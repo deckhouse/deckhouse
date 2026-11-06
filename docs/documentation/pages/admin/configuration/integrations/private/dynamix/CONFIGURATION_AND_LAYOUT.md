@@ -3,7 +3,7 @@ title: Layouts and configuration in Basis Dynamix
 permalink: en/admin/integrations/private/dynamix/layout.html
 ---
 
-Deckhouse Platform supports two layouts in the Basis Dynamix cloud:
+Deckhouse Platform supports two [layouts](../../../../glossary.html#layout) in the Basis Dynamix cloud:
 
 - Standard: A layout that uses only an external network
 - StandardWithInternalNetwork: A layout with an internal (private) network and DNS servers
@@ -76,11 +76,11 @@ masterNodeGroup:
 
 ## Required parameters
 
-- `layout`: Layout
+- `layout`: [Layout](../../../../glossary.html#layout)
 - `sshPublicKey`: Public key for accessing the nodes
 - `location`: Name of the Basis Dynamix location where the cluster resource group is created
 - `account`: Account name in the cloud
-- `storagePolicy`: Name of the storage policy used by default for virtual machine disks
+- `storagePolicy`: Name of the storage policy used by default for [virtual machine disks](../../../../glossary.html#vm-disk)
 - `provider.controllerUrl`, `oAuth2Url`, `appId`, `appSecret`: API access parameters
 - `imageName`: OS image name
 - `externalNetwork`: External network name

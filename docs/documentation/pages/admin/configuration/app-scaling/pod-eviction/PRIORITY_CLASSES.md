@@ -70,7 +70,7 @@ Apply the manifest to the cluster:
 d8 k apply -f critical-applications.yaml
 ```
 
-Verify that the priority class was created:
+Verify that the [priority class](../../../../glossary.html#priority-class) was created:
 
 ```shell
 d8 k get priorityclass critical-applications

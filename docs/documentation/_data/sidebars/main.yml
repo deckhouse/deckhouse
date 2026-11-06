@@ -10,6 +10,10 @@ entries:
         ru: Администрирование
       folders:
         - title:
+            en: System requirements
+            ru: Системные требования
+          url: /requirements/
+        - title:
             en: Platform installation
             ru: Установка платформы
           url: /installing/
@@ -1530,11 +1534,6 @@ entries:
             en: Overview
             ru: Обзор
           url: /architecture/
-        - title:
-            en: System requirements
-            ru: Системные требования
-          draft: true
-          url: /architecture/system-requirements/
         - title:
             en: DP architecture (C4 model)
             ru: Архитектура DP (модель C4)

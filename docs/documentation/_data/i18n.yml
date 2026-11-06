@@ -652,3 +652,44 @@ release_notes:
   chore:
     en: Chore
     ru: Chore
+requirements:
+  cluster_configuration:
+    en: Cluster configuration
+    ru: Конфигурация кластера
+  node_type:
+    en: Node type
+    ru: Тип узла
+  node_count:
+    en: Number of nodes
+    ru: Количество узлов
+  vcpu:
+    en: vCPU
+    ru: vCPU
+  ram_gb:
+    en: RAM, GB
+    ru: ОЗУ, ГБ
+  disk_gb:
+    en: Disk, GB
+    ru: Диск, ГБ
+  node_types:
+    master:
+      en: Master node
+      ru: Master-узел
+    worker:
+      en: Worker node
+      ru: Worker-узел
+    vm:
+      en: Virtual machine node
+      ru: Узел для запуска виртуальных машин
+    worker-vm:
+      en: Worker or virtual machine node
+      ru: Worker-узел или узел для запуска виртуальных машин
+    system:
+      en: System node
+      ru: Системный узел
+    frontend:
+      en: Frontend node
+      ru: Frontend-узел
+    monitoring:
+      en: Monitoring node
+      ru: Узел мониторинга

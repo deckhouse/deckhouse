@@ -375,7 +375,7 @@ EOF
 
 - `issuer` — URL-адрес инсталляции GitLab, как в claim `iss` её ID-токенов.
 - `audiences` — значение `aud`, которое задание указывает в `id_tokens`. Токен, выпущенный для другого сервиса, отклоняется.
-- `claimValidation` — claims, которые обязан нести токен. В примере принимаются только защищённые ветки проектов группы `platform`.
+- `claimValidation` — claims, которые обязан нести токен. В примере принимаются только защищённые ветки [проектов](../../../../glossary.html#project) группы `platform`.
 - `identity.username` — имя пользователя в кластере, например `gitlab-ci:project_path:platform/app:ref_type:branch:ref:main` для ветки `main` проекта `platform/app`.
 
 Получите идентификатор коннектора для запроса обмена:
@@ -401,7 +401,7 @@ DP настраивает kube-apiserver на проверку токенов De
 
 Подробнее о выдаче прав — в разделе [«Выдача прав пользователям и сервисным аккаунтам»](granting.html).
 
-Для упрощённой ролевой модели используйте [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule):
+Для упрощённой [ролевой модели](../../../../glossary.html#rbac) используйте [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule):
 
 ```shell
 cat <<EOF | d8 k apply -f -

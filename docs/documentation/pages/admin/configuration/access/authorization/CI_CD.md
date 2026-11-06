@@ -374,7 +374,7 @@ Parameters:
 
 - `issuer`: URL of the GitLab instance, as in the `iss` claim of its ID tokens.
 - `audiences`: Value of `aud` that the job sets in `id_tokens`. A token issued for another service is refused.
-- `claimValidation`: Claims that a token must carry. In the example, only protected branches of projects in the `platform` group are accepted.
+- `claimValidation`: Claims that a token must carry. In the example, only protected branches of [projects](../../../../glossary.html#project) in the `platform` group are accepted.
 - `identity.username`: User name in the cluster, for example `gitlab-ci:project_path:platform/app:ref_type:branch:ref:main` for the `main` branch of `platform/app`.
 
 Get the connector ID for the exchange request:
@@ -400,7 +400,7 @@ DP configures kube-apiserver to validate Dex tokens. The user name is the one To
 
 For details on granting permissions, see [Granting permissions to users and service accounts](granting.html).
 
-For the basic role model, use [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule):
+For the basic [role model](../../../../glossary.html#rbac), use [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule):
 
 ```shell
 cat <<EOF | d8 k apply -f -

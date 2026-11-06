@@ -14,9 +14,9 @@ Before deploying a cluster, you need to plan for the resources that you might ne
 * What is the expected load?
 * Does your cluster require a high load mode?
 * Does your cluster require a [high availability mode](../glossary.html#ha-mode)?
-* Which Deckhouse Platform (DP) modules do you intend to use?
+* Which Deckhouse Platform modules do you intend to use?
 
-The answers to these questions can help you estimate the number of nodes recommended for your cluster deployment. See [Deployment scenarios](#deployment-scenarios) to learn more.
+The answers to these questions can help you estimate the number of nodes recommended for your cluster deployment. See the [Deployment options](../requirements/#deployment-options) section of the "System requirements" page to learn more.
 
 {% alert level="info" %}
 The information below applies to a Deckhouse Platform installation running the [Default module set](../admin/configuration/#module-bundles).
@@ -24,179 +24,17 @@ The information below applies to a Deckhouse Platform installation running the [
 
 ## Deployment scenarios
 
-This section helps you **estimate the resources** required for the cluster based on the expected load.
-
-<table>
-  <thead>
-    <tr>
-      <th>Cluster configuration</th>
-      <th style="text-align: center;">Master nodes</th>
-      <th style="text-align: center;">Worker nodes</th>
-      <th style="text-align: center;">Frontend nodes</th>
-      <th style="text-align: center;">System nodes</th>
-      <th style="text-align: center;">Monitoring nodes</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>Minimum</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">At least 1</td>
-      <td style="text-align: center;">—</td>
-      <td style="text-align: center;">—</td>
-      <td style="text-align: center;">—</td>
-    </tr>
-    <tr>
-      <td>Typical</td>
-      <td style="text-align: center;">3</td>
-      <td style="text-align: center;">At least 1</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">—</td>
-    </tr>
-    <tr>
-      <td>Increased load</td>
-      <td style="text-align: center;">3</td>
-      <td style="text-align: center;">At least 1</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">2</td>
-    </tr>
-  </tbody>
-</table>
-
-Where:
-
-* **[master nodes](../glossary.html#master-node)** — nodes that manage the cluster;
-* **[frontend nodes](../glossary.html#frontend-node)** — nodes that balance incoming traffic; [Ingress controllers](../glossary.html#ingress-controller) run on them;
-* **[monitoring nodes](../glossary.html#monitoring-node)** — used to run Grafana, Prometheus, and other monitoring components;
-* **[system nodes](../glossary.html#system-node)** — intended to run DP modules;
-* **[worker nodes](../glossary.html#worker-node)** — intended to run user applications.
-
-See [Configuration Features](production.html#things-to-consider-when-configuring) of the "Going to production" guide for details on these node types.
-
-Features of the configurations listed in the table above:
-
-* **Minimum** — Minimum cluster configuration is suitable for small, light-load projects with low reliability requirements. It is up to you to define the characteristics of the worker node based on the expected user load. Note that in this configuration, some of the DP components will also run on the worker node.
-  > Such a cluster configuration is risky because if a single master node fails, the entire cluster will be affected.
-* **Typical** — This is the recommended configuration that can tolerate the failure of one master node. It greatly improves service availability.
-* **Increased load** — Unlike the typical configuration, this configuration includes dedicated monitoring nodes, enabling a high level of observability in the cluster even under high loads.
+Cluster deployment options ([single-node cluster](../glossary.html#single-node-cluster), cluster with one [master node](../glossary.html#master-node), cluster with three master nodes or cluster with role separation) and node types are described in the [Deployment options](../requirements/#deployment-options) section of the "System requirements" page.
 
 {% alert level="info" %}
-Starting with version 1.74, Deckhouse Platform has a module [integrity control](../glossary.html#integrity-control) mechanism that protects modules from being replaced or modified. This mechanism is enabled automatically when the operating system on the nodes where DP is installed supports the `erofs` kernel module. If this kernel module is not present, DP will continue to operate without the module integrity control mechanism, but an alert will be displayed indicating that this functionality is not working.
+Starting with version 1.74, Deckhouse Platform has a module [integrity control](../glossary.html#integrity-control) mechanism that protects modules from being replaced or modified. This mechanism is enabled automatically when the operating system on the nodes where Deckhouse Platform is installed supports the `erofs` kernel module. If this kernel module is not present, Deckhouse Platform will continue to operate without the module integrity control mechanism, but an alert will be displayed indicating that this functionality is not working.
 {% endalert %}
 
 ## Deciding on the amount of resources needed for nodes
 
-<table>
-  <thead>
-    <tr>
-      <th>Requirement level</th>
-      <th>Node type</th>
-      <th style="text-align: center;">CPU (pcs)</th>
-      <th style="text-align: center;">RAM (GB)</th>
-      <th style="text-align: center;">Disk space (GB)</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td rowspan="6" style="width: 45%;">
-        <b>Minimum</b><br><br>
-        <i>The way the cluster will run on minimum requirement nodes largely depends on which DP modules are enabled.<br>
-        If the number of enabled modules is large, increase node resources.<br><br>
-        </i>
-      </td>
-      <td>Master node</td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">8</td>
-      <td style="text-align: center;">60</td>
-    </tr>
-    <tr>
-      <td>Worker node<a href="#storage">*</a></td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">8</td>
-      <td style="text-align: center;">60</td>
-    </tr>
-    <tr>
-      <td>Frontend node</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">50</td>
-    </tr>
-    <tr>
-      <td>Monitoring node</td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">8</td>
-      <td style="text-align: center;"><a href="#storage">50 / 150*</a></td>
-    </tr>
-    <tr>
-      <td>System node</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;"><a href="#storage">50 / 150*</a></td>
-    </tr>
-    <tr>
-      <td>System node <i>(if no dedicated monitoring nodes are running in the cluster)</i></td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">8</td>
-      <td style="text-align: center;"><a href="#storage">60 / 160*</a></td>
-    </tr>
-    <tr>
-      <td rowspan="6" style="width: 45%;">
-        <b>Production</b><br><br>
-      </td>
-      <td>Master node</td>
-      <td style="text-align: center;">8</td>
-      <td style="text-align: center;">16</td>
-      <td style="text-align: center;">60</td>
-    </tr>
-    <tr>
-      <td>Worker node<a href="#storage">*</a></td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">12</td>
-      <td style="text-align: center;">60</td>
-    </tr>
-    <tr>
-      <td>Frontend node</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">50</td>
-    </tr>
-    <tr>
-      <td>Monitoring node</td>
-      <td style="text-align: center;">6</td>
-      <td style="text-align: center;">12</td>
-      <td style="text-align: center;"><a href="#storage">50 / 150*</a></td>
-    </tr>
-    <tr>
-      <td>System node</td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">8</td>
-      <td style="text-align: center;"><a href="#storage">50 / 150*</a></td>
-    </tr>
-    <tr>
-      <td>System node <i>(if no dedicated monitoring nodes are running in the cluster)</i></td>
-      <td style="text-align: center;">8</td>
-      <td style="text-align: center;">16</td>
-      <td style="text-align: center;"><a href="#storage">60 / 160*</a></td>
-    </tr>
-    <tr>
-      <td style="width: 45%;">
-        <b>Single-node cluster</b>
-      </td>
-      <td>Master node</td>
-      <td style="text-align: center;">6</td>
-      <td style="text-align: center;">12</td>
-      <td style="text-align: center;">100</td>
-    </tr>
-  </tbody>
-</table>
+Resource requirements depend on the deployment option (single-node cluster, cluster with one master node, cluster with three master nodes or cluster with role separation) and on the workload type (running containers, virtual machines, or both containers and virtual machines).
 
-{% alert level="info" %}
-* <span id="storage"></span>PVC disk space for [system components](../glossary.html#system-component): If the local disk space of the node will be used to store system PVCs (`prometheus`, `upmeter` modules, etc.), then it is necessary to additionally allocate >= 100 GB. The second value in the "Disk space" column (for example, 150 in "50 / 150") includes these 100 GB.
-* The parameters of [worker nodes](../glossary.html#worker-node) are largely dictated by the nature of the workload running on the node(s); the table lists the minimum requirements. For system services (`kubelet`) and system pods on worker nodes, you need to allocate at least 1 CPU and 2 GB of memory.
-* Note that all nodes require high performance disks (400+ IOPS).
-{% endalert %}
+The tables with node resources for every deployment option and workload type are given in the [Resource requirements](../requirements/#resource-requirements) section of the "System requirements" page. The same section describes what the values in the tables include and which resources to reserve on nodes in addition.
 
 ### Single-node cluster
 
@@ -206,9 +44,11 @@ Such clusters lack fault tolerance. Do not use this kind of clusters in producti
 
 In some cases, a cluster can consist of a single node that performs all the node roles described above. This configuration may be used, for example, to familiarize yourself with the technology or to run workloads with low resource requirements.
 
-The [Getting Started guide](/products/kubernetes-platform/gs/bm/step5.html) contains instructions for deploying a [single-node cluster](../glossary.html#single-node-cluster). Once you un-taint the node, it will run all cluster components included in the selected [module bundle](../glossary.html#module-bundle) ([bundle: Default](/modules/deckhouse/configuration.html#parameters-bundle) by default). To successfully run a cluster in this mode, you will need at least 16 CPUs, 32 GB of RAM, and 100 GB of disk space on a performance disk (400+ IOPS). Such a configuration would allow some workloads to be run.
+The [Getting Started guide](/products/kubernetes-platform/gs/bm/step5.html) contains instructions for deploying a single-node cluster. Once you un-taint the node, it will run all cluster components included in the selected [module bundle](../glossary.html#module-bundle) ([bundle: Default](/modules/deckhouse/configuration.html#parameters-bundle) by default). The resources for such a node are given in the "Single-node cluster" row of the tables in the [Resource requirements](../requirements/#resource-requirements) section for the required workload type: containers, virtual machines or combined workloads.
 
-With this configuration, a load of 2500 RPS on a typical web application (e.g., a static Nginx page) consisting of 30 pods, and incoming traffic of 24 Mbps will result in approximately the following resource consumption figures:
+Such a configuration would allow some workloads to be run.
+
+In a single-node cluster for running containers with the resources from the table, a load of 2500 RPS on a typical web application (e.g., a static Nginx page) consisting of 30 pods, and incoming traffic of 24 Mbps will result in approximately the following resource consumption figures:
 
 * CPU load will increase to ~60% in total;
 * RAM and disk resource consumption figures will remain largely unchanged. In the end, however, it comes down to the number of metrics collected and the nature of the workload being run.
@@ -219,33 +59,22 @@ Run load testing of the application and adjust the server capacity according to 
 
 ### Configuration examples
 
-To deploy Deckhouse Platform [Enterprise Edition](../glossary.html#edition) with the [Default](/modules/deckhouse/configuration.html#parameters-bundle) module set, the following node configuration is required:
+The example below is a cluster with role separation without fault tolerance: one node of each type, without dedicated [monitoring nodes](../glossary.html#monitoring-node). The node resources are taken from the [For containers](../requirements/#containers) table for the cluster with role separation.
 
-* **[master nodes](../glossary.html#master-node)** — 1 node, 4 CPU, 8 GB RAM;
-* **[frontend nodes](../glossary.html#frontend-node)** — 1 node, 2 CPU, 4 GB RAM;
-* **[system nodes](../glossary.html#system-node)** — 1 node, 8 CPU, 16 GB RAM;
-* **worker nodes** — 1 node, 4 CPU, 8 GB RAM.
+To deploy Deckhouse Platform for running containers in the [Ultimate/Enterprise Edition](../glossary.html#edition) with the [Default](/modules/deckhouse/configuration.html#parameters-bundle) module set, the following node configuration is required:
+
+* **[master nodes](../glossary.html#master-node)** — 1 node, 6 CPU, 12 GB RAM, 60 GB of disk space;
+* **[frontend nodes](../glossary.html#frontend-node)** — 1 node, 2 CPU, 4 GB RAM, 60 GB of disk space;
+* **[system nodes](../glossary.html#system-node)** — 1 node, 6 CPU, 12 GB RAM, 300 GB of disk space (the system node hosts the monitoring components and system PVCs);
+* **[worker nodes](../glossary.html#worker-node)** — 1 node, 2 CPU, 4 GB RAM, 60 GB of disk space plus the resources for the user workload.
 
 {% alert level="info" %}
-If needed, you can also run DP in the same configuration on a single node with 16 CPU and 32 GB RAM for a virtual machine, or 10 CPU and 24 GB RAM for a bare metal server.
+If needed, you can also run Deckhouse Platform in the same configuration on a single node. Its resources are given in the "Single-node cluster" row of the same table: 12 CPU, 24 GB RAM and 350 GB of disk space.
 {% endalert %}
 
-## Node hardware requirements
+## Node and network requirements
 
-The machines you intend to turn into nodes of your future cluster must meet the following requirements:
-
-* **CPU architecture** — all nodes must be of the `x86_64` CPU architecture.
-* **Identical nodes** — all nodes of the same type must have the same hardware configuration. Nodes must be of the same make and model with the same CPU, memory, and storage.
-* **Network interfaces** — each node must have at least one network interface for the routed network.
-
-## Network requirements
-
-The following network requirements apply to cluster nodes:
-
-* Nodes must be able to access each other over the network. The [network policies](../reference/network_interaction.html) must be met.
-* There are no MTU requirements.
-* Each node must have a permanent IP address. If you use a DHCP server to assign IP addresses to nodes, you must configure the DHCP server to explicitly assign addresses to each node. Changing the IP addresses of the nodes is undesirable.
-* Master nodes must be able to access time servers external to the cluster via NTP. Cluster nodes use master nodes to synchronize time, but can also synchronize with other time servers (see the [ntpServers](/modules/chrony/configuration.html#parameters-ntpservers) parameter).
+The requirements for node hardware, the operating system and the network between nodes are given in the [Node requirements](../requirements/#node-requirements) and [Network requirements](../requirements/#network-requirements) sections of the "System requirements" page.
 
 ## Community
 
@@ -255,4 +84,4 @@ Join our [Telegram channel](https://t.me/deckhouse) to stay up to date.
 
 Join the [Deckhouse community](https://deckhouse.io/community/about.html) for updates on important developments and news. There, you will be able to chat with others and learn from their experiences. This way, you can avoid many common mistakes.
 
-Setting up and running a production Kubernetes cluster takes effort. Share your experience with DP in the community to help others move to Kubernetes.
+Setting up and running a production Kubernetes cluster takes effort. Share your experience with Deckhouse Platform in the community to help others move to Kubernetes.

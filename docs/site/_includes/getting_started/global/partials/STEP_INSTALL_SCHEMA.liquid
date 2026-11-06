@@ -139,6 +139,9 @@ Scheme of Deckhouse Platform installation in a private environment:<br />
 {%- elsif page.platform_type == 'baremetal' %}
    <p><strong>Physical server or virtual machine for the master node.</strong></p>
    {% offtopic title="Requirements..." %}
+   {% alert level="warning" %}
+   If you plan to install a single-node cluster where one node performs all roles (this option becomes available at the "Installation" step), use the "Single-node cluster" row in the tables of the [Resource requirements](/products/kubernetes-platform/documentation/v1/requirements/#resource-requirements) section to choose the cluster resources.
+   {% endalert %}
 
    {% alert level="info" %}
    Starting with version 1.74, the Deckhouse Platform has a module integrity control mechanism that protects modules from being replaced or modified. This mechanism is enabled automatically when the operating system on the nodes where Deckhouse Platform is installed supports the `erofs` kernel module. If this kernel module is not present, Deckhouse Platform will continue to operate without the module integrity control mechanism, but an alert will be displayed indicating that this functionality is not working.
@@ -190,7 +193,7 @@ Scheme of Deckhouse Platform installation in a private environment:<br />
 {% if page.platform_type == "baremetal" or page.platform_type == "baremetal" or page.platform_type == "cloud" %}
 {% alert level="warning" %}
 The recommendations above provide the minimum {% if page.platform_type == "cloud" %}summary{% endif %} resources required for the initial deployment of a cluster with one master node and one worker node.
-This configuration is sufficient for introductory purposes, but it is not suitable for production environments. Read the [recommendations for going for production](/products/kubernetes-platform/documentation/v1/guides/production.html), [recommendations for disk layout and sizing](/products/kubernetes-platform/documentation/v1/guides/fs-requirements.html) and the [instructions for choosing the types and number of cluster nodes](/products/kubernetes-platform/documentation/v1/guides/hardware-requirements.html), as well as the resources for them, depending on your requirements
+This configuration is sufficient for introductory purposes, but it is not suitable for production environments. Read the [recommendations for going for production](/products/kubernetes-platform/documentation/v1/guides/production.html), [recommendations for disk layout and sizing](/products/kubernetes-platform/documentation/v1/guides/fs-requirements.html) and the [system requirements](/products/kubernetes-platform/documentation/v1/requirements/), which describe deployment options, node types and the resources for them, depending on your requirements
 for the operation of the future cluster.
 {% endalert %}
 {%- endif %}

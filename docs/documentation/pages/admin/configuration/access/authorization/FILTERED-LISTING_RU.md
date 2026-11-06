@@ -80,7 +80,7 @@ d8 k get pods -A --scope=accessible -w
 
 Создать ресурс может любой аутентифицированный пользователь, и ответ касается только его самого. Запрос с полями `spec.user`, `spec.groups`, `spec.uid` или `spec.extra` отклоняется.
 
-Пример запроса от страницы веб-интерфейса Deckhouse, которая показывает Deployment всех проектов, предлагает создать новый и показывает логи подов:
+Пример запроса от страницы [веб-интерфейса Deckhouse](../../../../glossary.html#web-ui), которая показывает Deployment всех проектов, предлагает создать новый и показывает логи подов:
 
 ```shell
 d8 k create -o yaml -f - <<EOF
@@ -358,4 +358,4 @@ kube-apiserver экспортирует метрики механизма:
 | kube-apiserver (патч DP) | Перехват `403 Forbidden` и фильтрация на слое хранилища |
 | Модуль [`user-authz`](/modules/user-authz/) (`permission-browser`) | Определение границы доступа через `SelfScopedAccessReview` |
 | Модуль [`multitenancy-manager`](/modules/multitenancy-manager/) | Классификация неймспейсов по лейблу `projects.deckhouse.io/project` |
-| Модуль [`user-authz`](/modules/user-authz/) (ConfigMap `d8-user-authz-multitenancy-state`) | Сообщает kube-apiserver, включён ли модуль `multitenancy-manager`, во всех редакциях |
+| Модуль [`user-authz`](/modules/user-authz/) (ConfigMap `d8-user-authz-multitenancy-state`) | Сообщает kube-apiserver, включён ли модуль `multitenancy-manager`, во всех [редакциях](../../../../glossary.html#edition) |

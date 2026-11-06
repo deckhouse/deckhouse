@@ -13,7 +13,7 @@ The integration provides the following capabilities:
 - Using prepared cloud images to deploy nodes
 - Configuring virtual machine parameters (CPU, RAM, disk, network)
 - Support for external and internal networks, including CIDR and DNS settings
-- Support for multiple layouts with an external or a combined network
+- Support for multiple [layouts](../../../../glossary.html#layout) with an external or a combined network
 - Disk placement by a storage policy
 
 ## Requirements
@@ -39,7 +39,7 @@ To deploy virtual machines, Deckhouse Platform uses OS cloud images prepared by 
 
 - `cloud-init`
 - Virtual hardware drivers
-- Guest agents
+- [Guest agents](../../../../glossary.html#vm-guest-agent)
 
 Use official cloud images distributed in the `.img`, `.qcow2`, and similar formats.
 

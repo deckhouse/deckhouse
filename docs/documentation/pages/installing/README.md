@@ -2,7 +2,7 @@
 title: "Installation"
 permalink: en/installing/
 description: |
-  Installing Deckhouse Platform (DP), preparing the installation infrastructure, and running the installer.
+  Installing Deckhouse Platform, preparing the installation infrastructure, and running the installer.
 search: requirements, system requirements, platform setup, infrastructure preparation, installer configuration, deckhouse setup, platform configuration, infrastructure preparation, installer configuration, installer setup, dhctl, dhctl bootstrap
 extractedLinksMax: 2
 relatedLinks:
@@ -12,7 +12,7 @@ relatedLinks:
     url: ../reference/supported_versions.html
   - title: "Integration with IaaS providers"
     url: ../admin/integrations/integrations-overview.html
-  - title: "Installing DP in a private environment"
+  - title: "Installing Deckhouse Platform in a private environment"
     url: ../guides/private-environment.html
   - title: "Going to Production"
     url: ../guides/production.html 
@@ -22,56 +22,25 @@ relatedLinks:
 Step-by-step installation instructions are available in the {% if site.mode == 'module' %}[Getting started]({{ site.urls[page.lang] }}/products/kubernetes-platform/gs/){% else %}[Getting started](/products/kubernetes-platform/gs/){% endif %} section.
 {% endalert %}
 
-This page provides an overview of installing Deckhouse Platform (DP).
+This page provides an overview of installing Deckhouse Platform.
 
 ## Installation methods
 
-You can install DP using a CLI [installer](../glossary.html#installer), which is available as a container image and based on the [dhctl](<https://github.com{{ site.github_repo_path }}/tree/main/dhctl/>) utility.
+You can install Deckhouse Platform using a CLI [installer](../glossary.html#installer), which is available as a container image and based on the [dhctl](<https://github.com{{ site.github_repo_path }}/tree/main/dhctl/>) utility.
 
 ## Installation options
 
-You can install DP in the following ways::
+You can install Deckhouse Platform in the following ways::
 
-- **In a supported cloud.** The installer automatically creates and configures all required resources (including virtual machines, network objects, etc.), deploys a Kubernetes cluster, and installs DP. A full list of supported [cloud providers](../glossary.html#cloud-provider) is available in the [Integration with IaaS](../admin/integrations/public/overview.html) section.
+- **In a supported cloud.** The installer automatically creates and configures all required resources (including virtual machines, network objects, etc.), deploys a Kubernetes cluster, and installs Deckhouse Platform. A full list of supported [cloud providers](../glossary.html#cloud-provider) is available in the [Integration with IaaS](../admin/integrations/public/overview.html) section.
 
-- **On bare-metal servers (including [hybrid clusters](../glossary.html#hybrid-cluster)) or in unsupported clouds.** The installer configures the servers or virtual machines specified in the configuration, deploys a Kubernetes cluster, and installs DP. Step-by-step instructions for bare metal are available in [Getting started → Deckhouse Platform for bare metal]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/bm/step2.html).
+- **On bare-metal servers (including [hybrid clusters](../glossary.html#hybrid-cluster)) or in unsupported clouds.** The installer configures the servers or virtual machines specified in the configuration, deploys a Kubernetes cluster, and installs Deckhouse Platform. Step-by-step instructions for bare metal are available in [Getting started → Deckhouse Platform for bare metal]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/bm/step2.html).
 
-- **In an existing Kubernetes cluster.** The installer deploys DP and integrates it with the current infrastructure. Step-by-step instructions for an existing cluster are available in [Getting started → Deckhouse Platform in existing cluster]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/existing/step2.html).
+- **In an existing Kubernetes cluster.** The installer deploys Deckhouse Platform and integrates it with the current infrastructure. Step-by-step instructions for an existing cluster are available in [Getting started → Deckhouse Platform in existing cluster]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/existing/step2.html).
 
 ## Installation requirements
 
-To estimate the resources required for Deckhouse Platform installation, refer to the following guides:
-
-- [Bare-metal cluster sizing guide](../guides/hardware-requirements.html)
-- [Disk layout and sizing guide](../guides/fs-requirements.html)
-- [Production preparation guide](../guides/production.html)
-
-Before installation, ensure the following:
-
-- For bare-metal clusters (including hybrid clusters) and installations in unsupported clouds: the server runs an OS from the [supported OS list](../reference/supported_versions.html) (or a compatible version) and is accessible via SSH with a key.
-
-- For supported clouds: the required resource quotas are available and access credentials to the cloud infrastructure are prepared (provider-specific).
-
-- If there are infrastructure-level restrictions on network communication, ensure that the requirements described in the [Network interaction of the platform components](../reference/network_interaction.html) section are met.
-  
-- There is access to the Deckhouse container registry (official `registry.deckhouse.io`, or a mirror).
-
-### Additional requirements for virtualization
-
-If you plan to run virtual machines (VMs) in the cluster, its nodes have to meet additional requirements. Take them into account when planning the cluster, because some of them can't be met after the installation.
-
-{% alert level="warning" %}
-Nodes that run virtual machines have to be physical servers (bare metal). Installation on virtual machines is allowed for demonstration purposes only, requires nested virtualization to be enabled, and isn't covered by technical support.
-{% endalert %}
-
-- Every node that will run VMs needs a CPU supporting Intel-VT (VMX) or AMD-V (SVM) instructions, with hardware virtualization enabled in the BIOS/UEFI settings.
-- All cluster nodes have to run the same Linux kernel version. Version differences lead to incompatible system calls and resource handling, which makes [live migration](../glossary.html#live-migration) of VMs unstable.
-- Astra Linux nodes require platform version 1.8.3 or higher: earlier versions contain a bug that interferes with virtualization.
-- [VM disks](../glossary.html#vm-disk) and images are created on top of PersistentVolume resources, so the cluster needs one or several [supported storages](../admin/configuration/storage/): local or replicated [SDS](../glossary.html#sds) storage, Ceph, NFS, TATLIN.UNIFIED (Yadro), Huawei Dorado, or HPE 3par. Also set the [default StorageClass](../admin/configuration/storage/supported-storage.html#setting-a-default-storageclass).
-- Choose the subnets that VMs will get IP addresses from in advance. They are set by the `virtualMachineCIDRs` parameter and must not overlap the pod (`podSubnetCIDR`) and service (`serviceSubnetCIDR`) address spaces.
-- A cluster with virtualization is designed for `1000` nodes and `50000` virtual machines.
-
-The hardware requirements for the nodes match the general DKP requirements listed above.
+Before starting the installation, review the Deckhouse Platform [deployment scenarios](../glossary.html#deployment-scenario) and installation requirements in the ["System Requirements"](../requirements/) section.
 
 ## Preparing the Configuration
 
@@ -79,21 +48,21 @@ Before installation, you need to prepare the [installation configuration file](#
 
 ### Installation configuration file
 
-The [installation configuration file](../glossary.html#installation-config) is a set of YAML documents that contains DP settings and manifests for cluster objects and resources to be created after installation. The configuration file is used by the CLI installer and is passed via the `--config` parameter (see below).
+The [installation configuration file](../glossary.html#installation-config) is a set of YAML documents that contains Deckhouse Platform settings and manifests for cluster objects and resources to be created after installation. The configuration file is used by the CLI installer and is passed via the `--config` parameter (see below).
 
 Required and optional objects/resources that may be needed in the installation configuration file:
 
-1. [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) (**required**): Initial [configuration parameters](../admin/configuration/) necessary to start DP.
+1. [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) (**required**): Initial [configuration parameters](../admin/configuration/) necessary to start Deckhouse Platform.
 
-   > Starting with DP 1.75, use the ModuleConfig `deckhouse` to configure access to the DP container registry. Configuring access with InitConfiguration (via `imagesRepo`, `registryDockerCfg`, `registryScheme`, and `registryCA` parameters) is considered a legacy method.
+   > Starting with Deckhouse Platform 1.75, use the ModuleConfig `deckhouse` to configure access to the Deckhouse Platform container registry. Configuring access with InitConfiguration (via `imagesRepo`, `registryDockerCfg`, `registryScheme`, and `registryCA` parameters) is considered a legacy method.
 
-1. [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration): General cluster parameters, such as Kubernetes (control plane components) version, network settings, CRI parameters, etc. **Required**, except when DP is installed into an already existing Kubernetes cluster.
+1. [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration): General cluster parameters, such as Kubernetes (control plane components) version, network settings, CRI parameters, etc. **Required**, except when Deckhouse Platform is installed into an already existing Kubernetes cluster.
 
-1. [StaticClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration): Parameters for a cluster deployed on bare-metal servers (including hybrid clusters) or in unsupported clouds. **Required**, except when DP is installed into an already existing Kubernetes cluster.
+1. [StaticClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration): Parameters for a cluster deployed on bare-metal servers (including hybrid clusters) or in unsupported clouds. **Required**, except when Deckhouse Platform is installed into an already existing Kubernetes cluster.
 
    To add worker [node groups](../glossary.html#node-group) (the [NodeGroup](/modules/node-manager/cr.html#nodegroup) object), you may also need [StaticInstance](/modules/node-manager/cr.html#staticinstance) and [SSHCredentials](/modules/node-manager/cr.html#sshcredentials).
 
-1. `<PROVIDER>ClusterConfiguration`: Parameters for integration with a [cloud provider](../glossary.html#cloud-provider). **Required** when integrating DP with a [supported cloud infrastructure](../admin/integrations/public/overview.html).
+1. `<PROVIDER>ClusterConfiguration`: Parameters for integration with a [cloud provider](../glossary.html#cloud-provider). **Required** when integrating Deckhouse Platform with a [supported cloud infrastructure](../admin/integrations/public/overview.html).
 
    > When integrating with Deckhouse Virtualization, the DVPClusterConfiguration resource is not used. It is replaced by the [`cloud-provider-dvp`](/modules/cloud-provider-dvp/configuration.html) ModuleConfig and related resources described in [Layouts and configuration in DVP](../admin/integrations/virtualization/dvp/configuration-and-layout-scheme.html).
 
@@ -112,7 +81,7 @@ Required and optional objects/resources that may be needed in the installation c
 
    To add cloud nodes, you also need `<PROVIDER>InstanceClass` objects (for example [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) for Yandex Cloud) that describe VM configuration in the node group (the [NodeGroup](/modules/node-manager/cr.html#nodegroup) object).
 
-1. DP module configurations.
+1. Deckhouse Platform module configurations.
 
    Each module is configured (and can be enabled or disabled) with its own [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) (for example, ModuleConfig `user-authn` for the [`user-authn`](/modules/user-authn/) module). Parameters that are allowed in the ModuleConfig object are described in the respective module documentation under "Configuration" (for example, [configuration of the `user-authn` module](/modules/user-authn/configuration.html)).
 
@@ -122,10 +91,10 @@ Required and optional objects/resources that may be needed in the installation c
 
    Modules often configured during installation:
 
-   * [`global`](/products/kubernetes-platform/documentation/v1/reference/api/global.html): Global DP settings for parameters used by default by all modules and components ([DNS name template](../glossary.html#public-domain-template), StorageClass, module component placement settings, etc.).
+   * [`global`](/products/kubernetes-platform/documentation/v1/reference/api/global.html): Global Deckhouse Platform settings for parameters used by default by all modules and components ([DNS name template](../glossary.html#public-domain-template), StorageClass, module component placement settings, etc.).
    * [`deckhouse`](/modules/deckhouse/configuration.html): Container registry access settings, the desired [release channel](../glossary.html#release-channel), and other parameters.
    * [`user-authn`](/modules/user-authn/configuration.html): Unified authentication.
-   * [`cni-cilium`](/modules/cni-cilium/configuration.html): Cluster networking (for example, used when installing DP on bare metal or in an air-gapped environment);
+   * [`cni-cilium`](/modules/cni-cilium/configuration.html): Cluster networking (for example, used when installing Deckhouse Platform on bare metal or in an air-gapped environment);
    * [`virtualization`](/modules/virtualization/configuration.html): Running virtual machines in the cluster, [enabled during the installation](#installing-virtualization) or later.
 
    If the cluster is created with nodes dedicated to specific workload types (for example, system or [monitoring nodes](../glossary.html#monitoring-node)), it is recommended to explicitly set the `nodeSelector` parameter in module configurations that use persistent storage volumes (for example, in the [`nodeSelector`](/modules/prometheus/configuration.html#parameters-nodeselector) parameter of the `prometheus` ModuleConfig for the `prometheus` module).
@@ -141,8 +110,8 @@ Required and optional objects/resources that may be needed in the installation c
 {% offtopic title="An example of the installation config..." %}
 
 {% tabs variant %}
-{% tab "Configuration applicable since DP 1.75" %}
-In this example, access to the DP container registry is configured using ModuleConfig `deckhouse`.
+{% tab "Configuration applicable since Deckhouse Platform 1.75" %}
+In this example, access to the Deckhouse Platform container registry is configured using ModuleConfig `deckhouse`.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -296,7 +265,7 @@ spec:
 
 {% endtab %}
 {% tab "Legacy configuration" %}
-In this example, access to the DP container registry is configured using InitConfiguration.
+In this example, access to the Deckhouse Platform container registry is configured using InitConfiguration.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -462,7 +431,7 @@ The [installer](../glossary.html#installer) allows you to run a custom script on
 The path to the post-bootstrap script can be specified using the `--post-bootstrap-script-path` parameter when running the CLI installer.
 
 {% offtopic title="Example: a script that retrieves the IP address of the load balancer..." %}
-This sample script retrieves the IP address of the load balancer after DP is installed:
+This sample script retrieves the IP address of the load balancer after Deckhouse Platform is installed:
 
 ```shell
 #!/usr/bin/env bash
@@ -530,7 +499,7 @@ docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/deckhouse/<
 
 Where:
 
-1. `<DECKHOUSE_REVISION>`: [DP edition](../reference/revision-comparison.html). For example, `ee` for Enterprise Edition, `ce` for Community Edition, etc.
+1. `<DECKHOUSE_REVISION>`: [Deckhouse Platform edition](../reference/revision-comparison.html). For example, `ee` for Enterprise Edition, `ce` for Community Edition, etc.
 1. `<MOUNT_OPTIONS>`: Parameters for mounting files into the installer container, such as:
    - SSH access keys
    - Configuration file
@@ -542,7 +511,7 @@ Where:
    - `stable`: Stable channel
    - `rock-solid`: Rock Solid channel
 
-Here is an example of a command to run the DP Community Edition installer container from the Stable [release channel](../glossary.html#release-channel):
+Here is an example of a command to run the Deckhouse Platform Community Edition/Open installer container from the Stable [release channel](../glossary.html#release-channel):
 
 ```shell
 docker run -it --pull=always \
@@ -551,16 +520,16 @@ docker run -it --pull=always \
   -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/ce/install:stable bash
 ```
 
-DP installation is performed within the installer container using the `dhctl` command:
+Deckhouse Platform installation is performed within the installer container using the `dhctl` command:
 
-* To start the installation of DP with the deployment of a new cluster (for all cases except installing into an existing cluster), use the command `dhctl bootstrap`.
-* To install DP into an already existing cluster, use the command `dhctl bootstrap-phase install-deckhouse`.
+* To start the installation of Deckhouse Platform with the deployment of a new cluster (for all cases except installing into an existing cluster), use the command `dhctl bootstrap`.
+* To install Deckhouse Platform into an already existing cluster, use the command `dhctl bootstrap-phase install-deckhouse`.
 
 {% alert level="info" %}
 To learn more about the available parameters, run `dhctl bootstrap -h`.
 {% endalert %}
 
-Example of running a DP installation with [cloud cluster](../glossary.html#cloud-cluster) deployment:
+Example of running a Deckhouse Platform installation with [cloud cluster](../glossary.html#cloud-cluster) deployment:
 
 ```shell
 dhctl bootstrap \
@@ -578,7 +547,7 @@ Where:
 ### Pre-installation checks
 
 {% alert level="info" %}
-Starting with version 1.74, DP modules are installed as images in the EROFS format that are mounted read-only, which protects them from being modified after installation. This mechanism is enabled automatically if the `erofs` filesystem is registered in the kernel on the node running the DP controller (a [master node](../glossary.html#master-node) by default). DP loads this kernel module only on nodes with containerd v2, so if master nodes use containerd v1, the operating system has to load `erofs` on its own. Otherwise, DP will install modules the regular way, without protecting their integrity and without a dedicated alert. For details, refer to ["Integrity protection of DP modules"](../architecture/security/integrity-control.html#integrity-protection-of-dp-modules).
+Starting with version 1.74, Deckhouse Platform modules are installed as images in the EROFS format that are mounted read-only, which protects them from being modified after installation. This mechanism is enabled automatically if the `erofs` filesystem is registered in the kernel on the node running the Deckhouse Platform controller (a [master node](../glossary.html#master-node) by default). Deckhouse Platform loads this kernel module only on nodes with containerd v2, so if master nodes use containerd v1, the operating system has to load `erofs` on its own. Otherwise, Deckhouse Platform will install modules the regular way, without protecting their integrity and without a dedicated alert. For details, refer to ["Integrity protection of Deckhouse Platform modules"](../architecture/security/integrity-control.html#integrity-protection-of-dp-modules).
 {% endalert %}
 
 {% offtopic title="Diagram of checks performed by the installer before installation..." %}
@@ -603,17 +572,7 @@ List of checks performed by the installer before starting Deckhouse Platform ins
    - Only one `--ssh-host` parameter is specified. For [static cluster](../glossary.html#static-cluster) configuration, only one IP address can be provided for configuring the first master node.
    - SSH connection is possible using the specified authentication data.
    - SSH tunneling to the master node server (or VM) is possible.
-   - The server (VM) selected for the master node installation must meet the [minimum system requirements](../guides/hardware-requirements.html):
-     - At least 4 CPU cores.
-     - At least 8 GB of RAM.
-     - At least 50 GB of disk space with 400+ IOPS performance.
-     - Linux kernel version 5.8 or newer.
-     - One of the package managers installed: `apt`, `apt-get`, `yum`, or `rpm`.
-     - Access to standard OS package repositories.
-     - **When using `ContainerdV2`** as the default container runtime on cluster nodes:
-        - Support for `CgroupsV2`.
-        - Systemd version `244`.
-        - Support for the `erofs` kernel module.
+   - The server (VM) selected for the master node installation has the minimum resources listed in the [Resource requirements](../requirements/#resource-requirements) section. The same section lists the node resources for each deployment option.
    - Python (Python 3 or Python 2) must be available on the server (VM) intended for the master node. The standard Python modules used by the installer must also be available:
      - For HTTP request handling: `urllib.request` (Python 3) or `urllib2` (Python 2)
      - For HTTP error handling: `urllib.error` (Python 3) or `urllib2` (Python 2)
@@ -632,7 +591,7 @@ List of checks performed by the installer before starting Deckhouse Platform ins
    - The address spaces for Pods (`podSubnetCIDR`), services (`serviceSubnetCIDR`), and internal network (`internalNetworkCIDRs`) do not intersect.
 
 1. Checks for cloud cluster installation:
-   - The configuration of the virtual machine for the master node meets the minimum requirements.
+   - The configuration of the virtual machine for the master node has the minimum resources listed in the [Resource requirements](../requirements/#resource-requirements) section.
    - The [cloud provider](../glossary.html#cloud-provider) API is accessible from the cluster nodes.
    - The configuration for [Yandex Cloud with NAT Instance](/modules/cloud-provider-yandex/layouts.html#withnatinstance) is verified.
 
@@ -748,15 +707,15 @@ Replace `<SSH_PRIVATE_KEY_FILE>` here with the name of your private key. For exa
 
 ### The local `deckhouse` system user
 
-DP components use UID/GID `64535` to run unprivileged processes and access their files on the node. The local `deckhouse` user and group reserve these identifiers for DP and let the OS display the `deckhouse` name instead of numeric UID/GID values in tools such as `ps`, `top`, and `ls`. Processes owned by `deckhouse` in `ps` or `top` output are expected: they belong to DP components, not to user sessions.
+Deckhouse Platform components use UID/GID `64535` to run unprivileged processes and access their files on the node. The local `deckhouse` user and group reserve these identifiers for Deckhouse Platform and let the OS display the `deckhouse` name instead of numeric UID/GID values in tools such as `ps`, `top`, and `ls`. Processes owned by `deckhouse` in `ps` or `top` output are expected: they belong to Deckhouse Platform components, not to user sessions.
 
 If the account does not exist, [bashible](../glossary.html#bashible) creates it with the `/sbin/nologin` shell, without a password or `sudo` privileges. `/etc/passwd` lists the system default home directory for the user (usually `/home/deckhouse`). Bashible creates this directory separately as the base directory for the home directories of users defined by `NodeUser` resources; the `deckhouse` system account itself is not intended for login or storing user files. The account must not be provided through AD or LDAP.
 
-The `deckhouse` name and UID/GID `64535` are reserved for DP and are not configurable. Do not delete or rename the user or group, change their UID/GID, or grant the user `sudo` privileges. The preflight check accepts an absent user and group, or an existing pair where the user has UID and primary GID `64535`, the group has GID `64535`, and the user has no `sudo` privileges. Installation fails if the name is used with different IDs or UID/GID `64535` are assigned to other accounts.
+The `deckhouse` name and UID/GID `64535` are reserved for Deckhouse Platform and are not configurable. Do not delete or rename the user or group, change their UID/GID, or grant the user `sudo` privileges. The preflight check accepts an absent user and group, or an existing pair where the user has UID and primary GID `64535`, the group has GID `64535`, and the user has no `sudo` privileges. Installation fails if the name is used with different IDs or UID/GID `64535` are assigned to other accounts.
 
 The `--preflight-skip-check=deckhouse-user` flag disables the check but does not resolve the conflict. If the `deckhouse` user or group exists with different IDs, bashible does not modify it and logs a warning. If UID/GID `64535` are assigned to another account, bashible cannot create the `deckhouse` user or group. Nor does bashible revoke `sudo` privileges from an existing user.
 
-If the conflict was left by a previous DP installation on a static node, perform [manual cleanup of the static node](../admin/configuration/platform-scaling/node/bare-metal-node.html#manual-cleanup-of-a-static-node). This is a destructive operation: the cleanup script removes the services, configuration, and local Kubernetes, containerd, and etcd data created by DP, as well as DP accounts, and then reboots the server. Run the cleanup only on a node prepared for redeployment. In all other cases, resolve the conflict manually or recreate the node.
+If the conflict was left by a previous Deckhouse Platform installation on a static node, perform [manual cleanup of the static node](../admin/configuration/platform-scaling/node/bare-metal-node.html#manual-cleanup-of-a-static-node). This is a destructive operation: the cleanup script removes the services, configuration, and local Kubernetes, containerd, and etcd data created by Deckhouse Platform, as well as Deckhouse Platform accounts, and then reboots the server. Run the cleanup only on a node prepared for redeployment. In all other cases, resolve the conflict manually or recreate the node.
 
 ### Aborting the installation
 
@@ -819,7 +778,7 @@ The module phase should be `Ready`.
 
 How components are distributed across nodes depends on the cluster configuration. A cluster may have only [master nodes](../glossary.html#master-node) running both control plane components and workloads; master and [worker nodes](../glossary.html#worker-node); master, system, and worker nodes; or other combinations. Worker nodes here are the nodes without restrictions (taints) that would prevent regular workloads from running.
 
-Deckhouse Platform (DP) distributes the components by priority, and if the cluster has a suitable node type, the component lands on it. What each component is responsible for is described in [Virtualization subsystem](../architecture/virtualization/).
+Deckhouse Platform distributes the components by priority, and if the cluster has a suitable node type, the component lands on it. What each component is responsible for is described in [Virtualization subsystem](../architecture/virtualization/).
 
 | Component name                | [Node group](../glossary.html#node-group)        | Comment                                                                                              |
 |-------------------------------|-------------------|------------------------------------------------------------------------------------------------------|
@@ -830,11 +789,11 @@ Deckhouse Platform (DP) distributes the components by priority, and if the clust
 | `virtualization-api-*`        | master            |                                                                                                      |
 | `virtualization-controller-*` | master            |                                                                                                      |
 | `dvcr-*`                      | system            | Storage has to be available on the node. With no [system nodes](../glossary.html#system-node), the component lands on a worker node. |
-| `virtualization-audit-*`      | master            | Available in commercial DP [editions](../glossary.html#edition).                                                                 |
-| `virtualization-dra-*`        | Dedicated nodes   | Available in commercial DP editions.                                                                 |
+| `virtualization-audit-*`      | master            | Available in commercial Deckhouse Platform [editions](../glossary.html#edition).                                                                 |
+| `virtualization-dra-*`        | Dedicated nodes   | Available in commercial Deckhouse Platform editions.                                                                 |
 | `vm-route-forge-*`            | All cluster nodes |                                                                                                      |
 
-The `virt-handler-*` component runs only on the nodes where DP detected KVM support and set the `virtualization.deckhouse.io/kvm-enabled` label, and the `virtualization-dra-*` component runs only on nodes labeled with `virtualization.deckhouse.io/usbip`.
+The `virt-handler-*` component runs only on the nodes where Deckhouse Platform detected KVM support and set the `virtualization.deckhouse.io/kvm-enabled` label, and the `virtualization-dra-*` component runs only on nodes labeled with `virtualization.deckhouse.io/usbip`.
 
 The components that create and upload [virtual machine images](../glossary.html#vm-image) and disks run only while that work is in progress:
 
@@ -862,15 +821,15 @@ Sometimes taints are configured on every cluster node, which is how an administr
 <div id="installing-deckhouse-kubernetes-platform-from-an-external-registry"></div>
 
 {% alert level="info" %}
-For more details on installing and updating DP in an air-gapped environment, see the [“Installing DP in an air-gapped environment”](../guides/private-environment.html) and [“Updating DP in an air-gapped environment”](../guides/airgapped-update.html) guides.
+For more details on installing and updating Deckhouse Platform in an air-gapped environment, see the [“Installing Deckhouse Platform in an air-gapped environment”](../guides/private-environment.html) and [“Updating Deckhouse Platform in an air-gapped environment”](../guides/airgapped-update.html) guides.
 {% endalert %}
 
 ### Installing from an external (third-party) registry
 
-DP can be installed from an external container registry or via a proxy registry inside an air-gapped environment.
+Deckhouse Platform can be installed from an external container registry or via a proxy registry inside an air-gapped environment.
 
 {% alert level="warning" %}
-DP supports Basic and Bearer token authentication schemes for container registries (Basic is tried first; if it fails, Bearer is used).
+Deckhouse Platform supports Basic and Bearer token authentication schemes for container registries (Basic is tried first; if it fails, Bearer is used).
 
 If a reverse proxy is placed in front of the registry, it must correctly forward the Registry API v2 header `Docker-Distribution-API-Version: registry/2.0`. Otherwise the Basic check may fail, and the subsequent Bearer attempt may fail with the error `couldn't find bearer realm parameter`.
 
@@ -880,13 +839,13 @@ The following container registries were verified and are guaranteed to work:
 {%- unless forloop.last %}, {% endunless %}
 {%- endfor %}.
 
-When working with external registries, do not use an administrator account to access them from DP. Create a dedicated read-only account limited to the required repository in the registry. Refer to an [example of creating](#nexus-configuration-notes) such an account.
+When working with external registries, do not use an administrator account to access them from Deckhouse Platform. Create a dedicated read-only account limited to the required repository in the registry. Refer to an [example of creating](#nexus-configuration-notes) such an account.
 {% endalert %}
 
 There are several options for configuring access to external container registries during cluster installation:
 
-- Starting from DP version 1.75 — using the `deckhouse` ModuleConfig.
-- Prior to DP version 1.75 — using InitConfiguration (considered a legacy method, refer to the example below).
+- Starting from Deckhouse Platform version 1.75 — using the `deckhouse` ModuleConfig.
+- Prior to Deckhouse Platform version 1.75 — using InitConfiguration (considered a legacy method, refer to the example below).
 
 To configure access using the `deckhouse` ModuleConfig, specify the external registry access parameters in the [`settings.registry`](/modules/deckhouse/configuration.html#parameters-registry) section.
 
@@ -919,10 +878,10 @@ spec:
 
 Set the following parameters in `InitConfiguration`:
 
-* `imagesRepo: <PROXY_REGISTRY>/<DECKHOUSE_REPO_PATH>/ee`: Path to the DP EE image in an external registry. Example: `imagesRepo: registry.deckhouse.io/deckhouse/ee`.
+* `imagesRepo: <PROXY_REGISTRY>/<DECKHOUSE_REPO_PATH>/ee`: Path to the Deckhouse Platform EE image in an external registry. Example: `imagesRepo: registry.deckhouse.io/deckhouse/ee`.
 * `registryDockerCfg: <BASE64>`: Base64-encoded access credentials to the external registry.
 
-If anonymous access is allowed to DP images in the external registry, the `registryDockerCfg` should look as follows:
+If anonymous access is allowed to Deckhouse Platform images in the external registry, the `registryDockerCfg` should look as follows:
 
 ```json
 {"auths": { "<PROXY_REGISTRY>": {}}}
@@ -930,7 +889,7 @@ If anonymous access is allowed to DP images in the external registry, the `regis
 
 The provided value must be Base64-encoded.
 
-If authentication is required to access DP images in the external registry, the `registryDockerCfg` should look as follows:
+If authentication is required to access Deckhouse Platform images in the external registry, the `registryDockerCfg` should look as follows:
 
 ```json
 {"auths": { "<PROXY_REGISTRY>": {"username":"<PROXY_USERNAME>","password":"<PROXY_PASSWORD>","auth":"<AUTH_BASE64>"}}}
@@ -1002,7 +961,7 @@ To configure Nexus, follow these steps:
    ![Example repository settings 2](../images/registry/nexus/nexus-repo-example-2.png)  
    ![Example repository settings 3](../images/registry/nexus/nexus-repo-example-3.png)
 
-1. Configure Nexus access control to allow DP to access the created repository:
+1. Configure Nexus access control to allow Deckhouse Platform to access the created repository:
    * Create a **Nexus** role ("Administration" → "Security" → "Roles") with the following privileges: `nx-repository-view-docker-<repository>-browse` and `nx-repository-view-docker-<repository>-read`.
 
      ![Create Nexus Role](../images/registry/nexus/nexus-role.png)
@@ -1021,7 +980,7 @@ To configure Nexus, follow these steps:
 
      ![Docker Bearer Token Realm Configuration](../images/registry/nexus/nexus-realms.png)
 
-As a result, DP images will be available at a URL as follows: `https://<NEXUS_HOST>:<REPOSITORY_PORT>/deckhouse/ee:<d8s-version>`.
+As a result, Deckhouse Platform images will be available at a URL as follows: `https://<NEXUS_HOST>:<REPOSITORY_PORT>/deckhouse/ee:<d8s-version>`.
 
 ### Harbor configuration notes
 
@@ -1051,9 +1010,9 @@ Use the [Harbor Proxy Cache](https://github.com/goharbor/harbor) feature.
 
    ![Creating a new project](../images/registry/harbor/harbor2.png)
 
-Once Harbor is configured, DP images will be available at a URL as follows: `https://your-harbor.com/d8s/deckhouse/ee:{d8s-version}`.
+Once Harbor is configured, Deckhouse Platform images will be available at a URL as follows: `https://your-harbor.com/d8s/deckhouse/ee:{d8s-version}`.
 
-### Manual loading of DP images and vulnerability DB into a private registry
+### Manual loading of Deckhouse Platform images and vulnerability DB into a private registry
 
 {% alert level="warning" %}
 The `d8 mirror` utility is not available for use with the Community Edition (CE) and Basic Edition (BE).
@@ -1065,9 +1024,9 @@ You can check the current status of versions in the [release channels](../glossa
 
 - [Download and install the Deckhouse CLI utility](../cli/d8/).
 
-- Download DP images to a dedicated directory using the `d8 mirror pull` command.
+- Download Deckhouse Platform images to a dedicated directory using the `d8 mirror pull` command.
 
-  By default, `d8 mirror pull` downloads only the current versions of DP, vulnerability scanner databases (if included in the DP edition), and officially delivered modules.
+  By default, `d8 mirror pull` downloads only the current versions of Deckhouse Platform, vulnerability scanner databases (if included in the Deckhouse Platform edition), and officially delivered modules.
   For example, for Deckhouse Platform 1.59, only version 1.59.12 will be downloaded, as it is sufficient for upgrading the platform from 1.58 to 1.59.
 
   Run the following command (specify the edition code and license key) to download the current version images:
@@ -1088,7 +1047,7 @@ You can check the current status of versions in the [release channels](../glossa
 
   > If the image download is interrupted, rerunning the command will resume the download, provided no more than one day has passed since the interruption.
 
-  Example command to download all DP EE versions starting from version 1.59 (specify your license key):
+  Example command to download all Deckhouse Platform EE versions starting from version 1.59 (specify your license key):
 
   ```shell
   d8 mirror pull \
@@ -1096,7 +1055,7 @@ You can check the current status of versions in the [release channels](../glossa
   --since-version=1.59 /home/user/d8-bundle
   ```
 
-  Example command to download the current DP SE versions (specify your license key):
+  Example command to download the current Deckhouse Platform SE versions (specify your license key):
 
   ```shell
   d8 mirror pull \
@@ -1105,7 +1064,7 @@ You can check the current status of versions in the [release channels](../glossa
   /home/user/d8-bundle
   ```
 
-  Example command to download DP images from an external registry:
+  Example command to download Deckhouse Platform images from an external registry:
 
   ```shell
   d8 mirror pull \
@@ -1208,14 +1167,14 @@ You can check the current status of versions in the [release channels](../glossa
 - `--exclude-module` / `-e` = `name`: Skip downloading a specific set of modules using a blacklist. Use multiple times to add more modules to the blacklist. Ignored if `--no-modules` or `--include-module` is used;
 - `--include-package` = `name[@version]`: Download only a specific set of packages using a whitelist. Versions and semver constraints use the same syntax as `--include-module`, including quoting rules.
 - `--exclude-package` = `name[@version]`: Skip downloading a specific set of packages using a blacklist. Ignored if `--include-package` is used.
-- `--modules-path-suffix`: Change the suffix of the path to the module repository in the main DP registry. The default suffix is `/modules` (for example, the full path to the module repo will be `registry.deckhouse.io/deckhouse/EDITION/modules`).
-- `--since-version=X.Y`: Download all DP versions starting from the specified [minor version](../glossary.html#minor-version). This option is ignored if the specified version is higher than the version on the Rock Solid release channel. Cannot be used with `--deckhouse-tag`.
-- `--deckhouse-tag`: Download only the specific DP version (regardless of release channels). Cannot be used with `--since-version`.
+- `--modules-path-suffix`: Change the suffix of the path to the module repository in the main Deckhouse Platform registry. The default suffix is `/modules` (for example, the full path to the module repo will be `registry.deckhouse.io/deckhouse/EDITION/modules`).
+- `--since-version=X.Y`: Download all Deckhouse Platform versions starting from the specified [minor version](../glossary.html#minor-version). This option is ignored if the specified version is higher than the version on the Rock Solid release channel. Cannot be used with `--deckhouse-tag`.
+- `--deckhouse-tag`: Download only the specific Deckhouse Platform version (regardless of release channels). Cannot be used with `--since-version`.
 - `--installer-tag=TAG`: Download a specific Deckhouse installer tag. Defaults to `latest` if omitted.
 - `--proxy-registry`: Pull from a proxy/cache registry that does not support the registry catalog API. Requires `--include-platform` unless the platform is skipped with `--no-platform`, and at least one `--include-module` unless modules are skipped with `--no-modules`. Cannot be used together with `--deckhouse-tag` or `--since-version`.
 - `--dry-run`: Print what would be pulled without downloading images.
 - `--verbose-summary`: Print a detailed summary for every module and package with resolved versions.
-- `--gost-digest`: Calculate the checksum of the final DP [image bundle](../glossary.html#mirror-image-bundle) using the GOST R 34.11-2012 (Streebog) algorithm. The checksum will be displayed and written to a `.tar.gostsum` file in the folder containing the image tarball.
+- `--gost-digest`: Calculate the checksum of the final Deckhouse Platform [image bundle](../glossary.html#mirror-image-bundle) using the GOST R 34.11-2012 (Streebog) algorithm. The checksum will be displayed and written to a `.tar.gostsum` file in the folder containing the image tarball.
 - `--source-login` and `--source-password`: Authentication data to access the external registry.
 - `--tls-skip-verify`: Disable TLS certificate validation.
 - `--insecure`: Interact with registries over HTTP.
@@ -1231,9 +1190,9 @@ Additional configuration parameters for the `d8 mirror` command family are avail
 - `MIRROR_BYPASS_ACCESS_CHECKS`: Set this variable to `1` to disable credential validation for the registry.
 {% endofftopic %}
 
-- On the host with access to the container registry where DP images should be uploaded, copy the downloaded DP image bundle and install the [Deckhouse CLI](../cli/d8/).
+- On the host with access to the container registry where Deckhouse Platform images should be uploaded, copy the downloaded Deckhouse Platform image bundle and install the [Deckhouse CLI](../cli/d8/).
 
-- Upload DP images to the registry using the `d8 mirror push` command.
+- Upload Deckhouse Platform images to the registry using the `d8 mirror push` command.
 
   The `d8 mirror push` command uploads images from all packages located in the specified directory.
   If you only want to push specific packages, you can either run the command separately for each TAR image bundle by specifying the direct path to it,
@@ -1248,27 +1207,27 @@ Additional configuration parameters for the `d8 mirror` command family are avail
 
   Before uploading the images, make sure that the target path in the container registry exists (in the example, `/sys/deckhouse`) and that the account used has write permissions.
 
-  If you're using Harbor, you won't be able to upload images to the root of a project. Use a dedicated repository within the project to store DP images.
+  If you're using Harbor, you won't be able to upload images to the root of a project. Use a dedicated repository within the project to store Deckhouse Platform images.
 
-- After uploading the images to the registry, you can proceed with installing DP. Use the [getting-started guide](/products/kubernetes-platform/gs/bm-private/step2.html).
+- After uploading the images to the registry, you can proceed with installing Deckhouse Platform. Use the [getting-started guide](/products/kubernetes-platform/gs/bm-private/step2.html).
 
-  When running the installer, use the address of your own image registry (where the images were uploaded earlier) instead of the official public DP container registry. For the example above, the installer image address will be `corp.company.com:5000/sys/deckhouse/install:stable` instead of `registry.deckhouse.io/deckhouse/ee/install:stable`.
+  When running the installer, use the address of your own image registry (where the images were uploaded earlier) instead of the official public Deckhouse Platform container registry. For the example above, the installer image address will be `corp.company.com:5000/sys/deckhouse/install:stable` instead of `registry.deckhouse.io/deckhouse/ee/install:stable`.
 
-  In the [`registry`](/modules/deckhouse/configuration.html#parameters-registry) section of ModuleConfig `deckhouse`, use your registry address and authorization data (starting with DP 1.75). The legacy method is to use [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) (parameters [`imagesRepo`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), [`registryDockerCfg`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg)).
+  In the [`registry`](/modules/deckhouse/configuration.html#parameters-registry) section of ModuleConfig `deckhouse`, use your registry address and authorization data (starting with Deckhouse Platform 1.75). The legacy method is to use [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) (parameters [`imagesRepo`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), [`registryDockerCfg`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg)).
 
-### Creating a cluster and running DP without using release channels
+### Creating a cluster and running Deckhouse Platform without using release channels
 
 {% alert level="warning" %}
 This method should only be used if your private (isolated) registry does not contain images with release channel metadata.
 {% endalert %}
 
-If you need to install DP with automatic updates disabled:
+If you need to install Deckhouse Platform with automatic updates disabled:
 
 1. Use the installer image tag corresponding to the desired version. For example, to install release `v1.44.3`, use the image `your.private.registry.com/deckhouse/install:v1.44.3`.
 1. Specify the appropriate version number in the [`deckhouse.devBranch`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-devbranch) parameter of [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration).  
    > **Do not specify** the [`deckhouse.releaseChannel`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy-v1alpha2-spec-releasechannel) parameter in [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration).
 
-If you want to disable automatic updates in an already running DP installation (including patch updates), remove the [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) parameter from the `deckhouse` module configuration.
+If you want to disable automatic updates in an already running Deckhouse Platform installation (including patch updates), remove the [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) parameter from the `deckhouse` module configuration.
 
 ### Using a proxy server
 
@@ -1310,7 +1269,7 @@ If you want to disable automatic updates in an already running DP installation (
 
 {% endofftopic %}
 
-To configure DP to work with a proxy server, use the [`proxy`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-proxy) parameter of the [ClusterConfiguration](../glossary.html#cluster-configuration) resource.
+To configure Deckhouse Platform to work with a proxy server, use the [`proxy`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-proxy) parameter of the [ClusterConfiguration](../glossary.html#cluster-configuration) resource.
 
 Example:
 
@@ -1335,7 +1294,7 @@ proxy:
 
 ### Automatic proxy variable loading for users in CLI
 
-Starting from version 1.67, the `/etc/profile.d/d8-system-proxy.sh` file is no longer configured in DP to set proxy variables for users.  
+Starting from version 1.67, the `/etc/profile.d/d8-system-proxy.sh` file is no longer configured in Deckhouse Platform to set proxy variables for users.  
 To automatically load proxy variables for users in CLI, use the [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource:
 
 ```yaml

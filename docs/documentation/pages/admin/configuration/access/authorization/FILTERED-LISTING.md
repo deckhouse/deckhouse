@@ -361,4 +361,4 @@ kube-apiserver exports the following metrics of the mechanism:
 | kube-apiserver (DP patch) | Bypasses `403 Forbidden` and provides filtering at the storage layer |
 | [`user-authz`](/modules/user-authz/) (`permission-browser`) | Defines the access boundary via `SelfScopedAccessReview` |
 | [`multitenancy-manager`](/modules/multitenancy-manager/) | Provides namespace classification based on the `projects.deckhouse.io/project` label |
-| [`user-authz`](/modules/user-authz/) (the `d8-user-authz-multitenancy-state` ConfigMap) | Tells kube-apiserver whether the `multitenancy-manager` module is enabled, in every edition |
+| [`user-authz`](/modules/user-authz/) (the `d8-user-authz-multitenancy-state` ConfigMap) | Tells kube-apiserver whether the `multitenancy-manager` module is enabled, in every [edition](../../../../glossary.html#edition) |

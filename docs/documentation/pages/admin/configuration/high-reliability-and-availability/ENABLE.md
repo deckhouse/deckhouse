@@ -55,7 +55,7 @@ and switch the **HA mode** toggle to **Yes**.
 
 Deckhouse Platform allows you to configure HA mode with two master nodes and an [arbiter node](../../../glossary.html#arbiter-node). This approach allows you to meet HA requirements in conditions of limited resources.
 
-Only etcd is placed on the arbiter node, without the other control plane components. This node is used to ensure the etcd quorum.
+Only etcd is placed on the arbiter node, without the other control plane components. This node is used to ensure the etcd [quorum](../../../glossary.html#quorum).
 
 Requirements for the arbiter node:
 

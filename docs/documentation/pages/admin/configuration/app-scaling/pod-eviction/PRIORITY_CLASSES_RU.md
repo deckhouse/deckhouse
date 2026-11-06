@@ -71,7 +71,7 @@ description: "Приоритет для критичных приложений"
 d8 k apply -f critical-applications.yaml
 ```
 
-Проверьте создание класса приоритета:
+Проверьте создание [класса приоритета](../../../../glossary.html#priority-class):
 
 ```shell
 d8 k get priorityclass critical-applications

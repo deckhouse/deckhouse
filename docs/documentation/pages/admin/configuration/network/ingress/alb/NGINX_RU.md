@@ -22,7 +22,7 @@ relatedLinks:
 {% alert level="info" %}
 В 2025 году Ingress NGINX был [переведён](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/) в режим сопровождения без планов активного развития новых возможностей. Дальнейшее развитие средств балансировки входящего трафика в Kubernetes ориентировано на [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/).
 
-На поддержку модуля в составе Deckhouse Platform (DP) это не распространяется: модуль сопровождается командой DP, включая обновления безопасности. Подробности — в разделе [«Поддержка и безопасность модуля»](#поддержка-и-безопасность-модуля).
+На поддержку модуля в составе Deckhouse Platform это не распространяется: модуль сопровождается командой Deckhouse Platform, включая обновления безопасности. Подробности — в разделе [«Поддержка и безопасность модуля»](#поддержка-и-безопасность-модуля).
 
 Пошаговый переход на Gateway API — в разделе [«Миграция с ingress-nginx на alb»](migration.html).
 {% endalert %}
@@ -263,7 +263,7 @@ spec:
 ### Пример для bare metal (MetalLB в режиме BGP LoadBalancer)
 
 {% alert level="info" %}
-Доступно только в DP Enterprise Edition, DP Ultimate и DP Certified Pro.
+Доступно только в Deckhouse Platform Enterprise Edition, Deckhouse Platform Ultimate и Deckhouse Platform Certified Pro.
 {% endalert %}
 
 IngressNginxController с инлетом [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer) для использования с MetalLB в режиме BGP:
@@ -313,7 +313,7 @@ spec:
 
 ### Пример для bare metal (балансировщик MetalLB в режиме L2 LoadBalancer)
 
-{% alert level="info" %}Доступно только в DP Enterprise Edition и DP Ultimate.{% endalert %}
+{% alert level="info" %}Доступно только в Deckhouse Platform Enterprise Edition и Deckhouse Platform Ultimate.{% endalert %}
 
 1. Включите [модуль `metallb`](/modules/metallb/):
 
@@ -330,7 +330,7 @@ spec:
 1. Создайте [ресурс MetalLoadBalancerClass](/modules/metallb/cr.html#metalloadbalancerclass):
 
    {% alert level="info" %}
-   MetalLB-балансировщики должны размещаться на тех же узлах, что и Ingress-контроллеры. В [типовых сценариях развёртывания](../../../../../guides/hardware-requirements.html#сценарии-развёртывания) для этой цели используются frontend-узлы.
+   MetalLB-балансировщики должны размещаться на тех же узлах, что и Ingress-контроллеры. В [кластере с разделением ролей узлов](../../../../../requirements/#варианты-размещения) для этой цели используются frontend-узлы.
 
   Чтобы разместить Ingress-контроллеры и MetalLB-балансировщики на frontend-узлах, укажите в `nodeSelector` лейбл `node-role.deckhouse.io/frontend: ""`.
    {% endalert %}
@@ -386,7 +386,7 @@ spec:
   Пример настройки приведён в [разделе «Создание Service с присвоением определённых IP-адресов из пула»](/modules/metallb/examples.html#создание-service-с-присвоением-определённых-ip-адресов-из-пула).
    {% endalert %}
 
-DP создаст Service с типом LoadBalancer, которому будет присвоено заданное количество адресов:
+Deckhouse Platform создаст Service с типом LoadBalancer, которому будет присвоено заданное количество адресов:
 
 ```shell
 d8 k -n d8-ingress-nginx get svc
@@ -565,6 +565,6 @@ spec:
 
 ## Поддержка и безопасность модуля
 
-Модуль `ingress-nginx` входит в сопровождение DP на весь срок поддержки платформы, вне зависимости от режима развития upstream-проекта. Команда DP отслеживает CVE в контроллере и зависимостях — NGINX, Lua-модули, базовые образы — и поставляет исправления в релизах платформы.
+Модуль `ingress-nginx` входит в сопровождение Deckhouse Platform на весь срок поддержки платформы, вне зависимости от режима развития upstream-проекта. Команда Deckhouse Platform отслеживает CVE в контроллере и зависимостях — NGINX, Lua-модули, базовые образы — и поставляет исправления в релизах платформы.
 
-Для соответствия ожиданиям PCI DSS по вендорской поддержке и срокам устранения уязвимостей ответственным вендором модуля является компания «Флант». Сертификация DP в ФСТЭК России фиксирует, в том числе, процессы управления уязвимостями и выпуск обновлений безопасности.
+Для соответствия ожиданиям PCI DSS по вендорской поддержке и срокам устранения уязвимостей ответственным вендором модуля является компания «Флант». Сертификация Deckhouse Platform в ФСТЭК России фиксирует, в том числе, процессы управления уязвимостями и выпуск обновлений безопасности.

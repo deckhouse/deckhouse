@@ -43,7 +43,7 @@ Transitioning from 2 to 1 master node requires manual etcd adjustment. All other
 ### Common scaling scenarios
 
 {% alert level="warning" %}
-For cluster stability, it is necessary to maintain an odd number of nodes with etcd to ensure quorum.
+For cluster stability, it is necessary to maintain an odd number of nodes with etcd to ensure [quorum](../../../../glossary.html#quorum).
 {% endalert %}
 
 DP supports both automatic and manual scaling of master nodes in cloud and bare-metal clusters:
@@ -378,7 +378,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
 ## Adding master nodes to a static or hybrid cluster
 
-> It is important to have an odd number of masters to ensure a quorum.
+> It is important to have an odd number of masters to ensure a [quorum](../../../../glossary.html#quorum).
 
 {% alert level="warning" %}
 If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before changing [master nodes](../../../../glossary.html#master-node). Create a [backup of the module's data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.

@@ -44,33 +44,20 @@ If your application uses outdated versions of resources or depends on a particul
 ## Resource requirements
 
 {% alert %}
-Use at least 4 CPUs / 8 GB RAM for [infrastructure nodes](../glossary.html#infrastructure-node) (2 CPUs / 4 GB RAM for [frontend nodes](../glossary.html#frontend-node)). For master and [monitoring nodes](../glossary.html#monitoring-node), fast disks are recommended.
+For production, use a cluster with three master nodes or a cluster with role separation. Choose node resources according to the [resource requirements](../requirements/#resource-requirements) for the selected deployment option and workload type.
 {% endalert %}
 
-The following resource minimums are recommended for infrastructure nodes, depending on their role in the cluster:
+The resource requirements for each [deployment option](../requirements/#deployment-options) are listed on the "System requirements" page. The values in the tables cover only the load of Deckhouse Platform components.
 
-- **[Master node](../glossary.html#master-node)** — 8 CPU, 16GB RAM, 60 GB of disk space for the cluster and etcd data on a fast disk (400+ IOPS);
-- **Frontend node** — 2 CPU, 4GB RAM, 50 GB of disk space;
-- **Monitoring node** (for high-load clusters) — 6 CPU, 12GB RAM, <a href="#storage">50 / 150*</a> GB of disk space on a fast disk (400+ IOPS).
-- **[System node](../glossary.html#system-node)**:
-  - 4 CPU, 8 GB RAM, <a href="#storage">50 / 150*</a> GB of disk space — if there are dedicated monitoring nodes in the cluster;
-  - 8 CPU, 16 GB RAM, <a href="#storage">60 / 160*</a> GB of disk space on a fast disk (400+ IOPS) — if there are no dedicated monitoring nodes in the cluster.
-- **[Worker node](../glossary.html#worker-node)** — the requirements are similar to those for the master node, but largely depend on the nature of the load running on the node (nodes).
+When preparing a production cluster, consider the following:
 
-Additional recommendations:<span id="storage"></span>
+- Do not use a [single-node cluster](../glossary.html#single-node-cluster) or a [single-master cluster](../glossary.html#single-master): they are not fault-tolerant.
+- For [master nodes](../glossary.html#master-node) and [monitoring nodes](../glossary.html#monitoring-node), use fast disks with performance of at least 400 IOPS.
+- Set up a dedicated [StorageClass](../reference/api/global.html#parameters-modules-storageclass) on fast disks for Deckhouse Platform components.
+- Add resources for the user workload to the resources of [worker nodes](../glossary.html#worker-node).
+- Run load tests of your applications and adjust node resources based on the results.
 
-- If system PVCs (of the `prometheus`, `upmeter` modules and others) are stored on the node's local disk, additionally allocate at least 100 GB of free space. The second value of the disk space for monitoring and system nodes above (for example, 150 in "50 / 150") includes these 100 GB.
-- For system services (kubelet) and system pods on each worker node, reserve at least 1 CPU and 2 GB of RAM.
-- For all nodes, use fast disks with performance of at least 400 IOPS.
-
-Estimates of the resources required for the clusters to run:
-
-- **Regular cluster**: 3 master nodes, 2 frontend nodes, 2 system nodes. Such a configuration requires **at least 44 CPUs and 88 GB RAM** along with fast 400+ IOPS disks for the master nodes.
-- **High-load cluster** (with dedicated monitoring nodes): 3 master nodes, 2 frontend nodes, 2 system nodes, 2 monitoring nodes. Such a configuration requires **at least 48 CPUs and 96 GB RAM** along with fast 400+ IOPS disks for the master and monitoring nodes.
-- Set up a dedicated [storageClass](../reference/api/global.html#parameters-modules-storageclass) on the fast disks for platform components.
-- Add worker nodes to this, taking into account the nature of the workloads.
-
-Also read [the instructions](hardware-requirements.html) on the hardware requirements for cluster resources, which describes in detail how to select the necessary resources depending on the expected load.
+For details on choosing resources depending on the load, see the [Picking resources for a bare metal cluster](hardware-requirements.html) guide.
 
 ## Things to consider when configuring
 
@@ -80,7 +67,7 @@ Also read [the instructions](hardware-requirements.html) on the hardware require
 Three master nodes with fast 400+ IOPS disks are highly recommended for a cluster.
 {% endalert %}
 
-Use three master nodes in all cases, as they are sufficient for fault tolerance. Also, with three nodes, you can safely update the cluster's control plane as well as the master nodes. Extra master nodes are not needed, while 2 nodes (or any even number) do not make a quorum.
+Use three master nodes in all cases, as they are sufficient for fault tolerance. Also, with three nodes, you can safely update the cluster's control plane as well as the master nodes. Extra master nodes are not needed, while 2 nodes (or any even number) do not make a [quorum](../glossary.html#quorum).
 
 The master node configuration for [cloud clusters](../glossary.html#cloud-cluster) can be configured using the [masterNodeGroup](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-masternodegroup) parameter.
 

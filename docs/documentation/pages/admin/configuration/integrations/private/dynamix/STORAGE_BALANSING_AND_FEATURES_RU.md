@@ -8,7 +8,7 @@ lang: ru
 
 Размещение дисков виртуальных машин в Basis Dynamix определяет политика хранения (storage policy). Она задаёт набор доступных аккаунту пар из storage endpoint и пула, а также лимит IOPS. Конкретное размещение диска внутри политики выбирает Basis Dynamix.
 
-Политику хранения для дисков всех виртуальных машин кластера задаёт параметр [`storagePolicy`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-storagepolicy) в корне DynamixClusterConfiguration. Чтобы группа узлов использовала другую политику хранения, укажите `storagePolicy` в её `instanceClass`, в том числе в `masterNodeGroup.instanceClass`, или в [DynamixInstanceClass](/modules/cloud-provider-dynamix/cr.html#dynamixinstanceclass-v1-spec-storagepolicy). Размер корневого диска каждой виртуальной машины в гигабайтах задаёт параметр [`rootDiskSizeGb`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-masternodegroup-instanceclass-rootdisksizegb).
+Политику хранения для дисков всех виртуальных машин кластера задаёт параметр [`storagePolicy`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-storagepolicy) в корне DynamixClusterConfiguration. Чтобы [группа узлов](../../../../glossary.html#node-group) использовала другую политику хранения, укажите `storagePolicy` в её `instanceClass`, в том числе в `masterNodeGroup.instanceClass`, или в [DynamixInstanceClass](/modules/cloud-provider-dynamix/cr.html#dynamixinstanceclass-v1-spec-storagepolicy). Размер корневого диска каждой виртуальной машины в гигабайтах задаёт параметр [`rootDiskSizeGb`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-masternodegroup-instanceclass-rootdisksizegb).
 
 Пример настройки:
 
@@ -31,13 +31,13 @@ masterNodeGroup:
 - при смене `storagePolicy` в DynamixInstanceClass — узлы групп, которые используют этот DynamixInstanceClass;
 - при смене `storagePolicy` в корне DynamixClusterConfiguration — узлы всех групп, в том числе групп с собственной политикой хранения.
 
-Master-узлы и узлы групп из `nodeGroups` модуль не пересоздаёт. Новая политика хранения применяется к такому узлу только при его повторном создании.
+[Master-узлы](../../../../glossary.html#master-node) и узлы групп из `nodeGroups` модуль не пересоздаёт. Новая политика хранения применяется к такому узлу только при его повторном создании.
 
 ## Балансировка нагрузки
 
 Платформа Basis Dynamix не предоставляет встроенного балансировщика нагрузки. Для организации входящего трафика в кластер Deckhouse Platform рекомендуются следующие подходы:
 
-1. Внешний балансировщик. Если в вашей инфраструктуре есть внешний балансировщик (аппаратный или программный), настройте проброс портов 80 и 443 на frontend-узлы кластера.
+1. Внешний балансировщик. Если в вашей инфраструктуре есть внешний балансировщик (аппаратный или программный), настройте проброс портов 80 и 443 на [frontend-узлы](../../../../glossary.html#frontend-node) кластера.
 
 1. Использование MetalLB. Для обеспечения отказоустойчивой балансировки можно использовать MetalLB в L2-режиме.
 

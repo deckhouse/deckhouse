@@ -5,9 +5,9 @@ permalink: en/admin/integrations/private/dynamix/storage.html
 
 ## Storage
 
-Virtual machine disk placement in Basis Dynamix is defined by a storage policy. It sets the storage endpoint and pool pairs available to the account, as well as an IOPS limit. Basis Dynamix chooses the exact placement of a disk within the policy.
+[Virtual machine disk](../../../../glossary.html#vm-disk) placement in Basis Dynamix is defined by a storage policy. It sets the storage endpoint and pool pairs available to the account, as well as an IOPS limit. Basis Dynamix chooses the exact placement of a disk within the policy.
 
-The [`storagePolicy`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-storagepolicy) parameter at the root of DynamixClusterConfiguration sets the storage policy for the disks of all virtual machines in the cluster. To use a different storage policy for a node group, set `storagePolicy` in its `instanceClass`, including `masterNodeGroup.instanceClass`, or in a [DynamixInstanceClass](/modules/cloud-provider-dynamix/cr.html#dynamixinstanceclass-v1-spec-storagepolicy). The [`rootDiskSizeGb`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-masternodegroup-instanceclass-rootdisksizegb) parameter sets the root disk size of each virtual machine in gigabytes.
+The [`storagePolicy`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-storagepolicy) parameter at the root of DynamixClusterConfiguration sets the storage policy for the disks of all virtual machines in the cluster. To use a different storage policy for a [node group](../../../../glossary.html#node-group), set `storagePolicy` in its `instanceClass`, including `masterNodeGroup.instanceClass`, or in a [DynamixInstanceClass](/modules/cloud-provider-dynamix/cr.html#dynamixinstanceclass-v1-spec-storagepolicy). The [`rootDiskSizeGb`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-masternodegroup-instanceclass-rootdisksizegb) parameter sets the root disk size of each virtual machine in gigabytes.
 
 Example configuration:
 
@@ -30,13 +30,13 @@ The storage policy of a disk is set when the virtual machine is created and does
 - When `storagePolicy` changes in a DynamixInstanceClass: The nodes of the groups that use this DynamixInstanceClass.
 - When `storagePolicy` changes at the root of DynamixClusterConfiguration: The nodes of all groups, including groups with their own storage policy.
 
-The module doesn't recreate master nodes and the nodes of the `nodeGroups` groups. A new storage policy applies to such a node only when the node is created again.
+The module doesn't recreate [master nodes](../../../../glossary.html#master-node) and the nodes of the `nodeGroups` groups. A new storage policy applies to such a node only when the node is created again.
 
 ## Load balancing
 
 The Basis Dynamix platform doesn't provide a built-in load balancer. To handle inbound traffic to a Deckhouse Platform cluster, the following approaches are recommended:
 
-1. An external load balancer. If your infrastructure has an external load balancer (hardware or software), configure it to forward ports 80 and 443 to the cluster's frontend nodes.
+1. An external load balancer. If your infrastructure has an external load balancer (hardware or software), configure it to forward ports 80 and 443 to the cluster's [frontend nodes](../../../../glossary.html#frontend-node).
 
 1. Using MetalLB. You can use MetalLB in L2 mode to provide fault-tolerant load balancing.
 

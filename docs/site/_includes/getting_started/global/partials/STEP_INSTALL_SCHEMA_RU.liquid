@@ -146,6 +146,9 @@
 {%- elsif page.platform_type == 'baremetal' %}
    <p><strong>Физический сервер или виртуальная машина для master-узла.</strong></p>
    {% offtopic title="Требования..." %}
+   {% alert level="warning" %}
+   Если вы планируете установку одноузлового кластера, в котором один узел выполняет все роли (выбор этого варианта будет доступен на шаге «Установка»), для выбора ресурсов для кластера воспользуйтесь строкой «Одноузловой кластер» в таблицах раздела [«Требования к ресурсам»](/products/kubernetes-platform/documentation/v1/requirements/#требования-к-ресурсам).
+   {% endalert %}
    {% alert level="info" %}
    Deckhouse Platform имеет механизм контроля целостности модулей, который защищает их от подмены и изменения. Этот механизм включается автоматически при поддержке операционной системой на узлах, где установлен Deckhouse Platform, модуля ядра `erofs`. При отсутствии этого модуля ядра Deckhouse Platform продолжит работу без механизма контроля целостности модулей, при этом появится алерт о неработоспособности этой функциональности.
    {% endalert %}
@@ -196,6 +199,6 @@
 {% if page.platform_type == "baremetal" or page.platform_type == "baremetal" or page.platform_type == "cloud" %}
 {% alert level="warning" %}
 В рекомендациях выше приведены минимальные {% if page.platform_type == "cloud" %}суммарные{% endif %} ресурсы, необходимые для начального развёртывания кластера с одним master-узлом и одним worker-узлом.
-Такой конфигурации достаточно для ознакомительных целей, но для production-окружений она не подходит. Ознакомьтесь с [рекомендациями по подготовке к production](/products/kubernetes-platform/documentation/v1/guides/production.html), [рекомендациями по разметке и объёму дисков](/products/kubernetes-platform/documentation/v1/guides/fs-requirements.html) и [инструкцией по выбору типов и количества узлов кластера](/products/kubernetes-platform/documentation/v1/guides/hardware-requirements.html), а также ресурсов для них, в зависимости от ваших требований к эксплуатации будущего кластера.
+Такой конфигурации достаточно для ознакомительных целей, но для production-окружений она не подходит. Ознакомьтесь с [рекомендациями по подготовке к production](/products/kubernetes-platform/documentation/v1/guides/production.html), [рекомендациями по разметке и объёму дисков](/products/kubernetes-platform/documentation/v1/guides/fs-requirements.html) и [системными требованиями](/products/kubernetes-platform/documentation/v1/requirements/), где описаны варианты размещения, типы узлов и ресурсы для них в зависимости от ваших требований к эксплуатации будущего кластера.
 {% endalert %}
 {%- endif %}

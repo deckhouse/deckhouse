@@ -11,7 +11,7 @@ Deckhouse Platform integrates with the Basis Dynamix cloud platform and uses [Dy
 - Configuring virtual machine parameters, including the number of CPUs, memory size, and root disk size
 - Specifying the OS template (image name) and the storage policy used for disk placement
 - Connecting to external networks
-- Using multiple node groups with individual parameters
+- Using multiple [node groups](../../../../glossary.html#node-group) with individual parameters
 
 Example DynamixInstanceClass:
 
