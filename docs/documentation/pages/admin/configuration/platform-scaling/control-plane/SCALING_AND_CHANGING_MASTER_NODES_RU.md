@@ -13,7 +13,7 @@ Deckhouse Platform (DP) поддерживает два режима работ�
 1. **Single-master**:
    - `kube-apiserver` использует только локальный экземпляр etcd;
    - на узле запускается прокси-сервер, который принимает запросы на `localhost`;
-   - `kube-apiserver` "слушает" только на IP-адресе master-узла.
+   - `kube-apiserver` "слушает" только на IP-адресе [master-узла](../../../../glossary.html#master-node).
 
 1. **Multi-master**:
    - `kube-apiserver` работает со всеми экземплярами etcd в кластере;
@@ -66,18 +66,18 @@ Deckhouse Platform (DP) поддерживает автоматическое и
        - выполните команду `d8 k delete node <имя-узла>`;
        - выключите соответствующие виртуальные машины или серверы.
 
-   > **Важно**. В облачных кластерах все необходимые действия автоматически выполняются с помощью команды `dhctl converge`.
+   > **Важно**. В [облачных кластерах](../../../../glossary.html#cloud-cluster) все необходимые действия автоматически выполняются с помощью команды `dhctl converge`.
 1. **Изменение числа master-узлов в облачном кластере**:
 
    - Аналогично добавлению/удалению узлов, но чаще всего выполняется с помощью команды `dhctl converge` или вручную через облачные инструменты.
 
-1. **Миграция multi-master (3 master-узла) → 2 master-узла и 1 arbiter-узел в облачном кластере**:
+1. **Миграция multi-master (3 master-узла) → 2 master-узла и 1 [arbiter-узел](../../../../glossary.html#arbiter-node) в облачном кластере**:
 
-   - В настройках облачного провайдера для параметра `masterNodeGroup.replicas` укажите `2` и создайте NodeGroup для arbiter-узла. Аналогично добавлению/удалению узлов, но чаще всего выполняется с помощью команды `dhctl converge` или вручную через облачные инструменты.
+   - В настройках [облачного провайдера](../../../../glossary.html#cloud-provider) для параметра `masterNodeGroup.replicas` укажите `2` и создайте NodeGroup для arbiter-узла. Аналогично добавлению/удалению узлов, но чаще всего выполняется с помощью команды `dhctl converge` или вручную через облачные инструменты.
 
-     Подробнее о настройке режима HA c двумя master-узлами и arbiter-узлом в облачном кластере можно почитать в разделе [Управление режимом HA](../../high-reliability-and-availability/enable.html#настройка-в-облачном-кластере).
+     Подробнее о настройке [режима HA](../../../../glossary.html#ha-mode) c двумя master-узлами и arbiter-узлом в облачном кластере можно почитать в разделе [Управление режимом HA](../../high-reliability-and-availability/enable.html#настройка-в-облачном-кластере).
 
-1. **Миграция multi-master (3 master-узла) → 2 master-узла и 1 arbiter-узел в статическом кластере**:
+1. **Миграция multi-master (3 master-узла) → 2 master-узла и 1 arbiter-узел в [статическом кластере](../../../../glossary.html#static-cluster)**:
 
    - создайте NodeGroup для arbiter-узла и добавьте узел в кластер;
    - снимите лейблы `node-role.kubernetes.io/control-plane=""`, `node-role.kubernetes.io/master=""` и `node.deckhouse.io/group-""` с лишнего master-узла;
@@ -138,7 +138,7 @@ Deckhouse Platform (DP) поддерживает автоматическое и
 
 #### В облачном кластере
 
-Чтобы изменить образ ОС master-узлов в облачном мультимастерном кластере, выполните следующие шаги:
+Чтобы изменить образ ОС master-узлов в облачном [мультимастерном кластере](../../../../glossary.html#multi-master), выполните следующие шаги:
 
 {% alert level="warning" %}
 Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед изменением master-узлов убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом изменений настоятельно рекомендуется создать [резервную копию данных модуля](/products/stronghold/documentation/admin/backups/overview/).
@@ -163,7 +163,7 @@ Deckhouse Platform (DP) поддерживает автоматическое и
 
    > При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Platform.
 
-1. **На локальной машине** запустите контейнер установщика DP соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
+1. **На локальной машине** запустите контейнер [установщика](../../../../glossary.html#installer) DP соответствующей [редакции](../../../../glossary.html#edition) и версии (измените адрес хранилища образов при необходимости):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
@@ -240,7 +240,7 @@ Deckhouse Platform (DP) поддерживает автоматическое и
 Инструкция ниже описывает замену ОС на master-узлах, которые добавлены в кластер **вручную** с помощью скрипта `bootstrap.sh`. Выполняйте шаги поочерёдно для каждого master-узла и переходите к следующему только после того, как текущий узел вернулся в кластер и стал работоспособен.
 
 {% alert level="warning" %}
-Если master-узлы управляются Cluster API Provider Static (CAPS) через ресурсы StaticInstance, не используйте эту инструкцию. Сначала [удалите StaticInstance](../node/bare-metal-node.html#удаление-staticinstance), установите требуемую ОС и снова [добавьте узел](#добавление-master-узлов-в-статический-или-гибридный-кластер) в NodeGroup `master`.
+Если master-узлы управляются [Cluster API Provider Static](../../../../glossary.html#caps) (CAPS) через ресурсы StaticInstance, не используйте эту инструкцию. Сначала [удалите StaticInstance](../node/bare-metal-node.html#удаление-staticinstance), установите требуемую ОС и снова [добавьте узел](#добавление-master-узлов-в-статический-или-гибридный-кластер) в NodeGroup `master`.
 {% endalert %}
 
 {% alert level="warning" %}
@@ -366,7 +366,7 @@ Deckhouse Platform (DP) поддерживает автоматическое и
 
 #### В облачном кластере
 
-1. Преобразуйте кластер с одним master-узлом в мультимастерный в соответствии с [инструкцией](#добавление-master-узлов-в-облачном-кластере).
+1. Преобразуйте [кластер с одним master-узлом](../../../../glossary.html#single-master) в мультимастерный в соответствии с [инструкцией](#добавление-master-узлов-в-облачном-кластере).
 1. Измените ОС на master-узлах в соответствии с [инструкцией](#в-облачном-кластере).
 1. Преобразуйте мультимастерный кластер в кластер с одним master-узлом в соответствии с [инструкцией](#уменьшение-числа-master-узлов-в-облачном-кластере).
 
@@ -378,13 +378,13 @@ Deckhouse Platform (DP) поддерживает автоматическое и
 
 ## Добавление master-узлов в статический или гибридный кластер
 
-> Важно иметь нечетное количество master-узлов для обеспечения кворума.
+> Важно иметь нечетное количество [master-узлов](../../../../glossary.html#master-node) для обеспечения кворума.
 
 {% alert level="warning" %}
 Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед изменением master-узлов убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом изменений настоятельно рекомендуется создать [резервную копию данных модуля](/products/stronghold/documentation/admin/backups/overview/).
 {% endalert %}
 
-В процессе установки Deckhouse Platform с настройками по умолчанию в NodeGroup `master` отсутствует секция [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра лейблов по ресурсам `staticInstances`. Из-за этого после изменения количества узлов `staticInstances` в NodeGroup `master` (параметр [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)) при добавлении обычного узла с помощью Cluster API Provider Static (CAPS) он может быть «перехвачен» и добавлен в NodeGroup `master`, даже если в соответствующем ему `StaticInstance` (в `metadata`) указан лейбл с `role`, отличающейся от `master`.
+В процессе установки Deckhouse Platform с настройками по умолчанию в NodeGroup `master` отсутствует секция [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра лейблов по ресурсам `staticInstances`. Из-за этого после изменения количества узлов `staticInstances` в NodeGroup `master` (параметр [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)) при добавлении обычного узла с помощью [Cluster API Provider Static](../../../../glossary.html#caps) (CAPS) он может быть «перехвачен» и добавлен в NodeGroup `master`, даже если в соответствующем ему `StaticInstance` (в `metadata`) указан лейбл с `role`, отличающейся от `master`.
 Чтобы избежать этого «перехвата», после установки DP измените NodeGroup `master` — добавьте в нее секцию [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра лейблов по ресурсам `staticInstances`. Пример NodeGroup `master` с `spec.staticInstances.labelSelector`:
 
 ```yaml
@@ -428,12 +428,12 @@ spec:
 Например, если нужно сделать мультимастер с тремя master-узлами в `spec.staticInstances.count` NodeGroup `master` укажите значение `2` и создайте два `staticInstances` для добавляемых узлов. После их добавления в кластер количество master-узлов будет равно трём: master-узел, на который происходила установка и два master-узла, добавленные с помощью CAPS.
 {% endalert %}
 
-В остальном добавление master-узла в статический или гибридный кластер аналогично добавлению обычного узла.
+В остальном добавление master-узла в статический или [гибридный кластер](../../../../glossary.html#hybrid-cluster) аналогично добавлению обычного узла.
 Воспользуйтесь для этого соответствующими [примерами](../node/bare-metal-node.html#добавление-узлов-в-bare-metal-кластере). Все необходимые действия по настройке компонентов control plane кластера на новом узле будут выполнены автоматически, дождитесь их завершения — появления master-узлов в статусе `Ready`.
 
 ## Добавление master-узлов в облачном кластере
 
-Далее описана конвертация кластера с одним master-узлом в мультимастерный кластер.
+Далее описана конвертация [кластера с одним master-узлом](../../../../glossary.html#single-master) в [мультимастерный кластер](../../../../glossary.html#multi-master).
 
 {% alert level="warning" %}
 Перед добавлением узлов убедитесь в наличии необходимых квот.
@@ -441,7 +441,7 @@ spec:
 {% endalert %}
 
 {% alert level="warning" %}
-Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед добавлением или удалением master-узла убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом любых изменений настоятельно рекомендуется создать [резервную копию данных модуля](/products/stronghold/documentation/admin/backups/overview/).  
+Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед добавлением или удалением [master-узла](../../../../glossary.html#master-node) убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом любых изменений настоятельно рекомендуется создать [резервную копию данных модуля](/products/stronghold/documentation/admin/backups/overview/).  
 {% endalert %}
 
 1. Сделайте [резервную копию etcd](../../backup/backup-and-restore.html#резервное-копирование-etcd) и директории `/etc/kubernetes`.
@@ -463,7 +463,7 @@ spec:
 
    > При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Platform.
 
-1. **На локальной машине** запустите контейнер установщика DP соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
+1. **На локальной машине** запустите контейнер [установщика](../../../../glossary.html#installer) DP соответствующей [редакции](../../../../glossary.html#edition) и версии (измените адрес хранилища образов при необходимости):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
@@ -512,10 +512,10 @@ spec:
 
 ## Уменьшение числа master-узлов в облачном кластере
 
-Далее описана конвертация мультимастерного кластера в кластер с одним master-узлом.
+Далее описана конвертация [мультимастерного кластера](../../../../glossary.html#multi-master) в [кластер с одним master-узлом](../../../../glossary.html#single-master).
 
 {% alert level="warning" %}
-Описанные ниже шаги необходимо выполнять с первого по порядку master-узла кластера (`master-0`). Это связано с тем, что кластер всегда масштабируется по порядку: например, невозможно удалить узлы `master-0` и `master-1`, оставив `master-2`.
+Описанные ниже шаги необходимо выполнять с первого по порядку [master-узла](../../../../glossary.html#master-node) кластера (`master-0`). Это связано с тем, что кластер всегда масштабируется по порядку: например, невозможно удалить узлы `master-0` и `master-1`, оставив `master-2`.
 {% endalert %}
 
 {% alert level="warning" %}
@@ -541,7 +541,7 @@ spec:
 
    > При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Platform.
 
-1. **На локальной машине** запустите контейнер установщика DP соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
+1. **На локальной машине** запустите контейнер [установщика](../../../../glossary.html#installer) DP соответствующей [редакции](../../../../glossary.html#edition) и версии (измените адрес хранилища образов при необходимости):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
@@ -572,7 +572,7 @@ spec:
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-   > Для **OpenStack** и **VK Cloud (OpenStack)** после подтверждения удаления узла обязательно проверьте удаление диска `<prefix>kubernetes-data-N` в самом Openstack.
+   > Для **OpenStack** и **VK Cloud (OpenStack)** после [подтверждения удаления](../../../../glossary.html#deletion-confirmation) узла обязательно проверьте удаление диска `<prefix>kubernetes-data-N` в самом Openstack.
    >
    > Например, при удалении узла `cloud-demo-master-2` в веб-интерфейсе Openstack или в OpenStack CLI необходимо проверить отсутствие диска `cloud-demo-kubernetes-data-2`.
    >
@@ -586,7 +586,7 @@ spec:
 
 ### Доступ к контроллеру DP в мультимастерном кластере
 
-В кластерах с несколькими master-узлами DP запускается в режиме высокой доступности (в нескольких экземплярах). Для доступа к активному контроллеру DP можно использовать следующую команду (на примере команды `deckhouse-controller queue list`):
+В кластерах с несколькими master-узлами DP запускается в [режиме высокой доступности](../../../../glossary.html#ha-mode) (в нескольких экземплярах). Для доступа к активному контроллеру DP можно использовать следующую команду (на примере команды `deckhouse-controller queue list`):
 
 ```shell
 d8 system queue list

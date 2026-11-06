@@ -6,7 +6,7 @@ lang: ru
 search: marketplace, application, пакеты приложений, установка приложения, управление приложениями
 ---
 
-В этом разделе описано, как использовать Marketplace в Deckhouse Platform (DP).
+В этом разделе описано, как использовать [Marketplace](../../glossary.html#marketplace) в Deckhouse Platform (DP).
 
 Marketplace позволяет устанавливать готовые приложения в свой неймспейс из хранилищ образов, подключённых администратором кластера. Каждое приложение устанавливается в виде ресурса [Application](../../reference/api/cr.html#application) и может существовать в нескольких независимых экземплярах, например, отдельные экземпляры Redis для кеширования и для сессий в одном неймспейсе.
 
@@ -16,7 +16,7 @@ Marketplace и ресурс Application доступны начиная с DP в
 
 ## Предварительные условия
 
-Перед установкой приложения администратор кластера должен подключить хотя бы одно хранилище образов с пакетами. Проверьте, что объекты [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion) доступны:
+Перед установкой приложения администратор кластера должен подключить хотя бы одно хранилище образов с [пакетами](../../glossary.html#marketplace-package). Проверьте, что объекты [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion) доступны:
 
 ```bash
 d8 k get apv

@@ -14,7 +14,7 @@ To ensure proper operation of Deckhouse Platform with the zVirt cloud, the follo
 - A prepared virtual machine template based on the cloud image.
 
 {% alert level="info" %}
-The zVirt cloud provider is in experimental status.
+The zVirt [cloud provider](../../../../glossary.html#cloud-provider) is in experimental status.
 API and behavior may change in future versions.
 {% endalert %}
 

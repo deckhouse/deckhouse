@@ -4,7 +4,7 @@ permalink: en/admin/configuration/access/authentication/k8s-api-lb.html
 description: "Configure authenticated access to Kubernetes API through load balancer in Deckhouse Platform. Secure kubectl access via Ingress controller with authentication."
 ---
 
-DP allows using authentication when accessing the Kubernetes API. In this case, a user can generate a `kubectl` configuration via the DP kubeconfig web interface to securely access the Kubernetes API through a traffic balancer (Ingress controller).
+DP allows using authentication when accessing the Kubernetes API. In this case, a user can generate a `kubectl` configuration via the DP kubeconfig web interface to securely access the Kubernetes API through a traffic balancer ([Ingress controller](../../../../glossary.html#ingress-controller)).
 
 To configure access, follow these steps:
 
@@ -68,7 +68,7 @@ To configure:
 1. Enable API publishing as shown in the example above.
 1. Configure access restrictions. In the [`control-plane-manager` module configuration](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress), you can specify:
    - A list of IP addresses or networks allowed to access ([`apiserver.publishAPI.ingress.whitelistSourceRanges`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-whitelistsourceranges)).
-   - The Ingress controller to be used for publishing ([`apiserver.publishAPI.ingress.ingressClass`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-ingressclass)).
+   - The [Ingress controller](../../../../glossary.html#ingress-controller) to be used for publishing ([`apiserver.publishAPI.ingress.ingressClass`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-ingressclass)).
 1. Use the kubeconfig web interface.  
    Users will be able to securely access the API using the kubeconfig generated via the web interface (`https://kubeconfig.<publicDomainTemplate>`).  
    This kubeconfig will include the OIDC token and the Ingress connection settings.

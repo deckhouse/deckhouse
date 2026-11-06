@@ -6,7 +6,7 @@ lang: ru
 search: PackageRepositoryOperation, scanning, scan operation, сканирование, операция сканирования, репозиторий пакетов
 ---
 
-Deckhouse Platform (DP) сканирует репозитории пакетов с помощью объектов [PackageRepositoryOperation](../../../reference/api/cr.html#packagerepositoryoperation). Каждая операция сканирования обнаруживает новые версии пакетов и создаёт для них объекты [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion). DP создаёт операции автоматически, также их можно создавать вручную.
+Deckhouse Platform (DP) сканирует репозитории [пакетов](../../../glossary.html#marketplace-package) с помощью объектов [PackageRepositoryOperation](../../../reference/api/cr.html#packagerepositoryoperation). Каждая операция сканирования обнаруживает новые версии пакетов и создаёт для них объекты [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion). DP создаёт операции автоматически, также их можно создавать вручную.
 
 ## Просмотр операций сканирования
 
@@ -106,9 +106,9 @@ d8 system package scan <REPOSITORY_NAME>
 
 | Значение | Поведение |
 |---|---|
-| `true` | Получает все semver-теги каждого пакета и создаёт версии, которых нет в кластере. Уже существующие версии повторно не читаются |
+| `true` | Получает все semver-теги каждого [пакета](../../../glossary.html#marketplace-package) и создаёт версии, которых нет в кластере. Уже существующие версии повторно не читаются |
 | `false` (по умолчанию) | Обрабатывает только теги с версией выше последней версии пакета, уже обработанной в кластере |
 
 Автоматическая операция выполняет полное сканирование, если у репозитория ещё нет операций, и инкрементальное — в остальных случаях.
 
-Используйте `fullScan: true`, если версия была опубликована после более высокой, например, патч для более старой минорной версии, или если в объектах [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) отсутствуют версии, которые есть в хранилище образов.
+Используйте `fullScan: true`, если версия была опубликована после более высокой, например, патч для более старой [минорной версии](../../../glossary.html#minor-version), или если в объектах [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) отсутствуют версии, которые есть в хранилище образов.

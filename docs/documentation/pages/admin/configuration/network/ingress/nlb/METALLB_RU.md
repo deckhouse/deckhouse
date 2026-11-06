@@ -37,7 +37,7 @@ lang: ru
 
 Модуль `metallb` устраняет эти ограничения. Он предоставляет [ресурс MetalLoadBalancerClass](/modules/metallb/cr.html#metalloadbalancerclass), который позволяет:
 
-- связать группу узлов с пулом IP-адресов с помощью `nodeSelector`;
+- связать [группу узлов](../../../../../glossary.html#node-group) с пулом IP-адресов с помощью `nodeSelector`;
 - создать стандартный объект Service с типом LoadBalancer и указать имя нужного MetalLoadBalancerClass;
 - через аннотацию определить количество IP-адресов для L2-анонсирования.
 

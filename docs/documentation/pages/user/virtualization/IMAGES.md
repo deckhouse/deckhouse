@@ -5,7 +5,7 @@ description: "Virtual machine images in a project: sources and storage options, 
 search: VM images, VirtualImage, creating an image, image upload
 ---
 
-An image holds the contents of a disk that you use to create virtual machine disks. A [VirtualImage](/modules/virtualization/cr.html#virtualimage) is created in a project and available only in the project or namespace where it was created.
+An image holds the contents of a disk that you use to create [virtual machine disks](../../glossary.html#vm-disk). A [VirtualImage](/modules/virtualization/cr.html#virtualimage) is created in a [project](../../glossary.html#project) and available only in the project or namespace where it was created.
 
 {% alert level="info" %}
 To make the same image available to every project in the cluster, you need a cluster image, [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage). Only an administrator can create it; the procedure is described in [Cluster images of virtual machines](../../admin/configuration/virtualization/cluster-images.html).
@@ -16,12 +16,12 @@ A virtual machine accesses an attached image in read-only mode.
 An image appears in a project in three steps:
 
 1. You create a [VirtualImage](/modules/virtualization/cr.html#virtualimage) resource and specify a data source in it.
-1. Deckhouse Platform (DP) downloads the image from that source to the storage, which is either DVCR or a PVC, depending on the selected type.
+1. Deckhouse Platform (DP) downloads the image from that source to the storage, which is either [DVCR](../../glossary.html#dvcr) or a PVC, depending on the selected type.
 1. The downloaded image becomes available for creating disks.
 
 ## Sources and storage options
 
-The image source can be an HTTP server hosting the image file, a container image registry, or a file on your computer that you upload from the command line. You can also create an image from another image, from a virtual machine disk, or from a disk snapshot.
+The image source can be an HTTP server hosting the image file, a container image registry, or a file on your computer that you upload from the command line. You can also create an image from another image, from a virtual machine disk, or from a [disk snapshot](../../glossary.html#vm-snapshot).
 
 Image types, supported file formats, and compression algorithms are described in [Image types and formats](../../admin/configuration/virtualization/cluster-images.html#image-types-and-formats).
 
@@ -191,7 +191,7 @@ To create disks from an image faster, store it in a PVC. DP can then clone the v
 
 {% tab "Using the web interface" %}
 
-1. Go to the **Projects** tab and select the project you need.
+1. Go to the **[Projects](../../glossary.html#project)** tab and select the project you need.
 1. Go to **Virtualization** → **Images**.
 1. Click **Create**.
 1. In the **Source** block, select **By link**.
@@ -264,7 +264,7 @@ DP works only with registries that have TLS enabled. If the registry uses its ow
 
 {% tab "Using the web interface" %}
 
-1. Go to the **Projects** tab and select the project you need.
+1. Go to the **[Projects](../../glossary.html#project)** tab and select the project you need.
 1. Go to **Virtualization** → **Images**.
 1. Click **Create**.
 1. In the **Source** block, select **From registry**.
@@ -353,7 +353,7 @@ You can also verify the uploaded file against a checksum. To do this, specify th
 
 {% tab "Using the web interface" %}
 
-1. Go to the **Projects** tab and select the project you need.
+1. Go to the **[Projects](../../glossary.html#project)** tab and select the project you need.
 1. Go to **Virtualization** → **Images**.
 1. Click **Create**, then select **Upload** in the **Source** block.
 1. In the **Image name** field, enter the image name.
@@ -418,7 +418,7 @@ You can create an image from a [disk snapshot](snapshots.html#creating-disk-snap
 
 {% tab "Using the CLI" %}
 
-Create an image using the disk snapshot as the source:
+Create an image using the [disk snapshot](../../glossary.html#vm-snapshot) as the source:
 
 ```shell
 d8 k apply -f - <<EOF
@@ -440,7 +440,7 @@ EOF
 
 {% tab "Using the web interface" %}
 
-1. Go to the **Projects** tab and select the project you need.
+1. Go to the **[Projects](../../glossary.html#project)** tab and select the project you need.
 1. Go to **Virtualization** → **Images**.
 1. Click **Create**.
 1. In the form that opens, enter the image name in the **Image name** field.
@@ -457,5 +457,5 @@ EOF
 Image properties are convenient to review in the web interface, in **Virtualization** → **Images**:
 
 - The list shows the image name, status, size, format in the **Type** column, and visibility scope in the **Availability** column, and the filters narrow it down by status, image, and type.
-- On the image page, the **Information** tab collects the creation parameters in the **Storage** and **Source** blocks, and the **State** block shows the average download speed, format, unpacked size, size in storage, creation time, the **CD-ROM** flag, and the image path in DVCR.
+- On the image page, the **Information** tab collects the creation parameters in the **Storage** and **Source** blocks, and the **State** block shows the average download speed, format, unpacked size, size in storage, creation time, the **CD-ROM** flag, and the image path in [DVCR](../../glossary.html#dvcr).
 - The **Meta** and **YAML** tabs show labels with annotations and the full resource specification.

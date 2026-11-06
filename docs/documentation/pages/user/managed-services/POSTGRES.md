@@ -17,7 +17,7 @@ This guide uses two examples:
 - `snapshot-pg`: a separate example for creating and restoring snapshots, since it requires a StorageClass with CSI snapshot support.
 
 {% alert level="info" %}
-The examples use two worker nodes so that PostgreSQL instances in `Cluster` mode can be placed on different nodes. The cluster is located in a single zone, `default`.
+The examples use two [worker nodes](../../../glossary.html#worker-node) so that PostgreSQL instances in `Cluster` mode can be placed on different nodes. The cluster is located in a single zone, `default`.
 {% endalert %}
 
 ## Check available resources
@@ -426,7 +426,7 @@ The Services with the `-r` and `-rw` suffixes route connections to the only inst
 
 ## Configure topology and replication mode
 
-In `Cluster` mode, you can manage the fault tolerance of PostgreSQL instances by setting their placement across nodes and availability zones in the [`spec.cluster.topology`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-cluster-topology) parameter.
+In `Cluster` mode, you can manage the fault tolerance of PostgreSQL instances by setting their placement across nodes and [availability zones](../../../glossary.html#availability-zone) in the [`spec.cluster.topology`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-cluster-topology) parameter.
 
 ### Configure topology
 
@@ -1484,7 +1484,7 @@ With monitoring enabled, the output also contains the label:
 
 ## Backup and restore
 
-The PostgresSnapshot object is used to create snapshots. The StorageClass where Postgres is placed must use a CSI driver with snapshot support, and a corresponding VolumeSnapshotClass must be available in the cluster.
+The PostgresSnapshot object is used to create snapshots. The StorageClass where Postgres is placed must use a [CSI driver](../../../glossary.html#csi-driver) with snapshot support, and a corresponding VolumeSnapshotClass must be available in the cluster.
 
 The [main example](#main-example-of-creating-postgres) uses the `replicated` StorageClass, for which the provider in this configuration doesn't support creating snapshots. So for this demonstration, a separate `snapshot-local` StorageClass on `sds-local-volume` with LVM Thin is used.
 

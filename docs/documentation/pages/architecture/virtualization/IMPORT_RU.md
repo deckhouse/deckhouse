@@ -6,7 +6,7 @@ search: image import, image upload, import image, upload image, disk import, dis
 description: Описание импорта и загрузки образов и дисков ВМ в модуле virtualization в Deckhouse Platform.
 ---
 
-Virtualization-controller компонента [Virtualization-API](api.html) модуля [`virtualization`](/modules/virtualization/) позволяет импортировать образы и диски ВМ из различных источников в PVC-тома, используемые в качестве дисков ВМ, управляемых KubeVirt.
+Virtualization-controller компонента [Virtualization-API](api.html) модуля [`virtualization`](/modules/virtualization/) позволяет импортировать образы и [диски ВМ](../../glossary.html#vm-disk) из различных источников в PVC-тома, используемые в качестве дисков ВМ, управляемых KubeVirt.
 
 {% alert level="info" %}
 [KubeVirt](https://github.com/kubevirt/kubevirt) — это Open Source-проект, который позволяет запускать, развёртывать и управлять ВМ с использованием Kubernetes в качестве платформы оркестрации. Он обеспечивает совместную работу традиционных ВМ и контейнерных рабочих нагрузок в одном кластере Kubernetes, предоставляя единую плоскость управления.
@@ -14,9 +14,9 @@ Virtualization-controller компонента [Virtualization-API](api.html) м
 
 В зависимости от сценариев импорта или загрузки образов и дисков ВМ virtualization-controller запускает следующие *временные* поды:
 
-1. **D8v-<vi\|cvi>-importer** — под, состоящий из одного контейнера **d8v-dvcr-importer** и запускаемый для реализации следующих сценариев импорта образов и дисков ВМ в хранилище DVCR:
+1. **D8v-<vi\|cvi>-importer** — под, состоящий из одного контейнера **d8v-dvcr-importer** и запускаемый для реализации следующих сценариев импорта образов и дисков ВМ в хранилище [DVCR](../../glossary.html#dvcr):
 
-   * импорт диска или образа ВМ из внешних источников (HTTP-источник, доступный по URL, или хранилище образов);
+   * импорт диска или [образа ВМ](../../glossary.html#vm-image) из внешних источников (HTTP-источник, доступный по URL, или хранилище образов);
    * импорт образа ВМ, диска или снимка из ресурсов VirtualImage, ClusterVirtualImage, VirtualDisk или VirtualDiskSnapshot.
 
 1. **D8v-<vi\|cvi>-uploader** — под, состоящий из одного контейнера **d8v-dvcr-uploader** и запускаемый для загрузки *пользователем* образов и дисков ВМ в хранилище DVCR.
@@ -31,7 +31,7 @@ Virtualization-controller в процессе импорта образа или
 
 * импорт образа ВМ из хранилища образов в PVC-том;
 * импорт образа ВМ из снимка тома (ресурс VolumeSnapshot) в PVC-том;
-* импорт образа ВМ из одного PVC-тома в другой PVC-том (клонирование средствами CSI-драйвера);
+* импорт образа ВМ из одного PVC-тома в другой PVC-том (клонирование средствами [CSI-драйвера](../../glossary.html#csi-driver));
 * создание пустого PVC-тома.
 
 {% alert level="info" %}

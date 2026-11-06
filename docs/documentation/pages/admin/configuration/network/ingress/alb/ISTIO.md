@@ -12,16 +12,16 @@ relatedLinks:
     url: /modules/istio/
 ---
 
-ALB with Istio is implemented via [Istio Ingress Gateway](#istio-ingress-gateway) or [Ingress NGINX](#ingress-nginx).
+[ALB](../../../../../glossary.html#alb) with Istio is implemented via [Istio Ingress Gateway](#istio-ingress-gateway) or [Ingress NGINX](#ingress-nginx).
 The [`istio`](/modules/istio/) module is used for this purpose.
 
-Use this option when you need advanced traffic management in a service mesh, for example canary routing or mTLS. Configuration details are in the [`istio`](/modules/istio/) module documentation.
+Use this option when you need advanced traffic management in a [service mesh](../../../../../glossary.html#service-mesh), for example canary routing or mTLS. Configuration details are in the [`istio`](/modules/istio/) module documentation.
 
 Creating an [IngressIstioController](/modules/istio/cr.html) and preparing infrastructure is a cluster administrator task. Application publishing with Gateway and VirtualService resources, including [canary deployment](../../../../../user/network/ingress/alb/istio.html#canary-deployment-with-virtualservice), is described in ["Publishing applications using Istio Ingress Gateway resource"](../../../../../user/network/ingress/alb/istio.html#publishing-applications-using-istio-ingress-gateway-resource).
 
 ## Ingress to publish applications
 
-Applications can be published using the Istio Ingress Gateway or through Ingress NGINX with the Istio sidecar enabled.
+Applications can be published using the [Istio Ingress Gateway](../../../../../glossary.html#istio-ingress-gateway) or through Ingress NGINX with the Istio sidecar enabled.
 
 ### Istio Ingress Gateway {#istio-ingress-gateway}
 
@@ -29,7 +29,7 @@ To publish the application using the Istio Ingress Gateway, follow these steps:
 
 1. Create an IngressIstioController resource.
 
-   The example below creates a controller with the `HostPort` inlet on frontend nodes:
+   The example below creates a controller with the `HostPort` [inlet](../../../../../glossary.html#inlet) on [frontend nodes](../../../../../glossary.html#frontend-node):
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1

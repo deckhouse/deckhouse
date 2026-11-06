@@ -6,12 +6,12 @@ lang: ru
 ---
 
 {% alert level="warning" %}
-Режим хаос-инжиниринга включается только для групп узлов с [`nodeType: CloudEphemeral`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetype).
+Режим [хаос-инжиниринга](../../../glossary.html#chaos-engineering) включается только для групп узлов с [`nodeType: CloudEphemeral`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetype).
 {% endalert %}
 
 Включите режим хаос-инжиниринга для конкретных групп узлов (NodeGroup) одним из следующих способов:
 
-1. Укажите в параметрах тестируемой группы узлов [параметр `spec.chaos`](/modules/node-manager/cr.html#nodegroup-v1-spec-chaos) с двумя вложенными параметрами:
+1. Укажите в параметрах тестируемой [группы узлов](../../../glossary.html#node-group) [параметр `spec.chaos`](/modules/node-manager/cr.html#nodegroup-v1-spec-chaos) с двумя вложенными параметрами:
 
    ```yaml
    chaos:
@@ -41,4 +41,4 @@ lang: ru
        period: 24h
    ```
 
-1. Если в кластере включен модуль [`console`](/modules/console/), откройте веб-интерфейс Deckhouse, перейдите в настройки выбранной группы узлов в разделе «Узлы» — «Группы узлов» и включите Chaos Monkey в пункте «Параметры chaos monkey», указав временные интервалы в соответствующих полях.
+1. Если в кластере включен модуль [`console`](/modules/console/), откройте [веб-интерфейс Deckhouse](../../../glossary.html#web-ui), перейдите в настройки выбранной группы узлов в разделе «Узлы» — «Группы узлов» и включите Chaos Monkey в пункте «Параметры chaos monkey», указав временные интервалы в соответствующих полях.

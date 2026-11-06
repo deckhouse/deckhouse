@@ -6,7 +6,7 @@ search: VM pool, VirtualMachinePool, replicas, pool scaling, reclaim
 ---
 
 {% alert level="info" %}
-Available in commercial Deckhouse Platform (DP) editions.
+Available in commercial Deckhouse Platform (DP) [editions](../../glossary.html#edition).
 {% endalert %}
 
 The [VirtualMachinePool](/modules/virtualization/cr.html#virtualmachinepool) resource maintains a given number of identical virtual machines (VMs) and lets you scale them through the `scale` subresource, HorizontalPodAutoscaler (HPA), or KEDA. The `virtualMachineTemplate.spec` field matches the regular `VirtualMachineSpec`, so a replica is no different from a manually created virtual machine.
@@ -15,7 +15,7 @@ The [VirtualMachinePool](/modules/virtualization/cr.html#virtualmachinepool) res
 The `Legacy` OS type isn't supported in a pool, because replicas are differentiated by initialization, which these operating systems don't have, so every replica would be a byte-for-byte copy of one disk, and for Windows guest operating systems that also means the same SID on the network. A pool template with `osType: Legacy` is rejected. Create such virtual machines individually.
 {% endalert %}
 
-The following example shows how to create a virtual machine pool:
+The following example shows how to create a [virtual machine pool](../../glossary.html#vm-pool):
 
 {% tabs pool-create %}
 
@@ -100,7 +100,7 @@ Replicas are named `<POOL>-<RANDOM>`. Disks follow the same scheme, and a per-re
 
 {% tab "Using the web interface" %}
 
-1. Go to the **Projects** tab and select the project you need.
+1. Go to the **[Projects](../../glossary.html#project)** tab and select the project you need.
 1. Go to **Virtualization** → **VM pools**.
 1. Click **Create**.
 1. In the **Create resource** window that opens, enter the pool name in the **Name** field.
@@ -195,8 +195,8 @@ spec:
 
 {% tab "Using the web interface" %}
 
-1. Go to the **Projects** tab and select the project you need.
-1. Go to **Virtualization** → **VM pools**.
+1. Go to the **[Projects](../../glossary.html#project)** tab and select the project you need.
+1. Go to **Virtualization** → **[VM pools](../../glossary.html#vm-pool)**.
 1. Select the pool you need from the list and click its name.
 1. On the **Configuration** tab, set the new value in the **Replicas** field.
 1. Click **Apply**.

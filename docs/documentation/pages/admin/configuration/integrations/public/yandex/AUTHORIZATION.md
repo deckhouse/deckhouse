@@ -98,8 +98,8 @@ Increase quotas via the Yandex Cloud Console if necessary.
 
 ## Reserving a public IP
 
-If you are using the WithoutNAT or WithNATInstance deployment layout and need a fixed external IP address
-(for example, to use in [`externalIPAddresses`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-nodegroups-instanceclass-externalipaddresses), [`natInstanceExternalAddress`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-natinstanceexternaladdress), or a bastion host), run the following command:
+If you are using the WithoutNAT or WithNATInstance deployment [layout](../../../../glossary.html#layout) and need a fixed external IP address
+(for example, to use in [`externalIPAddresses`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-nodegroups-instanceclass-externalipaddresses), [`natInstanceExternalAddress`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-natinstanceexternaladdress), or a [bastion host](../../../../glossary.html#bastion-host)), run the following command:
 
 ```shell
 yc vpc address create --external-ipv4 zone=ru-central1-a

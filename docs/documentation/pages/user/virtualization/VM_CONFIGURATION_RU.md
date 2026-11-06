@@ -15,7 +15,7 @@ lang: ru
 | [`.spec.liveMigrationPolicy`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-livemigrationpolicy)                         | Сразу                                                                                                                                                            |
 | [`.spec.runPolicy`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-runpolicy)                                             | Сразу                                                                                                                                                            |
 | [`.spec.disruptions.restartApprovalMode`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-disruptions-restartapprovalmode) | Сразу                                                                                                                                                            |
-| [`.spec.affinity`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-affinity)                                               | Сразу в коммерческих редакциях DP, в DP Open нужен перезапуск                                                                                                    |
+| [`.spec.affinity`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-affinity)                                               | Сразу в коммерческих [редакциях](../../glossary.html#edition) DP, в DP Open нужен перезапуск                                                                                                    |
 | [`.spec.nodeSelector`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-nodeselector)                                       | Сразу в коммерческих редакциях DP, в DP Open нужен перезапуск                                                                                                    |
 | [`.spec.cpu.cores`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-cpu-cores)                                             | Без перезапуска, если включено [изменение числа ядер без перезапуска](#изменение-числа-ядер-без-перезапуска) в коммерческих редакциях DP, иначе нужен перезапуск |
 | [`.spec.networks`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks)                                               | Добавление и удаление сетей применяется на работающей ВМ, если гостевая ОС поддерживает подключение интерфейсов на ходу                                          |
@@ -115,7 +115,7 @@ spec:
 
 {% tab "В веб-интерфейсе" %}
 
-1. Перейдите на вкладку «Проекты» и выберите нужный проект.
+1. Перейдите на вкладку «Проекты» и выберите нужный [проект](../../glossary.html#project).
 1. Перейдите в раздел «Виртуализация» → «Виртуальные машины».
 1. Из списка выберите нужную ВМ и нажмите на её имя.
 1. Внесите изменения на вкладке «Конфигурация». Если машину требуется перезапустить, DP покажет предупреждение и список ожидающих изменений.
@@ -127,7 +127,7 @@ spec:
 
 ## Изменение числа ядер без перезапуска
 
-Число ядер работающей машины можно менять, не перезагружая её, если изменение применимо через живую миграцию. В пределах текущей топологии CPU ядра можно и добавлять, и убирать.
+Число ядер работающей машины можно менять, не перезагружая её, если изменение применимо через [живую миграцию](../../glossary.html#live-migration). В пределах текущей [топологии CPU](../../glossary.html#vm-cpu-topology) ядра можно и добавлять, и убирать.
 
 Возможность выключена по умолчанию. Чтобы её включить, администратор добавляет `HotplugCPUWithLiveMigration` в параметр [`.spec.settings.featureGates`](/modules/virtualization/configuration.html#parameters-featuregates):
 
@@ -208,7 +208,7 @@ spec:
 
 В веб-интерфейсе переключатель называется «Изменение памяти без перезагрузки» и лежит там же, в блоке «Экспериментальные возможности» настроек модуля.
 
-Когда возможность включена, новое значение [`.spec.memory.size`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-memory-size) больше текущего и машина допускает миграцию, DP применяет изменение живой миграцией. Перезапуск понадобится, если память уменьшают, если исходный размер меньше 1 ГиБ или если машину нельзя мигрировать. Без перезапуска память растёт до 256 ГиБ, это предел, заложенный в конфигурацию машины при первом запуске.
+Когда возможность включена, новое значение [`.spec.memory.size`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-memory-size) больше текущего и машина допускает миграцию, DP применяет изменение [живой миграцией](../../glossary.html#live-migration). Перезапуск понадобится, если память уменьшают, если исходный размер меньше 1 ГиБ или если машину нельзя мигрировать. Без перезапуска память растёт до 256 ГиБ, это предел, заложенный в конфигурацию машины при первом запуске.
 
 {% tabs vm-memory-change %}
 
@@ -224,7 +224,7 @@ d8 k patch vm linux-vm --type merge -p '{"spec":{"memory":{"size":"4Gi"}}}'
 
 {% tab "В веб-интерфейсе" %}
 
-1. Перейдите на вкладку «Проекты» и выберите нужный проект.
+1. Перейдите на вкладку «Проекты» и выберите нужный [проект](../../glossary.html#project).
 1. Перейдите в раздел «Виртуализация» → «Виртуальные машины».
 1. Из списка выберите нужную ВМ и нажмите на её имя.
 1. На вкладке «Конфигурация» в разделе «Ресурсы» задайте новое значение в поле «Объём памяти».

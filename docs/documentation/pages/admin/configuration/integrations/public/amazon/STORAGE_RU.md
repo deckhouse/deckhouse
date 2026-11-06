@@ -9,7 +9,7 @@ lang: ru
 - Подключение облачных дисков через CSI;
 - Автоматическое создание StorageClass;
 - Использование LoadBalancer;
-- Доступ через bastion-хост;
+- Доступ через [bastion-хост](../../../../glossary.html#bastion-host);
 - Подключение вручную созданных CloudStatic-узлов.
 
 ## Хранилище (CSI и StorageClass)
@@ -94,7 +94,7 @@ metadata:
     service.beta.kubernetes.io/aws-load-balancer-subnets: "subnet-foo,subnet-bar"
 ```
 
-Это особенно важно при ручной настройке Ingress-контроллеров или нестандартной схеме размещения узлов.
+Это особенно важно при ручной настройке [Ingress-контроллеров](../../../../glossary.html#ingress-controller) или нестандартной [схеме размещения](../../../../glossary.html#layout) узлов.
 
 Чтобы получить список текущих подсетей, используемых в установке DP, выполните команду:
 

@@ -10,20 +10,20 @@ The following recommendations may be of less importance for a test or developmen
 ## Release channel and update mode
 
 {% alert %}
-Use the `EarlyAccess` or `Stable` release channel. Configure [auto-update window](/modules/deckhouse/usage.html#update-windows-configuration) or select [manual mode](/modules/deckhouse/usage.html#manual-update-confirmation).
+Use the `EarlyAccess` or `Stable` [release channel](../glossary.html#release-channel). Configure [auto-update window](/modules/deckhouse/usage.html#update-windows-configuration) or select [manual mode](/modules/deckhouse/usage.html#manual-update-confirmation).
 {% endalert %}
 
 Select the [release channel](../reference/release-channels.html) and [update mode](/modules/deckhouse/configuration.html#parameters-update-mode) that suit your needs. The more stable the release channel is, the later you will have the chance to use the new features.
 
 If possible, use different release channels for clusters. Use a less stable update channel for a development cluster than for a testing cluster or stage (pre-production) cluster.
 
-Use the `EarlyAccess` or `Stable` release channel for production clusters. If you have more than one cluster in a production environment, consider using different release channels for them. For example, `EarlyAccess` for one, and `Stable` for another. If the clusters use the same release channel, set update windows so that they do not overlap.
+Use the `EarlyAccess` or `Stable` release channel for production clusters. If you have more than one cluster in a production environment, consider using different release channels for them. For example, `EarlyAccess` for one, and `Stable` for another. If the clusters use the same release channel, set [update windows](../glossary.html#update-window) so that they do not overlap.
 
 {% alert level="warning" %}
 Even in very busy and critical clusters, it is not a good idea to disable the use of the release channel. The best strategy is a scheduled update. If you are using a Deckhouse Platform (DP) release in your cluster that has not received an update in over six months, you will have a hard time getting help quickly should a problem arise.
 {% endalert %}
 
-The [update windows](/modules/deckhouse/configuration.html#parameters-update-windows) management allows you to schedule automatic DP release updates when your cluster is not experiencing peak load.
+The [update windows](/modules/deckhouse/configuration.html#parameters-update-windows) management allows you to schedule automatic DP [release](../glossary.html#dp-release) updates when your cluster is not experiencing peak load.
 
 ## Kubernetes version
 
@@ -33,7 +33,7 @@ Use the automatic [Kubernetes version selection](../reference/api/cr.html#cluste
 
 In most cases, opt for the automatic selection of the Kubernetes version. In DP, this behavior is set by default, but it can be changed with the [kubernetesVersion](../reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter. Upgrading the Kubernetes version in the cluster has no effect on applications and is done in a [consistent and secure fashion](/modules/control-plane-manager/#version-control).
 
-If the automatic Kubernetes version selection is enabled, DP can upgrade the Kubernetes version in the cluster together with the DP update (when upgrading a minor version). If the Kubernetes version in the [kubernetesVersion](../reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter is set explicitly, DP may not upgrade to a newer version at some point if the Kubernetes version used in the cluster is no longer supported.
+If the automatic Kubernetes version selection is enabled, DP can upgrade the Kubernetes version in the cluster together with the DP update (when upgrading a [minor version](../glossary.html#minor-version)). If the Kubernetes version in the [kubernetesVersion](../reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter is set explicitly, DP may not upgrade to a newer version at some point if the Kubernetes version used in the cluster is no longer supported.
 
 You must decide for yourself whether to use automatic version selection or set a specific version and update it manually every now and then.
 
@@ -42,18 +42,18 @@ If your application uses outdated versions of resources or depends on a particul
 ## Resource requirements
 
 {% alert %}
-Use at least 4 CPUs / 8 GB RAM for infrastructure nodes (2 CPUs / 4 GB RAM for frontend nodes). For master and monitoring nodes, fast disks are recommended.
+Use at least 4 CPUs / 8 GB RAM for [infrastructure nodes](../glossary.html#infrastructure-node) (2 CPUs / 4 GB RAM for [frontend nodes](../glossary.html#frontend-node)). For master and [monitoring nodes](../glossary.html#monitoring-node), fast disks are recommended.
 {% endalert %}
 
 The following resource minimums are recommended for infrastructure nodes, depending on their role in the cluster:
 
-- **Master node** — 8 CPU, 16GB RAM, 60 GB of disk space for the cluster and etcd data on a fast disk (400+ IOPS);
+- **[Master node](../glossary.html#master-node)** — 8 CPU, 16GB RAM, 60 GB of disk space for the cluster and etcd data on a fast disk (400+ IOPS);
 - **Frontend node** — 2 CPU, 4GB RAM, 50 GB of disk space;
 - **Monitoring node** (for high-load clusters) — 6 CPU, 12GB RAM, <a href="#storage">50 / 150*</a> GB of disk space on a fast disk (400+ IOPS).
-- **System node**:
+- **[System node](../glossary.html#system-node)**:
   - 4 CPU, 8 GB RAM, <a href="#storage">50 / 150*</a> GB of disk space — if there are dedicated monitoring nodes in the cluster;
   - 8 CPU, 16 GB RAM, <a href="#storage">60 / 160*</a> GB of disk space on a fast disk (400+ IOPS) — if there are no dedicated monitoring nodes in the cluster.
-- **Worker node** — the requirements are similar to those for the master node, but largely depend on the nature of the load running on the node (nodes).
+- **[Worker node](../glossary.html#worker-node)** — the requirements are similar to those for the master node, but largely depend on the nature of the load running on the node (nodes).
 
 Additional recommendations:<span id="storage"></span>
 
@@ -80,7 +80,7 @@ Three master nodes with fast 400+ IOPS disks are highly recommended for a cluste
 
 Use three master nodes in all cases, as they are sufficient for fault tolerance. Also, with three nodes, you can safely update the cluster's control plane as well as the master nodes. Extra master nodes are not needed, while 2 nodes (or any even number) do not make a quorum.
 
-The master node configuration for cloud clusters can be configured using the [masterNodeGroup](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-masternodegroup) parameter.
+The master node configuration for [cloud clusters](../glossary.html#cloud-cluster) can be configured using the [masterNodeGroup](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-masternodegroup) parameter.
 
 Reference:
 
@@ -92,10 +92,10 @@ Reference:
 {% alert %}
 Use two or more frontend nodes.
 
-Use inlet `LoadBalancer` for OpenStack-based clouds and cloud services where automatic balancer ordering is not supported (AWS, GCP, Azure, etc.). Use inlet  `HostPort` with an external load balancer for bare metal or vSphere.
+Use [inlet](../glossary.html#inlet) `LoadBalancer` for OpenStack-based clouds and cloud services where automatic balancer ordering is not supported (AWS, GCP, Azure, etc.). Use inlet  `HostPort` with an external load balancer for bare metal or vSphere.
 {% endalert %}
 
-Frontend nodes are used for balancing incoming traffic. Such nodes are allocated for Ingress controllers. The [NodeGroup](/modules/node-manager/cr.html#nodegroup) of the frontend nodes has a `node-role.deckhouse.io/frontend` label. Read more about [allocating nodes for specific load types...](../admin/configuration/#advanced-scheduling)
+Frontend nodes are used for balancing incoming traffic. Such nodes are allocated for [Ingress controllers](../glossary.html#ingress-controller). The [NodeGroup](/modules/node-manager/cr.html#nodegroup) of the frontend nodes has a `node-role.deckhouse.io/frontend` label. Read more about [allocating nodes for specific load types...](../admin/configuration/#advanced-scheduling)
 
 Use more than one frontend node. Frontend nodes must be able to still handle traffic even if one of the frontend nodes fails.
 
@@ -108,7 +108,7 @@ When deploying a cluster using DP in a cloud infrastructure where provisioning o
 In environments where automatic load balancer provisioning is not supported (bare metal clusters, vSphere, custom OpenStack solutions), use the `HostPort` or `HostPortWithProxyProtocol` inlet. In this case, you can either add some A&#8209;records to DNS for the corresponding domain or use an external load-balancing service (e.g., Cloudflare, Qrator solutions, or configure metallb).
 
 {% alert level="warning" %}
-The `HostWithFailover` inlet is suitable for clusters with a single frontend node. It reduces the time that the Ingress controller is unavailable during updates. This type of inlet is suitable for important development environments, but **not recommended for production**.
+The `HostWithFailover` inlet is suitable for clusters with a single [frontend node](../glossary.html#frontend-node). It reduces the time that the Ingress controller is unavailable during updates. This type of inlet is suitable for important development environments, but **not recommended for production**.
 {% endalert %}
 
 The algorithm for choosing an inlet:
@@ -118,7 +118,7 @@ The algorithm for choosing an inlet:
 ### Monitoring nodes
 
 {% alert %}
-For high-load clusters, use two monitoring nodes equipped with fast disks.
+For high-load clusters, use two [monitoring nodes](../glossary.html#monitoring-node) equipped with fast disks.
 {% endalert %}
 
 Monitoring nodes are used to run Grafana, Prometheus, and other monitoring components. The [NodeGroup](/modules/node-manager/cr.html#nodegroup) for monitoring nodes has the `node-role.deckhouse.io/monitoring` label attached.
@@ -127,7 +127,7 @@ In high-load clusters, where many alerts are generated and many metrics are coll
 
 When allocating monitoring nodes, it is important to allocate fast disks to them. You can do so by providing a dedicated `storageClass` on fast disks for all DP components (global parameter [storageClass](../reference/api/global.html#parameters-modules-storageclass)) or allocate a dedicated `storageClass` to monitoring components only [storageClass](/modules/prometheus/configuration.html#parameters-storageclass) and [longtermStorageClass](/modules/prometheus/configuration.html#parameters-longtermstorageclass) parameters of the `prometheus` module.
 
-If the cluster is initially created with nodes allocated for a specific type of workload (system nodes, nodes for monitoring, etc.), explicitly specify the corresponding `nodeSelector` parameter in the module configuration for modules that use persistent storage volumes (for example, for the `prometheus` module). For the `prometheus` module, this parameter is [nodeSelector](/modules/prometheus/configuration.html#parameters-nodeselector).
+If the cluster is initially created with nodes allocated for a specific type of workload ([system nodes](../glossary.html#system-node), nodes for monitoring, etc.), explicitly specify the corresponding `nodeSelector` parameter in the module configuration for modules that use persistent storage volumes (for example, for the `prometheus` module). For the `prometheus` module, this parameter is [nodeSelector](/modules/prometheus/configuration.html#parameters-nodeselector).
 
 ### System nodes
 

@@ -4,10 +4,10 @@ permalink: en/admin/configuration/network/egress/gateway.html
 ---
 
 {% alert level="warning" %}
-Available in DP Standard Edition+, Enterprise Edition, DP Core, DP Ultimate.
+Available in DP [Standard Edition](../../../../glossary.html#edition)+, Enterprise Edition, DP Core, DP Ultimate.
 {% endalert %}
 
-Egress Gateway enables centralized management and control of outgoing traffic
+[Egress Gateway](../../../../glossary.html#egress-gateway) enables centralized management and control of outgoing traffic
 and provides features such as encryption, routing, and monitoring.
 
 {% alert level="warning"%}
@@ -80,7 +80,7 @@ To perform maintenance on a node that is currently the active egress gateway, fo
    ```
 
 {% alert level="warning" %}
-Reapplying the label may cause the node to become active egress gateway again
+Reapplying the label may cause the node to become active [egress gateway](../../../../glossary.html#egress-gateway) again
 (if it is first in alphabetical order among candidates).
 
 To avoid immediate return to the active state, temporarily reduce the number of EgressGateway replicas

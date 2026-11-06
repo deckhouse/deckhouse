@@ -30,7 +30,7 @@ DP поддерживает импорт дисков в формате `vmdk`.
 
 Для типичных ВМ из VMware используйте утилиту `virt-v2v`: она конвертирует `VMDK` в `qcow2` и адаптирует гостевую ОС к KVM (virtio-драйверы, загрузчик, замена VMware-устройств).
 Подготовленный диск загружается напрямую в ресурс [`VirtualDisk`](/modules/virtualization/cr.html#virtualdisk) с `type: Upload`.
-Том создаётся в выбранном StorageClass, минуя DVCR.
+Том создаётся в выбранном StorageClass, минуя [DVCR](../glossary.html#dvcr).
 
 Ниже приведена пошаговая инструкция по этому сценарию.
 
@@ -47,7 +47,7 @@ DP поддерживает импорт дисков в формате `vmdk`.
 
 Перед началом переноса убедитесь, что у вас есть:
 
-- доступ к кластеру DP с установленной утилитой Deckhouse CLI (`d8`) и правами на создание ресурсов виртуализации в нужном неймспейсе;
+- доступ к кластеру DP с установленной утилитой [Deckhouse CLI](../glossary.html#deckhouse-cli) (`d8`) и правами на создание ресурсов виртуализации в нужном неймспейсе;
 - Linux-хост с `virt-v2v` и `libguestfs` и достаточным местом на диске под распаковку `OVA` (или отдельных `VMDK`) и результат конвертации;
 - файлы исходной ВМ (`OVA` или `VMDK`).
 
@@ -177,7 +177,7 @@ VIRTIO_WIN=/path/to/virtio-win.iso virt-v2v -i disk ./machine-disk1.vmdk \
 
 Этот подраздел описывает, как передать подготовленный образ `qcow2` в DP через API Kubernetes.
 На этом этапе файл становится постоянным томом в кластере: создайте ресурс VirtualDisk с `type: Upload` и передайте `qcow2` по HTTP.
-Диск попадёт в выбранный StorageClass, минуя DVCR.
+Диск попадёт в выбранный StorageClass, минуя [DVCR](../glossary.html#dvcr).
 
 Загрузка образа диска в кластер включает следующие шаги:
 
@@ -207,7 +207,7 @@ rv-thin-r1 (default) replicated.csi.storage.deckhouse.io     Immediate          
 rv-thin-r2           replicated.csi.storage.deckhouse.io     Immediate           48d
 ```
 
-Запомните имя класса, который подходит под ваши требования к хранилищу для дисков ВМ.
+Запомните имя класса, который подходит под ваши требования к хранилищу для [дисков ВМ](../glossary.html#vm-disk).
 
 ### Создание VirtualDisk для загрузки
 
@@ -302,12 +302,12 @@ default     uploaded-disk    Ready   10Gi       1m
 |-------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------|
 | Datastore               | StorageClass                                                                                                                                                  | Хранилище для дисков             |
 | VMX (конфиг ВМ)         | [VirtualMachine](/modules/virtualization/cr.html#virtualmachine).spec                                                                                         | Спецификация ВМ                  |
-| Virtual Disk (VMDK)     | [VirtualDisk](/modules/virtualization/cr.html#virtualdisk)                                                                                                    | Диск ВМ                          |
+| Virtual Disk (VMDK)     | [VirtualDisk](/modules/virtualization/cr.html#virtualdisk)                                                                                                    | [Диск ВМ](../glossary.html#vm-disk)                          |
 | ISO Image               | [VirtualImage](/modules/virtualization/cr.html#virtualimage) (`cdrom: true`)                                                                                  | ISO для установки или драйверов  |
 | Template                | [VirtualImage](/modules/virtualization/cr.html#virtualimage)                                                                                                  | Шаблон для создания дисков       |
 | Port Group / VLAN       | [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) (`networks`)                                                                                 | Сетевые настройки                |
 | Resource Pool           | Project и квоты                                                                                                                                               | Ограничения ресурсов на проект   |
-| Snapshot                | [VirtualDiskSnapshot](/modules/virtualization/cr.html#virtualdisksnapshot) / [VirtualMachineSnapshot](/modules/virtualization/cr.html#virtualmachinesnapshot) | Снимки диска и ВМ                |
+| Snapshot                | [VirtualDiskSnapshot](/modules/virtualization/cr.html#virtualdisksnapshot) / [VirtualMachineSnapshot](/modules/virtualization/cr.html#virtualmachinesnapshot) | [Снимки диска](../glossary.html#vm-snapshot) и ВМ                |
 | Folder                  | Namespace                                                                                                                                                     | Неймспейс                        |
 | Cluster / Resource Pool | Project                                                                                                                                                       | Группировка неймспейсов          |
 | ESXi Host               | Node                                                                                                                                                          | Физический сервер                |
@@ -346,7 +346,7 @@ EOF
 
 Если исходная ВМ в VMware загружалась через UEFI, добавьте `bootloader: EFI` (см. таблицу параметров ниже).
 
-Если в кластере настроены дополнительные сети и модуль SDN, к основной сети можно добавить интерфейсы:
+Если в кластере настроены дополнительные сети и модуль [SDN](../glossary.html#sdn), к основной сети можно добавить интерфейсы:
 
 ```yaml
   networks:

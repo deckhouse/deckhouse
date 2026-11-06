@@ -36,12 +36,12 @@ The module consists of the following components:
 
    * **cni-migration-init-checker**: Init container waiting for the migration process from another CNI plugin to complete, if such a migration has been started.
    * **iptables-wrapper-init**: Init container that prepares executables required for working with iptables.
-   * **handle-vxlan-offload**: Optional init container that corrects UDP segmentation settings on the node's network interface. It is created by the Deckhouse controller if the [`podNetworkMode`](/modules/cni-flannel/configuration.html#parameters-podnetworkmode) parameter is set to `VXLAN`.
+   * **handle-vxlan-offload**: Optional init container that corrects UDP segmentation settings on the node's network interface. It is created by the [Deckhouse controller](../../glossary.html#deckhouse-controller) if the [`podNetworkMode`](/modules/cni-flannel/configuration.html#parameters-podnetworkmode) parameter is set to `VXLAN`.
    * **kube-flannel**: Main container.
 
 1. **Flannel (CNI plugin)**: An executable file run by the containerd component according to the [CNI specification](https://www.cni.dev/docs/spec/#cni-operations), for example ADD when creating a pod's network namespace and DEL when removing it.
 
-   On startup, the component reads the subnet parameters from the `/run/flannel/subnet.env` file and delegates creation of the pod's network interface to the `bridge` CNI plugin, which in turn requests an IP address from the `host-local` IP Address Management (IPAM) plugin. Both `bridge` and `host-local` are standard [Open Source CNI plugins](https://github.com/containernetworking/plugins), installed on every cluster node independently of this module, as part of kubelet installation.
+   On startup, the component reads the subnet parameters from the `/run/flannel/subnet.env` file and delegates creation of the pod's network interface to the `bridge` CNI plugin, which in turn requests an IP address from the `host-local` IP Address Management ([IPAM](../../glossary.html#sdn-ipam)) plugin. Both `bridge` and `host-local` are standard [Open Source CNI plugins](https://github.com/containernetworking/plugins), installed on every cluster node independently of this module, as part of kubelet installation.
 
 ## Module interactions
 

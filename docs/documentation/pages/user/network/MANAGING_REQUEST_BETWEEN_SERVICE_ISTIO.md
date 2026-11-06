@@ -32,6 +32,6 @@ Use this resource to:
   - TCP connection and request limits for endpoints.
   - Sticky Sessions support.
   - Circuit Breaker configuration.
-- Define alternative endpoint groups for handling traffic (applicable to Canary Deployments).
+- Define alternative endpoint groups for handling traffic (applicable to [Canary Deployments](../../glossary.html#canary-deployment)).
   Each group can have its own load balancing strategy.
 - Configure TLS for outgoing requests.

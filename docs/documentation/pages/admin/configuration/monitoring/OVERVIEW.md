@@ -16,7 +16,7 @@ relatedLinks:
 ---
 
 Deckhouse Platform (DP) provides a Kubernetes monitoring solution based on **Prometheus** and **Grafana**.
-DP automatically configures metrics collection in the cluster from nodes, pods, and key cluster components (etcd, kube-apiserver, CoreDNS), which enables preset dashboards for analyzing CPU, memory, disk, and network usage.
+DP automatically configures metrics collection in the cluster from nodes, pods, and key cluster components (etcd, kube-apiserver, CoreDNS), which enables preset [dashboards](../../../glossary.html#dashboard) for analyzing CPU, memory, disk, and network usage.
 
 Cluster monitoring is enabled by default in the `Default` and `Managed` [module bundles](../#module-bundles).
 
@@ -121,7 +121,7 @@ DP monitoring capabilities:
 
 ## Extended monitoring mode
 
-DP supports an extended monitoring mode via the [`extended-monitoring`](/modules/extended-monitoring/) module, allowing you to configure:
+DP supports an [extended monitoring](../../../glossary.html#extended-monitoring) mode via the [`extended-monitoring`](/modules/extended-monitoring/) module, allowing you to configure:
 
 - Monitoring secrets in the cluster (Secret objects) and TLS certificate expiration in them.
 - Collecting Kubernetes cluster events as metrics.
@@ -161,11 +161,11 @@ Availability assessment in DP is performed by the [`upmeter`](/modules/upmeter/)
 
 Composition of the `upmeter` module:
 
-- **agent**: Runs on master nodes and performs availability probes, sends results to the server.
+- **agent**: Runs on [master nodes](../../../glossary.html#master-node) and performs [availability probes](../../../glossary.html#availability-probe), sends results to the server.
 - **upmeter**: Collects results and maintains an API server for their retrieval.
 - **front**:
   - **status**: Shows availability level for the last 10 minutes (requires authorization, but it can be disabled).
-  - **webui**: Shows a dashboard with statistics on probes and availability groups (requires authorization).
+  - **webui**: Shows a [dashboard](../../../glossary.html#dashboard) with statistics on probes and availability groups (requires authorization).
 - **smoke-mini**: Maintains continuous *smoke testing* using StatefulSet.
 
 The module sends about 100 metric readings every 5 minutes. This value depends on the number of enabled Deckhouse Platform modules.

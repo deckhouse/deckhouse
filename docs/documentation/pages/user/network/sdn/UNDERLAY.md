@@ -6,14 +6,14 @@ description: |
 search: DPDK applications, UnderlayNetwork, physical interfaces, SR-IOV, VF PF
 ---
 
-If your namespace (project) hosts high-performance workloads that require direct access to hardware (e.g., DPDK applications), you can use direct connection of physical network interfaces (Physical Functions and Virtual Functions) to pods via Kubernetes Dynamic Resource Allocation (DRA).
+If your namespace ([project](../../../glossary.html#project)) hosts high-performance workloads that require direct access to hardware (e.g., DPDK applications), you can use direct connection of physical network interfaces (Physical Functions and Virtual Functions) to pods via Kubernetes Dynamic Resource Allocation (DRA).
 
 Physical network interfaces can be connected to pods in one of two modes:
 
 - `Shared`: Virtual Functions (VF) are created from Physical Functions (PF) using SR-IOV, and multiple pods can share the same hardware.
 - `Dedicated`: Each pod gets exclusive access to the entire PF.
 
-For more information about the capabilities and features of working with Underlay networks in DP, see the section [Configuring and connecting underlay networks for hardware device forwarding](../../../admin/configuration/network/sdn/configure.html#configuring-and-connecting-underlay-networks-for-hardware-device-passthrough).
+For more information about the capabilities and features of working with [Underlay networks](../../../glossary.html#underlay-network) in DP, see the section [Configuring and connecting underlay networks for hardware device forwarding](../../../admin/configuration/network/sdn/configure.html#configuring-and-connecting-underlay-networks-for-hardware-device-passthrough).
 
 ## Connecting physical network interfaces to pods
 

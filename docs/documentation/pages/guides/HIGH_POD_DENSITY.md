@@ -10,7 +10,7 @@ When you plan to place and run more than 100 pods on a single node, a number of 
 {% alert %}
 For nodes with high pod density:
 
-- Plan the node subnet size in advance (via [`podSubnetNodeCIDRPrefix`](../reference/api/cr.html#clusterconfiguration-podsubnetnodecidrprefix)) — the pod limit per node will adjust automatically.
+- Plan the node subnet size in advance (via [`podSubnetNodeCIDRPrefix`](../reference/api/cr.html#clusterconfiguration-podsubnetnodecidrprefix)) — the [pod limit per node](../glossary.html#pod-limit-per-node) will adjust automatically.
 - Use a Linux kernel version 6.12 or newer.
 - Use a fast local disk (NVMe or SSD) and do not use a network file system.
 - Use lightweight application images with minimum amount of layers (for example, `distroless`).

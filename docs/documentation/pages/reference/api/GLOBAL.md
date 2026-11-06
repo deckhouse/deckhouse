@@ -10,7 +10,7 @@ Global configuration settings allow you to customize parameters that are used by
 The global configuration settings are stored in the ModuleConfig `global`.
 
 {% alert %}
-The [publicDomainTemplate](#parameters-modules-publicdomaintemplate) parameter specifies a DNS name template used by some Deckhouse modules to create Ingress resources. If this parameter is not specified, Ingress resources will not be created.
+The [publicDomainTemplate](#parameters-modules-publicdomaintemplate) parameter specifies a [DNS name template](../../glossary.html#public-domain-template) used by some Deckhouse modules to create Ingress resources. If this parameter is not specified, Ingress resources will not be created.
 
 If you don't have access to wildcard DNS records, you can use [sslip.io](https://sslip.io) or similar services for testing purposes.
 

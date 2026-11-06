@@ -30,7 +30,7 @@ Direct import is suitable only when the `VMDK` is already prepared for QEMU/KVM.
 
 For typical VMs from VMware, use the `virt-v2v` utility: it converts `VMDK` to `qcow2` and adapts the guest OS for KVM (virtio drivers, bootloader, replacement of VMware devices).
 Upload the prepared disk directly to a [`VirtualDisk`](/modules/virtualization/cr.html#virtualdisk) with `type: Upload`.
-The volume is provisioned in the chosen StorageClass, bypassing DVCR.
+The volume is provisioned in the chosen StorageClass, bypassing [DVCR](../glossary.html#dvcr).
 
 The step-by-step instructions below cover this scenario.
 
@@ -47,7 +47,7 @@ Migrating a VM from VMware to DP includes the following stages:
 
 Before you start the migration, make sure you have:
 
-- access to the DP cluster with the Deckhouse CLI utility (`d8`) installed and permissions to create virtualization resources in the target namespace;
+- access to the DP cluster with the [Deckhouse CLI](../glossary.html#deckhouse-cli) utility (`d8`) installed and permissions to create virtualization resources in the target namespace;
 - a Linux host with `virt-v2v` and `libguestfs` installed and enough disk space to unpack the `OVA` (or standalone `VMDK` files) and store the conversion output;
 - the VMware export files (`OVA` or `VMDK`).
 
@@ -177,7 +177,7 @@ After the conversion, a file such as `./out/machine.qcow2` will appear under `./
 
 This section describes how to transfer the prepared `qcow2` image to DP through the Kubernetes API.
 At this stage the file becomes a persistent volume in the cluster: create a VirtualDisk with `type: Upload` and transfer the `qcow2` over HTTP.
-The disk is provisioned in the chosen StorageClass, bypassing DVCR.
+The disk is provisioned in the chosen StorageClass, bypassing [DVCR](../glossary.html#dvcr).
 
 Uploading the disk image to the cluster includes the following steps:
 
@@ -205,7 +205,7 @@ rv-thin-r1 (default) replicated.csi.storage.deckhouse.io     Immediate          
 rv-thin-r2           replicated.csi.storage.deckhouse.io     Immediate           48d
 ```
 
-Select the class name that fits your storage requirements for VM disks.
+Select the class name that fits your storage requirements for [VM disks](../glossary.html#vm-disk).
 
 ### Create a VirtualDisk for upload
 
@@ -300,12 +300,12 @@ If you know vSphere, the following table maps familiar VMware objects to Kuberne
 |-------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------|
 | Datastore               | StorageClass                                                                                                                                                  | Disk backing storage             |
 | VMX                     | [VirtualMachine](/modules/virtualization/cr.html#virtualmachine).spec                                                                                         | VM specification                 |
-| Virtual disk (VMDK)     | [VirtualDisk](/modules/virtualization/cr.html#virtualdisk)                                                                                                    | VM disk                          |
+| Virtual disk (VMDK)     | [VirtualDisk](/modules/virtualization/cr.html#virtualdisk)                                                                                                    | [VM disk](../glossary.html#vm-disk)                          |
 | ISO image               | [VirtualImage](/modules/virtualization/cr.html#virtualimage) (`cdrom: true`)                                                                                  | Installation or driver ISO       |
 | Template                | [VirtualImage](/modules/virtualization/cr.html#virtualimage)                                                                                                  | Template for provisioning disks  |
 | Port group / VLAN       | [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) (`networks`)                                                                                 | Networking                       |
 | Resource pool           | Project and quotas                                                                                                                                            | Resource limits per project      |
-| Snapshot                | [VirtualDiskSnapshot](/modules/virtualization/cr.html#virtualdisksnapshot) / [VirtualMachineSnapshot](/modules/virtualization/cr.html#virtualmachinesnapshot) | Disk and VM snapshots            |
+| Snapshot                | [VirtualDiskSnapshot](/modules/virtualization/cr.html#virtualdisksnapshot) / [VirtualMachineSnapshot](/modules/virtualization/cr.html#virtualmachinesnapshot) | Disk and [VM snapshots](../glossary.html#vm-snapshot)            |
 | Folder                  | Namespace                                                                                                                                                     | Namespace                        |
 | Cluster / resource pool | Project                                                                                                                                                       | Namespace grouping               |
 | ESXi host               | Node                                                                                                                                                          | Physical server                  |
@@ -344,7 +344,7 @@ Set `osType: Windows` for Windows guests.
 
 If the source VM in VMware used UEFI boot, add `bootloader: EFI` (see the parameter table below).
 
-If additional networks and the SDN module are configured in the cluster, you can add interfaces alongside the primary network:
+If additional networks and the [SDN](../glossary.html#sdn) module are configured in the cluster, you can add interfaces alongside the primary network:
 
 ```yaml
   networks:

@@ -5,11 +5,11 @@ description: "Настройка аутентифицированного дос
 lang: ru
 ---
 
-С DP можно использовать аутентификацию при доступе к Kubernetes API. В этом случае пользователь в веб-интерфейсе kubeconfig DP может сгенерировать конфигурацию для `kubectl`, для безопасного доступа к Kubernetes API через балансировщик трафика (Ingress-контроллер).
+С DP можно использовать аутентификацию при доступе к Kubernetes API. В этом случае пользователь в веб-интерфейсе kubeconfig DP может сгенерировать конфигурацию для `kubectl`, для безопасного доступа к Kubernetes API через балансировщик трафика ([Ingress-контроллер](../../../../glossary.html#ingress-controller)).
 
 Чтобы настроить доступ, выполните следующие шаги:
 
-1. Включите публикацию Kubernetes API. Для этого установите параметр [`apiserver.publishAPI.ingress.enabled: true`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-enabled) в настройках модуля `control-plane-manager` или с помощью веб-интерфейса Deckhouse Platform.
+1. Включите публикацию Kubernetes API. Для этого установите параметр [`apiserver.publishAPI.ingress.enabled: true`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-enabled) в настройках модуля `control-plane-manager` или с помощью [веб-интерфейса Deckhouse](../../../../glossary.html#web-ui) Platform.
 
    Пример конфигурации модуля:
 

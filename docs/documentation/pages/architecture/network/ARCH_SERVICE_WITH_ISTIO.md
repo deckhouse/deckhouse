@@ -16,14 +16,14 @@ Compatibility between Istio versions and Kubernetes versions is defined by the c
   * **Envoy**: Proxies application traffic. It is responsible for implementing all the Istio functionality,
     including routing, authentication, authorization, etc.
   * **Pilot-agent**: A part of Istio that is responsible for keeping the Envoy configuration up to date
-    and has a built-in caching DNS server.
+    and has a built-in [caching DNS server](../../glossary.html#caching-dns-server).
 * **DNAT settings**:
   * DNAT of incoming and outgoing application requests in the sidecar proxy is configured in each Pod using an additional init container.
     Thus, traffic will be intercepted transparently for applications.
   * Since incoming traffic is redirected to the sidecar proxy, this also applies to readiness/liveness probes.
     Since the Kubernetes subsystem does not support Mutual TLS probes,
     all existing probes are redirected to a port in the sidecar proxy, which passes them to the application unchanged.
-* **Ingress Controller**:
+* **[Ingress Controller](../../glossary.html#ingress-controller)**:
   * Each Pod of an Ingress controller also includes a sidecar proxy, which handles traffic between the controller and services.
   * Incoming traffic from users is handled directly by the controller.
 * **Ingress resources**:

@@ -6,12 +6,12 @@ search: PCI in a VM, PCI passthrough, PCIDevice, migration limitations
 ---
 
 {% alert level="info" %}
-PCI device passthrough is available in commercial Deckhouse Platform (DP) editions.
+PCI [device passthrough](../../glossary.html#device-passthrough) is available in commercial Deckhouse Platform (DP) [editions](../../glossary.html#edition).
 {% endalert %}
 
 PCI device passthrough lets you use a physical device of a node in a virtual machine (VM), for example an industrial controller, a hardware security module, a capture card, or an FPGA. The device works in the guest operating system under its own driver, so install that driver in the guest system yourself.
 
-Devices are granted to a project by the administrator, who also handles the requirements for the nodes and the cluster versions.
+Devices are granted to a [project](../../glossary.html#project) by the administrator, who also handles the requirements for the nodes and the cluster versions.
 
 ## Attaching a PCI device to a VM
 
@@ -68,7 +68,7 @@ If the device is removed from the node, the machine doesn't start and stays in t
 
 When attaching PCI devices, consider the following limitations:
 
-- A machine with a PCI device starts only on the node of that device and can't be moved by live migration, so it has to be stopped when the node is put into maintenance.
+- A machine with a PCI device starts only on the node of that device and can't be moved by [live migration](../../glossary.html#live-migration), so it has to be stopped when the node is put into maintenance.
 - All PCI devices of a machine have to be on the same node, otherwise the specification is rejected.
 - A device is attached to one machine only. If another one already lists it, DP rejects your specification.
 - A machine takes no more than eight PCI devices.

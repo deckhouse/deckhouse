@@ -4,7 +4,7 @@ permalink: en/admin/configuration/storage/sds/lvm-local.html
 description: "Configure local LVM-based storage in Deckhouse Platform. High-performance local storage setup for test environments and EDGE clusters with reduced network latency."
 ---
 
-Local storage reduces network latency and provides higher performance compared to remote storage accessed over a network. This approach is particularly effective in test environments and EDGE clusters. This functionality is provided by the [`sds-local-volume`](/modules/sds-local-volume/) module.
+[Local storage](../../../../glossary.html#local-storage) reduces network latency and provides higher performance compared to remote storage accessed over a network. This approach is particularly effective in test environments and EDGE clusters. This functionality is provided by the [`sds-local-volume`](/modules/sds-local-volume/) module.
 
 ## Configuring local storage
 
@@ -12,7 +12,7 @@ To ensure the correct operation of the `sds-local-volume` module, follow these s
 
 1. Configure LVMVolumeGroup. Before creating a StorageClass, you must create an [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource for the `sds-node-configurator` module on the cluster nodes.
 1. Enable the [`sds-node-configurator`](/modules/sds-node-configurator/) module. Ensure that the module is enabled **before** enabling the `sds-local-volume` module.
-1. Create the corresponding StorageClasses. Creating a StorageClass for the CSI driver `local.csi.storage.deckhouse.io` by a user is **prohibited**.
+1. Create the corresponding StorageClasses. Creating a StorageClass for the [CSI driver](../../../../glossary.html#csi-driver) `local.csi.storage.deckhouse.io` by a user is **prohibited**.
 
 The module supports two operating modes: LVM and LVMThin.
 
@@ -285,7 +285,7 @@ This is possible, for example, in the following scenario:
 
 ### Thick volumes
 
-To prevent data leaks through thick volumes, the [`volumeCleanup`](/modules/sds-node-configurator/cr.html#lvmlogicalvolume-v1alpha1-spec-volumecleanup) parameter is provided. It allows you to select the volume cleanup method before deleting a PV.
+To prevent data leaks through [thick volumes](../../../../glossary.html#thick-volume), the [`volumeCleanup`](/modules/sds-node-configurator/cr.html#lvmlogicalvolume-v1alpha1-spec-volumecleanup) parameter is provided. It allows you to select the volume cleanup method before deleting a PV.
 
 Possible values:
 
@@ -300,9 +300,9 @@ Possible values:
 
 ### Thin volumes
 
-When a block in a thin volume is freed via `discard` by the guest operating system, this command is forwarded to the device. If a hard disk is used or if the solid-state drive does not support `discard`, the data may remain in the thin pool until the block is reused. However, users are only granted access to thin volumes, not the thin pool itself. They can only obtain a volume from the pool, and for thin volumes, the thin pool block is zeroed upon reuse, preventing data leaks between clients. This is ensured by the `thin_pool_zero=1` setting in LVM.
+When a block in a [thin volume](../../../../glossary.html#thin-volume) is freed via `discard` by the guest operating system, this command is forwarded to the device. If a hard disk is used or if the solid-state drive does not support `discard`, the data may remain in the thin pool until the block is reused. However, users are only granted access to thin volumes, not the thin pool itself. They can only obtain a volume from the pool, and for thin volumes, the thin pool block is zeroed upon reuse, preventing data leaks between clients. This is ensured by the `thin_pool_zero=1` setting in LVM.
 
 ## System requirements and recommendations
 
 - Use stock kernels provided with [supported distributions](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html#linux).
-- Do not use another SDS (Software Defined Storage) to provide disks for SDS Deckhouse.
+- Do not use another [SDS](../../../../glossary.html#sds) (Software Defined Storage) to provide disks for SDS Deckhouse.

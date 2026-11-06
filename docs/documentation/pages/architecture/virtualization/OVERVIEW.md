@@ -13,10 +13,10 @@ The [`virtualization`](/modules/virtualization/) module consists of the followin
 
 - [Virtualization API](api.html): A controller that implements a user API for creating and managing VM resources.
 - [A module core](core.html): It is based on the KubeVirt project and uses QEMU/KVM + libvirtd to run VMs. [KubeVirt](https://github.com/kubevirt/kubevirt) is an open-source project that allows you to launch, deploy, and manage VMs using Kubernetes as an orchestration platform. It enables a cooperation between traditional VMs and container workloads in the same Kubernetes cluster, providing a single control plane.
-- [Deckhouse Virtualization Container Registry (DVCR)](dvcr.html): A container registry for storing and caching VM images.
+- [Deckhouse Virtualization Container Registry (DVCR)](dvcr.html): A container registry for storing and caching [VM images](../../glossary.html#vm-image).
 - [Auxiliary components](auxiliary.html): Components that implement the following auxiliary functions:
 
-  - Security events audit.
+  - [Security events](../../glossary.html#security-event) audit.
   - Forwarding USB devices to VMs.
   - Updating network routes.
   - Deleting resources before deactivating the [`virtualization`](/modules/virtualization/) module.

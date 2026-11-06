@@ -29,7 +29,7 @@ The Network (internal network) can be configured by your VMware Cloud Director s
 For access to the VMware Cloud Director API, one of the following options is sufficient:
 
 * The `Organization Administrator` role with the `Preserve All ExtraConfig Elements During OVF Import and Export` right. This option does not require configuring a separate role, but grants the user full administrative access to the organization.
-* A custom role with the set of rights listed [below](#user-rights). This set is sufficient to create a cluster, provision nodes (including CloudEphemeral with static addressing and DHCP), and work with CSI disks and StorageClass without granting additional administrative rights.
+* A custom role with the set of rights listed [below](#user-rights). This set is sufficient to create a cluster, provision nodes (including [CloudEphemeral](../../../../glossary.html#cloud-ephemeral-node) with static addressing and DHCP), and work with CSI disks and StorageClass without granting additional administrative rights.
 
 In VMware Cloud Director, user permissions come from the role and from a **Rights Bundle** — a set of rights published to the organization. Add the `Preserve All ExtraConfig Elements During OVF Import and Export` right both to the role and to the organization's Rights Bundle.
 
@@ -139,7 +139,7 @@ This instruction applies only to the "Standard" placement scheme.
 To dynamically provision nodes, enable the DHCP server for the internal network.
 
 {% alert level="info" %}
-We recommend reserving the beginning of the address range for system workloads (control plane, frontend nodes, system nodes), and using the rest for the DHCP pool.  
+We recommend reserving the beginning of the address range for system workloads (control plane, [frontend nodes](../../../../glossary.html#frontend-node), [system nodes](../../../../glossary.html#system-node)), and using the rest for the DHCP pool.  
 For example, for a "/24" network, reserving 20 addresses for system workloads is sufficient.
 {% endalert %}
 
@@ -227,7 +227,7 @@ This address is managed by MetalLB in L2 mode on dedicated frontend nodes.
 ### Let's Encrypt certificate issuance
 
 {% alert level="info" %}
-This instruction is applicable only for the `Standard` deployment layout.
+This instruction is applicable only for the `Standard` deployment [layout](../../../../glossary.html#layout).
 {% endalert %}
 
 When using [`cert-manager`](/modules/cert-manager/) with the HTTP-01 ACME challenge type, you may need to configure Hairpin NAT (NAT loopback) on the Edge Gateway.
@@ -283,7 +283,7 @@ Disable vApp/Guest OS Customization (Guest Customization, vApp Customization, an
 {% include notice_envinronment.liquid %}
 
 In the example, an "OVA" file provided by Ubuntu is used, with two modifications.  
-These modifications are required for proper provisioning of CloudPermanent nodes and to allow attaching disks created by CSI.
+These modifications are required for proper provisioning of [CloudPermanent nodes](../../../../glossary.html#cloud-permanent-node) and to allow attaching disks created by CSI.
 
 ### Preparing the template from an OVA file
 
@@ -416,7 +416,7 @@ shutdown -P now
 ## Using the LoadBalancer
 
 - DP components support `Service` resources of type `LoadBalancer` when deployed on VMware Cloud Director (VCD).
-- VMware NSX Advanced Load Balancer (ALB or Avi Networks) is used as the load balancer.
+- VMware NSX [Advanced Load Balancer](../../../../glossary.html#advanced-load-balancer) (ALB or Avi Networks) is used as the load balancer.
 - Support is available **only** when using the `NSX-T` network virtualization platform.
 - The load balancer functionality must be enabled on the Edge Gateway by your VCD provider. You can verify this under Edge Gateway → Load Balancer → General Settings — the `State` parameter must be `Active`.
 - If the load balancer was enabled after the DP cluster was successfully created, the components will automatically pick up the changes within an hour (no additional actions are required).

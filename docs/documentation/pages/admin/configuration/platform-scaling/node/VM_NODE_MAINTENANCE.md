@@ -9,7 +9,7 @@ Work on a node affects the virtual machines (VMs) running on it. The sections be
 
 ## VM migration and node maintenance
 
-Live migration moves a running virtual machine from one node to another without shutting it down. It's needed in three situations:
+[Live migration](../../../../glossary.html#live-migration) moves a running virtual machine from one node to another without shutting it down. It's needed in three situations:
 
 - Load balancing, to distribute VMs evenly across nodes.
 - Node maintenance or update, to free the node from VMs.
@@ -92,12 +92,12 @@ The following steps show how to move a selected VM to another node.
 
 {% tab "Using the web interface" %}
 
-1. Go to the **Projects** tab and select the project you need.
+1. Go to the **[Projects](../../../../glossary.html#project)** tab and select the project you need.
 1. Go to **Virtualization** → **Virtual machines**.
 1. Select the virtual machine from the list and click the ellipsis button.
 1. In the menu that opens, select **Migrate**.
 1. In the **Virtual machine migration** window, select **Migrate to an arbitrary node** or **Migrate to a selected node** and specify the node in the **Nodes available for migration** field.
-1. If required, enable **Migrate disks** to move the VM disks along with the VM, and **Force (slow down guest CPU)** to make sure the migration completes for an actively running VM.
+1. If required, enable **Migrate disks** to move the [VM disks](../../../../glossary.html#vm-disk) along with the VM, and **Force (slow down guest CPU)** to make sure the migration completes for an actively running VM.
 1. Click **Migrate**, or cancel the operation with **Cancel**.
 
 {% endtab %}
@@ -126,10 +126,10 @@ To return migration traffic to the main node network, delete the `network` block
 
 To create a system network in the web interface:
 
-1. Go to the **System** tab, then to **Network** → **SDN** → **System networks**.
+1. Go to the **System** tab, then to **Network** → **[SDN](../../../../glossary.html#sdn)** → **System networks**.
 1. Click **Create**.
 1. In the **Create resource** window that opens, enter the network name in the **Name** field.
-1. On the **Configuration** tab, select the type (`VLAN`, `Access`, or `SRIOVVirtualFunction`) in the **Type** field, the underlay network in the **Underlay network** field, and the VLAN identifier in the **VLAN** block. Set the **IPAM** block parameters, if required.
+1. On the **Configuration** tab, select the type (`VLAN`, `Access`, or `SRIOVVirtualFunction`) in the **Type** field, the [underlay network](../../../../glossary.html#underlay-network) in the **Underlay network** field, and the VLAN identifier in the **VLAN** block. Set the **IPAM** block parameters, if required.
 1. Click **Apply**.
 1. Review the created networks in the list, which shows the **Status**, **Type**, **Underlay network**, **VLAN ID**, and **IP pool** columns.
 
@@ -153,7 +153,7 @@ d8 k get vm -o json | jq -r '.items[] | [.metadata.name, (.status.conditions[] |
 
 ### Maintenance mode
 
-Work on a node that runs virtual machines can disrupt them. To prevent this, switch the node to maintenance mode, and DP moves the VMs to other nodes.
+Work on a node that runs virtual machines can disrupt them. To prevent this, switch the node to [maintenance mode](../../../../glossary.html#maintenance-mode), and DP moves the VMs to other nodes.
 
 {% tabs node-drain %}
 
@@ -207,13 +207,13 @@ d8 k annotate node <NODE_NAME> virtualization.deckhouse.io/virtualmachines-resta
 
 Where `<NODE_NAME>` is the name of the node being switched to maintenance mode.
 
-Only the VMs that can't be moved by live migration are restarted. The guest OS shuts down gracefully, after which the VM starts according to the [`.spec.runPolicy`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-runpolicy) run policy. For each restart, a [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource named `node-maintenance-restart-*` is created. A restart interrupts the applications inside the VM, so coordinate it with the project owners.
+Only the VMs that can't be moved by live migration are restarted. The guest OS shuts down gracefully, after which the VM starts according to the [`.spec.runPolicy`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-runpolicy) [run policy](../../../../glossary.html#vm-run-policy). For each restart, a [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource named `node-maintenance-restart-*` is created. A restart interrupts the applications inside the VM, so coordinate it with the project owners.
 
 The approval doesn't apply to VMs that can be moved by live migration, including those with no suitable node at the moment. Such VMs are moved by live migration as soon as a suitable node appears.
 
 You can grant the approval in advance, while planning the work. Until the node is switched to maintenance mode, the annotation has no effect. DP removes both annotations once the node is free, so one approval covers one maintenance of one node.
 
-DP reacts to VM eviction from a node. If eviction stopped on timeout (the [`.spec.nodeDrainTimeoutSecond`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodedraintimeoutsecond) parameter of the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource, 10 minutes by default), eviction isn't retried. An approval granted after that doesn't trigger a restart, and you have to free the node manually.
+DP reacts to [VM eviction](../../../../glossary.html#vm-eviction) from a node. If eviction stopped on timeout (the [`.spec.nodeDrainTimeoutSecond`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodedraintimeoutsecond) parameter of the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource, 10 minutes by default), eviction isn't retried. An approval granted after that doesn't trigger a restart, and you have to free the node manually.
 
 A restart frees the node but doesn't guarantee that the VM starts on another one right away. The limitation that prevents live migration usually prevents the start on another node as well. In that case, the VM stays in the `Pending` phase, and the `Running` condition reports the reason received from the scheduler. Maintenance can continue meanwhile. The VM starts as soon as a suitable node appears, including after the node returns to service with `d8 k uncordon`.
 
@@ -221,7 +221,7 @@ The VM owner sees the same information in the `EvictionRequired` condition of th
 
 ### Shutting down and rebooting a node with virtual machines
 
-Running virtual machines postpone the shutdown and reboot of their node. DP labels their workloads with `pod.deckhouse.io/inhibit-node-shutdown` and uses this label to delay the node shutdown. The mechanism is available in commercial DP editions, is described in the [`node-manager` module documentation](/modules/node-manager/), and doesn't need to be enabled.
+Running virtual machines postpone the shutdown and reboot of their node. DP labels their workloads with `pod.deckhouse.io/inhibit-node-shutdown` and uses this label to delay the node shutdown. The mechanism is available in commercial DP [editions](../../../../glossary.html#edition), is described in the [`node-manager` module documentation](/modules/node-manager/), and doesn't need to be enabled.
 
 If a shutdown or reboot is requested on a node that still runs virtual machines:
 

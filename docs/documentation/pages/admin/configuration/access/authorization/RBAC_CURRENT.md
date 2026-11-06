@@ -4,7 +4,7 @@ permalink: en/admin/configuration/access/authorization/rbac-current.html
 description: "Configure current RBAC authorization model in Deckhouse Platform. User-authz module setup, ClusterRole management, and role-based access control configuration."
 ---
 
-To use the current role model, the [`user-authz`](/modules/user-authz/) module must be enabled in the cluster.
+To use the current [role model](../../../../glossary.html#rbac), the [`user-authz`](/modules/user-authz/) module must be enabled in the cluster.
 This module creates a set of cluster roles (ClusterRole) suitable for most user and group access management tasks.
 
 {% alert level="warning" %}
@@ -17,7 +17,7 @@ Automatic conversion of resources is not possible.
 
 Key features of the current role model:
 
-- Implements a role-based end-to-end authorization subsystem that extends the standard RBAC functionality.
+- Implements a role-based end-to-end authorization [subsystem](../../../../glossary.html#subsystem) that extends the standard RBAC functionality.
 - Access rights are managed using the custom resources [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) and [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule).
 - Controls access to scaling tools (via the `allowScale` parameter in the [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-allowscale) or [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule-v1alpha1-spec-allowscale) resource).
 - Controls access to port forwarding (via the `portForwarding` parameter in the [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-portforwarding) or [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule-v1alpha1-spec-portforwarding) resource).
@@ -26,7 +26,7 @@ Key features of the current role model:
 ## High-level roles used in the current model
 
 In addition to RBAC, the current role model implemented via the [`user-authz`](/modules/user-authz/) module
-provides a convenient set of high-level roles:
+provides a convenient set of [high-level roles](../../../../glossary.html#high-level-role):
 
 | Role | Examples of allowed actions | Limitations |
 |------|-----------------------------|-------------|

@@ -12,7 +12,7 @@ This subsection describes the architecture of the Network subsystem of Deckhouse
 The Network subsystem includes the following modules:
 
 * [`kube-dns`](/modules/kube-dns/): Installs CoreDNS components for DNS management in the Kubernetes cluster.
-* [`node-local-dns`](/modules/node-local-dns/): Deploys a caching DNS server on each cluster node and exports DNS metrics to Prometheus for analyzing DNS operation in the cluster on the [Grafana dashboard](/modules/node-local-dns/#grafana-dashboard).
+* [`node-local-dns`](/modules/node-local-dns/): Deploys a [caching DNS server](../../glossary.html#caching-dns-server) on each cluster node and exports DNS metrics to Prometheus for analyzing DNS operation in the cluster on the [Grafana dashboard](/modules/node-local-dns/#grafana-dashboard).
 * [`kube-proxy`](/modules/kube-proxy/): Manages the kube-proxy components responsible for networking and load balancing within the cluster.
 * [`cni-cilium`](/modules/cni-cilium/): Provides cluster networking using the CNI Cilium plugin.
 * [`cni-flannel`](/modules/cni-flannel/): Provides a network between multiple nodes in a cluster using the [Flannel](https://github.com/flannel-io/flannel) project.
@@ -20,9 +20,9 @@ The Network subsystem includes the following modules:
 * [`cilium-hubble`](/modules/cilium-hubble/): Provides visualization of the cluster network stack if the Cilium CNI is enabled.
 * [`ingress-nginx`](/modules/ingress-nginx/): Installs and manages the [Ingress NGINX Controller](https://kubernetes.github.io/ingress-nginx/) using custom resources.
 * [`metallb`](/modules/metallb/): Implements the LoadBalancer mechanism for Services in bare-metal clusters.
-* [`istio`](/modules/istio/): Implements a Service Mesh based on Istio for centralized management of network traffic in the cluster.
+* [`istio`](/modules/istio/): Implements a [Service Mesh](../../glossary.html#service-mesh) based on Istio for centralized management of network traffic in the cluster.
 * [`alb`](/modules/alb/): Implements an Application Load Balancer (ALB) based on the [Kubernetes Gateway API](https://gateway-api.sigs.k8s.io/).
-* [`sdn`](/modules/sdn/): Provides software-defined networking (SDN) functions in the cluster — node network interface configuration, additional networks for pods and VMs, underlay networks, and system networks.
+* [`sdn`](/modules/sdn/): Provides software-defined networking ([SDN](../../glossary.html#sdn)) functions in the cluster — node network interface configuration, additional networks for pods and VMs, [underlay networks](../../glossary.html#underlay-network), and [system networks](../../glossary.html#system-network).
 * [`service-with-healthchecks`](/modules/service-with-healthchecks/): Provides an internal load balancer with independent health checks for each port, unlike the standard Kubernetes Service load balancer.
 * [`static-routing-manager`](/modules/static-routing-manager/): Manages static routes and `ip rule` entries on cluster nodes.
 

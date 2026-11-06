@@ -34,7 +34,7 @@ The set of virtual devices the guest OS sees:
 | Attaching disks on the fly     | yes                                                         | yes                                                         | only with `enableParavirtualization: true` and only if the guest OS has the virtio-scsi driver |
 | Changing CPU and memory on the fly | yes                                                     | yes                                                         | no                           |
 
-USB device passthrough works for `Legacy`, but the UHCI controller is limited to the USB 1.1 speed of 12 Mbps, so fast storage in such a VM hits the bus limit.
+USB [device passthrough](../../glossary.html#device-passthrough) works for `Legacy`, but the UHCI controller is limited to the USB 1.1 speed of 12 Mbps, so fast storage in such a VM hits the bus limit.
 
 Choose `Legacy` when the guest operating system can't work with an AHCI controller, not just because it's old. For Linux with kernel 2.6.19 and newer, `osType: Generic` with `enableParavirtualization: false` is a fit, because there's no four-device limit there and attaching disks on the fly through [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) remains available.
 
@@ -45,7 +45,7 @@ For `Legacy`, the following isn't available:
 - The `EFI` and `EFIWithSecureBoot` bootloaders, as well as initialization (`cloud-init` and Sysprep), because these guest operating systems don't support them.
 - Guest OS information in the VM status and file system information.
 
-You can install the QEMU guest agent in such an OS from an archived virtio-win release, and the VM does show `AgentReady`, but its version is too old for Deckhouse Platform (DP). The VM gets the `AgentVersionNotSupported` condition, guest OS information isn't collected, and there's nothing to update the agent to.
+You can install the [QEMU guest agent](../../glossary.html#vm-guest-agent) in such an OS from an archived virtio-win release, and the VM does show `AgentReady`, but its version is too old for Deckhouse Platform (DP). The VM gets the `AgentVersionNotSupported` condition, guest OS information isn't collected, and there's nothing to update the agent to.
 
 A snapshot with `requiredConsistency: true` also doesn't complete successfully, but for a different reason. DP requests a file system freeze, and the agent replies that the command is disabled in its build with the `guest-fsfreeze-status has been disabled for this instance` message. On Windows, the freeze goes through the VSS provider, which isn't in this build. The snapshot waits in the `InProgress` phase for about ten minutes and moves to `Failed`, so set `requiredConsistency: false` for such VMs.
 
@@ -102,7 +102,7 @@ The `enableParavirtualization` parameter controls the use of the `virtio` bus fo
 To use the paravirtualization mode (`virtio`), some operating systems require the matching drivers to be installed. If the drivers aren't installed, the VM may fail to boot or the devices may work incorrectly.
 {% endalert %}
 
-For the `Legacy` OS type, the default value `true` isn't a fit, because these operating systems have no built-in virtio drivers, so for a VM you're going to install from the original media, set `enableParavirtualization: false`, otherwise the installer reports that it found no hard drives. A warning is issued when creating and modifying such a VM.
+For the `Legacy` OS type, the default value `true` isn't a fit, because these operating systems have no built-in virtio drivers, so for a VM you're going to install from the original media, set `enableParavirtualization: false`, otherwise the [installer](../../glossary.html#installer) reports that it found no hard drives. A warning is issued when creating and modifying such a VM.
 
 Keep `enableParavirtualization: true` for a VM with the `Legacy` OS type only when the virtio drivers are already installed in the guest OS. Then the VM keeps the i440fx chipset and the `BIOS` bootloader, but gets disks on virtio-blk, the virtio-net adapter, and loses the four-device limit. The CD-ROM stays on the IDE bus, because virtio-blk has no drive.
 

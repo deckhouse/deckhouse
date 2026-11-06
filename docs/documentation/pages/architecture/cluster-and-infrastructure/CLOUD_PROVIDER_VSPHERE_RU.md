@@ -29,7 +29,7 @@ description: Архитектура модуля cloud-provider-vsphere в Deckh
 
 1. **Сloud-controller-manager** — [Kubernetes vSphere Cloud Provider](https://github.com/kubernetes/cloud-provider-vsphere), реализация [cloud сontroller manager](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/) для VMware vSphere. Компонент обеспечивает интеграцию с облачными ресурсами на базе VMware vSphere и выполняет следующие функции:
 
-   * реализует связь 1:1 между объектом узла в Kubernetes (Node) и виртуальной машиной в облачном провайдере. Для этого:
+   * реализует связь 1:1 между объектом узла в Kubernetes (Node) и виртуальной машиной в [облачном провайдере](../../../glossary.html#cloud-provider). Для этого:
 
      * заполняет поля `spec.providerID` и `nodeInfo` ресурса Node;
      * проверяет наличие виртуальной машины в облаке и при ее отсутствии удаляет ресурс Node в кластере.
@@ -49,7 +49,7 @@ description: Архитектура модуля cloud-provider-vsphere в Deckh
    * **cloud-data-discoverer** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контейнера cloud-data-discoverer.
 
-1. **CSI-драйвер (vsphere)** — реализация CSI-драйвера для VMware vSphere. С архитектурой CSI-драйвера, используемого в модуле `cloud-provider-vsphere` DP, можно ознакомиться в [соответствующем разделе документации](../../storage/csi-drivers/csi-driver-vsphere.html).
+1. **[CSI-драйвер](../../../glossary.html#csi-driver) (vsphere)** — реализация CSI-драйвера для VMware vSphere. С архитектурой CSI-драйвера, используемого в модуле `cloud-provider-vsphere` DP, можно ознакомиться в [соответствующем разделе документации](../../storage/csi-drivers/csi-driver-vsphere.html).
 
    CSI-драйвер (vsphere) не поддерживает работу со снимками. По этой причине в поде `csi-controller` отсутствует сайдкар-контейнер snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)).
 

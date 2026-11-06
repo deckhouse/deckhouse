@@ -282,7 +282,7 @@ deploy:
 
 {% endraw %}
 
-Variables `K8S_SERVER`, `K8S_USER`, `K8S_PASSWORD` are set in the project CI/CD settings.
+Variables `K8S_SERVER`, `K8S_USER`, `K8S_PASSWORD` are set in the [project](../../../../glossary.html#project) CI/CD settings.
 
 ---
 

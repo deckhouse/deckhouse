@@ -6,13 +6,13 @@ search: vault, secrets
 description: Архитектура модуля secrets-store-integration в Deckhouse Platform.
 ---
 
-Модуль [`secrets-store-integration`](/modules/secrets-store-integration/) реализует доставку секретов для приложений в Deckhouse Platform (DP) из внешнего хранилища, совместимого с API [HashiCorp Vault](https://github.com/hashicorp/vault).
+Модуль [`secrets-store-integration`](/modules/secrets-store-integration/) реализует доставку секретов для приложений в Deckhouse Platform (DP) из [внешнего хранилища](../../glossary.html#external-storage), совместимого с API [HashiCorp Vault](https://github.com/hashicorp/vault).
 
 Модуль предоставляет следующие возможности:
 
 - доставка секретов в поды в виде примонтированных файлов или переменных окружения без хранения в etcd;
 - автоматическое подключение к внутреннему экземпляру [Deckhouse Stronghold](/products/stronghold/documentation/) без ручной настройки (режим `DiscoverLocalStronghold`);
-- работа с любым Vault-совместимым хранилищем секретов в режиме `Manual`;
+- работа с любым Vault-совместимым [хранилищем секретов](../../glossary.html#secrets-store) в режиме `Manual`;
 - автоматическое обновление примонтированных секретов каждые две минуты при изменении значения в хранилище;
 - подмена команды запуска (entrypoint) для приложений, которые нельзя модифицировать для прямого чтения секретов из хранилища;
 - доставка бинарных секретов в формате Base64 (например, JKS-хранилища, keytab-файлы для Kerberos) с автоматическим раскодированием.
@@ -48,7 +48,7 @@ description: Архитектура модуля secrets-store-integration в De
 
    Csi-secrets-store выполняет следующие действия:
 
-   - регистрирует эфемерный CSI-драйвер `secrets-store.csi.deckhouse.io` в [kubelet](../kubernetes-and-scheduling/kubelet.html);
+   - регистрирует эфемерный [CSI-драйвер](../../glossary.html#csi-driver) `secrets-store.csi.deckhouse.io` в [kubelet](../kubernetes-and-scheduling/kubelet.html);
    - взаимодействует с vault-csi-provider для получения данных из хранилища секретов;
    - монтирует секреты в виде файлов в под;
    - выполняет ротацию секретов;
@@ -90,7 +90,7 @@ description: Архитектура модуля secrets-store-integration в De
   - **copy-env-injector** — init-контейнер, добавленный компонентом webhook, который выполняет копирование исполняемого файл-инжектора из служебного образа `secrets-store-integration/env-injector`;
   - **&lt;CONTAINER_NAME&gt;** — один или несколько контейнеров (в том числе init-контейнеры) оригинального приложения пользователя, команда запуска которых изменена компонентом webhook на запуск файл-инжектора.
 
-   Файл-инжектор авторизуется в хранилище секретов, получает данные, передаёт секреты приложению через переменные окружения и запускает исходную команду контейнера. Если указана аннотация `secrets-store.deckhouse.io/restart-on-secret-change` со значением `watch-for-lease` или `watch-for-data`, файл-инжектор выполняет ротацию секретов при их изменении в хранилище.
+   Файл-инжектор авторизуется в [хранилище секретов](../../glossary.html#secrets-store), получает данные, передаёт секреты приложению через переменные окружения и запускает исходную команду контейнера. Если указана аннотация `secrets-store.deckhouse.io/restart-on-secret-change` со значением `watch-for-lease` или `watch-for-data`, файл-инжектор выполняет ротацию секретов при их изменении в хранилище.
 
 ## Взаимодействия модуля
 
@@ -113,7 +113,7 @@ description: Архитектура модуля secrets-store-integration в De
 1. **Kubelet**:
 
    - регистрирует Node Plugin;
-   - проверяет `livenessProbe` CSI-драйвера;
+   - проверяет `livenessProbe` [CSI-драйвера](../../glossary.html#csi-driver);
    - вызывает RPC `NodePublishVolume` и `NodeUnpublishVolume` в Node Plugin.
 
 1. **Prometheus-main** — собирает метрики компонентов csi-secrets-store и webhook.

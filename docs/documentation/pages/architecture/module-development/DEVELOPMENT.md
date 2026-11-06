@@ -4,7 +4,7 @@ permalink: en/architecture/module-development/development/
 description: Tools and approaches for developing and debugging Deckhouse Platform modules, including local testing and troubleshooting.
 ---
 
-When developing modules, you may want to pull and deploy a module bypassing the release channels. The [ModulePullOverride](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulepulloverride) resource is used for this purpose.
+When developing modules, you may want to pull and deploy a module bypassing the [release channels](../../../glossary.html#release-channel). The [ModulePullOverride](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulepulloverride) resource is used for this purpose.
 
 {% alert level="warning" %}
 The ModulePullOverride resource is intended **for development and debugging environments only**.
@@ -162,7 +162,7 @@ and can be enabled using the ModuleConfig object, and will be enabled by default
 * To use this mechanism, the `module.yaml` file must be included in the release image.
 * A module can still be disabled using ModuleConfig.
 * A module will remain on the last available release if the next release disables it
-  (for example, by setting `available: false` in the corresponding edition).
+  (for example, by setting `available: false` in the corresponding [edition](../../../glossary.html#edition)).
 
 {% endalert %}
 
@@ -488,7 +488,7 @@ update:
 
 ## Module artifacts in the container registry
 
-After a module has been built, its artifacts must be pushed to the container registry at a path that is the *source* path for pulling and running modules in DP. The path where module artifacts are pushed to the registry is specified in the [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource) resource.
+After a module has been built, its artifacts must be pushed to the container registry at a path that is the *source* path for pulling and running modules in DP. The path where [module artifacts](../../../glossary.html#module-artifacts) are pushed to the registry is specified in the [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource) resource.
 
 Below is an example of the container image hierarchy after pushing the `module-1` and `modules-2` module artifacts into the registry:
 
@@ -521,7 +521,7 @@ registry.example.io
 The container registry must support a nested repository structure. See [the requirements section](../#requirements) for more details.  
 {% endalert %}
 
-Below is a list of commands for working with the module source. The examples use the [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane#crane) tool. Follow the [instructions](https://github.com/google/go-containerregistry/tree/main/cmd/crane#installation) to install it. For macOS, use `brew`.
+Below is a list of commands for working with the [module source](../../../glossary.html#module-source). The examples use the [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane#crane) tool. Follow the [instructions](https://github.com/google/go-containerregistry/tree/main/cmd/crane#installation) to install it. For macOS, use `brew`.
 
 ### Print the list of modules in the module source
 
@@ -587,7 +587,7 @@ $ crane export registry.example.io/modules-source/module-1:v1.23.1 -  | tar -Oxf
 
 ### Configuring extra images
 
-Modules can include additional images (such as vulnerability databases or other supplementary data) by adding an `extra_images.json` file. This file specifies extra images that need to be manually pushed to the registry and are separate from the main module images.
+Modules can include additional images (such as [vulnerability databases](../../../glossary.html#vulnerability-database) or other supplementary data) by adding an `extra_images.json` file. This file specifies extra images that need to be manually pushed to the registry and are separate from the main module images.
 
 To view the extra images configuration:
 
@@ -625,7 +625,7 @@ alpha
 beta
 ```
 
-In the example above, there are two releases in the container registry; two release channels, `alpha` and `beta`, are also used:
+In the example above, there are two releases in the container registry; two [release channels](../../../glossary.html#release-channel), `alpha` and `beta`, are also used:
 
 ### Print the version in use on the `alpha` release channel
 

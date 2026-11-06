@@ -96,7 +96,7 @@ yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.jso
 
 ## Резервирование публичного IP
 
-Если используется схема размещения WithoutNAT или WithNATInstance, и требуется фиксированный внешний IP-адрес (например, для указания в [`externalIPAddresses`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-nodegroups-instanceclass-externalipaddresses), [`natInstanceExternalAddress`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-natinstanceexternaladdress) или для bastion-хоста), выполните команду:
+Если используется [схема размещения](../../../../glossary.html#layout) WithoutNAT или WithNATInstance, и требуется фиксированный внешний IP-адрес (например, для указания в [`externalIPAddresses`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-nodegroups-instanceclass-externalipaddresses), [`natInstanceExternalAddress`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-natinstanceexternaladdress) или для [bastion-хоста](../../../../glossary.html#bastion-host)), выполните команду:
 
 ```shell
 yc vpc address create --external-ipv4 zone=ru-central1-a

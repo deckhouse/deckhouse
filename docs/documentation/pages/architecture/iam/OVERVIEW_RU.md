@@ -8,7 +8,7 @@ extractedLinksOnlyMax: 0
 extractedLinksMax: 0
 ---
 
-В данном подразделе описывается архитектура подсистемы IAM (Identity and Access Management, идентификация и управление доступом) платформы Deckhouse Platform (DP).
+В данном подразделе описывается архитектура [подсистемы](../../glossary.html#subsystem) IAM (Identity and Access Management, идентификация и управление доступом) платформы Deckhouse Platform (DP).
 
 {% alert level="info" %}
 Практики безопасности, связанные с IAM, подробно разобраны в курсе [«Инструменты безопасности в Deckhouse Platform»](https://deckhouse.ru/courses/security-tools-in-dkp/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
@@ -17,7 +17,7 @@ extractedLinksMax: 0
 Подсистема IAM отвечает за следующие функции в DP:
 
 * [аутентификация пользователей](authentication.html);
-* ролевая модель управления доступом (RBAC);
+* [ролевая модель](../../glossary.html#rbac) управления доступом (RBAC);
 * [мультитенантность](multitenancy.html);
 * автоматическое назначение аннотаций и лейблов неймспейсам.
 

@@ -7,7 +7,7 @@ extractedLinksOnlyMax: 0
 extractedLinksMax: 0
 ---
 
-This subsection describes the architecture of the IAM subsystem (Identity and Access Management) of Deckhouse Platform (DP).
+This subsection describes the architecture of the IAM [subsystem](../../glossary.html#subsystem) (Identity and Access Management) of Deckhouse Platform (DP).
 
 The IAM subsystem provides the following features in DP:
 

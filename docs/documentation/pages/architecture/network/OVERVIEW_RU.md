@@ -13,7 +13,7 @@ extractedLinksMax: 0
 В подсистему Network входят следующие модули:
 
 * [`kube-dns`](/modules/kube-dns/) — устанавливает компоненты CoreDNS для управления DNS в кластере Kubernetes;
-* [`node-local-dns`](/modules/node-local-dns/) — разворачивает кеширующий DNS-сервер на каждом узле кластера и экспортирует данные в Prometheus для анализа работы DNS в кластере [на дашборде Grafana](/modules/node-local-dns/#grafana-dashboard);
+* [`node-local-dns`](/modules/node-local-dns/) — разворачивает [кеширующий DNS-сервер](../../glossary.html#caching-dns-server) на каждом узле кластера и экспортирует данные в Prometheus для анализа работы DNS в кластере [на дашборде Grafana](/modules/node-local-dns/#grafana-dashboard);
 * [`kube-proxy`](/modules/kube-proxy/) — управляет компонентами kube-proxy для сетевого взаимодействия и балансировки нагрузки в кластере;
 * [`cni-cilium`](/modules/cni-cilium/) — обеспечивает работу сети в кластере Kubernetes с помощью CNI Cilium;
 * [`cni-flannel`](/modules/cni-flannel/) — обеспечивает работу сети между узлами кластера на основе проекта [Flannel](https://github.com/flannel-io/flannel);
@@ -23,7 +23,7 @@ extractedLinksMax: 0
 * [`metallb`](/modules/metallb/) — реализует механизм LoadBalancer для сервисов в bare-metal-кластерах;
 * [`istio`](/modules/istio/) — реализует Service Mesh на основе Istio для централизованного управления сетевым трафиком в кластере;
 * [`alb`](/modules/alb/) — реализует прикладной балансировщик нагрузки (ALB) на основе [Kubernetes Gateway API](https://gateway-api.sigs.k8s.io/);
-* [`sdn`](/modules/sdn/) — предоставляет функции программно-определяемых сетей (SDN) в кластере: настройку сетевых интерфейсов на узлах, дополнительные сети для подов и ВМ, underlay-сети и системные сети;
+* [`sdn`](/modules/sdn/) — предоставляет функции [программно-определяемых сетей](../../glossary.html#sdn) (SDN) в кластере: настройку сетевых интерфейсов на узлах, дополнительные сети для подов и ВМ, [underlay-сети](../../glossary.html#underlay-network) и [системные сети](../../glossary.html#system-network);
 * [`service-with-healthchecks`](/modules/service-with-healthchecks/) — предоставляет внутренний балансировщик нагрузки с независимыми проверками работоспособности для каждого порта, в отличие от стандартного балансировщика Service Kubernetes;
 * [`static-routing-manager`](/modules/static-routing-manager/) — управляет статическими маршрутами и правилами `ip rule` на узлах кластера.
 

@@ -74,7 +74,7 @@ d8 k get vmsop <VMSOP_NAME> -o json | jq '.status.resources'
 
 A clone is assembled from temporary snapshots of a machine, so you don't have to stop it.
 
-A VM is cloned using the [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource with the `Clone` operation type, both for powered-off and for running virtual machines. When a running VM is cloned, a consistent snapshot is created automatically, and the clone is then built from it.
+A VM is cloned using the [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource with the `Clone` operation type, both for powered-off and for running virtual machines. When a running VM is cloned, a [consistent snapshot](../../glossary.html#vm-consistent-snapshot) is created automatically, and the clone is then built from it.
 
 During cloning, temporary snapshots are created automatically for the virtual machine and all its disks, and the new VM is assembled from them. After cloning finishes, the temporary snapshots are deleted, so you won't see them in the resource list. The specification of the cloned disks still keeps a reference (`dataSource`) to the corresponding snapshot, even though the snapshot itself no longer exists. This is expected behavior and doesn't indicate a problem, because by the time the clone starts, all the necessary data has already been transferred to the new disks.
 
@@ -99,7 +99,7 @@ Windows:
 
 {% tab "Using the CLI" %}
 
-To create a VM clone, use the following resource:
+To create a [VM clone](../../glossary.html#vm-clone), use the following resource:
 
 ```yaml
 apiVersion: virtualization.deckhouse.io/v1alpha2
@@ -169,11 +169,11 @@ As a result, a VM named `clone-database-prod` and a disk named `clone-database-r
 
 {% tab "Using the web interface" %}
 
-1. Go to the **Projects** tab and select the project you need.
+1. Go to the **[Projects](../../glossary.html#project)** tab and select the project you need.
 1. Go to **Virtualization** → **Virtual machines**.
 1. Select the virtual machine you need from the list and click the ellipsis button.
 1. In the menu that opens, select **Clone**.
-1. In the **Machine cloning** window that opens, select the snapshot to create the clone from in the **Virtual machine snapshot name** field. The clone is created from a snapshot, so prepare the snapshot in advance.
+1. In the **Machine cloning** window that opens, select the snapshot to create the clone from in the **[Virtual machine snapshot](../../glossary.html#vm-snapshot) name** field. The clone is created from a snapshot, so prepare the snapshot in advance.
 1. In the **Cloning mode** field, select `Strict` or `BestEffort`.
 1. If required, set new names for the clone resources in the **Customization** → **Resource renaming** block, specifying the resource type, the original name, and the new name.
 1. Click **Clone**.
@@ -186,7 +186,7 @@ As a result, a VM named `clone-database-prod` and a disk named `clone-database-r
 
 A VM is cloned from a snapshot using the [VirtualMachineSnapshotOperation](/modules/virtualization/cr.html#virtualmachinesnapshotoperation) resource with the `CreateVirtualMachine` operation type.
 
-To create a VM clone from a snapshot, use the following resource:
+To create a [VM clone](../../glossary.html#vm-clone) from a snapshot, use the following resource:
 
 ```yaml
 apiVersion: virtualization.deckhouse.io/v1alpha2

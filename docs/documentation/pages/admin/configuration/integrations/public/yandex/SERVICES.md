@@ -9,7 +9,7 @@ This allows for external monitoring, secure secret management, and automated dat
 This section describes steps to configure the following integrations:
 
 - Yandex Lockbox via External Secrets Operator
-- Yandex Managed Service for Prometheus
+- Yandex [Managed Service](../../../../glossary.html#managed-service) for Prometheus
 
 ## Integration with Yandex Lockbox
 
@@ -178,7 +178,7 @@ To set up the integration:
 
 ## Integration with Yandex Managed Service for Prometheus
 
-This integration lets you use [Yandex Managed Service for Prometheus](https://yandex.cloud/en/docs/monitoring/operations/prometheus/) as an external storage for metrics (for example, for long-term retention).
+This integration lets you use [Yandex Managed Service for Prometheus](https://yandex.cloud/en/docs/monitoring/operations/prometheus/) as an [external storage](../../../../glossary.html#external-storage) for metrics (for example, for long-term retention).
 
 To configure PrometheusRemoteWrite, follow these steps:
 

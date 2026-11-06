@@ -6,7 +6,7 @@ search: csi vsphere, csi-vsphere, container storage interface, vmware vsphere
 description: Описание архитектуры CSI-драйвера для VMware vSphere в Deckhouse Platform.
 ---
 
-Для управления постоянными томами хранения в Deckhouse Platform (DP) используется CSI-драйвер (плагин).
+Для управления постоянными томами хранения в Deckhouse Platform (DP) используется [CSI-драйвер](../../../glossary.html#csi-driver) (плагин).
 
 [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) — это стандартный интерфейс, который унифицирует доступ к хранилищам и упрощает интеграцию различных систем хранения в кластеры.
 
@@ -82,7 +82,7 @@ CSI-драйвер состоит из следующих компонентов
 
 1. [Kubelet](../../kubernetes-and-scheduling/kubelet.html):
 
-   * проверяет livenessProbe CSI-драйвера;
+   * проверяет livenessProbe [CSI-драйвера](../../../glossary.html#csi-driver);
    * регистрирует Node Plugin;
    * вызывает RPC `NodeStageVolume`, `NodeUnstageVolume`, `NodePublishVolume`, `NodeUnpublishVolume` и `NodeExpandVolume` в Node Plugin.
 

@@ -24,7 +24,7 @@ Main Argo CD capabilities:
 - visualization of differences between the desired and actual state;
 - tracking application configuration in Git;
 - working with multiple Kubernetes clusters;
-- access control through its own role model;
+- access control through its own [role model](../../../../glossary.html#rbac);
 - rollback to a previously recorded configuration and action audit;
 - working through the web interface, CLI, and API, including integration with Git webhooks and external automation systems.
 
@@ -35,7 +35,7 @@ Additionally, the module provides:
 
 - single sign-on (SSO) support;
 - integration with monitoring in DP;
-- high availability mode;
+- [high availability mode](../../../../glossary.html#ha-mode);
 - support for automatic image updates via Argo CD Image Updater;
 - access control for cluster resources.
 

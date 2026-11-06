@@ -138,7 +138,7 @@ Creating more than one ArgoCD object in a single namespace is not supported.
 
 ### Enabling high availability mode
 
-To enable high availability mode, set the [`spec.ha.enabled: true`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-ha-enabled) parameter in the ArgoCD object.
+To enable [high availability mode](../../../../../glossary.html#ha-mode), set the [`spec.ha.enabled: true`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-ha-enabled) parameter in the ArgoCD object.
 
 Example:
 

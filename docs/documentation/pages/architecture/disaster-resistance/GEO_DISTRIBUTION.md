@@ -3,7 +3,7 @@ title: Geo-distribution
 permalink: en/architecture/disaster-resilience/geo-distribution.html
 ---
 
-Geo-distribution, in the context of disaster resilience in Deckhouse Platform (DP),
+[Geo-distribution](../../glossary.html#geo-distribution), in the context of [disaster resilience](../../glossary.html#disaster-resilience) in Deckhouse Platform (DP),
 is an architectural approach that ensures continuous cluster operation by distributing its components
 across multiple [availability zones (Multi-AZ)](#using-multiple-availability-zones-multi-az) or [regions (Multi-Region)](#using-multiple-regions-multi-region).
 This approach minimizes the risks of incidents of various scales.
@@ -15,7 +15,7 @@ This is the responsibility of the platform administrator.
 
 ## Using multiple availability zones (Multi-AZ)
 
-DP lets you distribute cluster nodes across availability zones.
+DP lets you distribute cluster nodes across [availability zones](../../glossary.html#availability-zone).
 This approach increases application resilience to infrastructure-wide failures
 and ensures the applications remain functional even if one of the zones in a data center or cloud becomes unavailable.
 
@@ -36,14 +36,14 @@ Availability zones are defined by the following features:
 
 ### Distributing nodes across zones
 
-With most cloud providers, zone distribution happens automatically.
+With most [cloud providers](../../glossary.html#cloud-provider), zone distribution happens automatically.
 In non-cloud environments, administrators must manually label nodes to indicate the target zone.
 
 For the node labeling process and how to add nodes to groups, refer to ["Node management"](../../admin/configuration/platform-scaling/node/node-management.html).
 
 ## Using multiple regions (Multi-Region)
 
-DP supports distributing cluster nodes across different regions.
+DP supports distributing cluster nodes across different [regions](../../glossary.html#region).
 This approach allows applications to continue running
 even in the event of a complete outage of a data center or cloud provider.
 
@@ -56,7 +56,7 @@ A region is a key element in the global distributed architecture used by cloud p
 Using multiple regions (Multi-Region) is usually appropriate
 only when applications can work independently in each region (without reaching out to others).
 This is due to the relatively high latency between regions.
-Typical use cases include hosting CDN cache servers or distributed monitoring nodes.
+Typical use cases include hosting CDN cache servers or distributed [monitoring nodes](../../glossary.html#monitoring-node).
 {% endalert %}
 
 ### Region features

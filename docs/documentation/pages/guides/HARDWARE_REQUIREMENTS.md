@@ -13,7 +13,7 @@ Before deploying a cluster, you need to plan for the resources that you might ne
 
 * What is the expected load?
 * Does your cluster require a high load mode?
-* Does your cluster require a high availability mode?
+* Does your cluster require a [high availability mode](../glossary.html#ha-mode)?
 * Which Deckhouse Platform (DP) modules do you intend to use?
 
 The answers to these questions can help you estimate the number of nodes recommended for your cluster deployment. See [Deployment scenarios](#deployment-scenarios) to learn more.
@@ -67,11 +67,11 @@ This section helps you **estimate the resources** required for the cluster based
 
 Where:
 
-* **master nodes** — nodes that manage the cluster;
-* **frontend nodes** — nodes that balance incoming traffic; Ingress controllers run on them;
-* **monitoring nodes** — used to run Grafana, Prometheus, and other monitoring components;
-* **system nodes** — intended to run DP modules;
-* **worker nodes** — intended to run user applications.
+* **[master nodes](../glossary.html#master-node)** — nodes that manage the cluster;
+* **[frontend nodes](../glossary.html#frontend-node)** — nodes that balance incoming traffic; [Ingress controllers](../glossary.html#ingress-controller) run on them;
+* **[monitoring nodes](../glossary.html#monitoring-node)** — used to run Grafana, Prometheus, and other monitoring components;
+* **[system nodes](../glossary.html#system-node)** — intended to run DP modules;
+* **[worker nodes](../glossary.html#worker-node)** — intended to run user applications.
 
 See [Configuration Features](production.html#things-to-consider-when-configuring) of the "Going to production" guide for details on these node types.
 
@@ -83,7 +83,7 @@ Features of the configurations listed in the table above:
 * **Increased load** — Unlike the typical configuration, this configuration includes dedicated monitoring nodes, enabling a high level of observability in the cluster even under high loads.
 
 {% alert level="info" %}
-Starting with version 1.74, Deckhouse Platform has a module integrity control mechanism that protects modules from being replaced or modified. This mechanism is enabled automatically when the operating system on the nodes where DP is installed supports the `erofs` kernel module. If this kernel module is not present, DP will continue to operate without the module integrity control mechanism, but an alert will be displayed indicating that this functionality is not working.
+Starting with version 1.74, Deckhouse Platform has a module [integrity control](../glossary.html#integrity-control) mechanism that protects modules from being replaced or modified. This mechanism is enabled automatically when the operating system on the nodes where DP is installed supports the `erofs` kernel module. If this kernel module is not present, DP will continue to operate without the module integrity control mechanism, but an alert will be displayed indicating that this functionality is not working.
 {% endalert %}
 
 ## Deciding on the amount of resources needed for nodes
@@ -193,8 +193,8 @@ Starting with version 1.74, Deckhouse Platform has a module integrity control me
 </table>
 
 {% alert level="info" %}
-* <span id="storage"></span>PVC disk space for system components: If the local disk space of the node will be used to store system PVCs (`prometheus`, `upmeter` modules, etc.), then it is necessary to additionally allocate >= 100 GB. The second value in the "Disk space" column (for example, 150 in "50 / 150") includes these 100 GB.
-* The parameters of worker nodes are largely dictated by the nature of the workload running on the node(s); the table lists the minimum requirements. For system services (`kubelet`) and system pods on worker nodes, you need to allocate at least 1 CPU and 2 GB of memory.
+* <span id="storage"></span>PVC disk space for [system components](../glossary.html#system-component): If the local disk space of the node will be used to store system PVCs (`prometheus`, `upmeter` modules, etc.), then it is necessary to additionally allocate >= 100 GB. The second value in the "Disk space" column (for example, 150 in "50 / 150") includes these 100 GB.
+* The parameters of [worker nodes](../glossary.html#worker-node) are largely dictated by the nature of the workload running on the node(s); the table lists the minimum requirements. For system services (`kubelet`) and system pods on worker nodes, you need to allocate at least 1 CPU and 2 GB of memory.
 * Note that all nodes require high performance disks (400+ IOPS).
 {% endalert %}
 
@@ -206,7 +206,7 @@ Such clusters lack fault tolerance. Do not use this kind of clusters in producti
 
 In some cases, a cluster can consist of a single node that performs all the node roles described above. This configuration may be used, for example, to familiarize yourself with the technology or to run workloads with low resource requirements.
 
-The [Getting Started guide](/products/kubernetes-platform/gs/bm/step5.html) contains instructions for deploying a single-node cluster. Once you un-taint the node, it will run all cluster components included in the selected module bundle ([bundle: Default](/modules/deckhouse/configuration.html#parameters-bundle) by default). To successfully run a cluster in this mode, you will need at least 16 CPUs, 32 GB of RAM, and 100 GB of disk space on a performance disk (400+ IOPS). Such a configuration would allow some workloads to be run.
+The [Getting Started guide](/products/kubernetes-platform/gs/bm/step5.html) contains instructions for deploying a [single-node cluster](../glossary.html#single-node-cluster). Once you un-taint the node, it will run all cluster components included in the selected [module bundle](../glossary.html#module-bundle) ([bundle: Default](/modules/deckhouse/configuration.html#parameters-bundle) by default). To successfully run a cluster in this mode, you will need at least 16 CPUs, 32 GB of RAM, and 100 GB of disk space on a performance disk (400+ IOPS). Such a configuration would allow some workloads to be run.
 
 With this configuration, a load of 2500 RPS on a typical web application (e.g., a static Nginx page) consisting of 30 pods, and incoming traffic of 24 Mbps will result in approximately the following resource consumption figures:
 
@@ -219,11 +219,11 @@ Run load testing of the application and adjust the server capacity according to 
 
 ### Configuration examples
 
-To deploy Deckhouse Platform Enterprise Edition with the [Default](/modules/deckhouse/configuration.html#parameters-bundle) module set, the following node configuration is required:
+To deploy Deckhouse Platform [Enterprise Edition](../glossary.html#edition) with the [Default](/modules/deckhouse/configuration.html#parameters-bundle) module set, the following node configuration is required:
 
-* **master nodes** — 1 node, 4 CPU, 8 GB RAM;
-* **frontend nodes** — 1 node, 2 CPU, 4 GB RAM;
-* **system nodes** — 1 node, 8 CPU, 16 GB RAM;
+* **[master nodes](../glossary.html#master-node)** — 1 node, 4 CPU, 8 GB RAM;
+* **[frontend nodes](../glossary.html#frontend-node)** — 1 node, 2 CPU, 4 GB RAM;
+* **[system nodes](../glossary.html#system-node)** — 1 node, 8 CPU, 16 GB RAM;
 * **worker nodes** — 1 node, 4 CPU, 8 GB RAM.
 
 {% alert level="info" %}

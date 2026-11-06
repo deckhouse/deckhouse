@@ -32,13 +32,13 @@ Each user is allowed a maximum of 20 login attempts. Once this limit is reached,
 
 1. **Passing the token to the application**. DexAuthenticator sets the `Authorization` HTTP header with the `ID token` from Redis.  
    This may be optional for some applications, such as Upmeter, where other authorization mechanisms are used.  
-   However, for applications like the Kubernetes Dashboard, this behavior is critical, as the Dashboard forwards the `ID token` to access the Kubernetes API on behalf of the user.
+   However, for applications like the Kubernetes [Dashboard](../../glossary.html#dashboard), this behavior is critical, as the Dashboard forwards the `ID token` to access the Kubernetes API on behalf of the user.
 
 ## DP-specific Dex extensions
 
 DP uses a modified version of Dex that supports:
 
-* Groups for static user accounts and the Bitbucket Cloud provider (via the [`bitbucketCloud`](/modules/user-authn/cr.html#dexprovider-v1-spec-bitbucketcloud) parameter).
+* Groups for [static user](../../glossary.html#static-user) accounts and the Bitbucket [Cloud provider](../../glossary.html#cloud-provider) (via the [`bitbucketCloud`](/modules/user-authn/cr.html#dexprovider-v1-spec-bitbucketcloud) parameter).
 * Passing the `group` claim to clients.
 * The `obsolete tokens` mechanism, which helps prevent race conditions when refreshing tokens in OIDC clients.
 

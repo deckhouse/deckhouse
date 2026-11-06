@@ -5,7 +5,7 @@ search: csi-scsi-generic, csi driver
 description: Architecture of the csi-scsi-generic CSI driver in Deckhouse Platform.
 ---
 
-The `csi-scsi-generic` CSI driver is the implementation of the [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) standard to manage volumes on SCSI-connected storage systems in Deckhouse Platform (DP). The CSI driver supports both iSCSI and Fibre Channel (FC) connection technologies.
+The `csi-scsi-generic` [CSI driver](../../../glossary.html#csi-driver) is the implementation of the [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) standard to manage volumes on SCSI-connected storage systems in Deckhouse Platform (DP). The CSI driver supports both iSCSI and Fibre Channel (FC) connection technologies.
 
 ## Driver architecture
 
@@ -74,7 +74,7 @@ The following external components interact with the driver:
 
 1. [Kubelet](../../kubernetes-and-scheduling/kubelet.html):
 
-   * Checks CSI driver livenessProbe.
+   * Checks [CSI driver](../../../glossary.html#csi-driver) livenessProbe.
    * Registers the Node Plugin.
    * Calls `NodeStageVolume`, `NodeUnstageVolume`, `NodePublishVolume`, and `NodeUnpublishVolume` RPCs in the Node Plugin.
 

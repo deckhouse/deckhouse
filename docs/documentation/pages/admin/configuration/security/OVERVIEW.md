@@ -11,23 +11,23 @@ as well as integration with external systems.
 
 In this section, you will find information on:
 
-- Security event audit:
+- [Security event](../../../glossary.html#security-event) audit:
   - How to enable and configure Kubernetes API event audit.
   - How to collect security events at the kernel and Kubernetes API levels
     using the platform's built-in capabilities (Falco).
-  - How to configure audit rules and receive alerts on suspicious activity.
+  - How to configure [audit rules](../../../glossary.html#runtime-audit-rule) and receive alerts on suspicious activity.
 
 - Virtualization event audit:
   - How to enable the log of actions on virtual machines.
   - Which events it records and how to view them.
 
 - Security policies:
-  - Support for Pod Security Standards.
+  - Support for [Pod Security Standards](../../../glossary.html#pod-security-standards).
   - Configuring operational and advanced security policies using Gatekeeper.
   - Verifying container image signatures.
   - Working with custom policies and exceptions.
 
-- Image vulnerability scanning:
+- Image [vulnerability scanning](../../../glossary.html#vulnerability-scanning):
   - How to set up regular scanning of container images.
   - How to view scan results and manually trigger rescans.
 

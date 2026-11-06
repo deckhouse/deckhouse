@@ -8,7 +8,7 @@ search: Application, install application, application conditions, installing app
 
 ## Browsing available package versions
 
-To list all available package versions, use the following command (the short name `apv` can be used):
+To list all available [package](../../glossary.html#marketplace-package) versions, use the following command (the short name `apv` can be used):
 
 ```bash
 d8 k get apv
@@ -68,7 +68,7 @@ spec:
 ```
 
 {% alert level="info" %}
-`spec.settings` is validated against the OpenAPI schema defined in the package. If the schema rejects your settings, the Application is not created. The schema is published in the `status.packageSchemas.settingsSchema` field of the package's [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion).
+`spec.settings` is validated against the OpenAPI schema defined in the [package](../../glossary.html#marketplace-package). If the schema rejects your settings, the Application is not created. The schema is published in the `status.packageSchemas.settingsSchema` field of the package's [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion).
 {% endalert %}
 
 ### Naming constraints
@@ -149,7 +149,7 @@ status:
 
 ## Multiple instances
 
-The same package can be installed multiple times in the same or different namespaces, each with a separate name and settings. For example, two Redis instances can be created: one for caching and one for sessions:
+The same [package](../../glossary.html#marketplace-package) can be installed multiple times in the same or different namespaces, each with a separate name and settings. For example, two Redis instances can be created: one for caching and one for sessions:
 
 ```yaml
 # Caching instance
@@ -211,7 +211,7 @@ When an Application is deleted, DP deletes the Kubernetes objects of the applica
 
 ### Can updates happen automatically?
 
-No. In the current implementation, updates require a manual change to `spec.packageVersion`. Automatic updates via release channels are planned for future versions.
+No. In the current implementation, updates require a manual change to `spec.packageVersion`. Automatic updates via [release channels](../../glossary.html#release-channel) are planned for future versions.
 
 ### Can an Application depend on another Application?
 

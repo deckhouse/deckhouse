@@ -69,15 +69,15 @@ The following external components interact with the module:
 
 ## Loki module
 
-In Kubernetes, system logs stored on nodes are retained only for a limited time and may be lost during node restarts or updates. The `loki` module deploys an internal short-term log storage system in the cluster based on Grafana Loki.
+In Kubernetes, system logs stored on nodes are retained only for a limited time and may be lost during node restarts or updates. The `loki` module deploys an internal [short-term log storage](../../glossary.html#short-term-log-storage) system in the cluster based on Grafana Loki.
 
 Module capabilities:
 
 * System logs are automatically sent to Loki without additional configuration.
-* Logs can be accessed through Grafana and the Deckhouse web UI (the `console` module).
+* Logs can be accessed through Grafana and the [Deckhouse web UI](../../glossary.html#web-ui) (the `console` module).
 
 {% alert level="warning" %}
-The short-term log storage based on Grafana Loki does not support high availability (HA) mode. For long-term storage of important logs, use external storage systems supported by the [`log-shipper`](/modules/log-shipper/) module.
+The short-term log storage based on Grafana Loki does not support high availability (HA) mode. For [long-term storage](../../glossary.html#longterm-storage) of important logs, use [external storage](../../glossary.html#external-storage) systems supported by the [`log-shipper`](/modules/log-shipper/) module.
 {% endalert %}
 
 For more details about module configuration and usage examples, refer to the [corresponding documentation section](/modules/loki/).
@@ -101,6 +101,6 @@ The module consists of a single component:
 
 The following external components interact with the module:
 
-* **vector**: Sends logs from system components to loki.
+* **vector**: Sends logs from [system components](../../glossary.html#system-component) to loki.
 * **console** (the Grafana instance embedded in the web UI): Uses loki as a data source for log visualization and analysis.
 * **prometheus-main**: Collects loki metrics.

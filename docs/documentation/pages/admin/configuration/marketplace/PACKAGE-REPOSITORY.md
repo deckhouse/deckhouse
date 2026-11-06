@@ -4,7 +4,7 @@ permalink: en/admin/configuration/marketplace/package-repository.html
 description: "Connect a container registry with packages to Deckhouse Platform Marketplace using PackageRepository. Configure authentication, scan intervals, and monitor repository status."
 ---
 
-To connect Deckhouse Platform (DP) to a container registry with application packages, use the [PackageRepository](../../../reference/api/cr.html#packagerepository) resource. Once the resource is created, DP scans the registry and creates an [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) object for each discovered package version.
+To connect Deckhouse Platform (DP) to a container registry with [application packages](../../../glossary.html#marketplace-package), use the [PackageRepository](../../../reference/api/cr.html#packagerepository) resource. Once the resource is created, DP scans the registry and creates an [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) object for each discovered package version.
 
 Example of a PackageRepository manifest:
 
@@ -82,7 +82,7 @@ Output columns:
 | `Phase` | Repository phase: `Active` after the first successful scan |
 | `Scan` | Time of the last successful scan |
 | `MSG` | Message of the `LastScanSucceeded` condition, for example, the error of the last scan |
-| `Packages` | Number of packages in the repository (hidden by default, use `-o wide`) |
+| `Packages` | Number of [packages](../../../glossary.html#marketplace-package) in the repository (hidden by default, use `-o wide`) |
 
 For detailed information about the status, use the following command:
 

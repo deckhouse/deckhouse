@@ -12,7 +12,7 @@ lang: ru
 - [`pool`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-masternodegroup-instanceclass-pool) — имя пула хранения внутри указанного хранилища;
 - [`rootDiskSizeGb`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-masternodegroup-instanceclass-rootdisksizegb) — размер корневого диска каждой виртуальной машины (в гигабайтах).
 
-Эти параметры задаются в секции instanceClass как для master-узлов, так и для рабочих групп узлов (NodeGroup).
+Эти параметры задаются в секции instanceClass как для [master-узлов](../../../../glossary.html#master-node), так и для рабочих групп узлов (NodeGroup).
 
 Пример настройки:
 
@@ -26,14 +26,14 @@ masterNodeGroup:
 ```
 
 {% alert level="info" %}
-В текущей версии поддерживается только одно хранилище на группу узлов.
+В текущей версии поддерживается только одно хранилище на [группу узлов](../../../../glossary.html#node-group).
 {% endalert %}
 
 ## Балансировка нагрузки
 
 Платформа Basis Dynamix не предоставляет встроенного балансировщика нагрузки. Для организации входящего трафика в кластер Deckhouse Platform рекомендуются следующие подходы:
 
-1. Внешний балансировщик. Если в вашей инфраструктуре есть внешний балансировщик (аппаратный или программный), настройте проброс портов 80 и 443 на frontend-узлы кластера.
+1. Внешний балансировщик. Если в вашей инфраструктуре есть внешний балансировщик (аппаратный или программный), настройте проброс портов 80 и 443 на [frontend-узлы](../../../../glossary.html#frontend-node) кластера.
 
 1. Использование MetalLB. Для обеспечения отказоустойчивой балансировки можно использовать MetalLB в L2-режиме.
 

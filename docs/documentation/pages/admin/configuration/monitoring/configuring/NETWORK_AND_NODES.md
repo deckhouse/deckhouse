@@ -11,7 +11,7 @@ Features of network interaction monitoring:
 
 - Automatically checks the availability of all cluster nodes (and, optionally, external systems) using ICMP (ping) — testing is started every two seconds.
 - All results are exported in metrics format to the Prometheus monitoring system.
-- Included is a ready-made dashboard for Grafana, where current availability, delay schedules, and potential network connectivity issues are visualized in real time (for details, refer to [Grafana](../../../../user/web/grafana.html)).
+- Included is a ready-made [dashboard](../../../../glossary.html#dashboard) for Grafana, where current availability, delay schedules, and potential network connectivity issues are visualized in real time (for details, refer to [Grafana](../../../../user/web/grafana.html)).
 - Allows you to quickly identify nodes with degraded connectivity and speeds up the response to incidents.
 
 The [`monitoring-ping`](/modules/monitoring-ping/) module tracks any changes to the `.status.addresses` field of a node. If changes are detected, a hook is triggered that collects the complete list of node names and their addresses, and passes it to the DaemonSet, which recreates the pods. Thus, `ping` checks always the current list of nodes.

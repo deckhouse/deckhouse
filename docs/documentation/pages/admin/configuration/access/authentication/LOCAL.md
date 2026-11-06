@@ -9,7 +9,7 @@ In addition to external authentication providers, DP also supports local authent
 Local authentication provides user verification and access management with support for configurable password policies, two-factor authentication (2FA), and group management.
 The implementation complies with OWASP recommendations, ensuring reliable protection of access to the cluster and applications without requiring integration with external authentication systems.
 
-Local authentication involves creating User and Group resources in the cluster for static users and groups:
+Local authentication involves creating User and Group resources in the cluster for [static users](../../../../glossary.html#static-user) and groups:
 
 - A [User](/modules/user-authn/cr.html#user) object stores user information, including email and a hashed password (the password is not stored in plain text).
 - A [Group](/modules/user-authn/cr.html#group) object defines a list of users grouped together.
@@ -122,7 +122,7 @@ It is forbidden to use users and groups with the `system:` prefix.
 Authentication attempts by such users or members of such groups will be rejected, and a corresponding warning will appear in the `kube-apiserver` logs.
 {% endalert %}
 
-To group static users together, create a [Group](/modules/user-authn/cr.html#group) resource.
+To group [static users](../../../../glossary.html#static-user) together, create a [Group](/modules/user-authn/cr.html#group) resource.
 
 Example resource definition:
 
@@ -222,7 +222,7 @@ spec:
 
 Field description:
 
-* `enabled`: Enables or disables 2FA for all static users.
+* `enabled`: Enables or disables 2FA for all [static users](../../../../glossary.html#static-user).
 * `issuerName`: Name displayed in the authenticator application when adding an account.
 
 {% alert level="info" %}

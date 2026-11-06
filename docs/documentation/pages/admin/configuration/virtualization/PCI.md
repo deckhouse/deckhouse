@@ -6,18 +6,18 @@ search: PCI devices, PCI passthrough, NodePCIDevice, PCIDevice, vfio-pci, IOMMU
 ---
 
 {% alert level="info" %}
-PCI device passthrough is available in commercial Deckhouse Platform (DP) editions.
+PCI [device passthrough](../../../glossary.html#device-passthrough) is available in commercial Deckhouse Platform (DP) [editions](../../../glossary.html#edition).
 {% endalert %}
 
 PCI device passthrough lets you attach a physical device of a node to a virtual machine (VM), for example an industrial controller, a hardware security module, a capture card, an FPGA, or an entire network card. In the guest operating system, such a device works under its own driver, so a VM can use the hardware DP doesn't support directly.
 
-A device reaches a machine in two steps. First you assign it to a project namespace, and then the project owner lists the device in the specification of their machine. The device is granted for exclusive use, so it's available in one namespace and to one machine only.
+A device reaches a machine in two steps. First you assign it to a [project](../../../glossary.html#project) namespace, and then the project owner lists the device in the specification of their machine. The device is granted for exclusive use, so it's available in one namespace and to one machine only.
 
 DP switches the device drivers itself, and you don't need to configure them on the node manually. When a machine starts, DP unbinds the device from the regular kernel driver and binds it to the `vfio-pci` driver, and once the machine is stopped, it returns the device to the regular driver. While the machine is running, the node doesn't use the device.
 
 ## Node requirements
 
-PCI device passthrough is handled by the `virtualization-dra-pci` system component. It runs only on nodes with containerd version 2 and hardware I/O virtualization enabled. DP checks the nodes itself and assigns the `virtualization.deckhouse.io/vfio=true` label to the suitable ones.
+PCI device passthrough is handled by the `virtualization-dra-pci` [system component](../../../glossary.html#system-component). It runs only on nodes with containerd version 2 and hardware I/O virtualization enabled. DP checks the nodes itself and assigns the `virtualization.deckhouse.io/vfio=true` label to the suitable ones.
 
 To enable hardware I/O virtualization, turn on `VT-d` on Intel or `AMD-Vi` on AMD in the node BIOS and add the `intel_iommu=on` or `amd_iommu=on` kernel parameter.
 
@@ -86,7 +86,7 @@ To make a device available to a project, follow these steps.
    d8 k get pcidevice -n my-project
    ```
 
-After that, the project owner attaches the device to their machine by specifying the [PCIDevice](/modules/virtualization/cr.html#pcidevice) resource name in the [`.spec.pciDevices`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-pcidevices) parameter of the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource.
+After that, the [project](../../../glossary.html#project) owner attaches the device to their machine by specifying the [PCIDevice](/modules/virtualization/cr.html#pcidevice) resource name in the [`.spec.pciDevices`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-pcidevices) parameter of the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource.
 
 To make the device unavailable to the project, clear the [`.spec.assignedNamespace`](/modules/virtualization/cr.html#nodepcidevice-v1alpha2-spec-assignednamespace) parameter or set a different namespace. The [PCIDevice](/modules/virtualization/cr.html#pcidevice) resource in the previous namespace is deleted.
 
@@ -94,7 +94,7 @@ While the device is listed in a machine specification, the [PCIDevice](/modules/
 
 ## Requirements and limitations for PCI devices
 
-When planning PCI device passthrough, consider the following requirements and limitations:
+When planning PCI [device passthrough](../../../glossary.html#device-passthrough), consider the following requirements and limitations:
 
 - Passthrough works in a cluster with [Kubernetes](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html#kubernetes) 1.34 or higher and containerd version 2 on the nodes, and the `DRAResourceClaimDeviceStatus`, `DRADeviceBindingConditions`, and `DRAConsumableCapacity` feature gates have to be enabled in kube-apiserver.
 - DP doesn't detect every device of a node, because the hardware the node itself depends on stays at its disposal. The following devices never appear in the list:
@@ -104,7 +104,7 @@ When planning PCI device passthrough, consider the following requirements and li
   - Storage controllers whose disks are used by the node.
   - Devices that share an IOMMU group with any of the above, because a group goes to the VM as a whole.
 - A VM starts only on the node that holds the device attached to it, so all its PCI devices have to be on the same node, otherwise the specification is rejected.
-- A VM with a PCI device can't be moved by live migration, and the `Migratable` condition gets the `VirtualMachineHostDevicesNotMigratable` reason, so such machines have to be stopped before the node is put into maintenance.
+- A VM with a PCI device can't be moved by [live migration](../../../glossary.html#live-migration), and the `Migratable` condition gets the `VirtualMachineHostDevicesNotMigratable` reason, so such machines have to be stopped before the node is put into maintenance.
 - Devices are attached when the VM starts, so a change to the [`.spec.pciDevices`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-pcidevices) parameter requires its restart.
 - A single device is attached to one VM only, and a VM takes no more than eight devices.
 - A network card that's passed through works around the cluster network subsystem. It doesn't appear in the [`.spec.networks`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks) parameter, and DP neither assigns nor tracks its IP and MAC addresses.

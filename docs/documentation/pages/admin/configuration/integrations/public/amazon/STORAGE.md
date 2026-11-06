@@ -8,8 +8,8 @@ This section covers the following additional aspects of integrating Deckhouse Pl
 - Connecting cloud disks using CSI.
 - Automatic StorageClass creation.
 - Using LoadBalancer.
-- Accessing via bastion host.
-- Connecting manually created CloudStatic nodes.
+- Accessing via [bastion host](../../../../glossary.html#bastion-host).
+- Connecting manually created [CloudStatic nodes](../../../../glossary.html#cloud-static-node).
 
 ## Storage (CSI and StorageClass)
 
@@ -105,7 +105,7 @@ metadata:
     service.beta.kubernetes.io/aws-load-balancer-subnets: "subnet-foo,subnet-bar"
 ```
 
-This is especially important when manually configuring Ingress controllers or using non-standard node layout.
+This is especially important when manually configuring [Ingress controllers](../../../../glossary.html#ingress-controller) or using non-standard node [layout](../../../../glossary.html#layout).
 
 To retrieve the current list of subnets used in your DP setup, run the following:
 

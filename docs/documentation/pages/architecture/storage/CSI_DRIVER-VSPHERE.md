@@ -5,7 +5,7 @@ search: csi vsphere, csi-vsphere, container storage interface, vmware vsphere
 description: Overview of the CSI driver architecture for VMware vSphere in Deckhouse Platform.
 ---
 
-A CSI driver (plugin) is used to manage persistent storage volumes in Deckhouse Platform (DP).
+A [CSI driver](../../../glossary.html#csi-driver) (plugin) is used to manage persistent storage volumes in Deckhouse Platform (DP).
 
 [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) is a standard interface that unifies access to storage systems and simplifies integration of different storage systems into clusters.
 
@@ -81,7 +81,7 @@ The following external components interact with the driver:
 
 1. [Kubelet](../../kubernetes-and-scheduling/kubelet.html):
 
-   * Checks the CSI driver livenessProbe.
+   * Checks the [CSI driver](../../../glossary.html#csi-driver) livenessProbe.
    * Registers the Node Plugin.
    * Calls the RPC methods `NodeStageVolume`, `NodeUnstageVolume`, `NodePublishVolume`, `NodeUnpublishVolume`, and `NodeExpandVolume` in Node Plugin.
 

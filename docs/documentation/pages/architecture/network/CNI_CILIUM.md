@@ -32,7 +32,7 @@ The module consists of the following components:
 
    * **Garbage collection for security identifiers**: Maintains a local cache of active identifiers (CiliumIdentity) and periodically scans it, deleting records about identifiers that have stopped signaling activity (heartbeat). This is important because identifiers are represented by a 16-bit integer, and running out of them (maximum 65536) can lead to problems.
 
-   * **CiliumEndpointSlices (CES) Management**: Maintains up-to-date information about endpoints in the cluster, which is critical for the correct operation of network policies and load balancing.
+   * **CiliumEndpointSlices (CES) Management**: Maintains up-to-date information about endpoints in the cluster, which is critical for the correct operation of [network policies](../../glossary.html#network-policy) and load balancing.
 
    It consists of the following containers:
 
@@ -45,7 +45,7 @@ The module consists of the following components:
 
    * **Network policies enforcement**: Calculates and applies network policies rules set in the cluster. Cilium uses the identity-based policies concept: the rules are based not on IP addresses, but on the security identity of the pod. The agent converts these rules into data structures (BPF maps) that the Linux kernel uses to filter traffic.
 
-   * **IP Address Management (IPAM)**: Allocates IP addresses for pods scheduled on its node using IP address ranges from the `spec.podCIDRs` or `spec.PodCidr` fields of the specification of the corresponding Node resource.
+   * **IP Address Management ([IPAM](../../glossary.html#sdn-ipam))**: Allocates IP addresses for pods scheduled on its node using IP address ranges from the `spec.podCIDRs` or `spec.PodCidr` fields of the specification of the corresponding Node resource.
 
    * **Datapath Orchestration**: Compiles, loads eBPF programs into the Linux kernel and binds them to network interfaces. It is these programs in the kernel that perform real packet processing: forwarding, policy filtering, connection tracking, NAT and load balancing.
 
@@ -104,7 +104,7 @@ The module interacts with the following components:
 
    * Manages Cilium custom resources.
    * Watches changes to standard Kubernetes API resources and Cilium custom resources.
-   * Monitors status of pods running on the node, reads network policies.
+   * Monitors status of pods running on the node, reads [network policies](../../glossary.html#network-policy).
    * Requests the IP ranges of cluster nodes via the `PodCidr`/`podCIDRs` attributes of the Node resource specification.
    * Authorizes requests for agent and operator metrics.
 

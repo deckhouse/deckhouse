@@ -31,7 +31,7 @@ The module consists of the following components:
    * [CephClusterConnection](/modules/csi-ceph/stable/cr.html#cephclusterconnection): Ceph cluster connection parameters.
    * [CephStorageClass](/modules/csi-ceph/stable/cr.html#cephstorageclass): Defines the configuration for the Kubernetes StorageClass that will be created.
 
-   CephStorageClass specifies the storage class type (`CephFS` or `RBD`), reclaim policy, Ceph cluster connection parameters, and additional parameters specific to each storage class type. Depending on the storage class type, these parameters are used by the provisioner of either the `rbd.csi.ceph.com` or `cephfs.csi.ceph.com` CSI driver when managing volumes.
+   CephStorageClass specifies the storage class type (`CephFS` or `RBD`), reclaim policy, Ceph cluster connection parameters, and additional parameters specific to each storage class type. Depending on the storage class type, these parameters are used by the provisioner of either the `rbd.csi.ceph.com` or `cephfs.csi.ceph.com` [CSI driver](../../../glossary.html#csi-driver) when managing volumes.
 
    The [CephMetadataBackup](/modules/csi-ceph/cr.html#cephmetadatabackup) custom resource is used in migration and recovery workflows implemented by module hooks, rather than by the main runtime controller.
 

@@ -5,14 +5,14 @@ description: "Configure collection, processing, and delivery of security events 
 ---
 
 Deckhouse Platform (DP) provides tools for declarative collection, processing,
-normalization, and delivery of security events extracted from logs of applications
+normalization, and delivery of [security events](../../../../glossary.html#security-event) extracted from logs of applications
 and Kubernetes infrastructure components.
 
 A security event is a structured record of an action or fact that is significant from an information security perspective.
 
 DP lets you:
 
-- Collect security events from various sources (pod logs, node files, Kubernetes API audit).
+- Collect security events from various sources (pod logs, node files, [Kubernetes API audit](../../../../glossary.html#kubernetes-api-audit)).
 - Bring events to a unified format with a mandatory minimum set of attributes.
 - Enrich events with contextual data.
 - Filter events by sources and severity level.
@@ -147,7 +147,7 @@ spec:
 After events are formed, you should define the destinations they will be delivered to.
 For this, you need to:
 
-1. Configure security event destinations.
+1. Configure [security event](../../../../glossary.html#security-event) destinations.
 1. Configure event delivery rules to destinations.
 
 ### Configuring a destination
@@ -216,7 +216,7 @@ spec:
 
 If the module settings are not explicitly specified, the following objects are created in the cluster:
 
-- [ClusterSecurityEventConfig](/modules/security-events-manager/cr.html#clustersecurityeventconfig): Configures security event delivery to destinations. By default, an object with the following configuration is created:
+- [ClusterSecurityEventConfig](/modules/security-events-manager/cr.html#clustersecurityeventconfig): Configures [security event](../../../../glossary.html#security-event) delivery to destinations. By default, an object with the following configuration is created:
 
   ```yaml
   apiVersion: security.deckhouse.io/v1alpha1

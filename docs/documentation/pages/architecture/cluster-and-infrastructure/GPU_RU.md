@@ -46,7 +46,7 @@ description: Архитектура модуля gpu в Deckhouse Platform.
 
 Модуль состоит из следующих компонентов:
 
-1. **gpu-controller** (Deployment) — контроллер, который реализует обработку запросов на GPU-ресурсы и реализует admission-вебхуки для DRA-объектов через механизм [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/). Контроллер работает на master-узлах.
+1. **gpu-controller** (Deployment) — контроллер, который реализует обработку запросов на GPU-ресурсы и реализует admission-вебхуки для DRA-объектов через механизм [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/). Контроллер работает на [master-узлах](../../../glossary.html#master-node).
 
    Контроллер gpu-controller выполняет следующие действия:
 
@@ -168,7 +168,7 @@ description: Архитектура модуля gpu в Deckhouse Platform.
    Компонент выполняет следующие действия:
 
    - получает желаемый MIG-профиль (лейбл `nvidia.com/mig.config`) и текущее состояние;
-   - переводит узел в режим обслуживания (выставляет taint, cordon или drain) при необходимости;
+   - переводит узел в [режим обслуживания](../../../glossary.html#maintenance-mode) (выставляет taint, cordon или drain) при необходимости;
    - останавливает поды, использующие GPU на узле;
    - применяет MIG-профиль;
    - инициирует перезагрузку узла при необходимости;

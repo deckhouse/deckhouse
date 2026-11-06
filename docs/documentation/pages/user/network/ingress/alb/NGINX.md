@@ -10,7 +10,7 @@ relatedLinks:
 
 ## Publishing applications using the Ingress NGINX Controller
 
-To publish applications, the cluster administrator must create an Ingress controller. The setup procedure is described in ["Load balancing configuration examples"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/nginx.html#load-balancing-configuration-examples). Ask the administrator for the controller `ingressClass` name and specify it in the Ingress resource that routes traffic to your application.
+To publish applications, the cluster administrator must create an [Ingress controller](../../../../glossary.html#ingress-controller). The setup procedure is described in ["Load balancing configuration examples"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/nginx.html#load-balancing-configuration-examples). Ask the administrator for the controller `ingressClass` name and specify it in the Ingress resource that routes traffic to your application.
 
 {% tabs Ingress examples %}
 {% tab "HTTP" %}

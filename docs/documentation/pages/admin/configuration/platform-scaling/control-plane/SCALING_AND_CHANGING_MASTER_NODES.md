@@ -9,12 +9,12 @@ permalink: en/admin/configuration/platform-scaling/control-plane/scaling-and-cha
 
 Deckhouse Platform (DP) supports two operation modes for the control plane:
 
-1. **Single-master**:
+1. **[Single-master](../../../../glossary.html#single-master)**:
    - `kube-apiserver` uses only the local `etcd` instance.
    - A proxy server runs on the node to handle requests on `localhost`.
-   - The `kube-apiserver` listens only on the master node's IP address.
+   - The `kube-apiserver` listens only on the [master node](../../../../glossary.html#master-node)'s IP address.
 
-2. **Multi-master**:
+2. **[Multi-master](../../../../glossary.html#multi-master)**:
    - `kube-apiserver` interacts with all `etcd` instances in the cluster.
    - A proxy is configured on all nodes:
      - If the local `kube-apiserver` is unavailable, requests are automatically forwarded to other nodes.
@@ -65,19 +65,19 @@ DP supports both automatic and manual scaling of master nodes in cloud and bare-
        - Run `d8 k delete node <node-name>`;
        - Power off the corresponding VMs or servers.
 
-   > **Important**. In cloud clusters, all necessary actions are automatically handled by the `dhctl converge` command.
+   > **Important**. In [cloud clusters](../../../../glossary.html#cloud-cluster), all necessary actions are automatically handled by the `dhctl converge` command.
 
 1. **Changing the number of master nodes in a cloud cluster**:
 
    - Similar to node addition/removal, typically done using the `dhctl converge` command or cloud tools.
 
-1. **Multi-master migration (3 master nodes) → 2 master nodes and 1 arbiter node in a cloud cluster**:
+1. **Multi-master migration (3 master nodes) → 2 master nodes and 1 [arbiter node](../../../../glossary.html#arbiter-node) in a cloud cluster**:
 
-   - In the cloud provider settings, set `masterNodeGroup.replicas` to `2` and create a NodeGroup for the arbiter node. Similar to node addition/removal, typically done using the `dhctl converge` command or cloud tools.
+   - In the [cloud provider](../../../../glossary.html#cloud-provider) settings, set `masterNodeGroup.replicas` to `2` and create a NodeGroup for the arbiter node. Similar to node addition/removal, typically done using the `dhctl converge` command or cloud tools.
 
-     For details on configuring HA mode with 2 master nodes and 1 arbiter node in a cloud cluster, refer to [Managing HA mode](../../high-reliability-and-availability/enable.html#configuring-in-a-cloud-cluster).
+     For details on configuring [HA mode](../../../../glossary.html#ha-mode) with 2 master nodes and 1 arbiter node in a cloud cluster, refer to [Managing HA mode](../../high-reliability-and-availability/enable.html#configuring-in-a-cloud-cluster).
 
-1. **Multi-master migration (3 master nodes) → 2 master nodes and 1 arbiter node in a static cluster**:
+1. **Multi-master migration (3 master nodes) → 2 master nodes and 1 arbiter node in a [static cluster](../../../../glossary.html#static-cluster)**:
 
    - Create a NodeGroup for the arbiter node and add the node to the cluster.
    - Remove the labels `node-role.kubernetes.io/control-plane=""`, `node-role.kubernetes.io/master=""` and `node.deckhouse.io/group-""` from the extra master node.
@@ -159,9 +159,9 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
    During the login process, you will need to enter your `Username` and `Password`.
 
-   > When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Platform license key.
+   > When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Platform [license key](../../../../glossary.html#license-key).
 
-1. **On your local machine**, run the Deckhouse installer container for the corresponding edition and version (change the container registry address if necessary):
+1. **On your local machine**, run the Deckhouse [installer](../../../../glossary.html#installer) container for the corresponding [edition](../../../../glossary.html#edition) and version (change the container registry address if necessary):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
@@ -240,7 +240,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 The following instruction describes OS replacement on master nodes that were added to the cluster **manually** using the `bootstrap.sh` script. Perform the steps for each master node, one node at a time. Do not proceed to the next node until the current node has rejoined the cluster and is healthy.
 
 {% alert level="warning" %}
-If master nodes are managed by Cluster API Provider Static (CAPS) through StaticInstance resources, do not use this instruction. First [delete the StaticInstance](../node/bare-metal-node.html#deleting-a-staticinstance), install the required OS, and [add the node](#adding-master-nodes-to-a-static-or-hybrid-cluster) to the `master` NodeGroup again.
+If master nodes are managed by [Cluster API Provider Static](../../../../glossary.html#caps) (CAPS) through StaticInstance resources, do not use this instruction. First [delete the StaticInstance](../node/bare-metal-node.html#deleting-a-staticinstance), install the required OS, and [add the node](#adding-master-nodes-to-a-static-or-hybrid-cluster) to the `master` NodeGroup again.
 {% endalert %}
 
 {% alert level="warning" %}
@@ -381,10 +381,10 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 > It is important to have an odd number of masters to ensure a quorum.
 
 {% alert level="warning" %}
-If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before changing master nodes. Create a [backup of the module's data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
+If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before changing [master nodes](../../../../glossary.html#master-node). Create a [backup of the module's data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
 {% endalert %}
 
-When installing Deckhouse Platform with default settings, the NodeGroup `master` lacks the section [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) with label filter settings for `staticInstances` resources. Because of this, after changing the number of `staticInstances` nodes in the NodeGroup `master` (parameter [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), when adding a regular node using Cluster API Provider Static (CAPS), it can be "intercepted" and added to the NodeGroup `master`, even if the corresponding `StaticInstance` (in `metadata`) specifies a label with a `role` different from `master`.
+When installing Deckhouse Platform with default settings, the NodeGroup `master` lacks the section [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) with label filter settings for `staticInstances` resources. Because of this, after changing the number of `staticInstances` nodes in the NodeGroup `master` (parameter [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), when adding a regular node using [Cluster API Provider Static](../../../../glossary.html#caps) (CAPS), it can be "intercepted" and added to the NodeGroup `master`, even if the corresponding `StaticInstance` (in `metadata`) specifies a label with a `role` different from `master`.
 To avoid this "interception", after installing DP, edit the NodeGroup `master` — add the section [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) with label filter settings for `staticInstances` resources. Example of NodeGroup `master` with `spec.staticInstances.labelSelector`:
 
 ```yaml
@@ -423,16 +423,16 @@ spec:
 When adding new master nodes using CAPS and changing the number of master nodes in the NodeGroup `master` (parameter [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), please note the following:
 
 During the initial cluster installation, the configuration specifies the first master node on which the installation takes place.
-If, after installation, you need to create a multi-master cluster and add master nodes using CAPS, you must specify the number of nodes in the `spec.staticInstances.count` parameter of the NodeGroup `master` as one less than the desired number.
+If, after installation, you need to create a [multi-master cluster](../../../../glossary.html#multi-master) and add master nodes using CAPS, you must specify the number of nodes in the `spec.staticInstances.count` parameter of the NodeGroup `master` as one less than the desired number.
 
 For example, if you need to create a multi-master with three master nodes in `spec.staticInstances.count` NodeGroup `master`, specify the value `2` and create two `staticInstances` for the nodes to be added. After adding them to the cluster, the number of master nodes will be three: the master node on which the installation took place and two master nodes added using CAPS.
 {% endalert %}
 
-Otherwise, adding a master node to a static or hybrid cluster is similar to adding a regular node. To do this, use the corresponding [examples](../node/bare-metal-node.html#adding-nodes-to-a-bare-metal-cluster). All the necessary actions to configure a cluster control plane components on the new master nodes are performed automatically. Wait until the master nodes appear in `Ready` status.
+Otherwise, adding a master node to a static or [hybrid cluster](../../../../glossary.html#hybrid-cluster) is similar to adding a regular node. To do this, use the corresponding [examples](../node/bare-metal-node.html#adding-nodes-to-a-bare-metal-cluster). All the necessary actions to configure a cluster control plane components on the new master nodes are performed automatically. Wait until the master nodes appear in `Ready` status.
 
 ## Adding master nodes in a cloud cluster
 
-This section describes how to convert a single-master cluster into a multi-master cluster.
+This section describes how to convert a [single-master cluster](../../../../glossary.html#single-master) into a multi-master cluster.
 
 {% alert level="warning" %}
 Before adding nodes, make sure the required quotas are available.
@@ -445,7 +445,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
 1. Create a [backup of etcd](../../backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
 1. Copy the resulting archive outside the cluster (e.g., to a local machine).
-1. Ensure there are no active alerts in the cluster that may interfere with adding new master nodes.
+1. Ensure there are no active alerts in the cluster that may interfere with adding new [master nodes](../../../../glossary.html#master-node).
 1. Make sure the Deckhouse queue is empty:
 
    ```shell
@@ -460,9 +460,9 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
    During the login process, you will need to enter your `Username` and `Password`.
 
-   > When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Platform license key.
+   > When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Platform [license key](../../../../glossary.html#license-key).
 
-1. On the **local machine**, run the Deckhouse installer container for the appropriate edition and version (change the container registry address if necessary):
+1. On the **local machine**, run the Deckhouse [installer](../../../../glossary.html#installer) container for the appropriate [edition](../../../../glossary.html#edition) and version (change the container registry address if necessary):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
@@ -511,10 +511,10 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
 ## Reducing the number of master nodes in a cloud cluster
 
-This section describes the process of converting a multi-master cluster into a single-master cluster.
+This section describes the process of converting a [multi-master cluster](../../../../glossary.html#multi-master) into a [single-master cluster](../../../../glossary.html#single-master).
 
 {% alert level="warning" %}
-The following steps must be performed starting from the first master node (`master-0`) in the cluster. This is because the cluster scales in order — for example, it is not possible to remove `master-0` and `master-1` while leaving `master-2`.
+The following steps must be performed starting from the first [master node](../../../../glossary.html#master-node) (`master-0`) in the cluster. This is because the cluster scales in order — for example, it is not possible to remove `master-0` and `master-1` while leaving `master-2`.
 {% endalert %}
 
 {% alert level="warning" %}
@@ -538,9 +538,9 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
    During the login process, you will need to enter your `Username` and `Password`.
 
-   > When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Platform license key.
+   > When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Platform [license key](../../../../glossary.html#license-key).
 
-1. On the **local machine**, run the DP installer container for the corresponding edition and version (change the container registry address if needed):
+1. On the **local machine**, run the DP [installer](../../../../glossary.html#installer) container for the corresponding [edition](../../../../glossary.html#edition) and version (change the container registry address if needed):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 

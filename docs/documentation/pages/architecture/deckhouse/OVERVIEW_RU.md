@@ -12,8 +12,8 @@ extractedLinksMax: 0
 
 В подсистему Deckhouse входят следующие модули:
 
-* [`deckhouse`](/modules/deckhouse/) — контроллер Deckhouse;
-* [`console`](/modules/console/stable/) — веб-интерфейс Deckhouse;
+* [`deckhouse`](/modules/deckhouse/) — [контроллер Deckhouse](../../glossary.html#deckhouse-controller);
+* [`console`](/modules/console/stable/) — [веб-интерфейс Deckhouse](../../glossary.html#web-ui);
 * [`deckhouse-tools`](/modules/deckhouse-tools/) — создает веб-интерфейс для скачивания CLI-утилиты [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/);
 * [`documentation`](/modules/documentation/) — создает веб-интерфейс с документацией, соответствующей запущенной версии DP;
 * [`registry`](/modules/registry/) — управляет конфигурацией компонентов DP, отвечающих за работу с хранилищем образов контейнеров, и предоставляет внутреннее хранилище образов.

@@ -5,7 +5,7 @@ description: Managing HA mode
 ---
 
 {% alert level="info" %}
-Note that if the cluster has **more than one master node**, HA mode is **enabled automatically**.
+Note that if the cluster has **more than one [master node](../../../glossary.html#master-node)**, [HA mode](../../../glossary.html#ha-mode) is **enabled automatically**.
 This applies both when deploying a cluster with multiple master nodes from the start
 and when increasing the number of master nodes from one to three.
 {% endalert %}
@@ -48,12 +48,12 @@ You can enable HA mode globally for DP in one of the following ways.
 ### Using Deckhouse web UI
 
 If the [`console`](/modules/console/) module is enabled in the cluster,
-open the Deckhouse web UI, navigate to **Deckhouse** — **Global settings** — **Global module settings**,
+open the [Deckhouse web UI](../../../glossary.html#web-ui), navigate to **Deckhouse** — **[Global settings](../../../glossary.html#global-settings)** — **Global module settings**,
 and switch the **HA mode** toggle to **Yes**.
 
 ## Configuring HA mode with two master nodes and an arbiter node
 
-Deckhouse Platform allows you to configure HA mode with two master nodes and an arbiter node. This approach allows you to meet HA requirements in conditions of limited resources.
+Deckhouse Platform allows you to configure HA mode with two master nodes and an [arbiter node](../../../glossary.html#arbiter-node). This approach allows you to meet HA requirements in conditions of limited resources.
 
 Only etcd is placed on the arbiter node, without the other control plane components. This node is used to ensure the etcd quorum.
 
@@ -67,8 +67,8 @@ The network latency requirements for the arbiter node are similar to those for t
 
 ### Configuring in a cloud cluster
 
-The example below applies to a cloud cluster with three master nodes.
-To configure HA mode with two master nodes and an arbiter node in a cloud cluster, you need to remove one master node from the cluster and add one arbiter node.
+The example below applies to a [cloud cluster](../../../glossary.html#cloud-cluster) with three [master nodes](../../../glossary.html#master-node).
+To configure [HA mode](../../../glossary.html#ha-mode) with two master nodes and an arbiter node in a cloud cluster, you need to remove one master node from the cluster and add one arbiter node.
 
 To do this, follow these steps:
 
@@ -89,7 +89,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
    d8 system queue list
    ```
 
-1. On the **local machine**, run the DP installer container for the corresponding edition and version (change the container registry address if needed):
+1. On the **local machine**, run the DP [installer](../../../glossary.html#installer) container for the corresponding [edition](../../../glossary.html#edition) and version (change the container registry address if needed):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
@@ -105,7 +105,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
      --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-   Change the cloud provider settings:
+   Change the [cloud provider](../../../glossary.html#cloud-provider) settings:
 
    * Set `masterNodeGroup.replicas` to `2`.
    * Create a NodeGroup for the arbiter node. The arbiter node **must have** the label `node.deckhouse.io/etcd-arbiter: ""` and a taint that prevents user workloads from being placed on it. Example of a NodeGroup description for the arbiter node:
@@ -158,7 +158,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
 ### Configuring in a static cluster
 
-To configure HA mode with two master nodes and an arbiter node in a static cluster, follow these steps:
+To configure HA mode with two master nodes and an arbiter node in a [static cluster](../../../glossary.html#static-cluster), follow these steps:
 
 1. Create a NodeGroup for the arbiter node. The arbiter node **must have** the label `node.deckhouse.io/etcd-arbiter: “”` and a taint that prevents user workloads from being placed on it. Example of a NodeGroup description for the arbiter node:
 
@@ -184,7 +184,7 @@ To configure HA mode with two master nodes and an arbiter node in a static clust
 
 ## Enabling HA mode for individual components
 
-Some DP modules may have their own HA mode settings.
+Some DP modules may have their own [HA mode](../../../glossary.html#ha-mode) settings.
 To enable HA mode in a specific module, set the `settings.highAvailability` parameter in its configuration.
 The HA mode operation in individual modules is independent of the global HA mode.
 

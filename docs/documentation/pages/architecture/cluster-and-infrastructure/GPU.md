@@ -46,7 +46,7 @@ The Level 2 C4 architecture of the [`gpu`](/modules/gpu/) module in DRA mode and
 
 The module consists of the following components:
 
-1. **gpu-controller** (Deployment): A controller that processes GPU resource requests and runs admission webhooks for DRA objects through the [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/) mechanism. The controller runs on master nodes.
+1. **gpu-controller** (Deployment): A controller that processes GPU resource requests and runs admission webhooks for DRA objects through the [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/) mechanism. The controller runs on [master nodes](../../../glossary.html#master-node).
 
    The gpu-controller performs the following actions:
 
@@ -145,7 +145,7 @@ The module consists of the following components:
 
 1. **gpu-feature-discovery-&lt;NG&gt;** (DaemonSet): A component that queries the GPU driver via the NVIDIA Management Library (NVML) and writes information about GPU hardware capabilities to the `/etc/kubernetes/node-feature-discovery/features.d/gfd` file. Node-feature-discovery-worker publishes this information as NodeFeature resources, from which node-feature-discovery-master updates the corresponding `nvidia.com/*` labels for cluster nodes.
 
-   The component is created by the Deckhouse controller of the [`deckhouse`](/modules/deckhouse/) module for every NodeGroup (NG) whose configuration specifies the [`.spec.gpu`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu) parameter.
+   The component is created by the [Deckhouse controller](../../../glossary.html#deckhouse-controller) of the [`deckhouse`](/modules/deckhouse/) module for every NodeGroup (NG) whose configuration specifies the [`.spec.gpu`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu) parameter.
 
    It consists of the following containers:
 
@@ -168,7 +168,7 @@ The module consists of the following components:
    The component performs the following actions:
 
    - Retrieves the desired MIG profile (the `nvidia.com/mig.config` label) and the current state.
-   - Puts the node into maintenance mode when necessary (applies a taint, cordon, and drain).
+   - Puts the node into [maintenance mode](../../../glossary.html#maintenance-mode) when necessary (applies a taint, cordon, and drain).
    - Stops pods that use GPUs on the node.
    - Applies the MIG profile.
    - Initiates a node reboot when necessary.

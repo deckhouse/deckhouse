@@ -7,10 +7,10 @@ lang: ru
 ---
 
 {% alert level="info" %}
-Проброс GPU-устройств — экспериментальная возможность, доступная в коммерческих редакциях Deckhouse Platform (DP).
+Проброс GPU-устройств — экспериментальная возможность, доступная в коммерческих [редакциях](../../../glossary.html#edition) Deckhouse Platform (DP).
 {% endalert %}
 
-DP подключает физические GPU-устройства к виртуальным машинам через DRA (Dynamic Resource Allocation). Владелец проекта запрашивает устройство по ссылке на `GPUClass` в блоке [`.spec.gpus`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-gpus) своей машины, а кластер к этому готовите вы.
+DP подключает физические GPU-устройства к виртуальным машинам через DRA (Dynamic Resource Allocation). Владелец [проекта](../../../glossary.html#project) запрашивает устройство по ссылке на `GPUClass` в блоке [`.spec.gpus`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-gpus) своей машины, а кластер к этому готовите вы.
 
 Чтобы проброс заработал, обеспечьте следующее:
 

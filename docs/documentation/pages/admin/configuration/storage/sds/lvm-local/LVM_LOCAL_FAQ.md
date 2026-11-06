@@ -232,7 +232,7 @@ d8 k -n d8-sds-local-volume logs -l app=sds-local-volume-controller
 
 ## Data migration between PVCs
 
-Copy the following script into a file named `migrate.sh` on any master node:
+Copy the following script into a file named `migrate.sh` on any [master node](../../../../glossary.html#master-node):
 
 ```shell
 #!/bin/bash

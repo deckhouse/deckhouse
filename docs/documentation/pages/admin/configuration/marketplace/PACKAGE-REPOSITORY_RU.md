@@ -6,7 +6,7 @@ lang: ru
 search: PackageRepository, package repository, container registry, репозиторий пакетов, хранилище образов, сканирование
 ---
 
-Чтобы подключить Deckhouse Platform (DP) к хранилищу образов с пакетами приложений, используйте ресурс [PackageRepository](../../../reference/api/cr.html#packagerepository). После создания ресурса DP сканирует хранилище образов и создаёт объект [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) для каждой обнаруженной версии пакета.
+Чтобы подключить Deckhouse Platform (DP) к хранилищу образов с [пакетами приложений](../../../glossary.html#marketplace-package), используйте ресурс [PackageRepository](../../../reference/api/cr.html#packagerepository). После создания ресурса DP сканирует хранилище образов и создаёт объект [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) для каждой обнаруженной версии пакета.
 
 Пример манифеста PackageRepository:
 
@@ -84,7 +84,7 @@ d8 k get packagerepository <REPOSITORY_NAME>
 | `Phase` | Фаза репозитория: `Active` после первого успешного сканирования |
 | `Scan` | Время последнего успешного сканирования |
 | `MSG` | Сообщение условия `LastScanSucceeded`, например, ошибка последнего сканирования |
-| `Packages` | Количество пакетов в репозитории (скрыто по умолчанию, используйте `-o wide`) |
+| `Packages` | Количество [пакетов](../../../glossary.html#marketplace-package) в репозитории (скрыто по умолчанию, используйте `-o wide`) |
 
 Чтобы получить подробную информацию о статусе, выполните следующую команду:
 

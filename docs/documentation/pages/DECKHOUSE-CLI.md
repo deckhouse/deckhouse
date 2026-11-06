@@ -5,14 +5,14 @@ description: Deckhouse CLI is a command line interface for cluster management cr
 search: d8, deckhouse cli, d8 utility, command line interface
 ---
 
-Deckhouse CLI (`d8`) is a command-line interface for working with products in the Deckhouse ecosystem. It combines commands for working with Kubernetes, administering Deckhouse Platform, delivering applications, copying images, creating backups, collecting diagnostic information, virtualization, working with user data, and other tasks.
+[Deckhouse CLI](../../glossary.html#deckhouse-cli) (`d8`) is a command-line interface for working with products in the Deckhouse ecosystem. It combines commands for working with Kubernetes, administering Deckhouse Platform, delivering applications, copying images, creating backups, collecting diagnostic information, virtualization, working with user data, and other tasks.
 
 Starting from release 1.59, `d8` is automatically installed on all DP cluster nodes. The utility can also be [installed](#how-do-i-install-the-deckhouse-cli) on a separate administrator machine.
 
 ## Main command groups
 
 {% alert level="info" %}
-The `d8 delivery-kit` and `d8 mirror` command groups are not available in Community Edition (CE) and Basic Edition (BE) editions.
+The `d8 delivery-kit` and `d8 mirror` command groups are not available in [Community Edition](../../glossary.html#edition) (CE) and Basic Edition (BE) editions.
 {% endalert %}
 
 `d8` commands are grouped by purpose:
@@ -72,7 +72,7 @@ If you need to install one of the versions below 0.10, use the [outdated install
    . $(trdl use d8 0 stable) && d8 --version
    ```
 
-To avoid having to run `. $(trdl use d8 0 stable)` before every Deckhouse CLI invocation, add the following line to your shell’s RC file: `alias d8='trdl exec d8 0 stable -- "$@"'`.
+To avoid having to run `. $(trdl use d8 0 stable)` before every [Deckhouse CLI](../../glossary.html#deckhouse-cli) invocation, add the following line to your shell’s RC file: `alias d8='trdl exec d8 0 stable -- "$@"'`.
 
 Congratulations, you have installed the Deckhouse CLI.
 

@@ -8,7 +8,7 @@ description: Архитектура модулей Deckhouse Platform, обес�
 
 ## Модуль console
 
-Модуль [`console`](/modules/console/) реализует веб-интерфейс Deckhouse Platform (DP), который упрощает управление платформой и позволяет отслеживать состояние системы.
+Модуль [`console`](/modules/console/) реализует [веб-интерфейс Deckhouse](../../glossary.html#web-ui) Platform (DP), который упрощает управление платформой и позволяет отслеживать состояние системы.
 
 ### Архитектура модуля
 
@@ -43,9 +43,9 @@ description: Архитектура модулей Deckhouse Platform, обес�
    * обнаружение версий DP и Kubernetes;
    * загрузка метрик и логов;
    * загрузка информации о доступности платформы;
-   * скачивание дисков ВМ (при включенных модулях [`virtualization`](/modules/virtualization/) и [`storage-volume-data-manager`](/modules/storage-volume-data-manager/)).
+   * скачивание [дисков ВМ](../../glossary.html#vm-disk) (при включенных модулях [`virtualization`](/modules/virtualization/) и [`storage-volume-data-manager`](/modules/storage-volume-data-manager/)).
 
-1. **Observability-gw** — состоит из одного контейнера **nginx** и выполняет проксирование запросов к Grafana для встраивания дашбордов в основной веб-интерфейс платформы, а также для работы с метриками и логами выбранного проекта.
+1. **Observability-gw** — состоит из одного контейнера **nginx** и выполняет проксирование запросов к Grafana для встраивания [дашбордов](../../glossary.html#dashboard) в основной веб-интерфейс платформы, а также для работы с метриками и логами выбранного проекта.
 
 ### Взаимодействия модуля
 

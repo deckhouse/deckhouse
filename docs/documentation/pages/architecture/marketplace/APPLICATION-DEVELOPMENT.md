@@ -20,7 +20,7 @@ d8 dk cr login -u license-token dev-registry.deckhouse.io --password <LICENSE_TO
 
 ## Bootstrapping an Application package
 
-To create a `<APPLICATION_NAME>/` directory in the current working directory with the package skeleton and initialize a Git repository with the first commit, run the command `d8 package bootstrap app <APPLICATION_NAME>` (`application` is an alias of `app`).
+To create a `<APPLICATION_NAME>/` directory in the current working directory with the [package](../../glossary.html#marketplace-package) skeleton and initialize a Git repository with the first commit, run the command `d8 package bootstrap app <APPLICATION_NAME>` (`application` is an alias of `app`).
 
 Example:
 
@@ -35,7 +35,7 @@ Available options:
 
 | Option | Description |
 |---|---|
-| `--hooks` | Generate Go hooks: a hook example and a settings validation hook |
+| `--hooks` | Generate Go [hooks](../../glossary.html#module-hook): a hook example and a settings validation hook |
 | `--werf` | Describe the image build in a `werf.inc.yaml` file instead of a `Dockerfile` |
 | `--extended` | Add the `oss.yaml` file with the list of open source components used by the application |
 | `-o, --output <OUTPUT_PATH>` | Path where the package will be created (default: `<CURRENT_WORKING_DIRECTORY>/<APPLICATION_NAME>`) |
@@ -84,7 +84,7 @@ myapp/
     └── vpa.yaml
 ```
 
-Don't add `Chart.yaml` or `values.yaml` to the package root: `d8 package build` doesn't include these files in the package bundle. DP renders the templates as a chart without metadata, and default values are described in the [OpenAPI schemas](settings.html).
+Don't add `Chart.yaml` or `values.yaml` to the [package](../../glossary.html#marketplace-package) root: `d8 package build` doesn't include these files in the [package bundle](../../glossary.html#marketplace-package-bundle). DP renders the templates as a chart without metadata, and default values are described in the [OpenAPI schemas](settings.html).
 
 ## package.yaml
 
@@ -123,14 +123,14 @@ requirements:
 | `descriptions` | Yes | Localized description for the catalog and user interface (UI) (`ru`, `en`) |
 | `version` | Yes | Version in Semantic Versioning (SemVer) format; added automatically at build time |
 | `type` | Yes | `Application` or `Module` |
-| `stage` | Yes | Maturity stage (`Preview`, `General Availability`, etc.) |
+| `stage` | Yes | [Maturity stage](../../glossary.html#module-lifecycle-stage) (`Preview`, `General Availability`, etc.) |
 | `category` | Yes | Category for catalog classification |
 | `requirements.deckhouse` | No | Minimum Deckhouse Platform (DP) version constraint |
 | `requirements.kubernetes` | No | Minimum Kubernetes version constraint |
-| `requirements.modules` | No | Module dependencies (SemVer constraints). See [Requirements](#requirements) |
+| `requirements.modules` | No | [Module dependencies](../../glossary.html#module-dependencies) (SemVer constraints). See [Requirements](#requirements) |
 | `disable` | No | Confirmation before the application is deleted. See [Deletion confirmation](#deletion-confirmation) |
 
-When DP scans a repository, it publishes the description, stage, requirements, deletion confirmation, and the contents of `changelog.yaml` in the `status.packageMetadata` field of the [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion) resource.
+When DP scans a repository, it publishes the description, stage, requirements, [deletion confirmation](../../glossary.html#deletion-confirmation), and the contents of `changelog.yaml` in the `status.packageMetadata` field of the [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion) resource.
 
 ### Requirements
 
@@ -198,7 +198,7 @@ DP publishes the section in the `status.packageMetadata.disableOptions` field of
 
 ### changelog.yaml
 
-The `changelog.yaml` file describes the changes in the package version:
+The `changelog.yaml` file describes the changes in the [package](../../glossary.html#marketplace-package) version:
 
 ```yaml
 features:
@@ -221,7 +221,7 @@ The schemas, validation rules, and the extensions that control defaulting, immut
 ## Templates and hooks
 
 - The values available to templates and the rules for templates are described in [Templates](templates.html).
-- Go hooks and the settings validation hook are described in [Hooks](hooks.html).
+- Go [hooks](../../glossary.html#module-hook) and the settings validation hook are described in [Hooks](hooks.html).
 - How DP installs, updates, and deletes an application and how to debug it is described in [Lifecycle and debugging](lifecycle.html).
 
 ## Local rendering
@@ -240,7 +240,7 @@ Available options:
 |---|---|
 | `--file <FILE_NAME>` | Print only the objects rendered from the template with the specified file name |
 | `--render-file <PATH>` | Write the manifests to a file, without the template file name comments |
-| `-r, --remote <REPOSITORY>/<PACKAGE_NAME>:<PACKAGE_VERSION>` | Render a published package bundle instead of the local directory. A tag or a digest is required |
+| `-r, --remote <REPOSITORY>/<PACKAGE_NAME>:<PACKAGE_VERSION>` | Render a published [package bundle](../../glossary.html#marketplace-package-bundle) instead of the local directory. A tag or a digest is required |
 | `--remote-user`, `--remote-password` | Container registry credentials. They can also be set in the `PACKAGE_REMOTE_USER` and `PACKAGE_REMOTE_PASSWORD` environment variables |
 
 The command uses stub values instead of the values from a cluster: the `test` instance in the `default` namespace, the `dev` package version, and settings generated from `openapi/settings.yaml` (from `x-example`, `x-examples`, `enum`, or `default`). Image references are stubs keyed by the names of the image directories. To render the templates of an installed application with its actual values, use `deckhouse-controller packages render` (see [Lifecycle and debugging](lifecycle.html#state-in-dp)).
@@ -269,7 +269,7 @@ The rules are grouped by linters:
 
 Available options: `--hide-warnings` (don't show warnings), `--show-ignored` (show the findings of ignored rules), `--lint-config <PATH>` (path to the settings file).
 
-To check a published package, run `d8 package verify remote <REPOSITORY> <PACKAGE_NAME>`. By default, the command checks the bundle of the latest version. Use `--version <PACKAGE_VERSION>` to choose the version and `--release` to also check the version metadata image. The command uses the container registry credentials saved with `d8 dk cr login`.
+To check a published [package](../../glossary.html#marketplace-package), run `d8 package verify remote <REPOSITORY> <PACKAGE_NAME>`. By default, the command checks the bundle of the latest version. Use `--version <PACKAGE_VERSION>` to choose the version and `--release` to also check the version metadata image. The command uses the container registry credentials saved with `d8 dk cr login`.
 
 ### .pkglint.yaml
 
@@ -328,7 +328,7 @@ Available options:
 
 ## CI/CD setup
 
-The CI/CD pipeline publishes package releases to the container registry. To publish a release, configure the container registry credentials, then create a Git tag in SemVer format and push it to the repository.
+The CI/CD pipeline publishes [package](../../glossary.html#marketplace-package) releases to the container registry. To publish a release, configure the container registry credentials, then create a Git tag in SemVer format and push it to the repository.
 
 ### Environment variables
 
@@ -352,7 +352,7 @@ The pipeline builds the package and pushes it to the container registry. Once th
 
 ## Package artifacts in the container registry
 
-The package and related data are published to a container registry. The package bundle, container images, and version metadata are stored at separate paths.
+The package and related data are published to a container registry. The [package bundle](../../glossary.html#marketplace-package-bundle), container images, and version metadata are stored at separate paths.
 
 | Path | Description |
 |---|---|
@@ -360,7 +360,7 @@ The package and related data are published to a container registry. The package 
 | `<REPOSITORY>/<PACKAGE_NAME>:<PACKAGE_VERSION>` | Bundle — contains templates, `openapi/`, `hooks/` |
 | `<REPOSITORY>/<PACKAGE_NAME>@<DIGEST>` | Container images of the application. Templates reference them by digest (see [Templates](templates.html#container-images)) |
 | `<REPOSITORY>/<PACKAGE_NAME>/version:<PACKAGE_VERSION>` | Version metadata |
-| `<REPOSITORY>/<PACKAGE_NAME>/release-channel:<RELEASE_CHANNEL>` | Version recommended for a release channel |
+| `<REPOSITORY>/<PACKAGE_NAME>/release-channel:<RELEASE_CHANNEL>` | Version recommended for a [release channel](../../glossary.html#release-channel) |
 
 Here `<REPOSITORY>` is the root path of the packages, for example, `registry.deckhouse.io/deckhouse/<EDITION>/packages`.
 

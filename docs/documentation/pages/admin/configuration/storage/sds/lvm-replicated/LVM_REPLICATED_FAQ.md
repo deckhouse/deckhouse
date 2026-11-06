@@ -10,13 +10,13 @@ Functionality is guaranteed only if the [system requirements](#system-requiremen
 ## System requirements
 
 {% alert level="info" %}
-Applicable to both single‑zone clusters and clusters that use multiple availability zones.
+Applicable to both single‑zone clusters and clusters that use multiple [availability zones](../../../../glossary.html#availability-zone).
 {% endalert %}
 
 - Use stock kernels shipped with the supported distributions.
 - For network connectivity, use infrastructure with bandwidth of 10 Gbps or higher.
 - To achieve maximum performance, network latency between nodes should be within 0.5–1 ms.
-- Do not use another SDS (Software‑defined storage) to provide disks for Deckhouse SDS.
+- Do not use another [SDS](../../../../glossary.html#sds) (Software‑defined storage) to provide disks for Deckhouse SDS.
 
 ## Recommendations
 
@@ -28,7 +28,7 @@ Applicable to both single‑zone clusters and clusters that use multiple availab
 
 There are two ways to obtain this information:
 
-1. Via the Grafana dashboard:
+1. Via the Grafana [dashboard](../../../../glossary.html#dashboard):
 
    Go to "Dashboards" → "Storage" → "LINSTOR/DRBD". The current cluster space usage level is shown in the upper‑right corner.
 
@@ -149,7 +149,7 @@ If you need to reboot another node, repeat the procedure.
 Replica management and state monitoring are automated in the `replicas_manager.sh` script.
 It checks the availability of the LINSTOR controller, identifies faulty or corrupted resources, creates database backups, and manages disk replicas, including configuring `TieBreaker` for quorum.
 
-To check the existence of the `replicas_manager.sh` script, run the following command on any master node:
+To check the existence of the `replicas_manager.sh` script, run the following command on any [master node](../../../../glossary.html#master-node):
 
    ```shell
    ls -l /opt/deckhouse/sbin/replicas_manager.sh
@@ -220,7 +220,7 @@ For non‑interactive mode, add `--non-interactive` and specify the node name. T
 
 ### Example of removing resources from a node
 
-Run `evict.sh` on any master node in interactive mode, specifying `--delete-resources-only`:
+Run `evict.sh` on any [master node](../../../../glossary.html#master-node) in interactive mode, specifying `--delete-resources-only`:
 
 ```shell
 /opt/deckhouse/sbin/evict.sh --delete-resources-only
@@ -276,7 +276,7 @@ Issues can arise at various component layers. The cheat sheet below helps diagno
    d8 k get pod -n d8-sds-replicated-volume -l app=linstor-node
    ```
 
-1. If some Pods are stuck in `Init`, check the DRBD version and bashible logs on the node:
+1. If some Pods are stuck in `Init`, check the DRBD version and [bashible](../../../../glossary.html#bashible) logs on the node:
 
    ```shell
    cat /proc/drbd

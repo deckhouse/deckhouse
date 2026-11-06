@@ -8,7 +8,7 @@ Deckhouse Platform (DP) supports the full lifecycle of node management:
 
 - Automatic node scaling based on workload.
 - Node updates and maintenance to keep them up to date.
-- Centralized configuration management for node groups using the NodeGroup CRD.
+- Centralized configuration management for [node groups](../../../../glossary.html#node-group) using the NodeGroup CRD.
 - Support for various types of nodes: permanent, ephemeral, cloud-based, or bare-metal.
 
 {% alert level="info" %}
@@ -21,12 +21,12 @@ Node groups allow logical segmentation of the cluster infrastructure. In DP, the
 - `front`: Nodes for routing HTTP(S) traffic.
 - `monitoring`: Nodes for hosting monitoring components.
 - `worker`: Nodes for user applications.
-- `system`: Dedicated nodes for system components.
+- `system`: Dedicated nodes for [system components](../../../../glossary.html#system-component).
 
 Each group can have centralized configuration settings, including the Kubernetes version, resources, taints, labels, kubelet parameters, and more.
 
 {% alert level="info" %}
-Node management is only available for clusters fully managed by DP. This feature is not supported for Managed Kubernetes clusters.
+Node management is only available for [clusters fully managed by DP](../../../../glossary.html#dp-managed-cluster). This feature is not supported for Managed Kubernetes clusters.
 {% endalert %}
 
 ## Automatic deployment and updates
@@ -75,7 +75,7 @@ These actions are performed automatically when using `bootstrap.sh` or when conn
 
 ### Disruptive updates
 
-Some updates — for example, upgrading `containerd` or kubelet across multiple versions — require node downtime and may cause short-term disruption of system components (*disruptive updates*).  
+Some updates — for example, upgrading `containerd` or kubelet across multiple versions — require node downtime and may cause short-term disruption of system components (*[disruptive updates](../../../../glossary.html#disruptive-update)*).  
 The application mode for such updates is configured via the [`disruptions.approvalMode`](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) parameter:
 
 - `Manual`: Manual approval mode for disruptive updates.  
@@ -91,12 +91,12 @@ The application mode for such updates is configured via the [`disruptions.approv
   > If needed, perform the drain manually before applying the annotation.  
   >
   > To avoid issues during draining,
-  > always use the `Manual` mode for master node groups.
+  > always use the `Manual` mode for [master node](../../../../glossary.html#master-node) groups.
 
 - `Automatic`: Automatic approval mode for disruptive updates.  
 
   In this mode, the node is drained automatically before applying the update by default.  
-  This behavior can be changed using the [`disruptions.automatic.drainBeforeApproval`](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval) parameter in the node group settings.
+  This behavior can be changed using the [`disruptions.automatic.drainBeforeApproval`](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval) parameter in the [node group](../../../../glossary.html#node-group) settings.
 
 - `RollingUpdate`: A mode in which a new node with updated settings is created and the old one is removed.  
   Applicable only to cloud nodes.
@@ -106,7 +106,7 @@ The application mode for such updates is configured via the [`disruptions.approv
 
 ## Example of a system NodeGroup
 
-System nodes are dedicated to running system components.  
+[System nodes](../../../../glossary.html#system-node) are dedicated to running [system components](../../../../glossary.html#system-component).  
 They are typically isolated using labels and taints to prevent user pods from being scheduled on them.  
 System nodes can be either static or cloud-based.
 
@@ -168,7 +168,7 @@ metadata:
 
 ## Settings for Static and CloudStatic NodeGroups
 
-Node groups with types Static and CloudStatic are intended for managing manually created nodes — either physical (bare-metal) or virtual (in the cloud, but outside DP automation). These nodes are connected manually or via [StaticInstance](/modules/node-manager/cr.html#staticinstance) and do not support automatic updates or scaling.
+[Node groups](../../../../glossary.html#node-group) with types Static and [CloudStatic](../../../../glossary.html#cloud-static-node) are intended for managing manually created nodes — either physical (bare-metal) or virtual (in the cloud, but outside DP automation). These nodes are connected manually or via [StaticInstance](/modules/node-manager/cr.html#staticinstance) and do not support automatic updates or scaling.
 
 Configuration specifics:
 
@@ -183,11 +183,11 @@ Configuration specifics:
   ```
 
 - Node registration to the cluster can be performed either manually or automatically, depending on the configuration:
-  - **Manual**: The user downloads the bootstrap script, configures the server, and runs the script manually.
-  - **Automatic (CAPS)**: When using [StaticInstance](/modules/node-manager/cr.html#staticinstance) and [SSHCredentials](/modules/node-manager/cr.html#sshcredentials), DP automatically connects and configures the nodes.
+  - **Manual**: The user downloads the [bootstrap script](../../../../glossary.html#bootstrap-script), configures the server, and runs the script manually.
+  - **Automatic ([CAPS](../../../../glossary.html#caps))**: When using [StaticInstance](/modules/node-manager/cr.html#staticinstance) and [SSHCredentials](/modules/node-manager/cr.html#sshcredentials), DP automatically connects and configures the nodes.
   - **Hybrid approach**: A manually added node can be handed over to CAPS by using the annotation `static.node.deckhouse.io/skip-bootstrap-phase: ""`.
 
-If the Cluster API Provider Static (CAPS) is enabled, the NodeGroup resource can use the `staticInstances` section. This allows DP to automatically connect, configure, and, if necessary, clean up static nodes based on StaticInstance and SSHCredentials resources.
+If the Cluster API Provider Static (CAPS) is enabled, the NodeGroup resource can use the `staticInstances` section. This allows DP to automatically connect, configure, and, if necessary, clean up [static nodes](../../../../glossary.html#static-node) based on StaticInstance and SSHCredentials resources.
 
 > In a [NodeGroup](/modules/node-manager/cr.html#nodegroup) of type Static or CloudStatic, you can explicitly specify the number of nodes using the `spec.staticInstances.count` parameter. This allows you to define the expected number of nodes — DP uses this value for state monitoring and automation.
 

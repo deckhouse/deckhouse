@@ -6,10 +6,10 @@ description: |
 search: additional networks, project network, cluster network, Network, NetworkClass
 ---
 
-DP implements the ability to use additional software-defined networks (hereinafter referred to as additional networks) for application workloads (pods, virtual machines). You can use the following types of networks:
+DP implements the ability to use additional [software-defined networks](../../../glossary.html#sdn) (hereinafter referred to as [additional networks](../../../glossary.html#additional-network)) for application workloads (pods, virtual machines). You can use the following types of networks:
 
-- Cluster (public) — a network that is publicly available in each project, configured and managed by the administrator. An example is a public WAN network or a shared network for traffic exchange between projects. To create such a network and use it for application pods, contact the cluster administrator.
-- Project network (user network) — a network accessible within a namespace, created and managed by the user using the NetworkClass manifest provided by the administrator.
+- Cluster (public) — a network that is publicly available in each [project](../../../glossary.html#project), configured and managed by the administrator. An example is a public WAN network or a shared network for traffic exchange between projects. To create such a network and use it for application pods, contact the cluster administrator.
+- [Project network](../../../glossary.html#project-network) (user network) — a network accessible within a namespace, created and managed by the user using the NetworkClass manifest provided by the administrator.
 
 For more information about additional software-defined networks, see [Configuring and connecting additional virtual networks for use in application pods](../../../admin/configuration/network/sdn/configure.html#configuring-and-connecting-additional-virtual-networks-for-use-in-application-pods).
 
@@ -67,9 +67,9 @@ After creating a network, you can [connect it to pods](#connecting-additional-ne
 
 ## Connecting additional networks to pods
 
-You can connect cluster networks and project networks to pods. To do this, use the pod annotation, specifying the parameters of the additional networks to be connected.
+You can connect [cluster networks](../../../glossary.html#cluster-network) and project networks to pods. To do this, use the pod annotation, specifying the parameters of the [additional networks](../../../glossary.html#additional-network) to be connected.
 
-Example of a pod manifest with two additional networks added (the cluster network `my-cluster-network` and the project network `my-network`):
+Example of a pod manifest with two additional networks added (the cluster network `my-cluster-network` and the [project](../../../glossary.html#project) network `my-network`):
 
 > The `ifName` field (optional) specifies the name of the TAP interface within the subnet. The `mac` field (optional) specifies the MAC address to be assigned to the TAP interface.
 
@@ -102,7 +102,7 @@ spec:
 
 ## IPAM for additional networks (IP allocation and assignment)
 
-The IPAM (IP Address Management) mechanism allows you to allocate IP addresses (IPv4 addresses are supported) from pools and assign them to additional network interfaces of pods connected to cluster networks and project networks.
+The [IPAM](../../../glossary.html#sdn-ipam) (IP Address Management) mechanism allows you to allocate IP addresses (IPv4 addresses are supported) from pools and assign them to additional network interfaces of pods connected to cluster networks and [project networks](../../../glossary.html#project-network).
 
 The cluster administrator is responsible for allocating IP addresses for connection to cluster networks. They enable and configure IPAM for networks and define the IP address pool for them. Users can assign addresses and configure IPAM in project networks.
 
@@ -167,7 +167,7 @@ To allocate a pool of addresses and assign them to network interfaces of pods co
          name: my-net-pool
    ```
 
-After allocating a pool of IP addresses for the project network, they can be assigned to the network interfaces of the pods connected to this network.
+After allocating a pool of IP addresses for the [project](../../../glossary.html#project) network, they can be assigned to the network interfaces of the pods connected to this network.
 
 ### Assigning IP addresses to network interfaces of pods connected to an additional network
 
@@ -175,7 +175,7 @@ DP implements [automatic IP address assignment](#automatic-ip-address-assignment
 
 #### Automatic IP address assignment
 
-To have the IP address for the additional network interface pod selected automatically from the pool, add the annotation `network.deckhouse.io/networks-spec` to the pod. In this annotation, specify the network parameters with IPAM enabled.
+To have the IP address for the [additional network](../../../glossary.html#additional-network) interface pod selected automatically from the pool, add the annotation `network.deckhouse.io/networks-spec` to the pod. In this annotation, specify the network parameters with IPAM enabled.
 
 Example (the IP address will be automatically selected from the pool created for the `my-network` network and assigned to the `net1` interface):
 

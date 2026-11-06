@@ -36,7 +36,7 @@ description: Архитектура модуля csi-netapp в Deckhouse Platfor
 
     Состоит из одного основного контейнера **controller**.
 
-1. **CSI-драйвер (netapp)** — реализация CSI-драйвера, использующего provisioner `csi.trident.netapp.io`. С типовой архитектурой CSI-драйвера, используемого в DP, можно ознакомиться [в описании архитектуры CSI-драйвера](../csi-drivers/csi-driver.html).
+1. **[CSI-драйвер](../../../glossary.html#csi-driver) (netapp)** — реализация CSI-драйвера, использующего provisioner `csi.trident.netapp.io`. С типовой архитектурой CSI-драйвера, используемого в DP, можно ознакомиться [в описании архитектуры CSI-драйвера](../csi-drivers/csi-driver.html).
 
 ## Взаимодействия модуля
 

@@ -4,7 +4,7 @@ permalink: en/admin/multitenancy/project-management.html
 description: Project management
 ---
 
-Deckhouse Platform includes a set of templates for creating projects:
+Deckhouse Platform includes a set of templates for creating [projects](../../glossary.html#project):
 
 - `default` is a template for basic project use cases:
   - resource limits
@@ -99,7 +99,7 @@ You can create a new project for an existing namespace. To do this, add the `pro
    test        Deployed   empty                                                                     1m
    ```
 
-You can change the template of an existing project to another available template.
+You can change the template of an existing [project](../../glossary.html#project) to another available template.
 
 {% alert level="warning" %}
 Note that changing the template may cause resource conflicts: if the template chart defines resources that already exist in the namespace, the template cannot be applied.
@@ -196,7 +196,7 @@ data:
 
 Resources with the label `projects.deckhouse.io/unmanaged`:
 
-- Will be created **only once** when the project is created;
+- Will be created **only once** when the [project](../../glossary.html#project) is created;
 - **Will not be updated** with subsequent template changes or updates;
 - Will not be monitored in the project's status;
 - Will receive the labels `projects.deckhouse.io/project` and `projects.deckhouse.io/project-template` but **will not receive** the label `heritage: multitenancy-manager`.
@@ -295,7 +295,7 @@ To implement validation for resources with a different label (for example, `heri
 
 ## Granting cluster-scoped resources to projects
 
-The `multitenancy-manager` lets cluster administrators control which cluster-scoped resources (for example StorageClass) may be referenced from within project namespaces.
+The `multitenancy-manager` lets cluster administrators control which cluster-scoped resources (for example StorageClass) may be referenced from within [project](../../glossary.html#project) namespaces.
 
 To do this, custom resources are used:
 

@@ -14,10 +14,10 @@ lang: ru
 - Сети с DHCP и доступом в Интернет;
 - Доступные shared Datastore на всех используемых ESXi;
 - Версия vSphere — `7.x` или `8.x` с поддержкой механизма [`Online volume expansion`](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion);
-- vCenter, доступный изнутри кластера с master-узлов;
+- vCenter, доступный изнутри кластера с [master-узлов](../../../../glossary.html#master-node);
 - Созданный Datacenter, в котором должны быть настроены следующие объекты:
   1. VirtualMachine template:
-     - Образ виртуальной машины должен использовать `Virtual machines with hardware version 15 or later` — это необходимо для работы online resize.
+     - [Образ виртуальной машины](../../../../glossary.html#vm-image) должен использовать `Virtual machines with hardware version 15 or later` — это необходимо для работы online resize.
      - В образе должны быть установлены пакеты `open-vm-tools`, `cloud-init` и [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) — при использовании версии `cloud-init` ниже `21.3`.
   1. Network:
      - Сеть должна быть доступна на всех ESXi, на которых планируется создание виртуальных машин.

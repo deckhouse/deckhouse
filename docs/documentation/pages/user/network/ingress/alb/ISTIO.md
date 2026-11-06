@@ -18,7 +18,7 @@ When deploying an application using Istio, choose one of the following options: 
 
 ### Publishing applications using Ingress NGINX {#publishing-applications-using-ingress-nginx}
 
-To publish an application using Ingress NGINX, the cluster administrator must configure the Ingress controller by adding an Istio sidecar to it.
+To publish an application using Ingress NGINX, the cluster administrator must configure the [Ingress controller](../../../../glossary.html#ingress-controller) by adding an Istio sidecar to it.
 
 To publish an application, prepare an Ingress resource that references a Service. Set `ingressClassName` to the controller with the Istio sidecar (the administrator provides the value). Required annotations for the Ingress resource:
 
@@ -77,7 +77,7 @@ spec:
 
 ### Publishing applications using Istio Ingress Gateway resource {#publishing-applications-using-istio-ingress-gateway-resource}
 
-To publish an application using the Istio Ingress Gateway, the cluster administrator must create an [IngressIstioController](/modules/istio/cr.html) resource.
+To publish an application using the [Istio Ingress Gateway](../../../../glossary.html#istio-ingress-gateway), the cluster administrator must create an [IngressIstioController](/modules/istio/cr.html) resource.
 
 To publish an application using the Istio Ingress Gateway resource, create a Gateway. In `spec.selector`, specify the label that references `ingressGatewayClass` and the Secret name provided by the cluster administrator:
 

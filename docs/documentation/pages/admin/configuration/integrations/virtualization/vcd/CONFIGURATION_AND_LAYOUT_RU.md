@@ -18,7 +18,7 @@ lang: ru
 
 ## Схемы размещения
 
-Deckhouse Platform поддерживает две схемы размещения ресурсов в VCD.
+Deckhouse Platform поддерживает две [схемы размещения](../../../../glossary.html#layout) ресурсов в VCD.
 
 ### Standard
 
@@ -67,7 +67,7 @@ masterNodeGroup:
 Если используется `NSX-V`, DHCP необходимо настроить вручную. В противном случае узлы, ожидающие получение IP-адреса по DHCP, не смогут его получить.
 
 {% alert level="warning" %}
-Не рекомендуется использовать динамическую адресацию для первого master-узла совместно с `NSX-V`.
+Не рекомендуется использовать динамическую адресацию для первого [master-узла](../../../../glossary.html#master-node) совместно с `NSX-V`.
 {% endalert %}
 
 Схема размещения предполагает автоматическое создание следующих правил NAT:
@@ -183,7 +183,7 @@ masterNodeGroup:
 
 ## Конфигурация
 
-Интеграция осуществляется с помощью [ресурса VCDClusterConfiguration](/modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration), который описывает конфигурацию облачного кластера в VCD и используется системой виртуализации, если управляющий слой (control plane) кластера размещён в системе. Отвечающий за интеграцию модуль DP настраивается автоматически, исходя из выбранной схемы размещения.
+Интеграция осуществляется с помощью [ресурса VCDClusterConfiguration](/modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration), который описывает конфигурацию [облачного кластера](../../../../glossary.html#cloud-cluster) в VCD и используется системой виртуализации, если управляющий слой (control plane) кластера размещён в системе. Отвечающий за интеграцию модуль DP настраивается автоматически, исходя из выбранной [схемы размещения](../../../../glossary.html#layout).
 
 Чтобы изменить конфигурацию в запущенном кластере, выполните следующую команду:
 
@@ -229,7 +229,7 @@ provider:
   insecure: true
 ```
 
-Количество и параметры процесса заказа машин в облаке настраиваются в кастомном ресурсе [NodeGroup](/modules/node-manager/cr.html#nodegroup), в котором также указывается название используемого для этой группы узлов инстанс-класса (параметр `cloudInstances.classReference`). Инстанс-класс для cloud-провайдера VCD — это кастомный ресурс [VCDInstanceClass](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass), в котором указываются конкретные параметры самих машин.
+Количество и параметры процесса заказа машин в облаке настраиваются в кастомном ресурсе [NodeGroup](/modules/node-manager/cr.html#nodegroup), в котором также указывается название используемого для этой [группы узлов](../../../../glossary.html#node-group) [инстанс-класса](../../../../glossary.html#instance-class) (параметр `cloudInstances.classReference`). Инстанс-класс для cloud-провайдера VCD — это кастомный ресурс [VCDInstanceClass](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass), в котором указываются конкретные параметры самих машин.
 
 Ниже представлен пример конфигурации VCDInstanceClass для эфемерных узлов cloud-провайдера VMware Cloud Director.
 

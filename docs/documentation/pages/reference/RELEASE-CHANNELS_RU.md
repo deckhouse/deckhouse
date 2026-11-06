@@ -13,7 +13,7 @@ search: release channels, update channels, update strategy, каналы обн�
 {%- assign releases = site.data.releases.channels | sort: "stability" -%}
 
 {% alert %}
-Информацию о том, какие версии Deckhouse находятся в настоящий момент на каких каналах обновлений, а также о планируемой дате смены версии на канале обновлений смотрите на сайте <a href="https://releases.deckhouse.ru" target="_blank">releases.deckhouse.ru</a>.
+Информацию о том, какие версии Deckhouse находятся в настоящий момент на каких [каналах обновлений](../glossary.html#release-channel), а также о планируемой дате смены версии на канале обновлений смотрите на сайте <a href="https://releases.deckhouse.ru" target="_blank">releases.deckhouse.ru</a>.
 {% endalert %}
 
 К кластерам как элементам инфраструктуры обычно предъявляются различные требования.

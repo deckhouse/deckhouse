@@ -7,7 +7,7 @@ description: Architecture of the ingress-nginx module in Deckhouse Platform.
 
 The `ingress-nginx` module installs and manages the [Ingress NGINX Controller](https://kubernetes.github.io/ingress-nginx/) using the IngressNginxController custom resource.
 
-The module can operate in high availability (HA) mode and provides flexible configuration for placing Ingress controllers on cluster nodes, as well as tuning controller behavior according to the specifics of the underlying infrastructure.
+The module can operate in high availability (HA) mode and provides flexible configuration for placing [Ingress controllers](../../glossary.html#ingress-controller) on cluster nodes, as well as tuning controller behavior according to the specifics of the underlying infrastructure.
 
 The module supports running and configuring multiple instances of the Ingress NGINX Controller independently. This allows, for example, separating external and intranet application Ingress resources.
 
@@ -95,13 +95,13 @@ The following external components interact with the module:
 
 Methods for receiving traffic from external networks are described in the [`spec.inlet`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-inlet) parameter of the IngressNginxController custom resource.
 
-For inlet types LoadBalancer, LoadBalancerWithProxyProtocol, and LoadBalancerWithSSLPassthrough, the load balancer shown in the diagram is automatically provided by the cloud provider (when DP is deployed in a cloud environment) or can be implemented using the MetalLB controller (for bare-metal installations). For configuration details, refer to the [`metallb` module documentation](/modules/metallb/configuration.html).
+For [inlet](../../glossary.html#inlet) types LoadBalancer, LoadBalancerWithProxyProtocol, and LoadBalancerWithSSLPassthrough, the load balancer shown in the diagram is automatically provided by the [cloud provider](../../glossary.html#cloud-provider) (when DP is deployed in a cloud environment) or can be implemented using the MetalLB controller (for bare-metal installations). For configuration details, refer to the [`metallb` module documentation](/modules/metallb/configuration.html).
 
 For inlet types HostPort, HostPortWithProxyProtocol, HostPortWithSSLPassthrough, and HostWithFailover, the load balancer is deployed by the user or may be absent. In this case, the user must configure the load balancer backends or otherwise ensure network connectivity to the ingress-controller. The ingress-controller entry point in this case is the ports on the cluster nodes where the controller is running.
 
 ## Architecture of Ingress controller with HostWithFailover inlet type
 
-When the value `HostWithFailover` of the [`spec.inlet`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-inlet) parameter of the IngressNginxController custom resource is set, two Ingress controllers are installed in the cluster: the primary controller and the failover controller, as well as a proxy-failover controller that coordinates traffic switch between them.
+When the value `HostWithFailover` of the [`spec.inlet`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-inlet) parameter of the IngressNginxController custom resource is set, two [Ingress controllers](../../glossary.html#ingress-controller) are installed in the cluster: the primary controller and the failover controller, as well as a proxy-failover controller that coordinates traffic switch between them.
 
 The primary controller starts in `hostNetwork`, while the failover controller starts in `podNetwork`. If the main controller pod is unavailable on the node, the proxy failover starts proxying traffic to the failover controller pod using the `PROXY PROTOCOL` to save information about the client's IP address.
 

@@ -45,7 +45,7 @@ description: Архитектура модуля operator-argo в Deckhouse Plat
 
   ![Архитектура модуля operator-argo с Redis HA](../../images/architecture/delivery/c4-l2-operator-argo-ha.ru.svg)
 
-- Вариант развёртывания экземпляра Argo CD в [управляющем кластере](https://argocd-agent.readthedocs.io/stable/concepts/components-terminology/) в мультикластерной конфигурации (на диаграмме отражены только отличия от основного варианта развёртывания):
+- Вариант развёртывания экземпляра Argo CD в [управляющем кластере](https://argocd-agent.readthedocs.io/stable/concepts/components-terminology/) в [мультикластерной](../../glossary.html#multicluster) конфигурации (на диаграмме отражены только отличия от основного варианта развёртывания):
 
   ![Архитектура модуля operator-argo с Principal](../../images/architecture/delivery/c4-l2-operator-argo-principal.ru.svg)
 
@@ -131,7 +131,7 @@ description: Архитектура модуля operator-argo в Deckhouse Plat
 
    Более подробную информацию о механизмах работы можно найти [в документации по Argo CD Notifications](https://argo-cd.readthedocs.io/en/stable/operator-manual/notifications/).
 
-1. **&lt;ArgoCD name&gt;-dex-server** (Deployment) — argocd-dex-server, опциональный компонент для аутентификации пользователей в Argo CD, выступающий в роли OIDC-провайдера (OpenID Connect) на базе [Dex](https://github.com/dexidp/dex). Компонент реализует возможность входа пользователей через различные внешние провайдеры аутентификации (LDAP, GitHub, GitLab, SAML, Azure AD и др.), а также поддерживает работу со статическими пользователями, определёнными в конфигурации Dex.
+1. **&lt;ArgoCD name&gt;-dex-server** (Deployment) — argocd-dex-server, опциональный компонент для аутентификации пользователей в Argo CD, выступающий в роли OIDC-провайдера (OpenID Connect) на базе [Dex](https://github.com/dexidp/dex). Компонент реализует возможность входа пользователей через различные внешние провайдеры аутентификации (LDAP, GitHub, GitLab, SAML, Azure AD и др.), а также поддерживает работу со [статическими пользователями](../../glossary.html#static-user), определёнными в конфигурации Dex.
 
    Состоит из следующих контейнеров:
 
@@ -150,7 +150,7 @@ description: Архитектура модуля operator-argo в Deckhouse Plat
 
    Argocd-operator-controller-manager разворачивает этот компонент, если параметр [`.spec.ha.enabled`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-ha-enabled) кастомного ресурса ArgoCD принимает значение `false`.
 
-1. **&lt;ArgoCD name&gt;-redis-ha-server** (StatefulSet) — argocd-redis-ha-server, обязательный компонент для развёртывания Redis в режиме высокой доступности (HA) в составе Argo CD. Реализует отказоустойчивый кластер Redis с репликацией и автоматическим переключением (failover) с помощью механизма [Redis Sentinel](https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/).
+1. **&lt;ArgoCD name&gt;-redis-ha-server** (StatefulSet) — argocd-redis-ha-server, обязательный компонент для развёртывания Redis в [режиме высокой доступности](../../glossary.html#ha-mode) (HA) в составе Argo CD. Реализует отказоустойчивый кластер Redis с репликацией и автоматическим переключением (failover) с помощью механизма [Redis Sentinel](https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/).
 
    Состоит из следующих контейнеров:
 
@@ -170,7 +170,7 @@ description: Архитектура модуля operator-argo в Deckhouse Plat
    Argocd-operator-controller-manager разворачивает этот компонент, если параметр [`.spec.ha.enabled`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-ha-enabled) кастомного ресурса ArgoCD принимает значение `true`.
 
    {% alert level="info" %}
-   Для реализации безопасного и масштабируемого мультикластера в Argo CD используются следующие компоненты:
+   Для реализации безопасного и масштабируемого [мультикластера](../../glossary.html#multicluster) в Argo CD используются следующие компоненты:
    - Principal — это центральная точка управления: хранит состояние и раздает задания;
    - Agent — это исполнитель в каждом целевом кластере: применяет манифесты и возвращает результат обработки в Principal.
 
@@ -195,12 +195,12 @@ description: Архитектура модуля operator-argo в Deckhouse Plat
 
 Модуль взаимодействует со следующими компонентами:
 
-1. **Внешние хранилища образов** — получение списка образов.
+1. **[Внешние хранилища](../../glossary.html#external-storage) образов** — получение списка образов.
 1. **Внешние репозитории кода**:
     - получение манифестов развёртывания приложения из репозиториев;
     - обновление параметров образа контейнера (поле `image`) в Helm-чарте.
 1. **Внешний Argo CD Principal**:
-    - подключение к управляющему кластеру Argo CD;
+    - подключение к [управляющему кластеру](../../glossary.html#managing-cluster) Argo CD;
     - получение запросов на обработку;
     - передача результатов выполнения запросов.
 1. **Kube-apiserver**:

@@ -12,7 +12,7 @@ Key features:
 - Integration with the [`node-manager`](/modules/node-manager/) module to support DVPInstanceClass when defining a [NodeGroup](/modules/node-manager/cr.html#nodegroup)
 
 {% alert level="info" %}
-The virtualization integration is enabled automatically for all cloud clusters deployed in built-in virtualization.
+The virtualization integration is enabled automatically for all [cloud clusters](../../../../glossary.html#cloud-cluster) deployed in built-in virtualization.
 No additional configuration is required.
 {% endalert %}
 

@@ -37,7 +37,7 @@ description: Архитектура модуля managed-opensearch в Deckhouse
 
 1. **Managed-opensearch-operator** (Deployment) — оператор Kubernetes, состоящий из одного контейнера **manager** и выполняющий следующие операции:
 
-   - согласование состояния кастомных ресурсов [Opensearch](/modules/managed-opensearch/cr.html#opensearch) во всех пользовательских неймспейсах. Кастомные ресурсы Opensearch и OpensearchClass определяют настройки инстанса OpenSearch;
+   - согласование состояния кастомных ресурсов [Opensearch](/modules/managed-opensearch/cr.html#opensearch) во всех [пользовательских неймспейсах](../../glossary.html#user-namespace). Кастомные ресурсы Opensearch и OpensearchClass определяют настройки инстанса OpenSearch;
 
    - создание и управление кастомным ресурсом [Certificate](https://cert-manager.io/docs/usage/certificate/) и ресурсами StatefulSet, Service, Secret и PersistentVolumeClaim, относящимися к инстансу OpenSearch.
 

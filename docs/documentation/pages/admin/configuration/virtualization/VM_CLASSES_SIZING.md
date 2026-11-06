@@ -5,7 +5,7 @@ description: "The VirtualMachineClass sizing policy: allowed combinations of cor
 search: sizing policy, sizingPolicy, coreFraction, memory per core
 ---
 
-The [`.spec.sizingPolicies`](/modules/virtualization/cr.html#virtualmachineclass-v1alpha3-spec-sizingpolicies) block defines which combinations of cores, core fraction, and memory are allowed for virtual machines (VMs) of this class.
+The [`.spec.sizingPolicies`](/modules/virtualization/cr.html#virtualmachineclass-v1alpha3-spec-sizingpolicies) block defines which combinations of cores, [core fraction](../../../glossary.html#vm-core-fraction), and memory are allowed for virtual machines (VMs) of this class.
 
 {% alert level="warning" %}
 Changes to the [`.spec.sizingPolicies`](/modules/virtualization/cr.html#virtualmachineclass-v1alpha3-spec-sizingpolicies) block affect existing virtual machines.
@@ -45,12 +45,12 @@ DP doesn't forbid gaps between ranges, but a virtual machine whose number of cor
 Within a range, you set the requirements for memory and for the core fraction:
 
 - `memory`: The minimum and maximum amount of memory. Set either for the whole range or per core, in the nested `memory.perCore` block.
-- `coreFractions`: The list of allowed core fractions, for example `[25, 50, 100]` for 25%, 50%, and 100%. If the project owner sets the `coreFraction` parameter of a virtual machine explicitly, the value must come from this list.
+- `coreFractions`: The list of allowed core fractions, for example `[25, 50, 100]` for 25%, 50%, and 100%. If the [project](../../../glossary.html#project) owner sets the `coreFraction` parameter of a virtual machine explicitly, the value must come from this list.
 - `defaultCoreFraction`: The core fraction that a virtual machine gets if `coreFraction` isn't set in it. The value must be in the `coreFractions` list. If the parameter isn't specified, 100% applies.
 
 A rule with neither `memory` nor `coreFractions` doesn't limit anything, so set at least one of them.
 
-In commercial DP editions, you can set the `defaultCoreFraction` parameter to `Auto`. In that case, the core fraction for VMs without an explicit `coreFraction` is chosen by [vertical autoscaling](../../../user/virtualization/vm-resources.html#automatic-corefraction-auto). `Auto` is a mode, not a share of a core, so it must not appear in the `coreFractions` list.
+In commercial DP [editions](../../../glossary.html#edition), you can set the `defaultCoreFraction` parameter to `Auto`. In that case, the core fraction for VMs without an explicit `coreFraction` is chosen by [vertical autoscaling](../../../user/virtualization/vm-resources.html#automatic-corefraction-auto). `Auto` is a mode, not a share of a core, so it must not appear in the `coreFractions` list.
 
 ```yaml
 spec:
@@ -192,7 +192,7 @@ spec:
       coreFractions: [100]
 ```
 
-To configure sizing policies in the web interface, in the [VM class creation form](vm-classes.html#virtualmachineclass-settings):
+To configure [sizing policies](../../../glossary.html#sizing-policy) in the web interface, in the [VM class creation form](vm-classes.html#virtualmachineclass-settings):
 
 1. Click **Add** in the **Resource allocation rules for virtual machines** block.
 1. In the **CPU** block, enter `1` in the **Min** field and `4` in the **Max** field.

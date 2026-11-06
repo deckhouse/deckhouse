@@ -136,7 +136,7 @@ This section walks through a minimal scenario: you create an Ubuntu 24.04 image,
 
 1. Create an image from an external source:
 
-   1. Go to the **Projects** tab and select the project you need.
+   1. Go to the **[Projects](../../glossary.html#project)** tab and select the project you need.
    1. Go to **Virtualization** → **Images**.
    1. Click **Create**.
    1. In the **Source** block, select **By link**.
@@ -205,7 +205,7 @@ This section walks through a minimal scenario: you create an Ubuntu 24.04 image,
 1. Delete the created resources:
 
    1. Go to **Virtualization** and select the section you need, for example **Virtual machines**, **Disks**, or **Images**.
-   1. In the resource row, click the ellipsis button and select **Delete**. In some lists, for example in the list of VM snapshots, deletion is a separate button.
+   1. In the resource row, click the ellipsis button and select **Delete**. In some lists, for example in the list of [VM snapshots](../../glossary.html#vm-snapshot), deletion is a separate button.
    1. In the confirmation window, click **Delete** or cancel the action with **Don't delete**.
 
    > **Important:** Deleting a resource is irreversible. A disk attached to a running virtual machine can't be deleted, and the **Delete** item is inactive for it.

@@ -46,7 +46,7 @@ description: Архитектура модуля sds-node-configurator в Deckho
    Компонент содержит следующие контейнеры:
 
    - **controller** — основной контейнер;
-   - **webhook** — сайдкар-контейнер, реализующий вебхук-сервер для проверки кастомных ресурсов [LVMLogicalVolumeSnapshot](/modules/sds-node-configurator/cr.html#lvmlogicalvolumesnapshot). Если используемая редакция DP не поддерживает функционал снимков логических томов LVM, кастомный ресурс [LVMLogicalVolumeSnapshot](/modules/sds-node-configurator/cr.html#lvmlogicalvolumesnapshot) не проходит валидацию.
+   - **webhook** — сайдкар-контейнер, реализующий вебхук-сервер для проверки кастомных ресурсов [LVMLogicalVolumeSnapshot](/modules/sds-node-configurator/cr.html#lvmlogicalvolumesnapshot). Если используемая [редакция](../../glossary.html#edition) DP не поддерживает функционал снимков логических томов LVM, кастомный ресурс [LVMLogicalVolumeSnapshot](/modules/sds-node-configurator/cr.html#lvmlogicalvolumesnapshot) не проходит валидацию.
 
 ## Взаимодействия модуля
 

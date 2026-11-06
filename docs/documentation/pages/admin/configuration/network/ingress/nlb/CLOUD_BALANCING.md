@@ -17,8 +17,8 @@ A list of supported providers:
 * zVirtExperimental
 
 Configuring incoming traffic balancing in clusters on cloud platforms
-involves creating an Ingress controller with specified LoadBalancer parameters.
-Based on these settings, the cloud provider automatically creates an external load balancer.
+involves creating an [Ingress controller](../../../../../glossary.html#ingress-controller) with specified LoadBalancer parameters.
+Based on these settings, the [cloud provider](../../../../../glossary.html#cloud-provider) automatically creates an external load balancer.
 In the cluster, a Service resource is created through which the external load balancer routes traffic to applications.
 
 ## Example of creating an Ingress controller for the OpenStack provider

@@ -5,11 +5,11 @@ description: "Configure update settings for Deckhouse Platform including release
 ---
 
 Deckhouse Platform (DP) supports a flexible update mechanism,
-allowing you to select [release channels](../../../architecture/updating.html#release-channels) and configure the update mode.
-Release channels help you balance stability with the speed of receiving new features.
+allowing you to select [release channels](../../../architecture/updating.html#release-channels) and configure the [update mode](../../../glossary.html#update-mode).
+[Release channels](../../../glossary.html#release-channel) help you balance stability with the speed of receiving new features.
 
 The update mode configuration lets you choose between automatic or manual updates
-and define update windows during which new versions can be installed.
+and define [update windows](../../../glossary.html#update-window) during which new versions can be installed.
 Together, these features help you avoid updates at inconvenient times and control migration to new releases.
 
 {% alert level="info" %}
@@ -52,7 +52,7 @@ spec:
 DP supports two update modes that [determine](/modules/deckhouse/configuration.html#parameters-update-mode) how new versions are applied:
 
 - **Automatic mode** — the cluster updates as soon as a new version appears on the [selected release channel](../../../architecture/updating.html#release-channels). Two configuration options are available:
-  - `AutoPatch` — only patch version updates within the current minor version are applied;
+  - `AutoPatch` — only [patch version](../../../glossary.html#patch-version) updates within the current [minor version](../../../glossary.html#minor-version) are applied;
   - `Auto` — both patch and minor versions are applied automatically.
 - **Manual mode (`Manual`)** — both patch and minor versions are applied only after manual approval.
 
@@ -108,7 +108,7 @@ d8 k patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"
 
 ### Checking the current update mode
 
-To determine the current update mode used in the cluster,
+To determine the current [update mode](../../../glossary.html#update-mode) used in the cluster,
 inspect the configuration of the [`deckhouse`](/modules/deckhouse/) module with the following command:
 
 ```shell
@@ -135,7 +135,7 @@ spec:
 Automatic update mode is enabled when the [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) parameter is specified in the [`deckhouse`](/modules/deckhouse/) module configuration.
 When this condition is met:
 
-1. DP checks the release channel every minute for new releases.
+1. DP checks the [release channel](../../../glossary.html#release-channel) every minute for new releases.
 1. When a new release appears, DP downloads it into the cluster and creates a [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) custom resource.
 1. Once the DeckhouseRelease resource appears in the cluster,
    DP applies the corresponding update according to the configured update settings
@@ -148,7 +148,7 @@ d8 k get deckhousereleases
 ```
 
 {% alert level="warning" %}
-Starting from DP 1.70, patch version updates (for example, an update to version `1.70.2` when version `1.70.1` is installed) are applied taking update windows into account. Prior to DP 1.70, patch version updates are applied without regard to the update mode and windows.
+Starting from DP 1.70, patch version updates (for example, an update to version `1.70.2` when version `1.70.1` is installed) are applied taking [update windows](../../../glossary.html#update-window) into account. Prior to DP 1.70, patch version updates are applied without regard to the update mode and windows.
 {% endalert %}
 
 #### Release pinning
@@ -239,7 +239,7 @@ Manual approval of DP updates is required in the following cases:
   ```
 
 - Automatic update approval is disabled for a NodeGroup,
-  for updates that might cause temporary downtime of system components.
+  for updates that might cause temporary downtime of [system components](../../../glossary.html#system-component).
 
   This means the [`spec.disruptions.approvalMode`](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) parameter of the corresponding NodeGroup resource is set to `Manual`.
 
@@ -253,7 +253,7 @@ Manual approval of DP updates is required in the following cases:
 
 ## Update windows
 
-DP allows you to define *update windows*, which are specific time intervals during which automatic updates are allowed.
+DP allows you to define *[update windows](../../../glossary.html#update-window)*, which are specific time intervals during which automatic updates are allowed.
 Using update windows ensures that updates won’t be installed at inconvenient times
 or during periods of high cluster load.
 
@@ -261,7 +261,7 @@ or during periods of high cluster load.
 
 - If update windows are configured, DP installs new versions only during the specified windows.
 - If no update windows are configured,
-  the update is applied as soon as a new version appears on the configured release channel.
+  the update is applied as soon as a new version appears on the configured [release channel](../../../glossary.html#release-channel).
 
 ### Configuring update windows
 

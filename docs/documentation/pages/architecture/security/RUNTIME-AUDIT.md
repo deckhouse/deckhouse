@@ -5,8 +5,8 @@ search: runtime audit, audit rules, falco
 description: Runtime audit architecture in Deckhouse Platform.
 ---
 
-The runtime audit of Deckhouse Platform (DP) is based on the [Falco](https://falco.org/) threat detection system.
-This mechanism analyzes Linux kernel events and Kubernetes API audit events to detect suspicious activity
+The [runtime audit](../../glossary.html#runtime-audit) of Deckhouse Platform (DP) is based on the [Falco](https://falco.org/) threat detection system.
+This mechanism analyzes Linux kernel events and [Kubernetes API audit](../../glossary.html#kubernetes-api-audit) events to detect suspicious activity
 in running containers and across the cluster.
 
 DP deploys Falco agents on each node as part of a DaemonSet.
@@ -30,7 +30,7 @@ Each cluster node runs a Falco Pod with the following components:
   and exports them as metrics to external systems.
 - `kube-rbac-proxy`: Protects the `falcosidekick` metrics endpoint from unauthorized access.
 
-For a detailed architecture of the [`runtime-audit-engine`](/modules/runtime-audit-engine/) module, which implements DP security event audit, refer to the [corresponding documentation section](./runtime-audit-engine.html).
+For a detailed architecture of the [`runtime-audit-engine`](/modules/runtime-audit-engine/) module, which implements DP [security event](../../glossary.html#security-event) audit, refer to the [corresponding documentation section](./runtime-audit-engine.html).
 
 ## Audit rules
 
@@ -41,7 +41,7 @@ Each rule consists of a condition expression written in accordance with [Falco's
 
 DP provides the following types of built-in rules:
 
-- **Kubernetes audit rules**: Help detect security issues in DP and in the audit mechanism itself.
+- **Kubernetes [audit rules](../../glossary.html#runtime-audit-rule)**: Help detect security issues in DP and in the audit mechanism itself.
   These rules are located in the `falco` container at `/etc/falco/k8s_audit_rules.yaml`.
 
 ### Custom rules

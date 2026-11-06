@@ -5,7 +5,7 @@ description: "Virtual machines in a Deckhouse Platform project: images, disks, w
 search: virtual machines, VM, virtualization, images, disks
 ---
 
-In a Deckhouse Platform (DP) project, virtual machines (VMs) run next to container workloads. A machine, its disks, and its images are described by Kubernetes resources, so you create, change, and delete them the same way as the other objects of the project.
+In a Deckhouse Platform (DP) [project](../../glossary.html#project), virtual machines (VMs) run next to container workloads. A machine, its disks, and its images are described by Kubernetes resources, so you create, change, and delete them the same way as the other objects of the project.
 
 Cluster-wide resources are prepared by an administrator: virtual machine classes, cluster images, and the storage and subnets available to the project. If the project lacks the class or image you need, contact the administrator.
 
@@ -21,7 +21,7 @@ Working with disks is covered in three sections: [Virtual machine disks](disks.h
 
 The minimum set of parameters and the machine start are covered in [Creating a virtual machine](vm-create.html). Each group of parameters is then covered separately:
 
-- [CPU and memory of a virtual machine](vm-resources.html): The number of cores, the core fraction, and the memory size.
+- [CPU and memory of a virtual machine](vm-resources.html): The number of cores, the [core fraction](../../glossary.html#vm-core-fraction), and the memory size.
 - [Guest OS and bootloader of a virtual machine](vm-os-and-boot.html): The operating system type and the boot mode.
 - [Provisioning and the guest OS agent](vm-provisioning.html): cloud-init, Sysprep, and `qemu-guest-agent`.
 - [Placement of virtual machines across nodes](vm-placement.html): Node selectors and affinity rules.
@@ -35,7 +35,7 @@ The state of a disk or of a whole machine is saved by a snapshot, which a new di
 
 ## Networking
 
-A machine gets an address in the main cluster network automatically, but you can choose the address in advance and keep it reserved for the project, as covered in [IP addresses of virtual machines](../network/virtualization/vm-ip-addresses.html). To open a machine application to other cluster workloads or to the outside, refer to [Access to applications on a virtual machine](../network/virtualization/vm-publishing.html). Besides the main network, a machine can be connected to project and cluster networks, which is covered in [Additional network interfaces of virtual machines](../network/virtualization/vm-additional-interfaces.html).
+A machine gets an address in the [main cluster network](../../glossary.html#main-network) automatically, but you can choose the address in advance and keep it reserved for the project, as covered in [IP addresses of virtual machines](../network/virtualization/vm-ip-addresses.html). To open a machine application to other cluster workloads or to the outside, refer to [Access to applications on a virtual machine](../network/virtualization/vm-publishing.html). Besides the main network, a machine can be connected to project and cluster networks, which is covered in [Additional network interfaces of virtual machines](../network/virtualization/vm-additional-interfaces.html).
 
 ## Device passthrough
 

@@ -22,7 +22,7 @@ lang: ru
 * `topology.kubernetes.io/zone`;
 * `topology.kubernetes.io/region`.
 
-Это полезно для межкластерного фейловера при использовании совместно с мультикластером.
+Это полезно для межкластерного фейловера при использовании совместно с [мультикластером](../../glossary.html#multicluster).
 
 {% alert level="warning" %}
 Для активации Locality Failover используется ресурс [DestinationRule](../network/managing_request_between_service_istio.html#ресурс-destinationrule), в котором также необходимо указать параметр `outlierDetection`.

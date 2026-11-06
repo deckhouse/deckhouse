@@ -38,10 +38,10 @@ are listed in the "Network" section of a respective DP version on the [Release n
 ## Requirements for network latency between master nodes
 
 {% alert level="info" %}
-DP supports HA mode using [arbiter nodes](../../admin/configuration/high-reliability-and-availability/enable.html#configuring-ha-mode-with-two-master-nodes-and-an-arbiter-node). The network latency requirements listed below also apply to arbiter nodes.
+DP supports [HA mode](../glossary.html#ha-mode) using [arbiter nodes](../../admin/configuration/high-reliability-and-availability/enable.html#configuring-ha-mode-with-two-master-nodes-and-an-arbiter-node). The network latency requirements listed below also apply to [arbiter nodes](../glossary.html#arbiter-node).
 {% endalert %}
 
-Etcd only commits a writing after the change has been replicated to a majority of master nodes. Therefore, the round-trip time (RTT) between master nodes directly determines the cluster’s performance.
+Etcd only commits a writing after the change has been replicated to a majority of [master nodes](../glossary.html#master-node). Therefore, the round-trip time (RTT) between master nodes directly determines the cluster’s performance.
 A single operation in the cluster typically consists of several consecutive writes, so as latency increases, the application of manifests, operator operations, and Kubernetes API responsiveness slow down noticeably.
 
 **The sum of RTT and jitter between master nodes must not exceed 100 ms.**
@@ -106,9 +106,9 @@ Here, `avg` is the average RTT, `mdev` is the delay variation (jitter), and `max
 
 ## Network latency at the other nodes
 
-The control plane has no requirements regarding network latency on nodes that are not master nodes: latency on these nodes does not affect the cluster’s stability. The only factor that matters is the duration of the loss of communication with master nodes—by default, after 40 seconds, a node enters the `Unreachable` state, and after 5 minutes, its pods are migrated to other nodes. Both thresholds are configured using the [nodeMonitorGracePeriodSeconds](/modules/control-plane-manager/configuration.html#parameters-nodemonitorgraceperiodseconds) and [failedNodePodEvictionTimeoutSeconds](/modules/control-plane-manager/configuration.html#parameters-failednodepodevictiontimeoutseconds) parameters.
+The control plane has no requirements regarding network latency on nodes that are not [master nodes](../glossary.html#master-node): latency on these nodes does not affect the cluster’s stability. The only factor that matters is the duration of the loss of communication with master nodes—by default, after 40 seconds, a node enters the `Unreachable` state, and after 5 minutes, its pods are migrated to other nodes. Both thresholds are configured using the [nodeMonitorGracePeriodSeconds](/modules/control-plane-manager/configuration.html#parameters-nodemonitorgraceperiodseconds) and [failedNodePodEvictionTimeoutSeconds](/modules/control-plane-manager/configuration.html#parameters-failednodepodevictiontimeoutseconds) parameters.
 
-These delays affect the performance of everything running on the nodes—including the platform’s own components. For components that access the Kubernetes API (DP operators, Prometheus, Ingress controllers), latency to the master nodes is added to every request. Latency between nodes is added to every network request between pods and to DNS lookups, and—when using replicated storage—to the time it takes to write to disk.
+These delays affect the performance of everything running on the nodes—including the platform’s own components. For components that access the Kubernetes API (DP operators, Prometheus, [Ingress controllers](../glossary.html#ingress-controller)), latency to the master nodes is added to every request. Latency between nodes is added to every network request between pods and to DNS lookups, and—when using [replicated storage](../glossary.html#replicated-storage)—to the time it takes to write to disk.
 
 Thus, the acceptable value is determined by the requirements of the running workload. For clusters distributed across remote sites, this means that the platform will continue to operate, but application latencies will reflect the geographic distribution of the nodes.
 

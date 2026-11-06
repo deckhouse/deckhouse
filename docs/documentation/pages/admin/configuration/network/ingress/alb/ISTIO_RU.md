@@ -13,15 +13,15 @@ relatedLinks:
     url: /modules/istio/
 ---
 
-ALB средствами Istio реализуется через [Istio Ingress Gateway](#istio-ingress-gateway) или [Ingress NGINX](#ingress-nginx). Для этого используется модуль [`istio`](/modules/istio/).
+[ALB](../../../../../glossary.html#alb) средствами Istio реализуется через [Istio Ingress Gateway](#istio-ingress-gateway) или [Ingress NGINX](#ingress-nginx). Для этого используется модуль [`istio`](/modules/istio/).
 
-Используйте этот вариант, если требуются расширенные возможности управления трафиком в сервис-меше, например, canary-маршрутизация или mTLS. Подробнее о настройке и возможностях — в документации модуля [`istio`](/modules/istio/).
+Используйте этот вариант, если требуются расширенные возможности управления трафиком в [сервис-меше](../../../../../glossary.html#service-mesh), например, canary-маршрутизация или mTLS. Подробнее о настройке и возможностях — в документации модуля [`istio`](/modules/istio/).
 
 Создание [IngressIstioController](/modules/istio/cr.html) и подготовка инфраструктуры — задача администратора кластера. Публикация приложения ресурсами Gateway и VirtualService, в том числе [canary-развёртывание](../../../../../user/network/ingress/alb/istio.html#canary-развёртывание-через-virtualservice), описана в разделе [«Публикация приложений с использованием ресурса Istio Ingress Gateway»](../../../../../user/network/ingress/alb/istio.html#публикация-приложений-с-использованием-ресурса-istio-ingress-gateway).
 
 ## Ingress для публикации приложений
 
-Приложения можно публиковать средствами Istio Ingress Gateway или через Ingress NGINX с включённым Istio-сайдкаром.
+Приложения можно публиковать средствами [Istio Ingress Gateway](../../../../../glossary.html#istio-ingress-gateway) или через Ingress NGINX с включённым Istio-сайдкаром.
 
 ### Istio Ingress Gateway {#istio-ingress-gateway}
 
@@ -29,7 +29,7 @@ ALB средствами Istio реализуется через [Istio Ingress 
 
 1. Создайте ресурс [IngressIstioController](/modules/istio/cr.html).
 
-   В примере ниже создаётся контроллер с инлетом `HostPort` на frontend-узлах:
+   В примере ниже создаётся контроллер с [инлетом](../../../../../glossary.html#inlet) `HostPort` на [frontend-узлах](../../../../../glossary.html#frontend-node):
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1

@@ -13,7 +13,7 @@ Integration with built-in virtualization uses the [`cloud-provider-dvp`](/module
 This section describes two ways to add nodes:
 
 - **Automatically creating built-in virtualization nodes**. DP creates virtual machines through the built-in virtualization API. VM parameters are specified using the [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass) resource, while the required number of nodes and placement zones are specified using the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with the [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html) type.
-- **Connecting manually created nodes using a bootstrap script**. A virtual machine is created in advance by the user and connected to the cluster using a DP bootstrap script. This scenario uses a [NodeGroup](/modules/node-manager/cr.html#nodegroup) with the [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html) type.
+- **Connecting manually created nodes using a [bootstrap script](../../../glossary.html#bootstrap-script)**. A virtual machine is created in advance by the user and connected to the cluster using a DP bootstrap script. This scenario uses a [NodeGroup](/modules/node-manager/cr.html#nodegroup) with the [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html) type.
 
 ## Prerequisites
 
@@ -37,7 +37,7 @@ Before you begin, make sure that the following requirements are met:
 {% alert level="warning" %}
 Make sure there are no StorageClass resources in the static DP cluster whose names match the names of StorageClass resources in the built-in virtualization cluster.
 
-When the `cloud-provider-dvp` module is enabled, the corresponding StorageClass resources are automatically synchronized from built-in virtualization to the DP cluster. If a StorageClass with the same name already exists in the static cluster, a resource conflict may occur, causing the module installation or upgrade to fail.
+When the `cloud-provider-dvp` module is enabled, the corresponding StorageClass resources are automatically synchronized from built-in virtualization to the DP cluster. If a StorageClass with the same name already exists in the [static cluster](../../../glossary.html#static-cluster), a resource conflict may occur, causing the module installation or upgrade to fail.
 {% endalert %}
 
 ## Adding automatically created nodes
@@ -264,7 +264,7 @@ Before you begin, make sure that the following requirements are met:
 - The virtual machine is connected to the built-in virtualization network used for hybrid integration with the cluster.
 - The virtual machine IP address belongs to the range specified in [`internalNetworkCIDRs`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration-internalnetworkcidrs).
 - The virtual machine name in built-in virtualization matches the hostname inside the operating system.
-- SSH access is available on the virtual machine for copying and running the bootstrap script.
+- SSH access is available on the virtual machine for copying and running the [bootstrap script](../../../glossary.html#bootstrap-script).
 - The SSH user can run commands using `sudo` without entering a password.
 - One of the package managers (`apt`/`apt-get`, `yum`, or `rpm`) for a supported OS is installed on the virtual machine.
 
@@ -306,7 +306,7 @@ Before you begin, make sure that the following requirements are met:
      -o jsonpath='{.data.bootstrap\.sh}' > ${NODE_GROUP}-bootstrap.b64
    ```
 
-1. On the master node, verify that the file contains valid Base64 data of the bootstrap script:
+1. On the [master node](../../../glossary.html#master-node), verify that the file contains valid Base64 data of the bootstrap script:
 
    ```shell
    base64 -d ${NODE_GROUP}-bootstrap.b64 > /dev/null

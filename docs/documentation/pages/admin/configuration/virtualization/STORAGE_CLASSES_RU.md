@@ -6,7 +6,7 @@ search: классы хранения, StorageClass, allowedStorageClassSelector
 lang: ru
 ---
 
-Класс хранения для образа или диска выбирает владелец проекта. Вы можете ограничить этот выбор и задать класс, который применяется по умолчанию. За образы отвечает блок [`.spec.settings.virtualImages`](/modules/virtualization/configuration.html#parameters-virtualimages), за диски — блок [`.spec.settings.virtualDisks`](/modules/virtualization/configuration.html#parameters-virtualdisks).
+Класс хранения для образа или диска выбирает владелец [проекта](../../../glossary.html#project). Вы можете ограничить этот выбор и задать класс, который применяется по умолчанию. За образы отвечает блок [`.spec.settings.virtualImages`](/modules/virtualization/configuration.html#parameters-virtualimages), за диски — блок [`.spec.settings.virtualDisks`](/modules/virtualization/configuration.html#parameters-virtualdisks).
 
 Пример:
 

@@ -12,7 +12,7 @@ where built-in load balancers by providers are unavailable.
 Two operating modes are supported:
 
 - **Layer 2**: An enhanced version of the standard L2 mode in MetalLB, allowing multiple public addresses to be used for services.
-- **BGP**: Fully based on the [MetalLB](https://metallb.io/) solution and available only in DP Enterprise Edition.
+- **BGP**: Fully based on the [MetalLB](https://metallb.io/) solution and available only in DP [Enterprise Edition](../../../../../glossary.html#edition).
 
 ## Layer 2 mode
 
@@ -181,7 +181,7 @@ Example output:
 ## BGP mode
 
 {% alert level="info" %}
-Available in DP Enterprise Edition and DP Ultimate only.
+Available in DP [Enterprise Edition](../../../../../glossary.html#edition) and DP Ultimate only.
 {% endalert %}
 
 In BGP mode, [`metallb`](/modules/metallb/) provides LoadBalancer-type services in Kubernetes clusters deployed on physical infrastructure.

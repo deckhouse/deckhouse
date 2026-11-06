@@ -5,16 +5,16 @@ search: integrity control, container integrity, container validation, integrity 
 description: Architecture of the integrity control mechanisms in Deckhouse Platform.
 ---
 
-Integrity control is a set of mechanisms for verifying containers to ensure their security and compliance with the specified configuration.
+[Integrity control](../../glossary.html#integrity-control) is a set of mechanisms for verifying containers to ensure their security and compliance with the specified configuration.
 
 Deckhouse Platform (DP) provides the following mechanisms:
 
-- Integrity control of user workloads at startup: image signature verification during Kubernetes API request validation.
-- Integrity control of running containers: runtime audit.
+- Integrity control of user workloads at startup: [image signature verification](../../glossary.html#image-signature-verification) during Kubernetes API request validation.
+- Integrity control of running containers: [runtime audit](../../glossary.html#runtime-audit).
 - Integrity protection of DP modules: modules are installed as immutable images.
 
 {% alert level="warning" %}
-Container image integrity control at the container runtime (CRI) level — cryptographic image signature verification and protection of unpacked layers from modification — is implemented only in DP Certified Core and Certified Pro editions. In other editions, this mechanism is unavailable (for details, refer to ["Container image integrity control at the CRI level"](#container-image-integrity-control-at-the-cri-level)).
+Container image integrity control at the container runtime (CRI) level — cryptographic image signature verification and protection of unpacked layers from modification — is implemented only in DP Certified Core and Certified Pro [editions](../../glossary.html#edition). In other editions, this mechanism is unavailable (for details, refer to ["Container image integrity control at the CRI level"](#container-image-integrity-control-at-the-cri-level)).
 
 The edition restriction applies to this mechanism, not to DM-Verity itself. DM-Verity is a Linux kernel mechanism used in DP in two independent scenarios: for container image layers (only in Certified Core and Certified Pro) and for platform module images (in all editions; refer to ["Integrity protection of DP modules"](#integrity-protection-of-dp-modules)).
 {% endalert %}
@@ -57,7 +57,7 @@ For more details on the configuration, refer to ["Image signature verification"]
 
 ## Integrity control of running containers
 
-Runtime auditing in DP includes analyzing Linux kernel events and Kubernetes API audit events.
+Runtime auditing in DP includes analyzing Linux kernel events and [Kubernetes API audit](../../glossary.html#kubernetes-api-audit) events.
 This makes it possible to track whether applications in pods are running unchanged, conform to their expected state,
 and have not been modified.
 
@@ -75,9 +75,9 @@ For more details on configuring runtime audit, refer to ["Runtime audit"](../../
 
 Starting with version 1.74, DP modules are installed not as a directory with files, but as an image in the EROFS format that is mounted read-only through the DM-Verity kernel mechanism. This protects the contents of an already installed module from being modified on the node. The module files cannot be overwritten in the mounted image, and DM-Verity verifies the image blocks when they are accessed.
 
-This is a separate mechanism unrelated to container image integrity control at the CRI level: here, the DP controller applies DM-Verity to the platform module image rather than containerd applying it to container image layers. Therefore, the edition restriction described in ["Container image integrity control at the CRI level"](#container-image-integrity-control-at-the-cri-level) does not apply to this mechanism.
+This is a separate mechanism unrelated to container image [integrity control](../../glossary.html#integrity-control) at the CRI level: here, the DP controller applies DM-Verity to the platform module image rather than containerd applying it to container image layers. Therefore, the edition restriction described in ["Container image integrity control at the CRI level"](#container-image-integrity-control-at-the-cri-level) does not apply to this mechanism.
 
-The mechanism is enabled automatically if the `erofs` filesystem is registered in the kernel on the node running the DP controller (a master node by default), that is, the corresponding kernel module is either loaded or built into the kernel. To check it, run the following command:
+The mechanism is enabled automatically if the `erofs` filesystem is registered in the kernel on the node running the DP controller (a [master node](../../glossary.html#master-node) by default), that is, the corresponding kernel module is either loaded or built into the kernel. To check it, run the following command:
 
 ```shell
 grep -w erofs /proc/filesystems
@@ -95,4 +95,4 @@ Note the following when using this mechanism:
 
 - The mechanism protects modules from being modified after installation, but does not confirm their authenticity: there is no cryptographic signature verification for modules. The container image registry the module is pulled from remains the source of trust.
 - The mechanism applies only to DP modules and does not cover user application images.
-- The mechanism is available in all DP editions and does not need to be enabled separately.
+- The mechanism is available in all DP [editions](../../glossary.html#edition) and does not need to be enabled separately.

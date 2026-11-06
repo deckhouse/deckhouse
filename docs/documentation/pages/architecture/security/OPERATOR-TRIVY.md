@@ -15,12 +15,12 @@ The `operator-trivy` module works with custom resources from the `trivy.deckhous
 
 The `trivy.deckhouse.io` API group includes the following resources:
 
-- [ClusterComplianceReport](/modules/operator-trivy/cr.html#clustercompliancereport): Stores an aggregated cluster compliance report for security requirements (for example, CIS Kubernetes Benchmark).
+- [ClusterComplianceReport](/modules/operator-trivy/cr.html#clustercompliancereport): Stores an aggregated cluster compliance report for security requirements (for example, [CIS Kubernetes Benchmark](../../glossary.html#cis-compliance-check)).
 - ClusterConfigAuditReport: Stores cluster-level audit results for Kubernetes object configuration.
 - ClusterInfraAssessmentReport: Stores cluster-level Kubernetes infrastructure security assessment results.
 - ClusterRbacAssessmentReport: Stores cluster-level role-based access control (RBAC) settings assessment results.
 - ClusterSbomReport: Stores an aggregated cluster-level SBOM (Software Bill of Materials) for software components.
-- ClusterVulnerabilityReport: Stores aggregated cluster-level vulnerability scanning results.
+- ClusterVulnerabilityReport: Stores aggregated cluster-level [vulnerability scanning](../../glossary.html#vulnerability-scanning) results.
 - [ConfigAuditReport](/modules/operator-trivy/cr.html#configauditreport): Stores audit results for Kubernetes object configuration.
 - [ExposedSecretReport](/modules/operator-trivy/cr.html#exposedsecretreport): Stores results of searching for potential secrets in container images.
 - InfraAssessmentReport: Stores security assessment results for Kubernetes infrastructure objects.
@@ -34,11 +34,11 @@ The `trivy.deckhouse.io` API group includes the following resources:
 The `spdx.softwarecomposition.kubescape.io` API group includes the following resources:
 
 - ApplicationProfiles: Stores an application behavior profile at runtime (system calls, executed processes, file access, HTTP endpoints).
-- CollapseConfigurations: Defines dynamic path, endpoint, and network address aggregation parameters to reduce runtime profile size.
+- CollapseConfigurations: Defines dynamic path, endpoint, and network address aggregation parameters to reduce [runtime profile](../../glossary.html#runtime-profile) size.
 - ConfigurationScanSummaries: Stores a summary of configuration scan results for a workload group within a specified scope (for example, a namespace).
 - ContainerProfiles: Stores an individual container profile, including runtime behavior and network interactions.
 - GeneratedNetworkPolicies: Stores NetworkPolicy objects generated from observed traffic.
-- KnownServers: Stores a catalog of known servers and IP address ranges to enrich generated network policies.
+- KnownServers: Stores a catalog of known servers and IP address ranges to enrich generated [network policies](../../glossary.html#network-policy).
 - NetworkNeighborhoods: Stores an observed map of incoming and outgoing workload network interactions.
 - OpenVulnerabilityExchangeContainers: Stores OpenVEX documents with vulnerability statuses for components.
 - SbomSyftFiltereds: Stores a filtered Syft SBOM with only relevant vulnerable components.
@@ -93,7 +93,7 @@ The module consists of the following components:
 
 1. **Trivy-server** (StatefulSet): This component implements a security scanning service and is based on the Open Source [Trivy](https://github.com/aquasecurity/trivy) project.
 
-   Trivy-server updates its vulnerability database from an Open Container Initiative (OCI) image at startup and then periodically.
+   Trivy-server updates its [vulnerability database](../../glossary.html#vulnerability-database) from an Open Container Initiative (OCI) image at startup and then periodically.
 
    Trivy-server processes requests from other module components (operator, registry-scanner, trivy-provider, and scanning tasks), performs the requested scan, and returns the result.
 
@@ -106,7 +106,7 @@ The module consists of the following components:
 
    When the module is installed, a Provider resource is created to register trivy-provider as a provider in Gatekeeper. For details about the integration, see the [relevant Gatekeeper documentation section](https://open-policy-agent.github.io/gatekeeper/website/docs/externaldata/).
 
-   The Deckhouse controller deploys this component if the [`.settings.denyVulnerableImages.enabled`](/modules/operator-trivy/stable/configuration.html#parameters-denyvulnerableimages-enabled) parameter of the ModuleConfig custom resource is set to `true` (default is `false`) and the Gatekeeper component of the [`admission-policy-engine`](/modules/admission-policy-engine/) module is enabled.
+   The [Deckhouse controller](../../glossary.html#deckhouse-controller) deploys this component if the [`.settings.denyVulnerableImages.enabled`](/modules/operator-trivy/stable/configuration.html#parameters-denyvulnerableimages-enabled) parameter of the ModuleConfig custom resource is set to `true` (default is `false`) and the Gatekeeper component of the [`admission-policy-engine`](/modules/admission-policy-engine/) module is enabled.
 
 1. **Report-updater** (Deployment): An optional controller that includes a single **report-updater** container, implements a MutatingWebhook, and enriches the VulnerabilityReport custom resource with BDU identifiers. The BDU dictionary is regularly updated from an OCI image every six hours.
 
@@ -124,7 +124,7 @@ The module consists of the following components:
    - Metadata is stored in an SQLite database.
    - Object body is stored in gob format in the `/data` directory.
 
-1. **Node-agent** (DaemonSet): An optional component with a single **node-agent** container that runs on all cluster nodes in privileged mode, observes container behavior by using eBPF programs, and builds runtime profiles.
+1. **Node-agent** (DaemonSet): An optional component with a single **node-agent** container that runs on all cluster nodes in privileged mode, observes container behavior by using eBPF programs, and builds [runtime profiles](../../glossary.html#runtime-profile).
 
    Node-agent stores runtime profiles in ApplicationProfile and NetworkNeighborhood custom resources (in the security-storage component). For details about node-agent behavior, see the [module documentation section](/modules/operator-trivy/stable/runtime_map.html).
 
@@ -163,7 +163,7 @@ The module interacts with the following components:
    - Watches Pod, ReplicaSet, ReplicationController, StatefulSet, DaemonSet, CronJob, and Job resources.
    - Creates, updates, and deletes Secret, ConfigMap, and Job resources.
 
-1. [**Registry**](/modules/registry/): Pulls OCI images with the vulnerability database and the BDU database.
+1. [**Registry**](/modules/registry/): Pulls OCI images with the [vulnerability database](../../glossary.html#vulnerability-database) and the BDU database.
 
 1. **Container registry**: Scanning images.
 

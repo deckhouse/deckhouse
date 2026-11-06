@@ -8,7 +8,7 @@ description: Архитектура вспомогательных компон�
 
 В модуле [`virtualization`](/modules/virtualization/) используются компоненты, реализующие следующие вспомогательные функции:
 
-- аудит событий безопасности;
+- аудит [событий безопасности](../../glossary.html#security-event);
 - проброс USB-устройств в виртуальные машины;
 - обновление сетевых маршрутов;
 - удаление ресурсов перед деактивацией модуля [`virtualization`](/modules/virtualization/).
@@ -77,7 +77,7 @@ Virtualization-audit взаимодействует со следующими к
 
 1. **Vm-route-forge** — контроллер, следящий за кастомными ресурсами [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) API-группы `virtualization.deckhouse.io` и обновляющий сетевые маршруты на узле через Linux netlink/eBPF в таблицах маршрутизации, используемых [CNI Cilium](/modules/cni-cilium/) для маршрутизации трафика между ВМ.
 
-1. **Pre-delete-hook** (Job) — задача, запускаемая контроллером Deckhouse перед удалением модуля [`virtualization`](/modules/virtualization/). Она удаляет кастомный ресурс InternalVirtualizationKubeVirt с именем `config`.
+1. **Pre-delete-hook** (Job) — задача, запускаемая [контроллером Deckhouse](../../glossary.html#deckhouse-controller) перед удалением модуля [`virtualization`](/modules/virtualization/). Она удаляет кастомный ресурс InternalVirtualizationKubeVirt с именем `config`.
 
 ### Взаимодействия
 

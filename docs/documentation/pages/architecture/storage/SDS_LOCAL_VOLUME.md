@@ -26,7 +26,7 @@ The Level 2 C4 architecture of the [`sds-local-volume`](/modules/sds-local-volum
 
 The module consists of the following components:
 
-1. **Controller**: It reconciles [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass) custom resources. LocalStorageClass is a Kubernetes custom resource that defines the configuration for Kubernetes StorageClass. The StorageClass being created uses `local.csi.storage.deckhouse.io` provisioner. StorageClass configures LVM logical volume types, VolumeGroups settings, reclaim policy, volume binding mode, etc. These settings are used by the provisioner of CSI driver (`sds-local-volume`) when managing LVM-based local volumes.
+1. **Controller**: It reconciles [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass) custom resources. LocalStorageClass is a Kubernetes custom resource that defines the configuration for Kubernetes StorageClass. The StorageClass being created uses `local.csi.storage.deckhouse.io` provisioner. StorageClass configures LVM logical volume types, VolumeGroups settings, reclaim policy, volume binding mode, etc. These settings are used by the provisioner of [CSI driver](../../glossary.html#csi-driver) (`sds-local-volume`) when managing LVM-based local volumes.
 
    It consists of the following containers:
 

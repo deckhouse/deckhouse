@@ -11,7 +11,7 @@ description: Архитектура модуля alb в Deckhouse Platform.
 Модуль работает со следующими кастомными ресурсами API-группы `network.deckhouse.io`:
 
 - [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance) — определяет экземпляр ALB (data-plane) в масштабе всего кластера, используется для общих или платформенных Gateway;
-- [ALBInstance](/modules/alb/cr.html#albinstance) — определяет экземпляр ALB в рамках пользовательского неймспейса, используется для Gateway уровня приложения или проекта.
+- [ALBInstance](/modules/alb/cr.html#albinstance) — определяет экземпляр ALB в рамках [пользовательского неймспейса](../../glossary.html#user-namespace), используется для Gateway уровня приложения или проекта.
 
 Подробнее с описанием настройки и примерами использования модуля можно ознакомиться [в разделе документации модуля](/modules/alb/).
 
@@ -80,11 +80,11 @@ description: Архитектура модуля alb в Deckhouse Platform.
    * постоянное хранение данных (перезагрузка компонентов не приводит к повторным обращениям к серверам MaxMind);
    * возможность указать своё зеркало для загрузки баз.
 
-   Gateway-controller создаёт этот компонент программно на каждый ClusterALBInstance и ALBInstance, только если у ресурса задан параметр [`spec.geoIP.licenseKeySecretRef`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-geoip-licensekeysecretref), содержащий ссылку на Secret с лицензионным ключом MaxMind.
+   Gateway-controller создаёт этот компонент программно на каждый ClusterALBInstance и ALBInstance, только если у ресурса задан параметр [`spec.geoIP.licenseKeySecretRef`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-geoip-licensekeysecretref), содержащий ссылку на Secret с [лицензионным ключом](../../glossary.html#license-key) MaxMind.
 
    Состоит из одного контейнера **geoproxy**.
 
-1. **Module-cleanup-waiter** (Job) — Helm `pre-delete` хук модуля, запускаемый контроллером Deckhouse перед удалением модуля [`alb`](/modules/alb/), который ожидает, пока gateway-controller завершит очистку ресурсов модуля, и только после этого позволяет закончить удаление релиза. Не участвует в штатной работе модуля.
+1. **Module-cleanup-waiter** (Job) — Helm `pre-delete` хук модуля, запускаемый [контроллером Deckhouse](../../glossary.html#deckhouse-controller) перед удалением модуля [`alb`](/modules/alb/), который ожидает, пока gateway-controller завершит очистку ресурсов модуля, и только после этого позволяет закончить удаление релиза. Не участвует в штатной работе модуля.
 
 ## Взаимодействия модуля
 

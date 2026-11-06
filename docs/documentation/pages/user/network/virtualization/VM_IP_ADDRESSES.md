@@ -5,15 +5,15 @@ description: "IP addresses of virtual machines: requesting a specific address, k
 search: VM IP address, VirtualMachineIPAddress, IPAM, main network
 ---
 
-Every virtual machine (VM) gets an address in the main cluster network. The sections below cover how to view the assigned address, request a specific one, and keep it in the project.
+Every virtual machine (VM) gets an address in the [main cluster network](../../../glossary.html#main-network). The sections below cover how to view the assigned address, request a specific one, and keep it in the [project](../../../glossary.html#project).
 
 ## IP addresses of VMs
 
-Two resources describe the address of a machine in the main cluster network, the cluster-wide address lease and the address reserved for the project.
+Two resources describe the address of a machine in the main [cluster network](../../../glossary.html#cluster-network), the cluster-wide address lease and the address reserved for the project.
 
 The [`.spec.settings.virtualMachineCIDRs`](/modules/virtualization/configuration.html#parameters-virtualmachinecidrs) block in the module settings defines the subnets that machines get IP addresses from. All addresses of a subnet are available except the first and the last one.
 
-If an address pool is configured for the main cluster network in the [`sdn`](/modules/sdn/) module, the address of a machine in that network is managed by the shared IPAM of that module, that is, by the same IPAddress resource as for additional networks. The address is requested automatically, and existing machines switch to the shared IPAM without changing their addresses and without a restart.
+If an address pool is configured for the main cluster network in the [`sdn`](/modules/sdn/) module, the address of a machine in that network is managed by the shared [IPAM](../../../glossary.html#sdn-ipam) of that module, that is, by the same IPAddress resource as for [additional networks](../../../glossary.html#additional-network). The address is requested automatically, and existing machines switch to the shared IPAM without changing their addresses and without a restart.
 
 {% alert level="warning" %}
 In a cluster with the shared IPAM, the [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) and [VirtualMachineIPAddressLease](/modules/virtualization/cr.html#virtualmachineipaddresslease) resources, as well as the [`.spec.virtualMachineIPAddressName`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-virtualmachineipaddressname) parameter, are deprecated. They keep working and are described in the sections below, but the main network address of new machines is managed by the shared IPAM, covered in [IPAM for the main network](#ipam-for-the-main-network).
@@ -70,7 +70,7 @@ linux-vm-7prpx   10.66.10.14   Attached   linux-vm   12h
 
 {% tab "Using the web interface" %}
 
-1. Go to the **Projects** tab and select the project you need.
+1. Go to the **[Projects](../../../glossary.html#project)** tab and select the project you need.
 1. Go to **Virtualization** → **IP addresses**.
 1. The list shows the resource name, status, address, type (`Auto` or `Static`), the virtual machine that uses the address, and the resource age.
 

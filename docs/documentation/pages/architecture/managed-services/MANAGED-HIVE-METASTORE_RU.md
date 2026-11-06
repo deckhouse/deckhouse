@@ -34,7 +34,7 @@ description: Архитектура модуля managed-hive-metastore в Deckh
 
 1. **Managed-hive-metastore-operator** (Deployment) — оператор Kubernetes, состоящий из одного контейнера **manager** и выполняющий следующие операции:
 
-   - согласование состояния кастомных ресурсов [HiveMetastore](/modules/managed-hive-metastore/cr.html#hive-metastore) во всех пользовательских неймспейсах. Кастомные ресурсы HiveMetastore и HiveMetastoreClass определяют настройки инстанса HMS;
+   - согласование состояния кастомных ресурсов [HiveMetastore](/modules/managed-hive-metastore/cr.html#hive-metastore) во всех [пользовательских неймспейсах](../../glossary.html#user-namespace). Кастомные ресурсы HiveMetastore и HiveMetastoreClass определяют настройки инстанса HMS;
 
    - создание и управление кастомным ресурсом [Certificate](https://cert-manager.io/docs/usage/certificate/) и ресурсами Deployment, Service и Secret, относящимися к инстансу HMS;
 

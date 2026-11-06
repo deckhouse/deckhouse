@@ -3,7 +3,7 @@ title: "Monitoring dashboards"
 permalink: en/user/monitoring/dashboards.html
 ---
 
-In this section, you will learn how to work with dashboards
+In this section, you will learn how to work with [dashboards](../../glossary.html#dashboard)
 to analyze the state of the Deckhouse Platform (DP) and the applications running in it.
 
 Dashboards are collections of charts and tables that display application performance data.
@@ -31,7 +31,7 @@ Preinstalled dashboards are not available for editing.
 
 ### Ingress Nginx
 
-Dashboards for monitoring the operation of the Ingress controller.
+Dashboards for monitoring the operation of the [Ingress controller](../../glossary.html#ingress-controller).
 They include metrics reflecting the state of virtual hosts, HTTP response statistics, and request processing latency data.
 
 Available dashboards:
@@ -59,7 +59,7 @@ Dashboards that contain metrics related to the security of cluster components.
 
 Available dashboards:
 
-- **Admission policy engine** — metrics of the [`admission-policy-engine`](/modules/admission-policy-engine/) module,
+- **[Admission policy](../../glossary.html#admission-policy) engine** — metrics of the [`admission-policy-engine`](/modules/admission-policy-engine/) module,
   including information about policy checks and enforcement.
 
 ## Custom dashboards
@@ -70,9 +70,9 @@ depending on the requirements for access control and the dashboard scope.
 ### Using the observability module
 
 The [`observability`](/modules/observability/) module extends the functionality of the `prometheus` module
-and the Deckhouse web UI by providing additional capabilities for flexible metric visualization and access control.
+and the [Deckhouse web UI](../../glossary.html#web-ui) by providing additional capabilities for flexible metric visualization and access control.
 
-The module introduces new dashboard types, including namespace-scoped resources.
+The module introduces new [dashboard](../../glossary.html#dashboard) types, including namespace-scoped resources.
 This allows users to create and manage their own dashboards without requiring permissions for cluster-level objects.
 The module also simplifies dashboard editing by allowing users to configure dashboards directly in the web UI,
 without manually managing resources.
@@ -85,7 +85,7 @@ If necessary, contact your DP administrator.
 The following resources are available for creating dashboards:
 
 - [ObservabilityDashboard](/modules/observability/cr.html#observabilitydashboard): Dashboards scoped to a namespace.
-  They are displayed in the Deckhouse web UI under "Monitoring" → "Projects".
+  They are displayed in the Deckhouse web UI under "Monitoring" → "[Projects](../../glossary.html#project)".
 
   Example:
 
@@ -180,7 +180,7 @@ The following access scenarios are supported:
 
   RBAC access to the `clustermetrics.observability.deckhouse.io` resource is used.
 
-- Metrics from user namespaces can also be available to administrators
+- Metrics from [user namespaces](../../glossary.html#user-namespace) can also be available to administrators
   if they have the appropriate permissions for the `metrics.observability.deckhouse.io` resource.
 
 Example configuration of ClusterRole and RoleBinding resources for read and edit access to metrics and dashboards:

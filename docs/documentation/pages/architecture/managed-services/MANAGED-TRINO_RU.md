@@ -36,7 +36,7 @@ description: Архитектура модуля managed-trino в Deckhouse Plat
 
 1. **Managed-trino-operator** (Deployment) — оператор Kubernetes, состоящий из одного контейнера **manager** и выполняющий следующие операции:
 
-   - согласование состояния кастомных ресурсов [Trino](/modules/managed-trino/cr.html#trino) во всех пользовательских неймспейсах. Кастомные ресурсы Trino и TrinoClass определяют настройки инстанса Trino;
+   - согласование состояния кастомных ресурсов [Trino](/modules/managed-trino/cr.html#trino) во всех [пользовательских неймспейсах](../../glossary.html#user-namespace). Кастомные ресурсы Trino и TrinoClass определяют настройки инстанса Trino;
 
    - создание и управление ресурсами Deployment, Service, Secret и ConfigMap, относящимися к инстансу Trino;
 

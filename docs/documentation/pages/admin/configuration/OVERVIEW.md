@@ -8,7 +8,7 @@ description: "Learn how to configure Deckhouse Platform using global settings, m
 
 You can configure Deckhouse using:
 
-- **[Global settings](../../reference/api/global.html)**. Global settings are stored in the `ModuleConfig/global` custom resource. Global settings can be be thought of as a special `global` module that cannot be disabled.
+- **[Global settings](../../reference/api/global.html)**. [Global settings](../../glossary.html#global-settings) are stored in the `ModuleConfig/global` custom resource. Global settings can be be thought of as a special `global` module that cannot be disabled.
 - **[Module settings](#configuring-the-module)**. Module settings are stored in the `ModuleConfig` custom resource; its name is the same as that of the module (in kebab-case).
 - **[Custom resources](../../reference/api/cr.html).** Some modules are configured using the additional custom resources.
 
@@ -82,7 +82,7 @@ Changes are applied automatically once the resource configuration is saved.
 ### Modifying cluster configuration
 
 {% alert level="warning" %}
-To apply changes related to node configuration, you must run the `dhctl converge` command using the DP installer.  
+To apply changes related to node configuration, you must run the `dhctl converge` command using the DP [installer](../../glossary.html#installer).  
 This command synchronizes the actual node state with the specified configuration.
 {% endalert %}
 
@@ -136,7 +136,7 @@ It will automatically:
 
  To change protected settings using `dhctl`, follow these steps:
 
-1. Get the current DP version and edition from your cluster. To do this, run the DP installer container of the appropriate edition and version **on your local machine**:
+1. Get the current DP version and [edition](../../glossary.html#edition) from your cluster. To do this, run the DP installer container of the appropriate edition and version **on your local machine**:
 
    ```shell
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}')
@@ -167,7 +167,7 @@ It will automatically:
 
    Where:
    - `<SSH_KEY_FILENAME>`: Your SSH private key filename;
-   - `<USERNAME>`: SSH user with sudo privileges on the target master node of the cluster;
+   - `<USERNAME>`: SSH user with sudo privileges on the target [master node](../../glossary.html#master-node) of the cluster;
    - `<MASTER-NODE-HOST>` — master node IP address or hostname.
 
 1. Edit the configuration in the opened editor, save, and exit the editor.
@@ -280,7 +280,7 @@ Some modules can also be configured using custom resources. Use the search bar a
 
 To enable/disable the module, set [`spec.enabled`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig-v1alpha1-spec-enabled) field of the ModuleConfig custom resource to `true` or `false`. Note that this may require you to first create a ModuleConfig resource for the module.
 
-Here is an example of disabling the [`user-authn`](/modules/user-authn/) module (the module will be turned off even if it is enabled as part of a module bundle):
+Here is an example of disabling the [`user-authn`](/modules/user-authn/) module (the module will be turned off even if it is enabled as part of a [module bundle](../../glossary.html#module-bundle)):
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -306,7 +306,7 @@ user-authn   false     1         12h
 Depending on the [bundle used](/modules/deckhouse/configuration.html#parameters-bundle), modules may be enabled or disabled by default.
 
 {% alert level="warning" %}
-The table below describes module bundles only for built-in modules of Deckhouse Platform.  
+The table below describes module bundles only for [built-in modules](../../glossary.html#built-in-module) of Deckhouse Platform.  
 Modules from sources are not included in this table.
 {% endalert %}
 
@@ -338,9 +338,9 @@ Modules from sources are not included in this table.
 Deckhouse Platform with the `Minimal` module set and no basic modules included will only be able to operate in an already deployed cluster.
 {% endalert %}
 
-To install DP with the `Minimal` module set, enable at least the following modules by specifying them in the installer configuration file:
+To install DP with the `Minimal` module set, enable at least the following modules by specifying them in the [installer](../../glossary.html#installer) configuration file:
 
-* cloud provider module (for example, [`cloud-provider-aws`](/modules/cloud-provider-aws/) for AWS), in a case of deploying a cloud cluster;
+* [cloud provider](../../glossary.html#cloud-provider) module (for example, [`cloud-provider-aws`](/modules/cloud-provider-aws/) for AWS), in a case of deploying a [cloud cluster](../../glossary.html#cloud-cluster);
 * [`cni-cilium`](/modules/cni-cilium/) or another CNI control module (if necessary);
 * [`control-plane-manager`](/modules/control-plane-manager/);
 * [`kube-dns`](/modules/kube-dns/);
@@ -371,7 +371,7 @@ If no `nodeSelector/tolerations` are explicitly specified in the module paramete
 You cannot set `nodeSelector` and `tolerations` for modules:
 
 - running on all cluster nodes (such as [`cni-flannel`](/modules/cni-flannel/) or [`monitoring-ping`](/modules/monitoring-ping/));
-- running on all master nodes (such as [`prometheus-metrics-adapter`](/modules/prometheus-metrics-adapter/) or [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/)).
+- running on all [master nodes](../../glossary.html#master-node) (such as [`prometheus-metrics-adapter`](/modules/prometheus-metrics-adapter/) or [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/)).
 
 ### Module features that depend on its type
 

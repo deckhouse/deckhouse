@@ -6,9 +6,9 @@ lang: ru
 
 В Deckhouse Platform (DP) облачные узлы могут быть следующих типов:
 
-- **CloudEphemeral** — временные, автоматически создаваемые и удаляемые узлы;
-- **CloudPermanent** — постоянные узлы, управляемые вручную через `replicas`;
-- **CloudStatic** — статические облачные узлы. Машины создаются вручную или внешними средствами, а DP подключает их к кластеру и управляет ими как обычными узлами.
+- **[CloudEphemeral](../../../../glossary.html#cloud-ephemeral-node)** — временные, автоматически создаваемые и удаляемые узлы;
+- **[CloudPermanent](../../../../glossary.html#cloud-permanent-node)** — постоянные узлы, управляемые вручную через `replicas`;
+- **[CloudStatic](../../../../glossary.html#cloud-static-node)** — статические облачные узлы. Машины создаются вручную или внешними средствами, а DP подключает их к кластеру и управляет ими как обычными узлами.
 
 Ниже приведены инструкции по добавлению и настройке каждого типа.
 
@@ -18,7 +18,7 @@ CloudEphemeral-узлы автоматически создаются и упр�
 
 Для добавления узлов:
 
-1. Убедитесь, что включён модуль облачного провайдера. Например: [`cloud-provider-yandex`](/modules/cloud-provider-yandex/), [`cloud-provider-openstack`](/modules/cloud-provider-openstack/), [`cloud-provider-aws`](/modules/cloud-provider-aws/).
+1. Убедитесь, что включён модуль [облачного провайдера](../../../../glossary.html#cloud-provider). Например: [`cloud-provider-yandex`](/modules/cloud-provider-yandex/), [`cloud-provider-openstack`](/modules/cloud-provider-openstack/), [`cloud-provider-aws`](/modules/cloud-provider-aws/).
 
 1. Создайте объект [InstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass) с конфигурацией машин. Этот объект описывает параметры виртуальных машин, создаваемых в облаке:
 
@@ -70,7 +70,7 @@ CloudEphemeral-узлы автоматически создаются и упр�
 
 ## Настройки для групп с узлами CloudEphemeral
 
-Группы узлов с типом CloudEphemeral предназначены для автоматического масштабирования за счёт создания и удаления виртуальных машин в облаке с помощью Machine Controller Manager (MCM). Этот тип групп широко применяется в облачных кластерах DP.
+[Группы узлов](../../../../glossary.html#node-group) с типом [CloudEphemeral](../../../../glossary.html#cloud-ephemeral-node) предназначены для автоматического масштабирования за счёт создания и удаления виртуальных машин в облаке с помощью Machine Controller Manager (MCM). Этот тип групп широко применяется в [облачных кластерах](../../../../glossary.html#cloud-cluster) DP.
 
 Конфигурация узлов задаётся в секции `cloudInstances` и включает параметры для масштабирования, зонирования, резервирования и приоритизации.
 
@@ -90,7 +90,7 @@ spec:
 
 ## Изменение конфигурации облачного провайдера в кластере
 
-Настройки используемого облачного провайдера в облачном или гибридном кластере хранятся в структуре `<PROVIDER_NAME>ClusterConfiguration`, где `<PROVIDER_NAME>` — название/код провайдера. Например, для провайдера OpenStack структура будет называться [OpenStackClusterConfiguration]({% if site.mode == 'module' and site.d8Revision == 'CE' %}{{ site.urls[page.lang] }}{% endif %}/modules/cloud-provider-openstack/cluster_configuration.html).
+Настройки используемого [облачного провайдера](../../../../glossary.html#cloud-provider) в облачном или [гибридном кластере](../../../../glossary.html#hybrid-cluster) хранятся в структуре `<PROVIDER_NAME>ClusterConfiguration`, где `<PROVIDER_NAME>` — название/код провайдера. Например, для провайдера OpenStack структура будет называться [OpenStackClusterConfiguration]({% if site.mode == 'module' and site.d8Revision == 'CE' %}{{ site.urls[page.lang] }}{% endif %}/modules/cloud-provider-openstack/cluster_configuration.html).
 
 Независимо от используемого облачного провайдера его настройки можно изменить с помощью следующей команды:
 
@@ -100,7 +100,7 @@ d8 system edit provider-cluster-configuration
 
 ## Автомасштабирование группы узлов
 
-В Deckhouse Platform (DP) автомасштабирование группы узлов происходит на основе потребностей в ресурсах (CPU и память) и выполняется компонентом `Cluster Autoscaler`, входящим в модуль [`node-manager`](/modules/node-manager/).
+В Deckhouse Platform (DP) [автомасштабирование группы узлов](../../../../glossary.html#node-group-autoscaling) происходит на основе потребностей в ресурсах (CPU и память) и выполняется компонентом `Cluster Autoscaler`, входящим в модуль [`node-manager`](/modules/node-manager/).
 
 Автоматическое масштабирование происходит только при наличии Pending-подов, которые не могут быть запущены на существующих узлах из-за нехватки ресурсов (например, CPU или памяти). В этом случае `Cluster Autoscaler` пытается добавить узлы, основываясь на конфигурации NodeGroup.
 
@@ -189,7 +189,7 @@ spec:
 {% alert level="info" %}
 DP по умолчанию поддерживает использование taint с ключом `dedicated`, поэтому рекомендуется применять этот ключ с любым значением для taints на ваших выделенных узлах.
 
-Если требуется использовать другие ключи для taints (например, `dedicated.client.com`), необходимо добавить соответствующее значение ключа в параметр `modules.placement.customTolerationKeys`. Это обеспечит разрешение системным компонентам, таким как `cni-flannel`, использовать эти узлы.
+Если требуется использовать другие ключи для taints (например, `dedicated.client.com`), необходимо добавить соответствующее значение ключа в параметр `modules.placement.customTolerationKeys`. Это обеспечит разрешение [системным компонентам](../../../../glossary.html#system-component), таким как `cni-flannel`, использовать эти узлы.
 {% endalert %}
 
 ### Ускорение заказа узлов в облаке при горизонтальном масштабировании приложений
@@ -247,7 +247,7 @@ spec:
 - добавлять корневые сертификаты;
 - настраивать доверие к собственным container registries и т.п.
 
-NodeGroupConfiguration применяется к новым узлам при их создании, включая CloudEphemeral.
+NodeGroupConfiguration применяется к новым узлам при их создании, включая [CloudEphemeral](../../../../glossary.html#cloud-ephemeral-node).
 
 {% alert level="info" %}  
 NodeGroupConfiguration применяется только к узлам с указанным образом операционной системы (`bundle`).
@@ -503,9 +503,9 @@ spec:
 
 ## Добавление CloudPermanent-узлов в облачном кластере
 
-Чтобы добавить узлы типа CloudPermanent в облачный кластер DP:
+Чтобы добавить [узлы типа CloudPermanent](../../../../glossary.html#cloud-permanent-node) в [облачный кластер](../../../../glossary.html#cloud-cluster) DP:
 
-1. Убедитесь, что включён модуль соответствующего облачного провайдера, например [`cloud-provider-yandex`](/modules/cloud-provider-yandex/), [`cloud-provider-openstack`](/modules/cloud-provider-openstack/) или [`cloud-provider-aws`](/modules/cloud-provider-aws/).
+1. Убедитесь, что включён модуль соответствующего [облачного провайдера](../../../../glossary.html#cloud-provider), например [`cloud-provider-yandex`](/modules/cloud-provider-yandex/), [`cloud-provider-openstack`](/modules/cloud-provider-openstack/) или [`cloud-provider-aws`](/modules/cloud-provider-aws/).
 
    Проверить состояние конкретного модуля можно командой:
 
@@ -519,7 +519,7 @@ spec:
    d8 k -n d8-system get module cloud-provider-yandex
    ```
 
-1. Добавьте группу узлов типа `CloudPermanent` в секцию `nodeGroups` объекта (Provider)ClusterConfiguration. Узлы типа `CloudPermanent` управляются через Terraform, встроенный в DP.
+1. Добавьте [группу узлов](../../../../glossary.html#node-group) типа `CloudPermanent` в секцию `nodeGroups` объекта (Provider)[ClusterConfiguration](../../../../glossary.html#cluster-configuration). Узлы типа `CloudPermanent` управляются через Terraform, встроенный в DP.
 
    Отредактировать конфигурацию работающего кластера можно с помощью команды:
 
@@ -552,7 +552,7 @@ spec:
 
    Для других облачных провайдеров названия и структура параметров могут отличаться. Актуальные поля можно посмотреть в описании (Provider)ClusterConfiguration или в документации по соответствующему облачному провайдеру, например [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration).
 
-1. На локальном компьютере или административном узле запустите установочный контейнер DP. Используйте образ той же редакции и версии, что и в кластере:
+1. На локальном компьютере или административном узле запустите установочный контейнер DP. Используйте образ той же [редакции](../../../../glossary.html#edition) и версии, что и в кластере:
 
    ```shell
    docker run --pull=always --rm -it \
@@ -592,19 +592,19 @@ spec:
    d8 k get nodes
    ```
 
-   Также список новых узлов доступен в веб-интерфейсе Deckhouse.
+   Также список новых узлов доступен в [веб-интерфейсе Deckhouse](../../../../glossary.html#web-ui).
 
 Deckhouse Platform может работать поверх сервисов Managed Kubernetes (например, GKE и EKS). При этом модуль [`node-manager`](/modules/node-manager/) обеспечивает управление конфигурацией и автоматизацию действий с узлами, но возможности могут быть ограничены API соответствующего облачного провайдера.
 
 ## Добавление CloudStatic узла в кластер
 
-Добавление статического узла можно выполнить вручную или с помощью Cluster API Provider Static (CAPS).
+Добавление [статического узла](../../../../glossary.html#static-node) можно выполнить вручную или с помощью [Cluster API Provider Static](../../../../glossary.html#caps) (CAPS).
 
 ### Вручную
 
 Чтобы добавить новый статический узел в кластер вручную, выполните следующие шаги:
 
-1. Для [CloudStatic-узлов](/modules/node-manager/cr.html#nodegroup) в облачных провайдерах, перечисленных ниже, выполните описанные в документации шаги:
+1. Для [CloudStatic-узлов](/modules/node-manager/cr.html#nodegroup) в [облачных провайдерах](../../../../glossary.html#cloud-provider), перечисленных ниже, выполните описанные в документации шаги:
    - [для AWS](/modules/cloud-provider-aws/faq.html#добавление-cloudstatic-узлов-в-кластер);
    - [для GCP](/modules/cloud-provider-gcp/faq.html#добавление-cloudstatic-узлов-в-кластер);
    - [для YC](/modules/cloud-provider-yandex/faq.html#добавление-cloudstatic-узлов-в-кластер).
@@ -667,7 +667,7 @@ Deckhouse Platform может работать поверх сервисов Man
      chown -R caps:caps /home/caps/
      ```
 
-   В операционных системах семейства Astra Linux, при использовании модуля мандатного контроля целостности Parsec, сконфигурируйте максимальный уровень целостности для пользователя `caps`:
+   В операционных системах семейства Astra Linux, при использовании модуля мандатного [контроля целостности](../../../../glossary.html#integrity-control) Parsec, сконфигурируйте максимальный уровень целостности для пользователя `caps`:
 
      ```shell
      pdpl-user -i 63 caps
@@ -819,11 +819,11 @@ Deckhouse Platform может работать поверх сервисов Man
 
 ## Добавление master-узлов в облачном кластере
 
-Чтобы добавить master-узлы в облачном кластере:
+Чтобы добавить [master-узлы](../../../../glossary.html#master-node) в [облачном кластере](../../../../glossary.html#cloud-cluster):
 
 1. Убедитесь, что включён модуль [`control-plane-manager`](/modules/control-plane-manager/).
 
-1. Откройте файл ClusterConfiguration (например, OpenStackClusterConfiguration).
+1. Откройте файл [ClusterConfiguration](../../../../glossary.html#cluster-configuration) (например, OpenStackClusterConfiguration).
 
 1. Добавьте или отредактируйте секцию `masterNodeGroup`:
 
@@ -894,7 +894,7 @@ spec:
 
 ## Состояния группы узлов и их интерпретация
 
-**Ready** — группа узлов содержит минимально необходимое число запланированных узлов с состоянием `Ready` для всех зон.
+**Ready** — [группа узлов](../../../../glossary.html#node-group) содержит минимально необходимое число запланированных узлов с состоянием `Ready` для всех зон.
 
 Пример 1. Группа узлов в состоянии `Ready`:
 

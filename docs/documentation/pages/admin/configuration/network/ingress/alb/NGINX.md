@@ -20,7 +20,7 @@ relatedLinks:
     url: /modules/metallb/
 ---
 
-The [`ingress-nginx`](/modules/ingress-nginx/) module is used to implement ALB using the [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx).
+The [`ingress-nginx`](/modules/ingress-nginx/) module is used to implement [ALB](../../../../../glossary.html#alb) using the [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx).
 
 {% alert level="info" %}
 In 2025, Ingress NGINX was [placed](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/) in maintenance mode, with no plans for active development of new features. Further evolution of inbound traffic load balancing in Kubernetes is focused on the [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/).
@@ -31,8 +31,8 @@ Step-by-step migration to Gateway API is in [Migrating from ingress-nginx to alb
 {% endalert %}
 
 The `ingress-nginx` module installs the Ingress NGINX Controller and manages it with custom resources.
-If there is more than one node available for hosting the Ingress controller,
-it is deployed in the HA mode, taking into account the infrastructure specifics of both cloud and bare-metal environments,
+If there is more than one node available for hosting the [Ingress controller](../../../../../glossary.html#ingress-controller),
+it is deployed in the [HA mode](../../../../../glossary.html#ha-mode), taking into account the infrastructure specifics of both cloud and bare-metal environments,
 as well as various Kubernetes cluster types.
 
 The module supports running and configuring several Ingress NGINX controllers simultaneously
@@ -82,7 +82,7 @@ The data can be grouped by the:
 - `ingress` resources
 - `location` (in nginx)
 
-All graphs are grouped by Grafana dashboards. From any graph you can open a more detailed view:
+All graphs are grouped by Grafana [dashboards](../../../../../glossary.html#dashboard). From any graph you can open a more detailed view:
 for example, from a `namespace` statistics view, you can click through to the corresponding `vhost` dashboard for more detail,
 and continue down the hierarchy.
 
@@ -94,7 +94,7 @@ and continue down the hierarchy.
    and stores them in a buffer (each NGINX worker has its own buffer).
 1. At the `init_by_lua_block` stage, each NGINX worker starts a process that sends data in `protobuf` format via TCP socket
    to the `protobuf_exporter` every second (developed by Deckhouse Platform).
-1. `protobuf_exporter` runs as a sidecar container in the Ingress controller pod, receives `protobuf` messages,
+1. `protobuf_exporter` runs as a sidecar container in the [Ingress controller](../../../../../glossary.html#ingress-controller) pod, receives `protobuf` messages,
    parses and aggregates them, and exports metrics for Prometheus.
 1. Prometheus scrapes metrics every 30 seconds from both the Ingress controller and the `protobuf_exporter`.
    This scraped data is what statistics is based on.
@@ -147,7 +147,7 @@ If no instances remain in a zone, that IP is removed from DNS.
 
 If only one Ingress controller instance exists in a zone, its IP is temporarily removed from DNS during pod restarts.
 
-Example IngressNginxController with the [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer) inlet and AWS NLB annotations:
+Example IngressNginxController with the [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer) [inlet](../../../../../glossary.html#inlet) and AWS [NLB](../../../../../glossary.html#nlb) annotations:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -231,7 +231,7 @@ spec:
 
 ### Example for bare metal
 
-IngressNginxController with the [`HostWithFailover`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-inlet) inlet on frontend nodes:
+IngressNginxController with the [`HostWithFailover`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-inlet) inlet on [frontend nodes](../../../../../glossary.html#frontend-node):
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -276,7 +276,7 @@ spec:
 ### Example for bare metal (MetalLB in BGP LoadBalancer mode)
 
 {% alert level="info" %}
-Available in DP Enterprise Edition and DP Ultimate only.
+Available in DP [Enterprise Edition](../../../../../glossary.html#edition) and DP Ultimate only.
 {% endalert %}
 
 IngressNginxController with the [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer) inlet for use with MetalLB in BGP mode:
@@ -297,7 +297,7 @@ spec:
       value: frontend
 ```
 
-When using MetalLB, its speaker pods (MetalLB components that announce IP addresses) must run on the same nodes as the Ingress controller pods.
+When using MetalLB, its speaker pods (MetalLB components that announce IP addresses) must run on the same nodes as the [Ingress controller](../../../../../glossary.html#ingress-controller) pods.
 
 To preserve the real client IP addresses,
 the Ingress controller Service should be created with `externalTrafficPolicy: Local` to avoid inter-node SNAT.

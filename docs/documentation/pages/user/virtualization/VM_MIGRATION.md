@@ -5,7 +5,7 @@ description: "Live migration of a virtual machine to another node: how it works,
 search: live migration, VirtualMachineOperation, Migratable
 ---
 
-Live migration of virtual machines (VMs) is the process of moving a running VM from one physical node to another without shutting it down. This feature plays a key role in managing virtualized infrastructure, keeping applications running during maintenance, load balancing, or updates.
+[Live migration](../../glossary.html#live-migration) of virtual machines (VMs) is the process of moving a running VM from one physical node to another without shutting it down. This feature plays a key role in managing virtualized infrastructure, keeping applications running during maintenance, load balancing, or updates.
 
 ## How live migration works
 
@@ -36,10 +36,10 @@ Until the VM switches to the new node (step 5), the VM on the source node keeps 
 
 A live migration doesn't always succeed. The following is what has to match on the source and target nodes.
 
-**Disk availability.** All disks attached to the VM have to be available on the target node. With network storage such as NFS or Ceph, this requirement is met on its own, because the disks are visible from all cluster nodes. Local storage needs to be able to create a new local volume on the target node, and if such storage exists only on the source node, the migration doesn't run.
+**Disk availability.** All disks attached to the VM have to be available on the target node. With network storage such as NFS or Ceph, this requirement is met on its own, because the disks are visible from all cluster nodes. [Local storage](../../glossary.html#local-storage) needs to be able to create a new local volume on the target node, and if such storage exists only on the source node, the migration doesn't run.
 
 <!-- markdownlint-disable MD013 -->
-**Attaching and detaching disks.** While a migration is preparing the target node, disks can be neither attached to the machine with a [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) resource nor detached by deleting one. An attachment stays in the `Pending` phase with the `BlockedByMigration` reason in the `Attached` condition, and a deleted one stays in the `Terminating` phase, until the migration completes. While the migration is still queued and the target node isn't being prepared yet, for example when it waits for the project quota to free up, attaching and detaching work as usual. The reverse is also true, a migration waits for an attach or detach request that has already been sent, and all that time the [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource stays in the `Pending` phase with the `WaitingForBlockDeviceAttachment` reason. If the request doesn't complete within 5 minutes, the operation fails.
+**Attaching and detaching disks.** While a migration is preparing the target node, disks can be neither attached to the machine with a [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) resource nor detached by deleting one. An attachment stays in the `Pending` phase with the `BlockedByMigration` reason in the `Attached` condition, and a deleted one stays in the `Terminating` phase, until the migration completes. While the migration is still queued and the target node isn't being prepared yet, for example when it waits for the [project](../../glossary.html#project) quota to free up, attaching and detaching work as usual. The reverse is also true, a migration waits for an attach or detach request that has already been sent, and all that time the [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource stays in the `Pending` phase with the `WaitingForBlockDeviceAttachment` reason. If the request doesn't complete within 5 minutes, the operation fails.
 <!-- markdownlint-enable MD013 -->
 
 **Network bandwidth.** The slower the network, the more memory synchronization iterations the migration goes through and the longer the VM downtime at the final stage, and in the worst case the migration doesn't fit into the timeout. The [migration policy](#configuring-the-migration-policy) controls how the migration runs, and the [AutoConverge](#migrations-with-insufficient-network-bandwidth) mechanism helps with a slow network.
@@ -70,15 +70,15 @@ The most common reasons:
 
 | Reason | What it means | What to do |
 | --- | --- | --- |
-| `VirtualMachineMigratable` | The VM can be moved by live migration | — |
+| `VirtualMachineMigratable` | The VM can be moved by [live migration](../../glossary.html#live-migration) | — |
 | `VirtualMachineNoMigrationTarget` | The VM is capable of migrating, but no other cluster node can host it | Check the `spec.nodeSelector`, `spec.affinity`, and `spec.tolerations` of the VM and the same parameters of its [VirtualMachineClass](/modules/virtualization/cr.html#virtualmachineclass) |
 | `VirtualMachineWaitingForMigrationTarget` | The VM is capable of migrating and suitable nodes exist in the cluster, but none of them can accept it right now, because the nodes are unschedulable, not ready, or don't run virtualization | If maintenance is in progress, migration becomes possible as soon as such a node returns. In other cases, check why the nodes are unschedulable and whether virtualization runs on them |
-| `VirtualMachineDisksNotMigratable` | The VM disks are in storage available from only one node | Move the disks to storage with the `ReadWriteMany` access mode |
+| `VirtualMachineDisksNotMigratable` | The [VM disks](../../glossary.html#vm-disk) are in storage available from only one node | Move the disks to storage with the `ReadWriteMany` access mode |
 | `VirtualMachineHostDevicesNotMigratable` | The VM has a device attached that can't be moved to another node | Detach the device and restart the VM |
 | `VirtualMachineNonMigratable` | The VM can't be moved by live migration, and the reason is in the `message` field of the condition. | Read the `message` of the condition. If it's about the CPU, use the `Discovery`, `Model`, or `Features` types in the VM class |
 | `VirtualMachineDisksShouldBeMigrating` | The VM can be moved, and its local disks are moved along with it | — |
 
-Moving disks along with a VM is available in commercial Deckhouse Platform (DP) editions, so the `VirtualMachineDisksShouldBeMigrating` reason appears only there. In DP Open, a VM with disks in storage available from one node gets the `VirtualMachineDisksNotMigratable` reason.
+Moving disks along with a VM is available in commercial Deckhouse Platform (DP) [editions](../../glossary.html#edition), so the `VirtualMachineDisksShouldBeMigrating` reason appears only there. In DP Open, a VM with disks in storage available from one node gets the `VirtualMachineDisksNotMigratable` reason.
 
 ## Specifics of the Migratable condition
 
@@ -88,7 +88,7 @@ A few specifics of the condition that matter when planning maintenance and readi
 
 - When a node is made unschedulable, the VM stays capable of migrating. Cordoning, rebooting, and node maintenance happen on their own, so the condition stays `True` and only the reason changes to `VirtualMachineWaitingForMigrationTarget`. Otherwise, planned maintenance of a neighboring node would turn a CPU or memory change into a VM restart. In DP Open, such changes require a reboot in any case.
 
-- The `True` value means that the VM is capable of migrating, not that it's ready to migrate right now. Before a migration, look at the reason. The `VirtualMachineMigratable` reason means there's a node to migrate to, and `VirtualMachineWaitingForMigrationTarget` means there's no suitable node at this moment. The `d8_virtualization_virtualmachine_migratable` metric carries the same answer in the `reason` label, so a dashboard that filters VMs only by value counts waiting VMs together with those ready to migrate.
+- The `True` value means that the VM is capable of migrating, not that it's ready to migrate right now. Before a migration, look at the reason. The `VirtualMachineMigratable` reason means there's a node to migrate to, and `VirtualMachineWaitingForMigrationTarget` means there's no suitable node at this moment. The `d8_virtualization_virtualmachine_migratable` metric carries the same answer in the `reason` label, so a [dashboard](../../glossary.html#dashboard) that filters VMs only by value counts waiting VMs together with those ready to migrate.
 
 - A migration started with the `VirtualMachineWaitingForMigrationTarget` reason doesn't wait for a node indefinitely. If the target pod can't be scheduled within five minutes, the operation fails, and the `Completed` condition of the [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource gets the `TargetUnschedulable` reason. If maintenance drags on, restart the migration.
 
@@ -199,7 +199,7 @@ linux-vm   Running     79m      virtlab-pt-2   10.66.10.14   79m
 
 {% tab "Using the web interface" %}
 
-1. Go to the **Projects** tab and select the project you need.
+1. Go to the **[Projects](../../glossary.html#project)** tab and select the project you need.
 1. Go to **Virtualization** → **Virtual machines**.
 1. Select the virtual machine you need from the list and click the ellipsis button.
 1. In the menu that opens, select **Migrate**.
@@ -209,7 +209,7 @@ linux-vm   Running     79m      virtlab-pt-2   10.66.10.14   79m
 1. Enable additional options if required:
    - **Migrate disks**: Move the disks along with the VM (used when changing storage).
    - **Force (throttle guest CPU)**: Apply AutoConverge so that the migration completes even when network bandwidth is insufficient.
-1. The window shows the current migration policy of the VM, for example "VM migration policy: PreferSafe".
+1. The window shows the current [migration policy](../../glossary.html#vm-migration-policy) of the VM, for example "VM migration policy: PreferSafe".
 1. Click **Migrate** or cancel the operation with **Cancel**.
 
 {% endtab %}
@@ -241,7 +241,7 @@ To configure the migration policy, use the [`.spec.liveMigrationPolicy` paramete
 
 ## Migrations with insufficient network bandwidth
 
-During a live migration of a virtual machine, the network bandwidth may not be enough to transfer data faster than it changes in the virtual machine memory. In that case, the number of dirty pages keeps growing and the migration may not complete within the timeout.
+During a [live migration](../../glossary.html#live-migration) of a virtual machine, the network bandwidth may not be enough to transfer data faster than it changes in the virtual machine memory. In that case, the number of dirty pages keeps growing and the migration may not complete within the timeout.
 
 The AutoConverge mechanism, configured through the [migration policy](#configuring-the-migration-policy), solves this problem.
 
@@ -280,7 +280,7 @@ DP starts some migrations itself, by creating a [VirtualMachineOperation](/modul
 |------------------------------------------------------------------|-------------------------|
 | A virtual machine firmware update                                | `firmware-update-`      |
 | Load redistribution in the cluster                               | `evacuation-`           |
-| Putting a node into maintenance mode (node drain)                | `evacuation-`           |
+| Putting a node into [maintenance mode](../../glossary.html#maintenance-mode) (node drain)                | `evacuation-`           |
 | A change in the [VM placement parameters](vm-placement.html) | `nodeplacement-update-` |
 | A change of the core count or memory size without a restart      | `hotplug-resources-`    |
 | Moving disks to another storage                                  | `volume-migration-`     |
@@ -313,7 +313,7 @@ firmware-update-fnbk2   Completed   100%       Evict   linux-vm         1m
 
 {% tab "Using the web interface" %}
 
-1. Go to the **Projects** tab and select the project you need.
+1. Go to the **[Projects](../../glossary.html#project)** tab and select the project you need.
 1. Go to **Virtualization** → **Virtual machines**.
 1. Select the VM you need from the list and click its name.
 1. Go to the **Operations** tab.
@@ -324,13 +324,13 @@ firmware-update-fnbk2   Completed   100%       Evict   linux-vm         1m
 
 ## Live VM migration on a placement parameter change
 
-When the placement rules of a running machine change, DP moves it to a suitable node with a live migration.
+When the placement rules of a running machine change, DP moves it to a suitable node with a [live migration](../../glossary.html#live-migration).
 
 {% alert level="info" %}
-The feature is available in commercial DP editions.
+The feature is available in commercial DP [editions](../../glossary.html#edition).
 {% endalert %}
 
-The following example shows the migration mechanism in a cluster with two node groups, `green` and `blue`. Suppose a virtual machine initially runs on a node of the `green` group, and its configuration has no placement restrictions.
+The following example shows the migration mechanism in a cluster with two [node groups](../../glossary.html#node-group), `green` and `blue`. Suppose a virtual machine initially runs on a node of the `green` group, and its configuration has no placement restrictions.
 
 First, add a requirement to be placed in the `green` group to the VM specification:
 

@@ -4,7 +4,7 @@ permalink: en/admin/integrations/integrations-overview.html
 ---
 
 Deckhouse Platform (DP) provides built-in tools
-for integrating with various cloud providers and virtualization systems.
+for integrating with various [cloud providers](../../glossary.html#cloud-provider) and virtualization systems.
 These tools let you:
 
 - Automatically use cloud infrastructure to provision virtual machines and connect them to the cluster.

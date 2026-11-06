@@ -16,7 +16,7 @@ The module provides the following capabilities:
 - Automatically connects to an internal
   [Deckhouse Stronghold](/products/stronghold/documentation/) instance
   without manual configuration (`DiscoverLocalStronghold` mode).
-- Works with any Vault-compatible secrets store in `Manual` mode.
+- Works with any Vault-compatible [secrets store](../../glossary.html#secrets-store) in `Manual` mode.
 - Automatically refreshes mounted secrets every two minutes
   when the value in the store changes.
 - Injects an entrypoint for applications
@@ -65,7 +65,7 @@ The `secrets-store-integration` module consists of the following components:
 
    Csi-secrets-store performs the following actions:
 
-   - Registers the ephemeral CSI driver `secrets-store.csi.deckhouse.io` in [kubelet](../kubernetes-and-scheduling/kubelet.html).
+   - Registers the ephemeral [CSI driver](../../glossary.html#csi-driver) `secrets-store.csi.deckhouse.io` in [kubelet](../kubernetes-and-scheduling/kubelet.html).
    - Interacts with vault-csi-provider to retrieve data from the secrets store.
    - Mounts secrets as files in a pod.
    - Rotates secrets.
@@ -92,7 +92,7 @@ The `secrets-store-integration` module consists of the following components:
 
 1. **Vault-csi-provider** (DaemonSet): Runs on all cluster nodes
    and consists of a single **vault-csi-provider** container.
-   Vault-csi-provider authenticates with the secrets store, retrieves data from it,
+   Vault-csi-provider authenticates with the [secrets store](../../glossary.html#secrets-store), retrieves data from it,
    and passes the data to csi-secrets-store.
 
 1. **Ssi-controller** (Deployment): Consists of a single **ssi-controller** container.
@@ -162,7 +162,7 @@ The following external components interact with the module:
 1. **Kubelet**:
 
    - Registers the Node Plugin.
-   - Checks the CSI driver `livenessProbe`.
+   - Checks the [CSI driver](../../glossary.html#csi-driver) `livenessProbe`.
    - Calls the `NodePublishVolume` and `NodeUnpublishVolume` RPCs in the Node Plugin.
 
 1. **Prometheus-main**: Collects metrics from the csi-secrets-store and webhook components.

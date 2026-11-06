@@ -26,7 +26,7 @@ The Level 2 C4 architecture of the [`cloud-provider-vcd`](/modules/cloud-provide
 
 The module consists of the following components:
 
-1. **Capcd-controller-manager**: [Kubernetes Cluster API Provider Cloud Director](https://github.com/vmware-archive/cluster-api-provider-cloud-director). [Cluster API](https://github.com/kubernetes-sigs/cluster-api) is an extension for Kubernetes that allows you to manage Kubernetes clusters as custom resources inside another Kubernetes cluster. Cluster API Provider allows clusters running the Cluster API to order virtual machines in the cloud provider's infrastructure, VMware Cloud Director in this case. Capcd-controller-manager works with the following custom resources:
+1. **Capcd-controller-manager**: [Kubernetes Cluster API Provider Cloud Director](https://github.com/vmware-archive/cluster-api-provider-cloud-director). [Cluster API](https://github.com/kubernetes-sigs/cluster-api) is an extension for Kubernetes that allows you to manage Kubernetes clusters as custom resources inside another Kubernetes cluster. Cluster API Provider allows clusters running the Cluster API to order virtual machines in the [cloud provider](../../../glossary.html#cloud-provider)'s infrastructure, VMware Cloud Director in this case. Capcd-controller-manager works with the following custom resources:
 
    * VCDClusterTemplate: Template describing the characteristics of the cluster created in the cloud.
    * VCDCluster: Description of the characteristics of a cluster created based on VCDClusterTemplate.
@@ -59,13 +59,13 @@ The module consists of the following components:
    * **cloud-data-discoverer**: Main container.
    * **kube-rbac-proxy**: Sidecar container providing an RBAC-based authorization proxy for secure access to the cloud-data-discoverer metrics.
 
-1. **Infra-controller-manager**: It is responsible for managing the schedulling of node location relative to each other at the hypervisor level, which can help improve fault tolerance, and control the distribution of workloads. Infra-controller-manager works with a custom resource [VCDAffinityRule](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass-v1-spec-affinityrule). It specifies the affinity rule applied only to virtual machines of node groups referencing this instance class within the cluster.
+1. **Infra-controller-manager**: It is responsible for managing the schedulling of node location relative to each other at the hypervisor level, which can help improve fault tolerance, and control the distribution of workloads. Infra-controller-manager works with a custom resource [VCDAffinityRule](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass-v1-spec-affinityrule). It specifies the affinity rule applied only to virtual machines of [node groups](../../../glossary.html#node-group) referencing this [instance class](../../../glossary.html#instance-class) within the cluster.
 
    It consists of a single container:
 
    * **infra-controller-manager**.
 
-1. **CSI driver (VCD)**: It is an implementation of the CSI driver for VMware Cloud Director. To study the `cloud-provider-*` CSI driver typical architecture, refer to [the corresponding documentation](../../storage/csi-drivers/csi-driver.html) section. `Cloud-provider-vcd` module uses [CSI driver for VMware Cloud Director Named Independent Disks](https://github.com/vmware-archive/cloud-director-named-disk-csi-driver).
+1. **[CSI driver](../../../glossary.html#csi-driver) (VCD)**: It is an implementation of the CSI driver for VMware Cloud Director. To study the `cloud-provider-*` CSI driver typical architecture, refer to [the corresponding documentation](../../storage/csi-drivers/csi-driver.html) section. `Cloud-provider-vcd` module uses [CSI driver for VMware Cloud Director Named Independent Disks](https://github.com/vmware-archive/cloud-director-named-disk-csi-driver).
 
    CSI driver (VCD) does not support snapshots. For this reason, the `csi-controller` Pod does not include the snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)) sidecar container.
 
@@ -100,7 +100,7 @@ Indirect interactions:
 1. The `cloud-provider-vcd` module provides [`node-manager`](/modules/node-manager/) with following artifacts:
 
    * Provider-specific Cluster API custom resource templates to be used by `cloud-provider-vcd` to create VMs in the cloud.
-   * The `kube-system/d8-node-manager-cloud-provider` Secret, which contains all the necessary settings to connect to the cloud and to create CloudEphemeral nodes. These settings are registered in the provider-specific Cluster API custom resources created based on the templates mentioned above.
+   * The `kube-system/d8-node-manager-cloud-provider` Secret, which contains all the necessary settings to connect to the cloud and to create [CloudEphemeral nodes](../../../glossary.html#cloud-ephemeral-node). These settings are registered in the provider-specific Cluster API custom resources created based on the templates mentioned above.
 
 1. The `cloud-provider-vcd` module provides Terraform/OpenTofu components for VMware Cloud Director cloud used when building the [`dhctl`](https://github.com/deckhouse/deckhouse/tree/main/dhctl) executable file for the [`terraform-manager`](/modules/terraform-manager/) module, such as:
 

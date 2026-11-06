@@ -71,7 +71,7 @@ description: Архитектура ядра модуля virtualization в Deck
 
 1. **Virt-handler** (DaemonSet) — отдельный контроллер, запускающийся на всех узлах кластера. Virt-handler выполняет следующие функции:
 
-   - расширяет функционал [kubelet](../kubernetes-and-scheduling/kubelet.html), донастраивая окружение пода для запуска ВМ внутри него. На данный момент virt-handler отвечает за создание сетевых интерфейсов, а также используется для проброса `dev/kvm` и других устройств с узла внутрь пода. Для проброса устройств virt-handler использует [kubelet device plugins](https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/device-plugins/);
+   - расширяет функционал [kubelet](../kubernetes-and-scheduling/kubelet.html), донастраивая окружение пода для запуска ВМ внутри него. На данный момент virt-handler отвечает за создание сетевых интерфейсов, а также используется для проброса `dev/kvm` и других устройств с узла внутрь пода. Для [проброса устройств](../../glossary.html#device-passthrough) virt-handler использует [kubelet device plugins](https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/device-plugins/);
 
    - как и virt-controller, virt-handler следит за VirtualMachineInstance ресурсами, соответствующими запущенным на узле ВМ. При обнаружении изменений virt-handler отправляет команду процессу virt-launcher, запущенному в контейнере compute пода ВМ. Virt-launcher изменяет состояние ВМ в соответствии с полученной командой. Virt-handler также следит за событиями ВМ, которые возвращает virt-launcher, и синхронизирует состояние соответствующего VirtualMachineInstance ресурса;
 

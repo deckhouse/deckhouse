@@ -12,7 +12,7 @@ DP logging capabilities:
 - Collect logs from cluster pods and nodes.
 - Process logs, including metadata enrichment and message filtering.
 - Deliver to various storage and analysis systems, including Loki, Elasticsearch, Splunk, and others.
-- Short-term log storage in the cluster with search and visualization capabilities through Grafana.
+- [Short-term log storage](../../../glossary.html#short-term-log-storage) in the cluster with search and visualization capabilities through Grafana.
 
 The following sections describe how to configure log collection and delivery,
 as well as organize their short-term storage within the cluster.

@@ -6,7 +6,7 @@ search: csi-nfs, nfs
 description: Архитектура CSI-драйвера для работы с NFS-томами в Deckhouse Platform.
 ---
 
-CSI-драйвер `csi-nfs` — это реализация стандарта [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) для управления NFS-томами в Deckhouse Platform (DP).
+[CSI-драйвер](../../../glossary.html#csi-driver) `csi-nfs` — это реализация стандарта [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) для управления NFS-томами в Deckhouse Platform (DP).
 
 ## Архитектура драйвера
 
@@ -69,7 +69,7 @@ CSI-драйвер `csi-nfs` состоит из следующих компон
 
    * **net-handshake-checker** — init-контейнер, выполняющий однократный запуск [`tlshd`](https://github.com/oracle/ktls-utils) для проверки работоспособности процедуры TLS handshake на уровне ядра ОС;
 
-   * **node** — основной контейнер, реализующий функции CSI-драйвера в виде gRPC-сервисов Identity Service и Node Service согласно [спецификации CSI](https://github.com/container-storage-interface/spec/blob/master/spec.md#rpc-interface);
+   * **node** — основной контейнер, реализующий функции [CSI-драйвера](../../../glossary.html#csi-driver) в виде gRPC-сервисов Identity Service и Node Service согласно [спецификации CSI](https://github.com/container-storage-interface/spec/blob/master/spec.md#rpc-interface);
 
    * **tlshd** — сайдкар-контейнер, обеспечивающий работу в режиме RPC-with-TLS;
 

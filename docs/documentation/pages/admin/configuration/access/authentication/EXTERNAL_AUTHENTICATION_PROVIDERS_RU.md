@@ -94,7 +94,7 @@ DP поддерживает подключение следующих внешн
            description: "Direct access to kubernetes API"
      ```
 
-   - Чтобы опубликовать Kubernetes API через Ingress-контроллер или Gateway API, включите параметр [`apiserver.publishAPI.ingress.enabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-enabled) в настройках модуля `control-plane-manager`:
+   - Чтобы опубликовать Kubernetes API через [Ingress-контроллер](../../../../glossary.html#ingress-controller) или Gateway API, включите параметр [`apiserver.publishAPI.ingress.enabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-enabled) в настройках модуля `control-plane-manager`:
 
      ```yaml
      apiVersion: deckhouse.io/v1alpha1
@@ -122,7 +122,7 @@ DP поддерживает подключение следующих внешн
 Полученные в ходе выполнения инструкции `clientID` и `clientSecret` укажите в [ресурсе DexProvider](/modules/user-authn/cr.html#dexprovider).
 
 {% alert level="info" %}
-При регистрации приложения в любом OIDC-провайдере необходимо указать адрес перенаправления (Redirect URI). Для интеграции с DexProvider используйте следующий формат: `https://dex.<publicDomainTemplate>/callback`, где [`publicDomainTemplate`](../../../../reference/api/global.html#parameters-modules-publicdomaintemplate) — шаблон DNS-имен вашего кластера, определенный в модуле `global`.
+При регистрации приложения в любом OIDC-провайдере необходимо указать адрес перенаправления (Redirect URI). Для интеграции с DexProvider используйте следующий формат: `https://dex.<publicDomainTemplate>/callback`, где [`publicDomainTemplate`](../../../../reference/api/global.html#parameters-modules-publicdomaintemplate) — [шаблон DNS-имен](../../../../glossary.html#public-domain-template) вашего кластера, определенный в модуле `global`.
 {% endalert %}
 
 {% alert level="info" %}
@@ -389,7 +389,7 @@ spec:
 
 ### Интеграция с GitLab
 
-В GitLab проекта необходимо создать новое приложение.
+В GitLab [проекта](../../../../glossary.html#project) необходимо создать новое приложение.
 
 Для этого выполните следующие шаги:
 

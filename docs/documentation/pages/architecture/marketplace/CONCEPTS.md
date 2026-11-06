@@ -6,7 +6,7 @@ description: "Core Marketplace concepts: Package types, CRD model, scan-to-deplo
 
 ## Package types
 
-A **Package** is an abstract unit that encompasses either an **Application** or a **Module**. The distinction is based on scope and purpose:
+A **[Package](../../glossary.html#marketplace-package)** is an abstract unit that encompasses either an **Application** or a **Module**. The distinction is based on scope and purpose:
 
 | Characteristic | Module | Application |
 |---|---|---|
@@ -19,7 +19,7 @@ A **Package** is an abstract unit that encompasses either an **Application** or 
 
 ## Resource model
 
-Deckhouse Platform (DP) Marketplace uses five custom resources:
+Deckhouse Platform (DP) [Marketplace](../../glossary.html#marketplace) uses five custom resources:
 
 <script src="/assets/js/mermaid.min.js"></script>
 <script>mermaid.initialize({ startOnLoad: true });</script>
@@ -45,12 +45,12 @@ flowchart TD
 Each [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion) object carries:
 
 - `status.packageMetadata.description` — localized (`en`/`ru`) package description
-- `status.packageMetadata.stage` — maturity stage (`Preview`, `General Availability`, etc.)
-- `status.packageMetadata.requirements` — DP and Kubernetes version constraints; module dependencies (`mandatory`, `conditional`, `anyOf`, `noneOf`)
+- `status.packageMetadata.stage` — [maturity stage](../../glossary.html#module-lifecycle-stage) (`Preview`, `General Availability`, etc.)
+- `status.packageMetadata.requirements` — DP and Kubernetes version constraints; [module dependencies](../../glossary.html#module-dependencies) (`mandatory`, `conditional`, `anyOf`, `noneOf`)
 - `status.packageMetadata.disableOptions` — confirmation before the application is deleted (see [Deletion confirmation](application-development.html#deletion-confirmation))
 - `status.packageMetadata.changelog` — changes in the version from `changelog.yaml`
 - `status.packageSchemas.settingsSchema` — OpenAPI v3 schema used to validate `Application.spec.settings`
-- `status.packageSchemas.valuesSchema` — OpenAPI v3 schema for effective values passed to hooks and templates
+- `status.packageSchemas.valuesSchema` — OpenAPI v3 schema for effective values passed to [hooks](../../glossary.html#module-hook) and templates
 
 ## Scan-to-deploy lifecycle
 
@@ -59,7 +59,7 @@ Each [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackagev
 3. The operation scans the container registry and creates [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion) objects for each discovered version.
 4. User creates an [Application](../../reference/api/cr.html#application) in their namespace referencing `packageRepositoryName`, `packageName`, and `packageVersion`.
 5. DP validates `spec.settings` against the `settingsSchema` from the corresponding ApplicationPackageVersion.
-6. Nelm deploys the Helm templates from the package bundle.
+6. Nelm deploys the Helm templates from the [package bundle](../../glossary.html#marketplace-package-bundle).
 7. The `Installed` condition on the Application reflects deployment progress and is the only condition reported until the installation completes. Once it becomes `True`, the other conditions (`ConfigurationApplied`, `Scaled`, `Ready`, and so on) appear.
 
 ## Application constraints
@@ -78,7 +78,7 @@ All constraints exist to enforce namespace isolation and prevent Applications fr
 
 The objects of an Application are named `d8a-<INSTANCE_NAME>-<SUFFIX>` (see [Templates](templates.html#object-names)), so the instance name is a part of every object name. To keep the object names within the Kubernetes limits:
 
-- **Application instance name** (`metadata.name`): at most **24 characters**. The validating webhook rejects an Application with a longer name.
+- **[Application instance](../../glossary.html#application-instance) name** (`metadata.name`): at most **24 characters**. The validating webhook rejects an Application with a longer name.
 - **Resource name suffix inside the Application**: at most **23 characters** for StatefulSets, Jobs, and CronJobs, whose names must fit 52 characters (4 + 24 + 1 + 23 = 52), and at most **34 characters** for other objects, whose names must fit 63 characters.
 
 Example: the `master` StatefulSet of the `redis-cache` instance (11 characters) is named `d8a-redis-cache-master` (22 characters).

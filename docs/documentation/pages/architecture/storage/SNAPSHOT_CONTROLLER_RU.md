@@ -6,7 +6,7 @@ search: snapshot-controller, snapshot, снимок, снапшот, снапш�
 description: Архитектура модуля snapshot-controller в Deckhouse Platform.
 ---
 
-Модуль `snapshot-controller` включает поддержку снимков томов для совместимых CSI-драйверов в Deckhouse Platform (DP).
+Модуль `snapshot-controller` включает поддержку снимков томов для совместимых [CSI-драйверов](../../glossary.html#csi-driver) в Deckhouse Platform (DP).
 
 Подробнее с описанием модуля можно ознакомиться в [соответствующем разделе документации](/modules/snapshot-controller/).
 

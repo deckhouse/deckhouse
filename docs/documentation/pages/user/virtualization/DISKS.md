@@ -105,7 +105,7 @@ An empty disk is what you need to install an operating system on it or to store 
 
 You can skip this step and create the disk while creating the VM.
 
-1. Go to the **Projects** tab and select the project you need.
+1. Go to the **[Projects](../../glossary.html#project)** tab and select the project you need.
 1. Go to **Virtualization** → **Disks**.
 1. Click **Create**.
 1. In the form that opens, enter `blank-disk` in the **Disk name** field.
@@ -215,7 +215,7 @@ Specifying the disk size is optional. If you don't set it, DP creates the disk e
 
 You can skip this step and create the disk while creating the VM.
 
-1. Go to the **Projects** tab and select the project you need.
+1. Go to the **[Projects](../../glossary.html#project)** tab and select the project you need.
 1. Go to **Virtualization** → **Disks**.
 1. Click **Create**.
 1. In the form that opens, enter `linux-vm-root` in the **Disk name** field.
@@ -301,7 +301,7 @@ If the image file is on your computer, upload it straight into a disk. DP create
 
 {% tab "Using the web interface" %}
 
-1. Go to the **Projects** tab and select the project you need.
+1. Go to the **[Projects](../../glossary.html#project)** tab and select the project you need.
 1. Go to **Virtualization** → **Disks**.
 1. Click **Create**.
 1. In the form that opens, enter the disk name in the **Disk name** field.

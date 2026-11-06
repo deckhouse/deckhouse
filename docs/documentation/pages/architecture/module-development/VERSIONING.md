@@ -8,15 +8,15 @@ Deckhouse Platform (DP) uses [semantic versioning](https://semver.org/) for modu
 
 When choosing a version, stick to the following guidelines:
 
-- updating the **patch version** (e.g., from `0.0.1` to `0.0.2`) means that some issue has been fixed;
-- updating the **minor version** (e.g., from `0.0.1` to `0.1.0`) means that some new feature has been added;
+- updating the **[patch version](../../../glossary.html#patch-version)** (e.g., from `0.0.1` to `0.0.2`) means that some issue has been fixed;
+- updating the **[minor version](../../../glossary.html#minor-version)** (e.g., from `0.0.1` to `0.1.0`) means that some new feature has been added;
 - updating the **major version** (e.g., from `0.0.1` to `1.0.0`) means that a feature has been added that radically changes the module's capabilities; the interface has undergone significant changes or a major phase of development has been completed.
 
 The git tag and registry container **always** have a "v" before the version number, e.g., `v0.0.73` or `v1.0.0`.
 
 ## Release channels
 
-Release channels allow you to publish a module version not for all users at once, but for a limited group of users. You define the stability level of the module version and the maximum release channel to which it can be published.
+[Release channels](../../../glossary.html#release-channel) allow you to publish a module version not for all users at once, but for a limited group of users. You define the stability level of the module version and the maximum release channel to which it can be published.
 
 Note that the choice of a specific release channel does not determine how stable the module is. The channels are an instrument for delivery of updates and determine the degree of stability of a particular release.
 
@@ -132,7 +132,7 @@ You can add new parameters without changing the version.
 
 ### Automatic API Conversion
 
-To enable automatic conversion of module parameters from one version to another, you can include the appropriate [module conversions](../structure/#conversions). Conversions may be necessary when a parameter is renamed or moved to a different location in a new version of the OpenAPI specification.
+To enable automatic [conversion](../../../glossary.html#module-settings-conversion) of module parameters from one version to another, you can include the appropriate [module conversions](../structure/#conversions). Conversions may be necessary when a parameter is renamed or moved to a different location in a new version of the OpenAPI specification.
 
 ### Recommendations for Releasing New Versions of CRD
 

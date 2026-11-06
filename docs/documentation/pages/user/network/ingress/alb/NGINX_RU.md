@@ -11,7 +11,7 @@ relatedLinks:
 
 ## Публикация приложений средствами Ingress NGINX Controller
 
-Для публикации приложений администратор кластера должен создать Ingress-контроллер. Порядок настройки описан в разделе [«Примеры настройки балансировки»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/nginx.html#load-balancing-configuration-examples). Запросите у администратора имя `ingressClass` контроллера и укажите его в манифесте ресурса Ingress, который маршрутизирует входящий трафик к приложению.
+Для публикации приложений администратор кластера должен создать [Ingress-контроллер](../../../../glossary.html#ingress-controller). Порядок настройки описан в разделе [«Примеры настройки балансировки»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/nginx.html#load-balancing-configuration-examples). Запросите у администратора имя `ingressClass` контроллера и укажите его в манифесте ресурса Ingress, который маршрутизирует входящий трафик к приложению.
 
 {% tabs Примеры Ingress %}
 {% tab "HTTP" %}

@@ -5,7 +5,7 @@ permalink: en/admin/integrations/public/yandex/layout.html
 
 ## Layouts
 
-This section describes the possible node placement layouts in Yandex Cloud infrastructure
+This section describes the possible node placement [layouts](../../../../glossary.html#layout) in Yandex Cloud infrastructure
 and the related configuration options.
 The selected layout affects networking behavior, availability of public IP addresses, outgoing traffic routing,
 and how nodes are accessed.
@@ -20,7 +20,7 @@ behind a specific NAT Gateway in third-party services.
 {% endalert %}
 
 {% alert level="warning" %}
-Because nodes are created without public IP addresses in this layout, the master node must be accessible over SSH from the machine where `dhctl` is running: either directly over a private network or through a bastion host.
+Because nodes are created without public IP addresses in this layout, the [master node](../../../../glossary.html#master-node) must be accessible over SSH from the machine where `dhctl` is running: either directly over a private network or through a [bastion host](../../../../glossary.html#bastion-host).
 If the master node is not directly accessible, run the installation with the `--ssh-bastion-host`, `--ssh-bastion-user`, and, if needed, `--ssh-bastion-port` parameters.
 {% endalert %}
 
@@ -240,9 +240,9 @@ dhcpOptions:
 ```
 
 {% alert level="info" %}
-In this example, master and worker nodes are created without public IP addresses and without additional external network interfaces. Outbound traffic from the cluster subnets goes through the NAT instance.
+In this example, master and [worker nodes](../../../../glossary.html#worker-node) are created without public IP addresses and without additional external network interfaces. Outbound traffic from the cluster subnets goes through the NAT instance.
 
-The NAT instance is not automatically used by the `dhctl` installer as a bastion host or jump host. To install the cluster, the master node must be accessible over SSH from the machine where `dhctl` is running: either directly or through a bastion host.
+The NAT instance is not automatically used by the `dhctl` [installer](../../../../glossary.html#installer) as a bastion host or jump host. To install the cluster, the master node must be accessible over SSH from the machine where `dhctl` is running: either directly or through a bastion host.
 
 If the master node does not have a public IP address or is not directly accessible, run the installation with the `--ssh-bastion-host` and `--ssh-bastion-user` parameters.
 
@@ -290,7 +290,7 @@ dhctl converge
 
 Below is a minimal example of a YandexClusterConfiguration resource
 that defines a cluster with one master group and one worker node group.
-It uses the Standard layout and includes basic compute resource parameters,
+It uses the Standard [layout](../../../../glossary.html#layout) and includes basic compute resource parameters,
 an SSH public key, and cloud and folder identifiers:
 
 ```yaml
@@ -346,7 +346,7 @@ in a DP cluster deployed in Yandex Cloud.
 
 ### Internal node addressing
 
-The [`nodeNetworkCIDR`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-nodenetworkcidr) parameter defines the IP address range for splitting between availability zones
+The [`nodeNetworkCIDR`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-nodenetworkcidr) parameter defines the IP address range for splitting between [availability zones](../../../../glossary.html#availability-zone)
 and applying to the internal node interfaces.
 
 ```yaml
@@ -517,8 +517,8 @@ If the cluster uses Cilium with pod traffic tunneling over VXLAN, allow UDP traf
 
 ## Configuring access via bastion host
 
-To connect to nodes located in private subnets (for example, when using the Standard or WithNATInstance layout),
-you can use a bastion host — an intermediary VM with a public IP address that provides SSH access to the nodes.
+To connect to nodes located in private subnets (for example, when using the Standard or WithNATInstance [layout](../../../../glossary.html#layout)),
+you can use a [bastion host](../../../../glossary.html#bastion-host) — an intermediary VM with a public IP address that provides SSH access to the nodes.
 
 To configure access, follow these steps:
 

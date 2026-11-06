@@ -5,11 +5,11 @@ description: "Additional network interfaces of a virtual machine from sdn module
 search: additional interfaces, SDN, ClusterNetwork, IPAddress, project networks
 ---
 
-Besides the main cluster network, a virtual machine (VM) can be connected to additional networks of the [`sdn`](/modules/sdn/) module, and its interfaces can be assigned addresses.
+Besides the [main cluster network](../../../glossary.html#main-network), a virtual machine (VM) can be connected to [additional networks](../../../glossary.html#additional-network) of the [`sdn`](/modules/sdn/) module, and its interfaces can be assigned addresses.
 
 ## Additional network interfaces
 
-Besides the main cluster network, a machine can connect to additional networks, both project ones (Network) and cluster ones (ClusterNetwork). You list the networks you need in the [`.spec.networks`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks) block, and if that block isn't set, the machine works only in the main cluster network.
+Besides the main [cluster network](../../../glossary.html#cluster-network), a machine can connect to additional networks, both [project](../../../glossary.html#project) ones (Network) and cluster ones (ClusterNetwork). You list the networks you need in the [`.spec.networks`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks) block, and if that block isn't set, the machine works only in the main cluster network.
 
 {% alert level="info" %}
 To work with additional networks, the `sdn` module has to be enabled.
@@ -26,7 +26,7 @@ Specifics of additional network interfaces:
 - adding or removing the main network (`type: Main`) still requires a VM reboot, because it's bound to the main network interface of the pod and can't be changed on a running pod;
 - to preserve the order of network interfaces inside the guest operating system, add new networks to the end of the [`.spec.networks`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks) list and don't change the order of existing ones;
 - network security policies (NetworkPolicy) don't apply to additional network interfaces;
-- the network parameters (IP addresses, gateways, DNS, and so on) for additional networks are configured manually from inside the guest OS (for example, with Cloud-Init), unless IPAM is configured for the network, as covered in [IPAM for additional network interfaces](#ipam-for-additional-network-interfaces).
+- the network parameters (IP addresses, gateways, DNS, and so on) for additional networks are configured manually from inside the guest OS (for example, with Cloud-Init), unless [IPAM](../../../glossary.html#sdn-ipam) is configured for the network, as covered in [IPAM for additional network interfaces](#ipam-for-additional-network-interfaces).
 
 For each additional network interface, a unique MAC address is created and reserved automatically, which prevents MAC address collisions. The [VirtualMachineMACAddress](/modules/virtualization/cr.html#virtualmachinemacaddress) (`vmmac`) and [VirtualMachineMACAddressLease](/modules/virtualization/cr.html#virtualmachinemacaddresslease) (`vmmacl`) resources are used for this.
 
@@ -51,7 +51,7 @@ The following example shows how to connect a virtual machine to an additional ne
 
 List the networks you need in the [`.spec.networks`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks) block of the machine specification.
 
-Here is an example of connecting a VM to the main cluster network and the `user-net` project network:
+Here is an example of connecting a VM to the main cluster network and the `user-net` [project network](../../../glossary.html#project-network):
 
 ```yaml
 spec:
@@ -73,7 +73,7 @@ spec:
       name: corp-net # Network name
 ```
 
-Here is an example of connecting a VM only to additional networks (without the main cluster network):
+Here is an example of connecting a VM only to [additional networks](../../../glossary.html#additional-network) (without the [main cluster network](../../../glossary.html#main-network)):
 
 ```yaml
 spec:
@@ -148,7 +148,7 @@ vm-01-fz9cr   5e:e6:19:22:0f:d8   Attached   vm-01   5m42s
 To create a project network:
 
 1. Go to the **Projects** tab and select the project you need.
-1. Go to **Network** → **SDN** → **Networks**.
+1. Go to **Network** → **[SDN](../../../glossary.html#sdn)** → **Networks**.
 1. Click **Create**.
 1. In the **Create resource** window that opens, enter the network name in the **Name** field.
 1. On the **Configuration** tab, select the Network class in the **Network class** field, the network type in the **Type** field, and the VLAN ID in the **VLAN** field. Set **Mtu** and the parameters of the **IPAM** block if required.
@@ -186,7 +186,7 @@ The parameter values are described in the [IP sysctl documentation](https://docs
 
 ## IPAM for additional network interfaces
 
-Deckhouse Platform (DP) can hand out addresses in an additional network itself, if an administrator has configured an address pool for that network ([`spec.ipam.ipAddressPoolRef`](/modules/sdn/cr.html#clusternetwork-v1alpha1-spec-ipam-ipaddresspoolref) in the [`sdn`](/modules/sdn/) module). DP then allocates addresses for the additional VM interfaces and delivers them to the guest OS over DHCP.
+Deckhouse Platform (DP) can hand out addresses in an [additional network](../../../glossary.html#additional-network) itself, if an administrator has configured an address pool for that network ([`spec.ipam.ipAddressPoolRef`](/modules/sdn/cr.html#clusternetwork-v1alpha1-spec-ipam-ipaddresspoolref) in the [`sdn`](/modules/sdn/) module). DP then allocates addresses for the additional VM interfaces and delivers them to the guest OS over DHCP.
 
 Two modes are supported:
 
@@ -194,7 +194,7 @@ Two modes are supported:
 
 - **Static**: If the [`ipAddressName` field](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks-ipaddressname) is specified in [`.spec.networks[]`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks), the controller uses the IPAddress resource provided by the user (of the `Static` type, `network.deckhouse.io/v1alpha1`). The address is defined by the user and doesn't change automatically.
 
-If an additional network has no IPAM pool configured, the IPAM feature isn't enabled. The interface works in L2-only mode, and IP addressing has to be configured manually in the guest OS.
+If an additional network has no [IPAM](../../../glossary.html#sdn-ipam) pool configured, the IPAM feature isn't enabled. The interface works in L2-only mode, and IP addressing has to be configured manually in the guest OS.
 
 {% alert level="warning" %}
 If an IPAM pool is configured for an additional network, don't configure a static IP address on the additional interface in the guest OS manually (through Cloud-Init). Use the automatic (DHCP) or static (`ipAddressName`) mode to avoid address conflicts.
@@ -266,8 +266,8 @@ status:
 
 {% tab "Using the web interface" %}
 
-1. Go to the **Projects** tab and select the project you need.
-1. Go to **Network** → **SDN** → **IP pools**.
+1. Go to the **[Projects](../../../glossary.html#project)** tab and select the project you need.
+1. Go to **Network** → **[SDN](../../../glossary.html#sdn)** → **IP pools**.
 1. Click **Create**.
 1. In the **Create resource** window that opens, enter the pool name in the **Name** field.
 1. On the **Configuration** tab, set the lease lifetime in the **Lease TTL** field, and in the **Pools** block, set the network (**Network**), the address ranges (**Ranges**), and the routes (**Routes**).

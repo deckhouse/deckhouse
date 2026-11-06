@@ -5,7 +5,7 @@ description: "Модель административного доступа к 
 lang: ru
 ---
 
-Deckhouse Platform (DP) поддерживает размещение нескольких файлов kubeconfig на master-узлах (поддержка реализуется модулем [`control-plane-manager`](/modules/control-plane-manager/)). Понимание их назначения важно для безопасного администрирования кластера.
+Deckhouse Platform (DP) поддерживает размещение нескольких файлов kubeconfig на [master-узлах](../../../../glossary.html#master-node) (поддержка реализуется модулем [`control-plane-manager`](/modules/control-plane-manager/)). Понимание их назначения важно для безопасного администрирования кластера.
 
 ## Файлы kubeconfig на master-узлах
 
@@ -24,7 +24,7 @@ Deckhouse Platform (DP) поддерживает размещение неско
 
 Если модуль [`user-authz`](/modules/user-authz/) **выключен**, DP привязывает группу `kubeadm:cluster-admins` к встроенной роли `cluster-admin` с wildcard-правами (как в обычном кластере kubeadm без дополнительной настройки RBAC).
 
-Если модуль `user-authz` **включён**, группа привязывается к `user-authz:cluster-admin`, а вторая ClusterRoleBinding добавляет роль `d8:control-plane-manager:admin-kubeconfig-supplement` (правила сверх высокоуровневой роли, например, для сертификатов и компонентов control plane). Вместе они заменяют одну wildcard-роль `cluster-admin` для этой идентичности. Для полного неограниченного доступа используйте `super-admin.conf`.
+Если модуль `user-authz` **включён**, группа привязывается к `user-authz:cluster-admin`, а вторая ClusterRoleBinding добавляет роль `d8:control-plane-manager:admin-kubeconfig-supplement` (правила сверх [высокоуровневой роли](../../../../glossary.html#high-level-role), например, для сертификатов и компонентов control plane). Вместе они заменяют одну wildcard-роль `cluster-admin` для этой идентичности. Для полного неограниченного доступа используйте `super-admin.conf`.
 
 ## Рекомендуемый административный доступ
 
@@ -60,7 +60,7 @@ spec:
 
 ## Усиление безопасности
 
-Модуль `control-plane-manager` автоматически ограничивает права доступа к файлам `admin.conf` и `super-admin.conf` до `0600` (чтение/запись только для владельца) при каждом цикле согласования. Это предотвращает несанкционированный доступ к этим конфиденциальным учётным данным.
+Модуль `control-plane-manager` автоматически ограничивает права доступа к файлам `admin.conf` и `super-admin.conf` до `0600` (чтение/запись только для владельца) при каждом [цикле согласования](../../../../glossary.html#application-reconciliation). Это предотвращает несанкционированный доступ к этим конфиденциальным учётным данным.
 
 ## Аварийный доступ (break-glass) к кластеру
 

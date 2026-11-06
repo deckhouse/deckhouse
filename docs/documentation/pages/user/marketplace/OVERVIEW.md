@@ -4,7 +4,7 @@ permalink: en/user/marketplace/
 description: "Using Marketplace in Deckhouse Platform. Browse available application packages, install them into your namespace, and manage their lifecycle."
 ---
 
-This section describes how to use Marketplace in Deckhouse Platform (DP).
+This section describes how to use [Marketplace](../../glossary.html#marketplace) in Deckhouse Platform (DP).
 
 Marketplace lets you install ready-made applications into your namespace from the container registries connected by the cluster administrator. Each application is installed as an [Application](../../reference/api/cr.html#application) resource and can exist in multiple independent instances, for example, separate Redis instances for caching and for sessions in the same namespace.
 
@@ -14,7 +14,7 @@ Marketplace and the Application resource are available starting from DP version 
 
 ## Prerequisites
 
-Before you can install an application, the cluster administrator must connect at least one container registry with packages. Check that [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion) objects are available:
+Before you can install an application, the cluster administrator must connect at least one container registry with [packages](../../glossary.html#marketplace-package). Check that [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion) objects are available:
 
 ```bash
 d8 k get apv

@@ -5,7 +5,7 @@ description: "Restricting the list of storage classes available for virtual mach
 search: storage classes, StorageClass, allowedStorageClassSelector, VM disks
 ---
 
-The project owner chooses the storage class for an image or a disk. You can limit that choice and set a default class. The [`.spec.settings.virtualImages`](/modules/virtualization/configuration.html#parameters-virtualimages) block covers images, and the [`.spec.settings.virtualDisks`](/modules/virtualization/configuration.html#parameters-virtualdisks) block covers disks.
+The [project](../../../glossary.html#project) owner chooses the storage class for an image or a disk. You can limit that choice and set a default class. The [`.spec.settings.virtualImages`](/modules/virtualization/configuration.html#parameters-virtualimages) block covers images, and the [`.spec.settings.virtualDisks`](/modules/virtualization/configuration.html#parameters-virtualdisks) block covers disks.
 
 Example:
 

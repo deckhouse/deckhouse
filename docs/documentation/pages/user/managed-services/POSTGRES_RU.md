@@ -18,7 +18,7 @@ relatedLinks:
 - `snapshot-pg` — отдельный пример для создания и восстановления снимков, поскольку для него требуется StorageClass с поддержкой CSI-снимков.
 
 {% alert level="info" %}
-В примерах используются два worker-узла, чтобы экземпляры PostgreSQL в режиме `Cluster` могли размещаться на разных узлах. Кластер находится в одной зоне `default`.
+В примерах используются два [worker-узла](../../../glossary.html#worker-node), чтобы экземпляры PostgreSQL в режиме `Cluster` могли размещаться на разных узлах. Кластер находится в одной зоне `default`.
 {% endalert %}
 
 ## Проверка доступных ресурсов
@@ -427,7 +427,7 @@ d8ms-pg-app-postgres-rw   10.112.2.31:5432   42h
 
 ## Настройка топологии и режима репликации
 
-В режиме `Cluster` пользователь может управлять отказоустойчивостью экземпляров PostgreSQL, задавая их размещение по узлам и зонам доступности в параметре [`spec.cluster.topology`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-cluster-topology).
+В режиме `Cluster` пользователь может управлять отказоустойчивостью экземпляров PostgreSQL, задавая их размещение по узлам и [зонам доступности](../../../glossary.html#availability-zone) в параметре [`spec.cluster.topology`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-cluster-topology).
 
 ### Настройка топологии
 
@@ -1485,7 +1485,7 @@ EnabledWithoutAlerts   → no-alerts
 
 ## Резервное копирование и восстановление
 
-Для создания снимков используется объект PostgresSnapshot. StorageClass, в котором размещён Postgres, должен использовать CSI-драйвер с поддержкой snapshots, а в кластере должен быть доступен соответствующий VolumeSnapshotClass.
+Для создания снимков используется объект PostgresSnapshot. StorageClass, в котором размещён Postgres, должен использовать [CSI-драйвер](../../../glossary.html#csi-driver) с поддержкой snapshots, а в кластере должен быть доступен соответствующий VolumeSnapshotClass.
 
 В [основном примере](#основной-пример-создание-postgres) используется StorageClass `replicated`, для которого провайдер в рассматриваемой конфигурации не поддерживает создание снимков. Поэтому для демонстрации используется отдельный StorageClass `snapshot-local` на `sds-local-volume` с LVM Thin.
 

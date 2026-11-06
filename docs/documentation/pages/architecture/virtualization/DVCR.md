@@ -5,7 +5,7 @@ search: deckhouse virtualization container registry, dvcr
 description: Architecture of the DVCR component of virtualization module in Deckhouse Platform.
 ---
 
-The Deckhouse Virtualization Container Registry (DVCR) component of the [`virtualization`](/modules/virtualization/) module is a specialized container registry for storing and caching virtual machine (VM) images. Virtualization-controller of the [Virtualization-API](api.html) component of the [`virtualization`](/modules/virtualization/) module allows you to import images stored in DVCR into PVC volumes used as VM disks managed by KubeVirt. For more details, see [Importing and uploading VM images and disks](import.html).
+The Deckhouse Virtualization Container Registry ([DVCR](../../glossary.html#dvcr)) component of the [`virtualization`](/modules/virtualization/) module is a specialized container registry for storing and caching virtual machine (VM) images. Virtualization-controller of the [Virtualization-API](api.html) component of the [`virtualization`](/modules/virtualization/) module allows you to import images stored in DVCR into PVC volumes used as [VM disks](../../glossary.html#vm-disk) managed by KubeVirt. For more details, see [Importing and uploading VM images and disks](import.html).
 
 {% alert level="info" %}
 [KubeVirt](https://github.com/kubevirt/kubevirt) is an open-source project that allows you to launch, deploy, and manage VMs using Kubernetes as an orchestration platform. It enables cooperation between traditional VMs and container workloads in the same Kubernetes cluster, providing a single control plane.
@@ -28,7 +28,7 @@ The Level 2 C4 architecture of the DVCR component of [`virtualization`](/modules
 
 DVCR consists of the following components:
 
-1. **Dvcr**: A container registry based on [Distribution](https://github.com/distribution/distribution). Distribution is an open-source project that provides a framework for storing and distributing container images and other content using the [OCI Distribution Specification](https://github.com/opencontainers/distribution-spec). Dvcr is used for storing and caching VM images.
+1. **Dvcr**: A container registry based on [Distribution](https://github.com/distribution/distribution). Distribution is an open-source project that provides a framework for storing and distributing container images and other content using the [OCI Distribution Specification](https://github.com/opencontainers/distribution-spec). Dvcr is used for storing and caching [VM images](../../glossary.html#vm-image).
 
    It consists of the following containers:
 

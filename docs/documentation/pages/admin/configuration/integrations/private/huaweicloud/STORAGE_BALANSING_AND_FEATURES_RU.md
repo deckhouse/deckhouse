@@ -6,7 +6,7 @@ lang: ru
 
 ## Хранилище
 
-Deckhouse Platform заказывает диски в Huawei Cloud с помощью CSI-драйвера. Для настройки типа хранилища используются параметры в объекте HuaweiCloudClusterConfiguration, в частности [поле `volumeTypeMap`](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration-masternodegroup-volumetypemap).
+Deckhouse Platform заказывает диски в Huawei Cloud с помощью [CSI-драйвера](../../../../glossary.html#csi-driver). Для настройки типа хранилища используются параметры в объекте HuaweiCloudClusterConfiguration, в частности [поле `volumeTypeMap`](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration-masternodegroup-volumetypemap).
 
 Пример настройки:
 
@@ -37,6 +37,6 @@ spec:
 
 Балансировка нагрузки в Huawei Cloud осуществляется с использованием сервисов ELB (Elastic Load Balancer). Для получения доступа к API балансировщика в IAM-политике пользователя необходимо разрешение [`ELB FullAccess`](./authorization.html).
 
-В схеме размещения [Standard](./layout.html#standard) доступен [параметр `enableEIP`](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration-standard-enableeip), который позволяет назначать Elastic IP для master-узлов.
+В [схеме размещения](../../../../glossary.html#layout) [Standard](./layout.html#standard) доступен [параметр `enableEIP`](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration-standard-enableeip), который позволяет назначать Elastic IP для [master-узлов](../../../../glossary.html#master-node).
 
 По умолчанию узлы, управляемые Cluster API, не получают публичные IP-адреса.

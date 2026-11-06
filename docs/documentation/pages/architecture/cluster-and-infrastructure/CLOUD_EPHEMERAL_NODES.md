@@ -5,7 +5,7 @@ search: cloudephemeral nodes
 description: Architecture of the node-manager module for CloudEphemeral nodes.
 ---
 
-This page describes the architecture of the [`node-manager`](/modules/node-manager/) module for CloudEphemeral nodes.
+This page describes the architecture of the [`node-manager`](/modules/node-manager/) module for [CloudEphemeral nodes](../../../glossary.html#cloud-ephemeral-node).
 
 ## Module architecture
 
@@ -23,12 +23,12 @@ The Level 2 C4 architecture of the [`node-manager`](/modules/node-manager/) modu
 ## Module components
 
 {% alert level="info" %}
-Bashible is a key component of the Cluster & Infrastructure subsystem that enables the operation of the `node-manager` module. However, it is not part of the module itself, as it runs at the OS level as a system service. For Bashible details, refer to the [corresponding documentation section](bashible.html).
+[Bashible](../../../glossary.html#bashible) is a key component of the Cluster & Infrastructure subsystem that enables the operation of the `node-manager` module. However, it is not part of the module itself, as it runs at the OS level as a system service. For Bashible details, refer to the [corresponding documentation section](bashible.html).
 {% endalert %}
 
 The module managing CloudEphemeral nodes consists of the following components:
 
-1. **Bashible-api-server**: A [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/) deployed on master nodes. It generates bashible scripts from templates stored in custom resources. When kube-apiserver receives a request for resources containing bashible bundles, it forwards the request to bashible-api-server and returns the generated result. For more details about bashible and bashible-api-server, refer to the [corresponding documentation section](bashible.html).
+1. **[Bashible-api-server](../../../glossary.html#bashible-api-server)**: A [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/) deployed on [master nodes](../../../glossary.html#master-node). It generates bashible scripts from templates stored in custom resources. When kube-apiserver receives a request for resources containing [bashible bundles](../../../glossary.html#bashible-bundle), it forwards the request to bashible-api-server and returns the generated result. For more details about bashible and bashible-api-server, refer to the [corresponding documentation section](bashible.html).
 
 1. **Node-controller** (Deployment): A controller that manages [NodeGroup](/modules/node-manager/cr.html#nodegroup) custom resources lifecycle. Node-controller performs the following operations:
 
@@ -47,7 +47,7 @@ The module managing CloudEphemeral nodes consists of the following components:
    * **node-controller**: Main container.
    * **kube-rbac-proxy**: Sidecar container providing an RBAC-based authorization proxy for secure access to controller metrics.
 
-1. **Node-group-exporter** (Deployment): A component that exports NodeGroup resource metrics in Prometheus format, containing information about the number of nodes in each node group: the total number, the number of nodes in the `Ready` status, the number of nodes in error, the minimum and maximum number of nodes in the group, etc.
+1. **Node-group-exporter** (Deployment): A component that exports NodeGroup resource metrics in Prometheus format, containing information about the number of nodes in each [node group](../../../glossary.html#node-group): the total number, the number of nodes in the `Ready` status, the number of nodes in error, the minimum and maximum number of nodes in the group, etc.
 
    The component includes:
 
@@ -68,9 +68,9 @@ The module managing CloudEphemeral nodes consists of the following components:
    * **cluster-autoscaler**: Main container.
    * **kube-rbac-proxy**: Sidecar container providing an RBAC-based authorization proxy for secure access to the cluster-autoscaler metrics.
 
-1. **Fencing-agent** (DaemonSet) and **fencing-controller**: Components that implement the fencing mechanism. The operation principles of both components are described in detail in the [`spec.fencing.mode`](/modules/node-manager/cr.html#nodegroup-v1-spec-fencing-mode) parameter description of the NodeGroup resource. For details on how the fencing mechanism handles different node types, refer to [FAQ](/modules/node-manager/faq.html#how-the-fencing-mechanism-handles-different-node-types) in the `node-manager` module documentation.
+1. **Fencing-agent** (DaemonSet) and **fencing-controller**: Components that implement the [fencing](../../../glossary.html#fencing) mechanism. The operation principles of both components are described in detail in the [`spec.fencing.mode`](/modules/node-manager/cr.html#nodegroup-v1-spec-fencing-mode) parameter description of the NodeGroup resource. For details on how the fencing mechanism handles different node types, refer to [FAQ](/modules/node-manager/faq.html#how-the-fencing-mechanism-handles-different-node-types) in the `node-manager` module documentation.
 
-1. **Standby-holder** (Deployment): A pod used to reserve nodes. When the [`spec.cloudinstances.standby`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-standby) parameter is enabled in the NodeGroup custom resource, standby nodes are created in all configured [zones](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-zones).
+1. **Standby-holder** (Deployment): A pod used to reserve nodes. When the [`spec.cloudinstances.standby`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-standby) parameter is enabled in the NodeGroup custom resource, [standby nodes](../../../glossary.html#standby-node) are created in all configured [zones](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-zones).
 
    A standby node is a cluster node with pre-reserved resources available for immediate scaling. This allows cluster-autoscaler to schedule workloads without waiting for node initialization, which may take several minutes.
 
@@ -98,7 +98,7 @@ The module interacts with the following components:
    * `/dev/watchdog`: Sends signals to reset the Watchdog timer.
 
 {% alert level="info" %}
-The module interacts with the `cloud-provider` module via kube-apiserver using the `kube-system/d8-node-manager-cloud-provider` Secret to obtain cloud connection settings and create CloudEphemeral nodes. The `cloud-provider` module also provides provider-specific Cluster API custom resource templates to `node-manager`.
+The module interacts with the `cloud-provider` module via kube-apiserver using the `kube-system/d8-node-manager-cloud-provider` Secret to obtain cloud connection settings and create [CloudEphemeral nodes](../../../glossary.html#cloud-ephemeral-node). The `cloud-provider` module also provides provider-specific Cluster API custom resource templates to `node-manager`.
 {% endalert %}
 
 The following external components interact with the module:
@@ -107,7 +107,7 @@ The following external components interact with the module:
 
    * Executes validating and conversion webhooks of node-controller.
    * Executes mutating and validating webhooks of capi-controller-manager.
-   * Forwards requests for bashible resources to bashible-api-server.
+   * Forwards requests for [bashible](../../../glossary.html#bashible) resources to [bashible-api-server](../../../glossary.html#bashible-api-server).
 
 1. **Prometheus-main**:
 
@@ -116,7 +116,7 @@ The following external components interact with the module:
 ## Architecture features specific to CloudEphemeral nodes
 
 1. Nodes are ephemeral and automatically created and deleted by the module.
-1. A configured cloud provider module (`cloud-provider-*`) is required for interaction with cloud infrastructure. It also includes csi-driver and cloud-controller-manager.
+1. A configured [cloud provider](../../../glossary.html#cloud-provider) module (`cloud-provider-*`) is required for interaction with cloud infrastructure. It also includes csi-driver and cloud-controller-manager.
 1. **Capi-controller-manager** manages the lifecycle of the cluster and its nodes through higher-level custom resources, without directly provisioning infrastructure. It generates infrastructure-specific custom resources, leaving provisioning to the `cloud-provider` module.
 1. **Cluster-autoscaler** enables node autoscaling.
 1. Node reservation is supported.

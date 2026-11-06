@@ -9,17 +9,17 @@ Deckhouse Platform (DP) supports two inter-cluster communication models:
 - [Federation](../alliance/federation.html)
 
 Both models can be implemented using Istio (via the [`istio`](/modules/istio/) module).
-Istio provides deployment of a service mesh for managing and configuring network interactions between applications within a cluster.
+Istio provides deployment of a [service mesh](../../../../glossary.html#service-mesh) for managing and configuring network interactions between applications within a cluster.
 
 ## Service mesh usage specifics in DP
 
-Available scenarios depend on the platform edition.
+Available scenarios depend on the platform [edition](../../../../glossary.html#edition).
 
-Multicluster and federation are available in the Enterprise Edition (EE).
+[Multicluster](../../../../glossary.html#multicluster) and [federation](../../../../glossary.html#federation) are available in the Enterprise Edition (EE).
 
 In the Community Edition (CE), Basic Edition (BE), Standard Edition (SE), and Standard Edition+ (SE+),
 the service mesh can only be used within a single cluster — for example, to implement patterns such as Circuit Breaker,
-Canary Deployment, and others.
+[Canary Deployment](../../../../glossary.html#canary-deployment), and others.
 
 | Use case | CE / BE / SE / SE+  | EE |
 |----------|---------------------|----|

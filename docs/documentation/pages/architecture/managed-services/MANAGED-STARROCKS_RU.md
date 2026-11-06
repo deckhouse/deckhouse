@@ -36,7 +36,7 @@ description: Архитектура модуля managed-starrocks в Deckhouse 
 
 1. **Managed-starrocks-operator** (Deployment) — оператор Kubernetes, состоящий из одного контейнера **manager** и выполняющий следующие операции:
 
-   - согласование состояния кастомных ресурсов [Starrocks](/modules/managed-starrocks/cr.html#starrocks) во всех пользовательских неймспейсах. Кастомные ресурсы Starrocks и StarrocksClass определяют настройки инстанса StarRocks;
+   - согласование состояния кастомных ресурсов [Starrocks](/modules/managed-starrocks/cr.html#starrocks) во всех [пользовательских неймспейсах](../../glossary.html#user-namespace). Кастомные ресурсы Starrocks и StarrocksClass определяют настройки инстанса StarRocks;
 
    - создание и управление кастомным ресурсом [Certificate](https://cert-manager.io/docs/usage/certificate/) и ресурсами StatefulSet, Service, Secret, ConfigMap и PersistentVolumeClaim, относящимися к инстансу StarRocks.
 

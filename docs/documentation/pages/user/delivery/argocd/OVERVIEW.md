@@ -38,7 +38,7 @@ If an Argo CD instance is not deployed yet, contact the administrator or follow 
 
 ## AppProject projects
 
-[AppProject](/modules/operator-argo/cr.html#appproject) is an Argo CD custom resource that defines the logical boundaries of a project. With it, you can define:
+[AppProject](/modules/operator-argo/cr.html#appproject) is an Argo CD custom resource that defines the logical boundaries of a [project](../../../glossary.html#project). With it, you can define:
 
 - which Git repositories are allowed as application sources;
 - which clusters and namespaces applications may be deployed to;
@@ -107,7 +107,7 @@ You can create an application through the Argo CD web interface. To do this:
 1. Open the web interface of the required Argo CD instance.
 1. Go to the "Applications" section.
 1. Click "New App".
-1. Specify the application name, project, repository, revision, path to manifests or chart, and the target cluster and namespace.
+1. Specify the application name, [project](../../../glossary.html#project), repository, revision, path to manifests or chart, and the target cluster and namespace.
 1. If needed, configure automatic synchronization and additional parameters.
 1. Click "Create".
 

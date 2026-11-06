@@ -26,7 +26,7 @@ The Level 2 C4 architecture of the [`snapshot-controller`](/modules/snapshot-con
 
 The module consists of the following components:
 
-1. **Snapshot-controller**: Works in conjunction with the snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)) sidecar container of the csi-controller Pod of the `cloud-provider-*` module (as long as the provider's CSI driver supports snapshot creation).
+1. **Snapshot-controller**: Works in conjunction with the snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)) sidecar container of the csi-controller Pod of the `cloud-provider-*` module (as long as the provider's [CSI driver](../../glossary.html#csi-driver) supports snapshot creation).
 
    A single snapshot-controller is used for all installed CSI drivers. It watches for VolumeSnapshot and VolumeSnapshotContent resources. When a new VolumeSnapshot resource is created, the controller creates a VolumeSnapshotContent resource and binds them together. As a result, VolumeSnapshot points to a respective VolumeSnapshotContent, and that VolumeSnapshotContent points to the original VolumeSnapshot.
 

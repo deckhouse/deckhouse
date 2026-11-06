@@ -34,7 +34,7 @@ The module consists of the following components:
 
 1. **Managed-cassandra-operator** (Deployment): Kubernetes operator consisting of a single container **manager** that performs the following operations:
 
-   * Reconciles [Cassandra](/modules/managed-cassandra/cr.html#cassandra) custom resources in all user namespaces. The Cassandra and CassandraClass custom resources define the settings of the Cassandra instance.
+   * Reconciles [Cassandra](/modules/managed-cassandra/cr.html#cassandra) custom resources in all [user namespaces](../../glossary.html#user-namespace). The Cassandra and CassandraClass custom resources define the settings of the Cassandra instance.
 
    * Creates and manages StatefulSet, Service, Secret, and PersistentVolumeClaim resources related to the Cassandra instance.
 

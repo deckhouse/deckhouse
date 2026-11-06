@@ -17,7 +17,7 @@ For VMware Cloud Director API versions earlier than `37.2`, compatibility mode f
 
 ## Layouts
 
-Deckhouse Platform supports two layouts for deploying resources in VCD.
+Deckhouse Platform supports two [layouts](../../../../glossary.html#layout) for deploying resources in VCD.
 
 ### Standard
 
@@ -65,7 +65,7 @@ If the Edge Gateway is based on `NSX-T`, a DHCP server will be automatically ena
 If `NSX-V` is used, DHCP must be configured manually. Otherwise, nodes waiting to obtain an IP address via DHCP will not be able to receive one.
 
 {% alert level="warning" %}
-It is not recommended to use dynamic addressing for the first master node together with `NSX-V`.
+It is not recommended to use dynamic addressing for the first [master node](../../../../glossary.html#master-node) together with `NSX-V`.
 {% endalert %}
 
 This layout assumes the automatic creation of the following NAT rules:
@@ -181,7 +181,7 @@ masterNodeGroup:
 
 ## Configuration
 
-Integration is carried out using the [VCDClusterConfiguration](/modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration) resource, which describes the configuration of the cloud cluster in VCD and is used by the virtualization system if the cluster’s control plane is hosted there. The DP module responsible for integration is automatically configured based on the selected deployment layout.
+Integration is carried out using the [VCDClusterConfiguration](/modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration) resource, which describes the configuration of the [cloud cluster](../../../../glossary.html#cloud-cluster) in VCD and is used by the virtualization system if the cluster’s control plane is hosted there. The DP module responsible for integration is automatically configured based on the selected deployment [layout](../../../../glossary.html#layout).
 
 To modify the configuration in a running cluster, execute the following command:
 
@@ -228,8 +228,8 @@ provider:
 ```
 
 The number of nodes to be provisioned and their parameters are defined in the [NodeGroup](/modules/node-manager/cr.html#nodegroup) custom resource,
-where you also specify the name of the instance class used for that group (the `cloudInstances.classReference` parameter).
-For the VCD cloud provider, the instance class is a custom resource called [VCDInstanceClass](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass),
+where you also specify the name of the [instance class](../../../../glossary.html#instance-class) used for that group (the `cloudInstances.classReference` parameter).
+For the VCD [cloud provider](../../../../glossary.html#cloud-provider), the instance class is a custom resource called [VCDInstanceClass](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass),
 which contains the specific configuration of the VMs.
 
 The following is the example configuration of VCDInstanceClass for ephemeral nodes of the VMware Cloud Director cloud provider.

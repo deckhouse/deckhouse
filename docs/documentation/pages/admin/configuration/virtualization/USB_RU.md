@@ -7,10 +7,10 @@ lang: ru
 ---
 
 {% alert level="info" %}
-Проброс USB-устройств доступен в коммерческих редакциях Deckhouse Platform (DP).
+Проброс USB-устройств доступен в коммерческих [редакциях](../../../glossary.html#edition) Deckhouse Platform (DP).
 {% endalert %}
 
-За проброс USB-устройств к виртуальным машинам (ВМ) отвечает системный компонент `virtualization-dra`, которому на узле нужны три модуля ядра:
+За проброс USB-устройств к виртуальным машинам (ВМ) отвечает [системный компонент](../../../glossary.html#system-component) `virtualization-dra`, которому на узле нужны три модуля ядра:
 
 - `usbip_core`;
 - `usbip_host`;
@@ -49,7 +49,7 @@ d8 k -n d8-virtualization get pods -l app=virtualization-dra -o wide
 
 1. После назначения неймспейса DP создаёт в нём ресурс [USBDevice](/modules/virtualization/cr.html#usbdevice).
 
-1. Владелец проекта подключает устройство [USBDevice](/modules/virtualization/cr.html#usbdevice) к виртуальной машине, добавив его в параметр [`.spec.usbDevices`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-usbdevices) ресурса [VirtualMachine](/modules/virtualization/cr.html#virtualmachine).
+1. Владелец [проекта](../../../glossary.html#project) подключает устройство [USBDevice](/modules/virtualization/cr.html#usbdevice) к виртуальной машине, добавив его в параметр [`.spec.usbDevices`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-usbdevices) ресурса [VirtualMachine](/modules/virtualization/cr.html#virtualmachine).
 
 ## Обнаруженные устройства (NodeUSBDevice)
 
@@ -147,7 +147,7 @@ Logitech Webcam C920 (046d:082d)
 
 {% endtabs %}
 
-Устройства, назначенные проекту, его владелец видит в разделе «Виртуализация» → «USB-устройства» своего проекта.
+Устройства, назначенные [проекту](../../../glossary.html#project), его владелец видит в разделе «Виртуализация» → «USB-устройства» своего проекта.
 
 ## Требования и ограничения
 

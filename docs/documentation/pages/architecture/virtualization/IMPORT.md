@@ -5,7 +5,7 @@ search: image import, image upload, import image, upload image, disk import, dis
 description: Description of importing and uploading VM images and disks in virtualization module in Deckhouse Platform.
 ---
 
-Virtualization-controller of the [Virtualization-API](api.html) component of the [`virtualization`](/modules/virtualization/) module allows you to import VM images and disks from different sources into PVC volumes used as VM disks managed by KubeVirt.
+Virtualization-controller of the [Virtualization-API](api.html) component of the [`virtualization`](/modules/virtualization/) module allows you to import [VM images](../../glossary.html#vm-image) and disks from different sources into PVC volumes used as [VM disks](../../glossary.html#vm-disk) managed by KubeVirt.
 
 {% alert level="info" %}
 [KubeVirt](https://github.com/kubevirt/kubevirt) is an open-source project that allows you to launch, deploy, and manage VMs using Kubernetes as an orchestration platform. It enables cooperation between traditional VMs and container workloads in the same Kubernetes cluster, providing a single control plane.
@@ -13,7 +13,7 @@ Virtualization-controller of the [Virtualization-API](api.html) component of the
 
 Depending on the scenarios for importing or uploading VM images and disks, virtualization-controller launches the following *temporary* pods:
 
-1. **D8v-<vi\|cvi>-importer**: Pod consisting of a single **d8v-dvcr-importer** container, that is launched to implement the following scenarios for importing VM images and disks to DVCR storage:
+1. **D8v-<vi\|cvi>-importer**: Pod consisting of a single **d8v-dvcr-importer** container, that is launched to implement the following scenarios for importing VM images and disks to [DVCR](../../glossary.html#dvcr) storage:
 
    * Import of a VM image from external sources (HTTP source available via URL or container registry).
    * Import of a VM image, disk or snapshot from VirtualImage, ClusterVirtualImage, VirtualDisk or VirtualDiskSnapshot resources.
@@ -30,7 +30,7 @@ Virtualization-controller also supports the following scenarios for importing VM
 
 * Importing a VM image from container registry into PVC volume.
 * Importing a VM image from volume snapshot (VolumeSnapshot resource) into PVC volume.
-* Importing a VM image from one PVC volume to another PVC volume (cloning by CSI driver).
+* Importing a VM image from one PVC volume to another PVC volume (cloning by [CSI driver](../../glossary.html#csi-driver)).
 * Creating an empty PVC volume.
 
 {% alert level="info" %}

@@ -4,11 +4,11 @@ permalink: en/user/managed-services/
 description: "Using managed services in Deckhouse Platform"
 ---
 
-Managed services allow users to create and use ready-to-run application services by using Kubernetes custom resources.
+[Managed services](../../glossary.html#managed-service) allow users to create and use ready-to-run application services by using Kubernetes custom resources.
 
 ## How it works
 
-A user creates a custom resource of a managed service in their namespace (project), for example Postgres, and describes the desired configuration in it: resources, deployment mode, topology, users, and other parameters. The resource references a managed service class (for example, PostgresClass) prepared by the cluster administrator — the class defines the allowed parameters and limits.
+A user creates a custom resource of a managed service in their namespace ([project](../../glossary.html#project)), for example Postgres, and describes the desired configuration in it: resources, deployment mode, topology, users, and other parameters. The resource references a managed service class (for example, PostgresClass) prepared by the cluster administrator — the class defines the allowed parameters and limits.
 
 The operator watches these resources and creates or updates the managed service's running instances according to the specified configuration. The resource status reflects the current state of the managed service.
 

@@ -5,7 +5,7 @@ description: "The VirtualMachineClass resource: the default class, the set of se
 search: VirtualMachineClass, virtual machine class, default class
 ---
 
-A virtual machine (VM) class defines what the project owner doesn't configure: the virtual CPU model, the allowed combinations of cores and memory, and the nodes where a VM can run. These rules are described by the [VirtualMachineClass](/modules/virtualization/cr.html#virtualmachineclass) resource, which you use to control how project workloads are distributed across cluster nodes.
+A virtual machine (VM) class defines what the [project](../../../glossary.html#project) owner doesn't configure: the virtual CPU model, the allowed combinations of cores and memory, and the nodes where a VM can run. These rules are described by the [VirtualMachineClass](/modules/virtualization/cr.html#virtualmachineclass) resource, which you use to control how project workloads are distributed across cluster nodes.
 
 On the initial installation, the module creates the `generic` class with the Nehalem CPU model. This model is old but supported by any modern CPU, so VMs of this class start on any cluster node and migrate between nodes without restrictions.
 

@@ -312,7 +312,7 @@ The user can see the available options and pick a suitable one when creating a P
 
 ## Manage fault tolerance across availability zones
 
-The administrator can manage the fault tolerance of users' PostgreSQL instances by setting their availability zone distribution topology in the [`spec.topology`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology) parameter section. This can be useful in production environments with data-center-level fault tolerance requirements.
+The administrator can manage the fault tolerance of users' PostgreSQL instances by setting their [availability zone](../../../../glossary.html#availability-zone) distribution topology in the [`spec.topology`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology) parameter section. This can be useful in production environments with data-center-level fault tolerance requirements.
 
 Three topologies are available:
 
@@ -336,7 +336,7 @@ spec:
       - zone-b
 ```
 
-In this fragment, `Zonal` and `TransZonal` modes are allowed, with `TransZonal` applied by default. The `allowedZones` field lists placeholder zones — replace them with the actual zone names from your cloud provider or data center.
+In this fragment, `Zonal` and `TransZonal` modes are allowed, with `TransZonal` applied by default. The `allowedZones` field lists placeholder zones — replace them with the actual zone names from your [cloud provider](../../../../glossary.html#cloud-provider) or data center.
 
 Users can choose the fault tolerance level when creating a Postgres object. If not specified explicitly, the default value applies (as set in the `defaultTopology` parameter).
 

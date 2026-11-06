@@ -16,7 +16,7 @@ subjects:
 ```
 
 {% alert level="warning" %}
-В случае использования [модуля `user-authn`](/modules/user-authn/) и статических пользователей, указывайте в `subjects` именно email пользователя, а не имя [ресурса User](/modules/user-authn/cr.html#user).
+В случае использования [модуля `user-authn`](/modules/user-authn/) и [статических пользователей](../../../../glossary.html#static-user), указывайте в `subjects` именно email пользователя, а не имя [ресурса User](/modules/user-authn/cr.html#user).
 {% endalert %}
 
 или
@@ -36,7 +36,7 @@ subjects:
   namespace: <пространство имён, в котором создан сервисный аккаунт>
 ```
 
-## Предоставление прав с помощью AuthorizationRule и ClusterAuthorizationRule (текущая ролевая модель)
+## Предоставление прав с помощью AuthorizationRule и ClusterAuthorizationRule (текущая [ролевая модель](../../../../glossary.html#rbac))
 
 При использовании текущей ролевой модели в Deckhouse Platform для предоставления прав пользователям можно использовать ресурсы [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) и [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule).
 
@@ -88,7 +88,7 @@ spec:
 
 При использовании экспериментальной ролевой модели в Deckhouse Platform для предоставления прав пользователям можно использовать ресурсы [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) и [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/).
 
-### Назначение прав администратору кластера (экспериментальная ролевая модель)
+### Назначение прав администратору кластера (экспериментальная [ролевая модель](../../../../glossary.html#rbac))
 
 Для назначения прав администратору кластера используйте [manage-роль](../authorization/rbac-experimental.html#manage-роли) `d8:manage:all:manager` в [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/).
 
@@ -125,7 +125,7 @@ roleRef:
 
 ### Назначение прав сетевому администратору (экспериментальная ролевая модель)
 
-Для назначения прав сетевому администратору на управление сетевой подсистемой кластера используйте [manage-роль](../authorization/rbac-experimental.html#manage-роли) `d8:manage:networking:manager` в [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/).
+Для назначения прав сетевому администратору на управление сетевой [подсистемой](../../../../glossary.html#subsystem) кластера используйте [manage-роль](../authorization/rbac-experimental.html#manage-роли) `d8:manage:networking:manager` в [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/).
 
 Пример назначения прав сетевому администратору (User `jane`):
 

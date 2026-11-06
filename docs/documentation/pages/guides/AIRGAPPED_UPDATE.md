@@ -6,7 +6,7 @@ lang: en
 ---
 
 {% alert level="info" %}
-This guide is intended for DP Enterprise Edition,
+This guide is intended for DP [Enterprise Edition](../glossary.html#edition),
 but the mechanism is the same [for other editions](../reference/revision-comparison.html).
 
 To run the commands given in the guide, you need to authenticate in the container registry `registry.deckhouse.io`. Use `license-token` as the username and your license token as the password for authentication.
@@ -18,7 +18,7 @@ Install it first following the [official instructions](https://github.com/google
 ## Platform update mechanism using release channels
 
 Deckhouse Platform (DP) updates are based on [release channels](../architecture/updating.html#release-channels).
-You can check which release channel is configured for your DP installation
+You can check which [release channel](../glossary.html#release-channel) is configured for your DP installation
 in the [`deckhouse`](/modules/deckhouse/configuration.html) ModuleConfig by running the following command:
 
 ```bash
@@ -58,7 +58,7 @@ version.json
 The image contains two key files:
 
 - `changelog.yaml`: Describes changes.
-- `version.json`: Contains data about the release canary deployment (`canary`), requirements (`requirements`), disruptions (`disruptions`) ([deprecated field](../reference/api/cr.html#deckhouserelease-v1alpha1-spec-disruptions)), and the release version itself in the `version` field.
+- `version.json`: Contains data about the release [canary deployment](../glossary.html#canary-deployment) (`canary`), requirements (`requirements`), disruptions (`disruptions`) ([deprecated field](../reference/api/cr.html#deckhouserelease-v1alpha1-spec-disruptions)), and the release version itself in the `version` field.
 
   To view the contents of `version.json`, run the following command:
 
@@ -123,11 +123,11 @@ When the `version` field changes in `version.json` in the registry, DP applies a
 a `deckhouserelease` object is created and the update process begins.
 
 {% alert level="info" %}
-If the `deckhouse` module is set to manual update mode (via the [`settings.update.mode`](/modules/deckhouse/configuration.html#parameters-update-mode) field),
+If the `deckhouse` module is set to manual [update mode](../glossary.html#update-mode) (via the [`settings.update.mode`](/modules/deckhouse/configuration.html#parameters-update-mode) field),
 you need to manually approve the new version before it is applied.
 {% endalert %}
 
-If there is a gap between the minor version running in the cluster and the one in the `release-channel` image,
+If there is a gap between the [minor version](../glossary.html#minor-version) running in the cluster and the one in the `release-channel` image,
 DP will automatically attempt to reconstruct intermediate `deckhouserelease` objects to perform a sequential update.
 
 {% alert level="warning" %}
@@ -142,7 +142,7 @@ Skipping minor releases may result in:
 
 ## Module from source update mechanism
 
-Modules from source have a similar update mechanism, but their release cycle is decoupled from the platform and fully independent.
+[Modules from source](../glossary.html#module-from-source) have a similar update mechanism, but their release cycle is decoupled from the platform and fully independent.
 
 The cluster contains [ModuleSource](../reference/api/cr.html#modulesource) resources tracked by DP,
 which determine the list of available modules.
@@ -231,7 +231,7 @@ Skipping minor releases may result in:
 - Cluster malfunction due to missed migrations
 {% endalert %}
 
-If required minor versions are missing,
+If required [minor versions](../glossary.html#minor-version) are missing,
 DP will report an error that may look as follows: `minor version is greater than deployed $version by one`.
 
 If there is a gap between the minor version running in the cluster and the one in the `release` image,
@@ -243,7 +243,7 @@ DP will automatically attempt to reconstruct intermediate `modulerelease` object
 Available in DP EE and DP Ultimate.
 {% endalert %}
 
-Vulnerability databases are updated every 6 hours.
+[Vulnerability databases](../glossary.html#vulnerability-database) are updated every 6 hours.
 The `operator-trivy` module in the cluster downloads them from the registry once during this period.
 
 Vulnerability database images in [DP EE](/modules/operator-trivy/) have fixed names and tags and are available at:
@@ -273,7 +273,7 @@ To update DP, its modules, and vulnerability databases to the latest versions in
 download the latest patch releases of all required platform minor versions and modules, then upload them to your registry.
 
 Running `d8 mirror pull --source='registry.deckhouse.io/deckhouse/ee' --license='<LICENSE_TOKEN>' $(pwd)/d8-bundle`
-downloads all release channel images and all modules (over 30 in DP EE).
+downloads all [release channel](../glossary.html#release-channel) images and all modules (over 30 in DP EE).
 This results in a very large `d8-bundle` (at the time of writing, the volume of the `d8-bundle` directory is more than 50 GB).
 
 To avoid this, download only the images relevant to your version following these guidelines:
@@ -320,11 +320,11 @@ To avoid this, download only the images relevant to your version following these
    d8 mirror pull --source='registry.deckhouse.io/deckhouse/ee' --license='<LICENSE_TOKEN>' --since-version='v1.68.13' --include-module='commander-agent@1.2.4' --include-module='console@1.35.1' $(pwd)/d8-bundle
    ```
 
-   > If you have already set up periodic downloading and pushing of vulnerability databases to your registry,
+   > If you have already set up periodic downloading and pushing of [vulnerability databases](../glossary.html#vulnerability-database) to your registry,
    > you can add the flag `--no-security-db` to skip them during this process.
 
-   This will download the latest patch releases of all required platform minor versions and modules,
-   starting from the latest patch versions up to the current ones on [release channels](https://releases.deckhouse.io/ee).
+   This will download the latest patch releases of all required platform [minor versions](../glossary.html#minor-version) and modules,
+   starting from the latest [patch versions](../glossary.html#patch-version) up to the current ones on [release channels](https://releases.deckhouse.io/ee).
 
 1. Push the artifacts to your registry using the following command:
 
@@ -354,7 +354,7 @@ Error: pull failed, see the log for details
 ```
 
 This means that release deployment on a channel has been suspended.
-This happens when a new version is pushed to the release channel but then something happened that paused its rollout.
+This happens when a new version is pushed to the [release channel](../glossary.html#release-channel) but then something happened that paused its rollout.
 The channel image is patched with a `suspend` flag.
 
 Nevertheless, you can still download the platform version by specifying the `--deckhouse-tag` flag in `d8 mirror pull`.

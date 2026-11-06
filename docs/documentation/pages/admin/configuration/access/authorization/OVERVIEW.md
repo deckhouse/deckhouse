@@ -11,7 +11,7 @@ ensuring security and operational control in the cluster.
 
 DP supports two role models:
 
-- [Current](../authorization/rbac-current.html): The end-to-end authorization subsystem extends the standard RBAC mechanism
+- [Current](../authorization/rbac-current.html): The end-to-end authorization [subsystem](../../../../glossary.html#subsystem) extends the standard RBAC mechanism
   using custom resources — [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) and [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule).
 - [Experimental](../authorization/rbac-experimental.html): This model also relies on the standard RBAC mechanism.
   Access is configured by creating [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) or [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) resources.

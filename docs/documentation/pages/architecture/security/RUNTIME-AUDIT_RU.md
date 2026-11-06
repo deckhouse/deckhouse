@@ -6,7 +6,7 @@ search: рантайм-аудит, аудит рантайма, правила �
 description: Архитектура рантайм-аудита в Deckhouse Platform.
 ---
 
-Рантайм-аудит Deckhouse Platform (DP) основан на системе обнаружения угроз [Falco](https://falco.org/).
+[Рантайм-аудит](../../glossary.html#runtime-audit) Deckhouse Platform (DP) основан на системе обнаружения угроз [Falco](https://falco.org/).
 Этот механизм анализирует события ядра Linux и аудит событий Kubernetes API для выявления подозрительной активности
 в работающих контейнерах и кластере в целом.
 
@@ -32,7 +32,7 @@ DP запускает объединённые в DaemonSet агенты Falco �
   и экспортирует их в виде метрик во внешние системы;
 - `kube-rbac-proxy` — защищает эндпоинт метрик `falcosidekick` от неавторизованного доступа.
 
-Подробнее с архитектурой модуля [`runtime-audit-engine`](/modules/runtime-audit-engine/), реализующего аудит событий безопасности DP, можно ознакомиться [в разделе с описанием архитектуры модуля](./runtime-audit-engine.html).
+Подробнее с архитектурой модуля [`runtime-audit-engine`](/modules/runtime-audit-engine/), реализующего аудит [событий безопасности](../../glossary.html#security-event) DP, можно ознакомиться [в разделе с описанием архитектуры модуля](./runtime-audit-engine.html).
 
 ## Правила аудита
 

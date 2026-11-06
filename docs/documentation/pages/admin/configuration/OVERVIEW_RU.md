@@ -9,7 +9,7 @@ lang: ru
 
 Deckhouse конфигурируется с помощью:
 
-- **[Глобальных настроек](../../reference/api/global.html).** Глобальные настройки хранятся в ресурсе `ModuleConfig/global`. Эти настройки можно рассматривать как специальный модуль `global`, который нельзя отключить.
+- **[Глобальных настроек](../../reference/api/global.html).** [Глобальные настройки](../../glossary.html#global-settings) хранятся в ресурсе `ModuleConfig/global`. Эти настройки можно рассматривать как специальный модуль `global`, который нельзя отключить.
 - **[Настроек модулей](#настройка-модуля).** Настройки каждого модуля хранятся в ресурсе `ModuleConfig`, имя которого совпадает с именем модуля (в kebab-case).
 - **[Кастомных ресурсов](../../reference/api/cr.html).** Некоторые модули настраиваются с помощью дополнительных кастомных ресурсов.
 
@@ -129,9 +129,9 @@ d8 system edit cluster-configuration
 - откроет редактор для изменения конфигурации;
 - удалит аннотацию после сохранения изменений.
 
-Для изменения защищённых параметров с помощью `dhctl` выполните следующие шаги:
+Для изменения [защищённых параметров](../../glossary.html#protected-parameters) с помощью `dhctl` выполните следующие шаги:
 
-1. Получите текущую версию и редакцию DP из вашего кластера. Для этого **на локальной машине** запустите контейнер установщика DP соответствующей редакции и версии:
+1. Получите текущую версию и [редакцию](../../glossary.html#edition) DP из вашего кластера. Для этого **на локальной машине** запустите контейнер [установщика](../../glossary.html#installer) DP соответствующей редакции и версии:
 
    ```shell
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}')
@@ -162,7 +162,7 @@ d8 system edit cluster-configuration
 
    Где:
    - `<SSH_KEY_FILENAME>` — имя файла вашего приватного SSH-ключа,
-   - `<USERNAME>` — SSH-пользователь с правами sudo на целевом  master-узле кластера,
+   - `<USERNAME>` — SSH-пользователь с правами sudo на целевом  [master-узле](../../glossary.html#master-node) кластера,
    - `<MASTER-NODE-HOST>` — IP-адрес или имя хоста master-узла.
 
 1. Отредактируйте конфигурацию в открывшемся редакторе, сохраните изменения и выйдите из редактора.
@@ -279,7 +279,7 @@ spec:
 
 Для явного включения или отключения модуля необходимо установить `true` или `false` в [поле `.spec.enabled`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig-v1alpha1-spec-enabled) в соответствующем кастомном ресурсе ModuleConfig. Если для модуля нет такого кастомного ресурса ModuleConfig, его нужно создать.
 
-Пример явного выключения модуля [`user-authn`](/modules/user-authn/) (модуль будет выключен независимо от используемого набора модулей):
+Пример явного выключения модуля [`user-authn`](/modules/user-authn/) (модуль будет выключен независимо от используемого [набора модулей](../../glossary.html#module-bundle)):
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -305,8 +305,8 @@ user-authn   false     1         12h
 В зависимости от используемого [набора модулей](/modules/deckhouse/configuration.html#parameters-bundle) (bundle) модули могут быть включены или выключены по умолчанию.
 
 {% alert level="warning" %}
-Таблица ниже описывает наборы модулей только для встроенных модулей Deckhouse Platform.  
-Модули, подключаемые из источника модулей, в этой таблице не учитываются.
+Таблица ниже описывает наборы модулей только для [встроенных модулей](../../glossary.html#built-in-module) Deckhouse Platform.  
+Модули, подключаемые из [источника модулей](../../glossary.html#module-source), в этой таблице не учитываются.
 {% endalert %}
 
 <table>
@@ -337,15 +337,15 @@ user-authn   false     1         12h
 Deckhouse Platform с набором модулей `Minimal` без включения базовых модулей сможет работать только в уже развернутом кластере.
 {% endalert %}
 
-Для установки DP с набором модулей `Minimal` включите как минимум следующие модули, указав их в конфигурационном файле установщика:
+Для установки DP с набором модулей `Minimal` включите как минимум следующие модули, указав их в конфигурационном файле [установщика](../../glossary.html#installer):
 
 * [`cni-cilium`](/modules/cni-cilium/) или другой модуль управления CNI (при необходимости);
 * [`control-plane-manager`](/modules/control-plane-manager/);
 * [`kube-dns`](/modules/kube-dns/);
-* [`terraform-manager`](/modules/terraform-manager/), в случае развертывания облачного кластера;
+* [`terraform-manager`](/modules/terraform-manager/), в случае развертывания [облачного кластера](../../glossary.html#cloud-cluster);
 * [`node-manager`](/modules/node-manager/);
 * `registry-packages-proxy`;
-* модуль облачного провайдера (например, [`cloud-provider-aws`](/modules/cloud-provider-aws/) для AWS), в случае развертывания облачного кластера.
+* модуль [облачного провайдера](../../glossary.html#cloud-provider) (например, [`cloud-provider-aws`](/modules/cloud-provider-aws/) для AWS), в случае развертывания облачного кластера.
 
 ### Доступ к документации текущей версии
 
@@ -368,7 +368,7 @@ Deckhouse Platform с набором модулей `Minimal` без включ�
 Возможность настройки `nodeSelector` и `tolerations` отключена для модулей:
 
 - которые работают на всех узлах кластера (например, [`cni-flannel`](/modules/cni-flannel/), [`monitoring-ping`](/modules/monitoring-ping/));
-- которые работают на всех master-узлах (например, [`prometheus-metrics-adapter`](/modules/prometheus-metrics-adapter/), [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/)).
+- которые работают на всех [master-узлах](../../glossary.html#master-node) (например, [`prometheus-metrics-adapter`](/modules/prometheus-metrics-adapter/), [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/)).
 
 ### Особенности автоматики, зависящие от типа модуля
 

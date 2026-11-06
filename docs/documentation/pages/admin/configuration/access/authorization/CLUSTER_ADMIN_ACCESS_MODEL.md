@@ -4,7 +4,7 @@ permalink: en/admin/configuration/access/authorization/cluster-admin-access-mode
 description: "Admin access model for the Deckhouse Platform cluster"
 ---
 
-Deckhouse Platform (DP) supports the presence of multiple kubeconfig files on master nodes (this feature is implemented by the [`control-plane-manager`](/modules/control-plane-manager/) module). Understanding their purpose is important for secure cluster administration.
+Deckhouse Platform (DP) supports the presence of multiple kubeconfig files on [master nodes](../../../../glossary.html#master-node) (this feature is implemented by the [`control-plane-manager`](/modules/control-plane-manager/) module). Understanding their purpose is important for secure cluster administration.
 
 ## Kubeconfig files on master nodes
 
@@ -23,7 +23,7 @@ Starting from Kubernetes 1.29, kubeadm generates `admin.conf` with the `kubeadm:
 
 If the [`user-authz`](/modules/user-authz/) module is **disabled**, DP binds the `kubeadm:cluster-admins` group to the built-in wildcard ClusterRole `cluster-admin` (same effective model as a plain kubeadm cluster without extra RBAC).
 
-If `user-authz`is **enabled**, the group is bound to `user-authz:cluster-admin`, and a second ClusterRoleBinding adds ClusterRole `d8:control-plane-manager:admin-kubeconfig-supplement` (rules beyond the high-level role, e.g. for certificates and cluster machinery). Together they replace a single wildcard `cluster-admin` for this identity. For full unrestricted access, use `super-admin.conf`.
+If `user-authz`is **enabled**, the group is bound to `user-authz:cluster-admin`, and a second ClusterRoleBinding adds ClusterRole `d8:control-plane-manager:admin-kubeconfig-supplement` (rules beyond the [high-level role](../../../../glossary.html#high-level-role), e.g. for certificates and cluster machinery). Together they replace a single wildcard `cluster-admin` for this identity. For full unrestricted access, use `super-admin.conf`.
 
 ## Recommended admin access
 

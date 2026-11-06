@@ -4,7 +4,7 @@ permalink: en/admin/configuration/network/other/bpflb.html
 ---
 
 You can use the [`cni-cilium`](/modules/cni-cilium/) module
-to configure the BPF Load Balancer (bpfLB) mode of operation in Deckhouse Platform.
+to configure the BPF Load Balancer ([bpfLB](../../../../glossary.html#bpflb)) mode of operation in Deckhouse Platform.
 
 In Kubernetes, traffic typically comes through a load balancer
 that distributes incoming requests among servers and processes responses.

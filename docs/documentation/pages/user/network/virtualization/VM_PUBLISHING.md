@@ -17,7 +17,7 @@ Which service type to choose depends on the task:
 - `LoadBalancer`: External access through an external load balancer.
 
 {% alert level="info" %}
-If a connection to the VM from a cluster node doesn't go through, check the `NetworkPolicy` in the project. The policy may deny traffic to the machine.
+If a connection to the VM from a cluster node doesn't go through, check the `NetworkPolicy` in the [project](../../../glossary.html#project). The policy may deny traffic to the machine.
 {% endalert %}
 
 A machine gets into a service by labels. Assign the machine the label that the service looks for:
@@ -85,7 +85,7 @@ After creation, you can reach the machine by the `http.default.svc` name.
 
 {% tab "Using the web interface" %}
 
-1. Go to the **Projects** tab and select the project you need.
+1. Go to the **[Projects](../../../glossary.html#project)** tab and select the project you need.
 1. Go to **Network** → **Services**.
 1. Click **Create**.
 1. In the form that opens, enter the service name in the **Name** field.
@@ -100,7 +100,7 @@ After creation, you can reach the machine by the `http.default.svc` name.
 
 ## Service of the ClusterIP type
 
-`ClusterIP` is the standard service type that provides an internal IP address for accessing the service inside the cluster. This IP address is used to route traffic between different system components and lets virtual machines interact with each other through a predictable and stable address.
+`ClusterIP` is the standard service type that provides an internal IP address for accessing the service inside the cluster. This IP address is used to route traffic between different [system components](../../../glossary.html#system-component) and lets virtual machines interact with each other through a predictable and stable address.
 
 {% tabs svc-clusterip %}
 
@@ -173,7 +173,7 @@ If you don't specify the `nodePort` value explicitly, an arbitrary port is assig
 
 {% tab "Using the web interface" %}
 
-1. Go to the **Projects** tab and select the project you need.
+1. Go to the **[Projects](../../../glossary.html#project)** tab and select the project you need.
 1. Go to **Network** → **Services**.
 1. Click **Create**.
 1. In the form that opens, enter the service name in the **Name** field.
@@ -290,7 +290,7 @@ EOF
 
 {% tab "Using the web interface" %}
 
-1. Go to the **Projects** tab and select the project you need.
+1. Go to the **[Projects](../../../glossary.html#project)** tab and select the project you need.
 1. Go to **Network** → **Ingresses**.
 1. Click **Create**.
 1. In the **Create Ingress** form that opens, enter the resource name in the **Name** field, and select the controller class (`spec.ingressClassName`) in the **Ingress Class** field.

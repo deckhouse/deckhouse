@@ -29,7 +29,7 @@ Istio-proxy, который работает в качестве сайдкар-
 - Каждый запрос DNAT'ится в Envoy, который обрабатывает это запрос и создает еще один. На принимающей стороне — аналогично.
 - Каждый Envoy хранит информацию обо всех сервисах в кластере, что требует памяти. Больше кластер — больше памяти потребляет Envoy. Решение — кастомный ресурс [Sidecar](/modules/istio/istio-cr.html#sidecar).
 
-Также важно подготовить Ingress-контроллер и Ingress-ресурсы приложения:
+Также важно подготовить [Ingress-контроллер](../../glossary.html#ingress-controller) и Ingress-ресурсы приложения:
 
 - Включите [`enableIstioSidecar`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-enableistiosidecar) у ресурса IngressNginxController.
 - Добавьте аннотации на Ingress-ресурсы приложения:

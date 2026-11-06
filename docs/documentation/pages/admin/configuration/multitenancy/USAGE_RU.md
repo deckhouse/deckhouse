@@ -5,7 +5,7 @@ description: Управление проектами
 lang: ru
 ---
 
-В Deckhouse Platform есть набор шаблонов для создания проектов:
+В Deckhouse Platform есть набор шаблонов для создания [проектов](../../glossary.html#project):
 
 - `default` — шаблон для базовых сценариев использования проектов:
   * ограничение ресурсов;
@@ -61,7 +61,7 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.
          name: k8s-admins
    ```
 
-1. Для проверки статуса проекта выполните команду:
+1. Для проверки статуса [проекта](../../glossary.html#project) выполните команду:
 
    ```shell
    d8 k get projects my-project
@@ -124,7 +124,7 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.
    {% alert level="info" %}
    Необходимо изменить не только шаблон, но и схему входных параметров под него.
 
-   Шаблоны для проектов поддерживают все [функции шаблонизации Helm](https://helm.sh/docs/chart_template_guide/function_list/).
+   Шаблоны для [проектов](../../glossary.html#project) поддерживают все [функции шаблонизации Helm](https://helm.sh/docs/chart_template_guide/function_list/).
    {% endalert %}
 
 1. Измените имя шаблона в поле `.metadata.name`.
@@ -196,7 +196,7 @@ data:
 
 Ресурсы с лейблом `projects.deckhouse.io/unmanaged`:
 
-- Будут созданы **только один раз** при создании проекта.
+- Будут созданы **только один раз** при создании [проекта](../../glossary.html#project).
 - **Не будут обновляться** при последующих изменениях шаблона или обновлениях.
 - Не будут отслеживаться в статусе проекта.
 - Получат лейблы `projects.deckhouse.io/project` и `projects.deckhouse.io/project-template`, но **не получат** лейбл `heritage: multitenancy-manager`.
@@ -297,7 +297,7 @@ data:
 
 ## Выдача кластерных ресурсов проектам
 
-`multitenancy-manager` позволяет администраторам кластера управлять тем, какие кластерные ресурсы (например, StorageClass) можно использовать из неймспейсов проектов.
+`multitenancy-manager` позволяет администраторам кластера управлять тем, какие кластерные ресурсы (например, StorageClass) можно использовать из неймспейсов [проектов](../../glossary.html#project).
 
 Для этого используются кастомные ресурсы:
 

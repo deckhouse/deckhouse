@@ -6,7 +6,7 @@ lang: ru
 ---
 
 Deckhouse Platform (DP) предоставляет средства для декларативного сбора, обработки,
-нормализации и доставки событий безопасности, извлекаемых из логов приложений
+нормализации и доставки [событий безопасности](../../../../glossary.html#security-event), извлекаемых из логов приложений
 и инфраструктурных компонентов Kubernetes.
 
 Событие безопасности — это структурированная запись о значимом с точки зрения информационной безопасности (ИБ)
@@ -85,7 +85,7 @@ DP позволяет:
 
 ## Настройка источников событий
 
-Источники событий безопасности настраиваются через следующие кастомные ресурсы:
+Источники [событий безопасности](../../../../glossary.html#security-event) настраиваются через следующие кастомные ресурсы:
 
 - [PodSecurityEventShipper](/modules/security-events-manager/cr.html#podsecurityeventshipper) — для контейнерных источников (логи подов в конкретном неймспейсе);
 - [ClusterSecurityEventShipper](/modules/security-events-manager/cr.html#clustersecurityeventshipper) — для кластерных источников (файлы на узлах, логи системных сервисов).
@@ -157,7 +157,7 @@ spec:
 Приёмники настраиваются через ресурс [ClusterSecurityEventDestination](/modules/security-events-manager/cr.html#clustersecurityeventdestination).
 
 Поддерживаются все типы приёмников, доступные в экосистеме `log-shipper` (Loki, Elasticsearch, Kafka, Splunk, Vector, File и другие).
-Для хранения событий безопасности внутри кластера предусмотрена автоматическая настройка приёмника Loki при включении соответствующей опции модуля.
+Для хранения [событий безопасности](../../../../glossary.html#security-event) внутри кластера предусмотрена автоматическая настройка приёмника Loki при включении соответствующей опции модуля.
 
 Пример конфигурации ClusterSecurityEventDestination для настройки приёмника Loki:
 
@@ -218,7 +218,7 @@ spec:
 
 Если настройки модуля не заданы явно, в кластере автоматически создаются следующие объекты:
 
-- [ClusterSecurityEventConfig](/modules/security-events-manager/cr.html#clustersecurityeventconfig) — отвечает за настройку отправки событий безопасности в приёмники. По умолчанию создаётся объект со следующими настройками:
+- [ClusterSecurityEventConfig](/modules/security-events-manager/cr.html#clustersecurityeventconfig) — отвечает за настройку отправки [событий безопасности](../../../../glossary.html#security-event) в приёмники. По умолчанию создаётся объект со следующими настройками:
 
   ```yaml
   apiVersion: security.deckhouse.io/v1alpha1

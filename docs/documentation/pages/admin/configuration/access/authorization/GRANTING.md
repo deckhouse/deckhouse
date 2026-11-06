@@ -15,7 +15,7 @@ subjects:
 ```
 
 {% alert level="warning" %}
-If you are using the [`user-authn`](/modules/user-authn/) module and static users, make sure to specify the user’s email in `subjects`,
+If you are using the [`user-authn`](/modules/user-authn/) module and [static users](../../../../glossary.html#static-user), make sure to specify the user’s email in `subjects`,
 not the name of the [User](/modules/user-authn/cr.html#user) resource.
 {% endalert %}
 
@@ -38,7 +38,7 @@ subjects:
 
 ## Granting permissions using AuthorizationRule and ClusterAuthorizationRule (current role model)
 
-When using the current role model in DP,
+When using the current [role model](../../../../glossary.html#rbac) in DP,
 you can grant permissions to users via the [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) and [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) resources.
 
 ### Granting permissions to a user within a single namespace
@@ -95,7 +95,7 @@ spec:
 
 ## Granting permissions using ClusterRoleBinding and RoleBinding (experimental role model)
 
-When using the experimental role model in DP,
+When using the experimental [role model](../../../../glossary.html#rbac) in DP,
 you can grant permissions to users via the [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) and [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) resources.
 
 ### Assigning cluster administrator permissions (experimental role model)
@@ -136,7 +136,7 @@ The user will have the following permissions:
 
 ### Assigning networking administrator permissions (experimental role model)
 
-To assign networking administrator permissions for managing the cluster’s networking subsystem,
+To assign networking administrator permissions for managing the cluster’s networking [subsystem](../../../../glossary.html#subsystem),
 use the [manage role](rbac-experimental.html#manage-roles) `d8:manage:networking:manager` in a [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) resource.
 
 Example of assigning networking administrator permissions to the user `jane`:

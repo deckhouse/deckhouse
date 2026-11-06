@@ -51,7 +51,7 @@ Without the output redirected to a file, the command fails, and on success you g
 
 {% tab "Using the web interface" %}
 
-1. Go to the **Projects** tab and select the project you need.
+1. Go to the **[Projects](../../glossary.html#project)** tab and select the project you need.
 1. Go to **Virtualization** → **Virtual machines**.
 1. Select the VM you need from the list and click its name.
 1. Go to the **Diagnostics** tab.

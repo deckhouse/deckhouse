@@ -25,7 +25,7 @@ DP supports hybrid integration with VMware vSphere. For configuration details, s
 
 ### Removing CloudPermanent nodes in vSphere
 
-Nodes of the [`CloudPermanent`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-permanent-nodes.html) type are created based on the node group configuration specified in the [`nodeGroups`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-nodegroups) section of the VsphereClusterConfiguration resource.
+Nodes of the [`CloudPermanent`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-permanent-nodes.html) type are created based on the [node group](../../../../glossary.html#node-group) configuration specified in the [`nodeGroups`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-nodegroups) section of the VsphereClusterConfiguration resource.
 
 The [`replicas`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-nodegroups-replicas) parameter defines the required number of virtual machines in the group. After the configuration is changed, run the `dhctl converge` command to start Terraform and bring the state of virtual machines in VMware vSphere in line with the specified number of replicas.
 
@@ -77,7 +77,7 @@ To reduce the number of nodes in a `CloudPermanent` group:
    ```
 
    {% alert level="info" %}
-   Use an installer container of the same edition and version as the cluster.
+   Use an [installer](../../../../glossary.html#installer) container of the same [edition](../../../../glossary.html#edition) and version as the cluster.
    {% endalert %}
 
 1. Wait for `dhctl converge` to complete and check the number of nodes in the group:
@@ -135,7 +135,7 @@ To completely remove a `CloudPermanent` group:
 
    Also use vSphere Client to make sure that the virtual machines associated with the group have been removed.
 
-1. Open the cloud provider configuration again:
+1. Open the [cloud provider](../../../../glossary.html#cloud-provider) configuration again:
 
    ```shell
    d8 system edit provider-cluster-configuration

@@ -29,7 +29,7 @@ description: Архитектура модуля cloud-provider-yandex в Deckho
 
 1. **Сloud-controller-manager** — реализация [Сloud сontroller manager](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/) для Yandex Cloud. Обеспечивает взаимодействие с облаком Yandex Cloud и выполняет следующие функции:
 
-   * реализует связь 1:1 между объектом узла в Kubernetes (Node) и виртуальной машиной в облачном провайдере. Для этого:
+   * реализует связь 1:1 между объектом узла в Kubernetes (Node) и виртуальной машиной в [облачном провайдере](../../../glossary.html#cloud-provider). Для этого:
 
      * заполняет поля `spec.providerID` и `nodeInfo` ресурса Node;
      * проверяет наличие виртуальной машины в облаке и при ее отсутствии удаляет ресурс Node в кластере.
@@ -57,7 +57,7 @@ description: Архитектура модуля cloud-provider-yandex в Deckho
     * **cloud-metrics-exporter** — основной контейнер;
     * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам, получаемым от cloud-metrics-exporter.
 
-4. **CSI-драйвер (yandex)** — реализация CSI-драйвера для Yandex Cloud. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DP, можно ознакомиться на [соответствующей странице документации](../../storage/csi-drivers/csi-driver.html).
+4. **[CSI-драйвер](../../../glossary.html#csi-driver) (yandex)** — реализация CSI-драйвера для Yandex Cloud. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DP, можно ознакомиться на [соответствующей странице документации](../../storage/csi-drivers/csi-driver.html).
 
    CSI-драйвер (yandex) не поддерживает работу со снимками. По этой причине в поде `csi-controller` отсутствует сайдкар-контейнер snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)).
 

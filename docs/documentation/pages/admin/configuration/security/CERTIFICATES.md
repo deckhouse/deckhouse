@@ -9,7 +9,7 @@ Deckhouse Platform (DP) provides built-in tools for managing TLS certificates in
 - Requesting certificates from all supported sources, such as [Let's Encrypt](https://letsencrypt.org/), [HashiCorp Vault](https://developer.hashicorp.com/vault), [Venafi](https://docs.venafi.com/).
 - Issuing self-signed certificates.
 - Automatic renewal and expiration monitoring.
-- Deploying `cm-acme-http-solver` on master nodes and dedicated nodes.
+- Deploying `cm-acme-http-solver` on [master nodes](../../../glossary.html#master-node) and dedicated nodes.
 
 This page describes the available certificate management features in DP
 and the procedure for working with certificate issuers.

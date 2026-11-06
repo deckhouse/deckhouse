@@ -1,0 +1,13 @@
+{%- comment -%}
+Emits glossary.json: a map of term id to its title and short description.
+The client script (docs/site/assets/js/glossary.js) loads it lazily to show tooltips
+on links that point to glossary.html#<id>. `description` is rendered from inline Markdown
+to HTML here, without the wrapping paragraph, so the tooltip can show links and inline code.
+{%- endcomment -%}
+{%- assign terms = site.glossary | where: "lang", page.lang | sort_natural: "title" -%}
+{
+{%- for term in terms %}
+{%- assign term_id = term.path | split: "/" | last | remove: "_RU.md" | remove: ".md" %}
+  {{ term_id | jsonify }}: {"title": {{ term.title | jsonify }}, "description": {{ term.description | markdownify | strip | remove_first: "<p>" | remove: "</p>" | strip | jsonify }}}{% unless forloop.last %},{% endunless %}
+{%- endfor %}
+}

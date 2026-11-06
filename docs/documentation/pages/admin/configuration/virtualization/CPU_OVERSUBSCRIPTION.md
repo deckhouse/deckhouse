@@ -5,12 +5,12 @@ description: "CPU oversubscription for virtual machines: a fixed core fraction a
 search: CPU oversubscription, coreFraction, CPU overcommit
 ---
 
-Oversubscription lets you give the virtual machines (VMs) on a node more virtual cores than the node physically has. This makes sense because VMs rarely load the CPU at the same time and at full capacity.
+[Oversubscription](../../../glossary.html#cpu-oversubscription) lets you give the virtual machines (VMs) on a node more virtual cores than the node physically has. This makes sense because VMs rarely load the CPU at the same time and at full capacity.
 
-The degree of oversubscription is controlled by the `coreFraction` parameter of a virtual machine, and you define its allowed values in the sizing policy of the class. The parameter defines the share of a core's capacity guaranteed to a VM. For example, with `coreFraction: 20%`, a VM always gets a fifth of a core, and it can take a whole core when the node has spare resources.
+The degree of oversubscription is controlled by the `coreFraction` parameter of a virtual machine, and you define its allowed values in the [sizing policy](../../../glossary.html#sizing-policy) of the class. The parameter defines the share of a core's capacity guaranteed to a VM. For example, with `coreFraction: 20%`, a VM always gets a fifth of a core, and it can take a whole core when the node has spare resources.
 
 {% alert level="info" %}
-If the `coreFractions` list isn't set in the class or contains several values, the project owner chooses the degree of oversubscription by specifying `coreFraction` when creating a VM.
+If the `coreFractions` list isn't set in the class or contains several values, the [project](../../../glossary.html#project) owner chooses the degree of oversubscription by specifying `coreFraction` when creating a VM.
 {% endalert %}
 
 When placing a VM on a node, Deckhouse Platform (DP) sums the guaranteed shares of all VMs on that node using the `Σ(cores × coreFraction / 100)` formula. If the sum exceeds the number of physical cores, the VM doesn't start on that node.

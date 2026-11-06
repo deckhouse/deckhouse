@@ -6,7 +6,7 @@ search: csi-ceph, ceph, rbd, rados block device
 description: Архитектура CSI-драйвера для работы с Ceph RBD томами в Deckhouse Platform.
 ---
 
-CSI-драйвер `csi-rbd` — это реализация стандарта [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) для обеспечения работы с Ceph [RBD (RADOS Block Device)](https://docs.ceph.com/en/reef/rbd/) томами в Deckhouse Platform (DP).
+[CSI-драйвер](../../../glossary.html#csi-driver) `csi-rbd` — это реализация стандарта [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) для обеспечения работы с Ceph [RBD (RADOS Block Device)](https://docs.ceph.com/en/reef/rbd/) томами в Deckhouse Platform (DP).
 
 ## Архитектура CSI-драйвера
 
@@ -75,7 +75,7 @@ CSI-драйвер `csi-rbd` состоит из следующих компон
 
 * [Kubelet](../../kubernetes-and-scheduling/kubelet.html):
 
-  * проверяет livenessProbe CSI-драйвера;
+  * проверяет livenessProbe [CSI-драйвера](../../../glossary.html#csi-driver);
   * регистрирует Node Plugin;
   * вызывает RPC `NodeStageVolume`, `NodeUnstageVolume`, `NodePublishVolume`, `NodeUnpublishVolume` и `NodeExpandVolume` в Node Plugin.
 

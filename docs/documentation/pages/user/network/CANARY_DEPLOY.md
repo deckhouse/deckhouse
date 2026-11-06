@@ -4,7 +4,7 @@ description: "Configuring Canary deployment strategy in Deckhouse Platform using
 permalink: en/user/network/canary-deployment.html
 ---
 
-Canary deployment is an application deployment strategy
+[Canary deployment](../../glossary.html#canary-deployment) is an application deployment strategy
 that allows gradually rolling out a new application version to production.
 This approach makes it possible to test new versions on a small portion of traffic,
 minimizing risks and ensuring a smooth transition.
@@ -99,7 +99,7 @@ spec:
 
 ### Configuring Ingress for Canary deployment
 
-For Canary deployment with Ingress NGINX, special annotations are used:
+For [Canary deployment](../../glossary.html#canary-deployment) with Ingress NGINX, special annotations are used:
 
 - `nginx.ingress.kubernetes.io/canary`: Enables Canary mode for the Ingress.
 - `nginx.ingress.kubernetes.io/canary-weight`: Specifies the percentage of traffic to be routed to the Canary version.

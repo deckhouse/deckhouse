@@ -173,7 +173,7 @@ DP поддерживает интеграцию с Yandex Lockbox с помощ
 
 ## Интеграция с Yandex Managed Service for Prometheus
 
-С помощью данной интеграции вы можете использовать [Yandex Managed Service for Prometheus](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/) в качестве внешнего хранилища метрик, например, для долгосрочного хранения.
+С помощью данной интеграции вы можете использовать [Yandex Managed Service for Prometheus](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/) в качестве [внешнего хранилища](../../../../glossary.html#external-storage) метрик, например, для долгосрочного хранения.
 
 Для записи метрик (PrometheusRemoteWrite) выполните следующие шаги:
 

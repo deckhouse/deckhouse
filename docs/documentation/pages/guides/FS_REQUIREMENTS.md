@@ -8,7 +8,7 @@ description: A guide on how to select the disk size and layout of the file syste
 In the [guide to choosing the minimum required disk space](hardware-requirements.html#deciding-on-the-amount-of-resources-needed-for-nodes) for various types of Deckhouse Platform (DP) nodes, the disk volumes that must be allocated for successful installation and operation of DP are specified. But you should also pay attention to the correct configuration of the file system so that the disk space does not suddenly "run out" despite the correctly selected volume at the installation stage.
 
 {% alert level="info" %}
-Problems may arise not through the fault of the administrator, but due to the peculiarities of the installer of the selected Linux distribution. For example, during installation, Astra Linux may allocate 15 GB for the root file system (`/`), 15 GB for the user's home directory (`/home`), and leave the rest unallocated, despite the connected disk having a total capacity of 60 GB, as recommended in the guide. With this configuration, the DP installation will not fail with an error about insufficient disk space.
+Problems may arise not through the fault of the administrator, but due to the peculiarities of the [installer](../glossary.html#installer) of the selected Linux distribution. For example, during installation, Astra Linux may allocate 15 GB for the root file system (`/`), 15 GB for the user's home directory (`/home`), and leave the rest unallocated, despite the connected disk having a total capacity of 60 GB, as recommended in the guide. With this configuration, the DP installation will not fail with an error about insufficient disk space.
 {% endalert %}
 
 To avoid problems in the future, before installing, make sure that the file system partitions of the disk allocated for the machine meet the DP volume requirements.
@@ -21,7 +21,7 @@ DP stores various types of data in specific file system directories. The main on
 * `/var/lib/containerd` — layers of images of DP components and other containers running on the node. The more DP components are installed on a node or user load containers are launched on it, the more free space in this directory will be required.
 * `/var/lib/kubelet` — two types of information are stored in this directory:
   * data about the pods running in the cluster;
-  * ephemeral-storage data — for example, if 7 GB of ephemeral-storage is requested on the master node, and there is not enough space in this directory, pods will not be scheduled for this node.
+  * ephemeral-storage data — for example, if 7 GB of ephemeral-storage is requested on the [master node](../glossary.html#master-node), and there is not enough space in this directory, pods will not be scheduled for this node.
 * `/var/lib/etcd` — the etcd database, which stores the information necessary for the operation of the Kubernetes cluster;
 * `/var/lib/deckhouse/downloaded/` — repository of release configurations for DP modules ([ModuleRelease](../reference/api/cr.html#modulerelease));
 * `/var/lib/deckhouse/stronghold/` — data storage for [Stronghold](/products/stronghold/) (if the corresponding module is enabled);
@@ -100,7 +100,7 @@ The table below shows the recommended amounts of space for the directories used 
 
 ### Worker nodes
 
-The table below shows the recommended amounts of space for the directories used by DP on the worker nodes of the cluster.
+The table below shows the recommended amounts of space for the directories used by DP on the [worker nodes](../glossary.html#worker-node) of the cluster.
 
 <table>
   <thead>
@@ -155,7 +155,7 @@ The table below shows the recommended amounts of space for the directories used 
 
 ### System nodes
 
-The system nodes are the nodes on which the DP components are running. When adding such nodes to the cluster, keep in mind that they host the monitoring load, including:
+The [system nodes](../glossary.html#system-node) are the nodes on which the DP components are running. When adding such nodes to the cluster, keep in mind that they host the monitoring load, including:
 
 - [Prometheus](/modules/prometheus/);
 - [loki](/modules/loki/);
@@ -169,7 +169,7 @@ If you use a cluster configuration without dedicated system nodes, the above loa
 
 ### Pod log storage
 
-Pod logs are stored in the `/var/log/pods/` directory. The amount of logs used depends on the number of containers and DP settings. On average, about 90 containers are running on the master node when using the [Default module set](../admin/configuration/#module-bundles), By default, up to 4 log files of up to 50 MB each are stored for each container, that is, up to 200 MB per container. That is, there should be a minimum of `90 * 200 MB = 18 GB` space available in the directory `/var/log/pods/`.
+Pod logs are stored in the `/var/log/pods/` directory. The amount of logs used depends on the number of containers and DP settings. On average, about 90 containers are running on the [master node](../glossary.html#master-node) when using the [Default module set](../admin/configuration/#module-bundles), By default, up to 4 log files of up to 50 MB each are stored for each container, that is, up to 200 MB per container. That is, there should be a minimum of `90 * 200 MB = 18 GB` space available in the directory `/var/log/pods/`.
 
 The log storage parameters can be redefined in the `spec.kubelet.containerLogMaxSize` and `spec.kubelet.containerLogMaxFiles` parameters of the [NodeGroup](/modules/node-manager/cr.html#nodegroup) (see [node customization](../admin/configuration/platform-scaling/node/node-customization.html)). Default values:
 
@@ -182,7 +182,7 @@ spec:
 
 ### Trivy vulnerability database repository
 
-DP has a built-in [vulnerability image scanning system](../admin/configuration/security/scanning.html) based on [Trivy](https://github.com/aquasecurity/trivy), which scans all container images used in the cluster's pods. Both public vulnerability databases and enriched data from Astra Linux, ALT Linux and RED OS are used for scanning. The total amount of disk space occupied by databases is 5 GB, so it must be taken into account when choosing the disk partition configuration.
+DP has a built-in [vulnerability image scanning system](../admin/configuration/security/scanning.html) based on [Trivy](https://github.com/aquasecurity/trivy), which scans all container images used in the cluster's pods. Both public [vulnerability databases](../glossary.html#vulnerability-database) and enriched data from Astra Linux, ALT Linux and RED OS are used for scanning. The total amount of disk space occupied by databases is 5 GB, so it must be taken into account when choosing the disk partition configuration.
 
 Databases are stored on the cluster's system nodes, and if there are no such nodes in the cluster, the databases will be located on the worker node.
 

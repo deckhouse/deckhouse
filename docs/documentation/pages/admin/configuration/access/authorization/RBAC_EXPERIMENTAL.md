@@ -3,7 +3,7 @@ title: "Experimental authorization model"
 permalink: en/admin/configuration/access/authorization/rbac-experimental.html
 ---
 
-The experimental role model is designed on the principle of aggregation.
+The experimental [role model](../../../../glossary.html#rbac) is designed on the principle of aggregation.
 It combines low-level roles into bigger roles that cover common tasks.
 This simplifies model extensibility by allowing you to add your own roles.
 
@@ -55,7 +55,7 @@ If multitenancy mode is enabled in the cluster (via [`enableMultiTenancy: true`]
 Use rules can only be used in [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) resources.
 {% endalert %}
 
-Use roles are intended for granting permissions to users *within a specific namespace*.
+[Use roles](../../../../glossary.html#use-role) are intended for granting permissions to users *within a specific namespace*.
 "Users" in this context typically refers to developers deploying applications in a cluster configured by an administrator.
 These users don’t need to manage DP modules or the cluster,
 but they do need permissions to create Ingress resources, configure application authentication, collect logs, etc.
@@ -82,10 +82,10 @@ Key role differences:
 ## Manage roles
 
 {% alert level="warning" %}
-Manage roles do not grant access to namespaces used by user applications.
+[Manage roles](../../../../glossary.html#manage-role) do not grant access to namespaces used by user applications.
 
-A manage role only grants access to system namespaces (those starting with `d8-` or `kube-`),
-and only to those where the modules associated with the role’s subsystem are running.
+A manage role only grants access to [system namespaces](../../../../glossary.html#system-namespace) (those starting with `d8-` or `kube-`),
+and only to those where the modules associated with the role’s [subsystem](../../../../glossary.html#subsystem) are running.
 {% endalert %}
 
 Manage roles are intended for granting permissions to administer the entire DP or its parts ([specific subsystems](#role-model-subsystems)),
@@ -135,7 +135,7 @@ The module provides two access levels for administrators:
 
 ## Role model subsystems
 
-Each DP module belongs to a specific subsystem.
+Each DP module belongs to a specific [subsystem](../../../../glossary.html#subsystem).
 For each subsystem, there is a set of roles with different access levels.
 These roles are automatically updated when a module is enabled or disabled.
 
@@ -146,10 +146,10 @@ For example, the `networking` subsystem includes the following manage roles, whi
 
 The scope of a role depends on which subsystem it belongs to:
 
-- The scope of roles from the `all` subsystem is all system namespaces (starting with `d8-` or `kube-`) in the cluster.
+- The scope of roles from the `all` subsystem is all [system namespaces](../../../../glossary.html#system-namespace) (starting with `d8-` or `kube-`) in the cluster.
 - The scope of roles from other subsystems includes the namespaces in which the subsystem’s modules operate (see the subsystem composition table), as well as all cluster-wide objects of the subsystem’s modules.
 
-### Role model subsystem composition
+### [Role model](../../../../glossary.html#rbac) subsystem composition
 
 {% include rbac/rbac-subsystems-list.liquid %}
 
@@ -190,7 +190,7 @@ rules: []
 
 A created role includes the following labels:
 
-- `rbac.deckhouse.io/use-role: admin`: Indicates which role the hook should use when creating use roles.
+- `rbac.deckhouse.io/use-role: admin`: Indicates which role the hook should use when creating [use roles](../../../../glossary.html#use-role).
 - `rbac.deckhouse.io/kind: manage`: Specifies that the role's type is `manage`. **This label is required**.
 - `rbac.deckhouse.io/level: subsystem`: Indicates that the role belongs to a subsystem level and will be processed accordingly.
 - `rbac.deckhouse.io/subsystem: custom`: Defines the name of the subsystem this role is responsible for.
@@ -201,10 +201,10 @@ A created role includes the following labels:
 The `aggregationRule` section defines which roles and modules are aggregated into this role:
 
 - `rbac.deckhouse.io/kind: manage`, `rbac.deckhouse.io/aggregate-to-deckhouse-as: manager`:
-  Aggregates a manage role from the `deckhouse` and `kubernetes` subsystems.
+  Aggregates a [manage role](../../../../glossary.html#manage-role) from the `deckhouse` and `kubernetes` subsystems.
 - `rbac.deckhouse.io/kind: manage`, `module: user-authn`: Aggregates all rules from the `user-authn` module.
 
-This way, the role inherits permissions from the `deckhouse` and `kubernetes` subsystems as well as from the [`user-authn`](/modules/user-authn/) module.
+This way, the role inherits permissions from the `deckhouse` and `kubernetes` [subsystems](../../../../glossary.html#subsystem) as well as from the [`user-authn`](/modules/user-authn/) module.
 
 {% alert level="info" %}
 
@@ -279,7 +279,7 @@ To grant access to it, you need to extend an existing manage role described abov
      - watch
    ```
 
-   The new role's permissions will be added to the subsystem role, providing view access to the new object.
+   The new role's permissions will be added to the [subsystem](../../../../glossary.html#subsystem) role, providing view access to the new object.
 
 {% alert level="info" %}
 There are no restrictions on the role name, but it is recommended that you follow the consistent naming style.
@@ -289,7 +289,7 @@ There are no restrictions on the role name, but it is recommended that you follo
 
 To extend an existing role, follow the same steps as above but make sure to change the role name and labels.
 
-Example configuration for extending the manage role from the `deckhouse` subsystem (`d8:manage:deckhouse:manager`):
+Example configuration for extending the [manage role](../../../../glossary.html#manage-role) from the `deckhouse` [subsystem](../../../../glossary.html#subsystem) (`d8:manage:deckhouse:manager`):
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -314,7 +314,7 @@ This way the new role will extend the `d8:manage:deckhouse` role.
 
 ## Extending manage-subsystem roles and adding a namespace
 
-To add a new namespace for creating a use role in it via the hook, you would need only one label:
+To add a new namespace for creating a [use role](../../../../glossary.html#use-role) in it via the hook, you would need only one label:
 
 ```yaml
 "rbac.deckhouse.io/namespace": namespace

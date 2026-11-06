@@ -4,7 +4,7 @@ permalink: ru/admin/integrations/private/huaweicloud/layout.html
 lang: ru
 ---
 
-Данный раздел описывает схемы размещения кластера в инфраструктуре Huawei Cloud и связанные с ними параметры.
+Данный раздел описывает [схемы размещения](../../../../glossary.html#layout) кластера в инфраструктуре Huawei Cloud и связанные с ними параметры.
 
 ## Список необходимых сервисов Huawei Cloud
 
@@ -24,7 +24,7 @@ lang: ru
 ## Standard
 
 - Создаётся внутренняя сеть кластера со шлюзом к публичной сети.
-- Master-узлу можно назначить Elastic IP.
+- [Master-узлу](../../../../glossary.html#master-node) можно назначить Elastic IP.
 - Узлы, управляемые Cluster API, не имеют публичных IP-адресов.
 
 ![Схема размещения Standard](../../../../images/cloud-provider-huawei/huawei-standard.png)

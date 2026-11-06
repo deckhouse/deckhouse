@@ -5,7 +5,7 @@ permalink: en/user/network/ingress/
 ---
 
 Network Load Balancer (NLB) and Application Load Balancer (ALB) are used to provide external access to applications
-deployed in a cluster managed by Deckhouse Platform.
+deployed in a [cluster managed by Deckhouse Platform](../../../glossary.html#dp-managed-cluster).
 
 ## NLB features and purpose
 

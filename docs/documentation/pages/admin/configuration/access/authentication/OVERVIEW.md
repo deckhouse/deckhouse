@@ -5,7 +5,7 @@ description: "Configure authentication for Deckhouse Platform with local and ext
 ---
 
 **Authentication** is the process of verifying a user's identity, providing access control to all interfaces of the Deckhouse Platform (DP) and cluster resources.  
-The platform implements end-to-end authentication, allowing a unified mechanism to be applied both to internal components and user applications.
+The platform implements [end-to-end authentication](../../../../glossary.html#end-to-end-authentication), allowing a unified mechanism to be applied both to internal components and user applications.
 
 The core of the authentication mechanism is a federated OpenID Connect (OIDC) provider — `Dex`.  
 Learn more about how authentication works in the [Architecture](../../../../architecture/iam/authentication.html) section.

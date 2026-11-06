@@ -75,7 +75,7 @@ spec:
 
 ## Настройка собственной политики аудита
 
-Чтобы создать расширенную политику аудита API Kubernetes, выполните следующие шаги:
+Чтобы создать расширенную политику [аудита API Kubernetes](../../../../glossary.html#kubernetes-api-audit), выполните следующие шаги:
 
 1. Включите [параметр `auditPolicyEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-auditpolicyenabled) в настройках модуля [`control-plane-manager`](/modules/control-plane-manager/):
 
@@ -140,7 +140,7 @@ rules:                       # Набор правил для аудита
     namespaces:                # Пространства имен (namespaces), которые охватывает правило
 ```
 
-Массив `rules` описывает правила аудита.
+Массив `rules` описывает [правила аудита](../../../../glossary.html#runtime-audit-rule).
 Каждое правило содержит следующие поля:
 
 - `level` — уровень детализации логируемого события.
@@ -258,7 +258,7 @@ rules:
 
 ## Работа с лог-файлом аудита
 
-Предполагается, что на master-узлах кластера Deckhouse Platform установлен инструмент для отслеживания лог-файла `/var/log/kube-audit/audit.log`: `log-shipper`, `promtail` или `filebeat`.
+Предполагается, что на [master-узлах](../../../../glossary.html#master-node) кластера Deckhouse Platform установлен инструмент для отслеживания лог-файла `/var/log/kube-audit/audit.log`: `log-shipper`, `promtail` или `filebeat`.
 
 Параметры ротации логов в файле предустановлены и не подлежат изменению:
 

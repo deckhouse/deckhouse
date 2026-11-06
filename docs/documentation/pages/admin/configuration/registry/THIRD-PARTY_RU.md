@@ -8,13 +8,13 @@ lang: ru
 {% alert level="warning" %}
 Информация на этой странице относится только к Managed Kubernetes-кластерам. В таких кластерах управление хранилищем образов через модуль `registry` недоступно.
 
-Для кластеров, полностью управляемых Deckhouse Platform (DP), настройка хранилища образов выполняется с помощью модуля [`registry`](/modules/registry/) (или, для кластеров, ещё работающих на его предыдущей реализации, — в секции [`registry`](/modules/deckhouse/configuration.html#parameters-registry) конфигурации модуля `deckhouse`). Примеры настроек и описания реализаций приведены в разделе [«Управление хранилищем образов в кластерах, полностью управляемых DP»](managing-interaction.html).
+Для [кластеров, полностью управляемых Deckhouse Platform](../../../glossary.html#dp-managed-cluster) (DP), настройка хранилища образов выполняется с помощью модуля [`registry`](/modules/registry/) (или, для кластеров, ещё работающих на его предыдущей реализации, — в секции [`registry`](/modules/deckhouse/configuration.html#parameters-registry) конфигурации модуля `deckhouse`). Примеры настроек и описания реализаций приведены в разделе [«Управление хранилищем образов в кластерах, полностью управляемых DP»](managing-interaction.html).
 
 Эта страница актуальна для кластеров, в которых в качестве основного container runtime используется containerd v1 или containerd v2. При этом для DP актуальной версией является containerd v2. Если вам нужно мигрировать на containerd v2, воспользуйтесь разделом [«Миграция container runtime на containerd v2»](../platform-scaling/node/migrating.html) для проверки возможности и выполнения миграции.
 {% endalert %}
 
 {% alert level="warning" %}
-Использование хранилищ образов контейнеров, отличных от `registry.deckhouse.io` и `registry.deckhouse.ru`, доступно только в коммерческих редакциях Deckhouse Platform.
+Использование хранилищ образов контейнеров, отличных от `registry.deckhouse.io` и `registry.deckhouse.ru`, доступно только в коммерческих [редакциях](../../../glossary.html#edition) Deckhouse Platform.
 {% endalert %}
 
 {% alert level="info" %}
@@ -76,9 +76,9 @@ lang: ru
    ```
 
 1. Дождитесь перехода пода `registry` в статус `Ready`. Если под находится в статусе `ImagePullBackoff`, перезапустите его.
-1. Дождитесь применения новых настроек на master-узле.
+1. Дождитесь применения новых настроек на [master-узле](../../../glossary.html#master-node).
 
-   Проверьте журнал системного сервиса bashible на master-узле, например, с помощью следующей команды:
+   Проверьте журнал системного сервиса [bashible](../../../glossary.html#bashible) на master-узле, например, с помощью следующей команды:
 
    ```shell
    journalctl -u bashible -n 20

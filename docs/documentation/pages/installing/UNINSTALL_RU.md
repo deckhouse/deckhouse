@@ -7,9 +7,9 @@ search: deckhouse uninstall, cluster removal, platform uninstall, cleanup, clust
 
 ## Удаление кластера, развёрнутого в облачном провайдере
 
-Для удаления кластера, развёрнутого в облачном провайдере, нужно выполнить несколько шагов:
+Для удаления кластера, развёрнутого в [облачном провайдере](../glossary.html#cloud-provider), нужно выполнить несколько шагов:
 
-1. Узнайте канал обновления, заданный в кластере. Для этого выполните команду:
+1. Узнайте [канал обновления](../glossary.html#release-channel), заданный в кластере. Для этого выполните команду:
 
    ```shell
    kubectl get mc deckhouse  -o jsonpath='{.spec.settings.releaseChannel}'
@@ -51,16 +51,16 @@ search: deckhouse uninstall, cluster removal, platform uninstall, cleanup, clust
 
    где:
    - `<USER>` — пользователь удалённой машины, из-под которого производилась установка. Если для `<USER>` требуется выполнять действия через `sudo`, добавьте флаг `--ask-become-pass`;
-   - `<MASTER_IP>` — IP-адрес master-узла кластера;
+   - `<MASTER_IP>` — IP-адрес [master-узла](../glossary.html#master-node) кластера;
    - `<SSH_PRIVATE_KEY_FILE>` — имя приватного ключа. Например, для ключа с RSA-шифрованием это может быть `id_rsa`, а для ключа с ED25519-шифрованием — `id_ed25519`.
 
 Инсталлятор подключится к кластеру, получит необходимые данные и произведёт удаление всех ресурсов и объектов в облаке, созданных при установке и работе DP.
 
 ## Удаление гибридного кластера
 
-Для удаления гибридного кластера, состоящего из автоматически развёрнутых узлов в облаке и вручную подключённых статических узлов, выполните следующие действия:
+Для удаления [гибридного кластера](../glossary.html#hybrid-cluster), состоящего из автоматически развёрнутых узлов в облаке и вручную подключённых [статических узлов](../glossary.html#static-node), выполните следующие действия:
 
-1. [Удалите](/modules/node-manager/faq.html#как-очистить-узел-для-последующего-ввода-в-кластер) из кластера все вручную подключённые [дополнительные узлы](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetype) — CloudStatic и Static.
+1. [Удалите](/modules/node-manager/faq.html#как-очистить-узел-для-последующего-ввода-в-кластер) из кластера все вручную подключённые [дополнительные узлы](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetype) — [CloudStatic](../glossary.html#cloud-static-node) и Static.
 
 2. Узнайте канал обновления, заданный в кластере. Для этого выполните команду:
 
@@ -79,7 +79,7 @@ search: deckhouse uninstall, cluster removal, platform uninstall, cleanup, clust
    - `<MOUNT_OPTIONS>` — параметры монтирования файлов в контейнер инсталлятора, таких как SSH-ключи доступа:
    - `<DECKHOUSE_REVISION>` — [редакция](../revision-comparison.html) Deckhouse (например, `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.)
    - `<RELEASE_CHANNEL>` — [канал обновлений](/modules/deckhouse/configuration.html#parameters-releasechannel) Deckhouse в kebab-case:
-     - `alpha` — для канала обновлений *Alpha*;
+     - `alpha` — для [канала обновлений](../glossary.html#release-channel) *Alpha*;
      - `beta` — для канала обновлений *Beta*;
      - `early-access` — для канала обновлений *Early Access*;
      - `stable` — для канала обновлений *Stable*;
@@ -157,7 +157,7 @@ search: deckhouse uninstall, cluster removal, platform uninstall, cleanup, clust
 
    где:
    - `<USER>` — пользователь удалённой машины, из-под которого производилась установка. Если для `<USER>` требуется выполнять действия через `sudo`, добавьте флаг `--ask-become-pass`;
-   - `<MASTER_IP>` — IP-адрес master-узла кластера;
+   - `<MASTER_IP>` — IP-адрес [master-узла](../glossary.html#master-node) кластера;
    - `<SSH_PRIVATE_KEY_FILE>` — имя приватного ключа. Например, для ключа с RSA-шифрованием это может быть `id_rsa`, а для ключа с ED25519-шифрованием — `id_ed25519`.
 
 Инсталлятор подключится к master-узлу и удалит на нём все компоненты Deckhouse и кластера Kubernetes.

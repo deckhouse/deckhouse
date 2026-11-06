@@ -4,7 +4,7 @@ permalink: en/admin/configuration/marketplace/scanning.html
 description: "Monitor and manage package repository scanning operations in Deckhouse Platform Marketplace. View scan history, check progress, and trigger manual scans with PackageRepositoryOperation."
 ---
 
-Deckhouse Platform (DP) uses [PackageRepositoryOperation](../../../reference/api/cr.html#packagerepositoryoperation) objects to scan package repositories. Each scan operation discovers new package versions and creates [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) objects for them. DP creates operations automatically, and you can also create them manually.
+Deckhouse Platform (DP) uses [PackageRepositoryOperation](../../../reference/api/cr.html#packagerepositoryoperation) objects to scan [package](../../../glossary.html#marketplace-package) repositories. Each scan operation discovers new package versions and creates [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) objects for them. DP creates operations automatically, and you can also create them manually.
 
 ## Viewing scan operations
 
@@ -104,9 +104,9 @@ This command creates a PackageRepositoryOperation with `spec.type: Update` and `
 
 | Value | Behavior |
 |---|---|
-| `true` | Lists all semver tags of each package and creates the versions that are missing in the cluster. Versions that already exist are not read again |
+| `true` | Lists all semver tags of each [package](../../../glossary.html#marketplace-package) and creates the versions that are missing in the cluster. Versions that already exist are not read again |
 | `false` (default) | Processes only the tags whose version is higher than the latest version of the package already processed in the cluster |
 
 An automatic operation is full if the repository has no operations yet, and incremental otherwise.
 
-Use `fullScan: true` if a version was published after a higher one, for example, a patch for an older minor version, or when [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) objects are missing versions that exist in the container registry.
+Use `fullScan: true` if a version was published after a higher one, for example, a patch for an older [minor version](../../../glossary.html#minor-version), or when [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) objects are missing versions that exist in the container registry.

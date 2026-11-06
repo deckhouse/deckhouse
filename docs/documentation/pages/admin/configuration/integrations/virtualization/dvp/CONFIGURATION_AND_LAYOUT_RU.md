@@ -16,7 +16,7 @@ lang: ru
 Инструкция: [Как мигрировать облачный провайдер на конфигурацию через ModuleConfig](../../../../faq.html#как-мигрировать-облачный-провайдер-на-конфигурацию-через-modulec).
 {% endalert %}
 
-Пример конфигурации схемы размещения:
+Пример конфигурации [схемы размещения](../../../../glossary.html#layout):
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -90,12 +90,12 @@ spec:
 
 ## Конфигурация
 
-Параметры облачного провайдера встроенной виртуализации задаются в четырёх ресурсах:
+Параметры [облачного провайдера](../../../../glossary.html#cloud-provider) встроенной виртуализации задаются в четырёх ресурсах:
 
-- [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) модуля `cloud-provider-dvp` задаёт схему размещения и параметры подключения к родительскому кластеру;
+- [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) модуля `cloud-provider-dvp` задаёт [схему размещения](../../../../glossary.html#layout) и параметры подключения к родительскому кластеру;
 - секрет `d8-credentials` в неймспейсе `d8-cloud-provider-dvp` хранит учётные данные для доступа к API родительского кластера, его формат описан в разделе [«Секрет с учётными данными»](authorization.html#секрет-с-учётными-данными);
 - [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass) описывает параметры виртуальных машин;
-- [NodeGroup](/modules/node-manager/cr.html#nodegroup) описывает группы узлов и ссылается на инстанс-класс.
+- [NodeGroup](/modules/node-manager/cr.html#nodegroup) описывает [группы узлов](../../../../glossary.html#node-group) и ссылается на [инстанс-класс](../../../../glossary.html#instance-class).
 
 Чтобы изменить настройки провайдера в работающем кластере, отредактируйте ModuleConfig:
 

@@ -15,7 +15,7 @@ relatedLinks:
     url: https://docs.cilium.io/en/v1.17/security/host-firewall/
 ---
 
-Network policies restrict how pods communicate with each other, with external systems, and with cluster nodes. In Deckhouse Platform (DP), the implementation depends on the enabled CNI module.
+[Network policies](../../../../glossary.html#network-policy) restrict how pods communicate with each other, with external systems, and with cluster nodes. In Deckhouse Platform (DP), the implementation depends on the enabled CNI module.
 
 ## Network policy implementation in DP
 
@@ -24,7 +24,7 @@ The available policy formats and the engine that processes them depend on the en
 - With the [`cni-cilium`](/modules/cni-cilium/) module, the implementation is built into Cilium and supports three policy formats:
   - the standard [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/) at L3 and L4;
   - [CiliumNetworkPolicy](https://docs.cilium.io/en/v1.17/network/kubernetes/policy/#ciliumnetworkpolicy) — a namespaced resource with L3–L7 rules;
-  - [CiliumClusterwideNetworkPolicy](https://docs.cilium.io/en/v1.17/network/kubernetes/policy/#ciliumclusterwidenetworkpolicy) — a cluster-scoped resource that also supports `nodeSelector` for protecting nodes (host firewall).
+  - [CiliumClusterwideNetworkPolicy](https://docs.cilium.io/en/v1.17/network/kubernetes/policy/#ciliumclusterwidenetworkpolicy) — a cluster-scoped resource that also supports `nodeSelector` for protecting nodes ([host firewall](../../../../glossary.html#host-firewall)).
 - With the `cni-flannel` module or another CNI without policy support, the [`network-policy-engine`](/modules/network-policy-engine/) module handles enforcement on top of [kube-router](https://github.com/cloudnativelabs/kube-router). Only the standard NetworkPolicy at L3 and L4 is supported. Policies are translated into `iptables` and `ipset` rules on every node.
 
 {% alert level="warning" %}

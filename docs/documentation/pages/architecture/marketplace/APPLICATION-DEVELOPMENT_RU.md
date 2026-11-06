@@ -22,7 +22,7 @@ d8 dk cr login -u license-token dev-registry.deckhouse.io --password <LICENSE_TO
 
 ## Бутстрап пакета Application
 
-Чтобы создать директорию `<APPLICATION_NAME>/` в текущей рабочей директории с заготовкой пакета и инициализировать Git-репозиторий с первым коммитом, выполните команду `d8 package bootstrap app <APPLICATION_NAME>` (`application` — псевдоним `app`).
+Чтобы создать директорию `<APPLICATION_NAME>/` в текущей рабочей директории с заготовкой [пакета](../../glossary.html#marketplace-package) и инициализировать Git-репозиторий с первым коммитом, выполните команду `d8 package bootstrap app <APPLICATION_NAME>` (`application` — псевдоним `app`).
 
 Пример:
 
@@ -37,7 +37,7 @@ git push --set-upstream origin main
 
 | Параметр | Описание |
 |---|---|
-| `--hooks` | Создать Go-хуки: пример хука и хук валидации настроек |
+| `--hooks` | Создать Go-хуки: пример [хука](../../glossary.html#module-hook) и хук валидации настроек |
 | `--werf` | Описать сборку образа в файле `werf.inc.yaml` вместо `Dockerfile` |
 | `--extended` | Добавить файл `oss.yaml` со списком компонентов с открытым исходным кодом, которые использует приложение |
 | `-o, --output <OUTPUT_PATH>` | Путь, в котором будет создан пакет (по умолчанию: `<CURRENT_WORKING_DIRECTORY>/<APPLICATION_NAME>`) |
@@ -86,7 +86,7 @@ myapp/
     └── vpa.yaml
 ```
 
-Не добавляйте `Chart.yaml` и `values.yaml` в корень пакета: `d8 package build` не включает эти файлы в bundle пакета. DP рендерит шаблоны как чарт без метаданных, а значения по умолчанию описываются в [OpenAPI-схемах](settings.html).
+Не добавляйте `Chart.yaml` и `values.yaml` в корень [пакета](../../glossary.html#marketplace-package): `d8 package build` не включает эти файлы в [bundle пакета](../../glossary.html#marketplace-package-bundle). DP рендерит шаблоны как чарт без метаданных, а значения по умолчанию описываются в [OpenAPI-схемах](settings.html).
 
 ## package.yaml
 
@@ -125,14 +125,14 @@ requirements:
 | `descriptions` | Да | Локализованное описание для каталога и пользовательского интерфейса (UI) (`ru`, `en`) |
 | `version` | Да | Версия в формате семантического версионирования (SemVer); добавляется автоматически при сборке |
 | `type` | Да | `Application` или `Module` |
-| `stage` | Да | Стадия зрелости (`Preview`, `General Availability` и т. д.) |
+| `stage` | Да | [Стадия зрелости](../../glossary.html#module-lifecycle-stage) (`Preview`, `General Availability` и т. д.) |
 | `category` | Да | Категория для классификации в каталоге |
 | `requirements.deckhouse` | Нет | Ограничение на минимальную версию Deckhouse Platform (DP) |
 | `requirements.kubernetes` | Нет | Ограничение на минимальную версию Kubernetes |
 | `requirements.modules` | Нет | Зависимости от модулей (ограничения версий в формате SemVer). См. [«Требования»](#требования) |
 | `disable` | Нет | Подтверждение перед удалением приложения. См. [«Подтверждение удаления»](#подтверждение-удаления) |
 
-При сканировании репозитория DP публикует описание, стадию, требования, подтверждение удаления и содержимое `changelog.yaml` в поле `status.packageMetadata` ресурса [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion).
+При сканировании репозитория DP публикует описание, стадию, требования, [подтверждение удаления](../../glossary.html#deletion-confirmation) и содержимое `changelog.yaml` в поле `status.packageMetadata` ресурса [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion).
 
 ### Требования
 
@@ -200,7 +200,7 @@ DP публикует раздел в поле `status.packageMetadata.disableOp
 
 ### changelog.yaml
 
-Файл `changelog.yaml` описывает изменения в версии пакета:
+Файл `changelog.yaml` описывает изменения в версии [пакета](../../glossary.html#marketplace-package):
 
 ```yaml
 features:
@@ -223,7 +223,7 @@ DP публикует содержимое файла в поле `status.packag
 ## Шаблоны и хуки
 
 - Значения, доступные шаблонам, и правила для шаблонов описаны в разделе [«Шаблоны»](templates.html).
-- Go-хуки и хук валидации настроек описаны в разделе [«Хуки»](hooks.html).
+- Go-хуки и [хук](../../glossary.html#module-hook) валидации настроек описаны в разделе [«Хуки»](hooks.html).
 - Как DP устанавливает, обновляет и удаляет приложение и как его отлаживать, описано в разделе [«Жизненный цикл и отладка»](lifecycle.html).
 
 ## Локальный рендеринг
@@ -242,7 +242,7 @@ d8 package render
 |---|---|
 | `--file <FILE_NAME>` | Вывести только объекты, отрендеренные из шаблона с указанным именем файла |
 | `--render-file <PATH>` | Записать манифесты в файл без комментариев с именами файлов шаблонов |
-| `-r, --remote <REPOSITORY>/<PACKAGE_NAME>:<PACKAGE_VERSION>` | Отрендерить опубликованный bundle пакета вместо локальной директории. Обязательно указание тега или дайджеста |
+| `-r, --remote <REPOSITORY>/<PACKAGE_NAME>:<PACKAGE_VERSION>` | Отрендерить опубликованный [bundle пакета](../../glossary.html#marketplace-package-bundle) вместо локальной директории. Обязательно указание тега или дайджеста |
 | `--remote-user`, `--remote-password` | Учётные данные для доступа к хранилищу образов. Их также можно задать в переменных окружения `PACKAGE_REMOTE_USER` и `PACKAGE_REMOTE_PASSWORD` |
 
 Команда использует значения-заглушки вместо значений из кластера: экземпляр `test` в неймспейсе `default`, версию пакета `dev` и настройки, сгенерированные по `openapi/settings.yaml` (из `x-example`, `x-examples`, `enum` или `default`). Ссылки на образы — заглушки с ключами по именам каталогов образов. Чтобы отрендерить шаблоны установленного приложения с его фактическими значениями, используйте `deckhouse-controller packages render` (см. [«Жизненный цикл и отладка»](lifecycle.html#состояние-в-dp)).
@@ -271,7 +271,7 @@ d8 package verify
 
 Доступные параметры: `--hide-warnings` (не показывать предупреждения), `--show-ignored` (показывать результаты игнорируемых правил), `--lint-config <PATH>` (путь к файлу настроек).
 
-Чтобы проверить опубликованный пакет, выполните `d8 package verify remote <REPOSITORY> <PACKAGE_NAME>`. По умолчанию команда проверяет bundle последней версии. Чтобы выбрать версию, используйте `--version <PACKAGE_VERSION>`, а чтобы проверить также образ метаданных версии — `--release`. Команда использует учётные данные для доступа к хранилищу образов, сохранённые с помощью `d8 dk cr login`.
+Чтобы проверить опубликованный [пакет](../../glossary.html#marketplace-package), выполните `d8 package verify remote <REPOSITORY> <PACKAGE_NAME>`. По умолчанию команда проверяет bundle последней версии. Чтобы выбрать версию, используйте `--version <PACKAGE_VERSION>`, а чтобы проверить также образ метаданных версии — `--release`. Команда использует учётные данные для доступа к хранилищу образов, сохранённые с помощью `d8 dk cr login`.
 
 ### .pkglint.yaml
 
@@ -330,7 +330,7 @@ d8 package build -v v0.0.1 -r dev-registry.deckhouse.io/deckhouse/packages
 
 ## Настройка CI/CD
 
-Пайплайн CI/CD публикует релизы пакета в хранилище образов. Чтобы опубликовать релиз, настройте учётные данные для доступа к хранилищу образов, а затем создайте Git-тег в формате SemVer и отправьте его в репозиторий.
+Пайплайн CI/CD публикует релизы [пакета](../../glossary.html#marketplace-package) в хранилище образов. Чтобы опубликовать релиз, настройте учётные данные для доступа к хранилищу образов, а затем создайте Git-тег в формате SemVer и отправьте его в репозиторий.
 
 ### Переменные окружения
 
@@ -354,7 +354,7 @@ git push origin v0.1.0
 
 ## Артефакты пакета в хранилище образов
 
-Пакет и связанные с ним данные публикуются в хранилище образов. Bundle пакета, образы контейнеров и метаданные версий хранятся по отдельным путям.
+Пакет и связанные с ним данные публикуются в хранилище образов. [Bundle пакета](../../glossary.html#marketplace-package-bundle), образы контейнеров и метаданные версий хранятся по отдельным путям.
 
 | Путь | Описание |
 |---|---|
@@ -362,7 +362,7 @@ git push origin v0.1.0
 | `<REPOSITORY>/<PACKAGE_NAME>:<PACKAGE_VERSION>` | Bundle — содержит шаблоны, `openapi/`, `hooks/` |
 | `<REPOSITORY>/<PACKAGE_NAME>@<DIGEST>` | Образы контейнеров приложения. Шаблоны ссылаются на них по дайджесту (см. [«Шаблоны»](templates.html#образы-контейнеров)) |
 | `<REPOSITORY>/<PACKAGE_NAME>/version:<PACKAGE_VERSION>` | Метаданные версии |
-| `<REPOSITORY>/<PACKAGE_NAME>/release-channel:<RELEASE_CHANNEL>` | Рекомендуемая версия для канала обновлений |
+| `<REPOSITORY>/<PACKAGE_NAME>/release-channel:<RELEASE_CHANNEL>` | Рекомендуемая версия для [канала обновлений](../../glossary.html#release-channel) |
 
 Здесь `<REPOSITORY>` — корневой путь пакетов, например, `registry.deckhouse.io/deckhouse/<EDITION>/packages`.
 

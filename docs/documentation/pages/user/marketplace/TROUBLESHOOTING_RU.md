@@ -6,7 +6,7 @@ lang: ru
 search: Application troubleshooting, application conditions, диагностика приложений, условия приложения, логи приложения
 ---
 
-## Проверка наличия CRD Marketplace
+## Проверка наличия CRD [Marketplace](../../glossary.html#marketplace)
 
 Если `d8 k get applications` возвращает ошибку о том, что такого типа ресурсов нет, возможно, CRD Marketplace не установлены. Чтобы это проверить, выполните следующую команду:
 
@@ -110,7 +110,7 @@ d8 k logs -n <NAMESPACE> deployments/d8a-<APPLICATION_NAME>-<SUFFIX>
 
 | Причина | Условия | Значение и что проверить |
 |---|---|---|
-| `Pending` | `Installed`, `UpdateInstalled` | DP ждёт возможности установить версию, например, пока не будут включены модули из `requirements.modules` пакета. Попросите администратора проверить эти модули |
+| `Pending` | `Installed`, `UpdateInstalled` | DP ждёт возможности установить версию, например, пока не будут включены модули из `requirements.modules` [пакета](../../glossary.html#marketplace-package). Попросите администратора проверить эти модули |
 | `RequirementsUnmet` | `Installed` | Кластер не удовлетворяет требованиям пакета. В сообщении указано невыполненное требование |
 | `DownloadFailed` | `Installed`, `UpdateInstalled`, `ConfigurationApplied`, `Managed`, `Ready` | DP не удаётся загрузить версию пакета. Попросите администратора проверить PackageRepository и доступ к хранилищу образов |
 | `LoadFromFilesystemFailed` | `Installed`, `UpdateInstalled`, `Ready` | DP не удаётся прочитать загруженный пакет. Обратитесь к разработчику пакета |

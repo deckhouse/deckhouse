@@ -41,7 +41,7 @@ The module consists of the following components:
     * **controller**: Main container.
     * **iscsi-command-service**: Sidecar container implementing SCSI device discovery.
 
-1. **CSI driver (`csi-scsi-generic`)**: CSI driver implementation for the `scsi-generic.csi.storage.deckhouse.io` provisioner. To study the architecture of the `csi-scsi-generic` CSI driver, refer to the [CSI driver documentation page](../../storage/csi-drivers/csi-driver-scsi-generic.html).
+1. **[CSI driver](../../../glossary.html#csi-driver) (`csi-scsi-generic`)**: CSI driver implementation for the `scsi-generic.csi.storage.deckhouse.io` provisioner. To study the architecture of the `csi-scsi-generic` CSI driver, refer to the [CSI driver documentation page](../../storage/csi-drivers/csi-driver-scsi-generic.html).
 
 ## Module interactions
 

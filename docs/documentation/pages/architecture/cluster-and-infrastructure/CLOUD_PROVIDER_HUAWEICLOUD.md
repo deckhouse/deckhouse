@@ -26,7 +26,7 @@ The Level 2 C4 architecture of the [`cloud-provider-huaweicloud`](/modules/cloud
 
 The module consists of the following components:
 
-1. **Caphc-controller-manager**: Kubernetes Cluster API Provider for Huawei Cloud. [Cluster API](https://github.com/kubernetes-sigs/cluster-api) is an extension for Kubernetes that allows you to manage Kubernetes clusters as custom resources inside another Kubernetes cluster. Cluster API Provider allows clusters running the Cluster API to order virtual machines in the cloud provider's infrastructure, Huawei Cloud in this case.  Caphc-controller-manager works with the following custom resources:
+1. **Caphc-controller-manager**: Kubernetes Cluster API Provider for Huawei Cloud. [Cluster API](https://github.com/kubernetes-sigs/cluster-api) is an extension for Kubernetes that allows you to manage Kubernetes clusters as custom resources inside another Kubernetes cluster. Cluster API Provider allows clusters running the Cluster API to order virtual machines in the [cloud provider](../../../glossary.html#cloud-provider)'s infrastructure, Huawei Cloud in this case.  Caphc-controller-manager works with the following custom resources:
 
    * HuaweiCloudCluster: Description of a Huawei Cloud-based cluster.
    * HuaweiCloudMachineTemplate: Template describing the characteristics of the machines created in the cloud.
@@ -58,7 +58,7 @@ The module consists of the following components:
    * **cloud-data-discoverer**: Main container.
    * **kube-rbac-proxy**: Sidecar container providing an RBAC-based authorization proxy for secure access to the cloud-data-discoverer metrics.
 
-4. **CSI driver (huaweicloud)**: It is an implementation of the CSI driver for Huawei Cloud. To study the `cloud-provider-*` CSI driver typical architecture, refer to the [corresponding documentation page](../../storage/csi-drivers/csi-driver.html).
+4. **[CSI driver](../../../glossary.html#csi-driver) (huaweicloud)**: It is an implementation of the CSI driver for Huawei Cloud. To study the `cloud-provider-*` CSI driver typical architecture, refer to the [corresponding documentation page](../../storage/csi-drivers/csi-driver.html).
 
    CSI driver (huaweicloud) does not support snapshots. For this reason, the `csi-controller` Pod does not include the snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter )) sidecar container.
 
@@ -92,7 +92,7 @@ Indirect interactions:
 1. The `cloud-provider-huaweicloud` module provides [`node-manager`](/modules/node-manager/) with following artifacts:
 
    * Provider-specific Cluster API custom resource templates to be used by `cloud-provider-huaweicloud` to create VMs in the cloud.
-   * The `kube-system/d8-node-manager-cloud-provider` Secret, which contains all the necessary settings to connect to the cloud and to create CloudEphemeral nodes. These settings are registered in the provider-specific Cluster API custom resources created based on the templates mentioned above.
+   * The `kube-system/d8-node-manager-cloud-provider` Secret, which contains all the necessary settings to connect to the cloud and to create [CloudEphemeral nodes](../../../glossary.html#cloud-ephemeral-node). These settings are registered in the provider-specific Cluster API custom resources created based on the templates mentioned above.
 
 2. The `cloud-provider-huaweicloud` module provides Terraform/OpenTofu components for Huawei Cloud used when building the [dhctl](https://github.com/deckhouse/deckhouse/tree/main/dhctl) executable file for the [`terraform-manager`](/modules/terraform-manager/) module, such as:
 

@@ -35,7 +35,7 @@ The module consists of the following components:
 
 1. **Managed-clickhouse-operator** (Deployment): Kubernetes operator consisting of a single container **manager** that performs the following operations:
 
-   * Reconciles [Clickhouse](/modules/managed-clickhouse/cr.html#clickhouse) custom resources in all user namespaces. The Clickhouse and ClickhouseClass custom resources define the settings of the ClickHouse instance.
+   * Reconciles [Clickhouse](/modules/managed-clickhouse/cr.html#clickhouse) custom resources in all [user namespaces](../../glossary.html#user-namespace). The Clickhouse and ClickhouseClass custom resources define the settings of the ClickHouse instance.
 
    * Creates and manages the [Certificate](https://cert-manager.io/docs/usage/certificate/) custom resource and StatefulSet, Secret, Service, ConfigMap, and PersistentVolumeClaim resources related to the ClickHouse instance.
 

@@ -10,7 +10,7 @@ The [`registry-packages-proxy`](/modules/registry-packages-proxy/) module provid
 It acts as an intermediary between cluster components and external or internal registries,
 offering caching capabilities to optimize bandwidth usage and improve package retrieval performance.
 
-This module is a critical infrastructure component that runs on master nodes and is used during cluster bootstrap,
+This module is a critical infrastructure component that runs on [master nodes](../../../glossary.html#master-node) and is used during cluster bootstrap,
 as well as during cluster operation, to fetch packages from container registries.
 
 The module deploys a highly-available proxy service that:
@@ -62,10 +62,10 @@ The module interacts with the following components:
 
 The following external components interact with the module:
 
-1. **Bashible**: Downloads the image with assembled binaries to nodes during cluster bootstrap.
+1. **[Bashible](../../../glossary.html#bashible)**: Downloads the image with assembled binaries to nodes during cluster bootstrap.
 
 1. **Prometheus-main**: Collects metrics from the registry-packages-proxy container.
 
 1. **Console**: Retrieves package icons.
 
-1. **Deckhouse CLI**: Retrieves versions of the [`d8`](../../../cli/d8/) utility and its plugins.
+1. **[Deckhouse CLI](../../../glossary.html#deckhouse-cli)**: Retrieves versions of the [`d8`](../../../cli/d8/) utility and its plugins.

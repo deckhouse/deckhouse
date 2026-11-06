@@ -18,16 +18,16 @@ relatedLinks:
 
 This section describes the approaches to balancing incoming traffic in Deckhouse Platform (DP):
 
-- NLB (Network Load Balancer) — operates at the network level, routing traffic based on IP addresses
+- [NLB](../../../../glossary.html#nlb) (Network Load Balancer) — operates at the network level, routing traffic based on IP addresses
   and ports without inspecting request contents.
-- ALB (Application Load Balancer) — operates at the application level, analyzing HTTP(S) headers, paths, and domains.
+- [ALB](../../../../glossary.html#alb) (Application Load Balancer) — operates at the application level, analyzing HTTP(S) headers, paths, and domains.
   It supports SSL termination and content-based routing.
 
 ## Network-level load balancing (NLB)
 
 NLB-based load balancing can be implemented in two ways:
 
-- Using an external load balancer provided by a cloud provider.
+- Using an external load balancer provided by a [cloud provider](../../../../glossary.html#cloud-provider).
 - Using the built-in [`metallb`](/modules/metallb/) balancer, which works in both cloud and bare-metal clusters.
 
 ## Application-level load balancing (ALB)
@@ -55,7 +55,7 @@ When using the `alb` module, responsibilities are typically split as follows:
 - Namespace administrator — deploys namespaced gateway infrastructure with ALBInstance and configures how traffic is accepted with ListenerSet (hostname, TLS, ports).
 - Application developers — configure routing to applications with HTTPRoute and other route objects.
 
-In a typical cluster-wide gateway scenario, the namespace administrator creates the ListenerSet, and application developers create the HTTPRoute. The same person may perform both roles if they have the required permissions.
+In a typical [cluster-wide gateway](../../../../glossary.html#alb-managed-gateway) scenario, the namespace administrator creates the ListenerSet, and application developers create the HTTPRoute. The same person may perform both roles if they have the required permissions.
 
 ### Choosing an ALB implementation
 
@@ -66,7 +66,7 @@ The table below lists the criteria for choosing an ALB implementation.
 | Publishing API | Ingress + annotations | Gateway, ListenerSet, routes | Gateway, VirtualService, DestinationRule |
 | Protocols | HTTP/HTTPS, gRPC (Ingress) | HTTP/HTTPS, gRPC, TLS, TCP, UDP | HTTP/HTTPS, gRPC, TCP (Istio Gateway) |
 | Role separation | IngressClass + Ingress | ClusterALBInstance/ALBInstance → ListenerSet → routes | IngressIstioController + Istio Gateway |
-| Service mesh | No | Optional (sidecar on the gateway proxy) | Yes |
+| [Service mesh](../../../../glossary.html#service-mesh) | No | Optional (sidecar on the gateway proxy) | Yes |
 | Typical use case | Classic Ingress, minimal change | New apps, multitenancy, gradual migration from Ingress | Canary, mTLS, tracing, advanced routing |
 
 ### Comparison of the ingress-nginx and alb modules {#comparison-of-the-ingress-nginx-and-alb-modules}
@@ -79,12 +79,12 @@ Service domains (web interfaces of DP components and modules via `publicDomainTe
 | :--- |:--------------------------------------------------------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Routing standard | Ingress API with annotations                                                                                              | Kubernetes Gateway API                                                                                                                                                                   |
 | Proxy implementation | nginx                                                                                                                     | Envoy Proxy                                                                                                                                                                              |
-| Lifecycle stage | General Availability                                                                                                      | Preview                                                                                                                                                                                  |
+| [Lifecycle stage](../../../../glossary.html#module-lifecycle-stage) | General Availability                                                                                                      | Preview                                                                                                                                                                                  |
 | Development | Maintenance mode: the upstream Ingress NGINX project no longer develops new features, while DP provides security updates | Actively developed                                                                                                                                                                       |
 | Minimum DP version | Available in all supported versions                                                                                       | 1.76                                                                                                                                                                                     |
-| DP editions | All editions                                                                                                              | All editions                                                                                                                                                                             |
+| DP [editions](../../../../glossary.html#edition) | All editions                                                                                                              | All editions                                                                                                                                                                             |
 | Role separation model | Cluster administrator, namespace administrator                                                                            | Cluster administrator, namespace administrator, application developers                                                                                                                    |
-| Multiple independent entry points | Multiple Ingress controllers selected via `ingressClass`                                                                  | Multiple Gateway objects selected via `gatewayName`; cluster-scoped and namespaced gateways                                                                                              |
+| Multiple independent entry points | Multiple [Ingress controllers](../../../../glossary.html#ingress-controller) selected via `ingressClass`                                                                  | Multiple Gateway objects selected via `gatewayName`; cluster-scoped and namespaced gateways                                                                                              |
 | HTTP/HTTPS (HTTP/1.1, HTTP/2, HTTP/3) | Yes                                                                                                                       | Yes ([enabling HTTP/3](alb/alb-gateway-api.html#http3))                                                                                                                                  |
 | WebSocket | Yes                                                                                                                       | Yes                                                                                                                                                                                      |
 | gRPC | Yes                                                                                                                       | Yes                                                                                                                                                                                      |
@@ -93,7 +93,7 @@ Service domains (web interfaces of DP components and modules via `publicDomainTe
 | UDP | No                                                                                                                        | Yes (UDPRoute)                                                                                                                                                                           |
 | TLS passthrough | Yes                                                                                                                       | Yes (TLSRoute)                                                                                                                                                                           |
 | Proxy Protocol | Yes                                                                                                                       | Yes                                                                                                                                                                                      |
-| Traffic ingress methods | `LoadBalancer`, `HostPort`, and `HostWithFailover` [inlets](./alb/alb-gateway-api.html#inlets)                            | [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer) and [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) inlets |
+| Traffic ingress methods | `LoadBalancer`, `HostPort`, and `HostWithFailover` [inlets](./alb/alb-gateway-api.html#inlets)                            | [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer) and [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) [inlets](../../../../glossary.html#inlet) |
 | Automatic TLS certificate issuance (cert-manager) | Yes                                                                                                                       | Yes                                                                                                                                                                                      |
 | HTTPS policy tuning (TLS versions, ciphers, HSTS) | Yes                                                                                                                       | TLSv1.2/1.3 by default; HSTS via a response-header annotation                                                                                                                            |
 | WAF | ModSecurity at the controller or Ingress level                                                                            | ModSecurity/Coraza at the route level, OWASP CRS preset                                                                                                                                  |
@@ -103,14 +103,14 @@ Service domains (web interfaces of DP components and modules via `publicDomainTe
 | Request rate limiting | Yes                                                                                                                       | Yes                                                                                                                                                                                      |
 | Session affinity | Yes                                                                                                                       | Yes                                                                                                                                                                                      |
 | GeoIP | Geo-based request statistics in metrics                                                                                   | [Adding GeoIP fields to headers](alb/alb-gateway-api.html#geoip) based on MaxMind databases                                                                                              |
-| Prometheus metrics and Grafana dashboards | Yes, detailed by namespace, vhost, Ingress resource, and location                                                         | Yes: Envoy Proxy metrics and dashboards for requests, routes, and upstreams                                                                                                              |
+| Prometheus metrics and Grafana [dashboards](../../../../glossary.html#dashboard) | Yes, detailed by namespace, vhost, Ingress resource, and location                                                         | Yes: Envoy Proxy metrics and dashboards for requests, routes, and upstreams                                                                                                              |
 | OpenTelemetry tracing | Yes                                                                                                                       | Yes ([configuration](alb/alb-gateway-api.html#tracing))                                                                                                                                  |
 
 ### Next steps
 
 To publish an application, follow these steps:
 
-1. Choose an ALB implementation based on the criteria in the table above: [Ingress NGINX](alb/nginx.html), [Gateway API](alb/alb-gateway-api.html), or [Istio](alb/istio.html).
+1. Choose an [ALB](../../../../glossary.html#alb) implementation based on the criteria in the table above: [Ingress NGINX](alb/nginx.html), [Gateway API](alb/alb-gateway-api.html), or [Istio](alb/istio.html).
    - Istio — when you need service-mesh traffic management (canary routing, mTLS between Pods).
    - Gateway API — when you need a model with role separation and protocols beyond classic Ingress.
    - Ingress NGINX — when you need a mature Ingress-based ALB.

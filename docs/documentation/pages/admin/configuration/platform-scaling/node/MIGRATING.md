@@ -3,7 +3,7 @@ title: "Migrating container runtime to containerd v2"
 permalink: en/admin/configuration/platform-scaling/node/migrating.html
 ---
 
-You can configure containerd v2 as the primary container runtime either at the cluster level or for specific node groups. This runtime option enables the use of cgroups v2, provides improved security, and allows more flexible resource management.
+You can configure containerd v2 as the primary container runtime either at the cluster level or for specific [node groups](../../../../glossary.html#node-group). This runtime option enables the use of cgroups v2, provides improved security, and allows more flexible resource management.
 
 {% alert level="info" %}
 
@@ -73,7 +73,7 @@ You can enable containerd v2 in two ways:
    defaultCRI: ContainerdV2
    ```
 
-1. **For a specific node group**. Set `ContainerdV2` in the [`spec.cri.type`](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter of the [NodeGroup](/modules/node-manager/cr.html#nodegroup) object.
+1. **For a specific [node group](../../../../glossary.html#node-group)**. Set `ContainerdV2` in the [`spec.cri.type`](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter of the [NodeGroup](/modules/node-manager/cr.html#nodegroup) object.
 
    Example:
 

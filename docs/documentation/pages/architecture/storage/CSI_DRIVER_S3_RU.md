@@ -6,7 +6,7 @@ search: csi-s3, s3, csi driver
 description: Архитектура CSI-драйвера csi-s3 в Deckhouse Platform.
 ---
 
-CSI-драйвер [`csi-s3`](https://github.com/yandex-cloud/k8s-csi-s3) — это реализация стандарта [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) для обеспечения работы с томами на основе S3-хранилищ в Deckhouse Platform (DP).
+[CSI-драйвер](../../../glossary.html#csi-driver) [`csi-s3`](https://github.com/yandex-cloud/k8s-csi-s3) — это реализация стандарта [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) для обеспечения работы с томами на основе S3-хранилищ в Deckhouse Platform (DP).
 
 ## Архитектура CSI-драйвера (csi-s3)
 
@@ -69,7 +69,7 @@ CSI-драйвер `csi-s3` состоит из следующих компон�
 
 * [Kubelet](../../kubernetes-and-scheduling/kubelet.html):
 
-  * проверяет livenessProbe CSI-драйвера;
+  * проверяет livenessProbe [CSI-драйвера](../../../glossary.html#csi-driver);
   * регистрирует Node Plugin;
   * вызывает RPC `NodeStageVolume`, `NodeUnstageVolume`, `NodePublishVolume` и `NodeUnpublishVolume` в Node Plugin.
 

@@ -8,7 +8,7 @@ description: Архитектура модуля ingress-nginx в Deckhouse Plat
 
 Модуль `ingress-nginx` устанавливает и управляет [Ingress NGINX Controller](https://kubernetes.github.io/ingress-nginx/) с помощью кастомного ресурса IngressNginxController.
 
-Модуль может работать в режиме высокой доступности (HA) и предоставляет гибкие настройки размещения Ingress-контроллеров на узлах кластера, а также параметры работы контроллера с учетом особенностей реализации инфраструктуры.
+Модуль может работать в [режиме высокой доступности](../../glossary.html#ha-mode) (HA) и предоставляет гибкие настройки размещения [Ingress-контроллеров](../../glossary.html#ingress-controller) на узлах кластера, а также параметры работы контроллера с учетом особенностей реализации инфраструктуры.
 
 Модуль поддерживает запуск и раздельную конфигурацию нескольких экземпляров Ingress NGINX Controller. Это позволяет, например, разделять внешние и внутренние (intranet) Ingress-ресурсы приложений.
 
@@ -96,13 +96,13 @@ description: Архитектура модуля ingress-nginx в Deckhouse Plat
 
 Способы приема трафика из внешней сети подробно описаны в параметре [`spec.inlet`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-inlet) кастомного ресурса IngressNginxController.
 
-Для инлетов вида LoadBalancer, LoadBalancerWithProxyProtocol и LoadBalancerWithSSLPassthrough указанный на схеме балансировщик нагрузки автоматически предоставляется облачным провайдером (при развертывании DP в облаке), либо может быть реализован при помощи MetalLB-контроллера (при установке на bare-metal-хостах). С настройками модуля `metallb` можно ознакомиться в [соответствующем разделе документации](/modules/metallb/configuration.html).
+Для [инлетов](../../glossary.html#inlet) вида LoadBalancer, LoadBalancerWithProxyProtocol и LoadBalancerWithSSLPassthrough указанный на схеме балансировщик нагрузки автоматически предоставляется [облачным провайдером](../../glossary.html#cloud-provider) (при развертывании DP в облаке), либо может быть реализован при помощи MetalLB-контроллера (при установке на bare-metal-хостах). С настройками модуля `metallb` можно ознакомиться в [соответствующем разделе документации](/modules/metallb/configuration.html).
 
 Для инлетов вида HostPort, HostPortWithProxyProtocol, HostPortWithSSLPassthrough и HostWithFailover балансировщик нагрузки разворачивается пользователем, либо может отсутствовать. В этом случае пользователь самостоятельно настраивает бэкенды балансировщика или обеспечивает сетевую связность до ingress-controller. Точкой входа в ingress-controller в этом случае являются порты на узлах кластера, на которых запущен контроллер.
 
 ## Архитектура Ingress-контроллера с инлетом HostWithFailover
 
-При значении `HostWithFailover` параметра [`spec.inlet`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-inlet) кастомного ресурса IngressNginxController в кластере устанавливаются два Ingress-контроллера — основной и резервный (failover), а также proxy-failover-контроллер, который координирует переключение трафика между ними.
+При значении `HostWithFailover` параметра [`spec.inlet`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-inlet) кастомного ресурса IngressNginxController в кластере устанавливаются два [Ingress-контроллера](../../glossary.html#ingress-controller) — основной и резервный (failover), а также proxy-failover-контроллер, который координирует переключение трафика между ними.
 
 Основной контроллер запускается в `hostNetwork`, в то время как failover-контроллер запускается в `podNetwork`. Если под основного контроллера становится недоступен на узле, proxy-failover начинает проксировать трафик в под failover-контроллера, используя `PROXY PROTOCOL` для сохранения информации об IP-адресе клиента.
 

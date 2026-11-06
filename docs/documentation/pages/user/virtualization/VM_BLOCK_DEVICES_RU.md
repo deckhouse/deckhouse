@@ -6,7 +6,7 @@ search: подключение диска, VirtualMachineBlockDeviceAttachment, 
 lang: ru
 ---
 
-К виртуальной машине (ВМ) можно подключать диски и образы. Они описываются как блочные устройства (BlockDevices).
+К виртуальной машине (ВМ) можно подключать диски и образы. Они описываются как [блочные устройства](../../glossary.html#vm-block-device) (BlockDevices).
 
 Типы блочных устройств и режимы доступа:
 
@@ -31,7 +31,7 @@ lang: ru
 
 Подключить диск к работающей ВМ можно только тогда, когда хранилище доступно на том узле кластера, где выполняется виртуальная машина. При создании и обновлении ВМ, а также при создании [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment), учитываются правила размещения (`nodeSelector`, `affinity`, `tolerations`) тома, виртуальной машины и класса ВМ, и хотя бы одно общее допустимое размещение у них должно найтись. Если ВМ уже запущена и работает на конкретном узле, новый диск должен быть доступен на этом узле.
 
-Пока живая миграция машины готовит целевой узел, диск нельзя ни подключить, ни отключить. Новый ресурс [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) остаётся в фазе `Pending` с причиной `BlockedByMigration` в условии `Attached`, а удаляемый остаётся в фазе `Terminating`, и оба доводятся до конца после миграции. Пока миграция стоит в очереди и целевой узел ещё не готовится, подключение и отключение работают как обычно.
+Пока [живая миграция](../../glossary.html#live-migration) машины готовит целевой узел, диск нельзя ни подключить, ни отключить. Новый ресурс [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) остаётся в фазе `Pending` с причиной `BlockedByMigration` в условии `Attached`, а удаляемый остаётся в фазе `Terminating`, и оба доводятся до конца после миграции. Пока миграция стоит в очереди и целевой узел ещё не готовится, подключение и отключение работают как обычно.
 
 ## Подключение через спецификацию ВМ
 
@@ -77,7 +77,7 @@ spec:
 
 {% tab "В веб-интерфейсе" %}
 
-1. Перейдите на вкладку «Проекты» и выберите нужный проект.
+1. Перейдите на вкладку «Проекты» и выберите нужный [проект](../../glossary.html#project).
 1. Перейдите в раздел «Виртуализация» → «Виртуальные машины».
 1. Из списка выберите нужную ВМ и нажмите на её имя.
 1. На вкладке «Конфигурация» прокрутите страницу до раздела «Диски».
@@ -94,7 +94,7 @@ spec:
 
 ## Подключение через VirtualMachineBlockDeviceAttachment
 
-Ресурс [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) подключает и отключает блочное устройство у ВМ, не затрагивая её спецификацию. Он подходит для автоматизации и для случаев, когда у пользователя нет прав на редактирование машины.
+Ресурс [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) подключает и отключает [блочное устройство](../../glossary.html#vm-block-device) у ВМ, не затрагивая её спецификацию. Он подходит для автоматизации и для случаев, когда у пользователя нет прав на редактирование машины.
 
 Устройство подключено, когда ресурс переходит в фазу `Attached`. Остальные фазы описаны в поле [`.status.phase`](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment-v1alpha2-status-phase), а причину задержки показывает блок [`.status.conditions`](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment-v1alpha2-status-conditions).
 

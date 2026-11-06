@@ -10,7 +10,7 @@ The following recommendations are essential for a production cluster and may be 
 ## Release channel and update mode
 
 {% alert level="info" %}
-Use `Early Access` or `Stable` release channel.
+Use `Early Access` or `Stable` [release channel](../glossary.html#release-channel).
 Configure the [auto-update window](/modules/deckhouse/usage.html#update-windows-configuration) or select [manual mode](/modules/deckhouse/usage.html#manual-update-confirmation).
 {% endalert %}
 
@@ -21,7 +21,7 @@ If possible, use separate release channels for different clusters. For a develop
 We recommend using the `Early Access` or `Stable` release channel for production clusters.
 If you have more than one cluster in a production environment, consider using separate release channels for them.
 For example, you can use `Early Access` for the first cluster and `Stable` for the second.
-If you can't use separate release channels, we recommend setting update windows so that they don't overlap.  
+If you can't use separate release channels, we recommend setting [update windows](../glossary.html#update-window) so that they don't overlap.  
 
 {% alert level="warning" %}
 Even in very busy and critical clusters, it's recommended that you don't disable the release channel.
@@ -42,7 +42,7 @@ In most cases, we recommend opting for the automatic selection of the Kubernetes
 In the platform, this behavior is set by default, but it can be changed with the [kubernetesVersion](../reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter.
 Upgrading the Kubernetes version in the cluster has no effect on applications and is done [consistently and securely](/modules/control-plane-manager/#version-control).
 
-If automatic Kubernetes version selection is enabled, the platform can upgrade the Kubernetes version in the cluster when updating the platform release (when upgrading a minor version).
+If automatic Kubernetes version selection is enabled, the platform can upgrade the Kubernetes version in the cluster when updating the platform release (when upgrading a [minor version](../glossary.html#minor-version)).
 
 {% alert level="warning" %}
 If the Kubernetes version is explicitly specified in the [kubernetesVersion](../reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter, the platform update may fail if the Kubernetes version used in the cluster is no longer supported.
@@ -55,13 +55,13 @@ check whether it's [supported](../reference/supported_versions.html) and [set it
 
 Deckhouse Platform supports several cluster architecture options for virtualization — from single-node installations to distributed configurations. The choice of a specific option depends on the requirements: the need for quick test deployment, high availability, or isolation of system services from user workloads.
 
-**Single-node cluster (Single Node / Edge)**: All management components, auxiliary services, and virtual machines are placed on a single server. Suitable for test environments and edge scenarios. Requires minimal resources but does not provide fault tolerance.
+**[Single-node cluster](../glossary.html#single-node-cluster) (Single Node / Edge)**: All management components, auxiliary services, and virtual machines are placed on a single server. Suitable for test environments and edge scenarios. Requires minimal resources but does not provide fault tolerance.
 
-**Cluster with one master node and worker nodes**: One node performs management functions, virtual machines are placed on dedicated worker nodes. Suitable for small clusters where separation of system services and user workloads is required. Fault tolerance is absent.
+**Cluster with one [master node](../glossary.html#master-node) and [worker nodes](../glossary.html#worker-node)**: One node performs management functions, virtual machines are placed on dedicated worker nodes. Suitable for small clusters where separation of system services and user workloads is required. Fault tolerance is absent.
 
 **Three-node cluster (High Availability)**: Management components are distributed across three master nodes, which ensures fault tolerance of the control plane and continued operation if one of the nodes fails. User workloads can run on these same servers or on dedicated worker nodes. Recommended for production environments.
 
-**Highly available distributed cluster**: Management components are deployed on three dedicated master nodes; if necessary, system services, monitoring, and ingress are moved to separate system or frontend nodes. User virtual machines run exclusively on worker hypervisors. Provides high availability, scalability, and isolation of user workloads from system services. Used in large clusters.
+**Highly available distributed cluster**: Management components are deployed on three dedicated master nodes; if necessary, system services, monitoring, and ingress are moved to separate system or [frontend nodes](../glossary.html#frontend-node). User virtual machines run exclusively on worker hypervisors. Provides high availability, scalability, and isolation of user workloads from system services. Used in large clusters.
 
 See also the [Architecture options](../architecture/virtualization/) section.
 
@@ -71,8 +71,8 @@ Before deploying a cluster, you need to plan the resources that may be required 
 
 - What workload is planned for the cluster?
 - How many virtual machines are planned to be launched?
-- Does the cluster require high availability mode?
-- What type of storage will be used (SDS or external)?
+- Does the cluster require [high availability mode](../glossary.html#ha-mode)?
+- What type of storage will be used ([SDS](../glossary.html#sds) or external)?
 
 Answers to these questions will help determine the required cluster architecture and node resources.
 
@@ -82,7 +82,7 @@ When using software-defined storage (SDS) on nodes that participate in storage o
 
 Depending on the architecture, the following minimum resources are required for the platform to operate correctly:
 
-| Architecture                                                             | Workload placement   | Master node          | Worker node         | System node          | Frontend node       |
+| Architecture                                                             | Workload placement   | Master node          | Worker node         | [System node](../glossary.html#system-node)          | Frontend node       |
 |--------------------------------------------------------------------------|----------------------|----------------------|---------------------|----------------------|---------------------|
 | Single-node platform<br/>(Single Node / Edge)                            | On a single node     | 3 vCPU<br/>10 GB RAM | —                   | —                    | —                   |
 | Multi-node platform<br/>(1 master node + worker nodes)                   | On all nodes         | 6 vCPU<br/>6 GB RAM  | 2 vCPU<br/>4 GB RAM | —                    | —                   |
@@ -119,10 +119,10 @@ See also the [VM Network](../admin/configuration/network/vm-network.html) sectio
 A cluster must include three master nodes with fast 400+ IOPS disks.
 {% endalert %}
 
-Always use three master nodes — this number ensures fault tolerance and allows safe updates of master nodes. There is no need for more master nodes, and two nodes will not provide quorum.
+Always use three [master nodes](../glossary.html#master-node) — this number ensures fault tolerance and allows safe updates of master nodes. There is no need for more master nodes, and two nodes will not provide quorum.
 
 {% alert level="info" %}
-If you need to run workloads (virtual machines) on control plane nodes, which is typical for **Single-node cluster (Single Node / Edge)** and **Three-node cluster (High Availability)** configurations, you need to configure tolerations in the virtual machine configuration or in the virtual machine class to allow VMs to be placed on master nodes.
+If you need to run workloads (virtual machines) on control plane nodes, which is typical for **[Single-node cluster](../glossary.html#single-node-cluster) (Single Node / Edge)** and **Three-node cluster (High Availability)** configurations, you need to configure tolerations in the virtual machine configuration or in the virtual machine class to allow VMs to be placed on master nodes.
 {% endalert %}
 
 See also the [Working with static nodes](../architecture/cluster-and-infrastructure/node-management/overview.html#working-with-static-nodes) section.
@@ -130,12 +130,12 @@ See also the [Working with static nodes](../architecture/cluster-and-infrastruct
 ### Frontend nodes
 
 {% alert level="info" %}
-Use two or more frontend nodes.
+Use two or more [frontend nodes](../glossary.html#frontend-node).
 
-Use the `HostPort` inlet with an external load balancer.
+Use the `HostPort` [inlet](../glossary.html#inlet) with an external load balancer.
 {% endalert %}
 
-Frontend nodes balance incoming traffic. Ingress controllers run on them. The NodeGroup of frontend nodes has the `node-role.deckhouse.io/frontend` label. For details on allocating nodes for specific load types, refer to [Advanced scheduling](../admin/configuration/#advanced-scheduling).
+Frontend nodes balance incoming traffic. [Ingress controllers](../glossary.html#ingress-controller) run on them. The NodeGroup of frontend nodes has the `node-role.deckhouse.io/frontend` label. For details on allocating nodes for specific load types, refer to [Advanced scheduling](../admin/configuration/#advanced-scheduling).
 
 Use more than one frontend node. Frontend nodes must be able to continue handling traffic even if one of them fails.
 
@@ -154,7 +154,7 @@ The `HostWithFailover` inlet is suitable for clusters with a single frontend nod
 ### Monitoring nodes
 
 {% alert level="info" %}
-For high-load clusters, use two monitoring nodes equipped with fast disks.
+For high-load clusters, use two [monitoring nodes](../glossary.html#monitoring-node) equipped with fast disks.
 {% endalert %}
 
 Monitoring nodes are used to run Grafana, Prometheus, and other monitoring components. The [NodeGroup](/modules/node-manager/cr.html#nodegroup) for monitoring nodes has the `node-role.deckhouse.io/monitoring` label.
@@ -163,7 +163,7 @@ In high-load clusters with many alerts and large volumes of metrics, we recommen
 
 When allocating monitoring nodes, it's important to equip them with fast disks. You can do so by providing a dedicated `storageClass` on fast disks for all platform components (the [storageClass](../reference/api/global.html#parameters-storageclass) global parameter) or allocating a dedicated `storageClass` to monitoring components only (the [storageClass](/modules/prometheus/configuration.html#parameters-storageclass) and [longtermStorageClass](/modules/prometheus/configuration.html#parameters-longtermstorageclass) parameters of the `prometheus` module).
 
-If the cluster is initially created with nodes allocated for a specific type of workload (system nodes, monitoring nodes, etc.), we recommend that you explicitly specify the corresponding nodeSelector in the configuration of modules using persistent storage volumes. For example, for the `prometheus` module, this parameter is [nodeSelector](/modules/prometheus/configuration.html#parameters-nodeselector).
+If the cluster is initially created with nodes allocated for a specific type of workload ([system nodes](../glossary.html#system-node), monitoring nodes, etc.), we recommend that you explicitly specify the corresponding nodeSelector in the configuration of modules using persistent storage volumes. For example, for the `prometheus` module, this parameter is [nodeSelector](/modules/prometheus/configuration.html#parameters-nodeselector).
 
 ### System nodes
 
@@ -179,13 +179,13 @@ Fast disks are recommended for platform components (the [storageClass](../refere
 
 ### Storage configuration
 
-Configure one or more storage systems for virtual machine disks:
+Configure one or more storage systems for [virtual machine disks](../glossary.html#vm-disk):
 
-- **Software-defined storage (SDS)**:
-  - `[sds-local-volume](/modules/sds-local-volume/)`: Local storage based on LVM. High performance but without replication. Suitable for temporary data or when external backup is available.
-  - `[sds-replicated-volume](/modules/sds-replicated-volume/)`: Replicated storage based on DRBD. Provides fault tolerance through replication between nodes. Recommended for production.
+- **[Software-defined storage](../glossary.html#sds) (SDS)**:
+  - `[sds-local-volume](/modules/sds-local-volume/)`: [Local storage](../glossary.html#local-storage) based on LVM. High performance but without replication. Suitable for temporary data or when external backup is available.
+  - `[sds-replicated-volume](/modules/sds-replicated-volume/)`: [Replicated storage](../glossary.html#replicated-storage) based on DRBD. Provides fault tolerance through replication between nodes. Recommended for production.
 
-- **External storage**: Ceph, NFS, TATLIN.UNIFIED (Yadro), Huawei Dorado, HPE 3par, iSCSI. Connected via corresponding CSI drivers.
+- **[External storage](../glossary.html#external-storage)**: Ceph, NFS, TATLIN.UNIFIED (Yadro), Huawei Dorado, HPE 3par, iSCSI. Connected via corresponding [CSI drivers](../glossary.html#csi-driver).
 
 {% alert level="info" %}
 When using SDS on nodes participating in storage organization, you need to provide additional disks beyond the minimum requirements for node resources. The size of additional disks depends on the planned volume of virtual machine data.
@@ -201,18 +201,18 @@ Create your own virtual machine class (one or more).
 The default `generic` class is not recommended for production.
 {% endalert %}
 
-Configure sizing policies to control VM resources:
+Configure [sizing policies](../glossary.html#sizing-policy) to control VM resources:
 - Use `type: Host` for identical nodes (same processor architecture).
 - Use `type: Discovery` for different processor types.
 
-Sizing policies limit the allowed VM resource configurations (number of cores, memory, core usage fraction) and prevent creating VMs with suboptimal configurations. The `coreFractions` parameter controls CPU overcommit: by setting the minimum core usage fraction, you guarantee each VM a corresponding portion of CPU and thereby limit the maximum allowed resource oversubscription level.
+Sizing policies limit the allowed VM resource configurations (number of cores, memory, core usage fraction) and prevent creating VMs with suboptimal configurations. The `coreFractions` parameter controls CPU overcommit: by setting the minimum core usage fraction, you guarantee each VM a corresponding portion of CPU and thereby limit the maximum allowed resource [oversubscription](../glossary.html#cpu-oversubscription) level.
 
 See also the [VirtualMachineClass settings](../admin/configuration/virtualization/vm-classes.html#virtualmachineclass-settings) section.
 
 ## Access control
 
 {% alert level="info" %}
-Configure user authentication and access control. For production, it is recommended to use projects with role model configuration.
+Configure user authentication and access control. For production, it is recommended to use projects with [role model](../glossary.html#rbac) configuration.
 {% endalert %}
 
 The platform supports managing internal users and groups, as well as integration with external authentication providers:
@@ -226,8 +226,8 @@ Configure projects and access rights in accordance with the planned use of the c
 
 Access control is configured through a role model using the standard Kubernetes RBAC approach. You can use existing roles or create your own:
 
-- **Manage roles**: For platform administrators. Allow configuring the cluster, managing virtual machines at the platform level, and creating projects (tenants) for users.
-- **Use roles**: For project users. Allow managing resources (including virtual machines) within assigned projects.
+- **[Manage roles](../glossary.html#manage-role)**: For platform administrators. Allow configuring the cluster, managing virtual machines at the platform level, and creating projects (tenants) for users.
+- **[Use roles](../glossary.html#use-role)**: For project users. Allow managing resources (including virtual machines) within assigned projects.
 
 See also the [Projects](../admin/multitenancy/project-management.html) and [Role model](../admin/configuration/access/authorization/rbac-experimental.html) sections.
 

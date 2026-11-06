@@ -444,7 +444,7 @@ profile k8s-apparmor-example-deny-write flags=(attach_disconnected) {
 
 There are three types of profiles:
 
-- Built-in runtime profile (`RuntimeDefault`): Contains a basic set of containerization restrictions that are optimal for most tasks.
+- Built-in [runtime profile](../../glossary.html#runtime-profile) (`RuntimeDefault`): Contains a basic set of containerization restrictions that are optimal for most tasks.
 - Profile without restrictions (`Unconfined`): Completely disables AppArmor protection for the container.
 - User profiles (`Localhost`): Custom profiles that the administrator must pre-load into the Linux kernel on each node in the `/etc/apparmor.d` directory.
 
@@ -532,7 +532,7 @@ Example:
 
 There are three profile types:
 
-- Built-in runtime profile (`RuntimeDefault`): Contains a basic set of allowed system calls that is optimal for most containers.
+- Built-in [runtime profile](../../glossary.html#runtime-profile) (`RuntimeDefault`): Contains a basic set of allowed system calls that is optimal for most containers.
 - Profile without restrictions (`Unconfined`): Allows you to perform any action in the container.
 - User profiles.
 
@@ -651,7 +651,7 @@ Here are the most common of them:
 
 - `NET_BIND_SERVICE`: Allows a process (even not as `root`) to listen on system ports (for example, `80` or `443`).
 - `SYS_TIME`: Allows changing the system time on a node.
-- `NET_ADMIN`: Allows you to configure network interfaces, routing rules and a firewall within the container network (often used in service mesh, such as Istio).
+- `NET_ADMIN`: Allows you to configure network interfaces, routing rules and a firewall within the container network (often used in [service mesh](../../glossary.html#service-mesh), such as Istio).
 - `CHOWN`: Allows you to randomly change the owner of files.
 
 Capabilities implement the principle of least privilege. Using it, you can give the user a single specific kernel privilege without giving full `root` access, or take away some privileges from the `root` user.
@@ -793,7 +793,7 @@ When setting the `privileged: true` parameter, the following changes occur:
 The `privileged: true` flag is the biggest security hole if it is issued to an untrusted application. An attacker who gains access to such a container can be guaranteed to compromise the entire node with one command. For example, he can issue the `mount` command on the host's root disk and gain full control of the host's operating system files by "escaping the container".
 
 {% alert level="warning" %}
-This flag is strictly contraindicated for ordinary business applications. It is required exclusively for cluster system components: network plugins (CNI), storage drivers (CSI) or low-level monitoring agents.
+This flag is strictly contraindicated for ordinary business applications. It is required exclusively for cluster [system components](../../glossary.html#system-component): network plugins (CNI), storage drivers (CSI) or low-level monitoring agents.
 {% endalert %}
 
 ### Parameter location
@@ -930,7 +930,7 @@ When using `hostNetwork: true`, Kubernetes instructs the container runtime not t
 
 - **The host network stack is shared**: The container uses the node's network interfaces (`eth0`, `loopback`), its IP address, and routing tables directly.
 - **Ports are opened on the host**: Any port that the application in the container listens on is automatically opened on the node's interfaces and is reachable from outside the cluster.
-- **CNI is ignored**: The cluster network plugin does not assign a separate IP address to the pod and does not apply network policies (`NetworkPolicy`) to its traffic.
+- **CNI is ignored**: The cluster network plugin does not assign a separate IP address to the pod and does not apply [network policies](../../glossary.html#network-policy) (`NetworkPolicy`) to its traffic.
 
 Enabling `hostNetwork: true` destroys the network isolation of the pod. The application gains direct access to all network interfaces of the node, can intercept foreign traffic (sniffing), interfere with cluster routing, or conflict on ports with system services of the host. Kubernetes network policies stop applying, since the pod's traffic is indistinguishable from the traffic of the node itself. An attacker who compromises such a pod can attack neighboring pods and nodes directly, bypassing micro-segmentation mechanisms.
 
@@ -978,7 +978,7 @@ When using `hostPID: true`, the container runtime does not create a separate PID
 - **All node processes are visible**: Processes inside the container see the full list of processes running on the node (analogous to the `ps aux` command on the host).
 - **Interaction with host processes is available**: Provided sufficient privileges, container processes can send signals (`kill`, `SIGTERM`) to node processes or inspect their memory via `/proc`.
 
-The `hostPID: true` parameter opens a window into the node's operating system for container processes. An attacker who compromises such a pod can analyze system components running on the node (including `kubelet`, `containerd`, other pods), collect information about command lines and process arguments, and, with sufficient privileges, terminate foreign processes, causing a denial of service. In addition, access to `/proc` of foreign processes allows reading their environment variables, which often contain secrets and tokens.
+The `hostPID: true` parameter opens a window into the node's operating system for container processes. An attacker who compromises such a pod can analyze [system components](../../glossary.html#system-component) running on the node (including `kubelet`, `containerd`, other pods), collect information about command lines and process arguments, and, with sufficient privileges, terminate foreign processes, causing a denial of service. In addition, access to `/proc` of foreign processes allows reading their environment variables, which often contain secrets and tokens.
 
 {% alert level="warning" %}
 The ability to send signals to host processes depends on the privileges of the user inside the container. Even with `hostPID: true`, a non-root container will not be able to directly manage `root` processes on the host, however, reading process metadata via `/proc` will still be available.

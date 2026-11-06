@@ -8,7 +8,7 @@ description: Архитектура и функции модуля control-plane
 
 ## Модуль control-plane-manager
 
-Управление компонентами control plane кластера осуществляется с помощью модуля [`control-plane-manager`](/modules/control-plane-manager/), который запускается на всех master-узлах кластера (узлах с лейблом `node-role.kubernetes.io/control-plane: ""`).
+Управление компонентами control plane кластера осуществляется с помощью модуля [`control-plane-manager`](/modules/control-plane-manager/), который запускается на всех [master-узлах](../../glossary.html#master-node) кластера (узлах с лейблом `node-role.kubernetes.io/control-plane: ""`).
 
 Модуль работает со следующими кастомными ресурсами:
 
@@ -25,7 +25,7 @@ description: Архитектура и функции модуля control-plane
 * **Управление сертификатами** — выпуск, продление и обновление сертификатов, необходимых для работы control plane. Позволяет автоматически поддерживать безопасную конфигурацию control plane и оперативно добавлять дополнительные альтернативные имена субъекта (Subject Alternative Name, SAN) для организации защищенного доступа к API Kubernetes.
 * **Настройка компонентов** — автоматическое создание необходимых конфигураций и манифестов компонентов control plane.
 * **Обновление и откат версий компонентов (upgrade/downgrade)** — поддержание в кластере согласованных версий компонентов.
-* **Управление конфигурацией etcd-кластера и его членов** — масштабирование master-узлов и миграция между одномастерными и мультимастерными конфигурациями.
+* **Управление конфигурацией etcd-кластера и его членов** — масштабирование master-узлов и миграция между одномастерными и [мультимастерными](../../glossary.html#multi-master) конфигурациями.
 * **Настройка kubeconfig** — поддержание актуальной конфигурации для работы `kubectl` на узлах кластера. Генерация, продление и обновление kubeconfig с правами *cluster-admin*, а также создание символьной ссылки для пользователя `root`, чтобы kubeconfig использовался по умолчанию.
 * **Расширение работы планировщика** — подключение внешних плагинов через вебхуки с использованием ресурса [KubeSchedulerWebhookConfiguration](/modules/control-plane-manager/cr.html#kubeschedulerwebhookconfiguration). Позволяет использовать продвинутую логику при решении задач планирования нагрузки в кластере, например:
 
@@ -80,7 +80,7 @@ description: Архитектура и функции модуля control-plane
      * **image-holder-kube-scheduler**;
      * **image-holder-etcd**.
 
-1. **kubernetes-api-proxy** (статические поды) — на каждом master-узле настраивается дополнительный прокси-сервер, отвечающий на запросы к `localhost`. По умолчанию проксирует запросы к локальному экземпляру **kube-apiserver**, а в случае его недоступности последовательно опрашивает остальные экземпляры **kube-apiserver**. Включает в себя следующие контейнеры:
+1. **[kubernetes-api-proxy](../../glossary.html#kubernetes-api-proxy)** ([статические поды](../../glossary.html#static-pod)) — на каждом master-узле настраивается дополнительный прокси-сервер, отвечающий на запросы к `localhost`. По умолчанию проксирует запросы к локальному экземпляру **kube-apiserver**, а в случае его недоступности последовательно опрашивает остальные экземпляры **kube-apiserver**. Включает в себя следующие контейнеры:
 
    * **kubernetes-api-proxy** — прокси-сервер на базе [NGINX](https://github.com/nginx/nginx);
    * **kubernetes-api-proxy-reloader** — сайдкар-контейнер, перезапускающий прокси-сервер при изменении конфигурации. Является разработкой компании «Флант».
@@ -95,7 +95,7 @@ description: Архитектура и функции модуля control-plane
 
    * **kube-rbac-proxy** — контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам компонентов control plane кластера. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
 
-1. **control-plane-proxy-etcd-arbiter** (DaemonSet) — опциональный компонент, который устанавливается в кластере при включенном модуле [`prometheus`](/modules/prometheus/), если кластер работает [в режиме HA с двумя master-узлами и arbiter-узлом](../../admin/configuration/high-reliability-and-availability/enable.html#%D0%BD%D0%B0%D1%81%D1%82%D1%80%D0%BE%D0%B9%D0%BA%D0%B0-%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0-ha-c-%D0%B4%D0%B2%D1%83%D0%BC%D1%8F-master-%D1%83%D0%B7%D0%BB%D0%B0%D0%BC%D0%B8-%D0%B8-arbiter-%D1%83%D0%B7%D0%BB%D0%BE%D0%BC). Control-plane-proxy-etcd-arbiter в этом случае запускается на arbiter-узле и пересылает авторизованные запросы на получение метрик к запущенному на нём экземпляре etcd.
+1. **control-plane-proxy-etcd-arbiter** (DaemonSet) — опциональный компонент, который устанавливается в кластере при включенном модуле [`prometheus`](/modules/prometheus/), если кластер работает [в режиме HA с двумя master-узлами и arbiter-узлом](../../admin/configuration/high-reliability-and-availability/enable.html#%D0%BD%D0%B0%D1%81%D1%82%D1%80%D0%BE%D0%B9%D0%BA%D0%B0-%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0-ha-c-%D0%B4%D0%B2%D1%83%D0%BC%D1%8F-master-%D1%83%D0%B7%D0%BB%D0%B0%D0%BC%D0%B8-%D0%B8-arbiter-%D1%83%D0%B7%D0%BB%D0%BE%D0%BC). Control-plane-proxy-etcd-arbiter в этом случае запускается на [arbiter-узле](../../glossary.html#arbiter-node) и пересылает авторизованные запросы на получение метрик к запущенному на нём экземпляре etcd.
 
    Включает в себя один контейнер:
 

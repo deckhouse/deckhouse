@@ -60,10 +60,10 @@ description: Архитектура модуля prometheus в Deckhouse Platfor
 
    В prometheus-longterm также может использоваться оригинальный Prometheus или Deckhouse Prom++. Состав контейнеров и принцип их работы у prometheus-longterm совпадает с prometheus-main.
 
-1. **Grafana-v10** — необязательный компонент Grafana, предоставляющий веб-интерфейс для визуализации данных мониторинга. Grafana отображает дашборды, поставляемые вместе с модулями DP. Grafana умеет работать в режиме высокой доступности, не хранит состояние и настраивается с помощью [кастомных ресурсов](/modules/prometheus/cr.html#grafanaadditionaldatasource). Компонент включён по умолчанию, но при желании его можно отключить с помощью [параметра `settings.grafana.enabled`](/modules/prometheus/configuration.html#parameters-grafana-enabled).
+1. **Grafana-v10** — необязательный компонент Grafana, предоставляющий веб-интерфейс для визуализации данных мониторинга. Grafana отображает [дашборды](../../glossary.html#dashboard), поставляемые вместе с модулями DP. Grafana умеет работать в [режиме высокой доступности](../../glossary.html#ha-mode), не хранит состояние и настраивается с помощью [кастомных ресурсов](/modules/prometheus/cr.html#grafanaadditionaldatasource). Компонент включён по умолчанию, но при желании его можно отключить с помощью [параметра `settings.grafana.enabled`](/modules/prometheus/configuration.html#parameters-grafana-enabled).
 
    {% alert level="info" %}
-   Grafana-v10 будет отключена в будущих релизах DP. Для просмотра дашбордов мониторинга используйте [веб-интерфейс Deckhouse](/modules/console/).
+   Grafana-v10 будет отключена в будущих [релизах DP](../../glossary.html#dp-release). Для просмотра дашбордов мониторинга используйте [веб-интерфейс Deckhouse](/modules/console/).
    {% endalert %}
 
    Состоит из следующих контейнеров:
@@ -99,7 +99,7 @@ description: Архитектура модуля prometheus в Deckhouse Platfor
    В будущих релизах DP alerts-receiver будет удалён из модуля [`prometheus`](/modules/prometheus/). Для приема всех алертов будет использоваться компонент Alertmanager модуля [`observability`](/modules/observability/).
    {% endalert %}
 
-1. **Alerts-receiver** — сервер, совместимый с API [Alertmanager](https://github.com/prometheus/alertmanager). Alerts-receiver принимает базовые алерты от prometheus-main, создаёт на их основе кастомные ресурсы [ClusterAlert](/modules/prometheus/cr.html#clusteralert), обновляет их статусы и удаляет, если алерт больше не активен. Кастомные ресурсы ClusterAlert используются для информирования пользователей DP об активных алертах и отображаются в веб-интерфейсе Deckhouse. Является разработкой компании «Флант». Состоит из одного контейнера.
+1. **Alerts-receiver** — сервер, совместимый с API [Alertmanager](https://github.com/prometheus/alertmanager). Alerts-receiver принимает базовые алерты от prometheus-main, создаёт на их основе кастомные ресурсы [ClusterAlert](/modules/prometheus/cr.html#clusteralert), обновляет их статусы и удаляет, если алерт больше не активен. Кастомные ресурсы ClusterAlert используются для информирования пользователей DP об активных алертах и отображаются в [веб-интерфейсе Deckhouse](../../glossary.html#web-ui). Является разработкой компании «Флант». Состоит из одного контейнера.
 
 ## Взаимодействия модуля
 

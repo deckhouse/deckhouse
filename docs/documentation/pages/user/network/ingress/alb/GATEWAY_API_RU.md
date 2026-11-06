@@ -13,9 +13,9 @@ relatedLinks:
 
 ## Публикация приложений средствами Kubernetes Gateway API
 
-Публикация приложения возможна через общекластерный шлюз (ClusterALBInstance, создаёт администратор кластера) или через отдельный шлюз в неймспейсе приложения (ALBInstance).
+Публикация приложения возможна через [общекластерный шлюз](../../../../glossary.html#alb-managed-gateway) (ClusterALBInstance, создаёт администратор кластера) или через отдельный шлюз в неймспейсе приложения (ALBInstance).
 
-Создание управляемого [Gateway](https://gateway-api.sigs.k8s.io/reference/api-types/gateway/) (ClusterALBInstance или ALBInstance, инлеты, включение модуля) — задача администратора. Настройка инфраструктуры описана в разделе [«Включение модуля и создание Gateway»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#создание-управляемого-объекта-gateway).
+Создание управляемого [Gateway](https://gateway-api.sigs.k8s.io/reference/api-types/gateway/) (ClusterALBInstance или ALBInstance, [инлеты](../../../../glossary.html#inlet), включение модуля) — задача администратора. Настройка инфраструктуры описана в разделе [«Включение модуля и создание Gateway»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#создание-управляемого-объекта-gateway).
 
 Этот сценарий предполагает, что объект ClusterALBInstance или ALBInstance уже создан и перешёл в состояние `Ready`. Запросите у администратора имя и неймспейс управляемого Gateway или получите имя Gateway из поля [`status.gateway`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-status) инстанса:
 

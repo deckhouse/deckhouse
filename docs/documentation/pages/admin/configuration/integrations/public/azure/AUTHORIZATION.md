@@ -12,7 +12,7 @@ The provider supports working with only one disk in the virtual machine template
 
 To ensure Deckhouse Platform (DP) works correctly with Microsoft Azure, the following conditions must be met:
 
-- The selected region must support Availability Zones.
+- The selected region must support [Availability Zones](../../../../glossary.html#availability-zone).
 - All virtual machines must have the `cloud-init` package installed.
   After the VMs start, the following services must be active:
   - `cloud-config.service`

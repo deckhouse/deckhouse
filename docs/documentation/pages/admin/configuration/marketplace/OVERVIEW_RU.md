@@ -9,7 +9,7 @@ relatedLinks:
     url: ../../../user/marketplace/
 ---
 
-Marketplace — это система управления единицами поставки Deckhouse Platform (DP) (Packages). Она позволяет администраторам подключать хранилища образов с пакетами, обнаруживать доступные пакеты и открывать пользователям проектов возможность их установки.
+[Marketplace](../../../glossary.html#marketplace) — это система управления единицами поставки Deckhouse Platform (DP) (Packages). Она позволяет администраторам подключать хранилища образов с [пакетами](../../../glossary.html#marketplace-package), обнаруживать доступные пакеты и открывать пользователям [проектов](../../../glossary.html#project) возможность их установки.
 
 {% alert level="info" %}
 Marketplace доступен начиная с DP версии 1.76.
@@ -33,7 +33,7 @@ Marketplace доступен начиная с DP версии 1.76.
 | [`PackageRepositoryOperation`](../../../reference/api/cr.html#packagerepositoryoperation) | `pro` | Cluster | Операция сканирования репозитория |
 | [`ApplicationPackageVersion`](../../../reference/api/cr.html#applicationpackageversion) | `apv` | Cluster | Обнаруженная версия пакета |
 | [`ApplicationPackage`](../../../reference/api/cr.html#applicationpackage) | — | Cluster | Сводная информация о пакете: репозитории, в которых он доступен, и приложения, которые его используют |
-| [`Application`](../../../reference/api/cr.html#application) | — | Namespace | Установленный экземпляр приложения (управляется пользователями) |
+| [`Application`](../../../reference/api/cr.html#application) | — | Namespace | Установленный [экземпляр приложения](../../../glossary.html#application-instance) (управляется пользователями) |
 
 В разделе [«Репозитории пакетов»](package-repository.html) описаны подключение хранилища образов и проверка состояния репозитория.
 

@@ -7,11 +7,11 @@ description: Release types, release channels, and the update process for the con
 ## Releases
 
 A release is any published version of Deckhouse Platform (DP).
-Each release is distributed through release channels with defined delays.
+Each release is distributed through [release channels](../glossary.html#release-channel) with defined delays.
 DP publishes two types of releases:
 
-- **Patch version** (for example, from `0.0.1` to `0.0.2`): Includes bug fixes and is published when needed.
-- **Minor version** (for example, from `0.0.1` to `0.1.0`): Includes new features and is published every 3–4 weeks.
+- **[Patch version](../glossary.html#patch-version)** (for example, from `0.0.1` to `0.0.2`): Includes bug fixes and is published when needed.
+- **[Minor version](../glossary.html#minor-version)** (for example, from `0.0.1` to `0.1.0`): Includes new features and is published every 3–4 weeks.
 
 ## Release channels
 
@@ -60,7 +60,7 @@ When switching to a less stable channel (for example, from `EarlyAccess` to `Alp
 
 ## Control plane updates
 
-In DP, the control plane update process is highly automated and safe for both single-master and multi-master clusters.
+In DP, the control plane update process is highly automated and safe for both [single-master](../glossary.html#single-master) and [multi-master clusters](../glossary.html#multi-master).
 While brief interruptions in API server availability may occur,
 they do not affect the operation of applications running in the cluster.
 In most cases, no additional maintenance window is required.
@@ -78,8 +78,8 @@ The process is fully automated by the platform.
 
 ### Automatic minor version updates
 
-To automatically update the control plane to a new minor version (for example, from `1.28.*` to `1.30.*`),
-specify [`kubernetesVersion: Automatic`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) in the ClusterConfiguration resource.
+To automatically update the control plane to a new [minor version](../glossary.html#minor-version) (for example, from `1.28.*` to `1.30.*`),
+specify [`kubernetesVersion: Automatic`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) in the [ClusterConfiguration](../glossary.html#cluster-configuration) resource.
 DP will select the default Kubernetes version at the time of the update.
 
 ### Manual minor version updates
@@ -103,7 +103,7 @@ d8 k get nodes
 
 1. The [control-plane-manager](/modules/control-plane-manager/) module modifies the manifests of core components
    (`apiserver`, `controller-manager`, `scheduler`, etc.).
-1. The updated components are deployed on all master nodes.
+1. The updated components are deployed on all [master nodes](../glossary.html#master-node).
 
 When performing a minor version upgrade:
 
@@ -119,12 +119,12 @@ When performing a downgrade:
 
 After the control plane has been updated, node updates begin:
 
-1. The Bashible API Server updates the kubelet version in the scripts for all NodeGroups.
+1. The [Bashible](../glossary.html#bashible) API Server updates the kubelet version in the scripts for all NodeGroups.
 1. Nodes in different NodeGroups are updated in parallel,
    but within each NodeGroup, they are updated sequentially (one by one).
 1. Each NodeGroup's update settings are taken into account:
-   - Manual or automatic update mode.
-   - Update windows.
+   - Manual or automatic [update mode](../glossary.html#update-mode).
+   - [Update windows](../glossary.html#update-window).
    - Whether Pods should be evicted before updating, etc.
 1. One or more candidate nodes that meet all update conditions are selected and updated.
 1. The process repeats until all nodes in all groups are updated.
@@ -154,7 +154,7 @@ The changelog includes four sections:
 ### Minor versions and zero patch releases
 
 All major changes are listed in the **zero patch release** (for example, `v1.68.0` for the DP `v1.68`).
-Before updating to a new minor version (for example, `v1.68`):
+Before updating to a new [minor version](../glossary.html#minor-version) (for example, `v1.68`):
 
 1. Review the changelog for the corresponding version.
 1. Check if the changes affect your infrastructure.
@@ -170,6 +170,6 @@ If any of the following incompatibilities are detected, the update is aborted:
   - The release introduces a new default Kubernetes version;
   - Monitoring is enabled;
   - The cluster contains resources that are [deprecated](https://kubernetes.io/docs/reference/using-api/deprecation-guide/) in the new version.
-- The installed Ingress controller version is incompatible with the new release.
+- The installed [Ingress controller](../glossary.html#ingress-controller) version is incompatible with the new release.
 - Nodes are running outdated or unsupported operating systems.
 - The cluster has an enabled module that is `deprecated` or has been removed in the new release.

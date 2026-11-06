@@ -35,7 +35,7 @@ description: Архитектура модуля managed-kafka в Deckhouse Plat
 
 1. **Managed-kafka-operator** (Deployment) — оператор Kubernetes, состоящий из одного контейнера **manager** и выполняющий следующие операции:
 
-   - согласование состояния кастомных ресурсов [Kafka](/modules/managed-kafka/cr.html#kafka) во всех пользовательских неймспейсах. Кастомные ресурсы Kafka и KafkaClass определяют настройки инстанса Kafka;
+   - согласование состояния кастомных ресурсов [Kafka](/modules/managed-kafka/cr.html#kafka) во всех [пользовательских неймспейсах](../../glossary.html#user-namespace). Кастомные ресурсы Kafka и KafkaClass определяют настройки инстанса Kafka;
 
    - создание и управление кастомным ресурсом [Certificate](https://cert-manager.io/docs/usage/certificate/) и ресурсами StatefulSet, Service, Secret и PersistentVolumeClaim, относящимися к инстансу Kafka.
 

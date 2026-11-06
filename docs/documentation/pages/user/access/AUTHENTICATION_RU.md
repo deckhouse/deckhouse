@@ -8,7 +8,7 @@ search: user authentication, authentication methods, user access control, user m
 
 ## Обзор
 
-Аутентификация — это процесс проверки подлинности пользователя. Deckhouse Platform (DP) поддерживает сквозную аутентификацию пользователей при доступе к интерфейсам платформы и ресурсам кластера. Этот механизм также может использоваться для включения аутентификации в собственных приложениях, развёрнутых в кластере.
+Аутентификация — это процесс проверки подлинности пользователя. Deckhouse Platform (DP) поддерживает [сквозную аутентификацию](../../glossary.html#end-to-end-authentication) пользователей при доступе к интерфейсам платформы и ресурсам кластера. Этот механизм также может использоваться для включения аутентификации в собственных приложениях, развёрнутых в кластере.
 
 DP позволяет настраивать аутентификацию как на основе внутренней базы данных, так и с использованием внешних провайдеров — например, LDAP, GitLab или GitHub. Это даёт возможность использовать единую аутентификацию сразу в нескольких кластерах DP.
 
@@ -123,7 +123,7 @@ DP позволяет настраивать аутентификацию как
    - `nginx.ingress.kubernetes.io/auth-url: https://<NAME>-dex-authenticator.<NS>.svc.<CLUSTER_DOMAIN>/dex-authenticator/auth`, где:
       - `<NAME>` — значение параметра `metadata.name` DexAuthenticator;
       - `<NS>` — значение параметра `metadata.namespace` DexAuthenticator;
-      - `<C_DOMAIN>` — домен кластера (параметр [clusterDomain](../../reference/api/cr.html#clusterconfiguration-clusterdomain) ClusterConfiguration, по умолчанию — `cluster.local`).
+      - `<C_DOMAIN>` — домен кластера (параметр [clusterDomain](../../reference/api/cr.html#clusterconfiguration-clusterdomain) [ClusterConfiguration](../../glossary.html#cluster-configuration), по умолчанию — `cluster.local`).
 
    Пример (для DexAuthenticator с именем `app-name`, в пространстве имен `app-ns`):
 

@@ -36,7 +36,7 @@ The module consists of the following components:
 
 1. **Managed-trino-operator** (Deployment): Kubernetes operator consisting of a single container **manager** that performs the following operations:
 
-   * Reconciles [Trino](/modules/managed-trino/cr.html#trino) custom resources in all user namespaces. The Trino and TrinoClass custom resources define the settings of the Trino instance.
+   * Reconciles [Trino](/modules/managed-trino/cr.html#trino) custom resources in all [user namespaces](../../glossary.html#user-namespace). The Trino and TrinoClass custom resources define the settings of the Trino instance.
 
    * Creates and manages Deployment, Service, Secret, and ConfigMap resources related to the Trino instance.
 

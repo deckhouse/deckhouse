@@ -48,4 +48,4 @@ lang: ru
 Если вам нужна помощь:
 
 - задайте вопрос [в Telegram-канале «Deckhouse &#124; RU-сообщество»]({{ site.social_links[page.lang]['telegram'] }});
-- если вы используете коммерческую редакцию Deckhouse Platform, обратитесь в поддержку по адресу [`support@deckhouse.ru`](mailto:support@deckhouse.ru).
+- если вы используете коммерческую [редакцию](glossary.html#edition) Deckhouse Platform, обратитесь в поддержку по адресу [`support@deckhouse.ru`](mailto:support@deckhouse.ru).

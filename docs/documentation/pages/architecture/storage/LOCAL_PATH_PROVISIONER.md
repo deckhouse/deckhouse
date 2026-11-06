@@ -5,7 +5,7 @@ search: local-path-provisioner, hostpath
 description: Architecture of the local-path-provisioner module in Deckhouse Platform.
 ---
 
-The `local-path-provisioner` module provides the local storage on Kubernetes nodes using `HostPath` volumes and creates StorageClass resources to manage the allocation of local storage.
+The `local-path-provisioner` module provides the [local storage](../../glossary.html#local-storage) on Kubernetes nodes using `HostPath` volumes and creates StorageClass resources to manage the allocation of local storage.
 
 For more details about module, refer to the [corresponding documentation section](/modules/local-path-provisioner/).
 

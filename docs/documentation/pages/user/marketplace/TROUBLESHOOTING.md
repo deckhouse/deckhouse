@@ -6,7 +6,7 @@ lang: en
 search: Application troubleshooting, application conditions, diagnosing applications, application logs
 ---
 
-## Verify that Marketplace CRDs are present
+## Verify that [Marketplace](../../glossary.html#marketplace) CRDs are present
 
 If `d8 k get applications` returns an error that the resource type doesn't exist, the Marketplace CRDs may not be installed. To check, run the following command:
 
@@ -110,7 +110,7 @@ d8 k logs -n <NAMESPACE> deployments/d8a-<APPLICATION_NAME>-<SUFFIX>
 
 | Reason | Conditions | Meaning and what to check |
 |---|---|---|
-| `Pending` | `Installed`, `UpdateInstalled` | DP is waiting to install the version, for example, until the modules from `requirements.modules` of the package are enabled. Ask the administrator to check these modules |
+| `Pending` | `Installed`, `UpdateInstalled` | DP is waiting to install the version, for example, until the modules from `requirements.modules` of the [package](../../glossary.html#marketplace-package) are enabled. Ask the administrator to check these modules |
 | `RequirementsUnmet` | `Installed` | The cluster doesn't meet the package requirements. The message names the unmet requirement |
 | `DownloadFailed` | `Installed`, `UpdateInstalled`, `ConfigurationApplied`, `Managed`, `Ready` | DP can't download the package version. Ask the administrator to check the PackageRepository and access to the container registry |
 | `LoadFromFilesystemFailed` | `Installed`, `UpdateInstalled`, `Ready` | DP can't read the downloaded package. Contact the package developer |

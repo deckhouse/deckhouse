@@ -4,12 +4,12 @@ permalink: en/admin/configuration/storage/
 description: "Configure storage solutions in Deckhouse Platform including SDS, external storage, snapshots, and supported storage types."
 ---
 
-Reliable data storage is one of the key tasks when deploying and operating Kubernetes clusters. In Deckhouse Platform, this is achieved through flexible support for both software-defined and external storage systems, as well as convenient automation and management tools.
+Reliable data storage is one of the key tasks when deploying and operating Kubernetes clusters. In Deckhouse Platform, this is achieved through flexible support for both software-defined and [external storage](../../../glossary.html#external-storage) systems, as well as convenient automation and management tools.
 
 In this section, you will learn:
 
 - Which types of storage Deckhouse supports.
-- How to set up both local (SDS) and external storage systems.
+- How to set up both local ([SDS](../../../glossary.html#sds)) and external storage systems.
 - Which tools Deckhouse provides to simplify storage configuration and operation.
 - How to choose the optimal solution for your scenarios, based on requirements for reliability, performance, and scalability.
 

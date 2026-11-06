@@ -12,14 +12,14 @@ Integration with VCD uses the [`cloud-provider-vcd`](/modules/cloud-provider-vcd
 This section describes two ways to add nodes:
 
 - **Automatic node creation in VCD**. DP creates virtual machines through the VCD API. VM parameters are defined by the [VCDInstanceClass](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass) resource, and the required number of nodes is defined by the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with the [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html) type.
-- **Connecting manually created nodes through a bootstrap script**. A virtual machine is created by the user in advance and connected to the cluster using the DP bootstrap script. This scenario uses the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with the [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html) type.
+- **Connecting manually created nodes through a [bootstrap script](../../../glossary.html#bootstrap-script)**. A virtual machine is created by the user in advance and connected to the cluster using the DP bootstrap script. This scenario uses the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with the [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html) type.
 
 ## Prerequisites for VCD
 
 Before you begin, make sure that the following conditions are met:
 
 - The cluster was created with the [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype) parameter.
-- [Network connectivity](./overview.html#general-network-requirements) is configured between the network of static nodes and the network of virtual machines in VCD. VCD nodes added to the cluster have access to the Kubernetes API, DNS, and the required addresses according to the [Network interaction](../../../../reference/network_interaction.html) and [Network policy configuration](../../configuration/network/policy/configuration.html) sections. When using Cilium with pod traffic tunneling, the [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode) mode is selected according to the network connectivity between sites.
+- [Network connectivity](./overview.html#general-network-requirements) is configured between the network of [static nodes](../../../glossary.html#static-node) and the network of virtual machines in VCD. VCD nodes added to the cluster have access to the Kubernetes API, DNS, and the required addresses according to the [Network interaction](../../../../reference/network_interaction.html) and [Network policy configuration](../../configuration/network/policy/configuration.html) sections. When using Cilium with pod traffic tunneling, the [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode) mode is selected according to the network connectivity between sites.
 - The requirements from the [Connection and authorization in VMware vCloud Director](../virtualization/vcd/connection-and-authorization.html) section are met:
   - A tenant with allocated resources is configured in VCD.
   - A VCD account with a static password and administrator permissions is prepared.
@@ -176,7 +176,7 @@ Before you begin, make sure that the following conditions are met:
 - The virtual machine is connected to the VCD network used as the main network for the cluster's cloud nodes. Usually, this is the network specified in the [`mainNetwork`](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass-v1-spec-mainnetwork) parameter of the `cloud-provider-vcd` configuration or in the VCDInstanceClass being used.
 - One of the package managers (`apt`/`apt-get`, `yum`, or `rpm`) for a supported OS is installed on the virtual machine.
 
-1. Create a file with a NodeGroup resource and the CloudStatic node type. For example, `cloud-static-nodegroup.yaml`:
+1. Create a file with a NodeGroup resource and the [CloudStatic node](../../../glossary.html#cloud-static-node) type. For example, `cloud-static-nodegroup.yaml`:
 
    ```shell
    d8 k apply -f - <<EOF
@@ -204,7 +204,7 @@ Before you begin, make sure that the following conditions are met:
    {: .nowrap-default }
    <!-- markdownlint-enable MD031 -->
 
-1. Get the bootstrap script for the created NodeGroup:
+1. Get the [bootstrap script](../../../glossary.html#bootstrap-script) for the created NodeGroup:
 
    ```shell
    NODE_GROUP=cloud-static
@@ -236,7 +236,7 @@ Before you begin, make sure that the following conditions are met:
 
    After the bootstrap script is started, it will install the required components, configure the container runtime and kubelet, and connect the node to the cluster.
 
-1. On the master node, check that the new node has appeared:
+1. On the [master node](../../../glossary.html#master-node), check that the new node has appeared:
 
    ```shell
    d8 k get nodes -o wide

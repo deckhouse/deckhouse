@@ -35,7 +35,7 @@ description: Архитектура модуля managed-clickhouse в Deckhouse
 
 1. **Managed-clickhouse-operator** (Deployment) — оператор Kubernetes, состоящий из одного контейнера **manager** и выполняющий следующие операции:
 
-   - согласование состояния кастомных ресурсов [Clickhouse](/modules/managed-clickhouse/cr.html#clickhouse) во всех пользовательских неймспейсах. Кастомные ресурсы Clickhouse и ClickhouseClass определяют настройки инстанса ClickHouse;
+   - согласование состояния кастомных ресурсов [Clickhouse](/modules/managed-clickhouse/cr.html#clickhouse) во всех [пользовательских неймспейсах](../../glossary.html#user-namespace). Кастомные ресурсы Clickhouse и ClickhouseClass определяют настройки инстанса ClickHouse;
 
    - создание и управление кастомным ресурсом [Certificate](https://cert-manager.io/docs/usage/certificate/) и ресурсами StatefulSet, Secret, Service, ConfigMap и PersistentVolumeClaim, относящимися к инстансу ClickHouse;
 

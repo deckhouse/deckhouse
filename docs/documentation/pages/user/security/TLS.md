@@ -206,7 +206,7 @@ For mode details on CAA records, refer to [Let's Encrypt documentation](https://
 1. Create a ServiceAccount with the required role:
 
    - Open the [policy management page](https://console.cloud.google.com/iam-admin/serviceaccounts).
-   - Choose the target project and create a ServiceAccount under any name (for example, `dns01-solver`).
+   - Choose the target [project](../../glossary.html#project) and create a ServiceAccount under any name (for example, `dns01-solver`).
    - In the created account, create a key by clicking **Add key**.
      A JSON file with the key data will be downloaded.
    - Encode the JSON file as a Base64 string:

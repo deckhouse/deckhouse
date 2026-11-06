@@ -7,7 +7,7 @@ relatedLinks:
     url: ../../../user/marketplace/
 ---
 
-Marketplace is a system for managing Deckhouse Platform (DP) delivery units (Packages). It lets administrators connect container registries with packages, discover available packages, and make them available to project users for installation.
+[Marketplace](../../../glossary.html#marketplace) is a system for managing Deckhouse Platform (DP) delivery units ([Packages](../../../glossary.html#marketplace-package)). It lets administrators connect container registries with packages, discover available packages, and make them available to [project](../../../glossary.html#project) users for installation.
 
 {% alert level="info" %}
 Marketplace is available starting from DP version 1.76.
@@ -31,7 +31,7 @@ Users interact with packages through the Application object (read more in the [U
 | [`PackageRepositoryOperation`](../../../reference/api/cr.html#packagerepositoryoperation) | `pro` | Cluster | Scanning operation on a repository |
 | [`ApplicationPackageVersion`](../../../reference/api/cr.html#applicationpackageversion) | `apv` | Cluster | Discovered version of a package |
 | [`ApplicationPackage`](../../../reference/api/cr.html#applicationpackage) | — | Cluster | Package summary: the repositories that provide the package and the applications that use it |
-| [`Application`](../../../reference/api/cr.html#application) | — | Namespace | Installed application instance (managed by users) |
+| [`Application`](../../../reference/api/cr.html#application) | — | Namespace | Installed [application instance](../../../glossary.html#application-instance) (managed by users) |
 
 The [Package repositories](package-repository.html) section describes how to connect a container registry and check the repository status.
 

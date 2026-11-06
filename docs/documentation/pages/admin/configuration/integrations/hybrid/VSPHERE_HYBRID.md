@@ -12,14 +12,14 @@ Integration with vSphere uses the [`cloud-provider-vsphere`](/modules/cloud-prov
 This section describes two ways to add nodes:
 
 - **Automatic node creation in vSphere**. DP creates virtual machines through the vSphere API. VM parameters are defined by the [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) resource, and the required number of nodes and placement zones are defined by the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with the [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html) type.
-- **Connecting manually created nodes through a bootstrap script**. A virtual machine is created by the user in advance and connected to the cluster using the DP bootstrap script. This scenario uses the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with the [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html) type.
+- **Connecting manually created nodes through a [bootstrap script](../../../glossary.html#bootstrap-script)**. A virtual machine is created by the user in advance and connected to the cluster using the DP bootstrap script. This scenario uses the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with the [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html) type.
 
 ## Prerequisites for vSphere
 
 Before you begin, make sure that the following conditions are met:
 
 - The cluster was created with the [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype) parameter.
-- [Network connectivity](./overview.html#general-network-requirements) is configured between the network of static nodes and the network of virtual machines in vSphere.
+- [Network connectivity](./overview.html#general-network-requirements) is configured between the network of [static nodes](../../../glossary.html#static-node) and the network of virtual machines in vSphere.
 - vSphere nodes added to the cluster have access to the Kubernetes API, DNS, and the required addresses according to the [Network interaction](../../../../reference/network_interaction.html) and [Network policy configuration](../../configuration/network/policy/configuration.html) sections.
 - The requirements from the [Connection and authorization in VMware vSphere](../virtualization/vsphere/authorization.html) section are met:
   - Access to vCenter is configured.
@@ -30,7 +30,7 @@ Before you begin, make sure that the following conditions are met:
 
 ## Adding automatically created nodes
 
-To connect an already running static cluster to vCenter, use the [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) resource of the [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/) module.
+To connect an already running [static cluster](../../../glossary.html#static-cluster) to vCenter, use the [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) resource of the [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/) module.
 
 In the `spec.settings` parameter, specify access parameters for vCenter, network settings, region and zone tags, and SSH keys that will be added to the created virtual machines.
 
@@ -123,8 +123,8 @@ An example configuration and description of the available parameters are provide
    Where:
 
    - [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) describes the parameters of the virtual machine that will be created in vSphere.
-   - [NodeGroup](/modules/node-manager/cr.html#nodegroup) describes the node group that DP must maintain in the cluster.
-   - `nodeType: CloudEphemeral` means that nodes will be created automatically through the cloud provider.
+   - [NodeGroup](/modules/node-manager/cr.html#nodegroup) describes the [node group](../../../glossary.html#node-group) that DP must maintain in the cluster.
+   - `nodeType: CloudEphemeral` means that nodes will be created automatically through the [cloud provider](../../../glossary.html#cloud-provider).
    - `cloudInstances.classReference` points to VsphereInstanceClass.
    - `cloudInstances.zones` must contain zones from the `zones` list in ModuleConfig.
 
@@ -237,7 +237,7 @@ Before you begin, make sure that the following conditions are met:
 - The virtual machine is connected to the network specified in the [`internalNetworkNames`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-internalnetworknames) parameter of the `cloud-provider-vsphere` module configuration.
 - One of the package managers (`apt`/`apt-get`, `yum`, or `rpm`) for a supported OS is installed on the virtual machine.
 
-1. Create a file with a NodeGroup resource and the CloudStatic node type. For example, `cloud-static-nodegroup.yaml`:
+1. Create a file with a NodeGroup resource and the [CloudStatic node](../../../glossary.html#cloud-static-node) type. For example, `cloud-static-nodegroup.yaml`:
 
    ```shell
    d8 k apply -f - <<EOF
@@ -265,7 +265,7 @@ Before you begin, make sure that the following conditions are met:
    {: .nowrap-default }
    <!-- markdownlint-enable MD031 -->
 
-1. Get the bootstrap script for the created NodeGroup:
+1. Get the [bootstrap script](../../../glossary.html#bootstrap-script) for the created NodeGroup:
 
    ```shell
    NODE_GROUP=cloud-static
@@ -297,7 +297,7 @@ Before you begin, make sure that the following conditions are met:
 
    After the bootstrap script is started, it will install the required components, configure the container runtime and kubelet, and connect the node to the cluster.
 
-1. On the master node, check that the new node has appeared:
+1. On the [master node](../../../glossary.html#master-node), check that the new node has appeared:
 
    ```shell
    d8 k get nodes -o wide

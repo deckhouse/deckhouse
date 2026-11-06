@@ -3,7 +3,7 @@ title: Layouts and configuration in Huawei Cloud
 permalink: en/admin/integrations/private/huaweicloud/layout.html
 ---
 
-This section describes the cluster layouts in Huawei Cloud infrastructure and the associated parameters.
+This section describes the cluster [layouts](../../../../glossary.html#layout) in Huawei Cloud infrastructure and the associated parameters.
 
 ## List of required Huawei Cloud services
 
@@ -23,7 +23,7 @@ A list of services required for Deckhouse Platform (DP) to work in Huawei Cloud:
 ## Standard
 
 - An internal cluster network is created with a gateway to the public network.
-- An Elastic IP can be assigned to the master node.
+- An Elastic IP can be assigned to the [master node](../../../../glossary.html#master-node).
 - Nodes managed by the Cluster API do not have public IP addresses.
 
 ![Standard layout in Huawei CLoud](../../../../images/cloud-provider-huawei/huawei-standard.png)
@@ -37,7 +37,7 @@ The following inbound rules will be created:
 - Allow incoming traffic over the ICMP protocol from `0.0.0.0/0`.
 - Allow incoming traffic over the TCP protocol on ports `30000`–`32767` for services of the `NodePort` type. Inbound UDP traffic to `NodePort` ports is not allowed by default.
 
-Attach custom security groups for CloudEphemeral nodes in the [HuaweiCloudInstanceClass](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass) resource via [`spec.securityGroups`](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass-v1-spec-securitygroups). They are applied together with the group created by DP.
+Attach custom security groups for [CloudEphemeral nodes](../../../../glossary.html#cloud-ephemeral-node) in the [HuaweiCloudInstanceClass](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass) resource via [`spec.securityGroups`](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass-v1-spec-securitygroups). They are applied together with the group created by DP.
 
 Example configuration:
 

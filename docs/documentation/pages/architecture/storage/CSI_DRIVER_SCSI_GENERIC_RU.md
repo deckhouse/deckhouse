@@ -6,7 +6,7 @@ search: csi-scsi-generic, csi driver
 description: Архитектура CSI-драйвера csi-scsi-generic в Deckhouse Platform.
 ---
 
-CSI-драйвер `csi-scsi-generic` — это реализация стандарта [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) для работы с томами на СХД с подключением по SCSI в Deckhouse Platform (DP). CSI-драйвер поддерживает технологии подключения iSCSI и Fibre Channel (FC).
+[CSI-драйвер](../../../glossary.html#csi-driver) `csi-scsi-generic` — это реализация стандарта [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) для работы с томами на СХД с подключением по SCSI в Deckhouse Platform (DP). CSI-драйвер поддерживает технологии подключения iSCSI и Fibre Channel (FC).
 
 ## Архитектура CSI-драйвера (csi-scsi-generic)
 
@@ -75,7 +75,7 @@ CSI-драйвер `csi-scsi-generic` состоит из следующих к�
 
 * [Kubelet](../../kubernetes-and-scheduling/kubelet.html):
 
-  * проверяет livenessProbe CSI-драйвера;
+  * проверяет livenessProbe [CSI-драйвера](../../../glossary.html#csi-driver);
   * регистрирует Node Plugin;
   * вызывает RPC `NodeStageVolume`, `NodeUnstageVolume`, `NodePublishVolume` и `NodeUnpublishVolume` в Node Plugin.
 

@@ -41,7 +41,7 @@ Agent запускается на каждом узле кластера и вы
 - следит за кастомными ресурсами SDNInternalNodeRoutingTable и SDNInternalNodeIPRuleSet и обновляет их статус;
 - применяет статические маршруты и правила `ip rule` к таблице маршрутизации ядра узла.
 
-Кастомные ресурсы SDNInternalNodeRoutingTable и SDNInternalNodeIPRuleSet создаются контроллером Deckhouse модуля [`deckhouse`](/modules/deckhouse/) для каждого узла кластера, подходящих под `nodeSelector` ресурсов IPRuleSet и RoutingTable.
+Кастомные ресурсы SDNInternalNodeRoutingTable и SDNInternalNodeIPRuleSet создаются [контроллером Deckhouse](../../glossary.html#deckhouse-controller) модуля [`deckhouse`](/modules/deckhouse/) для каждого узла кластера, подходящих под `nodeSelector` ресурсов IPRuleSet и RoutingTable.
 
 ## Взаимодействия модуля
 

@@ -10,7 +10,7 @@ lang: ru
 {% alert %}
 Для узлов с высокой плотностью размещения подов:
 
-- заранее спланируйте размер подсети узла (параметр [`podSubnetNodeCIDRPrefix`](../reference/api/cr.html#clusterconfiguration-podsubnetnodecidrprefix)) — лимит подов на узел подстроится автоматически;
+- заранее спланируйте размер подсети узла (параметр [`podSubnetNodeCIDRPrefix`](../reference/api/cr.html#clusterconfiguration-podsubnetnodecidrprefix)) — [лимит подов на узел](../glossary.html#pod-limit-per-node) подстроится автоматически;
 - используйте ядро Linux версии 6.12 или новее;
 - используйте быстрый локальный диск (NVMe или SSD) и не используйте сетевую файловую систему;
 - используйте лёгкие образы приложений с минимальным количеством слоёв (например, `distroless`).

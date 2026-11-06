@@ -133,4 +133,4 @@ To perform the migration, follow these steps:
    Preserve client IP addresses = Off
    ```
 
-1. Reboot the cluster nodes one by one, including the master nodes.
+1. Reboot the cluster nodes one by one, including the [master nodes](../../../../glossary.html#master-node).

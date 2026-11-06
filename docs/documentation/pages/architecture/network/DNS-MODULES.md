@@ -47,7 +47,7 @@ The `kube-dns` module consists of the following components:
 
 1. **D8-kube-dns-sts-pods-hosts-appender-webhook** (Deployment): Optional component that consists of a single **webhook** container.
 
-   The Deckhouse controller of the [`deckhouse`](/modules/deckhouse/) module creates this component if the `.spec.settings.clusterDomainAliases` parameter is set in ModuleConfig.
+   The [Deckhouse controller](../../glossary.html#deckhouse-controller) of the [`deckhouse`](/modules/deckhouse/) module creates this component if the `.spec.settings.clusterDomainAliases` parameter is set in ModuleConfig.
 
    The component implements a mutating webhook server that adds the **render-etc-hosts-with-cluster-domain-aliases** init container to a pod created by a StatefulSet controller if the `.spec.subdomain` option is specified in the pod spec.
 

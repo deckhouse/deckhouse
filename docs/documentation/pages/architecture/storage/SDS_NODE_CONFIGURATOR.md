@@ -36,7 +36,7 @@ The module consists of the following components:
    It consists of the following containers:
 
    - **sds-utils-installer**: Init container that installs a set of utilities necessary for managing block devices and LVM volumes.
-   - **thin-volumes-enabler**: Init container that enables thin volumes.
+   - **thin-volumes-enabler**: Init container that enables [thin volumes](../../glossary.html#thin-volume).
    - **sds-node-configurator-agent**: Main container.
    - **kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC that provides secure access to the controller metrics. It is an [open-source project](https://github.com/brancz/kube-rbac-proxy).
 
@@ -45,7 +45,7 @@ The module consists of the following components:
    It consists of the following containers:
 
    - **controller**: Main container.
-   - **webhook**: Sidecar container that implements a webhook server for [LVMLogicalVolumeSnapshot](/modules/sds-node-configurator/cr.html#lvmlogicalvolumesnapshot) custom resources validation. If used edition of DP does not support LVM logical volume snapshots functionality, [LVMLogicalVolumeSnapshot](/modules/sds-node-configurator/cr.html#lvmlogicalvolumesnapshot) custom resource does not pass validation.
+   - **webhook**: Sidecar container that implements a webhook server for [LVMLogicalVolumeSnapshot](/modules/sds-node-configurator/cr.html#lvmlogicalvolumesnapshot) custom resources validation. If used [edition](../../glossary.html#edition) of DP does not support LVM logical volume snapshots functionality, [LVMLogicalVolumeSnapshot](/modules/sds-node-configurator/cr.html#lvmlogicalvolumesnapshot) custom resource does not pass validation.
 
 ## Module interactions
 

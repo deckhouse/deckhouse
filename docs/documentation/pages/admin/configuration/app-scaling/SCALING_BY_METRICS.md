@@ -102,7 +102,7 @@ To configure custom metric calculation rules:
 1. Make sure the [`observability`](/modules/observability/) module is enabled.
 1. Create a ClusterObservabilityMetricsRulesGroup or ObservabilityMetricsRulesGroup resource:
 
-   - [ClusterObservabilityMetricsRulesGroup](/modules/observability/cr.html#clusterobservabilitymetricsrulesgroup): Intended for cluster-wide rules applied to system namespaces.
+   - [ClusterObservabilityMetricsRulesGroup](/modules/observability/cr.html#clusterobservabilitymetricsrulesgroup): Intended for cluster-wide rules applied to [system namespaces](../../../glossary.html#system-namespace).
    - [ObservabilityMetricsRulesGroup](/modules/observability/cr.html#observabilitymetricsrulesgroup): Intended for rules that operate within a specific namespace.
 
 Configuration example:
@@ -171,7 +171,7 @@ In Deckhouse Platform, you can configure node autoscaling settings through the [
 To configure autoscaling in the web interface:
 
 - Open the Deckhouse web interface;
-- In the left menu, go to the “Nodes” → “Node Groups” section;
+- In the left menu, go to the “Nodes” → “[Node Groups](../../../glossary.html#node-group)” section;
 - Select the desired NodeGroup;
 - In the “Autoscaling Parameters” section, the current settings will be displayed.
 
@@ -191,12 +191,12 @@ To modify autoscaling parameters:
 When you click “Create based on” in the web interface, a form for configuring autoscaling parameters opens:
 
 1. **Main parameters:**
-   - Zones – selection of availability zones where machines will be created. This helps distribute nodes across multiple zones. The default value depends on the selected cloud provider and usually includes all zones in the region.
+   - Zones – selection of [availability zones](../../../glossary.html#availability-zone) where machines will be created. This helps distribute nodes across multiple zones. The default value depends on the selected [cloud provider](../../../glossary.html#cloud-provider) and usually includes all zones in the region.
    - Scaling priority – used if multiple node groups exist with the same priority. If not specified, the system will randomly choose a group for scaling.
    - Number of machines created simultaneously during scale-up – defines how many machines can be added at once during scale-up. For example, if the value is 1, nodes will be added one at a time.
    - Max unavailable instances during RollingUpdate – how many nodes can be unavailable during updates. A value of 0 means rolling updates will occur one by one with no downtime.
 
-1. **Standby nodes and resources:**
+1. **[Standby nodes](../../../glossary.html#standby-node) and resources:**
    - Number of standby nodes out of total nodes – you can specify an exact number (e.g., 2–6) or a percentage (e.g., 15%). A standby node is a pre-provisioned node ready to receive workloads immediately. This speeds up scale-up by several minutes.
    - Resources reserved on standby nodes – the percentage of resources to reserve on standby nodes. Acceptable values: 1% to 80%. For example, if set to 50%, half of the node’s resources will be reserved.
 

@@ -17,15 +17,15 @@ Conditions can be hard or soft. A hard `requiredDuringSchedulingIgnoredDuringExe
 All rules, including [`.spec.nodeSelector`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-nodeselector) from the VM class, apply together. If at least one hard condition can't be met, the machine stays in the `Pending` phase. So set consistent rules, prefer combinations of labels over single hard restrictions, and keep spare nodes for critical workloads. Also consider the startup order: if one machine has to end up next to another, the second one has to start first. If the nodes you need have `taints`, add the matching `tolerations` to the machine.
 
 {% alert level="info" %}
-When you change the placement rules of a running machine and its current node no longer meets the new requirements, in commercial editions Deckhouse Platform (DP) moves the machine by live migration, and in DP Open the changes apply only after a reboot. A machine that already meets the new requirements stays where it is.
+When you change the placement rules of a running machine and its current node no longer meets the new requirements, in commercial [editions](../../glossary.html#edition) Deckhouse Platform (DP) moves the machine by [live migration](../../glossary.html#live-migration), and in DP Open the changes apply only after a reboot. A machine that already meets the new requirements stays where it is.
 {% endalert %}
 
 To set the placement rules in the web interface:
 
-1. Go to the **Projects** tab and select the project you need.
+1. Go to the **[Projects](../../glossary.html#project)** tab and select the project you need.
 1. Go to **Virtualization** → **Virtual machines**.
 1. Select the VM you need from the list and click its name.
-1. On the **Configuration** tab, scroll down to the **VM placement** toggle.
+1. On the **Configuration** tab, scroll down to the **[VM placement](../../glossary.html#vm-placement)** toggle.
 1. Select the input mode. In the **Basic setup** mode, the rules are set with the **Co-location** and **Separate placement** toggles, and in the **Editing** mode, the placement block is set manually as YAML.
 1. Enable the toggle you need and fill in the fields. The **Select rule mode** field offers **Required** (`requiredDuringSchedulingIgnoredDuringExecution`) and **Preferred** (`preferredDuringSchedulingIgnoredDuringExecution`), and the **Placement rule** field offers placement relative to other VMs or relative to node labels.
 1. Click the **Save** button that appears.
@@ -81,7 +81,7 @@ To perform the operation in the web interface in the placement section:
 1. Enable the **Co-location** toggle.
 1. In the **Select rule mode** field, select **Required**.
 1. In the **Placement rule** field, select **On selected nodes**.
-1. In the **How to identify the node group** field, select **By labels** and specify the node labels (for example, `disktype: ssd`); the **By name** option lets you select specific nodes.
+1. In the **How to identify the [node group](../../glossary.html#node-group)** field, select **By labels** and specify the node labels (for example, `disktype: ssd`); the **By name** option lets you select specific nodes.
 1. Click the **Save** button that appears.
 
 ## Preferred binding (Affinity)
@@ -132,7 +132,7 @@ spec:
 
 In this example, the virtual machine is placed only on nodes that already run a virtual machine with the `server: database` label. The rule is soft (`preferred`), so if there are no such nodes, the machine starts on any suitable one.
 
-To place VMs across availability zones (instead of pinning them to specific nodes), set `topologyKey: topology.kubernetes.io/zone` ([Placing VMs across availability zones](#placing-vms-across-availability-zones)).
+To place VMs across [availability zones](../../glossary.html#availability-zone) (instead of pinning them to specific nodes), set `topologyKey: topology.kubernetes.io/zone` ([Placing VMs across availability zones](#placing-vms-across-availability-zones)).
 
 To set "preferences" and "requirements" for the placement of virtual machines in the web interface, in the placement section:
 
