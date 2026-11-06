@@ -290,6 +290,25 @@ bb-rpp-get-fetch() {
   fi
   /opt/deckhouse/bin/minget "$1" --fail
 }
+bb-rpp-get-sha256() {
+  local sum
+  sum="$(sha256sum "$1")" || return 1
+  echo "sha256:${sum%% *}"
+}
+# bb-rpp-get-download <url> <digest> <dir> puts a verified rpp-get into <dir> or prints why not:
+# the manifest has to hash to the digest from the bundle and list the hash of the layer. A refusal
+# names how many bytes arrived, to compare with the size in the proxy log.
+bb-rpp-get-download() {
+  local url="$1" digest="$2" dir="$3" layer_digest
+  bb-rpp-get-fetch "${url}/manifest?digest=${digest}" > "$dir/manifest" || { echo "manifest download failed"; return 1; }
+  [[ "$(bb-rpp-get-sha256 "$dir/manifest")" == "$digest" ]] || { echo "manifest of $(wc -c < "$dir/manifest") bytes does not match ${digest}"; return 1; }
+  bb-rpp-get-fetch "${url}/layer?digest=${digest}" > "$dir/layer" || { echo "layer download failed"; return 1; }
+  layer_digest="$(bb-rpp-get-sha256 "$dir/layer")" || { echo "layer cannot be hashed"; return 1; }
+  grep -qF "$layer_digest" "$dir/manifest" || { echo "layer of $(wc -c < "$dir/layer") bytes is not in the manifest"; return 1; }
+  tar -xzOf "$dir/layer" rpp-get > "$dir/rpp-get" || { echo "layer holds no rpp-get"; return 1; }
+  chmod +x "$dir/rpp-get"
+  bb-rpp-get-binary-ready "$dir/rpp-get" || { echo "verified rpp-get does not run on this node"; return 1; }
+}
 # One line per failed source, so a node that cannot reach the bootstrap proxy says why instead
 # of repeating the same anonymous retry thirty times.
 bb-rpp-get-report() {
@@ -313,11 +332,10 @@ bb-rpp-get-install() {
   local bin="/opt/deckhouse/bin/rpp-get"
   local digest="{{ get $registryPackages "rppGet" }}"
   local digest_file="${BB_RP_INSTALLED_PACKAGES_STORE:-/var/cache/registrypackages}/rpp-get/digest"
-  local tmp="${bin}.tmp"
-  local fetch_log="${bin}.fetch.log"
+  local dir="${bin}.download"
   local prefix="${PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID:+/${PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID}}"
   local attempts="${1:-30}"
-  local attempt address
+  local attempt address reason
   if [[ -f "$digest_file" &&
         "$(<"$digest_file")" == "$digest" ]] &&
      bb-rpp-get-binary-ready "$bin"; then
@@ -327,25 +345,16 @@ bb-rpp-get-install() {
     >&2 echo "rpp-get bootstrap source is not configured"
     return 1
   fi
-  mkdir -p "${bin%/*}" "${digest_file%/*}"
+  mkdir -p "$dir" "${digest_file%/*}"
   for ((attempt = 1; attempts == 0 || attempt <= attempts; attempt++)); do
     for address in ${PACKAGES_PROXY_BOOTSTRAP_ADDRESSES}; do
-      if ! bb-rpp-get-fetch "${address}${prefix}/rpp-get?digest=${digest}" > "$tmp" 2> "$fetch_log"; then
-        bb-rpp-get-report "$attempt" "$attempts" "$address" "download failed" "$fetch_log"
-        continue
+      if reason="$(bb-rpp-get-download "${address}${prefix}/rpp-get" "$digest" "$dir" 2> "$dir/log")"; then
+        mv -f "$dir/rpp-get" "$bin"
+        echo "$digest" > "$digest_file"
+        rm -rf "$dir"
+        return 0
       fi
-      chmod +x "$tmp"
-      if ! bb-rpp-get-binary-ready "$tmp"; then
-        # The download reported success, so what arrived is worth showing: a proxy error page
-        # or a truncated body looks exactly like this and nothing else would name it.
-        bb-rpp-get-report "$attempt" "$attempts" "$address" \
-          "downloaded $(wc -c < "$tmp" | tr -d ' ') bytes that do not run as rpp-get" "$tmp"
-        continue
-      fi
-      mv -f "$tmp" "$bin"
-      echo "$digest" > "$digest_file"
-      rm -f "$fetch_log"
-      return 0
+      bb-rpp-get-report "$attempt" "$attempts" "$address" "$reason" "$dir/log"
     done
     if (( attempts == 0 )); then
       >&2 echo "Failed to install rpp-get (attempt ${attempt}), retrying in 5 seconds"
@@ -356,7 +365,7 @@ bb-rpp-get-install() {
   done
   >&2 echo "Failed to install rpp-get after ${attempts} attempts"
   >&2 echo "rpp-get is served by registry-packages-proxy on the master nodes (${PACKAGES_PROXY_BOOTSTRAP_ADDRESSES}); check that the port is reachable from this node and that the module is running"
-  rm -f "$tmp" "$fetch_log"
+  rm -rf "$dir"
   return 1
 }
 {{- end }}

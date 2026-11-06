@@ -16,6 +16,8 @@ package proxy
 
 import (
 	"archive/tar"
+	"bytes"
+	"cmp"
 	"compress/gzip"
 	"context"
 	"encoding/json"
@@ -74,11 +76,15 @@ type rppBinaryHandler struct {
 	registryClient registry.Client
 	signCheck      bool
 	binaryName     string
-	expectedPath   string
 }
 
 const (
 	rppBinaryName = "rpp-get"
+
+	// The rpp-get layer is about 4.5 MiB. The caps keep a request for another image of the
+	// repository, or a hostile archive, from exhausting the process memory.
+	maxRPPGetLayerBytes  = 16 << 20
+	maxRPPGetBinaryBytes = 64 << 20
 
 	// cliImagesPathPrefix is the URL prefix served on the standard proxy mux for
 	// deckhouse-cli (and plugin) downloads. Paths under it look like:
@@ -146,6 +152,7 @@ var iconCandidates = []iconCandidate{
 var (
 	errEmptyRegistryConfig   = errors.New("empty registry config")
 	errFileNotFoundInArchive = errors.New("file not found in archive")
+	errInvalidDigest         = errors.New("query parameter \"digest\" must be a sha256 digest")
 )
 
 func NewProxy(server *http.Server,
@@ -180,12 +187,17 @@ func NewRPPClientBinaryServerFromRegistry(opts RPPClientBinaryServerOptions) *RP
 		registryClient: opts.RegistryClient,
 		signCheck:      opts.SignCheck,
 		binaryName:     rppBinaryName,
-		expectedPath:   path.Join("/", normalizeBootstrapClusterUUID(opts.ClusterUUID), rppBinaryName),
 	}
+
+	rppGetPath := path.Join("/", normalizeBootstrapClusterUUID(opts.ClusterUUID), rppBinaryName)
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET "+rppGetPath, handler.serveBinary)
+	mux.HandleFunc("GET "+rppGetPath+"/manifest", handler.serveManifest)
+	mux.HandleFunc("GET "+rppGetPath+"/layer", handler.serveLayer)
 
 	return &RPPClientBinaryServer{
 		server: &http.Server{
-			Handler:           handler,
+			Handler:           mux,
 			ReadHeaderTimeout: 5 * time.Second,
 			ReadTimeout:       10 * time.Second,
 			WriteTimeout:      300 * time.Second,
@@ -462,47 +474,75 @@ func getRequestIP(r *http.Request) string {
 	return IPAddress
 }
 
-func (h *rppBinaryHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	requestIP := getRequestIP(r)
-
-	if r.URL.Path != h.expectedPath {
-		h.logger.Warnf("rpp-get request from client %s for unexpected path %q, expected %q", requestIP, r.URL.Path, h.expectedPath)
-		http.NotFound(w, r)
-		return
-	}
-
-	if r.Method != http.MethodGet {
-		h.logger.Warnf("rpp-get request from client %s with method %s is not allowed", requestIP, r.Method)
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	digest := r.URL.Query().Get("digest")
-	if digest == "" {
-		h.logger.Warnf("rpp-get request from client %s: query %q is missing required parameter \"digest\"", requestIP, r.URL.RawQuery)
-		http.Error(w, "missing required query parameter \"digest\"", http.StatusBadRequest)
-		return
-	}
-
-	h.logger.Infof("Received rpp-get request with digest %q from client %s", digest, requestIP)
-
-	binary, err := h.fetchBinary(r.Context(), digest)
+// A node verifies rpp-get through the manifest: it hashes to the digest from the bundle and lists
+// the layer that holds the binary. The bare path serves an extracted binary nothing can check; it
+// stays for the bundles of earlier releases.
+func (h *rppBinaryHandler) serveBinary(w http.ResponseWriter, r *http.Request) {
+	layer, err := h.readLayer(r)
 	if err != nil {
-		h.writeFetchError(w, digest, requestIP, err)
+		h.writeError(w, r, err)
 		return
 	}
 
-	h.writeBinaryResponse(w, binary)
-	h.logger.Infof("rpp-get binary for digest %q sent successfully to client %s, size %d", digest, requestIP, len(binary))
+	binary, err := extractTarGzFile(bytes.NewReader(layer), baseNameMatcher(h.binaryName), maxRPPGetBinaryBytes)
+	if err != nil {
+		h.writeError(w, r, fmt.Errorf("extract %s binary: %w", h.binaryName, err))
+		return
+	}
+
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, h.binaryName))
+	h.writeBody(w, r, binary, "application/octet-stream")
 }
 
-func (h *rppBinaryHandler) fetchBinary(ctx context.Context, digest string) ([]byte, error) {
+func (h *rppBinaryHandler) serveManifest(w http.ResponseWriter, r *http.Request) {
+	digest, cfg, err := h.requestedImage(r)
+	if err != nil {
+		h.writeError(w, r, err)
+		return
+	}
+
+	manifest, mediaType, err := h.registryClient.GetRawManifest(r.Context(), h.logger, cfg, "", digest)
+	if err != nil {
+		h.writeError(w, r, err)
+		return
+	}
+
+	h.writeBody(w, r, manifest, cmp.Or(mediaType, "application/vnd.oci.image.manifest.v1+json"))
+}
+
+// A layer goes out only when it holds rpp-get, and the install and uninstall scripts of the rpp-get
+// image go out with it. GNU tar on the node takes only the member named rpp-get, not ./rpp-get
+// (candi/bashible/lib.sh.tpl, bb-rpp-get-download).
+func (h *rppBinaryHandler) serveLayer(w http.ResponseWriter, r *http.Request) {
+	layer, err := h.readLayer(r)
+	if err != nil {
+		h.writeError(w, r, err)
+		return
+	}
+
+	exactName := func(header *tar.Header) bool { return header.Name == h.binaryName }
+	if _, err := extractTarGzFile(bytes.NewReader(layer), exactName, maxRPPGetBinaryBytes); err != nil {
+		h.writeError(w, r, fmt.Errorf("extract %s binary: %w", h.binaryName, err))
+		return
+	}
+
+	h.writeBody(w, r, layer, "application/x-gzip")
+}
+
+// Only a content address: a tag would reach the manifest of any image in the repository.
+func (h *rppBinaryHandler) requestedImage(r *http.Request) (string, *registry.ClientConfig, error) {
+	digest := r.URL.Query().Get("digest")
+	if _, err := v1.NewHash(digest); err != nil {
+		return "", nil, fmt.Errorf("%w: %w", errInvalidDigest, err)
+	}
+
 	registryConfig, err := h.configGetter.Get(registry.DefaultRepository)
 	if err != nil {
-		return nil, fmt.Errorf("get registry config: %w", err)
+		return "", nil, fmt.Errorf("get registry config: %w", err)
 	}
+
 	if registryConfig == nil {
-		return nil, errEmptyRegistryConfig
+		return "", nil, errEmptyRegistryConfig
 	}
 	// Copy before mutating so we don't race with the watcher (which may
 	// rewrite registryClientConfigs under Lock while readers still hold a
@@ -510,44 +550,63 @@ func (h *rppBinaryHandler) fetchBinary(ctx context.Context, digest string) ([]by
 	localCfg := *registryConfig
 	localCfg.SignCheck = h.signCheck
 
-	_, _, packageReader, err := h.registryClient.GetPackage(ctx, h.logger, &localCfg, digest, "")
+	return digest, &localCfg, nil
+}
+
+// The digest may name any image of the repository, so the size is checked before a byte is read.
+// The reader of GetPackage stops at that size and checks the digest at the end of the layer.
+func (h *rppBinaryHandler) readLayer(r *http.Request) ([]byte, error) {
+	digest, cfg, err := h.requestedImage(r)
+	if err != nil {
+		return nil, err
+	}
+
+	size, _, packageReader, err := h.registryClient.GetPackage(r.Context(), h.logger, cfg, digest, "")
 	if err != nil {
 		return nil, err
 	}
 	defer packageReader.Close()
 
-	// rpp-get binaries are small (a few MiB); cap reads at 64 MiB so a
-	// malformed or hostile archive cannot exhaust the process memory.
-	const maxBinaryBytes = 64 << 20
-	binary, err := extractTarGzFile(packageReader, baseNameMatcher(h.binaryName), maxBinaryBytes)
-	if err != nil {
-		return nil, fmt.Errorf("extract %s binary: %w", h.binaryName, err)
+	if size > maxRPPGetLayerBytes {
+		return nil, fmt.Errorf("%s layer is %d bytes, the limit is %d", h.binaryName, size, maxRPPGetLayerBytes)
 	}
 
-	return binary, nil
+	layer, err := io.ReadAll(packageReader)
+	if err != nil {
+		return nil, fmt.Errorf("read %s layer: %w", h.binaryName, err)
+	}
+
+	return layer, nil
 }
 
-func (h *rppBinaryHandler) writeFetchError(w http.ResponseWriter, digest, requestIP string, err error) {
-	if errors.Is(err, registry.ErrPackageNotFound) {
-		h.logger.Warnf("rpp-get package %q requested by client %s was not found", digest, requestIP)
+func (h *rppBinaryHandler) writeError(w http.ResponseWriter, r *http.Request, err error) {
+	digest, client := r.URL.Query().Get("digest"), getRequestIP(r)
+
+	switch {
+	case errors.Is(err, errInvalidDigest):
+		h.logger.Warnf("rpp-get request from client %s for %s: %v", client, r.URL.Path, err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	case errors.Is(err, registry.ErrPackageNotFound):
+		h.logger.Warnf("rpp-get package %q requested by client %s was not found", digest, client)
 		http.Error(w, err.Error(), http.StatusNotFound)
+	default:
+		h.logger.Errorf("fetch %s package %q requested by client %s: %v", h.binaryName, digest, client, err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+	}
+}
+
+func (h *rppBinaryHandler) writeBody(w http.ResponseWriter, r *http.Request, body []byte, contentType string) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Length", strconv.Itoa(len(body)))
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+
+	if _, err := w.Write(body); err != nil {
+		h.logger.Errorf("write %s response: %v", r.URL.Path, err)
 		return
 	}
 
-	h.logger.Errorf("fetch %s package %q requested by client %s: %v", h.binaryName, digest, requestIP, err)
-	http.Error(w, "internal server error", http.StatusInternalServerError)
-}
-
-func (h *rppBinaryHandler) writeBinaryResponse(w http.ResponseWriter, binary []byte) {
-	w.Header().Set("Cache-Control", "no-store")
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, h.binaryName))
-	w.Header().Set("Content-Length", strconv.Itoa(len(binary)))
-	w.Header().Set("Content-Type", "application/octet-stream")
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-
-	if _, err := w.Write(binary); err != nil {
-		h.logger.Errorf("write %s response: %v", h.binaryName, err)
-	}
+	h.logger.Infof("%s for digest %q sent successfully to client %s, size %d", r.URL.Path, r.URL.Query().Get("digest"), getRequestIP(r), len(body))
 }
 
 // cliHandler implements the /v1/images/* HTTP routes documented on Proxy.ServeCLI.
