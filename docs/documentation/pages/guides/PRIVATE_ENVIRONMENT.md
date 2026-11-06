@@ -1,11 +1,11 @@
 ---
-title: Installing DP in a private environment
+title: Installing Deckhouse Platform in a private environment
 permalink: en/guides/private-environment.html
 description: A guide to installing the Deckhouse Platform in a private environment
 lang: en
 ---
 
-This guide describes how to deploy a Deckhouse Platform (DP) cluster in a [private environment](../glossary.html#private-environment) with no direct access to the DP container image registry (`registry.deckhouse.io`) and to external deb/rpm package repositories used on nodes running [supported operating systems](../reference/supported_versions.html#linux).
+This guide describes how to deploy a Deckhouse Platform cluster in a [private environment](../glossary.html#private-environment) with no direct access to the Deckhouse Platform container image registry (`registry.deckhouse.io`) and to external deb/rpm package repositories used on nodes running [supported operating systems](../reference/supported_versions.html#linux).
 
 ## Private environment specifics
 
@@ -13,15 +13,15 @@ Deploying in a private environment is almost the same as deploying [on bare meta
 
 Key specifics:
 
-* Proxy server parameters set [in the cluster configuration](../reference/api/cr.html#clusterconfiguration-proxy) during installation are automatically propagated to the `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` environment variables for **cluster nodes and DP components**.
+* Proxy server parameters set [in the cluster configuration](../reference/api/cr.html#clusterconfiguration-proxy) during installation are automatically propagated to the `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` environment variables for **cluster nodes and Deckhouse Platform components**.
   User applications (pods) do not receive these variables from the cluster configuration automatically. To give them Internet access via a proxy, you must set the environment variables (`HTTP_PROXY`, `HTTPS_PROXY`, and, if needed, `NO_PROXY`) explicitly in manifests. Depending on corporate policy, application access may be arranged in other ways—for example, by allowing direct egress from nodes.
-* A container registry with DP images is deployed separately with access from inside the perimeter, and the cluster is configured to use it with the required permissions.
+* A container registry with Deckhouse Platform images is deployed separately with access from inside the perimeter, and the cluster is configured to use it with the required permissions.
 
 Cluster nodes are usually accessed through a dedicated physical server or virtual machine called a [bastion host](../glossary.html#bastion-host). A proxy for access to external resources from the internal network is deployed according to your [network policy](../glossary.html#network-policy) and infrastructure architecture; depending on requirements, it may run on the bastion host or on a separate machine.
 A private container registry should preferably run on a separate VM or server in the internal network. Colocating the registry on the bastion host is not recommended for production. An exception may be lab or simplified stand-alone setups for limited use cases.
 
 {% alert level="info" %}
-Depending on your organization’s security policies, access to external resources may be fully disabled. In that case, no proxy is used for outbound access to external networks. Required external artifacts (for example, an archive of DP container images) are brought into the perimeter onto the target VM by any permitted means—for example, removable media.
+Depending on your organization’s security policies, access to external resources may be fully disabled. In that case, no proxy is used for outbound access to external networks. Required external artifacts (for example, an archive of Deckhouse Platform container images) are brought into the perimeter onto the target VM by any permitted means—for example, removable media.
 {% endalert %}
 
 Overall private environment diagram:
@@ -32,8 +32,8 @@ Overall private environment diagram:
 The diagram also shows an internal OS package repository. It is used to install packages on nodes when access to official repositories is not available even through a proxy.
 Many private environments already run internal OS package mirrors, and installation uses them—in that case, a proxy for package traffic is not required.
 A proxy server is used for other kinds of traffic:
-- pulling container images from the public DP registry to the bastion host
-- DP components and nodes calling external resources (if allowed by policy)
+- pulling container images from the public Deckhouse Platform registry to the bastion host
+- Deckhouse Platform components and nodes calling external resources (if allowed by policy)
 - optionally, pod applications accessing external services.
 {% endalert %}
 
@@ -51,14 +51,14 @@ You will need:
 
 Server requirements:
 
-* **Bastion**: at least 4 CPU cores, 8 GB RAM, and 150 GB on fast storage. That much disk space is needed because the bastion host temporarily holds all DP images used for installation. Images are downloaded from the public DP registry to the bastion host before being pushed to the private container registry and packed into archives; these steps require substantial free space.
-* **VM for the private registry**: at least 4 CPU cores, 8 GB RAM, and at least 150 GB on fast storage for DP images. Plan disk capacity with a margin, using the bundle size after `d8 mirror push` as a guide.
-* **Cluster nodes**: choose [resources for future cluster nodes](hardware-requirements.html#deciding-on-the-amount-of-resources-needed-for-nodes) based on expected workload. For example, the minimum recommended configuration is 4 CPU cores (_8 CPU cores recommended_), 8 GB RAM (_16 GB RAM recommended_), and 60 GB on fast storage (400+ IOPS) per node.
+* **Bastion**: at least 4 CPU cores, 8 GB RAM, and 150 GB on fast storage. That much disk space is needed because the bastion host temporarily holds all Deckhouse Platform images used for installation. Images are downloaded from the public Deckhouse Platform registry to the bastion host before being pushed to the private container registry and packed into archives; these steps require substantial free space.
+* **VM for the private registry**: at least 4 CPU cores, 8 GB RAM, and at least 150 GB on fast storage for Deckhouse Platform images. Plan disk capacity with a margin, using the bundle size after `d8 mirror push` as a guide.
+* **Cluster nodes**: choose [resources for future cluster nodes](../requirements/#resource-requirements) based on expected workload. For example, the minimum recommended configuration is 4 CPU cores (_8 CPU cores recommended_), 8 GB RAM (_16 GB RAM recommended_), and 60 GB on fast storage (400+ IOPS) per node.
 
 ## Preparing a private container registry
 
 {% alert level="warning" %}
-DP supports Basic and Bearer token authentication schemes for container registries (Basic is tried first; if it fails, Bearer is used).
+Deckhouse Platform supports Basic and Bearer token authentication schemes for container registries (Basic is tried first; if it fails, Bearer is used).
 
 If a reverse proxy is placed in front of the registry, it must correctly forward the Registry API v2 header `Docker-Distribution-API-Version: registry/2.0`. Otherwise the Basic check may fail, and the subsequent Bearer attempt may fail with the error `couldn't find bearer realm parameter`.
 {% endalert %}
@@ -733,9 +733,9 @@ Harbor configuration is now complete.
 {% endtabs %}
 <br>
 
-## Copying DP images to a private container registry
+## Copying Deckhouse Platform images to a private container registry
 
-The next step is to copy DP component images from the public Deckhouse Platform registry to Harbor.
+The next step is to copy Deckhouse Platform component images from the public Deckhouse Platform registry to Harbor.
 
 {% alert level="info" %}
 The steps in this section require the [Deckhouse CLI](../glossary.html#deckhouse-cli). Install it on the host from which you will mirror images to the private registry — in this guide, the [bastion host](../glossary.html#bastion-host). For installation instructions, see  [the Deckhouse CLI documentation](../cli/d8/).
@@ -776,9 +776,9 @@ Downloading images takes a significant amount of time. To avoid losing progress 
 {% endofftopic %}
 {% endalert %}
 
-Download DP images into a dedicated directory using `d8 mirror pull`.
+Download Deckhouse Platform images into a dedicated directory using `d8 mirror pull`.
 
-By default, `d8 mirror pull` downloads current [DP releases](../glossary.html#dp-release), vulnerability scanner databases (if included in your [edition](../glossary.html#edition)), and officially shipped modules.
+By default, `d8 mirror pull` downloads current [Deckhouse Platform releases](../glossary.html#dp-release), vulnerability scanner databases (if included in your [edition](../glossary.html#edition)), and officially shipped modules.
 
 Run the following command to download current image versions. Replace the placeholders with your values: `<EDITION>`, `<LICENSE_KEY>`, and optionally the target directory path:
 
@@ -788,9 +788,9 @@ d8 mirror pull --source='registry.deckhouse.io/deckhouse/<EDITION>' --license='<
 
 where:
 
-- `--source` — DP image registry address
-- `<EDITION>` — DP edition code (for example, `ee`, `se`, `se-plus`). The default is `ee` (Enterprise Edition), so `--source` may be omitted
-- `--license` — DP [license key](../glossary.html#license-key) for authentication to the official registry
+- `--source` — Deckhouse Platform image registry address
+- `<EDITION>` — Deckhouse Platform edition code (for example, `ee`, `se`, `se-plus`). The default is `ee` (Enterprise Edition), so `--source` may be omitted
+- `--license` — Deckhouse Platform [license key](../glossary.html#license-key) for authentication to the official registry
 - `<LICENSE_KEY>` — your license key
 - `/home/ubuntu/d8-bundle` — directory for downloaded [image bundles](../glossary.html#mirror-image-bundle) (created automatically if missing).
 
@@ -873,7 +873,7 @@ total 51G
 -rw-rw-r-- 1 user user 1.3G Feb 26 17:51 security.tar
 ```
 
-Push the downloaded images to the private registry. Substitute the DP edition and Harbor robot account credentials:
+Push the downloaded images to the private registry. Substitute the Deckhouse Platform edition and Harbor robot account credentials:
 
 - `<ROBOT_ACCOUNT_NAME>` — robot account name
 - `<PASSWORD>` — token issued when the robot account was created.
@@ -966,14 +966,14 @@ Servers intended for future cluster nodes must meet the following requirements:
 - one of the package managers available (`apt`/`apt-get`, `yum`, or `rpm`).
 
 - Python installed;
-- access to the proxying registry or to the private container registry that holds DP images;
+- access to the proxying registry or to the private container registry that holds Deckhouse Platform images;
 - access to the standard OS package repositories for your distribution (via a proxy or an internal package mirror);
 - SSH access from the bastion host using a key;
 - network access from the bastion host on port `22/TCP`;
 - no container runtime packages installed on the node (for example, no containerd or Docker).
 
 {% alert level="warning" %}
-For proper resource sizing, read [the production preparation guide](production.html) and [the hardware requirements](hardware-requirements.html) for node roles, node counts, and sizing based on workload and operations.
+For proper resource sizing, read [the production preparation guide](production.html) and [the system requirements](../requirements/) for deployment options, node types, and sizing based on workload and operations.
 {% endalert %}
 
 ### Mapping registry.local to the Harbor VM
@@ -1018,7 +1018,7 @@ There are two ways to connect:
 
 ### Configuring SSH access to the master node
 
-To install DP, add the public part of your SSH key to `.ssh/authorized_keys` for the user on the future [master node](../glossary.html#master-node) that will be used to install the platform.
+To install Deckhouse Platform, add the public part of your SSH key to `.ssh/authorized_keys` for the user on the future [master node](../glossary.html#master-node) that will be used to install the platform.
 
 Run the commands as `root` (substitute the public part of your SSH key):
 
@@ -1107,7 +1107,7 @@ If cluster nodes need outbound access via a proxy, deploy the proxy ahead of tim
 
 {% offtopic title="Example: Squid proxy in a container..." %}
 
-A proxy may be required for traffic such as pulling images from the public DP registry to the bastion, or for DP components and nodes to reach external URLs when policy allows. OS packages on nodes can still come from internal mirrors, in which case the proxy is not used for package traffic.
+A proxy may be required for traffic such as pulling images from the public Deckhouse Platform registry to the bastion, or for Deckhouse Platform components and nodes to reach external URLs when policy allows. OS packages on nodes can still come from internal mirrors, in which case the proxy is not used for package traffic.
 
 Deploy a proxy on a separate machine if your environment allows external access.
 
@@ -1160,7 +1160,7 @@ You should see a container named `squid` in the list.
   * In the `spec.settings.registry` section, specify access settings for the private container registry (Harbor in this guide):
 
     ```yaml
-    # Settings for accessing the container registry with DP images.
+    # Settings for accessing the container registry with Deckhouse Platform images.
     registry:
       mode: Unmanaged
       unmanaged:
@@ -1185,7 +1185,7 @@ You should see a container named `squid` in the list.
       # MUST NOT match clusterDomain in ClusterConfiguration.
       # You may change this now or after installation.
       publicDomainTemplate: "%s.test.local"
-      # How DP modules terminate HTTPS.
+      # How Deckhouse Platform modules terminate HTTPS.
       https:
         certManager:
           clusterIssuerName: selfsigned
@@ -1260,11 +1260,11 @@ spec:
     bundle: Default
     releaseChannel: Stable
     logLevel: Info
-    # Settings for accessing the container registry with DP images.
+    # Settings for accessing the container registry with Deckhouse Platform images.
     registry:
       mode: Unmanaged
       unmanaged:
-        # Address of the Docker registry where the DP images are located.
+        # Address of the Docker registry where the Deckhouse Platform images are located.
         imagesRepo: <IMAGES_REPO_URI>
         # The username for authenticating with the container registry.
         username: <USERNAME>
@@ -1277,7 +1277,7 @@ spec:
           ...
           -----END CERTIFICATE-----
 ---
-# Global DP settings.
+# Global Deckhouse Platform settings.
 # https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -1292,10 +1292,10 @@ spec:
       # The domain MUST NOT match the value specified in the clusterDomain parameter of the ClusterConfiguration resource.
       # You can set your own value right away, or follow the guide and change it after installation.
       publicDomainTemplate: "%s.test.local"
-      # The HTTPS implementation method used by DP modules.
+      # The HTTPS implementation method used by Deckhouse Platform modules.
       https:
         certManager:
-          # Use self-signed certificates for DP modules.
+          # Use self-signed certificates for Deckhouse Platform modules.
           clusterIssuerName: selfsigned
 ---
 # user-authn module settings.
@@ -1371,7 +1371,7 @@ internalNetworkCIDRs:
 
 The [installation configuration file](../glossary.html#installation-config) is ready.
 
-## Installing DP
+## Installing Deckhouse Platform
 
 Copy the prepared configuration file to the host from which you run the installation (for example, `~/deckhouse` on the bastion). Go to that directory and start the [installer](../glossary.html#installer):
 
@@ -1393,7 +1393,7 @@ After the image is pulled and the container starts successfully, you will see a 
 [deckhouse] root@guide-bastion / #
 ```
 
-Start the DP installation with the following command (specify the [master node](../glossary.html#master-node)’s internal IP address):
+Start the Deckhouse Platform installation with the following command (specify the [master node](../glossary.html#master-node)’s internal IP address):
 
 ```bash
 dhctl bootstrap --ssh-user=<USER> --ssh-host=<MASTER_IP> --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml
@@ -1517,7 +1517,7 @@ Perform the following steps:
   d8cluster-worker   Ready    worker                 10m   v1.34.10
   ```
 
-  It may take some time for all DP components to start after the installation completes.
+  It may take some time for all Deckhouse Platform components to start after the installation completes.
 
 ## Configuring the Ingress controller and creating a user
 
@@ -1564,7 +1564,7 @@ Apply it by running the following command on the master node:
 sudo -i d8 k create -f $PWD/ingress-nginx-controller.yml
 ```
 
-Starting the Ingress controller after DP installation may take some time. Before you proceed, make sure the Ingress controller is running (run the following command on the master node):
+Starting the Ingress controller after Deckhouse Platform installation may take some time. Before you proceed, make sure the Ingress controller is running (run the following command on the master node):
 
 <!-- markdownlint-disable MD031 -->
 ```console
@@ -1659,12 +1659,12 @@ To confirm the cluster is healthy, open Grafana (built from `publicDomainTemplat
 
 ## Next steps
 
-DP is installed and running. You can use the web UIs to manage the cluster:
+Deckhouse Platform is installed and running. You can use the web UIs to manage the cluster:
 
 * **Deckhouse Console** — cluster and core component management. URL: **console.test.local**. You can download the `d8` CLI from this UI.
-* **Documentation** — documentation for the DP version running in the cluster. URL: **documentation.test.local**.
-* **Monitoring** — Grafana [dashboards](../glossary.html#dashboard) shipped with DP. URL: **grafana.test.local** (Prometheus UI path: **/prometheus/**). More in the [monitoring documentation](../admin/configuration/monitoring/).
-* **Status page** — overall DP and component status. URL: **status.test.local**.
+* **Documentation** — documentation for the Deckhouse Platform version running in the cluster. URL: **documentation.test.local**.
+* **Monitoring** — Grafana [dashboards](../glossary.html#dashboard) shipped with Deckhouse Platform. URL: **grafana.test.local** (Prometheus UI path: **/prometheus/**). More in the [monitoring documentation](../admin/configuration/monitoring/).
+* **Status page** — overall Deckhouse Platform and component status. URL: **status.test.local**.
 * **Upmeter** — SLA tracking by component and period. URL: **upmeter.test.local**.
 * **Production readiness** — follow the [production preparation guide](production.html) before taking real traffic.
 

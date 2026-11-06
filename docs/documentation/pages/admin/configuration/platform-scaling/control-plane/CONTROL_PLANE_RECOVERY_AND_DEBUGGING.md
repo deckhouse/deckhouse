@@ -308,7 +308,7 @@ If any component of the control plane becomes unavailable, the cluster temporari
 
 However, prolonged unavailability of control plane components disrupts the processing of new objects, handling of node failures, and other operations. Over time, this can lead to cluster degradation and impact user applications.
 
-To mitigate these risks, the control plane should be scaled to a high-availability configuration — a minimum of three nodes. This is especially critical for etcd, which requires a quorum to elect a leader. The quorum works on a majority basis (N/2 + 1) of the total number of nodes.
+To mitigate these risks, the control plane should be scaled to a high-availability configuration — a minimum of three nodes. This is especially critical for etcd, which requires a [quorum](../../../../glossary.html#quorum) to elect a leader. The quorum works on a majority basis (N/2 + 1) of the total number of nodes.
 
 Example:
 

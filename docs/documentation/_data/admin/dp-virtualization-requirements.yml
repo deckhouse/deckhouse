@@ -1,0 +1,91 @@
+- name: single-node-cluster
+  en:
+    description: |
+      All-in-one cluster where a single node performs both master and worker roles
+  ru:
+    description: |
+      Одноузловой кластер, в котором один узел выполняет роли и master, и worker
+  nodes:
+    - node_type: master
+      count: 1
+      vcpu: 16
+      ram_gb: 32
+      disk_gb: 450
+
+- name: single-master-cluster
+  en:
+    description: |
+      Cluster with one master node and one or more nodes intended for running virtual machines
+  ru:
+    description: |
+      Кластер с одним master-узлом и одним или несколькими узлами, предназначенными для запуска виртуальных машин
+  nodes:
+    - node_type: master
+      count: 1
+      vcpu: 8
+      ram_gb: 16
+      disk_gb: 150
+    - node_type: vm
+      count: "1+"
+      vcpu: 12
+      ram_gb: 24
+      disk_gb: 350
+
+- name: three-master-cluster
+  en:
+    description: |
+      High-availability cluster with three master nodes
+  ru:
+    description: |
+      Кластер с тремя master-узлами для высокой доступности
+  nodes:
+    - node_type: master
+      count: 3
+      vcpu: 8
+      ram_gb: 16
+      disk_gb: 200
+
+- name: role-separated-cluster
+  en:
+    description: |
+      Cluster with role separation: dedicated master, virtual-machine, system, frontend and monitoring nodes
+  ru:
+    description: |
+      Кластер с разделением ролей узлов: выделенные master-, узлы для запуска виртуальных машин, системные, frontend- и узлы мониторинга
+  nodes:
+    - node_type: master
+      count: 3
+      vcpu: 6
+      ram_gb: 12
+      disk_gb: 60
+    - node_type: vm
+      count: "1+"
+      vcpu: 4
+      ram_gb: 8
+      disk_gb: 120
+    - node_type: system
+      count: "2+"
+      vcpu: 4
+      ram_gb: 8
+      disk_gb: 100
+    - node_type: system
+      count: "2+"
+      vcpu: 8
+      ram_gb: 16
+      disk_gb: 300
+      en:
+        note: |
+          Applied if there are no dedicated monitoring nodes
+      ru:
+        note: |
+          Применяется, если нет выделенных узлов мониторинга
+    - node_type: frontend
+      count: "2+"
+      vcpu: 2
+      ram_gb: 4
+      disk_gb: 60
+    - node_type: monitoring
+      count: "2+"
+      vcpu: 4
+      ram_gb: 8
+      disk_gb: 200

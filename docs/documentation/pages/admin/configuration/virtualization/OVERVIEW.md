@@ -16,7 +16,7 @@ DP lets you do the following:
 
 ## Installation and configuration
 
-Virtualization has its own node requirements: hardware virtualization support, the same kernel version everywhere, storage for disks and images, and dedicated subnets for machines. They are listed in [Additional requirements for virtualization](../../../installing/#additional-requirements-for-virtualization), while enabling virtualization and placing its components across nodes is covered in [Installing virtualization](../../../installing/#installing-virtualization).
+Virtualization has its own node requirements: hardware virtualization support, the same kernel version everywhere, storage for disks and images, and dedicated subnets for machines. They are listed in [Requirements for running virtual machines](../../../requirements/#requirements-for-running-virtual-machines), while enabling virtualization and placing its components across nodes is covered in [Installing virtualization](../../../installing/#installing-virtualization).
 
 The parameters set in the ModuleConfig resource are covered in the [module settings reference](/modules/virtualization/configuration.html), and the specifics of updating the components are covered in [Updating virtualization](../update/configuration.html#updating-virtualization).
 

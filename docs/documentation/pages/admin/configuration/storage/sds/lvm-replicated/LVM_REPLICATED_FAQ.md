@@ -147,7 +147,7 @@ If you need to reboot another node, repeat the procedure.
 ## Automatic management of replicas and monitoring of LINSTOR state
 
 Replica management and state monitoring are automated in the `replicas_manager.sh` script.
-It checks the availability of the LINSTOR controller, identifies faulty or corrupted resources, creates database backups, and manages disk replicas, including configuring `TieBreaker` for quorum.
+It checks the availability of the LINSTOR controller, identifies faulty or corrupted resources, creates database backups, and manages disk replicas, including configuring `TieBreaker` for [quorum](../../../../glossary.html#quorum).
 
 To check the existence of the `replicas_manager.sh` script, run the following command on any [master node](../../../../glossary.html#master-node):
 

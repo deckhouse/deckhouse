@@ -1,9 +1,9 @@
 ---
-title: Deployment scenario
-description: One of the reference cluster configurations used to estimate the resources needed for the expected load, Minimum, Typical or Increased load.
+title: Deployment option
+description: A cluster configuration that defines the number of nodes, the distribution of roles between them, and whether the cluster tolerates a node failure.
 lang: en
 ---
 
-The Minimum scenario has one [master node](glossary.html#master-node) and at least one [worker node](glossary.html#worker-node). It suits small projects with low reliability requirements, because the failure of the master node affects the whole cluster. The Typical scenario adds two more master nodes, two [frontend nodes](glossary.html#frontend-node) and two [system nodes](glossary.html#system-node) and tolerates the failure of one master node. The Increased load scenario adds two [monitoring nodes](glossary.html#monitoring-node) for observability under high load.
+The deployment option is chosen before the installation. Examples of options: a [single-node cluster](glossary.html#single-node-cluster), a [single-master cluster](glossary.html#single-master), a high-availability cluster with three [master nodes](glossary.html#master-node), and a cluster with role separation, where [system](glossary.html#system-node), [frontend](glossary.html#frontend-node) and [monitoring nodes](glossary.html#monitoring-node) are dedicated to the platform components and incoming traffic. The node resource requirements depend on the deployment option.
 
-For details, see [Hardware requirements](guides/hardware-requirements.html).
+For details, see the [Deployment options](requirements/#deployment-options) section of the "System requirements" page.

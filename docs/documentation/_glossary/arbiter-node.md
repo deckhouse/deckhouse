@@ -1,6 +1,6 @@
 ---
 title: Arbiter node
-description: A node that holds only etcd, without the other control plane components, to provide the etcd quorum in HA mode with two master nodes.
+description: A node that holds only etcd, without the other control plane components, to provide the etcd [quorum](glossary.html#quorum) in HA mode with two master nodes.
 lang: en
 ---
 

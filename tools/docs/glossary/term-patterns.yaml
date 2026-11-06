@@ -231,6 +231,9 @@ terms:
   protected-parameters:
     en: ['protected parameters?']
     ru: ['защищ[её]нн\w{2,3} параметр\w{0,3}']
+  quorum:
+    en: ['quorums?']
+    ru: ['кворум\w{0,2}']
   rbac:
     en: ['role model']
     ru: ['ролев\w{2,3} модел\w{1,3}']

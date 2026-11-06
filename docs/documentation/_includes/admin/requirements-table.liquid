@@ -1,0 +1,43 @@
+{%- comment %}
+Renders a table of cluster node requirements from _data/admin/<data>.yml.
+Parameters:
+  data — the data file name without extension, e.g. "dp-containers-requirements".
+{%- endcomment %}
+{%- assign lang = page.lang | default: 'en' %}
+{%- assign i18n = site.data.i18n.requirements %}
+<table markdown="0">
+  <thead>
+    <tr>
+      <th>{{ i18n.cluster_configuration[lang] }}</th>
+      <th>{{ i18n.node_type[lang] }}</th>
+      <th style="text-align: center;">{{ i18n.node_count[lang] }}</th>
+      <th style="text-align: center;">{{ i18n.vcpu[lang] }}</th>
+      <th style="text-align: center;">{{ i18n.ram_gb[lang] }}</th>
+      <th style="text-align: center;">{{ i18n.disk_gb[lang] }}</th>
+    </tr>
+  </thead>
+  <tbody>
+{%- for cluster in site.data.admin[include.data] %}
+{%- for node in cluster.nodes %}
+    <tr>
+{%- if forloop.first %}
+      <td rowspan="{{ cluster.nodes.size }}">{{ cluster[lang].description | strip }}</td>
+{%- endif %}
+{%- assign node_type_name = i18n.node_types[node.node_type][lang] | default: node.node_type %}
+      <td>{{ node_type_name }}
+{%- if node[lang].note %}
+{%- assign note = node[lang].note | strip %}
+{%- assign note_last = note | slice: -1 %}
+{%- if note_last == "." %}{% assign note_size = note.size | minus: 1 %}{% assign note = note | slice: 0, note_size %}{% endif %}
+<br>({{ note | slice: 0 | downcase }}{{ note | slice: 1, note.size }})
+{%- endif -%}
+      </td>
+      <td style="text-align: center;">{{ node.count }}</td>
+      <td style="text-align: center;">{{ node.vcpu }}</td>
+      <td style="text-align: center;">{{ node.ram_gb }}</td>
+      <td style="text-align: center;">{{ node.disk_gb }}</td>
+    </tr>
+{%- endfor %}
+{%- endfor %}
+  </tbody>
+</table>

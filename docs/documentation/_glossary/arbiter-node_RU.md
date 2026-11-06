@@ -1,6 +1,6 @@
 ---
 title: Arbiter-узел
-description: Узел, на котором размещается только etcd, без остальных компонентов control plane, для обеспечения кворума etcd в режиме HA с двумя master-узлами.
+description: Узел, на котором размещается только etcd, без остальных компонентов control plane, для обеспечения [кворума](glossary.html#quorum) etcd в режиме HA с двумя master-узлами.
 lang: ru
 ---
 

@@ -360,7 +360,7 @@ DP настраивает kube-apiserver на проверку токенов De
 
 Подробнее о выдаче прав — в разделе [«Выдача прав пользователям и сервисным аккаунтам»](granting.html).
 
-Для текущей ролевой модели используйте [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule):
+Для текущей [ролевой модели](../../../../glossary.html#rbac) используйте [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule):
 
 ```shell
 cat <<EOF | d8 k apply -f -

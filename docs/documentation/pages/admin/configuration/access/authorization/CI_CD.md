@@ -359,7 +359,7 @@ The set of claims required by kube-apiserver for authentication depends on confi
 
 For details on granting permissions, see [Granting permissions to users and service accounts](granting.html).
 
-For the current role model, use [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule):
+For the current [role model](../../../../glossary.html#rbac), use [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule):
 
 ```shell
 cat <<EOF | d8 k apply -f -

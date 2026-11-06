@@ -25,7 +25,7 @@ The [`ingress-nginx`](/modules/ingress-nginx/) module is used to implement [ALB]
 {% alert level="info" %}
 In 2025, Ingress NGINX was [placed](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/) in maintenance mode, with no plans for active development of new features. Further evolution of inbound traffic load balancing in Kubernetes is focused on the [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/).
 
-This does not apply to the module as part of Deckhouse Platform (DP): the module is maintained by the DP team, including security updates. Details are in ["Module support and security"](#module-support-and-security).
+This does not apply to the module as part of Deckhouse Platform: the module is maintained by the Deckhouse Platform team, including security updates. Details are in ["Module support and security"](#module-support-and-security).
 
 Step-by-step migration to Gateway API is in [Migrating from ingress-nginx to alb](migration.html).
 {% endalert %}
@@ -276,7 +276,7 @@ spec:
 ### Example for bare metal (MetalLB in BGP LoadBalancer mode)
 
 {% alert level="info" %}
-Available in DP [Enterprise Edition](../../../../../glossary.html#edition) and DP Ultimate only.
+Available in Deckhouse Platform [Enterprise Edition](../../../../../glossary.html#edition) and Deckhouse Platform Ultimate only.
 {% endalert %}
 
 IngressNginxController with the [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer) inlet for use with MetalLB in BGP mode:
@@ -329,7 +329,7 @@ spec:
 ### Example for bare metal (MetalLB in L2 LoadBalancer mode)
 
 {% alert level="info" %}
-Available in DP Enterprise Edition and DP Ultimate only.
+Available in Deckhouse Platform Enterprise Edition and Deckhouse Platform Ultimate only.
 {% endalert %}
 
 1. Enable the [`metallb`](/modules/metallb/) module:
@@ -347,7 +347,7 @@ Available in DP Enterprise Edition and DP Ultimate only.
 1. Create a [MetalLoadBalancerClass](/modules/metallb/cr.html#metalloadbalancerclass) resource:
 
    {% alert level="info" %}
-   MetalLB balancers should be placed on the same nodes as Ingress controllers. In [typical deployment scenarios](../../../../../guides/hardware-requirements.html#deployment-scenarios), frontend nodes are used for this purpose. To deploy Ingress controllers and MetalLB load balancers on frontend nodes, set the label `node-role.deckhouse.io/frontend: ""` in `nodeSelector`.
+   MetalLB balancers should be placed on the same nodes as Ingress controllers. In a [cluster with role separation](../../../../../requirements/#deployment-options), frontend nodes are used for this purpose. To deploy Ingress controllers and MetalLB load balancers on frontend nodes, set the label `node-role.deckhouse.io/frontend: ""` in `nodeSelector`.
    {% endalert %}
 
    ```yaml
@@ -396,7 +396,7 @@ If you need more than one address, also set `network.deckhouse.io/l2-load-balanc
 See ["Example of using annotations"](/modules/metallb/examples.html#creating-a-service-and-assigning-it-specific-ip-addresses-from-the-pool) to assign specific addresses from the pool to the Service.
 {% endalert %}
 
-DP will create a LoadBalancer Service with the specified number of IPs:
+Deckhouse Platform will create a LoadBalancer Service with the specified number of IPs:
 
 ```shell
 d8 k -n d8-ingress-nginx get svc
@@ -575,6 +575,6 @@ spec:
 
 ## Module support and security
 
-The `ingress-nginx` module is covered by DP maintenance for the entire platform support lifecycle, regardless of the upstream project's development status. The DP team tracks CVEs in the controller and its dependencies — NGINX, Lua modules, and base images — and delivers fixes in platform releases.
+The `ingress-nginx` module is covered by Deckhouse Platform maintenance for the entire platform support lifecycle, regardless of the upstream project's development status. The Deckhouse Platform team tracks CVEs in the controller and its dependencies — NGINX, Lua modules, and base images — and delivers fixes in platform releases.
 
-For compliance with PCI DSS expectations regarding vendor support and vulnerability remediation timelines, Flant is the responsible vendor of the module. DP certification with FSTEC of Russia also covers vulnerability management processes and the release of security updates.
+For compliance with PCI DSS expectations regarding vendor support and vulnerability remediation timelines, Flant is the responsible vendor of the module. Deckhouse Platform certification with FSTEC of Russia also covers vulnerability management processes and the release of security updates.

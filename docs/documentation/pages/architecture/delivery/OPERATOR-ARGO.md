@@ -36,7 +36,7 @@ The Level 2 C4 architecture of the [`operator-argo`](/modules/operator-argo/) mo
 
   ![Operator-argo module operator architecture](../../images/architecture/delivery/c4-l2-operator-argo-operator.svg)
 
-- Argo CD instance [deployment scenario](../../glossary.html#deployment-scenario) with Redis in a non-HA configuration:
+- Argo CD instance deployment scenario with Redis in a non-HA configuration:
 
   ![Operator-argo module architecture with Redis non-HA](../../images/architecture/delivery/c4-l2-operator-argo.svg)
 

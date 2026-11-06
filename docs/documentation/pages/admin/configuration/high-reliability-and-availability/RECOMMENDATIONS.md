@@ -11,7 +11,7 @@ Below are the recommended roles and number of nodes for various components.
 To ensure cluster fault tolerance, **always** use at least three [master nodes](../../../glossary.html#master-node).
 This number ensures uninterrupted cluster operation and lets you update master nodes safely.
 More than three nodes are unnecessary,
-and two nodes are insufficient to maintain alignment (quorum) in case of issues in one of the nodes.
+and two nodes are insufficient to maintain alignment ([quorum](../../../glossary.html#quorum)) in case of issues in one of the nodes.
 
 Using only one master node means its failure will bring down the entire cluster
 since it manages key components that keep the cluster running.

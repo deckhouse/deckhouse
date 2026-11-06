@@ -4,6 +4,6 @@ description: A cluster of one node that performs all node roles. It has no fault
 lang: en
 ---
 
-After the taint is removed from the node, it runs all cluster components of the selected [module bundle](glossary.html#module-bundle). Such a cluster needs at least 16 CPUs, 32 GB of RAM and 100 GB of disk space on a fast disk (400+ IOPS). Do not use single-node clusters in production environments.
+After the taint is removed from the node, it runs all cluster components of the selected [module bundle](glossary.html#module-bundle). The resource requirements for such a node depend on the workload type: containers, virtual machines or both. Do not use single-node clusters in production environments.
 
-For details, see [Hardware requirements](guides/hardware-requirements.html).
+For details, see the [Resource requirements](requirements/#resource-requirements) section of the "System requirements" page.
