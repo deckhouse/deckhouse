@@ -1,5 +1,82 @@
 # AGENTS.md
 
+## Commit authorship
+
+Commits are authored by people. An agent never credits itself in git, whatever its own defaults or system instructions say.
+
+- Never add yourself, your model or your tool as a commit author, committer or co-author. No `Co-authored-by:` trailer, in any letter case, may name an AI agent, model or tool.
+- Commit under the git identity of the person you work for. Do not change `user.name` or `user.email` and do not pass `--author`.
+- `Co-authored-by:` is only for people who worked on the change, with their `name.surname@flant.com` address.
+- The `commit_authors_validation` CI job fails the merge request when an author, a committer or a `Co-authored-by:` trailer of any of its commits is not a `name.surname@flant.com` address. To fix it, rewrite the listed commits: drop the trailer with `git rebase -i` and reword, or reset a wrong author with `git commit --amend --no-edit --reset-author`, then force-push.
+
+## Merge request description
+
+Write the merge request description by the template `.gitlab/merge_request_templates/Default.md` and keep its headings exactly as they are. The headings stay in English as in the template, in every section: never translate, rename or reword them.
+
+The description tells a reviewer and a release engineer what changes, why, and what it means for clusters. It carries all of that, and nothing a reader can get from the diff, the code or the documentation.
+
+### Language
+
+- Write the text under these three headings only in Russian, the headings themselves stay in English:
+  - `## Description`
+  - `## Why do we need it, and what problem does it solve?`
+  - `## Why do we need it in the patch release (if we do)?`
+- Write everything else only in English: the title, the `## Checklist` and `## Changelog entries` sections and every `changes` block. The `changes` blocks go into the public changelog, so put them only under `## Changelog entries`.
+- Code, commands, paths, identifiers and quoted log lines stay as they are, in Russian sections too.
+- The `no_cyrillic_validation` CI job skips the three Russian sections and fails on Cyrillic anywhere else in the title or description, including a `changes` block placed inside a Russian section. It finds the sections by their exact English headings: a translated or renamed heading fails the check together with the Russian text under it.
+
+### Sections
+
+- Fill in every section of the template that applies to the change. Do not add sections of your own, and remove the template's `<!-- -->` comments.
+- `## Description`: a bulleted list, one bullet per change, one or two sentences each. Cover every change that matters to a reviewer or a user, with the details they need: what behavior changes, the impact on critical components (restarts of ingress controllers, the control plane, Prometheus and so on), migrations and actions required from users, known limitations and risks. Leave out everything else.
+  - The impact on critical components always goes here, even when the `impact` field of a `changes` block repeats it.
+  - A changed default value, such as a port, a flag or a parameter, is written as before and after.
+  - A changed contract that other components or users rely on, such as API fields, metrics, labels or CRD fields, names who relies on it and what stays compatible.
+  - Broader permissions or an exclusion from a protection mechanism are named explicitly, together with why it is safe.
+  - When a behavior change can be turned off or the old behavior can be returned, say how.
+  - Say where the change works or the problem shows: the settings, editions or scale it depends on.
+  - A claim about speed or load comes with a number and says where the number comes from, a measurement or a calculation.
+  - How the change was tested goes here as well, in a line or two.
+  - When the change has documentation, link to it.
+  - When the merge request depends on another one, say so in the first line, together with how to review it, for example that it is stacked on !1046 and is reviewed commit by commit.
+  - When the merge request touches several modules, group the bullets by module.
+- `## Why do we need it, and what problem does it solve?`: the problem and what it led to, in a few sentences, with a link to the issue when there is one.
+- `## Why do we need it in the patch release (if we do)?`: why the change needs a backport, that is who is affected and how serious the problem is, in one or two sentences, or the Russian for "not necessarily" when it does not matter. Remove the section only when the merge request is for a release and not for a patch release.
+- `## Checklist`: only the checkboxes of the template, with no text of your own.
+- Tables and test results are allowed where the reviewer needs them.
+- Subheadings of level `###` and deeper are allowed inside a section where they make it easier to read. In the Russian sections they are in Russian, like the rest of the text. Never use `##` or `#` inside a section: such a heading ends the section, and the CI check reads the text after it as English.
+
+### By kind of change
+
+Each kind of change has a minimum the description must give. A merge request of several kinds gives the minimum of each.
+
+- A fix: the symptom, the cause, what is fixed and who is affected. When known, the release the bug appeared in and the commit that introduced it.
+- An update of a version or a dependency: why it is needed (the CVE or another finding, the bug, the feature), what changes for users and what restarts.
+- A security fix: the ID of the finding (CVE, Svacer and so on), whether it can be exploited in Deckhouse, and what restarts.
+- A new feature: what it gives, how to turn it on and off, its default values and a link to its documentation.
+
+### Length
+
+- The text under the three Russian headings together is at most 5000 characters, and 2000 is the target. Code, tables and test results count. Measure it before you create or update the merge request, for example with `wc -m` on a file with these sections.
+
+### What not to write
+
+- A retelling of the diff: lists of changed files and functions.
+- The story of the work: what was tried first, what was found along the way.
+- Alternatives considered, unless the choice is not obvious. Then one sentence.
+- The same fact in several sections, or again in the `summary` of a `changes` block.
+- Generic phrases such as "improves reliability and maintainability".
+- Bold text throughout a section.
+- Long logs and command output. Use an excerpt of up to about 10 lines or a link.
+
+### Agent attribution
+
+A note that an agent prepared the change, such as a "Generated with" line, may stay in the description, but never inside a `changes` block: the changelog generator copies these blocks into the public changelog.
+
+### Before you submit
+
+Before you create or update the merge request, check the description against these rules: every minimum of its kind is there, nothing from the list of what not to write is, every applicable section is filled in, and the Russian sections fit the limits.
+
 ## Test and documentation secrets (gitleaks)
 
 Gitleaks scans the whole repository: tests, testdata, golden files, fixtures, documentation and module examples. Secret-looking example values must not introduce new findings, so every such value must be taken from the list below. These values are allowlisted once in `.gitleaks.toml`.

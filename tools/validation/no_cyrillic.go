@@ -69,8 +69,8 @@ func RunNoCyrillicValidation(info *DiffInfo, title string, description string) (
 		}
 	}
 	if description != "" {
-		fmt.Printf("Check description ... ")
-		msg, hasCyr := checkCyrillicLetters(description)
+		fmt.Printf("Check description, except the sections written in Russian ... ")
+		msg, hasCyr := checkCyrillicLetters(skipRussianSections(description))
 		if hasCyr {
 			fmt.Printf("ERROR\n")
 			descErr = msg
@@ -156,6 +156,56 @@ func RunNoCyrillicValidation(info *DiffInfo, title string, description string) (
 	}
 
 	return exitCode
+}
+
+// The merge request template asks for these sections in Russian (see AGENTS.md).
+// Keys are the lowercased heading texts of .gitlab/merge_request_templates/Default.md.
+var russianSections = map[string]struct{}{
+	"description": {},
+	"why do we need it, and what problem does it solve?": {},
+	"why do we need it in the patch release (if we do)?": {},
+}
+
+var mdHeadingRe = regexp.MustCompile(`^(#{1,6})\s+(.*?)\s*#*\s*$`)
+var mdFenceRe = regexp.MustCompile("^\\s*(```|~~~)(.*)$")
+
+// skipRussianSections drops the bodies of russianSections from a merge request description.
+// A section ends at the next heading of the same or a higher level, and a line in a fenced
+// code block is never a heading. A ```changes block is kept wherever it is: the changelog
+// generator takes these blocks from anywhere in the description, and the changelog is English.
+func skipRussianSections(description string) string {
+	lines := strings.Split(description, "\n")
+	kept := make([]string, 0, len(lines))
+	// Level of the heading of the section being skipped, 0 when not skipping.
+	skipLevel := 0
+	inFence, inChanges := false, false
+	for _, line := range lines {
+		text := strings.TrimRight(line, "\r")
+		keep := skipLevel == 0
+		if fence := mdFenceRe.FindStringSubmatch(text); fence != nil {
+			if !inFence {
+				inChanges = strings.EqualFold(strings.TrimSpace(fence[2]), "changes")
+			}
+			keep = keep || inChanges
+			inFence = !inFence
+			inChanges = inChanges && inFence
+		} else if inFence {
+			keep = keep || inChanges
+		} else if heading := mdHeadingRe.FindStringSubmatch(text); heading != nil {
+			level := len(heading[1])
+			if skipLevel == 0 || level <= skipLevel {
+				skipLevel = 0
+				if _, ok := russianSections[strings.ToLower(heading[2])]; ok {
+					skipLevel = level
+				}
+			}
+			keep = skipLevel == 0
+		}
+		if keep {
+			kept = append(kept, line)
+		}
+	}
+	return strings.Join(kept, "\n")
 }
 
 var cyrRe = regexp.MustCompile(`[А-Яа-яЁё]+`)

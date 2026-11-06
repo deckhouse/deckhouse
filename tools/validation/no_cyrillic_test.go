@@ -112,3 +112,73 @@ func Test_skip_localized_role_metadata(t *testing.T) {
 		}
 	}
 }
+
+func Test_skip_russian_sections(t *testing.T) {
+	const russianSections = "## Description\n" +
+		"Описание изменений.\n" +
+		"### Детали\n" +
+		"Подробности.\n" +
+		"```text\n" +
+		"## Checklist\n" +
+		"```\n" +
+		"Текст после блока кода.\n" +
+		"\n" +
+		"## Why do we need it, and what problem does it solve?\n" +
+		"<!--- This is the most important paragraph. -->\n" +
+		"Зачем это нужно.\n" +
+		"\n" +
+		"## Why do we need it in the patch release (if we do)?\n" +
+		"Не обязательно.\n"
+	const checklist = "\n## Checklist\n" +
+		"- [x] The code is covered by unit tests.\n"
+	const changes = "\n## Changelog entries\n" +
+		"```changes\n" +
+		"section: ci\n" +
+		"type: chore\n" +
+		"summary: Check commit authors.\n" +
+		"```\n"
+
+	for name, tc := range map[string]struct {
+		in     string
+		hasCyr bool
+	}{
+		"Russian only in the Russian sections": {
+			in: russianSections + checklist + changes,
+		},
+		"CRLF line endings": {
+			in: strings.ReplaceAll(russianSections+checklist+changes, "\n", "\r\n"),
+		},
+		"Russian in the checklist": {
+			in:     russianSections + strings.Replace(checklist, "The code", "Код", 1) + changes,
+			hasCyr: true,
+		},
+		"Russian in the changes block": {
+			in:     russianSections + checklist + strings.Replace(changes, "Check commit authors.", "Проверка авторов.", 1),
+			hasCyr: true,
+		},
+		"changes block inside a Russian section": {
+			in:     "## Description\nОписание.\n```changes\nsummary: Проверка авторов.\n```\nЕще описание.\n" + checklist,
+			hasCyr: true,
+		},
+		"Russian before any heading": {
+			in:     "Описание без шаблона.\n" + russianSections,
+			hasCyr: true,
+		},
+		"Russian under an unknown heading": {
+			in:     russianSections + "## Notes\nЗаметки.\n",
+			hasCyr: true,
+		},
+		"translated heading": {
+			in:     strings.Replace(russianSections, "## Description", "## Описание", 1) + checklist + changes,
+			hasCyr: true,
+		},
+		"Russian added to a heading": {
+			in:     strings.Replace(russianSections, "## Description", "## Description (описание)", 1) + checklist + changes,
+			hasCyr: true,
+		},
+	} {
+		if _, has := checkCyrillicLetters(skipRussianSections(tc.in)); has != tc.hasCyr {
+			t.Errorf("%s: has Cyrillic = %v, want %v\n%s", name, has, tc.hasCyr, skipRussianSections(tc.in))
+		}
+	}
+}
