@@ -36,6 +36,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/crd"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/hookcache"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/disk/erofs"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/disk/symlink"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule"
@@ -277,6 +278,7 @@ func buildKubeEventsManager(metricStorage metricsstorage.Storage, logger *log.Lo
 
 	manager := kubeeventsmanager.NewKubeEventsManager(context.Background(), client, logger.Named("kube-events-manager"))
 	manager.WithMetricStorage(metricStorage)
+	manager.WithObjectTransform(hookcache.StripUnusedFields)
 
 	return manager, nil
 }

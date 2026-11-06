@@ -284,7 +284,8 @@ func buildControllerOpts(ctx context.Context, scheme *runtime.Scheme, webhookSer
 		GracefulShutdownTimeout: new(gracefulShutdownTimeout),
 		WebhookServer:           webhookServer,
 		Cache: cache.Options{
-			ByObject: buildCacheByObject(),
+			ByObject:         buildCacheByObject(),
+			DefaultTransform: cache.TransformStripManagedFields(),
 		},
 	}
 }

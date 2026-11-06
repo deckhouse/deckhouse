@@ -53,7 +53,7 @@ func applyPatches(t *testing.T, resources []*unstructured.Unstructured, patches 
 	for _, resource := range resources {
 		meta := spec.NewResourceMetaFromUnstructured(resource, releaseNamespace, "chart/templates/workload.yaml")
 
-		patched, err := spec.ApplyPatches(t.Context(), compiled, meta, releaseNamespace, resource)
+		patched, err := spec.ApplyPatches(t.Context(), compiled, meta, releaseNamespace, resource, spec.ApplyPatchesOptions{})
 		if err != nil {
 			return err
 		}

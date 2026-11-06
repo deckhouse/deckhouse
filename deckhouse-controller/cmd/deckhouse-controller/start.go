@@ -46,6 +46,7 @@ import (
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/hookcache"
 	apiv1 "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/api/handlers/root/v1"
 	apiserver "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/api/server"
 	d8apis "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis"
@@ -120,6 +121,7 @@ func start(logger *log.Logger, cfg *app.Config) func(cmd *cobra.Command, args []
 		operator := addonoperator.NewAddonOperator(ctx, metricsStorage, hookMetricStorage,
 			addonoperator.WithConfig(cfg),
 			addonoperator.WithLogger(logger.Named("addon-operator")),
+			addonoperator.WithObjectTransform(hookcache.StripUnusedFields),
 		)
 
 		operator.StartAPIServer()
