@@ -56,19 +56,27 @@ PRIVILEGED_USERS = {
     "system:serviceaccount:kube-system:clusterrole-aggregation-controller",
 }
 
-# Cluster administrators apply platform manifests (Commander e2e SSA-patches
-# d8:commander:commander-admin with * on deckhouse.io). Same break-glass set as
-# system_resources.py — a namespace admin is never in these groups.
+# Break-glass cluster administrators. Same set as system_resources.py — a namespace admin is never
+# in these groups.
 BYPASS_GROUPS = {
     "system:masters",
     "kubeadm:cluster-admins",
 }
 
-# Platform ClusterRoles live under the reserved d8: prefix (cluster_roles.py). Commander
-# materializes d8:commander:* with cluster-admin rules; Deckhouse ships d8:project:*. The
-# escalation threat is a tenant Role or a d8:custom:* ClusterRole, not those names.
-def is_platform_owned_clusterrole(kind: str, name: str) -> bool:
-    return kind == "ClusterRole" and name.startswith("d8:") and not name.startswith("d8:custom:")
+# Commander's roles on a managed cluster, written by its agent; see COMMANDER_PREFIX in
+# cluster_roles.py. Their rules are whatever Commander's users define, * on every API included.
+COMMANDER_PREFIX = "d8:commander:"
+COMMANDER_AGENT = "system:serviceaccount:d8-commander-agent:commander-agent"
+
+
+# Platform ClusterRoles live under the reserved d8: prefix (cluster_roles.py): Deckhouse ships
+# d8:project:* and the rest, which nobody else may write, and the Commander agent writes
+# d8:commander:*. The escalation threat is a tenant Role, a d8:custom:* ClusterRole, or a
+# d8:commander:* ClusterRole that someone other than the agent writes, not those names.
+def is_platform_owned_clusterrole(kind: str, name: str, username: Optional[str]) -> bool:
+    if kind != "ClusterRole" or not name.startswith("d8:") or name.startswith("d8:custom:"):
+        return False
+    return not name.startswith(COMMANDER_PREFIX) or username == COMMANDER_AGENT
 
 
 def rule_grants_protected(rule: dict) -> bool:
@@ -100,7 +108,7 @@ def validation_error(ctx: DotMap) -> Optional[str]:
 
     kind = obj.get("kind") or "Role"
     name = obj.get("metadata", {}).get("name", "")
-    if is_platform_owned_clusterrole(kind, name):
+    if is_platform_owned_clusterrole(kind, name, username):
         return None
     rules = obj.get("rules") or []
 

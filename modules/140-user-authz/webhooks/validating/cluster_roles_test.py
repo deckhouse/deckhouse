@@ -22,7 +22,10 @@ from deckhouse import hook, tests
 from dotmap import DotMap
 
 # The hook lives in a ValidationWebhook manifest; the harness assembles it the way webhook-operator does.
+# role_escalation is a separate handler (its own .Files.Get), loaded the same way so the test can
+# compare the Commander constants the two files each declare.
 cluster_roles = load_validation_webhook(Path(__file__).parent / "cluster_roles.py")
+role_escalation = load_validation_webhook(Path(__file__).parent / "role_escalation.py")
 
 
 # The tail of the refusal of a use-role label above viewer on a system or subsystem role.
@@ -34,7 +37,7 @@ DENY_USE_ROLE_TAIL = (
 )
 
 
-def binding_context(name, labels=None, rules=None, selector_labels=None, annotations=None):
+def binding_context(name, labels=None, rules=None, selector_labels=None, annotations=None, username="kubernetes-admin"):
     object_ = {
         "apiVersion": "rbac.authorization.k8s.io/v1",
         "kind": "ClusterRole",
@@ -57,7 +60,7 @@ def binding_context(name, labels=None, rules=None, selector_labels=None, annotat
                 "request": {
                     "uid": "5c2c5f30-5a8e-4a4e-9d52-25d44a3677b1",
                     "operation": "CREATE",
-                    "userInfo": {"username": "kubernetes-admin"},
+                    "userInfo": {"username": username},
                     "object": object_,
                 }
             },
@@ -126,10 +129,54 @@ class TestClusterRolesValidation(unittest.TestCase):
                     'Use the "d8:custom:" prefix for custom roles and capabilities.',
                 )
 
-    def test_commander_prefix_is_allowed(self):
-        # Commander writes d8:commander:* on managed clusters; the prefix is reserved for that
-        # module, not for tenants (tenants still cannot take d8:system / d8:namespace / …).
-        out = self.run_hook(binding_context("d8:commander:commander-admin", rules=SOME_RULES))
+    def test_commander_agent_writes_commander_roles(self):
+        # Commander's global and workspace roles, named after what its users called them.
+        for name in ["d8:commander:commander-admin", "d8:commander:workspace:developers"]:
+            with self.subTest(name=name):
+                out = self.run_hook(
+                    binding_context(name, rules=SOME_RULES, username=cluster_roles.COMMANDER_AGENT)
+                )
+                tests.assert_validation_allowed(self, out, None)
+
+    def test_commander_prefix_is_reserved_for_everyone_else(self):
+        # A cluster administrator, another ServiceAccount of the agent's namespace, and the
+        # Commander ServiceAccount that applies the initial User on the cluster it was installed by.
+        for username in [
+            "kubernetes-admin",
+            "system:serviceaccount:d8-commander-agent:default",
+            "system:serviceaccount:d8-commander:cluster-manager",
+        ]:
+            with self.subTest(username=username):
+                out = self.run_hook(
+                    binding_context("d8:commander:t-q-editor", rules=SOME_RULES, username=username)
+                )
+                tests.assert_validation_deny(self, out, RESERVED_PREFIX_MSG)
+
+    def test_commander_agent_gets_no_other_d8_name(self):
+        for name in ["d8:project:admin", "d8:commander-agent", "d8:whatever"]:
+            with self.subTest(name=name):
+                out = self.run_hook(
+                    binding_context(name, rules=SOME_RULES, username=cluster_roles.COMMANDER_AGENT)
+                )
+                tests.assert_validation_deny(self, out, RESERVED_PREFIX_MSG)
+
+    def test_commander_role_update_by_someone_else_is_denied(self):
+        old = _cr("d8:commander:operator", rules=SOME_RULES)
+        new = _cr("d8:commander:operator", rules=SOME_RULES + [{"apiGroups": [""], "resources": ["secrets"], "verbs": ["get"]}])
+        out = self.run_hook(update_binding_context(old, new))
+        tests.assert_validation_deny(self, out, RESERVED_PREFIX_MSG)
+
+    def test_commander_role_update_by_the_agent_is_allowed(self):
+        old = _cr("d8:commander:operator", rules=SOME_RULES)
+        new = _cr("d8:commander:operator", rules=[{"apiGroups": ["*"], "resources": ["*"], "verbs": ["*"]}])
+        out = self.run_hook(update_binding_context(old, new, username=cluster_roles.COMMANDER_AGENT))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_custom_meta_on_commander_role_by_someone_else_is_allowed(self):
+        # The display-annotation exception of the built-in roles, and no more than that.
+        old = _cr("d8:commander:operator", rules=SOME_RULES)
+        new = _cr("d8:commander:operator", rules=SOME_RULES, annotations={"custom.meta.deckhouse.io/title": "Operator"})
+        out = self.run_hook(update_binding_context(old, new))
         tests.assert_validation_allowed(self, out, None)
 
     def test_builtin_kind_labels_are_reserved(self):
@@ -272,9 +319,20 @@ class TestClusterRolesValidation(unittest.TestCase):
                 "d8:commander:operator",
                 labels={"rbac.deckhouse.io/scope": "system", "rbac.deckhouse.io/use-role": "admin"},
                 rules=SOME_RULES,
+                username=cluster_roles.COMMANDER_AGENT,
             )
         )
         tests.assert_validation_allowed(self, out, None)
+
+    def test_commander_role_projection_label_by_someone_else_is_denied(self):
+        out = self.run_hook(
+            binding_context(
+                "d8:commander:operator",
+                labels={"rbac.deckhouse.io/scope": "system", "rbac.deckhouse.io/use-role": "admin"},
+                rules=SOME_RULES,
+            )
+        )
+        tests.assert_validation_deny(self, out, RESERVED_PREFIX_MSG)
 
     def test_custom_role_lineage_mixing_is_forbidden(self):
         out = self.run_hook(
@@ -1428,6 +1486,16 @@ class TestBuiltInCapabilityValueIsReserved(unittest.TestCase):
             rules=SOME_RULES,
         )
         tests.assert_validation_allowed(self, self.run_hook(update_binding_context(old, new)), None)
+
+
+class TestCommanderConstantsMatchRoleEscalation(unittest.TestCase):
+    """COMMANDER_AGENT and COMMANDER_PREFIX are copied into both handlers, because each one is
+    inserted into its own ValidationWebhook via .Files.Get and cannot import the other. This is
+    what keeps the two copies from drifting."""
+
+    def test_commander_agent_and_prefix_match(self):
+        self.assertEqual(role_escalation.COMMANDER_AGENT, cluster_roles.COMMANDER_AGENT)
+        self.assertEqual(role_escalation.COMMANDER_PREFIX, cluster_roles.COMMANDER_PREFIX)
 
 
 if __name__ == "__main__":

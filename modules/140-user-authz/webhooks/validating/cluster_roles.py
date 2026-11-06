@@ -18,7 +18,8 @@ from dotmap import DotMap
 
 
 # Validates RBAC v2 framework objects (ClusterRoles):
-#   - the "d8:" name prefix is reserved for Deckhouse, users may only create "d8:custom:*" objects;
+#   - the "d8:" name prefix is reserved for Deckhouse, users may only create "d8:custom:*" objects,
+#     and "d8:commander:*" is left to the Commander agent alone;
 #   - the built-in framework kinds (role/capability) cannot be created by users,
 #     they must use custom-role/custom-capability;
 #   - the rbac.deckhouse.io/capability values of the built-in capabilities cannot be claimed by users,
@@ -91,6 +92,15 @@ LEGACY_SYSTEM_LINEAGES = {
     "all",
 }
 
+# Commander keeps the roles its users define on a managed cluster as d8:commander:<role> and
+# d8:commander:workspace:<role>. Their names and rules are whatever those users chose, so no list of
+# names describes them; their writer does: commander-agent applies them with server-side apply under
+# its own ServiceAccount, without impersonation. The prefix is open to that account only. For anyone
+# else it is reserved like the rest of d8:, or whoever may create ClusterRoles would get past the
+# checks of this webhook and of role_escalation.py by naming a role d8:commander:<anything>.
+COMMANDER_PREFIX = "d8:commander:"
+COMMANDER_AGENT = "system:serviceaccount:d8-commander-agent:commander-agent"
+
 # The context binding of templates/rbacv2-cluster-roles-validation-webhook.yaml that lists the subsystem
 # roles in the cluster, {"subsystem": <the rbac.deckhouse.io/subsystem label>} per role.
 SUBSYSTEM_ROLES_SNAPSHOT = "subsystem_roles"
@@ -131,6 +141,11 @@ def _old_label(request, key: str) -> Optional[str]:
         return None
     old_meta = _as_dict(request.oldObject).get("metadata") or {}
     return (old_meta.get("labels") or {}).get(key)
+
+
+def _is_commander_role(request, name: str) -> bool:
+    """Whether the request is the Commander agent writing a role under its prefix."""
+    return name.startswith(COMMANDER_PREFIX) and _as_dict(request.userInfo).get("username") == COMMANDER_AGENT
 
 
 def _capability_scope(value: str) -> str:
@@ -264,11 +279,13 @@ def validation_error(ctx: DotMap) -> Optional[str]:
     rules = obj.get("rules") or []
     selectors = (obj.get("aggregationRule") or {}).get("clusterRoleSelectors") or []
     system_lineages = _system_lineages(ctx)
+    commander_role = _is_commander_role(request, name)
 
-    # The d8: name prefix is reserved; users may only create objects under d8:custom:.
-    # Commander materializes its global roles as d8:commander:* on managed clusters
-    # (e2e SSA-patches d8:commander:commander-admin); that prefix is Commander's, not a tenant's.
-    if name.startswith("d8:") and not name.startswith("d8:custom:") and not name.startswith("d8:commander:"):
+    # The d8: name prefix is reserved; users may only create objects under d8:custom:, and the
+    # Commander agent its roles under d8:commander: (COMMANDER_PREFIX). The same holds for an UPDATE:
+    # a d8:commander: role somebody else changes, with kubectl or a GitOps tool, is refused as a
+    # built-in one would be. The roles already in the cluster keep working; only writes are refused.
+    if name.startswith("d8:") and not name.startswith("d8:custom:") and not commander_role:
         # Exception: allow an UPDATE of a built-in role that changes ONLY its
         # custom.meta.deckhouse.io/* annotations (display title/description) — no privilege change.
         if request.operation == "UPDATE" and _only_custom_meta_annotation_change(
@@ -336,13 +353,13 @@ def validation_error(ctx: DotMap) -> Optional[str]:
     # modules as viewer at most, whatever its name and kind: user-authz-controller takes every
     # ClusterRole with such a scope label for a manage role (ManageRoleSelector) and caps the ones that
     # are not built in, so the label is checked on the same set. Without the label a role is not
-    # projected at all. The d8:commander: roles are Commander's, as their names are above.
+    # projected at all. The roles the Commander agent writes are Commander's, as their names are above.
     use_role = labels.get(USE_ROLE_LABEL)
     if (
         labels.get(SCOPE_LABEL) in ("system", "subsystem")
         and use_role is not None
         and use_role != MAX_CUSTOM_USE_ROLE
-        and not name.startswith("d8:commander:")
+        and not commander_role
     ):
         return (
             f'ClusterRole "{name}" must not carry "{USE_ROLE_LABEL}: {use_role}": a system or subsystem role '

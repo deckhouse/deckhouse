@@ -227,6 +227,21 @@ spec:
               bash ../common/scripts/expect.sh denied \
                 'ClusterRole names with the "d8:" prefix are reserved for Deckhouse. Use the "d8:custom:" prefix for custom roles and capabilities.' \
                 -- kubectl create clusterrole d8:e2e-authz-wh-reserved --dry-run=server --verb=get --resource=pods
+        - description: A ClusterRole under the Commander prefix is rejected for anyone but the Commander agent
+          script:
+            content: |
+              bash ../common/scripts/expect.sh denied \
+                'ClusterRole names with the "d8:" prefix are reserved for Deckhouse. Use the "d8:custom:" prefix for custom roles and capabilities.' \
+                -- kubectl create clusterrole d8:commander:e2e-authz-wh-planted --dry-run=server --verb=get --resource=pods
+        - description: >-
+            The Commander agent may write under its prefix. The agent is not installed here, so the
+            request impersonates its ServiceAccount with system:masters to get past authorization;
+            that group does not exempt it from rbacv2-cluster-roles.
+          script:
+            content: |
+              bash ../common/scripts/expect.sh allowed \
+                -- kubectl --as system:serviceaccount:d8-commander-agent:commander-agent --as-group system:masters \
+                  create clusterrole d8:commander:e2e-authz-wh-agent --dry-run=server --verb=get --resource=pods
         - description: A ClusterRole with the heritage deckhouse label is rejected
           script:
             content: |

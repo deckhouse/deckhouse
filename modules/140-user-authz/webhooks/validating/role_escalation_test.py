@@ -141,18 +141,38 @@ class TestRoleEscalationValidation(unittest.TestCase):
         )
         tests.assert_validation_allowed(self, out, None)
 
-    def test_commander_admin_clusterrole_is_allowed(self):
-        # Commander SSA-patches d8:commander:commander-admin with * on every API, including
-        # deckhouse.io project-management resources. That is a platform ClusterRole, not a tenant
-        # escalation.
+    def test_commander_agent_writes_a_commander_clusterrole(self):
+        # A Commander role may carry * on every API, deckhouse.io project-management resources
+        # included; the agent applying it is the platform, not a tenant escalating.
         out = self.run_hook(
             binding_context(
                 "ClusterRole",
                 "d8:commander:commander-admin",
                 [rule(["*"], ["*"], ["*"])],
+                username=role_escalation.COMMANDER_AGENT,
             )
         )
         tests.assert_validation_allowed(self, out, None)
+
+    def test_commander_clusterrole_by_someone_else_is_denied(self):
+        # The lab case: a ClusterRole with project write, named under Commander's prefix.
+        for username in [
+            "namespace-admin",
+            "e2e-super-admin",
+            "system:serviceaccount:d8-commander-agent:default",
+        ]:
+            for operation in ["CREATE", "UPDATE"]:
+                with self.subTest(username=username, operation=operation):
+                    out = self.run_hook(
+                        binding_context(
+                            "ClusterRole",
+                            "d8:commander:t-q-editor",
+                            [rule(["deckhouse.io"], ["projects", "projecttemplates"], ["create", "update"])],
+                            username=username,
+                            operation=operation,
+                        )
+                    )
+                    tests.assert_validation_deny(self, out, expected_deny("ClusterRole", "d8:commander:t-q-editor"))
 
     def test_platform_clusterrole_prefix_is_allowed(self):
         out = self.run_hook(
@@ -161,10 +181,13 @@ class TestRoleEscalationValidation(unittest.TestCase):
         tests.assert_validation_allowed(self, out, None)
 
     def test_namespaced_role_with_platform_looking_name_is_still_denied(self):
-        out = self.run_hook(
-            binding_context("Role", "d8:commander:commander-admin", [PRB_WRITE], namespace="team-a")
-        )
-        tests.assert_validation_deny(self, out, expected_deny("Role", "d8:commander:commander-admin"))
+        for username in ["namespace-admin", role_escalation.COMMANDER_AGENT]:
+            with self.subTest(username=username):
+                out = self.run_hook(
+                    binding_context("Role", "d8:commander:commander-admin", [PRB_WRITE],
+                                    username=username, namespace="team-a")
+                )
+                tests.assert_validation_deny(self, out, expected_deny("Role", "d8:commander:commander-admin"))
 
     def test_system_masters_is_allowed(self):
         ctx = binding_context("Role", "escalate", [PRB_WRITE], namespace="team-a")
