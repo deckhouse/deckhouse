@@ -65,12 +65,21 @@ ensure_crb() {
     }')" >/dev/null
 }
 
+# kubelet re-reads a manifest on every inotify event and can catch a half-written file:
+# a pod from a truncated manifest is never stopped before the API is up, and the full one never starts.
+# kubelet skips dotfiles, and rename within the directory is atomic.
+install_manifest() {
+  local name=$1
+  cp {{ $manifestsDir }}/${name} /etc/kubernetes/manifests/.${name}.tmp
+  mv -f /etc/kubernetes/manifests/.${name}.tmp /etc/kubernetes/manifests/${name}
+}
+
 check_container_running "kubernetes-api-proxy" || exit 1
 __sec wait_api_proxy
 
 cp -r {{ $manifestsDir}}/pki /etc/kubernetes/
 cp {{ $kubeconfigDir }}/{admin.conf,controller-manager.conf,scheduler.conf,super-admin.conf} /etc/kubernetes/
-cp {{ $manifestsDir}}/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
+install_manifest etcd.yaml
 check_container_running "etcd" || exit 1
 __sec wait_etcd
 
@@ -87,9 +96,9 @@ anonymous:
 EOF
 
 # kubelet starts these static pods concurrently, so wait for them concurrently too.
-cp {{ $manifestsDir}}/kube-apiserver.yaml /etc/kubernetes/manifests/kube-apiserver.yaml
-cp {{ $manifestsDir}}/kube-scheduler.yaml /etc/kubernetes/manifests/kube-scheduler.yaml
-cp {{ $manifestsDir}}/kube-controller-manager.yaml /etc/kubernetes/manifests/kube-controller-manager.yaml
+install_manifest kube-apiserver.yaml
+install_manifest kube-scheduler.yaml
+install_manifest kube-controller-manager.yaml
 
 check_container_running "kube-apiserver" &
 pid_api=$!
