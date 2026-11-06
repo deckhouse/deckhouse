@@ -82,13 +82,29 @@ class FakeAPI:
         raise AssertionError(f"unexpected kubectl resource: {resource}")
 
 
+_ABSENT = object()
+
+
 def edit_context(kind, name, *, labels=None, namespace=NS, username=USER, groups=None,
-                 operation="UPDATE", old_labels="same"):
-    def obj(labs):
-        return {
+                 operation="UPDATE", old_labels="same", template_labels=_ABSENT,
+                 old_template_labels="same", job_template_labels=_ABSENT,
+                 old_job_template_labels="same"):
+    def obj(labs, tmpl, job_tmpl):
+        body = {
             "kind": kind,
             "metadata": {"name": name, "namespace": namespace, "labels": labs or {}},
         }
+        spec = {}
+        if tmpl is not _ABSENT:
+            spec["template"] = {"metadata": {"labels": tmpl or {}}}
+        if job_tmpl is not _ABSENT:
+            spec["jobTemplate"] = {"spec": {"template": {"metadata": {"labels": job_tmpl or {}}}}}
+        if spec:
+            body["spec"] = spec
+        return body
+
+    def pick(value, current):
+        return current if value == "same" else value
 
     request = {
         "uid": "00000000-0000-0000-0000-000000000001",
@@ -98,11 +114,18 @@ def edit_context(kind, name, *, labels=None, namespace=NS, username=USER, groups
         "namespace": namespace,
         "userInfo": {"username": username, "groups": groups or []},
     }
-    old = obj(labels if old_labels == "same" else old_labels)
+    new = obj(labels, template_labels, job_template_labels)
+    old = obj(
+        labels if old_labels == "same" else old_labels,
+        pick(old_template_labels, template_labels),
+        pick(old_job_template_labels, job_template_labels),
+    )
     if operation == "DELETE":
         request["oldObject"] = old
+    elif operation == "CREATE":
+        request["object"] = new
     else:
-        request["object"] = obj(labels)
+        request["object"] = new
         request["oldObject"] = old
 
     return DotMap({"binding": system_resources.BINDING_EDIT, "review": {"request": request}})
@@ -149,6 +172,24 @@ def expected_system_deny(kind, name):
         f'(label {system_resources.SYSTEM_RESOURCE_LABEL}={system_resources.SYSTEM_RESOURCE_VALUE}) placed in this '
         "namespace. It can be modified or deleted only by a superadmin of this namespace or "
         f"project, a system superadmin or a cluster administrator ({system_resources.PRIVILEGED_ROLES_HINT})."
+    )
+
+
+def expected_heritage_create_deny(kind, name):
+    return (
+        f'{kind} "{name}" cannot be created with the label '
+        f"{system_resources.HERITAGE_LABEL}={system_resources.HERITAGE_MULTITENANCY}: the label marks resources the "
+        "multitenancy-manager controller renders from the ProjectTemplate. Change the "
+        "ProjectTemplate or Project instead."
+    )
+
+
+def expected_system_create_deny(kind, name):
+    return (
+        f'{kind} "{name}" cannot be created with the label '
+        f"{system_resources.SYSTEM_RESOURCE_LABEL}={system_resources.SYSTEM_RESOURCE_VALUE}: the label marks Deckhouse system "
+        "resources, and only a superadmin of this namespace or project, a system superadmin "
+        f"or a cluster administrator ({system_resources.PRIVILEGED_ROLES_HINT}) may set it."
     )
 
 
@@ -202,6 +243,7 @@ class TestDenyMessage(unittest.TestCase):
     def test_every_role_the_gate_accepts_is_named(self):
         for role in system_resources.PRIVILEGED_ROLES:
             self.assertIn(role, expected_system_deny("Pod", "p"), role)
+            self.assertIn(role, expected_system_create_deny("Pod", "p"), role)
             self.assertIn(role, expected_exec_deny("p", "exec"), role)
 
 
@@ -246,6 +288,11 @@ class TestSystemResourceEdit(unittest.TestCase):
         out = _run(edit_context("Pod", "dex-authenticator-0", labels={}, old_labels=SYSTEM_LABEL))
         tests.assert_validation_deny(self, out, expected_system_deny("Pod", "dex-authenticator-0"))
 
+    def test_label_added_in_update_is_denied(self):
+        # The old object is unmarked; the user puts the marker on it -> the new object carries it -> deny.
+        out = _run(edit_context("ConfigMap", "app-config", labels=SYSTEM_LABEL, old_labels={}))
+        tests.assert_validation_deny(self, out, expected_system_deny("ConfigMap", "app-config"))
+
     def test_heritage_resource_mutation_by_non_superadmin_is_denied(self):
         out = _run(edit_context("ConfigMap", "tmpl-cm", labels=HERITAGE_LABELS))
         tests.assert_validation_deny(self, out, expected_heritage_deny("ConfigMap", "tmpl-cm"))
@@ -266,6 +313,21 @@ class TestSystemResourceEdit(unittest.TestCase):
         out = _run(edit_context("ConfigMap", "app-config"))
         tests.assert_validation_allowed(self, out, None)
 
+    def test_objects_without_spec_are_allowed(self):
+        # ConfigMap, Secret and RoleBinding have no spec. The template walk must treat a missing
+        # path as unmarked rather than fail the request.
+        for kind in ("ConfigMap", "Secret", "RoleBinding"):
+            with self.subTest(kind=kind):
+                out = _run(edit_context(kind, "plain", operation="CREATE"))
+                tests.assert_validation_allowed(self, out, None)
+
+    def test_non_map_spec_is_not_walked(self):
+        # A CRD may type spec as a scalar. Descending into it would not be a map of fields.
+        ctx = edit_context("Widget", "w", operation="CREATE")
+        ctx.review.request.object.spec = "scalar"
+        out = _run(ctx)
+        tests.assert_validation_allowed(self, out, None)
+
     def test_deckhouse_sa_bypasses(self):
         out = _run(edit_context("Pod", "dex-authenticator-0", labels=SYSTEM_LABEL,
                                 username="system:serviceaccount:d8-system:deckhouse"))
@@ -275,6 +337,133 @@ class TestSystemResourceEdit(unittest.TestCase):
         out = _run(edit_context("ConfigMap", "tmpl-cm", labels=HERITAGE_LABELS,
                                 username="system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"))
         tests.assert_validation_allowed(self, out, None)
+
+
+class TestSystemResourceCreate(unittest.TestCase):
+    """The marker is a claim only the platform may make. Created by an ordinary user, the object
+    would be locked against its own author and the namespace admin, so the create is held to the same
+    tiers as an edit."""
+
+    def test_create_with_system_label_by_non_superadmin_is_denied(self):
+        out = _run(edit_context("ConfigMap", "fake-system", labels=SYSTEM_LABEL, operation="CREATE"))
+        tests.assert_validation_deny(self, out, expected_system_create_deny("ConfigMap", "fake-system"))
+
+    def test_create_with_system_label_by_namespace_admin_is_denied(self):
+        api = FakeAPI(rolebindings_by_ns={NS: superadmin_rb(role="d8:namespace:admin")})
+        out = _run(edit_context("Secret", "fake-system", labels=SYSTEM_LABEL, operation="CREATE"), api)
+        tests.assert_validation_deny(self, out, expected_system_create_deny("Secret", "fake-system"))
+
+    def test_create_with_system_label_by_namespace_superadmin_is_allowed(self):
+        out = _run(edit_context("ConfigMap", "dex-config", labels=SYSTEM_LABEL, operation="CREATE"),
+                   FakeAPI(rolebindings_by_ns={NS: superadmin_rb()}))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_create_with_system_label_by_project_superadmin_is_allowed(self):
+        api = FakeAPI(rolebindings_by_ns={NS: superadmin_rb(role="d8:project:superadmin")})
+        out = _run(edit_context("Service", "managed-db", labels=SYSTEM_LABEL, operation="CREATE"), api)
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_create_with_system_label_by_system_superadmin_is_allowed(self):
+        api = FakeAPI(clusterrolebindings=[clusterrolebinding("d8:system:superadmin", [user_subject(USER)])])
+        out = _run(edit_context("Pod", "vm-pod", labels=SYSTEM_LABEL, operation="CREATE"), api)
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_create_with_system_label_by_cluster_admin_is_allowed(self):
+        api = FakeAPI(clusterrolebindings=[clusterrolebinding("cluster-admin", [user_subject(USER)])])
+        out = _run(edit_context("Pod", "vm-pod", labels=SYSTEM_LABEL, operation="CREATE"), api)
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_create_with_system_label_by_system_components_bypasses(self):
+        for username, groups in (
+            ("system:serviceaccount:d8-system:deckhouse", []),
+            ("system:serviceaccount:kube-system:replicaset-controller", ["system:serviceaccounts:kube-system"]),
+        ):
+            with self.subTest(username=username):
+                out = _run(edit_context("Pod", "dex-authenticator-0", labels=SYSTEM_LABEL, operation="CREATE",
+                                        username=username, groups=groups))
+                tests.assert_validation_allowed(self, out, None)
+
+    def test_create_with_system_label_by_module_serviceaccount_bypasses(self):
+        # Controllers of other modules run in their own d8-* namespace, not in d8-system.
+        out = _run(edit_context(
+            "Pod", "vm-pod", labels=SYSTEM_LABEL, operation="CREATE",
+            username="system:serviceaccount:d8-virtualization:virtualization-controller",
+        ))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_create_with_system_label_by_serviceaccount_outside_d8_is_denied(self):
+        # The prefix is `system:serviceaccount:d8-`, so a namespace named `d8` or a user namespace
+        # does not qualify.
+        for username in (
+            "system:serviceaccount:virtualization:virtualization-controller",
+            "system:serviceaccount:d8:virtualization-controller",
+            "system:serviceaccount:team-a:builder",
+        ):
+            with self.subTest(username=username):
+                out = _run(edit_context(
+                    "Pod", "vm-pod", labels=SYSTEM_LABEL, operation="CREATE", username=username,
+                ))
+                tests.assert_validation_deny(self, out, expected_system_create_deny("Pod", "vm-pod"))
+
+    def test_create_without_label_is_allowed(self):
+        out = _run(edit_context("ConfigMap", "app-config", operation="CREATE"))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_create_with_heritage_label_by_superadmin_is_denied(self):
+        out = _run(edit_context("ConfigMap", "tmpl-cm", labels=HERITAGE_LABELS, operation="CREATE"),
+                   FakeAPI(rolebindings_by_ns={NS: superadmin_rb()}))
+        tests.assert_validation_deny(self, out, expected_heritage_create_deny("ConfigMap", "tmpl-cm"))
+
+
+class TestWorkloadPodTemplate(unittest.TestCase):
+    """A label on the pod template marks the pods, and those pods are created by the kube-system
+    controllers, which bypass the hook. The template is therefore checked on the workload itself."""
+
+    def test_create_with_marked_pod_template_is_denied(self):
+        for kind in ("Deployment", "StatefulSet", "DaemonSet", "ReplicaSet", "Job"):
+            with self.subTest(kind=kind):
+                out = _run(edit_context(kind, "app", operation="CREATE", template_labels=SYSTEM_LABEL))
+                tests.assert_validation_deny(self, out, expected_system_create_deny(kind, "app"))
+
+    def test_create_cronjob_with_marked_job_template_is_denied(self):
+        out = _run(edit_context("CronJob", "nightly", operation="CREATE", job_template_labels=SYSTEM_LABEL))
+        tests.assert_validation_deny(self, out, expected_system_create_deny("CronJob", "nightly"))
+
+    def test_create_with_marked_pod_template_by_module_serviceaccount_is_allowed(self):
+        out = _run(edit_context(
+            "Deployment", "vm", operation="CREATE", template_labels=SYSTEM_LABEL,
+            username="system:serviceaccount:d8-virtualization:virtualization-controller",
+        ))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_create_with_unmarked_pod_template_is_allowed(self):
+        out = _run(edit_context("Deployment", "app", operation="CREATE", template_labels={"app": "web"}))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_update_adding_label_to_pod_template_is_denied(self):
+        out = _run(edit_context("Deployment", "app", template_labels=SYSTEM_LABEL, old_template_labels={}))
+        tests.assert_validation_deny(self, out, expected_system_deny("Deployment", "app"))
+
+    def test_update_stripping_label_from_pod_template_is_denied(self):
+        out = _run(edit_context("Deployment", "app", template_labels={}, old_template_labels=SYSTEM_LABEL))
+        tests.assert_validation_deny(self, out, expected_system_deny("Deployment", "app"))
+
+    def test_delete_of_workload_with_marked_pod_template_is_denied(self):
+        out = _run(edit_context("Deployment", "app", operation="DELETE", template_labels=SYSTEM_LABEL))
+        tests.assert_validation_deny(self, out, expected_system_deny("Deployment", "app"))
+
+    def test_create_with_heritage_on_pod_template_is_denied_even_for_superadmin(self):
+        out = _run(
+            edit_context("Deployment", "app", operation="CREATE", template_labels=HERITAGE_LABELS),
+            FakeAPI(rolebindings_by_ns={NS: superadmin_rb()}),
+        )
+        tests.assert_validation_deny(self, out, expected_heritage_create_deny("Deployment", "app"))
+
+    def test_object_metadata_label_still_denies_when_template_is_clean(self):
+        out = _run(edit_context(
+            "Deployment", "app", labels=SYSTEM_LABEL, operation="CREATE", template_labels={"app": "web"},
+        ))
+        tests.assert_validation_deny(self, out, expected_system_create_deny("Deployment", "app"))
 
 
 class TestSystemResourceExec(unittest.TestCase):
@@ -319,6 +508,13 @@ class TestSystemResourceExec(unittest.TestCase):
     def test_exec_by_cluster_admin_is_allowed(self):
         api = FakeAPI(pods={(NS, "dex-authenticator-0"): SYSTEM_LABEL})
         out = _run(exec_context("dex-authenticator-0", groups=["system:masters"]), api)
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_exec_by_module_serviceaccount_bypasses(self):
+        api = FakeAPI(pods={(NS, "vm-pod"): SYSTEM_LABEL})
+        out = _run(exec_context(
+            "vm-pod", username="system:serviceaccount:d8-virtualization:virtualization-controller",
+        ), api)
         tests.assert_validation_allowed(self, out, None)
 
 

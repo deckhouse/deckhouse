@@ -26,9 +26,11 @@ from dotmap import DotMap
 # This hook ENFORCES the marking at admission time:
 #
 #   1. system-resource edit protection (binding rbacv2-system-resource-edit.deckhouse.io):
-#      UPDATE/PATCH/DELETE of an object labeled `deckhouse.io/system-resource: "true"` is denied for
-#      everyone below both the superadmin and cluster-administrator tiers. PATCH arrives as an UPDATE
-#      admission operation, so it is covered.
+#      CREATE/UPDATE/PATCH/DELETE of an object labeled `deckhouse.io/system-resource: "true"` is denied
+#      for everyone below both the superadmin and cluster-administrator tiers. PATCH arrives as an
+#      UPDATE admission operation, so it is covered. CREATE is covered because the label is a claim
+#      that only the platform may make: an object created with it by an ordinary user could then be
+#      changed or deleted by nobody below these tiers, its author and the namespace admin included.
 #
 #   2. ProjectTemplate-owned (heritage) protection: objects labeled `heritage: multitenancy-manager`
 #      are rendered and reconciled by the multitenancy-manager controller. They must not be mutated by
@@ -58,7 +60,9 @@ from dotmap import DotMap
 #
 # Known limitations: only the roles listed below are recognised — a custom role that aggregates the
 # superadmin lineage is not detected; group membership is matched by name as presented in
-# request.userInfo.groups.
+# request.userInfo.groups. The pod template of a built-in workload is checked (see _LABEL_PATHS):
+# those pods are created by the kube-system controllers, which bypass this hook, so a label set
+# only on the template would mark them. Templates of custom resources with a different shape are not.
 #
 # Out of scope (documented as follow-ups): the GET/LIST "visibility" split (admin+ sees vendor-API
 # system resources, everyone sees shared-API ones) is a READ/authorization concern that admission
@@ -115,6 +119,17 @@ PRIVILEGED_USERS = {
     "system:serviceaccount:kube-system:clusterrole-aggregation-controller",
     "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager",
 }
+
+# Every module ServiceAccount lives in a d8-* namespace (virtualization controllers in
+# d8-virtualization, and so on). Limiting the bypass to d8-system and kube-system would refuse
+# the creates those controllers make. The same prefix the platform ValidatingAdmissionPolicies
+# use (modules/002-deckhouse/templates/validation.yaml, reserved-public-hosts.yaml). The
+# matchConditions of the system-resources ValidationWebhooks repeat it: they are a pre-filter,
+# and the template tests keep the two in step. The named entries in PRIVILEGED_USERS stay,
+# because kube-system accounts are not covered by this prefix.
+PRIVILEGED_USER_PREFIXES = (
+    "system:serviceaccount:d8-",
+)
 
 # Groups whose members skip this webhook entirely, both here and in the matchConditions of the
 # system-resources ValidationWebhooks:
@@ -180,12 +195,40 @@ def _to_list(value) -> list:
     return list(value) if value else []
 
 
+# Where a marking may sit. The object's own labels, the pod template of a Deployment, StatefulSet,
+# DaemonSet, ReplicaSet or Job, and the nested pod template of a CronJob. The webhook rule is
+# resources: ["*"], so these kinds are already admitted; a path that the object does not have is
+# simply absent.
+_LABEL_PATHS = (
+    ("metadata", "labels"),
+    ("spec", "template", "metadata", "labels"),
+    ("spec", "jobTemplate", "spec", "template", "metadata", "labels"),
+)
+
+
+def _labels_at(obj: dict, path: tuple) -> dict:
+    current = obj
+    for key in path:
+        if not isinstance(current, dict):
+            return {}
+        current = current.get(key)
+    if not isinstance(current, dict):
+        return {}
+    return current
+
+
 def _markings(obj: dict) -> tuple[bool, bool]:
-    """Return (is_system_resource, is_heritage_managed) for an object dict."""
-    meta = obj.get("metadata") or {}
-    labels = meta.get("labels") or {}
-    is_system = labels.get(SYSTEM_RESOURCE_LABEL) == SYSTEM_RESOURCE_VALUE
-    is_heritage = labels.get(HERITAGE_LABEL) == HERITAGE_MULTITENANCY
+    """Return (is_system_resource, is_heritage_managed) for an object dict.
+
+    A label on the pod template counts: the kube-system controllers that create the pods bypass
+    this hook, so the template is the place a user would set the marking.
+    """
+    is_system = False
+    is_heritage = False
+    for path in _LABEL_PATHS:
+        labels = _labels_at(obj, path)
+        is_system = is_system or labels.get(SYSTEM_RESOURCE_LABEL) == SYSTEM_RESOURCE_VALUE
+        is_heritage = is_heritage or labels.get(HERITAGE_LABEL) == HERITAGE_MULTITENANCY
     return is_system, is_heritage
 
 
@@ -326,13 +369,20 @@ def is_system_pod(namespace: str, name: str) -> bool:
     return labels.get(SYSTEM_RESOURCE_LABEL) == SYSTEM_RESOURCE_VALUE
 
 
+def _has_privileged_prefix(username) -> bool:
+    """True for a ServiceAccount of any d8-* namespace. A missing username is not a string."""
+    if not isinstance(username, str) or not username:
+        return False
+    return any(username.startswith(prefix) for prefix in PRIVILEGED_USER_PREFIXES)
+
+
 def validate(ctx: DotMap) -> tuple[Optional[str], bool]:
     request = ctx.review.request
     username = request.userInfo.username
     groups = set(_to_list(request.userInfo.groups))
 
     # System components and cluster-admins bypass all protections.
-    if username in PRIVILEGED_USERS or (groups & BYPASS_GROUPS):
+    if username in PRIVILEGED_USERS or _has_privileged_prefix(username) or (groups & BYPASS_GROUPS):
         return None, True
 
     binding = ctx.binding
@@ -364,6 +414,8 @@ def validate_edit(request: DotMap, username: str, groups: set) -> Optional[str]:
     kind = request.kind.kind or obj.get("kind") or "resource"
     name = meta.get("name") or request.name or ""
     namespace = meta.get("namespace") or request.namespace or ""
+    # On CREATE there is no old object, so the markings above are those the requester is setting.
+    creating = request.operation == "CREATE"
 
     # heritage protection wins: ProjectTemplate-owned objects belong to the multitenancy-manager
     # controller and must not be mutated by users — not by a project superadmin and not by a cluster
@@ -371,6 +423,13 @@ def validate_edit(request: DotMap, username: str, groups: set) -> Optional[str]:
     # and allows nobody but the controller, so this branch stays aligned with it: a bypass here would
     # only produce a confusing second opinion on a request that policy denies anyway.
     if is_heritage:
+        if creating:
+            return (
+                f'{kind} "{name}" cannot be created with the label '
+                f"{HERITAGE_LABEL}={HERITAGE_MULTITENANCY}: the label marks resources the "
+                "multitenancy-manager controller renders from the ProjectTemplate. Change the "
+                "ProjectTemplate or Project instead."
+            )
         return (
             f'{kind} "{name}" is managed by the multitenancy-manager controller '
             f'(label {HERITAGE_LABEL}={HERITAGE_MULTITENANCY}) and cannot be modified. '
@@ -378,8 +437,16 @@ def validate_edit(request: DotMap, username: str, groups: set) -> Optional[str]:
             "Project instead."
         )
 
-    # system-resource protection: editable only by a superadmin or a cluster administrator.
+    # system-resource protection: created with the label and editable only by a superadmin or a
+    # cluster administrator.
     if is_system and not privileged_roles(username, groups, namespace):
+        if creating:
+            return (
+                f'{kind} "{name}" cannot be created with the label '
+                f"{SYSTEM_RESOURCE_LABEL}={SYSTEM_RESOURCE_VALUE}: the label marks Deckhouse system "
+                "resources, and only a superadmin of this namespace or project, a system superadmin "
+                f"or a cluster administrator ({PRIVILEGED_ROLES_HINT}) may set it."
+            )
         return (
             f'{kind} "{name}" is a Deckhouse system resource '
             f'(label {SYSTEM_RESOURCE_LABEL}={SYSTEM_RESOURCE_VALUE}) placed in this '

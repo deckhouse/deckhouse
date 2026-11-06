@@ -1333,7 +1333,7 @@ The namespaces where the action is allowed are counted as follows:
 
 The answer describes authorization, the decision whether the user may perform the action on the resource. Admission can still refuse a write of a particular object:
 
-- update and delete of objects with the `deckhouse.io/system-resource=true` label for users below the `superadmin` level;
+- creation of objects with the `deckhouse.io/system-resource=true` label, and update and delete of such objects, for users below the `superadmin` level;
 - update and delete of objects that `multitenancy-manager` creates in project namespaces, and deletion of a project namespace;
 - creation of a namespace while the `allowNamespacesWithoutProjects` parameter of the [`multitenancy-manager` module](/modules/multitenancy-manager/configuration.html) is `false`;
 - creation of a ProjectRoleBinding or a ProjectNamespace outside the main namespace of the project;
@@ -1365,5 +1365,7 @@ The server answers with an error in the following cases:
 ## How do I protect objects that my module places in user namespaces?
 
 The marker is a **label**, `deckhouse.io/system-resource: "true"`, on the object itself — not an annotation. For edits and deletes the objects to protect are selected on the API server side, in the admission `matchConditions`, and those read labels; for `exec`, `attach` and `port-forward` the admission object is the connect request rather than the pod, so the webhook reads the pod itself — its labels again. Either way an object marked with an annotation is not seen and stays open, with nothing to say so. Put the label on every namespaced object your module places into user namespaces (pods, services, PVCs, secrets, custom resources): it then becomes writable by `superadmin` and cluster administrators only, and its pods reachable by `exec`, `attach` and `port-forward` only for them.
+
+The label can be set by Deckhouse Platform itself, by ServiceAccounts of the `d8-*` and `kube-system` namespaces, by `superadmin` and by a cluster administrator: a user below `superadmin` who creates an object with it is refused. Put the label into the Helm templates of the module, which Deckhouse Platform applies, or let the module controller set it from its ServiceAccount in a `d8-*` namespace. The pod template of a workload is checked the same way. A user below `superadmin` cannot put the label on `spec.template.metadata.labels` of a Deployment, StatefulSet, DaemonSet, ReplicaSet or Job, or on `spec.jobTemplate.spec.template.metadata.labels` of a CronJob. A template that Deckhouse Platform applies still produces marked pods, because the `kube-system` controllers that create them bypass the webhook.
 
 For what the label restricts, see [Admin level restrictions and superadmin rights](./#admin-level-restrictions-and-superadmin-rights).

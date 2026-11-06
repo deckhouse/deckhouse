@@ -7,7 +7,8 @@ metadata:
 validationObject:
   name: rbacv2-system-resource-exec.deckhouse.io
   group: main
-  # The same bypass as BYPASS_GROUPS and PRIVILEGED_USERS of webhooks/validating/system_resources.py,
+  # The same bypass as BYPASS_GROUPS, PRIVILEGED_USERS and PRIVILEGED_USER_PREFIXES of
+  # webhooks/validating/system_resources.py,
   # expressed for the apiserver instead of the hook body. Both webhooks are fail-closed, and the exec
   # one matches CONNECT on every pod in the cluster: the target pod's marker lives on the Pod, while the
   # reviewed object is a PodExecOptions, so no CEL expression can pre-filter it the way
@@ -26,6 +27,12 @@ validationObject:
     expression: '"system:serviceaccount:kube-system:clusterrole-aggregation-controller" != request.userInfo.username'
   - name: exclude-multitenancy-manager
     expression: '"system:serviceaccount:d8-multitenancy-manager:multitenancy-manager" != request.userInfo.username'
+  # Every module ServiceAccount, not only the named ones above. Same prefix as
+  # PRIVILEGED_USER_PREFIXES and the platform ValidatingAdmissionPolicies. The exec webhook
+  # matches CONNECT on every pod and is fail-closed, so this has to be evaluated here: an
+  # unavailable webhook-handler must not block exec for module controllers.
+  - name: exclude-d8-serviceaccounts
+    expression: '!request.userInfo.username.startsWith("system:serviceaccount:d8-")'
   - name: exclude-group-kubeadm-cluster-admins
     expression: '!("kubeadm:cluster-admins" in request.userInfo.groups)'
   - name: exclude-group-superadmins

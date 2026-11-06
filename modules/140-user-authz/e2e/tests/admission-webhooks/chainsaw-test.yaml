@@ -8,7 +8,7 @@ spec:
     exact messages of webhooks/validating/*.py: ClusterAuthorizationRule subjects, the
     multitenancy-only fields and RE2 patterns, ClusterRoleBindings to scoped roles, reserved
     ClusterRole names and aggregation labels, the heritage label, project-management
-    escalation through a Role, and exec into or edits of objects marked
+    escalation through a Role, and exec into, edits of and creation of objects marked
     deckhouse.io/system-resource=true. Rejections are checked with --dry-run=server or with
     actions that change nothing, so a regression cannot leave objects behind.
   timeouts:
@@ -41,7 +41,7 @@ spec:
             content: bash ../common/scripts/ensure-user-authz.sh
 
     - name: setup
-      description: Create an Editor and a SuperAdmin rule, a system pod, a plain pod and a system ConfigMap
+      description: Create an Editor and a SuperAdmin rule, a system pod, a plain pod, a system ConfigMap and a plain ConfigMap
       try:
         - description: Apply the Editor and SuperAdmin ClusterAuthorizationRules
           apply:
@@ -68,6 +68,9 @@ spec:
         - description: Create the system ConfigMap
           apply:
             file: manifests/system-configmap.yaml
+        - description: Create the plain ConfigMap
+          apply:
+            file: manifests/plain-configmap.yaml
         - description: Assert the system pod is Running
           assert:
             resource:
@@ -332,3 +335,57 @@ spec:
               bash ../common/scripts/expect.sh allowed \
                 -- kubectl -n "${NAMESPACE}" --as e2e-authz-wh-superadmin label configmap e2e-authz-wh-system \
                   --dry-run=server e2e-authz-touched=true
+        - description: Editor adding the label to the plain ConfigMap is rejected
+          script:
+            content: |
+              bash ../common/scripts/expect.sh denied \
+                'ConfigMap "e2e-authz-wh-plain" is a Deckhouse system resource' \
+                -- kubectl -n "${NAMESPACE}" --as e2e-authz-wh-editor label configmap e2e-authz-wh-plain \
+                  --dry-run=server deckhouse.io/system-resource=true
+
+    - name: system-resource-create
+      description: >-
+        system_resources.py rejects creating an object labeled deckhouse.io/system-resource=true for
+        an Editor, and lets the Editor create it without the label and a SuperAdmin with it
+      try:
+        - description: Editor creation of a ConfigMap with the label is rejected
+          script:
+            content: |
+              bash ../common/scripts/expect.sh denied \
+                'ConfigMap "e2e-authz-wh-created" cannot be created with the label deckhouse.io/system-resource=true: the label marks Deckhouse system resources, and only a superadmin of this namespace or project, a system superadmin or a cluster administrator' \
+                -- kubectl -n "${NAMESPACE}" --as e2e-authz-wh-editor apply --dry-run=server -f - <<'YAML'
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: e2e-authz-wh-created
+                labels:
+                  deckhouse.io/system-resource: "true"
+              data:
+                purpose: e2e
+              YAML
+        - description: Editor creation of the same ConfigMap without the label is allowed
+          script:
+            content: |
+              bash ../common/scripts/expect.sh allowed \
+                -- kubectl -n "${NAMESPACE}" --as e2e-authz-wh-editor apply --dry-run=server -f - <<'YAML'
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: e2e-authz-wh-created
+              data:
+                purpose: e2e
+              YAML
+        - description: SuperAdmin creation of a ConfigMap with the label is allowed
+          script:
+            content: |
+              bash ../common/scripts/expect.sh allowed \
+                -- kubectl -n "${NAMESPACE}" --as e2e-authz-wh-superadmin apply --dry-run=server -f - <<'YAML'
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: e2e-authz-wh-created
+                labels:
+                  deckhouse.io/system-resource: "true"
+              data:
+                purpose: e2e
+              YAML

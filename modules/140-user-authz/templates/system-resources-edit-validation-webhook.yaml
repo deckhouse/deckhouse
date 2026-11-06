@@ -7,7 +7,8 @@ metadata:
 validationObject:
   name: rbacv2-system-resource-edit.deckhouse.io
   group: main
-  # The same bypass as BYPASS_GROUPS and PRIVILEGED_USERS of webhooks/validating/system_resources.py,
+  # The same bypass as BYPASS_GROUPS, PRIVILEGED_USERS and PRIVILEGED_USER_PREFIXES of
+  # webhooks/validating/system_resources.py,
   # expressed for the apiserver instead of the hook body. Both webhooks are fail-closed, and the exec
   # one matches CONNECT on every pod in the cluster: the target pod's marker lives on the Pod, while the
   # reviewed object is a PodExecOptions, so no CEL expression can pre-filter it the way
@@ -26,6 +27,10 @@ validationObject:
     expression: '"system:serviceaccount:kube-system:clusterrole-aggregation-controller" != request.userInfo.username'
   - name: exclude-multitenancy-manager
     expression: '"system:serviceaccount:d8-multitenancy-manager:multitenancy-manager" != request.userInfo.username'
+  # Every module ServiceAccount, not only the named ones above. Same prefix as
+  # PRIVILEGED_USER_PREFIXES and the platform ValidatingAdmissionPolicies.
+  - name: exclude-d8-serviceaccounts
+    expression: '!request.userInfo.username.startsWith("system:serviceaccount:d8-")'
   - name: exclude-group-kubeadm-cluster-admins
     expression: '!("kubeadm:cluster-admins" in request.userInfo.groups)'
   - name: exclude-group-superadmins
@@ -41,8 +46,21 @@ validationObject:
   - name: exclude-group-system-sudousers
     expression: '!("system:sudousers" in request.userInfo.groups)'
   # Only forward requests for objects that actually carry the markings, so the (intentionally broad)
-  # rule below does not put every namespaced UPDATE/DELETE through the hook. Guarded with has()/in to
-  # never error (which would otherwise fail the request under a Fail matchConditions policy).
+  # rule below does not put every namespaced CREATE/UPDATE/DELETE through the hook. On CREATE only the
+  # new object exists, so this forwards exactly the creates that set a marking. The pod template of a
+  # workload counts too (spec.template, and spec.jobTemplate.spec.template for a CronJob): the pods
+  # are created by kube-system controllers, which bypass the hook. Guarded with has()/in to never
+  # error (which would otherwise fail the request under a Fail matchConditions policy).
+  # has() tests only its last field: has(object.spec.template.metadata.labels) still evaluates
+  # object.spec, and on a ConfigMap (no spec) or a Pod (no spec.template) that read raises
+  # "no such key". CEL does not absorb it — false || <error> is an error — and this webhook is
+  # fail-closed, so the error would reject every namespaced write the exclusion conditions had
+  # not already skipped. Each level is therefore tested on its own. && does not evaluate the
+  # right-hand side after a false test. type() == map stops a CRD whose spec (or a field under
+  # it) is a scalar before the next field is read. The pod-template labels field is checked the
+  # same way: with x-kubernetes-preserve-unknown-fields it can be a string or a list, and `in` on
+  # that value raises "no such overload". ObjectMeta.labels is always a map, so the object's own
+  # labels are not type-checked.
   - name: only-marked-objects
     # In admission matchConditions the reviewed objects are TOP-LEVEL CEL variables `object`/`oldObject`
     # (the `request` variable is the AdmissionRequest metadata and has NO `.object`/`.oldObject`). Using
@@ -53,14 +71,30 @@ validationObject:
       (object != null && has(object.metadata.labels) && (
         ('deckhouse.io/system-resource' in object.metadata.labels && object.metadata.labels['deckhouse.io/system-resource'] == 'true')
         || ('heritage' in object.metadata.labels && object.metadata.labels['heritage'] == 'multitenancy-manager')
+      )) || (object != null && has(object.spec) && type(object.spec) == map && has(object.spec.template) && type(object.spec.template) == map && has(object.spec.template.metadata) && type(object.spec.template.metadata) == map && has(object.spec.template.metadata.labels) && type(object.spec.template.metadata.labels) == map && (
+        ('deckhouse.io/system-resource' in object.spec.template.metadata.labels && object.spec.template.metadata.labels['deckhouse.io/system-resource'] == 'true')
+        || ('heritage' in object.spec.template.metadata.labels && object.spec.template.metadata.labels['heritage'] == 'multitenancy-manager')
+      )) || (object != null && has(object.spec) && type(object.spec) == map && has(object.spec.jobTemplate) && type(object.spec.jobTemplate) == map && has(object.spec.jobTemplate.spec) && type(object.spec.jobTemplate.spec) == map && has(object.spec.jobTemplate.spec.template) && type(object.spec.jobTemplate.spec.template) == map && has(object.spec.jobTemplate.spec.template.metadata) && type(object.spec.jobTemplate.spec.template.metadata) == map && has(object.spec.jobTemplate.spec.template.metadata.labels) && type(object.spec.jobTemplate.spec.template.metadata.labels) == map && (
+        ('deckhouse.io/system-resource' in object.spec.jobTemplate.spec.template.metadata.labels && object.spec.jobTemplate.spec.template.metadata.labels['deckhouse.io/system-resource'] == 'true')
+        || ('heritage' in object.spec.jobTemplate.spec.template.metadata.labels && object.spec.jobTemplate.spec.template.metadata.labels['heritage'] == 'multitenancy-manager')
       )) || (oldObject != null && has(oldObject.metadata.labels) && (
         ('deckhouse.io/system-resource' in oldObject.metadata.labels && oldObject.metadata.labels['deckhouse.io/system-resource'] == 'true')
         || ('heritage' in oldObject.metadata.labels && oldObject.metadata.labels['heritage'] == 'multitenancy-manager')
+      )) || (oldObject != null && has(oldObject.spec) && type(oldObject.spec) == map && has(oldObject.spec.template) && type(oldObject.spec.template) == map && has(oldObject.spec.template.metadata) && type(oldObject.spec.template.metadata) == map && has(oldObject.spec.template.metadata.labels) && type(oldObject.spec.template.metadata.labels) == map && (
+        ('deckhouse.io/system-resource' in oldObject.spec.template.metadata.labels && oldObject.spec.template.metadata.labels['deckhouse.io/system-resource'] == 'true')
+        || ('heritage' in oldObject.spec.template.metadata.labels && oldObject.spec.template.metadata.labels['heritage'] == 'multitenancy-manager')
+      )) || (oldObject != null && has(oldObject.spec) && type(oldObject.spec) == map && has(oldObject.spec.jobTemplate) && type(oldObject.spec.jobTemplate) == map && has(oldObject.spec.jobTemplate.spec) && type(oldObject.spec.jobTemplate.spec) == map && has(oldObject.spec.jobTemplate.spec.template) && type(oldObject.spec.jobTemplate.spec.template) == map && has(oldObject.spec.jobTemplate.spec.template.metadata) && type(oldObject.spec.jobTemplate.spec.template.metadata) == map && has(oldObject.spec.jobTemplate.spec.template.metadata.labels) && type(oldObject.spec.jobTemplate.spec.template.metadata.labels) == map && (
+        ('deckhouse.io/system-resource' in oldObject.spec.jobTemplate.spec.template.metadata.labels && oldObject.spec.jobTemplate.spec.template.metadata.labels['deckhouse.io/system-resource'] == 'true')
+        || ('heritage' in oldObject.spec.jobTemplate.spec.template.metadata.labels && oldObject.spec.jobTemplate.spec.template.metadata.labels['heritage'] == 'multitenancy-manager')
       ))
   rules:
+  # CREATE is here because the marking is not something a user may claim: an object created with it
+  # would be locked against its own author and against the namespace admin. UPDATE covers adding and
+  # removing the marking on an existing object. resources: ["*"] already includes the built-in
+  # workload kinds whose pod templates are checked above.
   - apiGroups:   ["*"]
     apiVersions: ["*"]
-    operations:  ["UPDATE", "DELETE"]
+    operations:  ["CREATE", "UPDATE", "DELETE"]
     resources:   ["*"]
     scope:       "Namespaced"
 handler:
