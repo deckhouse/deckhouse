@@ -38,10 +38,10 @@ index b1518da0..a7411f40 100644
  	if rl := serverConfig.RateLimit; rl != nil {
  		logger.Info("config rate limit of failed attempts per client address",
 diff --git a/connector/connector.go b/connector/connector.go
-index 709c2946..3e328f86 100644
+index b6dca2f8..4347e332 100644
 --- a/connector/connector.go
 +++ b/connector/connector.go
-@@ -163,6 +163,13 @@ type RefreshConnector interface {
+@@ -200,6 +200,13 @@ type RefreshConnector interface {
  	Refresh(ctx context.Context, s Scopes, identity Identity) (Identity, error)
  }
  

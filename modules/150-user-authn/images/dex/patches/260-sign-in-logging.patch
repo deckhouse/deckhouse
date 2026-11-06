@@ -159,10 +159,10 @@ index 00000000..775d523e
 +	})
 +}
 diff --git a/connector/connector.go b/connector/connector.go
-index a9f0fe3a..709c2946 100644
+index d08d086d..d78db7fd 100644
 --- a/connector/connector.go
 +++ b/connector/connector.go
-@@ -14,12 +14,54 @@ import (
+@@ -17,12 +17,54 @@ import (
  type UserNotInRequiredGroupsError struct {
  	UserID string
  	Groups []string
@@ -506,10 +506,10 @@ index 202c5e91..6ad05694 100644
  		return filteredGroups, nil
  	}
 diff --git a/connector/oidc/oidc.go b/connector/oidc/oidc.go
-index ef48fca4..aaaa6b2f 100644
+index cd5ac8cb..0a3cb061 100644
 --- a/connector/oidc/oidc.go
 +++ b/connector/oidc/oidc.go
-@@ -712,7 +712,14 @@ func (c *oidcConnector) createIdentity(ctx context.Context, identity connector.I
+@@ -774,7 +774,14 @@ func (c *oidcConnector) createIdentity(ctx context.Context, identity connector.I
  
  			if len(groupMatches) == 0 {
  				// No group membership matches found, disallowing
@@ -1797,7 +1797,7 @@ index 2e0572ca..6c4afd2e 100644
  	}
  	auth.Claims = issued
 diff --git a/server/grants/refresh.go b/server/grants/refresh.go
-index beddf335..350d7a3d 100644
+index 7c75e07a..ed9992d7 100644
 --- a/server/grants/refresh.go
 +++ b/server/grants/refresh.go
 @@ -14,6 +14,7 @@ import (
@@ -1837,7 +1837,7 @@ index beddf335..350d7a3d 100644
  
  	var notAllowed *allowlist.NotAllowedError
  	if errors.As(err, &notAllowed) {
-@@ -321,9 +321,7 @@ func (g *refresh) rotateError(ctx context.Context, err error, refreshToken *stor
+@@ -324,9 +324,7 @@ func (g *refresh) rotateError(ctx context.Context, err error, refreshToken *stor
  	var upstreamErr *tokens.UpstreamError
  	switch {
  	case errors.As(err, &upstreamErr) && upstreamErr.Refused:
@@ -1848,7 +1848,7 @@ index beddf335..350d7a3d 100644
  		return &oauth2.Error{
  			Type:        oauth2.InvalidGrant,
  			Description: "The identity provider refused to refresh the identity.",
-@@ -332,11 +330,23 @@ func (g *refresh) rotateError(ctx context.Context, err error, refreshToken *stor
+@@ -342,11 +340,23 @@ func (g *refresh) rotateError(ctx context.Context, err error, refreshToken *stor
  	case errors.As(err, &upstreamErr):
  		// Logged where the connector failed.
  	default:
@@ -2827,10 +2827,10 @@ index 00000000..79847a96
 +	}
 +}
 diff --git a/server/tokens/refresh_upstream.go b/server/tokens/refresh_upstream.go
-index 8229dc17..04248d71 100644
+index ecae6ce5..677b1dea 100644
 --- a/server/tokens/refresh_upstream.go
 +++ b/server/tokens/refresh_upstream.go
-@@ -24,6 +24,7 @@ import (
+@@ -25,6 +25,7 @@ import (
  
  	"github.com/dexidp/dex/connector"
  	"github.com/dexidp/dex/server/internal"
@@ -2838,7 +2838,7 @@ index 8229dc17..04248d71 100644
  	"github.com/dexidp/dex/storage"
  )
  
-@@ -136,6 +137,9 @@ type upstreamRefresher struct {
+@@ -143,6 +144,9 @@ type upstreamRefresher struct {
  	credentials []credentialRef
  	logger      *slog.Logger
  	connectorID string
@@ -2848,7 +2848,7 @@ index 8229dc17..04248d71 100644
  
  	isDone bool
  	ident  connector.Identity
-@@ -186,8 +190,15 @@ func (u *upstreamRefresher) identity(ctx context.Context, base connector.Identit
+@@ -194,8 +198,15 @@ func (u *upstreamRefresher) identity(ctx context.Context, base connector.Identit
  			return u.ident, nil
  		}
  
@@ -2858,15 +2858,15 @@ index 8229dc17..04248d71 100644
 +		// error. Whether the refresh is refused is logged once all credentials
 +		// are tried (grants), with the reason.
 +		level := slog.LevelError
-+		if identityRefused(err) {
++		if refreshRefused(err) && !connector.Unavailable(err) {
 +			level = slog.LevelWarn
 +		}
 +		u.logger.Log(ctx, level, "failed to refresh identity", append(signinlog.Failed(err, u.connectorID, u.clientID, u.user),
 +			"credential_source", credential.source.String())...)
  		u.isRefused = credentialRefused(err)
- 		allRefused = allRefused && identityRefused(err)
- 		lastErr = err
-@@ -250,6 +261,8 @@ func (rt *RefreshStore) RotateUpstream(ctx context.Context, storageToken *storag
+ 		switch {
+ 		case connector.Unavailable(err):
+@@ -287,6 +298,8 @@ func (rt *RefreshStore) RotateUpstream(ctx context.Context, storageToken *storag
  			credentials: credentials,
  			logger:      rt.logger,
  			connectorID: storageToken.ConnectorID,
@@ -2875,7 +2875,7 @@ index 8229dc17..04248d71 100644
  		}
  
  		rawToken, ident, err := rt.rotate(ctx, storageToken, requestToken, strategy, refresher)
-@@ -393,7 +406,7 @@ func (rt *RefreshStore) retireDeadSharedCredential(ctx context.Context, token *s
+@@ -431,7 +444,7 @@ func (rt *RefreshStore) retireDeadSharedCredential(ctx context.Context, token *s
  		rt.logger.ErrorContext(ctx, "failed to retire refused upstream credential", "err", err)
  	default:
  		rt.logger.WarnContext(ctx, "upstream provider refused the credential shared by the clients of the user, dropped it so that the next login restores it",
@@ -2884,3 +2884,67 @@ index 8229dc17..04248d71 100644
  	}
  }
  
+diff --git a/server/tokens/refresh_upstream_test.go b/server/tokens/refresh_upstream_test.go
+index 983e54eb..151a29bf 100644
+--- a/server/tokens/refresh_upstream_test.go
++++ b/server/tokens/refresh_upstream_test.go
+@@ -1,8 +1,13 @@
+ package tokens
+ 
+ import (
++	"bytes"
++	"context"
++	"encoding/json"
+ 	"errors"
+ 	"fmt"
++	"log/slog"
++	"net/http"
+ 	"net/url"
+ 	"testing"
+ 
+@@ -107,3 +112,45 @@ func TestNotFinal(t *testing.T) {
+ 	other := errors.New("storage")
+ 	assert.Equal(t, other, notFinal(other))
+ }
++
++// The answer of a provider that refuses the refresh is a warning, a provider that
++// did not answer, or failed in a way the connector does not explain, an error.
++func TestUpstreamRefreshFailureLogLevel(t *testing.T) {
++	answered := func(status int) error {
++		return fmt.Errorf("oidc: failed to get refresh token: %w",
++			&oauth2.RetrieveError{Response: &http.Response{StatusCode: status}, ErrorCode: "invalid_request"})
++	}
++	tests := []struct {
++		name  string
++		err   error
++		level string
++	}{
++		{name: "request refused", err: answered(http.StatusBadRequest), level: "WARN"},
++		{name: "no refresh token", err: fmt.Errorf("oidc: %w", connector.ErrRefreshRefused), level: "WARN"},
++		{name: "throttled", err: answered(http.StatusTooManyRequests), level: "ERROR"},
++		{name: "provider failed", err: answered(http.StatusBadGateway), level: "ERROR"},
++		{name: "unexplained", err: errors.New("gitlab: get groups: 502 Bad Gateway"), level: "ERROR"},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			var buf bytes.Buffer
++			u := &upstreamRefresher{
++				refresh: func(context.Context, connector.Identity) (connector.Identity, error) {
++					return connector.Identity{}, tc.err
++				},
++				credentials: []credentialRef{{data: []byte("x"), source: credentialFromToken}},
++				logger:      slog.New(slog.NewJSONHandler(&buf, nil)),
++			}
++			_, err := u.identity(t.Context(), connector.Identity{})
++			assert.Error(t, err)
++
++			var record struct {
++				Level string `json:"level"`
++				Msg   string `json:"msg"`
++			}
++			assert.NoError(t, json.Unmarshal(buf.Bytes(), &record))
++			assert.Equal(t, "failed to refresh identity", record.Msg)
++			assert.Equal(t, tc.level, record.Level)
++		})
++	}
++}

@@ -233,18 +233,23 @@ index 00000000..dac3dcca
 +	}
 +}
 diff --git a/connector/connector.go b/connector/connector.go
-index f95c62e4..a9f0fe3a 100644
+index f95c62e4..d08d086d 100644
 --- a/connector/connector.go
 +++ b/connector/connector.go
-@@ -3,6 +3,7 @@ package connector
+@@ -3,8 +3,12 @@ package connector
  
  import (
  	"context"
 +	"errors"
  	"fmt"
++	"net"
  	"net/http"
++
++	"golang.org/x/oauth2"
  )
-@@ -19,6 +20,13 @@ func (e *UserNotInRequiredGroupsError) Error() string {
+ 
+ // UserNotInRequiredGroupsError is returned by a connector when a user
+@@ -19,6 +23,69 @@ func (e *UserNotInRequiredGroupsError) Error() string {
  	return fmt.Sprintf("user %q is not in any of the required groups %v", e.UserID, e.Groups)
  }
  
@@ -254,6 +259,62 @@ index f95c62e4..a9f0fe3a 100644
 +// wrapped, from Refresh, and the server refuses the refresh with invalid_grant
 +// rather than a server error, so the client asks the user to log in again.
 +var ErrIdentityGone = errors.New("identity no longer valid upstream")
++
++// ErrRefreshRefused reports that the upstream provider answered the refresh, but
++// the answer cannot refresh the identity: the provider refused the request, gave
++// no refresh token to present, or returned an answer without the claims of the
++// user. Only a new login brings what the refresh lacks, so the server answers
++// invalid_grant, as for ErrIdentityGone, and the client asks the user to log in
++// again. A connector wraps it into the error of Refresh.
++var ErrRefreshRefused = errors.New("refresh refused upstream")
++
++// ErrUpstreamUnavailable reports that the upstream provider did not answer the
++// refresh: a connector wraps it when the failure is not a network error the
++// server recognizes by itself (see Unavailable).
++var ErrUpstreamUnavailable = errors.New("upstream provider unavailable")
++
++// Unavailable reports whether err says the upstream provider did not answer: the
++// connection failed or timed out, or the provider answered 408, 429 or a 5xx
++// status. Nothing is known about the user then, and the refresh may succeed later.
++func Unavailable(err error) bool {
++	if errors.Is(err, ErrUpstreamUnavailable) {
++		return true
++	}
++	var retrieveErr *oauth2.RetrieveError
++	if errors.As(err, &retrieveErr) {
++		if retrieveErr.Response == nil {
++			return false
++		}
++		status := retrieveErr.Response.StatusCode
++		return status == http.StatusRequestTimeout || status == http.StatusTooManyRequests ||
++			status >= http.StatusInternalServerError
++	}
++	// A failed connection (*url.Error) and a timeout (context.DeadlineExceeded)
++	// are both net.Error.
++	var netErr net.Error
++	return errors.As(err, &netErr) || errors.Is(err, context.Canceled)
++}
++
++// OAuth2Refusal reports whether err carries an error answer of an OAuth2 token
++// endpoint: a code of RFC 6749, section 5.2, or bad_refresh_token, which GitHub
++// answers instead of invalid_grant. The oauth2 package takes the code from any
++// JSON body with an "error" field, so the answer of a proxy in front of the
++// provider, such as {"status":403,"error":"Forbidden"} of a Spring gateway,
++// carries one too; such a code is no answer of the provider.
++func OAuth2Refusal(err error) bool {
++	var retrieveErr *oauth2.RetrieveError
++	return errors.As(err, &retrieveErr) && oauth2RefusalCodes[retrieveErr.ErrorCode]
++}
++
++var oauth2RefusalCodes = map[string]bool{
++	"invalid_request":        true,
++	"invalid_client":         true,
++	"invalid_grant":          true,
++	"unauthorized_client":    true,
++	"unsupported_grant_type": true,
++	"invalid_scope":          true,
++	"bad_refresh_token":      true,
++}
 +
  // Connector is a mechanism for federating login to a remote identity service.
  //
@@ -544,20 +605,324 @@ index 0c78a1d1..a5f791b8 100644
  
  	newIdent, err := c.identityFromEntry(user)
 diff --git a/connector/oidc/oidc.go b/connector/oidc/oidc.go
-index 8b92bb9f..ef48fca4 100644
+index 8b92bb9f..cd5ac8cb 100644
 --- a/connector/oidc/oidc.go
 +++ b/connector/oidc/oidc.go
-@@ -554,7 +554,9 @@ func (c *oidcConnector) Refresh(ctx context.Context, s connector.Scopes, identit
+@@ -543,7 +543,8 @@ func (c *oidcConnector) Refresh(ctx context.Context, s connector.Scopes, identit
+ 	cd := connectorData{}
+ 	err := json.Unmarshal(identity.ConnectorData, &cd)
+ 	if err != nil {
+-		return identity, fmt.Errorf("oidc: failed to unmarshal connector data: %v", err)
++		// Nothing to refresh with: only a login stores a credential.
++		return identity, fmt.Errorf("oidc: failed to unmarshal connector data: %v: %w", err, connector.ErrRefreshRefused)
+ 	}
+ 
+ 	ctx = context.WithValue(ctx, oauth2.HTTPClient, c.httpClient)
+@@ -554,9 +555,69 @@ func (c *oidcConnector) Refresh(ctx context.Context, s connector.Scopes, identit
  	}
  	token, err := c.oauth2Config.TokenSource(ctx, t).Token()
  	if err != nil {
 -		return identity, fmt.Errorf("oidc: failed to get refresh token: %v", err)
 +		// Wrapped, so that a refused credential tells apart from a provider that
 +		// failed to answer.
-+		return identity, fmt.Errorf("oidc: failed to get refresh token: %w", err)
++		return identity, fmt.Errorf("oidc: failed to get refresh token: %w", refreshRefusal(err))
  	}
- 	return c.createIdentity(ctx, identity, token, refreshCaller)
+-	return c.createIdentity(ctx, identity, token, refreshCaller)
++	ident, err := c.createIdentity(ctx, identity, token, refreshCaller)
++	if errors.Is(err, errKeysNotFetched) {
++		// The keys are fetched on every start of Dex and every rotation of the
++		// keys of the provider: an ID token the provider has just issued that Dex
++		// could not fetch the keys for says nothing about the user (Deckhouse).
++		return identity, fmt.Errorf("%w: %w", err, connector.ErrUpstreamUnavailable)
++	}
++	if err != nil {
++		return identity, refreshRefusal(err)
++	}
++	return ident, nil
++}
++
++// errKeysNotFetched marks the failure to verify the ID token of a token response
++// because the keys of the provider could not be fetched (Deckhouse).
++var errKeysNotFetched = errors.New("keys of the provider not fetched")
++
++// keysNotFetched reports whether err of Verify is a failure to fetch the keys of
++// the provider. go-oidc v3.21.0 checks the signature first, and fetching the keys
++// (keysFromRemote) is the only step of Verify that goes to the network; it wraps
++// that error as "fetching keys %w", and Verify passes it on with %v, as text
++// only. Any other failure of Verify (aud, iss, an expired token, a token that
++// does not parse, a signature the fetched keys do not verify) is the same on a
++// retry (Deckhouse).
++func keysNotFetched(err error) bool {
++	return strings.Contains(err.Error(), "fetching keys")
++}
++
++// refreshRefusal marks the failure of a refresh as a refusal
++// (connector.ErrRefreshRefused) unless the provider did not answer or did not
++// answer as an OAuth2 server: a refresh token the provider never issued, an
++// OAuth2 error, a token response that cannot be read, an ID token that does not
++// verify, or an ID token and user info without the claims of the user cannot
++// turn into an identity until the user logs in again. A 4xx answer without an
++// OAuth2 error of the provider (connector.OAuth2Refusal) comes from a proxy or a
++// load balancer in front of the provider rather than from the provider, and is
++// left unmarked (Deckhouse).
++func refreshRefusal(err error) error {
++	if connector.Unavailable(err) {
++		return err
++	}
++	var retrieveErr *oauth2.RetrieveError
++	if errors.As(err, &retrieveErr) && !connector.OAuth2Refusal(err) {
++		return err
++	}
++	return fmt.Errorf("%w: %w", err, connector.ErrRefreshRefused)
++}
++
++// userInfoError keeps the status of a user info answer other than 200 readable:
++// go-oidc reports it only at the start of the text of the error, "<status>:
++// <body>". A provider that answered 429 or 5xx did not answer about the user
++// (Deckhouse).
++func userInfoError(err error) error {
++	var status int
++	if _, scanErr := fmt.Sscanf(err.Error(), "%d ", &status); scanErr == nil &&
++		(status == http.StatusTooManyRequests || status >= http.StatusInternalServerError) {
++		return fmt.Errorf("%w: %w", err, connector.ErrUpstreamUnavailable)
++	}
++	return err
  }
+ 
+ func (c *oidcConnector) TokenIdentity(ctx context.Context, subjectTokenType, subjectToken string) (connector.Identity, error) {
+@@ -577,6 +638,9 @@ func (c *oidcConnector) createIdentity(ctx context.Context, identity connector.I
+ 	if rawIDToken, ok := token.Extra("id_token").(string); ok {
+ 		idToken, err := c.verifier.Verify(ctx, rawIDToken)
+ 		if err != nil {
++			if keysNotFetched(err) {
++				return identity, fmt.Errorf("oidc: failed to verify ID Token: %v: %w", err, errKeysNotFetched)
++			}
+ 			return identity, fmt.Errorf("oidc: failed to verify ID Token: %v", err)
+ 		}
+ 
+@@ -614,7 +678,7 @@ func (c *oidcConnector) createIdentity(ctx context.Context, identity connector.I
+ 			TokenType:   "Bearer", // The UserInfo endpoint requires a bearer token as per RFC6750
+ 		}))
+ 		if err != nil {
+-			return identity, fmt.Errorf("oidc: error loading userinfo: %v", err)
++			return identity, fmt.Errorf("oidc: error loading userinfo: %w", userInfoError(err))
+ 		}
+ 		if err := userInfo.Claims(&claims); err != nil {
+ 			return identity, fmt.Errorf("oidc: failed to decode userinfo claims: %v", err)
+diff --git a/connector/oidc/oidc_refresh_test.go b/connector/oidc/oidc_refresh_test.go
+new file mode 100644
+index 00000000..b48e8d14
+--- /dev/null
++++ b/connector/oidc/oidc_refresh_test.go
+@@ -0,0 +1,208 @@
++package oidc
++
++import (
++	"errors"
++	"net/http"
++	"net/http/httptest"
++	"testing"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/connector"
++)
++
++// A refresh the provider answered without anything to refresh the identity with
++// is a refusal (connector.ErrRefreshRefused): the server answers invalid_grant
++// and the client asks the user to log in again. A provider that did not answer is
++// connector.Unavailable: the refresh may succeed later (Deckhouse).
++func TestRefreshFailureKinds(t *testing.T) {
++	claims := map[string]interface{}{"sub": "subvalue", "name": "namevalue"}
++	answer := func(status int, body string) http.HandlerFunc {
++		return func(w http.ResponseWriter, _ *http.Request) {
++			w.Header().Set("Content-Type", "application/json")
++			w.WriteHeader(status)
++			_, _ = w.Write([]byte(body))
++		}
++	}
++	const withRefreshToken = `{"RefreshToken":"asdf"}`
++
++	tests := []struct {
++		name          string
++		connectorData string
++		clientID      string // the client the ID token is not for, when set
++		noIDToken     bool
++		noUserInfo    bool
++		token         http.HandlerFunc
++		userInfo      http.HandlerFunc
++		keys          http.HandlerFunc
++		down          bool
++		refused       bool
++		unavailable   bool
++	}{
++		{
++			name:    "no credential stored",
++			refused: true,
++		},
++		{
++			name:          "no upstream refresh token",
++			connectorData: `{"RefreshToken":""}`,
++			refused:       true,
++		},
++		{
++			name:          "token request refused",
++			connectorData: withRefreshToken,
++			token:         answer(http.StatusBadRequest, `{"error":"invalid_request"}`),
++			refused:       true,
++		},
++		{
++			name:          "client refused",
++			connectorData: withRefreshToken,
++			token:         answer(http.StatusUnauthorized, `{"error":"invalid_client"}`),
++			refused:       true,
++		},
++		{
++			name:          "token response that cannot be read",
++			connectorData: withRefreshToken,
++			token:         answer(http.StatusOK, `not json`),
++			refused:       true,
++		},
++		{
++			name:          "no ID token and no user info",
++			connectorData: withRefreshToken,
++			noIDToken:     true,
++			noUserInfo:    true,
++			refused:       true,
++		},
++		{
++			name:          "user info refused",
++			connectorData: withRefreshToken,
++			noIDToken:     true,
++			userInfo:      answer(http.StatusUnauthorized, `{"error":"invalid_token"}`),
++			refused:       true,
++		},
++		{
++			name:          "token request answered by a proxy, not by the provider",
++			connectorData: withRefreshToken,
++			token:         answer(http.StatusNotFound, `<html>Not Found</html>`),
++		},
++		{
++			name:          "token request forbidden by a proxy",
++			connectorData: withRefreshToken,
++			token:         answer(http.StatusForbidden, ``),
++		},
++		{
++			name:          "token request forbidden by a gateway with a JSON error",
++			connectorData: withRefreshToken,
++			token:         answer(http.StatusForbidden, `{"status":403,"error":"Forbidden","path":"/token"}`),
++		},
++		{
++			name:          "ID token for another client",
++			connectorData: withRefreshToken,
++			clientID:      "renamedClientID",
++			refused:       true,
++		},
++		{
++			name:          "token request timed out",
++			connectorData: withRefreshToken,
++			token:         answer(http.StatusRequestTimeout, ``),
++			unavailable:   true,
++		},
++		{
++			name:          "keys of the provider failed",
++			connectorData: withRefreshToken,
++			keys:          answer(http.StatusServiceUnavailable, `unavailable`),
++			unavailable:   true,
++		},
++		{
++			name:          "keys of the provider unreachable",
++			connectorData: withRefreshToken,
++			keys:          dropConnection,
++			unavailable:   true,
++		},
++		{
++			name:          "token endpoint failed",
++			connectorData: withRefreshToken,
++			token:         answer(http.StatusServiceUnavailable, `{"error":"temporarily_unavailable"}`),
++			unavailable:   true,
++		},
++		{
++			name:          "token endpoint throttled",
++			connectorData: withRefreshToken,
++			token:         answer(http.StatusTooManyRequests, `{"error":"slow_down"}`),
++			unavailable:   true,
++		},
++		{
++			name:          "user info failed",
++			connectorData: withRefreshToken,
++			noIDToken:     true,
++			userInfo:      answer(http.StatusInternalServerError, `oops`),
++			unavailable:   true,
++		},
++		{
++			name:          "user info throttled",
++			connectorData: withRefreshToken,
++			noIDToken:     true,
++			userInfo:      answer(http.StatusTooManyRequests, `slow down`),
++			unavailable:   true,
++		},
++		{
++			name:          "provider down",
++			connectorData: withRefreshToken,
++			down:          true,
++			unavailable:   true,
++		},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			mux, err := oidcTestMux(claims, !tc.noIDToken)
++			require.NoError(t, err)
++			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++				switch {
++				case r.URL.Path == "/token" && tc.token != nil:
++					tc.token(w, r)
++				case r.URL.Path == "/userinfo" && tc.userInfo != nil:
++					tc.userInfo(w, r)
++				case r.URL.Path == "/keys" && tc.keys != nil:
++					tc.keys(w, r)
++				default:
++					mux.ServeHTTP(w, r)
++				}
++			}))
++			defer srv.Close()
++
++			clientID := "clientID" // the audience of the ID tokens of oidcTestMux
++			if tc.clientID != "" {
++				clientID = tc.clientID
++			}
++			conn, err := newConnector(Config{
++				Issuer:       srv.URL,
++				ClientID:     clientID,
++				ClientSecret: "clientSecret",
++				Scopes:       []string{"openid", "offline_access"},
++				RedirectURI:  srv.URL + "/callback",
++				GetUserInfo:  !tc.noUserInfo,
++			})
++			require.NoError(t, err)
++			if tc.down {
++				srv.Close()
++			}
++
++			var data []byte
++			if tc.connectorData != "" {
++				data = []byte(tc.connectorData)
++			}
++			_, err = conn.Refresh(t.Context(), connector.Scopes{OfflineAccess: true}, connector.Identity{ConnectorData: data})
++			require.Error(t, err)
++			require.Equal(t, tc.refused, errors.Is(err, connector.ErrRefreshRefused), "refused: %v", err)
++			require.Equal(t, tc.unavailable, connector.Unavailable(err), "unavailable: %v", err)
++		})
++	}
++}
++
++// dropConnection closes the connection without an answer.
++func dropConnection(w http.ResponseWriter, _ *http.Request) {
++	conn, _, err := w.(http.Hijacker).Hijack()
++	if err == nil {
++		_ = conn.Close()
++	}
++}
 diff --git a/server/authflow/finalize.go b/server/authflow/finalize.go
 index efa37e77..62bcaffc 100644
 --- a/server/authflow/finalize.go
@@ -816,7 +1181,7 @@ index 00000000..82908f5f
 +	return isSAML
 +}
 diff --git a/server/grants/refresh.go b/server/grants/refresh.go
-index 57f74a2f..beddf335 100644
+index 57f74a2f..7c75e07a 100644
 --- a/server/grants/refresh.go
 +++ b/server/grants/refresh.go
 @@ -122,25 +122,25 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
@@ -862,7 +1227,7 @@ index 57f74a2f..beddf335 100644
  	}
  
  	auth := tokens.Authorization{
-@@ -280,42 +280,61 @@ func (g *refresh) refreshScopes(req *Request, refreshToken *storage.RefreshToken
+@@ -280,42 +280,71 @@ func (g *refresh) refreshScopes(req *Request, refreshToken *storage.RefreshToken
  	return req.Scopes, nil
  }
  
@@ -928,11 +1293,14 @@ index 57f74a2f..beddf335 100644
 -	if err != nil {
 -		g.logger.ErrorContext(ctx, "failed to refresh identity", "err", err)
 -		return ident, err
-+// rotateError maps a failed rotation to the token response. The upstream
-+// provider refusing the identity (the user is gone, the access revoked) is
-+// final, so the refresh token is no longer good for anything: invalid_grant,
-+// as RFC 6749 section 5.2 has it, tells the client to log the user in again.
-+// Any other failure stays a server error.
++// rotateError maps a failed rotation to the token response. A provider that
++// answered and cannot refresh the identity (the user is gone, the access
++// revoked, no upstream refresh token, an answer without the user) is final until
++// the user logs in again, so the refresh token is no longer good for anything:
++// invalid_grant, as RFC 6749 section 5.2 has it, tells the client to log the user
++// in again. A provider that did not answer is temporarily_unavailable (503): the
++// same refresh may succeed later. Any other failure, the storage of dex included,
++// stays a server error.
 +func (g *refresh) rotateError(ctx context.Context, err error, refreshToken *storage.RefreshToken) *oauth2.Error {
 +	var upstreamErr *tokens.UpstreamError
 +	switch {
@@ -944,6 +1312,13 @@ index 57f74a2f..beddf335 100644
 +			Type:        oauth2.InvalidGrant,
 +			Description: "The identity provider refused to refresh the identity.",
 +			Status:      http.StatusBadRequest,
++		}
++	case errors.As(err, &upstreamErr) && upstreamErr.Unavailable:
++		// Logged where the connector failed.
++		return &oauth2.Error{
++			Type:        oauth2.TemporarilyUnavailable,
++			Description: "The identity provider did not answer the refresh.",
++			Status:      http.StatusServiceUnavailable,
 +		}
 +	case errors.As(err, &upstreamErr):
 +		// Logged where the connector failed.
@@ -957,10 +1332,10 @@ index 57f74a2f..beddf335 100644
  // parseRefreshToken decodes the refresh_token parameter, tolerating the legacy
 diff --git a/server/server_grant_refresh_upstream_test.go b/server/server_grant_refresh_upstream_test.go
 new file mode 100644
-index 00000000..523d5075
+index 00000000..d6f9d8f0
 --- /dev/null
 +++ b/server/server_grant_refresh_upstream_test.go
-@@ -0,0 +1,1138 @@
+@@ -0,0 +1,1254 @@
 +package server
 +
 +import (
@@ -981,6 +1356,7 @@ index 00000000..523d5075
 +	"golang.org/x/oauth2"
 +
 +	"github.com/dexidp/dex/connector"
++	"github.com/dexidp/dex/connector/oidc"
 +	"github.com/dexidp/dex/server/connectors"
 +	"github.com/dexidp/dex/server/internal"
 +	"github.com/dexidp/dex/server/tokens"
@@ -1476,13 +1852,13 @@ index 00000000..523d5075
 +	// Once it is gone, the clients relying on it stop paying for the conclusion.
 +	reads.reads = 0
 +	rr = refreshTokenRequest(t, t.Context(), s, clientID, requestToken(refreshID))
-+	require.Equal(t, http.StatusInternalServerError, rr.Code, "nothing to refresh with is not a refusal")
++	requireOAuth2Error(t, rr, http.StatusBadRequest, "invalid_grant")
 +	require.Equal(t, 1, reads.reads, "with no shared credential left there is nothing to wait for")
 +}
 +
 +// A provider that fails to answer costs a request nothing beyond its own failure:
 +// the credential is neither recovered from nor dropped, so an outage does not
-+// turn into users logging in again.
++// turn into users logging in again, and the client is told to try later (503).
 +func TestUpstreamRotationKeepsCredentialWhenProviderUnreachable(t *testing.T) {
 +	const clientID, refreshID = "kubeconfig-generator", "cli-refresh-id"
 +	clk := &testClock{now: time.Now()}
@@ -1504,7 +1880,7 @@ index 00000000..523d5075
 +	createOfflineSession(t, s, upstreamConnID, map[string]string{clientID: refreshID}, shared)
 +
 +	rr := refreshTokenRequest(t, t.Context(), s, clientID, requestToken(refreshID))
-+	requireOAuth2Error(t, rr, http.StatusInternalServerError, "invalid_request")
++	requireOAuth2Error(t, rr, http.StatusServiceUnavailable, "temporarily_unavailable")
 +	require.Equal(t, 1, upstream.calls)
 +	require.Equal(t, 1, reads.reads, "an unreachable provider costs no extra read of the offline session")
 +
@@ -1841,11 +2217,22 @@ index 00000000..523d5075
 +	return connector.Identity{}, nil
 +}
 +
-+// When the provider answers that the user is gone or its access was revoked, the
-+// refresh is refused with invalid_grant, not a server error (R30); a provider
-+// that fails to answer is still a server error.
++// When the provider answers and the answer cannot refresh the identity, the
++// refresh is refused with invalid_grant, not a server error (R30): the user is
++// gone or its access was revoked, the provider refused the credential or the
++// request, or the connector found nothing to refresh with. A provider that fails
++// to answer is temporarily_unavailable (503), and a failure the connector does
++// not explain stays a server error.
 +func TestUpstreamRefreshRefused(t *testing.T) {
 +	unreachable := &url.Error{Op: "Post", URL: "https://idp.example.com/token", Err: errors.New("connection refused")}
++	answered := func(status int, code string) error {
++		return fmt.Errorf("oidc: failed to get refresh token: %w", &oauth2.RetrieveError{
++			Response:  &http.Response{StatusCode: status},
++			Body:      []byte(`{"error":"` + code + `"}`),
++			ErrorCode: code,
++		})
++	}
++	unexplained := errors.New("gitlab: get groups: 502 Bad Gateway")
 +	tests := []struct {
 +		name     string
 +		own      bool
@@ -1888,21 +2275,83 @@ index 00000000..523d5075
 +			expected: "invalid_grant",
 +		},
 +		{
++			name:     "provider refused the request",
++			errs:     []error{answered(http.StatusBadRequest, "invalid_request")},
++			status:   http.StatusBadRequest,
++			expected: "invalid_grant",
++		},
++		{
++			name:     "provider refused the client",
++			errs:     []error{answered(http.StatusUnauthorized, "invalid_client")},
++			status:   http.StatusBadRequest,
++			expected: "invalid_grant",
++		},
++		{
++			name:     "connector refused: no upstream refresh token",
++			errs:     []error{fmt.Errorf("oidc: failed to get refresh token: %w", fmt.Errorf("%w: %w", errors.New("oauth2: token expired and refresh token is not set"), connector.ErrRefreshRefused))},
++			status:   http.StatusBadRequest,
++			expected: "invalid_grant",
++		},
++		{
 +			name:     "own credential refused, provider then unreachable",
 +			own:      true,
 +			errs:     []error{refusedGrant(), unreachable},
-+			status:   http.StatusInternalServerError,
-+			expected: "invalid_request",
++			status:   http.StatusServiceUnavailable,
++			expected: "temporarily_unavailable",
 +		},
 +		{
 +			name:     "provider unreachable",
 +			errs:     []error{unreachable},
++			status:   http.StatusServiceUnavailable,
++			expected: "temporarily_unavailable",
++		},
++		{
++			name:     "provider timed out",
++			errs:     []error{fmt.Errorf("oidc: failed to get refresh token: %w", context.DeadlineExceeded)},
++			status:   http.StatusServiceUnavailable,
++			expected: "temporarily_unavailable",
++		},
++		{
++			name:     "provider call canceled",
++			errs:     []error{fmt.Errorf("oidc: failed to get refresh token: %w", context.Canceled)},
++			status:   http.StatusServiceUnavailable,
++			expected: "temporarily_unavailable",
++		},
++		{
++			name:     "provider answered 5xx",
++			errs:     []error{answered(http.StatusBadGateway, "server_error")},
++			status:   http.StatusServiceUnavailable,
++			expected: "temporarily_unavailable",
++		},
++		{
++			name:     "provider answered 429",
++			errs:     []error{answered(http.StatusTooManyRequests, "slow_down")},
++			status:   http.StatusServiceUnavailable,
++			expected: "temporarily_unavailable",
++		},
++		{
++			name:     "connector says the provider did not answer",
++			errs:     []error{fmt.Errorf("oidc: error loading userinfo: %w", connector.ErrUpstreamUnavailable)},
++			status:   http.StatusServiceUnavailable,
++			expected: "temporarily_unavailable",
++		},
++		{
++			name:     "failure the connector does not explain",
++			errs:     []error{unexplained},
 +			status:   http.StatusInternalServerError,
 +			expected: "invalid_request",
 +		},
 +		{
-+			name:     "provider error without an answer about the user",
-+			errs:     []error{errors.New("gitlab: get groups: 502 Bad Gateway")},
++			name:     "own credential refused, then a failure the connector does not explain",
++			own:      true,
++			errs:     []error{refusedGrant(), unexplained},
++			status:   http.StatusInternalServerError,
++			expected: "invalid_request",
++		},
++		{
++			name:     "own credential unreachable, then a failure the connector does not explain",
++			own:      true,
++			errs:     []error{unreachable, unexplained},
 +			status:   http.StatusInternalServerError,
 +			expected: "invalid_request",
 +		},
@@ -1956,7 +2405,7 @@ index 00000000..523d5075
 +}
 +
 +// A request that keeps losing the race for the shared credential gives up after
-+// a bounded number of attempts with a server error, not invalid_grant: the
++// a bounded number of attempts with temporarily_unavailable, not invalid_grant: the
 +// credential is alive, other clients are spending it, and the user is fine.
 +func TestUpstreamRotationContendedSharedCredentialIsNotRefused(t *testing.T) {
 +	const clientID, refreshID = "kubeconfig-generator", "cli-refresh-id"
@@ -1976,7 +2425,7 @@ index 00000000..523d5075
 +	createOfflineSession(t, s, upstreamConnID, map[string]string{clientID: refreshID}, upstream.mint())
 +
 +	rr := refreshTokenRequest(t, t.Context(), s, clientID, requestToken(refreshID))
-+	requireOAuth2Error(t, rr, http.StatusInternalServerError, "invalid_request")
++	requireOAuth2Error(t, rr, http.StatusServiceUnavailable, "temporarily_unavailable")
 +	require.Equal(t, 3, upstream.calls, "the first attempt and two more, each with the credential the winner published")
 +
 +	session, err := inner.GetOfflineSessions(t.Context(), upstreamUserID, upstreamConnID)
@@ -2098,6 +2547,48 @@ index 00000000..523d5075
 +			requireRefreshSucceeds(t, s, clientID, token)
 +		})
 +	}
++}
++
++// An OIDC provider that issued no refresh token at login (refresh tokens off for
++// the client, no offline_access) leaves dex nothing to refresh with: the token
++// endpoint answers invalid_grant, so the client sends the user to log in again
++// instead of retrying a refresh that cannot succeed.
++func TestUpstreamRefreshOIDCWithoutRefreshToken(t *testing.T) {
++	const clientID, refreshID = "dex-authenticator", "web-refresh-id"
++	idp := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		issuer := "http://" + r.Host
++		w.Header().Set("Content-Type", "application/json")
++		_ = json.NewEncoder(w).Encode(map[string]string{
++			"issuer":                 issuer,
++			"authorization_endpoint": issuer + "/authorize",
++			"token_endpoint":         issuer + "/token",
++			"jwks_uri":               issuer + "/keys",
++		})
++	}))
++	defer idp.Close()
++
++	clk := &testClock{now: time.Now()}
++	httpServer, s := newTestServer(t, rotatingPolicy(clk))
++	defer httpServer.Close()
++
++	conn, err := (&oidc.Config{
++		Issuer:       idp.URL,
++		ClientID:     "dex",
++		ClientSecret: upstreamSecret,
++		RedirectURI:  upstreamRedirect,
++		Scopes:       []string{"openid", "email"},
++	}).Open(upstreamConnID, slog.New(slog.DiscardHandler))
++	require.NoError(t, err)
++	registerUpstreamConnector(t, s, upstreamConnID, conn)
++	registerClients(t, s, clientID)
++
++	// What the login stored: the provider answered without a refresh token.
++	noRefreshToken := []byte(`{"RefreshToken":""}`)
++	createRefreshToken(t, s, upstreamConnID, refreshID, clientID, noRefreshToken, clk.now)
++	createOfflineSession(t, s, upstreamConnID, map[string]string{clientID: refreshID}, noRefreshToken)
++
++	rr := refreshTokenRequest(t, t.Context(), s, clientID, requestToken(refreshID))
++	requireOAuth2Error(t, rr, http.StatusBadRequest, "invalid_grant")
 +}
 diff --git a/server/tokens/refresh_store.go b/server/tokens/refresh_store.go
 index 0201e4ab..e390ed1e 100644
@@ -2257,10 +2748,10 @@ index 0201e4ab..e390ed1e 100644
  
 diff --git a/server/tokens/refresh_upstream.go b/server/tokens/refresh_upstream.go
 new file mode 100644
-index 00000000..8229dc17
+index 00000000..ecae6ce5
 --- /dev/null
 +++ b/server/tokens/refresh_upstream.go
-@@ -0,0 +1,450 @@
+@@ -0,0 +1,488 @@
 +package tokens
 +
 +// refresh_upstream.go refreshes the identity of a refresh token through the
@@ -2280,6 +2771,7 @@ index 00000000..8229dc17
 +	"errors"
 +	"fmt"
 +	"log/slog"
++	"net/http"
 +	"slices"
 +	"time"
 +
@@ -2324,12 +2816,18 @@ index 00000000..8229dc17
 +}
 +
 +// UpstreamError reports that the upstream connector did not refresh the
-+// identity. Refused is set when the provider answered with a final refusal for
-+// every credential offered: the user is gone or its access was revoked. A
-+// provider that failed to answer leaves it unset.
++// identity. Refused is set when the provider answered for every credential
++// offered and no answer refreshes the identity: the user is gone or its access
++// was revoked, the provider refused the credential or the request, or its
++// answer lacks the user (see refreshRefused). Unavailable is set when the
++// provider did not answer for at least one of them and refused the others (see
++// connector.Unavailable), or when other clients kept rotating the shared
++// credential: the refresh may succeed later. Neither is set for a failure the
++// connector does not explain.
 +type UpstreamError struct {
-+	Refused bool
-+	Err     error
++	Refused     bool
++	Unavailable bool
++	Err         error
 +}
 +
 +func (e *UpstreamError) Error() string { return "upstream refresh: " + e.Err.Error() }
@@ -2434,6 +2932,7 @@ index 00000000..8229dc17
 +	}
 +
 +	allRefused := true
++	var anyUnavailable, anyUnexplained bool
 +	var lastErr error
 +	for _, credential := range candidates {
 +		offered := base
@@ -2452,11 +2951,19 @@ index 00000000..8229dc17
 +		u.logger.ErrorContext(ctx, "failed to refresh identity",
 +			"connector_id", u.connectorID, "credential_source", credential.source.String(), "err", err)
 +		u.isRefused = credentialRefused(err)
-+		allRefused = allRefused && identityRefused(err)
++		switch {
++		case connector.Unavailable(err):
++			allRefused, anyUnavailable = false, true
++		case refreshRefused(err) || len(u.credentials) == 0:
++			// With no credential to offer, nothing but a login can refresh the
++			// identity, whatever the connector says.
++		default:
++			allRefused, anyUnexplained = false, true
++		}
 +		lastErr = err
 +	}
 +
-+	u.err = &UpstreamError{Refused: allRefused, Err: lastErr}
++	u.err = &UpstreamError{Refused: allRefused, Unavailable: anyUnavailable && !anyUnexplained, Err: lastErr}
 +	return u.ident, u.err
 +}
 +
@@ -2482,6 +2989,27 @@ index 00000000..8229dc17
 +func identityRefused(err error) bool {
 +	var groupsErr *connector.UserNotInRequiredGroupsError
 +	return credentialRefused(err) || errors.Is(err, connector.ErrIdentityGone) || errors.As(err, &groupsErr)
++}
++
++// refreshRefused reports whether the provider answered the refresh and the answer
++// cannot refresh the identity until the user logs in again: a final refusal of the
++// identity, a 4xx answer to the token request with an OAuth2 error of the
++// provider (connector.OAuth2Refusal: RFC 6749, section 5.2, and
++// bad_refresh_token) in its body, or a connector that marked its failure as
++// connector.ErrRefreshRefused (Deckhouse). A 4xx without such an error, the
++// {"error":"Forbidden"} of a gateway among them, comes from a proxy in front of
++// the provider and is no answer about the user, and a 408 or a 429 is no answer
++// at all: connector.Unavailable, checked first, takes them.
++func refreshRefused(err error) bool {
++	if identityRefused(err) || errors.Is(err, connector.ErrRefreshRefused) {
++		return true
++	}
++	var retrieveErr *oauth2.RetrieveError
++	if !errors.As(err, &retrieveErr) || retrieveErr.Response == nil || !connector.OAuth2Refusal(err) {
++		return false
++	}
++	status := retrieveErr.Response.StatusCode
++	return status >= http.StatusBadRequest && status < http.StatusInternalServerError
 +}
 +
 +// RotateUpstream is Rotate with the identity refreshed through the upstream
@@ -2548,11 +3076,12 @@ index 00000000..8229dc17
 +	}
 +}
 +
-+// notFinal turns a refusal into a failure that says nothing about the user.
++// notFinal turns a refusal into a failure that says nothing about the user and
++// may pass: the credential is alive, other clients are spending it.
 +func notFinal(err error) error {
 +	var upstreamErr *UpstreamError
 +	if errors.As(err, &upstreamErr) {
-+		return &UpstreamError{Err: upstreamErr.Err}
++		return &UpstreamError{Unavailable: true, Err: upstreamErr.Err}
 +	}
 +	return err
 +}
@@ -2713,10 +3242,10 @@ index 00000000..8229dc17
 +}
 diff --git a/server/tokens/refresh_upstream_test.go b/server/tokens/refresh_upstream_test.go
 new file mode 100644
-index 00000000..2b05002e
+index 00000000..983e54eb
 --- /dev/null
 +++ b/server/tokens/refresh_upstream_test.go
-@@ -0,0 +1,73 @@
+@@ -0,0 +1,109 @@
 +package tokens
 +
 +import (
@@ -2774,6 +3303,42 @@ index 00000000..2b05002e
 +		t.Run(tc.name, func(t *testing.T) {
 +			assert.Equal(t, tc.isCredential, credentialRefused(tc.err), "credentialRefused")
 +			assert.Equal(t, tc.isIdentityFinal, identityRefused(tc.err), "identityRefused")
++		})
++	}
++}
++
++// A 4xx answer to the token request is a refusal only with an OAuth2 error of the
++// provider in its body: without one, or with another JSON error, it comes from a
++// proxy in front of the provider. A 408 is no answer.
++func TestRefreshRefused(t *testing.T) {
++	answer := func(status int, code string) error {
++		return fmt.Errorf("oidc: failed to get refresh token: %w",
++			&oauth2.RetrieveError{Response: &http.Response{StatusCode: status}, ErrorCode: code})
++	}
++	tests := []struct {
++		name        string
++		err         error
++		refused     bool
++		unavailable bool
++	}{
++		{name: "invalid_grant", err: answer(http.StatusBadRequest, "invalid_grant"), refused: true},
++		{name: "invalid_client", err: answer(http.StatusUnauthorized, "invalid_client"), refused: true},
++		{name: "a 403 with an OAuth2 error", err: answer(http.StatusForbidden, "unauthorized_client"), refused: true},
++		{name: "a 404 of a proxy", err: answer(http.StatusNotFound, "")},
++		{name: "a 403 of a proxy", err: answer(http.StatusForbidden, "")},
++		{name: "a 405 of a proxy", err: answer(http.StatusMethodNotAllowed, "")},
++		{name: "a 403 of a gateway with a JSON error", err: answer(http.StatusForbidden, "Forbidden")},
++		{name: "bad_refresh_token", err: answer(http.StatusBadRequest, "bad_refresh_token"), refused: true},
++		{name: "a 408", err: answer(http.StatusRequestTimeout, ""), unavailable: true},
++		{name: "a 429", err: answer(http.StatusTooManyRequests, "slow_down"), unavailable: true},
++		{name: "a 503", err: answer(http.StatusServiceUnavailable, ""), unavailable: true},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			assert.Equal(t, tc.unavailable, connector.Unavailable(tc.err), "Unavailable")
++			if !tc.unavailable {
++				assert.Equal(t, tc.refused, refreshRefused(tc.err), "refreshRefused")
++			}
 +		})
 +	}
 +}

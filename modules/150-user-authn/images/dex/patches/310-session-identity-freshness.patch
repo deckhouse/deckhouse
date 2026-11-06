@@ -330,7 +330,7 @@ index a6e2b551..72a909f2 100644
  	})
  	if oerr := identityError(ctx, g.logger, err, tokenRequestLocked,
 diff --git a/server/grants/refresh.go b/server/grants/refresh.go
-index 3634384d..1c22995f 100644
+index 77d20841..df68d06d 100644
 --- a/server/grants/refresh.go
 +++ b/server/grants/refresh.go
 @@ -10,9 +10,11 @@ import (
@@ -401,7 +401,7 @@ index 3634384d..1c22995f 100644
  	}
  
  	auth := tokens.Authorization{
-@@ -187,6 +193,123 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+@@ -187,6 +193,125 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
  	return ts.Response(g.now()), nil
  }
  
@@ -413,9 +413,11 @@ index 3634384d..1c22995f 100644
 +// the refreshes to come.
 +//
 +// A provider that answers the user is gone or no longer let in ends everything
-+// the pair holds (see endPair). A provider that fails to answer leaves the stored
-+// claims served for the grace period beyond maxAge; after it the refresh fails as a
-+// server error, and the token is kept for when the provider is back.
++// the pair holds (see endPair); another answer that cannot refresh the identity is
++// invalid_grant at once (see rotateError). A provider that fails to answer leaves
++// the stored claims served for the grace period beyond maxAge; after it the refresh
++// fails with temporarily_unavailable (a server error when the connector does not
++// explain the failure), and the token is kept for when the provider is back.
 +func (g *refresh) rotateStored(ctx context.Context, req *Request, refreshToken *storage.RefreshToken, ui storage.UserIdentity, conn connectors.Connector, scopes []string) (string, connector.Identity, *oauth2.Error) {
 +	now := g.now()
 +	stored := func(context.Context) (connector.Identity, error) { return tokens.IdentityFromClaims(ui.Claims), nil }
@@ -675,10 +677,10 @@ index 938ad81b..2ef6df5e 100644
  			})
 diff --git a/server/server_identity_refresh_test.go b/server/server_identity_refresh_test.go
 new file mode 100644
-index 00000000..14b376e9
+index 00000000..34ec03dd
 --- /dev/null
 +++ b/server/server_identity_refresh_test.go
-@@ -0,0 +1,266 @@
+@@ -0,0 +1,282 @@
 +package server
 +
 +import (
@@ -777,6 +779,22 @@ index 00000000..14b376e9
 +			age:         maxAge + grace,
 +			upstreamErr: errors.New("connection refused"),
 +			wantStatus:  http.StatusInternalServerError,
++			wantCalls:   1,
++			wantStored:  stored,
++		},
++		{
++			name:        "provider unreachable after the grace period",
++			age:         maxAge + grace,
++			upstreamErr: &url.Error{Op: "Post", URL: "https://idp.example.com/token", Err: errors.New("connection refused")},
++			wantStatus:  http.StatusServiceUnavailable,
++			wantCalls:   1,
++			wantStored:  stored,
++		},
++		{
++			name:        "provider answers without anything to refresh with, within the grace period",
++			age:         maxAge,
++			upstreamErr: fmt.Errorf("oidc: failed to get refresh token: %w", connector.ErrRefreshRefused),
++			wantStatus:  http.StatusBadRequest,
 +			wantCalls:   1,
 +			wantStored:  stored,
 +		},

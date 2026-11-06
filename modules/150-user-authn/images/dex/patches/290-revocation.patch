@@ -369,7 +369,7 @@ index 6c4afd2e..a6e2b551 100644
  	return issueTokens(ctx, g.logger, g.issuer, auth, "", shouldIssueRefreshToken(conn, req.Scopes))
  }
 diff --git a/server/grants/refresh.go b/server/grants/refresh.go
-index 350d7a3d..d14e9ed8 100644
+index ed9992d7..fb2b5a9f 100644
 --- a/server/grants/refresh.go
 +++ b/server/grants/refresh.go
 @@ -90,11 +90,14 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl

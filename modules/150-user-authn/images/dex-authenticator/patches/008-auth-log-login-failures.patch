@@ -1,8 +1,8 @@
 diff --git a/oauthproxy.go b/oauthproxy.go
-index 08fad0bb..96be355c 100644
+index 64e2c014..ce9f9d7a 100644
 --- a/oauthproxy.go
 +++ b/oauthproxy.go
-@@ -967,6 +967,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
+@@ -974,6 +974,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
  	errorString := req.Form.Get("error")
  	if errorString != "" {
  		logger.Errorf("Error while parsing OAuth2 callback: %s", errorString)
@@ -10,7 +10,7 @@ index 08fad0bb..96be355c 100644
  		message := fmt.Sprintf("Login Failed: The upstream identity provider returned an error: %s", errorString)
  		// Set the debug message and override the non debug message to be the same for this case
  		p.ErrorPage(rw, req, http.StatusForbidden, message, message)
-@@ -996,6 +997,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
+@@ -1003,6 +1004,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
  	session, err := p.redeemCode(req, csrf.GetCodeVerifier())
  	if err != nil {
  		logger.Errorf("Error redeeming code during OAuth2 callback: %v", err)
@@ -166,11 +166,11 @@ index 00000000..6685a46c
 +	}
 +}
 diff --git a/pkg/middleware/stored_session.go b/pkg/middleware/stored_session.go
-index 31002724..31e831d5 100644
+index 6cb0328a..0e645910 100644
 --- a/pkg/middleware/stored_session.go
 +++ b/pkg/middleware/stored_session.go
-@@ -225,6 +225,9 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
- 	refreshErr := s.refreshSession(rw, req, session)
+@@ -254,6 +254,9 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
+ 	}
  	if refreshErr != nil {
  		logger.Errorf("Unable to refresh session: %v", refreshErr)
 +		if refreshFailures.shouldLog(session, s.refreshPeriod, time.Now()) {

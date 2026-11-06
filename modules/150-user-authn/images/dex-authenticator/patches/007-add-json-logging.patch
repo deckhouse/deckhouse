@@ -132,10 +132,10 @@ index 00000000..e411ddd4
 +	assert.Equal(t, "jane.doe@example.com", signedOut[0]["user"])
 +}
 diff --git a/oauthproxy.go b/oauthproxy.go
-index eae1d343..08fad0bb 100644
+index a09f5b53..64e2c014 100644
 --- a/oauthproxy.go
 +++ b/oauthproxy.go
-@@ -833,6 +833,10 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
+@@ -840,6 +840,10 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
  	// (and id_token) available to invoke the provider's logout endpoint
  	p.backendLogout(rw, req)
  

@@ -1,9 +1,9 @@
 diff --git a/deckhouse_cookie_refresh_test.go b/deckhouse_cookie_refresh_test.go
 new file mode 100644
-index 00000000..55fde15e
+index 00000000..63837511
 --- /dev/null
 +++ b/deckhouse_cookie_refresh_test.go
-@@ -0,0 +1,449 @@
+@@ -0,0 +1,484 @@
 +package main
 +
 +import (
@@ -406,6 +406,41 @@ index 00000000..55fde15e
 +	assert.Empty(t, cleared.Value, "the cookie of a refused refresh token is cleared")
 +}
 +
++// TestRefreshUnavailableEndsAfterOneRefreshPeriod checks that a session whose refresh dex keeps
++// failing is kept for one --cookie-refresh period from the first failure, and then sent to sign in:
++// /auth answers 401 and the cookie is cleared.
++func TestRefreshUnavailableEndsAfterOneRefreshPeriod(t *testing.T) {
++	dex := newFakeDex(t)
++	cookie := signInThroughDex(t, newDeckhouseReplica(t, dex, time.Second))
++	replica := newDeckhouseReplica(t, dex, time.Second)
++	dex.fail(&dexFailure{status: http.StatusServiceUnavailable, body: `{"error":"temporarily_unavailable"}`})
++
++	expectRefreshUnavailable(t, replica, cookie)
++	time.Sleep(time.Second + 100*time.Millisecond)
++
++	rw := serveWithCookie(replica, "/oauth2/auth", cookie)
++	assert.Equal(t, http.StatusUnauthorized, rw.Code)
++	cleared := sessionCookie(replica, rw)
++	require.NotNil(t, cleared)
++	assert.Empty(t, cleared.Value, "past one refresh period the cookie is cleared")
++}
++
++// TestRefreshWithoutUpstreamRefreshTokenSignsIn checks the answer dex gives when its upstream provider
++// issued no refresh token at sign-in (TestUpstreamRefreshOIDCWithoutRefreshToken of the dex image):
++// the session goes to sign in at once, not to 503.
++func TestRefreshWithoutUpstreamRefreshTokenSignsIn(t *testing.T) {
++	dex := newFakeDex(t)
++	cookie := signInThroughDex(t, newDeckhouseReplica(t, dex, 10*time.Minute))
++	replica := newDeckhouseReplica(t, dex, 10*time.Minute)
++	dex.fail(&dexFailure{status: http.StatusBadRequest, body: `{"error":"invalid_grant","error_description":"The identity provider refused to refresh the identity."}`})
++
++	rw := serveWithCookie(replica, "/oauth2/auth", cookie)
++	assert.Equal(t, http.StatusUnauthorized, rw.Code)
++	cleared := sessionCookie(replica, rw)
++	require.NotNil(t, cleared)
++	assert.Empty(t, cleared.Value)
++}
++
 +// TestParallelRequestsRefreshOnce checks that parallel requests with one cookie to a replica without
 +// the session in its Redis refresh the session through dex once: the stub of patch 002 refreshes
 +// under the lock of its ticket, as a stored session does.
@@ -611,17 +646,20 @@ index b778bd54..827c65bd 100644
  }
 diff --git a/pkg/middleware/deckhouse_refresh_unavailable.go b/pkg/middleware/deckhouse_refresh_unavailable.go
 new file mode 100644
-index 00000000..959876ef
+index 00000000..d49197ee
 --- /dev/null
 +++ b/pkg/middleware/deckhouse_refresh_unavailable.go
-@@ -0,0 +1,35 @@
+@@ -0,0 +1,104 @@
 +package middleware
 +
 +import (
 +	"context"
++	"crypto/sha256"
 +	"errors"
 +	"net/http"
 +	"net/url"
++	"sync"
++	"time"
 +
 +	"golang.org/x/oauth2"
 +)
@@ -650,12 +688,78 @@ index 00000000..959876ef
 +	_, isTransportErr := errors.AsType[*url.Error](err)
 +	return isTransportErr || errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled)
 +}
++
++const (
++	// unavailableRetention is how long a replica remembers the first failed refresh of a session that
++	// is not tried again: longer than any session lasts without a request.
++	unavailableRetention = 24 * time.Hour
++	// maxUnavailableSessions bounds the memory: a replica tracks at most this many failing sessions,
++	// and a session beyond them is kept as before the bound, answered 503 until dex answers.
++	maxUnavailableSessions = 100000
++)
++
++// unavailableSince remembers when the refresh of each session first failed because the provider did
++// not answer (Deckhouse patch 002), so that the session is not kept answering 503 for ever: the
++// provider may keep answering 5xx for a session it can never refresh. A session is known by the hash
++// of its refresh token, which only a successful refresh changes. The time lives in the memory of the
++// replica: the cookie cannot carry it, since ingress-nginx passes no Set-Cookie of a 503 auth answer
++// on, and the Redis of a pod is its own. Each replica thus ends a session one window after the first
++// failure it saw, and a restart of the pod starts its window again.
++type unavailableSince struct {
++	now func() time.Time
++
++	mu        sync.Mutex
++	since     map[[sha256.Size]byte]time.Time
++	lastSweep time.Time
++}
++
++func newUnavailableSince() *unavailableSince {
++	return &unavailableSince{now: time.Now, since: map[[sha256.Size]byte]time.Time{}}
++}
++
++// failed records a refresh of the session with refreshToken that the provider did not answer, and
++// reports whether the first such failure was longer than window ago.
++func (u *unavailableSince) failed(refreshToken string, window time.Duration) bool {
++	if refreshToken == "" {
++		return false
++	}
++	key := sha256.Sum256([]byte(refreshToken))
++	now := u.now()
++
++	u.mu.Lock()
++	defer u.mu.Unlock()
++	if now.Sub(u.lastSweep) > time.Hour {
++		u.lastSweep = now
++		for k, first := range u.since {
++			if now.Sub(first) > unavailableRetention {
++				delete(u.since, k)
++			}
++		}
++	}
++	first, ok := u.since[key]
++	if !ok {
++		if len(u.since) < maxUnavailableSessions {
++			u.since[key] = now
++		}
++		return false
++	}
++	return now.Sub(first) > window
++}
++
++// forget drops the session with refreshToken: it was refreshed or ended.
++func (u *unavailableSince) forget(refreshToken string) {
++	key := sha256.Sum256([]byte(refreshToken))
++
++	u.mu.Lock()
++	defer u.mu.Unlock()
++	delete(u.since, key)
++}
 diff --git a/pkg/middleware/deckhouse_refresh_unavailable_test.go b/pkg/middleware/deckhouse_refresh_unavailable_test.go
 new file mode 100644
-index 00000000..29651f29
+index 00000000..d1a5fa01
 --- /dev/null
 +++ b/pkg/middleware/deckhouse_refresh_unavailable_test.go
-@@ -0,0 +1,170 @@
+@@ -0,0 +1,398 @@
 +package middleware
 +
 +import (
@@ -826,11 +930,255 @@ index 00000000..29651f29
 +		})
 +	}
 +}
++
++// TestUnavailableSince checks the memory of the first failed refresh of a session: the window counts
++// from the first failure, a refresh that succeeds or ends the session starts it again, and a session
++// without a refresh token is not tracked.
++func TestUnavailableSince(t *testing.T) {
++	const window = 10 * time.Minute
++	now := time.Now()
++	u := newUnavailableSince()
++	u.now = func() time.Time { return now }
++
++	assert.False(t, u.failed("refresh-token", window), "the first failure starts the window")
++	now = now.Add(window)
++	assert.False(t, u.failed("refresh-token", window), "within the window")
++	now = now.Add(time.Second)
++	assert.True(t, u.failed("refresh-token", window), "past the window from the first failure")
++	assert.True(t, u.failed("refresh-token", window), "and for the following failures")
++	assert.False(t, u.failed("other-refresh-token", window), "each session has a window of its own")
++
++	u.forget("refresh-token")
++	assert.False(t, u.failed("refresh-token", window), "a forgotten session starts again")
++
++	assert.False(t, u.failed("", window))
++	now = now.Add(2 * window)
++	assert.False(t, u.failed("", window), "a session without a refresh token is not tracked")
++}
++
++// TestUnavailableSinceBounds checks the bounds of the memory: a session not tried again for longer
++// than unavailableRetention is forgotten, and no more than maxUnavailableSessions are tracked.
++func TestUnavailableSinceBounds(t *testing.T) {
++	const window = 10 * time.Minute
++	now := time.Now()
++	u := newUnavailableSince()
++	u.now = func() time.Time { return now }
++
++	u.failed("idle", window)
++	now = now.Add(unavailableRetention + 2*time.Hour)
++	assert.False(t, u.failed("idle", window), "a session not tried again for a day starts again")
++
++	u = newUnavailableSince()
++	u.now = func() time.Time { return now }
++	for i := range maxUnavailableSessions {
++		u.failed(fmt.Sprintf("refresh-token-%d", i), window)
++	}
++	u.failed("one-too-many", window)
++	now = now.Add(2 * window)
++	assert.True(t, u.failed("refresh-token-0", window))
++	assert.False(t, u.failed("one-too-many", window), "a session beyond the bound is not tracked")
++	assert.Len(t, u.since, maxUnavailableSessions)
++}
++
++// TestLoadSessionEndsLongUnavailableSession checks the loader on a session whose refresh the provider
++// does not answer: it is kept, and the request answered 503, for one refresh period from the first
++// failure; past it the session is cleared and the request goes to sign in. A refresh that succeeds in
++// between starts the window again.
++func TestLoadSessionEndsLongUnavailableSession(t *testing.T) {
++	const refreshPeriod = 10 * time.Minute
++	now := time.Now()
++	createdAt := now.Add(-time.Hour)
++	var (
++		refreshErr error
++		cleared    bool
++	)
++	store := &fakeSessionStore{
++		LoadFunc: func(*http.Request) (*sessionsapi.SessionState, error) {
++			return &sessionsapi.SessionState{CreatedAt: &createdAt, RefreshToken: "refresh-token", Lock: &testLock{}}, nil
++		},
++		ClearFunc: func(http.ResponseWriter, *http.Request) error {
++			cleared = true
++			return nil
++		},
++		SaveFunc: func(http.ResponseWriter, *http.Request, *sessionsapi.SessionState) error { return nil },
++	}
++	loader := newStoredSessionLoader(&StoredSessionLoaderOptions{
++		SessionStore:  store,
++		RefreshPeriod: refreshPeriod,
++		RefreshSession: func(_ context.Context, ss *sessionsapi.SessionState) (bool, error) {
++			if refreshErr != nil {
++				return false, fmt.Errorf("unable to redeem refresh token: %w", refreshErr)
++			}
++			// A refresh replaces the refresh token; the store of the test keeps serving the old one.
++			ss.RefreshToken = "rotated-refresh-token"
++			return true, nil
++		},
++		ValidateSession: func(_ context.Context, ss *sessionsapi.SessionState) bool { return refreshErr == nil },
++	})
++	loader.unavailable.now = func() time.Time { return now }
++
++	serve := func() *middlewareapi.RequestScope {
++		cleared = false
++		scope := &middlewareapi.RequestScope{}
++		req := middlewareapi.AddRequestScope(httptest.NewRequest(http.MethodGet, "/", nil), scope)
++		loader.loadSession(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})).ServeHTTP(httptest.NewRecorder(), req)
++		return scope
++	}
++
++	refreshErr = retrieveError(http.StatusServiceUnavailable, "temporarily_unavailable")
++	scope := serve()
++	assert.True(t, scope.SessionUnavailable, "the first failure keeps the session")
++	assert.False(t, cleared)
++
++	now = now.Add(refreshPeriod)
++	scope = serve()
++	assert.True(t, scope.SessionUnavailable, "the session is kept for one refresh period")
++	assert.False(t, cleared)
++
++	refreshErr = nil
++	scope = serve()
++	assert.NotNil(t, scope.Session, "the provider is back and refreshes the session")
++
++	refreshErr = retrieveError(http.StatusInternalServerError, "invalid_request")
++	now = now.Add(time.Second)
++	scope = serve()
++	assert.True(t, scope.SessionUnavailable, "the refresh in between started the window again")
++	assert.False(t, cleared)
++
++	now = now.Add(refreshPeriod + time.Second)
++	scope = serve()
++	assert.False(t, scope.SessionUnavailable, "past one refresh period the session is not kept")
++	assert.Nil(t, scope.Session)
++	assert.True(t, cleared, "and its cookie is cleared, so the request goes to sign in")
++
++	scope = serve()
++	assert.True(t, scope.SessionUnavailable, "the ended session is forgotten: a new cookie with it starts again")
++	assert.False(t, cleared)
++}
++
++// TestSessionRefreshTimeoutFitsTheIngress checks that a request that waits for the lock and then
++// refreshes is answered well before ingress-nginx gives the auth subrequest up after its default
++// 60 seconds.
++func TestSessionRefreshTimeoutFitsTheIngress(t *testing.T) {
++	const ingressAuthTimeout = 60 * time.Second
++	assert.Less(t, sessionRefreshObtainTimeout+sessionRefreshTimeout, ingressAuthTimeout/2)
++}
++
++// TestLoadSessionBoundsTheRefresh checks the deadline of a refresh against a dex that takes its time:
++// a dex that does not answer at all is unavailable once the deadline passes, while the ingress still
++// waits, and the window of the session starts; a client that gives up does not cancel a refresh that
++// dex answers.
++func TestLoadSessionBoundsTheRefresh(t *testing.T) {
++	const refreshTimeout = 100 * time.Millisecond
++
++	newDex := func(t *testing.T, delay time.Duration) string {
++		t.Helper()
++		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++			select {
++			case <-r.Context().Done():
++				return
++			case <-time.After(delay):
++			}
++			w.Header().Set("Content-Type", "application/json")
++			_, _ = w.Write([]byte(`{"access_token":"access-token","token_type":"bearer","refresh_token":"rotated-refresh-token","expires_in":600}`))
++		}))
++		t.Cleanup(srv.Close)
++		return srv.URL
++	}
++
++	newLoader := func(tokenURL string, saved *string, cleared *bool) *storedSessionLoader {
++		createdAt := time.Now().Add(-time.Hour)
++		cfg := &oauth2.Config{ClientID: "dex-authenticator", ClientSecret: "secret", Endpoint: oauth2.Endpoint{TokenURL: tokenURL}}
++		return newStoredSessionLoader(&StoredSessionLoaderOptions{
++			SessionStore: &fakeSessionStore{
++				LoadFunc: func(*http.Request) (*sessionsapi.SessionState, error) {
++					return &sessionsapi.SessionState{CreatedAt: &createdAt, RefreshToken: "refresh-token", Lock: &testLock{}}, nil
++				},
++				SaveFunc: func(_ http.ResponseWriter, _ *http.Request, ss *sessionsapi.SessionState) error {
++					*saved = ss.RefreshToken
++					return nil
++				},
++				ClearFunc: func(http.ResponseWriter, *http.Request) error {
++					*cleared = true
++					return nil
++				},
++			},
++			RefreshPeriod: time.Minute,
++			RefreshSession: func(ctx context.Context, ss *sessionsapi.SessionState) (bool, error) {
++				token, err := cfg.TokenSource(ctx, &oauth2.Token{RefreshToken: ss.RefreshToken}).Token()
++				if err != nil {
++					return false, fmt.Errorf("unable to redeem refresh token: %w", fmt.Errorf("failed to get token: %w", err))
++				}
++				ss.RefreshToken = token.RefreshToken
++				return true, nil
++			},
++			// Validation may fetch the keys of dex, under the same deadline.
++			ValidateSession: func(ctx context.Context, _ *sessionsapi.SessionState) bool { return ctx.Err() == nil },
++		})
++	}
++
++	serve := func(ctx context.Context, loader *storedSessionLoader) *middlewareapi.RequestScope {
++		scope := &middlewareapi.RequestScope{}
++		req := middlewareapi.AddRequestScope(httptest.NewRequestWithContext(ctx, http.MethodGet, "/", nil), scope)
++		loader.loadSession(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})).ServeHTTP(httptest.NewRecorder(), req)
++		return scope
++	}
++
++	t.Run("dex does not answer", func(t *testing.T) {
++		var (
++			saved   string
++			cleared bool
++		)
++		loader := newLoader(newDex(t, 5*time.Second), &saved, &cleared)
++		loader.refreshTimeout = refreshTimeout
++
++		started := time.Now()
++		scope := serve(t.Context(), loader)
++		assert.Less(t, time.Since(started), 2*time.Second, "the refresh gives up at its own deadline")
++		assert.True(t, scope.SessionUnavailable, "a dex that does not answer is unavailable")
++		assert.False(t, cleared)
++		assert.Len(t, loader.unavailable.since, 1, "and the window of the session starts")
++	})
++
++	t.Run("client gives up", func(t *testing.T) {
++		var (
++			saved   string
++			cleared bool
++		)
++		// The default deadline of the loader, which dex answers well within.
++		loader := newLoader(newDex(t, 20*time.Millisecond), &saved, &cleared)
++
++		ctx, cancel := context.WithCancel(t.Context())
++		cancel()
++		scope := serve(ctx, loader)
++		assert.Equal(t, "rotated-refresh-token", saved, "the refresh dex answered is saved")
++		assert.NotNil(t, scope.Session)
++		assert.False(t, scope.SessionUnavailable)
++		assert.False(t, cleared)
++		assert.Empty(t, loader.unavailable.since)
++	})
++}
 diff --git a/pkg/middleware/stored_session.go b/pkg/middleware/stored_session.go
-index 53238f19..31002724 100644
+index 53238f19..6cb0328a 100644
 --- a/pkg/middleware/stored_session.go
 +++ b/pkg/middleware/stored_session.go
-@@ -49,6 +49,7 @@ func isFatalRefreshError(err error) bool {
+@@ -30,6 +30,15 @@ const (
+ 	// How long to wait after failing to obtain the lock before trying again.
+ 	// TODO: This should probably be configurable by the end user.
+ 	sessionRefreshRetryPeriod = 10 * time.Millisecond
++
++	// sessionRefreshTimeout bounds the refresh of a session at the provider and its validation
++	// (Deckhouse patch 002). ingress-nginx gives the auth subrequest 60 seconds by default and then
++	// answers 504 itself, so an answer of the proxy after that never reaches the user: a provider
++	// that drops packets would keep the session answering 504 for as long as it is down, and the end
++	// of the window of unavailableSince would never reach the browser either. 10 seconds is far above
++	// a refresh through dex, the upstream provider included, and with the wait for the lock
++	// (sessionRefreshObtainTimeout) well below the timeout of the ingress.
++	sessionRefreshTimeout = 10 * time.Second
+ )
+ 
+ // isFatalRefreshError checks if a refresh error indicates a revoked or
+@@ -49,6 +58,7 @@ func isFatalRefreshError(err error) bool {
  	fatalErrors := []string{
  		"invalid_grant",  // refresh token revoked, expired, or session terminated
  		"invalid_client", // client credentials no longer valid
@@ -838,7 +1186,40 @@ index 53238f19..31002724 100644
  	}
  
  	for _, fe := range fatalErrors {
-@@ -116,7 +117,13 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
+@@ -83,13 +93,18 @@ type StoredSessionLoaderOptions struct {
+ // If no session is found, the request will be passed to the nex handler.
+ // If a session was loader by a previous handler, it will not be replaced.
+ func NewStoredSessionLoader(opts *StoredSessionLoaderOptions) alice.Constructor {
+-	ss := &storedSessionLoader{
++	return newStoredSessionLoader(opts).loadSession
++}
++
++func newStoredSessionLoader(opts *StoredSessionLoaderOptions) *storedSessionLoader {
++	return &storedSessionLoader{
+ 		store:            opts.SessionStore,
+ 		refreshPeriod:    opts.RefreshPeriod,
+ 		sessionRefresher: opts.RefreshSession,
+ 		sessionValidator: opts.ValidateSession,
++		unavailable:      newUnavailableSince(),
++		refreshTimeout:   sessionRefreshTimeout,
+ 	}
+-	return ss.loadSession
+ }
+ 
+ // storedSessionLoader is responsible for loading sessions from cookie
+@@ -99,6 +114,11 @@ type storedSessionLoader struct {
+ 	refreshPeriod    time.Duration
+ 	sessionRefresher func(context.Context, *sessionsapi.SessionState) (bool, error)
+ 	sessionValidator func(context.Context, *sessionsapi.SessionState) bool
++	// unavailable bounds how long a session whose refresh the provider does not answer is kept
++	// (Deckhouse patch 002).
++	unavailable *unavailableSince
++	// refreshTimeout bounds the refresh and the validation that follows it (Deckhouse patch 002).
++	refreshTimeout time.Duration
+ }
+ 
+ // loadSession attempts to load a session as identified by the request cookies.
+@@ -116,7 +136,13 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
  		}
  
  		session, err := s.getValidatedSession(rw, req)
@@ -853,7 +1234,7 @@ index 53238f19..31002724 100644
  			// In the case when there was an error loading the session,
  			// we should clear the session
  			logger.Errorf("Error loading cookied session: %v, removing session", err)
-@@ -143,7 +150,7 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
+@@ -143,7 +169,7 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
  
  	err = s.refreshSessionIfNeeded(rw, req, session)
  	if err != nil {
@@ -862,7 +1243,7 @@ index 53238f19..31002724 100644
  	}
  
  	return session, nil
-@@ -165,11 +172,11 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
+@@ -165,11 +191,11 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
  	for !lockObtained {
  		select {
  		case <-ctx.Done():
@@ -876,13 +1257,23 @@ index 53238f19..31002724 100644
  			} else if errors.Is(err, sessionsapi.ErrLockNotObtained) {
  				time.Sleep(sessionRefreshRetryPeriod)
  				continue
-@@ -215,12 +222,13 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
+@@ -215,12 +241,23 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
  
  	// We are holding the lock and the session needs a refresh
  	logger.Printf("Refreshing session - User: %s; SessionAge: %s", session.User, session.Age())
 -	if err := s.refreshSession(rw, req, session); err != nil {
 -		logger.Errorf("Unable to refresh session: %v", err)
-+	refreshErr := s.refreshSession(rw, req, session)
++	// A refresh replaces the refresh token: the session is known by the one it had.
++	refreshToken := session.RefreshToken
++	// The refresh has a deadline of its own, so that a provider that does not answer is known as
++	// unavailable while the ingress still waits for the answer. A client that gives up does not
++	// cancel it: its outcome still counts in the window, and a rotated refresh token is still saved.
++	refreshCtx, cancelRefresh := context.WithTimeout(context.WithoutCancel(req.Context()), s.refreshTimeout)
++	defer cancelRefresh()
++	refreshErr := s.refreshSession(rw, req.WithContext(refreshCtx), session)
++	if !isProviderUnavailable(refreshErr) {
++		s.unavailable.forget(refreshToken)
++	}
 +	if refreshErr != nil {
 +		logger.Errorf("Unable to refresh session: %v", refreshErr)
  
@@ -893,7 +1284,7 @@ index 53238f19..31002724 100644
  			logger.Printf("Fatal refresh error detected (session revoked or invalid), clearing session for user: %s", session.User)
  
  			// Clear the session from storage (Redis) and remove the cookie
-@@ -229,7 +237,7 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
+@@ -229,7 +266,7 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
  			}
  
  			// Return error immediately to force re-authentication
@@ -902,24 +1293,31 @@ index 53238f19..31002724 100644
  		}
  
  		// For non-fatal errors (network issues, timeouts), keep the session
-@@ -237,7 +245,15 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
+@@ -237,7 +274,22 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
  	}
  
  	// Validate all sessions after any Redeem/Refresh operation (fail or success)
 -	return s.validateSession(req.Context(), session)
-+	validateErr := s.validateSession(req.Context(), session)
++	validateErr := s.validateSession(refreshCtx, session)
 +	if validateErr != nil && isProviderUnavailable(refreshErr) {
 +		// The provider did not say whether the refresh token is still good, and the session
 +		// cannot be trusted without the refresh: the stub of a session restored from the
 +		// cookie has no ID token, and the ID token of a stored session has expired. Clearing
 +		// the session would drop its cookie, the only copy of the refresh token of the stub.
++		// That lasts one refresh period from the first such failure: a provider that keeps
++		// answering 5xx for a session may never refresh it. Past it the error ends the session,
++		// and loadSession clears it, so the user signs in again.
++		if s.unavailable.failed(refreshToken, s.refreshPeriod) {
++			s.unavailable.forget(refreshToken)
++			return fmt.Errorf("session invalidated: the provider has not answered the refresh for longer than %s: %w", s.refreshPeriod, refreshErr)
++		}
 +		return fmt.Errorf("%w: %w", errRefreshUnavailable, refreshErr)
 +	}
 +	return validateErr
  }
  
  // needsRefresh determines whether we should attempt to refresh a session or not.
-@@ -250,7 +266,7 @@ func needsRefresh(refreshPeriod time.Duration, session *sessionsapi.SessionState
+@@ -250,7 +302,7 @@ func needsRefresh(refreshPeriod time.Duration, session *sessionsapi.SessionState
  func (s *storedSessionLoader) refreshSession(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) error {
  	refreshed, err := s.sessionRefresher(req.Context(), session)
  	if err != nil && !errors.Is(err, providers.ErrNotImplemented) {
@@ -929,10 +1327,23 @@ index 53238f19..31002724 100644
  
  	// HACK:
 diff --git a/pkg/middleware/stored_session_test.go b/pkg/middleware/stored_session_test.go
-index c913a4ef..7e8a38fa 100644
+index c913a4ef..32b4cef5 100644
 --- a/pkg/middleware/stored_session_test.go
 +++ b/pkg/middleware/stored_session_test.go
-@@ -590,7 +590,7 @@ var _ = Describe("Stored Session Suite", func() {
+@@ -480,8 +480,10 @@ var _ = Describe("Stored Session Suite", func() {
+ 				}
+ 
+ 				s := &storedSessionLoader{
+-					refreshPeriod: in.refreshPeriod,
+-					store:         store,
++					refreshPeriod:  in.refreshPeriod,
++					store:          store,
++					unavailable:    newUnavailableSince(),
++					refreshTimeout: sessionRefreshTimeout,
+ 					sessionRefresher: func(_ context.Context, ss *sessionsapi.SessionState) (bool, error) {
+ 						refreshed = true
+ 						switch ss.RefreshToken {
+@@ -590,7 +592,7 @@ var _ = Describe("Stored Session Suite", func() {
  						obtainError: sessionsapi.ErrLockNotObtained,
  					},
  				},
@@ -941,7 +1352,7 @@ index c913a4ef..7e8a38fa 100644
  				expectRefreshed:      false,
  				expectValidated:      false,
  				expectedLockObtained: true,
-@@ -711,7 +711,7 @@ var _ = Describe("Stored Session Suite", func() {
+@@ -711,7 +713,7 @@ var _ = Describe("Stored Session Suite", func() {
  					CreatedAt:    &now,
  					ExpiresOn:    &now,
  				},

@@ -90,7 +90,7 @@ index 00000000..1ef180ab
 +	require.ErrorContains(t, err, `invalid discoveryTimeout "soon"`)
 +}
 diff --git a/connector/oidc/oidc.go b/connector/oidc/oidc.go
-index e6a38a8a..a28f9d61 100644
+index 6776b7c3..6175dadc 100644
 --- a/connector/oidc/oidc.go
 +++ b/connector/oidc/oidc.go
 @@ -51,6 +51,12 @@ type Config struct {

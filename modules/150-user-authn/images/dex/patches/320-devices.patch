@@ -471,7 +471,7 @@ index 72a909f2..c17ad0de 100644
  
  	// The allow-lists of the client and the connector decide whether the user
 diff --git a/server/grants/refresh.go b/server/grants/refresh.go
-index 1c22995f..2d5236f7 100644
+index df68d06d..787aa588 100644
 --- a/server/grants/refresh.go
 +++ b/server/grants/refresh.go
 @@ -65,6 +65,13 @@ func (g *refresh) ConnectorID(ctx context.Context, req *Request, client storage.
@@ -496,7 +496,7 @@ index 1c22995f..2d5236f7 100644
  	}
  
  	// The connector may have returned another email or other groups: the
-@@ -286,7 +294,7 @@ func (g *refresh) endPair(ctx context.Context, userID, connectorID string) {
+@@ -288,7 +296,7 @@ func (g *refresh) endPair(ctx context.Context, userID, connectorID string) {
  	if err != nil && !errors.Is(err, storage.ErrNotFound) {
  		g.logger.ErrorContext(ctx, "failed to get offline sessions", "err", err)
  	}
@@ -505,7 +505,7 @@ index 1c22995f..2d5236f7 100644
  		refresh, err := g.storage.GetRefresh(ctx, ref.ID)
  		if err != nil {
  			continue
-@@ -375,7 +383,7 @@ func (g *refresh) sessionID(ctx context.Context, refreshToken *storage.RefreshTo
+@@ -377,7 +385,7 @@ func (g *refresh) sessionID(ctx context.Context, refreshToken *storage.RefreshTo
  		return "", &oauth2.Error{Type: oauth2.InvalidRequest, Status: http.StatusInternalServerError}
  	}
  
@@ -1009,10 +1009,10 @@ index 2ef6df5e..fc859c3c 100644
  			}
  
 diff --git a/server/server_identity_refresh_test.go b/server/server_identity_refresh_test.go
-index 14b376e9..8427600f 100644
+index 34ec03dd..8a057841 100644
 --- a/server/server_identity_refresh_test.go
 +++ b/server/server_identity_refresh_test.go
-@@ -151,6 +151,7 @@ func TestRefreshReadsStaleIdentity(t *testing.T) {
+@@ -167,6 +167,7 @@ func TestRefreshReadsStaleIdentity(t *testing.T) {
  				}
  				require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
  				assert.Equal(t, tc.wantUsername, decodeJWTClaims(t, resp.IDToken)["name"])

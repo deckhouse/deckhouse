@@ -558,8 +558,8 @@ the connector at refresh and none of this applies.
   none. A refresh offers the token's own credential first, then the shared one
   of the offline session, and writes a rotated credential back to the object it
   was read from. A request that lost the race for the shared credential
-  continues from the winner's successor (at most two more attempts, then a
-  server error: the credential is alive). A shared credential the provider
+  continues from the winner's successor (at most two more attempts, then
+  `temporarily_unavailable`: the credential is alive). A shared credential the provider
   refused and nobody rotated is dropped, so the next login of any client
   restores it. A credential rotated during a request that fails afterwards is
   still stored. Refreshes inside the reuse interval keep the stored credential.
@@ -573,21 +573,60 @@ the connector at refresh and none of this applies.
   holds for 10 s, and a call that outlives the lock lets a request on another
   replica take it and spend the same upstream credential. Half of the lock
   leaves room for the API calls under it and for clocks of the replicas that
-  differ. A provider slower than that gets 500, as an unreachable one; a
+  differ. A provider slower than that gets 503, as an unreachable one; a
   credential it rotated after the bound is lost, so the next refresh of that
   token is refused by the provider and answers `invalid_grant`.
-- `invalid_grant` on a refusal (behaviour change). When the provider refuses
-  the user at refresh, the token endpoint answers 400 `invalid_grant` ("The
-  identity provider refused to refresh the identity.") instead of 500: refresh
-  token refused (`invalid_grant`, GitHub's `bad_refresh_token`), user deleted
-  or deactivated, access token revoked, `connector.UserNotInRequiredGroupsError`.
-  `connector.ErrIdentityGone` carries that answer from LDAP (user not found, the
-  username now names another entry), Atlassian Crowd (`USER_NOT_FOUND`,
-  `INACTIVE_ACCOUNT`), GitHub, GitLab and Bitbucket Cloud (401 from the API)
-  and the local password store (user deleted or replaced). GitLab, GitHub,
-  OIDC, Google and Bitbucket wrap the token error with `%w`. A provider that
-  fails to answer (unreachable, 5xx, timeout) stays 500 and touches no stored
-  credential. The refresh token is kept either way.
+- Three answers to a failed upstream refresh (behaviour change). The token
+  endpoint answers:
+  - 400 `invalid_grant` ("The identity provider refused to refresh the
+    identity.") instead of 500 when the provider answered and the answer cannot
+    refresh the identity until the user logs in again: refresh token refused
+    (`invalid_grant`, GitHub's `bad_refresh_token`), any other 4xx answer to the
+    token request with an OAuth2 error of RFC 6749 §5.2 in its body
+    (`invalid_request`, `invalid_client`, `unauthorized_client`,
+    `unsupported_grant_type`, `invalid_scope`; `connector.OAuth2Refusal`) but
+    408 and 429, user deleted or deactivated, access token revoked,
+    `connector.UserNotInRequiredGroupsError`, nothing to refresh with (no
+    credential stored). `connector.ErrIdentityGone` carries the answer about the
+    user from LDAP (user not found, the username now names another entry),
+    Atlassian Crowd (`USER_NOT_FOUND`, `INACTIVE_ACCOUNT`), GitHub, GitLab and
+    Bitbucket Cloud (401 from the API) and the local password store (user
+    deleted or replaced). `connector.ErrRefreshRefused` carries the rest from
+    the OIDC connector: no upstream refresh token (the provider issued none, for
+    example with refresh tokens off for the client), a token response that
+    cannot be read, an ID token that does not verify for a reason other than
+    the keys (`aud`, `iss`, expiry, signature), an ID token or user info without
+    the claims of the user, user info refused with 4xx. GitLab, GitHub, OIDC,
+    Google and Bitbucket wrap the token error with `%w`.
+  - 503 `temporarily_unavailable` instead of 500 when the provider did not
+    answer: the connection failed or timed out, the provider answered 408, 429
+    or a 5xx status (`connector.Unavailable`; the OIDC connector marks a 429 or
+    5xx of user info with `connector.ErrUpstreamUnavailable`, since go-oidc
+    reports that status only in the text of the error), the OIDC connector could
+    not fetch the keys of the provider to verify the ID token of the answer
+    (the keys are fetched on every start of dex and every rotation of the keys;
+    go-oidc v3.21.0 passes that failure on only as the text `fetching keys`, so
+    the connector matches the text), or other clients kept rotating the shared
+    credential. Nothing stored is touched.
+  - 500 as before for a failure the connector does not explain (LDAP errors
+    other than a missing user, a plain error text, a 4xx answer to the token
+    request without an OAuth2 error of the provider, which a proxy in front of
+    the provider gives, `{"error":"Forbidden"}` of a Spring gateway among them)
+    and for the storage of dex.
+  The refresh token is kept either way. The `failed to refresh identity` line
+  is WARN for the first answer and ERROR for the others (260).
+
+  Limitation: the OIDC connector stores the refresh token the provider issued
+  only once it has built the identity from the answer (the connector data is
+  made at the end of `createIdentity`). When the provider has accepted the
+  refresh but building the identity fails for a temporary reason, dex answers
+  503 and drops the new refresh token: the keys of the provider cannot be
+  fetched to verify the ID token, user info answers 429 or 5xx, or user info
+  is unreachable or does not answer in time. A provider
+  whose refresh tokens serve once (Keycloak with "Revoke Refresh Token", Okta
+  after its grace period, Auth0 with reuse detection, which revokes the whole
+  family) then refuses the next refresh with the old token, and the session
+  ends with `invalid_grant` despite the 503.
 - SAML. The connector data of SAML is the identity of a login, not a
   credential. A SAML login replaces it on the offline session, and every
   refresh token refreshes to the offline session's, the latest login's; the
@@ -598,12 +637,13 @@ is actually minted. Kept anyway: the call is memoized per request, because the
 kubernetes storage reruns the refresh token updater on conflicts, which would
 spend a rotated upstream token twice.
 
-Not changed: a token left with no credential at all gets 500 until a login, as
-in upstream. Memory storage only (not Deckhouse): a refresh of a local user
+Not changed: memory storage only (not Deckhouse): a refresh of a local user
 deadlocks, as upstream does one step earlier.
 
 **Consumer in Deckhouse:** no config. kubeconfig clients and DexAuthenticator
 start a new login on `invalid_grant` instead of failing with a server error.
+DexAuthenticator keeps a session on 503 (and 500) for one `--cookie-refresh`
+period from the first failure (its patch 002).
 
 **Upstream status:** not upstream; the bugs fixed here (one credential shared
 by all clients, the request context) are present in v2.46 with sessions off.
@@ -882,7 +922,9 @@ stored before it, from the last login.
   `invalid_grant`. A refused credential alone ends only the token, as in 250;
 - a provider that does not answer leaves the stored claims served up to
   `identityRefresh.gracePeriod` past `maxAge` (default 0), and the refresh
-  fails with 500 after it, the token kept;
+  fails with 503 after it (500 for a failure the connector does not explain),
+  the token kept; an answer that cannot refresh the identity (250) is
+  `invalid_grant` at once;
 - a session login with stale claims signs a user of a provider in through the
   provider again, rather than spend here the provider credential the refresh
   tokens of the pair rotate (250); a local user's claims are read from the

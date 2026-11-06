@@ -1,5 +1,5 @@
 diff --git a/connector/oidc/oidc.go b/connector/oidc/oidc.go
-index aaaa6b2f..e6a38a8a 100644
+index 24a1a6dd..6776b7c3 100644
 --- a/connector/oidc/oidc.go
 +++ b/connector/oidc/oidc.go
 @@ -74,6 +74,12 @@ type Config struct {
@@ -1064,7 +1064,7 @@ index c2680d6d..fdcb40b9 100644
  		&deviceCode{storage: h.Storage, now: h.Now, logger: h.Logger},
  	)
 diff --git a/server/grants/refresh.go b/server/grants/refresh.go
-index d14e9ed8..3634384d 100644
+index fb2b5a9f..77d20841 100644
 --- a/server/grants/refresh.go
 +++ b/server/grants/refresh.go
 @@ -99,14 +99,13 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl

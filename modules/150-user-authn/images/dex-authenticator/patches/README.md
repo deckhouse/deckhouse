@@ -33,9 +33,24 @@ into the image. To run them, apply the patches to a clone of the tag and run `go
   which dex answers with 429 for a locked account) still clears the session and the cookie, and so does any other 4xx
   answer for such a session. Sign-out does not need dex and clears
   the cookie.
+  - The session is kept for one `--cookie-refresh` period (`idTokenTTL`) from the first refresh dex did not answer;
+    the next failure past it ends the session, clears the cookie and sends the user to sign in. dex answers 5xx for
+    a session it can never refresh too (its upstream provider failing for that user), and without the bound such a
+    user would get 500 on every reload. A refresh that succeeds or is refused starts the window again. The time of the
+    first failure is kept in the memory of the replica by the SHA-256 of the refresh token, which only a refresh
+    changes: the cookie cannot carry it (ingress-nginx passes no `Set-Cookie` of a 503 auth answer on), and the Redis
+    of a pod is its own. So each replica ends the session one period after the first failure it saw, a restart of the
+    pod starts its window again, at most 100000 sessions are tracked (one beyond them is kept as before), and one not
+    tried again for a day is forgotten.
+  - The refresh and the validation after it have a deadline of their own, 10 seconds, after which dex counts as not
+    answering. ingress-nginx gives the auth subrequest 60 seconds and then answers 504 itself, so without the deadline
+    a dex that drops packets kept the request hanging past it: the answer of the proxy, 503 or the end of the session,
+    never reached the user. 10 seconds is far above a refresh through dex, its upstream provider included, and with
+    the 5-second wait for the lock well below the timeout of the ingress. A client that gives up does not cancel the
+    refresh: its outcome still counts, and a rotated refresh token is still saved.
   - Behind ingress-nginx a 503 of the auth subrequest is neither 401 nor 403, so ingress-nginx does not redirect to
     the sign-in page: it answers its own 500 page and does not pass `Retry-After` on. The user reloads the page once
-    dex is back and is still signed in.
+    dex is back and is still signed in, or, past the period above, is sent to sign in.
   - Behind Envoy `ext_authz` (Gateway API) a 5xx of the authorizer is a failure of the check: Envoy answers
     `status_on_error`, 403 unless the route sets another status, and never passes the request on unless
     `failure_mode_allow` is set.

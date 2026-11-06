@@ -113,7 +113,7 @@ index 00000000..1d2635b1
 +	}
 +}
 diff --git a/oauthproxy.go b/oauthproxy.go
-index 96be355c..ce9f9d7a 100644
+index c1a6e777..71b72564 100644
 --- a/oauthproxy.go
 +++ b/oauthproxy.go
 @@ -760,6 +760,13 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
@@ -130,7 +130,7 @@ index 96be355c..ce9f9d7a 100644
  		if p.SkipProviderButton {
  			p.OAuthStart(rw, req)
  		} else {
-@@ -1427,6 +1434,21 @@ func isAjax(req *http.Request) bool {
+@@ -1420,6 +1427,21 @@ func isAjax(req *http.Request) bool {
  	return false
  }
  
