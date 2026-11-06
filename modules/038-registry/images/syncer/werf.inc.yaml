@@ -89,3 +89,5 @@ imageSpec:
       FUZZ_WORKDIR: /app
       FUZZ_PACKAGES: "./pkg/config"
       CGO_ENABLED: "0"
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-511c6c758dd92cef3962e741b3bd5ec0c0800e38193ac1563a00fd12fc600849",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 1,
+  "version": 2,
   "statements": [
     {
       "vulnerability": {
@@ -96,7 +96,25 @@
       "justification": "vulnerable_code_not_present",
       "impact_statement": "Уязвимость в BatchingProcessor из SDK логов OpenTelemetry: при переполненном буфере экспорта он в цикле повторяет экспорт и занимает CPU. Запись относится к otel/sdk/log v0.19.0 в /bin/opentofu (opentofu v1.12.7). /dhctl в этом образе собран с otel/sdk/log v0.22.0, где уязвимость исправлена. opentofu не отправляет логи через OpenTelemetry, BatchingProcessor в его сборку не входит.",
       "timestamp": "2026-10-08T15:30:00.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-85747",
+        "aliases": [
+          "GHSA-685w-q87j-wqw3"
+        ]
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/distribution@v2.8.3+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "CVE-2026-85747 относится к пакету github.com/docker/distribution/registry/client: функция (*manifests).Get не сверяет полученный манифест с запрошенным дайджестом, а прокси registry/proxy может раздавать подменённый манифест из кэша. Модуль есть только в /dhctl этого образа, /bin/opentofu его не содержит. В dhctl из модуля собран только пакет registry/client/auth/challenge: его импортирует github.com/google/go-containerregistry/pkg/v1/remote/transport, чтобы разобрать заголовок WWW-Authenticate. Пакетов registry/client и registry/proxy в бинарнике нет, это показывает go list -deps. Исправление вышло только в модуле distribution/v3, для v2 исправленной версии нет.",
+      "timestamp": "2026-11-06T15:24:04.000000000Z"
     }
   ],
-  "timestamp": "2026-09-24T12:09:15.000000000Z"
+  "timestamp": "2026-09-24T12:09:15.000000000Z",
+  "last_updated": "2026-11-06T15:24:04Z"
 }

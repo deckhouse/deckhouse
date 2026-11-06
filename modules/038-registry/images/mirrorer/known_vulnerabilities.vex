@@ -1,0 +1,26 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-7dce7470540938cf0902edb575278f1cafb545020505aaf78a6a6afbe30c2072",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-85747",
+        "aliases": [
+          "GHSA-685w-q87j-wqw3"
+        ]
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/distribution@v2.8.3+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "CVE-2026-85747 относится к пакету github.com/docker/distribution/registry/client: функция (*manifests).Get не сверяет полученный манифест с запрошенным дайджестом, а прокси registry/proxy может раздавать подменённый манифест из кэша. В бинарнике mirrorer из модуля собран только пакет registry/client/auth/challenge: его импортирует github.com/google/go-containerregistry/pkg/v1/remote/transport, чтобы разобрать заголовок WWW-Authenticate. Пакетов registry/client и registry/proxy в бинарнике нет, это показывает go list -deps. Исправление вышло только в модуле distribution/v3, для v2 исправленной версии нет.",
+      "timestamp": "2026-11-06T15:24:04.000000000Z"
+    }
+  ],
+  "timestamp": "2026-11-06T15:24:04Z"
+}

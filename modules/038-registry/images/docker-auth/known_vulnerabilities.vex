@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-b66e782eaf081e2e4cccd624e54715428fd768c9fcea1b71c27fa1f2bdf7f344",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 1,
+  "version": 2,
   "statements": [
     {
       "vulnerability": {
@@ -17,7 +17,25 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который помечен как unmaintained. Бинарник auth_server не импортирует golang.org/x/crypto/openpgp: модуль golang.org/x/crypto указан прямой зависимостью ради bcrypt в пакете authn, в графе импортов из него присутствуют только golang.org/x/crypto/bcrypt и golang.org/x/crypto/blowfish. Второй модуль в дереве исходников, auth_server/.build/genversion, используется только на этапе сборки (Makefile вызывает go run для вычисления Version и BuildID) и в образ не попадает; там golang.org/x/crypto v0.56.0 подтягивается транзитивно через github.com/go-git/go-git/v5 и его ssh-транспорт, подпакета openpgp в графе тоже нет. Пакеты openpgp, которые видны в графе genversion, принадлежат отдельному модулю github.com/ProtonMail/go-crypto и под данную advisory не подпадают. Ни grep по исходникам, ни go list -deps не находят golang.org/x/crypto/openpgp. Исправленной версии пакета нет; уязвимый код в данном компоненте не выполняется.",
       "timestamp": "2026-08-27T13:01:05.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-85747",
+        "aliases": [
+          "GHSA-685w-q87j-wqw3"
+        ]
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/distribution@v2.8.3+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "CVE-2026-85747 относится к пакету github.com/docker/distribution/registry/client: функция (*manifests).Get не сверяет полученный манифест с запрошенным дайджестом, а прокси registry/proxy может раздавать подменённый манифест из кэша. auth_server (сервер аутентификации реестра) импортирует из модуля только пакет registry/auth/token: из него берутся структуры заголовка и полей выдаваемого токена. Этот пакет зависит лишь от registry/auth, context и uuid. Пакетов registry/client и registry/proxy в бинарнике нет, это показывает go list -deps. Исправление вышло только в модуле distribution/v3, для v2 исправленной версии нет.",
+      "timestamp": "2026-11-06T15:24:04.000000000Z"
     }
   ],
-  "timestamp": "2026-10-01T09:08:28.000000000Z"
+  "timestamp": "2026-10-01T09:08:28.000000000Z",
+  "last_updated": "2026-11-06T15:24:04Z"
 }
