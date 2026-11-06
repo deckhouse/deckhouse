@@ -19,8 +19,8 @@ package clusterprojectrolebinding
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"k8s.io/client-go/util/flowcontrol"
 	"testing"
 	"time"
 
@@ -33,6 +33,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/flowcontrol"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -65,7 +66,7 @@ func newReconciler(t *testing.T, objs ...client.Object) (*Reconciler, client.Cli
 	t.Helper()
 	scheme := runtime.NewScheme()
 	for _, add := range []func(*runtime.Scheme) error{
-		rbacv1.AddToScheme, v1alpha3.AddToScheme,
+		corev1.AddToScheme, rbacv1.AddToScheme, v1alpha3.AddToScheme,
 	} {
 		if err := add(scheme); err != nil {
 			t.Fatal(err)
@@ -370,6 +371,7 @@ func TestReconcile_DefaultBudgetKeepsSmallFanOutsFast(t *testing.T) {
 // and the error is returned so the reconcile is retried.
 func TestReconcile_WritesStatusWhenANamespaceFails(t *testing.T) {
 	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
 	require.NoError(t, rbacv1.AddToScheme(scheme))
 	require.NoError(t, v1alpha3.AddToScheme(scheme))
 	c := fake.NewClientBuilder().
@@ -406,6 +408,99 @@ func TestReconcile_WritesStatusWhenANamespaceFails(t *testing.T) {
 	require.NotNil(t, ready, "the Ready condition must be written")
 	assert.Equal(t, corev1.ConditionFalse, ready.Status)
 	assert.Equal(t, "the RoleBinding could not be written in 1 namespace(s): orphan", ready.Message)
+}
+
+// namespaceTerminatingForbidden is the Forbidden error NamespaceLifecycle returns for a create in a
+// namespace that is being deleted, with the cause the API server sets on it. The fake client does
+// not emulate that admission plugin.
+func namespaceTerminatingForbidden(name string) error {
+	status := k8serrors.NewForbidden(rbacv1.Resource("rolebindings"), name,
+		errors.New("unable to create new content in namespace "+name+" because it is being terminated"))
+	status.ErrStatus.Details.Causes = []metav1.StatusCause{{
+		Type:    corev1.NamespaceTerminatingCause,
+		Message: "namespace is being terminated",
+	}}
+	return status
+}
+
+func terminatingNamespaceClient(t *testing.T, objs ...client.Object) (client.Client, *[]string) {
+	t.Helper()
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, rbacv1.AddToScheme(scheme))
+	require.NoError(t, v1alpha3.AddToScheme(scheme))
+	var created []string
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(objs...).
+		WithStatusSubresource(&v1alpha3.ClusterProjectRoleBinding{}).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Create: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+				if obj.GetNamespace() == "alpha-backend" {
+					created = append(created, obj.GetName())
+					return namespaceTerminatingForbidden(obj.GetName())
+				}
+				return cl.Create(ctx, obj, opts...)
+			},
+		}).
+		Build()
+	return c, &created
+}
+
+func assertCPRBReady(t *testing.T, c client.Client) {
+	t.Helper()
+	got := &v1alpha3.ClusterProjectRoleBinding{}
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "global-viewer"}, got))
+	assert.Equal(t, int32(1), got.Status.BoundProjects)
+	ready := findCondition(got.Status.Conditions, v1alpha3.ClusterProjectRoleBindingConditionReady)
+	require.NotNil(t, ready)
+	assert.Equal(t, corev1.ConditionTrue, ready.Status)
+}
+
+// A create in a namespace that is being deleted is forbidden by NamespaceLifecycle. That refusal is
+// not a failure: the binding stays Ready and the other namespaces still receive it.
+func TestReconcile_IgnoresCreateInATerminatingNamespace(t *testing.T) {
+	now := metav1.Now()
+	going := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name: "alpha-backend", Labels: map[string]string{v1alpha3.ResourceLabelProject: "alpha"},
+		DeletionTimestamp: &now, Finalizers: []string{"kubernetes"},
+	}}
+	c, created := terminatingNamespaceClient(t,
+		cprb("global-viewer", "d8:project:viewer"), project("alpha", false, "alpha", "alpha-backend"), going)
+	r := &Reconciler{Client: c}
+
+	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: "global-viewer"}})
+	require.NoError(t, err)
+	assert.NotEmpty(t, *created, "the create in the terminating namespace is attempted")
+	name := rolebinding.CPRBServiceName("global-viewer")
+	err = c.Get(context.Background(), client.ObjectKey{Namespace: "alpha-backend", Name: name}, &rbacv1.RoleBinding{})
+	assert.True(t, k8serrors.IsNotFound(err), "the forbidden create does not leave a RoleBinding")
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Namespace: "alpha", Name: name}, &rbacv1.RoleBinding{}))
+	assertCPRBReady(t, c)
+}
+
+// An existing RoleBinding in a namespace that is being deleted is still updated: NamespaceLifecycle
+// forbids only the create, so a subject revoked on the binding is taken off the RoleBinding.
+func TestReconcile_UpdatesRoleBindingInATerminatingNamespace(t *testing.T) {
+	now := metav1.Now()
+	going := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name: "alpha-backend", Labels: map[string]string{v1alpha3.ResourceLabelProject: "alpha"},
+		DeletionTimestamp: &now, Finalizers: []string{"kubernetes"},
+	}}
+	existing := serviceRoleBinding("global-viewer", "alpha-backend", "d8:project:viewer")
+	existing.Subjects = []rbacv1.Subject{{APIGroup: rbacv1.GroupName, Kind: "Group", Name: "former"}}
+	c, created := terminatingNamespaceClient(t,
+		cprb("global-viewer", "d8:project:viewer"), project("alpha", false, "alpha", "alpha-backend"), going, existing)
+	r := &Reconciler{Client: c}
+
+	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: "global-viewer"}})
+	require.NoError(t, err)
+	assert.Empty(t, *created, "an existing RoleBinding is updated, not created")
+
+	rb := &rbacv1.RoleBinding{}
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Namespace: "alpha-backend", Name: existing.Name}, rb))
+	assert.Equal(t, []rbacv1.Subject{{APIGroup: rbacv1.GroupName, Kind: "Group", Name: "platform"}}, rb.Subjects)
+	assertCPRBReady(t, c)
 }
 
 func findCondition(conditions []v1alpha3.Condition, condType string) *v1alpha3.Condition {

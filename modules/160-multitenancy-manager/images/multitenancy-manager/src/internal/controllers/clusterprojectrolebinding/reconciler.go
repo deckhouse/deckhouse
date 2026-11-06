@@ -176,7 +176,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	failedProjects := make(map[string]struct{})
 	written := 0
 	for ns, project := range target {
+		// NamespaceLifecycle forbids only a create in a namespace that is being deleted. An update
+		// or a delete of a RoleBinding that is already there still applies, which is how a subject
+		// or a role is revoked while the namespace terminates. A create the API server refuses
+		// because the namespace is terminating is not a failure of the binding.
 		wrote, err := r.upsertRoleBinding(ctx, cprb, ns, project)
+		if err != nil && k8serrors.HasStatusCause(err, corev1.NamespaceTerminatingCause) {
+			log.V(1).Info("the namespace is terminating, so a refused RoleBinding write is ignored", "namespace", ns)
+			continue
+		}
 		if err != nil {
 			errs = append(errs, err)
 			failed = append(failed, ns)
@@ -198,8 +206,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// The status is written whatever the fan-out did: a namespace that refuses the binding -- one
-	// that is missing or terminating -- must not leave every ClusterProjectRoleBinding of the cluster
-	// without its status. Ready says which namespaces failed, and the error below retries them.
+	// that is missing -- must not leave every ClusterProjectRoleBinding of the cluster without its
+	// status. A create refused because the namespace is terminating is not such a failure. Ready
+	// says which namespaces failed, and the error below retries them.
 	readyStatus, readyMessage := corev1.ConditionTrue, ""
 	if len(errs) > 0 {
 		readyStatus, readyMessage = corev1.ConditionFalse, rolebinding.FanOutFailureMessage(failed, pruneErr != nil)
@@ -315,9 +324,8 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // projectNamespaceCreated lets through the creation of a project namespace. A main namespace deleted
 // and created again by the project reconcile leaves the namespace set of the project as it was, so
-// the project watch does not see it, and the retries of the fan-out into the namespace while it was
-// terminating have backed off by then. Without this watch the RoleBindings would come back into the
-// namespace only on the next retry, minutes later.
+// the project watch does not see it, and a create into the namespace is refused while it terminates.
+// Without this watch the RoleBindings would come back into the namespace only on some later reconcile.
 func projectNamespaceCreated() predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
