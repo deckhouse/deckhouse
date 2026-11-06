@@ -42,7 +42,7 @@ description: Архитектура модуля cni-flannel в Deckhouse Platfo
 
 1. **Flannel (CNI-плагин)** — исполняемый файл, запускаемый компонентом containerd в соответствии со [спецификацией CNI](https://www.cni.dev/docs/spec/#cni-operations), например ADD при создании сетевого пространства имён пода и DEL при его удалении.
 
-   При запуске компонент читает параметры подсети из файла `/run/flannel/subnet.env` и делегирует создание сетевого интерфейса пода CNI-плагину `bridge`, который, в свою очередь, запрашивает выделение IP-адреса у плагина IP Address Management ([IPAM](../../glossary.html#sdn-ipam)) `host-local`. Оба плагина, `bridge` и `host-local`, являются стандартными [Open Source-плагинами CNI](https://github.com/containernetworking/plugins), устанавливаемыми на каждый узел кластера независимо от этого модуля, в рамках установки kubelet.
+   При запуске компонент читает параметры подсети из файла `/run/flannel/subnet.env` и делегирует создание сетевого интерфейса пода CNI-плагину `bridge`, который, в свою очередь, запрашивает выделение IP-адреса у плагина IP Address Management ([IPAM](../../glossary.html#ipam)) `host-local`. Оба плагина, `bridge` и `host-local`, являются стандартными [Open Source-плагинами CNI](https://github.com/containernetworking/plugins), устанавливаемыми на каждый узел кластера независимо от этого модуля, в рамках установки kubelet.
 
 ## Взаимодействия модуля
 

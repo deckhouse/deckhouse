@@ -14,7 +14,7 @@ lang: ru
 
 Блок [`.spec.settings.virtualMachineCIDRs`](/modules/virtualization/configuration.html#parameters-virtualmachinecidrs) в настройках модуля задаёт подсети, из которых машины получают IP-адреса. Доступны все адреса подсети, кроме первого и последнего.
 
-Если в модуле [`sdn`](/modules/sdn/) для основной сети кластера настроен пул адресов, адресом машины в этой сети управляет общий [IPAM](../../../glossary.html#sdn-ipam) этого модуля, то есть тот же ресурс IPAddress, что и для [дополнительных сетей](../../../glossary.html#additional-network). Адрес запрашивается автоматически, а существующие машины переходят на общий IPAM без смены адресов и без перезапуска.
+Если в модуле [`sdn`](/modules/sdn/) для основной сети кластера настроен пул адресов, адресом машины в этой сети управляет общий [IPAM](../../../glossary.html#ipam) этого модуля, то есть тот же ресурс IPAddress, что и для [дополнительных сетей](../../../glossary.html#additional-network). Адрес запрашивается автоматически, а существующие машины переходят на общий IPAM без смены адресов и без перезапуска.
 
 {% alert level="warning" %}
 В кластере с общим IPAM ресурсы [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) и [VirtualMachineIPAddressLease](/modules/virtualization/cr.html#virtualmachineipaddresslease), а также параметр [`.spec.virtualMachineIPAddressName`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-virtualmachineipaddressname) устарели. Они продолжают работать и описаны в разделах ниже, но адресом основной сети новых машин управляет общий IPAM, о котором рассказывает раздел [IPAM для основной сети](#ipam-для-основной-сети).

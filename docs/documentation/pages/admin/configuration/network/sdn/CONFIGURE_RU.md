@@ -379,7 +379,7 @@ right-worker-b23d3a26-5fb4b-h2bkv-vlan-900-60f3dc    Deckhouse   right-worker-b2
 
 ### IPAM для дополнительных сетей
 
-Механизм [IPAM](../../../../glossary.html#sdn-ipam) (IP Address Management) позволяет выделять IPv4-адреса из пулов и назначать их на дополнительные сетевые интерфейсы подов, подключаемых к [кластерным сетям](#создание-общедоступной-кластерной-сети) и [сетям проекта](#создание-сети-проекта-пользовательской-сети).
+Механизм [IPAM](../../../../glossary.html#ipam) (IP Address Management) позволяет выделять IPv4-адреса из пулов и назначать их на дополнительные сетевые интерфейсы подов, подключаемых к [кластерным сетям](#создание-общедоступной-кластерной-сети) и [сетям проекта](#создание-сети-проекта-пользовательской-сети).
 
 #### Принципы и особенности работы IPAM в DP
 
@@ -722,7 +722,7 @@ d8 k label namespace mydpdk direct-nic-access.network.deckhouse.io/enabled=""
 
 [Системные сети](../../../../glossary.html#system-network) (сервисные сети) предназначены для служебного трафика на уровне узлов (например, для нужд хранилища, управления и т. д.) и не используются как [дополнительные сети](../../../../glossary.html#additional-network) подов.
 
-Дополнительные сервисные сети создаются на узлах кластера поверх существующих [underlay-сетей](../../../../glossary.html#underlay-network). Для этого используется кастомный ресурс [SystemNetwork](/modules/sdn/cr.html#systemnetwork). Системные сети получают IP-адреса из [ClusterIPAddressPool](/modules/sdn/cr.html#clusteripaddresspool) при настройке [IPAM](../../../../glossary.html#sdn-ipam).
+Дополнительные сервисные сети создаются на узлах кластера поверх существующих [underlay-сетей](../../../../glossary.html#underlay-network). Для этого используется кастомный ресурс [SystemNetwork](/modules/sdn/cr.html#systemnetwork). Системные сети получают IP-адреса из [ClusterIPAddressPool](/modules/sdn/cr.html#clusteripaddresspool) при настройке [IPAM](../../../../glossary.html#ipam).
 
 Принципы и особенности работы системных сетей:
 

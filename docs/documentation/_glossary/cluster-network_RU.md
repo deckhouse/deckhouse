@@ -4,6 +4,6 @@ description: Дополнительная программно-определя�
 lang: ru
 ---
 
-Примеры кластерной сети: публичная WAN-сеть или shared-сеть для обмена трафиком между [проектами](glossary.html#project). Администратор создаёт её с помощью объекта [ClusterNetwork](/modules/sdn/cr.html#clusternetwork) модуля [`sdn`](/modules/sdn/) и при необходимости включает для неё [IPAM](glossary.html#sdn-ipam) с пулом адресов в масштабе кластера. Чтобы использовать такую сеть в подах приложений, обратитесь к администратору кластера. Второй вид [дополнительной сети](glossary.html#additional-network) — [сеть проекта](glossary.html#project-network).
+Примеры кластерной сети: публичная WAN-сеть или shared-сеть для обмена трафиком между [проектами](glossary.html#project). Администратор создаёт её с помощью объекта [ClusterNetwork](/modules/sdn/cr.html#clusternetwork) модуля [`sdn`](/modules/sdn/) и при необходимости включает для неё [IPAM](glossary.html#ipam) с пулом адресов в масштабе кластера. Чтобы использовать такую сеть в подах приложений, обратитесь к администратору кластера. Второй вид [дополнительной сети](glossary.html#additional-network) — [сеть проекта](glossary.html#project-network).
 
 Подробнее в разделе [«Программно-определяемые сети (SDN)»](admin/configuration/network/sdn/).
