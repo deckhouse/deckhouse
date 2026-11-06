@@ -40,30 +40,30 @@ func TestSudoOverTheDefaultBackend(t *testing.T) {
 	}{
 		{
 			name: "sudo works",
-			node: newFakeNode().on("true").succeeds(),
+			node: newFakeNode().on("sudo true").succeeds(),
 		},
 		{
 			// What sudo itself said, rather than dhctl's paraphrase of it.
 			name:     "a password is required",
-			node:     newFakeNode().on("true").exits(1).stderr("sudo: a password is required"),
+			node:     newFakeNode().on("sudo true").exits(1).stderr("sudo: a password is required"),
 			wantErr:  "sudo: a password is required",
 			wantPerm: true,
 		},
 		{
 			name:     "the user is not in sudoers",
-			node:     newFakeNode().on("true").exits(1).stderr("user is not in the sudoers file"),
+			node:     newFakeNode().on("sudo true").exits(1).stderr("user is not in the sudoers file"),
 			wantErr:  "user is not in the sudoers file",
 			wantPerm: true,
 		},
 		{
 			// 255 is the SSH transport itself, which says nothing about sudo.
 			name:    "the transport failed",
-			node:    newFakeNode().on("true").exits(255),
+			node:    newFakeNode().on("sudo true").exits(255),
 			wantErr: "the command did not complete",
 		},
 		{
 			name:    "the session died",
-			node:    newFakeNode().on("true").fails(errors.New("ssh: connection lost")),
+			node:    newFakeNode().on("sudo true").fails(errors.New("ssh: connection lost")),
 			wantErr: "the command did not complete",
 		},
 	}

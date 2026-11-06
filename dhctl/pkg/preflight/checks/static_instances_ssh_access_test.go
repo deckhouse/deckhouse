@@ -336,9 +336,7 @@ func (p *switchingSSHProvider) SwitchClient(_ context.Context, sess *session.Ses
 		return nil, p.switchErr
 	}
 	p.switched = append(p.switched, sess.Host()+"|"+sess.BastionHost)
-	node := newFakeNode().
-		on("sudo -n true").succeeds().
-		on("true").succeeds()
+	node := newFakeNode().on("sudo true").succeeds()
 	return &fakeSSHClient{sess: sess, node: node}, nil
 }
 

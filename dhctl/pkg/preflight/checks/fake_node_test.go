@@ -76,7 +76,7 @@ func newFakeNode() *fakeNode {
 //
 //	newFakeNode().
 //		on("command -v sudo").prints("/usr/bin/sudo").
-//		on("sudo -n true").exits(1).stderr("sudo: a password is required")
+//		on("sudo true").exits(1).stderr("sudo: a password is required")
 func (n *fakeNode) on(commandLine string) *fakeNode {
 	n.current, n.currentIsScript = commandLine, false
 	if _, declared := n.answers[commandLine]; !declared {
@@ -182,7 +182,12 @@ func (e *fakeSSHExitError) ExitStatus() int { return e.status }
 
 // libcon.Interface
 
+// Command refuses a literal sudo: it does not answer the password prompt the way Sudo() does, so a
+// check written that way fails on every node that asks for a become password.
 func (n *fakeNode) Command(name string, args ...string) libcon.Command {
+	if name == "sudo" {
+		panic("fakeNode: run the command through Sudo() instead of a literal sudo")
+	}
 	return &fakeCommand{node: n, line: strings.TrimSpace(name + " " + strings.Join(args, " "))}
 }
 
@@ -220,8 +225,10 @@ func (c *fakeCommand) CombinedOutput(context.Context) ([]byte, error) {
 func (c *fakeCommand) StdoutBytes() []byte { return []byte(c.answer.stdout) }
 func (c *fakeCommand) StderrBytes() []byte { return []byte(c.answer.stderr) }
 
-func (c *fakeCommand) Cmd(context.Context)  {}
-func (c *fakeCommand) Sudo(context.Context) {}
+func (c *fakeCommand) Cmd(context.Context) {}
+
+// Sudo records the command as "sudo <command line>", so a test declares and asserts it that way.
+func (c *fakeCommand) Sudo(context.Context) { c.line = "sudo " + c.line }
 
 func (c *fakeCommand) OnCommandStart(func())          {}
 func (c *fakeCommand) WithEnv(map[string]string)      {}

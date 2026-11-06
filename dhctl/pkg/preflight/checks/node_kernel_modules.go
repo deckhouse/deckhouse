@@ -95,13 +95,18 @@ func (c NodeKernelModulesCheck) Run(ctx context.Context) (string, error) {
 // which would have this check refuse a kernel that already has what Deckhouse needs.
 //
 // Only when the module is absent is modprobe asked, and then as a dry run: -n loads nothing and -q
-// keeps it quiet, so the question costs nothing and changes nothing on the node.
+// keeps it quiet, so the question costs nothing and changes nothing on the node. It goes through
+// Sudo rather than a literal "sudo" in the command line: only Sudo answers a password prompt with
+// the become password, and a literal sudo on such a node fails and reports every module missing.
 func moduleAvailable(ctx context.Context, nodeInterface libcon.Interface, module string) bool {
 	if err := nodeInterface.Command("test", "-d", "/sys/module/"+module).Run(ctx); err == nil {
 		return true
 	}
 
-	return nodeInterface.Command("sudo", "modprobe", "-n", "-q", module).Run(ctx) == nil
+	cmd := nodeInterface.Command("modprobe", "-n", "-q", module)
+	cmd.Sudo(ctx)
+
+	return cmd.Run(ctx) == nil
 }
 
 func NodeKernelModules(metaConfig *config.MetaConfig, nodeInterface NodeInterfaceFunc) preflight.Check {
