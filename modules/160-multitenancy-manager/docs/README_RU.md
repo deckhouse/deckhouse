@@ -202,6 +202,7 @@ Deckhouse Platform регистрирует следующие cluster-wide-ре
 | `loadbalancerclasses` | Значение `loadbalancerclass` | Service `.spec.loadBalancerClass` (для сервисов типа `LoadBalancer`) | `FillEmpty` |
 | `clusterissuers` | ClusterIssuer (cert-manager.io) | Certificate `.spec.issuerRef.name`; Ingress: аннотация `cert-manager.io/cluster-issuer` | `FillEmpty` или `None` |
 | `clusterroles` | ClusterRole (rbac.authorization.k8s.io) | RoleBinding `.roleRef.name` | `None` |
+| `applicationpackages` | ApplicationPackage (deckhouse.io) | Application `.spec.packageName` | `None` |
 
 Регистрация `clusterroles` исключает все ClusterRole без лейбла `rbac.deckhouse.io/delegatable: "true"`. По умолчанию RoleBinding в проекте может ссылаться на роли `d8:namespace:*` и `d8:project:*`, устаревшие псевдонимы `d8:use:role:*` и роли `user-authz:user`, `user-authz:privileged-user`, `user-authz:editor` и `user-authz:admin` упрощённой модели.
 

@@ -5,6 +5,8 @@ git:
   to: /deckhouse
   includePaths:
   - candi
+  excludePaths:
+  - '**/AGENTS.md'
 {{ .Files.Get (printf "tools/build_includes/candi-cloud-providers-%s.yaml" .Env) }}
 {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 - add: /deckhouse-controller/crds

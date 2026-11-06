@@ -47,6 +47,50 @@ d8 k get ap redis \
 `MetadataLoaded=True` в выводе означает, что OpenAPI-схема пакета, описание и требования успешно загружены из репозитория. Версию пакета с `MetadataLoaded=False` нельзя установить, пока не загружены метаданные.
 {% endalert %}
 
+### Пакеты, доступные в проекте
+
+Если включён модуль `multitenancy-manager`, в каждом неймспейсе проекта есть объект [AvailableClusterResource](/modules/multitenancy-manager/cr.html#availableclusterresource) с именем `applicationpackages`, в котором перечислены пакеты, доступные проекту. В отличие от объектов ApplicationPackage, его можно прочитать с ролями неймспейса. Чтобы его просмотреть, выполните следующую команду:
+
+```bash
+d8 k get available applicationpackages -n <NAMESPACE> -o yaml
+```
+
+Пример вывода (сокращённый):
+
+```yaml
+status:
+  grantedResourceKind: ApplicationPackage
+  availableCount: 2
+  available:
+    - name: postgres
+      fields:
+        availableRepositories:
+          - my-registry
+        releaseChannels:
+          my-registry:
+            stable: v15.0.0
+    - name: redis
+      fields:
+        availableRepositories:
+          - my-registry
+        releaseChannels:
+          my-registry:
+            alpha: v7.3.0
+            stable: v7.2.0
+```
+
+В поле `fields.availableRepositories` перечислены репозитории, в которых доступен пакет, а в поле `fields.releaseChannels` — версии пакета на каналах обновлений каждого репозитория.
+
+В списке версий пакетов (`d8 k get apv`) есть и пакеты, недоступные проекту.
+
+Application с пакетом, который недоступен проекту, отклоняется с сообщением:
+
+```text
+[multitenancy] Application "<APPLICATION_NAME>" references "<PACKAGE_NAME>" which is not available to project "<PROJECT_NAME>". Ask the cluster administrator to grant it.
+```
+
+Пакеты, доступные проекту, администратор кластера выбирает с помощью ClusterResourceGrantPolicy для ресурса `applicationpackages` (подробнее — в разделе [«Доступ к пакетам»](../../admin/configuration/marketplace/package-access.html)). По умолчанию проекту доступны все пакеты. Приложение, установленное до того, как его пакет стал недоступен проекту, продолжает работать.
+
 ## Установка приложения
 
 Чтобы установить приложение, создайте объект [Application](../../reference/api/cr.html#application) в нужном неймспейсе.

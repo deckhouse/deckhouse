@@ -1,0 +1,62 @@
+{{- /*
+  ApplicationPackage is registered as a grantable cluster resource of multitenancy-manager: a project
+  sees the application packages it may install and cannot install the others.
+
+  The definition makes multitenancy-manager render the AvailableClusterResource "applicationpackages"
+  into every project namespace: the packages available to the project, the repositories each one is in
+  and the versions on their release channels. Project users read it with their namespace roles, while
+  ApplicationPackage itself is cluster-scoped and closed to them. status.usedBy stays out of the
+  catalog on purpose: it names the applications of every project and the namespaces they are in.
+
+  The reference makes the /is-granted webhook of multitenancy-manager refuse an Application whose
+  spec.packageName is not available to the project. The webhook skips the deckhouse-controller, the
+  system service accounts and system:masters; every other user is checked, a cluster administrator who
+  holds the rights through RBAC included. On UPDATE it lets through the package the Application
+  already had, so an application installed before its package was taken away from the project keeps
+  running, and the d8_cluster_objects_grant_violated metric shows it.
+
+  defaultAvailability: All keeps every package available to every project until a
+  ClusterResourceGrantPolicy narrows the list, so enabling multitenancy-manager takes nothing away.
+
+  Both kinds are served by the CRDs of multitenancy-manager, and a release with an object of a kind
+  that is not served fails, so the objects are rendered only while the module is enabled and its CRDs
+  are served. addon-operator installs the CRDs of a module being enabled before it reruns the modules.
+*/ -}}
+{{- if and (.Values.global.enabledModules | has "multitenancy-manager") (.Capabilities.APIVersions.Has "multitenancy.deckhouse.io/v1alpha1/GrantableClusterResourceDefinition") (.Capabilities.APIVersions.Has "multitenancy.deckhouse.io/v1alpha1/GrantableClusterResourceReference") }}
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceDefinition
+metadata:
+  name: applicationpackages
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  grantedResource:
+    apiGroup: deckhouse.io
+    kind: ApplicationPackage
+  enforcement: Managed
+  defaultAvailability: All
+  catalogFields:
+  - name: availableRepositories
+    path: $.status.availableRepositories
+  - name: releaseChannels
+    path: $.status.releaseChannels
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: applicationpackages-application
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  grantableClusterResourceName: applicationpackages
+  rule:
+    apiGroups:
+    - deckhouse.io
+    apiVersions:
+    - "*"
+    resources:
+    - applications
+  fieldPaths:
+  # The package is required and has no default, so the field is only validated.
+  - path: $.spec.packageName
+    defaulting: None
+{{- end }}

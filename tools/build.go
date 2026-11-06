@@ -66,6 +66,7 @@ var testsExcludes = []string{
 	"images",
 	"webhooks",
 	"crds",
+	"**/AGENTS.md",
 }
 
 var defaultModulesExcludes = []string{
@@ -89,11 +90,19 @@ var defaultModulesExcludes = []string{
 	"values_matrix_test.yaml",
 	".build.yaml",
 	"e2e",
+	// Guides for AI agents are for the repository only and never go into an image.
+	"**/AGENTS.md",
+}
+
+// candiExcludes keeps the guides for AI agents out of the images that take candi.
+var candiExcludes = []string{
+	"**/AGENTS.md",
 }
 
 var nothingButGoHooksExcludes = []string{
 	"**/*_test.go",
 	"**/*.sh",
+	"**/AGENTS.md",
 }
 
 var stageDependenciesSetup = map[string][]string{
@@ -798,6 +807,7 @@ func (e *executor) executeEdition(editionName string) {
 			SaveTo:            candiCloudProviders,
 			Dir:               "modules",
 			Prefix:            prefix,
+			ExcludePaths:      candiExcludes,
 			StageDependencies: stageDependenciesInstall,
 			AvailableModules:  availableModules,
 		}
@@ -805,6 +815,7 @@ func (e *executor) executeEdition(editionName string) {
 		writeSettingCandi := writeSettings{
 			Edition:           editionName,
 			SaveTo:            candiFileName,
+			ExcludePaths:      candiExcludes,
 			StageDependencies: stageDependenciesInstall,
 		}
 		if bi.SkipCandi == nil || !*bi.SkipCandi {

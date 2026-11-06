@@ -47,6 +47,50 @@ d8 k get ap redis \
 If you see `MetadataLoaded=True` in the output, it means that the package's OpenAPI schema, description, and requirements were successfully loaded from the repository. A package version with `MetadataLoaded=False` cannot be installed until the metadata is loaded.
 {% endalert %}
 
+### Packages available in a project
+
+If the `multitenancy-manager` module is enabled, each project namespace has an [AvailableClusterResource](/modules/multitenancy-manager/cr.html#availableclusterresource) named `applicationpackages` that lists the packages available to the project. Unlike ApplicationPackage objects, it can be read with the roles of the namespace. To view it, use the following command:
+
+```bash
+d8 k get available applicationpackages -n <NAMESPACE> -o yaml
+```
+
+Example output (abridged):
+
+```yaml
+status:
+  grantedResourceKind: ApplicationPackage
+  availableCount: 2
+  available:
+    - name: postgres
+      fields:
+        availableRepositories:
+          - my-registry
+        releaseChannels:
+          my-registry:
+            stable: v15.0.0
+    - name: redis
+      fields:
+        availableRepositories:
+          - my-registry
+        releaseChannels:
+          my-registry:
+            alpha: v7.3.0
+            stable: v7.2.0
+```
+
+The `fields.availableRepositories` field lists the package repositories that provide the package, and `fields.releaseChannels` lists the package versions on the release channels of each repository.
+
+The list of package versions (`d8 k get apv`) also includes the packages that are not available to the project.
+
+An Application of a package that is not available to the project is rejected with the following message:
+
+```text
+[multitenancy] Application "<APPLICATION_NAME>" references "<PACKAGE_NAME>" which is not available to project "<PROJECT_NAME>". Ask the cluster administrator to grant it.
+```
+
+The cluster administrator selects the packages available to a project with a ClusterResourceGrantPolicy for the `applicationpackages` resource (for details, refer to ["Package access"](../../admin/configuration/marketplace/package-access.html)). By default, every package is available to every project. An application installed before its package became unavailable to the project keeps working.
+
 ## Installing an application
 
 To install an application, create an [Application](../../reference/api/cr.html#application) object in the target namespace.

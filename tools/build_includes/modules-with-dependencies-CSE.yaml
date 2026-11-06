@@ -4,6 +4,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -12,6 +13,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -20,6 +22,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -28,6 +31,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -36,6 +40,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -44,6 +49,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -52,6 +58,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -60,6 +67,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -68,6 +76,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -76,6 +85,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -84,6 +94,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -92,6 +103,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -100,6 +112,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -108,6 +121,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -116,6 +130,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -124,6 +139,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -132,6 +148,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -140,6 +157,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -148,6 +166,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -156,6 +175,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -164,6 +184,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -172,6 +193,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -180,6 +202,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -188,6 +211,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -196,6 +220,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -204,6 +229,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -212,6 +238,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -220,6 +247,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -228,6 +256,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -236,6 +265,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -244,6 +274,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -252,6 +283,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'
@@ -260,6 +292,7 @@
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
+    - '**/AGENTS.md'
   stageDependencies:
     install:
         - '**/*'

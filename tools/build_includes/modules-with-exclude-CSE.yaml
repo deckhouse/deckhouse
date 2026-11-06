@@ -20,6 +20,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -44,6 +45,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -68,6 +70,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -92,6 +95,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -116,6 +120,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -140,6 +145,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -164,6 +170,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -188,6 +195,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -212,6 +220,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -236,6 +245,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -260,6 +270,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -284,6 +295,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -308,6 +320,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -332,6 +345,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -356,6 +370,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -380,6 +395,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -404,6 +420,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -428,6 +445,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -452,6 +470,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -476,6 +495,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -500,6 +520,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -524,6 +545,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -548,6 +570,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -572,6 +595,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -596,6 +620,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -625,6 +650,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -649,6 +675,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -673,6 +700,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -697,6 +725,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -721,6 +750,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -745,6 +775,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -789,6 +820,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -813,6 +845,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -837,6 +870,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -861,6 +895,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -890,6 +925,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -919,6 +955,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -953,6 +990,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -977,6 +1015,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -1001,6 +1040,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -1025,6 +1065,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -1049,6 +1090,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -1073,6 +1115,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -1097,6 +1140,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -1196,6 +1240,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -1220,6 +1265,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -1274,6 +1320,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -1313,6 +1360,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -1337,6 +1385,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -1361,6 +1410,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -1385,6 +1435,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -1409,6 +1460,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -1433,6 +1485,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -1472,6 +1525,7 @@
     - values_matrix_test.yaml
     - .build.yaml
     - e2e
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'

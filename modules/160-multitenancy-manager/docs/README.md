@@ -195,6 +195,7 @@ Deckhouse Platform registers the following cluster-wide resources:
 | `loadbalancerclasses` | `loadbalancerclass` value | Service `.spec.loadBalancerClass` (for services of the `LoadBalancer` type) | `FillEmpty` |
 | `clusterissuers` | ClusterIssuer (cert-manager.io) | Certificate `.spec.issuerRef.name`; Ingress: `cert-manager.io/cluster-issuer` annotation | `FillEmpty` or `None` |
 | `clusterroles` | ClusterRole (rbac.authorization.k8s.io) | RoleBinding `.roleRef.name` | `None` |
+| `applicationpackages` | ApplicationPackage (deckhouse.io) | Application `.spec.packageName` | `None` |
 
 The `clusterroles` registration excludes every ClusterRole without the `rbac.deckhouse.io/delegatable: "true"` label. By default, a RoleBinding in a project can reference the `d8:namespace:*` and `d8:project:*` roles, the deprecated `d8:use:role:*` aliases, and the `user-authz:user`, `user-authz:privileged-user`, `user-authz:editor` and `user-authz:admin` roles of the basic model.
 

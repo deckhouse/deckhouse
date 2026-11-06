@@ -6,6 +6,8 @@ git:
   to: /deckhouse
   includePaths:
   - candi
+  excludePaths:
+  - '**/AGENTS.md'
 {{ .Files.Get (printf "tools/build_includes/candi-cloud-providers-%s.yaml" .Env) | include "git_without_install_dependencies" }}
 {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) | include "git_without_install_dependencies" }}
 import:

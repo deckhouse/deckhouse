@@ -23,7 +23,8 @@ A cluster administrator:
 
 1. Connects a package repository by creating a [PackageRepository](../../../reference/api/cr.html#packagerepository) resource.
 2. Monitors the repository scanning operations by Marketplace, discovering available packages.
-3. Grants users the permissions to view package versions and to create Application objects in their namespaces.
+3. Grants users the permissions to create Application objects in their namespaces. Any authenticated user can view package versions.
+4. If needed, chooses the packages available in projects.
 
 Users interact with packages through the [Application object](../../../reference/api/cr.html#application).
 
@@ -42,3 +43,5 @@ The following resources are used for working with the Marketplace:
 The ["Package repositories"](package-repository.html) section describes how to connect a repository and check its status.
 
 The ["Scanning"](scanning.html) section describes how to monitor scanning operations and trigger a scanning manually.
+
+The ["Package access"](package-access.html) section describes how to choose the packages available in projects.

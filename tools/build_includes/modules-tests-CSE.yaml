@@ -7,6 +7,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -18,6 +19,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -29,6 +31,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -40,6 +43,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -51,6 +55,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -62,6 +67,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -73,6 +79,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -84,6 +91,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -95,6 +103,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -106,6 +115,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -117,6 +127,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -128,6 +139,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -139,6 +151,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -150,6 +163,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -161,6 +175,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -172,6 +187,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -183,6 +199,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -194,6 +211,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -205,6 +223,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -216,6 +235,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -227,6 +247,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -238,6 +259,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -249,6 +271,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -260,6 +283,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -271,6 +295,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -287,6 +312,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -298,6 +324,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -309,6 +336,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -320,6 +348,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -331,6 +360,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -342,6 +372,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -373,6 +404,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -384,6 +416,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -395,6 +428,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -406,6 +440,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -417,6 +452,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -433,6 +469,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -449,6 +486,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -470,6 +508,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -481,6 +520,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -492,6 +532,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -503,6 +544,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -514,6 +556,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -525,6 +568,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -536,6 +580,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -562,6 +607,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -648,6 +694,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -659,6 +706,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -700,6 +748,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -751,6 +800,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -762,6 +812,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -773,6 +824,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -784,6 +836,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -795,6 +848,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -806,6 +860,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'
@@ -832,6 +887,7 @@
     - images
     - webhooks
     - crds
+    - '**/AGENTS.md'
   stageDependencies:
     setup:
         - '**/*'

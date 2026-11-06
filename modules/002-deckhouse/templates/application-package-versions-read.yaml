@@ -1,0 +1,44 @@
+# A certified workaround: every authenticated identity may read ApplicationPackageVersion. The binding
+# to system:authenticated is intentional.
+#
+# A project user installs an application from a package version, so the user has to see the versions
+# and their settings schemas. ApplicationPackageVersion is cluster-scoped, while a project user holds
+# only namespace roles, and a namespace role cannot grant a cluster-scoped resource. Reading the
+# versions is therefore open to everyone, and what a project may install is limited elsewhere:
+# ApplicationPackage is a grantable resource of multitenancy-manager (application-package-grants.yaml),
+# so an Application of a package that is not available to the project is rejected, even though the
+# versions of that package are readable.
+#
+# This is a workaround of the module for one resource, not d8:dict, the shared one that grants are
+# replacing. The group system:authenticated includes every ServiceAccount, so they read the versions
+# too, and status.usedBy of a version, which names the applications installed from it and their
+# namespaces in every project, is readable by all. Both are accepted.
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:deckhouse:application-package-versions-reader
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - applicationpackageversions
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:deckhouse:application-package-versions-reader:system-authenticated
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:deckhouse:application-package-versions-reader
+subjects:
+- kind: Group
+  apiGroup: rbac.authorization.k8s.io
+  name: system:authenticated
