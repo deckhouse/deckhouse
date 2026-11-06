@@ -551,6 +551,8 @@ func TestMembershipMayChange(t *testing.T) {
 	relabelled := labelled("proj")
 	relabelled.Labels["team"] = "a"
 	unlabelled := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "proj-extra"}}
+	madeAgain := labelled("proj")
+	madeAgain.UID = "made-again"
 
 	tests := []struct {
 		name     string
@@ -563,6 +565,10 @@ func TestMembershipMayChange(t *testing.T) {
 		{name: "the project label is removed", old: labelled("proj"), updated: unlabelled, expected: true},
 		{name: "the deletion starts", old: labelled("proj"), updated: deleting, expected: true},
 		{name: "a deleting namespace changes", old: deleting, updated: deleting.DeepCopy()},
+		// A relist of the informer turns a delete and a create under the same name into one update.
+		{name: "the namespace is made again", old: deleting, updated: madeAgain, expected: true},
+		{name: "the namespace is made again before it was seen deleting", old: labelled("proj"), updated: madeAgain, expected: true},
+		{name: "the deletion is gone", old: deleting, updated: labelled("proj"), expected: true},
 		{name: "another label changes", old: labelled("proj"), updated: relabelled},
 		{name: "an annotation changes", old: labelled("proj"), updated: annotated},
 	}
@@ -622,4 +628,138 @@ func TestReconcile_WritesStatusWhenANamespaceFails(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, c.Get(context.Background(), request.NamespacedName, got))
 	assert.Equal(t, corev1.ConditionTrue, condition(t, got, v1alpha3.ProjectRoleBindingConditionReady).Status)
+}
+
+// namespaceTerminatingForbidden is the Forbidden error NamespaceLifecycle returns for a create in a
+// namespace that is being deleted, with the cause the API server sets on it. The fake client does
+// not emulate that admission plugin.
+func namespaceTerminatingForbidden(name string) error {
+	status := k8serrors.NewForbidden(rbacv1.Resource("rolebindings"), name,
+		errors.New("unable to create new content in namespace "+name+" because it is being terminated"))
+	status.ErrStatus.Details.Causes = []metav1.StatusCause{{
+		Type:    corev1.NamespaceTerminatingCause,
+		Message: "namespace is being terminated",
+	}}
+	return status
+}
+
+func terminatingNamespaceClient(t *testing.T, objs ...client.Object) (client.Client, *[]string) {
+	t.Helper()
+	scheme := runtime.NewScheme()
+	for _, add := range []func(*runtime.Scheme) error{corev1.AddToScheme, rbacv1.AddToScheme, v1alpha3.AddToScheme} {
+		require.NoError(t, add(scheme))
+	}
+	var created []string
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(objs...).
+		WithStatusSubresource(&v1alpha3.ProjectRoleBinding{}).
+		WithIndex(&v1alpha3.ProjectRoleBinding{}, subjectNamespaceIndex, subjectNamespaces).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Create: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+				if obj.GetNamespace() != "proj-backend" {
+					return cl.Create(ctx, obj, opts...)
+				}
+				created = append(created, obj.GetName())
+				ns := &corev1.Namespace{}
+				if err := cl.Get(ctx, client.ObjectKey{Name: obj.GetNamespace()}, ns); err == nil && !ns.DeletionTimestamp.IsZero() {
+					return namespaceTerminatingForbidden(obj.GetName())
+				}
+				return cl.Create(ctx, obj, opts...)
+			},
+		}).
+		Build()
+	return c, &created
+}
+
+// A create in a namespace that is being deleted is forbidden by NamespaceLifecycle. That refusal is
+// not a failure: the binding stays Ready and the other namespaces still receive it.
+func TestReconcile_IgnoresCreateInATerminatingNamespace(t *testing.T) {
+	now := metav1.Now()
+	going := namespace("proj-backend", "proj")
+	going.DeletionTimestamp = &now
+	going.Finalizers = []string{"kubernetes"}
+	c, created := terminatingNamespaceClient(t,
+		prb("viewers", "proj", "d8:project:viewer"), project("proj", "proj", "proj-backend"), namespace("proj", "proj"), going)
+	r := &Reconciler{Client: c}
+	request := ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "proj", Name: "viewers"}}
+
+	_, err := r.Reconcile(context.Background(), request)
+	require.NoError(t, err)
+	assert.NotEmpty(t, *created, "the create in the terminating namespace is attempted")
+	name := rolebinding.PRBServiceName("viewers")
+	err = c.Get(context.Background(), client.ObjectKey{Namespace: "proj-backend", Name: name}, &rbacv1.RoleBinding{})
+	assert.True(t, k8serrors.IsNotFound(err), "the forbidden create does not leave a RoleBinding")
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Namespace: "proj", Name: name}, &rbacv1.RoleBinding{}))
+	got := &v1alpha3.ProjectRoleBinding{}
+	require.NoError(t, c.Get(context.Background(), request.NamespacedName, got))
+	assert.Equal(t, corev1.ConditionTrue, condition(t, got, v1alpha3.ProjectRoleBindingConditionReady).Status)
+}
+
+// An existing RoleBinding in a namespace that is being deleted is still updated: NamespaceLifecycle
+// forbids only the create, so a subject revoked on the binding is taken off the RoleBinding.
+func TestReconcile_UpdatesRoleBindingInATerminatingNamespace(t *testing.T) {
+	now := metav1.Now()
+	going := namespace("proj-backend", "proj")
+	going.DeletionTimestamp = &now
+	going.Finalizers = []string{"kubernetes"}
+	existing := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "proj-backend", Name: rolebinding.PRBServiceName("viewers")},
+		RoleRef:    rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: "d8:project:viewer"},
+		Subjects:   []rbacv1.Subject{{APIGroup: rbacv1.GroupName, Kind: "User", Name: "bob"}},
+	}
+	c, created := terminatingNamespaceClient(t,
+		prb("viewers", "proj", "d8:project:viewer"), project("proj", "proj", "proj-backend"), namespace("proj", "proj"), going, existing)
+	r := &Reconciler{Client: c}
+	request := ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "proj", Name: "viewers"}}
+
+	_, err := r.Reconcile(context.Background(), request)
+	require.NoError(t, err)
+	assert.Empty(t, *created, "an existing RoleBinding is updated, not created")
+
+	rb := &rbacv1.RoleBinding{}
+	require.NoError(t, c.Get(context.Background(), client.ObjectKeyFromObject(existing), rb))
+	assert.Equal(t, []rbacv1.Subject{{APIGroup: rbacv1.GroupName, Kind: "User", Name: "alice"}}, rb.Subjects)
+	got := &v1alpha3.ProjectRoleBinding{}
+	require.NoError(t, c.Get(context.Background(), request.NamespacedName, got))
+	assert.Equal(t, corev1.ConditionTrue, condition(t, got, v1alpha3.ProjectRoleBindingConditionReady).Status)
+}
+
+// A create refused while a namespace of the project terminates is not retried by the reconcile. A
+// namespace made again under the same name leaves the namespace list of the project as it was, so
+// the project watch does not see it: the event of the new namespace brings the binding into it.
+func TestReconcile_ReachesANamespaceMadeAgain(t *testing.T) {
+	now := metav1.Now()
+	going := namespace("proj-backend", "proj")
+	going.DeletionTimestamp = &now
+	going.Finalizers = []string{"kubernetes"}
+	c, created := terminatingNamespaceClient(t,
+		prb("viewers", "proj", "d8:project:viewer"), project("proj", "proj", "proj-backend"), namespace("proj", "proj"), going)
+	r := &Reconciler{Client: c}
+	request := ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "proj", Name: "viewers"}}
+	ctx := context.Background()
+
+	result, err := r.Reconcile(ctx, request)
+	require.NoError(t, err)
+	assert.Zero(t, result, "the refusal is not retried by the reconcile")
+	require.NotEmpty(t, *created, "the create in the terminating namespace is attempted")
+	key := client.ObjectKey{Namespace: "proj-backend", Name: rolebinding.PRBServiceName("viewers")}
+	require.True(t, k8serrors.IsNotFound(c.Get(ctx, key, &rbacv1.RoleBinding{})))
+
+	// The namespace controller finishes the deletion, and the namespace is made again.
+	gone := &corev1.Namespace{}
+	require.NoError(t, c.Get(ctx, client.ObjectKey{Name: "proj-backend"}, gone))
+	gone.Finalizers = nil
+	require.NoError(t, c.Update(ctx, gone))
+	made := namespace("proj-backend", "proj")
+	require.NoError(t, c.Create(ctx, made))
+
+	require.True(t, membershipMayChange().Create(event.CreateEvent{Object: made}))
+	requests := r.requestsForNamespace(ctx, made)
+	require.Contains(t, requests, request, "the new namespace wakes the binding of its project")
+	for _, req := range requests {
+		_, err := r.Reconcile(ctx, req)
+		require.NoError(t, err)
+	}
+	require.NoError(t, c.Get(ctx, key, &rbacv1.RoleBinding{}), "the binding reaches the namespace made again")
 }

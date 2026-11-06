@@ -22,6 +22,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -200,4 +201,21 @@ func TestMainNamespaceQuotaHandler(t *testing.T) {
 
 	assert.Equal(t, []string{"team"}, requestNames(mainNamespaceQuotaRequests(main)))
 	assert.Empty(t, mainNamespaceQuotaRequests(additional))
+}
+
+// The creation of the RoleBinding that the d8-manifests binding fans out into a namespace wakes the
+// project, as the objects of the manifests in a namespace they make wait for it; its other events and
+// the other RoleBindings do not.
+func TestManifestsFanOutWakesTheProject(t *testing.T) {
+	label := map[string]string{v1alpha3.ResourceLabelProject: "team"}
+	fannedOut := &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Namespace: "team-backend", Name: "d8:prb:d8-manifests", Labels: label}}
+	other := &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Namespace: "team-backend", Name: "d8:prb:viewers", Labels: label}}
+
+	created := manifestsFanOutCreated()
+	assert.True(t, created.Create(event.CreateEvent{Object: fannedOut}))
+	assert.False(t, created.Create(event.CreateEvent{Object: other}))
+	assert.False(t, created.Update(event.UpdateEvent{ObjectOld: fannedOut, ObjectNew: fannedOut}))
+	assert.False(t, created.Delete(event.DeleteEvent{Object: fannedOut}))
+
+	assert.Equal(t, []string{"team"}, requestNames(standardFieldRequests(fannedOut, manifestsFanOutName)))
 }

@@ -26,6 +26,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -46,6 +47,7 @@ import (
 	"controller/internal/helm"
 	"controller/internal/impersonate"
 	projectmanager "controller/internal/manager/project"
+	"controller/internal/rolebinding"
 	"controller/internal/startup"
 )
 
@@ -109,7 +111,27 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, logger lo
 		// a handover of a Helm text release waits for the administrators binding to be Ready, and the
 		// manifests of a template wait for the binding of the user they are applied as
 		Watches(&v1alpha3.ProjectRoleBinding{}, standardFieldHandler(v1alpha3.ProjectAdministratorsBinding, v1alpha3.ProjectManifestsBinding)).
+		// the objects that the manifests put into a namespace they make wait for the binding of their
+		// user to reach it, which its Ready condition does not tell, as the fan-out into a namespace
+		// that appears does not change the generation of the binding
+		Watches(&rbacv1.RoleBinding{}, standardFieldHandler(manifestsFanOutName), builder.WithPredicates(manifestsFanOutCreated())).
 		Complete(projectController)
+}
+
+// manifestsFanOutName is the name of the RoleBinding that the d8-manifests ProjectRoleBinding fans
+// out into every namespace of the project.
+var manifestsFanOutName = rolebinding.PRBServiceName(v1alpha3.ProjectManifestsBinding)
+
+// manifestsFanOutCreated lets through the creation of a fanned-out RoleBinding of the d8-manifests
+// binding only: that is what the objects of a new namespace wait for, and the other events of the
+// RoleBindings of the cluster are not the project's business.
+func manifestsFanOutCreated() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc:  func(e event.CreateEvent) bool { return e.Object.GetName() == manifestsFanOutName },
+		UpdateFunc:  func(event.UpdateEvent) bool { return false },
+		DeleteFunc:  func(event.DeleteEvent) bool { return false },
+		GenericFunc: func(event.GenericEvent) bool { return false },
+	}
 }
 
 // mainNamespaceQuotaHandler wakes the project of the d8-project-quota ResourceQuota of its main

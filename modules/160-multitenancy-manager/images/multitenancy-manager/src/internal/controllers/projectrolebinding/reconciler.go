@@ -145,7 +145,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	var errs []error
 	var failed []string
 	for _, ns := range target {
-		if err := r.upsertRoleBinding(ctx, prb, ns, related, subjects); err != nil {
+		// NamespaceLifecycle forbids only a create in a namespace that is being deleted. An update
+		// or a delete of a RoleBinding that is already there still applies, which is how a subject
+		// or a role is revoked while the namespace terminates. A create the API server refuses
+		// because the namespace is terminating is not a failure of the binding. A namespace made
+		// again under the same name wakes the binding through its event (requestsForNamespace).
+		err := r.upsertRoleBinding(ctx, prb, ns, related, subjects)
+		if err != nil && k8serrors.HasStatusCause(err, corev1.NamespaceTerminatingCause) {
+			log.V(1).Info("the namespace is terminating, so a refused RoleBinding write is ignored", "namespace", ns)
+			continue
+		}
+		if err != nil {
 			errs = append(errs, err)
 			failed = append(failed, ns)
 		}
@@ -157,8 +167,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// The status is written whatever the fan-out did: a namespace of the project that refuses the
-	// binding -- one that is missing or terminating -- must not leave the binding without its status.
-	// Ready says which namespaces failed, and the error below retries them.
+	// binding -- one that is missing -- must not leave the binding without its status. A create
+	// refused because the namespace is terminating is not such a failure. Ready says which
+	// namespaces failed, and the error below retries them.
 	readyStatus, readyMessage := corev1.ConditionTrue, ""
 	if len(errs) > 0 {
 		readyStatus, readyMessage = corev1.ConditionFalse, rolebinding.FanOutFailureMessage(failed, pruneErr != nil)
@@ -264,17 +275,7 @@ func (r *Reconciler) cleanup(ctx context.Context, name, project string) error {
 // SetupWithManager wires the reconciler and its watches.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	enqueueByProject := handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
-		// a project change enqueues all PRBs in its main namespace
-		list := &v1alpha3.ProjectRoleBindingList{}
-		if err := r.List(ctx, list, client.InNamespace(obj.GetName())); err != nil {
-			ctrllog.FromContext(ctx).Error(err, "list ProjectRoleBindings for project watch", "project", obj.GetName())
-			return nil
-		}
-		reqs := make([]reconcile.Request, 0, len(list.Items))
-		for i := range list.Items {
-			reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: list.Items[i].Namespace, Name: list.Items[i].Name}})
-		}
-		return reqs
+		return r.requestsForProject(ctx, obj.GetName())
 	})
 
 	enqueueByOwnedRoleBinding := handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
@@ -293,7 +294,10 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// A namespace can come and go without a change to the binding or to its project, when a
 	// ProjectNamespace is deleted or a namespace under the freed name is made for another project. The
 	// index finds the bindings whose subjects name the ServiceAccounts of a namespace, so the change
-	// reaches them. The setup has no context of its own, and the indexer uses it only to look up the
+	// reaches them. A namespace of a project deleted and made again under the same name leaves the
+	// namespace list of the project as it was, so the project watch does not see it, and the create
+	// into it was refused while it terminated: the event of the namespace reaches the bindings of its
+	// project too. The setup has no context of its own, and the indexer uses it only to look up the
 	// informer.
 	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &v1alpha3.ProjectRoleBinding{}, subjectNamespaceIndex, subjectNamespaces); err != nil {
 		return fmt.Errorf("index ProjectRoleBindings by the namespaces of their subjects: %w", err)
@@ -321,8 +325,22 @@ func subjectNamespaces(obj client.Object) []string {
 	return rolebinding.ServiceAccountNamespaces(prb.Spec.Subjects, prb.Namespace)
 }
 
+// requestsForProject enqueues the ProjectRoleBindings of the project, which are in its main namespace.
+func (r *Reconciler) requestsForProject(ctx context.Context, project string) []reconcile.Request {
+	list := &v1alpha3.ProjectRoleBindingList{}
+	if err := r.List(ctx, list, client.InNamespace(project)); err != nil {
+		ctrllog.FromContext(ctx).Error(err, "list ProjectRoleBindings for project watch", "project", project)
+		return nil
+	}
+	reqs := make([]reconcile.Request, 0, len(list.Items))
+	for i := range list.Items {
+		reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: list.Items[i].Namespace, Name: list.Items[i].Name}})
+	}
+	return reqs
+}
+
 // requestsForNamespace enqueues the ProjectRoleBindings whose subjects name the ServiceAccounts of the
-// namespace.
+// namespace, and the ProjectRoleBindings of the project the namespace is labelled with.
 func (r *Reconciler) requestsForNamespace(ctx context.Context, obj client.Object) []reconcile.Request {
 	list := &v1alpha3.ProjectRoleBindingList{}
 	if err := r.List(ctx, list, client.MatchingFields{subjectNamespaceIndex: obj.GetName()}); err != nil {
@@ -333,12 +351,23 @@ func (r *Reconciler) requestsForNamespace(ctx context.Context, obj client.Object
 	for i := range list.Items {
 		reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: list.Items[i].Namespace, Name: list.Items[i].Name}})
 	}
+	if project := obj.GetLabels()[v1alpha3.ResourceLabelProject]; project != "" {
+		for _, req := range r.requestsForProject(ctx, project) {
+			if !slices.Contains(reqs, req) {
+				reqs = append(reqs, req)
+			}
+		}
+	}
 	return reqs
 }
 
 // membershipMayChange lets through the namespace events that can change whether the ServiceAccounts
-// of the namespace get the rights of a binding. The namespace appears or is gone, its project label
-// changes, or its deletion starts. Create and delete events always pass.
+// of the namespace get the rights of a binding, or whether a binding of its project can be written
+// into it. The namespace appears or is gone, its project label changes, or its deletion starts.
+// Create and delete events always pass. After a relist of the informer, a namespace deleted and made
+// again under the same name comes as one update: the old object is deleting, the new one is not and
+// has another UID. That update passes too, so a binding refused by the deleting namespace reaches
+// the new one.
 func membershipMayChange() predicate.Predicate {
 	return predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
@@ -346,7 +375,10 @@ func membershipMayChange() predicate.Predicate {
 			if e.ObjectOld.GetLabels()[label] != e.ObjectNew.GetLabels()[label] {
 				return true
 			}
-			return e.ObjectOld.GetDeletionTimestamp().IsZero() && !e.ObjectNew.GetDeletionTimestamp().IsZero()
+			if e.ObjectOld.GetUID() != e.ObjectNew.GetUID() {
+				return true
+			}
+			return e.ObjectOld.GetDeletionTimestamp().IsZero() != e.ObjectNew.GetDeletionTimestamp().IsZero()
 		},
 	}
 }

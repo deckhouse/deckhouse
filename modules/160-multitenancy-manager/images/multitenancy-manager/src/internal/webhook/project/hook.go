@@ -382,7 +382,10 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 	// parameters, so it is rehearsed the same way, and a text that does not render or a parameter that
 	// becomes structure is refused here rather than first in the ManifestsApplied condition. Whether
 	// the objects may be applied is the controller's to say: it depends on the namespaces of the
-	// project and on the kinds the cluster serves.
+	// project and on the kinds the cluster serves. An object in a namespace that is neither a namespace
+	// of the project nor one that a ProjectNamespace of the manifests makes is named in a warning, as
+	// the controller refuses the render for it, while a namespace may yet appear before the
+	// controller looks, so the project is not refused for it.
 	//
 	// The API server refuses some objects to the user the objects are applied as, such as an
 	// AuthorizationRule of the Admin level (the d8-multitenancy-manager-manifests admission policy).
@@ -399,6 +402,17 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 				"the manifests of the '%s' project template render objects that the API server refuses to apply as the %s user, "+
 					"so the '%s' project switches to Error until the template leaves them out: %s",
 				template.Name, naming.ProjectUser(project.Name), project.Name, strings.Join(refused, "; ")))
+		}
+		// The status of a project in an update may be left out of the request; the stored one has it.
+		known := rolebinding.ProjectNamespaceNames(project)
+		if old != nil {
+			known = append(known, rolebinding.ProjectNamespaceNames(old)...)
+		}
+		if unknown := projectmanager.UnknownManifestNamespaces(project.Name, known, rendered); len(unknown) > 0 {
+			warnings = append(warnings, fmt.Sprintf(
+				"the manifests of the '%s' project template put objects into namespaces that are not namespaces of the '%s' project "+
+					"and that no ProjectNamespace of the manifests makes, so the project switches to Error until the template leaves them out: %s",
+				template.Name, project.Name, strings.Join(unknown, ", ")))
 		}
 	}
 

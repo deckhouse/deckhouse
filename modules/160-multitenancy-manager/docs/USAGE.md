@@ -780,7 +780,7 @@ The objects are applied as follows:
 
 - The controller creates the `d8-manifests` ProjectRoleBinding in the main namespace of the project. It grants the `d8:project:admin` role to the `system:multitenancy-manager:project:<PROJECT_NAME>` user in every namespace of the project.
 - The objects are applied once this binding is `Ready` for its current generation and the `d8:project:admin` ClusterRole has its aggregated rules. Until then the `ManifestsApplied` condition of the project says what the objects wait for, and the project stays `Deployed`.
-- Each object is applied with server-side apply as this user, with the `multitenancy-manager/manifests` field manager. An object without `metadata.namespace` goes to the main namespace of the project.
+- Each object is applied with server-side apply as this user, with the `multitenancy-manager/manifests` field manager. An object without `metadata.namespace` goes to the main namespace of the project. An object can also go to an additional namespace of the project, including one that a ProjectNamespace of the same `manifests` makes, as [Additional namespaces in manifests](#additional-namespaces-in-manifests) describes.
 - Each object gets the `projects.deckhouse.io/project: <PROJECT_NAME>` and `projects.deckhouse.io/source: manifests` labels, and `.status.manifestObjects` of the project lists the objects.
 - An object that exists already is applied only when it belongs to the project, that is, when `.status.manifestObjects` lists it, when a switch from a Helm text left it in `.status.keptObjects`, or when it has both labels. Any other object is left alone, as [Limitations of manifests](#limitations-of-manifests) describes.
 - The objects do not get the `heritage: multitenancy-manager` label. Unlike the objects of the structured fields and of a Helm text, they can be changed and deleted by whoever may write them in the namespaces of the project, the project administrators included. Within 10 minutes the controller applies them again, which puts back a deleted object and the fields that the template sets, while a field that somebody added stays. So describe what the projects must not change with the structured fields.
@@ -847,13 +847,49 @@ d8 k get project <PROJECT_NAME> -o jsonpath='{.status.conditions[?(@.type=="Mani
 d8 k get project <PROJECT_NAME> -o jsonpath='{range .status.manifestObjects[*]}{.kind} {.namespace}/{.name}{"\n"}{end}'
 ```
 
+#### Additional namespaces in manifests
+
+`manifests` can make additional namespaces of the project with [ProjectNamespace](cr.html#projectnamespace) objects and put objects into them in the same text. A ProjectNamespace without `metadata.namespace` goes to the main namespace of the project, and its namespace is named `<PROJECT_NAME>-<spec.name>`, so an object in it names the namespace as {% raw %}`{{ .projectName }}-<spec.name>`{% endraw %}.
+
+The namespace does not exist on the first render, so the objects are applied in two steps:
+
+- The ProjectNamespace objects and the objects of the namespaces that exist are applied at once.
+- The objects of a namespace that a ProjectNamespace of the same `manifests` makes wait until the namespace exists and the `d8-manifests` binding has reached it. Until then the `ManifestsApplied` condition is `False` and names what the objects wait for, and the project stays `Deployed`. A namespace that is being deleted is reported as terminating, and one that is not there yet as still to be created. When the ProjectNamespace is not `Ready`, the condition includes its `Ready=False` message. Objects that wait are kept. Objects that `manifests` no longer renders are deleted. The project is reconciled when the namespace is created and when the binding reaches it, so the objects are applied without any action.
+- When `manifests` drops a ProjectNamespace, the ProjectNamespace is deleted, and its namespace goes with everything in it. The objects of `manifests` in that namespace leave `.status.manifestObjects` without a delete of their own.
+
+An object in a namespace that is neither a namespace of the project nor made by a ProjectNamespace of the same `manifests` is refused, as [Limitations of manifests](#limitations-of-manifests) describes. A create or a change of a project whose `manifests` render such an object is admitted with a warning that names the namespace.
+
+The following `manifests` make the `backend` namespace and put a ConfigMap into it:
+
+{% raw %}
+
+```yaml
+manifests: |
+  apiVersion: deckhouse.io/v1alpha3
+  kind: ProjectNamespace
+  metadata:
+    name: backend
+  spec:
+    name: backend
+  ---
+  apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: backend-settings
+    namespace: "{{ .projectName }}-backend"
+  data:
+    team: {{ .parameters.team | quote }}
+```
+
+{% endraw %}
+
 #### Limitations of manifests
 
 `manifests` covers only what an administrator of the project can do in its namespaces.
 The following limitations apply:
 
 - A text that does not render for a project, for example because of a syntax error or a `required` value that the project does not set, is accepted when the template is written, because the template is not rendered at that point. Such a project switches to `Error`, `ManifestsApplied` names the error, and a create or a change of the project is refused until the text renders. A change of `manifests` reaches every project of the template at once, so try it first on a copy of the template with one project.
-- A cluster-scoped object, an object in a namespace outside the project, an object with the `heritage: multitenancy-manager` or `heritage: deckhouse` label, an object without `metadata.name` and an object that the text renders twice are refused. While the render holds such an object, none of its objects is applied, the project switches to `Error`, and the `ManifestsApplied` condition names the object.
+- A cluster-scoped object, an object in a namespace that is neither a namespace of the project nor made by a ProjectNamespace of the same `manifests`, an object with the `heritage: multitenancy-manager` or `heritage: deckhouse` label, an object without `metadata.name` and an object that the text renders twice are refused. While the render holds such an object, none of its objects is applied, the project switches to `Error`, and the `ManifestsApplied` condition names the object.
 - An object that exists already and does not belong to the project, for example one that a project administrator created by hand, is not changed, listed or deleted later. The other objects are applied, but nothing is deleted, the project switches to `Error`, `ManifestsApplied` names the object, and the controller looks again every minute. To hand the object over to `manifests`, give it the `projects.deckhouse.io/project: <PROJECT_NAME>` and `projects.deckhouse.io/source: manifests` labels, or delete it so that `manifests` creates it. Do not delete an AuthorizationRule of the `Admin` access level this way, because `manifests` does not create one. Give it the labels instead.
 - An object that the `d8:project:admin` role does not allow is refused by the API server with `403 Forbidden`. Examples are a RoleBinding to a role that a project administrator cannot [bind](#granting-access-within-a-project) and an object of a kind that the role does not cover. The other objects are applied, the project switches to `Error`, `ManifestsApplied` names the refused object, and the controller tries again with a growing interval.
 - An AuthorizationRule of the `Admin` access level is refused when `manifests` creates it, raises an existing one to this level or adds subjects to an existing one of this level, although the `d8:project:admin` role allows it. The administrators of a project are set in [`.spec.administrators`](cr.html#project-v1alpha3-spec-administrators) of the Project. An AuthorizationRule of the `User`, `PrivilegedUser` or `Editor` level is applied as other objects are.

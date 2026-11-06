@@ -67,10 +67,11 @@ import (
 //     (internal/impersonate), with the multitenancy-manager/manifests field manager and the force that
 //     takes over the fields another manager set. Nothing else here acts as the user.
 //   - Every object is namespaced and lands in a namespace of the project: the main one when it names
-//     none. A cluster-scoped object, an object in another namespace, and an object with the heritage
-//     label of the module or of Deckhouse are refused before anything is applied: the admission
-//     policies of those labels refuse a write by anybody else than the controller or Deckhouse, and
-//     the refusal says so better than a 403 would. Every object gets the projects.deckhouse.io/project
+//     none, or one that a ProjectNamespace of the same manifests makes, once it exists
+//     (manifests_namespaces.go). A cluster-scoped object, an object in another namespace, and an
+//     object with the heritage label of the module or of Deckhouse are refused before anything is
+//     applied: the admission policies of those labels refuse a write by anybody else than the
+//     controller or Deckhouse, and the refusal says so better than a 403 would. Every object gets the projects.deckhouse.io/project
 //     label and projects.deckhouse.io/source: manifests.
 //   - Some objects that d8:project:admin allows are still not for a template to write, an
 //     AuthorizationRule of the Admin level among them (refusedManifestKinds). The
@@ -84,7 +85,8 @@ import (
 //     the same reason.
 //   - status.manifestObjects of the project lists what was applied. What is about to be applied goes on
 //     the list before the apply, and an object that the template does not render any more is deleted,
-//     as the user, once everything else is applied. One that lost the labels, or whose namespace left
+//     as the user, once the objects that can be applied are applied. An object that waits for a
+//     namespace is kept, and is not on the list yet. One that lost the labels, or whose namespace left
 //     the project, leaves the list and stays.
 //   - An object that a switch from a Helm text left in place (status.keptObjects) and that the
 //     manifests render under the same kind, namespace and name is taken over: the fields that the
@@ -93,7 +95,9 @@ import (
 //     status.keptObjects.
 //
 // The ManifestsApplied condition says what the objects wait for, why they are not applied, or which
-// of them the API server refused, with the code of the refusal.
+// of them the API server refused, with the code of the refusal. While a namespace that a
+// ProjectNamespace makes is not there yet, the condition repeats the Ready=False message of that
+// ProjectNamespace, and a namespace that is being deleted is named as terminating.
 
 const (
 	// manifestsFieldManager is the field manager of the server-side apply of the manifests.
@@ -197,12 +201,14 @@ func (m *Manager) reconcileManifests(ctx context.Context, project *v1alpha3.Proj
 	}
 
 	var objects []*unstructured.Unstructured
+	var planned []string
 	if wanted {
 		rendered, err := m.helmClient.RenderManifests(project, template.Spec.Manifests, template.Spec.ParametersSchema.OpenAPIV3Schema)
 		if err != nil {
 			return m.manifestsFailed(project, fmt.Sprintf("The manifests of the template do not render: %v.", err)), nil
 		}
-		objects, err = m.manifestObjects(project, rendered)
+		planned = plannedManifestNamespaces(project.Name, rendered)
+		objects, err = m.manifestObjects(project, rendered, planned)
 		var refused manifestsRefusedError
 		switch {
 		case errors.As(err, &refused):
@@ -227,14 +233,27 @@ func (m *Manager) reconcileManifests(ctx context.Context, project *v1alpha3.Proj
 		return manifestsOutcome{recheck: manifestsBindingRecheck}, nil
 	}
 
+	// The objects of a namespace that a ProjectNamespace of the manifests is still making wait for it
+	// (see manifests_namespaces.go); the others are applied now.
+	objects, held, waiting, err := m.holdBackForNamespaces(ctx, project, planned, objects)
+	if err != nil {
+		return m.manifestsFailed(project, fmt.Sprintf("The namespaces of the manifests of the template are not checked: %v.", err)), err
+	}
+
 	applied := manifestObjectsOf(objects)
+	// The digest is of the objects that are applied now, not of the ones that wait. A recheck of the
+	// wait does not apply the ready objects again while that part of the render is unchanged.
 	digest, err := manifestsDigest(objects)
 	if err != nil {
 		return m.manifestsFailed(project, fmt.Sprintf("The manifests of the template are not applied: %v.", err)), err
 	}
 	if since, recently := m.appliedRecently(project, applied, digest); recently {
-		project.SetConditionTrue(v1alpha3.ProjectConditionManifestsApplied)
-		return manifestsOutcome{recheck: manifestsReapply - since}, nil
+		if len(waiting) == 0 {
+			project.SetConditionTrue(v1alpha3.ProjectConditionManifestsApplied)
+			return manifestsOutcome{recheck: manifestsReapply - since}, nil
+		}
+		project.SetConditionFalse(v1alpha3.ProjectConditionManifestsApplied, manifestsWaitingMessage(waiting))
+		return manifestsOutcome{recheck: manifestsNamespaceRecheck}, nil
 	}
 	// The objects are about to change, so the render they were last applied from does not describe
 	// them any more: an apply that stops halfway leaves some of them as the new render has them, and a
@@ -292,9 +311,14 @@ func (m *Manager) reconcileManifests(ctx context.Context, project *v1alpha3.Proj
 		return m.manifestsFailed(project, strings.Join(messages, " ")), fmt.Errorf("apply the manifests of the template as %s: %s", user, refused)
 	}
 
-	left, refusals := m.pruneManifestObjects(ctx, project, actor, applied)
+	// The objects that wait are kept, together with the ones just applied: they are still in the
+	// render, and the prune would otherwise take them for objects the render no longer holds. What
+	// the render dropped is deleted even while something waits.
+	left, refusals := m.pruneManifestObjects(ctx, project, actor, slices.Concat(applied, manifestObjectsOf(held)))
+	// An object that waits and was applied before stays on the list as well: the list is what a later
+	// render that drops the object is pruned against, and an object off the list is never deleted.
 	err = m.recordInStatus(ctx, project, func(status *v1alpha3.ProjectStatus) bool {
-		return setManifestObjects(status, mergeManifestObjects(applied, left))
+		return setManifestObjects(status, mergeManifestObjects(slices.Concat(applied, listedObjectsOf(status, project.Name, held)), left))
 	})
 	if err != nil {
 		return m.manifestsFailed(project, fmt.Sprintf("The objects of the manifests are not recorded on the project: %v.", err)), err
@@ -311,8 +335,20 @@ func (m *Manager) reconcileManifests(ctx context.Context, project *v1alpha3.Proj
 		return manifestsOutcome{}, m.deleteManifestsBinding(ctx, project)
 	}
 	m.manifestsApplied.Store(project.Name, appliedManifests{digest: digest, at: time.Now()})
+	if len(waiting) > 0 {
+		project.SetConditionFalse(v1alpha3.ProjectConditionManifestsApplied, manifestsWaitingMessage(waiting))
+		return manifestsOutcome{recheck: manifestsNamespaceRecheck}, nil
+	}
 	project.SetConditionTrue(v1alpha3.ProjectConditionManifestsApplied)
 	return manifestsOutcome{recheck: manifestsReapply}, nil
+}
+
+// manifestsWaitingMessage is the ManifestsApplied message while objects wait for a namespace that a
+// ProjectNamespace of the manifests makes. waiting is what they wait for, one entry per namespace.
+func manifestsWaitingMessage(waiting []string) string {
+	return fmt.Sprintf(
+		"The other objects of the manifests of the template are applied, and the objects in the namespaces that ProjectNamespace objects of the manifests make wait for %s.",
+		strings.Join(waiting, " and "))
 }
 
 // ownManifestObjects splits the objects of a render into the ones the apply may write and the ones
@@ -375,12 +411,13 @@ func (m *Manager) manifestsFailed(project *v1alpha3.Project, message string) man
 }
 
 // manifestObjects reads the objects of a render of the manifests, in the order the render has them,
-// List objects unwrapped. Each of them is pinned to a namespace of the project and gets the labels of
-// the objects of the manifests; the fields a server sets are dropped, so that an object copied from a
+// List objects unwrapped. Each of them is pinned to a namespace of the project, or to one of the
+// planned namespaces that ProjectNamespace objects of the render make, and gets the labels of the
+// objects of the manifests; the fields a server sets are dropped, so that an object copied from a
 // cluster applies. It returns a manifestsRefusedError for an object it does not apply, and a NoMatch
 // error for a kind the API server does not serve.
-func (m *Manager) manifestObjects(project *v1alpha3.Project, rendered string) ([]*unstructured.Unstructured, error) {
-	namespaces := rolebinding.ProjectNamespaceNames(project)
+func (m *Manager) manifestObjects(project *v1alpha3.Project, rendered string, planned []string) ([]*unstructured.Unstructured, error) {
+	namespaces := append(rolebinding.ProjectNamespaceNames(project), planned...)
 	seen := make(map[releaseKey]struct{})
 	var objects []*unstructured.Unstructured
 	err := eachManifestObject(rendered, func(object *unstructured.Unstructured) error {
@@ -476,7 +513,9 @@ func (m *Manager) pinManifestObject(project *v1alpha3.Project, namespaces []stri
 	case namespace == "":
 		object.SetNamespace(project.Name)
 	case !slices.Contains(namespaces, namespace):
-		return manifestsRefusedError{reason: fmt.Sprintf("%s is in the '%s' namespace, which is not a namespace of the project", describe(), namespace)}
+		return manifestsRefusedError{reason: fmt.Sprintf(
+			"%s is in the '%s' namespace, which is neither a namespace of the project nor one that a ProjectNamespace of the manifests makes",
+			describe(), namespace)}
 	}
 	labels := object.GetLabels()
 	switch heritage := labels[v1alpha3.ResourceLabelHeritage]; heritage {
@@ -656,27 +695,34 @@ func (m *Manager) adoptKeptObject(ctx context.Context, project *v1alpha3.Project
 }
 
 // pruneManifestObjects deletes, as the user of the project, the objects of status.manifestObjects that
-// the render does not hold. One whose API version is not served any more is read through the version
+// the render does not hold. keep is what the render holds: the objects applied now and the ones that
+// wait for a namespace. One whose API version is not served any more is read through the version
 // the API server serves its kind at. One that is gone, whose kind is not served at all any more, that
-// lost the labels of the objects of the manifests, or whose namespace is not a namespace of the
-// project any more, leaves the list without a delete. It returns the objects that stay on the list,
+// lost the labels of the objects of the manifests, whose namespace is not a namespace of the project
+// any more, or whose namespace goes with a ProjectNamespace that the prune deletes
+// (prunedNamespaces) leaves the list without a delete. It returns the objects that stay on the list,
 // those the API server refused to read or delete, and what it answered for them.
 func (m *Manager) pruneManifestObjects(
 	ctx context.Context,
 	project *v1alpha3.Project,
 	actor client.Client,
-	applied []v1alpha3.ManifestObject,
+	keepObjects []v1alpha3.ManifestObject,
 ) ([]v1alpha3.ManifestObject, []string) {
-	keep := make(map[releaseKey]struct{}, len(applied))
-	for _, object := range applied {
+	keep := make(map[releaseKey]struct{}, len(keepObjects))
+	for _, object := range keepObjects {
 		keep[manifestObjectKey(object, project.Name)] = struct{}{}
 	}
 	namespaces := rolebinding.ProjectNamespaceNames(project)
+	pruned := prunedNamespaces(ctx, actor, project, keep)
 
 	var left []v1alpha3.ManifestObject
 	var refusals []string
 	for _, listed := range project.Status.ManifestObjects {
 		if _, ok := keep[manifestObjectKey(listed, project.Name)]; ok || !slices.Contains(namespaces, listed.Namespace) {
+			continue
+		}
+		// the namespace goes with the ProjectNamespace that this prune deletes
+		if _, ok := pruned[listed.Namespace]; ok {
 			continue
 		}
 		live := new(unstructured.Unstructured)
@@ -749,6 +795,21 @@ func manifestsDigest(objects []*unstructured.Unstructured) (string, error) {
 		hash.Write([]byte{'\n'})
 	}
 	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+// listedObjectsOf is the entries of status.manifestObjects that name one of the objects.
+func listedObjectsOf(status *v1alpha3.ProjectStatus, project string, objects []*unstructured.Unstructured) []v1alpha3.ManifestObject {
+	keys := make(map[releaseKey]struct{}, len(objects))
+	for _, object := range objects {
+		keys[keyOf(releaseObjectOf(object), project)] = struct{}{}
+	}
+	var listed []v1alpha3.ManifestObject
+	for _, entry := range status.ManifestObjects {
+		if _, ok := keys[manifestObjectKey(entry, project)]; ok {
+			listed = append(listed, entry)
+		}
+	}
+	return listed
 }
 
 // manifestObjectsOf is the status.manifestObjects entries of the objects, sorted.

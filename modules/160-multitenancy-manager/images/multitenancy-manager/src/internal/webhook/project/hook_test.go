@@ -1594,6 +1594,10 @@ func TestHandle_ManifestsRefusedKinds(t *testing.T) {
 		project.Name = "team"
 		project.Spec.ProjectTemplateName = template
 		project.Status.ManifestObjects = status
+		// the rules of the render go to the main namespace and to team-dev, which is one of the project
+		project.Status.Namespaces = []v1alpha3.NamespaceStatus{
+			{Name: "team", Kind: v1alpha3.NamespaceKindMain}, {Name: "team-dev", Kind: v1alpha3.NamespaceKindAdditional},
+		}
 		raw, err := json.Marshal(project)
 		require.NoError(t, err)
 		operation := admissionv1.Create
@@ -1676,6 +1680,47 @@ func TestHandle_ManifestsRefusedKinds(t *testing.T) {
 		require.True(t, resp.Allowed, resp.Result)
 		require.Len(t, resp.Warnings, 1)
 		assert.Equal(t, lead+admins+"; "+devAdmin, resp.Warnings[0], "a warning too many does less harm than one too few")
+	})
+}
+
+// An object of the manifests in a namespace that is neither a namespace of the project nor made by a
+// ProjectNamespace of the same manifests is named in a warning, as the controller refuses the render
+// for it; a namespace that a ProjectNamespace of the manifests makes is not.
+func TestHandle_ManifestsNamespaces(t *testing.T) {
+	template := func(name, manifests string) *v1alpha2.ProjectTemplate {
+		return &v1alpha2.ProjectTemplate{ObjectMeta: metav1.ObjectMeta{Name: name}, Spec: v1alpha2.ProjectTemplateSpec{Manifests: manifests}}
+	}
+	const made = "---\napiVersion: deckhouse.io/v1alpha3\nkind: ProjectNamespace\nmetadata:\n  name: backend\nspec:\n  name: backend\n" +
+		"---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: settings\n  namespace: '{{ .projectName }}-backend'\n"
+	const unmade = "---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: settings\n  namespace: '{{ .projectName }}-backend'\n"
+	v := newValidator(t, template("made", made), template("unmade", unmade))
+
+	create := func(t *testing.T, template string) admission.Response {
+		t.Helper()
+		project := projectWithParameters(map[string]any{})
+		project.Name = "team"
+		project.Spec.ProjectTemplateName = template
+		raw, err := json.Marshal(project)
+		require.NoError(t, err)
+		return v.Handle(context.Background(), admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{
+			Operation: admissionv1.Create,
+			UserInfo:  authnv1.UserInfo{Username: "alice"},
+			Object:    runtime.RawExtension{Raw: raw},
+		}})
+	}
+
+	t.Run("a namespace the manifests make", func(t *testing.T) {
+		resp := create(t, "made")
+		require.True(t, resp.Allowed, resp.Result)
+		assert.Empty(t, resp.Warnings)
+	})
+
+	t.Run("a namespace nobody makes", func(t *testing.T) {
+		resp := create(t, "unmade")
+		require.True(t, resp.Allowed, resp.Result)
+		require.Len(t, resp.Warnings, 1)
+		assert.Contains(t, resp.Warnings[0], "the manifests of the 'unmade' project template put objects into namespaces that are not namespaces of the 'team' project")
+		assert.Regexp(t, `: team-backend$`, resp.Warnings[0])
 	})
 }
 

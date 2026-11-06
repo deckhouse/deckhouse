@@ -596,7 +596,7 @@ func TestHandle_RefusesWhatTheManifestsCannotCarry(t *testing.T) {
 		{
 			name:      "an object in a namespace outside the project",
 			manifests: "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: settings\n  namespace: d8-system\n",
-			reason:    "the ConfigMap 'settings' is in the 'd8-system' namespace, which is not a namespace of the project",
+			reason:    "the ConfigMap 'settings' is in the 'd8-system' namespace, which is neither a namespace of the project nor one that a ProjectNamespace of the manifests makes",
 		},
 		{
 			name:      "an object that tries the heritage of the module",
@@ -871,7 +871,7 @@ metadata:
   creationTimestamp: "2026-10-01T00:00:00Z"
 status: {}
 `
-	objects, err := m.manifestObjects(project, rendered)
+	objects, err := m.manifestObjects(project, rendered, nil)
 	require.NoError(t, err)
 	require.Len(t, objects, 3)
 	assert.Equal(t, []string{"first", "second", "third"}, []string{objects[0].GetName(), objects[1].GetName(), objects[2].GetName()})
