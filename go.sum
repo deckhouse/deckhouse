@@ -138,10 +138,10 @@ github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/deckhouse/deckhouse/pkg/log v0.2.1 h1:7SSD+QJPnziAO3l8ycgRwN5wlQeC312Tf7f2Wa/hWDg=
-github.com/deckhouse/deckhouse/pkg/log v0.2.1/go.mod h1:pbAxTSDcPmwyl3wwKDcEB3qdxHnRxqTV+J0K+sha8bw=
-github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0 h1:xZvbKuexrSQGEw6CB4n3UC7XbOb9QNLbm8UhcGZ2R1I=
-github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0/go.mod h1:Rz++SzCLkFW03WGgftnn91TimGU2shiKb5S/YuxcBuE=
+github.com/deckhouse/deckhouse/pkg/log v0.3.0 h1:YJ3oqG4GOjY/p5moHg7dq/gGEgMcl0WhDPak1Rhbrcs=
+github.com/deckhouse/deckhouse/pkg/log v0.3.0/go.mod h1:pbAxTSDcPmwyl3wwKDcEB3qdxHnRxqTV+J0K+sha8bw=
+github.com/deckhouse/deckhouse/pkg/metrics-storage v0.4.0 h1:Ot0Gr6ztPug72iDa5xGxfnvJATCvj0aPUBqgA2bUrMc=
+github.com/deckhouse/deckhouse/pkg/metrics-storage v0.4.0/go.mod h1:yXbj0xVrP+krr9j+IKGHZJjfnYd+0pCBF6EQiOm4wZ4=
 github.com/deckhouse/deckhouse/pkg/registry v0.0.2-0.20260916084840-a97e86c61556 h1:knIw8XMoq5XC1aaeTf3+Qo6KtU9nMOuNV3rsACxtZEU=
 github.com/deckhouse/deckhouse/pkg/registry v0.0.2-0.20260916084840-a97e86c61556/go.mod h1:KDf44MqEif8jAKCehKJqOg0k4sJcnetKJKDGd0IFQjI=
 github.com/deckhouse/lib-gossh v0.3.0 h1:FUAlF8+fLnBCII9hXSNx+arZ4PH3H/6fzp5LBlnmlps=

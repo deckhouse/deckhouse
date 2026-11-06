@@ -47,8 +47,8 @@ require (
 	github.com/daixiang0/gci v0.2.8 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/deckhouse/deckhouse/go_lib/dependency/vsphere v0.0.0-00010101000000-000000000000 // indirect
-	github.com/deckhouse/deckhouse/pkg/log v0.2.1 // indirect
-	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0 // indirect
+	github.com/deckhouse/deckhouse/pkg/log v0.3.0 // indirect
+	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.4.0 // indirect
 	github.com/deckhouse/module-sdk v0.13.0 // indirect
 	github.com/denis-tingajkin/go-header v0.4.2 // indirect
 	github.com/docker/cli v29.4.0+incompatible // indirect
