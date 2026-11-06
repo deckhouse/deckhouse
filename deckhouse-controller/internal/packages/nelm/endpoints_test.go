@@ -505,6 +505,58 @@ spec:
 `,
 			expected: nil,
 		},
+		{
+			name: "annotated serviceaccounts yield the in-cluster kubernetes api",
+			rendered: `
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: deployer
+  annotations:
+    packages.deckhouse.io/application-endpoint-description: "Deploy"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: deployer-ci
+  annotations:
+    packages.deckhouse.io/application-endpoint-description: "Deploy"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: reader
+  annotations:
+    packages.deckhouse.io/application-endpoint-description: "true"
+`,
+			expected: []observed.URL{
+				{URL: "https://kubernetes.default.svc/"},
+				{URL: "https://kubernetes.default.svc/", Description: "Deploy"},
+			},
+		},
+		{
+			name: "serviceaccount without annotation, excluded or of another group is skipped",
+			rendered: `
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: app
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: excluded
+  annotations:
+    packages.deckhouse.io/application-endpoint-description: "false"
+---
+apiVersion: example.io/v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    packages.deckhouse.io/application-endpoint-description: "true"
+`,
+			expected: nil,
+		},
 	}
 
 	for _, tt := range tests {

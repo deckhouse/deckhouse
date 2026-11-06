@@ -1,7 +1,7 @@
 ---
 title: Templates
 permalink: en/architecture/marketplace/templates.html
-description: "Helm templates of an Application package: template values, object naming, container images and container registry access, Ingress, HTTPRoute and application endpoints, credentials in the web interface, labels, and workload health."
+description: "Helm templates of an Application package: template values, object naming, container images and container registry access, Ingress, HTTPRoute, ServiceAccount and application endpoints, credentials in the web interface, labels, and workload health."
 ---
 
 {% raw %}
@@ -180,10 +180,10 @@ The package skeleton created by `d8 package bootstrap app` contains helpers for 
 
 ## Application endpoints
 
-To show the addresses of an application in the [`status.urls`](../../reference/api/cr.html#application-v1alpha1-status-urls) field of the Application (for example, the web interface shows them as links to the application), add the `packages.deckhouse.io/application-endpoint-description` annotation to an Ingress or, if the application is published through the [`alb`](/modules/alb/) module, to an HTTPRoute:
+To show the addresses of an application in the [`status.urls`](../../reference/api/cr.html#application-v1alpha1-status-urls) field of the Application (for example, the web interface shows them as links to the application), add the `packages.deckhouse.io/application-endpoint-description` annotation to an Ingress, to an HTTPRoute if the application is published through the [`alb`](/modules/alb/) module, or to a [ServiceAccount](#serviceaccount-endpoints):
 
 - The annotation value is the endpoint description. The `"true"` value adds the endpoint without a description, and the `"false"` value excludes the object.
-- Only objects rendered by the templates are taken into account: Ingress objects of the `networking.k8s.io` API group and HTTPRoute objects of the `gateway.networking.k8s.io` API group.
+- Only objects rendered by the templates are taken into account: Ingress objects of the `networking.k8s.io` API group, HTTPRoute objects of the `gateway.networking.k8s.io` API group, and ServiceAccount objects (`apiVersion: v1`).
 - Deckhouse Platform updates `status.urls` after every successful apply of the templates.
 
 For an Ingress, Deckhouse Platform builds a URL for every `host` and `path` pair of `spec.rules`. The scheme is `https` if the host is listed in `spec.tls`, and `http` otherwise. A rule without paths gives the `<SCHEME>://<HOST>/` URL. Rules without `host` are skipped.
@@ -261,6 +261,23 @@ where:
 
 For this HTTPRoute, Deckhouse Platform adds the same endpoint to `status.urls` as for the example Ingress: `https://myapp.my-namespace.apps.example.com/` with the `Web UI` description.
 
+### ServiceAccount endpoints
+
+If the application gives users a ServiceAccount token for accessing the Kubernetes API, add the annotation to this ServiceAccount. For a ServiceAccount, Deckhouse Platform adds the in-cluster address of the Kubernetes API, `https://kubernetes.default.svc/`, to `status.urls`. This address is the same for all ServiceAccounts and is reachable only from inside the cluster.
+
+Example ServiceAccount:
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: d8a-{{ .Application.Instance.Name }}-api
+  annotations:
+    packages.deckhouse.io/application-endpoint-description: "Kubernetes API"
+```
+
+For this ServiceAccount, Deckhouse Platform adds the `https://kubernetes.default.svc/` endpoint with the `Kubernetes API` description to `status.urls`. To show the ServiceAccount token next to this endpoint in the web interface, bind a Secret with the token to the ServiceAccount (for details, refer to ["ServiceAccount token"](#serviceaccount-token)).
+
 ## Credentials in the web interface
 
 The web interface can show the credentials for signing in next to an application endpoint, for example, the login and password of the administrator account that the application creates during installation. To do this, add a Secret with the login and password to the templates and bind this Secret to the endpoint:
@@ -283,9 +300,9 @@ data:
 The web interface finds the credentials as follows:
 
 - The `packages.deckhouse.io/application-instance` label with the instance name is required. The web interface looks for credentials only among the Secrets with this label in the namespace of the application. Deckhouse Platform doesn't add this label to the objects, and the `packages.deckhouse.io/instance` label that Deckhouse Platform adds (for details, refer to ["Labels and object protection"](#labels-and-object-protection)) is not taken into account.
-- The `packages.deckhouse.io/application-ingress` label binds the Secret to an Ingress from the templates by its name. For an application published through the [`alb`](/modules/alb/) module, use the `packages.deckhouse.io/application-alb` label with the name of an HTTPRoute from the templates instead. The web interface shows the credentials next to the endpoints with the description of this object. A label value can't be longer than 63 characters, so the name of the Ingress or HTTPRoute must fit this limit.
-- Instead of the label, you can set the endpoint description in the `packages.deckhouse.io/application-endpoint-description` annotation of the Secret. If both are set, the description of the Ingress or HTTPRoute is used.
-- The web interface shows the credentials only if the application has endpoints with a matching description. Endpoints without a description don't get credentials, so set a description in the annotation of the Ingress or HTTPRoute instead of `"true"`.
+- The `packages.deckhouse.io/application-ingress` label binds the Secret to an Ingress from the templates by its name. For an application published through the [`alb`](/modules/alb/) module, use the `packages.deckhouse.io/application-alb` label with the name of an HTTPRoute from the templates instead, and for a ServiceAccount token, the `packages.deckhouse.io/application-serviceaccount` label with the name of a ServiceAccount from the templates. The web interface shows the credentials next to the endpoints with the description of this object. A label value can't be longer than 63 characters, so the name of the Ingress, HTTPRoute, or ServiceAccount must fit this limit.
+- Instead of the label, you can set the endpoint description in the `packages.deckhouse.io/application-endpoint-description` annotation of the Secret. If both are set, the description of the Ingress, HTTPRoute, or ServiceAccount is used.
+- The web interface shows the credentials only if the application has endpoints with a matching description. Endpoints without a description don't get credentials, so set a description in the annotation of the Ingress, HTTPRoute, or ServiceAccount instead of `"true"`.
 - The `packages.deckhouse.io/initial-secret` label marks the Secret as one-time credentials. Deckhouse Platform creates such a Secret once and doesn't update it afterwards: it adds the `werf.io/resource-policy: skip-update` annotation to the Secret (an existing policy is kept, for example, `skip-delete` becomes `skip-delete,skip-update`). The admission policies let users change such a Secret, so the web interface can mark it as shown, and users can change the credentials. Without this label, the policies deny the change, and the credentials can be requested again. Deckhouse Platform checks only that the label is present, its value doesn't matter.
 
 Put the login into the `login` key and the password into the `password` key. The web interface shows every key of `data` as a separate field named after the key, so don't store other data in this Secret.
@@ -295,6 +312,26 @@ In the web interface, endpoints with credentials get a button for getting the lo
 Since Deckhouse Platform doesn't update a Secret with the `packages.deckhouse.io/initial-secret` label, changes to its template, including `data`, apply only when the Secret is created, for example, in a new instance.
 
 Generate the credentials once and keep them unchanged: the web interface doesn't offer a Secret again even if its data changes. Don't generate the password in the template: functions such as `randAlphaNum` give a new value on every render (for details, refer to ["Known issues and troubleshooting"](nelm-annotations.html#known-issues-and-troubleshooting)). Instead, for example, generate it in a hook if the Secret doesn't exist yet, and otherwise take it from the snapshot of the existing Secret. Values set by hooks are kept only in memory, so the hook must restore the password after Deckhouse Platform restarts (for details, refer to ["Hooks"](hooks.html#values)).
+
+### ServiceAccount token
+
+To show a ServiceAccount token, add a Secret of the `kubernetes.io/service-account-token` type for the ServiceAccount from the [example above](#serviceaccount-endpoints):
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8a-{{ .Application.Instance.Name }}-api-token
+  labels:
+    packages.deckhouse.io/application-instance: {{ .Application.Instance.Name }}
+    packages.deckhouse.io/application-serviceaccount: d8a-{{ .Application.Instance.Name }}-api
+    packages.deckhouse.io/initial-secret: "true"
+  annotations:
+    kubernetes.io/service-account.name: d8a-{{ .Application.Instance.Name }}-api
+type: kubernetes.io/service-account-token
+```
+
+Kubernetes fills in the `ca.crt`, `namespace`, and `token` keys of this Secret: the CA certificate of the Kubernetes API, the namespace, and the ServiceAccount token. The web interface shows them as separate fields.
 
 ## Restrictions
 

@@ -333,10 +333,10 @@ spec:
                         Версия, которую автоматическое обновление установит следующей. Меняется только после того, как предыдущая установлена и готова. Пусто в режиме обновления `Manual`.
                 urls:
                   description: |
-                    URL-адреса эндпоинтов приложения, полученные из ресурсов Ingress и HTTPRoute чарта приложения с аннотацией `packages.deckhouse.io/application-endpoint-description`.
+                    URL-адреса эндпоинтов приложения, полученные из ресурсов Ingress, HTTPRoute и ServiceAccount чарта приложения с аннотацией `packages.deckhouse.io/application-endpoint-description`. Для ServiceAccount это внутрикластерный адрес API Kubernetes — `https://kubernetes.default.svc/`.
                   items:
                     description: |
-                      Эндпоинт приложения, построенный на основе ресурса Ingress или HTTPRoute чарта приложения.
+                      Эндпоинт приложения, построенный на основе ресурса Ingress, HTTPRoute или ServiceAccount чарта приложения.
                     properties:
                       description:
                         description: |

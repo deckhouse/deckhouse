@@ -620,12 +620,13 @@ spec:
                     type: array
                 type: object
               urls:
-                description: Application endpoint URLs obtained from Ingress and HTTPRoute
-                  resources in the application chart with the `packages.deckhouse.io/application-endpoint-description`
-                  annotation.
+                description: Application endpoint URLs obtained from Ingress, HTTPRoute,
+                  and ServiceAccount resources in the application chart with the `packages.deckhouse.io/application-endpoint-description`
+                  annotation. A ServiceAccount gives the in-cluster address of the
+                  Kubernetes API, `https://kubernetes.default.svc/`.
                 items:
-                  description: Application endpoint defined by an Ingress or HTTPRoute
-                    resource in the application chart.
+                  description: Application endpoint defined by an Ingress, HTTPRoute,
+                    or ServiceAccount resource in the application chart.
                   properties:
                     description:
                       description: |-

@@ -1,9 +1,9 @@
 ---
 title: Шаблоны
 permalink: ru/architecture/marketplace/templates.html
-description: "Helm-шаблоны пакета Application: значения шаблонов, именование объектов, образы контейнеров и доступ к хранилищу образов, Ingress, HTTPRoute и адреса приложения, учётные данные в веб-интерфейсе, метки и состояние рабочих нагрузок."
+description: "Helm-шаблоны пакета Application: значения шаблонов, именование объектов, образы контейнеров и доступ к хранилищу образов, Ingress, HTTPRoute, ServiceAccount и адреса приложения, учётные данные в веб-интерфейсе, метки и состояние рабочих нагрузок."
 lang: ru
-search: application templates, d8a prefix, Application.Instance, Platform.applications, application-endpoint-description, application-ingress, application-alb, application-instance, initial-secret, showed-credentials, HTTPRoute, ListenerSet, шаблоны приложения, имена объектов, образы пакета, учётные данные приложения
+search: application templates, d8a prefix, Application.Instance, Platform.applications, application-endpoint-description, application-ingress, application-alb, application-serviceaccount, application-instance, initial-secret, showed-credentials, HTTPRoute, ListenerSet, ServiceAccount, шаблоны приложения, имена объектов, образы пакета, учётные данные приложения
 ---
 
 {% raw %}
@@ -182,10 +182,10 @@ spec:
 
 ## Адреса приложения
 
-Чтобы адреса приложения отображались [в поле `status.urls`](../../reference/api/cr.html#application-v1alpha1-status-urls) ресурса Application (например, веб-интерфейс показывает их как ссылки на приложение), добавьте аннотацию `packages.deckhouse.io/application-endpoint-description` к Ingress или, если приложение публикуется через модуль [`alb`](/modules/alb/), к HTTPRoute:
+Чтобы адреса приложения отображались [в поле `status.urls`](../../reference/api/cr.html#application-v1alpha1-status-urls) ресурса Application (например, веб-интерфейс показывает их как ссылки на приложение), добавьте аннотацию `packages.deckhouse.io/application-endpoint-description` к Ingress, к HTTPRoute, если приложение публикуется через модуль [`alb`](/modules/alb/), или к [ServiceAccount](#адреса-serviceaccount):
 
 - Значение аннотации — описание адреса. Значение `"true"` добавляет адрес без описания, а значение `"false"` исключает объект.
-- Учитываются только объекты из шаблонов: Ingress группы API `networking.k8s.io` и HTTPRoute группы API `gateway.networking.k8s.io`.
+- Учитываются только объекты из шаблонов: Ingress группы API `networking.k8s.io`, HTTPRoute группы API `gateway.networking.k8s.io` и ServiceAccount (`apiVersion: v1`).
 - Deckhouse Platform обновляет `status.urls` после каждого успешного применения шаблонов.
 
 Для Ingress Deckhouse Platform формирует URL-адрес для каждой пары `host` и `path` из `spec.rules`. Схема — `https`, если хост указан в `spec.tls`, иначе `http`. Правило без путей даёт URL-адрес `<SCHEME>://<HOST>/`. Правила без `host` пропускаются.
@@ -263,6 +263,23 @@ spec:
 
 Для этого HTTPRoute Deckhouse Platform добавляет в `status.urls` тот же адрес, что и для примера Ingress: `https://myapp.my-namespace.apps.example.com/` с описанием `Web UI`.
 
+### Адреса ServiceAccount
+
+Если приложение выдаёт пользователям токен ServiceAccount для доступа к API Kubernetes, добавьте аннотацию к этому ServiceAccount. Для ServiceAccount Deckhouse Platform добавляет в `status.urls` внутрикластерный адрес API Kubernetes — `https://kubernetes.default.svc/`. Этот адрес одинаков для всех ServiceAccount и доступен только изнутри кластера.
+
+Пример ServiceAccount:
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: d8a-{{ .Application.Instance.Name }}-api
+  annotations:
+    packages.deckhouse.io/application-endpoint-description: "Kubernetes API"
+```
+
+Для этого ServiceAccount Deckhouse Platform добавляет в `status.urls` адрес `https://kubernetes.default.svc/` с описанием `Kubernetes API`. Чтобы веб-интерфейс показывал рядом с этим адресом токен ServiceAccount, привяжите к ServiceAccount Secret с токеном (подробнее — [в разделе «Токен ServiceAccount»](#токен-serviceaccount)).
+
 ## Учётные данные в веб-интерфейсе
 
 Веб-интерфейс может показывать рядом с адресом приложения учётные данные для входа, например логин и пароль учётной записи администратора, которую приложение создаёт при установке. Для этого добавьте в шаблоны Secret с логином и паролем и привяжите этот Secret к адресу:
@@ -285,9 +302,9 @@ data:
 Веб-интерфейс находит учётные данные следующим образом:
 
 - Лейбл `packages.deckhouse.io/application-instance` с именем экземпляра обязателен. Веб-интерфейс ищет учётные данные только среди Secret с этим лейблом в неймспейсе приложения. DP не добавляет этот лейбл к объектам, а лейбл `packages.deckhouse.io/instance`, который DP добавляет (подробнее — [в разделе «Лейблы и защита объектов»](#лейблы-и-защита-объектов)), не учитывается.
-- Лейбл `packages.deckhouse.io/application-ingress` привязывает Secret к Ingress из шаблонов по имени. Для приложения, которое публикуется через модуль [`alb`](/modules/alb/), вместо него используйте лейбл `packages.deckhouse.io/application-alb` с именем HTTPRoute из шаблонов. Веб-интерфейс показывает учётные данные рядом с адресами, у которых описание этого объекта. Значение лейбла не может быть длиннее 63 символов, поэтому имя Ingress или HTTPRoute должно укладываться в это ограничение.
-- Вместо лейбла можно указать описание адреса в аннотации `packages.deckhouse.io/application-endpoint-description` у Secret. Если заданы и лейбл, и аннотация, используется описание Ingress или HTTPRoute.
-- Веб-интерфейс показывает учётные данные, только если у приложения есть адреса с подходящим описанием. К адресам без описания учётные данные не привязываются, поэтому указывайте в аннотации Ingress или HTTPRoute описание, а не `"true"`.
+- Лейбл `packages.deckhouse.io/application-ingress` привязывает Secret к Ingress из шаблонов по имени. Для приложения, которое публикуется через модуль [`alb`](/modules/alb/), вместо него используйте лейбл `packages.deckhouse.io/application-alb` с именем HTTPRoute из шаблонов, а для токена ServiceAccount — лейбл `packages.deckhouse.io/application-serviceaccount` с именем ServiceAccount из шаблонов. Веб-интерфейс показывает учётные данные рядом с адресами, у которых описание этого объекта. Значение лейбла не может быть длиннее 63 символов, поэтому имя Ingress, HTTPRoute или ServiceAccount должно укладываться в это ограничение.
+- Вместо лейбла можно указать описание адреса в аннотации `packages.deckhouse.io/application-endpoint-description` у Secret. Если заданы и лейбл, и аннотация, используется описание Ingress, HTTPRoute или ServiceAccount.
+- Веб-интерфейс показывает учётные данные, только если у приложения есть адреса с подходящим описанием. К адресам без описания учётные данные не привязываются, поэтому указывайте в аннотации Ingress, HTTPRoute или ServiceAccount описание, а не `"true"`.
 - Лейбл `packages.deckhouse.io/initial-secret` помечает Secret как одноразовые учётные данные. DP создаёт такой Secret один раз и больше его не обновляет: он добавляет к Secret аннотацию `werf.io/resource-policy: skip-update` (уже заданная политика сохраняется, например `skip-delete` превращается в `skip-delete,skip-update`). Admission-политики разрешают пользователям изменять такой Secret, поэтому веб-интерфейс может отметить его как показанный, а пользователи — сменить учётные данные. Без этого лейбла политики запрещают изменение, и учётные данные можно запросить повторно. DP проверяет только наличие лейбла, его значение не важно.
 
 Укажите логин в ключе `login`, а пароль — в ключе `password`. Веб-интерфейс показывает каждый ключ `data` отдельным полем с именем ключа, поэтому не храните в этом Secret другие данные.
@@ -297,6 +314,26 @@ data:
 Поскольку Deckhouse Platform не обновляет Secret с лейблом `packages.deckhouse.io/initial-secret`, изменения его шаблона, в том числе `data`, применяются только при создании Secret, например в новом экземпляре.
 
 Сгенерируйте учётные данные один раз и не меняйте их: веб-интерфейс не предлагает Secret повторно, даже если его данные изменились. Не генерируйте пароль в шаблоне: функции вроде `randAlphaNum` дают новое значение при каждом рендеринге (подробнее — [в разделе «Известные проблемы и способы решения»](nelm-annotations.html#известные-проблемы-и-способы-решения)). Вместо этого, например, генерируйте пароль в хуке, если Secret ещё не создан, а иначе берите его из снимка существующего Secret. Значения, которые задают хуки, хранятся только в памяти, поэтому хук должен восстанавливать пароль после перезапуска Deckhouse Platform (подробнее — [в разделе «Values»](hooks.html#values) на странице хуков).
+
+### Токен ServiceAccount
+
+Чтобы показать токен ServiceAccount, добавьте Secret типа `kubernetes.io/service-account-token` для ServiceAccount из [примера выше](#адреса-serviceaccount):
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8a-{{ .Application.Instance.Name }}-api-token
+  labels:
+    packages.deckhouse.io/application-instance: {{ .Application.Instance.Name }}
+    packages.deckhouse.io/application-serviceaccount: d8a-{{ .Application.Instance.Name }}-api
+    packages.deckhouse.io/initial-secret: "true"
+  annotations:
+    kubernetes.io/service-account.name: d8a-{{ .Application.Instance.Name }}-api
+type: kubernetes.io/service-account-token
+```
+
+Kubernetes заполняет в этом Secret ключи `ca.crt`, `namespace` и `token`: CA-сертификат API Kubernetes, неймспейс и токен ServiceAccount. Веб-интерфейс показывает их отдельными полями.
 
 ## Ограничения
 

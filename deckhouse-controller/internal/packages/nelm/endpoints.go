@@ -27,17 +27,23 @@ import (
 )
 
 const (
-	ingressKind     = "Ingress"
-	httpRouteKind   = "HTTPRoute"
-	listenerSetKind = "ListenerSet"
+	ingressKind        = "Ingress"
+	httpRouteKind      = "HTTPRoute"
+	listenerSetKind    = "ListenerSet"
+	serviceAccountKind = "ServiceAccount"
 
 	// gatewayGroup is the API group of the Gateway API, through which the alb
 	// module publishes applications: HTTPRoutes attached to ListenerSets.
 	gatewayGroup = "gateway.networking.k8s.io"
 
-	// annotationEndpointDescription marks an Ingress or an HTTPRoute in the
-	// application chart as an application endpoint and holds its description; the
-	// hosts and paths of that object are reflected in status.urls.
+	// kubernetesAPIURL is the endpoint of a ServiceAccount: the in-cluster
+	// address of the Kubernetes API, which its token is used against.
+	kubernetesAPIURL = "https://kubernetes.default.svc/"
+
+	// annotationEndpointDescription marks an Ingress, an HTTPRoute or a
+	// ServiceAccount in the application chart as an application endpoint and
+	// holds its description; the hosts and paths of that object, or the
+	// Kubernetes API address for a ServiceAccount, are reflected in status.urls.
 	annotationEndpointDescription = "packages.deckhouse.io/application-endpoint-description"
 )
 
@@ -113,11 +119,12 @@ type listenerSet struct {
 // multi-document YAML manifest. An endpoint is built for every host/path pair
 // of networking.k8s.io Ingress and gateway.networking.k8s.io HTTPRoute
 // resources annotated with packages.deckhouse.io/application-endpoint-description
-// (any value except "false"). The annotation value becomes the endpoint
-// description ("true" means no description). The scheme is https when the host
-// is covered by spec.tls of the Ingress or by an HTTPS listener the HTTPRoute
-// attaches to, http otherwise. The result is deduplicated and sorted;
-// undecodable documents are skipped.
+// (any value except "false"), and for every annotated ServiceAccount, whose
+// endpoint is the in-cluster address of the Kubernetes API. The annotation
+// value becomes the endpoint description ("true" means no description). The
+// scheme is https when the host is covered by spec.tls of the Ingress or by an
+// HTTPS listener the HTTPRoute attaches to, http otherwise. The result is
+// deduplicated and sorted; undecodable documents are skipped.
 func extractEndpointURLs(renderedManifests string) []observed.URL {
 	manifests := decodeEndpointManifests(renderedManifests)
 	listenerSets := collectListenerSets(manifests)
@@ -134,6 +141,8 @@ func extractEndpointURLs(renderedManifests string) []observed.URL {
 			urls = append(urls, ingressURLs(m, description)...)
 		case m.Kind == httpRouteKind && strings.HasPrefix(m.APIVersion, gatewayGroup+"/"):
 			urls = append(urls, httpRouteURLs(m, description, listenerSets)...)
+		case m.Kind == serviceAccountKind && m.APIVersion == "v1":
+			urls = append(urls, observed.URL{URL: kubernetesAPIURL, Description: description})
 		}
 	}
 

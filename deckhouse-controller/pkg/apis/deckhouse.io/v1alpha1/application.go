@@ -382,7 +382,7 @@ type ApplicationStatus struct {
 	// +optional
 	Update *ApplicationStatusUpdate `json:"update,omitempty"`
 
-	// Application endpoint URLs obtained from Ingress and HTTPRoute resources in the application chart with the `packages.deckhouse.io/application-endpoint-description` annotation.
+	// Application endpoint URLs obtained from Ingress, HTTPRoute, and ServiceAccount resources in the application chart with the `packages.deckhouse.io/application-endpoint-description` annotation. A ServiceAccount gives the in-cluster address of the Kubernetes API, `https://kubernetes.default.svc/`.
 	// +optional
 	URLs []ApplicationStatusURL `json:"urls,omitempty"`
 
@@ -446,7 +446,7 @@ type ApplicationStatusSummary struct {
 	Tip string `json:"tip,omitempty"`
 }
 
-// Application endpoint defined by an Ingress or HTTPRoute resource in the application chart.
+// Application endpoint defined by an Ingress, HTTPRoute, or ServiceAccount resource in the application chart.
 type ApplicationStatusURL struct {
 	// Application endpoint URL.
 	URL string `json:"url"`
