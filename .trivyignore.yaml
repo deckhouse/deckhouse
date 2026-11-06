@@ -1,0 +1,8 @@
+secrets:
+  - id: gcp-service-account
+    paths:
+      - "/app/docs-dkp/en/admin/integrations/public/gcp/configuration-and-layout-scheme.html"
+      - "/app/docs-dkp/ru/admin/integrations/public/gcp/configuration-and-layout-scheme.html"
+      - "/app/embedded-modules/en/modules/cloud-provider-gcp/layouts.html"
+      - "/app/embedded-modules/ru/modules/cloud-provider-gcp/layouts.html"
+    statement: "false positive: configuration example in the documentation"
