@@ -6,10 +6,10 @@ Bumps Go module dependencies to remediate CVEs reported by Trivy for the
 cluster-autoscaler binary. The vulnerabilities live in indirect/build
 dependencies that are linked into the binary (x/crypto/ssh, x/net, k8s
 staging modules), not in cluster-autoscaler logic, so the fix is a pure
-`go.mod`/`go.sum` bump. The gardener tag stays `v1.35.1`.
+`go.mod`/`go.sum` bump. The gardener tag stays `v1.35.2`.
 
 This patch also covers the k8s 1.36 image: `werf.inc.yaml` clamps
-`$maxVersion = "1.35"`, so that image is built from gardener `v1.35.1`
+`$maxVersion = "1.35"`, so that image is built from gardener `v1.35.2`
 with `patches/1.35/`.
 
 Applied to both `cluster-autoscaler/go.mod` and `cluster-autoscaler/apis/go.mod`:
@@ -30,7 +30,7 @@ To recreate this patch, check out the clean tag and re-apply the bumps:
 
 ```shell
 git clone <SOURCE_REPO>/gardener/autoscaler.git
-cd autoscaler && git checkout v1.35.1
+cd autoscaler && git checkout v1.35.2
 cd cluster-autoscaler
 go get google.golang.org/grpc@v1.83.2 \
   go.opentelemetry.io/otel/sdk@v1.45.0 \

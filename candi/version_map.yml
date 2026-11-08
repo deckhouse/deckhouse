@@ -61,7 +61,7 @@ k8s:
     status: available
     patch: 12
     bashible: *bashible
-    clusterAutoscalerPatch: "1"
+    clusterAutoscalerPatch: "4"
     crictlPatch: 0
     csi:
       provisioner: v5.2.0
@@ -74,7 +74,7 @@ k8s:
     status: available
     patch: 9
     bashible: *bashible
-    clusterAutoscalerPatch: "1"
+    clusterAutoscalerPatch: "2"
     crictlPatch: 0
     csi:
       provisioner: v5.2.0
@@ -87,7 +87,7 @@ k8s:
     status: preview
     patch: 5
     bashible: *bashible
-    clusterAutoscalerPatch: "1"
+    clusterAutoscalerPatch: "2"
     crictlPatch: 0
     csi:
       provisioner: v5.2.0

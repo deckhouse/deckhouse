@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-642feb22aa75cdfead8050beea783a62233df9ea5f46ff497abd7fa75a06a621",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 6,
+  "version": 7,
   "statements": [
     {
       "vulnerability": {
@@ -38,13 +38,13 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/golang.org/x/net@v0.55.0"
+          "@id": "pkg:golang/golang.org/x/net@v0.56.0"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
-      "impact_statement": "Уязвимость находится в собственной реализации HTTP/2 модуля golang.org/x/net. При каждом кадре SETTINGS со значением SETTINGS_INITIAL_WINDOW_SIZE функция serverConn.processSettingInitialWindowSize и обработчик SETTINGS клиентского транспорта пересчитывают окно управления потоком для всех открытых потоков, поэтому поток мелких кадров SETTINGS создаёт нагрузку на CPU, пропорциональную числу потоков. В x/net v0.55.0 файлы этой реализации (http2/server.go, http2/transport.go и связанные с ними) собираются только при условии !(go1.27 && !http2legacy). Updater собирается Go 1.27 без тега http2legacy, поэтому вместо них компилируются обёртки server_wrap.go и transport_wrap.go, которые передают работу встроенной реализации HTTP/2 из net/http. В бинарном файле updater из golang.org/x/net/http2 остались только обёртки Transport и ClientConn и функция ConfigureTransports, а символов serverConn, clientConnReadLoop, outflow и Framer нет (проверено go tool nm на сборке vertical-pod-autoscaler-1.7.0 с наложенными патчами модуля). Та же проблема во встроенной реализации стандартной библиотеки исправлена в Go 1.27.2, которым собирается образ. Уязвимый код x/net в образе отсутствует.",
-      "timestamp": "2026-10-16T09:06:33.864275Z"
+      "impact_statement": "Уязвимость находится в собственной реализации HTTP/2 модуля golang.org/x/net. При каждом кадре SETTINGS со значением SETTINGS_INITIAL_WINDOW_SIZE функция serverConn.processSettingInitialWindowSize и обработчик SETTINGS клиентского транспорта пересчитывают окно управления потоком для всех открытых потоков, поэтому поток мелких кадров SETTINGS создаёт нагрузку на CPU, пропорциональную числу потоков. В x/net v0.56.0 файлы этой реализации (http2/server.go, http2/transport.go и связанные с ними) собираются только при условии !(go1.27 && !http2legacy). Updater собирается Go 1.27 без тега http2legacy, поэтому вместо них компилируются обёртки server_wrap.go и transport_wrap.go, которые передают работу встроенной реализации HTTP/2 из net/http. В бинарном файле updater из golang.org/x/net/http2 остались только обёртки Transport и ClientConn и функция configureTransports, а символов serverConn, clientConnReadLoop, outflow и Framer нет (проверено go tool nm на сборке vertical-pod-autoscaler-1.7.3 с наложенными патчами модуля). Та же проблема во встроенной реализации стандартной библиотеки исправлена в Go 1.27.2, которым собирается образ. Уязвимый код x/net в образе отсутствует.",
+      "timestamp": "2026-11-06T06:21:06.147139Z"
     },
     {
       "vulnerability": {
@@ -52,13 +52,13 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/golang.org/x/net@v0.55.0"
+          "@id": "pkg:golang/golang.org/x/net@v0.56.0"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
-      "impact_statement": "Уязвимость находится в серверной части собственной реализации HTTP/2 модуля golang.org/x/net. Когда клиент сбрасывает поток, serverConn возвращает в окно управления потоком соединения объём буферизованных, но не прочитанных данных, а когда обработчик дочитывает тело запроса, возвращает его повторно. Так злонамеренный клиент обходит лимит MaxReceiveBufferPerConnection. В x/net v0.55.0 файлы этой реализации (http2/server.go, http2/transport.go и связанные с ними) собираются только при условии !(go1.27 && !http2legacy). Updater собирается Go 1.27 без тега http2legacy, поэтому вместо них компилируются обёртки server_wrap.go и transport_wrap.go, которые передают работу встроенной реализации HTTP/2 из net/http. В бинарном файле updater из golang.org/x/net/http2 остались только обёртки Transport и ClientConn и функция ConfigureTransports, а символов serverConn, outflow и Framer нет (проверено go tool nm на сборке vertical-pod-autoscaler-1.7.0 с наложенными патчами модуля). Та же проблема во встроенной реализации стандартной библиотеки исправлена в Go 1.27.2, которым собирается образ. Уязвимый код x/net в образе отсутствует.",
-      "timestamp": "2026-10-16T09:06:56.861665Z"
+      "impact_statement": "Уязвимость находится в серверной части собственной реализации HTTP/2 модуля golang.org/x/net. Когда клиент сбрасывает поток, serverConn возвращает в окно управления потоком соединения объём буферизованных, но не прочитанных данных, а когда обработчик дочитывает тело запроса, возвращает его повторно. Так злонамеренный клиент обходит лимит MaxReceiveBufferPerConnection. В x/net v0.56.0 файлы этой реализации (http2/server.go, http2/transport.go и связанные с ними) собираются только при условии !(go1.27 && !http2legacy). Updater собирается Go 1.27 без тега http2legacy, поэтому вместо них компилируются обёртки server_wrap.go и transport_wrap.go, которые передают работу встроенной реализации HTTP/2 из net/http. В бинарном файле updater из golang.org/x/net/http2 остались только обёртки Transport и ClientConn и функция configureTransports, а символов serverConn, outflow и Framer нет (проверено go tool nm на сборке vertical-pod-autoscaler-1.7.3 с наложенными патчами модуля). Та же проблема во встроенной реализации стандартной библиотеки исправлена в Go 1.27.2, которым собирается образ. Уязвимый код x/net в образе отсутствует.",
+      "timestamp": "2026-11-06T06:21:30.934704Z"
     },
     {
       "vulnerability": {
@@ -66,13 +66,13 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/golang.org/x/net@v0.55.0"
+          "@id": "pkg:golang/golang.org/x/net@v0.56.0"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
-      "impact_statement": "Уязвимость находится в серверной части собственной реализации HTTP/2 модуля golang.org/x/net. При обработке кадра SETTINGS со значением SETTINGS_HEADER_TABLE_SIZE serverConn меняет размер таблицы HPACK-кодировщика без синхронизации, пока другая горутина кодирует тем же кодировщиком кадр HEADERS ответа, поэтому злонамеренный клиент может вызвать аварийное завершение сервера. В x/net v0.55.0 файлы этой реализации (http2/server.go, http2/transport.go и связанные с ними) собираются только при условии !(go1.27 && !http2legacy). Updater собирается Go 1.27 без тега http2legacy, поэтому вместо них компилируются обёртки server_wrap.go и transport_wrap.go, которые передают работу встроенной реализации HTTP/2 из net/http. В бинарном файле updater из golang.org/x/net/http2 остались только обёртки Transport и ClientConn и функция ConfigureTransports, символов serverConn и Framer нет, а из golang.org/x/net/http2/hpack попадает только инициализация пакета, без кодировщика (проверено go tool nm на сборке vertical-pod-autoscaler-1.7.0 с наложенными патчами модуля). Та же проблема во встроенной реализации стандартной библиотеки исправлена в Go 1.27.2, которым собирается образ. Уязвимый код x/net в образе отсутствует.",
-      "timestamp": "2026-10-16T09:07:18.56899Z"
+      "impact_statement": "Уязвимость находится в серверной части собственной реализации HTTP/2 модуля golang.org/x/net. При обработке кадра SETTINGS со значением SETTINGS_HEADER_TABLE_SIZE serverConn меняет размер таблицы HPACK-кодировщика без синхронизации, пока другая горутина кодирует тем же кодировщиком кадр HEADERS ответа, поэтому злонамеренный клиент может вызвать аварийное завершение сервера. В x/net v0.56.0 файлы этой реализации (http2/server.go, http2/transport.go и связанные с ними) собираются только при условии !(go1.27 && !http2legacy). Updater собирается Go 1.27 без тега http2legacy, поэтому вместо них компилируются обёртки server_wrap.go и transport_wrap.go, которые передают работу встроенной реализации HTTP/2 из net/http. В бинарном файле updater из golang.org/x/net/http2 остались только обёртки Transport и ClientConn и функция configureTransports, символов serverConn и Framer нет, а из golang.org/x/net/http2/hpack попадает только инициализация пакета, без кодировщика (проверено go tool nm на сборке vertical-pod-autoscaler-1.7.3 с наложенными патчами модуля). Та же проблема во встроенной реализации стандартной библиотеки исправлена в Go 1.27.2, которым собирается образ. Уязвимый код x/net в образе отсутствует.",
+      "timestamp": "2026-11-06T06:21:51.155258Z"
     },
     {
       "vulnerability": {
@@ -80,13 +80,13 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/golang.org/x/net@v0.55.0"
+          "@id": "pkg:golang/golang.org/x/net@v0.56.0"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
-      "impact_statement": "Уязвимость находится в собственной реализации HTTP/2 модуля golang.org/x/net. HTTP/2-сервер разворачивает перечисленные в заголовке Trailer имена полей в карту Request.Trailer и расходует память на каждое поле, тогда как сам заголовок учитывается в лимите размера заголовков один раз, поэтому злонамеренный клиент может вызвать исчерпание памяти. Исправление в x/net v0.60.0 вводит для заголовка trailer отдельный бюджет в Framer.readMetaFrame. В x/net v0.55.0 серверная реализация (http2/server.go и связанные с ней файлы) собирается только при условии !(go1.27 && !http2legacy). Updater собирается Go 1.27 без тега http2legacy, поэтому вместо неё компилируются обёртки server_wrap.go и transport_wrap.go, которые передают работу встроенной реализации HTTP/2 из net/http. В бинарном файле updater из golang.org/x/net/http2 остались только обёртки Transport и ClientConn и функция ConfigureTransports, а символов serverConn и Framer, включая readMetaFrame, и пакета golang.org/x/net/internal/httpcommon нет (go tool nm на сборке vertical-pod-autoscaler-1.7.0 с наложенными патчами модуля). Та же проблема во встроенной реализации стандартной библиотеки исправлена в Go 1.27.2, которым собирается образ. Уязвимый код x/net в образе отсутствует.",
-      "timestamp": "2026-10-16T09:07:30.15302Z"
+      "impact_statement": "Уязвимость находится в собственной реализации HTTP/2 модуля golang.org/x/net. HTTP/2-сервер разворачивает перечисленные в заголовке Trailer имена полей в карту Request.Trailer и расходует память на каждое поле, тогда как сам заголовок учитывается в лимите размера заголовков один раз, поэтому злонамеренный клиент может вызвать исчерпание памяти. Исправление в x/net v0.60.0 вводит для заголовка trailer отдельный бюджет в Framer.readMetaFrame. В x/net v0.56.0 серверная реализация (http2/server.go и связанные с ней файлы) собирается только при условии !(go1.27 && !http2legacy). Updater собирается Go 1.27 без тега http2legacy, поэтому вместо неё компилируются обёртки server_wrap.go и transport_wrap.go, которые передают работу встроенной реализации HTTP/2 из net/http. В бинарном файле updater из golang.org/x/net/http2 остались только обёртки Transport и ClientConn и функция configureTransports, а символов serverConn и Framer, включая readMetaFrame, и пакета golang.org/x/net/internal/httpcommon нет (go tool nm на сборке vertical-pod-autoscaler-1.7.3 с наложенными патчами модуля). Та же проблема во встроенной реализации стандартной библиотеки исправлена в Go 1.27.2, которым собирается образ. Уязвимый код x/net в образе отсутствует.",
+      "timestamp": "2026-11-06T06:22:13.621191Z"
     },
     {
       "vulnerability": {
@@ -94,13 +94,13 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/golang.org/x/net@v0.55.0"
+          "@id": "pkg:golang/golang.org/x/net@v0.56.0"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
-      "impact_statement": "Уязвимость находится в клиентском транспорте собственной реализации HTTP/2 модуля golang.org/x/net: функция clientConnReadLoop.handleResponse принимала в ответах сервера некорректные заголовки, влияющие на кадрирование (Connection, Transfer-Encoding, конфликтующие Content-Length). Если программа работает как обратный прокси и пересылает такой ответ клиенту HTTP/1, это может привести к подмене ответов (response smuggling). В x/net v0.55.0 клиентская реализация (http2/transport.go) собирается только при условии !(go1.27 && !http2legacy). Updater собирается Go 1.27 без тега http2legacy, поэтому вместо неё компилируется обёртка transport_wrap.go, которая передаёт запросы встроенной реализации HTTP/2 из net/http. Символов clientConnReadLoop из golang.org/x/net/http2 в бинарном файле нет (go tool nm на сборке vertical-pod-autoscaler-1.7.0 с наложенными патчами модуля). Та же проблема во встроенной реализации стандартной библиотеки исправлена в Go 1.27.2, которым собирается образ. Уязвимый код x/net в образе отсутствует.",
-      "timestamp": "2026-10-16T09:07:45.107636Z"
+      "impact_statement": "Уязвимость находится в клиентском транспорте собственной реализации HTTP/2 модуля golang.org/x/net: функция clientConnReadLoop.handleResponse принимала в ответах сервера некорректные заголовки, влияющие на кадрирование (Connection, Transfer-Encoding, конфликтующие Content-Length). Если программа работает как обратный прокси и пересылает такой ответ клиенту HTTP/1, это может привести к подмене ответов (response smuggling). В x/net v0.56.0 клиентская реализация (http2/transport.go) собирается только при условии !(go1.27 && !http2legacy). Updater собирается Go 1.27 без тега http2legacy, поэтому вместо неё компилируется обёртка transport_wrap.go, которая передаёт запросы встроенной реализации HTTP/2 из net/http. Символов clientConnReadLoop из golang.org/x/net/http2 в бинарном файле нет (go tool nm на сборке vertical-pod-autoscaler-1.7.3 с наложенными патчами модуля). Та же проблема во встроенной реализации стандартной библиотеки исправлена в Go 1.27.2, которым собирается образ. Уязвимый код x/net в образе отсутствует.",
+      "timestamp": "2026-11-06T06:22:23.478439Z"
     },
     {
       "vulnerability": {
@@ -113,8 +113,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
-      "impact_statement": "Уязвимость находится в пакете golang.org/x/text/secure/precis: профиль Nickname может аварийно завершиться с выходом за границы среза при преобразовании специально подобранной строки в короткий буфер. Updater не использует профили PRECIS: пакета secure/precis нет в графе зависимостей сборки (go list -deps), и его символов нет в бинарном файле (go tool nm на сборке vertical-pod-autoscaler-1.7.0 с наложенными патчами модуля). Из golang.org/x/text в сборку попадают только пакеты, которые использует golang.org/x/net/idna: transform, unicode/bidi, unicode/norm и secure/bidirule. Уязвимый код в образе отсутствует.",
-      "timestamp": "2026-10-15T13:06:38.499105Z"
+      "impact_statement": "Уязвимость находится в пакете golang.org/x/text/secure/precis: профиль Nickname может аварийно завершиться с выходом за границы среза при преобразовании специально подобранной строки в короткий буфер. Updater не использует профили PRECIS: пакета secure/precis нет в графе зависимостей сборки (go list -deps), и его символов нет в бинарном файле (go tool nm на сборке vertical-pod-autoscaler-1.7.3 с наложенными патчами модуля). Из golang.org/x/text в сборку попадают только пакеты, которые использует golang.org/x/net/idna: transform, unicode/bidi, unicode/norm и secure/bidirule. Уязвимый код в образе отсутствует.",
+      "timestamp": "2026-11-06T06:22:38.339969Z"
     },
     {
       "vulnerability": {
@@ -127,8 +127,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
-      "impact_statement": "Уязвимость находится в HTML-парсере golang.org/x/net/html: при слиянии соседних текстовых узлов методы parser.addText и parser.fosterParent дописывали текст к существующему узлу конкатенацией строк, поэтому документ из множества коротких текстовых фрагментов, разделённых игнорируемыми закрывающими тегами, вызывает квадратичное число аллокаций и копирований в html.Parse и html.ParseFragment. Пакет golang.org/x/net/html не входит в граф зависимостей собираемого бинарного файла updater: из модуля golang.org/x/net v0.55.0 в сборку попадают только idna, http2, http2/hpack, http/httpguts, internal/httpcommon и internal/httpsfv (проверено go list -deps для pkg/updater на vertical-pod-autoscaler-1.7.0 с наложенными патчами модуля). Разбор HTML компонент не выполняет, уязвимый код в образе отсутствует.",
-      "timestamp": "2026-11-02T08:53:56.023984Z"
+      "impact_statement": "Уязвимость находится в HTML-парсере golang.org/x/net/html: при слиянии соседних текстовых узлов методы parser.addText и parser.fosterParent дописывали текст к существующему узлу конкатенацией строк, поэтому документ из множества коротких текстовых фрагментов, разделённых игнорируемыми закрывающими тегами, вызывает квадратичное число аллокаций и копирований в html.Parse и html.ParseFragment. Пакет golang.org/x/net/html не входит в граф зависимостей собираемого бинарного файла updater: из модуля golang.org/x/net v0.56.0 в сборку попадают только idna, http2, http2/hpack, http/httpguts, internal/httpcommon и internal/httpsfv (проверено go list -deps для pkg/updater на vertical-pod-autoscaler-1.7.3 с наложенными патчами модуля). Разбор HTML компонент не выполняет, уязвимый код в образе отсутствует.",
+      "timestamp": "2026-11-06T06:23:00.203482Z"
     },
     {
       "vulnerability": {
@@ -141,9 +141,9 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
-      "impact_statement": "Уязвимость находится в HTML-сериализаторе golang.org/x/net/html: функция childTextNodesAreLiteral, по которой html.Render решает, выводить ли без экранирования текст внутри элементов script, style, iframe, noscript, xmp и подобных, проверяла предков только до ближайшего элемента внешнего пространства имён и, если он оказывался точкой интеграции HTML, считала текст безопасным. Сама точка интеграции может находиться внутри элемента, перенесённого во внешнее пространство имён при foster parenting (например, <mglyph> или <malignmark> под <mtext>), и тогда при повторном разборе выведенного без экранирования текста поддерево попадает в другое пространство имён, что позволяет обойти санитайзеры, которые разбирают и заново сериализуют HTML. Пакет golang.org/x/net/html не входит в граф зависимостей собираемого бинарного файла updater: из модуля golang.org/x/net v0.55.0 в сборку попадают только idna, http2, http2/hpack, http/httpguts, internal/httpcommon и internal/httpsfv (проверено go list -deps для pkg/updater на vertical-pod-autoscaler-1.7.0 с наложенными патчами модуля). HTML-документы компонент не строит и не сериализует, уязвимый код в образе отсутствует.",
-      "timestamp": "2026-11-02T08:54:44.982197Z"
+      "impact_statement": "Уязвимость находится в HTML-сериализаторе golang.org/x/net/html: функция childTextNodesAreLiteral, по которой html.Render решает, выводить ли без экранирования текст внутри элементов script, style, iframe, noscript, xmp и подобных, проверяла предков только до ближайшего элемента внешнего пространства имён и, если он оказывался точкой интеграции HTML, считала текст безопасным. Сама точка интеграции может находиться внутри элемента, перенесённого во внешнее пространство имён при foster parenting (например, <mglyph> или <malignmark> под <mtext>), и тогда при повторном разборе выведенного без экранирования текста поддерево попадает в другое пространство имён, что позволяет обойти санитайзеры, которые разбирают и заново сериализуют HTML. Пакет golang.org/x/net/html не входит в граф зависимостей собираемого бинарного файла updater: из модуля golang.org/x/net v0.56.0 в сборку попадают только idna, http2, http2/hpack, http/httpguts, internal/httpcommon и internal/httpsfv (проверено go list -deps для pkg/updater на vertical-pod-autoscaler-1.7.3 с наложенными патчами модуля). HTML-документы компонент не строит и не сериализует, уязвимый код в образе отсутствует.",
+      "timestamp": "2026-11-06T06:23:21.691256Z"
     }
   ],
-  "timestamp": "2026-11-02T08:54:51Z"
+  "timestamp": "2026-11-06T06:23:26Z"
 }
