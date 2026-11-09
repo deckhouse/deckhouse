@@ -53,26 +53,55 @@ import (
 // network — so the upstream from the module's own configuration comes first here too, and the mirror
 // is what is left when there is none.
 func GetRegistryDataPreferUpstream(ctx context.Context, kubeCl *client.KubernetesClient, inCluster bool) (*image.RegistryConfig, string, error) {
+	data, err := ResolveRegistryData(ctx, kubeCl, inCluster)
+	if err != nil {
+		return nil, "", err
+	}
+	return data.Config, data.DockerCfg, nil
+}
+
+// RegistryData is the registry GetRegistryDataPreferUpstream resolves, together with how it was
+// reached.
+type RegistryData struct {
+	Config    *image.RegistryConfig
+	DockerCfg string
+
+	// ThroughStoreTunnel is set when Config is the cluster's own store reached through the SSH
+	// connection (see mirrorThroughNode). It means more than an address: the cluster names no upstream,
+	// so whatever the store does not hold, nothing this process can reach holds either. A pull that
+	// fails there for a missing image is a question about the store, not about access, and the caller
+	// says so in what it reports — the address alone, `127.0.0.1:<port>`, does not tell an operator
+	// which registry that was.
+	ThroughStoreTunnel bool
+}
+
+// ResolveRegistryData is GetRegistryDataPreferUpstream that also reports how the registry was
+// reached.
+func ResolveRegistryData(ctx context.Context, kubeCl *client.KubernetesClient, inCluster bool) (RegistryData, error) {
 	if inCluster {
 		if conf, dockerCfg, found, err := registryDataFromConfigResource(ctx, kubeCl); err != nil {
-			return nil, "", err
+			return RegistryData{}, err
 		} else if found {
-			return conf, dockerCfg, nil
+			return RegistryData{Config: conf, DockerCfg: dockerCfg}, nil
 		}
 		if conf, dockerCfg, found, err := registryDataFromStore(ctx, kubeCl); err != nil {
-			return nil, "", err
+			return RegistryData{}, err
 		} else if found {
-			return conf, dockerCfg, nil
+			return RegistryData{Config: conf, DockerCfg: dockerCfg}, nil
 		}
-		return GetRegistryData(ctx, kubeCl)
+		conf, dockerCfg, err := GetRegistryData(ctx, kubeCl)
+		if err != nil {
+			return RegistryData{}, err
+		}
+		return RegistryData{Config: conf, DockerCfg: dockerCfg}, nil
 	}
 
 	conf, dockerCfg, found, err := getUpstreamRegistryData(ctx, kubeCl)
 	if err != nil {
-		return nil, "", err
+		return RegistryData{}, err
 	}
 	if found {
-		return conf, dockerCfg, nil
+		return RegistryData{Config: conf, DockerCfg: dockerCfg}, nil
 	}
 
 	// No upstream, which for an air-gapped cluster is not a gap in its configuration but the point of
@@ -82,16 +111,16 @@ func GetRegistryDataPreferUpstream(ctx context.Context, kubeCl *client.Kubernete
 	// there.
 	conf, dockerCfg, err = GetRegistryData(ctx, kubeCl)
 	if err != nil {
-		return nil, "", err
+		return RegistryData{}, err
 	}
 
 	if throughNode, throughNodeCfg, ok, err := mirrorThroughNode(ctx, kubeCl, conf); err != nil {
-		return nil, "", err
+		return RegistryData{}, err
 	} else if ok {
-		return throughNode, throughNodeCfg, nil
+		return RegistryData{Config: throughNode, DockerCfg: throughNodeCfg, ThroughStoreTunnel: true}, nil
 	}
 
-	return conf, dockerCfg, nil
+	return RegistryData{Config: conf, DockerCfg: dockerCfg}, nil
 }
 
 var (

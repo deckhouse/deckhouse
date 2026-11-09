@@ -292,6 +292,12 @@ type providerBundleRef struct {
 
 	// nil means "keep the caller's registry".
 	Registry *image.RegistryConfig
+
+	// RegistrySource is where Registry came from, for what a failed pull tells the operator: a
+	// ModuleSource's registry only when the configuration carries that ModuleSource. For the default
+	// source without one the module chain reads the configuration's own registry, and its credentials
+	// are the ones to fix.
+	RegistrySource bundleRegistrySource
 }
 
 // A function rather than a value because the cluster-side answer costs an API call. A nil lookup
@@ -323,9 +329,17 @@ func resolveModuleProviderBundle(ctx context.Context, provider string, lookup pr
 
 	moduleName := CloudProviderModuleName(provider)
 
-	catalogRepo, conf, err := md.moduleRepo(moduleName, md.providerSource(moduleName))
+	sourceName := md.providerSource(moduleName)
+	catalogRepo, conf, err := md.moduleRepo(moduleName, sourceName)
 	if err != nil {
 		return providerBundleRef{}, err
+	}
+
+	// Mirrors moduleRepo: the ModuleSource when the configuration carries it, the configuration's own
+	// registry otherwise.
+	registrySource := bundleRegistryFromConfig
+	if md.source(sourceName) != nil {
+		registrySource = bundleRegistryFromModuleSource
 	}
 	moduleRepo := path.Join(catalogRepo, moduleName)
 
@@ -346,9 +360,10 @@ func resolveModuleProviderBundle(ctx context.Context, provider string, lookup pr
 	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Provider bundle resolved from module %s:%s", moduleRepo, moduleTag))
 
 	return providerBundleRef{
-		Image:    moduleRepo + "@" + digest,
-		Digest:   digest,
-		Registry: conf,
+		Image:          moduleRepo + "@" + digest,
+		Digest:         digest,
+		Registry:       conf,
+		RegistrySource: registrySource,
 	}, nil
 }
 

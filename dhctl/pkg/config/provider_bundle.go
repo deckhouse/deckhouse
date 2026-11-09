@@ -18,12 +18,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
 	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	libdhctlyaml "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/yaml"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
@@ -38,9 +40,31 @@ import (
 // cluster runs is a property of that cluster, not of the bundle lying in the download dir.
 type KubeClientGetter func(ctx context.Context) (*client.KubernetesClient, error)
 
-// bundleRegistryGetter reads the registry to download the provider bundle from. A function because
-// one caller parses documents for it and another calls the target cluster.
-type bundleRegistryGetter func(ctx context.Context) (*image.RegistryConfig, error)
+// bundleRegistryGetter reads the registry to download the provider bundle from, and says where that
+// registry came from. A function because one caller parses documents for it and another calls the
+// target cluster.
+type bundleRegistryGetter func(ctx context.Context) (*image.RegistryConfig, bundleRegistrySource, error)
+
+// bundleRegistrySource is where the registry a provider bundle is pulled from came from. A failed pull
+// runs before every preflight check, so its message is all the operator gets, and what they can do
+// about it depends on this: fix the configuration they wrote, fix the registry the cluster names, or —
+// for an air-gapped cluster whose store lacks the image — bring the bundle from somewhere else.
+type bundleRegistrySource int
+
+const (
+	// bundleRegistryFromConfig is the registry of the configuration documents dhctl was given, or the
+	// public registry they default to.
+	bundleRegistryFromConfig bundleRegistrySource = iota
+	// bundleRegistryFromCluster is the registry the target cluster names: the upstream of its registry
+	// module, or deckhouse-registry.
+	bundleRegistryFromCluster
+	// bundleRegistryFromClusterStore is the cluster's own store, reached through the SSH connection to
+	// a master because the cluster names no upstream. Nothing else this process can reach holds what
+	// the store lacks.
+	bundleRegistryFromClusterStore
+	// bundleRegistryFromModuleSource is the registry of the ModuleSource the provider module comes from.
+	bundleRegistryFromModuleSource
+)
 
 var (
 	// Prefers the module chain, falls back to this installer's embedded digests. globalOptions
@@ -182,38 +206,38 @@ func RestoreProviderBundle(ctx context.Context, m *MetaConfig, globalOptions *op
 
 // docsBundleRegistry derives the registry from the configuration documents.
 func docsBundleRegistry(provider string, docs []string) bundleRegistryGetter {
-	return func(context.Context) (*image.RegistryConfig, error) {
+	return func(context.Context) (*image.RegistryConfig, bundleRegistrySource, error) {
 		conf, err := buildRegistryConfig(docs)
 		if err != nil {
-			return nil, fmt.Errorf("registry data to fetch provider bundle for %q: %w", provider, err)
+			return nil, bundleRegistryFromConfig, fmt.Errorf("registry data to fetch provider bundle for %q: %w", provider, err)
 		}
-		return conf, nil
+		return conf, bundleRegistryFromConfig, nil
 	}
 }
 
 // clusterBundleRegistry reads the registry from the target cluster.
 func clusterBundleRegistry(kubeClient KubeClientGetter) bundleRegistryGetter {
-	return func(ctx context.Context) (*image.RegistryConfig, error) {
+	return func(ctx context.Context) (*image.RegistryConfig, bundleRegistrySource, error) {
 		kubeCl, err := kubeClient(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("get kube client for provider bundle: %w", err)
+			return nil, bundleRegistryFromCluster, fmt.Errorf("get kube client for provider bundle: %w", err)
 		}
 
 		// deckhouse-registry points at the registry.d8-system.svc mirror on clusters with an
 		// in-cluster registry, which an out-of-cluster caller cannot resolve.
 		conf, found, err := registrydata.GetUpstreamRegistryData(ctx, kubeCl)
 		if err != nil {
-			return nil, fmt.Errorf("get upstream registry data from cluster: %w", err)
+			return nil, bundleRegistryFromCluster, fmt.Errorf("get upstream registry data from cluster: %w", err)
 		}
 		if found {
-			return conf, nil
+			return conf, bundleRegistryFromCluster, nil
 		}
 
 		conf, _, err = registrydata.GetRegistryData(ctx, kubeCl)
 		if err != nil {
-			return nil, fmt.Errorf("get registry data from cluster: %w", err)
+			return nil, bundleRegistryFromCluster, fmt.Errorf("get registry data from cluster: %w", err)
 		}
-		return conf, nil
+		return conf, bundleRegistryFromCluster, nil
 	}
 }
 
@@ -240,16 +264,23 @@ func updateProviderBundle(
 }
 
 func unpackProviderBundle(ctx context.Context, provider string, ref providerBundleRef, registry bundleRegistryGetter, globalOptions *options.GlobalOptions) (string, error) {
+	// Set by the registry getter and read by the download that follows it: EnsureUnpacked asks for the
+	// registry and then pulls, in that order and on this goroutine.
+	source := bundleRegistryFromConfig
+
 	dir, err := image.EnsureUnpacked(ctx, image.UnpackRequest{
 		Root:   globalOptions.DownloadDir,
 		Name:   provider,
 		Digest: ref.Digest,
 		Registry: func(ctx context.Context) (*image.RegistryConfig, error) {
-			// The bundle lives in the ModuleSource's registry, not the one resolved for deckhouse.
+			// The bundle lives in the module's registry, not the one resolved for deckhouse.
 			if ref.Registry != nil {
+				source = ref.RegistrySource
 				return ref.Registry, nil
 			}
-			return registry(ctx)
+			conf, from, err := registry(ctx)
+			source = from
+			return conf, err
 		},
 	}, image.EnsureUnpackedOptions{
 		// The module chain knows the repository. The in-tree path pins the flat images repo.
@@ -258,11 +289,8 @@ func unpackProviderBundle(ctx context.Context, provider string, ref providerBund
 		Download: func(ctx context.Context, imageRef, destDir string, registryConfig image.RegistryConfig, showProgress bool) error {
 			if err := downloadProviderBundle(ctx, imageRef, destDir, registryConfig, showProgress); err != nil {
 				// Runs before every preflight check, so this message is all the operator gets.
-				return fmt.Errorf("%w\n"+
-					"It carries the provider schemas and the validator, so the configuration cannot be checked without it. "+
-					"Make that reference reachable with the registry credentials from the configuration, "+
-					"or unpack the bundle into %s yourself before dhctl starts.",
-					err, providerdir.DigestDir(globalOptions.DownloadDir, provider, ref.Digest))
+				return fmt.Errorf("%w\n%s", err, failedBundlePullHint(err, source, imageRef, ref.Digest,
+					providerdir.DigestDir(globalOptions.DownloadDir, provider, ref.Digest)))
 			}
 			return nil
 		},
@@ -283,6 +311,97 @@ func unpackProviderBundle(ctx context.Context, provider string, ref providerBund
 	}
 
 	return dir, nil
+}
+
+// failedBundlePullHint is what a failed bundle pull tells the operator to do, by where the registry
+// came from. dir is where dhctl looks for the bundle before it pulls, so a bundle unpacked there by
+// hand is used as it lies.
+func failedBundlePullHint(err error, source bundleRegistrySource, imageRef, digest, dir string) string {
+	const carries = "It carries the provider schemas and the validator, so the configuration cannot be checked without it. "
+
+	switch source {
+	case bundleRegistryFromClusterStore:
+		if !isImageMissing(err) {
+			return carries + "It was pulled from the cluster's own registry through the SSH connection to a master, " +
+				"because the cluster names no upstream registry. " +
+				"Check that the store is up and serves the cluster's images (`d8 k get registrystorage registry`), " +
+				"or unpack the bundle into " + dir + " yourself before dhctl starts."
+		}
+
+		// The air-gapped cluster whose store lost its images, or never got this one. The address in the
+		// error is the local end of the tunnel and names no registry an operator would recognise, and no
+		// credentials of any configuration would help: nothing this process can reach holds the image.
+		//
+		// The repository in that address is no help elsewhere either: `system/deckhouse` is the store's
+		// name for the platform's image repository, whatever that repository is called upstream, so the
+		// way out names the digest on its own and the repository by what it is. Only the in-tree bundle
+		// is pulled through the tunnel — a module's bundle comes with a registry of its own — so that
+		// repository is the platform's, the flat one its images are pulled from by digest.
+		//
+		// The digest is this installer's own: only the in-tree bundle comes through here, and that one is
+		// pinned by the digests this dhctl was built with. The store holds the images of the release the
+		// cluster runs, so a dhctl of another release asks it for a bundle it never had, and the store is
+		// not to blame. Telling the two apart would take the cluster's release, which nothing on this path
+		// reads, so the message names both and puts the cheaper way out first.
+		//
+		// The next way out is the one that always exists: dhctl in a container that already has this
+		// bundle and its schemas downloaded, such as the one a previous operation on this cluster ran
+		// in. No new flag is added for an image bundle: an operator who can bring the bundle can bring
+		// such a container. After a platform update the bootstrap's bundle is not this one, hence the
+		// digest in the condition.
+		//
+		// The bundle unpacked by hand goes through a staging dir, as dhctl's own download does: dhctl takes
+		// any dir at the digest's path for an unpacked bundle, and an export that fails halfway must not
+		// leave one there.
+		staging := dir + ".unpacking"
+		return carries + "The cluster's own registry does not hold " + imageRef + ": " +
+			"the cluster names no upstream registry, so dhctl pulled it from the cluster's store " +
+			"through the SSH connection to a master. The digest is the bundle of the release this dhctl was built for, " +
+			"and the store holds the images of the release the cluster runs, so either this dhctl is of another release, " +
+			"or the store is empty or lacks this image (see `d8 k get registrystorage registry`). Ways out, in this order:\n" +
+			"  - if this dhctl is not of the release the cluster runs (compare `dhctl version` with the version in the ConfigMap `d8-system/d8-deckhouse-version-info`), " +
+			"run the installer of that release instead;\n" +
+			"  - run dhctl in a container that already has this bundle downloaded, such as the one a previous " +
+			"operation on this cluster ran in, or with --download-dir pointing at a download dir that holds " +
+			filepath.Base(dir) + ";\n" +
+			"  - make the store serve it again: restore the store, or set an upstream registry;\n" +
+			"  - on a machine with access to the upstream or the public registry, pull " + digest +
+			" from the platform's image repository there, the one the cluster was installed from " +
+			"(for example, registry.deckhouse.io/deckhouse/<edition>; `system/deckhouse` in the address above " +
+			"is the store's name for it, not a path to look for), or take it from a `d8 mirror` bundle of this dhctl's release, " +
+			"and unpack it into " + dir + " through a staging dir, so that a failed export leaves nothing dhctl would take for the bundle, " +
+			"for example with `crane export <repository>@" + digest + " bundle.tar && mkdir -p " + staging +
+			" && tar -x -f bundle.tar -C " + staging + " && mv " + staging + " " + dir + "`."
+
+	case bundleRegistryFromCluster:
+		return carries + "Make that reference reachable with the registry the cluster names " +
+			"(the upstream of its registry module, or deckhouse-registry), " +
+			"or unpack the bundle into " + dir + " yourself before dhctl starts."
+
+	case bundleRegistryFromModuleSource:
+		return carries + "Make that reference reachable with the registry and credentials of the ModuleSource " +
+			"the provider module comes from, or unpack the bundle into " + dir + " yourself before dhctl starts."
+
+	default:
+		return carries + "Make that reference reachable with the registry credentials from the configuration, " +
+			"or unpack the bundle into " + dir + " yourself before dhctl starts."
+	}
+}
+
+// isImageMissing reports whether the registry answered that it does not hold the image, as opposed to
+// refusing access or not answering at all.
+func isImageMissing(err error) bool {
+	var transportErr *transport.Error
+	if !errors.As(err, &transportErr) {
+		return false
+	}
+	for _, diagnostic := range transportErr.Errors {
+		switch diagnostic.Code {
+		case transport.ManifestUnknownErrorCode, transport.NameUnknownErrorCode, transport.BlobUnknownErrorCode:
+			return true
+		}
+	}
+	return transportErr.StatusCode == http.StatusNotFound
 }
 
 // loadBundleSchemas loads the schemas of an unpacked bundle into this process.

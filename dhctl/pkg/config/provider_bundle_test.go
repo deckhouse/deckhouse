@@ -15,10 +15,14 @@
 package config
 
 import (
+	"archive/tar"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -26,13 +30,21 @@ import (
 	"testing"
 	"time"
 
+	libcon "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/registrydata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/tests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/image"
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
 const ensureRegistryMCDoc = `
@@ -310,7 +322,9 @@ func TestUnpackProviderBundleFailedDownloadLeavesNoDigestDir(t *testing.T) {
 
 	conf, err := image.NewRegistryConfig("HTTPS", "r.example.com/test", "", "", "")
 	require.NoError(t, err)
-	registry := func(context.Context) (*image.RegistryConfig, error) { return conf, nil }
+	registry := func(context.Context) (*image.RegistryConfig, bundleRegistrySource, error) {
+		return conf, bundleRegistryFromConfig, nil
+	}
 
 	_, err = unpackProviderBundle(context.Background(), "enspartial", providerBundleRef{Digest: digest}, registry, globalOptions)
 	require.ErrorContains(t, err, "Make that reference reachable", "a failed pull points the operator at the registry")
@@ -522,7 +536,7 @@ func TestEnsureProviderBundleFromClusterFailedDownloadIsAnError(t *testing.T) {
 
 	origDigest := resolveProviderBundleRef
 	resolveProviderBundleRef = func(context.Context, string, providerModuleLookup, *options.GlobalOptions) (providerBundleRef, error) {
-		return providerBundleRef{Digest: fresh, Registry: conf}, nil
+		return providerBundleRef{Digest: fresh, Registry: conf, RegistrySource: bundleRegistryFromModuleSource}, nil
 	}
 	t.Cleanup(func() { resolveProviderBundleRef = origDigest })
 
@@ -538,6 +552,8 @@ func TestEnsureProviderBundleFromClusterFailedDownloadIsAnError(t *testing.T) {
 	_, _, err = EnsureProviderBundleFromCluster(
 		context.Background(), nil, ensureClusterConfigDoc(provider), globalOptions)
 	require.ErrorContains(t, err, "download refused")
+	require.ErrorContains(t, err, "credentials of the ModuleSource the provider module comes from",
+		"the bundle came from the ModuleSource's registry, not the one the cluster names")
 
 	require.DirExists(t, providerdir.DigestDir(globalOptions.DownloadDir, provider, old), "a failed download must leave the old digest in place")
 	require.NoDirExists(t, providerdir.DigestDir(globalOptions.DownloadDir, provider, fresh), "a failed download must leave no dir of the new digest")
@@ -785,9 +801,9 @@ func TestUpdateProviderBundleSkipsTheRegistryForAnUnpackedDigest(t *testing.T) {
 	writeTestProviderSchema(t, providerdir.DigestDir(globalOptions.DownloadDir, provider, digest), "EnsNoRegReadConfiguration")
 
 	var asked atomic.Int32
-	registry := func(context.Context) (*image.RegistryConfig, error) {
+	registry := func(context.Context) (*image.RegistryConfig, bundleRegistrySource, error) {
 		asked.Add(1)
-		return nil, fmt.Errorf("registry unreachable")
+		return nil, bundleRegistryFromConfig, fmt.Errorf("registry unreachable")
 	}
 
 	_, gotDigest, err := updateProviderBundle(context.Background(), provider, nil, registry, globalOptions)
@@ -844,4 +860,375 @@ func TestPrepareProviderBundleStaticNoop(t *testing.T) {
 
 	require.NoError(t, PrepareProviderBundle(context.Background(), kubeCl, ensureTestGlobalOptions(t)))
 	require.Zero(t, digestCalls.Load(), "a static cluster has no provider bundle")
+}
+
+// manifestUnknown is what a registry answers for a digest it does not hold, as go-containerregistry
+// reports it.
+func manifestUnknown() error {
+	return fmt.Errorf("pulling image: %w", &transport.Error{
+		StatusCode: http.StatusNotFound,
+		Errors:     []transport.Diagnostic{{Code: transport.ManifestUnknownErrorCode, Message: "manifest unknown"}},
+	})
+}
+
+func stubProviderDownloadError(t *testing.T, err error) {
+	t.Helper()
+	orig := downloadProviderBundle
+	downloadProviderBundle = func(context.Context, string, string, image.RegistryConfig, bool) error {
+		return err
+	}
+
+	t.Cleanup(func() { downloadProviderBundle = orig })
+}
+
+// prepareFromClusterRegistry runs the from-cluster bundle path against a registry the cluster read
+// resolved to, which is all that path asks of the cluster once the digest is known.
+func prepareFromClusterRegistry(t *testing.T, provider string, data registrydata.RegistryData, globalOptions *options.GlobalOptions) error {
+	t.Helper()
+	registryData := func(context.Context) (registrydata.RegistryData, error) { return data, nil }
+
+	_, err := prepareClusterProviderBundle(context.Background(), nil, provider, registryData, globalOptions)
+	return err
+}
+
+// An air-gapped cluster names no upstream, so the store reached through the SSH tunnel is the only
+// registry there is. When it lacks the bundle, no credentials of any configuration help — destroy is
+// given none — and the address in the error is the local end of the tunnel. The message says what that
+// registry is and how to get the bundle anyway, the way that always exists first: dhctl in a
+// container that already has the bundle downloaded.
+func TestPrepareClusterProviderBundleNamesTheStoreThatLacksTheBundle(t *testing.T) {
+	const (
+		provider = "enstunnel"
+		digest   = "sha256:enstunnel"
+		repo     = "127.0.0.1:45453/system/deckhouse"
+	)
+
+	stubProviderDigest(t, digest, nil)
+	stubProviderDownloadError(t, manifestUnknown())
+
+	conf, err := image.NewRegistryConfig("HTTPS", repo, "registry-ro", "dh-test-secret-0123456789abcdef", "")
+	require.NoError(t, err)
+
+	globalOptions := ensureTestGlobalOptions(t)
+	err = prepareFromClusterRegistry(t, provider, registrydata.RegistryData{Config: conf, ThroughStoreTunnel: true}, globalOptions)
+	require.Error(t, err)
+
+	msg := err.Error()
+	require.Contains(t, msg, "MANIFEST_UNKNOWN", "the registry's own answer stays in the message")
+	require.Contains(t, msg, "The cluster's own registry does not hold "+repo+"@"+digest)
+	require.Contains(t, msg, "names no upstream registry")
+	require.Contains(t, msg, "`d8 k get registrystorage registry`")
+	require.NotContains(t, msg, "credentials from the configuration", "destroy is given no configuration")
+
+	// The digest is this installer's own, and the store holds the cluster's release: a dhctl of another
+	// release finds nothing there however healthy the store is, so the store is not the only suspect.
+	require.Contains(t, msg, "either this dhctl is of another release, or the store is empty or lacks this image")
+
+	dir := providerdir.DigestDir(globalOptions.DownloadDir, provider, digest)
+	release := strings.Index(msg, "if this dhctl is not of the release the cluster runs")
+	container := strings.Index(msg, "run dhctl in a container that already has this bundle downloaded")
+	store := strings.Index(msg, "make the store serve it again")
+	pull := strings.Index(msg, "pull "+digest+" from the platform's image repository")
+	require.True(t, release >= 0 && container > release && store > container && pull > store,
+		"the ways out come in this order: the cluster's release, a container with the bundle, fix the store, pull elsewhere:\n%s", msg)
+	// The ConfigMap holds the running version with or without a release channel; DeckhouseRelease
+	// objects exist only with one.
+	require.Contains(t, msg[release:container], "compare `dhctl version` with the version in the ConfigMap `d8-system/d8-deckhouse-version-info`")
+	// The digest is this dhctl's, so a mirror bundle of the cluster's release may not hold it.
+	require.Contains(t, msg[pull:], "a `d8 mirror` bundle of this dhctl's release")
+
+	// A download dir holds the bundle only for the digest it was downloaded for, which after an update
+	// is not the bootstrap's.
+	require.Contains(t, msg[container:store], "a download dir that holds "+filepath.Base(dir)+";")
+
+	// The store's repository name is no path upstream: the way out names the digest and what the
+	// repository is, and says so.
+	require.Contains(t, msg[pull:], "registry.deckhouse.io/deckhouse/<edition>")
+	require.Contains(t, msg[pull:], "`system/deckhouse` in the address above is the store's name for it")
+	require.NotContains(t, msg[pull:], "same repository path")
+	require.Contains(t, msg[pull:], "unpack it into "+dir, "pulling elsewhere names the dir dhctl reads the bundle from")
+	require.Contains(t, msg[pull:], "`crane export <repository>@"+digest+" bundle.tar && ")
+}
+
+// unpackCommand is the shell command the store-tunnel hint offers for unpacking the bundle by hand,
+// with the repository filled in.
+func unpackCommand(t *testing.T, msg string) string {
+	t.Helper()
+	const lead = "for example with `"
+	start := strings.Index(msg, lead)
+	require.GreaterOrEqual(t, start, 0, "the hint carries an unpack command:\n%s", msg)
+	command := msg[start+len(lead):]
+	end := strings.Index(command, "`")
+	require.Positive(t, end, "the unpack command is closed:\n%s", msg)
+	return strings.ReplaceAll(command[:end], "<repository>", "registry.example.com/deckhouse/ee")
+}
+
+// tarWithFile is a tar stream holding one regular file.
+func tarWithFile(t *testing.T, name, content string) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	require.NoError(t, tw.WriteHeader(&tar.Header{Name: name, Mode: 0o644, Size: int64(len(content))}))
+	_, err := tw.Write([]byte(content))
+	require.NoError(t, err)
+	require.NoError(t, tw.Close())
+	return buf.Bytes()
+}
+
+// dhctl takes any dir at the digest's path for an unpacked bundle. The unpack command the hint offers
+// is run here as an operator would run it, with a crane that exports the bundle or dies halfway
+// through: a failed export must leave no dir there, and a good one must leave the bundle's files.
+func TestStoreTunnelHintUnpackCommandLeavesNoPartialBundle(t *testing.T) {
+	for _, tool := range []string{"sh", "tar", "mkdir", "mv"} {
+		if _, err := exec.LookPath(tool); err != nil {
+			t.Skipf("the unpack command needs %s: %v", tool, err)
+		}
+	}
+
+	const (
+		provider = "ensunpackcmd"
+		digest   = "sha256:ensunpackcmd"
+	)
+	bundle := tarWithFile(t, "openapi/cluster_configuration.yaml", "kind: ClusterConfiguration\n")
+
+	for name, tc := range map[string]struct {
+		// What the fake crane writes into the tarball before it exits.
+		written  []byte
+		exitCode int
+		unpacked bool
+	}{
+		"export fails halfway": {written: bundle[:len(bundle)/2], exitCode: 1},
+		"export succeeds":      {written: bundle, unpacked: true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			globalOptions := ensureTestGlobalOptions(t)
+			dir := providerdir.DigestDir(globalOptions.DownloadDir, provider, digest)
+			command := unpackCommand(t, failedBundlePullHint(manifestUnknown(), bundleRegistryFromClusterStore,
+				"127.0.0.1:45455/system/deckhouse@"+digest, digest, dir))
+
+			bin := t.TempDir()
+			tarball := filepath.Join(t.TempDir(), "written.tar")
+			require.NoError(t, os.WriteFile(tarball, tc.written, 0o600))
+			// crane export <ref> <file>: copies what it managed to pull into the file, then exits.
+			crane := fmt.Sprintf("#!/bin/sh\ncat %q > \"$3\"\nexit %d\n", tarball, tc.exitCode)
+			require.NoError(t, os.WriteFile(filepath.Join(bin, "crane"), []byte(crane), 0o755))
+
+			cmd := exec.CommandContext(t.Context(), "sh", "-c", command)
+			cmd.Dir = t.TempDir()
+			cmd.Env = append(os.Environ(), "PATH="+bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+			out, err := cmd.CombinedOutput()
+
+			if !tc.unpacked {
+				require.NoDirExists(t, dir, "a failed export must leave nothing dhctl would take for an unpacked bundle")
+				require.Error(t, err, "a failed export fails the command:\n%s", out)
+				return
+			}
+			require.NoError(t, err, "%s\n%s", command, out)
+			require.FileExists(t, filepath.Join(dir, "openapi", "cluster_configuration.yaml"))
+		})
+	}
+}
+
+// storeTunnelSSHClient is an SSH connection whose forwards open without dialing anything: what is
+// checked is what the resolved registry is called in the message, not the bytes through the forward.
+// The embedded nil interface makes any other method panic at the line that reaches for it.
+type storeTunnelSSHClient struct{ libcon.SSHClient }
+
+func (storeTunnelSSHClient) Tunnel(string) libcon.Tunnel { return openStoreTunnel{} }
+
+type openStoreTunnel struct{ libcon.Tunnel }
+
+func (openStoreTunnel) Up(context.Context) error { return nil }
+
+// The tests above hand prepareClusterProviderBundle the registry data directly. This one reads it the
+// way destroy does — PrepareProviderBundle over an SSH connection against a cluster in the air-gapped
+// state — so that the store being reached through the tunnel has to survive the trip from the
+// registry read to the message: a cluster that names no upstream, deckhouse-registry naming the
+// in-cluster address, and the store's access secret.
+func TestPrepareProviderBundleOverSSHNamesTheStoreThatLacksTheBundle(t *testing.T) {
+	const (
+		provider = "enstunnelssh"
+		digest   = "sha256:enstunnelssh"
+		// Unique to this test: forwards are kept per store address for the life of the process.
+		storeAddress = "10.128.0.78"
+	)
+
+	kubeCl := client.NewFakeKubernetesClient()
+	testCreateKubeSystemSecret(t, kubeCl, clusterConfigSecretName, map[string][]byte{
+		"cluster-configuration.yaml": []byte(ensureClusterConfigDoc(provider)),
+	})
+
+	gvr := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "registryconfigs"}
+	_, err := kubeCl.Dynamic().Resource(gvr).Create(t.Context(), &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "deckhouse.io/v1alpha1", "kind": "RegistryConfig",
+		"metadata": map[string]interface{}{"name": "registry"},
+		"spec":     map[string]interface{}{"mode": "Managed", "storage": map[string]interface{}{"cache": true}},
+	}}, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	for _, secret := range []*corev1.Secret{
+		{
+			ObjectMeta: metav1.ObjectMeta{Name: "deckhouse-registry", Namespace: "d8-system"},
+			Data: map[string][]byte{
+				".dockerconfigjson": []byte(`{"auths":{"` + registry_const.Host + `":{"auth":"dXNlcm5hbWU6cGFzc3dvcmQ="}}}`),
+				"imagesRegistry":    []byte(registry_const.HostWithPath),
+				"scheme":            []byte("HTTPS"),
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{Name: "registry-storage-access", Namespace: "d8-system"},
+			Data: map[string][]byte{
+				"addresses": []byte(storeAddress),
+				"ca.crt":    []byte("-----BEGIN CERTIFICATE-----\nfake-registry-storage-ca\n-----END CERTIFICATE-----\n"),
+				"username":  []byte("registry-ro"),
+				"password":  []byte("dh-test-secret-0123456789abcdef"),
+			},
+		},
+	} {
+		_, err := kubeCl.CoreV1().Secrets(secret.Namespace).Create(t.Context(), secret, metav1.CreateOptions{})
+		require.NoError(t, err)
+	}
+
+	kubeCl.SSHClient = storeTunnelSSHClient{}
+
+	stubProviderDigest(t, digest, nil)
+
+	var pulledFrom string
+	orig := downloadProviderBundle
+	downloadProviderBundle = func(_ context.Context, _ string, _ string, conf image.RegistryConfig, _ bool) error {
+		pulledFrom = conf.GetRegistry()
+		return manifestUnknown()
+	}
+	t.Cleanup(func() { downloadProviderBundle = orig })
+
+	err = PrepareProviderBundle(t.Context(), kubeCl, ensureTestGlobalOptions(t))
+	require.Error(t, err)
+	require.True(t, strings.HasPrefix(pulledFrom, "127.0.0.1:"), "pulled through the tunnel, not from %q", pulledFrom)
+	require.ErrorContains(t, err, "The cluster's own registry does not hold "+pulledFrom+"@"+digest)
+	require.NotContains(t, err.Error(), "Make that reference reachable with the registry the cluster names")
+}
+
+// The module chain reads a provider module's bundle from a ModuleSource only when the configuration
+// carries one. For the default source without one it reads the configuration's own registry, and a
+// failed pull points at the configuration's credentials, not at a ModuleSource there is none of.
+func TestEnsureProviderBundleFromConfigNamesTheModuleRegistryBySource(t *testing.T) {
+	for name, tc := range map[string]struct {
+		moduleRepo string
+		docs       []string
+		want       string
+		notWant    string
+	}{
+		"default source without a ModuleSource: the configuration's registry": {
+			moduleRepo: "r.example.com/test/modules/cloud-provider-dvp",
+			docs: []string{ensureRegistryMCDoc, ensureClusterConfigDoc("DVP"), `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-dvp
+spec:
+  version: 1
+  source: deckhouse
+`},
+			want:    "Make that reference reachable with the registry credentials from the configuration",
+			notWant: "ModuleSource",
+		},
+		"a ModuleSource in the configuration: its registry": {
+			moduleRepo: "registry.example.io/modules/cloud-provider-dvp",
+			docs: []string{
+				ensureRegistryMCDoc, ensureClusterConfigDoc("DVP"),
+				testProviderMCWithSourceDoc, testModuleSourceDoc(t, "registry.example.io/modules"),
+			},
+			want:    "credentials of the ModuleSource the provider module comes from",
+			notWant: "credentials from the configuration",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			stubModuleCatalog(t, newModuleStand(tc.moduleRepo).
+				addImage(t, tc.moduleRepo+"/release", "stable", map[string]string{"version.json": `{"version": "1.0.0"}`}).
+				addImage(t, tc.moduleRepo, "v1.0.0", map[string]string{"images_digests.json": `{"terraformManager": "` + testBundleDigest + `"}`}))
+
+			var pulled string
+			orig := downloadProviderBundle
+			downloadProviderBundle = func(_ context.Context, imageRef string, _ string, _ image.RegistryConfig, _ bool) error {
+				pulled = imageRef
+				return manifestUnknown()
+			}
+			t.Cleanup(func() { downloadProviderBundle = orig })
+
+			_, err := ensureProviderBundleFromConfig(t.Context(), tc.docs, ensureTestGlobalOptions(t))
+			require.Equal(t, tc.moduleRepo+"@"+testBundleDigest, pulled, "the bundle came through the module chain")
+			require.ErrorContains(t, err, tc.want)
+			require.NotContains(t, err.Error(), tc.notWant)
+		})
+	}
+}
+
+// Through the tunnel, a failure that is not a missing image says nothing about the store's contents.
+func TestPrepareClusterProviderBundleThroughTheStoreBlamesTheStoreOnlyForAMissingImage(t *testing.T) {
+	stubProviderDigest(t, "sha256:enstunneldenied", nil)
+	stubProviderDownloadError(t, fmt.Errorf("pulling image: %w", &transport.Error{
+		StatusCode: http.StatusUnauthorized,
+		Errors:     []transport.Diagnostic{{Code: transport.UnauthorizedErrorCode, Message: "authentication required"}},
+	}))
+
+	conf, err := image.NewRegistryConfig("HTTPS", "127.0.0.1:45454/system/deckhouse", "", "", "")
+	require.NoError(t, err)
+
+	err = prepareFromClusterRegistry(t, "enstunneldenied", registrydata.RegistryData{Config: conf, ThroughStoreTunnel: true}, ensureTestGlobalOptions(t))
+	require.ErrorContains(t, err, "through the SSH connection to a master")
+	require.NotContains(t, err.Error(), "does not hold")
+	require.NotContains(t, err.Error(), "credentials from the configuration")
+}
+
+// A registry the cluster names by itself — its upstream, or deckhouse-registry — is the cluster's to
+// fix, and the configuration has nothing to do with it either.
+func TestPrepareClusterProviderBundleNamesTheClusterRegistry(t *testing.T) {
+	stubProviderDigest(t, "sha256:ensclusterreg", nil)
+	stubProviderDownloadError(t, manifestUnknown())
+
+	conf, err := image.NewRegistryConfig("HTTPS", "r.example.com/test", "", "", "")
+	require.NoError(t, err)
+
+	err = prepareFromClusterRegistry(t, "ensclusterreg", registrydata.RegistryData{Config: conf}, ensureTestGlobalOptions(t))
+	require.ErrorContains(t, err, "Make that reference reachable with the registry the cluster names")
+	require.NotContains(t, err.Error(), "does not hold")
+	require.NotContains(t, err.Error(), "credentials from the configuration")
+}
+
+// The configuration path keeps its hint for the in-tree bundle: the registry is the one the operator
+// wrote.
+func TestEnsureProviderBundleFromConfigPointsAtTheConfiguredRegistry(t *testing.T) {
+	const (
+		provider = "ensconfigreg"
+		digest   = "sha256:ensconfigreg"
+	)
+
+	stubProviderDigest(t, digest, nil)
+	stubProviderDownloadError(t, manifestUnknown())
+
+	globalOptions := ensureTestGlobalOptions(t)
+	_, err := ensureProviderBundleFromConfig(context.Background(),
+		[]string{ensureClusterConfigDoc(provider), ensureRegistryMCDoc}, globalOptions)
+	require.ErrorContains(t, err, "Make that reference reachable with the registry credentials from the configuration")
+	require.ErrorContains(t, err, providerdir.DigestDir(globalOptions.DownloadDir, provider, digest))
+	require.NotContains(t, err.Error(), "does not hold")
+	require.NotContains(t, err.Error(), "registrystorage")
+}
+
+func TestIsImageMissing(t *testing.T) {
+	for name, tc := range map[string]struct {
+		err  error
+		want bool
+	}{
+		"manifest unknown":      {err: manifestUnknown(), want: true},
+		"name unknown":          {err: &transport.Error{StatusCode: http.StatusNotFound, Errors: []transport.Diagnostic{{Code: transport.NameUnknownErrorCode}}}, want: true},
+		"bare 404":              {err: &transport.Error{StatusCode: http.StatusNotFound}, want: true},
+		"unauthorized":          {err: &transport.Error{StatusCode: http.StatusUnauthorized, Errors: []transport.Diagnostic{{Code: transport.UnauthorizedErrorCode}}}},
+		"server error":          {err: &transport.Error{StatusCode: http.StatusBadGateway}},
+		"not a registry answer": {err: errors.New("dial tcp 127.0.0.1:45453: connect: connection refused")},
+	} {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.want, isImageMissing(tc.err))
+		})
+	}
 }

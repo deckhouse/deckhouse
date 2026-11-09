@@ -242,19 +242,18 @@ func ParseConfigInCluster(
 
 // clusterRegistryData reads the cluster's registry on the first caller that needs it and hands the
 // same answer, error included, to every caller after.
-func clusterRegistryData(kubeCl *client.KubernetesClient, inCluster bool) func(ctx context.Context) (*image.RegistryConfig, string, error) {
+func clusterRegistryData(kubeCl *client.KubernetesClient, inCluster bool) func(ctx context.Context) (registrydata.RegistryData, error) {
 	var (
-		once      sync.Once
-		conf      *image.RegistryConfig
-		dockerCfg string
-		err       error
+		once sync.Once
+		data registrydata.RegistryData
+		err  error
 	)
 
-	return func(ctx context.Context) (*image.RegistryConfig, string, error) {
+	return func(ctx context.Context) (registrydata.RegistryData, error) {
 		once.Do(func() {
-			conf, dockerCfg, err = registrydata.GetRegistryDataPreferUpstream(ctx, kubeCl, inCluster)
+			data, err = registrydata.ResolveRegistryData(ctx, kubeCl, inCluster)
 		})
-		return conf, dockerCfg, err
+		return data, err
 	}
 }
 
@@ -266,7 +265,7 @@ func prepareClusterProviderBundle(
 	ctx context.Context,
 	kubeCl *client.KubernetesClient,
 	provider string,
-	registryData func(ctx context.Context) (*image.RegistryConfig, string, error),
+	registryData func(ctx context.Context) (registrydata.RegistryData, error),
 	globalOptions *options.GlobalOptions,
 ) (string, error) {
 	if IsInternalCloudProviderBundle(provider, globalOptions) {
@@ -279,9 +278,14 @@ func prepareClusterProviderBundle(
 		globalOptions.KubeInCluster,
 	)
 
-	registry := func(ctx context.Context) (*image.RegistryConfig, error) {
-		conf, _, err := registryData(ctx)
-		return conf, err
+	// The store reached through the tunnel is told apart from the rest: on an air-gapped cluster it
+	// is the only source there is, and a bundle it lacks is to be brought from elsewhere.
+	registry := func(ctx context.Context) (*image.RegistryConfig, bundleRegistrySource, error) {
+		data, err := registryData(ctx)
+		if data.ThroughStoreTunnel {
+			return data.Config, bundleRegistryFromClusterStore, err
+		}
+		return data.Config, bundleRegistryFromCluster, err
 	}
 
 	bundleDir, _, err := updateProviderBundle(ctx, provider, lookup, registry, globalOptions)
@@ -305,11 +309,11 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 	registryData := clusterRegistryData(kubeCl, globalOptions.KubeInCluster)
 
 	if globalOptions.EnsureCandiAvailable {
-		conf, _, err := registryData(ctx)
+		data, err := registryData(ctx)
 		if err != nil {
 			return nil, err
 		}
-		if err := prepareCandiDir(ctx, conf, globalOptions); err != nil {
+		if err := prepareCandiDir(ctx, data.Config, globalOptions); err != nil {
 			return nil, err
 		}
 	}
@@ -323,15 +327,15 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 	// The lazy provider-plugin and terraform-manager pulls read these off DeckhouseConfig long after
 	// this parse, so a cloud cluster needs them whether or not anything was downloaded above.
 	if clusterConfig.Type == CloudClusterType {
-		conf, dockerCfg, err := registryData(ctx)
+		data, err := registryData(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("read registry data from cluster: %w", err)
 		}
 
-		metaConfig.DeckhouseConfig.RegistryDockerCfg = dockerCfg
-		metaConfig.DeckhouseConfig.ImagesRepo = conf.GetRegistry()
-		metaConfig.DeckhouseConfig.RegistryCA = conf.GetCA()
-		metaConfig.DeckhouseConfig.RegistryScheme = conf.GetScheme()
+		metaConfig.DeckhouseConfig.RegistryDockerCfg = data.DockerCfg
+		metaConfig.DeckhouseConfig.ImagesRepo = data.Config.GetRegistry()
+		metaConfig.DeckhouseConfig.RegistryCA = data.Config.GetCA()
+		metaConfig.DeckhouseConfig.RegistryScheme = data.Config.GetScheme()
 	}
 
 	metaConfig.DownloadRootDir = globalOptions.DownloadDir

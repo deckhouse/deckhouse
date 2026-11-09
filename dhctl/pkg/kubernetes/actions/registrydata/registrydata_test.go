@@ -15,9 +15,11 @@
 package registrydata
 
 import (
+	"context"
 	"strings"
 	"testing"
 
+	libcon "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -314,6 +316,112 @@ func TestAnAirGappedClusterIsReadFromTheStoreInTheCluster(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEqual(t, "registry-ro", conf.GetUsername(),
 			"the store's account is for the pod network, not for a caller over SSH")
+	})
+}
+
+// tunnelSSHClient is an SSH connection whose forwards open without dialing anything: what is checked
+// is what the resolved registry says about itself, not the bytes through the forward. The embedded nil
+// interface makes any other method panic at the line that reaches for it.
+type tunnelSSHClient struct {
+	libcon.SSHClient
+
+	tunnels []string
+}
+
+func (c *tunnelSSHClient) Tunnel(address string) libcon.Tunnel {
+	c.tunnels = append(c.tunnels, address)
+	return upTunnel{}
+}
+
+type upTunnel struct{ libcon.Tunnel }
+
+func (upTunnel) Up(context.Context) error { return nil }
+
+// TestResolveRegistryDataReportsTheStoreTunnel: a caller that pulls from what was resolved has to know
+// whether that was the cluster's own store through the SSH connection, because on an air-gapped cluster
+// that store is the only registry there is, and its address, the local end of the forward, names no
+// registry an operator would recognise.
+func TestResolveRegistryDataReportsTheStoreTunnel(t *testing.T) {
+	const (
+		mirror = "registry.d8-system.svc:5001/system/deckhouse"
+		// Unique to this test: forwards are kept per store address for the life of the process.
+		storeAddress = "10.128.0.77"
+	)
+
+	// An air-gapped cluster as the controller-based implementation describes it: a RegistryConfig with
+	// no upstream, deckhouse-registry naming the in-cluster address, and the store's access secret.
+	// withUpstream gives the RegistryConfig an upstream instead.
+	cluster := func(t *testing.T, withUpstream bool) *client.KubernetesClient {
+		t.Helper()
+		kubeCl := client.NewFakeKubernetesClient()
+
+		if withUpstream {
+			createRegistryConfigResource(t, kubeCl, "dev-registry.deckhouse.io", "/sys/deckhouse-oss", nil)
+		} else {
+			gvr := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "registryconfigs"}
+			_, err := kubeCl.Dynamic().Resource(gvr).Create(t.Context(), &unstructured.Unstructured{Object: map[string]interface{}{
+				"apiVersion": "deckhouse.io/v1alpha1",
+				"kind":       "RegistryConfig",
+				"metadata":   map[string]interface{}{"name": registryConfigResourceName},
+				"spec":       map[string]interface{}{"mode": "Managed", "storage": map[string]interface{}{"cache": true}},
+			}}, metav1.CreateOptions{})
+			require.NoError(t, err)
+		}
+
+		createDeckhouseRegistrySecret(t, kubeCl, mirror)
+		_, err := kubeCl.CoreV1().Secrets(storeSecretNamespace).Create(t.Context(), &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: storeSecretName, Namespace: storeSecretNamespace},
+			Data: map[string][]byte{
+				"addresses": []byte(storeAddress), "ca.crt": []byte(testCA),
+				"username": []byte("registry-ro"), "password": []byte("dh-test-secret-0123456789abcdef"),
+			},
+		}, metav1.CreateOptions{})
+		require.NoError(t, err)
+
+		return kubeCl
+	}
+
+	t.Run("air-gapped over SSH: the store through the tunnel", func(t *testing.T) {
+		kubeCl := cluster(t, false)
+		sshCl := &tunnelSSHClient{}
+		kubeCl.SSHClient = sshCl
+
+		data, err := ResolveRegistryData(t.Context(), kubeCl, false)
+		require.NoError(t, err)
+		require.True(t, data.ThroughStoreTunnel)
+		require.True(t, strings.HasPrefix(data.Config.GetRegistry(), "127.0.0.1:"), data.Config.GetRegistry())
+		require.True(t, strings.HasSuffix(data.Config.GetRegistry(), "/system/deckhouse"), data.Config.GetRegistry())
+		require.Len(t, sshCl.tunnels, 1)
+		require.True(t, strings.HasPrefix(sshCl.tunnels[0], storeAddress+":"), sshCl.tunnels[0])
+
+		conf, _, err := GetRegistryDataPreferUpstream(t.Context(), kubeCl, false)
+		require.NoError(t, err)
+		require.Equal(t, data.Config.GetRegistry(), conf.GetRegistry(), "the same answer, without the flag")
+	})
+
+	t.Run("an upstream is not the store", func(t *testing.T) {
+		kubeCl := cluster(t, true)
+		kubeCl.SSHClient = &tunnelSSHClient{}
+
+		data, err := ResolveRegistryData(t.Context(), kubeCl, false)
+		require.NoError(t, err)
+		require.False(t, data.ThroughStoreTunnel)
+		require.Equal(t, "dev-registry.deckhouse.io/sys/deckhouse-oss", data.Config.GetRegistry())
+	})
+
+	t.Run("no SSH connection: the mirror as it stands", func(t *testing.T) {
+		data, err := ResolveRegistryData(t.Context(), cluster(t, false), false)
+		require.NoError(t, err)
+		require.False(t, data.ThroughStoreTunnel)
+		require.Equal(t, mirror, data.Config.GetRegistry())
+	})
+
+	t.Run("in the cluster the store is read directly, not through a tunnel", func(t *testing.T) {
+		data, err := ResolveRegistryData(t.Context(), cluster(t, false), true)
+		require.NoError(t, err)
+		require.False(t, data.ThroughStoreTunnel)
+		require.Equal(t, mirror, data.Config.GetRegistry())
+		require.Equal(t, "registry-ro", data.Config.GetUsername())
 	})
 }
 
