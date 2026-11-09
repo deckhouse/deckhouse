@@ -34,12 +34,14 @@ const (
 
 // SystemType selects how the node is managed. The value means the same in every
 // version and is carried through the conversion unchanged.
-// +kubebuilder:validation:Enum=Mutable;Immutable
+// +kubebuilder:validation:Enum=GenericOS;DeckhouseEngine
 type SystemType string
 
 const (
-	SystemTypeMutable   SystemType = "Mutable"
-	SystemTypeImmutable SystemType = "Immutable"
+	SystemTypeGenericOS       SystemType = "GenericOS"
+	SystemTypeDeckhouseEngine SystemType = "DeckhouseEngine"
+	SystemTypeLegacyMutable   SystemType = "Mutable"
+	SystemTypeLegacyImmutable SystemType = "Immutable"
 )
 
 // CRIType defines the container runtime type (v1alpha1 version)

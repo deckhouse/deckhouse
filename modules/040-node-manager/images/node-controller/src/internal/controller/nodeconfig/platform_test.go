@@ -149,13 +149,13 @@ func TestReadMutableInputsRefusesAReleaseMissingAPlatformPackage(t *testing.T) {
 
 // The documents already written stay as they were while the release lacks a package.
 func TestABashibleNodeKeepsItsDocumentWhileAPlatformPackageIsMissing(t *testing.T) {
-	ng := mutableGroup("worker", v1.SystemTypeMutable)
+	ng := mutableGroup("worker", v1.SystemTypeLegacyMutable)
 	node := nodeInGroup("worker-0", "worker")
 	existing := &internalv1alpha1.NodeConfig{
 		ObjectMeta: metav1.ObjectMeta{Name: "worker-0", Labels: map[string]string{
 			nodecommon.NodeGroupLabel: "worker", managedByLabel: managedByValue,
 		}},
-		Spec: internalv1alpha1.NodeSpec{SystemType: internalv1alpha1.SystemTypeMutable, NodeName: "worker-0"},
+		Spec: internalv1alpha1.NodeSpec{SystemType: internalv1alpha1.SystemTypeLegacyMutable, NodeName: "worker-0"},
 	}
 	digests := mutableDigests()
 	delete(digests, "socat1734")
@@ -208,11 +208,26 @@ func TestAnEngineNodeIsRenderedWhileAPlatformPackageIsMissing(t *testing.T) {
 	require.Equal(t, []string{"drbd"}, requestedNames(renderSpec(immutableGroup("worker"), nodeWith(nil), in).Extensions))
 }
 
-// The file is the bashible nodes' document: one written for another kind of node is
-// refused, not poured into a Mutable spec.
-func TestThePlatformDocumentRefusesANodeThatIsNotMutable(t *testing.T) {
-	_, err := renderPlatformDocument(strings.Replace(twoPackages, "systemType: Mutable", "systemType: Immutable", 1),
-		map[string]map[string]string{registryPackagesDigestsKey: {"nodelet": "sha256:agent", "jq": "sha256:jq"}})
+func TestThePlatformDocumentTakesAGenericOSNodeInEitherSpelling(t *testing.T) {
+	for _, systemType := range []string{"Mutable", "GenericOS"} {
+		t.Run(systemType, func(t *testing.T) {
+			_, err := renderPlatformDocument(strings.Replace(twoPackages, "systemType: Mutable", "systemType: "+systemType, 1),
+				map[string]map[string]string{registryPackagesDigestsKey: {"nodelet": "sha256:agent", "jq": "sha256:jq"}})
 
-	require.ErrorContains(t, err, `"Immutable" node`)
+			require.NoError(t, err)
+		})
+	}
+}
+
+// The file is the bashible nodes' document: one written for another kind of node is
+// refused, not poured into a GenericOS spec.
+func TestThePlatformDocumentRefusesANodeThatIsNotGenericOS(t *testing.T) {
+	for _, systemType := range []string{"Immutable", "DeckhouseEngine"} {
+		t.Run(systemType, func(t *testing.T) {
+			_, err := renderPlatformDocument(strings.Replace(twoPackages, "systemType: Mutable", "systemType: "+systemType, 1),
+				map[string]map[string]string{registryPackagesDigestsKey: {"nodelet": "sha256:agent", "jq": "sha256:jq"}})
+
+			require.ErrorContains(t, err, `"`+systemType+`" node, not a GenericOS one`)
+		})
+	}
 }

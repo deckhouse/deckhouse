@@ -206,7 +206,7 @@ func createNodeConfig(ctx context.Context, nodeName string) *internalv1alpha1.No
 	nc := &internalv1alpha1.NodeConfig{
 		ObjectMeta: metav1.ObjectMeta{Name: nodeName},
 		Spec: internalv1alpha1.NodeSpec{
-			SystemType: internalv1alpha1.SystemTypeImmutable,
+			SystemType: internalv1alpha1.SystemTypeLegacyImmutable,
 			NodeName:   nodeName,
 			OSImage:    internalv1alpha1.OSImage{Digest: testenv.TestOSImageDigest},
 		},

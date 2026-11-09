@@ -87,7 +87,7 @@ func MetaConfig(t *testing.T) *config.MetaConfig {
 				"master": {
 					"apiVersion": "deckhouse.io/v1",
 					"kind":       "NodeGroup",
-					"spec":       map[string]any{"nodeType": "CloudPermanent", "systemType": "Immutable"},
+					"spec":       map[string]any{"nodeType": "CloudPermanent", "systemType": "DeckhouseEngine"},
 				},
 			},
 		},

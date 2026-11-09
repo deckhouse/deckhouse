@@ -481,7 +481,7 @@ func mutableReconciler(cl client.Client, in clusterInputs) (*Reconciler, *pass) 
 // them. Rendered by name alone, a node that took the request reads as one left behind,
 // and the slot it holds goes to a second node.
 func TestTheBudgetOfABashibleGroupRendersEachNodeWithItsLabels(t *testing.T) {
-	ng := mutableGroup("worker", v1.SystemTypeMutable)
+	ng := mutableGroup("worker", v1.SystemTypeLegacyMutable)
 	node := nodeInGroup("worker-0", "worker")
 	node.Labels["storage"] = "drbd"
 	var in clusterInputs
@@ -505,7 +505,7 @@ func TestTheBudgetOfABashibleGroupRendersEachNodeWithItsLabels(t *testing.T) {
 // approval, and the document is written before that. One node waiting for its agent held
 // the only slot, and no other node of the group got its document.
 func TestABashibleNodeWithoutAnAgentHoldsNoSlot(t *testing.T) {
-	ng := mutableGroup("worker", v1.SystemTypeMutable)
+	ng := mutableGroup("worker", v1.SystemTypeLegacyMutable)
 	current := nodeInGroup("worker-0", "worker")
 	fresh := nodeInGroup("worker-1", "worker")
 	stale := nodeInGroup("worker-2", "worker")
@@ -542,7 +542,7 @@ func TestABashibleNodeWithoutAnAgentHoldsNoSlot(t *testing.T) {
 // are written anyway, or the gate never sees it and nothing removes it with its node;
 // that write hands the node nothing, so it spends no slot.
 func TestAHeldNodeConfigIsLabelledWithoutSpendingASlot(t *testing.T) {
-	ng := mutableGroup("worker", v1.SystemTypeMutable)
+	ng := mutableGroup("worker", v1.SystemTypeLegacyMutable)
 	holder := nodeInGroup("worker-0", "worker")
 	joiner := nodeInGroup("worker-1", "worker")
 	joiner.UID = "worker-1-uid"
@@ -580,7 +580,7 @@ func TestAHeldNodeConfigIsLabelledWithoutSpendingASlot(t *testing.T) {
 // A held node that reported on an older spec is not mid-rollout: labelled once the pass has
 // read its group's budget, it is not counted there, and the only slot stays the holder's.
 func TestAHeldNodeOnAnOlderSpecIsNotCountedWhenLabelled(t *testing.T) {
-	ng := mutableGroup("worker", v1.SystemTypeMutable)
+	ng := mutableGroup("worker", v1.SystemTypeLegacyMutable)
 	holder := nodeInGroup("worker-0", "worker")
 	joiner := nodeInGroup("worker-1", "worker")
 	joiner.UID = "worker-1-uid"
@@ -615,7 +615,7 @@ func TestAMetadataOnlyChangeSpendsNoFreeSlot(t *testing.T) {
 		{name: "still applying its spec", wantHolders: []string{"worker-0"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			ng := mutableGroup("worker", v1.SystemTypeMutable)
+			ng := mutableGroup("worker", v1.SystemTypeLegacyMutable)
 			node := nodeInGroup("worker-0", "worker")
 			node.UID = "worker-0-uid"
 			spec := renderMutableSpec(&node, ng.Name, clusterInputs{})
@@ -664,7 +664,7 @@ func TestAnEngineNodeWithoutAnAgentHoldsItsSlot(t *testing.T) {
 // The exception ends where the agent speaks: whichever part of the status it reported
 // first, a bashible node whose agent answered is mid-rollout and holds its slot.
 func TestABashibleNodeWhoseAgentReportedHoldsItsSlot(t *testing.T) {
-	desired := internalv1alpha1.NodeSpec{NodeName: "n1", SystemType: internalv1alpha1.SystemTypeMutable}
+	desired := internalv1alpha1.NodeSpec{NodeName: "n1", SystemType: internalv1alpha1.SystemTypeLegacyMutable}
 	observedOlder := internalv1alpha1.NodeConfig{ObjectMeta: metav1.ObjectMeta{Name: "n1", Generation: 2}, Spec: desired}
 	observedOlder.Status.ObservedGeneration = 1
 	conditionsOnly := internalv1alpha1.NodeConfig{ObjectMeta: metav1.ObjectMeta{Name: "n1", Generation: 2}, Spec: desired}

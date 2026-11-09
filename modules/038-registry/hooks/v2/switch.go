@@ -66,12 +66,13 @@ const (
 	// watches the same secret under, because snapshots belong to the hook that asked for them.
 	legacyNodeConfigSnapName = "legacy-node-config"
 
-	// systemTypeImmutable is the NodeGroup whose nodes an on-node agent configures from a
+	// systemTypeDeckhouseEngine is the NodeGroup whose nodes an on-node agent configures from a
 	// NodeConfig. bashible never runs on one, which is the whole of what this gate needs to
 	// know about it. Spelled out rather than imported from node-manager for the reason
 	// `modeDirect` is: it is a string read out of another module's resource, and the field
 	// names are the contract.
-	systemTypeImmutable = "Immutable"
+	systemTypeDeckhouseEngine = "DeckhouseEngine"
+	legacySystemTypeImmutable = "Immutable"
 
 	blockedMetric      = "d8_registry_migration_pending"
 	blockedMetricGroup = "d8_registry_migration"
@@ -397,7 +398,7 @@ type gate struct {
 	// `Direct` safe, and it is deliberately not consulted for any other mode.
 	ModuleConfigured bool
 
-	// EngineOnly reports that every NodeGroup in the cluster names `systemType: Immutable`,
+	// EngineOnly reports that every NodeGroup in the cluster names `systemType: DeckhouseEngine`,
 	// so no node here is configured by bashible.
 	//
 	// It settles the handover on its own, because the legacy implementation has exactly one
@@ -408,7 +409,7 @@ type gate struct {
 	// Without this the gate is not merely cautious here, it is stuck: a state recorded by the
 	// legacy implementation could only ever be moved by its own transitions, and those are
 	// bashible steps. So a `Direct` or `Proxy` state recorded on a cluster whose nodes are
-	// all Immutable never clears, the switch never happens, and with it the module never
+	// all DeckhouseEngine never clears, the switch never happens, and with it the module never
 	// renders its controller — which is what compiles a RegistryUpstream into anything at all.
 	//
 	// Deliberately all rather than any. A cluster holding one bashible group still has nodes
@@ -588,9 +589,15 @@ func engineOnly(systemTypes []string) bool {
 		return false
 	}
 	for _, systemType := range systemTypes {
-		if systemType != systemTypeImmutable {
+		if !isDeckhouseEngine(systemType) {
 			return false
 		}
 	}
 	return true
+}
+
+// isDeckhouseEngine mirrors IsDeckhouseEngine in
+// modules/040-node-manager/images/node-controller/src/api/deckhouse.io/v1/nodegroup_types.go.
+func isDeckhouseEngine(systemType string) bool {
+	return systemType == systemTypeDeckhouseEngine || systemType == legacySystemTypeImmutable
 }

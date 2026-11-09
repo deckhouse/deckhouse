@@ -41,6 +41,19 @@ import (
 // testProxyToken is a placeholder, so no token-shaped literal sits in the tree.
 var testProxyToken = []byte("proxy-token")
 
+func TestIsMutableComparesTheSystemTypeClass(t *testing.T) {
+	for systemType, want := range map[v1.SystemType]bool{
+		v1.SystemTypeDeckhouseEngine: false,
+		v1.SystemTypeLegacyImmutable: false,
+		v1.SystemTypeGenericOS:       true,
+		v1.SystemTypeLegacyMutable:   true,
+		"":                           true,
+	} {
+		ng := &v1.NodeGroup{Spec: v1.NodeGroupSpec{SystemType: systemType}}
+		require.Equal(t, want, IsMutable(ng), "systemType %q", systemType)
+	}
+}
+
 // A bashible node's document carries what the agent does there and nothing an
 // Engine node needs: no OS image, no system extensions.
 func TestTheMutableRenderCarriesOnlyWhatTheAgentDoesThere(t *testing.T) {
@@ -69,7 +82,7 @@ func TestTheMutableRenderCarriesOnlyWhatTheAgentDoesThere(t *testing.T) {
 		OSImage:                internalv1alpha1.OSImage{Digest: testOSImageDigest},
 	})
 
-	require.Equal(t, internalv1alpha1.SystemTypeMutable, spec.SystemType)
+	require.Equal(t, internalv1alpha1.SystemTypeGenericOS, spec.SystemType)
 	require.Equal(t, "worker-0", spec.NodeName)
 	require.Zero(t, spec.OSImage)
 	require.Equal(t, []string{"https://10.0.0.1:6443"}, spec.APIServerEndpoints)
@@ -247,13 +260,13 @@ func mutableCluster(t *testing.T, digests string, objects ...client.Object) clie
 // A release without the agent's package is broken, not an edition without the agent:
 // the node's pass fails on it by name, and the document it has stays as it was.
 func TestABashibleNodeKeepsItsDocumentWhileTheAgentPackageIsMissing(t *testing.T) {
-	ng := mutableGroup("worker", v1.SystemTypeMutable)
+	ng := mutableGroup("worker", v1.SystemTypeLegacyMutable)
 	node := nodeInGroup("worker-0", "worker")
 	existing := &internalv1alpha1.NodeConfig{
 		ObjectMeta: metav1.ObjectMeta{Name: "worker-0", Labels: map[string]string{
 			nodecommon.NodeGroupLabel: "worker", managedByLabel: managedByValue,
 		}},
-		Spec: internalv1alpha1.NodeSpec{SystemType: internalv1alpha1.SystemTypeMutable, NodeName: "worker-0"},
+		Spec: internalv1alpha1.NodeSpec{SystemType: internalv1alpha1.SystemTypeLegacyMutable, NodeName: "worker-0"},
 	}
 	digests := mutableDigests()
 	delete(digests, "nodelet")
@@ -366,7 +379,7 @@ func TestReadMutableInputsSettlesTheRequests(t *testing.T) {
 // A pass delivers a package by the kind its requester declared: nothing is asked, so
 // nothing is waited for and no retry is scheduled.
 func TestAPassDeliversAPackageWithNobodyToAsk(t *testing.T) {
-	ng := mutableGroup("worker", v1.SystemTypeMutable)
+	ng := mutableGroup("worker", v1.SystemTypeLegacyMutable)
 	node := nodeInGroup("worker-0", "worker")
 	request := ner("sds-utils", deckhousev1alpha1.NodeExtensionRequestSpec{
 		Extension: deckhousev1alpha1.NodeExtension{Name: "sds-utils", Digest: drbdDigest, Kind: deckhousev1alpha1.ExtensionKindPackage},

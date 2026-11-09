@@ -50,7 +50,8 @@ const (
 	NodeStaticPodRequestCRDFile NodeManagerCRDFile = "nodestaticpodrequest.yaml"
 	// Under crds/internal: nobody creates the Cluster API bootstrap objects by
 	// hand, so they are kept out of the documentation and installed by a hook.
-	NodeBootstrapConfigCRDFile NodeManagerCRDFile = "internal/nodebootstrapconfig.yaml"
+	NodeBootstrapConfigCRDFile         NodeManagerCRDFile = "internal/nodebootstrapconfig.yaml"
+	NodeBootstrapConfigTemplateCRDFile NodeManagerCRDFile = "internal/nodebootstrapconfigtemplate.yaml"
 )
 
 // RealCacheCRDPaths returns the CRDs every envtest manager needs regardless of what the

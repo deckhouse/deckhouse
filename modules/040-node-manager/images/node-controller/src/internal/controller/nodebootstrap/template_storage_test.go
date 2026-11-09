@@ -155,6 +155,24 @@ func TestNodeConfigTemplateCarriesABootstrapToken(t *testing.T) {
 	require.NotEmpty(t, template.Spec.Kubelet.BootstrapToken)
 }
 
+func TestNodeConfigTemplateServesAStaticEngineGroupOfEitherSpelling(t *testing.T) {
+	for _, systemType := range []deckhousev1.SystemType{deckhousev1.SystemTypeDeckhouseEngine, deckhousev1.SystemTypeLegacyImmutable} {
+		t.Run(string(systemType), func(t *testing.T) {
+			ng := immutableStaticNodeGroup(testTemplateNodeGroup).(*deckhousev1.NodeGroup)
+			ng.Spec.SystemType = systemType
+			storage := NewTemplateStorage(templateCluster(t, ng, bootstrapTokenSecret(testTemplateNodeGroup)))
+
+			require.Equal(t, internalv1alpha1.SystemTypeLegacyImmutable, templateOf(t, storage).Spec.SystemType)
+
+			object, err := storage.List(t.Context(), &metainternalversion.ListOptions{})
+			require.NoError(t, err)
+			list, ok := object.(*templatesv1alpha1.NodeConfigTemplateList)
+			require.True(t, ok, "storage returned %T", object)
+			require.Len(t, list.Items, 1)
+		})
+	}
+}
+
 // Nobody installs a cloud node by hand: its config is rendered onto the machine
 // CAPI creates. Answering for such a group would put a template in an
 // operator's hands that no machine of that group will ever read.
@@ -163,7 +181,7 @@ func TestNodeConfigTemplateIsNotServedForACloudGroup(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: testTemplateNodeGroup},
 		Spec: deckhousev1.NodeGroupSpec{
 			NodeType:   deckhousev1.NodeTypeCloudPermanent,
-			SystemType: deckhousev1.SystemTypeImmutable,
+			SystemType: deckhousev1.SystemTypeLegacyImmutable,
 		},
 	}
 	storage := NewTemplateStorage(templateCluster(t, cloud, bootstrapTokenSecret(testTemplateNodeGroup)))
@@ -268,7 +286,7 @@ func immutableStaticNodeGroup(name string) client.Object {
 		ObjectMeta: metav1.ObjectMeta{Name: name},
 		Spec: deckhousev1.NodeGroupSpec{
 			NodeType:   deckhousev1.NodeTypeStatic,
-			SystemType: deckhousev1.SystemTypeImmutable,
+			SystemType: deckhousev1.SystemTypeLegacyImmutable,
 		},
 	}
 }
@@ -410,7 +428,7 @@ func TestNodeConfigTemplateServesTheDocumentOfABashibleGroup(t *testing.T) {
 		name       string
 		systemType deckhousev1.SystemType
 	}{
-		{name: "a Mutable group", systemType: deckhousev1.SystemTypeMutable},
+		{name: "a Mutable group", systemType: deckhousev1.SystemTypeLegacyMutable},
 		{name: "a group that names no type", systemType: ""},
 	}
 	for _, tt := range tests {
@@ -423,7 +441,7 @@ func TestNodeConfigTemplateServesTheDocumentOfABashibleGroup(t *testing.T) {
 			require.True(t, ok, "storage returned %T", object)
 
 			require.Equal(t, "worker", template.Name)
-			require.Equal(t, internalv1alpha1.SystemTypeMutable, template.Spec.SystemType)
+			require.Equal(t, internalv1alpha1.SystemTypeLegacyMutable, template.Spec.SystemType)
 			require.Empty(t, template.Spec.NodeName)
 			require.Empty(t, template.Spec.Kubelet.BootstrapToken)
 			require.Empty(t, template.Spec.StatusToken)
@@ -456,7 +474,7 @@ func TestTheTemplateOfABashibleGroupCarriesItsPackageRequests(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
 		Spec: deckhousev1.NodeGroupSpec{
 			NodeType:     deckhousev1.NodeTypeStatic,
-			SystemType:   deckhousev1.SystemTypeMutable,
+			SystemType:   deckhousev1.SystemTypeLegacyMutable,
 			NodeTemplate: &deckhousev1.NodeTemplate{Labels: map[string]string{"storage": "drbd"}},
 		},
 	}
@@ -517,7 +535,7 @@ func TestNodeConfigTemplateOfABashibleGroupFailsWithoutTheAgentPackage(t *testin
 	require.NoError(t, clientgoscheme.AddToScheme(scheme))
 	require.NoError(t, deckhousev1.AddToScheme(scheme))
 	cluster := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-		bashibleNodeGroup("worker", deckhousev1.SystemTypeMutable),
+		bashibleNodeGroup("worker", deckhousev1.SystemTypeLegacyMutable),
 		&corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{Namespace: nodecommon.MachineNamespace, Name: "bashible-apiserver-files"},
 			Data:       map[string]string{"images_digests.json": `{"registrypackages":{}}`},

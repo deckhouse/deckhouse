@@ -151,7 +151,7 @@ func TestASystemExtensionCountsTheNodesOfEngineGroups(t *testing.T) {
 	engineNode := nodeInGroup("worker-0", "worker")
 	bashibleNode := nodeInGroup("mutable-0", "mutable-workers")
 	cl := nerStatusCluster(t, request, immutableGroup("worker"),
-		mutableGroup("mutable-workers", v1.SystemTypeMutable), &engineNode, &bashibleNode)
+		mutableGroup("mutable-workers", v1.SystemTypeLegacyMutable), &engineNode, &bashibleNode)
 
 	require.NoError(t, nerStatusReconciler(cl).reconcileNERStatuses(t.Context(), logr.Discard(), newPass()))
 
@@ -170,7 +170,7 @@ func TestARegistryPackageCountsTheNodesOfBashibleGroups(t *testing.T) {
 	engineNode := nodeInGroup("engine-0", "engine")
 	bashibleNode := nodeInGroup("worker-0", "worker")
 	cl := nerStatusCluster(t, kindedRequest("sds-utils", drbdDigest, deckhousev1alpha1.ExtensionKindPackage),
-		immutableGroup("engine"), mutableGroup("worker", v1.SystemTypeMutable), &engineNode, &bashibleNode)
+		immutableGroup("engine"), mutableGroup("worker", v1.SystemTypeLegacyMutable), &engineNode, &bashibleNode)
 
 	require.NoError(t, nerStatusReconciler(cl).reconcileNERStatuses(t.Context(), logr.Discard(), newPass()))
 
@@ -189,7 +189,7 @@ func TestNERStatusFailsOnAReleaseWithoutTheAgentPackage(t *testing.T) {
 	digests := mutableDigests()
 	delete(digests, "nodelet")
 	cl := mutableCluster(t, digestsJSON(t, digests), kindedRequest("sds-utils", drbdDigest, deckhousev1alpha1.ExtensionKindPackage),
-		mutableGroup("worker", v1.SystemTypeMutable), &bashibleNode)
+		mutableGroup("worker", v1.SystemTypeLegacyMutable), &bashibleNode)
 
 	err := nerStatusReconciler(cl).reconcileNERStatuses(t.Context(), logr.Discard(), newPass())
 
@@ -279,7 +279,7 @@ func TestNERStatusTakesTheKindFromTheSpec(t *testing.T) {
 			request.Generation = 2
 			engineNode := nodeInGroup("engine-0", "engine")
 			bashibleNode := nodeInGroup("worker-0", "worker")
-			cl := nerStatusCluster(t, request, immutableGroup("engine"), mutableGroup("worker", v1.SystemTypeMutable),
+			cl := nerStatusCluster(t, request, immutableGroup("engine"), mutableGroup("worker", v1.SystemTypeLegacyMutable),
 				&engineNode, &bashibleNode)
 
 			require.NoError(t, nerStatusReconciler(cl).reconcileNERStatuses(t.Context(), logr.Discard(), newPass()))
@@ -302,7 +302,7 @@ func TestARequestNamingGroupsOfTheOtherTypeSaysSo(t *testing.T) {
 		request.Spec.NodeGroupSelector.MatchNames = matchNames
 		engineNode := nodeInGroup("engine-0", "engine")
 		bashibleNode := nodeInGroup("worker-0", "worker")
-		cl := nerStatusCluster(t, request, immutableGroup("engine"), mutableGroup("worker", v1.SystemTypeMutable),
+		cl := nerStatusCluster(t, request, immutableGroup("engine"), mutableGroup("worker", v1.SystemTypeLegacyMutable),
 			&engineNode, &bashibleNode)
 		require.NoError(t, nerStatusReconciler(cl).reconcileNERStatuses(t.Context(), logr.Discard(), newPass()))
 		return nerStatusOf(t, cl, "sds-utils")
@@ -334,7 +334,7 @@ func TestARegistryPackageWithKernelModulesIsNotDeliverable(t *testing.T) {
 	request := kindedRequest("sds-utils", drbdDigest, deckhousev1alpha1.ExtensionKindPackage)
 	request.Spec.Extension.KernelModules = []deckhousev1alpha1.KernelModule{{Name: "drbd"}}
 	node := nodeInGroup("worker-0", "worker")
-	cl := nerStatusCluster(t, request, mutableGroup("worker", v1.SystemTypeMutable), &node)
+	cl := nerStatusCluster(t, request, mutableGroup("worker", v1.SystemTypeLegacyMutable), &node)
 
 	require.NoError(t, nerStatusReconciler(cl).reconcileNERStatuses(t.Context(), logr.Discard(), newPass()))
 
@@ -367,7 +367,7 @@ func TestNERStatusWritesItsZeroCounters(t *testing.T) {
 func TestNERStatusNamesThePlatformPackageARequestYieldsTo(t *testing.T) {
 	node := nodeInGroup("worker-0", "worker")
 	cl := nerStatusCluster(t, kindedRequest("jq", drbdDigest, deckhousev1alpha1.ExtensionKindPackage),
-		mutableGroup("worker", v1.SystemTypeMutable), &node)
+		mutableGroup("worker", v1.SystemTypeLegacyMutable), &node)
 
 	require.NoError(t, nerStatusReconciler(cl).reconcileNERStatuses(t.Context(), logr.Discard(), newPass()))
 
@@ -385,7 +385,7 @@ func TestAnUnreadablePlatformHoldsBackOnlyTheRegistryPackages(t *testing.T) {
 	bashibleNode := nodeInGroup("worker-0", "worker")
 	cl := fake.NewClientBuilder().
 		WithScheme(nsprStatusScheme(t)).
-		WithObjects(sysext, registryPackage, immutableGroup("engine"), mutableGroup("worker", v1.SystemTypeMutable),
+		WithObjects(sysext, registryPackage, immutableGroup("engine"), mutableGroup("worker", v1.SystemTypeLegacyMutable),
 			&engineNode, &bashibleNode, imagesConfigMap()).
 		WithStatusSubresource(&deckhousev1alpha1.NodeExtensionRequest{}).
 		Build()

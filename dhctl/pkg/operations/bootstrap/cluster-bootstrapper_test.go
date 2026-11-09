@@ -80,7 +80,7 @@ func TestParseResourcesRefusesNodeConfigDocumentsWithoutAnImmutableMaster(t *tes
 
 	err := (&ClusterBootstrapper{}).bootstrapParseResources(t.Context(), bctx)
 	require.ErrorContains(t, err, "1 NodeConfig document")
-	require.ErrorContains(t, err, "systemType: Immutable")
+	require.ErrorContains(t, err, "systemType: DeckhouseEngine")
 }
 
 const nodeConfigDocument = "apiVersion: " + immutable.PayloadAPIVersion + "\nkind: " + immutable.NodeConfigKind + "\n" +

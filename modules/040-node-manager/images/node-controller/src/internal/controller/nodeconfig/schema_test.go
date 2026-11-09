@@ -75,35 +75,29 @@ func TestMain(m *testing.M) {
 }
 
 // One CRD serves both system types, and the API server is what keeps them apart:
-// an Engine node without an OS image can never be updated, a node that changed type
-// would have two owners configuring it, and a Mutable document carrying Engine
-// sections is configuration bashible and the agent would both apply.
+// an Engine node without an OS image can never be updated, and a GenericOS document
+// carrying Engine sections is configuration bashible and the agent would both apply.
 func TestNodeConfigSchemaTellsTheSystemTypesApart(t *testing.T) {
 	c := nodeConfigAPIClient(t)
 
-	t.Run("a Mutable document needs no OS image", func(t *testing.T) {
-		require.NoError(t, c.Create(t.Context(), rawNodeConfig("mutable-0", map[string]any{"systemType": "Mutable"})))
-	})
+	for _, systemType := range []string{"Mutable", "GenericOS"} {
+		t.Run("a "+systemType+" document needs no OS image", func(t *testing.T) {
+			document := rawNodeConfig(strings.ToLower(systemType)+"-0", map[string]any{"systemType": systemType})
+			require.NoError(t, c.Create(t.Context(), document))
+		})
+	}
 
-	t.Run("an Immutable document does", func(t *testing.T) {
-		err := c.Create(t.Context(), rawNodeConfig("immutable-0", map[string]any{"systemType": "Immutable"}))
-		require.ErrorContains(t, err, "spec.osImage must be set on an Immutable node")
-	})
+	for _, systemType := range []string{"Immutable", "DeckhouseEngine"} {
+		t.Run("a "+systemType+" document does", func(t *testing.T) {
+			err := c.Create(t.Context(), rawNodeConfig(strings.ToLower(systemType)+"-0", map[string]any{"systemType": systemType}))
+			require.ErrorContains(t, err, "spec.osImage must be set on a DeckhouseEngine node")
+		})
+	}
 
 	// No default: a writer that names no type wrote a document for no node.
 	t.Run("a document that names no type is refused", func(t *testing.T) {
 		err := c.Create(t.Context(), rawNodeConfig("untyped-0", map[string]any{}))
 		require.ErrorContains(t, err, "spec.systemType: Required value")
-	})
-
-	t.Run("the type cannot be changed", func(t *testing.T) {
-		document := rawNodeConfig("mutable-1", map[string]any{"systemType": "Mutable"})
-		require.NoError(t, c.Create(t.Context(), document))
-
-		require.NoError(t, unstructured.SetNestedField(document.Object, "Immutable", "spec", "systemType"))
-		require.NoError(t, unstructured.SetNestedMap(document.Object,
-			map[string]any{"digest": "sha256:" + strings.Repeat("a", 64)}, "spec", "osImage"))
-		require.ErrorContains(t, c.Update(t.Context(), document), "spec.systemType cannot be changed")
 	})
 
 	t.Run("a feature name is a DNS label", func(t *testing.T) {
@@ -119,7 +113,7 @@ func TestNodeConfigSchemaTellsTheSystemTypesApart(t *testing.T) {
 			"systemType": "Mutable",
 			"kubelet":    map[string]any{"maxPods": int64(110)},
 		}))
-		require.ErrorContains(t, err, "a Mutable node takes only nodeName, featureGates, apiServerEndpoints, registryPackagesProxy, registry, extensions and staticPods")
+		require.ErrorContains(t, err, "a GenericOS node takes only nodeName, featureGates, apiServerEndpoints, registryPackagesProxy, registry, extensions and staticPods")
 	})
 
 	// nodelet routes the RegistryUpstream objects on a bashible node from this block.
@@ -136,6 +130,46 @@ func TestNodeConfigSchemaTellsTheSystemTypesApart(t *testing.T) {
 			},
 		})))
 	})
+}
+
+func TestNodeConfigSchemaMovesASpellingWithinItsClass(t *testing.T) {
+	c := nodeConfigAPIClient(t)
+	engine := map[string]bool{"Immutable": true, "DeckhouseEngine": true}
+	osImage := map[string]any{"digest": "sha256:" + strings.Repeat("a", 64)}
+
+	for _, tc := range []struct {
+		from, to string
+		refused  bool
+	}{
+		{from: "Immutable", to: "DeckhouseEngine"},
+		{from: "DeckhouseEngine", to: "Immutable"},
+		{from: "Mutable", to: "GenericOS"},
+		{from: "GenericOS", to: "Mutable"},
+		{from: "DeckhouseEngine", to: "GenericOS", refused: true},
+		{from: "Mutable", to: "Immutable", refused: true},
+	} {
+		t.Run(tc.from+" to "+tc.to, func(t *testing.T) {
+			spec := map[string]any{"systemType": tc.from}
+			if engine[tc.from] {
+				spec["osImage"] = osImage
+			}
+			document := rawNodeConfig(strings.ToLower("move-"+tc.from+"-"+tc.to), spec)
+			require.NoError(t, c.Create(t.Context(), document))
+
+			require.NoError(t, unstructured.SetNestedField(document.Object, tc.to, "spec", "systemType"))
+			if engine[tc.to] {
+				require.NoError(t, unstructured.SetNestedMap(document.Object, osImage, "spec", "osImage"))
+			} else {
+				unstructured.RemoveNestedField(document.Object, "spec", "osImage")
+			}
+			err := c.Update(t.Context(), document)
+			if tc.refused {
+				require.ErrorContains(t, err, "spec.systemType cannot move between DeckhouseEngine and GenericOS")
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
 }
 
 // A NodeConfig is named after its node, and the agent configures its hostname and

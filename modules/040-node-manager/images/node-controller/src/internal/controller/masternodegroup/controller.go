@@ -222,8 +222,8 @@ func (r *Reconciler) readMasterSystemType(ctx context.Context) (deckhousev1.Syst
 	}
 
 	for _, node := range nodes.Items {
-		if node.Labels[common.NodeSystemTypeLabel] == string(deckhousev1.SystemTypeImmutable) {
-			return deckhousev1.SystemTypeImmutable, nil
+		if deckhousev1.IsDeckhouseEngine(deckhousev1.SystemType(node.Labels[common.NodeSystemTypeLabel])) {
+			return deckhousev1.SystemTypeDeckhouseEngine, nil
 		}
 	}
 

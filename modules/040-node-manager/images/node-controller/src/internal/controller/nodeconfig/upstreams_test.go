@@ -432,8 +432,8 @@ func TestTheStatusTellsWhatContainerdV1NodesDoNotApply(t *testing.T) {
 
 	t.Run("module disabled, a containerd v1 group", func(t *testing.T) {
 		cluster := upstreamsCluster(t, append(objects(),
-			nodeGroupWithCRI("legacy", v1.SystemTypeMutable, v1.CRITypeContainerd),
-			nodeGroupWithCRI("modern", v1.SystemTypeMutable, v1.CRITypeContainerdV2),
+			nodeGroupWithCRI("legacy", v1.SystemTypeLegacyMutable, v1.CRITypeContainerd),
+			nodeGroupWithCRI("modern", v1.SystemTypeLegacyMutable, v1.CRITypeContainerdV2),
 		)...)
 		r := &Reconciler{Base: register.Base{Client: cluster}}
 		require.NoError(t, r.reconcileRegistryUpstreamStatuses(t.Context(), logr.Discard()))
@@ -448,7 +448,7 @@ func TestTheStatusTellsWhatContainerdV1NodesDoNotApply(t *testing.T) {
 
 	t.Run("the cluster default is containerd v1", func(t *testing.T) {
 		cluster := upstreamsCluster(t, append(objects(),
-			nodeGroupWithCRI("default", v1.SystemTypeMutable, ""),
+			nodeGroupWithCRI("default", v1.SystemTypeLegacyMutable, ""),
 			&corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Namespace: kubeSystemNS, Name: clusterConfigSecretName},
 				Data:       map[string][]byte{clusterConfigKey: []byte("defaultCRI: Containerd\n")},
@@ -461,11 +461,11 @@ func TestTheStatusTellsWhatContainerdV1NodesDoNotApply(t *testing.T) {
 
 	for name, extra := range map[string][]client.Object{
 		"no containerd v1 group": {
-			nodeGroupWithCRI("modern", v1.SystemTypeMutable, v1.CRITypeContainerdV2),
-			nodeGroupWithCRI("engine", v1.SystemTypeImmutable, v1.CRITypeContainerd),
+			nodeGroupWithCRI("modern", v1.SystemTypeLegacyMutable, v1.CRITypeContainerdV2),
+			nodeGroupWithCRI("engine", v1.SystemTypeLegacyImmutable, v1.CRITypeContainerd),
 		},
 		"the module configures the nodes": {
-			nodeGroupWithCRI("legacy", v1.SystemTypeMutable, v1.CRITypeContainerd),
+			nodeGroupWithCRI("legacy", v1.SystemTypeLegacyMutable, v1.CRITypeContainerd),
 			&corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Namespace: d8SystemNS, Name: registryBashibleConfigSecret},
 				Data:       map[string][]byte{registryBashibleConfigKey: []byte("mode: Unmanaged\n")},
@@ -491,9 +491,9 @@ func TestTheStatusTellsWhereAModuleSourceKeepsItsRegistry(t *testing.T) {
 			registryUpstreamObject("over-modules", "Modules.Example.com", 0, map[string]any{"host": "vendor.example.com"}),
 			registryUpstreamObject("plain", "ghcr.example.com", 1, map[string]any{"host": "proxy.example.com"}),
 			moduleSourceObject("partner", "modules.example.com/modules", sourceCA, 0),
-			nodeGroupWithCRI("legacy", v1.SystemTypeMutable, v1.CRITypeContainerd),
-			nodeGroupWithCRI("modern", v1.SystemTypeMutable, v1.CRITypeContainerdV2),
-			nodeGroupWithCRI("engine", v1.SystemTypeImmutable, v1.CRITypeContainerdV2),
+			nodeGroupWithCRI("legacy", v1.SystemTypeLegacyMutable, v1.CRITypeContainerd),
+			nodeGroupWithCRI("modern", v1.SystemTypeLegacyMutable, v1.CRITypeContainerdV2),
+			nodeGroupWithCRI("engine", v1.SystemTypeLegacyImmutable, v1.CRITypeContainerdV2),
 		}
 	}
 	message := func(cluster client.Client, name string) string {

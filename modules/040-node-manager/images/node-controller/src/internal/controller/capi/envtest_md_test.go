@@ -169,6 +169,26 @@ var _ = Describe("CAPI MachineDeployment rendering", func() {
 		))
 	})
 
+	DescribeTable("renders the bootstrap template of a Deckhouse Engine group",
+		func(systemType deckhousev1.SystemType) {
+			Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, newInstanceClass()))).To(Succeed())
+
+			ng := newNodeGroup(testenv.UniqueName("cap-engine"))
+			ng.Spec.SystemType = systemType
+			Expect(testenv.CreateNodeGroup(suiteCtx, k8sClient, ng)).To(Succeed())
+			DeferCleanup(func() { _ = k8sClient.Delete(suiteCtx, ng) })
+
+			tmpl := &unstructured.Unstructured{}
+			tmpl.SetAPIVersion("bootstrap.deckhouse.io/v1alpha1")
+			tmpl.SetKind("NodeBootstrapConfigTemplate")
+			Eventually(func() error {
+				return k8sClient.Get(suiteCtx, types.NamespacedName{Namespace: common.MachineNamespace, Name: ng.Name}, tmpl)
+			}, 20*time.Second, 250*time.Millisecond).Should(Succeed())
+		},
+		Entry("DeckhouseEngine", deckhousev1.SystemTypeDeckhouseEngine),
+		Entry("Immutable", deckhousev1.SystemTypeLegacyImmutable),
+	)
+
 	// Before the migration helm rendered the infrastructure template and pruned it when the
 	// NodeGroup left its values. node-controller took the rendering over, and for a while
 	// nothing took the deletion over: a live cluster ended up with one orphaned template per

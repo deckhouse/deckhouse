@@ -99,7 +99,7 @@ spec:
                   properties:
                     path:
                       description: |
-                        Путь на узле. Задаётся модулем, а не пользователем: `/var/lib/deckhouse/registry`, если у NodeGroup master-узлов `systemType: Immutable`, иначе `/opt/deckhouse/registry`.
+                        Путь на узле. Задаётся модулем, а не пользователем: `/var/lib/deckhouse/registry`, если у NodeGroup master-узлов `systemType: DeckhouseEngine`, иначе `/opt/deckhouse/registry`.
                     size:
                       description: |
                         Бюджет хранилища каждой реплики, берётся из `storage.size` в ModuleConfig: сколько могут занимать его блобы и незавершённые загрузки. Если не задан, бюджета нет; резерв на файловой системе хранилища (см. `status.replicas[].store.reserveBytes`) действует в любом случае.

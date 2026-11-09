@@ -137,7 +137,7 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 	}
 
 	spec := nodeSpec{
-		SystemType: systemTypeImmutable,
+		SystemType: legacySystemTypeImmutable,
 		NodeName:   in.NodeName,
 		OSImage:    osImageRef,
 		Storage: storage{
@@ -226,7 +226,7 @@ func nodeKubelet(metaConfig *config.MetaConfig, kubernetesVersion string, podsPe
 		NodeLabels: map[string]string{
 			global.NodeGroupLabel: nodeGroupOrMaster(nodeGroupName),
 			nodeTypeLabel:         nodeType,
-			systemTypeLabel:       systemTypeImmutable,
+			systemTypeLabel:       systemTypeDeckhouseEngine,
 			cgroupLabel:           "cgroup2fs", // Deckhouse Engine's only layout; bashible probes it in 092_set_cgroup_type.sh.tpl
 		},
 		// Nobody can approve a serving CSR until Deckhouse is installed, and
@@ -338,7 +338,7 @@ func refuseBundleRegistry(metaConfig *config.MetaConfig) error {
 			"reach — it pulls its system extensions and control-plane images itself. For an air-gapped cluster, push the "+
 			"images into a registry inside your perimeter with `d8 mirror push` and set the registry ModuleConfig to "+
 			"mode: Managed with primary.upstream pointing at that internal mirror",
-		systemTypeImmutable, constant.ModeLocal, constant.BundleAddressWithPort)
+		systemTypeDeckhouseEngine, constant.ModeLocal, constant.BundleAddressWithPort)
 }
 
 // nodeRegistry gives the node direct registry access: it pulls the

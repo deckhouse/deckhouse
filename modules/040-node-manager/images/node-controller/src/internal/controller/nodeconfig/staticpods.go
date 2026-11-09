@@ -81,7 +81,7 @@ func orderedNSPRs(nsprs []deckhousev1alpha1.NodeStaticPodRequest) []*deckhousev1
 
 // rejectedNSPRs runs the checks in order (node-config name, reserved name, manifest, reserved
 // pod, pod claimed by an older object), cluster-wide as in resolveNERConflicts; a refusal
-// claims nothing. The second map adds what a bashible step writes on a Mutable node.
+// claims nothing. The second map adds what a bashible step writes on a Generic OS node.
 func rejectedNSPRs(ordered []*deckhousev1alpha1.NodeStaticPodRequest) (map[string]nsprRefusal, map[string]nsprRefusal) {
 	rejected := map[string]nsprRefusal{}
 	onMutable := map[string]nsprRefusal{}
@@ -125,7 +125,7 @@ func rejectedNSPRs(ordered []*deckhousev1alpha1.NodeStaticPodRequest) (map[strin
 			continue
 		}
 		claimed[pod] = nspr.Name
-		if deckhousev1alpha1.IsReservedStaticPodOn(v1.SystemTypeMutable, nspr.Name, pod) {
+		if deckhousev1alpha1.IsReservedStaticPodOn(v1.SystemTypeGenericOS, nspr.Name, pod) {
 			onMutable[nspr.Name] = nsprRefusal{
 				reason:  reasonReservedName,
 				message: "a bashible step writes this manifest on the nodes it manages",

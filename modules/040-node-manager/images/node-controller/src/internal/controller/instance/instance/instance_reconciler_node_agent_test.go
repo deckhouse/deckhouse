@@ -53,7 +53,7 @@ func TestDesiredNodeAgentCondition(t *testing.T) {
 	}{
 		{
 			name:          "silent agent of an Immutable node",
-			config:        nodeConfig(internalv1alpha1.SystemTypeImmutable, now.Add(-11*time.Minute)),
+			config:        nodeConfig(internalv1alpha1.SystemTypeLegacyImmutable, now.Add(-11*time.Minute)),
 			expectPatch:   true,
 			expectStatus:  metav1.ConditionUnknown,
 			expectReason:  nodeAgentNoReportReason,
@@ -61,7 +61,7 @@ func TestDesiredNodeAgentCondition(t *testing.T) {
 		},
 		{
 			name:          "reporting agent of an Immutable node",
-			config:        nodeConfig(internalv1alpha1.SystemTypeImmutable, now.Add(-time.Minute)),
+			config:        nodeConfig(internalv1alpha1.SystemTypeLegacyImmutable, now.Add(-time.Minute)),
 			expectPatch:   true,
 			expectStatus:  metav1.ConditionTrue,
 			expectReason:  nodeAgentReportingReason,
@@ -70,7 +70,7 @@ func TestDesiredNodeAgentCondition(t *testing.T) {
 		{
 			name:          "agent that fell silent after reporting",
 			conditions:    []deckhousev1alpha2.InstanceCondition{reporting},
-			config:        nodeConfig(internalv1alpha1.SystemTypeImmutable, now.Add(-11*time.Minute)),
+			config:        nodeConfig(internalv1alpha1.SystemTypeLegacyImmutable, now.Add(-11*time.Minute)),
 			expectPatch:   true,
 			expectStatus:  metav1.ConditionUnknown,
 			expectReason:  nodeAgentNoReportReason,
@@ -79,12 +79,12 @@ func TestDesiredNodeAgentCondition(t *testing.T) {
 		{
 			name:        "unchanged condition is not patched",
 			conditions:  []deckhousev1alpha2.InstanceCondition{reporting},
-			config:      nodeConfig(internalv1alpha1.SystemTypeImmutable, now.Add(-time.Minute)),
+			config:      nodeConfig(internalv1alpha1.SystemTypeLegacyImmutable, now.Add(-time.Minute)),
 			expectPatch: false,
 		},
 		{
 			name:          "silent agent of a bashible node",
-			config:        nodeConfig(internalv1alpha1.SystemTypeMutable, now.Add(-11*time.Minute)),
+			config:        nodeConfig(internalv1alpha1.SystemTypeLegacyMutable, now.Add(-11*time.Minute)),
 			expectPatch:   true,
 			expectStatus:  metav1.ConditionUnknown,
 			expectReason:  nodeAgentNoReportReason,
@@ -92,7 +92,7 @@ func TestDesiredNodeAgentCondition(t *testing.T) {
 		},
 		{
 			name:        "agent that has not finished a pass has nothing to age",
-			config:      nodeConfig(internalv1alpha1.SystemTypeImmutable, time.Time{}),
+			config:      nodeConfig(internalv1alpha1.SystemTypeLegacyImmutable, time.Time{}),
 			expectPatch: false,
 		},
 	}

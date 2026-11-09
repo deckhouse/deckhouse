@@ -63,8 +63,10 @@ func TestNodeGroupConversion_PreservesSystemType_RoundTrip(t *testing.T) {
 		name string
 		in   SystemType
 	}{
-		{name: "immutable survives the round-trip", in: SystemTypeImmutable},
-		{name: "mutable survives the round-trip", in: SystemTypeMutable},
+		{name: "DeckhouseEngine survives the round-trip", in: SystemTypeDeckhouseEngine},
+		{name: "GenericOS survives the round-trip", in: SystemTypeGenericOS},
+		{name: "immutable survives the round-trip", in: SystemTypeLegacyImmutable},
+		{name: "mutable survives the round-trip", in: SystemTypeLegacyMutable},
 		{name: "unset stays unset", in: ""},
 	}
 

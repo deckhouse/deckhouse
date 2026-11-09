@@ -43,9 +43,9 @@ func (s *Service) Compute(ctx context.Context, ng *v1.NodeGroup) (Result, error)
 		return Result{}, err
 	}
 
-	// An Immutable node reports its rollout in its NodeConfig and never carries the
+	// A Deckhouse Engine node reports its rollout in its NodeConfig and never carries the
 	// bashible checksum annotation.
-	immutable := ng.Spec.SystemType == v1.SystemTypeImmutable
+	immutable := v1.IsDeckhouseEngine(ng.Spec.SystemType)
 	configChecksum := ""
 	if !immutable {
 		configChecksum = s.getConfigurationChecksum(ctx, ng.Name)

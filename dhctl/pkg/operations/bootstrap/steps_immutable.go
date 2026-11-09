@@ -102,6 +102,10 @@ func (b *ClusterBootstrapper) printCollectedKubeconfig(ctx context.Context, bctx
 // created needs. The non-skippable class is for the guards that genuinely belong in a suite —
 // immutable-supported-provider among them.
 func (b *ClusterBootstrapper) detectImmutableMaster(ctx context.Context, bctx *bootstrapContext) error {
+	if err := immutable.RefuseLegacySystemType(bctx.metaConfig); err != nil {
+		return err
+	}
+
 	immutableMaster, err := immutable.IsImmutableMaster(ctx, bctx.metaConfig)
 	if err != nil {
 		return err
@@ -113,7 +117,7 @@ func (b *ClusterBootstrapper) detectImmutableMaster(ctx context.Context, bctx *b
 		if len(b.Options.Bootstrap.MasterHostsRaw) > 0 {
 			return errors.New(
 				"--master-host names control-plane machines, and those exist only for a master NodeGroup with " +
-					"systemType: Immutable, which this configuration does not ask for: add it to the master NodeGroup, " +
+					"systemType: DeckhouseEngine, which this configuration does not ask for: add it to the master NodeGroup, " +
 					"or drop the flag")
 		}
 		return nil

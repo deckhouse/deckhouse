@@ -113,7 +113,7 @@ spec:
                   description: |
                     Operation to perform on the node.
 
-                    * `Reboot`: Reboot the node. Only the nodes of a NodeGroup with `systemType: Immutable` perform this operation. A node that bashible manages refuses it, and the operation fails with the reason `NodeRefused`.
+                    * `Reboot`: Reboot the node. Only the nodes of a NodeGroup with `systemType: DeckhouseEngine` perform this operation. A node that bashible manages refuses it, and the operation fails with the reason `NodeRefused`.
                     * `Drain`: Evict the workload from the node. The node stays unschedulable until an operator makes it schedulable again. `node-manager` also creates a `Drain` for the node of a deleted Cluster API Machine. `.spec.cause` names the machine.
 
                       To cancel a running `Drain`, delete it. `node-manager` withdraws its eviction request from the node before the object is gone. The cordon the eviction placed stays: make the node schedulable again yourself.

@@ -337,7 +337,13 @@ func (r *Reconciler) reconcileNodeObject(ctx context.Context, node *corev1.Node,
 		return ctrl.Result{}, r.deleteOrphaned(ctx, nodeName, logger)
 	}
 
-	spec, err := r.renderNode(ctx, ng, node, p)
+	existing := &internalv1alpha1.NodeConfig{}
+	if err := r.Client.Get(ctx, types.NamespacedName{Name: nodeName}, existing); apierrors.IsNotFound(err) {
+		existing = nil
+	} else if err != nil {
+		return ctrl.Result{}, fmt.Errorf("get NodeConfig %s: %w", nodeName, err)
+	}
+	spec, err := r.renderNode(ctx, ng, node, existing, p)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -361,20 +367,25 @@ func (r *Reconciler) reconcileNodeObject(ctx context.Context, node *corev1.Node,
 }
 
 // renderNode is the spec a node of the group is published: the Engine render for
-// an Immutable group, the agent-only one for a group bashible manages.
-func (r *Reconciler) renderNode(ctx context.Context, ng *v1.NodeGroup, node *corev1.Node, p *pass) (internalv1alpha1.NodeSpec, error) {
+// a Deckhouse Engine group, the agent-only one for a group bashible manages.
+func (r *Reconciler) renderNode(ctx context.Context, ng *v1.NodeGroup, node *corev1.Node,
+	existing *internalv1alpha1.NodeConfig, p *pass) (internalv1alpha1.NodeSpec, error) {
+	var spec internalv1alpha1.NodeSpec
 	if IsMutable(ng) {
 		in, err := r.mutableInputs(ctx, p)
 		if err != nil {
 			return internalv1alpha1.NodeSpec{}, fmt.Errorf("read the inputs of a bashible node: %w", err)
 		}
-		return renderMutableSpec(node, ng.Name, in), nil
+		spec = renderMutableSpec(node, ng.Name, in)
+	} else {
+		in, err := r.clusterInputs(ctx, ng, p)
+		if err != nil {
+			return internalv1alpha1.NodeSpec{}, fmt.Errorf("read the inputs of an Engine node: %w", err)
+		}
+		spec = renderSpec(ng, node, in)
 	}
-	in, err := r.clusterInputs(ctx, ng, p)
-	if err != nil {
-		return internalv1alpha1.NodeSpec{}, fmt.Errorf("read the inputs of an Engine node: %w", err)
-	}
-	return renderSpec(ng, node, in), nil
+	spec.SystemType = publishedSystemType(spec, existing)
+	return spec, nil
 }
 
 // apply creates or patches the object and returns it as it now stands — nil

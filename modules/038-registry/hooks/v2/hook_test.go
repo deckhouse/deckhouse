@@ -103,11 +103,19 @@ func TestStorePathFollowsTheMasterGroup(t *testing.T) {
 		want:       registry_const.StorePath,
 	}, {
 		name:       "a bashible master group",
+		systemType: "GenericOS",
+		want:       registry_const.StorePath,
+	}, {
+		name:       "a bashible master group in the legacy spelling",
 		systemType: "Mutable",
 		want:       registry_const.StorePath,
 	}, {
 		name:       "an Engine master group",
-		systemType: systemTypeImmutable,
+		systemType: "DeckhouseEngine",
+		want:       registry_const.StorePathImmutable,
+	}, {
+		name:       "an Engine master group in the legacy spelling",
+		systemType: "Immutable",
 		want:       registry_const.StorePathImmutable,
 	}}
 

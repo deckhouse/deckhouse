@@ -170,7 +170,7 @@ func IsReservedStaticPod(pod string) bool {
 // bashible step writes there and nowhere else: registry-agent on the nodes bashible
 // manages (candi/bashible/common-steps/all/053_configure_registry_agent.sh.tpl).
 var reservedStaticPodsBySystemType = map[v1.SystemType]map[string]string{
-	v1.SystemTypeMutable: {"registry-agent": "kube-system/registry-agent"},
+	v1.SystemTypeGenericOS: {"registry-agent": "kube-system/registry-agent"},
 }
 
 // IsReservedStaticPodOn reports whether a manifest already has a writer on the nodes

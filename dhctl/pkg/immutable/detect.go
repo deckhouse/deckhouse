@@ -18,6 +18,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	libdhctlyaml "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/yaml"
@@ -40,14 +42,14 @@ func IsImmutableMaster(_ context.Context, metaConfig *config.MetaConfig) (bool, 
 	if metaConfig.CloudProviderVars != nil {
 		master := metaConfig.CloudProviderVars.NodeGroups[global.MasterNodeGroupName]
 		systemType, _, _ := unstructured.NestedString(master, "spec", "systemType")
-		return systemType == systemTypeImmutable, nil
+		return SystemTypeIsImmutable(systemType), nil
 	}
 
 	systemType, err := masterSystemTypeFromResources(metaConfig.ResourcesYAML)
 	if err != nil {
 		return false, err
 	}
-	return systemType == systemTypeImmutable, nil
+	return SystemTypeIsImmutable(systemType), nil
 }
 
 // The group the master NodeGroup must belong to. Matched the way the other
@@ -67,14 +69,7 @@ func masterSystemTypeFromResources(resourcesYAML string) (string, error) {
 		// bootstrap before any gate, and a document it cannot read — a comment, a
 		// stray fragment, a foreign resource — says nothing about the master.
 		var obj map[string]any
-		if err := yaml.Unmarshal([]byte(document), &obj); err != nil {
-			continue
-		}
-
-		kind, _, _ := unstructured.NestedString(obj, "kind")
-		apiVersion, _, _ := unstructured.NestedString(obj, "apiVersion")
-		index := yamlvalidation.SchemaIndex{Kind: kind, Version: apiVersion}
-		if index.Kind != nodeGroupKind || index.Group() != nodeGroupAPIGroup {
+		if err := yaml.Unmarshal([]byte(document), &obj); err != nil || !isNodeGroup(obj) {
 			continue
 		}
 		if name, _, _ := unstructured.NestedString(obj, "metadata", "name"); name != global.MasterNodeGroupName {
@@ -94,16 +89,16 @@ func masterSystemTypeFromResources(resourcesYAML string) (string, error) {
 	return "", nil
 }
 
+// SystemTypeIsImmutable reports whether a NodeGroup's spec.systemType names a Deckhouse
+// Engine node. Mirrors IsDeckhouseEngine of
+// modules/040-node-manager/images/node-controller/src/api/deckhouse.io/v1/nodegroup_types.go.
+func SystemTypeIsImmutable(systemType string) bool {
+	return systemType == systemTypeDeckhouseEngine || systemType == legacySystemTypeImmutable
+}
+
 // NodeGroupIsImmutable reports whether a NodeGroup read from the cluster asks for an
 // immutable system. The cluster object is the source of truth: a bashible bootstrap
 // Secret exists for an immutable group too, so its presence proves nothing.
-// SystemTypeIsImmutable reports whether a NodeGroup's spec.systemType names the
-// immutable kind, for the callers that already hold the value rather than the
-// object it came from.
-func SystemTypeIsImmutable(systemType string) bool {
-	return systemType == systemTypeImmutable
-}
-
 func NodeGroupIsImmutable(ng *unstructured.Unstructured) bool {
 	if ng == nil {
 		return false
@@ -111,7 +106,48 @@ func NodeGroupIsImmutable(ng *unstructured.Unstructured) bool {
 
 	systemType, _, _ := unstructured.NestedString(ng.Object, "spec", "systemType")
 
-	return systemType == systemTypeImmutable
+	return SystemTypeIsImmutable(systemType)
+}
+
+var newSystemTypeSpelling = map[string]string{
+	legacySystemTypeImmutable: systemTypeDeckhouseEngine,
+	legacySystemTypeMutable:   systemTypeGenericOS,
+}
+
+func RefuseLegacySystemType(metaConfig *config.MetaConfig) error {
+	if metaConfig == nil {
+		return nil
+	}
+
+	systemTypes := make(map[string]string)
+	if metaConfig.CloudProviderVars != nil {
+		for name, group := range metaConfig.CloudProviderVars.NodeGroups {
+			systemTypes[name], _, _ = unstructured.NestedString(group, "spec", "systemType")
+		}
+	}
+	for _, document := range libdhctlyaml.SplitYAML(metaConfig.ResourcesYAML) {
+		var obj map[string]any
+		if err := yaml.Unmarshal([]byte(document), &obj); err != nil || !isNodeGroup(obj) {
+			continue
+		}
+		name, _, _ := unstructured.NestedString(obj, "metadata", "name")
+		systemTypes[name], _, _ = unstructured.NestedString(obj, "spec", "systemType")
+	}
+
+	for _, name := range slices.Sorted(maps.Keys(systemTypes)) {
+		if replacement, legacy := newSystemTypeSpelling[systemTypes[name]]; legacy {
+			return fmt.Errorf("NodeGroup %s: systemType %q is no longer accepted, set %q instead",
+				name, systemTypes[name], replacement)
+		}
+	}
+	return nil
+}
+
+func isNodeGroup(obj map[string]any) bool {
+	kind, _, _ := unstructured.NestedString(obj, "kind")
+	apiVersion, _, _ := unstructured.NestedString(obj, "apiVersion")
+	index := yamlvalidation.SchemaIndex{Kind: kind, Version: apiVersion}
+	return index.Kind == nodeGroupKind && index.Group() == nodeGroupAPIGroup
 }
 
 // ValidateInputs refuses the combinations that leave the bootstrap with a node
@@ -141,7 +177,7 @@ func ValidateInputs(_ context.Context, metaConfig *config.MetaConfig, hosts map[
 		return fmt.Errorf(
 			"the master NodeGroup asks for systemType %q and this is a %q cluster, so nothing reports where the machines are: "+
 				"name each of them with --master-host <node-name>=<address>",
-			systemTypeImmutable, metaConfig.ClusterType)
+			systemTypeDeckhouseEngine, metaConfig.ClusterType)
 	}
 
 	return nil

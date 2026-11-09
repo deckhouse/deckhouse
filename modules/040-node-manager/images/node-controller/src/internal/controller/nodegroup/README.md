@@ -153,7 +153,7 @@ itself down and no minor upgrade could ever finish.
 
 Counts the nodes of a group: how many exist, how many are ready, and how many already run the
 desired configuration. A bashible node runs it when it carries the desired configuration checksum.
-An Immutable node runs it when its NodeConfig has applied the current generation; the same
+A Deckhouse Engine node runs it when its NodeConfig has applied the current generation; the same
 NodeConfig marks the node as updating while it is behind, and as waiting for disruption approval.
 
 ### cloud_status

@@ -456,12 +456,12 @@ NODE:.metadata.name,STALE:.status.staleStorageDataBytes
 ```
 
 If you are not going to turn the cache back on, remove the contents of the cache directory on the
-node: `/var/lib/deckhouse/registry` on a node of a NodeGroup with `systemType: Immutable`,
+node: `/var/lib/deckhouse/registry` on a node of a NodeGroup with `systemType: DeckhouseEngine`,
 `/opt/deckhouse/registry` on other nodes. Keep the directory itself: the agent has it mounted, and
 once it is removed the agent no longer sees the node's directory, so data a cache leaves there
 later goes unreported until the agent restarts. To do this, follow these steps:
 
-1. Open a root shell on the node over SSH. A node of a NodeGroup with `systemType: Immutable` has
+1. Open a root shell on the node over SSH. A node of a NodeGroup with `systemType: DeckhouseEngine` has
    no SSH: start a debug pod on it and switch to the node's root filesystem:
 
    ```bash

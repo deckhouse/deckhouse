@@ -887,7 +887,7 @@ metadata:
   name: master
 spec:
   nodeType: Static
-  systemType: Immutable
+  systemType: DeckhouseEngine
 `}
 	isImmutable, err = immutable.IsImmutableMaster(t.Context(), immutableStatic)
 	require.NoError(t, err)
@@ -912,7 +912,7 @@ metadata:
   name: master
 spec:
   nodeType: Static
-  systemType: Immutable
+  systemType: DeckhouseEngine
 `
 		// Detection is what fills this in; the helper hands out a ready one.
 		bctx.immutable = nil
@@ -952,9 +952,27 @@ spec:
 	bctx.immutable = nil
 
 	err := b.detectImmutableMaster(t.Context(), bctx)
-	require.ErrorContains(t, err, "systemType: Immutable")
+	require.ErrorContains(t, err, "systemType: DeckhouseEngine")
 	require.ErrorContains(t, err, "--master-host")
 	require.Nil(t, bctx.immutable)
+}
+
+func TestDetectImmutableMasterRefusesALegacySystemType(t *testing.T) {
+	b, bctx := immutableTestBootstrapper(t)
+	bctx.metaConfig.ResourcesYAML = `
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: CloudEphemeral
+  systemType: Mutable
+`
+	bctx.immutable = nil
+
+	err := b.detectImmutableMaster(t.Context(), bctx)
+	require.EqualError(t, err, `NodeGroup worker: systemType "Mutable" is no longer accepted, set "GenericOS" instead`)
+	require.Nil(t, bctx.immutable, "the bootstrap must not get as far as deciding how to create the first master")
 }
 
 // An installation from a bundle cannot reach an immutable master, and the payload builder that
@@ -996,7 +1014,7 @@ metadata:
   name: master
 spec:
   nodeType: Static
-  systemType: Immutable
+  systemType: DeckhouseEngine
 `
 	bctx.immutable = nil
 

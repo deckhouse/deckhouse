@@ -34,7 +34,7 @@ import (
 // IsMutable reports whether bashible manages the group. A group that names no
 // type predates the field and is bashible's as well.
 func IsMutable(ng *v1.NodeGroup) bool {
-	return ng.Spec.SystemType != v1.SystemTypeImmutable
+	return !v1.IsDeckhouseEngine(ng.Spec.SystemType)
 }
 
 // readMutableInputs reads what the document of a node bashible configures is
@@ -98,7 +98,7 @@ func (s *sourceReader) readMutableInputs(ctx context.Context) (clusterInputs, er
 func renderMutableSpec(node *corev1.Node, ngName string, in clusterInputs) internalv1alpha1.NodeSpec {
 	requested, _ := nodeExtensions(in, deckhousev1alpha1.ExtensionKindPackage, node, ngName)
 	return internalv1alpha1.NodeSpec{
-		SystemType:            internalv1alpha1.SystemTypeMutable,
+		SystemType:            internalv1alpha1.SystemTypeGenericOS,
 		NodeName:              node.Name,
 		APIServerEndpoints:    in.APIServerEndpoints,
 		RegistryPackagesProxy: internalv1alpha1.RegistryPackagesProxy{AccessToken: in.RegistryPackagesProxyToken},
@@ -130,5 +130,7 @@ func RenderMutableSpec(ctx context.Context, reader client.Reader, ng *v1.NodeGro
 	if err != nil {
 		return internalv1alpha1.NodeSpec{}, fmt.Errorf("read the inputs of a bashible node: %w", err)
 	}
-	return renderMutableSpec(registeringNode(ng, ""), ng.Name, in), nil
+	spec := renderMutableSpec(registeringNode(ng, ""), ng.Name, in)
+	spec.SystemType = publishedSystemType(spec, nil)
+	return spec, nil
 }

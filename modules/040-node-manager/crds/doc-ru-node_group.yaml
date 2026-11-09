@@ -25,18 +25,18 @@ spec:
                   description: |
                     Способ управления узлами группы.
 
-                    - `Mutable` — bashible настраивает узел «на лету». Незаполненное поле означает то же самое.
-                    - `Immutable` — агент узла приводит узел в состояние, описанное в объекте NodeConfig, без bashible. Машина должна загружаться с образа Deckhouse Engine.
+                    - `GenericOS` — узлы Generic OS, которые bashible настраивает «на лету». Незаполненное поле означает то же самое.
+                    - `DeckhouseEngine` — узлы Deckhouse Engine. Агент узла приводит узел в состояние, описанное в объекте NodeConfig, без bashible. Машина должна загружаться с образа Deckhouse Engine.
 
-                    `Immutable` поддерживается для групп:
+                    `DeckhouseEngine` поддерживается для групп:
 
                     - `Static` — машины должны добавляться командой `d8 node add`;
                     - `Cloud` — машины должен создавать облачный провайдер через Cluster API (CAPI);
                     - `Hybrid` — машины должен создавать dhctl (`CloudPermanent` в `deckhouse.io/v1`).
 
-                    Остальные группы `Hybrid` (`CloudStatic` в `deckhouse.io/v1`) значение `Immutable` не поддерживают.
+                    Остальные группы `Hybrid` (`CloudStatic` в `deckhouse.io/v1`) значение `DeckhouseEngine` не поддерживают.
 
-                    Значение `Immutable` можно указать, только пока в группе нет узлов, настроенных bashible. `Immutable` нельзя изменить или удалить.
+                    Значение `DeckhouseEngine` можно указать, только пока в группе нет узлов, настроенных bashible. `DeckhouseEngine` нельзя удалить или изменить на `GenericOS`.
                 kubernetesVersion:
                   description: |
                     Желаемая минорная версия Kubernetes.
@@ -366,18 +366,18 @@ spec:
                   description: |
                     Способ управления узлами группы.
 
-                    - `Mutable` — bashible настраивает узел «на лету». Незаполненное поле означает то же самое.
-                    - `Immutable` — агент узла приводит узел в состояние, описанное в объекте NodeConfig, без bashible. Машина должна загружаться с образа Deckhouse Engine.
+                    - `GenericOS` — узлы Generic OS, которые bashible настраивает «на лету». Незаполненное поле означает то же самое.
+                    - `DeckhouseEngine` — узлы Deckhouse Engine. Агент узла приводит узел в состояние, описанное в объекте NodeConfig, без bashible. Машина должна загружаться с образа Deckhouse Engine.
 
-                    `Immutable` поддерживается для групп:
+                    `DeckhouseEngine` поддерживается для групп:
 
                     - `Static` — машины должны добавляться командой `d8 node add`;
                     - `Cloud` — машины должен создавать облачный провайдер через Cluster API (CAPI);
                     - `Hybrid` — машины должен создавать dhctl (`CloudPermanent` в `deckhouse.io/v1`).
 
-                    Остальные группы `Hybrid` (`CloudStatic` в `deckhouse.io/v1`) значение `Immutable` не поддерживают.
+                    Остальные группы `Hybrid` (`CloudStatic` в `deckhouse.io/v1`) значение `DeckhouseEngine` не поддерживают.
 
-                    Значение `Immutable` можно указать, только пока в группе нет узлов, настроенных bashible. `Immutable` нельзя изменить или удалить.
+                    Значение `DeckhouseEngine` можно указать, только пока в группе нет узлов, настроенных bashible. `DeckhouseEngine` нельзя удалить или изменить на `GenericOS`.
                 cri:
                   description: |
                     Параметры container runtime.
@@ -709,18 +709,18 @@ spec:
                   description: |
                     Способ управления узлами группы.
 
-                    - `Mutable` — bashible настраивает узел «на лету». Незаполненное поле означает то же самое.
-                    - `Immutable` — агент узла приводит узел в состояние, описанное в объекте NodeConfig, без bashible. Машина должна загружаться с образа Deckhouse Engine.
+                    - `GenericOS` — узлы Generic OS, которые bashible настраивает «на лету». Незаполненное поле означает то же самое.
+                    - `DeckhouseEngine` — узлы Deckhouse Engine. Агент узла приводит узел в состояние, описанное в объекте NodeConfig, без bashible. Машина должна загружаться с образа Deckhouse Engine.
 
-                    `Immutable` поддерживается для групп:
+                    `DeckhouseEngine` поддерживается для групп:
 
                     - `Static` — машины должны добавляться командой `d8 node add`, параметр `staticInstances` использовать нельзя;
                     - `CloudEphemeral` — машины должен создавать облачный провайдер через Cluster API (CAPI);
                     - `CloudPermanent` — машины создаёт dhctl.
 
-                    Группы `CloudStatic` значение `Immutable` не поддерживают.
+                    Группы `CloudStatic` значение `DeckhouseEngine` не поддерживают.
 
-                    Значение `Immutable` можно указать, только пока в группе нет узлов, настроенных bashible. `Immutable` нельзя изменить или удалить.
+                    Значение `DeckhouseEngine` можно указать, только пока в группе нет узлов, настроенных bashible. `DeckhouseEngine` нельзя удалить или изменить на `GenericOS`.
                 nodeDrainTimeoutSecond:
                   description: |
                     Максимальная продолжительность периода (в секундах), в течение которого контроллер будет пытаться переселить поды на новую машину в процессе выполнения drain на узле.

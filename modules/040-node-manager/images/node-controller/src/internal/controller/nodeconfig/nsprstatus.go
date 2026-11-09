@@ -82,7 +82,7 @@ func (r *Reconciler) reconcileNSPRStatuses(ctx context.Context, logger logr.Logg
 	// Iterated in contest order so a reader of the log sees the winner before the
 	// objects that lost to it.
 	for _, nspr := range ordered {
-		// Refused on a Mutable node and nowhere else: a bashible step serves it there.
+		// Refused on a Generic OS node and nowhere else: a bashible step serves it there.
 		_, refused := rejected[nspr.Name]
 		_, refusedOnMutable := onMutable[nspr.Name]
 		reach := reachOf(nspr, immutable, mutable, refusedOnMutable && !refused)

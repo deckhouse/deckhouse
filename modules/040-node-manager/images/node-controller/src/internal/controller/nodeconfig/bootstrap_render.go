@@ -48,7 +48,9 @@ func RenderBootstrapSpec(ctx context.Context, cl client.Client, reader client.Re
 	}
 
 	// Zero CreationTimestamp makes registration taints render.
-	return renderSpec(ng, registeringNode(ng, machineName), in), nil
+	spec := renderSpec(ng, registeringNode(ng, machineName), in)
+	spec.SystemType = publishedSystemType(spec, nil)
+	return spec, nil
 }
 
 // registeringNode is a machine as kubelet will register it: named, and labelled so that a

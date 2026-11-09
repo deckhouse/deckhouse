@@ -99,7 +99,7 @@ func (r *Status) SetupWatches(w register.Watcher) {
 	w.Watches(&capiv1beta2.Machine{}, handler.EnqueueRequestsFromMapFunc(ngcommon.MachineToNodeGroup))
 	w.Watches(ngcommon.NewUnstructured(ngcommon.CAPIMachineDeploymentGVK), handler.EnqueueRequestsFromMapFunc(ngcommon.MachineDeploymentToNodeGroup))
 	w.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.secretToAllNodeGroups), builder.WithPredicates(nodecommon.ChecksumSecretPredicate()))
-	// An Immutable node reports its rollout in its NodeConfig, not on the Node; the object
+	// A Deckhouse Engine node reports its rollout in its NodeConfig, not on the Node; the object
 	// carries the group label the mapper reads.
 	w.Watches(&internalv1alpha1.NodeConfig{}, handler.EnqueueRequestsFromMapFunc(ngcommon.MachineToNodeGroup),
 		builder.WithPredicates(predicate.Funcs{UpdateFunc: nodestatus.NodeConfigChanged}))

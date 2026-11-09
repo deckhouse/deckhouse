@@ -66,8 +66,8 @@ func renderPlatformDocument(text string, images map[string]map[string]string) (p
 	if err := yaml.UnmarshalStrict(rendered.Bytes(), &file); err != nil {
 		return platformDocument{}, fmt.Errorf("parse rendered %s: %w", platformDocumentKey, err)
 	}
-	if file.Spec.SystemType != internalv1alpha1.SystemTypeMutable {
-		return platformDocument{}, fmt.Errorf("%s describes a %q node, not a Mutable one", platformDocumentKey, file.Spec.SystemType)
+	if file.Spec.SystemType != internalv1alpha1.SystemTypeGenericOS && file.Spec.SystemType != internalv1alpha1.SystemTypeLegacyMutable {
+		return platformDocument{}, fmt.Errorf("%s describes a %q node, not a GenericOS one", platformDocumentKey, file.Spec.SystemType)
 	}
 
 	for i, ext := range file.Spec.Extensions {

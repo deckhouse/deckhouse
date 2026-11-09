@@ -4875,7 +4875,7 @@ alerts:
         journalctl -u kubelet --since "1 hour ago" | grep registry-agent
         ```
 
-        A node of a NodeGroup with `systemType: Immutable` has no SSH: start a debug pod on it
+        A node of a NodeGroup with `systemType: DeckhouseEngine` has no SSH: start a debug pod on it
         with `d8 k debug node/{{ $labels.node }} -it --image=ubuntu` and run `chroot /host`
         first.
 
@@ -5300,14 +5300,14 @@ alerts:
 
         Nothing is wrong and nothing needs doing urgently. To reclaim the space, remove the
         contents of the directory the store kept its blobs in: `/var/lib/deckhouse/registry`
-        on a node of a NodeGroup with `systemType: Immutable`, `/opt/deckhouse/registry` on
+        on a node of a NodeGroup with `systemType: DeckhouseEngine`, `/opt/deckhouse/registry` on
         other nodes. Keep the directory itself: the agent has it mounted, and once it is
         removed the agent no longer sees the node's directory, so data a cache leaves there
         later goes unreported until the agent restarts. With the cache off there is no
         RegistryStorage left to ask, so the command below looks at both.
 
         Open a root shell on the node over SSH. A node of a NodeGroup with
-        `systemType: Immutable` has no SSH: start a debug pod on it and switch to the node's
+        `systemType: DeckhouseEngine` has no SSH: start a debug pod on it and switch to the node's
         root filesystem:
 
         ```

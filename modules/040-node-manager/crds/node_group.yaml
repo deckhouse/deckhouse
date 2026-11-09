@@ -90,26 +90,27 @@ spec:
                 - nodeType
               # Written against spec rather than against the field: a transition
               # rule on the field itself is skipped when the field is absent on
-              # either side, so `self == oldSelf` there would let an immutable
+              # either side, so `self == oldSelf` there would let a DeckhouseEngine
               # group have its systemType removed and turn back into a bashible
               # one.
               #
-              # Unset and Mutable mean the same, so a group moves between them
-              # freely. It may also become Immutable: the bootstrap hook creates
-              # the master NodeGroup before dhctl applies the manifest naming its
-              # systemType. Doing that on a group already running bashible nodes
+              # Unset and GenericOS mean the same, so a group moves between
+              # them freely. It may also become DeckhouseEngine: the bootstrap hook
+              # creates the master NodeGroup before dhctl applies the manifest naming
+              # its systemType. Doing that on a group already running bashible nodes
               # is the harmful case, and deciding that needs to see the cluster,
-              # so the webhook denies that one. Only Immutable is final.
+              # so the webhook denies that one. Only DeckhouseEngine
+              # is final.
               #
               # Never add `default:` to systemType: it would write an explicit
-              # value into every existing group and break unset == Mutable.
+              # value into every existing group and break unset == GenericOS.
               #
               # Hybrid resolves to CloudStatic or CloudPermanent only at conversion
               # and staticInstances does not exist here, so the CloudStatic refusal
               # is left to the webhook, which sees every request as v1.
               x-kubernetes-validations:
-                - rule: "oldSelf.?systemType.orValue('Mutable') != 'Immutable' || self.?systemType.orValue('') == 'Immutable'"
-                  message: .spec.systemType Immutable cannot be changed or removed
+                - rule: "!(oldSelf.?systemType.orValue('') in ['Immutable', 'DeckhouseEngine']) || self.?systemType.orValue('') in ['Immutable', 'DeckhouseEngine']"
+                  message: .spec.systemType DeckhouseEngine cannot be changed or removed
               properties:
 
                 nodeType:
@@ -136,22 +137,22 @@ spec:
                   description: |
                     How the nodes of the group are managed.
 
-                    - `Mutable`: bashible configures the node on the fly. An unset field means the same.
-                    - `Immutable`: The node agent brings the node to the state described in a NodeConfig object, without bashible. The machine must boot from a Deckhouse Engine image.
+                    - `GenericOS`: Generic OS nodes, configured by bashible on the fly. An unset field means the same.
+                    - `DeckhouseEngine`: Deckhouse Engine nodes. The node agent brings the node to the state described in a NodeConfig object, without bashible. The machine must boot from a Deckhouse Engine image.
 
-                    `Immutable` is supported for:
+                    `DeckhouseEngine` is supported for:
 
                     - `Static`: Machines must be added with `d8 node add`.
                     - `Cloud`: Machines must be created by the cloud provider through Cluster API (CAPI).
                     - `Hybrid`: Machines must be created by dhctl (`CloudPermanent` in `deckhouse.io/v1`).
 
-                    `Immutable` is not supported for other `Hybrid` groups (`CloudStatic` in `deckhouse.io/v1`).
+                    `DeckhouseEngine` is not supported for other `Hybrid` groups (`CloudStatic` in `deckhouse.io/v1`).
 
-                    A group can become `Immutable` only while bashible has configured none of its nodes. `Immutable` cannot be changed or removed.
+                    A group can become `DeckhouseEngine` only while bashible has configured none of its nodes. `DeckhouseEngine` cannot be removed or changed to `GenericOS`.
                   type: string
                   enum:
-                    - Mutable
-                    - Immutable
+                    - GenericOS
+                    - DeckhouseEngine
                 kubernetesVersion:
                   description: |
                     The desired minor version of Kubernetes.
@@ -765,26 +766,27 @@ spec:
                 - nodeType
               # Written against spec rather than against the field: a transition
               # rule on the field itself is skipped when the field is absent on
-              # either side, so `self == oldSelf` there would let an immutable
+              # either side, so `self == oldSelf` there would let a DeckhouseEngine
               # group have its systemType removed and turn back into a bashible
               # one.
               #
-              # Unset and Mutable mean the same, so a group moves between them
-              # freely. It may also become Immutable: the bootstrap hook creates
-              # the master NodeGroup before dhctl applies the manifest naming its
-              # systemType. Doing that on a group already running bashible nodes
+              # Unset and GenericOS mean the same, so a group moves between
+              # them freely. It may also become DeckhouseEngine: the bootstrap hook
+              # creates the master NodeGroup before dhctl applies the manifest naming
+              # its systemType. Doing that on a group already running bashible nodes
               # is the harmful case, and deciding that needs to see the cluster,
-              # so the webhook denies that one. Only Immutable is final.
+              # so the webhook denies that one. Only DeckhouseEngine
+              # is final.
               #
               # Never add `default:` to systemType: it would write an explicit
-              # value into every existing group and break unset == Mutable.
+              # value into every existing group and break unset == GenericOS.
               #
               # Hybrid resolves to CloudStatic or CloudPermanent only at conversion
               # and staticInstances does not exist here, so the CloudStatic refusal
               # is left to the webhook, which sees every request as v1.
               x-kubernetes-validations:
-                - rule: "oldSelf.?systemType.orValue('Mutable') != 'Immutable' || self.?systemType.orValue('') == 'Immutable'"
-                  message: .spec.systemType Immutable cannot be changed or removed
+                - rule: "!(oldSelf.?systemType.orValue('') in ['Immutable', 'DeckhouseEngine']) || self.?systemType.orValue('') in ['Immutable', 'DeckhouseEngine']"
+                  message: .spec.systemType DeckhouseEngine cannot be changed or removed
               properties:
                 nodeType:
                   description: |
@@ -810,22 +812,22 @@ spec:
                   description: |
                     How the nodes of the group are managed.
 
-                    - `Mutable`: bashible configures the node on the fly. An unset field means the same.
-                    - `Immutable`: The node agent brings the node to the state described in a NodeConfig object, without bashible. The machine must boot from a Deckhouse Engine image.
+                    - `GenericOS`: Generic OS nodes, configured by bashible on the fly. An unset field means the same.
+                    - `DeckhouseEngine`: Deckhouse Engine nodes. The node agent brings the node to the state described in a NodeConfig object, without bashible. The machine must boot from a Deckhouse Engine image.
 
-                    `Immutable` is supported for:
+                    `DeckhouseEngine` is supported for:
 
                     - `Static`: Machines must be added with `d8 node add`.
                     - `Cloud`: Machines must be created by the cloud provider through Cluster API (CAPI).
                     - `Hybrid`: Machines must be created by dhctl (`CloudPermanent` in `deckhouse.io/v1`).
 
-                    `Immutable` is not supported for other `Hybrid` groups (`CloudStatic` in `deckhouse.io/v1`).
+                    `DeckhouseEngine` is not supported for other `Hybrid` groups (`CloudStatic` in `deckhouse.io/v1`).
 
-                    A group can become `Immutable` only while bashible has configured none of its nodes. `Immutable` cannot be changed or removed.
+                    A group can become `DeckhouseEngine` only while bashible has configured none of its nodes. `DeckhouseEngine` cannot be removed or changed to `GenericOS`.
                   type: string
                   enum:
-                    - Mutable
-                    - Immutable
+                    - GenericOS
+                    - DeckhouseEngine
                 cri:
                   type: object
                   description: |
@@ -1480,26 +1482,27 @@ spec:
                 - nodeType
               # Written against spec rather than against the field: a transition
               # rule on the field itself is skipped when the field is absent on
-              # either side, so `self == oldSelf` there would let an immutable
+              # either side, so `self == oldSelf` there would let a DeckhouseEngine
               # group have its systemType removed and turn back into a bashible
               # one.
               #
-              # Unset and Mutable mean the same, so a group moves between them
-              # freely. It may also become Immutable: the bootstrap hook creates
-              # the master NodeGroup before dhctl applies the manifest naming its
-              # systemType. Doing that on a group already running bashible nodes
+              # Unset and GenericOS mean the same, so a group moves between
+              # them freely. It may also become DeckhouseEngine: the bootstrap hook
+              # creates the master NodeGroup before dhctl applies the manifest naming
+              # its systemType. Doing that on a group already running bashible nodes
               # is the harmful case, and deciding that needs to see the cluster,
-              # so the webhook denies that one. Only Immutable is final.
+              # so the webhook denies that one. Only DeckhouseEngine
+              # is final.
               #
               # Never add `default:` to systemType: it would write an explicit
-              # value into every existing group and break unset == Mutable.
+              # value into every existing group and break unset == GenericOS.
               x-kubernetes-validations:
-                - rule: "oldSelf.?systemType.orValue('Mutable') != 'Immutable' || self.?systemType.orValue('') == 'Immutable'"
-                  message: .spec.systemType Immutable cannot be changed or removed
-                - rule: "self.?systemType.orValue('') != 'Immutable' || self.nodeType != 'CloudStatic'"
-                  message: systemType Immutable is not supported for nodeType CloudStatic
-                - rule: "self.?systemType.orValue('') != 'Immutable' || !has(self.staticInstances)"
-                  message: "staticInstances cannot provision an Immutable node. Add machines with d8 node add"
+                - rule: "!(oldSelf.?systemType.orValue('') in ['Immutable', 'DeckhouseEngine']) || self.?systemType.orValue('') in ['Immutable', 'DeckhouseEngine']"
+                  message: .spec.systemType DeckhouseEngine cannot be changed or removed
+                - rule: "!(self.?systemType.orValue('') in ['Immutable', 'DeckhouseEngine']) || self.nodeType != 'CloudStatic'"
+                  message: systemType DeckhouseEngine is not supported for nodeType CloudStatic
+                - rule: "!(self.?systemType.orValue('') in ['Immutable', 'DeckhouseEngine']) || !has(self.staticInstances)"
+                  message: "staticInstances cannot provision a DeckhouseEngine node. Add machines with d8 node add"
               properties:
                 nodeType:
                   description: |
@@ -1527,22 +1530,22 @@ spec:
                   description: |
                     How the nodes of the group are managed.
 
-                    - `Mutable`: bashible configures the node on the fly. An unset field means the same.
-                    - `Immutable`: The node agent brings the node to the state described in a NodeConfig object, without bashible. The machine must boot from a Deckhouse Engine image.
+                    - `GenericOS`: Generic OS nodes, configured by bashible on the fly. An unset field means the same.
+                    - `DeckhouseEngine`: Deckhouse Engine nodes. The node agent brings the node to the state described in a NodeConfig object, without bashible. The machine must boot from a Deckhouse Engine image.
 
-                    `Immutable` is supported for:
+                    `DeckhouseEngine` is supported for:
 
                     - `Static`: Machines must be added with `d8 node add`. `staticInstances` cannot be used.
                     - `CloudEphemeral`: Machines must be created by the cloud provider through Cluster API (CAPI).
                     - `CloudPermanent`: Machines are created by dhctl.
 
-                    `Immutable` is not supported for `CloudStatic` groups.
+                    `DeckhouseEngine` is not supported for `CloudStatic` groups.
 
-                    A group can become `Immutable` only while bashible has configured none of its nodes. `Immutable` cannot be changed or removed.
+                    A group can become `DeckhouseEngine` only while bashible has configured none of its nodes. `DeckhouseEngine` cannot be removed or changed to `GenericOS`.
                   type: string
                   enum:
-                    - Mutable
-                    - Immutable
+                    - GenericOS
+                    - DeckhouseEngine
                 nodeDrainTimeoutSecond:
                   type: integer
                   minimum: 30

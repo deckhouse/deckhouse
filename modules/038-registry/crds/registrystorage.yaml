@@ -195,7 +195,7 @@ spec:
                     path:
                       type: string
                       description: |
-                        Path on the node. Set by the module, not by the user: `/var/lib/deckhouse/registry` when the master NodeGroup has `systemType: Immutable`, `/opt/deckhouse/registry` otherwise.
+                        Path on the node. Set by the module, not by the user: `/var/lib/deckhouse/registry` when the master NodeGroup has `systemType: DeckhouseEngine`, `/opt/deckhouse/registry` otherwise.
                       x-doc-example: '/opt/deckhouse/registry'
                     size:
                       type: string

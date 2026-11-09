@@ -74,7 +74,7 @@ NodeGroup changed (or secondary resource triggers re-enqueue)
 |-------|--------|
 | `status.nodes` | Count of nodes in NodeGroup |
 | `status.ready` | Count of ready nodes |
-| `status.upToDate` | Mutable: count of nodes matching the configuration checksum. Immutable: count of nodes whose NodeConfig applied its current generation (`appliedGeneration == generation` and `ConfigurationApplied=True` at it) |
+| `status.upToDate` | Generic OS group: count of nodes matching the configuration checksum. Deckhouse Engine group: count of nodes whose NodeConfig applied its current generation (`appliedGeneration == generation` and `ConfigurationApplied=True` at it) |
 | `status.desired` | From MachineDeployment replicas (CloudEphemeral only) |
 | `status.min` / `status.max` | From MachineDeployment (CloudEphemeral only) |
 | `status.instances` | Running machine instances (CloudEphemeral only) |

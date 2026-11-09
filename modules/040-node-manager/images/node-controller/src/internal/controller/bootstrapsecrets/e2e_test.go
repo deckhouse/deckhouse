@@ -133,29 +133,33 @@ var _ = Describe("Bootstrap secrets controller", func() {
 	// The group is CAPI-served and passes every check, so only the immutable half of the
 	// writeCAPISecrets guard keeps the group-wide cloud-init away. Its token is still minted:
 	// nodebootstrap renders it into every machine's userdata (nodebootstrap/render.go:45).
-	It("mints a bootstrap token but no CAPI secret for an immutable CloudEphemeral group", func() {
-		className := testenv.UniqueName("class")
-		createInstanceClass(className)
-		createCloudProviderRegistration(capiRegistration(`["zone-a"]`))
+	DescribeTable("mints a bootstrap token but no CAPI secret for an immutable CloudEphemeral group",
+		func(systemType deckhousev1.SystemType) {
+			className := testenv.UniqueName("class")
+			createInstanceClass(className)
+			createCloudProviderRegistration(capiRegistration(`["zone-a"]`))
 
-		name := testenv.UniqueName("immutable")
-		ng := capiCloudNodeGroup(name, className)
-		ng.Spec.SystemType = deckhousev1.SystemTypeImmutable
-		createNodeGroup(ng)
+			name := testenv.UniqueName("immutable")
+			ng := capiCloudNodeGroup(name, className)
+			ng.Spec.SystemType = systemType
+			createNodeGroup(ng)
 
-		Eventually(func(g Gomega) {
-			tokens := &corev1.SecretList{}
-			g.Expect(k8sClient.List(suiteCtx, tokens,
-				client.InNamespace(nodecommon.KubeSystemNamespace),
-				client.MatchingLabels{nodecommon.BootstrapTokenNodeGroupLabel: name})).To(Succeed())
-			g.Expect(tokens.Items).NotTo(BeEmpty())
-		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
+			Eventually(func(g Gomega) {
+				tokens := &corev1.SecretList{}
+				g.Expect(k8sClient.List(suiteCtx, tokens,
+					client.InNamespace(nodecommon.KubeSystemNamespace),
+					client.MatchingLabels{nodecommon.BootstrapTokenNodeGroupLabel: name})).To(Succeed())
+				g.Expect(tokens.Items).NotTo(BeEmpty())
+			}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
 
-		By("writing no group-wide cloud-init: an immutable machine boots from its own NodeBootstrapConfig")
-		Consistently(func() bool {
-			return k8sClient.Get(suiteCtx, capiSecretKey(name, "zone-a"), &corev1.Secret{}) == nil
-		}, negativeCheckDuration, eventuallyPoll).Should(BeFalse())
-	})
+			By("writing no group-wide cloud-init: an immutable machine boots from its own NodeBootstrapConfig")
+			Consistently(func() bool {
+				return k8sClient.Get(suiteCtx, capiSecretKey(name, "zone-a"), &corev1.Secret{}) == nil
+			}, negativeCheckDuration, eventuallyPoll).Should(BeFalse())
+		},
+		Entry("DeckhouseEngine", deckhousev1.SystemTypeDeckhouseEngine),
+		Entry("Immutable", deckhousev1.SystemTypeLegacyImmutable),
+	)
 
 	// The other half of "no Secret, and here is why": a group the cloud checks
 	// reject. The fixture takes the one path that needs no InstanceClass CRD —
@@ -534,7 +538,7 @@ func staticNodeGroup(name string) *deckhousev1.NodeGroup {
 
 func createNodeGroup(ng *deckhousev1.NodeGroup) {
 	GinkgoHelper()
-	Expect(k8sClient.Create(suiteCtx, ng)).To(Succeed())
+	Expect(testenv.CreateNodeGroup(suiteCtx, k8sClient, ng)).To(Succeed())
 	DeferCleanup(func() {
 		Expect(client.IgnoreNotFound(k8sClient.Delete(suiteCtx, ng))).To(Succeed())
 	})

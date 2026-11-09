@@ -151,12 +151,16 @@ func (r *Reconciler) rolloutBudget(ctx context.Context, ng *v1.NodeGroup, p *pas
 	if err := r.sources.Reader.List(ctx, nodes, client.MatchingLabels{nodecommon.NodeGroupLabel: ng.Name}); err != nil {
 		return nil, fmt.Errorf("list Nodes of %s: %w", ng.Name, err)
 	}
+	existing := make(map[string]*internalv1alpha1.NodeConfig, len(configs.Items))
+	for i := range configs.Items {
+		existing[configs.Items[i].Name] = &configs.Items[i]
+	}
 	// The same render apply() gives the node, so a node that already carries what
 	// the cluster publishes is not mistaken for one left behind. The inputs are
 	// memoised in the pass, so this reads nothing more.
 	desired := make(map[string]internalv1alpha1.NodeSpec, len(nodes.Items))
 	for i := range nodes.Items {
-		spec, err := r.renderNode(ctx, ng, &nodes.Items[i], p)
+		spec, err := r.renderNode(ctx, ng, &nodes.Items[i], existing[nodes.Items[i].Name], p)
 		if err != nil {
 			return nil, fmt.Errorf("render the NodeConfig of %s: %w", nodes.Items[i].Name, err)
 		}

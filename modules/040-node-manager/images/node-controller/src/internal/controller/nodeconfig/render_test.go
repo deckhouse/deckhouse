@@ -320,7 +320,7 @@ func TestRenderNodeLabelsPublishesTheSystemType(t *testing.T) {
 
 	labels := renderNodeLabels(ng)
 
-	require.Equal(t, internalv1alpha1.NodeLabelValue(v1.SystemTypeImmutable), labels[nodecommon.NodeSystemTypeLabel])
+	require.Equal(t, internalv1alpha1.NodeLabelValue(v1.SystemTypeDeckhouseEngine), labels[nodecommon.NodeSystemTypeLabel])
 	require.True(t, kubeletMaySetLabel(nodecommon.NodeSystemTypeLabel))
 }
 
@@ -436,7 +436,7 @@ func TestRecordClampedSettings(t *testing.T) {
 			r.recordClampedSettings(&v1.NodeGroup{
 				ObjectMeta: metav1.ObjectMeta{Name: "worker"},
 				Spec: v1.NodeGroupSpec{
-					SystemType: v1.SystemTypeImmutable,
+					SystemType: v1.SystemTypeLegacyImmutable,
 					Kubelet:    &v1.KubeletSpec{MaxPods: tt.maxPods},
 				},
 			})
@@ -549,7 +549,7 @@ func TestRenderTaintsDropsWhatKubeletCannotRegister(t *testing.T) {
 	ng := &v1.NodeGroup{
 		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
 		Spec: v1.NodeGroupSpec{
-			SystemType: v1.SystemTypeImmutable,
+			SystemType: v1.SystemTypeLegacyImmutable,
 			NodeTemplate: &v1.NodeTemplate{Taints: []corev1.Taint{
 				{Key: "dedicated", Value: "frontend"},
 				{Key: "ship-class", Value: "frigate", Effect: corev1.TaintEffectNoExecute},
@@ -929,14 +929,12 @@ func TestRenderRegistryOwner(t *testing.T) {
 	require.Empty(t, renderSpec(ng, node, clusterInputs{}).ContainerRuntime.RegistryConfigOwner)
 }
 
-// The API server defaults an unnamed type to Immutable; an Engine render that left
-// it out would never equal the object it wrote, and every pass would patch it.
 func TestTheEngineRenderNamesItsSystemType(t *testing.T) {
 	ng := immutableGroup("worker")
 
 	spec := renderSpec(ng, &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0"}}, clusterInputs{})
 
-	require.Equal(t, internalv1alpha1.SystemTypeImmutable, spec.SystemType)
+	require.Equal(t, internalv1alpha1.SystemTypeDeckhouseEngine, spec.SystemType)
 }
 
 // The spec's sections are omitzero; an Engine render from no inputs still sends the
@@ -960,7 +958,7 @@ func TestRecordClampedSettingsLeavesABashibleGroupAlone(t *testing.T) {
 	r := &Reconciler{}
 	r.Recorder = recorder
 
-	for _, systemType := range []v1.SystemType{v1.SystemTypeMutable, ""} {
+	for _, systemType := range []v1.SystemType{v1.SystemTypeLegacyMutable, ""} {
 		ng := mutableGroup("worker", systemType)
 		ng.Spec.Kubelet = &v1.KubeletSpec{MaxPods: ptr.To(int32(1500))}
 		ng.Spec.Disruptions = &v1.DisruptionsSpec{ApprovalMode: v1.DisruptionApprovalModeRollingUpdate}
@@ -982,7 +980,7 @@ func TestRenderUpdatePolicyCarriesEveryWindow(t *testing.T) {
 	ng := &v1.NodeGroup{
 		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
 		Spec: v1.NodeGroupSpec{
-			SystemType: v1.SystemTypeImmutable,
+			SystemType: v1.SystemTypeLegacyImmutable,
 			Disruptions: &v1.DisruptionsSpec{
 				ApprovalMode: v1.DisruptionApprovalModeManual,
 				Automatic: &v1.AutomaticDisruptionSpec{Windows: []v1.DisruptionWindow{

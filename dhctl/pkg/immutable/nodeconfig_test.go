@@ -94,7 +94,8 @@ func TestNodeConfigCloudProviderFollowsTheClusterType(t *testing.T) {
 func TestNodeConfigNamesTheSystemTypeOfTheMaster(t *testing.T) {
 	nodeConfig, err := buildNodeConfig(t.Context(), nodeConfigInput{NodeName: "master-0", MetaConfig: testMetaConfig(t)})
 	require.NoError(t, err)
-	require.Equal(t, systemTypeImmutable, nodeConfig.Spec.Kubelet.NodeLabels[systemTypeLabel])
+	require.Equal(t, "DeckhouseEngine", nodeConfig.Spec.Kubelet.NodeLabels[systemTypeLabel])
+	require.Equal(t, "Immutable", nodeConfig.Spec.SystemType)
 }
 
 func TestSysextDigestsMissing(t *testing.T) {

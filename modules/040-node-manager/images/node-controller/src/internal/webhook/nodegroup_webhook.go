@@ -153,25 +153,25 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		if oldNG.Spec.NodeType != ng.Spec.NodeType {
 			return admission.Denied(".spec.nodeType field is immutable")
 		}
-		// Unset and Mutable are the same and may still become Immutable; leaving
-		// Immutable re-creates every machine. Mirrors the systemType rule in
+		// Unset and GenericOS are the same and may still become DeckhouseEngine; leaving
+		// DeckhouseEngine re-creates every machine. Mirrors the systemType rule in
 		// modules/040-node-manager/crds/node_group.yaml.
-		if oldNG.Spec.SystemType == v1.SystemTypeImmutable && ng.Spec.SystemType != v1.SystemTypeImmutable {
-			return admission.Denied(".spec.systemType Immutable cannot be changed or removed")
+		if v1.IsDeckhouseEngine(oldNG.Spec.SystemType) && !v1.IsDeckhouseEngine(ng.Spec.SystemType) {
+			return admission.Denied(".spec.systemType DeckhouseEngine cannot be changed or removed")
 		}
 	}
 
 	// Checked on CREATE as well as UPDATE: recreating a deleted group under
-	// the same name with systemType: Immutable arrives as a CREATE and would
+	// the same name with systemType: DeckhouseEngine arrives as a CREATE and would
 	// otherwise adopt the old, still-labelled bashible nodes unchecked.
 	if becomingImmutable(req, ng, oldNG) {
 		// The CRD of v1alpha1/v1alpha2 cannot say this: Hybrid becomes CloudStatic only at conversion.
 		if ng.Spec.NodeType == v1.NodeTypeCloudStatic {
-			return admission.Denied("systemType Immutable is not supported for nodeType CloudStatic")
+			return admission.Denied("systemType DeckhouseEngine is not supported for nodeType CloudStatic")
 		}
 		engineMessage, err := w.validateImmutableEngine(ctx, ng)
 		if err != nil {
-			webhookLog.Error(err, "failed to resolve the engine of an Immutable NodeGroup")
+			webhookLog.Error(err, "failed to resolve the engine of a DeckhouseEngine NodeGroup")
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 		if engineMessage != "" {
@@ -187,7 +187,7 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 			return admission.Denied(fmt.Sprintf(
 				"it is forbidden to set .spec.systemType to %q on a NodeGroup whose nodes are already configured by bashible: %s. "+
 					"To change it, create a NodeGroup under a different name",
-				v1.SystemTypeImmutable, strings.Join(bashibleNodes, " ")))
+				v1.SystemTypeDeckhouseEngine, strings.Join(bashibleNodes, " ")))
 		}
 	}
 
@@ -817,18 +817,18 @@ func (w *NodeGroupValidator) getNodesWithCustomContainerd(ctx context.Context, n
 }
 
 // becomingImmutable reports whether this admission puts the group under
-// systemType: Immutable — created under that type, or unset or Mutable until now.
+// systemType: DeckhouseEngine — created under that type, or unset or GenericOS until now.
 func becomingImmutable(req admission.Request, ng, oldNG *v1.NodeGroup) bool {
-	if ng.Spec.SystemType != v1.SystemTypeImmutable {
+	if !v1.IsDeckhouseEngine(ng.Spec.SystemType) {
 		return false
 	}
 	if req.Operation == "CREATE" {
 		return true
 	}
-	return oldNG != nil && oldNG.Spec.SystemType != v1.SystemTypeImmutable
+	return oldNG != nil && !v1.IsDeckhouseEngine(oldNG.Spec.SystemType)
 }
 
-// validateImmutableEngine refuses an Immutable CloudEphemeral group whose machines
+// validateImmutableEngine refuses a DeckhouseEngine CloudEphemeral group whose machines
 // would not be created through CAPI: only a CAPI machine boots the Deckhouse Engine image.
 func (w *NodeGroupValidator) validateImmutableEngine(ctx context.Context, ng *v1.NodeGroup) (string, error) {
 	if ng.Spec.NodeType != v1.NodeTypeCloudEphemeral {
@@ -840,7 +840,7 @@ func (w *NodeGroupValidator) validateImmutableEngine(ctx context.Context, ng *v1
 		return "", fmt.Errorf("load the cloud provider of NodeGroup %s: %w", ng.Name, err)
 	}
 	if registration.IsStatic() {
-		return "systemType Immutable on a CloudEphemeral NodeGroup needs machines created through CAPI, " +
+		return "systemType DeckhouseEngine on a CloudEphemeral NodeGroup needs machines created through CAPI, " +
 			"but no cloud provider is registered", nil
 	}
 
@@ -851,7 +851,7 @@ func (w *NodeGroupValidator) validateImmutableEngine(ctx context.Context, ng *v1
 	if engine == derived_status.EngineCAPI {
 		return "", nil
 	}
-	return fmt.Sprintf("systemType Immutable on a CloudEphemeral NodeGroup needs machines created through CAPI, "+
+	return fmt.Sprintf("systemType DeckhouseEngine on a CloudEphemeral NodeGroup needs machines created through CAPI, "+
 		"but cloud provider %q creates them through %s", registration.Type, engine), nil
 }
 

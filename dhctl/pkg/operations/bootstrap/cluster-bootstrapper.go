@@ -1255,7 +1255,7 @@ func (b *ClusterBootstrapper) bootstrapParseResources(ctx context.Context, bctx 
 		}
 		if !immutableMaster {
 			return fmt.Errorf("the resources carry %d NodeConfig document(s), which describe immutable machines, "+
-				"and the master NodeGroup is not immutable: add systemType: Immutable to it, or drop the documents", len(documents))
+				"and the master NodeGroup is not immutable: add systemType: DeckhouseEngine to it, or drop the documents", len(documents))
 		}
 		bctx.metaConfig.ResourcesYAML = rest
 	}

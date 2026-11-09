@@ -620,17 +620,25 @@ func TestEngineOnly(t *testing.T) {
 		systemTypes: nil,
 		want:        false,
 	}, {
-		name:        "every group is Immutable",
-		systemTypes: []string{systemTypeImmutable, systemTypeImmutable},
+		name:        "every group is DeckhouseEngine",
+		systemTypes: []string{"DeckhouseEngine", "DeckhouseEngine"},
+		want:        true,
+	}, {
+		name:        "every group is Engine, in either spelling",
+		systemTypes: []string{"DeckhouseEngine", "Immutable"},
 		want:        true,
 	}, {
 		// A group predating the field carries no systemType, and that absence means bashible.
 		name:        "one group predating the field",
-		systemTypes: []string{systemTypeImmutable, ""},
+		systemTypes: []string{"DeckhouseEngine", ""},
 		want:        false,
 	}, {
 		name:        "a mixed cluster mid-migration",
-		systemTypes: []string{systemTypeImmutable, "Mutable"},
+		systemTypes: []string{"DeckhouseEngine", "GenericOS"},
+		want:        false,
+	}, {
+		name:        "a mixed cluster mid-migration, in the legacy spelling",
+		systemTypes: []string{"Immutable", "Mutable"},
 		want:        false,
 	}}
 

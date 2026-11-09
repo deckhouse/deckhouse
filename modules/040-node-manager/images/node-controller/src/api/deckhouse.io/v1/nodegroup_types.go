@@ -33,16 +33,22 @@ const (
 	NodeTypeStatic         NodeType = "Static"
 )
 
-// SystemType selects how the node is managed: the classic mutable node
-// configured by bashible, or an immutable node the on-node agent (nodelet)
-// reconciles from a NodeConfig object.
-// +kubebuilder:validation:Enum=Mutable;Immutable
+// SystemType selects how the node is managed: a GenericOS node configured by
+// bashible, or a DeckhouseEngine node the on-node agent (nodelet) reconciles from
+// a NodeConfig object.
+// +kubebuilder:validation:Enum=GenericOS;DeckhouseEngine
 type SystemType string
 
 const (
-	SystemTypeMutable   SystemType = "Mutable"
-	SystemTypeImmutable SystemType = "Immutable"
+	SystemTypeGenericOS       SystemType = "GenericOS"
+	SystemTypeDeckhouseEngine SystemType = "DeckhouseEngine"
+	SystemTypeLegacyMutable   SystemType = "Mutable"
+	SystemTypeLegacyImmutable SystemType = "Immutable"
 )
+
+func IsDeckhouseEngine(systemType SystemType) bool {
+	return systemType == SystemTypeDeckhouseEngine || systemType == SystemTypeLegacyImmutable
+}
 
 // CRIType defines the container runtime type
 // +kubebuilder:validation:Enum=Docker;Containerd;ContainerdV2;NotManaged
@@ -85,7 +91,7 @@ type NodeGroupSpec struct {
 	// +optional
 	ProviderType string `json:"providerType,omitempty"`
 
-	// SystemType selects how the node is managed. An Immutable node is
+	// SystemType selects how the node is managed. A DeckhouseEngine node is
 	// reconciled from a NodeConfig object by the agent on the node instead of by
 	// bashible. Once the field names a value it cannot be changed.
 	// +optional

@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 )
@@ -37,7 +38,7 @@ func createNodeConfig(name string, systemType internalv1alpha1.SystemType, lastR
 		ObjectMeta: metav1.ObjectMeta{Name: name},
 		Spec:       internalv1alpha1.NodeSpec{NodeName: name, SystemType: systemType},
 	}
-	if systemType == internalv1alpha1.SystemTypeImmutable {
+	if v1.IsDeckhouseEngine(v1.SystemType(systemType)) {
 		config.Spec.OSImage = internalv1alpha1.OSImage{Digest: "sha256:" + strings.Repeat("a", 64)}
 	}
 	Expect(k8sClient.Create(suiteCtx, config)).To(Succeed())
@@ -53,7 +54,7 @@ var _ = Describe("Node agent of an Immutable node (NodeConfig status.lastReconci
 	It("marks a silent node agent with reason NoReport and a message without bashible", func() {
 		name := uniqueName("agent-silent")
 		lastReport := time.Now().Add(-11 * time.Minute).Truncate(time.Second)
-		createNodeConfig(name, internalv1alpha1.SystemTypeImmutable, lastReport)
+		createNodeConfig(name, internalv1alpha1.SystemTypeLegacyImmutable, lastReport)
 		newNodeBackedInstance(name)
 
 		want := "the node agent has not reported since " + lastReport.UTC().Format(time.RFC3339)
@@ -71,7 +72,7 @@ var _ = Describe("Node agent of an Immutable node (NodeConfig status.lastReconci
 
 	It("marks a reporting node agent True", func() {
 		name := uniqueName("agent-reporting")
-		createNodeConfig(name, internalv1alpha1.SystemTypeImmutable, time.Now())
+		createNodeConfig(name, internalv1alpha1.SystemTypeLegacyImmutable, time.Now())
 		newNodeBackedInstance(name)
 
 		Eventually(func(g Gomega) {
@@ -86,7 +87,7 @@ var _ = Describe("Node agent of an Immutable node (NodeConfig status.lastReconci
 
 	It("marks a silent node agent on a bashible node too, above a healthy bashible", func() {
 		name := uniqueName("agent-bashible")
-		createNodeConfig(name, internalv1alpha1.SystemTypeMutable, time.Now().Add(-11*time.Minute))
+		createNodeConfig(name, internalv1alpha1.SystemTypeLegacyMutable, time.Now().Add(-11*time.Minute))
 		newNodeBackedInstance(name)
 		applyBashibleCondition(name, bashibleReadyManager,
 			bashibleReady(metav1.ConditionTrue, "StepsCompleted", "converge cycle finished", time.Now()))

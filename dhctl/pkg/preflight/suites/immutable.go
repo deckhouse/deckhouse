@@ -34,7 +34,7 @@ type ImmutableDeps struct {
 }
 
 // NewImmutableSuite gathers the checks that only apply when the master
-// NodeGroup asks for systemType: Immutable. It is added to the runner only in
+// NodeGroup asks for systemType: DeckhouseEngine. It is added to the runner only in
 // that case, so none of its checks has to test for it again.
 func NewImmutableSuite(deps ImmutableDeps) preflight.Suite {
 	return preflight.NewSuite(

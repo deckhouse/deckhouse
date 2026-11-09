@@ -260,7 +260,7 @@ func CreateImmutableNodeGroup(ctx context.Context, c client.Client, name string,
 		ObjectMeta: metav1.ObjectMeta{Name: name},
 		Spec: deckhousev1.NodeGroupSpec{
 			NodeType:   deckhousev1.NodeTypeCloudEphemeral,
-			SystemType: deckhousev1.SystemTypeImmutable,
+			SystemType: deckhousev1.SystemTypeDeckhouseEngine,
 			// A CloudEphemeral group must declare how its nodes are ordered.
 			CloudInstances: &deckhousev1.CloudInstancesSpec{
 				MinPerZone:     1,

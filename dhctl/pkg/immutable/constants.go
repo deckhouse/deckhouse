@@ -40,10 +40,15 @@ const (
 	controlPlaneConfigPath = "/config/controlplane.yaml"
 )
 
-// systemTypeImmutable is the NodeGroup systemType that asks for a node dhctl
-// cannot SSH into, and the spec.systemType of the NodeConfig such a node gets.
-// Mirrors SystemTypeImmutable of node-controller/src/api/deckhouse.io/v1.
-const systemTypeImmutable = "Immutable"
+// The NodeGroup systemType values. DeckhouseEngine asks for a node dhctl cannot SSH into.
+// Mirrors the SystemType constants of
+// modules/040-node-manager/images/node-controller/src/api/deckhouse.io/v1/nodegroup_types.go.
+const (
+	systemTypeDeckhouseEngine = "DeckhouseEngine"
+	systemTypeGenericOS       = "GenericOS"
+	legacySystemTypeImmutable = "Immutable"
+	legacySystemTypeMutable   = "Mutable"
+)
 
 // The node's one-shot bootstrap channel: what it is doing, the credentials, and
 // the confirmation that ends the handover.

@@ -4,7 +4,7 @@
   Everywhere else a bashible step installs it (candi/bashible/common-steps/all/053). An
   Engine node runs no bashible steps, so the agent arrives as a static pod the platform
   writes into the node's config — which is what this object asks for. node-controller
-  compiles it into the NodeConfig of every Immutable node group and ignores it for the
+  compiles it into the NodeConfig of every Deckhouse Engine node group and ignores it for the
   rest, so one object with no selector is the whole of "wherever bashible cannot reach".
 
   Two things about it are load-bearing and easy to undo by accident.
@@ -71,7 +71,7 @@ metadata:
 spec:
   {{- /*
     No selector: every group. A group bashible configures has no node config at all, so
-    naming the Immutable ones here would only repeat a decision node-controller already
+    naming the Deckhouse Engine ones here would only repeat a decision node-controller already
     makes — and would have to be kept in step with it.
   */}}
   manifest: |

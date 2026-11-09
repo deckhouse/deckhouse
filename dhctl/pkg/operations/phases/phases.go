@@ -85,7 +85,7 @@ type ClusterConfig struct {
 	// then the type is unknown rather than static. Fill it from MetaConfig.HasClusterConfiguration
 	// at every call site - left at its zero value it silently drops the nodes gated on it.
 	HasClusterConfiguration bool
-	// ImmutableMaster says the master NodeGroup asks for systemType: Immutable. Such a machine
+	// ImmutableMaster says the master NodeGroup asks for systemType: DeckhouseEngine. Such a machine
 	// is handed its configuration over the network instead of being created, so the node that
 	// creates master-0 runs for it too — on a static cluster, where nothing else would.
 	ImmutableMaster bool
@@ -556,7 +556,7 @@ func ifCloudOrImmutableMaster(opts phasesOpts) bool {
 }
 
 // ifImmutableMaster includes the node on a bootstrap whose master NodeGroup asks for
-// systemType: Immutable, and ifBashibleMaster on every other one that builds a control
+// systemType: DeckhouseEngine, and ifBashibleMaster on every other one that builds a control
 // plane. The pair is exhaustive over clusters dhctl installs Kubernetes on, and both
 // test HasClusterConfiguration for the same reason InstallKubernetes does: a cluster
 // dhctl did not create has neither kind of master.

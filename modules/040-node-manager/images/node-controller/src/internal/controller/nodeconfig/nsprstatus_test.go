@@ -55,7 +55,7 @@ func nsprStatusScheme(t *testing.T) *runtime.Scheme {
 func immutableGroup(name string) *v1.NodeGroup {
 	return &v1.NodeGroup{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral, SystemType: v1.SystemTypeImmutable},
+		Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral, SystemType: v1.SystemTypeLegacyImmutable},
 	}
 }
 
@@ -314,7 +314,7 @@ func TestNSPRStatusCountsTheNodesOfEveryGroup(t *testing.T) {
 		WithObjects(
 			&object,
 			immutableGroup("engine"),
-			mutableGroup("worker", v1.SystemTypeMutable),
+			mutableGroup("worker", v1.SystemTypeLegacyMutable),
 			mutableGroup("legacy", ""),
 			&engineNode, &pendingNode, &bashibleNode, &legacyNode,
 			nodeConfigWithPod("engine-0", pods, written),
@@ -348,7 +348,7 @@ func TestNSPRStatusLeavesTheRegistryAgentToBashible(t *testing.T) {
 		WithObjects(
 			&byName, &byPod,
 			immutableGroup("engine"),
-			mutableGroup("worker", v1.SystemTypeMutable),
+			mutableGroup("worker", v1.SystemTypeLegacyMutable),
 			&engineNode, &bashibleNode,
 		).
 		WithStatusSubresource(&deckhousev1alpha1.NodeStaticPodRequest{}).
@@ -370,7 +370,7 @@ func TestNSPRStatusLeavesTheRegistryAgentToBashible(t *testing.T) {
 // The cap counts what a node is given. A bashible node is not given registry-agent,
 // so it must not push the youngest of sixteen others out of that group's configs.
 func TestTheCapOnABashibleGroupLeavesTheRegistryAgentOut(t *testing.T) {
-	objects := []client.Object{mutableGroup("worker", v1.SystemTypeMutable)}
+	objects := []client.Object{mutableGroup("worker", v1.SystemTypeLegacyMutable)}
 	for i := range maxStaticPods {
 		object := nspr(fmt.Sprintf("pod-%02d", i), deckhousev1alpha1.NodeStaticPodRequestSpec{})
 		objects = append(objects, &object)
@@ -570,7 +570,7 @@ func TestNSPRStatusSaysWhyARequestReachesNoNode(t *testing.T) {
 			cl := fake.NewClientBuilder().
 				WithScheme(nsprStatusScheme(t)).
 				WithObjects(tc.request, immutableGroup("engine"), immutableGroup("empty"),
-					mutableGroup("worker", v1.SystemTypeMutable), &engineNode, &workerNode).
+					mutableGroup("worker", v1.SystemTypeLegacyMutable), &engineNode, &workerNode).
 				WithStatusSubresource(&deckhousev1alpha1.NodeStaticPodRequest{}).
 				Build()
 
@@ -607,7 +607,7 @@ func TestNSPRStatusDoesNotWaitForTheRenderInputsOfABashibleNode(t *testing.T) {
 	cl := fake.NewClientBuilder().
 		WithScheme(nsprStatusScheme(t)).
 		WithObjects(&enginePod, &workerPod, immutableGroup("engine"),
-			mutableGroup("worker", v1.SystemTypeMutable), &engineNode, &workerNode).
+			mutableGroup("worker", v1.SystemTypeLegacyMutable), &engineNode, &workerNode).
 		WithStatusSubresource(&deckhousev1alpha1.NodeStaticPodRequest{}).
 		Build()
 

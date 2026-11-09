@@ -17,6 +17,7 @@ limitations under the License.
 package node_status
 
 import (
+	"cmp"
 	"context"
 	"testing"
 
@@ -207,6 +208,7 @@ func TestCompute_ImmutableGroupReadsNodeConfig(t *testing.T) {
 	}
 	tests := []struct {
 		name         string
+		systemType   v1.SystemType
 		config       *internalv1alpha1.NodeConfig
 		wantUpToDate int32
 		wantUpdating bool
@@ -233,6 +235,12 @@ func TestCompute_ImmutableGroupReadsNodeConfig(t *testing.T) {
 			wantUpdating: true,
 		},
 		{
+			name:         "behind the current generation, in the legacy spelling",
+			systemType:   v1.SystemTypeLegacyImmutable,
+			config:       makeNodeConfig("n1", 3, 2, appliedAt(2)),
+			wantUpdating: true,
+		},
+		{
 			name: "holds the current generation for approval",
 			config: makeNodeConfig("n1", 3, 2,
 				metav1.Condition{Type: "ConfigurationApplied", Status: metav1.ConditionFalse, Reason: "DisruptionApprovalPending", ObservedGeneration: 3},
@@ -247,7 +255,7 @@ func TestCompute_ImmutableGroupReadsNodeConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// The checksum annotation matches: an Immutable group must not count it.
+			// The checksum annotation matches: an Engine group must not count it.
 			objs := []runtime.Object{
 				makeChecksumSecret(map[string]string{"worker": "abc"}),
 				makeNode("n1", "worker", true, "abc"),
@@ -258,7 +266,7 @@ func TestCompute_ImmutableGroupReadsNodeConfig(t *testing.T) {
 			cl := fake.NewClientBuilder().WithScheme(newScheme(t)).WithRuntimeObjects(objs...).Build()
 			ng := &v1.NodeGroup{
 				ObjectMeta: metav1.ObjectMeta{Name: "worker"},
-				Spec:       v1.NodeGroupSpec{SystemType: v1.SystemTypeImmutable},
+				Spec:       v1.NodeGroupSpec{SystemType: cmp.Or(tt.systemType, v1.SystemTypeDeckhouseEngine)},
 			}
 
 			res, err := (&Service{Client: cl}).Compute(context.Background(), ng)

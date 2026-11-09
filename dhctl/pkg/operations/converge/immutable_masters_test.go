@@ -86,6 +86,15 @@ func TestMasterGroupIsImmutable(t *testing.T) {
 		require.False(t, immutableMasters)
 	})
 
+	t.Run("a DeckhouseEngine control plane drops it", func(t *testing.T) {
+		kubeGetter, _ := gateClient(t, nodeGroup("master", "DeckhouseEngine"), nodeGroup("worker", ""))
+
+		immutableMasters, err := masterGroupIsImmutable(t.Context(), kubeGetter)
+
+		require.NoError(t, err)
+		require.True(t, immutableMasters)
+	})
+
 	t.Run("an immutable control plane drops it", func(t *testing.T) {
 		kubeGetter, _ := gateClient(t, nodeGroup("master", "Immutable"), nodeGroup("worker", ""))
 

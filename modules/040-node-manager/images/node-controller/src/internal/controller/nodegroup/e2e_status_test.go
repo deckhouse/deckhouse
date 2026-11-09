@@ -362,7 +362,7 @@ var _ = Describe("NodeGroup status controller", func() {
 		It("reads the rollout of its nodes off their NodeConfigs", func() {
 			name := uniqueNG("immutable-rollout")
 			ng := staticNodeGroup(name)
-			ng.Spec.SystemType = v1.SystemTypeImmutable
+			ng.Spec.SystemType = v1.SystemTypeDeckhouseEngine
 			createNodeGroup(ng)
 			nodeName := name + "-n1"
 			createGroupNode(nodeName, name, true, "", nil)
@@ -373,7 +373,7 @@ var _ = Describe("NodeGroup status controller", func() {
 					Labels: map[string]string{nodecommon.NodeGroupLabel: name},
 				},
 				Spec: internalv1alpha1.NodeSpec{
-					SystemType: internalv1alpha1.SystemTypeImmutable,
+					SystemType: internalv1alpha1.SystemTypeLegacyImmutable,
 					NodeName:   nodeName,
 					OSImage:    internalv1alpha1.OSImage{Digest: testenv.TestOSImageDigest},
 				},

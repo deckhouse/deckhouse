@@ -329,7 +329,7 @@ func handle(_ context.Context, input *go_hook.HookInput) error {
 //
 // Decided here rather than left a constant because the answer differs by node, and the
 // one place that knows which kind of node the store lands on is the module: the store is
-// a StatefulSet on the master group, and that group is either wholly Immutable or wholly
+// a StatefulSet on the master group, and that group is either wholly DeckhouseEngine or wholly
 // not — systemType cannot be changed once set, and a group has one of them.
 //
 // An unreadable or absent group reads as the bashible path, which is the answer that
@@ -349,7 +349,7 @@ func storePath(input *go_hook.HookInput) string {
 
 // storePathFor is the same decision as a function of the one thing it depends on.
 func storePathFor(systemType string) string {
-	if systemType == systemTypeImmutable {
+	if isDeckhouseEngine(systemType) {
 		return registry_const.StorePathImmutable
 	}
 	return registry_const.StorePath

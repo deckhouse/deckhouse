@@ -146,7 +146,7 @@ func TestImmutableAPIReachable(t *testing.T) {
 		_, err := ImmutableAPIReachable(nil).Run(context.Background())
 
 		require.ErrorIs(t, err, preflight.ErrNotApplicable)
-		assert.Contains(t, err.Error(), "does not ask for systemType: Immutable")
+		assert.Contains(t, err.Error(), "does not ask for systemType: DeckhouseEngine")
 	})
 
 	t.Run("the address is not known yet", func(t *testing.T) {

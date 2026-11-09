@@ -274,7 +274,7 @@ func (r *Reconciler) writeCAPISecrets(ctx context.Context, ng *deckhousev1.NodeG
 	// An immutable node boots from a per-machine NodeBootstrapConfig referenced
 	// through bootstrap.configRef, so it has no cloud-init Secret at all. The MCM
 	// machine-class Secret is the capi controller's to write, not this one's.
-	if resolved.Engine != engineCAPI || ng.Spec.SystemType == deckhousev1.SystemTypeImmutable {
+	if resolved.Engine != engineCAPI || deckhousev1.IsDeckhouseEngine(ng.Spec.SystemType) {
 		return nil
 	}
 

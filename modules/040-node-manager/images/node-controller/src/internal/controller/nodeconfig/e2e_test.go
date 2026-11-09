@@ -890,6 +890,36 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 	})
 
+	It("publishes the new systemType once the node runs the nodelet of the release", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-spelling")
+		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName)
+		nodeName := testenv.UniqueName("node")
+		createNode(ctx, nodeName, ngName)
+
+		generation := publishedGeneration(ctx, nodeName)
+
+		By("the node applying its document, the nodelet not reported yet")
+		reportApplied(ctx, nodeName)
+		Consistently(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+			g.Expect(nc.Generation).To(Equal(generation))
+			g.Expect(nc.Spec.SystemType).To(Equal(internalv1alpha1.SystemTypeLegacyImmutable))
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+
+		By("the node reporting the nodelet of this release installed")
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+			nc.Status.Extensions = []internalv1alpha1.ExtensionStatus{
+				{Name: nodeletExtension, Digest: testNodeletDigest, State: extensionStateReady},
+			}
+			g.Expect(k8sClient.Status().Update(ctx, nc)).To(Succeed())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		Eventually(func(g Gomega) {
+			g.Expect(getNodeConfig(ctx, g, nodeName).Spec.SystemType).To(Equal(internalv1alpha1.SystemTypeDeckhouseEngine))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
 	// The gate decides from a list and then writes, so the list must be the API
 	// server's: judged against a cache that has not caught up, every node sees
 	// "nothing updating" and the whole group takes the change at once.
@@ -1227,7 +1257,7 @@ var _ = Describe("NodeConfig controller", func() {
 		nc := &internalv1alpha1.NodeConfig{
 			ObjectMeta: metav1.ObjectMeta{Name: nodeName},
 			Spec: internalv1alpha1.NodeSpec{
-				SystemType: internalv1alpha1.SystemTypeImmutable,
+				SystemType: internalv1alpha1.SystemTypeLegacyImmutable,
 				NodeName:   nodeName,
 				OSImage:    internalv1alpha1.OSImage{Digest: testOSImageDigest},
 				Network: internalv1alpha1.Network{Interfaces: []internalv1alpha1.NetworkInterface{
@@ -1260,7 +1290,7 @@ var _ = Describe("NodeConfig controller", func() {
 		published := &internalv1alpha1.NodeConfig{
 			ObjectMeta: metav1.ObjectMeta{Name: nodeName},
 			Spec: internalv1alpha1.NodeSpec{
-				SystemType:  internalv1alpha1.SystemTypeImmutable,
+				SystemType:  internalv1alpha1.SystemTypeLegacyImmutable,
 				NodeName:    nodeName,
 				OSImage:     internalv1alpha1.OSImage{Digest: testOSImageDigest},
 				StatusToken: testStatusToken,
@@ -1292,7 +1322,7 @@ var _ = Describe("NodeConfig controller", func() {
 		published := &internalv1alpha1.NodeConfig{
 			ObjectMeta: metav1.ObjectMeta{Name: nodeName},
 			Spec: internalv1alpha1.NodeSpec{
-				SystemType: internalv1alpha1.SystemTypeImmutable,
+				SystemType: internalv1alpha1.SystemTypeLegacyImmutable,
 				NodeName:   nodeName,
 				OSImage:    internalv1alpha1.OSImage{Digest: testOSImageDigest},
 				Kubelet:    internalv1alpha1.Kubelet{BootstrapToken: "abcdef.0123456789abcdef"},
@@ -1513,7 +1543,7 @@ var _ = Describe("NodeConfig controller", func() {
 
 		Eventually(func(g Gomega) {
 			nc := getNodeConfig(ctx, g, nodeName)
-			g.Expect(nc.Spec.SystemType).To(Equal(internalv1alpha1.SystemTypeMutable))
+			g.Expect(nc.Spec.SystemType).To(Equal(internalv1alpha1.SystemTypeLegacyMutable))
 			g.Expect(nc.Spec.NodeName).To(Equal(nodeName))
 			g.Expect(nc.Spec.OSImage).To(BeZero())
 			g.Expect(nc.Spec.APIServerEndpoints).To(ConsistOf(apiServerEndpoints))
@@ -1565,7 +1595,7 @@ var _ = Describe("NodeConfig controller", func() {
 		var created *internalv1alpha1.NodeConfig
 		Eventually(func(g Gomega) {
 			created = getNodeConfig(ctx, g, nodeName)
-			g.Expect(created.Spec.SystemType).To(Equal(internalv1alpha1.SystemTypeMutable))
+			g.Expect(created.Spec.SystemType).To(Equal(internalv1alpha1.SystemTypeLegacyMutable))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		By("deleting the object, as a release without bashible NodeConfigs does")
@@ -1784,7 +1814,7 @@ var _ = Describe("NodeConfig controller", func() {
 		bootstrapped := &internalv1alpha1.NodeConfig{
 			ObjectMeta: metav1.ObjectMeta{Name: nodeName},
 			Spec: internalv1alpha1.NodeSpec{
-				SystemType: internalv1alpha1.SystemTypeImmutable,
+				SystemType: internalv1alpha1.SystemTypeLegacyImmutable,
 				NodeName:   nodeName,
 				OSImage:    internalv1alpha1.OSImage{Digest: testOSImageDigest},
 				Network: internalv1alpha1.Network{
@@ -1836,7 +1866,7 @@ var _ = Describe("NodeConfig controller", func() {
 		published := &internalv1alpha1.NodeConfig{
 			ObjectMeta: metav1.ObjectMeta{Name: nodeName},
 			Spec: internalv1alpha1.NodeSpec{
-				SystemType: internalv1alpha1.SystemTypeImmutable,
+				SystemType: internalv1alpha1.SystemTypeLegacyImmutable,
 				NodeName:   nodeName,
 				OSImage:    internalv1alpha1.OSImage{Digest: testOSImageDigest},
 			},
@@ -1889,7 +1919,7 @@ var _ = Describe("NodeConfig controller", func() {
 			published := &internalv1alpha1.NodeConfig{
 				ObjectMeta: metav1.ObjectMeta{Name: nodeName},
 				Spec: internalv1alpha1.NodeSpec{
-					SystemType: internalv1alpha1.SystemTypeImmutable,
+					SystemType: internalv1alpha1.SystemTypeLegacyImmutable,
 					NodeName:   nodeName,
 					OSImage:    internalv1alpha1.OSImage{Digest: testOSImageDigest},
 				},
@@ -1952,7 +1982,7 @@ var _ = Describe("NodeConfig controller", func() {
 		published := &internalv1alpha1.NodeConfig{
 			ObjectMeta: metav1.ObjectMeta{Name: nodeName},
 			Spec: internalv1alpha1.NodeSpec{
-				SystemType: internalv1alpha1.SystemTypeImmutable,
+				SystemType: internalv1alpha1.SystemTypeLegacyImmutable,
 				NodeName:   nodeName,
 				OSImage:    internalv1alpha1.OSImage{Digest: testOSImageDigest},
 				Network: internalv1alpha1.Network{
@@ -2011,7 +2041,7 @@ var _ = Describe("NodeConfig controller", func() {
 		bootstrapped := &internalv1alpha1.NodeConfig{
 			ObjectMeta: metav1.ObjectMeta{Name: nodeName},
 			Spec: internalv1alpha1.NodeSpec{
-				SystemType: internalv1alpha1.SystemTypeImmutable,
+				SystemType: internalv1alpha1.SystemTypeLegacyImmutable,
 				NodeName:   nodeName,
 				Registry:   &internalv1alpha1.Registry{Address: "registry.example.com", Path: "/deckhouse/ce"},
 				OSImage:    internalv1alpha1.OSImage{Digest: testOSImageDigest},
@@ -2479,7 +2509,7 @@ func createManagedNodeConfig(ctx context.Context, name string) {
 
 	nc := &internalv1alpha1.NodeConfig{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Labels: map[string]string{managedByLabel: managedByValue}},
-		Spec:       internalv1alpha1.NodeSpec{SystemType: internalv1alpha1.SystemTypeMutable, NodeName: name},
+		Spec:       internalv1alpha1.NodeSpec{SystemType: internalv1alpha1.SystemTypeLegacyMutable, NodeName: name},
 	}
 	Expect(k8sClient.Create(ctx, nc)).To(Succeed())
 	DeferCleanup(func(ctx context.Context) {
@@ -2491,7 +2521,7 @@ func createManagedNodeConfig(ctx context.Context, name string) {
 // one bashible manages; only a CloudEphemeral one keeps its cloudInstances.
 func managedByBashible(nodeType deckhousev1.NodeType) func(*deckhousev1.NodeGroup) {
 	return func(ng *deckhousev1.NodeGroup) {
-		ng.Spec.SystemType = deckhousev1.SystemTypeMutable
+		ng.Spec.SystemType = deckhousev1.SystemTypeGenericOS
 		ng.Spec.NodeType = nodeType
 		if nodeType != deckhousev1.NodeTypeCloudEphemeral {
 			ng.Spec.CloudInstances = nil

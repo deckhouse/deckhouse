@@ -111,7 +111,8 @@ var _ = BeforeSuite(func() {
 	By("bootstrapping the envtest environment with the NodeGroup and provider CRDs")
 	var err error
 	crdPaths := append(
-		testenv.CRDPaths(testenv.WithNodeGroupCRDFile(), testenv.WithMachineSetCRDFile()),
+		testenv.CRDPaths(testenv.WithNodeGroupCRDFile(), testenv.WithMachineSetCRDFile(),
+			testenv.WithNodeManager(testenv.NodeBootstrapConfigTemplateCRDFile)),
 		filepath.Join(testdataDir(), "dvpinstanceclass-crd.yaml"),
 		filepath.Join(testdataDir(), "deckhousemachinetemplate-crd.yaml"),
 	)

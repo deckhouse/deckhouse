@@ -239,14 +239,14 @@ func TestValidation_SystemTypeImmutability(t *testing.T) {
 		newType     v1.SystemType
 		wantAllowed bool
 	}{
-		{name: "recording Immutable on a group with no nodes is allowed", oldType: "", newType: v1.SystemTypeImmutable, wantAllowed: true},
-		{name: "recording Mutable on a group that never named one is allowed", oldType: "", newType: v1.SystemTypeMutable, wantAllowed: true},
-		{name: "changing Mutable to Immutable on a group with no nodes is allowed", oldType: v1.SystemTypeMutable, newType: v1.SystemTypeImmutable, wantAllowed: true},
-		{name: "clearing it on a mutable group is allowed", oldType: v1.SystemTypeMutable, newType: "", wantAllowed: true},
-		{name: "clearing it on an immutable group is denied", oldType: v1.SystemTypeImmutable, newType: ""},
-		{name: "changing Immutable to Mutable is denied", oldType: v1.SystemTypeImmutable, newType: v1.SystemTypeMutable},
+		{name: "recording Immutable on a group with no nodes is allowed", oldType: "", newType: v1.SystemTypeLegacyImmutable, wantAllowed: true},
+		{name: "recording Mutable on a group that never named one is allowed", oldType: "", newType: v1.SystemTypeLegacyMutable, wantAllowed: true},
+		{name: "changing Mutable to Immutable on a group with no nodes is allowed", oldType: v1.SystemTypeLegacyMutable, newType: v1.SystemTypeLegacyImmutable, wantAllowed: true},
+		{name: "clearing it on a mutable group is allowed", oldType: v1.SystemTypeLegacyMutable, newType: "", wantAllowed: true},
+		{name: "clearing it on an immutable group is denied", oldType: v1.SystemTypeLegacyImmutable, newType: ""},
+		{name: "changing Immutable to Mutable is denied", oldType: v1.SystemTypeLegacyImmutable, newType: v1.SystemTypeLegacyMutable},
 		{name: "leaving it unset is allowed", oldType: "", newType: "", wantAllowed: true},
-		{name: "leaving it Immutable is allowed", oldType: v1.SystemTypeImmutable, newType: v1.SystemTypeImmutable, wantAllowed: true},
+		{name: "leaving it Immutable is allowed", oldType: v1.SystemTypeLegacyImmutable, newType: v1.SystemTypeLegacyImmutable, wantAllowed: true},
 	}
 
 	for _, tc := range tests {
@@ -320,7 +320,7 @@ func TestValidation_SystemTypeAdoptionChecksNodes(t *testing.T) {
 		oldType v1.SystemType
 	}{
 		{op: admissionv1.Update, oldType: ""},
-		{op: admissionv1.Update, oldType: v1.SystemTypeMutable},
+		{op: admissionv1.Update, oldType: v1.SystemTypeLegacyMutable},
 		{op: admissionv1.Create},
 	}
 
@@ -332,7 +332,7 @@ func TestValidation_SystemTypeAdoptionChecksNodes(t *testing.T) {
 				w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
 
 				newNG := baseNodeGroup("worker", v1.NodeTypeStatic)
-				newNG.Spec.SystemType = v1.SystemTypeImmutable
+				newNG.Spec.SystemType = v1.SystemTypeLegacyImmutable
 
 				var oldNG *v1.NodeGroup
 				if tr.op == admissionv1.Update {
@@ -389,11 +389,11 @@ func TestValidation_SystemTypeImmutableNeedsCAPI(t *testing.T) {
 			wantDenied: "no cloud provider is registered",
 		},
 		{
-			name: "a Mutable group on MCM turning Immutable", registration: mcmOnly, op: admissionv1.Update, oldType: v1.SystemTypeMutable,
+			name: "a Mutable group on MCM turning Immutable", registration: mcmOnly, op: admissionv1.Update, oldType: v1.SystemTypeLegacyMutable,
 			wantDenied: `cloud provider "openstack" creates them through MCM`,
 		},
 		// Not re-judged once Immutable: an unrelated edit must not depend on the provider.
-		{name: "an Immutable group edited", registration: mcmOnly, op: admissionv1.Update, oldType: v1.SystemTypeImmutable},
+		{name: "an Immutable group edited", registration: mcmOnly, op: admissionv1.Update, oldType: v1.SystemTypeLegacyImmutable},
 	}
 
 	for _, tc := range tests {
@@ -406,7 +406,7 @@ func TestValidation_SystemTypeImmutableNeedsCAPI(t *testing.T) {
 			w := &NodeGroupValidator{Client: builder.Build(), decoder: admission.NewDecoder(s)}
 
 			newNG := baseNodeGroup("worker", v1.NodeTypeCloudEphemeral)
-			newNG.Spec.SystemType = v1.SystemTypeImmutable
+			newNG.Spec.SystemType = v1.SystemTypeLegacyImmutable
 			if tc.useMCM {
 				newNG.Annotations = map[string]string{"node.deckhouse.io/use-mcm": "true"}
 			}
@@ -429,6 +429,9 @@ func TestValidation_SystemTypeImmutableNeedsCAPI(t *testing.T) {
 			if !strings.Contains(resp.Result.Message, tc.wantDenied) {
 				t.Fatalf("message = %q, want it to contain %q", resp.Result.Message, tc.wantDenied)
 			}
+			if !strings.HasPrefix(resp.Result.Message, "systemType DeckhouseEngine on a CloudEphemeral NodeGroup needs machines created through CAPI") {
+				t.Fatalf("message = %q, want it to name systemType DeckhouseEngine", resp.Result.Message)
+			}
 		})
 	}
 }
@@ -440,7 +443,7 @@ func TestValidation_SystemTypeImmutableRefusesCloudStatic(t *testing.T) {
 	w := &NodeGroupValidator{Client: fake.NewClientBuilder().WithScheme(s).Build(), decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("worker", v1.NodeTypeCloudStatic)
-	ng.Spec.SystemType = v1.SystemTypeImmutable
+	ng.Spec.SystemType = v1.SystemTypeLegacyImmutable
 
 	resp := w.Handle(t.Context(), makeAdmissionRequest(t, admissionv1.Create, ng, nil))
 	if resp.Allowed {
@@ -448,6 +451,52 @@ func TestValidation_SystemTypeImmutableRefusesCloudStatic(t *testing.T) {
 	}
 	if resp.Result.Message != cloudStaticMessage {
 		t.Fatalf("message = %q, want %q", resp.Result.Message, cloudStaticMessage)
+	}
+}
+
+func TestSystemTypeSpellingWithinClass(t *testing.T) {
+	bashibleMessage := `it is forbidden to set .spec.systemType to "DeckhouseEngine" on a NodeGroup ` +
+		"whose nodes are already configured by bashible: worker-0. To change it, create a NodeGroup under a different name"
+
+	tests := []struct {
+		oldType    v1.SystemType
+		newType    v1.SystemType
+		wantDenied string
+	}{
+		{oldType: v1.SystemTypeLegacyImmutable, newType: v1.SystemTypeDeckhouseEngine},
+		{oldType: v1.SystemTypeDeckhouseEngine, newType: v1.SystemTypeLegacyImmutable},
+		{oldType: v1.SystemTypeLegacyMutable, newType: v1.SystemTypeGenericOS},
+		{oldType: "", newType: v1.SystemTypeGenericOS},
+		{oldType: v1.SystemTypeDeckhouseEngine, newType: v1.SystemTypeGenericOS, wantDenied: systemTypeChangedMessage},
+		{oldType: v1.SystemTypeDeckhouseEngine, newType: "", wantDenied: systemTypeChangedMessage},
+		{oldType: v1.SystemTypeGenericOS, newType: v1.SystemTypeDeckhouseEngine, wantDenied: bashibleMessage},
+	}
+
+	for _, tc := range tests {
+		t.Run(fmt.Sprintf("%q to %q", tc.oldType, tc.newType), func(t *testing.T) {
+			s := newScheme()
+			c := fake.NewClientBuilder().WithScheme(s).WithObjects(groupNode("worker-0", "worker", true)).Build()
+			w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+
+			oldNG := baseNodeGroup("worker", v1.NodeTypeStatic)
+			oldNG.Spec.SystemType = tc.oldType
+			newNG := baseNodeGroup("worker", v1.NodeTypeStatic)
+			newNG.Spec.SystemType = tc.newType
+
+			resp := w.Handle(t.Context(), makeAdmissionRequest(t, admissionv1.Update, newNG, oldNG))
+			if tc.wantDenied == "" {
+				if !resp.Allowed {
+					t.Fatalf("want allowed, got denied: %v", resp.Result)
+				}
+				return
+			}
+			if resp.Allowed {
+				t.Fatalf("want denied with %q, got allowed", tc.wantDenied)
+			}
+			if resp.Result.Message != tc.wantDenied {
+				t.Fatalf("message = %q, want %q", resp.Result.Message, tc.wantDenied)
+			}
+		})
 	}
 }
 

@@ -102,7 +102,7 @@ func buildCAPIMachineDeployment(in capiMDInput) *unstructured.Unstructured {
 	// from the group's template; a bashible node keeps the group-wide bootstrap
 	// Secret. configRef has no apiVersion: CAPI resolves it from the contract label.
 	bootstrap := map[string]interface{}{"dataSecretName": in.bootstrapSecretName}
-	if in.ng.Spec.SystemType == deckhousev1.SystemTypeImmutable {
+	if deckhousev1.IsDeckhouseEngine(in.ng.Spec.SystemType) {
 		bootstrap = map[string]interface{}{
 			"configRef": map[string]interface{}{
 				"apiGroup": "bootstrap.deckhouse.io",
@@ -417,7 +417,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(
 	// An immutable group's MachineDeployments reference a NodeBootstrapConfig
 	// template through bootstrap.configRef, so it has to exist before them or
 	// CAPI cannot resolve the reference. One template per group, all zones.
-	if ng.Spec.SystemType == deckhousev1.SystemTypeImmutable {
+	if deckhousev1.IsDeckhouseEngine(ng.Spec.SystemType) {
 		tmpl := buildNodeBootstrapConfigTemplate(ng)
 		if err := r.Client.Patch(ctx, tmpl, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
 			return fmt.Errorf("apply NodeBootstrapConfigTemplate %s: %w", ng.Name, err)

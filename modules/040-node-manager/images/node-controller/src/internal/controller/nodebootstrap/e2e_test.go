@@ -209,7 +209,7 @@ var _ = Describe("NodeBootstrap controller", func() {
 			ObjectMeta: metav1.ObjectMeta{Name: ngName},
 			Spec: deckhousev1.NodeGroupSpec{
 				NodeType:   deckhousev1.NodeTypeCloudEphemeral,
-				SystemType: deckhousev1.SystemTypeMutable,
+				SystemType: deckhousev1.SystemTypeGenericOS,
 				CloudInstances: &deckhousev1.CloudInstancesSpec{
 					MinPerZone:     1,
 					MaxPerZone:     3,

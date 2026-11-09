@@ -17,6 +17,7 @@ limitations under the License.
 package capi
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
@@ -257,6 +258,43 @@ func TestMachineDeploymentsHandTheDrainToNodeManager(t *testing.T) {
 			}
 			if got, ok := annotations[capiv1beta2.ExcludeNodeDrainingAnnotation]; !ok || got != "" {
 				t.Fatalf("annotation %q = %q (present %v), want an empty value", capiv1beta2.ExcludeNodeDrainingAnnotation, got, ok)
+			}
+		})
+	}
+}
+
+func TestCAPIMachineDeploymentBootstrapFollowsTheSystemTypeClass(t *testing.T) {
+	for _, tt := range []struct {
+		systemType deckhousev1.SystemType
+		engine     bool
+	}{
+		{systemType: deckhousev1.SystemTypeDeckhouseEngine, engine: true},
+		{systemType: deckhousev1.SystemTypeLegacyImmutable, engine: true},
+		{systemType: deckhousev1.SystemTypeGenericOS},
+		{systemType: deckhousev1.SystemTypeLegacyMutable},
+		{systemType: ""},
+	} {
+		t.Run(string(tt.systemType), func(t *testing.T) {
+			ng := &deckhousev1.NodeGroup{}
+			ng.Name = "worker"
+			ng.Spec.SystemType = tt.systemType
+
+			md := buildCAPIMachineDeployment(capiMDInput{ng: ng, bootstrapSecretName: "worker-bootstrap"})
+			bootstrap, _, err := unstructured.NestedMap(md.Object, "spec", "template", "spec", "bootstrap")
+			if err != nil {
+				t.Fatalf("read spec.template.spec.bootstrap: %v", err)
+			}
+
+			want := map[string]interface{}{"dataSecretName": "worker-bootstrap"}
+			if tt.engine {
+				want = map[string]interface{}{"configRef": map[string]interface{}{
+					"apiGroup": "bootstrap.deckhouse.io",
+					"kind":     "NodeBootstrapConfigTemplate",
+					"name":     "worker",
+				}}
+			}
+			if !reflect.DeepEqual(bootstrap, want) {
+				t.Fatalf("bootstrap = %v, want %v", bootstrap, want)
 			}
 		})
 	}

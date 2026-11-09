@@ -81,7 +81,7 @@ const (
 	registryBashibleAgentKey     = "agent"
 
 	// registryAgentStaticPodName is the NodeStaticPodRequest the registry module
-	// publishes to put its node agent on an Immutable node, and so the name of the
+	// publishes to put its node agent on a Deckhouse Engine node, and so the name of the
 	// manifest in a node's spec.staticPods.
 	//
 	// The platform has to know it, because on such a node that object is the only way

@@ -129,7 +129,7 @@ type NetworkStatus struct {
 // ExtensionStatus is the reconcile outcome of one extension.
 type ExtensionStatus struct {
 	// Name is the extension name: a spec.extensions[].name, or the name of an extension
-	// removed from spec whose uninstall failed on a Mutable node.
+	// removed from spec whose uninstall failed on a Generic OS node.
 	Name string `json:"name"`
 	// Digest depends on state: installed when Ready, being installed when Pending, refused or not
 	// installable when Failed.
@@ -194,17 +194,19 @@ const (
 type SystemType string
 
 const (
-	SystemTypeImmutable SystemType = "Immutable"
-	SystemTypeMutable   SystemType = "Mutable"
+	SystemTypeDeckhouseEngine SystemType = "DeckhouseEngine"
+	SystemTypeGenericOS       SystemType = "GenericOS"
+	SystemTypeLegacyImmutable SystemType = "Immutable"
+	SystemTypeLegacyMutable   SystemType = "Mutable"
 )
 
 // NodeSpec is the desired state of the node.
 type NodeSpec struct {
-	// SystemType is how the node is managed, and cannot be changed: Immutable, a Deckhouse Engine
-	// node the agent configures whole, or Mutable, a bashible node where it runs only featureGates.
+	// SystemType is how the node is managed, and cannot be changed: DeckhouseEngine, a Deckhouse
+	// Engine node the agent configures whole, or GenericOS, a bashible node where it runs only featureGates.
 	SystemType SystemType `json:"systemType"`
 	// FeatureGates switch node agent features on or off by name, set by node-controller. A missing
-	// one is on for an Immutable node if its type supports it, and off for a Mutable node.
+	// one is on for a Deckhouse Engine node if its type supports it, and off for a Generic OS node.
 	FeatureGates map[string]bool `json:"featureGates,omitempty"`
 	// NodeName is the name of the Kubernetes node this configuration applies to. Equal to
 	// the object name and cannot be changed.
@@ -212,17 +214,17 @@ type NodeSpec struct {
 
 	// Maintainers: omitzero, as Storage, Kernel, Network, Kubelet, ContainerRuntime,
 	// UpdatePolicy and RegistryPackagesProxy: an empty section is left out rather than sent
-	// as {}, and a Mutable document must not carry osImage: {digest: ""}.
+	// as {}, and a Generic OS document must not carry osImage: {digest: ""}.
 
-	// OSImage is the operating system image the node runs, required when systemType is Immutable.
+	// OSImage is the operating system image the node runs, required on a Deckhouse Engine node.
 	// The node compares its digest with /config/os-digest, saved at installation, to decide an update.
 	OSImage OSImage `json:"osImage,omitzero"`
 	// Storage selects the whole disk the system is installed on and the filesystems the node
 	// mounts. device, wipe and diskSelector cannot be changed; mounts can.
 	Storage Storage `json:"storage,omitzero"`
 	// Extensions are what the node installs, each pinned by digest: a signed dm-verity system
-	// extension on an Immutable node, a registry package on a Mutable one. An entry named nodelet
-	// updates the node agent itself.
+	// extension on a Deckhouse Engine node, a registry package on a Generic OS one. An entry
+	// named nodelet updates the node agent itself.
 	Extensions []Extension `json:"extensions,omitempty"`
 
 	// StaticPods are the manifests the node writes to /etc/kubernetes/manifests for kubelet. The
@@ -291,7 +293,7 @@ type Registry struct {
 	// registry.d directory of its match: the accepted RegistryUpstream objects and the
 	// certificate authorities of the ModuleSource registries, already arbitrated. Empty
 	// on an Engine node while the registry agent owns its registry configuration: the
-	// agent routes them then. A Mutable node gets the RegistryUpstream ones always (bashible
+	// agent routes them then. A Generic OS node gets the RegistryUpstream ones always (bashible
 	// writes the ModuleSource authorities there itself), and nodelet leaves them
 	// unapplied while bashible's state says the agent owns registry.d.
 	//
@@ -511,8 +513,8 @@ type DiskSelector struct {
 // Extension is one artifact the node installs, pinned by digest and fetched through the
 // registry-packages-proxy.
 type Extension struct {
-	// Name of the extension: the system extension image name on an Immutable node, the
-	// registry package name on a Mutable one.
+	// Name of the extension: the system extension image name on a Deckhouse Engine node, the
+	// registry package name on a Generic OS one.
 	Name string `json:"name"`
 	// Digest of the artifact image.
 	Digest string `json:"digest"`

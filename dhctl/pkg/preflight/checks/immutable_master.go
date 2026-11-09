@@ -30,7 +30,7 @@ import (
 )
 
 // The checks below only run when the master NodeGroup asks for
-// systemType: Immutable. Each of them guards an assumption the immutable
+// systemType: DeckhouseEngine. Each of them guards an assumption the immutable
 // bootstrap path makes that the classic bashible path does not.
 const (
 	ImmutableInstallerImagesCheckName      preflight.CheckName = "immutable-installer-images"

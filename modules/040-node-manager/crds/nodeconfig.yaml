@@ -111,8 +111,8 @@ spec:
                 description: |-
                   Extensions the node installs, each pinned by digest.
 
-                  On an Immutable node an entry is a signed dm-verity system extension image.
-                  On a Mutable node an entry is a registry package: the node agent runs the
+                  On a Deckhouse Engine node an entry is a signed dm-verity system extension image.
+                  On a Generic OS node an entry is a registry package: the node agent runs the
                   package's own `install` script as root.
 
                   An entry named `nodelet` updates the node agent itself.
@@ -182,8 +182,8 @@ spec:
                 description: |-
                   Node agent features to switch on or off, keyed by feature name.
 
-                  A feature missing from this map is on for an Immutable node if the node type
-                  supports it, and off for a Mutable node. A Mutable node runs only the features
+                  A feature missing from this map is on for a Deckhouse Engine node if the node type
+                  supports it, and off for a Generic OS node. A Generic OS node runs only the features
                   switched on here.
 
                   The node rejects a document that names an unknown feature or switches on a
@@ -316,7 +316,7 @@ spec:
                     description: |-
                       KubernetesVersion is the cluster's minor version, e.g. "1.34". It decides
                       which feature gates kubelet is started with (bashible turns DRA gates on
-                      by version); without it DRA workloads cannot run on immutable nodes.
+                      by version); without it DRA workloads cannot run on Deckhouse Engine nodes.
                     maxLength: 16
                     pattern: ^[0-9]+\.[0-9]+$
                     type: string
@@ -520,7 +520,7 @@ spec:
 
                   To determine whether an update is required, the node compares the image `digest` with the value saved to `/config/os-digest` during installation. The digest identifies a specific image publication and may change when the same content is republished.
 
-                  Required when `systemType` is `Immutable`.
+                  Required when `systemType` is `DeckhouseEngine` or its former name `Immutable`.
                 properties:
                   digest:
                     description: |-
@@ -562,7 +562,7 @@ spec:
                   proxy yet but must pull images and sysexts. `upstreams` lists the additional
                   registries containerd routes pulls to.
 
-                  On a Mutable node bashible configures containerd for the registry itself, and
+                  On a Generic OS node bashible configures containerd for the registry itself, and
                   the node agent writes only the `upstreams` routes, with the `registry-routes`
                   feature on. It reads only `address` there, which no route may take over, and
                   never downloads from the registry directly.
@@ -611,14 +611,14 @@ spec:
                       restart containerd. An entry the node cannot apply is skipped and reported in
                       the `RegistryRoutesReady` condition; the other entries are still applied.
 
-                      The `registry-routes` feature applies this list. It is on by default on an
-                      Immutable node; a Mutable node applies the list only when `featureGates`
+                      The `registry-routes` feature applies this list. It is on by default on a
+                      Deckhouse Engine node; a Generic OS node applies the list only when `featureGates`
                       switch the feature on. With the feature off, the node leaves the directories
                       it wrote before as they are.
 
                       Set by node-controller from the accepted RegistryUpstream objects and the CAs
-                      of ModuleSource objects. On an Immutable node the list is empty while the
-                      registry module's agent configures containerd. On a Mutable node the list is
+                      of ModuleSource objects. On a Deckhouse Engine node the list is empty while the
+                      registry module's agent configures containerd. On a Generic OS node the list is
                       always set but has no ModuleSource entry, since bashible writes those CAs
                       itself, and the node writes no route while the agent's `_default`
                       directory is listed in bashible's `deckhouse_hosts_state.json`.
@@ -1063,13 +1063,17 @@ spec:
                 description: |-
                   How the node is managed.
 
-                  - `Immutable`: a Deckhouse Engine node. The node agent configures the whole node.
-                  - `Mutable`: a node configured by bashible. The node agent manages only what `featureGates` turn on.
+                  - `DeckhouseEngine`: a Deckhouse Engine node. The node agent configures the whole node.
+                  - `GenericOS`: a node configured by bashible. The node agent manages only what `featureGates` turn on.
 
-                  Cannot be changed.
+                  The former names `Immutable` (for `DeckhouseEngine`) and `Mutable` (for `GenericOS`) are deprecated and accepted during the transition period.
+
+                  The node type cannot be changed. Replacing a former name with the new name of the same type, or back, is allowed.
                 enum:
                 - Immutable
                 - Mutable
+                - DeckhouseEngine
+                - GenericOS
                 type: string
               updatePolicy:
                 description: UpdatePolicy controls how and when the node is updated.
@@ -1131,15 +1135,17 @@ spec:
             - systemType
             type: object
             x-kubernetes-validations:
-            - message: spec.osImage must be set on an Immutable node
-              rule: self.systemType == 'Mutable' || has(self.osImage)
-            - message: spec.systemType cannot be changed
-              rule: self.systemType == oldSelf.systemType
-            - message: a Mutable node takes only nodeName, featureGates, apiServerEndpoints,
+            - message: spec.osImage must be set on a DeckhouseEngine node
+              rule: self.systemType in ['Mutable', 'GenericOS'] || has(self.osImage)
+            - message: spec.systemType cannot move between DeckhouseEngine and GenericOS
+              rule: (self.systemType in ['Immutable', 'DeckhouseEngine']) == (oldSelf.systemType
+                in ['Immutable', 'DeckhouseEngine'])
+            - message: a GenericOS node takes only nodeName, featureGates, apiServerEndpoints,
                 registryPackagesProxy, registry, extensions and staticPods
-              rule: self.systemType == 'Immutable' || !(has(self.osImage) || has(self.storage)
-                || has(self.kernel) || has(self.network) || has(self.kubelet) || has(self.containerRuntime)
-                || has(self.updatePolicy) || has(self.statusToken) || has(self.internalNetworkCIDRs))
+              rule: self.systemType in ['Immutable', 'DeckhouseEngine'] || !(has(self.osImage)
+                || has(self.storage) || has(self.kernel) || has(self.network) || has(self.kubelet)
+                || has(self.containerRuntime) || has(self.updatePolicy) || has(self.statusToken)
+                || has(self.internalNetworkCIDRs))
           status:
             description: Status is reported by the on-node agent after each reconcile
               pass.
@@ -1243,7 +1249,7 @@ spec:
                     Specific reasons with `True`:
 
                     - `OwnedByRegistryAgent` (`RegistryRoutesReady`): The registry agent configures
-                      containerd's registry hosts on this Mutable node. The node writes no route and
+                      containerd's registry hosts on this Generic OS node. The node writes no route and
                       has removed the ones it wrote.
 
                     Specific reasons with `False` that mean a failure:
@@ -1353,13 +1359,13 @@ spec:
                     name:
                       description: |-
                         Name is the extension name: a spec.extensions[].name, or the name of an
-                        extension removed from spec whose uninstall failed on a Mutable node.
+                        extension removed from spec whose uninstall failed on a Generic OS node.
                       type: string
                     state:
                       description: |-
                         State of the extension.
 
-                        - Ready: the extension is installed (on an Immutable node, also merged).
+                        - Ready: the extension is installed (on a Deckhouse Engine node, also merged).
                         - Pending: the extension is being fetched or waits for the update window, or
                           the agent restarts with a new build of itself (reason RestartPending).
                         - Failed: the cause is in Message.

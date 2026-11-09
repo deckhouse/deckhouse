@@ -249,24 +249,28 @@ var _ = Describe("MasterNodeGroup controller reconcile", func() {
 		Expect(getMaster().Spec.NodeType).To(Equal(deckhousev1.NodeTypeStatic))
 	})
 
-	It("creates an Immutable master NodeGroup when a master is a Deckhouse Engine node", func() {
-		deleteMaster()
+	DescribeTable("creates a DeckhouseEngine master NodeGroup when a master is a Deckhouse Engine node",
+		func(label deckhousev1.SystemType) {
+			deleteMaster()
 
-		node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{
-			Name: "engine-master-0",
-			Labels: map[string]string{
-				common.NodeGroupLabel:      masterNodeGroupName,
-				common.NodeSystemTypeLabel: string(deckhousev1.SystemTypeImmutable),
-			},
-		}}
-		Expect(k8sClient.Create(suiteCtx, node)).To(Succeed())
-		DeferCleanup(func() { Expect(client.IgnoreNotFound(k8sClient.Delete(suiteCtx, node))).To(Succeed()) })
+			node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{
+				Name: "engine-master-0",
+				Labels: map[string]string{
+					common.NodeGroupLabel:      masterNodeGroupName,
+					common.NodeSystemTypeLabel: string(label),
+				},
+			}}
+			Expect(k8sClient.Create(suiteCtx, node)).To(Succeed())
+			DeferCleanup(func() { Expect(client.IgnoreNotFound(k8sClient.Delete(suiteCtx, node))).To(Succeed()) })
 
-		_, err := reconcileMaster()
-		Expect(err).NotTo(HaveOccurred())
+			_, err := reconcileMaster()
+			Expect(err).NotTo(HaveOccurred())
 
-		Expect(getMaster().Spec.SystemType).To(Equal(deckhousev1.SystemTypeImmutable))
-	})
+			Expect(getMaster().Spec.SystemType).To(Equal(deckhousev1.SystemTypeDeckhouseEngine))
+		},
+		Entry("labelled DeckhouseEngine", deckhousev1.SystemTypeDeckhouseEngine),
+		Entry("labelled Immutable", deckhousev1.SystemTypeLegacyImmutable),
+	)
 
 	// The node type is not guessable: a CloudPermanent master group on a static cluster is wrong,
 	// so an unreadable cluster configuration must leave the group absent and retry.

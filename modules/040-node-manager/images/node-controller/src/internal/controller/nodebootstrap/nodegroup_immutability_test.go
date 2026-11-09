@@ -38,7 +38,7 @@ const systemTypeFieldOwner = client.FieldOwner("systemtype-immutability-test")
 var _ = Describe("NodeGroup systemType immutability", func() {
 	It("accepts a group created with a systemType, and one created without", func(ctx context.Context) {
 		immutable := testenv.CreateImmutableNodeGroup(ctx, k8sClient, testenv.UniqueName("born-imm"))
-		Expect(immutable.Spec.SystemType).To(Equal(deckhousev1.SystemTypeImmutable))
+		Expect(immutable.Spec.SystemType).To(Equal(deckhousev1.SystemTypeDeckhouseEngine))
 
 		bashible := createBashibleNodeGroup(ctx, testenv.UniqueName("born-mut"))
 		Expect(bashible.Spec.SystemType).To(BeEmpty())
@@ -64,10 +64,10 @@ var _ = Describe("NodeGroup systemType immutability", func() {
 			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: ng.Name}, fresh)).To(Succeed())
 			Expect(fresh.Spec.SystemType).To(Equal(to))
 		},
-		Entry("a group that named none records Immutable", deckhousev1.SystemType(""), deckhousev1.SystemTypeImmutable, true),
-		Entry("a group that named none records Mutable", deckhousev1.SystemType(""), deckhousev1.SystemTypeMutable, true),
-		Entry("a named systemType cannot be cleared", deckhousev1.SystemTypeImmutable, deckhousev1.SystemType(""), false),
-		Entry("a named systemType cannot be changed to another", deckhousev1.SystemTypeImmutable, deckhousev1.SystemTypeMutable, false),
+		Entry("a group that named none records DeckhouseEngine", deckhousev1.SystemType(""), deckhousev1.SystemTypeDeckhouseEngine, true),
+		Entry("a group that named none records GenericOS", deckhousev1.SystemType(""), deckhousev1.SystemTypeGenericOS, true),
+		Entry("a named systemType cannot be cleared", deckhousev1.SystemTypeDeckhouseEngine, deckhousev1.SystemType(""), false),
+		Entry("a named systemType cannot be changed to another", deckhousev1.SystemTypeDeckhouseEngine, deckhousev1.SystemTypeGenericOS, false),
 	)
 
 	// A merge patch removes a field by setting it to null, which is not an
@@ -84,7 +84,7 @@ var _ = Describe("NodeGroup systemType immutability", func() {
 	It("refuses an apply that stops sending the systemType", func(ctx context.Context) {
 		name := testenv.UniqueName("noapply")
 
-		Expect(k8sClient.Patch(ctx, applyNodeGroup(name, deckhousev1.SystemTypeImmutable),
+		Expect(k8sClient.Patch(ctx, applyNodeGroup(name, deckhousev1.SystemTypeDeckhouseEngine),
 			client.Apply, systemTypeFieldOwner, client.ForceOwnership)).To(Succeed())
 		DeferCleanup(func(ctx context.Context) {
 			_ = k8sClient.Delete(ctx, &deckhousev1.NodeGroup{ObjectMeta: metav1.ObjectMeta{Name: name}})

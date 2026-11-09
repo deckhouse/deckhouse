@@ -64,7 +64,7 @@ func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv
 	runtime := renderContainerRuntime(ng, in, staticPods)
 
 	return internalv1alpha1.NodeSpec{
-		SystemType:           internalv1alpha1.SystemTypeImmutable,
+		SystemType:           internalv1alpha1.SystemTypeDeckhouseEngine,
 		NodeName:             node.Name,
 		OSImage:              in.OSImage,
 		APIServerEndpoints:   in.APIServerEndpoints,
@@ -245,17 +245,17 @@ func (r *Reconciler) recordClampedSettings(ng *v1.NodeGroup) {
 	}
 	if maxPods, ok := configuredMaxPods(ng); ok && clampMaxPods(maxPods) != maxPods {
 		r.Recorder.Event(ng, corev1.EventTypeWarning, settingClampedEvent,
-			fmt.Sprintf("kubelet.maxPods %d is outside the range 1..%d allowed on Immutable nodes. The nodes of this group are configured with %d",
+			fmt.Sprintf("kubelet.maxPods %d is outside the range 1..%d allowed on Deckhouse Engine nodes. The nodes of this group are configured with %d",
 				maxPods, maxPodsCeiling, clampMaxPods(maxPods)))
 	}
 	if ng.Spec.Disruptions != nil && ng.Spec.Disruptions.ApprovalMode == v1.DisruptionApprovalModeRollingUpdate {
 		r.Recorder.Event(ng, corev1.EventTypeWarning, settingClampedEvent,
-			fmt.Sprintf("disruptions.approvalMode %s is not supported on Immutable nodes. The nodes of this group are configured with %s",
+			fmt.Sprintf("disruptions.approvalMode %s is not supported on Deckhouse Engine nodes. The nodes of this group are configured with %s",
 				v1.DisruptionApprovalModeRollingUpdate, v1.DisruptionApprovalModeAutomatic))
 	}
 	if configuredReservationMode(ng) == resourceReservationModeStatic {
 		r.Recorder.Event(ng, corev1.EventTypeWarning, settingClampedEvent,
-			fmt.Sprintf("kubelet.resourceReservation.mode %s is not supported on Immutable nodes: they reserve resources by capacity or not at all. The nodes of this group are configured with %s",
+			fmt.Sprintf("kubelet.resourceReservation.mode %s is not supported on Deckhouse Engine nodes: they reserve resources by capacity or not at all. The nodes of this group are configured with %s",
 				resourceReservationModeStatic, resourceReservationModeAuto))
 	}
 	for _, key := range effectlessTaints(ng) {
@@ -272,8 +272,8 @@ func renderNodeLabels(ng *v1.NodeGroup) map[string]internalv1alpha1.NodeLabelVal
 	labels := map[string]internalv1alpha1.NodeLabelValue{
 		nodecommon.NodeGroupLabel: internalv1alpha1.NodeLabelValue(ng.Name),
 		nodecommon.NodeTypeLabel:  internalv1alpha1.NodeLabelValue(ng.Spec.NodeType),
-		// masternodegroup creates the master group Immutable from it; the installer sets it on the first master.
-		nodecommon.NodeSystemTypeLabel: internalv1alpha1.NodeLabelValue(v1.SystemTypeImmutable),
+		// masternodegroup creates the master group DeckhouseEngine from it; the installer sets it on the first master.
+		nodecommon.NodeSystemTypeLabel: internalv1alpha1.NodeLabelValue(v1.SystemTypeDeckhouseEngine),
 		// A Deckhouse Engine node is cgroup v2 by construction, and the cluster learns
 		// that from this label alone (node-manager raises alerts otherwise).
 		// The installer sets it on the first master; the render must keep it.
@@ -379,7 +379,7 @@ func renderContainerRuntime(
 	// Two things have to be true, and the second is about this node rather than about
 	// the cluster. The registry module saying it owns the pull path is an intent, and
 	// on a bashible node the step that acts on it installs the agent in the same pass.
-	// A node config is rendered for Immutable groups only, where there is no such step:
+	// This render is for Deckhouse Engine groups only, where there is no such step:
 	// the agent arrives as a static pod or not at all. Releasing registry.d for an agent
 	// that is not in this node's own spec leaves the node with no registry configuration
 	// and no way to pull the agent that would write one — an end state, not a race, since

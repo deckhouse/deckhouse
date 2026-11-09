@@ -84,7 +84,7 @@ An unconfigured registry is proxied untouched, along with whatever credentials t
 
 #### The in-cluster cache
 
-With [`storage.cache`](configuration.html#parameters-storage-cache) enabled, a registry runs on each control-plane node. It stores blobs (the files an image is made of) in the cache directory: `/var/lib/deckhouse/registry` when the master NodeGroup has `systemType: Immutable`, `/opt/deckhouse/registry` otherwise. One control-plane node holds the lease and fills from the upstream; the others replicate data from the leading replica (the one holding the lease) ahead of time, so losing the leader does not mean filling from scratch. For details on how the leading replica is chosen, see [Leader election](#leader-election).
+With [`storage.cache`](configuration.html#parameters-storage-cache) enabled, a registry runs on each control-plane node. It stores blobs (the files an image is made of) in the cache directory: `/var/lib/deckhouse/registry` when the master NodeGroup has `systemType: DeckhouseEngine`, `/opt/deckhouse/registry` otherwise. One control-plane node holds the lease and fills from the upstream; the others replicate data from the leading replica (the one holding the lease) ahead of time, so losing the leader does not mean filling from scratch. For details on how the leading replica is chosen, see [Leader election](#leader-election).
 
 Agents reach a replica by the node's address, not by the service name `registry.d8-system.svc:5001`.
 `registry.d8-system.svc:5001` is what every image reference in the cluster is built from, and what a request is matched against. But the agent runs in the host's network namespace, where the cluster DNS name does not resolve.
@@ -198,7 +198,7 @@ Installing from a bundle has the following limitations:
   `node.cloudprovider.kubernetes.io/uninitialized` taint, the cache cannot be placed on it. The installer waits for
   that, and if it does not happen, it stops with an error naming the node and keeps the temporary registry, so that
   the node is not left with nothing to pull images from.
-- A master NodeGroup with `systemType: Immutable` does not support installing from a bundle: such a node runs none of
+- A master NodeGroup with `systemType: DeckhouseEngine` does not support installing from a bundle: such a node runs none of
   the steps that set up the temporary registry. The installer refuses this combination before it creates any
   infrastructure. To install such a cluster without internet access, push the bundle with `d8 mirror push` into a
   registry inside your perimeter, and set `mode: Managed` with
@@ -214,7 +214,7 @@ Before enabling the `registry` module to manage the pull paths for container ima
 - The cluster is fully managed by DP. The module does not work in Managed Kubernetes.
 - The in-cluster cache uses disks on the control-plane nodes, in static and cloud clusters alike. In a cloud
   cluster that is the control-plane node's root disk unless another one is mounted at the cache directory
-  (`/var/lib/deckhouse/registry` when the master NodeGroup has `systemType: Immutable`, `/opt/deckhouse/registry`
+  (`/var/lib/deckhouse/registry` when the master NodeGroup has `systemType: DeckhouseEngine`, `/opt/deckhouse/registry`
   otherwise), so size that disk for [`storage.size`](configuration.html#parameters-storage-size) on top of what the node
   itself uses.
 

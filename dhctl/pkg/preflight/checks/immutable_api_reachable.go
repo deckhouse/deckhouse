@@ -73,7 +73,7 @@ func ImmutableAPIReachable(resolve func(context.Context) (*MasterAPIEndpoint, er
 		Timeout: preflight.LongCheckTimeout,
 		Run: func(ctx context.Context) (string, error) {
 			if resolve == nil {
-				return "", preflight.NotApplicable("the master NodeGroup of this cluster does not ask for systemType: Immutable")
+				return "", preflight.NotApplicable("the master NodeGroup of this cluster does not ask for systemType: DeckhouseEngine")
 			}
 			return dialMasterAPI(ctx, resolve)
 		},

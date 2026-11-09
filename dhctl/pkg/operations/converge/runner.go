@@ -268,7 +268,7 @@ func (r *runner) convergeTerraNodes(ctx *convergecontext.Context, metaConfig *co
 		r.switcher.GetGlobalOptions(),
 		// A group added after bootstrap has no state and is created here, while the same
 		// group with state goes through the controller and gets this very builder. It
-		// reaches only the groups whose systemType is Immutable.
+		// reaches only the groups whose systemType is DeckhouseEngine.
 		controller.NewImmutablePayloadBuilder(ctx),
 	); err != nil {
 		return err

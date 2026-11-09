@@ -40,7 +40,7 @@ func TestTheApplyKeepsTheMachineFieldsAndDropsWhatTheRenderLeftOut(t *testing.T)
 	registered := &internalv1alpha1.NodeConfig{
 		ObjectMeta: metav1.ObjectMeta{Name: "owned-0"},
 		Spec: internalv1alpha1.NodeSpec{
-			SystemType:  internalv1alpha1.SystemTypeImmutable,
+			SystemType:  internalv1alpha1.SystemTypeLegacyImmutable,
 			NodeName:    "owned-0",
 			OSImage:     internalv1alpha1.OSImage{Digest: "sha256:" + strings.Repeat("a", 64)},
 			StatusToken: "status-token",

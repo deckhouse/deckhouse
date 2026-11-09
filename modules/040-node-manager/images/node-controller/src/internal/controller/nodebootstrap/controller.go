@@ -173,10 +173,10 @@ func (r *Reconciler) renderFor(ctx context.Context, config *bootstrapv1alpha1.No
 	}
 	// Defensive: bashible groups never reference this template, so a
 	// non-immutable group here means a misconfiguration, not work to do.
-	if ng.Spec.SystemType != v1.SystemTypeImmutable {
-		logger.Info("node-group is not immutable, skipping", "nodeGroup", ngName)
+	if !v1.IsDeckhouseEngine(ng.Spec.SystemType) {
+		logger.Info("node-group is not DeckhouseEngine, skipping", "nodeGroup", ngName)
 		return ctrl.Result{RequeueAfter: ownerWaitInterval}, r.notReady(ctx, config, reasonNodeGroupUnusable,
-			fmt.Sprintf("NodeGroup %s is not immutable, so there is no bootstrap data to render yet", ngName))
+			fmt.Sprintf("NodeGroup %s is not DeckhouseEngine, so there is no bootstrap data to render yet", ngName))
 	}
 
 	return r.ensureBootstrapData(ctx, config, ng, machine, logger)

@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 
@@ -45,6 +46,11 @@ func TestIsImmutableMaster(t *testing.T) {
 	}{
 		{name: "no resources at all"},
 		{
+			name:       "DeckhouseEngine master among other groups",
+			nodeGroups: map[string]map[string]any{"master": nodeGroup("DeckhouseEngine"), "worker": nodeGroup("")},
+			want:       true,
+		},
+		{
 			name:       "immutable master among other groups",
 			nodeGroups: map[string]map[string]any{"master": nodeGroup("Immutable"), "worker": nodeGroup("")},
 			want:       true,
@@ -52,6 +58,10 @@ func TestIsImmutableMaster(t *testing.T) {
 		{
 			name:       "master without systemType",
 			nodeGroups: map[string]map[string]any{"master": nodeGroup("")},
+		},
+		{
+			name:       "master asking for a GenericOS system",
+			nodeGroups: map[string]map[string]any{"master": nodeGroup("GenericOS")},
 		},
 		{
 			name:       "master asking for a mutable system",
@@ -85,22 +95,106 @@ func TestIsImmutableMaster(t *testing.T) {
 }
 
 func TestIsImmutableMasterReadsResourcesOfAStaticCluster(t *testing.T) {
-	metaConfig := &config.MetaConfig{
-		ClusterType: config.StaticClusterType,
-		ResourcesYAML: `
+	for _, systemType := range []string{"DeckhouseEngine", "Immutable"} {
+		t.Run(systemType, func(t *testing.T) {
+			metaConfig := &config.MetaConfig{
+				ClusterType: config.StaticClusterType,
+				ResourcesYAML: `
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: master
 spec:
   nodeType: Static
-  systemType: Immutable
+  systemType: ` + systemType + `
 `,
+			}
+
+			isImmutable, err := IsImmutableMaster(t.Context(), metaConfig)
+			require.NoError(t, err)
+			require.True(t, isImmutable)
+		})
+	}
+}
+
+func TestNodeGroupIsImmutableAcceptsBothSpellings(t *testing.T) {
+	tests := []struct {
+		systemType string
+		want       bool
+	}{
+		{systemType: "DeckhouseEngine", want: true},
+		{systemType: "Immutable", want: true},
+		{systemType: "GenericOS"},
+		{systemType: "Mutable"},
+		{systemType: ""},
 	}
 
-	isImmutable, err := IsImmutableMaster(t.Context(), metaConfig)
-	require.NoError(t, err)
-	require.True(t, isImmutable)
+	for _, tt := range tests {
+		t.Run("systemType "+tt.systemType, func(t *testing.T) {
+			spec := map[string]any{"nodeType": "CloudPermanent"}
+			if tt.systemType != "" {
+				spec["systemType"] = tt.systemType
+			}
+			ng := &unstructured.Unstructured{Object: map[string]any{"spec": spec}}
+
+			require.Equal(t, tt.want, NodeGroupIsImmutable(ng))
+			require.Equal(t, tt.want, SystemTypeIsImmutable(tt.systemType))
+		})
+	}
+
+	require.False(t, NodeGroupIsImmutable(nil))
+}
+
+func TestRefuseLegacySystemType(t *testing.T) {
+	nodeGroupDocument := func(name, systemType string) string {
+		return "apiVersion: deckhouse.io/v1\nkind: NodeGroup\nmetadata:\n  name: " + name +
+			"\nspec:\n  nodeType: Static\n  systemType: " + systemType + "\n"
+	}
+	tests := []struct {
+		name       string
+		metaConfig *config.MetaConfig
+		wantErr    string
+	}{
+		{
+			name:       "a worker in the resources names Mutable",
+			metaConfig: &config.MetaConfig{ResourcesYAML: nodeGroupDocument("worker", "Mutable")},
+			wantErr:    `NodeGroup worker: systemType "Mutable" is no longer accepted, set "GenericOS" instead`,
+		},
+		{
+			name:       "the master in the resources names Immutable",
+			metaConfig: &config.MetaConfig{ResourcesYAML: nodeGroupDocument("master", "Immutable")},
+			wantErr:    `NodeGroup master: systemType "Immutable" is no longer accepted, set "DeckhouseEngine" instead`,
+		},
+		{
+			name: "the master parsed into CloudProviderVars names Immutable",
+			metaConfig: &config.MetaConfig{CloudProviderVars: &config.CloudProviderVars{NodeGroups: map[string]map[string]any{
+				"master": {"spec": map[string]any{"systemType": "Immutable"}},
+			}}},
+			wantErr: `NodeGroup master: systemType "Immutable" is no longer accepted, set "DeckhouseEngine" instead`,
+		},
+		{
+			name: "the new spellings",
+			metaConfig: &config.MetaConfig{
+				ResourcesYAML: nodeGroupDocument("master", "DeckhouseEngine") + "---\n" + nodeGroupDocument("worker", "GenericOS"),
+			},
+		},
+		{
+			name:       "a NodeGroup of another API group",
+			metaConfig: &config.MetaConfig{ResourcesYAML: "apiVersion: example.com/v1\nkind: NodeGroup\nmetadata:\n  name: worker\nspec:\n  systemType: Immutable\n"},
+		},
+		{name: "no configuration"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := RefuseLegacySystemType(tt.metaConfig)
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.EqualError(t, err, tt.wantErr)
+		})
+	}
 }
 
 func TestIsImmutableMasterIgnoresOtherGroups(t *testing.T) {
@@ -252,6 +346,7 @@ func TestValidateInputsRefusesAStaticClusterWithoutHosts(t *testing.T) {
 	err := ValidateInputs(t.Context(), metaConfig, nil)
 
 	require.ErrorContains(t, err, "--master-host")
+	require.ErrorContains(t, err, `systemType "DeckhouseEngine"`)
 }
 
 func TestValidateInputsAcceptsAStaticClusterWithHosts(t *testing.T) {
@@ -310,6 +405,7 @@ func TestValidateInputsRefusesAnInstallationFromABundle(t *testing.T) {
 			err := ValidateInputs(t.Context(), metaConfig, tc.hosts)
 
 			require.ErrorContains(t, err, "installation from a bundle is not supported")
+			require.ErrorContains(t, err, `systemType "DeckhouseEngine"`)
 			require.ErrorContains(t, err, "mode: Managed with primary.upstream",
 				"the refusal has to name the supported way to install an air-gapped immutable cluster")
 		})

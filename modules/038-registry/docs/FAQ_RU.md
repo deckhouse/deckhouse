@@ -396,12 +396,12 @@ NODE:.metadata.name,STALE:.status.staleStorageDataBytes
 ```
 
 Если включать кеш обратно вы не собираетесь, удалите на узле содержимое директории кеша:
-`/var/lib/deckhouse/registry` на узле NodeGroup с `systemType: Immutable`,
+`/var/lib/deckhouse/registry` на узле NodeGroup с `systemType: DeckhouseEngine`,
 `/opt/deckhouse/registry` на остальных узлах. Саму директорию оставьте: она смонтирована в агент,
 и после её удаления агент перестаёт видеть директорию узла. Данные, которые кеш оставит там позже,
 тогда не будут учтены до перезапуска агента. Для этого выполните следующие действия:
 
-1. Откройте на узле shell от имени root по SSH. На узле NodeGroup с `systemType: Immutable` SSH нет:
+1. Откройте на узле shell от имени root по SSH. На узле NodeGroup с `systemType: DeckhouseEngine` SSH нет:
    запустите на нём отладочный под и переключитесь в корневую файловую систему узла:
 
    ```bash

@@ -263,7 +263,7 @@ func statusToken() (string, error) {
 // configuration. A static immutable node is provisioned by hand — the operator
 // writes its network and disks on the machine — and the cluster knows neither.
 func machineOwnedConfig(ng *v1.NodeGroup) bool {
-	return ng.Spec.NodeType == v1.NodeTypeStatic && ng.Spec.SystemType == v1.SystemTypeImmutable
+	return ng.Spec.NodeType == v1.NodeTypeStatic && v1.IsDeckhouseEngine(ng.Spec.SystemType)
 }
 
 func templateGroupResource() schema.GroupResource {
