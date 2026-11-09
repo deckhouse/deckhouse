@@ -582,6 +582,7 @@ var _ = Describe("Module :: registry :: helm template :: v2 storage", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			Expect(f.KubernetesResource("StatefulSet", "d8-system", "registry-storage").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("DaemonSet", "d8-system", "registry-storage-image-holder").Exists()).To(BeFalse())
 			// The endpoint every image reference in the cluster is built from must not
 			// appear while the legacy implementation still owns it.
 			Expect(f.KubernetesResource("Service", "d8-system", "registry").Exists()).To(BeFalse())
@@ -670,20 +671,88 @@ var _ = Describe("Module :: registry :: helm template :: v2 storage", func() {
 		// Its RollingUpdate goes by ordinal and the fill lease has nothing to do with the ordinal,
 		// so the built-in order takes the leader down first about as often as not. What replaces
 		// the replicas instead is the registry-storage-update controller, which knows which one
-		// leads, keeps it for last, and refuses to touch the only replica of an air-gapped cache
-		// at all — nothing there could serve its new image.
+		// leads, keeps it for last, and replaces the only replica of an air-gapped cache only once
+		// its node holds the new images — nothing else there could serve them.
 		It("leaves the replacing of its replicas to the controller", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			set := f.KubernetesResource("StatefulSet", "d8-system", "registry-storage")
 			Expect(set.Field("spec.updateStrategy.type").String()).To(Equal("OnDelete"))
+		})
 
-			// And no image holder: `/pause` exists in the images Deckhouse packages around
-			// third-party binaries and not in the distroless ones its own components are built
-			// on, so half of a holder's containers could never start — and a gate waiting for
-			// them would have stopped the cache from ever being updated.
-			Expect(f.KubernetesResource("DaemonSet", "d8-system", "registry-storage-image-holder").Exists()).
-				To(BeFalse())
+		// The holder is what lets the only replica of an air-gapped cache be replaced at all: the
+		// controller waits until the holder on the replica's node runs every image of the pod
+		// template, and compares the references one for one. A container added to the storage
+		// without its image here would leave that wait unending; an image named differently here
+		// would hold something the replica never pulls. Hence the comparison of the whole sets.
+		It("keeps every image of the storage pod pulled on the masters", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			set := f.KubernetesResource("StatefulSet", "d8-system", "registry-storage")
+			holder := f.KubernetesResource("DaemonSet", "d8-system", "registry-storage-image-holder")
+			Expect(set.Exists()).To(BeTrue())
+			Expect(holder.Exists()).To(BeTrue())
+
+			var storageImages []string
+			for _, path := range []string{"spec.template.spec.initContainers", "spec.template.spec.containers"} {
+				for _, c := range set.Field(path).Array() {
+					storageImages = append(storageImages, c.Get("image").String())
+				}
+			}
+			Expect(storageImages).To(HaveLen(4))
+
+			var heldImages []string
+			for _, c := range holder.Field("spec.template.spec.containers").Array() {
+				heldImages = append(heldImages, c.Get("image").String())
+
+				// `/pause` and nothing else: it is in every one of these images, and it does
+				// nothing that could fail or need configuring.
+				Expect(c.Get("command").String()).To(MatchJSON(`["/pause"]`), c.Get("name").String())
+				Expect(c.Get("imagePullPolicy").String()).To(Equal("IfNotPresent"))
+				Expect(c.Get("resources.requests.cpu").String()).To(Equal("10m"))
+				Expect(c.Get("resources.requests.memory").String()).To(Equal("10Mi"))
+				Expect(c.Get("securityContext.runAsNonRoot").Bool()).To(BeTrue())
+				Expect(c.Get("securityContext.allowPrivilegeEscalation").Bool()).To(BeFalse())
+			}
+			Expect(heldImages).To(ConsistOf(storageImages),
+				"the holder must run exactly the images of the storage pod, or the controller waits on it forever")
+
+			// On every node the storage can run on, and a node it cannot reach is no use.
+			Expect(holder.Field("spec.template.spec.nodeSelector").String()).
+				To(MatchJSON(set.Field("spec.template.spec.nodeSelector").String()))
+			Expect(holder.Field("spec.template.spec.tolerations").String()).
+				To(MatchJSON(set.Field("spec.template.spec.tolerations").String()))
+			Expect(holder.Field("spec.template.spec.priorityClassName").String()).To(Equal("system-cluster-critical"))
+
+			// Pulled the way the storage pulls, with the node's credentials, so that a holder that
+			// started proves the replica can.
+			Expect(holder.Field("spec.template.spec.imagePullSecrets").Exists()).To(BeFalse())
+			Expect(holder.Field("spec.template.spec.automountServiceAccountToken").Bool()).To(BeFalse())
+
+			// And under the label the controller looks for, which must not be the storage's own:
+			// a holder counted as a replica would stop every update at "a replica is missing".
+			Expect(holder.Field("spec.template.metadata.labels.app").String()).To(Equal("registry-storage-image-holder"))
+			Expect(holder.Field("spec.updateStrategy.type").String()).To(Equal("RollingUpdate"))
+
+			// An autoscaler like every controller of the platform, and one that can never move the
+			// requests: Off, and every bound equal to them.
+			vpa := f.KubernetesResource("VerticalPodAutoscaler", "d8-system", "registry-storage-image-holder")
+			Expect(vpa.Exists()).To(BeTrue())
+			Expect(vpa.Field("spec.updatePolicy.updateMode").String()).To(Equal("Off"))
+			Expect(vpa.Field("spec.targetRef.kind").String()).To(Equal("DaemonSet"))
+			var policies []string
+			for _, policy := range vpa.Field("spec.resourcePolicy.containerPolicies").Array() {
+				policies = append(policies, policy.Get("containerName").String())
+				for _, bound := range []string{"minAllowed", "maxAllowed"} {
+					Expect(policy.Get(bound + ".cpu").String()).To(Equal("10m"))
+					Expect(policy.Get(bound + ".memory").String()).To(Equal("10Mi"))
+				}
+			}
+			var containers []string
+			for _, c := range holder.Field("spec.template.spec.containers").Array() {
+				containers = append(containers, c.Get("name").String())
+			}
+			Expect(policies).To(ConsistOf(containers))
 		})
 
 		It("keeps the blobs on the host at the fixed path", func() {
@@ -1354,6 +1423,7 @@ var _ = Describe("Module :: registry :: helm template :: v2 what gets deployed",
 		It("deploys no components at all", func() {
 			Expect(f.KubernetesResource("Deployment", "d8-system", "registry-controller").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("StatefulSet", "d8-system", "registry-storage").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("DaemonSet", "d8-system", "registry-storage-image-holder").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Service", "d8-system", "registry").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Service", "d8-system", "registry-push").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Ingress", "d8-system", "registry-push").Exists()).To(BeFalse())
@@ -1380,6 +1450,7 @@ var _ = Describe("Module :: registry :: helm template :: v2 what gets deployed",
 			Expect(f.KubernetesGlobalResource("RegistryConfig", "registry").Exists()).To(BeTrue())
 
 			Expect(f.KubernetesResource("StatefulSet", "d8-system", "registry-storage").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("DaemonSet", "d8-system", "registry-storage-image-holder").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Service", "d8-system", "registry").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Secret", "d8-system", "registry-storage-pki").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "registry-storage").Exists()).To(BeFalse())

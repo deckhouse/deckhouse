@@ -60,6 +60,33 @@ var (
 		Name: "d8_registry_upstreams_rejected",
 		Help: "Additional registries refused by arbitration, by reason.",
 	}, []string{"reason"})
+
+	// StorageUpdateBlocked is 1, under its reason, while the storage update refuses to replace
+	// the next replica of the cache; every other reason reads 0.
+	//
+	// The refusal is the safe outcome and leaves nothing behind but an event: the StatefulSet
+	// keeps its new revision ready and waits, which under OnDelete looks the same whether the
+	// update is a moment from its next step or will never take it. Some of these resolve on
+	// their own — a follower finishing its copy, a holder finishing its pull — and some wait for
+	// an operator, which is why the reason is a label: the alert has to say which.
+	//
+	// Published by the elected controller replica only, the one that decides; the others never
+	// set it, so it is read as a max across replicas.
+	StorageUpdateBlocked = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "d8_registry_storage_update_blocked",
+		Help: "1, by reason, while the storage update refuses to replace a replica of the cache.",
+	}, []string{"reason"})
+
+	// StorageReplicasOutdated is how many replicas of the cache are not yet on the StatefulSet's
+	// update revision, counting a replica deleted for replacement and not yet back.
+	//
+	// Beside the refusal rather than instead of it: the StatefulSet's own status cannot say this
+	// under OnDelete — its current revision does not move until every pod is replaced — so this is
+	// the one place that tells an update in progress from one that has finished.
+	StorageReplicasOutdated = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "d8_registry_storage_replicas_outdated",
+		Help: "Replicas of the cache not yet on the StatefulSet's update revision.",
+	})
 )
 
 // The state of the resources, exported by the observe reconciler.
@@ -201,7 +228,7 @@ func init() {
 	// manager's own endpoint alongside the reconcile counters rather than from a second
 	// listener.
 	metrics.Registry.MustRegister(
-		UpstreamProbes, AirGapHeld, UpstreamsRejected,
+		UpstreamProbes, AirGapHeld, UpstreamsRejected, StorageUpdateBlocked, StorageReplicasOutdated,
 		Managed, ConfigValid, EffectiveUpstream, Nodes, NodeReconciled, NodeFromCache,
 		StorageReplicas, StorageReplicaFull, StorageAllReplicasFull,
 		StorageSafeToDropUpstream, StorageStaleData,

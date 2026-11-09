@@ -392,6 +392,11 @@ but not the way the configuration asks — a state that is easy to miss otherwis
   `KubernetesStatefulSetReplicasUnavailable` of the `extended-monitoring` module, if it is
   enabled.
 
+`D8RegistryStorageUpdateBlocked`
+: The cache has a new revision, but for an hour the controller has been unable to replace the next
+  replica. Existing replicas remain running, but the cache update cannot proceed. The `reason` label
+  says what the controller is waiting for and whether anything needs doing. See [how the cache is updated](#how-is-the-cache-updated).
+
 ## How do I remove leftover cache data from a node?
 
 When the cache is turned off, the data in the cache directory is intentionally kept:
@@ -811,6 +816,99 @@ Description of the response fields:
   store refuses writes. This is what keeps an air-gapped cluster from deadlocking with an empty leader
   and a full follower. A leader that is still completing the set from the upstream keeps leading:
   a follower copies from it and may finish first, and moving the lease then would gain nothing.
+
+## How is the cache updated?
+
+A new Deckhouse Platform release can change the images of the cache itself, the `registry-storage`
+StatefulSet in `d8-system`. The StatefulSet uses the `OnDelete` update strategy, and its replicas are
+replaced by `registry-controller`: one at a time, followers first and the leader last, and only while
+every other replica is ready. A replica on the old revision that has never started or is in
+`CrashLoopBackOff` is replaced at once.
+
+A replaced replica pulls its new images after it is deleted, from the cache it was part of. So
+the controller replaces a replica only while something else can serve them:
+
+- a follower: the leader keeps serving;
+- the leader: once a follower holds the whole image set. The lease then goes to whichever replica
+  holding the whole set takes it first: a follower holding it or the leader's own replacement, which
+  comes back on the same node over the same store;
+- any replica: the upstream registry, if the cluster has one.
+
+### One master node in an air-gapped cluster
+
+With a single replica and no upstream, nothing else can serve the images. The new images
+therefore have to be on the master before the replica is replaced. The module keeps them there
+with the `registry-storage-image-holder` DaemonSet: on every master it runs each image of the
+cache's pod as `/pause`. When the images change, the holder pulls the new ones from the running
+cache, and as long as it runs them the kubelet does not delete them from the node. Once the
+holder on the master runs every new image, the controller replaces the replica, and the new pod
+starts from the images already on the node.
+
+While the only replica of the cache restarts, the nodes cannot pull images from it. How long this
+takes depends on stopping the old replica and starting the new one. The kubelet retries failed pulls
+with a back-off of up to 5 minutes, so some pods may start with an extra delay after the cache is
+back.
+
+The holder requests 10m CPU and 10Mi of memory per image on each master, 40m and 40Mi in total. It
+holds the images on every master, but the controller only uses it when the cache has one replica
+and no upstream.
+
+### Several master nodes in an air-gapped cluster
+
+The leader is replaced last, and only once a follower holds the whole image set. Otherwise the
+lease would move to a follower with images missing, and the images only the old leader had would
+be gone from the cluster. The image holder does not replace that check. A follower counts only if
+it was found full against the same set as the leader: after an update that changes the Deckhouse Platform
+release or the modules, a replaced follower still reports the set it held before until it has
+copied the new one. Normally this means waiting while a follower copies the set from the leader.
+If the leader itself does not hold the whole set, the followers cannot complete it either: they
+copy from the leader. Then the update continues only once the Deckhouse Platform release and the
+modules the cluster uses are pushed into the cache.
+
+### What the UpdateBlocked event means
+
+While the controller waits, it writes an `UpdateBlocked` event to the StatefulSet with the replica,
+the reason and what ends the wait. It writes the event again when what the wait depends on changes,
+and otherwise every five minutes while the wait lasts:
+
+```bash
+d8 k -n d8-system get events --field-selector involvedObject.name=registry-storage,reason=UpdateBlocked
+```
+
+The same reason is the `reason` label of the `d8_registry_storage_update_blocked` metric, and the
+`D8RegistryStorageUpdateBlocked` alert fires if the wait lasts longer than an hour:
+
+- `HolderNotReady` — one replica, and the holder on its master does not run every new image yet.
+  If its pod is in `ImagePullBackOff`, the cache does not hold an image: push the Deckhouse Platform
+  release the cluster is updating to with `d8 mirror push`, and the holder pulls it on its next
+  retry. If its pod is in `CrashLoopBackOff` or `CreateContainerError`, the holder has the image
+  but cannot run it, and a push does not help: the cause is in the events of the pod. Otherwise the
+  holder is still rolling or pulling, and nothing needs to be done.
+- `SingleReplicaWithoutHolder` — one replica, and the holder DaemonSet has no pod on its master.
+  For a moment this is normal while the DaemonSet creates its pod on the node. If it lasts, find out why the
+  DaemonSet does not schedule a pod there:
+  `d8 k -n d8-system describe daemonset registry-storage-image-holder`.
+- `LeaderWithoutFullFollower` — only the leader remains to be replaced, but no follower holds the whole set. If
+  the leader holds it, wait for a follower to finish copying. If the leader reports that it does
+  not hold it, pull the Deckhouse Platform release and the modules the cluster uses with
+  `d8 mirror pull`, as described in the
+  [air-gapped update guide](/products/kubernetes-platform/documentation/v1/guides/airgapped-update.html),
+  and push them into the cache with `d8 mirror push`, as in step 2 of
+  [Going air-gapped](examples.html#going-air-gapped). If the leader has not reported yet,
+  reports an error or cannot tell which set the cluster needs, a push does not help, and the update
+  continues only after a pass of the leader succeeds: look at the log of the `syncer` container of
+  the leader's pod.
+- `LeaderNotServing` — the storage lease names a master without a serving replica. It moves on its
+  own once the lease expires.
+- `StorageUnknown` — the `RegistryStorage` resource does not exist yet. The controller creates it.
+  If it does not appear, check the log of `registry-controller`.
+
+To see what the holders and the replicas are doing:
+
+```bash
+d8 k -n d8-system get pods -l app=registry-storage-image-holder -o wide
+d8 k get registrystorage registry -o jsonpath='{.status.replicas}' | jq
+```
 
 ## The previous implementation
 

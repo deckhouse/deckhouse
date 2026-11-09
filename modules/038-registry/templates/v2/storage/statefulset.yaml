@@ -37,6 +37,7 @@ Deckhouse operator is down.
   /opt. The default is only for a values tree written before that hook ran.
 */ -}}
 {{- $storePath := ((.Values.registry.internal).v2).storePath | default "/opt/deckhouse/registry" }}
+{{- $images := include "registry_storage_images" $ | fromYaml }}
 ---
 apiVersion: v1
 kind: Service
@@ -100,7 +101,10 @@ spec:
   #
   # OnDelete makes the StatefulSet stop replacing pods on its own: it keeps the new revision ready
   # and waits. The registry-storage-update controller then deletes one pod at a time, checking that
-  # the node already holds the new images and that every other replica is serving before it does.
+  # every other replica is serving and that something can serve the replaced pod's new images while
+  # it is away: the leader, a follower holding the whole set, the upstream — or, for the only
+  # replica of an air-gapped cache, the node itself, once the image holder in image-holder.yaml
+  # runs every image of this template there.
   updateStrategy:
     type: OnDelete
   selector:
@@ -183,7 +187,7 @@ spec:
       # disabled: then nothing configures the node, and pods do need their own credentials.
       containers:
       - name: distribution
-        image: {{ include "helm_lib_module_image" (list $ "dockerDistribution") }}
+        image: {{ index $images "distribution" }}
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -268,7 +272,7 @@ spec:
       # Without it the registry would advertise a token endpoint that answers nowhere,
       # and every authenticated pull from the cache would fail at the exchange.
       - name: auth
-        image: {{ include "helm_lib_module_image" (list $ "dockerAuth") }}
+        image: {{ index $images "auth" }}
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -318,7 +322,7 @@ spec:
       # The registry's own metrics endpoint is part of its debug listener, which also
       # serves pprof — so it binds loopback and nothing but this reaches it.
       - name: kube-rbac-proxy
-        image: {{ include "helm_lib_module_common_image" (list $ "kubeRbacProxy") }}
+        image: {{ index $images "kube-rbac-proxy" }}
         imagePullPolicy: IfNotPresent
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" $ | nindent 8 }}
         args:
@@ -366,7 +370,7 @@ spec:
       # No preStop, unlike the registry and the token service: the syncer releases the fill lease on
       # SIGTERM, and a wait here would only hold the handover back by as long as theirs cover it.
       - name: syncer
-        image: {{ include "helm_lib_module_image" (list $ "registrySyncer") }}
+        image: {{ index $images "syncer" }}
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false

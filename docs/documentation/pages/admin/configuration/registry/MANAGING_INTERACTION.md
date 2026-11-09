@@ -223,8 +223,8 @@ To move the cluster to air-gapped, follow these steps:
    ```bash
    PUSH_SECRET=$(d8 k -n d8-system get secret registry-storage-push -o json)
    d8 mirror push ./d8-bundle registry.example.com/system/deckhouse \
-     --username "$(echo "$PUSH_SECRET" | jq -r .data.username | base64 -d)" \
-     --password "$(echo "$PUSH_SECRET" | jq -r .data.password | base64 -d)"
+     --registry-login "$(echo "$PUSH_SECRET" | jq -r .data.username | base64 -d)" \
+     --registry-password "$(echo "$PUSH_SECRET" | jq -r .data.password | base64 -d)"
    ```
 
 1. Describe the expected image set in the cache and remove the `upstream` from the `registry` ModuleConfig:

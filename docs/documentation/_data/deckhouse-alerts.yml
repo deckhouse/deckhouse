@@ -5389,6 +5389,62 @@ alerts:
         The registry cache has not reclaimed its disk for a week.
       severity: "6"
       markupFormat: markdown
+    - name: D8RegistryStorageUpdateBlocked
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/storage-update.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        The `registry-storage` StatefulSet has a new revision, and the controller that replaces its
+        replicas has refused to replace the next one for an hour. Existing replicas remain running,
+        but the cache update cannot proceed. The `reason` label identifies what is blocking it.
+
+        Reason: `{{ $labels.reason }}`
+
+        - `HolderNotReady` — the cache has one replica and no upstream, so its new images must be on
+          its master before it is replaced. The `registry-storage-image-holder` DaemonSet keeps them
+          there and has not got all of them yet. If its pod on the master is in `ImagePullBackOff`,
+          the cache does not hold an image: push the Deckhouse Platform release the cluster is updating to with
+          `d8 mirror push`, and the holder pulls it on its next retry. If the pod is in
+          `CrashLoopBackOff` or `CreateContainerError`, the holder has the image but cannot run it,
+          and a push does not help: the cause is in the events of the pod. Otherwise it is still
+          rolling or pulling, and there is nothing to do.
+        - `SingleReplicaWithoutHolder` — the same, and the DaemonSet has no pod on that master at all.
+          For a moment this is normal while the DaemonSet creates its pod there; lasting an hour, it means
+          the DaemonSet does not schedule a pod there. Find out why with
+          `d8 k -n d8-system describe daemonset registry-storage-image-holder`.
+        - `LeaderWithoutFullFollower` — only the leader is left to replace, and no follower holds the
+          whole image set to take over from it. If the leader holds the set, the followers are copying
+          it and the update continues once one of them finishes. If the leader reports that it does not
+          hold it, the followers cannot complete the set either, since they copy it from the leader:
+          pull the Deckhouse Platform release and the modules the cluster uses with `d8 mirror pull`,
+          as described in the [air-gapped update guide](https://deckhouse.io/products/kubernetes-platform/documentation/v1/guides/airgapped-update.html),
+          and push them into the cache with `d8 mirror push`, as in step 2 of
+          [Going air-gapped](https://deckhouse.io/modules/registry/examples.html#going-air-gapped).
+          If the leader has not reported yet, reports an error or cannot tell which set the cluster
+          needs, pushing does not help: the cause is in the log of the `syncer` container of the
+          leader's pod.
+        - `LeaderNotServing` — the storage lease names a master where no serving replica runs. The
+          replicas move the lease on their own once it expires.
+        - `StorageUnknown` — the `RegistryStorage` resource does not exist. The controller creates it;
+          check the log of `registry-controller`.
+
+        The event on the StatefulSet says which replica and what it is waiting for:
+
+        ```
+        d8 k -n d8-system get events --field-selector involvedObject.name=registry-storage,reason=UpdateBlocked
+        ```
+
+        And the two things it is waiting on:
+
+        ```
+        d8 k -n d8-system get pods -l app=registry-storage-image-holder -o wide
+        d8 k get registrystorage registry -o jsonpath='{.status.replicas}' | jq
+        ```
+      summary: |
+        The in-cluster registry cache cannot be updated to its new revision.
+      severity: "6"
+      markupFormat: markdown
     - name: D8RegistryStoreNearlyFull
       sourceFile: modules/038-registry/monitoring/prometheus-rules/registry.yaml
       moduleUrl: 038-registry

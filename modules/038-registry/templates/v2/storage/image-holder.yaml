@@ -1,0 +1,110 @@
+{{- /*
+  Keeps the images of the storage pod pulled on every master, so that a replica can be replaced
+  when nothing else could serve its new images.
+
+  A replaced replica pulls its new images AFTER it is deleted, from the registry it was part of.
+  With more than one replica, or with an upstream, something else serves them meanwhile. The only
+  replica of an air-gapped cache has nothing: deleted, it would come back to an empty pull and stay
+  in ImagePullBackOff, and the cluster with it. So the storage update controller refused to replace
+  it, and a single-master air-gapped cluster could never update its cache at all.
+
+  This is what makes that case possible. Every image of the storage pod runs here as `/pause`, so
+  the kubelet pulls the new ones as soon as this DaemonSet rolls — from the old replica, which is
+  still serving — and the image garbage collector leaves them alone, since a running container uses
+  them. A one-off pull would not do: the store sits on the same filesystem as the images by default,
+  and past the kubelet's threshold an image nothing runs can be gone minutes later. The controller
+  then replaces the replica once the holder on its node runs every image of the StatefulSet's
+  template, and the new pod starts from what is already on the node.
+
+  The same pattern as the control-plane-manager's `image-holder-*` containers and the previous
+  implementation of this module, in a DaemonSet of its own because the storage is a StatefulSet and
+  has no per-node pod to put them in.
+
+  Holding the images is all it does, and it never holds back an update that could go ahead without
+  it: with another replica or an upstream the controller does not look at it.
+*/ -}}
+{{- if eq (include "registry_v2_caches" .) "true" }}
+{{- $images := include "registry_storage_images" $ | fromYaml }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+# Off, with every bound pinned to the requests below: there is nothing for it to size. `/pause` uses
+# next to nothing and always the same, and the requests stay in the pod spec whether or not this
+# exists. It is here because every controller of the platform has one, which is also how its
+# absence is checked, and with the bounds equal to the requests it can never change anything — the
+# same as the holders of the control-plane-manager and of the previous implementation.
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: registry-storage-image-holder
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "registry-storage-image-holder" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: registry-storage-image-holder
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+    {{- range $name, $_ := $images }}
+    - containerName: image-holder-{{ $name }}
+      minAllowed:
+        {{- include "image_holder_resources" $ | nindent 8 }}
+      maxAllowed:
+        {{- include "image_holder_resources" $ | nindent 8 }}
+    {{- end }}
+{{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: registry-storage-image-holder
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "registry-storage-image-holder")) | nindent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: registry-storage-image-holder
+  # All at once: a holder serves nothing, so there is no availability to protect by rolling it
+  # node by node — only the time until the new images are on every master, which the update of
+  # the storage waits for.
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 100%
+  template:
+    metadata:
+      labels:
+        app: registry-storage-image-holder
+    spec:
+      # Wherever the storage can run, with the same selector and tolerations: the images are
+      # needed on the node the replica is on, and on a node it may come to.
+      {{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple $ "master") | nindent 6 }}
+      {{- include "registry_master_tolerations" (dict "context" $ "leaveUnreachableNode" false) | nindent 6 }}
+      # Unlike the storage, nothing here needs root or the host network: `/pause` reads no file
+      # and opens no socket. So the restricted standard holds as it is, and there is no exception
+      # to grant.
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" $ | nindent 6 }}
+      automountServiceAccountToken: false
+      # No imagePullSecrets, for the reason the StatefulSet has none: the node holds the credentials
+      # for the registry the cluster pulls from. And the pull has to be the one the storage would
+      # make — the same references, from the same source, with the same credentials — or holding
+      # an image here would prove nothing about whether the replica can start.
+      containers:
+      {{- range $name, $image := $images }}
+      - name: image-holder-{{ $name }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ $image }}
+        imagePullPolicy: IfNotPresent
+        command:
+        - /pause
+        # Fixed, whether or not the VerticalPodAutoscaler above exists: it is Off and pinned to
+        # these very numbers.
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
+            {{- include "image_holder_resources" $ | nindent 12 }}
+      {{- end }}
+{{- end }}

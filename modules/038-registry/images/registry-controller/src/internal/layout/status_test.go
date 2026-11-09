@@ -751,3 +751,65 @@ func TestStorageEndpointInUse(t *testing.T) {
 		})
 	}
 }
+
+// TestHoldsLeadersSet is the per-replica half of FollowersBehind on its own, as the storage update
+// reads it to decide whether a follower can take the lease over.
+func TestHoldsLeadersSet(t *testing.T) {
+	withSet := func(r registryv1alpha1.StorageReplicaStatus, set string) *registryv1alpha1.StorageReplicaStatus {
+		r.VerifiedSet = set
+		return &r
+	}
+	failed := func(r *registryv1alpha1.StorageReplicaStatus) *registryv1alpha1.StorageReplicaStatus {
+		r.Error = "reading the catalogue: input/output error"
+		return r
+	}
+
+	tests := []struct {
+		name    string
+		replica *registryv1alpha1.StorageReplicaStatus
+		leader  *registryv1alpha1.StorageReplicaStatus
+		want    bool
+		because string
+	}{
+		{
+			name:    "full against the leader's set",
+			replica: withSet(follower("master-1", true, 414, "master-0"), "b"),
+			leader:  withSet(leader("master-0", true, 430), "b"),
+			want:    true,
+		},
+		{
+			name:    "full against the set before the update",
+			replica: withSet(follower("master-1", true, 414, "master-0"), "a"),
+			leader:  withSet(leader("master-0", true, 430), "b"),
+			because: "a replaced follower reads its old Full back from the status before it replicates the new set",
+		},
+		{
+			name:    "not full",
+			replica: withSet(follower("master-1", false, 120, "master-0"), ""),
+			leader:  withSet(leader("master-0", true, 430), "b"),
+		},
+		{
+			name:    "its last pass failed",
+			replica: failed(withSet(follower("master-1", true, 430, "master-0"), "b")),
+			leader:  withSet(leader("master-0", true, 430), "b"),
+		},
+		{
+			name:    "the leader names no set",
+			replica: withSet(follower("master-1", true, 430, "master-0"), "b"),
+			leader:  withSet(leader("master-0", false, 200), ""),
+			because: "with nothing to compare with, no follower can be shown to be current",
+		},
+		{
+			name:    "neither names a set",
+			replica: withSet(follower("master-1", true, 430, "master-0"), ""),
+			leader:  withSet(leader("master-0", true, 430), ""),
+			because: "two empty fingerprints are not a match",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, HoldsLeadersSet(tt.replica, tt.leader), tt.because)
+		})
+	}
+}

@@ -224,8 +224,8 @@ d8 k get registrystorage registry -o jsonpath='{.status}' | jq '{phase,fill,lead
    ```bash
    PUSH_SECRET=$(d8 k -n d8-system get secret registry-storage-push -o json)
    d8 mirror push ./d8-bundle registry.example.com/system/deckhouse \
-     --username "$(echo "$PUSH_SECRET" | jq -r .data.username | base64 -d)" \
-     --password "$(echo "$PUSH_SECRET" | jq -r .data.password | base64 -d)"
+     --registry-login "$(echo "$PUSH_SECRET" | jq -r .data.username | base64 -d)" \
+     --registry-password "$(echo "$PUSH_SECRET" | jq -r .data.password | base64 -d)"
    ```
 
 1. Опишите ожидаемый набор образов в кеше и уберите `upstream` из ModuleConfig `registry`:

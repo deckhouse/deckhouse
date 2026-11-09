@@ -80,13 +80,14 @@ var expectedFor = map[string]string{
 	"D8RegistryStoreUnbounded":       "1h",
 	"D8RegistryControllerDown":       "10m",
 	"D8RegistryStorageLeaderAbsent":  "10m",
+	"D8RegistryStorageUpdateBlocked": "1h",
 }
 
 // The files these tests read. Named rather than globbed: the other rule files of this module read
 // metrics the module's hooks export, which are declared as constants rather than as collector options
 // and so are invisible to registeredMetrics. Those are checked by monitoring_tests, which reads the
 // hooks as well.
-var ruleFiles = []string{"registry.yaml", "availability.yaml"}
+var ruleFiles = []string{"registry.yaml", "availability.yaml", "storage-update.yaml"}
 
 func loadRules(t *testing.T) ruleFile {
 	t.Helper()
@@ -94,7 +95,7 @@ func loadRules(t *testing.T) ruleFile {
 	var groups []ruleGroup
 	for _, name := range ruleFiles {
 		raw, err := os.ReadFile(filepath.Join("prometheus-rules", name))
-		require.NoError(t, err, "the module's alerting rules must be readable")
+		require.NoError(t, err, "the module's alerting rules must be readable: %s", name)
 
 		var parsed []ruleGroup
 		require.NoError(t, yaml.Unmarshal(raw, &parsed), "parsing %s", name)
@@ -293,6 +294,35 @@ func TestAStoreThatIsNotWritableIsNotSaidToBeFilling(t *testing.T) {
 		}
 	}
 	t.Fatal("D8RegistryStorageIncomplete was not found")
+}
+
+// TestTheUpdateAlertExplainsEveryReason: the reason is a label, and the description is where an
+// operator learns what each value means and whether to do anything. A reason added to the controller
+// and not here arrives as a word nobody has explained — and the one thing these reasons exist to say
+// is which of them need an operator and which do not.
+func TestTheUpdateAlertExplainsEveryReason(t *testing.T) {
+	rules := loadRules(t)
+
+	raw, err := os.ReadFile(filepath.Join("..", "images", "registry-controller", "src", "internal",
+		"controller", "storageupdate", "refusal.go"))
+	require.NoError(t, err)
+	reasons := regexp.MustCompile(`BlockReason = "([A-Za-z]+)"`).FindAllStringSubmatch(string(raw), -1)
+	require.NotEmpty(t, reasons, "no reasons were found in the controller's code")
+
+	var description string
+	for _, group := range rules.Groups {
+		for _, rule := range group.Rules {
+			if rule.Alert == "D8RegistryStorageUpdateBlocked" {
+				description = rule.Annotations["description"]
+			}
+		}
+	}
+	require.NotEmpty(t, description, "D8RegistryStorageUpdateBlocked was not found at all")
+
+	for _, reason := range reasons {
+		assert.Contains(t, description, "`"+reason[1]+"`",
+			"the controller can report %s, and the alert does not say what it means", reason[1])
+	}
 }
 
 // registeredMetrics reads the metric names out of the controller's registry.

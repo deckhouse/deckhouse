@@ -66,6 +66,13 @@ import:
     add: /registry
     to: /registry
     before: setup
+  # For the image holder on the masters, which keeps every image of the storage pod pulled on the
+  # node by running it as `/pause`. The other three images of that pod carry it already; without it
+  # here the holder of this one could never start, and the storage update would wait on it forever.
+  - from: common/pause
+    add: /pause
+    to: /pause
+    before: setup
 imageSpec:
   config:
     entrypoint: ["/registry-syncer"]

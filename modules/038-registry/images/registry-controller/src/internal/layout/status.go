@@ -228,13 +228,30 @@ func FollowersBehind(
 			continue
 		}
 		replica, reported := reports[node]
-		if !reported || !replica.Full || replica.Error != "" ||
-			leader.VerifiedSet == "" || replica.VerifiedSet != leader.VerifiedSet ||
-			replica.Source != leader.Node {
+		if !reported || !HoldsLeadersSet(replica, leader) || replica.Source != leader.Node {
 			return true
 		}
 	}
 	return false
+}
+
+// HoldsLeadersSet reports whether a replica's own report says it holds the set its leader holds:
+// full, its last pass finished, and found full against the same set as the leader was.
+//
+// Full alone does not say it. A replica keeps the Full it was last found with — a replaced one reads
+// it back from the status when it starts — while the set moves on a Deckhouse update or a module
+// change, so a follower can read full for a release the cluster no longer runs, and replicate the
+// new one only later. The leader's fingerprint is what it is compared with, because the leader is
+// what a follower copies from and what tells the current set: an air-gapped leader counts its store
+// against it on every pass, and one with an upstream fills to it. A leader that names no set — not
+// full, its pass failed, or it could not tell which set the cluster needs — makes this false for
+// every replica, since nothing then shows any of them to be current.
+//
+// Shared by what keeps the followers replicating, FollowersBehind, and by what lets the leader be
+// replaced by one of them, so that "a follower is still catching up" means the same in both.
+func HoldsLeadersSet(replica, leader *registryv1alpha1.StorageReplicaStatus) bool {
+	return replica.Full && replica.Error == "" &&
+		leader.VerifiedSet != "" && replica.VerifiedSet == leader.VerifiedSet
 }
 
 // LeaderAddress is where the leading replica answers, or "" when there is no usable leader.
