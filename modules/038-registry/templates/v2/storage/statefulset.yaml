@@ -1,11 +1,18 @@
+{{- /*
+  Requests only, and no limits on any container — the platform's rule, and here also the only
+  setting that does no harm. A CPU limit throttles the cache in the middle of serving a pull, which
+  is the one moment it is needed. A memory limit on the registry kills it in the middle of a blob a
+  node is reading, and on the syncer it kills the garbage collection, which runs in the syncer's own
+  cgroup, partway through a sweep.
+
+  These are the floor the VerticalPodAutoscaler below starts from, and they are written into the
+  containers unconditionally, unlike the usual `if not VPA`: the storage comes up during bootstrap,
+  well before the autoscaler does, and a pod created then would otherwise run with no requests at
+  all — and under `Initial` it would keep running that way until it is next replaced.
+*/ -}}
 {{- define "registry_storage_distribution_resources" }}
 cpu: 50m
 memory: 150Mi
-{{- end }}
-
-{{- define "registry_storage_kube_rbac_proxy_resources" }}
-cpu: 10m
-memory: 25Mi
 {{- end }}
 
 {{- define "registry_storage_auth_resources" }}
@@ -17,6 +24,27 @@ memory: 30Mi
 cpu: 25m
 memory: 50Mi
 {{- end }}
+
+{{- /*
+  One replica per master node. The cache is part of the control plane: putting it on every node
+  would multiply the disk cost by the size of the cluster.
+
+  Counted from clusterMasterCount, which counts exactly the nodes this StatefulSet is scheduled onto
+  — the ones labelled `node-role.kubernetes.io/control-plane`, the same selector as its
+  nodeSelector. The obvious-looking alternative, `d8SpecificNodeCountByRole.master`, is keyed by
+  `node-role.deckhouse.io/<role>` labels, which master nodes do not carry under that name: the key is
+  absent, the default applies, and a three-master cluster silently runs one replica. It did — with
+  no redundancy and no replication happening at all, while the StatefulSet reported 1/1 ready and
+  every check that compares ready against desired passed.
+
+  A define because two places have to agree on it: the replica count and the disruption budget
+  below. The budget used to follow the cluster's high-availability flag instead, which is a
+  different question — `global.highAvailability: false` on three masters left three replicas behind
+  a budget of zero, and every drain of a master stopped on the cache until it timed out.
+*/ -}}
+{{- define "registry_storage_replicas" -}}
+{{ .Values.global.discovery.clusterMasterCount | default 1 }}
+{{- end -}}
 
 {{- /*
 The storage of the controller-based implementation.
@@ -57,6 +85,67 @@ spec:
     port: 5001
     targetPort: 5001
     protocol: TCP
+{{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+{{- /*
+  `Initial`, and not the in-place or recreating modes the other components use: the autoscaler's
+  updater evicts a pod whenever it decides to, and here that decision belongs to the
+  registry-storage-update controller alone. It replaces the replicas one at a time, followers
+  first and the leader last, after checking that every other replica serves — an eviction knows
+  none of that, and under a budget of one it can take the leader down in the middle of a fill.
+  With `Initial` a recommendation is applied only to a pod being created anyway, which is a pod that
+  controller chose to replace.
+
+  The ceilings are small on purpose, and they are what bounds the risk of this mode: a replica
+  recreated with a recommendation that no longer fits the master stays Pending, and on a single
+  master in an air-gapped cluster a Pending storage is no images at all. Their CPU sum stays near
+  400m, which a four-core master holds beside its control plane. And small against etcd and the
+  API server too, not just small enough to fit: under contention the CPU is shared by request, so
+  the more the cache asks for while it fills, the less is left for them.
+
+  Sized from test clusters on four-core masters filling a store from scratch: the registry, the
+  syncer and the token service averaged at most 0.18, 0.13 and 0.06 of a core over the fill, and
+  none of them went past 100Mi of resident memory on one master or three. The syncer's memory
+  ceiling leaves room for the garbage collection it runs as a child process.
+*/}}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: registry-storage
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "registry-storage" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: StatefulSet
+    name: registry-storage
+  updatePolicy:
+    updateMode: "Initial"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: distribution
+      controlledValues: RequestsOnly
+      minAllowed:
+        {{- include "registry_storage_distribution_resources" $ | nindent 8 }}
+      maxAllowed:
+        cpu: 150m
+        memory: 256Mi
+    - containerName: auth
+      controlledValues: RequestsOnly
+      minAllowed:
+        {{- include "registry_storage_auth_resources" $ | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 64Mi
+    - containerName: syncer
+      controlledValues: RequestsOnly
+      minAllowed:
+        {{- include "registry_storage_syncer_resources" $ | nindent 8 }}
+      maxAllowed:
+        cpu: 150m
+        memory: 256Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" $ | nindent 4 }}
+{{- end }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -65,7 +154,17 @@ metadata:
   namespace: d8-system
   {{- include "helm_lib_module_labels" (list $ (dict "app" "registry-storage")) | nindent 2 }}
 spec:
-  maxUnavailable: {{ if include "registry_single_master" $ }}0{{ else }}1{{ end }}
+  # From the number of replicas: see registry_storage_replicas. Not from the cluster's
+  # high-availability flag, and not from the master count directly as the controller's budget is:
+  # the two agree once the count is known, but before it is the StatefulSet still runs its one
+  # replica, and a budget of one would let it go. One of several may be away at a time; the only one
+  # may not, which is what every other single-replica component on a master asks for too. A drain of
+  # the only master is not held up by it: node-manager does not drain a control-plane group of one
+  # node.
+  #
+  # The budget does not stand in the way of updates either. The update controller deletes the pods
+  # it replaces rather than evicting them, so the order it keeps is its own.
+  maxUnavailable: {{ if gt (include "registry_storage_replicas" $ | int) 1 }}1{{ else }}0{{ end }}
   selector:
     matchLabels:
       app: registry-storage
@@ -78,18 +177,9 @@ metadata:
   {{- include "helm_lib_module_labels" (list $ (dict "app" "registry-storage")) | nindent 2 }}
 spec:
   serviceName: registry
-  # One replica per master node. The cache is part of the control plane: putting it
-  # on every node would multiply the disk cost by the size of the cluster.
-  #
-  # Counted from clusterMasterCount, which counts exactly the nodes this StatefulSet is
-  # scheduled onto — the ones labelled `node-role.kubernetes.io/control-plane`, the same
-  # selector as the nodeSelector below. The obvious-looking alternative,
-  # `d8SpecificNodeCountByRole.master`, is keyed by `node-role.deckhouse.io/<role>` labels,
-  # which master nodes do not carry under that name: the key is absent, the default applies,
-  # and a three-master cluster silently runs one replica. It did — with no redundancy and no
-  # replication happening at all, while the StatefulSet reported 1/1 ready and every check
-  # that compares ready against desired passed.
-  replicas: {{ $.Values.global.discovery.clusterMasterCount | default 1 }}
+  # One replica per master node, counted from clusterMasterCount: see registry_storage_replicas,
+  # which the disruption budget above reads too.
+  replicas: {{ include "registry_storage_replicas" $ }}
   podManagementPolicy: Parallel
   # Replaced by the controller, one replica at a time, and never the leader first.
   #
@@ -213,22 +303,80 @@ spec:
         - name: registry-push
           containerPort: 5003
         # Ready only once the registry has read its configuration and serves. The syncer writes that
-        # configuration into an emptyDir after the pod starts, so a fresh replica's registry exits on
-        # a missing file and restarts until it is there — and with no probe of its own the pod read as
-        # ready between those restarts. The controller replaces the next replica as soon as this one
-        # reads ready: measured on a three-master cluster, the leader was taken down while the replica
-        # just replaced was in a restart back-off, two of three out of service at once.
+        # configuration into an emptyDir after the pod starts, so a fresh replica's registry used to
+        # exit on a missing file and restart until it was there — and with no probe of its own the
+        # pod read as ready between those restarts. The controller replaces the next replica as soon
+        # as this one reads ready: measured on a three-master cluster, the leader was taken down while
+        # the replica just replaced was in a restart back-off, two of three out of service at once. The
+        # registry now waits for the file instead of exiting (awaitConfig in the wrapper), and this
+        # probe is what still keeps the pod unready until the serving port opens.
         #
         # The serving port itself, which the registry opens only from a configuration that loaded. On
         # the node address, the probe's default here: that is where the registry listens, while the
         # loopback :5001 is the node's registry agent and would answer for a registry that is down.
         #
-        # Not the debug listener's /debug/health: upstream starts that listener from its `serve`
-        # command, which the wrapper does not run, so nothing listens on :5002 and a probe there
-        # never passes — every replica stayed unready.
+        # Not the debug listener's /debug/health on :5002. The wrapper does open that listener now —
+        # upstream opens it from its `serve` command, which the wrapper does not run, and while it did
+        # not, every replica probed there stayed unready — but it is the wrong place to ask. It listens
+        # on loopback, 127.0.0.1:5002 as the syncer renders it, which a probe with no host never
+        # reaches: the kubelet's default is the node address. It opens before the serving listener, so
+        # an answer from it would say nothing about whether the serving one is up, and it is allowed to
+        # fail without stopping the registry. And on a node still moving off the previous
+        # implementation, the node's :5002 belongs to that implementation's proxy, which would answer
+        # for a registry that is down.
         readinessProbe:
           tcpSocket:
             port: 5001
+        # Restarted when the serving listener stops answering. Nothing else notices: the controller
+        # builds the agents' addresses from the replicas' reports and the fill lease, not from pod
+        # readiness, so a registry that hangs with its port open keeps being sent the cluster's pulls,
+        # and each of them waits out the agent's response timeout of a minute.
+        #
+        # `/` on the serving port, by name. Upstream answers that path itself, ahead of the registry's
+        # own handlers: 200, with no authentication and no access to the store. In front of it are
+        # upstream's tracing wrapper, the module's middlewares (the client address, the token proxy,
+        # settle), upstream's access log, its panic recovery and its health gate, which has no checks
+        # configured here; none of them waits on the store or the upstream. HTTPS without a client
+        # certificate, which the serving listener does not ask for. No host, for the same reason as
+        # the readiness probe: the default is the node address, where the registry listens.
+        #
+        # So it catches a listener that has stopped answering, and nothing past it: a process that can
+        # no longer accept a connection, finish a handshake or start a request — out of file
+        # descriptors, say, or stalled as a whole. A hung handler it does not catch. Every request runs
+        # on its own goroutine, so a deadlock in the registry's request path, a blob read stuck on the
+        # disk or a miss stuck on the upstream leaves `/` answering 200, and the pulls that reach the
+        # stuck path keep waiting out the agent's timeout with no restart.
+        #
+        # Not a path through those handlers instead. Each of them asks for a token first and answers
+        # 401 without one, which the kubelet counts as a failure, and a token cannot be written into a
+        # probe: the token service issues it signed and expiring. And the hangs most likely there are
+        # the disk's and the upstream's, which a restart does not fix; the syncer is what watches the
+        # store.
+        #
+        # Neither probe looks at the write endpoint. A registry that cannot take a push still serves
+        # every pull, and restarting it for a failed push would turn that into an outage.
+        livenessProbe:
+          httpGet:
+            path: /
+            port: registry
+            scheme: HTTPS
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
+        # The listener opens late, and legitimately so: the registry first waits for the syncer to
+        # write its configuration, for as long as the API server keeps the syncer waiting, and then
+        # walks the whole store to account for what it holds before admitting a single write. Both
+        # happen on every start of the container, including the restart the syncer asks for on a
+        # configuration change, and the walk of a large store takes minutes. Up to an hour before the
+        # liveness probe takes over; a container that runs out of it restarts and waits again.
+        startupProbe:
+          httpGet:
+            path: /
+            port: registry
+            scheme: HTTPS
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 360
         # Keeps serving for a while after the pod is told to go.
         #
         # The syncer beside it releases the fill lease at once, and until another full replica takes
@@ -366,7 +514,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
-            {{- include "registry_storage_kube_rbac_proxy_resources" $ | nindent 12 }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" $ | nindent 12 }}
       # No preStop, unlike the registry and the token service: the syncer releases the fill lease on
       # SIGTERM, and a wait here would only hold the handover back by as long as theirs cover it.
       - name: syncer

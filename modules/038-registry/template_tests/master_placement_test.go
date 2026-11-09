@@ -75,9 +75,15 @@ var _ = Describe("Module :: registry :: helm template :: placement on masters", 
 		}
 
 		for _, w := range masterWorkloads {
+			budget := maxUnavailable
+			// The storage budget follows its replica count, which is one until the master count is
+			// known, and the only replica is kept.
+			if w.name == "registry-storage" && f.ValuesGet("global.discovery.clusterMasterCount").Int() == 0 {
+				budget = 0
+			}
 			pdb := f.KubernetesResource("PodDisruptionBudget", "d8-system", w.name)
 			Expect(pdb.Exists()).To(BeTrue(), w.name)
-			Expect(pdb.Field("spec.maxUnavailable").Int()).To(Equal(maxUnavailable), w.name)
+			Expect(pdb.Field("spec.maxUnavailable").Int()).To(Equal(budget), w.name)
 
 			workload := f.KubernetesResource(w.kind, "d8-system", w.name)
 			Expect(workload.Exists()).To(BeTrue(), w.name)
