@@ -286,6 +286,47 @@ kubeconfig_volume="$(cat << "VOLUME"
 VOLUME
 )"
 
+# The proxy ClusterConfiguration names, in the agent's own environment.
+#
+# The agent is the one process on the node that fetches from the upstream registry: the runtime
+# asks the agent on the loopback address, and the agent asks the registry. So the runtime's proxy
+# — step 003's drop-in for containerd — never reaches the registry at all, and without these the
+# images of a cluster behind a proxy are fetched past it. Its HTTP client takes the proxy from the
+# environment like any Go client does.
+#
+# Taken from this step's own context, as step 003 takes the runtime's, and for 003's reason: the
+# context is what the configuration checksum is computed from, so a node sent through bashible by a
+# proxy change gets the new proxy here — bb-set-proxy's bashbooster is re-rendered later, by helm, and
+# its change sends no node through bashible again. NO_PROXY is the context's list: the loopback
+# address the agent serves and reads the API server on, the in-cluster registry, the cluster's networks
+# and whatever the cluster adds. A changed proxy changes the manifest, and kubelet restarts the agent
+# with it.
+#
+# The values are written into double-quoted YAML scalars: the ClusterConfiguration schema allows
+# neither a double quote nor a backslash in any of them.
+proxy_env=""
+# Nothing inherited: without a proxy in the context the agent gets none, whatever bashible's own
+# environment carries.
+unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
+{{- if .proxy }}
+  {{- if .proxy.httpProxy }}
+export HTTP_PROXY={{ .proxy.httpProxy | replace "'" "'\"'\"'" | squote }}
+export http_proxy=${HTTP_PROXY}
+  {{- end }}
+  {{- if .proxy.httpsProxy }}
+export HTTPS_PROXY={{ .proxy.httpsProxy | replace "'" "'\"'\"'" | squote }}
+export https_proxy=${HTTPS_PROXY}
+  {{- end }}
+export NO_PROXY={{ concat (list "127.0.0.1" "169.254.169.254" "registry.d8-system.svc") (.proxy.noProxy | default list) | compact | uniq | join "," | replace "'" "'\"'\"'" | squote }}
+export no_proxy=${NO_PROXY}
+{{- end }}
+for proxy_var in HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy; do
+  [[ -n "${!proxy_var:-}" ]] || continue
+  proxy_env+=${proxy_env:+$'\n'}
+  proxy_env+="    - name: ${proxy_var}"$'\n'"      value: \"${!proxy_var}\""
+done
+bb-unset-proxy
+
 # The manifest carries the agent's image digest as an annotation, so that a new agent actually
 # starts.
 #
@@ -346,6 +387,7 @@ spec:
       valueFrom:
         fieldRef:
           fieldPath: spec.nodeName
+${proxy_env}
     securityContext:
       allowPrivilegeEscalation: false
       capabilities:

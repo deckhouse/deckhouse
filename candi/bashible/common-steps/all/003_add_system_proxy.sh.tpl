@@ -23,7 +23,30 @@ _reload_systemd() {
 
 {{- if .proxy }}
 
-bb-set-proxy
+# The values are this step's own context, not bb-set-proxy's.
+#
+# bb-set-proxy lives in bashbooster, which the node-manager module renders with helm from the
+# deckhouse values, while this step is rendered from the bashible context node-controller assembles
+# from d8-cluster-configuration directly. When the proxy changes, the context changes first and its
+# checksum sends every node through bashible at once — before deckhouse has restarted and re-rendered
+# bashbooster. The drop-ins below were then rewritten with the OLD proxy, and nothing ran bashible
+# again: bashbooster is not part of the checksum. Taken from the context, the values are the ones the
+# checksum was computed from, so a node that runs this step writes the proxy it was sent here for.
+#
+# The quoting is bb-set-proxy's: a single quote in a value is closed, escaped and reopened.
+unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
+  {{- if .proxy.httpProxy }}
+export HTTP_PROXY={{ .proxy.httpProxy | replace "'" "'\"'\"'" | squote }}
+export http_proxy=${HTTP_PROXY}
+  {{- end }}
+  {{- if .proxy.httpsProxy }}
+export HTTPS_PROXY={{ .proxy.httpsProxy | replace "'" "'\"'\"'" | squote }}
+export https_proxy=${HTTPS_PROXY}
+  {{- end }}
+{{- /* bb-set-proxy's own three first, then the context's list: the same string bb-set-proxy built, so
+       a cluster with a proxy gets an identical drop-in on upgrade and containerd is not restarted. */}}
+export NO_PROXY={{ concat (list "127.0.0.1" "169.254.169.254" "registry.d8-system.svc") (.proxy.noProxy | default list) | compact | uniq | join "," | replace "'" "'\"'\"'" | squote }}
+export no_proxy=${NO_PROXY}
 
 bb-event-on 'bb-sync-file-changed' '_reload_systemd'
 
