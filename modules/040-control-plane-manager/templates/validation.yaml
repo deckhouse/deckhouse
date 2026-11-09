@@ -49,18 +49,122 @@ spec:
     - apiGroups: [""]
       apiVersions: ["v1"]
       operations: ["CREATE", "UPDATE"]
-      resources: ["pods", "persistentvolumeclaims"]
+      # The resize subresource changes the resources of a running pod.
+      resources: ["pods", "pods/resize", "persistentvolumeclaims"]
   matchConditions:
+  # The ephemeral volume controller copies the labels of a volume claim template into the PVC it
+  # creates as kube-system, so the template in a pod is checked like the labels of the pod itself.
   - name: has-resource-quota-override-labels
     expression: |
-      has(object.metadata.labels) &&
-      object.metadata.labels.exists(k, k.startsWith("resource-quota-overrides.deckhouse.io/"))
+      (has(object.metadata.labels) &&
+        object.metadata.labels.exists(k, k.startsWith("resource-quota-overrides.deckhouse.io/")))
+      || object.spec.?volumes.orValue([]).exists(v,
+        v.?ephemeral.?volumeClaimTemplate.?metadata.?labels.orValue({})
+          .exists(k, k.startsWith("resource-quota-overrides.deckhouse.io/")))
   validations:
   - expression: |
       request.userInfo.username.startsWith("system:serviceaccount:d8-") ||
       request.userInfo.username.startsWith("system:serviceaccount:kube-system:") ||
       request.userInfo.username == "system:kube-scheduler"
     message: "Labels with prefix 'resource-quota-overrides.deckhouse.io/' can only be set by system controllers"
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "control-plane-manager") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions:
+  - Deny
+---
+{{- $policyName := "resource-quota-overrides-templates.deckhouse.io" }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "control-plane-manager") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  # The controllers of kube-controller-manager create pods and PVCs as kube-system service accounts,
+  # which the policy above lets through, out of the templates of their owners. The labels are checked
+  # in those templates instead, where a user writes them.
+  matchConstraints:
+    resourceRules:
+    - apiGroups: ["apps"]
+      apiVersions: ["*"]
+      operations: ["CREATE", "UPDATE"]
+      resources: ["deployments", "replicasets", "daemonsets", "statefulsets"]
+    - apiGroups: ["batch"]
+      apiVersions: ["*"]
+      operations: ["CREATE", "UPDATE"]
+      resources: ["jobs", "cronjobs"]
+    - apiGroups: [""]
+      apiVersions: ["v1"]
+      operations: ["CREATE", "UPDATE"]
+      resources: ["replicationcontrollers"]
+    # The data of a ControllerRevision cannot be changed after it is created.
+    - apiGroups: ["apps"]
+      apiVersions: ["*"]
+      operations: ["CREATE"]
+      resources: ["controllerrevisions"]
+  variables:
+  - name: prefix
+    expression: '"resource-quota-overrides.deckhouse.io/"'
+  # The specs to compare: the new one and, on UPDATE, the old one. A ControllerRevision keeps the spec
+  # of a StatefulSet or a DaemonSet in data; the StatefulSet controller finds the current revision by
+  # name only and creates pods out of its spec.
+  - name: specs
+    expression: |
+      (oldObject == null ? [object] : [object, oldObject]).map(o,
+        request.resource.resource == "controllerrevisions" ? o.?data.?spec.orValue({}) : o.spec)
+  - name: templates
+    expression: |
+      variables.specs.map(s, request.resource.resource == "cronjobs"
+        ? s.?jobTemplate.?spec.?template.orValue({})
+        : s.?template.orValue({}))
+  # The labels a controller copies into pods and PVCs: those of the pod template, of its ephemeral
+  # volume claim templates and of the volume claim templates of a StatefulSet.
+  - name: hasOverrides
+    expression: |
+      (
+        [variables.templates[0].?metadata.?labels.orValue({})]
+        + variables.templates[0].?spec.?volumes.orValue([]).map(vol,
+          vol.?ephemeral.?volumeClaimTemplate.?metadata.?labels.orValue({}))
+        + variables.specs[0].?volumeClaimTemplates.orValue([]).map(claim, claim.?metadata.?labels.orValue({}))
+      ).exists(labels, labels.exists(k, k.startsWith(variables.prefix)))
+  - name: podOverrides
+    expression: |
+      variables.templates.map(t,
+        t.?metadata.?labels.orValue({}).transformMap(k, v, k.startsWith(variables.prefix), v))
+  # An update that keeps the override labels, the pod spec and the volume claim templates as they
+  # were changes nothing a controller copies into pods and PVCs. Annotations, other labels and the
+  # fields outside the template, such as replicas, may change, so the controllers, the garbage
+  # collector and kubectl rollout restart keep working.
+  - name: unchanged
+    expression: |
+      request.operation == "UPDATE"
+      && variables.podOverrides[0] == variables.podOverrides[1]
+      && variables.templates[0].?spec.orValue({}) == variables.templates[1].?spec.orValue({})
+      && variables.specs[0].?volumeClaimTemplates.orValue([]) == variables.specs[1].?volumeClaimTemplates.orValue([])
+  # Deckhouse components, and the controllers that copy templates this policy has already checked
+  # into the objects they create.
+  - name: trusted
+    expression: |
+      request.userInfo.username.startsWith("system:serviceaccount:d8-")
+      || request.userInfo.username in {
+        "replicasets": ["system:serviceaccount:kube-system:deployment-controller"],
+        "jobs": ["system:serviceaccount:kube-system:cronjob-controller"],
+        "controllerrevisions": [
+          "system:serviceaccount:kube-system:statefulset-controller",
+          "system:serviceaccount:kube-system:daemon-set-controller",
+        ],
+      }[?request.resource.resource].orValue([])
+  validations:
+  - expression: '!variables.hasOverrides || variables.trusted || variables.unchanged'
+    reason: Forbidden
+    messageExpression: |
+      "Labels with prefix 'resource-quota-overrides.deckhouse.io/' in pod and volume claim templates, and the templates that have them, can only be set by Deckhouse components, not by " + request.userInfo.username
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding

@@ -1,5 +1,173 @@
+diff --git a/pkg/apis/core/validation/resource_quota_labels_test.go b/pkg/apis/core/validation/resource_quota_labels_test.go
+new file mode 100644
+index 00000000000..84e7090d429
+--- /dev/null
++++ b/pkg/apis/core/validation/resource_quota_labels_test.go
+@@ -0,0 +1,162 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package validation
++
++import (
++	"testing"
++
++	v1 "k8s.io/api/core/v1"
++	"k8s.io/apimachinery/pkg/api/resource"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/apimachinery/pkg/util/validation/field"
++	"k8s.io/kubernetes/pkg/apis/core"
++)
++
++func TestValidateResourceQuotaLabels(t *testing.T) {
++	type labelCase struct {
++		value string
++		valid bool
++	}
++	cpu := []labelCase{
++		{"1", true}, {"500m", true}, {"0.5", true}, {"2.5", true},
++		{"1k", false}, {"1M", false}, {"1Ki", false}, {"1Gi", false},
++		{"-100m", false}, {"abc", false}, {"", false},
++	}
++	bytes := []labelCase{
++		{"1Gi", true}, {"500Mi", true}, {"1G", true}, {"1024", true},
++		{"500m", false}, {"-1Gi", false}, {"abc", false}, {"", false},
++	}
++	cases := map[string][]labelCase{
++		v1.LabelResourceQuotaIgnore: {
++			{"true", true}, {"false", true},
++			{"True", false}, {"yes", false}, {"1", false}, {"", false},
++		},
++		v1.LabelResourceQuotaCapCPU:          cpu,
++		v1.LabelResourceQuotaDiscountCPU:     cpu,
++		v1.LabelResourceQuotaCapMemory:       bytes,
++		v1.LabelResourceQuotaDiscountMemory:  bytes,
++		v1.LabelResourceQuotaCapStorage:      bytes,
++		v1.LabelResourceQuotaDiscountStorage: bytes,
++	}
++
++	path := field.NewPath("metadata", "labels")
++	for label, values := range cases {
++		for _, c := range values {
++			t.Run(label+"="+c.value, func(t *testing.T) {
++				errs := validateResourceQuotaLabels(map[string]string{label: c.value}, path)
++				if c.valid {
++					if len(errs) != 0 {
++						t.Errorf("want no errors, got %v", errs)
++					}
++					return
++				}
++				if len(errs) == 0 {
++					t.Fatal("want an error, got none")
++				}
++				for _, err := range errs {
++					if err.Type != field.ErrorTypeInvalid || err.Field != path.Key(label).String() {
++						t.Errorf("want an Invalid error for %s, got %v", path.Key(label), err)
++					}
++				}
++			})
++		}
++	}
++
++	t.Run("labels without the prefix", func(t *testing.T) {
++		if errs := validateResourceQuotaLabels(nil, path); len(errs) != 0 {
++			t.Errorf("nil labels: want no errors, got %v", errs)
++		}
++		if errs := validateResourceQuotaLabels(map[string]string{"app": "web"}, path); len(errs) != 0 {
++			t.Errorf("want no errors, got %v", errs)
++		}
++	})
++
++	t.Run("every invalid label is reported", func(t *testing.T) {
++		errs := validateResourceQuotaLabels(map[string]string{
++			v1.LabelResourceQuotaIgnore:      "yes",
++			v1.LabelResourceQuotaCapCPU:      "1Gi",
++			v1.LabelResourceQuotaCapMemory:   "500m",
++			v1.LabelResourceQuotaDiscountCPU: "100m",
++		}, path)
++		fields := map[string]bool{}
++		for _, err := range errs {
++			fields[err.Field] = true
++		}
++		for _, label := range []string{v1.LabelResourceQuotaIgnore, v1.LabelResourceQuotaCapCPU, v1.LabelResourceQuotaCapMemory} {
++			if !fields[path.Key(label).String()] {
++				t.Errorf("want an error for %s, got %v", path.Key(label), errs)
++			}
++		}
++		if fields[path.Key(v1.LabelResourceQuotaDiscountCPU).String()] {
++			t.Errorf("want no error for the valid %s, got %v", v1.LabelResourceQuotaDiscountCPU, errs)
++		}
++	})
++}
++
++// The labels are validated as part of pods and PVCs, with the same field path for both.
++func TestResourceQuotaLabelsOfPodsAndPVCs(t *testing.T) {
++	wantPath := field.NewPath("metadata", "labels").Key(v1.LabelResourceQuotaIgnore).String()
++
++	gracePeriod := int64(30)
++	pod := func(labels map[string]string) *core.Pod {
++		return &core.Pod{
++			ObjectMeta: metav1.ObjectMeta{Name: "web", Namespace: "team-a", Labels: labels},
++			Spec: core.PodSpec{
++				Containers: []core.Container{{
++					Name:                     "web",
++					Image:                    "registry.example.com/web:1.0",
++					ImagePullPolicy:          core.PullIfNotPresent,
++					TerminationMessagePolicy: core.TerminationMessageReadFile,
++				}},
++				RestartPolicy:                 core.RestartPolicyAlways,
++				DNSPolicy:                     core.DNSClusterFirst,
++				TerminationGracePeriodSeconds: &gracePeriod,
++			},
++		}
++	}
++	pvc := func(labels map[string]string) *core.PersistentVolumeClaim {
++		return &core.PersistentVolumeClaim{
++			ObjectMeta: metav1.ObjectMeta{Name: "data", Namespace: "team-a", Labels: labels},
++			Spec: core.PersistentVolumeClaimSpec{
++				AccessModes: []core.PersistentVolumeAccessMode{core.ReadWriteOnce},
++				Resources: core.VolumeResourceRequirements{
++					Requests: core.ResourceList{core.ResourceStorage: resource.MustParse("10Gi")},
++				},
++			},
++		}
++	}
++
++	validate := map[string]func(labels map[string]string) field.ErrorList{
++		"pod": func(labels map[string]string) field.ErrorList {
++			return ValidatePodCreate(pod(labels), PodValidationOptions{})
++		},
++		"pvc": func(labels map[string]string) field.ErrorList {
++			return ValidatePersistentVolumeClaim(pvc(labels), PersistentVolumeClaimSpecValidationOptions{})
++		},
++	}
++	for kind, validate := range validate {
++		t.Run(kind, func(t *testing.T) {
++			if errs := validate(map[string]string{v1.LabelResourceQuotaIgnore: "true"}); len(errs) != 0 {
++				t.Errorf("a valid label: want no errors, got %v", errs)
++			}
++			errs := validate(map[string]string{v1.LabelResourceQuotaIgnore: "yes"})
++			if len(errs) != 1 || errs[0].Type != field.ErrorTypeInvalid || errs[0].Field != wantPath {
++				t.Errorf("an invalid label: want one Invalid error for %s, got %v", wantPath, errs)
++			}
++		})
++	}
++}
 diff --git a/pkg/apis/core/validation/validation.go b/pkg/apis/core/validation/validation.go
-index 3a228e2ec17..b82ecfbcfa5 100644
+index 3a228e2ec17..fa8bdc7bace 100644
 --- a/pkg/apis/core/validation/validation.go
 +++ b/pkg/apis/core/validation/validation.go
 @@ -2390,6 +2390,86 @@ func allowInvalidAPIGroupInDataSourceOrRef(spec *core.PersistentVolumeClaimSpec)
@@ -93,7 +261,7 @@ index 3a228e2ec17..b82ecfbcfa5 100644
  
  	allErrs := ValidateObjectMeta(&pod.ObjectMeta, true, ValidatePodName, metaPath)
  	allErrs = append(allErrs, ValidatePodSpecificAnnotations(pod.ObjectMeta.Annotations, &pod.Spec, metaPath.Child("annotations"), opts)...)
-+	allErrs = append(allErrs, validateResourceQuotaLabels(pod.ObjectMeta.Labels, metaPath)...)
++	allErrs = append(allErrs, validateResourceQuotaLabels(pod.ObjectMeta.Labels, metaPath.Child("labels"))...)
  	allErrs = append(allErrs, ValidatePodSpec(&pod.Spec, &pod.ObjectMeta, specPath, opts)...)
  
  	// we do additional validation only pertinent for pods and not pod templates
@@ -114,7 +282,7 @@ index 592f6080d52..a8b20a482c3 100644
  	result[corev1.ResourcePersistentVolumeClaims] = *(resource.NewQuantity(1, resource.DecimalSI))
  	result[pvcObjectCountName] = *(resource.NewQuantity(1, resource.DecimalSI))
 diff --git a/pkg/quota/v1/evaluator/core/pods.go b/pkg/quota/v1/evaluator/core/pods.go
-index 00c364298bd..3182fa19379 100644
+index 00c364298bd..9db2b3f5891 100644
 --- a/pkg/quota/v1/evaluator/core/pods.go
 +++ b/pkg/quota/v1/evaluator/core/pods.go
 @@ -384,6 +384,11 @@ func PodUsageFunc(obj runtime.Object, clock clock.Clock) (corev1.ResourceList, e
@@ -129,7 +297,7 @@ index 00c364298bd..3182fa19379 100644
  	// always quota the object count (even if the pod is end of life)
  	// object count quotas track all objects that are in storage.
  	// where "pods" tracks all pods that have not reached a terminal state,
-@@ -406,10 +411,73 @@ func PodUsageFunc(obj runtime.Object, clock clock.Clock) (corev1.ResourceList, e
+@@ -406,10 +411,75 @@ func PodUsageFunc(obj runtime.Object, clock clock.Clock) (corev1.ResourceList, e
  	requests := resourcehelper.PodRequests(pod, opts)
  	limits := resourcehelper.PodLimits(pod, opts)
  
@@ -149,15 +317,17 @@ index 00c364298bd..3182fa19379 100644
 +	if labels == nil {
 +		return
 +	}
++	// cpu, memory and ephemeral-storage are the names a quota may use for requests.cpu,
++	// requests.memory and requests.ephemeral-storage, so they change together with them.
 +	// CPU discount + cap
-+	applyDiscount(usage, labels, corev1.LabelResourceQuotaDiscountCPU, corev1.ResourceRequestsCPU, corev1.ResourceLimitsCPU)
-+	applyCap(usage, labels, corev1.LabelResourceQuotaCapCPU, corev1.ResourceRequestsCPU, corev1.ResourceLimitsCPU)
++	applyDiscount(usage, labels, corev1.LabelResourceQuotaDiscountCPU, corev1.ResourceCPU, corev1.ResourceRequestsCPU, corev1.ResourceLimitsCPU)
++	applyCap(usage, labels, corev1.LabelResourceQuotaCapCPU, corev1.ResourceCPU, corev1.ResourceRequestsCPU, corev1.ResourceLimitsCPU)
 +	// Memory discount + cap
-+	applyDiscount(usage, labels, corev1.LabelResourceQuotaDiscountMemory, corev1.ResourceRequestsMemory, corev1.ResourceLimitsMemory)
-+	applyCap(usage, labels, corev1.LabelResourceQuotaCapMemory, corev1.ResourceRequestsMemory, corev1.ResourceLimitsMemory)
++	applyDiscount(usage, labels, corev1.LabelResourceQuotaDiscountMemory, corev1.ResourceMemory, corev1.ResourceRequestsMemory, corev1.ResourceLimitsMemory)
++	applyCap(usage, labels, corev1.LabelResourceQuotaCapMemory, corev1.ResourceMemory, corev1.ResourceRequestsMemory, corev1.ResourceLimitsMemory)
 +	// Ephemeral-storage discount + cap
-+	applyDiscount(usage, labels, corev1.LabelResourceQuotaDiscountStorage, corev1.ResourceRequestsEphemeralStorage, corev1.ResourceLimitsEphemeralStorage)
-+	applyCap(usage, labels, corev1.LabelResourceQuotaCapStorage, corev1.ResourceRequestsEphemeralStorage, corev1.ResourceLimitsEphemeralStorage)
++	applyDiscount(usage, labels, corev1.LabelResourceQuotaDiscountStorage, corev1.ResourceEphemeralStorage, corev1.ResourceRequestsEphemeralStorage, corev1.ResourceLimitsEphemeralStorage)
++	applyCap(usage, labels, corev1.LabelResourceQuotaCapStorage, corev1.ResourceEphemeralStorage, corev1.ResourceRequestsEphemeralStorage, corev1.ResourceLimitsEphemeralStorage)
 +}
 +
 +// applyDiscount subtracts discount from the resource in usage, ensuring the result is non-negative
@@ -204,11 +374,420 @@ index 00c364298bd..3182fa19379 100644
  func isBestEffort(pod *corev1.Pod) bool {
  	return qos.GetPodQOS(pod) == corev1.PodQOSBestEffort
  }
+diff --git a/pkg/quota/v1/evaluator/core/resource_quota_overrides_test.go b/pkg/quota/v1/evaluator/core/resource_quota_overrides_test.go
+new file mode 100644
+index 00000000000..bdc77113438
+--- /dev/null
++++ b/pkg/quota/v1/evaluator/core/resource_quota_overrides_test.go
+@@ -0,0 +1,231 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package core
++
++import (
++	"testing"
++
++	corev1 "k8s.io/api/core/v1"
++	"k8s.io/apimachinery/pkg/api/resource"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	quota "k8s.io/apiserver/pkg/quota/v1"
++	"k8s.io/utils/clock"
++)
++
++// overridesResources builds a resource list out of name-value pairs.
++func overridesResources(pairs ...string) corev1.ResourceList {
++	list := corev1.ResourceList{}
++	for i := 0; i+1 < len(pairs); i += 2 {
++		list[corev1.ResourceName(pairs[i])] = resource.MustParse(pairs[i+1])
++	}
++	return list
++}
++
++func overridesPod(labels map[string]string, requests, limits corev1.ResourceList) *corev1.Pod {
++	return &corev1.Pod{
++		ObjectMeta: metav1.ObjectMeta{Name: "web", Namespace: "team-a", Labels: labels},
++		Spec: corev1.PodSpec{
++			Containers: []corev1.Container{{
++				Name:      "web",
++				Resources: corev1.ResourceRequirements{Requests: requests, Limits: limits},
++			}},
++		},
++	}
++}
++
++func TestPodUsageWithResourceQuotaOverrides(t *testing.T) {
++	requests := overridesResources("cpu", "500m", "memory", "1Gi")
++	limits := overridesResources("cpu", "1", "memory", "2Gi")
++	counted := overridesResources(
++		"pods", "1", "count/pods", "1",
++		"cpu", "500m", "requests.cpu", "500m", "limits.cpu", "1",
++		"memory", "1Gi", "requests.memory", "1Gi", "limits.memory", "2Gi",
++	)
++
++	tests := []struct {
++		name     string
++		labels   map[string]string
++		requests corev1.ResourceList
++		limits   corev1.ResourceList
++		want     corev1.ResourceList
++	}{
++		{
++			name:     "a pod without the labels is counted in full",
++			requests: requests, limits: limits,
++			want: counted,
++		},
++		{
++			name:     "ignore leaves the pod out, its count included",
++			labels:   map[string]string{corev1.LabelResourceQuotaIgnore: "true"},
++			requests: requests, limits: limits,
++			want: corev1.ResourceList{},
++		},
++		{
++			name:     "ignore set to false counts the pod in full",
++			labels:   map[string]string{corev1.LabelResourceQuotaIgnore: "false"},
++			requests: requests, limits: limits,
++			want: counted,
++		},
++		{
++			name:     "a discount is subtracted from requests, limits and their short name",
++			labels:   map[string]string{corev1.LabelResourceQuotaDiscountCPU: "200m"},
++			requests: requests, limits: limits,
++			want: overridesResources(
++				"pods", "1", "count/pods", "1",
++				"cpu", "300m", "requests.cpu", "300m", "limits.cpu", "800m",
++				"memory", "1Gi", "requests.memory", "1Gi", "limits.memory", "2Gi",
++			),
++		},
++		{
++			name:     "a discount larger than the usage stops at zero",
++			labels:   map[string]string{corev1.LabelResourceQuotaDiscountMemory: "8Gi"},
++			requests: requests, limits: limits,
++			want: overridesResources(
++				"pods", "1", "count/pods", "1",
++				"cpu", "500m", "requests.cpu", "500m", "limits.cpu", "1",
++				"memory", "0", "requests.memory", "0", "limits.memory", "0",
++			),
++		},
++		{
++			name:     "a cap limits requests, limits and their short name",
++			labels:   map[string]string{corev1.LabelResourceQuotaCapMemory: "512Mi"},
++			requests: requests, limits: limits,
++			want: overridesResources(
++				"pods", "1", "count/pods", "1",
++				"cpu", "500m", "requests.cpu", "500m", "limits.cpu", "1",
++				"memory", "512Mi", "requests.memory", "512Mi", "limits.memory", "512Mi",
++			),
++		},
++		{
++			name:     "a cap above the usage changes nothing",
++			labels:   map[string]string{corev1.LabelResourceQuotaCapCPU: "4"},
++			requests: requests, limits: limits,
++			want: counted,
++		},
++		{
++			name: "the discount goes before the cap",
++			labels: map[string]string{
++				corev1.LabelResourceQuotaDiscountCPU: "1",
++				corev1.LabelResourceQuotaCapCPU:      "2",
++			},
++			requests: overridesResources("cpu", "4"),
++			limits:   overridesResources("cpu", "4"),
++			want: overridesResources(
++				"pods", "1", "count/pods", "1",
++				"cpu", "2", "requests.cpu", "2", "limits.cpu", "2",
++			),
++		},
++		{
++			name: "the storage labels apply to ephemeral storage",
++			labels: map[string]string{
++				corev1.LabelResourceQuotaDiscountStorage: "5Gi",
++				corev1.LabelResourceQuotaCapStorage:      "10Gi",
++			},
++			requests: overridesResources("ephemeral-storage", "10Gi"),
++			limits:   overridesResources("ephemeral-storage", "20Gi"),
++			want: overridesResources(
++				"pods", "1", "count/pods", "1",
++				"ephemeral-storage", "5Gi", "requests.ephemeral-storage", "5Gi", "limits.ephemeral-storage", "10Gi",
++			),
++		},
++		{
++			name:     "a discount for a resource the pod does not request adds nothing",
++			labels:   map[string]string{corev1.LabelResourceQuotaDiscountMemory: "1Gi"},
++			requests: overridesResources("cpu", "500m"),
++			want: overridesResources(
++				"pods", "1", "count/pods", "1",
++				"cpu", "500m", "requests.cpu", "500m",
++			),
++		},
++	}
++
++	evaluator := NewPodEvaluator(nil, clock.RealClock{})
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			got, err := evaluator.Usage(overridesPod(tt.labels, tt.requests, tt.limits))
++			if err != nil {
++				t.Fatal(err)
++			}
++			if !quota.Equals(tt.want, got) {
++				t.Errorf("want %v, got %v", tt.want, got)
++			}
++		})
++	}
++}
++
++func TestPersistentVolumeClaimUsageWithResourceQuotaOverrides(t *testing.T) {
++	storageClass := "fast"
++	pvc := func(labels map[string]string) *corev1.PersistentVolumeClaim {
++		return &corev1.PersistentVolumeClaim{
++			ObjectMeta: metav1.ObjectMeta{Name: "data", Namespace: "team-a", Labels: labels},
++			Spec: corev1.PersistentVolumeClaimSpec{
++				AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
++				StorageClassName: &storageClass,
++				Resources: corev1.VolumeResourceRequirements{
++					Requests: overridesResources("storage", "10Gi"),
++				},
++			},
++		}
++	}
++
++	evaluator := NewPersistentVolumeClaimEvaluator(nil)
++	counted, err := evaluator.Usage(pvc(nil))
++	if err != nil {
++		t.Fatal(err)
++	}
++	if storage := counted[corev1.ResourceRequestsStorage]; storage.Cmp(resource.MustParse("10Gi")) != 0 {
++		t.Fatalf("a PVC without the labels: want requests.storage 10Gi, got %v", counted)
++	}
++
++	tests := []struct {
++		name   string
++		labels map[string]string
++		want   corev1.ResourceList
++	}{
++		{
++			name:   "ignore leaves the PVC out, its count included",
++			labels: map[string]string{corev1.LabelResourceQuotaIgnore: "true"},
++			want:   corev1.ResourceList{},
++		},
++		{
++			name:   "ignore set to false counts the PVC in full",
++			labels: map[string]string{corev1.LabelResourceQuotaIgnore: "false"},
++			want:   counted,
++		},
++		{
++			// Only ignore is supported for PVCs, see the resource quota ignore mechanism ADR.
++			name: "the storage discount and cap do not apply to PVCs",
++			labels: map[string]string{
++				corev1.LabelResourceQuotaDiscountStorage: "5Gi",
++				corev1.LabelResourceQuotaCapStorage:      "1Gi",
++			},
++			want: counted,
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			got, err := evaluator.Usage(pvc(tt.labels))
++			if err != nil {
++				t.Fatal(err)
++			}
++			if !quota.Equals(tt.want, got) {
++				t.Errorf("want %v, got %v", tt.want, got)
++			}
++		})
++	}
++}
+diff --git a/pkg/quota/v1/install/resource_quota_overrides_test.go b/pkg/quota/v1/install/resource_quota_overrides_test.go
+new file mode 100644
+index 00000000000..3ac478ec386
+--- /dev/null
++++ b/pkg/quota/v1/install/resource_quota_overrides_test.go
+@@ -0,0 +1,122 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package install
++
++import (
++	"testing"
++
++	v1 "k8s.io/api/core/v1"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/apimachinery/pkg/runtime/schema"
++)
++
++// overridesLabelValues holds two valid values for every resource quota control label.
++// The list is written out by hand, so a label missing from v1.ResourceQuotaLabels fails the tests.
++var overridesLabelValues = []struct {
++	label    string
++	old, new string
++}{
++	{v1.LabelResourceQuotaIgnore, "true", "false"},
++	{v1.LabelResourceQuotaDiscountStorage, "1Gi", "2Gi"},
++	{v1.LabelResourceQuotaCapStorage, "1Gi", "2Gi"},
++	{v1.LabelResourceQuotaDiscountCPU, "100m", "200m"},
++	{v1.LabelResourceQuotaCapCPU, "100m", "200m"},
++	{v1.LabelResourceQuotaDiscountMemory, "128Mi", "256Mi"},
++	{v1.LabelResourceQuotaCapMemory, "128Mi", "256Mi"},
++}
++
++type overridesLabelsCase struct {
++	name                 string
++	oldLabels, newLabels map[string]string
++	want                 bool
++}
++
++// overridesLabelsCases returns the label transitions: adding, removing and changing every control label
++// is a change, other labels and unchanged control labels are not.
++func overridesLabelsCases() []overridesLabelsCase {
++	var cases []overridesLabelsCase
++	for _, v := range overridesLabelValues {
++		cases = append(cases,
++			overridesLabelsCase{
++				name:      v.label + " added",
++				oldLabels: map[string]string{"app": "web"},
++				newLabels: map[string]string{"app": "web", v.label: v.new},
++				want:      true,
++			},
++			overridesLabelsCase{
++				name:      v.label + " removed",
++				oldLabels: map[string]string{"app": "web", v.label: v.old},
++				newLabels: map[string]string{"app": "web"},
++				want:      true,
++			},
++			overridesLabelsCase{
++				name:      v.label + " changed",
++				oldLabels: map[string]string{"app": "web", v.label: v.old},
++				newLabels: map[string]string{"app": "web", v.label: v.new},
++				want:      true,
++			},
++			overridesLabelsCase{
++				name:      v.label + " unchanged, another label changed",
++				oldLabels: map[string]string{"app": "web", v.label: v.old},
++				newLabels: map[string]string{"app": "api", v.label: v.old},
++				want:      false,
++			},
++		)
++	}
++	return append(cases,
++		overridesLabelsCase{
++			name: "no labels",
++			want: false,
++		},
++		overridesLabelsCase{
++			name:      "a label with a similar prefix changed",
++			oldLabels: map[string]string{"resource-quota-overrides.deckhouse.io/other": "a"},
++			newLabels: map[string]string{"resource-quota-overrides.deckhouse.io/other": "b"},
++			want:      false,
++		},
++	)
++}
++
++func TestHasResourceQuotaLabelsChanged(t *testing.T) {
++	for _, tc := range overridesLabelsCases() {
++		t.Run(tc.name, func(t *testing.T) {
++			if got := hasResourceQuotaLabelsChanged(tc.oldLabels, tc.newLabels); got != tc.want {
++				t.Errorf("hasResourceQuotaLabelsChanged() = %v, want %v", got, tc.want)
++			}
++		})
++	}
++}
++
++func TestUpdateFilterPodResourceQuotaLabels(t *testing.T) {
++	filter := DefaultUpdateFilter()
++	pods := schema.GroupVersionResource{Version: "v1", Resource: "pods"}
++	pod := func(labels map[string]string) *v1.Pod {
++		return &v1.Pod{
++			ObjectMeta: metav1.ObjectMeta{Name: "web", Namespace: "team-a", Labels: labels},
++			Spec:       v1.PodSpec{Containers: []v1.Container{{Name: "web"}}},
++			Status:     v1.PodStatus{Phase: v1.PodRunning},
++		}
++	}
++
++	for _, tc := range overridesLabelsCases() {
++		t.Run(tc.name, func(t *testing.T) {
++			if got := filter(pods, pod(tc.oldLabels), pod(tc.newLabels)); got != tc.want {
++				t.Errorf("DefaultUpdateFilter() for pods = %v, want %v", got, tc.want)
++			}
++		})
++	}
++}
+diff --git a/pkg/quota/v1/install/update_filter.go b/pkg/quota/v1/install/update_filter.go
+index 9a4ce799727..cf3211b7d3e 100644
+--- a/pkg/quota/v1/install/update_filter.go
++++ b/pkg/quota/v1/install/update_filter.go
+@@ -44,6 +44,11 @@ func DefaultUpdateFilter() func(resource schema.GroupVersionResource, oldObj, ne
+ 				return true
+ 			}
+ 
++			// when resource quota labels changed
++			if hasResourceQuotaLabelsChanged(oldPod.Labels, newPod.Labels) {
++				return true
++			}
++
+ 			return core.QuotaV1Pod(oldPod, clock.RealClock{}) && !core.QuotaV1Pod(newPod, clock.RealClock{})
+ 		case schema.GroupResource{Resource: "services"}:
+ 			oldService := oldObj.(*v1.Service)
+@@ -52,6 +57,10 @@ func DefaultUpdateFilter() func(resource schema.GroupVersionResource, oldObj, ne
+ 		case schema.GroupResource{Resource: "persistentvolumeclaims"}:
+ 			oldPVC := oldObj.(*v1.PersistentVolumeClaim)
+ 			newPVC := newObj.(*v1.PersistentVolumeClaim)
++			// when resource quota labels changed
++			if hasResourceQuotaLabelsChanged(oldPVC.Labels, newPVC.Labels) {
++				return true
++			}
+ 			return core.RequiresQuotaReplenish(newPVC, oldPVC)
+ 		}
+ 
+@@ -59,6 +68,16 @@ func DefaultUpdateFilter() func(resource schema.GroupVersionResource, oldObj, ne
+ 	}
+ }
+ 
++// hasResourceQuotaLabelsChanged checks if any resource quota control labels have changed
++func hasResourceQuotaLabelsChanged(oldLabels, newLabels map[string]string) bool {
++	for _, label := range v1.ResourceQuotaLabels {
++		if oldLabels[label] != newLabels[label] {
++			return true
++		}
++	}
++	return false
++}
++
+ // hasResourcesChanged function to compare resources in container statuses
+ func hasResourcesChanged(oldPod *v1.Pod, newPod *v1.Pod) bool {
+ 	for _, oldStatus := range oldPod.Status.ContainerStatuses {
 diff --git a/staging/src/k8s.io/api/core/v1/well_known_labels.go b/staging/src/k8s.io/api/core/v1/well_known_labels.go
-index 8c3cb87b82a..1ec408f6772 100644
+index 8c3cb87b82a..46d0768fdc0 100644
 --- a/staging/src/k8s.io/api/core/v1/well_known_labels.go
 +++ b/staging/src/k8s.io/api/core/v1/well_known_labels.go
-@@ -71,4 +71,13 @@ const (
+@@ -71,4 +71,25 @@ const (
  	LabelNodeExcludeBalancers = "node.kubernetes.io/exclude-from-external-load-balancers"
  	// LabelMetadataName is the label name which, in-tree, is used to automatically label namespaces, so they can be selected easily by tools which require definitive labels
  	LabelMetadataName = "kubernetes.io/metadata.name"
@@ -222,3 +801,15 @@ index 8c3cb87b82a..1ec408f6772 100644
 +	LabelResourceQuotaDiscountMemory  = "resource-quota-overrides.deckhouse.io/discount-memory"
 +	LabelResourceQuotaCapMemory       = "resource-quota-overrides.deckhouse.io/cap-memory"
  )
++
++// ResourceQuotaLabels is a list of all resource quota labels.
++// This list is used to check if any of these labels have changed on a pod or PVC.
++var ResourceQuotaLabels = []string{
++	LabelResourceQuotaIgnore,
++	LabelResourceQuotaDiscountStorage,
++	LabelResourceQuotaCapStorage,
++	LabelResourceQuotaDiscountCPU,
++	LabelResourceQuotaCapCPU,
++	LabelResourceQuotaDiscountMemory,
++	LabelResourceQuotaCapMemory,
++}

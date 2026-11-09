@@ -33,7 +33,24 @@ Supports DaemonSets in disruption controller by adding /scale subresource to dae
 
 ### resource-quota-ignore-mechanism.patch
 
-Add resource quota ignore mechanism for k8s pvc and pod based on labels
+Lets Deckhouse components leave Pods and PVCs fully or partly out of ResourceQuota usage with labels:
+
+| Label (`resource-quota-overrides.deckhouse.io/...`) | Pod | PVC |
+| --- | --- | --- |
+| `ignore: "true"` | Not counted at all, `pods` and `count/pods` included | Not counted at all |
+| `discount-cpu`, `discount-memory`, `discount-storage` | The value is subtracted from `requests.*` and `limits.*`, down to zero | No effect |
+| `cap-cpu`, `cap-memory`, `cap-storage` | `requests.*` and `limits.*` are counted up to the value | No effect |
+
+- The `*-storage` labels apply to the `ephemeral-storage` of a Pod, not to PVCs.
+- `cpu`, `memory` and `ephemeral-storage`, the names a quota may use for `requests.*`, change together with `requests.*`.
+- `ignore` goes first, then `discount`, then `cap`.
+- The quota controller recounts the quota as soon as a label is added, removed or changed on an existing Pod or PVC, without waiting for the full resync.
+- The API server rejects invalid values: `ignore` is `true` or `false`, CPU labels take CPU quantities (`500m`, `1`), memory and storage labels take byte quantities (`1Gi`), negative values are invalid.
+- Only Deckhouse components may set the labels. The `resource-quota-overrides.deckhouse.io` and `resource-quota-overrides-templates.deckhouse.io` ValidatingAdmissionPolicies of control-plane-manager check Pods, PVCs and the templates controllers create them from.
+
+The image build does not run the tests of the patch: run `go test -mod=readonly ./pkg/apis/core/validation/ ./pkg/quota/v1/evaluator/core/ ./pkg/quota/v1/install/ -run ResourceQuota` on the patched tree.
+
+> Design: ADR `architecture-decision-records/dkp/2025-12-10-resource-quota-ignore-mechanism.md` in the docs repository.
 
 ### kubelet-disable-k-panic-check
 
