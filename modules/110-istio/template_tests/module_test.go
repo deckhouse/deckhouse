@@ -2700,13 +2700,28 @@ tls.key: KEYKEYKEY
 			f.ValuesSet("global.modules.https.mode", "CustomCertificate")
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
 			f.ValuesSetFromYaml("istio.internal.customCertificateData", `
-tls.crt: CRTCRTCRT
-tls.key: KEYKEYKEY
+tls.crt: test-value
+tls.key: dh-test-secret-0123456789abcdef
 `)
 			f.ValuesSet("istio.multicluster.enabled", true)
 			f.ValuesSet("global.discovery.gatewayAPIDefaultGateway.name", "shared-gateway")
 			f.ValuesSet("global.discovery.gatewayAPIDefaultGateway.namespace", "d8-alb")
 			f.HelmRender(WithAPIVersions("gateway.networking.k8s.io/v1/HTTPRoute", "gateway.networking.k8s.io/v1/ListenerSet"))
+		})
+
+		It("preserves both custom certificates with and without Gateway API", func() {
+			for _, gatewayEnabled := range []bool{false, true} {
+				By(fmt.Sprintf("rendering with Gateway API enabled=%t", gatewayEnabled))
+				f.ValuesSet("global.modules.gatewayAPI.enabled", gatewayEnabled)
+				f.HelmRender(WithAPIVersions("gateway.networking.k8s.io/v1/HTTPRoute", "gateway.networking.k8s.io/v1/ListenerSet"))
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				for _, name := range []string{"istio-ingress-tls-customcertificate", "api-proxy-ingress-tls-customcertificate"} {
+					secret := f.KubernetesResource("Secret", "d8-istio", name)
+					Expect(secret.Exists()).To(BeTrue(), name)
+					Expect(secret.Field(`data.tls\.crt`).String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("test-value"))))
+					Expect(secret.Field(`data.tls\.key`).String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("dh-test-secret-0123456789abcdef"))))
+				}
+			}
 		})
 
 		// The multicluster api-proxy path follows the same dedup rule as the main kiali path.
