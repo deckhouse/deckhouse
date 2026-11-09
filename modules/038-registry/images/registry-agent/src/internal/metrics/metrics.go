@@ -16,12 +16,14 @@ limitations under the License.
 
 // Package metrics is what the agent knows about the pulls passing through it.
 //
-// Served on the loopback address, and read from the node rather than scraped. That is not a
-// shortcut: the agent is a static pod because it has to keep working when the API server
-// does not, and a kube-rbac-proxy beside it would authenticate against that same API server
-// — turning the one component built to survive an outage into one that reports nothing
-// during it. So this is for someone on the node with a shell, and the agent's
-// cluster-visible state travels through the RegistryNode status instead.
+// Never scraped directly. That is not a shortcut: the agent is a static pod because it has to
+// keep working when the API server does not, and a kube-rbac-proxy beside it would
+// authenticate against that same API server — turning the one component built to survive an
+// outage into one that reports nothing during it. So the collectors here reach Prometheus as a
+// file in the node exporter's textfile directory (Textfile), under the node exporter's job and
+// with the node's name as a label, and someone on the node with a shell reads them from the
+// loopback listener. The agent's state as the cluster sees it still travels through the
+// RegistryNode status.
 //
 // What is here is what nothing else can see. Once the container runtime is pointed at the
 // agent, every pull on the node passes through it — including pulls of images this module

@@ -293,9 +293,10 @@ implementation.
 
 ## What do the registry alerts mean?
 
-Apart from `D8RegistryStorageLeaderAbsent` in an air-gapped cluster, none of these alerts mean
-that the cluster has stopped pulling images. Most of them report a state where everything works,
-but not the way the configuration asks — a state that is easy to miss otherwise.
+Apart from the two about the node agent and `D8RegistryStorageLeaderAbsent` in an air-gapped
+cluster, none of these alerts mean that the cluster has stopped pulling images. Most of them report
+a state where everything works, but not the way the configuration asks — a state that is easy to
+miss otherwise.
 
 `D8RegistryMigrationPending`
 : The cluster is still running the previous implementation of the module. Nothing is degraded; the migration
@@ -318,6 +319,17 @@ but not the way the configuration asks — a state that is easy to miss otherwis
   behind the cluster's. The agent reports the fallback through the API server, so the alert does
   not cover an agent that cannot write there: a node cut off from the API server shows as
   `NotReady` instead, and an agent refused access on a `Ready` node is not reported at all.
+
+`D8RegistryAgentNotReady`
+: The agent on a node has not been ready for 15 minutes: it fails on start, does not answer, or
+  is not running on the node at all. Until it is back, containerd on that node pulls without it:
+  platform images and images from registries that need the cluster's credentials or CA fail,
+  other images bypass the cache. See [where to look](#a-pull-is-failing-on-a-node-where-do-i-look).
+
+`D8RegistryAgentRestartingTooOften`
+: The agent on a node has restarted five times or more in an hour. Each restart drops the
+  pulls in progress on the node. The container's last state and the log of the previous run say
+  whether it exited on its own or was restarted for not answering.
 
 `D8RegistryStorageIncomplete`
 : Some cache replicas do not hold the whole expected image set. While an upstream is
@@ -417,9 +429,11 @@ d8 k get registrynodes -o custom-columns=\
 NODE:.metadata.name,STALE:.status.staleStorageDataBytes
 ```
 
-If you are not going to turn the cache back on, remove the cache directory on the node:
-`/var/lib/deckhouse/registry` on a node of a NodeGroup with `systemType: Immutable`,
-`/opt/deckhouse/registry` on other nodes. To do this, follow these steps:
+If you are not going to turn the cache back on, remove the contents of the cache directory on the
+node: `/var/lib/deckhouse/registry` on a node of a NodeGroup with `systemType: Immutable`,
+`/opt/deckhouse/registry` on other nodes. Keep the directory itself: the agent has it mounted, and
+once it is removed the agent no longer sees the node's directory, so data a cache leaves there
+later goes unreported until the agent restarts. To do this, follow these steps:
 
 1. Open a root shell on the node over SSH. A node of a NodeGroup with `systemType: Immutable` has
    no SSH: start a debug pod on it and switch to the node's root filesystem:
@@ -429,11 +443,11 @@ If you are not going to turn the cache back on, remove the cache directory on th
    chroot /host
    ```
 
-1. Remove the data. The command checks both directories:
+1. Remove the data. The command checks both directories and keeps the directories themselves:
 
    ```bash
    for dir in /opt/deckhouse/registry /var/lib/deckhouse/registry; do
-     [ -d "$dir" ] && du -sh "$dir" && rm -rf "$dir"
+     [ -d "$dir" ] && du -sh "$dir" && find "$dir" -mindepth 1 -delete
    done
    ```
 
@@ -707,6 +721,12 @@ d8 k -n d8-system delete pod -l app=registry-storage --field-selector spec.nodeN
 Start with the agent: it is on the path of every pull on the node. It is deployed as a static
 pod, so it is available even when the cluster is not.
 
+The kubelet probes the agent on the address the container runtime uses, `127.0.0.1:5001`, and
+restarts it after a minute without an answer. An agent that stays not ready raises
+[`D8RegistryAgentNotReady`](#what-do-the-registry-alerts-mean), and one that keeps restarting raises
+[`D8RegistryAgentRestartingTooOften`](#what-do-the-registry-alerts-mean). Neither alert covers an
+agent that answers but cannot reach the API server: that one is ready.
+
 To check the agent's logs, use the command:
 
 ```bash
@@ -719,10 +739,20 @@ To check the configuration the agent has, and whether it agrees with the cluster
 d8 k get registrynode <NODE> -o jsonpath='{.status}' | jq
 ```
 
-The agent's metrics — its own view of the pulls passing through it. They are read directly
-from the node rather than through Prometheus: the agent is a static pod precisely because it
-has to work when the API server does not, and a kube-rbac-proxy beside it would authenticate
-against that same API server:
+The agent's metrics — its own view of the pulls passing through it. Prometheus collects them
+through the node exporter of the `monitoring-kubernetes` module: every 30 seconds the agent writes
+them to the node exporter's textfile directory, `/var/run/node-exporter-textfile/registry-agent.prom`.
+The `d8_registry_agent_*` series therefore come with `job="node-exporter"` and the node's name in
+the `node` label, for example:
+
+```text
+sum by (node, kind, result) (rate(d8_registry_agent_requests_total[5m]))
+```
+
+Nothing scrapes the agent directly: it is a static pod precisely because it has to work when the
+API server does not, and a `kube-rbac-proxy` beside it would authenticate against that same API
+server. Without `monitoring-kubernetes` the series are not collected. On the node itself the same
+metrics, together with the agent's Go runtime metrics, are served on the loopback address:
 
 ```bash
 ssh <NODE> 'curl -s http://127.0.0.1:4286/metrics | grep d8_registry_agent'

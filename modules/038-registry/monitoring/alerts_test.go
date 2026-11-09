@@ -66,21 +66,23 @@ type ruleFile struct {
 // act rather than a diff nobody reads. They are also what decides which alerts a cluster test can
 // catch at all: anything above twenty minutes is not worth holding a cluster open for.
 var expectedFor = map[string]string{
-	"D8RegistryConfigInvalid":        "5m",
-	"D8RegistryNodeNotConverged":     "20m",
-	"D8RegistryNodeRunningFromDisk":  "1h",
-	"D8RegistryStorageIncomplete":    "2h",
-	"D8RegistryAirGapTransitionHeld": "6h",
-	"D8RegistryUpstreamProbeFailing": "15m",
-	"D8RegistryUpstreamRejected":     "15m",
-	"D8RegistryStaleCacheData":       "24h",
-	"D8RegistryStorageNotReclaimed":  "1h",
-	"D8RegistryStoreWritesRefused":   "2m",
-	"D8RegistryStoreNearlyFull":      "5m",
-	"D8RegistryStoreUnbounded":       "1h",
-	"D8RegistryControllerDown":       "10m",
-	"D8RegistryStorageLeaderAbsent":  "10m",
-	"D8RegistryStorageUpdateBlocked": "1h",
+	"D8RegistryConfigInvalid":           "5m",
+	"D8RegistryNodeNotConverged":        "20m",
+	"D8RegistryNodeRunningFromDisk":     "1h",
+	"D8RegistryAgentNotReady":           "15m",
+	"D8RegistryAgentRestartingTooOften": "5m",
+	"D8RegistryStorageIncomplete":       "2h",
+	"D8RegistryAirGapTransitionHeld":    "6h",
+	"D8RegistryUpstreamProbeFailing":    "15m",
+	"D8RegistryUpstreamRejected":        "15m",
+	"D8RegistryStaleCacheData":          "24h",
+	"D8RegistryStorageNotReclaimed":     "1h",
+	"D8RegistryStoreWritesRefused":      "2m",
+	"D8RegistryStoreNearlyFull":         "5m",
+	"D8RegistryStoreUnbounded":          "1h",
+	"D8RegistryControllerDown":          "10m",
+	"D8RegistryStorageLeaderAbsent":     "10m",
+	"D8RegistryStorageUpdateBlocked":    "1h",
 }
 
 // The files these tests read. Named rather than globbed: the other rule files of this module read
@@ -325,6 +327,42 @@ func TestTheUpdateAlertExplainsEveryReason(t *testing.T) {
 	}
 }
 
+// TestTheRestartAlertFiresAtTheCountItNames holds D8RegistryAgentRestartingTooOften to the number
+// of restarts its description names.
+//
+// The count is an increase over the hour, which extrapolates to the ends of the window: it reads a
+// little above the true count, and exactly the count only when the samples line up with the window.
+// Compared with ">", the alert fires at the count itself most of the time and one restart later
+// when the samples line up, so "more than" describes neither; ">=" fires at the count however the
+// samples fall. The description has to say the same number.
+func TestTheRestartAlertFiresAtTheCountItNames(t *testing.T) {
+	rules := loadRules(t)
+
+	words := map[string]string{"3": "three", "4": "four", "5": "five", "6": "six", "10": "ten"}
+	threshold := regexp.MustCompile(`\)\s*(>=|>)\s*(\d+)\s*\n`)
+
+	var found bool
+	for _, group := range rules.Groups {
+		for _, rule := range group.Rules {
+			if rule.Alert != "D8RegistryAgentRestartingTooOften" {
+				continue
+			}
+			found = true
+
+			match := threshold.FindStringSubmatch(rule.Expr)
+			require.NotNil(t, match, "the restart count the alert compares against was not found")
+			assert.Equal(t, ">=", match[1],
+				"with \">\" the alert fires at the count or one restart later, depending on how the samples fall")
+
+			word, ok := words[match[2]]
+			require.Truef(t, ok, "add %s to the numbers this test spells out", match[2])
+			assert.Contains(t, rule.Annotations["description"], "restarted "+word+" times or more",
+				"the description names a different count from the one the alert fires at")
+		}
+	}
+	require.True(t, found, "D8RegistryAgentRestartingTooOften was not found at all")
+}
+
 // registeredMetrics reads the metric names out of the controller's registry.
 //
 // From the source rather than from a list kept here, so that the two cannot drift apart: a list
@@ -333,16 +371,20 @@ func TestTheUpdateAlertExplainsEveryReason(t *testing.T) {
 func registeredMetrics(t *testing.T) map[string]bool {
 	t.Helper()
 
-	// Both components that are scraped, because the rules draw on both: the controller describes
-	// the cluster, a storage replica describes itself. Reading only the controller made this test
-	// report the garbage-collection alert as broken on its first run, when what was incomplete was
-	// the list of places it looked.
+	// Every component whose metrics reach Prometheus, because the rules may draw on any of them:
+	// the controller describes the cluster, a storage replica describes itself. Reading only the
+	// controller made this test report the garbage-collection alert as broken on its first run,
+	// when what was incomplete was the list of places it looked.
 	//
-	// The node agent is deliberately absent: it is a static pod with no kube-rbac-proxy, nothing
-	// scrapes it, and what it knows reaches Prometheus through the controller instead.
+	// The node agent is one of them, though nothing scrapes it: it is a static pod with no
+	// kube-rbac-proxy, and it writes its metrics into the node exporter's textfile directory
+	// instead. They arrive under the node exporter's job with the node's name as a label, so a
+	// rule on them aggregates by node rather than by pod. What the agent writes into its
+	// RegistryNode status still reaches Prometheus through the controller.
 	sources := []string{
 		filepath.Join("..", "images", "registry-controller", "src", "internal", "metrics", "metrics.go"),
 		filepath.Join("..", "images", "registry-syncer", "src", "internal", "metrics", "metrics.go"),
+		filepath.Join("..", "images", "registry-agent", "src", "internal", "metrics", "metrics.go"),
 	}
 
 	names := map[string]bool{}

@@ -241,6 +241,59 @@ func TestNothingAlertsOnAModuleManagingNothing(t *testing.T) {
 	}
 }
 
+// TestTheAgentAlertsSelectTheAgent is the same silent failure from the other side: the agent's
+// alerts read kube-state-metrics series, which exist whatever the selector says, so a selector that
+// stopped matching the agent's mirror pod would leave one alert never firing and the other firing
+// on every node. The pod is read from dhctl's copy of the Engine manifest, which a template test
+// holds equal to the module's and a bashible test holds the bashible node's to.
+func TestTheAgentAlertsSelectTheAgent(t *testing.T) {
+	content, err := os.ReadFile("../../../dhctl/pkg/immutable/registry-agent.yaml")
+	require.NoError(t, err)
+
+	var pod struct {
+		Metadata struct {
+			Name      string `json:"name"`
+			Namespace string `json:"namespace"`
+		} `json:"metadata"`
+		Spec struct {
+			Containers []struct {
+				Name string `json:"name"`
+			} `json:"containers"`
+		} `json:"spec"`
+	}
+	require.NoError(t, yaml.Unmarshal(content, &pod))
+	require.Len(t, pod.Spec.Containers, 1)
+
+	// The kubelet names a mirror pod after the manifest's pod and the node. The name is quoted
+	// twice: once as the expression's own regular expression would spell it, once to find that
+	// spelling in the expression's text.
+	selector := regexp.MustCompile(`namespace="` + regexp.QuoteMeta(pod.Metadata.Namespace) +
+		`", pod=~"` + regexp.QuoteMeta(regexp.QuoteMeta(pod.Metadata.Name)+"-") + `\.\+"`)
+	container := `container="` + pod.Spec.Containers[0].Name + `"`
+
+	expressions := map[string]string{}
+	for _, g := range loadRules(t) {
+		for _, r := range g.Rules {
+			expressions[r.Alert] = r.Expr
+		}
+	}
+
+	// Every pod series is checked, not just the expression as a whole: one series still naming the
+	// agent would otherwise hide another that had lost its selector.
+	podSeries := regexp.MustCompile(`kube_pod_\w+\{[^}]*\}`)
+	for _, alert := range []string{"D8RegistryAgentNotReady", "D8RegistryAgentRestartingTooOften"} {
+		expr, ok := expressions[alert]
+		require.Truef(t, ok, "there is no alert %s", alert)
+		series := podSeries.FindAllString(expr, -1)
+		require.NotEmptyf(t, series, "alert %s reads no pod series", alert)
+		for _, s := range series {
+			assert.Regexpf(t, selector, s, "alert %s reads %s, which is not the agent's mirror pod", alert, s)
+		}
+	}
+	assert.Containsf(t, expressions["D8RegistryAgentRestartingTooOften"], container,
+		"D8RegistryAgentRestartingTooOften does not count the agent container's restarts")
+}
+
 func sorted(m map[string]string) []string {
 	names := make([]string, 0, len(m))
 	for name := range m {

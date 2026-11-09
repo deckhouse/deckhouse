@@ -23,8 +23,9 @@ limitations under the License.
 //
 // It is also the only way some of that state can be reported. The node agent cannot be scraped:
 // it is a static pod that has to work when the API server does not, so it can carry no
-// kube-rbac-proxy, which would authenticate against the very API server the agent outlives. What
-// the agent knows reaches Prometheus by way of the resource it already writes.
+// kube-rbac-proxy, which would authenticate against the very API server the agent outlives. Its
+// own counters go through the node exporter's textfile directory; what it knows about its layout
+// and the node's disk reaches Prometheus by way of the resource it already writes.
 //
 // This reconciler converges nothing, and runs on every replica rather than only on the lease
 // holder: the thing reporting a problem should not be the thing most likely to have one.

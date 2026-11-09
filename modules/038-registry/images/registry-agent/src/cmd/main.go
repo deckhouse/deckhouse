@@ -170,6 +170,7 @@ func main() {
 		idleLimit     time.Duration
 		dialLimit     time.Duration
 		metricsListen string
+		metricsFile   string
 		logLevel      string
 	)
 
@@ -208,8 +209,11 @@ func main() {
 	flag.DurationVar(&dialLimit, "dial-timeout", proxy.DefaultDialTimeout,
 		"How long opening a connection to one registry may take before the next one is tried.")
 	flag.StringVar(&metricsListen, "metrics-address", "127.0.0.1:4286",
-		"Where to serve the agent's own metrics. Loopback: nothing scrapes a static pod "+
-			"that has to work while the API server does not.")
+		"Where to serve the agent's own metrics, the Go runtime's included, to someone on the node. "+
+			"Loopback: what reaches Prometheus goes through --metrics-textfile instead.")
+	flag.StringVar(&metricsFile, "metrics-textfile", "",
+		"A .prom file in the node exporter's textfile directory to keep the agent's own metrics in, "+
+			"rewritten every 30 seconds and removed on exit. Empty: not written.")
 	flag.StringVar(&logLevel, "log-level", "info", "Log level: debug, info, warn or error.")
 	flag.Parse()
 
@@ -240,6 +244,7 @@ func main() {
 		idleLimit:     idleLimit,
 		dialLimit:     dialLimit,
 		metricsListen: metricsListen,
+		metricsFile:   metricsFile,
 	}); err != nil {
 		log.Error("the agent stopped", "error", err.Error())
 		os.Exit(1)
@@ -263,6 +268,7 @@ type options struct {
 	idleLimit     time.Duration
 	dialLimit     time.Duration
 	metricsListen string
+	metricsFile   string
 }
 
 func run(ctx context.Context, log *slog.Logger, opts options) error {
@@ -322,23 +328,29 @@ func run(ctx context.Context, log *slog.Logger, opts options) error {
 		Interval:      opts.interval,
 	}
 
-	// The agent's own view of the pulls passing through it. Read from the node rather
-	// than scraped, for the reason the agent is a static pod at all: a kube-rbac-proxy
-	// beside it would authenticate against the API server this component exists to
-	// outlive.
-	registry := prometheus.NewRegistry()
-	registry.MustRegister(collectors.NewGoCollector(),
-		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
-	collected := agentmetrics.New(registry)
+	// The agent's own view of the pulls passing through it. Never scraped directly, for the
+	// reason the agent is a static pod at all: a kube-rbac-proxy beside it would authenticate
+	// against the API server this component exists to outlive. Prometheus gets it from the
+	// node exporter's textfile directory instead, and someone on the node from the loopback
+	// listener.
+	served, ownOnly, collected := buildMetrics()
 	loop.Metrics = collected
 
 	go func() {
-		if err := serveMetrics(ctx, opts.metricsListen, registry); err != nil {
+		if err := serveMetrics(ctx, opts.metricsListen, served); err != nil {
 			// Never fatal. Every pull on this node goes through the agent, and none of
 			// them may depend on whether anyone is watching.
 			log.Error("the metrics listener stopped", "error", err.Error())
 		}
 	}()
+
+	if opts.metricsFile != "" {
+		textfile := &agentmetrics.Textfile{Log: log, Path: opts.metricsFile, Gatherer: ownOnly}
+		// Deferred so that run does not return, and the process does not exit, before the
+		// file is gone. See Textfile.Start.
+		stop := textfile.Start(ctx)
+		defer stop()
+	}
 
 	server := &proxy.Server{
 		Log:             log,
@@ -400,10 +412,32 @@ func newClient(kubeconfig, nodeConfigPath string, attempt int) (client.Client, e
 	return built, nil
 }
 
+// buildMetrics returns, in this order, what the loopback listener serves, what the textfile
+// carries, and the collectors the agent updates.
+//
+// Two registries, because the two readers differ. Someone on the node with a shell wants the
+// Go runtime and the process along with the agent's own families. The node exporter merges the
+// textfile into its own answer, and it reports go_* and process_* of its own: the same names
+// from a second source, with different help and values, are an inconsistent answer that loses
+// the agent's series at best and fails the node exporter's scrape at worst. So the textfile
+// gets the agent's families and nothing else.
+//
+// A function so that this split can be asserted against what main actually wires.
+func buildMetrics() (prometheus.Gatherer, prometheus.Gatherer, *agentmetrics.Metrics) {
+	own := prometheus.NewRegistry()
+	collected := agentmetrics.New(own)
+
+	process := prometheus.NewRegistry()
+	process.MustRegister(collectors.NewGoCollector(),
+		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+
+	return prometheus.Gatherers{process, own}, own, collected
+}
+
 // serveMetrics answers whoever is on the node, and nobody else.
-func serveMetrics(ctx context.Context, address string, registry *prometheus.Registry) error {
+func serveMetrics(ctx context.Context, address string, gatherer prometheus.Gatherer) error {
 	mux := http.NewServeMux()
-	mux.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
+	mux.Handle("/metrics", promhttp.HandlerFor(gatherer, promhttp.HandlerOpts{}))
 
 	server := &http.Server{
 		Addr:              address,

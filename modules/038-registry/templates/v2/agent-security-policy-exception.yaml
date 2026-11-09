@@ -38,7 +38,8 @@ spec:
       metadata:
         description: |
           The container runtime reaches the agent on the node's loopback address, which
-          exists only in the host network namespace. The agent opens no other port.
+          exists only in the host network namespace. Besides it, the agent listens only on
+          127.0.0.1:4286 for its own metrics, also loopback-only.
   volumes:
     types:
       allowedValues:
@@ -69,5 +70,13 @@ spec:
           readOnly: true
           metadata:
             description: The kubelet's rotating client certificate, which the agent reads the API server with.
+        - path: /opt/deckhouse/registry
+          readOnly: true
+          metadata:
+            description: The store's directory on this node, measured to report data left behind.
+        - path: /var/run/node-exporter-textfile
+          readOnly: false
+          metadata:
+            description: The node exporter's textfile directory, where the agent keeps its own metrics for it to report.
 {{- end }}
 {{- end }}

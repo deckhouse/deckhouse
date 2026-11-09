@@ -8,8 +8,10 @@
   Nothing here scrapes the node agent, and it cannot. The agent is a static pod that has to
   keep working when the API server does not — that is the whole reason it exists as one —
   so it can carry no kube-rbac-proxy, since that sidecar authenticates against the very API
-  server the agent is designed to outlive. What the agent knows is written into its
-  RegistryNode status and exported from the controller instead.
+  server the agent is designed to outlive. Its own metrics (d8_registry_agent_*) reach
+  Prometheus as a file in the node exporter's textfile directory, under the node exporter's
+  job and with the node's name as a label; what it writes into its RegistryNode status is
+  exported from the controller.
 */ -}}
 {{- if and (eq (include "registry_v2_manages" .) "true") (.Values.global.enabledModules | has "operator-prometheus-crd") }}
 ---

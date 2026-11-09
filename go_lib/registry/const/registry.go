@@ -140,6 +140,30 @@ const (
 	// AgentCAFile is the authority that signs what the agent serves.
 	AgentCAFile = AgentPKIPath + "/ca.crt"
 
+	// AgentCPURequest and AgentMemoryRequest are what the node agent's static pod requests.
+	//
+	// Requests and no limits. Without requests the pod is BestEffort, and BestEffort is the
+	// smallest CPU weight on the node: under load — a node bootstrapping, a busy worker — the
+	// agent got next to no CPU, and every pull on the node waited on it, the pulls that would
+	// have relieved the load included. A CPU limit would throttle the same path from the other
+	// side, since every byte of every image crosses the agent's TLS. Memory is left unlimited
+	// until the agent's peak under parallel pulls is measured; until then the OOM killer reaches
+	// it last anyway, through system-node-critical.
+	//
+	// Shared constants because the manifest exists three times — the bashible step, the
+	// module's request for Engine nodes and dhctl's copy of it — and tests pin all of them here.
+	AgentCPURequest    = "50m"
+	AgentMemoryRequest = "64Mi"
+
+	// AgentMetricsTextfile is where the node agent keeps its metrics for the node exporter.
+	//
+	// The directory is the node exporter's textfile directory: it mounts this host path and
+	// reads every *.prom file in it (monitoring-kubernetes, node-exporter's DaemonSet, the
+	// textfile volume and --collector.textfile.directory). That is a contract with another
+	// module rather than something this one decides, hence one constant for the three manifests
+	// that name it.
+	AgentMetricsTextfile = "/var/run/node-exporter-textfile/registry-agent.prom"
+
 	// ImageAddressConfigMapName is the record that the cluster's pull path goes through the
 	// node agent: its presence says image references name HostWithPath, and its one key says
 	// so in words.

@@ -17,7 +17,10 @@ limitations under the License.
 package template_tests
 
 import (
+	"fmt"
+	"net"
 	"os"
+	"path/filepath"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
@@ -211,6 +214,98 @@ var _ = Describe("Module :: registry :: helm template :: v2 node static pod", fu
 			// naming no registry and no API server.
 			Expect(volumes["node-config"]["path"]).To(Equal("/config"))
 			Expect(volumes["node-config"]["type"]).To(Equal("Directory"))
+		})
+
+		// BestEffort is the smallest CPU weight on the node, and every pull on the node waits on
+		// this pod. A limit would starve the same path from the other side: every byte of every
+		// image crosses the agent's TLS. The same constants pin the bashible node's manifest.
+		It("requests what the agent needs and limits nothing", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			resources := container()["resources"].(map[string]any)
+			Expect(resources).ToNot(HaveKey("limits"))
+			requests := resources["requests"].(map[string]any)
+			Expect(requests["cpu"]).To(Equal(constant.AgentCPURequest))
+			Expect(requests["memory"]).To(Equal(constant.AgentMemoryRequest))
+		})
+
+		It("measures the store through whatever is mounted on its directory", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			args := container()["args"].([]any)
+			Expect(args).To(ContainElement("--store-path=" + constant.StorePathImmutable))
+
+			for _, raw := range container()["volumeMounts"].([]any) {
+				mount := raw.(map[string]any)
+				if mount["mountPath"] != constant.StorePathImmutable {
+					continue
+				}
+				Expect(mount["readOnly"]).To(BeTrue())
+				// A disk mounted on the directory after the agent started is what it has to
+				// measure, not the empty directory under it.
+				Expect(mount["mountPropagation"]).To(Equal("HostToContainer"))
+				return
+			}
+			Fail("the store's directory is not mounted")
+		})
+
+		// A frozen agent completes no handshake, so containerd pulls without it, where platform
+		// images cannot be pulled; with no liveness probe nothing restarted it. The listener the
+		// runtime uses, over TLS, so that the probe passes only if a pull's handshake would.
+		It("probes the agent where the runtime reaches it", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			host, port, err := net.SplitHostPort(constant.ProxyHost)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			for _, name := range []string{"startupProbe", "livenessProbe", "readinessProbe"} {
+				Expect(container()).To(HaveKey(name))
+				httpGet := container()[name].(map[string]any)["httpGet"].(map[string]any)
+				Expect(httpGet["scheme"]).To(Equal("HTTPS"), name)
+				Expect(httpGet["host"]).To(Equal(host), name)
+				Expect(fmt.Sprint(httpGet["port"])).To(Equal(port), name)
+				Expect(httpGet["path"]).To(Equal("/healthz"), name)
+			}
+
+			// A restart drops every pull in flight on the node, so it takes a minute of silence.
+			liveness := container()["livenessProbe"].(map[string]any)
+			Expect(liveness["periodSeconds"].(int) * liveness["failureThreshold"].(int)).To(BeNumerically(">=", 60))
+
+			// A frozen agent cannot act on SIGTERM; the kubelet kills it when the grace period ends.
+			Expect(podSpec()).To(HaveKey("terminationGracePeriodSeconds"))
+			Expect(podSpec()["terminationGracePeriodSeconds"]).To(BeNumerically("<=", 15))
+		})
+
+		// Nothing scrapes the agent; the node exporter reports what it writes into the textfile
+		// directory. The directory is monitoring-kubernetes' contract, the same on every node.
+		It("writes its metrics where the node exporter reads them", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			args := container()["args"].([]any)
+			Expect(args).To(ContainElement("--metrics-textfile=" + constant.AgentMetricsTextfile))
+
+			directory := filepath.Dir(constant.AgentMetricsTextfile)
+			var name string
+			for _, raw := range container()["volumeMounts"].([]any) {
+				mount := raw.(map[string]any)
+				if mount["mountPath"] == directory {
+					Expect(mount).ToNot(HaveKey("readOnly"), "the agent writes and removes the file")
+					name = mount["name"].(string)
+				}
+			}
+			Expect(name).ToNot(BeEmpty(), "the textfile directory is not mounted")
+
+			found := false
+			for _, raw := range podSpec()["volumes"].([]any) {
+				volume := raw.(map[string]any)
+				if volume["name"] == name {
+					found = true
+					hostPath := volume["hostPath"].(map[string]any)
+					Expect(hostPath["path"]).To(Equal(directory))
+					Expect(hostPath["type"]).To(Equal("DirectoryOrCreate"))
+				}
+			}
+			Expect(found).To(BeTrue(), "the textfile mount names no volume")
 		})
 	})
 

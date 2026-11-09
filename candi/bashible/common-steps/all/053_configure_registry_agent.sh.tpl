@@ -37,12 +37,32 @@
 {{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
   {{- $agent_image = "deckhouse.local/images:registry-agent" }}
 {{- end }}
+{{- /*
+  Where the kubelet probes the agent: the address it serves the runtime on, taken apart rather than
+  restated, so that a different endpoint moves the probes with the listener instead of leaving them
+  knocking on a port nothing answers — which liveness would answer by restarting a healthy agent
+  forever.
+*/}}
+{{- $agent_probe_host := .registry.agent.endpoint | splitList ":" | first }}
+{{- $agent_probe_port := .registry.agent.endpoint | splitList ":" | last }}
 
 agent_path="/etc/kubernetes/registry-agent"
 pki_path="${agent_path}/pki"
 bootstrap_layout="${agent_path}/bootstrap-layout.json"
 agent_kubeconfig="${agent_path}/kubeconfig"
 cache_path="/var/lib/deckhouse/registry-agent"
+
+# Where the in-cluster cache keeps its blobs on this node. Always this path here: only a node of
+# an Immutable group keeps them elsewhere, and such a node runs no bashible steps.
+store_path="/opt/deckhouse/registry"
+
+# The node exporter's textfile directory, which it mounts from this host path and reads every
+# *.prom file of. The contract is monitoring-kubernetes': its node-exporter DaemonSet mounts
+# /var/run/node-exporter-textfile (DirectoryOrCreate) and passes
+# --collector.textfile.directory=/host/textfile* (last in this repository at
+# modules/340-monitoring-kubernetes/templates/node-exporter/daemonset.yaml before 0a4d0cfea0
+# moved the module out).
+metrics_textfile_dir="/var/run/node-exporter-textfile"
 
 # The certificate authorities this cluster accepts, staged one file per registry by step 003 for
 # whichever implementation is in charge. The agent needs them for the reason the runtime used to:
@@ -337,6 +357,42 @@ bb-unset-proxy
 # ran, so the OLD container keeps serving. The digest makes the file differ exactly when the image
 # does, and bb-sync-file rewriting it is what makes kubelet restart the pod.
 #
+# Requests, and no limits. Without requests the pod is BestEffort, the smallest CPU weight on the
+# node, and under load the agent got next to no CPU while every pull on the node waited on it. A CPU
+# limit would throttle the same path from the other side: every byte of every image crosses the
+# agent's TLS. Memory stays unlimited until the agent's peak under parallel pulls is measured, and
+# system-node-critical already makes it the OOM killer's last choice. The values are AgentCPURequest
+# and AgentMemoryRequest in go_lib/registry/const, which a test holds this manifest to.
+#
+# The store's directory, read-only. The agent measures what the in-cluster cache left on the node
+# once the cache is turned off, and reports it as staleStorageDataBytes, which is what
+# D8RegistryStaleCacheData fires on. Without the mount it measured an empty directory inside its own
+# container and reported zero on every node bashible configures. HostToContainer so that a disk
+# mounted on that directory after the agent started is what it measures, rather than the empty
+# directory under it. DirectoryOrCreate: a node that never held a store has nothing there, which
+# measures as nothing left behind.
+#
+# The node exporter's textfile directory, writable. The agent is never scraped directly — a
+# kube-rbac-proxy beside it would authenticate against the API server it exists to outlive — so it
+# keeps its own metrics in a file there, and the node exporter reports them under its own job with
+# the node's name. The agent removes the file when it stops, and the branch below removes it when
+# the agent is taken off the node.
+#
+# Probes, on the port the runtime pulls through and over TLS, not on the plain-HTTP metrics
+# listener: a probe that passes has completed the same handshake every pull does, with the
+# certificate read from disk as it is on every handshake. Loopback, because that is the only
+# address the agent listens on, and the kubelet shares the host's network namespace with it.
+#
+# Liveness restarts an agent that has not answered for a minute. A frozen agent still accepts
+# connections into the kernel's backlog but completes no handshake, so containerd waits out its
+# handshake timeout on every pull and then pulls without the agent, where platform images cannot be
+# pulled; without liveness nothing would restart it, and the node would stay like that. A minute,
+# not seconds, because a restart drops every pull in flight. The startup probe holds liveness off
+# for up to two minutes, so an agent slow to start on a node that is still booting is not killed for
+# it. Readiness is quicker and costs nothing to fail: the pod has no Service, and its Ready
+# condition is read only by the D8RegistryAgentNotReady alert. The same probes are in the Engine
+# manifest, which a test holds this one to.
+#
 # This prose lives HERE and not inside the heredoc below, and neither does any backtick: the
 # delimiter cannot be quoted — the body needs ${drop_in_root} expanded — so everything inside it is
 # subject to command substitution, comments included.
@@ -370,6 +426,10 @@ spec:
   dnsPolicy: Default
   priorityClassName: system-node-critical
   priority: 2000001000
+  # A frozen agent cannot act on SIGTERM, so the kubelet kills it only when the grace period
+  # ends: with the default 30 s, liveness gave up on it after a minute and the node waited half a
+  # minute more. A running agent exits within a second of SIGTERM, so this is headroom, not a wait.
+  terminationGracePeriodSeconds: 15
   containers:
   - name: registry-agent
     image: {{ $agent_image }}
@@ -382,6 +442,8 @@ spec:
     - --kubeconfig=${agent_kubeconfig}
     - --layout-cache=${cache_path}/layout.json
     - --trust-dir=${trust_path}
+    - --store-path=${store_path}
+    - --metrics-textfile=${metrics_textfile_dir}/registry-agent.prom
     env:
     - name: NODE_NAME
       valueFrom:
@@ -399,6 +461,37 @@ ${proxy_env}
       runAsUser: 0
       seccompProfile:
         type: RuntimeDefault
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+    startupProbe:
+      httpGet:
+        scheme: HTTPS
+        host: {{ $agent_probe_host }}
+        port: {{ $agent_probe_port }}
+        path: /healthz
+      periodSeconds: 5
+      timeoutSeconds: 5
+      failureThreshold: 24
+    livenessProbe:
+      httpGet:
+        scheme: HTTPS
+        host: {{ $agent_probe_host }}
+        port: {{ $agent_probe_port }}
+        path: /healthz
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 6
+    readinessProbe:
+      httpGet:
+        scheme: HTTPS
+        host: {{ $agent_probe_host }}
+        port: {{ $agent_probe_port }}
+        path: /healthz
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
     volumeMounts:
     # Written by the agent, and by nothing else.
     - mountPath: ${drop_in_root}
@@ -413,6 +506,12 @@ ${proxy_env}
     - mountPath: ${trust_path}
       name: trusted-authorities
       readOnly: true
+    - mountPath: ${store_path}
+      name: store-data
+      readOnly: true
+      mountPropagation: HostToContainer
+    - mountPath: ${metrics_textfile_dir}
+      name: metrics-textfile
 ${kubeconfig_mount}
   volumes:
   - hostPath:
@@ -433,6 +532,14 @@ ${kubeconfig_mount}
       path: ${trust_path}
       type: DirectoryOrCreate
     name: trusted-authorities
+  - hostPath:
+      path: ${store_path}
+      type: DirectoryOrCreate
+    name: store-data
+  - hostPath:
+      path: ${metrics_textfile_dir}
+      type: DirectoryOrCreate
+    name: metrics-textfile
 ${kubeconfig_volume}
 EOF
 
@@ -447,9 +554,15 @@ EOF
 # handover works in both directions without either step reaching into the other's
 # output.
 #
-# What is removed here is the pod and the material only the agent reads.
+# What is removed here is the pod, the material only the agent reads, and the agent's metrics
+# file. The agent removes that file itself when the kubelet stops it, but not when it is killed
+# or the node goes down under it, and a file left behind is a set of series the node exporter
+# goes on reporting as current. This removal runs before the kubelet has noticed the manifest
+# is gone, so a running agent may write the file once more after it; on a clean stop it is the
+# agent's own removal that counts, and this one is for a file an agent no longer running left.
 rm -f /etc/kubernetes/manifests/registry-agent.yaml
 rm -rf /etc/kubernetes/registry-agent
 rm -rf /var/lib/deckhouse/registry-agent
+rm -f /var/run/node-exporter-textfile/registry-agent.prom
 
 {{- end }}

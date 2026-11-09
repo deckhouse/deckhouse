@@ -112,6 +112,127 @@
         shows as `NotReady` and is reported as such. An agent whose own access is refused is
         the other, and while its node stays `Ready` nothing reports it.
 
+  # The agent's health as the kubelet sees it, rather than as the agent reports it. A crashed
+  # agent reports nothing, a frozen one cannot, and a node whose manifest is gone has no agent to
+  # report anything: RegistryNode keeps the status it was last given, and the agent's own metrics
+  # stop with it. The kubelet's probes and kube-state-metrics see all three.
+  #
+  # Every node with a RegistryNode is expected to run one, and a node with no Ready mirror pod
+  # called registry-agent-<node> is the alert — so a pod that is missing altogether counts, not
+  # only one that is failing. A node that is not Ready is left out: its kubelet cannot update the
+  # mirror pod, and the node itself is the bigger news. A node is kept when kube-state-metrics says
+  # it is Ready rather than dropped when it says NotReady, so with kube-state-metrics disabled or
+  # down the alert stays silent instead of firing on every node. kube_pod_info is reduced to one
+  # series per pod because a static pod whose manifest changed comes back under the same name with
+  # a new UID, and for a while both are in the lookback.
+  #
+  # Not covered: an agent that serves pulls but cannot reach the API server answers its probes and
+  # is Ready, so this alert says nothing about it.
+  - alert: D8RegistryAgentNotReady
+    expr: |
+      max by (node) (d8_registry_node_reconciled)
+      unless on (node) max by (node) (
+        (kube_pod_status_ready{namespace="kube-system", pod=~"registry-agent-.+", condition="true"} == 1)
+        * on (namespace, pod) group_left (node)
+        max by (namespace, pod, node) (kube_pod_info{namespace="kube-system", pod=~"registry-agent-.+"})
+      )
+      and on (node) max by (node) (kube_node_status_condition{condition="Ready", status="true"} == 1)
+      and on () max(d8_registry_managed) > 0
+    for: 15m
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: registry
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The registry agent on node {{ $labels.node }} is not ready.
+      description: |-
+        The registry agent on node `{{ $labels.node }}` is not answering, or is not running at
+        all. Every pull on the node goes through it, and without it containerd pulls straight
+        from the registry an image names. Images of the platform itself, and of registries that
+        need the cluster's credentials or certificate authority, then fail on that node; other
+        images still pull, bypassing the in-cluster cache and any `RegistryUpstream`.
+
+        The kubelet restarts an agent that stops answering for a minute, so a state that lasts
+        this long is one a restart does not fix: an agent that fails on start, or one that is
+        not on the node at all.
+
+        What the pod says:
+
+        ```
+        d8 k -n kube-system get pod registry-agent-{{ $labels.node }} -o wide
+        d8 k -n kube-system describe pod registry-agent-{{ $labels.node }}
+        d8 k -n kube-system logs registry-agent-{{ $labels.node }} --previous --tail=50
+        ```
+
+        An agent that exits on start names in its log what it could not use, usually its
+        certificate material under `/etc/kubernetes/registry-agent/pki` or containerd's
+        drop-in directory.
+
+        No such pod means either that the kubelet has no manifest for it — on a node bashible
+        configures, that is `/etc/kubernetes/manifests/registry-agent.yaml` — or that the API
+        server refused the mirror pod, in which case the agent may well be running. The
+        kubelet's log on the node says which:
+
+        ```
+        journalctl -u kubelet --since "1 hour ago" | grep registry-agent
+        ```
+
+        A node of a NodeGroup with `systemType: Immutable` has no SSH: start a debug pod on it
+        with `d8 k debug node/{{ $labels.node }} -it --image=ubuntu` and run `chroot /host`
+        first.
+
+        Fifteen minutes, so that a node taking over the agent after the module starts managing
+        it, or an update that replaces the agent on every node, does not raise it.
+
+  # Readiness alone misses an agent that keeps coming back: one that runs for a while, fails, and
+  # is restarted is Ready most of the time, and each restart drops the pulls in flight on its
+  # node. Five restarts an hour is past what an update, or one bad moment, explains.
+  #
+  # Five or more, not more than five: increase extrapolates to the ends of the window, so five
+  # restarts usually read a little above five and read exactly five only when the samples line up
+  # with the window. "> 5" fired at about the fifth restart, which "more than five" did not
+  # describe; ">= 5" fires at the fifth however the samples fall.
+  - alert: D8RegistryAgentRestartingTooOften
+    expr: |
+      max by (node) (
+        increase(kube_pod_container_status_restarts_total{namespace="kube-system", pod=~"registry-agent-.+", container="registry-agent"}[1h])
+        * on (namespace, pod) group_left (node)
+        max by (namespace, pod, node) (kube_pod_info{namespace="kube-system", pod=~"registry-agent-.+"})
+      ) >= 5
+      and on () max(d8_registry_managed) > 0
+    for: 5m
+    labels:
+      severity_level: "5"
+      tier: cluster
+      d8_module: registry
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The registry agent on node {{ $labels.node }} keeps restarting.
+      description: |-
+        The registry agent on node `{{ $labels.node }}` has restarted five times or more in
+        the last hour. Each restart drops every pull in flight on the node, and until the agent
+        is back containerd pulls without it, where images of the platform cannot be pulled.
+
+        Either the agent exits on its own, or the kubelet kills it because it stopped answering
+        its liveness probe for a minute. The last state of the container says which:
+
+        ```
+        d8 k -n kube-system get pod registry-agent-{{ $labels.node }} -o jsonpath='{.status.containerStatuses[0].lastState}' | jq
+        d8 k -n kube-system logs registry-agent-{{ $labels.node }} --previous --tail=100
+        d8 k -n kube-system get events --field-selector involvedObject.name=registry-agent-{{ $labels.node }}
+        ```
+
+        `Liveness probe failed` in the events is an agent that hung: the log before the restart
+        shows what it was doing. An exit code with an error in the log is an agent that gave
+        up: the log names what it could not use.
+
   - alert: D8RegistryStorageIncomplete
     expr: |
       max(d8_registry_managed) > 0
@@ -296,10 +417,12 @@
         alert is.
 
         Nothing is wrong and nothing needs doing urgently. To reclaim the space, remove the
-        directory the store kept its blobs in: `/var/lib/deckhouse/registry` on a node of a
-        NodeGroup with `systemType: Immutable`, `/opt/deckhouse/registry` on other nodes.
-        With the cache off there is no RegistryStorage left to ask, so the command below
-        looks at both.
+        contents of the directory the store kept its blobs in: `/var/lib/deckhouse/registry`
+        on a node of a NodeGroup with `systemType: Immutable`, `/opt/deckhouse/registry` on
+        other nodes. Keep the directory itself: the agent has it mounted, and once it is
+        removed the agent no longer sees the node's directory, so data a cache leaves there
+        later goes unreported until the agent restarts. With the cache off there is no
+        RegistryStorage left to ask, so the command below looks at both.
 
         Open a root shell on the node over SSH. A node of a NodeGroup with
         `systemType: Immutable` has no SSH: start a debug pod on it and switch to the node's
@@ -310,11 +433,11 @@
         chroot /host
         ```
 
-        Then remove the data:
+        Then remove the data, keeping the directories themselves:
 
         ```
         for dir in /opt/deckhouse/registry /var/lib/deckhouse/registry; do
-          [ -d "$dir" ] && du -sh "$dir" && rm -rf "$dir"
+          [ -d "$dir" ] && du -sh "$dir" && find "$dir" -mindepth 1 -delete
         done
         ```
 

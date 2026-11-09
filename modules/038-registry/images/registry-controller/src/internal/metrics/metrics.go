@@ -94,8 +94,9 @@ var (
 // From one place, because these are facts the resources already carry and a second exporter
 // would reach the same conclusions a beat later. Several of them cannot be reported any
 // other way: the node agent is a static pod that must work when the API server does not, so
-// it cannot carry a kube-rbac-proxy and cannot be scraped — what it knows arrives here by
-// way of the resource it writes.
+// it cannot carry a kube-rbac-proxy and cannot be scraped. Its own counters reach Prometheus
+// through the node exporter's textfile directory; what it knows about its layout and the
+// node's disk arrives here by way of the resource it writes.
 var (
 	// Managed is 1 while the module owns the pull path.
 	//
