@@ -134,6 +134,8 @@ properties:
         items:
           type: object
           properties:
+            name:
+              type: string
             urlPrefix:
               type: string
             filterVerb:

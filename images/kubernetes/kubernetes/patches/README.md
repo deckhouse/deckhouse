@@ -358,3 +358,18 @@ While a simulation runs, real scheduling waits for it, extender calls included; 
 The endpoint listens on loopback only. `control-plane-proxy` publishes it as `/scheduler/simulate`; access is granted by the ClusterRole `d8:control-plane-manager:scheduler-simulate`.
 
 The patch is carried on 1.33 (`024`), 1.34 (`025`), 1.35 (`024`), 1.36 (`023`) and 1.37 (`022`).
+
+### scheduler-extender-metrics.patch
+
+Upstream kube-scheduler has no metrics for HTTP extenders: a slow or failing extender shows up only as a longer scheduling cycle, and a dropped prioritize call is silent. The patch adds:
+
+- `scheduler_extender_request_duration_seconds{extender, verb, result}`: every request to an extender with its result: `success`, `extender_error` (the extender answered with an error in the body), `timeout`, `error` (connection or local failure), `status` (HTTP code other than 200), `decode`;
+- `scheduler_extender_request_phase_duration_seconds{extender, verb, phase}`: where a successful request spends its time (encoding, waiting for a connection, writing, waiting for the answer, reading);
+- `scheduler_extender_info{extender, url, filter_verb, prioritize_verb, preempt_verb, bind_verb, weight, ignorable}`: the configured extenders with their URL prefixes, published by every replica;
+- `scheduler_extender_filter_nodes_total{extender, outcome}`: nodes a filter answer passed, failed or failed as unresolvable.
+
+Requests made by the simulate endpoint are not recorded.
+
+`extender` is the name of the extender: the name of its KubeSchedulerWebhookConfiguration, with `/<n>` (the position of the webhook in `webhooks`, from 1) when the object has several webhooks. Deckhouse passes the names in `DECKHOUSE_EXTENDER_NAMES` (comma-separated `<urlPrefix>=<name>`); an extender without a name, for example one configured by hand, is labelled by its URL prefix. The number of series stays the same, but the label values change once, on the upgrade to a Deckhouse that renders the names: graphs and alerts by `extender` break at that point.
+
+The patch is carried on 1.33 (`025`), 1.34 (`026`), 1.35 (`025`), 1.36 (`024`) and 1.37 (`023`).

@@ -83,6 +83,18 @@ spec:
            loopback only; control-plane-proxy publishes it with authorization as /scheduler/simulate. */}}
     - name: DECKHOUSE_SCHEDULER_SIMULATE_ADDRESS
       value: "127.0.0.1:10261"
+{{- $names := list }}
+{{- range $extender := (.scheduler).extenders }}
+  {{- if $extender.name }}
+    {{- $names = append $names (printf "%s=%s" $extender.urlPrefix $extender.name) }}
+  {{- end }}
+{{- end }}
+{{- if $names }}
+    {{- /* Names of extenders in kube-scheduler metrics (patch scheduler-extender-metrics): comma-separated
+           <urlPrefix>=<name>; a name is a KubeSchedulerWebhookConfiguration name, with /<n> for one of several webhooks. */}}
+    - name: DECKHOUSE_EXTENDER_NAMES
+      value: {{ $names | join "," | quote }}
+{{- end }}
 {{- if (.images).controlPlaneManager }}  
 {{- $imageWithVersion := printf "kubeScheduler%s" ($.clusterConfiguration.kubernetesVersion | replace "." "") }}
   {{- if hasKey $.images.controlPlaneManager $imageWithVersion }}

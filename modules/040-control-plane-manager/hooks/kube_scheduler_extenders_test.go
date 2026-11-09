@@ -224,6 +224,7 @@ webhooks:
 			Expect(len(f.ValuesGet(configPath).Array())).To(Equal(1))
 			Expect(f.ValuesGet(configPath).Array()[0].String()).To(MatchJSON(`
           {
+            "name": "test1",
             "urlPrefix": "https://scheduler.test1.svc.cluster.local:8080/scheduler",
             "weight": 5,
             "timeout": "5s",
@@ -253,6 +254,7 @@ webhooks:
 			Expect(len(f.ValuesGet(configPath).Array())).To(Equal(3))
 			Expect(f.ValuesGet(configPath).Array()[0].String()).To(MatchJSON(`
           {
+            "name": "test1",
             "urlPrefix": "https://scheduler.test1.svc.cluster.local:8080/scheduler",
             "weight": 5,
             "timeout": "5s",
@@ -265,6 +267,7 @@ webhooks:
 
 			Expect(f.ValuesGet(configPath).Array()[1].String()).To(MatchJSON(`
           {
+            "name": "test2/1",
             "urlPrefix": "https://scheduler.test2.svc.cluster.local:8080/scheduler",
             "weight": 10,
             "timeout": "5s",
@@ -277,6 +280,7 @@ webhooks:
 
 			Expect(f.ValuesGet(configPath).Array()[2].String()).To(MatchJSON(`
           {
+            "name": "test2/2",
             "urlPrefix": "https://scheduler2.test2.svc.cluster.local:8080/scheduler",
             "weight": 20,
             "timeout": "10s",
@@ -306,6 +310,7 @@ webhooks:
 			Expect(len(f.ValuesGet(configPath).Array())).To(Equal(1))
 			Expect(f.ValuesGet(configPath).Array()[0].String()).To(MatchJSON(`
           {
+            "name": "test4",
             "urlPrefix": "https://scheduler.test4.svc.cluster.local:8080/scheduler",
             "weight": 10,
             "timeout": "5s",
@@ -334,6 +339,7 @@ webhooks:
 			Expect(len(f.ValuesGet(configPath).Array())).To(Equal(1))
 			Expect(f.ValuesGet(configPath).Array()[0].String()).To(MatchJSON(`
           {
+            "name": "test5",
             "urlPrefix": "https://scheduler.test5.svc.cluster.local:8080/scheduler",
             "weight": 10,
             "timeout": "5s",
@@ -362,6 +368,7 @@ webhooks:
 			Expect(len(f.ValuesGet(configPath).Array())).To(Equal(1))
 			Expect(f.ValuesGet(configPath).Array()[0].String()).To(MatchJSON(`
           {
+            "name": "test6",
             "urlPrefix": "https://scheduler.test6.svc.cluster.local:8080/scheduler",
             "weight": 10,
             "timeout": "500ms",

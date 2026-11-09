@@ -53,14 +53,32 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleExtenders)
 
+// extenderObject is one KubeSchedulerWebhookConfiguration: its name names its
+// extenders in kube-scheduler metrics.
+type extenderObject struct {
+	Name     string                 `json:"name"`
+	Webhooks []KubeSchedulerWebhook `json:"webhooks"`
+}
+
 func extendersFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var extenderCR KubeSchedulerWebhookConfiguration
 
 	err := sdk.FromUnstructured(obj, &extenderCR)
-	return extenderCR.Webhooks, err
+	return extenderObject{Name: extenderCR.Name, Webhooks: extenderCR.Webhooks}, err
 }
+
+// extenderName is the name of a webhook in kube-scheduler metrics: the object
+// name, with the 1-based index of the webhook when the object has several.
+func extenderName(object string, index, count int) string {
+	if count > 1 {
+		return fmt.Sprintf("%s/%d", object, index+1)
+	}
+	return object
+}
+
 func handleExtenders(_ context.Context, input *go_hook.HookInput) error {
 	type extenderConfig struct {
+		Name           string `yaml:"name" json:"name"`
 		URLPrefix      string `yaml:"urlPrefix" json:"urlPrefix"`
 		Weight         int    `yaml:"weight" json:"weight"`
 		Timeout        string `yaml:"timeout" json:"timeout"`
@@ -74,12 +92,12 @@ func handleExtenders(_ context.Context, input *go_hook.HookInput) error {
 
 	var clusterDomain = input.Values.Get("global.discovery.clusterDomain").String()
 	var kubernetesCABase64 = base64.StdEncoding.EncodeToString([]byte(input.Values.Get("global.discovery.kubernetesCA").String()))
-	for snapshot, err := range sdkobjectpatch.SnapshotIter[[]KubeSchedulerWebhook](input.Snapshots.Get("kube_scheduler_extenders")) {
+	for snapshot, err := range sdkobjectpatch.SnapshotIter[extenderObject](input.Snapshots.Get("kube_scheduler_extenders")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'nodes' snapshot: %w", err)
 		}
 
-		for _, config := range snapshot {
+		for i, config := range snapshot.Webhooks {
 			err = verifyCAChain(config.ClientConfig.CABundle)
 			if err != nil {
 				input.Logger.Warn("failed to verify CA chain, use default kubernetes CA", log.Err(err))
@@ -107,6 +125,7 @@ func handleExtenders(_ context.Context, input *go_hook.HookInput) error {
 				}
 			}
 			newExtender := extenderConfig{
+				Name:           extenderName(snapshot.Name, i, len(snapshot.Webhooks)),
 				URLPrefix:      urlPrefix,
 				Weight:         config.Weight,
 				Timeout:        timeout,

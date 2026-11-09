@@ -1434,6 +1434,56 @@ resources:
 			Expect(conf.Extenders).To(HaveLen(1))
 			Expect(conf.Extenders[0].HTTPTimeout.Duration).To(Equal(500 * time.Millisecond))
 		})
+
+		It("should not set extender names for an extender without a name", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+			manifest, err := base64.StdEncoding.DecodeString(s.Field("data.kube-scheduler\\.yaml\\.tpl").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(manifest)).NotTo(ContainSubstring("DECKHOUSE_EXTENDER_NAMES"))
+		})
+	})
+
+	Context("Scheduler extenders with names", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("controlPlaneManager.internal.kubeSchedulerExtenders", `
+- name: usage/1
+  urlPrefix: https://usage.d8-usage.svc.cluster.local:8443/usage
+  weight: 1
+  timeout: 100ms
+  ignorable: true
+  caData: ABCD=
+  filterVerb: ""
+  prioritizeVerb: prioritize
+  preemptVerb: ""
+- name: sds
+  urlPrefix: https://sds.d8-sds.svc.cluster.local:8099/scheduler
+  weight: 5
+  timeout: 5s
+  ignorable: false
+  caData: ABCD=
+  filterVerb: filter
+  prioritizeVerb: prioritize
+  preemptVerb: ""
+- urlPrefix: https://manual.example.svc.cluster.local:8080
+  weight: 1
+  timeout: 5s
+  ignorable: true
+  caData: ABCD=
+  filterVerb: filter
+  prioritizeVerb: ""
+  preemptVerb: ""
+`)
+			f.HelmRender()
+		})
+
+		It("should map the URL prefixes of named extenders to their names in DECKHOUSE_EXTENDER_NAMES", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+			manifest, err := base64.StdEncoding.DecodeString(s.Field("data.kube-scheduler\\.yaml\\.tpl").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(manifest)).To(ContainSubstring("- name: DECKHOUSE_EXTENDER_NAMES\n      value: \"https://usage.d8-usage.svc.cluster.local:8443/usage=usage/1,https://sds.d8-sds.svc.cluster.local:8099/scheduler=sds\""))
+		})
 	})
 
 	Context("webhook configuration in apiserver", func() {

@@ -32,7 +32,8 @@ positive:
         etcdServers:
         - 1.2.3.4
         kubeSchedulerExtenders:
-        - urlPrefix: https://scheduler.test.svc.cluster.local:8080/scheduler
+        - name: test
+          urlPrefix: https://scheduler.test.svc.cluster.local:8080/scheduler
           weight: 5
           timeout: 500ms
           ignorable: true

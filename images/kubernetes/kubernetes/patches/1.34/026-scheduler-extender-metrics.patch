@@ -1,0 +1,732 @@
+diff --git a/pkg/scheduler/deckhouse_extender_metrics.go b/pkg/scheduler/deckhouse_extender_metrics.go
+new file mode 100644
+index 00000000000..21a792008c7
+--- /dev/null
++++ b/pkg/scheduler/deckhouse_extender_metrics.go
+@@ -0,0 +1,142 @@
++/*
++Copyright 2026 Flant JSC
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scheduler
++
++// Deckhouse: metrics of HTTP extenders. Upstream has none: a slow or failing
++// extender is visible only as a longer scheduling cycle.
++
++import (
++	"net/http/httptrace"
++	"strconv"
++	"sync/atomic"
++	"time"
++
++	v1 "k8s.io/api/core/v1"
++	extenderv1 "k8s.io/kube-scheduler/extender/v1"
++	schedulerapi "k8s.io/kubernetes/pkg/scheduler/apis/config"
++	"k8s.io/kubernetes/pkg/scheduler/metrics"
++)
++
++// deckhouseRecordExtenderInfo publishes the configuration of an extender as
++// scheduler_extender_info: its name and URL prefix. Tests create extenders
++// without registered metrics.
++func deckhouseRecordExtenderInfo(config *schedulerapi.Extender) {
++	if metrics.ExtenderInfo == nil {
++		return
++	}
++	metrics.ExtenderInfo.WithLabelValues(
++		deckhouseExtenderName(config.URLPrefix),
++		config.URLPrefix,
++		config.FilterVerb,
++		config.PrioritizeVerb,
++		config.PreemptVerb,
++		config.BindVerb,
++		strconv.FormatInt(config.Weight, 10),
++		strconv.FormatBool(config.Ignorable),
++	).Set(1)
++}
++
++// deckhouseIsSimulation reports whether the Pod is a copy made by the
++// simulate endpoint: its extender requests are not recorded.
++func deckhouseIsSimulation(pod *v1.Pod) bool {
++	return pod != nil && pod.Annotations[DeckhouseSimulationAnnotation] == "true"
++}
++
++// requestPhases splits a request with an answer into encode (json.Marshal), conn (waiting for a
++// connection or an HTTP/2 stream), write (the request on the wire), wait (until the first byte of
++// the response: the network, the extender and waking up the transport's reader) and read (the
++// headers, the body and json decoding). The marks are monotonic offsets from the start of the
++// request, 0 when the transport did not report them.
++type requestPhases struct {
++	start                              time.Time
++	encoded                            time.Duration
++	getConn, gotConn, wrote, firstByte atomic.Int64 // the transport calls the trace from its goroutines
++}
++
++func newRequestPhases(start time.Time) *requestPhases {
++	return &requestPhases{start: start, encoded: time.Since(start)}
++}
++
++func (p *requestPhases) trace() *httptrace.ClientTrace {
++	mark := func(t *atomic.Int64) { t.Store(max(1, int64(time.Since(p.start)))) }
++	return &httptrace.ClientTrace{
++		GetConn:              func(string) { mark(&p.getConn) },
++		GotConn:              func(httptrace.GotConnInfo) { mark(&p.gotConn) },
++		WroteRequest:         func(httptrace.WroteRequestInfo) { mark(&p.wrote) },
++		GotFirstResponseByte: func() { mark(&p.firstByte) },
++	}
++}
++
++func (p *requestPhases) observe(extender, verb string) {
++	done := int64(time.Since(p.start))
++	get, got, wrote, first := p.getConn.Load(), p.gotConn.Load(), p.wrote.Load(), p.firstByte.Load()
++	if get == 0 || got < get || first < got {
++		return // the transport did not report a connection or an answer
++	}
++	// An extender may answer before the whole request is written (a large filter body):
++	// writing then ends at the first byte of the answer and waiting takes no time.
++	if wrote == 0 || wrote > first {
++		wrote = first
++	}
++	for _, x := range []struct {
++		phase    string
++		from, to int64
++	}{
++		{"encode", 0, int64(p.encoded)},
++		{"conn", get, got},
++		{"write", got, wrote},
++		{"wait", wrote, first},
++		{"read", first, done},
++	} {
++		metrics.ExtenderRequestPhaseDuration.WithLabelValues(extender, verb, x.phase).Observe(float64(x.to-x.from) / 1e9)
++	}
++}
++
++// deckhouseOutcome is the result of a request the extender answered: an
++// error it reported in the answer (filter, bind) is "extender_error".
++func deckhouseOutcome(result interface{}) string {
++	switch r := result.(type) {
++	case *extenderv1.ExtenderFilterResult:
++		if r.Error != "" {
++			return "extender_error"
++		}
++	case *extenderv1.ExtenderBindingResult:
++		if r.Error != "" {
++			return "extender_error"
++		}
++	}
++	return "success"
++}
++
++// deckhouseRecordFilterNodes counts the nodes a filter answer passed, failed
++// and failed as unresolvable.
++func (h *HTTPExtender) deckhouseRecordFilterNodes(pod *v1.Pod, result *extenderv1.ExtenderFilterResult) {
++	if deckhouseIsSimulation(pod) || metrics.ExtenderFilterNodes == nil {
++		return
++	}
++	passed := 0
++	if result.NodeNames != nil {
++		passed = len(*result.NodeNames)
++	} else if result.Nodes != nil {
++		passed = len(result.Nodes.Items)
++	}
++	for outcome, n := range map[string]int{"passed": passed, "failed": len(result.FailedNodes), "unresolvable": len(result.FailedAndUnresolvableNodes)} {
++		if n > 0 {
++			metrics.ExtenderFilterNodes.WithLabelValues(h.name, outcome).Add(float64(n))
++		}
++	}
++}
+diff --git a/pkg/scheduler/deckhouse_extender_metrics_test.go b/pkg/scheduler/deckhouse_extender_metrics_test.go
+new file mode 100644
+index 00000000000..cb526fd7c62
+--- /dev/null
++++ b/pkg/scheduler/deckhouse_extender_metrics_test.go
+@@ -0,0 +1,158 @@
++/*
++Copyright 2026 Flant JSC
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scheduler
++
++import (
++	"net/http"
++	"net/http/httptest"
++	"testing"
++	"time"
++
++	v1 "k8s.io/api/core/v1"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/component-base/metrics/testutil"
++	fwk "k8s.io/kube-scheduler/framework"
++
++	schedulerapi "k8s.io/kubernetes/pkg/scheduler/apis/config"
++	"k8s.io/kubernetes/pkg/scheduler/framework"
++	"k8s.io/kubernetes/pkg/scheduler/metrics"
++)
++
++// Every extender request is observed with its result, a request the extender
++// answered also with its phases; a filter answer counts its nodes.
++func TestExtenderRequestDuration(t *testing.T) {
++	metrics.Register()
++	cases := []struct {
++		name, result string
++		handler      http.HandlerFunc
++		timeout      time.Duration
++		phases       uint64
++	}{
++		{name: "success", result: "success", phases: 1, handler: func(w http.ResponseWriter, _ *http.Request) {
++			_, _ = w.Write([]byte(`{"nodenames":["n"],"failedNodes":{"m":"full"}}`))
++		}},
++		{name: "extender error", result: "extender_error", phases: 1, handler: func(w http.ResponseWriter, _ *http.Request) {
++			_, _ = w.Write([]byte(`{"error":"volume group unavailable"}`))
++		}},
++		{name: "status", result: "status", handler: func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusInternalServerError) }},
++		{name: "decode", result: "decode", handler: func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte(`{`)) }},
++		{name: "timeout", result: "timeout", timeout: 50 * time.Millisecond, handler: func(_ http.ResponseWriter, _ *http.Request) { time.Sleep(200 * time.Millisecond) }},
++		{name: "timeout in the body", result: "timeout", timeout: 100 * time.Millisecond, handler: func(w http.ResponseWriter, _ *http.Request) {
++			_, _ = w.Write([]byte(`{"nodenames":`))
++			w.(http.Flusher).Flush()
++			time.Sleep(400 * time.Millisecond)
++		}},
++	}
++	for _, tc := range cases {
++		t.Run(tc.name, func(t *testing.T) {
++			srv := httptest.NewServer(tc.handler)
++			defer srv.Close()
++			cfg := &schedulerapi.Extender{URLPrefix: srv.URL, FilterVerb: "filter", Weight: 1, NodeCacheCapable: true}
++			if tc.timeout > 0 {
++				cfg.HTTPTimeout = metav1.Duration{Duration: tc.timeout}
++			}
++			ext, err := NewHTTPExtender(cfg)
++			if err != nil {
++				t.Fatal(err)
++			}
++			node := framework.NewNodeInfo()
++			node.SetNode(&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "n"}})
++			_, _, _, _ = ext.Filter(&v1.Pod{}, []fwk.NodeInfo{node})
++
++			h := metrics.ExtenderRequestDuration.WithLabelValues(srv.URL, "filter", tc.result)
++			if got, err := testutil.GetHistogramMetricCount(h); err != nil || got != 1 {
++				t.Errorf("%d observations with result %s (%v), want 1", got, tc.result, err)
++			}
++			for _, phase := range []string{"encode", "conn", "write", "wait", "read"} {
++				p := metrics.ExtenderRequestPhaseDuration.WithLabelValues(srv.URL, "filter", phase)
++				if got, err := testutil.GetHistogramMetricCount(p); err != nil || got != tc.phases {
++					t.Errorf("phase %s: %d observations (%v), want %d", phase, got, err, tc.phases)
++				}
++			}
++			if tc.result == "success" {
++				for outcome, want := range map[string]float64{"passed": 1, "failed": 1, "unresolvable": 0} {
++					got, _ := testutil.GetCounterMetricValue(metrics.ExtenderFilterNodes.WithLabelValues(srv.URL, outcome))
++					if got != want {
++						t.Errorf("filter nodes %s = %v, want %v", outcome, got, want)
++					}
++				}
++			}
++		})
++	}
++}
++
++// A simulation (deckhouse_simulate.go) calls extenders like a real cycle, but
++// its requests are not recorded.
++func TestDeckhouseExtenderSimulationNotRecorded(t *testing.T) {
++	metrics.Register()
++	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte(`[]`)) }))
++	defer srv.Close()
++	ext, err := NewHTTPExtender(&schedulerapi.Extender{URLPrefix: srv.URL, PrioritizeVerb: "prioritize", Weight: 1})
++	if err != nil {
++		t.Fatal(err)
++	}
++	node := framework.NewNodeInfo()
++	node.SetNode(&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "n"}})
++	sim := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{DeckhouseSimulationAnnotation: "true"}}}
++	if _, _, err := ext.Prioritize(sim, []fwk.NodeInfo{node}); err != nil {
++		t.Fatal(err)
++	}
++	h := metrics.ExtenderRequestDuration.WithLabelValues(srv.URL, "prioritize", "success")
++	if got, _ := testutil.GetHistogramMetricCount(h); got != 0 {
++		t.Errorf("simulation: %d observations, want 0", got)
++	}
++	if _, _, err := ext.Prioritize(&v1.Pod{}, []fwk.NodeInfo{node}); err != nil {
++		t.Fatal(err)
++	}
++	if got, _ := testutil.GetHistogramMetricCount(h); got != 1 {
++		t.Errorf("real cycle: %d observations, want 1", got)
++	}
++
++	phase := metrics.ExtenderRequestPhaseDuration.WithLabelValues(srv.URL, "prioritize", "wait")
++	if got, _ := testutil.GetHistogramMetricCount(phase); got != 1 {
++		t.Errorf("phases: %d observations, want 1 from the real cycle only", got)
++	}
++
++	fsrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte(`{"nodenames":["n"]}`)) }))
++	defer fsrv.Close()
++	fext, err := NewHTTPExtender(&schedulerapi.Extender{URLPrefix: fsrv.URL, FilterVerb: "filter", Weight: 1, NodeCacheCapable: true})
++	if err != nil {
++		t.Fatal(err)
++	}
++	if _, _, _, err := fext.Filter(sim, []fwk.NodeInfo{node}); err != nil {
++		t.Fatal(err)
++	}
++	fh := metrics.ExtenderRequestDuration.WithLabelValues(fsrv.URL, "filter", "success")
++	passed, _ := testutil.GetCounterMetricValue(metrics.ExtenderFilterNodes.WithLabelValues(fsrv.URL, "passed"))
++	if got, _ := testutil.GetHistogramMetricCount(fh); got != 0 || passed != 0 {
++		t.Errorf("simulated filter: %d observations, %v nodes counted; want none", got, passed)
++	}
++}
++
++// Every configured extender is listed with its verbs, weight and ignorable flag.
++func TestDeckhouseExtenderInfo(t *testing.T) {
++	metrics.Register()
++	if _, err := NewHTTPExtender(&schedulerapi.Extender{
++		URLPrefix: "https://sds.example/scheduler", FilterVerb: "filter", PrioritizeVerb: "prioritize", Weight: 5, Ignorable: true,
++	}); err != nil {
++		t.Fatal(err)
++	}
++	g := metrics.ExtenderInfo.WithLabelValues("https://sds.example/scheduler", "https://sds.example/scheduler", "filter", "prioritize", "", "", "5", "true")
++	if got, err := testutil.GetGaugeMetricValue(g); err != nil || got != 1 {
++		t.Errorf("extender info = %v (%v), want 1", got, err)
++	}
++}
+diff --git a/pkg/scheduler/deckhouse_extender_names.go b/pkg/scheduler/deckhouse_extender_names.go
+new file mode 100644
+index 00000000000..3aa978d2020
+--- /dev/null
++++ b/pkg/scheduler/deckhouse_extender_names.go
+@@ -0,0 +1,83 @@
++/*
++Copyright 2026 Flant JSC
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scheduler
++
++// Deckhouse: readable names of extenders. Upstream knows an extender only by
++// its URL prefix. Deckhouse renders DECKHOUSE_EXTENDER_NAMES, comma-separated
++// <urlPrefix>=<name> pairs (the name of the KubeSchedulerWebhookConfiguration,
++// with /<n> when the object has several webhooks). The extender metrics carry
++// the name in the label extender; scheduler_extender_info also carries the URL
++// prefix in the label url. An extender without a name (the variable is unset,
++// an older Deckhouse, a manual configuration) keeps its URL prefix as the name.
++// Everything else (Name(), requests, logs) keeps the URL prefix.
++
++import (
++	"net/url"
++	"os"
++	"strings"
++	"sync"
++
++	"k8s.io/klog/v2"
++)
++
++const deckhouseExtenderNamesEnv = "DECKHOUSE_EXTENDER_NAMES"
++
++// deckhouseExtenderNames returns the names from the environment, read once.
++// A variable so that tests can replace it.
++var deckhouseExtenderNames = sync.OnceValue(func() map[string]string {
++	return parseDeckhouseExtenderNames(os.Getenv(deckhouseExtenderNamesEnv))
++})
++
++// parseDeckhouseExtenderNames reads <urlPrefix>=<name>,... A name contains
++// neither "=" nor ",", so a pair is split at its last "=". A pair without a
++// name, with a URL prefix that is not an absolute URL (for example a fragment
++// of a URL with a comma) or with a URL prefix seen before is skipped; the
++// skipped pairs are logged once.
++func parseDeckhouseExtenderNames(s string) map[string]string {
++	names := map[string]string{}
++	if s == "" {
++		return names
++	}
++	var skipped []string
++	for _, pair := range strings.Split(s, ",") {
++		i := strings.LastIndexByte(pair, '=')
++		if i < 0 {
++			skipped = append(skipped, pair)
++			continue
++		}
++		prefix, name := pair[:i], pair[i+1:]
++		u, err := url.Parse(prefix)
++		if _, seen := names[prefix]; name == "" || err != nil || u.Scheme == "" || u.Host == "" || seen {
++			skipped = append(skipped, pair)
++			continue
++		}
++		names[prefix] = name
++	}
++	if len(skipped) > 0 {
++		klog.Warningf("Ignoring entries of %s, want <urlPrefix>=<name> with a new URL prefix: %q", deckhouseExtenderNamesEnv, skipped)
++	}
++	return names
++}
++
++// deckhouseExtenderName is the name of the extender with this URL prefix, or
++// the URL prefix itself when it has none.
++func deckhouseExtenderName(urlPrefix string) string {
++	if name, ok := deckhouseExtenderNames()[urlPrefix]; ok {
++		return name
++	}
++	return urlPrefix
++}
+diff --git a/pkg/scheduler/deckhouse_extender_names_test.go b/pkg/scheduler/deckhouse_extender_names_test.go
+new file mode 100644
+index 00000000000..b976baebfb0
+--- /dev/null
++++ b/pkg/scheduler/deckhouse_extender_names_test.go
+@@ -0,0 +1,112 @@
++/*
++Copyright 2026 Flant JSC
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scheduler
++
++import (
++	"net/http"
++	"net/http/httptest"
++	"reflect"
++	"strings"
++	"testing"
++
++	v1 "k8s.io/api/core/v1"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/component-base/metrics/testutil"
++	fwk "k8s.io/kube-scheduler/framework"
++	schedulerapi "k8s.io/kubernetes/pkg/scheduler/apis/config"
++	"k8s.io/kubernetes/pkg/scheduler/framework"
++	"k8s.io/kubernetes/pkg/scheduler/metrics"
++)
++
++// withExtenderNames replaces the names read from the environment until the
++// test ends.
++func withExtenderNames(t *testing.T, names map[string]string) {
++	saved := deckhouseExtenderNames
++	deckhouseExtenderNames = func() map[string]string { return names }
++	t.Cleanup(func() { deckhouseExtenderNames = saved })
++}
++
++func TestDeckhouseParseExtenderNames(t *testing.T) {
++	cases := []struct {
++		env  string
++		want map[string]string
++	}{
++		{env: "", want: map[string]string{}},
++		{
++			env:  "https://usage.d8-usage.svc.cluster.local:8443/usage=usage,https://sds.d8-sds.svc:8099/scheduler=sds/1",
++			want: map[string]string{"https://usage.d8-usage.svc.cluster.local:8443/usage": "usage", "https://sds.d8-sds.svc:8099/scheduler": "sds/1"},
++		},
++		// A URL prefix may hold "=", a name cannot: the last "=" splits.
++		{env: "https://a.svc/x?y=z=a", want: map[string]string{"https://a.svc/x?y=z": "a"}},
++		// Malformed pairs are skipped, the others kept; a repeated URL prefix keeps its first name.
++		{
++			env:  "noname,https://b.svc/=,relative/path=c,=d,https://a.svc,x=a,https://e.svc=e,https://e.svc=f",
++			want: map[string]string{"https://e.svc": "e"},
++		},
++	}
++	for _, tc := range cases {
++		if got := parseDeckhouseExtenderNames(tc.env); !reflect.DeepEqual(got, tc.want) {
++			t.Errorf("%q: %v, want %v", tc.env, got, tc.want)
++		}
++	}
++}
++
++// The extender metrics carry the name; scheduler_extender_info also carries
++// the URL prefix, and Name() stays the URL prefix.
++func TestDeckhouseExtenderNameLabels(t *testing.T) {
++	metrics.Register()
++	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
++		_, _ = w.Write([]byte(`{"nodenames":["n"]}`))
++	}))
++	defer srv.Close()
++	// A name of its own per server: go test -count=2 runs the test twice.
++	name := "usage/" + srv.URL[strings.LastIndexByte(srv.URL, ':')+1:]
++	withExtenderNames(t, map[string]string{srv.URL: name})
++
++	e, err := NewHTTPExtender(&schedulerapi.Extender{URLPrefix: srv.URL, FilterVerb: "filter", PrioritizeVerb: "prioritize", Weight: 1, Ignorable: true, NodeCacheCapable: true})
++	if err != nil {
++		t.Fatal(err)
++	}
++	h := e.(*HTTPExtender)
++	if e.Name() != srv.URL || h.name != name {
++		t.Fatalf("Name() %q, name %q", e.Name(), h.name)
++	}
++	node := framework.NewNodeInfo()
++	node.SetNode(&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "n"}})
++	if _, _, _, err := e.Filter(&v1.Pod{}, []fwk.NodeInfo{node}); err != nil {
++		t.Fatal(err)
++	}
++
++	if n, err := testutil.GetHistogramMetricCount(metrics.ExtenderRequestDuration.WithLabelValues(name, "filter", "success")); err != nil || n != 1 {
++		t.Errorf("request duration by name: %d (%v), want 1", n, err)
++	}
++	if n, err := testutil.GetHistogramMetricCount(metrics.ExtenderRequestPhaseDuration.WithLabelValues(name, "filter", "wait")); err != nil || n != 1 {
++		t.Errorf("phase duration by name: %d (%v), want 1", n, err)
++	}
++	if v, err := testutil.GetCounterMetricValue(metrics.ExtenderFilterNodes.WithLabelValues(name, "passed")); err != nil || v != 1 {
++		t.Errorf("filter nodes by name: %v (%v), want 1", v, err)
++	}
++	if v, err := testutil.GetGaugeMetricValue(metrics.ExtenderInfo.WithLabelValues(name, srv.URL, "filter", "prioritize", "", "", "1", "true")); err != nil || v != 1 {
++		t.Errorf("extender info with name and url: %v (%v), want 1", v, err)
++	}
++	if _, err := NewHTTPExtender(&schedulerapi.Extender{URLPrefix: "https://manual.example/x", FilterVerb: "filter"}); err != nil {
++		t.Fatal(err)
++	}
++	if v, err := testutil.GetGaugeMetricValue(metrics.ExtenderInfo.WithLabelValues("https://manual.example/x", "https://manual.example/x", "filter", "", "", "", "0", "false")); err != nil || v != 1 {
++		t.Errorf("an extender without a name keeps its URL prefix: %v (%v)", v, err)
++	}
++}
+diff --git a/pkg/scheduler/extender.go b/pkg/scheduler/extender.go
+index 518574b7e66..3c75722a92a 100644
+--- a/pkg/scheduler/extender.go
++++ b/pkg/scheduler/extender.go
+@@ -18,10 +18,13 @@ package scheduler
+ 
+ import (
+ 	"bytes"
++	"context"
+ 	"encoding/json"
+ 	"errors"
+ 	"fmt"
++	"net"
+ 	"net/http"
++	"net/http/httptrace"
+ 	"strings"
+ 	"time"
+ 
+@@ -33,6 +36,7 @@ import (
+ 	fwk "k8s.io/kube-scheduler/framework"
+ 	schedulerapi "k8s.io/kubernetes/pkg/scheduler/apis/config"
+ 	"k8s.io/kubernetes/pkg/scheduler/framework"
++	"k8s.io/kubernetes/pkg/scheduler/metrics"
+ )
+ 
+ const (
+@@ -43,6 +47,7 @@ const (
+ // HTTPExtender implements the Extender interface.
+ type HTTPExtender struct {
+ 	extenderURL      string
++	name             string // Deckhouse patch: the name in metrics (deckhouse_extender_names.go)
+ 	preemptVerb      string
+ 	filterVerb       string
+ 	prioritizeVerb   string
+@@ -102,8 +107,10 @@ func NewHTTPExtender(config *schedulerapi.Extender) (framework.Extender, error)
+ 	for _, r := range config.ManagedResources {
+ 		managedResources.Insert(string(r.Name))
+ 	}
++	deckhouseRecordExtenderInfo(config)
+ 	return &HTTPExtender{
+ 		extenderURL:      config.URLPrefix,
++		name:             deckhouseExtenderName(config.URLPrefix),
+ 		preemptVerb:      config.PreemptVerb,
+ 		filterVerb:       config.FilterVerb,
+ 		prioritizeVerb:   config.PrioritizeVerb,
+@@ -285,12 +292,13 @@ func (h *HTTPExtender) Filter(
+ 		NodeNames: nodeNames,
+ 	}
+ 
+-	if err := h.send(h.filterVerb, args, &result); err != nil {
++	if err := h.sendRecorded(h.filterVerb, args, &result, !deckhouseIsSimulation(pod)); err != nil {
+ 		return nil, nil, nil, err
+ 	}
+ 	if result.Error != "" {
+ 		return nil, nil, nil, errors.New(result.Error)
+ 	}
++	h.deckhouseRecordFilterNodes(pod, &result) // Deckhouse patch
+ 
+ 	if h.nodeCacheCapable && result.NodeNames != nil {
+ 		nodeResult = make([]fwk.NodeInfo, len(*result.NodeNames))
+@@ -352,7 +360,7 @@ func (h *HTTPExtender) Prioritize(pod *v1.Pod, nodes []fwk.NodeInfo) (*extenderv
+ 		NodeNames: nodeNames,
+ 	}
+ 
+-	if err := h.send(h.prioritizeVerb, args, &result); err != nil {
++	if err := h.sendRecorded(h.prioritizeVerb, args, &result, !deckhouseIsSimulation(pod)); err != nil {
+ 		return nil, 0, err
+ 	}
+ 	return &result, h.weight, nil
+@@ -397,14 +405,28 @@ func (h *HTTPExtender) IsFilter() bool {
+ 
+ // Helper function to send messages to the extender
+ func (h *HTTPExtender) send(action string, args interface{}, result interface{}) error {
++	return h.sendRecorded(action, args, result, true)
++}
++
++// sendRecorded sends a request; with record it observes the request metrics.
++// Deckhouse: simulations (deckhouse_simulate.go) are not recorded.
++func (h *HTTPExtender) sendRecorded(action string, args interface{}, result interface{}, record bool) (err error) {
++	start, outcome := time.Now(), "error"
++	defer func() {
++		if record {
++			metrics.ExtenderRequestDuration.WithLabelValues(h.name, action, outcome).Observe(time.Since(start).Seconds())
++		}
++	}()
++
+ 	out, err := json.Marshal(args)
+ 	if err != nil {
+ 		return err
+ 	}
++	ph := newRequestPhases(start)
+ 
+ 	url := strings.TrimRight(h.extenderURL, "/") + "/" + action
+ 
+-	req, err := http.NewRequest("POST", url, bytes.NewReader(out))
++	req, err := http.NewRequestWithContext(httptrace.WithClientTrace(context.Background(), ph.trace()), "POST", url, bytes.NewReader(out))
+ 	if err != nil {
+ 		return err
+ 	}
+@@ -413,15 +435,32 @@ func (h *HTTPExtender) send(action string, args interface{}, result interface{})
+ 
+ 	resp, err := h.client.Do(req)
+ 	if err != nil {
++		var netErr net.Error
++		if errors.As(err, &netErr) && netErr.Timeout() {
++			outcome = "timeout"
++		}
+ 		return err
+ 	}
+ 	defer resp.Body.Close()
+ 
+ 	if resp.StatusCode != http.StatusOK {
++		outcome = "status"
+ 		return fmt.Errorf("failed %v with extender at URL %v, code %v", action, url, resp.StatusCode)
+ 	}
+ 
+-	return json.NewDecoder(resp.Body).Decode(result)
++	if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
++		outcome = "decode"
++		var netErr net.Error
++		if errors.As(err, &netErr) && netErr.Timeout() {
++			outcome = "timeout"
++		}
++		return err
++	}
++	outcome = deckhouseOutcome(result)
++	if record {
++		ph.observe(h.name, action)
++	}
++	return nil
+ }
+ 
+ // IsInterested returns true if at least one extended resource requested by
+diff --git a/pkg/scheduler/metrics/metrics.go b/pkg/scheduler/metrics/metrics.go
+index 9ff706cfc6d..7467f41c9da 100644
+--- a/pkg/scheduler/metrics/metrics.go
++++ b/pkg/scheduler/metrics/metrics.go
+@@ -121,6 +121,15 @@ var (
+ 	PreemptionGoroutinesDuration       *metrics.HistogramVec
+ 	PreemptionGoroutinesExecutionTotal *metrics.CounterVec
+ 
++	// ExtenderRequestDuration is the duration of HTTP requests to extenders (Deckhouse patch).
++	ExtenderRequestDuration *metrics.HistogramVec
++	// ExtenderRequestPhaseDuration splits successful extender requests into phases (Deckhouse patch).
++	ExtenderRequestPhaseDuration *metrics.HistogramVec
++	// ExtenderInfo lists the configured extenders (Deckhouse patch).
++	ExtenderInfo *metrics.GaugeVec
++	// ExtenderFilterNodes counts the nodes extender filters passed and failed (Deckhouse patch).
++	ExtenderFilterNodes *metrics.CounterVec
++
+ 	// The below are only available when the SchedulerAsyncAPICalls feature gate is enabled.
+ 	AsyncAPICallsTotal   *metrics.CounterVec
+ 	AsyncAPICallDuration *metrics.HistogramVec
+@@ -328,6 +337,48 @@ func InitMetrics() {
+ 			StabilityLevel: metrics.ALPHA,
+ 		}, []string{"plugin", "extension_point", "profile"})
+ 
++	ExtenderRequestDuration = metrics.NewHistogramVec(
++		&metrics.HistogramOpts{
++			Subsystem: SchedulerSubsystem,
++			Name:      "extender_request_duration_seconds",
++			Help: "Duration of HTTP requests to scheduler extenders, from encoding the request to decoding the response, " +
++				"by extender, verb and result (success, extender_error, timeout, error, status, decode).",
++			// 0.5ms .. ~16s
++			Buckets:        metrics.ExponentialBuckets(0.0005, 2, 16),
++			StabilityLevel: metrics.ALPHA,
++		},
++		[]string{"extender", "verb", "result"})
++
++	ExtenderRequestPhaseDuration = metrics.NewHistogramVec(
++		&metrics.HistogramOpts{
++			Subsystem: SchedulerSubsystem,
++			Name:      "extender_request_phase_duration_seconds",
++			Help: "Phases of successful HTTP requests to scheduler extenders: encode (json.Marshal), conn (waiting for a connection " +
++				"or an HTTP/2 stream), write (sending the request), wait (until the first response byte), read (headers, body, decoding).",
++			// 0.1ms .. ~6.5s
++			Buckets:        metrics.ExponentialBuckets(0.0001, 2, 17),
++			StabilityLevel: metrics.ALPHA,
++		},
++		[]string{"extender", "verb", "phase"})
++
++	ExtenderFilterNodes = metrics.NewCounterVec(
++		&metrics.CounterOpts{
++			Subsystem:      SchedulerSubsystem,
++			Name:           "extender_filter_nodes_total",
++			Help:           "Nodes in the answers of extender filters: passed, failed or unresolvable (failed for good).",
++			StabilityLevel: metrics.ALPHA,
++		}, []string{"extender", "outcome"})
++
++	ExtenderInfo = metrics.NewGaugeVec(
++		&metrics.GaugeOpts{
++			Subsystem: SchedulerSubsystem,
++			Name:      "extender_info",
++			Help: "Configured scheduler extenders, always 1: the name, the URL prefix, the verbs it serves (empty if not), " +
++				"its weight and whether its failures are ignored.",
++			StabilityLevel: metrics.ALPHA,
++		},
++		[]string{"extender", "url", "filter_verb", "prioritize_verb", "preempt_verb", "bind_verb", "weight", "ignorable"})
++
+ 	PreemptionGoroutinesDuration = metrics.NewHistogramVec(
+ 		&metrics.HistogramOpts{
+ 			Subsystem:      SchedulerSubsystem,
+@@ -394,6 +445,10 @@ func InitMetrics() {
+ 		CacheSize,
+ 		unschedulableReasons,
+ 		PluginEvaluationTotal,
++		ExtenderRequestDuration,
++		ExtenderRequestPhaseDuration,
++		ExtenderInfo,
++		ExtenderFilterNodes,
+ 	}
+ }
+ 

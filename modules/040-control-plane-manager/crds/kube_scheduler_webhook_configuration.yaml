@@ -25,6 +25,8 @@ spec:
             Defines the configuration for connecting a third-party kube-scheduler extender webhook.
 
             An external kube-scheduler webhook allows expanding the capabilities of the scheduler and consider more complex conditions when planning the load in the  Kubernetes cluster.
+
+            kube-scheduler metrics name the extender of a webhook by the name of this object; when the object has several webhooks, the name gets `/<n>`, the position of the webhook in `webhooks` starting from 1.
           properties:
             webhooks:
               type: array
