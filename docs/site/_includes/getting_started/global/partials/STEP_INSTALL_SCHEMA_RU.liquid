@@ -199,6 +199,6 @@
 {% if page.platform_type == "baremetal" or page.platform_type == "baremetal" or page.platform_type == "cloud" %}
 {% alert level="warning" %}
 В рекомендациях выше приведены минимальные {% if page.platform_type == "cloud" %}суммарные{% endif %} ресурсы, необходимые для начального развёртывания кластера с одним master-узлом и одним worker-узлом.
-Такой конфигурации достаточно для ознакомительных целей, но для production-окружений она не подходит. Ознакомьтесь с [рекомендациями по подготовке к production](/products/kubernetes-platform/documentation/v1/guides/production.html), [рекомендациями по разметке и объёму дисков](/products/kubernetes-platform/documentation/v1/guides/fs-requirements.html) и [системными требованиями](/products/kubernetes-platform/documentation/v1/requirements/), где описаны варианты размещения, типы узлов и ресурсы для них в зависимости от ваших требований к эксплуатации будущего кластера.
+Такой конфигурации достаточно для ознакомительных целей, но для production-окружений она не подходит. Ознакомьтесь с [рекомендациями по подготовке к production](/products/kubernetes-platform/documentation/v1/guides/production.html), [рекомендациями по разметке и объёму дисков](/products/kubernetes-platform/documentation/v1/guides/fs-requirements.html) и [системными требованиями](/products/kubernetes-platform/documentation/latest/requirements/), где описаны варианты размещения, типы узлов и ресурсы для них в зависимости от ваших требований к эксплуатации будущего кластера.
 {% endalert %}
 {%- endif %}
