@@ -690,6 +690,7 @@ allow-lists, the rate limit and the upstream refresh.
 | `refresh token claimed twice` (reused after rotation), `trying to claim token for different client` (upstream logs `ERROR`) | WARN | |
 | `refresh denied: credentials revoked`, `token request denied: credentials revoked` (code exchange, `/auth` response), `session login refused: credentials revoked` (290) | WARN | `revoked` |
 | `token revoked` (290, `/token/revoke`) | INFO | |
+| `invalid 'state' parameter provided` (280, a step of an expired sign-in; with `path`, and `connector_id` when the address names it; no client or user; upstream logs `ERROR` and only for the form and the callback) | WARN | `login_expired` |
 
 A refusal decided in `finalizeLogin` is logged once, where it is decided, not
 again as `failed to finalize login`.
@@ -738,6 +739,63 @@ browser under a URL of other ones.
 **Upstream status:** not upstream.
 
 **Depends on:** 220 (`server/templates/passwordchange.go`).
+
+### 280-login-request-expired.patch
+
+**Zone:** the expired sign-in. A sign-in lives `expiry.authRequests` from its
+start (10 minutes in Deckhouse); a step that comes later finds no auth request
+(after the garbage collection) or one past its expiry (before it). Upstream
+answers the login form and the connector callback with 400 "Requested resource
+does not exist." and an `ERROR` line, the approval and the dispatcher with
+"User session error.", the second factor with 500 "Database error.", the
+password change page (220) with "Requested resource does not exist." and the
+authorization response with "User session has expired.". The patch answers all
+of them with one page:
+
+- `templates.LoginExpired` (`server/templates/expired.go`) renders the error
+  page with 400, the message "The sign-in has expired. Go back to the
+  application and sign in again.", `ErrCode` `login_expired` and `ReturnURL`.
+  The error page gets `ErrCode` and `ReturnURL` on every error, empty on the
+  others, so a theme tells the case apart without matching the message; a theme
+  that does not know the code shows the message.
+- `ReturnURL` is the application to go back to: the origin (`https://host[:port]/`)
+  of the `redirect_uri` in the connector selection link of the login form
+  (`back`, `/auth?client_id=...&redirect_uri=...`). The connector selection
+  itself is not offered: it would start the same sign-in of the client, whose
+  own state has expired too, so without the sessions of Dex the user would
+  enter the password twice. Dex puts `back` into the login form only when it has
+  more than one connector, and the other steps have none: then there is no button.
+- **Security of `ReturnURL`:** `back` comes from the address of the form, so it
+  is checked as `/auth` checks a sign-in (`loginExpiredReturnURL`): the client
+  exists in the storage, and the `redirect_uri` passes `validateRedirectURI` and
+  is https, which makes it one of the `RedirectURIs` of the client exactly (the
+  loopback, out-of-band and device addresses a public client may use are not
+  https). Only the scheme and the host are kept; the path, the query, the
+  fragment and any userinfo are dropped, and `html/template` escapes the link.
+  Anything else (no `back`, a link that does not parse, an unknown client, an
+  address the client did not register, http) gets the page without the button.
+- The login form and the connector callback also refuse an auth request past
+  its expiry before the garbage collection, before the credentials are checked.
+  The authorization response keeps its check and gets the same page; so does a
+  response whose auth request another request has just removed.
+- Logging: one `WARN` line `invalid 'state' parameter provided` with `reason`
+  `login_expired` and `path`, `connector_id` when the address names one
+  (`signinlog.LoginExpired`). The client and the user are unknown: they were in
+  the auth request.
+
+Other 400 and 404 errors of Dex keep their messages and pages. The upstream
+tests of the approval that check "User session error." check the new page.
+
+**Consumer in Deckhouse:** `images/dex/src/web/templates/error.html`, which
+explains `login_expired` in the language of `frontend.extra.lang` and shows
+the **Return to the application** button when there is a `ReturnURL`; FAQ "How
+to find out why a sign-in was refused?" (`login_expired`).
+
+**Upstream status:** not upstream. Upstream has no code for the error page and
+logs the missing auth request at `ERROR`.
+
+**Depends on:** 220 (the password change page), 260 (`server/signinlog`). 290,
+300 and 320 apply to it with shifted line numbers and blob hashes only.
 
 ### 290-revocation.patch
 

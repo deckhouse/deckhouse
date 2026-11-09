@@ -221,6 +221,65 @@ The security events of `templates/security-events.yaml` are built from these lin
 - **Upstream:** not proposed; the behavior pairs with the browser sessions of dex.
 - **Depends on:** 005-sign-in-401-for-scripts (the navigation-versus-script test and the 401 for scripts) and
   008-auth-log-login-failures (the auth log line of a failed redemption).
+- **Changed by:** 014 moves the restart redirect into `restartLogin`, shared by both restarts, without changing it.
+
+### 014-restart-login-without-csrf-cookie.patch
+
+- **Zone:** the OAuth2 callback without its CSRF cookie (`OAuthCallback`), `--restart-login-without-csrf-cookie`, and
+  the restart mark in the `state` of a restarted flow (`doOAuthStart`).
+- **Consumer in Deckhouse:** every DexAuthenticator. The CSRF cookie of a sign-in flow lives 10 minutes
+  (`--cookie-csrf-expire=10m`), so a user who left the sign-in of dex open longer than that, or a callback opened again
+  from the history, came back to the bare 403 «Unable to find a valid CSRF token» of oauth2-proxy.
+- **What it does:** a callback whose CSRF cookie is missing, does not validate or has expired:
+  - a script (`fetch`/XHR, decided as in patch 005) gets 401 with `{}`;
+  - a browser navigation gets the 403 page of an expired sign-in (message
+    `Login Failed: The sign-in has expired. Unable to find a valid CSRF token. Please sign in again.`, which the
+    templates of patch 015 tell apart by its prefix), whose **Sign in again** button goes to the sign-in page with
+    the `rd` of the `state`, validated (`/` when it is not an allowed redirect);
+  - with `--restart-login-without-csrf-cookie` a browser navigation is redirected to the sign-in page with that `rd`
+    and `login_restarted=1` instead, the same way as patch 013. The module sets the flag while the sessions of dex
+    are on (`sessions.enabled`): a live session signs the user in again without a password. Without the sessions the
+    restart would show the user the dex sign-in once more, so the page asks first. The flag is a container argument,
+    so a change of `sessions.enabled` rolls the DexAuthenticator pods.
+- **Loop guard:** a flow without its cookie cannot read the mark of patch 013, so the sign-in of a restarted flow also
+  prefixes the nonce in its `state` with `r.` (a nonce hash, unpadded base64url, has no dot); the callback strips the
+  mark before it names the CSRF cookie and checks the state. A callback of a marked flow without its cookie gets the
+  page, so a browser that does not keep the cookie does not loop.
+- **Security:** a callback without its CSRF cookie never redeems its code, in either mode and for any request, and
+  sets no session; it trusts nothing of the lost flow but the validated `rd`. A restart starts a new flow from
+  scratch, with a new state, CSRF cookie and PKCE verifier, so a code slipped into another browser cannot become its
+  session (`TestForeignCodeWithoutCSRFCookieIsNeverRedeemed`, `TestRestartStartsANewFlow`). A forged callback only
+  shows the page or sends the browser to the sign-in page, which anyone can link to anyway.
+- **Logs:** the missing cookie keeps its auth log line (`, restarting the login` is appended for a restart), so the
+  `D8_DEX_AUTHENTICATOR_LOGIN_FAILED` security event still fires; a state that does not match the cookie
+  (`CSRF token mismatch`, `D8_DEX_AUTHENTICATOR_CSRF_MISMATCH`) stays the 403 of upstream.
+- **Upstream:** not proposed.
+- **Depends on:** 013 (the restart redirect and the mark in the CSRF cookie), 005-sign-in-401-for-scripts and
+  008-auth-log-login-failures.
+- **Order:** right after 013; its hunks in `oauthproxy.go` sit inside those of 013. 015 sets the language in
+  `errorPageTo`, the error page with a given redirect that 014 adds.
+
+### 015-deckhouse-pages.patch
+
+- **Zone:** the data of the sign-in and error pages (`pkg/app/pagewriter`, `OAuthProxy.ErrorPage`).
+- **Consumer in Deckhouse:** every DexAuthenticator, with the templates of `images/dex-authenticator/templates`
+  (`--custom-templates-dir=/usr/share/dex-authenticator/templates`).
+- **What it does:** the pages get `Lang`, `ru` when the `Accept-Language` of the request prefers Russian to English
+  and `en` otherwise (`PreferredLanguage`; the first 32 entries of the header are read, a range with `q=0` or a
+  weight that does not parse is skipped), and the error page gets `LogoData`, the logo of `--custom-sign-in-logo`
+  that upstream gives only to the sign-in page. The templates get `HasPrefix` to tell the generic messages of the
+  error page apart. Dex itself shows its pages in one language (`frontend.extra.lang` of the dex config, `en`), so
+  the pages of DexAuthenticator follow the browser instead.
+- **The pages:** `error.html` and `sign_in.html` are not in the patch: the image takes them from
+  `images/dex-authenticator/templates`, and `template_tests/authenticator_pages_test.go` renders them. With
+  `--skip-provider-button` only the error page is shown; `sign_in.html` and `robots.txt` are there so that the proxy
+  does not log the missing files at startup. The stylesheet, fonts and images are those of the Dex theme
+  (`images/dex/src/web/static`): the image copies them into `static/` before the build, and `go:embed static/*`
+  serves them under `/dex-authenticator/static/`. The deployment passes the Deckhouse logo as
+  `--custom-sign-in-logo`, or `-` when the module has a custom logo, which the namespace of the authenticator cannot
+  read.
+- **Upstream:** not proposed.
+- **Order:** after 014; it adds one line to `errorPageTo`, the error page of 014.
 
 ### 998-fix-cve.patch
 

@@ -190,17 +190,18 @@ var _ = Describe("Module :: user-authn :: helm template :: security events", fun
 			Expect(hec.RenderError).ToNot(HaveOccurred())
 
 			lines := map[string]string{
-				authLogLine("jane@example.com", "AuthSuccess", "Authenticated via OAuth2: Session{email:jane@example.com user:Cgcx groups:[admins]}"): "D8_DEX_AUTHENTICATOR_LOGIN_SUCCEEDED",
-				authLogLine("jane@example.com", "AuthSuccess", "User signed out"):                                                                     "D8_DEX_AUTHENTICATOR_LOGOUT",
-				authLogLine("jane@example.com", "AuthFailure", "Invalid authentication via OAuth2: unauthorized"):                                     "D8_DEX_AUTHENTICATOR_LOGIN_DENIED",
-				authLogLine("jane@example.com", "AuthFailure", "Session validation failed: Session{}"):                                                "D8_DEX_AUTHENTICATOR_LOGIN_DENIED",
-				authLogLine("jane@example.com", "AuthFailure", "Invalid authorization via session (unauthorized): removing session Session{}"):        "D8_DEX_AUTHENTICATOR_LOGIN_DENIED",
-				authLogLine("-", "AuthFailure", "Invalid authentication via OAuth2: unable to obtain CSRF cookie"):                                    "D8_DEX_AUTHENTICATOR_LOGIN_FAILED",
-				authLogLine("-", "AuthFailure", "Invalid authentication via OAuth2: identity provider returned an error: access_denied"):              "D8_DEX_AUTHENTICATOR_LOGIN_FAILED",
-				authLogLine("-", "AuthError", "Invalid authentication via OAuth2: unable to redeem the code"):                                         "D8_DEX_AUTHENTICATOR_LOGIN_FAILED",
-				authLogLine("jane@example.com", "AuthFailure", "Invalid authentication via OAuth2: CSRF token mismatch, potential attack"):            "D8_DEX_AUTHENTICATOR_CSRF_MISMATCH",
-				authLogLine("jane@example.com", "AuthError", `Unable to refresh session: error refreshing tokens: oauth2: \"invalid_request\"`):       "D8_DEX_AUTHENTICATOR_SESSION_REFRESH_FAILED",
-				`{"time":"2026/10/22 13:25:45","level":"error","msg":"Error while parsing OAuth2 callback: access_denied"}`:                           "",
+				authLogLine("jane@example.com", "AuthSuccess", "Authenticated via OAuth2: Session{email:jane@example.com user:Cgcx groups:[admins]}"):                                                     "D8_DEX_AUTHENTICATOR_LOGIN_SUCCEEDED",
+				authLogLine("jane@example.com", "AuthSuccess", "User signed out"):                                                                                                                         "D8_DEX_AUTHENTICATOR_LOGOUT",
+				authLogLine("jane@example.com", "AuthFailure", "Invalid authentication via OAuth2: unauthorized"):                                                                                         "D8_DEX_AUTHENTICATOR_LOGIN_DENIED",
+				authLogLine("jane@example.com", "AuthFailure", "Session validation failed: Session{}"):                                                                                                    "D8_DEX_AUTHENTICATOR_LOGIN_DENIED",
+				authLogLine("jane@example.com", "AuthFailure", "Invalid authorization via session (unauthorized): removing session Session{}"):                                                            "D8_DEX_AUTHENTICATOR_LOGIN_DENIED",
+				authLogLine("-", "AuthFailure", "Invalid authentication via OAuth2: unable to obtain CSRF cookie"):                                                                                        "D8_DEX_AUTHENTICATOR_LOGIN_FAILED",
+				authLogLine("-", "AuthFailure", "Invalid authentication via OAuth2: unable to obtain CSRF cookie: CSRF cookie with name '_oauth2_proxy_AbCdEf_csrf' was not found, restarting the login"): "D8_DEX_AUTHENTICATOR_LOGIN_FAILED",
+				authLogLine("-", "AuthFailure", "Invalid authentication via OAuth2: identity provider returned an error: access_denied"):                                                                  "D8_DEX_AUTHENTICATOR_LOGIN_FAILED",
+				authLogLine("-", "AuthError", "Invalid authentication via OAuth2: unable to redeem the code"):                                                                                             "D8_DEX_AUTHENTICATOR_LOGIN_FAILED",
+				authLogLine("jane@example.com", "AuthFailure", "Invalid authentication via OAuth2: CSRF token mismatch, potential attack"):                                                                "D8_DEX_AUTHENTICATOR_CSRF_MISMATCH",
+				authLogLine("jane@example.com", "AuthError", `Unable to refresh session: error refreshing tokens: oauth2: \"invalid_request\"`):                                                           "D8_DEX_AUTHENTICATOR_SESSION_REFRESH_FAILED",
+				`{"time":"2026/10/22 13:25:45","level":"error","msg":"Error while parsing OAuth2 callback: access_denied"}`:                                                                               "",
 			}
 
 			produces := hec.KubernetesGlobalResource("ClusterSecurityEventShipper", "dex-authenticator").Field("spec.0.produces").Array()

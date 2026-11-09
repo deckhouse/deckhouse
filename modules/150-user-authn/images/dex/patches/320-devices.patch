@@ -151,7 +151,7 @@ index 8aaf24f0..b1518da0 100644
  	if serverConfig.PasswordPolicy, err = c.PasswordPolicy.serverPolicy(); err != nil {
  		return fmt.Errorf("invalid password policy config: %v", err)
 diff --git a/server/authflow/dispatch.go b/server/authflow/dispatch.go
-index 1f7ef11a..ab767e1b 100644
+index d765f3ec..2d8865b6 100644
 --- a/server/authflow/dispatch.go
 +++ b/server/authflow/dispatch.go
 @@ -96,7 +96,7 @@ func (h *Handler) dispatch(w http.ResponseWriter, r *http.Request, authReq stora
@@ -203,10 +203,10 @@ index e0584a7e..d44f7562 100644
  		h.Logger.ErrorContext(r.Context(), "failed to create authorization request", "err", err)
  		h.renderError(r, w, http.StatusInternalServerError, "Failed to connect to the database.")
 diff --git a/server/authflow/response.go b/server/authflow/response.go
-index 91952c6d..fea5e343 100644
+index 0e4d536f..d0717b52 100644
 --- a/server/authflow/response.go
 +++ b/server/authflow/response.go
-@@ -212,6 +212,9 @@ func (h *Handler) issueCode(ctx context.Context, w http.ResponseWriter, r *http.
+@@ -213,6 +213,9 @@ func (h *Handler) issueCode(ctx context.Context, w http.ResponseWriter, r *http.
  		PKCE:          authReq.PKCE,
  		AuthTime:      authReq.AuthTime,
  		Generation:    authReq.Generation,

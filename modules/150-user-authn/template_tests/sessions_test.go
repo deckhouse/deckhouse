@@ -128,6 +128,10 @@ var _ = Describe("Module :: user-authn :: helm template :: sessions of dex", fun
 			Expect(dexEnv().Exists()).To(BeFalse())
 			Expect(authenticatorArgs(hec, "d8-console", "console-dex-authenticator")).
 				NotTo(ContainElement(HavePrefix("--provider-logout-url")))
+			// Without a session of dex a restarted sign-in would ask for the password again, so a callback
+			// without its CSRF cookie shows the page of an expired sign-in instead.
+			Expect(authenticatorArgs(hec, "d8-console", "console-dex-authenticator")).
+				NotTo(ContainElement("--restart-login-without-csrf-cookie"))
 		})
 
 		It("keeps the cookie key", func() {
@@ -186,6 +190,19 @@ var _ = Describe("Module :: user-authn :: helm template :: sessions of dex", fun
 		It("signs a DexAuthenticator out through dex", func() {
 			Expect(authenticatorArgs(hec, "tenant-ns", "app-dex-authenticator")).
 				To(ContainElement("--provider-logout-url=https://dex.example.com/logout"))
+		})
+
+		// The session of dex signs the user in again without a password, so a callback without its CSRF
+		// cookie starts the sign-in again. The flag is an argument of the container, so turning the
+		// sessions on or off rolls the DexAuthenticator pods.
+		It("restarts a sign-in without its CSRF cookie", func() {
+			for _, app := range []struct{ namespace, name string }{
+				{"d8-console", "console-dex-authenticator"},
+				{"tenant-ns", "app-dex-authenticator"},
+			} {
+				Expect(authenticatorArgs(hec, app.namespace, app.name)).
+					To(ContainElement("--restart-login-without-csrf-cookie"), app.name)
+			}
 		})
 	})
 

@@ -1,0 +1,361 @@
+diff --git a/deckhouse_pages_test.go b/deckhouse_pages_test.go
+new file mode 100644
+index 00000000..5dbb14f4
+--- /dev/null
++++ b/deckhouse_pages_test.go
+@@ -0,0 +1,40 @@
++package main
++
++import (
++	"net/http"
++	"net/http/httptest"
++	"os"
++	"path/filepath"
++	"testing"
++
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++
++	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
++)
++
++// TestErrorPageTakesTheLanguageOfTheRequest: the error pages of the proxy are rendered in the
++// language the browser asks for (Deckhouse patch 015).
++func TestErrorPageTakesTheLanguageOfTheRequest(t *testing.T) {
++	dir := t.TempDir()
++	require.NoError(t, os.WriteFile(filepath.Join(dir, "error.html"), []byte(`{{define "error.html"}}{{.Lang}}{{end}}`), 0o600))
++	opts := baseTestOptions()
++	opts.Templates.Path = dir
++	require.NoError(t, validation.Validate(opts))
++	proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
++	require.NoError(t, err)
++
++	for header, want := range map[string]string{"ru-RU,ru;q=0.9,en;q=0.8": "ru", "en-US": "en", "": "en"} {
++		t.Run(header, func(t *testing.T) {
++			req := httptest.NewRequest(http.MethodGet, "/oauth2/callback", nil)
++			req.Header.Set("Accept-Language", header)
++			req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{})
++			rw := httptest.NewRecorder()
++
++			proxy.ErrorPage(rw, req, http.StatusForbidden, "test")
++
++			assert.Equal(t, want, rw.Body.String())
++		})
++	}
++}
+diff --git a/oauthproxy.go b/oauthproxy.go
+index 1df18484..5f50b717 100644
+--- a/oauthproxy.go
++++ b/oauthproxy.go
+@@ -685,6 +685,7 @@ func (p *OAuthProxy) errorPageTo(rw http.ResponseWriter, req *http.Request, code
+ 		RequestID:   scope.RequestID,
+ 		AppError:    appError,
+ 		Messages:    messages,
++		Lang:        pagewriter.PreferredLanguage(req.Header.Get("Accept-Language")),
+ 	})
+ }
+ 
+diff --git a/pkg/app/pagewriter/deckhouse_language.go b/pkg/app/pagewriter/deckhouse_language.go
+new file mode 100644
+index 00000000..9aa1b175
+--- /dev/null
++++ b/pkg/app/pagewriter/deckhouse_language.go
+@@ -0,0 +1,73 @@
++package pagewriter
++
++import (
++	"strconv"
++	"strings"
++)
++
++// The languages of the Deckhouse templates of the pages (Deckhouse patch 015).
++const (
++	languageEnglish = "en"
++	languageRussian = "ru"
++)
++
++// maxAcceptLanguageEntries bounds the work spent on one Accept-Language header.
++const maxAcceptLanguageEntries = 32
++
++// PreferredLanguage returns the language of the pages for an Accept-Language
++// header (RFC 9110, section 12.5.4): "ru" when Russian has the highest weight of
++// the languages the templates have, "en" otherwise. A language range matches by
++// its primary subtag, so "ru-RU" is Russian; "*" stands for English, and a range
++// with q=0 or a weight that does not parse is skipped. Of equal weights the first
++// wins, as browsers list the languages in the order of preference.
++func PreferredLanguage(acceptLanguage string) string {
++	best, bestWeight := languageEnglish, 0.0
++	for i, entry := range strings.Split(acceptLanguage, ",") {
++		if i == maxAcceptLanguageEntries {
++			break
++		}
++		tag, params, _ := strings.Cut(entry, ";")
++		primary, _, _ := strings.Cut(strings.TrimSpace(tag), "-")
++		var lang string
++		switch strings.ToLower(primary) {
++		case languageRussian:
++			lang = languageRussian
++		case languageEnglish, "*":
++			lang = languageEnglish
++		default:
++			continue
++		}
++		weight, ok := languageWeight(params)
++		if !ok || weight <= bestWeight {
++			continue
++		}
++		best, bestWeight = lang, weight
++	}
++	return best
++}
++
++// languageWeight parses the q parameter of a language range; without one the
++// weight is 1.
++func languageWeight(params string) (float64, bool) {
++	for _, param := range strings.Split(params, ";") {
++		name, value, found := strings.Cut(strings.TrimSpace(param), "=")
++		if !found || !strings.EqualFold(strings.TrimSpace(name), "q") {
++			continue
++		}
++		weight, err := strconv.ParseFloat(strings.TrimSpace(value), 64)
++		// The negated range check also refuses NaN.
++		if err != nil || !(weight >= 0 && weight <= 1) {
++			return 0, false
++		}
++		return weight, true
++	}
++	return 1, true
++}
++
++// languageOrDefault is lang, or English when it is not set.
++func languageOrDefault(lang string) string {
++	if lang == "" {
++		return languageEnglish
++	}
++	return lang
++}
+diff --git a/pkg/app/pagewriter/deckhouse_pages_test.go b/pkg/app/pagewriter/deckhouse_pages_test.go
+new file mode 100644
+index 00000000..cfaac6f8
+--- /dev/null
++++ b/pkg/app/pagewriter/deckhouse_pages_test.go
+@@ -0,0 +1,121 @@
++package pagewriter
++
++import (
++	"net/http"
++	"net/http/httptest"
++	"os"
++	"path/filepath"
++	"testing"
++
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++
++	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
++)
++
++func TestPreferredLanguage(t *testing.T) {
++	tests := []struct {
++		name   string
++		header string
++		want   string
++	}{
++		{"no header", "", "en"},
++		{"Russian", "ru", "ru"},
++		{"Russian with a region", "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7", "ru"},
++		{"English first", "en-US,en;q=0.9,ru;q=0.8", "en"},
++		{"Russian weighs more", "en;q=0.5, ru;q=0.8", "ru"},
++		{"equal weights keep the order", "en, ru", "en"},
++		{"the primary subtag is case-insensitive", "RU-ru", "ru"},
++		{"an unsupported language is skipped", "de-DE,de;q=0.9,ru;q=0.5", "ru"},
++		{"only unsupported languages", "de, fr;q=0.9", "en"},
++		{"a wildcard is English", "*;q=0.9, ru;q=0.5", "en"},
++		{"q=0 refuses a language", "ru;q=0, en;q=0.1", "en"},
++		{"a weight that does not parse is skipped", "ru;q=high, en;q=0.1", "en"},
++		{"NaN is skipped", "ru;q=NaN", "en"},
++		{"a weight above 1 is skipped", "ru;q=2", "en"},
++		{"spaces around the parameter", "en;q=0.1 , ru ; q = 0.9", "ru"},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			assert.Equal(t, tc.want, PreferredLanguage(tc.header))
++		})
++	}
++}
++
++// TestPreferredLanguageBoundsTheHeader: entries past the limit are not read.
++func TestPreferredLanguageBoundsTheHeader(t *testing.T) {
++	header := ""
++	for range maxAcceptLanguageEntries {
++		header += "de,"
++	}
++	assert.Equal(t, "en", PreferredLanguage(header+"ru"))
++}
++
++// newDeckhousePagesWriter is a writer whose templates show the data the Deckhouse templates use.
++func newDeckhousePagesWriter(t *testing.T, customLogo string) Writer {
++	t.Helper()
++	dir := t.TempDir()
++	require.NoError(t, os.WriteFile(filepath.Join(dir, "error.html"),
++		[]byte(`{{define "error.html"}}{{.Lang}}|{{.LogoData}}|{{if HasPrefix .Message "Login Failed"}}login{{else}}other{{end}}{{end}}`), 0o600))
++	require.NoError(t, os.WriteFile(filepath.Join(dir, "sign_in.html"),
++		[]byte(`{{define "sign_in.html"}}{{.Lang}}|{{.LogoData}}{{end}}`), 0o600))
++	logo := filepath.Join(dir, "logo.svg")
++	require.NoError(t, os.WriteFile(logo, []byte(`<svg id="logo"></svg>`), 0o600))
++	if customLogo == "" {
++		customLogo = logo
++	}
++	writer, err := NewWriter(Opts{TemplatesPath: dir, ProxyPrefix: "/oauth2", CustomLogo: customLogo})
++	require.NoError(t, err)
++	return writer
++}
++
++// TestErrorPageCarriesLanguageAndLogo: the error page gets the language of the request and the
++// logo of the sign-in page (Deckhouse patch 015).
++func TestErrorPageCarriesLanguageAndLogo(t *testing.T) {
++	tests := []struct {
++		name       string
++		lang       string
++		customLogo string
++		messages   []interface{}
++		want       string
++	}{
++		{"Russian", "ru", "", []interface{}{"Login Failed: Unable to find a valid CSRF token. Please try again."}, `ru|<svg id="logo"></svg>|login`},
++		{"no language is English", "", "", nil, `en|<svg id="logo"></svg>|other`},
++		{"the logo is disabled", "en", "-", nil, `en||other`},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			rw := httptest.NewRecorder()
++			newDeckhousePagesWriter(t, tc.customLogo).WriteErrorPage(rw, ErrorPageOpts{
++				Status:   http.StatusForbidden,
++				Lang:     tc.lang,
++				Messages: tc.messages,
++			})
++			assert.Equal(t, tc.want, rw.Body.String())
++		})
++	}
++}
++
++// TestProxyErrorPageLanguage: the error page of an upstream failure takes the language of the
++// request too.
++func TestProxyErrorPageLanguage(t *testing.T) {
++	req := httptest.NewRequest(http.MethodGet, "/", nil)
++	req.Header.Set("Accept-Language", "ru-RU")
++	req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{})
++	rw := httptest.NewRecorder()
++
++	newDeckhousePagesWriter(t, "-").ProxyErrorHandler(rw, req, assert.AnError)
++
++	assert.Equal(t, "ru||other", rw.Body.String())
++}
++
++// TestSignInPageLanguage: the sign-in page gets the language of the request.
++func TestSignInPageLanguage(t *testing.T) {
++	req := httptest.NewRequest(http.MethodGet, "/oauth2/sign_in", nil)
++	req.Header.Set("Accept-Language", "ru")
++	rw := httptest.NewRecorder()
++
++	newDeckhousePagesWriter(t, "").WriteSignInPage(rw, req, "/", http.StatusOK)
++
++	assert.Equal(t, `ru|<svg id="logo"></svg>`, rw.Body.String())
++}
+diff --git a/pkg/app/pagewriter/error_page.go b/pkg/app/pagewriter/error_page.go
+index e62a9a52..3c313ab1 100644
+--- a/pkg/app/pagewriter/error_page.go
++++ b/pkg/app/pagewriter/error_page.go
+@@ -36,6 +36,10 @@ type errorPageWriter struct {
+ 	// debug determines whether errors pages should be rendered with detailed
+ 	// errors.
+ 	debug bool
++
++	// logoData is the logo of the sign-in page (--custom-sign-in-logo), which the
++	// error page shows too (Deckhouse patch 015).
++	logoData string
+ }
+ 
+ // ErrorPageOpts bundles up all the content needed to write the Error Page
+@@ -50,6 +54,9 @@ type ErrorPageOpts struct {
+ 	AppError string
+ 	// Generic error messages shown in non-debug mode
+ 	Messages []interface{}
++	// Lang is the language of the page, "en" or "ru", chosen by PreferredLanguage
++	// (Deckhouse patch 015). Empty means "en".
++	Lang string
+ }
+ 
+ // WriteErrorPage writes an error page to the given response writer.
+@@ -67,6 +74,8 @@ func (e *errorPageWriter) WriteErrorPage(rw http.ResponseWriter, opts ErrorPageO
+ 		RequestID   string
+ 		Footer      template.HTML
+ 		Version     string
++		Lang        string
++		LogoData    template.HTML
+ 	}{
+ 		Title:       http.StatusText(opts.Status),
+ 		Message:     e.getMessage(opts.Status, opts.AppError, opts.Messages...),
+@@ -76,6 +85,8 @@ func (e *errorPageWriter) WriteErrorPage(rw http.ResponseWriter, opts ErrorPageO
+ 		RequestID:   opts.RequestID,
+ 		Footer:      template.HTML(e.footer), // #nosec G203 -- We allow unescaped template.HTML since it is user configured options
+ 		Version:     e.version,
++		Lang:        languageOrDefault(opts.Lang),
++		LogoData:    template.HTML(e.logoData), // #nosec G203 -- We allow unescaped template.HTML since it is user configured options
+ 	}
+ 
+ 	if err := e.template.Execute(rw, data); err != nil {
+@@ -96,6 +107,7 @@ func (e *errorPageWriter) ProxyErrorHandler(rw http.ResponseWriter, req *http.Re
+ 		RequestID:   scope.RequestID,
+ 		AppError:    proxyErr.Error(),
+ 		Messages:    []interface{}{"There was a problem connecting to the upstream server."},
++		Lang:        PreferredLanguage(req.Header.Get("Accept-Language")),
+ 	})
+ }
+ 
+diff --git a/pkg/app/pagewriter/pagewriter.go b/pkg/app/pagewriter/pagewriter.go
+index 8da82a87..31792411 100644
+--- a/pkg/app/pagewriter/pagewriter.go
++++ b/pkg/app/pagewriter/pagewriter.go
+@@ -77,6 +77,7 @@ func NewWriter(opts Opts) (Writer, error) {
+ 		footer:      opts.Footer,
+ 		version:     opts.Version,
+ 		debug:       opts.Debug,
++		logoData:    logoData,
+ 	}
+ 
+ 	signInPage := &signInPageWriter{
+diff --git a/pkg/app/pagewriter/sign_in_page.go b/pkg/app/pagewriter/sign_in_page.go
+index bb34bb49..6bd3b4fe 100644
+--- a/pkg/app/pagewriter/sign_in_page.go
++++ b/pkg/app/pagewriter/sign_in_page.go
+@@ -65,6 +65,7 @@ func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Req
+ 		ProxyPrefix   string
+ 		Footer        template.HTML
+ 		LogoData      template.HTML
++		Lang          string
+ 	}{
+ 		ProviderName:  s.providerName,
+ 		SignInMessage: template.HTML(s.signInMessage), // #nosec G203 -- We allow unescaped template.HTML since it is user configured options
+@@ -75,6 +76,7 @@ func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Req
+ 		ProxyPrefix:   s.proxyPrefix,
+ 		Footer:        template.HTML(s.footer),   // #nosec G203 -- We allow unescaped template.HTML since it is user configured options
+ 		LogoData:      template.HTML(s.logoData), // #nosec G203 -- We allow unescaped template.HTML since it is user configured options
++		Lang:          PreferredLanguage(req.Header.Get("Accept-Language")),
+ 	}
+ 
+ 	err := s.template.Execute(rw, t)
+diff --git a/pkg/app/pagewriter/templates.go b/pkg/app/pagewriter/templates.go
+index 66d24ecc..abb8132c 100644
+--- a/pkg/app/pagewriter/templates.go
++++ b/pkg/app/pagewriter/templates.go
+@@ -31,6 +31,9 @@ func loadTemplates(customDir string) (*template.Template, error) {
+ 	t := template.New("").Funcs(template.FuncMap{
+ 		"ToUpper": strings.ToUpper,
+ 		"ToLower": strings.ToLower,
++		// HasPrefix lets a template tell the generic messages of the error page apart
++		// (Deckhouse patch 015).
++		"HasPrefix": strings.HasPrefix,
+ 	})
+ 	var err error
+ 	t, err = addTemplate(t, customDir, signInTemplateName, defaultSignInTemplate)

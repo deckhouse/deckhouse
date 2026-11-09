@@ -269,15 +269,30 @@ spec:
         - --tls-cert-file=/opt/dex-authenticator/tls/tls.crt
         - --tls-key-file=/opt/dex-authenticator/tls/tls.key
         - --skip-provider-button
+        # The pages of the proxy in the theme of the Deckhouse Dex, in the language of the browser (patch 015).
+        # With --skip-provider-button only the error page is shown. The logo of a custom design is not reachable
+        # from the namespace of the authenticator, so with it the pages show no logo.
+        - --custom-templates-dir=/usr/share/dex-authenticator/templates
+    {{- if (dig "customLogo" "enabled" false $context.Values.userAuthn.internal) }}
+        - --custom-sign-in-logo=-
+    {{- else }}
+        - --custom-sign-in-logo=/usr/share/dex-authenticator/deckhouse-logo-title.svg
+    {{- end }}
         - --silence-ping-logging
         - --logging-format=json
         # One CSRF cookie per sign-in flow: it holds the state and the PKCE verifier of the flow, so two
         # tabs that sign in at the same time no longer overwrite each other's verifier. A flow lives as
         # long as the sign-in at dex takes, so its cookie expires after 10 minutes, and at most 10 of them
-        # are kept: the oldest go first.
+        # are kept: the oldest go first. A callback that comes back after its cookie has gone shows the page of
+        # an expired sign-in with a button to sign in again (patch 014).
         - --cookie-csrf-per-request=true
         - --cookie-csrf-per-request-limit=10
         - --cookie-csrf-expire=10m
+    {{- if (dig "sessions" "enabled" false $context.Values.userAuthn) }}
+        # With the sessions of dex on, such a callback starts the sign-in again instead, once: the session of
+        # dex signs the user in without a password, so the user does not see it.
+        - --restart-login-without-csrf-cookie
+    {{- end }}
         {{- include "dex_authenticator_session_store_args" $context | nindent 8 }}
     {{- $idTokenTTL := $context.Values.userAuthn.idTokenTTL | default "10m" }}
     {{- $keepUsersLoggedInFor := $crd.spec.keepUsersLoggedInFor | default "168h" }} # 7 days

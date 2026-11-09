@@ -1,0 +1,538 @@
+diff --git a/deckhouse_csrf_cookie_test.go b/deckhouse_csrf_cookie_test.go
+new file mode 100644
+index 00000000..63c9203b
+--- /dev/null
++++ b/deckhouse_csrf_cookie_test.go
+@@ -0,0 +1,344 @@
++package main
++
++import (
++	"bytes"
++	"context"
++	"net/http"
++	"net/http/httptest"
++	"net/url"
++	"os"
++	"strings"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++
++	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
++	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
++)
++
++// countingProvider redeems every code for a valid session of jane@example.com and counts the
++// redemptions, so a test can tell whether the callback trusted the code.
++type countingProvider struct {
++	*providers.ProviderData
++	redeemed int
++}
++
++func (p *countingProvider) Redeem(_ context.Context, _, _, _ string) (*sessionsapi.SessionState, error) {
++	p.redeemed++
++	return &sessionsapi.SessionState{Email: "jane@example.com", User: "jane", AccessToken: "access"}, nil
++}
++
++func (p *countingProvider) ValidateSession(_ context.Context, _ *sessionsapi.SessionState) bool {
++	return true
++}
++
++// newCountingProxy builds a proxy with one CSRF cookie per sign-in flow, as DexAuthenticator runs
++// it, whose provider is a countingProvider; restart is --restart-login-without-csrf-cookie.
++func newCountingProxy(t *testing.T, restart bool) (*OAuthProxy, *countingProvider) {
++	t.Helper()
++	proxy := newCallbackProxyWith(t, nil, true)
++	proxy.restartLoginWithoutCSRFCookie = restart
++	provider := &countingProvider{ProviderData: &providers.ProviderData{
++		LoginURL: &url.URL{Scheme: "https", Host: "dex.example.com", Path: "/auth"},
++	}}
++	proxy.provider = provider
++	return proxy, provider
++}
++
++// callbackWithoutCSRFCookie is the callback of a flow that was going to appRedirect, whose CSRF
++// cookie the browser does not have: it has expired, or the callback is forged. The state carries
++// the restart mark when restarted is set.
++func callbackWithoutCSRFCookie(t *testing.T, proxy *OAuthProxy, appRedirect string, headers map[string]string, restarted bool) *http.Request {
++	t.Helper()
++	csrf, err := cookies.NewCSRF(proxy.CookieOptions, "")
++	require.NoError(t, err)
++	nonce := csrf.HashOAuthState()
++	if restarted {
++		nonce = restartedStateMark + nonce
++	}
++	req := httptest.NewRequest(http.MethodGet,
++		"/oauth2/callback?code=foreign_code&state="+url.QueryEscape(encodeState(nonce, appRedirect, false)), nil)
++	req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{})
++	for k, v := range headers {
++		req.Header.Set(k, v)
++	}
++	return req
++}
++
++var navigationHeaders = map[string]string{"Sec-Fetch-Mode": "navigate"}
++
++// requireLoginExpiredPage checks the page of an expired sign-in: 403, no redirect, and the sign-in
++// button of the error page going back to rd.
++func requireLoginExpiredPage(t *testing.T, rw *httptest.ResponseRecorder, rd string) {
++	t.Helper()
++	assert.Equal(t, http.StatusForbidden, rw.Code, rw.Body.String())
++	assert.Empty(t, rw.Header().Get("Location"))
++	assert.Contains(t, rw.Body.String(), "Login Failed: The sign-in has expired.")
++	assert.Contains(t, rw.Body.String(), `<input type="hidden" name="rd" value="`+rd+`">`)
++}
++
++// TestCallbackWithoutCSRFCookieAsksToSignInAgain: without --restart-login-without-csrf-cookie a
++// sign-in page left open longer than the CSRF cookie lives comes back to the page of an expired
++// sign-in, whose button signs in again to where the flow was going (Deckhouse patch 014).
++func TestCallbackWithoutCSRFCookieAsksToSignInAgain(t *testing.T) {
++	t.Run("the cookie is gone", func(t *testing.T) {
++		proxy, _ := newCountingProxy(t, false)
++		rw := httptest.NewRecorder()
++
++		proxy.OAuthCallback(rw, callbackWithoutCSRFCookie(t, proxy, "/app/page", navigationHeaders, false))
++
++		requireLoginExpiredPage(t, rw, "/app/page")
++	})
++
++	t.Run("the cookie has expired", func(t *testing.T) {
++		proxy, _ := newCountingProxy(t, false)
++		req := callbackRequestOfFlow(t, proxy, "/app/page", navigationHeaders, false)
++		// The browser still sends the cookie, but it is older than --cookie-csrf-expire.
++		proxy.CookieOptions.CSRFExpire = time.Nanosecond
++		time.Sleep(time.Millisecond)
++		rw := httptest.NewRecorder()
++
++		proxy.OAuthCallback(rw, req)
++
++		requireLoginExpiredPage(t, rw, "/app/page")
++	})
++
++	t.Run("an open redirect falls back to the root", func(t *testing.T) {
++		proxy, _ := newCountingProxy(t, false)
++		rw := httptest.NewRecorder()
++
++		proxy.OAuthCallback(rw, callbackWithoutCSRFCookie(t, proxy, "https://evil.example.com/", navigationHeaders, false))
++
++		requireLoginExpiredPage(t, rw, "/")
++	})
++}
++
++// TestCallbackWithoutCSRFCookieRestartsTheLogin: with --restart-login-without-csrf-cookie (the
++// browser sessions of dex are on) the callback starts the login again instead, so a live session of
++// the provider signs the user in without a password.
++func TestCallbackWithoutCSRFCookieRestartsTheLogin(t *testing.T) {
++	t.Run("the cookie is gone", func(t *testing.T) {
++		proxy, _ := newCountingProxy(t, true)
++		rw := httptest.NewRecorder()
++
++		proxy.OAuthCallback(rw, callbackWithoutCSRFCookie(t, proxy, "/app/page", navigationHeaders, false))
++
++		assert.Equal(t, http.StatusFound, rw.Code, rw.Body.String())
++		assert.Equal(t, "/oauth2/sign_in?rd=%2Fapp%2Fpage&login_restarted=1", rw.Header().Get("Location"))
++	})
++
++	t.Run("the cookie has expired", func(t *testing.T) {
++		proxy, _ := newCountingProxy(t, true)
++		req := callbackRequestOfFlow(t, proxy, "/app/page", navigationHeaders, false)
++		proxy.CookieOptions.CSRFExpire = time.Nanosecond
++		time.Sleep(time.Millisecond)
++		rw := httptest.NewRecorder()
++
++		proxy.OAuthCallback(rw, req)
++
++		assert.Equal(t, http.StatusFound, rw.Code, rw.Body.String())
++		assert.Equal(t, "/oauth2/sign_in?rd=%2Fapp%2Fpage&login_restarted=1", rw.Header().Get("Location"))
++	})
++
++	t.Run("an open redirect falls back to the root", func(t *testing.T) {
++		proxy, _ := newCountingProxy(t, true)
++		rw := httptest.NewRecorder()
++
++		proxy.OAuthCallback(rw, callbackWithoutCSRFCookie(t, proxy, "https://evil.example.com/", navigationHeaders, false))
++
++		assert.Equal(t, http.StatusFound, rw.Code)
++		assert.Equal(t, "/oauth2/sign_in?rd=%2F&login_restarted=1", rw.Header().Get("Location"))
++	})
++
++	// The callback of a restarted flow that again finds no CSRF cookie gets the page, not one more
++	// restart, so a browser that does not keep the cookie does not go round in a loop.
++	t.Run("once in a row", func(t *testing.T) {
++		proxy, _ := newCountingProxy(t, true)
++		rw := httptest.NewRecorder()
++
++		proxy.OAuthCallback(rw, callbackWithoutCSRFCookie(t, proxy, "/app/page", navigationHeaders, true))
++
++		requireLoginExpiredPage(t, rw, "/app/page")
++	})
++}
++
++// TestCallbackWithoutCSRFCookieAnswersScripts401: a script gets 401 with no page in both modes, as
++// on the sign-in page (patch 005).
++func TestCallbackWithoutCSRFCookieAnswersScripts401(t *testing.T) {
++	for _, restart := range []bool{false, true} {
++		for _, h := range []map[string]string{
++			{"Sec-Fetch-Mode": "cors"},
++			{"X-Requested-With": "XMLHttpRequest"},
++		} {
++			proxy, _ := newCountingProxy(t, restart)
++			rw := httptest.NewRecorder()
++
++			proxy.OAuthCallback(rw, callbackWithoutCSRFCookie(t, proxy, "/app/page", h, false))
++
++			assert.Equal(t, http.StatusUnauthorized, rw.Code, "restart=%v %v", restart, h)
++			assert.Equal(t, applicationJSON, rw.Header().Get("Content-Type"))
++			assert.Equal(t, "{}", rw.Body.String())
++			assert.Empty(t, rw.Header().Get("Location"))
++		}
++	}
++}
++
++// TestForeignCodeWithoutCSRFCookieIsNeverRedeemed: a callback without its CSRF cookie never redeems
++// its code and never sets a session, whatever the mode, the kind of request and the state, so a
++// code slipped into another browser (login CSRF) does not become a session of that browser.
++func TestForeignCodeWithoutCSRFCookieIsNeverRedeemed(t *testing.T) {
++	for _, restart := range []bool{false, true} {
++		for _, headers := range []map[string]string{navigationHeaders, {"Sec-Fetch-Mode": "cors"}, {}} {
++			for _, marked := range []bool{false, true} {
++				proxy, provider := newCountingProxy(t, restart)
++				rw := httptest.NewRecorder()
++
++				proxy.OAuthCallback(rw, callbackWithoutCSRFCookie(t, proxy, "/app/page", headers, marked))
++
++				assert.Zero(t, provider.redeemed, "restart=%v headers=%v marked=%v", restart, headers, marked)
++				for _, c := range rw.Result().Cookies() {
++					assert.NotEqual(t, proxy.CookieOptions.Name, c.Name, "a session cookie was set")
++				}
++				assert.Contains(t, []int{http.StatusFound, http.StatusForbidden, http.StatusUnauthorized}, rw.Code)
++			}
++		}
++	}
++}
++
++// TestRestartStartsANewFlow: the restart starts the sign-in from scratch: the new flow has a state,
++// a CSRF cookie and a PKCE challenge of its own, and the state of the lost flow does not match it.
++func TestRestartStartsANewFlow(t *testing.T) {
++	proxy, _ := newCountingProxy(t, true)
++	proxy.provider.Data().CodeChallengeMethod = "S256"
++	lost := callbackWithoutCSRFCookie(t, proxy, "/app/page", navigationHeaders, false)
++	restart := httptest.NewRecorder()
++	proxy.OAuthCallback(restart, lost)
++	require.Equal(t, http.StatusFound, restart.Code)
++
++	start := httptest.NewRecorder()
++	startReq := httptest.NewRequest(http.MethodGet, strings.Replace(restart.Header().Get("Location"), signInPath, oauthStartPath, 1), nil)
++	proxy.OAuthStart(start, middlewareapi.AddRequestScope(startReq, &middlewareapi.RequestScope{}))
++	require.Equal(t, http.StatusFound, start.Code, start.Body.String())
++
++	loginURL, err := url.Parse(start.Header().Get("Location"))
++	require.NoError(t, err)
++	newNonce, rd, err := decodeState(loginURL.Query().Get("state"), false)
++	require.NoError(t, err)
++	lostNonce, _, err := decodeState(lost.URL.Query().Get("state"), false)
++	require.NoError(t, err)
++	assert.Equal(t, "/app/page", rd)
++	assert.NotEqual(t, lostNonce, newNonce)
++	assert.NotEmpty(t, loginURL.Query().Get("code_challenge"))
++	var csrfCookies int
++	for _, c := range start.Result().Cookies() {
++		if strings.HasSuffix(c.Name, "_csrf") && c.MaxAge >= 0 {
++			csrfCookies++
++		}
++	}
++	assert.Equal(t, 1, csrfCookies)
++}
++
++// TestCallbackWithoutCSRFCookieLogs: the page and the restart both write the auth log line that
++// the D8_DEX_AUTHENTICATOR_LOGIN_FAILED security event is built from, with the client address.
++func TestCallbackWithoutCSRFCookieLogs(t *testing.T) {
++	for _, tc := range []struct {
++		name       string
++		restart    bool
++		headers    map[string]string
++		restarting bool
++	}{
++		{"page", false, navigationHeaders, false},
++		{"restart", true, navigationHeaders, true},
++		{"script", true, map[string]string{"Sec-Fetch-Mode": "cors"}, false},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			var out bytes.Buffer
++			logger.SetOutput(&out)
++			t.Cleanup(func() { logger.SetOutput(os.Stdout) })
++
++			proxy, _ := newCountingProxy(t, tc.restart)
++			req := callbackWithoutCSRFCookie(t, proxy, "/app/page", tc.headers, false)
++			req.RemoteAddr = "192.0.2.10:4711"
++			proxy.OAuthCallback(httptest.NewRecorder(), req)
++
++			assert.Contains(t, out.String(), "Invalid authentication via OAuth2: unable to obtain CSRF cookie: ")
++			assert.Contains(t, out.String(), "192.0.2.10")
++			assert.Equal(t, tc.restarting, strings.Contains(out.String(), "restarting the login"))
++		})
++	}
++}
++
++// TestRestartedFlowSignsIn: the sign-in that a restart redirects to puts the mark into the state,
++// and the callback of that flow strips it before it finds the CSRF cookie and checks the state, so
++// the restarted flow signs the user in.
++func TestRestartedFlowSignsIn(t *testing.T) {
++	for _, tc := range []struct {
++		name     string
++		target   string
++		wantMark bool
++	}{
++		{"restarted", "/oauth2/start?rd=%2Fapp%2Fpage&login_restarted=1", true},
++		{"not restarted", "/oauth2/start?rd=%2Fapp%2Fpage", false},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			proxy, provider := newCountingProxy(t, true)
++			start := httptest.NewRecorder()
++			proxy.OAuthStart(start, middlewareapi.AddRequestScope(httptest.NewRequest(http.MethodGet, tc.target, nil), &middlewareapi.RequestScope{}))
++			require.Equal(t, http.StatusFound, start.Code, start.Body.String())
++
++			loginURL, err := url.Parse(start.Header().Get("Location"))
++			require.NoError(t, err)
++			state := loginURL.Query().Get("state")
++			assert.Equal(t, tc.wantMark, strings.HasPrefix(state, restartedStateMark), state)
++
++			callback := httptest.NewRequest(http.MethodGet, "/oauth2/callback?code=callback_code&state="+url.QueryEscape(state), nil)
++			callback = middlewareapi.AddRequestScope(callback, &middlewareapi.RequestScope{})
++			callback.Header.Set("Sec-Fetch-Mode", "navigate")
++			for _, c := range start.Result().Cookies() {
++				if strings.HasSuffix(c.Name, "_csrf") && c.MaxAge >= 0 {
++					callback.AddCookie(c)
++				}
++			}
++			rw := httptest.NewRecorder()
++
++			proxy.OAuthCallback(rw, callback)
++
++			assert.Equal(t, http.StatusFound, rw.Code, rw.Body.String())
++			assert.Equal(t, "/app/page", rw.Header().Get("Location"))
++			assert.Equal(t, 1, provider.redeemed)
++		})
++	}
++}
++
++// TestRestartLoginWithoutCSRFCookieFlag: the mode comes from --restart-login-without-csrf-cookie,
++// off by default.
++func TestRestartLoginWithoutCSRFCookieFlag(t *testing.T) {
++	for _, tc := range []struct {
++		args []string
++		want bool
++	}{
++		{nil, false},
++		{[]string{"--restart-login-without-csrf-cookie"}, true},
++		{[]string{"--restart-login-without-csrf-cookie=false"}, false},
++	} {
++		flagSet := options.NewFlagSet()
++		require.NoError(t, flagSet.Parse(tc.args))
++		opts := options.NewOptions()
++		require.NoError(t, options.Load("", flagSet, opts))
++		assert.Equal(t, tc.want, opts.RestartLoginWithoutCSRFCookie, "%v", tc.args)
++
++		testOpts := baseTestOptions()
++		testOpts.RestartLoginWithoutCSRFCookie = opts.RestartLoginWithoutCSRFCookie
++		require.NoError(t, validation.Validate(testOpts))
++		proxy, err := NewOAuthProxy(testOpts, func(string) bool { return true })
++		require.NoError(t, err)
++		assert.Equal(t, tc.want, proxy.restartLoginWithoutCSRFCookie, "%v", tc.args)
++	}
++}
+diff --git a/oauthproxy.go b/oauthproxy.go
+index ab87dfc8..1df18484 100644
+--- a/oauthproxy.go
++++ b/oauthproxy.go
+@@ -116,6 +116,10 @@ type OAuthProxy struct {
+ 	revocationURL        string
+ 	providerLogoutURL    *url.URL
+ 
++	// restartLoginWithoutCSRFCookie starts the sign-in again for a callback without its
++	// CSRF cookie instead of the page of an expired sign-in (Deckhouse patch 014).
++	restartLoginWithoutCSRFCookie bool
++
+ 	sessionChain      alice.Chain
+ 	headersChain      alice.Chain
+ 	preAuthChain      alice.Chain
+@@ -263,6 +267,8 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
+ 		revocationURL:        opts.RevocationURL,
+ 		providerLogoutURL:    providerLogoutURL,
+ 
++		restartLoginWithoutCSRFCookie: opts.RestartLoginWithoutCSRFCookie,
++
+ 		basicAuthValidator: basicAuthValidator,
+ 		basicAuthGroups:    opts.HtpasswdUserGroups,
+ 		sessionChain:       sessionChain,
+@@ -666,7 +672,12 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, req *http.Request, code i
+ 	if redirectURL == p.SignInPath || redirectURL == "" {
+ 		redirectURL = "/"
+ 	}
++	p.errorPageTo(rw, req, code, redirectURL, appError, messages...)
++}
+ 
++// errorPageTo is ErrorPage whose "Sign in" button goes back to redirectURL, for a
++// callback that knows where its flow was going (Deckhouse patch 014).
++func (p *OAuthProxy) errorPageTo(rw http.ResponseWriter, req *http.Request, code int, redirectURL, appError string, messages ...interface{}) {
+ 	scope := middlewareapi.GetRequestScope(req)
+ 	p.pageWriter.WriteErrorPage(rw, pagewriter.ErrorPageOpts{
+ 		Status:      code,
+@@ -1089,7 +1100,8 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
+ 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+ 		return
+ 	}
+-	if req.URL.Query().Get(loginRestartedParam) != "" {
++	restarted := req.URL.Query().Get(loginRestartedParam) != ""
++	if restarted {
+ 		// The callback restarted a flow whose code the provider refused (Deckhouse patch 013).
+ 		csrf.MarkRestarted()
+ 	}
+@@ -1101,10 +1113,17 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
+ 		return
+ 	}
+ 
++	stateNonce := csrf.HashOAuthState()
++	if restarted {
++		// The callback of a restarted flow may find no CSRF cookie at all, so the mark
++		// travels in the state too, which the provider returns as it is (Deckhouse patch 014).
++		stateNonce = restartedStateMark + stateNonce
++	}
++
+ 	callbackRedirect := p.getOAuthRedirectURI(req)
+ 	loginURL := p.provider.GetLoginURL(
+ 		callbackRedirect,
+-		encodeState(csrf.HashOAuthState(), appRedirect, p.encodeState),
++		encodeState(stateNonce, appRedirect, p.encodeState),
+ 		csrf.HashOIDCNonce(),
+ 		extraParams,
+ 	)
+@@ -1155,6 +1174,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
+ 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+ 		return
+ 	}
++	nonce, restartedFlow := strings.CutPrefix(nonce, restartedStateMark)
+ 
+ 	// calculate the cookie name
+ 	cookieName := cookies.GenerateCookieName(p.CookieOptions, nonce)
+@@ -1164,8 +1184,37 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
+ 		// There are a lot of issues opened complaining about missing CSRF cookies.
+ 		// Try to log the INs and OUTs of OAuthProxy, to be easier to analyse these issues.
+ 		LoggingCSRFCookiesInOAuthCallback(req, cookieName)
++		// The CSRF cookie lives as long as --cookie-csrf-expire, so a sign-in page left
++		// open longer than that comes back without it; so does a callback opened again
++		// from the history after the flow ended. Without the cookie neither the state nor
++		// the code can be trusted, so the code is never redeemed: the callback either
++		// starts a new flow from scratch, with a new state, CSRF cookie and PKCE verifier,
++		// or asks the user to sign in again (Deckhouse patch 014). Both log the line of a
++		// missing cookie, so the security event of a failed login still fires (patch
++		// 008-auth-log-login-failures).
++		if !isNavigation(req) {
++			// A script gets a status it can act on, as on the sign-in page (patch 005).
++			logger.PrintAuthf("", req, logger.AuthFailure, "Invalid authentication via OAuth2: unable to obtain CSRF cookie: %s", err)
++			p.errorJSON(rw, http.StatusUnauthorized)
++			return
++		}
++		if p.restartLoginWithoutCSRFCookie && !restartedFlow {
++			// With --restart-login-without-csrf-cookie (the browser sessions of the provider
++			// are on) a live session signs the user in again without a password. A restarted
++			// flow carries the mark in its state, and a callback of that flow without the
++			// cookie gets the page below, so a browser that does not keep the cookie does not
++			// loop.
++			logger.PrintAuthf("", req, logger.AuthFailure, "Invalid authentication via OAuth2: unable to obtain CSRF cookie: %s, restarting the login", err)
++			p.restartLogin(rw, req, appRedirect)
++			return
++		}
++		// Otherwise the provider would ask for the password again on its own, so the page
++		// says the sign-in has expired and offers to sign in again to where it was going.
+ 		logger.PrintAuthf("", req, logger.AuthFailure, "Invalid authentication via OAuth2: unable to obtain CSRF cookie: %s", err)
+-		p.ErrorPage(rw, req, http.StatusForbidden, err.Error(), "Login Failed: Unable to find a valid CSRF token. Please try again.")
++		if !p.redirectValidator.IsValidRedirect(appRedirect) {
++			appRedirect = "/"
++		}
++		p.errorPageTo(rw, req, http.StatusForbidden, appRedirect, err.Error(), loginExpiredMessage)
+ 		return
+ 	}
+ 
+@@ -1188,16 +1237,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
+ 				"Invalid authentication via OAuth2: unable to redeem the code: the provider refused it (invalid_grant), restarting the login")
+ 			// The CSRF cookie of the refused flow is spent.
+ 			csrf.ClearCookie(rw, req)
+-			if !isNavigation(req) {
+-				// A script must get a status it can act on, not a cross-origin
+-				// redirect to the provider's sign-in (see patch 005).
+-				p.errorJSON(rw, http.StatusUnauthorized)
+-				return
+-			}
+-			if !p.redirectValidator.IsValidRedirect(appRedirect) {
+-				appRedirect = "/"
+-			}
+-			http.Redirect(rw, req, p.ProxyPrefix+signInPath+"?rd="+url.QueryEscape(appRedirect)+"&"+loginRestartedParam+"=1", http.StatusFound)
++			p.restartLogin(rw, req, appRedirect)
+ 			return
+ 		}
+ 		logger.Errorf("Error redeeming code during OAuth2 callback: %v", err)
+@@ -1652,6 +1692,33 @@ func isNavigation(req *http.Request) bool {
+ // carries it is an error, so the restart happens at most once per flow.
+ const loginRestartedParam = "login_restarted"
+ 
++// restartedStateMark prefixes the nonce in the state of a restarted sign-in flow
++// (Deckhouse patch 014). The callback reads it when the flow has no CSRF cookie to
++// carry the mark of patch 013. A nonce hash is unpadded base64url and never contains
++// a dot, so the mark cannot be mistaken for a part of it.
++const restartedStateMark = "r."
++
++// loginExpiredMessage is the message of the error page of a callback without its
++// CSRF cookie (Deckhouse patch 014). The templates tell the page apart by its
++// prefix; it keeps the words of the upstream message.
++const loginExpiredMessage = "Login Failed: The sign-in has expired. Unable to find a valid CSRF token. Please sign in again."
++
++// restartLogin starts the sign-in again for a callback whose flow cannot finish:
++// the provider refused the code (Deckhouse patch 013) or the CSRF cookie of the
++// flow is gone (Deckhouse patch 014). A browser navigation is redirected to the
++// sign-in page with where it was going (rd, validated) and the restart mark; a
++// script gets 401 instead of a cross-origin redirect it cannot follow (see patch 005).
++func (p *OAuthProxy) restartLogin(rw http.ResponseWriter, req *http.Request, appRedirect string) {
++	if !isNavigation(req) {
++		p.errorJSON(rw, http.StatusUnauthorized)
++		return
++	}
++	if !p.redirectValidator.IsValidRedirect(appRedirect) {
++		appRedirect = "/"
++	}
++	http.Redirect(rw, req, p.ProxyPrefix+signInPath+"?rd="+url.QueryEscape(appRedirect)+"&"+loginRestartedParam+"=1", http.StatusFound)
++}
++
+ // isCodeRefused reports whether the provider refused the authorization code at the token endpoint
+ // with invalid_grant (RFC 6749 §5.2). Dex answers this when the browser session the code was minted
+ // in has ended between the code being issued and redeemed: the code is spent though it never bought
+diff --git a/pkg/apis/options/options.go b/pkg/apis/options/options.go
+index acb07afd..9199aade 100644
+--- a/pkg/apis/options/options.go
++++ b/pkg/apis/options/options.go
+@@ -79,6 +79,10 @@ type Options struct {
+ 	// The RP-initiated logout endpoint of the provider the browser is sent to after sign-out.
+ 	ProviderLogoutURL string `flag:"provider-logout-url" cfg:"provider_logout_url"`
+ 
++	// Start the sign-in again for a callback without its CSRF cookie instead of the
++	// page of an expired sign-in (Deckhouse patch 014).
++	RestartLoginWithoutCSRFCookie bool `flag:"restart-login-without-csrf-cookie" cfg:"restart_login_without_csrf_cookie"`
++
+ 	// This is used for backwards compatibility for basic auth users
+ 	LegacyPreferEmailToUser bool `cfg:",internal"`
+ 
+@@ -176,6 +180,7 @@ func NewFlagSet() *pflag.FlagSet {
+ 	flagSet.String("revocation-feed-url", "", "https URL of the revocation feed of the user-authn module of Deckhouse: sessions it revokes are refused. Disabled when empty")
+ 	flagSet.String("revocation-feed-ca-file", "", "path to the CA certificate the revocation feed is checked against instead of the system roots")
+ 	flagSet.String("revocation-url", "", "token revocation endpoint (RFC 7009) of the provider: sign-out revokes the refresh token of the session there. Disabled when empty")
++	flagSet.Bool("restart-login-without-csrf-cookie", false, "start the sign-in again, once, for a callback whose CSRF cookie has expired or is gone, instead of the page of an expired sign-in. For a provider whose browser session signs the user in again without a password")
+ 	flagSet.String("provider-logout-url", "", "https URL of the RP-initiated logout endpoint of the provider: sign-out sends the browser there by client_id, to return to the root of the host. Disabled when empty")
+ 
+ 	flagSet.AddFlagSet(cookieFlagSet())

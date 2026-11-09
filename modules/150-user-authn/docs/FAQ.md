@@ -282,6 +282,10 @@ if (response.status === 401) {
 }
 ```
 
+### A sign-in that took longer than 10 minutes
+
+The system stores the temporary login state (a one-time authentication request) for 10 minutes. If the user does not complete it within this time (for example, due to slow entry of the login/password on the external provider's page, a long wait for the code during MFA, a lengthy recovery of a forgotten password, etc.), the login must be started over.
+
 ### Ending a DexAuthenticator session
 
 DexAuthenticator ends the sessions of a user within seconds after a `Lock`, `ResetPassword`, `Reset2FA` or `Logout` operation and after the user is deleted. A request with an ended session gets the same answer as a request without a session.
@@ -416,6 +420,7 @@ Dex logs every sign-in in JSON. A refused sign-in is logged at the `WARN` level 
 * `rate_limited`: Too many failed attempts came from the client IP address. The line contains the requested `path` instead of the provider, the client and the user.
 * `upstream_refused`: The provider refused to extend the session because the user no longer exists in the provider or has lost access.
 * `revoked`: The refresh token, the authorization code or the browser session was issued before a `Lock`, `ResetPassword`, `Reset2FA` or `Logout` operation or before the user was deleted.
+* `login_expired`: The sign-in request expired or was not found (the sign-in already finished, or it never existed, including a forged or replayed `state`). The line contains the requested `path` and, if the request path contains the provider ID, `connector_id` instead of the client and the user.
 
 The line also contains `connector_id`, `client_id` and the known user attributes, such as `username` and `email`. A group refusal also contains `user_groups` and `allowed_groups`. A failure of Dex or of the provider is logged at the `ERROR` level.
 

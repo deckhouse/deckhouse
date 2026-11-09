@@ -1,8 +1,36 @@
 {{ template "header.html" . }}
 
 <div class="content">
+  {{ if eq .ErrCode "login_expired" }}
+  <h2 class="content-title">
+      {{ if eq (extra "lang") "en" }}
+      The sign-in has expired
+      {{ else }}
+      Время входа истекло
+      {{ end }}
+  </h2>
+  <div class="content-text">
+      {{ if eq (extra "lang") "en" }}
+      Go back to the application and sign in again.
+      {{ else }}
+      Вернитесь в приложение и войдите снова.
+      {{ end }}
+  </div>
+  {{ if .ReturnURL }}
+  <div class="form-extra">
+    <a class="btn btn-primary" href="{{ .ReturnURL }}">
+      {{ if eq (extra "lang") "en" }}
+      Return to the application
+      {{ else }}
+      Вернуться в приложение
+      {{ end }}
+    </a>
+  </div>
+  {{ end }}
+  {{ else }}
   <h2 class="content-title">{{ .ErrType }}</h2>
   <div class="content-text">{{ .ErrMsg }}</div>
+  {{ end }}
 </div>
 
 {{ template "footer.html" . }}

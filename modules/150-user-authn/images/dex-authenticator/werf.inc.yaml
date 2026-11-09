@@ -10,6 +10,11 @@ import:
   add: /src/url-exec-prober
   to: /usr/local/bin/url-exec-prober
   before: setup
+# The templates of the pages and the logo for --custom-sign-in-logo (see templates/dex-authenticator/deployment.yaml).
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /share
+  to: /usr/share/dex-authenticator
+  before: setup
 {{- include "image mount points" . }}
 imageSpec:
   config:
@@ -33,6 +38,25 @@ git:
         - '**/*.go'
         - '**/go.mod'
         - '**/go.sum'
+  # The pages of DexAuthenticator take the theme of the Deckhouse Dex: its stylesheet, fonts and images are built
+  # into the binary next to the static files of oauth2-proxy, so the pages load nothing from another origin.
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/dex/src/web/static
+    to: /dex-static
+    includePaths:
+    - main.css
+    - fonts/*.woff2
+    - img/deckhouse-background-logo-theme-*.svg
+    - img/deckhouse-logo-title.svg
+    - img/favicon.svg
+    - img/flant-logo-*.svg
+    stageDependencies:
+      install:
+      - '**/*'
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/templates
+    to: /share/templates
+    stageDependencies:
+      install:
+      - '**/*'
   - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/url-exec-prober
     to: /src/url-exec-prober
     includePaths:
@@ -49,6 +73,10 @@ shell:
     - cd /src
     - git apply --verbose /patches/*.patch
     - rm -rf .git docs
+    # go:embed static/* serves these under <proxy prefix>/static/; main.css finds the fonts and images by the same
+    # relative paths as in Dex.
+    - cp -r /dex-static/. /src/static/
+    - cp /dex-static/img/deckhouse-logo-title.svg /share/deckhouse-logo-title.svg
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-oauth2-proxy-artifact
 from: {{ index $.Images "builder/golang" }}

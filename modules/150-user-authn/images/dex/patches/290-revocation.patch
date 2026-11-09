@@ -23,7 +23,7 @@ index 4038c148..bf9314ba 100644
  	}
  	if err := h.Storage.UpdateAuthRequest(ctx, authReq.ID, updater); err != nil {
 diff --git a/server/authflow/response.go b/server/authflow/response.go
-index 3a63e252..a2ea0213 100644
+index ee903a9a..968823c8 100644
 --- a/server/authflow/response.go
 +++ b/server/authflow/response.go
 @@ -8,6 +8,7 @@ package authflow
@@ -43,7 +43,7 @@ index 3a63e252..a2ea0213 100644
  	"github.com/dexidp/dex/server/tokens"
  	"github.com/dexidp/dex/storage"
  )
-@@ -40,6 +43,9 @@ func (h *Handler) writeResponse(w http.ResponseWriter, r *http.Request, authReq
+@@ -41,6 +44,9 @@ func (h *Handler) writeResponse(w http.ResponseWriter, r *http.Request, authReq
  		}
  		return
  	}
@@ -53,7 +53,7 @@ index 3a63e252..a2ea0213 100644
  	u, err := url.Parse(authReq.RedirectURI)
  	if err != nil {
  		h.renderError(r, w, http.StatusInternalServerError, "Invalid redirect URI.")
-@@ -111,6 +117,26 @@ func (h *Handler) writeResponse(w http.ResponseWriter, r *http.Request, authReq
+@@ -112,6 +118,26 @@ func (h *Handler) writeResponse(w http.ResponseWriter, r *http.Request, authReq
  	http.Redirect(w, r, u.String(), http.StatusSeeOther)
  }
  
@@ -80,7 +80,7 @@ index 3a63e252..a2ea0213 100644
  // authResponse accumulates the artifacts each response-type handler produces
  // for the authorization response.
  type authResponse struct {
-@@ -167,6 +193,7 @@ func (h *Handler) issueCode(ctx context.Context, w http.ResponseWriter, r *http.
+@@ -168,6 +194,7 @@ func (h *Handler) issueCode(ctx context.Context, w http.ResponseWriter, r *http.
  		ConnectorData: authReq.ConnectorData,
  		PKCE:          authReq.PKCE,
  		AuthTime:      authReq.AuthTime,
@@ -88,7 +88,7 @@ index 3a63e252..a2ea0213 100644
  	}
  	if err := h.Storage.CreateAuthCode(ctx, resp.code); err != nil {
  		h.Logger.ErrorContext(r.Context(), "Failed to create auth code", "err", err)
-@@ -199,6 +226,7 @@ func (h *Handler) issueAccessToken(ctx context.Context, w http.ResponseWriter, r
+@@ -200,6 +227,7 @@ func (h *Handler) issueAccessToken(ctx context.Context, w http.ResponseWriter, r
  		Nonce:       authReq.Nonce,
  		AuthTime:    authReq.AuthTime,
  		SessionID:   resp.sessionID,
@@ -96,7 +96,7 @@ index 3a63e252..a2ea0213 100644
  	})
  	if err != nil {
  		h.Logger.ErrorContext(r.Context(), "failed to create new access token", "err", err)
-@@ -224,6 +252,7 @@ func (h *Handler) issueIDToken(ctx context.Context, w http.ResponseWriter, r *ht
+@@ -225,6 +253,7 @@ func (h *Handler) issueIDToken(ctx context.Context, w http.ResponseWriter, r *ht
  		Nonce:       authReq.Nonce,
  		AuthTime:    authReq.AuthTime,
  		SessionID:   resp.sessionID,

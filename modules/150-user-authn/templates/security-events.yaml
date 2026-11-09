@@ -165,7 +165,8 @@ spec:
         en: |
           The login callback did not complete: the CSRF cookie is missing, the identity provider returned an error,
           or DexAuthenticator could not redeem the authorization code.
-          A missing CSRF cookie is common after the browser goes back to an old callback page.
+          A missing CSRF cookie is common after the browser goes back to an old callback page or after a sign-in
+          that took longer than 10 minutes.
           A burst of these events from one address may indicate a replay of authorization codes.
         ru: {{ $ru.docs | quote }}
   source: dex-authenticator

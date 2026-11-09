@@ -140,6 +140,14 @@ var _ = Describe("Module :: user-authn :: helm template :: DexAuthenticator oaut
 			Expect(authenticatorArgs(hec, "tenant-ns", "app-dex-authenticator")).To(ContainElement("--code-challenge-method=S256"))
 		})
 
+		It("renders its pages from the Deckhouse templates with the Deckhouse logo", func() {
+			args := authenticatorArgs(hec, "tenant-ns", "app-dex-authenticator")
+			Expect(args).To(ContainElement("--custom-templates-dir=/usr/share/dex-authenticator/templates"))
+			Expect(args).To(ContainElement("--custom-sign-in-logo=/usr/share/dex-authenticator/deckhouse-logo-title.svg"))
+			// Only the error page is shown: the sign-in goes straight to dex.
+			Expect(args).To(ContainElement("--skip-provider-button"))
+		})
+
 		// Two tabs signing in at the same time shared one CSRF cookie, and each sign-in overwrote the
 		// PKCE verifier of the other, so dex refused every code.
 		It("keeps one short-lived CSRF cookie per sign-in flow", func() {
@@ -201,6 +209,22 @@ var _ = Describe("Module :: user-authn :: helm template :: DexAuthenticator oaut
 				Expect(resource.Field(`metadata.annotations.dexauthenticator\.deckhouse\.io/client-id`).String()).
 					To(Equal("dex-authenticator-app@tenant-ns"), object.kind+" "+object.name)
 			}
+		})
+	})
+
+	// The logo of a custom design lives in d8-user-authn, out of reach of the authenticator.
+	Context("With a custom logo", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("userAuthn.internal.customLogo.enabled", true)
+			hec.ValuesSet("userAuthn.internal.customLogo.checksum", "abc")
+			hec.HelmRender(WithAPIVersions("gateway.networking.k8s.io/v1/HTTPRoute"))
+			Expect(hec.RenderError).NotTo(HaveOccurred())
+		})
+
+		It("shows no logo on its pages", func() {
+			args := authenticatorArgs(hec, "tenant-ns", "app-dex-authenticator")
+			Expect(args).To(ContainElement("--custom-sign-in-logo=-"))
+			Expect(args).To(ContainElement("--custom-templates-dir=/usr/share/dex-authenticator/templates"))
 		})
 	})
 

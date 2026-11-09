@@ -1,0 +1,56 @@
+{{- /*
+  The sign-in page of DexAuthenticator in the theme of the Deckhouse Dex, see error.html.
+  DexAuthenticator runs with --skip-provider-button, so the sign-in goes straight to Dex and this page is not shown;
+  it is here so that the proxy does not fall back to the stock page of oauth2-proxy and log the missing file.
+*/ -}}
+{{- define "sign_in.html" -}}
+{{- $ru := eq .Lang "ru" -}}
+<!DOCTYPE html>
+<html lang="{{ if $ru }}ru{{ else }}en{{ end }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>{{ if $ru }}Вход{{ else }}Sign in{{ end }}</title>
+    <link href="{{ .ProxyPrefix }}/static/main.css" rel="stylesheet">
+    <link rel="icon" href="{{ .ProxyPrefix }}/static/img/favicon.svg" type="image/svg+xml">
+  </head>
+
+  <body class="login-page">
+    <div class="layout">
+      <div class="layout-content">
+        {{- if .LogoData }}
+        <div class="layout-deckhouse-title">{{ .LogoData }}</div>
+        {{- end }}
+
+        <div class="content">
+          <h2 class="content-title">{{ if $ru }}Вход{{ else }}Sign in{{ end }}</h2>
+          <div class="content-text">{{ if $ru }}Войдите, чтобы открыть приложение.{{ else }}Sign in to open the application.{{ end }}</div>
+
+          <form method="GET" action="{{ .ProxyPrefix }}/start" class="login-form">
+            {{- if .Redirect }}
+            <input type="hidden" name="rd" value="{{ .Redirect }}">
+            {{- end }}
+            <button type="submit" class="btn btn-primary">{{ if $ru }}Войти{{ else }}Sign in{{ end }}</button>
+          </form>
+        </div>
+      </div>
+      {{- if $ru }}
+      <a href="https://flant.ru" target="_blank" rel="noopener noreferrer" class="layout-logo">
+        <picture>
+          <source srcset="{{ .ProxyPrefix }}/static/img/flant-logo-ru-theme-dark.svg" media="(prefers-color-scheme: dark)">
+          <img src="{{ .ProxyPrefix }}/static/img/flant-logo-ru-theme-light.svg" alt="Flant">
+        </picture>
+      </a>
+      {{- else }}
+      <a href="https://flant.com" target="_blank" rel="noopener noreferrer" class="layout-logo">
+        <picture>
+          <source srcset="{{ .ProxyPrefix }}/static/img/flant-logo-en-theme-dark.svg" media="(prefers-color-scheme: dark)">
+          <img src="{{ .ProxyPrefix }}/static/img/flant-logo-en-theme-light.svg" alt="Flant">
+        </picture>
+      </a>
+      {{- end }}
+    </div>
+  </body>
+</html>
+{{- end -}}

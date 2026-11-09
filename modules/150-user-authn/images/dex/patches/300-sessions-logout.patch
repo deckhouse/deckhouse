@@ -94,10 +94,10 @@ index 4881e21a..6d91d9b2 100644
  	SkipApproval bool
  
 diff --git a/server/authflow/response.go b/server/authflow/response.go
-index a2ea0213..91952c6d 100644
+index 968823c8..0e4d536f 100644
 --- a/server/authflow/response.go
 +++ b/server/authflow/response.go
-@@ -57,6 +57,7 @@ func (h *Handler) writeResponse(w http.ResponseWriter, r *http.Request, authReq
+@@ -58,6 +58,7 @@ func (h *Handler) writeResponse(w http.ResponseWriter, r *http.Request, authReq
  	// cookie — not something to repeat two or three times while writing one
  	// response.
  	resp := &authResponse{sessionID: h.sessionID(ctx, w, r)}
@@ -105,7 +105,7 @@ index a2ea0213..91952c6d 100644
  	for _, handle := range []responseTypeHandler{
  		h.issueCode,
  		h.issueAccessToken,
-@@ -175,6 +176,23 @@ func (h *Handler) sessionID(ctx context.Context, w http.ResponseWriter, r *http.
+@@ -176,6 +177,23 @@ func (h *Handler) sessionID(ctx context.Context, w http.ResponseWriter, r *http.
  	return ""
  }
  
@@ -1485,10 +1485,10 @@ index 9553f526..09e4c5a4 100644
  		h.renderError(r, w, http.StatusBadRequest, "Session not found.")
  		return
 diff --git a/server/mfa/handler.go b/server/mfa/handler.go
-index bd397e79..be4d8a26 100644
+index fa84e17b..cb1d76f5 100644
 --- a/server/mfa/handler.go
 +++ b/server/mfa/handler.go
-@@ -99,6 +99,13 @@ func (h *Handler) validateMFARequest(w http.ResponseWriter, r *http.Request) (*m
+@@ -108,6 +108,13 @@ func (h *Handler) validateMFARequest(w http.ResponseWriter, r *http.Request) (*m
  	}, true
  }
  
@@ -2897,7 +2897,7 @@ index c5b2d2af..b7b7e602 100644
 +	TokenRevoked             = "token revoked"
  )
 diff --git a/server/templates/templates.go b/server/templates/templates.go
-index 647aaafd..6ca0aa57 100644
+index b848c8bc..45d56734 100644
 --- a/server/templates/templates.go
 +++ b/server/templates/templates.go
 @@ -531,14 +531,40 @@ func (t *Templates) Home(r *http.Request, w http.ResponseWriter, data HomeData)

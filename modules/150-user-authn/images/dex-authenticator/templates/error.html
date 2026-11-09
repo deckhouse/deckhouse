@@ -1,0 +1,158 @@
+{{- /*
+  The error page of DexAuthenticator in the theme of the Deckhouse Dex (modules/150-user-authn/images/dex/src/web).
+  main.css, the fonts and the images are the Dex ones, built into the binary and served under {{.ProxyPrefix}}/static/,
+  so the page loads nothing from another origin. .Lang ("en" or "ru") comes from Accept-Language and .LogoData from
+  --custom-sign-in-logo (patch 015); the logo is off when the module has a custom logo.
+  The texts depend on the status: a 403 whose message starts with "Login Failed: The sign-in has expired" is a callback
+  without its CSRF cookie (patch 014), another "Login Failed" is a refusal of the identity provider or a state that does
+  not match its cookie; any other 403 is a user without access.
+*/ -}}
+{{- define "error.html" -}}
+{{- $ru := eq .Lang "ru" -}}
+{{- $code := .StatusCode -}}
+{{- $title := "" -}}
+{{- $text := "" -}}
+{{- $retry := true -}}
+{{- if and (eq $code 403) (HasPrefix .Message "Login Failed: The sign-in has expired") -}}
+  {{- if $ru -}}
+    {{- $title = "Время входа истекло" -}}
+    {{- $text = "Страница входа была открыта слишком долго. Войдите снова." -}}
+  {{- else -}}
+    {{- $title = "The sign-in has expired" -}}
+    {{- $text = "The sign-in page stayed open too long. Sign in again." -}}
+  {{- end -}}
+{{- else if and (eq $code 403) (HasPrefix .Message "Login Failed: The upstream identity provider returned an error") -}}
+  {{- if $ru -}}
+    {{- $title = "Вход отклонён" -}}
+    {{- $text = "Сервис аутентификации отклонил вход. Войдите снова. Если ошибка повторится, обратитесь к администратору." -}}
+  {{- else -}}
+    {{- $title = "Sign-in refused" -}}
+    {{- $text = "The authentication service refused the sign-in. Sign in again. If the error repeats, contact your administrator." -}}
+  {{- end -}}
+{{- else if and (eq $code 403) (HasPrefix .Message "Login Failed") -}}
+  {{- if $ru -}}
+    {{- $title = "Не удалось войти" -}}
+    {{- $text = "Вход не завершился. Войдите снова. Если ошибка повторится, обратитесь к администратору." -}}
+  {{- else -}}
+    {{- $title = "Sign-in did not complete" -}}
+    {{- $text = "The sign-in did not finish. Sign in again. If the error repeats, contact your administrator." -}}
+  {{- end -}}
+{{- else if eq $code 403 -}}
+  {{- if $ru -}}
+    {{- $title = "Нет доступа" -}}
+    {{- $text = "У вашей учётной записи нет доступа к этому приложению. Обратитесь к администратору." -}}
+  {{- else -}}
+    {{- $title = "Access denied" -}}
+    {{- $text = "Your account has no access to this application. Contact your administrator." -}}
+  {{- end -}}
+{{- else if eq $code 401 -}}
+  {{- if $ru -}}
+    {{- $title = "Требуется вход" -}}
+    {{- $text = "Войдите, чтобы открыть приложение." -}}
+  {{- else -}}
+    {{- $title = "Sign-in required" -}}
+    {{- $text = "Sign in to open the application." -}}
+  {{- end -}}
+{{- else if eq $code 404 -}}
+  {{- $retry = false -}}
+  {{- if $ru -}}
+    {{- $title = "Страница не найдена" -}}
+    {{- $text = "Такой страницы нет." -}}
+  {{- else -}}
+    {{- $title = "Page not found" -}}
+    {{- $text = "There is no such page." -}}
+  {{- end -}}
+{{- else if eq $code 503 -}}
+  {{- if $ru -}}
+    {{- $title = "Вход временно недоступен" -}}
+    {{- $text = "Сервис аутентификации не отвечает. Повторите попытку через несколько секунд." -}}
+  {{- else -}}
+    {{- $title = "Sign-in is temporarily unavailable" -}}
+    {{- $text = "The authentication service does not respond. Try again in a few seconds." -}}
+  {{- end -}}
+{{- else -}}
+  {{- if $ru -}}
+    {{- $title = "Что-то пошло не так" -}}
+    {{- $text = "Не удалось завершить вход. Войдите снова. Если ошибка повторится, сообщите администратору идентификатор запроса из подробностей." -}}
+  {{- else -}}
+    {{- $title = "Something went wrong" -}}
+    {{- $text = "The sign-in could not be completed. Sign in again. If the error repeats, give your administrator the request ID from the details." -}}
+  {{- end -}}
+{{- end -}}
+<!DOCTYPE html>
+<html lang="{{ if $ru }}ru{{ else }}en{{ end }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>{{ $title }}</title>
+    <link href="{{ .ProxyPrefix }}/static/main.css" rel="stylesheet">
+    <link rel="icon" href="{{ .ProxyPrefix }}/static/img/favicon.svg" type="image/svg+xml">
+  </head>
+
+  <body class="login-page">
+    <div class="layout">
+      <div class="layout-content">
+        {{- if .LogoData }}
+        <div class="layout-deckhouse-title">{{ .LogoData }}</div>
+        {{- end }}
+
+        <div class="content">
+          <h2 class="content-title">{{ $title }}</h2>
+          <div class="content-text">{{ $text }}</div>
+
+          {{- if $retry }}
+          <form method="GET" action="{{ .ProxyPrefix }}/sign_in" class="login-form">
+            {{- if .Redirect }}
+            <input type="hidden" name="rd" value="{{ .Redirect }}">
+            {{- end }}
+            <button type="submit" class="btn btn-primary">{{ if $ru }}Войти снова{{ else }}Sign in again{{ end }}</button>
+          </form>
+          {{- else }}
+          <div class="form-extra">
+            <a href="{{ if .Redirect }}{{ .Redirect }}{{ else }}/{{ end }}" class="btn btn-primary-outline">{{ if $ru }}Вернуться в приложение{{ else }}Back to application{{ end }}</a>
+          </div>
+          {{- end }}
+
+          <details class="form-extra">
+            <summary class="content-text">{{ if $ru }}Подробности{{ else }}Details{{ end }}</summary>
+            <dl class="dex-facts">
+              <div class="dex-fact">
+                <dt>{{ if $ru }}Код ответа{{ else }}Status{{ end }}</dt>
+                <dd>{{ $code }}</dd>
+              </div>
+              {{- if .Message }}
+              <div class="dex-fact">
+                <dt>{{ if $ru }}Сообщение{{ else }}Message{{ end }}</dt>
+                <dd class="dex-fact__long">{{ .Message }}</dd>
+              </div>
+              {{- end }}
+              {{- if .RequestID }}
+              <div class="dex-fact">
+                <dt>{{ if $ru }}Идентификатор запроса{{ else }}Request ID{{ end }}</dt>
+                <dd class="dex-fact__long">{{ .RequestID }}</dd>
+              </div>
+              {{- end }}
+            </dl>
+          </details>
+        </div>
+      </div>
+      {{- if $ru }}
+      <a href="https://flant.ru" target="_blank" rel="noopener noreferrer" class="layout-logo">
+        <picture>
+          <source srcset="{{ .ProxyPrefix }}/static/img/flant-logo-ru-theme-dark.svg" media="(prefers-color-scheme: dark)">
+          <img src="{{ .ProxyPrefix }}/static/img/flant-logo-ru-theme-light.svg" alt="Flant">
+        </picture>
+      </a>
+      {{- else }}
+      <a href="https://flant.com" target="_blank" rel="noopener noreferrer" class="layout-logo">
+        <picture>
+          <source srcset="{{ .ProxyPrefix }}/static/img/flant-logo-en-theme-dark.svg" media="(prefers-color-scheme: dark)">
+          <img src="{{ .ProxyPrefix }}/static/img/flant-logo-en-theme-light.svg" alt="Flant">
+        </picture>
+      </a>
+      {{- end }}
+    </div>
+  </body>
+</html>
+{{- end -}}
