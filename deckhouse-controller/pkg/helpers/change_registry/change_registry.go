@@ -37,15 +37,17 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
-	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/envconfig"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	kclient "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -57,7 +59,10 @@ import (
 const (
 	caKey              = "ca"
 	registryModuleName = "registry"
+	registryConfigName = "registry"
 )
+
+var registryConfigGVR = registryv1alpha1.GroupVersion.WithResource("registryconfigs")
 
 func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTag, scheme string, dryRun bool, logger *log.Logger) error {
 	ctx := context.Background()
@@ -70,13 +75,8 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 
 	logEntry.Info("Checking registry module")
 
-	enabled, err := moduleEnabled(ctx, kubeCl, registryModuleName)
-	if err != nil {
-		return fmt.Errorf("failed to check if %q module is enabled: %w", registryModuleName, err)
-	}
-
-	if enabled {
-		return fmt.Errorf("the %q module is enabled; please configure the registry using 'moduleConfig/deckhouse'", registryModuleName)
+	if err := checkPullPathNotManaged(ctx, kubeCl); err != nil {
+		return err
 	}
 
 	authConfig := newAuthConfig(username, password)
@@ -188,12 +188,22 @@ func newTransport(ctx context.Context, repo name.Repository, authConfig authn.Au
 	return t, nil
 }
 
+// newKubeClient builds the client the way the controller's dhctl commands do: in-cluster by default
+// (DECKHOUSE_KUBE_CONFIG_IN_CLUSTER), so the kube client takes KUBECONFIG or ~/.kube/config if set and
+// the pod's service account otherwise. Empty kube options would send it to http://localhost:6445,
+// which in the hostNetwork deckhouse pod is the TLS-only kubernetes-api-proxy.
 func newKubeClient() (*kclient.KubernetesClient, error) {
 	kubeCl := kclient.NewKubernetesClient()
-	if err := kubeCl.Init(kclient.AppKubernetesInitParams(nil)); err != nil {
+	if err := kubeCl.Init(kubeInitParams()); err != nil {
 		return nil, fmt.Errorf("init: %w", err)
 	}
 	return kubeCl, nil
+}
+
+func kubeInitParams() *kclient.KubernetesInitParams {
+	return kclient.AppKubernetesInitParams(&options.KubeOptions{
+		InCluster: envconfig.EnvBoolOr(envconfig.EnvKubeConfigInCluster, true),
+	})
 }
 
 func modifyPullSecret(ctx context.Context, kubeCl *kclient.KubernetesClient, newSecretData map[string]string) (*v1.Secret, error) {
@@ -468,32 +478,60 @@ func encodeDockerCfgAuthEntryFromAuthConfig(authConfig authn.AuthConfig) *docker
 	}
 }
 
-func moduleEnabled(ctx context.Context, kubeCl *kclient.KubernetesClient, moduleName string) (bool, error) {
-	moduleUnstructured, err := kubeCl.
+// checkPullPathNotManaged refuses when the registry module manages the image pull path.
+//
+// There the image references name the in-cluster registry and the module routes it to the
+// upstream from its own configuration, so the 'deckhouse-registry' secret this helper edits
+// is not where images come from. In the Unmanaged mode the module is enabled but writes
+// nothing, and the secret is the only description of the registry, as on a cluster without
+// the module at all.
+//
+// Two signals, and either one is enough. The ConfigMap is what the global registry discovery
+// renders image references from, so while it exists the secret is not read. The resource is
+// rendered for as long as the module serves the in-cluster registry, including the time it
+// drains after Unmanaged is asked for and the ConfigMap is already gone. Its mode is not read:
+// without the ConfigMap the discovery takes the upstream from the resource whatever the mode,
+// so a resource left by hand in the Unmanaged mode still overrides the secret.
+func checkPullPathNotManaged(ctx context.Context, kubeCl *kclient.KubernetesClient) error {
+	managed, err := pullPathManaged(ctx, kubeCl)
+	if err != nil {
+		return fmt.Errorf("failed to check if the %q module manages the image pull path: %w", registryModuleName, err)
+	}
+
+	if managed {
+		return fmt.Errorf("the %q module manages the image pull path, so this helper cannot change it; "+
+			"set 'primary.upstream' (path and credentials) in 'moduleConfig/registry', "+
+			"wait for 'registryconfig/registry' to report %s=True and every RegistryNode to be reconciled, "+
+			"then run 'kubectl -n %s rollout restart deploy/deckhouse'; "+
+			"in an air-gapped cluster, push the new images with the mirror push command of the Deckhouse CLI "+
+			"and update 'storage.source' instead of 'primary.upstream'; "+
+			"if 'mode: Unmanaged' was just set, wait until 'registryconfig/registry' is gone and run this helper again",
+			registryModuleName, registryv1alpha1.ConditionUpstreamValid, app.NamespaceDeckhouse)
+	}
+
+	return nil
+}
+
+func pullPathManaged(ctx context.Context, kubeCl *kclient.KubernetesClient) (bool, error) {
+	_, err := kubeCl.KubeClient.CoreV1().ConfigMaps(app.NamespaceDeckhouse).Get(ctx, registry_const.ImageAddressConfigMapName, metav1.GetOptions{})
+	switch {
+	case err == nil:
+		return true, nil
+	case !k8serrors.IsNotFound(err):
+		return false, fmt.Errorf("failed to get configmap %q: %w", registry_const.ImageAddressConfigMapName, err)
+	}
+
+	_, err = kubeCl.
 		Dynamic().
-		Resource(deckhousev1alpha1.ModuleGVR).
-		Namespace("").
-		Get(ctx, moduleName, metav1.GetOptions{})
-	if err != nil {
-		if k8serrors.IsNotFound(err) {
-			return false, nil
-		}
-		return false, fmt.Errorf("failed to get module: %w", err)
+		Resource(registryConfigGVR).
+		Get(ctx, registryConfigName, metav1.GetOptions{})
+	switch {
+	case err == nil:
+		return true, nil
+	case k8serrors.IsNotFound(err), meta.IsNoMatchError(err):
+		// No resource, or no such kind on a cluster without the module.
+		return false, nil
+	default:
+		return false, fmt.Errorf("failed to get registryconfig %q: %w", registryConfigName, err)
 	}
-
-	moduleJSON, err := moduleUnstructured.MarshalJSON()
-	if err != nil {
-		return false, fmt.Errorf("failed to marshal unstructured module: %w", err)
-	}
-
-	var module deckhousev1alpha1.Module
-	decoder := serializer.
-		NewCodecFactory(runtime.NewScheme()).
-		UniversalDeserializer()
-	if _, _, err := decoder.Decode(moduleJSON, nil, &module); err != nil {
-		return false, fmt.Errorf("failed to decode module JSON: %w", err)
-	}
-
-	enabled := module.IsCondition(deckhousev1alpha1.ModuleConditionEnabledByModuleManager, v1.ConditionTrue)
-	return enabled, nil
 }

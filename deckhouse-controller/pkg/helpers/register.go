@@ -75,7 +75,9 @@ func DefineHelperCommands(rootCmd *cobra.Command, logger *log.Logger) {
 			Long: "Change registry for deckhouse images.\n\n" +
 				"NEW_REGISTRY: Registry that will be used for deckhouse images " +
 				"(example: registry.deckhouse.io/deckhouse/ce). By default, https will be used; " +
-				"pass --scheme=http to switch to http.",
+				"pass --scheme=http to switch to http.\n\n" +
+				"Refused while the registry module manages the image pull path (the Managed mode): " +
+				"the registry is changed in moduleConfig/registry there.",
 			Args: cobra.ExactArgs(1),
 			RunE: func(_ *cobra.Command, args []string) error {
 				if caFile != "" {

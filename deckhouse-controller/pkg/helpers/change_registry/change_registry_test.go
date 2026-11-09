@@ -16,9 +16,13 @@ package changeregistry
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -26,6 +30,7 @@ import (
 	"strings"
 	"testing"
 
+	klient "github.com/flant/kube-client/client"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -33,12 +38,21 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	dynamicfake "k8s.io/client-go/dynamic/fake"
+	k8sfake "k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 	"sigs.k8s.io/yaml"
 
 	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/envconfig"
 	kclient "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
 func TestUpdateDeployContainersImagesToNewRepo(t *testing.T) {
@@ -436,7 +450,7 @@ func Test_getCAContent(t *testing.T) {
 	}
 }
 
-func Test_moduleEnabled(t *testing.T) {
+func Test_checkPullPathNotManaged(t *testing.T) {
 	t.Helper()
 
 	toUnstructured := func(resourceYAML string) *unstructured.Unstructured {
@@ -446,19 +460,7 @@ func Test_moduleEnabled(t *testing.T) {
 		return obj
 	}
 
-	tests := []struct {
-		name           string
-		module         *unstructured.Unstructured
-		expectedEnable bool
-	}{
-		{
-			name:           "Module does not exist",
-			module:         nil,
-			expectedEnable: false,
-		},
-		{
-			name: "Module exists and enabled",
-			module: toUnstructured(fmt.Sprintf(`
+	enabledModule := toUnstructured(fmt.Sprintf(`
 apiVersion: deckhouse.io/v1alpha1
 kind: Module
 metadata:
@@ -467,20 +469,71 @@ status:
   conditions:
   - type: %q
     status: "True"
-`, deckhousev1alpha1.ModuleConditionEnabledByModuleManager)),
-			expectedEnable: true,
-		},
-		{
-			name: "Module exists and disabled",
-			module: toUnstructured(`
+`, deckhousev1alpha1.ModuleConditionEnabledByModuleManager))
+
+	registryConfig := func(mode string) *unstructured.Unstructured {
+		return toUnstructured(fmt.Sprintf(`
 apiVersion: deckhouse.io/v1alpha1
-kind: Module
+kind: RegistryConfig
 metadata:
   name: registry
-status:
-  conditions: []
-`),
-			expectedEnable: false,
+spec:
+  mode: %q
+`, mode))
+	}
+
+	imageAddress := &v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      registry_const.ImageAddressConfigMapName,
+			Namespace: "d8-system",
+		},
+		Data: map[string]string{registry_const.ImageAddressConfigMapKey: registry_const.HostWithPath},
+	}
+
+	tests := []struct {
+		name           string
+		module         *unstructured.Unstructured
+		registryConfig *unstructured.Unstructured
+		imageAddress   *v1.ConfigMap
+		wantRefused    bool
+	}{
+		{
+			name: "Module disabled (managed Kubernetes)",
+		},
+		{
+			name:   "Module enabled, Unmanaged: nothing rendered",
+			module: enabledModule,
+		},
+		{
+			name:           "RegistryConfig left in the Unmanaged mode still overrides the secret",
+			module:         enabledModule,
+			registryConfig: registryConfig("Unmanaged"),
+			wantRefused:    true,
+		},
+		{
+			name:           "Managed",
+			module:         enabledModule,
+			registryConfig: registryConfig("Managed"),
+			imageAddress:   imageAddress,
+			wantRefused:    true,
+		},
+		{
+			name:           "Managed, the agents have not applied the layout yet",
+			module:         enabledModule,
+			registryConfig: registryConfig("Managed"),
+			wantRefused:    true,
+		},
+		{
+			name:           "RegistryConfig without a mode",
+			module:         enabledModule,
+			registryConfig: registryConfig(""),
+			wantRefused:    true,
+		},
+		{
+			name:         "Image address published without a RegistryConfig (installer)",
+			module:       enabledModule,
+			imageAddress: imageAddress,
+			wantRefused:  true,
 		},
 	}
 
@@ -498,11 +551,180 @@ status:
 				require.NoError(t, err, "failed to create test module")
 			}
 
-			enabled, err := moduleEnabled(ctx, kubeCl, registryModuleName)
-			require.NoError(t, err)
-			assert.Equal(t, tt.expectedEnable, enabled)
+			if tt.registryConfig != nil {
+				_, err := kubeCl.
+					Dynamic().
+					Resource(registryConfigGVR).
+					Create(ctx, tt.registryConfig, metav1.CreateOptions{})
+				require.NoError(t, err, "failed to create test registryconfig")
+			}
+
+			if tt.imageAddress != nil {
+				_, err := kubeCl.KubeClient.CoreV1().
+					ConfigMaps(tt.imageAddress.Namespace).
+					Create(ctx, tt.imageAddress, metav1.CreateOptions{})
+				require.NoError(t, err, "failed to create test configmap")
+			}
+
+			err := checkPullPathNotManaged(ctx, kubeCl)
+			if !tt.wantRefused {
+				require.NoError(t, err)
+				return
+			}
+
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "moduleConfig/registry")
+			assert.Contains(t, err.Error(), "rollout restart deploy/deckhouse")
+			assert.Contains(t, err.Error(), "storage.source")
+			assert.Contains(t, err.Error(), "'registryconfig/registry' is gone")
+			assert.NotContains(t, err.Error(), "moduleConfig/deckhouse")
+			// 'd8 k exec' rewrites a quoted d8 command on stderr into a 'd8 k ...' one that does not exist.
+			assert.Contains(t, err.Error(), "mirror push command of the Deckhouse CLI")
+			assert.NotContains(t, err.Error(), "'d8 ")
 		})
 	}
+}
+
+// Test_checkPullPathNotManaged_APIError checks that the helper fails closed: when the API server
+// does not answer whether the module manages the pull path, the helper refuses rather than edits the
+// secret. Only a missing object or a missing kind means the module is not there.
+func Test_checkPullPathNotManaged_APIError(t *testing.T) {
+	tests := []struct {
+		name            string
+		configMapErr    error
+		registryConfErr error
+		wantRefused     bool
+	}{
+		{
+			name:         "ConfigMap get times out",
+			configMapErr: k8serrors.NewTimeoutError("the server was unable to return a response", 1),
+			wantRefused:  true,
+		},
+		{
+			name:         "ConfigMap get is forbidden",
+			configMapErr: k8serrors.NewForbidden(schema.GroupResource{Resource: "configmaps"}, registry_const.ImageAddressConfigMapName, errors.New("denied")),
+			wantRefused:  true,
+		},
+		{
+			name:            "RegistryConfig get fails with an internal error",
+			registryConfErr: k8serrors.NewInternalError(errors.New("etcdserver: request timed out")),
+			wantRefused:     true,
+		},
+		{
+			name:            "RegistryConfig get is throttled",
+			registryConfErr: k8serrors.NewTooManyRequests("slow down", 1),
+			wantRefused:     true,
+		},
+		{
+			name:            "RegistryConfig not found",
+			registryConfErr: k8serrors.NewNotFound(registryConfigGVR.GroupResource(), registryConfigName),
+		},
+		{
+			name:            "No RegistryConfig kind on a cluster without the module",
+			registryConfErr: &meta.NoKindMatchError{GroupKind: schema.GroupKind{Group: registryConfigGVR.Group, Kind: "RegistryConfig"}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			kubeCl := kclient.NewFakeKubernetesClient()
+
+			if tt.configMapErr != nil {
+				clientset, ok := kubeCl.KubeClient.(*klient.Client).Interface.(*k8sfake.Clientset)
+				require.True(t, ok, "fake kube client is not backed by a fake clientset")
+				clientset.PrependReactor("get", "configmaps", func(k8stesting.Action) (bool, runtime.Object, error) {
+					return true, nil, tt.configMapErr
+				})
+			}
+
+			if tt.registryConfErr != nil {
+				dyn, ok := kubeCl.Dynamic().(*dynamicfake.FakeDynamicClient)
+				require.True(t, ok, "fake kube client is not backed by a fake dynamic client")
+				dyn.PrependReactor("get", registryConfigGVR.Resource, func(k8stesting.Action) (bool, runtime.Object, error) {
+					return true, nil, tt.registryConfErr
+				})
+			}
+
+			err := checkPullPathNotManaged(context.Background(), kubeCl)
+			if !tt.wantRefused {
+				require.NoError(t, err)
+				return
+			}
+
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "failed to check if the \"registry\" module manages the image pull path")
+		})
+	}
+}
+
+func Test_kubeInitParams(t *testing.T) {
+	t.Run("in-cluster by default", func(t *testing.T) {
+		t.Setenv(envconfig.EnvKubeConfigInCluster, "")
+
+		params := kubeInitParams()
+		assert.True(t, params.KubeConfigInCluster)
+		assert.Empty(t, params.KubeConfig)
+		assert.Nil(t, params.RestConfig)
+	})
+
+	t.Run("in-cluster turned off", func(t *testing.T) {
+		t.Setenv(envconfig.EnvKubeConfigInCluster, "false")
+
+		assert.False(t, kubeInitParams().KubeConfigInCluster)
+	})
+}
+
+// Test_newKubeClient checks that the client goes to the API server the environment names, over TLS
+// with its token, and not to http://localhost:6445 as it did with empty kube options. The pod's
+// service account files sit at a fixed path, so KUBECONFIG stands in for them here: the kube client
+// tries it first and falls back to the service account when it is absent.
+func Test_newKubeClient(t *testing.T) {
+	const token = "dh-test-secret-0123456789abcdef"
+
+	var gotPath, gotAuth string
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath, gotAuth = r.URL.Path, r.Header.Get("Authorization")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"apiVersion":"v1","kind":"ConfigMap","metadata":{"name":"` +
+			registry_const.ImageAddressConfigMapName + `","namespace":"d8-system"}}`))
+	}))
+	defer srv.Close()
+
+	caData := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: srv.Certificate().Raw})
+	kubeconfig := fmt.Sprintf(`apiVersion: v1
+kind: Config
+clusters:
+- name: test
+  cluster:
+    server: %s
+    certificate-authority-data: %s
+users:
+- name: test
+  user:
+    token: %s
+contexts:
+- name: test
+  context:
+    cluster: test
+    user: test
+current-context: test
+`, srv.URL, base64.StdEncoding.EncodeToString(caData), token)
+
+	kubeconfigPath := filepath.Join(t.TempDir(), "kubeconfig")
+	require.NoError(t, os.WriteFile(kubeconfigPath, []byte(kubeconfig), 0o600))
+
+	t.Setenv("KUBECONFIG", kubeconfigPath)
+	t.Setenv(envconfig.EnvKubeConfigInCluster, "")
+	t.Setenv("FLANT_KUBE_CLIENT_IN_MEMORY_DISCOVERY_CACHE", "true")
+
+	kubeCl, err := newKubeClient()
+	require.NoError(t, err)
+
+	managed, err := pullPathManaged(context.Background(), kubeCl)
+	require.NoError(t, err)
+	assert.True(t, managed)
+	assert.Equal(t, "/api/v1/namespaces/d8-system/configmaps/"+registry_const.ImageAddressConfigMapName, gotPath)
+	assert.Equal(t, "Bearer "+token, gotAuth)
 }
 
 const (
