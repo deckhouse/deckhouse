@@ -22,11 +22,14 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -43,6 +46,8 @@ type StateController struct {
 	namespace      string
 	client         client.Client
 	dataCh         chan HashedRegistryData
+	// rejected is what was last logged as a rejected RegistryUpstream, by name.
+	rejected upstreamVerdicts
 }
 
 type HashedRegistryData struct {
@@ -67,9 +72,16 @@ func (sc *StateController) SetupWithManager(ctx context.Context, ctrlManager ctr
 
 	klog.Infof("Setting up controller %q with manager", sc.controllerName)
 
+	// Every RegistryUpstream event rebuilds the one registry context; the request is
+	// only a trigger, Reconcile reads everything again.
+	upstreamsHandler := handler.EnqueueRequestsFromMapFunc(func(context.Context, client.Object) []reconcile.Request {
+		return []reconcile.Request{{NamespacedName: types.NamespacedName{Namespace: sc.namespace, Name: deckhouseRegistrySecretName}}}
+	})
+
 	err := ctrl.NewControllerManagedBy(ctrlManager).
 		Named(sc.controllerName).
 		For(&corev1.Secret{}, builder.WithPredicates(secretsPredicate)).
+		Watches(newUpstreamObject(), upstreamsHandler).
 		Complete(sc)
 	if err != nil {
 		klog.Fatalf("cannot build %q controller: %v", sc.controllerName, err)
@@ -107,6 +119,14 @@ func (sc *StateController) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ctrl.Result{}, fmt.Errorf("cannot create registry data: %w", err)
 	}
 
+	// Only while the registry module configures no node: see upstreams.go. While it does,
+	// every runtime reads registry.d, and nothing here would be rendered.
+	if rData.RegistryModuleEnable {
+		sc.rejected = nil
+	} else if err := sc.addUpstreams(ctx, &rData); err != nil {
+		return ctrl.Result{}, fmt.Errorf("cannot add registry upstreams: %w", err)
+	}
+
 	err = rData.validate()
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("validation error for registry data: %w", err)
@@ -124,6 +144,28 @@ func (sc *StateController) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 
 	sc.dataCh <- HashedRegistryData{HashSum: hashSum, Data: mapData}
 	return ctrl.Result{}, nil
+}
+
+// addUpstreams merges the cluster's RegistryUpstream objects into rData and logs a
+// rejection when it appears or its reason changes.
+func (sc *StateController) addUpstreams(ctx context.Context, rData *RegistryData) error {
+	list := &unstructured.UnstructuredList{}
+	list.SetGroupVersionKind(registryUpstreamGVK.GroupVersion().WithKind(registryUpstreamGVK.Kind + "List"))
+	if err := sc.client.List(ctx, list); err != nil {
+		if meta.IsNoMatchError(err) {
+			// A cluster without the CRD has no upstreams to render.
+			return nil
+		}
+		return fmt.Errorf("cannot list RegistryUpstream objects: %w", err)
+	}
+	rejected := rData.addUpstreams(readUpstreams(list.Items))
+	for name, reason := range rejected {
+		if sc.rejected[name] != reason {
+			klog.Warningf("%s: RegistryUpstream %q is not rendered: %s", sc.controllerName, name, reason)
+		}
+	}
+	sc.rejected = rejected
+	return nil
 }
 
 func (sc *StateController) loadDeckhouseRegistrySecret(ctx context.Context) (deckhouseRegistrySecret, error) {

@@ -63,6 +63,8 @@ func RealCacheCRDPaths() []string {
 		[]string{
 			testdataPath("deckhousecontrolplane-crd.yaml"),
 			testdataPath("moduleconfig-crd.yaml"),
+			testdataPath("registryupstream-crd.yaml"),
+			testdataPath("modulesource-crd.yaml"),
 		},
 	)
 }

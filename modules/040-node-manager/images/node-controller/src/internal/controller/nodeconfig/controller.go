@@ -32,6 +32,7 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -148,6 +149,17 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 			return obj.GetNamespace() == d8SystemNS && obj.GetName() == registryBashibleConfigSecret
 		},
 	)))
+	// The objects the nodes' registry routes come from. Only a spec change can move a
+	// route, and the predicate is what keeps this controller's own status writes on a
+	// RegistryUpstream from re-entering its queue. Unstructured, as ModuleConfig below:
+	// the kinds are not in this controller's scheme. Both CRDs are always there — the
+	// RegistryUpstream one by a global hook (global-hooks/ensure_registry_upstream_crd.go),
+	// ModuleSource with Deckhouse itself — which a watch needs, as said above.
+	for _, gvk := range []schema.GroupVersionKind{registryUpstreamGVK, moduleSourceGVK} {
+		watched := &unstructured.Unstructured{}
+		watched.SetGroupVersionKind(gvk)
+		w.Watches(watched, allMapper, builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+	}
 	// The image digests and the platform document of the release. Without this
 	// watch a new release re-renders nothing until some unrelated input moves:
 	// nothing else enqueues a pass, and no resync period is set.
@@ -263,6 +275,9 @@ func (r *Reconciler) reconcileAllNodes(ctx context.Context, logger logr.Logger) 
 		errs = append(errs, err)
 	}
 	if err := r.reconcileNSPRStatuses(ctx, logger, p); err != nil {
+		errs = append(errs, err)
+	}
+	if err := r.reconcileRegistryUpstreamStatuses(ctx, logger); err != nil {
 		errs = append(errs, err)
 	}
 	if len(errs) > 0 {

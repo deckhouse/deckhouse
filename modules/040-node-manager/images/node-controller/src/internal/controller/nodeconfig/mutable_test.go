@@ -230,6 +230,12 @@ func mutableCluster(t *testing.T, digests string, objects ...client.Object) clie
 			ObjectMeta: metav1.ObjectMeta{Namespace: cloudInstanceManagerNS, Name: registryPackagesProxyTokenSecret},
 			Data:       map[string][]byte{registryPackagesProxyTokenKey: []byte("proxy-token")},
 		},
+		// A bashible node's document carries the registry block too: nodelet routes the
+		// RegistryUpstream objects from it there.
+		&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Namespace: d8SystemNS, Name: deckhouseRegistrySecret},
+			Data:       map[string][]byte{registryAddressKey: []byte(testenv.TestRegistryAddress)},
+		},
 	}
 	return fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -403,4 +409,35 @@ func TestNodesOfOnePassDoNotShareTheirRequestedPackages(t *testing.T) {
 	require.Equal(t, []string{"pkg-a"}, requestedNames(a.Extensions))
 	require.Equal(t, []string{"pkg-b"}, requestedNames(b.Extensions))
 	require.Len(t, in.Platform.Extensions, 1)
+}
+
+// User story: as an operator, I want my RegistryUpstream objects routed on the nodes bashible
+// configures, without the cluster's registry credentials copied into a document every node
+// reads, and without node-controller guessing when the registry agent takes registry.d over.
+// The document carries the primary's address alone, and the routes whatever the module's
+// mode: nodelet sees the agent's _default in bashible's state and steps aside on its own.
+func TestABashibleNodeGetsTheRoutesAndThePrimaryAddressOnly(t *testing.T) {
+	agent := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Namespace: d8SystemNS, Name: registryBashibleConfigSecret},
+		Data:       map[string][]byte{registryBashibleConfigKey: []byte("agent:\n  endpoint: 127.0.0.1:4281\n")},
+	}
+	cluster := mutableCluster(t, digestsJSON(t, mutableDigests()), agent,
+		registryUpstreamObject("virtualization", "Images.Example.com", 0, map[string]any{"host": "vendor.example.com"}),
+		moduleSourceObject("partner", "modules.example.com/modules", testCertificate(t), 0),
+	)
+	primary := &corev1.Secret{}
+	require.NoError(t, cluster.Get(t.Context(), types.NamespacedName{Namespace: d8SystemNS, Name: deckhouseRegistrySecret}, primary))
+	primary.Data[registryPathKey] = []byte("/deckhouse/ee")
+	primary.Data[registrySchemeKey] = []byte("https")
+	primary.Data[registryCAKey] = []byte("PRIMARY-CA")
+	require.NoError(t, cluster.Update(t.Context(), primary))
+
+	in, err := sourceReaderOver(cluster).readMutableInputs(t.Context())
+	require.NoError(t, err)
+	spec := renderMutableSpec(namedNode("worker-0"), "worker", in)
+
+	require.NotNil(t, spec.Registry)
+	require.Equal(t, []string{"RegistryUpstream/virtualization=images.example.com"}, matches(spec.Registry.Upstreams),
+		"routed in agent mode too, lower-cased, and without the ModuleSource bashible writes itself")
+	require.Equal(t, internalv1alpha1.Registry{Address: testenv.TestRegistryAddress, Upstreams: spec.Registry.Upstreams}, *spec.Registry)
 }

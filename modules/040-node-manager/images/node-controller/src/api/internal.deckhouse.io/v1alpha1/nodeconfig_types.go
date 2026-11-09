@@ -287,6 +287,83 @@ type Registry struct {
 	// Auth is the user:password pair, base64-encoded, as in the auth field of a docker
 	// config.
 	Auth []byte `json:"auth,omitempty"`
+	// Upstreams are the other registries the node routes on its own, each in a
+	// registry.d directory of its match: the accepted RegistryUpstream objects and the
+	// certificate authorities of the ModuleSource registries, already arbitrated. Empty
+	// on an Engine node while the registry agent owns its registry configuration: the
+	// agent routes them then. A Mutable node gets the RegistryUpstream ones always (bashible
+	// writes the ModuleSource authorities there itself), and nodelet leaves them
+	// unapplied while bashible's state says the agent owns registry.d.
+	//
+	// The limits are the arbitration's (go_lib/registry/apis/upstreams, MaxRoutes and the
+	// per-field Max*), which holds every list it hands out within them, and nodelet's
+	// schema and loader repeat them: a list past them would cost every node its document.
+	// +optional
+	// +listType=atomic
+	// +kubebuilder:validation:MaxItems=256
+	Upstreams []RegistryUpstream `json:"upstreams,omitempty"`
+}
+
+// RegistryUpstream is one route of spec.registry.upstreams, shaped as the spec of a
+// RegistryUpstream so an entry reads the same as the object it came from. Not the
+// registry module's type itself: that one also carries auth.secretRef, which the
+// RegistryUpstream CRD does not serve and a node could not resolve.
+type RegistryUpstream struct {
+	// RequestedBy is the object the route comes from: a RegistryUpstream, or the
+	// ModuleSource whose registry certificate authority it carries.
+	RequestedBy ObjectOwner `json:"requestedBy"`
+	// Match is the registry host the node routes, and the name of its directory, lower-case.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9]([-a-zA-Z0-9]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([-a-zA-Z0-9]*[a-zA-Z0-9])?)*(:[0-9]{1,5})?$`
+	Match string `json:"match"`
+	// Upstream is where the pulls of that host go.
+	Upstream RegistryUpstreamEndpoints `json:"upstream"`
+}
+
+// RegistryUpstreamEndpoints is the registry a route sends pulls to, and its mirrors.
+type RegistryUpstreamEndpoints struct {
+	RegistryEndpoint `json:",inline"`
+	// Mirrors serve the same content and are tried after the registry, in order.
+	// +optional
+	// +kubebuilder:validation:MaxItems=8
+	Mirrors []RegistryEndpoint `json:"mirrors,omitempty"`
+}
+
+// RegistryEndpoint is one address of a route.
+type RegistryEndpoint struct {
+	// Scheme is HTTP or HTTPS. Defaults to HTTPS when unset.
+	// +optional
+	// +kubebuilder:validation:Enum=HTTP;HTTPS
+	Scheme string `json:"scheme,omitempty"`
+	// Host is the registry host, optionally with a port.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=255
+	Host string `json:"host"`
+	// Path is the repository prefix inside the registry.
+	// +optional
+	// +kubebuilder:validation:MaxLength=1024
+	Path string `json:"path,omitempty"`
+	// CA is a PEM certificate authority bundle to verify the registry with.
+	// +optional
+	// +kubebuilder:validation:MaxLength=65536
+	CA string `json:"ca,omitempty"`
+	// Auth is the credential of the registry.
+	Auth *RegistryEndpointAuth `json:"auth,omitempty"`
+}
+
+// RegistryEndpointAuth is a registry credential: Auth, base64 of user:password, wins
+// over Username and Password.
+type RegistryEndpointAuth struct {
+	// +optional
+	// +kubebuilder:validation:MaxLength=1024
+	Username string `json:"username,omitempty"`
+	// +optional
+	// +kubebuilder:validation:MaxLength=4096
+	Password string `json:"password,omitempty"`
+	// +optional
+	// +kubebuilder:validation:MaxLength=4096
+	Auth string `json:"auth,omitempty"`
 }
 
 // ObjectOwner names the object that asked for an entry of the spec.
@@ -301,6 +378,8 @@ type ObjectOwner struct {
 const (
 	ObjectOwnerKindNodeExtensionRequest = "NodeExtensionRequest"
 	ObjectOwnerKindNodeStaticPodRequest = "NodeStaticPodRequest"
+	ObjectOwnerKindRegistryUpstream     = "RegistryUpstream"
+	ObjectOwnerKindModuleSource         = "ModuleSource"
 )
 
 // Maintainers: mirrors the agent's contract (internal/config/types.go in the nodelet

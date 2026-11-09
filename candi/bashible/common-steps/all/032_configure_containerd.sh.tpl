@@ -410,35 +410,69 @@ oom_score = 0
       [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
         [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
           endpoint = ["https://registry-1.docker.io"]
-  {{- range $host_name, $host_values := .registry.hosts }}
+  {{- /*
+    The accepted RegistryUpstream objects ride along with the cluster's own hosts here: while
+    the registry module configures no node (disabled, or in Unmanaged mode) this runtime gets
+    no config_path and reads its mirrors from config.toml, not from registry.d, where nodelet
+    writes them on every other node (and on this one too while the module configures it).
+    bashible-apiserver puts them into the context only then, and leaves out the ones with a
+    path, which inline mirrors cannot rewrite, and the ones whose registry already has a table
+    below, which a second one would make unparsable (pkg/template/registry/upstreams.go). The
+    cluster's own hosts come first: on a clash, merge keeps the first.
+
+    config.toml keys the credentials and the authority by the registry, so each registry gets
+    one table: the configs table is opened once, a registry already written is not written
+    again, and a ModuleSource authority goes into the table of a registry written here (when
+    the mirror brings none of its own) rather than into a second one.
+  */}}
+  {{- $inline_hosts := merge (dict) .registry.hosts (.registry.inlineUpstreams | default dict) }}
+  {{- $module_sources_ca := dict }}
+  {{- if eq .runType "Normal" }}
+    {{- range $registryAddr, $ca := (.normal.moduleSourcesCA | default dict) }}
+      {{- if $ca }}
+        {{- $_ := set $module_sources_ca ($registryAddr | lower) true }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- range $host_name, $host_values := $inline_hosts }}
         [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ $host_name }}"]
           endpoint = [{{- range $i, $mirror := $host_values.mirrors }}{{ if $i }}, {{ end }}{{ printf "%s://%s" $mirror.scheme $mirror.host| quote }}{{- end }}]
   {{- end }}
-  {{- range $host_name, $host_values := .registry.hosts }}
-    {{- range $mirror := $host_values.mirrors }}
       [plugins."io.containerd.grpc.v1.cri".registry.configs]
+  {{- $configured := dict }}
+  {{- range $host_name, $host_values := $inline_hosts }}
+    {{- range $mirror := $host_values.mirrors }}
+      {{- $registry := $mirror.host | lower }}
+      {{- if not (hasKey $configured $registry) }}
+        {{- $_ := set $configured $registry true }}
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ $mirror.host }}".auth]
           {{- if (($mirror).auth).username }}
           auth = {{ printf "%s:%s" ($mirror.auth.username) ($mirror.auth.password | default "") | b64enc | quote }}
           {{- else }}
           auth = {{ (($mirror).auth).auth | default "" | quote }}
           {{- end }}
-      {{- if $mirror.ca }}
+        {{- $ca_file := "" }}
+        {{- if $mirror.ca }}
+          {{- $ca_file = printf "/opt/deckhouse/share/ca-certificates/registry-%s-ca.crt" $registry }}
+        {{- else if and (eq $mirror.scheme "https") (hasKey $module_sources_ca $registry) }}
+          {{- $ca_file = printf "/opt/deckhouse/share/ca-certificates/%s-ca.crt" $registry }}
+        {{- end }}
+        {{- if or $ca_file (eq $mirror.scheme "http") }}
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ $mirror.host }}".tls]
-          ca_file = "/opt/deckhouse/share/ca-certificates/registry-{{ $mirror.host | lower }}-ca.crt"
-      {{- end }}
-      {{- if eq $mirror.scheme "http" }}
-        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ $mirror.host }}".tls]
+          {{- if $ca_file }}
+          ca_file = {{ $ca_file | quote }}
+          {{- end }}
+          {{- if eq $mirror.scheme "http" }}
           insecure_skip_verify = true
+          {{- end }}
+        {{- end }}
       {{- end }}
     {{- end }}
   {{- end }}
-  {{- if eq .runType "Normal" }}
-    {{- range $registryAddr,$ca := .normal.moduleSourcesCA }}
-      {{- if $ca }}
-        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ $registryAddr | lower }}".tls]
-          ca_file = "/opt/deckhouse/share/ca-certificates/{{ $registryAddr | lower }}-ca.crt"
-      {{- end }}
+  {{- range $registry, $_ := $module_sources_ca }}
+    {{- if not (hasKey $configured $registry) }}
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ $registry }}".tls]
+          ca_file = "/opt/deckhouse/share/ca-certificates/{{ $registry }}-ca.crt"
     {{- end }}
   {{- end }}
 {{- end }}

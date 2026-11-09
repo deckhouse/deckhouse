@@ -26,8 +26,13 @@ limitations under the License.
 package layout
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"slices"
+	"strings"
+
+	"k8s.io/apimachinery/pkg/util/validation"
 
 	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
@@ -411,7 +416,7 @@ func withReferencedAuth(d Desired) Desired {
 		for i := range routes {
 			// Keyed by what the route intercepts, which is the only thing that
 			// distinguishes one route from another.
-			key := "route-" + routes[i].Match
+			key := routeAuthKey(routes[i].Match)
 			original := routes[i].Endpoint
 			collectAuth(credentials, original, key)
 			routes[i].Endpoint = authRef(original, key)
@@ -501,6 +506,18 @@ func sharedOrOwnKey(
 		return baseKey
 	}
 	return mirrorAuthKey(baseKey, index)
+}
+
+// routeAuthKey keys a route's credentials by its match, written the way a Secret key can
+// carry it: a port's ':' becomes '_', which no match contains. A match too long to fit a
+// key with a mirror's suffix is keyed by its digest, under a prefix no match key has.
+func routeAuthKey(match string) string {
+	key := "route-" + strings.ReplaceAll(match, ":", "_")
+	if len(key)+len(mirrorAuthKey("", 99)) <= validation.DNS1123SubdomainMaxLength {
+		return key
+	}
+	sum := sha256.Sum256([]byte(match))
+	return "route_" + hex.EncodeToString(sum[:16])
 }
 
 // mirrorAuthKey keys a mirror's own credentials. Mirrors serve the same content but can

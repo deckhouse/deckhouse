@@ -590,3 +590,20 @@ func TestContextToMap(t *testing.T) {
 		})
 	}
 }
+
+// The inline upstreams appear in the template context only when there are some, and their keys
+// are held to a registry host like the hosts' are: each becomes a TOML table name in config.toml.
+func TestContextInlineUpstreams(t *testing.T) {
+	ctx := validContext()
+	_, present := ctx.ToMap()["inlineUpstreams"]
+	assert.False(t, present, "a context without inline upstreams must read as it did before them")
+
+	ctx.InlineUpstreams = map[string]ContextHosts{"transit.example.com": validContextHosts()}
+	require.NoError(t, ctx.Validate())
+	inline, ok := ctx.ToMap()["inlineUpstreams"].(map[string]any)
+	require.True(t, ok)
+	assert.Contains(t, inline, "transit.example.com")
+
+	ctx.InlineUpstreams = map[string]ContextHosts{`evil"]; touch /pwned`: validContextHosts()}
+	assert.Error(t, ctx.Validate())
+}

@@ -100,6 +100,12 @@ rules:
 - apiGroups: ["deckhouse.io"]
   resources: ["nodeusers", "modulesources"]
   verbs: ["get", "list", "watch"]
+# With the registry module disabled, the RegistryUpstream objects node-controller accepted
+# are rendered inline into config.toml for containerd v1, which then has no config_path and
+# does not read the registry.d nodelet routes them in (pkg/template/registry/upstreams.go).
+- apiGroups: ["deckhouse.io"]
+  resources: ["registryupstreams"]
+  verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

@@ -89,6 +89,9 @@ type clusterInputs struct {
 	// node gets it: the pulls containerd makes for itself — the control-plane
 	// static pods of a bootstrapping master among them — carry no imagePullSecret.
 	Registry *internalv1alpha1.Registry
+	// RegistryRoutes are the other registries the nodes route on their own, arbitrated
+	// once per pass; nodeRegistry decides whether a node gets them.
+	RegistryRoutes registryRoutes
 	// NodeExtensions are the operator's requests in the order their uniqueness contest
 	// ran; the contest is cluster-wide, so it is settled here, once per pass, rather than
 	// once per node. NodeExtensionConflicts says which requests lost the contest.
@@ -267,6 +270,10 @@ func (s *sourceReader) readReleaseImages(ctx context.Context, in *clusterInputs)
 
 	// imagesRepo is the root hash resolver's; the render takes the registry only.
 	in.Registry, _, err = s.readRegistry(ctx)
+	if err != nil {
+		return err
+	}
+	in.RegistryRoutes, err = s.readRegistryRoutes(ctx, in.Registry)
 	if err != nil {
 		return err
 	}

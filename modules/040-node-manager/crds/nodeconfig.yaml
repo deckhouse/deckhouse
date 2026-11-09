@@ -88,8 +88,10 @@ spec:
                       Component that writes the containerd `registry.d` directory.
 
                       - `Nodelet`: The node agent writes the configuration from `spec.registry` to the
-                        directory and removes everything else in it.
-                      - `RegistryAgent`: The registry agent static pod owns the directory.
+                        directory and removes everything else in it, except the route directories of
+                        `spec.registry.upstreams`.
+                      - `RegistryAgent`: The registry agent static pod owns the directory. The node
+                        agent writes nothing there and only removes the directories it wrote before.
 
                       Defaults to `Nodelet` when unset. Set by `node-manager`.
                     enum:
@@ -152,6 +154,8 @@ spec:
                           enum:
                           - NodeExtensionRequest
                           - NodeStaticPodRequest
+                          - RegistryUpstream
+                          - ModuleSource
                           type: string
                         name:
                           description: Name of the object.
@@ -555,7 +559,13 @@ spec:
                 description: |-
                   Registry is the container registry the node talks to directly, without
                   the registry-packages-proxy. A node bootstrapping a control plane has no
-                  proxy yet but must pull images and sysexts; workers leave this empty.
+                  proxy yet but must pull images and sysexts. `upstreams` lists the additional
+                  registries containerd routes pulls to.
+
+                  On a Mutable node bashible configures containerd for the registry itself, and
+                  the node agent writes only the `upstreams` routes, with the `registry-routes`
+                  feature on. It reads only `address` there, which no route may take over, and
+                  never downloads from the registry directly.
                 properties:
                   address:
                     description: |-
@@ -591,6 +601,177 @@ spec:
                     - HTTPS
                     - HTTP
                     type: string
+                  upstreams:
+                    description: |-
+                      Additional registries the node routes pulls to: each entry sends the pulls of
+                      one registry host to another registry and its mirrors.
+
+                      The node writes one containerd host directory per entry, named after `match`
+                      in lower case, and removes the directories of entries that are gone. A route change does not
+                      restart containerd. An entry the node cannot apply is skipped and reported in
+                      the `RegistryRoutesReady` condition; the other entries are still applied.
+
+                      The `registry-routes` feature applies this list. It is on by default on an
+                      Immutable node; a Mutable node applies the list only when `featureGates`
+                      switch the feature on. With the feature off, the node leaves the directories
+                      it wrote before as they are.
+
+                      Set by node-controller from the accepted RegistryUpstream objects and the CAs
+                      of ModuleSource objects. On an Immutable node the list is empty while the
+                      registry module's agent configures containerd. On a Mutable node the list is
+                      always set but has no ModuleSource entry, since bashible writes those CAs
+                      itself, and the node writes no route while the agent's `_default`
+                      directory is listed in bashible's `deckhouse_hosts_state.json`.
+                    items:
+                      description: RegistryUpstream is one route of spec.registry.upstreams.
+                      properties:
+                        match:
+                          description: |-
+                            Registry host, optionally with a port, whose pulls the route takes over. The
+                            name of the containerd host directory.
+                          maxLength: 255
+                          minLength: 1
+                          pattern: ^[a-zA-Z0-9]([-a-zA-Z0-9]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([-a-zA-Z0-9]*[a-zA-Z0-9])?)*(:[0-9]{1,5})?$
+                          type: string
+                        requestedBy:
+                          description: |-
+                            Object the route comes from: a RegistryUpstream, or a ModuleSource whose
+                            registry needs its own CA.
+                          properties:
+                            kind:
+                              description: Kind of the object.
+                              enum:
+                              - NodeExtensionRequest
+                              - NodeStaticPodRequest
+                              - RegistryUpstream
+                              - ModuleSource
+                              type: string
+                            name:
+                              description: Name of the object.
+                              maxLength: 253
+                              minLength: 1
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                              type: string
+                          required:
+                          - kind
+                          - name
+                          type: object
+                        upstream:
+                          description: Registry the pulls are sent to, and its mirrors.
+                          properties:
+                            auth:
+                              description: Credentials for the registry.
+                              properties:
+                                auth:
+                                  description: |-
+                                    Base64-encoded `username:password` pair. Takes precedence over `username` and
+                                    `password` when set.
+                                  maxLength: 4096
+                                  type: string
+                                password:
+                                  description: Password for basic authentication.
+                                  maxLength: 4096
+                                  type: string
+                                username:
+                                  description: Username for basic authentication.
+                                  maxLength: 1024
+                                  type: string
+                              type: object
+                            ca:
+                              description: |-
+                                PEM bundle of the CA certificates the registry is verified with over `HTTPS`.
+                                The node skips the route unless the bundle is only CERTIFICATE blocks that all parse.
+                              maxLength: 65536
+                              type: string
+                            host:
+                              description: Registry host, optionally with a port.
+                              maxLength: 255
+                              minLength: 1
+                              type: string
+                            mirrors:
+                              description: |-
+                                Additional addresses serving the same content, tried after the registry in
+                                the listed order.
+                              items:
+                                description: RegistryEndpoint is one address of a
+                                  route.
+                                properties:
+                                  auth:
+                                    description: Credentials for the registry.
+                                    properties:
+                                      auth:
+                                        description: |-
+                                          Base64-encoded `username:password` pair. Takes precedence over `username` and
+                                          `password` when set.
+                                        maxLength: 4096
+                                        type: string
+                                      password:
+                                        description: Password for basic authentication.
+                                        maxLength: 4096
+                                        type: string
+                                      username:
+                                        description: Username for basic authentication.
+                                        maxLength: 1024
+                                        type: string
+                                    type: object
+                                  ca:
+                                    description: |-
+                                      PEM bundle of the CA certificates the registry is verified with over `HTTPS`.
+                                      The node skips the route unless the bundle is only CERTIFICATE blocks that all parse.
+                                    maxLength: 65536
+                                    type: string
+                                  host:
+                                    description: Registry host, optionally with a
+                                      port.
+                                    maxLength: 255
+                                    minLength: 1
+                                    type: string
+                                  path:
+                                    description: |-
+                                      Repository prefix inside the registry, for example `/virtualization`. The node
+                                      prepends it to every repository it pulls through this address.
+                                    maxLength: 1024
+                                    type: string
+                                  scheme:
+                                    description: |-
+                                      Protocol the node uses to connect to the registry.
+
+                                      Defaults to `HTTPS` when unset.
+                                    enum:
+                                    - HTTP
+                                    - HTTPS
+                                    type: string
+                                required:
+                                - host
+                                type: object
+                              maxItems: 8
+                              type: array
+                            path:
+                              description: |-
+                                Repository prefix inside the registry, for example `/virtualization`. The node
+                                prepends it to every repository it pulls through this address.
+                              maxLength: 1024
+                              type: string
+                            scheme:
+                              description: |-
+                                Protocol the node uses to connect to the registry.
+
+                                Defaults to `HTTPS` when unset.
+                              enum:
+                              - HTTP
+                              - HTTPS
+                              type: string
+                          required:
+                          - host
+                          type: object
+                      required:
+                      - match
+                      - requestedBy
+                      - upstream
+                      type: object
+                    maxItems: 256
+                    type: array
+                    x-kubernetes-list-type: atomic
                 required:
                 - address
                 type: object
@@ -659,6 +840,8 @@ spec:
                           enum:
                           - NodeExtensionRequest
                           - NodeStaticPodRequest
+                          - RegistryUpstream
+                          - ModuleSource
                           type: string
                         name:
                           description: Name of the object.
@@ -953,11 +1136,10 @@ spec:
             - message: spec.systemType cannot be changed
               rule: self.systemType == oldSelf.systemType
             - message: a Mutable node takes only nodeName, featureGates, apiServerEndpoints,
-                registryPackagesProxy, extensions and staticPods
+                registryPackagesProxy, registry, extensions and staticPods
               rule: self.systemType == 'Immutable' || !(has(self.osImage) || has(self.storage)
                 || has(self.kernel) || has(self.network) || has(self.kubelet) || has(self.containerRuntime)
-                || has(self.registry) || has(self.updatePolicy) || has(self.statusToken)
-                || has(self.internalNetworkCIDRs))
+                || has(self.updatePolicy) || has(self.statusToken) || has(self.internalNetworkCIDRs))
           status:
             description: Status is reported by the on-node agent after each reconcile
               pass.
@@ -1043,18 +1225,26 @@ spec:
                     - `ContainerdReady`
                     - `KubeletReady`
                     - `StaticPodsReady`
+                    - `RegistryRoutesReady`
                     - `UnitsRunning`
                     - `OSImageUpToDate`
                     - `ControlPlaneBootstrapped`
 
                     Values of a subsystem condition:
 
-                    - `True`: The reason is `ReconcileSucceeded`.
+                    - `True`: The reason is `ReconcileSucceeded`, or a specific reason of the
+                      subsystem listed below.
                     - `False`: The message gives the cause. The reason is `Pending` while the subsystem
                       waits for something outside the node, otherwise `ReconcileFailed` or a more
                       specific reason of the subsystem listed below.
                     - `Unknown`: The subsystem did not run in this pass. The reason is
                       `ReconcileSkipped`.
+
+                    Specific reasons with `True`:
+
+                    - `OwnedByRegistryAgent` (`RegistryRoutesReady`): The registry agent configures
+                      containerd's registry hosts on this Mutable node. The node writes no route and
+                      has removed the ones it wrote.
 
                     Specific reasons with `False` that mean a failure:
 

@@ -47,6 +47,13 @@ type Context struct {
 	ImagesBase           string                  `json:"imagesBase" yaml:"imagesBase"`
 	ProxyEndpoints       []string                `json:"proxyEndpoints,omitempty" yaml:"proxyEndpoints,omitempty"`
 	Hosts                map[string]ContextHosts `json:"hosts" yaml:"hosts"`
+	// InlineUpstreams are the accepted RegistryUpstream objects, for the one runtime nodelet
+	// cannot route them on: containerd v1 has no config_path while the registry module
+	// configures no node, and reads its mirrors inline from config.toml rather than from
+	// registry.d. Present only then (RegistryModuleEnable false: the module is disabled or in
+	// Unmanaged mode); otherwise every runtime, containerd v1 included, reads registry.d and
+	// leaves them to nodelet or the agent, so the steps that write registry.d never read them.
+	InlineUpstreams map[string]ContextHosts `json:"inlineUpstreams,omitempty" yaml:"inlineUpstreams,omitempty"`
 }
 
 type ContextHosts struct {
@@ -90,6 +97,7 @@ func (c Context) Validate() error {
 		validation.Field(&c.Hosts, validation.Required),
 		// Validate each host
 		validation.Field(&c.Hosts, validation.Each(validation.Required)),
+		validation.Field(&c.InlineUpstreams, validation.Each(validation.Required)),
 	); err != nil {
 		return err
 	}
@@ -103,6 +111,13 @@ func (c Context) Validate() error {
 		}
 		if err := helpers.HostWithOptionalPort(host); err != nil {
 			return fmt.Errorf("hosts key %q validation failed: %w", host, err)
+		}
+	}
+	// The same for the inline upstreams: a key becomes a quoted TOML table name in
+	// config.toml, written by a root shell script.
+	for host := range c.InlineUpstreams {
+		if err := helpers.HostWithOptionalPort(host); err != nil {
+			return fmt.Errorf("inlineUpstreams key %q validation failed: %w", host, err)
 		}
 	}
 
@@ -153,8 +168,38 @@ func (c Context) ToMap() map[string]any {
 		proxies = append(proxies, ep)
 	}
 
-	hosts := make(map[string]any, len(c.Hosts))
-	for hostName, host := range c.Hosts {
+	ret := map[string]any{
+		"registryModuleEnable": c.RegistryModuleEnable,
+		"mode":                 c.Mode,
+		"version":              c.Version,
+		"imagesBase":           c.ImagesBase,
+		"proxyEndpoints":       proxies,
+		"hosts":                hostsToMap(c.Hosts),
+	}
+	// Present only when there is something to route inline, so a context without
+	// upstreams reads exactly as it did before they existed.
+	if len(c.InlineUpstreams) > 0 {
+		ret["inlineUpstreams"] = hostsToMap(c.InlineUpstreams)
+	}
+
+	if c.Bootstrap != nil {
+		ret["bootstrap"] = c.Bootstrap.ToMap()
+	}
+	// Present only when the agent owns the runtime configuration, so a template can ask
+	// "is there an agent" rather than compare a mode against a list of names.
+	if c.Agent != nil {
+		ret["agent"] = map[string]any{
+			"endpoint":   c.Agent.Endpoint,
+			"dropInFile": c.Agent.DropInFile,
+			"layout":     c.Agent.Layout,
+		}
+	}
+	return ret
+}
+
+func hostsToMap(in map[string]ContextHosts) map[string]any {
+	hosts := make(map[string]any, len(in))
+	for hostName, host := range in {
 		mirrors := make([]any, 0, len(host.Mirrors))
 		for _, mirror := range host.Mirrors {
 			auth := map[string]any{
@@ -183,27 +228,5 @@ func (c Context) ToMap() map[string]any {
 			"mirrors": mirrors,
 		}
 	}
-
-	ret := map[string]any{
-		"registryModuleEnable": c.RegistryModuleEnable,
-		"mode":                 c.Mode,
-		"version":              c.Version,
-		"imagesBase":           c.ImagesBase,
-		"proxyEndpoints":       proxies,
-		"hosts":                hosts,
-	}
-
-	if c.Bootstrap != nil {
-		ret["bootstrap"] = c.Bootstrap.ToMap()
-	}
-	// Present only when the agent owns the runtime configuration, so a template can ask
-	// "is there an agent" rather than compare a mode against a list of names.
-	if c.Agent != nil {
-		ret["agent"] = map[string]any{
-			"endpoint":   c.Agent.Endpoint,
-			"dropInFile": c.Agent.DropInFile,
-			"layout":     c.Agent.Layout,
-		}
-	}
-	return ret
+	return hosts
 }

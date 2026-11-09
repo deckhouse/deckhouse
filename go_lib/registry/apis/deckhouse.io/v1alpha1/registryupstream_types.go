@@ -40,9 +40,17 @@ type RegistryUpstreamSpec struct {
 	// A match already claimed by another writer, or one that would shadow the
 	// primary path, is rejected by the controller rather than silently merged.
 	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=255
 	Match string `json:"match"`
 
 	// Upstream is where the intercepted pulls are actually sent.
+	//
+	// The shape is the shared Upstream, so its limits live in the hand-written CRD
+	// (modules/038-registry/crds/registryupstream.yaml) and in the arbitration that
+	// enforces them for every reader (go_lib/registry/apis/upstreams, Max*): host 255,
+	// path 1024, ca 65536, auth.username 1024, auth.password and auth.auth 4096, at
+	// most 8 mirrors. They are not markers here because RegistryConfig and
+	// RegistryNode share the type with limits of their own.
 	Upstream Upstream `json:"upstream"`
 }
 

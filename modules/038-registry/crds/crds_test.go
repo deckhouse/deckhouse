@@ -479,3 +479,32 @@ func TestCRDsAreAcceptedByTheAPIServer(t *testing.T) {
 		})
 	}
 }
+
+// TestRegistryUpstreamLimits pins the per-field limits every copy of the spec shares: the
+// arbitration (go_lib/registry/apis/upstreams, Max*) and NodeConfig spec.registry.upstreams
+// declare the same, so an object the API server stores is never one a node refuses.
+func TestRegistryUpstreamLimits(t *testing.T) {
+	crd := loadCRD(t, "registryupstream.yaml")
+	spec := crd.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["spec"]
+	upstream := spec.Properties["upstream"]
+	mirror := upstream.Properties["mirrors"].Items.Schema
+
+	maxLength := func(props apiextensionsv1.JSONSchemaProps) int64 {
+		require.NotNil(t, props.MaxLength)
+		return *props.MaxLength
+	}
+	assert.Equal(t, int64(255), maxLength(spec.Properties["match"]))
+	for name, endpoint := range map[string]apiextensionsv1.JSONSchemaProps{"upstream": upstream, "mirror": *mirror} {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, int64(255), maxLength(endpoint.Properties["host"]))
+			assert.Equal(t, int64(1024), maxLength(endpoint.Properties["path"]))
+			assert.Equal(t, int64(65536), maxLength(endpoint.Properties["ca"]))
+			auth := endpoint.Properties["auth"]
+			assert.Equal(t, int64(1024), maxLength(auth.Properties["username"]))
+			assert.Equal(t, int64(4096), maxLength(auth.Properties["password"]))
+			assert.Equal(t, int64(4096), maxLength(auth.Properties["auth"]))
+		})
+	}
+	require.NotNil(t, upstream.Properties["mirrors"].MaxItems)
+	assert.Equal(t, int64(8), *upstream.Properties["mirrors"].MaxItems)
+}

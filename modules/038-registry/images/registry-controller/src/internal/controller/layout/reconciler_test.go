@@ -1101,6 +1101,34 @@ func TestReconcileReportsAMatchCollisionToTheLoser(t *testing.T) {
 	assert.Contains(t, loser.Status.Conflict, "RegistryUpstream/incumbent")
 }
 
+// In Managed mode the agent gets what node-controller hands the nodes without it: one
+// arbitration decides both, so an object refused there is refused here, with the same
+// words on its status. A CA that does not parse would otherwise reach every agent.
+func TestReconcileRefusesWhatEveryArbitratorRefuses(t *testing.T) {
+	cfg := registryConfig(registryv1alpha1.RegistryConfigSpec{
+		Mode:    registryv1alpha1.ModeManaged,
+		Primary: registryv1alpha1.PrimarySource{Upstream: upstream("registry.deckhouse.io")},
+		Storage: registryv1alpha1.StorageConfig{Cache: true, Source: source()},
+	})
+	broken := additionalUpstream("broken-ca", "ghcr.io", "proxy.example.com")
+	broken.Spec.Upstream.CA = "VENDOR-CA"
+	fine := additionalUpstream("fine", "quay.io", "proxy.example.com")
+
+	r, c := newReconciler(t, cfg, accessSecret(), node("master-0"), broken, fine)
+	runReconcile(t, r)
+
+	routes := listNodes(t, c)["master-0"].Spec.AdditionalRoutes
+	require.Len(t, routes, 1)
+	assert.Equal(t, "quay.io", routes[0].Match)
+
+	refused := getUpstream(t, c, "broken-ca")
+	assert.False(t, refused.Status.Accepted)
+	assert.Contains(t, refused.Status.Conflict, "spec.upstream: ca: not a PEM bundle of certificates")
+	condition := apimeta.FindStatusCondition(refused.Status.Conditions, registryv1alpha1.ConditionAccepted)
+	require.NotNil(t, condition)
+	assert.Equal(t, registryv1alpha1.ReasonInvalidSpec, condition.Reason)
+}
+
 // TestReconcileAddressesTheStorageByNodeAddress is the fix for a layout that looked
 // right and could not work: a node agent runs in the host network and resolves through
 // the host's resolver, where `registry.d8-system.svc` does not exist. The Service name

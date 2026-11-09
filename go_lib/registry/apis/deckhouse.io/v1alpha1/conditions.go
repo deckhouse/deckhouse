@@ -68,6 +68,7 @@ const (
 	ReasonMatchConflict    = "MatchConflict"
 	ReasonShadowsPrimary   = "ShadowsPrimary"
 	ReasonInvalidSpec      = "InvalidSpec"
+	ReasonLimitExceeded    = "LimitExceeded"
 	ReasonCacheDisabled    = "CacheDisabled"
 	ReasonAirGap           = "AirGap"
 	ReasonAPIUnavailable   = "APIUnavailable"

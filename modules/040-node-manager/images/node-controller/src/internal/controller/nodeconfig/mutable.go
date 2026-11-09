@@ -66,6 +66,17 @@ func (s *sourceReader) readMutableInputs(ctx context.Context) (clusterInputs, er
 		return in, fmt.Errorf("read the packages proxy token: %w", err)
 	}
 
+	// Of the registry, nodelet acts on the routes alone here, and keeps them off the
+	// address: bashible writes the primary into registry.d (mutableNodeRegistry).
+	in.Registry, _, err = s.readRegistry(ctx)
+	if err != nil {
+		return in, fmt.Errorf("read the registry: %w", err)
+	}
+	in.RegistryRoutes, err = s.readRegistryRoutes(ctx, in.Registry)
+	if err != nil {
+		return in, fmt.Errorf("read the registry routes: %w", err)
+	}
+
 	nsprs, err := s.readNodeStaticPodRequests(ctx)
 	if err != nil {
 		return in, fmt.Errorf("read the static pod requests: %w", err)
@@ -91,9 +102,11 @@ func renderMutableSpec(node *corev1.Node, ngName string, in clusterInputs) inter
 		NodeName:              node.Name,
 		APIServerEndpoints:    in.APIServerEndpoints,
 		RegistryPackagesProxy: internalv1alpha1.RegistryPackagesProxy{AccessToken: in.RegistryPackagesProxyToken},
-		FeatureGates:          maps.Clone(in.Platform.FeatureGates),
-		StaticPods:            mergeStaticPods(in.Platform.StaticPods, nodeStaticPods(in.NodeStaticPodRequests, in.NodeStaticPodRequestsRejected, ngName)),
-		Extensions:            mergeExtensions(in.Platform.Extensions, requested),
+		// The address and the routes alone, whoever owns registry.d: see mutableNodeRegistry.
+		Registry:     mutableNodeRegistry(in),
+		FeatureGates: maps.Clone(in.Platform.FeatureGates),
+		StaticPods:   mergeStaticPods(in.Platform.StaticPods, nodeStaticPods(in.NodeStaticPodRequests, in.NodeStaticPodRequestsRejected, ngName)),
+		Extensions:   mergeExtensions(in.Platform.Extensions, requested),
 	}
 }
 

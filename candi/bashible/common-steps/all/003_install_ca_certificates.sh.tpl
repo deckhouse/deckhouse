@@ -28,3 +28,24 @@ EOF
     {{- end }}
   {{- end }}
 {{- end }}
+
+{{- /*
+  The authorities of the RegistryUpstream objects step 032 renders inline: only containerd v1
+  reads them from here, while the registry module configures no node (disabled, or in
+  Unmanaged mode), since step 032 then sets no config_path. Every other runtime, and
+  containerd v1 while the module configures it, reads registry.d, where nodelet writes them.
+  Their hosts never repeat one above (bashible-apiserver, pkg/template/registry/upstreams.go).
+*/}}
+{{- if and (eq .cri "Containerd") (not .registry.registryModuleEnable) }}
+  {{- range $_, $host_values := (.registry.inlineUpstreams | default dict) }}
+    {{- range $mirror := $host_values.mirrors }}
+      {{- if $mirror.ca }}
+
+bb-log-info "Sync registry CA for {{ $mirror.host }}"
+bb-sync-file "/opt/deckhouse/share/ca-certificates/registry-{{ $mirror.host | lower }}-ca.crt" - << "EOF"
+{{ $mirror.ca }}
+EOF
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}

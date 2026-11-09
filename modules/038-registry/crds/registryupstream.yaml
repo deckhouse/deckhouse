@@ -54,6 +54,10 @@ spec:
             Traffic through these upstreams is **always transit**: the agent proxies the pull, substituting credentials and the certificate authority, and streams it through without writing to disk or to the cache. Cache space is finite and reserved for Deckhouse components, all the more so in an air-gapped cluster where the cache is the only source of images.
 
             A `match` already claimed by another object, or one that would shadow the primary path, is rejected rather than silently merged. See `status.conflict`.
+
+            Objects are accepted oldest first. All accepted objects together are limited to 256 objects and 256 KiB of `spec` (measured as JSON): an object that does not fit is rejected, and an object accepted earlier is never pushed out by a newer one.
+
+            With the module disabled or in `Unmanaged` mode, there is no agent on the nodes. The objects are then arbitrated by the same rules by `node-manager`, which writes `status` and hands the accepted ones to the nodes. The nodes apply them directly to the container runtime configuration: the runtime pulls from the upstream and its mirrors without a proxy. A `match` equal to the registry of a `ModuleSource` is accepted: on Immutable nodes the object takes over that registry together with its certificate authority, while nodes configured by bashible, apart from those with containerd v1 described below, keep the registry as the `ModuleSource` configures it. While the module configures no node — it is disabled or in `Unmanaged` mode — nodes with containerd v1 (`Containerd`) do not apply an upstream with `path`, or one whose registry is already configured on the node or named twice in the object. Such an object stays accepted, and the message of its `Accepted` condition names the node groups that do not apply it and why.
           required:
             - spec
           properties:
@@ -66,6 +70,7 @@ spec:
                 match:
                   type: string
                   minLength: 1
+                  maxLength: 255
                   pattern: '^[a-zA-Z0-9]([-a-zA-Z0-9]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([-a-zA-Z0-9]*[a-zA-Z0-9])?)*(:[0-9]{1,5})?$'
                   description: |
                     The registry host intercepted on the nodes.
@@ -88,18 +93,23 @@ spec:
                     host:
                       type: string
                       minLength: 1
+                      maxLength: 255
                       description: |
-                        The registry host, optionally with a port.
+                        The registry host, optionally with a port. An IPv6 address is written in brackets, followed by a port.
                       x-doc-example: 'registry-vendor.example.com'
                     path:
                       type: string
+                      maxLength: 1024
                       description: |
                         The repository prefix inside the registry.
                       x-doc-example: '/virt'
                     ca:
                       type: string
+                      maxLength: 65536
                       description: |
                         A PEM-encoded certificate authority bundle used to verify the registry when `scheme` is `HTTPS`.
+
+                        Only `CERTIFICATE` blocks are accepted, and each of them must parse.
                     auth:
                       type: object
                       description: |
@@ -109,20 +119,24 @@ spec:
                       properties:
                         username:
                           type: string
+                          maxLength: 1024
                           description: |
                             The username for basic authentication.
                         password:
                           type: string
+                          maxLength: 4096
                           description: |
                             The password for basic authentication.
                         auth:
                           type: string
+                          maxLength: 4096
                           description: |
                             Pre-encoded `base64("username:password")`.
 
-                            Takes precedence over `username` and `password` when set.
+                            Takes precedence over `username` and `password` when set. When both forms are set, they must name the same credentials.
                     mirrors:
                       type: array
+                      maxItems: 8
                       description: |
                         Additional addresses serving **the same** content as the registry, used for failover.
                       items:
@@ -141,14 +155,17 @@ spec:
                           host:
                             type: string
                             minLength: 1
+                            maxLength: 255
                             description: |
-                              The mirror host, optionally with a port.
+                              The mirror host, optionally with a port. An IPv6 address is written in brackets, followed by a port.
                           path:
                             type: string
+                            maxLength: 1024
                             description: |
                               The repository prefix inside the mirror.
                           ca:
                             type: string
+                            maxLength: 65536
                             description: |
                               A PEM-encoded certificate authority bundle used to verify the mirror.
                           auth:
@@ -160,14 +177,17 @@ spec:
                             properties:
                               username:
                                 type: string
+                                maxLength: 1024
                                 description: |
                                   The username for basic authentication.
                               password:
                                 type: string
+                                maxLength: 4096
                                 description: |
                                   The password for basic authentication.
                               auth:
                                 type: string
+                                maxLength: 4096
                                 description: |
                                   Pre-encoded `base64("username:password")`.
             status:
@@ -185,7 +205,7 @@ spec:
                 conflict:
                   type: string
                   description: |
-                    Why the object was rejected: which object already holds the `match`, or that the `match` would shadow the primary path.
+                    Why the object was rejected: which object already holds the `match`, that the `match` would shadow the primary path, which field of `spec` is invalid, or that the object does not fit into the limits of all accepted objects.
 
                     Empty when the object is accepted.
                 conditions:

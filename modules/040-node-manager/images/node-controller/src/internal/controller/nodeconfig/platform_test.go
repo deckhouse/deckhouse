@@ -24,7 +24,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -201,10 +200,6 @@ func TestAnEngineNodeIsRenderedWhileAPlatformPackageIsMissing(t *testing.T) {
 		dnsService(kubeDNSServiceName, "kube-dns", "10.0.0.10"),
 		clusterCAConfigMapObject(testenv.TestClusterCA),
 		clusterConfigSecret("clusterDomain: cluster.local\n"),
-		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Namespace: d8SystemNS, Name: deckhouseRegistrySecret},
-			Data:       map[string][]byte{registryAddressKey: []byte(testenv.TestRegistryAddress)},
-		},
 	)
 
 	in, err := sourceReaderOver(cluster).readClusterInputs(t.Context(), testenv.TestKubernetesVersion)

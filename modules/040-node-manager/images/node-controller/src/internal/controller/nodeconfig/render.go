@@ -61,6 +61,7 @@ func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv
 
 	kernel := renderKernel()
 	kernel.Modules = extraModules
+	runtime := renderContainerRuntime(ng, in, staticPods)
 
 	return internalv1alpha1.NodeSpec{
 		SystemType:           internalv1alpha1.SystemTypeImmutable,
@@ -77,11 +78,13 @@ func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv
 		Kernel:           kernel,
 		Network:          renderNetwork(node),
 		Kubelet:          renderKubelet(ng, node, in),
-		ContainerRuntime: renderContainerRuntime(ng, in, staticPods),
+		ContainerRuntime: runtime,
 		// Every node, not only control-plane: containerd pulls the pause image
 		// itself with no imagePullSecret, and in a closed network that image
-		// lives in a private registry.
-		Registry:              in.Registry,
+		// lives in a private registry. The routes follow the node's own owner of
+		// registry.d rather than the module's intent: a node the agent has not
+		// reached yet keeps routing them itself.
+		Registry:              nodeRegistry(in, runtime.RegistryConfigOwner == internalv1alpha1.RegistryConfigOwnerRegistryAgent),
 		UpdatePolicy:          renderUpdatePolicy(ng),
 		RegistryPackagesProxy: internalv1alpha1.RegistryPackagesProxy{AccessToken: in.RegistryPackagesProxyToken},
 	}

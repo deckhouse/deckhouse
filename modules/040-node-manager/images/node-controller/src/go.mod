@@ -18,7 +18,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	k8s.io/api v0.34.3
 	k8s.io/apiextensions-apiserver v0.34.3
-	k8s.io/apimachinery v0.34.3
+	k8s.io/apimachinery v0.34.8
 	k8s.io/apiserver v0.34.3
 	k8s.io/client-go v0.34.3
 	k8s.io/component-base v0.34.3
@@ -53,6 +53,7 @@ require (
 	github.com/coreos/go-semver v0.3.1 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/deckhouse/deckhouse/go_lib/registry/apis v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/pkg/log v0.2.0 // indirect
 	github.com/docker/cli v29.2.0+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
@@ -167,3 +168,5 @@ require (
 	sigs.k8s.io/kustomize/kyaml v0.18.1 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 )
+
+replace github.com/deckhouse/deckhouse/go_lib/registry/apis => ../../../../../go_lib/registry/apis

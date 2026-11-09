@@ -206,7 +206,8 @@ by the agent on every node, with the credentials and certificate authority held 
 rather than by each workload. Nothing on any node is reconfigured for this.
 
 After creating the RegistryUpstream, check that it was accepted: a conflict with the primary registry, or with another resource
-claiming the same name, is refused rather than merged:
+claiming the same name, is refused rather than merged. So is an invalid field, such as a `ca` that is not a PEM certificate, and a
+resource that does not fit into the limits on all accepted resources together (256 resources, 256 KiB of `spec`):
 
 ```bash
 d8 k get registryupstreams -o custom-columns=\

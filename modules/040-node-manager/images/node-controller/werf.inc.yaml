@@ -41,6 +41,14 @@ git:
   - '**/*.go'
   - '**/*.mod'
   - '**/*.sum'
+# The RegistryUpstream types and their arbitration, shared with registry-controller: a
+# separate module replaced by a relative path, as above.
+- add: /{{ $.ModulePath }}go_lib/registry/apis
+  to: /go_lib/registry/apis
+  includePaths:
+  - '**/*.go'
+  - '**/*.mod'
+  - '**/*.sum'
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ index $.Images "builder/golang" }}
@@ -57,6 +65,10 @@ import:
 - from: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /pkg/registry
   to: /pkg/registry
+  before: install
+- from: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /go_lib/registry/apis
+  to: /go_lib/registry/apis
   before: install
 mount:
 {{ include "mount points for golang builds" . }}

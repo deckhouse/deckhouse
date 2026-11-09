@@ -31,6 +31,25 @@ rules:
   - registry
   verbs:
   - get
+# The other registries the nodes route, rendered into every NodeConfig's spec.registry.upstreams
+# while no registry agent owns the nodes' registry.d: the RegistryUpstream objects, arbitrated and
+# told their verdict here then (under the agent the registry module's controller does both), and
+# the ModuleSources, whose registry certificate authorities the nodes need for module images.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - registryupstreams
+  - modulesources
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - registryupstreams/status
+  verbs:
+  - patch
 # NodeGroups - full access for status updates; create is only used to ensure the master NodeGroup
 # exists (master-node-group controller, taken over from the create_master_node_group hook)
 - apiGroups:

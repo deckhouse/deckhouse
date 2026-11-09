@@ -119,7 +119,22 @@ func TestNodeConfigSchemaTellsTheSystemTypesApart(t *testing.T) {
 			"systemType": "Mutable",
 			"kubelet":    map[string]any{"maxPods": int64(110)},
 		}))
-		require.ErrorContains(t, err, "a Mutable node takes only nodeName, featureGates, apiServerEndpoints, registryPackagesProxy, extensions and staticPods")
+		require.ErrorContains(t, err, "a Mutable node takes only nodeName, featureGates, apiServerEndpoints, registryPackagesProxy, registry, extensions and staticPods")
+	})
+
+	// nodelet routes the RegistryUpstream objects on a bashible node from this block.
+	t.Run("a Mutable document takes the registry", func(t *testing.T) {
+		require.NoError(t, c.Create(t.Context(), rawNodeConfig("mutable-4", map[string]any{
+			"systemType": "Mutable",
+			"registry": map[string]any{
+				"address": "registry.example.com",
+				"upstreams": []any{map[string]any{
+					"requestedBy": map[string]any{"kind": "RegistryUpstream", "name": "virtualization"},
+					"match":       "images.example.com",
+					"upstream":    map[string]any{"host": "vendor.example.com"},
+				}},
+			},
+		})))
 	})
 }
 

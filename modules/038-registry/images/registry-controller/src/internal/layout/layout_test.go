@@ -18,10 +18,12 @@ package layout
 
 import (
 	"encoding/base64"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/utils/ptr"
 
 	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
@@ -844,6 +846,50 @@ func TestComputeLeavesNoCredentialInAnyResource(t *testing.T) {
 	assert.Equal(t, "ro", got.Credentials[constant.AuthKeyStorage].Username)
 	assert.Equal(t, "mirror-user", got.Credentials["upstream-mirror-0"].Username)
 	assert.Equal(t, "route-user", got.Credentials["route-images.example.com"].Username)
+}
+
+// A route's credentials go into a Secret under a key derived from its match, and a match
+// may carry a port and be 255 characters long: the API server refuses a key with ':' or
+// over 253 characters, and with it the whole Secret, which stops every layout.
+func TestRouteCredentialKeysAreSecretKeys(t *testing.T) {
+	long := strings.Repeat("a", 63) + "." + strings.Repeat("b", 63) + "." + strings.Repeat("c", 63) + "." + strings.Repeat("d", 58) + ":5000"
+	require.Len(t, long, 255)
+	auth := func(user string) *registryv1alpha1.Auth {
+		return &registryv1alpha1.Auth{Username: user, Password: "dh-test-secret-0123456789abcdef"}
+	}
+	var routes []registryv1alpha1.Route
+	for _, match := range []string{"harbor.example.com:8443", long} {
+		routes = append(routes, registryv1alpha1.Route{
+			Match:    match,
+			Endpoint: registryv1alpha1.Endpoint{Host: "upstream.example.com", Auth: auth("route-user")},
+			Mirrors:  []registryv1alpha1.Endpoint{{Host: "mirror.example.com", Auth: auth("mirror-user")}},
+		})
+	}
+
+	got := Compute(Inputs{
+		Config: registryv1alpha1.RegistryConfigSpec{
+			Mode:    registryv1alpha1.ModeManaged,
+			Primary: registryv1alpha1.PrimarySource{Upstream: testUpstream("registry.deckhouse.io")},
+			Storage: registryv1alpha1.StorageConfig{Cache: true},
+		},
+		Nodes:         []string{"master-0"},
+		StorageAccess: testAccess(),
+		Routes:        routes,
+	})
+
+	for key := range got.Credentials {
+		assert.Empty(t, validation.IsConfigMapKey(key), "key %q", key)
+	}
+	assert.Equal(t, "route-user", got.Credentials["route-harbor.example.com_8443"].Username)
+	assert.Equal(t, "mirror-user", got.Credentials["route-harbor.example.com_8443-mirror-0"].Username)
+	// Two routes and two mirrors, each under a key of its own.
+	routeKeys := 0
+	for key := range got.Credentials {
+		if strings.HasPrefix(key, "route") {
+			routeKeys++
+		}
+	}
+	assert.Equal(t, 4, routeKeys)
 }
 
 // TestAgentsArePointedAtTheLeader pins which replica a node asks first.

@@ -53,6 +53,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/registry/apis/upstreams"
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 
 	"github.com/deckhouse/registry-controller/internal/controller/config"
@@ -60,7 +61,6 @@ import (
 	"github.com/deckhouse/registry-controller/internal/metrics"
 	"github.com/deckhouse/registry-controller/internal/probe"
 	"github.com/deckhouse/registry-controller/internal/register"
-	"github.com/deckhouse/registry-controller/internal/upstreams"
 )
 
 const (

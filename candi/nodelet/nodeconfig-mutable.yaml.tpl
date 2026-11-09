@@ -5,6 +5,7 @@ spec:
   featureGates:
     extensions: true
     static-pods: true
+    registry-routes: true
   extensions:
   - name: nodelet
     digest: {{ .images.registrypackages.nodelet }}

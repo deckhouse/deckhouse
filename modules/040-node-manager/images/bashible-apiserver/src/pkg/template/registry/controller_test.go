@@ -23,6 +23,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -39,11 +40,15 @@ func reconcileWith(t *testing.T, objects ...runtime.Object) (HashedRegistryData,
 
 	scheme := runtime.NewScheme()
 	require.NoError(t, corev1.AddToScheme(scheme))
+	// RegistryUpstream is read as unstructured, so the fake client learns its scope here.
+	mapper := meta.NewDefaultRESTMapper(nil)
+	mapper.Add(corev1.SchemeGroupVersion.WithKind("Secret"), meta.RESTScopeNamespace)
+	mapper.Add(registryUpstreamGVK, meta.RESTScopeRoot)
 
 	sc := &StateController{
 		controllerName: "registry-state-test",
 		namespace:      "d8-system",
-		client:         fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(objects...).Build(),
+		client:         fake.NewClientBuilder().WithScheme(scheme).WithRESTMapper(mapper).WithRuntimeObjects(objects...).Build(),
 		dataCh:         make(chan HashedRegistryData),
 	}
 

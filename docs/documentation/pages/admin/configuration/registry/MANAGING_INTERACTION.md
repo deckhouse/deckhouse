@@ -278,7 +278,7 @@ spec:
       password: <PASSWORD>
 ```
 
-After creating the resource, check that it has been accepted — a conflict with the primary registry or with another resource claiming the same name is rejected rather than merged:
+After creating the resource, check that it has been accepted — a conflict with the primary registry or with another resource claiming the same name is rejected rather than merged. So is an invalid field, such as a `ca` that is not a PEM certificate, and a resource that does not fit into the limits on all accepted resources together (256 resources, 256 KiB of `spec`):
 
 ```bash
 d8 k get registryupstreams -o custom-columns=\

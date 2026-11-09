@@ -429,7 +429,7 @@ func TestNodeConfigTemplateServesTheDocumentOfABashibleGroup(t *testing.T) {
 			require.Empty(t, template.Spec.StatusToken)
 			require.Equal(t, []string{"https://192.168.199.10:6443"}, template.Spec.APIServerEndpoints)
 			require.Equal(t, []byte("proxy-token"), template.Spec.RegistryPackagesProxy.AccessToken)
-			require.Equal(t, map[string]bool{"static-pods": true, "extensions": true}, template.Spec.FeatureGates)
+			require.Equal(t, map[string]bool{"static-pods": true, "extensions": true, "registry-routes": true}, template.Spec.FeatureGates)
 			names := make([]string, 0, len(template.Spec.Extensions))
 			for _, ext := range template.Spec.Extensions {
 				names = append(names, ext.Name)
