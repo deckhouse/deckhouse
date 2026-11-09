@@ -3,7 +3,7 @@ module github.com/deckhouse/deckhouse
 go 1.26.4
 
 require (
-	fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl v0.24.0
+	fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl v0.24.1
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/benjamintf1/unmarshalledmatchers v0.0.0-20190408201839-bb1c1f34eaea
@@ -104,7 +104,7 @@ require (
 	atomicgo.dev/schedule v0.1.0 // indirect
 	cel.dev/expr v0.25.2 // indirect
 	dario.cat/mergo v1.0.2 // indirect
-	fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection v0.18.1 // indirect
+	fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection v0.18.2 // indirect
 	fox.flant.com/deckhouse/cluster-and-infrastructure/libs/oteljsonl v0.1.1 // indirect
 	github.com/ProtonMail/go-crypto v1.4.1 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
