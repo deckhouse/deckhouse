@@ -28,7 +28,7 @@ import (
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        moduleQueue,
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 60},
 }, getFeatureGatesHandler)
 
 type featureGatesResult struct {
@@ -94,18 +94,13 @@ func isFeatureGateDeprecatedInFutureVersions(currentVersion KubernetesVersion, f
 }
 
 func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
-	k8sVersionStr := input.Values.Get("global.discovery.targetKubernetesVersion").String()
+	// Match the version rendered by daemonset.yaml, including intermediate upgrade steps.
+	// Run after effective_kubernetes_version.go (Order 50) to use this reconciliation's value.
+	k8sVersionStr := input.Values.Get("controlPlaneManager.internal.effectiveKubernetesVersion").String()
 
-	// An empty target means the global target_kubernetes_version hook has not published yet, or
-	// failed. Fail rather than publish an empty allow-list: these values feed --feature-gates on
-	// apiserver/controller-manager/scheduler/kubelet via arguments.yaml and daemonset.yaml, so
-	// "no gates" would silently strip the operator's enabledFeatureGates from the control plane.
-	//
-	// effective_kubernetes_version.go already errors on the same input; it only happens to shield
-	// this hook today because it runs at a higher OnBeforeHelm Order (50 vs 5) and aborts the module
-	// run. Relying on hook ordering is not a contract — both consumers must agree on their own.
+	// An empty version must not silently strip the configured gates from the control plane.
 	if k8sVersionStr == "" {
-		return fmt.Errorf("kubernetesVersion required (global.discovery.targetKubernetesVersion is empty)")
+		return fmt.Errorf("kubernetesVersion required (controlPlaneManager.internal.effectiveKubernetesVersion is empty)")
 	}
 
 	result := featureGatesResult{
@@ -116,6 +111,22 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 	}
 
 	currentVersion := KubernetesVersion(k8sVersionStr).Normalize()
+
+	// Match node-manager: kubelet follows min(target, observed apiserver minimum).
+	// effective can already describe the next control-plane step while apiservers are still old.
+	minAPIServerValue := input.Values.Get("controlPlaneManager.internal.minAPIServerKubernetesVersion")
+	if !minAPIServerValue.Exists() {
+		return fmt.Errorf("controlPlaneManager.internal.minAPIServerKubernetesVersion has not been calculated")
+	}
+	kubeletVersion := KubernetesVersion(input.Values.Get("global.discovery.targetKubernetesVersion").String()).Normalize()
+	minAPIServerVersion := KubernetesVersion(minAPIServerValue.String()).Normalize()
+	if minAPIServerVersion != "" && (kubeletVersion == "" || kubeletVersion.IsGreaterThan(minAPIServerVersion)) {
+		kubeletVersion = minAPIServerVersion
+	}
+	if kubeletVersion == "" {
+		return fmt.Errorf("cannot determine kubelet Kubernetes version")
+	}
+	kubeletFeatures := FeatureGatesMap[string(kubeletVersion)]
 
 	userFeatureGates := input.Values.Get("controlPlaneManager.enabledFeatureGates").Array()
 
@@ -136,6 +147,12 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 			continue
 		}
 
+		// Kubelet may still use an older version whose gate policy differs from the control plane.
+		kubeletInfo := kubeletFeatures.GetFeatureGateInfo("kubelet", featureName)
+		if kubeletInfo.Exists && !kubeletInfo.IsForbidden && !kubeletInfo.IsDeprecated {
+			result.Kubelet = append(result.Kubelet, featureName)
+		}
+
 		if currentFeatures.IsForbidden(featureName) {
 			currentlyForbiddenFeatureGates[featureName] = true
 			continue
@@ -146,8 +163,9 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 			continue
 		}
 
-		components := []string{"apiserver", "kubeControllerManager", "kubeScheduler", "kubelet"}
-		featureExistsInAnyComponent := false
+		components := []string{"apiserver", "kubeControllerManager", "kubeScheduler"}
+		// Existence is judged by the effective version: a lagging kubelet does not make a gate unknown.
+		featureExistsInAnyComponent := currentFeatures.GetFeatureGateInfo("kubelet", featureName).Exists
 		for _, component := range components {
 			info := currentFeatures.GetFeatureGateInfo(component, featureName)
 
@@ -160,8 +178,6 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 					result.KubeControllerManager = append(result.KubeControllerManager, featureName)
 				case "kubeScheduler":
 					result.KubeScheduler = append(result.KubeScheduler, featureName)
-				case "kubelet":
-					result.Kubelet = append(result.Kubelet, featureName)
 				}
 			}
 		}

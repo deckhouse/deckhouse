@@ -40,6 +40,7 @@ type input struct {
 	nodeVersions         []string
 	configVersion        string
 	controlPlaneVersions []string
+	apiserverVersions    []string // nil uses controlPlaneVersions; an empty slice models bootstrap
 
 	// The three interchangeable sources of the maxUsed floor, in descending freshness. An empty
 	// string means "this source has nothing", which is a supported state for each of them.
@@ -149,7 +150,9 @@ data:
 	for index, controlPlaneVersion := range caseInput.controlPlaneVersions {
 		kubeApiserverManifest := strings.ReplaceAll(kubeApiserverPodTemplate, "<<PLACEHOLDER>>", controlPlaneVersion)
 		kubeApiserverManifest = strings.ReplaceAll(kubeApiserverManifest, "<<INDEX>>", strconv.Itoa(index))
-		b.WriteString(kubeApiserverManifest)
+		if caseInput.apiserverVersions == nil {
+			b.WriteString(kubeApiserverManifest)
+		}
 
 		kubeControllerManager := strings.ReplaceAll(kubeControllerManagerPodTemplate, "<<PLACEHOLDER>>", controlPlaneVersion)
 		kubeControllerManager = strings.ReplaceAll(kubeControllerManager, "<<INDEX>>", strconv.Itoa(index))
@@ -158,6 +161,11 @@ data:
 		kubeSchedulerManifest := strings.ReplaceAll(kubeSchedulerPodTemplate, "<<PLACEHOLDER>>", controlPlaneVersion)
 		kubeSchedulerManifest = strings.ReplaceAll(kubeSchedulerManifest, "<<INDEX>>", strconv.Itoa(index))
 		b.WriteString(kubeSchedulerManifest)
+	}
+
+	for index, version := range caseInput.apiserverVersions {
+		manifest := strings.ReplaceAll(kubeApiserverPodTemplate, "<<PLACEHOLDER>>", version)
+		b.WriteString(strings.ReplaceAll(manifest, "<<INDEX>>", strconv.Itoa(index)))
 	}
 
 	// Both Secret keys are omitted rather than emitted empty when unset: an empty value is not the
@@ -447,6 +455,39 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: effective_kuberne
 				},
 			),
 		)
+	})
+
+	Context("Observed apiserver minimum", func() {
+		f := HookExecutionConfigInit(`{"controlPlaneManager":{"internal": {}}}`, `{}`)
+
+		DescribeTable("publishes only the apiserver minimum",
+			func(controlPlaneVersions, apiserverVersions []string, want string) {
+				setStateFromTestCase(f, input{
+					nodeVersions: []string{"v1.33.1"}, configVersion: "1.33",
+					maxUsedControlPlaneVersion: "1.34",
+					controlPlaneVersions:       controlPlaneVersions, apiserverVersions: apiserverVersions,
+				})
+				f.RunHook()
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.ValuesGet("controlPlaneManager.internal.minAPIServerKubernetesVersion").String()).To(Equal(want))
+			},
+			Entry("mixed apiserver versions", []string{"1.34"}, []string{"1.34.2", "1.33.12"}, "1.33"),
+			Entry("old scheduler and controller-manager do not lower it", []string{"1.33"}, []string{"1.34.2", "1.34.1"}, "1.34"),
+			Entry("bootstrap has no observed apiserver minimum", []string{"1.33"}, []string{}, ""),
+		)
+
+		It("fails on an invalid observed version without publishing a new minimum", func() {
+			setStateFromTestCase(f, input{
+				nodeVersions: []string{"v1.33.1"}, configVersion: "1.34",
+				maxUsedControlPlaneVersion: "1.33",
+				controlPlaneVersions:       []string{"1.33"}, apiserverVersions: []string{"invalid-version"},
+			})
+			f.ValuesSet("controlPlaneManager.internal.minAPIServerKubernetesVersion", "1.33")
+			f.RunHook()
+			Expect(f).NotTo(ExecuteSuccessfully())
+			Expect(f.GoHookError.Error()).To(ContainSubstring("invalid semver"))
+			Expect(f.ValuesGet("controlPlaneManager.internal.minAPIServerKubernetesVersion").String()).To(Equal("1.33"))
+		})
 	})
 
 	Context("ModuleConfig kubernetesVersion override", func() {

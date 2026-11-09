@@ -165,6 +165,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 type controlPlanePod struct {
 	Name       string
+	Component  string
 	K8sVersion string
 }
 
@@ -181,7 +182,7 @@ func ekvFilterControlPlaneAnnotations(unstructured *unstructured.Unstructured) (
 		return nil, nil
 	}
 
-	return controlPlanePod{Name: pod.Name, K8sVersion: k8sVersion}, nil
+	return controlPlanePod{Name: pod.Name, Component: pod.Labels["component"], K8sVersion: k8sVersion}, nil
 }
 
 func ekvFilterNode(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -296,7 +297,7 @@ func handleEffectiveK8sVersion(ctx context.Context, input *go_hook.HookInput, dc
 	}
 
 	// process pods snapshot
-	minControlPlaneVersion, maxControlPlaneVersion, err := ekvProcessPodsSnapshot(ctx, input, dc)
+	minControlPlaneVersion, maxControlPlaneVersion, minAPIServerVersion, err := ekvProcessPodsSnapshot(ctx, input, dc)
 	if err != nil {
 		return err
 	}
@@ -363,6 +364,11 @@ func handleEffectiveK8sVersion(ctx context.Context, input *go_hook.HookInput, dc
 	resultStr := fmt.Sprintf("%d.%d", effectiveKubernetesVersion.Major(), effectiveKubernetesVersion.Minor())
 
 	input.Values.Set("controlPlaneManager.internal.effectiveKubernetesVersion", resultStr)
+	minAPIServerVersionStr := ""
+	if minAPIServerVersion != nil {
+		minAPIServerVersionStr = fmt.Sprintf("%d.%d", minAPIServerVersion.Major(), minAPIServerVersion.Minor())
+	}
+	input.Values.Set("controlPlaneManager.internal.minAPIServerKubernetesVersion", minAPIServerVersionStr)
 	input.MetricsCollector.Set("d8_kubernetes_version", 1, map[string]string{"k8s_version": resultStr})
 
 	// Step 2 of 2: computed after the switch, which is why the floor above is a separate value — the
@@ -417,16 +423,17 @@ func handleEffectiveK8sVersion(ctx context.Context, input *go_hook.HookInput, dc
 }
 
 // process control plane pods snapshot with annotation, gettings minimum and maximum from control-plane-pods
-// returns minControlPlaneVersion, maxControlPlaneVersion and error
-func ekvProcessPodsSnapshot(_ context.Context, input *go_hook.HookInput, dc dependency.Container) (*semver.Version, *semver.Version, error) {
+// returns the control-plane minimum and maximum, the observed apiserver minimum, and an error.
+// A nil apiserver minimum means no annotated apiserver Pods were observed (bootstrap).
+func ekvProcessPodsSnapshot(_ context.Context, input *go_hook.HookInput, dc dependency.Container) (*semver.Version, *semver.Version, *semver.Version, error) {
 	controlPlaneVersions, err := sdkobjectpatch.UnmarshalToStruct[controlPlanePod](input.Snapshots, "control_plane_versions")
 	if err != nil {
-		return nil, nil, fmt.Errorf("unmarshal control_plane_versions: %w", err)
+		return nil, nil, nil, fmt.Errorf("unmarshal control_plane_versions: %w", err)
 	}
 
 	var apiserverExists bool
 	for _, pod := range controlPlaneVersions {
-		if strings.Contains(pod.Name, "kube-apiserver") {
+		if pod.Component == "kube-apiserver" {
 			apiserverExists = true
 			break
 		}
@@ -437,12 +444,12 @@ func ekvProcessPodsSnapshot(_ context.Context, input *go_hook.HookInput, dc depe
 
 		k8sClient, err := dc.GetK8sClient()
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		verInfo, err := k8sClient.Discovery().ServerVersion()
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		controlPlaneVersions = []controlPlanePod{{
@@ -451,18 +458,22 @@ func ekvProcessPodsSnapshot(_ context.Context, input *go_hook.HookInput, dc depe
 		}}
 	}
 
+	var minAPIServerVersion *semver.Version
 	controlPlaneVs := make([]*semver.Version, len(controlPlaneVersions))
 	for i, pod := range controlPlaneVersions {
 		v, err := semver.NewVersion(pod.K8sVersion)
 		if err != nil {
-			return nil, nil, fmt.Errorf("control_plane_version: %s has invalid semver: %s", pod.Name, pod.K8sVersion)
+			return nil, nil, nil, fmt.Errorf("control_plane_version: %s has invalid semver: %s", pod.Name, pod.K8sVersion)
 		}
 		controlPlaneVs[i] = v
+		if pod.Component == "kube-apiserver" && (minAPIServerVersion == nil || v.LessThan(minAPIServerVersion)) {
+			minAPIServerVersion = v
+		}
 	}
 
 	sort.Sort(semver.Collection(controlPlaneVs))
 
-	return controlPlaneVs[0], controlPlaneVs[len(controlPlaneVs)-1], nil
+	return controlPlaneVs[0], controlPlaneVs[len(controlPlaneVs)-1], minAPIServerVersion, nil
 }
 
 // determine minimum and maximum node versions
