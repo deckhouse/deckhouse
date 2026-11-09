@@ -177,25 +177,6 @@ jobs:
         run: /tmp/check-external-module.sh --module-path "$(pwd)"
 ```
 
-## Working with spellchecker
-
-> Run the following commands from the root of the repository.
-
-Spellchecking commands:
-
-- `make docs-spellcheck`: Check all documentation in the repository for spelling errors.
-- `file=<PATH_TO_FILE> make docs-spellcheck`: Check a specific file for spelling errors.
-
-  Example:
-
-  ```shell
-  file=ee/se-plus/modules/030-cloud-provider-vsphere/docs/CONFIGURATION_RU.md make docs-spellcheck
-  ```
-
-- `make docs-spellcheck-generate-dictionary`: Generate a word dictionary. Run it after adding new words to the `tools/docs/spelling/wordlist` file.
-- `make docs-spellcheck-get-typos-list`: Get a sorted list of typos from the documentation.
-- `make lint-doc-spellcheck-pr`: Used in CI to check the spelling of documentation in a PR.
-
 ## Architecture (WIP)
 
 > [!NOTE]
@@ -735,7 +716,7 @@ Changing the text of a term needs no other action. Removing a term breaks the li
 
 ### Checks
 
-`make docs-glossary-check` (`tools/docs/glossary/check.sh`) verifies that every term has both language files with non-empty `title` and `description`, that ids are kebab-case and that every `glossary.html#<anchor>` in the documentation, module docs, CRDs and OpenAPI schemas points to an existing term. Term files are also covered by `make lint-markdown` and `make docs-spellcheck`.
+`make docs-glossary-check` (`tools/docs/glossary/check.sh`) verifies that every term has both language files with non-empty `title` and `description`, that ids are kebab-case and that every `glossary.html#<anchor>` in the documentation, module docs, CRDs and OpenAPI schemas points to an existing term. Term files are also covered by `make lint-markdown`.
 
 ## Search
 

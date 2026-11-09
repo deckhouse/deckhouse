@@ -26,7 +26,7 @@ up: werf-bin ## Start documentation containers in a werf watch mode (rebuilding 
 			echo "\nStarting documentation in a watch mode using local docker images store..."; \
 		fi
 		@echo -n "\nwerf: "; $(WERF_BIN) version
-		@$(WERF_BIN) compose up --follow --docker-compose-command-options='-d --force-recreate' --env local --repo $(WERF_REPO) --skip-image-spec-stage=true
+		@$(WERF_BIN) compose up --follow --docker-compose-command-options='-d --force-recreate' --env local --repo $(WERF_REPO)
 
 dev: werf-bin ## Start documentation containers in a werf watch mode (rebuilding on any documentation changes)
 		##~ Options: [USE_LOCALHOST_REPO=1]
@@ -37,7 +37,7 @@ dev: werf-bin ## Start documentation containers in a werf watch mode (rebuilding
 			echo "\nStarting documentation in a DEV watch mode using local docker images store..."; \
 		fi
 		@echo -n "\nwerf: "; $(WERF_BIN) version
-		@$(WERF_BIN) compose up --follow --docker-compose-command-options='-d --force-recreate' --dev --env development --repo $(WERF_REPO) --skip-image-spec-stage=true
+		@$(WERF_BIN) compose up --follow --docker-compose-command-options='-d --force-recreate' --dev --env development --repo $(WERF_REPO)
 
 external-module: werf-bin ## Watch external module docs and run the local portal
 		##~ Options: MODULE_PATH=/path/to/module [CHANNEL=alpha] [MODULE_VERSION=v0.1.0] [USE_LOCALHOST_REPO=1]
@@ -56,7 +56,7 @@ external-module: werf-bin ## Watch external module docs and run the local portal
 		kill -0 $$HUGO_PID; \
 		$(MAKE) free-port-80; \
 		echo -n "\nwerf: "; $(WERF_BIN) version; \
-		$(WERF_BIN) compose up --follow --docker-compose-command-options='-d --force-recreate' --dev --env development --repo $(WERF_REPO) --skip-image-spec-stage=true
+		$(WERF_BIN) compose up --follow --docker-compose-command-options='-d --force-recreate' --dev --env development --repo $(WERF_REPO)
 
 ai-export: ## Generate the AI export (per-page .md, external-llms.txt, external-corpus.json) for external modules
 		##~ Options: [AI_EXPORT_SRC=backends/docs-builder-template] [HUGO_IMAGE=ghcr.io/gohugoio/hugo:vX.Y.Z]
