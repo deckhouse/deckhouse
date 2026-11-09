@@ -45,27 +45,35 @@ func init() {
 
 // check compares what a release requires against what the cluster is running.
 //
-// An absent value passes: a cluster that recorded nothing is one whose registry module has not run
-// yet, and blocking an update on missing information would strand it.
+// A value that is absent or not a string refuses. The module's hook seeds Legacy when the process
+// starts and replaces it on its first pass, so neither happens while the module is enabled; if a
+// change ever breaks that, a release that removes code this cluster may still depend on is the
+// wrong thing to let through on missing information. With the module disabled this check is not
+// consulted at all.
 func check(required string, getter requirements.ValueGetter) (bool, error) {
 	raw, exists := getter.Get(ImplementationKey)
-	if !exists {
-		return true, nil
-	}
-
 	current, ok := raw.(string)
-	if !ok {
-		return true, nil
+	if !exists || !ok {
+		return false, fmt.Errorf(
+			"this release requires the %q registry implementation, and the `registry` module has "+
+				"not recorded which one this cluster depends on; wait for the module to reconcile",
+			required)
 	}
 	if current == required {
 		return true, nil
 	}
 
-	// The advice names the only lever there is: no setting selects an implementation, and the
-	// handover happens on its own once the previous implementation has let go of the pull path.
+	// The advice names what an operator can do on THIS release, mode by mode, because no setting
+	// selects an implementation: the handover happens on its own after the update, once the previous
+	// implementation has let go of the pull path or, in `Direct`, once its replacement is configured.
 	return false, fmt.Errorf(
-		"this release requires the %q registry implementation, and the cluster is running %q; "+
-			"bring `registry.mode` in the deckhouse ModuleConfig to Unmanaged and wait for that "+
-			"transition to finish, after which the handover completes on its own",
+		"this release requires the %q registry implementation and removes the previous (v1) "+
+			"implementation of the `registry` module, which this cluster still depends on (%q); "+
+			"before the update, migrate as described in \"Migrating from the previous implementation "+
+			"to the current one\" on the documentation page \"Managing the registry in DP-managed "+
+			"clusters\": from `Proxy`, set `registry.mode` in the `deckhouse` ModuleConfig to "+
+			"`Unmanaged` and wait for the switch to finish; from `Local`, follow the procedure for "+
+			"air-gapped clusters; from `Direct`, configure the `registry` ModuleConfig with "+
+			"`mode: Managed` and `primary.upstream`; this requirement is met on its own once that is done",
 		required, current)
 }

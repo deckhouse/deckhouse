@@ -18,6 +18,7 @@ package implementation
 
 import (
 	"encoding/json"
+	"os"
 	"testing"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -100,6 +101,112 @@ func TestHandleImplementationTellsAbsenceFromUnreadability(t *testing.T) {
 
 		assert.Equal(t, ImplementationV2, recorded(t, snaps))
 	})
+}
+
+// TestDesiredModeReachesTheDecision covers the binding on the `deckhouse` ModuleConfig: what an
+// operator has asked of the previous implementation refuses even while its recorded state still
+// admits.
+func TestDesiredModeReachesTheDecision(t *testing.T) {
+	withDesired := func(snaps snapshots, mode any) snapshots {
+		snaps[desiredModeSnapName] = []sdkpkg.Snapshot{snapshot{value: mode}}
+		return snaps
+	}
+
+	t.Run("state Unmanaged, Proxy asked for", func(t *testing.T) {
+		snaps := withDesired(legacyStateSnapshot(legacyState{Mode: "Unmanaged"}), "Proxy")
+		assert.Equal(t, ImplementationLegacy, recorded(t, snaps))
+	})
+
+	t.Run("state Direct with the module configured, so V2-ready, and Proxy asked for", func(t *testing.T) {
+		snaps := withDesired(legacyStateSnapshot(legacyState{Mode: "Direct"}), "Proxy")
+		snaps[moduleConfigSnapName] = []sdkpkg.Snapshot{snapshot{value: true}}
+		assert.Equal(t, ImplementationLegacy, recorded(t, snaps))
+	})
+
+	t.Run("no state, Local asked for", func(t *testing.T) {
+		assert.Equal(t, ImplementationLegacy, recorded(t, withDesired(snapshots{}, "Local")))
+	})
+
+	t.Run("no state, Unmanaged asked for", func(t *testing.T) {
+		assert.Equal(t, ImplementationV2, recorded(t, withDesired(snapshots{}, "Unmanaged")))
+	})
+
+	t.Run("state Direct with the module configured, and Unmanaged asked for", func(t *testing.T) {
+		snaps := withDesired(legacyStateSnapshot(legacyState{Mode: "Direct"}), "Unmanaged")
+		snaps[moduleConfigSnapName] = []sdkpkg.Snapshot{snapshot{value: true}}
+		assert.Equal(t, ImplementationLegacy, recorded(t, snaps))
+	})
+
+	t.Run("a snapshot that is not a mode: refused rather than guessed", func(t *testing.T) {
+		assert.Equal(t, ImplementationLegacy, recorded(t, withDesired(snapshots{}, map[string]any{"mode": "Proxy"})))
+	})
+}
+
+// seededAtStart is what the store held when the tests started, before any of them touched it: what
+// the package recorded on its own when the process started.
+var seededAtStart any
+
+func TestMain(m *testing.M) {
+	seededAtStart, _ = requirements.GetValue(registry_requirements.ImplementationKey)
+	os.Exit(m.Run())
+}
+
+// TestValueIsLegacyUntilDecided pins the seed the package writes when the process starts: until the
+// hook's first pass the release check reads Legacy and refuses, and the first pass replaces it.
+func TestValueIsLegacyUntilDecided(t *testing.T) {
+	assert.Equal(t, ImplementationLegacy, seededAtStart, "the package records Legacy before the hook has run")
+
+	requirements.RemoveValue(registry_requirements.ImplementationKey)
+	recordUndecided()
+
+	value, found := requirements.GetValue(registry_requirements.ImplementationKey)
+	require.True(t, found)
+	assert.Equal(t, ImplementationLegacy, value)
+
+	ok, err := requirements.CheckRequirement(registry_requirements.ImplementationKey, ImplementationV2)
+	require.Error(t, err)
+	assert.False(t, ok)
+
+	require.NoError(t, handleImplementation(t.Context(), &go_hook.HookInput{
+		Snapshots: snapshots{},
+		Logger:    log.NewNop(),
+	}))
+	value, _ = requirements.GetValue(registry_requirements.ImplementationKey)
+	assert.Equal(t, ImplementationV2, value, "a cluster that never ran the previous implementation")
+
+	ok, err = requirements.CheckRequirement(registry_requirements.ImplementationKey, ImplementationV2)
+	require.NoError(t, err)
+	assert.True(t, ok)
+}
+
+// TestFilterDesiredMode reads the mode out of the `deckhouse` ModuleConfig and never fails: an error
+// would drop the object from the snapshot, which reads as nothing asked for and admits.
+func TestFilterDesiredMode(t *testing.T) {
+	mc := func(settings map[string]any) *unstructured.Unstructured {
+		return &unstructured.Unstructured{Object: map[string]any{
+			"apiVersion": "deckhouse.io/v1alpha1",
+			"kind":       "ModuleConfig",
+			"metadata":   map[string]any{"name": "deckhouse"},
+			"spec":       map[string]any{"version": int64(1), "settings": settings},
+		}}
+	}
+
+	for _, tc := range []struct {
+		name     string
+		settings map[string]any
+		want     string
+	}{
+		{name: "Proxy", settings: map[string]any{"registry": map[string]any{"mode": "Proxy"}}, want: "Proxy"},
+		{name: "no registry section: the schema default", settings: map[string]any{"releaseChannel": "Stable"}, want: "Unmanaged"},
+		{name: "no settings: the schema default", settings: nil, want: "Unmanaged"},
+		{name: "a mode that is not a string", settings: map[string]any{"registry": map[string]any{"mode": int64(1)}}, want: desiredModeUnreadable},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := filterDesiredMode(mc(tc.settings))
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, result)
+		})
+	}
 }
 
 // TestFilterLegacyStateNormalisesWhatItCannotRead pins the answer to "why does this filter never

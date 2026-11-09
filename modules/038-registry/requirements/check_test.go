@@ -49,20 +49,37 @@ func TestCheck(t *testing.T) {
 		ok, err := check("V2", getter{})
 		require.Error(t, err)
 		assert.False(t, ok)
-		// The advice has to name something an operator can act on, and no setting selects an
-		// implementation — so the message points at the previous implementation's mode.
-		assert.Contains(t, err.Error(), "Unmanaged")
+		// The advice has to name something an operator can do on this release, for each mode that
+		// refuses, and no setting selects an implementation.
+		for _, step := range []string{
+			"Migrating from the previous implementation to the current one",
+			"`Unmanaged`",
+			"air-gapped",
+			"`mode: Managed` and `primary.upstream`",
+		} {
+			assert.Contains(t, err.Error(), step)
+		}
 		assert.NotContains(t, err.Error(), "implementation: V2",
 			"nothing accepts that setting, and telling an operator to set it sends them looking")
 	})
 
-	// Passing rather than blocking: a cluster with no recorded value has not reported yet, and
-	// stranding it on missing information would be worse than letting the update through.
+	// Refusing rather than passing: the module's hook seeds a value when the process starts, so
+	// nothing should ever read an absent one, and if something does, letting a release through that
+	// removes code the cluster may depend on is the wrong way to fail.
 	t.Run("a cluster that has recorded nothing", func(t *testing.T) {
 		requirements.RemoveValue(ImplementationKey)
 
 		ok, err := check("V2", getter{})
-		require.NoError(t, err)
-		assert.True(t, ok)
+		require.Error(t, err)
+		assert.False(t, ok)
+	})
+
+	t.Run("a value that is not a string", func(t *testing.T) {
+		requirements.RemoveValue(ImplementationKey)
+		requirements.SaveValue(ImplementationKey, true)
+
+		ok, err := check("V2", getter{})
+		require.Error(t, err)
+		assert.False(t, ok)
 	})
 }

@@ -32,6 +32,7 @@ func TestDecide(t *testing.T) {
 	for _, tc := range []struct {
 		name       string
 		legacy     *legacyState
+		desired    string
 		configured bool
 		want       string
 	}{
@@ -84,9 +85,83 @@ func TestDecide(t *testing.T) {
 			legacy: &legacyState{},
 			want:   ImplementationLegacy,
 		},
+
+		// The desired mode in the `deckhouse` ModuleConfig runs ahead of the recorded state, which
+		// learns of it only on the next render of module `deckhouse`. These rows are that gap.
+		{
+			name:    "Unmanaged with Proxy asked for: refused before the state has heard of it",
+			legacy:  &legacyState{Mode: "Unmanaged"},
+			desired: "Proxy",
+			want:    ImplementationLegacy,
+		},
+		{
+			name:    "no state at all with Local asked for: refused, the previous implementation is about to take the cluster",
+			legacy:  nil,
+			desired: "Local",
+			want:    ImplementationLegacy,
+		},
+		{
+			name:       "Direct and configured, the case that is admitted, with Proxy asked for: refused",
+			legacy:     &legacyState{Mode: "Direct"},
+			desired:    "Proxy",
+			configured: true,
+			want:       ImplementationLegacy,
+		},
+		{
+			name:       "Unmanaged with Direct asked for: refused, a switch into Direct is in flight",
+			legacy:     &legacyState{Mode: "Unmanaged"},
+			desired:    "Direct",
+			configured: true,
+			want:       ImplementationLegacy,
+		},
+		{
+			name:       "Direct asked for and already recorded: the state decides",
+			legacy:     &legacyState{Mode: "Direct", TargetMode: "Direct"},
+			desired:    "Direct",
+			configured: true,
+			want:       ImplementationV2,
+		},
+		{
+			name:    "Unmanaged asked for and recorded: the state decides",
+			legacy:  &legacyState{Mode: "Unmanaged"},
+			desired: "Unmanaged",
+			want:    ImplementationV2,
+		},
+		{
+			name:       "Direct and configured with Unmanaged asked for: refused, a switch out of Direct is in flight",
+			legacy:     &legacyState{Mode: "Direct", TargetMode: "Direct"},
+			desired:    "Unmanaged",
+			configured: true,
+			want:       ImplementationLegacy,
+		},
+		{
+			name:       "Direct and configured with no deckhouse ModuleConfig to read: the state decides",
+			legacy:     &legacyState{Mode: "Direct", TargetMode: "Direct"},
+			desired:    "",
+			configured: true,
+			want:       ImplementationV2,
+		},
+		{
+			name:    "no state at all with Unmanaged asked for: nothing to switch",
+			legacy:  nil,
+			desired: "Unmanaged",
+			want:    ImplementationV2,
+		},
+		{
+			name:    "Unmanaged asked for while Proxy is recorded: the switch has not finished",
+			legacy:  &legacyState{Mode: "Proxy"},
+			desired: "Unmanaged",
+			want:    ImplementationLegacy,
+		},
+		{
+			name:    "a desired mode this code does not know: refused rather than guessed",
+			legacy:  nil,
+			desired: desiredModeUnreadable,
+			want:    ImplementationLegacy,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, decide(tc.legacy, tc.configured))
+			assert.Equal(t, tc.want, decide(tc.legacy, tc.desired, tc.configured))
 		})
 	}
 }

@@ -53,6 +53,21 @@ type legacyState struct {
 // — its Service, its in-cluster proxy — so a cluster whose nodes still point at the in-cluster
 // address would be left with an address nobody serves.
 //
+// Two inputs describe the previous implementation. `legacy` is what it has recorded, `desiredMode`
+// is what the operator has asked of it in the `deckhouse` ModuleConfig. The second runs ahead of
+// the first: the recorded state learns of a new mode only when module `deckhouse` renders it again,
+// and a release checked in that gap would be judged by the mode the cluster is leaving.
+//
+//   - A desired `Proxy` or `Local`, or any mode this code does not know: refused, whatever the
+//     state says. The operator has asked for exactly what the upgrade cannot carry.
+//   - A desired `Direct` or `Unmanaged` that is not yet the recorded mode: refused, as a transition
+//     in flight. Leaving `Direct` for `Unmanaged` moves every node off the in-cluster address, and
+//     the next release would find that switch half done.
+//   - No desired mode at all, because there is no `deckhouse` ModuleConfig to read: nothing to
+//     compare with.
+//
+// Otherwise the recorded state decides:
+//
 //   - No state at all: the previous implementation never took the cluster.
 //   - `Unmanaged`: it has already let go of the pull path, and the nodes pull from a registry named
 //     in the configuration rather than from anything the upgrade deletes.
@@ -66,7 +81,24 @@ type legacyState struct {
 //
 // A transition in flight refuses in every case: a cluster being reconfigured right now is not a
 // cluster to upgrade.
-func decide(legacy *legacyState, moduleConfigured bool) string {
+func decide(legacy *legacyState, desiredMode string, moduleConfigured bool) string {
+	switch desiredMode {
+	case "":
+		// No `deckhouse` ModuleConfig: the recorded state alone decides.
+	case "Unmanaged":
+		// No state is a cluster the previous implementation never took, and asking it for
+		// `Unmanaged` changes nothing there.
+		if legacy != nil && legacy.Mode != desiredMode {
+			return ImplementationLegacy
+		}
+	case "Direct":
+		if legacy == nil || legacy.Mode != desiredMode {
+			return ImplementationLegacy
+		}
+	default:
+		return ImplementationLegacy
+	}
+
 	if legacy == nil {
 		return ImplementationV2
 	}

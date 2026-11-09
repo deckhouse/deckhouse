@@ -35,7 +35,34 @@ import (
 const (
 	legacyStateSnapName  = "legacy-state"
 	moduleConfigSnapName = "module-config"
+	desiredModeSnapName  = "desired-mode"
+
+	// desiredModeUnreadable stands for a `registry.mode` in the `deckhouse` ModuleConfig that is not
+	// a string. Any value `decide` does not know refuses, so this one does too.
+	desiredModeUnreadable = "<unreadable>"
 )
+
+// The value starts as Legacy, before this hook has run even once, so that it is never absent while
+// the module runs.
+//
+// Every start of the controller process — a restart, a new leader — begins with nothing recorded,
+// and a release requiring V2 must not be judged on a cluster nobody has looked at yet. `check`
+// refuses an absent value as well; the seed makes that state visible as what it means
+// (`deckhouse-controller requirements` shows Legacy) instead of resting on a fallback.
+//
+// A cluster that is V2 does not notice it. A minor release is checked only once the controller
+// reports ready, which is after the first converge of every enabled module, and this hook runs in
+// that converge (OnBeforeHelm) and replaces the seed. What can still read the seed is a manual
+// approval of such a release made during that first converge: it is refused and can be repeated
+// once the controller is ready. With the module disabled the seed stays and nothing reads it, since
+// the check of a disabled module is skipped.
+func init() {
+	recordUndecided()
+}
+
+func recordUndecided() {
+	requirements.SaveValue(registry_requirements.ImplementationKey, ImplementationLegacy)
+}
 
 var _ = sdk.RegisterFunc(
 	&go_hook.HookConfig{
@@ -64,6 +91,18 @@ var _ = sdk.RegisterFunc(
 					MatchNames: []string{"registry"},
 				},
 				FilterFunc: filterModuleConfig,
+			},
+			{
+				// The mode the operator has asked the previous implementation for. It changes before
+				// the recorded state does, so a cluster asked to move to `Proxy` or `Local` is
+				// refused from that moment rather than from the next render of module `deckhouse`.
+				Name:       desiredModeSnapName,
+				ApiVersion: "deckhouse.io/v1alpha1",
+				Kind:       "ModuleConfig",
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"deckhouse"},
+				},
+				FilterFunc: filterDesiredMode,
 			},
 		},
 	},
@@ -116,6 +155,24 @@ func filterModuleConfig(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 	return mode == "Managed" && hasPrimary, nil
 }
 
+// filterDesiredMode reads `spec.settings.registry.mode` of the `deckhouse` ModuleConfig. A mode that
+// is not set is `Unmanaged`, the schema default that module `deckhouse` renders for it: removing the
+// setting from a `Direct` cluster starts the same switch as writing `Unmanaged`.
+//
+// It never returns an error, for the reason `filterLegacyState` gives: an object dropped from the
+// snapshot reads as "nothing asked for", which admits. A mode that is not a string cannot pass the
+// ModuleConfig schema, and is reported as a mode `decide` does not know, which refuses.
+func filterDesiredMode(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	mode, found, err := unstructured.NestedString(obj.Object, "spec", "settings", "registry", "mode")
+	switch {
+	case err != nil:
+		return desiredModeUnreadable, nil
+	case !found || mode == "":
+		return "Unmanaged", nil
+	}
+	return mode, nil
+}
+
 func handleImplementation(_ context.Context, input *go_hook.HookInput) error {
 	// "The previous implementation never recorded a state" and "it recorded one this code cannot
 	// read" are the difference between admitting a cluster and refusing it, so the two are told
@@ -145,11 +202,22 @@ func handleImplementation(_ context.Context, input *go_hook.HookInput) error {
 		configured = value
 	}
 
-	value := decide(legacy, configured)
+	// No ModuleConfig is nothing asked of the previous implementation. A snapshot the helper cannot
+	// convert is a mode nobody can tell, which refuses.
+	desiredMode := ""
+	mode, err := helpers.SnapshotToSingle[string](input, desiredModeSnapName)
+	switch {
+	case err == nil:
+		desiredMode = mode
+	case !errors.Is(err, helpers.ErrNoSnapshot):
+		desiredMode = desiredModeUnreadable
+	}
+
+	value := decide(legacy, desiredMode, configured)
 	requirements.SaveValue(registry_requirements.ImplementationKey, value)
 
 	input.Logger.Info("recorded whether this cluster may take a release without the previous registry implementation",
-		"value", value, "moduleConfigured", configured)
+		"value", value, "desiredMode", desiredMode, "moduleConfigured", configured)
 
 	return nil
 }
