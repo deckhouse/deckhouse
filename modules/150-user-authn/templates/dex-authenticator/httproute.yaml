@@ -1,5 +1,3 @@
-{{- $moduleGateway := dict }}
-{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
 {{- $context := . }}
 {{- $dexAuthenticatorNames := .Values.userAuthn.internal.dexAuthenticatorNames | default dict -}}
 {{- range $crd := .Values.userAuthn.internal.dexAuthenticatorCRDs }}
@@ -7,7 +5,10 @@
     {{- continue }}
   {{- end }}
   {{- range $idx, $app := $crd.spec.applications }}
-  {{- if and $moduleGateway $app.gatewayAPI (include "helm_lib_kind_exists" (list $context "HTTPRoute")) }}
+  {{- /* The v1 -> v2alpha1 conversion emits a gatewayAPI object full of nulls, so gate on the name itself: */ -}}
+  {{- /* an empty parentRefs name renders a manifest the API server rejects. */ -}}
+  {{- $listenerSetName := dig "httpRouteListenerSetName" "" ($app.gatewayAPI | default dict) }}
+  {{- if and $listenerSetName (include "helm_lib_kind_exists" (list $context "HTTPRoute")) }}
   {{- $hashedDomain := sha256sum $app.domain | trunc 8 }}
   {{- $nameSuffix := "" }}
   {{- if ne $idx 0 }}
@@ -46,7 +47,7 @@ spec:
   parentRefs:
   - group: gateway.networking.k8s.io
     kind: ListenerSet
-    name: {{ $app.gatewayAPI.httpRouteListenerSetName }}
+    name: {{ $listenerSetName }}
     {{- if $app.gatewayAPI.httpRouteListenerSetNamespace }}
     namespace: {{ $app.gatewayAPI.httpRouteListenerSetNamespace }}
     {{- else }}
