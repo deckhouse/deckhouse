@@ -453,6 +453,8 @@ spec:
           env:
           - name: GOGC
             value: "50"
+          - name: DECKHOUSE_SCHEDULER_SIMULATE_ADDRESS
+            value: "127.0.0.1:10261"
           image: dev-registry.deckhouse.io/sys/deckhouse-oss@sha256:8888888888888888888888888888888888888888888888888888888888888888
           imagePullPolicy: IfNotPresent
           livenessProbe:

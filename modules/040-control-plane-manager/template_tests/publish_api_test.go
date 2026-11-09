@@ -42,6 +42,8 @@ const globalValues = `
     serviceSubnetCIDR: 10.222.0.0/16
   modulesImages:
     digests:
+      common:
+        kubeRbacProxy: sha256:abcdefgh
       controlPlaneManager:
         controlPlaneManager: sha256:abcdefgh
         etcd: sha256:abcdefgh

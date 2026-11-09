@@ -346,3 +346,15 @@ The code is in a new package, `pkg/controlplane/apiserver/licensewarning`, `serv
 ### kubelet-host-network-hosts-aliases-first.patch
 
 For `hostNetwork` Pods kubelet builds `/etc/hosts` from a copy of the node's `/etc/hosts` and appends `spec.hostAliases` after it. Resolvers take the first matching line, so an entry added to the node file by hand (for example, a stale address of Dex) shadows the Pod's `hostAliases` and breaks authentication. The patch writes the `hostAliases` block right after the kubelet header, before the node entries. Pods without `hostAliases` and Pods without `hostNetwork` get the same file as before.
+
+### scheduler-simulate-endpoint.patch
+
+Adds a dry-run scheduling endpoint to kube-scheduler: `POST /simulate` answers "which node would this Pod get right now, and why". Without it nobody outside the scheduler can tell where a Pod will land or why it landed there: the descheduler evicts blindly, and the reasons for a placement are visible only in the scheduler's debug logs.
+
+The scheduler evaluates the Pod as in a real scheduling cycle, on its live cache, with the same plugins and extenders, but places nothing and changes nothing. The answer lists every node: whether it fits, which filter or extender rejected it and why, and the score each plugin and extender gave it. The caller can exclude nodes (the source node of a live migration) and treat some Pods as already deleted (the evicted Pod, or all Pods of a node that is about to be removed). Query parameters add details: `weights=true` shows the weight behind every score, `filters=all` lists every filter a node fails instead of the first one.
+
+While a simulation runs, real scheduling waits for it, extender calls included; therefore a replica runs one simulation at a time and answers 429 to a concurrent request. `filters=all` makes a simulation longer and is meant for debugging.
+
+The endpoint listens on loopback only. `control-plane-proxy` publishes it as `/scheduler/simulate`; access is granted by the ClusterRole `d8:control-plane-manager:scheduler-simulate`.
+
+The patch is carried on 1.33 (`024`), 1.34 (`025`), 1.35 (`024`), 1.36 (`023`) and 1.37 (`022`).

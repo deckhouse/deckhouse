@@ -74,6 +74,23 @@ type AuthenticationConfigurationV1beta1 struct {
 	} `yaml:"anonymous"`
 }
 
+// controlPlaneProxyUpstreams maps the published path of control-plane-proxy to its upstream.
+func controlPlaneProxyUpstreams(ds object_store.KubeObject) map[string]string {
+	raw := ds.Field(`spec.template.spec.containers.0.env.#(name=="KUBE_RBAC_PROXY_CONFIG").value`).String()
+	var config struct {
+		Upstreams []struct {
+			Path     string `json:"path"`
+			Upstream string `json:"upstream"`
+		} `json:"upstreams"`
+	}
+	Expect(yaml.Unmarshal([]byte(raw), &config)).To(Succeed())
+	out := map[string]string{}
+	for _, u := range config.Upstreams {
+		out[u.Path] = u.Upstream
+	}
+	return out
+}
+
 func CountLinesContaining(content []byte, substring string) int {
 	lines := strings.Split(string(content), "\n")
 	count := 0
@@ -448,6 +465,12 @@ apiserver:
 				Expect(f.KubernetesResource("Service", "kube-system", "control-plane-proxy").Exists()).To(BeTrue())
 				Expect(f.KubernetesResource("ServiceAccount", "kube-system", "d8-control-plane-manager-control-plane-proxy").Exists()).To(BeTrue())
 				Expect(f.KubernetesResource("ServiceMonitor", "d8-monitoring", "control-plane-proxy").Exists()).To(BeTrue())
+				Expect(controlPlaneProxyUpstreams(f.KubernetesResource("DaemonSet", "kube-system", "control-plane-proxy"))).To(Equal(map[string]string{
+					"/controller-manager/metrics": "https://127.0.0.1:10257/metrics",
+					"/scheduler/metrics":          "https://127.0.0.1:10259/metrics",
+					"/scheduler/simulate":         "http://127.0.0.1:10261/simulate",
+					"/etcd/metrics":               "http://127.0.0.1:2381/metrics",
+				}))
 				Expect(f.KubernetesResource("ServiceMonitor", "d8-monitoring", "kube-apiserver").Exists()).To(BeTrue())
 
 				Expect(f.KubernetesGlobalResource("ClusterRole", "d8:control-plane-manager:scraper").Exists()).To(BeTrue())
@@ -489,20 +512,32 @@ apiserver:
 		Context("Prometheus module disabled", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global.enabledModules", `[]`)
+				f.ValuesSetFromYaml("global.discovery.apiVersions", `["deckhouse.io/v1alpha1/SecurityPolicyException"]`)
 				f.ValuesSet("controlPlaneManager.internal.hasEtcdArbiterNode", true)
 				f.HelmRender()
 			})
 
-			It("should not render the scrape stack", func() {
+			It("should not render the scrape stack but keep the scheduler simulate endpoint", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-				Expect(f.KubernetesResource("DaemonSet", "kube-system", "control-plane-proxy").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("ServiceMonitor", "d8-monitoring", "control-plane-proxy").Exists()).To(BeFalse())
 				Expect(f.KubernetesResource("ServiceMonitor", "d8-monitoring", "kube-apiserver").Exists()).To(BeFalse())
 				Expect(f.KubernetesGlobalResource("ClusterRole", "d8:control-plane-manager:scraper").Exists()).To(BeFalse())
 
+				// The etcd arbiter proxy only serves metrics.
 				Expect(f.KubernetesResource("DaemonSet", "kube-system", "control-plane-proxy-etcd-arbiter").Exists()).To(BeFalse())
 				Expect(f.KubernetesResource("Service", "kube-system", "control-plane-proxy-etcd-arbiter").Exists()).To(BeFalse())
 				Expect(f.KubernetesResource("ServiceMonitor", "d8-monitoring", "control-plane-proxy-etcd-arbiter").Exists()).To(BeFalse())
+
+				// The simulate endpoint does not depend on other modules: access is granted by RBAC only.
+				ds := f.KubernetesResource("DaemonSet", "kube-system", "control-plane-proxy")
+				Expect(ds.Exists()).To(BeTrue())
+				Expect(controlPlaneProxyUpstreams(ds)).To(HaveKeyWithValue("/scheduler/simulate", "http://127.0.0.1:10261/simulate"))
+				// Without the exception hostNetwork Pods of the proxy are rejected by the security policy.
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "control-plane-proxy").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("Service", "kube-system", "control-plane-proxy").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("ServiceAccount", "kube-system", "d8-control-plane-manager-control-plane-proxy").Exists()).To(BeTrue())
+				Expect(f.KubernetesGlobalResource("ClusterRole", "d8:control-plane-manager:scheduler-simulate").Exists()).To(BeTrue())
 			})
 		})
 	})
@@ -2160,12 +2195,13 @@ apiserver:
 				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "kube-controller-manager").Exists()).To(BeTrue())
 				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "kube-scheduler").Exists()).To(BeTrue())
 				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "d8-control-plane-manager").Exists()).To(BeTrue())
+				// control-plane-proxy always publishes the kube-scheduler simulate endpoint.
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "control-plane-proxy").Exists()).To(BeTrue())
 			})
 
-			It("should not render control-plane-proxy or etcd-backup exceptions without their prerequisites", func() {
+			It("should not render the etcd-backup exception without its prerequisites", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "control-plane-proxy").Exists()).To(BeFalse())
 				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "d8-etcd-backup").Exists()).To(BeFalse())
 			})
 		})

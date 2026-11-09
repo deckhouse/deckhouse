@@ -1,6 +1,5 @@
-{{- if (.Values.global.enabledModules | has "prometheus") }}
 {{- $profiles := list "main" }}
-{{- if .Values.controlPlaneManager.internal.hasEtcdArbiterNode }}
+{{- if and (.Values.global.enabledModules | has "prometheus") .Values.controlPlaneManager.internal.hasEtcdArbiterNode }}
   {{- $profiles = append $profiles "etcd-arbiter" }}
 {{- end }}
 
@@ -24,5 +23,4 @@ spec:
     port: 8080
     protocol: TCP
     targetPort: https-metrics
-{{- end }}
 {{- end }}

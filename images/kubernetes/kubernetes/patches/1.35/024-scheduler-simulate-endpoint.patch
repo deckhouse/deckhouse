@@ -1,0 +1,1727 @@
+diff --git a/cmd/kube-scheduler/app/server.go b/cmd/kube-scheduler/app/server.go
+index 834213e337f..404139b312d 100644
+--- a/cmd/kube-scheduler/app/server.go
++++ b/cmd/kube-scheduler/app/server.go
+@@ -292,6 +292,9 @@ func Run(ctx context.Context, cc *schedulerserverconfig.CompletedConfig, sched *
+ 	if !cc.ComponentConfig.DelayCacheUntilActive || cc.LeaderElection == nil {
+ 		startInformersAndWaitForSync(ctx)
+ 	}
++	// Deckhouse: dry-run scheduling endpoint, served by every replica.
++	scheduler.StartDeckhouseSimulateServer(ctx, sched, isLeader, handlerSyncReadyCh)
++
+ 	// If leader election is enabled, runCommand via LeaderElector until done and exit.
+ 	if cc.LeaderElection != nil {
+ 		if utilfeature.DefaultFeatureGate.Enabled(kubefeatures.CoordinatedLeaderElection) {
+diff --git a/pkg/scheduler/backend/cache/deckhouse_snapshot.go b/pkg/scheduler/backend/cache/deckhouse_snapshot.go
+new file mode 100644
+index 00000000000..35956e36be7
+--- /dev/null
++++ b/pkg/scheduler/backend/cache/deckhouse_snapshot.go
+@@ -0,0 +1,132 @@
++/*
++Copyright 2026 Flant JSC
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package cache
++
++import (
++	"maps"
++	"slices"
++
++	"k8s.io/apimachinery/pkg/types"
++	"k8s.io/apimachinery/pkg/util/sets"
++	"k8s.io/klog/v2"
++	fwk "k8s.io/kube-scheduler/framework"
++	"k8s.io/kubernetes/pkg/scheduler/framework"
++)
++
++// DeckhousePodRef names a scheduled Pod. Without a UID every cache entry with
++// this namespace and name matches (a recreated Pod may briefly coexist with
++// the old one); with a UID only that entry matches.
++type DeckhousePodRef struct {
++	Namespace string    `json:"namespace"`
++	Name      string    `json:"name"`
++	UID       types.UID `json:"uid,omitempty"`
++}
++
++func (r DeckhousePodRef) String() string { return r.Namespace + "/" + r.Name }
++
++// DeckhouseWithoutPods makes the snapshot look as if the given Pods were
++// deleted, for a dry-run simulation (pkg/scheduler/deckhouse_simulate.go).
++// The nodes of these Pods are replaced by clones without them, and the
++// derived lists (nodes with affinity Pods, used PVCs) are rebuilt. restore puts
++// the original objects back, so the next UpdateSnapshot of a real cycle works
++// on untouched data. The caller must hold the lock that serializes the
++// snapshot with scheduling cycles until restore returns.
++func (s *Snapshot) DeckhouseWithoutPods(logger klog.Logger, refs []DeckhousePodRef) (restore func(), removed, notFound []string) {
++	restore = func() {}
++	if len(refs) == 0 {
++		return restore, nil, nil
++	}
++	// key -> UIDs to match; an empty set matches every UID. A ref without a UID
++	// matches every entry even when other refs name the same Pod with a UID.
++	want := map[string]sets.Set[types.UID]{}
++	for _, r := range refs {
++		key := r.String()
++		uids, seen := want[key]
++		switch {
++		case r.UID == "":
++			want[key] = sets.New[types.UID]()
++		case !seen:
++			want[key] = sets.New(r.UID)
++		case uids.Len() > 0:
++			uids.Insert(r.UID)
++		}
++	}
++
++	clones := map[string]*framework.NodeInfo{}
++	done := sets.New[string]()
++	for name, ni := range s.nodeInfoMap {
++		for _, pi := range ni.GetPods() {
++			pod := pi.GetPod()
++			key := pod.Namespace + "/" + pod.Name
++			uids, ok := want[key]
++			if !ok || (uids.Len() > 0 && !uids.Has(pod.UID)) {
++				continue
++			}
++			clone := clones[name]
++			if clone == nil {
++				clone = ni.SnapshotConcrete()
++				clones[name] = clone
++			}
++			if err := clone.RemovePod(logger, pod); err != nil {
++				logger.Error(err, "Simulation could not remove a Pod from the node", "pod", key, "node", name)
++				continue
++			}
++			done.Insert(key)
++		}
++	}
++	removed = sets.List(done)
++	for _, r := range refs {
++		if !done.Has(r.String()) && !slices.Contains(notFound, r.String()) {
++			notFound = append(notFound, r.String())
++		}
++	}
++	if len(clones) == 0 {
++		return restore, removed, notFound
++	}
++
++	savedMap, savedList := s.nodeInfoMap, s.nodeInfoList
++	savedAffinity, savedAntiAffinity, savedPVCs := s.havePodsWithAffinityNodeInfoList, s.havePodsWithRequiredAntiAffinityNodeInfoList, s.usedPVCSet
++	restore = func() {
++		s.nodeInfoMap, s.nodeInfoList = savedMap, savedList
++		s.havePodsWithAffinityNodeInfoList, s.havePodsWithRequiredAntiAffinityNodeInfoList, s.usedPVCSet = savedAffinity, savedAntiAffinity, savedPVCs
++	}
++
++	s.nodeInfoMap = maps.Clone(savedMap)
++	for name, clone := range clones {
++		s.nodeInfoMap[name] = clone
++	}
++	s.nodeInfoList = make([]fwk.NodeInfo, 0, len(savedList))
++	s.havePodsWithAffinityNodeInfoList = make([]fwk.NodeInfo, 0, len(savedAffinity))
++	s.havePodsWithRequiredAntiAffinityNodeInfoList = make([]fwk.NodeInfo, 0, len(savedAntiAffinity))
++	s.usedPVCSet = sets.New[string]()
++	for _, ni := range savedList {
++		if clone := clones[ni.Node().Name]; clone != nil {
++			ni = clone
++		}
++		s.nodeInfoList = append(s.nodeInfoList, ni)
++		if len(ni.GetPodsWithAffinity()) > 0 {
++			s.havePodsWithAffinityNodeInfoList = append(s.havePodsWithAffinityNodeInfoList, ni)
++		}
++		if len(ni.GetPodsWithRequiredAntiAffinity()) > 0 {
++			s.havePodsWithRequiredAntiAffinityNodeInfoList = append(s.havePodsWithRequiredAntiAffinityNodeInfoList, ni)
++		}
++		for key := range ni.GetPVCRefCounts() {
++			s.usedPVCSet.Insert(key)
++		}
++	}
++	return restore, removed, notFound
++}
+diff --git a/pkg/scheduler/deckhouse_simulate.go b/pkg/scheduler/deckhouse_simulate.go
+new file mode 100644
+index 00000000000..2ecb81c1f6e
+--- /dev/null
++++ b/pkg/scheduler/deckhouse_simulate.go
+@@ -0,0 +1,593 @@
++/*
++Copyright 2026 Flant JSC
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scheduler
++
++// Deckhouse: dry-run scheduling endpoint.
++//
++// POST /simulate answers "which node would this Pod get right now": it runs the
++// same PreFilter, Filter, filter extenders, PreScore, Score and prioritize
++// extenders as a real scheduling cycle, on the same cache, and returns every
++// node with its verdict and per-plugin weighted scores. Nothing is reserved,
++// assumed, bound or nominated, the OpportunisticBatching hints of real cycles
++// are not read, and the extension point duration, plugin evaluation and
++// prioritizing-extender goroutine metrics are not recorded.
++//
++// Query parameters add details to the answer and cost nothing outside the
++// request: weights=true adds the weight and the normalized score to every
++// score, filters=all runs every filter plugin on a node instead of stopping at
++// the first failure and lists all failures.
++//
++// The endpoint is plain HTTP on a loopback address only (the address comes from
++// DECKHOUSE_SCHEDULER_SIMULATE_ADDRESS); authentication and authorization are
++// done by kube-rbac-proxy in front of it.
++
++import (
++	"context"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"net"
++	"net/http"
++	"net/url"
++	"os"
++	"sort"
++	"strconv"
++	"time"
++
++	v1 "k8s.io/api/core/v1"
++	apierrors "k8s.io/apimachinery/pkg/api/errors"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/apimachinery/pkg/util/sets"
++	"k8s.io/apimachinery/pkg/util/uuid"
++	"k8s.io/klog/v2"
++	fwk "k8s.io/kube-scheduler/framework"
++	internalcache "k8s.io/kubernetes/pkg/scheduler/backend/cache"
++	"k8s.io/kubernetes/pkg/scheduler/framework"
++)
++
++const (
++	deckhouseSimulateAddressEnv = "DECKHOUSE_SCHEDULER_SIMULATE_ADDRESS"
++	deckhouseSimulateMaxBody    = 1 << 20
++	deckhouseSimulateTimeout    = 30 * time.Second
++
++	// DeckhouseSimulationAnnotation marks the Pod copy, so that an extender can
++	// tell a simulation from a real cycle (e.g. not to reserve space for it).
++	DeckhouseSimulationAnnotation = "scheduler.deckhouse.io/simulation"
++)
++
++// Verdicts of a node in a simulation.
++const (
++	VerdictFeasible     = "Feasible"
++	VerdictRejected     = "Rejected"
++	VerdictNotEvaluated = "NotEvaluated"
++)
++
++// SimulateRequest names the Pod to place: either a full Pod object or a
++// reference to an existing Pod. Both lists are optional. ExcludeNodes are
++// removed from the candidates, e.g. the source node of a live migration.
++// RemovePods are scheduled Pods the simulation treats as deleted: they free
++// their node resources and stop counting in topology spread, inter-Pod affinity
++// and PVC usage. The caller decides what is gone: nothing for a live migration
++// (the source runs until the target is ready), the evicted Pod for "evict and
++// recreate", all Pods of a node for a scale-down check.
++type SimulateRequest struct {
++	Pod          *v1.Pod                         `json:"pod,omitempty"`
++	Namespace    string                          `json:"namespace,omitempty"`
++	Name         string                          `json:"name,omitempty"`
++	ExcludeNodes []string                        `json:"excludeNodes,omitempty"`
++	RemovePods   []internalcache.DeckhousePodRef `json:"removePods,omitempty"`
++
++	// Weights and AllFilters come from the query parameters weights=true and
++	// filters=all, not from the body.
++	Weights    bool `json:"-"`
++	AllFilters bool `json:"-"`
++}
++
++// SimulateScore is a weighted score of one score plugin or one extender. With
++// weights=true it also carries the weight and the normalized score, Score =
++// Normalized * Weight. Normalized is 0-100 for a plugin and the extender score
++// (0-10) times 10 for an extender.
++type SimulateScore struct {
++	Name       string `json:"name"`
++	Score      int64  `json:"score"`
++	Weight     int64  `json:"weight,omitempty"`
++	Normalized *int64 `json:"normalized,omitempty"`
++}
++
++// SimulateRejection is one failing filter plugin or extender of a node.
++type SimulateRejection struct {
++	Plugin  string   `json:"plugin"`
++	Reasons []string `json:"reasons,omitempty"`
++}
++
++// SimulateNode is the verdict for one node. RejectedBy is the plugin (filter or
++// PreFilter) or the extender that rejected the node; it is empty when PreFilter
++// narrowed the candidate list. NotEvaluated nodes were not reached: a real cycle
++// also stops after numFeasibleNodesToFind feasible nodes.
++type SimulateNode struct {
++	Name       string          `json:"name"`
++	Verdict    string          `json:"verdict"`
++	RejectedBy string          `json:"rejectedBy,omitempty"`
++	Reasons    []string        `json:"reasons,omitempty"`
++	TotalScore int64           `json:"totalScore,omitempty"`
++	Scores     []SimulateScore `json:"scores,omitempty"`
++	// Rejections lists every failing filter plugin with filters=all. An
++	// extender only sees the nodes that passed all filter plugins, so a node
++	// has either plugin rejections or one extender rejection.
++	Rejections []SimulateRejection `json:"rejections,omitempty"`
++}
++
++// SimulateResponse lists feasible nodes by total score (best first), then the
++// other ones by name. BestNodes holds every node with the top score: a real
++// cycle picks one of them at random.
++type SimulateResponse struct {
++	Pod              string         `json:"pod"`
++	Profile          string         `json:"profile"`
++	Leader           bool           `json:"leader"`
++	PreFilterMessage string         `json:"preFilterMessage,omitempty"`
++	BestNodes        []string       `json:"bestNodes"`
++	Nodes            []SimulateNode `json:"nodes"`
++	// RemovedPods are the RemovePods found in the cache, NotFoundPods the rest
++	// (already deleted or not scheduled yet).
++	RemovedPods  []string `json:"removedPods,omitempty"`
++	NotFoundPods []string `json:"notFoundPods,omitempty"`
++}
++
++// deckhouseExtenderStatus names the extender in its rejection status during a
++// simulation. Real cycles keep the upstream status without a plugin name.
++func deckhouseExtenderStatus(ctx context.Context, s *fwk.Status, extender fwk.Extender) *fwk.Status {
++	if framework.IsDeckhouseSimulation(ctx) {
++		return s.WithPlugin(extender.Name())
++	}
++	return s
++}
++
++// errSimulateRequest marks errors caused by the request itself.
++type errSimulateRequest struct{ error }
++
++// Simulate runs filtering and scoring for a copy of the Pod without touching
++// the cache. It holds deckhouseSimulateMu, so it never interleaves with the
++// synchronous part of a real scheduling cycle that shares the snapshot.
++func (sched *Scheduler) Simulate(ctx context.Context, req *SimulateRequest) (*SimulateResponse, error) {
++	pod, err := sched.simulationPod(ctx, req)
++	if err != nil {
++		return nil, err
++	}
++	schedFramework, err := sched.frameworkForPod(pod)
++	if err != nil {
++		return nil, errSimulateRequest{err}
++	}
++
++	sched.deckhouseSimulateMu.Lock()
++	defer sched.deckhouseSimulateMu.Unlock()
++	// The request may have waited for the lock longer than its deadline.
++	if err := ctx.Err(); err != nil {
++		return nil, err
++	}
++	// Keep the real cycles' round-robin start untouched by simulations.
++	savedStart := sched.nextStartNodeIndex
++	defer func() { sched.nextStartNodeIndex = savedStart }()
++
++	logger := klog.FromContext(ctx)
++	if err := sched.Cache.UpdateSnapshot(logger, sched.nodeInfoSnapshot); err != nil {
++		return nil, err
++	}
++	restore, removedPods, notFoundPods := sched.nodeInfoSnapshot.DeckhouseWithoutPods(logger, req.RemovePods)
++	defer restore()
++	// Listed after the removal: the nodes as the simulation sees them.
++	allNodes, err := sched.nodeInfoSnapshot.NodeInfos().List()
++	if err != nil {
++		return nil, err
++	}
++	if len(allNodes) == 0 {
++		return nil, ErrNoNodesAvailable
++	}
++
++	ctx = framework.WithDeckhouseSimulation(ctx)
++	var filterLog *framework.DeckhouseFilterLog
++	if req.AllFilters {
++		ctx, filterLog = framework.WithDeckhouseFilterLog(ctx)
++	}
++	state := framework.NewCycleState()
++	state.Write(framework.PodsToActivateKey, framework.NewPodsToActivate())
++	feasible, diagnosis, _, _, err := sched.findNodesThatFitPodWithHint(ctx, schedFramework, state, pod, false)
++	// Filters stop on a cancelled context without an error, and a plugin may fail
++	// because of it: report the deadline first, never a partial result.
++	if ctxErr := ctx.Err(); ctxErr != nil {
++		return nil, ctxErr
++	}
++	if err != nil {
++		return nil, err
++	}
++
++	resp := &SimulateResponse{
++		Pod:              pod.Namespace + "/" + pod.Name,
++		Profile:          schedFramework.ProfileName(),
++		PreFilterMessage: diagnosis.PreFilterMsg,
++		BestNodes:        []string{},
++		RemovedPods:      removedPods,
++		NotFoundPods:     notFoundPods,
++	}
++	if len(feasible) > 0 {
++		scores, err := prioritizeNodes(ctx, sched.Extenders, schedFramework, state, pod, feasible)
++		if ctxErr := ctx.Err(); ctxErr != nil {
++			return nil, ctxErr
++		}
++		if err != nil {
++			return nil, err
++		}
++		var weights map[string]int64
++		if req.Weights {
++			weights = sched.deckhouseWeights(schedFramework)
++		}
++		resp.Nodes, resp.BestNodes = simulateScoredNodes(scores, weights)
++	}
++	resp.Nodes = append(resp.Nodes, simulateOtherNodes(allNodes, feasible, diagnosis.NodeToStatus, deckhouseCandidates(state), filterLog)...)
++	return resp, nil
++}
++
++// deckhouseWeights returns the weights of the score plugins of the profile and
++// of the extenders that score.
++func (sched *Scheduler) deckhouseWeights(schedFramework framework.Framework) map[string]int64 {
++	out := map[string]int64{}
++	if f, ok := schedFramework.(interface{ DeckhouseScorePluginWeights() map[string]int }); ok {
++		for name, w := range f.DeckhouseScorePluginWeights() {
++			out[name] = int64(w)
++		}
++	}
++	for _, e := range sched.Extenders {
++		if h, ok := e.(*HTTPExtender); ok && e.IsPrioritizer() {
++			out[e.Name()] = h.weight
++		}
++	}
++	return out
++}
++
++// simulationPod builds the Pod to place: an unscheduled copy that cannot land
++// on an excluded node. The copy keeps the UID and the claim statuses of the
++// original: generic ephemeral volumes and DRA claims belong to the Pod by its
++// UID, and template claims are found through the status, as for a real
++// re-schedule of the same Pod. Only a Pod without a UID gets a new one.
++func (sched *Scheduler) simulationPod(ctx context.Context, req *SimulateRequest) (*v1.Pod, error) {
++	var pod *v1.Pod
++	switch {
++	case req.Pod != nil && (req.Namespace != "" || req.Name != ""):
++		return nil, errSimulateRequest{errors.New("set either pod or namespace and name, not both")}
++	case req.Pod != nil:
++		if req.Pod.Namespace == "" || req.Pod.Name == "" {
++			return nil, errSimulateRequest{errors.New("pod.metadata.namespace and pod.metadata.name must be set")}
++		}
++		pod = req.Pod.DeepCopy()
++	case req.Namespace != "" && req.Name != "":
++		got, err := sched.client.CoreV1().Pods(req.Namespace).Get(ctx, req.Name, metav1.GetOptions{})
++		if err != nil {
++			return nil, err
++		}
++		pod = got.DeepCopy()
++	default:
++		return nil, errSimulateRequest{errors.New("either pod or namespace and name must be set")}
++	}
++
++	if pod.UID == "" {
++		pod.UID = uuid.NewUUID()
++	}
++	pod.ResourceVersion = ""
++	pod.Spec.NodeName = ""
++	pod.Status = v1.PodStatus{
++		ResourceClaimStatuses:       pod.Status.ResourceClaimStatuses,
++		ExtendedResourceClaimStatus: pod.Status.ExtendedResourceClaimStatus,
++	}
++	if pod.Spec.SchedulerName == "" {
++		pod.Spec.SchedulerName = v1.DefaultSchedulerName
++	}
++	if pod.Annotations == nil {
++		pod.Annotations = map[string]string{}
++	}
++	pod.Annotations[DeckhouseSimulationAnnotation] = "true"
++	excludeNodes(pod, req.ExcludeNodes)
++	return pod, nil
++}
++
++// excludeNodes adds "metadata.name NotIn [node]" for every excluded node to every
++// required node affinity term, or creates the single term when the Pod has none.
++// A matchFields requirement takes exactly one value, so each node gets its own
++// requirement; requirements inside a term are ANDed, terms are ORed.
++func excludeNodes(pod *v1.Pod, nodes []string) {
++	if len(nodes) == 0 {
++		return
++	}
++	reqs := make([]v1.NodeSelectorRequirement, 0, len(nodes))
++	for _, n := range nodes {
++		reqs = append(reqs, v1.NodeSelectorRequirement{Key: "metadata.name", Operator: v1.NodeSelectorOpNotIn, Values: []string{n}})
++	}
++
++	if pod.Spec.Affinity == nil {
++		pod.Spec.Affinity = &v1.Affinity{}
++	}
++	if pod.Spec.Affinity.NodeAffinity == nil {
++		pod.Spec.Affinity.NodeAffinity = &v1.NodeAffinity{}
++	}
++	na := pod.Spec.Affinity.NodeAffinity
++	if na.RequiredDuringSchedulingIgnoredDuringExecution == nil || len(na.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms) == 0 {
++		na.RequiredDuringSchedulingIgnoredDuringExecution = &v1.NodeSelector{
++			NodeSelectorTerms: []v1.NodeSelectorTerm{{MatchFields: reqs}},
++		}
++		return
++	}
++	terms := na.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms
++	for i := range terms {
++		terms[i].MatchFields = append(terms[i].MatchFields, reqs...)
++	}
++}
++
++// simulateScoredNodes sorts the feasible nodes by total score. With weights
++// (weights=true) every score gets its weight and normalized score.
++func simulateScoredNodes(scores []fwk.NodePluginScores, weights map[string]int64) ([]SimulateNode, []string) {
++	nodes := make([]SimulateNode, 0, len(scores))
++	for _, s := range scores {
++		n := SimulateNode{Name: s.Name, Verdict: VerdictFeasible, TotalScore: s.TotalScore}
++		for _, p := range s.Scores {
++			score := SimulateScore{Name: p.Name, Score: p.Score}
++			if w := weights[p.Name]; w > 0 {
++				normalized := p.Score / w
++				score.Weight, score.Normalized = w, &normalized
++			}
++			n.Scores = append(n.Scores, score)
++		}
++		nodes = append(nodes, n)
++	}
++	sort.SliceStable(nodes, func(i, j int) bool {
++		if nodes[i].TotalScore != nodes[j].TotalScore {
++			return nodes[i].TotalScore > nodes[j].TotalScore
++		}
++		return nodes[i].Name < nodes[j].Name
++	})
++	best := []string{}
++	for _, n := range nodes {
++		if n.TotalScore == nodes[0].TotalScore {
++			best = append(best, n.Name)
++		}
++	}
++	return nodes, best
++}
++
++// deckhouseCandidatesKey keeps the node list PreFilter narrowed the search to,
++// in a simulation only: the nodes of that list without a status of their own
++// were not reached by the filters, the other nodes were rejected by PreFilter.
++const deckhouseCandidatesKey fwk.StateKey = "deckhouse.io/simulation-candidates"
++
++type deckhouseCandidatesState struct{ names sets.Set[string] }
++
++func (s deckhouseCandidatesState) Clone() fwk.StateData { return s }
++
++func deckhouseRememberCandidates(ctx context.Context, state fwk.CycleState, names sets.Set[string]) {
++	if framework.IsDeckhouseSimulation(ctx) {
++		state.Write(deckhouseCandidatesKey, deckhouseCandidatesState{names: names})
++	}
++}
++
++func deckhouseCandidates(state fwk.CycleState) sets.Set[string] {
++	if d, err := state.Read(deckhouseCandidatesKey); err == nil {
++		return d.(deckhouseCandidatesState).names
++	}
++	return nil
++}
++
++// simulateOtherNodes reports the nodes that did not pass. A node with its own
++// status was rejected by a filter or an extender. A node without one shares the
++// "absent" status: without a message, or inside the candidate list PreFilter
++// narrowed the search to, the filters never reached it; otherwise PreFilter
++// rejected it.
++//
++// With a filter log (filters=all) a rejected node also lists every failing
++// filter plugin, or the one extender that rejected it.
++func simulateOtherNodes(all, feasible []fwk.NodeInfo, statuses *framework.NodeToStatus, candidates sets.Set[string], filterLog *framework.DeckhouseFilterLog) []SimulateNode {
++	ok := make(map[string]bool, len(feasible))
++	for _, n := range feasible {
++		ok[n.Node().Name] = true
++	}
++	explicit := map[string]*fwk.Status{}
++	statuses.ForEachExplicitNode(func(name string, s *fwk.Status) { explicit[name] = s })
++
++	var out []SimulateNode
++	for _, n := range all {
++		name := n.Node().Name
++		if ok[name] {
++			continue
++		}
++		node := SimulateNode{Name: name, Verdict: VerdictRejected}
++		s, found := explicit[name]
++		if !found {
++			s = statuses.AbsentNodesStatus()
++			if s == nil || len(s.Reasons()) == 0 || candidates.Has(name) {
++				node.Verdict = VerdictNotEvaluated
++			}
++		}
++		if node.Verdict == VerdictRejected && s != nil {
++			node.RejectedBy = s.Plugin()
++			node.Reasons = s.Reasons()
++			if filterLog != nil {
++				node.Rejections = simulateRejections(filterLog.Get(name), s)
++			}
++		}
++		out = append(out, node)
++	}
++	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
++	return out
++}
++
++// simulateRejections lists the recorded filter plugin failures of a node, or
++// its own status when nothing was recorded (an extender or PreFilter rejected
++// it).
++func simulateRejections(failed []*fwk.Status, own *fwk.Status) []SimulateRejection {
++	if len(failed) == 0 {
++		failed = []*fwk.Status{own}
++	}
++	out := make([]SimulateRejection, 0, len(failed))
++	for _, f := range failed {
++		out = append(out, SimulateRejection{Plugin: f.Plugin(), Reasons: f.Reasons()})
++	}
++	return out
++}
++
++// simulateQuery reads the query parameters into the request. Unknown
++// parameters and values are errors: a typo must not silently drop a detail.
++func simulateQuery(q url.Values, req *SimulateRequest) error {
++	for key, values := range q {
++		if len(values) != 1 {
++			return fmt.Errorf("parameter %q must be set once", key)
++		}
++		switch v := values[0]; key {
++		case "weights":
++			b, err := strconv.ParseBool(v)
++			if err != nil {
++				return fmt.Errorf("weights must be true or false, got %q", v)
++			}
++			req.Weights = b
++		case "filters":
++			switch v {
++			case "first":
++				req.AllFilters = false
++			case "all":
++				req.AllFilters = true
++			default:
++				return fmt.Errorf("filters must be first or all, got %q", v)
++			}
++		default:
++			return fmt.Errorf("unknown parameter %q, known: weights, filters", key)
++		}
++	}
++	return nil
++}
++
++// simulateHTTPStatus maps a Simulate error to a status code and a message for
++// the client. Internal errors are logged and not echoed back.
++func simulateHTTPStatus(err error) (int, string) {
++	var reqErr errSimulateRequest
++	switch {
++	case errors.As(err, &reqErr):
++		return http.StatusBadRequest, err.Error()
++	case apierrors.IsNotFound(err):
++		return http.StatusNotFound, err.Error()
++	case errors.Is(err, context.DeadlineExceeded), errors.Is(err, context.Canceled):
++		return http.StatusGatewayTimeout, "simulation did not finish in time"
++	case errors.Is(err, ErrNoNodesAvailable):
++		return http.StatusServiceUnavailable, err.Error()
++	default:
++		return http.StatusInternalServerError, "simulation failed, see the kube-scheduler log"
++	}
++}
++
++// deckhouseSimulateHandler serves POST /simulate. It runs one simulation at a
++// time: a simulation holds the lock that real scheduling cycles take, extender
++// calls included, so a queue of simulations would delay real scheduling. A
++// request that arrives while another one runs gets 429.
++type deckhouseSimulateHandler struct {
++	sched    *Scheduler
++	isLeader func() bool
++	synced   <-chan struct{}
++	logger   klog.Logger
++	busy     chan struct{}
++}
++
++func newDeckhouseSimulateHandler(sched *Scheduler, isLeader func() bool, synced <-chan struct{}, logger klog.Logger) *deckhouseSimulateHandler {
++	return &deckhouseSimulateHandler{sched: sched, isLeader: isLeader, synced: synced, logger: logger, busy: make(chan struct{}, 1)}
++}
++
++func (h *deckhouseSimulateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
++	if r.Method != http.MethodPost {
++		http.Error(w, "use POST", http.StatusMethodNotAllowed)
++		return
++	}
++	select {
++	case <-h.synced:
++	default:
++		http.Error(w, "scheduler cache is not synced yet", http.StatusServiceUnavailable)
++		return
++	}
++	var req SimulateRequest
++	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, deckhouseSimulateMaxBody)).Decode(&req); err != nil {
++		http.Error(w, fmt.Sprintf("bad request: %v", err), http.StatusBadRequest)
++		return
++	}
++	query, err := url.ParseQuery(r.URL.RawQuery)
++	if err == nil {
++		err = simulateQuery(query, &req)
++	}
++	if err != nil {
++		http.Error(w, fmt.Sprintf("bad request: %v", err), http.StatusBadRequest)
++		return
++	}
++	select {
++	case h.busy <- struct{}{}:
++		defer func() { <-h.busy }()
++	default:
++		w.Header().Set("Retry-After", "1")
++		http.Error(w, "another simulation is running, retry later", http.StatusTooManyRequests)
++		return
++	}
++	rctx, cancel := context.WithTimeout(klog.NewContext(r.Context(), h.logger), deckhouseSimulateTimeout)
++	defer cancel()
++	resp, err := h.sched.Simulate(rctx, &req)
++	if err != nil {
++		code, msg := simulateHTTPStatus(err)
++		if code == http.StatusInternalServerError {
++			h.logger.Error(err, "Simulation failed", "namespace", req.Namespace, "name", req.Name)
++		}
++		http.Error(w, msg, code)
++		return
++	}
++	resp.Leader = h.isLeader()
++	w.Header().Set("Content-Type", "application/json")
++	if err := json.NewEncoder(w).Encode(resp); err != nil {
++		h.logger.Error(err, "Failed to write simulate response")
++	}
++}
++
++// StartDeckhouseSimulateServer serves POST /simulate on the loopback address
++// from DECKHOUSE_SCHEDULER_SIMULATE_ADDRESS. It does nothing when the variable
++// is empty and refuses any non-loopback address: the endpoint has no auth of
++// its own. Requests get 503 until the scheduler handlers are synced.
++func StartDeckhouseSimulateServer(ctx context.Context, sched *Scheduler, isLeader func() bool, synced <-chan struct{}) {
++	logger := klog.FromContext(ctx)
++	addr := os.Getenv(deckhouseSimulateAddressEnv)
++	if addr == "" {
++		return
++	}
++	host, _, err := net.SplitHostPort(addr)
++	if ip := net.ParseIP(host); err != nil || ip == nil || !ip.IsLoopback() {
++		logger.Error(err, "Simulate endpoint is disabled: the address must be a loopback IP:port", "address", addr)
++		return
++	}
++
++	mux := http.NewServeMux()
++	mux.Handle("/simulate", newDeckhouseSimulateHandler(sched, isLeader, synced, logger))
++
++	srv := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
++	go func() {
++		logger.Info("Serving the simulate endpoint", "address", addr)
++		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
++			logger.Error(err, "Simulate endpoint stopped")
++		}
++	}()
++	go func() {
++		<-ctx.Done()
++		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
++		defer cancel()
++		_ = srv.Shutdown(shutdownCtx)
++	}()
++}
+diff --git a/pkg/scheduler/deckhouse_simulate_test.go b/pkg/scheduler/deckhouse_simulate_test.go
+new file mode 100644
+index 00000000000..928fe911cfc
+--- /dev/null
++++ b/pkg/scheduler/deckhouse_simulate_test.go
+@@ -0,0 +1,618 @@
++/*
++Copyright 2026 Flant JSC
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scheduler
++
++import (
++	"context"
++	"net/http"
++	"net/http/httptest"
++	"net/url"
++	"reflect"
++	"strings"
++	"sync/atomic"
++	"testing"
++
++	v1 "k8s.io/api/core/v1"
++	apierrors "k8s.io/apimachinery/pkg/api/errors"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/apimachinery/pkg/runtime"
++	"k8s.io/apimachinery/pkg/runtime/schema"
++	"k8s.io/apimachinery/pkg/util/sets"
++	"k8s.io/component-base/metrics/testutil"
++	"k8s.io/component-helpers/scheduling/corev1/nodeaffinity"
++	"k8s.io/klog/v2/ktesting"
++	fwk "k8s.io/kube-scheduler/framework"
++	"k8s.io/kubernetes/pkg/scheduler/apis/config"
++	internalcache "k8s.io/kubernetes/pkg/scheduler/backend/cache"
++	internalqueue "k8s.io/kubernetes/pkg/scheduler/backend/queue"
++	"k8s.io/kubernetes/pkg/scheduler/framework"
++	"k8s.io/kubernetes/pkg/scheduler/framework/plugins/defaultbinder"
++	"k8s.io/kubernetes/pkg/scheduler/framework/plugins/feature"
++	nodeaffinityplugin "k8s.io/kubernetes/pkg/scheduler/framework/plugins/nodeaffinity"
++	"k8s.io/kubernetes/pkg/scheduler/framework/plugins/queuesort"
++	frameworkruntime "k8s.io/kubernetes/pkg/scheduler/framework/runtime"
++	"k8s.io/kubernetes/pkg/scheduler/metrics"
++	tf "k8s.io/kubernetes/pkg/scheduler/testing/framework"
++)
++
++// An excluded node must not match whichever required term the Pod has, and the
++// other nodes must still match: matchFields takes one value per requirement.
++func TestDeckhouseExcludeNodes(t *testing.T) {
++	node := func(name, zone string) *v1.Node {
++		return &v1.Node{ObjectMeta: metav1.ObjectMeta{Name: name, Labels: map[string]string{"zone": zone}}}
++	}
++	nodes := []*v1.Node{node("hv-01", "a"), node("hv-02", "a"), node("hv-03", "a"), node("hv-04", "b")}
++
++	cases := []struct {
++		name string
++		pod  *v1.Pod
++		want map[string]bool
++	}{{
++		name: "no affinity",
++		pod:  &v1.Pod{},
++		want: map[string]bool{"hv-01": false, "hv-02": false, "hv-03": true, "hv-04": true},
++	}, {
++		name: "two terms, one by zone and one by name",
++		pod: &v1.Pod{Spec: v1.PodSpec{Affinity: &v1.Affinity{NodeAffinity: &v1.NodeAffinity{
++			RequiredDuringSchedulingIgnoredDuringExecution: &v1.NodeSelector{NodeSelectorTerms: []v1.NodeSelectorTerm{
++				{MatchExpressions: []v1.NodeSelectorRequirement{{Key: "zone", Operator: v1.NodeSelectorOpIn, Values: []string{"a"}}}},
++				{MatchFields: []v1.NodeSelectorRequirement{{Key: "metadata.name", Operator: v1.NodeSelectorOpIn, Values: []string{"hv-02"}}}},
++			}},
++		}}}},
++		want: map[string]bool{"hv-01": false, "hv-02": false, "hv-03": true, "hv-04": false},
++	}}
++	for _, tc := range cases {
++		t.Run(tc.name, func(t *testing.T) {
++			excludeNodes(tc.pod, []string{"hv-01", "hv-02"})
++			req := nodeaffinity.GetRequiredNodeAffinity(tc.pod)
++			for _, n := range nodes {
++				got, err := req.Match(n)
++				if err != nil {
++					t.Fatalf("%s: %v", n.Name, err)
++				}
++				if got != tc.want[n.Name] {
++					t.Errorf("%s: match = %v, want %v", n.Name, got, tc.want[n.Name])
++				}
++			}
++		})
++	}
++
++	untouched := &v1.Pod{}
++	excludeNodes(untouched, nil)
++	if untouched.Spec.Affinity != nil {
++		t.Fatalf("no excluded nodes must leave the pod as is")
++	}
++}
++
++func newSimulateTestScheduler(t *testing.T, ctx context.Context, nodeNames []string, extra ...tf.RegisterPluginFunc) *Scheduler {
++	t.Helper()
++	sched := makeScheduler(ctx, makeNodeList(nodeNames))
++	nodeAffinity := func(ctx context.Context, _ runtime.Object, h fwk.Handle) (fwk.Plugin, error) {
++		return nodeaffinityplugin.New(ctx, &config.NodeAffinityArgs{}, h, feature.Features{})
++	}
++	schedFramework, err := tf.NewFramework(ctx,
++		append([]tf.RegisterPluginFunc{
++			tf.RegisterQueueSortPlugin(queuesort.Name, queuesort.New),
++			tf.RegisterPluginAsExtensions(nodeaffinityplugin.Name, nodeAffinity, "PreFilter", "Filter"),
++			tf.RegisterScorePlugin("NumericMap", newNumericMapPlugin(), 1),
++			tf.RegisterBindPlugin(defaultbinder.Name, defaultbinder.New),
++		}, extra...),
++		v1.DefaultSchedulerName,
++		frameworkruntime.WithPodNominator(internalqueue.NewTestQueue(ctx, nil)),
++		frameworkruntime.WithSnapshotSharedLister(sched.nodeInfoSnapshot),
++	)
++	if err != nil {
++		t.Fatal(err)
++	}
++	sched.Profiles = map[string]framework.Framework{v1.DefaultSchedulerName: schedFramework}
++	return sched
++}
++
++// A simulation runs the real filters, extenders and scores, answers with every
++// node, names the extender that rejected a node, and leaves the scheduler as it
++// was: no pods in the cache, the same round-robin start, no extension point metrics.
++func TestDeckhouseSimulate(t *testing.T) {
++	_, ctx := ktesting.NewTestContext(t)
++	ctx, cancel := context.WithCancel(ctx)
++	defer cancel()
++	metrics.Register()
++
++	sched := newSimulateTestScheduler(t, ctx, []string{"1", "2", "3", "4"})
++	sched.nextStartNodeIndex = 2
++	onlyNode1 := func(_ *v1.Pod, n fwk.NodeInfo) *fwk.Status {
++		if n.Node().Name == "1" {
++			return nil
++		}
++		return fwk.NewStatus(fwk.Unschedulable, "no replica")
++	}
++	sched.Extenders = []fwk.Extender{&tf.FakeExtender{ExtenderName: "sds", Predicates: []tf.FitPredicate{onlyNode1}}}
++	preFilterMetric := metrics.FrameworkExtensionPointDuration.WithLabelValues(metrics.PreFilter, fwk.Success.String(), v1.DefaultSchedulerName)
++	filterMetric := metrics.FrameworkExtensionPointDuration.WithLabelValues(metrics.Filter, fwk.Success.String(), v1.DefaultSchedulerName)
++	evalMetric := metrics.PluginEvaluationTotal.WithLabelValues(nodeaffinityplugin.Name, metrics.Filter, v1.DefaultSchedulerName)
++	metricsBefore, _ := testutil.GetHistogramMetricCount(preFilterMetric)
++	filterBefore, _ := testutil.GetHistogramMetricCount(filterMetric)
++	evalBefore, _ := testutil.GetCounterMetricValue(evalMetric)
++
++	pod := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "vm", Namespace: "ns", UID: "original"}}
++	resp, err := sched.Simulate(ctx, &SimulateRequest{Pod: pod, ExcludeNodes: []string{"4", "3"}})
++	if err != nil {
++		t.Fatal(err)
++	}
++
++	if !reflect.DeepEqual(resp.BestNodes, []string{"1"}) {
++		t.Errorf("bestNodes = %v, want [1]", resp.BestNodes)
++	}
++	type verdict struct{ verdict, by string }
++	got := map[string]verdict{}
++	for _, n := range resp.Nodes {
++		got[n.Name] = verdict{n.Verdict, n.RejectedBy}
++	}
++	want := map[string]verdict{
++		"1": {VerdictFeasible, ""},
++		"2": {VerdictRejected, "sds"},
++		"3": {VerdictRejected, nodeaffinityplugin.Name},
++		"4": {VerdictRejected, nodeaffinityplugin.Name},
++	}
++	if !reflect.DeepEqual(got, want) {
++		t.Errorf("verdicts = %v, want %v", got, want)
++	}
++	if resp.Nodes[0].Name != "1" || len(resp.Nodes[0].Scores) == 0 || resp.Nodes[0].Scores[0].Name != "NumericMap" {
++		t.Errorf("first node = %+v, want node 1 with the NumericMap score", resp.Nodes[0])
++	}
++
++	if pod.UID != "original" || pod.Spec.Affinity != nil || pod.Annotations != nil {
++		t.Errorf("the request Pod was modified: %+v", pod)
++	}
++	if n, _ := sched.Cache.PodCount(); n != 0 {
++		t.Errorf("cache holds %d pods after a simulation", n)
++	}
++	if sched.nextStartNodeIndex != 2 {
++		t.Errorf("nextStartNodeIndex = %d, want 2", sched.nextStartNodeIndex)
++	}
++	if metricsAfter, _ := testutil.GetHistogramMetricCount(preFilterMetric); metricsAfter != metricsBefore {
++		t.Errorf("PreFilter duration observed %d times by a simulation", metricsAfter-metricsBefore)
++	}
++	if filterAfter, _ := testutil.GetHistogramMetricCount(filterMetric); filterAfter != filterBefore {
++		t.Errorf("Filter duration observed %d times by a simulation", filterAfter-filterBefore)
++	}
++	if evalAfter, _ := testutil.GetCounterMetricValue(evalMetric); evalAfter != evalBefore {
++		t.Errorf("NodeAffinity Filter evaluations counted %v times by a simulation", evalAfter-evalBefore)
++	}
++}
++
++func TestDeckhouseSimulateErrors(t *testing.T) {
++	_, ctx := ktesting.NewTestContext(t)
++	sched := newSimulateTestScheduler(t, ctx, []string{"1"})
++
++	cancelled, cancel := context.WithCancel(ctx)
++	cancel()
++	named := metav1.ObjectMeta{Name: "vm", Namespace: "ns"}
++	_, err := sched.Simulate(cancelled, &SimulateRequest{Pod: &v1.Pod{ObjectMeta: named}})
++	if code, _ := simulateHTTPStatus(err); code != http.StatusGatewayTimeout {
++		t.Errorf("cancelled context: code %d (%v), want 504", code, err)
++	}
++
++	_, err = sched.Simulate(ctx, &SimulateRequest{})
++	if code, _ := simulateHTTPStatus(err); code != http.StatusBadRequest {
++		t.Errorf("empty request: code %d (%v), want 400", code, err)
++	}
++
++	_, err = sched.Simulate(ctx, &SimulateRequest{Pod: &v1.Pod{ObjectMeta: named, Spec: v1.PodSpec{SchedulerName: "unknown"}}})
++	if code, _ := simulateHTTPStatus(err); code != http.StatusBadRequest {
++		t.Errorf("unknown profile: code %d (%v), want 400", code, err)
++	}
++
++	notFound := apierrors.NewNotFound(schema.GroupResource{Resource: "pods"}, "vm")
++	if code, _ := simulateHTTPStatus(notFound); code != http.StatusNotFound {
++		t.Errorf("not found: code %d, want 404", code)
++	}
++	if code, msg := simulateHTTPStatus(context.DeadlineExceeded); code != http.StatusGatewayTimeout || msg == context.DeadlineExceeded.Error() {
++		t.Errorf("deadline: code %d, msg %q", code, msg)
++	}
++}
++
++// Nodes without an own status are NotEvaluated unless PreFilter rejected all of them.
++func TestDeckhouseSimulateOtherNodes(t *testing.T) {
++	all := []fwk.NodeInfo{}
++	for _, n := range makeNodeList([]string{"1", "2", "3"}) {
++		ni := framework.NewNodeInfo()
++		ni.SetNode(n)
++		all = append(all, ni)
++	}
++
++	statuses := framework.NewDefaultNodeToStatus()
++	statuses.Set("2", fwk.NewStatus(fwk.Unschedulable, "disk is full").WithPlugin("https://sds/scheduler"))
++	got := simulateOtherNodes(all, all[:1], statuses, nil, nil)
++	want := []SimulateNode{
++		{Name: "2", Verdict: VerdictRejected, RejectedBy: "https://sds/scheduler", Reasons: []string{"disk is full"}},
++		{Name: "3", Verdict: VerdictNotEvaluated},
++	}
++	if !reflect.DeepEqual(got, want) {
++		t.Errorf("got %+v, want %+v", got, want)
++	}
++
++	statuses = framework.NewDefaultNodeToStatus()
++	statuses.SetAbsentNodesStatus(fwk.NewStatus(fwk.UnschedulableAndUnresolvable, "no claim").WithPlugin("DynamicResources"))
++	got = simulateOtherNodes(all, nil, statuses, nil, nil)
++	for _, n := range got {
++		if n.Verdict != VerdictRejected || n.RejectedBy != "DynamicResources" {
++			t.Errorf("PreFilter rejection: %+v", n)
++		}
++	}
++
++	// PreFilter narrowed the search to nodes 1 and 2, the filters reached node 1 only.
++	statuses = framework.NewDefaultNodeToStatus()
++	statuses.SetAbsentNodesStatus(fwk.NewStatus(fwk.UnschedulableAndUnresolvable, "node(s) didn't satisfy plugin(s) [NodeAffinity]"))
++	statuses.Set("1", fwk.NewStatus(fwk.Unschedulable, "taint").WithPlugin("TaintToleration"))
++	got = simulateOtherNodes(all, nil, statuses, sets.New("1", "2"), nil)
++	verdicts := map[string]string{}
++	for _, n := range got {
++		verdicts[n.Name] = n.Verdict
++	}
++	if want := map[string]string{"1": VerdictRejected, "2": VerdictNotEvaluated, "3": VerdictRejected}; !reflect.DeepEqual(verdicts, want) {
++		t.Errorf("narrowed PreFilter: verdicts = %v, want %v", verdicts, want)
++	}
++}
++
++// Every node sharing the top score is a candidate of a real cycle.
++func TestDeckhouseSimulateBestNodes(t *testing.T) {
++	nodes, best := simulateScoredNodes([]fwk.NodePluginScores{
++		{Name: "hv-03", TotalScore: 150},
++		{Name: "hv-02", TotalScore: 420},
++		{Name: "hv-01", TotalScore: 420},
++	}, nil)
++	if !reflect.DeepEqual(best, []string{"hv-01", "hv-02"}) {
++		t.Fatalf("best = %v", best)
++	}
++	if nodes[2].Name != "hv-03" || nodes[2].Verdict != VerdictFeasible {
++		t.Fatalf("order = %+v", nodes)
++	}
++}
++
++// RemovePods frees their nodes for the simulation only: the snapshot used by
++// real cycles keeps the Pods and the PVCs they use.
++func TestDeckhouseSimulateRemovePods(t *testing.T) {
++	logger, ctx := ktesting.NewTestContext(t)
++	sched := makeScheduler(ctx, makeNodeList([]string{"1", "2"}))
++	schedFramework, err := tf.NewFramework(ctx,
++		[]tf.RegisterPluginFunc{
++			tf.RegisterQueueSortPlugin(queuesort.Name, queuesort.New),
++			tf.RegisterFilterPlugin("NoPodsFilter", NewNoPodsFilterPlugin),
++			tf.RegisterScorePlugin("NumericMap", newNumericMapPlugin(), 1),
++			tf.RegisterBindPlugin(defaultbinder.Name, defaultbinder.New),
++		},
++		v1.DefaultSchedulerName,
++		frameworkruntime.WithPodNominator(internalqueue.NewTestQueue(ctx, nil)),
++		frameworkruntime.WithSnapshotSharedLister(sched.nodeInfoSnapshot),
++	)
++	if err != nil {
++		t.Fatal(err)
++	}
++	sched.Profiles = map[string]framework.Framework{v1.DefaultSchedulerName: schedFramework}
++	blocker := &v1.Pod{
++		ObjectMeta: metav1.ObjectMeta{Name: "blocker", Namespace: "ns", UID: "blocker"},
++		Spec: v1.PodSpec{NodeName: "2", Volumes: []v1.Volume{{Name: "data", VolumeSource: v1.VolumeSource{
++			PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{ClaimName: "data"}}}}},
++	}
++	if err := sched.Cache.AddPod(logger, blocker); err != nil {
++		t.Fatal(err)
++	}
++	// The same name with another UID on node 1: the old Pod, not yet gone from the cache.
++	oldBlocker := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "blocker", Namespace: "ns", UID: "blocker-old"}, Spec: v1.PodSpec{NodeName: "1"}}
++	if err := sched.Cache.AddPod(logger, oldBlocker); err != nil {
++		t.Fatal(err)
++	}
++	pod := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "web", Namespace: "ns"}}
++
++	node2 := func(resp *SimulateResponse) string {
++		for _, n := range resp.Nodes {
++			if n.Name == "2" {
++				return n.Verdict
++			}
++		}
++		return ""
++	}
++
++	resp, err := sched.Simulate(ctx, &SimulateRequest{Pod: pod})
++	if err != nil {
++		t.Fatal(err)
++	}
++	if node2(resp) != VerdictRejected || len(resp.BestNodes) != 0 {
++		t.Fatalf("with both blockers: node 2 %s, best %v", node2(resp), resp.BestNodes)
++	}
++
++	// With a UID only that entry is removed.
++	resp, err = sched.Simulate(ctx, &SimulateRequest{Pod: pod, RemovePods: []internalcache.DeckhousePodRef{{Namespace: "ns", Name: "blocker", UID: "blocker-old"}}})
++	if err != nil {
++		t.Fatal(err)
++	}
++	if node2(resp) != VerdictRejected || !reflect.DeepEqual(resp.BestNodes, []string{"1"}) {
++		t.Fatalf("old blocker removed by UID: node 2 %s, best %v", node2(resp), resp.BestNodes)
++	}
++
++	resp, err = sched.Simulate(ctx, &SimulateRequest{Pod: pod, RemovePods: []internalcache.DeckhousePodRef{
++		{Namespace: "ns", Name: "blocker"}, {Namespace: "ns", Name: "gone"},
++	}})
++	if err != nil {
++		t.Fatal(err)
++	}
++	// Without a UID both entries are removed, whatever the map order.
++	if node2(resp) != VerdictFeasible || !reflect.DeepEqual(resp.BestNodes, []string{"2"}) {
++		t.Errorf("blockers removed: node 2 %s, best %v", node2(resp), resp.BestNodes)
++	}
++	if !reflect.DeepEqual(resp.RemovedPods, []string{"ns/blocker"}) || !reflect.DeepEqual(resp.NotFoundPods, []string{"ns/gone"}) {
++		t.Errorf("removed %v, not found %v", resp.RemovedPods, resp.NotFoundPods)
++	}
++
++	// A ref without a UID removes every entry even next to a ref with a UID.
++	resp, err = sched.Simulate(ctx, &SimulateRequest{Pod: pod, RemovePods: []internalcache.DeckhousePodRef{
++		{Namespace: "ns", Name: "blocker", UID: "blocker-old"}, {Namespace: "ns", Name: "blocker"},
++	}})
++	if err != nil {
++		t.Fatal(err)
++	}
++	if node2(resp) != VerdictFeasible {
++		t.Errorf("mixed refs: node 2 %s, want both blockers removed", node2(resp))
++	}
++
++	ni, err := sched.nodeInfoSnapshot.Get("2")
++	if err != nil {
++		t.Fatal(err)
++	}
++	if len(ni.GetPods()) != 1 || !sched.nodeInfoSnapshot.IsPVCUsedByPods("ns/data") {
++		t.Errorf("snapshot not restored: %d pods on node 2, PVC used %v", len(ni.GetPods()), sched.nodeInfoSnapshot.IsPVCUsedByPods("ns/data"))
++	}
++	resp, err = sched.Simulate(ctx, &SimulateRequest{Pod: pod})
++	if err != nil {
++		t.Fatal(err)
++	}
++	if node2(resp) != VerdictRejected {
++		t.Errorf("after a simulation with RemovePods node 2 is %s for the next one", node2(resp))
++	}
++}
++
++// filters=all lists every failing filter plugin of a node in the plugin order,
++// weights=true adds the weight and the normalized score; without them the
++// answer is the same as before.
++func TestDeckhouseSimulateDetails(t *testing.T) {
++	_, ctx := ktesting.NewTestContext(t)
++	sched := newSimulateTestScheduler(t, ctx, []string{"1", "2", "3"},
++		tf.RegisterFilterPlugin("FakeFilter", tf.NewFakeFilterPlugin(map[string]fwk.Code{"3": fwk.Unschedulable})))
++	pod := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "vm", Namespace: "ns"}}
++
++	byName := func(resp *SimulateResponse) map[string]SimulateNode {
++		m := map[string]SimulateNode{}
++		for _, n := range resp.Nodes {
++			m[n.Name] = n
++		}
++		return m
++	}
++
++	plain, err := sched.Simulate(ctx, &SimulateRequest{Pod: pod, ExcludeNodes: []string{"3"}})
++	if err != nil {
++		t.Fatal(err)
++	}
++	if n := byName(plain)["3"]; n.RejectedBy != nodeaffinityplugin.Name || n.Rejections != nil {
++		t.Errorf("plain: node 3 = %+v, want the first plugin only", n)
++	}
++	if s := byName(plain)["1"].Scores[0]; s.Weight != 0 || s.Normalized != nil {
++		t.Errorf("plain: score = %+v, want no weight", s)
++	}
++
++	full, err := sched.Simulate(ctx, &SimulateRequest{Pod: pod, ExcludeNodes: []string{"3"}, Weights: true, AllFilters: true})
++	if err != nil {
++		t.Fatal(err)
++	}
++	n3 := byName(full)["3"]
++	var plugins []string
++	for _, r := range n3.Rejections {
++		plugins = append(plugins, r.Plugin)
++	}
++	if n3.RejectedBy != nodeaffinityplugin.Name || !reflect.DeepEqual(plugins, []string{nodeaffinityplugin.Name, "FakeFilter"}) {
++		t.Errorf("filters=all: node 3 = %+v, want NodeAffinity then FakeFilter", n3)
++	}
++	if s := byName(full)["1"].Scores[0]; s.Name != "NumericMap" || s.Weight != 1 || s.Normalized == nil || *s.Normalized != s.Score {
++		t.Errorf("weights=true: score = %+v, want weight 1 and normalized = score", s)
++	}
++}
++
++// Plugin weights come from the profile, extender weights from the extender
++// config; only prioritizing extenders score.
++func TestDeckhouseSimulateWeights(t *testing.T) {
++	_, ctx := ktesting.NewTestContext(t)
++	sched := newSimulateTestScheduler(t, ctx, []string{"1"})
++	sched.Extenders = []fwk.Extender{
++		&HTTPExtender{extenderURL: "https://sds", prioritizeVerb: "prioritize", weight: 5},
++		&HTTPExtender{extenderURL: "https://filter-only", filterVerb: "filter", weight: 3},
++	}
++	got := sched.deckhouseWeights(sched.Profiles[v1.DefaultSchedulerName])
++	if want := map[string]int64{"NumericMap": 1, "https://sds": 5}; !reflect.DeepEqual(got, want) {
++		t.Errorf("weights = %v, want %v", got, want)
++	}
++
++	nodes, _ := simulateScoredNodes([]fwk.NodePluginScores{{
++		Name:       "hv-01",
++		TotalScore: 520,
++		Scores:     []fwk.PluginScore{{Name: "https://sds", Score: 500}, {Name: "NumericMap", Score: 20}, {Name: "unknown", Score: 7}},
++	}}, got)
++	want := []int64{100, 20, -1}
++	for i, s := range nodes[0].Scores {
++		n := int64(-1)
++		if s.Normalized != nil {
++			n = *s.Normalized
++		}
++		if n != want[i] {
++			t.Errorf("%s: normalized = %d, want %d", s.Name, n, want[i])
++		}
++	}
++}
++
++func TestDeckhouseSimulateQuery(t *testing.T) {
++	cases := []struct {
++		query           string
++		weights, filter bool
++		bad             bool
++	}{
++		{query: ""},
++		{query: "weights=true&filters=all", weights: true, filter: true},
++		{query: "weights=false&filters=first"},
++		{query: "weights=yes", bad: true},
++		{query: "filters=some", bad: true},
++		{query: "filters=all&filters=all", bad: true},
++		{query: "nodes=all", bad: true},
++	}
++	for _, tc := range cases {
++		q, err := url.ParseQuery(tc.query)
++		if err != nil {
++			t.Fatal(err)
++		}
++		var req SimulateRequest
++		err = simulateQuery(q, &req)
++		if (err != nil) != tc.bad {
++			t.Errorf("%q: err = %v, want error %v", tc.query, err, tc.bad)
++			continue
++		}
++		if !tc.bad && (req.Weights != tc.weights || req.AllFilters != tc.filter) {
++			t.Errorf("%q: weights=%v filters=all %v", tc.query, req.Weights, req.AllFilters)
++		}
++	}
++}
++
++// The copy keeps the UID and the claim statuses of the original Pod: generic
++// ephemeral volumes and DRA claims belong to the Pod by its UID. A Pod without
++// a UID gets one. A body Pod needs a namespace and a name, and the two ways to
++// name the Pod exclude each other.
++func TestDeckhouseSimulationPod(t *testing.T) {
++	_, ctx := ktesting.NewTestContext(t)
++	sched := newSimulateTestScheduler(t, ctx, []string{"1"})
++	claim := "vm-disk-0"
++	original := &v1.Pod{
++		ObjectMeta: metav1.ObjectMeta{Name: "vm", Namespace: "ns", UID: "original"},
++		Spec:       v1.PodSpec{NodeName: "1"},
++		Status: v1.PodStatus{
++			Phase:                 v1.PodRunning,
++			NominatedNodeName:     "1",
++			ResourceClaimStatuses: []v1.PodResourceClaimStatus{{Name: "disk", ResourceClaimName: &claim}},
++		},
++	}
++	got, err := sched.simulationPod(ctx, &SimulateRequest{Pod: original})
++	if err != nil {
++		t.Fatal(err)
++	}
++	if got.UID != "original" || got.Spec.NodeName != "" || got.Status.Phase != "" || got.Status.NominatedNodeName != "" {
++		t.Errorf("copy = uid %q node %q phase %q nominated %q", got.UID, got.Spec.NodeName, got.Status.Phase, got.Status.NominatedNodeName)
++	}
++	if !reflect.DeepEqual(got.Status.ResourceClaimStatuses, original.Status.ResourceClaimStatuses) {
++		t.Errorf("claim statuses = %v", got.Status.ResourceClaimStatuses)
++	}
++	if original.Spec.NodeName != "1" || original.Annotations != nil {
++		t.Errorf("the request Pod was modified: %+v", original)
++	}
++
++	fresh, err := sched.simulationPod(ctx, &SimulateRequest{Pod: &v1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "new", Namespace: "ns"}}})
++	if err != nil || fresh.UID == "" {
++		t.Errorf("a Pod without a UID: uid %q, err %v", fresh.UID, err)
++	}
++
++	for name, req := range map[string]*SimulateRequest{
++		"no namespace": {Pod: &v1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "vm"}}},
++		"both forms":   {Pod: original, Namespace: "ns", Name: "vm"},
++		"nothing":      {},
++	} {
++		_, err := sched.simulationPod(ctx, req)
++		if code, _ := simulateHTTPStatus(err); code != http.StatusBadRequest {
++			t.Errorf("%s: code %d (%v), want 400", name, code, err)
++		}
++	}
++}
++
++// countingFilter rejects every node and counts its calls.
++type countingFilter struct{ calls *atomic.Int32 }
++
++func (f countingFilter) Name() string { return "CountingFilter" }
++
++func (f countingFilter) Filter(context.Context, fwk.CycleState, *v1.Pod, fwk.NodeInfo) *fwk.Status {
++	f.calls.Add(1)
++	return fwk.NewStatus(fwk.Unschedulable, "counted")
++}
++
++// Without filters=all a node rejected by one plugin is not passed to the next
++// one, as in a real cycle: the plain path is the upstream path.
++func TestDeckhouseSimulateFirstFilterStops(t *testing.T) {
++	_, ctx := ktesting.NewTestContext(t)
++	calls := &atomic.Int32{}
++	counting := func(context.Context, runtime.Object, fwk.Handle) (fwk.Plugin, error) {
++		return countingFilter{calls: calls}, nil
++	}
++	sched := newSimulateTestScheduler(t, ctx, []string{"1", "2"}, tf.RegisterFilterPlugin("CountingFilter", counting))
++	pod := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "vm", Namespace: "ns"}}
++
++	if _, err := sched.Simulate(ctx, &SimulateRequest{Pod: pod, ExcludeNodes: []string{"1", "2"}}); err != nil {
++		t.Fatal(err)
++	}
++	if n := calls.Load(); n != 0 {
++		t.Errorf("first failure: CountingFilter called %d times, want 0", n)
++	}
++	if _, err := sched.Simulate(ctx, &SimulateRequest{Pod: pod, ExcludeNodes: []string{"1", "2"}, AllFilters: true}); err != nil {
++		t.Fatal(err)
++	}
++	if n := calls.Load(); n != 2 {
++		t.Errorf("filters=all: CountingFilter called %d times, want 2", n)
++	}
++}
++
++// The handler answers in the documented codes and runs one simulation at a time.
++func TestDeckhouseSimulateHandler(t *testing.T) {
++	logger, ctx := ktesting.NewTestContext(t)
++	sched := newSimulateTestScheduler(t, ctx, []string{"1"})
++	synced := make(chan struct{})
++	h := newDeckhouseSimulateHandler(sched, func() bool { return true }, synced, logger)
++	body := `{"pod": {"metadata": {"namespace": "ns", "name": "vm"}}}`
++	call := func(method, query, body string) *httptest.ResponseRecorder {
++		w := httptest.NewRecorder()
++		h.ServeHTTP(w, httptest.NewRequest(method, "/simulate"+query, strings.NewReader(body)))
++		return w
++	}
++
++	if code := call(http.MethodPost, "", body).Code; code != http.StatusServiceUnavailable {
++		t.Errorf("before sync: %d, want 503", code)
++	}
++	close(synced)
++	if code := call(http.MethodGet, "", body).Code; code != http.StatusMethodNotAllowed {
++		t.Errorf("GET: %d, want 405", code)
++	}
++	for _, q := range []string{"?weights=%zz", "?nodes=all", "?filters=some"} {
++		if code := call(http.MethodPost, q, body).Code; code != http.StatusBadRequest {
++			t.Errorf("query %q: %d, want 400", q, code)
++		}
++	}
++	if code := call(http.MethodPost, "", "{").Code; code != http.StatusBadRequest {
++		t.Errorf("broken JSON: %d, want 400", code)
++	}
++
++	h.busy <- struct{}{}
++	w := call(http.MethodPost, "", body)
++	<-h.busy
++	if w.Code != http.StatusTooManyRequests || w.Header().Get("Retry-After") == "" {
++		t.Errorf("while busy: %d, Retry-After %q, want 429 with Retry-After", w.Code, w.Header().Get("Retry-After"))
++	}
++
++	w = call(http.MethodPost, "?weights=true&filters=all", body)
++	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `"leader":true`) {
++		t.Errorf("simulation: %d %s", w.Code, w.Body.String())
++	}
++}
+diff --git a/pkg/scheduler/framework/deckhouse_simulation.go b/pkg/scheduler/framework/deckhouse_simulation.go
+new file mode 100644
+index 00000000000..87d4df6ac9d
+--- /dev/null
++++ b/pkg/scheduler/framework/deckhouse_simulation.go
+@@ -0,0 +1,85 @@
++/*
++Copyright 2026 Flant JSC
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package framework
++
++import (
++	"context"
++	"sync"
++
++	fwk "k8s.io/kube-scheduler/framework"
++)
++
++// Deckhouse: the context of a dry-run simulation (pkg/scheduler/deckhouse_simulate.go)
++// carries this marker. Extension point duration metrics are not recorded for it,
++// and extender rejections name the extender; real cycles are not affected.
++type deckhouseSimulationKey struct{}
++
++// WithDeckhouseSimulation marks the context as a simulation.
++func WithDeckhouseSimulation(ctx context.Context) context.Context {
++	return context.WithValue(ctx, deckhouseSimulationKey{}, true)
++}
++
++// IsDeckhouseSimulation reports whether the context belongs to a simulation.
++func IsDeckhouseSimulation(ctx context.Context) bool {
++	v, _ := ctx.Value(deckhouseSimulationKey{}).(bool)
++	return v
++}
++
++// DeckhouseFilterLog collects every failing filter plugin per node during a
++// simulation asked for all filters (filters=all). Real cycles and plain
++// simulations stop at the first failing plugin and never see a log.
++type DeckhouseFilterLog struct {
++	mu     sync.Mutex
++	byNode map[string][]*fwk.Status
++}
++
++type deckhouseFilterLogKey struct{}
++
++// WithDeckhouseFilterLog makes RunFilterPlugins run every filter plugin on a
++// node and record all failures in the returned log.
++func WithDeckhouseFilterLog(ctx context.Context) (context.Context, *DeckhouseFilterLog) {
++	l := &DeckhouseFilterLog{byNode: map[string][]*fwk.Status{}}
++	return context.WithValue(ctx, deckhouseFilterLogKey{}, l), l
++}
++
++// DeckhouseAllFilters reports whether filtering must not stop at the first
++// failing plugin.
++func DeckhouseAllFilters(ctx context.Context) bool {
++	return ctx.Value(deckhouseFilterLogKey{}) != nil
++}
++
++// DeckhouseRecordFilters stores the failures of one filter run on a node and
++// returns the first one, the status a real cycle would get. A later run on the
++// same node (the second pass with nominated Pods) replaces the earlier one.
++func DeckhouseRecordFilters(ctx context.Context, nodeInfo fwk.NodeInfo, failed []*fwk.Status) *fwk.Status {
++	if len(failed) == 0 {
++		return nil
++	}
++	if l, ok := ctx.Value(deckhouseFilterLogKey{}).(*DeckhouseFilterLog); ok {
++		l.mu.Lock()
++		l.byNode[nodeInfo.Node().Name] = failed
++		l.mu.Unlock()
++	}
++	return failed[0]
++}
++
++// Get returns the failures recorded for the node.
++func (l *DeckhouseFilterLog) Get(node string) []*fwk.Status {
++	l.mu.Lock()
++	defer l.mu.Unlock()
++	return l.byNode[node]
++}
+diff --git a/pkg/scheduler/framework/runtime/deckhouse_weights.go b/pkg/scheduler/framework/runtime/deckhouse_weights.go
+new file mode 100644
+index 00000000000..d7bb3e520e3
+--- /dev/null
++++ b/pkg/scheduler/framework/runtime/deckhouse_weights.go
+@@ -0,0 +1,27 @@
++/*
++Copyright 2026 Flant JSC
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package runtime
++
++// DeckhouseScorePluginWeights returns the weight of every score plugin of the
++// profile, for the simulate endpoint (weights=true). The map is a copy.
++func (f *frameworkImpl) DeckhouseScorePluginWeights() map[string]int {
++	out := make(map[string]int, len(f.scorePluginWeight))
++	for name, w := range f.scorePluginWeight {
++		out[name] = w
++	}
++	return out
++}
+diff --git a/pkg/scheduler/framework/runtime/framework.go b/pkg/scheduler/framework/runtime/framework.go
+index 350c8e0c7fe..8ba67b2996c 100644
+--- a/pkg/scheduler/framework/runtime/framework.go
++++ b/pkg/scheduler/framework/runtime/framework.go
+@@ -864,7 +864,9 @@ func (f *frameworkImpl) RunPreFilterPlugins(ctx context.Context, state fwk.Cycle
+ 	skipPlugins := sets.New[string]()
+ 	defer func() {
+ 		state.SetSkipFilterPlugins(skipPlugins)
+-		metrics.FrameworkExtensionPointDuration.WithLabelValues(metrics.PreFilter, status.Code().String(), f.profileName).Observe(metrics.SinceInSeconds(startTime))
++		if !framework.IsDeckhouseSimulation(ctx) {
++			metrics.FrameworkExtensionPointDuration.WithLabelValues(metrics.PreFilter, status.Code().String(), f.profileName).Observe(metrics.SinceInSeconds(startTime))
++		}
+ 	}()
+ 	nodes, err := f.SnapshotSharedLister().NodeInfos().List()
+ 	if err != nil {
+@@ -1042,6 +1044,9 @@ func (f *frameworkImpl) RunFilterPlugins(
+ 		logger = klog.LoggerWithName(logger, "Filter")
+ 	}
+ 
++	// Deckhouse: a simulation with filters=all runs every plugin and records all failures.
++	allFilters := framework.DeckhouseAllFilters(ctx)
++	var failed []*fwk.Status
+ 	for _, pl := range f.filterPlugins {
+ 		if state.GetSkipFilterPlugins().Has(pl.Name()) {
+ 			continue
+@@ -1058,11 +1063,14 @@ func (f *frameworkImpl) RunFilterPlugins(
+ 				status = fwk.AsStatus(fmt.Errorf("running %q filter plugin: %w", pl.Name(), status.AsError()))
+ 			}
+ 			status.SetPlugin(pl.Name())
+-			return status
++			if !allFilters {
++				return status
++			}
++			failed = append(failed, status)
+ 		}
+ 	}
+ 
+-	return nil
++	return framework.DeckhouseRecordFilters(ctx, nodeInfo, failed)
+ }
+ 
+ func (f *frameworkImpl) runFilterPlugin(ctx context.Context, pl fwk.FilterPlugin, state fwk.CycleState, pod *v1.Pod, nodeInfo fwk.NodeInfo) *fwk.Status {
+@@ -1231,7 +1239,9 @@ func (f *frameworkImpl) RunPreScorePlugins(
+ 	skipPlugins := sets.New[string]()
+ 	defer func() {
+ 		state.SetSkipScorePlugins(skipPlugins)
+-		metrics.FrameworkExtensionPointDuration.WithLabelValues(metrics.PreScore, status.Code().String(), f.profileName).Observe(metrics.SinceInSeconds(startTime))
++		if !framework.IsDeckhouseSimulation(ctx) {
++			metrics.FrameworkExtensionPointDuration.WithLabelValues(metrics.PreScore, status.Code().String(), f.profileName).Observe(metrics.SinceInSeconds(startTime))
++		}
+ 	}()
+ 	logger := klog.FromContext(ctx)
+ 	verboseLogs := logger.V(4).Enabled()
+@@ -1273,7 +1283,9 @@ func (f *frameworkImpl) runPreScorePlugin(ctx context.Context, pl fwk.PreScorePl
+ func (f *frameworkImpl) RunScorePlugins(ctx context.Context, state fwk.CycleState, pod *v1.Pod, nodes []fwk.NodeInfo) (ns []fwk.NodePluginScores, status *fwk.Status) {
+ 	startTime := time.Now()
+ 	defer func() {
+-		metrics.FrameworkExtensionPointDuration.WithLabelValues(metrics.Score, status.Code().String(), f.profileName).Observe(metrics.SinceInSeconds(startTime))
++		if !framework.IsDeckhouseSimulation(ctx) {
++			metrics.FrameworkExtensionPointDuration.WithLabelValues(metrics.Score, status.Code().String(), f.profileName).Observe(metrics.SinceInSeconds(startTime))
++		}
+ 	}()
+ 	allNodePluginScores := make([]fwk.NodePluginScores, len(nodes))
+ 	numPlugins := len(f.scorePlugins)
+diff --git a/pkg/scheduler/framework/runtime/instrumented_plugins.go b/pkg/scheduler/framework/runtime/instrumented_plugins.go
+index 6e9e86650e7..faba047a7c1 100644
+--- a/pkg/scheduler/framework/runtime/instrumented_plugins.go
++++ b/pkg/scheduler/framework/runtime/instrumented_plugins.go
+@@ -22,6 +22,7 @@ import (
+ 	v1 "k8s.io/api/core/v1"
+ 	compbasemetrics "k8s.io/component-base/metrics"
+ 	fwk "k8s.io/kube-scheduler/framework"
++	"k8s.io/kubernetes/pkg/scheduler/framework"
+ )
+ 
+ type instrumentedFilterPlugin struct {
+@@ -33,7 +34,9 @@ type instrumentedFilterPlugin struct {
+ var _ fwk.FilterPlugin = &instrumentedFilterPlugin{}
+ 
+ func (p *instrumentedFilterPlugin) Filter(ctx context.Context, state fwk.CycleState, pod *v1.Pod, nodeInfo fwk.NodeInfo) *fwk.Status {
+-	p.metric.Inc()
++	if !framework.IsDeckhouseSimulation(ctx) {
++		p.metric.Inc()
++	}
+ 	return p.FilterPlugin.Filter(ctx, state, pod, nodeInfo)
+ }
+ 
+@@ -47,7 +50,7 @@ var _ fwk.PreFilterPlugin = &instrumentedPreFilterPlugin{}
+ 
+ func (p *instrumentedPreFilterPlugin) PreFilter(ctx context.Context, state fwk.CycleState, pod *v1.Pod, nodes []fwk.NodeInfo) (*fwk.PreFilterResult, *fwk.Status) {
+ 	result, status := p.PreFilterPlugin.PreFilter(ctx, state, pod, nodes)
+-	if !status.IsSkip() {
++	if !status.IsSkip() && !framework.IsDeckhouseSimulation(ctx) {
+ 		p.metric.Inc()
+ 	}
+ 	return result, status
+@@ -63,7 +66,7 @@ var _ fwk.PreScorePlugin = &instrumentedPreScorePlugin{}
+ 
+ func (p *instrumentedPreScorePlugin) PreScore(ctx context.Context, state fwk.CycleState, pod *v1.Pod, nodes []fwk.NodeInfo) *fwk.Status {
+ 	status := p.PreScorePlugin.PreScore(ctx, state, pod, nodes)
+-	if !status.IsSkip() {
++	if !status.IsSkip() && !framework.IsDeckhouseSimulation(ctx) {
+ 		p.metric.Inc()
+ 	}
+ 	return status
+@@ -78,6 +81,8 @@ type instrumentedScorePlugin struct {
+ var _ fwk.ScorePlugin = &instrumentedScorePlugin{}
+ 
+ func (p *instrumentedScorePlugin) Score(ctx context.Context, state fwk.CycleState, pod *v1.Pod, nodeInfo fwk.NodeInfo) (int64, *fwk.Status) {
+-	p.metric.Inc()
++	if !framework.IsDeckhouseSimulation(ctx) {
++		p.metric.Inc()
++	}
+ 	return p.ScorePlugin.Score(ctx, state, pod, nodeInfo)
+ }
+diff --git a/pkg/scheduler/schedule_one.go b/pkg/scheduler/schedule_one.go
+index fd7d4991d60..ac777a15d34 100644
+--- a/pkg/scheduler/schedule_one.go
++++ b/pkg/scheduler/schedule_one.go
+@@ -113,7 +113,9 @@ func (sched *Scheduler) ScheduleOne(ctx context.Context) {
+ 	schedulingCycleCtx, cancel := context.WithCancel(ctx)
+ 	defer cancel()
+ 
++	sched.deckhouseSimulateMu.Lock()
+ 	scheduleResult, assumedPodInfo, status := sched.schedulingCycle(schedulingCycleCtx, state, fwk, podInfo, start, podsToActivate)
++	sched.deckhouseSimulateMu.Unlock()
+ 	if !status.IsSuccess() {
+ 		sched.FailureHandler(schedulingCycleCtx, fwk, assumedPodInfo, status, scheduleResult.nominatingInfo, start)
+ 		return
+@@ -480,6 +482,12 @@ func (sched *Scheduler) schedulePod(ctx context.Context, fwk framework.Framework
+ // Filters the nodes to find the ones that fit the pod based on the framework
+ // filter plugins and filter extenders.
+ func (sched *Scheduler) findNodesThatFitPod(ctx context.Context, schedFramework framework.Framework, state fwk.CycleState, pod *v1.Pod) ([]fwk.NodeInfo, framework.Diagnosis, string, fwk.PodSignature, error) {
++	return sched.findNodesThatFitPodWithHint(ctx, schedFramework, state, pod, true)
++}
++
++// Deckhouse: useHint=false skips the OpportunisticBatching node hint. Reading a
++// hint consumes it, so a simulation must not take the hint of a real cycle.
++func (sched *Scheduler) findNodesThatFitPodWithHint(ctx context.Context, schedFramework framework.Framework, state fwk.CycleState, pod *v1.Pod, useHint bool) ([]fwk.NodeInfo, framework.Diagnosis, string, fwk.PodSignature, error) {
+ 	logger := klog.FromContext(ctx)
+ 	diagnosis := framework.Diagnosis{
+ 		NodeToStatus: framework.NewDefaultNodeToStatus(),
+@@ -509,7 +517,7 @@ func (sched *Scheduler) findNodesThatFitPod(ctx context.Context, schedFramework
+ 
+ 	var nodeHint string
+ 	var signature fwk.PodSignature
+-	if utilfeature.DefaultFeatureGate.Enabled(features.OpportunisticBatching) {
++	if useHint && utilfeature.DefaultFeatureGate.Enabled(features.OpportunisticBatching) {
+ 		// We get the node hint even if we have a nominated name for simplicity, but we could potentially avoid it
+ 		// in this scenario in the future.
+ 		nodeHint, signature = schedFramework.GetNodeHint(ctx, pod, state, sched.CurrentCycle())
+@@ -540,6 +548,7 @@ func (sched *Scheduler) findNodesThatFitPod(ctx context.Context, schedFramework
+ 			}
+ 		}
+ 		diagnosis.NodeToStatus.SetAbsentNodesStatus(fwk.NewStatus(fwk.UnschedulableAndUnresolvable, fmt.Sprintf("node(s) didn't satisfy plugin(s) %v", sets.List(unscheduledPlugins))))
++		deckhouseRememberCandidates(ctx, state, preRes.NodeNames)
+ 	}
+ 	feasibleNodes, err := sched.findNodesThatPassFilters(ctx, schedFramework, state, pod, &diagnosis, nodes)
+ 	// always try to update the sched.nextStartNodeIndex regardless of whether an error has occurred
+@@ -686,7 +695,9 @@ func (sched *Scheduler) findNodesThatPassFilters(
+ 		// We record Filter extension point latency here instead of in framework.go because framework.RunFilterPlugins
+ 		// function is called for each node, whereas we want to have an overall latency for all nodes per scheduling cycle.
+ 		// Note that this latency also includes latency for `addNominatedPods`, which calls framework.RunPreFilterAddPod.
+-		metrics.FrameworkExtensionPointDuration.WithLabelValues(metrics.Filter, statusCode.String(), schedFramework.ProfileName()).Observe(metrics.SinceInSeconds(beginCheckNode))
++		if !framework.IsDeckhouseSimulation(ctx) {
++			metrics.FrameworkExtensionPointDuration.WithLabelValues(metrics.Filter, statusCode.String(), schedFramework.ProfileName()).Observe(metrics.SinceInSeconds(beginCheckNode))
++		}
+ 	}()
+ 
+ 	// Stops searching for more nodes once the configured number of feasible nodes
+@@ -766,7 +777,7 @@ func findNodesThatPassExtenders(ctx context.Context, extenders []fwk.Extender, p
+ 		}
+ 
+ 		for failedNodeName, failedMsg := range failedAndUnresolvableMap {
+-			statuses.Set(failedNodeName, fwk.NewStatus(fwk.UnschedulableAndUnresolvable, failedMsg))
++			statuses.Set(failedNodeName, deckhouseExtenderStatus(ctx, fwk.NewStatus(fwk.UnschedulableAndUnresolvable, failedMsg), extender))
+ 		}
+ 
+ 		for failedNodeName, failedMsg := range failedMap {
+@@ -775,7 +786,7 @@ func findNodesThatPassExtenders(ctx context.Context, extenders []fwk.Extender, p
+ 				// note that this only happens if the extender returns the node in both maps
+ 				continue
+ 			}
+-			statuses.Set(failedNodeName, fwk.NewStatus(fwk.Unschedulable, failedMsg))
++			statuses.Set(failedNodeName, deckhouseExtenderStatus(ctx, fwk.NewStatus(fwk.Unschedulable, failedMsg), extender))
+ 		}
+ 
+ 		feasibleNodes = feasibleList
+@@ -844,9 +855,14 @@ func prioritizeNodes(
+ 			}
+ 			wg.Add(1)
+ 			go func(extIndex int) {
+-				metrics.Goroutines.WithLabelValues(metrics.PrioritizingExtender).Inc()
++				simulation := framework.IsDeckhouseSimulation(ctx)
++				if !simulation {
++					metrics.Goroutines.WithLabelValues(metrics.PrioritizingExtender).Inc()
++				}
+ 				defer func() {
+-					metrics.Goroutines.WithLabelValues(metrics.PrioritizingExtender).Dec()
++					if !simulation {
++						metrics.Goroutines.WithLabelValues(metrics.PrioritizingExtender).Dec()
++					}
+ 					wg.Done()
+ 				}()
+ 				prioritizedList, weight, err := extenders[extIndex].Prioritize(pod, nodes)
+diff --git a/pkg/scheduler/scheduler.go b/pkg/scheduler/scheduler.go
+index 7c289c15414..04fc50daf76 100644
+--- a/pkg/scheduler/scheduler.go
++++ b/pkg/scheduler/scheduler.go
+@@ -20,6 +20,7 @@ import (
+ 	"context"
+ 	"errors"
+ 	"fmt"
++	"sync"
+ 	"time"
+ 
+ 	v1 "k8s.io/api/core/v1"
+@@ -127,6 +128,10 @@ type Scheduler struct {
+ 	registeredHandlers []cache.ResourceEventHandlerRegistration
+ 
+ 	nominatedNodeNameForExpectationEnabled bool
++
++	// Deckhouse: serializes the synchronous part of a scheduling cycle with
++	// simulations (deckhouse_simulate.go) that use the same snapshot.
++	deckhouseSimulateMu sync.Mutex
+ }
+ 
+ func (sched *Scheduler) applyDefaultHandlers() {

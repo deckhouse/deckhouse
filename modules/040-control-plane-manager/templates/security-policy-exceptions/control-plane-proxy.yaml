@@ -1,4 +1,3 @@
-{{- if (.Values.global.enabledModules | has "prometheus") }}
 {{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -13,12 +12,11 @@ spec:
       allowedValue: true
       metadata:
         description: |
-          control-plane-proxy scrapes control-plane metrics from loopback endpoints
-          (controller-manager, scheduler, etcd) on the same node.
+          control-plane-proxy publishes loopback endpoints of the same node: control-plane
+          metrics (controller-manager, scheduler, etcd) and the kube-scheduler simulate endpoint.
     hostPorts:
       - port: 4209
         protocol: TCP
         metadata:
-          description: HTTPS metrics endpoint exposed through kube-rbac-proxy.
-{{- end }}
+          description: HTTPS endpoint of kube-rbac-proxy (metrics and the scheduler simulate endpoint).
 {{- end }}

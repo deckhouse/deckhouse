@@ -79,6 +79,10 @@ spec:
     env:
     - name: GOGC
       value: "50"
+    {{- /* Dry-run scheduling endpoint (patch scheduler-simulate-endpoint, every supported version),
+           loopback only; control-plane-proxy publishes it with authorization as /scheduler/simulate. */}}
+    - name: DECKHOUSE_SCHEDULER_SIMULATE_ADDRESS
+      value: "127.0.0.1:10261"
 {{- if (.images).controlPlaneManager }}  
 {{- $imageWithVersion := printf "kubeScheduler%s" ($.clusterConfiguration.kubernetesVersion | replace "." "") }}
   {{- if hasKey $.images.controlPlaneManager $imageWithVersion }}
