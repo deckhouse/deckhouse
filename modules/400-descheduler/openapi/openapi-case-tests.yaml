@@ -87,6 +87,24 @@ positive:
                   cpu: 5
                 evictionLimits:
                   node: 2
+          - name: test6
+            strategies:
+              lowNodeUtilization:
+                enabled: true
+                metricsSource: Prometheus
+                thresholds:
+                  cpu: 5
+                targetThresholds:
+                  cpu: 5
+          - name: test7
+            strategies:
+              lowNodeUtilization:
+                enabled: true
+                metricsSource: Default
+                thresholds:
+                  cpu: 20
+                targetThresholds:
+                  cpu: 50
 negative:
   configValues:
     - logLevel: "warning"
@@ -122,6 +140,17 @@ negative:
                   cpu: 5
                 evictionLimits:
                   node: 0
+    - internal:
+        deschedulers:
+          - name: test1
+            strategies:
+              lowNodeUtilization:
+                enabled: true
+                metricsSource: Thanos
+                thresholds:
+                  cpu: 5
+                targetThresholds:
+                  cpu: 5
     - deschedulingInterval: "invalid"
       internal:
         deschedulers: []

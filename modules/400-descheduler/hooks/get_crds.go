@@ -28,6 +28,7 @@ import (
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
+	"github.com/deckhouse/deckhouse/go_lib/module"
 	dsv1alpha2 "github.com/deckhouse/deckhouse/modules/400-descheduler/hooks/internal/v1alpha2"
 )
 
@@ -80,6 +81,7 @@ type InternalValuesDeschedulerSpec struct {
 }
 
 func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
+	prometheusEnabled := module.IsEnabled("prometheus", input)
 	internalValues := make([]InternalValuesDeschedulerSpec, 0, len(input.Snapshots.Get("deschedulers")))
 	for item, err := range sdkobjectpatch.SnapshotIter[DeschedulerSnapshotItem](input.Snapshots.Get("deschedulers")) {
 		if err != nil {
@@ -112,10 +114,24 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 			ds.ProtectedStorageClasses = item.Spec.ProtectedStorageClasses
 		}
 
+		// The CRD defaults metricsSource to Default; drop it so such resources produce the same values as before the field existed.
+		if lnu := ds.Strategies.LowNodeUtilization; lnu != nil && lnu.MetricsSource == dsv1alpha2.MetricsSourceDefault {
+			lnu.MetricsSource = ""
+		}
+
 		if !item.Spec.Strategies.HasValidStrategies() {
 			input.Logger.Warn("Descheduler CR has no valid v1alpha2 strategies, skipping",
 				slog.String("name", item.Name))
 			continue
+		}
+
+		// Same condition as descheduler_prometheus_metrics_enabled in templates/_helpers.tpl:
+		// without the prometheus module such a profile silently renders as Default.
+		if lnu := ds.Strategies.LowNodeUtilization; lnu != nil && lnu.Enabled &&
+			lnu.MetricsSource == dsv1alpha2.MetricsSourcePrometheus && !prometheusEnabled {
+			input.Logger.Warn("Descheduler requests Prometheus metrics, but the prometheus module is disabled; LowNodeUtilization uses the Default metrics source",
+				slog.String("name", item.Name),
+				slog.String("metrics_source", lnu.MetricsSource))
 		}
 
 		internalValues = append(internalValues, *ds)

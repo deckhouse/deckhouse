@@ -217,6 +217,9 @@ properties:
                         node:
                           type: integer
                           minimum: 1
+                    metricsSource:
+                      type: string
+                      enum: ["Default", "Prometheus"]
                 highNodeUtilization:
                   type: object
                   default: {}

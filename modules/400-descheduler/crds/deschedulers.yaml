@@ -519,6 +519,9 @@ spec:
                   properties:
                     lowNodeUtilization:
                       type: object
+                      x-kubernetes-validations:
+                        - rule: "!has(self.enabled) || !self.enabled || !has(self.metricsSource) || self.metricsSource != 'Prometheus' || (has(self.thresholds) && has(self.thresholds.cpu) && has(self.targetThresholds) && has(self.targetThresholds.cpu))"
+                          message: "an enabled strategy with metricsSource Prometheus requires the cpu key in both thresholds and targetThresholds."
                       description: |-
                         This strategy identifies *under utilized nodes* and evicts pods from other *over utilized nodes*. The strategy assumes that the evicted pods will be recreated on the under utilized nodes (following normal scheduler behavior).
 
@@ -614,8 +617,27 @@ spec:
                                 The limit also counts pods evicted in the background, such as a virtual machine pod that leaves the node through a live migration. Such a pod takes a place in the limit in every cycle until it leaves the node, and no new eviction request is sent for it. So for virtual machines the parameter effectively limits how many of them migrate from one node at the same time.
 
                                 If the parameter is not set, the strategy evicts pods from a node until the node stops being over utilized or the under utilized nodes run out of free resources.
+
+                                With [metricsSource](#descheduler-v1alpha2-spec-strategies-lownodeutilization-metricssource) `Prometheus` the strategy evicts one pod from each over utilized node in a cycle without the parameter and up to the set number of pods with it, so in that mode the parameter raises the number of evictions instead of limiting it.
                           x-doc-examples:
                             - node: 2
+                        metricsSource:
+                          type: string
+                          enum: ["Default", "Prometheus"]
+                          default: "Default"
+                          description: |-
+                            The source of the node utilization for the strategy.
+
+                            - `Default` - pod requests or, if the `metrics.k8s.io` API group is registered in the cluster, the actual consumption from the Metrics API at the moment of the descheduling cycle.
+                            - `Prometheus` - the node CPU utilization averaged over the last 15 minutes, taken from the cluster Prometheus (node-exporter data). Short load spikes do not trigger evictions.
+
+                            With `Prometheus`:
+                            - only the `cpu` key of [thresholds](#descheduler-v1alpha2-spec-strategies-lownodeutilization-thresholds) and [targetThresholds](#descheduler-v1alpha2-spec-strategies-lownodeutilization-targetthresholds) is used, as a percentage of the node CPU; other keys are ignored. The `cpu` key is required in both sections;
+                            - the `prometheus` module must be enabled. If it is disabled, the strategy works as with `Default`, and the Deckhouse log shows a warning;
+                            - together with [useDeviationThresholds](#descheduler-v1alpha2-spec-strategies-lownodeutilization-usedeviationthresholds), the strategy keeps the nodes within a corridor around the 15-minute average CPU utilization of the cluster;
+                            - if Prometheus has no data for at least one Ready node (node-exporter does not run on it or fails to be scraped, or the node has just joined and has not been scraped twice yet) or is unavailable, the strategy of this Descheduler skips balancing in this cycle. Other Descheduler resources keep working;
+                            - the strategy cannot estimate how much an evicted pod adds to the average, so it evicts one pod from each over utilized node in a cycle, or up to [evictionLimits.node](#descheduler-v1alpha2-spec-strategies-lownodeutilization-evictionlimits-node) pods if the parameter is set. Do not set the parameter with this source: it raises the number of evictions per cycle;
+                            - the average reflects the evictions with a delay of up to 15 minutes. With the `Frequent` descheduling interval (5 minutes) a node stays over utilized for several cycles after the evictions, and the strategy evicts pods from it again. Use the `Moderate` (default) or `Rare` interval with this source.
                     highNodeUtilization:
                       type: object
                       description: |-

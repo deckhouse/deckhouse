@@ -66,6 +66,28 @@ spec:
         node: 2
 ```
 
+## Пример стратегии LowNodeUtilization по средней загрузке CPU за 15 минут
+
+Стратегия удерживает узлы в коридоре ±5% от средней по кластеру загрузки CPU, усредненной за 15 минут, поэтому кратковременные всплески нагрузки не вызывают вытеснений. За цикл работы descheduler стратегия вытесняет один под с каждого избыточно нагруженного узла. В этом режиме не задавайте `evictionLimits.node`: параметр увеличивает это число. Используйте интервал работы `Moderate` (15 минут, по умолчанию). Должен быть включен модуль `prometheus`:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Descheduler
+metadata:
+  name: low-node-utilization-prometheus
+spec:
+  strategies:
+    lowNodeUtilization:
+      enabled: true
+      metricsSource: Prometheus
+      useDeviationThresholds: true
+      thresholds:
+        cpu: 5
+      targetThresholds:
+        cpu: 5
+```
+
 ## Пример стратегии HighNodeUtilization
 
 ```yaml

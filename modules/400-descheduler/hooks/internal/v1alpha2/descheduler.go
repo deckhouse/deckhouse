@@ -85,7 +85,16 @@ type LowNodeUtilization struct {
 	// UseDeviationThresholds makes thresholds and targetThresholds offsets from the average node utilization.
 	UseDeviationThresholds bool            `json:"useDeviationThresholds,omitempty" yaml:"useDeviationThresholds,omitempty"`
 	EvictionLimits         *EvictionLimits `json:"evictionLimits,omitempty" yaml:"evictionLimits,omitempty"`
+	// MetricsSource selects where node utilization comes from: Default (requests or metrics-server) or Prometheus.
+	MetricsSource string `json:"metricsSource,omitempty" yaml:"metricsSource,omitempty"`
 }
+
+const (
+	// MetricsSourceDefault is the CRD default of LowNodeUtilization.MetricsSource; the hook omits it from values.
+	MetricsSourceDefault = "Default"
+	// MetricsSourcePrometheus makes LowNodeUtilization use the 15-minute CPU average from Prometheus.
+	MetricsSourcePrometheus = "Prometheus"
+)
 
 // EvictionLimits mirrors the upstream api.EvictionLimits of the LowNodeUtilization plugin args.
 type EvictionLimits struct {

@@ -121,7 +121,7 @@ server default, which answers with an `unknown field` warning) or `Ignore`.
 
 | Strategy key | Since | Plugin, extension point | Arguments that reach the plugin |
 |---|---|---|---|
-| `lowNodeUtilization` | 1.67.0 | `LowNodeUtilization`, balance | `thresholds`, `targetThresholds`; since 1.78.0 also `useDeviationThresholds` and `evictionLimits.node` |
+| `lowNodeUtilization` | 1.67.0 | `LowNodeUtilization`, balance | `thresholds`, `targetThresholds`; since 1.78.0 also `useDeviationThresholds` and `evictionLimits.node`, and `metricsSource` picks the usage source |
 | `highNodeUtilization` | 1.67.0 | `HighNodeUtilization`, balance | `thresholds` |
 | `removeDuplicates` | 1.67.0 | `RemoveDuplicates`, balance | none |
 | `removePodsViolatingNodeAffinity` | 1.67.0 | `RemovePodsViolatingNodeAffinity`, deschedule | `nodeAffinityType` |
@@ -142,7 +142,7 @@ profile, delete the resource.
   checks any other key, such as an extended resource, but the descheduler still requires a number
   from 0 to 100 there, and any other value stops every profile. A node is underutilized when every
   listed resource is at or below its threshold, and overutilized when any listed resource is above
-  its target. Usage comes from one of two sources:
+  its target. Usage comes from one of three sources:
   - By default, from pod requests. Usage is the sum of pod requests, and limits are ignored. If the
     underutilized nodes do not have a listed resource, the strategy evicts nothing.
   - Since 1.76.0, from node metrics whenever the cluster has any APIService for `metrics.k8s.io`,
@@ -156,6 +156,28 @@ profile, delete the resource.
     Ready node that has had no metrics since the descheduler started, makes the strategy fail
     every cycle, and only the log shows it. If a node's metrics stop later, the descheduler keeps
     seeing the node at its last value until the next restart.
+  - Since 1.78.0, with `metricsSource: Prometheus` (the default is `Default`, the two sources
+    above), from the node CPU utilization averaged over 15 minutes:
+    `1 - avg by (node) (rate(node_cpu_seconds_total{job="node-exporter",mode="idle"}[15m]))`, read
+    from the cluster Prometheus through `aggregating-proxy` in `d8-monitoring` with the
+    descheduler's ServiceAccount token. The source is chosen per resource; other resources keep
+    theirs. Details:
+    - It needs the `prometheus` module. While that module is disabled, the resource renders exactly
+      as with `Default`, and the `get_crds` hook logs a warning naming the resource in the
+      Deckhouse log on every run.
+    - The CRD then requires `cpu` in both maps. Only `cpu` reaches the plugin, as the upstream
+      `MetricResource`; other keys are dropped.
+    - The strategy does not know how much a pod adds to the average, so it does not stop when a node
+      would fall back below its target. It evicts one pod from each overutilized node per cycle, or
+      up to `evictionLimits.node` pods when that is set; the limit raises the count above one rather
+      than lowering it, so leave it unset in this mode.
+    - The average reacts to evictions with a delay of up to 15 minutes. With `deschedulingInterval:
+      Frequent` (5 minutes) the same node stays overutilized and loses pods in up to three cycles in
+      a row; use `Moderate` (15 minutes, the default).
+    - If Prometheus is unreachable, or a Ready node has no sample (node-exporter does not run on it
+      or its scrape fails, or the node joined and has not been scraped twice yet), the strategy fails that cycle and
+      evicts nothing; other strategies of the resource and other resources keep working. Only the
+      descheduler log shows it.
 
   Since 1.78.0 two more arguments reach the plugin; both are omitted from the policy when unset:
   - `useDeviationThresholds: true` (default `false`) turns both maps into offsets from the average
@@ -330,6 +352,8 @@ before it is used, so a mistake surfaces in one of four ways.
   satisfies the rule);
 - a `cpu`, `memory` or `pods` threshold that is fractional or outside 0 to 100, and a
   `podRestartThreshold` below 1;
+- since 1.78.0, `lowNodeUtilization.metricsSource: Prometheus` without `cpu` in both `thresholds`
+  and `targetThresholds`;
 - both `name` and `value` in `priorityClassThreshold`, or neither;
 - a value outside an enum, `Exists` or `DoesNotExist` with `values`, `In` or `NotIn` without
   `values`;
@@ -396,6 +420,9 @@ and the module reports itself healthy; see "Signals" for what shows the failure.
 - a `lowNodeUtilization` resource that the underutilized nodes do not have;
 - `lowNodeUtilization` on node metrics with any other resource, or with a node that has had no
   metrics since the descheduler started;
+- `lowNodeUtilization` with `metricsSource: Prometheus` while the `prometheus` module is disabled
+  (it runs as `Default`, with a warning in the Deckhouse log), while Prometheus is unreachable, or
+  while a Ready node has no node-exporter data;
 - a `podRestartThreshold` above 2147483647 that wraps to a positive number (4294967301 becomes 5);
 - on 1.76.x, a `namespaceLabelSelector` with only `matchExpressions`, which widens the profile to
   every namespace.
@@ -506,7 +533,8 @@ Earlier releases differ from the sections above in at least these ways:
 4. **Give every enabled utilization strategy its thresholds.** For `lowNodeUtilization`, both maps
    with the same keys, each threshold at or below its target (unless `useDeviationThresholds` is
    `true`), every value from 0 to 100, and only
-   `cpu`, `memory` and `pods` as keys on a cluster that has, or may get, `metrics.k8s.io`.
+   `cpu`, `memory` and `pods` as keys on a cluster that has, or may get, `metrics.k8s.io`. With
+   `metricsSource: Prometheus` only `cpu` counts, and the `prometheus` module must be enabled.
 5. **Check label keys and values yourself.** The CRD lets malformed pod and namespace selectors
    through, and they stop every profile. It also rejects legal values without a lowercase letter or
    digit, such as `PROD`; select on those through `matchLabels`.

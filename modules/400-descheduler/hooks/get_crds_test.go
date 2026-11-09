@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"strings"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -212,6 +214,39 @@ spec:
         cpu: 50
       evictionLimits: {}
 `
+
+	deschedulerCR11 = `
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Descheduler
+metadata:
+  name: test11
+spec:
+  strategies:
+    lowNodeUtilization:
+      enabled: true
+      metricsSource: Prometheus
+      thresholds:
+        cpu: 5
+      targetThresholds:
+        cpu: 5
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Descheduler
+metadata:
+  name: test12
+spec:
+  strategies:
+    lowNodeUtilization:
+      enabled: true
+      metricsSource: Default
+      thresholds:
+        cpu: 20
+      targetThresholds:
+        cpu: 50
+`
+
+	prometheusDisabledWarning = "the prometheus module is disabled"
 
 	// Simulates a Descheduler CR that was converted from v1alpha1
 	// with only deprecated strategies (e.g. removePodsViolatingNodeTaints).
@@ -532,6 +567,61 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
         cpu: 50
       evictionLimits: {}
 `))
+		})
+	})
+
+	Context("Cluster with Descheduler CRs with LowNodeUtilization metricsSource Prometheus and Default", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(deschedulerCR11)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should warn once, for the Prometheus resource, that the prometheus module is disabled", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			logs := string(f.LoggerOutput.Contents())
+			Expect(strings.Count(logs, prometheusDisabledWarning)).To(Equal(1))
+			Expect(logs).To(ContainSubstring("test11"))
+			Expect(logs).NotTo(ContainSubstring("test12"))
+		})
+
+		It("Should pass Prometheus to internal values and drop the CRD default", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("descheduler.internal.deschedulers").String()).To(MatchYAML(`
+- name: test11
+  evictLocalStoragePods: false
+  strategies:
+    lowNodeUtilization:
+      enabled: true
+      metricsSource: Prometheus
+      thresholds:
+        cpu: 5
+      targetThresholds:
+        cpu: 5
+- name: test12
+  evictLocalStoragePods: false
+  strategies:
+    lowNodeUtilization:
+      enabled: true
+      thresholds:
+        cpu: 20
+      targetThresholds:
+        cpu: 50
+`))
+		})
+	})
+
+	Context("Cluster with a Descheduler CR with metricsSource Prometheus and the prometheus module enabled", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.enabledModules", []byte(`["prometheus"]`))
+			f.KubeStateSet(deschedulerCR11)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should not warn about the prometheus module", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(string(f.LoggerOutput.Contents())).NotTo(ContainSubstring(prometheusDisabledWarning))
 		})
 	})
 

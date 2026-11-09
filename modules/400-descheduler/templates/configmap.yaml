@@ -1,3 +1,14 @@
+{{- /*
+  The averaging window of the node CPU utilization for LowNodeUtilization with metricsSource Prometheus.
+  It is the tuning knob of that mode: the docs and the CRD description name 15 minutes, keep them in sync.
+*/}}
+{{- $prometheusWindow := "15m" }}
+{{- /*
+  node-exporter labels its series with `node` (the node name) while `instance` is IP:port;
+  upstream matches samples to nodes by `instance` and expects a value in [0, 1].
+*/}}
+{{- $prometheusQuery := printf `label_replace(clamp(1 - avg by (node) (rate(node_cpu_seconds_total{job="node-exporter",mode="idle"}[%s])), 0, 1), "instance", "$1", "node", "(.+)")` $prometheusWindow }}
+{{- $prometheusMetricsEnabled := include "descheduler_prometheus_metrics_enabled" . }}
 {{- if len .Values.descheduler.internal.deschedulers }}
 ---
 apiVersion: v1
@@ -10,9 +21,16 @@ data:
   policy.yaml: |
     apiVersion: "descheduler/v1alpha2"
     kind: "DeschedulerPolicy"
-    {{- if default false $.Values.descheduler.internal.isMetricsServerEnabled }}
+    {{- if or (default false $.Values.descheduler.internal.isMetricsServerEnabled) $prometheusMetricsEnabled }}
     metricsProviders:
+    {{- if default false $.Values.descheduler.internal.isMetricsServerEnabled }}
     - source: KubernetesMetrics
+    {{- end }}
+    {{- if $prometheusMetricsEnabled }}
+    - source: Prometheus
+      prometheus:
+        url: https://aggregating-proxy.d8-monitoring.svc.{{ $.Values.global.discovery.clusterDomain }}
+    {{- end }}
     {{- end }}
     profiles:
     {{- range $d := .Values.descheduler.internal.deschedulers }}
@@ -73,11 +91,19 @@ data:
       {{- if dig "strategies" "lowNodeUtilization" "enabled" false $d }}
       - name: "LowNodeUtilization"
         args:
-          {{- if default false $.Values.descheduler.internal.isMetricsServerEnabled }}
+          {{- $s := omit $d.strategies.lowNodeUtilization "enabled" "metricsSource" }}
+          {{- if and $prometheusMetricsEnabled (eq (dig "strategies" "lowNodeUtilization" "metricsSource" "" $d) "Prometheus") }}
+          {{- /*
+            Upstream accepts only the MetricResource key in Prometheus mode; the CRD requires cpu in both maps.
+            Without the prometheus module the profile falls through to the Default rendering below.
+          */}}
+          {{- $_ := set $s "metricsUtilization" (dict "source" "Prometheus" "prometheus" (dict "query" $prometheusQuery)) }}
+          {{- $_ = set $s "thresholds" (dict "MetricResource" $s.thresholds.cpu) }}
+          {{- $_ = set $s "targetThresholds" (dict "MetricResource" $s.targetThresholds.cpu) }}
+          {{- else if default false $.Values.descheduler.internal.isMetricsServerEnabled }}
           metricsUtilization:
             source: KubernetesMetrics
           {{- end }}
-          {{- $s := unset ($d.strategies.lowNodeUtilization | deepCopy) "enabled" }}
           {{- $s | toYaml | nindent 10 }}
       {{- end }}
       {{- if dig "strategies" "highNodeUtilization" "enabled" false $d }}

@@ -101,6 +101,15 @@ spec:
         {{- $featureGates := list "EvictionsInBackground=true" }}
         - "--feature-gates"
         - {{ $featureGates | join "," | quote }}
+        {{- if include "descheduler_prometheus_metrics_enabled" . }}
+        env:
+        {{- /*
+          aggregating-proxy serves a self-signed certificate that the pod CA does not sign,
+          so the descheduler skips its verification (patch 004), like VPA with --prometheus-insecure.
+        */}}
+        - name: DESCHEDULER_PROMETHEUS_INSECURE_SKIP_VERIFY
+          value: "true"
+        {{- end }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}

@@ -101,6 +101,21 @@ If the `metrics.k8s.io` API is **not** available in the cluster, node resource u
 If the `metrics.k8s.io` API **is** available (see [Metrics provider](#metrics-provider)), the strategy uses the **actual** resource consumption from the Metrics API *instead of* requests and limits. In this case the values used by the descheduler are close to what `kubectl top` shows, but they no longer match the kube-scheduler's view: a node whose requests are exhausted may still be considered under utilized, and its pods will not be evicted.
 {% endalert %}
 
+#### CPU utilization averaged over 15 minutes
+
+The momentary values from the Metrics API or pod requests react to short load spikes. To balance nodes by their sustained load, set [spec.strategies.lowNodeUtilization.metricsSource](cr.html#descheduler-v1alpha2-spec-strategies-lownodeutilization-metricssource) to `Prometheus`. The strategy then uses the node CPU utilization averaged over the last 15 minutes, which the cluster Prometheus calculates from the node-exporter data.
+
+How the strategy works in this mode:
+
+1. Only the `cpu` key of `thresholds` and `targetThresholds` is used, as a percentage of the node CPU. The key is required in both sections, other keys are ignored.
+1. The `prometheus` module must be enabled. If it is disabled, the strategy works as with `Default`, and the Deckhouse log shows a warning.
+1. With `useDeviationThresholds: true` the strategy keeps the nodes within a corridor around the 15-minute average CPU utilization of the cluster.
+1. The strategy cannot estimate how much one pod adds to the average, so it evicts one pod from each over utilized node in a cycle. With `evictionLimits.node` set, it evicts up to that number of pods from each over utilized node: in this mode the parameter raises the number of evictions instead of limiting it. Do not set `evictionLimits.node` with this source.
+1. The average reflects the evictions with a delay of up to 15 minutes. With the `Frequent` [descheduling interval](configuration.html#parameters-deschedulinginterval) a node stays over utilized for several cycles after the evictions and loses pods again. Use the `Moderate` interval (15 minutes, default) with this source.
+1. If Prometheus is unavailable or has no data for at least one Ready node (node-exporter does not run on it or fails to be scraped, or the node has just joined and has not been scraped twice yet), the strategy of this Descheduler skips the cycle. Other Descheduler resources keep working.
+
+The descheduler reads the metrics through `aggregating-proxy` in the `d8-monitoring` namespace with its ServiceAccount token. The module grants the read access only while at least one Descheduler uses this mode. An example is on the [Examples](examples.html) page.
+
 ### RemoveDuplicates
 
 {% alert level="info" %}

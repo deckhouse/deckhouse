@@ -68,6 +68,28 @@ spec:
         node: 2
 ```
 
+## Example LowNodeUtilization strategy on the 15-minute CPU average
+
+The strategy keeps the nodes within the corridor of ±5% around the cluster average of the CPU utilization averaged over 15 minutes, so short load spikes do not trigger evictions. It evicts one pod from each over utilized node per descheduling cycle; keep `evictionLimits.node` unset in this mode, since it raises that number. Use the default `Moderate` descheduling interval (15 minutes). The `prometheus` module must be enabled:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Descheduler
+metadata:
+  name: low-node-utilization-prometheus
+spec:
+  strategies:
+    lowNodeUtilization:
+      enabled: true
+      metricsSource: Prometheus
+      useDeviationThresholds: true
+      thresholds:
+        cpu: 5
+      targetThresholds:
+        cpu: 5
+```
+
 ## Example HighNodeUtilization strategy
 
 ```yaml

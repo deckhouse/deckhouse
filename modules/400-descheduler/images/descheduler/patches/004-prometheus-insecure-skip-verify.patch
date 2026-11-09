@@ -1,0 +1,40 @@
+diff --git a/pkg/descheduler/client/client.go b/pkg/descheduler/client/client.go
+index 6f1b64f..b3f7d0b 100644
+--- a/pkg/descheduler/client/client.go
++++ b/pkg/descheduler/client/client.go
+@@ -24,6 +24,7 @@ import (
+ 	"net/http"
+ 	"net/url"
+ 	"os"
++	"strconv"
+ 	"time"
+ 
+ 	promapi "github.com/prometheus/client_golang/api"
+@@ -41,6 +42,15 @@ import (
+ 
+ var K8sPodCAFilePath = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+ 
++// PrometheusInsecureSkipVerifyEnv turns off the TLS verification of the Prometheus endpoint when set to a true value.
++// It is meant for in-cluster endpoints with a self-signed serving certificate that the pod CA does not sign.
++const PrometheusInsecureSkipVerifyEnv = "DESCHEDULER_PROMETHEUS_INSECURE_SKIP_VERIFY"
++
++func prometheusInsecureSkipVerify() bool {
++	v, err := strconv.ParseBool(os.Getenv(PrometheusInsecureSkipVerifyEnv))
++	return err == nil && v
++}
++
+ func createConfig(clientConnection componentbaseconfig.ClientConnectionConfiguration, userAgt string) (*rest.Config, error) {
+ 	var cfg *rest.Config
+ 	if len(clientConnection.Kubeconfig) != 0 {
+@@ -144,8 +154,9 @@ func CreatePrometheusClient(prometheusURL, authToken string) (promapi.Client, *h
+ 		IdleConnTimeout:     90 * time.Second,
+ 		TLSHandshakeTimeout: 10 * time.Second,
+ 		TLSClientConfig: &tls.Config{
+-			RootCAs:    caCertPool,
+-			ServerName: u.Host,
++			RootCAs:            caCertPool,
++			ServerName:         u.Host,
++			InsecureSkipVerify: prometheusInsecureSkipVerify(), //nolint:gosec // opt-in, see PrometheusInsecureSkipVerifyEnv
+ 		},
+ 	}
+ 	roundTripper := transport.NewBearerAuthRoundTripper(
