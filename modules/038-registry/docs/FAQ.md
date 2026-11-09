@@ -320,7 +320,9 @@ but not the way the configuration asks — a state that is easy to miss otherwis
 `D8RegistryStorageIncomplete`
 : Some cache replicas do not hold the whole expected image set. While an upstream is
   configured this does not affect pulls, but the cluster would not survive losing the
-  upstream — and this is what blocks a transition to air-gap.
+  upstream — and this is what blocks a transition to air-gap. A replica whose store the
+  registry cannot write to (`NotWritable`) is reported by `D8RegistryStoreWritesRefused`
+  instead.
 
 `D8RegistryAirGapTransitionHeld`
 : The upstream was removed from the configuration, but the module keeps using it: either the
@@ -353,16 +355,21 @@ but not the way the configuration asks — a state that is easy to miss otherwis
 
 `D8RegistryStoreWritesRefused`
 : The cache on a master has stopped accepting writes: its store reached `storage.size`
-  (`BudgetExhausted`) or the space kept free for the node (`ReserveExhausted`). The node is
+  (`BudgetExhausted`) or the space kept free on its filesystem (`ReserveExhausted`). The node is
   safe and the cache keeps serving what it holds; what stops is filling it. See
   [what happens when the store is full](#what-happens-when-the-caches-store-is-full).
+  `NotWritable` means something else: the registry cannot create files in its tree in the
+  store (`docker/registry/v2` and below, or the store's directory while that tree does not
+  exist yet), because of their owner or mode, an attribute, a read-only mount or a security
+  module. Neither garbage collection nor a larger `storage.size` helps. The replica's `error`
+  in the RegistryStorage status names the directory and the command that fixes it.
 
 `D8RegistryStoreNearlyFull`
 : The store on a master holds over 85% of `storage.size`. The next release may not fit.
 
 `D8RegistryStoreUnbounded`
-: The cache is on and `storage.size` is not set, so the only limit is the space kept free for
-  the node.
+: The cache is on and `storage.size` is not set, so the only limit is the space kept free on
+  the store's filesystem.
 
 `D8RegistryControllerDown`
 : No replica of `registry-controller` is ready and answering Prometheus. Pulls are not
@@ -515,7 +522,7 @@ Collection also starts once every replica holds a new image set: after a Deckhou
 a module is enabled or updated. That is the moment the images only the previous set needed become
 garbage. Disabling a module does not change the set: its images are kept for when it is enabled again.
 
-A store that refuses writes — over its budget, or down to the space kept free for the node — can
+A store that refuses writes — over its budget, or down to the space kept free on its filesystem — can
 never take in a new set, so it is collected without waiting for one: once per deployed Deckhouse Platform
 release, and again after an update or after the store has accepted writes in between. If that
 collection fails, it is tried again four hours after it ended.
@@ -633,9 +640,13 @@ Garbage collection created [manually] (#how-to-run-garbage-collection-manually) 
 Each master's store has two limits, and the registry checks both on every write:
 
 - the budget, `storage.size` in the `registry` ModuleConfig — how much the store may hold;
-- the reserve — how much of the filesystem under the store must stay free for the node: the
-  kubelet's soft eviction threshold (10% of the filesystem, at most 40 GiB) plus a margin (10%,
-  at most 20 GiB). It applies whatever `storage.size` says, including when it is not set.
+- the reserve — how much of the filesystem under the store must stay free. On a filesystem
+  shared with the node it is the kubelet's soft eviction threshold (10% of the filesystem, at
+  most 40 GiB) plus a margin (10%, at most 20 GiB). On a disk of the store's own
+  (`dedicatedFilesystem: true` in the replica's `store`) it is the margin alone. Both are taken
+  of the filesystem's current size, so a disk grown under a running store moves the reserve
+  without a restart. The reserve applies whatever `storage.size` says, including when it is not
+  set.
 
 When either is reached, the store refuses new writes and keeps serving everything it holds:
 
@@ -656,8 +667,31 @@ d8 k get registrystorage registry -o json | jq '.status.replicas[] | {node, stor
 
 `writable: false` with `reason: BudgetExhausted` means `storage.size` is reached: raise it if the
 disk has room, or let the collection reclaim what no deployed release needs.
-`reason: ReserveExhausted` means the disk is: free space on the node, or move the store to a disk
-of its own.
+`reason: ReserveExhausted` means the disk is. On a filesystem shared with the node, free space on
+the node or move the store to a disk of its own. On a disk of its own, grow the disk or let the
+collection reclaim space. `reason: NotWritable` is not a limit: the registry cannot create files
+in the store, and `.status.replicas[].error` names the directory and the command that fixes it.
+
+## The store's disk did not mount. What happens?
+
+If the store was on a disk of its own (`dedicatedFilesystem: true`) last time and that disk is
+not mounted now, for example after a reboot, the store starts on the node's own filesystem and
+fills there. The replica reports this in `.status.replicas[].error` for as long as the disk is
+missing, and keeps reporting it after the store has filled. A replica with an error does not
+count as full:
+
+- it does not stay the leader while another replica is full: that replica takes over;
+- if it is the leader and no other replica is full, for example on a single master, the
+  RegistryStorage phase is `Failed` and a transition to air-gap waits;
+- after two hours `D8RegistryStorageIncomplete` fires.
+
+To fix it, mount the disk before the kubelet starts (in `/etc/fstab` without `nofail`) and delete
+the replica's pod on that node. To keep the store on the node's filesystem on purpose, delete the
+`.filesystem-before` file in the store's directory on the node, then the replica's pod:
+
+```shell
+d8 k -n d8-system delete pod -l app=registry-storage --field-selector spec.nodeName=<NODE>
+```
 
 ## A pull is failing on a node. Where do I look?
 

@@ -35,7 +35,9 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -271,6 +273,28 @@ func TestTheAvailabilityAlertsDoNotNeedWhatTheyWatch(t *testing.T) {
 	}
 }
 
+// TestAStoreThatIsNotWritableIsNotSaidToBeFilling: such a replica reports an error, and a replica with
+// an error is not full — so two hours later D8RegistryStorageIncomplete fired beside
+// D8RegistryStoreWritesRefused, saying the replica was still filling while it held the whole set and
+// could not take a write. The term that leaves those nodes out is a single line.
+func TestAStoreThatIsNotWritableIsNotSaidToBeFilling(t *testing.T) {
+	const guard = `unless on (node) (max by (node) (d8_registry_store_writable{reason="NotWritable"}) == 0)`
+
+	for _, group := range loadRules(t).Groups {
+		for _, rule := range group.Rules {
+			if rule.Alert != "D8RegistryStorageIncomplete" {
+				continue
+			}
+			assert.Contains(t, strings.Join(strings.Fields(rule.Expr), " "), guard,
+				"without it a store the registry cannot write to is reported as still filling")
+			assert.Contains(t, rule.Annotations["description"], "D8RegistryStoreWritesRefused",
+				"the description says where such a replica is reported")
+			return
+		}
+	}
+	t.Fatal("D8RegistryStorageIncomplete was not found")
+}
+
 // registeredMetrics reads the metric names out of the controller's registry.
 //
 // From the source rather than from a list kept here, so that the two cannot drift apart: a list
@@ -302,4 +326,50 @@ func registeredMetrics(t *testing.T) map[string]bool {
 		}
 	}
 	return names
+}
+
+// TestEveryRefusalIsExplained: D8RegistryStoreWritesRefused fires for whatever reason a replica's store
+// refuses writes on, and the reason is all the operator gets in the summary. A reason the CRD allows and
+// the description does not explain is an alert nobody knows what to do about — the state NotWritable
+// was in when it was added: published, alerting, and described as a limit doing its job.
+func TestEveryRefusalIsExplained(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "crds", "registrystorage.yaml"))
+	require.NoError(t, err)
+	// The enum under store.reason, which is the only one in the file that lists BudgetExhausted.
+	item := regexp.MustCompile(`^\s+- (\w+)$`)
+	var reasons []string
+	lines := strings.Split(string(raw), "\n")
+	for i, line := range lines {
+		if strings.TrimSpace(line) != "enum:" {
+			continue
+		}
+		var values []string
+		for _, next := range lines[i+1:] {
+			match := item.FindStringSubmatch(next)
+			if match == nil {
+				break
+			}
+			values = append(values, match[1])
+		}
+		if slices.Contains(values, "BudgetExhausted") {
+			reasons = values
+		}
+	}
+	require.Contains(t, reasons, "NotWritable", "the store's reasons were not found in the CRD")
+
+	for _, group := range loadRules(t).Groups {
+		for _, rule := range group.Rules {
+			if rule.Alert != "D8RegistryStoreWritesRefused" {
+				continue
+			}
+			assert.NotContains(t, rule.Expr, "reason=",
+				"the alert is for every reason: one left out of the expression would never fire")
+			for _, reason := range reasons {
+				assert.Contains(t, rule.Annotations["description"], "`"+reason+"` — ",
+					"the description says nothing about %s", reason)
+			}
+			return
+		}
+	}
+	t.Fatal("D8RegistryStoreWritesRefused was not found")
 }

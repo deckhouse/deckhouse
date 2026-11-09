@@ -629,6 +629,31 @@ func TestProgressClearsTheLastPassesError(t *testing.T) {
 		"the same progress writes nothing")
 }
 
+// TestProgressCarriesWhatIsWrongWithTheStore: a store the registry cannot write to still counts every
+// reference it holds as done, so a pass over it reports progress. The error that says the store is not
+// writable is what keeps a replica `full` from an earlier pass from being elected or copied from, and
+// a progress report that cleared it left such a store looking healthy for as long as the pass ran.
+func TestProgressCarriesWhatIsWrongWithTheStore(t *testing.T) {
+	const notWritable = "the store is not writable: creating a file in /data/docker/registry/v2/blobs failed"
+	replicas := []registryv1alpha1.StorageReplicaStatus{{
+		Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, VerifiedSet: "abc",
+		VerifiedDigests: 459, DeclaredDigests: 459, Error: notWritable,
+	}}
+
+	assert.False(t, MergeProgress(&replicas, State{Node: "master-0", VerifiedDigests: 1, DeclaredDigests: 459,
+		Error: notWritable}), "the same error and a lower count write nothing")
+	assert.Equal(t, notWritable, replicas[0].Error, "kept while the store is still not writable")
+	assert.True(t, replicas[0].Full, "progress leaves Full alone, so only the error keeps this one from counting")
+
+	assert.True(t, MergeProgress(&replicas, State{Node: "master-0", VerifiedDigests: 2, DeclaredDigests: 459,
+		Error: "something else"}))
+	assert.Equal(t, "something else", replicas[0].Error, "replaced, not appended to")
+
+	assert.True(t, MergeProgress(&replicas, State{Node: "master-0", VerifiedDigests: 3, DeclaredDigests: 459}))
+	assert.Empty(t, replicas[0].Error, "nothing wrong while copying: cleared")
+	assert.True(t, replicas[0].Full)
+}
+
 func TestMergeWithdrawTakesBackOnlyFull(t *testing.T) {
 	replicas := []registryv1alpha1.StorageReplicaStatus{{
 		Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader, Full: true,

@@ -17,7 +17,9 @@ limitations under the License.
 package bound
 
 import (
+	"bytes"
 	"errors"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"testing"
@@ -68,7 +70,7 @@ func refusal(t *testing.T, err error) *ErrStoreFull {
 }
 
 func TestTheBudgetCountsBlobsAndUploadsButNotLinks(t *testing.T) {
-	guard := New(t.TempDir(), 1000, 0)
+	guard := New(t.TempDir(), 1000, Fixed(0))
 	guard.statfs = fixed(1 << 40)
 
 	require.NoError(t, guard.take(blobPath, 600, true))
@@ -86,7 +88,7 @@ func TestTheBudgetCountsBlobsAndUploadsButNotLinks(t *testing.T) {
 }
 
 func TestAZeroBudgetLeavesOnlyTheReserve(t *testing.T) {
-	guard := New(t.TempDir(), 0, 100)
+	guard := New(t.TempDir(), 0, Fixed(100))
 	guard.statfs = fixed(1 << 50)
 
 	for range 3 {
@@ -99,7 +101,7 @@ func TestAZeroBudgetLeavesOnlyTheReserve(t *testing.T) {
 }
 
 func TestTheReserveAppliesToEveryWrite(t *testing.T) {
-	guard := New(t.TempDir(), 0, 10<<20)
+	guard := New(t.TempDir(), 0, Fixed(10<<20))
 	guard.statfs = fixed(11 << 20)
 
 	for _, path := range []string{blobPath, uploadPath, linkPath} {
@@ -116,7 +118,7 @@ func TestTheReserveAppliesToEveryWrite(t *testing.T) {
 func TestAStreamStopsAtTheReserveWithoutMeasuringEveryChunk(t *testing.T) {
 	root := t.TempDir()
 	measured := &disk{root: root, capacity: 100 << 20}
-	guard := New(root, 0, 40<<20)
+	guard := New(root, 0, Fixed(40<<20))
 	guard.statfs = measured.statfs
 
 	file, err := os.Create(filepath.Join(root, "data"))
@@ -144,7 +146,7 @@ func TestAStreamStopsAtTheReserveWithoutMeasuringEveryChunk(t *testing.T) {
 }
 
 func TestTheFilesystemIsMeasuredEveryFewMegabytesWithinAStream(t *testing.T) {
-	guard := New(t.TempDir(), 0, 0)
+	guard := New(t.TempDir(), 0, Fixed(0))
 	counting := &disk{root: t.TempDir(), capacity: 1 << 40}
 	guard.statfs = counting.statfs
 
@@ -157,7 +159,7 @@ func TestTheFilesystemIsMeasuredEveryFewMegabytesWithinAStream(t *testing.T) {
 }
 
 func TestTheFreeSpaceIsMeasuredAgainBeforeRefusing(t *testing.T) {
-	guard := New(t.TempDir(), 0, 10<<20)
+	guard := New(t.TempDir(), 0, Fixed(10<<20))
 
 	free := int64(11 << 20)
 	guard.statfs = func(string) (int64, int64, error) { return free, 1 << 40, nil }
@@ -171,7 +173,7 @@ func TestTheFreeSpaceIsMeasuredAgainBeforeRefusing(t *testing.T) {
 // TestANewFileIsChargedInBlocks: the store writes many small files, each taking whole blocks, and
 // counting their length would let them spend the reserve unnoticed.
 func TestANewFileIsChargedInBlocks(t *testing.T) {
-	guard := New(t.TempDir(), 0, 1<<20)
+	guard := New(t.TempDir(), 0, Fixed(1<<20))
 	guard.statfs = fixed(1<<20 + 2*blockSize - 1)
 
 	// 71 bytes fit by length and do not by blocks: one for the data, one for the file itself.
@@ -183,7 +185,7 @@ func TestANewFileIsChargedInBlocks(t *testing.T) {
 }
 
 func TestAGuardThatCannotSeeTheDiskRefuses(t *testing.T) {
-	guard := New(t.TempDir(), 0, 0)
+	guard := New(t.TempDir(), 0, Fixed(0))
 	guard.statfs = func(string) (int64, int64, error) { return 0, 0, errors.New("no such device") }
 
 	err := guard.take(linkPath, 1, true)
@@ -193,7 +195,7 @@ func TestAGuardThatCannotSeeTheDiskRefuses(t *testing.T) {
 
 func TestAMeasurementReplacesTheCountWithWhatIsOnDisk(t *testing.T) {
 	root := t.TempDir()
-	guard := New(root, 1000, 0)
+	guard := New(root, 1000, Fixed(0))
 	guard.statfs = fixed(1 << 40)
 
 	write := func(path string, size int) {
@@ -220,7 +222,7 @@ func TestAMeasurementReplacesTheCountWithWhatIsOnDisk(t *testing.T) {
 }
 
 func TestAMeasurementOfAnEmptyStoreIsZero(t *testing.T) {
-	guard := New(t.TempDir(), 1000, 0)
+	guard := New(t.TempDir(), 1000, Fixed(0))
 	require.NoError(t, guard.Measure())
 	assert.Zero(t, guard.base+guard.delta)
 }
@@ -234,7 +236,7 @@ func TestSizesReadTheWayAnOperatorReadsThem(t *testing.T) {
 // TestAPushIsRefusedUpFrontWithinAMeasurementOfALimit: the store stops a few blocks short of a
 // limit, so "reached" would never be true up front, and every push would fail one block in instead.
 func TestAPushIsRefusedUpFrontWithinAMeasurementOfALimit(t *testing.T) {
-	guard := New(t.TempDir(), 100<<20, 10<<20)
+	guard := New(t.TempDir(), 100<<20, Fixed(10<<20))
 	guard.statfs = fixed(1 << 40)
 	require.NoError(t, guard.take(blobPath, 80<<20, true))
 
@@ -242,18 +244,48 @@ func TestAPushIsRefusedUpFrontWithinAMeasurementOfALimit(t *testing.T) {
 	require.NotNil(t, full, "20 MiB left of the budget")
 	assert.Equal(t, BudgetExhausted, full.Reason)
 
-	guard = New(t.TempDir(), 0, 10<<20)
+	guard = New(t.TempDir(), 0, Fixed(10<<20))
 	guard.statfs = fixed(20 << 20)
 	full = guard.Refusal()
 	require.NotNil(t, full, "10 MiB left above the reserve")
 	assert.Equal(t, ReserveExhausted, full.Reason)
 
 	// Named after the nearer limit.
-	guard = New(t.TempDir(), 1<<30, 10<<20)
+	guard = New(t.TempDir(), 1<<30, Fixed(10<<20))
 	guard.statfs = fixed(20 << 20)
 	assert.Equal(t, ReserveExhausted, guard.Refusal().Reason)
 
-	guard = New(t.TempDir(), 0, 10<<20)
+	guard = New(t.TempDir(), 0, Fixed(10<<20))
 	guard.statfs = fixed(100 << 20)
 	assert.Nil(t, guard.Refusal())
+}
+
+// TestTheReserveFollowsTheFilesystemsSize: a disk grown under a running store moves the reserve at the
+// next measurement, with no new configuration and no restart. Grown from 50 to 100 GiB with 6 GiB
+// free, the store that had room above a tenth of the old size has none above a tenth of the new one —
+// which is where the kubelet, recomputing its own threshold from the new size, starts evicting.
+func TestTheReserveFollowsTheFilesystemsSize(t *testing.T) {
+	var logged bytes.Buffer
+	guard := New(t.TempDir(), 0, func(capacity int64) int64 { return capacity / 10 }).
+		WithLogger(slog.New(slog.NewTextHandler(&logged, nil)))
+	capacity := int64(50 << 30)
+	guard.statfs = func(string) (int64, int64, error) { return 6 << 30, capacity, nil }
+	assert.Zero(t, guard.Reserve(), "nothing measured yet")
+
+	assert.Nil(t, guard.Refusal())
+	assert.Equal(t, int64(5<<30), guard.Reserve())
+	assert.Empty(t, logged.String(), "the first measurement is not a change")
+
+	capacity = 100 << 30
+	full := guard.Refusal()
+	require.NotNil(t, full)
+	assert.Equal(t, ReserveExhausted, full.Reason)
+	assert.Equal(t, int64(10<<30), full.Reserve)
+	assert.Equal(t, int64(10<<30), guard.Reserve())
+	assert.Contains(t, logged.String(), "changed size")
+
+	// A write measures the filesystem too, and is held to the reserve of the size found then.
+	capacity = 50 << 30
+	require.NoError(t, guard.take(blobPath, 1<<20, true))
+	assert.Equal(t, int64(5<<30), guard.Reserve())
 }

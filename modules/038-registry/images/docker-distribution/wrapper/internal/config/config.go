@@ -59,17 +59,59 @@ type Wrapper struct {
 	Store Store `yaml:"store"`
 }
 
-// Store bounds what the store writes. Both figures are in bytes and both are the syncer's: the
-// budget comes from `storage.size`, the reserve from the size of the filesystem under the store.
+// Store bounds what the store writes. Both limits are the syncer's: the budget comes from
+// `storage.size`, the reserve from what the syncer found out about the filesystem under the store.
 type Store struct {
-	// Budget is how much the blobs and the uploads in progress may take. Zero means no budget was
-	// configured, and only the reserve applies.
+	// Budget is how much the blobs and the uploads in progress may take, in bytes. Zero means no
+	// budget was configured, and only the reserve applies.
 	Budget int64 `yaml:"budget,omitempty"`
 
-	// Reserve is how much of the filesystem must stay free. Required: it is the one limit that
-	// holds whatever the budget says, and a registry started without it would write until the node
-	// has nothing left.
-	Reserve int64 `yaml:"reserve"`
+	// Reserve is how much of the filesystem must stay free, as a rule over its size rather than a
+	// figure. Required: it is the one limit that holds whatever the budget says, and a registry
+	// started without it would write until the node has nothing left.
+	//
+	// A rule and not a number of bytes, because the size it is taken of is the filesystem's as it is
+	// at the moment of the write, not as it was when this file was written. A disk grown under a
+	// running store — lvextend and resize2fs, xfs_growfs — then moves the reserve with it at the
+	// next measurement, where a figure rendered from the old size would keep it where it was: below
+	// the kubelet's threshold, which the kubelet recomputes from the new size. And it leaves this
+	// file alone, so the registry is not restarted for a disk that only grew.
+	Reserve []ReservePart `yaml:"reserve"`
+}
+
+// ReservePart is one term of the reserve: a share of the filesystem's size, up to a ceiling.
+//
+// The reserve is the sum of its parts. Which parts there are is the syncer's decision — one for
+// what the kubelet keeps free when the store shares its filesystem, one for everyone else who
+// writes there — and the wrapper only adds them up, so the reasoning lives in one place.
+type ReservePart struct {
+	// Percent is the share of the filesystem's size, from 1 to 100.
+	Percent int64 `yaml:"percent"`
+
+	// AtMost is the ceiling of this part, in bytes.
+	AtMost int64 `yaml:"atMost"`
+}
+
+// reserveQuantum is what the size of the filesystem is rounded up to before the reserve is taken of
+// it. Up, so that the reserve only ever errs above what the parts say; and to a whole GiB, so that a
+// filesystem whose reported size moves a little with its own bookkeeping — btrfs, zfs — does not
+// move the reserve on every measurement. The syncer rounds the same way: the status says what the
+// registry enforces.
+const reserveQuantum = int64(1) << 30
+
+// ReserveFor is the reserve on a filesystem of the given size, in bytes.
+func (s Store) ReserveFor(capacity int64) int64 {
+	if capacity <= 0 {
+		return 0
+	}
+	rounded := (capacity + reserveQuantum - 1) / reserveQuantum * reserveQuantum
+	var reserve int64
+	for _, part := range s.Reserve {
+		// The share without the overflow capacity*percent would risk on a large enough disk.
+		share := rounded/100*part.Percent + rounded%100*part.Percent/100
+		reserve += min(share, part.AtMost)
+	}
+	return reserve
 }
 
 // Upstream is the registry a cache miss is fetched from, and the path it serves the image set
@@ -183,9 +225,17 @@ func (w *Wrapper) Validate() error {
 			"so nothing would present it")
 	}
 
-	if w.Store.Reserve <= 0 {
+	if len(w.Store.Reserve) == 0 {
 		return fmt.Errorf("store.reserve is required: without it the store writes until the node " +
 			"has no space left")
+	}
+	for i, part := range w.Store.Reserve {
+		if part.Percent <= 0 || part.Percent > 100 {
+			return fmt.Errorf("store.reserve[%d].percent %d is not between 1 and 100", i, part.Percent)
+		}
+		if part.AtMost <= 0 {
+			return fmt.Errorf("store.reserve[%d].atMost %d is not positive", i, part.AtMost)
+		}
 	}
 	if w.Store.Budget < 0 {
 		return fmt.Errorf("store.budget %d is negative", w.Store.Budget)

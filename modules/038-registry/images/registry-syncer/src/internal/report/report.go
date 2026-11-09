@@ -282,7 +282,14 @@ func MergeWithdraw(replicas *[]registryv1alpha1.StorageReplicaStatus, state Stat
 // then the entry carried the previous pass's words — an error included, which the controller reads
 // before anything else — so a fill working normally showed `Failed` with no progress for as long as
 // it ran. A pass that is copying has, by that alone, got past whatever stopped the previous one:
-// the error is cleared, and the count shows how far it is.
+// the error is replaced with state.Error, and the count shows how far it is.
+//
+// state.Error and not nothing, because a copy that goes through is not a store with nothing wrong
+// with it. A store the registry cannot write to still counts every reference it already holds as
+// done, and the error that says so is what keeps it from being elected or copied from — a progress
+// report that cleared it left a store `full` from an earlier pass looking healthy, with no error,
+// for as long as the pass ran. The pass's caller puts in what it knows to be wrong with the store
+// while copying; empty clears.
 //
 // The count only ever goes up here. A pass counts from zero, while the entry may hold what the
 // store was measured to hold last time; showing the lower of the two would read as a store that
@@ -483,9 +490,10 @@ func MergeStore(replicas *[]registryv1alpha1.StorageReplicaStatus, state State) 
 	return true
 }
 
-// MergeProgress records a pass under way in this replica's entry: its error cleared, its count
-// raised to what the pass has reached, its denominator filled in if it had none. Every other field is
-// left alone — above all Full, which a pass in progress has not yet earned or lost.
+// MergeProgress records a pass under way in this replica's entry: its error replaced with the one the
+// pass reports while copying — see PublishProgress — its count raised to what the pass has reached,
+// its denominator filled in if it had none. Every other field is left alone — above all Full, which a
+// pass in progress has not yet earned or lost.
 func MergeProgress(replicas *[]registryv1alpha1.StorageReplicaStatus, state State) bool {
 	for i := range *replicas {
 		entry := &(*replicas)[i]
@@ -494,8 +502,8 @@ func MergeProgress(replicas *[]registryv1alpha1.StorageReplicaStatus, state Stat
 		}
 
 		changed := false
-		if entry.Error != "" {
-			entry.Error = ""
+		if entry.Error != state.Error {
+			entry.Error = state.Error
 			changed = true
 		}
 		if state.VerifiedDigests > entry.VerifiedDigests {

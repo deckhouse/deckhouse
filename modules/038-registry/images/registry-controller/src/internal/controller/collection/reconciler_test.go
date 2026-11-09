@@ -376,6 +376,26 @@ func TestAStoreAcceptingWritesAgainForgetsTheRefusal(t *testing.T) {
 		"a later refusal is a new one")
 }
 
+// TestAStoreThatIsNotWritableIsNotCollected: a collection frees room, and a store whose directory the
+// registry cannot write to has room enough — counted as a refusal, it was collected once per release and
+// again after every failure, pausing the replica's writes for a fix only the operator can make.
+func TestAStoreThatIsNotWritableIsNotCollected(t *testing.T) {
+	s := storage(true, "", scheduledAt(threeAM))
+	for i := range s.Status.Replicas {
+		s.Status.Replicas[i].Store = &registryv1alpha1.StoreUsage{Writable: false, Reason: registryv1alpha1.StoreNotWritable}
+	}
+	r, c := newReconciler(t, threeAM.Add(time.Hour), s, deckhouse("dev-registry.deckhouse.io/sys/deckhouse-oss:pr880"))
+	reconcileStorage(t, r)
+
+	assert.Empty(t, operations(t, c))
+	assert.Empty(t, annotations(t, c)[registryv1alpha1.RefusalCollectedAnnotation])
+
+	// Beside one at a limit, only that one is named.
+	s = full(scheduledAt(threeAM))
+	s.Status.Replicas[0].Store.Reason = registryv1alpha1.StoreNotWritable
+	assert.Equal(t, []string{s.Status.Replicas[1].Node}, refusingReplicas(s))
+}
+
 func master(name string) *corev1.Node {
 	return &corev1.Node{ObjectMeta: metav1.ObjectMeta{
 		Name: name, Labels: map[string]string{"node-role.kubernetes.io/control-plane": ""},

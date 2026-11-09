@@ -334,25 +334,35 @@ type StorageReplicaStatus struct {
 	Store *StoreUsage `json:"store,omitempty"`
 }
 
-// StoreRefusal names the limit a store refuses writes on.
-// +kubebuilder:validation:Enum=BudgetExhausted;ReserveExhausted
+// StoreRefusal names what a store refuses writes on: one of its two limits, or a directory the
+// registry cannot write to.
+// +kubebuilder:validation:Enum=BudgetExhausted;ReserveExhausted;NotWritable
 type StoreRefusal string
 
 const (
 	// StoreBudgetExhausted: the store holds as much as `storage.size` allows.
 	StoreBudgetExhausted StoreRefusal = "BudgetExhausted"
 
-	// StoreReserveExhausted: the filesystem under the store is down to the space kept free for
-	// the node — the kubelet's eviction threshold plus a margin.
+	// StoreReserveExhausted: the filesystem under the store is down to the space kept free — the
+	// kubelet's eviction threshold plus a margin on a filesystem shared with the node, the margin
+	// alone on one of the store's own.
 	StoreReserveExhausted StoreRefusal = "ReserveExhausted"
+
+	// StoreNotWritable: the registry cannot create files in its tree in the store — docker/registry/v2
+	// and the directories under it, or the store's directory while that tree is not there yet: their
+	// owner or mode, the immutable attribute, a read-only mount or a security module. No
+	// limit is involved, and neither a collection nor a larger `storage.size` helps; the replica's error
+	// names the directory and what to run. It wins over either limit: only the operator's fix lets the
+	// store take a write, whatever room it has.
+	StoreNotWritable StoreRefusal = "NotWritable"
 )
 
 // StoreUsage is one replica's store against its two limits.
 //
 // The registry itself enforces both, on every write; this is the syncer's account of the same
 // figures, measured beside it, for the status and the alerts. Sizes are rounded to 16 MiB — used
-// up, free down — so that a filesystem shared with the rest of the node does not rewrite the status
-// on every pass.
+// up, free and capacity down — so that a filesystem shared with the rest of the node does not
+// rewrite the status on every pass.
 type StoreUsage struct {
 	// UsedBytes is what the store's blobs and uploads in progress take.
 	UsedBytes int64 `json:"usedBytes"`
@@ -361,19 +371,32 @@ type StoreUsage struct {
 	// +optional
 	BudgetBytes int64 `json:"budgetBytes,omitempty"`
 
-	// ReserveBytes is how much of the filesystem the store leaves free for the node.
+	// ReserveBytes is how much of the filesystem the store leaves free, taken of its size as
+	// measured now: the kubelet's eviction threshold plus a margin on a filesystem shared with the
+	// node, the margin alone on one of the store's own — see DedicatedFilesystem.
 	ReserveBytes int64 `json:"reserveBytes"`
 
 	// FilesystemFreeBytes and FilesystemCapacityBytes describe the filesystem the store is on,
-	// which on a node without a dedicated disk is the one the kubelet and containerd use too.
+	// which on a node without a dedicated disk is the one the kubelet and containerd use too. Both
+	// are measured on every pass, so a filesystem grown under a running store shows its new size.
 	FilesystemFreeBytes     int64 `json:"filesystemFreeBytes"`
 	FilesystemCapacityBytes int64 `json:"filesystemCapacityBytes"`
 
+	// DedicatedFilesystem is true when the store has a filesystem of its own, as the replica found
+	// from its mounts: then the reserve leaves out the kubelet's eviction threshold, which guards a
+	// filesystem the store is not on. Absent means the store shares a filesystem with the node, or
+	// that the replica could not tell — every doubt counts as shared.
+	// +optional
+	DedicatedFilesystem bool `json:"dedicatedFilesystem,omitempty"`
+
 	// Writable is false while the store refuses new writes. Reads are never refused: a full
-	// store serves everything it holds, and a pull it cannot keep is streamed from the upstream.
+	// store serves everything it holds, and a pull it cannot keep is streamed from the upstream —
+	// except on a store that is NotWritable, whose registry fails such a pull, refused by the
+	// directory before any limit is asked.
 	Writable bool `json:"writable"`
 
-	// Reason is the limit writes are refused on, when they are.
+	// Reason is what writes are refused on, when they are: a limit, or a store the registry cannot
+	// write to — see StoreNotWritable.
 	// +optional
 	Reason StoreRefusal `json:"reason,omitempty"`
 }

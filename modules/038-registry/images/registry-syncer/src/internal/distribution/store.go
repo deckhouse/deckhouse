@@ -31,24 +31,66 @@ import (
 
 const gib = int64(1) << 30
 
-// Reserve is how much of the filesystem under the store must stay free, for a filesystem of the
-// given size.
+// ReservePart is one term of the reserve: a share of the filesystem's size, up to a ceiling. The
+// reserve is the sum of its parts, taken of the filesystem's size as it is at the time — see
+// ReserveParts and Reserve.
+type ReservePart struct {
+	// Percent is the share of the filesystem's size.
+	Percent int64 `json:"percent"`
+
+	// AtMost is the ceiling of this part, in bytes.
+	AtMost int64 `json:"atMost"`
+}
+
+// ReserveParts is how much of the filesystem under the store must stay free, as a rule over its size.
 //
-// Two parts. The first is the kubelet's soft eviction threshold for its node filesystem, as the
-// module's kubelet step configures it — 10 %, at most 40G — because the point of the reserve is
-// that the store stops before the kubelet starts evicting, and on a typical master the store shares
-// that filesystem. The second is room for everyone else who writes there: containerd unpacking an
-// image, logs, etcd on a static master. The store cannot see or stop those writes, so the margin is
-// sized for them — 10 % again, at most 20G.
+// On a filesystem the store shares with the node — which is most masters: nothing requires a disk of
+// its own — two parts. The first is the kubelet's soft eviction threshold for its node filesystem, as
+// the module's kubelet step configures it — 10 %, at most 40G — because the point of the reserve is
+// that the store stops before the kubelet starts evicting. The second is room for everyone else who
+// writes there: containerd unpacking an image, logs, etcd on a static master. The store cannot see or
+// stop those writes, so the margin is sized for them — 10 % again, at most 20G.
+//
+// On a filesystem of its own the kubelet's part protects nothing: the kubelet measures its own
+// filesystem, and the store filling this one does not bring it a byte closer to evicting. So only the
+// margin stays, kept for what the store cannot bound itself — the links and tags the budget does not
+// count, the blocks a write takes beyond its length, a filesystem's own metadata. Whether the
+// filesystem is the store's own is DetectFilesystem's call, and every doubt there is a no.
 //
 // GiB rather than the kubelet's decimal G for both ceilings: the reserve must never come out below
 // the kubelet's threshold, and the binary unit only errs above it.
 //
-// A function of the size alone, never of what is free: the result is rendered into the registry's
-// configuration, and a figure that changed with every write would restart the registry on every
-// pass of the loop.
-func Reserve(capacity int64) int64 {
-	return min(capacity/10, 40*gib) + min(capacity/10, 20*gib)
+// A rule and not a figure, because the registry takes it of the size of the filesystem at every
+// measurement: a disk grown under a running store moves the reserve with it, with no new
+// configuration and no restart of the registry.
+func ReserveParts(dedicated bool) []ReservePart {
+	if dedicated {
+		return []ReservePart{{Percent: 10, AtMost: 20 * gib}}
+	}
+	return []ReservePart{{Percent: 10, AtMost: 40 * gib}, {Percent: 10, AtMost: 20 * gib}}
+}
+
+// reserveQuantum is what the size of the filesystem is rounded up to before the reserve is taken of
+// it. Up, so that the reserve only ever errs above what the parts say; and to a whole GiB, so that a
+// filesystem whose reported size moves a little with its own bookkeeping does not move the reserve
+// on every measurement. The registry rounds the same way, so the status says what it enforces.
+const reserveQuantum = gib
+
+// Reserve is how much of a filesystem of the given size the store leaves free: ReserveParts taken of
+// the size, rounded up to a whole GiB. The registry's wrapper computes the same figure from the same
+// parts.
+func Reserve(capacity int64, dedicated bool) int64 {
+	if capacity <= 0 {
+		return 0
+	}
+	rounded := (capacity + reserveQuantum - 1) / reserveQuantum * reserveQuantum
+	var reserve int64
+	for _, part := range ReserveParts(dedicated) {
+		// The share without the overflow capacity*percent would risk on a large enough disk.
+		share := rounded/100*part.Percent + rounded%100*part.Percent/100
+		reserve += min(share, part.AtMost)
+	}
+	return reserve
 }
 
 // Budget is `storage.size` in bytes: how much the store may hold. Zero when none is set.
@@ -66,12 +108,6 @@ func Budget(size string) (int64, error) {
 	return quantity.Value(), nil
 }
 
-// Capacity is the size of the filesystem holding path.
-func Capacity(path string) (int64, error) {
-	_, capacity, err := statfs(path)
-	return capacity, err
-}
-
 // refuseWithin is how close to a limit the registry stops accepting new writes: it refuses a push up
 // front once less than this is left, rather than let it fail a block in. The registry's own figure —
 // its guard's measurement interval — repeated here so that the status says what the registry does.
@@ -83,8 +119,9 @@ const refuseWithin = 32 << 20
 const usageQuantum = 16 << 20
 
 // MeasureStore is the replica's store against its two limits, measured the way the registry
-// measures it.
-func MeasureStore(dataDir string, spec *registryv1alpha1.RegistryStorageSpec, capacity int64) (*registryv1alpha1.StoreUsage, error) {
+// measures it: the reserve taken of the filesystem's size as it is now, which is what the registry
+// takes it of too. dedicated says whether the filesystem is the store's own — see ReserveParts.
+func MeasureStore(dataDir string, spec *registryv1alpha1.RegistryStorageSpec, dedicated bool) (*registryv1alpha1.StoreUsage, error) {
 	budget, err := Budget(spec.Store.Size)
 	if err != nil {
 		return nil, err
@@ -93,22 +130,22 @@ func MeasureStore(dataDir string, spec *registryv1alpha1.RegistryStorageSpec, ca
 	if err != nil {
 		return nil, err
 	}
-	free, measured, err := measureFilesystem(dataDir)
+	free, capacity, err := measureFilesystem(dataDir)
 	if err != nil {
 		return nil, err
 	}
-	if capacity <= 0 {
-		capacity = measured
-	}
-	reserve := Reserve(capacity)
+	reserve := Reserve(capacity, dedicated)
 
 	usage := &registryv1alpha1.StoreUsage{
 		// Rounded toward the alarming side: used up, free down.
-		UsedBytes:               (used + usageQuantum - 1) / usageQuantum * usageQuantum,
-		BudgetBytes:             budget,
-		ReserveBytes:            reserve,
-		FilesystemFreeBytes:     free / usageQuantum * usageQuantum,
-		FilesystemCapacityBytes: capacity,
+		UsedBytes:           (used + usageQuantum - 1) / usageQuantum * usageQuantum,
+		BudgetBytes:         budget,
+		ReserveBytes:        reserve,
+		FilesystemFreeBytes: free / usageQuantum * usageQuantum,
+		// Down, like free: a filesystem whose reported size moves with its own bookkeeping would
+		// otherwise rewrite the status on every pass.
+		FilesystemCapacityBytes: capacity / usageQuantum * usageQuantum,
+		DedicatedFilesystem:     dedicated,
 		Writable:                true,
 	}
 

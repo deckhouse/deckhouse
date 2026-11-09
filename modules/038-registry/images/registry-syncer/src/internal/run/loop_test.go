@@ -197,7 +197,6 @@ func newLoop(
 				HTTPSecret:    "secret",
 				AuthRealm:     "https://10.0.0.1:5051/auth",
 				TokenIssuer:   "Registry server",
-				StoreCapacity: 50 << 30,
 			},
 		},
 		Publisher:  &report.Publisher{Client: fakeClient},

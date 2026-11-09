@@ -45,14 +45,14 @@ type wrapperConfig struct {
 	// AuthProxy is the token service this registry forwards token requests to.
 	AuthProxy *wrapperAuthProxy `json:"authProxy,omitempty"`
 
-	// Store bounds what the store writes: the budget from `storage.size`, and the reserve kept free
-	// on the filesystem under it. See Reserve.
+	// Store bounds what the store writes: the budget from `storage.size`, and the rule for the
+	// reserve kept free on the filesystem under it. See ReserveParts.
 	Store wrapperStore `json:"store"`
 }
 
 type wrapperStore struct {
-	Budget  int64 `json:"budget,omitempty"`
-	Reserve int64 `json:"reserve"`
+	Budget  int64         `json:"budget,omitempty"`
+	Reserve []ReservePart `json:"reserve"`
 }
 
 type wrapperUpstream struct {
@@ -115,13 +115,10 @@ func RenderWrapper(spec *registryv1alpha1.RegistryStorageSpec, opts Options) ([]
 	if err != nil {
 		return nil, err
 	}
-	if opts.StoreCapacity <= 0 {
-		// Never rendered without a reserve: the registry refuses to start on such a file, and
-		// rightly — the reserve is the one limit that holds when the budget is wrong or absent.
-		return nil, fmt.Errorf("the size of the filesystem under the store is unknown, so no " +
-			"reserve can be derived from it")
-	}
-	config.Store = wrapperStore{Budget: budget, Reserve: Reserve(opts.StoreCapacity)}
+	// The rule, not a figure: the registry takes it of the filesystem's size at every measurement.
+	// Which is also why nothing about the disk is needed to render it, and why the file does not
+	// change — and the registry does not restart — when the disk grows.
+	config.Store = wrapperStore{Budget: budget, Reserve: ReserveParts(opts.StoreFilesystem.Dedicated)}
 
 	if upstream := spec.Upstream; upstream != nil {
 		scheme := upstream.Scheme

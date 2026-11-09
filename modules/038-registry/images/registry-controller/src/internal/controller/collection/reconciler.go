@@ -17,7 +17,8 @@ limitations under the License.
 // Package collection decides when the cache is collected, and asks for it by creating a
 // RegistryOperation of type GarbageCollection.
 //
-// Three reasons to collect: the schedule, a new image set, and a store that refuses writes. The second
+// Three reasons to collect: the schedule, a new image set, and a store that refuses writes at one of
+// its limits — not one whose directory refuses them, which a collection cannot help. The second
 // is the moment there is something to collect — every replica holds the new set, so what only the old
 // one needed is garbage — and it is a moment no schedule can name. The third is a store that no new
 // set can ever be held in, so the second never comes for it: it is collected without waiting, once per
@@ -386,11 +387,20 @@ func activeOperation(operations []registryv1alpha1.RegistryOperation) string {
 	return ""
 }
 
-// refusingReplicas names the replicas whose store refuses writes, sorted.
+// refusingReplicas names the replicas whose store refuses writes at one of its two limits, sorted.
+//
+// The limits only: a store the registry cannot write to — NotWritable — gets nothing from a collection,
+// which can only free room. Counted, it started a collection once per release, and again
+// refusalRetryAfter after each that failed — as one in a directory the registry cannot write to may
+// well do — each pausing the replica's writes for nothing until the operator fixed the directory.
 func refusingReplicas(storage *registryv1alpha1.RegistryStorage) []string {
 	var nodes []string
 	for _, replica := range storage.Status.Replicas {
-		if replica.Store != nil && !replica.Store.Writable {
+		if replica.Store == nil || replica.Store.Writable {
+			continue
+		}
+		switch replica.Store.Reason {
+		case registryv1alpha1.StoreBudgetExhausted, registryv1alpha1.StoreReserveExhausted:
 			nodes = append(nodes, replica.Node)
 		}
 	}

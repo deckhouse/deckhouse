@@ -201,7 +201,7 @@ spec:
                       type: string
                       pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                       description: |
-                        The budget of each replica's store, taken from `storage.size` of the ModuleConfig: how much its blobs and uploads in progress may take. Unset means no budget; the reserve kept free for the node applies either way.
+                        The budget of each replica's store, taken from `storage.size` of the ModuleConfig: how much its blobs and uploads in progress may take. Unset means no budget; the reserve kept free on the store's filesystem (see `status.replicas[].store.reserveBytes`) applies either way.
                 publish:
                   type: boolean
                   description: |
@@ -422,7 +422,7 @@ spec:
                         description: |
                           How much of its node's disk this replica's store takes, and whether it still accepts writes. Absent until the replica has measured it.
 
-                          The registry enforces both limits itself, on every write; this is the syncer's account of the same figures, for the status and the alerts. Sizes are rounded to 16 MiB — used up, free down — so that a filesystem shared with the rest of the node does not rewrite the status on every pass.
+                          The registry enforces both limits itself, on every write; this is the syncer's account of the same figures, for the status and the alerts. Sizes are rounded to 16 MiB — used up, free and capacity down — so that a filesystem shared with the rest of the node does not rewrite the status on every pass.
                         required:
                           - usedBytes
                           - reserveBytes
@@ -444,7 +444,7 @@ spec:
                             type: integer
                             format: int64
                             description: |
-                              How much of the filesystem the store leaves free for the node: the kubelet's soft eviction threshold plus a margin.
+                              How much of the filesystem the store leaves free, taken of the filesystem's current size rounded up to a whole GiB. On a filesystem shared with the node it is the kubelet's soft eviction threshold (10%, at most 40 GiB) plus a margin for other writers (10%, at most 20 GiB). On a filesystem of the store's own (see `dedicatedFilesystem`) only the margin is kept.
                           filesystemFreeBytes:
                             type: integer
                             format: int64
@@ -454,21 +454,27 @@ spec:
                             type: integer
                             format: int64
                             description: |
-                              Size of the filesystem the store is on.
+                              Size of the filesystem the store is on, as measured now: a filesystem grown under a running store shows its new size, and the reserve follows it.
+                          dedicatedFilesystem:
+                            type: boolean
+                            description: |
+                              True when the store has a filesystem of its own: a disk mounted at the store's directory or at the store path above it, holding neither the kubelet's nor containerd's directory. The replica finds this from its mounts when it starts. Absent when the store shares a filesystem with the node, or when that could not be told: such a filesystem is treated as shared.
                           writable:
                             type: boolean
                             description: |
-                              False while the store refuses new writes. Reads are never refused: a full store serves everything it holds, and a pull it cannot keep is streamed from the upstream.
+                              False while the store refuses new writes. Reads are never refused: a full store serves everything it holds, and a pull it cannot keep is streamed from the upstream. The exception is `reason: NotWritable`, where the registry fails such a pull: its directories refuse it before any limit is checked.
                           reason:
                             type: string
                             enum:
                               - BudgetExhausted
                               - ReserveExhausted
+                              - NotWritable
                             description: |
-                              The limit writes are refused on, when they are.
+                              What writes are refused on, when they are.
 
                               - `BudgetExhausted` — the store holds as much as `storage.size` allows;
-                              - `ReserveExhausted` — the filesystem under the store is down to the space kept free for the node.
+                              - `ReserveExhausted` — the filesystem under the store is down to the space kept free on it, see `reserveBytes`;
+                              - `NotWritable` — the registry cannot create files in its tree in the store: `docker/registry/v2` and the directories under it, or the store's directory while that tree does not exist yet. Their owner or mode, the immutable attribute, a read-only mount or a security module stands in the way. No limit is involved, and neither a garbage collection nor a larger `storage.size` helps. The replica's `error` names the directory and the command that fixes it. Takes precedence over either limit.
                 conditions:
                   type: array
                   description: |

@@ -59,7 +59,7 @@ func quiet() *slog.Logger {
 // unbounded is a guard over root that refuses nothing a test would write.
 func unbounded(t *testing.T, root string) *bound.Guard {
 	t.Helper()
-	guard := bound.New(root, 0, 1)
+	guard := bound.New(root, 0, bound.Fixed(1))
 	require.NoError(t, guard.Measure())
 	return guard
 }

@@ -144,8 +144,9 @@ func (l Lease) incumbent(replicas []registryv1alpha1.StorageReplicaStatus) *regi
 	return nil
 }
 
-// acceptsWrites reports whether a replica's store takes writes, as it measured itself. A replica that
-// reports no measurement is taken as writable, as every replica was before stores were measured.
+// acceptsWrites reports whether a replica's store takes writes, as it reported itself: at neither limit,
+// and with a directory the registry can write to. A replica that reports no measurement is taken as
+// writable, as every replica was before stores were measured.
 func acceptsWrites(replica *registryv1alpha1.StorageReplicaStatus) bool {
 	return replica.Store == nil || replica.Store.Writable
 }

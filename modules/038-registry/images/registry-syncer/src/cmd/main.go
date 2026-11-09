@@ -28,6 +28,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -218,6 +219,7 @@ func main() {
 		interval       time.Duration
 		copyRateMiB    int
 		storeRecheck   time.Duration
+		storeHostPath  string
 		logLevel       string
 	)
 
@@ -253,6 +255,9 @@ func main() {
 			"by the nodes are not limited.")
 	flag.DurationVar(&storeRecheck, "store-recheck", 6*time.Hour,
 		"How often an idle replica reads its own store again, to find what it may have lost.")
+	flag.StringVar(&storeHostPath, "store-host-path", os.Getenv("REGISTRY_STORE_HOST_PATH"),
+		"The store's directory on the node: which directory a disk for it is mounted at or above, and "+
+			"what to change the owner of when the registry cannot write to it.")
 	flag.StringVar(&logLevel, "log-level", "info", "Log level: debug, info, warn or error.")
 	flag.Parse()
 
@@ -289,6 +294,7 @@ func main() {
 		interval:       interval,
 		copyRateMiB:    copyRateMiB,
 		storeRecheck:   storeRecheck,
+		storeHostPath:  storeHostPath,
 	}); err != nil {
 		log.Error("the syncer stopped", "error", err.Error())
 		os.Exit(1)
@@ -310,6 +316,7 @@ type options struct {
 	interval       time.Duration
 	copyRateMiB    int
 	storeRecheck   time.Duration
+	storeHostPath  string
 }
 
 // defaultCopyRateMiB bounds the background copy to what a control-plane node can spare while it
@@ -337,12 +344,18 @@ func serve(ctx context.Context, log *slog.Logger, opts options) error {
 		return fmt.Errorf("building the API client: %w", err)
 	}
 
-	// The registry keeps a reserve free on this filesystem, derived from its size. Measured here,
-	// once: without it the registry's configuration cannot be rendered at all.
-	storeCapacity, err := distribution.Capacity(distribution.DataDir)
-	if err != nil {
-		return err
+	// The registry keeps a reserve free on the filesystem under the store, and how much depends on
+	// whether that filesystem is the store's own. Found here, once: the container's mounts do not
+	// change while it runs. The size the reserve is taken of is not — the registry measures it at
+	// every write.
+	storeDirectory := distribution.StoreDirectory
+	if opts.storeHostPath != "" {
+		storeDirectory = filepath.Base(opts.storeHostPath)
 	}
+	storeFilesystem := distribution.DetectFilesystem(distribution.MountInfo, distribution.DataDir, storeDirectory)
+	log.Info("the filesystem under the store", "dedicated", storeFilesystem.Dedicated,
+		"why", storeFilesystem.Why, "root", storeFilesystem.Root, "type", storeFilesystem.Type,
+		"device", storeFilesystem.Device)
 
 	// Credentials of this replica's own registry. Read from the environment rather
 	// than from the custom resource: they are the pod's own identity, and the
@@ -373,8 +386,8 @@ func serve(ctx context.Context, log *slog.Logger, opts options) error {
 				// be believed.
 				AuthRealm: fmt.Sprintf("https://%s:%d%s",
 					opts.listenAddress, constant.Port, distribution.AuthTokenPath),
-				TokenIssuer:   os.Getenv("REGISTRY_TOKEN_ISSUER"),
-				StoreCapacity: storeCapacity,
+				TokenIssuer:     os.Getenv("REGISTRY_TOKEN_ISSUER"),
+				StoreFilesystem: storeFilesystem,
 			},
 		},
 		Publisher: &report.Publisher{Client: kubeClient},
@@ -389,6 +402,7 @@ func serve(ctx context.Context, log *slog.Logger, opts options) error {
 		// The store the replica serves, counted from disk when completeness has to be read
 		// rather than derived from what a fill wrote.
 		DataDir:         distribution.DataDir,
+		StoreHostPath:   opts.storeHostPath,
 		ReportedAddress: fmt.Sprintf("%s:%d", opts.listenAddress, constant.Port),
 		LocalCA:         os.Getenv("REGISTRY_LOCAL_CA"),
 		LocalUser:       os.Getenv("REGISTRY_LOCAL_USER"),

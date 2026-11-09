@@ -392,6 +392,12 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        # The data volume's directory on the node. The syncer sees the store only as /data, and needs
+        # the node's name for it twice: its last directory is what tells a disk mounted for the store
+        # from a directory of the node's own filesystem, and the whole path is what an operator has to
+        # chown when the registry cannot write to it.
+        - name: REGISTRY_STORE_HOST_PATH
+          value: {{ $storePath }}/local_data
         # The identity of this replica's own registry, needed to fill it and to read
         # its catalogue. From the pod rather than from the custom resource: the
         # storage has to stay reachable even when the desired state cannot be read.

@@ -169,7 +169,7 @@ var (
 	}, []string{"node"})
 	StoreReserve = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "d8_registry_store_reserve_bytes",
-		Help: "Bytes the store leaves free on its filesystem for the node.",
+		Help: "Bytes the store leaves free on its filesystem.",
 	}, []string{"node"})
 	StoreFilesystemFree = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "d8_registry_store_filesystem_free_bytes",
@@ -180,7 +180,8 @@ var (
 		Help: "Size of the filesystem the store is on.",
 	}, []string{"node"})
 
-	// StoreWritable is 0 while a replica's store refuses writes, with the limit it refuses on.
+	// StoreWritable is 0 while a replica's store refuses writes, with why: the limit it is at, or
+	// NotWritable for a tree the registry cannot create files in.
 	StoreWritable = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "d8_registry_store_writable",
 		Help: "1 while the replica's store accepts writes; 0 with the reason while it refuses them.",

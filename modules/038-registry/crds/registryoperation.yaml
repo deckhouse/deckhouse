@@ -76,7 +76,7 @@ spec:
 
             With `storage.garbageCollection.enabled: false` the module creates none of them. An operation created by hand runs either way.
 
-            A replica starts only when its store is not being written to: while the cache is being filled or an image set is being pushed with `d8 mirror push`, the replica waits. A store that refuses writes — over its budget, or down to the space kept free for the node — is not waited for: a fill cannot go on until something frees room. A replica that has not picked the operation up, or is still held back by its store, an hour after the operation was accepted fails with the reason `DeadlineExceeded`. Once its turn comes, a replica looks at its store again: if a fill or a push has started meanwhile, it gives the turn back and waits for the store to go quiet.
+            A replica starts only when its store is not being written to: while the cache is being filled or an image set is being pushed with `d8 mirror push`, the replica waits. A store that refuses writes — over its budget, or down to the space kept free on its filesystem — is not waited for: a fill cannot go on until something frees room. A replica that has not picked the operation up, or is still held back by its store, an hour after the operation was accepted fails with the reason `DeadlineExceeded`. Once its turn comes, a replica looks at its store again: if a fill or a push has started meanwhile, it gives the turn back and waits for the store to go quiet.
 
             Only one operation runs at a time. An operation created while an older one is not finished fails with the reason `AnotherOperationActive`.
 

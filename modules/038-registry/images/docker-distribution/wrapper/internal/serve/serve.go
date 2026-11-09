@@ -315,19 +315,21 @@ func storeGuard(distribution *configuration.Configuration, wrapper *config.Wrapp
 		return nil, errors.New("the configuration names no rootdirectory for the store")
 	}
 
-	guard := bound.New(root, wrapper.Store.Budget, wrapper.Store.Reserve).WithLogger(log)
+	guard := bound.New(root, wrapper.Store.Budget, wrapper.Store.ReserveFor).WithLogger(log)
 
 	started := time.Now()
 	if err := guard.Measure(); err != nil {
 		return nil, fmt.Errorf("measuring the store before serving it: %w", err)
 	}
-	log.Info("the store is bounded",
-		"used", guard.Used(), "budget", wrapper.Store.Budget, "reserve", wrapper.Store.Reserve,
-		"measured_in", time.Since(started).String())
 
 	// Asked once so that a store starting full says so at startup — the guard logs the refusal
-	// itself. Not a reason to stay down: a full store still serves everything it holds.
+	// itself. Not a reason to stay down: a full store still serves everything it holds. It is also
+	// the first measurement of the filesystem, which the reserve logged below is taken of.
 	_ = guard.Refusal()
+
+	log.Info("the store is bounded",
+		"used", guard.Used(), "budget", wrapper.Store.Budget, "reserve", guard.Reserve(),
+		"measured_in", time.Since(started).String())
 
 	return guard, nil
 }

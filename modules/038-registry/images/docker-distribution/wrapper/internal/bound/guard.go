@@ -29,8 +29,10 @@ limitations under the License.
 //     progress, which is where the bytes are. Zero means none was configured.
 //   - the reserve: how much of the filesystem must stay free. Applies to every write, links and
 //     tags included, because on a filesystem the store shares with the kubelet, containerd and
-//     etcd, nothing may take the last free bytes. The syncer derives it from the eviction
-//     thresholds of the kubelet, so the store stops well before the kubelet starts evicting.
+//     etcd, nothing may take the last free bytes. The syncer decides the rule — from the eviction
+//     thresholds of the kubelet where the store shares its filesystem, so that the store stops well
+//     before the kubelet starts evicting — and the guard takes it of the filesystem's size at every
+//     measurement, so that a disk grown under a running store moves the reserve with it.
 //
 // Nothing here deletes anything. A full store refuses writes and keeps serving reads; what frees
 // space is the garbage collection, on its own rules.
@@ -56,7 +58,7 @@ const (
 	// BudgetExhausted: the store holds as much as `storage.size` allows.
 	BudgetExhausted Reason = "BudgetExhausted"
 
-	// ReserveExhausted: the filesystem under the store is down to the space kept for the node.
+	// ReserveExhausted: the filesystem under the store is down to the space kept free on it.
 	ReserveExhausted Reason = "ReserveExhausted"
 )
 
@@ -77,9 +79,12 @@ func (e *ErrStoreFull) Error() string {
 		return fmt.Sprintf("the store is full: it holds %s of the %s budget; raise storage.size "+
 			"or wait for the garbage collection to reclaim space", human(e.Used), human(e.Budget))
 	}
+	// The guard does not know whether the filesystem is the store's own, so the advice covers both:
+	// on a shared one the reserve is the node's, on the store's own disk it is the margin alone and
+	// the disk itself is full.
 	return fmt.Sprintf("the store refuses writes: the filesystem it is on has %s free, and %s is "+
-		"kept for the node; free space on the node or move the store to a dedicated disk",
-		human(e.Free), human(e.Reserve))
+		"kept free on it; free space on that filesystem or grow it, or, if the node shares it, move "+
+		"the store to a dedicated disk", human(e.Free), human(e.Reserve))
 }
 
 // statfsEvery is how many bytes may be written on a free-space figure before it is measured again.
@@ -93,14 +98,27 @@ const statfsEvery = 32 << 20
 // difference, which the reserve's margin is sized to absorb.
 const blockSize = 4096
 
+// ReserveRule is how much of a filesystem of the given size must stay free, in bytes.
+type ReserveRule func(capacity int64) int64
+
+// Fixed is a reserve that is the same whatever the size of the filesystem.
+func Fixed(bytes int64) ReserveRule {
+	return func(int64) int64 { return bytes }
+}
+
 // Guard is the accounting for one store, shared by every driver instance in the process.
 //
 // One per process and not one per driver, because the process builds two: the serving half and the
 // write endpoint each open the storage, and a guard in each would let both spend the same budget.
 type Guard struct {
-	root    string
-	budget  int64
-	reserve int64
+	root   string
+	budget int64
+
+	// reserveFor is the rule, and reserve what it came to at the last measurement of the filesystem,
+	// of the size the filesystem had then; capacity is that size, zero before the first measurement.
+	reserveFor ReserveRule
+	reserve    int64
+	capacity   int64
 
 	// statfs reports the free and total bytes of the filesystem holding a path. A field so that the
 	// tests can stand in for a disk.
@@ -133,15 +151,24 @@ type Guard struct {
 // New returns a guard over the store at root. A zero budget means none: only the reserve applies.
 //
 // The guard knows nothing about the store until Measure has run once; the caller does that before
-// any listener opens.
-func New(root string, budget, reserve int64) *Guard {
-	return &Guard{root: root, budget: budget, reserve: reserve, statfs: statfs, log: slog.New(slog.DiscardHandler)}
+// any listener opens. Nor about the filesystem, until the first write or Refusal measures it: the
+// reserve is taken of the size found then, and again at every measurement after it.
+func New(root string, budget int64, reserve ReserveRule) *Guard {
+	return &Guard{root: root, budget: budget, reserveFor: reserve, statfs: statfs, log: slog.New(slog.DiscardHandler)}
 }
 
 // WithLogger makes the guard report when the store stops and resumes accepting writes.
 func (g *Guard) WithLogger(log *slog.Logger) *Guard {
 	g.log = log
 	return g
+}
+
+// Reserve is how much of the filesystem is kept free, as of the last measurement of it: zero
+// before the first one.
+func (g *Guard) Reserve() int64 {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.reserve
 }
 
 // Used is what the store holds by the guard's count: the last walk plus what was written since.
@@ -326,9 +353,14 @@ func (g *Guard) headroom() int64 {
 	return room
 }
 
-// refresh measures the filesystem. Called with the lock held.
+// refresh measures the filesystem, and takes the reserve of the size it has now. Called with the
+// lock held.
+//
+// Of the size measured each time rather than once at startup: a filesystem grown under a running
+// store — the usual answer to ReserveExhausted — would otherwise keep the reserve of its old size,
+// below the kubelet's threshold, which the kubelet takes of the new one.
 func (g *Guard) refresh() error {
-	free, _, err := g.statfs(g.root)
+	free, capacity, err := g.statfs(g.root)
 	if err != nil {
 		// Refused rather than admitted: a guard that cannot see the disk cannot promise anything
 		// about it.
@@ -336,6 +368,13 @@ func (g *Guard) refresh() error {
 	}
 	g.free = free
 	g.since = 0
+
+	reserve := g.reserveFor(capacity)
+	if g.capacity > 0 && reserve != g.reserve {
+		g.log.Info("the filesystem under the store changed size, and the reserve with it",
+			"capacity", capacity, "was", g.capacity, "reserve", reserve, "reserve_was", g.reserve)
+	}
+	g.capacity, g.reserve = capacity, reserve
 	return nil
 }
 

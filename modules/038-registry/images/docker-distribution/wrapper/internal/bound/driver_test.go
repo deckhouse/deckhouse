@@ -70,7 +70,7 @@ func onDisk(t *testing.T, root, path string) (int64, bool) {
 
 func TestAPushStopsAtTheBudget(t *testing.T) {
 	root := t.TempDir()
-	guard := New(root, 256<<10, 0)
+	guard := New(root, 256<<10, Fixed(0))
 	guard.statfs = fixed(1 << 40)
 	store := bounded(t, root, guard, Fail)
 
@@ -89,7 +89,7 @@ func TestAPushStopsAtTheBudget(t *testing.T) {
 // the client of a cache miss shares one stream with the local copy, and must not lose it.
 func TestADiscardedMissReachesTheClientWholeAndIsNotKept(t *testing.T) {
 	root := t.TempDir()
-	guard := New(root, 256<<10, 0)
+	guard := New(root, 256<<10, Fixed(0))
 	guard.statfs = fixed(1 << 40)
 	store := bounded(t, root, guard, Discard)
 	ctx := context.Background()
@@ -113,7 +113,7 @@ func TestADiscardedMissReachesTheClientWholeAndIsNotKept(t *testing.T) {
 
 func TestARefusalBeforeTheFirstByteFailsAPush(t *testing.T) {
 	root := t.TempDir()
-	guard := New(root, 0, 100)
+	guard := New(root, 0, Fixed(100))
 	guard.statfs = fixed(50)
 	store := bounded(t, root, guard, Fail)
 	ctx := context.Background()
@@ -132,7 +132,7 @@ func TestARefusalBeforeTheFirstByteFailsAPush(t *testing.T) {
 // fails, because a store must not report holding what it does not.
 func TestACopyThatWouldNotFitIsNeverWritten(t *testing.T) {
 	root := t.TempDir()
-	guard := New(root, 0, 100)
+	guard := New(root, 0, Fixed(100))
 	guard.statfs = fixed(50)
 	store := bounded(t, root, guard, Discard)
 	ctx := context.Background()
@@ -162,7 +162,7 @@ func TestACopyThatWouldNotFitIsNeverWritten(t *testing.T) {
 // would still start, write until refused, and be deleted.
 func TestACopyIsDroppedWithinAMeasurementOfALimit(t *testing.T) {
 	root := t.TempDir()
-	guard := New(root, 0, 10<<20)
+	guard := New(root, 0, Fixed(10<<20))
 	guard.statfs = fixed(20 << 20)
 	store := bounded(t, root, guard, Discard)
 	ctx := context.Background()
@@ -183,7 +183,7 @@ func TestACopyIsDroppedWithinAMeasurementOfALimit(t *testing.T) {
 
 func TestReadsAndDeletionsPassAFullStore(t *testing.T) {
 	root := t.TempDir()
-	guard := New(root, 0, 0)
+	guard := New(root, 0, Fixed(0))
 	guard.statfs = fixed(1 << 40)
 	store := bounded(t, root, guard, Fail)
 	ctx := context.Background()
@@ -191,7 +191,7 @@ func TestReadsAndDeletionsPassAFullStore(t *testing.T) {
 	require.NoError(t, store.PutContent(ctx, blobPath, []byte("content")))
 
 	guard.statfs = fixed(0)
-	guard.reserve = 1
+	guard.reserveFor = Fixed(1)
 
 	content, err := store.GetContent(ctx, blobPath)
 	require.NoError(t, err)
@@ -207,7 +207,7 @@ func TestTheMiddlewareNeedsAGuardAndAKnownMode(t *testing.T) {
 	_, err = storagemiddleware.Get(ctx, MiddlewareName, map[string]any{"onrefusal": "fail"}, inner)
 	assert.ErrorContains(t, err, "needs a guard")
 
-	_, err = storagemiddleware.Get(ctx, MiddlewareName, Options(New("/", 0, 0), "ignore"), inner)
+	_, err = storagemiddleware.Get(ctx, MiddlewareName, Options(New("/", 0, Fixed(0)), "ignore"), inner)
 	assert.ErrorContains(t, err, `"ignore"`)
 }
 
@@ -215,7 +215,7 @@ func TestTheMiddlewareNeedsAGuardAndAKnownMode(t *testing.T) {
 // registry distribution builds from its configuration.
 func TestARegistryWithTheMiddlewareRefusesAPushOverBudget(t *testing.T) {
 	root := t.TempDir()
-	guard := New(root, 512<<10, 0)
+	guard := New(root, 512<<10, Fixed(0))
 	guard.statfs = fixed(1 << 40)
 	require.NoError(t, guard.Measure())
 
@@ -262,7 +262,7 @@ func TestATagIsNotRecordedWhileTheStoreRefuses(t *testing.T) {
 
 	for _, full := range []bool{true, false} {
 		root := t.TempDir()
-		guard := New(root, 0, 100)
+		guard := New(root, 0, Fixed(100))
 		guard.statfs = fixed(1 << 40)
 		if full {
 			guard.statfs = fixed(50)
@@ -275,7 +275,7 @@ func TestATagIsNotRecordedWhileTheStoreRefuses(t *testing.T) {
 
 	// The write endpoint is not a cache: a push that tags while the store refuses is told so.
 	root := t.TempDir()
-	guard := New(root, 0, 100)
+	guard := New(root, 0, Fixed(100))
 	guard.statfs = fixed(50)
 	err := bounded(t, root, guard, Fail).PutContent(ctx, tagLink, []byte("sha256:abcdef"))
 	assert.Equal(t, ReserveExhausted, refusal(t, err).Reason)

@@ -90,6 +90,10 @@ type Loop struct {
 	// can test. Empty means the constant.
 	DataDir string
 
+	// StoreHostPath is DataDir's directory on the node, for the advice when the store cannot be
+	// written to. Empty when it is not known, and the advice then names no path.
+	StoreHostPath string
+
 	// ReportedAddress is where OTHER replicas reach this one, which is not the same
 	// as LocalAddress: this replica talks to itself over the loopback interface,
 	// while its neighbours come in over the node address.
@@ -209,6 +213,43 @@ type Loop struct {
 	// registryDownSince is when this replica's registry was first found not listening, in Unix
 	// nanoseconds, and zero while it listens. See registryDownReported.
 	registryDownSince atomic.Int64
+
+	// lastRun is what this replica's store was before this process started — from the store's own
+	// memory of it when there is one, from what the replica last reported otherwise — read before
+	// anything here reports again, and dropped once the store holds something where it is meant to
+	// be. See recallStore and filesystemWarning. Touched only by the loop's own goroutine, as are the
+	// three below.
+	lastRun *registryv1alpha1.StoreUsage
+
+	// remembered is whether the store's directory already holds lastRun, so that it is written once.
+	// See rememberStore.
+	remembered bool
+
+	// filesystemProblem is what filesystemWarning said when the store was last measured: kept as it is
+	// while the store cannot be measured, because whether it is empty is then not known.
+	filesystemProblem string
+
+	// storeProblem is what storeProblems found last, so that it is logged when it appears, changes
+	// or goes away rather than on every pass.
+	storeProblem string
+
+	// checkWritable is distribution.CheckWritable, or what a test puts in its place: tests may run as
+	// root with every capability, which no mode bit stops. Nil means distribution.CheckWritable.
+	checkWritable func(dataDir, hostPath string) error
+
+	// measure is distribution.MeasureStore, or what a test puts in its place: the space left on the
+	// disk a test runs on is no figure to assert on. Nil means distribution.MeasureStore.
+	measure func(dataDir string, spec *registryv1alpha1.RegistryStorageSpec, dedicated bool) (*registryv1alpha1.StoreUsage, error)
+
+	// lastMeasured is the store as last measured, or, before this process measured it, as the replica
+	// last reported it — see recallStore. For publishedStore, when the store cannot be measured now:
+	// set and read from the loop's goroutine and watchStore's.
+	lastMeasured atomic.Pointer[registryv1alpha1.StoreUsage]
+
+	// storeNotWritable is whether the last write probe found the store refusing writes — see
+	// probeWritable. Like lastMeasured, set from two goroutines, the loop's and watchStore's, and read
+	// by whichever publishes the store — see publishedStore.
+	storeNotWritable atomic.Bool
 }
 
 // surveyStore reads the store, at most once a minute.
@@ -499,9 +540,16 @@ func (l *Loop) progress(ctx context.Context, state report.State, what string) fu
 		}
 		published = time.Now()
 
+		// What is wrong with the store goes with it: a store the registry cannot write to reaches here
+		// too, on the references it already holds, and an update without an error would take it off
+		// the status for the rest of the pass. Here, on the loop's goroutine — the copier calls this
+		// from its own loop over the set — so the probe creates and removes a file in up to three
+		// directories every progressEvery: nothing on a working disk, and on one that hangs it holds
+		// the pass here as the next copy would.
 		update := report.State{
 			Node: state.Node, Role: state.Role, Address: state.Address,
 			VerifiedDigests: done, DeclaredDigests: total,
+			Error: l.storeProblemsWhileCopying(),
 		}
 		if err := l.Publisher.PublishProgress(ctx, update); err != nil && ctx.Err() == nil {
 			l.Log.Warn("reporting the "+what+" progress failed", "error", err.Error())
@@ -518,6 +566,11 @@ const storeEvery = time.Minute
 // Only the store field is written — see report.PublishStore — so a fill in progress, a collection
 // and this never erase each other. The registry enforces the limits either way: this is what the
 // alerts and the StoreWritable condition see.
+//
+// The write probe runs here too, before each measurement, so that a store whose directory stops
+// taking writes is published as NotWritable within a tick, and not when a pass that may take an hour
+// ends — see publishedStore. The probe alone and not storeProblems, which only the loop's goroutine
+// may call: the error text follows with the next progress report or the end of the pass.
 func (l *Loop) watchStore(ctx context.Context, every time.Duration) {
 	ticker := time.NewTicker(every)
 	defer ticker.Stop()
@@ -533,7 +586,10 @@ func (l *Loop) watchStore(ctx context.Context, every time.Duration) {
 		if spec == nil || l.Publisher == nil {
 			continue
 		}
-		usage := l.measureStore(spec)
+		if l.DataDir != "" {
+			_ = l.probeWritable()
+		}
+		usage := l.publishedStore(l.measureStore(spec))
 		if usage == nil {
 			continue
 		}
@@ -551,20 +607,22 @@ func (l *Loop) watchStore(ctx context.Context, every time.Duration) {
 
 // measureStore reads how much of the node's disk the store takes. Nil when it cannot be read, and
 // the last measurement stays in the status: the registry enforces the limits whether or not this
-// succeeds, so a failed measurement is worth a warning and nothing more.
+// succeeds, so a failed measurement is worth a warning and nothing more. Kept as lastMeasured for a
+// store that cannot be measured and refuses writes — see publishedStore.
 func (l *Loop) measureStore(spec *registryv1alpha1.RegistryStorageSpec) *registryv1alpha1.StoreUsage {
 	if l.DataDir == "" {
 		return nil
 	}
-	var capacity int64
-	if l.Applier != nil {
-		capacity = l.Applier.Options.StoreCapacity
+	measure := l.measure
+	if measure == nil {
+		measure = distribution.MeasureStore
 	}
-	usage, err := distribution.MeasureStore(l.DataDir, spec, capacity)
+	usage, err := measure(l.DataDir, spec, l.storeFilesystem().Dedicated)
 	if err != nil {
 		l.Log.Warn("measuring the store failed", "error", err.Error())
 		return nil
 	}
+	l.lastMeasured.Store(usage.DeepCopy())
 	return usage
 }
 
@@ -602,6 +660,10 @@ func (l *Loop) Run(ctx context.Context) error {
 	if interval <= 0 {
 		interval = 30 * time.Second
 	}
+
+	// Before anything reports: the first report replaces what the last run said.
+	l.recallStore(ctx)
+	l.inspectStore()
 
 	go l.watchStore(ctx, storeEvery)
 
@@ -871,7 +933,21 @@ func (l *Loop) once(ctx context.Context) error {
 		state.AheadSet = l.heldAhead(aheadKey, reportedAhead)
 	}
 
-	err = l.Publisher.Publish(ctx, state)
+	// After Full and the set it was found against: a store that cannot take a write still holds what
+	// it holds, and a store that was verified is not verified again for it on every pass. The error
+	// is what keeps such a replica from being copied from or elected — see isFull.
+	if problem := l.storeProblems(state.Store); problem != "" {
+		if state.Error != "" {
+			problem += "; " + state.Error
+		}
+		state.Error = problem
+	}
+
+	// Published with the store as the probe just found it — see publishedStore; what is ahead of the
+	// set is still decided on the measurement alone.
+	published := state
+	published.Store = l.publishedStore(state.Store)
+	err = l.Publisher.Publish(ctx, published)
 	if keysKnown {
 		l.considerAhead(ctx, spec, isLeader, leader, aheadKey, state, ahead)
 	}
@@ -1034,6 +1110,8 @@ func (l *Loop) ForgetAhead() {
 }
 
 // RoomAhead reports whether this replica's store has room for what is ahead of the set — see roomAhead.
+// From the measurement alone, not from what is published: the collection releases what is ahead of the
+// set when this says no, and a store whose directory refuses writes gets no room back from that.
 func (l *Loop) RoomAhead() bool {
 	spec := l.Desired()
 	if spec == nil {
@@ -1050,7 +1128,9 @@ func (l *Loop) CurrentSet() string {
 }
 
 // StoreRefusesWrites reports whether this replica's store refuses writes now: over its budget, or down
-// to the space kept free for the node. Unmeasured is not a refusal.
+// to the space kept free on its filesystem. Unmeasured is not a refusal, and neither is a directory the
+// registry cannot write to: that one is published as NotWritable — see publishedStore — and is not a
+// store a collection makes room in.
 //
 // Asked by the garbage collection before it waits for a fill. A fill into a store that refuses writes
 // fails at its first blob and is tried again on the next pass, for as long as nothing frees room — and

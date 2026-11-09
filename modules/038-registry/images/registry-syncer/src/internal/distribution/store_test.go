@@ -28,7 +28,8 @@ import (
 	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
 )
 
-// TestTheReserveStaysAboveTheKubeletsThreshold pins the formula to the figures it was agreed on.
+// TestTheReserveStaysAboveTheKubeletsThreshold pins the formula to the figures it was agreed on, on a
+// filesystem the store shares with the node.
 func TestTheReserveStaysAboveTheKubeletsThreshold(t *testing.T) {
 	cases := []struct {
 		capacity, reserve int64
@@ -43,11 +44,47 @@ func TestTheReserveStaysAboveTheKubeletsThreshold(t *testing.T) {
 		{1024 * gib, 60 * gib},
 	}
 	for _, c := range cases {
-		assert.Equal(t, c.reserve, Reserve(c.capacity), "capacity %d GiB", c.capacity/gib)
+		assert.Equal(t, c.reserve, Reserve(c.capacity, false), "capacity %d GiB", c.capacity/gib)
 
 		// The kubelet's soft threshold is 10 %, capped at 40G decimal.
 		kubelet := min(c.capacity/10, 40_000_000_000)
-		assert.Greater(t, Reserve(c.capacity), kubelet, "capacity %d GiB", c.capacity/gib)
+		assert.Greater(t, Reserve(c.capacity, false), kubelet, "capacity %d GiB", c.capacity/gib)
+	}
+}
+
+// TestADedicatedFilesystemKeepsOnlyTheMargin: the kubelet does not measure a filesystem the store has
+// to itself, so its part of the reserve would protect nothing there.
+func TestADedicatedFilesystemKeepsOnlyTheMargin(t *testing.T) {
+	cases := []struct {
+		capacity, reserve int64
+	}{
+		{50 * gib, 5 * gib},
+		{100 * gib, 10 * gib},
+		{200 * gib, 20 * gib},
+		{1024 * gib, 20 * gib},
+	}
+	for _, c := range cases {
+		assert.Equal(t, c.reserve, Reserve(c.capacity, true), "capacity %d GiB", c.capacity/gib)
+	}
+}
+
+// TestTheReserveIsTakenOfTheSizeRoundedUp pins the arithmetic the registry's wrapper repeats: the same
+// table is in its config_test.go, so the status says what the registry enforces.
+func TestTheReserveIsTakenOfTheSizeRoundedUp(t *testing.T) {
+	cases := []struct {
+		capacity, shared, dedicated int64
+	}{
+		{50 * gib, 10 * gib, 5 * gib},
+		{100 * gib, 20 * gib, 10 * gib},
+		{300 * gib, 50 * gib, 20 * gib},
+		{1024 * gib, 60 * gib, 20 * gib},
+		{100*gib - 1, 20 * gib, 10 * gib},
+		{99*gib + 1, 20 * gib, 10 * gib},
+		{0, 0, 0},
+	}
+	for _, c := range cases {
+		assert.Equal(t, c.shared, Reserve(c.capacity, false), "shared, capacity %d", c.capacity)
+		assert.Equal(t, c.dedicated, Reserve(c.capacity, true), "dedicated, capacity %d", c.capacity)
 	}
 }
 
@@ -68,37 +105,45 @@ func TestBudgetIsStorageSizeInBytes(t *testing.T) {
 
 func TestTheWrapperCarriesTheBudgetAndTheReserve(t *testing.T) {
 	spec := &registryv1alpha1.RegistryStorageSpec{Store: registryv1alpha1.StorageStore{Size: "100Gi"}}
-	rendered, err := RenderWrapper(spec, testOptions())
-	require.NoError(t, err)
 
-	var parsed struct {
-		Store struct {
-			Budget  int64 `json:"budget"`
-			Reserve int64 `json:"reserve"`
-		} `json:"store"`
+	parse := func(options Options) (int64, []ReservePart) {
+		t.Helper()
+		rendered, err := RenderWrapper(spec, options)
+		require.NoError(t, err)
+		var parsed struct {
+			Store struct {
+				Budget  int64         `json:"budget"`
+				Reserve []ReservePart `json:"reserve"`
+			} `json:"store"`
+		}
+		require.NoError(t, yaml.Unmarshal(rendered, &parsed))
+		return parsed.Store.Budget, parsed.Store.Reserve
 	}
-	require.NoError(t, yaml.Unmarshal(rendered, &parsed))
-	assert.Equal(t, 100*gib, parsed.Store.Budget)
-	assert.Equal(t, 10*gib, parsed.Store.Reserve, "the test filesystem is 50 GiB")
-}
 
-// TestTheWrapperIsNeverRenderedWithoutAReserve: the registry refuses such a file, and it would be
-// right to — so the refusal happens here, where the reason is known.
-func TestTheWrapperIsNeverRenderedWithoutAReserve(t *testing.T) {
+	budget, reserve := parse(testOptions())
+	assert.Equal(t, 100*gib, budget)
+	assert.Equal(t, ReserveParts(false), reserve, "a filesystem not known to be the store's own is shared")
+	assert.Len(t, reserve, 2)
+
 	options := testOptions()
-	options.StoreCapacity = 0
-	_, err := RenderWrapper(&registryv1alpha1.RegistryStorageSpec{}, options)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "no reserve")
+	options.StoreFilesystem = Filesystem{Dedicated: true}
+	_, reserve = parse(options)
+	assert.Equal(t, []ReservePart{{Percent: 10, AtMost: 20 * gib}}, reserve)
 }
 
-func TestCapacityMeasuresARealFilesystem(t *testing.T) {
-	capacity, err := Capacity(t.TempDir())
+// TestTheWrapperDoesNotChangeWithTheDisk: the rule is rendered, not a figure taken of the disk, so a
+// disk that grows leaves the file — and the registry, which restarts when it changes — alone.
+func TestTheWrapperDoesNotChangeWithTheDisk(t *testing.T) {
+	spec := &registryv1alpha1.RegistryStorageSpec{}
+	measureFilesystem = func(string) (int64, int64, error) { return 30 * gib, 50 * gib, nil }
+	t.Cleanup(func() { measureFilesystem = statfs })
+	before, err := RenderWrapper(spec, testOptions())
 	require.NoError(t, err)
-	assert.Positive(t, capacity)
 
-	_, err = Capacity("/does/not/exist")
-	assert.Error(t, err)
+	measureFilesystem = func(string) (int64, int64, error) { return 80 * gib, 100 * gib, nil }
+	after, err := RenderWrapper(spec, testOptions())
+	require.NoError(t, err)
+	assert.Equal(t, string(before), string(after))
 }
 
 func TestMeasureStoreCountsWhatTheRegistryCounts(t *testing.T) {
@@ -114,14 +159,16 @@ func TestMeasureStoreCountsWhatTheRegistryCounts(t *testing.T) {
 	put("docker/registry/v2/repositories/system/deckhouse/_layers/sha256/abcdef/link", 30<<20)
 
 	spec := &registryv1alpha1.RegistryStorageSpec{Store: registryv1alpha1.StorageStore{Size: "1Gi"}}
-	usage, err := MeasureStore(dir, spec, 0)
+	usage, err := MeasureStore(dir, spec, false)
 	require.NoError(t, err)
 
 	assert.Equal(t, int64(32<<20), usage.UsedBytes, "25 MiB of blobs and uploads, rounded up; links not counted")
 	assert.Equal(t, int64(1<<30), usage.BudgetBytes)
 	assert.Positive(t, usage.FilesystemCapacityBytes)
-	assert.Equal(t, Reserve(usage.FilesystemCapacityBytes), usage.ReserveBytes)
+	assert.Equal(t, Reserve(usage.FilesystemCapacityBytes, false), usage.ReserveBytes)
 	assert.Zero(t, usage.FilesystemFreeBytes%usageQuantum)
+	assert.Zero(t, usage.FilesystemCapacityBytes%usageQuantum)
+	assert.False(t, usage.DedicatedFilesystem)
 }
 
 func TestMeasureStoreSaysWhenTheRegistryRefuses(t *testing.T) {
@@ -136,26 +183,56 @@ func TestMeasureStoreSaysWhenTheRegistryRefuses(t *testing.T) {
 	t.Cleanup(func() { measureFilesystem = statfs })
 
 	within := &registryv1alpha1.RegistryStorageSpec{Store: registryv1alpha1.StorageStore{Size: "100Mi"}}
-	usage, err := MeasureStore(dir, within, 50*gib)
+	usage, err := MeasureStore(dir, within, false)
 	require.NoError(t, err)
 	assert.False(t, usage.Writable, "10 MiB left of the budget: the registry refuses pushes up front")
 	assert.Equal(t, registryv1alpha1.StoreBudgetExhausted, usage.Reason)
 
 	roomy := &registryv1alpha1.RegistryStorageSpec{Store: registryv1alpha1.StorageStore{Size: "1Gi"}}
-	usage, err = MeasureStore(dir, roomy, 50*gib)
+	usage, err = MeasureStore(dir, roomy, false)
 	require.NoError(t, err)
 	assert.True(t, usage.Writable)
 
 	// The same disk with 20 MiB above its reserve.
 	measureFilesystem = func(string) (int64, int64, error) { return 10*gib + 20<<20, 50 * gib, nil }
-	usage, err = MeasureStore(dir, roomy, 50*gib)
+	usage, err = MeasureStore(dir, roomy, false)
 	require.NoError(t, err)
 	assert.False(t, usage.Writable)
 	assert.Equal(t, registryv1alpha1.StoreReserveExhausted, usage.Reason)
 
 	measureFilesystem = func(string) (int64, int64, error) { return 20 * gib, 50 * gib, nil }
-	usage, err = MeasureStore(dir, roomy, 50*gib)
+	usage, err = MeasureStore(dir, roomy, false)
 	require.NoError(t, err)
 	assert.True(t, usage.Writable)
 	assert.Empty(t, usage.Reason)
+}
+
+// TestMeasureStoreTakesTheReserveOfTheSizeNow: the size is measured with the free space, every time, so
+// a disk grown under the store shows the reserve the registry now keeps — and on a disk of its own,
+// the smaller one.
+func TestMeasureStoreTakesTheReserveOfTheSizeNow(t *testing.T) {
+	dir := t.TempDir()
+	spec := &registryv1alpha1.RegistryStorageSpec{}
+	capacity := 50 * gib
+	measureFilesystem = func(string) (int64, int64, error) { return 6 * gib, capacity, nil }
+	t.Cleanup(func() { measureFilesystem = statfs })
+
+	usage, err := MeasureStore(dir, spec, false)
+	require.NoError(t, err)
+	assert.Equal(t, 10*gib, usage.ReserveBytes)
+	assert.Equal(t, 50*gib, usage.FilesystemCapacityBytes)
+	assert.False(t, usage.Writable, "6 GiB free under a 10 GiB reserve")
+
+	capacity = 100 * gib
+	usage, err = MeasureStore(dir, spec, false)
+	require.NoError(t, err)
+	assert.Equal(t, 20*gib, usage.ReserveBytes, "the disk grew, and the reserve with it")
+	assert.Equal(t, 100*gib, usage.FilesystemCapacityBytes)
+
+	capacity = 50 * gib
+	usage, err = MeasureStore(dir, spec, true)
+	require.NoError(t, err)
+	assert.Equal(t, 5*gib, usage.ReserveBytes)
+	assert.True(t, usage.DedicatedFilesystem)
+	assert.True(t, usage.Writable, "6 GiB free over a 5 GiB reserve")
 }

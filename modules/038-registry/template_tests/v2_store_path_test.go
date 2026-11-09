@@ -64,6 +64,29 @@ var _ = Describe("Module :: registry :: helm template :: v2 store path", func() 
 		return ""
 	}
 
+	// The syncer is told the same directory: it advises chowning it when the registry cannot write
+	// there, and reads its last component to tell a disk mounted for the store.
+	syncerStoreHostPath := func() string {
+		sts := f.KubernetesResource("StatefulSet", "d8-system", "registry-storage")
+		Expect(sts.Exists()).To(BeTrue())
+
+		var containers []map[string]any
+		Expect(yaml.Unmarshal([]byte(sts.Field("spec.template.spec.containers").String()), &containers)).To(Succeed())
+		for _, container := range containers {
+			if container["name"] != "syncer" {
+				continue
+			}
+			for _, raw := range container["env"].([]any) {
+				variable := raw.(map[string]any)
+				if variable["name"] == "REGISTRY_STORE_HOST_PATH" {
+					return variable["value"].(string)
+				}
+			}
+		}
+		Fail("the syncer is not told where the store is on the node")
+		return ""
+	}
+
 	controllerArgs := func() []any {
 		deployment := f.KubernetesResource("Deployment", "d8-system", "registry-controller")
 		Expect(deployment.Exists()).To(BeTrue())
@@ -93,6 +116,7 @@ var _ = Describe("Module :: registry :: helm template :: v2 store path", func() 
 			// Not merely a default: the store adopts what is already in
 			// StorePath/local_data instead of refetching every image in the cluster.
 			Expect(dataHostPath()).To(Equal(constant.StorePath + "/local_data"))
+			Expect(syncerStoreHostPath()).To(Equal(dataHostPath()))
 			Expect(controllerArgs()).To(ContainElement("--store-path=" + constant.StorePath))
 		})
 
@@ -113,6 +137,7 @@ var _ = Describe("Module :: registry :: helm template :: v2 store path", func() 
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			Expect(dataHostPath()).To(Equal(constant.StorePathImmutable + "/local_data"))
+			Expect(syncerStoreHostPath()).To(Equal(dataHostPath()))
 			// Reported, so that an operator reclaiming the disk is told the directory
 			// that actually holds it rather than one that cannot exist on this node.
 			Expect(controllerArgs()).To(ContainElement("--store-path=" + constant.StorePathImmutable))

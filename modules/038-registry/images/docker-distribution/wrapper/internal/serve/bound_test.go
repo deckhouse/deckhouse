@@ -78,7 +78,7 @@ func TestACacheMissOverTheBudgetReachesTheClientWhole(t *testing.T) {
 	require.NoError(t, remote.Write(tag, image))
 
 	root := t.TempDir()
-	guard := bound.New(root, 256<<10, 1)
+	guard := bound.New(root, 256<<10, bound.Fixed(1))
 	require.NoError(t, guard.Measure())
 
 	never := time.Duration(0)
@@ -118,7 +118,7 @@ func TestAFullStoreRefusesAPushWith507(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Dir(blob), 0o755))
 	require.NoError(t, os.WriteFile(blob, make([]byte, 4096), 0o644))
 
-	guard := bound.New(root, 4096, 1)
+	guard := bound.New(root, 4096, bound.Fixed(1))
 	require.NoError(t, guard.Measure())
 
 	wrapper := &config.Wrapper{Scope: "system/deckhouse", WriteEndpoint: config.WriteEndpoint{Address: "127.0.0.1:0"}}
@@ -217,7 +217,7 @@ func TestACacheMissAtTheEdgeIsServedWithoutWritingTheLayers(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Dir(held), 0o755))
 	require.NoError(t, os.WriteFile(held, make([]byte, 100<<20), 0o644))
 
-	guard := bound.New(root, 110<<20, 1)
+	guard := bound.New(root, 110<<20, bound.Fixed(1))
 	require.NoError(t, guard.Measure())
 
 	never := time.Duration(0)

@@ -171,6 +171,11 @@ func TestObserveStore(t *testing.T) {
 				}},
 				// Not measured yet.
 				{Node: "master-2"},
+				{Node: "master-3", Store: &registryv1alpha1.StoreUsage{
+					UsedBytes: 16 << 20, ReserveBytes: 10 << 30,
+					FilesystemFreeBytes: 40 << 30, FilesystemCapacityBytes: 50 << 30,
+					Reason: registryv1alpha1.StoreNotWritable,
+				}},
 			},
 		},
 	}
@@ -183,7 +188,10 @@ func TestObserveStore(t *testing.T) {
 	assert.EqualValues(t, 1, testutil.ToFloat64(metrics.StoreWritable.WithLabelValues("master-0", "")))
 	assert.Zero(t, testutil.ToFloat64(metrics.StoreBudget.WithLabelValues("master-1")), "no storage.size")
 	assert.Zero(t, testutil.ToFloat64(metrics.StoreWritable.WithLabelValues("master-1", "ReserveExhausted")))
-	assert.Equal(t, 2, testutil.CollectAndCount(metrics.StoreUsed), "no series for a replica not measured")
+	assert.Zero(t, testutil.ToFloat64(metrics.StoreWritable.WithLabelValues("master-3", "NotWritable")),
+		"a directory the registry cannot write to reaches D8RegistryStoreWritesRefused the way a limit does")
+	assert.Equal(t, 3, testutil.CollectAndCount(metrics.StoreWritable), "one series per measured replica")
+	assert.Equal(t, 3, testutil.CollectAndCount(metrics.StoreUsed), "no series for a replica not measured")
 }
 
 // TestObserveStorageGoesAwayWithIt: a cache that was turned off must stop being reported,

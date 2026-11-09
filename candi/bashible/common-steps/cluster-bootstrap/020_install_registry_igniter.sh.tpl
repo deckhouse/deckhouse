@@ -289,19 +289,17 @@ EOF
 # what broke every Proxy and Local bootstrap once the image stopped being the patched fork. Rendered
 # the way registry-syncer renders it for the store (RenderWrapper), so the two cannot drift apart.
 #
-# The reserve is the syncer's formula over the filesystem the data lives on: the registry refuses to
-# start without one, because without it the store writes until the node has no space left.
-store_capacity="$(df -B1 --output=size "${data_path}" | tail -n 1 | tr -d ' ')"
-if [[ -z "${store_capacity}" || "${store_capacity}" -le 0 ]]; then
-  bb-log-error "cannot read the size of the filesystem under ${data_path}"
-  exit 1
-fi
-store_tenth=$(( store_capacity / 10 ))
-store_reserve=$(( (store_tenth < 40 * 1024 ** 3 ? store_tenth : 40 * 1024 ** 3) + (store_tenth < 20 * 1024 ** 3 ? store_tenth : 20 * 1024 ** 3) ))
+# The reserve is the syncer's rule for a filesystem the store shares with the node (ReserveParts): 10 %
+# of the filesystem, at most 40 GiB, for the kubelet's eviction threshold, and 10 %, at most 20 GiB,
+# for everyone else who writes there. A rule rather than a figure, because the registry takes it of
+# the filesystem's size at every write. Always the shared one here: nothing at bootstrap tells whether
+# the data has a disk of its own, and the shared rule is the one that errs toward keeping space free.
+# The registry refuses to start without a reserve, because without it the store writes until the node
+# has no space left.
 
 # Composed in parts so that the upstream's credentials pass through a QUOTED heredoc: the shell
 # expands nothing in it, so a backtick or a backslash in a password reaches the file as written.
-# The parts around it carry the paths and the reserve, which do need expanding.
+# The parts around it carry the paths, which do need expanding.
 {
 cat << EOF
 scope: system/deckhouse
@@ -329,7 +327,11 @@ authProxy:
   url: https://127.0.0.1:5051/auth
   ca: "${pki_path}/ca.crt"
 store:
-  reserve: ${store_reserve}
+  reserve:
+  - percent: 10
+    atMost: 42949672960
+  - percent: 10
+    atMost: 21474836480
 EOF
 } | bb-sync-file "${distribution_path}/deckhouse.yaml" -
 

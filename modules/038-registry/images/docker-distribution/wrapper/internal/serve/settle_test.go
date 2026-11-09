@@ -56,7 +56,7 @@ func pullAtTheEdge(t *testing.T, wrap func(http.Handler) http.Handler) error {
 
 	root := t.TempDir()
 	// Budget of one byte: every copy is dropped from the start, and every manifest refused.
-	guard := bound.New(root, 1, 1)
+	guard := bound.New(root, 1, bound.Fixed(1))
 	require.NoError(t, guard.Measure())
 
 	never := time.Duration(0)

@@ -131,10 +131,15 @@ type Options struct {
 	// of it.
 	ReadOnly bool
 
-	// StoreCapacity is the size of the filesystem under DataDir, in bytes: what the reserve the
-	// registry keeps free is derived from. Measured once when the syncer starts, since it changes
-	// only with the disk.
-	StoreCapacity int64
+	// StoreFilesystem is what the syncer found out about the filesystem under DataDir when it
+	// started: whether it is the store's own decides the rule the registry's reserve follows — see
+	// ReserveParts. Found once, because a container's mounts do not change while it runs; and never
+	// changed after, so that the loop and the garbage collection can read it from their own
+	// goroutines.
+	//
+	// Not the filesystem's size. The registry measures that itself at every write, so a disk grown
+	// under it moves the reserve without a new configuration and without a restart.
+	StoreFilesystem Filesystem
 }
 
 // WriteEndpointPort is the second address of the same registry: the one that accepts a push.

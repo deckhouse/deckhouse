@@ -17,6 +17,7 @@ limitations under the License.
 package layout
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -495,6 +496,54 @@ func TestStoreWritable(t *testing.T) {
 		assert.Equal(t, "BudgetExhausted", condition.Reason, "the limit most replicas hit")
 		assert.Contains(t, condition.Message, "storage.size")
 		assert.Contains(t, condition.Message, "dedicated disk")
+	})
+
+	// On a disk of the store's own the reserve is the margin alone: the disk is full, and moving the
+	// store to a dedicated disk is what the operator has already done.
+	t.Run("a store on its own disk is told to grow it", func(t *testing.T) {
+		ownDisk := measured("master-1", false, registryv1alpha1.StoreReserveExhausted)
+		ownDisk.Store.DedicatedFilesystem = true
+		condition := StoreWritable([]registryv1alpha1.StorageReplicaStatus{
+			measured("master-0", false, registryv1alpha1.StoreReserveExhausted), ownDisk,
+		}, 1)
+		assert.Equal(t, "ReserveExhausted", condition.Reason)
+		assert.Contains(t, condition.Message, "on master-0 is down to the space kept free for the node")
+		assert.Contains(t, condition.Message, "own disk on master-1 is full: grow the disk")
+		assert.NotContains(t, condition.Message, "on master-0, master-1")
+
+		alone := StoreWritable([]registryv1alpha1.StorageReplicaStatus{ownDisk}, 1)
+		assert.NotContains(t, alone.Message, "dedicated disk")
+	})
+
+	// No room helps a store the registry cannot write to, so it is the reason however many replicas
+	// are at a limit, and the message sends the operator to the replica's error for the command.
+	t.Run("a store that is not writable wins over the limits", func(t *testing.T) {
+		condition := StoreWritable([]registryv1alpha1.StorageReplicaStatus{
+			measured("master-0", false, registryv1alpha1.StoreBudgetExhausted),
+			measured("master-1", false, registryv1alpha1.StoreBudgetExhausted),
+			measured("master-2", false, registryv1alpha1.StoreNotWritable),
+		}, 1)
+		assert.Equal(t, metav1.ConditionFalse, condition.Status)
+		assert.Equal(t, "NotWritable", condition.Reason)
+		assert.Contains(t, condition.Message, "cannot create files in its tree in the store on master-2,")
+		assert.True(t, strings.HasPrefix(condition.Message, "Writes are refused; "),
+			"not \"reads still served\": a pull the store would keep fails")
+		assert.Contains(t, condition.Message, "status.replicas[].error")
+		assert.Contains(t, condition.Message, "on master-0, master-1 holds as much as storage.size allows",
+			"the limits are still named")
+
+		alone := StoreWritable([]registryv1alpha1.StorageReplicaStatus{
+			measured("master-1", false, registryv1alpha1.StoreNotWritable),
+			measured("master-0", false, registryv1alpha1.StoreNotWritable),
+		}, 1)
+		assert.Contains(t, alone.Message, "on master-0, master-1,")
+		assert.NotContains(t, alone.Message, "storage.size")
+		assert.NotContains(t, alone.Message, "garbage collection", "no collection helps it")
+
+		limits := StoreWritable([]registryv1alpha1.StorageReplicaStatus{
+			measured("master-0", false, registryv1alpha1.StoreBudgetExhausted),
+		}, 1)
+		assert.True(t, strings.HasPrefix(limits.Message, "Writes are refused and reads still served; "))
 	})
 }
 

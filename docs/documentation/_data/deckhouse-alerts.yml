@@ -5260,8 +5260,13 @@ alerts:
 
         Two hours, because filling a cache over a slow link legitimately takes that long.
 
+        A replica that reports an `error` counts as not holding the set, whatever it holds: the
+        error says why — a store that is not on the disk meant for it, for one. A replica whose
+        store the registry cannot write to is left out: it is neither filling nor going to,
+        and `D8RegistryStoreWritesRefused` reports it with what to do.
+
         ```
-        d8 k get registrystorage registry -o jsonpath='{.status.replicas}' | jq
+        d8 k get registrystorage registry -o json | jq '.status.replicas[] | {node, full, error}'
         ```
       summary: |
         Some registry cache replicas do not hold the whole image set.
@@ -5437,30 +5442,53 @@ alerts:
       edition: ce
       description: |-
         The in-cluster registry cache on node `{{ $labels.node }}` has stopped accepting writes,
-        because `{{ $labels.reason }}`. The node is safe — this is the limit doing its job — and
-        the cache keeps serving every image it holds. What stops is everything that ADDS to it:
-        filling the next release, replicating from the leader, `d8 mirror push`. Images the store
-        cannot keep are streamed from the upstream while there is one; in an air-gapped cluster a
-        release that is not in the cache cannot be installed.
+        because `{{ $labels.reason }}`. It keeps serving every image it holds. What stops is
+        everything that ADDS to it: filling the next release, replicating from the leader,
+        `d8 mirror push`. In an air-gapped cluster a release that is not in the cache cannot be
+        installed.
 
-        What the replica measured:
+        What the replica measured, and the error it reports:
 
         ```
-        d8 k get registrystorage registry -o json | jq '.status.replicas[] | {node, store}'
+        d8 k get registrystorage registry -o json | jq '.status.replicas[] | {node, store, error}'
         ```
 
-        `BudgetExhausted` — the store holds as much as `storage.size` allows. Either raise
-        `storage.size` in the `registry` ModuleConfig, if the disk has room for it, or let the
-        garbage collection reclaim what no deployed release needs any more: it runs on
-        `storage.garbageCollection.schedule` and keeps the deployed release, the previous one and
-        everything newer.
+        `BudgetExhausted` — the store holds as much as `storage.size` allows. The node is safe:
+        this is the limit doing its job, and images the store cannot keep are streamed from the
+        upstream while there is one. Either raise `storage.size` in the `registry` ModuleConfig,
+        if the disk has room for it, or let the garbage collection reclaim what no deployed
+        release needs any more: it runs on `storage.garbageCollection.schedule` and keeps the
+        deployed release, the previous one and everything newer.
 
-        `ReserveExhausted` — the filesystem under the store is down to the space kept free for
-        the node: the kubelet's eviction threshold plus a margin. `storage.size` is not what
-        stops it, the disk is. Free space on the node, or — which is what fixes it for good —
-        give the store a disk of its own, sized for `storage.size`.
+        `ReserveExhausted` — the filesystem under the store is down to the space kept free on it.
+        The node is safe for the same reason, and images are streamed the same way.
+        `storage.size` is not what stops it, the disk is. On a filesystem shared with the node
+        (`dedicatedFilesystem` absent from the replica's `store`) that is the kubelet's eviction
+        threshold plus a margin: free space on the node, or — which is what fixes it for good —
+        give the store a disk of its own, sized for `storage.size`. On a disk of the store's own
+        (`dedicatedFilesystem: true`) it is the margin alone, and the disk itself is full: grow
+        it — the reserve follows without a restart — or let the garbage collection reclaim what
+        no deployed release needs, as for `BudgetExhausted`.
+
+        `NotWritable` — the registry cannot create files in its tree in the store, whatever room
+        the store has: `docker/registry/v2` and the directories under it, or the store's directory
+        while that tree does not exist yet. It runs as root without capabilities, so those
+        directories have to belong to root and let their owner write. Other causes are the
+        immutable attribute, a read-only mount, or a security module such as SELinux or
+        AppArmor. No limit is involved: neither the garbage collection nor a larger
+        `storage.size` helps, and the collection does not start for it. Until it is fixed, a
+        pull the cache would keep from the upstream fails with an error instead of being
+        streamed. The replica's `error` names the directory on the node, its owner and mode, and
+        the command that fixes it:
+
+        ```
+        d8 k get registrystorage registry -o json | jq -r '.status.replicas[] | select(.store.reason == "NotWritable") | "\(.node): \(.error)"'
+        ```
+
+        `NotWritable` takes precedence over a limit the store is also at. Once it is fixed, the
+        replica says so within a minute, and the alert clears or names the limit.
       summary: |
-        The registry cache on node {{ $labels.node }} refuses writes ({{ $labels.reason }}).
+        The registry cache on node {{ $labels.node }} does not accept writes ({{ $labels.reason }}).
       severity: "4"
       markupFormat: markdown
     - name: D8RegistryUpstreamProbeFailing

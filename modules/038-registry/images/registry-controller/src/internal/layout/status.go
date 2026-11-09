@@ -322,6 +322,11 @@ func leaseHolderReport(
 // next release is a replica that falls behind, and the fix — a larger budget, a collection, a
 // dedicated disk — is the operator's either way. The reason is the limit hit on the most replicas;
 // the message names every refusing node and what frees each. Unknown until a replica has measured.
+//
+// NotWritable — a store the registry cannot create files in — is the reason whenever one replica
+// reports it, however many are at a limit: no room helps it, and the operator has to act on the node.
+// The message points to the replica's error rather than repeating it, because that is where the
+// syncer puts the directory, its owner and mode, and the command to run.
 func StoreWritable(replicas []registryv1alpha1.StorageReplicaStatus, generation int64) metav1.Condition {
 	condition := metav1.Condition{
 		Type:               registryv1alpha1.ConditionStoreWritable,
@@ -332,14 +337,22 @@ func StoreWritable(replicas []registryv1alpha1.StorageReplicaStatus, generation 
 	}
 
 	refusing := map[registryv1alpha1.StoreRefusal][]string{}
+	// ownDisk are the nodes whose store is out of reserve on a filesystem of its own. There the reserve
+	// is the margin alone and the disk itself is full: nothing else on the node takes that space, and
+	// "move the store to a dedicated disk" is advice the operator has already followed.
+	var ownDisk []string
 	measured := 0
 	for _, replica := range replicas {
 		if replica.Store == nil {
 			continue
 		}
 		measured++
-		if !replica.Store.Writable {
-			refusing[replica.Store.Reason] = append(refusing[replica.Store.Reason], replica.Node)
+		if replica.Store.Writable {
+			continue
+		}
+		refusing[replica.Store.Reason] = append(refusing[replica.Store.Reason], replica.Node)
+		if replica.Store.Reason == registryv1alpha1.StoreReserveExhausted && replica.Store.DedicatedFilesystem {
+			ownDisk = append(ownDisk, replica.Node)
 		}
 	}
 	if measured == 0 {
@@ -352,28 +365,53 @@ func StoreWritable(replicas []registryv1alpha1.StorageReplicaStatus, generation 
 		return condition
 	}
 
+	notWritable := refusing[registryv1alpha1.StoreNotWritable]
 	budget := refusing[registryv1alpha1.StoreBudgetExhausted]
 	reserve := refusing[registryv1alpha1.StoreReserveExhausted]
+	shared := slices.DeleteFunc(slices.Clone(reserve), func(node string) bool { return slices.Contains(ownDisk, node) })
+	sort.Strings(notWritable)
 	sort.Strings(budget)
-	sort.Strings(reserve)
+	sort.Strings(shared)
+	sort.Strings(ownDisk)
 
 	condition.Status = metav1.ConditionFalse
 	condition.Reason = string(registryv1alpha1.StoreReserveExhausted)
-	if len(budget) >= len(reserve) {
+	switch {
+	case len(notWritable) > 0:
+		condition.Reason = string(registryv1alpha1.StoreNotWritable)
+	case len(budget) >= len(reserve):
 		condition.Reason = string(registryv1alpha1.StoreBudgetExhausted)
 	}
 
 	var parts []string
+	if len(notWritable) > 0 {
+		parts = append(parts, fmt.Sprintf("the registry cannot create files in its tree in the store on %s, "+
+			"whatever room it has, and pulls it would keep from the upstream fail: the owner, mode or "+
+			"attributes of its directories, a read-only mount or a security module refuse it — "+
+			"status.replicas[].error names the directory and the command that fixes it",
+			strings.Join(notWritable, ", ")))
+	}
 	if len(budget) > 0 {
 		parts = append(parts, fmt.Sprintf("the store on %s holds as much as storage.size allows: "+
 			"raise storage.size or wait for the garbage collection to reclaim space",
 			strings.Join(budget, ", ")))
 	}
-	if len(reserve) > 0 {
+	if len(shared) > 0 {
 		parts = append(parts, fmt.Sprintf("the filesystem under the store on %s is down to the "+
 			"space kept free for the node: free space on the node or move the store to a dedicated disk",
-			strings.Join(reserve, ", ")))
+			strings.Join(shared, ", ")))
 	}
-	condition.Message = "Writes are refused and reads still served; " + strings.Join(parts, "; ") + "."
+	if len(ownDisk) > 0 {
+		parts = append(parts, fmt.Sprintf("the store's own disk on %s is full: grow the disk, which "+
+			"moves the reserve without a restart, or wait for the garbage collection to reclaim space",
+			strings.Join(ownDisk, ", ")))
+	}
+	// Reads still served is what a limit leaves the nodes, and not what a store that is not writable
+	// does: what it holds is served, and a pull it would keep fails.
+	prefix := "Writes are refused and reads still served; "
+	if len(notWritable) > 0 {
+		prefix = "Writes are refused; "
+	}
+	condition.Message = prefix + strings.Join(parts, "; ") + "."
 	return condition
 }

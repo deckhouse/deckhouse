@@ -32,8 +32,9 @@ const (
 	ConditionStorageConverged = "StorageConverged"
 
 	// ConditionStoreWritable reports whether every replica's store still accepts writes. False
-	// names the replicas that refuse and the limit they refuse on — the reasons are the
-	// StoreRefusal values. Reads are served either way.
+	// names the replicas that refuse and why — a limit they are at, or a tree the registry cannot
+	// create files in; the reasons are the StoreRefusal values. What a store holds is served either
+	// way.
 	ConditionStoreWritable = "StoreWritable"
 )
 

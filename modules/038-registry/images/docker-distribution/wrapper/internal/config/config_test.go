@@ -51,14 +51,19 @@ authProxy:
   ca: /pki/ca.crt
 store:
   budget: 107374182400
-  reserve: 10737418240
+  reserve:
+  - percent: 10
+    atMost: 42949672960
+  - percent: 10
+    atMost: 21474836480
 `)
 
 	wrapper, err := Load(path)
 	require.NoError(t, err)
 
 	assert.Equal(t, int64(100<<30), wrapper.Store.Budget)
-	assert.Equal(t, int64(10<<30), wrapper.Store.Reserve)
+	assert.Equal(t, []ReservePart{{Percent: 10, AtMost: 40 << 30}, {Percent: 10, AtMost: 20 << 30}},
+		wrapper.Store.Reserve)
 
 	assert.Equal(t, "system/deckhouse", wrapper.Scope)
 	require.NotNil(t, wrapper.Upstream)
@@ -77,7 +82,7 @@ store:
 // the difference is what the whole air-gap transition turns on.
 func TestAnAirGappedClusterHasNoUpstreamAtAll(t *testing.T) {
 	wrapper, err := Load(write(t, "scope: system/deckhouse\nwriteEndpoint:\n  address: 0.0.0.0:5003\n"+
-		"store:\n  reserve: 1073741824\n"))
+		"store:\n  reserve:\n  - percent: 10\n    atMost: 1073741824\n"))
 	require.NoError(t, err)
 
 	assert.Nil(t, wrapper.Upstream)
@@ -93,7 +98,9 @@ scope: system/deckhouse
 upstream:
   address: mirror.example.com
 store:
-  reserve: 1073741824
+  reserve:
+  - percent: 10
+    atMost: 1073741824
 `))
 	require.NoError(t, err)
 	assert.Equal(t, "/v2", wrapper.RemotePrefix())
@@ -141,8 +148,23 @@ func TestLoadRefusesWhatCannotWork(t *testing.T) {
 			contains: "store.reserve is required",
 		},
 		"a negative budget": {
-			content:  "scope: system/deckhouse\nstore:\n  budget: -1\n  reserve: 1\n",
+			content: "scope: system/deckhouse\nstore:\n  budget: -1\n  reserve:\n" +
+				"  - percent: 10\n    atMost: 1\n",
 			contains: "is negative",
+		},
+		"a reserve of a byte count": {
+			// The format before the reserve followed the filesystem's size. The syncer and this
+			// wrapper are one pod and are updated together, so only a mismatch could write it.
+			content:  "scope: system/deckhouse\nstore:\n  reserve: 1073741824\n",
+			contains: "decoding",
+		},
+		"a share above the whole": {
+			content:  "scope: system/deckhouse\nstore:\n  reserve:\n  - percent: 110\n    atMost: 1\n",
+			contains: "not between 1 and 100",
+		},
+		"a part without a ceiling": {
+			content:  "scope: system/deckhouse\nstore:\n  reserve:\n  - percent: 10\n",
+			contains: "atMost 0 is not positive",
 		},
 	}
 
@@ -159,4 +181,38 @@ func TestLoadSaysWhichFileIsMissing(t *testing.T) {
 	_, err := Load(filepath.Join(t.TempDir(), "absent.yaml"))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "absent.yaml")
+}
+
+const gib = int64(1) << 30
+
+// TestTheReserveIsTakenOfTheSizeItIsGiven pins the arithmetic of the parts to the syncer's: the two
+// halves of one pod compute the same figure, one to enforce it and the other to report it. The same
+// table is in the syncer's store_test.go.
+func TestTheReserveIsTakenOfTheSizeItIsGiven(t *testing.T) {
+	shared := Store{Reserve: []ReservePart{{Percent: 10, AtMost: 40 * gib}, {Percent: 10, AtMost: 20 * gib}}}
+	dedicated := Store{Reserve: []ReservePart{{Percent: 10, AtMost: 20 * gib}}}
+
+	cases := []struct {
+		capacity, shared, dedicated int64
+	}{
+		{50 * gib, 10 * gib, 5 * gib},
+		{100 * gib, 20 * gib, 10 * gib},
+		{300 * gib, 50 * gib, 20 * gib},
+		{1024 * gib, 60 * gib, 20 * gib},
+		// Rounded up to a whole GiB first: a byte short of 100 GiB is 100 GiB, and so is a byte
+		// over 99.
+		{100*gib - 1, 20 * gib, 10 * gib},
+		{99*gib + 1, 20 * gib, 10 * gib},
+		// Unmeasured: nothing to take a share of.
+		{0, 0, 0},
+	}
+	for _, c := range cases {
+		assert.Equal(t, c.shared, shared.ReserveFor(c.capacity), "shared, capacity %d", c.capacity)
+		assert.Equal(t, c.dedicated, dedicated.ReserveFor(c.capacity), "dedicated, capacity %d", c.capacity)
+	}
+
+	// A share that does not divide evenly is still exact, and no disk is large enough to overflow it.
+	odd := Store{Reserve: []ReservePart{{Percent: 7, AtMost: 1 << 62}}}
+	assert.Equal(t, 7*gib/100, odd.ReserveFor(gib))
+	assert.Positive(t, odd.ReserveFor(1<<62))
 }
