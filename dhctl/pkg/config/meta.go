@@ -566,6 +566,19 @@ func (m *MetaConfig) prepareRegistry() error {
 			return err
 		}
 	}
+	// Before Resolve, which expresses an installation from a bundle as Local too, and that one must
+	// pass. For every parse, commander's converge, check and destroy and its ValidateResources and
+	// ConfigExtender previews included: nothing in this release can act on these modes, and
+	// resources that still name them have to be corrected rather than read as something they do
+	// not say. commander.ParseMetaConfig rewords the refusal for converge, check and destroy with
+	// registry.ExistingClusterRefusal.
+	//
+	// Over every copy of the deckhouse ModuleConfig, not only over the first one read above: see
+	// refusePreviousRegistryModes.
+	if err := refusePreviousRegistryModes(m.ModuleConfigs); err != nil {
+		return err
+	}
+
 	// Before Resolve — see the same call in RegistryConfigProvider for why the order matters.
 	initConfig, deckhouseSettings, err := registry.FoldLegacyDirectIntoInit(initConfig, deckhouseSettings)
 	if err != nil {
@@ -586,7 +599,6 @@ func (m *MetaConfig) prepareRegistry() error {
 		providerOpts...,
 	).Config(
 		defaultCRI,
-		m.IsStatic(),
 		m.HasClusterConfiguration(),
 	)
 
@@ -594,6 +606,37 @@ func (m *MetaConfig) prepareRegistry() error {
 		m.Registry = registry
 	}
 	return err
+}
+
+// refusePreviousRegistryModes runs registry.RefusePreviousImplementationModes over the registry
+// settings of every deckhouse ModuleConfig in mcs.
+//
+// A configuration can carry several copies of that ModuleConfig. The resources of an installation
+// are parsed together with the rest of it: the --resources of dhctl bootstrap, and the init
+// resources and resources of commander and the server. The installation reads its registry from
+// one copy only, the first in prepareRegistry and the last in RegistryConfigProvider, and the
+// installer still applies every copy in turn, so a later one replaces an earlier one in the
+// cluster. Checking only the copy that was read let Proxy or Local in another copy through: the
+// installer either replaced or dropped its registry section without a word or, for an installation
+// configured through InitConfiguration, created it as written, and then the cluster refused it
+// late in the bootstrap, with the infrastructure already created.
+func refusePreviousRegistryModes(mcs []*ModuleConfig) error {
+	for _, mc := range mcs {
+		if mc == nil || mc.GetName() != "deckhouse" {
+			continue
+		}
+
+		rawJSON, err := json.Marshal(mc)
+		if err != nil {
+			return err
+		}
+
+		if err := registry.RefusePreviousImplementationModesInModuleConfig(rawJSON); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (m *MetaConfig) GetFullUUID() (string, error) {

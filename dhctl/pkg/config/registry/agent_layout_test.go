@@ -116,7 +116,7 @@ func TestLegacyModesAreLeftAlone(t *testing.T) {
 	for _, config := range []Config{
 		ConfigBuilder(WithModeUnmanaged(), WithLegacyMode()),
 		ConfigBuilder(WithModeDirect()),
-		ConfigBuilder(WithModeProxy()),
+		ConfigBuilder(WithModeLocal()),
 	} {
 		cfg, err := config.Manifest().modeModel.BashibleConfig(pki)
 		require.NoError(t, err)
@@ -187,7 +187,7 @@ func TestTheInstallerSaysTheClusterPullsThroughTheAgent(t *testing.T) {
 	for _, config := range []Config{
 		ConfigBuilder(WithModeUnmanaged(), WithLegacyMode()),
 		ConfigBuilder(WithModeDirect()),
-		ConfigBuilder(WithModeProxy()),
+		ConfigBuilder(WithModeLocal()),
 	} {
 		publish, _ := config.Manifest().ImageAddressData()
 		require.False(t, publish, "mode %s was told it pulls through an agent it does not have", config.Settings.Mode)

@@ -51,34 +51,6 @@ func createInitSecret(ctx context.Context, kubeClient client.KubeClient) error {
 	return createOrUpdateSecret(ctx, kubeClient, secret)
 }
 
-func createStatusSecret(ctx context.Context, kubeClient client.KubeClient, ready bool) error {
-	conditions := make([]metav1.Condition, 0)
-
-	if ready {
-		conditions = append(conditions, metav1.Condition{
-			Type:   conditionTypeReady,
-			Status: metav1.ConditionTrue,
-		})
-	}
-
-	conditionsYaml, err := yaml.Marshal(conditions)
-	if err != nil {
-		return err
-	}
-
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      stateSecretName,
-			Namespace: secretsNamespace,
-		},
-		Data: map[string][]byte{
-			"conditions": conditionsYaml,
-		},
-	}
-
-	return createOrUpdateSecret(ctx, kubeClient, secret)
-}
-
 func createOrUpdateSecret(ctx context.Context, kubeClient client.KubeClient, secret *corev1.Secret) error {
 	_, err := kubeClient.
 		CoreV1().
@@ -92,59 +64,6 @@ func createOrUpdateSecret(ctx context.Context, kubeClient client.KubeClient, sec
 			Update(ctx, secret, metav1.UpdateOptions{})
 	}
 	return err
-}
-
-func TestIsRegistryReady(t *testing.T) {
-	t.Run("legacy - returns ready regardless of state secret", func(t *testing.T) {
-		ctx := t.Context()
-		kubeClient := client.NewFakeKubernetesClient()
-		config := ConfigBuilder(
-			WithLegacyMode(),
-		)
-
-		// Legacy mode skips readiness checks entirely, so the registry is
-		// considered ready no matter what the state secret contains.
-		err := isRegistryReady(ctx, kubeClient, config)
-		require.NoError(t, err)
-
-		err = createStatusSecret(ctx, kubeClient, false)
-		require.NoError(t, err)
-
-		err = isRegistryReady(ctx, kubeClient, config)
-		require.NoError(t, err)
-
-		err = createStatusSecret(ctx, kubeClient, true)
-		require.NoError(t, err)
-
-		err = isRegistryReady(ctx, kubeClient, config)
-		require.NoError(t, err)
-	})
-
-	// The state secret still decides, on the two modes whose entire content is a registry the
-	// previous implementation runs in the cluster.
-	t.Run("the previous implementation's own modes - readiness flow", func(t *testing.T) {
-		ctx := t.Context()
-		kubeClient := client.NewFakeKubernetesClient()
-		config := ConfigBuilder(WithModeProxy())
-
-		// First run: not ready when module status is unknown
-		err := isRegistryReady(ctx, kubeClient, config)
-		require.EqualError(t, err, ErrIsNotReady.Error())
-
-		// Second run: not ready with unready status
-		err = createStatusSecret(ctx, kubeClient, false)
-		require.NoError(t, err)
-
-		err = isRegistryReady(ctx, kubeClient, config)
-		require.EqualError(t, err, ErrIsNotReady.Error())
-
-		// Third run: ready when status becomes ready
-		err = createStatusSecret(ctx, kubeClient, true)
-		require.NoError(t, err)
-
-		err = isRegistryReady(ctx, kubeClient, config)
-		require.NoError(t, err)
-	})
 }
 
 // TestNothingWaitsOnAStateSecretThatIsNeverWritten is the wait that cost a working cluster its

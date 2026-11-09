@@ -20,6 +20,8 @@ import (
 
 	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -48,6 +50,12 @@ func (b *ClusterBootstrapper) CreateResources(ctx context.Context) error {
 
 			resourcesToCreate = append(resourcesToCreate, ress...)
 		}
+	}
+
+	// Before anything is created, and before the cluster is even connected to. The cluster refuses
+	// such a deckhouse ModuleConfig too, but only once the resources queued before it exist.
+	if err := refusePreviousRegistryModes(resourcesToCreate); err != nil {
+		return err
 	}
 
 	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Resources: %s", resourcesToCreate.String()))
@@ -79,4 +87,28 @@ func (b *ClusterBootstrapper) CreateResources(ctx context.Context) error {
 	}
 
 	return body(nil)
+}
+
+// refusePreviousRegistryModes refuses Proxy and Local of the previous registry implementation in
+// every deckhouse ModuleConfig among the resources of `dhctl bootstrap-phase create-resources`, as
+// the parse of the configuration does for every other bootstrap entry point
+// (MetaConfig.prepareRegistry). This phase does not parse the configuration: it reads the
+// resources on their own, from --resources or from the --config files.
+func refusePreviousRegistryModes(resourcesToCreate template.Resources) error {
+	for _, r := range resourcesToCreate {
+		if r.GVK.Kind != config.ModuleConfigKind || r.Object.GetName() != "deckhouse" {
+			continue
+		}
+
+		rawJSON, err := r.Object.MarshalJSON()
+		if err != nil {
+			return fmt.Errorf("marshal the deckhouse ModuleConfig: %w", err)
+		}
+
+		if err := registry_config.RefusePreviousImplementationModesInModuleConfig(rawJSON); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

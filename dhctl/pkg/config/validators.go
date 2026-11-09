@@ -17,6 +17,12 @@ package config
 import (
 	"context"
 	"errors"
+	"strings"
+
+	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 type validator func(
@@ -31,6 +37,7 @@ type validator func(
 //   - validateUserResources  — structural (apiVersion/kind/CRD)
 //   - validateConfigSchema   — schema (OpenAPI) for the whole payload
 //   - validateCNIBootstrap   — domain (CNI mismatch vs cni-bootstrap.yml)
+//   - validatePreviousRegistryModes — domain (Proxy/Local of the previous registry implementation)
 //
 // New domain validators (CSI,Cloud) plug in as additional
 // Layer-3 entries: they filter the payload to their concern and operate on
@@ -39,6 +46,7 @@ var ResourcesPipeline = []validator{
 	validateUserResources,
 	validateConfigSchema,
 	validateCNIBootstrap,
+	validatePreviousRegistryModes,
 }
 
 func validateUserResources(_ context.Context, payload string, _ *SchemaStore, opts ...ValidateOption) *ValidationError {
@@ -73,4 +81,52 @@ func validateConfigSchema(ctx context.Context, payload string, _ *SchemaStore, o
 		return out
 	}
 	return nil
+}
+
+// validatePreviousRegistryModes refuses the `Proxy` and `Local` registry modes of the previous
+// implementation in every deckhouse ModuleConfig of a payload that carries no
+// ClusterConfiguration: the resources of an installation, validated on their own. The installation
+// would refuse them too, but only once it is started, and this is where commander checks the
+// resources before that.
+//
+// A payload with a ClusterConfiguration is left to validateConfigSchema: its MetaConfig.Prepare
+// refuses the same modes in every copy of the ModuleConfig (refusePreviousRegistryModes), and
+// checking here too would report the same document twice. Documents that do not even index-parse
+// are skipped: their structural problems belong to validateUserResources.
+func validatePreviousRegistryModes(_ context.Context, payload string, _ *SchemaStore, _ ...ValidateOption) *ValidationError {
+	if PayloadHasClusterConfiguration(payload) {
+		return nil
+	}
+
+	out := &ValidationError{}
+	for i, doc := range input.YAMLSplitRegexp.Split(strings.TrimSpace(payload), -1) {
+		if doc == "" {
+			continue
+		}
+
+		var index namedIndex
+		if err := yaml.Unmarshal([]byte(doc), &index); err != nil {
+			continue
+		}
+		if index.Kind != ModuleConfigKind || index.Metadata.Name != "deckhouse" {
+			continue
+		}
+
+		if err := registry.RefusePreviousImplementationModesInModuleConfig([]byte(doc)); err != nil {
+			out.Append(ErrKindValidationFailed, Error{
+				Index:    new(i),
+				Group:    ModuleConfigGroup,
+				Version:  ModuleConfigVersion,
+				Kind:     ModuleConfigKind,
+				Name:     index.Metadata.Name,
+				Messages: []string{err.Error()},
+			})
+		}
+	}
+
+	if len(out.Errors) == 0 {
+		return nil
+	}
+
+	return out
 }

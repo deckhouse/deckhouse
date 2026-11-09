@@ -467,6 +467,41 @@ func TestParseMetaConfigDestroyDoesNotNeedTheMaster(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// Resources an existing cluster was installed with can still name the previous registry
+// implementation's Proxy or Local. Check (which parses as converge), converge and destroy refuse them
+// and say what to do about this cluster's resources, not how to write a new installation.
+func TestParseMetaConfigRefusesThePreviousRegistryImplementation(t *testing.T) {
+	deckhouseMC := func(registry string) string {
+		return `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  settings:
+    registry:
+` + registry
+	}
+
+	for mode, registry := range map[string]string{
+		"Proxy": "      mode: Proxy\n      proxy:\n        imagesRepo: r.example.com/test\n        scheme: HTTPS\n",
+		"Local": "      mode: Local\n",
+	} {
+		for _, operation := range []string{infrastructureprovider.DhctlOperationConverge, infrastructureprovider.DhctlOperationDestroy} {
+			t.Run(mode+", "+operation, func(t *testing.T) {
+				_, err := parseMetaConfig(t, providerResources+deckhouseMC(registry), operation)
+				require.ErrorContains(t, err, `registry.mode "`+mode+`"`)
+				require.ErrorContains(t, err, "this cluster's resources")
+				require.ErrorContains(t, err, "remove settings.registry")
+				require.ErrorContains(t, err, "d8 k get mc registry -o jsonpath='{.spec}'")
+				require.NotContains(t, err.Error(), "--img-bundle-path", "the new installation's text")
+			})
+		}
+	}
+}
+
 func TestRequireControlPlaneSpec(t *testing.T) {
 	cloud := func(mutate func(m *config.MetaConfig)) *config.MetaConfig {
 		m := &config.MetaConfig{ClusterType: config.CloudClusterType}

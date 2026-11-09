@@ -107,7 +107,6 @@ func legacyRegistry() map[string]any {
 				"ro_user": map[string]any{"name": "ro", "password": "p", "password_hash": "h"},
 				"rw_user": map[string]any{"name": "rw", "password": "p", "password_hash": "h"},
 			},
-			"proxy": map[string]any{"ca": ""},
 		},
 	}
 }
@@ -283,9 +282,9 @@ func TestTheLegacyBootstrapPathStaysInert(t *testing.T) {
 	// to miss it. Filling in the wrong mode here is how this test would quietly stop
 	// testing anything.
 	steps := map[string]map[string]any{
-		"cluster-bootstrap/020_install_registry_igniter.sh.tpl": legacyRegistry(),
+		"cluster-bootstrap/020_install_registry_igniter.sh.tpl": localRegistry(),
 		"cluster-bootstrap/021_fill_registry_igniter.sh.tpl":    localRegistry(),
-		"cluster-bootstrap/070_install_registry.sh.tpl":         legacyRegistry(),
+		"cluster-bootstrap/070_install_registry.sh.tpl":         localRegistry(),
 		"cluster-bootstrap/073_init_registry_secrets.sh.tpl":    legacyRegistry(),
 	}
 

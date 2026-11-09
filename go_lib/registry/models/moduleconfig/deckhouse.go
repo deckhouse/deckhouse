@@ -29,7 +29,6 @@ import (
 var (
 	_ validation.Validatable = DeckhouseSettings{}
 	_ validation.Validatable = RegistrySettings{}
-	_ validation.Validatable = ProxySettings{}
 )
 
 var (
@@ -37,11 +36,15 @@ var (
 	errorImagesRepoRegexp = fmt.Errorf("does not match the regexp pattern: `%s`", imagesRepoRegexp.String())
 )
 
+// DeckhouseSettings is the registry section of the deckhouse ModuleConfig.
+//
+// Mode is parsed whatever it says, `Proxy` included, so that the installer can refuse the previous
+// implementation's modes by name. The `proxy` section that came with `Proxy` is not read: nothing
+// acts on it any more, and a stored one is ignored rather than failing the parse before the refusal.
 type DeckhouseSettings struct {
 	Mode      constant.ModeType `json:"mode" yaml:"mode"`
 	Direct    *RegistrySettings `json:"direct,omitempty" yaml:"direct,omitempty"`
 	Unmanaged *RegistrySettings `json:"unmanaged,omitempty" yaml:"unmanaged,omitempty"`
-	Proxy     *ProxySettings    `json:"proxy,omitempty" yaml:"proxy,omitempty"`
 }
 
 func New(mode constant.ModeType) DeckhouseSettings {
@@ -61,11 +64,6 @@ func New(mode constant.ModeType) DeckhouseSettings {
 
 	case constant.ModeUnmanaged:
 		settings.Unmanaged = &registrySettings
-
-	case constant.ModeProxy:
-		settings.Proxy = &ProxySettings{
-			RegistrySettings: registrySettings,
-		}
 	}
 
 	return settings
@@ -82,10 +80,6 @@ func (s DeckhouseSettings) ToMap() map[string]any {
 
 	if s.Unmanaged != nil {
 		result["unmanaged"] = s.Unmanaged.ToMap()
-	}
-
-	if s.Proxy != nil {
-		result["proxy"] = s.Proxy.ToMap()
 	}
 
 	return result
@@ -120,15 +114,6 @@ func (s DeckhouseSettings) Merge(other *DeckhouseSettings) DeckhouseSettings {
 		}
 	}
 
-	if other.Proxy != nil {
-		if out.Proxy == nil {
-			out.Proxy = other.Proxy.DeepCopy()
-		} else {
-			merged := out.Proxy.Merge(other.Proxy)
-			out.Proxy = &merged
-		}
-	}
-
 	return out
 }
 
@@ -137,7 +122,7 @@ func (s DeckhouseSettings) Validate() error {
 		validation.Field(&s.Mode,
 			validation.Required.
 				Error(fmt.Sprintf("Unknown registry mode: %s", s.Mode)),
-			validation.In(constant.ModeDirect, constant.ModeUnmanaged, constant.ModeProxy, constant.ModeLocal).
+			validation.In(constant.ModeDirect, constant.ModeUnmanaged, constant.ModeLocal).
 				Error(fmt.Sprintf("Unknown registry mode: %s", s.Mode)),
 		),
 		validation.Field(&s.Direct,
@@ -156,14 +141,6 @@ func (s DeckhouseSettings) Validate() error {
 				validation.Nil.Error("Section 'unmanaged' must be empty when mode is not 'Unmanaged'"),
 			),
 		),
-		validation.Field(&s.Proxy,
-			validation.When(s.Mode == constant.ModeProxy,
-				validation.NotNil,
-				validation.Required.Error("Section 'proxy' is required when mode is 'Proxy'"),
-			).Else(
-				validation.Nil.Error("Section 'proxy' must be empty when mode is not 'Proxy'"),
-			),
-		),
 	)
 }
 
@@ -178,11 +155,6 @@ func (s *DeckhouseSettings) DeepCopyInto(out *DeckhouseSettings) {
 	if s.Unmanaged != nil {
 		out.Unmanaged = new(RegistrySettings)
 		s.Unmanaged.DeepCopyInto(out.Unmanaged)
-	}
-
-	if s.Proxy != nil {
-		out.Proxy = new(ProxySettings)
-		s.Proxy.DeepCopyInto(out.Proxy)
 	}
 }
 
@@ -334,66 +306,6 @@ func (s *RegistrySettings) DeepCopy() *RegistrySettings {
 		return nil
 	}
 	out := new(RegistrySettings)
-	s.DeepCopyInto(out)
-	return out
-}
-
-type ProxySettings struct {
-	RegistrySettings
-	TTL string `json:"ttl,omitempty" yaml:"ttl,omitempty"`
-}
-
-func (s ProxySettings) ToMap() map[string]any {
-	ret := s.RegistrySettings.ToMap()
-
-	if s.TTL != "" {
-		ret["ttl"] = s.TTL
-	}
-
-	return ret
-}
-
-func (s ProxySettings) Merge(other *ProxySettings) ProxySettings {
-	out := *s.DeepCopy()
-
-	if other == nil {
-		return out
-	}
-
-	out.RegistrySettings = out.RegistrySettings.
-		Merge(&other.RegistrySettings)
-
-	if other.TTL != "" {
-		out.TTL = other.TTL
-	}
-
-	return out
-}
-
-func (s ProxySettings) Validate() error {
-	if err := s.RegistrySettings.Validate(); err != nil {
-		return err
-	}
-
-	ttl := s.TTL
-	if len(ttl) > 0 {
-		if err := validateTTL(ttl); err != nil {
-			return fmt.Errorf("invalid ttl format %q: %w", ttl, err)
-		}
-	}
-	return nil
-}
-
-func (s *ProxySettings) DeepCopyInto(out *ProxySettings) {
-	*out = *s
-	s.RegistrySettings.DeepCopyInto(&out.RegistrySettings)
-}
-
-func (s *ProxySettings) DeepCopy() *ProxySettings {
-	if s == nil {
-		return nil
-	}
-	out := new(ProxySettings)
 	s.DeepCopyInto(out)
 	return out
 }

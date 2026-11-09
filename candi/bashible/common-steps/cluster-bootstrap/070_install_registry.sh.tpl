@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if has (.registry).mode (list "Proxy" "Local") }}
+{{- if eq (.registry).mode "Local" }}
 
 {{ $img_docker_distribution := printf "%s@%s" .registry.imagesBase (index $.images.registry "dockerDistribution") }}
 {{ $img_docker_auth := printf "%s@%s" .registry.imagesBase (index $.images.registry "dockerAuth") }}
@@ -76,9 +76,6 @@ cp "${igniter_pki_path}/distribution.key" "${pki_path}/distribution.key"
 cp "${igniter_pki_path}/distribution.crt" "${pki_path}/distribution.crt"
 cp "${igniter_pki_path}/token.key" "${pki_path}/token.key"
 cp "${igniter_pki_path}/token.crt" "${pki_path}/token.crt"
-{{- with ((.registry.bootstrap).proxy).ca }}
-cp "${igniter_pki_path}/upstream-registry-ca.crt" "${pki_path}/upstream-registry-ca.crt"
-{{- end }}
 
 # Prepare auth manifest
 bb-sync-file "${auth_path}/config.yaml" - << EOF
@@ -101,21 +98,16 @@ token:
 users:
   {{ .registry.bootstrap.init.ro_user.name | quote }}:
     password: {{ .registry.bootstrap.init.ro_user.password_hash | quote | replace "$" "\\$" }}
-
-  {{- if eq .registry.mode "Local" }}
   {{ .registry.bootstrap.init.rw_user.name | quote }}:
     password: {{ .registry.bootstrap.init.rw_user.password_hash | quote | replace "$" "\\$" }}
-  {{- end }}
 
 acl:
   - match: { account: {{ .registry.bootstrap.init.ro_user.name | quote }} }
     actions: ["pull"]
     comment: "has readonly access"
-  {{- if eq .registry.mode "Local" }}
   - match: { account: {{ .registry.bootstrap.init.rw_user.name | quote }} }
     actions: [ "*" ]
     comment: "has full access"
-  {{- end }}
 EOF
 
 # Prepare distribution manifest
@@ -160,10 +152,11 @@ EOF
 
 # The registry image is a wrapper around upstream distribution (modules/038-registry/images/
 # docker-distribution/wrapper), and `serve` reads a second file of its own beside the one above: the
-# prefix the cluster pulls by, the upstream a miss goes to, the token service, the reserve the store
-# keeps free. Without it the process exits at once with "reading /config/deckhouse.yaml", which is
-# what broke every Proxy and Local bootstrap once the image stopped being the patched fork. Rendered
-# the way registry-syncer renders it for the store (RenderWrapper), so the two cannot drift apart.
+# prefix the cluster pulls by, the token service, the reserve the store keeps free. Without it the
+# process exits at once with "reading /config/deckhouse.yaml", which is what broke this bootstrap
+# once the image stopped being the patched fork. Rendered the way registry-syncer renders it for the
+# store (RenderWrapper), so the two cannot drift apart. No upstream: the store is filled from the
+# bundle, and a miss has nowhere else to go.
 #
 # The reserve is the syncer's rule for a filesystem the store shares with the node (ReserveParts): 10 %
 # of the filesystem, at most 40 GiB, for the kubelet's eviction threshold, and 10 %, at most 20 GiB,
@@ -173,32 +166,8 @@ EOF
 # The registry refuses to start without a reserve, because without it the store writes until the node
 # has no space left.
 
-# Composed in parts so that the upstream's credentials pass through a QUOTED heredoc: the shell
-# expands nothing in it, so a backtick or a backslash in a password reaches the file as written.
-# The parts around it carry the paths, which do need expanding.
-{
-cat << EOF
+bb-sync-file "${distribution_path}/deckhouse.yaml" - << EOF
 scope: system/deckhouse
-EOF
-{{- with .registry.bootstrap.proxy }}
-{{- /* No ttl: the wrapper's cache keeps what it fetched and never expires it, as the store's does. */}}
-cat << 'EOF'
-upstream:
-  address: {{ .host | quote }}
-  scheme: {{ .scheme | quote }}
-  path: {{ .path | quote }}
-  {{- if .username }}
-  username: {{ .username | quote }}
-  password: {{ .password | quote }}
-  {{- end }}
-EOF
-{{- if .ca }}
-cat << EOF
-  ca: "/pki/upstream-registry-ca.crt"
-EOF
-{{- end }}
-{{- end }}
-cat << EOF
 authProxy:
   url: https://127.0.0.1:5051/auth
   ca: "/pki/ca.crt"
@@ -209,7 +178,6 @@ store:
   - percent: 10
     atMost: 21474836480
 EOF
-} | bb-sync-file "${distribution_path}/deckhouse.yaml" -
 
 # Prepare static pod manifest
 # The registry reads two files, and the pod has to restart when either changes. The configuration
@@ -254,21 +222,6 @@ spec:
       - --deckhouse-config
       - /config/deckhouse.yaml
       - /config/config.yaml
-{{- with .registry.bootstrap.proxy }}
-    env:
-    - name: HTTP_PROXY
-      value: "${HTTP_PROXY}"
-    - name: http_proxy
-      value: "${HTTP_PROXY}"
-    - name: HTTPS_PROXY
-      value: "${HTTPS_PROXY}"
-    - name: https_proxy
-      value: "${HTTPS_PROXY}"
-    - name: NO_PROXY
-      value: "${NO_PROXY}"
-    - name: no_proxy
-      value: "${NO_PROXY}"
-{{- end }}
     ports:
       - name: distribution
         containerPort: 5001

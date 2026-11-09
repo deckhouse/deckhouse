@@ -17,36 +17,26 @@ package registry
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/retry"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/yaml"
-
-	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/kubeerrors"
 )
 
 const (
 	secretsNamespace = "d8-system"
-	stateSecretName  = "registry-state"
 	initSecretName   = "registry-init"
 
 	// initSecretAppliedAnnotation is the previous implementation's mark of a consumed init secret,
 	// read for presence by modules/038-registry/hooks/orchestrator/init-secret.
 	initSecretAppliedAnnotation = "registry.deckhouse.io/is-applied"
-
-	conditionTypeReady = "Ready"
 )
 
-// errRegistryCheckTransient marks a transport/API-level failure while reading or deleting the
-// registry init/state secrets, as opposed to a permanent parse failure or authorization error
-// that will fail identically on every attempt.
+// errRegistryCheckTransient marks a transport/API-level failure while reading the registry module's
+// RegistryStorage, or its absence before the module has started, as opposed to a permanent parse
+// failure or authorization error that will fail identically on every attempt.
 var errRegistryCheckTransient = fmt.Errorf("registry check: transient error, may succeed on retry")
 
 // WaitForRegistryInitialization waits for the registry to become fully initialized and ready.
@@ -68,14 +58,14 @@ func WaitForRegistryReady(ctx context.Context, kubeClient client.KubeClient, con
 
 // isRegistryReady checks whether the registry the cluster was configured with has become usable.
 //
-// There are exactly two things this can wait on, and which applies is decided from the configuration
-// rather than from what happens to be present in the cluster: a store the module runs, answered by
-// its own RegistryStorage status, or the previous implementation's state machine, answered by its
-// `registry-state` secret.
+// There is exactly one thing this can wait on, and whether it applies is decided from the
+// configuration rather than from what happens to be present in the cluster: a store the module runs,
+// answered by its own RegistryStorage status.
 //
-// The second is reachable only on a cluster that implementation still owns, which a cluster being
-// installed now never is — the current implementation takes over from the start and clears the values
-// that secret is written from, so waiting there waits for something nobody will write.
+// The previous implementation's state machine is not waited on any more. Its modes are refused when
+// the configuration is parsed (see RefusePreviousImplementationModes), and nothing in a cluster
+// installed from this release writes its `registry-state` secret, so a wait for it could only end in
+// a timeout.
 //
 // Everything else is not waited on, and that is a statement rather than a gap: a cluster pulling
 // straight from a registry has nothing in it that reports on that registry, and the moment Deckhouse
@@ -110,136 +100,7 @@ func isRegistryReady(ctx context.Context, kubeClient client.KubeClient, config C
 		return nil
 	}
 
-	if !isLegacyImplementation(config) {
-		logger.DebugContext(ctx,
-			"No in-cluster registry is expected for this configuration, so there is nothing to wait for")
-		return nil
-	}
-
-	conditions, err := getConditions(ctx, kubeClient)
-	if err != nil {
-		logger.DebugContext(ctx, fmt.Sprintf("Error while checking registry ready: %v", err))
-		return ErrIsNotReady
-	}
-
-	if isConditionsReady(conditions) {
-		return nil
-	}
-
-	if msg := formatNotReadyMessage(conditions); msg != "" {
-		err := fmt.Errorf("%s\n%s", ErrIsNotReady.Error(), msg)
-		logger.DebugContext(ctx, fmt.Sprintf("Error while checking registry ready: %v", err))
-		return err
-	}
-
-	return ErrIsNotReady
-}
-
-// isLegacyImplementation reports that the configuration asks for something only the previous
-// implementation provides, and so that its state machine is what reports readiness.
-//
-// Proxy and Local are the two modes whose whole content is a registry the previous implementation
-// runs in the cluster — its pull-through proxy, or its local store. Direct and Unmanaged are not:
-// they configure the container runtime to reach a registry that already exists, which is exactly
-// what the current implementation's fallback does, and there is nothing in the cluster to wait for.
-//
-// That distinction is why this is not simply `!LegacyMode`. Direct is the default for a cluster with
-// a supported container runtime, so reading it as "the previous implementation reports on this" is
-// what made every ordinary installation wait for a secret that is no longer written.
-func isLegacyImplementation(config Config) bool {
-	switch config.Settings.Mode {
-	case constant.ModeProxy, constant.ModeLocal:
-		return true
-	default:
-		return false
-	}
-}
-
-// formatNotReadyMessage builds a human-readable message listing all non-True
-// conditions (excluding the Ready condition itself).
-func formatNotReadyMessage(conditions []metav1.Condition) string {
-	if len(conditions) == 0 {
-		return ""
-	}
-
-	var msg strings.Builder
-
-	for _, condition := range conditions {
-		if condition.Type == conditionTypeReady {
-			continue
-		}
-
-		if condition.Status == metav1.ConditionTrue {
-			continue
-		}
-
-		if msg.Len() > 0 {
-			msg.WriteString("\n")
-		}
-
-		fmt.Fprintf(&msg, "* %s: %s",
-			condition.Type,
-			strings.TrimSpace(strings.ReplaceAll(condition.Message, "\n", " ")),
-		)
-	}
-
-	return msg.String()
-}
-
-// isConditionsReady checks whether the registry is ready based on its conditions.
-// It returns true only if the Ready condition is present and set to True.
-func isConditionsReady(conditions []metav1.Condition) bool {
-	if len(conditions) == 0 {
-		return false
-	}
-
-	for _, condition := range conditions {
-		if condition.Type == conditionTypeReady {
-			return condition.Status == metav1.ConditionTrue
-		}
-	}
-
-	return false
-}
-
-// getConditions retrieves and parses the registry state conditions.
-// Parameters:
-//   - ctx: context for cancellation and timeouts
-//   - kubeClient: Kubernetes client for API operations
-//
-// Returns:
-//   - []metav1.Condition: registry state conditions
-//   - err: error from the operation
-func getConditions(ctx context.Context, kubeClient client.KubeClient) ([]metav1.Condition, error) {
-	var conditions []metav1.Condition
-
-	secret, err := kubeClient.
-		CoreV1().
-		Secrets(secretsNamespace).
-		Get(ctx, stateSecretName, metav1.GetOptions{})
-
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			// No status reported yet: equivalent to no conditions being ready.
-			return nil, nil
-		}
-		if kubeerrors.IsPermanentAuthError(ctx, err) {
-			return nil, fmt.Errorf("get secret '%s/%s': %w", secretsNamespace, stateSecretName, err)
-		}
-		return nil, fmt.Errorf("%w: get secret '%s/%s': %w", errRegistryCheckTransient, secretsNamespace, stateSecretName, err)
-	}
-
-	rawConditions, exists := secret.Data["conditions"]
-	if !exists {
-		return conditions, nil
-	}
-
-	if err := yaml.Unmarshal(rawConditions, &conditions); err != nil {
-		return nil, fmt.Errorf(
-			"unmarshal secret '%s/%s' conditions: %w",
-			secretsNamespace, stateSecretName, err,
-		)
-	}
-
-	return conditions, nil
+	logger.DebugContext(ctx,
+		"No in-cluster registry is expected for this configuration, so there is nothing to wait for")
+	return nil
 }

@@ -154,7 +154,7 @@ func TestAFoldedDirectInstallsWithTheModuleManagingNothing(t *testing.T) {
 	}))
 	require.NoError(t, err)
 
-	config, err := NewConfigProvider(init, settings).Config(constant.CRIContainerdV1, true, true)
+	config, err := NewConfigProvider(init, settings).Config(constant.CRIContainerdV1, true)
 	require.NoError(t, err)
 
 	assert.True(t, config.LegacyMode, "the module is not asked to manage anything")
@@ -172,7 +172,7 @@ func TestAnUnfoldedDirectStillAsksForTheModule(t *testing.T) {
 		Scheme:     constant.SchemeHTTPS,
 	})
 
-	config, err := NewConfigProvider(nil, settings).Config(constant.CRIContainerdV1, true, true)
+	config, err := NewConfigProvider(nil, settings).Config(constant.CRIContainerdV1, true)
 	require.NoError(t, err)
 
 	assert.False(t, config.LegacyMode)

@@ -42,7 +42,6 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
-	"time"
 
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/deckhouse/go_lib/registry/helpers"
@@ -220,7 +219,7 @@ func FuzzDeckhouseSettingsJSON(f *testing.F) {
 		// names: the hook switches on the section, so a second one would be a
 		// configuration that means two different things.
 		sections := 0
-		for _, populated := range []bool{settings.Direct != nil, settings.Unmanaged != nil, settings.Proxy != nil} {
+		for _, populated := range []bool{settings.Direct != nil, settings.Unmanaged != nil} {
 			if populated {
 				sections++
 			}
@@ -236,67 +235,6 @@ func FuzzDeckhouseSettingsJSON(f *testing.F) {
 				t.Fatalf("Validate() accepted mode %q with %d populated sections: %q",
 					settings.Mode, sections, document)
 			}
-		}
-	})
-}
-
-// FuzzProxySettingsTTL covers the one field Proxy mode adds. It becomes the
-// blob and manifest lifetime of the caching registry, so a value that passes
-// here and then fails to parse would leave the proxy without one.
-func FuzzProxySettingsTTL(f *testing.F) {
-	// Durations the rule is meant to accept, the ones just below its minimum,
-	// and the shapes that are not a duration at all.
-	f.Add("")
-	f.Add("1h")
-	f.Add("5m")
-	f.Add("24h")
-	f.Add("1h30m")
-	f.Add("300s")
-	f.Add("1h0m0s")
-	f.Add("168h")
-	f.Add("4m")
-	f.Add("1s")
-	f.Add("0h")
-	f.Add("0")
-	f.Add("-1h")
-	f.Add("1d")
-	f.Add("1h1h")
-	f.Add("h")
-	f.Add("1")
-	f.Add("9999999999999999999h")
-	f.Add("1e3s")
-	f.Add(" 1h")
-
-	f.Fuzz(func(t *testing.T, ttl string) {
-		if len(ttl) > 256 {
-			return
-		}
-
-		settings := ProxySettings{
-			RegistrySettings: RegistrySettings{
-				ImagesRepo: "registry.example.com/deckhouse/ee",
-				Scheme:     constant.SchemeHTTPS,
-			},
-			TTL: ttl,
-		}
-
-		if err := settings.Validate(); err != nil {
-			return
-		}
-
-		if ttl == "" {
-			return
-		}
-
-		// Accepted means the caching registry will be configured with it, so it
-		// has to be a duration and it has to be the one the rule promises.
-		duration, err := time.ParseDuration(ttl)
-		if err != nil {
-			t.Fatalf("Validate() accepted ttl %q, which does not parse as a duration: %v", ttl, err)
-		}
-		if duration < ttlMin {
-			t.Fatalf("Validate() accepted ttl %q (%s), below the documented minimum %s",
-				ttl, duration, ttlMin)
 		}
 	})
 }

@@ -27,7 +27,8 @@ import (
 
 // ConfigExtender returns the recommended config for the requested extension
 // kind. Runs in commander mode unconditionally: the request proto has no
-// opts, and parsing here is non-mutating preview-only.
+// opts, and parsing here is non-mutating preview-only. Proxy and Local in the
+// deckhouse ModuleConfig are refused by the parse, as in every operation.
 func (s *Service) ConfigExtender(
 	ctx context.Context,
 	request *pb.ConfigExtenderRequest,

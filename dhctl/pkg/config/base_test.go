@@ -1279,11 +1279,9 @@ func testCreateDeckhouseRegistrySecret(t *testing.T, kubeCl *client.KubernetesCl
 // TestRegistryConfigProviderBundleBootstrap covers installing a cluster whose images come from a
 // bundle, recognised from the registry module's own ModuleConfig rather than from the deckhouse one.
 //
-// The third case is the reason this exists at all. Everything that serves images during such an
-// installation — the temporary registry on the first master, the candi schemas, the provider plugins —
-// comes from one local registry reached through a reverse tunnel, and none of that depends on the
-// cluster being static. The refusal that used to stand in the way belongs to the legacy modes and is
-// left untouched for them.
+// Everything that serves images during such an installation — the temporary registry on the first
+// master, the candi schemas, the provider plugins — comes from one local registry reached through a
+// reverse tunnel, and none of that depends on the cluster being static.
 func TestRegistryConfigProviderBundleBootstrap(t *testing.T) {
 	const mcRegistryCacheNoUpstream = `
 ---
@@ -1345,14 +1343,16 @@ spec:
 		require.False(t, isLocal)
 	})
 
-	t.Run("a cloud cluster is allowed to install from a bundle", func(t *testing.T) {
+	t.Run("an installation from a bundle builds a full configuration", func(t *testing.T) {
 		provider, err := RegistryConfigProvider([]string{mcRegistryCacheNoUpstream})
 		require.NoError(t, err)
 
-		// isStatic=false is the whole point: this used to be refused outright with "supported only in
-		// a static cluster", and every cluster this is tested on is a cloud one.
-		_, err = provider.Config(registry_const.CRIContainerdV2, false, true)
-		require.NoError(t, err, "installing from a bundle must not require a static cluster")
+		// Local, but decided from the registry module rather than written by the user, so the
+		// refusal of the previous implementation's modes must not touch it.
+		config, err := provider.Config(registry_const.CRIContainerdV2, true)
+		require.NoError(t, err)
+		require.Equal(t, registry_const.ModeLocal, config.Settings.Mode)
+		require.True(t, config.BundleBootstrap)
 	})
 
 	t.Run("the deckhouse ModuleConfig keeps precedence", func(t *testing.T) {
@@ -1380,6 +1380,111 @@ spec:
 		require.NoError(t, err)
 		require.False(t, isLocal, "an explicit legacy configuration must not be overridden by inference")
 	})
+}
+
+// TestRegistryConfigProviderRefusesPreviousImplementation pins the refusal the installer runs first,
+// before it starts the bundle registry and before anything is created.
+//
+// `Proxy` and `Local` in the deckhouse ModuleConfig used to be accepted on a static cluster, and the
+// installation then waited about half an hour for the previous implementation's state secret, which
+// nothing in this release writes. `Local` stays refused next to a registry ModuleConfig that asks for
+// an installation from a bundle: the user wrote it, and the deckhouse ModuleConfig would win.
+//
+// The `proxy` section that comes with `Proxy` is no longer read, and a stored one must still end in
+// this message rather than in a parse error.
+func TestRegistryConfigProviderRefusesPreviousImplementation(t *testing.T) {
+	const mcRegistryBundle = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: registry
+spec:
+  enabled: true
+  version: 1
+  settings:
+    mode: Managed
+    storage:
+      cache: true
+      size: 10Gi
+`
+
+	deckhouseMC := func(registry string) string {
+		return `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  enabled: true
+  version: 1
+  settings:
+    registry:
+` + registry
+	}
+
+	const mcDeckhouseWithoutRegistry = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  enabled: true
+  version: 1
+  settings:
+    bundle: Default
+`
+
+	refused := []struct {
+		name string
+		docs []string
+	}{
+		{"proxy", []string{deckhouseMC(`      mode: Proxy
+      proxy:
+        imagesRepo: r.example.com/test
+        scheme: HTTPS
+        ttl: 72h
+`)}},
+		{"local", []string{deckhouseMC("      mode: Local\n")}},
+		{"local beside a bundle registry ModuleConfig", []string{deckhouseMC("      mode: Local\n"), mcRegistryBundle}},
+		// The installation reads the last copy here, and the resources of an installation can
+		// carry more than one: every copy is checked, not only the one that is read.
+		{"proxy in a copy before the last", []string{deckhouseMC("      mode: Proxy\n"), mcDeckhouseWithoutRegistry}},
+		{"local in a copy before the last", []string{deckhouseMC("      mode: Local\n"), mcDeckhouseWithoutRegistry}},
+	}
+	for _, tt := range refused {
+		t.Run("refused: "+tt.name, func(t *testing.T) {
+			_, err := RegistryConfigProvider(tt.docs)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "belongs to the previous registry implementation")
+			require.Contains(t, err.Error(), "configure the registry ModuleConfig")
+		})
+	}
+
+	accepted := []struct {
+		name string
+		docs []string
+	}{
+		{"direct", []string{deckhouseMC(`      mode: Direct
+      direct:
+        imagesRepo: r.example.com/test
+        scheme: HTTPS
+`)}},
+		{"unmanaged", []string{deckhouseMC(`      mode: Unmanaged
+      unmanaged:
+        imagesRepo: r.example.com/test
+        scheme: HTTPS
+`)}},
+		{"the registry module, a bundle installation", []string{mcRegistryBundle}},
+	}
+	for _, tt := range accepted {
+		t.Run("accepted: "+tt.name, func(t *testing.T) {
+			_, err := RegistryConfigProvider(tt.docs)
+			require.NoError(t, err)
+		})
+	}
 }
 
 // TestAConfigurationThatNamesNoRegistryOutsideTheModule is the shape the air-gap test actually uses,
@@ -1428,8 +1533,8 @@ spec:
 	assert.Equal(t, registry_const.BundleImagesRepo, remote.ImagesRepo,
 		"the images come from the bundle the installer serves, not from a registry nobody named")
 
-	// And a cloud cluster is allowed to install this way, which every variant of the test matrix is.
-	_, err = provider.Config(registry_const.CRIContainerdV2, false, true)
+	// Every variant of the test matrix installs a cloud cluster this way.
+	_, err = provider.Config(registry_const.CRIContainerdV2, true)
 	require.NoError(t, err)
 }
 

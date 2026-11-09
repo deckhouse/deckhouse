@@ -45,9 +45,10 @@ import (
 // An InitConfiguration that already names a registry wins and is left alone: the two describe the
 // same registry on a cluster Commander installs, and that one is the operator's own statement.
 //
-// Only `Direct` is folded. `Local` is how an installation from a bundle is expressed inside dhctl,
-// `Proxy` is refused earlier with a message of its own, and `Unmanaged` already means what this
-// produces.
+// Only `Direct` is folded. `Proxy` and `Local` written by the user are refused by
+// RefusePreviousImplementationModes, in every operation and never folded into something else,
+// `Local` is otherwise how an installation from a bundle is expressed inside dhctl, and `Unmanaged`
+// already means what this produces.
 func FoldLegacyDirectIntoInit(
 	init *init_config.Config,
 	settings *module_config.DeckhouseSettings,

@@ -129,7 +129,7 @@ var (
 	AgentDropInFile = fmt.Sprintf("%s/%s/%s", DropInRoot, DropInDefaultHost, DropInHostsFile)
 
 	SupportedCRI         = []CRIType{CRIContainerdV1, CRIContainerdV2}
-	ModesRequiringModule = []ModeType{ModeDirect, ModeLocal, ModeProxy}
+	ModesRequiringModule = []ModeType{ModeDirect, ModeLocal}
 )
 
 // IsInCluster reports whether a repository names the in-cluster registry.

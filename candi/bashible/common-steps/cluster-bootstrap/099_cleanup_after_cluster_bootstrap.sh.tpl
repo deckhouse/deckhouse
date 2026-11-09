@@ -14,7 +14,7 @@
 
 rm -rf /var/lib/bashible/control-plane
 
-{{- if has (.registry).mode (list "Proxy" "Local") }}
+{{- if eq (.registry).mode "Local" }}
 rpp-get uninstall module-registry-auth \
                   module-registry-distribution \
                   module-registry-syncer \

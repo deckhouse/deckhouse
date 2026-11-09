@@ -817,6 +817,17 @@ func RegistryConfigProvider(docs []string) (*registry.ConfigProvider, error) {
 					return nil, err
 				}
 
+				// The previous implementation's modes, refused on the settings as the user wrote
+				// them: before Resolve, which expresses an installation from a bundle as Local too.
+				// Here as well as in MetaConfig.prepareRegistry, because the installer's bundle
+				// registry and the schema and plugin downloads come here before the configuration is
+				// parsed, and they have to stop with the same message before anything is downloaded
+				// or created. In every copy of this ModuleConfig, not only in the last one read
+				// here: see refusePreviousRegistryModes.
+				if err := registry.RefusePreviousImplementationModes(ret); err != nil {
+					return nil, err
+				}
+
 				deckhouseSettings = ret
 
 			case "registry":

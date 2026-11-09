@@ -26,6 +26,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
@@ -98,7 +99,9 @@ func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *Comman
 		config.ValidateOptionProviderBundleDir(bundleDir),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse config: %w", err)
+		// These are the resources of an existing cluster, and Proxy or Local in them needs the
+		// existing cluster's wording of the refusal, not the one for a new installation.
+		return nil, fmt.Errorf("unable to parse config: %w", registry.ExistingClusterRefusal(err))
 	}
 	metaConfig.UUID = clusterUUID
 

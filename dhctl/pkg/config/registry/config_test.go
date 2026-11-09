@@ -28,14 +28,12 @@ type (
 	updateRegistrySettings func(*module_config.RegistrySettings)
 	updateLegacyMode       func() bool
 	updateMode             func() constant.ModeType
-	updateTTL              func() string
 )
 
 func ConfigBuilder(opts ...any) Config {
 	var (
 		mode             = constant.ModeUnmanaged
 		legacyMode       = false
-		ttl              = ""
 		registrySettings = module_config.NewRegistrySettings()
 	)
 
@@ -49,9 +47,6 @@ func ConfigBuilder(opts ...any) Config {
 
 		case updateMode:
 			mode = fn()
-
-		case updateTTL:
-			ttl = fn()
 		}
 	}
 
@@ -62,15 +57,6 @@ func ConfigBuilder(opts ...any) Config {
 		userSettings = module_config.DeckhouseSettings{
 			Mode:   constant.ModeDirect,
 			Direct: &registrySettings,
-		}
-
-	case constant.ModeProxy:
-		userSettings = module_config.DeckhouseSettings{
-			Mode: constant.ModeProxy,
-			Proxy: &module_config.ProxySettings{
-				RegistrySettings: registrySettings,
-				TTL:              ttl,
-			},
 		}
 
 	case constant.ModeLocal:
@@ -134,12 +120,6 @@ func WithLicense(license string) updateRegistrySettings {
 	}
 }
 
-func WithTTL(ttl string) updateTTL {
-	return func() string {
-		return ttl
-	}
-}
-
 func WithModeDirect() updateMode {
 	return func() constant.ModeType {
 		return constant.ModeDirect
@@ -149,12 +129,6 @@ func WithModeDirect() updateMode {
 func WithModeUnmanaged() updateMode {
 	return func() constant.ModeType {
 		return constant.ModeUnmanaged
-	}
-}
-
-func WithModeProxy() updateMode {
-	return func() constant.ModeType {
-		return constant.ModeProxy
 	}
 }
 
@@ -283,20 +257,6 @@ func TestConfig_UseDeckhouseSettings(t *testing.T) {
 			},
 		},
 		{
-			name: "proxy -> not legacy && no errors",
-			input: input{
-				deckhouse: module_config.DeckhouseSettings{
-					Mode: constant.ModeProxy,
-					Proxy: &module_config.ProxySettings{
-						RegistrySettings: module_config.RegistrySettings{
-							ImagesRepo: "registry.example.com",
-							Scheme:     "HTTPS",
-						},
-					},
-				},
-			},
-		},
-		{
 			name: "unmanaged -> not legacy && no errors",
 			input: input{
 				deckhouse: module_config.DeckhouseSettings{
@@ -341,12 +301,6 @@ func TestConfig_DeepCopy(t *testing.T) {
 				name: "Direct mode",
 				config: func() *Config {
 					return new(ConfigBuilder(WithModeDirect()))
-				}(),
-			},
-			{
-				name: "Proxy mode",
-				config: func() *Config {
-					return new(ConfigBuilder(WithModeProxy()))
 				}(),
 			},
 			{
@@ -566,15 +520,6 @@ func TestConfigProvider_Config(t *testing.T) {
 			Scheme:     constant.SchemeHTTPS,
 		},
 	}
-	proxySettings := module_config.DeckhouseSettings{
-		Mode: constant.ModeProxy,
-		Proxy: &module_config.ProxySettings{
-			RegistrySettings: module_config.RegistrySettings{
-				ImagesRepo: "registry.example.com",
-				Scheme:     constant.SchemeHTTPS,
-			},
-		},
-	}
 	localSettings := module_config.DeckhouseSettings{
 		Mode: constant.ModeLocal,
 	}
@@ -586,9 +531,9 @@ func TestConfigProvider_Config(t *testing.T) {
 	type input struct {
 		initConfig             *init_config.Config
 		deckhouseSettings      *module_config.DeckhouseSettings
+		opts                   []ProviderOption
 		defaultCRI             constant.CRIType
 		noClusterConfiguration bool
-		isStatic               bool
 	}
 
 	type output struct {
@@ -609,7 +554,6 @@ func TestConfigProvider_Config(t *testing.T) {
 				initConfig:        &initCfg,
 				deckhouseSettings: &directSettings,
 				defaultCRI:        constant.CRIContainerdV1,
-				isStatic:          true,
 			},
 			output: output{
 				mode:       constant.ModeDirect,
@@ -621,7 +565,6 @@ func TestConfigProvider_Config(t *testing.T) {
 			input: input{
 				deckhouseSettings: &directSettings,
 				defaultCRI:        constant.CRIContainerdV1,
-				isStatic:          true,
 			},
 			output: output{
 				mode:       constant.ModeDirect,
@@ -640,39 +583,18 @@ func TestConfigProvider_Config(t *testing.T) {
 			},
 		},
 		{
-			name: "deckhouseSettings proxy + non-static -> error",
-			input: input{
-				deckhouseSettings: &proxySettings,
-				defaultCRI:        constant.CRIContainerdV1,
-				isStatic:          false,
-			},
-			output: output{
-				err:    true,
-				errMsg: "bootstrap with registry mode",
-			},
-		},
-		{
-			name: "deckhouseSettings local + static -> local mode",
+			// Local reaches the provider only as an installation from a bundle: written by the user it
+			// is refused before, by RefusePreviousImplementationModes. Nothing here depends on the
+			// cluster being static.
+			name: "local from a bundle -> local mode",
 			input: input{
 				deckhouseSettings: &localSettings,
+				opts:              []ProviderOption{WithBundleBootstrap(), WithStore(), WithSettingsFromRegistryModule()},
 				defaultCRI:        constant.CRIContainerdV1,
-				isStatic:          true,
 			},
 			output: output{
 				mode:       constant.ModeLocal,
 				legacyMode: false,
-			},
-		},
-		{
-			name: "deckhouseSettings local + non-static -> error",
-			input: input{
-				deckhouseSettings: &localSettings,
-				defaultCRI:        constant.CRIContainerdV1,
-				isStatic:          false,
-			},
-			output: output{
-				err:    true,
-				errMsg: "bootstrap with registry mode",
 			},
 		},
 		{
@@ -718,17 +640,6 @@ func TestConfigProvider_Config(t *testing.T) {
 			},
 		},
 		{
-			name: "deckhouseSettings proxy + no ClusterConfiguration -> error",
-			input: input{
-				deckhouseSettings:      &proxySettings,
-				noClusterConfiguration: true,
-			},
-			output: output{
-				err:    true,
-				errMsg: "bootstrap with registry mode",
-			},
-		},
-		{
 			name:  "no config + no ClusterConfiguration -> unmanaged legacy mode",
 			input: input{noClusterConfiguration: true},
 			output: output{
@@ -743,9 +654,9 @@ func TestConfigProvider_Config(t *testing.T) {
 			config, err := NewConfigProvider(
 				tt.input.initConfig,
 				tt.input.deckhouseSettings,
+				tt.input.opts...,
 			).Config(
 				tt.input.defaultCRI,
-				tt.input.isStatic,
 				!tt.input.noClusterConfiguration,
 			)
 

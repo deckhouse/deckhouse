@@ -33,18 +33,6 @@ func errUnsupportedCRI(cri constant.CRIType) error {
 	)
 }
 
-func errNonStaticClusterMode(mode constant.ModeType) error {
-	return fmt.Errorf(
-		"bootstrap with registry mode '%s' is supported only in a static cluster. "+
-			"Please use one of the supported bootstrap modes for a non-static cluster: %v",
-		mode,
-		[]constant.ModeType{
-			constant.ModeUnmanaged,
-			constant.ModeDirect,
-		},
-	)
-}
-
 func NewConfigProvider(
 	init *init_config.Config,
 	deckhouseSettings *module_config.DeckhouseSettings,
@@ -66,12 +54,8 @@ type ConfigProvider struct {
 	deckhouseSettings *module_config.DeckhouseSettings
 
 	// bundleBootstrap records that Local was decided from the registry module's own configuration
-	// rather than read from the deckhouse ModuleConfig.
-	//
-	// The distinction earns its keep in exactly one place — the static-cluster refusal in Config
-	// below. That refusal guards the legacy modes, where it was a deliberate restriction; this path
-	// is allowed in a cloud cluster, because what serves the images is a static pod on the host
-	// network and neither of those depends on the cluster being static.
+	// rather than read from the deckhouse ModuleConfig. Local written by the user is refused by
+	// RefusePreviousImplementationModes before it gets here.
 	bundleBootstrap bool
 
 	// storeExpected records that the registry module was asked for a store of its own.
@@ -183,7 +167,7 @@ func (p *ConfigProvider) RemoteData() (Data, error) {
 // of its nodes - the container runtime the registry module needs is then not dhctl's to check.
 // The mode defaulting below still sees criSupported=false there, which keeps a cluster with no
 // registry configuration at all on the legacy Unmanaged mode it gets today.
-func (p *ConfigProvider) Config(defaultCRI constant.CRIType, isStatic, hasClusterConfiguration bool) (Config, error) {
+func (p *ConfigProvider) Config(defaultCRI constant.CRIType, hasClusterConfiguration bool) (Config, error) {
 	var config Config
 
 	criSupported := constant.IsCRISupported(defaultCRI)
@@ -192,17 +176,6 @@ func (p *ConfigProvider) Config(defaultCRI constant.CRIType, isStatic, hasCluste
 	case p.deckhouseSettings != nil:
 		if hasClusterConfiguration && !criSupported {
 			return Config{}, errUnsupportedCRI(defaultCRI)
-		}
-
-		switch p.deckhouseSettings.Mode {
-		case constant.ModeProxy, constant.ModeLocal:
-			// The restriction belongs to the legacy modes, and it stays exactly as it was for them.
-			// An installation from a bundle is allowed in a cloud cluster: what serves the images
-			// during it is a static pod on the host network, which the cloud has no say in, and the
-			// cluster's own store serves everything afterwards.
-			if !isStatic && !p.bundleBootstrap {
-				return Config{}, errNonStaticClusterMode(p.deckhouseSettings.Mode)
-			}
 		}
 
 		if err := config.useDeckhouseSettings(*p.deckhouseSettings); err != nil {

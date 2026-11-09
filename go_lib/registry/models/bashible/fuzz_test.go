@@ -40,11 +40,12 @@ limitations under the License.
 // interpolated safely is a gap in the model's validation.
 //
 // The heredocs cannot be quoted shut, which is what makes validation the whole
-// defence. In Proxy and Local mode dhctl does not know the node's own address
-// and writes helpers.NodeIPPlaceholder in its place, and it is the shell
-// expanding that unquoted body which resolves it. So exactly one value carrying
-// a shell metacharacter has to be admitted; withoutNodeIPPlaceholder below
-// removes that literal and holds everything else to the full predicate.
+// defence. In Local mode, an installation from a bundle, dhctl does not know
+// the node's own address and writes helpers.NodeIPPlaceholder in its place, and
+// it is the shell expanding that unquoted body which resolves it. So exactly
+// one value carrying a shell metacharacter has to be admitted;
+// withoutNodeIPPlaceholder below removes that literal and holds everything else
+// to the full predicate.
 package bashible
 
 import (
@@ -143,7 +144,7 @@ func withoutNodeIPPlaceholder(value string) string {
 func validFuzzContext() Context {
 	return Context{
 		RegistryModuleEnable: true,
-		Mode:                 "Proxy",
+		Mode:                 "Local",
 		Version:              "0000000000000000000000000000000000000000000000000000000000000000",
 		ImagesBase:           "registry.d8-system.svc:5001/system/deckhouse",
 		Hosts: map[string]ContextHosts{

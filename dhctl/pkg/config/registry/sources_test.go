@@ -352,7 +352,9 @@ spec:
 			},
 		},
 		{
-			name: "proxy mode with credentials -> settings with credentials",
+			// The previous implementation's mode is kept by name, for the refusal to quote it; its
+			// section is not read, so a stored one cannot fail the parse before that refusal.
+			name: "proxy mode -> settings with mode only, the proxy section is not read",
 			input: []byte(`
 spec:
   settings:
@@ -368,15 +370,6 @@ spec:
 			output: output{
 				settings: &module_config.DeckhouseSettings{
 					Mode: constant.ModeProxy,
-					Proxy: &module_config.ProxySettings{
-						RegistrySettings: module_config.RegistrySettings{
-							ImagesRepo: "registry.example.com",
-							Scheme:     constant.SchemeHTTPS,
-							Username:   "user",
-							Password:   "pass",
-						},
-						TTL: "72h",
-					},
 				},
 			},
 		},

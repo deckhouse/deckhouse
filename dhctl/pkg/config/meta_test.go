@@ -455,8 +455,8 @@ spec:
 		// installs successfully and does not work, so it is asserted on the parsed configuration
 		// rather than on the provider that produced it.
 		//
-		// Note the cluster in this template is a Cloud one: this configuration used to be refused
-		// outright before an installation from a bundle was allowed outside static clusters.
+		// Note the cluster in this template is a Cloud one: an installation from a bundle does not
+		// depend on the cluster being static.
 		t.Run("ModuleConfig registry, a cache with no upstream -> the cluster is built with a local registry", func(t *testing.T) {
 			cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{
 				"manifests": []string{
@@ -511,6 +511,131 @@ spec:
 			})
 			require.NotEqual(t, registry_const.ModeLocal, cfg.Registry.Settings.Mode,
 				"an upstream is a source of images, so nothing here says bundle")
+		})
+	})
+
+	// The previous implementation cannot be installed from this release. Refused in the parse that
+	// every installation and render goes through, on a static cluster as well as a cloud one: static
+	// was where these modes used to be accepted.
+	//
+	// Refused for commander's converge, check (which runs as converge) and destroy too: nothing in
+	// this release acts on these modes, so resources that still name them are refused with the same
+	// message rather than converged as some other mode.
+	t.Run("ModuleConfig Deckhouse, the previous implementation's modes", func(t *testing.T) {
+		const staticCluster = `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+podSubnetCIDR: 10.111.0.0/16
+serviceSubnetCIDR: 10.222.0.0/16
+kubernetesVersion: "1.33"
+clusterDomain: "cluster.local"
+`
+		modes := map[string]string{
+			"Proxy": `      mode: Proxy
+      proxy:
+        imagesRepo: r.example.com/test
+        scheme: HTTPS
+`,
+			"Local": "      mode: Local\n",
+		}
+
+		for mode, registry := range modes {
+			deckhouseMC := `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  enabled: true
+  version: 1
+  settings:
+    registry:
+` + registry
+
+			clusters := map[string]string{
+				"cloud":  renderTestConfig(map[string]any{"manifests": []string{deckhouseMC}}, metaConfigTestsTemplate),
+				"static": staticCluster + "---\n" + deckhouseMC,
+			}
+
+			for cluster, configData := range clusters {
+				for _, operation := range []string{
+					"",
+					string(validatev1.OperationBootstrap),
+					string(validatev1.OperationConverge),
+					string(validatev1.OperationDestroy),
+				} {
+					t.Run(fmt.Sprintf("%s, %s cluster, operation %q -> refused", mode, cluster, operation), func(t *testing.T) {
+						_, err := ParseConfigFromData(t.Context(), configData, DummyValidatorProvider(), &options.New().Global,
+							ValidateOptionOperation(operation))
+						require.Error(t, err)
+						require.Contains(t, err.Error(), "belongs to the previous registry implementation")
+					})
+				}
+			}
+		}
+	})
+
+	// The resources of an installation are parsed with the rest of its configuration, and they can
+	// carry another copy of the deckhouse ModuleConfig. The installation reads its registry from the
+	// first copy only, and the installer applies every copy, so Proxy or Local in any later one is
+	// refused here, before anything is created, and not by the cluster at the end of the bootstrap.
+	t.Run("ModuleConfig Deckhouse, the previous implementation's modes in a later copy", func(t *testing.T) {
+		const staticCluster = `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+podSubnetCIDR: 10.111.0.0/16
+serviceSubnetCIDR: 10.222.0.0/16
+kubernetesVersion: "1.33"
+clusterDomain: "cluster.local"
+`
+		deckhouseMC := func(settings string) string {
+			return `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  enabled: true
+  version: 1
+  settings:
+` + settings
+		}
+		withoutRegistry := deckhouseMC("    bundle: Default\n")
+		direct := deckhouseMC(`    registry:
+      mode: Direct
+      direct:
+        imagesRepo: r.example.com/test
+        scheme: HTTPS
+`)
+
+		for mode, registry := range map[string]string{
+			"Proxy": "    registry:\n      mode: Proxy\n      proxy:\n        imagesRepo: r.example.com/test\n        scheme: HTTPS\n",
+			"Local": "    registry:\n      mode: Local\n",
+		} {
+			refused := deckhouseMC(registry)
+			for name, configData := range map[string]string{
+				"second of two":                   staticCluster + withoutRegistry + refused,
+				"between two":                     staticCluster + withoutRegistry + refused + withoutRegistry,
+				"after one that names a registry": staticCluster + direct + refused,
+			} {
+				t.Run(mode+", "+name, func(t *testing.T) {
+					_, err := ParseConfigFromData(t.Context(), configData, DummyValidatorProvider(), &options.New().Global,
+						ValidateOptionOperation(string(validatev1.OperationBootstrap)))
+					require.Error(t, err)
+					require.Contains(t, err.Error(), `registry.mode "`+mode+`"`)
+					require.Contains(t, err.Error(), "belongs to the previous registry implementation")
+				})
+			}
+		}
+
+		t.Run("copies without these modes are accepted", func(t *testing.T) {
+			_, err := ParseConfigFromData(t.Context(), staticCluster+withoutRegistry+direct+withoutRegistry,
+				DummyValidatorProvider(), &options.New().Global,
+				ValidateOptionOperation(string(validatev1.OperationBootstrap)))
+			require.NoError(t, err)
 		})
 	})
 

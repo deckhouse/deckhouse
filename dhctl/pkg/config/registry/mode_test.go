@@ -38,12 +38,6 @@ func TestModeNoError(t *testing.T) {
 			).DeckhouseSettings,
 		},
 		{
-			name: "mode proxy",
-			input: ConfigBuilder(
-				WithModeProxy(),
-			).DeckhouseSettings,
-		},
-		{
 			name: "mode unmanaged",
 			input: ConfigBuilder(
 				WithModeUnmanaged(),
@@ -198,120 +192,24 @@ func TestModeDirect(t *testing.T) {
 	})
 }
 
-func TestModeProxy(t *testing.T) {
+// TestModeProxyIsNotInstalled pins what is left of the previous implementation's Proxy mode: the
+// name. RefusePreviousImplementationModes refuses it with a message before anything here runs, and
+// should anything get past that refusal, it fails here too rather than being installed as some other
+// mode.
+func TestModeProxyIsNotInstalled(t *testing.T) {
+	_, err := newModeSettings(module_config.DeckhouseSettings{Mode: constant.ModeProxy})
+	require.ErrorIs(t, err, ErrUnknownMode)
+
 	pki, err := GeneratePKI()
 	require.NoError(t, err)
 
-	t.Run("Proxy mode", func(t *testing.T) {
-		config := ConfigBuilder(
-			WithModeProxy(),
-			WithImagesRepo("r.example.com/test"),
-			WithCredentials("test-user", "test-password"),
-			WithSchemeHTTPS(),
-			WithCA("-----BEGIN CERTIFICATE-----"),
-			WithTTL("5m"),
-		)
+	model := ModeModel{Mode: constant.ModeProxy}
 
-		t.Run("modeSettings", func(t *testing.T) {
-			expect := ModeSettings{
-				Mode: constant.ModeProxy,
-				RemoteData: Data{
-					ImagesRepo: "r.example.com/test",
-					Scheme:     "HTTPS",
-					CA:         "-----BEGIN CERTIFICATE-----",
-					Username:   "test-user",
-					Password:   "test-password",
-				},
-				TTL: "5m",
-			}
+	_, err = model.InClusterData(pki)
+	require.ErrorIs(t, err, ErrUnknownMode)
 
-			require.EqualValues(t, expect, config.Settings)
-		})
-
-		t.Run("modeModel", func(t *testing.T) {
-			actual := config.
-				Settings.
-				ToModel()
-
-			expect := ModeModel{
-				Mode:                constant.ModeProxy,
-				InClusterImagesRepo: "registry.d8-system.svc:5001/system/deckhouse",
-				RemoteImagesRepo:    "r.example.com/test",
-				RemoteData: Data{
-					ImagesRepo: "r.example.com/test",
-					Scheme:     "HTTPS",
-					CA:         "-----BEGIN CERTIFICATE-----",
-					Username:   "test-user",
-					Password:   "test-password",
-				},
-				TTL: "5m",
-			}
-
-			require.EqualValues(t, expect, actual)
-		})
-
-		t.Run("InclusterData", func(t *testing.T) {
-			actual, err := config.
-				Settings.
-				ToModel().
-				InClusterData(pki)
-
-			require.NoError(t, err)
-
-			expect := Data{
-				ImagesRepo: "registry.d8-system.svc:5001/system/deckhouse",
-				Scheme:     "HTTPS",
-				CA:         pki.CA.Cert,
-				Username:   pki.ROUser.Name,
-				Password:   pki.ROUser.Password,
-			}
-
-			require.EqualValues(t, expect, actual)
-		})
-
-		t.Run("BashibleConfig", func(t *testing.T) {
-			actual, err := config.
-				Settings.
-				ToModel().
-				BashibleConfig(pki)
-
-			require.NoError(t, err)
-
-			expect := bashible.Config{
-				Mode:           string(constant.ModeProxy),
-				Version:        actual.Version,
-				ImagesBase:     "registry.d8-system.svc:5001/system/deckhouse",
-				ProxyEndpoints: []string{"${discovered_node_ip}:5001"},
-				Hosts: map[string]bashible.ConfigHosts{
-					"registry.d8-system.svc:5001": {
-						Mirrors: []bashible.ConfigMirrorHost{
-							{
-								Host:   "127.0.0.1:5001",
-								Scheme: "https",
-								CA:     pki.CA.Cert,
-								Auth: bashible.ConfigAuth{
-									Username: pki.ROUser.Name,
-									Password: pki.ROUser.Password,
-								},
-							},
-							{
-								Host:   "${discovered_node_ip}:5001",
-								Scheme: "https",
-								CA:     pki.CA.Cert,
-								Auth: bashible.ConfigAuth{
-									Username: pki.ROUser.Name,
-									Password: pki.ROUser.Password,
-								},
-							},
-						},
-					},
-				},
-			}
-
-			require.NotEmpty(t, actual.Version)
-			require.EqualValues(t, expect, actual)
-		})
-	})
+	_, err = model.BashibleConfig(pki)
+	require.ErrorIs(t, err, ErrUnknownMode)
 }
 
 func TestModeLocal(t *testing.T) {
@@ -527,13 +425,6 @@ func TestModeSettings_DeepCopy(t *testing.T) {
 				name: "Direct ModeSettings",
 				settings: func() *ModeSettings {
 					cfg := ConfigBuilder(WithModeDirect())
-					return &cfg.Settings
-				}(),
-			},
-			{
-				name: "Proxy ModeSettings",
-				settings: func() *ModeSettings {
-					cfg := ConfigBuilder(WithModeProxy())
 					return &cfg.Settings
 				}(),
 			},

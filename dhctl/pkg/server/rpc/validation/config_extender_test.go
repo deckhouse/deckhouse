@@ -64,3 +64,20 @@ func TestConfigExtender_InvalidConfig_ErrorInResponse(t *testing.T) {
 	require.NotEmpty(t, resp.Err)
 	require.Empty(t, resp.Config)
 }
+
+// The preview parses the configuration like every operation, so, like ValidateResources, it refuses
+// Proxy and Local in the deckhouse ModuleConfig: nothing in this release can act on these modes.
+func TestConfigExtender_PreviousRegistryModesRefused(t *testing.T) {
+	for mode, cfg := range previousRegistryModeConfigs() {
+		t.Run(mode, func(t *testing.T) {
+			s := New(config.NewSchemaStore(nil), nil)
+			resp, err := s.ConfigExtender(t.Context(), &pb.ConfigExtenderRequest{
+				Config: cfg,
+				Kind:   pb.ConfigExtensionKind_CONFIG_EXTENSION_KIND_CNI,
+			})
+			require.NoError(t, err)
+			require.Contains(t, resp.Err, "belongs to the previous registry implementation")
+			require.Empty(t, resp.Config)
+		})
+	}
+}

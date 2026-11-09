@@ -31,9 +31,9 @@ func TestManifestsNoError(t *testing.T) {
 			),
 		},
 		{
-			name: "mode proxy",
+			name: "mode local",
 			input: ConfigBuilder(
-				WithModeProxy(),
+				WithModeLocal(),
 			),
 		},
 		{
@@ -100,9 +100,9 @@ func TestManifestsLegacyMode(t *testing.T) {
 			legacyMode: false,
 		},
 		{
-			name: "mode proxy",
+			name: "mode local",
 			input: ConfigBuilder(
-				WithModeProxy(),
+				WithModeLocal(),
 			),
 			legacyMode: false,
 		},

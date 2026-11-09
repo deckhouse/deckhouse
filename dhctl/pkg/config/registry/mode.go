@@ -31,7 +31,6 @@ const (
 type ModeSettings struct {
 	Mode       constant.ModeType
 	RemoteData Data
-	TTL        string
 }
 
 func newModeSettings(settings module_config.DeckhouseSettings) (ModeSettings, error) {
@@ -43,16 +42,6 @@ func newModeSettings(settings module_config.DeckhouseSettings) (ModeSettings, er
 		return ModeSettings{
 			Mode:       constant.ModeDirect,
 			RemoteData: remote,
-		}, nil
-
-	case settings.Proxy != nil:
-		var remote Data
-		remote.fromRegistrySettings(settings.Proxy.RegistrySettings)
-
-		return ModeSettings{
-			Mode:       constant.ModeProxy,
-			RemoteData: remote,
-			TTL:        settings.Proxy.TTL,
 		}, nil
 
 	case settings.Unmanaged != nil:
@@ -85,9 +74,6 @@ func (s ModeSettings) ToModel() ModeModel {
 	case constant.ModeDirect:
 		return s.toDirectModel()
 
-	case constant.ModeProxy:
-		return s.toProxyModel()
-
 	case constant.ModeLocal:
 		return s.toLocalModel()
 
@@ -105,16 +91,6 @@ func (s ModeSettings) toDirectModel() ModeModel {
 		InClusterImagesRepo: constant.HostWithPath,
 		RemoteImagesRepo:    s.RemoteData.ImagesRepo,
 		RemoteData:          s.RemoteData,
-	}
-}
-
-func (s ModeSettings) toProxyModel() ModeModel {
-	return ModeModel{
-		Mode:                constant.ModeProxy,
-		InClusterImagesRepo: constant.HostWithPath,
-		RemoteImagesRepo:    s.RemoteData.ImagesRepo,
-		RemoteData:          s.RemoteData,
-		TTL:                 s.TTL,
 	}
 }
 
@@ -155,7 +131,6 @@ type ModeModel struct {
 	InClusterImagesRepo string
 	RemoteImagesRepo    string
 	RemoteData          Data
-	TTL                 string
 
 	// AgentOwnsRuntime means the first master is installed with the node agent already on it,
 	// rather than with the container runtime pointed straight at the upstream.
@@ -177,7 +152,7 @@ func (m ModeModel) InClusterData(pki PKI) (Data, error) {
 	case constant.ModeDirect:
 		return m.toDirectInClusterData(pki), nil
 
-	case constant.ModeProxy, constant.ModeLocal:
+	case constant.ModeLocal:
 		return m.toProxyLocalInClusterData(pki), nil
 
 	case constant.ModeUnmanaged:
@@ -205,7 +180,7 @@ func (m ModeModel) BashibleConfig(pki PKI) (BashibleConfig, error) {
 	case constant.ModeUnmanaged:
 		mirrors = m.toUnmanagedBashibleHosts()
 
-	case constant.ModeProxy, constant.ModeLocal:
+	case constant.ModeLocal:
 		mirrors = m.toProxyLocalBashibleHosts(pki)
 		endpoints = m.toProxyLocalEndpoints()
 
