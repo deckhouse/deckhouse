@@ -1,0 +1,425 @@
+diff --git a/pkg/scheduler/deckhouse_extender_breaker.go b/pkg/scheduler/deckhouse_extender_breaker.go
+new file mode 100644
+index 00000000000..ba8ec8d80bb
+--- /dev/null
++++ b/pkg/scheduler/deckhouse_extender_breaker.go
+@@ -0,0 +1,157 @@
++/*
++Copyright 2026 Flant JSC
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scheduler
++
++// Deckhouse patch: a circuit breaker for ignorable extenders. A timed-out or failing ignorable
++// extender costs its whole timeout in every scheduling cycle and its scores are dropped anyway;
++// after a few failures in a row the scheduler stops calling it for a while and probes again.
++
++import (
++	"errors"
++	"os"
++	"strconv"
++	"sync"
++	"time"
++
++	"k8s.io/klog/v2"
++
++	"k8s.io/kubernetes/pkg/scheduler/metrics"
++)
++
++const (
++	// defaultBreakerFailures: kube-scheduler calls an extender once per scheduling cycle, so a hung
++	// extender with a 100ms timeout fails about 10 calls a second and the breaker opens within a
++	// second. A healthy extender on a starved master times out 12..17% of calls, and a GC pause of
++	// the extender (up to 0.7s seen) fails up to 7 calls in a row: 10 in a row does not happen then.
++	defaultBreakerFailures = 10
++	defaultBreakerOpen     = 30 * time.Second
++	// The environment of kube-scheduler overrides the defaults; failures 0 turns the breaker off.
++	envBreakerFailures = "DECKHOUSE_EXTENDER_BREAKER_FAILURES"
++	envBreakerOpen     = "DECKHOUSE_EXTENDER_BREAKER_OPEN"
++)
++
++var errCircuitOpen = errors.New("extender skipped: circuit breaker open after consecutive failures")
++
++// circuitBreaker opens after limit failed requests in a row: requests are skipped for openFor,
++// then one probe goes through; its success closes the breaker, its failure opens it again.
++type circuitBreaker struct {
++	extender string // the name in metrics (deckhouse_extender_names.go)
++	limit    int
++	openFor  time.Duration
++	now      func() time.Time
++
++	mu        sync.Mutex
++	failures  int
++	openUntil time.Time
++	probing   bool
++}
++
++// newCircuitBreaker returns nil (no breaker) for a non-ignorable extender: skipping it would fail
++// the scheduling of pods instead of dropping its scores.
++func newCircuitBreaker(urlPrefix string, ignorable bool) *circuitBreaker {
++	limit, openFor := defaultBreakerFailures, defaultBreakerOpen
++	if s := os.Getenv(envBreakerFailures); s != "" {
++		if v, err := strconv.Atoi(s); err == nil {
++			limit = v
++		} else {
++			klog.InfoS("Ignoring an invalid extender breaker setting", "env", envBreakerFailures, "value", s)
++		}
++	}
++	if s := os.Getenv(envBreakerOpen); s != "" {
++		if v, err := time.ParseDuration(s); err == nil && v > 0 {
++			openFor = v
++		} else {
++			klog.InfoS("Ignoring an invalid extender breaker setting", "env", envBreakerOpen, "value", s)
++		}
++	}
++	if !ignorable || limit <= 0 {
++		return nil
++	}
++	b := &circuitBreaker{extender: deckhouseExtenderName(urlPrefix), limit: limit, openFor: openFor, now: time.Now}
++	b.setOpen(false) // a series from the start, so a healthy extender shows 0
++	return b
++}
++
++// setOpen publishes the state; tests may build extenders without registered metrics.
++func (b *circuitBreaker) setOpen(open bool) {
++	if metrics.ExtenderCircuitOpen == nil {
++		return
++	}
++	v := 0.0
++	if open {
++		v = 1
++		metrics.ExtenderCircuitOpenTotal.WithLabelValues(b.extender).Inc()
++	}
++	metrics.ExtenderCircuitOpen.WithLabelValues(b.extender).Set(v)
++}
++
++// allow reports whether a request may go out now.
++func (b *circuitBreaker) allow() bool {
++	if b == nil {
++		return true
++	}
++	b.mu.Lock()
++	defer b.mu.Unlock()
++	switch {
++	case b.failures < b.limit:
++		return true
++	case b.now().Before(b.openUntil) || b.probing:
++		return false
++	default: // half-open: one probe at a time
++		b.probing = true
++		return true
++	}
++}
++
++// skipping reports whether the extender is skipped now: open, or its probe is in flight. It
++// takes no probe: for requests whose result must not count, such as simulations. After the open
++// period such a request goes out although no real request has probed yet.
++func (b *circuitBreaker) skipping() bool {
++	if b == nil {
++		return false
++	}
++	b.mu.Lock()
++	defer b.mu.Unlock()
++	return b.failures >= b.limit && (b.now().Before(b.openUntil) || b.probing)
++}
++
++// done records the result of a request that allow let through.
++func (b *circuitBreaker) done(ok bool) {
++	if b == nil {
++		return
++	}
++	b.mu.Lock()
++	defer b.mu.Unlock()
++	wasOpen := b.failures >= b.limit
++	b.probing = false
++	if ok {
++		b.failures = 0
++		if wasOpen {
++			b.setOpen(false)
++			klog.InfoS("Extender circuit breaker closed", "extender", b.extender)
++		}
++		return
++	}
++	b.failures++
++	if b.failures >= b.limit {
++		b.openUntil = b.now().Add(b.openFor)
++		b.setOpen(true)
++		if !wasOpen {
++			klog.InfoS("Extender circuit breaker opened", "extender", b.extender, "failures", b.failures, "openFor", b.openFor)
++		}
++	}
++}
+diff --git a/pkg/scheduler/deckhouse_extender_metrics_test.go b/pkg/scheduler/deckhouse_extender_metrics_test.go
+index cb526fd7c62..9470f4f2d15 100644
+--- a/pkg/scheduler/deckhouse_extender_metrics_test.go
++++ b/pkg/scheduler/deckhouse_extender_metrics_test.go
+@@ -19,6 +19,7 @@ package scheduler
+ import (
+ 	"net/http"
+ 	"net/http/httptest"
++	"sync/atomic"
+ 	"testing"
+ 	"time"
+ 
+@@ -156,3 +157,130 @@ func TestDeckhouseExtenderInfo(t *testing.T) {
+ 		t.Errorf("extender info = %v (%v), want 1", got, err)
+ 	}
+ }
++
++// An ignorable extender is skipped after ten failed requests in a row, probed after the open
++// period, and called again once the probe succeeds; a non-ignorable one has no breaker. Nine
++// failures in a row followed by a success do not open it.
++func TestExtenderCircuitBreaker(t *testing.T) {
++	metrics.Register()
++	if newCircuitBreaker("x", false) != nil {
++		t.Fatal("a non-ignorable extender must not get a breaker")
++	}
++	opened := func() float64 {
++		v, _ := testutil.GetCounterMetricValue(metrics.ExtenderCircuitOpenTotal.WithLabelValues("cb"))
++		return v
++	}
++	openedBefore := opened()
++	now := time.Unix(0, 0)
++	b := newCircuitBreaker("cb", true)
++	b.now = func() time.Time { return now }
++	for range 9 {
++		b.allow()
++		b.done(false)
++	}
++	b.allow()
++	b.done(true)
++	for range 10 {
++		if !b.allow() {
++			t.Fatal("closed breaker skipped a request")
++		}
++		b.done(false)
++	}
++	if b.allow() || !b.skipping() {
++		t.Fatal("open breaker let a request through")
++	}
++	now = now.Add(31 * time.Second)
++	if !b.allow() || b.allow() {
++		t.Fatal("after the open period exactly one probe must go through")
++	}
++	b.done(false) // the probe fails: open again
++	if b.allow() {
++		t.Fatal("breaker did not reopen after a failed probe")
++	}
++	now = now.Add(31 * time.Second)
++	if !b.allow() {
++		t.Fatal("no probe after the second open period")
++	}
++	b.done(true)
++	if !b.allow() || !b.allow() {
++		t.Fatal("breaker did not close after a successful probe")
++	}
++	if got := opened() - openedBefore; got != 2 {
++		t.Errorf("opened %v times, want 2", got)
++	}
++}
++
++// A simulation skips an extender the breaker skips, but neither takes the
++// half-open probe nor counts its result: the next real request gets the probe.
++func TestDeckhouseExtenderBreakerSimulation(t *testing.T) {
++	metrics.Register()
++	calls := 0
++	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
++		calls++
++		_, _ = w.Write([]byte(`[]`))
++	}))
++	defer srv.Close()
++	e, err := NewHTTPExtender(&schedulerapi.Extender{URLPrefix: srv.URL, PrioritizeVerb: "prioritize", Weight: 1, Ignorable: true})
++	if err != nil {
++		t.Fatal(err)
++	}
++	ext := e.(*HTTPExtender)
++	now := time.Unix(0, 0)
++	ext.breaker.now = func() time.Time { return now }
++	for range ext.breaker.limit {
++		ext.breaker.allow()
++		ext.breaker.done(false)
++	}
++	node := framework.NewNodeInfo()
++	node.SetNode(&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "n"}})
++	sim := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{DeckhouseSimulationAnnotation: "true"}}}
++	if _, _, err := ext.Prioritize(sim, []fwk.NodeInfo{node}); err == nil || calls != 0 {
++		t.Fatalf("simulation while the breaker is open: err %v, %d calls; want skipped", err, calls)
++	}
++	now = now.Add(time.Hour) // the open period is over: the next real request is the probe
++	if _, _, err := ext.Prioritize(sim, []fwk.NodeInfo{node}); err != nil || calls != 1 {
++		t.Fatalf("simulation after the open period: err %v, %d calls; want sent", err, calls)
++	}
++	if !ext.breaker.allow() {
++		t.Fatal("the simulation took the half-open probe")
++	}
++	ext.breaker.done(true)
++	if ext.breaker.skipping() {
++		t.Error("the successful probe did not close the breaker")
++	}
++}
++
++// The breaker covers filter and prioritize only: bind of a paused extender
++// still goes out, and an error the extender reports in its answer does not
++// count as a failure.
++func TestDeckhouseExtenderBreakerScope(t *testing.T) {
++	metrics.Register()
++	var calls atomic.Int32
++	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		calls.Add(1)
++		_, _ = w.Write([]byte(`{"error":"busy"}`))
++	}))
++	defer srv.Close()
++	e, err := NewHTTPExtender(&schedulerapi.Extender{URLPrefix: srv.URL, FilterVerb: "filter", BindVerb: "bind", Weight: 1, Ignorable: true, NodeCacheCapable: true})
++	if err != nil {
++		t.Fatal(err)
++	}
++	ext := e.(*HTTPExtender)
++	node := framework.NewNodeInfo()
++	node.SetNode(&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "n"}})
++	for range ext.breaker.limit + 2 {
++		_, _, _, _ = ext.Filter(&v1.Pod{}, []fwk.NodeInfo{node})
++	}
++	if ext.breaker.skipping() {
++		t.Fatal("answers with an extender error opened the breaker")
++	}
++	for range ext.breaker.limit {
++		ext.breaker.allow()
++		ext.breaker.done(false)
++	}
++	before := calls.Load()
++	_ = ext.Bind(&v1.Binding{ObjectMeta: metav1.ObjectMeta{Name: "p", Namespace: "ns"}, Target: v1.ObjectReference{Name: "n"}})
++	if calls.Load() != before+1 {
++		t.Error("bind of a paused extender did not go out")
++	}
++}
+diff --git a/pkg/scheduler/deckhouse_extender_names_test.go b/pkg/scheduler/deckhouse_extender_names_test.go
+index b976baebfb0..bede3c561d1 100644
+--- a/pkg/scheduler/deckhouse_extender_names_test.go
++++ b/pkg/scheduler/deckhouse_extender_names_test.go
+@@ -85,6 +85,9 @@ func TestDeckhouseExtenderNameLabels(t *testing.T) {
+ 	if e.Name() != srv.URL || h.name != name {
+ 		t.Fatalf("Name() %q, name %q", e.Name(), h.name)
+ 	}
++	if h.breaker == nil || h.breaker.extender != name {
++		t.Errorf("breaker %+v, want the name %q", h.breaker, name)
++	}
+ 	node := framework.NewNodeInfo()
+ 	node.SetNode(&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "n"}})
+ 	if _, _, _, err := e.Filter(&v1.Pod{}, []fwk.NodeInfo{node}); err != nil {
+diff --git a/pkg/scheduler/extender.go b/pkg/scheduler/extender.go
+index 3c75722a92a..30d5a4ea315 100644
+--- a/pkg/scheduler/extender.go
++++ b/pkg/scheduler/extender.go
+@@ -57,6 +57,7 @@ type HTTPExtender struct {
+ 	nodeCacheCapable bool
+ 	managedResources sets.Set[string]
+ 	ignorable        bool
++	breaker          *circuitBreaker // Deckhouse patch, nil when off
+ }
+ 
+ func makeTransport(config *schedulerapi.Extender) (http.RoundTripper, error) {
+@@ -120,6 +121,7 @@ func NewHTTPExtender(config *schedulerapi.Extender) (framework.Extender, error)
+ 		nodeCacheCapable: config.NodeCacheCapable,
+ 		managedResources: managedResources,
+ 		ignorable:        config.Ignorable,
++		breaker:          newCircuitBreaker(config.URLPrefix, config.Ignorable),
+ 	}, nil
+ }
+ 
+@@ -408,13 +410,27 @@ func (h *HTTPExtender) send(action string, args interface{}, result interface{})
+ 	return h.sendRecorded(action, args, result, true)
+ }
+ 
+-// sendRecorded sends a request; with record it observes the request metrics.
+-// Deckhouse: simulations (deckhouse_simulate.go) are not recorded.
++// sendRecorded sends a request; with record it observes the request metrics and
++// feeds the circuit breaker. Deckhouse: simulations (deckhouse_simulate.go) are not recorded.
+ func (h *HTTPExtender) sendRecorded(action string, args interface{}, result interface{}, record bool) (err error) {
+ 	start, outcome := time.Now(), "error"
++	// Deckhouse: the breaker covers filter and prioritize, as upstream kubernetes#142911;
++	// bind and preempt always go out and do not count. A simulation skips an extender the
++	// breaker skips, but takes no half-open probe and records nothing.
++	gated := action == h.filterVerb || action == h.prioritizeVerb
++	if gated && (record && !h.breaker.allow() || !record && h.breaker.skipping()) {
++		if record {
++			metrics.ExtenderRequestDuration.WithLabelValues(h.name, action, "skipped").Observe(time.Since(start).Seconds())
++		}
++		return errCircuitOpen
++	}
+ 	defer func() {
+ 		if record {
+ 			metrics.ExtenderRequestDuration.WithLabelValues(h.name, action, outcome).Observe(time.Since(start).Seconds())
++			if gated {
++				// An error the extender reports in its answer is not a failure to answer.
++				h.breaker.done(outcome == "success" || outcome == "extender_error")
++			}
+ 		}
+ 	}()
+ 
+diff --git a/pkg/scheduler/metrics/metrics.go b/pkg/scheduler/metrics/metrics.go
+index 7467f41c9da..bd25edc5cb0 100644
+--- a/pkg/scheduler/metrics/metrics.go
++++ b/pkg/scheduler/metrics/metrics.go
+@@ -129,6 +129,10 @@ var (
+ 	ExtenderInfo *metrics.GaugeVec
+ 	// ExtenderFilterNodes counts the nodes extender filters passed and failed (Deckhouse patch).
+ 	ExtenderFilterNodes *metrics.CounterVec
++	// ExtenderCircuitOpen and ExtenderCircuitOpenTotal show the circuit breaker of ignorable
++	// extenders (Deckhouse patch).
++	ExtenderCircuitOpen      *metrics.GaugeVec
++	ExtenderCircuitOpenTotal *metrics.CounterVec
+ 
+ 	// The below are only available when the SchedulerAsyncAPICalls feature gate is enabled.
+ 	AsyncAPICallsTotal   *metrics.CounterVec
+@@ -342,7 +346,7 @@ func InitMetrics() {
+ 			Subsystem: SchedulerSubsystem,
+ 			Name:      "extender_request_duration_seconds",
+ 			Help: "Duration of HTTP requests to scheduler extenders, from encoding the request to decoding the response, " +
+-				"by extender, verb and result (success, extender_error, timeout, error, status, decode).",
++				"by extender, verb and result (success, extender_error, timeout, error, status, decode; skipped: the circuit breaker is open).",
+ 			// 0.5ms .. ~16s
+ 			Buckets:        metrics.ExponentialBuckets(0.0005, 2, 16),
+ 			StabilityLevel: metrics.ALPHA,
+@@ -378,6 +382,21 @@ func InitMetrics() {
+ 			StabilityLevel: metrics.ALPHA,
+ 		},
+ 		[]string{"extender", "url", "filter_verb", "prioritize_verb", "preempt_verb", "bind_verb", "weight", "ignorable"})
++	ExtenderCircuitOpen = metrics.NewGaugeVec(
++		&metrics.GaugeOpts{
++			Subsystem:      SchedulerSubsystem,
++			Name:           "extender_circuit_open",
++			Help:           "1 while the circuit breaker skips an ignorable extender after consecutive failed requests, 0 otherwise.",
++			StabilityLevel: metrics.ALPHA,
++		}, []string{"extender"})
++
++	ExtenderCircuitOpenTotal = metrics.NewCounterVec(
++		&metrics.CounterOpts{
++			Subsystem:      SchedulerSubsystem,
++			Name:           "extender_circuit_open_total",
++			Help:           "Number of times the circuit breaker of an ignorable extender opened, including after a failed probe.",
++			StabilityLevel: metrics.ALPHA,
++		}, []string{"extender"})
+ 
+ 	PreemptionGoroutinesDuration = metrics.NewHistogramVec(
+ 		&metrics.HistogramOpts{
+@@ -449,6 +468,8 @@ func InitMetrics() {
+ 		ExtenderRequestPhaseDuration,
+ 		ExtenderInfo,
+ 		ExtenderFilterNodes,
++		ExtenderCircuitOpen,
++		ExtenderCircuitOpenTotal,
+ 	}
+ }
+ 

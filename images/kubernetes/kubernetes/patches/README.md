@@ -373,3 +373,9 @@ Requests made by the simulate endpoint are not recorded.
 `extender` is the name of the extender: the name of its KubeSchedulerWebhookConfiguration, with `/<n>` (the position of the webhook in `webhooks`, from 1) when the object has several webhooks. Deckhouse passes the names in `DECKHOUSE_EXTENDER_NAMES` (comma-separated `<urlPrefix>=<name>`); an extender without a name, for example one configured by hand, is labelled by its URL prefix. The number of series stays the same, but the label values change once, on the upgrade to a Deckhouse that renders the names: graphs and alerts by `extender` break at that point.
 
 The patch is carried on 1.33 (`025`), 1.34 (`026`), 1.35 (`025`), 1.36 (`024`) and 1.37 (`023`).
+
+### scheduler-extender-circuit-breaker.patch
+
+A failing or hung extender with `failurePolicy: Ignore` costs its whole timeout in every scheduling cycle, and its answer is dropped anyway. After 10 failed filter or prioritize requests in a row kube-scheduler stops sending filter and prioritize requests to such an extender for 30 seconds, then sends one probe request: success resumes the calls, failure pauses them again. Bind and preempt requests are never skipped, an answer with an error from the extender is not a failure, and extenders with `failurePolicy: Fail` are never skipped. Skipped requests are counted with `result="skipped"`. `scheduler_extender_circuit_open{extender}` shows whether an extender is skipped now, `scheduler_extender_circuit_open_total{extender}` how often it happened; `extender` is the extender name, as in the metrics of `scheduler-extender-metrics`. The simulate endpoint skips a paused extender too, but never changes the breaker.
+
+The patch is carried on 1.33 (`026`), 1.34 (`027`), 1.35 (`026`), 1.36 (`025`) and 1.37 (`024`).
