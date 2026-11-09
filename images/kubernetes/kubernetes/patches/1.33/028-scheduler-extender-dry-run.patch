@@ -1,0 +1,346 @@
+diff --git a/pkg/scheduler/deckhouse_extender_dryrun.go b/pkg/scheduler/deckhouse_extender_dryrun.go
+new file mode 100644
+index 00000000000..78ab9bd6eae
+--- /dev/null
++++ b/pkg/scheduler/deckhouse_extender_dryrun.go
+@@ -0,0 +1,69 @@
++/*
++Copyright 2026 Flant JSC
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scheduler
++
++// Deckhouse: the filter and prioritize requests of a simulation
++// (deckhouse_simulate.go) carry "dryRun": true, so that an extender computes
++// its answer without side effects such as reservations. Real requests stay as
++// upstream sends them. A simulation never calls preempt or bind.
++//
++// The scheduler tells its own simulation by the identity of the Pod copy: an
++// annotation or a field of the Pod can be set by anyone who creates a Pod.
++
++import (
++	"sync"
++
++	v1 "k8s.io/api/core/v1"
++	extenderv1 "k8s.io/kube-scheduler/extender/v1"
++)
++
++// deckhouseSimulatedPods holds the Pod copies of the running simulations. A
++// plain map: deleting the key drops the reference to the copy at once.
++var deckhouseSimulatedPods = struct {
++	sync.Mutex
++	m map[*v1.Pod]struct{}
++}{m: map[*v1.Pod]struct{}{}}
++
++// deckhouseMarkSimulation marks the Pod copy of a simulation until the
++// returned function is called.
++func deckhouseMarkSimulation(pod *v1.Pod) (unmark func()) {
++	deckhouseSimulatedPods.Lock()
++	defer deckhouseSimulatedPods.Unlock()
++	deckhouseSimulatedPods.m[pod] = struct{}{}
++	return func() {
++		deckhouseSimulatedPods.Lock()
++		defer deckhouseSimulatedPods.Unlock()
++		delete(deckhouseSimulatedPods.m, pod)
++	}
++}
++
++// deckhouseIsMarked reports whether the Pod is the copy of a running simulation.
++func deckhouseIsMarked(pod *v1.Pod) bool {
++	deckhouseSimulatedPods.Lock()
++	defer deckhouseSimulatedPods.Unlock()
++	_, ok := deckhouseSimulatedPods.m[pod]
++	return ok
++}
++
++// filterBody returns the filter request: with dryRun in a simulation, the
++// upstream one otherwise.
++func filterBody(pod *v1.Pod, args *extenderv1.ExtenderArgs) any {
++	if deckhouseIsSimulation(pod) {
++		return &extenderArgs{ExtenderArgs: args, DryRun: true}
++	}
++	return args
++}
+diff --git a/pkg/scheduler/deckhouse_extender_dryrun_test.go b/pkg/scheduler/deckhouse_extender_dryrun_test.go
+new file mode 100644
+index 00000000000..7a6bdaa919d
+--- /dev/null
++++ b/pkg/scheduler/deckhouse_extender_dryrun_test.go
+@@ -0,0 +1,120 @@
++/*
++Copyright 2026 Flant JSC
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scheduler
++
++import (
++	"context"
++	"encoding/json"
++	"io"
++	"net/http"
++	"net/http/httptest"
++	"sync"
++	"testing"
++
++	v1 "k8s.io/api/core/v1"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/klog/v2/ktesting"
++	schedulerapi "k8s.io/kubernetes/pkg/scheduler/apis/config"
++	"k8s.io/kubernetes/pkg/scheduler/metrics"
++)
++
++// A simulation sends "dryRun": true in its filter and prioritize requests,
++// never calls preempt or bind, and no longer annotates the Pod copy. Real
++// requests carry no dryRun, also for a Pod with the former simulation
++// annotation: a user can set it on any Pod.
++func TestDeckhouseExtenderDryRun(t *testing.T) {
++	_, ctx := ktesting.NewTestContext(t)
++	ctx, cancel := context.WithCancel(ctx)
++	defer cancel()
++	metrics.Register()
++
++	var mu sync.Mutex
++	bodies := map[string][]map[string]json.RawMessage{}
++	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		raw, _ := io.ReadAll(r.Body)
++		var b map[string]json.RawMessage
++		_ = json.Unmarshal(raw, &b)
++		mu.Lock()
++		bodies[r.URL.Path] = append(bodies[r.URL.Path], b)
++		mu.Unlock()
++		if r.URL.Path == "/filter" {
++			_, _ = w.Write([]byte(`{"NodeNames":["1","2"]}`))
++			return
++		}
++		_, _ = w.Write([]byte(`[{"Host":"1","Score":1},{"Host":"2","Score":0}]`))
++	}))
++	defer srv.Close()
++	e, err := NewHTTPExtender(&schedulerapi.Extender{
++		URLPrefix: srv.URL, FilterVerb: "filter", PrioritizeVerb: "prioritize", PreemptVerb: "preempt", BindVerb: "bind",
++		Weight: 1, NodeCacheCapable: true,
++	})
++	if err != nil {
++		t.Fatal(err)
++	}
++	sched := newSimulateTestScheduler(t, ctx, []string{"1", "2"})
++	sched.Extenders = append(sched.Extenders[:0:0], e)
++
++	pod := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "vm", Namespace: "ns", UID: "u1"}}
++	if _, err := sched.Simulate(ctx, &SimulateRequest{Pod: pod}); err != nil {
++		t.Fatal(err)
++	}
++	deckhouseSimulatedPods.Lock()
++	marked := len(deckhouseSimulatedPods.m)
++	deckhouseSimulatedPods.Unlock()
++	if marked != 0 {
++		t.Errorf("%d Pod copies still marked after the simulation", marked)
++	}
++
++	annotated := pod.DeepCopy()
++	annotated.Annotations = map[string]string{"scheduler.deckhouse.io/simulation": "true"}
++	if deckhouseIsSimulation(annotated) {
++		t.Error("an annotated Pod counts as a simulation")
++	}
++	nodes, err := sched.nodeInfoSnapshot.NodeInfos().List()
++	if err != nil {
++		t.Fatal(err)
++	}
++	ext := e.(*HTTPExtender)
++	if _, _, _, err := ext.Filter(annotated, nodes); err != nil {
++		t.Fatal(err)
++	}
++	if _, _, err := ext.Prioritize(annotated, nodes); err != nil {
++		t.Fatal(err)
++	}
++
++	mu.Lock()
++	defer mu.Unlock()
++	for _, verb := range []string{"/filter", "/prioritize"} {
++		got := bodies[verb]
++		if len(got) != 2 {
++			t.Fatalf("%s: %d requests, want 2 (simulation, real)", verb, len(got))
++		}
++		if string(got[0]["dryRun"]) != "true" {
++			t.Errorf("%s of the simulation: dryRun %q, want true", verb, got[0]["dryRun"])
++		}
++		if _, ok := got[1]["dryRun"]; ok {
++			t.Errorf("%s of a real cycle carries dryRun %s", verb, got[1]["dryRun"])
++		}
++		var copied v1.Pod
++		if err := json.Unmarshal(got[0]["Pod"], &copied); err != nil || copied.UID != "u1" || len(copied.Annotations) != 0 {
++			t.Errorf("%s of the simulation: Pod uid %q annotations %v (err %v), want u1 without annotations", verb, copied.UID, copied.Annotations, err)
++		}
++	}
++	if n := len(bodies["/preempt"]) + len(bodies["/bind"]); n != 0 {
++		t.Errorf("%d preempt or bind requests, want none", n)
++	}
++}
+diff --git a/pkg/scheduler/deckhouse_extender_metrics.go b/pkg/scheduler/deckhouse_extender_metrics.go
+index 21a792008c7..f8cf9a387f1 100644
+--- a/pkg/scheduler/deckhouse_extender_metrics.go
++++ b/pkg/scheduler/deckhouse_extender_metrics.go
+@@ -51,9 +51,10 @@ func deckhouseRecordExtenderInfo(config *schedulerapi.Extender) {
+ }
+ 
+ // deckhouseIsSimulation reports whether the Pod is a copy made by the
+-// simulate endpoint: its extender requests are not recorded.
++// simulate endpoint (deckhouseMarkSimulation): its extender requests are not
++// recorded.
+ func deckhouseIsSimulation(pod *v1.Pod) bool {
+-	return pod != nil && pod.Annotations[DeckhouseSimulationAnnotation] == "true"
++	return deckhouseIsMarked(pod)
+ }
+ 
+ // requestPhases splits a request with an answer into encode (json.Marshal), conn (waiting for a
+diff --git a/pkg/scheduler/deckhouse_extender_metrics_test.go b/pkg/scheduler/deckhouse_extender_metrics_test.go
+index 9ebc58b0cff..31e1a1cd902 100644
+--- a/pkg/scheduler/deckhouse_extender_metrics_test.go
++++ b/pkg/scheduler/deckhouse_extender_metrics_test.go
+@@ -107,7 +107,8 @@ func TestDeckhouseExtenderSimulationNotRecorded(t *testing.T) {
+ 	}
+ 	node := framework.NewNodeInfo()
+ 	node.SetNode(&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "n"}})
+-	sim := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{DeckhouseSimulationAnnotation: "true"}}}
++	sim := &v1.Pod{}
++	defer deckhouseMarkSimulation(sim)()
+ 	if _, _, err := ext.Prioritize(sim, []*framework.NodeInfo{node}); err != nil {
+ 		t.Fatal(err)
+ 	}
+@@ -232,7 +233,8 @@ func TestDeckhouseExtenderBreakerSimulation(t *testing.T) {
+ 	}
+ 	node := framework.NewNodeInfo()
+ 	node.SetNode(&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "n"}})
+-	sim := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{DeckhouseSimulationAnnotation: "true"}}}
++	sim := &v1.Pod{}
++	defer deckhouseMarkSimulation(sim)()
+ 	if _, _, err := ext.Prioritize(sim, []*framework.NodeInfo{node}); err == nil || calls != 0 {
+ 		t.Fatalf("simulation while the breaker is open: err %v, %d calls; want skipped", err, calls)
+ 	}
+diff --git a/pkg/scheduler/deckhouse_extender_placements.go b/pkg/scheduler/deckhouse_extender_placements.go
+index babbd4b7607..a831eba3ac2 100644
+--- a/pkg/scheduler/deckhouse_extender_placements.go
++++ b/pkg/scheduler/deckhouse_extender_placements.go
+@@ -59,11 +59,13 @@ type placement struct {
+ 	at        time.Time
+ }
+ 
+-// argsWithPlacements is a prioritize request with the placements since the
+-// previous one.
+-type argsWithPlacements struct {
++// extenderArgs is a filter or prioritize request with the Deckhouse fields:
++// the placements since the previous prioritize request, or dryRun in a
++// simulation (deckhouse_extender_dryrun.go).
++type extenderArgs struct {
+ 	*extenderv1.ExtenderArgs
+ 	Assumed []placement `json:"assumed,omitempty"`
++	DryRun  bool        `json:"dryRun,omitempty"`
+ }
+ 
+ // placements is the queue of one extender.
+@@ -139,16 +141,16 @@ func (q *placements) dropped(reason string, n int) {
+ 
+ // prioritizeBody adds the queued placements to a prioritize request. A
+ // simulation (deckhouse_simulate.go) takes none: they belong to the next real
+-// request.
++// request. Its request carries dryRun instead.
+ func (h *HTTPExtender) prioritizeBody(pod *v1.Pod, args *extenderv1.ExtenderArgs) (any, []placement) {
+ 	if deckhouseIsSimulation(pod) {
+-		return args, nil
++		return &extenderArgs{ExtenderArgs: args, DryRun: true}, nil
+ 	}
+ 	sent := h.pending.take()
+ 	if len(sent) == 0 {
+ 		return args, nil
+ 	}
+-	return &argsWithPlacements{ExtenderArgs: args, Assumed: sent}, sent
++	return &extenderArgs{ExtenderArgs: args, Assumed: sent}, sent
+ }
+ 
+ // notifyExtenders queues the reservation of the Pod on the node, or with
+diff --git a/pkg/scheduler/deckhouse_extender_placements_test.go b/pkg/scheduler/deckhouse_extender_placements_test.go
+index e13f5e4e2d3..2ccb552302b 100644
+--- a/pkg/scheduler/deckhouse_extender_placements_test.go
++++ b/pkg/scheduler/deckhouse_extender_placements_test.go
+@@ -136,7 +136,8 @@ func TestDeckhousePlacementsInPrioritize(t *testing.T) {
+ 	nodes := []*framework.NodeInfo{node}
+ 	placed := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "vm", Namespace: "ns", UID: "u1"}}
+ 	scored := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "next", Namespace: "ns"}}
+-	sim := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "sim", Namespace: "ns", Annotations: map[string]string{DeckhouseSimulationAnnotation: "true"}}}
++	sim := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "sim", Namespace: "ns"}}
++	defer deckhouseMarkSimulation(sim)()
+ 	assumed := func(i int) string {
+ 		mu.Lock()
+ 		defer mu.Unlock()
+diff --git a/pkg/scheduler/deckhouse_simulate.go b/pkg/scheduler/deckhouse_simulate.go
+index 03a663877e8..f694fdc1681 100644
+--- a/pkg/scheduler/deckhouse_simulate.go
++++ b/pkg/scheduler/deckhouse_simulate.go
+@@ -62,10 +62,6 @@ const (
+ 	deckhouseSimulateAddressEnv = "DECKHOUSE_SCHEDULER_SIMULATE_ADDRESS"
+ 	deckhouseSimulateMaxBody    = 1 << 20
+ 	deckhouseSimulateTimeout    = 30 * time.Second
+-
+-	// DeckhouseSimulationAnnotation marks the Pod copy, so that an extender can
+-	// tell a simulation from a real cycle (e.g. not to reserve space for it).
+-	DeckhouseSimulationAnnotation = "scheduler.deckhouse.io/simulation"
+ )
+ 
+ // Verdicts of a node in a simulation.
+@@ -173,6 +169,8 @@ func (sched *Scheduler) Simulate(ctx context.Context, req *SimulateRequest) (*Si
+ 
+ 	sched.deckhouseSimulateMu.Lock()
+ 	defer sched.deckhouseSimulateMu.Unlock()
++	// Extender requests for this copy carry dryRun (deckhouse_extender_dryrun.go).
++	defer deckhouseMarkSimulation(pod)()
+ 	// The request may have waited for the lock longer than its deadline.
+ 	if err := ctx.Err(); err != nil {
+ 		return nil, err
+@@ -290,10 +288,6 @@ func (sched *Scheduler) simulationPod(ctx context.Context, req *SimulateRequest)
+ 	if pod.Spec.SchedulerName == "" {
+ 		pod.Spec.SchedulerName = v1.DefaultSchedulerName
+ 	}
+-	if pod.Annotations == nil {
+-		pod.Annotations = map[string]string{}
+-	}
+-	pod.Annotations[DeckhouseSimulationAnnotation] = "true"
+ 	excludeNodes(pod, req.ExcludeNodes)
+ 	return pod, nil
+ }
+diff --git a/pkg/scheduler/extender.go b/pkg/scheduler/extender.go
+index 5b13d3e42d1..2df3bf04714 100644
+--- a/pkg/scheduler/extender.go
++++ b/pkg/scheduler/extender.go
+@@ -295,7 +295,8 @@ func (h *HTTPExtender) Filter(
+ 		NodeNames: nodeNames,
+ 	}
+ 
+-	if err := h.sendRecorded(h.filterVerb, args, &result, !deckhouseIsSimulation(pod)); err != nil {
++	// Deckhouse: dryRun in a simulation (deckhouse_extender_dryrun.go).
++	if err := h.sendRecorded(h.filterVerb, filterBody(pod, args), &result, !deckhouseIsSimulation(pod)); err != nil {
+ 		return nil, nil, nil, err
+ 	}
+ 	if result.Error != "" {

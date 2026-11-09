@@ -27,6 +27,8 @@ spec:
             An external kube-scheduler webhook allows expanding the capabilities of the scheduler and consider more complex conditions when planning the load in the  Kubernetes cluster.
 
             kube-scheduler metrics name the extender of a webhook by the name of this object; when the object has several webhooks, the name gets `/<n>`, the position of the webhook in `webhooks` starting from 1.
+
+            During a simulation, kube-scheduler evaluates which nodes could host a Pod without actually placing it. The `filter` and `prioritize` requests sent to the extender include `dryRun: true`, which is absent from regular scheduling requests. When `dryRun` is `true`, the extender must compute its response as usual without causing side effects: it must not reserve space or resources for the Pod or modify its own state. An extender that rejects unknown JSON fields (for example, Go `DisallowUnknownFields`) fails simulation requests; regular scheduling requests are unaffected.
           properties:
             webhooks:
               type: array

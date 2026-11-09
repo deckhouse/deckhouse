@@ -353,7 +353,7 @@ Adds a dry-run scheduling endpoint to kube-scheduler: `POST /simulate` answers "
 
 The scheduler evaluates the Pod as in a real scheduling cycle, on its live cache, with the same plugins and extenders, but places nothing and changes nothing. The answer lists every node: whether it fits, which filter or extender rejected it and why, and the score each plugin and extender gave it. The caller can exclude nodes (the source node of a live migration) and treat some Pods as already deleted (the evicted Pod, or all Pods of a node that is about to be removed). Query parameters add details: `weights=true` shows the weight behind every score, `filters=all` lists every filter a node fails instead of the first one.
 
-While a simulation runs, real scheduling waits for it, extender calls included; therefore a replica runs one simulation at a time and answers 429 to a concurrent request. `filters=all` makes a simulation longer and is meant for debugging.
+Extenders get the filter and prioritize requests of a simulation with `"dryRun": true` (`scheduler-extender-dry-run.patch`). While a simulation runs, real scheduling waits for it, extender calls included; therefore a replica runs one simulation at a time and answers 429 to a concurrent request. `filters=all` makes a simulation longer and is meant for debugging.
 
 The endpoint listens on loopback only. `control-plane-proxy` publishes it as `/scheduler/simulate`; access is granted by the ClusterRole `d8:control-plane-manager:scheduler-simulate`.
 
@@ -395,3 +395,11 @@ The `assumed` field contains a list of objects with the following fields:
 Placements go out only with a prioritize request: kube-scheduler skips prioritize when a single node fits, so placements may wait for a later Pod. Placements older than 30 seconds are not sent; `scheduler_extender_placements_dropped_total{extender, reason}` counts them; `extender` is the extender name, as in the metrics of `scheduler-extender-metrics`. Deckhouse lists the extenders with `sendPlacements: true` in `DECKHOUSE_EXTENDER_PLACEMENTS` by their URL prefixes: the names are used only in metric labels. Other extenders get the usual request. An extender must accept repeated placements (entries from a failed request may be sent again), a `forget` for a Pod it does not know, and must expire a placement after 30 seconds if no `forget` arrives.
 
 The patch is carried on 1.33 (`027`), 1.34 (`028`), 1.35 (`027`), 1.36 (`026`) and 1.37 (`025`).
+
+### scheduler-extender-dry-run.patch
+
+When the simulate endpoint evaluates a Pod, kube-scheduler calls the extenders as in a real cycle. Before this patch an extender could tell such a call only by the annotation `scheduler.deckhouse.io/simulation` on the Pod copy, and any user can put that annotation on a real Pod. Now the filter and prioritize requests of a simulation carry `"dryRun": true`, and the scheduler no longer adds the simulation annotation to the Pod copy. On `dryRun`, an extender computes its answer and does not cause side effects, such as reservations. Requests of real scheduling are unchanged and have no `dryRun` field. An extender that decodes requests leniently ignores the field; an extender that rejects unknown JSON fields (Go `DisallowUnknownFields`) fails the requests of a simulation, while its real requests are not affected. A simulation never sends preempt or bind requests.
+
+kube-scheduler tells its own simulation by the Pod copy object. A real Pod with the annotation is processed during scheduling, recorded in extender metrics, counted by the circuit breaker and sent in placements like any other Pod.
+
+The patch is carried on 1.33 (`028`), 1.34 (`029`), 1.35 (`028`), 1.36 (`027`) and 1.37 (`026`).
