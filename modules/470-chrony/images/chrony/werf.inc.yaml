@@ -57,7 +57,7 @@ shell:
   - chmod +x /entrypoint
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: common/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
 - from: {{ .ModuleName }}/build-chrony-static-artifact
   add: /opt/chrony-static

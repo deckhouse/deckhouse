@@ -68,7 +68,7 @@ shell:
   - echo "{{ trimPrefix "v" $clusterAutoscalerVersion }}-flant" > VERSION
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-from: common/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
 - from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /src

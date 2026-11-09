@@ -8,9 +8,12 @@ import:
   add: /
   to: /
   includePaths:
-  - which
   - install
   - uninstall
+  before: setup
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /usr/bin/which
+  to: /which
   before: setup
 imageSpec:
   config:
@@ -21,39 +24,12 @@ imageSpec:
     clearEntrypoint: true
     removeEnv: ["/.*/"]
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
-final: false
-from: {{ index $.Images "builder/src" }}
-git:
-- url: {{ $.SOURCE_REPO }}/gnu/which.git
-  tag: v{{ $version }}
-  add: /
-  to: /src/which
-- add: /{{ $.ImagePath }}/scripts
-  to: /src/scripts
----
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ index $.Images "builder/alpine" }}
+from: {{ index $.Images "builder/distroless" }}
 final: false
-mount:
-{{ include "mount points for golang builds" . }}
-import:
-- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
-  add: /src
-  to: /src
-  before: setup
+git:
+- add: /{{ $.ImagePath }}/scripts
+  to: /
 shell:
   install:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make build-base gcc binutils
-  setup:
-  - cd /src/which
-  - export CFLAGS="-static -O2 -s"
-  - export LDFLAGS="-static"
-  - ./configure --disable-nls --disable-rpath
-  - make
-  - strip ./which
-  - ./which --version
-  - mv ./which /which
-  - mv /src/scripts/* /
-  - chmod +x /which /install /uninstall
+  - pm install which@2.23

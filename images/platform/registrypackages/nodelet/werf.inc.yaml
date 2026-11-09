@@ -106,7 +106,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-package-artifact
 final: false
-from: {{ index $.Images "builder/scratch" }}
+from: scratch
 git:
 - add: /{{ $.ImagePath }}/scripts
   to: /
@@ -117,7 +117,7 @@ import:
   before: setup
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ index $.Images "builder/scratch" }}
+from: scratch
 import:
 - from: {{ $.ModuleName }}/{{ $.ImageName }}-package-artifact
   add: /

@@ -51,7 +51,7 @@ shell:
       -o chrony_exporter .
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: common/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
 - from: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /chrony_exporter/chrony_exporter

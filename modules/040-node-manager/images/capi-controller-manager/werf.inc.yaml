@@ -1,7 +1,7 @@
 {{- $version := include "get_oss_version_by_id" (list "cluster-api" $ )  -}}
 ---
 image: {{ .ModuleName }}/capi-controller-manager
-from: common/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
 - from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /capi-controller-manager

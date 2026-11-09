@@ -2,7 +2,7 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 final: false
-from: common/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
 - from: dhctl-base # from main werf.yaml
   add: /dhctl/bin/dhctl
@@ -22,7 +22,7 @@ git:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-opentofu
 final: false
-from: common/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
 - from: dhctl-base # from main werf.yaml
   add: /dhctl/bin/dhctl
