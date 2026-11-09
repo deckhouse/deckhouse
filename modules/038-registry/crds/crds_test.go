@@ -323,6 +323,44 @@ func TestRegistryNodeCarriesNoStorageCompleteness(t *testing.T) {
 	}
 }
 
+// TestStorageReplicasCarryTheHealthError: the syncers tell a replica that cannot serve from one whose
+// copy failed by this field alone. Missing from the schema, the API server prunes it without a word,
+// and every replica looks healthy to the others when nobody holds the whole set and nobody leads.
+func TestStorageReplicasCarryTheHealthError(t *testing.T) {
+	s := structuralOf(t, loadCRD(t, "registrystorage.yaml"), "v1alpha1")
+
+	status, ok := s.Properties["status"]
+	require.True(t, ok)
+	replicas, ok := status.Properties["replicas"]
+	require.True(t, ok)
+	require.NotNil(t, replicas.Items)
+
+	for _, field := range []string{"error", "healthError"} {
+		property, ok := replicas.Items.Properties[field]
+		require.Truef(t, ok, "RegistryStorage.status.replicas[] must carry %q", field)
+		assert.Equal(t, "string", property.Type)
+	}
+}
+
+// TestStorageReplicasCarryTheSyncerStart: the controller drops the upstream only on a lease holder's
+// entry stamped by the syncer running on its node now. A schema without the field has the API server
+// prune the stamp from every report, and the transition is then held for good.
+func TestStorageReplicasCarryTheSyncerStart(t *testing.T) {
+	s := structuralOf(t, loadCRD(t, "registrystorage.yaml"), "v1alpha1")
+
+	status, ok := s.Properties["status"]
+	require.True(t, ok)
+	replicas, ok := status.Properties["replicas"]
+	require.True(t, ok)
+	require.NotNil(t, replicas.Items)
+
+	property, ok := replicas.Items.Properties["syncerStartedAt"]
+	require.True(t, ok, "RegistryStorage.status.replicas[] must carry syncerStartedAt")
+	assert.Equal(t, "string", property.Type)
+	require.NotNil(t, property.ValueValidation)
+	assert.Equal(t, "date-time", property.ValueValidation.Format)
+}
+
 // TestRegistryUpstreamRequiresMatchAndUpstream keeps the multi-writer contract
 // honest: an upstream without a match would be routed nowhere, and a match
 // without an upstream would intercept pulls and drop them.

@@ -1367,6 +1367,36 @@ var _ = Describe("Module :: registry :: helm template :: v2 garbage collection",
 		Expect(cluster.Field("rules").String()).ToNot(ContainSubstring("modulereleases/status"))
 	})
 
+	// A pod does not leave a node that dies, so the syncer reads the node a report came from to tell a
+	// lost replica from a live one. Without the permission every read is refused, refused is taken as
+	// "alive", and the election waits on a dead leader again.
+	It("lets the syncer read the nodes the replicas run on, and nothing more", func() {
+		cluster := f.KubernetesGlobalResource("ClusterRole", "d8:registry:storage")
+		Expect(cluster.Exists()).To(BeTrue())
+
+		var nodes []gjson.Result
+		for _, rule := range cluster.Field("rules").Array() {
+			for _, resource := range rule.Get("resources").Array() {
+				if resource.String() == "nodes" {
+					nodes = append(nodes, rule)
+				}
+			}
+		}
+
+		Expect(nodes).To(HaveLen(1), "one rule, so what it grants is legible at a glance")
+		rule := nodes[0]
+		texts := func(values []gjson.Result) []string {
+			out := make([]string, 0, len(values))
+			for _, value := range values {
+				out = append(out, value.String())
+			}
+			return out
+		}
+		Expect(texts(rule.Get("apiGroups").Array())).To(ConsistOf(""))
+		// Read by name, one per report: no list of every node in the cluster, and no write.
+		Expect(texts(rule.Get("verbs").Array())).To(ConsistOf("get"))
+	})
+
 	// A release object is not the only way a cluster can be running a version: installed from a
 	// development or pull-request image, it has none, and then the fill has nothing to fill towards
 	// and the collector nothing to justify a deletion by. The running image names its own installer,

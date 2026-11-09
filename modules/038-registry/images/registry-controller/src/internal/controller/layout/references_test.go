@@ -206,18 +206,9 @@ func TestReconcileAirGapWaitsForThePlatformToLeaveTheUpstream(t *testing.T) {
 	// A replica of the store created before the in-cluster address was published. It has no pull
 	// secrets and has started, which would let any other pod off — but a replica replaced after
 	// the upstream is gone has to pull itself through the store, so it counts until it has moved.
-	replica := &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: Namespace, Name: "registry-storage-0", Labels: map[string]string{"app": storeAppLabel},
-		},
-		Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "distribution", Image: upstreamImage}}},
-		Status: corev1.PodStatus{
-			Phase: corev1.PodRunning,
-			ContainerStatuses: []corev1.ContainerStatus{{
-				Name: "distribution", State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{}},
-			}},
-		},
-	}
+	// It leads, and its syncer is the one whose report the transition goes by — see leaderSyncerStarted.
+	replica := storagePod("registry-storage-0", "master-0", syncerStart)
+	replica.Spec.Containers[0].Image = upstreamImage
 	// Its StatefulSet is already rendered from the in-cluster address; the replica is what lags.
 	store := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{Namespace: Namespace, Name: "registry-storage"},
@@ -247,7 +238,8 @@ func TestReconcileAirGapWaitsForThePlatformToLeaveTheUpstream(t *testing.T) {
 
 	storage := getStorage(t, c)
 	storage.Status.Replicas = []registryv1alpha1.StorageReplicaStatus{
-		{Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, VerifiedDigests: 459},
+		{Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, VerifiedDigests: 459,
+			SyncerStartedAt: stamp(syncerStart)},
 	}
 	require.NoError(t, c.Status().Update(ctx, storage))
 

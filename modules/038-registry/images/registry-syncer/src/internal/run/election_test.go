@@ -17,10 +17,12 @@ limitations under the License.
 package run
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
 	"log/slog"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -63,7 +65,7 @@ func (e *recordingElection) state() (int, bool) {
 	return e.attempts, e.leading
 }
 
-func newCandidate(eligible func(context.Context) (bool, error), elect func(context.Context)) *Candidate {
+func newCandidate(eligible func(context.Context) (bool, string, error), elect func(context.Context)) *Candidate {
 	return &Candidate{
 		Log:      slog.New(slog.NewTextHandler(io.Discard, nil)),
 		Eligible: eligible,
@@ -90,7 +92,7 @@ func eventually(t *testing.T, condition func() bool, message string) {
 func TestCandidateStandsAsideWhileIneligible(t *testing.T) {
 	election := newRecordingElection()
 	candidate := newCandidate(
-		func(context.Context) (bool, error) { return false, nil },
+		func(context.Context) (bool, string, error) { return false, "", nil },
 		election.elect)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -113,7 +115,7 @@ func TestCandidateEntersWhenItBecomesEligible(t *testing.T) {
 	var allowed atomic.Bool
 	election := newRecordingElection()
 	candidate := newCandidate(
-		func(context.Context) (bool, error) { return allowed.Load(), nil },
+		func(context.Context) (bool, string, error) { return allowed.Load(), "", nil },
 		election.elect)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -133,16 +135,18 @@ func TestCandidateEntersWhenItBecomesEligible(t *testing.T) {
 }
 
 // TestCandidateStepsDownWhenAnotherBecomesFull is the half that plain election cannot do,
-// and the reason it is needed: `d8 mirror push` lands on whichever replica the ingress
-// chose. If that is not the leader, an air-gapped cluster is left with an empty leader and
-// a full follower, and recovers from neither on its own.
+// and the reason it is needed: a replica that kept the set can watch the lease go to one that
+// did not. A push does not cause it, since through the Ingress it lands on the lease holder,
+// and only pushing the whole set again would cure it. If the leader does not step down, an
+// air-gapped cluster is left with an empty leader and a full follower, and recovers from
+// neither on its own.
 func TestCandidateStepsDownWhenAnotherBecomesFull(t *testing.T) {
 	allowed := atomic.Bool{}
 	allowed.Store(true)
 
 	election := newRecordingElection()
 	candidate := newCandidate(
-		func(context.Context) (bool, error) { return allowed.Load(), nil },
+		func(context.Context) (bool, string, error) { return allowed.Load(), "", nil },
 		election.elect)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -168,6 +172,106 @@ func TestCandidateStepsDownWhenAnotherBecomesFull(t *testing.T) {
 	assert.False(t, leading)
 }
 
+// TestCandidateSaysWhyItStepsAside: on a stand an empty replica stood while nobody was full and stepped
+// aside a quarter of a minute later, logging that another replica held the whole image set — which none
+// did. The log says what the eligibility said instead.
+func TestCandidateSaysWhyItStepsAside(t *testing.T) {
+	const why = "nobody leads or holds the whole image set, and master-0 holds the most of it (322 digests)"
+
+	var logged bytes.Buffer
+	var stood atomic.Bool
+	var asked atomic.Int32
+	election := newRecordingElection()
+	candidate := newCandidate(
+		func(context.Context) (bool, string, error) {
+			asked.Add(1)
+			if stood.Load() {
+				return false, why, nil
+			}
+			return true, "", nil
+		},
+		election.elect)
+	candidate.Log = slog.New(slog.NewTextHandler(&logged, nil))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	done := make(chan struct{})
+	go func() { defer close(done); candidate.Run(ctx) }()
+
+	eventually(t, func() bool {
+		_, leading := election.state()
+		return leading
+	}, "the replica never stood")
+	stood.Store(true)
+
+	select {
+	case <-election.left:
+	case <-time.After(2 * time.Second):
+		t.Fatal("the replica did not step aside")
+	}
+	// Ten reviews standing aside for the same reason.
+	aside := asked.Load()
+	eventually(t, func() bool { return asked.Load() >= aside+10 }, "eligibility was not read again")
+	// Read once the candidate has stopped, and with it everything that logs.
+	cancel()
+	<-done
+
+	assert.Contains(t, logged.String(), `reason="`+why+`"`)
+	assert.NotContains(t, logged.String(), "another replica holds the whole image set")
+	assert.Equal(t, 1, strings.Count(logged.String(), `reason="`+why+`"`),
+		"said when it stepped aside, and not again while it stands aside for the same reason")
+	assert.Equal(t, 1, strings.Count(logged.String(), "this replica stands in the election"), "it stood once")
+}
+
+// TestCandidateSaysOnceWhyItDoesNotStand: a replica that was never eligible logged nothing, so an election
+// that stalled for four minutes on a stand left no word of whom the others waited for. It says why, once
+// each time the reason changes; an answer that could not be had changes nothing.
+func TestCandidateSaysOnceWhyItDoesNotStand(t *testing.T) {
+	const (
+		first  = "nobody leads or holds the whole image set, and master-2 holds the most of it (277 digests)"
+		second = "nobody holds the whole image set and master-1 leads: the lease stays where the fill is"
+	)
+
+	var logged bytes.Buffer
+	var asked atomic.Int32
+	election := newRecordingElection()
+	candidate := newCandidate(
+		func(context.Context) (bool, string, error) {
+			switch n := asked.Add(1); {
+			case n <= 10:
+				return false, first, nil
+			case n <= 20:
+				return false, second, nil
+			case n <= 25:
+				return false, "", errors.New("dial tcp 10.0.0.1:6443: connect: connection refused")
+			case n <= 35:
+				return false, second, nil
+			default:
+				return false, first, nil
+			}
+		},
+		election.elect)
+	candidate.Log = slog.New(slog.NewTextHandler(&logged, nil))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	done := make(chan struct{})
+	go func() { defer close(done); candidate.Run(ctx) }()
+
+	eventually(t, func() bool { return asked.Load() >= 45 }, "eligibility was not read often enough")
+	cancel()
+	<-done
+
+	assert.Equal(t, 3, strings.Count(logged.String(), "this replica does not stand in the election"))
+	assert.Equal(t, 2, strings.Count(logged.String(), `reason="`+first+`"`), "said, and said again when it came back")
+	assert.Equal(t, 1, strings.Count(logged.String(), `reason="`+second+`"`), "not again after the failed read")
+	assert.NotContains(t, logged.String(), "this replica stands in the election")
+	attempts, _ := election.state()
+	assert.Zero(t, attempts)
+}
+
 // TestCandidateKeepsLeadingWhenEligibilityCannotBeRead: the answer comes from the API
 // server, and an unreachable one is no reason to hand over a lease that is working. This
 // is the same principle the whole design rests on — losing the control plane must not
@@ -176,11 +280,11 @@ func TestCandidateKeepsLeadingWhenEligibilityCannotBeRead(t *testing.T) {
 	var failing atomic.Bool
 	election := newRecordingElection()
 	candidate := newCandidate(
-		func(context.Context) (bool, error) {
+		func(context.Context) (bool, string, error) {
 			if failing.Load() {
-				return false, errors.New("dial tcp 10.0.0.1:6443: connect: connection refused")
+				return false, "", errors.New("dial tcp 10.0.0.1:6443: connect: connection refused")
 			}
-			return true, nil
+			return true, "", nil
 		},
 		election.elect)
 
@@ -210,12 +314,12 @@ func TestCandidateStaysAsideWhenEligibilityCannotBeRead(t *testing.T) {
 	var asked atomic.Int32
 	election := newRecordingElection()
 	candidate := newCandidate(
-		func(context.Context) (bool, error) {
+		func(context.Context) (bool, string, error) {
 			asked.Add(1)
 			if failing.Load() {
-				return false, errors.New("Get \"https://10.223.0.1:443/apis/deckhouse.io/v1alpha1/registrystorages/default\": context deadline exceeded")
+				return false, "", errors.New("Get \"https://10.223.0.1:443/apis/deckhouse.io/v1alpha1/registrystorages/default\": context deadline exceeded")
 			}
-			return false, nil
+			return false, "", nil
 		},
 		election.elect)
 
@@ -238,7 +342,7 @@ func TestCandidateStaysAsideWhenEligibilityCannotBeRead(t *testing.T) {
 func TestCandidateReentersAfterLosingTheLease(t *testing.T) {
 	var attempts atomic.Int32
 	candidate := newCandidate(
-		func(context.Context) (bool, error) { return true, nil },
+		func(context.Context) (bool, string, error) { return true, "", nil },
 		func(context.Context) {
 			attempts.Add(1)
 			// Returns immediately, as an elector does when it loses the lease.
@@ -257,7 +361,7 @@ func TestCandidateReentersAfterLosingTheLease(t *testing.T) {
 func TestCandidateStopsWithTheContext(t *testing.T) {
 	election := newRecordingElection()
 	candidate := newCandidate(
-		func(context.Context) (bool, error) { return true, nil },
+		func(context.Context) (bool, string, error) { return true, "", nil },
 		election.elect)
 
 	ctx, cancel := context.WithCancel(context.Background())

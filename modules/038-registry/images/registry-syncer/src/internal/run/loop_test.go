@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -32,6 +33,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -52,6 +54,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/yaml"
 
 	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
@@ -746,7 +749,7 @@ func TestOnceReportsItsOwnAddress(t *testing.T) {
 	require.NoError(t, loop.once(context.Background()))
 
 	// Reported by the replica itself, so a follower can reach the leader without
-	// resolving a node name and without reading Node objects.
+	// resolving a node name into an address.
 	assert.Equal(t, "10.0.0.1:5001", replicaOf(t, c, "master-0").Address)
 }
 
@@ -826,6 +829,20 @@ func heldOnDisk(t *testing.T, root string, digests ...string) {
 			`{"mediaType":"application/vnd.oci.image.manifest.v1+json",`+
 				`"config":{"digest":"`+config+`"},"layers":[{"digest":"`+layer+`"}]}`))
 	}
+}
+
+// storeHolding writes n manifests of no set in particular to the store under root, for a test that seeds
+// a replica reporting itself full: an idle pass holds the count of verified digests it carries over
+// against the store's own total, and takes back a Full the store cannot hold — see refutedByCount. A
+// test of the carry-over has to seed the store that Full stands on.
+func storeHolding(t *testing.T, root string, n int) {
+	t.Helper()
+
+	digests := make([]string, n)
+	for i := range digests {
+		digests[i] = fmt.Sprintf("sha256:%064x", i+1)
+	}
+	heldOnDisk(t, root, digests...)
 }
 
 // blobOnDisk writes a blob's content where the registry keeps it.
@@ -1408,6 +1425,10 @@ func TestAFullLeaderReverifiesWhenTheSetMoves(t *testing.T) {
 			loop.Publisher = &report.Publisher{Client: c}
 			loop.LocalAddress = local
 			loop.WriteAddress = local
+			// And the store its report stands on: a Full carried over beside a store that cannot hold it
+			// is taken back — see refutedByCount.
+			loop.DataDir = t.TempDir()
+			storeHolding(t, loop.DataDir, 459)
 			if tc.wantFull {
 				// A leader that is full holds the release it was found full against; an idle pass reads
 				// the store again and would rightly find one without it incomplete.
@@ -1610,6 +1631,9 @@ func TestAFullReplicaWaitsOutTheOthers(t *testing.T) {
 	// Checked a moment ago. Otherwise this pass is the first idle one and reads the store — and a store
 	// whose set cannot be read leaves the report alone, which made this test pass whatever the pass did.
 	loop.lastStoreCheck.Store(time.Now().UnixNano())
+	// Holding what it says it holds: the idle pass's count of the store must not refute it.
+	loop.DataDir = t.TempDir()
+	storeHolding(t, loop.DataDir, 3)
 
 	require.NoError(t, loop.once(context.Background()))
 
@@ -2108,4 +2132,494 @@ func TestACopyAheadGivesWayToTheSetAndResumes(t *testing.T) {
 	_, err = remote.Head(tag)
 	assert.NoError(t, err, "the copy ahead was started again and went through")
 	assert.False(t, loop.Filling())
+}
+
+// switchLeadership is a lease this replica can win or lose while a pass runs.
+type switchLeadership struct{ atomic.Bool }
+
+func (s *switchLeadership) IsLeader() bool { return s.Load() }
+
+// stalledRegistry is a registry that, once armed, takes every request for a blob and answers none of
+// them: a peer whose machine lost power, as far as a copy can tell. Until the request is given up, or
+// the registry released, when it answers as any registry would.
+type stalledRegistry struct {
+	address string
+	armed   atomic.Bool
+	entered chan struct{}
+	enter   sync.Once
+	release chan struct{}
+	free    sync.Once
+}
+
+func startStalledRegistry(t *testing.T) *stalledRegistry {
+	t.Helper()
+
+	s := &stalledRegistry{entered: make(chan struct{}), release: make(chan struct{})}
+	inner := registry.New(registry.Logger(log.New(io.Discard, "", 0)))
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if s.armed.Load() && r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/blobs/sha256:") {
+			s.enter.Do(func() { close(s.entered) })
+			select {
+			case <-r.Context().Done():
+				return
+			case <-s.release:
+			}
+		}
+		inner.ServeHTTP(w, r)
+	}))
+	t.Cleanup(server.Close)
+	// Before the server closes, which waits for its handlers.
+	t.Cleanup(s.Release)
+
+	parsed, err := url.Parse(server.URL)
+	require.NoError(t, err)
+	s.address = parsed.Host
+	return s
+}
+
+// Release lets every request through again, those waiting included.
+func (s *stalledRegistry) Release() {
+	s.free.Do(func() {
+		s.armed.Store(false)
+		close(s.release)
+	})
+}
+
+// waitEntered waits until a copy is stuck on the registry.
+func (s *stalledRegistry) waitEntered(t *testing.T) {
+	t.Helper()
+	select {
+	case <-s.entered:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the copy never asked the stalled registry for a blob")
+	}
+}
+
+// onceInBackground runs a pass, and hands back what it returns.
+func onceInBackground(loop *Loop) <-chan error {
+	result := make(chan error, 1)
+	go func() { result <- loop.once(context.Background()) }()
+	return result
+}
+
+// passEnds waits for a pass to end, and fails the test if it does not end soon.
+func passEnds(t *testing.T, result <-chan error, why string) error {
+	t.Helper()
+	select {
+	case err := <-result:
+		return err
+	case <-time.After(5 * time.Second):
+		t.Fatal(why)
+		return nil
+	}
+}
+
+// followerOf is master-0 set to replicate the release from leaderStorage, which holds it, with the
+// reports given. It checks its arrangement every 20ms.
+func followerOf(
+	t *testing.T, leaderStorage string, replicas ...registryv1alpha1.StorageReplicaStatus,
+) (*Loop, client.Client) {
+	t.Helper()
+
+	one := pushDigest(t, leaderStorage, "system/deckhouse")
+	pushImage(t, leaderStorage, "system/deckhouse:v1.76.6")
+	pushInstaller(t, leaderStorage, "system/deckhouse/install:v1.76.6", []string{one})
+
+	storage := storageWith(registryv1alpha1.RegistryStorageSpec{
+		Source:   &registryv1alpha1.StorageSource{ExpectedDigests: 3},
+		NeedSync: true,
+	})
+	storage.Status.Replicas = replicas
+
+	followerStorage := startRegistry(t)
+	loop, c, _ := newLoop(t, false, storage, deployedRelease("v1.76.6"))
+	loop.LocalAddress = followerStorage
+	loop.WriteAddress = followerStorage
+	loop.ReportedAddress = followerStorage
+	loop.ArrangementEvery = 20 * time.Millisecond
+	return loop, c
+}
+
+// leaseOf is a lease that can change while a pass runs.
+func leaseOf(loop *Loop, lease Lease) *atomic.Pointer[Lease] {
+	current := &atomic.Pointer[Lease]{}
+	current.Store(&lease)
+	loop.ReadLease = func(context.Context) Lease { return *current.Load() }
+	return current
+}
+
+// TestGainingTheLeaseStopsTheReplication is scenario G of the DVP stand. The leader lost power while
+// a follower replicated from it; the follower took the lease, and its pass went on copying from the
+// dead leader — a connection nothing answered, for fifty-six minutes, during which the new leader
+// filled nothing. A copy now ends with the role it was started under.
+func TestGainingTheLeaseStopsTheReplication(t *testing.T) {
+	leader := startStalledRegistry(t)
+	loop, c := followerOf(t, leader.address, registryv1alpha1.StorageReplicaStatus{
+		Node: "master-1", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, Address: leader.address,
+	})
+	leadership := &switchLeadership{}
+	loop.Leadership = leadership
+	leader.armed.Store(true)
+
+	result := onceInBackground(loop)
+	leader.waitEntered(t)
+	leadership.Store(true)
+
+	require.NoError(t, passEnds(t, result, "the replica took the lease and is still copying from the old leader"))
+
+	replica := replicaOf(t, c, "master-0")
+	assert.NotContains(t, replica.Error, "context canceled",
+		"a copy stopped on purpose is not a failure, and an error keeps a replica from leading")
+	assert.NotEqual(t, "master-1", replica.Source, "nothing was replicated from master-1")
+	assert.Equal(t, registryv1alpha1.ReplicaRoleFollower, replica.Role,
+		"the pass began as a follower and says nothing as a leader; the next pass does")
+}
+
+// TestAFollowerLeavesALeaderThatNoLongerHoldsTheLease is the other follower of scenario G: it went on
+// copying from the dead leader for an hour, because the dead leader's report still said Leader.
+func TestAFollowerLeavesALeaderThatNoLongerHoldsTheLease(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		lease Lease
+	}{
+		{"the lease moved to another replica", Lease{Known: true, Holder: "master-2", Live: true}},
+		{"the leader stopped renewing it", Lease{Known: true, Holder: "master-1"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			leader := startStalledRegistry(t)
+			loop, _ := followerOf(t, leader.address,
+				registryv1alpha1.StorageReplicaStatus{
+					Node: "master-1", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, Address: leader.address,
+				},
+				registryv1alpha1.StorageReplicaStatus{
+					Node: "master-2", Role: registryv1alpha1.ReplicaRoleFollower, Address: closedAddress(t),
+				})
+			lease := leaseOf(loop, Lease{Known: true, Holder: "master-1", Live: true})
+			leader.armed.Store(true)
+
+			result := onceInBackground(loop)
+			leader.waitEntered(t)
+			lease.Store(&tc.lease)
+
+			require.NoError(t, passEnds(t, result, "the follower is still copying from a replica that does not lead"))
+		})
+	}
+}
+
+// TestALeaderThatLostTheLeaseStopsFillingAndDemotesNobody: a leader that lost the lease mid-fill went on
+// filling from the upstream with the account the new leader fills with, and ended the pass by reporting
+// itself Leader — which takes the role from the replica holding the lease.
+func TestALeaderThatLostTheLeaseStopsFillingAndDemotesNobody(t *testing.T) {
+	upstream := startStalledRegistry(t)
+	local := startRegistry(t)
+
+	one := pushDigest(t, upstream.address, "deckhouse/ee")
+	pushImage(t, upstream.address, "deckhouse/ee:v1.70.1")
+	pushInstaller(t, upstream.address, "deckhouse/ee/install:v1.70.1", []string{one})
+
+	storage := storageWith(registryv1alpha1.RegistryStorageSpec{
+		Upstream: &registryv1alpha1.Upstream{
+			Endpoint: registryv1alpha1.Endpoint{
+				Scheme: registryv1alpha1.SchemeHTTP, Host: upstream.address, Path: "/deckhouse/ee",
+			},
+		},
+		NeedSync: true,
+	})
+	// master-1 took the lease and has said so, which demoted this replica's entry.
+	storage.Status.Replicas = []registryv1alpha1.StorageReplicaStatus{
+		{Node: "master-0", Role: registryv1alpha1.ReplicaRoleFollower, VerifiedDigests: 1, Address: local},
+		{Node: "master-1", Role: registryv1alpha1.ReplicaRoleLeader, VerifiedDigests: 2, Address: closedAddress(t)},
+	}
+	loop, c, _ := newLoop(t, true, storage, deployedRelease("v1.70.1"))
+	loop.LocalAddress = local
+	loop.WriteAddress = local
+	loop.ArrangementEvery = 20 * time.Millisecond
+	leadership := &switchLeadership{}
+	leadership.Store(true)
+	loop.Leadership = leadership
+	upstream.armed.Store(true)
+
+	result := onceInBackground(loop)
+	upstream.waitEntered(t)
+	leadership.Store(false)
+
+	require.NoError(t, passEnds(t, result, "the replica lost the lease and is still filling"))
+	assert.Equal(t, registryv1alpha1.ReplicaRoleLeader, replicaOf(t, c, "master-1").Role)
+	assert.Equal(t, registryv1alpha1.ReplicaRoleFollower, replicaOf(t, c, "master-0").Role)
+	assert.False(t, loop.Filling())
+}
+
+// TestAnUnchangedArrangementLetsTheCopyFinish: the watch checks often and changes nothing while the
+// leader holds the lease.
+func TestAnUnchangedArrangementLetsTheCopyFinish(t *testing.T) {
+	leaderStorage := startRegistry(t)
+	loop, c := followerOf(t, leaderStorage, registryv1alpha1.StorageReplicaStatus{
+		Node: "master-1", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, Address: leaderStorage,
+	})
+	loop.ArrangementEvery = time.Millisecond
+	loop.Present = func(
+		_ context.Context, replicas []registryv1alpha1.StorageReplicaStatus,
+	) []registryv1alpha1.StorageReplicaStatus {
+		return replicas
+	}
+	leaseOf(loop, Lease{Known: true, Holder: "master-1", Live: true})
+
+	require.NoError(t, loop.once(context.Background()))
+
+	replica := replicaOf(t, c, "master-0")
+	assert.Equal(t, "master-1", replica.Source)
+	assert.True(t, replica.Full)
+	assert.Empty(t, replica.Error)
+}
+
+// TestAnUnreadableLeaderKeepsTheCopyGoing: an API server that does not answer says nothing about the
+// leader, and stopping every copy in the cluster over it would turn one outage into two.
+func TestAnUnreadableLeaderKeepsTheCopyGoing(t *testing.T) {
+	leader := startStalledRegistry(t)
+	loop, c := followerOf(t, leader.address, registryv1alpha1.StorageReplicaStatus{
+		Node: "master-1", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, Address: leader.address,
+	})
+	lease := leaseOf(loop, Lease{Known: true, Holder: "master-1", Live: true})
+	var refused atomic.Bool
+	loop.Client = interceptor.NewClient(loop.Client.(client.WithWatch), interceptor.Funcs{
+		Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			if _, storage := obj.(*registryv1alpha1.RegistryStorage); storage && refused.Load() {
+				return errors.New("the server is currently unable to handle the request")
+			}
+			return c.Get(ctx, key, obj, opts...)
+		},
+	})
+	leader.armed.Store(true)
+
+	result := onceInBackground(loop)
+	leader.waitEntered(t)
+	lease.Store(&Lease{})
+	refused.Store(true)
+
+	select {
+	case err := <-result:
+		t.Fatalf("the copy stopped on an API server that did not answer: %v", err)
+	case <-time.After(300 * time.Millisecond):
+	}
+
+	refused.Store(false)
+	leader.Release()
+	require.NoError(t, passEnds(t, result, "the copy did not finish once the leader answered"))
+	assert.Equal(t, "master-1", replicaOf(t, c, "master-0").Source, "the copy went through to the end")
+}
+
+// leadsOnce holds the lease when a pass starts, and has lost it by the time the pass asks again.
+type leadsOnce struct{ asked atomic.Int32 }
+
+func (l *leadsOnce) IsLeader() bool { return l.asked.Add(1) == 1 }
+
+// TestARoleChangedDuringThePassIsNotPublished: the passes that do not copy are not stopped by a change
+// of the lease, and a Leader published from one of them took the role from the replica holding it.
+func TestARoleChangedDuringThePassIsNotPublished(t *testing.T) {
+	local := startRegistry(t)
+	storage := storageWith(registryv1alpha1.RegistryStorageSpec{
+		Source: &registryv1alpha1.StorageSource{ExpectedDigests: 1},
+	})
+	storage.Status.Replicas = []registryv1alpha1.StorageReplicaStatus{
+		{Node: "master-1", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, Address: closedAddress(t)},
+	}
+	loop, c, _ := newLoop(t, true, storage)
+	loop.LocalAddress = local
+	loop.WriteAddress = local
+	loop.DataDir = t.TempDir()
+	loop.Leadership = &leadsOnce{}
+
+	require.NoError(t, loop.once(context.Background()))
+
+	got := &registryv1alpha1.RegistryStorage{}
+	require.NoError(t, c.Get(context.Background(), types.NamespacedName{Name: registryv1alpha1.SingletonName}, got))
+	assert.Equal(t, []string{"master-1"}, replicaNodes(got.Status.Replicas), "master-0 said nothing")
+	assert.Equal(t, registryv1alpha1.ReplicaRoleLeader, got.Status.Replicas[0].Role)
+}
+
+func replicaNodes(replicas []registryv1alpha1.StorageReplicaStatus) []string {
+	var nodes []string
+	for _, replica := range replicas {
+		nodes = append(nodes, replica.Node)
+	}
+	return nodes
+}
+
+// TestTheFollowerCopiesFromTheLeaseHolder: the replica that took the lease writes Leader only when its
+// first pass ends, a fill from the upstream; the dead leader's Leader stands until then. Followed by
+// the roles, a follower copied from the dead one, and nothing from the new.
+func TestTheFollowerCopiesFromTheLeaseHolder(t *testing.T) {
+	holder := startRegistry(t)
+	loop, c := followerOf(t, holder,
+		registryv1alpha1.StorageReplicaStatus{
+			Node: "master-1", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, Address: closedAddress(t),
+		},
+		registryv1alpha1.StorageReplicaStatus{
+			Node: "master-2", Role: registryv1alpha1.ReplicaRoleFollower, Address: holder,
+		})
+	leaseOf(loop, Lease{Known: true, Holder: "master-2", Live: true})
+
+	require.NoError(t, loop.once(context.Background()))
+
+	replica := replicaOf(t, c, "master-0")
+	assert.Equal(t, "master-2", replica.Source)
+	assert.True(t, replica.Full)
+	assert.Empty(t, replica.Error)
+}
+
+// TestAReplicaHoldingTheLeaseCopiesFromNobody is the first pass after a restart that took the lease
+// back. It reads its role before the elector has said it won, and by the roles it replicated from the
+// dead leader it had replaced.
+func TestAReplicaHoldingTheLeaseCopiesFromNobody(t *testing.T) {
+	local := startRegistry(t)
+	one := pushDigest(t, local, "system/deckhouse")
+	pushImage(t, local, "system/deckhouse:v1.70.1")
+	pushInstaller(t, local, "system/deckhouse/install:v1.70.1", []string{one})
+
+	storage := storageWith(registryv1alpha1.RegistryStorageSpec{
+		Source:   &registryv1alpha1.StorageSource{ExpectedDigests: 1},
+		NeedSync: true,
+	})
+	storage.Status.Replicas = []registryv1alpha1.StorageReplicaStatus{
+		{Node: "master-1", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, Address: closedAddress(t)},
+	}
+	loop, c, _ := newLoop(t, false, storage, deployedRelease("v1.70.1"))
+	loop.LocalAddress = local
+	loop.WriteAddress = local
+	loop.DataDir = t.TempDir()
+	heldOnDisk(t, loop.DataDir, one)
+	leaseOf(loop, Lease{Known: true, Holder: "master-0", Live: true})
+
+	require.NoError(t, loop.once(context.Background()))
+
+	replica := replicaOf(t, c, "master-0")
+	assert.Empty(t, replica.Source)
+	assert.Empty(t, replica.Error, "nothing was tried against the dead leader")
+}
+
+// TestAFollowerKeepsItsSourceWhileTheLeaseIsFree: with the lease free — let go by a leader that stops,
+// until the next one takes it — a follower has nobody to copy from and counts its store. That pass
+// dropped the replica it had been filled from, and with it what tells the controller and the follower
+// itself that a full follower holds what its leader holds: once the same leader took the lease back,
+// needSync went up and every follower copied the set again. A follower that had not been found full
+// against this set never copied it from there, so a count that finds it full names no source, and it
+// copies from that replica once it leads again.
+func TestAFollowerKeepsItsSourceWhileTheLeaseIsFree(t *testing.T) {
+	set := SetKey(gc.Releases{Deployed: "v1.70.1"}, nil, nil)
+	for _, tc := range []struct {
+		name   string
+		full   bool
+		was    string
+		source string
+	}{
+		{"full against this set", true, set, "master-1"},
+		{"its copy not finished", false, "", ""},
+		{"full against another set", true, "an older set", ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			local := startRegistry(t)
+			one := pushDigest(t, local, "system/deckhouse")
+			pushImage(t, local, "system/deckhouse:v1.70.1")
+			pushInstaller(t, local, "system/deckhouse/install:v1.70.1", []string{one})
+
+			storage := storageWith(registryv1alpha1.RegistryStorageSpec{
+				Source: &registryv1alpha1.StorageSource{ExpectedDigests: 1},
+			})
+			storage.Status.Replicas = []registryv1alpha1.StorageReplicaStatus{
+				{Node: "master-1", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, VerifiedSet: set,
+					Address: closedAddress(t)},
+				{Node: "master-0", Role: registryv1alpha1.ReplicaRoleFollower, Full: tc.full, VerifiedSet: tc.was,
+					Source: "master-1", Address: local},
+			}
+			loop, _, _ := newLoop(t, false, nil)
+			c := releaseAwareClient(t, storage, deployedRelease("v1.70.1"))
+			loop.Client = c
+			loop.Publisher = &report.Publisher{Client: c}
+			loop.LocalAddress = local
+			loop.WriteAddress = local
+			loop.DataDir = t.TempDir()
+			release := resolveTag(t, local, "system/deckhouse", "v1.70.1")
+			heldOnDisk(t, loop.DataDir, one, release, resolveTag(t, local, "system/deckhouse/install", "v1.70.1"))
+			tagOnDisk(t, loop.DataDir, "v1.70.1", release)
+			leaseOf(loop, Lease{Known: true})
+
+			require.NoError(t, loop.once(context.Background()))
+
+			replica := replicaOf(t, c, "master-0")
+			assert.True(t, replica.Full, "the store was counted, and holds the set")
+			assert.Equal(t, set, replica.VerifiedSet)
+			assert.Equal(t, tc.source, replica.Source)
+		})
+	}
+}
+
+// TestAnUnreadableLeaseKeepsTheCopyGoing is the window after scenario G's takeover. The replica that took
+// the lease still reports Follower while its first fill runs, and the dead leader's Leader stands; a
+// follower copies from the holder. One read of the lease that failed while the storage could be read
+// let the roles decide, they named the dead leader, and the copy from the live one was cut.
+func TestAnUnreadableLeaseKeepsTheCopyGoing(t *testing.T) {
+	holder := startStalledRegistry(t)
+	loop, c := followerOf(t, holder.address,
+		registryv1alpha1.StorageReplicaStatus{
+			Node: "master-1", Role: registryv1alpha1.ReplicaRoleFollower, Address: holder.address,
+		},
+		registryv1alpha1.StorageReplicaStatus{
+			Node: "master-2", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, Address: closedAddress(t),
+		})
+	lease := leaseOf(loop, Lease{Known: true, Holder: "master-1", Live: true})
+	holder.armed.Store(true)
+
+	result := onceInBackground(loop)
+	holder.waitEntered(t)
+	lease.Store(&Lease{})
+
+	select {
+	case err := <-result:
+		t.Fatalf("the copy stopped on a lease that could not be read: %v", err)
+	case <-time.After(300 * time.Millisecond):
+	}
+
+	holder.Release()
+	require.NoError(t, passEnds(t, result, "the copy did not finish once the holder answered"))
+	assert.Equal(t, "master-1", replicaOf(t, c, "master-0").Source, "the copy went through to the end")
+}
+
+// TestTheElectionsViewDecidesOnlyWithoutTheLease: the replicas the election counts — see Loop.Present —
+// keep a dead leader's Leader from being followed when the lease cannot be read. While it can, a holder
+// it shows live is followed even if its node is counted lost: it renews, so it is there, and the
+// controller routes every pull to it.
+func TestTheElectionsViewDecidesOnlyWithoutTheLease(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		role   registryv1alpha1.ReplicaRole
+		lease  Lease
+		source string
+	}{
+		{"a live holder on a node counted lost is followed",
+			registryv1alpha1.ReplicaRoleFollower, Lease{Known: true, Holder: "master-1", Live: true}, "master-1"},
+		{"without the lease, a Leader on a node counted lost is not",
+			registryv1alpha1.ReplicaRoleLeader, Lease{}, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			leaderStorage := startRegistry(t)
+			loop, c := followerOf(t, leaderStorage, registryv1alpha1.StorageReplicaStatus{
+				Node: "master-1", Role: tc.role, Full: true, Address: leaderStorage,
+			})
+			loop.Present = func(
+				_ context.Context, replicas []registryv1alpha1.StorageReplicaStatus,
+			) []registryv1alpha1.StorageReplicaStatus {
+				var present []registryv1alpha1.StorageReplicaStatus
+				for _, replica := range replicas {
+					if replica.Node != "master-1" {
+						present = append(present, replica)
+					}
+				}
+				return present
+			}
+			leaseOf(loop, tc.lease)
+
+			require.NoError(t, loop.once(context.Background()))
+			assert.Equal(t, tc.source, replicaOf(t, c, "master-0").Source)
+		})
+	}
 }

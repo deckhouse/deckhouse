@@ -294,8 +294,7 @@ type StorageReplicaStatus struct {
 	// Address is where this replica answers, as "host:port".
 	//
 	// Reported by the replica itself so that a follower can replicate from the
-	// leader without having to resolve a node name into an address, and without the
-	// syncers needing to read Node objects at all.
+	// leader without having to resolve a node name into an address.
 	// +optional
 	Address string `json:"address,omitempty"`
 
@@ -304,7 +303,8 @@ type StorageReplicaStatus struct {
 	Source string `json:"source,omitempty"`
 
 	// Error is why the last fill or verification task failed, as reported by this
-	// replica's syncer. Empty when the last task succeeded.
+	// replica's syncer. Empty when the last task succeeded. While the last task did
+	// not fail, it also carries what HealthError reports.
 	//
 	// Safety does not depend on this field: a failed replica is simply not Full,
 	// and the upstream is only ever dropped once the leader IS full. It exists so
@@ -312,6 +312,20 @@ type StorageReplicaStatus struct {
 	// counters alone cannot express.
 	// +optional
 	Error string `json:"error,omitempty"`
+
+	// HealthError is what the syncer's health watch found wrong with this replica's own
+	// registry (not answering for five minutes) or store (refusing writes for two). Empty
+	// while both work, and written only by the watch.
+	//
+	// Separate from Error because the two say different things to the other replicas. An
+	// error from a pass may be about the copy and not about this replica: a follower whose
+	// leader died carries "could not be read from" the dead leader until its next pass. This
+	// one says the replica cannot serve what it holds, and is what keeps it from being the
+	// one that begins when nobody holds the whole set and nobody leads; an Error without it
+	// does not. Nor is a store at its budget or the node's reserve reported here: Store says
+	// that, and it keeps the replica from beginning too while another has room.
+	// +optional
+	HealthError string `json:"healthError,omitempty"`
 
 	// CollectedAt is when this replica last reclaimed its disk.
 	//
@@ -332,6 +346,20 @@ type StorageReplicaStatus struct {
 	// accepts writes. Absent until the replica has measured it.
 	// +optional
 	Store *StoreUsage `json:"store,omitempty"`
+
+	// SyncerStartedAt is when the syncer process that wrote this entry started, to the second, and
+	// only once that process has itself counted, copied into or rechecked its store. Absent before.
+	//
+	// What it is for is the one decision that cannot be undone. A replica's entry outlives its
+	// process: a leader whose pod is recreated on the same node takes its own lease back at once —
+	// the identity is the node name — and its entry still says what the previous process found, Full
+	// included, until the new one reads its store. A store wiped with the pod is exactly the case
+	// where that Full is wrong. So the controller drops the upstream only on an entry stamped no
+	// earlier than the start of the syncer container now running on the lease holder's node: one
+	// written by the process that is running there, about a store it has read. Both times come from
+	// that node's clock, so skew between nodes does not enter.
+	// +optional
+	SyncerStartedAt *metav1.Time `json:"syncerStartedAt,omitempty"`
 }
 
 // StoreRefusal names what a store refuses writes on: one of its two limits, or a directory the

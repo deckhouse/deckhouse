@@ -16,18 +16,34 @@ limitations under the License.
 
 package run
 
-import registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
+import (
+	"fmt"
 
-// MayLead reports whether this replica should stand in the election, given what every
-// replica has reported about itself.
+	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
+)
+
+// MayLead reports whether this replica should stand in the election — see WhyNotLead.
+func MayLead(
+	self string, replicas []registryv1alpha1.StorageReplicaStatus, currentSet string, lease Lease,
+) bool {
+	return WhyNotLead(self, replicas, currentSet, lease) == ""
+}
+
+// WhyNotLead says why this replica should not stand in the election, given what every replica has
+// reported about itself, and is empty when it should.
+//
+// A reason rather than a yes or no, because it is what the replica logs when it steps aside. A log
+// that always said "another replica holds the whole image set" sent whoever read a failover with
+// nobody full looking for a full replica that did not exist.
 //
 // Plain leader election is not enough, because leadership is not a symmetric role: the
 // leader is the replication source every follower copies from, and the one whose
 // completeness gates going air-gap. Handing it to an empty replica while a full one exists
-// is how a cluster gets stuck, most sharply in air-gap — `d8 mirror push` lands on whatever
-// replica the endpoint routes it to, and if the lease-holder is not that one it has no
-// upstream to fill from, the followers replicate its emptiness, and the replica that has
-// the images sits idle. Nothing recovers on its own.
+// is how a cluster gets stuck, most sharply in air-gap — the lease-holder has no upstream to
+// fill from, the followers replicate its emptiness, and the replica that has the images sits
+// idle. A `d8 mirror push` through the Ingress lands on the lease holder, because the
+// controller's registry-push EndpointSlice follows the leader, so short of pushing the whole
+// set again nothing recovers on its own.
 //
 // So a full replica leads and anything else follows — unless nobody is full, which is where
 // every cluster starts, and then someone has to lead in order to begin filling at all.
@@ -44,17 +60,35 @@ import registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/dec
 // handovers in three minutes on a live cluster, for a set that had merely grown by a module.
 //
 // lease is what the storage lease says about who leads; see Lease.
-func MayLead(
+//
+// The rule stays a pure function of the reports. What a report cannot say is that its replica has
+// stopped acting on it — a syncer cut from the API server leaves its last entry standing on a node that
+// stays Ready — and only that is local state, kept by the caller: see Waiting.
+func WhyNotLead(
 	self string, replicas []registryv1alpha1.StorageReplicaStatus, currentSet string, lease Lease,
-) bool {
-	someoneIsFull := false
+) string {
+	why, _ := whyNotLead(self, replicas, currentSet, lease, nil)
+	return why
+}
+
+// whyNotLead is WhyNotLead with the replicas the caller has passed over while nobody is full and nobody
+// leads — see Waiting. Its second result is the replica the rule chose to begin then: this one, when it
+// should stand, and empty when the decision was not that one, or when this replica cannot serve and so
+// waits on any replica that can, passing nobody over.
+func whyNotLead(
+	self string, replicas []registryv1alpha1.StorageReplicaStatus, currentSet string, lease Lease,
+	passedOver map[string]bool,
+) (string, string) {
+	var full *registryv1alpha1.StorageReplicaStatus
 	selfIsFull := false
 
 	for i := range replicas {
 		replica := &replicas[i]
 
 		if isFull(replica, currentSet) {
-			someoneIsFull = true
+			if full == nil {
+				full = replica
+			}
 			if replica.Node == self {
 				selfIsFull = true
 			}
@@ -76,14 +110,20 @@ func MayLead(
 	// with an expired lease the leader may be gone; with an error it is not completing at all; and a
 	// store at its budget or at the node's reserve cannot take the rest of the set, so it would hold
 	// the lease — and the air-gap transition with it — until somebody freed its disk.
-	if someoneIsFull && lease.Known && lease.CanFill && lease.Live && incumbent != nil &&
+	if full != nil && lease.Known && lease.CanFill && lease.Live && incumbent != nil &&
 		incumbent.Error == "" && acceptsWrites(incumbent) {
-		return incumbent.Node == self
+		if incumbent.Node == self {
+			return "", ""
+		}
+		return fmt.Sprintf("%s leads and completes the set from the upstream by itself", incumbent.Node), ""
 	}
 
 	// Otherwise a full replica leads. That is the whole rule while one exists.
-	if someoneIsFull {
-		return selfIsFull
+	if full != nil {
+		if selfIsFull {
+			return "", ""
+		}
+		return fmt.Sprintf("%s holds the whole image set and this replica does not", full.Node), ""
 	}
 
 	// Nobody is full, and here an election must not happen at all.
@@ -96,7 +136,11 @@ func MayLead(
 	//
 	// So while nobody is full, whoever leads keeps leading, and everyone else stands aside.
 	if incumbent != nil {
-		return incumbent.Node == self
+		if incumbent.Node == self {
+			return "", ""
+		}
+		return fmt.Sprintf("nobody holds the whole image set and %s leads: the lease stays where the fill is",
+			incumbent.Node), ""
 	}
 
 	// And nobody leads either — a cluster that has just started, or one whose leader is gone. Someone
@@ -104,7 +148,41 @@ func MayLead(
 	// the others can copy from, and starting elsewhere throws away what it already has. Ties by node
 	// name, so that every replica reaches the same answer from the same report rather than each
 	// preferring itself.
-	return leadsWhenNobodyIsFull(self, replicas)
+	//
+	// A replica that cannot serve waits on any that can, passed over or not. A pass-over must not make a
+	// candidate of it: it would lead without being able to fill or serve, and the incumbent rule above
+	// would keep it there after the healthy replica it passed over came back. Only with every report
+	// unable to serve is there nothing better, and then it stands as any of them may.
+	own := ownReport(self, replicas)
+	if own != nil && own.HealthError != "" {
+		if leadsWhenNobodyIsFull(replicas, nil) != nil {
+			return "this replica cannot serve what it holds: " + own.HealthError, ""
+		}
+		return "", self
+	}
+	best := leadsWhenNobodyIsFull(replicas, passedOver)
+	if best == nil || best.Node == self {
+		// Nothing to compare — no reports at all, or every one of them unable to serve or passed over.
+		// Then the election decides, because refusing to lead here is refusing to start.
+		return "", self
+	}
+	if own != nil && !acceptsWrites(own) && acceptsWrites(best) {
+		why := fmt.Sprintf("this replica's store refuses writes (%s), so it cannot take the rest of the set, "+
+			"and %s holds the most among those that can (%d digests)", own.Store.Reason, best.Node, best.VerifiedDigests)
+		return why, best.Node
+	}
+	return fmt.Sprintf("nobody leads or holds the whole image set, and %s holds the most of it (%d digests)",
+		best.Node, best.VerifiedDigests), best.Node
+}
+
+// ownReport is this replica's entry among the reports, if it has one.
+func ownReport(self string, replicas []registryv1alpha1.StorageReplicaStatus) *registryv1alpha1.StorageReplicaStatus {
+	for i := range replicas {
+		if replicas[i].Node == self {
+			return &replicas[i]
+		}
+	}
+	return nil
 }
 
 // Lease is what the storage lease says about who leads, read by the caller.
@@ -151,33 +229,74 @@ func acceptsWrites(replica *registryv1alpha1.StorageReplicaStatus) bool {
 	return replica.Store == nil || replica.Store.Writable
 }
 
-// leadsWhenNobodyIsFull picks the fullest replica, by name where the counts are equal.
+// leadsWhenNobodyIsFull picks the fullest replica that can serve, by name where the counts are equal,
+// and nil when there is none.
 //
 // Consulted only when there is no leader at all: once one exists it keeps leading until it is full or
 // gone, because moving the lease between incomplete replicas restarts the fill each time.
-func leadsWhenNobodyIsFull(self string, replicas []registryv1alpha1.StorageReplicaStatus) bool {
-	best := ""
-	var most int32 = -1
+//
+// A replica whose registry does not answer, or whose disk refuses writes, is not a candidate while any
+// other is: it cannot be what the others copy from, nor take the rest of the set. Its health watch says
+// so in healthError.
+//
+// Nor is one whose store is at its budget or at the node's reserve, while one with room is. The watch
+// leaves that to the store's own measurement — store.writable — because a full store is not a failing
+// one, so it has no healthError; and its pass's error, which used to pass it over, no longer does. It
+// cannot take the rest of the set, from the upstream or from a push, which lands on the lease holder,
+// and once chosen it would keep the lease while nobody is full — and the air-gap transition with it —
+// until somebody freed its disk: the rule for a full incumbent above guards the same. With every store
+// out of room the fullest is still the best source of what there is, and is chosen.
+//
+// Any other error is no reason to pass a replica over. It says that a pass failed, not that what the
+// replica holds is wrong: the count comes from the store — through reportHeld, or the catalogue —
+// whenever the store could be read. And with nobody full and nobody leading, the error is almost always
+// about a copy from a leader that is gone, or about the upstream, which every candidate shares. On a
+// DVP stand the full leader was powered off while one follower held 322 of 446 digests and the other
+// held none; both carried "could not be read from" the dead leader, the fuller one for about 20 s
+// longer, and for those 20 s the empty one was the only candidate and stood. Only client-go's minute of
+// watching an unchanged lease before it takes one kept it from leading and filling from scratch, and a
+// lease released by a leader that stops gracefully gives no such minute.
+//
+// Air-gap included: the fullest leads, Decide gives it the catalogue to count, and the others copy from
+// it through the lease. Passing it over for an error-free empty replica chose a leader that could never
+// fill.
+//
+// The price: a replica whose error is its own but escapes the watch — a survey of the store failing on
+// EIO while writes still go through — can be chosen when it is the fullest, and then keeps the lease
+// while nobody is full, as any incumbent does.
+//
+// Nor, finally, is a replica in passedOver: one the caller chose and waited on for too long without its
+// taking the lease — see Waiting. The rules above then apply among the replicas left, and with every one
+// that can serve passed over there is nothing to compare, and the election decides — unless the caller
+// itself cannot serve: see whyNotLead.
+func leadsWhenNobodyIsFull(
+	replicas []registryv1alpha1.StorageReplicaStatus, passedOver map[string]bool,
+) *registryv1alpha1.StorageReplicaStatus {
+	var best, bestWithRoom *registryv1alpha1.StorageReplicaStatus
 
 	for i := range replicas {
 		replica := &replicas[i]
-		// A replica whose last pass failed is not a candidate while any other is: what it holds is
-		// not something the others should be told to copy.
-		if replica.Error != "" {
+		if replica.HealthError != "" || passedOver[replica.Node] {
 			continue
 		}
-		if replica.VerifiedDigests > most ||
-			(replica.VerifiedDigests == most && replica.Node < best) {
-			best, most = replica.Node, replica.VerifiedDigests
+		if holdsMore(replica, best) {
+			best = replica
+		}
+		if acceptsWrites(replica) && holdsMore(replica, bestWithRoom) {
+			bestWithRoom = replica
 		}
 	}
-
-	if best == "" {
-		// Nothing to compare — no reports at all, or every one of them failing. Then the election
-		// decides, because refusing to lead here is refusing to start.
-		return true
+	if bestWithRoom != nil {
+		return bestWithRoom
 	}
-	return best == self
+	return best
+}
+
+// holdsMore reports whether a replica is to be preferred over another — nil, for none yet — by what it
+// holds, and by name where the counts are equal.
+func holdsMore(replica, other *registryv1alpha1.StorageReplicaStatus) bool {
+	return other == nil || replica.VerifiedDigests > other.VerifiedDigests ||
+		(replica.VerifiedDigests == other.VerifiedDigests && replica.Node < other.Node)
 }
 
 // isFull reads a replica's own report of itself.

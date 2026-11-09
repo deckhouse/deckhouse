@@ -102,6 +102,66 @@ func (l *Leader) Usable() bool {
 	return l != nil && l.Address != "" && l.Node != ""
 }
 
+// LeaderOf picks the replica a follower copies from out of the reports: the one holding the lease.
+//
+// The lease rather than the role each replica reports, as the controller already reads it — see
+// leaseHolderReport there. A role is what a replica last said about itself, and it says two things
+// wrong for as long as a pass lasts. An entry outlives its replica: a leader whose node lost power kept
+// Role=Leader until the replica that took over finished its first pass and published, and that pass
+// was a fill from the upstream — the followers copied from the dead leader all the while, and one of
+// them for an hour. And a replica that takes the lease writes Leader only when its first pass ends, so
+// by the roles alone it is not followed until then.
+//
+// Nobody while the lease is known and does not name a live holder: released, expired, or held by
+// this replica itself. Live, without the grace past expiry the election allows: the grace keeps an
+// incomplete fill from moving to another replica over a minute without the API server, while a
+// source to copy from has to be answering now. This replica as the holder is the first pass after a
+// restart, which reads its role before the elector has said it won: the leader it would have copied
+// from by the roles is the one it replaced. A holder without a report is nobody too: there is nothing
+// to say where it answers.
+//
+// Live compares the renewTime the holder wrote by its clock with the time on this node, so how it is
+// read is the caller's to say. The loop's reader also counts a renewal it saw happen by its own clock
+// — see followTheLease in cmd: by the clocks alone, a follower whose clock ran a minute ahead of the
+// leader's would never see it live, and in air-gap would never get the set at all.
+//
+// The roles only when the lease cannot be read, as before the lease was read at all.
+func LeaderOf(
+	self string, replicas []registryv1alpha1.StorageReplicaStatus, lease Lease,
+) *Leader {
+	if lease.Known {
+		if lease.Holder == "" || lease.Holder == self || !lease.Live {
+			return nil
+		}
+		for i := range replicas {
+			if replicas[i].Node == lease.Holder {
+				return leaderFrom(&replicas[i])
+			}
+		}
+		return nil
+	}
+
+	for i := range replicas {
+		replica := &replicas[i]
+		if replica.Role == registryv1alpha1.ReplicaRoleLeader && replica.Node != self {
+			return leaderFrom(replica)
+		}
+	}
+	return nil
+}
+
+// leaderFrom is what a follower needs of a leader's report.
+func leaderFrom(replica *registryv1alpha1.StorageReplicaStatus) *Leader {
+	return &Leader{
+		Node:    replica.Node,
+		Address: replica.Address,
+		// A replica that both claims completeness and reports a failure is not
+		// trustworthy enough to copy a whole set from.
+		Full:     replica.Full && replica.Error == "",
+		AheadSet: replica.AheadSet,
+	}
+}
+
 // Decide works out what this replica should do.
 //
 // A pure function of the spec and the role, so the one decision that can cut a

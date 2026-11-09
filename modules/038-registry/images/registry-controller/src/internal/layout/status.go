@@ -44,11 +44,15 @@ import (
 //
 // `upstreamReferences` is the count of platform workloads still naming the held upstream, or nil
 // when it was not taken. See SafeToDropUpstream.
+//
+// `running` is when the syncer container on the lease holder's node started, or nil when there is
+// no Ready pod there to say. See LeaderReportCurrent.
 func Aggregate(
 	spec *registryv1alpha1.RegistryStorageSpec,
 	replicas []registryv1alpha1.StorageReplicaStatus,
 	leaseHolder string,
 	upstreamReferences *int32,
+	running *metav1.Time,
 ) registryv1alpha1.RegistryStorageStatus {
 	status := registryv1alpha1.RegistryStorageStatus{
 		// The cache is the only source of images exactly when no upstream is left.
@@ -95,7 +99,7 @@ func Aggregate(
 	status.Leader = leader.Node
 	// Reported through the very same predicate the transition is gated on, so the
 	// field cannot claim "safe" while the controller refuses to act on it.
-	status.SafeToDropUpstream = SafeToDropUpstream(spec, replicas, leaseHolder, upstreamReferences)
+	status.SafeToDropUpstream = SafeToDropUpstream(spec, replicas, leaseHolder, upstreamReferences, running)
 
 	// Progress out of whatever denominator is known, and there are two.
 	//
@@ -159,8 +163,9 @@ func LeaderFull(replicas []registryv1alpha1.StorageReplicaStatus, leaseHolder st
 	return leader != nil && leader.Full && leader.Error == ""
 }
 
-// SafeToDropUpstream is the whole gate for going air-gap: the leader holds the expected set, and
-// nothing on the platform still names the upstream being held.
+// SafeToDropUpstream is the whole gate for going air-gap: the leader holds the expected set, by a
+// report of the syncer running on its node now, and nothing on the platform still names the upstream
+// being held.
 //
 // The second half exists because completeness is about blobs and an image reference is about a
 // name. The cache answers the in-cluster address; a reference naming the upstream by its own name
@@ -179,11 +184,37 @@ func SafeToDropUpstream(
 	replicas []registryv1alpha1.StorageReplicaStatus,
 	leaseHolder string,
 	upstreamReferences *int32,
+	running *metav1.Time,
 ) bool {
 	if spec == nil {
 		return false
 	}
-	return LeaderFull(replicas, leaseHolder) && referencesClear(spec.Upstream, upstreamReferences)
+	return LeaderFull(replicas, leaseHolder) && LeaderReportCurrent(replicas, leaseHolder, running) &&
+		referencesClear(spec.Upstream, upstreamReferences)
+}
+
+// LeaderReportCurrent reports whether the lease holder's entry was written by the syncer running on its
+// node now, after that syncer read its own store: stamped no earlier than `running`, the start of the
+// `syncer` container in the holder's Ready pod.
+//
+// LeaderFull alone cannot tell, because an entry outlives the process that wrote it, and the lease
+// does not tell either. A leader whose pod is recreated on the same node takes its own lease back at
+// once — the identity is the node name, and a record that already names it keeps its acquire time
+// and transitions — while its entry still says what the previous process found until the new one
+// reads its store. Over a store wiped with the pod that is a Full for an empty store, and dropping the
+// upstream on it cannot be undone. The syncer stamps its entry with its own start only once it has
+// copied into, counted or rechecked the store; see SyncerStartedAt on the CRD.
+//
+// Both times come from the holder node's clock, never this controller's, so skew between nodes does
+// not enter; both are whole seconds. No Ready pod to read `running` from, or no stamp, is no
+// permission. Held so, a healthy transition waits for the running syncer's first reading: not at all
+// once it has made one, and after a restart normally its first pass, within about two minutes.
+func LeaderReportCurrent(
+	replicas []registryv1alpha1.StorageReplicaStatus, leaseHolder string, running *metav1.Time,
+) bool {
+	leader := leaseHolderReport(replicas, leaseHolder)
+	return leader != nil && running != nil && leader.SyncerStartedAt != nil &&
+		!leader.SyncerStartedAt.Before(running)
 }
 
 // referencesClear is the second half of the gate, shared by the status and the transition.

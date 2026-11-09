@@ -65,11 +65,18 @@ func PacedRegistryOptions(certificateAuthority, username, password string, pacer
 		return nil, err
 	}
 
-	options := []remote.Option{remote.WithTransport(pacer.wrap(transport))}
+	return TransportOptions(pacer.wrap(transport), username, password), nil
+}
+
+// TransportOptions is the options for a registry reached through transport, with the credentials given.
+// For a caller that builds the transport itself — see Transport — and has to talk to the registry both
+// through the registry protocol and in plain HTTP, over one transport.
+func TransportOptions(transport http.RoundTripper, username, password string) []remote.Option {
+	options := []remote.Option{remote.WithTransport(transport)}
 	if username != "" || password != "" {
 		options = append(options, remote.WithAuth(&authn.Basic{Username: username, Password: password}))
 	}
-	return options, nil
+	return options
 }
 
 // wrap returns transport with every response body read through the pacer; a nil pacer returns it

@@ -281,7 +281,9 @@ implementation.
 
 1. Wait until the storage reports that it holds the whole set — `phase: Ready` with
    `safeToDropUpstream: true` — and remove `primary.upstream` from the `registry` ModuleConfig.
-   The cluster is air-gapped again, now on the module:
+   The cluster is air-gapped again, now on the module. After a storage replica restarts,
+   `safeToDropUpstream` can stay `false` until the leader's syncer has read its store, normally
+   within two minutes, or about ten minutes if that first reading fails:
 
    ```bash
    d8 k get registrystorage registry -o jsonpath='{.status.phase} {.status.safeToDropUpstream}{"\n"}'
@@ -326,11 +328,13 @@ but not the way the configuration asks — a state that is easy to miss otherwis
 
 `D8RegistryAirGapTransitionHeld`
 : The upstream was removed from the configuration, but the module keeps using it: either the
-  cache cannot serve the cluster alone yet, or workloads in the `kube-system` and `d8-*`
-  namespaces still reference the upstream (`upstreamReferences` in the RegistryStorage status).
+  cache cannot serve the cluster alone yet, or the cache leader's report was not written by the
+  `syncer` running on its node now (`syncerStartedAt` in the RegistryStorage status), or workloads
+  in the `kube-system` and `d8-*` namespaces still reference the upstream (`upstreamReferences`).
   This is the safe outcome: dropping the upstream at that point would leave the nodes with
-  nowhere to pull from. The alert does not resolve on its own if the cache has stopped filling
-  or a rollout onto the in-cluster address is stuck.
+  nowhere to pull from. The alert does not resolve on its own if the cache has stopped filling,
+  a rollout onto the in-cluster address is stuck, the leader's storage pod is not Ready, or that
+  pod runs a `syncer` from before `syncerStartedAt` existed (during a module update).
 
 `D8RegistryUpstreamProbeFailing`
 : A change to the primary upstream was rejected, and the cluster keeps using the last working
@@ -808,7 +812,10 @@ Description of the response fields:
 
 - `replicas` is the only place where completeness information is reported, and each entry is the replica's
   own account of itself. A replica reporting `full: true` alongside an `error` is not
-  complete: `full` says what it holds, and the error says whether its last pass finished.
+  complete: `full` says what it holds, and the error says whether its last pass finished, or whether
+  its registry or disk has stopped working (see `leader`). `syncerStartedAt` is when the syncer that
+  wrote the entry started, set once that syncer has read its own store; the upstream is dropped only
+  when the leader's entry carries the start of the syncer running in its pod now.
 - `leader` is the replica that fills from the upstream and serves as the replication source
   for the others. The election is deliberately not symmetric: once a replica holds the whole
   expected set, a leader that cannot complete it by itself steps aside for that replica. A leader
@@ -816,6 +823,15 @@ Description of the response fields:
   store refuses writes. This is what keeps an air-gapped cluster from deadlocking with an empty leader
   and a full follower. A leader that is still completing the set from the upstream keeps leading:
   a follower copies from it and may finish first, and moving the lease then would gain nothing.
+  A replica on a node unreachable for about two minutes is not counted in the election, and a replica whose
+  registry stops answering or whose disk stops accepting writes reports it in `healthError` and `error`
+  and steps aside for a full replica, if there is one. A leader whose store has lost the set (the
+  deployed release or most of a sample of the set is missing on its disk, or `totalDigests` is at most
+  half of its `verifiedDigests`) steps aside for a replica full for the current set, reporting
+  `full: false` and `verifiedDigests: 0`, and copies the set from it.
+  With no such replica it keeps leading, reports `full: false` and `verifiedDigests: 0` all the same,
+  and fills the set again from the upstream (in an air-gapped cluster, it counts its store again, and
+  the set comes back only with a new `d8 mirror push`).
 
 ## How is the cache updated?
 

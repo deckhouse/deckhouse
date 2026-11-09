@@ -79,8 +79,18 @@ type State struct {
 	Source string
 
 	// Error is why the last task failed, and empty when it succeeded. Cleared
-	// explicitly on success so a fixed problem stops being reported.
+	// explicitly on success so a fixed problem stops being reported. Also what the
+	// health watch found wrong with the registry or the store, while the last task
+	// did not fail — see PublishHealth.
 	Error string
+
+	// HealthError is what the health watch found wrong with the registry or the store, and
+	// nothing else. Written by PublishHealth alone; every other report keeps the one standing.
+	//
+	// Apart from Error because the other replicas read the two differently: a pass's error may
+	// be about a copy from a leader that is gone, and says nothing about whether this replica
+	// can serve — see run.MayLead.
+	HealthError string
 
 	// CollectedAt is when this replica last reclaimed its disk, if it has.
 	CollectedAt *time.Time
@@ -102,6 +112,12 @@ type State struct {
 	// AheadSet is the fingerprint of what is ahead of the set this replica holds as well — see the
 	// field of the same name on the CRD.
 	AheadSet string
+
+	// SyncerStartedAt is when this process started, and nil until it has copied into, counted or
+	// rechecked its store — see run.Loop.storeRead. Nil is "not yet", never "unknown": the controller
+	// reads an entry without it as one the running process has not vouched for, and holds the upstream
+	// on it — see the field of the same name on the CRD.
+	SyncerStartedAt *time.Time
 }
 
 // Publisher writes a replica's own entry.
@@ -276,6 +292,101 @@ func MergeWithdraw(replicas *[]registryv1alpha1.StorageReplicaStatus, state Stat
 	return false
 }
 
+// Demote takes back everything this replica's entry says it holds, because its store was found not to
+// hold the set another replica holds whole: it hands the lease over and copies the set from the next
+// leader — see run.Loop.StepDown.
+//
+// Full, VerifiedSet, AheadSet and the count go together, and the count to zero: a store that lost the
+// release's tag or most of a sample of the set does not hold the number the entry carried, and the
+// next pass that reads the store says what it does hold. Source goes, since what this replica holds is
+// no longer a copy of anything; Role goes to Follower, so that a follower reading the roles while the
+// lease cannot be read does not copy from it. And the two permissions the controller derived from the
+// leader's report, in the same write, as Withdraw does: this is the leader's report being taken back.
+//
+// Error and HealthError, the store's measurement, the collection and the size of the set stay: none of
+// them is a claim about what the store holds of the set.
+func (p *Publisher) Demote(ctx context.Context, state State) error {
+	if state.Node == "" {
+		return fmt.Errorf("a demotion needs the node it came from")
+	}
+
+	return p.publish(ctx, func(storage *registryv1alpha1.RegistryStorage) bool {
+		changed := MergeDemote(&storage.Status.Replicas, state)
+		return withdrawPermissions(storage) || changed
+	})
+}
+
+// TakeBack is Demote for a leader that keeps the lease: everything its entry says it holds goes, as
+// Demote takes it, and the two permissions with it — and the role stays, because no other replica
+// holds the set and this one is still the one that fills it — see run.Loop.TakeBackFull.
+//
+// The role matters as much as Full does here. A follower that reads the roles while the lease cannot be
+// read copies from the replica that says Leader, and the election, in that case, keeps the replica that
+// says Leader leading while nobody is full; a leader that called itself a follower would leave the
+// cluster with nobody to fill the set, the one thing it needs from the leader now.
+func (p *Publisher) TakeBack(ctx context.Context, state State) error {
+	if state.Node == "" {
+		return fmt.Errorf("taking a report back needs the node it came from")
+	}
+
+	return p.publish(ctx, func(storage *registryv1alpha1.RegistryStorage) bool {
+		changed := MergeTakeBack(&storage.Status.Replicas, state)
+		return withdrawPermissions(storage) || changed
+	})
+}
+
+// withdrawPermissions takes back the two permissions the controller derived from the leader's report,
+// and reports whether either stood.
+func withdrawPermissions(storage *registryv1alpha1.RegistryStorage) bool {
+	if !storage.Status.SafeToDropUpstream && !storage.Status.AllReplicasFull {
+		return false
+	}
+	storage.Status.SafeToDropUpstream = false
+	storage.Status.AllReplicasFull = false
+	return true
+}
+
+// MergeDemote clears what this replica's entry says it holds — see Demote — and leaves every other
+// entry alone: unlike Merge it demotes nobody else, since it claims nothing.
+func MergeDemote(replicas *[]registryv1alpha1.StorageReplicaStatus, state State) bool {
+	return takeBackHeld(replicas, state.Node, registryv1alpha1.ReplicaRoleFollower)
+}
+
+// MergeTakeBack clears what this replica's entry says it holds, as MergeDemote does, and leaves its role
+// as it is — see TakeBack.
+func MergeTakeBack(replicas *[]registryv1alpha1.StorageReplicaStatus, state State) bool {
+	return takeBackHeld(replicas, state.Node, "")
+}
+
+// takeBackHeld clears Full, the count, VerifiedSet, AheadSet and Source in the entry of node, and sets
+// its role to role unless that is empty. Every other field, and every other entry, stays.
+func takeBackHeld(
+	replicas *[]registryv1alpha1.StorageReplicaStatus, node string, role registryv1alpha1.ReplicaRole,
+) bool {
+	for i := range *replicas {
+		entry := &(*replicas)[i]
+		if entry.Node != node {
+			continue
+		}
+		if role == "" {
+			role = entry.Role
+		}
+		if !entry.Full && entry.VerifiedDigests == 0 && entry.VerifiedSet == "" && entry.AheadSet == "" &&
+			entry.Source == "" && entry.Role == role {
+			return false
+		}
+		entry.Full = false
+		entry.VerifiedDigests = 0
+		entry.VerifiedSet = ""
+		entry.AheadSet = ""
+		entry.Source = ""
+		entry.Role = role
+		return true
+	}
+	// No entry: nothing was claimed, so there is nothing to take back.
+	return false
+}
+
 // PublishProgress says that a pass is under way and how far it has got, and nothing else.
 //
 // The pass reports its outcome when it ends, and a fill over a slow link ends an hour later. Until
@@ -322,6 +433,41 @@ func (p *Publisher) PublishStore(ctx context.Context, state State) error {
 	})
 }
 
+// PublishHealth records what the syncer's health watch found about this replica's own registry and
+// store, and nothing else: only the Error and HealthError fields of its entry. See
+// run.Loop.watchHealth.
+//
+// Its own reporter, written apart from the pass, because the failures it reports are the ones that
+// stop a pass from reporting anything. A pass walks the store and measures it before it publishes, and
+// on a disk stuck in the kernel it never gets there: the status kept the last clean report — full, no
+// error — and the replica kept the lease, renewed by an elector that does not wait for passes, for as
+// long as the disk hung.
+//
+// previous is the error this reporter published last, and the only one it takes back from Error: an
+// error the pass reported — a fill that failed — is the pass's to clear, and a health error never
+// replaces one, since either already keeps the replica from counting as full. HealthError is this
+// reporter's alone and always says what it found.
+//
+// A leader reporting an error takes safeToDropUpstream back in the same write, and the controller keeps
+// it back: the permission needs a leader without an error — see LeaderFull there. allReplicasFull is
+// left alone. It is about what the replicas hold, which the health watch does not touch, and the
+// controller derives it from Full alone: taken back here, it would be put back by the controller and
+// taken back again by the next round, every half a minute for as long as the failure lasts.
+func (p *Publisher) PublishHealth(ctx context.Context, state State, previous string) error {
+	if state.Node == "" {
+		return fmt.Errorf("a health report needs the node it came from")
+	}
+
+	return p.publish(ctx, func(storage *registryv1alpha1.RegistryStorage) bool {
+		changed := MergeHealth(&storage.Status.Replicas, state, previous)
+		if state.Error != "" && state.Role == registryv1alpha1.ReplicaRoleLeader && storage.Status.SafeToDropUpstream {
+			storage.Status.SafeToDropUpstream = false
+			changed = true
+		}
+		return changed
+	})
+}
+
 // PublishCollection records the outcome of a garbage collection.
 func (p *Publisher) PublishCollection(ctx context.Context, state State) error {
 	if state.Node == "" {
@@ -355,6 +501,12 @@ func Merge(replicas *[]registryv1alpha1.StorageReplicaStatus, state State) bool 
 		VerifiedSet:     state.VerifiedSet,
 		AheadSet:        state.AheadSet,
 	}
+	// To the second, as the API server keeps it: a stamp with a fraction would never equal the one read
+	// back, and every pass would write the status again for nothing.
+	if state.SyncerStartedAt != nil {
+		stamp := metav1.NewTime(state.SyncerStartedAt.Truncate(time.Second))
+		entry.SyncerStartedAt = &stamp
+	}
 
 	// At most one replica may carry the leader's role, and the one publishing it now is the one
 	// holding the lease.
@@ -363,8 +515,8 @@ func Merge(replicas *[]registryv1alpha1.StorageReplicaStatus, state State) bool 
 	// led, lost the lease and then stopped publishing — because its pass fails, or its process is
 	// restarting — leaves `role: Leader` behind it forever. Two entries then claim Leader at once,
 	// one the actual lease-holder and one a memory of an earlier one. Which is worse than untidy,
-	// because everything downstream reads this status to
-	// find the leader, including the followers deciding what to replicate from.
+	// because the controller reads this status to find the leader, and so do the followers deciding
+	// what to replicate from whenever the lease cannot be read — see run.LeaderOf.
 	//
 	// Demoted rather than deleted: the stale entry still says truthfully how much that replica held,
 	// and it will correct the rest of itself the moment it publishes again.
@@ -389,6 +541,9 @@ func Merge(replicas *[]registryv1alpha1.StorageReplicaStatus, state State) bool 
 		// flaps for no reason.
 		entry.CollectedAt = (*replicas)[i].CollectedAt
 		entry.CollectionError = (*replicas)[i].CollectionError
+		// The same for the health watch, which owns HealthError: a pass knows nothing about it,
+		// and the watch writes it again only while something is wrong.
+		entry.HealthError = (*replicas)[i].HealthError
 		// A report that did not measure the store — the one announcing a pass, say — keeps the
 		// last measurement rather than erasing it, or the status would flap between the two.
 		if entry.Store == nil {
@@ -490,10 +645,52 @@ func MergeStore(replicas *[]registryv1alpha1.StorageReplicaStatus, state State) 
 	return true
 }
 
+// MergeHealth sets this replica's Error and HealthError to what the health watch found, or takes back
+// what it found before, and leaves every other field alone — Full and VerifiedSet above all: a registry
+// that answers again, or a disk that takes writes again, gives the replica back its completeness
+// without a copy.
+//
+// An Error already standing that the health watch did not write is left as it is, whichever way: it
+// belongs to the pass that reported it. HealthError is set beside it all the same, because that is what
+// the other replicas read to tell a replica that cannot serve from one whose copy failed.
+func MergeHealth(replicas *[]registryv1alpha1.StorageReplicaStatus, state State, previous string) bool {
+	for i := range *replicas {
+		entry := &(*replicas)[i]
+		if entry.Node != state.Node {
+			continue
+		}
+		changed := false
+		if entry.HealthError != state.HealthError {
+			entry.HealthError = state.HealthError
+			changed = true
+		}
+		if (entry.Error == "" || entry.Error == previous) && entry.Error != state.Error {
+			entry.Error = state.Error
+			changed = true
+		}
+		return changed
+	}
+
+	if state.Error == "" && state.HealthError == "" {
+		return false
+	}
+	// No entry yet: a replica whose registry or store failed before its first pass reported. The entry
+	// is created with what is known, which is the node and the failure.
+	*replicas = append(*replicas, registryv1alpha1.StorageReplicaStatus{
+		Node:        state.Node,
+		Role:        state.Role,
+		Address:     state.Address,
+		Error:       state.Error,
+		HealthError: state.HealthError,
+	})
+	return true
+}
+
 // MergeProgress records a pass under way in this replica's entry: its error replaced with the one the
-// pass reports while copying — see PublishProgress — its count raised to what the pass has reached,
-// its denominator filled in if it had none. Every other field is left alone — above all Full, which a
-// pass in progress has not yet earned or lost.
+// progress carries — what the pass finds wrong with the store while copying, see PublishProgress, and
+// what the health watch has standing — its count raised to what the pass has reached, its denominator
+// filled in if it had none. Every other field is left alone — above all
+// Full, which a pass in progress has not yet earned or lost.
 func MergeProgress(replicas *[]registryv1alpha1.StorageReplicaStatus, state State) bool {
 	for i := range *replicas {
 		entry := &(*replicas)[i]
@@ -527,6 +724,7 @@ func MergeProgress(replicas *[]registryv1alpha1.StorageReplicaStatus, state Stat
 		Role:            state.Role,
 		Address:         state.Address,
 		Source:          state.Source,
+		Error:           state.Error,
 		VerifiedDigests: state.VerifiedDigests,
 		DeclaredDigests: state.DeclaredDigests,
 	})

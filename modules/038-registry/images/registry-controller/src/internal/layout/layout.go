@@ -134,6 +134,12 @@ type Inputs struct {
 	// It gates the air-gap transition.
 	LeaderFull bool
 
+	// LeaderCurrent reports that the leader's report was written by the syncer running on its node
+	// now, after it read its own store. It gates the air-gap transition beside LeaderFull, and only
+	// that: a report left by the previous process says nothing the running one has checked, but it is
+	// no reason to fill either, so needSync is still LeaderFull's. See LeaderReportCurrent.
+	LeaderCurrent bool
+
 	// UpstreamReferences is how many platform workloads still name the upstream in effect, or
 	// nil when they were not counted. The other half of the air-gap gate, and nil withholds it:
 	// see SafeToDropUpstream.
@@ -184,8 +190,14 @@ type Desired struct {
 	Nodes map[string]registryv1alpha1.RegistryNodeSpec
 
 	// DropUpstream reports that this reconciliation is the moment the cluster
-	// becomes air-gapped: the cache is complete, so the upstream is removed from
-	// both the storage and the node layouts at once.
+	// becomes air-gapped: the cache is complete, so the upstream still in effect is
+	// removed from both the storage and the node layouts at once.
+	//
+	// An edge, not a level: it is set only while an upstream is still in effect, so it
+	// is false on every pass after the drop has been recorded, after a controller
+	// restart in air-gap, and on a cluster that was never anything but air-gapped. A
+	// drop pass that fails before the status is written leaves the upstream recorded,
+	// so the next pass reports the transition again, which it still is.
 	DropUpstream bool
 
 	// HeldUpstream is the upstream still in effect, which is not necessarily the
@@ -285,9 +297,17 @@ func compute(in Inputs) Desired {
 	// making it safer — and on nothing on the platform still naming the upstream,
 	// which a full cache cannot stand in for. SafeToDropUpstream reports the same
 	// two halves in status.safeToDropUpstream, so the field cannot claim what is
-	// refused here.
+	// refused here. The leader's completeness counts only as reported by the syncer
+	// running on its node now (LeaderCurrent): a restarted leader takes its lease
+	// back at once, with the previous process's report still standing.
+	//
+	// And only while there is an upstream to drop (effectiveUpstream != nil). Once the
+	// drop is recorded, AppliedUpstream is nil, nothing is held and the layouts below are
+	// the same either way; without this the flag stayed true on every pass for as long as
+	// the leader stayed full, and the transition was logged again on each of them.
 	wantAirGap := desiredUpstream == nil
-	dropUpstream := wantAirGap && in.LeaderFull && referencesClear(effectiveUpstream, in.UpstreamReferences)
+	dropUpstream := wantAirGap && effectiveUpstream != nil && in.LeaderFull && in.LeaderCurrent &&
+		referencesClear(effectiveUpstream, in.UpstreamReferences)
 
 	heldUpstream := effectiveUpstream
 	if dropUpstream {

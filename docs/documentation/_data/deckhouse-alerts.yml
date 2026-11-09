@@ -4809,7 +4809,8 @@ alerts:
       description: |-
         The configuration has no upstream, so the cluster is meant to be air-gapped, and the
         module is still holding the previous upstream: either the cache is not complete
-        enough to stand alone, or workloads in the platform namespaces (`kube-system` and
+        enough to stand alone, or the cache leader's report was not written by the `syncer`
+        running on its node now, or workloads in the platform namespaces (`kube-system` and
         `d8-*`) still reference the upstream and would have nowhere to pull from without it.
         Workloads in other namespaces are not counted and do not hold the transition.
 
@@ -4833,6 +4834,22 @@ alerts:
         ```
         d8 k -n d8-system logs -l app=registry-controller -c registry-controller --prefix --tail=-1 | grep 'still names the upstream' | tail -1
         ```
+
+        If the leader is full and `upstreamReferences` is `0`, the upstream is held on the
+        leader's report: its `syncerStartedAt` is missing or earlier than the start of the
+        `syncer` container in the leader's storage pod. The `syncer` stamps its report once it
+        has read its store, normally within two minutes of starting. The hold does not end
+        while the leader's storage pod is not Ready, or while that pod runs a `syncer` from
+        before `syncerStartedAt` existed (during a module update), which stamps nothing. To
+        see the leader's report and the controller's reason:
+
+        ```
+        d8 k get registrystorage registry -o json | jq '.status as $s | $s.replicas[] | select(.node == $s.leader) | {node,full,error,syncerStartedAt}'
+        d8 k -n d8-system logs -l app=registry-controller -c registry-controller --prefix --tail=-1 | grep 'the upstream is held' | tail -1
+        ```
+
+        Deleting the leader's storage pod is safe while the upstream is held: the replacement
+        `syncer` reads its store and stamps its report, normally within two minutes.
       summary: |
         The registry upstream cannot be removed yet.
       severity: "5"

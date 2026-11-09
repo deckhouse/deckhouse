@@ -19,6 +19,7 @@ package layout
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,9 +39,20 @@ func airGapSpec() *registryv1alpha1.RegistryStorageSpec {
 	return &registryv1alpha1.RegistryStorageSpec{Source: testSource()}
 }
 
+// syncerStart is when the syncer on the lease holder's node started, in these tests, and what leader()
+// stamps its report with: a report the running syncer wrote after reading its store.
+var syncerStart = metav1.NewTime(time.Date(2026, 10, 30, 9, 0, 0, 0, time.UTC))
+
+// running is syncerStart, as the controller reads it off the pod.
+func running() *metav1.Time {
+	started := syncerStart
+	return &started
+}
+
 func leader(node string, full bool, digests int32) registryv1alpha1.StorageReplicaStatus {
 	return registryv1alpha1.StorageReplicaStatus{
 		Node: node, Role: registryv1alpha1.ReplicaRoleLeader, Full: full, VerifiedDigests: digests,
+		SyncerStartedAt: running(),
 	}
 }
 
@@ -260,7 +272,7 @@ func TestAggregate(t *testing.T) {
 			// Nothing names the upstream here, so the table is about the leader alone; the
 			// other half of the gate is TestSafeToDropUpstreamWaitsForTheReferences.
 			nothing := int32(0)
-			got := Aggregate(tt.spec, tt.replicas, tt.holder, &nothing)
+			got := Aggregate(tt.spec, tt.replicas, tt.holder, &nothing, running())
 
 			assert.Equal(t, tt.wantPhase, got.Phase)
 			assert.Equal(t, tt.wantLeader, got.Leader)
@@ -272,7 +284,7 @@ func TestAggregate(t *testing.T) {
 }
 
 func TestAggregateFillProgress(t *testing.T) {
-	got := Aggregate(passThroughSpec(), []registryv1alpha1.StorageReplicaStatus{leader("master-0", false, 312)}, "master-0", nil)
+	got := Aggregate(passThroughSpec(), []registryv1alpha1.StorageReplicaStatus{leader("master-0", false, 312)}, "master-0", nil, running())
 
 	require.NotNil(t, got.Fill)
 	assert.EqualValues(t, 312, got.Fill.Filled)
@@ -285,7 +297,7 @@ func TestAggregateFillProgress(t *testing.T) {
 	fromLeader := Aggregate(
 		&registryv1alpha1.RegistryStorageSpec{Upstream: testUpstream("registry.deckhouse.io")},
 		[]registryv1alpha1.StorageReplicaStatus{withDeclared(leader("master-0", false, 312), 400)},
-		"master-0", nil,
+		"master-0", nil, running(),
 	)
 	require.NotNil(t, fromLeader.Fill)
 	assert.EqualValues(t, 312, fromLeader.Fill.Filled)
@@ -293,7 +305,7 @@ func TestAggregateFillProgress(t *testing.T) {
 
 	// The declaration wins while there is one: a transition gated on a stated number has to show
 	// progress against that number, not against one the cluster computed about itself.
-	declared := Aggregate(passThroughSpec(), []registryv1alpha1.StorageReplicaStatus{withDeclared(leader("master-0", false, 312), 400)}, "master-0", nil)
+	declared := Aggregate(passThroughSpec(), []registryv1alpha1.StorageReplicaStatus{withDeclared(leader("master-0", false, 312), 400)}, "master-0", nil, running())
 	require.NotNil(t, declared.Fill)
 	assert.EqualValues(t, 459, declared.Fill.Total)
 
@@ -302,7 +314,7 @@ func TestAggregateFillProgress(t *testing.T) {
 	noDenominator := Aggregate(
 		&registryv1alpha1.RegistryStorageSpec{Upstream: testUpstream("registry.deckhouse.io")},
 		[]registryv1alpha1.StorageReplicaStatus{leader("master-0", false, 312)},
-		"master-0", nil,
+		"master-0", nil, running(),
 	)
 	assert.Nil(t, noDenominator.Fill)
 }
@@ -349,9 +361,9 @@ func TestSafeToDropUpstreamWaitsForTheReferences(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, SafeToDropUpstream(tt.spec, tt.replicas, "master-0", tt.references))
+			assert.Equal(t, tt.want, SafeToDropUpstream(tt.spec, tt.replicas, "master-0", tt.references, running()))
 
-			got := Aggregate(tt.spec, tt.replicas, "master-0", tt.references)
+			got := Aggregate(tt.spec, tt.replicas, "master-0", tt.references, running())
 			assert.Equal(t, tt.want, got.SafeToDropUpstream, "the status reports the same gate")
 			if tt.spec.Upstream == nil {
 				assert.Nil(t, got.UpstreamReferences, "with no upstream there is no count to report")
@@ -450,6 +462,84 @@ func TestLeaderFull(t *testing.T) {
 			assert.Equal(t, tt.want, LeaderFull(tt.replicas, tt.holder))
 		})
 	}
+}
+
+// TestLeaderReportCurrent is defect 52 at the gate: a leader recreated on the same node takes its own
+// lease back at once, and until its new syncer reads the store its entry is the previous process's —
+// full over a store that may have been wiped with the pod. Only an entry stamped no earlier than the
+// syncer container running on the holder's node counts.
+func TestLeaderReportCurrent(t *testing.T) {
+	stamped := func(at *metav1.Time) []registryv1alpha1.StorageReplicaStatus {
+		entry := leader("master-0", true, 459)
+		entry.SyncerStartedAt = at
+		return []registryv1alpha1.StorageReplicaStatus{entry}
+	}
+	at := func(offset time.Duration) *metav1.Time {
+		stamp := metav1.NewTime(syncerStart.Add(offset))
+		return &stamp
+	}
+
+	tests := []struct {
+		name     string
+		replicas []registryv1alpha1.StorageReplicaStatus
+		holder   string
+		running  *metav1.Time
+		want     bool
+	}{
+		{name: "nobody holds the lease", replicas: stamped(running()), running: running(), want: false},
+		{
+			// No Ready pod on the holder's node, or one whose syncer is not running: no evidence.
+			name: "no syncer running on the holder's node", replicas: stamped(running()), holder: "master-0",
+			running: nil, want: false,
+		},
+		{
+			// Either a syncer that has not read its store yet, or one from before the field existed.
+			name: "no stamp", replicas: stamped(nil), holder: "master-0", running: running(), want: false,
+		},
+		{
+			name: "stamped by the previous process", replicas: stamped(at(-time.Minute)), holder: "master-0",
+			running: running(), want: false,
+		},
+		{
+			// The stamp is the process's start, which comes after its container's, but both are whole
+			// seconds and may fall into the same one.
+			name: "stamped in the second its container started", replicas: stamped(running()), holder: "master-0",
+			running: running(), want: true,
+		},
+		{
+			name: "stamped by the running process", replicas: stamped(at(3 * time.Second)), holder: "master-0",
+			running: running(), want: true,
+		},
+		{
+			name: "the holder has not reported", replicas: stamped(running()), holder: "master-1",
+			running: running(), want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, LeaderReportCurrent(tt.replicas, tt.holder, tt.running))
+		})
+	}
+}
+
+// TestSafeToDropUpstreamWantsTheRunningSyncersReport: the status reports the same gate the transition
+// is held on, so a full report from the previous process does not read as safe either.
+func TestSafeToDropUpstreamWantsTheRunningSyncersReport(t *testing.T) {
+	nothing := int32(0)
+	stale := leader("master-0", true, 459)
+	before := metav1.NewTime(syncerStart.Add(-time.Minute))
+	stale.SyncerStartedAt = &before
+	replicas := []registryv1alpha1.StorageReplicaStatus{stale}
+
+	assert.False(t, SafeToDropUpstream(passThroughSpec(), replicas, "master-0", &nothing, running()))
+	got := Aggregate(passThroughSpec(), replicas, "master-0", &nothing, running())
+	assert.False(t, got.SafeToDropUpstream)
+	assert.Equal(t, registryv1alpha1.StoragePhaseReady, got.Phase, "the phase is the leader's report, as before")
+
+	replicas[0].SyncerStartedAt = running()
+	assert.True(t, SafeToDropUpstream(passThroughSpec(), replicas, "master-0", &nothing, running()))
+	assert.True(t, Aggregate(passThroughSpec(), replicas, "master-0", &nothing, running()).SafeToDropUpstream)
 }
 
 func TestStoreWritable(t *testing.T) {

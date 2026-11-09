@@ -253,11 +253,36 @@ func TestComputeAirGapWaitsForTheLeader(t *testing.T) {
 		}
 	})
 
+	// Defect 52: a leader whose pod was recreated on the same node takes its own lease back at once,
+	// and its report is the previous process's until the new one reads its store — a wiped store
+	// included. Held on that, and on nothing else: the hold asks for no fill, since the report gives
+	// no reason to, and the nodes keep their fallback.
+	t.Run("the leader's full report is not the running syncer's", func(t *testing.T) {
+		got := Compute(Inputs{
+			Config:             config,
+			AppliedUpstream:    applied,
+			LeaderFull:         true,
+			LeaderCurrent:      false,
+			UpstreamReferences: ptr.To[int32](0),
+			Nodes:              []string{"master-0"},
+			StorageAccess:      testAccess(),
+		})
+
+		assert.False(t, got.DropUpstream, "a report the running syncer has not made cannot take the upstream away")
+		require.NotNil(t, got.HeldUpstream)
+		require.NotNil(t, got.Storage)
+		require.NotNil(t, got.Storage.Upstream)
+		assert.True(t, got.Storage.AirGapRequested, "the transition stays requested")
+		assert.Len(t, got.Nodes["master-0"].Backends, 2, "the nodes keep their fallback")
+		assert.False(t, got.Storage.NeedSync, "and nothing is asked to fill")
+	})
+
 	t.Run("the leader is full", func(t *testing.T) {
 		got := Compute(Inputs{
 			Config:             config,
 			AppliedUpstream:    applied,
 			LeaderFull:         true,
+			LeaderCurrent:      true,
 			UpstreamReferences: ptr.To[int32](0),
 			Nodes:              []string{"master-0", "worker-1"},
 			StorageAccess:      testAccess(),
@@ -465,6 +490,39 @@ func TestComputeAirGapFromScratch(t *testing.T) {
 	node := got.Nodes["master-0"]
 	require.Len(t, node.Backends, 1)
 	assert.Equal(t, registryv1alpha1.BackendStorage, node.Backends[0].Name)
+}
+
+// Every pass after the drop: the status no longer records an upstream, and the leader stays
+// full and current. Nothing is dropped any more, so DropUpstream is false, and the layout is the
+// air-gapped one it was. Without the gate on an upstream in effect the flag stayed true here, and
+// the reconciler logged the transition on every pass for as long as the cluster stayed air-gapped.
+func TestComputeAlreadyAirGappedIsNoTransition(t *testing.T) {
+	got := Compute(Inputs{
+		Config: registryv1alpha1.RegistryConfigSpec{
+			Mode:    registryv1alpha1.ModeManaged,
+			Storage: registryv1alpha1.StorageConfig{Cache: true, Size: "50Gi", Source: testSource()},
+		},
+		AppliedUpstream:    nil,
+		LeaderFull:         true,
+		LeaderCurrent:      true,
+		UpstreamReferences: ptr.To[int32](0),
+		Nodes:              []string{"master-0", "worker-1"},
+		StorageAccess:      testAccess(),
+	})
+
+	assert.False(t, got.DropUpstream, "there is no upstream left to drop")
+	assert.Nil(t, got.HeldUpstream)
+
+	require.NotNil(t, got.Storage)
+	assert.Nil(t, got.Storage.Upstream)
+	assert.True(t, got.Storage.AirGapRequested)
+	assert.False(t, got.Storage.NeedSync)
+
+	for _, name := range []string{"master-0", "worker-1"} {
+		node := got.Nodes[name]
+		require.Lenf(t, node.Backends, 1, "%s", name)
+		assert.Equalf(t, registryv1alpha1.BackendStorage, node.Backends[0].Name, "%s", name)
+	}
 }
 
 func TestComputeUnmanagedLaysOutNothing(t *testing.T) {

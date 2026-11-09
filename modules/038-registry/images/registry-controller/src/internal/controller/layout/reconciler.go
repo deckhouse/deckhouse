@@ -31,6 +31,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	coordinationv1 "k8s.io/api/coordination/v1"
@@ -86,6 +87,10 @@ const (
 	// collection, being the one the storage replicas run on.
 	masterNodeGroup = "master"
 
+	// syncerContainer is the storage pod's container that reports into RegistryStorage.status — see
+	// leaderSyncerStarted.
+	syncerContainer = "syncer"
+
 	// StorageLeaseName is the election lease the storage replicas take to decide which
 	// of them fills the cache, and the authority on which one leads.
 	//
@@ -132,6 +137,10 @@ type Reconciler struct {
 	// now is the clock the count is aged by. Left unset it is the real one.
 	now func() time.Time
 
+	// heldOnStaleReport is the lease holder whose stale report was last said to hold the upstream, so
+	// that it is said once per hold. See logHeldOnAStaleReport.
+	heldOnStaleReport atomic.Pointer[string]
+
 	// Prober verifies a changed primary upstream before the cluster is switched
 	// over to it. Injectable so the reconciliation is testable without a registry;
 	// left unset it defaults to the real one.
@@ -173,6 +182,39 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 	// does not read. Renewals change the lease every few seconds and say nothing new, so only a
 	// change of holder is let through.
 	w.Watches(&coordinationv1.Lease{}, toSingleton, builder.WithPredicates(storageLeaseHolderChanged()))
+	// The storage pods, for when the syncer on the leader's node started: without them a restart of
+	// that syncer reaches status.safeToDropUpstream only with the next pass for another reason, and
+	// the field keeps saying true on the previous process's report. Only what leaderSyncerStarted
+	// reads is let through, not every status update of the pod.
+	w.Watches(&corev1.Pod{}, toSingleton, builder.WithPredicates(storagePodSyncerChanged()))
+}
+
+// storagePodSyncerChanged lets through a storage pod being created or deleted, and a change in what
+// leaderSyncerStarted reads from it: its node, its deletion, and when its syncer started while Ready.
+func storagePodSyncerChanged() predicate.Predicate {
+	isStorage := func(object client.Object) bool {
+		return object.GetNamespace() == Namespace && object.GetLabels()["app"] == storeAppLabel
+	}
+	changed := func(previous, current client.Object) bool {
+		oldPod, okOld := previous.(*corev1.Pod)
+		newPod, okNew := current.(*corev1.Pod)
+		if !okOld || !okNew {
+			return false
+		}
+		oldStarted, newStarted := syncerStarted(oldPod), syncerStarted(newPod)
+		return oldPod.Spec.NodeName != newPod.Spec.NodeName ||
+			(oldPod.DeletionTimestamp == nil) != (newPod.DeletionTimestamp == nil) ||
+			(oldStarted == nil) != (newStarted == nil) ||
+			(oldStarted != nil && !oldStarted.Equal(newStarted))
+	}
+	return predicate.Funcs{
+		CreateFunc:  func(e event.CreateEvent) bool { return isStorage(e.Object) },
+		DeleteFunc:  func(e event.DeleteEvent) bool { return isStorage(e.Object) },
+		GenericFunc: func(event.GenericEvent) bool { return false },
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return isStorage(e.ObjectNew) && changed(e.ObjectOld, e.ObjectNew)
+		},
+	}
 }
 
 // storageLeaseHolderChanged lets through the storage lease being created, deleted, or changing hands.
@@ -240,7 +282,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	desired := layout.Compute(inputs)
 
 	if desired.DropUpstream {
-		log.Info("the storage leader holds the expected set; dropping the upstream and going air-gap")
+		// Logged once per transition: DropUpstream is set only while an upstream is still in
+		// effect, which with air-gap configured is the applied one, so the line names what is cut.
+		var dropped string
+		if inputs.AppliedUpstream != nil {
+			dropped = inputs.AppliedUpstream.Host
+		}
+		log.Info("the storage leader holds the expected set; dropping the upstream and going air-gap",
+			"upstream", dropped)
 	}
 
 	// The one transition in the design that can cut every node off from images, and the
@@ -578,6 +627,8 @@ func (r *Reconciler) collectInputs(
 	case err == nil:
 		leaseHolder = r.storageLeaseHolder(ctx)
 		inputs.LeaderFull = layout.LeaderFull(storage.Status.Replicas, leaseHolder)
+		inputs.LeaderCurrent = layout.LeaderReportCurrent(
+			storage.Status.Replicas, leaseHolder, r.leaderSyncerStarted(ctx, leaseHolder))
 		// Kept for the storage access below, which is assembled later in this function and would
 		// otherwise overwrite it.
 		leaderAddress = layout.LeaderAddress(storage.Status.Replicas, leaseHolder)
@@ -588,6 +639,7 @@ func (r *Reconciler) collectInputs(
 			inputs.AppliedUpstream = storage.Spec.Upstream
 		}
 		inputs.UpstreamReferences = r.upstreamReferences(ctx, cfg, inputs.AppliedUpstream, inputs.LeaderFull)
+		r.logHeldOnAStaleReport(ctx, cfg, inputs, storage.Status.Replicas, leaseHolder)
 	case apierrors.IsNotFound(err):
 		inputs.NothingApplied = cfg.Status.EffectiveUpstream == nil
 	default:
@@ -700,6 +752,116 @@ func (r *Reconciler) storageLeaseHolder(ctx context.Context) string {
 		return ""
 	}
 	return *lease.Spec.HolderIdentity
+}
+
+// logHeldOnAStaleReport says, once per hold, that the upstream is held for nothing but the leader's
+// report not being the running syncer's — see layout.LeaderReportCurrent. Nothing else in any object
+// says so: the leader reads full and nothing names the upstream. The hold ends with the report that
+// stamps it, which wakes this controller, or is looked at again on the referenceScanInterval requeue
+// while the pod is not Ready.
+//
+// A report with no stamp at all is said apart, because it has a second cause that does not settle on
+// its own: a syncer from before the stamp existed, on the leader during a module update. The
+// storage-update controller replaces the leader last, and not while any replica is missing or not
+// serving, so that hold lasts until the leader's pod runs the new syncer — or until someone deletes
+// that pod, which is safe while the upstream is held.
+func (r *Reconciler) logHeldOnAStaleReport(
+	ctx context.Context, cfg *registryv1alpha1.RegistryConfig, inputs layout.Inputs,
+	replicas []registryv1alpha1.StorageReplicaStatus, holder string,
+) {
+	// UpstreamReferences is counted only while the leader is full and an upstream is held.
+	held := cfg.Spec.Primary.Upstream == nil && inputs.LeaderFull && !inputs.LeaderCurrent &&
+		inputs.UpstreamReferences != nil && *inputs.UpstreamReferences == 0
+	if !held {
+		r.heldOnStaleReport.Store(nil)
+		return
+	}
+	if last := r.heldOnStaleReport.Load(); last != nil && *last == holder {
+		return
+	}
+	r.heldOnStaleReport.Store(&holder)
+	for i := range replicas {
+		if replicas[i].Node == holder && replicas[i].SyncerStartedAt == nil {
+			ctrl.LoggerFrom(ctx).Info("the upstream is held: the storage leader's report has no syncerStartedAt; "+
+				"its syncer has not read its store since it started, or predates that field and stamps nothing "+
+				"until its pod is replaced", "leader", holder)
+			return
+		}
+	}
+	ctrl.LoggerFrom(ctx).Info("the upstream is held: the storage leader's report predates the syncer running "+
+		"on its node, or that syncer's pod is not Ready; waiting for it to read its store", "leader", holder)
+}
+
+// leaderSyncerStarted is when the syncer container started in the storage pod on the lease holder's
+// node, or nil when no pod there can say: none, more than one, one that is not Ready, or one whose
+// syncer is not running. Nil holds the upstream — see layout.LeaderReportCurrent.
+//
+// Read from the cache, as the lease is. A pod lags its container by the kubelet's report and the
+// informer's, a second or two in which a container that has just died still reads as running; the
+// report accepted then is the one its process wrote about a store it had in hand.
+//
+// The identity in the lease is the node name, which is the pod's spec.nodeName — see NODE_NAME in the
+// StatefulSet. A pod on its way out is not counted: beside it, its replacement is the one that will
+// run there.
+func (r *Reconciler) leaderSyncerStarted(ctx context.Context, holder string) *metav1.Time {
+	if holder == "" {
+		return nil
+	}
+	pods := &corev1.PodList{}
+	if err := r.Client.List(ctx, pods,
+		client.InNamespace(Namespace), client.MatchingLabels{"app": storeAppLabel}); err != nil {
+		ctrl.LoggerFrom(ctx).Error(err, "cannot list the storage pods; the upstream is held until they can be read")
+		return nil
+	}
+
+	var leader *corev1.Pod
+	for i := range pods.Items {
+		pod := &pods.Items[i]
+		if pod.Spec.NodeName != holder || pod.DeletionTimestamp != nil {
+			continue
+		}
+		if leader != nil {
+			return nil
+		}
+		leader = pod
+	}
+	if leader == nil {
+		return nil
+	}
+	return syncerStarted(leader)
+}
+
+// syncerStarted is when the pod's syncer container started, or nil when the pod is not Ready or its
+// syncer is not running.
+func syncerStarted(pod *corev1.Pod) *metav1.Time {
+	if !podReady(pod) {
+		return nil
+	}
+	for i := range pod.Status.ContainerStatuses {
+		status := &pod.Status.ContainerStatuses[i]
+		if status.Name != syncerContainer {
+			continue
+		}
+		if status.State.Running == nil || status.State.Running.StartedAt.IsZero() {
+			return nil
+		}
+		started := status.State.Running.StartedAt
+		return &started
+	}
+	return nil
+}
+
+// podReady reports whether the pod is running and its Ready condition is true.
+func podReady(pod *corev1.Pod) bool {
+	if pod.Status.Phase != corev1.PodRunning {
+		return false
+	}
+	for i := range pod.Status.Conditions {
+		if pod.Status.Conditions[i].Type == corev1.PodReady {
+			return pod.Status.Conditions[i].Status == corev1.ConditionTrue
+		}
+	}
+	return false
 }
 
 // maintenanceWindows reads the disruption windows of the master node group.
@@ -897,8 +1059,9 @@ func (r *Reconciler) patchStorageStatus(
 	// the cluster actually holds, and agrees with it.
 	patch := client.MergeFromWithOptions(storage.DeepCopy(), client.MergeFromWithOptimisticLock{})
 
+	holder := r.storageLeaseHolder(ctx)
 	aggregate := layout.Aggregate(
-		&storage.Spec, storage.Status.Replicas, r.storageLeaseHolder(ctx), upstreamReferences,
+		&storage.Spec, storage.Status.Replicas, holder, upstreamReferences, r.leaderSyncerStarted(ctx, holder),
 	)
 	aggregate.ObservedGeneration = storage.Generation
 	// Conditions are merged rather than replaced, so an entry another writer owns

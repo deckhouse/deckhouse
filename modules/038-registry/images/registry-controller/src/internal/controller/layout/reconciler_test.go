@@ -19,6 +19,7 @@ package layout
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -33,9 +34,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/klog/v2/ktesting"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
@@ -79,6 +83,38 @@ func storageLease(holder string) *coordinationv1.Lease {
 	return &coordinationv1.Lease{
 		ObjectMeta: metav1.ObjectMeta{Namespace: Namespace, Name: StorageLeaseName},
 		Spec:       coordinationv1.LeaseSpec{HolderIdentity: &holder},
+	}
+}
+
+// syncerStart is when the syncer in the leader's pod started, in these tests.
+var syncerStart = metav1.NewTime(time.Date(2026, 10, 30, 9, 0, 0, 0, time.UTC))
+
+// stamp is a report's SyncerStartedAt: the start of the process that wrote it, after reading its store.
+func stamp(at metav1.Time) *metav1.Time { return &at }
+
+// storagePod is the storage replica on a node: Ready, its syncer running since started. The controller
+// reads it for when the syncer on the lease holder's node started — see leaderSyncerStarted.
+func storagePod(name, nodeName string, started metav1.Time) *corev1.Pod {
+	return &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: Namespace, Name: name, Labels: map[string]string{"app": storeAppLabel},
+		},
+		Spec: corev1.PodSpec{
+			NodeName:   nodeName,
+			Containers: []corev1.Container{{Name: "distribution"}, {Name: syncerContainer}},
+		},
+		Status: corev1.PodStatus{
+			Phase:      corev1.PodRunning,
+			Conditions: []corev1.PodCondition{{Type: corev1.PodReady, Status: corev1.ConditionTrue}},
+			ContainerStatuses: []corev1.ContainerStatus{
+				{Name: "distribution", State: corev1.ContainerState{
+					Running: &corev1.ContainerStateRunning{StartedAt: started},
+				}},
+				{Name: syncerContainer, State: corev1.ContainerState{
+					Running: &corev1.ContainerStateRunning{StartedAt: started},
+				}},
+			},
+		},
 	}
 }
 
@@ -298,7 +334,8 @@ func TestReconcileAirGapTransition(t *testing.T) {
 
 	// The lease is part of the cluster this walks through: a replica reporting itself as
 	// leader is not what makes it one.
-	r, c := newReconciler(t, cfg, accessSecret(), node("master-0"), storageLease("master-0"))
+	r, c := newReconciler(t, cfg, accessSecret(), node("master-0"), storageLease("master-0"),
+		storagePod("registry-storage-0", "master-0", syncerStart))
 	ctx := context.Background()
 	runReconcile(t, r)
 
@@ -334,9 +371,10 @@ func TestReconcileAirGapTransition(t *testing.T) {
 	assert.EqualValues(t, 312, storage.Status.Fill.Filled)
 	assert.EqualValues(t, 459, storage.Status.Fill.Total)
 
-	// The leader reports it is complete.
+	// The leader reports it is complete, as the syncer running on its node found it.
 	storage.Status.Replicas = []registryv1alpha1.StorageReplicaStatus{
-		{Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, VerifiedDigests: 459},
+		{Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, VerifiedDigests: 459,
+			SyncerStartedAt: stamp(syncerStart)},
 	}
 	require.NoError(t, c.Status().Update(ctx, storage))
 
@@ -358,6 +396,72 @@ func TestReconcileAirGapTransition(t *testing.T) {
 	layoutObj := listNodes(t, c)["master-0"]
 	require.Len(t, layoutObj.Spec.Backends, 1)
 	assert.Equal(t, registryv1alpha1.BackendStorage, layoutObj.Spec.Backends[0].Name)
+}
+
+// TestReconcileLogsTheAirGapDropOnce pins the transition as an edge. On a stand the line was logged
+// every 15-45 s for as long as the cluster stayed air-gapped: the flag behind it was computed from
+// the leader being full, which it stays, and from the upstream references being clear, which they
+// trivially are once no upstream is in effect. The pass that drops the upstream logs it, naming the
+// upstream it cuts; the passes after the drop is recorded log nothing, and neither does a restarted
+// controller, which reads the same status.
+func TestReconcileLogsTheAirGapDropOnce(t *testing.T) {
+	cfg := registryConfig(registryv1alpha1.RegistryConfigSpec{
+		Mode:    registryv1alpha1.ModeManaged,
+		Storage: registryv1alpha1.StorageConfig{Cache: true, Size: "50Gi", Source: source()},
+	})
+	// Air-gap requested over a cache that still holds the upstream, with the leader full as the
+	// syncer running on its node now reports it.
+	storage := &registryv1alpha1.RegistryStorage{
+		ObjectMeta: metav1.ObjectMeta{Name: registryv1alpha1.SingletonName},
+		Spec:       registryv1alpha1.RegistryStorageSpec{Upstream: upstream("registry.deckhouse.io")},
+		Status: registryv1alpha1.RegistryStorageStatus{
+			Replicas: []registryv1alpha1.StorageReplicaStatus{{
+				Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, VerifiedDigests: 459,
+				SyncerStartedAt: stamp(syncerStart),
+			}},
+		},
+	}
+	r, c := newReconciler(t, cfg, accessSecret(), storage, node("master-0"), storageLease("master-0"),
+		storagePod("registry-storage-0", "master-0", syncerStart))
+
+	logger := ktesting.NewLogger(t, ktesting.NewConfig(ktesting.BufferLogs(true)))
+	ctx := ctrl.LoggerInto(context.Background(), logger)
+	reconcile := func() {
+		t.Helper()
+		_, err := r.Reconcile(ctx, ctrl.Request{
+			NamespacedName: types.NamespacedName{Name: registryv1alpha1.SingletonName},
+		})
+		require.NoError(t, err)
+	}
+	drops := func() []string {
+		var lines []string
+		for _, line := range strings.Split(logger.GetSink().(ktesting.Underlier).GetBuffer().String(), "\n") {
+			if strings.Contains(line, "dropping the upstream and going air-gap") {
+				lines = append(lines, line)
+			}
+		}
+		return lines
+	}
+
+	reconcile()
+	require.Nil(t, getStorage(t, c).Spec.Upstream, "the leader is full, so this pass drops the upstream")
+	lines := drops()
+	require.Len(t, lines, 1, "the transition is logged on the pass that makes it")
+	assert.Contains(t, lines[0], "registry.deckhouse.io", "and names the upstream it cuts")
+
+	// The leader stays full and current; the drop is now recorded in the status.
+	reconcile()
+	reconcile()
+	assert.Len(t, drops(), 1, "an air-gapped cluster is not dropping its upstream again on every pass")
+
+	// A restarted controller: nothing in memory, the same objects.
+	r = &Reconciler{Prober: &stubProber{}}
+	r.InjectClient(c)
+	r.InjectAPIReader(c)
+	reconcile()
+	assert.Len(t, drops(), 1, "nor does a controller that starts on an air-gapped cluster")
+	assert.Nil(t, getStorage(t, c).Spec.Upstream)
+	assert.Len(t, listNodes(t, c)["master-0"].Spec.Backends, 1, "and the layout stays air-gapped")
 }
 
 // TestReconcileKeepsTheUpstreamWhenTheLeaderFails is the failure counterpart: a
@@ -432,6 +536,185 @@ func TestReconcileIgnoresTheClaimOfAReplicaThatNoLongerLeads(t *testing.T) {
 
 	// And the nodes keep the upstream as a fallback, which is the half a node feels.
 	assert.Len(t, listNodes(t, c)["master-1"].Spec.Backends, 2)
+}
+
+// restartedLeader is defect 52 as the controller meets it: air-gap is asked for, nothing names the
+// upstream, master-0 holds the lease and its entry says full — stamped by a syncer that started at
+// syncerStart. Its pod on master-0, created by the test, runs a syncer started five minutes later — the
+// time returned: the pod was recreated, and the new process has not read its store yet, which may have
+// been wiped with the pod.
+func restartedLeader(t *testing.T) (*Reconciler, client.Client, metav1.Time) {
+	t.Helper()
+
+	cfg := registryConfig(registryv1alpha1.RegistryConfigSpec{
+		Mode:    registryv1alpha1.ModeManaged,
+		Storage: registryv1alpha1.StorageConfig{Cache: true, Source: source()},
+	})
+	storage := &registryv1alpha1.RegistryStorage{
+		ObjectMeta: metav1.ObjectMeta{Name: registryv1alpha1.SingletonName},
+		Spec:       registryv1alpha1.RegistryStorageSpec{Upstream: upstream("registry.deckhouse.io")},
+		Status: registryv1alpha1.RegistryStorageStatus{
+			Replicas: []registryv1alpha1.StorageReplicaStatus{
+				{Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, VerifiedDigests: 459,
+					SyncerStartedAt: stamp(syncerStart)},
+				{Node: "master-1", Role: registryv1alpha1.ReplicaRoleFollower, Full: true, VerifiedDigests: 459,
+					Source: "master-0", SyncerStartedAt: stamp(syncerStart)},
+			},
+		},
+	}
+	restarted := metav1.NewTime(syncerStart.Add(5 * time.Minute))
+
+	r, c := newReconciler(t, cfg, accessSecret(), storage, node("master-0"), node("master-1"), storageLease("master-0"))
+	return r, c, restarted
+}
+
+func reconcileResult(t *testing.T, r *Reconciler) ctrl.Result {
+	t.Helper()
+
+	result, err := r.Reconcile(context.Background(), ctrl.Request{
+		NamespacedName: types.NamespacedName{Name: registryv1alpha1.SingletonName},
+	})
+	require.NoError(t, err)
+	return result
+}
+
+// TestReconcileHoldsTheUpstreamOnAReportThePreviousSyncerMade: the restarted leader's entry is the
+// previous process's until the new one reads its store, and the upstream is held on it — through the pod
+// being away, not Ready or replaced — without asking for a fill. Once the running syncer stamps its
+// report, the transition goes ahead.
+func TestReconcileHoldsTheUpstreamOnAReportThePreviousSyncerMade(t *testing.T) {
+	r, c, restarted := restartedLeader(t)
+	ctx := context.Background()
+	pod := storagePod("registry-storage-0", "master-0", restarted)
+	require.NoError(t, c.Create(ctx, pod))
+
+	held := func(t *testing.T, why string) {
+		t.Helper()
+		result := reconcileResult(t, r)
+
+		storage := getStorage(t, c)
+		require.NotNilf(t, storage.Spec.Upstream, "%s: the upstream is held", why)
+		assert.Falsef(t, storage.Status.SafeToDropUpstream, "%s: and the status does not call it safe", why)
+		assert.Falsef(t, storage.Spec.NeedSync, "%s: a report not yet checked is no reason to fill", why)
+		assert.Lenf(t, listNodes(t, c)["master-0"].Spec.Backends, 2, "%s: the nodes keep their fallback", why)
+		assert.Equalf(t, referenceScanInterval, result.RequeueAfter,
+			"%s: asked again, since nothing watched here says when the pod is Ready", why)
+	}
+
+	held(t, "the running syncer has not read its store")
+
+	// The pod goes away; the lease still names master-0.
+	require.NoError(t, c.Delete(ctx, pod))
+	held(t, "no pod on the holder's node")
+
+	// The rest is about the pod alone: its syncer is the one that stamped the report, which would count
+	// were the pod there to vouch for it.
+	notReady := storagePod("registry-storage-0", "master-0", syncerStart)
+	notReady.Status.Conditions[0].Status = corev1.ConditionFalse
+	require.NoError(t, c.Create(ctx, notReady))
+	held(t, "the pod is not Ready")
+	require.NoError(t, c.Delete(ctx, notReady))
+
+	leaving := storagePod("registry-storage-0", "master-0", syncerStart)
+	leaving.Finalizers = []string{"test.deckhouse.io/hold"}
+	require.NoError(t, c.Create(ctx, leaving))
+	require.NoError(t, c.Delete(ctx, leaving))
+	held(t, "the pod is terminating")
+
+	pending := storagePod("registry-storage-0-next", "master-0", restarted)
+	pending.Status.Phase = corev1.PodPending
+	pending.Status.Conditions = nil
+	pending.Status.ContainerStatuses = nil
+	require.NoError(t, c.Create(ctx, pending))
+	held(t, "a terminating pod beside its Pending replacement")
+
+	require.NoError(t, c.Get(ctx, client.ObjectKeyFromObject(leaving), leaving))
+	require.NotNil(t, leaving.DeletionTimestamp, "the old pod is terminating")
+	leaving.Finalizers = nil
+	require.NoError(t, c.Update(ctx, leaving))
+	require.NoError(t, c.Delete(ctx, pending))
+
+	// The pod is Ready again, its syncer the restarted one, and that syncer reads its store.
+	require.NoError(t, c.Create(ctx, storagePod("registry-storage-0", "master-0", restarted)))
+	held(t, "Ready, and the report still the previous process's")
+
+	storage := getStorage(t, c)
+	storage.Status.Replicas[0].SyncerStartedAt = stamp(restarted)
+	require.NoError(t, c.Status().Update(ctx, storage))
+	runReconcile(t, r)
+
+	storage = getStorage(t, c)
+	assert.Nil(t, storage.Spec.Upstream, "the running syncer found the store full, so the upstream goes")
+	assert.True(t, storage.Status.SafeToDropUpstream)
+	assert.Len(t, listNodes(t, c)["master-0"].Spec.Backends, 1)
+}
+
+// TestReconcileHoldsTheUpstreamWhenThePodsCannotBeRead: no evidence is no permission, and no failure
+// either — the layout is still applied.
+func TestReconcileHoldsTheUpstreamWhenThePodsCannotBeRead(t *testing.T) {
+	r, c, restarted := restartedLeader(t)
+	ctx := context.Background()
+
+	// The report is the running syncer's: the pod list is the only thing missing.
+	require.NoError(t, c.Create(ctx, storagePod("registry-storage-0", "master-0", restarted)))
+	storage := getStorage(t, c)
+	storage.Status.Replicas[0].SyncerStartedAt = stamp(restarted)
+	require.NoError(t, c.Status().Update(ctx, storage))
+
+	r.InjectClient(interceptor.NewClient(c.(client.WithWatch), interceptor.Funcs{
+		List: func(ctx context.Context, cl client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+			if _, pods := list.(*corev1.PodList); pods {
+				return errors.New("the cache is not synced")
+			}
+			return cl.List(ctx, list, opts...)
+		},
+	}))
+	runReconcile(t, r)
+
+	storage = getStorage(t, c)
+	require.NotNil(t, storage.Spec.Upstream)
+	assert.False(t, storage.Status.SafeToDropUpstream)
+	assert.Len(t, listNodes(t, c)["master-0"].Spec.Backends, 2)
+}
+
+// TestARestartedSyncerWakesTheReconciler: safeToDropUpstream is computed on reconcile, and a stand
+// read it true for about 15 s after the leader's syncer restarted, on the previous process's report.
+// The pods' other status updates (probes, other containers) say nothing leaderSyncerStarted reads.
+func TestARestartedSyncerWakesTheReconciler(t *testing.T) {
+	filter := storagePodSyncerChanged()
+	update := func(change func(pod *corev1.Pod)) bool {
+		previous := storagePod("registry-storage-0", "master-0", syncerStart)
+		current := previous.DeepCopy()
+		change(current)
+		return filter.Update(event.UpdateEvent{ObjectOld: previous, ObjectNew: current})
+	}
+
+	assert.True(t, update(func(pod *corev1.Pod) {
+		pod.Status.ContainerStatuses[1].State.Running.StartedAt = metav1.NewTime(syncerStart.Add(time.Minute))
+	}), "the syncer restarted")
+	assert.True(t, update(func(pod *corev1.Pod) {
+		pod.Status.ContainerStatuses[1].State = corev1.ContainerState{
+			Waiting: &corev1.ContainerStateWaiting{Reason: "CrashLoopBackOff"},
+		}
+	}), "the syncer stopped")
+	assert.True(t, update(func(pod *corev1.Pod) {
+		pod.Status.Conditions[0].Status = corev1.ConditionFalse
+	}), "the pod is no longer Ready")
+	assert.True(t, update(func(pod *corev1.Pod) {
+		pod.DeletionTimestamp = &syncerStart
+	}), "the pod is on its way out")
+	assert.False(t, update(func(pod *corev1.Pod) {
+		pod.Status.ContainerStatuses[0].State.Running.StartedAt = metav1.NewTime(syncerStart.Add(time.Minute))
+	}), "another container restarted")
+	assert.False(t, update(func(pod *corev1.Pod) {
+		pod.Status.PodIP = "10.0.0.1"
+	}), "nothing the controller reads")
+
+	other := storagePod("registry-controller-0", "master-0", syncerStart)
+	other.Labels = map[string]string{"app": "registry-controller"}
+	assert.False(t, filter.Create(event.CreateEvent{Object: other}), "somebody else's pod")
+	assert.True(t, filter.Create(event.CreateEvent{Object: storagePod("registry-storage-0", "master-0", syncerStart)}))
+	assert.True(t, filter.Delete(event.DeleteEvent{Object: storagePod("registry-storage-0", "master-0", syncerStart)}))
 }
 
 func TestReconcileSkipsAnInvalidConfig(t *testing.T) {

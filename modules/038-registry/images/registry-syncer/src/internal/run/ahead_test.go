@@ -53,10 +53,11 @@ func TestAnAirGappedLeaderDoesNotHoldTheCollectionBack(t *testing.T) {
 	assert.False(t, loop.OwesCopy(), "but with nothing to copy from, it holds no collection back")
 }
 
-// TestAnIdlePassEndsASilence: the registry's silence is timed across the passes that wanted it. One
-// that wanted nothing ends the series, so that a silence days old does not make the next ordinary
-// restart of the registry an error at once.
-func TestAnIdlePassEndsASilence(t *testing.T) {
+// TestAnIdlePassDoesNotEndASilence: the registry's silence is timed across everything that wanted
+// it, and a pass that wants nothing no longer ends it. It used to, and that hid the silence of a leader
+// with nothing to copy — reporting itself full, keeping the lease, while its registry answered nobody.
+// What ends a silence now is the registry answering: see TestASilenceEndsWhenTheRegistryAnswers.
+func TestAnIdlePassDoesNotEndASilence(t *testing.T) {
 	set := SetKey(gc.Releases{Deployed: "v1.76.6"}, nil, nil)
 	storage := storageWith(registryv1alpha1.RegistryStorageSpec{})
 	storage.Status.Replicas = []registryv1alpha1.StorageReplicaStatus{
@@ -71,10 +72,11 @@ func TestAnIdlePassEndsASilence(t *testing.T) {
 	loop.Client = c
 	loop.Publisher = &report.Publisher{Client: c}
 	loop.lastStoreCheck.Store(time.Now().UnixNano())
-	loop.registryDownSince.Store(time.Now().Add(-72 * time.Hour).UnixNano())
+	silent := time.Now().Add(-72 * time.Hour).UnixNano()
+	loop.registryDownSince.Store(silent)
 
 	require.NoError(t, loop.once(context.Background()))
-	assert.Zero(t, loop.registryDownSince.Load())
+	assert.Equal(t, silent, loop.registryDownSince.Load())
 }
 
 // TestACopyAheadStopsWhenItsSourceIsNoLongerThis: started under one arrangement — a role, a leader, an

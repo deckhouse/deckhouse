@@ -298,6 +298,8 @@ spec:
                     Deliberately the leader alone and not every replica: followers are filled ahead of time and in parallel, so waiting for all of them would delay the transition without adding safety.
 
                     A full cache does not make up for a remaining reference: an image reference that names the upstream by its own name is not answered by the cache once the upstream is gone. For details, see `upstreamReferences`.
+
+                    The leader's `full` counts only when the syncer running on its node now wrote it, after reading its own store (see `replicas[].syncerStartedAt`). After the leader's syncer restarts, this stays `false` until its first pass, normally within two minutes.
                 upstreamReferences:
                   type: integer
                   format: int32
@@ -381,7 +383,7 @@ spec:
                         description: |
                           Where this replica answers, as `host:port`.
 
-                          Reported by the replica itself so that a follower can replicate from the leader without resolving a node name into an address, and without the syncers needing to read Node objects at all.
+                          Reported by the replica itself so that a follower can replicate from the leader without resolving a node name into an address.
                       source:
                         type: string
                         description: |
@@ -399,12 +401,29 @@ spec:
                           Why the last attempt to reclaim did not finish, empty when it did.
 
                           Separate from `error`, which is about filling. A store that cannot be reclaimed still serves every image it holds, so the two say different things about how worried to be.
+                      syncerStartedAt:
+                        type: string
+                        format: date-time
+                        description: |
+                          When the syncer process that wrote this entry started, to the second. Set only once that process has itself counted, copied into or rechecked its store; absent before.
+
+                          An entry outlives the process that wrote it. A leader whose pod is recreated on the same node takes the lease back at once, and until the new process reads its store, its entry still says what the previous process found, `full` included, even if the store was wiped with the pod. So the upstream is dropped only on a lease holder's entry stamped no earlier than the start of the `syncer` container running in its Ready pod. Both times come from the clock of that node.
                       error:
                         type: string
                         description: |
                           Why the last fill or verification task failed, as reported by this replica's syncer. Empty when the last task succeeded.
 
+                          While the last task did not fail, it also carries what `healthError` reports.
+
                           Safety does not depend on this field: a failed replica is simply not `full`, and the upstream is only ever dropped once the leader **is** full. It exists so that an operator can tell "still filling" from "broken", which the fill counters alone cannot express.
+                      healthError:
+                        type: string
+                        description: |
+                          Why this replica cannot serve what it holds: its registry has not answered for five minutes, or its store has refused writes for two. Empty while both work.
+
+                          The syncer checks both every half a minute on its own, whatever the fill is doing, and clears the error once the registry answers and the store accepts writes again; `full` is left as it was and counts again from then on. A leader reporting it hands the lease over to a replica that holds the whole expected set, if there is one; otherwise it keeps the lease and only reports the error.
+
+                          While no replica holds the whole set and none leads, the replicas' syncers choose among themselves which one leads and begins filling: the one that holds the most. They skip a replica reporting this error. They also skip one whose store is at its budget or at the node's reserve (`store.writable` is `false`), unless every replica's store is. An `error` alone, such as a failed copy from a leader that is gone, does not keep a replica from being chosen.
                       verifiedSet:
                         type: string
                         description: |

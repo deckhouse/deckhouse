@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"net/http"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -70,6 +71,18 @@ type Loop struct {
 	// Leadership decides which work this replica does.
 	Leadership Leadership
 
+	// Present is the election's view of which reports still stand: those of replicas whose pod and node
+	// are there. Nil keeps every report. See currentLeader.
+	Present func(ctx context.Context, replicas []registryv1alpha1.StorageReplicaStatus) []registryv1alpha1.StorageReplicaStatus
+
+	// ReadLease is what the storage lease says about who leads. Nil means unknown, and the reported
+	// roles decide who a follower copies from — see LeaderOf.
+	ReadLease func(ctx context.Context) Lease
+
+	// ArrangementEvery is how often a copy under way checks that the arrangement it started under still
+	// holds. Zero means arrangementEvery. See whileArranged.
+	ArrangementEvery time.Duration
+
 	// LocalAddress is where this replica's own registry answers, used for the
 	// catalogue read and as the destination of a fill.
 	LocalAddress string
@@ -103,6 +116,11 @@ type Loop struct {
 	LocalCA                  string
 	LocalUser, LocalPassword string
 
+	// LocalTransport builds the transport to this replica's own registry. Nil means fill.Transport
+	// with LocalCA. A field so that a test can give the registry a listener that asks more of a client
+	// than a CA; see localTransport.
+	LocalTransport func() (*http.Transport, error)
+
 	// Metrics is what this replica reports about its own work. Optional: nothing about
 	// filling a cache should depend on whether anyone is watching.
 	Metrics *metrics.Metrics
@@ -121,12 +139,14 @@ type Loop struct {
 	aheadScope  string
 	// aheadHeld is the parts of what is ahead of the set a copy here left whole — see AheadKey;
 	// aheadMissedFor the parts the last copy was for and missed something of, and when — see aheadRetry.
-	// aheadForgotten: the collection took what is ahead of the set back, so what this replica reported
-	// before no longer stands — see ForgetAhead.
+	// aheadForgotten: what is ahead of the set was taken back, by the collection or with a store found
+	// short, so what this replica reported before no longer stands — see ForgetAhead; aheadForgets counts
+	// the times it was, so that a copy started before does not put back what it held.
 	aheadHeld      map[string]bool
 	aheadMissedFor string
 	aheadMissedAt  time.Time
 	aheadForgotten bool
+	aheadForgets   uint64
 	aheadRunning   atomic.Bool
 
 	// writes serialises this replica's own writes to the cache against the garbage collection.
@@ -143,6 +163,27 @@ type Loop struct {
 	survey      fill.Survey
 	surveyedAt  time.Time
 	surveyedFor int
+
+	// surveyStale is whether the last survey is not to be answered from, however fresh: a step-down or a
+	// take-back found the store short of what it said — see StepDown and TakeBackFull — and the pass that
+	// ends either must say what the store holds now. A flag rather than surveyMu, which a walk holds for
+	// as long as the walk takes, and which the review, under reportMu, must not wait on.
+	//
+	// Set as well where the store has changed, or is about to be judged, since the last walk: after a
+	// fill or a replication copied into it, so that reportHeld counts what the copy left rather than a
+	// walk from before it, and so that a pass whose reportHeld failed — its numbers then the branch's own
+	// — has its total taken fresh too, and an idle pass does not refute those numbers with a walk from
+	// before the copy (see refutedByCount); and on the first pass that sees air-gap requested — see
+	// airGapSeen.
+	surveyStale atomic.Bool
+
+	// airGapSeen is whether the last pass saw spec.airGapRequested. The pass that first sees it sets
+	// surveyStale, so the transition's recount — which runs on every pass from then on, and on whose
+	// Full the controller drops the upstream — walks the disk rather than answer from a survey up to a
+	// minute old, taken perhaps before the store was lost. Narrows the window and does not close it: the
+	// controller can drop the upstream in the very reconcile that requests the transition, on the report
+	// the leader made before it.
+	airGapSeen atomic.Bool
 
 	// The last declared set and when it was read. See declaredSet.
 	declaredMu  sync.Mutex
@@ -194,6 +235,16 @@ type Loop struct {
 	// started is when Run began, and the zero time — which is long ago — outside it.
 	started time.Time
 
+	// storeRead is whether this process has published a report it read off its own store: a copy into
+	// it, a count of it, or a recheck that read it. From then on its reports carry started as
+	// SyncerStartedAt — the passes after it carry that reading over, and dropping the stamp on them
+	// would make the status flap — and before then they carry none. The controller drops the upstream
+	// only on a lease holder's entry stamped no earlier than its syncer container started, so a Full
+	// left by the previous process — over a store wiped with the pod, say — cannot do it. Not set by a
+	// publish alone: a first recheck that failed, its upstream not answering, publishes the Full the
+	// previous process left.
+	storeRead atomic.Bool
+
 	// RegistryWait is how long a pass waits for this replica's registry to listen before it leaves
 	// the copy to the next pass. Zero means localRegistryWait.
 	RegistryWait time.Duration
@@ -210,8 +261,12 @@ type Loop struct {
 	// lastStoreCheck is when recheckStore last read the store, in Unix nanoseconds.
 	lastStoreCheck atomic.Int64
 
-	// registryDownSince is when this replica's registry was first found not listening, in Unix
-	// nanoseconds, and zero while it listens. See registryDownReported.
+	// registryDownSince is when this replica's registry was first found not answering, in Unix
+	// nanoseconds, and zero while it answers. See registryDownReported.
+	//
+	// Started by whichever looks first — a pass waiting to copy, or the health watch — and ended only
+	// by the health watch, when the registry answers HTTP again: a port that accepts a connection is
+	// not yet a registry that answers one. See watchHealth.
 	registryDownSince atomic.Int64
 
 	// lastRun is what this replica's store was before this process started — from the store's own
@@ -250,6 +305,74 @@ type Loop struct {
 	// probeWritable. Like lastMeasured, set from two goroutines, the loop's and watchStore's, and read
 	// by whichever publishes the store — see publishedStore.
 	storeNotWritable atomic.Bool
+
+	// configured is whether a pass has applied the registry configuration since this process started.
+	// The wrapper does not start the registry before it has one, so until then a registry that does
+	// not answer is one that has not been asked to, and the health watch does not time its silence.
+	configured atomic.Bool
+
+	// HealthEvery is how often the health watch probes this replica's registry and store. Zero means
+	// healthEvery. See watchHealth.
+	HealthEvery time.Duration
+
+	// StoreProbe writes to the store and takes the write back, returning what refused it. Nil means
+	// probeStore. A field so that a test can make a disk fail, refuse, or hang.
+	StoreProbe func(dir string) error
+
+	// StoreProbeTimeout is how long one write probe may take before it counts as a failure. Zero means
+	// storeProbeTimeout.
+	StoreProbeTimeout time.Duration
+
+	// What the health watch found, read by the pass and by the election; see HealthError.
+	healthMu  sync.Mutex
+	healthErr string
+
+	// The health watch's own state, touched by nothing else: when the store first refused the probe,
+	// and the probe still running, if one is.
+	storeFailingSince time.Time
+	storeProbing      chan error
+	storeProbeStarted time.Time
+
+	// StoreSample reads a sample of the set off this replica's disk. Nil means fill.Sample. A field so
+	// that a test can make the disk slow, failing or short of the set — see ShortOfSet.
+	StoreSample func(root, scope, release string, digests []string) (fill.SampleResult, error)
+
+	// StoreSampleTimeout is how long one sample may take before it counts as no finding. Zero means
+	// stepDownCheckTimeout.
+	StoreSampleTimeout time.Duration
+
+	// lost is whether this replica handed the lease over because its store did not hold the set another
+	// replica held whole — see StepDown — or, holding the lease with nobody else full, took its report
+	// back for the same reason — see TakeBackFull — and no pass has copied into the store or counted it
+	// since. Until one has, what the status carried over about this replica is not to be believed, by
+	// the passes or by the election.
+	lost atomic.Bool
+
+	// tookBack is whether lost came from TakeBackFull: the report taken back and the lease kept. A
+	// step-down still owes its role, the lease and the line that says why — see StepDown. Set and cleared
+	// with lost, under reportMu.
+	tookBack atomic.Bool
+
+	// losses counts the step-downs and take-backs of this process, so that a pass can tell one came in
+	// while it ran. A reading taken before the loss was found and published after it — a count from a
+	// walk of the store made before the wipe, in air-gap or during the transition, where the leader
+	// counts on every pass — says what the store held then, not now, and must not end the loss: published,
+	// it would put Full back on the leader the controller is about to drop the upstream on. Changed under
+	// reportMu.
+	losses atomic.Uint64
+
+	// reportMu orders a pass's report against a step-down's: a pass that carried Full over before the
+	// step-down must not publish it after the demotion, and one that read the store must not have its
+	// reading taken back by a step-down that came in between.
+	reportMu sync.Mutex
+
+	// ShortOfSet's own state: how many checks in a row found most of the sample missing, when the last
+	// check found nothing, and the sample still running, if one is.
+	sampleMu      sync.Mutex
+	sampleShort   int
+	sampleCleanAt time.Time
+	sampling      chan sampleOutcome
+	sampleStarted time.Time
 }
 
 // surveyStore reads the store, at most once a minute.
@@ -266,14 +389,20 @@ func (l *Loop) surveyStore(declared map[string]struct{}, deployed string) (fill.
 
 	// A request with no declared set asks only for the total, and any fresh survey answers it — the
 	// total does not depend on what was declared. Asking for a SET, on the other hand, is only answered
-	// by a survey taken for that same set.
-	if time.Since(l.surveyedAt) < freshFor && (len(declared) == 0 || l.surveyedFor == len(declared)) {
+	// by a survey taken for that same set. Neither is answered from a survey a step-down or a take-back
+	// has found wrong since — see surveyStale.
+	stale := l.surveyStale.Swap(false)
+	if !stale && time.Since(l.surveyedAt) < freshFor && (len(declared) == 0 || l.surveyedFor == len(declared)) {
 		return l.survey, nil
 	}
 
 	survey, err := fill.Take(l.dataDir(), strings.Trim(constant.Path, "/"), declared,
 		[]string{deployed})
 	if err != nil {
+		if stale {
+			// Not walked, so the survey it was not to be answered from still is not.
+			l.surveyStale.Store(true)
+		}
 		return fill.Survey{}, err
 	}
 
@@ -545,11 +674,20 @@ func (l *Loop) progress(ctx context.Context, state report.State, what string) fu
 		// the status for the rest of the pass. Here, on the loop's goroutine — the copier calls this
 		// from its own loop over the set — so the probe creates and removes a file in up to three
 		// directories every progressEvery: nothing on a working disk, and on one that hangs it holds
-		// the pass here as the next copy would.
+		// the pass here as the next copy would. And so does what the health watch found: it stands for
+		// as long as the watch finds the registry or the store failing, copy or no copy. The error a
+		// progress report clears is the previous pass's, never these.
+		problems := l.storeProblemsWhileCopying()
+		if health := l.HealthError(); health != "" {
+			if problems != "" {
+				problems += "; "
+			}
+			problems += health
+		}
 		update := report.State{
 			Node: state.Node, Role: state.Role, Address: state.Address,
 			VerifiedDigests: done, DeclaredDigests: total,
-			Error: l.storeProblemsWhileCopying(),
+			Error: problems,
 		}
 		if err := l.Publisher.PublishProgress(ctx, update); err != nil && ctx.Err() == nil {
 			l.Log.Warn("reporting the "+what+" progress failed", "error", err.Error())
@@ -654,6 +792,116 @@ func (l *Loop) observePass(action string, started time.Time, state *report.State
 	}
 }
 
+// arrangementEvery is how often a copy under way checks that the arrangement it started under still
+// holds, unless Loop.ArrangementEvery says otherwise.
+//
+// For the leader's fill that is one atomic read. For a follower it is also whether the replica it
+// copies from still leads: a read of the storage and of the lease — and, only while the lease cannot be
+// read, a list of the storage pods and a read of up to three nodes — paid only while a follower copies.
+// Small beside the minute a lease lasts and a node takes to be counted lost, so a copy outlives its
+// arrangement by seconds rather than by the rest of the pass.
+const arrangementEvery = 10 * time.Second
+
+// whileArranged gives a copy a context that ends when the arrangement it started under does: this
+// replica's role changes, or — for a follower — the leader it copies from no longer leads. The function
+// it returns stops the watch, and reports whether the watch ended the copy.
+//
+// A pass read its role once, at its start, and a copy lasts as long as the set takes to move. A
+// follower that took the lease kept copying from the leader it replaced: from a leader whose node lost
+// power that is a connection nothing answers, and on a DVP stand it hung for sixteen minutes, and the
+// next request waited on a dial, while the new leader filled nothing — fifty-six minutes, until the
+// container was restarted by hand. Its neighbour, by the roles, kept copying from the dead leader for an hour.
+// A leader that lost the lease kept filling from the upstream with the account it shares with the new
+// one, and ended the pass by reporting itself leader, which takes the role from the replica that holds
+// the lease — see report.Merge.
+//
+// The pass only: what is ahead of the set is copied under its own scope, which the next pass compares
+// — see stopAheadOutside.
+func (l *Loop) whileArranged(ctx context.Context, isLeader bool, leader *Leader) (context.Context, func() bool) {
+	every := l.ArrangementEvery
+	if every <= 0 {
+		every = arrangementEvery
+	}
+
+	copyCtx, cancel := context.WithCancel(ctx)
+	var ended atomic.Bool
+	done := make(chan struct{})
+	finished := make(chan struct{})
+
+	go func() {
+		defer close(finished)
+		ticker := time.NewTicker(every)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-copyCtx.Done():
+				return
+			case <-done:
+				return
+			case <-ticker.C:
+			}
+			if !l.rearranged(copyCtx, isLeader, leader) {
+				continue
+			}
+			select {
+			case <-done:
+				// The copy finished on its own while this looked: it went through under the arrangement
+				// it started under, and the pass reports it.
+			default:
+				ended.Store(true)
+				cancel()
+			}
+			return
+		}
+	}()
+
+	return copyCtx, func() bool {
+		close(done)
+		cancel()
+		<-finished
+		return ended.Load()
+	}
+}
+
+// rearranged reports whether the arrangement a copy was started under has ended — see whileArranged.
+//
+// A leader that cannot be read is no evidence that it has: the answer comes from the API server, and an
+// unreachable one says nothing about the replica the copy reads from — the rule the election and the
+// lost-node filter keep too. Its copy goes on, and fails on its own if the leader is gone.
+//
+// A lease that cannot be read is the same, though the storage could be: the roles currentLeader falls
+// back to are a guess, and right after a failover a wrong one — the replica that took the lease still
+// reports Follower while its first fill runs, and the dead leader's Leader stands until then. Judged by
+// them, one failed read of the lease cut a copy from the live holder and lost the pass it was in.
+func (l *Loop) rearranged(ctx context.Context, isLeader bool, leader *Leader) bool {
+	if l.Leadership.IsLeader() != isLeader {
+		return true
+	}
+	if isLeader {
+		return false
+	}
+	current, guessed, err := l.currentLeader(ctx)
+	if err != nil || guessed {
+		return false
+	}
+	return current == nil || current.Node != leader.Node || current.Address != leader.Address
+}
+
+// leaveRearranged ends a pass whose copy the arrangement ended under it — see whileArranged.
+//
+// Nothing is reported, and that is the point. What the pass holds is about the role it started with,
+// and its error is the cancellation: a Leader from a replica that no longer holds the lease would take
+// the role from the one that does — see report.Merge — and an error would turn the storage Failed over
+// a copy nothing failed. The progress the copy published stands; it never touches the role. The next
+// pass starts under the new arrangement at the next tick — at once after a copy that ran past one,
+// since the ticker keeps it.
+func (l *Loop) leaveRearranged(isLeader bool) error {
+	l.Log.Info("the copy stopped: this replica's role, or the leader it copies from, changed; "+
+		"the next pass starts under the new one", "leader", isLeader)
+	return nil
+}
+
 // Run drives the loop until the context is cancelled.
 func (l *Loop) Run(ctx context.Context) error {
 	interval := l.Interval
@@ -666,6 +914,7 @@ func (l *Loop) Run(ctx context.Context) error {
 	l.inspectStore()
 
 	go l.watchStore(ctx, storeEvery)
+	go l.watchHealth(ctx, l.HealthEvery)
 
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -687,6 +936,9 @@ func (l *Loop) Run(ctx context.Context) error {
 }
 
 func (l *Loop) once(ctx context.Context) error {
+	// Before anything this pass reads: a loss found after this has its reading come too late — see losses.
+	losses := l.losses.Load()
+
 	spec, err := l.desiredState(ctx)
 	if err != nil {
 		return err
@@ -701,6 +953,16 @@ func (l *Loop) once(ctx context.Context) error {
 		return nil
 	}
 
+	// The first pass under a request for air-gap reads the store afresh — see airGapSeen. Cleared when
+	// the request goes, so that the next request does the same.
+	if spec.AirGapRequested {
+		if !l.airGapSeen.Swap(true) {
+			l.surveyStale.Store(true)
+		}
+	} else {
+		l.airGapSeen.Store(false)
+	}
+
 	// The configuration is applied before anything else, and regardless of role.
 	// This is the path a credential change takes while the Deckhouse operator is
 	// down, and it must not wait behind a fill.
@@ -709,6 +971,7 @@ func (l *Loop) once(ctx context.Context) error {
 	} else if changed {
 		l.Log.Info("the registry configuration changed and the process was restarted")
 	}
+	l.configured.Store(true)
 
 	if l.storeStarting(ctx) {
 		return nil
@@ -716,11 +979,11 @@ func (l *Loop) once(ctx context.Context) error {
 
 	isLeader := l.Leadership.IsLeader()
 	// The address is reported by the replica itself, so a follower can replicate from
-	// the leader without resolving a node name and without reading Node objects.
+	// the leader without resolving a node name into an address.
 	state := report.State{Node: l.Node, Role: Role(isLeader), Address: l.ReportedAddress}
 	stated := ExpectedDigests(spec)
 
-	leader, err := l.currentLeader(ctx)
+	leader, _, err := l.currentLeader(ctx)
 	if err != nil {
 		return err
 	}
@@ -772,12 +1035,19 @@ func (l *Loop) once(ctx context.Context) error {
 	// still owed, only postponed.
 	copies := action == ActionFill || action == ActionReplicate
 	l.copiesNothing.Store(!copies)
-	if !copies {
-		// A silence is timed across the passes that wanted the registry and could not have it. One that
-		// wanted nothing ends the series: left standing, a silence days old made the next ordinary
-		// restart of the registry an error at once, without the grace it is given.
-		l.registryDownSince.Store(0)
-	}
+	// A pass that wants nothing from the registry no longer ends a silence, as it once did so that a
+	// silence days old would not make the next ordinary restart an error at once. That made the silence
+	// of a leader with nothing to copy invisible: it reported itself full and kept the lease while its
+	// registry answered nobody. The health watch ends a silence now, when the registry answers again —
+	// see watchHealth.
+
+	// Whether what this pass publishes comes from a copy or a count of the store, rather than carried
+	// over from the status; only such a report takes back a step-down — see StepDown. Not a recheck: on
+	// a store that lost the release it says Full is false and carries the old count over.
+	read := false
+	// Whether an idle pass's recheck read the store: not a reading that ends a step-down, but one this
+	// process made, which is what SyncerStartedAt asks — see storeRead.
+	rechecked := false
 
 	// The fill and the replication go through this replica's own registry, which is not listening
 	// for a while after it restarts: the configuration applied above may have just restarted it, and
@@ -805,8 +1075,6 @@ func (l *Loop) once(ctx context.Context) error {
 			if time.Since(time.Unix(0, since)) >= registryDownReported {
 				state.Error = fmt.Sprintf("this replica's registry is not listening: %v", err)
 			}
-		} else {
-			l.registryDownSince.Store(0)
 		}
 	}
 
@@ -818,46 +1086,77 @@ func (l *Loop) once(ctx context.Context) error {
 		started := time.Now()
 		l.filling.Store(true)
 		l.announceStart(ctx, state, stated)
+		copyCtx, stopWatching := l.whileArranged(ctx, isLeader, leader)
 		func() {
 			// Waits out a collection rather than racing it. The other direction is guarded too:
 			// a collection does not start while a fill is owed — see gc.Plan.FillPending.
 			done := l.PauseWrites()
 			defer done()
-			ahead = l.applyFill(ctx, spec, stated, &state)
+			ahead = l.applyFill(copyCtx, spec, stated, &state)
 		}()
+		rearranged := stopWatching()
 		l.filling.Store(false)
+		if rearranged {
+			return l.leaveRearranged(isLeader)
+		}
+		// The copy changed the store: what it holds is read off the disk, not off a walk from before the
+		// copy — see surveyStale.
+		l.surveyStale.Store(true)
 		// What the fill moved is logged; what the replica HOLDS of the declared set is published.
 		l.reportHeld(ctx, &state)
 		l.observePass(string(action), started, &state)
+		read = true
 	case ActionReplicate:
 		started := time.Now()
 		l.filling.Store(true)
 		l.announceStart(ctx, state, stated)
+		copyCtx, stopWatching := l.whileArranged(ctx, isLeader, leader)
 		func() {
 			done := l.PauseWrites()
 			defer done()
-			ahead = l.applyReplicate(ctx, leader, &state)
+			ahead = l.applyReplicate(copyCtx, leader, &state)
 		}()
+		rearranged := stopWatching()
 		l.filling.Store(false)
+		if rearranged {
+			return l.leaveRearranged(isLeader)
+		}
+		l.surveyStale.Store(true)
 		// The same correction as above, and the branch it matters most on: a follower enumerates
 		// through the leader's store, which holds more than the set.
 		l.reportHeld(ctx, &state)
 		l.observePass(string(action), started, &state)
+		read = true
 	case ActionCountCatalogue:
 		l.applyCatalogue(ctx, &state)
+		if !isLeader && setKey != "" && reported == setKey {
+			// A follower counts while it has nobody to copy from — see LeaderOf: above all while the lease
+			// is free, between a leader that let it go and the next one to take it. One found full against
+			// this very set holds what it copied from the replica it names, and saying so is what lets that
+			// replica, leading again, find this one already holding it — see AlreadyHeld, and
+			// FollowersBehind in the controller. Dropped, every follower copied the set again once the
+			// lease was back where it had been.
+			//
+			// Only then: a follower whose copy had not finished, or that was full against another set,
+			// never copied this set from that replica, and a count that finds it full here must not read
+			// as a replication that finished — see applyReplicate.
+			state.Source = reportedSource
+		}
+		read = true
 	case ActionNone:
 		// Keep whatever was reported last: this pass learned nothing new, and
 		// overwriting the count with a zero would look like the storage emptied.
 		if err := l.carryOverCount(ctx, &state); err != nil {
 			return err
 		}
-		l.recheckStore(ctx, &state, reported)
+		rechecked = l.recheckStore(ctx, &state, reported)
 	}
 
 	// While the write endpoint is open, the store has the last word on how much it
 	// holds — whatever the pass above managed to do.
 	if StoreIsAuthority(spec, isLeader) {
 		l.recountFromStore(ctx, &state)
+		read = read || state.Error == ""
 	}
 
 	// Full, and about which set: the one read before the pass. Had it moved during the pass, the next
@@ -879,22 +1178,40 @@ func (l *Loop) once(ctx context.Context) error {
 	// So it is answered where the store is already being read — see applyCatalogue — and carried over
 	// otherwise. Carrying over is what keeps the original concern addressed: the status keeps the last
 	// number that was actually measured instead of dropping to zero on a pass that did not look.
+	//
+	// measured is whether this pass's total comes from a walk of the store, rather than from the last
+	// number: only a measured total is evidence against a Full carried over — see refuteCarriedFull.
+	measured := false
 	if state.TotalDigests == 0 {
-		// Nothing measured it on this pass — the fill and replication paths do not read the store — so
-		// ask, at most once a minute, and fall back to the last number if even that is refused.
+		// Nothing measured it on this pass — an idle pass reads nothing, and a copy or a count whose
+		// reading failed has no total — so ask, at most once a minute, and fall back to the last number
+		// only if even that is refused.
 		//
 		// Needed because moving the count into applyCatalogue alone empties the field everywhere else,
 		// leaving a verified count beside an absent total — precisely the "reads as an emptied store"
 		// the field was introduced to prevent. The survey is shared with the catalogue path and cached
 		// the same way, so this costs one walk a minute at worst, not one per pass.
-		if survey, err := l.surveyStore(nil, ""); err == nil && survey.Total > 0 {
+		//
+		// A zero from a walk is a reading, and is published: a store that has emptied reads as one. Zero
+		// from no walk is not, and the last number stands. It used to be the other way round for any
+		// zero, and on a stand a store wiped in air-gap went on reporting the 446 manifests it had held
+		// for five minutes, until something was pushed into it again.
+		if survey, err := l.surveyStore(nil, ""); err == nil {
 			state.TotalDigests = survey.Total
+			measured = true
 		} else {
 			state.TotalDigests = l.lastTotalDigests.Load()
 		}
 	}
-	if state.TotalDigests > 0 {
+	if state.TotalDigests > 0 || measured {
 		l.lastTotalDigests.Store(state.TotalDigests)
+	}
+
+	// The one thing an idle pass can learn about its store without reading more of it: whether the
+	// total it has just measured can hold the Full it carried over — see refuteCarriedFull. Not after a
+	// pass that read the store or rechecked it, whose Full is its own reading.
+	if action == ActionNone && !read && !rechecked && measured {
+		l.refuteCarriedFull(ctx, &state, isLeader, setKey)
 	}
 
 	// And the denominator, which has the same shape of problem and one wrinkle of its own: memory is
@@ -918,19 +1235,57 @@ func (l *Loop) once(ctx context.Context) error {
 		l.lastDeclaredDigests.Store(state.DeclaredDigests)
 	}
 
-	// Remembered for the garbage collection, which asks on its own schedule: an incomplete store
-	// must not be collected, and the loop is the one that knows.
-	l.complete.Store(state.Full)
-
 	// Measured last, after whatever the pass wrote: a figure taken at the start of an hour-long
 	// fill would, published at its end, put back what the store watcher had long since replaced.
 	state.Store = l.measureStore(spec)
+
+	// A replica that handed the lease over for a store that did not hold the set, or kept it and took its
+	// report back, says so until a pass copies into the store or counts it — see StepDown and
+	// TakeBackFull. Whatever this pass carried over was read from the status, and the status may be from
+	// before the demotion: a pass that began before it, with Full in hand, would otherwise put Full back.
+	// Under reportMu from here to the report, so that a step-down cannot come between this and the write;
+	// nothing in between touches the disk.
+	l.reportMu.Lock()
+	// A reading counts only when no loss was found while the pass ran — see losses.
+	masked := l.lost.Load() && (!read || l.losses.Load() != losses)
+	if masked {
+		state.Full, state.VerifiedSet, state.VerifiedDigests = false, "", 0
+	}
+
+	// Remembered for the garbage collection, which asks on its own schedule: an incomplete store
+	// must not be collected, and the loop is the one that knows.
+	l.complete.Store(state.Full)
 
 	// What is ahead of the set, held as of the last copy that went through — or, unknown this pass, as
 	// reported last.
 	state.AheadSet = reportedAhead
 	if keysKnown {
 		state.AheadSet = l.heldAhead(aheadKey, reportedAhead)
+	}
+	if masked {
+		state.AheadSet = ""
+	}
+
+	// What the health watch found stands until the watch takes it back: a pass that went well — an idle
+	// one above all, which looks at nothing — does not know the registry answers or the disk takes
+	// writes, and publishing it without the error would hand a hung leader back its lease every half a
+	// minute. Its own error, if it has one, says more about what this pass did and stays. After
+	// VerifiedSet, so that the fingerprint survives: once the registry answers again the replica is
+	// full again without a copy.
+	if state.Error == "" {
+		state.Error = l.HealthError()
+	}
+
+	// The role this report states is the one the pass began with, and the lease may have moved since:
+	// a count, a wait for a collection or a withdrawal is not stopped by it the way a copy is — see
+	// whileArranged. Published, a Leader from a replica that no longer holds the lease takes the role
+	// from the one that does — see report.Merge — and the followers read the roles whenever the lease
+	// cannot be read. So nothing is said, and the next pass says it under the new role.
+	if l.Leadership.IsLeader() != isLeader {
+		l.reportMu.Unlock()
+		l.Log.Info("this replica's role changed during the pass, so it reports nothing; " +
+			"the next pass reports under the new role")
+		return nil
 	}
 
 	// After Full and the set it was found against: a store that cannot take a write still holds what
@@ -943,11 +1298,27 @@ func (l *Loop) once(ctx context.Context) error {
 		state.Error = problem
 	}
 
+	// Which process this report speaks for, once that process has read its store — see storeRead.
+	// Outside Run there is no start to speak for.
+	if (read || rechecked || l.storeRead.Load()) && !l.started.IsZero() {
+		started := l.started
+		state.SyncerStartedAt = &started
+	}
+
 	// Published with the store as the probe just found it — see publishedStore; what is ahead of the
 	// set is still decided on the measurement alone.
 	published := state
 	published.Store = l.publishedStore(state.Store)
 	err = l.Publisher.Publish(ctx, published)
+	if err == nil && read && !masked {
+		// A reading published supersedes the step-down: the status now says what the store holds.
+		l.lost.Store(false)
+		l.tookBack.Store(false)
+	}
+	if err == nil && (read || rechecked) {
+		l.storeRead.Store(true)
+	}
+	l.reportMu.Unlock()
 	if keysKnown {
 		l.considerAhead(ctx, spec, isLeader, leader, aheadKey, state, ahead)
 	}
@@ -1100,13 +1471,18 @@ func (l *Loop) heldAhead(current, reported string) string {
 }
 
 // ForgetAhead drops what this replica holds ahead of the set: the collection has taken it back — see
-// gc.Collector.ReleaseAhead — and saying otherwise would send its followers to copy what it no longer
-// has. Copied again, part by part, once the store has room.
+// gc.Collector.ReleaseAhead — or the store was found short of the set — see StepDown — and saying
+// otherwise would send its followers to copy what it no longer has. Copied again, part by part, once the
+// store has room.
+//
+// A copy ahead already running is left to finish or be stopped, but what it reports held is not taken:
+// it was copied into the store as it was before, and part of it may be gone with the rest.
 func (l *Loop) ForgetAhead() {
 	l.aheadMu.Lock()
 	defer l.aheadMu.Unlock()
 	l.aheadHeld = nil
 	l.aheadForgotten = true
+	l.aheadForgets++
 }
 
 // RoomAhead reports whether this replica's store has room for what is ahead of the set — see roomAhead.
@@ -1240,6 +1616,7 @@ func (l *Loop) startAhead(ctx context.Context, run func(context.Context) fill.Re
 	done := make(chan struct{})
 	l.aheadCancel, l.aheadDone, l.aheadScope = cancel, done, scope
 	l.aheadRunning.Store(true)
+	forgets := l.aheadForgets
 
 	go func() {
 		defer close(done)
@@ -1266,12 +1643,15 @@ func (l *Loop) startAhead(ctx context.Context, run func(context.Context) fill.Re
 		if l.aheadDone == done {
 			l.aheadCancel, l.aheadDone, l.aheadScope = nil, nil, ""
 		}
-		// Whole is whole, stopped or not; what was missed waits aheadRetry, unless it was only stopped.
+		// Whole is whole, stopped or not, unless what is ahead was forgotten since the copy started;
+		// what was missed waits aheadRetry, unless it was only stopped.
 		if l.aheadHeld == nil {
 			l.aheadHeld = map[string]bool{}
 		}
-		for _, part := range report.AheadHeld {
-			l.aheadHeld[part] = true
+		if l.aheadForgets == forgets {
+			for _, part := range report.AheadHeld {
+				l.aheadHeld[part] = true
+			}
 		}
 		if !stopped && len(report.AheadMissed) > 0 {
 			l.aheadMissedFor, l.aheadMissedAt = key, time.Now()
@@ -1399,9 +1779,10 @@ func (l *Loop) applyFill(
 
 // applyReplicate copies the leader's content into this replica.
 //
-// The read credentials are the same on every replica, so a follower reaches the
-// leader with what it already has: no separate replication identity to distribute,
-// and nothing that grants more than a pull.
+// The sync account is the same on every replica, so a follower reaches the leader with
+// what it already fills with: no separate replication identity to distribute. It can
+// write — it has to, to put what it copies into its own store — which is why it is a
+// replica's own account and not the one the nodes pull with.
 func (l *Loop) applyReplicate(
 	ctx context.Context, leader *Leader, state *report.State,
 ) *fill.Copier {
@@ -1510,7 +1891,7 @@ func (l *Loop) applyReplicate(
 	// What the leader does not hold yet is not this replica's failure, and is deliberately not
 	// reported as one: a follower now copies from a leader that is still filling, so a pass in that
 	// window legitimately ends with part of the set still to come. Reported as an error it would make
-	// a working replica look broken — and, through the eligibility rules, disqualify it from leading.
+	// a working replica look broken — and, through the eligibility rules, keep it from counting as full.
 	if len(result.Failed) > 0 {
 		state.Error = fmt.Sprintf("%d of %d references could not be replicated, the first being %s",
 			len(result.Failed), result.Total, result.Failed[0])
@@ -1523,36 +1904,41 @@ func (l *Loop) applyReplicate(
 	return copier
 }
 
-// currentLeader reads who to replicate from out of the reports.
+// currentLeader reads who to replicate from: the replica holding the lease, by its own report — see
+// LeaderOf.
 //
 // Taken from the replica entries rather than from the aggregate `leader` field: the
 // entries are what each replica wrote about itself, so a stale or hand-edited
 // summary cannot send a follower to copy from a replica that is not actually
 // complete.
-func (l *Loop) currentLeader(ctx context.Context) (*Leader, error) {
+//
+// When the lease cannot be read, the roles decide, and only among the entries the election counts —
+// see Present — so that a dead leader's Leader, which stands until the replica that replaced it
+// publishes, does not make its replica a source. Not while the lease can be read: a holder it shows
+// live has renewed within the last minute, and only a replica that is there renews, while a node is
+// counted lost only well after its replica stopped renewing — see nodeLostAfter in cmd. All the filter
+// could do then is drop a holder that renews while its kubelet does not report, which the controller
+// still routes every pull to.
+//
+// The second result says the roles decided because the lease could not be read — see rearranged.
+func (l *Loop) currentLeader(ctx context.Context) (*Leader, bool, error) {
 	storage := &registryv1alpha1.RegistryStorage{}
 	if err := l.Client.Get(ctx, types.NamespacedName{Name: registryv1alpha1.SingletonName}, storage); err != nil {
 		if errors.IsNotFound(err) {
-			return nil, nil
+			return nil, false, nil
 		}
-		return nil, fmt.Errorf("reading the storage state: %w", err)
+		return nil, false, fmt.Errorf("reading the storage state: %w", err)
 	}
 
-	for i := range storage.Status.Replicas {
-		replica := &storage.Status.Replicas[i]
-		if replica.Role != registryv1alpha1.ReplicaRoleLeader || replica.Node == l.Node {
-			continue
-		}
-		return &Leader{
-			Node:    replica.Node,
-			Address: replica.Address,
-			// A replica that both claims completeness and reports a failure is not
-			// trustworthy enough to copy a whole set from.
-			Full:     replica.Full && replica.Error == "",
-			AheadSet: replica.AheadSet,
-		}, nil
+	lease := Lease{}
+	if l.ReadLease != nil {
+		lease = l.ReadLease(ctx)
 	}
-	return nil, nil
+	replicas := storage.Status.Replicas
+	if !lease.Known && l.Present != nil {
+		replicas = l.Present(ctx, replicas)
+	}
+	return LeaderOf(l.Node, replicas, lease), l.ReadLease != nil && !lease.Known, nil
 }
 
 // dataDir is where this replica's blobs are, defaulting to where the container mounts them.
@@ -1648,19 +2034,7 @@ func versionsOf(releases gc.Releases) []string {
 	return versions
 }
 
-// carryOverCount keeps this replica's last accounting when the pass did none, so an idle pass does not
-// look like the storage emptied.
-//
-// Carried verbatim — the count AND the verdict — because a pass that learned nothing must not
-// contradict the one that did. Recomputing fullness from `expectedDigests`, which most clusters do not
-// state, could only answer "not full", so every idle pass erased a completeness a fill had just
-// established.
-//
-// The cycle that produces is worth knowing, because the symptom sits nowhere near the cause: the leader
-// reports full, the controller clears `needSync`, the next pass goes idle and erases the fullness, the
-// controller asks for a fill again — and since eligibility to lead depends on being full, the lease
-// travels with it and the whole thing reads as flapping leader election.
-// setKey is the fingerprint of the set the cluster needs now — see SetKey.
+// keys is the fingerprint of the set the cluster needs now — see SetKey — and of what is ahead of it.
 func (l *Loop) keys(ctx context.Context) (string, string, error) {
 	return CurrentKeys(ctx, l.Client)
 }
@@ -1669,25 +2043,40 @@ func (l *Loop) keys(ctx context.Context) (string, string, error) {
 // a replica's Full is compared against, both by the replica reporting it and by every replica
 // deciding who may lead.
 func CurrentSetKey(ctx context.Context, c client.Client) (string, error) {
-	set, _, err := CurrentKeys(ctx, c)
+	set, _, err := CurrentSet(ctx, c)
 	return set, err
+}
+
+// CurrentSet is CurrentSetKey and, beside it, the release deployed now, from the same reading of the
+// releases: a step-down judges a store by that release's tag only against the set it belongs to — see
+// WhyStepAside. Read twice, an update coming between the two readings would have a full replica
+// checked for a release it has no reason to hold yet.
+func CurrentSet(ctx context.Context, c client.Client) (string, string, error) {
+	releases, set, _, err := currentReading(ctx, c)
+	return set, releases.Deployed, err
 }
 
 // CurrentKeys is CurrentSetKey and, beside it, the AheadKey of what is pending now.
 func CurrentKeys(ctx context.Context, c client.Client) (string, string, error) {
+	_, set, ahead, err := currentReading(ctx, c)
+	return set, ahead, err
+}
+
+// currentReading is the releases the cluster has now, and the SetKey and AheadKey made of them.
+func currentReading(ctx context.Context, c client.Client) (gc.Releases, string, string, error) {
 	releases, err := gc.FromCluster(ctx, c)
 	if err != nil {
-		return "", "", err
+		return gc.Releases{}, "", "", err
 	}
 	modules, err := gc.ModulesFromCluster(ctx, c)
 	if err != nil {
-		return "", "", err
+		return gc.Releases{}, "", "", err
 	}
 	catalogue, err := gc.CatalogueFromCluster(ctx, c)
 	if err != nil {
-		return "", "", err
+		return gc.Releases{}, "", "", err
 	}
-	return SetKey(releases, modules, catalogue), AheadKey(releases, modules), nil
+	return releases, SetKey(releases, modules, catalogue), AheadKey(releases, modules), nil
 }
 
 // reportedSets is the fingerprint this replica last reported Full against, read back from the status
@@ -1712,6 +2101,24 @@ func (l *Loop) reportedSets(ctx context.Context) (string, string, string) {
 	return "", "", ""
 }
 
+// carryOverCount keeps this replica's last accounting when the pass did none, so an idle pass does not
+// look like the storage emptied.
+//
+// Carried verbatim — the count AND the verdict — because a pass that learned nothing must not
+// contradict the one that did. Recomputing fullness from `expectedDigests`, which most clusters do not
+// state, could only answer "not full", so every idle pass erased a completeness a fill had just
+// established.
+//
+// The cycle that produces is worth knowing, because the symptom sits nowhere near the cause: the leader
+// reports full, the controller clears `needSync`, the next pass goes idle and erases the fullness, the
+// controller asks for a fill again — and since eligibility to lead depends on being full, the lease
+// travels with it and the whole thing reads as flapping leader election.
+//
+// Carried from the status, which a replica whose store was lost does not correct by itself: see
+// StepDown and TakeBackFull for the leader's way out, and recheckStore for everyone's. Nor is it
+// carried past the store's own count: a Full beside a total of the disk that cannot hold it — at least
+// half of what it verified absent altogether — is taken back on the pass that measured the total, on the
+// leader and on a follower alike — see refuteCarriedFull.
 func (l *Loop) carryOverCount(ctx context.Context, state *report.State) error {
 	storage := &registryv1alpha1.RegistryStorage{}
 	if err := l.Client.Get(ctx, types.NamespacedName{Name: registryv1alpha1.SingletonName}, storage); err != nil {
@@ -1883,8 +2290,12 @@ func (l *Loop) copier(
 // update replaced the replica.
 //
 // Skipping keeps the previous report, which is the truer one during a restart: the store's data is
-// on the node and outlives the pod. Bounded, because a registry that never comes up is a failure,
-// and past the grace it is reported as one exactly as before.
+// on the node and outlives the pod — unless the node lost it, a wiped local_data say, and the kept
+// report is then wrong until this replica reads its store. A leader beside a replica full for the
+// current set finds that out from the release's tag and a sample of the set — see ShortOfSet — and,
+// holding the lease when it starts, from the tag before the registry starts — see stepDownAtStart in
+// the command; any replica at its next recheck — see recheckStore. Bounded, because a registry
+// that never comes up is a failure, and past the grace it is reported as one exactly as before.
 func (l *Loop) storeStarting(ctx context.Context) bool {
 	if l.LocalAddress == "" {
 		return false
@@ -1930,32 +2341,47 @@ const storeRecheck = 6 * time.Hour
 //
 // Nothing is copied while every replica holds the set, so nothing else would notice a store that
 // lost part of it — a disk replaced or cleaned by hand, a directory restored from an old copy: the
-// replica would go on reporting the last pass that did copy. Read again here, from this replica's
-// own disk and registry — no upstream, no leader — and reported as found; a replica that is no
-// longer complete makes the controller raise needSync, and the copy that follows repairs it.
+// replica would go on reporting the last pass that did copy. Read again here — see reportHeld — and
+// reported as found; a replica that is no longer complete makes the controller raise needSync, and
+// the copy that follows repairs it.
+//
+// The count is taken from this replica's own disk (fill.Take), never from a leader. The set it is
+// counted against is read through this replica's own serving listener, and with an upstream that
+// listener is the pull-through: the reading can come from the upstream, and fails while the upstream
+// does — and a store that lost the release's tag gets it back from the upstream that way.
 //
 // Not on every pass, because reading the set means reading the platform image to its end, and an
 // idle cluster has no reason to spend that every half a minute. The first idle pass of a process
-// does it, which covers a restart; after that, every StoreRecheck. A reading that fails changes
-// nothing and is tried again on the next pass.
+// that gets past storeStarting does it, which covers a restart; after that, every StoreRecheck. A
+// reading that fails changes nothing and is tried again after storeRecheckRetry, not on the next
+// pass. Rare on purpose, which leaves a store lost between two rechecks reported as it was. A leader
+// whose report says it holds the set does not wait for this when its store has lost the set — the
+// release, or most of a sample of it: its store is looked at about once a minute, and found short it
+// hands the lease to a replica full for the current set, or, with nobody else full, keeps the lease and
+// takes its report back — see ShortOfSet. Nor does any replica whose idle pass measures a total of the
+// store that cannot hold the Full it carries over — see refuteCarriedFull. A smaller loss, or one while
+// a pass copies the set in, waits for this on a leader too.
 //
 // It can take a fingerprint away and never gives one: a reading that finds the store complete says
 // what is on the disk now, not that a pass copied the set the fingerprint names — a follower reads its
 // own disk, and only a replication says it holds what its leader holds. The fingerprint stays whatever
 // the last copying pass made it, or goes.
-func (l *Loop) recheckStore(ctx context.Context, state *report.State, reported string) {
+//
+// Reports whether it read the store: what this pass publishes is then this process's own reading —
+// see storeRead.
+func (l *Loop) recheckStore(ctx context.Context, state *report.State, reported string) bool {
 	every := l.StoreRecheck
 	if every <= 0 {
 		every = storeRecheck
 	}
 	if last := l.lastStoreCheck.Load(); last != 0 && time.Since(time.Unix(0, last)) < every {
-		return
+		return false
 	}
 	// Counted as a check whether or not it could read the store, so that a reading that fails is tried
 	// again in storeRecheckRetry rather than on every pass of the loop.
 	l.lastStoreCheck.Store(time.Now().Add(min(storeRecheckRetry, every) - every).UnixNano())
 	if !l.reportHeld(ctx, state) {
-		return
+		return false
 	}
 	l.lastStoreCheck.Store(time.Now().UnixNano())
 
@@ -1963,6 +2389,7 @@ func (l *Loop) recheckStore(ctx context.Context, state *report.State, reported s
 	if state.Full && state.Error == "" {
 		state.VerifiedSet = reported
 	}
+	return true
 }
 
 // registryDownReported is how long this replica's registry may stay silent before the status says so.
@@ -2013,8 +2440,10 @@ func (l *Loop) awaitLocalRegistry(ctx context.Context) error {
 	return nil
 }
 
+// localRegistry is how to talk to this replica's own registry, through either of its listeners, over
+// localTransport.
 func (l *Loop) localRegistry() (fill.Registry, error) {
-	options, err := fill.RegistryOptions(l.LocalCA, l.LocalUser, l.LocalPassword)
+	transport, err := l.localTransport()
 	if err != nil {
 		return fill.Registry{}, fmt.Errorf("local storage: %w", err)
 	}
@@ -2022,8 +2451,23 @@ func (l *Loop) localRegistry() (fill.Registry, error) {
 	return fill.Registry{
 		Address:    l.LocalAddress,
 		Repository: trimSlashes(constant.Path),
-		Options:    options,
+		Options:    fill.TransportOptions(transport, l.LocalUser, l.LocalPassword),
 	}, nil
+}
+
+// localTransport is the transport every client of this replica's own registry is built on: the
+// registry protocol's, through localRegistry and writeRegistry, and the plain HTTP the health watch
+// asks with, in probeRegistry.
+//
+// One place, so that whatever a listener comes to ask of a client — a client certificate on the write
+// endpoint — is given here once and goes with every client. Given to the fill's clients alone, it would
+// leave the probe refused where the fill is admitted: five minutes later every replica would report its
+// registry as not answering, and the election would read that as a reason to move the lease.
+func (l *Loop) localTransport() (*http.Transport, error) {
+	if l.LocalTransport != nil {
+		return l.LocalTransport()
+	}
+	return fill.Transport(l.LocalCA)
 }
 
 // writeRegistry is the same store, addressed through the listener that does NOT proxy.

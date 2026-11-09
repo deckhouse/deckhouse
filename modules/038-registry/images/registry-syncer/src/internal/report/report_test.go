@@ -668,6 +668,133 @@ func TestMergeWithdrawTakesBackOnlyFull(t *testing.T) {
 	assert.False(t, MergeWithdraw(&replicas, State{Node: "master-1"}), "nothing to withdraw for an absent replica")
 }
 
+// TestMergeDemoteTakesBackWhatTheEntryClaims: a replica whose store was found short of the set takes
+// back everything its entry says it holds, and nothing else — not what the health watch, the store's
+// measurement or the collection wrote — and claims nothing about any other entry, a leader's included.
+func TestMergeDemoteTakesBackWhatTheEntryClaims(t *testing.T) {
+	collected := metav1.NewTime(time.Date(2026, 10, 30, 3, 0, 0, 0, time.UTC))
+	store := &registryv1alpha1.StoreUsage{UsedBytes: 4096, Writable: true}
+	replicas := []registryv1alpha1.StorageReplicaStatus{
+		{
+			Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader, Full: true,
+			VerifiedDigests: 453, DeclaredDigests: 453, TotalDigests: 517, VerifiedSet: "abc", AheadSet: "def",
+			Source: "master-2", Address: "10.0.0.1:5001", Error: "a pass failed", HealthError: "a disk failed",
+			Store: store, CollectedAt: &collected, CollectionError: "a collection failed",
+		},
+		{Node: "master-1", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, VerifiedSet: "abc"},
+	}
+
+	assert.True(t, MergeDemote(&replicas, State{Node: "master-0"}))
+	assert.Equal(t, registryv1alpha1.StorageReplicaStatus{
+		Node: "master-0", Role: registryv1alpha1.ReplicaRoleFollower,
+		DeclaredDigests: 453, TotalDigests: 517, Address: "10.0.0.1:5001",
+		Error: "a pass failed", HealthError: "a disk failed",
+		Store: store, CollectedAt: &collected, CollectionError: "a collection failed",
+	}, replicas[0])
+	assert.Equal(t, registryv1alpha1.StorageReplicaStatus{
+		Node: "master-1", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, VerifiedSet: "abc",
+	}, replicas[1], "another entry is never touched, the leader's least of all")
+
+	assert.False(t, MergeDemote(&replicas, State{Node: "master-0"}), "twice is once")
+	assert.False(t, MergeDemote(&replicas, State{Node: "master-3"}), "nothing to take back for an absent replica")
+	assert.Len(t, replicas, 2)
+}
+
+// TestDemoteWithdrawsThePermissions: the demotion is the leader's report taken back, and the two
+// permissions the controller derived from it go in the same write.
+func TestDemoteWithdrawsThePermissions(t *testing.T) {
+	storage := storageObject(
+		registryv1alpha1.StorageReplicaStatus{
+			Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, VerifiedDigests: 453, VerifiedSet: "abc",
+		},
+		registryv1alpha1.StorageReplicaStatus{Node: "master-1", Full: true, VerifiedDigests: 453, VerifiedSet: "abc"},
+	)
+	storage.Status.SafeToDropUpstream = true
+	storage.Status.AllReplicasFull = true
+	publisher, c := newPublisher(t, storage)
+
+	require.NoError(t, publisher.Demote(context.Background(), State{Node: "master-0"}))
+
+	updated := getStorage(t, c)
+	assert.False(t, updated.Status.SafeToDropUpstream)
+	assert.False(t, updated.Status.AllReplicasFull)
+	assert.False(t, updated.Status.Replicas[0].Full)
+	assert.Zero(t, updated.Status.Replicas[0].VerifiedDigests)
+	assert.Equal(t, registryv1alpha1.ReplicaRoleFollower, updated.Status.Replicas[0].Role)
+	assert.True(t, updated.Status.Replicas[1].Full)
+
+	assert.Error(t, publisher.Demote(context.Background(), State{}), "a demotion names its replica")
+}
+
+// TestMergeTakeBackKeepsTheRole: a leader that keeps the lease with nobody else full takes back what
+// Demote takes back — and only that — and keeps the role it reported: it is still the one that fills.
+func TestMergeTakeBackKeepsTheRole(t *testing.T) {
+	collected := metav1.NewTime(time.Date(2026, 10, 30, 3, 0, 0, 0, time.UTC))
+	stamp := metav1.NewTime(time.Date(2026, 10, 30, 9, 0, 0, 0, time.UTC))
+	store := &registryv1alpha1.StoreUsage{UsedBytes: 4096, Writable: true}
+	replicas := []registryv1alpha1.StorageReplicaStatus{
+		{
+			Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader, Full: true,
+			VerifiedDigests: 453, DeclaredDigests: 453, TotalDigests: 517, VerifiedSet: "abc", AheadSet: "def",
+			Source: "master-2", Address: "10.0.0.1:5001", Error: "a pass failed", HealthError: "a disk failed",
+			Store: store, CollectedAt: &collected, CollectionError: "a collection failed", SyncerStartedAt: &stamp,
+		},
+		{Node: "master-1", Role: registryv1alpha1.ReplicaRoleFollower, Full: true, VerifiedSet: "abc"},
+	}
+
+	assert.True(t, MergeTakeBack(&replicas, State{Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader}))
+	assert.Equal(t, registryv1alpha1.StorageReplicaStatus{
+		Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader,
+		DeclaredDigests: 453, TotalDigests: 517, Address: "10.0.0.1:5001",
+		Error: "a pass failed", HealthError: "a disk failed",
+		Store: store, CollectedAt: &collected, CollectionError: "a collection failed", SyncerStartedAt: &stamp,
+	}, replicas[0])
+	assert.Equal(t, registryv1alpha1.StorageReplicaStatus{
+		Node: "master-1", Role: registryv1alpha1.ReplicaRoleFollower, Full: true, VerifiedSet: "abc",
+	}, replicas[1], "another entry is never touched")
+
+	assert.False(t, MergeTakeBack(&replicas, State{Node: "master-0"}), "twice is once")
+	assert.False(t, MergeTakeBack(&replicas, State{Node: "master-3"}), "nothing to take back for an absent replica")
+	assert.Len(t, replicas, 2)
+
+	// A demotion afterwards still owes the role, and makes it.
+	assert.True(t, MergeDemote(&replicas, State{Node: "master-0"}))
+	assert.Equal(t, registryv1alpha1.ReplicaRoleFollower, replicas[0].Role)
+	assert.False(t, MergeDemote(&replicas, State{Node: "master-0"}))
+}
+
+// TestTakeBackWithdrawsThePermissions: the leader's report taken back, the two permissions the
+// controller derived from it go in the same write, as a demotion takes them — and the role stays.
+func TestTakeBackWithdrawsThePermissions(t *testing.T) {
+	storage := storageObject(
+		registryv1alpha1.StorageReplicaStatus{
+			Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, VerifiedDigests: 453, VerifiedSet: "abc",
+		},
+		registryv1alpha1.StorageReplicaStatus{Node: "master-1", VerifiedDigests: 300},
+	)
+	storage.Status.SafeToDropUpstream = true
+	storage.Status.AllReplicasFull = true
+	publisher, c := newPublisher(t, storage)
+	ctx := context.Background()
+
+	require.NoError(t, publisher.TakeBack(ctx, State{Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader}))
+
+	updated := getStorage(t, c)
+	assert.False(t, updated.Status.SafeToDropUpstream)
+	assert.False(t, updated.Status.AllReplicasFull)
+	assert.False(t, updated.Status.Replicas[0].Full)
+	assert.Zero(t, updated.Status.Replicas[0].VerifiedDigests)
+	assert.Empty(t, updated.Status.Replicas[0].VerifiedSet)
+	assert.Equal(t, registryv1alpha1.ReplicaRoleLeader, updated.Status.Replicas[0].Role)
+	assert.EqualValues(t, 300, updated.Status.Replicas[1].VerifiedDigests)
+
+	version := updated.ResourceVersion
+	require.NoError(t, publisher.TakeBack(ctx, State{Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader}))
+	assert.Equal(t, version, getStorage(t, c).ResourceVersion, "taken back twice writes once")
+
+	assert.Error(t, publisher.TakeBack(ctx, State{}), "a take-back names its replica")
+}
+
 func TestMergeCarriesTheVerifiedSet(t *testing.T) {
 	var replicas []registryv1alpha1.StorageReplicaStatus
 	Merge(&replicas, State{Node: "master-0", Full: true, VerifiedSet: "abc"})
@@ -694,4 +821,182 @@ func TestMergeCollectionClipsTheError(t *testing.T) {
 	MergeCollection(&replicas, State{Node: "master-0", CollectedAt: &now, CollectionError: strings.Repeat("x", 200000)})
 
 	assert.LessOrEqual(t, len(replicas[0].CollectionError), MessageLimit)
+}
+
+// TestMergeHealthTouchesOnlyItsOwnError: the health watch writes the error and healthError fields and
+// nothing else, and takes back from the error only what it wrote — an error a pass reported is the
+// pass's. healthError is the watch's alone and always says what it found.
+func TestMergeHealthTouchesOnlyItsOwnError(t *testing.T) {
+	const failing = "this replica's registry is not answering: 10.0.0.1:5001: connection refused"
+	health := func(found string) State { return State{Node: "master-0", Error: found, HealthError: found} }
+	replicas := []registryv1alpha1.StorageReplicaStatus{
+		{Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, VerifiedSet: "abc", VerifiedDigests: 459},
+		{Node: "master-1", Full: true},
+	}
+
+	assert.True(t, MergeHealth(&replicas, health(failing), ""))
+	assert.Equal(t, failing, replicas[0].Error)
+	assert.Equal(t, failing, replicas[0].HealthError)
+	assert.True(t, replicas[0].Full, "completeness is left alone and comes back with the registry")
+	assert.Equal(t, "abc", replicas[0].VerifiedSet)
+	assert.EqualValues(t, 459, replicas[0].VerifiedDigests)
+	assert.Empty(t, replicas[1].Error)
+	assert.Empty(t, replicas[1].HealthError)
+
+	assert.False(t, MergeHealth(&replicas, health(failing), failing), "the same error writes nothing")
+
+	const worse = failing + "; this replica's store does not accept writes: read-only file system"
+	assert.True(t, MergeHealth(&replicas, health(worse), failing), "its own error, replaced")
+	assert.Equal(t, worse, replicas[0].Error)
+	assert.Equal(t, worse, replicas[0].HealthError)
+
+	assert.True(t, MergeHealth(&replicas, health(""), worse), "and taken back")
+	assert.Empty(t, replicas[0].Error)
+	assert.Empty(t, replicas[0].HealthError)
+	assert.False(t, MergeHealth(&replicas, health(""), ""), "nothing to take back")
+
+	const copyFailed = "3 of 459 references could not be copied"
+	replicas[0].Error = copyFailed
+	assert.True(t, MergeHealth(&replicas, health(failing), ""),
+		"an error the pass reported is not replaced, and healthError is set beside it")
+	assert.Equal(t, copyFailed, replicas[0].Error)
+	assert.Equal(t, failing, replicas[0].HealthError)
+	assert.True(t, MergeHealth(&replicas, health(""), failing), "healthError taken back")
+	assert.Equal(t, copyFailed, replicas[0].Error, "and the pass's error not")
+	assert.Empty(t, replicas[0].HealthError)
+
+	assert.True(t, MergeHealth(&replicas, State{Node: "master-2", Error: failing, HealthError: failing}, ""),
+		"a replica failing before its first report gets an entry")
+	require.Len(t, replicas, 3)
+	assert.Equal(t, failing, replicas[2].Error)
+	assert.Equal(t, failing, replicas[2].HealthError)
+	assert.False(t, MergeHealth(&replicas, State{Node: "master-3"}, ""), "and a healthy one without a report gets none")
+}
+
+// TestAHealthErrorTakesBackOnlyThePermission: a leader whose registry or store fails takes back
+// safeToDropUpstream, which the controller then keeps back, since it needs a leader without an error. It
+// leaves allReplicasFull alone: the controller derives that from Full, which the health watch does not
+// touch, and put it back after every round — the field turned over every half a minute for as long as
+// the failure lasted.
+func TestAHealthErrorTakesBackOnlyThePermission(t *testing.T) {
+	const failing = "this replica's registry is not answering: 10.0.0.1:4283: connection refused"
+	storage := storageObject(
+		registryv1alpha1.StorageReplicaStatus{Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader, Full: true},
+		registryv1alpha1.StorageReplicaStatus{Node: "master-1", Role: registryv1alpha1.ReplicaRoleFollower, Full: true},
+	)
+	storage.Status.SafeToDropUpstream = true
+	storage.Status.AllReplicasFull = true
+	publisher, fakeClient := newPublisher(t, storage)
+
+	leader := State{Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader, Error: failing, HealthError: failing}
+	require.NoError(t, publisher.PublishHealth(context.Background(), leader, ""))
+
+	after := getStorage(t, fakeClient)
+	assert.False(t, after.Status.SafeToDropUpstream)
+	assert.True(t, after.Status.AllReplicasFull, "every replica still holds the set")
+	assert.True(t, after.Status.Replicas[0].Full)
+
+	written := after.ResourceVersion
+	require.NoError(t, publisher.PublishHealth(context.Background(), leader, failing))
+	assert.Equal(t, written, getStorage(t, fakeClient).ResourceVersion,
+		"the next round, with the failure unchanged, writes nothing")
+}
+
+// TestMergeKeepsTheHealthError: healthError is the health watch's, and no other report touches it. A pass
+// that went well does not know the registry answers, and one that rebuilt the entry without it would
+// make a replica that cannot serve a candidate again until the watch's next round.
+func TestMergeKeepsTheHealthError(t *testing.T) {
+	const failing = "this replica's store does not accept writes: read-only file system"
+	replicas := []registryv1alpha1.StorageReplicaStatus{{
+		Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, VerifiedSet: "abc",
+		VerifiedDigests: 459, Error: failing, HealthError: failing,
+	}}
+
+	assert.True(t, Merge(&replicas, State{Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader,
+		VerifiedDigests: 460, Error: "the upstream refused the credentials"}))
+	assert.Equal(t, failing, replicas[0].HealthError, "a pass's report")
+
+	MergeProgress(&replicas, State{Node: "master-0", VerifiedDigests: 461})
+	assert.Equal(t, failing, replicas[0].HealthError, "progress")
+
+	replicas[0].Full, replicas[0].VerifiedSet = true, "abc"
+	assert.True(t, MergeWithdraw(&replicas, State{Node: "master-0"}))
+	assert.Equal(t, failing, replicas[0].HealthError, "a withdrawal")
+
+	assert.False(t, MergeStore(&replicas, State{Node: "master-0", Store: replicas[0].Store}))
+	assert.True(t, MergeStore(&replicas, State{Node: "master-0", Store: &registryv1alpha1.StoreUsage{Writable: true}}))
+	assert.Equal(t, failing, replicas[0].HealthError, "a store measurement")
+
+	// And through the API: an announcement and a pass's report, written as the syncer writes them.
+	publisher, fakeClient := newPublisher(t, storageObject(replicas[0]))
+	require.NoError(t, publisher.Announce(context.Background(), State{Node: "master-0", DeclaredDigests: 446}))
+	require.NoError(t, publisher.Publish(context.Background(), State{Node: "master-0", VerifiedDigests: 462}))
+	stored := getReplicas(t, fakeClient)
+	require.Len(t, stored, 1)
+	assert.EqualValues(t, 462, stored[0].VerifiedDigests)
+	assert.Equal(t, failing, stored[0].HealthError, "an announcement and a published report")
+}
+
+// TestProgressCarriesTheHealthError: progress clears the previous pass's error and puts the health
+// watch's in its place, when there is one.
+func TestProgressCarriesTheHealthError(t *testing.T) {
+	const failing = "this replica's store does not accept writes: read-only file system"
+	replicas := []registryv1alpha1.StorageReplicaStatus{{
+		Node: "master-0", Error: "reading the image set of main: MANIFEST_UNKNOWN",
+	}}
+
+	assert.True(t, MergeProgress(&replicas, State{Node: "master-0", VerifiedDigests: 40, Error: failing}))
+	assert.Equal(t, failing, replicas[0].Error)
+	assert.False(t, MergeProgress(&replicas, State{Node: "master-0", VerifiedDigests: 40, Error: failing}))
+}
+
+// TestMergeStampsTheSyncerStart: the report says which process made it, to the second, once that
+// process has read its store, and nothing when it has not — so the controller does not take the
+// previous process's Full for the running one's.
+func TestMergeStampsTheSyncerStart(t *testing.T) {
+	started := time.Date(2026, 10, 30, 9, 0, 0, 750_000_000, time.UTC)
+	var replicas []registryv1alpha1.StorageReplicaStatus
+
+	assert.True(t, Merge(&replicas, State{Node: "master-0", Full: true, SyncerStartedAt: &started}))
+	require.NotNil(t, replicas[0].SyncerStartedAt)
+	assert.Equal(t, time.Date(2026, 10, 30, 9, 0, 0, 0, time.UTC), replicas[0].SyncerStartedAt.UTC(),
+		"to the second, as the API server keeps it")
+	assert.False(t, Merge(&replicas, State{Node: "master-0", Full: true, SyncerStartedAt: &started}),
+		"the same stamp writes nothing")
+
+	assert.True(t, Merge(&replicas, State{Node: "master-0", Full: true}))
+	assert.Nil(t, replicas[0].SyncerStartedAt, "a report this process has not vouched for carries no stamp")
+}
+
+// TestPublishingTheSameStampTwiceWritesNothing: read back from the API server, the stamp has lost its
+// fraction of a second; were it kept, every pass would rewrite the status, and every syncer and the
+// controller watch it.
+func TestPublishingTheSameStampTwiceWritesNothing(t *testing.T) {
+	publisher, c := newPublisher(t, storageObject())
+	started := time.Date(2026, 10, 30, 9, 0, 0, 750_000_000, time.Local)
+	state := State{Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, SyncerStartedAt: &started}
+	ctx := context.Background()
+
+	require.NoError(t, publisher.Publish(ctx, state))
+	version := getStorage(t, c).ResourceVersion
+
+	require.NoError(t, publisher.Publish(ctx, state))
+	assert.Equal(t, version, getStorage(t, c).ResourceVersion)
+}
+
+// TestTheOtherReportersKeepTheStamp: a demotion, progress and the health watch write their own fields
+// and leave the stamp as the last report of the pass made it.
+func TestTheOtherReportersKeepTheStamp(t *testing.T) {
+	stamp := metav1.NewTime(time.Date(2026, 10, 30, 9, 0, 0, 0, time.UTC))
+	replicas := []registryv1alpha1.StorageReplicaStatus{{
+		Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, VerifiedDigests: 453,
+		SyncerStartedAt: &stamp,
+	}}
+
+	assert.True(t, MergeDemote(&replicas, State{Node: "master-0"}))
+	assert.True(t, MergeProgress(&replicas, State{Node: "master-0", VerifiedDigests: 460}))
+	assert.True(t, MergeHealth(&replicas, State{Node: "master-0", HealthError: "a disk failed"}, ""))
+
+	require.NotNil(t, replicas[0].SyncerStartedAt)
+	assert.True(t, stamp.Equal(replicas[0].SyncerStartedAt))
 }

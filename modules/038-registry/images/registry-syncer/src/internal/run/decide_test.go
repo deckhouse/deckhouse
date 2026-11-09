@@ -390,3 +390,74 @@ func TestAlreadyHeld(t *testing.T) {
 	}
 	assert.False(t, AlreadyHeld(ActionFill, "", "", "", nil), "a set that could not be read is never held")
 }
+
+// TestLeaderOfFollowsTheLease: a follower copies from the replica holding the lease, whatever role the
+// reports give. A role outlives its replica: a leader whose node lost power kept Role=Leader until the
+// replica that took over finished a whole fill, and the followers copied from the dead one until then.
+func TestLeaderOfFollowsTheLease(t *testing.T) {
+	replicas := []registryv1alpha1.StorageReplicaStatus{
+		{Node: "master-0", Role: registryv1alpha1.ReplicaRoleFollower, Address: "10.0.0.1:5001"},
+		{Node: "master-1", Role: registryv1alpha1.ReplicaRoleLeader, Address: "10.0.0.2:5001", Full: true},
+		{Node: "master-2", Role: registryv1alpha1.ReplicaRoleFollower, Address: "10.0.0.3:5001",
+			Full: true, AheadSet: "platform v1.77.0"},
+	}
+
+	tests := []struct {
+		name  string
+		lease Lease
+		want  *Leader
+	}{
+		{
+			// It took the lease and has not finished the pass that would say so: its report still reads
+			// Follower, and master-1's Leader is a memory of a replica that is gone.
+			name:  "a live holder that still reports itself a follower",
+			lease: Lease{Known: true, Holder: "master-2", Live: true},
+			want:  &Leader{Node: "master-2", Address: "10.0.0.3:5001", Full: true, AheadSet: "platform v1.77.0"},
+		},
+		{
+			// The first pass after a restart, before the elector has said it won: by the roles it would
+			// copy from the leader it replaced.
+			name:  "this replica holds the lease",
+			lease: Lease{Known: true, Holder: "master-0", Live: true},
+		},
+		{
+			// The grace keeps the election from moving an incomplete fill; a source has to answer now.
+			name:  "a holder that stopped renewing",
+			lease: Lease{Known: true, Holder: "master-1"},
+		},
+		{
+			name:  "a released lease",
+			lease: Lease{Known: true},
+		},
+		{
+			// Nothing says where it answers — its report is gone, or its node is.
+			name:  "a holder without a report",
+			lease: Lease{Known: true, Holder: "master-3", Live: true},
+		},
+		{
+			// The lease could not be read: the roles decide, as they did before it was read at all.
+			name: "an unknown lease",
+			want: &Leader{Node: "master-1", Address: "10.0.0.2:5001", Full: true},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, LeaderOf("master-0", replicas, tt.lease))
+		})
+	}
+
+	t.Run("by the roles, never itself", func(t *testing.T) {
+		self := []registryv1alpha1.StorageReplicaStatus{
+			{Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader, Address: "10.0.0.1:5001"},
+		}
+		assert.Nil(t, LeaderOf("master-0", self, Lease{}))
+	})
+
+	t.Run("a holder reporting an error is not full", func(t *testing.T) {
+		failing := []registryv1alpha1.StorageReplicaStatus{
+			{Node: "master-1", Address: "10.0.0.2:5001", Full: true, Error: "the registry is not answering"},
+		}
+		assert.Equal(t, &Leader{Node: "master-1", Address: "10.0.0.2:5001"},
+			LeaderOf("master-0", failing, Lease{Known: true, Holder: "master-1", Live: true}))
+	})
+}

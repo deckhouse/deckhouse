@@ -151,6 +151,29 @@ d8 k get registryconfig registry -o jsonpath='{.status.effectiveUpstream}' | jq
 
 Пока `effectiveUpstream` заполнен, кластер им пользуется. Когда он опустеет, кластер изолирован.
 
+Если переход не завершается, найдите, что его держит:
+
+- Кеш не полон (`safeToDropUpstream: false`, а у лидера нет `full`): дождитесь наполнения или
+  проверьте `error` лидера в `.status.replicas`.
+- `upstreamReferences` не опускается до нуля: завершите или исправьте обновление объектов,
+  которые называет лог `registry-controller`.
+- У лидера `full`, а `upstreamReferences` равно `0`: upstream удерживается, пока `syncer`,
+  работающий на узле лидера, не прочитает своё хранилище и не отметит свой отчёт полем
+  `syncerStartedAt`, обычно не позже чем через две минуты после запуска. Удержание не закончится,
+  пока под хранилища на узле лидера не Ready или пока в нём работает `syncer`, выпущенный до
+  появления этого поля (во время обновления модуля). Пока upstream удерживается, под хранилища
+  лидера можно безопасно удалить: новый `syncer` прочитает своё хранилище и отметит отчёт, обычно
+  не позже чем через две минуты.
+  Посмотреть отчёт лидера и причину, которую называет контроллер:
+
+  ```bash
+  d8 k get registrystorage registry -o json | jq '.status as $s | $s.replicas[] | select(.node == $s.leader) | {node,full,error,syncerStartedAt}'
+  d8 k -n d8-system logs -l app=registry-controller -c registry-controller --prefix --tail=-1 | grep 'the upstream is held' | tail -1
+  ```
+
+Чтобы остаться на upstream, верните тот же `primary.upstream` в ModuleConfig: кластер всё это
+время им пользовался и продолжит пользоваться.
+
 ## Добавление ещё одного хранилища образов контейнеров
 
 Хранилище образов контейнеров, которое не является источником образов компонентов DP, объявляется отдельным ресурсом [RegistryUpstream](cr.html#registryupstream), а не ещё одним полем в ModuleConfig. Пример:

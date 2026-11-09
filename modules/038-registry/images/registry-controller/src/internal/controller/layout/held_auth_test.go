@@ -128,13 +128,13 @@ func TestReconcileDropsTheCredentialsWithTheUpstream(t *testing.T) {
 		Status: registryv1alpha1.RegistryStorageStatus{
 			Replicas: []registryv1alpha1.StorageReplicaStatus{{
 				Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader,
-				Full: true, VerifiedDigests: 459,
+				Full: true, VerifiedDigests: 459, SyncerStartedAt: stamp(syncerStart),
 			}},
 		},
 	}
 
 	r, c := newReconciler(t, cfg, accessSecret(), persisted, storage,
-		node("master-0"), storageLease("master-0"))
+		node("master-0"), storageLease("master-0"), storagePod("registry-storage-0", "master-0", syncerStart))
 	runReconcile(t, r)
 
 	got := getStorage(t, c)

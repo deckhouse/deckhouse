@@ -27,6 +27,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 )
 
 // CountHeld counts the distinct manifest digests the store holds on disk.
@@ -177,7 +178,10 @@ type Survey struct {
 	// Declared is how many manifests OF THE SET are present — the number `full` is decided from.
 	Declared int32
 
-	// Total is how many distinct manifests the store holds altogether. Reported, never decided from.
+	// Total is how many distinct manifests the store holds altogether. Reported, and never decided from
+	// in the direction of holding anything: it counts links, servable or not. Only the other way — a
+	// total too small for a Full carried over, which counting links can only overstate — see the run
+	// package's refutedByCount.
 	Total int32
 
 	// MissingTags are the asked-for tags the store cannot resolve.
@@ -342,7 +346,57 @@ func revision(repositories, path string) (string, string, bool) {
 }
 
 func roundTripper(certificateAuthority string) (http.RoundTripper, error) {
+	transport, err := Transport(certificateAuthority)
+	if err != nil {
+		return nil, err
+	}
+	return transport, nil
+}
+
+// peerSilentAfter and peerPingTimeout bound a connection to a peer that stopped answering: an HTTP/2
+// connection that has read no frame for peerSilentAfter is pinged, and closed if no answer comes within
+// peerPingTimeout.
+//
+// A peer whose machine lost power sends nothing back, not even a reset, and the kernel gives up on a
+// connection with data still unacknowledged only after its retransmissions run out — sixteen minutes
+// on a DVP stand, with keepalive silent all along because the send queue was not empty. Every request
+// sharing the connection waited as long, and every one after it on a dial. A ping is answered by the
+// peer's framer whatever its handlers are doing, so a live peer that is slow to answer — a mirror that
+// fetches a blob before it serves it — is never cut; only a silent one is. No bound on the request as a
+// whole: a blob of a few gigabytes takes as long as the link needs.
+const (
+	peerSilentAfter = 30 * time.Second
+	peerPingTimeout = 15 * time.Second
+)
+
+// responseHeaderTimeout is how long a peer that took a request may take to start answering it. Counted
+// after the request body is written, so an upload of any size is not bounded by it. Minutes, because a
+// proxy-cache mirror fetches what it does not hold before it answers: a cold Harbor held a pass two
+// minutes, and once four and a half, chasing one reference — see Loop.considerAhead. That was several
+// requests and their retries, so a single answer took less; how much less was not measured, and the
+// bound leaves room for one answer to take all of it.
+const responseHeaderTimeout = 5 * time.Minute
+
+// Transport is the HTTP transport RegistryOptions talks to a registry through: the system's
+// authorities plus the one given. Exported for a caller that has to speak plain HTTP to the same
+// registry rather than the registry protocol — the syncer asking its own registry whether it answers
+// at all — so that the two cannot come to trust different certificates.
+//
+// A peer that goes silent is dropped rather than waited for — see peerSilentAfter — and one that never
+// starts answering after responseHeaderTimeout. The ping is HTTP/2's, so over HTTP/1.1 — plain HTTP, or
+// a TLS peer that does not offer h2, such as a mirror behind a proxy without it — there is none. A peer
+// silent there before it answers is cut by the response timeout; one silent in the middle of a body
+// only by the kernel: keepalive while nothing this side sent is unacknowledged, its retransmissions
+// otherwise.
+func Transport(certificateAuthority string) (*http.Transport, error) {
+	return newTransport(certificateAuthority, peerSilentAfter, peerPingTimeout)
+}
+
+// newTransport is Transport with the silence bound given, so that a test does not wait half a minute.
+func newTransport(certificateAuthority string, silentAfter, pingTimeout time.Duration) (*http.Transport, error) {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.HTTP2 = &http.HTTP2Config{SendPingTimeout: silentAfter, PingTimeout: pingTimeout}
+	transport.ResponseHeaderTimeout = responseHeaderTimeout
 
 	if certificateAuthority == "" {
 		return transport, nil

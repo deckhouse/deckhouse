@@ -332,6 +332,16 @@ rules:
   - apiGroups: ["deckhouse.io"]
     resources: ["modulesources/sensitive"]
     verbs: ["get", "list", "watch"]
+  # Whether the node a replica runs on is still there. A pod does not leave a node that dies — the
+  # storage tolerates not-ready and unreachable for good — so its report stood, and the election
+  # waited on a dead leader, or on a dead full replica, for as long as the node object did. A replica
+  # whose node has gone unheard from for a minute is no longer counted; see nodeLostAfter in the
+  # syncer.
+  #
+  # `get` alone: the syncer reads the few nodes the reports name, by name, and never lists.
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get"]
 
 ---
 kind: Role

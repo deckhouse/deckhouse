@@ -158,6 +158,28 @@ d8 k get registryconfig registry -o jsonpath='{.status.effectiveUpstream}' | jq
 While `effectiveUpstream` is still set, the cluster is using it. When it becomes empty, the
 cluster is air-gapped.
 
+If the transition does not finish, find what holds it:
+
+- The cache is not complete (`safeToDropUpstream: false` with the leader not `full`): wait for the
+  fill, or check the `error` of the leader in `.status.replicas`.
+- `upstreamReferences` stays above zero: finish or fix the rollout of the objects named in the
+  `registry-controller` log.
+- The leader is `full` and `upstreamReferences` is `0`: the upstream is held until the `syncer`
+  running on the leader's node has read its store and stamped its report with `syncerStartedAt`,
+  normally within two minutes of its start. This does not end while the leader's storage pod is
+  not Ready, or while that pod runs a `syncer` from before this field existed (during a module
+  update). Deleting the leader's storage pod is safe while the upstream is held: the new `syncer`
+  reads its store and stamps its report, normally within two minutes. To see the leader's report
+  and the reason the controller gives:
+
+  ```bash
+  d8 k get registrystorage registry -o json | jq '.status as $s | $s.replicas[] | select(.node == $s.leader) | {node,full,error,syncerStartedAt}'
+  d8 k -n d8-system logs -l app=registry-controller -c registry-controller --prefix --tail=-1 | grep 'the upstream is held' | tail -1
+  ```
+
+To stay on the upstream instead, put the same `primary.upstream` back into the ModuleConfig: the
+cluster has been using it all along and keeps doing so.
+
 ## Adding another registry
 
 A registry that is not the source of DP component images is declared as its own
