@@ -271,12 +271,12 @@ func writeEndpoint(
 // writeConfiguration derives the write endpoint's configuration from the serving one.
 //
 // Derived rather than rendered separately, and that is the point of running both in one process:
-// authentication, the token service, the storage path and the read-only flag a garbage collection
-// sets cannot drift between the two halves, because there is only one of each. What differs is
-// exactly what has to: no proxying, so a push is answered by the store; its own address, since two
-// listeners cannot share a port; no debug listener, because the metrics collectors are registered
-// process-globally and a second registration panics; and the same guard in a different mode, because
-// here the client sending the bytes is the one who should hear the refusal, and the sooner the better.
+// authentication, the token service and the storage path cannot drift between the two halves,
+// because there is only one of each. What differs is exactly what has to: no proxying, so a push is
+// answered by the store; its own address, since two listeners cannot share a port; no debug listener,
+// because the metrics collectors are registered process-globally and a second registration panics;
+// and the same guard in a different mode, because here the client sending the bytes is the one who
+// should hear the refusal, and the sooner the better.
 func writeConfiguration(
 	serving *configuration.Configuration, wrapper *config.Wrapper, guard *bound.Guard,
 ) *configuration.Configuration {

@@ -217,16 +217,16 @@ spec:
 
                         Nothing else ever removes anything: every release adds a slice of the repository, so a cluster that lives for years fills its store and then stops being able to pull.
 
-                        A collection puts one replica read-only for as long as it takes. That replica keeps serving every image it holds; what it cannot do is store the result of a cache miss, or accept a `d8 mirror push`. Only one replica collects at a time.
+                        A collection does not interrupt serving: the replica keeps serving every image it holds. It does not start while the store is being filled or a `d8 mirror push` is in progress, and while it runs the replica stops filling its own store. A `d8 mirror push` started during a collection can fail and has to be retried. Only one replica collects at a time, so the others are unaffected.
                       properties:
                         enabled:
                           type: boolean
                           description: |
-                            Whether the cache reclaims its disk at all.
+                            Whether the cache reclaims its disk on its own: on the schedule, after a new image set, and when the store refuses writes. A RegistryOperation created by hand runs either way.
                         schedule:
                           type: string
                           description: |
-                            A five-field cron expression, in the replicas' own time zone.
+                            A five-field cron expression, in UTC.
 
                             Defaults to a night hour, or to the start of the `master` node group's maintenance window when one is set.
                     size:

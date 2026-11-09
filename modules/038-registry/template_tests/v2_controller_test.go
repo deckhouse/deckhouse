@@ -494,7 +494,9 @@ var _ = Describe("Module :: registry :: helm template :: v2 controller", func() 
 			// ClusterRole.
 			Expect(f.KubernetesResource("Role", "d8-system", "registry:controller").
 				Field("rules").String()).To(ContainSubstring("leases"))
-			Expect(controllerRole.Field("rules").String()).ShouldNot(ContainSubstring("leases"))
+			// Quoted, so the resource is matched and not every name that ends in it: the
+			// controller reads deckhousereleases cluster-wide.
+			Expect(controllerRole.Field("rules").String()).ShouldNot(ContainSubstring(`"leases"`))
 		})
 
 		// The grant above is cluster-wide because RegistryNode is cluster-scoped and RBAC cannot
@@ -757,6 +759,8 @@ var _ = Describe("Module :: registry :: helm template :: v2 storage", func() {
 			// What the storage should do is the controller's decision; a syncer only
 			// reports what it holds.
 			Expect(role.Field("rules").String()).To(ContainSubstring("registrystorages/status"))
+			// And its own progress on an operation.
+			Expect(role.Field("rules").String()).To(ContainSubstring("registryoperations/status"))
 
 			Expect(f.KubernetesResource("Role", "d8-system", "registry:storage").
 				Field("rules").String()).To(ContainSubstring("leases"))
@@ -1183,7 +1187,9 @@ var _ = Describe("Module :: registry :: helm template :: v2 token service", func
 
 		Expect(config).To(ContainSubstring("SYNC-HASH"))
 		Expect(config).ToNot(ContainSubstring("SYNC-PASSWORD"))
-		Expect(config).To(ContainSubstring(`actions: ["pull", "push"]`))
+		// And delete, which the garbage collection needs through this same account: without it every
+		// DELETE is refused with 401 and nothing is ever reclaimed.
+		Expect(config).To(ContainSubstring(`actions: ["pull", "push", "delete"]`))
 
 		// Three distinct identities, and the syncer holding neither of the other two: the node
 		// account is on every node, and the publication one guards a path reachable from outside.

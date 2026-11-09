@@ -23,11 +23,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	"github.com/deckhouse/registry-syncer/internal/fill"
 )
@@ -304,8 +306,8 @@ func TestEveryModuleIsPartOfTheSetWithItsSource(t *testing.T) {
 	}
 }
 
-// TestWithoutSourcesEveryModuleIsKept: sources that cannot be read leave the modules without one,
-// which a fill reads from the upstream, as it did before sources were looked at.
+// TestWithoutSourcesEveryModuleIsKept: a cluster without the ModuleSource CRD leaves the modules
+// without a source, which a fill reads from the upstream, as it did before sources were looked at.
 func TestWithoutSourcesEveryModuleIsKept(t *testing.T) {
 	c := moduleClient(t, false,
 		moduleRelease("console-v1.2.0", "console", "1.2.0", "Deployed", "deckhouse"),
@@ -315,6 +317,75 @@ func TestWithoutSourcesEveryModuleIsKept(t *testing.T) {
 	modules, err := ModulesFromCluster(context.Background(), c)
 	require.NoError(t, err)
 	assert.Equal(t, []string{"console@v1.2.0<", "sds-node-configurator@v0.7.5<"}, names(modules))
+}
+
+// TestModulesFailWhenTheSourcesCannotBeRead: the previous round's finding. A ModuleSource list the
+// apiserver refused — a 429, a timeout — left every module without its source, so a collection looked
+// for a module of another source under the platform's path, did not find its package, and deleted its
+// images as protected by nothing. A source that cannot be read now fails the read, like the releases.
+func TestModulesFailWhenTheSourcesCannotBeRead(t *testing.T) {
+	scheme := runtime.NewScheme()
+	scheme.AddKnownTypeWithName(
+		schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "ModuleRelease"},
+		&unstructured.Unstructured{})
+	scheme.AddKnownTypeWithName(moduleReleaseGVK, &unstructured.UnstructuredList{})
+	scheme.AddKnownTypeWithName(
+		schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "ModuleSource"},
+		&unstructured.Unstructured{})
+	scheme.AddKnownTypeWithName(moduleSourceGVK, &unstructured.UnstructuredList{})
+
+	c := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(
+			moduleSource("partner", "registry.partner.example/modules"),
+			moduleRelease("console-v1.2.0", "console", "1.2.0", "Deployed", "partner"),
+		).
+		WithInterceptorFuncs(interceptor.Funcs{
+			List: func(ctx context.Context, c client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+				if list.GetObjectKind().GroupVersionKind() == moduleSourceGVK {
+					return apierrors.NewTooManyRequests("the apiserver is busy", 1)
+				}
+				return c.List(ctx, list, opts...)
+			},
+		}).
+		Build()
+
+	modules, err := ModulesFromCluster(context.Background(), c)
+	require.Error(t, err)
+	assert.Nil(t, modules)
+}
+
+// TestAModuleOfASourceTheClusterDoesNotHaveSaysSo: a release whose source label names no ModuleSource
+// leaves the module without a source, and the name it gave travels with it, so that a collection does
+// not take its package missing from the platform's path for one that never arrived.
+func TestAModuleOfASourceTheClusterDoesNotHaveSaysSo(t *testing.T) {
+	c := moduleClient(t, true,
+		moduleSource("partner", "registry.partner.example/modules"),
+
+		moduleRelease("console-v1.2.0", "console", "1.2.0", "Deployed", "partner"),
+		moduleRelease("stronghold-v1.0.0", "stronghold", "1.0.0", "Deployed", "gone"),
+		moduleRelease("commander-v1.1.0", "commander", "1.1.0", "Deployed", "deckhouse"),
+		moduleRelease("csi-ceph-v0.5.0", "csi-ceph", "0.5.0", "Deployed", ""),
+	)
+
+	modules, err := ModulesFromCluster(context.Background(), c)
+	require.NoError(t, err)
+
+	unplaced := map[string]bool{}
+	for _, module := range modules {
+		unplaced[module.Name] = module.Unplaced()
+		if module.Name == "stronghold" {
+			assert.Equal(t, "gone", module.MissingSource)
+			assert.Empty(t, module.Source.Name)
+		}
+	}
+	assert.Equal(t, map[string]bool{
+		"console":    false,
+		"stronghold": true,
+		// The platform's own source is kept under the platform's path whether or not its object is
+		// there, so nothing about it is a guess.
+		"commander": false,
+		"csi-ceph":  false,
+	}, unplaced)
 }
 
 // TestAPendingModuleUpdateIsPartOfTheSet: a module update waiting for its window has to be in every

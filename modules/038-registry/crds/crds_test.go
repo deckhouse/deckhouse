@@ -36,6 +36,7 @@ import (
 	"github.com/stretchr/testify/require"
 	apiextensionsinternal "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiextensionsvalidation "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation"
 	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
 	structuralcel "k8s.io/apiextensions-apiserver/pkg/apiserver/schema/cel"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -50,10 +51,11 @@ var expectedCRDs = map[string]struct {
 	name string
 	kind string
 }{
-	"registryconfig.yaml":   {name: "registryconfigs.deckhouse.io", kind: "RegistryConfig"},
-	"registrystorage.yaml":  {name: "registrystorages.deckhouse.io", kind: "RegistryStorage"},
-	"registryupstream.yaml": {name: "registryupstreams.deckhouse.io", kind: "RegistryUpstream"},
-	"registrynode.yaml":     {name: "registrynodes.deckhouse.io", kind: "RegistryNode"},
+	"registryconfig.yaml":    {name: "registryconfigs.deckhouse.io", kind: "RegistryConfig"},
+	"registrystorage.yaml":   {name: "registrystorages.deckhouse.io", kind: "RegistryStorage"},
+	"registryupstream.yaml":  {name: "registryupstreams.deckhouse.io", kind: "RegistryUpstream"},
+	"registrynode.yaml":      {name: "registrynodes.deckhouse.io", kind: "RegistryNode"},
+	"registryoperation.yaml": {name: "registryoperations.deckhouse.io", kind: "RegistryOperation"},
 }
 
 // stripDocMarkers removes the `x-doc-*` keys the Deckhouse documentation tooling
@@ -282,10 +284,11 @@ func TestRegistryConfigTwoAxes(t *testing.T) {
 // clobber each other on apply.
 func TestRegistryConfigListMapKeys(t *testing.T) {
 	for file, path := range map[string][]string{
-		"registryconfig.yaml":   {"status", "conditions"},
-		"registryupstream.yaml": {"status", "conditions"},
-		"registrystorage.yaml":  {"status", "replicas"},
-		"registrynode.yaml":     {"spec", "backends"},
+		"registryconfig.yaml":    {"status", "conditions"},
+		"registryupstream.yaml":  {"status", "conditions"},
+		"registrystorage.yaml":   {"status", "replicas"},
+		"registrynode.yaml":      {"spec", "backends"},
+		"registryoperation.yaml": {"status", "replicas"},
 	} {
 		t.Run(file, func(t *testing.T) {
 			s := structuralOf(t, loadCRD(t, file), "v1alpha1")
@@ -329,4 +332,112 @@ func TestRegistryUpstreamRequiresMatchAndUpstream(t *testing.T) {
 
 	assert.ElementsMatch(t, []string{"match", "upstream"}, spec.Required)
 	assert.Equal(t, []string{"host"}, spec.Properties["upstream"].Required)
+}
+
+// validateUpdate runs the CEL rules of the CRD against an update from old to obj, so the transition
+// rules — the ones that read oldSelf — are exercised too.
+func validateUpdate(t *testing.T, s *structuralschema.Structural, obj, old map[string]any) field.ErrorList {
+	t.Helper()
+
+	validator := structuralcel.NewValidator(s, true, celconfig.PerCallLimit)
+	require.NotNil(t, validator, "no CEL rules found in the schema")
+
+	errs, _ := validator.Validate(
+		context.Background(), field.NewPath(""), s, obj, old, celconfig.RuntimeCELCostBudget,
+	)
+	return errs
+}
+
+// TestRegistryOperationTransitions keeps an operation what it was: the spec does not change after
+// creation, and a finished operation is not reopened by a late writer — a replica reporting after the
+// controller has already given up on it.
+func TestRegistryOperationTransitions(t *testing.T) {
+	s := structuralOf(t, loadCRD(t, "registryoperation.yaml"), "v1alpha1")
+
+	gc := map[string]any{"type": "GarbageCollection", "cause": "Scheduled"}
+	status := func(phase string) map[string]any {
+		return map[string]any{"spec": gc, "status": map[string]any{"phase": phase}}
+	}
+
+	tests := []struct {
+		name     string
+		old, obj map[string]any
+		wantErr  string
+	}{
+		{name: "pending to running", old: status("Pending"), obj: status("Running")},
+		{name: "running to succeeded", old: status("Running"), obj: status("Succeeded")},
+		{name: "running to canceled", old: status("Running"), obj: status("Canceled")},
+		{name: "first status", old: map[string]any{"spec": gc}, obj: status("Pending")},
+		{
+			name: "succeeded reopened", old: status("Succeeded"), obj: status("Running"),
+			wantErr: "a finished operation cannot be reopened",
+		},
+		{
+			name: "failed reopened", old: status("Failed"), obj: status("Pending"),
+			wantErr: "a finished operation cannot be reopened",
+		},
+		{
+			name: "canceled turned into success", old: status("Canceled"), obj: status("Succeeded"),
+			wantErr: "a finished operation cannot be reopened",
+		},
+		{
+			name: "cause changed", old: map[string]any{"spec": gc},
+			obj:     map[string]any{"spec": map[string]any{"type": "GarbageCollection", "cause": "Manual"}},
+			wantErr: "the spec of an operation is immutable",
+		},
+		{
+			name: "cause added", old: map[string]any{"spec": map[string]any{"type": "GarbageCollection"}},
+			obj:     map[string]any{"spec": gc},
+			wantErr: "the spec of an operation is immutable",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			errs := validateUpdate(t, s, tt.obj, tt.old)
+			if tt.wantErr == "" {
+				assert.Empty(t, errs, "update should be accepted")
+				return
+			}
+			require.NotEmpty(t, errs, "update should be rejected")
+			assert.Contains(t, errs.ToAggregate().Error(), tt.wantErr)
+		})
+	}
+}
+
+// TestRegistryOperationIsSelectableByTypeAndPhase: a UI lists the operations of one type, or the ones
+// still running, without reading them all.
+func TestRegistryOperationIsSelectableByTypeAndPhase(t *testing.T) {
+	crd := loadCRD(t, "registryoperation.yaml")
+
+	var paths []string
+	for _, field := range crd.Spec.Versions[0].SelectableFields {
+		paths = append(paths, field.JSONPath)
+	}
+	assert.ElementsMatch(t, []string{".spec.type", ".status.phase"}, paths)
+}
+
+// TestCRDsAreAcceptedByTheAPIServer runs the validation the API server runs when a CRD is created,
+// the CEL cost estimate included.
+//
+// Compiling and executing the rules, as the tests above do, says nothing about their estimated cost,
+// and the cost is checked only on create: a rule comparing optional strings drops their maxLength from
+// the estimate, the CRD is refused, and the module's ensure-CRDs task fails until Deckhouse never gets
+// Ready — which is how RegistryOperation first met a cluster.
+func TestCRDsAreAcceptedByTheAPIServer(t *testing.T) {
+	for file := range expectedCRDs {
+		t.Run(file, func(t *testing.T) {
+			crd := loadCRD(t, file)
+			// The defaults the API server fills in before it validates: listKind among them.
+			apiextensionsv1.SetObjectDefaults_CustomResourceDefinition(crd)
+
+			internal := &apiextensionsinternal.CustomResourceDefinition{}
+			require.NoError(t, apiextensionsv1.Convert_v1_CustomResourceDefinition_To_apiextensions_CustomResourceDefinition(crd, internal, nil))
+			// What the API server holds for a CRD on create: the one version stored.
+			internal.Status.StoredVersions = []string{internal.Spec.Versions[0].Name}
+
+			errs := apiextensionsvalidation.ValidateCustomResourceDefinition(context.Background(), internal)
+			assert.Empty(t, errs.ToAggregate(), "the API server would refuse %s", file)
+		})
+	}
 }

@@ -94,24 +94,7 @@ func (a *Applier) WrapperPath() string {
 // loop re-renders constantly, and restarting the registry on every pass would
 // make the storage permanently unavailable rather than merely reconfigured.
 func (a *Applier) Apply(spec *registryv1alpha1.RegistryStorageSpec) (bool, error) {
-	return a.apply(spec, a.Options)
-}
-
-// ApplyReadOnly configures the registry to refuse writes, and reports whether that changed
-// anything.
-//
-// Separate from Apply rather than a field on the spec, because it is not part of the desired
-// state: it is a temporary condition a replica puts itself in to collect garbage safely, and
-// the next ordinary Apply must take it back out. Writing it into the spec would make a
-// crashed collection permanent.
-func (a *Applier) ApplyReadOnly(spec *registryv1alpha1.RegistryStorageSpec) (bool, error) {
-	options := a.Options
-	options.ReadOnly = true
-	return a.apply(spec, options)
-}
-
-func (a *Applier) apply(spec *registryv1alpha1.RegistryStorageSpec, options Options) (bool, error) {
-	rendered, err := Render(spec, options)
+	rendered, err := Render(spec, a.Options)
 	if err != nil {
 		return false, err
 	}
@@ -135,7 +118,7 @@ func (a *Applier) apply(spec *registryv1alpha1.RegistryStorageSpec, options Opti
 	// moment: the first is upstream's configuration in upstream's vocabulary, the second is the
 	// mapping of repository paths, the token service and the write endpoint — the four things this
 	// module used to carry as patches against the registry's source.
-	wrapper, err := RenderWrapper(spec, options)
+	wrapper, err := RenderWrapper(spec, a.Options)
 	if err != nil {
 		return false, err
 	}
@@ -146,12 +129,10 @@ func (a *Applier) apply(spec *registryv1alpha1.RegistryStorageSpec, options Opti
 	}
 
 	// One file for both halves of the registry. The write endpoint is a second listener of the same
-	// process, derived from this same configuration, so authentication, the storage path, the token
-	// service and the read-only flag a garbage collection sets cannot drift between them — there is
-	// only one of each. It used to be a second rendered file for a second container, and the read-only
-	// flag had to be written into both by hand: a collection computes the reachable set and then
-	// deletes the rest, so an instance that went on accepting writes would lose exactly the blobs the
-	// read-only window exists to protect.
+	// process, derived from this same configuration, so authentication, the storage path and the
+	// token service cannot drift between them — there is only one of each. It used to be a second
+	// rendered file for a second container, and every setting the two shared had to be written into
+	// both by hand.
 	if !configChanged && !wrapperChanged && !caChanged {
 		return false, nil
 	}

@@ -33,6 +33,7 @@ import (
 	"context"
 	"fmt"
 	"time"
+	"unicode/utf8"
 
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -398,12 +399,34 @@ func Merge(replicas *[]registryv1alpha1.StorageReplicaStatus, state State) bool 
 	return true
 }
 
+// MessageLimit is the most text a single message in a status may carry, in bytes.
+//
+// A status is read by every replica and by the controller, and stored in etcd beside everything else
+// in the object. One failed sweep once put the whole output of `registry garbage-collect` into two
+// replicas' entries — 136 KB each, a 280 KB RegistryStorage — and what a reader needs from it is the
+// last line.
+const MessageLimit = 1024
+
+// Clip cuts text to MessageLimit bytes on a character boundary, saying that it did.
+func Clip(text string) string {
+	if len(text) <= MessageLimit {
+		return text
+	}
+	const marker = " … (truncated)"
+	cut := MessageLimit - len(marker)
+	for cut > 0 && !utf8.RuneStart(text[cut]) {
+		cut--
+	}
+	return text[:cut] + marker
+}
+
 // MergeCollection records the outcome of a garbage collection, and nothing else.
 //
 // The mirror of the rule above: this reporter owns two fields and must leave every other one
 // alone. A replica that had just finished filling would otherwise be reported as empty by the
 // next collection.
 func MergeCollection(replicas *[]registryv1alpha1.StorageReplicaStatus, state State) bool {
+	state.CollectionError = Clip(state.CollectionError)
 	collectedAt := (*metav1.Time)(nil)
 	if state.CollectedAt != nil {
 		stamp := metav1.NewTime(*state.CollectedAt)

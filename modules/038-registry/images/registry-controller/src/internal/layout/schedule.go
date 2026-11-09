@@ -25,10 +25,9 @@ import (
 
 // DefaultGarbageCollectionSchedule runs shortly after 03:00, every day.
 //
-// A night hour because collecting puts a replica read-only for the duration: it keeps serving
-// every image it holds, but it cannot store the result of a cache miss and cannot accept a
-// `d8 mirror push`. Neither is an outage, and both are better placed where the cluster is
-// quiet.
+// A night hour because collecting pauses the replica's own fill for the duration and can fail a
+// `d8 mirror push` started meanwhile. It keeps serving every image it holds, so neither is an
+// outage, and both are better placed where the cluster is quiet.
 const DefaultGarbageCollectionSchedule = "17 3 * * *"
 
 // MaintenanceWindow is a period an operator has already declared safe for disruption.

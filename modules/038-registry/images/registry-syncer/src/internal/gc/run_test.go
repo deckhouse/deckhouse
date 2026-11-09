@@ -103,9 +103,12 @@ type countingSweeper struct {
 	err  error
 }
 
-func (s *countingSweeper) Sweep(context.Context) error {
+func (s *countingSweeper) Sweep(context.Context) (int, error) {
 	s.runs++
-	return s.err
+	if s.err != nil {
+		return -1, s.err
+	}
+	return 7, nil
 }
 
 func newCollector(t *testing.T, target store, releases Releases, sweeper Sweeper) *Collector {
@@ -136,6 +139,8 @@ func TestRunReclaimsSupersededReleases(t *testing.T) {
 
 	assert.Equal(t, 5, report.Considered)
 	assert.Len(t, report.Deleted, 2)
+	// What a person reads off a request: the releases, not the references.
+	assert.ElementsMatch(t, []string{"v1.74.3", "v1.70.0"}, report.RemovedVersions)
 	assert.Empty(t, report.Failed)
 	assert.True(t, report.Swept)
 	assert.Equal(t, 1, sweeper.runs)
@@ -280,7 +285,7 @@ func TestInScope(t *testing.T) {
 func TestBinarySweepWithoutABinary(t *testing.T) {
 	sweeper := &Binary{Log: slog.New(slog.NewTextHandler(io.Discard, nil))}
 
-	err := sweeper.Sweep(context.Background())
+	_, err := sweeper.Sweep(context.Background())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no registry binary")
 }
@@ -325,11 +330,27 @@ func TestRunKeepsTagsOutsideThePlatformVersionSpace(t *testing.T) {
 // warnings — a run that looks like it ran.
 func startRefusingRegistry(t *testing.T) store {
 	t.Helper()
+	return startRegistryAnsweringDeletes(t, func(w http.ResponseWriter) { w.WriteHeader(http.StatusMethodNotAllowed) })
+}
+
+// startDenyingRegistry is the registry answering a deletion the way a token service does for an
+// account granted pull and push only: 401, for every reference.
+func startDenyingRegistry(t *testing.T) store {
+	t.Helper()
+	return startRegistryAnsweringDeletes(t, func(w http.ResponseWriter) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = w.Write([]byte(`{"errors":[{"code":"UNAUTHORIZED","message":"authentication required"}]}`))
+	})
+}
+
+func startRegistryAnsweringDeletes(t *testing.T, answer func(http.ResponseWriter)) store {
+	t.Helper()
 
 	real := registry.New(registry.Logger(log.New(io.Discard, "", 0)))
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodDelete {
-			w.WriteHeader(http.StatusMethodNotAllowed)
+			answer(w)
 			return
 		}
 		real.ServeHTTP(w, r)
@@ -367,4 +388,137 @@ func TestRunFailsWhenEveryDeletionIsRefused(t *testing.T) {
 	assert.Empty(t, report.Deleted)
 	assert.NotEmpty(t, report.Failed)
 	assert.Zero(t, sweeper.runs, "there is nothing to sweep when nothing was deleted")
+}
+
+// TestRunFailsWhenTheAccountMayNotDelete is the run seen on a live cluster: the replica's account was
+// granted pull and push, every manifest judged garbage was refused with 401, and the collection
+// finished as a success that had "removed 0 references". It is a failure, and it says what is missing.
+func TestRunFailsWhenTheAccountMayNotDelete(t *testing.T) {
+	target := startDenyingRegistry(t)
+
+	current := pushHeld(t, target, "system/deckhouse")
+	pushHeld(t, target, "system/deckhouse")
+	push(t, target, "system/deckhouse:pr880")
+	pushInstaller(t, target, "pr880", []string{current})
+
+	sweeper := &countingSweeper{}
+	collector := newCollector(t, target, Releases{Deployed: "pr880"}, sweeper)
+
+	report, err := collector.Run(context.Background())
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "needs the delete action")
+	assert.Empty(t, report.Deleted)
+	assert.NotEmpty(t, report.Failed)
+	assert.Zero(t, sweeper.runs)
+}
+
+// TestAStoreThatRefusesWritesIsSweptWithNothingToDelete: a sweep that failed after its deletions left
+// their blobs on disk, and the next run, finding nothing left to delete, never swept them. A store that
+// refuses writes is swept anyway.
+func TestAStoreThatRefusesWritesIsSweptWithNothingToDelete(t *testing.T) {
+	target := startRegistry(t)
+	push(t, target, "system/deckhouse:v1.76.6")
+
+	sweeper := &countingSweeper{}
+	collector := newCollector(t, target, Releases{Deployed: "v1.76.6"}, sweeper)
+	collector.SweepAnyway = true
+
+	report, err := collector.Run(context.Background())
+	require.NoError(t, err)
+
+	assert.Empty(t, report.Deleted)
+	assert.Equal(t, 1, sweeper.runs)
+	assert.True(t, report.Swept)
+}
+
+// TestUnreferencedBlobsAreSweptWithNothingToDelete: a sweep that failed after its deletions left their
+// blobs on disk, and every later run, finding nothing left to delete, skipped the sweep — on a store
+// that takes writes as much as on a full one. The estimate counted those blobs, and no collection freed
+// them.
+func TestUnreferencedBlobsAreSweptWithNothingToDelete(t *testing.T) {
+	target := startRegistry(t)
+	push(t, target, "system/deckhouse:v1.76.6")
+	orphan := []byte("a blob an earlier failed sweep left behind")
+	writeBlob(t, target.dataDir, orphan)
+
+	sweeper := &countingSweeper{}
+	collector := newCollector(t, target, Releases{Deployed: "v1.76.6"}, sweeper)
+
+	report, err := collector.Run(context.Background())
+	require.NoError(t, err)
+
+	assert.Empty(t, report.Deleted)
+	assert.Equal(t, 1, sweeper.runs)
+	assert.True(t, report.Swept)
+	assert.Equal(t, int64(len(orphan)), report.Orphaned)
+}
+
+// TestAStoreWithNothingUnreferencedIsNotSwept: a sweep reads the whole store, and a run with nothing
+// to delete and nothing left behind has no use for one.
+func TestAStoreWithNothingUnreferencedIsNotSwept(t *testing.T) {
+	target := startRegistry(t)
+	push(t, target, "system/deckhouse:v1.76.6")
+	config := writeBlob(t, target.dataDir, []byte("the config of the release kept"))
+	layer := writeBlob(t, target.dataDir, []byte("a layer of the release kept"))
+	// Outside the collector's scope, so that only the mark sees it: its blobs are referenced.
+	writeManifest(t, target.dataDir, "elsewhere/kept", config, layer)
+
+	sweeper := &countingSweeper{}
+	collector := newCollector(t, target, Releases{Deployed: "v1.76.6"}, sweeper)
+
+	report, err := collector.Run(context.Background())
+	require.NoError(t, err)
+
+	assert.Zero(t, sweeper.runs)
+	assert.Zero(t, report.Orphaned)
+}
+
+// TestAFailedSweepSaysOnlyWhy is the status that grew to 280 KB: the wrapper prints a line for every
+// manifest and blob it marks, then its error, and the whole of it went into two replicas' entries.
+// What the error carries is the last line. And the binary runs without this process's REGISTRY_*
+// variables, which distribution would read as overrides of its configuration.
+func TestAFailedSweepSaysOnlyWhy(t *testing.T) {
+	dir := t.TempDir()
+	script := filepath.Join(dir, "registry")
+	require.NoError(t, os.WriteFile(script, []byte(`#!/bin/sh
+i=0
+while [ $i -lt 3000 ]; do echo "system/deckhouse: marking blob sha256:$i"; i=$((i+1)); done
+echo "reclaiming blobs: failed to mark: filesystem: Path not found: /x/_layers registry-variables=$(env | grep -c '^REGISTRY_')"
+exit 1
+`), 0o755))
+	t.Setenv("REGISTRY_LOCAL_PASSWORD", "dh-test-secret-0123456789abcdef")
+
+	sweeper := &Binary{Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Path: script, ConfigPath: "/config.yaml"}
+	_, err := sweeper.Sweep(context.Background())
+
+	require.Error(t, err)
+	assert.Less(t, len(err.Error()), 300, "the error carries why, not the marking")
+	assert.Contains(t, err.Error(), "Path not found: /x/_layers")
+	assert.Contains(t, err.Error(), "registry-variables=0", "the binary sees none of this process's REGISTRY_* variables")
+}
+
+func TestSweptBlobsReadsUpstreamsSummary(t *testing.T) {
+	assert.Equal(t, 1199, sweptBlobs("1601 blobs marked, 1199 blobs and 0 manifests eligible for deletion"))
+	assert.Equal(t, -1, sweptBlobs("something else entirely"))
+}
+
+// TestARunCountsImagesByDigestAndBlobs: the store's weight is images written by digest with no tag, and
+// a count of "references" hid them among the releases.
+func TestARunCountsImagesByDigestAndBlobs(t *testing.T) {
+	target := startRegistry(t)
+
+	current := pushHeld(t, target, "system/deckhouse")
+	pushHeld(t, target, "system/deckhouse")
+	pushHeld(t, target, "system/deckhouse")
+	push(t, target, "system/deckhouse:v1.76.6")
+	pushInstaller(t, target, "v1.76.6", []string{current})
+
+	collector := newCollector(t, target, Releases{Deployed: "v1.76.6"}, &countingSweeper{})
+	report, err := collector.Run(context.Background())
+	require.NoError(t, err)
+
+	assert.Equal(t, 2, report.RemovedManifests)
+	assert.Equal(t, 7, report.RemovedBlobs, "what the sweeper said it removed")
+	assert.Equal(t, "Removed 0 releases and 2 images by digest; the sweep removed 7 blobs.", removedMessage(report))
 }

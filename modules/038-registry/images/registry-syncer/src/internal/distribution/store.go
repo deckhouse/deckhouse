@@ -128,6 +128,12 @@ func MeasureStore(dataDir string, spec *registryv1alpha1.RegistryStorageSpec, ca
 	return usage, nil
 }
 
+// StoreBytes is the exact size of the store the way the budget counts it, unrounded: for telling how
+// much a collection gave back, where MeasureStore's rounding would hide a small one entirely.
+func StoreBytes(dataDir string) (int64, error) {
+	return storeUsage(dataDir)
+}
+
 // storeUsage is what the budget counts: blobs, and uploads in progress. The links under each
 // repository are skipped — most of the files in a store and none of the bytes.
 func storeUsage(dataDir string) (int64, error) {

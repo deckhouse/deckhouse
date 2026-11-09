@@ -160,3 +160,32 @@ func blobCount(t *testing.T, root string) int {
 	require.NoError(t, err)
 	return count
 }
+
+// TestASweepSurvivesARepositoryWithNoLayerLinks is the store a pull-through cache leaves behind: a
+// repository holding manifests and no `_layers` directory at all. Upstream's mark phase tolerates a
+// missing `_manifests` and not a missing `_layers`, and failed the whole sweep on it — on a live
+// cluster, after the collection had already deleted 435 manifests whose blobs then stayed on a full
+// disk.
+func TestASweepSurvivesARepositoryWithNoLayerLinks(t *testing.T) {
+	root := t.TempDir()
+	settings := store(root)
+
+	registry := httptest.NewServer(handlers.NewApp(context.Background(), settings))
+	t.Cleanup(registry.Close)
+
+	image, err := random.Image(512, 1)
+	require.NoError(t, err)
+	tag, err := name.NewTag(registry.Listener.Addr().String()+"/system/deckhouse/modules/m/release:v1", name.Insecure)
+	require.NoError(t, err)
+	require.NoError(t, remote.Write(tag, image))
+
+	layers := filepath.Join(root, "docker", "registry", "v2", "repositories", "system", "deckhouse", "modules", "m", "release", "_layers")
+	require.NoError(t, os.RemoveAll(layers))
+
+	require.NoError(t, Run(context.Background(), settings, Options{}))
+
+	served, err := remote.Image(tag)
+	require.NoError(t, err)
+	_, err = served.Manifest()
+	require.NoError(t, err, "the image is still served after the sweep")
+}

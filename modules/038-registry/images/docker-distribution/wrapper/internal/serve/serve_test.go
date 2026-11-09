@@ -350,8 +350,8 @@ func TestWriteConfigurationCarriesTheStoreAndNotTheCache(t *testing.T) {
 	assert.Empty(t, writing.Proxy.RemoteURL)
 	assert.False(t, writing.HTTP.Debug.Prometheus.Enabled)
 
-	// The storage map is a map: a shallow copy would let a read-only flag set for a garbage
-	// collection on one half appear on the other.
+	// The storage map is a map: a shallow copy would let a storage parameter changed for one half
+	// appear on the other.
 	writing.Storage["filesystem"]["rootdirectory"] = "/somewhere/else"
 	assert.Equal(t, "/opt/deckhouse/registry/local_data", serving.Storage.Parameters()["rootdirectory"])
 }

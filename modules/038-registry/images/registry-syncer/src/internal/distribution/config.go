@@ -118,15 +118,17 @@ type Options struct {
 
 	// ReadOnly refuses writes while keeping reads working.
 	//
-	// Set for the duration of a garbage collection. Distribution's collector computes the
-	// set of reachable blobs and then deletes the rest, so a blob uploaded between those
-	// two steps is deleted — which is why the documented way to run it is against a store
-	// nothing is writing to.
+	// Nothing sets it. A garbage collection used to, for the window between computing the
+	// reachable set and deleting the rest, but applying it meant restarting the serving
+	// process twice per collection; a collection now keeps the store safe by pausing the
+	// syncer's own writes instead (see gc.Worker.collect), and the registry keeps accepting
+	// pushes and cache misses throughout.
 	//
-	// Reads are unaffected, so a replica in this state still serves every image it holds.
-	// What it cannot do is accept a `d8 mirror push`, or store the result of a cache miss
-	// — and a miss simply becomes a pull from the upstream, which the agent already falls
-	// back to.
+	// Kept, and rendered explicitly as `readonly: {enabled: false}`, so that the
+	// configuration states outright that the registry never refuses writes rather than
+	// leaving it to distribution's default. Removing the field and the key is a change to
+	// the render, and is left out of the cleanup that removed the garbage collection's use
+	// of it.
 	ReadOnly bool
 
 	// StoreCapacity is the size of the filesystem under DataDir, in bytes: what the reserve the

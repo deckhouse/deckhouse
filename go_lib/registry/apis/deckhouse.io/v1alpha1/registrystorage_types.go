@@ -101,8 +101,10 @@ type StorageStore struct {
 
 // GarbageCollection is when a replica reclaims its disk.
 type GarbageCollection struct {
-	// Enabled is whether replicas collect at all. Off leaves the store to grow, which is
-	// what a cluster with a very large disk and a very cautious operator may want.
+	// Enabled is whether the controller creates garbage collections on its own: on the schedule,
+	// after a new image set, and when the store refuses writes. Off leaves the store to grow, which is what a cluster with a
+	// very large disk and a very cautious operator may want; a RegistryOperation created by hand
+	// runs either way.
 	//
 	// Serialized even when false, which is why it carries no `omitempty`: collection is on
 	// unless it was explicitly turned off, so an absent key and `false` mean opposite things
@@ -112,12 +114,11 @@ type GarbageCollection struct {
 	// unimplemented when they were merely false.
 	Enabled bool `json:"enabled"`
 
-	// Schedule is a five-field cron expression, in the replica's own time zone.
+	// Schedule is a five-field cron expression, in UTC: the controller reads it.
 	//
-	// A schedule and not an interval, because collecting puts a replica read-only for the
-	// duration: it keeps serving every image it holds, but cannot store the result of a
-	// cache miss and cannot accept a `d8 mirror push`. Neither is an outage, and both
-	// belong at an hour the operator chose.
+	// A schedule and not an interval, because collecting pauses the replica's own fill for the
+	// duration and can fail a `d8 mirror push` started meanwhile. It keeps serving every image
+	// it holds, so neither is an outage, but both belong at an hour the operator chose.
 	// +optional
 	Schedule string `json:"schedule,omitempty"`
 }

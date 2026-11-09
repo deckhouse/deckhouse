@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -75,6 +76,32 @@ type Collector struct {
 	// useless but not harmful.
 	Sweep Sweeper
 
+	// SweepAnyway sweeps even when this run deleted nothing and found nothing unreferenced to sweep.
+	//
+	// For a store that refuses writes, which needs every byte back and cannot afford to trust the
+	// count: a run with nothing to delete sweeps whatever that count finds (see sweeps), and this is
+	// what makes it sweep when the count fails or says nothing.
+	SweepAnyway bool
+
+	// Pushing reports whether somebody is pushing into this store from outside right now. Nil means
+	// never.
+	//
+	// Asked again right before the sweep, which is the step a push cannot survive: its layers are on
+	// disk before the manifest that references them, and a sweep removes exactly that. The worker asks
+	// before the collection too, but the manifest pass can take minutes, and a push that starts in
+	// them is no less a push.
+	Pushing func() bool
+
+	// Upstream is where the set of the deployed release is read when this store cannot answer for it,
+	// with the credentials to read it. Nil in air-gap.
+	//
+	// The store answers only for a release whose installer it holds, and a store that refuses writes
+	// never got to take in the installer of the release the cluster has moved to — so the set could not
+	// be read, nothing was judged, and the store that most needed collecting was never collected. The
+	// fill reads the platform's set from here; the modules are still read from this store, as they are
+	// whenever the collector judges anything.
+	Upstream *fill.Registry
+
 	// DryRun decides what would go without touching anything.
 	DryRun bool
 
@@ -89,9 +116,9 @@ type Collector struct {
 	ReleaseAhead bool
 }
 
-// Sweeper reclaims unreachable blobs.
+// Sweeper reclaims unreachable blobs, and says how many it removed: -1 when it cannot tell.
 type Sweeper interface {
-	Sweep(ctx context.Context) error
+	Sweep(ctx context.Context) (int, error)
 }
 
 // Report is what a run did.
@@ -110,12 +137,40 @@ type Report struct {
 	// says nothing about the reference and everything about the address the run was pointed at.
 	deletionsUnsupported bool
 
+	// deletionsDenied is set when a registry answered a deletion by refusing the account the right to
+	// delete — the same answer for every reference the account asks about.
+	deletionsDenied bool
+
 	// Failed are the references that could not be removed, which is not a failure of the
 	// run: the disk is simply less reclaimed than it could have been.
 	Failed []string
 
 	// Swept reports whether blob reclamation ran.
 	Swept bool
+
+	// RemovedVersions are the platform releases whose tags were removed — the readable part of
+	// Deleted, which also carries every manifest by digest.
+	RemovedVersions []string
+
+	// RemovedManifests is how many manifests were deleted by digest: the images the fill writes with
+	// no tag at all, which is where nearly all of a store's weight is.
+	RemovedManifests int
+
+	// RemovedBlobs is how many blobs the sweep removed, as distribution counts them; -1 when the sweep
+	// did not run or did not say.
+	RemovedBlobs int
+
+	// Orphaned is how many bytes of blobs nothing references a run that had nothing to delete found
+	// on disk, and swept; zero when it deleted something, or found none.
+	Orphaned int64
+
+	// Doomed are the manifests a dry run judged removable, for Reclaimable to weigh. Empty unless
+	// DryRun.
+	Doomed []fill.HeldManifest
+
+	// ReclaimedBytes is how much the store shrank over the run, nil when it could not be measured.
+	// Measured by whoever runs the collection, around it: the collector itself only deletes.
+	ReclaimedBytes *int64
 
 	// KeptVersions are the release versions the tag pass decided to keep, which the manifest
 	// pass then enumerates the image sets of. Recorded rather than recomputed so that the two
@@ -157,8 +212,39 @@ func deletionUnsupported(err error) bool {
 	return false
 }
 
+// absent tells a reference the registry does not hold from a registry that could not be asked.
+func absent(err error) bool {
+	var status *transport.Error
+	if !errors.As(err, &status) {
+		return false
+	}
+	return status.StatusCode == http.StatusNotFound
+}
+
+// deletionDenied tells a reference that would not go from an account that may not delete anything.
+//
+// A 401 or 403 on a DELETE through a token service is the scope it issued: the account was granted
+// less than "delete", and every later reference is refused the same way. Seen on a live cluster where
+// the replica's account was granted pull and push only: hundreds of manifests judged garbage, every one
+// of them refused, and the run reported as a success that had found nothing to reclaim.
+func deletionDenied(err error) bool {
+	var status *transport.Error
+	if !errors.As(err, &status) {
+		return false
+	}
+	if status.StatusCode == http.StatusUnauthorized || status.StatusCode == http.StatusForbidden {
+		return true
+	}
+	for _, diagnostic := range status.Errors {
+		if diagnostic.Code == transport.UnauthorizedErrorCode || diagnostic.Code == transport.DeniedErrorCode {
+			return true
+		}
+	}
+	return false
+}
+
 func (c *Collector) Run(ctx context.Context) (Report, error) {
-	report := Report{Kept: map[string]int{}}
+	report := Report{Kept: map[string]int{}, RemovedBlobs: -1}
 
 	// What the tag pass may delete, and whether it may delete anything at all.
 	//
@@ -226,20 +312,30 @@ func (c *Collector) Run(ctx context.Context) (Report, error) {
 		doomed = append(doomed, tag)
 	}
 
+	// Deletions follow the run's context: a cancellation, or the window closing, stops them between
+	// one reference and the next instead of after the last.
+	deleteOptions := c.deleteOptions(ctx)
 	for _, tag := range doomed {
+		if err := ctx.Err(); err != nil {
+			return report, err
+		}
 		if c.DryRun {
 			report.Deleted = append(report.Deleted, tag.String())
+			report.RemovedVersions = append(report.RemovedVersions, tag.TagStr())
 			continue
 		}
-		if err := remote.Delete(tag, c.Registry.Options...); err != nil {
+		if err := remote.Delete(tag, deleteOptions...); err != nil {
 			// One reference that would not go is not a reason to abandon the rest, nor to
 			// skip the sweep: what did get deleted is still reclaimable.
 			c.Log.Warn("cannot delete a reference", "reference", tag.String(), "error", err.Error())
 			report.Failed = append(report.Failed, tag.String())
 			report.deletionsUnsupported = report.deletionsUnsupported || deletionUnsupported(err)
+			report.deletionsDenied = report.deletionsDenied || deletionDenied(err)
 			continue
 		}
 		report.Deleted = append(report.Deleted, tag.String())
+		// Only the scope root reaches here, so every deleted tag is a platform release.
+		report.RemovedVersions = append(report.RemovedVersions, tag.TagStr())
 	}
 
 	// The manifests, which is where the store's weight actually is.
@@ -272,13 +368,22 @@ func (c *Collector) Run(ctx context.Context) (Report, error) {
 			len(report.Failed), report.Failed[0])
 	}
 
+	// The same for an account refused the right to delete: not a reference that would not go, but a
+	// run that could delete nothing at all, and must not be reported as one that found nothing.
+	if report.deletionsDenied {
+		return report, fmt.Errorf(
+			"this registry refuses the account the right to delete (%d refused, first: %s): the "+
+				"replica's account needs the delete action",
+			len(report.Failed), report.Failed[0])
+	}
+
 	if c.DryRun {
 		c.Log.Info("dry run, nothing was touched",
 			"would_delete", len(report.Deleted), "kept", report.Kept)
 		return report, nil
 	}
 
-	if len(report.Deleted) == 0 {
+	if !c.sweeps(&report) {
 		c.Log.Info("nothing to reclaim", "considered", report.Considered, "kept", report.Kept)
 		return report, nil
 	}
@@ -287,13 +392,29 @@ func (c *Collector) Run(ctx context.Context) (Report, error) {
 		return report, nil
 	}
 
-	if err := c.Sweep.Sweep(ctx); err != nil {
+	if c.Pushing != nil && c.Pushing() {
+		// Left for the next run, which finds what is left unreferenced on disk and sweeps it — see
+		// sweeps. A run that deleted manifests failed to give their space back, and says so.
+		if len(report.Deleted) == 0 {
+			c.Log.Info("an image set is being pushed into the store, so blobs nothing references are not swept now")
+			return report, nil
+		}
+		return report, fmt.Errorf("the %d deleted references were not swept: an image set is being pushed "+
+			"into the store, and a sweep would remove its layers; the next collection sweeps them", len(report.Deleted))
+	}
+
+	blobs, err := c.Sweep.Sweep(ctx)
+	if err != nil {
 		// The manifests are gone either way, so the run did something. Reported so that a
 		// disk that never shrinks is attributable to the sweep rather than to the
 		// judgement.
+		if len(report.Deleted) == 0 {
+			return report, fmt.Errorf("reclaiming the blobs nothing references: %w", err)
+		}
 		return report, fmt.Errorf("reclaiming the blobs of %d deleted references: %w", len(report.Deleted), err)
 	}
 	report.Swept = true
+	report.RemovedBlobs = blobs
 
 	c.Log.Info("reclaimed the store",
 		"deleted", len(report.Deleted), "failed", len(report.Failed), "kept", report.Kept)
@@ -333,12 +454,21 @@ func (c *Collector) reclaimManifests(ctx context.Context, report *Report, surviv
 		return fmt.Errorf("cannot establish which manifests the kept tags need, so none were deleted: %w", err)
 	}
 
+	// And the platform manifests of every kept index — see keepChildren.
+	if err := keepChildren(c.DataDir, keep); err != nil {
+		return fmt.Errorf("cannot read the indexes the kept set names, so none were deleted: %w", err)
+	}
+
 	registry, err := c.registry()
 	if err != nil {
 		return err
 	}
 
+	deleteOptions := c.deleteOptions(ctx)
 	for _, manifest := range held {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		if _, needed := keep[manifest.Digest]; needed {
 			report.Kept[ReasonDeclared]++
 			continue
@@ -354,17 +484,21 @@ func (c *Collector) reclaimManifests(ctx context.Context, report *Report, surviv
 
 		if c.DryRun {
 			report.Deleted = append(report.Deleted, reference.String())
+			report.RemovedManifests++
+			report.Doomed = append(report.Doomed, manifest)
 			continue
 		}
 
-		if err := remote.Delete(reference, c.Registry.Options...); err != nil {
+		if err := remote.Delete(reference, deleteOptions...); err != nil {
 			c.Log.Warn("cannot delete a manifest",
 				"reference", reference.String(), "error", err.Error())
 			report.Failed = append(report.Failed, reference.String())
 			report.deletionsUnsupported = report.deletionsUnsupported || deletionUnsupported(err)
+			report.deletionsDenied = report.deletionsDenied || deletionDenied(err)
 			continue
 		}
 		report.Deleted = append(report.Deleted, reference.String())
+		report.RemovedManifests++
 	}
 
 	return nil
@@ -456,6 +590,14 @@ func (c *Collector) declaredDigests(ctx context.Context, versions []string) (map
 			Versions: []string{version},
 			Modules:  c.Modules,
 		}.Discover(ctx, source, puller)
+		if err != nil && version == c.Releases.Deployed && c.Upstream != nil {
+			c.Log.Info("this store does not answer for the set of the deployed release, so it is read from the upstream",
+				"version", version, "upstream", c.Upstream.Address, "reason", err.Error())
+			if upstreamErr := c.addUpstreamSet(ctx, version, source, puller, keep); upstreamErr != nil {
+				return nil, fmt.Errorf("%w; and from the upstream: %w", err, upstreamErr)
+			}
+			continue
+		}
 		if err != nil {
 			if version == c.Releases.Deployed {
 				return nil, err
@@ -467,7 +609,7 @@ func (c *Collector) declaredDigests(ctx context.Context, versions []string) (map
 				"version", version, "error", err.Error())
 			continue
 		}
-		if err := c.addDigests(ctx, puller, references, keep); err != nil {
+		if err := c.addDigests(ctx, puller, references, keep, true); err != nil {
 			return nil, err
 		}
 	}
@@ -493,15 +635,28 @@ func (c *Collector) declaredDigests(ctx context.Context, versions []string) (map
 	}
 	for _, reference := range pending {
 		// One at a time and never fatal: a pending module the copy ahead missed is simply not in the
-		// store, and that must not stop the collection of everything else.
-		_ = c.addDigests(ctx, puller, []name.Reference{reference}, keep)
+		// store, and that must not stop the collection of everything else. An unplaced one is the
+		// exception, as for the modules the cluster runs — see unplacedPackage.
+		if err := c.addDigests(ctx, puller, []name.Reference{reference}, keep, true); err != nil {
+			if _, unplaced := c.unplacedPackage(reference); unplaced {
+				return nil, err
+			}
+		}
 	}
 	return keep, nil
 }
 
-// addDigests reduces references to the digests they name, resolving tags against this store.
+// addDigests reduces references to the digests they name, resolving tags against the registry the
+// puller reads.
+//
+// local says that registry is this store. A tag it does not hold is then no error: nothing in the store
+// is reached through it, so there is nothing of it to protect. The case is a module enabled just before
+// the store ran out of room — its package is declared and never arrived — and failing on it failed every
+// collection of a store that only a collection could make room in. On the upstream a missing tag is a
+// set that cannot be read, and fails as before. The package of an unplaced module fails whether the
+// store holds that tag or not — see unplacedPackage.
 func (c *Collector) addDigests(
-	ctx context.Context, puller *remote.Puller, references []name.Reference, keep map[string]struct{},
+	ctx context.Context, puller *remote.Puller, references []name.Reference, keep map[string]struct{}, local bool,
 ) error {
 	for _, reference := range references {
 		if digest, ok := reference.(name.Digest); ok {
@@ -509,9 +664,21 @@ func (c *Collector) addDigests(
 			continue
 		}
 
+		if local {
+			if module, unplaced := c.unplacedPackage(reference); unplaced {
+				return fmt.Errorf("module %s names ModuleSource %s, which the cluster does not have, so %s "+
+					"is only a guess at where the store keeps it, and which of the store's images are the "+
+					"module's is unknown", module.Name, module.MissingSource, reference)
+			}
+		}
+
 		// A tag — the release image and its installer. What has to survive is whatever it points
 		// at now, so it is resolved here rather than assumed absent.
 		descriptor, err := puller.Head(ctx, reference)
+		if local && absent(err) {
+			c.Log.Info("a declared tag is not in the store, so it protects nothing", "reference", reference.String())
+			continue
+		}
 		if err != nil {
 			return fmt.Errorf("resolving %s: %w", reference, err)
 		}
@@ -519,6 +686,108 @@ func (c *Collector) addDigests(
 	}
 
 	return nil
+}
+
+// unplacedPackage tells the package tag of a module the cluster keeps whose release names a
+// ModuleSource the cluster does not have — see fill.ModuleRef.Unplaced.
+//
+// Such a module is looked for under the platform's path, and what a fill copied while its source
+// existed is under the source's own. Its package missing from the platform's path is then no module
+// whose package never arrived, and a package found there may be the platform's module of the same name
+// and version: either way its images may well be in the store, and taking them for garbage deletes what
+// an air-gapped cluster gets back only with another `d8 mirror push`. The state is short-lived: the
+// releases of a deleted source are its dependents, and go with it.
+func (c *Collector) unplacedPackage(reference name.Reference) (fill.ModuleRef, bool) {
+	tag, ok := reference.(name.Tag)
+	if !ok {
+		return fill.ModuleRef{}, false
+	}
+	for _, module := range c.Modules {
+		if module.Unplaced() && tag.TagStr() == module.Version &&
+			strings.HasSuffix("/"+tag.RepositoryStr(), "/"+module.StorePath()) {
+			return module, true
+		}
+	}
+	return fill.ModuleRef{}, false
+}
+
+// addUpstreamSet claims the set of a release read the way the fill reads it: the platform from the
+// upstream, and the modules the cluster keeps — with the catalogues — from this store, as declaredDigests
+// reads them. Anything that cannot be read fails the whole: an unreadable part is one whose images could
+// not be told apart from garbage.
+func (c *Collector) addUpstreamSet(
+	ctx context.Context, version string, local fill.Registry, localPuller *remote.Puller, keep map[string]struct{},
+) error {
+	upstreamPuller, err := remote.NewPuller(c.Upstream.Options...)
+	if err != nil {
+		return fmt.Errorf("building the client: %w", err)
+	}
+
+	platform, err := fill.Release{Versions: []string{version}}.Discover(ctx, *c.Upstream, upstreamPuller)
+	if err != nil {
+		return err
+	}
+	if err := c.addDigests(ctx, upstreamPuller, platform, keep, false); err != nil {
+		return err
+	}
+
+	var kept []fill.ModuleRef
+	for _, module := range c.Modules {
+		if !module.Pending {
+			kept = append(kept, module)
+		}
+	}
+	modules, err := fill.ModuleReferences(ctx, local, localPuller, kept)
+	if err != nil {
+		return fmt.Errorf("the modules the cluster keeps: %w", err)
+	}
+	catalogue, err := fill.ModuleCatalogue(ctx, local, nil)
+	if err != nil {
+		return fmt.Errorf("the module catalogue: %w", err)
+	}
+	catalogues, err := fill.SourceCatalogues(ctx, local, kept, nil)
+	if err != nil {
+		return fmt.Errorf("the catalogues of the module sources: %w", err)
+	}
+	return c.addDigests(ctx, localPuller, append(append(modules, catalogue...), catalogues...), keep, true)
+}
+
+// sweeps decides whether this run goes on to sweep: when it deleted something, when the store is to
+// be swept anyway, or when blobs nothing references lie on disk.
+//
+// The last is what a failed sweep leaves: the manifests it deleted are gone, their blobs stay, and the
+// next run, finding nothing left to delete, never swept them — on a live cluster, 805 manifests
+// deleted between two replicas and the stores at their budget for good. Nor only after a failure: a
+// fill cut off between its blobs and its manifest leaves the same. Counted with Reclaimable, which is
+// distribution's mark read from the files, so a run sweeps exactly when the estimate says it frees
+// something. Inside the collection, with this replica's writes paused, and after a push the collection
+// waited out: what is unreferenced now is not on its way to being referenced.
+func (c *Collector) sweeps(report *Report) bool {
+	if len(report.Deleted) > 0 || c.SweepAnyway {
+		return true
+	}
+	if c.DataDir == "" {
+		return false
+	}
+	orphaned, err := Reclaimable(c.DataDir, nil)
+	if err != nil {
+		c.Log.Warn("cannot tell whether blobs nothing references lie on disk, so nothing is swept",
+			"error", err.Error())
+		return false
+	}
+	if orphaned == 0 {
+		return false
+	}
+	c.Log.Info("nothing to delete, but blobs nothing references lie on disk, so the store is swept",
+		"bytes", orphaned)
+	report.Orphaned = orphaned
+	return true
+}
+
+// deleteOptions are the store's options with the run's context, in a slice of their own so the
+// collector's are never appended to.
+func (c *Collector) deleteOptions(ctx context.Context) []remote.Option {
+	return append(append(make([]remote.Option, 0, len(c.Registry.Options)+1), c.Registry.Options...), remote.WithContext(ctx))
 }
 
 // registry is this store as a name.Registry, parsed once for the references built against it.
@@ -605,18 +874,64 @@ type Binary struct {
 // fetched on a cache miss are untagged by nature, and removing them on every run would empty
 // the cache of exactly the images it was asked to hold — turning a garbage collection into a
 // cache flush. What this run reclaims is what the deleted tags made unreachable.
-func (b *Binary) Sweep(ctx context.Context) error {
+func (b *Binary) Sweep(ctx context.Context) (int, error) {
 	if b.Path == "" || b.ConfigPath == "" {
-		return errors.New("no registry binary to reclaim blobs with")
+		return -1, errors.New("no registry binary to reclaim blobs with")
 	}
 
 	command := exec.CommandContext(ctx, b.Path, "garbage-collect", b.ConfigPath)
+	// Without this process's REGISTRY_* variables: distribution reads every one of them as an
+	// override of the configuration it was given, so a variable meant for the syncer that happened to
+	// name a configuration key would change the store the sweep runs on. Today they only earn a
+	// warning each, at the top of the output.
+	command.Env = withoutRegistryVariables(os.Environ())
 	output, err := command.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%s garbage-collect: %w: %s", b.Path, err, strings.TrimSpace(string(output)))
+		return -1, fmt.Errorf("%s garbage-collect: %w: %s", b.Path, err, lastLine(output))
 	}
 
-	b.Log.Info("the registry reclaimed its unreachable blobs",
-		"output", strings.TrimSpace(string(output)))
-	return nil
+	summary := sweepSummary(output)
+	b.Log.Info("the registry reclaimed its unreachable blobs", "summary", summary)
+	return sweptBlobs(summary), nil
+}
+
+// sweptBlobs reads how many blobs a sweep removed out of upstream's summary, "N blobs marked, N blobs
+// and N manifests eligible for deletion" — what is eligible is what a sweep that did not fail deleted.
+// -1 when the summary does not say.
+func sweptBlobs(summary string) int {
+	var marked, blobs, manifests int
+	if _, err := fmt.Sscanf(summary, "%d blobs marked, %d blobs and %d manifests eligible for deletion",
+		&marked, &blobs, &manifests); err != nil {
+		return -1
+	}
+	return blobs
+}
+
+// lastLine is what a failed sweep says about why: the wrapper prints its error last, after a line per
+// manifest and per blob it marked — thousands of them on a real store, which once went whole into the
+// replica's status.
+func lastLine(output []byte) string {
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	return strings.TrimSpace(lines[len(lines)-1])
+}
+
+// sweepSummary is upstream's own account of a sweep, "N blobs marked, N blobs and N manifests eligible
+// for deletion", or the last line when there is none.
+func sweepSummary(output []byte) string {
+	for _, line := range strings.Split(string(output), "\n") {
+		if strings.Contains(line, "blobs marked") {
+			return strings.TrimSpace(line)
+		}
+	}
+	return lastLine(output)
+}
+
+func withoutRegistryVariables(environment []string) []string {
+	kept := make([]string, 0, len(environment))
+	for _, variable := range environment {
+		if !strings.HasPrefix(variable, "REGISTRY_") {
+			kept = append(kept, variable)
+		}
+	}
+	return kept
 }

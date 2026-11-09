@@ -70,8 +70,8 @@ func upstreamSpec(host, ca string) *registryv1alpha1.RegistryStorageSpec {
 // TestApplyWritesOneConfigurationForBothHalves covers what used to be two files for two containers.
 //
 // The write endpoint is a second listener of the same process, derived from this same file, so the two
-// halves cannot drift on authentication, on where the blobs live, or on the read-only flag a garbage
-// collection sets — there is only one of each to get right.
+// halves cannot drift on authentication, on the token service, or on where the blobs live — there is
+// only one of each to get right.
 func TestApplyWritesOneConfigurationForBothHalves(t *testing.T) {
 	applier := newApplier(t, &countingRestarter{})
 
@@ -112,14 +112,14 @@ func TestApplyWritesOneConfigurationForBothHalves(t *testing.T) {
 	assert.Equal(t, DataDir, filesystem["rootdirectory"])
 }
 
-// The read-only window a garbage collection opens covers the write endpoint too, because they are one
-// registry: the collection computes the reachable set and then deletes the rest, so a push landing
-// between those two steps loses its blobs. This used to need the flag written into a second file, and
-// an instance that missed it reintroduced exactly the corruption the window prevents.
-func TestApplyReadOnlyCoversTheWriteEndpoint(t *testing.T) {
+// TestApplyNeverRefusesWrites: a garbage collection no longer makes the registry read-only — it
+// pauses the syncer's own writes instead — so nothing the Applier writes refuses a push. The key
+// itself stays in the file, switched off, so the configuration says explicitly that writes are
+// accepted instead of relying on distribution's default.
+func TestApplyNeverRefusesWrites(t *testing.T) {
 	applier := newApplier(t, &countingRestarter{})
 
-	_, err := applier.ApplyReadOnly(upstreamSpec("registry.deckhouse.io", ""))
+	_, err := applier.Apply(upstreamSpec("registry.deckhouse.io", ""))
 	require.NoError(t, err)
 
 	raw, err := os.ReadFile(applier.ConfigPath)
@@ -129,11 +129,9 @@ func TestApplyReadOnlyCoversTheWriteEndpoint(t *testing.T) {
 
 	storage, _ := config["storage"].(map[string]any)
 	maintenance, _ := storage["maintenance"].(map[string]any)
-	readonly, _ := maintenance["readonly"].(map[string]any)
-	assert.Equal(t, true, readonly["enabled"],
-		"the write listener derives its configuration from this same file, which is what makes "+
-			"the window cover it: the registry image copies it and changes only the address and "+
-			"the proxying")
+	readonly, ok := maintenance["readonly"].(map[string]any)
+	require.True(t, ok, "the configuration must say explicitly that writes are accepted")
+	assert.Equal(t, false, readonly["enabled"])
 }
 
 func TestApplyWritesAndRestarts(t *testing.T) {
@@ -334,74 +332,6 @@ func TestWriteIfChangedLeavesNoTemporaryFiles(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, entries, 1)
 	assert.Equal(t, "config.yaml", entries[0].Name())
-}
-
-// TestApplyReadOnlyIsNotPartOfTheDesiredState is what keeps a crashed garbage collection from
-// leaving a replica unable to accept writes forever: read-only is a condition a replica puts
-// itself in, and the next ordinary Apply takes it back out.
-func TestApplyReadOnlyIsNotPartOfTheDesiredState(t *testing.T) {
-	applier := newApplier(t, &countingRestarter{})
-	spec := upstreamSpec("registry.deckhouse.io", "")
-
-	_, err := applier.Apply(spec)
-	require.NoError(t, err)
-	require.False(t, readOnly(t, applier), "writes were refused before anything asked for it")
-
-	changed, err := applier.ApplyReadOnly(spec)
-	require.NoError(t, err)
-	assert.True(t, changed)
-	assert.True(t, readOnly(t, applier))
-
-	// The same desired state as the first call, and it must undo the condition rather than
-	// see no difference.
-	changed, err = applier.Apply(spec)
-	require.NoError(t, err)
-	assert.True(t, changed, "the read-only condition was left in place")
-	assert.False(t, readOnly(t, applier))
-}
-
-// TestApplyReadOnlyKeepsServingReads: the point of read-only over stopping the process is
-// that a replica in this state still answers for every image it holds.
-func TestApplyReadOnlyKeepsServingReads(t *testing.T) {
-	applier := newApplier(t, &countingRestarter{})
-
-	_, err := applier.ApplyReadOnly(upstreamSpec("registry.deckhouse.io", ""))
-	require.NoError(t, err)
-
-	raw, err := os.ReadFile(applier.ConfigPath)
-	require.NoError(t, err)
-
-	var config map[string]any
-	require.NoError(t, yaml.Unmarshal(raw, &config))
-
-	// Still listening, and still a pull-through cache: what changed is only that writes are
-	// refused. The cache is in the other file, so both are read.
-	assert.Contains(t, config, "http")
-
-	raw, err = os.ReadFile(applier.WrapperPath())
-	require.NoError(t, err)
-	var wrapper map[string]any
-	require.NoError(t, yaml.Unmarshal(raw, &wrapper))
-	assert.Contains(t, wrapper, "upstream")
-}
-
-func readOnly(t *testing.T, applier *Applier) bool {
-	t.Helper()
-
-	raw, err := os.ReadFile(applier.ConfigPath)
-	require.NoError(t, err)
-
-	var config struct {
-		Storage struct {
-			Maintenance struct {
-				ReadOnly struct {
-					Enabled bool `json:"enabled"`
-				} `json:"readonly"`
-			} `json:"maintenance"`
-		} `json:"storage"`
-	}
-	require.NoError(t, yaml.Unmarshal(raw, &config))
-	return config.Storage.Maintenance.ReadOnly.Enabled
 }
 
 // TestApplyToleratesAMissingRegistryProcess is the pass that failed because a container was

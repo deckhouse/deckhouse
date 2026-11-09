@@ -33,7 +33,11 @@ package collect
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
 
 	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/registry/storage"
@@ -78,6 +82,12 @@ func Run(ctx context.Context, settings *configuration.Configuration, options Opt
 		return fmt.Errorf("reading the store: %w", err)
 	}
 
+	if root, ok := parameters["rootdirectory"].(string); ok && driverName == "filesystem" && root != "" {
+		if err := ensureLayerDirectories(root); err != nil {
+			return fmt.Errorf("preparing the store for a sweep: %w", err)
+		}
+	}
+
 	if err := storage.MarkAndSweep(ctx, driver, namespace, storage.GCOpts{
 		DryRun:         options.DryRun,
 		RemoveUntagged: options.RemoveUntagged,
@@ -86,4 +96,39 @@ func Run(ctx context.Context, settings *configuration.Configuration, options Opt
 	}
 
 	return nil
+}
+
+// ensureLayerDirectories gives every repository that has manifests the `_layers` directory upstream's
+// mark phase lists, empty where there was none.
+//
+// A pull-through cache writes a manifest it fetched on a miss without the layer links beside it, so a
+// store that served through its upstream holds repositories with `_manifests` and no `_layers`.
+// Upstream's mark phase forgives a repository with no `_manifests` and not one with no `_layers`: the
+// first such repository failed the whole sweep with "Path not found" — on a live cluster, after the
+// collection had deleted hundreds of manifests whose blobs then stayed on a full disk. An empty
+// directory says what the missing one did, that the repository links no layer, and the registry reads
+// the two alike.
+func ensureLayerDirectories(root string) error {
+	repositories := filepath.Join(root, "docker", "registry", "v2", "repositories")
+	return filepath.WalkDir(repositories, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				return nil
+			}
+			return err
+		}
+		if !entry.IsDir() || entry.Name() != "_manifests" {
+			return nil
+		}
+		layers := filepath.Join(filepath.Dir(path), "_layers")
+		if _, err := os.Stat(layers); errors.Is(err, fs.ErrNotExist) {
+			if err := os.Mkdir(layers, 0o755); err != nil {
+				return fmt.Errorf("creating %s: %w", layers, err)
+			}
+		} else if err != nil {
+			return err
+		}
+		// What is under `_manifests` is links and revisions, never another repository.
+		return filepath.SkipDir
+	})
 }

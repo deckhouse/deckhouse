@@ -18,8 +18,10 @@ package report
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -646,4 +648,25 @@ func TestMergeCarriesTheVerifiedSet(t *testing.T) {
 	Merge(&replicas, State{Node: "master-0", Full: true, VerifiedSet: "abc"})
 	require.Len(t, replicas, 1)
 	assert.Equal(t, "abc", replicas[0].VerifiedSet)
+}
+
+func TestClipKeepsAMessageWithinTheLimit(t *testing.T) {
+	short := "the sweep failed"
+	assert.Equal(t, short, Clip(short))
+
+	// Three bytes a character, so a cut at the limit lands inside one.
+	long := strings.Repeat("€", MessageLimit)
+	clipped := Clip(long)
+	assert.LessOrEqual(t, len(clipped), MessageLimit)
+	assert.True(t, utf8.ValidString(clipped), "cut on a character boundary")
+	assert.True(t, strings.HasSuffix(clipped, "(truncated)"))
+}
+
+func TestMergeCollectionClipsTheError(t *testing.T) {
+	replicas := []registryv1alpha1.StorageReplicaStatus{{Node: "master-0"}}
+	now := time.Now()
+
+	MergeCollection(&replicas, State{Node: "master-0", CollectedAt: &now, CollectionError: strings.Repeat("x", 200000)})
+
+	assert.LessOrEqual(t, len(replicas[0].CollectionError), MessageLimit)
 }

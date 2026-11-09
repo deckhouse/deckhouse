@@ -5230,6 +5230,7 @@ alerts:
         Where to look:
 
         ```
+        d8 k get registryoperation -o wide
         d8 k get registrystorage registry -o jsonpath='{.status.replicas}' | jq \
           'map({node, collectedAt, collectionError})'
         d8 k get registrystorage registry -o jsonpath='{.spec.garbageCollection}' | jq
@@ -5239,25 +5240,27 @@ alerts:
 
         - the collection is turned off in the `registry` ModuleConfig under
           `storage.garbageCollection.enabled`;
-        - the schedule has not come round yet, or names an hour that never arrives — a
-          collection only runs on the schedule, and an unreadable expression is refused rather
-          than guessed at;
+        - the schedule has not come round yet, or names an hour that never arrives — an
+          unreadable expression is refused rather than guessed at — and the image set has not
+          changed either;
+        - the collections are created and fail: the `RegistryOperation` objects of type
+          `GarbageCollection` say why in `status.replicas`, for a day after they finish;
         - no release is deployed, which is the one input that justifies deleting anything: every
           deletion is "older than what the cluster runs", and without that there is nothing to
           compare against;
         - `collectionError` on a replica, which says what its own last attempt hit.
 
-        One reading tells the first two apart from the rest. Each replica logs the time of its next
-        collection, so its absence means none was ever scheduled — a different problem from one
-        that is scheduled and failing:
+        One reading tells the first two apart from the rest. The controller logs every collection
+        it creates and every firing of the schedule it skips, so their absence means none was ever
+        started — a different problem from one that is started and failing:
 
         ```
-        d8 k -n d8-system logs registry-storage-0 -c syncer | grep -i "garbage collection"
+        d8 k -n d8-system logs -l app=registry-controller -c registry-controller --tail=-1 | grep -iE "garbage collection|schedule fired"
         ```
 
-        Collecting puts one replica read-only while it runs. That is not an outage — it keeps
-        serving every image it holds — but it does mean the schedule belongs at a quiet hour,
-        which is where it defaults to.
+        Collecting is not an outage — the replica keeps serving every image it holds — but it
+        pauses filling the replica's store and can fail a `d8 mirror push` started meanwhile, so
+        the schedule belongs at a quiet hour, which is where it defaults to.
       summary: |
         The registry cache has not reclaimed its disk for a week.
       severity: "6"

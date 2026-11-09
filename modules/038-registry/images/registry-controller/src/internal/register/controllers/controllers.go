@@ -22,8 +22,10 @@ limitations under the License.
 package controllers
 
 import (
+	_ "github.com/deckhouse/registry-controller/internal/controller/collection"
 	_ "github.com/deckhouse/registry-controller/internal/controller/config"
 	_ "github.com/deckhouse/registry-controller/internal/controller/layout"
 	_ "github.com/deckhouse/registry-controller/internal/controller/observe"
+	_ "github.com/deckhouse/registry-controller/internal/controller/operation"
 	_ "github.com/deckhouse/registry-controller/internal/controller/storageupdate"
 )

@@ -169,20 +169,20 @@ properties:
 
           Needed because nothing else ever removes anything: every release adds a slice of the repository, so a cluster that lives for years fills its store and then stops being able to pull.
 
-          A collection puts one replica read-only for as long as it takes. That replica keeps serving every image it holds; what it cannot do is store the result of a cache miss, or accept a `d8 mirror push`. Only one replica collects at a time, so the others are unaffected.
+          A collection does not interrupt serving: the replica keeps serving every image it holds. It does not start while the store is being filled or a `d8 mirror push` is in progress, and while it runs the replica stops filling its own store. A `d8 mirror push` started during a collection can fail and has to be retried. Only one replica collects at a time, so the others are unaffected.
         properties:
           enabled:
             type: boolean
             default: true
             description: |
-              Whether the cache reclaims its disk at all.
+              Whether the cache reclaims its disk on its own: on the schedule, once it holds a new image set, and when it refuses writes.
 
-              Turning this off leaves the store to grow without bound, which only makes sense with a disk large enough that it never matters.
+              Turning this off leaves the store to grow without bound, which only makes sense with a disk large enough that it never matters. A collection created by hand as a [RegistryOperation](cr.html#registryoperation) object still runs.
           schedule:
             type: string
             pattern: '^\s*\S+\s+\S+\s+\S+\s+\S+\s+\S+\s*$'
             description: |
-              A five-field cron expression, in the replicas' own time zone.
+              A five-field cron expression, in UTC.
 
               Defaults to a night hour. If the `master` node group has a maintenance window, the start of that window is used instead — that being a time the operator has already declared safe for disruption.
             x-examples:

@@ -73,6 +73,18 @@ type Metrics struct {
 	// past any threshold, and an alert with an hour's patience fires an hour after boot on a
 	// cluster whose schedule had not yet come round once.
 	Started prometheus.Gauge
+
+	// Reclaimable is how many bytes a garbage collection of this replica's store would free now,
+	// as last estimated, and ReclaimableEstimated is when that was.
+	//
+	// For whoever is about to start a collection by hand: zero says it would free nothing. Estimated
+	// rarely and never while the store is being written to — see gc.Estimator — so the time of the
+	// estimate is part of the answer.
+	//
+	// Neither is exposed before the first estimate. A zero there would read as "nothing to free"
+	// about a store nobody has looked at, which is the one answer this exists to give truthfully.
+	Reclaimable          *prometheus.GaugeVec
+	ReclaimableEstimated *prometheus.GaugeVec
 }
 
 // New registers the collectors and returns them.
@@ -117,14 +129,32 @@ func New(registry prometheus.Registerer) *Metrics {
 		Help: "When this replica's syncer started.",
 	})
 
+	// Without labels, and vectors only so that nothing is exposed until the first Set — see
+	// SetReclaimable.
+	m.Reclaimable = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "d8_registry_storage_reclaimable_bytes",
+		Help: "How many bytes a garbage collection of this replica's store would free, as last estimated.",
+	}, nil)
+	m.ReclaimableEstimated = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "d8_registry_storage_reclaimable_estimated_timestamp_seconds",
+		Help: "When d8_registry_storage_reclaimable_bytes was last estimated.",
+	}, nil)
+
 	// Set here rather than by the caller: this runs once, at startup, and a start time nobody
 	// remembered to set would read 0 — which would make the alert that depends on it fire on
 	// every cluster instead of none, the same way the zero it exists to disambiguate did.
 	m.Started.Set(float64(time.Now().Unix()))
 
 	registry.MustRegister(m.Leader, m.FillDuration, m.References, m.Passes,
-		m.Collections, m.Reclaimed, m.LastCollection, m.Started)
+		m.Collections, m.Reclaimed, m.LastCollection, m.Started,
+		m.Reclaimable, m.ReclaimableEstimated)
 	return m
+}
+
+// SetReclaimable records an estimate of what a garbage collection would free, and when it was made.
+func (m *Metrics) SetReclaimable(bytes int64, at time.Time) {
+	m.Reclaimable.WithLabelValues().Set(float64(bytes))
+	m.ReclaimableEstimated.WithLabelValues().Set(float64(at.Unix()))
 }
 
 // Outcomes a reference can have in a pass.

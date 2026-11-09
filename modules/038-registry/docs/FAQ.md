@@ -398,7 +398,9 @@ If you are not going to turn the cache back on, remove the cache directory on th
 
 ## The cache keeps growing. What reclaims it?
 
-Garbage collection, run on a schedule by the storage replicas themselves.
+Garbage collection, which every storage replica runs on its own store. The module starts it on a
+schedule, once the cache holds a new image set, and when the store refuses writes; it can also be
+started by hand.
 
 It is the only mechanism that removes anything from the store. Every DP release adds new
 images, so without collection the store of a long-lived cluster eventually fills up and stops
@@ -414,12 +416,22 @@ Collection removes the images of the releases the cluster has moved past. It kee
   anything pushed by hand. The collector cannot know what these mean, so it does not touch
   them.
 
+It also removes blobs that no image references, such as those left by an interrupted fill or by a
+collection whose cleanup failed. A collection removes them even when there are no images to delete.
+
 The collector is deliberately cautious. In an air-gapped cluster, deleting a blob that is
 still needed is unrecoverable without another `d8 mirror push`, while keeping an unneeded one
 merely costs disk space. So a run that cannot determine what to keep — for example, when no
 deployed release is found — does nothing at all.
 
 To check the collection status and schedule, use these commands:
+
+List the recent collections — what started them, how they went, and how much they freed. A finished
+collection is kept for a day:
+
+```bash
+d8 k get registryoperation -o wide
+```
 
 Check the last collection time on each replica, and any errors:
 
@@ -434,21 +446,30 @@ Check the current collection schedule:
 d8 k get registrystorage registry -o jsonpath='{.spec.garbageCollection}' | jq
 ```
 
-### When it runs, and why a replica goes read-only
+### When it runs, and what happens during a run?
 
 The registry's collector first computes the set of reachable blobs and then deletes the rest,
-so a blob uploaded between those two steps would be deleted. Collection is therefore only safe
-on a store nothing is writing to, and the replica rejects writes for the duration.
+so a blob written between those two steps and not yet referenced by a manifest would be
+deleted. A replica therefore collects only when its store is not being written to:
 
-The replica keeps serving all the images it holds. What it cannot do while collecting:
+- a collection does not start while the cache is being filled or replicated, or while a
+  `d8 mirror push` is in progress — it waits until the writing is over;
+- the replica looks at its store again when its turn comes: if a fill or a push started while it
+  waited, it gives the turn back and waits again;
+- it looks once more right before removing blobs: if a push has started by then, the blobs are
+  left for the next collection;
+- while it collects, the replica stops filling and replicating its own store.
 
-- store the result of a cache miss — the node agent falls back to the upstream, so the pull is
-  slower, not failed;
-- accept a `d8 mirror push` — the push fails with a visible error and can be retried.
+The replica keeps serving all the images it holds and fetching cache misses from the upstream.
+Do not run `d8 mirror push` while a collection is running: check `d8 k get registryoperation`
+first. A push that starts during the removal of blobs can fail with a visible error, and it can
+also report success and leave an image incomplete: a layer the store already held is not uploaded
+again, and the collection can remove it. Such an image fails to pull later with a missing blob.
+If a push overlapped a collection, run it again after the collection finishes.
 
 Only one replica collects at a time; the others work normally.
 
-By default, collection is scheduled at a night hour — or, if the `master` node group has a
+The schedule is in UTC. By default, collection is scheduled at a night hour — or, if the `master` node group has a
 maintenance window, at its start, since that hour is already declared safe for disruption. To
 set your own schedule, use the [`storage.garbageCollection`](configuration.html#parameters-storage-garbagecollection) parameter:
 
@@ -461,11 +482,106 @@ spec:
 ```
 
 A cron expression that cannot be parsed is rejected rather than guessed at: collecting at an
-unexpected hour is worse than not collecting.
+unexpected hour is worse than not collecting. For the same reason a changed schedule counts from
+the moment it changed: a firing of the new schedule that has already passed is not made up for. The
+same applies after collection is turned back on.
+
+Collection also starts once every replica holds a new image set: after a Deckhouse Platform update, or after
+a module is enabled or updated. That is the moment the images only the previous set needed become
+garbage. Disabling a module does not change the set: its images are kept for when it is enabled again.
+
+A store that refuses writes — over its budget, or down to the space kept free for the node — can
+never take in a new set, so it is collected without waiting for one: once per deployed Deckhouse Platform
+release, and again after an update or after the store has accepted writes in between. If that
+collection fails, it is tried again four hours after it ended.
+
+Every collection is a [RegistryOperation](cr.html#registryoperation) object of type
+`GarbageCollection`, whoever started it. Only one runs at a time: a firing of the schedule that comes
+while another collection is running is skipped, and a collection for a new image set waits for the
+running one to finish.
+
+### Is a collection worth running now?
+
+Each storage replica estimates how much a collection of its store would free and exports the estimate to Prometheus metrics:
+
+- `d8_registry_storage_reclaimable_bytes`: how many bytes a collection would free now. Zero means a collection would free nothing.
+- `d8_registry_storage_reclaimable_estimated_timestamp_seconds`: when the estimate was made.
+
+Both carry the `node` label of the replica. Neither is exported before the replica's first estimate.
+
+A replica makes the estimate:
+
+- when the image set the cluster needs changes;
+- after a collection on that replica;
+- every 30 minutes otherwise, and not more often than once in 5 minutes.
+
+Estimate is not performed:
+
+- during the filling of the cache;
+- while uploading images to the storage ('d8 mirror push');
+- during garbage collection.
+
+Therefore, when viewing an estimate, pay attention to its time. Storage that refuses to write is evaluated as usual: this is when garbage collection is most needed.
+
+To see the estimate for every replica, run the following query in Prometheus:
+
+```text
+d8_registry_storage_reclaimable_bytes
+```
+
+### How to run garbage collection manually?
+
+To run garbage collection manually, create a [RegistryOperation](cr.html#registryoperation) object of type `GarbageCollection`:
+
+```bash
+d8 k create -f - <<EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: RegistryOperation
+metadata:
+  generateName: gc-manual-
+spec:
+  type: GarbageCollection
+  cause: Free space before pushing a new release.
+EOF
+```
+
+It runs even when automatic collection is turned off. Replicas collect one at a time, exactly as
+on schedule. A replica starts only when its store is not being written to: while the cache is being
+filled or a `d8 mirror push` is in progress, the replica waits, and the reason is shown in
+`status.replicas[].reason`. A store that refuses writes is not waited for: a fill cannot go on until
+the collection frees room. A replica still held back an hour after the operation was accepted fails
+with the reason `DeadlineExceeded`. An operation created while another one is running fails with the
+reason `AnotherOperationActive`.
+
+Follow the operation and see what it removed:
+
+```bash
+d8 k get registryoperation <NAME> -o jsonpath='{.status}' | jq \
+  '{phase, reason, message, garbageCollection}'
+```
+
+To cancel an operation, including one a replica is already running, set the cancel label on it:
+
+```bash
+d8 k label registryoperation <NAME> registry.deckhouse.io/cancel=true
+```
+
+What was deleted before the cancellation stays deleted.
+
+If a replica's `syncer` container stops answering while the replica collects or waits for its turn,
+for example because its master went `NotReady`, the operation stays active until 24 hours after it
+was accepted, and then the replica fails with the reason `TimedOut`. Until then automatic collections
+do not start, and an operation created manually fails with the reason `AnotherOperationActive`. The
+cancel label releases a replica that waits for its turn, but not one that was collecting, since that
+replica itself acts on the label. To release the operation sooner, delete it:
+
+```bash
+d8 k delete registryoperation <NAME>
+```
 
 ### Turning it off
 
-Garbage collection is turned off in the module settings (the [`storage.garbageCollection`](configuration.html#parameters-storage-garbagecollection) parameter):
+To disable automatic garbage collection, set the value to `false` for the [`storage.garbageCollection`](configuration.html#parameters-storage-garbagecollection) parameter:
 
 ```yaml
 spec:
@@ -479,6 +595,8 @@ This only makes sense with a disk large enough that unbounded growth of the stor
 becomes a problem. Note that
 [`D8RegistryStorageNotReclaimed`](#what-do-the-registry-alerts-mean) still fires a week after
 the last collection: from the outside, "turned off" and "silently stopped" look the same.
+
+Garbage collection created [manually] (#how-to-run-garbage-collection-manually) is performed even if automatic is disabled.
 
 ## What happens when the cache's store is full?
 

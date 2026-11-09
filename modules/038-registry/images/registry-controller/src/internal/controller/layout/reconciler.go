@@ -62,10 +62,6 @@ import (
 	"github.com/deckhouse/registry-controller/internal/upstreams"
 )
 
-// controlPlaneLabel marks the nodes a storage replica runs on: the StatefulSet is placed by
-// helm_lib_node_selector "master", which selects on it.
-const controlPlaneLabel = "node-role.kubernetes.io/control-plane"
-
 const (
 	// ControllerName identifies this controller in logs, events and the
 	// --disable-controllers flag.
@@ -607,15 +603,12 @@ func (r *Reconciler) collectInputs(
 		return inputs, fmt.Errorf("listing nodes: %w", err)
 	}
 	inputs.Nodes = make([]string, 0, len(nodes.Items))
-	// Where a storage replica is expected: the nodes the StatefulSet is placed on, selected the same
-	// way (helm_lib_node_selector "master").
-	var storageNodes []string
 	for i := range nodes.Items {
 		inputs.Nodes = append(inputs.Nodes, nodes.Items[i].Name)
-		if _, isMaster := nodes.Items[i].Labels[controlPlaneLabel]; isMaster {
-			storageNodes = append(storageNodes, nodes.Items[i].Name)
-		}
 	}
+	// Where a storage replica is expected: the nodes the StatefulSet is placed on, selected the same
+	// way (helm_lib_node_selector "master").
+	storageNodes := layout.StorageNodes(nodes.Items)
 	if storage.Name != "" {
 		inputs.FollowersBehind = layout.FollowersBehind(
 			storage.Status.Replicas, leaseHolder, storageNodes)

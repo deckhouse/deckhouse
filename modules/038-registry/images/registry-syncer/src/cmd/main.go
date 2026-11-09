@@ -162,7 +162,7 @@ func main() {
 	flag.StringVar(&upstreamCAPath, "upstream-ca-path", distribution.UpstreamCAFile,
 		"Where the certificate authority of the upstream is written.")
 	flag.StringVar(&gcLeaseName, "gc-lease-name", "registry-storage-gc",
-		"The lease that serialises garbage collection, so at most one replica is read-only at a time.")
+		"The lease that serialises garbage collection, so at most one replica collects at a time.")
 	flag.StringVar(&registryBinary, "registry-binary", "/registry",
 		"The registry binary, used to reclaim blobs the deleted manifests left unreachable.")
 	flag.StringVar(&metricsAddress, "metrics-address", "127.0.0.1:4284",
@@ -443,11 +443,11 @@ func serve(ctx context.Context, log *slog.Logger, opts options) error {
 		return run.MayLead(opts.nodeName, replicas, currentSet, lease), nil
 	}
 
-	// Reclaiming the disk, on its own schedule and its own lease.
+	// Reclaiming the disk, when a RegistryOperation asks for it, on its own lease.
 	//
 	// A second lease, separate from the one above: the replica filling the cache is the last
-	// one that should stop accepting writes, so "who fills" and "whose turn is it to go
-	// read-only" must be free to be different replicas.
+	// one that should pause its writes, so "who fills" and "whose turn is it to collect" must be
+	// free to be different replicas.
 	go startCollector(ctx, log, opts, kubeClient, clientset, loop, collected)
 
 	candidate := &run.Candidate{Log: log, Eligible: eligible, Elect: elect}
@@ -533,7 +533,7 @@ func leaseAt(lease *coordinationv1.Lease, now time.Time) run.Lease {
 	return view
 }
 
-// startCollector runs the garbage collection schedule for this replica's own store.
+// startCollector runs the garbage collections asked of this replica's own store.
 //
 // Never fatal, and never in the way: a replica that cannot reclaim its disk still serves every
 // image it holds, and the filling and reporting share this process.
@@ -547,52 +547,82 @@ func startCollector(
 		return
 	}
 
-	scheduler := &gc.Scheduler{
+	pushing := func() bool {
+		active, err := fill.UploadInProgress(distribution.DataDir, pushIdleWindow, time.Now())
+		if err != nil {
+			// Unreadable means unknown, and unknown is not permission to delete: an upload that
+			// cannot be seen is exactly the one that must not be swept from under.
+			log.Warn("cannot tell whether a push is in progress, so the collection waits",
+				"error", err.Error())
+			return true
+		}
+		return active
+	}
+	// The same question for the estimate, which only reads and is asked without a collection to hold
+	// back: unknown is "not now", and not worth a warning.
+	pushingQuiet := func() bool {
+		active, err := fill.UploadInProgress(distribution.DataDir, pushIdleWindow, time.Now())
+		return err != nil || active
+	}
+
+	// What a collection would free now, for whoever decides whether to start one. Kept away from
+	// the store while anything writes to it, a collection included — see gc.Estimator.
+	var collecting atomic.Bool
+	estimator := &gc.Estimator{
+		Log:        log,
+		Filling:    loop.Filling,
+		Pushing:    pushingQuiet,
+		Collecting: collecting.Load,
+		Set:        loop.CurrentSet,
+		Estimate: func(ctx context.Context) (int64, error) {
+			collector, err := newCollector(ctx, log, opts, kubeClient, loop)
+			if err != nil {
+				return 0, err
+			}
+			collector.DryRun = true
+			report, err := collector.Run(ctx)
+			if err != nil {
+				return 0, err
+			}
+			// What the collection frees: the blobs only the doomed reference, and those nothing
+			// references at all, which it sweeps even with nothing to delete.
+			return gc.Reclaimable(distribution.DataDir, report.Doomed)
+		},
+		Publish: collected.SetReclaimable,
+	}
+
+	// When to collect is the controller's decision, made into RegistryOperation objects: on the
+	// schedule, after a new image set, or because somebody asked. This replica runs them.
+	worker := &gc.Worker{
 		Log: log,
 		Plan: func() gc.Plan {
-			// Read from the desired state at each firing, so changing the schedule does not
-			// need a restart.
 			spec := loop.Desired()
 			if spec == nil {
-				// Nothing has been read yet, which is not the same as a collection that has
-				// been turned off — and saying "disabled" here used to cost a fresh replica
-				// its first hour, because that is how long the disabled path waits.
+				// Nothing has been read yet: the store has not been looked at.
 				return gc.Plan{}
 			}
 			// A fill the cluster has asked for and this replica has not finished is a reason to
 			// collect nothing: the store cannot be compared with anything while the set is still
-			// going in, and the reclamation would refuse the writes that fill is made of.
-			// Only a copy this replica makes, though: see Loop.OwesCopy.
-			pending := spec.NeedSync && !loop.Complete() && loop.OwesCopy()
-
-			if spec.GarbageCollection == nil {
-				// Read, and it says nothing about collecting.
-				return gc.Plan{Known: true, FillPending: pending}
-			}
+			// going in. Only a copy this replica makes, though: see Loop.OwesCopy. And only one that
+			// can go in: a store that refuses writes fails every fill at its first blob, and waiting
+			// for it would wait out the one thing that can give the room back.
 			return gc.Plan{
 				Known:       true,
-				Enabled:     spec.GarbageCollection.Enabled,
-				Schedule:    spec.GarbageCollection.Schedule,
-				FillPending: pending,
+				FillPending: spec.NeedSync && !loop.Complete() && loop.OwesCopy() && !loop.StoreRefusesWrites(),
 			}
 		},
 		// Filling has priority: a collection reclaims what nothing declares, and a fill is putting
 		// the declarations in.
 		Filling: loop.Filling,
+		// The syncer stops writing to the cache for the duration, because it is the only thing in
+		// this pod that writes to it. Nothing else has to change: the reclamation deletes what no
+		// kept release declares, and a fill putting images in at the same moment is the one activity
+		// that could contradict it. Taken only if it is free: a fill holds it for its whole pass.
+		Pause: loop.TryPauseWrites,
 		// And so has a push from outside, which is the one writer this process cannot take turns
 		// with. Asked about activity rather than about the endpoint being open: it may stay open for
 		// the life of the cluster while pushes happen twice a year.
-		Pushing: func() bool {
-			active, err := fill.UploadInProgress(distribution.DataDir, pushIdleWindow, time.Now())
-			if err != nil {
-				// Unreadable means unknown, and unknown is not permission to delete: an upload that
-				// cannot be seen is exactly the one that must not be swept from under.
-				log.Warn("cannot tell whether a push is in progress, so the collection waits",
-					"error", err.Error())
-				return true
-			}
-			return active
-		},
+		Pushing: pushing,
 		Lease: &gc.ClusterLease{
 			Log:       log,
 			Client:    clientset.CoordinationV1(),
@@ -600,63 +630,57 @@ func startCollector(
 			Name:      opts.gcLeaseName,
 			Identity:  opts.nodeName,
 		},
+		Operations: &gc.ClusterOperations{Client: kubeClient, Node: opts.nodeName},
 		Collect: func(ctx context.Context) (gc.Report, error) {
-			// The syncer stops writing to the cache for the duration, because it is the only thing
-			// in this pod that writes to it. Nothing else has to change: the reclamation deletes
-			// what no kept release declares, and a fill putting images in at the same moment is the
-			// one activity that could contradict it.
-			done := loop.PauseWrites()
-			defer done()
+			collecting.Store(true)
+			defer func() {
+				collecting.Store(false)
+				estimator.Collected()
+			}()
 
-			releases, err := gc.FromCluster(ctx, kubeClient)
+			// Runs with this replica's writes paused — see Pause above.
+
+			// The store is measured on both sides of the run, inside the pause, so what it gave
+			// back is not mixed with what a fill would have added. A cache miss served meanwhile can
+			// still add a little, which makes the figure an underestimate and never an invention.
+			before, measureErr := distribution.StoreBytes(distribution.DataDir)
+			if measureErr != nil {
+				log.Warn("cannot measure the store before the collection, so what it gives back is not reported",
+					"error", measureErr.Error())
+			}
+
+			collector, err := newCollector(ctx, log, opts, kubeClient, loop)
 			if err != nil {
 				return gc.Report{}, err
 			}
-
-			// The same modules the fill and the count enumerate: what the collector protects has to
-			// be exactly what completeness is judged on, or one of them is wrong about the cluster.
-			modules, err := gc.ModulesFromCluster(ctx, kubeClient)
-			if err != nil {
-				return gc.Report{}, err
+			// The registry is not touched at all, and that is deliberate: inside this pod the only
+			// writer to the cache is this syncer, so "stop writing while collecting" is something it
+			// does to itself. Serving goes on exactly as before — a collection is not an outage, and
+			// making it one by restarting the serving process is what it used to be.
+			collector.Sweep = &gc.Binary{
+				Log:        log,
+				Path:       opts.registryBinary,
+				ConfigPath: opts.configPath,
 			}
-
-			collector := &gc.Collector{
-				Log: log,
-				Registry: gc.Registry{
-					// The non-proxying listener, the same one a fill writes to: deleting through
-					// the serving one deletes nothing. Its proxy store implements no deletion, so
-					// every DELETE is answered 405 and the run is refused reference by reference
-					// while reporting only warnings — see writeEndpointAddress.
-					Address:  writeEndpointAddress(opts.listenAddress),
-					Insecure: false,
-					Scope:    strings.Trim(constant.Path, "/"),
-					Options:  loop.LocalOptions(),
-				},
-				// What the store holds is read from its files, not asked of the registry: a
-				// pull-through cache answers that question with its upstream's contents.
-				DataDir:  distribution.DataDir,
-				Releases: releases,
-				Modules:  modules,
-				// The registry is not touched at all, and that is deliberate: inside this pod the
-				// only writer to the cache is this syncer, so "stop writing while collecting" is
-				// something it does to itself. Serving goes on exactly as before — a collection is
-				// not an outage, and making it one by restarting the serving process is what it used
-				// to be.
-				Sweep: &gc.Binary{
-					Log:        log,
-					Path:       opts.registryBinary,
-					ConfigPath: opts.configPath,
-				},
-				// What is ahead of the set is given back when the store is short of room and the upstream
-				// holds it again — see gc.Collector.ReleaseAhead.
-				ReleaseAhead: hasUpstream(loop.Desired()) && !loop.RoomAhead(),
-			}
+			// What an earlier sweep left behind, on a store that needs every byte of it back — see
+			// gc.Collector.SweepAnyway.
+			collector.SweepAnyway = loop.StoreRefusesWrites()
+			collector.Pushing = pushing
 			if collector.ReleaseAhead {
 				log.Info("the store is short of room, so what is ahead of the set is collected too")
 			}
 			report, err := collector.Run(ctx)
 			if collector.ReleaseAhead && len(report.Deleted) > 0 {
 				loop.ForgetAhead()
+			}
+			if measureErr == nil {
+				if after, afterErr := distribution.StoreBytes(distribution.DataDir); afterErr == nil {
+					reclaimed := max(before-after, 0)
+					report.ReclaimedBytes = &reclaimed
+				} else {
+					log.Warn("cannot measure the store after the collection, so what it gave back is not reported",
+						"error", afterErr.Error())
+				}
 			}
 			collected.Reclaimed.Add(float64(len(report.Deleted)))
 			return report, err
@@ -680,7 +704,60 @@ func startCollector(
 		},
 	}
 
-	scheduler.Run(ctx)
+	estimator.Plan = worker.Plan
+	go estimator.Run(ctx)
+	worker.Run(ctx)
+}
+
+// newCollector is a collection of this replica's store as it would run now: against the releases and
+// modules the cluster has, and with the room the store has. Without a sweep, which only a collection
+// that deletes has use for.
+func newCollector(
+	ctx context.Context, log *slog.Logger, opts options, kubeClient client.Client, loop *run.Loop,
+) (*gc.Collector, error) {
+	releases, err := gc.FromCluster(ctx, kubeClient)
+	if err != nil {
+		return nil, err
+	}
+
+	// The same modules the fill and the count enumerate: what the collector protects has to
+	// be exactly what completeness is judged on, or one of them is wrong about the cluster.
+	modules, err := gc.ModulesFromCluster(ctx, kubeClient)
+	if err != nil {
+		return nil, err
+	}
+
+	// The upstream, for the set of a release this store never got to hold — see
+	// gc.Collector.Upstream. Unreadable credentials leave it out, and the store is judged by
+	// what it holds, as before.
+	upstream, err := loop.UpstreamRegistry()
+	if err != nil {
+		log.Warn("cannot read the upstream for the image set, so only this store is read", "error", err.Error())
+		upstream = nil
+	}
+
+	return &gc.Collector{
+		Log: log,
+		Registry: gc.Registry{
+			// The non-proxying listener, the same one a fill writes to: deleting through
+			// the serving one deletes nothing. Its proxy store implements no deletion, so
+			// every DELETE is answered 405 and the run is refused reference by reference
+			// while reporting only warnings — see writeEndpointAddress.
+			Address:  writeEndpointAddress(opts.listenAddress),
+			Insecure: false,
+			Scope:    strings.Trim(constant.Path, "/"),
+			Options:  loop.LocalOptions(),
+		},
+		// What the store holds is read from its files, not asked of the registry: a
+		// pull-through cache answers that question with its upstream's contents.
+		DataDir:  distribution.DataDir,
+		Releases: releases,
+		Modules:  modules,
+		Upstream: upstream,
+		// What is ahead of the set is given back when the store is short of room and the upstream
+		// holds it again — see gc.Collector.ReleaseAhead.
+		ReleaseAhead: hasUpstream(loop.Desired()) && !loop.RoomAhead(),
+	}, nil
 }
 
 // serveMetrics answers the scraper beside it, and nothing else.

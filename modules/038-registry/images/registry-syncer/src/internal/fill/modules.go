@@ -64,8 +64,13 @@ type ModuleRef struct {
 	Version string
 
 	// Source is the ModuleSource the cluster installs the module from. Empty when its release names
-	// none, or the sources could not be read.
+	// none, or one the cluster does not have — see MissingSource.
 	Source ModuleSource
+
+	// MissingSource is the ModuleSource the module's release names when the cluster has no such
+	// source. The module is then taken for the platform's and looked for under the platform's path,
+	// which is only a guess: what a fill copied while the source still existed is under its own.
+	MissingSource string
 
 	// Origin is where the module is read from when that is not the copy's own source: a module of
 	// another ModuleSource is fetched from that source's registry, with its credentials. Nil means the
@@ -85,6 +90,13 @@ type ModuleRef struct {
 // before sources were looked at.
 func (m ModuleRef) FromPlatform() bool {
 	return m.Source.Name == "" || m.Source.Name == platformSource
+}
+
+// Unplaced tells a module whose release names another ModuleSource the cluster does not have. Where
+// the store keeps it is then unknown, and its package missing from the platform's path is no proof
+// that nothing of it is in the store.
+func (m ModuleRef) Unplaced() bool {
+	return m.MissingSource != "" && m.MissingSource != platformSource
 }
 
 // StorePath is where the store keeps the module, relative to the store's own repository.

@@ -60,6 +60,7 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&RegistryStorage{}, &RegistryStorageList{},
 		&RegistryUpstream{}, &RegistryUpstreamList{},
 		&RegistryNode{}, &RegistryNodeList{},
+		&RegistryOperation{}, &RegistryOperationList{},
 	)
 	metav1.AddToGroupVersion(scheme, GroupVersion)
 	return nil
@@ -71,6 +72,8 @@ const (
 	RegistryStorageKind  = "RegistryStorage"
 	RegistryUpstreamKind = "RegistryUpstream"
 	RegistryNodeKind     = "RegistryNode"
+
+	RegistryOperationKind = "RegistryOperation"
 )
 
 // SingletonName is the name of the cluster-wide singleton objects

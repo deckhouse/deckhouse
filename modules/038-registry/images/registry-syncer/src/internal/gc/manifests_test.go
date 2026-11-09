@@ -22,12 +22,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/registry"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/random"
@@ -282,6 +289,14 @@ func TestRunCollectsOnAClusterRunningATag(t *testing.T) {
 func pushModulePackage(t *testing.T, target store, module, version string, digests []string) {
 	t.Helper()
 
+	pushModulePackageAt(t, target, "system/deckhouse/modules/"+module, version, digests)
+}
+
+// pushModulePackageAt is pushModulePackage under a repository of the caller's choosing — the path the
+// store keeps the modules of another ModuleSource under.
+func pushModulePackageAt(t *testing.T, target store, repository, version string, digests []string) {
+	t.Helper()
+
 	byImage := make(map[string]string, len(digests))
 	for i, digest := range digests {
 		byImage[fmt.Sprintf("image%d", i)] = digest
@@ -301,7 +316,6 @@ func pushModulePackage(t *testing.T, target store, module, version string, diges
 	image, err := mutate.AppendLayers(empty.Image, layer)
 	require.NoError(t, err)
 
-	repository := "system/deckhouse/modules/" + module
 	push(t, target, repository+":"+version)
 	tag, err := name.NewTag(target.Address+"/"+repository+":"+version, name.Insecure)
 	require.NoError(t, err)
@@ -434,4 +448,265 @@ func TestRunGivesBackWhatIsAheadWhenShortOfRoom(t *testing.T) {
 	assert.False(t, holds(t, target, "system/deckhouse", newer), "the newer release is given back")
 	assert.False(t, holds(t, target, "system/deckhouse/modules/console", pending), "and so is the module update")
 	assert.Positive(t, report.Kept[ReasonCurrentRelease])
+}
+
+// TestRunReadsTheSetFromTheUpstreamWhenTheStoreCannot is the store that most needs collecting: it
+// refuses writes, so it never took in the installer of the release the cluster moved to, so the set
+// could not be read here, so nothing was judged and nothing was ever freed. The set is the fill's —
+// read from the upstream the fill reads it from — and what it does not declare goes.
+func TestRunReadsTheSetFromTheUpstreamWhenTheStoreCannot(t *testing.T) {
+	target := startRegistry(t)
+	upstream := startRegistry(t)
+
+	current := pushHeld(t, target, "system/deckhouse")
+	superseded := pushHeld(t, target, "system/deckhouse")
+
+	// The release the cluster runs is on the upstream, installer and all; the store has neither.
+	push(t, upstream, "system/deckhouse:pr880")
+	pushInstaller(t, upstream, "pr880", []string{current})
+
+	collector := newCollector(t, target, Releases{Deployed: "pr880"}, &countingSweeper{})
+	collector.Upstream = &fill.Registry{Address: upstream.Address, Repository: "system/deckhouse", Insecure: true}
+
+	report, err := collector.Run(context.Background())
+	require.NoError(t, err)
+
+	assert.True(t, holds(t, target, "system/deckhouse", current), "what the running release declares must survive")
+	assert.False(t, holds(t, target, "system/deckhouse", superseded), "and what it does not declare is reclaimed")
+	assert.Len(t, report.Deleted, 1)
+}
+
+// TestRunDeletesNothingWhenNeitherStoreNorUpstreamAnswers: the fallback widens where the set is read,
+// not what is deleted without one.
+func TestRunDeletesNothingWhenNeitherStoreNorUpstreamAnswers(t *testing.T) {
+	target := startRegistry(t)
+	upstream := startRegistry(t)
+
+	held := pushHeld(t, target, "system/deckhouse")
+
+	collector := newCollector(t, target, Releases{Deployed: "pr880"}, &countingSweeper{})
+	collector.Upstream = &fill.Registry{Address: upstream.Address, Repository: "system/deckhouse", Insecure: true}
+
+	report, err := collector.Run(context.Background())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot establish which manifests are needed")
+	assert.Contains(t, err.Error(), "from the upstream")
+	assert.Empty(t, report.Deleted)
+	assert.True(t, holds(t, target, "system/deckhouse", held))
+}
+
+// TestACancellationStopsTheDeletions: a canceled run went on deleting every manifest it had judged,
+// with the store's writes paused all the while, and the documentation promised it would stop.
+func TestACancellationStopsTheDeletions(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var deletes atomic.Int32
+	real := registry.New(registry.Logger(log.New(io.Discard, "", 0)))
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		real.ServeHTTP(w, r)
+		if r.Method == http.MethodDelete {
+			// Canceled as the first deletion goes through.
+			deletes.Add(1)
+			cancel()
+		}
+	}))
+	t.Cleanup(server.Close)
+	parsed, err := url.Parse(server.URL)
+	require.NoError(t, err)
+	target := store{
+		Registry: Registry{Address: parsed.Host, Insecure: true, Scope: "system/deckhouse"},
+		dataDir:  t.TempDir(),
+	}
+
+	current := pushHeld(t, target, "system/deckhouse")
+	for range 5 {
+		pushHeld(t, target, "system/deckhouse")
+	}
+	push(t, target, "system/deckhouse:v1.76.6")
+	pushInstaller(t, target, "v1.76.6", []string{current})
+
+	sweeper := &countingSweeper{}
+	collector := newCollector(t, target, Releases{Deployed: "v1.76.6"}, sweeper)
+	report, err := collector.Run(ctx)
+
+	require.ErrorIs(t, err, context.Canceled)
+	assert.EqualValues(t, 1, deletes.Load(), "the one in flight reached the registry, and no other")
+	assert.LessOrEqual(t, len(report.Deleted)+len(report.Failed), 1)
+	assert.Zero(t, sweeper.runs)
+}
+
+// TestAModuleWhosePackageNeverArrivedStopsNothing: a module enabled just before the store ran out of
+// room is declared, and its package never arrived. Nothing in the store is reached through its tag, so
+// there is nothing of it to protect, and the store that only a collection can make room in is
+// collected.
+func TestAModuleWhosePackageNeverArrivedStopsNothing(t *testing.T) {
+	target := startRegistry(t)
+
+	current := pushHeld(t, target, "system/deckhouse")
+	superseded := pushHeld(t, target, "system/deckhouse")
+	push(t, target, "system/deckhouse:v1.76.6")
+	pushInstaller(t, target, "v1.76.6", []string{current})
+
+	collector := newCollector(t, target, Releases{Deployed: "v1.76.6"}, &countingSweeper{})
+	collector.Modules = []fill.ModuleRef{{Name: "enabled-late", Version: "v0.3.0"}}
+
+	report, err := collector.Run(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, 1, report.RemovedManifests)
+	assert.True(t, holds(t, target, "system/deckhouse", current))
+	assert.False(t, holds(t, target, "system/deckhouse", superseded))
+}
+
+// TestAModuleOfAMissingSourceStopsTheCollection: the previous round's high finding. A module of
+// another ModuleSource is kept under module-sources/<source>/<name>; a module left without its source
+// was looked for under modules/<name>, its package was not there, and its images went as protected by
+// nothing — in air-gap, for good. Its release names a source, so the absent package is no package that
+// never arrived, and nothing is deleted. Nor is anything when a package of the same name and version is
+// on the platform's path, or when the module is only pending. The same module with its source found
+// keeps its images.
+func TestAModuleOfAMissingSourceStopsTheCollection(t *testing.T) {
+	setUp := func(t *testing.T) (store, string, string) {
+		target := startRegistry(t)
+
+		current := pushHeld(t, target, "system/deckhouse")
+		superseded := pushHeld(t, target, "system/deckhouse")
+		push(t, target, "system/deckhouse:v1.76.6")
+		pushInstaller(t, target, "v1.76.6", []string{current})
+
+		image := pushHeld(t, target, "system/deckhouse/module-sources/partner/console")
+		pushModulePackageAt(t, target, "system/deckhouse/module-sources/partner/console", "v1.2.0",
+			[]string{image})
+		return target, image, superseded
+	}
+
+	t.Run("unplaced", func(t *testing.T) {
+		target, image, superseded := setUp(t)
+
+		collector := newCollector(t, target, Releases{Deployed: "v1.76.6"}, &countingSweeper{})
+		collector.Modules = []fill.ModuleRef{{Name: "console", Version: "v1.2.0", MissingSource: "partner"}}
+
+		report, err := collector.Run(context.Background())
+		require.Error(t, err)
+		assert.Zero(t, report.RemovedManifests)
+		assert.True(t, holds(t, target, "system/deckhouse/module-sources/partner/console", image))
+		assert.True(t, holds(t, target, "system/deckhouse", superseded), "nothing is deleted at all")
+	})
+
+	t.Run("unplaced, with the platform's module of the same version", func(t *testing.T) {
+		target, image, superseded := setUp(t)
+		pushModulePackage(t, target, "console", "v1.2.0", nil)
+
+		collector := newCollector(t, target, Releases{Deployed: "v1.76.6"}, &countingSweeper{})
+		collector.Modules = []fill.ModuleRef{{Name: "console", Version: "v1.2.0", MissingSource: "partner"}}
+
+		report, err := collector.Run(context.Background())
+		require.Error(t, err)
+		assert.Zero(t, report.RemovedManifests)
+		assert.True(t, holds(t, target, "system/deckhouse/module-sources/partner/console", image))
+		assert.True(t, holds(t, target, "system/deckhouse", superseded), "nothing is deleted at all")
+	})
+
+	t.Run("unplaced and pending", func(t *testing.T) {
+		target, image, superseded := setUp(t)
+
+		collector := newCollector(t, target, Releases{Deployed: "v1.76.6"}, &countingSweeper{})
+		collector.Modules = []fill.ModuleRef{{
+			Name: "console", Version: "v1.2.0", MissingSource: "partner", Pending: true,
+		}}
+
+		report, err := collector.Run(context.Background())
+		require.Error(t, err)
+		assert.Zero(t, report.RemovedManifests)
+		assert.True(t, holds(t, target, "system/deckhouse/module-sources/partner/console", image))
+		assert.True(t, holds(t, target, "system/deckhouse", superseded), "nothing is deleted at all")
+	})
+
+	t.Run("placed", func(t *testing.T) {
+		target, image, superseded := setUp(t)
+
+		collector := newCollector(t, target, Releases{Deployed: "v1.76.6"}, &countingSweeper{})
+		collector.Modules = []fill.ModuleRef{{
+			Name: "console", Version: "v1.2.0", Source: fill.ModuleSource{Name: "partner"},
+		}}
+
+		report, err := collector.Run(context.Background())
+		require.NoError(t, err)
+		assert.Equal(t, 1, report.RemovedManifests)
+		assert.True(t, holds(t, target, "system/deckhouse/module-sources/partner/console", image))
+		assert.False(t, holds(t, target, "system/deckhouse", superseded))
+	})
+}
+
+// TestTheChildrenOfAKeptIndexAreKept: a release declares the digest a pull asks for, and for an image
+// built for more than one platform that is the index alone. Its platform manifests are revisions of
+// their own in the store; deleted as declared by nobody, they left an index every pull failed on.
+func TestTheChildrenOfAKeptIndexAreKept(t *testing.T) {
+	target := startRegistry(t)
+
+	index, err := random.Index(64, 1, 2)
+	require.NoError(t, err)
+	indexDigest, err := index.Digest()
+	require.NoError(t, err)
+	reference, err := name.NewDigest(
+		fmt.Sprintf("%s/system/deckhouse@%s", target.Address, indexDigest), name.Insecure)
+	require.NoError(t, err)
+	require.NoError(t, remote.WriteIndex(reference, index))
+
+	// The store's files, as the fill leaves them: the index and each child a revision, and the
+	// index's own content among the blobs.
+	raw, err := index.RawManifest()
+	require.NoError(t, err)
+	require.Equal(t, indexDigest.String(), writeBlob(t, target.dataDir, raw))
+	revisionLink(t, target.dataDir, "system/deckhouse", indexDigest.String())
+	manifest, err := index.IndexManifest()
+	require.NoError(t, err)
+	require.Len(t, manifest.Manifests, 2)
+	for _, child := range manifest.Manifests {
+		revisionLink(t, target.dataDir, "system/deckhouse", child.Digest.String())
+	}
+
+	superseded := pushHeld(t, target, "system/deckhouse")
+	push(t, target, "system/deckhouse:v1.76.6")
+	pushInstaller(t, target, "v1.76.6", []string{indexDigest.String()})
+
+	collector := newCollector(t, target, Releases{Deployed: "v1.76.6"}, &countingSweeper{})
+	report, err := collector.Run(context.Background())
+	require.NoError(t, err)
+
+	assert.Equal(t, 1, report.RemovedManifests, "only the image the release moved past")
+	assert.False(t, holds(t, target, "system/deckhouse", superseded))
+	assert.True(t, holds(t, target, "system/deckhouse", indexDigest.String()))
+	for _, child := range manifest.Manifests {
+		assert.True(t, holds(t, target, "system/deckhouse", child.Digest.String()),
+			"a platform manifest of the kept index")
+	}
+}
+
+// TestAPushThatStartsDuringTheCollectionIsNotSweptFromUnder: the manifest pass can take minutes, and a
+// push that starts in them has its layers on disk and no manifest yet.
+func TestAPushThatStartsDuringTheCollectionIsNotSweptFromUnder(t *testing.T) {
+	target := startRegistry(t)
+
+	current := pushHeld(t, target, "system/deckhouse")
+	pushHeld(t, target, "system/deckhouse")
+	push(t, target, "system/deckhouse:v1.76.6")
+	pushInstaller(t, target, "v1.76.6", []string{current})
+
+	sweeper := &countingSweeper{}
+	collector := newCollector(t, target, Releases{Deployed: "v1.76.6"}, sweeper)
+	collector.Pushing = func() bool { return true }
+
+	report, err := collector.Run(context.Background())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "being pushed")
+	assert.Equal(t, 1, report.RemovedManifests, "the manifests go; their blobs wait for the next run")
+	assert.Zero(t, sweeper.runs)
+
+	// With nothing deleted, there is nothing to report as failed: what lies unreferenced waits.
+	collector.SweepAnyway = true
+	report, err = collector.Run(context.Background())
+	require.NoError(t, err)
+	assert.Zero(t, report.RemovedManifests)
+	assert.Zero(t, sweeper.runs)
 }

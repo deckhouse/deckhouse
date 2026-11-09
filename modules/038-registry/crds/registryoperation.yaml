@@ -1,0 +1,313 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: registryoperations.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: registry
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: registryoperations
+    singular: registryoperation
+    kind: RegistryOperation
+    shortNames:
+      - rop
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      # Lets an operator or a UI select by type or phase; field selectors on custom resources need these.
+      selectableFields:
+        - jsonPath: .spec.type
+        - jsonPath: .status.phase
+      additionalPrinterColumns:
+        - name: Type
+          type: string
+          description: "What the operation does."
+          jsonPath: .spec.type
+        - name: Phase
+          type: string
+          description: "Where the operation is."
+          jsonPath: .status.phase
+        - name: Reason
+          type: string
+          description: "Why the operation is in its phase."
+          jsonPath: .status.reason
+        - name: Cause
+          type: string
+          description: "Why the operation was created."
+          jsonPath: .spec.cause
+          priority: 1
+        - name: Started
+          type: date
+          description: "When the first replica started."
+          jsonPath: .status.startedAt
+        - name: Finished
+          type: date
+          description: "When the operation finished."
+          jsonPath: .status.finishedAt
+        - name: Reclaimed
+          type: integer
+          description: "How many bytes a garbage collection freed."
+          jsonPath: .status.garbageCollection.reclaimedBytes
+          priority: 1
+        - name: Age
+          type: date
+          description: "Time since creation."
+          jsonPath: .metadata.creationTimestamp
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            An operation every replica of the registry cache performs on its own store, one replica at a time.
+
+            Images keep being served throughout.
+
+            The only type is `GarbageCollection`: it removes from the cache what the releases the cluster has moved past left there. The module creates these operations itself:
+
+            - on the schedule set in `storage.garbageCollection` of the module configuration;
+            - once the cache holds a new image set — after a Deckhouse Platform update, or after a module is enabled or updated;
+            - when the store refuses writes and so can never take in a new set — once per deployed Deckhouse Platform release.
+
+            With `storage.garbageCollection.enabled: false` the module creates none of them. An operation created by hand runs either way.
+
+            A replica starts only when its store is not being written to: while the cache is being filled or an image set is being pushed with `d8 mirror push`, the replica waits. A store that refuses writes — over its budget, or down to the space kept free for the node — is not waited for: a fill cannot go on until something frees room. A replica that has not picked the operation up, or is still held back by its store, an hour after the operation was accepted fails with the reason `DeadlineExceeded`. Once its turn comes, a replica looks at its store again: if a fill or a push has started meanwhile, it gives the turn back and waits for the store to go quiet.
+
+            Only one operation runs at a time. An operation created while an older one is not finished fails with the reason `AnotherOperationActive`.
+
+            To cancel an operation, set the label `registry.deckhouse.io/cancel: "true"` on it. A replica that has not started does not start, and a replica that is running stops. What it has already removed stays removed. Deleting the object cancels an operation too, but does not stop a replica that has already started.
+
+            A finished operation is deleted a day after it finished.
+          x-doc-examples:
+            - |
+              ```yaml
+              apiVersion: deckhouse.io/v1alpha1
+              kind: RegistryOperation
+              metadata:
+                generateName: gc-manual-
+              spec:
+                type: GarbageCollection
+                cause: Free space before pushing a new release.
+              ```
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              description: |
+                Does not change once the operation is created.
+              required:
+                - type
+              x-kubernetes-validations:
+                # Every field by name: a field added to the spec has to be added here too. Spelled with
+                # has() rather than optional equality, as in NodeOperation: comparing optionals loses the
+                # maxLength bound, and the rule's estimated cost exceeds the CRD budget — the API server
+                # refuses the CRD, and the module never becomes ready.
+                - rule: >-
+                    self.type == oldSelf.type &&
+                    has(self.cause) == has(oldSelf.cause) &&
+                    (!has(self.cause) || self.cause == oldSelf.cause)
+                  message: the spec of an operation is immutable; create another operation instead
+              properties:
+                type:
+                  type: string
+                  enum:
+                    - GarbageCollection
+                  description: |
+                    What the operation does.
+
+                    - `GarbageCollection` — remove from the cache what the releases the cluster has moved past left there. The deployed release, the previous one, anything newer and every tag that is not a version are kept.
+                cause:
+                  type: string
+                  maxLength: 1024
+                  description: |
+                    Why the operation was created, for a person reading it.
+
+                    The module sets it on the operations it creates itself.
+            status:
+              type: object
+              x-kubernetes-validations:
+                - rule: "!has(oldSelf.phase) || !(oldSelf.phase in ['Succeeded', 'Failed', 'Canceled']) || (has(self.phase) && self.phase == oldSelf.phase)"
+                  message: a finished operation cannot be reopened
+              properties:
+                phase:
+                  type: string
+                  enum:
+                    - Pending
+                    - Running
+                    - Succeeded
+                    - Failed
+                    - Canceled
+                  description: |
+                    Where the operation is.
+
+                    - `Pending` — no replica has started yet.
+                    - `Running` — at least one replica has started, and not every one has finished.
+                    - `Succeeded` — every replica finished the operation.
+                    - `Failed` — the operation was refused, or a replica did not finish it.
+                    - `Canceled` — the operation was canceled before every replica finished.
+                reason:
+                  type: string
+                  description: |
+                    A machine-readable reason for the phase.
+
+                    - `Pending`: `Accepted`.
+                    - `Running`: `InProgress`.
+                    - `Succeeded`: `Completed`.
+                    - `Failed`: `NoCache` (the cache is turned off), `NoReplicas` (no replica of the storage has reported yet), `AnotherOperationActive`, `ReplicaFailed`.
+                    - `Canceled`: `Canceled`.
+                message:
+                  type: string
+                  description: |
+                    A human-readable explanation of the reason.
+                acceptedAt:
+                  type: string
+                  format: date-time
+                  description: |
+                    When the operation was accepted.
+                deadline:
+                  type: string
+                  format: date-time
+                  description: |
+                    When a replica held back by a store that is being written to gives up.
+
+                    An hour after `acceptedAt`.
+                startedAt:
+                  type: string
+                  format: date-time
+                  description: |
+                    When the first replica started.
+                finishedAt:
+                  type: string
+                  format: date-time
+                  description: |
+                    When the operation reached a terminal phase.
+
+                    The operation is deleted a day later.
+                garbageCollection:
+                  type: object
+                  description: |
+                    What a `GarbageCollection` removed, summed over the replicas.
+                  properties:
+                    removedManifests:
+                      type: integer
+                      format: int32
+                      description: |
+                        How many images were deleted by digest — the images the fill writes with no tag, where nearly all of a store's weight is.
+                    removedBlobs:
+                      type: integer
+                      format: int32
+                      description: |
+                        How many blobs the sweep removed, as the registry counts them.
+
+                        A sweep also removes what an earlier one failed to, so these blobs need not belong to the images deleted in this run. Absent when the sweep did not run.
+                    removedVersions:
+                      type: array
+                      description: |
+                        The Deckhouse Platform releases removed.
+                      items:
+                        type: string
+                    reclaimedBytes:
+                      type: integer
+                      format: int64
+                      description: |
+                        How many bytes the store shrank by: its blobs and uploads in progress, measured before the collection and after.
+
+                        Absent when the store could not be measured.
+                replicas:
+                  type: array
+                  description: |
+                    One entry per replica the operation was handed to.
+
+                    Every replica of the storage that had reported when the operation was accepted is included.
+                  x-kubernetes-list-type: map
+                  x-kubernetes-list-map-keys:
+                    - node
+                  items:
+                    type: object
+                    required:
+                      - node
+                      - phase
+                    properties:
+                      node:
+                        type: string
+                        description: |
+                          The node the replica runs on.
+                      phase:
+                        type: string
+                        enum:
+                          - Pending
+                          - Waiting
+                          - Running
+                          - Succeeded
+                          - Failed
+                          - Skipped
+                          - Canceled
+                        description: |
+                          Where the replica is.
+
+                          - `Pending` — the replica has not picked the operation up yet.
+                          - `Waiting` — the replica is held back; `reason` says by what.
+                          - `Running` — the replica is running the operation.
+                          - `Succeeded` — the replica finished the operation.
+                          - `Failed` — the replica did not finish the operation.
+                          - `Skipped` — the replica left the storage before it started.
+                          - `Canceled` — the operation was canceled before the replica finished.
+                      reason:
+                        type: string
+                        description: |
+                          A machine-readable reason for the phase.
+
+                          - `Waiting`: `Filling` (the cache is being filled), `Pushing` (an image set is being pushed with `d8 mirror push`), `Turn` (another replica is running the operation; or the replica waited a whole window for its turn and waits for the store to go quiet before waiting again).
+                          - `Failed`: `OperationFailed`, `DeadlineExceeded` (by `deadline`, the replica had not picked the operation up, or its store was still being written to), `TimedOut` (the replica did not report a result within 24 hours).
+                          - `Skipped`: `ReplicaGone`, `NoCache`.
+                          - `Canceled`: `Canceled`.
+                      message:
+                        type: string
+                        description: |
+                          A human-readable explanation of the reason.
+                      startedAt:
+                        type: string
+                        format: date-time
+                        description: |
+                          When the replica started.
+                      finishedAt:
+                        type: string
+                        format: date-time
+                        description: |
+                          When the replica finished.
+                      garbageCollection:
+                        type: object
+                        description: |
+                          What a `GarbageCollection` removed from the replica's store.
+                        properties:
+                          removedManifests:
+                            type: integer
+                            format: int32
+                            description: |
+                              How many images were deleted by digest — the images the fill writes with no tag, where nearly all of a store's weight is.
+                          removedBlobs:
+                            type: integer
+                            format: int32
+                            description: |
+                              How many blobs the sweep removed, as the registry counts them.
+
+                              A sweep also removes what an earlier one failed to, so these blobs need not belong to the images deleted in this run. Absent when the sweep did not run.
+                          removedVersions:
+                            type: array
+                            description: |
+                              The Deckhouse Platform releases removed.
+                            items:
+                              type: string
+                          reclaimedBytes:
+                            type: integer
+                            format: int64
+                            description: |
+                              How many bytes the store shrank by: its blobs and uploads in progress, measured before the collection and after.
+
+                              Absent when the store could not be measured.

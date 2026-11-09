@@ -242,8 +242,10 @@ const moduleSourceLabel = "source"
 // Whatever ModuleSource a module came from. The operator installed it, so the cluster needs it, and
 // after the move to air-gap the store is the only place left to get it from. Each module carries what
 // its source says about where it lives, which is what decides where a fill reads it — see
-// fill.ResolveOrigins. The sources are best effort: a cluster whose sources cannot be read keeps every
-// module, read from the upstream as before.
+// fill.ResolveOrigins. Sources that cannot be read are an error, like the releases: a module left
+// without its source is looked for under the platform's path, and a collection that did not find it
+// there kept none of its images. A release that names a source the cluster does not have says so in
+// fill.ModuleRef.MissingSource.
 //
 // An absent CRD is not an error but an empty answer: a cluster can legitimately have no modules beyond
 // the platform's own, and on such a cluster nothing about the previous behaviour changes.
@@ -258,7 +260,10 @@ func ModulesFromCluster(ctx context.Context, c client.Client) ([]fill.ModuleRef,
 		return nil, fmt.Errorf("listing the modules the cluster keeps: %w", err)
 	}
 
-	sources := moduleSources(ctx, c)
+	sources, err := moduleSources(ctx, c)
+	if err != nil {
+		return nil, err
+	}
 
 	var modules []fill.ModuleRef
 	for i := range list.Items {
@@ -282,12 +287,18 @@ func ModulesFromCluster(ctx context.Context, c client.Client) ([]fill.ModuleRef,
 
 		// Versions are recorded without the leading "v" in the object and with it in the registry,
 		// which is where these are about to be looked for.
-		modules = append(modules, fill.ModuleRef{
+		label := item.GetLabels()[moduleSourceLabel]
+		source, known := sources[label]
+		module := fill.ModuleRef{
 			Name:    name,
 			Version: registryTag(version),
-			Source:  sources[item.GetLabels()[moduleSourceLabel]],
+			Source:  source,
 			Pending: phase == phasePending,
-		})
+		}
+		if label != "" && !known {
+			module.MissingSource = label
+		}
+		modules = append(modules, module)
 	}
 
 	return modules, nil
@@ -328,13 +339,16 @@ func CatalogueFromCluster(ctx context.Context, c client.Client) ([]string, error
 	return catalogue, nil
 }
 
-// moduleSources reads what every ModuleSource says about where its modules are, by name. Empty when
-// they cannot be read.
-func moduleSources(ctx context.Context, c client.Client) map[string]fill.ModuleSource {
+// moduleSources reads what every ModuleSource says about where its modules are, by name. An absent
+// CRD is no sources at all.
+func moduleSources(ctx context.Context, c client.Client) (map[string]fill.ModuleSource, error) {
 	list := &unstructured.UnstructuredList{}
 	list.SetGroupVersionKind(moduleSourceGVK)
 	if err := c.List(ctx, list); err != nil {
-		return nil
+		if meta.IsNoMatchError(err) || apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("listing the module sources: %w", err)
 	}
 
 	sources := make(map[string]fill.ModuleSource, len(list.Items))
@@ -352,7 +366,7 @@ func moduleSources(ctx context.Context, c client.Client) map[string]fill.ModuleS
 			Scheme:     field("scheme"),
 		}
 	}
-	return sources
+	return sources, nil
 }
 
 // registryTag is the module version as the registry tags it.

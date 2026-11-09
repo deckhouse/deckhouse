@@ -158,6 +158,10 @@ type Loop struct {
 	// publishes progress against an absent total, which reads as no progress at all.
 	lastDeclaredDigests atomic.Int32
 
+	// currentSet is the fingerprint of the set the cluster needed at the last pass that could tell,
+	// for whoever outside the loop has to notice the set changing — see CurrentSet.
+	currentSet atomic.Value
+
 	// complete records whether this replica holds the whole expected set, as of its last pass.
 	//
 	// Kept here rather than re-read from the API because the garbage collection asks it on its own
@@ -422,6 +426,18 @@ func (l *Loop) PauseWrites() func() {
 	return l.writes.Unlock
 }
 
+// TryPauseWrites is PauseWrites if nothing holds the cache now, and says whether it did.
+//
+// For the garbage collection, which takes its turn on a lease the other replicas wait for: a fill
+// holds the pause for its whole pass, and waiting it out with the lease in hand would hold them out
+// too.
+func (l *Loop) TryPauseWrites() (func(), bool) {
+	if !l.writes.TryLock() {
+		return nil, false
+	}
+	return l.writes.Unlock, true
+}
+
 // Desired is the last desired state this loop read, or nil before the first pass.
 //
 // Exposed rather than re-read because the two readers must not disagree: a collection that
@@ -678,6 +694,7 @@ func (l *Loop) once(ctx context.Context) error {
 			"error", err.Error())
 	} else {
 		setKey, aheadKey, keysKnown = set, ahead, true
+		l.currentSet.Store(set)
 	}
 	reported, reportedSource, reportedAhead := l.reportedSets(ctx)
 
@@ -1042,6 +1059,51 @@ func (l *Loop) RoomAhead() bool {
 		return true
 	}
 	return roomAhead(l.measureStore(spec))
+}
+
+// CurrentSet is the fingerprint of the set the cluster needs, as of the last pass that could tell —
+// see SetKey. Empty until one could.
+func (l *Loop) CurrentSet() string {
+	set, _ := l.currentSet.Load().(string)
+	return set
+}
+
+// StoreRefusesWrites reports whether this replica's store refuses writes now: over its budget, or down
+// to the space kept free for the node. Unmeasured is not a refusal.
+//
+// Asked by the garbage collection before it waits for a fill. A fill into a store that refuses writes
+// fails at its first blob and is tried again on the next pass, for as long as nothing frees room — and
+// the one thing that frees room is the collection that would be waiting for it.
+func (l *Loop) StoreRefusesWrites() bool {
+	spec := l.Desired()
+	if spec == nil {
+		return false
+	}
+	store := l.measureStore(spec)
+	return store != nil && !store.Writable
+}
+
+// UpstreamRegistry is the upstream the set is filled from, with the credentials to read it, or nil in
+// air-gap, where there is none.
+//
+// For the garbage collection, which reads the set out of this store and cannot when the store never
+// got to hold the installer of the release the cluster runs — a store that refuses writes cannot take
+// it in. The fill reads the same set from here.
+func (l *Loop) UpstreamRegistry() (*fill.Registry, error) {
+	spec := l.Desired()
+	if spec == nil || spec.Upstream == nil {
+		return nil, nil
+	}
+	username, password := spec.Upstream.Auth.BasicCredentials()
+	options, err := fill.RegistryOptions(spec.Upstream.CA, username, password)
+	if err != nil {
+		return nil, fmt.Errorf("upstream: %w", err)
+	}
+	return &fill.Registry{
+		Address:    spec.Upstream.Host,
+		Repository: trimSlashes(spec.Upstream.Path),
+		Options:    options,
+	}, nil
 }
 
 // aheadScope is what a copy ahead is started under: the role, and where it reads from — the leader it

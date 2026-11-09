@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,9 +35,9 @@ import (
 //
 // Built on the same leader election the rest of the cluster uses rather than a lock of our
 // own. What it guards is unusual for a lease — not "who is in charge" but "whose turn is it to
-// go read-only" — and it is deliberately a SECOND lease, separate from the one that decides
-// which replica fills from the upstream. Those two answers must be free to differ: the replica
-// filling the cache is the last one that should stop accepting writes.
+// collect" — and it is deliberately a SECOND lease, separate from the one that decides which
+// replica fills from the upstream. Those two answers must be free to differ: the replica filling
+// the cache is the last one that should pause its writes.
 type ClusterLease struct {
 	Log *slog.Logger
 
@@ -48,6 +49,17 @@ type ClusterLease struct {
 
 	// Identity is this replica, as recorded in the lease.
 	Identity string
+
+	// LeaseDuration, RenewDeadline and RetryPeriod are leader election's own. Zero means the defaults
+	// below; set apart so a test can lose a lease in a second rather than a minute.
+	LeaseDuration, RenewDeadline, RetryPeriod time.Duration
+}
+
+func orDefault(value, fallback time.Duration) time.Duration {
+	if value > 0 {
+		return value
+	}
+	return fallback
 }
 
 // Hold waits for this replica's turn, does the work, and gives the turn up.
@@ -59,9 +71,18 @@ func (l *ClusterLease) Hold(ctx context.Context, work func(context.Context) erro
 	held, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	// Whether the work started, decided once: client-go starts it on a goroutine of its own, which may
+	// not have run yet when Run returns. Whichever claims the turn first wins it — the work, which then
+	// is waited out, or Hold on its way out, after which the work never starts.
+	const (
+		turnOpen int32 = iota
+		turnStarted
+		turnClosed
+	)
 	var (
 		once   sync.Once
 		result error
+		turn   atomic.Int32
 		done   = make(chan struct{})
 	)
 
@@ -73,13 +94,16 @@ func (l *ClusterLease) Hold(ctx context.Context, work func(context.Context) erro
 		},
 		// Short, because the work is bounded and a holder that dies must not keep the others
 		// out for long: the next replica's whole turn may be inside this window.
-		LeaseDuration:   60 * time.Second,
-		RenewDeadline:   40 * time.Second,
-		RetryPeriod:     5 * time.Second,
+		LeaseDuration:   orDefault(l.LeaseDuration, 60*time.Second),
+		RenewDeadline:   orDefault(l.RenewDeadline, 40*time.Second),
+		RetryPeriod:     orDefault(l.RetryPeriod, 5*time.Second),
 		ReleaseOnCancel: true,
 		Callbacks: leaderelection.LeaderCallbacks{
 			OnStartedLeading: func(ctx context.Context) {
 				defer close(done)
+				if !turn.CompareAndSwap(turnOpen, turnStarted) {
+					return
+				}
 				result = work(ctx)
 				// Giving the turn up immediately rather than holding it to expiry.
 				cancel()
@@ -100,15 +124,24 @@ func (l *ClusterLease) Hold(ctx context.Context, work func(context.Context) erro
 
 	elector.Run(held)
 
-	select {
-	case <-done:
-		return result
-	default:
-		// Never became the holder. The caller reads a cancelled context as "another replica
-		// had the turn", which is not a failure.
-		if err := ctx.Err(); err != nil {
-			return err
+	// Run returns as soon as the lease is lost, and the work it started goes on: it cancels the work's
+	// context and does not wait for it. Returned there, the caller would read the outcome while the
+	// work still writes it — and the next replica, holding the lease now, would be collecting beside a
+	// deletion this one had not stopped. So a started turn is waited out.
+	if !turn.CompareAndSwap(turnOpen, turnClosed) {
+		<-done
+		// Canceled with the caller's context alive: only the elector cancels then, on losing the lease.
+		// Every other stop — the caller's own — ends the caller's context too.
+		if result != nil && ctx.Err() == nil && errors.Is(result, context.Canceled) {
+			return fmt.Errorf("the collection lease was lost while collecting: %w", result)
 		}
-		return errors.New("the collection turn was never obtained")
+		return result
 	}
+
+	// Never became the holder, or became it only as the turn was closing. The caller reads a cancelled
+	// context as "another replica had the turn", which is not a failure.
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return errors.New("the collection turn was never obtained")
 }

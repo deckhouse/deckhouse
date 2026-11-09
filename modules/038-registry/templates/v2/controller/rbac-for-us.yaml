@@ -37,6 +37,20 @@ rules:
   - apiGroups: ["deckhouse.io"]
     resources: ["registrystorages/status", "registrynodes/status"]
     verbs: ["get", "update", "patch"]
+  # Operations on the storage. The controller creates the garbage collections the module asks for
+  # itself — on the schedule and after a new image set — accepts every operation, sums up what the
+  # replicas report and deletes the finished ones a day later.
+  - apiGroups: ["deckhouse.io"]
+    resources: ["registryoperations"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+  - apiGroups: ["deckhouse.io"]
+    resources: ["registryoperations/status"]
+    verbs: ["get", "update", "patch"]
+  # Which Deckhouse release is deployed, read only when a garbage collection is created for a new
+  # image set: it tells an update of the platform from any other change of the set in the cause.
+  - apiGroups: ["deckhouse.io"]
+    resources: ["deckhousereleases"]
+    verbs: ["get", "list"]
   # The maintenance windows of the master node group, which is where the garbage collection
   # goes unless an operator said otherwise: those are hours they have already declared safe for
   # disruption. Read-only, and best-effort — without this the collection falls back to a night
@@ -221,6 +235,13 @@ rules:
     resources: ["deployments"]
     resourceNames: ["registry-incluster-proxy"]
     verbs: ["delete"]
+  # The image Deckhouse runs, for the cause of a garbage collection created for a new image set on a
+  # cluster with no DeckhouseRelease deployed — one installed from a development image. Read the way
+  # the syncer reads it, and by name.
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    resourceNames: ["deckhouse"]
+    verbs: ["get"]
   - apiGroups: [""]
     resources: ["secrets"]
     resourceNames: ["registry-incluster-proxy-config", "registry-pki"]
@@ -267,6 +288,14 @@ rules:
     verbs: ["get", "list", "watch"]
   - apiGroups: ["deckhouse.io"]
     resources: ["registrystorages/status"]
+    verbs: ["get", "update", "patch"]
+  # Operations on the storage: a syncer reads them and writes its own replica's progress into the
+  # status, nothing else.
+  - apiGroups: ["deckhouse.io"]
+    resources: ["registryoperations"]
+    verbs: ["get", "list"]
+  - apiGroups: ["deckhouse.io"]
+    resources: ["registryoperations/status"]
     verbs: ["get", "update", "patch"]
   # What the cluster is running, which is what the store is for at both ends: the fill copies
   # the images these releases declare, and the collector keeps exactly those and removes what
@@ -332,9 +361,9 @@ rules:
     resourceNames: ["deckhouse"]
     verbs: ["get"]
   # Two leases, and they are deliberately two. One decides which replica fills the cache from
-  # the upstream; the other decides whose turn it is to go read-only and reclaim its disk. The
-  # replica doing the filling is the last one that should stop accepting writes, so those two
-  # answers must be free to be different replicas.
+  # the upstream; the other decides whose turn it is to reclaim its disk. The replica doing the
+  # filling is the last one that should pause its writes, so those two answers must be free to be
+  # different replicas.
   - apiGroups: ["coordination.k8s.io"]
     resources: ["leases"]
     verbs: ["get", "list", "watch", "create", "update", "patch"]

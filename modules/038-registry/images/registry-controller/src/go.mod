@@ -6,6 +6,7 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/registry/apis v0.0.0-00010101000000-000000000000
 	github.com/prometheus/client_golang v1.22.0
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/stretchr/testify v1.11.1
 	k8s.io/api v0.34.8
 	k8s.io/apimachinery v0.34.8
