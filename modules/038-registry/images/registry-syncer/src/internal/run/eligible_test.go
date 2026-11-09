@@ -133,14 +133,14 @@ func TestAirGapCannotGetStuck(t *testing.T) {
 
 	// And once it has moved, the replica that stood aside copies from the one that has the images.
 	assert.Equal(t, ActionReplicate,
-		Decide(airGap, false, &Leader{Node: "master-1", Address: "10.0.0.2:5001", Full: true}))
+		Decide(airGap, false, &Leader{Node: "master-1", Address: "10.0.0.2:4281", Full: true}))
 
 	// The stall this guards against is not "an incomplete leader" — a follower will copy from one of
 	// those, taking what it has and reporting the rest as pending. It is an EMPTY leader in air-gap:
 	// it has nothing to give and no upstream to get it from, so eligibility has to move the lease to
 	// the replica the push filled. Which is what the two assertions above check.
 	assert.Equal(t, ActionReplicate,
-		Decide(airGap, false, &Leader{Node: "master-0", Address: "10.0.0.1:5001", Full: false}),
+		Decide(airGap, false, &Leader{Node: "master-0", Address: "10.0.0.1:4281", Full: false}),
 		"copying what a partial leader has is not the stall; leading with nothing is")
 }
 

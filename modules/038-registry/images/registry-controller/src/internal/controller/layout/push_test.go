@@ -37,8 +37,8 @@ func storageWithReplicas() *registryv1alpha1.RegistryStorage {
 		ObjectMeta: metav1.ObjectMeta{Name: registryv1alpha1.SingletonName},
 		Status: registryv1alpha1.RegistryStorageStatus{
 			Replicas: []registryv1alpha1.StorageReplicaStatus{
-				{Node: "master-0", Role: registryv1alpha1.ReplicaRoleFollower, Address: "10.0.0.1:5001", Full: true},
-				{Node: "master-1", Role: registryv1alpha1.ReplicaRoleLeader, Address: "10.0.0.2:5001", Full: true},
+				{Node: "master-0", Role: registryv1alpha1.ReplicaRoleFollower, Address: "10.0.0.1:4281", Full: true},
+				{Node: "master-1", Role: registryv1alpha1.ReplicaRoleLeader, Address: "10.0.0.2:4281", Full: true},
 			},
 		},
 	}
@@ -75,7 +75,7 @@ func TestAPushGoesToTheLeader(t *testing.T) {
 	assert.Equal(t, []string{"10.0.0.2"}, slice.Endpoints[0].Addresses, "the one the lease names")
 	require.Len(t, slice.Ports, 1)
 	assert.Equal(t, pushPortName, *slice.Ports[0].Name)
-	assert.EqualValues(t, 5003, *slice.Ports[0].Port, "the write listener, not the cache")
+	assert.EqualValues(t, 4283, *slice.Ports[0].Port, "the write listener, not the cache")
 
 	require.Len(t, slice.OwnerReferences, 1)
 	assert.Equal(t, "RegistryStorage", slice.OwnerReferences[0].Kind,
@@ -113,8 +113,116 @@ func TestWithoutALeaderNothingTakesAPush(t *testing.T) {
 	assert.Empty(t, pushSlice(t, c).Endpoints)
 }
 
+// TestDuringThePortUpdateEachReplicaIsReachedWhereItServes: an in-place update leaves the replicas
+// on the previous pod spec, serving on 5001 and taking a push on 5003, until storageupdate replaces
+// them one by one — with images the agents pull from those same replicas. The layout and the push
+// slice follow what each replica reported, or the update waits on itself.
+func TestDuringThePortUpdateEachReplicaIsReachedWhereItServes(t *testing.T) {
+	storageBackendOf := func(t *testing.T, c client.Client) *registryv1alpha1.Backend {
+		t.Helper()
+		applied := listNodes(t, c)["master-0"]
+		backend := applied.Spec.Backend(registryv1alpha1.BackendStorage)
+		require.NotNil(t, backend)
+		return backend
+	}
+
+	t.Run("every replica still on the previous pod spec", func(t *testing.T) {
+		storage := storageWithReplicas()
+		storage.Status.Replicas[0].Address = "10.0.0.1:5001"
+		storage.Status.Replicas[1].Address = "10.0.0.2:5001"
+		r, c := newReconciler(t, cachedConfig(), accessSecret(), node("master-0"), node("master-1"),
+			storage, storageLease("master-1"))
+		runReconcile(t, r)
+
+		backend := storageBackendOf(t, c)
+		assert.Equal(t, "10.0.0.2:5001", backend.Host, "the leader, where it still serves")
+		require.Len(t, backend.Mirrors, 1)
+		assert.Equal(t, "10.0.0.1:5001", backend.Mirrors[0].Host)
+
+		slice := pushSlice(t, c)
+		require.Len(t, slice.Endpoints, 1)
+		assert.Equal(t, []string{"10.0.0.2"}, slice.Endpoints[0].Addresses)
+		assert.EqualValues(t, 5003, *slice.Ports[0].Port, "the previous pod spec's write listener")
+	})
+
+	t.Run("the follower replaced, the leader not yet", func(t *testing.T) {
+		storage := storageWithReplicas()
+		storage.Status.Replicas[0].Address = "10.0.0.1:4281"
+		storage.Status.Replicas[1].Address = "10.0.0.2:5001"
+		r, c := newReconciler(t, cachedConfig(), accessSecret(), node("master-0"), node("master-1"),
+			storage, storageLease("master-1"))
+		runReconcile(t, r)
+
+		backend := storageBackendOf(t, c)
+		assert.Equal(t, "10.0.0.2:5001", backend.Host,
+			"the leader goes first although its port is not the one the others are reached on")
+		require.Len(t, backend.Mirrors, 1)
+		assert.Equal(t, "10.0.0.1:4281", backend.Mirrors[0].Host)
+		assert.EqualValues(t, 5003, *pushSlice(t, c).Ports[0].Port)
+	})
+
+	t.Run("the leader replaced, the follower not yet", func(t *testing.T) {
+		storage := storageWithReplicas()
+		storage.Status.Replicas[0].Address = "10.0.0.1:5001"
+		storage.Status.Replicas[1].Address = "10.0.0.2:4281"
+		r, c := newReconciler(t, cachedConfig(), accessSecret(), node("master-0"), node("master-1"),
+			storage, storageLease("master-1"))
+		runReconcile(t, r)
+
+		backend := storageBackendOf(t, c)
+		assert.Equal(t, "10.0.0.2:4281", backend.Host)
+		require.Len(t, backend.Mirrors, 1)
+		assert.Equal(t, "10.0.0.1:5001", backend.Mirrors[0].Host)
+		assert.EqualValues(t, 4283, *pushSlice(t, c).Ports[0].Port)
+	})
+
+	t.Run("a replica that has not reported gets the current port", func(t *testing.T) {
+		storage := storageWithReplicas()
+		storage.Status.Replicas = storage.Status.Replicas[1:]
+		storage.Status.Replicas[0].Address = "10.0.0.2:5001"
+		r, c := newReconciler(t, cachedConfig(), accessSecret(), node("master-0"), node("master-1"),
+			storage, storageLease("master-1"))
+		runReconcile(t, r)
+
+		backend := storageBackendOf(t, c)
+		assert.Equal(t, "10.0.0.2:5001", backend.Host)
+		require.Len(t, backend.Mirrors, 1)
+		assert.Equal(t, "10.0.0.1:4281", backend.Mirrors[0].Host)
+	})
+
+	t.Run("IPv6 leader on the previous pod spec", func(t *testing.T) {
+		storage := storageWithReplicas()
+		storage.Status.Replicas[0].Address = "[fd00::1]:4281"
+		storage.Status.Replicas[1].Address = "[fd00::2]:5001"
+		secret := accessSecret()
+		secret.Data[storageAccessAddressesKey] = []byte("fd00::1,fd00::2")
+		r, c := newReconciler(t, cachedConfig(), secret, node("master-0"), node("master-1"),
+			storage, storageLease("master-1"))
+		runReconcile(t, r)
+
+		backend := storageBackendOf(t, c)
+		assert.Equal(t, "[fd00::2]:5001", backend.Host)
+		require.Len(t, backend.Mirrors, 1)
+		assert.Equal(t, "[fd00::1]:4281", backend.Mirrors[0].Host)
+
+		slice := pushSlice(t, c)
+		assert.Equal(t, discoveryv1.AddressTypeIPv6, slice.AddressType)
+		require.Len(t, slice.Endpoints, 1)
+		assert.Equal(t, []string{"fd00::2"}, slice.Endpoints[0].Addresses)
+		assert.EqualValues(t, 5003, *slice.Ports[0].Port)
+	})
+}
+
+func TestPushPortFollowsTheReportedServingPort(t *testing.T) {
+	assert.EqualValues(t, 5003, pushPort("10.0.0.2:5001"), "a replica on the previous pod spec")
+	assert.EqualValues(t, 5003, pushPort("[fd00::2]:5001"))
+	assert.EqualValues(t, 4283, pushPort("10.0.0.2:4281"))
+	assert.EqualValues(t, 4283, pushPort(""), "no leader: the slice is empty and its port the current one")
+	assert.EqualValues(t, 4283, pushPort("10.0.0.2"), "a report without a port")
+}
+
 func TestPushEndpointsKeepsToOneAddressFamily(t *testing.T) {
-	kind, endpoints := pushEndpoints("[fd00::2]:5001")
+	kind, endpoints := pushEndpoints("[fd00::2]:4281")
 	assert.Equal(t, discoveryv1.AddressTypeIPv6, kind)
 	require.Len(t, endpoints, 1)
 	assert.Equal(t, []string{"fd00::2"}, endpoints[0].Addresses)
@@ -123,7 +231,7 @@ func TestPushEndpointsKeepsToOneAddressFamily(t *testing.T) {
 	assert.Equal(t, discoveryv1.AddressTypeIPv4, kind)
 	assert.Empty(t, endpoints)
 
-	_, endpoints = pushEndpoints("master-1:5001")
+	_, endpoints = pushEndpoints("master-1:4281")
 	assert.Empty(t, endpoints, "a name is not an endpoint address")
 }
 
@@ -131,7 +239,7 @@ func TestPushEndpointsKeepsToOneAddressFamily(t *testing.T) {
 // the other family replaces it — while an empty slice keeps the family it has.
 func TestAPushSliceChangesFamilyByBeingReplaced(t *testing.T) {
 	storage := storageWithReplicas()
-	storage.Status.Replicas[1].Address = "[fd00::2]:5001"
+	storage.Status.Replicas[1].Address = "[fd00::2]:4281"
 	r, c := newReconciler(t, cachedConfig(), accessSecret(), node("master-0"), node("master-1"),
 		storage, storageLease("master-1"),
 		&discoveryv1.EndpointSlice{

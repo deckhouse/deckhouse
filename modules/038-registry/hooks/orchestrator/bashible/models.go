@@ -288,7 +288,7 @@ func (b *ConfigBuilder) build() (*Config, error) {
 func (b *ConfigBuilder) proxyEndpoints() []string {
 	for _, p := range append(slices.Clone(b.ActualParams), b.ModeParams) {
 		if p.Proxy != nil || p.Local != nil {
-			return registry_const.GenerateProxyEndpoints(b.MasterNodesIPs)
+			return registry_const.GenerateProxyEndpoints(b.MasterNodesIPs, registry_const.LegacyStoragePort)
 		}
 	}
 	return []string{}

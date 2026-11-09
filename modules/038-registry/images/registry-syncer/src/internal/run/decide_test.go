@@ -93,7 +93,7 @@ func TestDecide(t *testing.T) {
 			name:     "a follower with a complete leader",
 			spec:     passThrough(true),
 			isLeader: false,
-			leader:   &Leader{Node: "master-0", Address: "10.0.0.1:5001", Full: true},
+			leader:   &Leader{Node: "master-0", Address: "10.0.0.1:4281", Full: true},
 			// Ahead of time, not on a cache miss: this is what makes a leader change
 			// cheap, and in air-gap it is the only way a follower gets the content.
 			want: ActionReplicate,
@@ -102,7 +102,7 @@ func TestDecide(t *testing.T) {
 			name:     "a follower whose leader is still filling",
 			spec:     passThrough(true),
 			isLeader: false,
-			leader:   &Leader{Node: "master-1", Address: "10.0.0.1:5001", Full: false},
+			leader:   &Leader{Node: "master-1", Address: "10.0.0.1:4281", Full: false},
 			// Replicated from anyway: whatever the leader holds is worth having, and what it does
 			// not hold yet comes back as pending rather than as a failure. Waiting for completeness
 			// left followers idle for as long as a fill takes — and holding nothing if the leader
@@ -119,7 +119,7 @@ func TestDecide(t *testing.T) {
 			name:     "an air-gapped follower with a complete leader",
 			spec:     &registryv1alpha1.RegistryStorageSpec{NeedSync: true},
 			isLeader: false,
-			leader:   &Leader{Node: "master-0", Address: "10.0.0.1:5001", Full: true},
+			leader:   &Leader{Node: "master-0", Address: "10.0.0.1:4281", Full: true},
 			// The only way content reaches a follower in air-gap: there is no upstream
 			// for it to fall back on, ever.
 			want: ActionReplicate,
@@ -130,14 +130,14 @@ func TestDecide(t *testing.T) {
 			name:     "a follower when no replica is behind",
 			spec:     passThrough(false),
 			isLeader: false,
-			leader:   &Leader{Node: "master-0", Address: "10.0.0.1:5001", Full: true},
+			leader:   &Leader{Node: "master-0", Address: "10.0.0.1:4281", Full: true},
 			want:     ActionNone,
 		},
 		{
 			name:     "an air-gapped follower when no replica is behind",
 			spec:     &registryv1alpha1.RegistryStorageSpec{},
 			isLeader: false,
-			leader:   &Leader{Node: "master-0", Address: "10.0.0.1:5001", Full: true},
+			leader:   &Leader{Node: "master-0", Address: "10.0.0.1:4281", Full: true},
 			want:     ActionNone,
 		},
 		{
@@ -184,7 +184,7 @@ func TestLeaderUsable(t *testing.T) {
 		{name: "none", leader: nil, want: false},
 		{
 			name:   "complete with an address",
-			leader: &Leader{Node: "master-0", Address: "10.0.0.1:5001", Full: true},
+			leader: &Leader{Node: "master-0", Address: "10.0.0.1:4281", Full: true},
 			want:   true,
 		},
 		{
@@ -192,7 +192,7 @@ func TestLeaderUsable(t *testing.T) {
 			// not hold yet is pending rather than failed. Requiring completeness here is what kept
 			// followers idle for the whole of a fill.
 			name:   "still filling",
-			leader: &Leader{Node: "master-0", Address: "10.0.0.1:5001"},
+			leader: &Leader{Node: "master-0", Address: "10.0.0.1:4281"},
 			want:   true,
 		},
 		{
@@ -203,7 +203,7 @@ func TestLeaderUsable(t *testing.T) {
 		},
 		{
 			name:   "no node name",
-			leader: &Leader{Address: "10.0.0.1:5001", Full: true},
+			leader: &Leader{Address: "10.0.0.1:4281", Full: true},
 			want:   false,
 		},
 	}

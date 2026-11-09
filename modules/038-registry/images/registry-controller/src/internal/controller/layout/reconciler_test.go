@@ -268,7 +268,7 @@ func TestReconcileCreatesTheLayout(t *testing.T) {
 		// An address, not `constant.Host`. That name identifies the image set and is
 		// what a request is matched against, but a node agent cannot resolve it: it
 		// runs in the host network, where cluster DNS does not exist.
-		assert.Equal(t, "10.0.0.1:5001", layoutObj.Spec.Backends[0].Host)
+		assert.Equal(t, "10.0.0.1:4281", layoutObj.Spec.Backends[0].Host)
 		assert.Equal(t, "-----BEGIN CERTIFICATE-----storage", layoutObj.Spec.Backends[0].CA)
 
 		// Owned by its Node, so a removed node takes its layout with it without the
@@ -1147,12 +1147,12 @@ func TestReconcileAddressesTheStorageByNodeAddress(t *testing.T) {
 	storage := applied.Spec.Backend(registryv1alpha1.BackendStorage)
 	require.NotNil(t, storage)
 
-	assert.Equal(t, "10.0.0.1:5001", storage.Host,
+	assert.Equal(t, "10.0.0.1:4281", storage.Host,
 		"the layout names something no node can resolve")
 	// The second replica is a mirror of the same backend, not a second backend: it
 	// holds the same content, so it is one source reachable in two places.
 	require.Len(t, storage.Mirrors, 1)
-	assert.Equal(t, "10.0.0.2:5001", storage.Mirrors[0].Host)
+	assert.Equal(t, "10.0.0.2:4281", storage.Mirrors[0].Host)
 
 	// Every replica takes the same credentials, since any may answer — so they share one
 	// key rather than each getting a copy of the same secret.
@@ -1208,7 +1208,7 @@ func TestReconcileAddressesTolerateAnExplicitPort(t *testing.T) {
 	})
 
 	secret := accessSecret()
-	secret.Data[storageAccessAddressesKey] = []byte(" 10.0.0.1:5001 , 10.0.0.2 ")
+	secret.Data[storageAccessAddressesKey] = []byte(" 10.0.0.1:4281 , 10.0.0.2 ")
 
 	r, c := newReconciler(t, cfg, secret, node("master-0"))
 	runReconcile(t, r)
@@ -1216,9 +1216,9 @@ func TestReconcileAddressesTolerateAnExplicitPort(t *testing.T) {
 	applied := listNodes(t, c)["master-0"]
 	storage := applied.Spec.Backend(registryv1alpha1.BackendStorage)
 	require.NotNil(t, storage)
-	assert.Equal(t, "10.0.0.1:5001", storage.Host)
+	assert.Equal(t, "10.0.0.1:4281", storage.Host)
 	require.Len(t, storage.Mirrors, 1)
-	assert.Equal(t, "10.0.0.2:5001", storage.Mirrors[0].Host)
+	assert.Equal(t, "10.0.0.2:4281", storage.Mirrors[0].Host)
 }
 
 // TestUnchangedUpstreamComparesCredentialsThroughTheDigest covers the comparison that

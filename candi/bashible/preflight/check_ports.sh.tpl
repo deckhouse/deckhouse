@@ -103,14 +103,19 @@ firewall_note="The control-plane node is likely behind firewall rules or another
 #
 # One group per line: a label, then "port=what needs it" pairs.
 #
-# 4282 is deliberately absent: registry-packages-proxy listens on it inside a pod, not on the
-# node, so nothing on the host competes for it.
+# The registry holds 4281 and 4283 on the node address and the node agent 5001 on the loopback;
+# a port is bound on all addresses here, so a holder on either shows up. 4281 is first the registry
+# the bootstrap starts from a bundle and then the cluster's store, which also writes on 4283.
+#
+# 4282 is not in the list, although it is a port on the node: dhctl reverse-tunnels its rpp-get
+# server to it during the bootstrap, as it does the packages proxy to 5444, and
+# registry-packages-proxy binds it with hostPort on every master once the cluster runs.
 port_groups=(
   "kubernetes API (6443)|6443=the Kubernetes API server"
   "Etcd (2379, 2380)|2379=etcd client connections|2380=etcd peer communication"
   "kubelet (10250)|10250=kubelet"
   "kubernetes-api-proxy (6445, 6480)|6445=kubernetes-api-proxy|6480=the kubernetes-api-proxy health endpoint"
-  "registry (5001, 5444)|5001=the in-cluster registry|5444=the registry packages proxy dhctl brings up during the bootstrap"
+  "registry (4281, 4283, 5001, 5444)|4281=the in-cluster registry|4283=the in-cluster registry write endpoint|5001=the registry agent on the loopback|5444=the registry packages proxy dhctl brings up during the bootstrap"
 )
 
 for group in "${port_groups[@]}"; do

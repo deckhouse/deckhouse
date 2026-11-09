@@ -29,6 +29,8 @@ limitations under the License.
 package pki
 
 import (
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry/pki"
@@ -40,7 +42,11 @@ const (
 	// CommonNameCA is the authority every storage certificate is signed by.
 	CommonNameCA = "registry-storage-ca"
 
-	// CommonNameDistribution is the certificate the storage serves with.
+	// CommonNameDistribution is the certificate the storage serves with, and the
+	// client certificate its syncer presents to the write listener. Every leaf of
+	// this authority carries client authentication — the signer's default profile —
+	// so no second leaf is needed for that, and adding one to State would make
+	// Complete false on every existing cluster and regenerate the authority.
 	CommonNameDistribution = "registry-storage"
 
 	// CommonNameAuth is the token service that authorizes pulls.
@@ -52,9 +58,18 @@ const (
 	CommonNameToken = "registry-storage-token"
 
 	// CommonNameIngressClient is the client certificate the ingress controller
-	// presents when proxying writes. The storage trusts this authority for the write
-	// path only, so the publication endpoint cannot be reached by anything that has
-	// not gone through the ingress.
+	// presents when proxying writes. The write listener refuses a handshake without
+	// a leaf of this authority issued under this name or CommonNameDistribution — the
+	// syncer writes to its own store with the serving pair — so the store takes a
+	// write only from an ingress controller presenting this certificate or from the
+	// replica itself. Only this name makes the client address the ingress forwards
+	// believed. That this means "through the module's Ingress, under its
+	// whitelistSourceRanges" also takes the controller not letting an Ingress of
+	// another namespace name the d8-system secret that holds it: see pki-secret.yaml.
+	//
+	// The wrapper of the registry image admits clients by these two names; renaming
+	// either here means changing serve.IngressClientName or serve.SyncerClientName
+	// there in the same change.
 	CommonNameIngressClient = "registry-storage-ingress-client"
 )
 
@@ -176,6 +191,10 @@ func Generate(hosts Hosts) (State, error) {
 		}
 	}
 
+	if _, err = state.EnsureIngressClientKey(); err != nil {
+		return State{}, err
+	}
+
 	if state.HTTPSecret, err = pki.GenerateRandomSecret(); err != nil {
 		return State{}, fmt.Errorf("generating the HTTP secret: %w", err)
 	}
@@ -234,6 +253,68 @@ func (s *State) EnsureHosts(hosts Hosts) (bool, error) {
 	}
 
 	return true, nil
+}
+
+// EnsureIngressClientKey keeps the ingress client key in PKCS#8, re-encoding a
+// stored one that is not, and reissues the ingress client pair from the authority
+// when the stored one does not decode or its key is not the certificate's. Reports
+// whether it changed.
+//
+// The shared encoder writes PKCS#1 (RSA) or SEC1 (EC) under the PKCS#8 label
+// "PRIVATE KEY". Go reads that back; OpenSSL does not, and the ingress controller
+// loads this key with OpenSSL even though it verifies nothing. nginx then refuses
+// its whole configuration, so the controller stops serving every Ingress of the
+// cluster, not only this module's. The encoder stays as it is: the previous
+// implementation writes its secrets with it, and changing it would rewrite them
+// and restart its pods on upgrade.
+//
+// Re-encoded in place, from the stored key, on every run: the key is the same and
+// only its encoding changes, so a cluster generated before this heals on the next
+// run, with no new field — one would make Complete false and regenerate the
+// authority. The other keys stay as they are: only Go reads them (the registry,
+// the token service and the syncer).
+//
+// A pair that cannot be re-encoded is reissued rather than refused. Refusing failed
+// the hook on every run, with nothing that would ever change the stored state; and
+// written out as it is, it fails the controller's configuration just the same. Only
+// this leaf is issued again, under the same authority: nothing else presents or
+// verifies it, so no node has to be told.
+func (s *State) EnsureIngressClientKey() (bool, error) {
+	pair, err := pki.DecodeCertKey([]byte(s.IngressClient.Cert), []byte(s.IngressClient.Key))
+	if err != nil {
+		if pair, err = s.reissueIngressClient(); err != nil {
+			return false, err
+		}
+	}
+
+	der, err := x509.MarshalPKCS8PrivateKey(pair.Key)
+	if err != nil {
+		return false, fmt.Errorf("encoding the %s key: %w", CommonNameIngressClient, err)
+	}
+	key := string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der}))
+
+	if key == s.IngressClient.Key {
+		return false, nil
+	}
+	s.IngressClient.Key = key
+	return true, nil
+}
+
+// reissueIngressClient issues a new ingress client leaf from the authority in the
+// state and stores it; the caller re-encodes its key.
+func (s *State) reissueIngressClient() (pki.CertKey, error) {
+	ca, err := pki.DecodeCertKey([]byte(s.CA.Cert), []byte(s.CA.Key))
+	if err != nil {
+		return pki.CertKey{}, fmt.Errorf("decoding the certificate authority: %w", err)
+	}
+	certificate, err := pki.GenerateCertificate(CommonNameIngressClient, ca)
+	if err != nil {
+		return pki.CertKey{}, fmt.Errorf("reissuing the %s certificate: %w", CommonNameIngressClient, err)
+	}
+	if s.IngressClient, err = encode(certificate); err != nil {
+		return pki.CertKey{}, fmt.Errorf("encoding the %s certificate: %w", CommonNameIngressClient, err)
+	}
+	return certificate, nil
 }
 
 // Complete reports whether the state has everything the storage needs.

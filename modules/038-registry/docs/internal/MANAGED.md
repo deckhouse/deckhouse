@@ -56,6 +56,12 @@ a replica by node address, not by the service name: it runs in the host network,
 cluster DNS name does not resolve — `registry.d8-system.svc:5001` identifies the image set
 and is what image references are built from, but nothing dials it.
 
+A replica serves on `<node address>:4281/TCP`: the agents of every node pull from there, and the
+other replicas replicate from there. The write listener, behind the publication Ingress, is
+`<node address>:4283/TCP`, reached from the nodes that run the ingress controller. Both are in the
+4200-4299 range the platform's host firewall rules open. The `:5001` in the service name is not a
+port anything listens on for the cache; on every node it is the agent's, on `127.0.0.1`.
+
 The upstream stays in each node's layout as a fallback while the cache is filling, so a
 cache miss is a slower pull rather than a failed one.
 
@@ -88,10 +94,10 @@ end
 
 upstream[("**registry.deckhouse.io**")]
 
-agent1 == "cache first" ==> storage1
+agent1 == "cache first, :4281" ==> storage1
 agent1 -. "fallback while filling" .-> upstream
 syncer1 ==> upstream
-storage2 == "replicates from the leader" ==> storage1
+storage2 == "replicates from the leader, :4281" ==> storage1
 ```
 
 ## Architecture, air-gapped
@@ -132,8 +138,8 @@ end
 end
 
 operator ==> ingress
-ingress == "client certificate + write credentials" ==> storage1
-storage2 == replicates ==> storage1
+ingress == "client certificate + write credentials, :4283" ==> storage1
+storage2 == "replicates, :4281" ==> storage1
 agent1 ==> storage1
 agent1 ==> storage2
 ```

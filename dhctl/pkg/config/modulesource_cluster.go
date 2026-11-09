@@ -195,7 +195,7 @@ func moduleVersionTag(version string) string {
 // source, read by the infrastructure converger, failed with `x509: certificate signed by unknown
 // authority`. So in the cluster too the source is read the way the registry module says: through the
 // upstream when there is one, and from the store with the store's own authority and account when the
-// cluster is air-gapped.
+// cluster is air-gapped — at the port the store serves on, which the recorded address does not name.
 func useUpstreamRegistry(ctx context.Context, kubeCl *client.KubernetesClient, src *ModuleSource, inCluster bool) error {
 	repo := src.Spec.Registry.Repo
 	if !strings.HasPrefix(repo, registry_const.Host) {
@@ -220,12 +220,16 @@ func useUpstreamRegistry(ctx context.Context, kubeCl *client.KubernetesClient, s
 		return nil
 	}
 
-	if strings.HasPrefix(upstream.GetRegistry(), registry_const.Host) {
-		// The store itself: the same address, read with its authority and account.
+	if strings.HasPrefix(upstream.GetRegistry(), registry_const.StorageHost) {
+		// The store itself: the same path under the Service's name, at the port the replicas serve on
+		// (see registry_const.StorageHost), read with its authority and account. The recorded address's
+		// `:5001` is the node agent's, on a loopback this process does not share.
+		repo = registry_const.StorageHost + strings.TrimPrefix(repo, registry_const.Host)
 		conf, err := image.NewRegistryConfig(upstream.GetScheme(), repo, upstream.GetUsername(), upstream.GetPassword(), upstream.GetCA())
 		if err != nil {
 			return fmt.Errorf("store registry config for ModuleSource %q: %w", src.GetName(), err)
 		}
+		src.Spec.Registry.Repo = repo
 		src.conf = conf
 		return nil
 	}

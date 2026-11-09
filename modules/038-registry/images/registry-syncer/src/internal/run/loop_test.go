@@ -744,13 +744,13 @@ func TestOnceReportsItsOwnAddress(t *testing.T) {
 	}))
 	loop.LocalAddress = local
 	loop.WriteAddress = local
-	loop.ReportedAddress = "10.0.0.1:5001"
+	loop.ReportedAddress = "10.0.0.1:4281"
 
 	require.NoError(t, loop.once(context.Background()))
 
 	// Reported by the replica itself, so a follower can reach the leader without
 	// resolving a node name into an address.
-	assert.Equal(t, "10.0.0.1:5001", replicaOf(t, c, "master-0").Address)
+	assert.Equal(t, "10.0.0.1:4281", replicaOf(t, c, "master-0").Address)
 }
 
 // holdsAnything reports whether a test registry received any repository at all, which is how "the
@@ -2622,4 +2622,59 @@ func TestTheElectionsViewDecidesOnlyWithoutTheLease(t *testing.T) {
 			assert.Equal(t, tc.source, replicaOf(t, c, "master-0").Source)
 		})
 	}
+}
+
+// TestAReplacedReplicaSaysWhereItServesBeforeItsFirstPassEnds is the update to the store's current
+// ports. The entry outlives the pod, so a replaced replica's entry carries its predecessor's port
+// until something writes it, and the registry controller points the agents and the push endpoint at
+// that port. The end of the first pass can be minutes away; the address is written as soon as the
+// registry answers, and nothing else in the entry moves with it.
+func TestAReplacedReplicaSaysWhereItServesBeforeItsFirstPassEnds(t *testing.T) {
+	predecessor := registryv1alpha1.StorageReplicaStatus{
+		Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader, Full: true,
+		VerifiedDigests: 410, DeclaredDigests: 410, Address: "10.0.0.1:5001",
+	}
+	replaced := func(t *testing.T) (*Loop, client.Client) {
+		storage := storageWith(registryv1alpha1.RegistryStorageSpec{})
+		storage.Status.Replicas = []registryv1alpha1.StorageReplicaStatus{predecessor}
+		loop, c, _ := newLoop(t, true, storage)
+		loop.ReportedAddress = "10.0.0.1:4281"
+		loop.started = time.Now()
+		return loop, c
+	}
+
+	t.Run("not while its registry is still starting", func(t *testing.T) {
+		loop, c := replaced(t)
+		loop.LocalAddress = closedAddress(t)
+
+		require.NoError(t, loop.once(context.Background()))
+
+		assert.Equal(t, predecessor, replicaOf(t, c, "master-0"))
+	})
+
+	t.Run("once it answers, the address and nothing else", func(t *testing.T) {
+		loop, c := replaced(t)
+
+		loop.publishAddress(context.Background())
+
+		want := predecessor
+		want.Address = "10.0.0.1:4281"
+		assert.Equal(t, want, replicaOf(t, c, "master-0"))
+	})
+
+	t.Run("once per process", func(t *testing.T) {
+		loop, c := replaced(t)
+		loop.publishAddress(context.Background())
+
+		storage := &registryv1alpha1.RegistryStorage{}
+		require.NoError(t, c.Get(context.Background(),
+			types.NamespacedName{Name: registryv1alpha1.SingletonName}, storage))
+		storage.Status.Replicas[0].Address = "10.0.0.1:5001"
+		require.NoError(t, c.Status().Update(context.Background(), storage))
+
+		loop.publishAddress(context.Background())
+
+		assert.Equal(t, "10.0.0.1:5001", replicaOf(t, c, "master-0").Address,
+			"after the first write the pass's own report keeps the address current")
+	})
 }

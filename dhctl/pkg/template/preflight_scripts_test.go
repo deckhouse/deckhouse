@@ -408,12 +408,26 @@ func TestCheckPortsScript(t *testing.T) {
 			name:          "the registry proxy ports are taken",
 			busy:          []string{"5001", "5444"},
 			wantCode:      1,
-			wantPresent:   []string{"the in-cluster registry", "registry packages proxy"},
+			wantPresent:   []string{"Port 5001 is not available but is required by the registry agent", "registry packages proxy"},
+			wantSuccesses: 4,
+		},
+		{
+			// The registry the bootstrap starts from a bundle serves here, and the cluster's store after
+			// it: a port held on the node address only would let the node agent's 5001 pass and still
+			// leave the registry nowhere to listen.
+			name:     "the in-cluster registry ports are taken",
+			busy:     []string{"4281", "4283"},
+			wantCode: 1,
+			wantPresent: []string{
+				"Port 4281 is not available but is required by the in-cluster registry.",
+				"Port 4283 is not available but is required by the in-cluster registry write endpoint",
+			},
+			wantMissing:   []string{"Port 5001"},
 			wantSuccesses: 4,
 		},
 		{
 			name:          "nothing is free",
-			busy:          []string{"6443", "2379", "2380", "10250", "6445", "6480", "5001", "5444"},
+			busy:          []string{"6443", "2379", "2380", "10250", "6445", "6480", "4281", "4283", "5001", "5444"},
 			wantCode:      1,
 			wantPresent:   []string{"Port 6443", "Port 2379", "Port 10250", "Port 6480"},
 			wantSuccesses: 0,

@@ -154,9 +154,12 @@ func (a *authority) file(t *testing.T) string {
 	return path
 }
 
-// serve runs a TLS listener that asks for a client certificate but does not require one, which is
-// how the write endpoint listens: a push without a certificate is still served, it just does not
-// get to say where it came from.
+// serve runs a TLS listener that asks for a client certificate but does not require one.
+//
+// Not how the write endpoint listens any more — it requires a certificate and refuses a handshake
+// without one, see serve.writeTLS — and that is the reason it is kept: the decision here must hold
+// on its own, whatever the listener in front of it lets through, so these tests give it every peer a
+// lenient listener would.
 func serve(t *testing.T, handler http.Handler, server tls.Certificate) *httptest.Server {
 	t.Helper()
 
@@ -187,12 +190,15 @@ func client(t *testing.T, ca *authority, certificate *tls.Certificate) *http.Cli
 	return &http.Client{Transport: transport}
 }
 
+// frontName is the name the front's certificate is issued under in these tests.
+const frontName = "ingress-controller"
+
 // seen records what the registry behind this middleware would log and hand to the token service.
 func seen(t *testing.T, ca *authority, clientCertCA string, certificate *tls.Certificate) string {
 	t.Helper()
 
 	var observed string
-	handler, err := Handler(clientCertCA, http.HandlerFunc(
+	handler, err := Handler(clientCertCA, frontName, http.HandlerFunc(
 		func(_ http.ResponseWriter, request *http.Request) {
 			observed = request.RemoteAddr
 		}))
@@ -221,9 +227,14 @@ func TestTheForwardedAddressIsBelievedOnlyBehindTheRightCertificate(t *testing.T
 	ingress := newAuthority(t, "ingress")
 	elsewhere := newAuthority(t, "somebody else")
 
-	trustedCertificate := ingress.issue(t, "ingress-controller", x509.ExtKeyUsageClientAuth)
-	foreignCertificate := elsewhere.issue(t, "ingress-controller", x509.ExtKeyUsageClientAuth)
-	serverCertificate := ingress.issue(t, "not-a-client", x509.ExtKeyUsageServerAuth)
+	trustedCertificate := ingress.issue(t, frontName, x509.ExtKeyUsageClientAuth)
+	foreignCertificate := elsewhere.issue(t, frontName, x509.ExtKeyUsageClientAuth)
+	// What this module's authority actually issues the storage: a leaf carrying client
+	// authentication as well, because the signer's default profile lists both usages. The syncer
+	// presents it when it writes to its own store.
+	neighbourCertificate := ingress.issue(t, "registry-storage", x509.ExtKeyUsageClientAuth)
+	// Under the front's own name, so that what refuses it is the usage and not the name.
+	serverCertificate := ingress.issue(t, frontName, x509.ExtKeyUsageServerAuth)
 
 	authorityFile := ingress.file(t)
 
@@ -245,6 +256,16 @@ func TestTheForwardedAddressIsBelievedOnlyBehindTheRightCertificate(t *testing.T
 			"this module issues server certificates too, and they are not a licence to speak for a client")
 	})
 
+	t.Run("a client certificate from the right authority, issued to somebody else", func(t *testing.T) {
+		// The case the usage check was once believed to cover. The authority signs every leaf
+		// for client authentication, so the only thing that tells the ingress apart from the
+		// syncer beside the registry is the name each was issued under.
+		address := seen(t, ingress, authorityFile, &neighbourCertificate)
+		assert.NotContains(t, address, "203.0.113.7",
+			"a neighbour admitted to write is not the front, and it has no client to speak for")
+		assert.Contains(t, address, "127.0.0.1", "the request is served, it just speaks for itself")
+	})
+
 	t.Run("no certificate at all", func(t *testing.T) {
 		address := seen(t, ingress, authorityFile, nil)
 		assert.NotContains(t, address, "203.0.113.7")
@@ -255,7 +276,7 @@ func TestTheForwardedAddressIsBelievedOnlyBehindTheRightCertificate(t *testing.T
 		// The reason the chain is read at all. Verified against the root alone this leaf does
 		// not chain to anything, and refusing it would stop believing a legitimate ingress.
 		through := ingress.intermediate(t, "ingress issuing authority")
-		certificate := through.issue(t, "ingress-controller", x509.ExtKeyUsageClientAuth)
+		certificate := through.issue(t, frontName, x509.ExtKeyUsageClientAuth)
 
 		assert.Equal(t, "203.0.113.7:0", seen(t, ingress, authorityFile, &certificate),
 			"a leaf signed through an intermediate is still the front, and it sends the intermediate")
@@ -266,7 +287,7 @@ func TestTheForwardedAddressIsBelievedOnlyBehindTheRightCertificate(t *testing.T
 		// and for nothing else in the chain, so a peer may append whatever it likes — here,
 		// the certificate genuinely issued to the ingress, over its own key. Walking the whole
 		// chain accepted that; only the leaf may decide.
-		forged := elsewhere.issue(t, "ingress-controller", x509.ExtKeyUsageClientAuth)
+		forged := elsewhere.issue(t, frontName, x509.ExtKeyUsageClientAuth)
 		forged.Certificate = append(forged.Certificate, trustedCertificate.Certificate[0])
 
 		address := seen(t, ingress, authorityFile, &forged)
@@ -292,7 +313,15 @@ func TestHandlerRefusesAnUnusableAuthority(t *testing.T) {
 	broken := filepath.Join(t.TempDir(), "ca.crt")
 	require.NoError(t, os.WriteFile(broken, []byte("this is not a certificate"), 0o600))
 
-	_, err := Handler(broken, http.NotFoundHandler())
+	_, err := Handler(broken, frontName, http.NotFoundHandler())
 	require.Error(t, err, "an authority that verifies nothing would silently trust nobody, forever")
 	assert.Contains(t, err.Error(), "no certificate")
+}
+
+// TestHandlerRefusesAnAuthorityWithoutTheFrontsName: an authority alone would believe every leaf it
+// signed, and this module's authority signs all of them for client authentication.
+func TestHandlerRefusesAnAuthorityWithoutTheFrontsName(t *testing.T) {
+	_, err := Handler(newAuthority(t, "ingress").file(t), "", http.NotFoundHandler())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "without the name")
 }

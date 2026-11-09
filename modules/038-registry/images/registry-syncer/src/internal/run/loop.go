@@ -116,10 +116,20 @@ type Loop struct {
 	LocalCA                  string
 	LocalUser, LocalPassword string
 
-	// LocalTransport builds the transport to this replica's own registry. Nil means fill.Transport
-	// with LocalCA. A field so that a test can give the registry a listener that asks more of a client
+	// LocalTransport builds the transport to this replica's own registry. Nil means
+	// fill.ClientTransport with LocalCA and LocalClientCertificate. A field so that a test can give the registry a listener that asks more of a client
 	// than a CA; see localTransport.
 	LocalTransport func() (*http.Transport, error)
+
+	// LocalClientCertificate is what this replica presents to its own write endpoint, which refuses a
+	// handshake without a client certificate from the module's authority. In the storage pod it is
+	// the registry's serving pair: see distribution.CertificateFile. Nil presents nothing, which is a
+	// loop pointed at a registry that does not ask.
+	//
+	// Carried by localTransport, and so by every client of this replica's own registry: writeRegistry
+	// and LocalOptions, and with them the fill, the replication and the garbage collection, and the
+	// health watch's probe of the listeners.
+	LocalClientCertificate *fill.ClientCertificate
 
 	// Metrics is what this replica reports about its own work. Optional: nothing about
 	// filling a cache should depend on whether anyone is watching.
@@ -244,6 +254,10 @@ type Loop struct {
 	// publish alone: a first recheck that failed, its upstream not answering, publishes the Full the
 	// previous process left.
 	storeRead atomic.Bool
+
+	// addressPublished is set once this process has written ReportedAddress into its entry. See
+	// publishAddress.
+	addressPublished bool
 
 	// RegistryWait is how long a pass waits for this replica's registry to listen before it leaves
 	// the copy to the next pass. Zero means localRegistryWait.
@@ -976,6 +990,7 @@ func (l *Loop) once(ctx context.Context) error {
 	if l.storeStarting(ctx) {
 		return nil
 	}
+	l.publishAddress(ctx)
 
 	isLeader := l.Leadership.IsLeader()
 	// The address is reported by the replica itself, so a follower can replicate from
@@ -2319,6 +2334,27 @@ func (l *Loop) storeStarting(ctx context.Context) bool {
 	return true
 }
 
+// publishAddress writes where this replica serves into its entry, once per process and as soon as
+// its registry answers, instead of waiting for the end of the first pass.
+//
+// The entry outlives the pod, so a replaced replica's entry still carries the address its
+// predecessor reported until something writes it. The registry controller builds the layout and the
+// push endpoint from that address, and storageupdate waits for it before replacing the next replica.
+// It matters during the update to the store's current ports, when the predecessor served on another
+// port. Retried on the next pass when it fails.
+func (l *Loop) publishAddress(ctx context.Context) {
+	if l.addressPublished || l.Publisher == nil || l.Node == "" || l.ReportedAddress == "" {
+		return
+	}
+	state := report.State{Node: l.Node, Address: l.ReportedAddress}
+	if err := l.Publisher.PublishAddress(ctx, state); err != nil {
+		l.Log.Warn("cannot report where this replica serves; the previous report stays until this pass ends",
+			"address", l.ReportedAddress, "error", err.Error())
+		return
+	}
+	l.addressPublished = true
+}
+
 // releaseAbsent reports whether this replica's own store answers that it does not hold the deployed
 // release — the image the set is read out of.
 func (l *Loop) releaseAbsent(ctx context.Context) bool {
@@ -2467,7 +2503,7 @@ func (l *Loop) localTransport() (*http.Transport, error) {
 	if l.LocalTransport != nil {
 		return l.LocalTransport()
 	}
-	return fill.Transport(l.LocalCA)
+	return fill.ClientTransport(l.LocalCA, l.LocalClientCertificate)
 }
 
 // writeRegistry is the same store, addressed through the listener that does NOT proxy.
@@ -2482,9 +2518,10 @@ func (l *Loop) localTransport() (*http.Transport, error) {
 // self-filling did not.
 //
 // The registry serves that listener itself, on WriteEndpointPort, from the same process and storage
-// with no proxy in front of it. Its client certificate is about trusting the address a request claims
-// to come from, not about admission: it answers an unauthenticated request with 401 like the serving
-// listener, so the credentials this replica already holds are enough.
+// with no proxy in front of it. It admits two clients and refuses every other handshake: the ingress
+// controller proxying `d8 mirror push`, and this syncer, with the client certificate localTransport
+// carries. The credentials are checked after that, as on the serving listener — the certificate
+// decides who may ask, the sync account what it may do.
 func (l *Loop) writeRegistry() (fill.Registry, error) {
 	registry, err := l.localRegistry()
 	if err != nil {

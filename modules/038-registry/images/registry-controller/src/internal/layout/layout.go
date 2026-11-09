@@ -29,7 +29,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"slices"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -55,6 +54,8 @@ type Access struct {
 	// image reference in the cluster is built from and what the agent matches a
 	// request against — but nothing ever dials it. The serving certificate covers
 	// these addresses for exactly this reason.
+	//
+	// Each with the port its replica serves on. See StorageAddresses.
 	Addresses []string
 
 	// Leader is the address of the replica that holds the election lease, when it has reported.
@@ -578,8 +579,14 @@ func storageBackend(access Access) registryv1alpha1.Backend {
 			Auth:   access.Auth,
 		}
 	}
-	listed := func(candidate string) bool {
-		return candidate != "" && slices.Contains(access.Addresses, candidate)
+	// among is the address here of the replica a candidate names, or "" when it names none of them.
+	among := func(candidate string) string {
+		for _, address := range access.Addresses {
+			if sameHost(address, candidate) {
+				return address
+			}
+		}
+		return ""
 	}
 
 	// The leader as the endpoint. The leader is the replica whose completeness authorized dropping
@@ -594,12 +601,16 @@ func storageBackend(access Access) registryv1alpha1.Backend {
 	// Only with neither, the given order: some endpoint is needed, and serving no storage backend
 	// at all is worse than an imperfect first choice. That is a cache turned on a moment ago, or a
 	// replica that has left the cluster along with its master.
+	//
+	// Matched by host: the leader's address is what it reported, and the nodes' endpoint is what an
+	// earlier layout wrote, and either may be spelled or have its port chosen differently from the
+	// addresses here — the port above all, while the replicas move to the one they serve on now. See
+	// StorageAddresses.
 	primary := access.Addresses[0]
-	switch {
-	case listed(access.Leader):
-		primary = access.Leader
-	case listed(access.Previous):
-		primary = access.Previous
+	if address := among(access.Leader); address != "" {
+		primary = address
+	} else if address := among(access.Previous); address != "" {
+		primary = address
 	}
 
 	backend := registryv1alpha1.Backend{

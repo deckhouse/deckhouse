@@ -80,18 +80,18 @@ func TestTheStorageEndpointStaysPutWithoutALeaseHolder(t *testing.T) {
 	r, c := newReconciler(t, cachedConfig(), accessSecret(), node("master-0"), node("master-1"),
 		storageWithReplicas(), storageLease("master-1"))
 	runReconcile(t, r)
-	require.Equal(t, map[string]string{"master-0": "10.0.0.2:5001", "master-1": "10.0.0.2:5001"},
+	require.Equal(t, map[string]string{"master-0": "10.0.0.2:4281", "master-1": "10.0.0.2:4281"},
 		storageEndpoints(t, c), "the leader is the endpoint")
 
 	setLeaseHolder(t, c, "")
 	runReconcile(t, r)
-	assert.Equal(t, map[string]string{"master-0": "10.0.0.2:5001", "master-1": "10.0.0.2:5001"},
+	assert.Equal(t, map[string]string{"master-0": "10.0.0.2:4281", "master-1": "10.0.0.2:4281"},
 		storageEndpoints(t, c), "a released lease must not move the endpoint to the first address")
 	assert.Empty(t, pushSlice(t, c).Endpoints, "a push is not kept on the replica that led: it is refused")
 
 	setLeaseHolder(t, c, "master-0")
 	runReconcile(t, r)
-	assert.Equal(t, map[string]string{"master-0": "10.0.0.1:5001", "master-1": "10.0.0.1:5001"},
+	assert.Equal(t, map[string]string{"master-0": "10.0.0.1:4281", "master-1": "10.0.0.1:4281"},
 		storageEndpoints(t, c), "the new leader becomes the endpoint as soon as it holds the lease")
 }
 
@@ -104,17 +104,17 @@ func TestTheStorageEndpointWithoutAnyLeaderToKeep(t *testing.T) {
 			storageWithReplicas(), storageLease(""))
 		runReconcile(t, r)
 
-		assert.Equal(t, map[string]string{"master-0": "10.0.0.1:5001", "master-1": "10.0.0.1:5001"},
+		assert.Equal(t, map[string]string{"master-0": "10.0.0.1:4281", "master-1": "10.0.0.1:4281"},
 			storageEndpoints(t, c))
 	})
 
 	t.Run("the endpoint the layouts carry is no longer a replica", func(t *testing.T) {
 		r, c := newReconciler(t, cachedConfig(), accessSecret(), node("master-0"), node("master-1"),
 			storageWithReplicas(), storageLease(""),
-			layoutPointedAt("master-0", "10.0.0.9:5001"), layoutPointedAt("master-1", "10.0.0.9:5001"))
+			layoutPointedAt("master-0", "10.0.0.9:4281"), layoutPointedAt("master-1", "10.0.0.9:4281"))
 		runReconcile(t, r)
 
-		assert.Equal(t, map[string]string{"master-0": "10.0.0.1:5001", "master-1": "10.0.0.1:5001"},
+		assert.Equal(t, map[string]string{"master-0": "10.0.0.1:4281", "master-1": "10.0.0.1:4281"},
 			storageEndpoints(t, c), "a replica that left must not stay the endpoint")
 	})
 }
@@ -129,13 +129,13 @@ func TestTheStorageEndpointKeptIsTheOneMostLayoutsCarry(t *testing.T) {
 	r, c := newReconciler(t, cachedConfig(), secret,
 		node("master-0"), node("master-1"), node("master-2"),
 		storageWithReplicas(), storageLease(""),
-		layoutPointedAt("master-0", "10.0.0.3:5001"),
-		layoutPointedAt("master-1", "10.0.0.2:5001"),
-		layoutPointedAt("master-2", "10.0.0.3:5001"))
+		layoutPointedAt("master-0", "10.0.0.3:4281"),
+		layoutPointedAt("master-1", "10.0.0.2:4281"),
+		layoutPointedAt("master-2", "10.0.0.3:4281"))
 	runReconcile(t, r)
 
 	assert.Equal(t, map[string]string{
-		"master-0": "10.0.0.3:5001", "master-1": "10.0.0.3:5001", "master-2": "10.0.0.3:5001",
+		"master-0": "10.0.0.3:4281", "master-1": "10.0.0.3:4281", "master-2": "10.0.0.3:4281",
 	}, storageEndpoints(t, c))
 }
 
@@ -162,17 +162,17 @@ func (c *failsNodeListOnce) List(ctx context.Context, list client.ObjectList, op
 func TestTheStorageEndpointIsNotMovedByAFailedList(t *testing.T) {
 	r, c := newReconciler(t, cachedConfig(), accessSecret(), node("master-0"), node("master-1"),
 		storageWithReplicas(), storageLease(""),
-		layoutPointedAt("master-0", "10.0.0.2:5001"), layoutPointedAt("master-1", "10.0.0.2:5001"))
+		layoutPointedAt("master-0", "10.0.0.2:4281"), layoutPointedAt("master-1", "10.0.0.2:4281"))
 	r.InjectClient(&failsNodeListOnce{Client: c})
 
 	_, err := r.Reconcile(context.Background(), ctrl.Request{
 		NamespacedName: types.NamespacedName{Name: registryv1alpha1.SingletonName},
 	})
 	require.ErrorContains(t, err, "listing RegistryNode objects")
-	assert.Equal(t, map[string]string{"master-0": "10.0.0.2:5001", "master-1": "10.0.0.2:5001"},
+	assert.Equal(t, map[string]string{"master-0": "10.0.0.2:4281", "master-1": "10.0.0.2:4281"},
 		storageEndpoints(t, c), "a failed list must not move the endpoint to the first address")
 
 	runReconcile(t, r)
-	assert.Equal(t, map[string]string{"master-0": "10.0.0.2:5001", "master-1": "10.0.0.2:5001"},
+	assert.Equal(t, map[string]string{"master-0": "10.0.0.2:4281", "master-1": "10.0.0.2:4281"},
 		storageEndpoints(t, c), "the pass after the failure keeps the endpoint")
 }

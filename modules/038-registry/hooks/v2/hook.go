@@ -239,6 +239,21 @@ func handle(_ context.Context, input *go_hook.HookInput) error {
 		}
 	}
 
+	// A state generated before the key was written in PKCS#8 heals here, without
+	// regenerating anything, and so does an ingress client pair that does not match:
+	// see EnsureIngressClientKey.
+	ingressClientCert := state.IngressClient.Cert
+	reencoded, err := state.EnsureIngressClientKey()
+	if err != nil {
+		return fmt.Errorf("checking the ingress client key: %w", err)
+	}
+	switch {
+	case reencoded && state.IngressClient.Cert != ingressClientCert:
+		input.Logger.Warn("reissued the ingress client certificate: the stored pair did not decode or did not match")
+	case reencoded:
+		input.Logger.Info("re-encoded the ingress client key as PKCS#8, which the ingress controller can load")
+	}
+
 	current.PKI = state
 	current.StorageAddresses = addresses
 	current.StorePath = storePath(input)

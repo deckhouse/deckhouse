@@ -64,9 +64,10 @@ import (
 
 // loopbackRegistry is the sentinel meaning "nobody asked for a particular address".
 //
-// A value rather than an empty string so that `--local-address=127.0.0.1:5001` stays a thing
-// somebody can ask for on purpose, and only the untouched default is replaced.
-const loopbackRegistry = "127.0.0.1:5001"
+// A value rather than an empty string so that `--local-address=127.0.0.1:4281` stays a thing
+// somebody can ask for on purpose, and only the untouched default is replaced. The loopback form
+// of the store's own port, constant.StoragePort, which is what such a request would name.
+const loopbackRegistry = "127.0.0.1:4281"
 
 // pushIdleWindow is how long an untouched upload still counts as a push in progress.
 //
@@ -90,10 +91,10 @@ func writeEndpointAddress(listenAddress string) string {
 // resolveLocalAddress decides where this replica's own registry is to be found: the address the
 // replica SERVES on, not the loopback.
 //
-// The pod runs with host networking, so the loopback it shares is the node's — where, on a Managed
-// cluster, the registry agent already answers on the very same port. A syncer dialling
-// 127.0.0.1:5001 therefore reaches the agent rather than the registry beside it and rejects the
-// certificate it is served, which comes from the agent's own authority.
+// The pod runs with host networking, so the loopback it shares is the node's, and the registry beside
+// it binds only the node address. A syncer dialling its own port on the loopback reaches nothing.
+// It used to be worse: the store and the registry agent shared a port number, so the loopback reached
+// the agent, whose certificate comes from the agent's own authority and was rejected.
 //
 // The failure is invisible while an upstream is configured, because every node falls back to it and
 // a leader that can neither read nor write its own store breaks nothing anybody notices. The air-gap
@@ -105,7 +106,7 @@ func resolveLocalAddress(localAddress, listenAddress string) string {
 	if localAddress != loopbackRegistry || listenAddress == "" {
 		return localAddress
 	}
-	return fmt.Sprintf("%s:%d", listenAddress, constant.Port)
+	return fmt.Sprintf("%s:%d", listenAddress, constant.StoragePort)
 }
 
 // leadership tracks whether this replica holds the lease.
@@ -399,7 +400,7 @@ func serve(ctx context.Context, log *slog.Logger, opts options) error {
 				// fallback, and a fallback pointing at an unreachable address is a lie waiting to
 				// be believed.
 				AuthRealm: fmt.Sprintf("https://%s:%d%s",
-					opts.listenAddress, constant.Port, distribution.AuthTokenPath),
+					opts.listenAddress, constant.StoragePort, distribution.AuthTokenPath),
 				TokenIssuer:     os.Getenv("REGISTRY_TOKEN_ISSUER"),
 				StoreFilesystem: storeFilesystem,
 			},
@@ -417,13 +418,20 @@ func serve(ctx context.Context, log *slog.Logger, opts options) error {
 		// rather than derived from what a fill wrote.
 		DataDir:         distribution.DataDir,
 		StoreHostPath:   opts.storeHostPath,
-		ReportedAddress: fmt.Sprintf("%s:%d", opts.listenAddress, constant.Port),
+		ReportedAddress: fmt.Sprintf("%s:%d", opts.listenAddress, constant.StoragePort),
 		LocalCA:         os.Getenv("REGISTRY_LOCAL_CA"),
 		LocalUser:       os.Getenv("REGISTRY_LOCAL_USER"),
 		LocalPassword:   os.Getenv("REGISTRY_LOCAL_PASSWORD"),
 		Interval:        opts.interval,
 		CopyPacer:       fill.NewPacer(opts.copyRateMiB << 20),
 		StoreRecheck:    opts.storeRecheck,
+		// What the write endpoint admits this syncer by: it refuses a handshake without a client
+		// certificate. The registry's own serving pair, from the PKI mount the two containers
+		// share — see distribution.CertificateFile.
+		LocalClientCertificate: &fill.ClientCertificate{
+			CertFile: distribution.CertificateFile,
+			KeyFile:  distribution.KeyFile,
+		},
 	}
 
 	// Built before the loop starts, which reads the lease through it — see followTheLease.
@@ -1191,7 +1199,8 @@ func newCollector(
 			// The non-proxying listener, the same one a fill writes to: deleting through
 			// the serving one deletes nothing. Its proxy store implements no deletion, so
 			// every DELETE is answered 405 and the run is refused reference by reference
-			// while reporting only warnings — see writeEndpointAddress.
+			// while reporting only warnings — see writeEndpointAddress. LocalOptions carry
+			// the client certificate that listener requires.
 			Address:  writeEndpointAddress(opts.listenAddress),
 			Insecure: false,
 			Scope:    strings.Trim(constant.Path, "/"),

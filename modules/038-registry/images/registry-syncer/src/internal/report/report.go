@@ -479,6 +479,44 @@ func (p *Publisher) PublishCollection(ctx context.Context, state State) error {
 	})
 }
 
+// PublishAddress corrects where other replicas reach this one, and nothing else.
+//
+// The address is otherwise written only by the report at the end of a pass, and a replaced pod's
+// first pass can take minutes. Until then its entry carries what the previous pod reported. During
+// the update to the store's current ports that is the previous pod spec's port, where nothing
+// listens any more, and the registry controller points the agents and the push endpoint at it.
+func (p *Publisher) PublishAddress(ctx context.Context, state State) error {
+	if state.Node == "" {
+		return fmt.Errorf("an address report needs the node it came from")
+	}
+
+	return p.publish(ctx, func(storage *registryv1alpha1.RegistryStorage) bool {
+		return MergeAddress(&storage.Status.Replicas, state)
+	})
+}
+
+// MergeAddress sets the address of this replica's existing entry and leaves every other field alone.
+//
+// It never creates an entry: Announce and Publish do, with the numbers an entry is read for, and an
+// entry created here would make Announce skip.
+func MergeAddress(replicas *[]registryv1alpha1.StorageReplicaStatus, state State) bool {
+	if state.Address == "" {
+		return false
+	}
+	for i := range *replicas {
+		entry := &(*replicas)[i]
+		if entry.Node != state.Node {
+			continue
+		}
+		if entry.Address == state.Address {
+			return false
+		}
+		entry.Address = state.Address
+		return true
+	}
+	return false
+}
+
 // Merge replaces this replica's entry in place, or appends it, and reports whether
 // anything changed.
 //

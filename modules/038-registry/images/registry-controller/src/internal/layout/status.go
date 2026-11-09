@@ -325,14 +325,23 @@ func LeaderAddress(replicas []registryv1alpha1.StorageReplicaStatus, leaseHolder
 // pointing at. The layouts agree unless something interrupted a write halfway or someone edited one
 // by hand; when they do not, the endpoint most of them carry wins, and a tie goes to the smallest
 // address, so that the answer depends on the layouts and not on the order they were listed in.
+//
+// A layout counts for the replica on the same host, and the answer is that replica's address as it is
+// now: a layout written before the replicas moved to the port they serve on names the old one, and
+// read exactly it would name no replica at all for the whole of that move.
 func StorageEndpointInUse(nodes []registryv1alpha1.RegistryNodeSpec, addresses []string) string {
 	votes := map[string]int{}
 	for i := range nodes {
 		storage := nodes[i].Backend(registryv1alpha1.BackendStorage)
-		if storage == nil || !slices.Contains(addresses, storage.Host) {
+		if storage == nil {
 			continue
 		}
-		votes[storage.Host]++
+		for _, address := range addresses {
+			if sameHost(address, storage.Host) {
+				votes[address]++
+				break
+			}
+		}
 	}
 
 	chosen := ""

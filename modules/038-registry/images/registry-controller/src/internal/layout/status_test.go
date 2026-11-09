@@ -903,3 +903,26 @@ func TestHoldsLeadersSet(t *testing.T) {
 		})
 	}
 }
+
+// TestStorageEndpointInUseAcrossThePortMove: layouts written before the replicas moved to the port they
+// serve on now name the old one. They still name a replica, and the answer is that replica as it is
+// now: read exactly, no layout would name one and the endpoint would go to the first address in the
+// first leaderless moment of the move.
+func TestStorageEndpointInUseAcrossThePortMove(t *testing.T) {
+	addresses := []string{"10.0.0.1:4281", "10.0.0.2:4281", "10.0.0.3:4281"}
+	pointedAt := func(host string) registryv1alpha1.RegistryNodeSpec {
+		return registryv1alpha1.RegistryNodeSpec{
+			Backends: []registryv1alpha1.Backend{{
+				Name:     registryv1alpha1.BackendStorage,
+				Endpoint: registryv1alpha1.Endpoint{Scheme: registryv1alpha1.SchemeHTTPS, Host: host},
+			}},
+		}
+	}
+
+	assert.Equal(t, "10.0.0.3:4281", StorageEndpointInUse(
+		[]registryv1alpha1.RegistryNodeSpec{pointedAt("10.0.0.3:5001"), pointedAt("10.0.0.3:4281")}, addresses),
+		"the old port and the new one are the same replica, and count together")
+	assert.Equal(t, "", StorageEndpointInUse(
+		[]registryv1alpha1.RegistryNodeSpec{pointedAt("10.0.0.9:5001")}, addresses),
+		"a host that is no replica is still none")
+}

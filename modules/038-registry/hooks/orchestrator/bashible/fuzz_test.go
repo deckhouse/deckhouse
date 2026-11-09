@@ -169,7 +169,7 @@ func assertProducerInvariants(t *testing.T, builder ConfigBuilder, config *Confi
 		t.Fatalf("build() returned no config and no error for %s = %q", field, values)
 	}
 
-	want := registry_const.GenerateProxyEndpoints(builder.MasterNodesIPs)
+	want := registry_const.GenerateProxyEndpoints(builder.MasterNodesIPs, registry_const.LegacyStoragePort)
 	if len(builder.MasterNodesIPs) == 0 {
 		want = []string{}
 	}

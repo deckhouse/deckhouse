@@ -399,6 +399,11 @@ func (m ModeModel) toProxyLocalBashibleHosts(pki PKI) map[string]bashible.Config
 	return ret
 }
 
+// toProxyLocalEndpoints is where the registry the bootstrap starts on the first master answers.
+//
+// The store's port rather than the previous implementation's: the bootstrap registry serves there so
+// that the store's pod, which declares the same port, cannot be scheduled beside it while it runs —
+// see HandOverBundleStore.
 func (m ModeModel) toProxyLocalEndpoints() []string {
-	return constant.GenerateProxyEndpoints([]string{discoveredNodeIP})
+	return constant.GenerateProxyEndpoints([]string{discoveredNodeIP}, constant.StoragePort)
 }

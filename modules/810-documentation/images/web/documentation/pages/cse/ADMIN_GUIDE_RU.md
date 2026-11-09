@@ -977,6 +977,7 @@ DP CSE поставляется на USB-флеш-накопителе или DV
 <li>2379, 2380/TCP</li>
 <li>4200–4201/TCP</li>
 <li>4223/TCP</li>
+<li>4281/TCP</li>
 <li>4290–4292/TCP</li>
 </ul>
 </td>
@@ -1001,6 +1002,8 @@ DP CSE поставляется на USB-флеш-накопителе или DV
 <li>4203/TCP</li>
 <li>4219/TCP</li>
 <li>4222/TCP</li>
+<li>4281/TCP</li>
+<li>4283/TCP</li>
 <li>4285/TCP</li>
 <li>4296/TCP</li>
 </ul>

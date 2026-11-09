@@ -232,6 +232,9 @@ acl:
 EOF
 
 # Prepare distribution manifest
+#
+# On 4281, the port of the cluster's own store: the store takes over from this registry on the same
+# port and the same directory, and the shared port is what keeps them from running at once (see 070).
 bb-sync-file "${distribution_path}/config.yaml" - << EOF
 version: 0.1
 log:
@@ -246,7 +249,7 @@ storage:
     disable: true
 
 http:
-  addr: "${discovered_node_ip}:5001"
+  addr: "${discovered_node_ip}:4281"
   prefix: /
   secret: asecretforbootstrap
   debug:
@@ -260,7 +263,7 @@ http:
 
 auth:
   token:
-    realm: https://${discovered_node_ip}:5001/auth/token
+    realm: https://${discovered_node_ip}:4281/auth/token
     service: Deckhouse registry
     issuer: Registry server
     rootcertbundle: "${pki_path}/token.crt"
@@ -382,7 +385,7 @@ if ! start_and_wait "${log_path}/distribution.log" /opt/deckhouse/bin/ign-regist
     echo "ERROR: registry distribution failed to start, see ${log_path}/distribution.log"
     exit 1
 fi
-if ! liveness_probe "https://${discovered_node_ip}:5001" "${pki_path}/ca.crt"; then
+if ! liveness_probe "https://${discovered_node_ip}:4281" "${pki_path}/ca.crt"; then
     echo "ERROR: registry distribution liveness probe failed, see ${log_path}/distribution.log"
     exit 1
 fi

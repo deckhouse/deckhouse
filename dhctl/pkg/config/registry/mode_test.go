@@ -282,7 +282,7 @@ func TestModeLocal(t *testing.T) {
 				Mode:           string(constant.ModeLocal),
 				Version:        actual.Version,
 				ImagesBase:     "registry.d8-system.svc:5001/system/deckhouse",
-				ProxyEndpoints: []string{"${discovered_node_ip}:5001"},
+				ProxyEndpoints: []string{"${discovered_node_ip}:4281"},
 				Hosts: map[string]bashible.ConfigHosts{
 					"registry.d8-system.svc:5001": {
 						Mirrors: []bashible.ConfigMirrorHost{
@@ -296,7 +296,7 @@ func TestModeLocal(t *testing.T) {
 								},
 							},
 							{
-								Host:   "${discovered_node_ip}:5001",
+								Host:   "${discovered_node_ip}:4281",
 								Scheme: "https",
 								CA:     pki.CA.Cert,
 								Auth: bashible.ConfigAuth{

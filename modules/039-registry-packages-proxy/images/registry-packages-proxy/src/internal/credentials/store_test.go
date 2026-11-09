@@ -22,8 +22,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/watch"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func storeSecret() map[string][]byte {
@@ -35,11 +39,11 @@ func storeSecret() map[string][]byte {
 }
 
 func TestStoreAuthorityCarriesTheStoresOwnAccount(t *testing.T) {
-	config := storeAuthority(storeSecret(), storeHost+"/"+storePath)
+	config := storeAuthority(storeSecret(), storeRepository)
 
 	require.NotNil(t, config)
-	assert.Equal(t, "registry.d8-system.svc:5001/system/deckhouse", config.Repository,
-		"the address every image reference in the cluster is built from")
+	assert.Equal(t, "registry.d8-system.svc:4281/system/deckhouse", config.Repository,
+		"the store at the port its replicas serve on, not the recorded `:5001`, which is the agent's")
 	assert.Equal(t, "https", config.Scheme)
 	assert.Equal(t, "-----BEGIN CERTIFICATE-----store", config.CA,
 		"the store's authority, not the installer's — after the handover that address is served by the store")
@@ -70,7 +74,7 @@ func TestStoreAuthorityRefusesHalfASecret(t *testing.T) {
 		data := storeSecret()
 		delete(data, missing)
 
-		assert.Nil(t, storeAuthority(data, storeHost+"/"+storePath),
+		assert.Nil(t, storeAuthority(data, storeRepository),
 			"a secret without %q must not be used", missing)
 	}
 }
@@ -92,8 +96,9 @@ func TestWithNoAgentTheStoreIsUsed(t *testing.T) {
 		CA:         "INSTALLER-CA",
 		Auth:       "aW5zdGFsbGVyOnBhc3M=",
 	}
-	store := storeAuthority(storeSecret(), recorded.Repository)
+	store := storeAuthority(storeSecret(), storeRepository)
 	require.NotNil(t, store)
+	withAgentAuthority(t, noCA)
 
 	w := &Watcher{
 		registryClientConfigs: map[string]*registry.ClientConfig{recorded.Repository: recorded},
@@ -121,10 +126,89 @@ func TestAModuleSourceIsNeverServedFromTheStore(t *testing.T) {
 
 	w := &Watcher{
 		registryClientConfigs: map[string]*registry.ClientConfig{elsewhere.Repository: elsewhere},
-		fromStoreSecret:       storeAuthority(storeSecret(), "registry.d8-system.svc:5001/system/deckhouse"),
+		fromStoreSecret:       storeAuthority(storeSecret(), storeRepository),
 	}
 
 	got, err := w.Get(elsewhere.Repository)
 	require.NoError(t, err)
 	assert.Same(t, elsewhere, got, "a third-party source is fetched as it was recorded")
+}
+
+// withAgentAuthority makes Get see the agent's authority as readCA returns it, for one test.
+func withAgentAuthority(t *testing.T, readCA func() ([]byte, error)) {
+	t.Helper()
+
+	previous := agentAuthority
+	agentAuthority = readCA
+	t.Cleanup(func() { agentAuthority = previous })
+}
+
+// watcherWithStore is a watcher that has seen the store access secret and holds the cluster's own
+// registry as recorded.
+func watcherWithStore(t *testing.T) (*Watcher, *registry.ClientConfig) {
+	t.Helper()
+
+	recorded := &registry.ClientConfig{
+		Repository: recordedHost + "/" + storePath,
+		Scheme:     "https",
+		CA:         "AS-RECORDED",
+		Auth:       "dXNlcm5hbWU6cGFzc3dvcmQ=",
+	}
+
+	w := &Watcher{
+		registryClientConfigs: map[string]*registry.ClientConfig{recorded.Repository: recorded},
+		logger:                log.NewNop(),
+	}
+	w.processStoreEvent(watch.Event{
+		Type:   watch.Added,
+		Object: &v1.Secret{ObjectMeta: metav1.ObjectMeta{Name: storeAccessSecret}, Data: storeSecret()},
+	})
+	require.NotNil(t, w.fromStoreSecret, "a complete store access secret is an answer")
+
+	return w, recorded
+}
+
+// TestWithoutAnAgentTheStoreIsDialledAtItsServingPort is the regression e2e job 8069309 found.
+//
+// The store moved from the masters' node addresses at 5001 to 4281, while the recorded address kept
+// its `:5001`, because it is a key in every image reference. This path dialled the recorded address:
+// the Service is headless, so that was `<master>:5001`, where only the agent listens, and only on the
+// loopback. Every fetch was refused, the agent package was never fetched — on the master or the
+// worker — and the bootstrap timed out waiting for a node that could not join.
+func TestWithoutAnAgentTheStoreIsDialledAtItsServingPort(t *testing.T) {
+	withAgentAuthority(t, noCA)
+	w, recorded := watcherWithStore(t)
+
+	got, err := w.Get(recorded.Repository)
+	require.NoError(t, err)
+
+	assert.Equal(t, "registry.d8-system.svc:4281/system/deckhouse", got.Repository,
+		"the store's serving port under the Service's name, which its certificate covers")
+	assert.Equal(t, "https", got.Scheme)
+	assert.Equal(t, "-----BEGIN CERTIFICATE-----store", got.CA, "the store's authority")
+
+	// The account is a plain `auth` value, not a docker config keyed by host, so it applies to
+	// whichever host is dialled.
+	decoded, err := base64.StdEncoding.DecodeString(got.Auth)
+	require.NoError(t, err)
+	assert.Equal(t, "registry-ro:secret", string(decoded), "the store's read-only account")
+
+	// The request is still matched by the recorded address, and that entry is left as it was.
+	assert.Equal(t, "registry.d8-system.svc:5001/system/deckhouse", recorded.Repository)
+	assert.Equal(t, "AS-RECORDED", recorded.CA)
+}
+
+// TestWithAnAgentTheStoreIsNotDialled keeps the other side of the decision where it was: with the
+// agent on the node, the request goes to the agent on the loopback at 5001, whose port did not move,
+// and the store's address and account are not used even though they are known.
+func TestWithAnAgentTheStoreIsNotDialled(t *testing.T) {
+	withAgentAuthority(t, caFrom("AGENT-CA"))
+	w, recorded := watcherWithStore(t)
+
+	got, err := w.Get(recorded.Repository)
+	require.NoError(t, err)
+
+	assert.Equal(t, "127.0.0.1:5001/system/deckhouse", got.Repository)
+	assert.Equal(t, "AGENT-CA", got.CA)
+	assert.Empty(t, got.Auth, "nothing authenticates to the agent")
 }

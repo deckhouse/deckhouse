@@ -43,7 +43,7 @@ func TestAModuleIsKeptUnderItsSource(t *testing.T) {
 
 func TestResolveOriginsReadsEachModuleWhereItLives(t *testing.T) {
 	upstream := Registry{Address: "registry.deckhouse.io", Repository: "deckhouse/ee"}
-	local := Registry{Address: "127.0.0.1:5003", Repository: "system/deckhouse"}
+	local := Registry{Address: "127.0.0.1:4283", Repository: "system/deckhouse"}
 
 	modules, err := ResolveOrigins([]ModuleRef{
 		// The platform's own, after the image address handover: from the upstream, as the platform.
@@ -92,13 +92,13 @@ func TestResolveOriginsReadsEachModuleWhereItLives(t *testing.T) {
 
 	moved := byName["moved"].Origin
 	require.NotNil(t, moved)
-	assert.Equal(t, "127.0.0.1:5003", moved.Address)
+	assert.Equal(t, "127.0.0.1:4283", moved.Address)
 	assert.Equal(t, "system/deckhouse/module-sources/moved", moved.Repository)
 }
 
 func TestRoutesAreExactAndKeepEachSourceApart(t *testing.T) {
 	upstream := Registry{Address: "registry.deckhouse.io", Repository: "deckhouse/ee"}
-	destination := Registry{Address: "127.0.0.1:5003", Repository: "system/deckhouse"}
+	destination := Registry{Address: "127.0.0.1:4283", Repository: "system/deckhouse"}
 	modules, err := ResolveOrigins([]ModuleRef{
 		{Name: "console", Source: ModuleSource{Name: "deckhouse"}},
 		{Name: "sds-node-configurator", Source: ModuleSource{Name: "sds",
@@ -263,7 +263,7 @@ func TestAReplicaReadsASourcesModuleFromItsPath(t *testing.T) {
 // copy. It is the upstream's registry at the same path, as the node agent serves it.
 func TestTheFlantSourceIsReadFromTheUpstream(t *testing.T) {
 	upstream := Registry{Address: "registry.deckhouse.io", Repository: "deckhouse/fe"}
-	destination := Registry{Address: "127.0.0.1:5003", Repository: "system/deckhouse"}
+	destination := Registry{Address: "127.0.0.1:4283", Repository: "system/deckhouse"}
 
 	modules, err := ResolveOrigins([]ModuleRef{
 		{Name: "console", Source: ModuleSource{Name: "flant", Repository: "registry.d8-system.svc:5001/flant/modules"}},
@@ -277,7 +277,7 @@ func TestTheFlantSourceIsReadFromTheUpstream(t *testing.T) {
 		"beside the edition's image set on the upstream's registry, not under it")
 
 	require.NotNil(t, modules[1].Origin)
-	assert.Equal(t, "127.0.0.1:5003", modules[1].Origin.Address, "a source on its store path is still read from the store")
+	assert.Equal(t, "127.0.0.1:4283", modules[1].Origin.Address, "a source on its store path is still read from the store")
 
 	// Air-gapped: no upstream, and nothing to translate the address into.
 	airGapped, err := ResolveOrigins([]ModuleRef{

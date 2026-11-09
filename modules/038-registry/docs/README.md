@@ -89,6 +89,8 @@ With [`storage.cache`](configuration.html#parameters-storage-cache) enabled, a r
 Agents reach a replica by the node's address, not by the service name `registry.d8-system.svc:5001`.
 `registry.d8-system.svc:5001` is what every image reference in the cluster is built from, and what a request is matched against. But the agent runs in the host's network namespace, where the cluster DNS name does not resolve.
 
+A replica serves on port `4281/TCP` of its control-plane node: the agents of every node connect to it, and so do the other replicas when they replicate. The publication endpoint behind the Ingress is port `4283/TCP` of the same nodes, reached from the nodes running the ingress controller. Both are in the 4200-4299 range and are listed in ["Network interaction of the platform components"](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html). The `5001` in the service name is not the cache's port: on every node, `127.0.0.1:5001` is the agent.
+
 That address (which agents use to reach a replica) takes effect in two steps, and the order matters. Nodes are given it as soon as
 the module starts managing the pull path, through the same bashible rollout that installs the
 agent. The image references of the platform's own components move only after every node's agent
@@ -136,15 +138,33 @@ A leader whose store has lost the expected image set, for example after the cach
 
 A replica whose store holds at most half as many manifests as its `verifiedDigests` (by `totalDigests`) stops reporting the set within about a minute and a half of the loss: the leader as described above, and a replica that does not hold the lease by reporting `full: false` and reading its store again. A smaller loss on a replica that does not hold the lease is reported no later than at its next periodic check of its store, every six hours by default. After the leader's syncer restarts, `safeToDropUpstream` stays `false` until the running syncer has read its store, normally at its first pass, within about two minutes, so a report left by the previous process cannot drop the upstream.
 
+##### What protects the ports on control-plane nodes
+
+The cache runs in the host network, so its ports are open on the address of every control-plane node, to anything that can reach that address: other nodes, pods, and hosts outside the cluster if the network lets them through. The module ships no host firewall policy for these ports (for example, Cilium host policies). Restricting who can reach a control-plane node at the network level is left to the cluster's own firewall. Each port protects itself as follows:
+
+| Port | Purpose | Protection |
+|---|---|---|
+| `4281/TCP` | Reading: the agents of all nodes pull through it, the other replicas replicate from it. | TLS with the module's own certificate authority. Every request needs a token from the module's token service. The read credentials, which every node uses to get one, are on every node, so whoever has taken them from any node and can reach this port can pull everything the cache holds. The port does not accept writes, whatever the credentials: a push or a delete is refused, in an air-gapped cluster as well, where the port serves the store itself rather than a cache in front of an upstream. The store accepts writes only on `4283/TCP`, which requires a client certificate. |
+| `4283/TCP` | Writing: `d8 mirror push` through the Ingress, and the replica's own filling, replication and garbage collection. | Mutual TLS. The connection is refused during the TLS handshake unless the client presents a certificate issued by the module's certificate authority to the ingress controller or to the cache's own pod. After that, the write credentials are checked. [`whitelistSourceRanges`](configuration.html#parameters-whitelistsourceranges) is applied by the Ingress only: the port does not filter by source address. A connection made directly to the port, or to the `registry-push` Service inside the cluster, without such a certificate fails at TLS. |
+| `4285/TCP` | Metrics. | `kube-rbac-proxy`: a request needs a token of a subject allowed to get the `prometheus-metrics` subresource of the `registry-storage` StatefulSet in `d8-system`. The registry's own metrics and debug listeners are behind it, on the loopback. |
+
+The ingress controller presents its certificate for any Ingress that names the `d8-system/registry-storage-ingress-client` secret, not only for the module's own. An ingress-nginx controller that lets an Ingress use a secret of another namespace (the `allow-cross-namespace-resources` option, enabled by default in controller versions before 1.12, 1.10 among them) therefore lets anyone who can create an Ingress and a Service in any namespace reach `4283/TCP` through them, outside `whitelistSourceRanges`. The write credentials are still checked on that path. To close it, turn `allow-cross-namespace-resources` off in the controller's configuration: the module's own Ingress is in `d8-system`, beside the secret, and keeps working.
+
+A replica whose pod was created before `4281/TCP` started refusing writes still accepts a push on that port in an air-gapped cluster, until the pod is replaced. The `registry-storage` StatefulSet is updated with `OnDelete`: the module replaces the pods one at a time, each only while something else can serve the nodes in its place: another replica, the upstream, or, for the only replica of an air-gapped cache, its new images already held on its master node (see [How is the cache updated?](faq.html#how-is-the-cache-updated)). While a replacement waits, the module records an `UpdateBlocked` event on the `d8-system/registry-storage` StatefulSet.
+
+Do not delete the pod to hurry this along. The new pod pulls its images from the store it is itself part of: deleted before they are on its node, the only replica of an air-gapped cache stays in `ImagePullBackOff`, and until it is back no node of the cluster can pull any image.
+
 #### Air-gapped clusters
 
 If no upstream is set in [`primary.upstream`](configuration.html#parameters-primary-upstream), the in-cluster cache is the only source of images, and
 [`d8 mirror push`](/products/kubernetes-platform/documentation/v1/cli/d8/) is the only way into the registry. It arrives through a publication endpoint that requires
 a client certificate from the ingress in addition to credentials: this is the one path that can replace an image, and
-a leaked password must not be enough to use it.
+a leaked password must not be enough to use it. A push sent straight to a control-plane node, around the endpoint, is refused on either port of the cache. For what protects each port, including on a replica whose pod has not been replaced yet after an update, see [What protects the ports on control-plane nodes](#what-protects-the-ports-on-control-plane-nodes).
 
-The endpoint exists only in an air-gapped cluster. A cluster that has image caching enabled but is not air-gapped does not
-get an internet-facing write point into the registry that it never asked for.
+The endpoint is not limited to air-gapped clusters: it exists in every cluster that has image caching enabled, so that
+images can be pushed into the store before the upstream is removed.
+
+It also needs [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) to be set and the `cert-manager` module to be enabled. If either is missing, an air-gapped cluster has no way to write into the store: `4281/TCP` refuses writes, and `4283/TCP` admits only the ingress controller and the cache itself. To bring images in, either set `publicDomainTemplate` and enable `cert-manager` (the endpoint appears on the next run of the module), or set [`primary.upstream`](configuration.html#parameters-primary-upstream) to a registry the cluster can reach that holds the images, let the cache fill from it, and remove the upstream again.
 
 ##### Installing from a bundle
 

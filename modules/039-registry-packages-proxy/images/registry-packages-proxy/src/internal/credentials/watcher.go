@@ -107,7 +107,7 @@ func (w *Watcher) Get(repository string) (*registry.ClientConfig, error) {
 		return nil, fmt.Errorf("registry client config for repository '%s' not found", repository)
 	}
 
-	dialled := throughTheAgent(clientConfig, readAgentCA)
+	dialled := throughTheAgent(clientConfig, agentAuthority)
 	if dialled != clientConfig {
 		return dialled, nil
 	}
@@ -115,6 +115,11 @@ func (w *Watcher) Get(repository string) (*registry.ClientConfig, error) {
 	// No agent on this node yet — the window the agent's own installation happens in, since the agent is
 	// installed from a package fetched through here. The cluster's own store is how that window is
 	// crossed: its address, its authority, its read-only account, and nothing that leaves the cluster.
+	//
+	// Its address as dialled, storageHost, which differs from the recorded one in the port: the
+	// recorded `:5001` is the agent's, and the agent is what is missing. The account travels as a plain
+	// `auth` value rather than a docker config, so it is not looked up by host and needs no entry for
+	// the name dialled.
 	//
 	// Only for the repository the store serves. A ModuleSource brought its own address and its own
 	// credentials, and the store's account authorizes nothing there.
@@ -134,6 +139,13 @@ func (w *Watcher) Get(repository string) (*registry.ClientConfig, error) {
 	// Removing it also removes the one place credentials reached an upstream from here, which is the
 	// rule this implementation is built on: an upstream is the agent's business, and a client on a node
 	// needs no credentials at all.
+	//
+	// For a repository under the recorded in-cluster address this answer cannot be fetched from: the
+	// recorded `:5001` resolves to the masters' node addresses, where nothing listens on that port. A
+	// `connection refused` to `<master>:5001` therefore means neither an agent nor the store access
+	// secret is here yet, not a store on the wrong port. It is still the answer rather than an error:
+	// with neither source the recorded configuration is returned unchanged, which is what
+	// TestWithNoAgentAndNoStoreNothingIsSubstituted pins.
 	return clientConfig, nil
 }
 
@@ -227,12 +239,14 @@ func (w *Watcher) processStoreEvent(secretEvent watch.Event) {
 
 	switch secretEvent.Type {
 	case watch.Added, watch.Modified:
-		// Keyed to the repository the store serves, which is the one address every image reference in
-		// the cluster is built from.
-		// Joined with a slash: `storePath` carries none of its own, and concatenating them plainly
-		// produced `registry.d8-system.svc:5001system/deckhouse`, which matches no repository and would
-		// have failed as a missing key rather than as a bad address.
-		authority := storeAuthority(secret.Data, storeHost+"/"+storePath)
+		// The store as dialled, at the port its replicas serve on, and not the recorded address: this
+		// answer is used only where there is no agent, and the recorded `:5001` is the agent's port.
+		// The Service is headless, so the name resolves to the masters' node addresses, and there the
+		// agent listens on the loopback only — the recorded address was refused on every master
+		// (job 8069309: `dial tcp <master>:5001: connect: connection refused`, the agent never
+		// installed, no node joined). Get still matches requests by the recorded address; only what it
+		// returns names this one.
+		authority := storeAuthority(secret.Data, storeRepository)
 		w.fromStoreSecret = authority
 		if authority != nil {
 			w.logger.Info("the in-cluster store can be read directly while a node has no agent",

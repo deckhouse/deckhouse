@@ -36,19 +36,26 @@ spec:
       allowedValue: true
       metadata:
         description: |
-          The registry binds the node address and the node's registry agent binds the
-          loopback one on the same port, which only works in the host network namespace.
-          It also lets the storage serve before the cluster network is up, since the
-          network's own images come from here.
+          The registry serves on the node address, where the agents of other nodes and the
+          other replicas reach it, and that address exists only in the host network
+          namespace. It also lets the storage serve before the cluster network is up, since
+          the network's own images come from here.
     hostPorts:
-      - port: 5001
+      - port: 4281
         protocol: TCP
         metadata:
           description: Registry, read through the cache by the node agents and replicated between replicas.
-      - port: 5003
+      - port: 4283
         protocol: TCP
         metadata:
           description: Registry write endpoint without the cache, used by d8 mirror push and by the fill.
+      - port: 5051
+        protocol: TCP
+        metadata:
+          description: |
+            Token service, on the loopback. Declared so that the storage is not scheduled beside the
+            previous implementation's registry static pod, which declares it too and serves the same
+            store directory.
       - port: 4285
         protocol: TCP
         metadata:

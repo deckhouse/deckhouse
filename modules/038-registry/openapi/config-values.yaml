@@ -242,7 +242,12 @@ properties:
       pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))?$'
     x-examples:
       - [ "10.0.0.0/10", "192.168.0.0/16" ]
-    description: 'A list of CIDR-formatted addresses allowed to connect to the registry. If not specified, connections from any address are allowed.'
+    description: |
+      A list of CIDR-formatted addresses allowed to connect to the registry's publication endpoint, the Ingress that `d8 mirror push` writes through. If not specified, connections from any address are allowed.
+
+      Applied by the Ingress only. The write port of the in-cluster cache behind it (`4283/TCP` on the control-plane nodes) does not filter by source address: it refuses any connection without a client certificate that the module's certificate authority issued to the ingress controller or to the cache's own pods. The cache's read port (`4281/TCP`) does not accept writes at all, so the write port is the only one a push can land on.
+
+      The ingress controller presents its certificate for any Ingress that names the module's ingress client secret. If the controller lets an Ingress use a secret of another namespace (`allow-cross-namespace-resources`, enabled by default in ingress-nginx before 1.12), an Ingress of any namespace can reach the write port this way, outside this list; the write credentials are still checked. See [What protects the ports on control-plane nodes](./#what-protects-the-ports-on-control-plane-nodes).
   ingressClass:
     type: string
     pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'

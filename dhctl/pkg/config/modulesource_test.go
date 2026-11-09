@@ -1486,7 +1486,7 @@ func TestAProviderFromASourceIsReadInTheClusterTheWayTheModuleSays(t *testing.T)
 		_, err := kubeCl.CoreV1().Secrets("d8-system").Create(t.Context(), &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{Name: "registry-storage-access", Namespace: "d8-system"},
 			Data: map[string][]byte{
-				"username": []byte("registry-ro"), "password": []byte("fake-password"),
+				"username": []byte("registry-ro"), "password": []byte("dh-test-secret-0123456789abcdef"),
 				"ca.crt": []byte("-----BEGIN CERTIFICATE-----\nfake-registry-storage-ca\n-----END CERTIFICATE-----\n"),
 			},
 		}, metav1.CreateOptions{})
@@ -1494,10 +1494,13 @@ func TestAProviderFromASourceIsReadInTheClusterTheWayTheModuleSays(t *testing.T)
 
 		md, err := moduleDocsFromCluster(t.Context(), kubeCl, "dvp", true)
 		require.NoError(t, err)
-		require.Equal(t, registry_const.HostWithPath+"/modules", md.Sources[0].Spec.Registry.Repo,
+		// At the port the store serves on: the recorded `:5001` is the node agent, on a loopback the
+		// pod network does not share.
+		require.Equal(t, "registry.d8-system.svc:4281/system/deckhouse/modules", md.Sources[0].Spec.Registry.Repo,
 			"the store is the only place left to read it from")
 		conf, err := md.Sources[0].RegistryConfig()
 		require.NoError(t, err)
+		require.Equal(t, "registry.d8-system.svc:4281/system/deckhouse/modules", conf.GetRegistry())
 		require.Equal(t, "registry-ro", conf.GetUsername())
 		require.Contains(t, conf.GetCA(), "fake-registry-storage-ca")
 	})

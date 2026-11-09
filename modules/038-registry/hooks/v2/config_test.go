@@ -162,10 +162,11 @@ func TestBuildBootstrapLayoutSeedsTheCacheToo(t *testing.T) {
 	storage := spec.Backend(registryv1alpha1.BackendStorage)
 	require.NotNil(t, storage)
 	// An address, not the Service name: a node reading this file is bootstrapping and
-	// has neither cluster DNS nor a cluster network.
-	assert.Equal(t, "10.0.0.1:5001", storage.Host)
+	// has neither cluster DNS nor a cluster network. And the store's port, not the one in
+	// the Service name: that one is the node agent's, on the loopback.
+	assert.Equal(t, "10.0.0.1:4281", storage.Host)
 	require.Len(t, storage.Mirrors, 1)
-	assert.Equal(t, "10.0.0.2:5001", storage.Mirrors[0].Host)
+	assert.Equal(t, "10.0.0.2:4281", storage.Mirrors[0].Host)
 	assert.Equal(t, "the-read-secret", storage.Auth.Password)
 	assert.Equal(t, "-----BEGIN CERTIFICATE-----storage", storage.CA)
 	assert.Nil(t, spec.Backend(registryv1alpha1.BackendUpstream), "air-gap has no upstream")

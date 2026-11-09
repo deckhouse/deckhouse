@@ -305,7 +305,7 @@ func TestMergeCollectionDoesNotEraseTheFillFields(t *testing.T) {
 		Role:            "leader",
 		Full:            true,
 		VerifiedDigests: 459,
-		Address:         "10.0.0.1:5001",
+		Address:         "10.0.0.1:4281",
 	}}
 
 	finished := time.Now().Truncate(time.Second)
@@ -315,7 +315,7 @@ func TestMergeCollectionDoesNotEraseTheFillFields(t *testing.T) {
 	require.Len(t, replicas, 1)
 	assert.True(t, replicas[0].Full, "the collection report erased the fill state")
 	assert.EqualValues(t, 459, replicas[0].VerifiedDigests)
-	assert.Equal(t, "10.0.0.1:5001", replicas[0].Address)
+	assert.Equal(t, "10.0.0.1:4281", replicas[0].Address)
 	require.NotNil(t, replicas[0].CollectedAt)
 }
 
@@ -350,7 +350,7 @@ func TestMergeCollectionCreatesAnEntry(t *testing.T) {
 
 	finished := time.Now().Truncate(time.Second)
 	assert.True(t, MergeCollection(&replicas, State{
-		Node: "master-0", Role: "follower", Address: "10.0.0.1:5001", CollectedAt: &finished,
+		Node: "master-0", Role: "follower", Address: "10.0.0.1:4281", CollectedAt: &finished,
 	}))
 
 	require.Len(t, replicas, 1)
@@ -487,7 +487,7 @@ func TestAnnounceSpeaksWhenNobodyHasReportedYet(t *testing.T) {
 	require.NoError(t, publisher.Announce(context.Background(), State{
 		Node:            "master-0",
 		Role:            registryv1alpha1.ReplicaRoleLeader,
-		Address:         "10.0.0.1:5001",
+		Address:         "10.0.0.1:4281",
 		DeclaredDigests: 443,
 	}))
 
@@ -999,4 +999,54 @@ func TestTheOtherReportersKeepTheStamp(t *testing.T) {
 
 	require.NotNil(t, replicas[0].SyncerStartedAt)
 	assert.True(t, stamp.Equal(replicas[0].SyncerStartedAt))
+}
+
+// TestPublishAddressCorrectsOnlyTheAddress is a replaced replica coming up on another port: its
+// entry still carries what the previous pod reported, and the address is the one thing the new pod
+// can say before its first pass ends.
+func TestPublishAddressCorrectsOnlyTheAddress(t *testing.T) {
+	previous := registryv1alpha1.StorageReplicaStatus{
+		Node: "master-1", Role: registryv1alpha1.ReplicaRoleLeader, Full: true,
+		VerifiedDigests: 410, DeclaredDigests: 410, Address: "10.0.0.2:5001",
+	}
+	other := registryv1alpha1.StorageReplicaStatus{Node: "master-0", Address: "10.0.0.1:5001"}
+	storage := storageObject(other, previous)
+	storage.Status.SafeToDropUpstream = true
+	publisher, fakeClient := newPublisher(t, storage)
+
+	require.NoError(t, publisher.PublishAddress(context.Background(), State{
+		Node: "master-1", Role: registryv1alpha1.ReplicaRoleFollower, Address: "10.0.0.2:4281",
+	}))
+
+	after := getStorage(t, fakeClient)
+	want := previous
+	want.Address = "10.0.0.2:4281"
+	assert.Equal(t, []registryv1alpha1.StorageReplicaStatus{other, want}, after.Status.Replicas,
+		"the role, the counts and Full stay what the last pass found")
+	assert.True(t, after.Status.SafeToDropUpstream, "an address says nothing about the permission")
+}
+
+func TestMergeAddress(t *testing.T) {
+	t.Run("an entry that already says it writes nothing", func(t *testing.T) {
+		replicas := []registryv1alpha1.StorageReplicaStatus{{Node: "master-0", Address: "10.0.0.1:4281"}}
+		assert.False(t, MergeAddress(&replicas, State{Node: "master-0", Address: "10.0.0.1:4281"}))
+	})
+
+	t.Run("no entry is not created: Announce and Publish do that with the numbers", func(t *testing.T) {
+		replicas := []registryv1alpha1.StorageReplicaStatus{{Node: "master-0", Address: "10.0.0.1:4281"}}
+		assert.False(t, MergeAddress(&replicas, State{Node: "master-1", Address: "10.0.0.2:4281"}))
+		assert.Len(t, replicas, 1)
+	})
+
+	t.Run("an empty address erases nothing", func(t *testing.T) {
+		replicas := []registryv1alpha1.StorageReplicaStatus{{Node: "master-0", Address: "10.0.0.1:5001"}}
+		assert.False(t, MergeAddress(&replicas, State{Node: "master-0"}))
+		assert.Equal(t, "10.0.0.1:5001", replicas[0].Address)
+	})
+}
+
+func TestPublishAddressRequiresANode(t *testing.T) {
+	publisher, _ := newPublisher(t, storageObject())
+
+	require.Error(t, publisher.PublishAddress(context.Background(), State{Address: "10.0.0.1:4281"}))
 }

@@ -188,7 +188,7 @@ func Resolve(
 	// The in-cluster cache is not among them. Its replicas are reached by the addresses of the
 	// control-plane nodes, and those are nobody's own address for an image: everything this
 	// module puts in the store lives under the image set's prefix and is caught by the branch
-	// above. Matching them here would serve any other repository on `<master IP>:5001` with this
+	// above. Matching them here would serve any other repository on `<master IP>:4281` with this
 	// node's read credentials — whatever someone pushed beside the image set, to anything on the
 	// node that asks. Left to the pass-through below, such a request goes out with nothing but
 	// the client's own credentials.

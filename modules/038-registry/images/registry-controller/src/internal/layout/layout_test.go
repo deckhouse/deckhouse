@@ -75,7 +75,7 @@ func testAccess() Access {
 	return Access{
 		// Node addresses: what a client can actually dial. The Service name is what
 		// image references are built from, and nothing resolves it.
-		Addresses: []string{"10.0.0.1:5001", "10.0.0.2:5001"},
+		Addresses: []string{"10.0.0.1:4281", "10.0.0.2:4281"},
 		CA:        "-----BEGIN CERTIFICATE-----storage",
 		Auth:      &registryv1alpha1.Auth{Username: "ro", Password: "secret"},
 	}
@@ -151,7 +151,7 @@ func TestComputePassThroughCache(t *testing.T) {
 	// An address rather than constant.Host: that name identifies the image set and is
 	// what a request is matched against, but a node agent runs in the host network and
 	// cannot resolve it.
-	assert.Equal(t, "10.0.0.1:5001", node.Backends[0].Host)
+	assert.Equal(t, "10.0.0.1:4281", node.Backends[0].Host)
 	assert.Equal(t, constant.Path, node.Backends[0].Path)
 	assert.Equal(t, testAccess().CA, node.Backends[0].CA)
 	// The layout names where the credentials are, never what they are: this resource is
@@ -599,7 +599,7 @@ func TestComputeGivesEachNodeItsOwnCopy(t *testing.T) {
 	first.AdditionalRoutes[0].Match = "mutated"
 
 	second := got.Nodes["worker-1"]
-	assert.Equal(t, "10.0.0.1:5001", second.Backends[0].Host)
+	assert.Equal(t, "10.0.0.1:4281", second.Backends[0].Host)
 	assert.Equal(t, "images.example.com", second.AdditionalRoutes[0].Match)
 }
 
@@ -665,9 +665,9 @@ func TestComputeAddressesTheStorageByReplica(t *testing.T) {
 	spec := desired.Nodes["worker-1"]
 	storage := spec.Backend(registryv1alpha1.BackendStorage)
 	require.NotNil(t, storage)
-	assert.Equal(t, "10.0.0.1:5001", storage.Host)
+	assert.Equal(t, "10.0.0.1:4281", storage.Host)
 	require.Len(t, storage.Mirrors, 1)
-	assert.Equal(t, "10.0.0.2:5001", storage.Mirrors[0].Host)
+	assert.Equal(t, "10.0.0.2:4281", storage.Mirrors[0].Host)
 	// Every replica needs the same authority and credentials, since any of them may be
 	// the one that answers.
 	assert.Equal(t, storage.CA, storage.Mirrors[0].CA)
@@ -905,21 +905,21 @@ func TestRouteCredentialKeysAreSecretKeys(t *testing.T) {
 // two other replicas hold on disk.
 func TestAgentsArePointedAtTheLeader(t *testing.T) {
 	access := testAccess()
-	access.Addresses = []string{"10.0.0.1:5001", "10.0.0.2:5001", "10.0.0.3:5001"}
+	access.Addresses = []string{"10.0.0.1:4281", "10.0.0.2:4281", "10.0.0.3:4281"}
 
 	t.Run("the leader goes first and the rest become its mirrors", func(t *testing.T) {
-		access.Leader = "10.0.0.3:5001"
+		access.Leader = "10.0.0.3:4281"
 
 		backend := storageBackend(access)
 
-		assert.Equal(t, "10.0.0.3:5001", backend.Endpoint.Host,
+		assert.Equal(t, "10.0.0.3:4281", backend.Endpoint.Host,
 			"the primary target must be the leader, not whichever address came first")
 		mirrors := make([]string, 0, len(backend.Mirrors))
 		for _, mirror := range backend.Mirrors {
 			mirrors = append(mirrors, mirror.Host)
 		}
-		assert.Equal(t, []string{"10.0.0.1:5001", "10.0.0.2:5001"}, mirrors)
-		assert.NotContains(t, mirrors, "10.0.0.3:5001", "the leader must not also be its own mirror")
+		assert.Equal(t, []string{"10.0.0.1:4281", "10.0.0.2:4281"}, mirrors)
+		assert.NotContains(t, mirrors, "10.0.0.3:4281", "the leader must not also be its own mirror")
 	})
 
 	t.Run("with no leader reported the given order stands", func(t *testing.T) {
@@ -927,52 +927,71 @@ func TestAgentsArePointedAtTheLeader(t *testing.T) {
 
 		backend := storageBackend(access)
 
-		assert.Equal(t, "10.0.0.1:5001", backend.Endpoint.Host)
+		assert.Equal(t, "10.0.0.1:4281", backend.Endpoint.Host)
 		assert.Len(t, backend.Mirrors, 2,
 			"serving no storage backend at all is worse than an imperfect first choice")
 	})
 
 	t.Run("a leader that is not among the addresses is ignored", func(t *testing.T) {
-		access.Leader, access.Previous = "10.9.9.9:5001", ""
+		access.Leader, access.Previous = "10.9.9.9:4281", ""
 
 		backend := storageBackend(access)
 
-		assert.Equal(t, "10.0.0.1:5001", backend.Endpoint.Host,
+		assert.Equal(t, "10.0.0.1:4281", backend.Endpoint.Host,
 			"a stale leader address must not become a target nobody can reach")
 		assert.Len(t, backend.Mirrors, 2)
 	})
 
 	t.Run("with no leader the endpoint the nodes have is kept", func(t *testing.T) {
-		access.Leader, access.Previous = "", "10.0.0.3:5001"
+		access.Leader, access.Previous = "", "10.0.0.3:4281"
 
 		backend := storageBackend(access)
 
-		assert.Equal(t, "10.0.0.3:5001", backend.Endpoint.Host,
+		assert.Equal(t, "10.0.0.3:4281", backend.Endpoint.Host,
 			"a lease released on a planned handover must not move every node to the first address")
 		mirrors := make([]string, 0, len(backend.Mirrors))
 		for _, mirror := range backend.Mirrors {
 			mirrors = append(mirrors, mirror.Host)
 		}
-		assert.Equal(t, []string{"10.0.0.1:5001", "10.0.0.2:5001"}, mirrors)
+		assert.Equal(t, []string{"10.0.0.1:4281", "10.0.0.2:4281"}, mirrors)
 	})
 
 	t.Run("a leader outranks the endpoint the nodes have", func(t *testing.T) {
-		access.Leader, access.Previous = "10.0.0.2:5001", "10.0.0.3:5001"
+		access.Leader, access.Previous = "10.0.0.2:4281", "10.0.0.3:4281"
 
 		backend := storageBackend(access)
 
-		assert.Equal(t, "10.0.0.2:5001", backend.Endpoint.Host,
+		assert.Equal(t, "10.0.0.2:4281", backend.Endpoint.Host,
 			"keeping the endpoint is for the window without a leader, not instead of one")
 	})
 
 	t.Run("a kept endpoint that is no longer an address gives way to the first", func(t *testing.T) {
-		access.Leader, access.Previous = "", "10.9.9.9:5001"
+		access.Leader, access.Previous = "", "10.9.9.9:4281"
 
 		backend := storageBackend(access)
 
-		assert.Equal(t, "10.0.0.1:5001", backend.Endpoint.Host,
+		assert.Equal(t, "10.0.0.1:4281", backend.Endpoint.Host,
 			"a replica that left with its master must not stay the endpoint")
 		assert.Len(t, backend.Mirrors, 2)
+	})
+
+	t.Run("the endpoint the nodes have, at the port its replica left, keeps that replica", func(t *testing.T) {
+		access.Leader, access.Previous = "", "10.0.0.3:5001"
+
+		backend := storageBackend(access)
+
+		assert.Equal(t, "10.0.0.3:4281", backend.Endpoint.Host,
+			"layouts written before the replicas moved to their port name the old one, and the replica "+
+				"is the same")
+	})
+
+	t.Run("a leader that reported another port is still the leader", func(t *testing.T) {
+		access.Leader, access.Previous = "10.0.0.2:5001", ""
+
+		backend := storageBackend(access)
+
+		assert.Equal(t, "10.0.0.2:4281", backend.Endpoint.Host,
+			"the endpoint is the leader's replica at the address it serves on now")
 	})
 }
 

@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -103,7 +104,7 @@ func (r *Reconciler) applyPushEndpoint(
 		slice.AddressType, slice.Endpoints = addressType, endpoints
 		slice.Ports = []discoveryv1.EndpointPort{{
 			Name:     ptr.To(pushPortName),
-			Port:     ptr.To(int32(constant.WritePort)),
+			Port:     ptr.To(pushPort(leaderAddress)),
 			Protocol: ptr.To(corev1.ProtocolTCP),
 		}}
 
@@ -138,6 +139,21 @@ func (r *Reconciler) removeOtherPushSlices(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+// pushPort is the leader's write listener.
+//
+// A replica reports the port it serves on and not the one it takes a push on, so this is derived from
+// the first: constant.LegacyStoragePort means a replica still on the store's previous pod spec during
+// the update to the current ports, whose write listener is constant.LegacyStorageWritePort until
+// storageupdate replaces it; anything else is constant.StorageWritePort. Once no replica on the
+// previous pod spec can exist, the constant alone will do.
+func pushPort(leaderAddress string) int32 {
+	if _, port, err := net.SplitHostPort(leaderAddress); err == nil &&
+		port == strconv.Itoa(constant.LegacyStoragePort) {
+		return constant.LegacyStorageWritePort
+	}
+	return constant.StorageWritePort
 }
 
 // pushEndpoints is the leader's write listener as an endpoint: the host of the address it serves on,

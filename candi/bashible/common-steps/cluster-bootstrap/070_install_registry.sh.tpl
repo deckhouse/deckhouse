@@ -125,7 +125,7 @@ storage:
     disable: true
 
 http:
-  addr: "${discovered_node_ip}:5001"
+  addr: "${discovered_node_ip}:4281"
   prefix: /
   secret: asecretforbootstrap
   debug:
@@ -139,7 +139,7 @@ http:
 
 auth:
   token:
-    realm: https://${discovered_node_ip}:5001/auth/token
+    realm: https://${discovered_node_ip}:4281/auth/token
     service: Deckhouse registry
     issuer: Registry server
     rootcertbundle: "/pki/token.crt"
@@ -222,10 +222,14 @@ spec:
       - --deckhouse-config
       - /config/deckhouse.yaml
       - /config/config.yaml
+    # The store's port, and on purpose. The cluster's store serves the same directory and declares the
+    # same port, so while this pod holds it the store is not scheduled onto this master; dhctl removes
+    # this manifest once the store's images are on the node (HandOverBundleStore). On another port the
+    # two would serve one directory at once. The token service's 5051 below is shared the same way.
     ports:
       - name: distribution
-        containerPort: 5001
-        hostPort: 5001
+        containerPort: 4281
+        hostPort: 4281
       - name: debug
         containerPort: 5002
     livenessProbe:

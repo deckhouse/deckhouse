@@ -26,6 +26,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
+
 	"github.com/deckhouse/registry-syncer/internal/distribution"
 	"github.com/deckhouse/registry-syncer/internal/metrics"
 )
@@ -33,10 +35,10 @@ import (
 // TestResolveLocalAddress pins where a replica looks for its own registry.
 //
 // The default has to move off the loopback. The pod is host-networked, so the loopback belongs to
-// the node, and on a Managed cluster the registry AGENT is already listening there on the same
-// port. A syncer that keeps the default therefore talks to the agent instead of the registry in
-// its own pod and is rejected at the TLS handshake, which leaves the air-gap transition unable to
-// count what the store holds.
+// the node, and the registry in the pod binds only the node address: a syncer that keeps the
+// default reaches nothing, and the air-gap transition is left unable to count what the store holds.
+// While the store and the node agent shared a port number it was the agent that answered there, and
+// the syncer was rejected at the TLS handshake instead.
 func TestResolveLocalAddress(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -48,7 +50,7 @@ func TestResolveLocalAddress(t *testing.T) {
 			name:          "the untouched default becomes the address this replica serves on",
 			localAddress:  loopbackRegistry,
 			listenAddress: "10.110.0.29",
-			want:          "10.110.0.29:5001",
+			want:          "10.110.0.29:4281",
 		},
 		{
 			// Somebody who names the loopback means it: a deployment that is not
@@ -66,7 +68,7 @@ func TestResolveLocalAddress(t *testing.T) {
 		},
 		{
 			// Nothing to substitute. main() refuses to start in this state anyway; returning
-			// the default rather than "10.110.0.29:5001" with an empty host is the honest
+			// the default rather than ":4281" with an empty host is the honest
 			// answer here.
 			name:          "no listen address to fall back on",
 			localAddress:  loopbackRegistry,
@@ -168,4 +170,18 @@ func scrapeLeaderGauge(t *testing.T, gatherer prometheus.Gatherer) float64 {
 	}
 	t.Fatal("d8_registry_storage_leader is not exported")
 	return 0
+}
+
+// TestTheServingAddressIsNotTheAgents keeps a replica's own address off the node agent's.
+//
+// Both are on every master. They used to share a port number on two addresses, which held only while
+// nothing took that port on all of them — and made the loopback, the obvious default, the agent's.
+func TestTheServingAddressIsNotTheAgents(t *testing.T) {
+	const node = "10.0.0.5"
+
+	assert.Equal(t, fmt.Sprintf("127.0.0.1:%d", constant.StoragePort), loopbackRegistry,
+		"the sentinel is the loopback form of the store's own port")
+	assert.Equal(t, fmt.Sprintf("%s:%d", node, constant.StoragePort), resolveLocalAddress(loopbackRegistry, node))
+	assert.NotEqual(t, constant.ProxyHost, resolveLocalAddress(loopbackRegistry, node))
+	assert.Equal(t, fmt.Sprintf("%s:%d", node, constant.StorageWritePort), writeEndpointAddress(node))
 }

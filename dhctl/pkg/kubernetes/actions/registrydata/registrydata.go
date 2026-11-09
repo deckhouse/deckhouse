@@ -274,6 +274,13 @@ const storeAccessSecret = "registry-storage-access"
 // cluster: the infrastructure converger failing on `x509: certificate signed by unknown authority`
 // against `registry.d8-system.svc:5001`, every run.
 //
+// It dials the store under the Service's name at the port the replicas serve on
+// (registry_const.StorageHost), not at the in-cluster address everything records
+// (registry_const.Host). The Service is headless: its name resolves to the masters' node addresses,
+// and the port is the client's own. `:5001` there is the node agent's, bound to each node's loopback,
+// so this process — in the pod network, with no agent of its own — reaches nothing at it. The docker
+// config is keyed by the same host, because a lazy pull looks the account up by the repository's.
+//
 // `found` is false, without an error, wherever the store cannot be read this way — no cache, a cluster
 // on the previous implementation, or a role that predates this read — and the caller falls back to
 // `deckhouse-registry` as before.
@@ -300,12 +307,12 @@ func registryDataFromStore(ctx context.Context, kubeCl *client.KubernetesClient)
 		return nil, "", false, nil
 	}
 
-	conf, err := image.NewRegistryConfig(strings.ToUpper(registry_const.Scheme), registry_const.HostWithPath,
+	conf, err := image.NewRegistryConfig(strings.ToUpper(registry_const.Scheme), registry_const.StorageHostWithPath,
 		username, password, ca)
 	if err != nil {
 		return nil, "", false, fmt.Errorf("build registry config from %s: %w", storeAccessSecret, err)
 	}
-	dockerCfg, err := helpers.DockerCfgFromCreds(username, password, registry_const.Host)
+	dockerCfg, err := helpers.DockerCfgFromCreds(username, password, registry_const.StorageHost)
 	if err != nil {
 		return nil, "", false, fmt.Errorf("build registry dockercfg from %s: %w", storeAccessSecret, err)
 	}

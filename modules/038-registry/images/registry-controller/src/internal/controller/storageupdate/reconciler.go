@@ -49,7 +49,9 @@ package storageupdate
 import (
 	"context"
 	"fmt"
+	"net"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -95,6 +97,9 @@ const (
 	// revisionLabel is what tells a pod of the new revision from a pod of the old one. Set by
 	// the StatefulSet controller on every pod it creates.
 	revisionLabel = "controller-revision-hash"
+
+	// servingPortName is the container port the agents and the other replicas reach a replica on.
+	servingPortName = "registry"
 
 	// settleInterval is how long to wait before looking again while an update is in flight.
 	//
@@ -250,6 +255,26 @@ func (r *Reconciler) reconcile(ctx context.Context, req ctrl.Request, report *up
 	stale := podsOnOtherRevision(pods, target)
 	if len(stale) == 0 {
 		return ctrl.Result{}, nil
+	}
+
+	reports, err := r.replicaReports(ctx)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if behind := addressNotReported(pods, target, reports); len(behind) > 0 {
+		// Not at V(1) like the waits above: those end on their own as a pod starts, while this one
+		// ends only when a syncer writes its report, and a syncer that never does holds the update
+		// with nothing else to show for it. A Normal event, so it does not share the spam budget of
+		// the UpdateBlocked warning, and repeats of it are folded into one by the event correlator.
+		log.Info("waiting for the replaced replicas to report where they serve before replacing another",
+			"replicas", behind, "revision", target)
+		if r.Recorder != nil {
+			r.Recorder.Eventf(storage, corev1.EventTypeNormal, "WaitingForAddress",
+				"Not replacing another replica yet: RegistryStorage still gives these replicas a port they do "+
+					"not serve on: %s. The agents are pointed at the reported port, so the update waits for "+
+					"their syncers to report their own addresses.", strings.Join(behind, ", "))
+		}
+		return ctrl.Result{RequeueAfter: settleInterval}, nil
 	}
 
 	// Followers first, and the leader only once no follower is left behind. A leader replaced
@@ -628,6 +653,66 @@ func leaseSuccessors(going *corev1.Pod, followers []string) string {
 	followers = slices.Sorted(slices.Values(followers))
 	return fmt.Sprintf("a replica holding the whole set, whichever the election picks: %s, or the replacement of %s on %s",
 		strings.Join(followers, ", "), going.Name, going.Spec.NodeName)
+}
+
+// replicaReports is what the replicas reported in RegistryStorage, or nil when there is no such
+// object.
+func (r *Reconciler) replicaReports(ctx context.Context) ([]registryv1alpha1.StorageReplicaStatus, error) {
+	storage := &registryv1alpha1.RegistryStorage{}
+	key := types.NamespacedName{Name: registryv1alpha1.SingletonName}
+	if err := r.Client.Get(ctx, key, storage); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("reading RegistryStorage: %w", err)
+	}
+	return storage.Status.Replicas, nil
+}
+
+// addressNotReported names the replicas on the target revision whose report still gives another
+// port than the one their pod serves on.
+//
+// The registry controller points the agents and the push endpoint at the port a replica reported.
+// During the update to the store's current ports a replaced replica's entry keeps its predecessor's
+// port until the new syncer writes its own, and replacing the next replica in that window can leave
+// the agents with no replica reachable where it is reported. Only a mismatch is waited for: no
+// report, an unreadable one or a pod that declares no `registry` port says nothing about a wrong
+// address. Once no replica on the previous pod spec can exist, this can go.
+func addressNotReported(
+	pods []*corev1.Pod, target string, reports []registryv1alpha1.StorageReplicaStatus,
+) []string {
+	reported := make(map[string]string, len(reports))
+	for i := range reports {
+		if _, port, err := net.SplitHostPort(reports[i].Address); err == nil {
+			reported[reports[i].Node] = port
+		}
+	}
+
+	var out []string
+	for _, pod := range pods {
+		if pod.Labels[revisionLabel] != target {
+			continue
+		}
+		served := servingPort(pod)
+		port, ok := reported[pod.Spec.NodeName]
+		if served == 0 || !ok || port == strconv.Itoa(int(served)) {
+			continue
+		}
+		out = append(out, pod.Name)
+	}
+	return out
+}
+
+// servingPort is the port the pod declares as `registry`, or zero.
+func servingPort(pod *corev1.Pod) int32 {
+	for i := range pod.Spec.Containers {
+		for _, port := range pod.Spec.Containers[i].Ports {
+			if port.Name == servingPortName {
+				return port.ContainerPort
+			}
+		}
+	}
+	return 0
 }
 
 func desiredReplicas(storage *appsv1.StatefulSet) int32 {

@@ -43,6 +43,7 @@ import (
 	craneregistry "github.com/google/go-containerregistry/pkg/registry"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -356,6 +357,164 @@ func TestWriteConfigurationCarriesTheStoreAndNotTheCache(t *testing.T) {
 	assert.Equal(t, "/opt/deckhouse/registry/local_data", serving.Storage.Parameters()["rootdirectory"])
 }
 
+// renderedConfiguration parses a configuration shaped like the one the syncer renders, read-only flag
+// included, through distribution's own parser: the value types of the storage section are the parser's,
+// and the app panics on any other.
+func renderedConfiguration(t *testing.T, root string, readOnly bool) *configuration.Configuration {
+	t.Helper()
+	settings, err := configuration.Parse(strings.NewReader(fmt.Sprintf(`version: 0.1
+log:
+  level: error
+  accesslog:
+    disabled: true
+storage:
+  filesystem:
+    rootdirectory: %s
+  delete:
+    enabled: true
+  maintenance:
+    uploadpurging:
+      enabled: false
+    readonly:
+      enabled: %t
+http:
+  addr: 127.0.0.1:0
+  secret: dh-test-secret-0123456789abcdef
+`, root, readOnly)))
+	require.NoError(t, err)
+	return settings
+}
+
+// readOnly is the read-only flag of a storage section, as distribution's app reads it.
+func readOnly(t *testing.T, storage configuration.Storage) bool {
+	t.Helper()
+	settings, ok := storage["maintenance"]["readonly"].(map[any]any)
+	require.True(t, ok, "distribution panics on a readonly section of any other type")
+	enabled, ok := settings["enabled"].(bool)
+	require.True(t, ok)
+	return enabled
+}
+
+// TestTheWriteEndpointIsTheOnlyWayToWriteToTheStore is the air-gapped store: no upstream, so the
+// serving listener is the store itself, on the node address with nothing in front of it. Beside a write
+// endpoint it must refuse every write a client sends, or the credentials alone are enough to replace an
+// image there — around the ingress, its whitelist and the client certificate the write endpoint asks for.
+func TestTheWriteEndpointIsTheOnlyWayToWriteToTheStore(t *testing.T) {
+	root := t.TempDir()
+	rendered := renderedConfiguration(t, root, false)
+	wrapper := &config.Wrapper{
+		Scope:         "system/deckhouse",
+		WriteEndpoint: config.WriteEndpoint{Address: "127.0.0.1:0"},
+	}
+
+	// The two halves, derived by the code that runs in production.
+	serving := servingConfiguration(rendered, wrapper)
+	writing := writeConfiguration(rendered, wrapper, unbounded(t, root))
+
+	assert.True(t, readOnly(t, serving.Storage), "the serving half refuses writes beside a write endpoint")
+	assert.False(t, readOnly(t, writing.Storage), "and the write endpoint keeps the flag as rendered")
+	assert.False(t, readOnly(t, rendered.Storage), "which the serving half must not change under it")
+
+	write := httptest.NewServer(handlers.NewApp(context.Background(), writing))
+	t.Cleanup(write.Close)
+	store := httptest.NewServer(handlers.NewApp(context.Background(), serving))
+	t.Cleanup(store.Close)
+
+	image, err := random.Image(1024, 1)
+	require.NoError(t, err)
+	pushTag, err := name.NewTag(write.Listener.Addr().String()+"/system/deckhouse/pushed:v1", name.Insecure)
+	require.NoError(t, err)
+	require.NoError(t, remote.Write(pushTag, image), "the write endpoint accepts a push")
+
+	// Reads are what the serving listener is for, and they are untouched.
+	pullTag, err := name.NewTag(store.Listener.Addr().String()+"/system/deckhouse/pushed:v1", name.Insecure)
+	require.NoError(t, err)
+	_, err = remote.Image(pullTag)
+	require.NoError(t, err, "the serving listener still serves what the store holds")
+
+	digest, err := image.Digest()
+	require.NoError(t, err)
+	layers, err := image.Layers()
+	require.NoError(t, err)
+	layer, err := layers[0].Digest()
+	require.NoError(t, err)
+	manifest, err := image.RawManifest()
+	require.NoError(t, err)
+
+	repository := store.URL + "/v2/system/deckhouse/pushed"
+	request := func(method, url string, body []byte) int {
+		t.Helper()
+		var reader io.Reader
+		if body != nil {
+			reader = strings.NewReader(string(body))
+		}
+		req, err := http.NewRequest(method, url, reader)
+		require.NoError(t, err)
+		if body != nil {
+			req.Header.Set("Content-Type", string(types.DockerManifestSchema2))
+		}
+		response, err := store.Client().Do(req)
+		require.NoError(t, err)
+		_ = response.Body.Close()
+		return response.StatusCode
+	}
+
+	// Every write route, answered by distribution itself: so a refusal is in the access log.
+	for _, route := range []struct{ method, url string }{
+		{http.MethodPost, repository + "/blobs/uploads/"},
+		{http.MethodPut, repository + "/manifests/v2"},
+		{http.MethodDelete, repository + "/manifests/" + digest.String()},
+		{http.MethodDelete, repository + "/blobs/" + layer.String()},
+	} {
+		var body []byte
+		if route.method == http.MethodPut {
+			body = manifest
+		}
+		assert.Equal(t, http.StatusMethodNotAllowed, request(route.method, route.url, body),
+			"%s %s on the serving listener", route.method, route.url)
+	}
+
+	assert.Equal(t, http.StatusOK, request(http.MethodGet, repository+"/manifests/v1", nil))
+	assert.Equal(t, http.StatusOK, request(http.MethodHead, repository+"/blobs/"+layer.String(), nil))
+}
+
+// TestARenderedReadOnlyFlagReachesTheWriteEndpoint: the syncer renders the flag off, but a
+// configuration that turns it on means the store, and the write endpoint is where every write to the
+// store lands.
+func TestARenderedReadOnlyFlagReachesTheWriteEndpoint(t *testing.T) {
+	root := t.TempDir()
+	rendered := renderedConfiguration(t, root, true)
+	wrapper := &config.Wrapper{
+		Scope:         "system/deckhouse",
+		WriteEndpoint: config.WriteEndpoint{Address: "127.0.0.1:0"},
+	}
+
+	assert.True(t, readOnly(t, servingConfiguration(rendered, wrapper).Storage))
+	assert.True(t, readOnly(t, writeConfiguration(rendered, wrapper, unbounded(t, root)).Storage))
+}
+
+// TestAStoreWithoutAWriteEndpointIsWrittenThroughItsOneListener is the bundle's registry during a
+// bootstrap and the previous registry version's static pod: the same binary with no write endpoint,
+// filled by pushes to the serving listener, which must therefore keep the flag as rendered.
+func TestAStoreWithoutAWriteEndpointIsWrittenThroughItsOneListener(t *testing.T) {
+	for _, flag := range []bool{false, true} {
+		rendered := renderedConfiguration(t, t.TempDir(), flag)
+		serving := servingConfiguration(rendered, &config.Wrapper{Scope: "system/deckhouse"})
+		assert.Equal(t, flag, readOnly(t, serving.Storage))
+	}
+
+	root := t.TempDir()
+	serving := servingConfiguration(renderedConfiguration(t, root, false), &config.Wrapper{Scope: "system/deckhouse"})
+	store := httptest.NewServer(handlers.NewApp(context.Background(), serving))
+	t.Cleanup(store.Close)
+
+	image, err := random.Image(1024, 1)
+	require.NoError(t, err)
+	tag, err := name.NewTag(store.Listener.Addr().String()+"/system/deckhouse/bundle:v1", name.Insecure)
+	require.NoError(t, err)
+	require.NoError(t, remote.Write(tag, image), "a bootstrap pushes the bundle to the serving listener")
+}
+
 // TestRunRefusesAConfigurationThatDecidesTheUpstreamTwice: which upstream a miss goes to is decided
 // by this module's own file, and a proxy section in the rendered registry configuration is a second
 // answer nobody reconciles.
@@ -374,7 +533,7 @@ func TestTheWriteEndpointRefusesToShareThePort(t *testing.T) {
 	settings := storeConfiguration(t.TempDir())
 	settings.HTTP.Addr = "0.0.0.0:5001"
 
-	_, err := writeEndpoint(context.Background(), settings, &config.Wrapper{
+	_, _, err := writeEndpoint(context.Background(), settings, &config.Wrapper{
 		Scope:         "system/deckhouse",
 		WriteEndpoint: config.WriteEndpoint{Address: "0.0.0.0:5001"},
 	}, unbounded(t, t.TempDir()), quiet())

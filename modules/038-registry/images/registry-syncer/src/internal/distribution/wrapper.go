@@ -98,9 +98,11 @@ func RenderWrapper(spec *registryv1alpha1.RegistryStorageSpec, opts Options) ([]
 		// is left with manifests naming blobs it does not have, every one of them reported written.
 		WriteEndpoint: wrapperWriteEndpoint{
 			Address: fmt.Sprintf("%s:%d", opts.ListenAddress, WriteEndpointPort),
-			// The ingress's authority: this is the half an ingress fronts, and without it every
-			// push would appear to come from the ingress controller rather than from the operator
-			// who sent it.
+			// The authority every client of this listener must present a certificate from: the
+			// registry refuses the handshake otherwise, and refuses to open the listener at all
+			// without one. The two it admits are the ingress controller, whose certificate is also
+			// what makes the address of the operator behind it believed, and this syncer — see
+			// CertificateFile.
 			ClientCertCA: IngressClientCAFile,
 		},
 		// The token service listens on the loopback, so the registry is the only thing that can

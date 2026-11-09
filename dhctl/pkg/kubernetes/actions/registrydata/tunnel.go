@@ -19,6 +19,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -28,6 +29,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/deckhouse/go_lib/registry/helpers"
@@ -95,7 +98,7 @@ func mirrorThroughNode(
 		return nil, "", false, err
 	}
 
-	localPort, err := tunnelTo(ctx, sshCl, store.address)
+	localPort, err := tunnelTo(ctx, sshCl, store.address, store.port)
 	if err != nil {
 		return nil, "", false, err
 	}
@@ -129,8 +132,8 @@ func mirrorThroughNode(
 	return rewritten, base64.StdEncoding.EncodeToString(dockerCfg), true, nil
 }
 
-// tunnels remembers the forward opened to each store address, so that every consumer of the same
-// resolved registry reaches it at the same port.
+// tunnels remembers the forward opened to each store address and port, so that every consumer of the
+// same resolved registry reaches it at the same local port.
 var tunnels = struct {
 	sync.Mutex
 	ports map[string]int
@@ -140,11 +143,12 @@ var tunnels = struct {
 //
 // The forward is deliberately not tied to the caller's context: see mirrorThroughNode. What it is tied
 // to is the process, which for dhctl is one operation.
-func tunnelTo(ctx context.Context, sshCl libcon.SSHClient, storeAddress string) (int, error) {
+func tunnelTo(ctx context.Context, sshCl libcon.SSHClient, storeAddress string, storePort int) (int, error) {
 	tunnels.Lock()
 	defer tunnels.Unlock()
 
-	if port, already := tunnels.ports[storeAddress]; already {
+	key := net.JoinHostPort(storeAddress, strconv.Itoa(storePort))
+	if port, already := tunnels.ports[key]; already {
 		return port, nil
 	}
 
@@ -155,13 +159,13 @@ func tunnelTo(ctx context.Context, sshCl libcon.SSHClient, storeAddress string) 
 
 	// "remote_bind:remote_port:local_bind:local_port": dhctl listens locally and dials the far end over
 	// the SSH connection.
-	address := fmt.Sprintf("%s:%d:127.0.0.1:%d", storeAddress, registry_const.Port, localPort)
+	address := fmt.Sprintf("%s:%d:127.0.0.1:%d", storeAddress, storePort, localPort)
 
 	if err := sshCl.Tunnel(address).Up(context.WithoutCancel(ctx)); err != nil {
 		return 0, fmt.Errorf("open a tunnel to the cluster store at %s: %w", address, err)
 	}
 
-	tunnels.ports[storeAddress] = localPort
+	tunnels.ports[key] = localPort
 	return localPort, nil
 }
 
@@ -181,8 +185,11 @@ const schemeHTTPS = "HTTPS"
 
 // storeAccess is how to reach the cluster's own store from outside it.
 type storeAccess struct {
-	// address is a replica's, without a port: the store answers on the same one everywhere.
+	// address is a replica's, without a port.
 	address string
+
+	// port is where that replica serves. See servingPort.
+	port int
 
 	ca                 string
 	username, password string
@@ -219,8 +226,63 @@ func readStoreAccess(ctx context.Context, kubeCl *client.KubernetesClient) (stor
 	if access.address == "" {
 		return storeAccess{}, false, nil
 	}
+	access.port = servingPort(ctx, kubeCl, access.address)
 
 	return access, true, nil
+}
+
+// registryStorageGVR is the object each replica of the store reports itself in.
+var registryStorageGVR = schema.GroupVersionResource{
+	Group: "deckhouse.io", Version: "v1alpha1", Resource: "registrystorages",
+}
+
+// registryStorageName is the name of that object, a singleton.
+const registryStorageName = "registry"
+
+// servingPort is the port the replica at address reported in RegistryStorage, and
+// registry_const.StoragePort when it has not reported or the report cannot be read.
+//
+// The same rule the registry controller follows for the agents. During the update to the store's
+// current ports a replica keeps the previous pod spec, and with it registry_const.LegacyStoragePort,
+// until the module's storageupdate replaces it, which on an air-gapped cluster with one replica waits
+// for the operator. A dhctl of the new version meets such a cluster and has to dial the port the
+// replica is on. Once no replica on the previous pod spec can exist, the constant alone will do.
+func servingPort(ctx context.Context, kubeCl *client.KubernetesClient, address string) int {
+	object, err := kubeCl.Dynamic().Resource(registryStorageGVR).Get(ctx, registryStorageName, metav1.GetOptions{})
+	if err != nil {
+		return registry_const.StoragePort
+	}
+	replicas, _, _ := unstructured.NestedSlice(object.Object, "status", "replicas")
+	return reportedPort(replicas, address)
+}
+
+// reportedPort picks the port out of the report whose host is address's, matched as IP addresses so
+// that two spellings of one IPv6 address agree.
+func reportedPort(replicas []interface{}, address string) int {
+	want := hostKey(strings.TrimSuffix(strings.TrimPrefix(address, "["), "]"))
+	for _, item := range replicas {
+		replica, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		reported, _ := replica["address"].(string)
+		host, port, err := net.SplitHostPort(reported)
+		if err != nil || hostKey(host) != want {
+			continue
+		}
+		if number, err := strconv.Atoi(port); err == nil && number > 0 && number <= 65535 {
+			return number
+		}
+	}
+	return registry_const.StoragePort
+}
+
+// hostKey is the form two spellings of one host compare equal in.
+func hostKey(host string) string {
+	if ip := net.ParseIP(host); ip != nil {
+		return ip.String()
+	}
+	return strings.ToLower(host)
 }
 
 // storeSecretNamespace is where the module keeps it.

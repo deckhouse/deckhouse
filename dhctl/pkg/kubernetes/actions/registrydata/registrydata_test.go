@@ -16,6 +16,8 @@ package registrydata
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -268,8 +270,15 @@ func TestAManagedClusterIsReadFromTheResourceEverywhere(t *testing.T) {
 // the pod network reads the cluster's own store — and has to with the store's authority and its
 // read-only account. `deckhouse-registry` carries the installer's authority and no account, and was
 // what failed every converge with `x509: certificate signed by unknown authority`.
+//
+// And at the port the replicas serve on, under the Service's name. The Service is headless, so the name
+// resolves to the masters' node addresses and the port is the client's own: `:5001` there is the node
+// agent, on each node's loopback, and this process is in the pod network.
 func TestAnAirGappedClusterIsReadFromTheStoreInTheCluster(t *testing.T) {
-	const mirror = "registry.d8-system.svc:5001/system/deckhouse"
+	const (
+		mirror = "registry.d8-system.svc:5001/system/deckhouse"
+		store  = "registry.d8-system.svc:4281/system/deckhouse"
+	)
 
 	kubeCl := client.NewFakeKubernetesClient()
 	gvr := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "registryconfigs"}
@@ -292,21 +301,32 @@ func TestAnAirGappedClusterIsReadFromTheStoreInTheCluster(t *testing.T) {
 	_, err = kubeCl.CoreV1().Secrets(d8RppSecretNamespace).Create(t.Context(), &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: storeAccessSecret, Namespace: d8RppSecretNamespace},
 		Data: map[string][]byte{
-			"username": []byte("registry-ro"), "password": []byte("fake-password"), "ca.crt": []byte(testCA),
+			"username": []byte("registry-ro"), "password": []byte("dh-test-secret-0123456789abcdef"), "ca.crt": []byte(testCA),
 		},
 	}, metav1.CreateOptions{})
 	require.NoError(t, err)
 
-	t.Run("with it, the store's own authority and account", func(t *testing.T) {
+	t.Run("with it, the store's own authority and account, at the store's port", func(t *testing.T) {
 		conf, b64dc, err := GetRegistryDataPreferUpstream(t.Context(), kubeCl, true)
 		require.NoError(t, err)
-		require.Equal(t, mirror, conf.GetRegistry())
+		require.Equal(t, store, conf.GetRegistry(), "the Service's name at the port the replicas serve on")
+		require.Equal(t, "HTTPS", conf.GetScheme())
 		require.Equal(t, "registry-ro", conf.GetUsername())
 		require.Equal(t, testCA, conf.GetCA())
 
+		raw, err := base64.StdEncoding.DecodeString(b64dc)
+		require.NoError(t, err)
+		var keys struct {
+			Auths map[string]json.RawMessage `json:"auths"`
+		}
+		require.NoError(t, json.Unmarshal(raw, &keys))
+		require.Len(t, keys.Auths, 1)
+		require.Contains(t, keys.Auths, "registry.d8-system.svc:4281",
+			"the account is keyed by the host the repository names, or a lazy pull finds none")
+
 		dockerCfg, err := image.DecodeDockerConfig(b64dc)
 		require.NoError(t, err)
-		fromCfg, err := image.RegistryConfigFromDockerConfig(dockerCfg, "HTTPS", mirror)
+		fromCfg, err := image.RegistryConfigFromDockerConfig(dockerCfg, "HTTPS", conf.GetRegistry())
 		require.NoError(t, err)
 		require.Equal(t, "registry-ro", fromCfg.GetUsername(), "lazy pulls find the account under the store's host")
 	})
@@ -416,11 +436,13 @@ func TestResolveRegistryDataReportsTheStoreTunnel(t *testing.T) {
 		require.Equal(t, mirror, data.Config.GetRegistry())
 	})
 
+	// Directly means under the Service's name at the store's own port, not at the agent's that the mirror
+	// records: see TestAnAirGappedClusterIsReadFromTheStoreInTheCluster.
 	t.Run("in the cluster the store is read directly, not through a tunnel", func(t *testing.T) {
 		data, err := ResolveRegistryData(t.Context(), cluster(t, false), true)
 		require.NoError(t, err)
 		require.False(t, data.ThroughStoreTunnel)
-		require.Equal(t, mirror, data.Config.GetRegistry())
+		require.Equal(t, "registry.d8-system.svc:4281/system/deckhouse", data.Config.GetRegistry())
 		require.Equal(t, "registry-ro", data.Config.GetUsername())
 	})
 }

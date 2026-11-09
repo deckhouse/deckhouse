@@ -82,7 +82,7 @@ func TestRenderCarriesNoUpstreamAndNoWriteEndpoint(t *testing.T) {
 	assert.NotContains(t, config, "writeendpoint")
 
 	http, _ := config["http"].(map[string]any)
-	assert.Equal(t, "10.0.0.1:5001", http["addr"])
+	assert.Equal(t, "10.0.0.1:4281", http["addr"])
 	assert.Equal(t, "shared-secret", http["secret"])
 
 	// The challenge points a client at this registry's own token path, which the registry then
@@ -397,7 +397,7 @@ func TestTheWriteEndpointIsAlwaysConfigured(t *testing.T) {
 
 		write, ok := config["writeEndpoint"].(map[string]any)
 		require.True(t, ok, "no write listener, published=%v", published)
-		assert.Contains(t, write["address"], ":5003", "published=%v", published)
+		assert.Contains(t, write["address"], ":4283", "published=%v", published)
 	}
 }
 

@@ -154,9 +154,14 @@ type WriteEndpoint struct {
 	// this process serves reads only.
 	Address string `yaml:"address,omitempty"`
 
-	// ClientCertCA is the authority whose client certificates are trusted to carry the real client
-	// address on this listener. It is the one endpoint reached through an ingress, so without it
-	// every push would appear to come from the ingress controller rather than from the operator.
+	// ClientCertCA is the authority a client of this listener must present a certificate from. The
+	// handshake fails without one, and with one the authority issued to anybody but the ingress
+	// controller or the syncer — see serve.writeTLS for both, and for why a write endpoint serving
+	// TLS refuses to start without this.
+	//
+	// The ingress's certificate is also what makes its `X-Forwarded-For` believed: this is the one
+	// endpoint reached through an ingress, so without that every push would appear to come from the
+	// ingress controller rather than from the operator. See realip.
 	ClientCertCA string `yaml:"clientCertCA,omitempty"`
 }
 

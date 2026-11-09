@@ -405,13 +405,13 @@ func storageEndpoint(address, ca string, auth registryv1alpha1.Auth) registryv1a
 	}
 }
 
-// withRegistryPort adds the registry port to a bare address, since the addresses are
+// withRegistryPort adds the store's port to a bare address, since the addresses are
 // discovered as node addresses and the port is a constant of the design.
 func withRegistryPort(address string) string {
 	if strings.Contains(address, ":") && !strings.HasPrefix(address, "[") {
 		return address
 	}
-	return fmt.Sprintf("%s:%d", address, registry_const.Port)
+	return fmt.Sprintf("%s:%d", address, registry_const.StoragePort)
 }
 
 func endpointOf(scheme, host, path, ca string, auth *ConfigAuth) registryv1alpha1.Endpoint {

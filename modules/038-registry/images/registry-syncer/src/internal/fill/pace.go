@@ -60,7 +60,16 @@ func NewPacer(bytesPerSecond int) *Pacer {
 // PacedRegistryOptions is RegistryOptions with every response body read through pacer. A nil
 // pacer gives exactly RegistryOptions.
 func PacedRegistryOptions(certificateAuthority, username, password string, pacer *Pacer) ([]remote.Option, error) {
-	transport, err := roundTripper(certificateAuthority)
+	return registryOptions(certificateAuthority, username, password, nil, pacer)
+}
+
+// registryOptions is what every constructor of options above comes down to: the transport trusting
+// the authority, presenting the client certificate if one is given, read through the pacer if one is
+// given, and the credentials.
+func registryOptions(
+	certificateAuthority, username, password string, client *ClientCertificate, pacer *Pacer,
+) ([]remote.Option, error) {
+	transport, err := ClientTransport(certificateAuthority, client)
 	if err != nil {
 		return nil, err
 	}

@@ -70,10 +70,25 @@ const (
 	// material — it is a copy of what the upstream configuration says.
 	UpstreamCAFile = ConfigDir + "/upstream-registry-ca.crt"
 
-	// IngressClientCAFile is the authority the write path trusts. Mounted from the
-	// storage PKI rather than written here: it is cluster material, not something
-	// derived from the desired state.
+	// IngressClientCAFile is the authority a client of the write endpoint must present
+	// a certificate from: the ingress controller's, or the syncer's own — see
+	// CertificateFile. Mounted from the storage PKI rather than written here: it is
+	// cluster material, not something derived from the desired state.
 	IngressClientCAFile = PKIDir + "/ingress-client-ca.crt"
+
+	// CertificateFile and KeyFile are the registry's serving pair, on both of its
+	// listeners — and the client certificate the syncer presents to the write endpoint
+	// when it writes to this replica's store.
+	//
+	// The same pair for both rather than a client leaf of the syncer's own. The module's
+	// authority signs every leaf for client as well as server authentication, so the
+	// serving certificate already is a client certificate, and it is already mounted
+	// here. A new leaf would be a new field of the generated PKI state, and the hook
+	// regenerates a state with a missing field from scratch — the authority every node
+	// trusts included. The write endpoint admits this pair by its name, which is the
+	// serving certificate's: registry-storage.
+	CertificateFile = PKIDir + "/distribution.crt"
+	KeyFile         = PKIDir + "/distribution.key"
 
 	// LocalPathAlias is the repository prefix this registry serves under, and the
 	// prefix every image reference in the cluster uses.
@@ -122,13 +137,15 @@ type Options struct {
 	// reachable set and deleting the rest, but applying it meant restarting the serving
 	// process twice per collection; a collection now keeps the store safe by pausing the
 	// syncer's own writes instead (see gc.Worker.collect), and the registry keeps accepting
-	// pushes and cache misses throughout.
+	// pushes at its write endpoint and cache misses throughout.
 	//
-	// Kept, and rendered explicitly as `readonly: {enabled: false}`, so that the
-	// configuration states outright that the registry never refuses writes rather than
-	// leaving it to distribution's default. Removing the field and the key is a change to
-	// the render, and is left out of the cleanup that removed the garbage collection's use
-	// of it.
+	// Kept, and rendered explicitly as `readonly: {enabled: false}`, so that the rendered
+	// configuration states outright that the store accepts writes rather than leaving it to
+	// distribution's default. The wrapper turns it on for the serving listener alone when a
+	// write endpoint runs beside it, so that the write endpoint is the only way to write to
+	// the store — see servingConfiguration in the docker-distribution wrapper. Removing the
+	// field and the key is a change to the render, and is left out of the cleanup that
+	// removed the garbage collection's use of it.
 	ReadOnly bool
 
 	// StoreFilesystem is what the syncer found out about the filesystem under DataDir when it
@@ -154,7 +171,7 @@ type Options struct {
 // ports on the NODE, and two listeners in one process cannot share one. It used to be a second
 // container over the same data directory, with its own rendered configuration and a store-wide flag
 // keeping each instance from deleting the other's data at startup.
-const WriteEndpointPort = constant.WritePort
+const WriteEndpointPort = constant.StorageWritePort
 
 // debugAddress is the metrics and pprof listener, on loopback. Only the serving half has one: the
 // write endpoint is the same process, and its metrics namespace is the same namespace.
@@ -193,7 +210,7 @@ func Render(spec *registryv1alpha1.RegistryStorageSpec, opts Options) ([]byte, e
 			},
 		},
 		"http": map[string]any{
-			"addr":   fmt.Sprintf("%s:%d", opts.ListenAddress, constant.Port),
+			"addr":   fmt.Sprintf("%s:%d", opts.ListenAddress, constant.StoragePort),
 			"prefix": "/",
 			"secret": opts.HTTPSecret,
 			"debug": map[string]any{
@@ -204,8 +221,8 @@ func Render(spec *registryv1alpha1.RegistryStorageSpec, opts Options) ([]byte, e
 				},
 			},
 			"tls": map[string]any{
-				"certificate": PKIDir + "/distribution.crt",
-				"key":         PKIDir + "/distribution.key",
+				"certificate": CertificateFile,
+				"key":         KeyFile,
 			},
 		},
 		"auth": map[string]any{

@@ -56,6 +56,12 @@ exporter ==> upstream
 имя cluster DNS не разрешается — `registry.d8-system.svc:5001` идентифицирует набор образов
 и из него строятся ссылки на образы, но никто по этому имени не дозванивается.
 
+Реплика слушает `<адрес узла>:4281/TCP`: оттуда загружают образы агенты всех узлов и
+реплицируют данные остальные реплики. Листенер записи за Ingress публикации — `<адрес узла>:4283/TCP`,
+к нему подключаются узлы, на которых работает ingress-контроллер. Оба порта входят в диапазон
+4200–4299, который открывают правила host firewall платформы. `:5001` в имени сервиса — не порт
+кэша: на каждом узле этот порт на `127.0.0.1` занимает агент.
+
 Upstream остаётся в конфигурации каждого узла как fallback, пока кэш наполняется, поэтому
 промах кэша — это более медленная загрузка, а не неудачная.
 
@@ -88,10 +94,10 @@ end
 
 upstream[("**registry.deckhouse.ru**")]
 
-agent1 == "cache first" ==> storage1
+agent1 == "cache first, :4281" ==> storage1
 agent1 -. "fallback while filling" .-> upstream
 syncer1 ==> upstream
-storage2 == "replicates from the leader" ==> storage1
+storage2 == "replicates from the leader, :4281" ==> storage1
 ```
 
 ## Архитектура, изолированный кластер
@@ -132,8 +138,8 @@ end
 end
 
 operator ==> ingress
-ingress == "client certificate + write credentials" ==> storage1
-storage2 == replicates ==> storage1
+ingress == "client certificate + write credentials, :4283" ==> storage1
+storage2 == "replicates, :4281" ==> storage1
 agent1 ==> storage1
 agent1 ==> storage2
 ```

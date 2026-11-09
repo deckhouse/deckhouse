@@ -77,13 +77,25 @@ spec:
   # A headless service: the agents reach the storage through the node addresses the
   # controller puts into their layout, and replication addresses a specific replica.
   # The stable name is what every image reference in the cluster is built from.
+  #
+  # The port keeps the number in that name, `registry.d8-system.svc:5001`, which nothing
+  # dials; the replicas serve on 4281. Being headless, the name resolves to the masters'
+  # node addresses and a client dials the port it names itself: targetPort applies to none
+  # of it. Two readers do dial the name, at 4281 (StorageHost in go_lib/registry/const):
+  # dhctl in the cluster, whose terraform-manager auto-converger and state exporter run in
+  # the pod network and read an air-gapped cluster's store from here, and
+  # registry-packages-proxy, on a master that has no agent yet, fetching the agent's own
+  # package (in practice the first master of an installation, since a joining master gets
+  # the agent's authority before its kubelet starts). During the update to these ports a
+  # replica on the previous pod spec still serves on 5001, and while no replica serves on
+  # 4281 dhctl's reads fail until one is replaced, and retry.
   clusterIP: None
   selector:
     app: registry-storage
   ports:
   - name: registry
     port: 5001
-    targetPort: 5001
+    targetPort: 4281
     protocol: TCP
 {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 {{- /*
@@ -251,11 +263,16 @@ spec:
               matchLabels:
                 app: registry-storage
             topologyKey: kubernetes.io/hostname
-      # The registry binds the node address, and the node agent binds the loopback
-      # one — the same port on different interfaces. That split only works in the
-      # host network namespace, where the node address actually exists. It is also
-      # what lets the storage serve before the cluster network is up, which matters
-      # because the network's own images come from here.
+      # The registry binds the node address, where the agents of other nodes and the
+      # other replicas reach it, and that address exists only in the host network
+      # namespace. It is also what lets the storage serve before the cluster network is
+      # up, which matters because the network's own images come from here.
+      #
+      # Its ports are therefore the node's, and each one declared below is reserved on the
+      # node by the scheduler: 4281, 4283 and the metrics' 4285 between nodes, inside the
+      # 4200-4299 range the platform documents for host firewalls, and 5051 on the loopback.
+      # The node agent's 127.0.0.1:5001 is not among them — the agent is a static pod of its
+      # own.
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       # The syncer signals the registry process to make it re-read its
@@ -285,9 +302,13 @@ spec:
             drop:
             - ALL
         args: ["serve", "/config/config.yaml"]
+        # What the node agents pull through and what one replica replicates from another, on the
+        # node address. The registry an installation from a bundle starts on the first master serves
+        # on the same port, and that is relied on: while its static pod holds the port, this pod is
+        # not scheduled onto that master, so the two never serve one directory at once.
         ports:
         - name: registry
-          containerPort: 5001
+          containerPort: 4281
         # The write endpoint: the same registry, the same store, a second listener with no cache in
         # front of it. It is what `d8 mirror push` writes to, what an operator publishing their own
         # modules writes to, and what this replica's own fill writes to.
@@ -299,9 +320,14 @@ spec:
         # to stop each process from deleting the other's data on startup.
         #
         # A different port because the pod is host-networked, and because two listeners in one process
-        # cannot share one either way.
+        # cannot share one either way. Reached from the nodes running the ingress controller.
+        #
+        # Being able to reach it is not enough: it refuses a handshake without a client certificate
+        # from the module's authority, issued to the ingress controller or to the syncer below, and
+        # checks the credentials after that. The port is open on the node address of every master,
+        # and `whitelistSourceRanges` is applied by the ingress, not here.
         - name: registry-push
-          containerPort: 5003
+          containerPort: 4283
         # Ready only once the registry has read its configuration and serves. The syncer writes that
         # configuration into an emptyDir after the pod starts, so a fresh replica's registry used to
         # exit on a missing file and restart until it was there — and with no probe of its own the
@@ -312,8 +338,8 @@ spec:
         # probe is what still keeps the pod unready until the serving port opens.
         #
         # The serving port itself, which the registry opens only from a configuration that loaded. On
-        # the node address, the probe's default here: that is where the registry listens, while the
-        # loopback :5001 is the node's registry agent and would answer for a registry that is down.
+        # the node address, the probe's default here: that is where the registry listens, and the
+        # loopback has nothing on this port.
         #
         # Not the debug listener's /debug/health on :5002. The wrapper does open that listener now —
         # upstream opens it from its `serve` command, which the wrapper does not run, and while it did
@@ -326,7 +352,7 @@ spec:
         # for a registry that is down.
         readinessProbe:
           tcpSocket:
-            port: 5001
+            port: 4281
         # Restarted when the serving listener stops answering. Nothing else notices: the controller
         # builds the agents' addresses from the replicas' reports and the fill lease, not from pod
         # readiness, so a registry that hangs with its port open keeps being sent the cluster's pulls,
@@ -430,6 +456,23 @@ spec:
         args:
         - -logtostderr
         - /auth/auth_config.yaml
+        # Declared although nothing outside the node reaches it, and declared for the scheduler.
+        #
+        # The previous implementation ran its registry on every master as the static pod
+        # /etc/kubernetes/manifests/registry-nodeservices.yaml — the same file a bundle installation's
+        # bootstrap registry is started from — over this same /opt/deckhouse/registry/local_data and
+        # with a token service on this same 5051, which it declares. Its own manager removes that file
+        # when the mode is turned off, and nothing of this implementation does. Ports of a
+        # host-networked pod are the node's: while that static pod exists, this one is not scheduled
+        # onto its node, and the kubelet refuses to admit it there even when the static pod's mirror is
+        # missing from the API. Started beside it instead, the registry here would serve that
+        # implementation's directory while it still did, and the syncer would fill and collect it.
+        #
+        # The registry's own port used to keep them apart, because both served on 5001. It moved
+        # into the platform range and the two no longer collide there; this is what still does.
+        ports:
+        - name: auth
+          containerPort: 5051
         livenessProbe:
           httpGet:
             path: /

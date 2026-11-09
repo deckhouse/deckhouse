@@ -21,7 +21,7 @@ bb-sync-file $syncer_config_path - << EOF
 source:
   address: 127.0.0.1:5511
 destination:
-  address: "${discovered_node_ip}:5001"
+  address: "${discovered_node_ip}:4281"
   ca: |
     {{ .registry.bootstrap.init.ca.cert | nindent 4 }}
   user:

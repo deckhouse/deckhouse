@@ -33,10 +33,18 @@ func noCA() ([]byte, error) { return nil, errors.New("no such file") }
 // TestTheAddressesArePinnedToTheirSource covers the literals this proxy carries in place of an
 // import — it is its own Go module and cannot depend on the platform's registry package.
 //
+// This catches an edit here. A change at the source is caught there instead: go_lib/registry/const
+// reads these literals from agent.go and compares them with its own values
+// (TestRegistryPackagesProxyCarriesTheseLiterals), in the CI job tests_registry_images, which a
+// change to agent.go or to go_lib/registry starts.
+//
 // Divergence here is not a build error, it is a proxy quietly dialling something else.
 func TestTheAddressesArePinnedToTheirSource(t *testing.T) {
-	require.Equal(t, "registry.d8-system.svc:5001", storeHost, "go_lib/registry/const: Host")
+	require.Equal(t, "registry.d8-system.svc:5001", recordedHost, "go_lib/registry/const: Host")
 	require.Equal(t, "system/deckhouse", storePath, "go_lib/registry/const: Path, without its leading slash")
+	require.Equal(t, "registry.d8-system.svc:4281", storageHost, "go_lib/registry/const: StorageHost")
+	require.Equal(t, "registry.d8-system.svc:4281/system/deckhouse", storeRepository,
+		"go_lib/registry/const: StorageHostWithPath")
 	require.Equal(t, "127.0.0.1:5001", proxyHost, "go_lib/registry/const: ProxyHost")
 	require.Equal(t, "/etc/kubernetes/registry-agent/pki/ca.crt", agentCAFile,
 		"go_lib/registry/const: AgentCAFile, and the mount path in the deployment")

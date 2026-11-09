@@ -2183,3 +2183,120 @@ func TestTheLeaderReplacedNamesEveryPossibleSuccessor(t *testing.T) {
 			source(t, storage))
 	})
 }
+
+// servingOn gives a replica the `registry` port its pod spec declares.
+func servingOn(pod *corev1.Pod, port int32) *corev1.Pod {
+	pod.Spec.Containers = []corev1.Container{{
+		Name:  "distribution",
+		Ports: []corev1.ContainerPort{{Name: "registry", ContainerPort: port}},
+	}}
+	return pod
+}
+
+// reporting is an air-gapped cache in which every replica holds the whole current set and reports
+// the address given for its node.
+func reporting(addresses map[string]string) *registryv1alpha1.RegistryStorage {
+	storage := airGappedStorage()
+	for _, node := range []string{"master-0", "master-1", "master-2"} {
+		storage.Status.Replicas = append(storage.Status.Replicas, registryv1alpha1.StorageReplicaStatus{
+			Node: node, Full: true, VerifiedSet: currentSet, Address: addresses[node],
+		})
+	}
+	return storage
+}
+
+// TestAReplacedReplicaReportsWhereItServesBeforeTheNextGoes is the update to the store's current
+// ports. The registry controller points the agents at the port each replica reported, and a replaced
+// replica's entry keeps its predecessor's port until the new syncer writes its own. Replacing the
+// leader in that window moved the lease to a replica reported on a port nothing listened on, with
+// every other replica reported the same way: an air-gapped cluster with nothing to pull from.
+func TestAReplacedReplicaReportsWhereItServesBeforeTheNextGoes(t *testing.T) {
+	pods := func() []client.Object {
+		return []client.Object{
+			servingOn(replica(0, "master-0", oldRevision, true), 5001),
+			servingOn(replica(1, "master-1", newRevision, true), 4281),
+			servingOn(replica(2, "master-2", newRevision, true), 4281),
+		}
+	}
+
+	t.Run("a replaced replica still reported on its predecessor's port holds the leader", func(t *testing.T) {
+		objects := append(pods(), storageSet(3, newRevision), lease("master-0"),
+			reporting(map[string]string{
+				"master-0": "10.0.0.1:5001", "master-1": "10.0.0.2:4281", "master-2": "10.0.0.3:5001",
+			}))
+		r, c := newReconciler(t, objects...)
+
+		events := record.NewFakeRecorder(10)
+		r.InjectRecorder(events)
+
+		result := reconcile(t, r)
+
+		assert.False(t, deleted(t, c, StorageName+"-0"))
+		assert.Equal(t, settleInterval, result.RequeueAfter)
+
+		// The wait ends only when a syncer writes its report, so it is said where an operator
+		// looking at a stalled update looks, and not only at a log level nobody runs with.
+		require.Len(t, events.Events, 1)
+		event := <-events.Events
+		assert.Contains(t, event, "Normal WaitingForAddress")
+		assert.Contains(t, event, StorageName+"-2", "names the replica that has not reported")
+	})
+
+	t.Run("once both have reported, the leader goes", func(t *testing.T) {
+		objects := append(pods(), storageSet(3, newRevision), lease("master-0"),
+			reporting(map[string]string{
+				"master-0": "10.0.0.1:5001", "master-1": "10.0.0.2:4281", "master-2": "10.0.0.3:4281",
+			}))
+		r, c := newReconciler(t, objects...)
+
+		reconcile(t, r)
+
+		assert.True(t, deleted(t, c, StorageName+"-0"))
+	})
+
+	t.Run("a follower waits the same way", func(t *testing.T) {
+		r, c := newReconciler(t,
+			storageSet(3, newRevision), lease("master-0"),
+			servingOn(replica(0, "master-0", oldRevision, true), 5001),
+			servingOn(replica(1, "master-1", oldRevision, true), 5001),
+			servingOn(replica(2, "master-2", newRevision, true), 4281),
+			reporting(map[string]string{
+				"master-0": "10.0.0.1:5001", "master-1": "10.0.0.2:5001", "master-2": "[fd00::3]:5001",
+			}))
+
+		reconcile(t, r)
+
+		assert.False(t, deleted(t, c, StorageName+"-1"))
+	})
+
+	t.Run("no report, or one that cannot be read, is not waited for", func(t *testing.T) {
+		r, c := newReconciler(t,
+			storageSet(3, newRevision), lease("master-0"),
+			servingOn(replica(0, "master-0", oldRevision, true), 5001),
+			servingOn(replica(1, "master-1", oldRevision, true), 5001),
+			servingOn(replica(2, "master-2", newRevision, true), 4281),
+			reporting(map[string]string{"master-0": "10.0.0.1:5001", "master-1": "10.0.0.2:5001", "master-2": "10.0.0.3"}))
+
+		reconcile(t, r)
+
+		assert.True(t, deleted(t, c, StorageName+"-1"))
+	})
+}
+
+func TestAddressNotReported(t *testing.T) {
+	reports := []registryv1alpha1.StorageReplicaStatus{
+		{Node: "master-0", Address: "10.0.0.1:5001"},
+		{Node: "master-1", Address: "[fd00::2]:4281"},
+		{Node: "master-2", Address: "10.0.0.3:5001"},
+	}
+	pods := []*corev1.Pod{
+		servingOn(replica(0, "master-0", oldRevision, true), 5001),
+		servingOn(replica(1, "master-1", newRevision, true), 4281),
+		servingOn(replica(2, "master-2", newRevision, true), 4281),
+		replica(3, "master-3", newRevision, true), // declares no port
+	}
+
+	assert.Equal(t, []string{StorageName + "-2"}, addressNotReported(pods, newRevision, reports),
+		"only a replica on the target revision whose report names another port than it serves on")
+	assert.Empty(t, addressNotReported(pods, newRevision, nil))
+}

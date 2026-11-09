@@ -673,7 +673,7 @@ func (r *Reconciler) collectInputs(
 	}
 
 	if cfg.Spec.Storage.Cache {
-		access, err := r.storageAccess(ctx)
+		access, err := r.storageAccess(ctx, storage.Status.Replicas)
 		if err != nil {
 			return inputs, err
 		}
@@ -910,11 +910,16 @@ func (r *Reconciler) maintenanceWindows(ctx context.Context) []layout.Maintenanc
 
 // storageAccess reads how agents reach the storage.
 //
+// The secret names the replicas' node addresses; the port of each comes from what that replica
+// reported, `replicas`. See layout.StorageAddresses.
+//
 // A missing secret is an error rather than a reason to proceed: writing a layout
 // without the certificate authority and credentials would leave every agent
 // unable to pull from the cache, and the node layout is exactly the thing that is
 // expensive to get wrong.
-func (r *Reconciler) storageAccess(ctx context.Context) (layout.Access, error) {
+func (r *Reconciler) storageAccess(
+	ctx context.Context, replicas []registryv1alpha1.StorageReplicaStatus,
+) (layout.Access, error) {
 	secret := &corev1.Secret{}
 	key := types.NamespacedName{Namespace: Namespace, Name: StorageAccessSecretName}
 
@@ -930,11 +935,13 @@ func (r *Reconciler) storageAccess(ctx context.Context) (layout.Access, error) {
 		}
 	}
 
+	var addresses []string
 	for _, address := range strings.Split(string(secret.Data[storageAccessAddressesKey]), ",") {
 		if trimmed := strings.TrimSpace(address); trimmed != "" {
-			access.Addresses = append(access.Addresses, addressWithPort(trimmed))
+			addresses = append(addresses, trimmed)
 		}
 	}
+	access.Addresses = layout.StorageAddresses(addresses, replicas)
 
 	if access.CA == "" {
 		return layout.Access{}, fmt.Errorf("secret %s has no %s", key, storageAccessCAKey)
@@ -947,19 +954,6 @@ func (r *Reconciler) storageAccess(ctx context.Context) (layout.Access, error) {
 		return layout.Access{}, fmt.Errorf("secret %s has no %s", key, storageAccessAddressesKey)
 	}
 	return access, nil
-}
-
-// addressWithPort adds the registry port to a bare address.
-//
-// The addresses are discovered as node addresses, and the port they serve on is a
-// constant of the design rather than something discovered with them.
-func addressWithPort(address string) string {
-	if strings.Contains(address, ":") && !strings.HasPrefix(address, "[") {
-		// Already has a port, or is a bare IPv6 address — which has to be bracketed
-		// before a port can be appended, and is left alone rather than guessed at.
-		return address
-	}
-	return fmt.Sprintf("%s:%d", address, constant.Port)
 }
 
 // applyAuthSecret persists the credentials the layouts reference.

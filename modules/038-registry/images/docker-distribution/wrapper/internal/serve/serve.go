@@ -28,7 +28,8 @@ limitations under the License.
 // for as long as it has an upstream to serve from. So a second app over the same directory, from the
 // same configuration with the proxy section removed, serves the pushes; hand-built rather than a
 // second `registry.NewRegistry`, because health checks live in a process-global registry and a
-// second registration panics.
+// second registration panics. Where it runs, it is the only listener that writes: the first refuses
+// a client's writes even with no upstream, when it is the store itself — see servingConfiguration.
 //
 // The third is the loopback rewriter, which the cache treats as its upstream. Nothing outside this
 // process can reach it.
@@ -76,6 +77,31 @@ import (
 // disagree with itself. The cache's `proxy.remoteurl` is set from here, which is also why the
 // rendered configuration carries no proxy section at all.
 const LoopbackUpstreamAddress = "127.0.0.1:5004"
+
+// The clients the write endpoint admits, by the common name of the leaf they present.
+//
+// Both certificates come from this module's own authority, which is what the listener verifies them
+// against first — see writeTLS. The names are checked on top of that because the authority alone
+// admits more than these two: it signs every leaf for client authentication as well as server
+// authentication (the signer's default profile), so the token service's certificate and any leaf a
+// later change adds would otherwise be write clients too, by accident rather than by decision.
+//
+// Constants rather than configuration. They are the names hooks/v2/pki/pki.go issues the
+// certificates under (CommonNameIngressClient and CommonNameDistribution), not something an
+// operator tunes, and a list in a rendered file is one more thing that can disagree with the PKI
+// it describes. Renaming either certificate there means changing it here in the same change.
+const (
+	// IngressClientName is the ingress controller's certificate, presented when it proxies a push
+	// from the publication endpoint. The one client whose word about somebody else's address is
+	// taken: see realip.
+	IngressClientName = "registry-storage-ingress-client"
+
+	// SyncerClientName is the storage's own serving certificate, which the syncer in the same pod
+	// presents when it writes to this replica's store: the fill, the replication and the garbage
+	// collection. Reused rather than a leaf of its own, because adding one to the generated state
+	// makes the hook regenerate all of it, the authority every node trusts included.
+	SyncerClientName = "registry-storage"
+)
 
 // measureEvery is how often the store is walked to replace the guard's running count with what is
 // on disk. The count errs only toward refusing early between walks, so this is about how soon space
@@ -150,7 +176,7 @@ func Run(ctx context.Context, distribution *configuration.Configuration, wrapper
 		return wrapped
 	})
 	dregistry.RegisterHandler(func(_ *configuration.Configuration, handler http.Handler) http.Handler {
-		wrapped, err := realip.Handler("", handler)
+		wrapped, err := realip.Handler("", "", handler)
 		if err != nil {
 			log.Error("the client address handling could not be mounted", "error", err.Error())
 			return handler
@@ -158,7 +184,7 @@ func Run(ctx context.Context, distribution *configuration.Configuration, wrapper
 		return wrapped
 	})
 
-	serving, err := dregistry.NewRegistry(ctx, distribution)
+	serving, err := dregistry.NewRegistry(ctx, servingConfiguration(distribution, wrapper))
 	if err != nil {
 		return fmt.Errorf("building the serving registry: %w", err)
 	}
@@ -168,12 +194,12 @@ func Run(ctx context.Context, distribution *configuration.Configuration, wrapper
 	_, _ = debugListener(distribution, log)
 
 	if wrapper.WriteEndpoint.Address != "" {
-		writing, err := writeEndpoint(ctx, distribution, wrapper, guard, log)
+		writing, listener, err := writeEndpoint(ctx, distribution, wrapper, guard, log)
 		if err != nil {
 			return err
 		}
 		go func() {
-			if err := writing(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			if err := writing.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 				// Fatal for the pushes, not for the pulls. Reported loudly and left to the
 				// kubelet: a store that cannot be written is still a store the cluster pulls from,
 				// and taking the serving half down with it would turn a failed push into an outage.
@@ -206,25 +232,121 @@ func Run(ctx context.Context, distribution *configuration.Configuration, wrapper
 	}
 }
 
-// writeEndpoint builds the listener that accepts a push, and returns the function that runs it.
+// servingConfiguration is the configuration the serving listener runs on: the rendered one, made
+// read-only for clients when this process also runs a write endpoint.
+//
+// With an upstream the serving half is a cache, and upstream's proxy refuses every write on its own.
+// Without one it is the store itself, host-networked on the node address of every master with nothing
+// in front of it, and it used to take a push or a delete from anybody who could reach the node and
+// held the write or sync credentials — around the ingress, its `whitelistSourceRanges`, and the client
+// certificate the write endpoint requires. Nothing in this module writes there: the syncer's fill,
+// replication and garbage collection and `d8 mirror push` all go to the write endpoint. So where one
+// exists, it is the only way to write to the store.
+//
+// Distribution's own read-only mode does it, and does exactly that: it drops the write routes from the
+// app, so a refused write is answered 405 from inside it and appears in the access log, and it gates
+// only what a client asks for, so a cache miss is still stored. The mode is read per app, so it lands
+// on this half alone; the write endpoint derives its configuration from the one passed in, which keeps
+// the flag as rendered: off.
+//
+// A process without a write endpoint runs on the rendered configuration as it is. That is the bundle's
+// registry during a bootstrap and the static pod of the previous registry version, which share this
+// binary, have no other listener, and are filled by pushes to this one.
+func servingConfiguration(rendered *configuration.Configuration, wrapper *config.Wrapper) *configuration.Configuration {
+	if wrapper.WriteEndpoint.Address == "" {
+		return rendered
+	}
+
+	settings := *rendered
+	settings.Storage = copyStorage(rendered.Storage)
+	if settings.Storage["maintenance"] == nil {
+		settings.Storage["maintenance"] = configuration.Parameters{}
+	}
+	// A new value rather than a key changed inside the rendered one: below the copied sections the
+	// values are still the rendered configuration's, which the write endpoint derives from. The type
+	// is the one distribution's parser produces and the only one its app accepts.
+	settings.Storage["maintenance"]["readonly"] = map[any]any{"enabled": true}
+
+	return &settings
+}
+
+// copyStorage copies the storage section down to each section's parameters.
+//
+// The parameters are maps, so a shallow copy would share them between the two halves; anything one
+// half sets there has to be a new value under a key of its own copy, not a change inside a value.
+func copyStorage(storage configuration.Storage) configuration.Storage {
+	copied := configuration.Storage{}
+	for kind, parameters := range storage {
+		section := configuration.Parameters{}
+		for key, value := range parameters {
+			section[key] = value
+		}
+		copied[kind] = section
+	}
+	return copied
+}
+
+// writeEndpoint builds the listener that accepts a push, and the server that runs it on that listener.
 func writeEndpoint(
 	ctx context.Context, serving *configuration.Configuration, wrapper *config.Wrapper, guard *bound.Guard,
 	log *slog.Logger,
-) (func() error, error) {
+) (*http.Server, net.Listener, error) {
 	if wrapper.WriteEndpoint.Address == serving.HTTP.Addr {
-		return nil, fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"the write endpoint and the serving endpoint are both on %s, and they are two "+
 				"listeners in one process", serving.HTTP.Addr)
 	}
 
 	settings := writeConfiguration(serving, wrapper, guard)
 
+	// Before the listener opens: a write endpoint that cannot require a client certificate must not
+	// accept a connection at all, not even for as long as it takes to notice.
+	var tlsConfig *tls.Config
+	if settings.HTTP.TLS.Certificate != "" {
+		var err error
+		if tlsConfig, err = writeTLS(settings, wrapper); err != nil {
+			return nil, nil, err
+		}
+	}
+
 	app := handlers.NewApp(ctx, settings)
 	// No RegisterHealthChecks: the health registry is global to the process and the serving half
 	// has already registered the checks for this storage. A second registration panics, and there
 	// is nothing it would watch that the first does not.
 
-	var handler http.Handler = app
+	handler, err := writeHandler(app, settings, wrapper, guard)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	server := &http.Server{
+		Handler:           handler,
+		ReadHeaderTimeout: 30 * time.Second,
+	}
+
+	listener, err := net.Listen("tcp", wrapper.WriteEndpoint.Address)
+	if err != nil {
+		return nil, nil, fmt.Errorf("listening for the write endpoint on %s: %w",
+			wrapper.WriteEndpoint.Address, err)
+	}
+	if tlsConfig != nil {
+		listener = tls.NewListener(listener, tlsConfig)
+	}
+
+	log.Info("the write endpoint accepts pushes", "address", wrapper.WriteEndpoint.Address)
+
+	return server, listener, nil
+}
+
+// writeHandler is everything the write endpoint puts in front of distribution's own app.
+//
+// Its own function so that the tests run exactly this chain, with a recorder in place of the app:
+// which client's word about its address is taken is decided here, and a test of a copy of it would
+// pass while this one changed.
+func writeHandler(
+	app http.Handler, settings *configuration.Configuration, wrapper *config.Wrapper, guard *bound.Guard,
+) (http.Handler, error) {
+	handler := app
 	// Right in front of distribution, behind everything that decides who the client is: a full store
 	// is answered with 507 and a reason, not with the unknown error the storage would produce.
 	handler = bound.Handler(guard, handler)
@@ -235,63 +357,34 @@ func writeEndpoint(
 		return nil, err
 	}
 	// The one listener an ingress fronts, and therefore the one where a forwarded address can be
-	// worth believing — if it comes from behind the certificate this module issued to that ingress.
-	handler, err = realip.Handler(wrapper.WriteEndpoint.ClientCertCA, handler)
+	// worth believing — from the ingress's certificate and no other. The syncer is admitted here
+	// too, with a certificate from the same authority, and it fronts nobody.
+	handler, err = realip.Handler(wrapper.WriteEndpoint.ClientCertCA, IngressClientName, handler)
 	if err != nil {
 		return nil, err
 	}
 	if !settings.Log.AccessLog.Disabled {
 		handler = gorhandlers.CombinedLoggingHandler(os.Stdout, handler)
 	}
-
-	server := &http.Server{
-		Handler:           handler,
-		ReadHeaderTimeout: 30 * time.Second,
-	}
-
-	listener, err := net.Listen("tcp", wrapper.WriteEndpoint.Address)
-	if err != nil {
-		return nil, fmt.Errorf("listening for the write endpoint on %s: %w",
-			wrapper.WriteEndpoint.Address, err)
-	}
-
-	if settings.HTTP.TLS.Certificate != "" {
-		tlsConfig, err := writeTLS(settings, wrapper)
-		if err != nil {
-			return nil, err
-		}
-		listener = tls.NewListener(listener, tlsConfig)
-	}
-
-	log.Info("the write endpoint accepts pushes", "address", wrapper.WriteEndpoint.Address)
-
-	return func() error { return server.Serve(listener) }, nil
+	return handler, nil
 }
 
 // writeConfiguration derives the write endpoint's configuration from the serving one.
 //
 // Derived rather than rendered separately, and that is the point of running both in one process:
 // authentication, the token service and the storage path cannot drift between the two halves,
-// because there is only one of each. What differs is exactly what has to: no proxying, so a push is
-// answered by the store; its own address, since two listeners cannot share a port; no debug listener,
-// because the metrics collectors are registered process-globally and a second registration panics;
-// and the same guard in a different mode, because here the client sending the bytes is the one who
-// should hear the refusal, and the sooner the better.
+// because there is only one of each. The serving half refuses a client's writes whenever this
+// endpoint exists — see servingConfiguration — so the read-only flag passed in, and kept here, is the
+// rendered one, which is off. What differs is exactly what has to: no proxying, so a push is answered
+// by the store; its own address, since two listeners cannot share a port; no debug listener, because
+// the metrics collectors are registered process-globally and a second registration panics; and the
+// same guard in a different mode, because here the client sending the bytes is the one who should
+// hear the refusal, and the sooner the better.
 func writeConfiguration(
 	serving *configuration.Configuration, wrapper *config.Wrapper, guard *bound.Guard,
 ) *configuration.Configuration {
 	settings := *serving
-
-	// The storage parameters are a map, so a shallow copy would share them with the half that
-	// serves reads.
-	settings.Storage = configuration.Storage{}
-	for kind, parameters := range serving.Storage {
-		copied := configuration.Parameters{}
-		for key, value := range parameters {
-			copied[key] = value
-		}
-		settings.Storage[kind] = copied
-	}
+	settings.Storage = copyStorage(serving.Storage)
 
 	settings.Middleware = bounded(serving.Middleware, guard, bound.Fail)
 	settings.Proxy = configuration.Proxy{}
@@ -361,37 +454,70 @@ func bounded(middleware map[string][]configuration.Middleware, guard *bound.Guar
 	return result
 }
 
-// writeTLS is the serving certificate plus the authority whose client certificates this listener
-// asks for.
+// writeTLS is the serving certificate plus the client certificate this listener requires.
 //
-// Asks for, not requires: a push that presents no certificate is served, it simply does not get to
-// say which address it came from. Requiring one would mean every client of the publication endpoint
-// needs a certificate this module does not issue to anybody but the ingress.
+// Required, not asked for. It used to be asked for only: a push without a certificate was served and
+// merely did not get to say which address it came from, on the reasoning that admission was the
+// token service's job. That left this listener — host-networked, on the node address of every master
+// — taking pushes from anybody who could reach the node and held the write credentials, around the
+// ingress and everything configured on it: `whitelistSourceRanges` applied to the publication
+// endpoint and to nothing else. The Service in front of it was the same hole from inside the cluster.
+//
+// Now a handshake has to present a leaf of this module's authority, issued to one of the two clients
+// that write here: the ingress controller proxying `d8 mirror push`, and the syncer beside this
+// process filling its own store. Anything else is refused before a byte of HTTP is read, and the
+// credentials are still checked after that; the certificate decides who may ask, the token service
+// what they may do. See IngressClientName for why the names are checked as well as the authority.
+//
+// Without an authority there is nothing to require, and a write endpoint serving TLS to anybody is
+// exactly what this replaced, so that is a refusal to start rather than a fallback. The syncer
+// renders the authority on every configuration.
 func writeTLS(settings *configuration.Configuration, wrapper *config.Wrapper) (*tls.Config, error) {
 	certificate, err := tls.LoadX509KeyPair(settings.HTTP.TLS.Certificate, settings.HTTP.TLS.Key)
 	if err != nil {
 		return nil, fmt.Errorf("loading the write endpoint's certificate: %w", err)
 	}
 
-	tlsConfig := &tls.Config{
+	if wrapper.WriteEndpoint.ClientCertCA == "" {
+		return nil, errors.New("the write endpoint serves TLS and names no client certificate " +
+			"authority (writeEndpoint.clientCertCA), so it would take a push from anybody who can " +
+			"reach the node")
+	}
+	pem, err := os.ReadFile(wrapper.WriteEndpoint.ClientCertCA)
+	if err != nil {
+		return nil, fmt.Errorf("reading %s: %w", wrapper.WriteEndpoint.ClientCertCA, err)
+	}
+	pool := x509.NewCertPool()
+	if !pool.AppendCertsFromPEM(pem) {
+		return nil, fmt.Errorf("%s holds no certificate this can use", wrapper.WriteEndpoint.ClientCertCA)
+	}
+
+	return &tls.Config{
 		Certificates: []tls.Certificate{certificate},
 		MinVersion:   tls.VersionTLS12,
-		ClientAuth:   tls.NoClientCert,
-	}
+		// Verified against the pool for client authentication by the handshake itself, before
+		// VerifyConnection is asked about the name.
+		ClientAuth:       tls.RequireAndVerifyClientCert,
+		ClientCAs:        pool,
+		VerifyConnection: admitWriters,
+	}, nil
+}
 
-	if wrapper.WriteEndpoint.ClientCertCA != "" {
-		pem, err := os.ReadFile(wrapper.WriteEndpoint.ClientCertCA)
-		if err != nil {
-			return nil, fmt.Errorf("reading %s: %w", wrapper.WriteEndpoint.ClientCertCA, err)
-		}
-		pool := x509.NewCertPool()
-		if !pool.AppendCertsFromPEM(pem) {
-			return nil, fmt.Errorf("%s holds no certificate this can use",
-				wrapper.WriteEndpoint.ClientCertCA)
-		}
-		tlsConfig.ClientCAs = pool
-		tlsConfig.ClientAuth = tls.RequestClientCert
+// admitWriters refuses a verified client whose leaf is not issued to one of the write endpoint's
+// clients.
+//
+// The leaf only: it is the certificate the peer proved it holds the key for. Whatever else it sent
+// is a chain, read by the verification as intermediates and nothing more.
+func admitWriters(state tls.ConnectionState) error {
+	if len(state.PeerCertificates) == 0 {
+		// RequireAndVerifyClientCert has refused this already; stated so that a change of the
+		// client authentication mode cannot quietly turn this into an open door.
+		return errors.New("the write endpoint requires a client certificate")
 	}
-
-	return tlsConfig, nil
+	switch name := state.PeerCertificates[0].Subject.CommonName; name {
+	case IngressClientName, SyncerClientName:
+		return nil
+	default:
+		return fmt.Errorf("the write endpoint does not admit a client certificate issued to %q", name)
+	}
 }

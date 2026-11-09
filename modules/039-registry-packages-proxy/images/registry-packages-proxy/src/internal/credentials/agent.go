@@ -39,10 +39,26 @@ import (
 // repeated rather than imported because this proxy is its own Go module; the constants below are
 // pinned to their source by a test.
 const (
-	// storeHost and storePath are the in-cluster address, as recorded. Source of truth:
+	// recordedHost and storePath are the in-cluster address, as recorded. Source of truth:
 	// `Host` and `Path` in go_lib/registry/const/registry.go.
-	storeHost = "registry.d8-system.svc:5001"
-	storePath = "system/deckhouse"
+	//
+	// A key, never dialled from here: with an agent the request goes to proxyHost, and without one
+	// to storageHost. Its `:5001` is not where the store listens.
+	recordedHost = "registry.d8-system.svc:5001"
+	storePath    = "system/deckhouse"
+
+	// storageHost is the store itself: the same name, at the port its replicas serve on. What this
+	// proxy dials while the node it runs on has no agent — see Watcher.Get. Source of truth:
+	// `StorageHost`.
+	//
+	// The Service behind the name is headless, so the name resolves to the masters' node addresses
+	// and the port is the client's own; recordedHost's `:5001` there is the agent's port, which the
+	// agent binds on the loopback only, so the node address refuses it. The store's serving
+	// certificate names the Service, so the name verifies at this port.
+	storageHost = "registry.d8-system.svc:4281"
+
+	// storeRepository is the repository read from the store directly.
+	storeRepository = storageHost + "/" + storePath
 
 	// proxyHost is the same registry as dialled: the agent, on this node's loopback.
 	// Source of truth: `ProxyHost`.
@@ -66,7 +82,7 @@ const (
 // Both spellings, because the same registry is written one way and dialled another: a request that
 // names the agent as its own registry is a loop, and the agent refuses it.
 func servedByTheAgent(repository string) bool {
-	for _, host := range []string{storeHost, proxyHost} {
+	for _, host := range []string{recordedHost, proxyHost} {
 		if repository == host || strings.HasPrefix(repository, host+"/") {
 			return true
 		}
@@ -106,7 +122,7 @@ func throughTheAgent(config *registry.ClientConfig, readCA func() ([]byte, error
 	// The host is replaced, not prefixed, and either spelling is stripped: a configuration already
 	// naming the agent would otherwise become `127.0.0.1:5001127.0.0.1:5001/…`, which fails as a
 	// malformed repository rather than as anything a reader could act on.
-	dialled.Repository = proxyHost + strings.TrimPrefix(strings.TrimPrefix(config.Repository, storeHost), proxyHost)
+	dialled.Repository = proxyHost + strings.TrimPrefix(strings.TrimPrefix(config.Repository, recordedHost), proxyHost)
 	dialled.Scheme = agentScheme
 	dialled.Auth = ""
 	dialled.CA = string(authority)
@@ -122,3 +138,7 @@ func throughTheAgent(config *registry.ClientConfig, readCA func() ([]byte, error
 func readAgentCA() ([]byte, error) {
 	return os.ReadFile(agentCAFile)
 }
+
+// agentAuthority is how Get reads the agent's authority: readAgentCA, and a variable only so that a
+// test can take either side of the decision, since the file lives under /etc/kubernetes.
+var agentAuthority = readAgentCA

@@ -83,7 +83,7 @@ EOF
 # Create hosts.toml files for registries
 #
 # The heredoc is deliberately unquoted: in Local and Proxy mode a mirror host is
-# ${discovered_node_ip}:5001, and the shell resolving it here is what makes the
+# ${discovered_node_ip}:4281, and the shell resolving it here is what makes the
 # bootstrap mirror reachable. Quoting the delimiter would leave the placeholder
 # in hosts.toml verbatim. Because the body is expanded, the values in it are
 # subject to parameter and command substitution as root -- what keeps that safe

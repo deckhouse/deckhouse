@@ -24,6 +24,11 @@ groups:
     description:
       en: Deckhouse controller webhook handler
       ru: Вебхук-обработчик контроллера Deckhouse
+  - ports: "4281"
+    protocol: TCP
+    description:
+      en: "`registry` storage: replication of images between the replicas on master nodes, and reads by `registry-packages-proxy` on a master node that has no `registry-agent` yet"
+      ru: "Хранилище модуля `registry`: репликация образов между репликами на master-узлах и чтение компонентом `registry-packages-proxy` на master-узле, где ещё нет `registry-agent`"
   - ports: "4290"
     protocol: TCP
     description:
@@ -96,6 +101,16 @@ groups:
     description:
       en: "Deckhouse controller metrics"
       ru: "Метрики контроллера Deckhouse"
+  - ports: "4281"
+    protocol: TCP
+    description:
+      en: "`registry` storage: image pulls by the `registry-agent` of every node, and reads by the `terraform-manager` pods from the pod network (air-gapped clusters)"
+      ru: "Хранилище модуля `registry`: загрузка образов агентами `registry-agent` всех узлов и чтение подами `terraform-manager` из сети подов (кластеры в закрытом окружении)"
+  - ports: "4283"
+    protocol: TCP
+    description:
+      en: "`registry` storage: publishing images through the `registry-push` Ingress (`d8 mirror push`); reached from the nodes running the Ingress controller"
+      ru: "Хранилище модуля `registry`: публикация образов через Ingress `registry-push` (`d8 mirror push`); к порту подключаются узлы, на которых работает Ingress-контроллер"
   - ports: "4284"
     protocol: TCP
     description:
@@ -111,6 +126,11 @@ groups:
     description:
       en: "`control-plane-manager` metrics"
       ru: "Метрики компонента `control-plane-manager`"
+  - ports: "5002, 5004, 5051"
+    protocol: TCP
+    description:
+      en: "`registry` storage on 127.0.0.1: registry metrics and debug (5002), the internal upstream of the registry (5004), the token service (5051). The ports carry no traffic between nodes and need no firewall rule; they are listed because the storage runs on the host network and occupies these ports on every master node"
+      ru: "Хранилище модуля `registry` на 127.0.0.1: метрики и отладка хранилища (5002), внутренний upstream хранилища (5004), сервис токенов (5051). Трафик между узлами через эти порты не идёт, правило firewall для них не нужно; порты указаны, потому что хранилище работает в сетевом пространстве имён узла и занимает эти порты на каждом master-узле"
 
 - group: NodesToNodes
   description:
@@ -475,8 +495,8 @@ groups:
   - ports: "4286"
     protocol: TCP
     description:
-      en: Istio CNI metrics
-      ru: Метрики Istio CNI
+      en: "Istio CNI metrics. On 127.0.0.1 of every node the same port is taken by the `registry-agent` metrics, which carry no traffic between nodes and need no firewall rule"
+      ru: "Метрики Istio CNI. На 127.0.0.1 каждого узла этот же порт занимают метрики `registry-agent`; трафик между узлами через них не идёт, правило firewall для них не нужно"
   - ports: "4287"
     protocol: UDP
     description:
@@ -522,6 +542,11 @@ groups:
         **Для кластеров, развернутых на DP версий 1.64–1.70.** Используется модулем `cni-cilium` для VXLAN-инкапсуляции трафика между подами. Обновление DP до более новых версий не изменит занимаемый порт, если не включается модуль `virtualization`.
 
         **Обратите внимание,** что в таких кластерах включение модуля `virtualization` на DP до версии 1.70 меняет порт на `4298/UDP`
+  - ports: "5001"
+    protocol: TCP
+    description:
+      en: "`registry-agent` on 127.0.0.1, through which the container runtime and Deckhouse pull images. The port carries no traffic between nodes and needs no firewall rule; it is listed because the agent runs on the host network and occupies this port on every node"
+      ru: "Агент `registry-agent` на 127.0.0.1, через который образы загружают container runtime и Deckhouse. Трафик между узлами через этот порт не идёт, правило firewall для него не нужно; порт указан, потому что агент работает в сетевом пространстве имён узла и занимает этот порт на каждом узле"
   - ports: "7000&#8209;7999"
     protocol: TCP
     description:

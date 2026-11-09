@@ -81,9 +81,14 @@ var storageGVR = schema.GroupVersionResource{
 //
 // Nothing moves. The bootstrap fills /opt/deckhouse/registry/local_data on the node and the store
 // mounts that same directory, so what has to change hands is not the data but the address: both serve
-// port 5001 on the host network, and while the bootstrap's static pod holds it the store's pod is not
-// merely unable to start — the scheduler will not place it at all ("node(s) didn't have free ports for
-// the requested pod ports"), which is what a first installation from a bundle actually did.
+// constant.StoragePort on the host network, and while the bootstrap's static pod holds it the store's
+// pod is not merely unable to start — the scheduler will not place it at all ("node(s) didn't have free
+// ports for the requested pod ports"), which is what a first installation from a bundle actually did.
+// The token service's 5051 is declared by both as well, and refused the same way.
+//
+// That refusal is the only thing keeping two registries off one directory, and it is relied on: the two
+// share a port so that it holds. A store on another port would start beside the bootstrap registry while
+// it still serves, and its syncer would fill and collect a store somebody else is writing.
 //
 // The order below is the whole content of this function and it is not interchangeable. Freeing the port
 // is the last step, because once it is free nothing on the node serves images, and the store's own

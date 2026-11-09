@@ -17,7 +17,12 @@ limitations under the License.
 package template_tests
 
 import (
+	"crypto"
+	"crypto/x509"
 	"encoding/base64"
+	"encoding/json"
+	"encoding/pem"
+	"fmt"
 	"path"
 	"regexp"
 	"sort"
@@ -29,6 +34,7 @@ import (
 	"github.com/tidwall/gjson"
 	"gopkg.in/yaml.v3"
 
+	v2pki "github.com/deckhouse/deckhouse/modules/038-registry/hooks/v2/pki"
 	. "github.com/deckhouse/deckhouse/testing/helm"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
@@ -660,13 +666,53 @@ var _ = Describe("Module :: registry :: helm template :: v2 storage", func() {
 			Expect(set.Field("spec.template.spec.affinity.podAntiAffinity").String()).
 				To(ContainSubstring("kubernetes.io/hostname"))
 
-			// The registry binds the node address while the node agent binds the
-			// loopback one — the same port on different interfaces. Without the host
-			// network namespace the node address does not exist for the container, and a
-			// host port would take 5001 away from the agent.
+			// The registry binds the node address, which does not exist for the container outside
+			// the host network namespace.
 			Expect(set.Field("spec.template.spec.hostNetwork").Bool()).To(BeTrue())
 			Expect(set.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(containers[0].Get("ports.0.hostPort").Exists()).To(BeFalse())
+		})
+
+		// Where the store answers, which a host firewall written from the documentation has to let
+		// through: both listeners cross between nodes, and the documented rules open 4200-4299. The
+		// node agent's 127.0.0.1:5001 is a static pod of its own and is not among them.
+		It("serves inside the platform port range", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			set := f.KubernetesResource("StatefulSet", "d8-system", "registry-storage")
+			distribution := containerNamed(set, "distribution")
+			Expect(distribution.Get("ports.#").Int()).To(BeEquivalentTo(2))
+			Expect(distribution.Get(`ports.#(name=="registry").containerPort`).Int()).To(BeEquivalentTo(4281))
+			Expect(distribution.Get(`ports.#(name=="registry-push").containerPort`).Int()).To(BeEquivalentTo(4283))
+			Expect(distribution.Get("readinessProbe.tcpSocket.port").Int()).To(BeEquivalentTo(4281),
+				"the probe has to reach the registry, and the loopback has nothing there")
+
+			for _, container := range set.Field("spec.template.spec.containers").Array() {
+				for _, port := range container.Get("ports").Array() {
+					Expect(port.Get("containerPort").Int()).NotTo(BeEquivalentTo(5001),
+						"%s declares the node agent's port", container.Get("name").String())
+				}
+			}
+
+			// The headless Service keeps the number in the name the cluster's images are built from;
+			// only where it leads changed.
+			service := f.KubernetesResource("Service", "d8-system", "registry")
+			Expect(service.Field("spec.ports.0.port").Int()).To(BeEquivalentTo(5001))
+			Expect(service.Field("spec.ports.0.targetPort").Int()).To(BeEquivalentTo(4281))
+		})
+
+		// The one thing that keeps the store off a master where the previous implementation's registry
+		// static pod still runs over the same directory: they declare the same token service port, and a
+		// host-networked pod's ports are the node's. The registry ports used to do this by colliding on
+		// 5001, and no longer collide.
+		It("declares the token service port the previous registry static pod holds", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			set := f.KubernetesResource("StatefulSet", "d8-system", "registry-storage")
+			auth := containerNamed(set, "auth")
+			Expect(auth.Get(`ports.#(name=="auth").containerPort`).Int()).To(BeEquivalentTo(5051))
+			Expect(auth.Get("livenessProbe.httpGet.port").Int()).To(BeEquivalentTo(5051),
+				"the declared port is the one the token service listens on")
 		})
 
 		// The update path of the cache: the StatefulSet must not replace pods on its own.
@@ -957,13 +1003,108 @@ var _ = Describe("Module :: registry :: helm template :: v2 publication endpoint
 
 			// At the write instance specifically: sending it to the serving one would mean pushing into
 			// a registry that proxies, which refuses every write.
-			Expect(service.Field("spec.ports.0.targetPort").Int()).To(BeEquivalentTo(5003))
+			Expect(service.Field("spec.ports.0.targetPort").Int()).To(BeEquivalentTo(4283))
 			// And at the leader only: no selector, so the only endpoint is the one the controller
 			// writes — see applyPushEndpoint. A selector over every replica let a push land on a
 			// follower, where the cluster never reads it.
 			Expect(service.Field("spec.selector").Exists()).To(BeFalse())
 			Expect(service.Field("spec.ports.0.name").String()).To(Equal("registry-push"),
 				"the controller's EndpointSlice names this port")
+		})
+
+		// The write listener refuses a handshake without a client certificate of the module's
+		// authority, so the ingress presenting one is what `d8 mirror push` stands on. ingress-nginx
+		// presents the pair of a `proxy-ssl-secret` only when the secret also carries `ca.crt`, and
+		// says nothing when it does not: the annotation alone is not evidence.
+		It("presents the client certificate the write listener requires", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ingress := f.KubernetesResource("Ingress", "d8-system", "registry-push")
+			Expect(ingress.Exists()).To(BeTrue())
+			Expect(ingress.Field(`metadata.annotations.nginx\.ingress\.kubernetes\.io/proxy-ssl-secret`).String()).
+				To(Equal("d8-system/registry-storage-ingress-client"))
+			Expect(ingress.Field(`metadata.annotations.nginx\.ingress\.kubernetes\.io/backend-protocol`).String()).
+				To(Equal("HTTPS"))
+
+			client := f.KubernetesResource("Secret", "d8-system", "registry-storage-ingress-client")
+			Expect(client.Exists()).To(BeTrue())
+			data := client.Field("data").Map()
+			Expect(data).To(HaveKey("tls.crt"))
+			Expect(data).To(HaveKey("tls.key"))
+			Expect(data).To(HaveKey("ca.crt"), "without it ingress-nginx renders no proxy_ssl_certificate")
+
+			// The authority the storage requires the certificate from, and nothing else: the
+			// secret is the ingress controller's, so a private key other than its own leaf's
+			// must not appear in it.
+			pki := f.KubernetesResource("Secret", "d8-system", "registry-storage-pki")
+			Expect(data["ca.crt"].String()).To(Equal(pki.Field(`data.ingress-client-ca\.crt`).String()))
+			for key, value := range data {
+				decoded, err := base64.StdEncoding.DecodeString(value.String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(string(decoded)).ShouldNot(ContainSubstring("CA-KEY"),
+					"%s carries the authority's private key", key)
+			}
+		})
+
+		// A layer of `d8 mirror push` is one request of up to several gigabytes. Buffered, the
+		// ingress controller writes all of it to its own disk before the registry sees a byte.
+		It("streams a push to the registry instead of collecting it on the controller", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			annotations := f.KubernetesResource("Ingress", "d8-system", "registry-push").
+				Field("metadata.annotations").Map()
+			Expect(annotations["nginx.ingress.kubernetes.io/proxy-request-buffering"].String()).To(Equal("off"))
+			// Idle timeouts, kept: they end a stalled connection, not a long transfer.
+			Expect(annotations["nginx.ingress.kubernetes.io/proxy-read-timeout"].String()).To(Equal("600"))
+			Expect(annotations["nginx.ingress.kubernetes.io/proxy-send-timeout"].String()).To(Equal("600"))
+		})
+	})
+
+	// ingress-nginx loads the key of a `proxy-ssl-secret` with OpenSSL, which reads a
+	// "PRIVATE KEY" block as PKCS#8 and nothing else, and one key it cannot load fails
+	// nginx's whole configuration. The fixtures above hold no real key, so this renders
+	// the state the hook generates.
+	Context("with the PKI the hook generates", func() {
+		BeforeEach(func() {
+			state, err := v2pki.Generate(v2pki.Hosts{Service: "registry.d8-system.svc"})
+			Expect(err).ShouldNot(HaveOccurred())
+			raw, err := json.Marshal(state)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("registry", v2Enabled)
+			f.ValuesSetFromYaml("registry.internal.v2.pki", string(raw))
+			f.HelmRender()
+		})
+
+		It("gives the ingress controller a key OpenSSL can load", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			client := f.KubernetesResource("Secret", "d8-system", "registry-storage-ingress-client")
+			Expect(client.Exists()).To(BeTrue())
+			field := func(name string) []byte {
+				decoded, err := base64.StdEncoding.DecodeString(client.Field("data." + name).String())
+				Expect(err).ShouldNot(HaveOccurred())
+				return decoded
+			}
+
+			block, rest := pem.Decode(field(`tls\.key`))
+			Expect(block).NotTo(BeNil())
+			Expect(rest).To(BeEmpty())
+			Expect(block.Type).To(Equal("PRIVATE KEY"))
+			key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+			Expect(err).ShouldNot(HaveOccurred(), "OpenSSL reads this label as PKCS#8 and nothing else")
+
+			block, _ = pem.Decode(field(`tls\.crt`))
+			Expect(block).NotTo(BeNil())
+			certificate, err := x509.ParseCertificate(block.Bytes)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(certificate.Subject.CommonName).To(Equal(v2pki.CommonNameIngressClient))
+
+			public, ok := certificate.PublicKey.(interface{ Equal(crypto.PublicKey) bool })
+			Expect(ok).To(BeTrue())
+			Expect(public.Equal(key.(crypto.Signer).Public())).To(BeTrue(), "the key is the certificate's")
 		})
 	})
 
@@ -977,8 +1118,8 @@ var _ = Describe("Module :: registry :: helm template :: v2 publication endpoint
 			Expect(ingress.Exists()).To(BeTrue())
 
 			annotations := ingress.Field("metadata.annotations").Map()
-			// A client certificate is required on this path, so a leaked password alone
-			// cannot be used to replace an image.
+			// A client certificate is required on the write listener behind this path, so a
+			// leaked password alone cannot be used to replace an image around the ingress.
 			Expect(annotations).To(HaveKey("nginx.ingress.kubernetes.io/proxy-ssl-secret"))
 			Expect(annotations["nginx.ingress.kubernetes.io/proxy-ssl-secret"].String()).
 				To(Equal("d8-system/registry-storage-ingress-client"))
@@ -1102,6 +1243,17 @@ var _ = Describe("Module :: registry :: helm template :: v2 node configuration",
 		})
 	})
 })
+
+// containerNamed is one container of a workload's pod template, failing the test when it is absent.
+func containerNamed(workload object_store.KubeObject, name string) gjson.Result {
+	for _, container := range workload.Field("spec.template.spec.containers").Array() {
+		if container.Get("name").String() == name {
+			return container
+		}
+	}
+	Fail(fmt.Sprintf("%s has no container %q", workload.Field("metadata.name").String(), name))
+	return gjson.Result{}
+}
 
 func decodeBashibleConfig(secret object_store.KubeObject) string {
 	decoded, err := base64.StdEncoding.DecodeString(secret.Field("data.config").String())

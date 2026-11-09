@@ -70,7 +70,7 @@ func FuzzGenerateProxyEndpoints(f *testing.F) {
 			return
 		}
 
-		endpoints := GenerateProxyEndpoints([]string{address})
+		endpoints := GenerateProxyEndpoints([]string{address}, StoragePort)
 
 		// One input, one output: the producer neither drops nor invents entries.
 		if len(endpoints) != 1 {
@@ -78,11 +78,11 @@ func FuzzGenerateProxyEndpoints(f *testing.F) {
 				address, len(endpoints))
 		}
 
-		// The result must be exactly the host and the module's port, joined the
+		// The result must be exactly the host and the given port, joined the
 		// way net.JoinHostPort joins them. Concatenating instead would drop the
 		// brackets an IPv6 literal needs, which is how the port ends up read as
 		// part of the address.
-		want := net.JoinHostPort(address, strconv.Itoa(Port))
+		want := net.JoinHostPort(address, strconv.Itoa(StoragePort))
 		if endpoints[0] != want {
 			t.Fatalf("GenerateProxyEndpoints(%q) produced %q, expected %q",
 				address, endpoints[0], want)
@@ -144,7 +144,7 @@ func FuzzGenerateProxyEndpointsList(f *testing.F) {
 		}
 
 		addresses := splitFuzzList(joined)
-		endpoints := GenerateProxyEndpoints(addresses)
+		endpoints := GenerateProxyEndpoints(addresses, LegacyStoragePort)
 
 		if len(endpoints) != len(addresses) {
 			t.Fatalf("GenerateProxyEndpoints(%q) returned %d endpoints for %d addresses",
@@ -152,7 +152,7 @@ func FuzzGenerateProxyEndpointsList(f *testing.F) {
 		}
 
 		for i, address := range addresses {
-			want := net.JoinHostPort(address, strconv.Itoa(Port))
+			want := net.JoinHostPort(address, strconv.Itoa(LegacyStoragePort))
 			if endpoints[i] != want {
 				t.Fatalf("endpoint[%d] is %q for address %q, expected %q; the order must be "+
 					"preserved so that an endpoint stays attributable to its node",
