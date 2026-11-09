@@ -75,6 +75,32 @@ func assertModuleConfig(t *testing.T, mc *ModuleConfig, enabled bool, version in
 	require.Equal(t, mc.Spec.Settings, SettingsValues(setting))
 }
 
+// defaultRegistrySettings are the registry ModuleConfig settings of an installation whose
+// configuration names no registry: the module managing the pull path from the public CE registry.
+var defaultRegistrySettings = map[string]any{
+	"mode": "Managed",
+	"primary": map[string]any{
+		"upstream": map[string]any{
+			"scheme": "HTTPS",
+			"host":   "registry.deckhouse.io",
+			"path":   "/deckhouse/ce",
+		},
+	},
+}
+
+// moduleConfigNamed returns the ModuleConfig called name, failing the test when there is none.
+func moduleConfigNamed(t *testing.T, mcs []*ModuleConfig, name string) *ModuleConfig {
+	t.Helper()
+
+	for _, mc := range mcs {
+		if mc.GetName() == name {
+			return mc
+		}
+	}
+	require.Failf(t, "no ModuleConfig", "%q is not among the ModuleConfigs", name)
+	return nil
+}
+
 func generateMetaConfigForDeckhouseConfigTest(t *testing.T, data map[string]any) *MetaConfig {
 	return generateMetaConfig(t, configOverridesTemplate, data, false)
 }
@@ -204,22 +230,19 @@ spec:
 					"logLevel": "Info",
 				})
 		})
-		t.Run("With CRI (module enable) -> direct", func(t *testing.T) {
-			assert(t,
-				map[string]any{
-					"enableCRI": true,
-				},
-				map[string]any{
-					"bundle":   "Default",
-					"logLevel": "Info",
-					"registry": map[string]any{
-						"mode": "Direct",
-						"direct": map[string]any{
-							"imagesRepo": "registry.deckhouse.io/deckhouse/ce",
-							"scheme":     "HTTPS",
-						},
-					},
-				})
+		// Through the registry module, and nothing in the deckhouse ModuleConfig: its registry section
+		// is the previous implementation's, which the current one takes for an unmanaged cluster.
+		t.Run("With CRI (module enable) -> registry ModuleConfig, Managed from CE", func(t *testing.T) {
+			metaConfig := generateMetaConfig(t, tpl, map[string]any{"enableCRI": true}, false)
+			installConfig, err := PrepareDeckhouseInstallConfig(t.Context(), metaConfig, &options.New().Global)
+			require.NoError(t, err)
+			require.Len(t, installConfig.ModuleConfigs, 2)
+
+			assertModuleConfig(t, moduleConfigNamed(t, installConfig.ModuleConfigs, "deckhouse"), true, 1, map[string]any{
+				"bundle":   "Default",
+				"logLevel": "Info",
+			})
+			assertModuleConfig(t, moduleConfigNamed(t, installConfig.ModuleConfigs, "registry"), true, 1, defaultRegistrySettings)
 		})
 	})
 	t.Run("ModuleConfig Deckhouse", func(t *testing.T) {
@@ -336,6 +359,8 @@ spec:
 `},
 			}, false)
 			require.True(t, metaConfig.Registry.FromRegistryModule)
+			require.False(t, metaConfig.Registry.FoldedFromDirect,
+				"the section is folded, but the registry comes from the registry ModuleConfig")
 
 			installConfig, err := PrepareDeckhouseInstallConfig(t.Context(), metaConfig, &options.New().Global)
 			require.NoError(t, err)
@@ -384,14 +409,17 @@ spec:
 		require.Equal(t, iCfg.LogLevel, "Info")
 		require.Equal(t, iCfg.Bundle, "Default")
 
-		// helm and deckhouseCm
-		require.Len(t, iCfg.ModuleConfigs, 2)
+		// common, the default registry and deckhouseCm
+		require.Len(t, iCfg.ModuleConfigs, 3)
 
-		require.Contains(t, iCfg.ModuleConfigs[1].Spec.Settings, "bundle")
-		require.Equal(t, iCfg.ModuleConfigs[1].Spec.Settings["bundle"], "Default")
+		deckhouseMC := moduleConfigNamed(t, iCfg.ModuleConfigs, "deckhouse")
+		require.Contains(t, deckhouseMC.Spec.Settings, "bundle")
+		require.Equal(t, deckhouseMC.Spec.Settings["bundle"], "Default")
 
-		require.Contains(t, iCfg.ModuleConfigs[1].Spec.Settings, "logLevel")
-		require.Equal(t, iCfg.ModuleConfigs[1].Spec.Settings["logLevel"], "Info")
+		require.Contains(t, deckhouseMC.Spec.Settings, "logLevel")
+		require.Equal(t, deckhouseMC.Spec.Settings["logLevel"], "Info")
+
+		require.NotContains(t, deckhouseMC.Spec.Settings, "registry")
 	})
 
 	t.Run("Use bundle and logLevel from module config", func(t *testing.T) {
@@ -416,7 +444,8 @@ spec:
 		require.Equal(t, iCfg.LogLevel, "Debug")
 		require.Equal(t, iCfg.Bundle, "Minimal")
 
-		require.Len(t, iCfg.ModuleConfigs, 1)
+		// deckhouse and the default registry
+		require.Len(t, iCfg.ModuleConfigs, 2)
 	})
 
 	t.Run("Forbid to use configOverrides", func(t *testing.T) {
@@ -480,21 +509,16 @@ spec:
 		iCfg, err := PrepareDeckhouseInstallConfig(t.Context(), metaConfig, &options.New().Global)
 		require.NoError(t, err)
 
-		require.Len(t, iCfg.ModuleConfigs, 2)
+		require.Len(t, iCfg.ModuleConfigs, 3)
 
-		assertModuleConfig(t, iCfg.ModuleConfigs[0], true, 1, map[string]any{
+		assertModuleConfig(t, moduleConfigNamed(t, iCfg.ModuleConfigs, "deckhouse"), true, 1, map[string]any{
 			"bundle":   "Minimal",
 			"logLevel": "Debug",
-			"registry": map[string]any{
-				"mode": "Direct",
-				"direct": map[string]any{
-					"imagesRepo": "registry.deckhouse.io/deckhouse/ce",
-					"scheme":     "HTTPS",
-				},
-			},
 		})
 
-		assertModuleConfig(t, iCfg.ModuleConfigs[1], false, 0, nil)
+		assertModuleConfig(t, moduleConfigNamed(t, iCfg.ModuleConfigs, "istio"), false, 0, nil)
+
+		assertModuleConfig(t, moduleConfigNamed(t, iCfg.ModuleConfigs, "registry"), true, 1, defaultRegistrySettings)
 	})
 
 	t.Run("Fail settings without version", func(t *testing.T) {
@@ -554,9 +578,9 @@ spec:
 		iCfg, err := PrepareDeckhouseInstallConfig(t.Context(), metaConfig, &options.New().Global)
 		require.NoError(t, err)
 
-		require.Len(t, iCfg.ModuleConfigs, 2)
+		require.Len(t, iCfg.ModuleConfigs, 3)
 
-		assertModuleConfig(t, iCfg.ModuleConfigs[0], true, 0, nil)
+		assertModuleConfig(t, moduleConfigNamed(t, iCfg.ModuleConfigs, moduleWithoutSpec), true, 0, nil)
 	})
 
 	t.Run("Module without spec file should fail with settings", func(t *testing.T) {

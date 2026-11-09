@@ -68,6 +68,10 @@ type ConfigProvider struct {
 	// fromRegistryModule records that deckhouseSettings were derived from the registry ModuleConfig
 	// rather than written by the user into the deckhouse one. See WithSettingsFromRegistryModule.
 	fromRegistryModule bool
+
+	// initFoldedFromDirect records that initConfig was folded from a Direct section of the deckhouse
+	// ModuleConfig rather than written by the user. See WithInitFoldedFromDirect.
+	initFoldedFromDirect bool
 }
 
 // ProviderOption adjusts a ConfigProvider at construction.
@@ -122,6 +126,16 @@ func WithAgent() ProviderOption {
 // rejects Local and Proxy there.
 func WithSettingsFromRegistryModule() ProviderOption {
 	return func(p *ConfigProvider) { p.fromRegistryModule = true }
+}
+
+// WithInitFoldedFromDirect marks the InitConfiguration as one FoldLegacyDirectIntoInit made from a
+// Direct section of the deckhouse ModuleConfig.
+//
+// The registry resolves exactly as it would from an InitConfiguration the user wrote, and nothing in
+// the cluster needs to tell the two apart. Only the messages that name a field to fix do: the user
+// wrote registry.direct in the deckhouse ModuleConfig, and that is where they have to look.
+func WithInitFoldedFromDirect() ProviderOption {
+	return func(p *ConfigProvider) { p.initFoldedFromDirect = true }
 }
 
 // IsLocal returns true when the bootstrap registry mode is Local.
@@ -193,6 +207,10 @@ func (p *ConfigProvider) Config(defaultCRI constant.CRIType, hasClusterConfigura
 			return Config{}, fmt.Errorf("get registry settings from 'initConfiguration': %w", err)
 		}
 
+		// After useInitConfig, which replaces the whole struct.
+		config.FoldedFromDirect = p.initFoldedFromDirect
+		config.FromInitConfiguration = !p.initFoldedFromDirect
+
 	default:
 		if err := config.useDefault(criSupported); err != nil {
 			return Config{}, fmt.Errorf("get default registry settings: %w", err)
@@ -224,6 +242,16 @@ type Config struct {
 	// FromRegistryModule records that DeckhouseSettings were derived from the registry ModuleConfig,
 	// and so are not written into the deckhouse one. See WithSettingsFromRegistryModule.
 	FromRegistryModule bool
+
+	// FromInitConfiguration records that the settings were built from an InitConfiguration the user
+	// wrote. LegacyMode does not say it: the default for a cluster without a container runtime to
+	// check is legacy too, and that one comes from no document at all.
+	FromInitConfiguration bool
+
+	// FoldedFromDirect records that the settings were built from an InitConfiguration folded from a
+	// Direct section of the deckhouse ModuleConfig, which is what the user wrote. See
+	// WithInitFoldedFromDirect.
+	FoldedFromDirect bool
 }
 
 // useDefault configures the registry with default CE settings.
@@ -231,6 +259,11 @@ type Config struct {
 // - If Direct mode is supported, uses Direct mode
 // - Otherwise, falls back to Unmanaged mode
 // - All parameters are populated with default values for the CE registry
+//
+// An installation with a ClusterConfiguration and no registry settings does not get here: the
+// config parse gives it a registry ModuleConfig, Managed from the CE registry, and that resolves to
+// the deckhouse settings this provider is built with. See addDefaultRegistryModuleConfig in
+// dhctl/pkg/config.
 func (c *Config) useDefault(criSupported bool) error {
 	var settings module_config.DeckhouseSettings
 

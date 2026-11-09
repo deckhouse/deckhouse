@@ -21,6 +21,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"sigs.k8s.io/yaml"
 
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
@@ -180,6 +181,26 @@ spec:
       cache: true
 `
 
+	// No mode at all: the module's default is Unmanaged, and its schema refuses the cache and the
+	// upstream below without mode: Managed, so neither is a fact.
+	const noMode = `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: registry
+spec:
+  enabled: true
+  version: 1
+  settings:
+    primary:
+      upstream:
+        scheme: HTTPS
+        host: dev-registry.deckhouse.io
+        path: /sys/deckhouse-oss
+    storage:
+      cache: true
+`
+
 	// An upstream block with no host in it: a configuration on its way to being edited, and not a
 	// source of anything.
 	const emptyUpstream = `
@@ -207,6 +228,7 @@ spec:
 		{name: "managed with a cache and an upstream", doc: managedWithUpstream, cache: true, upstream: true},
 		{name: "managed with a cache and no upstream", doc: managedNoUpstream, cache: true},
 		{name: "unmanaged manages nothing, so no cache", doc: unmanaged},
+		{name: "no mode is the default Unmanaged, so no cache and no upstream", doc: noMode},
 		{name: "a disabled module has no cache", doc: disabled},
 		{name: "a module without enabled counts as disabled", doc: withoutEnabled},
 		{name: "an upstream block without a host is not an upstream", doc: emptyUpstream, cache: true},
@@ -322,6 +344,44 @@ spec:
 	assert.Equal(t, "someone", settings.Direct.Username)
 	assert.Equal(t, "secret", settings.Direct.Password)
 	assert.Contains(t, settings.Direct.CA, "BEGIN CERTIFICATE")
+}
+
+// TestTheDefaultIsReadLikeAModuleConfigTheUserWrote: the settings an installation with no registry
+// settings is given go through the same reader as a ModuleConfig written by hand, and come out as the
+// CE registry, managed by the module, with no credentials and no store.
+func TestTheDefaultIsReadLikeAModuleConfigTheUserWrote(t *testing.T) {
+	doc, err := yaml.Marshal(map[string]any{
+		"apiVersion": "deckhouse.io/v1alpha1",
+		"kind":       "ModuleConfig",
+		"metadata":   map[string]any{"name": "registry"},
+		"spec": map[string]any{
+			"enabled":  true,
+			"version":  1,
+			"settings": DefaultModuleSettings(),
+		},
+	})
+	require.NoError(t, err)
+
+	facts, err := BundleFactsFromModuleConfig(doc)
+	require.NoError(t, err)
+	require.False(t, facts.CacheEnabled)
+	require.True(t, facts.UpstreamConfigured)
+	require.Equal(t, &UpstreamFacts{Scheme: "HTTPS", Host: "registry.deckhouse.io", Path: "/deckhouse/ce"}, facts.Upstream)
+
+	settings, options := facts.Resolve(nil)
+	require.NotNil(t, settings)
+	require.Equal(t, constant.ModeDirect, settings.Mode)
+	require.NotNil(t, settings.Direct)
+	assert.Equal(t, constant.DefaultImagesRepo, settings.Direct.ImagesRepo)
+	assert.Equal(t, constant.SchemeHTTPS, settings.Direct.Scheme)
+	assert.Empty(t, settings.Direct.Username)
+	assert.Empty(t, settings.Direct.Password)
+
+	provider := NewConfigProvider(nil, settings, options...)
+	assert.True(t, provider.agentOwnsRuntime, "the module owns the pull path, so the first master gets the agent")
+	assert.True(t, provider.fromRegistryModule, "nothing goes into the deckhouse ModuleConfig")
+	assert.False(t, provider.storeExpected, "no cache was asked for")
+	assert.False(t, provider.bundleBootstrap)
 }
 
 // TestALicenseIsCredentialsToo: for Deckhouse's own registry the token is the password, under a fixed

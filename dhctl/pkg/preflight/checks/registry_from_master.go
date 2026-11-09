@@ -294,8 +294,5 @@ func RegistryFromMaster(meta *config.MetaConfig, sshProviderInitializer *provide
 
 // registryMode is the mode the registry is configured in; see registrySection.
 func (c RegistryFromMasterCheck) registryMode() string {
-	if c.MetaConfig == nil {
-		return ""
-	}
-	return string(c.MetaConfig.Registry.Settings.Mode)
+	return configuredRegistryMode(c.MetaConfig)
 }

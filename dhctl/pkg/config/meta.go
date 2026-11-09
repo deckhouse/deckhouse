@@ -96,6 +96,10 @@ type MetaConfig struct {
 	// in the cluster before deckhouse is installed, while this one has to land after its
 	// ModuleSource.
 	externalProviderModuleConfig *ModuleConfig `json:"-"`
+
+	// registryDefaulted records that the registry ModuleConfig among ModuleConfigs was added by the
+	// installer, because the configuration named no registry. See addDefaultRegistryModuleConfig.
+	registryDefaulted bool `json:"-"`
 }
 
 type imagesDigests map[string]map[string]any
@@ -580,12 +584,15 @@ func (m *MetaConfig) prepareRegistry() error {
 	}
 
 	// Before Resolve — see the same call in RegistryConfigProvider for why the order matters.
-	initConfig, deckhouseSettings, err := registry.FoldLegacyDirectIntoInit(initConfig, deckhouseSettings)
+	initConfig, deckhouseSettings, folded, err := registry.FoldLegacyDirectIntoInit(initConfig, deckhouseSettings)
 	if err != nil {
 		return err
 	}
 
 	deckhouseSettings, providerOpts := bundleFacts.Resolve(deckhouseSettings)
+	if folded {
+		providerOpts = append(providerOpts, registry.WithInitFoldedFromDirect())
+	}
 
 	// Default CRI. The node-manager ModuleConfig setting takes precedence over the
 	// deprecated ClusterConfiguration.defaultCRI field (see effectiveDefaultCRI).

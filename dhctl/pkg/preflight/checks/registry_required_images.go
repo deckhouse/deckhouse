@@ -236,8 +236,5 @@ func RegistryRequiredImages(meta *config.MetaConfig) preflight.Check {
 // the fields live under. Empty when no configuration was loaded, which registrySection reports
 // as a placeholder rather than guessing.
 func (c RegistryRequiredImagesCheck) registryMode() string {
-	if c.MetaConfig == nil {
-		return ""
-	}
-	return string(c.MetaConfig.Registry.Settings.Mode)
+	return configuredRegistryMode(c.MetaConfig)
 }

@@ -18,9 +18,14 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
 
 // TestAbortNeverNamesKubeAPI is the abort invariant checked instead of agreed: abort must not use
@@ -80,6 +85,51 @@ func TestStaticAbortSuiteIsNotRunForImmutableMachines(t *testing.T) {
 
 	require.True(t, guarded,
 		"%s runs the SSH-based static abort suite without excluding an immutable master", abortFile)
+}
+
+// Abort removes what a bootstrap has created, and a configuration that bootstrap refuses must not keep
+// it from that: the infrastructure may come from an older dhctl or from the configuration before it was
+// edited. The registry refusal is the one bootstrap gives a configuration the module leaves Unmanaged
+// with no registry named. Abort parses it as the destroy it is, which does not refuse, and goes on to
+// the state cache.
+func TestAbort_DoesNotRefuseWhatOnlyAnInstallationRefuses(t *testing.T) {
+	t.Parallel()
+
+	const unmanagedWithoutRegistry = `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+kubernetesVersion: "1.33"
+podSubnetCIDR: 10.222.0.0/16
+serviceSubnetCIDR: 10.111.0.0/16
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: registry
+spec:
+  enabled: true
+  version: 1
+  settings:
+    mode: Unmanaged
+`
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	require.NoError(t, os.WriteFile(configPath, []byte(unmanagedWithoutRegistry), 0o600))
+
+	globalOptions := eksGlobalOptions(t)
+	globalOptions.ConfigPaths = []string{configPath}
+
+	// The configuration really is one an installation refuses.
+	_, err := config.LoadConfigFromFile(t.Context(), globalOptions.ConfigPaths, config.DummyValidatorProvider(), globalOptions)
+	require.ErrorIs(t, err, config.ErrNoRegistryToPullFrom)
+
+	opts := &options.Options{Global: *globalOptions}
+	opts.Cache.Dir = t.TempDir()
+	b := &ClusterBootstrapper{Params: &Params{Options: opts, SSHProviderInitializer: hostlessInitializer()}}
+
+	err = b.doRunBootstrapAbort(t.Context())
+	require.NotErrorIs(t, err, config.ErrNoRegistryToPullFrom)
+	require.ErrorContains(t, err, "No UUID found in the cache", "abort has to get past the parse to its state cache")
 }
 
 // namesIdent reports whether n mentions the given identifier anywhere inside it.

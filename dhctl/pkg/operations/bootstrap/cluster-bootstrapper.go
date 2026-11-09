@@ -904,7 +904,7 @@ func (b *ClusterBootstrapper) bootstrapPreparation(ctx context.Context, bctx *bo
 
 	metaConfig.ResourceManagementTimeout = b.Options.Cache.ResourceManagementTimeout
 
-	deckhouseInstallConfig, err := config.PrepareDeckhouseInstallConfig(ctx, metaConfig, &b.Options.Global)
+	deckhouseInstallConfig, err := prepareBootstrapInstallConfig(ctx, metaConfig, &b.Options.Global)
 	if err != nil {
 		return err
 	}

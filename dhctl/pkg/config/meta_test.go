@@ -397,6 +397,8 @@ func TestPrepareRegistry(t *testing.T) {
 				},
 			})
 			require.Equal(t, true, cfg.Registry.LegacyMode)
+			require.True(t, cfg.Registry.FromInitConfiguration)
+			require.False(t, cfg.Registry.FoldedFromDirect)
 			require.Equal(t, registry_const.ModeUnmanaged, cfg.Registry.Settings.Mode)
 			registry := cfg.Registry.Settings.RemoteData
 			require.Equal(t, "r.example.com/test", registry.ImagesRepo)
@@ -405,9 +407,46 @@ func TestPrepareRegistry(t *testing.T) {
 			require.Equal(t, "b", registry.Password)
 			require.Equal(t, "", registry.CA)
 		})
-		t.Run("Default -> CE edition registry && direct && not legacy", func(t *testing.T) {
+		// Commander's way of naming the registry. It installs as the InitConfiguration above, and is
+		// recorded as folded: the preflight messages then point at registry.direct, which the user
+		// wrote, and not at registry.unmanaged or InitConfiguration, which they did not.
+		t.Run("ModuleConfig Deckhouse Direct -> folded into InitConfiguration && legacy", func(t *testing.T) {
+			cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{
+				"manifests": []string{
+					`
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  enabled: true
+  settings:
+    registry:
+      mode: Direct
+      direct:
+        imagesRepo: r.example.com/test
+        scheme: HTTPS
+  version: 1
+`,
+				},
+			})
+			require.Equal(t, true, cfg.Registry.LegacyMode)
+			require.Equal(t, registry_const.ModeUnmanaged, cfg.Registry.Settings.Mode)
+			require.True(t, cfg.Registry.FoldedFromDirect)
+			require.False(t, cfg.Registry.FromInitConfiguration)
+			require.Equal(t, "r.example.com/test", cfg.Registry.Settings.RemoteData.ImagesRepo)
+		})
+		// The installer adds the registry ModuleConfig, Managed from CE, and resolves it the way it
+		// resolves one the user wrote: Direct for the installer, the agent on the first master, and
+		// nothing written into the deckhouse ModuleConfig.
+		t.Run("Default -> CE edition registry && registry module && not legacy", func(t *testing.T) {
 			cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{})
+			require.True(t, cfg.RegistryDefaulted())
+			require.NotNil(t, cfg.FindModuleConfig("registry"))
 			require.Equal(t, false, cfg.Registry.LegacyMode)
+			require.True(t, cfg.Registry.FromRegistryModule)
+			require.True(t, cfg.Registry.AgentOwnsRuntime)
+			require.False(t, cfg.Registry.StoreExpected)
 			require.Equal(t, registry_const.ModeDirect, cfg.Registry.Settings.Mode)
 			registry := cfg.Registry.Settings.RemoteData
 			require.Equal(t, "registry.deckhouse.io/deckhouse/ce", registry.ImagesRepo)
@@ -440,6 +479,8 @@ spec:
 				},
 			})
 			require.Equal(t, false, cfg.Registry.LegacyMode)
+			require.False(t, cfg.Registry.FromInitConfiguration)
+			require.False(t, cfg.Registry.FoldedFromDirect)
 			require.Equal(t, registry_const.ModeUnmanaged, cfg.Registry.Settings.Mode)
 			registry := cfg.Registry.Settings.RemoteData
 			require.Equal(t, "r.example.com/test", registry.ImagesRepo)

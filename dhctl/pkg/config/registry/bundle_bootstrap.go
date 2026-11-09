@@ -158,12 +158,13 @@ func BundleFactsFromModuleConfig(doc []byte) (BundleBootstrapInputs, error) {
 		return in, nil
 	}
 
-	// An absent mode means the module's own default, which manages the registry.
+	// An absent mode means the module's own default, Unmanaged, which manages nothing; the module's
+	// schema refuses primary and storage without mode: Managed.
 	mode, _, err := unstructured.NestedString(obj.Object, "spec", "settings", "mode")
 	if err != nil {
 		return in, fmt.Errorf("read the registry mode: %w", err)
 	}
-	if mode != "" && mode != modeManaged {
+	if mode != modeManaged {
 		return in, nil
 	}
 
@@ -237,6 +238,28 @@ func BundleFactsFromModuleConfig(doc []byte) (BundleBootstrapInputs, error) {
 
 // licenseUser is the account name a Deckhouse license authenticates as.
 const licenseUser = "license-token"
+
+// DefaultModuleSettings are the registry ModuleConfig settings of a cluster whose configuration
+// names no registry anywhere: the module manages the pull path, from the public CE registry, with no
+// credentials and no cache.
+//
+// Kept beside BundleFactsFromModuleConfig because it is that function's input: the installer writes
+// these settings into the configuration and then reads them back the way it reads a ModuleConfig the
+// user wrote, so the cluster gets exactly what that ModuleConfig would have given it.
+func DefaultModuleSettings() map[string]any {
+	host, path, _ := strings.Cut(constant.DefaultImagesRepo, "/")
+
+	return map[string]any{
+		"mode": modeManaged,
+		"primary": map[string]any{
+			"upstream": map[string]any{
+				"scheme": string(constant.DefaultScheme),
+				"host":   host,
+				"path":   "/" + path,
+			},
+		},
+	}
+}
 
 // Resolve turns the facts read from the registry ModuleConfig into the arguments NewConfigProvider
 // needs: the registry settings to use, and the options that go with them.

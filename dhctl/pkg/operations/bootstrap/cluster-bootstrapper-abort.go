@@ -61,11 +61,16 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context) error {
 	}
 	defer registryStop()
 
+	// Parsed as a destroy, which is what abort is. Without the operation the parse is an
+	// installation's, and what only an installation refuses, such as a registry ModuleConfig left
+	// Unmanaged with no registry named, would keep abort from removing the infrastructure an older
+	// dhctl or a since edited configuration has already created.
 	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
 		b.Options.Global.ConfigPaths,
 		infrastructureprovider.MetaConfigValidatorProvider(),
 		&b.Options.Global,
+		config.ValidateOptionOperation(infrastructureprovider.DhctlOperationDestroy),
 	)
 	if err != nil {
 		return err

@@ -120,18 +120,34 @@ func (c RegistryCredentialsCheck) authFailure(address, repoPath, user string, er
 		// registry (Nexus, Harbor with basic, registry:2 behind htpasswd): the password is
 		// simply wrong, and there is nothing to enable.
 		failure.Observed = fmt.Sprintf("%s uses basic authentication and rejected the credentials", address)
-		failure.Fix = registryCredentialsFix
+		failure.Fix = "check " + registryCredentialsField(c.registryMode())
 
 	default:
 		failure.Observed = fmt.Sprintf("%s rejected the credentials for %q (HTTP 401)", address, user)
-		failure.Fix = registryCredentialsFix
+		failure.Fix = "check " + registryCredentialsField(c.registryMode())
 	}
 
 	return preflight.Permanent(failure)
 }
 
-const registryCredentialsFix = `check .spec.settings.registry.direct.license (or username/password) in the "deckhouse" ModuleConfig, ` +
-	`or InitConfiguration.deckhouse.registryDockerCfg. Key the dockercfg entry by the registry address exactly`
+// registryCredentialsField names the credentials the way registryImagesRepoField names the
+// address: in the document the registry came from. The fix used to name registry.direct of the
+// deckhouse ModuleConfig whatever the mode, and so sent a registry the registry ModuleConfig names
+// to a section its configuration does not have.
+func registryCredentialsField(mode string) string {
+	switch mode {
+	case registryFromModule:
+		return `.spec.settings.primary.upstream.auth.license (or username/password) in the "registry" ModuleConfig`
+	case registryFoldedDirect:
+		return `.spec.settings.registry.direct.license (or username/password) in the "deckhouse" ModuleConfig`
+	case registryFromInitConfiguration:
+		return "InitConfiguration.deckhouse.registryDockerCfg. " + registryDockerCfgKey
+	}
+	return fmt.Sprintf(`.spec.settings.registry.%s.license (or username/password) in the "deckhouse" ModuleConfig, `+
+		"or InitConfiguration.deckhouse.registryDockerCfg. %s", registrySection(mode), registryDockerCfgKey)
+}
+
+const registryDockerCfgKey = "Key the dockercfg entry by the registry address exactly"
 
 func RegistryCredentials(meta *config.MetaConfig, cfg *config.DeckhouseInstaller) preflight.Check {
 	check := RegistryCredentialsCheck{
@@ -151,8 +167,5 @@ func RegistryCredentials(meta *config.MetaConfig, cfg *config.DeckhouseInstaller
 // the fields live under. Empty when no configuration was loaded, which registrySection reports
 // as a placeholder rather than guessing.
 func (c RegistryCredentialsCheck) registryMode() string {
-	if c.MetaConfig == nil {
-		return ""
-	}
-	return string(c.MetaConfig.Registry.Settings.Mode)
+	return configuredRegistryMode(c.MetaConfig)
 }

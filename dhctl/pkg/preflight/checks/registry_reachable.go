@@ -142,12 +142,72 @@ func registryTransportFailure(endpoint, address, scheme, mode string, err error)
 // the mode in use — registry.direct.imagesRepo, registry.proxy.imagesRepo — so a message printing
 // "<mode>" names a path that is in nobody's document, and the reader has to work out which of the
 // four sections is theirs before they can act on it.
+//
+// A registry the registry ModuleConfig names has neither: its upstream is primary.upstream there,
+// whether the user wrote that ModuleConfig or the installer did because nothing else named a
+// registry. Pointing such a reader at the deckhouse ModuleConfig sends them to a section their
+// configuration does not have.
+//
+// The same goes for a registry whose resolved mode is not the one the user wrote: a Direct section
+// of the deckhouse ModuleConfig is installed as InitConfiguration, and InitConfiguration as legacy
+// Unmanaged. Printing the resolved mode named registry.unmanaged, which neither of those users
+// wrote, so each is pointed at the field they did write.
 func registryImagesRepoField(mode string) string {
+	switch mode {
+	case registryFromModule:
+		return `.spec.settings.primary.upstream.host and .path in the "registry" ModuleConfig`
+	case registryFoldedDirect:
+		return `.spec.settings.registry.direct.imagesRepo in the "deckhouse" ModuleConfig`
+	case registryFromInitConfiguration:
+		return "InitConfiguration.deckhouse.imagesRepo"
+	}
 	return fmt.Sprintf(`.spec.settings.registry.%s.imagesRepo in the "deckhouse" ModuleConfig (InitConfiguration.deckhouse.imagesRepo)`, registrySection(mode))
 }
 
 func registryCAField(mode string) string {
+	switch mode {
+	case registryFromModule:
+		return `.spec.settings.primary.upstream.ca in the "registry" ModuleConfig`
+	case registryFoldedDirect:
+		return `.spec.settings.registry.direct.ca in the "deckhouse" ModuleConfig`
+	case registryFromInitConfiguration:
+		return "InitConfiguration.deckhouse.registryCA"
+	}
 	return fmt.Sprintf(`.spec.settings.registry.%s.ca in the "deckhouse" ModuleConfig (InitConfiguration.deckhouse.registryCA)`, registrySection(mode))
+}
+
+// Stand-ins for a mode where the mode the registry resolved to does not say where its fields live.
+// None of them is the name of a mode, so none can be mistaken for one.
+const (
+	// registryFromModule: the registry comes from the registry ModuleConfig. The fields then live
+	// there, under primary.upstream, and no mode section of the deckhouse ModuleConfig applies.
+	registryFromModule = "registry module"
+
+	// registryFoldedDirect: the user wrote registry.mode: Direct in the deckhouse ModuleConfig, and
+	// the installer read it as InitConfiguration (see registry.FoldLegacyDirectIntoInit).
+	registryFoldedDirect = "Direct folded into InitConfiguration"
+
+	// registryFromInitConfiguration: the user wrote the registry into InitConfiguration.
+	registryFromInitConfiguration = "InitConfiguration"
+)
+
+// configuredRegistryMode is what the checks pass to the field helpers above: the mode of the
+// deckhouse settings, or one of the stand-ins above when the document the registry came from is not
+// the deckhouse section of that mode. Empty when no configuration was loaded, which registrySection
+// reports as a placeholder rather than guessing.
+func configuredRegistryMode(meta *config.MetaConfig) string {
+	if meta == nil {
+		return ""
+	}
+	switch {
+	case meta.Registry.FromRegistryModule:
+		return registryFromModule
+	case meta.Registry.FoldedFromDirect:
+		return registryFoldedDirect
+	case meta.Registry.FromInitConfiguration:
+		return registryFromInitConfiguration
+	}
+	return string(meta.Registry.Settings.Mode)
 }
 
 // registrySection is the ModuleConfig key of a registry mode, which is its name lowercased. An
@@ -174,8 +234,5 @@ func RegistryReachable(meta *config.MetaConfig) preflight.Check {
 // the fields live under. Empty when no configuration was loaded, which registrySection reports
 // as a placeholder rather than guessing.
 func (c RegistryReachableCheck) registryMode() string {
-	if c.MetaConfig == nil {
-		return ""
-	}
-	return string(c.MetaConfig.Registry.Settings.Mode)
+	return configuredRegistryMode(c.MetaConfig)
 }

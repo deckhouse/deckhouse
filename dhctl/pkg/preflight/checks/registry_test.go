@@ -19,9 +19,12 @@ import (
 	"net/http"
 	"testing"
 
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	registry_mocks "github.com/deckhouse/deckhouse/dhctl/pkg/config/registrymocks"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
@@ -144,4 +147,90 @@ func TestRegistryCredentialsWithoutCredentialsIsNotApplicable(t *testing.T) {
 
 	_, err := check.Run(t.Context())
 	assert.ErrorIs(t, err, preflight.ErrNotApplicable)
+}
+
+// TestRegistryFieldsNameTheRegistryModuleConfigItCameFrom: a registry the registry ModuleConfig
+// names, written by the user or by the installer when nothing named a registry, has its upstream
+// under primary.upstream there. The failures used to send the reader to a section of the deckhouse
+// ModuleConfig their configuration does not have.
+func TestRegistryFieldsNameTheRegistryModuleConfigItCameFrom(t *testing.T) {
+	fromModule := registry_mocks.ConfigBuilder(registry_mocks.WithModeDirect())
+	fromModule.FromRegistryModule = true
+	meta := &config.MetaConfig{Registry: fromModule}
+
+	mode := configuredRegistryMode(meta)
+	assert.Equal(t, registryFromModule, mode)
+	assert.Equal(t, `.spec.settings.primary.upstream.host and .path in the "registry" ModuleConfig`, registryImagesRepoField(mode))
+	assert.Equal(t, `.spec.settings.primary.upstream.ca in the "registry" ModuleConfig`, registryCAField(mode))
+	assert.Equal(t, `.spec.settings.primary.upstream.auth.license (or username/password) in the "registry" ModuleConfig`, registryCredentialsField(mode))
+	assert.NotContains(t, RegistryReachableCheck{MetaConfig: meta}.registryMode(), "direct")
+
+	written := &config.MetaConfig{Registry: registry_mocks.ConfigBuilder(registry_mocks.WithModeDirect())}
+	assert.Contains(t, registryImagesRepoField(configuredRegistryMode(written)), `.spec.settings.registry.direct.imagesRepo in the "deckhouse" ModuleConfig`)
+	assert.Equal(t, "", configuredRegistryMode(nil))
+}
+
+// TestRegistryFieldsNameTheDocumentTheUserWrote: a Direct section of the deckhouse ModuleConfig, as
+// Commander writes it, is installed as InitConfiguration, and InitConfiguration as legacy Unmanaged.
+// The failures printed the resolved mode and sent both readers to registry.unmanaged, a section
+// neither of them wrote.
+func TestRegistryFieldsNameTheDocumentTheUserWrote(t *testing.T) {
+	t.Run("a folded Direct section names registry.direct", func(t *testing.T) {
+		folded := registry_mocks.ConfigBuilder(registry_mocks.WithModeUnmanaged(), registry_mocks.WithLegacyMode())
+		folded.FoldedFromDirect = true
+		meta := &config.MetaConfig{Registry: folded}
+
+		mode := configuredRegistryMode(meta)
+		assert.Equal(t, `.spec.settings.registry.direct.imagesRepo in the "deckhouse" ModuleConfig`, registryImagesRepoField(mode))
+		assert.Equal(t, `.spec.settings.registry.direct.ca in the "deckhouse" ModuleConfig`, registryCAField(mode))
+		assert.Equal(t, `.spec.settings.registry.direct.license (or username/password) in the "deckhouse" ModuleConfig`, registryCredentialsField(mode))
+	})
+
+	t.Run("InitConfiguration names InitConfiguration alone", func(t *testing.T) {
+		stated := registry_mocks.ConfigBuilder(registry_mocks.WithModeUnmanaged(), registry_mocks.WithLegacyMode())
+		stated.FromInitConfiguration = true
+		meta := &config.MetaConfig{Registry: stated}
+
+		mode := configuredRegistryMode(meta)
+		assert.Equal(t, "InitConfiguration.deckhouse.imagesRepo", registryImagesRepoField(mode))
+		assert.Equal(t, "InitConfiguration.deckhouse.registryCA", registryCAField(mode))
+		assert.Equal(t, "InitConfiguration.deckhouse.registryDockerCfg. Key the dockercfg entry by the registry address exactly", registryCredentialsField(mode))
+	})
+
+	t.Run("an Unmanaged section written by the user keeps its own path", func(t *testing.T) {
+		written := &config.MetaConfig{Registry: registry_mocks.ConfigBuilder(registry_mocks.WithModeUnmanaged())}
+		assert.Contains(t, registryImagesRepoField(configuredRegistryMode(written)), `.spec.settings.registry.unmanaged.imagesRepo in the "deckhouse" ModuleConfig`)
+		assert.Contains(t, registryCredentialsField(configuredRegistryMode(written)), `.spec.settings.registry.unmanaged.license (or username/password) in the "deckhouse" ModuleConfig`)
+	})
+
+	// The image check turns the same HTTP 401 into a failure of its own, so it has to name the
+	// same field as the credentials check.
+	t.Run("a refused image pull names the registry ModuleConfig", func(t *testing.T) {
+		refused := &transport.Error{
+			StatusCode: http.StatusUnauthorized,
+			Errors:     []transport.Diagnostic{{Code: transport.UnauthorizedErrorCode, Message: "authentication required"}},
+		}
+
+		var failure *preflight.Failure
+		require.ErrorAs(t, imageFetchFailure("registry.example.com/deckhouse/ce:v1.78.0", registryFromModule, refused), &failure)
+		assert.Equal(t, `check .spec.settings.primary.upstream.auth.license (or username/password) in the "registry" ModuleConfig`, failure.Fix)
+	})
+
+	// The edition check has no configuration of its own: it reads the mode back off the image the
+	// earlier check fetched, so the stand-in has to survive the trip.
+	t.Run("the edition check names the same field", func(t *testing.T) {
+		image := NewDeckhouseImage()
+		image.set("registry.example.com/deckhouse/ee:v1.78.0", &v1.ConfigFile{}, false, registryFoldedDirect)
+
+		edition := DhctlEditionCheck{
+			BuildInfo: options.BuildInfo{AppVersion: "dev", AppEdition: "ee"},
+			Image:     image,
+		}
+
+		_, err := edition.Run(t.Context())
+		var failure *preflight.Failure
+		require.ErrorAs(t, err, &failure)
+		assert.Contains(t, failure.Fix, `.spec.settings.registry.direct.imagesRepo in the "deckhouse" ModuleConfig`)
+		assert.NotContains(t, failure.Fix, "unmanaged")
+	})
 }

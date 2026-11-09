@@ -49,23 +49,28 @@ import (
 // RefusePreviousImplementationModes, in every operation and never folded into something else,
 // `Local` is otherwise how an installation from a bundle is expressed inside dhctl, and `Unmanaged`
 // already means what this produces.
+//
+// The bool reports that the InitConfiguration returned was made here from that section rather than
+// written by the user. The caller passes it on with WithInitFoldedFromDirect: the registry then
+// resolves exactly as one stated in InitConfiguration, and a message pointing at InitConfiguration
+// would send the reader to a document that has no registry in it.
 func FoldLegacyDirectIntoInit(
 	init *init_config.Config,
 	settings *module_config.DeckhouseSettings,
-) (*init_config.Config, *module_config.DeckhouseSettings, error) {
+) (*init_config.Config, *module_config.DeckhouseSettings, bool, error) {
 	if settings == nil || settings.Mode != constant.ModeDirect {
-		return init, settings, nil
+		return init, settings, false, nil
 	}
 
 	if init != nil && !init.IsEmpty() {
-		return init, nil, nil
+		return init, nil, false, nil
 	}
 
 	// Through New().Merge() so that a section naming only some of the fields is folded with the
 	// same defaults the mode would have been given.
 	direct := module_config.New(constant.ModeDirect).Merge(settings).Direct
 	if direct == nil {
-		return init, settings, nil
+		return init, settings, false, nil
 	}
 
 	folded := init_config.Config{
@@ -86,11 +91,11 @@ func FoldLegacyDirectIntoInit(
 
 		dockerCfg, err := helpers.DockerCfgFromCreds(username, password, address)
 		if err != nil {
-			return nil, nil, fmt.Errorf("build the docker configuration for %q: %w", address, err)
+			return nil, nil, false, fmt.Errorf("build the docker configuration for %q: %w", address, err)
 		}
 
 		folded.RegistryDockerCfg = base64.StdEncoding.EncodeToString(dockerCfg)
 	}
 
-	return &folded, nil, nil
+	return &folded, nil, true, nil
 }

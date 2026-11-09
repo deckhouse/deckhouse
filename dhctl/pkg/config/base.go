@@ -618,6 +618,15 @@ deckhouse: {}
 		}
 	}
 
+	// Here, over the documents, and not in Prepare: Prepare also builds the configuration of a cluster
+	// that exists, read back from it, and that one is not the installer's to give a registry.
+	if err := metaConfig.refuseRegistryModuleWithoutRegistry(options.commanderMode); err != nil {
+		return nil, err
+	}
+	if err := metaConfig.addDefaultRegistryModuleConfig(ctx, schemaStore); err != nil {
+		return nil, err
+	}
+
 	return metaConfig.Prepare(ctx, validatorProvider)
 }
 
@@ -855,7 +864,7 @@ func RegistryConfigProvider(docs []string) (*registry.ConfigProvider, error) {
 	// Before Resolve, so that a cluster carrying both this section and a registry ModuleConfig is
 	// installed from the latter: the module's own configuration is the deliberate statement, and
 	// until now the deckhouse ModuleConfig took precedence over it.
-	initConfig, deckhouseSettings, err := registry.FoldLegacyDirectIntoInit(initConfig, deckhouseSettings)
+	initConfig, deckhouseSettings, _, err := registry.FoldLegacyDirectIntoInit(initConfig, deckhouseSettings)
 	if err != nil {
 		return nil, err
 	}

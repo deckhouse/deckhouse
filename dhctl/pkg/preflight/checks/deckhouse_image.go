@@ -47,9 +47,9 @@ type DeckhouseImage struct {
 	// branch and carries whatever labels that branch happened to have, so the checks that
 	// compare labels have nothing to compare against.
 	fromDevBranch bool
-	// registryMode is the mode the image was fetched in, carried here so the checks that read
-	// the image afterwards can name the ModuleConfig section its fields live under without a
-	// configuration of their own.
+	// registryMode is the mode the image was fetched in, as configuredRegistryMode gives it,
+	// carried here so the checks that read the image afterwards can name the field to fix
+	// without a configuration of their own.
 	registryMode string
 }
 
@@ -209,7 +209,7 @@ func imageFetchFailure(image, mode string, err error) error {
 		case transport.UnauthorizedErrorCode, transport.DeniedErrorCode:
 			failure.Observed = fmt.Sprintf("the registry refused to serve %s with the configured credentials", image)
 			failure.Expected = "pull access to the repository"
-			failure.Fix = registryCredentialsFix
+			failure.Fix = "check " + registryCredentialsField(mode)
 			return preflight.Permanent(failure)
 		}
 	}
@@ -266,8 +266,5 @@ func DeckhouseImageAvailable(meta *config.MetaConfig, cfg *config.DeckhouseInsta
 // the fields live under. Empty when no configuration was loaded, which registrySection reports
 // as a placeholder rather than guessing.
 func (c DeckhouseImageAvailableCheck) registryMode() string {
-	if c.MetaConfig == nil {
-		return ""
-	}
-	return string(c.MetaConfig.Registry.Settings.Mode)
+	return configuredRegistryMode(c.MetaConfig)
 }

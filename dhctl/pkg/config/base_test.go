@@ -241,6 +241,8 @@ spec:
 			t.Run("Without CRI (module disable) -> unmanaged && legacy", func(t *testing.T) {
 				metaConfig, err := ParseConfigFromData(t.Context(), "", DummyValidatorProvider(), nil)
 				require.NoError(t, err)
+				require.False(t, metaConfig.RegistryDefaulted())
+				require.Nil(t, metaConfig.FindModuleConfig("registry"))
 				require.Equal(t, true, metaConfig.Registry.LegacyMode)
 				require.Equal(t, registry_const.ModeUnmanaged, metaConfig.Registry.Settings.Mode)
 				registry := metaConfig.Registry.Settings.RemoteData
@@ -250,10 +252,16 @@ spec:
 				require.Equal(t, "", registry.Password)
 				require.Equal(t, "", registry.CA)
 			})
-			t.Run("With CRI (module enable) -> direct && not legacy", func(t *testing.T) {
+			// Through the registry module: the installer adds its ModuleConfig, Managed from CE, and
+			// reads it the way it reads one the user wrote. See TestDefaultRegistryIsTheRegistryModule.
+			t.Run("With CRI (module enable) -> registry module && not legacy", func(t *testing.T) {
 				metaConfig, err := ParseConfigFromData(t.Context(), ""+clusterConfig, DummyValidatorProvider(), nil)
 				require.NoError(t, err)
+				require.True(t, metaConfig.RegistryDefaulted())
+				require.NotNil(t, metaConfig.FindModuleConfig("registry"))
 				require.Equal(t, false, metaConfig.Registry.LegacyMode)
+				require.True(t, metaConfig.Registry.FromRegistryModule)
+				require.True(t, metaConfig.Registry.AgentOwnsRuntime)
 				require.Equal(t, registry_const.ModeDirect, metaConfig.Registry.Settings.Mode)
 				registry := metaConfig.Registry.Settings.RemoteData
 				require.Equal(t, "registry.deckhouse.io/deckhouse/ce", registry.ImagesRepo)

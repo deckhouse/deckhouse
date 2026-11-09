@@ -20,6 +20,7 @@ import (
 
 	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -63,7 +64,7 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 			return err
 		}
 
-		installConfig, err := config.PrepareDeckhouseInstallConfig(ctx, metaConfig, &b.Options.Global)
+		installConfig, err := prepareBootstrapInstallConfig(ctx, metaConfig, &b.Options.Global)
 		if err != nil {
 			return err
 		}
@@ -115,4 +116,18 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 	}
 
 	return body(nil)
+}
+
+// prepareBootstrapInstallConfig is PrepareDeckhouseInstallConfig for the two commands that install
+// the ModuleConfigs, bootstrap and bootstrap-phase install-deckhouse. They are where the default
+// registry is announced: dhctl deckhouse create-deployment shares PrepareDeckhouseInstallConfig and
+// creates only the Deployment, so the warning is not said there.
+func prepareBootstrapInstallConfig(ctx context.Context, metaConfig *config.MetaConfig, globalOptions *options.GlobalOptions) (*config.DeckhouseInstaller, error) {
+	installConfig, err := config.PrepareDeckhouseInstallConfig(ctx, metaConfig, globalOptions)
+	if err != nil {
+		return nil, err
+	}
+	config.WarnAboutDefaultRegistry(ctx, metaConfig)
+
+	return installConfig, nil
 }

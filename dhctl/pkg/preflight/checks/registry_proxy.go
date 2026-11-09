@@ -224,8 +224,5 @@ func RegistryProxy(meta *config.MetaConfig, sshProviderInitializer *providerinit
 
 // registryMode is the mode the registry is configured in; see registrySection.
 func (c RegistryProxyCheck) registryMode() string {
-	if c.MetaConfig == nil {
-		return ""
-	}
-	return string(c.MetaConfig.Registry.Settings.Mode)
+	return configuredRegistryMode(c.MetaConfig)
 }

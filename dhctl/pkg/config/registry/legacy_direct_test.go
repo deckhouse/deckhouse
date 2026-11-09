@@ -52,7 +52,7 @@ func credentialsIn(t *testing.T, config *init_config.Config, address string) (st
 // address and which are left to mean what they say.
 func TestFoldLegacyDirectIntoInit(t *testing.T) {
 	t.Run("Direct with credentials becomes the installer's registry", func(t *testing.T) {
-		init, settings, err := FoldLegacyDirectIntoInit(nil, commanderDirect(module_config.RegistrySettings{
+		init, settings, folded, err := FoldLegacyDirectIntoInit(nil, commanderDirect(module_config.RegistrySettings{
 			ImagesRepo: "registry.example.com/deckhouse/ee",
 			Scheme:     constant.SchemeHTTPS,
 			CA:         "CA-CERT",
@@ -61,6 +61,7 @@ func TestFoldLegacyDirectIntoInit(t *testing.T) {
 		}))
 		require.NoError(t, err)
 
+		assert.True(t, folded, "the InitConfiguration is the fold's, not the user's")
 		assert.Nil(t, settings, "nothing is left to ask the previous implementation for")
 		require.NotNil(t, init)
 		assert.Equal(t, "registry.example.com/deckhouse/ee", init.ImagesRepo)
@@ -73,7 +74,7 @@ func TestFoldLegacyDirectIntoInit(t *testing.T) {
 	})
 
 	t.Run("a license is folded as the credentials it stands for", func(t *testing.T) {
-		init, _, err := FoldLegacyDirectIntoInit(nil, commanderDirect(module_config.RegistrySettings{
+		init, _, _, err := FoldLegacyDirectIntoInit(nil, commanderDirect(module_config.RegistrySettings{
 			ImagesRepo: "registry.example.com/deckhouse/ee",
 			Scheme:     constant.SchemeHTTPS,
 			License:    "LICENSE-KEY",
@@ -87,7 +88,7 @@ func TestFoldLegacyDirectIntoInit(t *testing.T) {
 	})
 
 	t.Run("no credentials, no docker configuration", func(t *testing.T) {
-		init, _, err := FoldLegacyDirectIntoInit(nil, commanderDirect(module_config.RegistrySettings{
+		init, _, _, err := FoldLegacyDirectIntoInit(nil, commanderDirect(module_config.RegistrySettings{
 			ImagesRepo: "registry.example.com/deckhouse/ce",
 			Scheme:     constant.SchemeHTTPS,
 		}))
@@ -102,12 +103,13 @@ func TestFoldLegacyDirectIntoInit(t *testing.T) {
 			RegistryScheme: string(constant.SchemeHTTPS),
 		}
 
-		init, settings, err := FoldLegacyDirectIntoInit(stated, commanderDirect(module_config.RegistrySettings{
+		init, settings, folded, err := FoldLegacyDirectIntoInit(stated, commanderDirect(module_config.RegistrySettings{
 			ImagesRepo: "registry.example.com/deckhouse/ee",
 			Scheme:     constant.SchemeHTTPS,
 		}))
 		require.NoError(t, err)
 
+		assert.False(t, folded, "the registry is the one the user wrote into InitConfiguration")
 		assert.Same(t, stated, init, "the operator's own statement is not rewritten")
 		assert.Nil(t, settings, "and the section that would have overridden it is dropped")
 	})
@@ -121,9 +123,10 @@ func TestFoldLegacyDirectIntoInit(t *testing.T) {
 			t.Run(string(mode), func(t *testing.T) {
 				original := &module_config.DeckhouseSettings{Mode: mode}
 
-				init, settings, err := FoldLegacyDirectIntoInit(nil, original)
+				init, settings, folded, err := FoldLegacyDirectIntoInit(nil, original)
 				require.NoError(t, err)
 
+				assert.False(t, folded)
 				assert.Nil(t, init)
 				assert.Same(t, original, settings)
 			})
@@ -131,9 +134,10 @@ func TestFoldLegacyDirectIntoInit(t *testing.T) {
 	})
 
 	t.Run("no settings at all", func(t *testing.T) {
-		init, settings, err := FoldLegacyDirectIntoInit(nil, nil)
+		init, settings, folded, err := FoldLegacyDirectIntoInit(nil, nil)
 		require.NoError(t, err)
 
+		assert.False(t, folded)
 		assert.Nil(t, init)
 		assert.Nil(t, settings)
 	})
@@ -146,15 +150,16 @@ func TestFoldLegacyDirectIntoInit(t *testing.T) {
 // into the deckhouse ModuleConfig of the installed cluster, so the registry module comes up at its
 // default — managing nothing — while the nodes pull from the registry the folded section named.
 func TestAFoldedDirectInstallsWithTheModuleManagingNothing(t *testing.T) {
-	init, settings, err := FoldLegacyDirectIntoInit(nil, commanderDirect(module_config.RegistrySettings{
+	init, settings, folded, err := FoldLegacyDirectIntoInit(nil, commanderDirect(module_config.RegistrySettings{
 		ImagesRepo: "registry.example.com/deckhouse/ee",
 		Scheme:     constant.SchemeHTTPS,
 		Username:   "robot",
 		Password:   "secret",
 	}))
 	require.NoError(t, err)
+	require.True(t, folded)
 
-	config, err := NewConfigProvider(init, settings).Config(constant.CRIContainerdV1, true)
+	config, err := NewConfigProvider(init, settings, WithInitFoldedFromDirect()).Config(constant.CRIContainerdV1, true)
 	require.NoError(t, err)
 
 	assert.True(t, config.LegacyMode, "the module is not asked to manage anything")
@@ -162,6 +167,33 @@ func TestAFoldedDirectInstallsWithTheModuleManagingNothing(t *testing.T) {
 	assert.Equal(t, "registry.example.com/deckhouse/ee", config.Settings.RemoteData.ImagesRepo)
 	assert.Equal(t, "robot", config.Settings.RemoteData.Username)
 	assert.Equal(t, "secret", config.Settings.RemoteData.Password)
+
+	// What the messages naming a field to fix go by: the user wrote registry.direct in the deckhouse
+	// ModuleConfig, and the Unmanaged above is the fold's, not theirs.
+	assert.True(t, config.FoldedFromDirect)
+	assert.False(t, config.FromInitConfiguration)
+}
+
+// TestAnInitConfigurationIsRecordedAsTheSource: a registry the user wrote into InitConfiguration
+// resolves to the same legacy Unmanaged as a folded Direct and as the default without a container
+// runtime, and only this one is recorded as coming from InitConfiguration.
+func TestAnInitConfigurationIsRecordedAsTheSource(t *testing.T) {
+	stated := &init_config.Config{
+		ImagesRepo:     "registry.stated.example.com/deckhouse/ee",
+		RegistryScheme: string(constant.SchemeHTTPS),
+	}
+
+	config, err := NewConfigProvider(stated, nil).Config(constant.CRIContainerdV1, true)
+	require.NoError(t, err)
+	assert.True(t, config.LegacyMode)
+	assert.True(t, config.FromInitConfiguration)
+	assert.False(t, config.FoldedFromDirect)
+
+	defaulted, err := NewConfigProvider(nil, nil).Config("", false)
+	require.NoError(t, err)
+	assert.True(t, defaulted.LegacyMode)
+	assert.False(t, defaulted.FromInitConfiguration, "the default comes from no document")
+	assert.False(t, defaulted.FoldedFromDirect)
 }
 
 // TestAnUnfoldedDirectStillAsksForTheModule pins the behaviour the fold replaces, so that a change

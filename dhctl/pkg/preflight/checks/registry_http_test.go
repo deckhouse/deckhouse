@@ -289,3 +289,36 @@ func TestRegistryCredentialsAgainstARealServer(t *testing.T) {
 		})
 	}
 }
+
+// TestRegistryCredentialsFixNamesTheRegistryModuleConfig: a default CE installation takes its
+// registry from the registry ModuleConfig, where the credentials are primary.upstream.auth. The
+// fix for an HTTP 401 named registry.direct.license of the deckhouse ModuleConfig and
+// InitConfiguration, neither of which that configuration has.
+func TestRegistryCredentialsFixNamesTheRegistryModuleConfig(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		withRegistryAPIVersion(w)
+		w.Header().Set("WWW-Authenticate", `Basic realm="registry"`)
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	t.Cleanup(server.Close)
+
+	registryCfg := registry_mocks.ConfigBuilder(
+		registry_mocks.WithImagesRepo(strings.TrimPrefix(server.URL, "https://")+"/deckhouse/ce"),
+		registry_mocks.WithSchemeHTTPS(),
+		registry_mocks.WithCA(serverCA(t, server)),
+		registry_mocks.WithCredentials("license-token", "dh-test-secret-0123456789abcdef"),
+	)
+	registryCfg.FromRegistryModule = true
+
+	check := RegistryCredentialsCheck{
+		MetaConfig:    &config.MetaConfig{Registry: registryCfg},
+		InstallConfig: &config.DeckhouseInstaller{Registry: registryCfg, DevBranch: "main"},
+	}
+
+	_, err := check.Run(t.Context())
+	var failure *preflight.Failure
+	require.ErrorAs(t, err, &failure)
+	assert.Equal(t, `check .spec.settings.primary.upstream.auth.license (or username/password) in the "registry" ModuleConfig`, failure.Fix)
+	assert.NotContains(t, failure.Fix, `"deckhouse"`)
+	assert.NotContains(t, failure.Fix, "InitConfiguration")
+}
