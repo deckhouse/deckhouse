@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -328,7 +329,11 @@ func (a *authenticator) exchange(
 	defer func() { _ = response.Body.Close() }()
 
 	if response.StatusCode != http.StatusOK {
-		return "", time.Time{}, fmt.Errorf("%s rejected the credentials with %s", ch.realm, response.Status)
+		err := fmt.Errorf("%s rejected the credentials with %s", ch.realm, response.Status)
+		if response.StatusCode == http.StatusUnauthorized || response.StatusCode == http.StatusForbidden {
+			err = credentialRefusal{err}
+		}
+		return "", time.Time{}, err
 	}
 
 	var body struct {
@@ -349,6 +354,23 @@ func (a *authenticator) exchange(
 	}
 
 	return token, time.Now().Add(tokenLifetime(body.ExpiresIn, token, time.Now()) - tokenLeeway), nil
+}
+
+// credentialRefusal is a token service turning the credentials down, as opposed to failing to
+// answer at all.
+//
+// Told apart because the two mean different things to the order targets are tried in: a token
+// service that answered 401 is a registry that is up and refusing, the same as a registry that
+// refuses a request directly, and demoting it would send traffic elsewhere for a reason that
+// has nothing to do with where it is sent.
+type credentialRefusal struct{ error }
+
+func (r credentialRefusal) Unwrap() error { return r.error }
+
+// isCredentialRefusal reports whether an attempt failed because credentials were refused.
+func isCredentialRefusal(err error) bool {
+	var refusal credentialRefusal
+	return errors.As(err, &refusal)
 }
 
 // tokenLifetime is how long a token is good for: what the response says, or else what the token says

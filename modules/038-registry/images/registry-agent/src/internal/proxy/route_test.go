@@ -594,3 +594,65 @@ func TestResolveSendsASiblingOfTheImageSetToTheUpstream(t *testing.T) {
 	_, err = Resolve(constant.Host, "/v2/flant/modules/console/manifests/v1", spec, self)
 	require.ErrorContains(t, err, "outside the image set")
 }
+
+// TestResolveGivesTheCachesCredentialsOnlyToTheImageSet is the boundary of the Known rule for
+// the in-cluster cache, as a node actually sees it: its replicas named by the addresses of the
+// control-plane nodes, the leader first and the others as mirrors, all with the read account.
+//
+// A repository under the image set's prefix is a primary pull and goes through the cache as
+// usual. Anything else on the same address is not the agent's to serve with that account: it is
+// sent out as an unconfigured registry would be, without credentials, and answered by the store
+// itself. That needs the store's authority, which the node does not trust on its own.
+func TestResolveGivesTheCachesCredentialsOnlyToTheImageSet(t *testing.T) {
+	readOnly := &registryv1alpha1.Auth{Username: "registry-ro", Password: "dh-test-secret-0123456789abcdef"}
+	spec := layout()
+	spec.Backends[0].Endpoint = registryv1alpha1.Endpoint{
+		Scheme: registryv1alpha1.SchemeHTTPS,
+		Host:   "10.0.0.5:5001",
+		Path:   constant.Path,
+		CA:     "storage-ca",
+		Auth:   readOnly,
+	}
+	spec.Backends[0].Mirrors = []registryv1alpha1.Endpoint{{
+		Scheme: registryv1alpha1.SchemeHTTPS,
+		Host:   "10.0.0.6:5001",
+		Path:   constant.Path,
+		CA:     "storage-ca",
+		Auth:   readOnly,
+	}}
+
+	for _, replica := range []string{"10.0.0.5:5001", "10.0.0.6:5001"} {
+		t.Run(replica+" outside the image set", func(t *testing.T) {
+			decision, err := Resolve(replica, "/v2/other/app/manifests/v1", spec, self)
+			require.NoError(t, err)
+
+			assert.Equal(t, KindPassThrough, decision.Kind)
+			require.Len(t, decision.Targets, 1)
+			assert.Nil(t, decision.Targets[0].Auth,
+				"the read account is for the image set, not for whatever else the store holds")
+			assert.Equal(t, "storage-ca", decision.Targets[0].CA,
+				"without it the handshake fails before the store can answer")
+			assert.Equal(t, "/v2/other/app/manifests/v1", decision.Targets[0].Path)
+		})
+
+		t.Run(replica+" inside the image set", func(t *testing.T) {
+			decision, err := Resolve(replica, "/v2/system/deckhouse/one/manifests/v1", spec, self)
+			require.NoError(t, err)
+
+			assert.Equal(t, KindPrimary, decision.Kind)
+			require.NotEmpty(t, decision.Targets)
+			assert.Equal(t, "10.0.0.5:5001", decision.Targets[0].Host, "the leader, as for any primary pull")
+			assert.Same(t, readOnly, decision.Targets[0].Auth)
+		})
+	}
+
+	// The upstream and the additional routes keep the rule: their own repositories are still
+	// served with the credentials the cluster holds for them.
+	decision, err := Resolve("registry.deckhouse.io", "/v2/somebody/else/manifests/v1", spec, self)
+	require.NoError(t, err)
+	assert.Equal(t, KindKnown, decision.Kind)
+
+	decision, err = Resolve("vendor.example.com", "/v2/virt/tool/manifests/sha256:abc", spec, self)
+	require.NoError(t, err)
+	assert.Equal(t, KindKnown, decision.Kind)
+}

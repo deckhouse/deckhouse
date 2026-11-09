@@ -184,6 +184,14 @@ func Resolve(
 	//
 	// The credentials go to the very registry they belong to, so nothing is disclosed: this
 	// adds no address, it only stops dropping the credentials for one already in the layout.
+	//
+	// The in-cluster cache is not among them. Its replicas are reached by the addresses of the
+	// control-plane nodes, and those are nobody's own address for an image: everything this
+	// module puts in the store lives under the image set's prefix and is caught by the branch
+	// above. Matching them here would serve any other repository on `<master IP>:5001` with this
+	// node's read credentials — whatever someone pushed beside the image set, to anything on the
+	// node that asks. Left to the pass-through below, such a request goes out with nothing but
+	// the client's own credentials.
 	if endpoint := knownEndpoint(spec, namespace); endpoint != nil {
 		return Decision{
 			Kind: KindKnown,
@@ -204,6 +212,11 @@ func Resolve(
 	// Unconfigured, and therefore forwarded untouched. No credentials are added: the
 	// agent has none for it, and inventing any would send this node's secrets to a
 	// registry the cluster never vetted.
+	//
+	// A replica of the in-cluster cache keeps the authority it is verified with, and only
+	// that. Its certificate is issued by the cluster's own authority, which the node does
+	// not trust: without it the handshake fails, and the client gets a 502 whatever
+	// credentials it brought, instead of the store's own answer to them.
 	return Decision{
 		Kind: KindPassThrough,
 		Targets: []Target{{
@@ -211,15 +224,36 @@ func Resolve(
 			Scheme: registryv1alpha1.SchemeHTTPS,
 			Host:   namespace,
 			Path:   requestPath,
+			CA:     storageAuthority(spec, namespace),
 		}},
 	}, nil
+}
+
+// storageAuthority is the authority that verifies the in-cluster cache, when the host is one
+// of its replicas — the endpoint or a mirror of the Storage backend — and nothing otherwise.
+func storageAuthority(spec *registryv1alpha1.RegistryNodeSpec, namespace string) string {
+	storage := spec.Backend(registryv1alpha1.BackendStorage)
+	if storage == nil {
+		return ""
+	}
+	if equalHost(storage.Endpoint.Host, namespace) {
+		return storage.Endpoint.CA
+	}
+	for i := range storage.Mirrors {
+		if equalHost(storage.Mirrors[i].Host, namespace) {
+			return storage.Mirrors[i].CA
+		}
+	}
+	return ""
 }
 
 // knownEndpoint finds a configured endpoint answering for this host.
 //
 // Every endpoint in the layout is considered — the backends, their mirrors, and the
 // additional routes with theirs — because the question is only "were we given credentials
-// for this registry", and it does not matter which entry they arrived in.
+// for this registry", and it does not matter which entry they arrived in. The one exception
+// is the in-cluster cache, endpoint and mirrors alike: its credentials are for the image set
+// alone — see Resolve.
 func knownEndpoint(
 	spec *registryv1alpha1.RegistryNodeSpec, namespace string,
 ) *registryv1alpha1.Endpoint {
@@ -231,6 +265,9 @@ func knownEndpoint(
 	}
 
 	for i := range spec.Backends {
+		if spec.Backends[i].Name == registryv1alpha1.BackendStorage {
+			continue
+		}
 		if found := match(&spec.Backends[i].Endpoint); found != nil {
 			return found
 		}

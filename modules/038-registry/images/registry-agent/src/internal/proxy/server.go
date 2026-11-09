@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -51,6 +52,31 @@ const (
 	// containerd's to give up on. Generous all the same: it is not measuring how long
 	// an image takes, only how long nothing at all has happened.
 	DefaultIdleTimeout = 2 * time.Minute
+
+	// DefaultDialTimeout is how long opening a connection to a target may take.
+	//
+	// A third of what the standard library allows, because the address that does not answer is
+	// usually the leader's, on a node that has gone silent, and every pull on this node waits it
+	// out before the next target is asked. The targets are a replica in the cluster's own network
+	// and a registry that serves images to the whole world; neither needs ten seconds to accept a
+	// connection unless something is wrong with it.
+	DefaultDialTimeout = 10 * time.Second
+
+	// h2PingAfter and h2PingTimeout probe an HTTP/2 connection that has gone quiet.
+	//
+	// The agent talks to the store over HTTP/2, so every request to a replica shares one
+	// connection. When the node behind it disappears without a reset, nothing on that
+	// connection fails by itself: each request multiplexed into it sits there until its own
+	// response timeout, and new ones keep being sent into it, because the pool still holds it as
+	// open. A ping after a quiet spell, and closing the connection when it goes unanswered,
+	// turns that into one failure about half a minute in, after which requests dial afresh and
+	// meet DefaultDialTimeout instead.
+	//
+	// Answered by the peer's protocol stack rather than by the registry, so a transfer that is
+	// merely slow, or a pull-through leader still fetching from its own upstream, keeps its
+	// connection.
+	h2PingAfter   = 15 * time.Second
+	h2PingTimeout = 10 * time.Second
 )
 
 // Layout provides the current node layout. An interface so the server does not care
@@ -102,6 +128,9 @@ type Server struct {
 	// fails.
 	IdleTimeout time.Duration
 
+	// DialTimeout bounds opening a connection to a target. Zero means DefaultDialTimeout.
+	DialTimeout time.Duration
+
 	// TrustDir is where Deckhouse stages the certificate authorities this cluster
 	// accepts, one file per registry — see DefaultTrustDir. Empty leaves the agent with
 	// its image's own bundle, which knows nothing the cluster was told.
@@ -120,6 +149,10 @@ type Server struct {
 
 	// serving reports whether the listener is up, for the status the agent publishes.
 	serving atomic.Bool
+
+	// demoted holds the addresses that failed recently, so that requests stop beginning with
+	// them — see demotions.
+	demoted demotions
 
 	// failing records targets whose last attempt did not work, keyed by name.
 	//
@@ -217,15 +250,40 @@ func (s *Server) forward(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	// Whatever failed a moment ago is asked last rather than first. Only reordered, never
+	// removed: when nothing else answers it is still worth asking.
+	promoted := s.demoted.order(decision.Targets)
+
+	// A failure only demotes a target when there is another one to prefer. With a single
+	// target there is no order to change, and recording it would keep a set of every
+	// unreachable registry any pod on the node ever named.
+	alternatives := len(decision.Targets) > 1
+
 	var lastStatus int
 	var lastError error
+
+	// held is a missing image reported by a target that demotion moved ahead of another, kept
+	// back until the targets passed over have been asked too — see below.
+	var held *http.Response
+	var heldTarget *Target
 
 	for i := range decision.Targets {
 		target := &decision.Targets[i]
 
+		// When the attempt began, not when it failed, is what tells a repeat from the same
+		// outage seen late — see demotions.fail.
+		started := s.demoted.clock()
 		response, err := s.attempt(request.Context(), request, target)
 		if err != nil {
 			lastError = err
+			// Not held against the target when the client gave up: containerd abandons a pull
+			// for reasons of its own, and an attempt it cut short says nothing about whether
+			// the registry would have answered. Nor when the target's token service turned
+			// the credentials down — that is the refusal below, arriving one step earlier, and
+			// a registry that answers is not one to route around for reachability.
+			if alternatives && request.Context().Err() == nil && !isCredentialRefusal(err) {
+				s.demoted.fail(target, started)
+			}
 			s.markFailing(target.Name)
 			s.failover(target.Name, metrics.ReasonUnreachable)
 			s.Log.Warn("a target did not answer, trying the next one",
@@ -245,6 +303,9 @@ func (s *Server) forward(writer http.ResponseWriter, request *http.Request) {
 		// own token endpoint, so the client leaves the agent and dials a host it has no
 		// reason to trust — reporting an unknown certificate authority for an address it
 		// should never have contacted, while the next backend is never asked.
+		//
+		// Not a reason to demote it. It answered, and what it refused is a question of
+		// credentials, which the next request carries just the same wherever it is sent.
 		refusedOurs := !target.Auth.IsEmpty() &&
 			(response.StatusCode == http.StatusUnauthorized || response.StatusCode == http.StatusForbidden)
 		if refusedOurs {
@@ -265,8 +326,12 @@ func (s *Server) forward(writer http.ResponseWriter, request *http.Request) {
 		// genuinely not there, and asking the upstream for it is exactly what the cache
 		// is supposed to do — but that is the cache's job, not the agent's: retrying a
 		// 404 here would turn every missing tag into a request to every backend.
-		if response.StatusCode >= http.StatusInternalServerError && i+1 < len(decision.Targets) {
+		//
+		// A missing image already held back counts as a target after it: a server error from
+		// the last one is no better an answer than that.
+		if response.StatusCode >= http.StatusInternalServerError && (i+1 < len(decision.Targets) || held != nil) {
 			lastStatus = response.StatusCode
+			s.demoted.fail(target, started)
 			s.markFailing(target.Name)
 			s.failover(target.Name, metrics.ReasonServerError)
 			_ = response.Body.Close()
@@ -275,10 +340,47 @@ func (s *Server) forward(writer http.ResponseWriter, request *http.Request) {
 			continue
 		}
 
-		// It answered, so whatever was wrong with it before is no longer true.
+		// It answered, so whatever was wrong with it before is no longer true. A server error
+		// from the last target is relayed because there is nothing left to try, which says
+		// nothing good about it, so that one leaves its demotion where it was.
+		if response.StatusCode < http.StatusInternalServerError {
+			s.demoted.succeed(target)
+		}
 		s.markWorking(target.Name)
+
+		// Not relayed yet, though, when it is a 404 from a target that is only being asked first
+		// because the one the layout put ahead of it failed a moment ago. The rule above holds
+		// because the cache comes first and fetches what it lacks from the upstream, so its 404
+		// speaks for both. Turned round, it does not: the upstream knows nothing of what the
+		// cache holds, and an image gone from the upstream or never in it may well be there.
+		// Relayed as it is, demotion would change the answer rather than only the wait — "not
+		// first" turned into "not at all" for the length of the window.
+		//
+		// So the targets passed over are asked as well, as they would have been without
+		// demotion, and the 404 is the answer only when none of them gives a better one. Only a
+		// missing image pays for that, and it pays what every request paid before demotion.
+		if response.StatusCode == http.StatusNotFound && promoted[i] {
+			if held == nil {
+				held, heldTarget = response, target
+			} else {
+				_ = response.Body.Close()
+			}
+			s.Log.Info("a target does not have the image, asking the ones demoted behind it",
+				"target", target.Name, "host", target.Host)
+			continue
+		}
+
+		if held != nil {
+			_ = held.Body.Close()
+		}
 		s.count(string(decision.Kind), result(response.StatusCode))
 		s.relay(writer, response, request.URL.Path, target.Path)
+		return
+	}
+
+	if held != nil {
+		s.count(string(decision.Kind), result(held.StatusCode))
+		s.relay(writer, held, request.URL.Path, heldTarget.Path)
 		return
 	}
 
@@ -408,6 +510,14 @@ func (s *Server) responseTimeout() time.Duration {
 	return DefaultResponseTimeout
 }
 
+// dialTimeout is how long opening a connection may take, defaulted.
+func (s *Server) dialTimeout() time.Duration {
+	if s.DialTimeout > 0 {
+		return s.DialTimeout
+	}
+	return DefaultDialTimeout
+}
+
 // idleTimeout is how long a transfer may produce nothing, defaulted.
 func (s *Server) idleTimeout() time.Duration {
 	if s.IdleTimeout > 0 {
@@ -524,6 +634,12 @@ func (s *Server) client(certificateAuthority string) (*http.Client, error) {
 	// proxy needs. A context deadline cannot express that — it would carry on into the
 	// transfer and cut a large image that is arriving perfectly well.
 	transport.ResponseHeaderTimeout = s.responseTimeout()
+	// The standard library's dialer, with the standard keep-alive, and a shorter limit on
+	// connecting — see DefaultDialTimeout.
+	transport.DialContext = (&net.Dialer{Timeout: s.dialTimeout(), KeepAlive: 30 * time.Second}).DialContext
+	// Health pings for HTTP/2 — see h2PingAfter. The clone keeps ForceAttemptHTTP2, so a
+	// target that offers HTTP/2 gets it even with the trust configured below.
+	transport.HTTP2 = &http.HTTP2Config{SendPingTimeout: h2PingAfter, PingTimeout: h2PingTimeout}
 	if certificateAuthority != "" || (staged != nil && len(staged.pem) > 0) {
 		pool, err := x509.SystemCertPool()
 		if err != nil || pool == nil {

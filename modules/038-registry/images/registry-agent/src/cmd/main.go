@@ -168,6 +168,7 @@ func main() {
 		interval      time.Duration
 		responseLimit time.Duration
 		idleLimit     time.Duration
+		dialLimit     time.Duration
 		metricsListen string
 		logLevel      string
 	)
@@ -204,6 +205,8 @@ func main() {
 		"How long a transfer already under way may produce nothing before the next registry is "+
 			"tried. Reset by every byte that arrives, so an image of any size may take as long as "+
 			"it takes.")
+	flag.DurationVar(&dialLimit, "dial-timeout", proxy.DefaultDialTimeout,
+		"How long opening a connection to one registry may take before the next one is tried.")
 	flag.StringVar(&metricsListen, "metrics-address", "127.0.0.1:4286",
 		"Where to serve the agent's own metrics. Loopback: nothing scrapes a static pod "+
 			"that has to work while the API server does not.")
@@ -235,6 +238,7 @@ func main() {
 		interval:      interval,
 		responseLimit: responseLimit,
 		idleLimit:     idleLimit,
+		dialLimit:     dialLimit,
 		metricsListen: metricsListen,
 	}); err != nil {
 		log.Error("the agent stopped", "error", err.Error())
@@ -257,6 +261,7 @@ type options struct {
 	interval      time.Duration
 	responseLimit time.Duration
 	idleLimit     time.Duration
+	dialLimit     time.Duration
 	metricsListen string
 }
 
@@ -341,6 +346,7 @@ func run(ctx context.Context, log *slog.Logger, opts options) error {
 		Self:            opts.advertise,
 		ResponseTimeout: opts.responseLimit,
 		IdleTimeout:     opts.idleLimit,
+		DialTimeout:     opts.dialLimit,
 		Metrics:         collected,
 		TrustDir:        opts.trustDir,
 	}

@@ -127,3 +127,67 @@ func TestPassThroughTrustsTheAuthoritiesStagedOnTheNode(t *testing.T) {
 		assert.Equal(t, http.StatusOK, response.StatusCode)
 	})
 }
+
+// TestPassThroughToAReplicaIsVerifiedWithTheStoreAuthority: a repository outside the image set,
+// named by a replica's address, is passed through without the node's credentials — and still has
+// to reach the store. The replica's certificate is issued by the cluster's own authority, which
+// is in the layout and nowhere on the node. Verified against the system trust alone, the request
+// never got past the handshake, and the client saw a 502 whatever credentials it brought.
+func TestPassThroughToAReplicaIsVerifiedWithTheStoreAuthority(t *testing.T) {
+	const node, client = "registry-ro", "someone"
+
+	var seen []string
+	store := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, _, _ := r.BasicAuth()
+		seen = append(seen, user)
+		if user != client {
+			w.Header().Set("WWW-Authenticate", `Basic realm="registry"`)
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		w.Header().Set("Docker-Content-Digest", "sha256:other")
+		_, _ = w.Write([]byte("something pushed beside the image set"))
+	}))
+	t.Cleanup(store.Close)
+
+	replica := store.Listener.Addr().String()
+	authority := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: store.Certificate().Raw})
+	spec := &registryv1alpha1.RegistryNodeSpec{
+		Backends: []registryv1alpha1.Backend{{
+			Name: registryv1alpha1.BackendStorage,
+			Endpoint: registryv1alpha1.Endpoint{
+				Scheme: registryv1alpha1.SchemeHTTPS,
+				Host:   replica,
+				Path:   constant.Path,
+				CA:     string(authority),
+				Auth:   &registryv1alpha1.Auth{Username: node, Password: "dh-test-secret-0123456789abcdef"},
+			},
+		}},
+	}
+	const path = "/v2/other/app/manifests/v1"
+
+	t.Run("without credentials the store refuses it", func(t *testing.T) {
+		seen = nil
+		response := pull(t, newServer(spec), replica, path)
+		assert.Equal(t, http.StatusUnauthorized, response.StatusCode,
+			"the store's own answer, not a failed handshake")
+		assert.NotContains(t, seen, node, "the node's account is for the image set alone")
+	})
+
+	t.Run("with the client's own credentials it goes through", func(t *testing.T) {
+		seen = nil
+		front := httptest.NewServer(newServer(spec).Handler())
+		t.Cleanup(front.Close)
+
+		request, err := http.NewRequest(http.MethodGet, front.URL+path+"?ns="+replica, nil)
+		require.NoError(t, err)
+		request.SetBasicAuth(client, "dh-test-secret-0123456789abcdef")
+
+		response, err := http.DefaultClient.Do(request)
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = response.Body.Close() })
+
+		assert.Equal(t, http.StatusOK, response.StatusCode)
+		assert.NotContains(t, seen, node)
+	})
+}
