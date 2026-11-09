@@ -303,20 +303,54 @@ func kubernetesVersion(metaConfig *config.MetaConfig) (string, error) {
 	return version, nil
 }
 
+// refuseBundleRegistry refuses an installation from a bundle for an immutable
+// master, and with it Local mode, which is what such an installation resolves
+// to.
+//
+// Local mode puts the installer's own bundle registry in RemoteData, and it
+// lives on 127.0.0.1 inside the installer container. Everything that makes it
+// work on an ordinary master is a bashible step — the temporary registry the
+// bundle is copied into, the directory the cluster's store later takes over —
+// and an immutable machine runs none of them: it pulls its system extensions
+// and control-plane images itself, from an address it cannot reach.
+//
+// One function for both places that refuse it, so that the two refusals cannot
+// drift apart. ValidateInputs asks it before anything is created, which is what
+// matters in a cloud, where the payload of the first master is built only after
+// the base infrastructure exists and a late refusal leaves that infrastructure
+// paid for and unused. The payload builder asks it again because it is the last
+// point before the document reaches the machine, whatever path led there.
+//
+// The way out it names is the supported one, not a workaround: the registry
+// module in Managed mode with its upstream on a registry inside the perimeter,
+// filled with `d8 mirror push`, is an air-gapped installation as far as the
+// cluster is concerned, and an immutable master installs from it as from any
+// other upstream.
+func refuseBundleRegistry(metaConfig *config.MetaConfig) error {
+	if !metaConfig.Registry.BundleBootstrap && metaConfig.Registry.Settings.Mode != constant.ModeLocal {
+		return nil
+	}
+
+	return fmt.Errorf(
+		"installation from a bundle is not supported for a master NodeGroup with systemType %q: "+
+			"--img-bundle-path is given and the registry ModuleConfig enables storage.cache with no primary.upstream (or the deckhouse ModuleConfig asks "+
+			"for registry mode %q), so the images would be served from %s inside the installer, which the machine cannot "+
+			"reach — it pulls its system extensions and control-plane images itself. For an air-gapped cluster, push the "+
+			"images into a registry inside your perimeter with `d8 mirror push` and set the registry ModuleConfig to "+
+			"mode: Managed with primary.upstream pointing at that internal mirror",
+		systemTypeImmutable, constant.ModeLocal, constant.BundleAddressWithPort)
+}
+
 // nodeRegistry gives the node direct registry access: it pulls the
 // control-plane images and the system extensions itself, with no in-cluster
 // registry-packages-proxy to go through during bootstrap.
 func nodeRegistry(metaConfig *config.MetaConfig) (*registrySpec, error) {
 	settings := metaConfig.Registry.Settings
 
-	// Local mode puts the installer's own bundle registry in RemoteData, and it
-	// lives on 127.0.0.1 inside the installer container. Refused here rather than
-	// by a preflight: preflights can be skipped, and the machine then dies mute.
-	if settings.Mode == constant.ModeLocal {
-		return nil, fmt.Errorf(
-			"registry mode %q is not supported for an immutable master: it serves the images from %s inside the installer, "+
-				"which the machine cannot reach — it pulls its system extensions and control-plane images itself. Use %q or %q",
-			constant.ModeLocal, constant.BundleAddressWithPort, constant.ModeDirect, constant.ModeUnmanaged)
+	// Refused here as well as in ValidateInputs rather than by a preflight:
+	// preflights can be skipped, and the machine then dies mute.
+	if err := refuseBundleRegistry(metaConfig); err != nil {
+		return nil, err
 	}
 
 	// A registry module that owns the pull path is no longer refused here, and the reason the

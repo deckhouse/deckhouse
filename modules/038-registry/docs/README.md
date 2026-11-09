@@ -130,6 +130,44 @@ a leaked password must not be enough to use it.
 The endpoint exists only in an air-gapped cluster. A cluster that has image caching enabled but is not air-gapped does not
 get an internet-facing write point into the registry that it never asked for.
 
+##### Installing from a bundle
+
+An air-gapped cluster can also be installed straight from a bundle made with `d8 mirror pull`. To do so, set
+`mode: Managed` in the `registry` ModuleConfig, enable [`storage.cache`](configuration.html#parameters-storage-cache)
+with its [`storage.size`](configuration.html#parameters-storage-size), describe the bundle in
+[`storage.source`](configuration.html#parameters-storage-source), set no
+[`primary.upstream`](configuration.html#parameters-primary-upstream), and pass the bundle to the installer with
+`--img-bundle-path`:
+
+```yaml
+spec:
+  enabled: true
+  settings:
+    mode: Managed
+    storage:
+      cache: true
+      size: 50Gi
+      source:
+        bundleRef: d8-mirror-bundle
+        expectedDigests: 459
+```
+
+A temporary registry on the first control-plane node serves the bundle until the in-cluster cache starts on that node,
+and the installer then hands the node over to the cache.
+
+Installing from a bundle has the following limitations:
+
+- In a cloud cluster, the `cloud-controller-manager` must be able to initialize the first control-plane node, which
+  means the cloud API must be reachable from the cluster. Until the node loses the
+  `node.cloudprovider.kubernetes.io/uninitialized` taint, the cache cannot be placed on it. The installer waits for
+  that, and if it does not happen, it stops with an error naming the node and keeps the temporary registry, so that
+  the node is not left with nothing to pull images from.
+- A master NodeGroup with `systemType: Immutable` does not support installing from a bundle: such a node runs none of
+  the steps that set up the temporary registry. The installer refuses this combination before it creates any
+  infrastructure. To install such a cluster without internet access, push the bundle with `d8 mirror push` into a
+  registry inside your perimeter, and set `mode: Managed` with
+  [`primary.upstream`](configuration.html#parameters-primary-upstream) pointing at that registry.
+
 ### Requirements for using the module
 
 Before enabling the `registry` module to manage the pull paths for container images, make sure the cluster meets the following requirements:

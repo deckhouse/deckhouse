@@ -19,7 +19,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 )
 
 func TestIsImmutableMaster(t *testing.T) {
@@ -271,6 +274,66 @@ func TestValidateInputsAcceptsACloudClusterWithoutHosts(t *testing.T) {
 	metaConfig := &config.MetaConfig{ClusterType: config.CloudClusterType}
 
 	require.NoError(t, ValidateInputs(t.Context(), metaConfig, nil))
+}
+
+// An installation from a bundle cannot reach an immutable master: the bundle is
+// served inside the installer and placed on the node by bashible steps the
+// machine never runs. The payload builder refuses it too, but in a cloud that
+// payload is built only after the base infrastructure exists, so the refusal
+// has to come from here — before anything is created — to be worth anything.
+// Asked of both cluster types, and of both shapes the configuration takes: the
+// bundle resolved from the registry ModuleConfig, and Local mode named in the
+// deckhouse ModuleConfig.
+func TestValidateInputsRefusesAnInstallationFromABundle(t *testing.T) {
+	bundle := registry.Config{
+		Settings:        registry.ModeSettings{Mode: constant.ModeLocal},
+		BundleBootstrap: true,
+	}
+	legacyLocal := registry.Config{
+		Settings: registry.ModeSettings{Mode: constant.ModeLocal},
+	}
+
+	for name, tc := range map[string]struct {
+		clusterType string
+		hosts       map[string]string
+		registry    registry.Config
+	}{
+		"bundle, cloud":        {clusterType: config.CloudClusterType, registry: bundle},
+		"bundle, static":       {clusterType: config.StaticClusterType, hosts: map[string]string{"master-0": "10.0.0.11"}, registry: bundle},
+		"Local mode, cloud":    {clusterType: config.CloudClusterType, registry: legacyLocal},
+		"Local mode, static":   {clusterType: config.StaticClusterType, hosts: map[string]string{"master-0": "10.0.0.11"}, registry: legacyLocal},
+		"bundle, static, bare": {clusterType: config.StaticClusterType, registry: bundle},
+	} {
+		t.Run(name, func(t *testing.T) {
+			metaConfig := &config.MetaConfig{ClusterType: tc.clusterType, Registry: tc.registry}
+
+			err := ValidateInputs(t.Context(), metaConfig, tc.hosts)
+
+			require.ErrorContains(t, err, "installation from a bundle is not supported")
+			require.ErrorContains(t, err, "mode: Managed with primary.upstream",
+				"the refusal has to name the supported way to install an air-gapped immutable cluster")
+		})
+	}
+}
+
+// The refusal is about the bundle and nothing else: an upstream named in the
+// registry ModuleConfig resolves to Direct, with or without the agent owning the
+// runtime, and that is exactly the air-gapped installation the refusal points to.
+func TestValidateInputsAcceptsARegistryWithAnUpstream(t *testing.T) {
+	for name, cfg := range map[string]registry.Config{
+		"Direct":                      {Settings: registry.ModeSettings{Mode: constant.ModeDirect}},
+		"Managed with an upstream":    {Settings: registry.ModeSettings{Mode: constant.ModeDirect}, AgentOwnsRuntime: true},
+		"Managed with upstream+cache": {Settings: registry.ModeSettings{Mode: constant.ModeDirect}, AgentOwnsRuntime: true, StoreExpected: true},
+		"Unmanaged":                   {Settings: registry.ModeSettings{Mode: constant.ModeUnmanaged}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			require.NoError(t, ValidateInputs(t.Context(),
+				&config.MetaConfig{ClusterType: config.CloudClusterType, Registry: cfg}, nil))
+			require.NoError(t, ValidateInputs(t.Context(),
+				&config.MetaConfig{ClusterType: config.StaticClusterType, Registry: cfg},
+				map[string]string{"master-0": "10.0.0.11"}))
+		})
+	}
 }
 
 func TestParseHostsSplitsNameAndAddress(t *testing.T) {

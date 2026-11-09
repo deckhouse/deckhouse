@@ -92,8 +92,12 @@ func InstallDeckhouse(
 		res.ManifestResult = resManifests
 
 		// Before the readiness wait, not after: an externally published cloud provider installs from
-		// these documents, and the cloud-controller-manager it ships clears
-		// node.cloudprovider.kubernetes.io/uninitialized, which otherwise keeps the wait from ending.
+		// these documents, and the cloud-controller-manager it ships is what clears
+		// node.cloudprovider.kubernetes.io/uninitialized, so the sooner it is installed the sooner the
+		// first master is initialized. The readiness wait itself does not wait for that: the Deckhouse
+		// pod tolerates every taint and becomes Ready with the taint still set. What does wait for it is
+		// the handover of an installation from a bundle below (see waitForStoreSchedulable in
+		// HandOverBundleStore), because the cluster store does not tolerate the taint.
 		if params.AfterManifestsTask != nil {
 			if err := params.AfterManifestsTask(); err != nil {
 				return fmt.Errorf("apply provider module documents: %w", err)

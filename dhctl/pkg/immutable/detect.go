@@ -117,7 +117,17 @@ func NodeGroupIsImmutable(ng *unstructured.Unstructured) bool {
 // ValidateInputs refuses the combinations that leave the bootstrap with a node
 // it cannot talk to: the address comes from the BaseInfra phase, which reports
 // nothing outside a cloud, and naming the machines closes exactly that hole.
+//
+// It also refuses an installation from a bundle, which an immutable master
+// cannot take part in (see refuseBundleRegistry). That is a fact about the
+// registry rather than about the machines, and it is asked here because this
+// runs before the infrastructure is created: the document that would otherwise
+// refuse it is built only once the first master exists.
 func ValidateInputs(_ context.Context, metaConfig *config.MetaConfig, hosts map[string]string) error {
+	if err := refuseBundleRegistry(metaConfig); err != nil {
+		return err
+	}
+
 	if metaConfig.ClusterType == config.CloudClusterType {
 		if len(hosts) > 0 {
 			return errors.New(

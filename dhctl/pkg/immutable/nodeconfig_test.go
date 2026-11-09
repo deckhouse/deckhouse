@@ -247,7 +247,7 @@ func TestNodeConfigRefusesTheInstallersOwnBundleRegistry(t *testing.T) {
 
 	require.ErrorContains(t, err, string(constant.ModeLocal), "the mode the operator has to change")
 	require.ErrorContains(t, err, constant.BundleAddressWithPort, "the address that would be baked into the document")
-	require.ErrorContains(t, err, string(constant.ModeUnmanaged), "what to bootstrap with instead")
+	require.ErrorContains(t, err, "mode: Managed with primary.upstream", "what to bootstrap with instead")
 }
 
 // A cluster whose registry ModuleConfig names an upstream and asks for a cache is

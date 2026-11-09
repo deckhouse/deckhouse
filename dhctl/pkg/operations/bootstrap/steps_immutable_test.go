@@ -957,6 +957,27 @@ spec:
 	require.Nil(t, bctx.immutable)
 }
 
+// An installation from a bundle cannot reach an immutable master, and the payload builder that
+// refuses it runs in a cloud only once the base infrastructure exists. Detection runs before
+// anything touches the infrastructure, so this is where the refusal has to come from for the
+// operator to learn it before paying for machines that would never install.
+func TestDetectImmutableMasterRefusesAnInstallationFromABundleInACloud(t *testing.T) {
+	b, bctx := immutableTestBootstrapper(t)
+	require.Equal(t, config.CloudClusterType, bctx.metaConfig.ClusterType,
+		"the cloud is where a late refusal leaves infrastructure behind")
+	// The shape BundleBootstrapInputs.Resolve gives a registry ModuleConfig with the cache on and
+	// no upstream: Local mode, marked as taking its images from a bundle.
+	bctx.metaConfig.Registry.BundleBootstrap = true
+	bctx.metaConfig.Registry.Settings.Mode = "Local"
+	bctx.immutable = nil
+
+	err := b.detectImmutableMaster(t.Context(), bctx)
+
+	require.ErrorContains(t, err, "installation from a bundle is not supported")
+	require.ErrorContains(t, err, "mode: Managed with primary.upstream")
+	require.Nil(t, bctx.immutable, "the bootstrap must not get as far as deciding how to create the first master")
+}
+
 // immutableDetectBootstrapper is the smallest bootstrapper detectImmutableMaster runs against: a
 // static cluster whose master NodeGroup asks for an immutable system, no detection done yet, and
 // the state cache of the caller so that two runs share one directory - which is what one cache

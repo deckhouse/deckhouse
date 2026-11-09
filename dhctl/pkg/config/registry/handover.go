@@ -24,6 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -44,7 +45,29 @@ const (
 	// crictlPath is where the node's own bundle installs crictl. Used rather than a bare name because
 	// the command runs through sudo, whose PATH does not include it.
 	crictlPath = "/opt/deckhouse/bin/crictl"
+
+	// cloudUninitializedTaint is what a cloud node carries until the cloud-controller-manager has
+	// initialized it. The store does not tolerate it, and must not: see waitForStoreSchedulable.
+	cloudUninitializedTaint = "node.cloudprovider.kubernetes.io/uninitialized"
+
+	// controlPlaneLabel is where the store runs when its pod spec names no nodes of its own. The
+	// module's template names them with this same label once discovery has counted the masters, and
+	// renders no selector before that; the fallback keeps an empty selector from meaning "every node
+	// in the cluster".
+	controlPlaneLabel = "node-role.kubernetes.io/control-plane"
 )
+
+// storeSchedulableAttempts and storeSchedulableWait bound waitForStoreSchedulable: ten minutes for
+// the cloud-controller-manager to initialize the first master. storeSchedulableReportEvery is how many
+// refused looks pass between two of its progress lines: one a minute.
+const (
+	storeSchedulableAttempts    = 60
+	storeSchedulableReportEvery = 6
+)
+
+// storeSchedulableWait is a variable only so that a test can run the whole wait without spending
+// those ten minutes.
+var storeSchedulableWait = 10 * time.Second
 
 // storageGVR is the RegistryStorage resource, read to find out whether the store has taken over.
 var storageGVR = schema.GroupVersionResource{
@@ -65,7 +88,9 @@ var storageGVR = schema.GroupVersionResource{
 // The order below is the whole content of this function and it is not interchangeable. Freeing the port
 // is the last step, because once it is free nothing on the node serves images, and the store's own
 // containers are pulled by digest from the very registry that just stopped answering. So they are
-// pulled while it still answers.
+// pulled while it still answers. And the port is freed only for a store that can be placed on the node
+// at all: freeing it for a pod the scheduler will not place trades the only registry on the node for
+// none.
 func HandOverBundleStore(ctx context.Context, kubeCl *client.KubernetesClient, config Config) error {
 	if !config.BundleBootstrap {
 		return nil
@@ -82,12 +107,16 @@ func HandOverBundleStore(ctx context.Context, kubeCl *client.KubernetesClient, c
 	}
 
 	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Hand the store over to the cluster", func(ctx context.Context) error {
-		images, err := waitForStorageImages(ctx, kubeCl)
+		spec, err := waitForStoragePodSpec(ctx, kubeCl)
 		if err != nil {
 			return err
 		}
 
-		if err := prePullOnFirstMaster(ctx, kubeCl, images); err != nil {
+		if err := waitForStoreSchedulable(ctx, kubeCl, spec); err != nil {
+			return err
+		}
+
+		if err := prePullOnFirstMaster(ctx, kubeCl, podImages(spec)); err != nil {
 			return err
 		}
 
@@ -95,11 +124,11 @@ func HandOverBundleStore(ctx context.Context, kubeCl *client.KubernetesClient, c
 	})
 }
 
-// waitForStorageImages waits until the module has rendered its store and returns the images its pod
-// needs. Waiting rather than reading once: the StatefulSet appears when Deckhouse starts the module,
-// which can be after this point.
-func waitForStorageImages(ctx context.Context, kubeCl *client.KubernetesClient) ([]string, error) {
-	var images []string
+// waitForStoragePodSpec waits until the module has rendered its store and returns the pod spec of it:
+// the images the pod needs, and where it may run. Waiting rather than reading once: the StatefulSet
+// appears when Deckhouse starts the module, which can be after this point.
+func waitForStoragePodSpec(ctx context.Context, kubeCl *client.KubernetesClient) (corev1.PodSpec, error) {
+	var spec corev1.PodSpec
 
 	err := retry.NewLoop("Waiting for the cluster store to be declared", 60, 10*time.Second).
 		RunContext(ctx, func() error {
@@ -110,15 +139,161 @@ func waitForStorageImages(ctx context.Context, kubeCl *client.KubernetesClient) 
 				return fmt.Errorf("get statefulset '%s/%s': %w", secretsNamespace, storageStatefulSetName, err)
 			}
 
-			images = podImages(sts.Spec.Template.Spec)
-			if len(images) == 0 {
+			if len(podImages(sts.Spec.Template.Spec)) == 0 {
 				return fmt.Errorf("statefulset '%s/%s' declares no images", secretsNamespace, storageStatefulSetName)
 			}
 
+			spec = sts.Spec.Template.Spec
 			return nil
 		})
 
-	return images, err
+	return spec, err
+}
+
+// waitForStoreSchedulable waits until the store's pod can be placed on the first master as far as
+// taints go, and refuses the handover when it cannot.
+//
+// In a cloud the first master starts with node.cloudprovider.kubernetes.io/uninitialized, and only
+// the cloud-controller-manager removes it. The store does not tolerate that taint, and the fix is not
+// to make it: before the cloud has initialized the node it may have no InternalIP, and the syncer
+// refuses to start without an address to listen on. Nothing earlier in the bootstrap guarantees the
+// taint is gone by now either. The readiness wait that precedes the handover is on the Deckhouse pod,
+// which tolerates every taint, so a cloud-controller-manager that is slow — or one that cannot reach
+// the cloud API at all, which is a real possibility in a cluster installed from a bundle precisely
+// because it is cut off — lets the bootstrap get here with the taint still in place. Removing the
+// bootstrap registry at that point leaves a store that stays Pending, and a node on which nothing
+// serves images any more, the cloud-controller-manager's own included if it is not pulled yet. The
+// bootstrap registry is the one thing on the node that can still put the cluster right, so it is kept.
+//
+// Asked of the store's own tolerations rather than of that one taint: any NoSchedule or NoExecute taint
+// the pod does not tolerate keeps it off the node just the same, and the template is the authority on
+// what it tolerates. A static cluster carries nothing the store does not tolerate, so there this
+// returns on the first look.
+//
+// Every node the store's selector matches is asked. During a bootstrap that is the first master alone:
+// the other masters join after the handover.
+//
+// The reason for the wait is put in front of the operator on the first refused look and once a minute
+// after that. The loop itself reports each attempt only to the debug log, so without these lines the
+// terminal would show the loop's name alone for up to ten minutes and say why only at the timeout.
+func waitForStoreSchedulable(ctx context.Context, kubeCl client.KubeClient, spec corev1.PodSpec) error {
+	logger := dhlog.FromContext(ctx)
+	limit := time.Duration(storeSchedulableAttempts) * storeSchedulableWait
+	attempt := 0
+
+	return retry.NewLoop("Waiting for the first master to accept the cluster store", storeSchedulableAttempts, storeSchedulableWait).
+		RunContext(ctx, func() error {
+			attempt++
+
+			err := storeSchedulable(ctx, kubeCl, spec)
+			if err == nil || (attempt-1)%storeSchedulableReportEvery != 0 {
+				return err
+			}
+
+			msg := fmt.Sprintf("Waiting up to %s for the first master to accept the cluster store: %v", limit, err)
+			if attempt > 1 {
+				waited := time.Duration(attempt-1) * storeSchedulableWait
+				msg = fmt.Sprintf("Still waiting for the first master to accept the cluster store (%s of %s): %v",
+					waited, limit, err)
+			}
+			logger.InfoContext(ctx, msg, dhlog.ShowInCompacted())
+
+			return err
+		})
+}
+
+// storeSchedulable is one look at the nodes the store runs on. See waitForStoreSchedulable.
+func storeSchedulable(ctx context.Context, kubeCl client.KubeClient, spec corev1.PodSpec) error {
+	selector := labels.SelectorFromSet(spec.NodeSelector)
+	if len(spec.NodeSelector) == 0 {
+		selector = labels.SelectorFromSet(labels.Set{controlPlaneLabel: ""})
+	}
+
+	nodes, err := kubeCl.CoreV1().Nodes().List(ctx, metav1.ListOptions{LabelSelector: selector.String()})
+	if err != nil {
+		return fmt.Errorf("list the nodes the cluster store runs on (%s): %w", selector, err)
+	}
+
+	if len(nodes.Items) == 0 {
+		return fmt.Errorf("no node matches the cluster store's node selector %s yet", selector)
+	}
+
+	for i := range nodes.Items {
+		node := &nodes.Items[i]
+
+		taint := untoleratedTaint(node.Spec.Taints, spec.Tolerations)
+		if taint == nil {
+			continue
+		}
+
+		if taint.Key == cloudUninitializedTaint {
+			return fmt.Errorf(
+				"the cloud controller manager has not initialized node %s (taint %s is still set), "+
+					"the bootstrap registry is kept: the cluster store cannot be placed on the node until it is, "+
+					"and without the bootstrap registry nothing on the node would serve images. "+
+					"Check that the cloud-controller-manager is running and can reach the cloud API",
+				node.Name, taint.ToString())
+		}
+
+		return fmt.Errorf(
+			"node %s has taint %s that the cluster store does not tolerate, the bootstrap registry is kept: "+
+				"the store cannot be placed on the node while the taint is there, "+
+				"and without the bootstrap registry nothing on the node would serve images",
+			node.Name, taint.ToString())
+	}
+
+	return nil
+}
+
+// untoleratedTaint returns the first taint that keeps a pod with the given tolerations off a node, or
+// nil when there is none. PreferNoSchedule only steers the scheduler and keeps nothing off.
+func untoleratedTaint(taints []corev1.Taint, tolerations []corev1.Toleration) *corev1.Taint {
+	for i := range taints {
+		taint := &taints[i]
+
+		if taint.Effect != corev1.TaintEffectNoSchedule && taint.Effect != corev1.TaintEffectNoExecute {
+			continue
+		}
+
+		tolerated := false
+		for j := range tolerations {
+			if tolerates(&tolerations[j], taint) {
+				tolerated = true
+				break
+			}
+		}
+
+		if !tolerated {
+			return taint
+		}
+	}
+
+	return nil
+}
+
+// tolerates is corev1.Toleration.ToleratesTaint as k8s.io/api v0.34 has it.
+//
+// Not that method itself: this package is compiled both by dhctl's own module and, through the
+// replace in the root go.mod, by deckhouse-controller, and the two pin different k8s.io/api lines.
+// From v0.35 the method takes a logger and a flag for the Lt/Gt operators, so no single call
+// compiles in both. The rule is small and stable; the operators v0.35 adds sit behind a feature
+// gate that is off, and an unknown operator tolerates nothing either way.
+func tolerates(toleration *corev1.Toleration, taint *corev1.Taint) bool {
+	if toleration.Effect != "" && toleration.Effect != taint.Effect {
+		return false
+	}
+	if toleration.Key != "" && toleration.Key != taint.Key {
+		return false
+	}
+
+	switch toleration.Operator {
+	case "", corev1.TolerationOpEqual:
+		return toleration.Value == taint.Value
+	case corev1.TolerationOpExists:
+		return true
+	default:
+		return false
+	}
 }
 
 // podImages lists every image a pod spec needs, init containers included.
