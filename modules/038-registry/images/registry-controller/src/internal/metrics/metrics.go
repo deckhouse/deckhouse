@@ -112,9 +112,15 @@ var (
 	// Not a failure: the node pulls images either way, which is the whole point of the
 	// copy. It is worth reporting precisely because it looks like success from every
 	// other angle.
+	//
+	// Read from the status the agent writes, so it covers only the agents that can still
+	// write one: the layout was read and could not be used — its credentials would not
+	// resolve — or the read failed and the write after it went through. An agent cut off from the
+	// API server altogether falls back to the copy too, and cannot say so here; its node goes
+	// NotReady with it, since the two reach the API server the same way.
 	NodeFromCache = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "d8_registry_node_layout_from_disk",
-		Help: "1 per node whose agent is routing from its on-disk copy because the API server was unreachable.",
+		Help: "1 per node whose agent reports routing from its on-disk copy because it got no usable layout from the API server.",
 	}, []string{"node"})
 
 	// StorageReplicas is how many replicas have reported.

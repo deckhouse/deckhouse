@@ -29,6 +29,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -110,11 +111,74 @@ func resolveLocalAddress(localAddress, listenAddress string) string {
 // Only the leader is filled from the upstream, so that several replicas do not
 // hammer it with the same credentials, and so that exactly one replica's
 // completeness gates the air-gap transition.
+//
+// It also owns d8_registry_storage_leader, which D8RegistryStorageLeaderAbsent sums across the
+// replicas. The gauge is set where the lease is won and lost, not by the loop: a pass reads the
+// lease once at its start and may then run for an hour, filling or replicating, and a gauge set
+// from that reading kept saying what the lease was an hour ago. A follower that took the lease
+// from a dead leader in the middle of such a pass went on reporting 0 to the end of it — long
+// enough for the alert to fire on a cluster that had a leader — and a leader that missed a
+// renewal mid-fill went on reporting 1, which is the value that hides a cluster with none.
 type leadership struct {
+	mu     sync.Mutex
 	leader atomic.Bool
+	// gauge is d8_registry_storage_leader; nil leaves the lease untracked by metrics.
+	gauge prometheus.Gauge
 }
 
 func (l *leadership) IsLeader() bool { return l.leader.Load() }
+
+// started records winning the lease, unless it has already been lost again.
+//
+// The elector calls OnStartedLeading in a goroutine of its own and OnStoppedLeading on its way
+// out, after cancelling the context it handed the first one. A renewal that fails at once can
+// therefore run the two in the opposite order, and a replica that took "started" at its word
+// would believe it led until the next election. The cancelled context is what tells: checked
+// under the same lock "stopped" takes, a "started" that arrives after "stopped" finds it done.
+func (l *leadership) started(ctx context.Context) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if ctx.Err() != nil {
+		return
+	}
+	l.set(true)
+}
+
+// stopped records losing the lease, or never having won it.
+func (l *leadership) stopped() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.set(false)
+}
+
+// callbacks is what the elector is handed: winning and losing the lease, recorded here.
+//
+// Built here rather than inline in serve so that the test drives the same functions the elector
+// calls, and a callback that stops recording fails it.
+func (l *leadership) callbacks(log *slog.Logger, node string) leaderelection.LeaderCallbacks {
+	return leaderelection.LeaderCallbacks{
+		OnStartedLeading: func(leading context.Context) {
+			log.Info("this replica now fills the storage", "node", node)
+			l.started(leading)
+		},
+		OnStoppedLeading: func() {
+			log.Info("this replica no longer fills the storage; it keeps serving images", "node", node)
+			l.stopped()
+		},
+	}
+}
+
+func (l *leadership) set(held bool) {
+	l.leader.Store(held)
+	if l.gauge == nil {
+		return
+	}
+	if held {
+		l.gauge.Set(1)
+		return
+	}
+	l.gauge.Set(0)
+}
 
 // buildScheme registers every kind this process reads or writes.
 //
@@ -334,9 +398,6 @@ func serve(ctx context.Context, log *slog.Logger, opts options) error {
 		StoreRecheck:    opts.storeRecheck,
 	}
 
-	tracker := &leadership{}
-	loop.Leadership = tracker
-
 	// Metrics about this replica's own work. Served on loopback: what the cluster scrapes
 	// is the kube-rbac-proxy beside it, so this listener never needs to authenticate
 	// anyone and never has to be reachable from off the node.
@@ -344,6 +405,9 @@ func serve(ctx context.Context, log *slog.Logger, opts options) error {
 	registry.MustRegister(collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 	collected := metrics.New(registry)
 	loop.Metrics = collected
+
+	tracker := &leadership{gauge: collected.Leader}
+	loop.Leadership = tracker
 
 	go func() {
 		if err := serveMetrics(ctx, opts.metricsAddress, registry); err != nil {
@@ -397,17 +461,7 @@ func serve(ctx context.Context, log *slog.Logger, opts options) error {
 			// most when the reason for the cancel is that another replica has the images
 			// and everything else is waiting on it.
 			ReleaseOnCancel: true,
-			Callbacks: leaderelection.LeaderCallbacks{
-				OnStartedLeading: func(context.Context) {
-					log.Info("this replica now fills the storage", "node", opts.nodeName)
-					tracker.leader.Store(true)
-				},
-				OnStoppedLeading: func() {
-					log.Info("this replica no longer fills the storage; it keeps serving images",
-						"node", opts.nodeName)
-					tracker.leader.Store(false)
-				},
-			},
+			Callbacks:       tracker.callbacks(log, opts.nodeName),
 		})
 		if err != nil {
 			log.Error("cannot build the leader elector", "error", err.Error())

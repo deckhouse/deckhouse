@@ -17,12 +17,17 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"testing"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/registry-syncer/internal/distribution"
+	"github.com/deckhouse/registry-syncer/internal/metrics"
 )
 
 // TestResolveLocalAddress pins where a replica looks for its own registry.
@@ -91,4 +96,76 @@ func TestWriteEndpointAddressIsNotTheServingListener(t *testing.T) {
 	assert.Equal(t, fmt.Sprintf("%s:%d", node, distribution.WriteEndpointPort), write)
 	assert.NotEqual(t, resolveLocalAddress(loopbackRegistry, node), write,
 		"the address that writes must not be the address that serves")
+}
+
+// TestTheLeaderGaugeFollowsTheLease: d8_registry_storage_leader is what
+// D8RegistryStorageLeaderAbsent sums across the replicas, so it has to change when the lease
+// does, not when a pass next gets round to looking.
+//
+// It used to be set by the loop, from a reading taken during a pass, and a pass can last an hour.
+// A follower that won the lease mid-pass reported 0 until the pass ended and a leader that lost it
+// mid-fill reported 1; nothing here runs a pass, so a gauge that moves at all moves with the lease.
+// The last case is the elector calling the two callbacks out of order, which it can: "started"
+// runs in a goroutine of its own and may arrive after "stopped".
+func TestTheLeaderGaugeFollowsTheLease(t *testing.T) {
+	gatherer := prometheus.NewRegistry()
+	tracker := &leadership{gauge: metrics.New(gatherer).Leader}
+	leaderGauge := func() float64 { return scrapeLeaderGauge(t, gatherer) }
+
+	assert.Equal(t, float64(0), leaderGauge(), "a replica that has not won the lease does not lead")
+
+	leading, lost := context.WithCancel(context.Background())
+	tracker.started(leading)
+	assert.True(t, tracker.IsLeader())
+	assert.Equal(t, float64(1), leaderGauge(), "winning the lease shows at once")
+
+	lost()
+	tracker.stopped()
+	assert.False(t, tracker.IsLeader())
+	assert.Equal(t, float64(0), leaderGauge(), "losing the lease shows at once")
+
+	// The elector cancels the context it gave "started" before it calls "stopped", so a "started"
+	// that comes last finds its context done and must not undo the "stopped" before it.
+	late, cancel := context.WithCancel(context.Background())
+	cancel()
+	tracker.stopped()
+	tracker.started(late)
+	assert.False(t, tracker.IsLeader(), "a lease lost before its start was recorded is not held")
+	assert.Equal(t, float64(0), leaderGauge(), "nor reported as held")
+}
+
+// TestTheElectorCallbacksMoveTheLeaderGauge: the test above calls the tracker directly, so it would
+// pass with callbacks that never reach it. This one goes through the callbacks serve hands the
+// elector (built by leadership.callbacks), in the order the elector calls them: "started" with the
+// term's context, then, once the term is over, the context cancelled and "stopped".
+func TestTheElectorCallbacksMoveTheLeaderGauge(t *testing.T) {
+	gatherer := prometheus.NewRegistry()
+	tracker := &leadership{gauge: metrics.New(gatherer).Leader}
+	callbacks := tracker.callbacks(slog.New(slog.DiscardHandler), "master-0")
+
+	term, over := context.WithCancel(context.Background())
+	callbacks.OnStartedLeading(term)
+	assert.True(t, tracker.IsLeader(), "the elector's start must reach the tracker")
+	assert.Equal(t, float64(1), scrapeLeaderGauge(t, gatherer), "and the gauge")
+
+	over()
+	callbacks.OnStoppedLeading()
+	assert.False(t, tracker.IsLeader(), "the elector's stop must reach the tracker")
+	assert.Equal(t, float64(0), scrapeLeaderGauge(t, gatherer), "and the gauge")
+}
+
+// scrapeLeaderGauge reads d8_registry_storage_leader back through the registry, the way a scrape
+// would.
+func scrapeLeaderGauge(t *testing.T, gatherer prometheus.Gatherer) float64 {
+	t.Helper()
+	families, err := gatherer.Gather()
+	require.NoError(t, err)
+	for _, family := range families {
+		if family.GetName() == "d8_registry_storage_leader" {
+			require.Len(t, family.GetMetric(), 1)
+			return family.GetMetric()[0].GetGauge().GetValue()
+		}
+	}
+	t.Fatal("d8_registry_storage_leader is not exported")
+	return 0
 }

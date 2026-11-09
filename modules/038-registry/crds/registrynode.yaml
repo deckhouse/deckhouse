@@ -348,7 +348,7 @@ spec:
                   description: |
                     The detailed state reported by the agent.
 
-                    - `Reconciled` — whether the spec has been applied. The reason distinguishes a normal reconcile from one applied out of the on-disk copy because the API server was unreachable.
+                    - `Reconciled` — whether the spec has been applied. The reason distinguishes a normal reconcile from one applied out of the on-disk copy (`AppliedFromCache`): the agent could not get a usable spec from the API server. Most often the credentials it references could not be read; a read of the spec that failed while the status write after it went through, as on a short API server outage, looks the same. The agent reports the fallback by writing this status, so an agent that cannot write it at all, such as one on a node cut off from the API server, leaves the previous condition in place.
                   x-kubernetes-list-type: map
                   x-kubernetes-list-map-keys:
                     - type

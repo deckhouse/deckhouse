@@ -33,6 +33,9 @@ import (
 type Metrics struct {
 	// Leader is 1 while this replica holds the storage lease.
 	//
+	// Set by whatever tracks the lease, as it is won and lost, and never by a pass: a pass can
+	// run for an hour, and a value read at its start would be an hour old by its end.
+	//
 	// Exported per replica rather than as one cluster-wide gauge, because the interesting
 	// failures are disagreements: two replicas both believing they lead, or none of them
 	// doing so. A single gauge could not express either.

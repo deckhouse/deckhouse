@@ -1831,6 +1831,22 @@ var _ = Describe("Module :: registry :: helm template :: v2 metrics are scrapabl
 		Expect(monitor.Field("metadata.labels.prometheus").String()).To(Equal("main"),
 			"Prometheus selects PodMonitors by this label; without it the target is never discovered")
 	})
+
+	// D8RegistryControllerDown asks whether anything answers on `job="registry-controller"`, and
+	// the job is not written anywhere: Prometheus takes it from the pod's `app` label because the
+	// PodMonitor says `jobLabel: app`. Changing either the label or that setting renames the job
+	// under the rule, which then reads an absence on every cluster and fires on all of them.
+	It("scrapes the controller under the job its availability alert asks about", func() {
+		monitor := f.KubernetesResource("PodMonitor", "d8-monitoring", "registry-controller")
+		Expect(monitor.Exists()).To(BeTrue())
+		Expect(monitor.Field("spec.jobLabel").String()).To(Equal("app"))
+		Expect(monitor.Field("spec.selector.matchLabels.app").String()).To(Equal("registry-controller"))
+
+		controller := f.KubernetesResource("Deployment", "d8-system", "registry-controller")
+		Expect(controller.Exists()).To(BeTrue(),
+			"the alert is guarded by this Deployment existing, under this name and namespace")
+		Expect(controller.Field("spec.template.metadata.labels.app").String()).To(Equal("registry-controller"))
+	})
 })
 
 // The absence of an imagePullSecret is a decision, so it is pinned like one.

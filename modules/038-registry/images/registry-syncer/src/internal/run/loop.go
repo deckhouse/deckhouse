@@ -575,23 +575,6 @@ func errorText(err error) string {
 	return err.Error()
 }
 
-// observeLeadership records whether this replica holds the lease.
-//
-// Per replica rather than as one cluster-wide gauge, because the interesting failures are
-// disagreements — two replicas both believing they lead, or none of them doing so — and a
-// single gauge could express neither.
-func (l *Loop) observeLeadership(isLeader bool) {
-	if l.Metrics == nil {
-		return
-	}
-
-	if isLeader {
-		l.Metrics.Leader.Set(1)
-		return
-	}
-	l.Metrics.Leader.Set(0)
-}
-
 // observePass records what a pass did, from the same state that is reported to the API.
 //
 // Taken from the report rather than counted separately, so the metric and the status cannot
@@ -679,8 +662,6 @@ func (l *Loop) once(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
-	l.observeLeadership(isLeader)
 
 	action := Decide(spec, isLeader, leader)
 

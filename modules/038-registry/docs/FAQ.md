@@ -291,9 +291,9 @@ implementation.
 
 ## What do the registry alerts mean?
 
-None of these alerts mean that the cluster has stopped pulling images. Most of them report a
-state where everything works, but not the way the configuration asks — a state that is easy to
-miss otherwise.
+Apart from `D8RegistryStorageLeaderAbsent` in an air-gapped cluster, none of these alerts mean
+that the cluster has stopped pulling images. Most of them report a state where everything works,
+but not the way the configuration asks — a state that is easy to miss otherwise.
 
 `D8RegistryMigrationPending`
 : The cluster is still running the previous implementation of the module. Nothing is degraded; the migration
@@ -308,10 +308,14 @@ miss otherwise.
   pulling with their old configuration, and further changes will not reach them either.
 
 `D8RegistryNodeRunningFromDisk`
-: Some nodes cannot reach the API server and route pulls using the copy of the configuration
-  stored on disk. This fallback works as designed: pulls on those nodes succeed, so nothing
-  else would report the problem — meanwhile their configuration can lag arbitrarily far behind
-  the cluster's.
+: The agent on some nodes could not get a usable configuration from the API server and routes
+  pulls using the copy stored on disk. Most often the credentials the configuration references
+  cannot be read; a read of the configuration that failed while the status write after it went
+  through, as on a short API server outage, looks the same. This fallback works as designed: pulls on those nodes succeed, so
+  nothing else would report the problem — meanwhile their configuration can lag arbitrarily far
+  behind the cluster's. The agent reports the fallback through the API server, so the alert does
+  not cover an agent that cannot write there: a node cut off from the API server shows as
+  `NotReady` instead, and an agent refused access on a `Ready` node is not reported at all.
 
 `D8RegistryStorageIncomplete`
 : Some cache replicas do not hold the whole expected image set. While an upstream is
@@ -359,6 +363,27 @@ miss otherwise.
 `D8RegistryStoreUnbounded`
 : The cache is on and `storage.size` is not set, so the only limit is the space kept free for
   the node.
+
+`D8RegistryControllerDown`
+: No replica of `registry-controller` is ready and answering Prometheus. Pulls are not
+  affected, but no configuration change reaches the nodes, and most other alerts of the module
+  are silent while this one fires: they read what the controller exports.
+  `D8RegistryStorageLeaderAbsent` and the migration and drain alerts do not depend on the
+  controller and keep working.
+
+`D8RegistryStorageLeaderAbsent`
+: No ready cache replica reports holding the leader lease. Nothing fills the cache, the other
+  replicas have nobody to replicate from, and `d8 mirror push` has nowhere to go. The nodes
+  still route pulls to the replica named as leader: with an upstream configured pulls are
+  slower, in an air-gapped cluster images the nodes do not already hold cannot be pulled. If
+  the Lease `registry-storage` in `d8-system` keeps being renewed, the leader is alive but its
+  report is not scraped: either its pod is not ready, then find out which of its containers is
+  not ready, or the scrape of that pod fails, then look at the log of its `kube-rbac-proxy`
+  container. If the master that held the lease is lost and is not coming back, delete its Node
+  object; otherwise look at the `error` the replicas report in the RegistryStorage status and
+  at their `syncer` logs. A cache replica that is merely not ready is reported by
+  `KubernetesStatefulSetReplicasUnavailable` of the `extended-monitoring` module, if it is
+  enabled.
 
 ## How do I remove leftover cache data from a node?
 

@@ -23,11 +23,12 @@ limitations under the License.
 // What they do NOT check: the PromQL itself, which needs the Prometheus query engine this repository
 // does not depend on. Those semantics are covered on a cluster, by scenario-alerts.sh.
 //
-// Why it matters: an alert can be inert for reasons no expression review would catch — every
+// Why it matters: an alert can be inert for reasons no expression review would catch — almost every
 // expression here opens with `max(d8_registry_managed) > 0`, so a component whose kube-rbac-proxy
 // cannot create a TokenReview publishes no series and nothing ever fires, with nothing looking
 // broken. An alert that never fires is indistinguishable from a problem that never happened, so what
-// it depends on needs checking by something other than the absence of complaints.
+// it depends on needs checking by something other than the absence of complaints. The exceptions
+// are the availability rules, which exist for exactly that case and so cannot depend on it.
 package monitoring_test
 
 import (
@@ -75,16 +76,28 @@ var expectedFor = map[string]string{
 	"D8RegistryStoreWritesRefused":   "2m",
 	"D8RegistryStoreNearlyFull":      "5m",
 	"D8RegistryStoreUnbounded":       "1h",
+	"D8RegistryControllerDown":       "10m",
+	"D8RegistryStorageLeaderAbsent":  "10m",
 }
+
+// The files these tests read. Named rather than globbed: the other rule files of this module read
+// metrics the module's hooks export, which are declared as constants rather than as collector options
+// and so are invisible to registeredMetrics. Those are checked by monitoring_tests, which reads the
+// hooks as well.
+var ruleFiles = []string{"registry.yaml", "availability.yaml"}
 
 func loadRules(t *testing.T) ruleFile {
 	t.Helper()
 
-	raw, err := os.ReadFile(filepath.Join("prometheus-rules", "registry.yaml"))
-	require.NoError(t, err, "the module's alerting rules must be readable")
-
 	var groups []ruleGroup
-	require.NoError(t, yaml.Unmarshal(raw, &groups))
+	for _, name := range ruleFiles {
+		raw, err := os.ReadFile(filepath.Join("prometheus-rules", name))
+		require.NoError(t, err, "the module's alerting rules must be readable")
+
+		var parsed []ruleGroup
+		require.NoError(t, yaml.Unmarshal(raw, &parsed), "parsing %s", name)
+		groups = append(groups, parsed...)
+	}
 	return ruleFile{Groups: groups}
 }
 
@@ -204,6 +217,58 @@ func TestTheReclaimAlertKnowsHowLongTheReplicaHasBeenAble(t *testing.T) {
 		}
 	}
 	require.True(t, found, "D8RegistryStorageNotReclaimed was not found at all")
+}
+
+// TestTheAvailabilityAlertsDoNotNeedWhatTheyWatch pins the terms that keep the two availability
+// alerts alive in the very states they exist to report.
+//
+// Each of them is a single term away from being inert, and none of the failures would show:
+//
+//   - The leader alert sums a gauge that only ready, scraped replicas export. With every replica
+//     down there is nothing to sum, `sum(...) < 1` is empty rather than true, and the alert goes
+//     quiet at the worst moment unless `absent(...)` stands beside it.
+//   - The controller alert asks whether anything answers on the job the PodMonitor scrapes. The
+//     job is taken from the pod's `app` label (`jobLabel: app`), so a typo here asks about a job
+//     that never exists and fires on every cluster with the module on — or, with `== 1` dropped,
+//     never fires at all, since a target that answers 0 is still present.
+//   - Both are guarded by the workload existing, as kube-state-metrics sees it, and not by
+//     `d8_registry_managed`: that gauge is the controller's, so a guard built on it would silence
+//     the controller alert precisely when the controller is gone.
+func TestTheAvailabilityAlertsDoNotNeedWhatTheyWatch(t *testing.T) {
+	rules := loadRules(t)
+
+	want := map[string][]string{
+		"D8RegistryControllerDown": {
+			`kube_deployment_spec_replicas{namespace="d8-system",deployment="registry-controller"}`,
+			`absent(up{job="registry-controller",namespace="d8-system"} == 1)`,
+		},
+		"D8RegistryStorageLeaderAbsent": {
+			`kube_statefulset_replicas{namespace="d8-system",statefulset="registry-storage"}`,
+			`sum(d8_registry_storage_leader) < 1`,
+			`absent(d8_registry_storage_leader)`,
+		},
+	}
+
+	found := map[string]bool{}
+	for _, group := range rules.Groups {
+		for _, rule := range group.Rules {
+			terms, ok := want[rule.Alert]
+			if !ok {
+				continue
+			}
+			found[rule.Alert] = true
+
+			for _, term := range terms {
+				assert.Contains(t, rule.Expr, term, "%s lost a term it cannot work without", rule.Alert)
+			}
+			assert.NotContains(t, rule.Expr, "d8_registry_managed",
+				"%s cannot be guarded by a gauge the controller exports: it has to fire when the "+
+					"controller does not", rule.Alert)
+		}
+	}
+	for name := range want {
+		assert.True(t, found[name], "%s was not found at all", name)
+	}
 }
 
 // registeredMetrics reads the metric names out of the controller's registry.

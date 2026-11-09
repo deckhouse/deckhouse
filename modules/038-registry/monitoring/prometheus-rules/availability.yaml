@@ -1,0 +1,149 @@
+- name: d8.registry.availability
+  rules:
+  # Whether the module's own components are there to be asked at all.
+  #
+  # Every rule in registry.yaml reads a gauge the controller exports, so with the controller gone
+  # they do not fire — they have nothing to read — and a cluster in that state looks exactly like a
+  # healthy one. These two are the ones that have to work without it, which is why neither can be
+  # guarded by `d8_registry_managed` the way the others are: that gauge is the controller's too, and
+  # it disappears with the thing it would be guarding. What they are guarded by instead is the
+  # existence of the workload, as kube-state-metrics sees it. The Deployment and the StatefulSet are
+  # rendered only while the module manages the registry and keeps a cache respectively, so a cluster
+  # that left the module alone has neither, and nothing here fires on it.
+  #
+  # The generic `up == 0` alerts do not cover this, and cannot: both PodMonitors keep only ready
+  # pods, so a replica that is not ready is not a target with `up` of 0 — it is not a target at
+  # all. Hence `absent(... == 1)`: "no target answering", whichever of the two it is.
+  #
+  # A replica of the cache that is merely not ready is left to KubernetesStatefulSetReplicasUnavailable
+  # of the extended-monitoring module, which reports it where that module is enabled; what only this
+  # module can say is that the replicas that are up have no leader among them.
+
+  # Ten minutes, because a Deckhouse update restarts the controller and the replica that is
+  # starting has to elect a leader and sync its informers before it is ready; a few minutes of
+  # nobody answering is the update working.
+  - alert: D8RegistryControllerDown
+    expr: |
+      max(kube_deployment_spec_replicas{namespace="d8-system",deployment="registry-controller"}) > 0
+      and on() absent(up{job="registry-controller",namespace="d8-system"} == 1)
+    for: 10m
+    labels:
+      severity_level: "5"
+      tier: cluster
+      d8_module: registry
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The registry controller is down or cannot be scraped.
+      description: |-
+        No replica of `registry-controller` in `d8-system` is both ready and answering Prometheus.
+        Either every replica is down or not ready, or they run and their metrics cannot be read —
+        through `kube-rbac-proxy`, which needs a TokenReview to let Prometheus in.
+
+        Pulls are not affected: every node keeps pulling the way its agent was last told. What
+        stops is everything that changes that. A change to the `registry` ModuleConfig, a new
+        RegistryUpstream, a leader moving to another master, an air-gap transition — none of it
+        reaches the nodes until the controller is back.
+
+        And while this is firing, most other `D8Registry*` alerts are blind: they read what the
+        controller exports, so they stay silent whatever happens in the meantime. The exceptions
+        are `D8RegistryStorageLeaderAbsent`, which reads the cache replicas themselves, and the
+        migration and drain alerts, which Deckhouse feeds; those keep working.
+
+        ```
+        d8 k -n d8-system get deploy registry-controller
+        d8 k -n d8-system get pods -l app=registry-controller -o wide
+        d8 k -n d8-system logs deploy/registry-controller -c registry-controller --all-pods=true --tail=100
+        d8 k -n d8-monitoring get podmonitor registry-controller
+        ```
+
+        If the pods are ready, the problem is in the scrape: look at the `kube-rbac-proxy`
+        container's log for authentication errors.
+
+  # Ten minutes for the same reason as the controller, and for one of the cache's own: the lease
+  # lasts a minute and is given a grace on top, so a leader that dies leaves the replicas leaderless
+  # for a couple of minutes before anybody may take over. A single-master cluster has no one to take
+  # over at all while its master restarts.
+  #
+  # Two conditions in one expression. `sum(...) < 1` is the case this exists for: replicas are
+  # scraped and none of them leads. `absent(...)` is the case in which there is nothing to sum —
+  # every replica is not ready, or none can be scraped — and without it the alert would go quiet
+  # exactly when things are at their worst. `sum(...) < 1` also covers a third case: a leader that
+  # is alive and holds the lease but whose pod is not ready, or whose own scrape fails, is not
+  # counted, so the scraped followers sum to 0 although somebody leads. The description has to tell
+  # the three apart, since they are fixed differently.
+  - alert: D8RegistryStorageLeaderAbsent
+    expr: |
+      max(kube_statefulset_replicas{namespace="d8-system",statefulset="registry-storage"}) > 0
+      and on() (
+        sum(d8_registry_storage_leader) < 1
+        or on() absent(d8_registry_storage_leader)
+      )
+    for: 10m
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: registry
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The registry cache has no leader.
+      description: |-
+        No ready replica of the in-cluster registry cache (`registry-storage` in `d8-system`)
+        reports holding the storage lease.
+
+        The leader is where the nodes pull from, and the only replica that writes. Without it
+        nothing fills the cache, the followers have nobody to replicate from, and `d8 mirror push`
+        has nowhere to go. The agents still route pulls to the replica named as leader in their
+        layout and wait for it before anything else: with an upstream configured a pull is slower
+        and comes from the upstream; in an air-gapped cluster an image a node does not already
+        hold cannot be pulled at all.
+
+        Which of three things it is decides what to do, so look first:
+
+        ```
+        d8 k -n d8-system get pods -l app=registry-storage -o wide
+        d8 k -n d8-system get lease registry-storage -o jsonpath='{.spec.holderIdentity} {.spec.renewTime}{"\n"}'
+        d8 k get registrystorage registry -o jsonpath='{.status.leader}{"\n"}'
+        d8 k get registrystorage registry -o json | jq '.status.replicas[] | {node, role, full, error}'
+        ```
+
+        - The Lease is held and its `renewTime` keeps moving: the leader is alive, but its report
+          is not counted. Look at the replica on the node named in `holderIdentity`:
+
+          ```
+          d8 k -n d8-system get pods -l app=registry-storage -o wide --field-selector spec.nodeName=<holderIdentity>
+          d8 k -n d8-system describe pod <the pod from the line above>
+          ```
+
+          If it is not ready, Prometheus does not scrape it, since it scrapes only ready pods.
+          `syncer` has no readiness probe; it is usually the `distribution` or `auth` container
+          that is not ready, and a leader with either of them not ready serves pulls badly or not
+          at all. Find out which one fails and why. If the pod is ready, its scrape fails while
+          the others' do not: look at its `kube-rbac-proxy` container's log for errors.
+
+        - The Lease's `renewTime` has stopped while other replicas are ready: nobody leads. First
+          rule out a master that has gone down: the Lease's `holderIdentity` above is the node the
+          last leader ran on.
+
+          ```
+          d8 k get nodes -l node-role.kubernetes.io/control-plane
+          ```
+
+          If a master is down and is not coming back, delete its Node object: the replica that ran
+          on it then no longer counts in the election. Otherwise, or if the alert keeps firing
+          after that, look at the `error` each replica reports in the list above and at the
+          `syncer` logs of the replicas that are up:
+
+          ```
+          d8 k -n d8-system logs registry-storage-0 -c syncer --tail=100
+          ```
+
+        - No replica is ready, or none can be scraped. Then this is not about the election: the
+          pods are down or not ready (where the `extended-monitoring` module is enabled,
+          `KubernetesStatefulSetReplicasUnavailable` says so as well), or Prometheus cannot read them through `kube-rbac-proxy`, and the leader may well be
+          alive. The Lease above tells it: a `renewTime` that keeps moving means somebody holds it.

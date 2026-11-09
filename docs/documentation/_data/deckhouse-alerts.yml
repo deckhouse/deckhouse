@@ -4843,6 +4843,39 @@ alerts:
         The registry configuration was rejected.
       severity: "4"
       markupFormat: markdown
+    - name: D8RegistryControllerDown
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/availability.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        No replica of `registry-controller` in `d8-system` is both ready and answering Prometheus.
+        Either every replica is down or not ready, or they run and their metrics cannot be read —
+        through `kube-rbac-proxy`, which needs a TokenReview to let Prometheus in.
+
+        Pulls are not affected: every node keeps pulling the way its agent was last told. What
+        stops is everything that changes that. A change to the `registry` ModuleConfig, a new
+        RegistryUpstream, a leader moving to another master, an air-gap transition — none of it
+        reaches the nodes until the controller is back.
+
+        And while this is firing, most other `D8Registry*` alerts are blind: they read what the
+        controller exports, so they stay silent whatever happens in the meantime. The exceptions
+        are `D8RegistryStorageLeaderAbsent`, which reads the cache replicas themselves, and the
+        migration and drain alerts, which Deckhouse feeds; those keep working.
+
+        ```
+        d8 k -n d8-system get deploy registry-controller
+        d8 k -n d8-system get pods -l app=registry-controller -o wide
+        d8 k -n d8-system logs deploy/registry-controller -c registry-controller --all-pods=true --tail=100
+        d8 k -n d8-monitoring get podmonitor registry-controller
+        ```
+
+        If the pods are ready, the problem is in the scrape: look at the `kube-rbac-proxy`
+        container's log for authentication errors.
+      summary: |
+        The registry controller is down or cannot be scraped.
+      severity: "5"
+      markupFormat: markdown
     - name: D8RegistryDrainStuck
       sourceFile: modules/038-registry/monitoring/prometheus-rules/drain.yaml
       moduleUrl: 038-registry
@@ -5129,20 +5162,29 @@ alerts:
       module: registry
       edition: ce
       description: |-
-        The agent on one or more nodes cannot reach the API server and is routing pulls from
-        the copy it keeps on disk. That is the copy working as designed — those nodes pull
-        images normally, which is exactly why this is worth saying out loud: from every
+        The agent on one or more nodes read its layout from the API server and could not use
+        it, so it is routing pulls from the copy it keeps on disk. Most often the credentials
+        the layout references cannot be read; a read that failed while the status write after
+        it went through looks the same. That is the copy working as designed — those nodes
+        pull images normally, which is exactly why this is worth saying out loud: from every
         other angle it looks like success, and their configuration can drift arbitrarily far
         behind the cluster's.
 
-        An hour, because a node that briefly loses the API server is not news; a node that
-        has not seen it since is.
+        An hour, because a node that falls back for a pass or two is not news; a node that
+        has not come off the copy since is.
 
         ```
         d8 k get registrynodes -o json | jq -r '
           .items[] | select(.status.conditions[]? | select(.type=="Reconciled" and .reason=="AppliedFromCache"))
           | .metadata.name'
+        d8 k -n kube-system logs -l component=registry-agent --tail=200 | grep 'cannot resolve the credentials'
         ```
+
+        What this alert cannot see is an agent that cannot write its status at all, since
+        that write is how it reports the fallback. A node cut off from the API server is the
+        main case: the agent reaches the API server the way the kubelet does, so the node
+        shows as `NotReady` and is reported as such. An agent whose own access is refused is
+        the other, and while its node stays `Ready` nothing reports it.
       summary: |
         Some nodes are routing pulls from their on-disk copy of the configuration.
       severity: "6"
@@ -5211,6 +5253,70 @@ alerts:
       summary: |
         Some registry cache replicas do not hold the whole image set.
       severity: "6"
+      markupFormat: markdown
+    - name: D8RegistryStorageLeaderAbsent
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/availability.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        No ready replica of the in-cluster registry cache (`registry-storage` in `d8-system`)
+        reports holding the storage lease.
+
+        The leader is where the nodes pull from, and the only replica that writes. Without it
+        nothing fills the cache, the followers have nobody to replicate from, and `d8 mirror push`
+        has nowhere to go. The agents still route pulls to the replica named as leader in their
+        layout and wait for it before anything else: with an upstream configured a pull is slower
+        and comes from the upstream; in an air-gapped cluster an image a node does not already
+        hold cannot be pulled at all.
+
+        Which of three things it is decides what to do, so look first:
+
+        ```
+        d8 k -n d8-system get pods -l app=registry-storage -o wide
+        d8 k -n d8-system get lease registry-storage -o jsonpath='{.spec.holderIdentity} {.spec.renewTime}{"\n"}'
+        d8 k get registrystorage registry -o jsonpath='{.status.leader}{"\n"}'
+        d8 k get registrystorage registry -o json | jq '.status.replicas[] | {node, role, full, error}'
+        ```
+
+        - The Lease is held and its `renewTime` keeps moving: the leader is alive, but its report
+          is not counted. Look at the replica on the node named in `holderIdentity`:
+
+          ```
+          d8 k -n d8-system get pods -l app=registry-storage -o wide --field-selector spec.nodeName=<holderIdentity>
+          d8 k -n d8-system describe pod <the pod from the line above>
+          ```
+
+          If it is not ready, Prometheus does not scrape it, since it scrapes only ready pods.
+          `syncer` has no readiness probe; it is usually the `distribution` or `auth` container
+          that is not ready, and a leader with either of them not ready serves pulls badly or not
+          at all. Find out which one fails and why. If the pod is ready, its scrape fails while
+          the others' do not: look at its `kube-rbac-proxy` container's log for errors.
+
+        - The Lease's `renewTime` has stopped while other replicas are ready: nobody leads. First
+          rule out a master that has gone down: the Lease's `holderIdentity` above is the node the
+          last leader ran on.
+
+          ```
+          d8 k get nodes -l node-role.kubernetes.io/control-plane
+          ```
+
+          If a master is down and is not coming back, delete its Node object: the replica that ran
+          on it then no longer counts in the election. Otherwise, or if the alert keeps firing
+          after that, look at the `error` each replica reports in the list above and at the
+          `syncer` logs of the replicas that are up:
+
+          ```
+          d8 k -n d8-system logs registry-storage-0 -c syncer --tail=100
+          ```
+
+        - No replica is ready, or none can be scraped. Then this is not about the election: the
+          pods are down or not ready (where the `extended-monitoring` module is enabled,
+          `KubernetesStatefulSetReplicasUnavailable` says so as well), or Prometheus cannot read them through `kube-rbac-proxy`, and the leader may well be
+          alive. The Lease above tells it: a `renewTime` that keeps moving means somebody holds it.
+      summary: |
+        The registry cache has no leader.
+      severity: "4"
       markupFormat: markdown
     - name: D8RegistryStorageNotReclaimed
       sourceFile: modules/038-registry/monitoring/prometheus-rules/registry.yaml

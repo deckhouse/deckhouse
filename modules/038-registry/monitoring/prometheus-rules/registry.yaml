@@ -88,20 +88,29 @@
       plk_grouped_by__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: Some nodes are routing pulls from their on-disk copy of the configuration.
       description: |-
-        The agent on one or more nodes cannot reach the API server and is routing pulls from
-        the copy it keeps on disk. That is the copy working as designed — those nodes pull
-        images normally, which is exactly why this is worth saying out loud: from every
+        The agent on one or more nodes read its layout from the API server and could not use
+        it, so it is routing pulls from the copy it keeps on disk. Most often the credentials
+        the layout references cannot be read; a read that failed while the status write after
+        it went through looks the same. That is the copy working as designed — those nodes
+        pull images normally, which is exactly why this is worth saying out loud: from every
         other angle it looks like success, and their configuration can drift arbitrarily far
         behind the cluster's.
 
-        An hour, because a node that briefly loses the API server is not news; a node that
-        has not seen it since is.
+        An hour, because a node that falls back for a pass or two is not news; a node that
+        has not come off the copy since is.
 
         ```
         d8 k get registrynodes -o json | jq -r '
           .items[] | select(.status.conditions[]? | select(.type=="Reconciled" and .reason=="AppliedFromCache"))
           | .metadata.name'
+        d8 k -n kube-system logs -l component=registry-agent --tail=200 | grep 'cannot resolve the credentials'
         ```
+
+        What this alert cannot see is an agent that cannot write its status at all, since
+        that write is how it reports the fallback. A node cut off from the API server is the
+        main case: the agent reaches the API server the way the kubelet does, so the node
+        shows as `NotReady` and is reported as such. An agent whose own access is refused is
+        the other, and while its node stays `Ready` nothing reports it.
 
   - alert: D8RegistryStorageIncomplete
     expr: |
