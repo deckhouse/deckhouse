@@ -58,7 +58,10 @@ rules:
       # Named here because a resourceNames Role is silent when it is short: a watch the proxy is not
       # allowed to make returns nothing rather than an error, so the whole path would simply never
       # engage and every fetch would fail with the installer's certificate instead.
-      - registry-storage-access
+      #
+      # The client secret, not registry-storage-access: that one is the storage pod's own and also
+      # carries the account the replicas write and delete with, which the proxy has no use for.
+      - registry-storage-client
       # `registry-bashible-config` is deliberately NOT here. The proxy used to read it as a last resort —
       # what nodes are told, which names an upstream and carries credentials for it — and that path is
       # gone: the installer now puts the agent on the first master, so a node never has to reach an

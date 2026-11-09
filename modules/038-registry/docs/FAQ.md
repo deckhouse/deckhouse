@@ -926,6 +926,33 @@ d8 k -n d8-system get pods -l app=registry-storage-image-holder -o wide
 d8 k get registrystorage registry -o jsonpath='{.status.replicas}' | jq
 ```
 
+## Who can read from and write to the in-cluster cache?
+
+The cache's registry accepts three accounts. Each of them is limited to the platform's path,
+`system/deckhouse`, and everything under it: that is where the cache keeps the platform, its modules,
+and the modules of other ModuleSources. A request for any other repository is refused, whatever the
+account.
+
+| Account | Who uses it | What it may do |
+|---|---|---|
+| `registry-ro` | the node agent on every node | pull; list the store's repositories |
+| `registry-sync` | the cache's own pods only | pull, push and delete: filling from the upstream, replication, garbage collection |
+| `registry-rw` | `d8 mirror push`, through the publication endpoint | pull and push |
+
+- The read account is held by every node, so it can change nothing the nodes pull.
+- The sync account is the one that writes into the store from inside the cluster. Its password is
+  used only by the cache's pods: the registry controller and `registry-packages-proxy` read the
+  Secret `registry-storage-client`, which carries the certificate authority, the read account and the
+  replicas' addresses and nothing else.
+- The publication account is for the platform administrator. It is how a new release reaches an
+  air-gapped cluster, so it can replace the platform's images by design: whoever can read the Secret
+  `registry-storage-push` in `d8-system` can replace what every node pulls. Grant read access to that
+  Secret only to those who publish the platform. The account can neither delete images nor list the
+  store's repositories: images are removed by the garbage collection.
+
+Push to the platform's path, `<publication endpoint>/system/deckhouse`, as in the
+[air-gap example](examples.html#going-air-gapped); a push to any other path is refused.
+
 ## The previous implementation
 
 The information below applies to a cluster still running the implementation of the module configured through the

@@ -72,11 +72,17 @@ const (
 	Namespace = "d8-system"
 
 	// StorageAccessSecretName holds what a client needs to reach the storage: the
-	// certificate authority of its serving certificate and the read credentials.
+	// certificate authority of its serving certificate, the read credentials and the
+	// replicas' addresses.
 	//
 	// An interim contract with the storage PKI work: the controller only consumes
 	// it, and does not care whether a hook or a controller produced it.
-	StorageAccessSecretName = "registry-storage-access"
+	//
+	// registry-storage-client rather than registry-storage-access, which carries the
+	// same values beside the sync account and the upload signing secret of the storage
+	// pod. The controller needs neither, and its Role grants this secret alone, so what
+	// it can read is what every node already holds.
+	StorageAccessSecretName = "registry-storage-client"
 
 	storageAccessCAKey        = "ca.crt"
 	storageAccessUsernameKey  = "username"

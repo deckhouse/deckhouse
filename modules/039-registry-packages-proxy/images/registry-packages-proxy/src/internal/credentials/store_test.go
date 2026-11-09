@@ -50,6 +50,16 @@ func TestStoreAuthorityCarriesTheStoresOwnAccount(t *testing.T) {
 	assert.Equal(t, "registry-ro:secret", string(decoded))
 }
 
+// TestTheStoreIsReadFromTheClientSecret keeps the proxy off the storage pod's own secret.
+//
+// registry-storage-access carries the same authority and read account, so pointing back at it would
+// still work — and would give anything that compromises the proxy the account the replicas write and
+// delete with. The proxy's Role in the deckhouse module names registry-storage-client alone, so the
+// two have to move together.
+func TestTheStoreIsReadFromTheClientSecret(t *testing.T) {
+	assert.Equal(t, "registry-storage-client", storeAccessSecret)
+}
+
 // TestStoreAuthorityRefusesHalfASecret keeps a partial secret from replacing a working answer.
 //
 // All three fields or none: an authority with no account authenticates nowhere, an account with no

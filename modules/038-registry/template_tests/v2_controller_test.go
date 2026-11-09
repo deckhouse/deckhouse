@@ -18,6 +18,9 @@ package template_tests
 
 import (
 	"encoding/base64"
+	"path"
+	"regexp"
+	"sort"
 	"strings"
 
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
@@ -1171,6 +1174,63 @@ var _ = Describe("Module :: registry :: helm template :: v2 storage access", fun
 		Expect(secret.Field("data").Map()).ToNot(HaveKey("ca.key"))
 		Expect(secret.Field("data").Map()).ToNot(HaveKey("tls.key"))
 	})
+
+	// What the controller reads, and all it reads: the authority, the read account and the addresses.
+	//
+	// The access secret carries the same values beside the sync account and the upload signing secret,
+	// which only the storage pod uses. Any key added here is one more thing a compromised controller
+	// holds, so the set is pinned exactly, and the values are pinned to the access secret's so the two
+	// cannot drift apart.
+	It("gives the controller a secret with the read account and nothing that can write", func() {
+		client := f.KubernetesResource("Secret", "d8-system", "registry-storage-client")
+		Expect(client.Exists()).To(BeTrue())
+
+		data := client.Field("data").Map()
+		keys := make([]string, 0, len(data))
+		for key := range data {
+			keys = append(keys, key)
+		}
+		Expect(keys).To(ConsistOf("ca.crt", "username", "password", "addresses"))
+
+		access := f.KubernetesResource("Secret", "d8-system", "registry-storage-access")
+		for _, key := range keys {
+			Expect(client.Field("data."+strings.ReplaceAll(key, ".", "\\.")).String()).
+				To(Equal(access.Field("data."+strings.ReplaceAll(key, ".", "\\.")).String()), key)
+		}
+		Expect(client.Field("data.username").String()).
+			To(Equal(base64.StdEncoding.EncodeToString([]byte("registry-ro"))))
+	})
+
+	// The storage pod's secret keeps every key it had.
+	//
+	// The StatefulSet is updated OnDelete, and a replica that nothing replaces — a single master with
+	// no upstream — runs on the spec it was created with indefinitely, resolving these keys again on
+	// every container restart. A key moved out of this secret is a syncer that cannot start after its
+	// next crash.
+	//
+	// The read pair and the addresses stay as well, although the client secret now carries them for
+	// the controller and the packages proxy: dhctl reads them from here on two paths. From outside the
+	// cluster it opens a tunnel to the address and takes the read pair and the authority as they are;
+	// a missing address means "no store". Inside it, as the infrastructure converger and the state
+	// exporter, it reads the read pair and the authority but not the addresses; a missing one of those
+	// means "no store". Neither path fails on a missing key: each falls back to the installer's registry
+	// and its certificate. Nothing else would notice the keys gone.
+	It("leaves the storage pod's secret as old replicas and dhctl expect it", func() {
+		access := f.KubernetesResource("Secret", "d8-system", "registry-storage-access")
+		data := access.Field("data").Map()
+
+		// The StatefulSet's environment.
+		for _, key := range []string{"sync-username", "sync-password", "http-secret", "token-issuer", "ca.crt"} {
+			Expect(data).To(HaveKey(key))
+		}
+
+		// dhctl's reads of the store, with the same values the client secret carries.
+		client := f.KubernetesResource("Secret", "d8-system", "registry-storage-client")
+		for _, key := range []string{"username", "password", "addresses"} {
+			Expect(data).To(HaveKey(key))
+			Expect(data[key].String()).To(Equal(client.Field("data."+key).String()), key)
+		}
+	})
 })
 
 // The token service. The registry advertises a token endpoint to every client and
@@ -1207,7 +1267,7 @@ var _ = Describe("Module :: registry :: helm template :: v2 token service", func
 		Expect(auth.Get("readinessProbe.httpGet.host").String()).To(Equal("127.0.0.1"))
 	})
 
-	It("grants the read account pulls and the write account everything", func() {
+	It("grants the read account pulls and the write account pulls and pushes", func() {
 		secret := f.KubernetesResource("Secret", "d8-system", "registry-storage-auth-config")
 		Expect(secret.Exists()).To(BeTrue())
 
@@ -1237,7 +1297,12 @@ var _ = Describe("Module :: registry :: helm template :: v2 token service", func
 		Expect(config).ToNot(ContainSubstring("RW-PASSWORD"))
 
 		Expect(config).To(ContainSubstring(`actions: ["pull"]`))
-		Expect(config).To(ContainSubstring(`actions: ["*"]`))
+
+		// The publication account uploads and nothing else: "*" also granted delete and the catalogue,
+		// and `d8 mirror push` uses neither.
+		rw := aclRulesOf(config, "registry-rw")
+		Expect(rw).To(HaveLen(1))
+		Expect(rw[0].Actions).To(Equal([]string{"pull", "push"}))
 	})
 
 	// A replica writes into its own store, and needs an account that may.
@@ -1307,6 +1372,172 @@ var _ = Describe("Module :: registry :: helm template :: v2 token service", func
 			"the catalogue rule must be matched before the rule that grants only pull")
 	})
 })
+
+// The token service's rules, evaluated the way the service evaluates them.
+//
+// A substring test cannot tell a rule that works from one that denies every pull in the cluster:
+// docker_auth takes a pattern between slashes as a regular expression and anything else as a
+// `path.Match` glob, matches an unanchored expression anywhere in the name, stops at the first rule
+// that matches, and denies a request no rule matches. A pattern that is one character off is
+// accepted by its validation and then matches nothing — the cluster finds out when no node can pull.
+var _ = Describe("Module :: registry :: helm template :: v2 token service rules", func() {
+	f := SetupHelmConfig(``)
+
+	var acl []aclRule
+
+	BeforeEach(func() {
+		f.ValuesSetFromYaml("global", globalValues)
+		f.ValuesSet("global.modulesImages", GetModulesImages())
+		f.ValuesSetFromYaml("registry", v2Enabled)
+		f.HelmRender()
+		Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+		secret := f.KubernetesResource("Secret", "d8-system", "registry-storage-auth-config")
+		acl = aclRules(secret.Field("stringData.auth_config\\.yaml").String())
+		Expect(acl).NotTo(BeEmpty())
+	})
+
+	platform := strings.Trim(constant.Path, "/")
+
+	It("holds every repository rule to the platform's path", func() {
+		for _, rule := range acl {
+			if rule.Match["type"] == "registry" && rule.Match["name"] == "catalog" {
+				continue
+			}
+			Expect(rule.Match).To(HaveKeyWithValue("name", `/^system/deckhouse(/.*)?$/`),
+				"the rule for %s reaches repositories outside the platform's path", rule.Match["account"])
+		}
+	})
+
+	It("lets the node account pull the platform's path and nothing else", func() {
+		for _, repository := range []string{
+			platform,
+			platform + "/install",
+			platform + "/modules/console",
+			platform + "/module-sources/partner/some-module",
+		} {
+			Expect(aclAuthorize(acl, "registry-ro", "repository", repository, "pull")).
+				To(Equal([]string{"pull"}), repository)
+		}
+
+		for _, repository := range []string{
+			"other/x",
+			"library/alpine",
+			platform + "-extra",
+			platform + "-extra/x",
+			"other/" + platform,
+			"other/" + platform + "/x",
+		} {
+			Expect(aclAuthorize(acl, "registry-ro", "repository", repository, "pull")).
+				To(BeEmpty(), repository)
+		}
+
+		Expect(aclAuthorize(acl, "registry-ro", "repository", platform+"/x", "pull", "push")).
+			To(Equal([]string{"pull"}), "the node account must never write")
+		Expect(aclAuthorize(acl, "registry-ro", "registry", "catalog", "*")).
+			To(Equal([]string{"*"}), "a replica counts what it holds by listing the catalogue")
+	})
+
+	It("lets a replica fill, replicate and collect the platform's path and nothing else", func() {
+		Expect(aclAuthorize(acl, "registry-sync", "repository", platform+"/modules/console", "pull", "push", "delete")).
+			To(Equal([]string{"delete", "pull", "push"}))
+		Expect(aclAuthorize(acl, "registry-sync", "repository", platform, "delete")).
+			To(Equal([]string{"delete"}), "the garbage collection deletes through this account")
+		Expect(aclAuthorize(acl, "registry-sync", "registry", "catalog", "*")).
+			To(Equal([]string{"*"}))
+
+		Expect(aclAuthorize(acl, "registry-sync", "repository", "other/x", "pull", "push", "delete")).
+			To(BeEmpty())
+		Expect(aclAuthorize(acl, "registry-sync", "repository", platform+"-extra", "push")).
+			To(BeEmpty())
+	})
+
+	It("lets the publication account upload the platform's path and nothing else", func() {
+		Expect(aclAuthorize(acl, "registry-rw", "repository", platform+"/release-channel", "pull", "push")).
+			To(Equal([]string{"pull", "push"}))
+		Expect(aclAuthorize(acl, "registry-rw", "repository", platform+"/modules/console", "delete")).
+			To(BeEmpty(), "removing images is the garbage collection's, not the internet-facing endpoint's")
+		Expect(aclAuthorize(acl, "registry-rw", "registry", "catalog", "*")).
+			To(BeEmpty(), "`d8 mirror push` does not list the catalogue")
+		Expect(aclAuthorize(acl, "registry-rw", "repository", "other/x", "pull", "push")).
+			To(BeEmpty())
+	})
+
+	It("denies an account the service does not know", func() {
+		Expect(aclAuthorize(acl, "someone", "repository", platform+"/x", "pull")).To(BeEmpty())
+	})
+})
+
+// aclRule is one entry of the token service's ACL, as much of it as these tests read.
+type aclRule struct {
+	Match   map[string]string `yaml:"match"`
+	Actions []string          `yaml:"actions"`
+}
+
+func aclRules(config string) []aclRule {
+	var parsed struct {
+		ACL []aclRule `yaml:"acl"`
+	}
+	Expect(yaml.Unmarshal([]byte(config), &parsed)).To(Succeed())
+	return parsed.ACL
+}
+
+// aclRulesOf is the rules naming an account, in their order.
+func aclRulesOf(config, account string) []aclRule {
+	var rules []aclRule
+	for _, rule := range aclRules(config) {
+		if rule.Match["account"] == account {
+			rules = append(rules, rule)
+		}
+	}
+	return rules
+}
+
+// aclAuthorize answers a request the way docker_auth's static ACL does (auth_server/authz/acl.go of
+// the fork the module builds): the first rule whose every condition matches decides, "*" grants
+// whatever was asked, anything else grants the intersection (sorted, as the service returns it), and
+// no matching rule denies.
+func aclAuthorize(acl []aclRule, account, kind, name string, actions ...string) []string {
+	request := map[string]string{"account": account, "type": kind, "name": name}
+	for _, rule := range acl {
+		matched := true
+		for field, pattern := range rule.Match {
+			if !aclMatchString(pattern, request[field]) {
+				matched = false
+				break
+			}
+		}
+		if !matched {
+			continue
+		}
+
+		if len(rule.Actions) == 1 && rule.Actions[0] == "*" {
+			return actions
+		}
+		var granted []string
+		for _, action := range actions {
+			for _, allowed := range rule.Actions {
+				if action == allowed {
+					granted = append(granted, action)
+				}
+			}
+		}
+		sort.Strings(granted)
+		return granted
+	}
+	return nil
+}
+
+// aclMatchString is docker_auth's matchString: between slashes a regular expression matched
+// anywhere in the value, otherwise a `path.Match` glob.
+func aclMatchString(pattern, value string) bool {
+	if len(pattern) > 2 && pattern[0] == '/' && pattern[len(pattern)-1] == '/' {
+		matched, err := regexp.MatchString(pattern[1:len(pattern)-1], value)
+		return err == nil && matched
+	}
+	matched, err := path.Match(pattern, value)
+	return err == nil && matched
+}
 
 // The garbage collection instruction, which reaches the replicas through the resource rather
 // than through each of them reading the ModuleConfig: three replicas taking turns behind one
@@ -1625,7 +1856,7 @@ var _ = Describe("Module :: registry :: helm template :: the controller can reac
 		Expect(f.RenderError).ShouldNot(HaveOccurred())
 	})
 
-	It("may read the storage access secret and write the resolved auth secret", func() {
+	It("may read the storage client secret and write the resolved auth secret", func() {
 		role := f.KubernetesResource("Role", "d8-system", "registry:controller")
 		Expect(role.Exists()).To(BeTrue())
 
@@ -1662,8 +1893,12 @@ var _ = Describe("Module :: registry :: helm template :: the controller can reac
 			}
 		}
 
-		Expect(named).To(HaveKey("registry-storage-access"))
-		Expect(named["registry-storage-access"]).To(ContainElement("get"))
+		Expect(named).To(HaveKey("registry-storage-client"))
+		Expect(named["registry-storage-client"]).To(ContainElement("get"))
+		// Not the storage pod's own secret: beside the same read account it carries the sync account,
+		// which writes into and deletes from the store, and nothing the controller does needs it.
+		Expect(named).NotTo(HaveKey("registry-storage-access"),
+			"the controller must not be able to read the sync account")
 
 		Expect(named).To(HaveKey(constant.AuthSecretName))
 		Expect(named[constant.AuthSecretName]).To(ContainElements("get", "update", "patch"),

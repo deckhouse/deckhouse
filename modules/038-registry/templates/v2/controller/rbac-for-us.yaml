@@ -159,12 +159,17 @@ rules:
   # How agents reach the cache — addresses, authority, read credentials — which the
   # controller turns into node layouts. Read-only: the storage PKI writes this, not us.
   #
+  # registry-storage-client, and not registry-storage-access: the latter also carries the sync
+  # account, which can write into and delete from the store, and the secret that signs upload
+  # state. Neither is anything the controller uses, and a grant here is what a compromised
+  # controller would hold.
+  #
   # `get` alone, and the components read these uncached for that reason: a rule with
   # resourceNames cannot authorize list or watch, so anything backed by an informer would be
   # refused here no matter how the cache is scoped.
   - apiGroups: [""]
     resources: ["secrets"]
-    resourceNames: ["registry-storage-access"]
+    resourceNames: ["registry-storage-client"]
     verbs: ["get"]
   # The credentials the layouts reference. Written here and nowhere else: this is the object
   # that exists so the layouts can name a credential instead of carrying it.

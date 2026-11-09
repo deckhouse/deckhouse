@@ -151,6 +151,30 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 `))
 		})
 
+		// The packages proxy reads how to reach the in-cluster store from the client secret, which
+		// holds the authority and the read account and nothing else. registry-storage-access is the
+		// storage pod's own and also carries the account the replicas write and delete with; a proxy
+		// allowed to read it could replace every platform image.
+		It("lets the packages proxy read the storage's client secret, not the storage pod's own", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			role := f.KubernetesResource("Role", nsName, "registry-packages-proxy")
+			Expect(role.Exists()).To(BeTrue())
+
+			var names []string
+			for _, rule := range role.Field("rules").Array() {
+				if rule.Get(`resources.#(=="secrets")`).String() != "secrets" {
+					continue
+				}
+				for _, name := range rule.Get("resourceNames").Array() {
+					names = append(names, name.String())
+				}
+			}
+			Expect(names).To(ContainElement("deckhouse-registry"), "the rule the test reads is the secrets one")
+			Expect(names).To(ContainElement("registry-storage-client"))
+			Expect(names).NotTo(ContainElement("registry-storage-access"))
+		})
+
 		It("Should configure Pod Security for d8-monitoring namespace", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 

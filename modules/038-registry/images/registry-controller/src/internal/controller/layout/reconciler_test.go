@@ -773,6 +773,35 @@ func TestReconcileFailsLoudlyWithoutStorageAccess(t *testing.T) {
 	assert.Empty(t, listNodes(t, c))
 }
 
+// TestReconcileReadsTheClientSecretOnly pins which secret the controller reads.
+//
+// The storage pod's own secret, registry-storage-access, carries the same authority, read
+// account and addresses beside the sync account, which can write into and delete from the
+// store. The controller's Role grants the client secret alone, so a fallback to the access
+// secret would be refused on a cluster anyway — and granting it again to make one work is
+// exactly what handing the controller a write account looks like.
+func TestReconcileReadsTheClientSecretOnly(t *testing.T) {
+	assert.Equal(t, "registry-storage-client", StorageAccessSecretName)
+
+	cfg := registryConfig(registryv1alpha1.RegistryConfigSpec{
+		Mode:    registryv1alpha1.ModeManaged,
+		Primary: registryv1alpha1.PrimarySource{Upstream: upstream("registry.deckhouse.io")},
+		Storage: registryv1alpha1.StorageConfig{Cache: true, Source: source()},
+	})
+
+	storagePodSecret := accessSecret()
+	storagePodSecret.Name = "registry-storage-access"
+
+	r, c := newReconciler(t, cfg, storagePodSecret, node("master-0"))
+
+	_, err := r.Reconcile(context.Background(), ctrl.Request{
+		NamespacedName: types.NamespacedName{Name: registryv1alpha1.SingletonName},
+	})
+	require.Error(t, err, "the layout was built from the storage pod's secret")
+	assert.Contains(t, err.Error(), "registry-storage-client")
+	assert.Empty(t, listNodes(t, c))
+}
+
 func TestReconcileIsIdempotent(t *testing.T) {
 	cfg := registryConfig(registryv1alpha1.RegistryConfigSpec{
 		Mode:    registryv1alpha1.ModeManaged,

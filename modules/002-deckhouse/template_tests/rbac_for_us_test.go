@@ -58,7 +58,7 @@ var _ = Describe("Module :: deckhouse :: registry access of node-manager compone
 		grants := roleGrants(f.KubernetesResource("Role", "d8-system", "registry-packages-proxy"))
 		Expect(grants).To(Equal(map[string][]string{
 			"secrets:deckhouse-registry":        rbacReadVerbs,
-			"secrets:registry-storage-access":   rbacReadVerbs,
+			"secrets:registry-storage-client":   rbacReadVerbs,
 			"configmaps:registry-image-address": rbacReadVerbs,
 		}), "a resourceNames Role that misses an object fails silently: the watch returns nothing")
 		Expect(grants).ToNot(HaveKey("secrets:registry-bashible-config"),

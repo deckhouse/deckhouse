@@ -27,7 +27,12 @@ const (
 	// storeAccessSecret holds how to read the cluster's own store: its authority and a read-only
 	// account. It is rendered only where the module actually runs a store, so its presence is itself
 	// the answer to "is the in-cluster registry a store of ours".
-	storeAccessSecret = "registry-storage-access"
+	//
+	// registry-storage-client and not registry-storage-access, although both carry the same three
+	// keys: the latter is the storage pod's own and also holds the account the replicas write and
+	// delete with. Whatever this proxy's Role may read, a compromised proxy holds, and reading the
+	// pod's secret would have handed it the means to replace or remove every platform image.
+	storeAccessSecret = "registry-storage-client"
 )
 
 // storeAuthority is how this proxy reaches the cluster's own store while the node has no agent.
