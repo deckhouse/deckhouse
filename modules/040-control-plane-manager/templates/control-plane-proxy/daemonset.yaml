@@ -5,8 +5,8 @@ memory: 15Mi
 {{- end }}
 
 {{- /* The proxy publishes loopback endpoints of the control plane with authorization:
-       the metrics for Prometheus and the kube-scheduler simulate endpoint for any client
-       allowed by RBAC. The etcd arbiter only has etcd metrics, so its proxy needs Prometheus. */}}
+       the metrics for Prometheus and the kube-scheduler simulate endpoint and decision log
+       for any client allowed by RBAC. The etcd arbiter only has etcd metrics, so its proxy needs Prometheus. */}}
 {{- $profiles := list "main" }}
 {{- if and (.Values.global.enabledModules | has "prometheus") .Values.controlPlaneManager.internal.hasEtcdArbiterNode }}
   {{- $profiles = append $profiles "etcd-arbiter" }}
@@ -114,6 +114,11 @@ spec:
             # authorized as POST, i.e. "create" on the non-resource URL /scheduler/simulate.
             - upstream: http://127.0.0.1:10261/simulate
               path: /scheduler/simulate
+            # The last scheduling decisions of kube-scheduler (patch scheduler-decision-observability),
+            # authorized as GET, i.e. "get" on the non-resource URL /scheduler/decisions.
+            # kube-scheduler answers 404 until DECKHOUSE_SCHEDULER_DECISION_LOG_SIZE turns the log on.
+            - upstream: http://127.0.0.1:10261/decisions
+              path: /scheduler/decisions
             {{- end }}
             - upstream: http://127.0.0.1:2381/metrics
               path: /etcd/metrics

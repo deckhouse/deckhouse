@@ -465,10 +465,17 @@ apiserver:
 				Expect(f.KubernetesResource("Service", "kube-system", "control-plane-proxy").Exists()).To(BeTrue())
 				Expect(f.KubernetesResource("ServiceAccount", "kube-system", "d8-control-plane-manager-control-plane-proxy").Exists()).To(BeTrue())
 				Expect(f.KubernetesResource("ServiceMonitor", "d8-monitoring", "control-plane-proxy").Exists()).To(BeTrue())
+				// The Scheduling dashboard keys kube-scheduler replicas by node, as etcd3 does.
+				for _, path := range []string{"/etcd/metrics", "/scheduler/metrics"} {
+					sm := f.KubernetesResource("ServiceMonitor", "d8-monitoring", "control-plane-proxy")
+					Expect(sm.Field(`spec.endpoints.#(path=="`+path+`").relabelings.#(targetLabel=="node").sourceLabels`).String()).
+						To(MatchJSON(`["__meta_kubernetes_pod_node_name"]`), path)
+				}
 				Expect(controlPlaneProxyUpstreams(f.KubernetesResource("DaemonSet", "kube-system", "control-plane-proxy"))).To(Equal(map[string]string{
 					"/controller-manager/metrics": "https://127.0.0.1:10257/metrics",
 					"/scheduler/metrics":          "https://127.0.0.1:10259/metrics",
 					"/scheduler/simulate":         "http://127.0.0.1:10261/simulate",
+					"/scheduler/decisions":        "http://127.0.0.1:10261/decisions",
 					"/etcd/metrics":               "http://127.0.0.1:2381/metrics",
 				}))
 				Expect(f.KubernetesResource("ServiceMonitor", "d8-monitoring", "kube-apiserver").Exists()).To(BeTrue())
@@ -517,7 +524,7 @@ apiserver:
 				f.HelmRender()
 			})
 
-			It("should not render the scrape stack but keep the scheduler simulate endpoint", func() {
+			It("should not render the scrape stack but keep the scheduler simulate and decisions endpoints", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 				Expect(f.KubernetesResource("ServiceMonitor", "d8-monitoring", "control-plane-proxy").Exists()).To(BeFalse())
@@ -533,11 +540,14 @@ apiserver:
 				ds := f.KubernetesResource("DaemonSet", "kube-system", "control-plane-proxy")
 				Expect(ds.Exists()).To(BeTrue())
 				Expect(controlPlaneProxyUpstreams(ds)).To(HaveKeyWithValue("/scheduler/simulate", "http://127.0.0.1:10261/simulate"))
+				Expect(controlPlaneProxyUpstreams(ds)).To(HaveKeyWithValue("/scheduler/decisions", "http://127.0.0.1:10261/decisions"))
 				// Without the exception hostNetwork Pods of the proxy are rejected by the security policy.
 				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "control-plane-proxy").Exists()).To(BeTrue())
 				Expect(f.KubernetesResource("Service", "kube-system", "control-plane-proxy").Exists()).To(BeTrue())
 				Expect(f.KubernetesResource("ServiceAccount", "kube-system", "d8-control-plane-manager-control-plane-proxy").Exists()).To(BeTrue())
 				Expect(f.KubernetesGlobalResource("ClusterRole", "d8:control-plane-manager:scheduler-simulate").Exists()).To(BeTrue())
+				decisions := f.KubernetesGlobalResource("ClusterRole", "d8:control-plane-manager:scheduler-decisions")
+				Expect(decisions.Field("rules").String()).To(MatchJSON(`[{"nonResourceURLs":["/scheduler/decisions"],"verbs":["get"]}]`))
 			})
 		})
 	})

@@ -1,0 +1,2059 @@
+diff --git a/pkg/scheduler/deckhouse_decision.go b/pkg/scheduler/deckhouse_decision.go
+new file mode 100644
+index 00000000000..c93e7b1c544
+--- /dev/null
++++ b/pkg/scheduler/deckhouse_decision.go
+@@ -0,0 +1,360 @@
++/*
++Copyright 2026 Flant JSC
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scheduler
++
++// Deckhouse: observability of real scheduling decisions.
++//
++// Right after schedulePod selects the node of a Pod, deckhouseRecordDecision
++// compares the selected node (the winner) with the best other feasible node by
++// total score (the runner-up). The score plugin or prioritize extender with the
++// largest positive difference of weighted scores between the two decided.
++// Every decision updates the scheduler_decision_* metrics. Two outputs are
++// opt-in and read once at start:
++//
++//   - DECKHOUSE_SCHEDULER_DECISION_EVENTS=true appends the top nodes and the
++//     deciding plugin to the message of the Scheduled event;
++//   - DECKHOUSE_SCHEDULER_DECISION_LOG_SIZE=<n> keeps the last n decisions in
++//     memory for GET /decisions (deckhouse_decision_log.go).
++//
++// The deciding plugin or extender is named with a prefix: plugin/<score
++// plugin>, extender/<extender name> (deckhouse_extender_names.go), and the
++// shortcuts scheduler/single-node, scheduler/tie, scheduler/nominated-node and
++// scheduler/node-hint. The prefixed names are built once before the
++// scheduling loop starts (deckhouseDecisionNames), so a decision concatenates
++// nothing.
++//
++// Simulations never reach schedulePod, and the check of IsDeckhouseSimulation
++// keeps it so.
++
++import (
++	"context"
++	"strconv"
++	"time"
++
++	v1 "k8s.io/api/core/v1"
++	fwk "k8s.io/kube-scheduler/framework"
++	"k8s.io/kubernetes/pkg/scheduler/framework"
++	"k8s.io/kubernetes/pkg/scheduler/metrics"
++	utiltrace "k8s.io/utils/trace"
++)
++
++const (
++	deckhouseDecisionEventsEnv  = "DECKHOUSE_SCHEDULER_DECISION_EVENTS"
++	deckhouseDecisionLogSizeEnv = "DECKHOUSE_SCHEDULER_DECISION_LOG_SIZE"
++	deckhouseDecisionLogMax     = 10000
++
++	// deckhouseDecisionTop is the number of nodes an event or a log entry shows.
++	deckhouseDecisionTop = 3
++	// deckhouseEventMessageLimit is the longest message events.k8s.io/v1
++	// accepts (note): a longer event is rejected by the API server.
++	deckhouseEventMessageLimit = 1024
++
++	// DecidedBySingleFeasibleNode: only one node passed the filters, nothing was
++	// scored. DecidedByTie: the runner-up has the same total score.
++	DecidedBySingleFeasibleNode = "scheduler/single-node"
++	DecidedByTie                = "scheduler/tie"
++	// DecidedByNodeHint and DecidedByNominatedNode: the scheduler tried one node
++	// only and took it without scoring: the OpportunisticBatching hint left by
++	// an earlier Pod with the same signature (1.35+), or the node nominated for
++	// the Pod by preemption. Other nodes may have fit too.
++	DecidedByNodeHint      = "scheduler/node-hint"
++	DecidedByNominatedNode = "scheduler/nominated-node"
++)
++
++// deckhouseDecisions holds the opt-in outputs of decisions. The zero value
++// keeps only the metrics; StartDeckhouseSimulateServer sets it from the
++// environment before the scheduling loop starts.
++type deckhouseDecisions struct {
++	events bool
++	log    *deckhouseDecisionLog
++	// names are the prefixed names of score plugins and extenders.
++	names deckhouseDecisionNames
++}
++
++// deckhouseDecision is one decision as indices into the scores of the cycle.
++// It lives on the stack of the scheduling goroutine.
++type deckhouseDecision struct {
++	feasible int
++	// top are the winner and the next best nodes, best first; n of them are set.
++	top [deckhouseDecisionTop]int
++	n   int
++	// decidedBy is the deciding plugin or extender (its score name from
++	// deckhouseDecide, prefixed by deckhouseRecordDecision),
++	// DecidedBySingleFeasibleNode or DecidedByTie. contribution is its
++	// weighted score difference.
++	decidedBy    string
++	contribution int64
++	// margin is the total score of the winner minus that of the runner-up.
++	margin int64
++}
++
++// deckhouseDecide explains why host won among the scored feasible nodes. With
++// fewer than two scores there was nothing to compare. ok is false when host is
++// not among the scores (never in a real cycle).
++//
++// One pass over the scores keeps the best three by total score, the earliest
++// first among equal totals; the winner is one of them unless more than three
++// nodes share the top score, then a second pass finds it.
++func deckhouseDecide(host string, scores []framework.NodePluginScores) (d deckhouseDecision, ok bool) {
++	d.feasible = len(scores)
++	if len(scores) < 2 {
++		d.feasible, d.n, d.decidedBy = 1, len(scores), DecidedBySingleFeasibleNode
++		return d, true
++	}
++
++	var best [deckhouseDecisionTop]int
++	n := 0
++	for i := range scores {
++		t := scores[i].TotalScore
++		if n == len(best) && t <= scores[best[n-1]].TotalScore {
++			continue
++		}
++		j := n
++		if n < len(best) {
++			n++
++		} else {
++			j = n - 1
++		}
++		for ; j > 0 && scores[best[j-1]].TotalScore < t; j-- {
++			best[j] = best[j-1]
++		}
++		best[j] = i
++	}
++
++	winner := -1
++	for k := 0; k < n; k++ {
++		if scores[best[k]].Name == host {
++			winner = best[k]
++			break
++		}
++	}
++	if winner < 0 {
++		for i := range scores {
++			if scores[i].Name == host {
++				winner = i
++				break
++			}
++		}
++		if winner < 0 {
++			return d, false
++		}
++	}
++	d.top[0], d.n = winner, 1
++	for k := 0; k < n && d.n < len(d.top); k++ {
++		if best[k] != winner {
++			d.top[d.n] = best[k]
++			d.n++
++		}
++	}
++
++	w, r := &scores[winner], &scores[d.top[1]]
++	d.margin = w.TotalScore - r.TotalScore
++	for k := range w.Scores {
++		name := w.Scores[k].Name
++		var other int64
++		if k < len(r.Scores) && r.Scores[k].Name == name {
++			other = r.Scores[k].Score
++		} else {
++			// Extenders append their scores in the order they answer.
++			for _, p := range r.Scores {
++				if p.Name == name {
++					other = p.Score
++					break
++				}
++			}
++		}
++		if diff := w.Scores[k].Score - other; diff > d.contribution {
++			d.contribution, d.decidedBy = diff, name
++		}
++	}
++	// The total is the sum of the weighted scores, so a positive margin always
++	// has a positive contribution; equal totals are a tie.
++	if d.margin <= 0 || d.decidedBy == "" {
++		d.decidedBy, d.contribution = DecidedByTie, 0
++	}
++	return d, true
++}
++
++// deckhouseRecordDecision records the decision of a real scheduling cycle:
++// host was selected among the feasible nodes with these scores, or it was the
++// only feasible node and scores is nil; nodeHint is the OpportunisticBatching
++// hint of the cycle (empty before 1.35). The deciding plugin or extender is
++// named with its prefix. With the opt-in outputs off it allocates nothing.
++func (sched *Scheduler) deckhouseRecordDecision(ctx context.Context, state fwk.CycleState, schedFramework framework.Framework, pod *v1.Pod, host string, scores []framework.NodePluginScores, nodeHint string, trace *utiltrace.Trace) {
++	if framework.IsDeckhouseSimulation(ctx) {
++		return
++	}
++	d, ok := deckhouseDecide(host, scores)
++	if !ok {
++		return
++	}
++	scored := len(scores) > 1
++	if scored {
++		d.decidedBy = sched.deckhouseDecisions.names.of(d.decidedBy)
++	} else {
++		d.decidedBy = deckhouseSingleNode(pod, host, nodeHint)
++	}
++	profile := schedFramework.ProfileName()
++	if metrics.DecisionDecidingPlugin != nil {
++		metrics.DecisionDecidingPlugin.WithLabelValues(profile, d.decidedBy).Inc()
++		// A shortcut tried one node: its count of feasible nodes means nothing.
++		if scored || d.decidedBy == DecidedBySingleFeasibleNode {
++			metrics.DecisionFeasibleNodes.WithLabelValues(profile).Observe(float64(d.feasible))
++		}
++		if scored {
++			metrics.DecisionScoreMargin.WithLabelValues(profile).Observe(float64(d.margin))
++		}
++	}
++	if sched.deckhouseDecisions.events {
++		state.Write(deckhouseDecisionEventKey, newDeckhouseDecisionEvent(host, d, scores))
++	}
++	if l := sched.deckhouseDecisions.log; l != nil {
++		l.record(time.Now(), pod, profile, host, d, scores, trace.TotalTime())
++	}
++}
++
++// deckhouseSingleNode names the decision for a single feasible node. The
++// nominated node, or without one the OpportunisticBatching hint, is tried
++// before all other nodes and taken when it passes the filters, in the order of
++// upstream evaluateNominatedNode.
++func deckhouseSingleNode(pod *v1.Pod, host, nodeHint string) string {
++	switch {
++	case pod.Status.NominatedNodeName != "":
++		if host == pod.Status.NominatedNodeName {
++			return DecidedByNominatedNode
++		}
++	case nodeHint != "" && host == nodeHint:
++		return DecidedByNodeHint
++	}
++	return DecidedBySingleFeasibleNode
++}
++
++// deckhouseDecisionEventKey keeps the decision in the CycleState for the
++// Scheduled event of the binding cycle.
++const deckhouseDecisionEventKey fwk.StateKey = "deckhouse.io/decision"
++
++type deckhouseDecisionEventNode struct {
++	name  string
++	total int64
++}
++
++type deckhouseDecisionEvent struct {
++	top          [deckhouseDecisionTop]deckhouseDecisionEventNode
++	n            int
++	scored       bool
++	decidedBy    string
++	contribution int64
++}
++
++func (e *deckhouseDecisionEvent) Clone() fwk.StateData { return e }
++
++func newDeckhouseDecisionEvent(host string, d deckhouseDecision, scores []framework.NodePluginScores) *deckhouseDecisionEvent {
++	e := &deckhouseDecisionEvent{decidedBy: d.decidedBy, contribution: d.contribution, scored: len(scores) > 1}
++	if !e.scored {
++		e.top[0], e.n = deckhouseDecisionEventNode{name: host}, 1
++		return e
++	}
++	for k := 0; k < d.n; k++ {
++		e.top[k] = deckhouseDecisionEventNode{name: scores[d.top[k]].Name, total: scores[d.top[k]].TotalScore}
++	}
++	e.n = d.n
++	return e
++}
++
++// deckhouseDecisionEventSuffix is appended to the upstream Scheduled message
++// "Successfully assigned <namespace>/<name> to <node>", for example
++// "; top: node-a=512 node-b=498 node-c=470; decided by NodeResourcesFit (+14)".
++// The whole message stays within deckhouseEventMessageLimit: nodes that do not
++// fit are left out from the end, and nothing is added when even the deciding
++// plugin does not fit. Empty when the events are off or the cycle recorded no
++// decision.
++func (sched *Scheduler) deckhouseDecisionEventSuffix(state fwk.CycleState, pod *v1.Pod, node string) string {
++	if !sched.deckhouseDecisions.events || state == nil {
++		return ""
++	}
++	data, err := state.Read(deckhouseDecisionEventKey)
++	if err != nil {
++		return ""
++	}
++	e, ok := data.(*deckhouseDecisionEvent)
++	if !ok {
++		return ""
++	}
++	budget := deckhouseEventMessageLimit - len("Successfully assigned / to ") - len(pod.Namespace) - len(pod.Name) - len(node)
++
++	decided := append([]byte("; decided by "), e.decidedBy...)
++	if e.contribution > 0 {
++		decided = append(decided, " (+"...)
++		decided = strconv.AppendInt(decided, e.contribution, 10)
++		decided = append(decided, ')')
++	}
++	if len(decided) > budget {
++		return ""
++	}
++	out := make([]byte, 0, budget)
++	out = append(out, "; top:"...)
++	added := 0
++	for k := 0; k < e.n; k++ {
++		mark := len(out)
++		out = append(out, ' ')
++		out = append(out, e.top[k].name...)
++		if e.scored {
++			out = append(out, '=')
++			out = strconv.AppendInt(out, e.top[k].total, 10)
++		}
++		if len(out)+len(decided) > budget {
++			out = out[:mark]
++			break
++		}
++		added++
++	}
++	if added == 0 {
++		out = out[:0]
++	}
++	return string(append(out, decided...))
++}
++
++// deckhouseDecisionNames maps the name of a score (a score plugin, or the URL
++// prefix of an extender, as prioritizeNodes names it) to plugin/<plugin> or
++// extender/<extender name>.
++type deckhouseDecisionNames map[string]string
++
++// of returns the prefixed name; a name it does not know (a plugin of a
++// framework without DeckhouseScorePluginWeights) stays as it is.
++func (n deckhouseDecisionNames) of(score string) string {
++	if name, ok := n[score]; ok {
++		return name
++	}
++	return score
++}
++
++// deckhouseDecisionNames builds the prefixed names of the score plugins of
++// every profile and of every extender.
++func (sched *Scheduler) deckhouseDecisionNames() deckhouseDecisionNames {
++	out := deckhouseDecisionNames{}
++	for _, f := range sched.Profiles {
++		if w, ok := f.(interface{ DeckhouseScorePluginWeights() map[string]int }); ok {
++			for name := range w.DeckhouseScorePluginWeights() {
++				out[name] = "plugin/" + name
++			}
++		}
++	}
++	for _, e := range sched.Extenders {
++		out[e.Name()] = "extender/" + deckhouseExtenderName(e.Name())
++	}
++	return out
++}
+diff --git a/pkg/scheduler/deckhouse_decision_log.go b/pkg/scheduler/deckhouse_decision_log.go
+new file mode 100644
+index 00000000000..55e6529448a
+--- /dev/null
++++ b/pkg/scheduler/deckhouse_decision_log.go
+@@ -0,0 +1,332 @@
++/*
++Copyright 2026 Flant JSC
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scheduler
++
++// Deckhouse: in-memory log of the last scheduling decisions, GET /decisions on
++// the loopback listener of the simulate endpoint.
++//
++// The log is a ring of slots allocated once. The scheduling goroutine takes the
++// next sequence number with an atomic add and copies the decision into its slot
++// under the slot's own mutex; a reader locks one slot at a time to copy it out.
++// The scheduling path therefore waits at most for the copy of one entry, never
++// for a whole read. An entry holds strings and numbers only: no Pod, NodeInfo
++// or framework object stays referenced.
++
++import (
++	"encoding/json"
++	"fmt"
++	"io"
++	"net/http"
++	"net/url"
++	"strconv"
++	"sync"
++	"sync/atomic"
++	"time"
++
++	v1 "k8s.io/api/core/v1"
++	"k8s.io/apimachinery/pkg/types"
++	"k8s.io/klog/v2"
++	"k8s.io/kubernetes/pkg/scheduler/framework"
++)
++
++const (
++	// deckhouseDecisionMaxScores bounds the plugin and extender scores kept per
++	// node of an entry.
++	deckhouseDecisionMaxScores     = 32
++	deckhouseDecisionsDefaultLimit = 100
++	// deckhouseDecisionsMaxLimit bounds one answer of GET /decisions whatever
++	// the size of the ring.
++	deckhouseDecisionsMaxLimit = 1000
++)
++
++// DeckhouseDecisionList is the answer of GET /decisions, newest first.
++type DeckhouseDecisionList struct {
++	Size      int                 `json:"size"`
++	Decisions []DeckhouseDecision `json:"decisions"`
++}
++
++// DeckhouseDecision is one decision of a real scheduling cycle. Top lists the
++// selected node first, then the next best nodes, with their weighted scores.
++// DurationSeconds is the time of the scheduling attempt up to the decision:
++// cache snapshot, filters, extenders and scores.
++type DeckhouseDecision struct {
++	Time            time.Time               `json:"time"`
++	Namespace       string                  `json:"namespace"`
++	Name            string                  `json:"name"`
++	UID             types.UID               `json:"uid"`
++	Profile         string                  `json:"profile"`
++	Node            string                  `json:"node"`
++	FeasibleNodes   int                     `json:"feasibleNodes"`
++	DecidedBy       string                  `json:"decidedBy"`
++	Contribution    int64                   `json:"contribution"`
++	Margin          int64                   `json:"margin"`
++	DurationSeconds float64                 `json:"durationSeconds"`
++	Top             []DeckhouseDecisionNode `json:"top"`
++}
++
++// DeckhouseDecisionNode is one of the top nodes of a decision. Scores are empty
++// when a single node was feasible.
++type DeckhouseDecisionNode struct {
++	Name       string          `json:"name"`
++	TotalScore int64           `json:"totalScore"`
++	Scores     []SimulateScore `json:"scores,omitempty"`
++}
++
++type deckhouseDecisionNodeRecord struct {
++	name   string
++	total  int64
++	scores []framework.PluginScore // the backing array is reused by later entries
++}
++
++type deckhouseDecisionRecord struct {
++	time                 time.Time
++	namespace, name      string
++	uid                  types.UID
++	profile, node        string
++	feasible             int
++	decidedBy            string
++	contribution, margin int64
++	duration             time.Duration
++	top                  [deckhouseDecisionTop]deckhouseDecisionNodeRecord
++	n                    int
++}
++
++type deckhouseDecisionSlot struct {
++	mu  sync.Mutex
++	seq uint64 // 1-based sequence number of the entry, 0 while empty
++	rec deckhouseDecisionRecord
++}
++
++type deckhouseDecisionLog struct {
++	next  atomic.Uint64
++	slots []deckhouseDecisionSlot
++	// names prefix the score names of an entry when it is read: the scheduling
++	// path copies the score names as prioritizeNodes made them.
++	names deckhouseDecisionNames
++}
++
++func newDeckhouseDecisionLog(size int) *deckhouseDecisionLog {
++	if size <= 0 {
++		return nil
++	}
++	return &deckhouseDecisionLog{slots: make([]deckhouseDecisionSlot, size)}
++}
++
++// deckhouseDecisionEventsFromEnv reads DECKHOUSE_SCHEDULER_DECISION_EVENTS. An
++// invalid value is logged and leaves the events off.
++func deckhouseDecisionEventsFromEnv(logger klog.Logger, getenv func(string) string) bool {
++	v := getenv(deckhouseDecisionEventsEnv)
++	if v == "" {
++		return false
++	}
++	b, err := strconv.ParseBool(v)
++	if err != nil {
++		logger.Error(err, "Ignoring invalid value", "variable", deckhouseDecisionEventsEnv, "value", v)
++	}
++	return b
++}
++
++// deckhouseDecisionLogFromEnv allocates the log of
++// DECKHOUSE_SCHEDULER_DECISION_LOG_SIZE entries, at most deckhouseDecisionLogMax.
++// Unset, 0 or an invalid value (logged) is nil: no log.
++func deckhouseDecisionLogFromEnv(logger klog.Logger, getenv func(string) string) *deckhouseDecisionLog {
++	v := getenv(deckhouseDecisionLogSizeEnv)
++	if v == "" {
++		return nil
++	}
++	n, err := strconv.Atoi(v)
++	if err != nil || n < 0 {
++		logger.Error(err, "Ignoring invalid value, the decision log is off", "variable", deckhouseDecisionLogSizeEnv, "value", v)
++		return nil
++	}
++	if n > deckhouseDecisionLogMax {
++		logger.Info("Decision log size is capped", "variable", deckhouseDecisionLogSizeEnv, "value", n, "size", deckhouseDecisionLogMax)
++		n = deckhouseDecisionLogMax
++	}
++	return newDeckhouseDecisionLog(n)
++}
++
++// record copies a decision into the next slot.
++func (l *deckhouseDecisionLog) record(now time.Time, pod *v1.Pod, profile, host string, d deckhouseDecision, scores []framework.NodePluginScores, duration time.Duration) {
++	seq := l.next.Add(1)
++	s := &l.slots[(seq-1)%uint64(len(l.slots))]
++	s.mu.Lock()
++	defer s.mu.Unlock()
++	if seq < s.seq {
++		// A later decision already took the slot after a full turn of the ring.
++		return
++	}
++	s.seq = seq
++	r := &s.rec
++	r.time, r.namespace, r.name, r.uid = now, pod.Namespace, pod.Name, pod.UID
++	r.profile, r.node, r.feasible, r.duration = profile, host, d.feasible, duration
++	r.decidedBy, r.contribution, r.margin = d.decidedBy, d.contribution, d.margin
++	if len(scores) < 2 {
++		r.top[0].name, r.top[0].total, r.top[0].scores, r.n = host, 0, r.top[0].scores[:0], 1
++		return
++	}
++	for k := 0; k < d.n; k++ {
++		src := &scores[d.top[k]]
++		ps := src.Scores
++		if len(ps) > deckhouseDecisionMaxScores {
++			ps = ps[:deckhouseDecisionMaxScores]
++		}
++		t := &r.top[k]
++		t.name, t.total, t.scores = src.Name, src.TotalScore, append(t.scores[:0], ps...)
++	}
++	r.n = d.n
++}
++
++// each copies out the newest entries that match, at most limit of them, and
++// passes them to fn one by one outside the slot lock; it stops at the first
++// error of fn. An empty namespace or name matches any.
++func (l *deckhouseDecisionLog) each(namespace, name string, limit int, fn func(DeckhouseDecision) error) error {
++	size := uint64(len(l.slots))
++	last := l.next.Load()
++	found := 0
++	for seq := last; seq > 0 && last-seq < size && found < limit; seq-- {
++		s := &l.slots[(seq-1)%size]
++		s.mu.Lock()
++		match := s.seq == seq && (namespace == "" || s.rec.namespace == namespace) && (name == "" || s.rec.name == name)
++		var d DeckhouseDecision
++		if match {
++			d = s.rec.export(l.names)
++		}
++		s.mu.Unlock()
++		if !match {
++			continue
++		}
++		found++
++		if err := fn(d); err != nil {
++			return err
++		}
++	}
++	return nil
++}
++
++// list returns what each passes.
++func (l *deckhouseDecisionLog) list(namespace, name string, limit int) []DeckhouseDecision {
++	var out []DeckhouseDecision
++	_ = l.each(namespace, name, limit, func(d DeckhouseDecision) error {
++		out = append(out, d)
++		return nil
++	})
++	return out
++}
++
++func (r *deckhouseDecisionRecord) export(names deckhouseDecisionNames) DeckhouseDecision {
++	out := DeckhouseDecision{
++		Time: r.time, Namespace: r.namespace, Name: r.name, UID: r.uid,
++		Profile: r.profile, Node: r.node, FeasibleNodes: r.feasible,
++		DecidedBy: r.decidedBy, Contribution: r.contribution, Margin: r.margin,
++		DurationSeconds: r.duration.Seconds(),
++		Top:             make([]DeckhouseDecisionNode, r.n),
++	}
++	for k := 0; k < r.n; k++ {
++		t := &r.top[k]
++		out.Top[k] = DeckhouseDecisionNode{Name: t.name, TotalScore: t.total}
++		if len(t.scores) > 0 {
++			out.Top[k].Scores = make([]SimulateScore, len(t.scores))
++			for i, p := range t.scores {
++				out.Top[k].Scores[i] = SimulateScore{Name: names.of(p.Name), Score: p.Score}
++			}
++		}
++	}
++	return out
++}
++
++// deckhouseDecisionsHandler serves GET /decisions?namespace=&name=&limit=.
++// Without the log it answers 404 and does nothing else.
++type deckhouseDecisionsHandler struct {
++	log    *deckhouseDecisionLog
++	logger klog.Logger
++}
++
++func (h deckhouseDecisionsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
++	if h.log == nil {
++		http.Error(w, "the decision log is off, set "+deckhouseDecisionLogSizeEnv, http.StatusNotFound)
++		return
++	}
++	if r.Method != http.MethodGet {
++		http.Error(w, "use GET", http.StatusMethodNotAllowed)
++		return
++	}
++	size := len(h.log.slots)
++	namespace, name, limit, err := decisionsQuery(r.URL.RawQuery, size)
++	if err != nil {
++		http.Error(w, fmt.Sprintf("bad request: %v", err), http.StatusBadRequest)
++		return
++	}
++	w.Header().Set("Content-Type", "application/json")
++	if err := writeDecisions(w, h.log, size, namespace, name, limit); err != nil {
++		h.logger.Error(err, "Failed to write decisions response")
++	}
++}
++
++// writeDecisions streams a DeckhouseDecisionList entry by entry, so that an
++// answer is never built in one buffer.
++func writeDecisions(w io.Writer, l *deckhouseDecisionLog, size int, namespace, name string, limit int) error {
++	if _, err := fmt.Fprintf(w, `{"size":%d,"decisions":[`, size); err != nil {
++		return err
++	}
++	enc := json.NewEncoder(w)
++	sep := ""
++	err := l.each(namespace, name, limit, func(d DeckhouseDecision) error {
++		if _, err := io.WriteString(w, sep); err != nil {
++			return err
++		}
++		sep = ","
++		return enc.Encode(d)
++	})
++	if err != nil {
++		return err
++	}
++	_, err = io.WriteString(w, "]}\n")
++	return err
++}
++
++// decisionsQuery reads namespace, name and limit (default 100, at most
++// deckhouseDecisionsMaxLimit and the size of the ring; a larger limit is cut).
++// Unknown or repeated parameters are errors.
++func decisionsQuery(raw string, size int) (namespace, name string, limit int, err error) {
++	q, err := url.ParseQuery(raw)
++	if err != nil {
++		return "", "", 0, err
++	}
++	limit = min(deckhouseDecisionsDefaultLimit, size)
++	maxLimit := min(deckhouseDecisionsMaxLimit, size)
++	for key, values := range q {
++		if len(values) != 1 {
++			return "", "", 0, fmt.Errorf("parameter %q must be set once", key)
++		}
++		switch v := values[0]; key {
++		case "namespace":
++			namespace = v
++		case "name":
++			name = v
++		case "limit":
++			n, err := strconv.Atoi(v)
++			if err != nil || n < 1 {
++				return "", "", 0, fmt.Errorf("limit must be a positive integer, got %q", v)
++			}
++			limit = min(n, maxLimit)
++		default:
++			return "", "", 0, fmt.Errorf("unknown parameter %q, known: namespace, name, limit", key)
++		}
++	}
++	return namespace, name, limit, nil
++}
+diff --git a/pkg/scheduler/deckhouse_decision_test.go b/pkg/scheduler/deckhouse_decision_test.go
+new file mode 100644
+index 00000000000..b59e1e9bcf9
+--- /dev/null
++++ b/pkg/scheduler/deckhouse_decision_test.go
+@@ -0,0 +1,912 @@
++/*
++Copyright 2026 Flant JSC
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scheduler
++
++import (
++	"context"
++	"encoding/json"
++	"fmt"
++	"net"
++	"net/http"
++	"net/http/httptest"
++	"strings"
++	"sync"
++	"testing"
++	"time"
++
++	"go.uber.org/goleak"
++	v1 "k8s.io/api/core/v1"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	k8sruntime "k8s.io/apimachinery/pkg/runtime"
++	"k8s.io/client-go/tools/events"
++	basemetrics "k8s.io/component-base/metrics"
++	"k8s.io/component-base/metrics/testutil"
++	"k8s.io/klog/v2"
++	"k8s.io/klog/v2/ktesting"
++	fwk "k8s.io/kube-scheduler/framework"
++	"k8s.io/kubernetes/pkg/scheduler/framework"
++	"k8s.io/kubernetes/pkg/scheduler/framework/plugins/defaultbinder"
++	"k8s.io/kubernetes/pkg/scheduler/framework/plugins/queuesort"
++	frameworkruntime "k8s.io/kubernetes/pkg/scheduler/framework/runtime"
++	"k8s.io/kubernetes/pkg/scheduler/metrics"
++	tf "k8s.io/kubernetes/pkg/scheduler/testing/framework"
++	utiltrace "k8s.io/utils/trace"
++)
++
++func decisionScores(nodes ...framework.NodePluginScores) []framework.NodePluginScores { return nodes }
++
++func decisionNode(name string, scores ...framework.PluginScore) framework.NodePluginScores {
++	n := framework.NodePluginScores{Name: name, Scores: scores}
++	for _, s := range scores {
++		n.TotalScore += s.Score
++	}
++	return n
++}
++
++func ps(name string, score int64) framework.PluginScore {
++	return framework.PluginScore{Name: name, Score: score}
++}
++
++// The deciding plugin is the one with the largest lead of the winner over the
++// best other node; ties, single nodes and more than three equal top scores are
++// named as such, and extender scores are matched by name in any order.
++func TestDeckhouseDecide(t *testing.T) {
++	cases := []struct {
++		name         string
++		host         string
++		scores       []framework.NodePluginScores
++		decidedBy    string
++		contribution int64
++		margin       int64
++		top          []string
++	}{{
++		name:      "single feasible node",
++		host:      "a",
++		decidedBy: DecidedBySingleFeasibleNode,
++	}, {
++		name: "largest positive lead decides",
++		host: "a",
++		scores: decisionScores(
++			decisionNode("c", ps("Fit", 50), ps("Spread", 40), ps("http://ext", 0)),
++			decisionNode("a", ps("Fit", 70), ps("Spread", 10), ps("http://ext", 30)),
++			decisionNode("b", ps("Fit", 60), ps("Spread", 30), ps("http://ext", 10)),
++		),
++		// a=110, b=100, c=90: Fit +10, Spread -20, ext +20.
++		decidedBy: "http://ext", contribution: 20, margin: 10, top: []string{"a", "b", "c"},
++	}, {
++		name: "extenders answered in another order, one did not score the runner-up",
++		host: "a",
++		scores: decisionScores(
++			decisionNode("a", ps("Fit", 10), ps("http://e1", 20), ps("http://e2", 50)),
++			decisionNode("b", ps("Fit", 30), ps("http://e2", 10)),
++		),
++		decidedBy: "http://e2", contribution: 40, margin: 40, top: []string{"a", "b"},
++	}, {
++		name: "tie",
++		host: "b",
++		scores: decisionScores(
++			decisionNode("a", ps("Fit", 50)),
++			decisionNode("b", ps("Fit", 50)),
++			decisionNode("c", ps("Fit", 10)),
++		),
++		decidedBy: DecidedByTie, top: []string{"b", "a", "c"},
++	}, {
++		name: "winner among more than three equal top scores",
++		host: "e",
++		scores: decisionScores(
++			decisionNode("a", ps("Fit", 50)), decisionNode("b", ps("Fit", 50)), decisionNode("c", ps("Fit", 50)),
++			decisionNode("d", ps("Fit", 50)), decisionNode("e", ps("Fit", 50)), decisionNode("f", ps("Fit", 1)),
++		),
++		decidedBy: DecidedByTie, top: []string{"e", "a", "b"},
++	}, {
++		name: "no score plugins: every total is 1",
++		host: "b",
++		scores: decisionScores(
++			framework.NodePluginScores{Name: "a", TotalScore: 1}, framework.NodePluginScores{Name: "b", TotalScore: 1},
++		),
++		decidedBy: DecidedByTie, top: []string{"b", "a"},
++	}, {
++		name: "best three kept in order",
++		host: "d",
++		scores: decisionScores(
++			decisionNode("a", ps("Fit", 1)), decisionNode("b", ps("Fit", 5)), decisionNode("c", ps("Fit", 3)),
++			decisionNode("d", ps("Fit", 9)), decisionNode("e", ps("Fit", 4)), decisionNode("f", ps("Fit", 5)),
++		),
++		decidedBy: "Fit", contribution: 4, margin: 4, top: []string{"d", "b", "f"},
++	}}
++	for _, tc := range cases {
++		t.Run(tc.name, func(t *testing.T) {
++			d, ok := deckhouseDecide(tc.host, tc.scores)
++			if !ok {
++				t.Fatal("not decided")
++			}
++			if d.decidedBy != tc.decidedBy || d.contribution != tc.contribution || d.margin != tc.margin {
++				t.Errorf("decided by %q (+%d), margin %d; want %q (+%d), margin %d", d.decidedBy, d.contribution, d.margin, tc.decidedBy, tc.contribution, tc.margin)
++			}
++			var top []string
++			for k := 0; k < d.n && len(tc.scores) > 1; k++ {
++				top = append(top, tc.scores[d.top[k]].Name)
++			}
++			if strings.Join(top, ",") != strings.Join(tc.top, ",") {
++				t.Errorf("top %v, want %v", top, tc.top)
++			}
++		})
++	}
++	if _, ok := deckhouseDecide("missing", decisionScores(decisionNode("a"), decisionNode("b"))); ok {
++		t.Error("a host outside the scores must not be decided")
++	}
++}
++
++func decisionMetric(t *testing.T, plugin string) float64 {
++	t.Helper()
++	v, err := testutil.GetCounterMetricValue(metrics.DecisionDecidingPlugin.WithLabelValues(v1.DefaultSchedulerName, plugin))
++	if err != nil {
++		t.Fatal(err)
++	}
++	return v
++}
++
++func decisionHistogramCount(t *testing.T, h *basemetrics.HistogramVec) uint64 {
++	t.Helper()
++	n, err := testutil.GetHistogramMetricCount(h.WithLabelValues(v1.DefaultSchedulerName))
++	if err != nil {
++		t.Fatal(err)
++	}
++	return n
++}
++
++// A real cycle records the decision; a simulation records none.
++func TestDeckhouseDecisionMetrics(t *testing.T) {
++	_, ctx := ktesting.NewTestContext(t)
++	ctx, cancel := context.WithCancel(ctx)
++	defer cancel()
++	metrics.Register()
++
++	sched := newSimulateTestScheduler(t, ctx, []string{"1", "2", "3"})
++	schedFramework := sched.Profiles[v1.DefaultSchedulerName]
++	pod := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "p", UID: "u"}}
++
++	numeric, single := decisionMetric(t, "plugin/NumericMap"), decisionMetric(t, DecidedBySingleFeasibleNode)
++	margins, feasible := decisionHistogramCount(t, metrics.DecisionScoreMargin), decisionHistogramCount(t, metrics.DecisionFeasibleNodes)
++
++	result, err := sched.SchedulePod(ctx, schedFramework, framework.NewCycleState(), pod)
++	if err != nil || result.SuggestedHost != "3" {
++		t.Fatalf("SchedulePod = %v, %v", result.SuggestedHost, err)
++	}
++	if got := decisionMetric(t, "plugin/NumericMap") - numeric; got != 1 {
++		t.Errorf("NumericMap decisions = %v, want 1", got)
++	}
++	if got := decisionHistogramCount(t, metrics.DecisionScoreMargin) - margins; got != 1 {
++		t.Errorf("margins observed = %v, want 1", got)
++	}
++	if got := decisionHistogramCount(t, metrics.DecisionFeasibleNodes) - feasible; got != 1 {
++		t.Errorf("feasible node counts observed = %v, want 1", got)
++	}
++
++	if _, err := sched.Simulate(ctx, &SimulateRequest{Pod: pod}); err != nil {
++		t.Fatal(err)
++	}
++	if _, err := sched.SchedulePod(framework.WithDeckhouseSimulation(ctx), schedFramework, framework.NewCycleState(), pod); err != nil {
++		t.Fatal(err)
++	}
++	if got := decisionMetric(t, "plugin/NumericMap") - numeric; got != 1 {
++		t.Errorf("simulations recorded decisions: %v, want 1 in total", got)
++	}
++
++	// The nominated node is tried first and taken without scoring.
++	nominated := decisionMetric(t, DecidedByNominatedNode)
++	nominatedPod := pod.DeepCopy()
++	nominatedPod.Status.NominatedNodeName = "2"
++	if result, err := sched.SchedulePod(ctx, schedFramework, framework.NewCycleState(), nominatedPod); err != nil || result.SuggestedHost != "2" {
++		t.Fatalf("SchedulePod = %v, %v", result.SuggestedHost, err)
++	}
++	if got := decisionMetric(t, DecidedByNominatedNode) - nominated; got != 1 {
++		t.Errorf("nominated node decisions = %v, want 1", got)
++	}
++	if got := decisionHistogramCount(t, metrics.DecisionFeasibleNodes) - feasible; got != 1 {
++		t.Errorf("a nominated node must not observe feasible nodes, observed = %v", got)
++	}
++
++	one := newSimulateTestScheduler(t, ctx, []string{"7"})
++	if _, err := one.SchedulePod(ctx, one.Profiles[v1.DefaultSchedulerName], framework.NewCycleState(), pod); err != nil {
++		t.Fatal(err)
++	}
++	if got := decisionMetric(t, DecidedBySingleFeasibleNode) - single; got != 1 {
++		t.Errorf("single feasible node decisions = %v, want 1", got)
++	}
++	if got := decisionHistogramCount(t, metrics.DecisionScoreMargin) - margins; got != 1 {
++		t.Errorf("a single feasible node must not observe a margin, margins observed = %v", got)
++	}
++	if got := decisionHistogramCount(t, metrics.DecisionFeasibleNodes) - feasible; got != 2 {
++		t.Errorf("feasible node counts observed = %v, want 2", got)
++	}
++
++}
++
++// Decisions name score plugins and extenders with their prefix: in the metric,
++// the event text and the decision log.
++func TestDeckhouseDecisionNames(t *testing.T) {
++	_, ctx := ktesting.NewTestContext(t)
++	ctx, cancel := context.WithCancel(ctx)
++	defer cancel()
++	metrics.Register()
++	const prefix = "https://usage.example:8443/usage"
++	withExtenderNames(t, map[string]string{prefix: "usage"})
++
++	sched := newSimulateTestScheduler(t, ctx, []string{"1", "2", "3"})
++	onlyNode1 := func(_ *v1.Pod, nodes []fwk.NodeInfo) (*framework.NodeScoreList, error) {
++		out := make(framework.NodeScoreList, len(nodes))
++		for i, n := range nodes {
++			out[i] = framework.NodeScore{Name: n.Node().Name}
++			if n.Node().Name == "1" {
++				out[i].Score = 10
++			}
++		}
++		return &out, nil
++	}
++	sched.Extenders = []framework.Extender{&tf.FakeExtender{ExtenderName: prefix, Weight: 1, Prioritizers: []tf.PriorityConfig{{Weight: 1, Function: onlyNode1}}}}
++	sched.deckhouseDecisions.names = sched.deckhouseDecisionNames()
++	sched.deckhouseDecisions.events = true
++	sched.deckhouseDecisions.log = newDeckhouseDecisionLog(1)
++	sched.deckhouseDecisions.log.names = sched.deckhouseDecisions.names
++	want := deckhouseDecisionNames{"NumericMap": "plugin/NumericMap", prefix: "extender/usage"}
++	if fmt.Sprint(sched.deckhouseDecisions.names) != fmt.Sprint(want) {
++		t.Errorf("names %v, want %v", sched.deckhouseDecisions.names, want)
++	}
++
++	before := decisionMetric(t, "extender/usage")
++	pod := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "p", UID: "u"}}
++	state := framework.NewCycleState()
++	result, err := sched.SchedulePod(ctx, sched.Profiles[v1.DefaultSchedulerName], state, pod)
++	if err != nil || result.SuggestedHost != "1" {
++		t.Fatalf("SchedulePod = %v, %v", result.SuggestedHost, err)
++	}
++	if got := decisionMetric(t, "extender/usage") - before; got != 1 {
++		t.Errorf("extender/usage decisions = %v, want 1", got)
++	}
++	if suffix := sched.deckhouseDecisionEventSuffix(state, pod, "1"); !strings.Contains(suffix, "; decided by extender/usage (+") {
++		t.Errorf("event suffix %q", suffix)
++	}
++	entries := sched.deckhouseDecisions.log.list("", "", 1)
++	if len(entries) != 1 || entries[0].DecidedBy != "extender/usage" {
++		t.Fatalf("log %+v", entries)
++	}
++	var scoreNames []string
++	for _, s := range entries[0].Top[0].Scores {
++		scoreNames = append(scoreNames, s.Name)
++	}
++	if strings.Join(scoreNames, ",") != "plugin/NumericMap,extender/usage" {
++		t.Errorf("score names %v", scoreNames)
++	}
++}
++
++func TestDeckhouseSingleNode(t *testing.T) {
++	// evaluateNominatedNode tries the nominated node; only without one the hint.
++	pod := &v1.Pod{Status: v1.PodStatus{NominatedNodeName: "b"}}
++	if got := deckhouseSingleNode(&v1.Pod{}, "a", "a"); got != DecidedByNodeHint {
++		t.Errorf("hint without a nominated node: %s", got)
++	}
++	for _, tc := range []struct{ host, hint, want string }{
++		{"a", "", DecidedBySingleFeasibleNode},
++		{"a", "a", DecidedBySingleFeasibleNode},
++		{"b", "a", DecidedByNominatedNode},
++		{"b", "b", DecidedByNominatedNode},
++		{"c", "a", DecidedBySingleFeasibleNode},
++	} {
++		if got := deckhouseSingleNode(pod, tc.host, tc.hint); got != tc.want {
++			t.Errorf("host %s hint %q: %s, want %s", tc.host, tc.hint, got, tc.want)
++		}
++	}
++}
++
++// The Scheduled event keeps the upstream message when the events are off and
++// gets the top nodes and the deciding plugin when they are on.
++func TestDeckhouseDecisionEvent(t *testing.T) {
++	_, ctx := ktesting.NewTestContext(t)
++	ctx, cancel := context.WithCancel(ctx)
++	defer cancel()
++	metrics.Register()
++
++	for _, on := range []bool{false, true} {
++		sched := newSimulateTestScheduler(t, ctx, []string{"1", "2", "3", "4"})
++		sched.deckhouseDecisions.events = on
++		schedFramework := sched.Profiles[v1.DefaultSchedulerName]
++		pod := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "p", UID: "u"}}
++		state := framework.NewCycleState()
++		result, err := sched.SchedulePod(ctx, schedFramework, state, pod)
++		if err != nil {
++			t.Fatal(err)
++		}
++		suffix := sched.deckhouseDecisionEventSuffix(state, pod, result.SuggestedHost)
++		want := ""
++		if on {
++			want = "; top: 4=4 3=3 2=2; decided by plugin/NumericMap (+1)"
++		}
++		if suffix != want {
++			t.Errorf("events %v: suffix %q, want %q", on, suffix, want)
++		}
++	}
++}
++
++func TestDeckhouseDecisionEventMessage(t *testing.T) {
++	_, ctx := ktesting.NewTestContext(t)
++	for _, on := range []bool{false, true} {
++		sched := newSimulateTestScheduler(t, ctx, []string{"1", "2"})
++		sched.deckhouseDecisions.events = on
++		recorder := events.NewFakeRecorder(1)
++		schedFramework := &recorderFramework{Framework: sched.Profiles[v1.DefaultSchedulerName], recorder: recorder}
++		pod := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "p"}}
++		state := framework.NewCycleState()
++		d, _ := deckhouseDecide("2", decisionScores(decisionNode("1", ps("Fit", 1)), decisionNode("2", ps("Fit", 3))))
++		state.Write(deckhouseDecisionEventKey, newDeckhouseDecisionEvent("2", d, decisionScores(decisionNode("1", ps("Fit", 1)), decisionNode("2", ps("Fit", 3)))))
++		sched.finishBinding(klog.FromContext(ctx), schedFramework, pod, "2", nil, state)
++		got := <-recorder.Events
++		want := "Normal Scheduled Successfully assigned ns/p to 2"
++		if on {
++			want += "; top: 2=3 1=1; decided by Fit (+2)"
++		}
++		if got != want {
++			t.Errorf("events %v: %q, want %q", on, got, want)
++		}
++	}
++}
++
++type recorderFramework struct {
++	framework.Framework
++	recorder events.EventRecorder
++}
++
++func (f *recorderFramework) EventRecorder() events.EventRecorder { return f.recorder }
++
++// The message never exceeds the events.k8s.io/v1 limit: nodes that do not fit
++// are left out from the end, and nothing is added when the plugin does not fit.
++func TestDeckhouseDecisionEventLimit(t *testing.T) {
++	sched := &Scheduler{deckhouseDecisions: deckhouseDecisions{events: true}}
++	long := func(c byte) string { return strings.Repeat(string(c), 253) }
++	pod := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: strings.Repeat("n", 63), Name: long('p')}}
++	scores := decisionScores(decisionNode(long('a'), ps("Fit", 9)), decisionNode(long('b'), ps("Fit", 5)), decisionNode(long('c'), ps("Fit", 1)))
++	d, _ := deckhouseDecide(long('a'), scores)
++	state := framework.NewCycleState()
++	state.Write(deckhouseDecisionEventKey, newDeckhouseDecisionEvent(long('a'), d, scores))
++
++	suffix := sched.deckhouseDecisionEventSuffix(state, pod, long('a'))
++	prefix := fmt.Sprintf("Successfully assigned %v/%v to %v", pod.Namespace, pod.Name, long('a'))
++	if n := len(prefix) + len(suffix); n > deckhouseEventMessageLimit {
++		t.Fatalf("message of %d bytes", n)
++	}
++	if !strings.HasSuffix(suffix, "; decided by Fit (+4)") || !strings.Contains(suffix, long('a')+"=9") || strings.Contains(suffix, long('b')) {
++		t.Errorf("suffix %q", suffix)
++	}
++
++	huge := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: pod.Namespace, Name: strings.Repeat("p", 700)}}
++	if s := sched.deckhouseDecisionEventSuffix(state, huge, long('a')); s != "" {
++		t.Errorf("no room left, got %q", s)
++	}
++	if s := sched.deckhouseDecisionEventSuffix(framework.NewCycleState(), pod, "a"); s != "" {
++		t.Errorf("no decision in the state, got %q", s)
++	}
++}
++
++func TestDeckhouseDecisionsFromEnv(t *testing.T) {
++	logger := klog.Background()
++	cases := []struct {
++		env    map[string]string
++		events bool
++		size   int
++	}{
++		{env: map[string]string{}},
++		{env: map[string]string{deckhouseDecisionEventsEnv: "true", deckhouseDecisionLogSizeEnv: "50"}, events: true, size: 50},
++		{env: map[string]string{deckhouseDecisionEventsEnv: "false", deckhouseDecisionLogSizeEnv: "0"}},
++		{env: map[string]string{deckhouseDecisionEventsEnv: "yes", deckhouseDecisionLogSizeEnv: "-1"}},
++		{env: map[string]string{deckhouseDecisionLogSizeEnv: "x"}},
++		{env: map[string]string{deckhouseDecisionLogSizeEnv: "1000000"}, size: deckhouseDecisionLogMax},
++	}
++	for _, tc := range cases {
++		getenv := func(k string) string { return tc.env[k] }
++		events, l := deckhouseDecisionEventsFromEnv(logger, getenv), deckhouseDecisionLogFromEnv(logger, getenv)
++		size := 0
++		if l != nil {
++			size = len(l.slots)
++		}
++		if events != tc.events || size != tc.size {
++			t.Errorf("%v: events %v size %d, want %v %d", tc.env, events, size, tc.events, tc.size)
++		}
++	}
++	if newDeckhouseDecisionLog(0) != nil {
++		t.Error("a log of 0 entries must be nil")
++	}
++}
++
++// The listener of the simulate endpoint serves the decision log, and its
++// goroutines end with the context.
++func TestDeckhouseDecisionsServer(t *testing.T) {
++	defer goleak.VerifyNone(t, goleak.IgnoreCurrent())
++	_, ctx := ktesting.NewTestContext(t)
++	ctx, cancel := context.WithCancel(ctx)
++	l, err := net.Listen("tcp", "127.0.0.1:0")
++	if err != nil {
++		t.Fatal(err)
++	}
++	addr := l.Addr().String()
++	l.Close()
++	t.Setenv(deckhouseSimulateAddressEnv, addr)
++	t.Setenv(deckhouseDecisionEventsEnv, "true")
++	t.Setenv(deckhouseDecisionLogSizeEnv, "10")
++
++	sched := &Scheduler{}
++	StartDeckhouseSimulateServer(ctx, sched, func() bool { return true }, make(chan struct{}))
++	if !sched.deckhouseDecisions.events || sched.deckhouseDecisions.log == nil {
++		t.Fatalf("decision outputs %+v", sched.deckhouseDecisions)
++	}
++	recordDecision(sched.deckhouseDecisions.log, "p")
++	client := &http.Client{Transport: &http.Transport{DisableKeepAlives: true}}
++	var resp *http.Response
++	for i := 0; i < 100; i++ {
++		if resp, err = client.Get("http://" + addr + "/decisions?name=p"); err == nil {
++			break
++		}
++		time.Sleep(10 * time.Millisecond)
++	}
++	if err != nil {
++		t.Fatal(err)
++	}
++	var list DeckhouseDecisionList
++	err = json.NewDecoder(resp.Body).Decode(&list)
++	resp.Body.Close()
++	if err != nil || resp.StatusCode != http.StatusOK || len(list.Decisions) != 1 {
++		t.Fatalf("GET /decisions: %d %+v %v", resp.StatusCode, list, err)
++	}
++	cancel()
++	for i := 0; i < 100; i++ {
++		if _, err = client.Get("http://" + addr + "/decisions"); err != nil {
++			break
++		}
++		time.Sleep(10 * time.Millisecond)
++	}
++	if err == nil {
++		t.Fatal("the server still answers after the context is done")
++	}
++}
++
++func recordDecision(l *deckhouseDecisionLog, name string) {
++	scores := decisionScores(
++		decisionNode("a", ps("Fit", 9), ps("http://ext", 1)),
++		decisionNode("b", ps("Fit", 5), ps("http://ext", 2)),
++	)
++	d, _ := deckhouseDecide("a", scores)
++	d.decidedBy = l.names.of(d.decidedBy) // as deckhouseRecordDecision does
++	l.record(time.Unix(1, 0), &v1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: name, UID: "uid-" + "x"}}, "default-scheduler", "a", d, scores, time.Millisecond)
++}
++
++// The ring keeps the last entries, newest first, and never grows.
++func TestDeckhouseDecisionLog(t *testing.T) {
++	l := newDeckhouseDecisionLog(3)
++	l.names = deckhouseDecisionNames{"Fit": "plugin/Fit", "http://ext": "extender/ext"}
++	for i := 0; i < 5; i++ {
++		recordDecision(l, fmt.Sprintf("p%d", i))
++	}
++	if len(l.slots) != 3 || cap(l.slots) != 3 {
++		t.Fatalf("ring of %d slots", len(l.slots))
++	}
++	var names []string
++	for _, d := range l.list("", "", 10) {
++		names = append(names, d.Name)
++	}
++	if strings.Join(names, ",") != "p4,p3,p2" {
++		t.Errorf("entries %v", names)
++	}
++	if got := l.list("ns", "p3", 10); len(got) != 1 || got[0].Name != "p3" {
++		t.Errorf("filtered %v", got)
++	}
++	if got := l.list("other", "", 10); len(got) != 0 {
++		t.Errorf("other namespace %v", got)
++	}
++	if got := l.list("", "", 2); len(got) != 2 || got[0].Name != "p4" {
++		t.Errorf("limit 2: %v", got)
++	}
++
++	want := DeckhouseDecision{
++		Time: time.Unix(1, 0), Namespace: "ns", Name: "p4", UID: "uid-x", Profile: "default-scheduler", Node: "a",
++		FeasibleNodes: 2, DecidedBy: "plugin/Fit", Contribution: 4, Margin: 3, DurationSeconds: 0.001,
++		Top: []DeckhouseDecisionNode{
++			{Name: "a", TotalScore: 10, Scores: []SimulateScore{{Name: "plugin/Fit", Score: 9}, {Name: "extender/ext", Score: 1}}},
++			{Name: "b", TotalScore: 7, Scores: []SimulateScore{{Name: "plugin/Fit", Score: 5}, {Name: "extender/ext", Score: 2}}},
++		},
++	}
++	got, _ := json.Marshal(l.list("", "p4", 1)[0])
++	wantJSON, _ := json.Marshal(want)
++	if string(got) != string(wantJSON) {
++		t.Errorf("entry\n%s\nwant\n%s", got, wantJSON)
++	}
++
++	// The score lists of a slot are reused and bounded.
++	many := make([]framework.PluginScore, 2*deckhouseDecisionMaxScores)
++	for i := range many {
++		many[i] = ps(fmt.Sprintf("P%d", i), 1)
++	}
++	scores := decisionScores(decisionNode("a", many...), decisionNode("b"))
++	d, _ := deckhouseDecide("a", scores)
++	l.record(time.Now(), &v1.Pod{}, "p", "a", d, scores, 0)
++	for i := range l.slots {
++		for _, n := range l.slots[i].rec.top {
++			if len(n.scores) > deckhouseDecisionMaxScores {
++				t.Errorf("slot %d keeps %d scores", i, len(n.scores))
++			}
++		}
++	}
++
++	single := newDeckhouseDecisionLog(1)
++	sd, _ := deckhouseDecide("x", nil)
++	single.record(time.Now(), &v1.Pod{}, "p", "x", sd, nil, 0)
++	if got := single.list("", "", 1); len(got) != 1 || got[0].DecidedBy != DecidedBySingleFeasibleNode || len(got[0].Top) != 1 || got[0].Top[0].Name != "x" || got[0].Top[0].Scores != nil {
++		t.Errorf("single feasible node entry %+v", got)
++	}
++}
++
++// Writers and readers run concurrently (go test -race): readers never get more
++// entries than the ring holds, and the ring keeps its size.
++func TestDeckhouseDecisionLogConcurrent(t *testing.T) {
++	l := newDeckhouseDecisionLog(64)
++	var wg sync.WaitGroup
++	stop := make(chan struct{})
++	for w := 0; w < 4; w++ {
++		wg.Add(1)
++		go func() {
++			defer wg.Done()
++			for i := 0; i < 2000; i++ {
++				recordDecision(l, "p")
++			}
++		}()
++	}
++	var readers sync.WaitGroup
++	for r := 0; r < 4; r++ {
++		readers.Add(1)
++		go func() {
++			defer readers.Done()
++			for {
++				select {
++				case <-stop:
++					return
++				default:
++				}
++				got := l.list("", "", 64)
++				if len(got) > 64 {
++					t.Errorf("read %d entries", len(got))
++					return
++				}
++			}
++		}()
++	}
++	wg.Wait()
++	close(stop)
++	readers.Wait()
++	if l.next.Load() != 8000 || len(l.slots) != 64 {
++		t.Errorf("next %d, slots %d", l.next.Load(), len(l.slots))
++	}
++	if got := l.list("", "", 64); len(got) != 64 {
++		t.Errorf("full ring reads %d entries", len(got))
++	}
++}
++
++func TestDeckhouseDecisionsQueryLimit(t *testing.T) {
++	for _, tc := range []struct {
++		query      string
++		size, want int
++	}{
++		{"", 10000, deckhouseDecisionsDefaultLimit},
++		{"", 50, 50},
++		{"limit=5000", 10000, deckhouseDecisionsMaxLimit},
++		{"limit=5000", 300, 300},
++		{"limit=7", 10000, 7},
++	} {
++		_, _, limit, err := decisionsQuery(tc.query, tc.size)
++		if err != nil || limit != tc.want {
++			t.Errorf("?%s size %d: limit %d %v, want %d", tc.query, tc.size, limit, err, tc.want)
++		}
++	}
++}
++
++func TestDeckhouseDecisionsHandler(t *testing.T) {
++	l := newDeckhouseDecisionLog(5)
++	for i := 0; i < 3; i++ {
++		recordDecision(l, fmt.Sprintf("p%d", i))
++	}
++	cases := []struct {
++		log    *deckhouseDecisionLog
++		method string
++		query  string
++		code   int
++		names  string
++	}{
++		{log: nil, method: http.MethodGet, code: http.StatusNotFound},
++		{log: l, method: http.MethodPost, code: http.StatusMethodNotAllowed},
++		{log: l, method: http.MethodGet, query: "limit=0", code: http.StatusBadRequest},
++		{log: l, method: http.MethodGet, query: "limit=x", code: http.StatusBadRequest},
++		{log: l, method: http.MethodGet, query: "node=a", code: http.StatusBadRequest},
++		{log: l, method: http.MethodGet, query: "name=a&name=b", code: http.StatusBadRequest},
++		{log: l, method: http.MethodGet, code: http.StatusOK, names: "p2,p1,p0"},
++		{log: l, method: http.MethodGet, query: "limit=1000", code: http.StatusOK, names: "p2,p1,p0"},
++		{log: l, method: http.MethodGet, query: "namespace=ns&name=p1", code: http.StatusOK, names: "p1"},
++		{log: l, method: http.MethodGet, query: "limit=2", code: http.StatusOK, names: "p2,p1"},
++	}
++	for _, tc := range cases {
++		rec := httptest.NewRecorder()
++		deckhouseDecisionsHandler{log: tc.log, logger: klog.Background()}.ServeHTTP(rec, httptest.NewRequest(tc.method, "/decisions?"+tc.query, nil))
++		if rec.Code != tc.code {
++			t.Errorf("%s ?%s: %d %s, want %d", tc.method, tc.query, rec.Code, rec.Body.String(), tc.code)
++			continue
++		}
++		if tc.code != http.StatusOK {
++			continue
++		}
++		var resp DeckhouseDecisionList
++		if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
++			t.Fatal(err)
++		}
++		var names []string
++		for _, d := range resp.Decisions {
++			names = append(names, d.Name)
++		}
++		if resp.Size != 5 || strings.Join(names, ",") != tc.names {
++			t.Errorf("?%s: size %d, entries %v, want %s", tc.query, resp.Size, names, tc.names)
++		}
++	}
++}
++
++// A panic in the simulate handler is counted as 500 and goes on to net/http.
++func TestDeckhouseSimulatePanicCounted(t *testing.T) {
++	_, ctx := ktesting.NewTestContext(t)
++	metrics.Register()
++	synced := make(chan struct{})
++	close(synced)
++	// Without a scheduler Simulate panics on the profiles.
++	h := newDeckhouseSimulateHandler(nil, func() bool { return true }, synced, klog.FromContext(ctx))
++	before, err := testutil.GetCounterMetricValue(metrics.SimulateRequests.WithLabelValues("500"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	func() {
++		defer func() {
++			if recover() == nil {
++				t.Error("the panic must reach the caller")
++			}
++		}()
++		h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/simulate", strings.NewReader(`{"pod":{"metadata":{"namespace":"ns","name":"p"}}}`)))
++	}()
++	after, err := testutil.GetCounterMetricValue(metrics.SimulateRequests.WithLabelValues("500"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	if after-before != 1 {
++		t.Errorf("500 answers counted: %v, want 1", after-before)
++	}
++}
++
++// The simulate endpoint counts every answer by code, and a simulation records
++// its wait for the lock and how long it held it.
++func TestDeckhouseSimulateMetrics(t *testing.T) {
++	_, ctx := ktesting.NewTestContext(t)
++	ctx, cancel := context.WithCancel(ctx)
++	defer cancel()
++	metrics.Register()
++
++	sched := newSimulateTestScheduler(t, ctx, []string{"1", "2"})
++	synced := make(chan struct{})
++	close(synced)
++	h := newDeckhouseSimulateHandler(sched, func() bool { return true }, synced, klog.FromContext(ctx))
++	count := func(code string) float64 {
++		v, err := testutil.GetCounterMetricValue(metrics.SimulateRequests.WithLabelValues(code))
++		if err != nil {
++			t.Fatal(err)
++		}
++		return v
++	}
++	held := func(filters string) uint64 {
++		n, err := testutil.GetHistogramMetricCount(metrics.SimulateDuration.WithLabelValues(filters))
++		if err != nil {
++			t.Fatal(err)
++		}
++		return n
++	}
++	waits := func() uint64 {
++		n, err := testutil.GetHistogramMetricCount(metrics.SimulateLockWait.ObserverMetric)
++		if err != nil {
++			t.Fatal(err)
++		}
++		return n
++	}
++	ok, bad, notAllowed, first, all, w := count("200"), count("400"), count("405"), held("first"), held("all"), waits()
++
++	body := `{"pod":{"metadata":{"namespace":"ns","name":"p"}}}`
++	for _, r := range []*http.Request{
++		httptest.NewRequest(http.MethodPost, "/simulate", strings.NewReader(body)),
++		httptest.NewRequest(http.MethodPost, "/simulate?filters=all", strings.NewReader(body)),
++		httptest.NewRequest(http.MethodPost, "/simulate?x=1", strings.NewReader(body)),
++		httptest.NewRequest(http.MethodGet, "/simulate", nil),
++	} {
++		h.ServeHTTP(httptest.NewRecorder(), r)
++	}
++	for name, got := range map[string]float64{
++		"200": count("200") - ok, "400": count("400") - bad, "405": count("405") - notAllowed,
++		"first": float64(held("first") - first), "all": float64(held("all") - all), "wait": float64(waits() - w),
++	} {
++		want := 1.0
++		if name == "200" || name == "wait" {
++			want = 2
++		}
++		if got != want {
++			t.Errorf("%s: %v, want %v", name, got, want)
++		}
++	}
++}
++
++// With the opt-in outputs off a decision allocates nothing.
++func TestDeckhouseDecisionAllocs(t *testing.T) {
++	_, ctx := ktesting.NewTestContext(t)
++	metrics.Register()
++	sched := newSimulateTestScheduler(t, ctx, []string{"1"})
++	schedFramework := sched.Profiles[v1.DefaultSchedulerName]
++	pod := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "p", UID: "u"}}
++	scores, host := benchmarkScores(100)
++	sched.deckhouseDecisions.names = benchmarkNames(scores)
++	state, trace := framework.NewCycleState(), utiltrace.New("Scheduling")
++	if n := testing.AllocsPerRun(100, func() {
++		sched.deckhouseRecordDecision(ctx, state, schedFramework, pod, host, scores, "", trace)
++		sched.deckhouseRecordDecision(ctx, state, schedFramework, pod, host, nil, "", trace)
++	}); n != 0 {
++		t.Errorf("%v allocations per decision", n)
++	}
++}
++
++// benchmarkScores builds the scores of n feasible nodes with 15 score plugins
++// and 2 extenders, as prioritizeNodes returns them.
++func benchmarkScores(n int) ([]framework.NodePluginScores, string) {
++	names := make([]string, 0, 17)
++	for i := 0; i < 15; i++ {
++		names = append(names, fmt.Sprintf("Plugin%02d", i))
++	}
++	names = append(names, "https://extender-1.example:8443/scheduler", "https://extender-2.example:8443/scheduler")
++	scores := make([]framework.NodePluginScores, n)
++	best, host := int64(-1), ""
++	for i := range scores {
++		s := framework.NodePluginScores{Name: fmt.Sprintf("node-%05d", i), Scores: make([]framework.PluginScore, len(names))}
++		for j, name := range names {
++			s.Scores[j] = framework.PluginScore{Name: name, Score: int64((i*31 + j*17) % 101)}
++			s.TotalScore += s.Scores[j].Score
++		}
++		if s.TotalScore > best {
++			best, host = s.TotalScore, s.Name
++		}
++		scores[i] = s
++	}
++	return scores, host
++}
++
++// benchmarkNames prefixes the score names of benchmarkScores as
++// deckhouseDecisionNames does.
++func benchmarkNames(scores []framework.NodePluginScores) deckhouseDecisionNames {
++	names := deckhouseDecisionNames{}
++	for _, p := range scores[0].Scores {
++		if strings.HasPrefix(p.Name, "https://") {
++			names[p.Name] = "extender/" + strings.TrimPrefix(p.Name, "https://")
++		} else {
++			names[p.Name] = "plugin/" + p.Name
++		}
++	}
++	return names
++}
++
++// BenchmarkDeckhouseDecision is the cost of one decision of a real cycle:
++// metrics only (the default), with the event data, and with the decision log.
++func BenchmarkDeckhouseDecision(b *testing.B) {
++	metrics.Register()
++	_, ctx := ktesting.NewTestContext(b)
++	sched := newSimulateTestScheduler(b, ctx, []string{"1"})
++	schedFramework := sched.Profiles[v1.DefaultSchedulerName]
++	pod := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "p", UID: "u"}}
++	trace := utiltrace.New("Scheduling")
++	for _, n := range []int{100, 1000, 5000} {
++		scores, host := benchmarkScores(n)
++		names := benchmarkNames(scores)
++		for _, mode := range []string{"metrics", "events", "log"} {
++			b.Run(fmt.Sprintf("nodes=%d/%s", n, mode), func(b *testing.B) {
++				sched.deckhouseDecisions = deckhouseDecisions{events: mode == "events", names: names}
++				if mode == "log" {
++					sched.deckhouseDecisions.log = newDeckhouseDecisionLog(deckhouseDecisionLogMax)
++				}
++				state := framework.NewCycleState()
++				b.ReportAllocs()
++				b.ResetTimer()
++				for i := 0; i < b.N; i++ {
++					sched.deckhouseRecordDecision(ctx, state, schedFramework, pod, host, scores, "", trace)
++				}
++			})
++		}
++	}
++}
++
++// BenchmarkDeckhousePrioritizeNodes is the upstream scoring of the same node
++// counts with 15 trivial score plugins and 2 in-process extenders, and the
++// selection of the host: a lower bound of what a real cycle spends to reach
++// the decision (real plugins and HTTP extenders cost more).
++func BenchmarkDeckhousePrioritizeNodes(b *testing.B) {
++	_, ctx := ktesting.NewTestContext(b)
++	for _, n := range []int{100, 1000, 5000} {
++		names := make([]string, n)
++		for i := range names {
++			names[i] = fmt.Sprintf("node-%05d", i)
++		}
++		sched := makeScheduler(ctx, makeNodeList(names))
++		plugins := []tf.RegisterPluginFunc{
++			tf.RegisterQueueSortPlugin(queuesort.Name, queuesort.New),
++			tf.RegisterBindPlugin(defaultbinder.Name, defaultbinder.New),
++		}
++		for i := 0; i < 15; i++ {
++			plugins = append(plugins, benchScorePlugin(fmt.Sprintf("Plugin%02d", i)))
++		}
++		schedFramework, err := tf.NewFramework(ctx, plugins, v1.DefaultSchedulerName,
++			frameworkruntime.WithSnapshotSharedLister(sched.nodeInfoSnapshot))
++		if err != nil {
++			b.Fatal(err)
++		}
++		extenders := []framework.Extender{benchExtender("https://extender-1.example:8443/scheduler"), benchExtender("https://extender-2.example:8443/scheduler")}
++		nodes, err := sched.nodeInfoSnapshot.NodeInfos().List()
++		if err != nil {
++			b.Fatal(err)
++		}
++		pod := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "p", UID: "u"}}
++		b.Run(fmt.Sprintf("nodes=%d", n), func(b *testing.B) {
++			b.ReportAllocs()
++			for i := 0; i < b.N; i++ {
++				scores, err := prioritizeNodes(ctx, extenders, schedFramework, framework.NewCycleState(), pod, nodes)
++				if err != nil {
++					b.Fatal(err)
++				}
++				if _, _, err := selectHost(scores, numberOfHighestScoredNodesToReport); err != nil {
++					b.Fatal(err)
++				}
++			}
++		})
++	}
++}
++
++func benchExtender(name string) *tf.FakeExtender {
++	return &tf.FakeExtender{ExtenderName: name, Weight: 1, Prioritizers: []tf.PriorityConfig{{Weight: 1, Function: func(_ *v1.Pod, nodes []fwk.NodeInfo) (*framework.NodeScoreList, error) {
++		out := make(framework.NodeScoreList, len(nodes))
++		for i, n := range nodes {
++			out[i] = framework.NodeScore{Name: n.Node().Name, Score: int64(i % 11)}
++		}
++		return &out, nil
++	}}}}
++}
++
++type benchScore struct{ name string }
++
++func (p benchScore) Name() string { return p.name }
++
++func (p benchScore) Score(_ context.Context, _ fwk.CycleState, _ *v1.Pod, nodeInfo fwk.NodeInfo) (int64, *fwk.Status) {
++	name := nodeInfo.Node().Name
++	return int64(len(name)*7+int(name[len(name)-1])+len(p.name)) % framework.MaxNodeScore, nil
++}
++
++func (p benchScore) ScoreExtensions() framework.ScoreExtensions { return nil }
++
++func benchScorePlugin(name string) tf.RegisterPluginFunc {
++	return tf.RegisterScorePlugin(name, func(context.Context, k8sruntime.Object, framework.Handle) (framework.Plugin, error) {
++		return benchScore{name: name}, nil
++	}, 1)
++}
+diff --git a/pkg/scheduler/deckhouse_simulate.go b/pkg/scheduler/deckhouse_simulate.go
+index 312584f5e3c..e28cf300d22 100644
+--- a/pkg/scheduler/deckhouse_simulate.go
++++ b/pkg/scheduler/deckhouse_simulate.go
+@@ -57,6 +57,7 @@ import (
+ 	fwk "k8s.io/kube-scheduler/framework"
+ 	internalcache "k8s.io/kubernetes/pkg/scheduler/backend/cache"
+ 	"k8s.io/kubernetes/pkg/scheduler/framework"
++	"k8s.io/kubernetes/pkg/scheduler/metrics"
+ )
+ 
+ const (
+@@ -93,10 +94,12 @@ type SimulateRequest struct {
+ 	AllFilters bool `json:"-"`
+ }
+ 
+-// SimulateScore is a weighted score of one score plugin or one extender. With
+-// weights=true it also carries the weight and the normalized score, Score =
+-// Normalized * Weight. Normalized is 0-100 for a plugin and the extender score
+-// (0-10) times 10 for an extender.
++// SimulateScore is a weighted score of one score plugin or one extender. Name
++// is plugin/<score plugin> or extender/<extender name> (the URL prefix for an
++// extender without a name), as in GET /decisions. With weights=true it also
++// carries the weight and the normalized score, Score = Normalized * Weight.
++// Normalized is 0-100 for a plugin and the extender score (0-10) times 10 for
++// an extender.
+ type SimulateScore struct {
+ 	Name       string `json:"name"`
+ 	Score      int64  `json:"score"`
+@@ -104,7 +107,8 @@ type SimulateScore struct {
+ 	Normalized *int64 `json:"normalized,omitempty"`
+ }
+ 
+-// SimulateRejection is one failing filter plugin or extender of a node.
++// SimulateRejection is one failing filter plugin or extender of a node. A
++// filter plugin is named as configured, an extender extender/<extender name>.
+ type SimulateRejection struct {
+ 	Plugin  string   `json:"plugin"`
+ 	Reasons []string `json:"reasons,omitempty"`
+@@ -144,14 +148,58 @@ type SimulateResponse struct {
+ }
+ 
+ // deckhouseExtenderStatus names the extender in its rejection status during a
+-// simulation. Real cycles keep the upstream status without a plugin name.
++// simulation, extender/<extender name> as in GET /decisions. Real cycles keep
++// the upstream status without a plugin name.
+ func deckhouseExtenderStatus(ctx context.Context, s *fwk.Status, extender framework.Extender) *fwk.Status {
+ 	if framework.IsDeckhouseSimulation(ctx) {
+-		return s.WithPlugin(extender.Name())
++		return s.WithPlugin("extender/" + deckhouseExtenderName(extender.Name()))
+ 	}
+ 	return s
+ }
+ 
++// deckhouseObserveSimulation records the wait for the scheduling lock, which
++// has just been taken, and returns the function that records how long the
++// simulation held it.
++func deckhouseObserveSimulation(waitStart time.Time, allFilters bool) func() {
++	locked := time.Now()
++	if metrics.SimulateLockWait == nil {
++		return func() {}
++	}
++	metrics.SimulateLockWait.Observe(locked.Sub(waitStart).Seconds())
++	filters := "first"
++	if allFilters {
++		filters = "all"
++	}
++	return func() { metrics.SimulateDuration.WithLabelValues(filters).Observe(metrics.SinceInSeconds(locked)) }
++}
++
++// deckhouseStatusWriter remembers the status code of an answer for
++// scheduler_simulate_requests_total.
++type deckhouseStatusWriter struct {
++	http.ResponseWriter
++	code int
++}
++
++func (w *deckhouseStatusWriter) WriteHeader(code int) {
++	w.code = code
++	w.ResponseWriter.WriteHeader(code)
++}
++
++// count is deferred by the handler. A panic is counted as 500, the status
++// net/http gives it, and goes on.
++func (w *deckhouseStatusWriter) count() {
++	r := recover()
++	if r != nil {
++		w.code = http.StatusInternalServerError
++	}
++	if metrics.SimulateRequests != nil {
++		metrics.SimulateRequests.WithLabelValues(strconv.Itoa(w.code)).Inc()
++	}
++	if r != nil {
++		panic(r)
++	}
++}
++
+ // errSimulateRequest marks errors caused by the request itself.
+ type errSimulateRequest struct{ error }
+ 
+@@ -168,10 +216,12 @@ func (sched *Scheduler) Simulate(ctx context.Context, req *SimulateRequest) (*Si
+ 		return nil, errSimulateRequest{err}
+ 	}
+ 
++	waitStart := time.Now()
+ 	sched.deckhouseSimulateMu.Lock()
+ 	defer sched.deckhouseSimulateMu.Unlock()
+ 	// Extender requests for this copy carry dryRun (deckhouse_extender_dryrun.go).
+ 	defer deckhouseMarkSimulation(pod)()
++	defer deckhouseObserveSimulation(waitStart, req.AllFilters)()
+ 	// The request may have waited for the lock longer than its deadline.
+ 	if err := ctx.Err(); err != nil {
+ 		return nil, err
+@@ -232,7 +282,7 @@ func (sched *Scheduler) Simulate(ctx context.Context, req *SimulateRequest) (*Si
+ 		if req.Weights {
+ 			weights = sched.deckhouseWeights(schedFramework)
+ 		}
+-		resp.Nodes, resp.BestNodes = simulateScoredNodes(scores, weights)
++		resp.Nodes, resp.BestNodes = simulateScoredNodes(scores, weights, sched.deckhouseDecisions.names)
+ 	}
+ 	resp.Nodes = append(resp.Nodes, simulateOtherNodes(allNodes, feasible, diagnosis.NodeToStatus, deckhouseCandidates(state), filterLog)...)
+ 	return resp, nil
+@@ -328,14 +378,16 @@ func excludeNodes(pod *v1.Pod, nodes []string) {
+ 	}
+ }
+ 
+-// simulateScoredNodes sorts the feasible nodes by total score. With weights
+-// (weights=true) every score gets its weight and normalized score.
+-func simulateScoredNodes(scores []framework.NodePluginScores, weights map[string]int64) ([]SimulateNode, []string) {
++// simulateScoredNodes sorts the feasible nodes by total score and names the
++// scores with their prefixes (names, as GET /decisions does). With weights
++// (weights=true) every score gets its weight and normalized score; weights are
++// keyed by the raw score name.
++func simulateScoredNodes(scores []framework.NodePluginScores, weights map[string]int64, names deckhouseDecisionNames) ([]SimulateNode, []string) {
+ 	nodes := make([]SimulateNode, 0, len(scores))
+ 	for _, s := range scores {
+ 		n := SimulateNode{Name: s.Name, Verdict: VerdictFeasible, TotalScore: s.TotalScore}
+ 		for _, p := range s.Scores {
+-			score := SimulateScore{Name: p.Name, Score: p.Score}
++			score := SimulateScore{Name: names.of(p.Name), Score: p.Score}
+ 			if w := weights[p.Name]; w > 0 {
+ 				normalized := p.Score / w
+ 				score.Weight, score.Normalized = w, &normalized
+@@ -502,7 +554,9 @@ func newDeckhouseSimulateHandler(sched *Scheduler, isLeader func() bool, synced
+ 	return &deckhouseSimulateHandler{sched: sched, isLeader: isLeader, synced: synced, logger: logger, busy: make(chan struct{}, 1)}
+ }
+ 
+-func (h *deckhouseSimulateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
++func (h *deckhouseSimulateHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
++	w := &deckhouseStatusWriter{ResponseWriter: rw, code: http.StatusOK}
++	defer w.count()
+ 	if r.Method != http.MethodPost {
+ 		http.Error(w, "use POST", http.StatusMethodNotAllowed)
+ 		return
+@@ -514,7 +568,7 @@ func (h *deckhouseSimulateHandler) ServeHTTP(w http.ResponseWriter, r *http.Requ
+ 		return
+ 	}
+ 	var req SimulateRequest
+-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, deckhouseSimulateMaxBody)).Decode(&req); err != nil {
++	if err := json.NewDecoder(http.MaxBytesReader(rw, r.Body, deckhouseSimulateMaxBody)).Decode(&req); err != nil {
+ 		http.Error(w, fmt.Sprintf("bad request: %v", err), http.StatusBadRequest)
+ 		return
+ 	}
+@@ -552,12 +606,18 @@ func (h *deckhouseSimulateHandler) ServeHTTP(w http.ResponseWriter, r *http.Requ
+ 	}
+ }
+ 
+-// StartDeckhouseSimulateServer serves POST /simulate on the loopback address
+-// from DECKHOUSE_SCHEDULER_SIMULATE_ADDRESS. It does nothing when the variable
+-// is empty and refuses any non-loopback address: the endpoint has no auth of
+-// its own. Requests get 503 until the scheduler handlers are synced.
++// StartDeckhouseSimulateServer serves POST /simulate and GET /decisions
++// (deckhouse_decision_log.go) on the loopback address from
++// DECKHOUSE_SCHEDULER_SIMULATE_ADDRESS. It does nothing more when the variable
++// is empty and refuses any non-loopback address: the endpoints have no auth of
++// their own. Simulations get 503 until the scheduler handlers are synced.
++// It reads DECKHOUSE_SCHEDULER_DECISION_EVENTS first and
++// DECKHOUSE_SCHEDULER_DECISION_LOG_SIZE only when it serves.
+ func StartDeckhouseSimulateServer(ctx context.Context, sched *Scheduler, isLeader func() bool, synced <-chan struct{}) {
+ 	logger := klog.FromContext(ctx)
++	// Read once, before the scheduling loop starts (deckhouse_decision.go).
++	sched.deckhouseDecisions.events = deckhouseDecisionEventsFromEnv(logger, os.Getenv)
++	sched.deckhouseDecisions.names = sched.deckhouseDecisionNames()
+ 	addr := os.Getenv(deckhouseSimulateAddressEnv)
+ 	if addr == "" {
+ 		return
+@@ -568,8 +628,14 @@ func StartDeckhouseSimulateServer(ctx context.Context, sched *Scheduler, isLeade
+ 		return
+ 	}
+ 
++	// Only this listener serves the decision log: without it there is no log.
++	sched.deckhouseDecisions.log = deckhouseDecisionLogFromEnv(logger, os.Getenv)
++	if sched.deckhouseDecisions.log != nil {
++		sched.deckhouseDecisions.log.names = sched.deckhouseDecisions.names
++	}
+ 	mux := http.NewServeMux()
+ 	mux.Handle("/simulate", newDeckhouseSimulateHandler(sched, isLeader, synced, logger))
++	mux.Handle("/decisions", deckhouseDecisionsHandler{log: sched.deckhouseDecisions.log, logger: logger})
+ 
+ 	srv := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
+ 	go func() {
+diff --git a/pkg/scheduler/deckhouse_simulate_test.go b/pkg/scheduler/deckhouse_simulate_test.go
+index 417ac3d31ad..01167ca1cb9 100644
+--- a/pkg/scheduler/deckhouse_simulate_test.go
++++ b/pkg/scheduler/deckhouse_simulate_test.go
+@@ -98,7 +98,7 @@ func TestDeckhouseExcludeNodes(t *testing.T) {
+ 	}
+ }
+ 
+-func newSimulateTestScheduler(t *testing.T, ctx context.Context, nodeNames []string, extra ...tf.RegisterPluginFunc) *Scheduler {
++func newSimulateTestScheduler(t testing.TB, ctx context.Context, nodeNames []string, extra ...tf.RegisterPluginFunc) *Scheduler {
+ 	t.Helper()
+ 	sched := makeScheduler(ctx, makeNodeList(nodeNames))
+ 	nodeAffinity := func(ctx context.Context, _ runtime.Object, h framework.Handle) (framework.Plugin, error) {
+@@ -119,6 +119,7 @@ func newSimulateTestScheduler(t *testing.T, ctx context.Context, nodeNames []str
+ 		t.Fatal(err)
+ 	}
+ 	sched.Profiles = map[string]framework.Framework{v1.DefaultSchedulerName: schedFramework}
++	sched.deckhouseDecisions.names = sched.deckhouseDecisionNames()
+ 	return sched
+ }
+ 
+@@ -163,14 +164,14 @@ func TestDeckhouseSimulate(t *testing.T) {
+ 	}
+ 	want := map[string]verdict{
+ 		"1": {VerdictFeasible, ""},
+-		"2": {VerdictRejected, "sds"},
++		"2": {VerdictRejected, "extender/sds"},
+ 		"3": {VerdictRejected, nodeaffinityplugin.Name},
+ 		"4": {VerdictRejected, nodeaffinityplugin.Name},
+ 	}
+ 	if !reflect.DeepEqual(got, want) {
+ 		t.Errorf("verdicts = %v, want %v", got, want)
+ 	}
+-	if resp.Nodes[0].Name != "1" || len(resp.Nodes[0].Scores) == 0 || resp.Nodes[0].Scores[0].Name != "NumericMap" {
++	if resp.Nodes[0].Name != "1" || len(resp.Nodes[0].Scores) == 0 || resp.Nodes[0].Scores[0].Name != "plugin/NumericMap" {
+ 		t.Errorf("first node = %+v, want node 1 with the NumericMap score", resp.Nodes[0])
+ 	}
+ 
+@@ -274,7 +275,7 @@ func TestDeckhouseSimulateBestNodes(t *testing.T) {
+ 		{Name: "hv-03", TotalScore: 150},
+ 		{Name: "hv-02", TotalScore: 420},
+ 		{Name: "hv-01", TotalScore: 420},
+-	}, nil)
++	}, nil, nil)
+ 	if !reflect.DeepEqual(best, []string{"hv-01", "hv-02"}) {
+ 		t.Fatalf("best = %v", best)
+ 	}
+@@ -425,7 +426,7 @@ func TestDeckhouseSimulateDetails(t *testing.T) {
+ 	if n3.RejectedBy != nodeaffinityplugin.Name || !reflect.DeepEqual(plugins, []string{nodeaffinityplugin.Name, "FakeFilter"}) {
+ 		t.Errorf("filters=all: node 3 = %+v, want NodeAffinity then FakeFilter", n3)
+ 	}
+-	if s := byName(full)["1"].Scores[0]; s.Name != "NumericMap" || s.Weight != 1 || s.Normalized == nil || *s.Normalized != s.Score {
++	if s := byName(full)["1"].Scores[0]; s.Name != "plugin/NumericMap" || s.Weight != 1 || s.Normalized == nil || *s.Normalized != s.Score {
+ 		t.Errorf("weights=true: score = %+v, want weight 1 and normalized = score", s)
+ 	}
+ }
+@@ -448,9 +449,14 @@ func TestDeckhouseSimulateWeights(t *testing.T) {
+ 		Name:       "hv-01",
+ 		TotalScore: 520,
+ 		Scores:     []framework.PluginScore{{Name: "https://sds", Score: 500}, {Name: "NumericMap", Score: 20}, {Name: "unknown", Score: 7}},
+-	}}, got)
++	}}, got, deckhouseDecisionNames{"https://sds": "extender/sds", "NumericMap": "plugin/NumericMap"})
++	// Scores are named as in GET /decisions; weights stay keyed by the raw name.
+ 	want := []int64{100, 20, -1}
++	wantNames := []string{"extender/sds", "plugin/NumericMap", "unknown"}
+ 	for i, s := range nodes[0].Scores {
++		if s.Name != wantNames[i] {
++			t.Errorf("score %d named %q, want %q", i, s.Name, wantNames[i])
++		}
+ 		n := int64(-1)
+ 		if s.Normalized != nil {
+ 			n = *s.Normalized
+diff --git a/pkg/scheduler/metrics/metrics.go b/pkg/scheduler/metrics/metrics.go
+index 50a356cb1d5..bddcce1dc83 100644
+--- a/pkg/scheduler/metrics/metrics.go
++++ b/pkg/scheduler/metrics/metrics.go
+@@ -136,6 +136,17 @@ var (
+ 	ExtenderCircuitOpen      *metrics.GaugeVec
+ 	ExtenderCircuitOpenTotal *metrics.CounterVec
+ 
++	// SimulateRequests, SimulateDuration and SimulateLockWait show the simulate
++	// endpoint (Deckhouse patch).
++	SimulateRequests *metrics.CounterVec
++	SimulateDuration *metrics.HistogramVec
++	SimulateLockWait *metrics.Histogram
++	// DecisionDecidingPlugin, DecisionScoreMargin and DecisionFeasibleNodes
++	// explain the node selection of real scheduling cycles (Deckhouse patch).
++	DecisionDecidingPlugin *metrics.CounterVec
++	DecisionScoreMargin    *metrics.HistogramVec
++	DecisionFeasibleNodes  *metrics.HistogramVec
++
+ 	// The below are only available when the SchedulerAsyncAPICalls feature gate is enabled.
+ 	AsyncAPICallsTotal   *metrics.CounterVec
+ 	AsyncAPICallDuration *metrics.HistogramVec
+@@ -409,6 +420,63 @@ func InitMetrics() {
+ 			StabilityLevel: metrics.ALPHA,
+ 		}, []string{"extender", "reason"})
+ 
++	SimulateRequests = metrics.NewCounterVec(
++		&metrics.CounterOpts{
++			Subsystem:      SchedulerSubsystem,
++			Name:           "simulate_requests_total",
++			Help:           "Requests to the simulate endpoint by HTTP status code of the answer.",
++			StabilityLevel: metrics.ALPHA,
++		}, []string{"code"})
++
++	SimulateDuration = metrics.NewHistogramVec(
++		&metrics.HistogramOpts{
++			Subsystem: SchedulerSubsystem,
++			Name:      "simulate_duration_seconds",
++			Help: "Time a simulation holds the scheduling lock, real scheduling cycles wait for it meanwhile; " +
++				"by the filters query parameter (first or all).",
++			// 1ms .. ~33s
++			Buckets:        metrics.ExponentialBuckets(0.001, 2, 16),
++			StabilityLevel: metrics.ALPHA,
++		}, []string{"filters"})
++
++	SimulateLockWait = metrics.NewHistogram(
++		&metrics.HistogramOpts{
++			Subsystem:      SchedulerSubsystem,
++			Name:           "simulate_lock_wait_seconds",
++			Help:           "Time a simulation waits for the scheduling lock before it starts.",
++			Buckets:        metrics.ExponentialBuckets(0.001, 2, 16),
++			StabilityLevel: metrics.ALPHA,
++		})
++
++	DecisionDecidingPlugin = metrics.NewCounterVec(
++		&metrics.CounterOpts{
++			Subsystem: SchedulerSubsystem,
++			Name:      "decision_deciding_plugin_total",
++			Help: "Node selections of real scheduling cycles by the score plugin (plugin/<name>) or extender (extender/<name>) " +
++				"with the largest weighted score lead of the selected node over the best other feasible node; " +
++				"scheduler/single-node: nothing was scored, scheduler/tie: both have the same total score, " +
++				"scheduler/nominated-node and scheduler/node-hint: one node was tried and taken without scoring.",
++			StabilityLevel: metrics.ALPHA,
++		}, []string{"profile", "plugin"})
++
++	DecisionScoreMargin = metrics.NewHistogramVec(
++		&metrics.HistogramOpts{
++			Subsystem:      SchedulerSubsystem,
++			Name:           "decision_score_margin",
++			Help:           "Total score of the selected node minus that of the best other feasible node, when nodes were scored.",
++			Buckets:        []float64{0, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000},
++			StabilityLevel: metrics.ALPHA,
++		}, []string{"profile"})
++
++	DecisionFeasibleNodes = metrics.NewHistogramVec(
++		&metrics.HistogramOpts{
++			Subsystem:      SchedulerSubsystem,
++			Name:           "decision_feasible_nodes",
++			Help:           "Number of feasible nodes a real scheduling cycle selected the node from.",
++			Buckets:        []float64{1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000},
++			StabilityLevel: metrics.ALPHA,
++		}, []string{"profile"})
++
+ 	PreemptionGoroutinesDuration = metrics.NewHistogramVec(
+ 		&metrics.HistogramOpts{
+ 			Subsystem:      SchedulerSubsystem,
+@@ -482,6 +550,12 @@ func InitMetrics() {
+ 		ExtenderPlacementsDropped,
+ 		ExtenderCircuitOpen,
+ 		ExtenderCircuitOpenTotal,
++		SimulateRequests,
++		SimulateDuration,
++		SimulateLockWait,
++		DecisionDecidingPlugin,
++		DecisionScoreMargin,
++		DecisionFeasibleNodes,
+ 	}
+ }
+ 
+diff --git a/pkg/scheduler/schedule_one.go b/pkg/scheduler/schedule_one.go
+index 54f6f15a5f5..81dcfc49072 100644
+--- a/pkg/scheduler/schedule_one.go
++++ b/pkg/scheduler/schedule_one.go
+@@ -460,6 +460,7 @@ func (sched *Scheduler) schedulePod(ctx context.Context, fwk framework.Framework
+ 
+ 	// When only one node after predicate, just use it.
+ 	if len(feasibleNodes) == 1 {
++		sched.deckhouseRecordDecision(ctx, state, fwk, pod, feasibleNodes[0].Node().Name, nil, "", trace)
+ 		return ScheduleResult{
+ 			SuggestedHost:  feasibleNodes[0].Node().Name,
+ 			EvaluatedNodes: 1 + diagnosis.NodeToStatus.Len(),
+@@ -474,6 +475,9 @@ func (sched *Scheduler) schedulePod(ctx context.Context, fwk framework.Framework
+ 
+ 	host, _, err := selectHost(priorityList, numberOfHighestScoredNodesToReport)
+ 	trace.Step("Prioritizing done")
++	if err == nil {
++		sched.deckhouseRecordDecision(ctx, state, fwk, pod, host, priorityList, "", trace)
++	}
+ 
+ 	return ScheduleResult{
+ 		SuggestedHost:  host,
+@@ -1010,7 +1014,7 @@ func (sched *Scheduler) assume(logger klog.Logger, assumed *v1.Pod, host string)
+ func (sched *Scheduler) bind(ctx context.Context, schedFramework framework.Framework, assumed *v1.Pod, targetNode string, state fwk.CycleState) (status *fwk.Status) {
+ 	logger := klog.FromContext(ctx)
+ 	defer func() {
+-		sched.finishBinding(logger, schedFramework, assumed, targetNode, status)
++		sched.finishBinding(logger, schedFramework, assumed, targetNode, status, state)
+ 	}()
+ 
+ 	bound, err := sched.extendersBinding(logger, assumed, targetNode)
+@@ -1039,7 +1043,7 @@ func (sched *Scheduler) extendersBinding(logger klog.Logger, pod *v1.Pod, node s
+ 	return false, nil
+ }
+ 
+-func (sched *Scheduler) finishBinding(logger klog.Logger, fwk framework.Framework, assumed *v1.Pod, targetNode string, status *fwk.Status) {
++func (sched *Scheduler) finishBinding(logger klog.Logger, fwk framework.Framework, assumed *v1.Pod, targetNode string, status *fwk.Status, state fwk.CycleState) {
+ 	if finErr := sched.Cache.FinishBinding(logger, assumed); finErr != nil {
+ 		utilruntime.HandleErrorWithLogger(logger, finErr, "Scheduler cache FinishBinding failed")
+ 	}
+@@ -1048,6 +1052,11 @@ func (sched *Scheduler) finishBinding(logger klog.Logger, fwk framework.Framewor
+ 		return
+ 	}
+ 
++	// Deckhouse: the top nodes and the deciding plugin, opt-in (deckhouse_decision.go).
++	if suffix := sched.deckhouseDecisionEventSuffix(state, assumed, targetNode); suffix != "" {
++		fwk.EventRecorder().Eventf(assumed, nil, v1.EventTypeNormal, "Scheduled", "Binding", "Successfully assigned %v/%v to %v%s", assumed.Namespace, assumed.Name, targetNode, suffix)
++		return
++	}
+ 	fwk.EventRecorder().Eventf(assumed, nil, v1.EventTypeNormal, "Scheduled", "Binding", "Successfully assigned %v/%v to %v", assumed.Namespace, assumed.Name, targetNode)
+ }
+ 
+diff --git a/pkg/scheduler/scheduler.go b/pkg/scheduler/scheduler.go
+index a23173404a7..641bd202e88 100644
+--- a/pkg/scheduler/scheduler.go
++++ b/pkg/scheduler/scheduler.go
+@@ -127,6 +127,8 @@ type Scheduler struct {
+ 	// Deckhouse: serializes the synchronous part of a scheduling cycle with
+ 	// simulations (deckhouse_simulate.go) that use the same snapshot.
+ 	deckhouseSimulateMu sync.Mutex
++	// Deckhouse: opt-in outputs of scheduling decisions (deckhouse_decision.go).
++	deckhouseDecisions deckhouseDecisions
+ }
+ 
+ func (sched *Scheduler) applyDefaultHandlers() {

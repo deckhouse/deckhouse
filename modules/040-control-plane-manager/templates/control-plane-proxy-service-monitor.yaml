@@ -59,6 +59,8 @@ spec:
       action: labeldrop
     - targetLabel: job
       replacement: kube-scheduler
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node
     - targetLabel: tier
       replacement: cluster
     - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]

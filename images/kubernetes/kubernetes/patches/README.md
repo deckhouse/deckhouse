@@ -351,7 +351,7 @@ For `hostNetwork` Pods kubelet builds `/etc/hosts` from a copy of the node's `/e
 
 Adds a dry-run scheduling endpoint to kube-scheduler: `POST /simulate` answers "which node would this Pod get right now, and why". Without it nobody outside the scheduler can tell where a Pod will land or why it landed there: the descheduler evicts blindly, and the reasons for a placement are visible only in the scheduler's debug logs.
 
-The scheduler evaluates the Pod as in a real scheduling cycle, on its live cache, with the same plugins and extenders, but places nothing and changes nothing. The answer lists every node: whether it fits, which filter or extender rejected it and why, and the score each plugin and extender gave it. The caller can exclude nodes (the source node of a live migration) and treat some Pods as already deleted (the evicted Pod, or all Pods of a node that is about to be removed). Query parameters add details: `weights=true` shows the weight behind every score, `filters=all` lists every filter a node fails instead of the first one.
+The scheduler evaluates the Pod as in a real scheduling cycle, on its live cache, with the same plugins and extenders, but places nothing and changes nothing. The answer lists every node: whether it fits, which filter or extender rejected it and why, and the score each plugin and extender gave it. Scores are named `plugin/<Name>` and `extender/<name>`, as in the decision log of `scheduler-decision-observability.patch`; an extender that rejected a node is `extender/<name>` too, a filter plugin keeps its plain name. `<name>` is the name of the extender in its metrics (`scheduler-extender-metrics.patch`), or its URL prefix when it has no KubeSchedulerWebhookConfiguration. The caller can exclude nodes (the source node of a live migration) and treat some Pods as already deleted (the evicted Pod, or all Pods of a node that is about to be removed). Query parameters add details: `weights=true` shows the weight behind every score, `filters=all` lists every filter a node fails instead of the first one.
 
 Extenders get the filter and prioritize requests of a simulation with `"dryRun": true` (`scheduler-extender-dry-run.patch`). While a simulation runs, real scheduling waits for it, extender calls included; therefore a replica runs one simulation at a time and answers 429 to a concurrent request. `filters=all` makes a simulation longer and is meant for debugging.
 
@@ -403,3 +403,46 @@ When the simulate endpoint evaluates a Pod, kube-scheduler calls the extenders a
 kube-scheduler tells its own simulation by the Pod copy object. A real Pod with the annotation is processed during scheduling, recorded in extender metrics, counted by the circuit breaker and sent in placements like any other Pod.
 
 The patch is carried on 1.33 (`028`), 1.34 (`029`), 1.35 (`028`), 1.36 (`027`) and 1.37 (`026`).
+
+### scheduler-decision-observability.patch
+
+Upstream kube-scheduler does not say why a Pod landed on its node: the scores are visible only in debug logs at level 10, and the simulate endpoint shows what would happen now, not what happened. The patch explains the real decisions and measures the simulate endpoint.
+
+After a scheduling cycle selects the node of a Pod, kube-scheduler compares it with the best other feasible node by total score (the runner-up). The score plugin or prioritize extender with the largest positive difference of weighted scores between the two decided. Simulations are not counted. Pods placed by the pod-group cycle (1.36+) produce no decision at all, neither metrics nor event text nor log entry: the cycle runs `schedulePod` for every candidate placement and binds the kept one without another run.
+
+"Feasible nodes" are the nodes the filters found. With `percentageOfNodesToScore` (adaptive by default) the filters stop after enough feasible nodes, for example about 500 of 5000, so `scheduler_decision_feasible_nodes`, the runner-up and `tie` refer to that sample, not to all nodes of the cluster.
+
+Metrics (`profile` is the scheduler profile):
+
+| Metric | Labels | Series |
+|---|---|---|
+| `scheduler_decision_deciding_plugin_total` | `profile`, `plugin` | profiles × (score plugins + prioritize extenders + 4) |
+| `scheduler_decision_score_margin` (histogram: total score of the selected node minus that of the runner-up; buckets 0, 1, 2, 5 ... 5000) | `profile` | profiles × 16 |
+| `scheduler_decision_feasible_nodes` (histogram: feasible nodes of the decision; buckets 1, 2, 5 ... 5000) | `profile` | profiles × 15 |
+| `scheduler_simulate_requests_total` | `code`: 200, 400, 404, 405, 429, 500, 503, 504 | 8 |
+| `scheduler_simulate_duration_seconds` (histogram: time a simulation holds the scheduling lock; real cycles wait meanwhile; 1ms .. 33s) | `filters`: `first`, `all` | 2 × 19 |
+| `scheduler_simulate_lock_wait_seconds` (histogram: time a simulation waits for the lock; 1ms .. 33s) | none | 19 |
+
+`plugin` says what decided, with a prefix:
+
+- `plugin/<name>`: a score plugin, for example `plugin/NodeResourcesFit`;
+- `extender/<name>`: a prioritize extender by its name, the `extender` label of the extender metrics (`scheduler-extender-metrics`): the KubeSchedulerWebhookConfiguration name, or the URL prefix for an extender without a name;
+- `scheduler/single-node`: only one node passed the filters, there was no choice;
+- `scheduler/tie`: scoring ran, but the best nodes have equal totals; the winner was picked at random;
+- `scheduler/nominated-node`: the Pod took the node nominated for it during preemption; it was tried first and fit, other nodes were not evaluated;
+- `scheduler/node-hint`: since 1.35 the scheduler took the node from the OpportunisticBatching hint, left by an earlier Pod of the same shape, without scoring; other nodes were not evaluated.
+
+The number of series does not depend on the prefixes; the values changed once (from `single_feasible_node`, `tie`, `nominated_node`, `node_hint`, plugin names and extender URL prefixes), so graphs and alerts by `plugin` break at the upgrade to this version of the patch.
+
+A decision is counted when the node is selected, also when the cycle fails later (Reserve, Permit, binding). `scheduler_decision_feasible_nodes` is not observed for `scheduler/nominated-node` and `scheduler/node-hint`, `scheduler_decision_score_margin` only when nodes were scored.
+
+Two outputs are off by default and read once at start from the environment of kube-scheduler (Deckhouse templates do not set them yet):
+
+- `DECKHOUSE_SCHEDULER_DECISION_EVENTS=true` appends the top three nodes with their total scores and the deciding plugin to the message of the `Scheduled` event: `Successfully assigned ns/pod to node-a; top: node-a=512 node-b=498 node-c=470; decided by plugin/NodeResourcesFit (+14)`, or with an extender `...; top: a=570 b=448; decided by extender/usage-extender (+80)`. The message stays within the 1024 bytes the events API accepts: nodes that do not fit are left out. Without the variable the message is the upstream one.
+- `DECKHOUSE_SCHEDULER_DECISION_LOG_SIZE=<n>` keeps the last `n` decisions in memory (at most 10000). An entry keeps at most 32 scores per node: about 2.6 KB in the worst case, 26 MB for 10000 entries; with 17 score plugins and extenders about 1.5 KB, 15 MB for 10000. `GET /decisions?namespace=&name=&limit=` on the loopback listener of the simulate endpoint returns them newest first: time, Pod, profile, node, number of feasible nodes, deciding plugin, its lead and the margin, the duration of the scheduling attempt up to the decision, and the top three nodes with the weighted score of every plugin and extender; `decidedBy` and the score names use the same prefixed names as the metric, and so does the answer of `/simulate`. `limit` is 100 by default and at most 1000 (and `n`), a larger value is cut; the answer is written entry by entry, never built in one buffer. Without the variable the endpoint answers 404. The log needs `DECKHOUSE_SCHEDULER_SIMULATE_ADDRESS`, as the simulate endpoint does.
+
+`control-plane-proxy` publishes the log as `/scheduler/decisions`; access is granted by the ClusterRole `d8:control-plane-manager:scheduler-decisions`.
+
+On the scheduling path a decision costs one pass over the scores of the feasible nodes and three metric updates, without allocations: 3-3.6 µs at 5000 nodes, about 0.1% of scoring the same nodes with trivial plugins (`BenchmarkDeckhouseDecision`, `BenchmarkDeckhousePrioritizeNodes`).
+
+The patch is carried on 1.33 (`029`), 1.34 (`030`), 1.35 (`029`), 1.36 (`028`) and 1.37 (`027`).

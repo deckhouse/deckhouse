@@ -13,10 +13,11 @@ spec:
       metadata:
         description: |
           control-plane-proxy publishes loopback endpoints of the same node: control-plane
-          metrics (controller-manager, scheduler, etcd) and the kube-scheduler simulate endpoint.
+          metrics (controller-manager, scheduler, etcd), the kube-scheduler simulate endpoint
+          and decision log.
     hostPorts:
       - port: 4209
         protocol: TCP
         metadata:
-          description: HTTPS endpoint of kube-rbac-proxy (metrics and the scheduler simulate endpoint).
+          description: HTTPS endpoint of kube-rbac-proxy (metrics, the scheduler simulate endpoint and decision log).
 {{- end }}
