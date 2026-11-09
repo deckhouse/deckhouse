@@ -611,3 +611,94 @@ func TestFollowersBehind(t *testing.T) {
 		})
 	}
 }
+
+// TestStorageEndpointInUse is what keeps the agents where they are while the lease has no holder,
+// which it has on every planned handover: the endpoint the node layouts carry, as long as it is still
+// one of the replicas, and the same answer however the layouts happen to be listed.
+func TestStorageEndpointInUse(t *testing.T) {
+	addresses := []string{"10.0.0.1:5001", "10.0.0.2:5001", "10.0.0.3:5001"}
+
+	pointedAt := func(host string) registryv1alpha1.RegistryNodeSpec {
+		return registryv1alpha1.RegistryNodeSpec{
+			Cache: true,
+			Backends: []registryv1alpha1.Backend{
+				{
+					Name:     registryv1alpha1.BackendStorage,
+					Endpoint: registryv1alpha1.Endpoint{Scheme: registryv1alpha1.SchemeHTTPS, Host: host},
+				},
+				{
+					Name: registryv1alpha1.BackendUpstream,
+					Endpoint: registryv1alpha1.Endpoint{
+						Scheme: registryv1alpha1.SchemeHTTPS, Host: "registry.deckhouse.io",
+					},
+				},
+			},
+		}
+	}
+	direct := registryv1alpha1.RegistryNodeSpec{
+		Backends: []registryv1alpha1.Backend{{
+			Name:     registryv1alpha1.BackendUpstream,
+			Endpoint: registryv1alpha1.Endpoint{Scheme: registryv1alpha1.SchemeHTTPS, Host: "10.0.0.1:5001"},
+		}},
+	}
+
+	tests := []struct {
+		name  string
+		nodes []registryv1alpha1.RegistryNodeSpec
+		want  string
+	}{
+		{
+			name:  "the endpoint every layout carries",
+			nodes: []registryv1alpha1.RegistryNodeSpec{pointedAt("10.0.0.3:5001"), pointedAt("10.0.0.3:5001")},
+			want:  "10.0.0.3:5001",
+		},
+		{
+			name: "no layouts yet",
+			want: "",
+		},
+		{
+			name:  "an endpoint that is no longer a replica",
+			nodes: []registryv1alpha1.RegistryNodeSpec{pointedAt("10.0.0.9:5001")},
+			want:  "",
+		},
+		{
+			name:  "layouts without a storage backend say nothing, even naming a replica's host",
+			nodes: []registryv1alpha1.RegistryNodeSpec{direct},
+			want:  "",
+		},
+		{
+			name: "the endpoint most layouts carry",
+			nodes: []registryv1alpha1.RegistryNodeSpec{
+				pointedAt("10.0.0.1:5001"), pointedAt("10.0.0.3:5001"), pointedAt("10.0.0.3:5001"),
+			},
+			want: "10.0.0.3:5001",
+		},
+		{
+			name: "only replicas still in use are counted",
+			nodes: []registryv1alpha1.RegistryNodeSpec{
+				pointedAt("10.0.0.9:5001"), pointedAt("10.0.0.9:5001"), pointedAt("10.0.0.2:5001"),
+			},
+			want: "10.0.0.2:5001",
+		},
+		{
+			name: "a tie goes to the smallest address",
+			nodes: []registryv1alpha1.RegistryNodeSpec{
+				pointedAt("10.0.0.3:5001"), pointedAt("10.0.0.2:5001"),
+			},
+			want: "10.0.0.2:5001",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, StorageEndpointInUse(tt.nodes, addresses))
+
+			// The same layouts listed the other way round: the answer must not depend on it.
+			reversed := make([]registryv1alpha1.RegistryNodeSpec, len(tt.nodes))
+			for i := range tt.nodes {
+				reversed[len(tt.nodes)-1-i] = tt.nodes[i]
+			}
+			assert.Equal(t, tt.want, StorageEndpointInUse(reversed, addresses))
+		})
+	}
+}

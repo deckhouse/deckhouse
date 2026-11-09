@@ -139,7 +139,7 @@ spec:
                       mirrors:
                         type: array
                         description: |
-                          Additional addresses serving the same content, tried on failure.
+                          Other addresses of the same backend. The agent recognises requests that name them, but pulls the primary image set only from the endpoint.
                         items:
                           type: object
                           required:

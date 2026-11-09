@@ -588,8 +588,9 @@ func TestComputeWithoutNodes(t *testing.T) {
 
 // TestComputeAddressesTheStorageByReplica: the cache is one source of images reachable
 // in several places, so the replicas are mirrors of one backend rather than several
-// backends. The agent then fails over between them without treating a dead replica as a
-// different registry.
+// backends. The agent pulls only from the endpoint; the mirrors let it recognise a request
+// that names another replica by its host as the same image set rather than a different
+// registry.
 func TestComputeAddressesTheStorageByReplica(t *testing.T) {
 	desired := Compute(Inputs{
 		Config: registryv1alpha1.RegistryConfigSpec{
@@ -789,10 +790,11 @@ func TestComputeLeavesNoCredentialInAnyResource(t *testing.T) {
 
 // TestAgentsArePointedAtTheLeader pins which replica a node asks first.
 //
-// It decides what a node can pull, because an agent does not move to the next target on a 404 — and
-// that is deliberate: for the Storage-then-Upstream chain a 404 means the image is genuinely absent,
-// and retrying it everywhere would turn every missing tag into a request to every backend. Mirrors
-// share that list and that rule, so a follower placed first answers 404 for images the cluster holds.
+// It decides what a node can pull, because the endpoint is the only replica an agent asks: for the
+// image set it goes to the Storage endpoint and then to the upstream, never to a mirror of the Storage
+// backend, and a 404 from the endpoint is final — deliberately: for the Storage-then-Upstream chain a
+// 404 means the image is genuinely absent. So a follower placed there answers 404 for images the
+// cluster holds.
 //
 // The leader is the replica whose completeness authorized dropping the upstream, so it is the one
 // that has the set: point an agent at a follower instead and a pod can fail to start over an image
@@ -817,7 +819,7 @@ func TestAgentsArePointedAtTheLeader(t *testing.T) {
 	})
 
 	t.Run("with no leader reported the given order stands", func(t *testing.T) {
-		access.Leader = ""
+		access.Leader, access.Previous = "", ""
 
 		backend := storageBackend(access)
 
@@ -827,12 +829,45 @@ func TestAgentsArePointedAtTheLeader(t *testing.T) {
 	})
 
 	t.Run("a leader that is not among the addresses is ignored", func(t *testing.T) {
-		access.Leader = "10.9.9.9:5001"
+		access.Leader, access.Previous = "10.9.9.9:5001", ""
 
 		backend := storageBackend(access)
 
 		assert.Equal(t, "10.0.0.1:5001", backend.Endpoint.Host,
 			"a stale leader address must not become a target nobody can reach")
+		assert.Len(t, backend.Mirrors, 2)
+	})
+
+	t.Run("with no leader the endpoint the nodes have is kept", func(t *testing.T) {
+		access.Leader, access.Previous = "", "10.0.0.3:5001"
+
+		backend := storageBackend(access)
+
+		assert.Equal(t, "10.0.0.3:5001", backend.Endpoint.Host,
+			"a lease released on a planned handover must not move every node to the first address")
+		mirrors := make([]string, 0, len(backend.Mirrors))
+		for _, mirror := range backend.Mirrors {
+			mirrors = append(mirrors, mirror.Host)
+		}
+		assert.Equal(t, []string{"10.0.0.1:5001", "10.0.0.2:5001"}, mirrors)
+	})
+
+	t.Run("a leader outranks the endpoint the nodes have", func(t *testing.T) {
+		access.Leader, access.Previous = "10.0.0.2:5001", "10.0.0.3:5001"
+
+		backend := storageBackend(access)
+
+		assert.Equal(t, "10.0.0.2:5001", backend.Endpoint.Host,
+			"keeping the endpoint is for the window without a leader, not instead of one")
+	})
+
+	t.Run("a kept endpoint that is no longer an address gives way to the first", func(t *testing.T) {
+		access.Leader, access.Previous = "", "10.9.9.9:5001"
+
+		backend := storageBackend(access)
+
+		assert.Equal(t, "10.0.0.1:5001", backend.Endpoint.Host,
+			"a replica that left with its master must not stay the endpoint")
 		assert.Len(t, backend.Mirrors, 2)
 	})
 }

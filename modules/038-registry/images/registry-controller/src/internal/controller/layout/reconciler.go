@@ -620,10 +620,41 @@ func (r *Reconciler) collectInputs(
 			return inputs, err
 		}
 		access.Leader = leaderAddress
+		if leaderAddress == "" {
+			// No leader to name, so the endpoint stays where the nodes already have it until a
+			// new one reports. See layout.StorageEndpointInUse.
+			//
+			// Into the access only, not into Leader: the publication endpoint is not kept the same
+			// way. A push has to land on the leader, the replica the others replicate from, and with
+			// the lease empty nothing says which replica that will be, so it is refused instead.
+			access.Previous, err = r.storageEndpointInUse(ctx, access.Addresses)
+			if err != nil {
+				return inputs, err
+			}
+		}
 		inputs.StorageAccess = access
 	}
 
 	return inputs, nil
+}
+
+// storageEndpointInUse reads the Storage endpoint the node layouts carry now. See
+// layout.StorageEndpointInUse.
+//
+// An error rather than an empty answer. Empty means "no endpoint to keep", and the layout then moves
+// every node to the first address — the very rewrite this exists to avoid, made because a list
+// failed. applyNodes lists the same objects a moment later and would fail on the same error anyway.
+func (r *Reconciler) storageEndpointInUse(ctx context.Context, addresses []string) (string, error) {
+	existing := &registryv1alpha1.RegistryNodeList{}
+	if err := r.Client.List(ctx, existing); err != nil {
+		return "", fmt.Errorf("listing RegistryNode objects: %w", err)
+	}
+
+	specs := make([]registryv1alpha1.RegistryNodeSpec, 0, len(existing.Items))
+	for i := range existing.Items {
+		specs = append(specs, existing.Items[i].Spec)
+	}
+	return layout.StorageEndpointInUse(specs, addresses), nil
 }
 
 // persistedCredentials reads back the credentials this module wrote last time.

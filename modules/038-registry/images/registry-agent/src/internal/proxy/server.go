@@ -26,6 +26,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -135,6 +136,18 @@ type Server struct {
 	// accepts, one file per registry — see DefaultTrustDir. Empty leaves the agent with
 	// its image's own bundle, which knows nothing the cluster was told.
 	TrustDir string
+
+	// StorageFailed is told when the Storage endpoint of the layout failed a request: it could
+	// not be reached, the connection or the handshake broke, or it answered with a server error.
+	// Not when it answered 404 or refused the credentials: it is up then, and moving would not
+	// help.
+	//
+	// The agent re-reads its layout on it (agent.Loop.RereadNow). This endpoint is the one the
+	// image set is asked for, with no other replica to fail over to, so a node that stays on an
+	// endpoint that has stopped cannot pull until it reads where the controller moved it.
+	//
+	// Optional. Called on the request's own goroutine, so it must not block.
+	StorageFailed func()
 
 	// trust is the staged authorities as last read, refreshed by RefreshTrust.
 	trust atomic.Pointer[trustBundle]
@@ -284,6 +297,9 @@ func (s *Server) forward(writer http.ResponseWriter, request *http.Request) {
 			if alternatives && request.Context().Err() == nil && !isCredentialRefusal(err) {
 				s.demoted.fail(target, started)
 			}
+			if unreachable(request.Context(), err) {
+				s.storageFailed(decision.Kind, target)
+			}
 			s.markFailing(target.Name)
 			s.failover(target.Name, metrics.ReasonUnreachable)
 			s.Log.Warn("a target did not answer, trying the next one",
@@ -320,6 +336,12 @@ func (s *Server) forward(writer http.ResponseWriter, request *http.Request) {
 				"target", target.Name, "host", target.Host, "status", response.Status,
 				"challenge", response.Header.Get("WWW-Authenticate"))
 			continue
+		}
+
+		if response.StatusCode >= http.StatusInternalServerError {
+			// Whether or not another target follows: in an air-gapped cluster this
+			// endpoint is the only one, and its 5xx is relayed below as it is.
+			s.storageFailed(decision.Kind, target)
 		}
 
 		// Only a server-side failure is worth another target. A 404 means the image is
@@ -394,6 +416,35 @@ func (s *Server) forward(writer http.ResponseWriter, request *http.Request) {
 	default:
 		http.Error(writer, "no registry to try", http.StatusBadGateway)
 	}
+}
+
+// storageFailed passes on that the Storage endpoint failed a request, when that is the target
+// that failed.
+//
+// The kind is checked as well as the name: a route is named after the host it matches, and
+// nothing stops a host being called `Storage`.
+func (s *Server) storageFailed(kind Kind, target *Target) {
+	if s.StorageFailed == nil || kind != KindPrimary || target.Name != string(registryv1alpha1.BackendStorage) {
+		return
+	}
+	s.StorageFailed()
+}
+
+// unreachable tells a target that could not be talked to from a request that failed for any
+// other reason.
+//
+// The transport wraps everything that happens on the wire in a *url.Error: a refused or reset
+// connection, a failed TLS handshake, a target that did not answer in time. That is true of the
+// token exchange too, which goes to the same replica. What is left out is the agent's own
+// trouble — a certificate authority that does not parse, a request it could not build, a token
+// service that refused the credentials — and the client giving up, which cancels the request and
+// says nothing about the target.
+func unreachable(ctx context.Context, err error) bool {
+	if ctx.Err() != nil {
+		return false
+	}
+	var transport *url.Error
+	return errors.As(err, &transport) && transport.Op != "parse"
 }
 
 // result names what a registry's answer amounts to.

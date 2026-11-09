@@ -27,6 +27,7 @@ package layout
 
 import (
 	"fmt"
+	"slices"
 
 	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
@@ -53,9 +54,21 @@ type Access struct {
 
 	// Leader is the address of the replica that holds the election lease, when it has reported.
 	//
-	// Agents are pointed at it first and reach the others as its mirrors. See LeaderAddress for
-	// what pointing them at a follower cost.
+	// It becomes the Storage endpoint, which is the only replica an agent asks for the image set
+	// before it goes to the upstream. See LeaderAddress for what pointing agents at a follower cost.
 	Leader string
+
+	// Previous is the Storage endpoint the node layouts carry now, set by the caller only while
+	// there is no Leader. See StorageEndpointInUse.
+	//
+	// It keeps the endpoint where it is until a new holder of the lease reports. The lease goes
+	// empty on every planned handover, because the leader releases it on its way out, and falling
+	// back to the first address there rewrote the layout of every node twice for one change of
+	// leader — and in between pointed the agents at whichever replica sorts first, which in an
+	// air-gapped cluster can be a follower one release behind, answering 404 for an image the
+	// cluster holds. The endpoint it keeps is the replica that led a moment ago: the one that
+	// holds the set, and, when it is only restarting, the one most likely to take the lease back.
+	Previous string
 
 	CA   string
 	Auth *registryv1alpha1.Auth
@@ -484,13 +497,6 @@ func collectAuth(into map[string]registryv1alpha1.Auth, endpoint registryv1alpha
 	into[key] = *endpoint.Auth.DeepCopy()
 }
 
-// storageBackend describes the in-cluster cache as one backend with one endpoint
-// per replica.
-//
-// Every replica holds the same content, so which one answers does not matter and
-// the rest are mirrors the agent fails over to. That is also why they are mirrors
-// of a single backend rather than several backends: a backend is a distinct source
-// of images, and these are one source reachable in several places.
 // garbageCollection compiles the collection instruction the replicas act on.
 func garbageCollection(in Inputs) *registryv1alpha1.GarbageCollection {
 	configured := in.Config.Storage.GarbageCollection
@@ -510,6 +516,21 @@ func garbageCollection(in Inputs) *registryv1alpha1.GarbageCollection {
 	}
 }
 
+// storageBackend describes the in-cluster cache as one backend: the leader as its
+// endpoint, every other replica as a mirror.
+//
+// The endpoint is the only replica an agent asks. For the image set it goes to the Storage
+// endpoint and then to the upstream, and never to a mirror of the Storage backend: a follower
+// can be behind the leader, and asking it after the leader would only add a request that answers
+// 404 or a stale tag. So which replica is the endpoint decides what a node can pull, and in an
+// air-gapped cluster, where there is no upstream behind it, a node is exactly as available as
+// that one replica.
+//
+// The mirrors are there for the agent to recognise a replica's own address, not to pull from: a
+// request that names a replica by its host is still the image set, and is rewritten onto the
+// endpoint and the upstream like any other. That is also why the replicas are mirrors of a single
+// backend rather than several backends: a backend is a distinct source of images, and these are
+// one source reachable in several places.
 func storageBackend(access Access) registryv1alpha1.Backend {
 	endpoint := func(address string) registryv1alpha1.Endpoint {
 		return registryv1alpha1.Endpoint{
@@ -520,25 +541,28 @@ func storageBackend(access Access) registryv1alpha1.Backend {
 			Auth:   access.Auth,
 		}
 	}
+	listed := func(candidate string) bool {
+		return candidate != "" && slices.Contains(access.Addresses, candidate)
+	}
 
-	// The leader first, the rest as its mirrors.
+	// The leader as the endpoint. The leader is the replica whose completeness authorized dropping
+	// the upstream, so it is the one that holds the set; a follower one image behind answers 404
+	// for an image the cluster holds, and a 404 from the Storage endpoint is final.
 	//
-	// Not cosmetic: an agent does not move to the next target on a 404, because for the
-	// Storage-then-Upstream chain a 404 means the image is genuinely absent. Mirrors share that
-	// list and that rule, so whichever replica is first decides what the node can pull — and a
-	// follower that is one image behind answers 404 for an image the cluster holds. The leader is
-	// the replica whose completeness authorized dropping the upstream, so it is the one to ask.
+	// Without a leader, the endpoint the nodes already have, for as long as that replica is still
+	// one of the addresses: the lease is empty for the whole of a planned handover, and moving the
+	// endpoint there only to move it again once the new leader reports rewrote every node's layout
+	// twice and, in between, could hand them a follower. See Access.Previous.
 	//
-	// Falls back to the given order when no leader has reported: some order is needed, and the
-	// alternative — serving no storage backend at all — is worse than an imperfect first choice.
+	// Only with neither, the given order: some endpoint is needed, and serving no storage backend
+	// at all is worse than an imperfect first choice. That is a cache turned on a moment ago, or a
+	// replica that has left the cluster along with its master.
 	primary := access.Addresses[0]
-	if access.Leader != "" {
-		for _, address := range access.Addresses {
-			if address == access.Leader {
-				primary = address
-				break
-			}
-		}
+	switch {
+	case listed(access.Leader):
+		primary = access.Leader
+	case listed(access.Previous):
+		primary = access.Previous
 	}
 
 	backend := registryv1alpha1.Backend{

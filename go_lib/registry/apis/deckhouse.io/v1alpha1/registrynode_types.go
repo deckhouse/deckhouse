@@ -68,8 +68,9 @@ type Backend struct {
 	// Endpoint is how to reach it.
 	Endpoint `json:",inline"`
 
-	// Mirrors are additional addresses serving the same content, tried on
-	// failure.
+	// Mirrors are other addresses of the same backend. The agent recognises
+	// requests that name them, but pulls the primary image set only from the
+	// endpoint.
 	// +optional
 	Mirrors []Endpoint `json:"mirrors,omitempty"`
 }

@@ -21,6 +21,7 @@ package agent
 import (
 	"context"
 	"log/slog"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -100,6 +101,10 @@ type Loop struct {
 	// stuck on a layout nobody can see.
 	Interval time.Duration
 
+	// RereadGap is the least time between the end of one pass and an early one asked for by
+	// RereadNow. See DefaultRereadGap.
+	RereadGap time.Duration
+
 	// current is the layout the proxy routes by. Swapped as a whole so a request never
 	// sees half of one.
 	current atomic.Pointer[registryv1alpha1.RegistryNodeSpec]
@@ -112,10 +117,48 @@ type Loop struct {
 	// it was taken.
 	staleBytes atomic.Int64
 	measuredAt atomic.Int64
+
+	// reread holds at most one request for an early pass. Made on first use, since RereadNow
+	// may be called before Run.
+	reread     chan struct{}
+	rereadOnce sync.Once
 }
+
+// DefaultRereadGap is the least time between the end of one pass and an early one.
+//
+// Short, because the early pass is what moves a node off a Storage endpoint that has stopped:
+// until it runs, every pull of the image set on the node fails. Not zero, because a Storage
+// endpoint that stays down fails every request sent to it, and each of them asks again: without
+// a gap, a node pulling images would read its layout from the API server as fast as the pulls
+// fail.
+const DefaultRereadGap = 2 * time.Second
 
 // Current is the layout the proxy should route by.
 func (l *Loop) Current() *registryv1alpha1.RegistryNodeSpec { return l.current.Load() }
+
+// RereadNow asks for a pass ahead of the next poll. It never blocks: a request already
+// waiting covers this one too.
+//
+// The proxy calls it when the Storage endpoint of the layout failed a request. The layout
+// controller moves the nodes to another replica as soon as one takes over, but a node that
+// waited for its poll kept asking the replica that had stopped for up to the whole interval,
+// and in an air-gapped cluster that is every pull of the image set failing. Read at once, the
+// new layout is in use after one failed request.
+//
+// Only an earlier read of the same layout: whether the endpoint is to be replaced, and by
+// what, is the controller's decision, and the agent still asks nothing but the endpoint it
+// names.
+func (l *Loop) RereadNow() {
+	select {
+	case l.rereads() <- struct{}{}:
+	default:
+	}
+}
+
+func (l *Loop) rereads() chan struct{} {
+	l.rereadOnce.Do(func() { l.reread = make(chan struct{}, 1) })
+	return l.reread
+}
 
 // Run drives the loop until the context is cancelled.
 func (l *Loop) Run(ctx context.Context) error {
@@ -123,6 +166,11 @@ func (l *Loop) Run(ctx context.Context) error {
 	if interval <= 0 {
 		interval = 30 * time.Second
 	}
+	gap := l.RereadGap
+	if gap <= 0 {
+		gap = DefaultRereadGap
+	}
+	rereads := l.rereads()
 
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -134,12 +182,47 @@ func (l *Loop) Run(ctx context.Context) error {
 			// what went wrong.
 			l.Log.Error("the pass failed", "error", err.Error())
 		}
+		passed := time.Now()
 
 		select {
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
+		case <-rereads:
+			// Deferred rather than dropped when it comes too soon: the failure that asked
+			// for it may have come after the pass that just ran, and only a later pass can
+			// see a layout rewritten since.
+			if !sleep(ctx, gap-time.Since(passed)) {
+				return nil
+			}
+			// What failed during the wait failed on the layout this pass replaces, so
+			// the pass answers it as well.
+			select {
+			case <-rereads:
+			default:
+			}
+			// The pass about to run is as fresh as a poll, so the next poll is a whole
+			// interval after it.
+			ticker.Reset(interval)
+			l.Log.Info("the Storage endpoint failed a request; re-reading the layout ahead of the next poll")
 		}
+	}
+}
+
+// sleep waits for the duration, and reports false if the context ended first.
+func sleep(ctx context.Context, duration time.Duration) bool {
+	if duration <= 0 {
+		return ctx.Err() == nil
+	}
+
+	timer := time.NewTimer(duration)
+	defer timer.Stop()
+
+	select {
+	case <-ctx.Done():
+		return false
+	case <-timer.C:
+		return true
 	}
 }
 
@@ -171,7 +254,9 @@ func (l *Loop) connect() {
 
 // reconnectAfter is how many passes in a row a client may fail before it is dropped and built
 // again. Three passes, a minute and a half at the default interval: longer than an API server
-// restart, short enough that an agent pinned to a master that is gone moves on.
+// restart, short enough that an agent pinned to a master that is gone moves on. Passes asked for
+// early (RereadNow) count too, so while the Storage endpoint fails as well it can be as little as
+// three gaps: that is a master going away with the replica on it, and moving on sooner is right.
 const reconnectAfter = 3
 
 // reconnect drops a client that keeps failing, so that the next pass builds a new one.

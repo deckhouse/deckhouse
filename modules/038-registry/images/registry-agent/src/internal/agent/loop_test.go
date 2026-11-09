@@ -24,6 +24,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -501,4 +502,120 @@ func TestOnceReconnectsWhenTheAPIKeepsFailing(t *testing.T) {
 	assert.Equal(t, 1, connects, "and the next pass builds a new one")
 	assert.Same(t, replacement, loop.Source.Client)
 	assert.Same(t, replacement, loop.Publisher.Client, "the status is written with the new client too")
+}
+
+// countingClient is a client to a fake API server that counts the reads of the layout, which is
+// one per pass when the status is not published through it.
+func countingClient(t *testing.T, reads *atomic.Int32, objects ...client.Object) client.Client {
+	t.Helper()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, registryv1alpha1.AddToScheme(scheme))
+
+	return fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(objects...).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Get: func(
+				ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption,
+			) error {
+				if _, layout := obj.(*registryv1alpha1.RegistryNode); layout {
+					reads.Add(1)
+				}
+				return c.Get(ctx, key, obj, opts...)
+			},
+		}).
+		Build()
+}
+
+// runLoop runs the loop until the test ends, with a poll too far off to ever come.
+func runLoop(t *testing.T, loop *Loop) {
+	t.Helper()
+
+	loop.Interval = time.Hour
+	ctx, cancel := context.WithCancel(context.Background())
+	stopped := make(chan struct{})
+	go func() {
+		defer close(stopped)
+		_ = loop.Run(ctx)
+	}()
+	t.Cleanup(func() {
+		cancel()
+		<-stopped
+	})
+}
+
+// TestRunRereadsAtOnceWhenAsked: a Storage endpoint that stopped is most often one the
+// controller has already moved the node off, and a node that waits for its poll keeps asking the
+// stopped replica for that long. Asked, the loop reads the layout without waiting for the poll.
+func TestRunRereadsAtOnceWhenAsked(t *testing.T) {
+	var reads atomic.Int32
+	kubeClient := countingClient(t, &reads, nodeLayout())
+	loop := newLoop(t, kubeClient)
+	loop.Publisher = nil
+	loop.RereadGap = 10 * time.Millisecond
+	runLoop(t, loop)
+
+	require.Eventually(t, func() bool { return loop.Current() != nil }, 5*time.Second, 5*time.Millisecond)
+
+	moved := &registryv1alpha1.RegistryNode{}
+	require.NoError(t, kubeClient.Get(context.Background(), types.NamespacedName{Name: "worker-1"}, moved))
+	moved.Spec.Backends[0].Host = "10.0.0.3:5001"
+	require.NoError(t, kubeClient.Update(context.Background(), moved))
+
+	loop.RereadNow()
+
+	assert.Eventually(t, func() bool {
+		return loop.Current().Backends[0].Host == "10.0.0.3:5001"
+	}, 5*time.Second, 5*time.Millisecond, "the new layout is read without waiting for the poll")
+}
+
+// TestRunHoldsRereadsApart: a Storage endpoint that stays down fails every request sent to it,
+// and each of them asks for a pass. They are held to one per RereadGap, and the last one is not
+// lost: a pass follows it.
+func TestRunHoldsRereadsApart(t *testing.T) {
+	var reads atomic.Int32
+	loop := newLoop(t, countingClient(t, &reads, nodeLayout()))
+	loop.Publisher = nil
+	loop.RereadGap = 200 * time.Millisecond
+	runLoop(t, loop)
+
+	require.Eventually(t, func() bool { return reads.Load() == 1 }, 5*time.Second, 5*time.Millisecond)
+
+	started := time.Now()
+	for time.Since(started) < time.Second {
+		loop.RereadNow()
+		time.Sleep(2 * time.Millisecond)
+	}
+	elapsed := time.Since(started)
+
+	rereads := reads.Load() - 1
+	assert.LessOrEqual(t, int64(rereads), int64(elapsed/loop.RereadGap)+1,
+		"no more than one pass per gap, however many requests failed")
+	assert.GreaterOrEqual(t, rereads, int32(3), "and the requests were not ignored either")
+
+	before := reads.Load()
+	loop.RereadNow()
+	assert.Eventually(t, func() bool { return reads.Load() > before }, 5*time.Second, 5*time.Millisecond,
+		"a request that came too soon is deferred, not dropped")
+}
+
+// TestRereadNowNeverBlocks: the proxy calls it on the request's goroutine, before the loop runs
+// and while a pass is under way.
+func TestRereadNowNeverBlocks(t *testing.T) {
+	loop := newLoop(t, newClient(t, nodeLayout()))
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for range 100 {
+			loop.RereadNow()
+		}
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("RereadNow blocked")
+	}
 }

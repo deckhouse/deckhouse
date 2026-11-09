@@ -338,6 +338,15 @@ func legacyReadableHosts(config RegistryConfig) map[string]bashible_model.Config
 // there is a control plane to ask. Kept to the shape without additional routes, because
 // those live in custom resources that a node in this state cannot read either — and
 // nothing needed to bring a node up is behind one.
+//
+// The Storage endpoint here is the first address, not the leader, and that is the one place it
+// differs from the controller. The agent asks only the Storage endpoint for the image set before it
+// goes to the upstream — the other replicas are listed as mirrors so that it recognises their hosts,
+// not to pull from — so for the time a node runs on this layout, a follower that happens to sort
+// first is the replica it pulls from. Short: the agent replaces it with its RegistryNode as soon as
+// it can read one, and that names the leader. Following the leader here instead would make this
+// layout, which goes into the hash that versions the node configuration, change on every change of
+// leader, and every such change would re-run bashible on every node in the cluster.
 func buildBootstrapLayout(
 	config RegistryConfig, access registryv1alpha1.Auth, ca string, addresses []string,
 ) (string, error) {
@@ -346,7 +355,7 @@ func buildBootstrapLayout(
 	if config.Storage.Cache && len(addresses) > 0 {
 		// Addresses, not the Service name. A node reading this file has no cluster DNS
 		// and, at the point it reads it, no cluster network either — it is bootstrapping.
-		// Every replica holds the same content, so the rest are mirrors to fail over to.
+		// The rest are mirrors of the same backend, for the agent to recognise, not to pull from.
 		storage := registryv1alpha1.Backend{
 			Name:     registryv1alpha1.BackendStorage,
 			Endpoint: storageEndpoint(addresses[0], ca, access),

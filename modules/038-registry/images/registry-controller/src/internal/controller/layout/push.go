@@ -62,7 +62,9 @@ const (
 // The leader is the one the election lease names, the same answer the agents are given, read from the
 // same place, so the two cannot disagree about which replica that is. With no leader the slice is
 // empty and a push is refused at the ingress, which is the honest answer: there is no replica whose
-// store the cluster would read it from.
+// store the cluster would read it from. The agents keep the endpoint they had for that while — see
+// layout.StorageEndpointInUse — and a push does not follow them there: a pull from the replica that
+// led a moment ago reads what it holds, while a push landing on it is lost if the lease goes elsewhere.
 //
 // Owned by the RegistryStorage, which exists exactly while the cache does, so turning the cache off
 // takes the slice with it.

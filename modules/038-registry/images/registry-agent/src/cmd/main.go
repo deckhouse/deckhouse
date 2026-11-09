@@ -352,6 +352,10 @@ func run(ctx context.Context, log *slog.Logger, opts options) error {
 	}
 	loop.Serving = server.Serving
 	loop.Usable = server.Usable
+	// A Storage endpoint that fails is most often one the controller has already moved the
+	// node off: the replica stopped, and another took over. Read at once rather than at the
+	// next poll, so the node follows after one failed request.
+	server.StorageFailed = loop.RereadNow
 	// Read now, and again on every pass of the loop: the directory is a mount of the
 	// node's, and a module source added to a running cluster puts its authority there
 	// with nothing restarting this static pod.

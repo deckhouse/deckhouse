@@ -144,7 +144,11 @@ spec:
           type: RuntimeDefault
       automountServiceAccountToken: true
       serviceAccountName: registry-storage
-      terminationGracePeriodSeconds: 30
+      # Room for the longest preStop below, the token service's 25 seconds, and for each container's
+      # own stop after its wait. The registry stops at once on SIGTERM, since it is given no drain
+      # timeout, and the token service only finishes the exchanges in flight. The syncer has no wait
+      # and the whole period to itself.
+      terminationGracePeriodSeconds: 45
       # One replica per node, since each one owns the store on its host.
       affinity:
         podAntiAffinity:
@@ -221,6 +225,30 @@ spec:
         readinessProbe:
           tcpSocket:
             port: 5001
+        # Keeps serving for a while after the pod is told to go.
+        #
+        # The syncer beside it releases the fill lease at once, and until another full replica takes
+        # the lease and the layout controller moves the nodes there, the nodes' Storage endpoint is
+        # still this replica: with the lease empty the controller keeps the endpoint where it was
+        # rather than send every node to whichever address sorts first. A follower tries for the
+        # lease every five to eleven seconds (five with jitter), and the layouts are rewritten as
+        # soon as it holds it. The agents ask nothing but that endpoint for the image set. Without
+        # the wait the registry stopped in the same SIGTERM as the syncer, and in an air-gapped
+        # cluster every pull failed until the agent read the new layout, up to about forty seconds
+        # with its thirty-second poll.
+        #
+        # Twenty seconds covers the lease moving and the layouts being rewritten, so the replica
+        # still serves while the nodes are moved away from it. An agent that has not read the new
+        # layout by the time the registry stops reads it at once when a request here fails, so that
+        # agent sees one failed request and not the rest of its poll.
+        #
+        # The cost is twenty seconds on every replacement of a replica, whose successor is created
+        # only once this pod is gone. A node shutdown gives pods of this priority fifteen seconds in
+        # all by default, which cuts the wait short there.
+        lifecycle:
+          preStop:
+            sleep:
+              seconds: 20
         volumeMounts:
         - name: config
           mountPath: /config
@@ -264,6 +292,14 @@ spec:
             port: 5051
             scheme: HTTPS
             host: 127.0.0.1
+        # Outlives the registry's wait by five seconds, so that the registry never serves a request
+        # whose token exchange has nobody to answer it. With the same value the two would stop at
+        # nearly the same moment, in no fixed order. The five seconds are added to every replacement
+        # of a replica, on top of the registry's twenty.
+        lifecycle:
+          preStop:
+            sleep:
+              seconds: 25
         volumeMounts:
         - name: auth-config
           mountPath: /auth
@@ -327,6 +363,8 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
             {{- include "registry_storage_kube_rbac_proxy_resources" $ | nindent 12 }}
+      # No preStop, unlike the registry and the token service: the syncer releases the fill lease on
+      # SIGTERM, and a wait here would only hold the handover back by as long as theirs cover it.
       - name: syncer
         image: {{ include "helm_lib_module_image" (list $ "registrySyncer") }}
         imagePullPolicy: IfNotPresent

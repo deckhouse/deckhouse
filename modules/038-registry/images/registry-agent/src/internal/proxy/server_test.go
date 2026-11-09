@@ -18,6 +18,7 @@ package proxy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -972,5 +973,139 @@ func TestPaginationLeadsBackToThisProxy(t *testing.T) {
 			t.Fatalf("restorePath(%q, %q) rewrote a header it should not have: %s",
 				testcase.requested, testcase.sent, got)
 		}
+	}
+}
+
+// TestServeTellsWhenTheStorageEndpointFails: the agent re-reads its layout on it, since a
+// Storage endpoint that stopped is most often one the controller has already moved the node off.
+// Only a failure of the endpoint itself counts. A 404 or a refusal of the credentials comes from
+// a replica that is up, and the other backends have nothing to do with where the image set is.
+func TestServeTellsWhenTheStorageEndpointFails(t *testing.T) {
+	credentials := &registryv1alpha1.Auth{Username: "registry-ro", Password: "dh-test-secret-0123456789abcdef"}
+
+	stopped := func(t *testing.T) *registryStub {
+		stub := (&registryStub{name: "stopped"}).start(t)
+		stub.server.Close()
+		return stub
+	}
+	answering := func(status int) func(t *testing.T) *registryStub {
+		return func(t *testing.T) *registryStub {
+			return (&registryStub{name: "storage", status: status}).start(t)
+		}
+	}
+
+	cases := []struct {
+		name     string
+		storage  func(t *testing.T) *registryStub
+		auth     *registryv1alpha1.Auth
+		upstream bool
+		told     int32
+	}{
+		{name: "refused connection, air-gapped", storage: stopped, told: 1},
+		{name: "refused connection, with an upstream behind", storage: stopped, upstream: true, told: 1},
+		{name: "refused connection at the token exchange", storage: stopped, auth: credentials, told: 1},
+		{name: "server error, air-gapped", storage: answering(http.StatusServiceUnavailable), told: 1},
+		{
+			name: "server error, with an upstream behind", storage: answering(http.StatusBadGateway),
+			upstream: true, told: 1,
+		},
+		{name: "missing image", storage: answering(http.StatusNotFound), told: 0},
+		{name: "served", storage: answering(http.StatusOK), told: 0},
+		{
+			name: "credentials refused",
+			storage: func(t *testing.T) *registryStub {
+				return (&registryStub{
+					name: "storage", challenge: "bearer", username: "someone-else", password: "dh-test-secret-012345678",
+				}).start(t)
+			},
+			auth: credentials, told: 0,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			backends := []registryv1alpha1.Backend{
+				insecureBackend(registryv1alpha1.BackendStorage, tc.storage(t), t, constant.Path, tc.auth),
+			}
+			if tc.upstream {
+				upstream := (&registryStub{name: "upstream", body: "from-the-upstream"}).start(t)
+				backends = append(backends, insecureBackend(registryv1alpha1.BackendUpstream, upstream, t, "/deckhouse/ee", nil))
+			}
+
+			server := newServer(&registryv1alpha1.RegistryNodeSpec{Cache: true, Backends: backends})
+			var told atomic.Int32
+			server.StorageFailed = func() { told.Add(1) }
+
+			response := pull(t, server, constant.Host, "/v2/system/deckhouse/one/manifests/v1")
+			_ = bodyOf(t, response)
+
+			assert.Equal(t, tc.told, told.Load())
+		})
+	}
+}
+
+// TestServeDoesNotBlameTheStorageEndpointForOthers: an upstream failing, or a route whose host
+// happens to be called after the backend, says nothing about where the image set is.
+func TestServeDoesNotBlameTheStorageEndpointForOthers(t *testing.T) {
+	failing := (&registryStub{name: "failing", status: http.StatusServiceUnavailable}).start(t)
+
+	spec := &registryv1alpha1.RegistryNodeSpec{
+		Backends: []registryv1alpha1.Backend{
+			insecureBackend(registryv1alpha1.BackendUpstream, failing, t, "/deckhouse/ee", nil),
+		},
+		AdditionalRoutes: []registryv1alpha1.Route{{
+			Match: string(registryv1alpha1.BackendStorage),
+			Endpoint: registryv1alpha1.Endpoint{
+				Scheme: registryv1alpha1.SchemeHTTP,
+				Host:   failing.host(t),
+			},
+		}},
+	}
+
+	server := newServer(spec)
+	var told atomic.Int32
+	server.StorageFailed = func() { told.Add(1) }
+
+	_ = bodyOf(t, pull(t, server, constant.Host, "/v2/system/deckhouse/one/manifests/v1"))
+	_ = bodyOf(t, pull(t, server, string(registryv1alpha1.BackendStorage), "/v2/library/one/manifests/v1"))
+
+	assert.Zero(t, told.Load())
+	assert.Len(t, failing.asked(), 2, "both requests reached the failing registry")
+}
+
+// TestUnreachableTellsTheTargetFromTheRest: only a failure on the wire says the target may have
+// stopped. A request that could not be built, or one the client gave up on, says nothing about
+// it, and must not send the agent to re-read its layout.
+func TestUnreachableTellsTheTargetFromTheRest(t *testing.T) {
+	cancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	dial := &url.Error{Op: "Get", URL: "https://10.0.0.2:5001/v2/", Err: errors.New("connect: connection refused")}
+	_, parse := url.Parse("https://10.0.0.2:5001/%zz")
+	require.Error(t, parse)
+
+	cases := []struct {
+		name string
+		ctx  context.Context
+		err  error
+		want bool
+	}{
+		{name: "refused connection", ctx: context.Background(), err: dial, want: true},
+		{
+			name: "refused connection at the token exchange", ctx: context.Background(),
+			err: fmt.Errorf("obtaining a token from https://10.0.0.2:5051/auth: %w", dial), want: true,
+		},
+		{name: "refused connection after the client gave up", ctx: cancelled, err: dial, want: false},
+		{name: "a URL that does not parse", ctx: context.Background(), err: parse, want: false},
+		{
+			name: "credentials rejected", ctx: context.Background(),
+			err: errors.New("https://10.0.0.2:5051/auth rejected the credentials with 401 Unauthorized"), want: false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, unreachable(tc.ctx, tc.err))
+		})
 	}
 }

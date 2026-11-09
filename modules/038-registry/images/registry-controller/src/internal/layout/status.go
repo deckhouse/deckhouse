@@ -18,6 +18,7 @@ package layout
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -238,22 +239,61 @@ func FollowersBehind(
 
 // LeaderAddress is where the leading replica answers, or "" when there is no usable leader.
 //
-// Agents are pointed at the leader first, and the rest of the replicas become its mirrors. Which
-// replica is first is not a detail: an agent that gets a 404 from its primary does not ask the next
-// one — deliberately, because for the Storage-then-Upstream chain a 404 means the image is genuinely
-// absent and retrying it everywhere would turn every missing tag into a request to every backend.
-// Mirrors sit in that same list, so the same rule applies to them, and a follower that is one image
-// behind answers 404 for an image the cluster does hold.
+// Agents are pointed at the leader, and it is the only replica they ask: for the image set an agent
+// goes to the Storage endpoint and then to the upstream, and the other replicas, listed as mirrors of
+// that backend, are there only for it to recognise their hosts. Which replica is the endpoint is not a
+// detail. A 404 from it is final — deliberately, because for the Storage-then-Upstream chain a 404
+// means the image is genuinely absent and retrying it everywhere would turn every missing tag into a
+// request to every backend — so a follower that is one image behind, put there, answers 404 for an
+// image the cluster does hold.
 //
 // The leader is the replica whose completeness authorized the air-gap in the first place, so it is the
 // one that has the set — pointing an agent at a follower instead can leave a pod unable to start over
 // an image that two other replicas hold on disk.
+//
+// "" does not move the agents anywhere by itself. While the lease has no holder, or its holder has not
+// reported, the endpoint stays where the node layouts already have it until a new leader reports — see
+// StorageEndpointInUse — and only a cluster with no such endpoint gets the first address.
 func LeaderAddress(replicas []registryv1alpha1.StorageReplicaStatus, leaseHolder string) string {
 	leader := leaseHolderReport(replicas, leaseHolder)
 	if leader == nil {
 		return ""
 	}
 	return leader.Address
+}
+
+// StorageEndpointInUse is the Storage endpoint the given node layouts carry, among the replica
+// addresses still in use, or "" when none of them carries one of those.
+//
+// It is what keeps the endpoint in place while there is no leader to name — on every planned
+// handover, where the leader releases the lease on its way out and the next one takes it a few
+// seconds later, and for the whole restart of a leader that no other replica could replace. Moving
+// the endpoint there is a rewrite of every node's layout to an address chosen by nothing better than
+// sort order, followed by a second rewrite once the new leader reports; and in an air-gapped cluster
+// the address that sorts first can be a follower one release behind, whose 404 the agent takes as
+// final. Kept, the endpoint is the replica that led until a moment ago, which holds the set.
+//
+// Only addresses still in use count, because a replica that left with its master is not one to keep
+// pointing at. The layouts agree unless something interrupted a write halfway or someone edited one
+// by hand; when they do not, the endpoint most of them carry wins, and a tie goes to the smallest
+// address, so that the answer depends on the layouts and not on the order they were listed in.
+func StorageEndpointInUse(nodes []registryv1alpha1.RegistryNodeSpec, addresses []string) string {
+	votes := map[string]int{}
+	for i := range nodes {
+		storage := nodes[i].Backend(registryv1alpha1.BackendStorage)
+		if storage == nil || !slices.Contains(addresses, storage.Host) {
+			continue
+		}
+		votes[storage.Host]++
+	}
+
+	chosen := ""
+	for address, count := range votes {
+		if chosen == "" || count > votes[chosen] || (count == votes[chosen] && address < chosen) {
+			chosen = address
+		}
+	}
+	return chosen
 }
 
 // leaseHolderReport is the report of the replica that holds the election lease, or nil when
