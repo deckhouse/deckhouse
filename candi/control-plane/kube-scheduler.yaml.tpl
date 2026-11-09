@@ -95,6 +95,17 @@ spec:
     - name: DECKHOUSE_EXTENDER_NAMES
       value: {{ $names | join "," | quote }}
 {{- end }}
+{{- $placements := list }}
+{{- range $extender := (.scheduler).extenders }}
+  {{- if $extender.sendPlacements }}
+    {{- $placements = append $placements $extender.urlPrefix }}
+  {{- end }}
+{{- end }}
+{{- if $placements }}
+    {{- /* Extenders with sendPlacements (patch scheduler-extender-placements) get the placed pods in prioritize requests. */}}
+    - name: DECKHOUSE_EXTENDER_PLACEMENTS
+      value: {{ $placements | join "," | quote }}
+{{- end }}
 {{- if (.images).controlPlaneManager }}  
 {{- $imageWithVersion := printf "kubeScheduler%s" ($.clusterConfiguration.kubernetesVersion | replace "." "") }}
   {{- if hasKey $.images.controlPlaneManager $imageWithVersion }}

@@ -1442,6 +1442,14 @@ resources:
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(string(manifest)).NotTo(ContainSubstring("DECKHOUSE_EXTENDER_NAMES"))
 		})
+		It("should not set placements for an extender without sendPlacements", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+			manifest, err := base64.StdEncoding.DecodeString(s.Field("data.kube-scheduler\\.yaml\\.tpl").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(manifest)).To(ContainSubstring("DECKHOUSE_SCHEDULER_SIMULATE_ADDRESS"))
+			Expect(string(manifest)).NotTo(ContainSubstring("DECKHOUSE_EXTENDER_PLACEMENTS"))
+		})
 	})
 
 	Context("Scheduler extenders with names", func() {
@@ -1483,6 +1491,39 @@ resources:
 			manifest, err := base64.StdEncoding.DecodeString(s.Field("data.kube-scheduler\\.yaml\\.tpl").String())
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(string(manifest)).To(ContainSubstring("- name: DECKHOUSE_EXTENDER_NAMES\n      value: \"https://usage.d8-usage.svc.cluster.local:8443/usage=usage/1,https://sds.d8-sds.svc.cluster.local:8099/scheduler=sds\""))
+		})
+	})
+
+	Context("Scheduler extenders with sendPlacements", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("controlPlaneManager.internal.kubeSchedulerExtenders", `
+- urlPrefix: https://usage.d8-usage.svc.cluster.local:8443/usage
+  weight: 1
+  timeout: 100ms
+  ignorable: true
+  caData: ABCD=
+  filterVerb: ""
+  prioritizeVerb: prioritize
+  preemptVerb: ""
+  sendPlacements: true
+- urlPrefix: https://sds.d8-sds.svc.cluster.local:8099/scheduler
+  weight: 5
+  timeout: 5s
+  ignorable: false
+  caData: ABCD=
+  filterVerb: filter
+  prioritizeVerb: prioritize
+  preemptVerb: ""
+`)
+			f.HelmRender()
+		})
+
+		It("should list only those extenders in DECKHOUSE_EXTENDER_PLACEMENTS of kube-scheduler", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+			manifest, err := base64.StdEncoding.DecodeString(s.Field("data.kube-scheduler\\.yaml\\.tpl").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(manifest)).To(ContainSubstring("- name: DECKHOUSE_EXTENDER_PLACEMENTS\n      value: \"https://usage.d8-usage.svc.cluster.local:8443/usage\""))
 		})
 	})
 

@@ -156,6 +156,8 @@ properties:
               type: boolean
             caData:
               type: string
+            sendPlacements:
+              type: boolean
         default: []
       disableAdmissionPlugins:
         type: string

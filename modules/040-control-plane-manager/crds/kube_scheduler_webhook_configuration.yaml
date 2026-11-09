@@ -83,6 +83,13 @@ spec:
                     description: |
                       Specifies scheduling should fail or not fail when the extender returns an error or is not reachable.
                     default: Fail
+                  sendPlacements:
+                    type: boolean
+                    default: false
+                    description: |
+                      Send the extender information about tentative Pod reservations on nodes and their cancellations through the `assumed` field in `prioritize` requests. Each entry has the fields `uid`, `namespace`, `name`, `node` and `forget: true` for a canceled reservation.
+
+                      Requires `prioritizeVerb`. Entries older than 30 seconds are not sent. After a failed request, entries may be sent again. The extender must handle repeated entries and `forget` notifications for Pods it does not know, and expire reservations after 30 seconds if no `forget` arrives.
                   clientConfig:
                     type: object
                     required: ['service', 'caBundle']

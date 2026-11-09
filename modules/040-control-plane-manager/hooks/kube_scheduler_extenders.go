@@ -87,6 +87,7 @@ func handleExtenders(_ context.Context, input *go_hook.HookInput) error {
 		FilterVerb     string `yaml:"filterVerb" json:"filterVerb"`
 		PrioritizeVerb string `yaml:"prioritizeVerb" json:"prioritizeVerb"`
 		PreemptVerb    string `yaml:"preemptVerb" json:"preemptVerb"`
+		SendPlacements bool   `yaml:"sendPlacements,omitempty" json:"sendPlacements,omitempty"`
 	}
 	extenders := make([]extenderConfig, 0)
 
@@ -134,6 +135,11 @@ func handleExtenders(_ context.Context, input *go_hook.HookInput) error {
 				FilterVerb:     *config.FilterVerb,
 				PrioritizeVerb: *config.PrioritizeVerb,
 				PreemptVerb:    config.PreemptVerb,
+				// Placements go in prioritize requests: without prioritize there is nothing to carry them.
+				SendPlacements: config.SendPlacements && *config.PrioritizeVerb != "",
+			}
+			if config.SendPlacements && !newExtender.SendPlacements {
+				input.Logger.Warn("sendPlacements needs prioritizeVerb, ignoring it", slog.String("url_prefix", urlPrefix))
 			}
 			extenders = append(extenders, newExtender)
 		}
@@ -166,6 +172,7 @@ type KubeSchedulerWebhook struct {
 	FilterVerb     *string                          `yaml:"filterVerb,omitempty" json:"filterVerb,omitempty"`
 	PrioritizeVerb *string                          `yaml:"prioritizeVerb,omitempty" json:"prioritizeVerb,omitempty"`
 	PreemptVerb    string                           `yaml:"preemptVerb" json:"preemptVerb"`
+	SendPlacements bool                             `json:"sendPlacements,omitempty" yaml:"sendPlacements,omitempty"`
 }
 
 type KubeSchedulerWebhookClientConfig struct {

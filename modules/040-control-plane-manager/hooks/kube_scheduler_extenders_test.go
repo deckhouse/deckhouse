@@ -161,6 +161,35 @@ webhooks:
   timeoutSeconds: 10
 `
 
+		extenderPlacements = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: KubeSchedulerWebhookConfiguration
+metadata:
+  name: usage
+webhooks:
+- weight: 1
+  failurePolicy: Ignore
+  sendPlacements: true
+  clientConfig:
+    service:
+      name: usage
+      namespace: d8-usage
+      port: 8443
+      path: /usage
+    caBundle: ABCD=
+- weight: 1
+  failurePolicy: Ignore
+  prioritizeVerb: ""
+  sendPlacements: true
+  clientConfig:
+    service:
+      name: filter-only
+      namespace: d8-usage
+      port: 8443
+    caBundle: ABCD=
+`
+
 		extender6 = `
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -399,6 +428,24 @@ webhooks:
 			Expect(f.ValuesGet(configPath).Array()[1].Get("timeout").String()).To(Equal("60s"))
 		})
 
+	})
+
+	Context("Extenders with sendPlacements", func() {
+		BeforeEach(func() {
+			f.ValuesSet("global.discovery.kubernetesCA", kubernetesCA)
+			f.BindingContexts.Set(f.KubeStateSet(extenderPlacements))
+			f.RunHook()
+		})
+
+		It("Must be executed successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It(configPath+" must keep sendPlacements only for an extender that prioritizes", func() {
+			Expect(len(f.ValuesGet(configPath).Array())).To(Equal(2))
+			Expect(f.ValuesGet(configPath).Array()[0].Get("sendPlacements").Bool()).To(BeTrue())
+			Expect(f.ValuesGet(configPath).Array()[1].Get("sendPlacements").Exists()).To(BeFalse())
+		})
 	})
 
 })

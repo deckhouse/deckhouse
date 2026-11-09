@@ -379,3 +379,19 @@ The patch is carried on 1.33 (`025`), 1.34 (`026`), 1.35 (`025`), 1.36 (`024`) a
 A failing or hung extender with `failurePolicy: Ignore` costs its whole timeout in every scheduling cycle, and its answer is dropped anyway. After 10 failed filter or prioritize requests in a row kube-scheduler stops sending filter and prioritize requests to such an extender for 30 seconds, then sends one probe request: success resumes the calls, failure pauses them again. Bind and preempt requests are never skipped, an answer with an error from the extender is not a failure, and extenders with `failurePolicy: Fail` are never skipped. Skipped requests are counted with `result="skipped"`. `scheduler_extender_circuit_open{extender}` shows whether an extender is skipped now, `scheduler_extender_circuit_open_total{extender}` how often it happened; `extender` is the extender name, as in the metrics of `scheduler-extender-metrics`. The simulate endpoint skips a paused extender too, but never changes the breaker.
 
 The patch is carried on 1.33 (`026`), 1.34 (`027`), 1.35 (`026`), 1.36 (`025`) and 1.37 (`024`).
+
+### scheduler-extender-placements.patch
+
+An extender that scores nodes by their load learns about a placed Pod only when its binding reaches the extender, about a second later under load, so a burst of Pods is scored as if none of them were placed. For an extender with `sendPlacements: true` in its KubeSchedulerWebhookConfiguration, kube-scheduler adds the `assumed` field to the next `prioritize` request with information about tentative Pod reservations on nodes and their cancellations.
+
+The `assumed` field contains a list of objects with the following fields:
+
+- `uid` — UID of the Pod;
+- `namespace` — namespace of the Pod;
+- `name` — name of the Pod;
+- `node` — name of the node;
+- `forget` — optional field. A value of `true` indicates that the reservation was canceled.
+
+Placements go out only with a prioritize request: kube-scheduler skips prioritize when a single node fits, so placements may wait for a later Pod. Placements older than 30 seconds are not sent; `scheduler_extender_placements_dropped_total{extender, reason}` counts them; `extender` is the extender name, as in the metrics of `scheduler-extender-metrics`. Deckhouse lists the extenders with `sendPlacements: true` in `DECKHOUSE_EXTENDER_PLACEMENTS` by their URL prefixes: the names are used only in metric labels. Other extenders get the usual request. An extender must accept repeated placements (entries from a failed request may be sent again), a `forget` for a Pod it does not know, and must expire a placement after 30 seconds if no `forget` arrives.
+
+The patch is carried on 1.33 (`027`), 1.34 (`028`), 1.35 (`027`), 1.36 (`026`) and 1.37 (`025`).

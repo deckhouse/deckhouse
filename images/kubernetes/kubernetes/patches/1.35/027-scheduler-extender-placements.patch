@@ -1,0 +1,503 @@
+diff --git a/pkg/scheduler/deckhouse_extender_names_test.go b/pkg/scheduler/deckhouse_extender_names_test.go
+index bede3c561d1..4e304505590 100644
+--- a/pkg/scheduler/deckhouse_extender_names_test.go
++++ b/pkg/scheduler/deckhouse_extender_names_test.go
+@@ -76,6 +76,7 @@ func TestDeckhouseExtenderNameLabels(t *testing.T) {
+ 	// A name of its own per server: go test -count=2 runs the test twice.
+ 	name := "usage/" + srv.URL[strings.LastIndexByte(srv.URL, ':')+1:]
+ 	withExtenderNames(t, map[string]string{srv.URL: name})
++	t.Setenv(deckhousePlacementsEnv, srv.URL)
+ 
+ 	e, err := NewHTTPExtender(&schedulerapi.Extender{URLPrefix: srv.URL, FilterVerb: "filter", PrioritizeVerb: "prioritize", Weight: 1, Ignorable: true, NodeCacheCapable: true})
+ 	if err != nil {
+@@ -88,6 +89,10 @@ func TestDeckhouseExtenderNameLabels(t *testing.T) {
+ 	if h.breaker == nil || h.breaker.extender != name {
+ 		t.Errorf("breaker %+v, want the name %q", h.breaker, name)
+ 	}
++	// Placements match the URL prefix and count by the name.
++	if h.pending == nil || h.pending.extender != name {
++		t.Errorf("placements %+v, want the name %q", h.pending, name)
++	}
+ 	node := framework.NewNodeInfo()
+ 	node.SetNode(&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "n"}})
+ 	if _, _, _, err := e.Filter(&v1.Pod{}, []fwk.NodeInfo{node}); err != nil {
+diff --git a/pkg/scheduler/deckhouse_extender_placements.go b/pkg/scheduler/deckhouse_extender_placements.go
+new file mode 100644
+index 00000000000..babbd4b7607
+--- /dev/null
++++ b/pkg/scheduler/deckhouse_extender_placements.go
+@@ -0,0 +1,163 @@
++/*
++Copyright 2026 Flant JSC
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scheduler
++
++// Deckhouse: placements piggybacked on prioritize requests. An extender that
++// scores nodes by their load learns about a placed Pod only when the binding
++// reaches its informer, about a second later under load, so a burst of Pods is
++// scored as if none of them were placed. For the extenders listed in
++// DECKHOUSE_EXTENDER_PLACEMENTS (URL prefixes, comma-separated) the scheduler
++// queues every reservation of a Pod on a node and every dropped reservation,
++// and sends them in the next prioritize request in "assumed". The
++// scheduling cycle is serial, so every Pod is scored with all the Pods placed
++// before it. Other extenders get the upstream request.
++
++import (
++	"os"
++	"slices"
++	"strings"
++	"sync"
++	"time"
++
++	v1 "k8s.io/api/core/v1"
++	"k8s.io/apimachinery/pkg/types"
++	extenderv1 "k8s.io/kube-scheduler/extender/v1"
++	"k8s.io/kubernetes/pkg/scheduler/metrics"
++)
++
++const (
++	deckhousePlacementsEnv = "DECKHOUSE_EXTENDER_PLACEMENTS"
++	// maxPendingPlacements bounds the queue while no prioritize request goes out
++	// or the extender fails; the oldest placements are dropped first.
++	maxPendingPlacements = 1000
++	// placementTTL: by then the binding has reached the extender's informer, and
++	// an older hint could only make it count the Pod twice.
++	placementTTL = 30 * time.Second
++)
++
++// placement is a Pod reserved on a node, or with Forget a dropped reservation.
++type placement struct {
++	UID       types.UID `json:"uid"`
++	Namespace string    `json:"namespace"`
++	Name      string    `json:"name"`
++	Node      string    `json:"node"`
++	Forget    bool      `json:"forget,omitempty"`
++	at        time.Time
++}
++
++// argsWithPlacements is a prioritize request with the placements since the
++// previous one.
++type argsWithPlacements struct {
++	*extenderv1.ExtenderArgs
++	Assumed []placement `json:"assumed,omitempty"`
++}
++
++// placements is the queue of one extender.
++type placements struct {
++	extender string // the name in metrics (deckhouse_extender_names.go)
++	now      func() time.Time
++
++	mu   sync.Mutex
++	list []placement
++}
++
++// newPlacements returns the queue of the extender, or nil when the extender is
++// not listed in DECKHOUSE_EXTENDER_PLACEMENTS or does not prioritize.
++func newPlacements(urlPrefix, prioritizeVerb string) *placements {
++	if prioritizeVerb == "" || !slices.Contains(strings.Split(os.Getenv(deckhousePlacementsEnv), ","), urlPrefix) {
++		return nil
++	}
++	return &placements{extender: deckhouseExtenderName(urlPrefix), now: time.Now}
++}
++
++// add queues a placement.
++func (q *placements) add(p placement) {
++	if q == nil {
++		return
++	}
++	p.at = q.now()
++	q.put(false, p)
++}
++
++// requeue puts the placements of a failed request back in front: the extender
++// may have applied them already, and applying a placement twice changes nothing.
++func (q *placements) requeue(l ...placement) {
++	if q == nil || len(l) == 0 {
++		return
++	}
++	q.put(true, l...)
++}
++
++func (q *placements) put(front bool, l ...placement) {
++	q.mu.Lock()
++	defer q.mu.Unlock()
++	if front {
++		q.list = append(slices.Clone(l), q.list...)
++	} else {
++		q.list = append(q.list, l...)
++	}
++	if over := len(q.list) - maxPendingPlacements; over > 0 {
++		q.list = q.list[over:]
++		q.dropped("overflow", over)
++	}
++}
++
++// take empties the queue and returns the placements younger than placementTTL.
++func (q *placements) take() []placement {
++	if q == nil {
++		return nil
++	}
++	q.mu.Lock()
++	defer q.mu.Unlock()
++	l := q.list
++	q.list = nil
++	cutoff := q.now().Add(-placementTTL)
++	fresh := slices.DeleteFunc(l, func(p placement) bool { return p.at.Before(cutoff) })
++	q.dropped("expired", len(l)-len(fresh))
++	return fresh
++}
++
++func (q *placements) dropped(reason string, n int) {
++	if n > 0 && metrics.ExtenderPlacementsDropped != nil {
++		metrics.ExtenderPlacementsDropped.WithLabelValues(q.extender, reason).Add(float64(n))
++	}
++}
++
++// prioritizeBody adds the queued placements to a prioritize request. A
++// simulation (deckhouse_simulate.go) takes none: they belong to the next real
++// request.
++func (h *HTTPExtender) prioritizeBody(pod *v1.Pod, args *extenderv1.ExtenderArgs) (any, []placement) {
++	if deckhouseIsSimulation(pod) {
++		return args, nil
++	}
++	sent := h.pending.take()
++	if len(sent) == 0 {
++		return args, nil
++	}
++	return &argsWithPlacements{ExtenderArgs: args, Assumed: sent}, sent
++}
++
++// notifyExtenders queues the reservation of the Pod on the node, or with
++// forget the dropped reservation, for the extenders that take placements and
++// are interested in the Pod.
++func (sched *Scheduler) notifyExtenders(forget bool, pod *v1.Pod, node string) {
++	for _, e := range sched.Extenders {
++		if h, ok := e.(*HTTPExtender); ok && h.pending != nil && h.IsInterested(pod) {
++			h.pending.add(placement{UID: pod.UID, Namespace: pod.Namespace, Name: pod.Name, Node: node, Forget: forget})
++		}
++	}
++}
+diff --git a/pkg/scheduler/deckhouse_extender_placements_test.go b/pkg/scheduler/deckhouse_extender_placements_test.go
+new file mode 100644
+index 00000000000..10c2f9e6ecc
+--- /dev/null
++++ b/pkg/scheduler/deckhouse_extender_placements_test.go
+@@ -0,0 +1,200 @@
++/*
++Copyright 2026 Flant JSC
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scheduler
++
++import (
++	"encoding/json"
++	"io"
++	"net/http"
++	"net/http/httptest"
++	"sync"
++	"testing"
++	"time"
++
++	v1 "k8s.io/api/core/v1"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/component-base/metrics/testutil"
++	fwk "k8s.io/kube-scheduler/framework"
++	schedulerapi "k8s.io/kubernetes/pkg/scheduler/apis/config"
++	"k8s.io/kubernetes/pkg/scheduler/framework"
++	"k8s.io/kubernetes/pkg/scheduler/metrics"
++)
++
++// The queue keeps the order, puts a failed request back in front, drops the
++// oldest placements over the limit and the expired ones when they are taken.
++func TestDeckhousePlacementsQueue(t *testing.T) {
++	metrics.Register()
++	dropped := func(reason string) float64 {
++		v, _ := testutil.GetCounterMetricValue(metrics.ExtenderPlacementsDropped.WithLabelValues("q", reason))
++		return v
++	}
++	overflowBefore, expiredBefore := dropped("overflow"), dropped("expired")
++	now := time.Unix(0, 0)
++	q := &placements{extender: "q", now: func() time.Time { return now }}
++	q.add(placement{Name: "a"})
++	q.add(placement{Name: "b"})
++	got := q.take()
++	if len(got) != 2 || got[0].Name != "a" || got[1].Name != "b" || q.take() != nil {
++		t.Fatalf("take = %+v", got)
++	}
++	q.add(placement{Name: "c"})
++	q.requeue(got...)
++	if l := q.take(); len(l) != 3 || l[0].Name != "a" || l[2].Name != "c" {
++		t.Fatalf("requeued in front: %+v", l)
++	}
++
++	for i := 0; i < maxPendingPlacements+5; i++ {
++		q.add(placement{Name: "x"})
++	}
++	if l := q.take(); len(l) != maxPendingPlacements {
++		t.Errorf("over the limit: %d queued, want %d", len(l), maxPendingPlacements)
++	}
++	if n := dropped("overflow") - overflowBefore; n != 5 {
++		t.Errorf("overflow drops = %v, want 5", n)
++	}
++
++	q.add(placement{Name: "old"})
++	now = now.Add(placementTTL + time.Second)
++	q.add(placement{Name: "new"})
++	if l := q.take(); len(l) != 1 || l[0].Name != "new" {
++		t.Errorf("after the TTL: %+v, want only new", l)
++	}
++	if n := dropped("expired") - expiredBefore; n != 1 {
++		t.Errorf("expired drops = %v, want 1", n)
++	}
++
++	var off *placements
++	off.add(placement{})
++	off.requeue(placement{})
++	if off.take() != nil {
++		t.Error("a nil queue must take nothing")
++	}
++}
++
++// Only the listed prioritizing extenders take placements.
++func TestDeckhouseNewPlacements(t *testing.T) {
++	t.Setenv(deckhousePlacementsEnv, "https://usage/x,https://other")
++	if newPlacements("https://usage/x", "prioritize") == nil {
++		t.Error("a listed extender must take placements")
++	}
++	if newPlacements("https://usage/x", "") != nil {
++		t.Error("an extender without prioritize must not")
++	}
++	if newPlacements("https://sds", "prioritize") != nil {
++		t.Error("an unlisted extender must not")
++	}
++}
++
++// A listed extender gets the queued placements in the next prioritize request,
++// gets them again after a failed request, and a simulation takes none. An
++// unlisted extender gets the upstream request.
++func TestDeckhousePlacementsInPrioritize(t *testing.T) {
++	metrics.Register()
++	var mu sync.Mutex
++	var bodies []map[string]json.RawMessage
++	fail := false
++	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		mu.Lock()
++		defer mu.Unlock()
++		raw, _ := io.ReadAll(r.Body)
++		var b map[string]json.RawMessage
++		_ = json.Unmarshal(raw, &b)
++		bodies = append(bodies, b)
++		if fail {
++			w.WriteHeader(http.StatusInternalServerError)
++			return
++		}
++		_, _ = w.Write([]byte(`[]`))
++	}))
++	defer srv.Close()
++	t.Setenv(deckhousePlacementsEnv, srv.URL+"/listed")
++
++	newExt := func(path string) *HTTPExtender {
++		e, err := NewHTTPExtender(&schedulerapi.Extender{URLPrefix: srv.URL + path, PrioritizeVerb: "prioritize", Weight: 1})
++		if err != nil {
++			t.Fatal(err)
++		}
++		return e.(*HTTPExtender)
++	}
++	listed, unlisted := newExt("/listed"), newExt("/unlisted")
++	sched := &Scheduler{Extenders: []fwk.Extender{listed, unlisted}}
++	node := framework.NewNodeInfo()
++	node.SetNode(&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "n"}})
++	nodes := []fwk.NodeInfo{node}
++	placed := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "vm", Namespace: "ns", UID: "u1"}}
++	scored := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "next", Namespace: "ns"}}
++	sim := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "sim", Namespace: "ns", Annotations: map[string]string{DeckhouseSimulationAnnotation: "true"}}}
++	assumed := func(i int) string {
++		mu.Lock()
++		defer mu.Unlock()
++		return string(bodies[i]["assumed"])
++	}
++
++	sched.notifyExtenders(false, placed, "n")
++	if unlisted.pending != nil {
++		t.Fatal("an unlisted extender must have no queue")
++	}
++	_, _, _ = listed.Prioritize(sim, nodes)
++	if assumed(0) != "" {
++		t.Errorf("a simulation took the placements: %s", assumed(0))
++	}
++	setFail := func(v bool) { mu.Lock(); fail = v; mu.Unlock() }
++	setFail(true)
++	_, _, _ = listed.Prioritize(scored, nodes)
++	setFail(false)
++	_, _, _ = listed.Prioritize(scored, nodes)
++	want := `[{"uid":"u1","namespace":"ns","name":"vm","node":"n"}]`
++	if assumed(1) != want || assumed(2) != want {
++		t.Errorf("failed request %s, retry %s; want %s in both", assumed(1), assumed(2), want)
++	}
++	_, _, _ = listed.Prioritize(scored, nodes)
++	_, _, _ = unlisted.Prioritize(scored, nodes)
++	if assumed(3) != "" || assumed(4) != "" {
++		t.Errorf("sent twice %q, or to an unlisted extender %q", assumed(3), assumed(4))
++	}
++}
++
++// A dropped reservation goes out with forget, and only extenders interested in
++// the Pod (managed resources) get its placements.
++func TestDeckhousePlacementsForgetAndInterest(t *testing.T) {
++	t.Setenv(deckhousePlacementsEnv, "https://gpu,https://all")
++	newExt := func(url string, managed ...schedulerapi.ExtenderManagedResource) *HTTPExtender {
++		e, err := NewHTTPExtender(&schedulerapi.Extender{URLPrefix: url, PrioritizeVerb: "prioritize", Weight: 1, ManagedResources: managed})
++		if err != nil {
++			t.Fatal(err)
++		}
++		return e.(*HTTPExtender)
++	}
++	gpu, all := newExt("https://gpu", schedulerapi.ExtenderManagedResource{Name: "example.com/gpu"}), newExt("https://all")
++	sched := &Scheduler{Extenders: []fwk.Extender{gpu, all}}
++	pod := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "vm", Namespace: "ns", UID: "u1"}, Spec: v1.PodSpec{Containers: []v1.Container{{Name: "c"}}}}
++
++	sched.notifyExtenders(false, pod, "n1")
++	sched.notifyExtenders(true, pod, "n1")
++	if l := gpu.pending.take(); len(l) != 0 {
++		t.Errorf("an extender not interested in the Pod got %+v", l)
++	}
++	l := all.pending.take()
++	raw, err := json.Marshal(l)
++	if err != nil {
++		t.Fatal(err)
++	}
++	want := `[{"uid":"u1","namespace":"ns","name":"vm","node":"n1"},{"uid":"u1","namespace":"ns","name":"vm","node":"n1","forget":true}]`
++	if string(raw) != want {
++		t.Errorf("placements = %s, want %s", raw, want)
++	}
++}
+diff --git a/pkg/scheduler/extender.go b/pkg/scheduler/extender.go
+index d2017892cb5..73b84b128f1 100644
+--- a/pkg/scheduler/extender.go
++++ b/pkg/scheduler/extender.go
+@@ -58,6 +58,7 @@ type HTTPExtender struct {
+ 	managedResources sets.Set[string]
+ 	ignorable        bool
+ 	breaker          *circuitBreaker // Deckhouse patch, nil when off
++	pending          *placements     // Deckhouse patch: placements for prioritize, nil when off
+ }
+ 
+ func makeTransport(config *schedulerapi.Extender) (http.RoundTripper, error) {
+@@ -122,6 +123,7 @@ func NewHTTPExtender(config *schedulerapi.Extender) (fwk.Extender, error) {
+ 		managedResources: managedResources,
+ 		ignorable:        config.Ignorable,
+ 		breaker:          newCircuitBreaker(config.URLPrefix, config.Ignorable),
++		pending:          newPlacements(config.URLPrefix, config.PrioritizeVerb),
+ 	}, nil
+ }
+ 
+@@ -362,7 +364,10 @@ func (h *HTTPExtender) Prioritize(pod *v1.Pod, nodes []fwk.NodeInfo) (*extenderv
+ 		NodeNames: nodeNames,
+ 	}
+ 
+-	if err := h.sendRecorded(h.prioritizeVerb, args, &result, !deckhouseIsSimulation(pod)); err != nil {
++	// Deckhouse: the placements since the previous request (deckhouse_extender_placements.go).
++	body, sent := h.prioritizeBody(pod, args)
++	if err := h.sendRecorded(h.prioritizeVerb, body, &result, !deckhouseIsSimulation(pod)); err != nil {
++		h.pending.requeue(sent...)
+ 		return nil, 0, err
+ 	}
+ 	return &result, h.weight, nil
+diff --git a/pkg/scheduler/metrics/metrics.go b/pkg/scheduler/metrics/metrics.go
+index bfb051a9b22..54cb564088e 100644
+--- a/pkg/scheduler/metrics/metrics.go
++++ b/pkg/scheduler/metrics/metrics.go
+@@ -155,6 +155,8 @@ var (
+ 	ExtenderInfo *metrics.GaugeVec
+ 	// ExtenderFilterNodes counts the nodes extender filters passed and failed (Deckhouse patch).
+ 	ExtenderFilterNodes *metrics.CounterVec
++	// ExtenderPlacementsDropped counts placements never sent to an extender (Deckhouse patch).
++	ExtenderPlacementsDropped *metrics.CounterVec
+ 	// ExtenderCircuitOpen and ExtenderCircuitOpenTotal show the circuit breaker of ignorable
+ 	// extenders (Deckhouse patch).
+ 	ExtenderCircuitOpen      *metrics.GaugeVec
+@@ -444,6 +446,15 @@ func InitMetrics() {
+ 			StabilityLevel: metrics.ALPHA,
+ 		}, []string{"extender"})
+ 
++	ExtenderPlacementsDropped = metrics.NewCounterVec(
++		&metrics.CounterOpts{
++			Subsystem: SchedulerSubsystem,
++			Name:      "extender_placements_dropped_total",
++			Help: "Placements of Pods queued for an extender and never sent in a prioritize request: " +
++				"overflow (more than 1000 waiting) or expired (older than 30s).",
++			StabilityLevel: metrics.ALPHA,
++		}, []string{"extender", "reason"})
++
+ 	PreemptionGoroutinesDuration = metrics.NewHistogramVec(
+ 		&metrics.HistogramOpts{
+ 			Subsystem:      SchedulerSubsystem,
+@@ -549,6 +560,7 @@ func InitMetrics() {
+ 		ExtenderRequestPhaseDuration,
+ 		ExtenderInfo,
+ 		ExtenderFilterNodes,
++		ExtenderPlacementsDropped,
+ 		ExtenderCircuitOpen,
+ 		ExtenderCircuitOpenTotal,
+ 	}
+diff --git a/pkg/scheduler/schedule_one.go b/pkg/scheduler/schedule_one.go
+index ac777a15d34..406da82513c 100644
+--- a/pkg/scheduler/schedule_one.go
++++ b/pkg/scheduler/schedule_one.go
+@@ -216,6 +216,7 @@ func (sched *Scheduler) schedulingCycle(
+ 		if forgetErr := sched.Cache.ForgetPod(logger, assumedPod); forgetErr != nil {
+ 			utilruntime.HandleErrorWithContext(ctx, forgetErr, "Scheduler cache ForgetPod failed")
+ 		}
++		sched.notifyExtenders(true, assumedPod, scheduleResult.SuggestedHost) // Deckhouse patch
+ 
+ 		if sts.IsRejected() {
+ 			fitErr := &framework.FitError{
+@@ -240,6 +241,7 @@ func (sched *Scheduler) schedulingCycle(
+ 		if forgetErr := sched.Cache.ForgetPod(logger, assumedPod); forgetErr != nil {
+ 			utilruntime.HandleErrorWithContext(ctx, forgetErr, "Scheduler cache ForgetPod failed")
+ 		}
++		sched.notifyExtenders(true, assumedPod, scheduleResult.SuggestedHost) // Deckhouse patch
+ 
+ 		if runPermitStatus.IsRejected() {
+ 			fitErr := &framework.FitError{
+@@ -368,6 +370,7 @@ func (sched *Scheduler) handleBindingCycleError(
+ 	assumedPod := podInfo.Pod
+ 	// trigger un-reserve plugins to clean up state associated with the reserved Pod
+ 	fwk.RunReservePluginsUnreserve(ctx, state, assumedPod, scheduleResult.SuggestedHost)
++	sched.notifyExtenders(true, assumedPod, scheduleResult.SuggestedHost) // Deckhouse patch
+ 	if forgetErr := sched.Cache.ForgetPod(logger, assumedPod); forgetErr != nil {
+ 		utilruntime.HandleErrorWithContext(ctx, forgetErr, "scheduler cache ForgetPod failed")
+ 	} else {
+@@ -980,6 +983,7 @@ func (sched *Scheduler) assume(logger klog.Logger, assumed *v1.Pod, host string)
+ 		logger.Error(err, "Scheduler cache AssumePod failed")
+ 		return err
+ 	}
++	sched.notifyExtenders(false, assumed, host) // Deckhouse patch
+ 	// if "assumed" is a nominated pod, we should remove it from internal cache
+ 	if sched.SchedulingQueue != nil {
+ 		sched.SchedulingQueue.DeleteNominatedPodIfExists(assumed)
