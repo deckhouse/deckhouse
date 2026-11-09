@@ -27,7 +27,7 @@ import (
 // validation-modules.yaml holds three policies over the module updates: the update policy a
 // ModuleRelease is labeled with is chosen by Deckhouse, and an update window of the deckhouse
 // ModuleConfig or of a ModuleUpdatePolicy has to end after it starts. The expressions are evaluated
-// with admissionPolicyVerdict (registry_validation_test.go).
+// with admissionPolicyVerdict (admission_policy_verdict_test.go).
 
 const (
 	updatePolicyLabelPolicy      = "update-policy-label-objects.deckhouse.io"

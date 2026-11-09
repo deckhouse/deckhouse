@@ -233,6 +233,25 @@ var _ = Describe("Module :: deckhouse :: helm template :: registry validation po
 		assertRendered()
 	})
 
+	It("holds in the CEL environment of the oldest supported Kubernetes", func() {
+		render(func() {})
+
+		policy := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", "deckhouse-module-registry-validation")
+		decide := func(operation string, oldObject, newObject object) verdict {
+			decision, _ := admissionPolicyVerdict(policy, moduleConfigRequest(operation), oldObject, newObject)
+			return decision
+		}
+
+		Expect(decide("CREATE", nil, moduleConfig("deckhouse", registrySettings("Local")))).To(Equal(verdictDenied))
+		Expect(decide("UPDATE", moduleConfig("deckhouse", registrySettings("Unmanaged")), moduleConfig("deckhouse", registrySettings("Proxy")))).
+			To(Equal(verdictDenied))
+		Expect(decide("UPDATE", moduleConfig("deckhouse", registrySettings("Proxy")), moduleConfig("deckhouse", registrySettings("Proxy")))).
+			To(Equal(verdictAllowed))
+		Expect(decide("UPDATE", moduleConfig("deckhouse", object{}), moduleConfig("deckhouse", object{"registry": object{}}))).
+			To(Equal(verdictAllowed))
+		Expect(decide("CREATE", nil, moduleConfig("registry", registrySettings("Proxy")))).To(Equal(verdictSkipped))
+	})
+
 	It("is not rendered where the API server has no ValidatingAdmissionPolicy", func() {
 		f.ValuesSetFromYaml("global", globalValues)
 		f.ValuesSet("global.modulesImages", GetModulesImages())
