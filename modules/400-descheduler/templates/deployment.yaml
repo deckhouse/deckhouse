@@ -101,14 +101,30 @@ spec:
         {{- $featureGates := list "EvictionsInBackground=true" }}
         - "--feature-gates"
         - {{ $featureGates | join "," | quote }}
-        {{- if include "descheduler_prometheus_metrics_enabled" . }}
+        {{- $prometheusMetrics := include "descheduler_prometheus_metrics_enabled" . }}
+        {{- $schedulerSimulate := .Values.global.enabledModules | has "control-plane-manager" }}
+        {{- if or $prometheusMetrics $schedulerSimulate }}
         env:
+        {{- if $prometheusMetrics }}
         {{- /*
           aggregating-proxy serves a self-signed certificate that the pod CA does not sign,
           so the descheduler skips its verification (patch 004), like VPA with --prometheus-insecure.
         */}}
         - name: DESCHEDULER_PROMETHEUS_INSECURE_SKIP_VERIFY
           value: "true"
+        {{- end }}
+        {{- if $schedulerSimulate }}
+        {{- /*
+          LowNodeUtilization evicts a pod only if kube-scheduler would place it on an underutilized node
+          (patch 005). The simulate endpoint exists only where control-plane-manager runs kube-scheduler;
+          on managed Kubernetes the check stays off, since it fails closed and would stop every eviction.
+          control-plane-proxy serves a self-signed certificate, so its verification is skipped as for aggregating-proxy.
+        */}}
+        - name: DESCHEDULER_SCHEDULER_SIMULATE_URL
+          value: https://control-plane-proxy.kube-system.svc.{{ .Values.global.discovery.clusterDomain }}:8080/scheduler/simulate
+        - name: DESCHEDULER_SCHEDULER_SIMULATE_INSECURE_SKIP_VERIFY
+          value: "true"
+        {{- end }}
         {{- end }}
         resources:
           requests:

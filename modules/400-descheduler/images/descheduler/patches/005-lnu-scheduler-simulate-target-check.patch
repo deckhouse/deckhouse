@@ -1,0 +1,1081 @@
+diff --git a/metrics/metrics.go b/metrics/metrics.go
+index c94568f..1f3d17e 100644
+--- a/metrics/metrics.go
++++ b/metrics/metrics.go
+@@ -54,6 +54,14 @@ var (
+ 			StabilityLevel: metrics.ALPHA,
+ 		}, []string{"namespace", "workload_kind", "workload_name", "node", "strategy", "profile", "result", "reason"})
+ 
++	SimulateTargetCheckTotal = metrics.NewCounterVec(
++		&metrics.CounterOpts{
++			Subsystem:      DeschedulerSubsystem,
++			Name:           "simulate_target_check_total",
++			Help:           "Number of LowNodeUtilization eviction candidates checked through the kube-scheduler simulate endpoint. The 'result' label is one of allowed, target_not_underutilized, no_target, error, limit_reached, skipped_same_owner or skipped_unreachable.",
++			StabilityLevel: metrics.ALPHA,
++		}, []string{"profile", "result"})
++
+ 	buildInfo = metrics.NewGauge(
+ 		&metrics.GaugeOpts{
+ 			Subsystem:      DeschedulerSubsystem,
+@@ -104,6 +112,7 @@ var (
+ 		PodsEvicted,
+ 		PodsEvictedTotal,
+ 		PodEvictionsTotal,
++		SimulateTargetCheckTotal,
+ 		buildInfo,
+ 		DeschedulerLoopDuration,
+ 		DeschedulerStrategyDuration,
+diff --git a/pkg/framework/plugins/nodeutilization/highnodeutilization.go b/pkg/framework/plugins/nodeutilization/highnodeutilization.go
+index 73633a5..981bd74 100644
+--- a/pkg/framework/plugins/nodeutilization/highnodeutilization.go
++++ b/pkg/framework/plugins/nodeutilization/highnodeutilization.go
+@@ -269,6 +269,7 @@ func (h *HighNodeUtilization) Balance(ctx context.Context, nodes []*v1.Node) *fr
+ 		continueEvictionCond,
+ 		h.usageClient,
+ 		nil,
++		nil,
+ 	)
+ 
+ 	return nil
+diff --git a/pkg/framework/plugins/nodeutilization/lownodeutilization.go b/pkg/framework/plugins/nodeutilization/lownodeutilization.go
+index cd3c296..0175794 100644
+--- a/pkg/framework/plugins/nodeutilization/lownodeutilization.go
++++ b/pkg/framework/plugins/nodeutilization/lownodeutilization.go
+@@ -52,6 +52,8 @@ type LowNodeUtilization struct {
+ 	resourceNames         []v1.ResourceName
+ 	extendedResourceNames []v1.ResourceName
+ 	usageClient           usageClient
++	// simulateClient is nil unless DESCHEDULER_SCHEDULER_SIMULATE_URL is set.
++	simulateClient *simulateClient
+ }
+ 
+ // NewLowNodeUtilization builds plugin from its arguments while passing a
+@@ -102,6 +104,11 @@ func NewLowNodeUtilization(
+ 		return nil, fmt.Errorf("error initializing pod filter function: %v", err)
+ 	}
+ 
++	simulateClient, err := newSimulateClientFromEnv()
++	if err != nil {
++		return nil, fmt.Errorf("error initializing scheduler simulate client: %v", err)
++	}
++
+ 	// this plugins supports different ways of collecting usage data. each
+ 	// different way provides its own "usageClient". the metrics-based client
+ 	// is reset at every extension point so we always get the latest prometheus
+@@ -121,6 +128,7 @@ func NewLowNodeUtilization(
+ 		extendedResourceNames: extendedResourceNames,
+ 		podFilter:             podFilter,
+ 		usageClient:           usageClient,
++		simulateClient:        simulateClient,
+ 	}, nil
+ }
+ 
+@@ -320,6 +328,14 @@ func (l *LowNodeUtilization) Balance(ctx context.Context, nodes []*v1.Node) *fra
+ 		nodeLimit = l.args.EvictionLimits.Node
+ 	}
+ 
++	// with the simulate endpoint configured, a pod is evicted only when
++	// kube-scheduler would place it on one of the nodes classified above as
++	// underutilized. no new threshold: the check reuses this classification.
++	var targetCheck *simulateTargetCheck
++	if l.simulateClient != nil {
++		targetCheck = newSimulateTargetCheck(l.simulateClient, evictorProfileName(l.handle.Evictor()), lowNodes)
++	}
++
+ 	evictPodsFromSourceNodes(
+ 		ctx,
+ 		l.args.EvictableNamespaces,
+@@ -332,6 +348,7 @@ func (l *LowNodeUtilization) Balance(ctx context.Context, nodes []*v1.Node) *fra
+ 		continueEvictionCond,
+ 		l.usageClient,
+ 		nodeLimit,
++		targetCheck,
+ 	)
+ 
+ 	return nil
+diff --git a/pkg/framework/plugins/nodeutilization/nodeutilization.go b/pkg/framework/plugins/nodeutilization/nodeutilization.go
+index f3837aa..fb3e739 100644
+--- a/pkg/framework/plugins/nodeutilization/nodeutilization.go
++++ b/pkg/framework/plugins/nodeutilization/nodeutilization.go
+@@ -174,6 +174,7 @@ func evictPodsFromSourceNodes(
+ 	continueEviction continueEvictionCond,
+ 	usageClient usageClient,
+ 	maxNoOfPodsToEvictPerNode *uint,
++	targetCheck *simulateTargetCheck,
+ ) {
+ 	logger := klog.FromContext(ctx)
+ 	available, err := assessAvailableResourceInNodes(destinationNodes, resourceNames)
+@@ -234,6 +235,7 @@ func evictPodsFromSourceNodes(
+ 			continueEviction,
+ 			usageClient,
+ 			maxNoOfPodsToEvictPerNode,
++			targetCheck,
+ 		); err != nil {
+ 			switch err.(type) {
+ 			case *evictions.EvictionTotalLimitError:
+@@ -259,6 +261,7 @@ func evictPods(
+ 	continueEviction continueEvictionCond,
+ 	usageClient usageClient,
+ 	maxNoOfPodsToEvictPerNode *uint,
++	targetCheck *simulateTargetCheck,
+ ) error {
+ 	logger := klog.FromContext(ctx)
+ 	// preemptive check to see if we should continue evicting pods.
+@@ -320,6 +323,19 @@ func evictPods(
+ 			unconstrainedResourceEviction = true
+ 		}
+ 
++		// the target check is the last step before the eviction because
++		// every simulation pauses real scheduling. it is nil unless the
++		// simulate endpoint is configured, and always nil for
++		// HighNodeUtilization.
++		if targetCheck != nil {
++			if result := targetCheck.check(ctx, pod, nodeInfo.node.Name); result != simulateResultAllowed {
++				if result == simulateResultLimitReached {
++					break
++				}
++				continue
++			}
++		}
++
+ 		if err := podEvictor.Evict(ctx, pod, evictOptions); err != nil {
+ 			switch err.(type) {
+ 			case *evictions.EvictionNodeLimitError, *evictions.EvictionTotalLimitError:
+diff --git a/pkg/framework/plugins/nodeutilization/simulatetargetcheck.go b/pkg/framework/plugins/nodeutilization/simulatetargetcheck.go
+new file mode 100644
+index 0000000..e39dc00
+--- /dev/null
++++ b/pkg/framework/plugins/nodeutilization/simulatetargetcheck.go
+@@ -0,0 +1,383 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package nodeutilization
++
++import (
++	"bytes"
++	"context"
++	"crypto/tls"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"io"
++	"net/http"
++	"net/url"
++	"os"
++	"strconv"
++	"sync"
++	"time"
++
++	v1 "k8s.io/api/core/v1"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/apimachinery/pkg/util/sets"
++	"k8s.io/client-go/transport"
++	"k8s.io/klog/v2"
++
++	"sigs.k8s.io/descheduler/metrics"
++	frameworktypes "sigs.k8s.io/descheduler/pkg/framework/types"
++)
++
++const (
++	// SchedulerSimulateURLEnv is the full URL of the kube-scheduler simulate
++	// endpoint. When it is set, LowNodeUtilization evicts a pod only if the
++	// scheduler would place it on an underutilized node. Unset keeps the
++	// upstream behaviour.
++	SchedulerSimulateURLEnv = "DESCHEDULER_SCHEDULER_SIMULATE_URL"
++	// SchedulerSimulateInsecureSkipVerifyEnv turns off the TLS verification of
++	// the simulate endpoint when set to a true value, for an in-cluster proxy
++	// with a self-signed serving certificate.
++	SchedulerSimulateInsecureSkipVerifyEnv = "DESCHEDULER_SCHEDULER_SIMULATE_INSECURE_SKIP_VERIFY"
++
++	// maxSimulationsPerSourceNode bounds the simulations of one source node in
++	// one cycle that do not allow an eviction. kube-scheduler pauses real
++	// scheduling while a simulation runs, so a node whose candidates keep
++	// failing the check must not hold the scheduler for long; it is left for
++	// the next cycle. Allowed simulations do not count: each one leads to an
++	// eviction the strategy wants, bounded by its own logic and evictionLimits.
++	maxSimulationsPerSourceNode = 5
++	// maxSimulationsPerCycle bounds all simulations of one profile in one
++	// cycle. Every simulation pauses real scheduling and profiles run one
++	// after another, so the per-node bound alone grows with the number of
++	// overutilized nodes. After the cap the rest of the cycle evicts nothing.
++	maxSimulationsPerCycle = 100
++	// simulateUnreachableBackoff is how long every profile skips the check
++	// after a request got no HTTP answer. It covers the rest of the cycle
++	// (profiles run one after another within seconds) and is shorter than
++	// any descheduling interval Deckhouse sets, so the next cycle tries again.
++	simulateUnreachableBackoff = time.Minute
++	// maxSimulateRetryWait caps the wait after a 429 before the single retry.
++	maxSimulateRetryWait = time.Second
++	// maxSimulateResponseBytes bounds the response body; it lists every node.
++	maxSimulateResponseBytes = 16 << 20
++
++	simulateResultAllowed                = "allowed"
++	simulateResultTargetNotUnderutilized = "target_not_underutilized"
++	simulateResultNoTarget               = "no_target"
++	simulateResultError                  = "error"
++	simulateResultLimitReached           = "limit_reached"
++	simulateResultSkippedSameOwner       = "skipped_same_owner"
++	simulateResultSkippedUnreachable     = "skipped_unreachable"
++)
++
++var (
++	// simulateTokenFile is the ServiceAccount token sent as the bearer token.
++	// A variable so tests can point it to a temporary file.
++	simulateTokenFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
++	// simulateRequestTimeout is the per-request timeout. It is well below the
++	// 30 seconds the endpoint itself allows, so a slow scheduler delays a
++	// cycle by seconds, not minutes. A variable for tests.
++	simulateRequestTimeout = 5 * time.Second
++)
++
++type simulatePodRef struct {
++	Namespace string `json:"namespace"`
++	Name      string `json:"name"`
++	UID       string `json:"uid,omitempty"`
++}
++
++type simulateRequest struct {
++	Namespace    string           `json:"namespace"`
++	Name         string           `json:"name"`
++	ExcludeNodes []string         `json:"excludeNodes"`
++	RemovePods   []simulatePodRef `json:"removePods"`
++}
++
++type simulateResponse struct {
++	Leader    bool     `json:"leader"`
++	BestNodes []string `json:"bestNodes"`
++}
++
++// simulateBusyError is a 429: another simulation runs on that replica.
++type simulateBusyError struct {
++	retryAfter time.Duration
++}
++
++func (e *simulateBusyError) Error() string {
++	return fmt.Sprintf("scheduler simulate endpoint is busy, retry after %v", e.retryAfter)
++}
++
++// simulateUnreachableError is a request that got no HTTP answer: a network
++// error or the request timeout.
++type simulateUnreachableError struct {
++	err error
++}
++
++func (e *simulateUnreachableError) Error() string {
++	return fmt.Sprintf("scheduler simulate endpoint is unreachable: %v", e.err)
++}
++
++func (e *simulateUnreachableError) Unwrap() error { return e.err }
++
++type simulateClient struct {
++	url        string
++	httpClient *http.Client
++
++	mu               sync.Mutex
++	unreachableUntil time.Time
++}
++
++func (c *simulateClient) markUnreachable() {
++	c.mu.Lock()
++	defer c.mu.Unlock()
++	c.unreachableUntil = time.Now().Add(simulateUnreachableBackoff)
++}
++
++func (c *simulateClient) isUnreachable() bool {
++	c.mu.Lock()
++	defer c.mu.Unlock()
++	return time.Now().Before(c.unreachableUntil)
++}
++
++// sharedSimulateClient is the one client of the process: every
++// LowNodeUtilization profile shares its transport, token source and
++// unreachable state. It is keyed by its configuration so tests with another
++// env get their own client.
++var sharedSimulateClient struct {
++	sync.Mutex
++	key    string
++	client *simulateClient
++}
++
++// newSimulateClientFromEnv returns nil when SchedulerSimulateURLEnv is unset,
++// otherwise the shared client for the current configuration.
++func newSimulateClientFromEnv() (*simulateClient, error) {
++	rawURL := os.Getenv(SchedulerSimulateURLEnv)
++	if rawURL == "" {
++		return nil, nil
++	}
++	key := rawURL + "\x00" + os.Getenv(SchedulerSimulateInsecureSkipVerifyEnv) + "\x00" + simulateTokenFile
++	sharedSimulateClient.Lock()
++	defer sharedSimulateClient.Unlock()
++	if sharedSimulateClient.client != nil && sharedSimulateClient.key == key {
++		return sharedSimulateClient.client, nil
++	}
++	client, err := buildSimulateClient(rawURL)
++	if err != nil {
++		return nil, err
++	}
++	sharedSimulateClient.key, sharedSimulateClient.client = key, client
++	return client, nil
++}
++
++func buildSimulateClient(rawURL string) (*simulateClient, error) {
++	u, err := url.Parse(rawURL)
++	if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
++		return nil, fmt.Errorf("%s must be an absolute http(s) URL, got %q", SchedulerSimulateURLEnv, rawURL)
++	}
++	insecure, _ := strconv.ParseBool(os.Getenv(SchedulerSimulateInsecureSkipVerifyEnv))
++
++	base := http.DefaultTransport.(*http.Transport).Clone()
++	base.TLSClientConfig = &tls.Config{InsecureSkipVerify: insecure} //nolint:gosec // opt-in, see SchedulerSimulateInsecureSkipVerifyEnv
++	// the token file is re-read every minute, as client-go does for the
++	// in-cluster config, so a rotated projected token is picked up.
++	rt, err := transport.NewBearerAuthWithRefreshRoundTripper("", simulateTokenFile, base)
++	if err != nil {
++		return nil, fmt.Errorf("unable to read the ServiceAccount token for the scheduler simulate endpoint: %v", err)
++	}
++	return &simulateClient{url: rawURL, httpClient: &http.Client{Transport: rt}}, nil
++}
++
++// bestNodes asks kube-scheduler where the pod would go if it were evicted
++// from sourceNode now. On a 429 it waits once, at most maxSimulateRetryWait,
++// and retries once.
++func (c *simulateClient) bestNodes(ctx context.Context, pod *v1.Pod, sourceNode string) ([]string, bool, error) {
++	body, err := json.Marshal(simulateRequest{
++		Namespace:    pod.Namespace,
++		Name:         pod.Name,
++		ExcludeNodes: []string{sourceNode},
++		RemovePods:   []simulatePodRef{{Namespace: pod.Namespace, Name: pod.Name, UID: string(pod.UID)}},
++	})
++	if err != nil {
++		return nil, false, err
++	}
++
++	resp, err := c.post(ctx, body)
++	var busy *simulateBusyError
++	if errors.As(err, &busy) {
++		timer := time.NewTimer(min(busy.retryAfter, maxSimulateRetryWait))
++		select {
++		case <-ctx.Done():
++			timer.Stop()
++			return nil, false, ctx.Err()
++		case <-timer.C:
++		}
++		resp, err = c.post(ctx, body)
++	}
++	if err != nil {
++		return nil, false, err
++	}
++	return resp.BestNodes, resp.Leader, nil
++}
++
++func (c *simulateClient) post(ctx context.Context, body []byte) (*simulateResponse, error) {
++	ctx, cancel := context.WithTimeout(ctx, simulateRequestTimeout)
++	defer cancel()
++
++	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url, bytes.NewReader(body))
++	if err != nil {
++		return nil, err
++	}
++	req.Header.Set("Content-Type", "application/json")
++
++	resp, err := c.httpClient.Do(req)
++	if err != nil {
++		return nil, &simulateUnreachableError{err: err}
++	}
++	defer func() {
++		// drain the rest so the connection can be reused.
++		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, maxSimulateResponseBytes))
++		resp.Body.Close()
++	}()
++
++	switch resp.StatusCode {
++	case http.StatusOK:
++		var out simulateResponse
++		if err := json.NewDecoder(io.LimitReader(resp.Body, maxSimulateResponseBytes)).Decode(&out); err != nil {
++			return nil, fmt.Errorf("unable to decode the scheduler simulate response: %v", err)
++		}
++		return &out, nil
++	case http.StatusTooManyRequests:
++		// Retry-After is an integer number of seconds; without it the
++		// capped wait is used.
++		retryAfter := maxSimulateRetryWait
++		if s, err := strconv.Atoi(resp.Header.Get("Retry-After")); err == nil && s >= 0 {
++			retryAfter = time.Duration(s) * time.Second
++		}
++		return nil, &simulateBusyError{retryAfter: retryAfter}
++	default:
++		msg, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
++		return nil, fmt.Errorf("scheduler simulate endpoint answered %d: %s", resp.StatusCode, bytes.TrimSpace(msg))
++	}
++}
++
++// simulateTargetCheck lives for one LowNodeUtilization cycle of one profile.
++// It allows an eviction only if every best node of the simulation is in the
++// destination set: the nodes the strategy itself classified as
++// underutilized in this cycle. There is no threshold of its own, so with
++// deviation thresholds the target must be at or below the average minus the
++// lower deviation.
++type simulateTargetCheck struct {
++	client       *simulateClient
++	profile      string
++	destinations sets.Set[string]
++	// simulations counts all requests of the cycle (maxSimulationsPerCycle).
++	simulations int
++	// refused counts per source node the requests that did not allow an
++	// eviction (maxSimulationsPerSourceNode).
++	refused map[string]int
++	// deniedOwners remembers "<source node>/<controller UID>" of denied pods:
++	// their siblings on the same node get the same answer and are skipped.
++	deniedOwners sets.Set[string]
++	errorLogged  bool
++}
++
++func newSimulateTargetCheck(client *simulateClient, profile string, destinationNodes []NodeInfo) *simulateTargetCheck {
++	destinations := sets.New[string]()
++	for _, node := range destinationNodes {
++		destinations.Insert(node.node.Name)
++	}
++	return &simulateTargetCheck{
++		client:       client,
++		profile:      profile,
++		destinations: destinations,
++		refused:      map[string]int{},
++		deniedOwners: sets.New[string](),
++	}
++}
++
++// check returns one of the simulateResult* values. Only "allowed" lets the
++// caller evict the pod; "limit_reached" means the caller should stop with
++// this source node. Errors fail closed: the pod is skipped.
++func (t *simulateTargetCheck) check(ctx context.Context, pod *v1.Pod, sourceNode string) string {
++	logger := klog.FromContext(ctx)
++	result, bestNodes, leader := t.decide(ctx, pod, sourceNode)
++	metrics.SimulateTargetCheckTotal.With(map[string]string{"profile": t.profile, "result": result}).Inc()
++	logger.V(3).Info("Scheduler simulation target check",
++		"pod", klog.KObj(pod), "sourceNode", sourceNode, "bestNodes", bestNodes, "leader", leader, "result", result)
++	return result
++}
++
++// ownerKey is empty for a pod without a controller: such pods are never
++// deduplicated.
++func ownerKey(pod *v1.Pod, sourceNode string) string {
++	if ref := metav1.GetControllerOf(pod); ref != nil && ref.UID != "" {
++		return sourceNode + "/" + string(ref.UID)
++	}
++	return ""
++}
++
++func (t *simulateTargetCheck) decide(ctx context.Context, pod *v1.Pod, sourceNode string) (string, []string, bool) {
++	if t.simulations >= maxSimulationsPerCycle || t.refused[sourceNode] >= maxSimulationsPerSourceNode {
++		return simulateResultLimitReached, nil, false
++	}
++	owner := ownerKey(pod, sourceNode)
++	if owner != "" && t.deniedOwners.Has(owner) {
++		return simulateResultSkippedSameOwner, nil, false
++	}
++	if t.client.isUnreachable() {
++		return simulateResultSkippedUnreachable, nil, false
++	}
++
++	t.simulations++
++	bestNodes, leader, err := t.client.bestNodes(ctx, pod, sourceNode)
++	result := simulateResultAllowed
++	switch {
++	case err != nil:
++		var unreachable *simulateUnreachableError
++		if errors.As(err, &unreachable) {
++			t.client.markUnreachable()
++		}
++		if !t.errorLogged {
++			t.errorLogged = true
++			klog.FromContext(ctx).Error(err, "Scheduler simulation failed, the pod is not evicted; further failures in this cycle are logged at level 3 only",
++				"pod", klog.KObj(pod), "sourceNode", sourceNode)
++		} else {
++			klog.FromContext(ctx).V(3).Info("Scheduler simulation failed", "pod", klog.KObj(pod), "err", err)
++		}
++		result = simulateResultError
++	case len(bestNodes) == 0:
++		result = simulateResultNoTarget
++	case !t.destinations.HasAll(bestNodes...):
++		result = simulateResultTargetNotUnderutilized
++	}
++	if result != simulateResultAllowed {
++		t.refused[sourceNode]++
++	}
++	if (result == simulateResultNoTarget || result == simulateResultTargetNotUnderutilized) && owner != "" {
++		t.deniedOwners.Insert(owner)
++	}
++	return result, bestNodes, leader
++}
++
++// evictorProfileName returns the profile name of the evictor handle, or ""
++// for an evictor that does not expose it (test fakes).
++func evictorProfileName(evictor frameworktypes.Evictor) string {
++	if p, ok := evictor.(interface{ ProfileName() string }); ok {
++		return p.ProfileName()
++	}
++	return ""
++}
+diff --git a/pkg/framework/plugins/nodeutilization/simulatetargetcheck_test.go b/pkg/framework/plugins/nodeutilization/simulatetargetcheck_test.go
+new file mode 100644
+index 0000000..3ca3399
+--- /dev/null
++++ b/pkg/framework/plugins/nodeutilization/simulatetargetcheck_test.go
+@@ -0,0 +1,526 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package nodeutilization
++
++import (
++	"context"
++	"encoding/json"
++	"fmt"
++	"net/http"
++	"net/http/httptest"
++	"os"
++	"path/filepath"
++	"slices"
++	"strings"
++	"sync"
++	"testing"
++	"time"
++
++	v1 "k8s.io/api/core/v1"
++	policy "k8s.io/api/policy/v1"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/apimachinery/pkg/runtime"
++	"k8s.io/apimachinery/pkg/types"
++	"k8s.io/client-go/kubernetes/fake"
++	core "k8s.io/client-go/testing"
++	"k8s.io/utils/ptr"
++
++	"sigs.k8s.io/descheduler/pkg/api"
++	"sigs.k8s.io/descheduler/pkg/framework/plugins/defaultevictor"
++	frameworktesting "sigs.k8s.io/descheduler/pkg/framework/testing"
++	frameworktypes "sigs.k8s.io/descheduler/pkg/framework/types"
++	"sigs.k8s.io/descheduler/test"
++)
++
++const simulateTestToken = "simulate-test-token"
++
++// fakeSimulateServer answers with the reply function and records requests.
++type fakeSimulateServer struct {
++	mu       sync.Mutex
++	requests []simulateRequest
++	tokens   []string
++	reply    func(n int, req simulateRequest, w http.ResponseWriter)
++}
++
++func (f *fakeSimulateServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
++	var req simulateRequest
++	_ = json.NewDecoder(r.Body).Decode(&req)
++	f.mu.Lock()
++	f.requests = append(f.requests, req)
++	f.tokens = append(f.tokens, r.Header.Get("Authorization"))
++	n := len(f.requests)
++	f.mu.Unlock()
++	f.reply(n, req, w)
++}
++
++func (f *fakeSimulateServer) count() int {
++	f.mu.Lock()
++	defer f.mu.Unlock()
++	return len(f.requests)
++}
++
++func bestNodesReply(nodes ...string) func(int, simulateRequest, http.ResponseWriter) {
++	return func(_ int, _ simulateRequest, w http.ResponseWriter) {
++		_ = json.NewEncoder(w).Encode(map[string]any{"leader": true, "bestNodes": nodes})
++	}
++}
++
++func statusReply(code int) func(int, simulateRequest, http.ResponseWriter) {
++	return func(_ int, _ simulateRequest, w http.ResponseWriter) {
++		if code == http.StatusTooManyRequests {
++			w.Header().Set("Retry-After", "0")
++		}
++		http.Error(w, http.StatusText(code), code)
++	}
++}
++
++// setupSimulateEnv points the plugin to the server and the token file to a
++// temporary file. An empty serverURL leaves the check disabled.
++func setupSimulateEnv(t *testing.T, serverURL string) {
++	t.Helper()
++	tokenFile := filepath.Join(t.TempDir(), "token")
++	if err := os.WriteFile(tokenFile, []byte(simulateTestToken), 0o600); err != nil {
++		t.Fatal(err)
++	}
++	previous := simulateTokenFile
++	simulateTokenFile = tokenFile
++	t.Cleanup(func() { simulateTokenFile = previous })
++	t.Setenv(SchedulerSimulateURLEnv, serverURL)
++	t.Setenv(SchedulerSimulateInsecureSkipVerifyEnv, "")
++}
++
++// TestLowNodeUtilizationSimulateTargetCheck runs the plugin on n1 (8 of 10
++// pods, overutilized) and n2, n3 (underutilized). Without the check the
++// plugin evicts exactly one pod from n1.
++func TestLowNodeUtilizationSimulateTargetCheck(t *testing.T) {
++	tests := []struct {
++		name             string
++		disabled         bool
++		reply            func(n int, req simulateRequest, w http.ResponseWriter)
++		timeout          time.Duration
++		expectedEvicted  uint
++		expectedRequests int
++	}{
++		{
++			name:             "env unset, no simulation",
++			disabled:         true,
++			reply:            statusReply(http.StatusInternalServerError),
++			expectedEvicted:  1,
++			expectedRequests: 0,
++		},
++		{
++			name:             "target underutilized, eviction allowed",
++			reply:            bestNodesReply("n2"),
++			expectedEvicted:  1,
++			expectedRequests: 1,
++		},
++		{
++			name:             "all best nodes underutilized, eviction allowed",
++			reply:            bestNodesReply("n2", "n3"),
++			expectedEvicted:  1,
++			expectedRequests: 1,
++		},
++		{
++			name:             "one best node not underutilized, every candidate denied up to the limit",
++			reply:            bestNodesReply("n2", "n4"),
++			expectedEvicted:  0,
++			expectedRequests: maxSimulationsPerSourceNode,
++		},
++		{
++			name:             "no best nodes, skipped",
++			reply:            bestNodesReply(),
++			expectedEvicted:  0,
++			expectedRequests: maxSimulationsPerSourceNode,
++		},
++		{
++			name: "first candidate denied, next one allowed",
++			reply: func(n int, req simulateRequest, w http.ResponseWriter) {
++				if n == 1 {
++					bestNodesReply("n4")(n, req, w)
++					return
++				}
++				bestNodesReply("n3")(n, req, w)
++			},
++			expectedEvicted:  1,
++			expectedRequests: 2,
++		},
++		{
++			name:             "server error, fail closed",
++			reply:            statusReply(http.StatusInternalServerError),
++			expectedEvicted:  0,
++			expectedRequests: maxSimulationsPerSourceNode,
++		},
++		{
++			name:             "pod not found, fail closed",
++			reply:            statusReply(http.StatusNotFound),
++			expectedEvicted:  0,
++			expectedRequests: maxSimulationsPerSourceNode,
++		},
++		{
++			name: "undecodable answer, fail closed",
++			reply: func(_ int, _ simulateRequest, w http.ResponseWriter) {
++				_, _ = w.Write([]byte("{not json"))
++			},
++			expectedEvicted:  0,
++			expectedRequests: maxSimulationsPerSourceNode,
++		},
++		{
++			name: "busy once, retried and allowed",
++			reply: func(n int, req simulateRequest, w http.ResponseWriter) {
++				if n == 1 {
++					statusReply(http.StatusTooManyRequests)(n, req, w)
++					return
++				}
++				bestNodesReply("n2")(n, req, w)
++			},
++			expectedEvicted:  1,
++			expectedRequests: 2,
++		},
++		{
++			name:             "busy twice, skipped; one retry per candidate",
++			reply:            statusReply(http.StatusTooManyRequests),
++			expectedEvicted:  0,
++			expectedRequests: 2 * maxSimulationsPerSourceNode,
++		},
++		{
++			name: "endpoint hangs, one timeout per cycle",
++			reply: func(n int, req simulateRequest, w http.ResponseWriter) {
++				time.Sleep(300 * time.Millisecond)
++				bestNodesReply("n2")(n, req, w)
++			},
++			timeout:          50 * time.Millisecond,
++			expectedEvicted:  0,
++			expectedRequests: 1,
++		},
++	}
++
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			ctx := context.Background()
++			server := &fakeSimulateServer{reply: tc.reply}
++			ts := httptest.NewServer(server)
++			defer ts.Close()
++			if tc.timeout > 0 {
++				previous := simulateRequestTimeout
++				simulateRequestTimeout = tc.timeout
++				defer func() { simulateRequestTimeout = previous }()
++			}
++			if tc.disabled {
++				setupSimulateEnv(t, "")
++			} else {
++				setupSimulateEnv(t, ts.URL)
++			}
++
++			nodes := []*v1.Node{
++				test.BuildTestNode("n1", 2000, 3000, 10, nil),
++				test.BuildTestNode("n2", 1000, 3000, 10, nil),
++				test.BuildTestNode("n3", 1000, 3000, 10, nil),
++			}
++			var objs []runtime.Object
++			for _, node := range nodes {
++				objs = append(objs, node)
++			}
++			pods := map[string]*v1.Pod{}
++			for i := 1; i <= 8; i++ {
++				pod := test.BuildTestPod(fmt.Sprintf("pod_%d_n1", i), 200, 0, "n1", test.SetRSOwnerRef)
++				pods[pod.Name] = pod
++				objs = append(objs, pod)
++			}
++			objs = append(objs, test.BuildTestPod("pod_9_n2", 200, 0, "n2", test.SetRSOwnerRef))
++
++			fakeClient := fake.NewSimpleClientset(objs...)
++			var evicted []string
++			fakeClient.Fake.AddReactor("create", "pods", func(action core.Action) (bool, runtime.Object, error) {
++				if eviction, ok := action.(core.CreateAction).GetObject().(*policy.Eviction); ok {
++					evicted = append(evicted, eviction.Name)
++				}
++				return true, nil, nil
++			})
++
++			handle, podEvictor, err := frameworktesting.InitFrameworkHandle(ctx, fakeClient, nil, defaultevictor.DefaultEvictorArgs{NodeFit: true}, nil)
++			if err != nil {
++				t.Fatalf("Unable to initialize a framework handle: %v", err)
++			}
++			plugin, err := NewLowNodeUtilization(ctx, &LowNodeUtilizationArgs{
++				Thresholds:       api.ResourceThresholds{v1.ResourcePods: 20},
++				TargetThresholds: api.ResourceThresholds{v1.ResourcePods: 70},
++			}, handle)
++			if err != nil {
++				t.Fatalf("Unable to initialize the plugin: %v", err)
++			}
++			plugin.(frameworktypes.BalancePlugin).Balance(ctx, nodes)
++
++			if got := podEvictor.TotalEvicted(); got != tc.expectedEvicted {
++				t.Errorf("Expected %v evictions, got %v (%v)", tc.expectedEvicted, got, evicted)
++			}
++			if got := server.count(); got != tc.expectedRequests {
++				t.Errorf("Expected %v simulate requests, got %v", tc.expectedRequests, got)
++			}
++
++			for i, req := range server.requests {
++				if server.tokens[i] != "Bearer "+simulateTestToken {
++					t.Errorf("request %d: unexpected Authorization header %q", i, server.tokens[i])
++				}
++				pod := pods[req.Name]
++				if pod == nil || req.Namespace != pod.Namespace {
++					t.Fatalf("request %d: unexpected pod %s/%s", i, req.Namespace, req.Name)
++				}
++				if !slices.Equal(req.ExcludeNodes, []string{"n1"}) {
++					t.Errorf("request %d: excludeNodes = %v, want [n1]", i, req.ExcludeNodes)
++				}
++				want := []simulatePodRef{{Namespace: pod.Namespace, Name: pod.Name, UID: string(pod.UID)}}
++				if !slices.Equal(req.RemovePods, want) {
++					t.Errorf("request %d: removePods = %v, want %v", i, req.RemovePods, want)
++				}
++			}
++			// the denied first candidate must not be the evicted one.
++			if tc.name == "first candidate denied, next one allowed" && len(evicted) == 1 && evicted[0] == server.requests[0].Name {
++				t.Errorf("denied pod %q was evicted", evicted[0])
++			}
++		})
++	}
++}
++
++func TestHighNodeUtilizationIgnoresSimulateEnv(t *testing.T) {
++	ctx := context.Background()
++	server := &fakeSimulateServer{reply: bestNodesReply()}
++	ts := httptest.NewServer(server)
++	defer ts.Close()
++	setupSimulateEnv(t, ts.URL)
++
++	nodes := []*v1.Node{
++		test.BuildTestNode("n1", 2000, 3000, 10, nil),
++		test.BuildTestNode("n2", 2000, 3000, 10, nil),
++	}
++	objs := []runtime.Object{nodes[0], nodes[1], test.BuildTestPod("p1", 200, 0, "n1", test.SetRSOwnerRef)}
++	for i := 2; i <= 5; i++ {
++		objs = append(objs, test.BuildTestPod(fmt.Sprintf("p%d", i), 200, 0, "n2", test.SetRSOwnerRef))
++	}
++	handle, podEvictor, err := frameworktesting.InitFrameworkHandle(ctx, fake.NewSimpleClientset(objs...), nil, defaultevictor.DefaultEvictorArgs{NodeFit: true}, nil)
++	if err != nil {
++		t.Fatalf("Unable to initialize a framework handle: %v", err)
++	}
++	plugin, err := NewHighNodeUtilization(ctx, &HighNodeUtilizationArgs{
++		Thresholds: api.ResourceThresholds{v1.ResourcePods: 20},
++	}, handle)
++	if err != nil {
++		t.Fatalf("Unable to initialize the plugin: %v", err)
++	}
++	plugin.(frameworktypes.BalancePlugin).Balance(ctx, nodes)
++
++	if got := podEvictor.TotalEvicted(); got != 1 {
++		t.Errorf("Expected 1 eviction, got %v", got)
++	}
++	if got := server.count(); got != 0 {
++		t.Errorf("Expected no simulate requests, got %v", got)
++	}
++}
++
++// newResultsTestCheck serves bestNodes by pod name prefix: allowed* -> [n2],
++// denied* -> [n4], empty* -> [], hang* sleeps past the timeout, anything
++// else 503. n2 and n3 are the destinations.
++func newResultsTestCheck(t *testing.T) (*fakeSimulateServer, func(profile string) *simulateTargetCheck) {
++	t.Helper()
++	server := &fakeSimulateServer{reply: func(n int, req simulateRequest, w http.ResponseWriter) {
++		switch {
++		case strings.HasPrefix(req.Name, "allowed"):
++			bestNodesReply("n2")(n, req, w)
++		case strings.HasPrefix(req.Name, "denied"):
++			bestNodesReply("n4")(n, req, w)
++		case strings.HasPrefix(req.Name, "empty"):
++			bestNodesReply()(n, req, w)
++		case strings.HasPrefix(req.Name, "hang"):
++			time.Sleep(200 * time.Millisecond)
++			bestNodesReply("n2")(n, req, w)
++		default:
++			statusReply(http.StatusServiceUnavailable)(n, req, w)
++		}
++	}}
++	ts := httptest.NewServer(server)
++	t.Cleanup(ts.Close)
++	setupSimulateEnv(t, ts.URL)
++	destinations := []NodeInfo{
++		{NodeUsage: NodeUsage{node: test.BuildTestNode("n2", 1000, 3000, 10, nil)}},
++		{NodeUsage: NodeUsage{node: test.BuildTestNode("n3", 1000, 3000, 10, nil)}},
++	}
++	return server, func(profile string) *simulateTargetCheck {
++		client, err := newSimulateClientFromEnv()
++		if err != nil || client == nil {
++			t.Fatalf("newSimulateClientFromEnv() = %v, %v", client, err)
++		}
++		return newSimulateTargetCheck(client, profile, destinations)
++	}
++}
++
++func ownedBy(uid string) func(*v1.Pod) {
++	return func(pod *v1.Pod) {
++		pod.OwnerReferences = []metav1.OwnerReference{{Kind: "ReplicaSet", Name: "rs-" + uid, UID: types.UID(uid), Controller: ptr.To(true)}}
++	}
++}
++
++type checkStep struct {
++	pod, source string
++	apply       func(*v1.Pod)
++	want        string
++}
++
++func runCheckSteps(t *testing.T, check *simulateTargetCheck, steps []checkStep) {
++	t.Helper()
++	for i, step := range steps {
++		pod := test.BuildTestPod(step.pod, 100, 0, step.source, step.apply)
++		if got := check.check(context.Background(), pod, step.source); got != step.want {
++			t.Errorf("step %d (%s on %s): got %q, want %q", i, step.pod, step.source, got, step.want)
++		}
++	}
++}
++
++func TestSimulateTargetCheckResults(t *testing.T) {
++	server, newCheck := newResultsTestCheck(t)
++	runCheckSteps(t, newCheck("p"), []checkStep{
++		{"allowed-1", "n1", nil, simulateResultAllowed},
++		{"denied-1", "n1", nil, simulateResultTargetNotUnderutilized},
++		{"empty-1", "n1", nil, simulateResultNoTarget},
++		{"unavailable-1", "n1", nil, simulateResultError},
++		// allowed simulations do not count toward the per-node limit.
++		{"allowed-2", "n1", nil, simulateResultAllowed},
++		{"allowed-3", "n1", nil, simulateResultAllowed},
++		{"allowed-4", "n1", nil, simulateResultAllowed},
++		{"denied-2", "n1", nil, simulateResultTargetNotUnderutilized},
++		{"denied-3", "n1", nil, simulateResultTargetNotUnderutilized},
++		// 5 refused simulations on n1: the node is done for this cycle.
++		{"allowed-5", "n1", nil, simulateResultLimitReached},
++		// the limit is per source node.
++		{"allowed-6", "n5", nil, simulateResultAllowed},
++	})
++	if got, want := server.count(), 10; got != want {
++		t.Errorf("Expected %d requests, got %d", want, got)
++	}
++}
++
++func TestSimulateTargetCheckSkipsSiblingsOfDeniedOwner(t *testing.T) {
++	server, newCheck := newResultsTestCheck(t)
++	runCheckSteps(t, newCheck("p"), []checkStep{
++		{"denied-a1", "n1", ownedBy("a"), simulateResultTargetNotUnderutilized},
++		// a sibling gets no request, whatever it would have answered.
++		{"allowed-a2", "n1", ownedBy("a"), simulateResultSkippedSameOwner},
++		{"empty-b1", "n1", ownedBy("b"), simulateResultNoTarget},
++		{"allowed-b2", "n1", ownedBy("b"), simulateResultSkippedSameOwner},
++		// the same owner on another source node is simulated.
++		{"allowed-a3", "n6", ownedBy("a"), simulateResultAllowed},
++		// an allowed or failed result is not remembered.
++		{"allowed-c1", "n1", ownedBy("c"), simulateResultAllowed},
++		{"allowed-c2", "n1", ownedBy("c"), simulateResultAllowed},
++		{"unavailable-d1", "n1", ownedBy("d"), simulateResultError},
++		{"allowed-d2", "n1", ownedBy("d"), simulateResultAllowed},
++		// pods without a controller are never deduplicated.
++		{"denied-x", "n7", nil, simulateResultTargetNotUnderutilized},
++		{"allowed-x", "n7", nil, simulateResultAllowed},
++	})
++	if got, want := server.count(), 9; got != want {
++		t.Errorf("Expected %d requests, got %d", want, got)
++	}
++	// a new cycle forgets the denied owners.
++	runCheckSteps(t, newCheck("p"), []checkStep{{"allowed-a4", "n1", ownedBy("a"), simulateResultAllowed}})
++}
++
++func TestSimulateTargetCheckCycleLimit(t *testing.T) {
++	server, newCheck := newResultsTestCheck(t)
++	check := newCheck("p")
++	var steps []checkStep
++	for i := 0; i < maxSimulationsPerCycle; i++ {
++		steps = append(steps, checkStep{fmt.Sprintf("allowed-%d", i), fmt.Sprintf("src-%d", i%7), nil, simulateResultAllowed})
++	}
++	steps = append(steps,
++		checkStep{"allowed-x", "src-0", nil, simulateResultLimitReached},
++		checkStep{"allowed-y", "fresh", nil, simulateResultLimitReached},
++	)
++	runCheckSteps(t, check, steps)
++	if got := server.count(); got != maxSimulationsPerCycle {
++		t.Errorf("Expected %d requests, got %d", maxSimulationsPerCycle, got)
++	}
++	// the next cycle starts over.
++	runCheckSteps(t, newCheck("p"), []checkStep{{"allowed-z", "src-0", nil, simulateResultAllowed}})
++}
++
++func TestSimulateClientSharedUnreachable(t *testing.T) {
++	previous := simulateRequestTimeout
++	simulateRequestTimeout = 20 * time.Millisecond
++	defer func() { simulateRequestTimeout = previous }()
++
++	server, newCheck := newResultsTestCheck(t)
++	first, second := newCheck("first"), newCheck("second")
++	if first.client != second.client {
++		t.Fatal("profiles must share one simulate client")
++	}
++	runCheckSteps(t, first, []checkStep{
++		{"hang-1", "n1", nil, simulateResultError},
++		{"allowed-1", "n1", nil, simulateResultSkippedUnreachable},
++	})
++	// a later profile of the same cycle skips too, without a request.
++	runCheckSteps(t, second, []checkStep{{"allowed-2", "n8", nil, simulateResultSkippedUnreachable}})
++	if got := server.count(); got != 1 {
++		t.Errorf("Expected 1 request, got %d", got)
++	}
++	// after the backoff the endpoint is tried again.
++	first.client.mu.Lock()
++	first.client.unreachableUntil = time.Time{}
++	first.client.mu.Unlock()
++	runCheckSteps(t, newCheck("third"), []checkStep{{"allowed-3", "n1", nil, simulateResultAllowed}})
++}
++
++func TestNewSimulateClientFromEnv(t *testing.T) {
++	ts := httptest.NewTLSServer(&fakeSimulateServer{reply: bestNodesReply("n2")})
++	defer ts.Close()
++	pod := test.BuildTestPod("p", 100, 0, "n1", nil)
++
++	setupSimulateEnv(t, "")
++	if client, err := newSimulateClientFromEnv(); client != nil || err != nil {
++		t.Fatalf("unset env: got %v, %v, want nil, nil", client, err)
++	}
++
++	for _, bad := range []string{"control-plane-proxy:8080/scheduler/simulate", "ftp://host/x", "https://"} {
++		setupSimulateEnv(t, bad)
++		if _, err := newSimulateClientFromEnv(); err == nil {
++			t.Errorf("URL %q: expected an error", bad)
++		}
++	}
++
++	// the self-signed test certificate fails verification by default.
++	setupSimulateEnv(t, ts.URL)
++	client, err := newSimulateClientFromEnv()
++	if err != nil {
++		t.Fatal(err)
++	}
++	if _, _, err := client.bestNodes(context.Background(), pod, "n1"); err == nil {
++		t.Error("expected a TLS verification error without the insecure env")
++	}
++
++	t.Setenv(SchedulerSimulateInsecureSkipVerifyEnv, "true")
++	client, err = newSimulateClientFromEnv()
++	if err != nil {
++		t.Fatal(err)
++	}
++	nodes, _, err := client.bestNodes(context.Background(), pod, "n1")
++	if err != nil || !slices.Equal(nodes, []string{"n2"}) {
++		t.Errorf("insecure env: got %v, %v, want [n2]", nodes, err)
++	}
++
++	simulateTokenFile = filepath.Join(t.TempDir(), "missing")
++	if _, err := newSimulateClientFromEnv(); err == nil {
++		t.Error("expected an error for a missing token file")
++	}
++}
+diff --git a/pkg/framework/profile/profile.go b/pkg/framework/profile/profile.go
+index cc0dd16..21f3465 100644
+--- a/pkg/framework/profile/profile.go
++++ b/pkg/framework/profile/profile.go
+@@ -60,6 +60,12 @@ func (ei *evictorImpl) PreEvictionFilter(pod *v1.Pod) bool {
+ 	return ei.preEvictionFilter(pod)
+ }
+ 
++// ProfileName returns the name of the profile the evictor belongs to.
++// Plugins read it through an interface assertion for their own metrics.
++func (ei *evictorImpl) ProfileName() string {
++	return ei.profileName
++}
++
+ // Evict evicts a pod (no pre-check performed)
+ func (ei *evictorImpl) Evict(ctx context.Context, pod *v1.Pod, opts evictions.EvictOptions) error {
+ 	opts.ProfileName = ei.profileName

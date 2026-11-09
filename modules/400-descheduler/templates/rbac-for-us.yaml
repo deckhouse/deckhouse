@@ -111,3 +111,23 @@ subjects:
     name: descheduler
     namespace: d8-descheduler
 {{- end }}
+{{- if .Values.global.enabledModules | has "control-plane-manager" }}
+{{- /*
+  Access to the kube-scheduler simulate endpoint behind control-plane-proxy (POST /scheduler/simulate)
+  for the target check of LowNodeUtilization (patch 005). The control-plane-manager module defines the ClusterRole.
+*/}}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:descheduler:scheduler-simulate
+  {{- include "helm_lib_module_labels" (list . (dict "app" "descheduler")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:control-plane-manager:scheduler-simulate
+subjects:
+  - kind: ServiceAccount
+    name: descheduler
+    namespace: d8-descheduler
+{{- end }}

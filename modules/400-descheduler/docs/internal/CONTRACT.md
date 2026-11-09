@@ -203,6 +203,37 @@ profile, delete the resource.
     ordered before the tracked ones can still be evicted. Without the limit the strategy evicts from
     a node until the node is no longer overutilized or the underutilized nodes have no capacity
     left.
+  Since 1.78.0, while the `control-plane-manager` module is enabled, every `lowNodeUtilization`
+  eviction first passes a target check against kube-scheduler. The descheduler simulates the pod
+  through `POST /scheduler/simulate` of control-plane-proxy, with the source node excluded and the
+  pod itself treated as deleted, and evicts it only if every node with the top score is
+  underutilized in this cycle by the same resource's thresholds. There is no threshold of its own:
+  with `useDeviationThresholds` the target must be at or below the average minus `thresholds`.
+  Details:
+  - A pod whose best nodes include a node that is not underutilized, or that has no feasible node,
+    stays, and the strategy goes on with the next pod of that node, as with any filter miss.
+  - Errors fail closed: if the endpoint does not answer within 5 seconds, or answers with an error,
+    the pod stays. After a request without any answer (network error or timeout) every resource
+    skips the check for one minute, that is the rest of the cycle, and evicts nothing. A busy answer (429) is retried
+    once after at most 1 second. The first failure per resource and cycle is logged as an error,
+    later ones only at verbosity 3.
+  - kube-scheduler pauses real scheduling while a simulation runs, so the number of simulations is
+    bounded per resource and cycle. After 5 simulations of one overutilized node that did not allow
+    an eviction, the node is left to the next cycle; allowed simulations do not count, so evictions
+    per node stay bounded only by the strategy itself and `evictionLimits.node`. After 100
+    simulations of any result the resource evicts nothing more in that cycle.
+  - When a pod is refused because of its target, the other pods of the same controller (for
+    example the same ReplicaSet) on the same node are skipped in that cycle without a simulation.
+    Pods without a controller are always simulated.
+  - The check simulates the pod as it is now. For a KubeVirt VM that is the source virt-launcher
+    pod; the migration target pod is built from the same VM spec, so the answer is close but not
+    exact.
+  - The scheduler does not yet see the replacements of pods evicted earlier in the same cycle, so
+    several pods may be checked against the same free node. A kube-scheduler replica that is not
+    the leader (most answers, since control-plane-proxy runs on every master) does not see pods the
+    leader has placed but not bound yet either.
+  - The check covers every resource; a producer cannot turn it off or on. Without the
+    `control-plane-manager` module, as on managed Kubernetes, the strategy runs without it.
 - `highNodeUtilization`: send non-empty `thresholds`. The strategy always uses requests and evicts
   pods only from nodes at or below every threshold. The evicted pods are packed onto busier nodes
   only if they use `schedulerName: high-node-utilization`, the scheduler profile of
@@ -423,6 +454,9 @@ and the module reports itself healthy; see "Signals" for what shows the failure.
 - `lowNodeUtilization` with `metricsSource: Prometheus` while the `prometheus` module is disabled
   (it runs as `Default`, with a warning in the Deckhouse log), while Prometheus is unreachable, or
   while a Ready node has no node-exporter data;
+- since 1.78.0, `lowNodeUtilization` while the kube-scheduler simulate endpoint is unreachable or
+  failing (no evictions, see the target check above), and a strategy whose pods all go to nodes that
+  are not underutilized;
 - a `podRestartThreshold` above 2147483647 that wraps to a positive number (4294967301 becomes 5);
 - on 1.76.x, a `namespaceLabelSelector` with only `matchExpressions`, which widens the profile to
   every namespace.
@@ -457,6 +491,13 @@ stay within that strategy and cycle.
   the strategy as its reason.
 - Since 1.77.0 `descheduler_pod_evictions_total` counts evictions by workload with `profile` set to
   the resource name; a PDB rejection appears as `result="error"`, `reason="too_many_requests"`.
+
+- Since 1.78.0 `descheduler_simulate_target_check_total` counts the target checks of
+  `lowNodeUtilization` by `profile` (the resource name) and `result`: `allowed`,
+  `target_not_underutilized`, `no_target`, `error` (a request that failed), `limit_reached`,
+  `skipped_same_owner` and `skipped_unreachable` (not sent after an unanswered request). An increasing `error` count
+  indicates failed checks; pods whose checks fail are not evicted. The descheduler log reports the cause once per
+  resource and cycle.
 
 Two resources that match the same pods may evict the same pod twice in one cycle and count it twice.
 

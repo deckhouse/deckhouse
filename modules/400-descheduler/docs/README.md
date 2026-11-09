@@ -116,6 +116,19 @@ How the strategy works in this mode:
 
 The descheduler reads the metrics through `aggregating-proxy` in the `d8-monitoring` namespace with its ServiceAccount token. The module grants the read access only while at least one Descheduler uses this mode. An example is on the [Examples](examples.html) page.
 
+#### Eviction target check
+
+Since Deckhouse 1.78, in clusters with the `control-plane-manager` module enabled, the strategy requests the expected target node from kube-scheduler before evicting a pod. kube-scheduler runs a dry-run scheduling cycle for the pod, with the source node excluded, and returns the nodes with the top score.
+
+How the strategy uses the answer:
+
+1. The pod is evicted only if every node with the top score is under utilized in this cycle by this Descheduler's own `thresholds`. With `useDeviationThresholds: true` this means at or below the average minus `thresholds`. The check has no thresholds of its own.
+1. The pod stays on the node, and the strategy tries the next pod of the same node, if kube-scheduler would place the pod on a node that is not under utilized or has no node for it.
+1. The pod also stays if kube-scheduler does not answer or answers with an error: the strategy does not evict a pod without the check.
+1. kube-scheduler pauses the real scheduling while a check runs, so the checks are limited. After 5 checks of one over utilized node that did not allow an eviction, the node waits for the next cycle. After 100 checks in a cycle, this Descheduler resource stops evicting pods until the next cycle. If the check finds no feasible node or any top-scoring node is not underutilized, other pods of the same controller on the source node are skipped for this cycle.
+
+The check applies to every Descheduler with `lowNodeUtilization` and cannot be turned off. On managed Kubernetes (the `control-plane-manager` module is disabled) the strategy works without it. The `descheduler_simulate_target_check_total` metric counts the checks by result.
+
 ### RemoveDuplicates
 
 {% alert level="info" %}

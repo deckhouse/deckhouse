@@ -6,20 +6,12 @@ This patch removes pods in `d8-` and `kube-system` namespaces from processing.
 
 ## 002-pod-level-eviction-metrics.patch
 
-This patch adds a workload-scoped eviction counter
-`descheduler_pod_evictions_total{namespace, workload_kind, workload_name, node, strategy, profile, result, reason}`
-so that eviction activity can be drilled down to the owning workload in Prometheus
-(no per-pod label, to keep cardinality bounded).
-
-The pod's owning workload is resolved in-process inside `PodEvictor.EvictPod`
-(`pod -> ReplicaSet -> Deployment`; other controllers are used as-is, bare pods
-report `<none>`). This requires watching ReplicaSets, so the descheduler
-`ClusterRole` is granted `get/list/watch` on `apps/replicasets`
-(see `templates/rbac-for-us.yaml`).
-
-`result` is a bounded enum (`success`, `error`, `blocked`) and `reason` is a
-normalized value (e.g. `node_limit_reached`, `too_many_requests`); arbitrary
-error text is never used as a label value.
+This patch adds the counter
+`descheduler_pod_evictions_total{namespace, workload_kind, workload_name, node, strategy, profile, result, reason}`,
+so that evictions can be drilled down to the owning workload (a Deployment instead of its
+ReplicaSet; bare pods report `<none>`). There is no per-pod label, and `result` (`success`,
+`error`, `blocked`) and `reason` take values from a fixed set. The descheduler needs
+`get/list/watch` on `apps/replicasets` for it (see `templates/rbac-for-us.yaml`).
 
 ## 003-go-mod.patch
 
@@ -33,15 +25,27 @@ v1.45.0, `go.opentelemetry.io/proto/otlp` to v1.11.0.
 
 ## 004-prometheus-insecure-skip-verify.patch
 
-This patch adds an opt-in to skip the TLS verification of the Prometheus endpoint: the
-`DESCHEDULER_PROMETHEUS_INSECURE_SKIP_VERIFY` environment variable, read by
-`client.CreatePrometheusClient` (`pkg/descheduler/client/client.go`) with `strconv.ParseBool`.
-Upstream trusts only the pod's ServiceAccount CA and offers no such option, while the in-cluster
-Prometheus endpoint, `aggregating-proxy` in `d8-monitoring`, serves a self-signed certificate. VPA
-reaches the same endpoint with `--prometheus-insecure=true`.
+This patch adds the `DESCHEDULER_PROMETHEUS_INSECURE_SKIP_VERIFY` environment variable: when it is a
+true boolean, the descheduler does not verify the certificate of the Prometheus endpoint. Upstream
+trusts only the pod's ServiceAccount CA, while `aggregating-proxy` in `d8-monitoring` serves a
+self-signed certificate; VPA reaches it with `--prometheus-insecure=true`. The module sets the
+variable only while a Descheduler uses `lowNodeUtilization.metricsSource: Prometheus` and the
+`prometheus` module is enabled. The ServiceAccount token is still sent with every request.
 
-The module sets the variable to `true` only when the policy has the Prometheus metrics provider, that is
-when the `prometheus` module is enabled and at least one Descheduler sets
-`lowNodeUtilization.metricsSource: Prometheus` (see `templates/deployment.yaml`). Unset or any value
-that is not a true boolean keeps the upstream behaviour. The ServiceAccount token is still sent
-with every request, so whoever answers at the Prometheus URL receives it.
+## 005-lnu-scheduler-simulate-target-check.patch
+
+This patch makes LowNodeUtilization check the eviction target before it evicts a pod. When
+`DESCHEDULER_SCHEDULER_SIMULATE_URL` is set, the strategy asks the kube-scheduler simulate
+endpoint where the pod would go without its current node, and evicts it only if every node with
+the top score is one the strategy classified as underutilized in this cycle. Otherwise, and on any
+error, the pod stays and the next pod of the node is tried. Since a simulation pauses real
+scheduling, a cycle runs at most 5 refused simulations per source node and 100 simulations per
+profile, and skips sibling pods of a refused pod's controller.
+`DESCHEDULER_SCHEDULER_SIMULATE_INSECURE_SKIP_VERIFY` turns off the certificate verification of
+the endpoint. Unset, the strategy behaves as upstream; HighNodeUtilization never checks. The
+counter `descheduler_simulate_target_check_total{profile, result}` counts the checks.
+
+The module sets both variables while the `control-plane-manager` module is enabled (since
+Deckhouse 1.78), with control-plane-proxy in `kube-system` as the endpoint.
+
+How to port the patches to a new descheduler version: see `AGENTS.md`.
