@@ -416,7 +416,7 @@ type ApplicationStatus struct {
 
 // ApplicationStatusUpdate is the automatic update state of the application, recomputed on every reconcile.
 type ApplicationStatusUpdate struct {
-	// Update path after the automatic version in every update mode: each step is the newest version the previous one may be updated to by its compatibility rules.
+	// Update path after the automatic version in every update mode. The path follows the compatibility rules to the newest version in the cluster, or to the newest version the rules reach; each step is the newest version from which the end of the path is still reached.
 	// +optional
 	Plan []string `json:"plan,omitempty"`
 

@@ -37,6 +37,7 @@ status:
           minor: 0
           patches: -1
       upgrade:
+        from: '>=0.9.0'
         step:
           major: 0
           minor: 2

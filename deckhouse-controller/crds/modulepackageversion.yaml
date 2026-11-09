@@ -461,8 +461,14 @@ spec:
                             major: 0
                             minor: 1
                             patches: -1
-                        description: Compatibility rules for upgrading from this version.
+                        description: Compatibility rules for upgrading to and from
+                          this version.
                         properties:
+                          from:
+                            description: SemVer constraint on the versions that may
+                              be upgraded to this one. When set, it takes priority
+                              over the step of the version upgraded from.
+                            type: string
                           step:
                             description: Step defines the compatibility rule for this
                               direction.

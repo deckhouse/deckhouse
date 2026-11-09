@@ -333,12 +333,85 @@ func (s *applicationValidationHandlerSuite) TestVersionChangeIsGatedByRulesInPre
 	s.Contains(response.Result.Message, "incompatible version: current=v1.0.0 target=v1.0.2")
 }
 
+func (s *applicationValidationHandlerSuite) TestVersionChangeIsGatedByUpgradeFromOfTarget() {
+	// The step of v1.2.0 allows the next minor, v1.3.0 accepts only v1.2.5 and later.
+	oldApp := newApplication("repo", "pkg", "v1.2.0")
+	oldApp.Status.CurrentVersion = &v1alpha1.ApplicationStatusVersion{Version: "v1.2.0"}
+	app := newApplication("repo", "pkg", "v1.3.0")
+	app.Status = oldApp.Status
+
+	response := s.submitVersions("UPDATE", app, oldApp, new(fakePackageManager), upgradeFromAPV(app, ">=1.2.5"))
+
+	s.False(response.Allowed)
+	s.Contains(response.Result.Message, "incompatible version: current=v1.2.0 target=v1.3.0")
+}
+
+func (s *applicationValidationHandlerSuite) TestVersionChangeToVersionWithInvalidUpgradeFromIsRejected() {
+	for _, constraint := range []string{"not a constraint", ">=1.0.0 <", "1.2.3.4", " "} {
+		s.Run(constraint, func() {
+			// The step of v1.2.3 allows any patch.
+			oldApp := newApplication("repo", "pkg", "v1.2.3")
+			oldApp.Status.CurrentVersion = &v1alpha1.ApplicationStatusVersion{Version: "v1.2.3"}
+			app := newApplication("repo", "pkg", "v1.2.5")
+			app.Status = oldApp.Status
+
+			response := s.submitVersions("UPDATE", app, oldApp, new(fakePackageManager), upgradeFromAPV(app, constraint))
+
+			s.False(response.Allowed)
+			s.Contains(response.Result.Message, "incompatible version: current=v1.2.3 target=v1.2.5")
+		})
+	}
+}
+
+func (s *applicationValidationHandlerSuite) TestVersionChangeAllowedByUpgradeFromOverStep() {
+	// The step of v1.9.0 forbids another major, v2.0.0 accepts v1.9.0.
+	oldApp := newApplication("repo", "pkg", "v1.9.0")
+	oldApp.Status.CurrentVersion = &v1alpha1.ApplicationStatusVersion{Version: "v1.9.0"}
+	app := newApplication("repo", "pkg", "v2.0.0")
+	app.Status = oldApp.Status
+	manager := new(fakePackageManager)
+
+	response := s.submitVersions("UPDATE", app, oldApp, manager, upgradeFromAPV(app, ">=1.8.0 <2.0.0"))
+
+	s.True(response.Allowed)
+	s.True(manager.checkCalled)
+}
+
+func (s *applicationValidationHandlerSuite) TestVersionChangeIsGatedByUpgradeFromForEveryVersionLeft() {
+	// v1.2.0 runs while the automatic update heads to v1.2.5; v1.3.0 accepts only v1.2.5 and later.
+	oldApp := newApplication("repo", "pkg", "v1.2.0")
+	oldApp.Spec.Update = &v1alpha1.ApplicationUpdate{Mode: "Auto"}
+	oldApp.Status.CurrentVersion = &v1alpha1.ApplicationStatusVersion{Version: "v1.2.0"}
+	oldApp.Status.Update = &v1alpha1.ApplicationStatusUpdate{AutomaticVersion: "v1.2.5"}
+	app := newApplication("repo", "pkg", "v1.3.0")
+	app.Spec.Update = oldApp.Spec.Update
+	app.Status = oldApp.Status
+
+	response := s.submitVersions("UPDATE", app, oldApp, new(fakePackageManager), upgradeFromAPV(app, ">=1.2.5"))
+
+	s.False(response.Allowed)
+	s.Contains(response.Result.Message, "incompatible version: current=v1.2.0 target=v1.3.0")
+}
+
+// upgradeFromAPV publishes the package version the application names, accepting upgrades from the versions the
+// constraint matches.
+func upgradeFromAPV(app *v1alpha1.Application, constraint string) *v1alpha1.ApplicationPackageVersion {
+	apv := newAPV(apvNameOf(app), false, nil)
+	apv.Status.PackageMetadata = &v1alpha1.ApplicationPackageVersionStatusMetadata{
+		Compatibility: &v1alpha1.PackageVersionCompatibilityRules{
+			Upgrade: &v1alpha1.PackageVersionUpgradeRule{From: constraint},
+		},
+	}
+
+	return apv
+}
+
 // patchLimitedAPV publishes a package version that may be upgraded across the given number of patches.
 func patchLimitedAPV(app *v1alpha1.Application, version string, patches int32) *v1alpha1.ApplicationPackageVersion {
 	apv := newAPV(v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, version), false, nil)
 	apv.Status.PackageMetadata = &v1alpha1.ApplicationPackageVersionStatusMetadata{
 		Compatibility: &v1alpha1.PackageVersionCompatibilityRules{
-			Upgrade: &v1alpha1.PackageVersionCompatibilityRule{Step: v1alpha1.PackageVersionCompatibilityRuleStep{
+			Upgrade: &v1alpha1.PackageVersionUpgradeRule{Step: v1alpha1.PackageVersionCompatibilityRuleStep{
 				Patches: ptr.To(patches),
 			}},
 		},
@@ -486,7 +559,7 @@ func TestValidateAppAgainstApv(t *testing.T) {
 		apv := newAPV(apvName, false, nil)
 		apv.Status.PackageMetadata = &v1alpha1.ApplicationPackageVersionStatusMetadata{
 			Compatibility: &v1alpha1.PackageVersionCompatibilityRules{
-				Upgrade: &v1alpha1.PackageVersionCompatibilityRule{Step: v1alpha1.PackageVersionCompatibilityRuleStep{
+				Upgrade: &v1alpha1.PackageVersionUpgradeRule{Step: v1alpha1.PackageVersionCompatibilityRuleStep{
 					Patches: ptr.To[int32](-1), Minor: ptr.To[int32](1), Major: ptr.To[int32](0),
 				}},
 				Downgrade: &v1alpha1.PackageVersionCompatibilityRule{Step: v1alpha1.PackageVersionCompatibilityRuleStep{
@@ -517,9 +590,21 @@ func TestValidateAppAgainstApv(t *testing.T) {
 		apv := newAPV(name, false, nil)
 		apv.Status.PackageMetadata = &v1alpha1.ApplicationPackageVersionStatusMetadata{
 			Compatibility: &v1alpha1.PackageVersionCompatibilityRules{
-				Upgrade: &v1alpha1.PackageVersionCompatibilityRule{Step: v1alpha1.PackageVersionCompatibilityRuleStep{
+				Upgrade: &v1alpha1.PackageVersionUpgradeRule{Step: v1alpha1.PackageVersionCompatibilityRuleStep{
 					Major: ptr.To[int32](1),
 				}},
+			},
+		}
+
+		return apv
+	}
+
+	// fromAPV publishes the target version accepting upgrades from the versions the constraint matches.
+	fromAPV := func(constraint string) *v1alpha1.ApplicationPackageVersion {
+		apv := newAPV(apvName, false, nil)
+		apv.Status.PackageMetadata = &v1alpha1.ApplicationPackageVersionStatusMetadata{
+			Compatibility: &v1alpha1.PackageVersionCompatibilityRules{
+				Upgrade: &v1alpha1.PackageVersionUpgradeRule{From: constraint},
 			},
 		}
 
@@ -552,8 +637,36 @@ func TestValidateAppAgainstApv(t *testing.T) {
 			wantCheck:   true,
 		},
 		{
-			name:        "upgrade ignores the target's rules",
+			name:        "upgrade ignores the target's step",
 			apv:         majorUpgradeAPV(apvName),
+			oldVersion:  "0.9.0",
+			wantErr:     true,
+			wantErrText: "incompatible version: current=0.9.0 target=1.0.0",
+		},
+		{
+			name:       "upgrade follows the target's upgrade.from over the previous version's step",
+			apv:        fromAPV(">=0.9.0"),
+			oldVersion: "0.9.0",
+			wantCheck:  true,
+		},
+		{
+			name:        "upgrade the target's upgrade.from rejects is rejected though the previous version's step allows it",
+			apv:         fromAPV(">=0.9.5"),
+			previousAPV: majorUpgradeAPV(v1alpha1.MakeApplicationPackageVersionName(repo, pkg, "0.9.0")),
+			oldVersion:  "0.9.0",
+			wantErr:     true,
+			wantErrText: "incompatible version: current=0.9.0 target=1.0.0",
+		},
+		{
+			name:       "downgrade follows the previous version's step even to a target whose upgrade.from does not parse",
+			apv:        fromAPV("not a constraint"),
+			oldVersion: "1.0.3",
+			wantCheck:  true,
+		},
+		{
+			name:        "upgrade to a target whose upgrade.from does not parse is rejected",
+			apv:         fromAPV("not a constraint"),
+			previousAPV: majorUpgradeAPV(v1alpha1.MakeApplicationPackageVersionName(repo, pkg, "0.9.0")),
 			oldVersion:  "0.9.0",
 			wantErr:     true,
 			wantErrText: "incompatible version: current=0.9.0 target=1.0.0",

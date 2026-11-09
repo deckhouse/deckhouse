@@ -90,13 +90,15 @@ func (u *Updater) Update(ctx context.Context, app *v1alpha1.Application) error {
 	return nil
 }
 
-// candidate is a version the plan may step to, with the rules that bound the next step from it.
+// candidate is a version on the way of the plan, with its rules: their upgrade.from bounds the step to it, their step
+// the next step from it.
 type candidate struct {
 	version *semver.Version
 	rules   *v1alpha1.PackageVersionCompatibilityRules
 }
 
-// computePlan returns the update path from current, each step the newest version the previous one's rules allow.
+// computePlan returns the update path from current to the newest version the steps and the upgrade.from constraints
+// reach, through every version on the way; each step is the newest version from which that end is still reached.
 // Drafts and versions gone from the registry are skipped; on AutoPatch so are versions outside the current minor.
 func computePlan(mode v1alpha2.UpdateMode, current string, apvs []v1alpha1.ApplicationPackageVersion) []string {
 	from, err := semver.NewVersion(current)
@@ -104,9 +106,8 @@ func computePlan(mode v1alpha2.UpdateMode, current string, apvs []v1alpha1.Appli
 		return nil
 	}
 
-	rules := versionRules(from, apvs)
-
-	candidates := make([]candidate, 0, len(apvs))
+	// The current version is the first node, the newer candidates follow it oldest first.
+	nodes := []candidate{{version: from, rules: versionRules(from, apvs)}}
 	for _, apv := range apvs {
 		if !installable(apv) {
 			continue
@@ -121,27 +122,58 @@ func computePlan(mode v1alpha2.UpdateMode, current string, apvs []v1alpha1.Appli
 			continue
 		}
 
-		candidates = append(candidates, candidate{version: version, rules: compatibility(apv)})
+		nodes = append(nodes, candidate{version: version, rules: compatibility(apv)})
 	}
 
-	// Newest first: the first compatible candidate is the step, and only the ones before it are newer.
-	slices.SortFunc(candidates, func(a, b candidate) int {
-		return b.version.Compare(a.version)
+	slices.SortFunc(nodes[1:], func(a, b candidate) int {
+		return a.version.Compare(b.version)
 	})
 
-	var plan []string
-	for {
-		idx := slices.IndexFunc(candidates, func(c candidate) bool {
-			return rules.IsCompatible(from.Original(), c.version.Original())
-		})
-		if idx < 0 {
-			return plan
-		}
+	// end[i] is the newest node reached from node i, next[i] the newest step from it towards end[i], -1 for none. A
+	// step only goes up, so the search ends; each node is searched once, and only when a step reaches it.
+	end := make([]int, len(nodes))
+	next := make([]int, len(nodes))
+	searched := make([]bool, len(nodes))
 
-		from, rules = candidates[idx].version, candidates[idx].rules
-		plan = append(plan, from.Original())
-		candidates = candidates[:idx]
+	var search func(i int)
+	search = func(i int) {
+		searched[i] = true
+		end[i], next[i] = i, -1
+
+		for j := len(nodes) - 1; j > i && end[i] < len(nodes)-1; j-- {
+			// A searched node that reaches no further cannot move the end.
+			if searched[j] && end[j] <= end[i] {
+				continue
+			}
+
+			if !canStep(nodes[i], nodes[j]) {
+				continue
+			}
+
+			if !searched[j] {
+				search(j)
+			}
+
+			if end[j] > end[i] {
+				end[i], next[i] = end[j], j
+			}
+		}
 	}
+
+	search(0)
+
+	var plan []string
+	for i := next[0]; i >= 0; i = next[i] {
+		plan = append(plan, nodes[i].version.Original())
+	}
+
+	return plan
+}
+
+// canStep reports whether the plan may go from one version straight to a newer one: the upgrade.from of the newer
+// version decides when it sets one, the step of the version left otherwise.
+func canStep(from, to candidate) bool {
+	return from.rules.IsCompatibleWith(from.version.Original(), to.version.Original(), to.rules)
 }
 
 // computeAutoVersion returns the version the automatic update moves the application to: the previous automatic

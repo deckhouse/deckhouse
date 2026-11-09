@@ -101,6 +101,7 @@ type: Application
 version: "1.0.0"
 versionCompatibilityRules:
   upgrade:
+    from: ">=0.9.0"
     step:
       minor: 2
   downgrade:

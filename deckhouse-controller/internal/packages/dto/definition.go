@@ -152,10 +152,17 @@ type DisableMessages struct {
 	En string `json:"en,omitempty" yaml:"en,omitempty"`
 }
 
-// VersionCompatibilityRules bounds which versions may upgrade to or downgrade from this one.
+// VersionCompatibilityRules bounds the upgrades and downgrades from this version, and which versions may upgrade to it.
 type VersionCompatibilityRules struct {
-	Upgrade   *VersionCompatibilityRule `json:"upgrade,omitempty" yaml:"upgrade,omitempty"`
+	Upgrade   *VersionUpgradeRule       `json:"upgrade,omitempty" yaml:"upgrade,omitempty"`
 	Downgrade *VersionCompatibilityRule `json:"downgrade,omitempty" yaml:"downgrade,omitempty"`
+}
+
+// VersionUpgradeRule is the upgrade direction's rule: the SemVer constraint on the versions that may upgrade to this
+// one, and the step from it.
+type VersionUpgradeRule struct {
+	From string                   `json:"from,omitempty" yaml:"from,omitempty"`
+	Step VersionCompatibilityStep `json:"step,omitempty" yaml:"step,omitempty"`
 }
 
 // VersionCompatibilityRule is one direction's compatibility step.
@@ -606,17 +613,18 @@ func compatibilityToCR(c VersionCompatibilityRules) *v1alpha1.PackageVersionComp
 }
 
 // upgradeCompatibilityRuleToCR projects the upgrade direction's rule, taking def for a missing rule or limit.
-func upgradeCompatibilityRuleToCR(r *VersionCompatibilityRule) *v1alpha1.PackageVersionCompatibilityRule {
-	var step VersionCompatibilityStep
+func upgradeCompatibilityRuleToCR(r *VersionUpgradeRule) *v1alpha1.PackageVersionUpgradeRule {
+	var rule VersionUpgradeRule
 	if r != nil {
-		step = r.Step
+		rule = *r
 	}
 
-	return &v1alpha1.PackageVersionCompatibilityRule{
+	return &v1alpha1.PackageVersionUpgradeRule{
+		From: rule.From,
 		Step: v1alpha1.PackageVersionCompatibilityRuleStep{
-			Patches: limitOrDefault(step.Patches, v1alpha1.DefaultUpgradePatches),
-			Minor:   limitOrDefault(step.Minor, v1alpha1.DefaultUpgradeMinor),
-			Major:   limitOrDefault(step.Major, v1alpha1.DefaultUpgradeMajor),
+			Patches: limitOrDefault(rule.Step.Patches, v1alpha1.DefaultUpgradePatches),
+			Minor:   limitOrDefault(rule.Step.Minor, v1alpha1.DefaultUpgradeMinor),
+			Major:   limitOrDefault(rule.Step.Major, v1alpha1.DefaultUpgradeMajor),
 		},
 	}
 }

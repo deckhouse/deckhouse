@@ -612,9 +612,11 @@ spec:
                       the `Manual` update mode.
                     type: string
                   plan:
-                    description: 'Update path after the automatic version in every
-                      update mode: each step is the newest version the previous one
-                      may be updated to by its compatibility rules.'
+                    description: Update path after the automatic version in every
+                      update mode. The path follows the compatibility rules to the
+                      newest version in the cluster, or to the newest version the
+                      rules reach; each step is the newest version from which the
+                      end of the path is still reached.
                     items:
                       type: string
                     type: array

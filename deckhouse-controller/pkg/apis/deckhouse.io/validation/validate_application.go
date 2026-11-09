@@ -231,16 +231,16 @@ func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packa
 		return warnings, nil
 	}
 
-	// Only a spec version change is gated, so the controller's own patches never trip it; nothing is installed on create.
-	if adm.oldApp != nil && adm.oldApp.Spec.PackageVersion != app.Spec.PackageVersion {
-		if err := checkVersionCompatibility(ctx, cli, app, adm.oldApp); err != nil {
-			return nil, err
-		}
-	}
-
 	metadata := apv.Status.PackageMetadata
 	if metadata == nil {
 		metadata = new(v1alpha1.ApplicationPackageVersionStatusMetadata)
+	}
+
+	// Only a spec version change is gated, so the controller's own patches never trip it; nothing is installed on create.
+	if adm.oldApp != nil && adm.oldApp.Spec.PackageVersion != app.Spec.PackageVersion {
+		if err := checkVersionCompatibility(ctx, cli, app, adm.oldApp, metadata.Compatibility); err != nil {
+			return nil, err
+		}
 	}
 
 	constraints, err := metadata.Requirements.ToScheduleConstraints()
@@ -264,8 +264,9 @@ func specVersionChanged(app, oldApp *v1alpha1.Application) bool {
 }
 
 // checkVersionCompatibility gates a change of the spec version by the rules of every version the engine may leave
-// for it, in either direction.
-func checkVersionCompatibility(ctx context.Context, cli client.Client, app, oldApp *v1alpha1.Application) error {
+// for it, in either direction; an upgrade to a version whose rules, target, set upgrade.from is gated by that
+// constraint instead, as the automatic update is.
+func checkVersionCompatibility(ctx context.Context, cli client.Client, app, oldApp *v1alpha1.Application, target *v1alpha1.PackageVersionCompatibilityRules) error {
 	wanted := app.Spec.PackageVersion
 
 	for _, current := range leftVersions(app, oldApp) {
@@ -274,7 +275,7 @@ func checkVersionCompatibility(ctx context.Context, cli client.Client, app, oldA
 			return err
 		}
 
-		if !rules.IsCompatible(current, wanted) {
+		if !rules.IsCompatibleWith(current, wanted, target) {
 			return fmt.Errorf("incompatible version: current=%s target=%s", current, wanted)
 		}
 	}

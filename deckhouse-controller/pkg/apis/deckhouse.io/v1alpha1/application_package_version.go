@@ -236,7 +236,8 @@ type ApplicationPackageVersionStatusMetadata struct {
 	// Version compatibility rules for upgrades and downgrades.
 	// +kubebuilder:default={}
 	// +optional
-	// +crd-enricher:raw:properties.upgrade.description="Compatibility rules for upgrading from this application version."
+	// +crd-enricher:raw:properties.upgrade.description="Compatibility rules for upgrading to and from this application version."
+	// +crd-enricher:raw:properties.upgrade.properties.from.description="SemVer constraint on the application versions from which the application can be upgraded to this version.\n\nIf specified, the constraint takes priority over the `step` limits of the version being upgraded from: the application is upgraded to this version only from the versions that satisfy the constraint, regardless of those limits. This applies to the update plan, the automatic update, and a change of `spec.packageVersion` of the Application. An invalid constraint forbids upgrading to this version.\n\nIf not specified, the `step` limits of the version being upgraded from apply."
 	// +crd-enricher:raw:properties.upgrade.properties.step.description="Compatibility rule step."
 	// +crd-enricher:raw:properties.upgrade.properties.step.properties.major.description="Number of major versions that can be skipped during an upgrade.\n\nThe `-1` value removes all limits, `0` forbids the change.\n\nDefaults to `0`."
 	// +crd-enricher:raw:properties.upgrade.properties.step.properties.minor.description="Number of minor versions that can be skipped during an upgrade.\n\nThe `-1` value removes all limits, `0` forbids the change.\n\nDefaults to `1`."

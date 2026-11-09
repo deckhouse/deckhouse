@@ -383,17 +383,30 @@ const (
 	DefaultDowngradeMajor int32 = 0
 )
 
-// PackageVersionCompatibilityRules bounds which versions this one may be upgraded or downgraded to.
+// PackageVersionCompatibilityRules bounds which versions this one may be upgraded or downgraded to, and which versions
+// may be upgraded to it.
 type PackageVersionCompatibilityRules struct {
-	// Compatibility rules for upgrading from this version.
+	// Compatibility rules for upgrading to and from this version.
 	// +kubebuilder:default={step:{patches:-1,minor:1,major:0}}
 	// +optional
-	Upgrade *PackageVersionCompatibilityRule `json:"upgrade,omitempty"`
+	Upgrade *PackageVersionUpgradeRule `json:"upgrade,omitempty"`
 
 	// Compatibility rules for downgrading from this version.
 	// +kubebuilder:default={step:{patches:-1,minor:0,major:0}}
 	// +optional
 	Downgrade *PackageVersionCompatibilityRule `json:"downgrade,omitempty"`
+}
+
+// PackageVersionUpgradeRule is the upgrade direction's rule: which versions may be upgraded to this one, and the
+// skip allowances of the upgrade from it.
+type PackageVersionUpgradeRule struct {
+	// SemVer constraint on the versions that may be upgraded to this one. When set, it takes priority over the step of the version upgraded from.
+	// +optional
+	From string `json:"from,omitempty"`
+
+	// Step defines the compatibility rule for this direction.
+	// +optional
+	Step PackageVersionCompatibilityRuleStep `json:"step,omitempty"`
 }
 
 // PackageVersionCompatibilityRule is one direction's version range and skip allowances.
@@ -440,17 +453,9 @@ func (r *PackageVersionCompatibilityRules) IsCompatible(from, to string) bool {
 
 	upgrade := toVer.GreaterThan(fromVer)
 
-	var rule *PackageVersionCompatibilityRule
-	if r != nil {
-		rule = r.Downgrade
-		if upgrade {
-			rule = r.Upgrade
-		}
-	}
-
-	var step PackageVersionCompatibilityRuleStep
-	if rule != nil {
-		step = rule.Step
+	step := r.downgradeStep()
+	if upgrade {
+		step = r.upgradeStep()
 	}
 
 	patches, minor, major := DefaultDowngradePatches, DefaultDowngradeMinor, DefaultDowngradeMajor
@@ -466,6 +471,61 @@ func (r *PackageVersionCompatibilityRules) IsCompatible(from, to string) bool {
 	default:
 		return withinLimit(fromVer.Patch(), toVer.Patch(), limitOr(step.Patches, patches))
 	}
+}
+
+// IsCompatibleWith reports whether from may move to to like IsCompatible, except that target, the rules of to, decide
+// an upgrade by their upgrade.from when they set it: the version upgraded to names the versions that may upgrade to
+// it, over the step of the version left. A constraint that does not parse allows no upgrade.
+func (r *PackageVersionCompatibilityRules) IsCompatibleWith(from, to string, target *PackageVersionCompatibilityRules) bool {
+	constraint := target.upgradeFrom()
+	if constraint == "" || !newerVersion(to, from) {
+		return r.IsCompatible(from, to)
+	}
+
+	return satisfiesConstraint(constraint, from)
+}
+
+// upgradeFrom returns the upgrade.from constraint; empty when it is unset.
+func (r *PackageVersionCompatibilityRules) upgradeFrom() string {
+	if r == nil || r.Upgrade == nil {
+		return ""
+	}
+
+	return r.Upgrade.From
+}
+
+// upgradeStep returns the step of the upgrade rule; without the rule every limit is unset.
+func (r *PackageVersionCompatibilityRules) upgradeStep() PackageVersionCompatibilityRuleStep {
+	if r == nil || r.Upgrade == nil {
+		return PackageVersionCompatibilityRuleStep{}
+	}
+
+	return r.Upgrade.Step
+}
+
+// downgradeStep returns the step of the downgrade rule; without the rule every limit is unset.
+func (r *PackageVersionCompatibilityRules) downgradeStep() PackageVersionCompatibilityRuleStep {
+	if r == nil || r.Downgrade == nil {
+		return PackageVersionCompatibilityRuleStep{}
+	}
+
+	return r.Downgrade.Step
+}
+
+// satisfiesConstraint reports whether version satisfies the SemVer constraint; an unparsable constraint or version
+// does not.
+func satisfiesConstraint(constraint, version string) bool {
+	c, err := semver.NewConstraint(constraint)
+	if err != nil {
+		return false
+	}
+
+	v, err := semver.NewVersion(version)
+	if err != nil {
+		return false
+	}
+
+	return c.Check(v)
 }
 
 // limitOr returns the limit, or def when it is unset.
