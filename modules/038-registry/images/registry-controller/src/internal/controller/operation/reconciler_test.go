@@ -23,6 +23,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,6 +33,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
 )
@@ -44,6 +46,7 @@ func newReconciler(t *testing.T, now time.Time, objects ...client.Object) (*Reco
 	scheme := runtime.NewScheme()
 	require.NoError(t, registryv1alpha1.AddToScheme(scheme))
 	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, coordinationv1.AddToScheme(scheme))
 
 	// Every replica of the storage on a master node of its own, unless the test says which nodes there
 	// are — which is how a master that left is written.
@@ -78,6 +81,29 @@ func master(name string) *corev1.Node {
 	return &corev1.Node{ObjectMeta: metav1.ObjectMeta{
 		Name: name, Labels: map[string]string{"node-role.kubernetes.io/control-plane": ""},
 	}}
+}
+
+// notReadyMaster is a master whose Ready condition has had the status since then.
+func notReadyMaster(name string, status corev1.ConditionStatus, since time.Time) *corev1.Node {
+	node := master(name)
+	node.Status.Conditions = []corev1.NodeCondition{{
+		Type: corev1.NodeReady, Status: status, LastTransitionTime: metav1.NewTime(since),
+	}}
+	return node
+}
+
+// collectionLease is the syncers' collection lease as client-go leaves it: held and renewed, or given
+// up (no holder, acquired and renewed at the release, one second long).
+func collectionLease(holder string, acquired, renewed time.Time, seconds int32) *coordinationv1.Lease {
+	return &coordinationv1.Lease{
+		ObjectMeta: metav1.ObjectMeta{Namespace: Namespace, Name: CollectionLeaseName},
+		Spec: coordinationv1.LeaseSpec{
+			HolderIdentity:       ptr.To(holder),
+			AcquireTime:          ptr.To(metav1.NewMicroTime(acquired)),
+			RenewTime:            ptr.To(metav1.NewMicroTime(renewed)),
+			LeaseDurationSeconds: ptr.To(seconds),
+		},
+	}
 }
 
 func storageWith(nodes ...string) *registryv1alpha1.RegistryStorage {
@@ -515,4 +541,177 @@ func TestCancelStopsAReplicaWaitingForItsStoreOrItsTurn(t *testing.T) {
 	assert.Equal(t, registryv1alpha1.ReplicaOperationCanceled, got.Replicas[0].Phase)
 	assert.Equal(t, registryv1alpha1.ReplicaOperationCanceled, got.Replicas[1].Phase)
 	assert.Equal(t, registryv1alpha1.OperationCanceled, got.Phase)
+}
+
+// running is a request master-0 has been collecting on since a minute after it was accepted, while
+// master-1 has finished.
+func running() *registryv1alpha1.RegistryOperation {
+	request := acceptedRequest("manual-1", "master-0", "master-1")
+	request.Status.Replicas[0].Phase = registryv1alpha1.ReplicaOperationRunning
+	request.Status.Replicas[0].StartedAt = at(time.Minute)
+	request.Status.Replicas[1].Phase = registryv1alpha1.ReplicaOperationSucceeded
+	request.Status.Replicas[1].StartedAt = at(time.Minute)
+	request.Status.Replicas[1].FinishedAt = at(2 * time.Minute)
+	return request
+}
+
+// TestARunningReplicaIsLeftToItWhileItHoldsTheLease: a collection takes hours and writes nothing
+// meanwhile. The lease it renews is what says it is still at work, and is read again when it would lapse.
+func TestARunningReplicaIsLeftToItWhileItHoldsTheLease(t *testing.T) {
+	renewed := accepted.Add(2 * time.Hour)
+	r, c := newReconciler(t, renewed.Add(30*time.Second),
+		storageWith("master-0", "master-1"), running(),
+		collectionLease("master-0", accepted.Add(time.Minute), renewed, 60))
+
+	result := reconcileRequest(t, r, "manual-1")
+
+	got := getRequest(t, c, "manual-1").Status
+	assert.Equal(t, registryv1alpha1.ReplicaOperationRunning, got.Replicas[0].Phase)
+	assert.Equal(t, registryv1alpha1.OperationRunning, got.Phase)
+	assert.Equal(t, 30*time.Second+lostLeaseGrace+time.Second, result.RequeueAfter,
+		"looked at again when the lease, not renewed, would have lapsed for the grace")
+}
+
+// TestARunningReplicaThatStoppedHoldingTheLeaseIsLost: its syncer died or lost the API server while it
+// collected. Nothing else settles its entry, and left to the timeout it held the operation, and every
+// collection with it, for a day.
+func TestARunningReplicaThatStoppedHoldingTheLeaseIsLost(t *testing.T) {
+	stopped := accepted.Add(time.Hour)
+
+	tests := []struct {
+		name  string
+		lease *coordinationv1.Lease
+		// lostAt is when the entry is given up on.
+		lostAt time.Time
+	}{
+		{
+			name:   "it stopped renewing the lease",
+			lease:  collectionLease("master-0", accepted.Add(time.Minute), stopped, 60),
+			lostAt: stopped.Add(time.Minute + lostLeaseGrace),
+		},
+		{
+			name:   "it gave the lease up and did not report",
+			lease:  collectionLease("", stopped, stopped, 1),
+			lostAt: stopped.Add(lostLeaseGrace),
+		},
+		{
+			name:   "another replica took the lease over",
+			lease:  collectionLease("master-1", stopped, stopped.Add(10*time.Minute), 60),
+			lostAt: stopped.Add(lostLeaseGrace),
+		},
+		{
+			name:   "there is no lease",
+			lostAt: accepted.Add(time.Minute + lostLeaseGrace),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			objects := []client.Object{storageWith("master-0", "master-1"), running()}
+			if tt.lease != nil {
+				objects = append(objects, tt.lease)
+			}
+
+			r, c := newReconciler(t, tt.lostAt.Add(-time.Second), objects...)
+			result := reconcileRequest(t, r, "manual-1")
+			assert.Equal(t, registryv1alpha1.ReplicaOperationRunning, getRequest(t, c, "manual-1").Status.Replicas[0].Phase,
+				"within the grace the replica may still be writing its result")
+			assert.Equal(t, 2*time.Second, result.RequeueAfter, "looked at again when the grace is over")
+
+			r.Now = func() time.Time { return tt.lostAt }
+			reconcileRequest(t, r, "manual-1")
+
+			got := getRequest(t, c, "manual-1").Status
+			assert.Equal(t, registryv1alpha1.ReplicaOperationFailed, got.Replicas[0].Phase)
+			assert.Equal(t, registryv1alpha1.ReasonOperationReplicaLost, got.Replicas[0].Reason)
+			assert.NotEmpty(t, got.Replicas[0].Message)
+			assert.Equal(t, registryv1alpha1.OperationFailed, got.Phase)
+			assert.Equal(t, registryv1alpha1.ReasonOperationReplicaFailed, got.Reason)
+			assert.Contains(t, got.Message, "master-0 (ReplicaLost)")
+		})
+	}
+}
+
+// TestAReplicaWaitingOnANodeThatIsNotReadyIsLost: a replica waiting for its turn holds nothing to show
+// it is alive, and its node is the sign. A master that went away for good otherwise kept the operation
+// open for a day.
+func TestAReplicaWaitingOnANodeThatIsNotReadyIsLost(t *testing.T) {
+	for _, status := range []corev1.ConditionStatus{corev1.ConditionFalse, corev1.ConditionUnknown} {
+		t.Run(string(status), func(t *testing.T) {
+			request := acceptedRequest("manual-1", "master-0", "master-1")
+			request.Status.Replicas[0].Phase = registryv1alpha1.ReplicaOperationWaiting
+			request.Status.Replicas[0].Reason = registryv1alpha1.ReasonOperationTurn
+			request.Status.Replicas[1].Phase = registryv1alpha1.ReplicaOperationRunning
+			request.Status.Replicas[1].StartedAt = at(time.Minute)
+
+			since := accepted.Add(2 * time.Hour)
+			r, c := newReconciler(t, since.Add(5*time.Minute),
+				storageWith("master-0", "master-1"),
+				notReadyMaster("master-0", status, since), master("master-1"), request,
+				collectionLease("master-1", accepted.Add(time.Minute), since.Add(5*time.Minute), 60))
+
+			result := reconcileRequest(t, r, "manual-1")
+			assert.Equal(t, registryv1alpha1.ReplicaOperationWaiting, getRequest(t, c, "manual-1").Status.Replicas[0].Phase,
+				"a master that reboots keeps its turn")
+			assert.Equal(t, 5*time.Minute+time.Second, result.RequeueAfter)
+
+			r.Now = func() time.Time { return since.Add(notReadyGrace) }
+			reconcileRequest(t, r, "manual-1")
+
+			got := getRequest(t, c, "manual-1").Status
+			assert.Equal(t, registryv1alpha1.ReplicaOperationFailed, got.Replicas[0].Phase)
+			assert.Equal(t, registryv1alpha1.ReasonOperationReplicaLost, got.Replicas[0].Reason)
+			assert.Equal(t, registryv1alpha1.ReplicaOperationRunning, got.Replicas[1].Phase, "the replica collecting is left to it")
+			assert.Equal(t, registryv1alpha1.OperationRunning, got.Phase)
+		})
+	}
+}
+
+// TestANodeThatIsNotReadyDoesNotTakeACollectionAway: a running replica is judged by the lease alone. A
+// node can drop out of Ready while its syncer still renews the lease and deletes, and its entry is not
+// settled under it.
+func TestANodeThatIsNotReadyDoesNotTakeACollectionAway(t *testing.T) {
+	now := accepted.Add(3 * time.Hour)
+	r, c := newReconciler(t, now,
+		storageWith("master-0", "master-1"),
+		notReadyMaster("master-0", corev1.ConditionUnknown, accepted.Add(time.Hour)), master("master-1"), running(),
+		collectionLease("master-0", accepted.Add(time.Minute), now.Add(-5*time.Second), 60))
+
+	reconcileRequest(t, r, "manual-1")
+
+	assert.Equal(t, registryv1alpha1.ReplicaOperationRunning, getRequest(t, c, "manual-1").Status.Replicas[0].Phase)
+}
+
+// TestANodeThatCameBackKeepsItsReplicasTurn: Ready again, however long it was away.
+func TestANodeThatCameBackKeepsItsReplicasTurn(t *testing.T) {
+	request := acceptedRequest("manual-1", "master-0")
+	request.Status.Replicas[0].Phase = registryv1alpha1.ReplicaOperationWaiting
+	request.Status.Replicas[0].Reason = registryv1alpha1.ReasonOperationTurn
+
+	r, c := newReconciler(t, accepted.Add(3*time.Hour),
+		storageWith("master-0"), notReadyMaster("master-0", corev1.ConditionTrue, accepted.Add(2*time.Hour)), request)
+	reconcileRequest(t, r, "manual-1")
+
+	assert.Equal(t, registryv1alpha1.ReplicaOperationWaiting, getRequest(t, c, "manual-1").Status.Replicas[0].Phase)
+}
+
+// TestOnlyAMasterChangingReadinessWakesTheOperations: kubelet writes the Ready condition of every node
+// every few seconds, and only a change of its status on a master is news here.
+func TestOnlyAMasterChangingReadinessWakesTheOperations(t *testing.T) {
+	ready := notReadyMaster("master-0", corev1.ConditionTrue, accepted)
+	heartbeat := ready.DeepCopy()
+	heartbeat.Status.Conditions[0].LastHeartbeatTime = metav1.NewTime(accepted.Add(time.Minute))
+	gone := notReadyMaster("master-0", corev1.ConditionUnknown, accepted.Add(time.Minute))
+
+	worker := func(node *corev1.Node) *corev1.Node {
+		node = node.DeepCopy()
+		node.Labels = nil
+		return node
+	}
+
+	changed := storageNodeReadinessChanged()
+	assert.True(t, changed.Update(event.UpdateEvent{ObjectOld: ready, ObjectNew: gone}))
+	assert.True(t, changed.Update(event.UpdateEvent{ObjectOld: gone, ObjectNew: ready}))
+	assert.False(t, changed.Update(event.UpdateEvent{ObjectOld: ready, ObjectNew: heartbeat}))
+	assert.False(t, changed.Update(event.UpdateEvent{ObjectOld: worker(ready), ObjectNew: worker(gone)}))
 }

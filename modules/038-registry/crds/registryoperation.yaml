@@ -80,6 +80,8 @@ spec:
 
             Only one operation runs at a time. An operation created while an older one is not finished fails with the reason `AnotherOperationActive`.
 
+            A replica that is gone fails with the reason `ReplicaLost`: one that was collecting, when it has not held the Lease `registry-storage-gc` in the `d8-system` namespace for five minutes; one that was waiting, when its node has not been `Ready` for ten minutes.
+
             To cancel an operation, set the label `registry.deckhouse.io/cancel: "true"` on it. A replica that has not started does not start, and a replica that is running stops. What it has already removed stays removed. Deleting the object cancels an operation too, but does not stop a replica that has already started.
 
             A finished operation is deleted a day after it finished.
@@ -264,7 +266,7 @@ spec:
                           A machine-readable reason for the phase.
 
                           - `Waiting`: `Filling` (the cache is being filled), `Pushing` (an image set is being pushed with `d8 mirror push`), `Turn` (another replica is running the operation; or the replica waited a whole window for its turn and waits for the store to go quiet before waiting again).
-                          - `Failed`: `OperationFailed`, `DeadlineExceeded` (by `deadline`, the replica had not picked the operation up, or its store was still being written to), `TimedOut` (the replica did not report a result within 24 hours).
+                          - `Failed`: `OperationFailed`, `DeadlineExceeded` (by `deadline`, the replica had not picked the operation up, or its store was still being written to), `TimedOut` (the replica did not report a result within 24 hours), `ReplicaLost` (the replica is gone: it stopped holding the collection lease while it collected, or its node was not `Ready` for ten minutes while it waited).
                           - `Skipped`: `ReplicaGone`, `NoCache`.
                           - `Canceled`: `Canceled`.
                       message:

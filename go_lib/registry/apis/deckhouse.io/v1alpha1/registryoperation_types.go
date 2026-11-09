@@ -49,7 +49,8 @@ const OperationCancelLabel = "registry.deckhouse.io/cancel"
 const OperationStartDeadline = time.Hour
 
 // OperationTimeout is how long after acceptance an operation may stay unfinished at all. It catches a
-// replica that stopped answering.
+// replica that stopped answering and that nothing else shows to be gone: one is given up on sooner when
+// it stops holding the collection lease while it collects, or when its node is not Ready while it waits.
 //
 // A day, because a replica that answers can take long without being stuck: the wait for its turn and
 // its own collection are bounded apart by the syncer's window of four hours each, and the third of
@@ -203,6 +204,10 @@ const (
 
 	// ReasonOperationTimedOut: the replica did not report a result in time.
 	ReasonOperationTimedOut = "TimedOut"
+
+	// ReasonOperationReplicaLost: the replica is gone while it collected or waited — it stopped holding
+	// the collection lease, or its node was not Ready for a while — and did not report a result.
+	ReasonOperationReplicaLost = "ReplicaLost"
 
 	// ReasonOperationReplicaGone: the replica left the storage.
 	ReasonOperationReplicaGone = "ReplicaGone"

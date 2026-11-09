@@ -32,6 +32,7 @@ import (
 	"strings"
 	"time"
 
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -40,7 +41,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
@@ -51,6 +54,28 @@ import (
 
 // ControllerName identifies this controller in logs, events and the --disable-controllers flag.
 const ControllerName = "registry-operation"
+
+const (
+	// Namespace is where the storage replicas take their leases.
+	Namespace = "d8-system"
+
+	// CollectionLeaseName is the lease a storage replica holds for as long as it collects: the syncer's
+	// --gc-lease-name.
+	CollectionLeaseName = "registry-storage-gc"
+)
+
+// lostLeaseGrace is how long a running entry is still left to its replica after the replica stopped
+// holding the collection lease. A replica that is alive does not hold it to the end: it gives the lease
+// up the moment its collection returns and writes the outcome after that, retrying every fifteen
+// seconds while the write is refused. And the lease is renewed by the clock of its node and read by
+// the clock of this one. Five minutes covers both, and is nothing next to the day such an entry held
+// the operation before.
+const lostLeaseGrace = 5 * time.Minute
+
+// notReadyGrace is how long the node of a waiting replica may stay not Ready before the entry is given
+// up on. Longer than a master takes to reboot, and twice the five minutes Kubernetes gives a pod on such
+// a node by default before it evicts it: a node that comes back within it keeps its replica's turn.
+const notReadyGrace = 10 * time.Minute
 
 func init() {
 	register.RegisterController(ControllerName, &registryv1alpha1.RegistryOperation{}, &Reconciler{})
@@ -78,9 +103,28 @@ func (r *Reconciler) now() time.Time {
 func (r *Reconciler) SetupWatches(w register.Watcher) {
 	w.Watches(&registryv1alpha1.RegistryStorage{}, handler.EnqueueRequestsFromMapFunc(r.unfinished))
 	// And the nodes: a master leaving takes its replica with it, and its entry stays behind. Only
-	// masters coming and going.
+	// masters coming and going, and a master going not Ready or back: a replica waiting there is given
+	// up on after a while — see lost.
 	w.Watches(&corev1.Node{}, handler.EnqueueRequestsFromMapFunc(r.unfinished),
-		builder.WithPredicates(layout.StorageNodesChanged()))
+		builder.WithPredicates(predicate.Or(layout.StorageNodesChanged(), storageNodeReadinessChanged())))
+}
+
+// storageNodeReadinessChanged lets through a storage node whose Ready condition changed status. Not its
+// heartbeats, which kubelet writes into the same condition every few seconds.
+func storageNodeReadinessChanged() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc:  func(event.CreateEvent) bool { return false },
+		DeleteFunc:  func(event.DeleteEvent) bool { return false },
+		GenericFunc: func(event.GenericEvent) bool { return false },
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			if _, isMaster := e.ObjectNew.GetLabels()[layout.ControlPlaneLabel]; !isMaster {
+				return false
+			}
+			before, ok := e.ObjectOld.(*corev1.Node)
+			after, okNew := e.ObjectNew.(*corev1.Node)
+			return ok && okNew && readyStatus(before) != readyStatus(after)
+		},
+	}
 }
 
 // unfinished maps any change of the storage to the operations it can still affect. Usually none: the
@@ -124,6 +168,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+	var live liveness
 
 	// Locked: the replicas write their own entries of the same list, and a merge patch replaces the
 	// whole list. Refused, the reconciliation is requeued and reads what the replicas reported.
@@ -137,7 +182,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 		accept(operation, storage, list.Items, now)
 	} else {
-		watchOver(operation, storage, now)
+		if live, err = r.liveness(ctx, operation); err != nil {
+			return ctrl.Result{}, err
+		}
+		watchOver(operation, storage, live, now)
 	}
 	summarize(operation, now)
 
@@ -159,7 +207,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if operation.Status.Phase.Finished() {
 		return ctrl.Result{RequeueAfter: registryv1alpha1.OperationRetention}, nil
 	}
-	return ctrl.Result{RequeueAfter: untilNextDeadline(&operation.Status, now.Time)}, nil
+	return ctrl.Result{RequeueAfter: untilNextDeadline(&operation.Status, live, now.Time)}, nil
 }
 
 // expire deletes a finished operation once it is a day old, and otherwise asks to be called again when
@@ -206,6 +254,70 @@ func (r *Reconciler) storage(ctx context.Context) (*registryv1alpha1.RegistrySto
 	}
 	storage.Status.Replicas = layout.CurrentReplicas(storage.Status.Replicas, storageNodes)
 	return storage, nil
+}
+
+// liveness is what tells a replica that is gone from one that is only quiet. A replica writes nothing
+// while it waits for its turn or collects, so its silence says nothing by itself.
+type liveness struct {
+	// notReadySince is when each storage node that is not Ready stopped being Ready.
+	notReadySince map[string]time.Time
+
+	// lease is the collection lease, read only while an entry is running. Nil when there is none.
+	lease *coordinationv1.Lease
+}
+
+// liveness reads the storage nodes' readiness and, while a replica collects, the collection lease. The
+// lease is not watched: it is renewed every few seconds, and what matters is that it stops being, so it
+// is read again when the replica would be given up on — see untilNextDeadline.
+func (r *Reconciler) liveness(
+	ctx context.Context, operation *registryv1alpha1.RegistryOperation,
+) (liveness, error) {
+	live := liveness{notReadySince: map[string]time.Time{}}
+
+	nodes := &corev1.NodeList{}
+	if err := r.Client.List(ctx, nodes, client.HasLabels{layout.ControlPlaneLabel}); err != nil {
+		return live, fmt.Errorf("listing the storage nodes: %w", err)
+	}
+	for i := range nodes.Items {
+		if condition := readyCondition(&nodes.Items[i]); condition != nil && condition.Status != corev1.ConditionTrue {
+			live.notReadySince[nodes.Items[i].Name] = condition.LastTransitionTime.Time
+		}
+	}
+
+	running := slices.ContainsFunc(operation.Status.Replicas, func(entry registryv1alpha1.ReplicaOperationStatus) bool {
+		return entry.Phase == registryv1alpha1.ReplicaOperationRunning
+	})
+	if !running {
+		return live, nil
+	}
+	lease := &coordinationv1.Lease{}
+	err := r.Client.Get(ctx, types.NamespacedName{Namespace: Namespace, Name: CollectionLeaseName}, lease)
+	switch {
+	case apierrors.IsNotFound(err):
+	case err != nil:
+		return live, fmt.Errorf("reading the collection lease: %w", err)
+	default:
+		live.lease = lease
+	}
+	return live, nil
+}
+
+// readyCondition is the node's Ready condition, or nil when kubelet has not reported one.
+func readyCondition(node *corev1.Node) *corev1.NodeCondition {
+	for i := range node.Status.Conditions {
+		if node.Status.Conditions[i].Type == corev1.NodeReady {
+			return &node.Status.Conditions[i]
+		}
+	}
+	return nil
+}
+
+// readyStatus is the status of the node's Ready condition, empty when there is none.
+func readyStatus(node *corev1.Node) corev1.ConditionStatus {
+	if condition := readyCondition(node); condition != nil {
+		return condition.Status
+	}
+	return ""
 }
 
 // accept decides whether a new operation runs, and hands it to the replicas if it does.
@@ -294,16 +406,19 @@ func CreatedBefore(a, b *registryv1alpha1.RegistryOperation) bool {
 
 // watchOver settles the entries no replica will settle itself: a replica that left the storage, one
 // that did not pick the operation up or get past waiting for its store by the deadline, and the entries
-// of a canceled operation that no replica has started on. Otherwise an entry a replica is collecting on,
-// or one waiting for its turn, is left to it: if its syncer stops answering — a master gone NotReady, a
-// pod in a crash loop — only OperationTimeout settles it, and until then the operation holds every
-// collection out. Deleting the operation is what releases it sooner.
+// of a canceled operation that no replica has started on. An entry a replica is collecting on, or one
+// waiting for its turn, is left to it until the replica is gone — see lost. A syncer that stops
+// answering — a master gone NotReady, a pod in a crash loop — would otherwise hold every collection out
+// until OperationTimeout settles its entry. Giving up on a running entry whose replica is in fact still at
+// work is safe: the replica finishes, finds its entry settled and writes nothing, and the lease keeps any
+// other replica from collecting beside it.
 //
 // A waiting entry is settled here as well as by its replica, and that is not a race: a replica that is
 // alive settles it the same way, the writes are locked, and a replica whose entry is settled does not
 // start — see the syncer's Worker.
 func watchOver(
-	operation *registryv1alpha1.RegistryOperation, storage *registryv1alpha1.RegistryStorage, now metav1.Time,
+	operation *registryv1alpha1.RegistryOperation, storage *registryv1alpha1.RegistryStorage, live liveness,
+	now metav1.Time,
 ) {
 	status := &operation.Status
 
@@ -328,6 +443,8 @@ func watchOver(
 			phase   registryv1alpha1.ReplicaOperationPhase
 			reason  string
 			message string
+
+			lostAt, lostWhy, canBeLost = lost(entry, live)
 		)
 		switch {
 		case storage == nil:
@@ -348,6 +465,8 @@ func watchOver(
 		case waitsForStore(entry) && pastDeadline:
 			phase, reason, message = registryv1alpha1.ReplicaOperationFailed, registryv1alpha1.ReasonOperationDeadlineExceeded,
 				fmt.Sprintf("The store was still being written to at the deadline (%s).", entry.Reason)
+		case canBeLost && !now.Time.Before(lostAt):
+			phase, reason, message = registryv1alpha1.ReplicaOperationFailed, registryv1alpha1.ReasonOperationReplicaLost, lostWhy
 		case timedOut:
 			phase, reason, message = registryv1alpha1.ReplicaOperationFailed, registryv1alpha1.ReasonOperationTimedOut,
 				fmt.Sprintf("The replica did not report a result within %s.", registryv1alpha1.OperationTimeout)
@@ -358,6 +477,68 @@ func watchOver(
 		entry.Phase, entry.Reason, entry.Message = phase, reason, message
 		entry.FinishedAt = &now
 	}
+}
+
+// lost says when an unfinished entry is given up on because its replica is gone, and why. False while
+// nothing says it is.
+//
+// A collecting replica holds the collection lease and renews it every few seconds, so the sign is a lease
+// it no longer holds: its syncer died, or its node lost the API server. A waiting replica holds nothing,
+// and the sign is its node being not Ready. A syncer that crashes while it waits on a node that is Ready
+// starts again and takes its place back, or is caught by the timeout.
+func lost(entry *registryv1alpha1.ReplicaOperationStatus, live liveness) (time.Time, string, bool) {
+	switch entry.Phase {
+	case registryv1alpha1.ReplicaOperationRunning:
+		return heldUntil(entry, live.lease).Add(lostLeaseGrace),
+			"The replica stopped holding the collection lease while it was collecting, and did not report the result.", true
+	case registryv1alpha1.ReplicaOperationWaiting:
+		since, notReady := live.notReadySince[entry.Node]
+		if !notReady {
+			return time.Time{}, "", false
+		}
+		return since.Add(notReadyGrace),
+			fmt.Sprintf("The node was not Ready for %s while the replica waited.", notReadyGrace), true
+	}
+	return time.Time{}, "", false
+}
+
+// heldUntil is the latest the replica of a running entry may still have held the collection lease.
+//
+// While it holds the lease, that is when the lease lapses unless renewed. Once it does not, the lease
+// changed hands after it last held it — given up, or taken by another replica — and the time of that
+// change is recorded in acquireTime either way. Without a lease at all — a holder that renews puts a
+// deleted one back within seconds — nothing has held it since the replica started.
+func heldUntil(entry *registryv1alpha1.ReplicaOperationStatus, lease *coordinationv1.Lease) time.Time {
+	var started time.Time
+	if entry.StartedAt != nil {
+		started = entry.StartedAt.Time
+	}
+	if lease == nil {
+		return started
+	}
+
+	spec := &lease.Spec
+	if spec.HolderIdentity != nil && *spec.HolderIdentity == entry.Node {
+		renewed := started
+		switch {
+		case spec.RenewTime != nil:
+			renewed = spec.RenewTime.Time
+		case spec.AcquireTime != nil:
+			renewed = spec.AcquireTime.Time
+		}
+		if spec.LeaseDurationSeconds != nil {
+			renewed = renewed.Add(time.Duration(*spec.LeaseDurationSeconds) * time.Second)
+		}
+		return renewed
+	}
+
+	switch {
+	case spec.AcquireTime != nil:
+		return spec.AcquireTime.Time
+	case spec.RenewTime != nil:
+		return spec.RenewTime.Time
+	}
+	return started
 }
 
 // waitsForStore is an entry still held back by its store being written to. The deadline is for exactly
@@ -521,8 +702,10 @@ func waitingFor(replicas []registryv1alpha1.ReplicaOperationStatus) string {
 }
 
 // untilNextDeadline is when an unfinished operation has to be looked at again even if nothing reports:
-// the start deadline while an entry is still not picked up, then the timeout.
-func untilNextDeadline(status *registryv1alpha1.RegistryOperationStatus, now time.Time) time.Duration {
+// the start deadline while an entry is still not picked up, the moment a replica would be given up on
+// as lost, then the timeout. A running replica that keeps renewing the lease moves that moment on, so
+// the lease is read again every few minutes while it collects.
+func untilNextDeadline(status *registryv1alpha1.RegistryOperationStatus, live liveness, now time.Time) time.Duration {
 	if status.AcceptedAt == nil {
 		return 0
 	}
@@ -534,6 +717,11 @@ func untilNextDeadline(status *registryv1alpha1.RegistryOperationStatus, now tim
 				next = status.Deadline.Time
 				break
 			}
+		}
+	}
+	for i := range status.Replicas {
+		if at, _, ok := lost(&status.Replicas[i], live); ok && now.Before(at) && at.Before(next) {
+			next = at
 		}
 	}
 

@@ -594,11 +594,16 @@ d8 k label registryoperation <NAME> registry.deckhouse.io/cancel=true
 What was deleted before the cancellation stays deleted.
 
 If a replica's `syncer` container stops answering while the replica collects or waits for its turn,
-for example because its master went `NotReady`, the operation stays active until 24 hours after it
-was accepted, and then the replica fails with the reason `TimedOut`. Until then automatic collections
-do not start, and an operation created manually fails with the reason `AnotherOperationActive`. The
-cancel label releases a replica that waits for its turn, but not one that was collecting, since that
-replica itself acts on the label. To release the operation sooner, delete it:
+for example because its master went `NotReady`, the replica fails with the reason `ReplicaLost`, so
+that the operation does not hold every collection after it for a day:
+
+- a replica that was collecting, once it has not held the Lease `registry-storage-gc` in the
+  `d8-system` namespace for five minutes;
+- a replica that was waiting, once its node has not been `Ready` for ten minutes. A master that is
+  back sooner keeps its replica's turn.
+
+A replica that waits on a node that stays `Ready` while its `syncer` does not answer is released by
+the cancel label, by the 24-hour timeout (the reason `TimedOut`), or by deleting the operation:
 
 ```bash
 d8 k delete registryoperation <NAME>
