@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	logger "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
@@ -45,7 +46,7 @@ func (c *Confirmation) WithMessage(m string) *Confirmation {
 }
 
 func (c *Confirmation) Ask() bool {
-	if !IsTerminal() {
+	if !IsInteractive() {
 		return c.defaultAnswer
 	}
 
@@ -80,6 +81,26 @@ func (c *Confirmation) Ask() bool {
 	}
 }
 
+// IsTerminal reports whether stdin is a terminal, that is, nothing is piped into dhctl. Whether a
+// person is there to answer is IsInteractive.
 func IsTerminal() bool {
 	return terminal.IsTerminal(int(os.Stdin.Fd()))
+}
+
+// IsInteractive reports whether a person can answer prompts and watch the live progress block:
+// stdin is a terminal and dhctl does not run in a CI job. A CI wrapper often allocates a
+// pseudo-terminal (docker run -t, script), so a terminal alone does not mean anyone is there.
+func IsInteractive() bool {
+	return IsTerminal() && !inCI()
+}
+
+// inCI reports whether the CI variable marks a CI job. GitLab CI, GitHub Actions and most other CI
+// systems set it to true, some to their name. CI=false or an empty CI turns the check off.
+func inCI() bool {
+	v := os.Getenv("CI")
+	if v == "" {
+		return false
+	}
+	ci, err := strconv.ParseBool(v)
+	return err != nil || ci
 }

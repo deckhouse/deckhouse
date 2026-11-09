@@ -225,11 +225,11 @@ func (c *bootstrapContext) cacheOrGlobal() state.Cache {
 	return cache.Global()
 }
 
-// isTerminal is input.IsTerminal behind a variable so the interactive branch below can be
+// isInteractive is input.IsInteractive behind a variable so the interactive branch below can be
 // exercised. It reads os.Stdin, which under go test is never a terminal, so without the seam the
 // one ordering guarantee interactive mode has - the phase context is replaced before the first
 // phase is announced - would be untestable and could regress silently.
-var isTerminal = input.IsTerminal
+var isInteractive = input.IsInteractive
 
 func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap")
@@ -255,7 +255,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	// announced: a phase announced on the context about to be thrown away is reported as skipped
 	// by its replacement, and the sub-phases completed on it are dropped. Nothing here reads the
 	// config, so nothing forces it any later than this.
-	interactive := isTerminal() && !b.Options.Global.ShowProgress
+	interactive := isInteractive() && !b.Options.Global.ShowProgress
 
 	printBanner(ctx)
 
@@ -840,14 +840,14 @@ func (b *ClusterBootstrapper) bootstrapPreparation(ctx context.Context, bctx *bo
 
 	// Check if static cluster without ssh-host
 	if staticBootstrapNeedsSSHHost(metaConfig, immutableMaster) && !b.SSHProviderInitializer.CheckHosts(ctx) {
-		if input.IsTerminal() {
+		if input.IsInteractive() {
 			confirmation := input.NewConfirmation().
 				WithMessage("Do you really want to bootstrap the cluster on the current host?")
 			if !confirmation.Ask() {
 				return fmt.Errorf("Bootstrap canceled by user")
 			}
 		} else {
-			return fmt.Errorf("Static cluster bootstrap requires --ssh-host option when not running in terminal. Please use --ssh-host option or pass --connection-config with SSHHost resource to bootstrap the cluster")
+			return fmt.Errorf("Static cluster bootstrap requires --ssh-host option when not running in an interactive terminal. Please use --ssh-host option or pass --connection-config with SSHHost resource to bootstrap the cluster")
 		}
 	}
 
@@ -1177,7 +1177,7 @@ func (b *ClusterBootstrapper) bootstrapFirstMaster(ctx context.Context, bctx *bo
 	bctx.masterAddressesForSSH[masterNodeName] = masterOutputs.MasterIPForSSH
 	state.SaveMasterHostsToCache(ctx, bctx.stateCache, bctx.masterAddressesForSSH)
 
-	if isTerminal() && !b.Options.Global.ShowProgress {
+	if isInteractive() && !b.Options.Global.ShowProgress {
 		dhlog.FromContext(ctx).InfoContext(ctx,
 			fmt.Sprintf("First master connection string: %s", masterConnectionString(connectionConfig, masterOutputs.MasterIPForSSH)))
 	}

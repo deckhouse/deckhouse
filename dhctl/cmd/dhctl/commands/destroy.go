@@ -96,7 +96,7 @@ func DefineDestroyCommand(cmd *cobra.Command, opts *options.Options) {
 			TmpDir:                 opts.Global.TmpDir,
 			Options:                opts,
 		}
-		interactive := input.IsTerminal() && !opts.Global.ShowProgress
+		interactive := input.IsInteractive() && !opts.Global.ShowProgress
 		if interactive {
 			progressCh, finishProgress, err := phases.InitProgress(ctx, logger.FromContext(ctx), "Destroy cluster")
 			if err != nil {

@@ -175,7 +175,7 @@ func (i *actionIniter) prepareTmpDirPath(tmpDir string) (string, error) {
 
 	inSystemDirs, inSystemDirsAll := fs.IsInSystemDirs(absPath)
 	if inSystemDirs {
-		if !input.IsTerminal() {
+		if !input.IsInteractive() {
 			return "", fmt.Errorf("Tmp dir '%s' cannot be in system directory %v", tmpDir, inSystemDirsAll)
 		}
 
@@ -186,7 +186,7 @@ func (i *actionIniter) prepareTmpDirPath(tmpDir string) (string, error) {
 	} else {
 		osTmp := os.TempDir()
 		if absPath == osTmp {
-			if !input.IsTerminal() {
+			if !input.IsInteractive() {
 				return "", fmt.Errorf("Tmp dir '%s' cannot be the system tmp dir %v", tmpDir, osTmp)
 			}
 
@@ -277,14 +277,15 @@ var disableLoggerCommands = []string{phaseCatalogCmd}
 
 func (i *actionIniter) initLogger(cmd *cobra.Command, tmpDir string) (onShutdownFunc, error) {
 	// Terminal logging axes:
-	//   - stdoutTTY: stdout is a terminal → enable the terminal sink at all.
-	//   - interactive: pinned progress bar; on only when a terminal AND not the -v linear dump.
+	//   - stdoutTTY: an interactive session (a terminal outside CI, see input.IsInteractive) → enable
+	//     the terminal sink at all.
+	//   - interactive: pinned progress bar; on only in an interactive session AND not the -v linear dump.
 	//   - verbose (-v): show every Info+ record on the terminal.
 	// DHCTL_DEBUG (isDebug) deliberately does NOT touch the terminal — it only enriches the .log file
 	// (full DEBUG is always captured there, plus shell-operator/klog internals via BindShellOperator).
 	// So the terminal looks identical with or without DHCTL_DEBUG.
 	verbose := i.opts.Global.ShowProgress
-	stdoutTTY := input.IsTerminal() || verbose
+	stdoutTTY := input.IsInteractive() || verbose
 	interactive := stdoutTTY && !verbose
 
 	name := commandName(cmd)
@@ -378,7 +379,7 @@ func commandName(cmd *cobra.Command) string {
 }
 
 func disableCleanupOnInterrupted(s os.Signal) {
-	if !input.IsTerminal() {
+	if !input.IsInteractive() {
 		return
 	}
 	// disable tmp cleaning if user pass ctrl + c

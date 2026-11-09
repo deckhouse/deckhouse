@@ -109,7 +109,7 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 		)
 	}
 
-	interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
+	interactive := input.IsInteractive() && !b.Options.Global.ShowProgress
 	if interactive {
 		return runProgress(ctx, dhlog.FromContext(ctx), "Install Deckhouse", body)
 	}

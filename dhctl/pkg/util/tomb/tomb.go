@@ -157,7 +157,7 @@ func printGorutinesStackTrace(shouldAlwaysPrint bool, msg string) {
 	buf := make([]byte, 20971520) // 20 mb
 	l := runtime.Stack(buf, true)
 	buf = buf[:l]
-	if shouldAlwaysPrint || input.IsTerminal() {
+	if shouldAlwaysPrint || input.IsInteractive() {
 		ctx := context.Background()
 		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("\n%sGoroutines stack for debug:\n%s", msg, string(buf)))
 	}

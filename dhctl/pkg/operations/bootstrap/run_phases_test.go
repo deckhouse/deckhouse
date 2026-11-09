@@ -680,9 +680,9 @@ func TestBootstrapPreparation_ConfigFailureIsReportedInsidePreparation(t *testin
 // Not parallel: it swaps the terminal seam, and top-level parallel tests only resume once the
 // sequential ones are done.
 func TestBootstrap_ReplacesThePhaseContextBeforeAnnouncingPreparation(t *testing.T) {
-	isTerminal = func() bool { return true }
+	isInteractive = func() bool { return true }
 
-	t.Cleanup(func() { isTerminal = input.IsTerminal })
+	t.Cleanup(func() { isInteractive = input.IsInteractive })
 
 	configPath := filepath.Join(t.TempDir(), "config.yaml")
 	require.NoError(t, os.WriteFile(configPath, []byte(

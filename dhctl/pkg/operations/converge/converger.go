@@ -246,7 +246,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		c.lastState = state
 	}
 
-	interactive := input.IsTerminal() && !c.Options.Global.ShowProgress
+	interactive := input.IsInteractive() && !c.Options.Global.ShowProgress
 	if interactive {
 		progressCh, finishProgress, err := phases.InitProgress(ctx, dhlog.FromContext(ctx), "Converge")
 		if err != nil {

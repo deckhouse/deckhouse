@@ -144,7 +144,7 @@ func DefineBootstrapAbortCommand(cmd *cobra.Command, opts *options.Options) {
 			Options:                opts,
 		})
 
-		interactive := input.IsTerminal() && !opts.Global.ShowProgress
+		interactive := input.IsInteractive() && !opts.Global.ShowProgress
 		if interactive {
 			progressCh, finishProgress, err := phases.InitProgress(ctx, dhlog.FromContext(ctx), "Destroy cluster")
 			if err != nil {

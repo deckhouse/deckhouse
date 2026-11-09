@@ -243,7 +243,7 @@ func extractImage(img v1.Image, destDir string, showProgress bool) error {
 		progress *mpb.Progress
 		bar      *mpb.Bar
 	)
-	if input.IsTerminal() && showProgress {
+	if input.IsInteractive() && showProgress {
 		total, err := compressedSize(layers)
 		if err != nil {
 			return err

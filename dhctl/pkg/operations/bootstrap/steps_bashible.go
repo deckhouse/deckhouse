@@ -189,7 +189,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		Logger:      logger,
 		SignCheck:   config.GetRPPSignCheck(),
 		GlobalOpts:  globalOpts,
-		Interactive: input.IsTerminal(),
+		Interactive: input.IsInteractive(),
 	})
 
 	if err != nil {

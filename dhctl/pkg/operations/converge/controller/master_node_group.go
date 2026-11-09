@@ -175,9 +175,9 @@ func confirmOrProceed(ctx *context.Context) func(string) bool {
 			return true
 		}
 
-		if !input.IsTerminal() {
+		if !input.IsInteractive() {
 			dhlog.FromContext(ctx.Ctx()).WarnContext(ctx.Ctx(),
-				fmt.Sprintf("Accepted without confirmation: no TTY.\n%s", msg))
+				fmt.Sprintf("Accepted without confirmation: not an interactive session.\n%s", msg))
 			return true
 		}
 
