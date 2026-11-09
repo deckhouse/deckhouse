@@ -1,14 +1,18 @@
+{{- /*
+  `registry.mode: Proxy` and `Local` in this module's ModuleConfig name the previous implementation of
+  the registry module, and nothing acts on them any more: the installer refuses them, the release
+  requirement keeps a cluster running them from updating to this release, and no hook or template
+  renders them. The values stay in the schema until 1.79, so that a ModuleConfig already stored with
+  one keeps validating; this policy is what stops them from being written again, on any cluster.
+
+  Only a newly written value is refused: a CREATE with one, or an UPDATE that changes the mode to one.
+  An UPDATE that keeps a stored value passes, so that the controller can still remove its finalizer
+  when the ModuleConfig is deleted, and labels or re-applies of unrelated settings are not blocked.
+  At bootstrap dhctl creates this ModuleConfig before the policy exists and refuses the modes itself;
+  CREATE here catches a ModuleConfig deleted and created again in a running cluster.
+*/ -}}
 {{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
 {{- $policyName := "deckhouse-module-registry-validation" }}
-
-{{- $moduleEnabled := .Values.global.enabledModules | has "registry" }}
-{{- $clusterBootstraped := .Values.global.clusterIsBootstrapped | default false }}
-{{- $staticCluster := eq (((.Values.global).clusterConfiguration).clusterType | default "" ) "Static" }}
-
-{{- $isLocalMode := eq ((((.Values.deckhouse).internal).registry).mode | default "") "Local" }}
-{{- $isProxyMode := eq ((((.Values.deckhouse).internal).registry).mode | default "") "Proxy" }}
-
-{{- if or (not $moduleEnabled) (not $clusterBootstraped) (not $staticCluster) $isLocalMode $isProxyMode }}
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
 kind: ValidatingAdmissionPolicy
@@ -21,80 +25,29 @@ spec:
     resourceRules:
     - apiGroups:   ["deckhouse.io"]
       apiVersions: ["v1alpha1"]
-      operations:  ["UPDATE"]
+      operations:  ["CREATE", "UPDATE"]
       resources:   ["moduleconfigs"]
   matchConditions:
   - name: 'deckhouse-mc'
     expression: 'object.metadata.name == "deckhouse"'
   validations:
-  {{- if not $moduleEnabled }}
   - expression: |
       !(
-        object.?spec.?settings.?registry.orValue("") !=
-        oldObject.?spec.?settings.?registry.orValue("")
-      )
-    message: >-
-      "Changing, adding, or removing `spec.settings.registry`
-      is forbidden when the registry module is disabled.
-      Please enable the module to make changes."
-  {{- end }}
-  {{- if not $clusterBootstraped }}
-  - expression: |
-      !(
-        object.?spec.?settings.?registry.orValue("") !=
-        oldObject.?spec.?settings.?registry.orValue("")
-      )
-    message: >-
-      "Changing, adding, or removing `spec.settings.registry`
-      is forbidden during cluster bootstrap.
-      Please wait until bootstrap is complete."
-  {{- end }}
-  {{- if not $staticCluster }}
-  - expression: |
-      !(
-        has(object.?spec.?settings.?registry.mode) && 
+        object.?spec.?settings.?registry.?mode.orValue("") in ["Proxy", "Local"] &&
         (
-          object.spec.settings.registry.mode == "Proxy" ||
-          object.spec.settings.registry.mode == "Local"
+          request.operation == "CREATE" ||
+          oldObject.?spec.?settings.?registry.?mode.orValue("") !=
+          object.?spec.?settings.?registry.?mode.orValue("")
         )
       )
     message: >-
-      "The field `spec.settings.registry.mode` cannot be set to Proxy or Local.
-      Proxy and Local are unsupported for non-static clusters.
-      Please use other available modes."
-  {{- end }}
-{{- if $isLocalMode }}
-  - expression: |
-      !(
-        (
-          has(object.?spec.?settings.?registry.mode) &&
-          (
-            object.spec.settings.registry.mode == "Proxy" ||
-            (
-              object.spec.settings.registry.mode == "Unmanaged" &&
-              !has(object.?spec.?settings.?registry.unmanaged)
-            )
-          )
-        ) ||
-        !has(object.?spec.?settings.registry) || 
-        size(object.spec.settings.registry) == 0
-      )
-    message: >-
-      Switching `spec.settings.registry.mode` to Proxy or non-configurable Unmanaged mode
-      is not supported when registry is running in "Local" mode.
-      Please use a transition mode to switch to the desired mode, for example: Direct or configurable Unmanaged.
-{{- end }}
-{{- if $isProxyMode }}
-  - expression: |
-      !(
-        has(object.?spec.?settings.?registry.mode) &&
-        object.spec.settings.registry.mode == "Local"
-      )
-    message: >-
-      Switching `spec.settings.registry.mode` to Local mode
-      is not supported when registry is running in "Proxy" mode.
-      Please use a transition mode to switch to the desired mode, for example: Direct or configurable Unmanaged.
-{{- end }}
+      The registry modes Proxy and Local of the `deckhouse` ModuleConfig
+      (`spec.settings.registry.mode`) belong to the previous implementation
+      of the registry module and are not supported. Set
+      `spec.settings.registry.mode` to `Unmanaged` or remove the
+      `spec.settings.registry` section, and configure the registry in the
+      `registry` ModuleConfig instead: `mode: Managed` with
+      `primary.upstream`, and `storage.cache` for an in-cluster cache.
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
@@ -104,5 +57,4 @@ metadata:
 spec:
   policyName: {{ $policyName }}
   validationActions: [Deny]
-{{- end }}
 {{- end }}

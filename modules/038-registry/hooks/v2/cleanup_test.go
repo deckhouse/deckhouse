@@ -44,8 +44,8 @@ func TestTheCleanupDeletesOnlyWhatHasNoOwnerAndNoReader(t *testing.T) {
 			"which registry to use",
 		"deckhouse-registry": "it is the imagePullSecret of this module's own storage and controller, " +
 			"so deleting it stops the pods that serve the registry",
-		"registry-config": "module 002 renders it on every cluster and dhctl reads it to resolve the " +
-			"upstream when pushing a bundle",
+		"registry-config": "it is a Helm object of module 002, and Helm removes it on that module's " +
+			"release now that the module no longer renders it",
 	}
 
 	for name, why := range spared {

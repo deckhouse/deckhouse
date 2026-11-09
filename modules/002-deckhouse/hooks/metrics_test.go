@@ -117,6 +117,77 @@ var _ = Describe("Modules :: deckhouse :: hooks :: metrics ", func() {
 		Expect(notExpireMetrics).To(Equal(2))
 	}
 
+	registryModeMetrics := func(f *HookExecutionConfig) []operation.MetricOperation {
+		var ops []operation.MetricOperation
+		for _, m := range f.MetricsCollector.CollectedMetrics() {
+			if m.Group == "D8DeckhouseRegistryModeUnsupported" {
+				ops = append(ops, m)
+			}
+		}
+		return ops
+	}
+
+	registrySections := map[string]string{
+		"Proxy":     `{"mode": "Proxy", "proxy": {"imagesRepo": "registry.deckhouse.io/test"}}`,
+		"Local":     `{"mode": "Local"}`,
+		"Unmanaged": `{"mode": "Unmanaged"}`,
+		"Direct":    `{"mode": "Direct", "direct": {"imagesRepo": "registry.deckhouse.io/test"}}`,
+	}
+
+	for _, mode := range []string{"Proxy", "Local"} {
+		Context("Registry mode is '"+mode+"'", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("deckhouse.registry", []byte(registrySections[mode]))
+
+				f.RunHook()
+			})
+
+			It("Expires the group and sets the unsupported mode metric", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				ops := registryModeMetrics(f)
+				Expect(ops).To(HaveLen(2))
+				Expect(ops[0].Action).To(Equal(operation.ActionExpireMetrics))
+				Expect(ops[1].Action).To(Equal(operation.ActionGaugeSet))
+				Expect(ops[1].Name).To(Equal("d8_deckhouse_registry_mode_unsupported"))
+				Expect(ops[1].Value).To(Equal(ptr.To(1.0)))
+				Expect(ops[1].Labels).To(Equal(map[string]string{"mode": mode}))
+			})
+		})
+	}
+
+	for _, mode := range []string{"Unmanaged", "Direct"} {
+		Context("Registry mode is '"+mode+"'", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("deckhouse.registry", []byte(registrySections[mode]))
+
+				f.RunHook()
+			})
+
+			It("Only expires the unsupported mode metric", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				ops := registryModeMetrics(f)
+				Expect(ops).To(HaveLen(1))
+				Expect(ops[0].Action).To(Equal(operation.ActionExpireMetrics))
+			})
+		})
+	}
+
+	Context("Registry section is not set", func() {
+		BeforeEach(func() {
+			f.RunHook()
+		})
+
+		It("Only expires the unsupported mode metric", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			ops := registryModeMetrics(f)
+			Expect(ops).To(HaveLen(1))
+			Expect(ops[0].Action).To(Equal(operation.ActionExpireMetrics))
+		})
+	})
+
 	Context("Approval mode is 'Manual'", func() {
 		Context("Update window is not set", func() {
 			BeforeEach(func() {

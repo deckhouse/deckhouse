@@ -217,37 +217,18 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 		})
 	})
 
-	// The previous implementation's registry contour, and the one fact that decides whether it exists.
-	//
-	// Nothing writes `deckhouse.registry.*` after the handover, so on a migrated cluster
-	// `registry-config` keeps naming the registry the cluster was migrated FROM, with that registry's
-	// account — and dhctl used to prefer it over the cluster's own configuration. So the object has to
-	// disappear exactly when the handover record appears, and come back if it ever does not.
-	Context("The legacy registry contour", func() {
-		legacyContourExists := func() bool {
-			return f.KubernetesResource("Secret", "d8-system", "registry-config").Exists()
-		}
+	// The previous implementation's registry contour is gone: nothing writes `deckhouse.registry.*`
+	// on a cluster the registry module runs, which from this release is every cluster, so a
+	// `registry-config` rendered from it would name the registry the cluster was installed or
+	// migrated FROM. dhctl still reads the secret from older clusters and falls back without it.
+	It("does not render the legacy registry contour", func() {
+		f.ValuesSetFromYaml("global", globalValues)
+		f.ValuesSet("global.modulesImages", GetModulesImages())
+		f.ValuesSetFromYaml("deckhouse", moduleValuesForMasterNode)
+		f.HelmRender()
 
-		It("is rendered while the previous implementation is the one configuring nodes", func() {
-			f.ValuesSetFromYaml("global", globalValues)
-			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("deckhouse", moduleValuesForMasterNode)
-			f.HelmRender()
-
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			Expect(legacyContourExists()).To(BeTrue())
-		})
-
-		It("is not rendered once the registry module has taken over", func() {
-			f.ValuesSetFromYaml("global", globalValues)
-			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("deckhouse", moduleValuesForMasterNode)
-			f.ValuesSet("deckhouse.internal.registry.v2Active", true)
-			f.HelmRender()
-
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			Expect(legacyContourExists()).To(BeFalse())
-		})
+		Expect(f.RenderError).ShouldNot(HaveOccurred())
+		Expect(f.KubernetesResource("Secret", "d8-system", "registry-config").Exists()).To(BeFalse())
 	})
 
 	// What the Deckhouse controller fetches over HTTP must name something its own client can

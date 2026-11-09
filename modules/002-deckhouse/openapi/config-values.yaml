@@ -455,11 +455,6 @@ properties:
         direct:
           imagesRepo: registry.deckhouse.io/deckhouse/ee
           license: "DECKHOUSE_LICENSE_KEY"
-      - mode: Proxy
-        proxy:
-          imagesRepo: registry.deckhouse.io/deckhouse/ee
-          license: "DECKHOUSE_LICENSE_KEY"
-      - mode: Local
 
     properties:
       mode:
@@ -469,8 +464,7 @@ properties:
 
           - `Unmanaged`: The default mode. In this mode, the `registry` module does not run an internal registry. To configure it, set the parameters in the `unmanaged` section. **Important.** Changing the registry in `Unmanaged` mode will result in a full restart of all DP components.
           - `Direct`: A mode for direct access to the registry. It uses a "virtual" registry address that is overwritten on the fly to the real registry address. This allows for registry changes without a full component restart. **Important.** The first switch from `Unmanaged` to `Direct` mode will result in a full restart of all DP components.
-          - `Proxy`: A proxy mode for the registry. It launches static pods with a caching proxy registry. This mode allows for reducing requests to the external registry by caching images. Cached data is stored on master nodes. Access to the proxy registry is done through a fixed address, similar to `Direct` mode. **Important.** Supported only on static clusters. The first switch from `Unmanaged` to `Proxy` mode will result in a full restart of all DP components.
-          - `Local`: A local registry mode. It launches static pods with a local registry. This mode allows the cluster to operate in an isolated environment. Data storage is performed on master nodes. Access to the registry is done through a fixed address, similar to `Direct` mode. **Important.** Supported only on static clusters. The first switch from `Unmanaged` to `Local` mode will result in a full restart of all DP components.
+          - `Proxy` and `Local`: Deprecated and will be removed in a future release. These are modes of the v1 implementation of the `registry` module (DP up to and including 1.77), and they have no effect: the installer refuses them, and they cannot be set in a running cluster. To run an in-cluster cache or to operate an air-gapped cluster, use the [`registry` module](/modules/registry/configuration.html).
         enum: [Unmanaged, Direct, Proxy, Local]
         default: Unmanaged
       direct:
@@ -590,9 +584,9 @@ properties:
 
       proxy:
         type: object
+        x-doc-deprecated: true
         description: |
-          Parameters for the `Proxy` access mode.
-          These parameters are required when `mode` is set to `Proxy`.
+          Deprecated. Parameters for the `Proxy` mode of the v1 implementation of the `registry` module. The mode has no effect, see the `mode` parameter.
         x-example:
           - imagesRepo: registry.deckhouse.io/deckhouse/ee
             license: "DECKHOUSE_LICENSE_KEY"

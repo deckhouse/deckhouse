@@ -35,8 +35,8 @@ limitations under the License.
 //   - `deckhouse-registry` — still the imagePullSecret of this module's own storage and controller,
 //     so deleting it stops the very pods that serve the registry. Retiring the contour it belongs to
 //     is a platform-level decision (design ADR 22), not a module hook's.
-//   - `registry-config` — rendered by module 002 on every cluster and read by dhctl to resolve the
-//     upstream when pushing a bundle. Deleting it here would be a fight with the module that owns it.
+//   - `registry-config` — a Helm object of module 002, which no longer renders it, so Helm removes it
+//     on that module's release. It has an owner, and the owner is already removing it.
 //
 // The rule those three share: this hook removes what has no owner and no reader, and nothing else.
 package v2

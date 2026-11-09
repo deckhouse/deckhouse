@@ -1079,3 +1079,45 @@
         ```
 
         If the ModuleConfig is deployed from an external source (e.g. a Git repository), make sure it is removed from there so it is not created again.
+
+  - alert: D8DeckhouseRegistryModeUnsupported
+    expr: |
+      max by (mode) (d8_deckhouse_registry_mode_unsupported) == 1
+    for: 10m
+    labels:
+      severity_level: "9"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: The `deckhouse` ModuleConfig stores the unsupported registry mode `{{ $labels.mode }}`.
+      description: |-
+        The `deckhouse` ModuleConfig has `spec.settings.registry.mode: {{ $labels.mode }}`. `Proxy` and `Local` are modes of the v1 implementation of the `registry` module, and they have no effect in Deckhouse Platform 1.78: the registry is managed by the `registry` module and configured in the `registry` ModuleConfig. These values are removed in Deckhouse Platform 1.79, and a `deckhouse` ModuleConfig that still stores one will not pass validation there.
+
+        To resolve this issue, do the following before updating to Deckhouse Platform 1.79:
+
+        1. Check the stored value:
+
+           ```bash
+           d8 k get moduleconfig deckhouse -o jsonpath='{.spec.settings.registry}'
+           ```
+
+        1. Remove the `spec.settings.registry` section:
+
+           ```bash
+           d8 k patch moduleconfig deckhouse --type json -p '[{"op": "remove", "path": "/spec/settings/registry"}]'
+           ```
+
+           Alternatively, set the mode to `Unmanaged` and drop the `proxy` section, which is allowed only in `Proxy` mode:
+
+           ```bash
+           d8 k patch moduleconfig deckhouse --type merge -p '{"spec": {"settings": {"registry": {"mode": "Unmanaged", "proxy": null}}}}'
+           ```
+
+           Both edits are accepted. Switching the mode to `Proxy` or `Local` is refused.
+
+        1. If the cluster needs what the stored mode was set for, an in-cluster registry or cache, configure it in the `registry` ModuleConfig: `mode: Managed` with `primary.upstream`, and `storage.cache` for an in-cluster cache. Removing the stored mode does not change where the cluster pulls images from, so this step is not required to resolve the alert.
+
+        If the `deckhouse` ModuleConfig is deployed from an external source (e.g. a Git repository), make the same change there so the value is not applied again.

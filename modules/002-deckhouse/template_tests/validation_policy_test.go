@@ -787,6 +787,8 @@ type namedProgram struct {
 type validationProgram struct {
 	expression cel.Program
 	message    cel.Program
+	// staticMessage is the plain `message`, used when there is no messageExpression.
+	staticMessage string
 }
 
 // evaluate returns the decision and, depending on it, the name of the
@@ -827,6 +829,9 @@ func (p admissionPolicy) evaluate(t *testing.T, request object, oldObject, objec
 			continue
 		}
 		message := "no message expression"
+		if validation.staticMessage != "" {
+			message = validation.staticMessage
+		}
 		if validation.message != nil {
 			out, _, err := validation.message.Eval(activation)
 			if err != nil {
@@ -875,6 +880,7 @@ func loadPolicy(t *testing.T, path, matchConditionName string) admissionPolicy {
 		Name              string `yaml:"name"`
 		Key               string `yaml:"key"`
 		Expression        string `yaml:"expression"`
+		Message           string `yaml:"message"`
 		MessageExpression string `yaml:"messageExpression"`
 		ValueExpression   string `yaml:"valueExpression"`
 	}
@@ -887,7 +893,8 @@ func loadPolicy(t *testing.T, path, matchConditionName string) admissionPolicy {
 		} `yaml:"spec"`
 	}
 
-	decoder := yaml.NewDecoder(strings.NewReader(withoutHelmActions(string(content))))
+	template := helmComment.ReplaceAllString(string(content), "")
+	decoder := yaml.NewDecoder(strings.NewReader(withoutHelmActions(template)))
 	for {
 		var doc document
 		if err := decoder.Decode(&doc); err != nil {
@@ -920,7 +927,8 @@ func loadPolicy(t *testing.T, path, matchConditionName string) admissionPolicy {
 		}
 		for i, validation := range doc.Spec.Validations {
 			compiled := validationProgram{
-				expression: compile(t, env, fmt.Sprintf("validation %d", i), validation.Expression, cel.BoolType),
+				expression:    compile(t, env, fmt.Sprintf("validation %d", i), validation.Expression, cel.BoolType),
+				staticMessage: validation.Message,
 			}
 			if validation.MessageExpression != "" {
 				compiled.message = compile(t, env, fmt.Sprintf("message %d", i), validation.MessageExpression, cel.StringType)
@@ -936,7 +944,8 @@ func loadPolicy(t *testing.T, path, matchConditionName string) admissionPolicy {
 
 // celEnvironment declares the variables a ValidatingAdmissionPolicy exposes to
 // its expressions. object and oldObject are dynamic because the policy matches
-// every resource.
+// every resource. Optional field selection (`object.?spec`) is part of the API
+// server's environment, so it is part of this one.
 func celEnvironment(t *testing.T) *cel.Env {
 	t.Helper()
 
@@ -944,6 +953,7 @@ func celEnvironment(t *testing.T) *cel.Env {
 		cel.Variable("object", cel.DynType),
 		cel.Variable("oldObject", cel.DynType),
 		cel.Variable("request", cel.DynType),
+		cel.OptionalTypes(),
 	)
 	if err != nil {
 		t.Fatalf("building the CEL environment: %v", err)

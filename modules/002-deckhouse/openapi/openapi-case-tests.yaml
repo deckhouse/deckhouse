@@ -41,6 +41,9 @@ positive:
       mode: Direct
       direct:
         imagesRepo: registry.deckhouse.io/test
+  # Proxy and Local are deprecated and stay in the enum until 1.79, so that a ModuleConfig stored
+  # with them keeps validating. Writing them is refused by the deckhouse-module-registry-validation
+  # policy, not by the schema.
   - registry:
       mode: Proxy
       proxy:
