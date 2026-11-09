@@ -92,6 +92,7 @@ const istioValues = `
           supportsAmbient: true
           supportsAmbientMulticluster: false
           supportsOperator: true
+      networkName: network-my-domain-199688871
       kialiSigningKey: "kiali"
       kialiRBACProxyTLS:
         ca: kialica

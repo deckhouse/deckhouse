@@ -141,6 +141,9 @@ const ambientMulticlusters = `
 
 const expectedNetworkName = "network-my-domain-199688871"
 
+// An old name derived from a long cluster domain. It is not a valid label value.
+const longNetworkName = "network-aaaaaaaaaa-bbbbbbbbbb-cccccccccc-dddddddddd-eee-199688871"
+
 // setUpAmbientMulticluster applies the values every ambient multicluster context needs.
 func setUpAmbientMulticluster(f *Config) {
 	f.ValuesSetFromYaml("global", globalValues)
@@ -487,35 +490,47 @@ var _ = Describe("Module :: istio :: helm template :: ambient multicluster", fun
 		})
 	})
 
-	// `istioNetworkName` is `len(clusterDomain) + 19` at worst and nothing bounds
-	// clusterDomain: ClusterConfiguration gives it no maxLength and the discovery values
-	// schema only constrains its charset. Elsewhere an invalid name is simply left out of
-	// the d8-istio namespace label and ztunnel, but ambient multicluster cannot work
-	// without them, so it refuses to render instead of silently running with no network.
-	Context("Ambient multicluster is enabled on a cluster with a long cluster domain", func() {
+	Context("Ambient multicluster is enabled with a network name of a new installation", func() {
+		const newNetworkName = "network-09710b4801ba99ae"
+
 		BeforeEach(func() {
 			setUpAmbientMulticluster(f)
-			f.ValuesSet("global.discovery.clusterDomain", "aaaaaaaaaa.bbbbbbbbbb.cccccccccc.dddddddddd.eee")
+			f.ValuesSetFromYaml("istio.internal.multiclusters", ambientMulticlusters)
+			f.ValuesSet("istio.internal.networkName", newNetworkName)
 			f.HelmRender()
 		})
 
-		It("Refuses to render, naming the cluster domain rather than leaving it to the API server", func() {
-			Expect(f.RenderError).To(HaveOccurred())
-			Expect(f.RenderError.Error()).To(ContainSubstring("over the 63-character limit"))
-			// The message has to name the cause, which is two derivations away from the
-			// label that would be rejected.
-			Expect(f.RenderError.Error()).To(ContainSubstring("global.discovery.clusterDomain"))
-			Expect(f.RenderError.Error()).To(ContainSubstring("aaaaaaaaaa.bbbbbbbbbb.cccccccccc.dddddddddd.eee"))
+		It("Renders and publishes the name to the peers", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesGlobalResource("Namespace", "d8-istio").
+				Field(`metadata.labels.topology\.istio\.io/network`).String()).To(Equal(newNetworkName))
+			Expect(exporterEnv(f, "MULTICLUSTER_NETWORK_NAME")).To(Equal(newNetworkName))
 		})
 	})
 
-	// The same cluster domain is fine with the feature off: the network name is left out of
-	// the labels, so failing the render would break an install that works today.
-	Context("A long cluster domain without ambient multicluster", func() {
+	// Ambient multicluster cannot work without the network label, so it refuses to render.
+	Context("Ambient multicluster is enabled on a cluster with a long network name", func() {
+		BeforeEach(func() {
+			setUpAmbientMulticluster(f)
+			f.ValuesSet("istio.internal.networkName", longNetworkName)
+			f.HelmRender()
+		})
+
+		It("Refuses to render, naming the stored name rather than leaving it to the API server", func() {
+			Expect(f.RenderError).To(HaveOccurred())
+			Expect(f.RenderError.Error()).To(ContainSubstring("(65 characters) is not a valid Kubernetes label value"))
+			Expect(f.RenderError.Error()).To(ContainSubstring(longNetworkName))
+			Expect(f.RenderError.Error()).To(ContainSubstring("istio.deckhouse.io/network-name"))
+		})
+	})
+
+	// Without the feature the name is just left out of the labels. Failing here would
+	// break installs that work today.
+	Context("A long network name without ambient multicluster", func() {
 		BeforeEach(func() {
 			setUpAmbientMulticluster(f)
 			f.ValuesSet("istio.multicluster.mode", "Sidecar")
-			f.ValuesSet("global.discovery.clusterDomain", "aaaaaaaaaa.bbbbbbbbbb.cccccccccc.dddddddddd.eee")
+			f.ValuesSet("istio.internal.networkName", longNetworkName)
 			f.HelmRender()
 		})
 

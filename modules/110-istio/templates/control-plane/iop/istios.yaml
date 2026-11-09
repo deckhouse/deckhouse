@@ -49,7 +49,7 @@ spec:
       operatorManageWebhooks: true # to deploy the MutatingWebhookConfiguration resources by D8
       istioNamespace: d8-{{ $.Chart.Name }}
       meshID: d8-istio-mesh
-      network: {{ include "istioNetworkName" $ }}
+      network: {{ include "istioNetworkName" $ | quote }}
       multiCluster:
         clusterName: {{ include "istioClusterID" $ }}
   {{- if include "istioSidecarMulticlusterEnabled" $ }}

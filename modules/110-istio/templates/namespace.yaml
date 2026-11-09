@@ -17,5 +17,7 @@ kind: Namespace
 metadata:
   name: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . $namespaceLabels) | nindent 2 }}
+  annotations:
+    istio.deckhouse.io/network-name: {{ include "istioNetworkName" . | quote }}
 ---
 {{- include "helm_lib_kube_rbac_proxy_ca_certificate" (list . (printf "d8-%s" .Chart.Name)) }}

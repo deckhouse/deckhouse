@@ -160,7 +160,7 @@ spec:
         - name: ISTIO_META_CLUSTER_ID
           value: {{ include "istioClusterID" $ }}
         - name: ISTIO_META_NETWORK
-          value: {{ include "istioNetworkName" $ }}
+          value: {{ include "istioNetworkName" $ | quote }}
         - name: JWT_POLICY
           value: {{ include "istioJWTPolicy" $ }}
         image: {{ include "helm_lib_module_image" (list $ (printf "proxyv2%s" $imageSuffix )) }}

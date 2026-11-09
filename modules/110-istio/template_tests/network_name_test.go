@@ -39,8 +39,17 @@ var _ = Describe("Module :: istio :: helm template :: network name", func() {
 		f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `[]`)
 	}
 
+	storedNetwork := func() string {
+		return f.KubernetesGlobalResource("Namespace", "d8-istio").Field(`metadata.annotations.istio\.deckhouse\.io/network-name`).String()
+	}
+
 	namespaceNetwork := func() gjson.Result {
 		return f.KubernetesGlobalResource("Namespace", "d8-istio").Field(`metadata.labels.topology\.istio\.io/network`).Result
+	}
+
+	sidecarNetwork := func() string {
+		values := f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x29").Field("data.values").String()
+		return gjson.Get(values, "global.network").String()
 	}
 
 	ztunnelEnv := func(name string) string {
@@ -63,9 +72,30 @@ var _ = Describe("Module :: istio :: helm template :: network name", func() {
 
 		It("Labels the namespace with the network the sidecars are injected with", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(storedNetwork()).To(Equal(expectedNetworkName))
 			Expect(namespaceNetwork().String()).To(Equal(expectedNetworkName))
-			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x29").
-				Field("data.values").String()).To(ContainSubstring(`"network": "` + expectedNetworkName + `"`))
+			Expect(sidecarNetwork()).To(Equal(expectedNetworkName))
+		})
+	})
+
+	// The cluster domain cannot give this name, so it must come from values.
+	Context("Ambient is enabled with a network name of a new installation", func() {
+		const newNetworkName = "network-09710b4801ba99ae"
+
+		BeforeEach(func() {
+			setUp("1.29")
+			f.ValuesSet("istio.ambient.enabled", true)
+			f.ValuesSet("istio.internal.networkName", newNetworkName)
+			f.HelmRender()
+		})
+
+		It("Uses the name everywhere and stores it in the namespace", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(storedNetwork()).To(Equal(newNetworkName))
+			Expect(namespaceNetwork().String()).To(Equal(newNetworkName))
+			Expect(sidecarNetwork()).To(Equal(newNetworkName))
+			Expect(ztunnelEnv("NETWORK")).To(Equal(newNetworkName))
+			Expect(waypointControllerEnv("ISTIO_NETWORK_NAME").String()).To(Equal(newNetworkName))
 		})
 	})
 
@@ -86,17 +116,13 @@ var _ = Describe("Module :: istio :: helm template :: network name", func() {
 		})
 	}
 
-	// The network name is `len(clusterDomain) + 19` characters long, so a cluster domain
-	// over 44 characters makes it an invalid label value. The namespace label would make
-	// the whole module unapplicable, and the waypoint labels would keep waypoints from
-	// being created, so the name is left out of every place a label value goes.
-	Context("Ambient is enabled on a cluster with a long cluster domain", func() {
-		const longClusterDomain = "aaaaaaaaaa.bbbbbbbbbb.cccccccccc.dddddddddd.eee"
-
+	// An invalid label would make the namespace unapplicable and block waypoints, so the
+	// name is left out of all labels.
+	Context("Ambient is enabled on a cluster with a long network name", func() {
 		BeforeEach(func() {
 			setUp("1.29")
 			f.ValuesSet("istio.ambient.enabled", true)
-			f.ValuesSet("global.discovery.clusterDomain", longClusterDomain)
+			f.ValuesSet("istio.internal.networkName", longNetworkName)
 			f.HelmRender()
 		})
 
@@ -112,10 +138,39 @@ var _ = Describe("Module :: istio :: helm template :: network name", func() {
 		})
 
 		// Clearing it would rename the network for the gateways and multicluster peers
-		// that already use the long name, so it waits until the name is configurable.
-		It("Still injects sidecars with the long name", func() {
-			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x29").
-				Field("data.values").String()).To(ContainSubstring(`"network": "network-aaaaaaaaaa-bbbbbbbbbb-`))
+		// that already use the long name.
+		It("Still stores the long name and injects sidecars with it", func() {
+			Expect(storedNetwork()).To(Equal(longNetworkName))
+			Expect(sidecarNetwork()).To(Equal(longNetworkName))
+		})
+	})
+
+	Context("The network name is not discovered", func() {
+		BeforeEach(func() {
+			setUp("1.29")
+			f.ValuesDelete("istio.internal.networkName")
+			f.HelmRender()
+		})
+
+		It("Refuses to render", func() {
+			Expect(f.RenderError).To(HaveOccurred())
+			Expect(f.RenderError.Error()).To(ContainSubstring("istio.internal.networkName is not set"))
+		})
+	})
+
+	Context("Ambient is enabled with a network name of exactly 63 characters", func() {
+		const maxNetworkName = "network-aaaaaaaaaa-bbbbbbbbbb-cccccccccc-dddddddddd-e-199688871"
+
+		BeforeEach(func() {
+			setUp("1.29")
+			f.ValuesSet("istio.ambient.enabled", true)
+			f.ValuesSet("istio.internal.networkName", maxNetworkName)
+			f.HelmRender()
+		})
+
+		It("Still labels the namespace", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(namespaceNetwork().String()).To(Equal(maxNetworkName))
 		})
 	})
 })

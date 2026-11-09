@@ -41,6 +41,12 @@ properties:
             supportsOperator:
               type: boolean
               x-examples: [false]
+      networkName:
+        type: string
+        description: |
+          Istio network name, stored in the istio.deckhouse.io/network-name annotation of the d8-istio namespace. Label value charset without the length limit: old names may be longer.
+        pattern: '^[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$'
+        x-examples: ["network-09710b4801ba99ae", "network-my-domain-199688871"]
       kialiSigningKey:
         type: string
         x-examples:

@@ -38,30 +38,20 @@
 {{- end -}}
 
 {{- define "istioNetworkName" -}}
-  network-{{ include "istioClusterID" . }}
-{{- end -}}
-
-{{- define "istioNetworkNameIsLabelValue" -}}
-  {{- $networkName := include "istioNetworkName" . -}}
-  {{- if and (le (len $networkName) 63) (regexMatch "^[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$" $networkName) -}}
-    true
-  {{- end -}}
+  {{- required "istio.internal.networkName is not set, it is discovered by a hook" .Values.istio.internal.networkName -}}
 {{- end -}}
 
 {{- define "istioNetworkLabel" -}}
-  {{- if include "istioNetworkNameIsLabelValue" . -}}
-    {{- include "istioNetworkName" . -}}
+  {{- $name := include "istioNetworkName" . -}}
+  {{- if and (le (len $name) 63) (regexMatch "^[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$" $name) -}}
+    {{- $name -}}
   {{- end -}}
 {{- end -}}
 
 {{- define "istioAssertNetworkNameIsLabelValue" -}}
-  {{- $networkName := include "istioNetworkName" . -}}
-  {{- $clusterDomain := .Values.global.discovery.clusterDomain -}}
-  {{- if gt (len $networkName) 63 -}}
-    {{- fail (printf "istio: cannot enable ambient multicluster - the derived network name %q is %d characters, over the 63-character limit for a Kubernetes label value, so the topology.istio.io/network label on the d8-istio namespace would be rejected. It is derived from global.discovery.clusterDomain (%q), which must be at most 44 characters. Until the network name is configurable, ambient multicluster cannot be enabled on this cluster." $networkName (len $networkName) $clusterDomain) -}}
-  {{- end -}}
-  {{- if not (include "istioNetworkNameIsLabelValue" .) -}}
-    {{- fail (printf "istio: cannot enable ambient multicluster - the derived network name %q is not a valid Kubernetes label value, so the topology.istio.io/network label on the d8-istio namespace would be rejected. It is derived from global.discovery.clusterDomain (%q)." $networkName $clusterDomain) -}}
+  {{- if not (include "istioNetworkLabel" .) -}}
+    {{- $networkName := include "istioNetworkName" . -}}
+    {{- fail (printf "istio: cannot enable ambient multicluster - the network name %q (%d characters) is not a valid Kubernetes label value. The name is kept in the istio.deckhouse.io/network-name annotation of the d8-istio namespace. See the D8IstioNetworkNameIsNotLabelValue alert for details." $networkName (len $networkName)) -}}
   {{- end -}}
 {{- end -}}
 

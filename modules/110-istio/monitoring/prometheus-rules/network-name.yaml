@@ -1,0 +1,18 @@
+- name: d8.istio.network-name
+  rules:
+  - alert: D8IstioNetworkNameIsNotLabelValue
+    expr: max by (network_name) (d8_istio_network_name_invalid == 1)
+    for: 5m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: istio
+      d8_component: control-plane
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      summary: The Istio network name is not a valid Kubernetes label value.
+      description: |
+        The Istio network name `{{$labels.network_name}}` of this cluster is not a valid Kubernetes label value. Because of this, the name is left out of every place where a label value is required.
+
+        Contact Deckhouse technical support to resolve the issue.

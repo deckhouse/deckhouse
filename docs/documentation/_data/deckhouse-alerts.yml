@@ -3164,6 +3164,19 @@ alerts:
         IstioMulticluster peer cluster UUID changed.
       severity: "4"
       markupFormat: markdown
+    - name: D8IstioNetworkNameIsNotLabelValue
+      sourceFile: modules/110-istio/monitoring/prometheus-rules/network-name.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ce
+      description: |
+        The Istio network name `{{$labels.network_name}}` of this cluster is not a valid Kubernetes label value. Because of this, the name is left out of every place where a label value is required.
+
+        Contact Deckhouse technical support to resolve the issue.
+      summary: |
+        The Istio network name is not a valid Kubernetes label value.
+      severity: "6"
+      markupFormat: markdown
     - name: D8IstioOperatorReconcileError
       sourceFile: modules/110-istio/monitoring/prometheus-rules/operator.yaml
       moduleUrl: 110-istio
