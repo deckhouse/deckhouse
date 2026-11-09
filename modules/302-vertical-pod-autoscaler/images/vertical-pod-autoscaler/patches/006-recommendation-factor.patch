@@ -1,5 +1,5 @@
 diff --git a/vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml b/vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml
-index 8a77e69..012a977 100644
+index 8b2e042..5e5e523 100644
 --- a/vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml
 +++ b/vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml
 @@ -420,6 +420,21 @@ spec:
@@ -43,7 +43,7 @@ index 8a77e69..012a977 100644
                              the target to violate the ContainerResourcePolicy (lower than MinAllowed
                              or higher that MaxAllowed).
 diff --git a/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/validation.go b/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/validation.go
-index 769d6c2..671e5b9 100644
+index 8c21222..2aef6ab 100644
 --- a/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/validation.go
 +++ b/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/validation.go
 @@ -18,6 +18,8 @@ package vpa
@@ -63,7 +63,7 @@ index 769d6c2..671e5b9 100644
  )
  
  // VPAValidationOptions contains the different settings for VPA validation
-@@ -252,6 +255,10 @@ func validateVPASpecResourcePolicy(resourcePolicy *vpa_types.PodResourcePolicy,
+@@ -295,6 +298,10 @@ func validateVPASpecResourcePolicy(resourcePolicy *vpa_types.PodResourcePolicy,
  			}
  		}
  
@@ -74,8 +74,8 @@ index 769d6c2..671e5b9 100644
  		if policy.StartupBoost != nil {
  			allErrs = append(allErrs, validateVPASpecStartupBoost(policy.StartupBoost, policyPath.Child("startupBoost"), opts)...)
  		}
-@@ -260,6 +267,26 @@ func validateVPASpecResourcePolicy(resourcePolicy *vpa_types.PodResourcePolicy,
- 	return allErrs
+@@ -303,6 +310,26 @@ func validateVPASpecResourcePolicy(resourcePolicy *vpa_types.PodResourcePolicy,
+ 	return warnings, allErrs
  }
  
 +// validateRecommendationFactor validates the keys and values of a container policy's recommendationFactor.
@@ -102,10 +102,10 @@ index 769d6c2..671e5b9 100644
  	allErrs := field.ErrorList{}
  
 diff --git a/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/validation_test.go b/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/validation_test.go
-index 559a482..db32e2d 100644
+index 8bd2448..d650830 100644
 --- a/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/validation_test.go
 +++ b/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/validation_test.go
-@@ -245,6 +245,56 @@ func TestAllowPerVPAConfig(t *testing.T) {
+@@ -245,6 +245,57 @@ func TestAllowPerVPAConfig(t *testing.T) {
  	}
  }
  
@@ -152,7 +152,8 @@ index 559a482..db32e2d 100644
 +	// Map iteration order is random, so repeat to make an unsorted implementation fail reliably.
 +	for range 20 {
 +		var got []string
-+		for _, err := range validateVPA(&vpa, opts) {
++		_, errs := validateVPA(&vpa, opts)
++		for _, err := range errs {
 +			got = append(got, err.Field)
 +		}
 +		assert.Equal(t, expected, got)
@@ -162,9 +163,9 @@ index 559a482..db32e2d 100644
  func TestValidateVPA(t *testing.T) {
  	badUpdateMode := vpa_types.UpdateMode("bad")
  	validUpdateMode := vpa_types.UpdateModeOff
-@@ -1358,6 +1408,74 @@ func TestValidateVPA(t *testing.T) {
+@@ -1419,6 +1470,74 @@ func TestValidateVPA(t *testing.T) {
  			},
- 			opts: VPAValidationOptions{IsVPACreate: true, AllowInPlace: true},
+ 			expectWarnings: []string{"spec.resourcePolicy.containerPolicies[0].controlledResources[1]: unsupported value \"broken\" is allowed only because it is present in the existing VPA object; supported values: \"cpu\", \"memory\""},
  		},
 +		{
 +			name: "valid recommendationFactor",
@@ -238,7 +239,7 @@ index 559a482..db32e2d 100644
  	for _, tc := range tests {
  		t.Run(fmt.Sprintf("test case: %s", tc.name), func(t *testing.T) {
 diff --git a/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1/types.go b/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1/types.go
-index 4d907c9..4a6741e 100644
+index 803483c..1333450 100644
 --- a/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1/types.go
 +++ b/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1/types.go
 @@ -292,6 +292,14 @@ type ContainerResourcePolicy struct {
@@ -336,7 +337,7 @@ index b30f07c..ffb7af7 100644
  func WithCPUConfidenceMultiplier(multiplier, exponent float64, baseEstimator CPUEstimator, confidenceInterval time.Duration) CPUEstimator {
  	return &cpuConfidenceMultiplier{
 diff --git a/vertical-pod-autoscaler/pkg/recommender/logic/recommender.go b/vertical-pod-autoscaler/pkg/recommender/logic/recommender.go
-index cb9d600..5f5af0a 100644
+index 7dbb323..d4cb6dc 100644
 --- a/vertical-pod-autoscaler/pkg/recommender/logic/recommender.go
 +++ b/vertical-pod-autoscaler/pkg/recommender/logic/recommender.go
 @@ -63,6 +63,8 @@ type RecommendedContainerResources struct {
@@ -574,7 +575,7 @@ index 9cee460..ea7b364 100644
 +	}
 +}
 diff --git a/vertical-pod-autoscaler/pkg/recommender/model/aggregate_container_state.go b/vertical-pod-autoscaler/pkg/recommender/model/aggregate_container_state.go
-index 29d8c72..307f3dc 100644
+index 0f70679..1830653 100644
 --- a/vertical-pod-autoscaler/pkg/recommender/model/aggregate_container_state.go
 +++ b/vertical-pod-autoscaler/pkg/recommender/model/aggregate_container_state.go
 @@ -48,6 +48,7 @@ import (

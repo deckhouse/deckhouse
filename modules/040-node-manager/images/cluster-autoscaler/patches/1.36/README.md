@@ -1,6 +1,6 @@
 ## Patches
 
-These patches are applied to gardener `v1.36.0`. The same build is used for
+These patches are applied to gardener `v1.36.1`. The same build is used for
 the k8s 1.36 and 1.37 images (see `oss.yaml`).
 
 Since `v1.36.0` gardener registers cloud providers through
@@ -15,7 +15,7 @@ stays in the binary too. Without the tag the binary has no `mcm` provider and
 Bumps Go module dependencies to remediate CVEs reported by Trivy for the
 cluster-autoscaler binary. The vulnerabilities live in dependencies linked
 into the binary, not in cluster-autoscaler logic, so the fix is a pure
-`go.mod`/`go.sum` bump. The gardener tag stays `v1.36.0`.
+`go.mod`/`go.sum` bump. The gardener tag stays `v1.36.1`.
 
 Changes in `cluster-autoscaler/go.mod`:
 
@@ -43,7 +43,7 @@ To recreate this patch, check out the clean tag and re-apply the bumps:
 
 ```shell
 git clone <SOURCE_REPO>/gardener/autoscaler.git
-cd autoscaler && git checkout v1.36.0
+cd autoscaler && git checkout v1.36.1
 cd cluster-autoscaler
 go get google.golang.org/grpc@v1.83.2 \
   go.opentelemetry.io/otel/sdk@v1.45.0 \

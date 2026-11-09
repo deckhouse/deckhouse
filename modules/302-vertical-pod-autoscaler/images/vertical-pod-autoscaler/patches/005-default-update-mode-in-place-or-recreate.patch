@@ -1,5 +1,5 @@
 diff --git a/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/handler.go b/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/handler.go
-index 1722017..175cd8f 100644
+index 12ba965..64e117f 100644
 --- a/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/handler.go
 +++ b/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/handler.go
 @@ -28,6 +28,7 @@ import (
@@ -10,7 +10,7 @@ index 1722017..175cd8f 100644
  )
  
  // resourceHandler builds patches for VPAs.
-@@ -88,8 +89,7 @@ func (h *resourceHandler) GetPatches(_ context.Context, ar *admissionv1.Admissio
+@@ -89,8 +90,7 @@ func (h *resourceHandler) GetPatches(_ context.Context, ar *admissionv1.Admissio
  	patches := []resource.PatchRecord{}
  	if vpa.Spec.UpdatePolicy == nil {
  		// Sets the default updatePolicy.
@@ -22,10 +22,10 @@ index 1722017..175cd8f 100644
  			Path:  "/spec/updatePolicy",
 diff --git a/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/handler_test.go b/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/handler_test.go
 new file mode 100644
-index 0000000..708e1a7
+index 0000000..77efc31
 --- /dev/null
 +++ b/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/handler_test.go
-@@ -0,0 +1,52 @@
+@@ -0,0 +1,53 @@
 +package vpa
 +
 +import (
@@ -67,11 +67,12 @@ index 0000000..708e1a7
 +		t.Run(tc.name, func(t *testing.T) {
 +			t.Setenv("VPA_DEFAULT_UPDATE_MODE", tc.defaultUpdateMode)
 +			handler := NewResourceHandler(NewDefaultPreProcessor())
-+			patches, errs := handler.GetPatches(context.Background(), &admissionv1.AdmissionRequest{
++			patches, warnings, errs := handler.GetPatches(context.Background(), &admissionv1.AdmissionRequest{
 +				Operation: admissionv1.Create,
 +				Object:    runtime.RawExtension{Raw: []byte(tc.vpaJSON)},
 +			})
 +			assert.Empty(t, errs)
++			assert.Empty(t, warnings)
 +			actual, err := json.Marshal(patches)
 +			assert.NoError(t, err)
 +			assert.JSONEq(t, tc.expectedPatches, string(actual))
@@ -79,12 +80,12 @@ index 0000000..708e1a7
 +	}
 +}
 diff --git a/vertical-pod-autoscaler/pkg/updater/logic/updater.go b/vertical-pod-autoscaler/pkg/updater/logic/updater.go
-index 6a7db37..1aaebf5 100644
+index e4872eb..52175c2 100644
 --- a/vertical-pod-autoscaler/pkg/updater/logic/updater.go
 +++ b/vertical-pod-autoscaler/pkg/updater/logic/updater.go
-@@ -524,7 +524,7 @@ func filterPods(pods []*corev1.Pod, predicate func(*corev1.Pod) bool) []*corev1.
+@@ -714,7 +714,7 @@ func filterPods(pods []*corev1.Pod, predicate func(*corev1.Pod) bool) []*corev1.
  
- func filterNonInPlaceUpdatablePods(pods []*corev1.Pod, inplaceRestriction restriction.PodsInPlaceRestriction, vpa *vpa_types.VerticalPodAutoscaler, infeasibleAttempts map[types.UID]*vpa_types.RecommendedPodResources) []*corev1.Pod {
+ func filterNonInPlaceUpdatablePods(pods []*corev1.Pod, inplaceRestriction restriction.PodsInPlaceRestriction, vpa *vpa_types.VerticalPodAutoscaler, vpaCount int, infeasibleAttempts map[types.UID]*vpa_types.RecommendedPodResources, eventRecorder record.EventRecorder) []*corev1.Pod {
  	return filterPods(pods, func(pod *corev1.Pod) bool {
 -		updateMode := *vpa.Spec.UpdatePolicy.UpdateMode
 +		updateMode := vpa_api_util.GetUpdateMode(vpa)
@@ -92,10 +93,10 @@ index 6a7db37..1aaebf5 100644
  		switch decision {
  		case utils.InPlaceApproved:
 diff --git a/vertical-pod-autoscaler/pkg/updater/logic/updater_test.go b/vertical-pod-autoscaler/pkg/updater/logic/updater_test.go
-index f2fcae1..5f95d82 100644
+index 9904c96..0e0923e 100644
 --- a/vertical-pod-autoscaler/pkg/updater/logic/updater_test.go
 +++ b/vertical-pod-autoscaler/pkg/updater/logic/updater_test.go
-@@ -199,6 +199,54 @@ func TestRunOnce_Mode(t *testing.T) {
+@@ -201,6 +201,54 @@ func TestRunOnce_Mode(t *testing.T) {
  	}
  }
  
@@ -150,7 +151,7 @@ index f2fcae1..5f95d82 100644
  func TestRunOnce_Status(t *testing.T) {
  	tests := []struct {
  		name                  string
-@@ -331,7 +379,9 @@ func testRunOnceBase(
+@@ -340,7 +388,9 @@ func testRunOnceBase(
  	podLister := &test.PodListerMock{}
  	podLister.On("List").Return(pods, nil)
  
@@ -162,7 +163,7 @@ index f2fcae1..5f95d82 100644
  		durationSeconds := int32(60)
  		cpuStartupBoost := &vpa_types.GenericStartupBoost{
 diff --git a/vertical-pod-autoscaler/pkg/utils/vpa/api.go b/vertical-pod-autoscaler/pkg/utils/vpa/api.go
-index c07bda1..fd9e316 100644
+index 76d9e73..6538913 100644
 --- a/vertical-pod-autoscaler/pkg/utils/vpa/api.go
 +++ b/vertical-pod-autoscaler/pkg/utils/vpa/api.go
 @@ -21,6 +21,7 @@ import (
@@ -173,7 +174,7 @@ index c07bda1..fd9e316 100644
  	"strings"
  	"time"
  
-@@ -325,11 +326,24 @@ func FindParentControllerForPod(ctx context.Context, pod *corev1.Pod, ctrlFetche
+@@ -356,11 +357,24 @@ func FindParentControllerForPod(ctx context.Context, pod *corev1.Pod, ctrlFetche
  	return controller, nil
  }
  
@@ -201,10 +202,10 @@ index c07bda1..fd9e316 100644
  	return *vpa.Spec.UpdatePolicy.UpdateMode
  }
 diff --git a/vertical-pod-autoscaler/pkg/utils/vpa/api_test.go b/vertical-pod-autoscaler/pkg/utils/vpa/api_test.go
-index 25abd00..7f3c2eb 100644
+index 6408a8d..9b18f78 100644
 --- a/vertical-pod-autoscaler/pkg/utils/vpa/api_test.go
 +++ b/vertical-pod-autoscaler/pkg/utils/vpa/api_test.go
-@@ -712,3 +712,63 @@ func TestPodHasCPUBoostInProgressAnnotation(t *testing.T) {
+@@ -955,3 +955,63 @@ func TestGetBoostRemainingDuration(t *testing.T) {
  		})
  	}
  }

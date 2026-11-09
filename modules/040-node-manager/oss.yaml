@@ -26,13 +26,13 @@
       version: v1.33.1
     - condition:
         k8s: "1.34"
-      version: v1.34.1
+      version: v1.34.4
     - condition:
         k8s: "1.35"
-      version: v1.35.1
+      version: v1.35.2
     - condition:
         k8s: "1.36"
-      version: v1.36.0
+      version: v1.36.1
     - condition:
         k8s: "1.37"
-      version: v1.36.0
+      version: v1.36.1

@@ -25,7 +25,7 @@ graph TD
 
 ## Сборка образа
 
-Запись `cluster-autoscaler` в `modules/040-node-manager/oss.yaml` сопоставляет каждой минорной версии Kubernetes тег gardener autoscaler. Образ `cluster-autoscaler-<минор k8s>` собирается из этого тега с патчами из `images/cluster-autoscaler/patches/<минор тега>/`, поэтому один набор патчей может обслуживать несколько минорных версий Kubernetes (gardener `v1.36.0` используется и для 1.36, и для 1.37).
+Запись `cluster-autoscaler` в `modules/040-node-manager/oss.yaml` сопоставляет каждой минорной версии Kubernetes тег gardener autoscaler. Образ `cluster-autoscaler-<минор k8s>` собирается из этого тега с патчами из `images/cluster-autoscaler/patches/<минор тега>/`, поэтому один набор патчей может обслуживать несколько минорных версий Kubernetes (gardener `v1.36.1` используется и для 1.36, и для 1.37).
 
 Deckhouse запускает один бинарник с двумя cloud provider: `--cloud-provider=clusterapi` для групп узлов на CAPI и `--cloud-provider=mcm` для групп на MCM (отдельный Deployment `cluster-autoscaler-mcm`, если в кластере есть оба вида). В бинарнике должны быть оба провайдера.
 

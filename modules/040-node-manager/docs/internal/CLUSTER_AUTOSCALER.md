@@ -25,7 +25,7 @@ graph TD
 
 ## Image build
 
-The `cluster-autoscaler` entry in `modules/040-node-manager/oss.yaml` maps each Kubernetes minor to a gardener autoscaler tag. The `cluster-autoscaler-<k8s minor>` image is built from that tag with the patches from `images/cluster-autoscaler/patches/<tag minor>/`, so one patch set can serve several Kubernetes minors (gardener `v1.36.0` is used for both 1.36 and 1.37).
+The `cluster-autoscaler` entry in `modules/040-node-manager/oss.yaml` maps each Kubernetes minor to a gardener autoscaler tag. The `cluster-autoscaler-<k8s minor>` image is built from that tag with the patches from `images/cluster-autoscaler/patches/<tag minor>/`, so one patch set can serve several Kubernetes minors (gardener `v1.36.1` is used for both 1.36 and 1.37).
 
 Deckhouse runs one binary with two cloud providers: `--cloud-provider=clusterapi` for CAPI node groups and `--cloud-provider=mcm` for MCM node groups (a separate `cluster-autoscaler-mcm` Deployment when a cluster has both). The binary must contain both providers.
 

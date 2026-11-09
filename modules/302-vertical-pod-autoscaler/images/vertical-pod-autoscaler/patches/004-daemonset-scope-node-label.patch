@@ -1,5 +1,5 @@
 diff --git a/vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml b/vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml
-index 1ffdae98a..8a77e6940 100644
+index 4273ac8..8b2e042 100644
 --- a/vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml
 +++ b/vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml
 @@ -310,6 +310,11 @@ spec:
@@ -109,20 +109,20 @@ index 1ffdae98a..8a77e6940 100644
                            additionalProperties:
                              anyOf:
 diff --git a/vertical-pod-autoscaler/pkg/admission-controller/main.go b/vertical-pod-autoscaler/pkg/admission-controller/main.go
-index 215773196..00aa7788e 100644
+index 99a5bed..93b4a6b 100644
 --- a/vertical-pod-autoscaler/pkg/admission-controller/main.go
 +++ b/vertical-pod-autoscaler/pkg/admission-controller/main.go
-@@ -88,7 +88,7 @@ func main() {
+@@ -87,7 +87,7 @@ func main() {
  		klog.ErrorS(err, "Failed to create limitRangeCalculator, falling back to not checking limits.")
  		limitRangeCalculator = limitrange.NewNoopLimitsCalculator()
  	}
 -	recommendationProvider := recommendation.NewProvider(limitRangeCalculator, vpa_api_util.NewCappingRecommendationProcessor(limitRangeCalculator))
 +	recommendationProvider := recommendation.NewProvider(limitRangeCalculator, vpa_api_util.NewCappingRecommendationProcessorWithNodeGetter(limitRangeCalculator, kubeClient.CoreV1().Nodes()))
- 	vpaMatcher := vpa.NewMatcher(vpaLister, targetSelectorFetcher, controllerFetcher)
+ 	vpaMatcher := vpa.NewMatcher(vpaIndexer, targetSelectorFetcher, controllerFetcher)
  
  	factory.Start(stopCh)
 diff --git a/vertical-pod-autoscaler/pkg/admission-controller/resource/pod/recommendation/recommendation_provider.go b/vertical-pod-autoscaler/pkg/admission-controller/resource/pod/recommendation/recommendation_provider.go
-index 9bcbae835..f3b2194f5 100644
+index 9bcbae8..f3b2194 100644
 --- a/vertical-pod-autoscaler/pkg/admission-controller/resource/pod/recommendation/recommendation_provider.go
 +++ b/vertical-pod-autoscaler/pkg/admission-controller/resource/pod/recommendation/recommendation_provider.go
 @@ -123,13 +123,16 @@ func (p *recommendationProvider) GetContainersResourcesForPod(pod *corev1.Pod, v
@@ -144,7 +144,7 @@ index 9bcbae835..f3b2194f5 100644
  	containerLimitRange, err := p.limitsRangeCalculator.GetContainerLimitRangeItem(pod.Namespace)
  	if err != nil {
 diff --git a/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1/types.go b/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1/types.go
-index 1334200c7..4d907c979 100644
+index 20a4322..803483c 100644
 --- a/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1/types.go
 +++ b/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1/types.go
 @@ -114,8 +114,16 @@ type VerticalPodAutoscalerSpec struct {
@@ -204,7 +204,7 @@ index 1334200c7..4d907c979 100644
  
  // VerticalPodAutoscalerConditionType are the valid conditions of
 diff --git a/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1/zz_generated.deepcopy.go b/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1/zz_generated.deepcopy.go
-index 860d40d95..496e5a249 100644
+index 860d40d..496e5a2 100644
 --- a/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1/zz_generated.deepcopy.go
 +++ b/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1/zz_generated.deepcopy.go
 @@ -309,6 +309,29 @@ func (in *RecommendedPodResources) DeepCopy() *RecommendedPodResources {
@@ -252,10 +252,10 @@ index 860d40d95..496e5a249 100644
  }
  
 diff --git a/vertical-pod-autoscaler/pkg/recommender/input/cluster_feeder.go b/vertical-pod-autoscaler/pkg/recommender/input/cluster_feeder.go
-index dda0612b9..777903e9a 100644
+index 44c1b63..d3d7d70 100644
 --- a/vertical-pod-autoscaler/pkg/recommender/input/cluster_feeder.go
 +++ b/vertical-pod-autoscaler/pkg/recommender/input/cluster_feeder.go
-@@ -46,6 +46,7 @@ import (
+@@ -45,6 +45,7 @@ import (
  	controllerfetcher "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/target/controller_fetcher"
  	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/client"
  	metrics_recommender "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/metrics/recommender"
@@ -263,7 +263,7 @@ index dda0612b9..777903e9a 100644
  )
  
  const (
-@@ -85,6 +86,7 @@ type ClusterStateFeederFactory struct {
+@@ -86,6 +87,7 @@ type ClusterStateFeederFactory struct {
  	VpaCheckpointLister vpa_lister.VerticalPodAutoscalerCheckpointLister
  	VpaLister           vpa_lister.VerticalPodAutoscalerLister
  	PodLister           listersv1.PodLister
@@ -271,7 +271,7 @@ index dda0612b9..777903e9a 100644
  	OOMObserver         oom.Observer
  	SelectorFetcher     target.VpaTargetSelectorFetcher
  	MemorySaveMode      bool
-@@ -104,7 +106,7 @@ func (m ClusterStateFeederFactory) Make() *clusterStateFeeder {
+@@ -105,7 +107,7 @@ func (m ClusterStateFeederFactory) Make() *clusterStateFeeder {
  		vpaCheckpointLister: m.VpaCheckpointLister,
  		vpaLister:           m.VpaLister,
  		clusterState:        m.ClusterState,
@@ -280,7 +280,7 @@ index dda0612b9..777903e9a 100644
  		selectorFetcher:     m.SelectorFetcher,
  		memorySaveMode:      m.MemorySaveMode,
  		controllerFetcher:   m.ControllerFetcher,
-@@ -490,7 +492,8 @@ func (feeder *clusterStateFeeder) LoadPods() {
+@@ -476,7 +478,8 @@ func (feeder *clusterStateFeeder) LoadPods() {
  		if feeder.memorySaveMode && !feeder.matchesVPA(pod) {
  			continue
  		}
@@ -290,8 +290,8 @@ index dda0612b9..777903e9a 100644
  		for _, container := range pod.Containers {
  			if err = feeder.clusterState.AddOrUpdateContainer(container.ID, container.Request); err != nil {
  				klog.V(0).InfoS("Failed to add container", "container", container.ID, "error", err)
-@@ -506,6 +509,31 @@ func (feeder *clusterStateFeeder) LoadPods() {
- 	}
+@@ -501,6 +504,31 @@ func (feeder *clusterStateFeeder) DeleteRemovedPods() {
+ 	feeder.podsToDelete = nil
  }
  
 +func (feeder *clusterStateFeeder) addScopedDaemonSetGroupingLabels(pod *spec.BasicPodSpec) map[string]string {
@@ -323,7 +323,7 @@ index dda0612b9..777903e9a 100644
  	containersMetrics, err := feeder.metricsClient.GetContainersMetrics(ctx)
  	if err != nil {
 diff --git a/vertical-pod-autoscaler/pkg/recommender/input/cluster_feeder_test.go b/vertical-pod-autoscaler/pkg/recommender/input/cluster_feeder_test.go
-index b3ec81e96..c5968d4a4 100644
+index 1d9eb66..5d93ee2 100644
 --- a/vertical-pod-autoscaler/pkg/recommender/input/cluster_feeder_test.go
 +++ b/vertical-pod-autoscaler/pkg/recommender/input/cluster_feeder_test.go
 @@ -42,6 +42,7 @@ import (
@@ -334,8 +334,8 @@ index b3ec81e96..c5968d4a4 100644
  	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/test"
  )
  
-@@ -517,6 +518,83 @@ func TestClusterStateFeeder_LoadPods_ContainerTracking(t *testing.T) {
- 	assert.Equal(t, len(feeder.clusterState.Pods()[podWithoutInitContainersID].InitContainers), 0)
+@@ -548,6 +549,83 @@ func TestClusterStateFeeder_LoadPods_PodDeletion(t *testing.T) {
+ 	assert.NotContains(t, feeder.clusterState.Pods(), pod2ID)
  }
  
 +func TestClusterStateFeeder_LoadPods_AddsDaemonSetScopeLabel(t *testing.T) {
@@ -419,7 +419,7 @@ index b3ec81e96..c5968d4a4 100644
  	for _, tc := range []struct {
  		Name              string
 diff --git a/vertical-pod-autoscaler/pkg/recommender/input/spec/spec_client.go b/vertical-pod-autoscaler/pkg/recommender/input/spec/spec_client.go
-index 6fb91e49d..1f8a47863 100644
+index 6fb91e4..1f8a478 100644
 --- a/vertical-pod-autoscaler/pkg/recommender/input/spec/spec_client.go
 +++ b/vertical-pod-autoscaler/pkg/recommender/input/spec/spec_client.go
 @@ -20,6 +20,7 @@ import (
@@ -488,7 +488,7 @@ index 6fb91e49d..1f8a47863 100644
  	return basicPodSpec
  }
 diff --git a/vertical-pod-autoscaler/pkg/recommender/input/spec/spec_client_test_util.go b/vertical-pod-autoscaler/pkg/recommender/input/spec/spec_client_test_util.go
-index c988b5712..831bdbbfd 100644
+index c988b57..831bdbb 100644
 --- a/vertical-pod-autoscaler/pkg/recommender/input/spec/spec_client_test_util.go
 +++ b/vertical-pod-autoscaler/pkg/recommender/input/spec/spec_client_test_util.go
 @@ -193,7 +193,7 @@ func (tc *specClientTestCase) createFakeSpecClient() SpecClient {
@@ -501,7 +501,7 @@ index c988b5712..831bdbbfd 100644
  
  func (tc *specClientTestCase) getFakePods() []*corev1.Pod {
 diff --git a/vertical-pod-autoscaler/pkg/recommender/logic/recommender.go b/vertical-pod-autoscaler/pkg/recommender/logic/recommender.go
-index e3b530448..cb9d600d0 100644
+index a089403..7dbb323 100644
 --- a/vertical-pod-autoscaler/pkg/recommender/logic/recommender.go
 +++ b/vertical-pod-autoscaler/pkg/recommender/logic/recommender.go
 @@ -191,6 +191,25 @@ func CreatePodResourceRecommender(config RecommendationConfig) PodResourceRecomm
@@ -531,7 +531,7 @@ index e3b530448..cb9d600d0 100644
  	// Sort the container names from the map. This is because maps are an
  	// unordered data structure, and iterating through the map will return
 diff --git a/vertical-pod-autoscaler/pkg/recommender/model/aggregate_container_state.go b/vertical-pod-autoscaler/pkg/recommender/model/aggregate_container_state.go
-index 0e1a645d2..29d8c72a7 100644
+index 4128295..0f70679 100644
 --- a/vertical-pod-autoscaler/pkg/recommender/model/aggregate_container_state.go
 +++ b/vertical-pod-autoscaler/pkg/recommender/model/aggregate_container_state.go
 @@ -393,6 +393,58 @@ func AggregateStateByContainerName(aggregateContainerStateMap aggregateContainer
@@ -594,7 +594,7 @@ index 0e1a645d2..29d8c72a7 100644
  // that creates ContainerStateAgregator for container if it is no longer
  // present in the cluster state.
 diff --git a/vertical-pod-autoscaler/pkg/recommender/model/cluster.go b/vertical-pod-autoscaler/pkg/recommender/model/cluster.go
-index eba44bb8f..8ad38b644 100644
+index eba44bb..8ad38b6 100644
 --- a/vertical-pod-autoscaler/pkg/recommender/model/cluster.go
 +++ b/vertical-pod-autoscaler/pkg/recommender/model/cluster.go
 @@ -265,6 +265,13 @@ func (cluster *clusterState) AddSample(sample *ContainerUsageSampleWithKey) erro
@@ -639,12 +639,12 @@ index eba44bb8f..8ad38b644 100644
  	vpa.SetConditionsMap(conditionsMap)
  	vpa.SetRecommendationDirect(currentRecommendation)
 diff --git a/vertical-pod-autoscaler/pkg/recommender/model/vpa.go b/vertical-pod-autoscaler/pkg/recommender/model/vpa.go
-index f68e2993c..cd3d51548 100644
+index bd0c3c5..33fd94d 100644
 --- a/vertical-pod-autoscaler/pkg/recommender/model/vpa.go
 +++ b/vertical-pod-autoscaler/pkg/recommender/model/vpa.go
-@@ -20,10 +20,12 @@ import (
+@@ -21,10 +21,12 @@ import (
  	"maps"
- 	"sort"
+ 	"slices"
  	"sync"
 +	"sync/atomic"
  	"time"
@@ -655,7 +655,7 @@ index f68e2993c..cd3d51548 100644
  	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
  	"k8s.io/apimachinery/pkg/labels"
  
-@@ -203,9 +205,16 @@ type Vpa struct {
+@@ -204,9 +206,16 @@ type Vpa struct {
  	APIVersion string
  	// TargetRef points to the controller managing the set of pods.
  	TargetRef *autoscalingv1.CrossVersionObjectReference
@@ -672,7 +672,7 @@ index f68e2993c..cd3d51548 100644
  	// mutex protects concurrent access to conditions and recommendation fields
  	mutex sync.RWMutex
  
-@@ -258,6 +267,7 @@ func (vpa *Vpa) UseAggregationIfMatching(aggregationKey AggregateStateKey, aggre
+@@ -259,6 +268,7 @@ func (vpa *Vpa) UseAggregationIfMatching(aggregationKey AggregateStateKey, aggre
  		aggregation.IsUnderVPA = true
  		aggregation.UpdateMode = vpa.UpdateMode
  		aggregation.UpdateFromPolicy(vpa_api_util.GetContainerResourcePolicy(aggregationKey.ContainerName(), vpa.ResourcePolicy))
@@ -680,7 +680,7 @@ index f68e2993c..cd3d51548 100644
  	}
  }
  
-@@ -298,6 +308,7 @@ func (vpa *Vpa) DeleteAggregation(aggregationKey AggregateStateKey) {
+@@ -299,6 +309,7 @@ func (vpa *Vpa) DeleteAggregation(aggregationKey AggregateStateKey) {
  	}
  	state.MarkNotAutoscaled()
  	delete(vpa.aggregateContainerStates, aggregationKey)
@@ -688,7 +688,7 @@ index f68e2993c..cd3d51548 100644
  }
  
  // MergeCheckpointedState adds checkpointed VPA aggregations to the given aggregateStateMap.
-@@ -320,6 +331,11 @@ func (vpa *Vpa) AggregateStateByContainerName() ContainerNameToAggregateStateMap
+@@ -321,6 +332,11 @@ func (vpa *Vpa) AggregateStateByContainerName() ContainerNameToAggregateStateMap
  	return containerNameToAggregateStateMap
  }
  
@@ -700,7 +700,7 @@ index f68e2993c..cd3d51548 100644
  // HasRecommendation returns if the VPA object contains any recommendation
  func (vpa *Vpa) HasRecommendation() bool {
  	vpa.mutex.RLock()
-@@ -338,13 +354,24 @@ func (vpa *Vpa) matchesAggregation(aggregationKey AggregateStateKey) bool {
+@@ -339,13 +355,24 @@ func (vpa *Vpa) matchesAggregation(aggregationKey AggregateStateKey) bool {
  // SetResourcePolicy updates the resource policy of the VPA and the scaling
  // policies of aggregators under this VPA.
  func (vpa *Vpa) SetResourcePolicy(resourcePolicy *vpa_types.PodResourcePolicy) {
@@ -727,7 +727,7 @@ index f68e2993c..cd3d51548 100644
  
  // SetUpdateMode updates the update mode of the VPA and aggregators under this VPA.
 diff --git a/vertical-pod-autoscaler/pkg/recommender/routines/recommender.go b/vertical-pod-autoscaler/pkg/recommender/routines/recommender.go
-index 778e06694..6f161d4ca 100644
+index 3f48b69..bb254bd 100644
 --- a/vertical-pod-autoscaler/pkg/recommender/routines/recommender.go
 +++ b/vertical-pod-autoscaler/pkg/recommender/routines/recommender.go
 @@ -18,6 +18,7 @@ package routines
@@ -887,7 +887,7 @@ index 778e06694..6f161d4ca 100644
  }
  
  // UpdateVPAs update VPA CRD objects' status.
-@@ -230,6 +331,7 @@ func (c RecommenderFactory) Make() Recommender {
+@@ -234,6 +335,7 @@ func (c RecommenderFactory) Make() Recommender {
  		lastAggregateContainerStateGC: time.Now(),
  		lastCheckpointGC:              time.Now(),
  		updateWorkerCount:             c.UpdateWorkerCount,
@@ -896,7 +896,7 @@ index 778e06694..6f161d4ca 100644
  	klog.V(3).InfoS("New Recommender created", "recommender", recommender)
  	return recommender
 diff --git a/vertical-pod-autoscaler/pkg/recommender/routines/recommender_controller.go b/vertical-pod-autoscaler/pkg/recommender/routines/recommender_controller.go
-index 42e265dfd..5b7bef020 100644
+index 211d833..d2a0c1b 100644
 --- a/vertical-pod-autoscaler/pkg/recommender/routines/recommender_controller.go
 +++ b/vertical-pod-autoscaler/pkg/recommender/routines/recommender_controller.go
 @@ -74,6 +74,7 @@ func NewRecommenderController(
@@ -913,10 +913,10 @@ index 42e265dfd..5b7bef020 100644
  		PodLister:           podLister,
 +		NodeLister:          nodeLister,
  		OOMObserver:         oomObserver,
- 		KubeClient:          kubeClient,
  		MetricsClient:       input_metrics.NewMetricsClient(source, commonFlags.VpaObjectNamespace, "default-metrics-client"),
+ 		VpaCheckpointClient: vpaClient.AutoscalingV1(),
 diff --git a/vertical-pod-autoscaler/pkg/recommender/routines/recommender_test.go b/vertical-pod-autoscaler/pkg/recommender/routines/recommender_test.go
-index 69414c055..4c064730d 100644
+index db1069e..c8be2d6 100644
 --- a/vertical-pod-autoscaler/pkg/recommender/routines/recommender_test.go
 +++ b/vertical-pod-autoscaler/pkg/recommender/routines/recommender_test.go
 @@ -17,6 +17,7 @@ limitations under the License.
@@ -944,7 +944,7 @@ index 69414c055..4c064730d 100644
  	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/test"
  )
  
-@@ -42,6 +46,96 @@ func (m *mockPodResourceRecommender) GetRecommendedPodResources(containerNameToA
+@@ -42,6 +46,96 @@ func (*mockPodResourceRecommender) GetRecommendedPodResources(containerNameToAgg
  	return logic.RecommendedPodResources{}
  }
  
@@ -1168,7 +1168,7 @@ index 69414c055..4c064730d 100644
  // by having multiple workers process overlapping sets of VPAs.
  func TestUpdateVPAsRaceCondition(t *testing.T) {
 diff --git a/vertical-pod-autoscaler/pkg/recommender/routines/vpa.go b/vertical-pod-autoscaler/pkg/recommender/routines/vpa.go
-index d7cfd66fc..62a6a815c 100644
+index d7cfd66..62a6a81 100644
 --- a/vertical-pod-autoscaler/pkg/recommender/routines/vpa.go
 +++ b/vertical-pod-autoscaler/pkg/recommender/routines/vpa.go
 @@ -19,12 +19,46 @@ package routines
@@ -1269,7 +1269,7 @@ index d7cfd66fc..62a6a815c 100644
 +}
 diff --git a/vertical-pod-autoscaler/pkg/recommender/routines/vpa_scope_test.go b/vertical-pod-autoscaler/pkg/recommender/routines/vpa_scope_test.go
 new file mode 100644
-index 000000000..392c59e17
+index 0000000..392c59e
 --- /dev/null
 +++ b/vertical-pod-autoscaler/pkg/recommender/routines/vpa_scope_test.go
 @@ -0,0 +1,153 @@
@@ -1427,10 +1427,10 @@ index 000000000..392c59e17
 +	return vpa
 +}
 diff --git a/vertical-pod-autoscaler/pkg/updater/main.go b/vertical-pod-autoscaler/pkg/updater/main.go
-index 327f3c254..d2e993fb6 100644
+index 308610a..a0ff32c 100644
 --- a/vertical-pod-autoscaler/pkg/updater/main.go
 +++ b/vertical-pod-autoscaler/pkg/updater/main.go
-@@ -169,7 +169,7 @@ func run(healthCheck *metrics.HealthCheck, commonFlag *common.CommonFlags) {
+@@ -190,7 +190,7 @@ func run(healthCheck *metrics.HealthCheck, commonFlag *common.CommonFlags) {
  
  	ignoredNamespaces := strings.Split(commonFlag.IgnoredVpaObjectNamespaces, ",")
  
@@ -1439,10 +1439,10 @@ index 327f3c254..d2e993fb6 100644
  
  	calculators := []patch.Calculator{inplace.NewResourceInPlaceUpdatesCalculator(recommendationProvider), inplace.NewInPlaceUpdatedCalculator(), inplace.NewUnboostAnnotationCalculator()}
  
-@@ -188,7 +188,7 @@ func run(healthCheck *metrics.HealthCheck, commonFlag *common.CommonFlags) {
- 		config.PodLifetimeUpdateThreshold,
- 		config.EvictAfterOOMThreshold,
+@@ -211,7 +211,7 @@ func run(healthCheck *metrics.HealthCheck, commonFlag *common.CommonFlags) {
+ 		config.AdmissionControllerStatusLeaseName,
  		admissionControllerStatusNamespace,
+ 		config.AdmissionControllerStatusLeaseTimeout,
 -		vpa_api_util.NewCappingRecommendationProcessor(limitRangeCalculator),
 +		vpa_api_util.NewCappingRecommendationProcessorWithNodeGetter(limitRangeCalculator, kubeClient.CoreV1().Nodes()),
  		priority.NewScalingDirectionPodEvictionAdmission(),
@@ -1450,7 +1450,7 @@ index 327f3c254..d2e993fb6 100644
  		controllerFetcher,
 diff --git a/vertical-pod-autoscaler/pkg/utils/scope/scope.go b/vertical-pod-autoscaler/pkg/utils/scope/scope.go
 new file mode 100644
-index 000000000..fb2ce6dc4
+index 0000000..fb2ce6d
 --- /dev/null
 +++ b/vertical-pod-autoscaler/pkg/utils/scope/scope.go
 @@ -0,0 +1,26 @@
@@ -1481,7 +1481,7 @@ index 000000000..fb2ce6dc4
 +}
 +
 diff --git a/vertical-pod-autoscaler/pkg/utils/vpa/api.go b/vertical-pod-autoscaler/pkg/utils/vpa/api.go
-index 2a8fa8284..c07bda144 100644
+index 4de8ab4..76d9e73 100644
 --- a/vertical-pod-autoscaler/pkg/utils/vpa/api.go
 +++ b/vertical-pod-autoscaler/pkg/utils/vpa/api.go
 @@ -25,7 +25,6 @@ import (
@@ -1492,7 +1492,7 @@ index 2a8fa8284..c07bda144 100644
  	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
  	"k8s.io/apimachinery/pkg/fields"
  	"k8s.io/apimachinery/pkg/labels"
-@@ -64,16 +63,106 @@ func patchVpaStatus(vpaClient vpa_api.VerticalPodAutoscalerInterface, vpaName st
+@@ -85,16 +84,106 @@ func patchVpaStatus(vpaClient vpa_api.VerticalPodAutoscalerInterface, vpaName st
  	return vpaClient.Patch(context.TODO(), vpaName, types.JSONPatchType, bytes, metav1.PatchOptions{}, "status")
  }
  
@@ -1607,7 +1607,7 @@ index 2a8fa8284..c07bda144 100644
  	}
  	return nil, nil
 diff --git a/vertical-pod-autoscaler/pkg/utils/vpa/capping.go b/vertical-pod-autoscaler/pkg/utils/vpa/capping.go
-index 021810fa6..2b4b6e78e 100644
+index 021810f..2b4b6e7 100644
 --- a/vertical-pod-autoscaler/pkg/utils/vpa/capping.go
 +++ b/vertical-pod-autoscaler/pkg/utils/vpa/capping.go
 @@ -17,22 +17,32 @@ limitations under the License.
@@ -1840,7 +1840,7 @@ index 021810fa6..2b4b6e78e 100644
  func applyContainerLimitRange(recommendation corev1.ResourceList,
  	containerRequests corev1.ResourceList, containerLimits corev1.ResourceList,
 diff --git a/vertical-pod-autoscaler/pkg/utils/vpa/capping_test.go b/vertical-pod-autoscaler/pkg/utils/vpa/capping_test.go
-index 549e62fe9..5572246a4 100644
+index 549e62f..5572246 100644
 --- a/vertical-pod-autoscaler/pkg/utils/vpa/capping_test.go
 +++ b/vertical-pod-autoscaler/pkg/utils/vpa/capping_test.go
 @@ -17,13 +17,17 @@ limitations under the License.

@@ -118,9 +118,9 @@ spec:
                         controlledResources:
                           description: |-
                             Specifies the type of recommendations that
-                            will be computed (and possibly applied) by VPA. If not
-                            specified, the default of (`ResourceCPU`, `ResourceMemory`)
-                            will be used.
+                            will be computed (and possibly applied) by VPA. Only
+                            `cpu` and `memory` are supported. If not specified,
+                            the default of (`cpu`, `memory`) will be used.
                           items:
                             description: |-
                               ResourceName is the name identifying various

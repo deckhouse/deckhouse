@@ -56,3 +56,11 @@ Fixes a nil pointer dereference in `applyPodLimitRange` (`pkg/utils/vpa/capping.
 - The loop now skips containers without a recommendation, as the `min` loop above it already does. Such containers are left unchanged, as the code comment there says.
 - `TestApplyPodLimitRange` gets a case with such a container; it panicked before the fix.
 - Found by Svace (`DEREF_AFTER_NULL.EX`). Upstream master has the same code.
+
+## 008-go-mod.patch
+
+Bumps `golang.org/x/net` from v0.58.0 to v0.62.0 in `go.mod` and `go.sum`.
+
+- Remediates CVE-2026-78669, CVE-2026-78659, CVE-2026-78660, CVE-2026-78663 and CVE-2026-97032 in `x/net/http2` (fixed in v0.60.0) and CVE-2026-78661 and CVE-2026-97045 in `x/net/html` (fixed in v0.62.0). No VPA release ships x/net v0.62.0 yet; 1.8.1 has v0.58.0.
+- Together with x/net, `golang.org/x/sys` moves to v0.49.0, `golang.org/x/term` to v0.47.0 and `golang.org/x/text` to v0.43.0, the versions x/net v0.62.0 requires. `golang.org/x/mod`, `golang.org/x/sync` and `golang.org/x/tools` move too, but they are not linked into the binaries.
+- Drop the patch once a VPA release ships x/net v0.62.0 or later.

@@ -6,19 +6,20 @@ Bumps Go module dependencies to remediate CVEs reported by Trivy for the
 cluster-autoscaler binary. The vulnerabilities live in indirect/build
 dependencies that are linked into the binary (x/crypto/ssh, x/net, k8s
 staging modules), not in cluster-autoscaler logic, so the fix is a pure
-`go.mod`/`go.sum` bump. The gardener tag stays `v1.34.1`.
+`go.mod`/`go.sum` bump. The gardener tag stays `v1.34.4`.
 
 Applied to both `cluster-autoscaler/go.mod` and `cluster-autoscaler/apis/go.mod`:
 
-- `go` directive: `1.24.0` -> `1.26.0`
+- `go` directive: `cluster-autoscaler/go.mod` keeps the tag's `1.26.2`;
+  `cluster-autoscaler/apis/go.mod`: `1.24.0` -> `1.25.0`
 - `google.golang.org/grpc`: `v1.72.1` -> `v1.83.2` (CVE-2026-84303, CVE-2026-84304, CVE-2026-84445)
 - `go.opentelemetry.io/otel/exporters/otlp/otlptrace`, `.../otlptrace/otlptracegrpc`
   and `go.opentelemetry.io/otel/sdk`: -> `v1.45.0` (CVE-2026-81870 / GO-2026-6505);
   `otel`, `otel/metric` and `otel/trace` follow to `v1.45.0`
-- `golang.org/x/net`: `v0.38.0` -> `v0.58.0` (HTML parser / HTTP2 / idna CVEs)
-- `golang.org/x/text`: `v0.23.0` -> `v0.42.0` (Unicode processing CVEs)
-- `golang.org/x/sys`: `v0.31.0` -> `v0.48.0`
-- `golang.org/x/crypto`: `v0.36.0` -> `v0.57.0` (x/crypto/ssh CVEs)
+- `golang.org/x/net`: `v0.47.0` -> `v0.58.0` (HTML parser / HTTP2 / idna CVEs)
+- `golang.org/x/text`: `v0.31.0` -> `v0.42.0` (Unicode processing CVEs)
+- `golang.org/x/sys`: `v0.38.0` -> `v0.48.0`
+- `golang.org/x/crypto`: `v0.44.0` -> `v0.57.0` (x/crypto/ssh CVEs)
 - `github.com/google/cel-go`: `v0.26.0` -> `v0.30.0` (GO-2026-6094 / GHSA-gcjh-h69q-9w9g)
 - `k8s.io/kubernetes`: `v1.34.1` -> `v1.34.2`, and all `k8s.io/*` staging
   modules (require + replace) synced to `v0.34.2` (kube-controller-manager
@@ -28,7 +29,7 @@ To recreate this patch, check out the clean tag and re-apply the bumps:
 
 ```shell
 git clone <SOURCE_REPO>/gardener/autoscaler.git
-cd autoscaler && git checkout v1.34.1
+cd autoscaler && git checkout v1.34.4
 cd cluster-autoscaler
 go get google.golang.org/grpc@v1.83.2 \
   go.opentelemetry.io/otel/sdk@v1.45.0 \
