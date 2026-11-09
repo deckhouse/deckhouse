@@ -30,21 +30,6 @@ var (
 	ErrSnapshotTypeError = errors.New("snapshot cannot be converted to requested type")
 )
 
-func SnapshotToMap[TKey comparable, TValue any](input *go_hook.HookInput, name string) (map[TKey]TValue, error) {
-	ret := make(map[TKey]TValue)
-
-	snapshot := input.Snapshots.Get(name)
-	for val, err := range sdkobjectpatch.SnapshotIter[KeyValue[TKey, TValue]](snapshot) {
-		if err != nil {
-			return ret, fmt.Errorf("value of type %T not convertible to KeyValue: %w", val, err)
-		}
-
-		ret[val.Key] = val.Value
-	}
-
-	return ret, nil
-}
-
 func SnapshotToSingle[TValue any](input *go_hook.HookInput, name string) (TValue, error) {
 	var value TValue
 

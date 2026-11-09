@@ -21,7 +21,7 @@ limitations under the License.
 // registry's address, scheme, path and CA, as they are substituted into the
 // service configurations. This is where those four values arrive -- the
 // ModuleConfig the operator writes, and the deckhouse-registry secret whose
-// contents reach the same fields through the orchestrator hook.
+// contents reach the same fields.
 //
 // The values do not stop here. `imagesRepo` is split into a host and a path by
 // helpers.SplitAddressAndPath and both halves reach:
@@ -189,8 +189,8 @@ func FuzzDeckhouseSettingsJSON(f *testing.F) {
 		// validation; it must simply not panic on anything that parsed.
 		_ = settings.ToMap()
 
-		// DeepCopy must be independent: the orchestrator keeps one copy as state
-		// and mutates another.
+		// DeepCopy must be independent: a caller may keep one copy and mutate
+		// another.
 		clone := settings.DeepCopy()
 		if clone == nil {
 			t.Fatal("DeepCopy() returned nil for a parsed document")

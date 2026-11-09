@@ -265,8 +265,7 @@ switch. Both paths are described in [how does the migration to the `registry` mo
 implementations never manage a cluster at the same time: whichever one is active decides what gets
 created at all, so there is no state where both configure the same node.
 
-`Proxy` and `Local` modes leave nodes in a state this release cannot correctly account for or carry over. So when the previous implementation of the module is running in these modes, it is switched to `Unmanaged` first. And that switch is only possible on a DP version that still contains the old `registry` implementation — that is, before upgrading to a version where that implementation is gone. The
-`D8RegistryMigrationPreflightBlocked` alert reports the same check from inside the cluster when the migration is not possible.
+`Proxy` and `Local` modes leave nodes in a state that DP 1.78 and later cannot correctly account for or carry over. So the v1 implementation running in these modes is switched to `Unmanaged` first. That switch is only possible on DP 1.77 or earlier — that is, before upgrading to DP 1.78, which no longer contains the v1 implementation.
 
 ### Mode switching restrictions
 

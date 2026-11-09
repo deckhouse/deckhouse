@@ -26,12 +26,16 @@ limitations under the License.
 // that checksum by itself, within about four hours. The node then fails in a retry loop, in a moment
 // unconnected to anything the operator did.
 //
-// Where such a file predates the migration the preflight blocks the handover over it. What that cannot
-// cover is a file written afterwards, which is this hook: the refusal belongs to a step that runs when
-// it runs, so the next best thing is to say so the moment a node reports carrying one. Step 091
-// already labels every node with `node.deckhouse.io/containerd-config-registry`, and this turns that
-// label into a metric while the module manages the registry — and into nothing when it does not, since
-// then the same file is merged normally.
+// The refusal belongs to a step that runs when it runs, so the next best thing is to say so the moment
+// a node reports carrying such a file. Step 091 already labels every node with
+// `node.deckhouse.io/containerd-config-registry`, and this turns that label into a metric while the
+// module manages the registry, and into nothing before the handover.
+//
+// "Manages" is the handover, not `mode: Managed`, and the refusal depends on the runtime. On
+// containerd v2 step 032 refuses a `conf2.d` file in every mode. On containerd v1 it refuses a
+// `conf.d` file only once `mode: Managed` configures the nodes, so a cluster handed over in
+// `Unmanaged` still merges it and is warned from the handover on: that is the only warning it gets
+// before switching to `mode: Managed` makes step 032 refuse the file.
 package v2
 
 import (
@@ -112,7 +116,8 @@ func handleForeignConfig(_ context.Context, input *go_hook.HookInput) error {
 
 	if len(nodes) > 0 {
 		input.Logger.Warn("nodes carry container runtime registry configuration this module did not write; "+
-			"their next full bashible run will refuse it and stop converging",
+			"a full bashible run refuses it (containerd v2 always, containerd v1 once the module is in mode: Managed) "+
+			"and the node stops converging",
 			"nodes", nodes)
 	}
 

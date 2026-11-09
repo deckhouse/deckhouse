@@ -61,19 +61,18 @@ func GetPKI(ctx context.Context, kubeClient client.KubeClient) (PKI, error) {
 // `deckhouse-registry` secret. An immutable master runs no such step, so without this the
 // installation stops at "get PKI: secrets \"registry-init\" not found" with the control plane up.
 //
-// The secret is the same one that step writes — same name, same `config` key, and the
-// `is-applied` annotation on a bundle bootstrap for the reason the step gives — so its readers
+// The secret is the same one that step writes — same name, same `config` key — so its readers
 // cannot tell which path wrote it. An existing secret is kept rather than regenerated, because on
 // a repeated run it is the PKI the cluster may already be serving.
-func EnsureInitSecret(ctx context.Context, kubeClient client.KubeClient, fromBundle bool) error {
+func EnsureInitSecret(ctx context.Context, kubeClient client.KubeClient) error {
 	return retry.
 		NewLoop(fmt.Sprintf("Upload the registry PKI to %s/%s", secretsNamespace, initSecretName), 30, 5*time.Second).
 		RunContext(ctx, func() error {
-			return ensureInitSecret(ctx, kubeClient, fromBundle)
+			return ensureInitSecret(ctx, kubeClient)
 		})
 }
 
-func ensureInitSecret(ctx context.Context, kubeClient client.KubeClient, fromBundle bool) error {
+func ensureInitSecret(ctx context.Context, kubeClient client.KubeClient) error {
 	secrets := kubeClient.CoreV1().Secrets(secretsNamespace)
 
 	_, err := secrets.Get(ctx, initSecretName, metav1.GetOptions{})
@@ -100,16 +99,10 @@ func ensureInitSecret(ctx context.Context, kubeClient client.KubeClient, fromBun
 		return fmt.Errorf("marshal PKI: %w", err)
 	}
 
-	annotations := map[string]string{}
-	if fromBundle {
-		annotations[initSecretAppliedAnnotation] = ""
-	}
-
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        initSecretName,
-			Namespace:   secretsNamespace,
-			Annotations: annotations,
+			Name:      initSecretName,
+			Namespace: secretsNamespace,
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{"config": config},

@@ -117,15 +117,10 @@ func accessor(input *go_hook.HookInput) helpers.ValuesAccessor[Values] {
 
 // IsActive reports that this implementation owns the cluster's registry.
 //
-// Exported for the legacy implementation to read, and that is the only import between the
-// two packages. The direction is deliberate: the legacy hooks may depend on this one, so
-// removing them stays a single deletion, whereas a dependency the other way would be the
-// thread left holding them together.
-//
 // Safe to call from any hook ordered after the switch (OnBeforeHelm order 5), which is
 // where the value is written. Before that it reads false — the same answer as "the previous
-// implementation owns the cluster", which is the answer that keeps the legacy state machine
-// running rather than the one that starts a second writer.
+// implementation owns the cluster", which is the answer that leaves the nodes as they are
+// rather than the one that starts a second writer.
 func IsActive(input *go_hook.HookInput) bool {
 	return accessor(input).Get().Enabled
 }

@@ -56,14 +56,6 @@ func TestContextBootstrap_Validate(t *testing.T) {
 			},
 			wantErr: false,
 		},
-		{
-			name: "valid from a bundle",
-			input: ContextBootstrap{
-				Init:       initConfig,
-				FromBundle: true,
-			},
-			wantErr: false,
-		},
 		// Invalid
 		{
 			name:    "missing init",
@@ -115,17 +107,6 @@ func TestContextBootstrap_ToMap(t *testing.T) {
 		input    ContextBootstrap
 		expected map[string]any
 	}{
-		{
-			name: "from a bundle",
-			input: ContextBootstrap{
-				Init:       initConfig,
-				FromBundle: true,
-			},
-			expected: map[string]any{
-				"init":       initConfigMap,
-				"fromBundle": true,
-			},
-		},
 		{
 			name: "not from a bundle",
 			input: ContextBootstrap{

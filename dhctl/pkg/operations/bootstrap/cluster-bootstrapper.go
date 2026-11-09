@@ -1422,7 +1422,7 @@ func (b *ClusterBootstrapper) bootstrapDeckhouse(ctx context.Context, bctx *boot
 	// An immutable master runs no bashible, so the step that uploads the registry PKI on every
 	// other cluster never runs, and the installation below reads that secret back.
 	if bctx.immutable != nil {
-		if err := registry_config.EnsureInitSecret(ctx, kubeCl, bctx.metaConfig.Registry.BundleBootstrap); err != nil {
+		if err := registry_config.EnsureInitSecret(ctx, kubeCl); err != nil {
 			return err
 		}
 	}

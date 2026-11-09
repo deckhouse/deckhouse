@@ -1,3 +1,15 @@
+## Версия 1.78
+
+### Обратите внимание
+
+- Удалена реализация v1 управления хранилищем образов, которая использовалась в DP до версии 1.77 включительно (режимы `Proxy` и `Local` в секции [`registry`](https://deckhouse.ru/modules/deckhouse/v1.78/configuration.html#parameters-registry) ModuleConfig `deckhouse`).
+  Установить кластер в этих режимах больше нельзя, а обновление на DP 1.78 блокируется, пока кластер работает в режиме `Proxy` или `Local` либо в режиме `Direct` без настроенного ModuleConfig `registry`.
+  Перед обновлением переведите кластер на модуль [`registry`](https://deckhouse.ru/modules/registry/v1.78/) на DP 1.77 — порядок действий описан [в FAQ модуля](https://deckhouse.ru/modules/registry/v1.78/faq.html#как-устроена-миграция-на-модуль-registry).
+  Обновляйтесь на DP 1.78 только с DP 1.77.1 или более новой версии: это первый релиз, который проверяет, на какой реализации registry работает кластер. Обновление в обход него, например переход между LTS-релизами или ограничение версий обновления с более раннего релиза, может установить DP 1.78 на кластер в режиме `Proxy` или `Local`, а такое состояние не поддерживается.
+
+- В Deckhouse Commander проверка, приведение к конфигурации (converge) и удаление кластера, в сохранённых ресурсах которого ModuleConfig `deckhouse` по-прежнему задаёт `registry.mode` `Proxy` или `Local`, теперь завершаются ошибкой и ничего не меняют.
+  Перед этими операциями приведите ресурсы в соответствие с кластером: замените в них ModuleConfig `deckhouse` на тот, что в кластере, и добавьте ModuleConfig `registry` кластера, если он есть.
+
 ## Версия 1.77
 
 ### Обратите внимание
@@ -19,6 +31,11 @@
   после обновления сработает [алерт `D8UserAuthzLegacyRBACv2CustomRoleFound`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.77/reference/alerts.html#user-authz-d8userauthzlegacyrbacv2customrolefound).
   Такие роли необходимо перевести на новую схему до обновления на DP 1.78, иначе оно будет заблокировано.
   Порядок миграции описан [в FAQ модуля `user-authz`](https://deckhouse.ru/modules/user-authz/v1.77/faq.html#как-перевести-кастомные-роли-на-новую-схему-в-dp-178).
+
+- Если в кластере используется реализация v1 управления хранилищем образов (секция `registry` ModuleConfig `deckhouse`) в режиме `Proxy` или `Local`
+  либо в режиме `Direct` без настроенного ModuleConfig `registry`,
+  кластер необходимо перевести на модуль [`registry`](https://deckhouse.ru/modules/registry/v1.77/) до обновления на DP 1.78, иначе оно будет заблокировано.
+  Порядок миграции описан [в FAQ модуля `registry`](https://deckhouse.ru/modules/registry/v1.78/faq.html#как-устроена-миграция-на-модуль-registry).
 
 - Если конфигурация [модуля `metallb`](https://deckhouse.ru/modules/metallb/v1.77/) управляется через GitOps,
   перед обновлением временно отключите синхронизацию из вашего репозитория,

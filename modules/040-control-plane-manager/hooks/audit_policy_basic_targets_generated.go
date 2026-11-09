@@ -129,7 +129,6 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-system:documentation",
 	"system:serviceaccount:d8-system:network-policy-engine",
 	"system:serviceaccount:d8-system:registry-controller",
-	"system:serviceaccount:d8-system:registry-nodeservices",
 	"system:serviceaccount:d8-system:registry-storage",
 	"system:serviceaccount:d8-system:terraform-auto-converger",
 	"system:serviceaccount:d8-system:terraform-state-exporter",

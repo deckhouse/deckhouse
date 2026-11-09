@@ -31,11 +31,11 @@ import (
 const (
 	// ImplementationKey is what the module records and a release may require.
 	//
-	// May, not does: no release declares it yet, and it cannot be this one — a requirement is
-	// evaluated by the version already INSTALLED, and a cluster on an older version has never
-	// registered this check and lets any value through. This release registers it and records a
-	// value everywhere; the release that refuses to install on a cluster still running the previous
-	// implementation adds `"registryImplementation": "V2"` to release.yaml.
+	// A requirement is evaluated by the version already INSTALLED, and a cluster on a version that
+	// never registered this check lets any value through. It was registered in 1.77.1, and 1.78 —
+	// the release without the v1 implementation — requires `"registryImplementation": "V2"` in
+	// release.yaml. Here it keeps the following releases off a cluster that 1.78 refused to take
+	// over from.
 	ImplementationKey = "registryImplementation"
 )
 
@@ -61,11 +61,16 @@ func check(required string, getter requirements.ValueGetter) (bool, error) {
 		return true, nil
 	}
 
-	// The advice names the only lever there is: no setting selects an implementation, and the
-	// handover happens on its own once the previous implementation has let go of the pull path.
+	// On this release the v1 implementation is gone, and with it the lever the release before
+	// named here: `registry.mode` of the deckhouse ModuleConfig moves nothing any more. No setting
+	// selects an implementation either. So the message points at the gate's own reason, which names
+	// the one step left where there is one — configuring the module, for `Direct` — and says that
+	// any other state is not supported.
 	return false, fmt.Errorf(
-		"this release requires the %q registry implementation, and the cluster is running %q; "+
-			"bring `registry.mode` in the deckhouse ModuleConfig to Unmanaged and wait for that "+
-			"transition to finish, after which the handover completes on its own",
+		"this release requires the %q registry implementation, and the cluster is running %q: "+
+			"the registry module has not taken over from the v1 implementation; the reason is in "+
+			"the D8RegistryMigrationPending alert. For the Direct mode, set `mode: Managed` with "+
+			"`primary.upstream` in the registry ModuleConfig; any other reason is a state that is "+
+			"not supported, contact Deckhouse Platform technical support",
 		required, current)
 }

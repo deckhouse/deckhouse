@@ -1,3 +1,15 @@
+## Version 1.78
+
+### Important
+
+- The v1 implementation of the container registry management, used up to and including DP 1.77 (the `Proxy` and `Local` modes set in the [`registry`](https://deckhouse.io/modules/deckhouse/v1.78/configuration.html#parameters-registry) section of the `deckhouse` ModuleConfig) has been removed.
+  A cluster can no longer be installed in these modes, and the update to DP 1.78 is blocked while the cluster runs `Proxy` or `Local`, or `Direct` without the `registry` ModuleConfig configured.
+  Migrate the cluster to the [`registry`](https://deckhouse.io/modules/registry/v1.78/) module on DP 1.77 before updating; the procedures are described in the [module FAQ](https://deckhouse.io/modules/registry/v1.78/faq.html#how-does-the-migration-to-the-registry-module-work).
+  Update to DP 1.78 only from DP 1.77.1 or later: that is the first release that checks which registry implementation the cluster runs. An update that skips it, for example an LTS release hop or an update constraint from an earlier release, can install DP 1.78 on a cluster still in `Proxy` or `Local` mode, which is not supported.
+
+- In Deckhouse Commander, checking, converging and deleting a cluster whose stored resources still set `registry.mode` to `Proxy` or `Local` in the `deckhouse` ModuleConfig now stop with an error and change nothing.
+  Before these operations, bring the resources in line with the cluster: replace the `deckhouse` ModuleConfig in them with the cluster's own and add the cluster's `registry` ModuleConfig, if it has one.
+
 ## Version 1.77
 
 ### Important
@@ -19,6 +31,11 @@
   the [`D8UserAuthzLegacyRBACv2CustomRoleFound`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.77/reference/alerts.html#user-authz-d8userauthzlegacyrbacv2customrolefound) alert will fire after the update.
   Such roles must be migrated to the new scheme before updating to DP 1.78, otherwise the update will be blocked.
   The migration procedure is described in the [`user-authz` module FAQ](https://deckhouse.io/modules/user-authz/v1.77/faq.html#how-do-i-migrate-custom-roles-to-the-new-scheme-in-dp-178).
+
+- If the cluster uses the v1 implementation of the container registry management (the `registry` section of the `deckhouse` ModuleConfig) in the `Proxy` or `Local` mode,
+  or in the `Direct` mode without the `registry` ModuleConfig configured,
+  it must be migrated to the [`registry`](https://deckhouse.io/modules/registry/v1.77/) module before updating to DP 1.78, otherwise the update will be blocked.
+  The migration procedures are described in the [`registry` module FAQ](https://deckhouse.io/modules/registry/v1.78/faq.html#how-does-the-migration-to-the-registry-module-work).
 
 - If the [`metallb`](https://deckhouse.io/modules/metallb/v1.77/) module configuration is managed through GitOps,
   temporarily disable synchronization from your repository before the update.

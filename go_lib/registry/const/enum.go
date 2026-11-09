@@ -43,30 +43,6 @@ type (
 	CRIType       string
 )
 
-func ToModeType(mode string) ModeType {
-	val := strings.ToLower(mode)
-	switch val {
-	case "direct":
-		return ModeDirect
-	case "proxy":
-		return ModeProxy
-	case "local":
-		return ModeLocal
-	default:
-		return ModeUnmanaged
-	}
-}
-
-func ToCheckModeType(mode string) CheckModeType {
-	val := strings.ToLower(mode)
-	switch val {
-	case "relax":
-		return CheckModeRelax
-	default:
-		return CheckModeDefault
-	}
-}
-
 func ToScheme(scheme string) SchemeType {
 	if strings.EqualFold(scheme, string(SchemeHTTP)) {
 		return SchemeHTTP

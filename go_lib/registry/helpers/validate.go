@@ -34,7 +34,7 @@ import (
 // Every value validated here is later interpolated into a file that another
 // component parses or executes: a static pod manifest read by kubelet, the
 // NGINX configuration of the node load balancer, /etc/containerd/registry.d
-// entries, or the distribution / docker_auth / mirrorer configurations. Values
+// entries, or the distribution / docker_auth configurations. Values
 // are escaped at the point of rendering, but escaping cannot help where the
 // consumer has no quoting at all -- an NGINX `server` directive, or a directory
 // name in a shell command. These rules therefore constrain each value to the

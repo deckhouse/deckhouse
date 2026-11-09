@@ -28,19 +28,6 @@ var (
 
 type ContextBootstrap struct {
 	Init initsecret.Config `json:"init" yaml:"init"`
-
-	// FromBundle marks a bootstrap whose images came from a bundle rather than from a registry the
-	// cluster can reach.
-	//
-	// The bootstrap steps this context feeds are the previous implementation's, borrowed on this path
-	// for one job: standing up a registry on the first master and filling it, so a cluster with no
-	// upstream anywhere can start at all. The field tells those steps apart — the ones bringing the
-	// registry up must still run, while the one that hands the cluster that implementation's state
-	// machine must not. Nothing in such a cluster would execute it, and the record it leaves reads as
-	// "the old implementation is mid-transition", which the current one refuses to take over from.
-	//
-	// Absent in every existing cluster, where the steps read it as "not from a bundle".
-	FromBundle bool `json:"fromBundle,omitempty" yaml:"fromBundle,omitempty"`
 }
 
 func (c ContextBootstrap) Validate() error {
@@ -53,13 +40,6 @@ func (c ContextBootstrap) ToMap() map[string]any {
 	m := make(map[string]any)
 
 	m["init"] = c.Init.ToMap()
-
-	// Only when true: the steps ask `not (.registry.bootstrap).fromBundle`, and an explicit false
-	// would read the same, but every existing cluster renders this map without the key at all — so
-	// leaving it out keeps the two indistinguishable.
-	if c.FromBundle {
-		m["fromBundle"] = c.FromBundle
-	}
 
 	return m
 }

@@ -18,9 +18,9 @@ limitations under the License.
 //
 // Threat model coverage (registry-threat-model.md), harness 10: this is one of
 // the three code sites section 6 names for that value, and the one that turns a
-// node address into the string a node's NGINX will contain. The other two are
-// hooks/orchestrator/bashible (see its own harness) and
-// go_lib/registry/models/bashible, which validates the result.
+// node address into the string a node's NGINX will contain. Of the other two,
+// go_lib/registry/models/bashible validates the result, and
+// hooks/orchestrator/bashible went with the previous implementation.
 //
 // GenerateProxyEndpoints has no validation of its own and should not acquire
 // any: its job is to join a host and a port. What it must never do is *launder*

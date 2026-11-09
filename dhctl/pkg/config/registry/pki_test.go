@@ -52,14 +52,13 @@ func TestEnsureInitSecret(t *testing.T) {
 		ctx := t.Context()
 		kubeClient := client.NewFakeKubernetesClient()
 
-		require.NoError(t, EnsureInitSecret(ctx, kubeClient, false))
+		require.NoError(t, EnsureInitSecret(ctx, kubeClient))
 
 		_, err := kubeClient.CoreV1().Namespaces().Get(ctx, secretsNamespace, metav1.GetOptions{})
 		require.NoError(t, err)
 
-		secret, err := kubeClient.CoreV1().Secrets(secretsNamespace).Get(ctx, initSecretName, metav1.GetOptions{})
+		_, err = kubeClient.CoreV1().Secrets(secretsNamespace).Get(ctx, initSecretName, metav1.GetOptions{})
 		require.NoError(t, err)
-		require.NotContains(t, secret.Annotations, initSecretAppliedAnnotation)
 
 		pki, err := GetPKI(ctx, kubeClient)
 		require.NoError(t, err)
@@ -76,21 +75,10 @@ func TestEnsureInitSecret(t *testing.T) {
 		before, err := GetPKI(ctx, kubeClient)
 		require.NoError(t, err)
 
-		require.NoError(t, EnsureInitSecret(ctx, kubeClient, false))
+		require.NoError(t, EnsureInitSecret(ctx, kubeClient))
 
 		after, err := GetPKI(ctx, kubeClient)
 		require.NoError(t, err)
 		require.Equal(t, before, after)
-	})
-
-	t.Run("marks the secret as applied on a bundle bootstrap", func(t *testing.T) {
-		ctx := t.Context()
-		kubeClient := client.NewFakeKubernetesClient()
-
-		require.NoError(t, EnsureInitSecret(ctx, kubeClient, true))
-
-		secret, err := kubeClient.CoreV1().Secrets(secretsNamespace).Get(ctx, initSecretName, metav1.GetOptions{})
-		require.NoError(t, err)
-		require.Contains(t, secret.Annotations, initSecretAppliedAnnotation)
 	})
 }

@@ -10,16 +10,11 @@ Harness'ы лежат рядом с кодом, который они прове
 
 | Пакет | Файл |
 | --- | --- |
-| `go_lib/registry/models/node-services` | `fuzz_test.go` |
 | `go_lib/registry/models/bashible` | `fuzz_test.go` |
 | `go_lib/registry/models/moduleconfig` | `fuzz_test.go` |
 | `go_lib/registry/pki` | `fuzz_test.go` |
 | `go_lib/registry/helpers` | `fuzz_test.go` |
 | `go_lib/registry/const` | `fuzz_test.go` |
-| `modules/038-registry/hooks/orchestrator` | `params_fuzz_test.go` |
-| `modules/038-registry/hooks/orchestrator/bashible` | `fuzz_test.go` |
-| `modules/038-registry/images/nodeservices-manager/app/internal/staticpod` | `fuzz_test.go` |
-| `modules/038-registry/images/mirrorer/app/internal/config` | `fuzz_test.go` |
 | `modules/038-registry/images/syncer/app/pkg/config` | `fuzz_test.go` |
 | `modules/038-registry/images/registry-proxy/reloader/src` | `fuzz_test.go`, `watcher_fuzz_test.go` |
 
@@ -30,16 +25,16 @@ harness'ов. Ниже — что требуется и что сделано.
 
 | № | Требуется | Состояние |
 | --- | --- | --- |
-| 1 | Конфигурация узла: `ProxyConfig` (`http`, `https`, `no_proxy`) и `LocalMode.Upstreams`; разбор и валидация моделей `go_lib/registry/models/node-services`, а также формирование манифеста статического пода и конфигураций служб в `internal/staticpod` | **Покрыто** |
-| 2 | Параметры вышестоящего хранилища (адрес, схема, путь, УЦ) — на входе хуков `hooks/orchestrator/*` **и** на выходе, в сформированных конфигурациях `distribution` и `mirrorer` | **Покрыто** |
+| 1 | Конфигурация узла: `ProxyConfig` (`http`, `https`, `no_proxy`) и `LocalMode.Upstreams`; разбор и валидация моделей `go_lib/registry/models/node-services`, а также формирование манифеста статического пода и конфигураций служб в `internal/staticpod` | **Удалено** вместе с предыдущей реализацией и кодом, который покрывало |
+| 2 | Параметры вышестоящего хранилища (адрес, схема, путь, УЦ) — на входе хуков `hooks/orchestrator/*` **и** на выходе, в сформированных конфигурациях `distribution` и `mirrorer` | **Частично**: входная сторона покрыта в `models/moduleconfig`; хуки и формируемые конфигурации удалены вместе с предыдущей реализацией |
 | 3 | `distribution` — протокол и хранилище: структурный фаззинг манифестов и дескрипторов слоёв, плюс отдельный stateful HTTP-harness тракта загрузки blob | **Покрыто** (форк) |
 | 4 | Служба `auth`: `/auth` с параметрами `service`, `scope`, `account`, повторяющимися и противоречивыми `scope`, некорректной кодировкой, аномальной длиной и заголовком `Authorization`; инварианты ACL | **Покрыто** (форк) |
 | 5 | Собственный код форка `distribution`: `registry/proxy_headers.go`, `registry/auth_proxy.go`, переработанный пакет `registry/proxy` | **Покрыто** (форк) |
-| 6 | `mirrorer`: конфигурация зеркалирования (`Upstreams`, учётные записи, адреса реплик) | **Покрыто** |
+| 6 | `mirrorer`: конфигурация зеркалирования (`Upstreams`, учётные записи, адреса реплик) | **Удалено** вместе с предыдущей реализацией и `mirrorer` |
 | 7 | `syncer` — явно необязательный, вне контура угроз (TM-16 признана неактуальной) | **Покрыто** |
 | 8 | NGINX в контексте `stream`: клиентское направление (данные, поступающие на `127.0.0.1:5001`) и upstream-направление (данные от хранилища образов) **отдельными** harness'ами — некорректные и усечённые потоки, аномальные размеры и темп передачи | **Покрыто** (форк) |
 | 9 | `registry-proxy-reloader`: входной файл `nginx_new.conf` для `watcher.go` (частично записанные, усечённые, синтаксически некорректные варианты) **и** функции сравнения `file_comparison.go` | **Покрыто** |
-| 10 | `proxyEndpoints`: исходное значение `Node.status.addresses[type=InternalIP]`, итоговые элементы и три участка кода — `hooks/orchestrator/bashible`, `go_lib/registry/const`, `go_lib/registry/models/bashible` | **Покрыто** |
+| 10 | `proxyEndpoints`: исходное значение `Node.status.addresses[type=InternalIP]`, итоговые элементы и три участка кода — `hooks/orchestrator/bashible`, `go_lib/registry/const`, `go_lib/registry/models/bashible` | **Покрыто** для двух оставшихся; `hooks/orchestrator/bashible` удалён вместе с предыдущей реализацией |
 
 ### Harness 8, как он построен
 
@@ -77,7 +72,9 @@ Harness конфигурационного парсера остаётся до�
 
 ### Что дало закрытие harness'ов 2, 6, 7, 9 и 10
 
-Каждый из них что-то воспроизвёл. Исправления входят в то же изменение.
+Каждый из них что-то воспроизвёл. Исправления входят в то же изменение. Часть
+упомянутого ниже кода с тех пор удалена вместе с предыдущей реализацией; находки
+оставлены для истории.
 
 - **Продюсер конфигурации bashible не валидировал то, что пишет** (harness 10,
   TM-17 и TM-18, обе критические). `hooks/orchestrator/bashible` объявляет
@@ -125,17 +122,14 @@ Harness конфигурационного парсера остаётся до�
 
 | Угроза | Harness | Инвариант |
 | --- | --- | --- |
-| TM-02 (произвольный статический под на узле control plane через `ProxyConfig`) | `FuzzStaticPodManifestProxyEnvs`, `FuzzProxyConfigValidate` | Сформированный манифест сохраняет структуру и воспроизводит значения прокси дословно; `ProxyConfig.Validate()` принимает только значения, которые можно безопасно отрендерить |
-| TM-08 (внедрение параметров в конфигурации `distribution` / `mirrorer`) | `FuzzDistributionConfigUpstream`, `FuzzMirrorerConfigUpstreams`, `FuzzUpstreamRegistryValidate`, `FuzzLocalModeUpstreams` | `remoteurl`, `local` и перечень `remote` сохраняют заданные значения; вышестоящее хранилище и адреса зеркал ограничены до рендеринга |
-| TM-17 (внедрение директив NGINX и команд ОС через `proxyEndpoints`) | `FuzzContextProxyEndpoints`, `FuzzGenerateProxyEndpoints`, `FuzzConfigBuilderMasterNodesIPs` | Всё, что принимает `Validate()`, — пара `<ip>:<port>` без метасимволов NGINX и командной оболочки; продюсер не превращает неприемлемое значение в приемлемое; конфигурация, которую пишет хук, проходит правила модели |
-| TM-18 (подмена хранилища через `hosts` / зеркала) | `FuzzContextHosts`, `FuzzConfigBuilderUnmanaged` | Ключи `hosts` — безопасные имена каталогов, хосты зеркал безопасны для командной оболочки, схема — `http` или `https` |
-| TM-06 (подмена вышестоящего хранилища при проксировании) | `FuzzRegistrySettingsValidate`, `FuzzDeckhouseSettingsJSON`, `FuzzParamsStateRoundTrip` | Принятый `imagesRepo` разделяется на хост и путь, безопасные для всех приёмников; ровно один раздел режима заполнен; сохранённое состояние читается обратно без потерь |
+| TM-17 (внедрение директив NGINX и команд ОС через `proxyEndpoints`) | `FuzzContextProxyEndpoints`, `FuzzGenerateProxyEndpoints` | Всё, что принимает `Validate()`, — пара `<ip>:<port>` без метасимволов NGINX и командной оболочки; продюсер не превращает неприемлемое значение в приемлемое |
+| TM-18 (подмена хранилища через `hosts` / зеркала) | `FuzzContextHosts` | Ключи `hosts` — безопасные имена каталогов, хосты зеркал безопасны для командной оболочки, схема — `http` или `https` |
+| TM-06 (подмена вышестоящего хранилища при проксировании) | `FuzzRegistrySettingsValidate`, `FuzzDeckhouseSettingsJSON` | Принятый `imagesRepo` разделяется на хост и путь, безопасные для всех приёмников; ровно один раздел режима заполнен |
 | TM-01, TM-07 (PKI модуля) | `FuzzDecodeCertificate`, `FuzzDecodePrivateKey`, `FuzzDecodeCertKey`, `FuzzValidateCertWithCAChain` | Декодирование никогда не завершается паникой; сертификат проверяется только против выдавшего его УЦ |
-| TM-15 (ACL хранилища) | `FuzzAuthConfigUsers` | Конфигурация `auth` сохраняет пять записей ACL, каждая сохраняет ограничение `account`, и учётная запись только для чтения никогда не получает права записи |
 | TM-21, TM-22, TM-23 (применение конфигурации балансировщика) | `FuzzFileContentsEqual`, `FuzzCopyFile`, `FuzzNginxReload`, `TestNginxMasterSelection` | Равенство сообщается ровно при совпадении байтов и никогда для отсутствующего или усечённого файла; применяются те байты, которые прошли проверку; SIGHUP адресуется мастер-процессу |
 | TM-05, TM-09, TM-13 (обращение с учётными данными в тракте поставки) | `FuzzCredsFromDockerCfg`, `FuzzDockerCfgRoundTrip`, `FuzzSplitAddressAndPath` | Учётные данные проходят пару кодирование/декодирование без изменений; хост реестра никогда не несёт разделитель пути |
 | TM-16 (перенос образов утилитой `syncer`, вне контура угроз) | `FuzzSyncerConfig` | Принятый адрес конструируем клиентом реестра; учётные данные пригодны для передачи в заголовке HTTP |
-| Устойчивость конфигураций | `FuzzConfigJSONValidate`, `FuzzConfigJSONRoundTrip`, `FuzzParseConfig` | Произвольное содержимое секрета не приводит к панике контроллера или хуков, а валидация детерминирована |
+| Устойчивость конфигураций | `FuzzConfigJSONRoundTrip` | Произвольное содержимое секрета не приводит к панике контроллера или хуков, а валидация детерминирована |
 
 Harness'ы 3, 4, 5 и 8 из плана модели угроз требуют исполнения сторонних
 компонентов в процессе, поэтому находятся в форках, а не здесь; их состояние — в
@@ -143,19 +137,18 @@ Harness'ы 3, 4, 5 и 8 из плана модели угроз требуют �
 
 ## Fuzz-образы
 
-Отдельная CI-сборка фаззинга включает шесть образов для harness'ов из этого репозитория:
-`registry/hooks-fuzz`, `registry/library-fuzz`, `registry/nodeservices-manager-fuzz`,
-`registry/mirrorer-fuzz`, `registry/syncer-fuzz` и `registry/registry-proxy-fuzz`.
+Отдельная CI-сборка фаззинга включает три образа для harness'ов из этого репозитория:
+`registry/library-fuzz`, `registry/syncer-fuzz` и `registry/registry-proxy-fuzz`.
 Также включены `registry/docker-distribution-fuzz` и `registry/docker-auth-fuzz`
 для harness'ов из веток `deckhouse` сторонних форков. Оба образа используют
 актуальную ветку `deckhouse` через удалённые Git-источники werf.
 Эти исходники отделены от production-сборок:
 distribution теперь использует локальную обёртку над v3, а релизный тег
 docker-auth ещё не содержит harness'ов.
-Все восемь Go-образов используют закреплённый базовый образ `fuzz-go`
+Все пять Go-образов используют закреплённый базовый образ `fuzz-go`
 и загружают Go-зависимости при сборке. Werf учитывает изменения исходников
-обоих форков в зависимостях стадии `install`. Образы hooks и library получают
-исходники напрямую из этого репозитория через Git-секции. Остальные четыре
+обоих форков в зависимостях стадии `install`. Образ library получает
+исходники напрямую из этого репозитория через Git-секции. Остальные два
 образа импортируют существующие артефакты исходников production-сборки.
 Все образы промежуточные (`final: false`). Обычные CI-сборки
 используют `WERF_FINAL_IMAGES_ONLY=true` и исключают их, поскольку финальные образы
@@ -188,9 +181,6 @@ container-factory, поэтому форк в ветке `deckhouse-fuzzing` б�
 
 ```shell
 cd go_lib/registry && go test ./...
-go test ./modules/038-registry/hooks/orchestrator/...
-cd modules/038-registry/images/nodeservices-manager/app && go test ./...
-cd modules/038-registry/images/mirrorer/app && go test ./...
 cd modules/038-registry/images/syncer/app && go test ./...
 cd modules/038-registry/images/registry-proxy/reloader && go test ./...
 ```
@@ -212,18 +202,7 @@ go test ./helpers/ -run 'FuzzSplitAddressAndPath/3e3b70dba384074d'
 
 ## Где обеспечиваются инварианты
 
-Harness'ы проверяют свойства; обеспечивают их два слоя.
-
-**Экранирование при рендеринге.** `internal/staticpod/templates.go` предоставляет
-две функции шаблона, и каждая подстановка проходит через одну из них:
-
-- `quote` формирует YAML-скаляр в двойных кавычках. Это `strconv.Quote` плюс
-  отказ на входе, не являющемся корректным UTF-8: Go записывает такие байты как
-  `\xNN`, тогда как YAML читает `\xNN` как кодовую точку `U+00NN`, поэтому у
-  значения нет представления в YAML и оно отвергается, а не меняется молча.
-- `hostPort` соединяет хост и порт через `net.JoinHostPort`, который берёт
-  IPv6-адреса в квадратные скобки — при простой конкатенации они остались бы
-  неоднозначными.
+Harness'ы проверяют свойства; обеспечивает их валидация.
 
 **Валидация ограничивает область значений.**
 `go_lib/registry/helpers/validate.go` содержит правила, применяемые моделями;
@@ -231,8 +210,7 @@ Harness'ы проверяют свойства; обеспечивают их д
 `HostWithOptionalPort`, `RegistryAddress`, `RegistryAccountName`, `IPWithPort`,
 `ProxyEndpoint`,
 `MirrorHost`, `IPAddress`, `URLScheme`, `URLPath`, `ProxyURL`, `NoProxyList` и
-`EncodableString`. Они используются в `models/node-services` (`ProxyConfig`,
-`LocalMode`, `UpstreamRegistry`, `User`), в `models/moduleconfig`
+`EncodableString`. Они используются в `models/moduleconfig`
 (`RegistrySettings.ImagesRepo`) и в `models/bashible` (`Context`, `Config`,
 хосты зеркал и ключи отображения `hosts`, до которых ozzo не достаёт, так как
 валидирует значения отображения, но не ключи).
@@ -243,7 +221,8 @@ Harness'ы проверяют свойства; обеспечивают их д
 валидацией.
 
 Два шага bashible, записывающие эти файлы, используют **незакавыченный**
-heredoc, и это сделано намеренно: в режимах Proxy и Local dhctl подставляет
+heredoc, и это сделано намеренно: в режиме Local, которым dhctl выражает установку
+из бандла, dhctl подставляет
 `helpers.NodeIPPlaceholder` там, где должен быть собственный адрес узла, и только
 раскрытие этого тела оболочкой его разрешает. Поэтому тело подвергается
 подстановке параметров и команд от имени root, и `$(...)` из него удерживает
@@ -324,10 +303,11 @@ Harness подтверждает, а не предполагает, что `SetX
 `req.Form["scope"]`, поэтому `?scope=a&scope=b` это другой путь, чем
 `?scope=a b`.
 
-`FuzzAuthEndpoint` прогоняет эндпоинт `/auth` против обеих поставляемых модулем
-политик ACL — узловой из
+`FuzzAuthEndpoint` прогоняет эндпоинт `/auth` против обеих политик ACL, которые
+поставляла предыдущая реализация, — узловой из
 `images/nodeservices-manager/app/internal/staticpod/templates/auth/config.yaml.tpl`
-и единственного правила «только чтение» из `templates/inclusterproxy/secret.yaml`.
+и единственного правила «только чтение» из `templates/inclusterproxy/secret.yaml`;
+обе удалены вместе с этой реализацией.
 Он не повторяет логику ACL, а проверяет границы, которые политики задают: токен
 никогда не несёт действия, которого клиент не запрашивал, никогда не называет
 ресурс, которого не было в запросе, учётная запись только для чтения и
@@ -517,7 +497,8 @@ fuzz/stream-run.sh upstream -runs=5000
 
 Основную ценность здесь несут два оракула, и их стоит переиспользовать:
 
-- **Структурная эквивалентность** (`assertSameShape` в пакете `staticpod`).
+- **Структурная эквивалентность** (`assertSameShape`, который находился в пакете
+  `staticpod` предыдущей реализации).
   Отрендерить шаблон дважды — один раз с фаззируемым значением, второй с инертным
   заполнителем той же «пустоты» — и сравнить формы документов: ключи отображений
   и длины последовательностей сохраняются, скаляры сводятся к своему типу. Любая

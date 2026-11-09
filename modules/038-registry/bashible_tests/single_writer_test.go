@@ -351,27 +351,21 @@ func TestTheAgentAlwaysGetsItsCredentialMount(t *testing.T) {
 	require.NotContains(t, body, "type: FileOrCreate")
 }
 
-// bundleRegistry is an installation whose images come from a bundle: on the node it looks exactly like
-// the legacy Local mode, because it borrows that mode's bootstrap steps to stand a registry up on the
-// first master and fill it from the bundle. The one thing that tells them apart is the flag below.
+// bundleRegistry is an installation whose images come from a bundle: on the node it is exactly the
+// Local mode, because it uses that mode's bootstrap steps to stand a registry up on the first master
+// and fill it from the bundle. Nothing in the context tells the two apart, and no step needs to.
 func bundleRegistry() map[string]any {
-	registry := localRegistry()
-	bootstrap := registry["bootstrap"].(map[string]any)
-	bootstrap["fromBundle"] = true
-	return registry
+	return localRegistry()
 }
 
 // How step 073 behaves on the bundle path is pinned in init_secret_test.go. Closing the step
-// altogether — which is what this file used to assert — kept the legacy state machine shut and took
-// the registry PKI down with it, stranding the installation with "get PKI: secrets \"registry-init\"
-// not found" after the store was already full. The secret is uploaded on every path now, and arrives
-// pre-annotated as consumed when the images came from a bundle.
+// altogether — which is what this file used to assert — took the registry PKI down with it, stranding
+// the installation with "get PKI: secrets \"registry-init\" not found" after the store was already
+// full. The secret is uploaded on every path now.
 
-// TestTheBundleInstallStillFillsTheStore is the other side of the gate above.
-//
-// The bundle path needs the borrowed steps: the igniter that serves the bundle through the tunnel, the
-// copy into the node's store, and the registry that then holds it. Gating them out along with the init
-// secret would leave a cluster with no images at all — and, since the cluster is air-gapped by
+// TestTheBundleInstallStillFillsTheStore: the bundle path needs these steps — the igniter that serves
+// the bundle through the tunnel, the copy into the node's store, and the registry that then holds it.
+// Gating them out would leave a cluster with no images at all — and, since the cluster is air-gapped by
 // definition here, nowhere to get them.
 func TestTheBundleInstallStillFillsTheStore(t *testing.T) {
 	steps := []string{

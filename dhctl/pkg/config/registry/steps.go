@@ -28,10 +28,6 @@ import (
 const (
 	secretsNamespace = "d8-system"
 	initSecretName   = "registry-init"
-
-	// initSecretAppliedAnnotation is the previous implementation's mark of a consumed init secret,
-	// read for presence by modules/038-registry/hooks/orchestrator/init-secret.
-	initSecretAppliedAnnotation = "registry.deckhouse.io/is-applied"
 )
 
 // errRegistryCheckTransient marks a transport/API-level failure while reading the registry module's

@@ -1,51 +1,4 @@
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-fuzz
-from: registry.flant.com/deckhouse/ssdlc/ci-images/fuzz-go:34fdc16d905326c2fd7097363059baa398c9a1c0
-fromLatest: true
-final: false
-git:
-  - add: /
-    to: /src
-    includePaths:
-      - go.mod
-      - go.sum
-      - go_lib
-      - pkg
-      - dhctl
-      - deckhouse-controller/pkg/apis
-      - ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent/src
-      - modules/038-registry/hooks
-    stageDependencies:
-      install:
-        - '**/*'
-  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/Taskfile.fuzz.yml
-    to: /src/Taskfile.yml
-    stageDependencies:
-      install:
-        - Taskfile.fuzz.yml
-mount:
-{{ include "mount points for golang builds" . }}
-secrets:
-  - id: GOPROXY
-    value: {{ $.GOPROXY }}
-  {{- include "secret for private go modules" . | nindent 2 }}
-shell:
-  install:
-    - cd /src
-    {{- include "auth for private go modules" . | nindent 4 }}
-    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
-    - rm -rf test/e2e tests/e2e tests/ginkgo
-    - chmod -R a+rwX /src /fuzz/gomod
-imageSpec:
-  config:
-    workingDir: /src
-    labels:
-      io.deckhouse.fuzz.engine: go
-    env:
-      FUZZ_WORKDIR: /src
-      FUZZ_PACKAGES: "./modules/038-registry/hooks/orchestrator ./modules/038-registry/hooks/orchestrator/bashible"
-      CGO_ENABLED: "0"
----
 image: {{ $.ModuleName }}/library-fuzz
 from: registry.flant.com/deckhouse/ssdlc/ci-images/fuzz-go:34fdc16d905326c2fd7097363059baa398c9a1c0
 fromLatest: true
@@ -77,5 +30,5 @@ imageSpec:
       io.deckhouse.fuzz.engine: go
     env:
       FUZZ_WORKDIR: /src/go_lib/registry
-      FUZZ_PACKAGES: "./const ./helpers ./models/bashible ./models/moduleconfig ./models/node-services ./pki"
+      FUZZ_PACKAGES: "./const ./helpers ./models/bashible ./models/moduleconfig ./pki"
       CGO_ENABLED: "0"

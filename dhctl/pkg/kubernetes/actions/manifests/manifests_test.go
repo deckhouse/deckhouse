@@ -24,6 +24,8 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 )
 
 func compareDeployments(t *testing.T, depl1, depl2 *appsv1.Deployment) {
@@ -228,4 +230,19 @@ func Test_DoNotMutateDeployment(t *testing.T) {
 			compareDeployments(t, depl, newDepl)
 		})
 	}
+}
+
+// Test_RegistryBashibleConfigSecretIsMarked: the node registry configuration the installer writes
+// carries the mark of exactly the document it holds. Without it the registry module's switch gate
+// reads an installation with no registry settings as a v1 `Direct` cluster and an installation from a
+// bundle as a v1 `Local` one, and refuses them.
+func Test_RegistryBashibleConfigSecretIsMarked(t *testing.T) {
+	document := []byte("mode: Local\nproxyEndpoints:\n- ${discovered_node_ip}:5001\n")
+
+	secret := RegistryBashibleConfigSecret(map[string][]byte{"config": document})
+
+	require.Equal(t, bashible.InstallerMark(document), secret.Annotations[bashible.InstallerMarkAnnotation])
+	require.True(t, bashible.WrittenByInstaller(secret.Annotations, secret.Data["config"]))
+	require.Equal(t, "keep", secret.Annotations["helm.sh/resource-policy"],
+		"the mark is added to the annotations the module's release relies on, not in place of them")
 }

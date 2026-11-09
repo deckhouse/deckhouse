@@ -49,9 +49,14 @@ func TestCheck(t *testing.T) {
 		ok, err := check("V2", getter{})
 		require.Error(t, err)
 		assert.False(t, ok)
-		// The advice has to name something an operator can act on, and no setting selects an
-		// implementation — so the message points at the previous implementation's mode.
-		assert.Contains(t, err.Error(), "Unmanaged")
+		// The advice has to name something an operator can act on, and on this release the v1
+		// implementation's mode is not that: nothing reads it any more. So the message points at the
+		// gate's reason and at the one step that is left for `Direct`.
+		assert.Contains(t, err.Error(), "D8RegistryMigrationPending")
+		assert.Contains(t, err.Error(), "primary.upstream")
+		assert.Contains(t, err.Error(), "Deckhouse Platform technical support")
+		assert.NotContains(t, err.Error(), "deckhouse ModuleConfig",
+			"the v1 mode in the deckhouse ModuleConfig moves nothing on this release")
 		assert.NotContains(t, err.Error(), "implementation: V2",
 			"nothing accepts that setting, and telling an operator to set it sends them looking")
 	})

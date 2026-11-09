@@ -529,9 +529,11 @@ additional_configs() {
 # node than a step that will not finish.
 #
 # What used to be wrong here was the timing, not the refusal: the operator learned hours later,
-# from a node that had stopped converging. A file that predates a migration is now caught by the
-# module's preflight, which blocks the handover and names the nodes; one written afterwards raises
-# `d8_registry_node_foreign_registry_config` the moment the node reports it.
+# from a node that had stopped converging. Now a node that reports such a file raises
+# `d8_registry_node_foreign_registry_config` from the handover on. When the refusal starts depends
+# on the runtime: a `conf2.d` file (containerd v2) is refused in every mode, with or without the
+# module, while a `conf.d` file (containerd v1) is refused only once the module configures the
+# nodes, with `mode: Managed`, so a cluster handed over in `Unmanaged` gets that warning first.
 check_additional_configs() {
   local full_conf_path="$1"
   local ctrd_version="$2"

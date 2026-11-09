@@ -46,40 +46,18 @@ import (
 
 const v2Disabled = `
 internal:
-  orchestrator:
-    hash: "123"
-    state:
-      mode: "Unmanaged"
-      target_mode: "Unmanaged"
-      bashible:
-        config:
-          mode: Unmanaged
-          version: "legacy1"
-          imagesBase: registry.example.com/deckhouse/ee
-          hosts:
-            registry.example.com:
-              mirrors:
-                - host: registry.example.com
-                  scheme: https
   v2:
     enabled: false
 `
 
-// A cluster upgraded to a release carrying the new schema can have `internal`
-// populated by the old hooks with no `v2` branch at all. Templates must tolerate
+// Values with no `v2` branch at all, before any hook has filled it. Templates must tolerate
 // that instead of failing to render the whole module.
 const v2Absent = `
-internal:
-  orchestrator:
-    hash: "123"
-    state:
-      mode: "Unmanaged"
-      target_mode: "Unmanaged"
+internal: {}
 `
 
 const v2Enabled = `
 internal:
-  orchestrator: {}
   v2:
     enabled: true
     bashibleConfig:
@@ -140,84 +118,6 @@ internal:
         passwordHash: RW-HASH
 `
 
-// The state the switch gate is supposed to make unreachable: the new implementation
-// active while the legacy state machine still wants its own Service and publication
-// endpoint. Rendered on purpose, because two definitions of one object are resolved by
-// template ordering rather than by intent — and `Service/registry` is the name every image
-// reference in the cluster is built from.
-const v2WithLegacyStillActive = `
-internal:
-  orchestrator:
-    hash: "123"
-    state:
-      mode: "Proxy"
-      target_mode: "Proxy"
-      conditions: []
-      registry_service: "node-services"
-      ingress_enabled: true
-      bashible:
-        config:
-          mode: Proxy
-          version: "legacy1"
-          imagesBase: registry.d8-system.svc:5001/system/deckhouse
-          hosts:
-            registry.d8-system.svc:5001:
-              mirrors:
-                - host: 10.0.0.1:5001
-                  scheme: https
-  v2:
-    enabled: true
-    bashibleConfig:
-      agent:
-        endpoint: 127.0.0.1:5001
-        dropInFile: /etc/containerd/registry.d/_default/hosts.toml
-        layout: '{"backends":[{"name":"Upstream","host":"registry.deckhouse.io"}]}'
-      mode: Managed
-      version: "abc123"
-      imagesBase: registry.d8-system.svc:5001/system/deckhouse
-      proxyEndpoints: []
-      hosts:
-        registry.d8-system.svc:5001:
-          mirrors:
-            - host: registry.d8-system.svc:5001
-              scheme: https
-    registryConfig:
-      mode: Managed
-      storage:
-        cache: true
-        size: 50Gi
-    storageAddresses: ["10.0.0.1", "10.0.0.2"]
-    pki:
-      ca:
-        cert: CA-CERT
-        key: CA-KEY
-      distribution:
-        cert: DISTRIBUTION-CERT
-        key: DISTRIBUTION-KEY
-      auth:
-        cert: AUTH-CERT
-        key: AUTH-KEY
-      token:
-        cert: TOKEN-CERT
-        key: TOKEN-KEY
-      ingressClient:
-        cert: INGRESS-CLIENT-CERT
-        key: INGRESS-CLIENT-KEY
-      httpSecret: HTTP-SECRET
-      ro:
-        name: registry-ro
-        password: RO-PASSWORD
-        passwordHash: RO-HASH
-      sync:
-        name: registry-sync
-        password: SYNC-PASSWORD
-        passwordHash: SYNC-HASH
-      rw:
-        name: registry-rw
-        password: RW-PASSWORD
-        passwordHash: RW-HASH
-`
-
 // v2AirGapPublished is v2AirGap with the publication fields of the previous schema filled in — the
 // three an operator could already set before this model existed.
 const v2AirGapPublished = `
@@ -233,7 +133,6 @@ whitelistSourceRanges: ["10.0.0.0/10", "192.168.0.0/16"]
 
 const v2AirGapBody = `
 internal:
-  orchestrator: {}
   v2:
     enabled: true
     registryConfig:
@@ -300,7 +199,6 @@ const v2Draining = v2Enabled + `
 
 const v2EnabledUnmanaged = `
 internal:
-  orchestrator: {}
   v2:
     enabled: true
     registryConfig:
@@ -340,7 +238,6 @@ internal:
 // cached. The storage must not appear anywhere.
 const v2ManagedNoCache = `
 internal:
-  orchestrator: {}
   v2:
     enabled: true
     registryConfig:
@@ -865,6 +762,9 @@ var _ = Describe("Module :: registry :: helm template :: v2 storage", func() {
 			service := f.KubernetesResource("Service", "d8-system", "registry")
 			Expect(service.Exists()).To(BeTrue())
 			Expect(service.Field("spec.ports.0.port").String()).To(Equal("5001"))
+			// The storage pods and nothing else: every image reference in the cluster is built
+			// from this name.
+			Expect(service.Field("spec.selector.app").String()).To(Equal("registry-storage"))
 		})
 
 		It("lets a syncer write only its own report and take the lease", func() {
@@ -1184,13 +1084,10 @@ var _ = Describe("Module :: registry :: helm template :: v2 node configuration",
 	Context("discriminator off", func() {
 		BeforeEach(func() { renderWith(v2Disabled) })
 
-		It("tells nodes nothing about an agent, so the old writer keeps the directory", func() {
-			secret := f.KubernetesResource("Secret", "d8-system", "registry-bashible-config")
-			Expect(secret.Exists()).To(BeTrue())
-
-			config := decodeBashibleConfig(secret)
-			Expect(config).ToNot(ContainSubstring("agent"))
-			Expect(config).To(ContainSubstring("registry.example.com"))
+		// The secret carries `helm.sh/resource-policy: keep`, so not rendering it leaves whatever the
+		// previous release wrote in place: nodes keep the configuration they were already given.
+		It("tells nodes nothing new", func() {
+			Expect(f.KubernetesResource("Secret", "d8-system", "registry-bashible-config").Exists()).To(BeFalse())
 		})
 
 		It("renders no marker of a switch that has not happened", func() {
@@ -1260,42 +1157,6 @@ func decodeBashibleConfig(secret object_store.KubeObject) string {
 	Expect(err).ShouldNot(HaveOccurred())
 	return string(decoded)
 }
-
-// Objects both implementations name identically. The switch gate is what normally keeps
-// the two apart, but a collision on these would be decided by template ordering, and one
-// of them carries the name every image reference in the cluster is built from — so the
-// templates refuse it themselves rather than trusting the state machine that feeds them.
-var _ = Describe("Module :: registry :: helm template :: v2 object ownership", func() {
-	f := SetupHelmConfig(``)
-
-	BeforeEach(func() {
-		f.ValuesSetFromYaml("global", globalValues)
-		f.ValuesSet("global.modulesImages", GetModulesImages())
-		f.ValuesSetFromYaml("registry", v2WithLegacyStillActive)
-		f.HelmRender()
-		Expect(f.RenderError).ShouldNot(HaveOccurred())
-	})
-
-	It("gives the registry Service to the new implementation alone", func() {
-		service := f.KubernetesResource("Service", "d8-system", "registry")
-		Expect(service.Exists()).To(BeTrue())
-		Expect(service.Field("spec.selector.app").String()).To(Equal("registry-storage"),
-			"the legacy Service definition won, so pulls would resolve to the old components")
-	})
-
-	It("gives the publication endpoint to the new implementation alone", func() {
-		service := f.KubernetesResource("Service", "d8-system", "registry-push")
-		Expect(service.Exists()).To(BeTrue())
-		// The new definition is the one without a selector: its endpoint is the storage leader,
-		// written by the controller. The legacy one selects its own components.
-		Expect(service.Field("metadata.labels.app").String()).To(Equal("registry-storage"))
-		Expect(service.Field("spec.selector").Exists()).To(BeFalse())
-
-		// The legacy publication Ingress is named `registry`, the new one `registry-push`.
-		// Both existing at once would publish two write endpoints for one cluster.
-		Expect(f.KubernetesResource("Ingress", "d8-system", "registry").Exists()).To(BeFalse())
-	})
-})
 
 // What a client needs to reach the storage. The addresses are the part that is easy to
 // get wrong: the Service name is what image references are built from, but everything

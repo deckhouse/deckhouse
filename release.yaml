@@ -40,6 +40,13 @@ requirements:
   # runtime on its nodes, in a release that itself has to be pulled through that configuration.
   # The check is evaluated by the version already INSTALLED — it ships in 1.77, in
   # modules/038-registry/requirements/check.go — and this line is what finally asks it.
+  # Release-engineering rule: it ships in 1.77.1, so a release older than 1.77.1 lets 1.78 through
+  # whatever registry mode the cluster runs (an unregistered key passes). Regular channels reach
+  # 1.78 only through the latest 1.77 patch, but an LTS hop or an update constraint can skip it: no
+  # LTS step and no `update.versions` constraint may take a cluster below 1.77.1 to 1.78 or later,
+  # and the latest 1.77 patch must not be suspended or skipped while 1.78 is on any channel. No
+  # requirement key that 1.75, 1.76 or 1.77.0 already checks can express this: none of them reads
+  # the registry mode, and none refuses an update by the version it starts from.
   "registryImplementation": "V2" # modules/038-registry/requirements/check.go
   # "checkContainerdV1NodesPresent": "false" # modules/040-node-manager/requirements/check.go; injected with 'true' only for CSE via .werf/werf-release-channel.yaml (CSE drops containerd v1)
 

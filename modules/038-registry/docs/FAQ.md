@@ -74,6 +74,20 @@ waiting for:
 d8 k -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
 ```
 
+On DP 1.78 the update deletes the `registry-state` secret. The mode is then still shown by the
+node configuration the v1 implementation left in the `registry-bashible-config` secret. This
+command prints only the mode and the proxy endpoints, without credentials:
+
+```bash
+d8 k -n d8-system get secret registry-bashible-config -o jsonpath='{.data.config}' | base64 -d \
+  | awk '/^(agent|mode):/ {print; next} /^proxyEndpoints:/ {p=1; print; next} p && /^ *- / {print; next} {p=0}'
+```
+
+An `agent:` line in the output, or the `registry.deckhouse.io/installer-config-sha256`
+annotation on the secret, means the configuration was written by the current implementation
+or by the installer of DP 1.78 or later, not by the v1 implementation. The annotation counts
+only while the configuration is unchanged since the installer wrote it.
+
 ## How do I migrate from Unmanaged mode?
 
 In `Unmanaged` mode the previous implementation does not manage the pull path, so there is
@@ -293,14 +307,26 @@ implementation.
 
 ## What do the registry alerts mean?
 
-Apart from the two about the node agent and `D8RegistryStorageLeaderAbsent` in an air-gapped
-cluster, none of these alerts mean that the cluster has stopped pulling images. Most of them report
-a state where everything works, but not the way the configuration asks — a state that is easy to
-miss otherwise.
+Apart from the two about the node agent, `D8RegistryStorageLeaderAbsent` in an air-gapped cluster
+and `D8RegistryMigrationPending`, none of these alerts mean that the cluster has stopped pulling
+images. Most of them report a state where everything works, but not the way the configuration asks —
+a state that is easy to miss otherwise.
 
 `D8RegistryMigrationPending`
-: The cluster is still running the previous implementation of the module. Nothing is degraded; the migration
-  is not complete. See [how the migration works](#how-does-the-migration-to-the-registry-module-work).
+: The module has not taken over from the v1 implementation, used up to and including DP 1.77,
+  and the alert's reason says why. If the reason names the `Direct` mode, configure the module as
+  described in [migrating from Direct mode](#how-do-i-migrate-from-direct-mode): the module then
+  takes over on its own. Any other reason (the `Proxy` or `Local` mode, a transition, no recorded
+  mode, or a state that cannot be read) means a state that is not supported. A cluster gets there
+  only through an update that bypassed the `registryImplementation` release requirement: a forced
+  release, an edited image, or a jump from a release older than DP 1.77.1. DP 1.78 does not
+  deploy the v1 implementation, and the update removed the components that managed its node
+  services on the masters, so those services were stopped or keep running with nothing to manage
+  them. Images already on a node keep working; pulling any other image may fail. Do not change
+  the `registry` or `deckhouse` ModuleConfigs and do not delete the `registry-*` secrets in
+  `d8-system`: those secrets keep the current implementation from being deployed next to what
+  the v1 implementation left. Contact Deckhouse Platform technical support. See also
+  [which implementation the cluster is running](#which-implementation-is-my-cluster-running).
 
 `D8RegistryConfigInvalid`
 : The configuration was rejected; the cluster keeps working with the previous one. The reason

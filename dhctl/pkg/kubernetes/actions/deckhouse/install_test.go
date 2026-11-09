@@ -28,6 +28,8 @@ import (
 	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
 	k8stesting "k8s.io/client-go/testing"
 
+	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	registry_mocks "github.com/deckhouse/deckhouse/dhctl/pkg/config/registrymocks"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
@@ -145,6 +147,9 @@ func TestDeckhouseInstall(t *testing.T) {
 				config := s.Data["config"]
 				if string(config) == "" {
 					return fmt.Errorf("empty config in registry-bashible-config secret")
+				}
+				if !bashible.WrittenByInstaller(s.Annotations, config) {
+					return fmt.Errorf("registry-bashible-config is not marked as the installer's: %v", s.Annotations)
 				}
 				return nil
 			},

@@ -17,16 +17,14 @@ limitations under the License.
 // Fuzz harnesses for the module's public key infrastructure helpers.
 //
 // These functions are the trust boundary of the registry module: the material
-// they parse arrives from Kubernetes secrets (registry-pki, registry-state,
-// registry-node-config-<node>) and decides which certificate every node in the
-// cluster trusts when pulling images.
+// they parse arrives from Kubernetes secrets and decides which certificate every
+// node in the cluster trusts when pulling images.
 //
 // Threat model coverage (registry-threat-model.md): TM-01, TM-07. The harnesses
 // assert two properties:
 //
-//   - Robustness: no input may panic. These decoders are called from
-//     Config.Validate() in registry-nodeservices-manager and from the
-//     orchestrator hooks, so a panic denies node services reconciliation.
+//   - Robustness: no input may panic. These decoders are called from the
+//     registry module's hooks and from dhctl, so a panic stops reconciliation.
 //   - Soundness of the chain check: ValidateCertWithCAChain must not accept a
 //     certificate that was not issued by the supplied CA.
 package pki

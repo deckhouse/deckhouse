@@ -9,16 +9,11 @@ The harnesses live next to the code they exercise, so they span two Go modules:
 
 | Package | File |
 | --- | --- |
-| `go_lib/registry/models/node-services` | `fuzz_test.go` |
 | `go_lib/registry/models/bashible` | `fuzz_test.go` |
 | `go_lib/registry/models/moduleconfig` | `fuzz_test.go` |
 | `go_lib/registry/pki` | `fuzz_test.go` |
 | `go_lib/registry/helpers` | `fuzz_test.go` |
 | `go_lib/registry/const` | `fuzz_test.go` |
-| `modules/038-registry/hooks/orchestrator` | `params_fuzz_test.go` |
-| `modules/038-registry/hooks/orchestrator/bashible` | `fuzz_test.go` |
-| `modules/038-registry/images/nodeservices-manager/app/internal/staticpod` | `fuzz_test.go` |
-| `modules/038-registry/images/mirrorer/app/internal/config` | `fuzz_test.go` |
 | `modules/038-registry/images/syncer/app/pkg/config` | `fuzz_test.go` |
 | `modules/038-registry/images/registry-proxy/reloader/src` | `fuzz_test.go`, `watcher_fuzz_test.go` |
 
@@ -29,16 +24,16 @@ harnesses. This is what each one asks for and what exists.
 
 | # | Required | State |
 | --- | --- | --- |
-| 1 | Node configuration: `ProxyConfig` (`http`, `https`, `no_proxy`) and `LocalMode.Upstreams`; parsing and validation of `go_lib/registry/models/node-services`, plus static pod manifest and service config generation in `internal/staticpod` | **Covered** |
-| 2 | Upstream registry parameters (address, scheme, path, CA) — at the input of `hooks/orchestrator/*` **and** at the output, in the generated `distribution` and `mirrorer` configs | **Covered** |
+| 1 | Node configuration: `ProxyConfig` (`http`, `https`, `no_proxy`) and `LocalMode.Upstreams`; parsing and validation of `go_lib/registry/models/node-services`, plus static pod manifest and service config generation in `internal/staticpod` | **Removed** with the previous implementation, together with the code it covered |
+| 2 | Upstream registry parameters (address, scheme, path, CA) — at the input of `hooks/orchestrator/*` **and** at the output, in the generated `distribution` and `mirrorer` configs | **Partly**: the input side is covered in `models/moduleconfig`; the hooks and the generated configs were removed with the previous implementation |
 | 3 | `distribution` protocol and storage: structural fuzzing of manifests and layer descriptors, plus a separate stateful HTTP harness for the blob upload tract | **Covered** (fork) |
 | 4 | `auth` service: `/auth` with `service`, `scope`, `account`, repeated and contradictory scopes, bad encoding, anomalous length, `Authorization` header; ACL invariants | **Covered** (fork) |
 | 5 | Fork-specific `distribution` code: `registry/proxy_headers.go`, `registry/auth_proxy.go`, the reworked `registry/proxy` package | **Covered** (fork) |
-| 6 | `mirrorer`: mirroring configuration (`Upstreams`, accounts, replica addresses) | **Covered** |
+| 6 | `mirrorer`: mirroring configuration (`Upstreams`, accounts, replica addresses) | **Removed** with the previous implementation, together with `mirrorer` |
 | 7 | `syncer` — explicitly optional, outside the threat perimeter (TM-16 assessed as not applicable) | **Covered** |
 | 8 | NGINX in the `stream` context: the client direction (data arriving at `127.0.0.1:5001`) and the upstream direction (data from the registry) as **separate** harnesses — malformed and truncated streams, anomalous sizes and transfer rates | **Covered** (fork) |
 | 9 | `registry-proxy-reloader`: the input `nginx_new.conf` for `watcher.go` (partially written, truncated, syntactically invalid) **and** the `file_comparison.go` functions | **Covered** |
-| 10 | `proxyEndpoints`: the source `Node.status.addresses[type=InternalIP]`, the final elements, and three code sites — `hooks/orchestrator/bashible`, `go_lib/registry/const`, `go_lib/registry/models/bashible` | **Covered** |
+| 10 | `proxyEndpoints`: the source `Node.status.addresses[type=InternalIP]`, the final elements, and three code sites — `hooks/orchestrator/bashible`, `go_lib/registry/const`, `go_lib/registry/models/bashible` | **Covered** for the two that remain; `hooks/orchestrator/bashible` was removed with the previous implementation |
 
 ### Harness 8, how it is built
 
@@ -78,7 +73,8 @@ it covers the path from `registry.proxyEndpoints` through the generated file to
 ### What closing 2, 6, 7, 9 and 10 turned up
 
 Every one of those harnesses reproduced something. The fixes are in the same
-change.
+change. Some of the code named below has since been removed with the previous
+implementation; the findings are kept as a record.
 
 - **The producer of the bashible configuration did not validate what it wrote**
   (harness 10, TM-17 and TM-18, both critical). `hooks/orchestrator/bashible`
@@ -122,17 +118,14 @@ change.
 
 | Threat | Harness | Invariant |
 | --- | --- | --- |
-| TM-02 (arbitrary static pod on a control plane node via `ProxyConfig`) | `FuzzStaticPodManifestProxyEnvs`, `FuzzProxyConfigValidate` | The rendered manifest keeps its structure and reproduces the proxy values verbatim; `ProxyConfig.Validate()` only accepts values that can be rendered safely |
-| TM-08 (injection into `distribution` / `mirrorer` configuration) | `FuzzDistributionConfigUpstream`, `FuzzMirrorerConfigUpstreams`, `FuzzUpstreamRegistryValidate`, `FuzzLocalModeUpstreams` | `remoteurl`, `local` and the `remote` list keep their intended values; the upstream registry and mirror targets are constrained before rendering |
-| TM-17 (NGINX directive and shell injection through `proxyEndpoints`) | `FuzzContextProxyEndpoints`, `FuzzGenerateProxyEndpoints`, `FuzzConfigBuilderMasterNodesIPs` | Anything `Validate()` accepts is an `<ip>:<port>` pair, free of NGINX and shell metacharacters; the producer never turns an unacceptable value into an acceptable one; the configuration the hook writes satisfies the model's rules |
-| TM-18 (redirecting image pulls through `hosts` / mirrors) | `FuzzContextHosts`, `FuzzConfigBuilderUnmanaged` | `hosts` keys are safe directory names, mirror hosts are shell-safe and the scheme is `http` or `https` |
-| TM-06 (substituting the upstream registry when proxying) | `FuzzRegistrySettingsValidate`, `FuzzDeckhouseSettingsJSON`, `FuzzParamsStateRoundTrip` | An accepted `imagesRepo` splits into a host and a path safe for every sink; exactly one mode section is populated; persisted state reads back unchanged |
+| TM-17 (NGINX directive and shell injection through `proxyEndpoints`) | `FuzzContextProxyEndpoints`, `FuzzGenerateProxyEndpoints` | Anything `Validate()` accepts is an `<ip>:<port>` pair, free of NGINX and shell metacharacters; the producer never turns an unacceptable value into an acceptable one |
+| TM-18 (redirecting image pulls through `hosts` / mirrors) | `FuzzContextHosts` | `hosts` keys are safe directory names, mirror hosts are shell-safe and the scheme is `http` or `https` |
+| TM-06 (substituting the upstream registry when proxying) | `FuzzRegistrySettingsValidate`, `FuzzDeckhouseSettingsJSON` | An accepted `imagesRepo` splits into a host and a path safe for every sink; exactly one mode section is populated |
 | TM-01, TM-07 (module PKI) | `FuzzDecodeCertificate`, `FuzzDecodePrivateKey`, `FuzzDecodeCertKey`, `FuzzValidateCertWithCAChain` | Decoding never panics; a certificate only verifies against the CA that issued it |
-| TM-15 (storage ACL) | `FuzzAuthConfigUsers` | The `auth` config keeps five ACL entries, every entry keeps its `account` constraint and the read-only account never gains write actions |
 | TM-21, TM-22, TM-23 (applying the balancer configuration) | `FuzzFileContentsEqual`, `FuzzCopyFile`, `FuzzNginxReload`, `TestNginxMasterSelection` | Equality is reported exactly when the bytes match, never for a missing or truncated file; the bytes applied are the bytes that passed the check; SIGHUP goes to the master process |
 | TM-05, TM-09, TM-13 (credential handling in the supply path) | `FuzzCredsFromDockerCfg`, `FuzzDockerCfgRoundTrip`, `FuzzSplitAddressAndPath` | Credentials survive the encode/decode pair unchanged; the registry host never carries a path separator |
 | TM-16 (image transfer by `syncer`, outside the threat perimeter) | `FuzzSyncerConfig` | An accepted address is one the registry client can construct; credentials are carriable in an HTTP header |
-| Configuration robustness | `FuzzConfigJSONValidate`, `FuzzConfigJSONRoundTrip`, `FuzzParseConfig` | An arbitrary secret payload never panics the controller or the hooks, and validation is deterministic |
+| Configuration robustness | `FuzzConfigJSONRoundTrip` | An arbitrary secret payload never panics the controller or the hooks, and validation is deterministic |
 
 Harnesses 3, 4, 5 and 8 of the threat model's plan need the third-party binaries
 under test in-process, so they live in the forks rather than here; see
@@ -140,19 +133,18 @@ under test in-process, so they live in the forks rather than here; see
 
 ## Fuzz images
 
-The dedicated CI fuzz build includes six images for the harnesses in this repository:
-`registry/hooks-fuzz`, `registry/library-fuzz`, `registry/nodeservices-manager-fuzz`,
-`registry/mirrorer-fuzz`, `registry/syncer-fuzz` and `registry/registry-proxy-fuzz`.
+The dedicated CI fuzz build includes three images for the harnesses in this repository:
+`registry/library-fuzz`, `registry/syncer-fuzz` and `registry/registry-proxy-fuzz`.
 It also includes `registry/docker-distribution-fuzz` and `registry/docker-auth-fuzz`
 for the harnesses in the third-party forks' `deckhouse` branches. Both images
 track the current `deckhouse` branch through werf's remote Git mappings.
 These sources are separate
 from the production builds: distribution now uses a local v3 wrapper, and the
 docker-auth release tag does not yet include the harnesses.
-All eight Go images use the pinned `fuzz-go` base image and download
+All five Go images use the pinned `fuzz-go` base image and download
 Go dependencies during the build. Werf tracks source changes in both forks as
-dependencies of the `install` stage. The hooks and library images add their
-sources directly from this repository through Git mappings. The other four
+dependencies of the `install` stage. The library image adds its
+sources directly from this repository through Git mappings. The other two
 images import existing production source artifacts.
 All are intermediate images (`final: false`). Regular CI builds use
 `WERF_FINAL_IMAGES_ONLY=true` and exclude them because no final image depends
@@ -184,9 +176,6 @@ Seed corpora run as ordinary unit tests:
 
 ```shell
 cd go_lib/registry && go test ./...
-go test ./modules/038-registry/hooks/orchestrator/...
-cd modules/038-registry/images/nodeservices-manager/app && go test ./...
-cd modules/038-registry/images/mirrorer/app && go test ./...
 cd modules/038-registry/images/syncer/app && go test ./...
 cd modules/038-registry/images/registry-proxy/reloader && go test ./...
 ```
@@ -208,24 +197,13 @@ go test ./helpers/ -run 'FuzzSplitAddressAndPath/3e3b70dba384074d'
 
 ## Where the invariants are enforced
 
-The harnesses assert properties; two layers uphold them.
-
-**Rendering escapes.** `internal/staticpod/templates.go` exposes two template
-functions and every substitution goes through one of them:
-
-- `quote` renders a YAML double-quoted scalar. It is `strconv.Quote` plus a
-  rejection of input that is not valid UTF-8: Go writes such bytes as `\xNN`
-  while YAML reads `\xNN` as the code point `U+00NN`, so the value has no YAML
-  representation and is refused rather than silently changed.
-- `hostPort` joins a host and a port with `net.JoinHostPort`, which brackets IPv6
-  addresses that plain concatenation would leave ambiguous.
+The harnesses assert properties; validation upholds them.
 
 **Validation constrains the domain.** `go_lib/registry/helpers/validate.go`
 holds the rules the models apply, each documented with the sink it protects:
 `HostWithOptionalPort`, `RegistryAddress`, `RegistryAccountName`,
 `IPWithPort`, `ProxyEndpoint`, `MirrorHost`, `IPAddress`, `URLScheme`, `URLPath`, `ProxyURL`,
-`NoProxyList` and `EncodableString`. They are used by `models/node-services`
-(`ProxyConfig`, `LocalMode`, `UpstreamRegistry`, `User`), by `models/moduleconfig`
+`NoProxyList` and `EncodableString`. They are used by `models/moduleconfig`
 (`RegistrySettings.ImagesRepo`) and by `models/bashible` (`Context`, `Config`,
 mirror hosts and the `hosts` map keys, which ozzo cannot reach because it
 validates map values, not keys).
@@ -236,7 +214,8 @@ directory name in a shell command have no quoting of their own, so
 constrains them.
 
 The two bashible steps that write those files use an **unquoted** heredoc, and
-that is deliberate: in Proxy and Local mode dhctl writes
+that is deliberate: in Local mode, which is how dhctl expresses an installation
+from a bundle, dhctl writes
 `helpers.NodeIPPlaceholder` where the node's own address belongs, and the shell
 expanding that body is the only thing that resolves it. So the body is subject to
 parameter and command substitution as root, and validation -- not quoting -- is
@@ -311,9 +290,10 @@ repeated `scope` query parameters -- `ParseRequest` iterates `req.Form["scope"]`
 so `?scope=a&scope=b` is a different path from `?scope=a b`.
 
 `FuzzAuthEndpoint` drives the `/auth` endpoint against both ACL policies the
-module ships -- the node-side one from
+previous implementation shipped -- the node-side one from
 `images/nodeservices-manager/app/internal/staticpod/templates/auth/config.yaml.tpl`
-and the single pull-only rule from `templates/inclusterproxy/secret.yaml`. It
+and the single pull-only rule from `templates/inclusterproxy/secret.yaml`, both
+since removed with that implementation. It
 does not reimplement the ACL; it asserts bounds the policies fix: a token never
 carries an action the client did not request, never names a resource the request
 did not name, the read-only account and the mirror puller never exceed `pull`
@@ -495,7 +475,8 @@ is most of what there is to cover.
 
 Two oracles carry most of the value here and are worth reusing:
 
-- **Structural equivalence** (`assertSameShape` in the `staticpod` package).
+- **Structural equivalence** (`assertSameShape`, which lived in the `staticpod`
+  package of the previous implementation).
   Render the template twice — once with the fuzzed value, once with an inert
   placeholder of the same emptiness — and compare the documents' shapes: mapping
   keys and sequence lengths are kept, scalars are reduced to their type. Any

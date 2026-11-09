@@ -17,7 +17,7 @@ limitations under the License.
 // Fuzz harnesses for the registry address and credential helpers.
 //
 // These functions sit between the deckhouse-registry secret / ModuleConfig and
-// the values the orchestrator hooks publish to nodes:
+// the values the registry module and dhctl publish to nodes:
 //
 //   - SplitAddressAndPath derives the containerd `hosts` key and the rewrite
 //     target from `imagesRepo`.

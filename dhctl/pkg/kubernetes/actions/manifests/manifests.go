@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 )
@@ -596,6 +597,13 @@ func DeckhouseRegistrySecret(data map[string][]byte) *apiv1.Secret {
 	return ret
 }
 
+// RegistryBashibleConfigSecret is the node registry configuration the installer hands the first
+// nodes, marked as the installer's.
+//
+// The mark is what keeps the registry module's switch gate from reading this document as one the v1
+// implementation left: by its contents an installation with no registry settings is a v1 `Direct`
+// cluster, and an installation from a bundle a v1 `Local` one, and the gate refuses both. See
+// bashible.InstallerMarkAnnotation.
 func RegistryBashibleConfigSecret(data map[string][]byte) *apiv1.Secret {
 	ret := &apiv1.Secret{
 		Type: apiv1.SecretTypeOpaque,
@@ -610,6 +618,7 @@ func RegistryBashibleConfigSecret(data map[string][]byte) *apiv1.Secret {
 				"helm.sh/resource-policy":        "keep",
 				"meta.helm.sh/release-name":      "registry",
 				"meta.helm.sh/release-namespace": "d8-system",
+				bashible.InstallerMarkAnnotation: bashible.InstallerMark(data["config"]),
 			},
 		},
 		Data: data,

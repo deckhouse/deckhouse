@@ -1,4 +1,13 @@
 {{- /*
+  What each image here asks for: it only runs `/pause`, and is there for the kubelet to keep its
+  image pulled.
+*/ -}}
+{{- define "image_holder_resources" }}
+cpu: 10m
+memory: 10Mi
+{{- end }}
+
+{{- /*
   Keeps the images of the storage pod pulled on every master, so that a replica can be replaced
   when nothing else could serve its new images.
 

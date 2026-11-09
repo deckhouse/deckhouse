@@ -279,7 +279,7 @@ func FuzzContextHosts(f *testing.F) {
 // ---------------------------------------------------------------------------
 
 // FuzzConfigJSONRoundTrip feeds arbitrary JSON as the secret payload and drives
-// the whole chain the orchestrator hooks use: decode, validate, convert to a
+// the whole chain a bashible config goes through: decode, validate, convert to a
 // bashible context and flatten it for the template. None of it may panic, and a
 // config that validates must still validate after the conversion.
 func FuzzConfigJSONRoundTrip(f *testing.F) {

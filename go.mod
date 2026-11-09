@@ -71,7 +71,6 @@ require (
 	github.com/go-openapi/swag/conv v0.28.0
 	github.com/go-openapi/swag/loading v0.28.0
 	github.com/go-openapi/swag/yamlutils v0.28.0
-	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/gofrs/uuid/v5 v5.4.0
 	github.com/golang/protobuf v1.5.4
 	github.com/itchyny/gojq v0.12.19
@@ -129,6 +128,7 @@ require (
 	github.com/go-openapi/swag/pools v0.28.0 // indirect
 	github.com/go-openapi/swag/stringutils v0.28.0 // indirect
 	github.com/go-openapi/swag/typeutils v0.28.0 // indirect
+	github.com/go-ozzo/ozzo-validation/v4 v4.3.0 // indirect
 	github.com/go-resty/resty/v2 v2.17.2 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/goccy/go-json v0.10.6 // indirect

@@ -345,7 +345,7 @@ func (c *Config) IsLocal() bool {
 func (c *Config) Manifest() *ManifestBuilder {
 	model := c.Settings.ToModel()
 	model.AgentOwnsRuntime = c.AgentOwnsRuntime
-	return newManifestBuilder(model, c.LegacyMode, c.BundleBootstrap)
+	return newManifestBuilder(model, c.LegacyMode)
 }
 
 // DeepCopyInto copies the receiver into out.
