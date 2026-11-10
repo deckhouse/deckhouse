@@ -43,10 +43,10 @@ The patch touches `util.go`.
 
 Bumps vulnerable transitive Go dependencies of `v0.0.36` (`go.mod`, `go.sum`):
 
-* `github.com/klauspost/compress` `v1.17.11` → `v1.18.7`
-* `golang.org/x/net` `v0.38.0` → `v0.56.0`
-* `golang.org/x/sys` `v0.31.0` → `v0.46.0`
-* `golang.org/x/text` `v0.23.0` → `v0.39.0`
+* `github.com/klauspost/compress` `v1.17.11` → `v1.20.2`
+* `golang.org/x/net` `v0.38.0` → `v0.62.0`
+* `golang.org/x/sys` `v0.31.0` → `v0.49.0`
+* `golang.org/x/text` `v0.23.0` → `v0.43.0`
 * `golang.org/x/mod`, `golang.org/x/sync`, `golang.org/x/term`, `golang.org/x/tools` — bumped to satisfy the module graph
 
 #### Fix CVEs
@@ -62,5 +62,14 @@ Bumps vulnerable transitive Go dependencies of `v0.0.36` (`go.mod`, `go.sum`):
 - CVE-2026-42502
 - CVE-2026-42506
 - CVE-2026-46600
+- CVE-2026-56851
 - CVE-2026-56852
+- CVE-2026-78659
+- CVE-2026-78660
+- CVE-2026-78661
+- CVE-2026-78663
+- CVE-2026-78669
+- CVE-2026-97032
+- CVE-2026-97045
+- CVE-2026-116591
 - GHSA-259r-337f-4rfw
