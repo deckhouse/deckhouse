@@ -206,7 +206,7 @@ Deckhouse Platform регистрирует следующие cluster-wide-ре
 
 Регистрация `clusterroles` исключает все ClusterRole без лейбла `rbac.deckhouse.io/delegatable: "true"`. По умолчанию RoleBinding в проекте может ссылаться на роли `d8:namespace:*` и `d8:project:*`, устаревшие псевдонимы `d8:use:role:*` и роли `user-authz:user`, `user-authz:privileged-user`, `user-authz:editor` и `user-authz:admin` упрощённой модели.
 
-Определение `clusterissuers` регистрируется только при включённом модуле `cert-manager`.
+Определение `clusterissuers` поставляется [модулем `cert-manager`](/modules/cert-manager/), поэтому оно регистрируется только при включённом модуле `cert-manager`.
 
 ### Ресурсы механизма управления доступом
 

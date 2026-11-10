@@ -1379,7 +1379,7 @@ spec:
 Для аннотации `cert-manager.io/cluster-issuer` значение по умолчанию не подставляется. Если аннотация указана, её значение проверяется по тому же списку разрешённых ClusterIssuer.
 
 {% alert level="info" %}
-Управление доступом к ClusterIssuer доступно только при включённом [модуле `cert-manager`](/modules/cert-manager/).
+Управление доступом к ClusterIssuer доступно только при включённом [модуле `cert-manager`](/modules/cert-manager/): определение `clusterissuers` поставляется этим модулем.
 {% endalert %}
 
 #### Ограничение ClusterRole для проекта

@@ -25,6 +25,15 @@ description: "Управление сертификатами в кластер�
 
 Изменения в оригинальный [cert-manager](https://github.com/jetstack/cert-manager) были внесены, чтобы поды `cm-acme-http-solver` могли выполняться на master-узлах и выделенных узлах.
 
+## Ограничение ClusterIssuer для проектов
+
+При включённом [модуле `multitenancy-manager`](/modules/multitenancy-manager/) модуль `cert-manager` регистрирует ClusterIssuer как cluster-wide-ресурс, использование которого из пространств имён проектов можно ограничить. Регистрация — это GrantableClusterResourceDefinition `clusterissuers`. Она распространяется на следующие ссылки:
+
+- поле `.spec.issuerRef.name` ресурса Certificate, если в `.spec.issuerRef.kind` указано ClusterIssuer;
+- аннотацию `cert-manager.io/cluster-issuer` ресурса Ingress.
+
+По умолчанию каждый ClusterIssuer доступен всем проектам. Чтобы сократить список или задать ClusterIssuer, используемый по умолчанию, создайте [ClusterResourceGrantPolicy](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy) с `resourceName: clusterissuers`.
+
 ## Мониторинг
 
 Модуль обеспечивает экспорт метрик в Prometheus для мониторинга:

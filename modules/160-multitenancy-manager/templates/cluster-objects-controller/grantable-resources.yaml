@@ -5,6 +5,9 @@
   definitions use defaultAvailability: All. A ClusterResourceGrantPolicy still narrows
   availability; clusterroles also exclude non-delegatable roles via `excluded`, so those
   stay unavailable even without a policy.
+
+  A module registers the cluster resources it introduces itself: ClusterIssuer is registered by
+  the cert-manager module (modules/101-cert-manager/templates/cluster-resource-grants.yaml).
 */}}
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
@@ -84,62 +87,6 @@ spec:
       fieldPath: $.spec.type
       equals: LoadBalancer
     defaulting: FillEmpty
-{{- if .Values.global.enabledModules | has "cert-manager" }}
----
-apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: GrantableClusterResourceDefinition
-metadata:
-  name: clusterissuers
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
-spec:
-  grantedResource:
-    apiGroup: cert-manager.io
-    kind: ClusterIssuer
-  enforcement: Managed
-  defaultAvailability: All
----
-apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: GrantableClusterResourceReference
-metadata:
-  name: clusterissuers-certificate
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
-spec:
-  grantableClusterResourceName: clusterissuers
-  rule:
-    apiGroups:
-    - cert-manager.io
-    apiVersions:
-    - v1
-    resources:
-    - certificates
-  fieldPaths:
-  # Certificates reference a ClusterIssuer by name (guarded: issuerRef.kind == ClusterIssuer).
-  - path: $.spec.issuerRef.name
-    match:
-      fieldPath: $.spec.issuerRef.kind
-      equals: ClusterIssuer
-    defaulting: FillEmpty
----
-apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: GrantableClusterResourceReference
-metadata:
-  name: clusterissuers-ingress
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
-spec:
-  grantableClusterResourceName: clusterissuers
-  rule:
-    apiGroups:
-    - networking.k8s.io
-    apiVersions:
-    - "*"
-    resources:
-    - ingresses
-  fieldPaths:
-  # The cert-manager.io/cluster-issuer annotation is a toggle — its absence means "no cert-manager",
-  # so it is validated but never defaulted.
-  - path: $.metadata.annotations['cert-manager.io/cluster-issuer']
-    defaulting: None
-{{- end }}
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: GrantableClusterResourceDefinition

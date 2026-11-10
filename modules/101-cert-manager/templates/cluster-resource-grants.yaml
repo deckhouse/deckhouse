@@ -1,0 +1,74 @@
+{{- /*
+  ClusterIssuer is registered as a grantable cluster resource of multitenancy-manager, so a cluster
+  administrator can limit which ClusterIssuers a project may reference with a ClusterResourceGrantPolicy.
+  The GrantableClusterResourceDefinition declares governance and baseline availability; each
+  GrantableClusterResourceReference declares one validation/defaulting path.
+
+  defaultAvailability: All keeps every ClusterIssuer available to every project until a
+  ClusterResourceGrantPolicy narrows the list, so the registration alone changes nothing.
+
+  The object names are part of the API: a ClusterResourceGrantPolicy refers to the definition by
+  name (resourceName: clusterissuers), so they must not change. multitenancy-manager shipped these
+  objects before; its hook migrate_clusterissuers_grants.go keeps them from being deleted while
+  this release adopts them.
+
+  Both kinds are served by the CRDs of multitenancy-manager, and a release with an object of a kind
+  that is not served fails, so the objects are rendered only while the module is enabled and its CRDs
+  are served. addon-operator installs the CRDs of a module being enabled before it reruns the modules.
+*/ -}}
+{{- if and (.Values.global.enabledModules | has "multitenancy-manager") (.Capabilities.APIVersions.Has "multitenancy.deckhouse.io/v1alpha1/GrantableClusterResourceDefinition") (.Capabilities.APIVersions.Has "multitenancy.deckhouse.io/v1alpha1/GrantableClusterResourceReference") }}
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceDefinition
+metadata:
+  name: clusterissuers
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  grantedResource:
+    apiGroup: cert-manager.io
+    kind: ClusterIssuer
+  enforcement: Managed
+  defaultAvailability: All
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: clusterissuers-certificate
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  grantableClusterResourceName: clusterissuers
+  rule:
+    apiGroups:
+    - cert-manager.io
+    apiVersions:
+    - v1
+    resources:
+    - certificates
+  fieldPaths:
+  # Certificates reference a ClusterIssuer by name (guarded: issuerRef.kind == ClusterIssuer).
+  - path: $.spec.issuerRef.name
+    match:
+      fieldPath: $.spec.issuerRef.kind
+      equals: ClusterIssuer
+    defaulting: FillEmpty
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: clusterissuers-ingress
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  grantableClusterResourceName: clusterissuers
+  rule:
+    apiGroups:
+    - networking.k8s.io
+    apiVersions:
+    - "*"
+    resources:
+    - ingresses
+  fieldPaths:
+  # The cert-manager.io/cluster-issuer annotation is a toggle — its absence means "no cert-manager",
+  # so it is validated but never defaulted.
+  - path: $.metadata.annotations['cert-manager.io/cluster-issuer']
+    defaulting: None
+{{- end }}

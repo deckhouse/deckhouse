@@ -1371,7 +1371,7 @@ When a Certificate with a ClusterIssuer is created without a value in `.spec.iss
 No default value is assigned to the `cert-manager.io/cluster-issuer` annotation. If the annotation is specified, its value is checked against the same list of allowed ClusterIssuers.
 
 {% alert level="info" %}
-Access management for ClusterIssuer is available only when the [`cert-manager`](/modules/cert-manager/) module is enabled.
+Access management for ClusterIssuer is available only when the [`cert-manager`](/modules/cert-manager/) module is enabled: the `clusterissuers` definition is shipped by that module.
 {% endalert %}
 
 #### Restricting ClusterRoles for a project

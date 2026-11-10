@@ -23,6 +23,15 @@ The module has all the features of the original cert-manager, including:
 
 Changes to the original [cert-manager](https://github.com/jetstack/cert-manager) were made so that the `cm-acme-http-solver` Pods could run on master and dedicated nodes.
 
+## Restricting ClusterIssuers for projects
+
+When the [`multitenancy-manager`](/modules/multitenancy-manager/) module is enabled, `cert-manager` registers ClusterIssuer as a cluster-wide resource whose use from project namespaces can be restricted. The registration is the `clusterissuers` GrantableClusterResourceDefinition. It applies to the following references:
+
+- the `.spec.issuerRef.name` field of a Certificate if `.spec.issuerRef.kind` is set to ClusterIssuer;
+- the `cert-manager.io/cluster-issuer` annotation of an Ingress.
+
+By default, every ClusterIssuer is available to every project. To limit the list or set the ClusterIssuer used by default, create a [ClusterResourceGrantPolicy](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy) with `resourceName: clusterissuers`.
+
 ## Monitoring
 
 The module can expose metrics in the Prometheus format, allowing you to monitor:
