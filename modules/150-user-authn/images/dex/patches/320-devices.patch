@@ -2499,3 +2499,262 @@ index e5bd8c9a..34e82439 100644
  // TestRefreshed: claims read again outside a login replace the stored ones, unless
  // those were read later (Deckhouse).
  func TestRefreshed(t *testing.T) {
+diff --git a/storage/kubernetes/k8sapi/unversioned.go b/storage/kubernetes/k8sapi/unversioned.go
+index f123f529..880789ee 100644
+--- a/storage/kubernetes/k8sapi/unversioned.go
++++ b/storage/kubernetes/k8sapi/unversioned.go
+@@ -49,4 +49,8 @@ type ListMeta struct {
+ 	// Read-only.
+ 	// More info: http://releases.k8s.io/release-1.3/docs/devel/api-conventions.md#concurrency-control-and-consistency
+ 	ResourceVersion string `json:"resourceVersion,omitempty" protobuf:"bytes,2,opt,name=resourceVersion"`
++
++	// Continue is set when a list asked with a limit has more items: the next
++	// page is asked with it as the continue parameter (Deckhouse).
++	Continue string `json:"continue,omitempty"`
+ }
+diff --git a/storage/kubernetes/refresh_list_test.go b/storage/kubernetes/refresh_list_test.go
+new file mode 100644
+index 00000000..070abe54
+--- /dev/null
++++ b/storage/kubernetes/refresh_list_test.go
+@@ -0,0 +1,192 @@
++package kubernetes
++
++import (
++	"encoding/json"
++	"hash"
++	"hash/fnv"
++	"log/slog"
++	"maps"
++	"net/http"
++	"net/http/httptest"
++	"slices"
++	"strconv"
++	"strings"
++	"sync"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/server/tokens"
++	"github.com/dexidp/dex/storage"
++)
++
++// objectsAPI is a fake of the Kubernetes API for the custom resources of dex: it keeps the
++// objects of every resource by name and serves lists in pages with limit and continue, as the
++// apiserver does.
++type objectsAPI struct {
++	mu      sync.Mutex
++	objects map[string]map[string]json.RawMessage // resource → name → object
++	// lists counts the list requests of every resource.
++	lists map[string]int
++}
++
++func newObjectsAPI() *objectsAPI {
++	return &objectsAPI{objects: map[string]map[string]json.RawMessage{}, lists: map[string]int{}}
++}
++
++func (f *objectsAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
++	f.mu.Lock()
++	defer f.mu.Unlock()
++
++	resource, name, _ := strings.Cut(strings.TrimPrefix(r.URL.Path, "/apis/dex.coreos.com/v1/namespaces/dex/"), "/")
++	if f.objects[resource] == nil {
++		f.objects[resource] = map[string]json.RawMessage{}
++	}
++	objects := f.objects[resource]
++	switch {
++	case r.Method == http.MethodGet && name == "":
++		f.lists[resource]++
++		names := slices.Sorted(maps.Keys(objects))
++		start, _ := strconv.Atoi(r.URL.Query().Get("continue"))
++		end := len(names)
++		if limit, err := strconv.Atoi(r.URL.Query().Get("limit")); err == nil && limit > 0 && start+limit < end {
++			end = start + limit
++		}
++		items := []json.RawMessage{}
++		for _, n := range names[start:end] {
++			items = append(items, objects[n])
++		}
++		list := map[string]any{"items": items, "metadata": map[string]any{}}
++		if end < len(names) {
++			list["metadata"] = map[string]any{"continue": strconv.Itoa(end)}
++		}
++		_ = json.NewEncoder(w).Encode(list)
++	case r.Method == http.MethodGet:
++		obj, ok := objects[name]
++		if !ok {
++			w.WriteHeader(http.StatusNotFound)
++			return
++		}
++		_, _ = w.Write(obj)
++	case r.Method == http.MethodPost || r.Method == http.MethodPut:
++		var obj struct {
++			Metadata struct {
++				Name string `json:"name"`
++			} `json:"metadata"`
++		}
++		var raw json.RawMessage
++		if err := json.NewDecoder(r.Body).Decode(&raw); err != nil || json.Unmarshal(raw, &obj) != nil {
++			w.WriteHeader(http.StatusBadRequest)
++			return
++		}
++		if r.Method == http.MethodPost {
++			if _, ok := objects[obj.Metadata.Name]; ok {
++				w.WriteHeader(http.StatusConflict)
++				return
++			}
++			objects[obj.Metadata.Name] = raw
++			w.WriteHeader(http.StatusCreated)
++			return
++		}
++		objects[name] = raw
++	case r.Method == http.MethodDelete:
++		if _, ok := objects[name]; !ok {
++			w.WriteHeader(http.StatusNotFound)
++			return
++		}
++		delete(objects, name)
++	default:
++		w.WriteHeader(http.StatusMethodNotAllowed)
++	}
++}
++
++func newObjectsClient(t *testing.T, api *objectsAPI) *client {
++	t.Helper()
++	server := httptest.NewServer(api)
++	t.Cleanup(server.Close)
++	return &client{
++		client:     server.Client(),
++		baseURL:    server.URL,
++		namespace:  "dex",
++		apiVersion: "dex.coreos.com/v1",
++		logger:     slog.New(slog.DiscardHandler),
++		hash:       func() hash.Hash { return fnv.New64() },
++	}
++}
++
++// TestListRefreshTokens: the refresh tokens are listed page by page, every one of them, with
++// their fields (Deckhouse patch 320). Upstream leaves the list unimplemented for this storage, and
++// the sweep of the expired tokens failed on it once an hour.
++func TestListRefreshTokens(t *testing.T) {
++	ctx := t.Context()
++	api := newObjectsAPI()
++	cli := newObjectsClient(t, api)
++	pageSize := refreshTokensPageSize
++	refreshTokensPageSize = 2
++	t.Cleanup(func() { refreshTokensPageSize = pageSize })
++
++	created := time.Date(2026, 11, 4, 10, 0, 0, 0, time.UTC)
++	for i := range 5 {
++		require.NoError(t, cli.CreateRefresh(ctx, storage.RefreshToken{
++			ID:          "token-" + strconv.Itoa(i),
++			Token:       "secret-" + strconv.Itoa(i),
++			ClientID:    "client-1",
++			ConnectorID: "local",
++			Claims:      storage.Claims{UserID: "jane"},
++			CreatedAt:   created,
++			LastUsed:    created.Add(time.Duration(i) * time.Minute),
++		}))
++	}
++
++	tokens, err := cli.ListRefreshTokens(ctx)
++	require.NoError(t, err)
++	require.Len(t, tokens, 5)
++	for i, tok := range tokens {
++		require.Equal(t, "token-"+strconv.Itoa(i), tok.ID)
++		require.Equal(t, "client-1", tok.ClientID)
++		require.Equal(t, "jane", tok.Claims.UserID)
++		require.True(t, tok.LastUsed.Equal(created.Add(time.Duration(i)*time.Minute)), tok.LastUsed)
++	}
++	require.Equal(t, 3, api.lists[resourceRefreshToken], "five tokens in pages of two")
++
++	empty, err := newObjectsClient(t, newObjectsAPI()).ListRefreshTokens(ctx)
++	require.NoError(t, err)
++	require.Empty(t, empty)
++}
++
++// TestDeleteExpiredOnKubernetes: the sweep of the expired refresh tokens runs on the kubernetes
++// storage: it deletes the expired token with its grant and keeps the others (Deckhouse patch 320).
++func TestDeleteExpiredOnKubernetes(t *testing.T) {
++	ctx := t.Context()
++	cli := newObjectsClient(t, newObjectsAPI())
++	now := time.Now()
++
++	refs := map[string]*storage.RefreshTokenRef{}
++	for _, tok := range []storage.RefreshToken{
++		{ID: "expired", ClientID: "gone-client", CreatedAt: now.Add(-time.Hour), LastUsed: now.Add(-45 * time.Minute)},
++		{ID: "fresh", ClientID: "app", CreatedAt: now.Add(-time.Hour), LastUsed: now.Add(-time.Minute)},
++	} {
++		tok.ConnectorID, tok.Claims = "local", storage.Claims{UserID: "jane"}
++		require.NoError(t, cli.CreateRefresh(ctx, tok))
++		refs[tok.ID] = &storage.RefreshTokenRef{ID: tok.ID, ClientID: tok.ClientID, CreatedAt: tok.CreatedAt, LastUsed: tok.LastUsed}
++	}
++	require.NoError(t, cli.CreateOfflineSessions(ctx, storage.OfflineSessions{
++		UserID: "jane", ConnID: "local",
++		Refresh: map[string]*storage.RefreshTokenRef{"gone-client": refs["expired"], "app": refs["fresh"]},
++		Grants:  refs,
++	}))
++
++	store := tokens.NewRefreshStore(cli, time.Now, slog.New(slog.DiscardHandler))
++	n, err := store.DeleteExpired(ctx, tokens.NewRefreshStrategy(true, 0, 30*time.Minute, 0, func() time.Time { return now }))
++	require.NoError(t, err)
++	require.Equal(t, 1, n)
++
++	_, err = cli.GetRefresh(ctx, "expired")
++	require.ErrorIs(t, err, storage.ErrNotFound)
++	_, err = cli.GetRefresh(ctx, "fresh")
++	require.NoError(t, err)
++	sessions, err := cli.GetOfflineSessions(ctx, "jane", "local")
++	require.NoError(t, err)
++	require.Equal(t, []string{"fresh"}, slices.Sorted(maps.Keys(sessions.Grants)))
++}
+diff --git a/storage/kubernetes/storage.go b/storage/kubernetes/storage.go
+index e65b4f34..0f4d7ab8 100644
+--- a/storage/kubernetes/storage.go
++++ b/storage/kubernetes/storage.go
+@@ -7,6 +7,8 @@ import (
+ 	"log/slog"
+ 	"math/rand"
+ 	"net/http"
++	"net/url"
++	"strconv"
+ 	"strings"
+ 	"time"
+ 
+@@ -400,8 +402,33 @@ func (cli *client) ListClients(ctx context.Context) ([]storage.Client, error) {
+ 	return nil, errors.New("not implemented")
+ }
+ 
++// refreshTokensPageSize is how many refresh tokens a page of their list holds.
++// Every token of the cluster is listed once an hour per replica (Deckhouse patch
++// 320, the sweep of the expired tokens), so the list is read in pages.
++var refreshTokensPageSize = 500
++
++// ListRefreshTokens lists every refresh token, page by page (Deckhouse patch
++// 320). Upstream leaves it unimplemented for this storage.
+ func (cli *client) ListRefreshTokens(ctx context.Context) ([]storage.RefreshToken, error) {
+-	return nil, errors.New("not implemented")
++	var tokens []storage.RefreshToken
++	params := url.Values{"limit": {strconv.Itoa(refreshTokensPageSize)}}
++	for {
++		u, err := cli.urlForWithParams(cli.apiVersion, cli.namespace, resourceRefreshToken, "", params)
++		if err != nil {
++			return nil, err
++		}
++		var page RefreshList
++		if err := cli.getURL(u, &page); err != nil {
++			return nil, fmt.Errorf("list a page of refresh tokens: %w", err)
++		}
++		for _, r := range page.RefreshTokens {
++			tokens = append(tokens, toStorageRefreshToken(r))
++		}
++		if page.Continue == "" {
++			return tokens, nil
++		}
++		params.Set("continue", page.Continue)
++	}
+ }
+ 
+ func (cli *client) ListPasswords(ctx context.Context) (passwords []storage.Password, err error) {

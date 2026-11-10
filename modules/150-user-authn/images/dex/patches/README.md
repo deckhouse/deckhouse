@@ -1037,7 +1037,9 @@ second laptop or a second kubeconfig signs the first one out.
   longer than allowed is deleted with its reference when a refresh is refused
   as expired, and the garbage collection deletes the others once an hour (they
   belong to clients that never came back). Upstream keeps them, and each one
-  stayed a device of the user in `UserAccount`;
+  stayed a device of the user in `UserAccount`. The kubernetes storage lists
+  the refresh tokens for it in pages of 500 (`ListRefreshTokens`, which
+  upstream leaves unimplemented there);
 - **logout of one browser**: `/logout` revokes the grants of the clients bound
   to the session that were issued in that session, not the grants the same
   clients hold on the other devices of the user;

@@ -380,19 +380,18 @@ index eb11e489..64b94f4b 100644
  }
  
 diff --git a/storage/kubernetes/storage.go b/storage/kubernetes/storage.go
-index e65b4f34..b81d0f0b 100644
+index 0f4d7ab8..5d1e504c 100644
 --- a/storage/kubernetes/storage.go
 +++ b/storage/kubernetes/storage.go
-@@ -7,6 +7,8 @@ import (
- 	"log/slog"
+@@ -8,6 +8,7 @@ import (
  	"math/rand"
  	"net/http"
-+	"net/url"
+ 	"net/url"
 +	"slices"
+ 	"strconv"
  	"strings"
  	"time"
- 
-@@ -54,6 +56,7 @@ const (
+@@ -56,6 +57,7 @@ const (
  var (
  	_ storage.Storage           = (*client)(nil)
  	_ storage.RevocationCreator = (*client)(nil)
@@ -400,7 +399,7 @@ index e65b4f34..b81d0f0b 100644
  )
  
  const (
-@@ -947,6 +950,61 @@ func (cli *client) RevocationExists(ctx context.Context, typ storage.RevocationT
+@@ -974,6 +976,61 @@ func (cli *client) RevocationExists(ctx context.Context, typ storage.RevocationT
  	return true, nil
  }
  
