@@ -112,8 +112,8 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 	for _, mpo := range mpos.Items {
 		moduleName := mpo.GetModuleName()
 
-		// ignore deleted mpo or unready mpo
-		if !mpo.ObjectMeta.DeletionTimestamp.IsZero() || mpo.Status.Message != v1alpha1.ModulePullOverrideMessageReady {
+		// An override that has not installed a module leaves recovery to its release.
+		if !mpo.ObjectMeta.DeletionTimestamp.IsZero() || !mpo.HasDeployed() {
 			continue
 		}
 
@@ -143,6 +143,24 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 		// source must be
 		if module.Properties.Source == "" {
 			l.logger.Info("module does not have an active source, skip restoring module pull override process", slog.String("name", mpo.Name))
+			continue
+		}
+
+		// Keep the installed module when its override cannot fetch an update.
+		// Restore only its registry so image references use the active source.
+		if mpo.Status.Message != v1alpha1.ModulePullOverrideMessageReady {
+			source := new(v1alpha1.ModuleSource)
+			if err := l.client.Get(ctx, client.ObjectKey{Name: module.Properties.Source}, source); err != nil {
+				if !apierrors.IsNotFound(err) {
+					return fmt.Errorf("get the module source '%s' for the module '%s': %w", module.Properties.Source, mpo.Name, err)
+				}
+
+				l.logger.Warn("module source not found, skip the module pull override that is not ready", slog.String("name", mpo.Name))
+				continue
+			}
+
+			l.logger.Info("module pull override is not ready, keep the deployed module and pin its registry", slog.String("name", mpo.Name))
+			l.registries[moduleName] = utils.BuildRegistryValue(source)
 			continue
 		}
 
@@ -233,12 +251,12 @@ func (l *Loader) restoreModulesByReleases(ctx context.Context) error {
 
 		deployedReleases[moduleName] = release
 
-		// if ModulePullOverride exists, don't check and restore overridden release
-		exists, err := utils.ModulePullOverrideExists(ctx, l.client, moduleName)
+		// Recover the release until an override has installed its module.
+		deployed, err := utils.ModulePullOverrideHasDeployed(ctx, l.client, moduleName)
 		if err != nil {
 			return fmt.Errorf("get module pull override for the '%s' module: %w", moduleName, err)
 		}
-		if exists {
+		if deployed {
 			l.logger.Info("module is overridden, skip release restoring", slog.String("name", moduleName))
 			continue
 		}

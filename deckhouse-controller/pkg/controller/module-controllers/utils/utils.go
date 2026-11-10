@@ -243,6 +243,18 @@ func ModulePullOverrideExists(ctx context.Context, cli client.Client, moduleName
 	return true, nil
 }
 
+// ModulePullOverrideHasDeployed reports whether an override has installed the module.
+func ModulePullOverrideHasDeployed(ctx context.Context, cli client.Client, moduleName string) (bool, error) {
+	mpo := new(v1alpha2.ModulePullOverride)
+	if err := cli.Get(ctx, client.ObjectKey{Name: moduleName}, mpo); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return false, fmt.Errorf("get: %w", err)
+		}
+		return false, nil
+	}
+	return mpo.HasDeployed(), nil
+}
+
 // GetClusterUUID gets uuid from the secret or generate a new one
 func GetClusterUUID(ctx context.Context, cli client.Client) string {
 	// attempt to read the cluster UUID from a secret

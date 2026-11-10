@@ -1096,6 +1096,12 @@ func (suite *ReleaseControllerTestSuite) assembleInitObject(strObj string) clien
 		require.NoError(suite.T(), err)
 		obj = module
 
+	case v1alpha2.ModulePullOverrideGVK.Kind:
+		mpo := new(v1alpha2.ModulePullOverride)
+		err = yaml.Unmarshal(raw, mpo)
+		require.NoError(suite.T(), err)
+		obj = mpo
+
 	case v1alpha1.ModuleDocumentationGVK.Kind:
 		documentation := new(v1alpha1.ModuleDocumentation)
 		err = yaml.Unmarshal(raw, documentation)
@@ -1153,6 +1159,9 @@ func stripDeletionTimestamp(obj client.Object) {
 
 type stubModulesManager struct {
 	modulePhase addonmodules.ModuleRunPhase
+	pushed      *[]string
+	modules     map[string]*addonmodules.BasicModule
+	disabled    bool
 }
 
 func (s stubModulesManager) AreModulesInited() bool {
@@ -1163,10 +1172,18 @@ func (s stubModulesManager) DisableModuleHooks(_ string) {
 }
 
 func (s stubModulesManager) GetModule(name string) *addonmodules.BasicModule {
+	if bm, ok := s.modules[name]; ok {
+		return bm
+	}
+
 	bm, _ := addonmodules.NewBasicModule(name, "", 900, nil, []byte{}, []byte{}, addonmodules.WithLogger(log.NewNop()))
 	bm.SetPhase(addonmodules.Ready)
 	if s.modulePhase != "" {
 		bm.SetPhase(s.modulePhase)
+	}
+
+	if s.modules != nil {
+		s.modules[name] = bm
 	}
 
 	return bm
@@ -1177,10 +1194,14 @@ func (s stubModulesManager) GetEnabledModuleNames() []string {
 }
 
 func (s stubModulesManager) IsModuleEnabled(_ string) bool {
-	return true
+	return !s.disabled
 }
 
-func (s stubModulesManager) PushRunModuleTask(_ string, _ bool) error {
+func (s stubModulesManager) PushRunModuleTask(name string, _ bool) error {
+	if s.pushed != nil {
+		*s.pushed = append(*s.pushed, name)
+	}
+
 	return nil
 }
 
@@ -1312,6 +1333,166 @@ status:
   phase: Pending
 `
 )
+
+// TestRegistrySpecChanged keeps a deployed override on its active source's registry.
+// Overrides from the release source receive its new registry settings.
+func (suite *ReleaseControllerTestSuite) TestRegistrySpecChanged() {
+	const module = "sds-local-volume"
+
+	cases := []struct {
+		name         string
+		file         string
+		embedded     bool
+		disabled     bool
+		existingRepo string
+		injected     bool
+		pushed       []string
+	}{
+		{name: "settings reach a module served by the release", file: "registry-spec-changed.yaml", injected: true, pushed: []string{module}},
+		{name: "settings skip a module overridden from another source", file: "registry-spec-changed-overridden.yaml", existingRepo: "dev-registry.example.com/deckhouse/modules"},
+		{name: "settings reach a module overridden from the release source", file: "registry-spec-changed-overridden-same-source.yaml", injected: true, pushed: []string{module}},
+		{name: "settings skip a module whose embedded copy is shipped", file: "registry-spec-changed.yaml", embedded: true},
+		{name: "settings reach a disabled module without running it", file: "registry-spec-changed.yaml", disabled: true, injected: true},
+	}
+
+	for _, tc := range cases {
+		suite.Run(tc.name, func() {
+			suite.setupReleaseController(suite.fetchTestFileData(tc.file), withInstaller(&installermock.Installer{
+				IsEmbeddedPresentFunc: func(string) bool { return tc.embedded },
+			}))
+
+			var pushed []string
+			modules := make(map[string]*addonmodules.BasicModule)
+			suite.ctr.moduleManager = stubModulesManager{pushed: &pushed, modules: modules, disabled: tc.disabled}
+			if tc.existingRepo != "" {
+				suite.ctr.moduleManager.GetModule(module).InjectRegistryValue(&addonmodules.Registry{
+					Base:   tc.existingRepo,
+					Scheme: "HTTPS",
+				})
+			}
+
+			mr := suite.getModuleRelease(suite.testMRName)
+			_, err := suite.ctr.handleRelease(context.TODO(), mr)
+			require.NoError(suite.T(), err)
+
+			assert.Equal(suite.T(), tc.pushed, pushed)
+
+			var want any
+			if tc.existingRepo != "" {
+				want = map[string]any{
+					"base":      tc.existingRepo,
+					"dockercfg": "",
+					"scheme":    "HTTPS",
+				}
+			}
+			if tc.injected {
+				source := new(v1alpha1.ModuleSource)
+				require.NoError(suite.T(), suite.client.Get(context.TODO(), client.ObjectKey{Name: mr.GetModuleSource()}, source))
+				want = map[string]any{
+					"base":      source.Spec.Registry.Repo,
+					"dockercfg": source.Spec.Registry.DockerCFG,
+					"scheme":    source.Spec.Registry.Scheme,
+				}
+			}
+			assert.EqualValues(suite.T(), want, injectedRegistry(modules, module), "registry in the module values")
+
+			_, set := suite.getModuleRelease(suite.testMRName).GetAnnotations()[v1alpha1.ModuleReleaseAnnotationRegistrySpecChanged]
+			assert.False(suite.T(), set, "the annotation is handled in every case and must be dropped")
+		})
+	}
+}
+
+// TestOverriddenFromAnotherSource protects previously deployed overrides during registry updates.
+// An override that has never deployed leaves the module under its release's control.
+func (suite *ReleaseControllerTestSuite) TestOverriddenFromAnotherSource() {
+	suite.testDataFileName = ""
+
+	const release = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  labels:
+    module: sds-local-volume
+    source: deckhouse
+  name: sds-local-volume-v0.3.19
+  ownerReferences:
+    - apiVersion: deckhouse.io/v1alpha1
+      controller: true
+      kind: ModuleSource
+      name: deckhouse
+      uid: 71d2300f-700b-452a-896a-6a3805f9cef7
+spec:
+  moduleName: sds-local-volume
+  version: 0.3.19
+status:
+  phase: Deployed
+`
+
+	override := func(message, digest string) string {
+		return fmt.Sprintf(`
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModulePullOverride
+metadata:
+  name: sds-local-volume
+spec:
+  imageTag: main
+status:
+  message: %q
+  imageDigest: %q
+`, message, digest)
+	}
+
+	deployed := override(v1alpha1.ModulePullOverrideMessageReady, "sha256:cafe")
+	failing := override("Download error: MANIFEST_UNKNOWN", "sha256:cafe")
+	neverDeployed := override("Download error: MANIFEST_UNKNOWN", "")
+
+	module := func(source string) string {
+		return fmt.Sprintf(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: sds-local-volume
+properties:
+  source: %q
+`, source)
+	}
+
+	cases := []struct {
+		name string
+		doc  string
+		want bool
+	}{
+		{name: "no override", doc: release + module("deckhouse-dev"), want: false},
+		{name: "override from the release source", doc: release + module("deckhouse") + deployed, want: false},
+		{name: "override from another source", doc: release + module("deckhouse-dev") + deployed, want: true},
+		{name: "failing override from another source", doc: release + module("deckhouse-dev") + failing, want: true},
+		{name: "override from another source that never deployed", doc: release + module("deckhouse-dev") + neverDeployed, want: false},
+		{name: "override of a module without an active source", doc: release + module("") + deployed, want: true},
+		{name: "override of a module without the Module object", doc: release + deployed, want: true},
+	}
+
+	for _, tc := range cases {
+		suite.Run(tc.name, func() {
+			suite.setupReleaseController(tc.doc)
+
+			got, err := suite.ctr.overriddenFromAnotherSource(context.TODO(), suite.getModuleRelease(suite.testMRName))
+			require.NoError(suite.T(), err)
+			assert.Equal(suite.T(), tc.want, got)
+		})
+	}
+}
+
+func injectedRegistry(modules map[string]*addonmodules.BasicModule, name string) any {
+	module, ok := modules[name]
+	if !ok {
+		return nil
+	}
+
+	return module.GetValues(false)["registry"]
+}
 
 func (suite *ReleaseControllerTestSuite) TestRestartLoop() {
 	ctx := suite.Context()

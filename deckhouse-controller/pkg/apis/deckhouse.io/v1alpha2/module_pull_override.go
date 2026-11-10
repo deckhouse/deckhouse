@@ -20,6 +20,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
 var (
@@ -106,6 +108,12 @@ func (mo *ModulePullOverride) GetReleaseVersion() string {
 // GetWeight returns the weight of the module
 func (mo *ModulePullOverride) GetWeight() uint32 {
 	return mo.Status.Weight
+}
+
+// HasDeployed reports whether the override has installed its module.
+// A failed update keeps the digest of the installed image.
+func (mo *ModulePullOverride) HasDeployed() bool {
+	return mo.Status.Message == v1alpha1.ModulePullOverrideMessageReady || mo.Status.ImageDigest != ""
 }
 
 // +kubebuilder:object:root=true
