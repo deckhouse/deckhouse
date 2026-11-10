@@ -118,6 +118,18 @@ func reloadHooks(ctx context.Context, shOp *shell_operator.ShellOperator, logger
 		}
 	}
 
+	// Remember how to stop the kubernetes monitors of the current hooks.
+	// HookManager.Init() replaces every hook with a new instance that gets new
+	// MonitorIds, but it never stops the monitors of the replaced hooks. Without
+	// this, every reload leaks a full set of monitors with their caches and
+	// goroutines until the process restarts.
+	var stopReplacedMonitors []func()
+	for _, name := range shOp.HookManager.GetHookNames() {
+		if h := shOp.HookManager.GetHook(name); h != nil && h.HookController != nil {
+			stopReplacedMonitors = append(stopReplacedMonitors, h.HookController.DisableKubernetesBindings)
+		}
+	}
+
 	// Re-discover hooks from disk.  This is the step most likely to fail
 	// (e.g. malformed hook file), so it MUST happen before we clear the
 	// current registration maps — otherwise a failed Init leaves the
@@ -125,6 +137,17 @@ func reloadHooks(ctx context.Context, shOp *shell_operator.ShellOperator, logger
 	if err := shOp.HookManager.Init(); err != nil {
 		return fmt.Errorf("re-init hook manager: %w", err)
 	}
+
+	// The replaced hooks are unreachable once Init has succeeded, so their
+	// monitors are stopped on every return path. Stop them only after the new
+	// hooks are wired: the new monitors then already hold the shared informers
+	// in the FactoryStore, so the informers keep running instead of being
+	// stopped and listed again.
+	defer func() {
+		for _, stop := range stopReplacedMonitors {
+			stop()
+		}
+	}()
 
 	// Clear the current registration state AFTER Init has succeeded.
 	// Rebuilding from scratch avoids stale webhook resources after hook
@@ -186,8 +209,8 @@ func reloadHooks(ctx context.Context, shOp *shell_operator.ShellOperator, logger
 	// This MUST be driven to completion here rather than relying on the
 	// reconciler to requeue on error. The shell-operator main queue enables
 	// bindings on the *startup* hook index, but every reloadHooks() call
-	// replaces that index with new MonitorIds; the main queue's monitors are
-	// then orphaned relative to the current index. If reloadHooks() returns
+	// replaces that index with new MonitorIds and stops the monitors of the
+	// replaced index (see stopReplacedMonitors above). If reloadHooks() returns
 	// before wiring the current index (e.g. a transient apiserver outage)
 	// and no further reload is triggered, the current index stays unwired and
 	// snapshots stay empty indefinitely. So enableKubernetesBindings retries
