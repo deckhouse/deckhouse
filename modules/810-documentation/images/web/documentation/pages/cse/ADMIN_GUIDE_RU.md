@@ -322,6 +322,7 @@ DP CSE поставляется на USB-флеш-накопителе или DV
 <td>
 <ul>
 <li>Kubernetes+Virtualization</li>
+<li>Virtualization</li>
 <li>Kubernetes</li>
 </ul>
 </td>
@@ -431,6 +432,17 @@ DP CSE поставляется на USB-флеш-накопителе или DV
 </td>
 </tr>
 <tr>
+<td>4.23</td>
+<td>Веб-интерфейс модуля `commander`</td>
+<td>
+<ul>
+<li>Kubernetes+Virtualization</li>
+<li>Virtualization</li>
+<li>Kubernetes</li>
+</ul>
+</td>
+</tr>
+<tr>
 <td>5</td>
 <td>Описание параметров (настроек) безопасности</td>
 <td>
@@ -462,10 +474,11 @@ DP CSE поставляется на USB-флеш-накопителе или DV
 </tr>
 <tr>
 <td>5.3</td>
-<td>Настройка уведомлений о событиях безопасности на почту</td>
+<td>Настройка оповещения о событиях безопасности</td>
 <td>
 <ul>
 <li>Kubernetes+Virtualization</li>
+<li>Virtualization</li>
 <li>Kubernetes</li>
 </ul>
 </td>
@@ -486,6 +499,7 @@ DP CSE поставляется на USB-флеш-накопителе или DV
 <td>
 <ul>
 <li>Kubernetes+Virtualization</li>
+<li>Virtualization</li>
 <li>Kubernetes</li>
 </ul>
 </td>
@@ -1089,73 +1103,73 @@ DP CSE поддерживает гостевые операционные сис
 
 1. Общие требования для узлов кластера:
 
-   - ОС соответствует требованиям к программным средствам (Таблица 1);
-   - пакеты ОС обновлены до последних доступных версий;
-   - настроен SSH-доступ по ключу;
-   - узел имеет доступ к хранилищу образов контейнеров DP CSE;
-   - указанные в конфигурации установки данные аутентификации для хранилища образов контейнеров корректны;
-   - значения параметров `publicDomainTemplate` и `clusterDomain` не совпадают;
-   - адресные пространства подов (`podSubnetCIDR`), сервисов (`serviceSubnetCIDR`) и внутренней сети кластера (`internalNetworkCIDRs`) не пересекаются;
-   - на узлах нет пользователя и группы `deckhouse`. Если пользователь и группа `deckhouse` уже существуют (например, узел ранее входил в кластер DP CSE), у них должны быть UID и GID `64535` и у пользователя не должно быть прав `sudo`;
-   - поддерживается cgroups v2;
-   - используется ядро Linux версии 5.8 и новее, кроме версий 6.12.0–6.12.28 и 6.14.0–6.14.6 (эти версии подвержены уязвимости CVE-2025-37999 в EROFS);
-   - используется `systemd` версии 244 и новее;
-   - поддерживается модуль ядра `erofs`;
-   - среда выполнения контейнеров на узлах не требуется: DP CSE устанавливает containerd самостоятельно. Если в ClusterConfiguration указано `defaultCRI: NotManaged`, установите среду выполнения контейнеров на узлы заранее;
-   - узлы кластера имеют уникальные имена (hostname), которые соответствуют следующим требованиям:
-     - длина не более 63 символов;
-     - состоит только из строчных букв;
-     - не содержит спецсимволов (допускаются символы `-` и `.`, при этом они не могут быть в начале или в конце имени);
-   - на узлах установлено корректное системное время, синхронизированное с доверенным NTP-сервером.
+    - ОС соответствует требованиям к программным средствам (Таблица 1);
+    - пакеты ОС обновлены до последних доступных версий;
+    - настроен SSH-доступ по ключу;
+    - узел имеет доступ к хранилищу образов контейнеров DP CSE;
+    - указанные в конфигурации установки данные аутентификации для хранилища образов контейнеров корректны;
+    - значения параметров `publicDomainTemplate` и `clusterDomain` не совпадают;
+    - адресные пространства подов (`podSubnetCIDR`), сервисов (`serviceSubnetCIDR`) и внутренней сети кластера (`internalNetworkCIDRs`) не пересекаются;
+    - на узлах нет пользователя и группы `deckhouse`. Если пользователь и группа `deckhouse` уже существуют (например, узел ранее входил в кластер DP CSE), у них должны быть UID и GID `64535` и у пользователя не должно быть прав `sudo`;
+    - поддерживается cgroups v2;
+    - используется ядро Linux версии 5.8 и новее, кроме версий 6.12.0–6.12.28 и 6.14.0–6.14.6 (эти версии подвержены уязвимости CVE-2025-37999 в EROFS);
+    - используется `systemd` версии 244 и новее;
+    - поддерживается модуль ядра `erofs`;
+    - среда выполнения контейнеров на узлах не требуется: DP CSE устанавливает containerd самостоятельно. Если в ClusterConfiguration указано `defaultCRI: NotManaged`, установите среду выполнения контейнеров на узлы заранее;
+    - узлы кластера имеют уникальные имена (hostname), которые соответствуют следующим требованиям:
+        - длина не более 63 символов;
+        - состоит только из строчных букв;
+        - не содержит спецсимволов (допускаются символы `-` и `.`, при этом они не могут быть в начале или в конце имени);
+    - на узлах установлено корректное системное время, синхронизированное с доверенным NTP-сервером.
 
 1. Дополнительные требования для узлов, предназначенных для запуска виртуальных машин (если используется виртуализация):
 
-   - доступ к репозиториям пакетов используемой ОС;
-   - HTTPS-доступ к хранилищу образов контейнеров DP CSE;
-   - SSH-доступ с машины для запуска установки;
-   - на узлах с РЕД ОС установлены `yum` и `which` (по умолчанию их может не быть).
+    - доступ к репозиториям пакетов используемой ОС;
+    - HTTPS-доступ к хранилищу образов контейнеров DP CSE;
+    - SSH-доступ с машины для запуска установки;
+    - на узлах с РЕД ОС установлены `yum` и `which` (по умолчанию их может не быть).
 
 1. Дополнительные требования для статического кластера:
 
-   - в команде запуска установки (`dhctl bootstrap`) указан только один флаг `--ssh-host` с IP-адресом первого master-узла;
-   - можно подключиться по SSH с указанными ключами;
-   - можно установить SSH-туннель до первого master-узла;
-   - узел, который станет master-узлом:
+    - в команде запуска установки (`dhctl bootstrap`) указан только один флаг `--ssh-host` с IP-адресом первого master-узла;
+    - можно подключиться по SSH с указанными ключами;
+    - можно установить SSH-туннель до первого master-узла;
+    - узел, который станет master-узлом:
 
-     - соответствует минимальным системным требованиям (п. 4.1.2);
-     - имеет установленный пакетный менеджер (`apt`, `apt-rpm`, `dnf`, `yum` или `zypper` — в зависимости от ОС) и утилиту `which`;
-     - имеет доступ к системным репозиториям;
-     - имеет установленный Python 3 (не ниже 3.12.10) с модулями `urllib.request`, `urllib.error`, `configparser` и `http.server` (или Python 2 с модулями `urllib2`, `ConfigParser`, `SimpleHTTPServer` и `SocketServer`);
+        - соответствует минимальным системным требованиям (п. 4.1.2);
+        - имеет установленный пакетный менеджер (`apt`, `apt-rpm`, `dnf`, `yum` или `zypper` — в зависимости от ОС) и утилиту `which`;
+        - имеет доступ к системным репозиториям;
+        - имеет установленный Python 3 (не ниже 3.12.10) с модулями `urllib.request`, `urllib.error`, `configparser` и `http.server` (или Python 2 с модулями `urllib2`, `ConfigParser`, `SimpleHTTPServer` и `SocketServer`);
 
-   - если в конфигурации указаны параметры прокси-сервера, хранилище образов контейнеров доступно через прокси-сервер;
-   - между машиной для запуска установки и сервером открыт порт 22/TCP;
-   - нет конфликтов по портам, которые использует установщик;
-   - DNS разрешает имя `localhost` в IP-адрес 127.0.0.1;
-   - пользователь, от имени которого выполняется установка (например, пользователь `caps`), имеет доступ к команде `sudo`;
-   - на сервере (ВМ) установлено время, синхронизированное с доверенным NTP-сервером.
+    - если в конфигурации указаны параметры прокси-сервера, хранилище образов контейнеров доступно через прокси-сервер;
+    - между машиной для запуска установки и сервером открыт порт 22/TCP;
+    - нет конфликтов по портам, которые использует установщик;
+    - DNS разрешает имя `localhost` в IP-адрес 127.0.0.1;
+    - пользователь, от имени которого выполняется установка (например, пользователь `caps`), имеет доступ к команде `sudo`;
+    - на сервере (ВМ) установлено время, синхронизированное с доверенным NTP-сервером.
 
 1. Для узлов с Московской серверной операционной системой выполните следующие действия:
 
-   1. Добавьте параметр `systemd.unified_cgroup_hierarchy=1` в `GRUB_CMDLINE_LINUX` в файле `/etc/default/grub`. Затем обновите конфигурацию GRUB:
+    1. Добавьте параметр `systemd.unified_cgroup_hierarchy=1` в `GRUB_CMDLINE_LINUX` в файле `/etc/default/grub`. Затем обновите конфигурацию GRUB:
 
-      ```bash
-      grub2-mkconfig -o /boot/grub2/grub.cfg
-      ```
+       ```bash
+       grub2-mkconfig -o /boot/grub2/grub.cfg
+       ```
 
-   1. Установите пакет `kernel-default-extra` и загрузите модуль ядра `erofs`:
+    1. Установите пакет `kernel-default-extra` и загрузите модуль ядра `erofs`:
 
-      ```bash
-      zypper install kernel-default-extra
-      modprobe erofs
-      ```
+       ```bash
+       zypper install kernel-default-extra
+       modprobe erofs
+       ```
 
 1. Требования к машине для запуска установки DP CSE, которую не планируется добавлять в кластер:
 
-   - допустимые ОС: РЕД ОС не ниже 7.3, Astra Linux Special Edition не ниже 1.7, Альт не ниже 8 СП. Это требование относится только к машине для запуска установки. Для узлов кластера действуют требования Таблицы 1 (п. 4.1.1): в исполнениях Virtualization и Kubernetes+Virtualization используйте Astra Linux Special Edition не ниже 1.8.3;
-   - установленный Docker для запуска установщика DP CSE;
-   - HTTP- или HTTPS-доступ к хранилищу образов контейнеров DP CSE;
-   - SSH-доступ по ключу к будущему master-узлу;
-   - сетевой доступ к master-узлу по порту 22/TCP.
+    - допустимые ОС: РЕД ОС не ниже 7.3, Astra Linux Special Edition не ниже 1.7, Альт не ниже 8 СП. Это требование относится только к машине для запуска установки. Для узлов кластера действуют требования Таблицы 1 (п. 4.1.1): в исполнениях Virtualization и Kubernetes+Virtualization используйте Astra Linux Special Edition не ниже 1.8.3;
+    - установленный Docker для запуска установщика DP CSE;
+    - HTTP- или HTTPS-доступ к хранилищу образов контейнеров DP CSE;
+    - SSH-доступ по ключу к будущему master-узлу;
+    - сетевой доступ к master-узлу по порту 22/TCP.
 
 Чтобы пропустить все предварительные проверки, укажите в команде `dhctl bootstrap` флаг `--preflight-skip-all-checks`. Чтобы пропустить отдельную проверку, укажите флаг `--preflight-skip-check=<ИМЯ_ПРОВЕРКИ>`, где `<ИМЯ_ПРОВЕРКИ>` — имя проверки из списков ниже. Чтобы пропустить несколько проверок, укажите этот флаг несколько раз.
 
@@ -1308,8 +1322,8 @@ TLS-сертификат нужен для работы по протоколу 
 
    Здесь:
 
-   - `<ПОЛЬЗОВАТЕЛЬ_ХРАНИЛИЩА>` — имя пользователя хранилища образов контейнеров;
-   - `<ПАРОЛЬ_ХРАНИЛИЩА>` — пароль этого пользователя.
+    - `<ПОЛЬЗОВАТЕЛЬ_ХРАНИЛИЩА>` — имя пользователя хранилища образов контейнеров;
+    - `<ПАРОЛЬ_ХРАНИЛИЩА>` — пароль этого пользователя.
 
 1. Поместите ключ и TLS-сертификат хранилища в файлы `/etc/docker/registry/private.key` (ключ) и `/etc/docker/registry/public.crt` (сертификат). Если TLS-сертификатов нет, сгенерируйте самоподписанные сертификаты (п. 4.3.1).
 
@@ -1376,8 +1390,8 @@ TLS-сертификат нужен для работы по протоколу 
 
    Здесь:
 
-   - `<ПОЛЬЗОВАТЕЛЬ_ХРАНИЛИЩА>` и `<ПАРОЛЬ_ХРАНИЛИЩА>` — имя и пароль пользователя, созданного на шаге 2;
-   - `<АДРЕС_ХРАНИЛИЩА>` — адрес хранилища образов контейнеров.
+    - `<ПОЛЬЗОВАТЕЛЬ_ХРАНИЛИЩА>` и `<ПАРОЛЬ_ХРАНИЛИЩА>` — имя и пароль пользователя, созданного на шаге 2;
+    - `<АДРЕС_ХРАНИЛИЩА>` — адрес хранилища образов контейнеров.
 
 Образы DP CSE можно загрузить в хранилище образов контейнеров из публичного хранилища образов контейнеров DP CSE (электронная поставка), с USB-флеш-накопителя или с DVD-диска из комплекта поставки (физическая поставка) согласно п. 3.3 Технических условий {% endraw %}{{ page.decimalNumber }}{% raw %}. Чтобы загрузить образы, выполните следующие шаги:
 
@@ -1391,8 +1405,8 @@ TLS-сертификат нужен для работы по протоколу 
 
    Здесь:
 
-   - `<ПУТЬ_К_ДИРЕКТОРИИ_ПАКЕТА>` — директория для скачанных образов;
-   - `<ЛИЦЕНЗИОННЫЙ_КЛЮЧ>` — лицензионный ключ для доступа к публичному хранилищу образов контейнеров DP CSE.
+    - `<ПУТЬ_К_ДИРЕКТОРИИ_ПАКЕТА>` — директория для скачанных образов;
+    - `<ЛИЦЕНЗИОННЫЙ_КЛЮЧ>` — лицензионный ключ для доступа к публичному хранилищу образов контейнеров DP CSE.
 
    Без флага `--include-module` команда загружает образы платформы и всех модулей DP CSE. Флаг `--include-module=<ИМЯ_МОДУЛЯ>` задаёт список загружаемых модулей. Если флаг указан, команда загружает только перечисленные модули. Некоторые модули поставляются отдельно от платформы и подключаются через ModuleSource (например, `loki`, `prometheus`, `log-shipper`, `ingress-nginx`, `operator-trivy`, `runtime-audit-engine`, `virtualization`). Если вы указываете `--include-module`, перечислите такие модули явно, иначе они не попадут в комплект. Чтобы исключить из загрузки отдельные модули, используйте флаг `--exclude-module=<ИМЯ_МОДУЛЯ>`.
 
@@ -1423,14 +1437,14 @@ TLS-сертификат нужен для работы по протоколу 
 
    Здесь:
 
-   - `platform.tar` — образы платформы;
-   - `installer.tar` — образы установщика;
-   - `security.tar` — базы данных сканера уязвимостей;
-   - `module-<ИМЯ_МОДУЛЯ>.tar` — образы модуля (по одному архиву на каждый модуль);
-   - `package-<ИМЯ_ПАКЕТА>.tar` — образы пакета (по одному архиву на каждый пакет);
-   - `package-versions.tar` — сведения о версиях пакетов;
-   - `deckhouse-cli.tar` — исполняемый файл `d8`;
-   - `plugin-<ИМЯ_ПЛАГИНА>.tar` — плагины `d8`, необходимые загруженным модулям.
+    - `platform.tar` — образы платформы;
+    - `installer.tar` — образы установщика;
+    - `security.tar` — базы данных сканера уязвимостей;
+    - `module-<ИМЯ_МОДУЛЯ>.tar` — образы модуля (по одному архиву на каждый модуль);
+    - `package-<ИМЯ_ПАКЕТА>.tar` — образы пакета (по одному архиву на каждый пакет);
+    - `package-versions.tar` — сведения о версиях пакетов;
+    - `deckhouse-cli.tar` — исполняемый файл `d8`;
+    - `plugin-<ИМЯ_ПЛАГИНА>.tar` — плагины `d8`, необходимые загруженным модулям.
 
    Команда создаёт файлы с суффиксом `.gostsum`, если указан флаг `--gost-digest`. Если задан флаг `--images-bundle-chunk-size`, команда разбивает архивы на части с именами вида `<ИМЯ_АРХИВА>.tar.<НОМЕР_ЧАСТИ>.chunk`.
 
@@ -1448,11 +1462,11 @@ TLS-сертификат нужен для работы по протоколу 
 
    Здесь:
 
-   - `<ПУТЬ>` — путь к файлу архива или к директории поставки с архивами образов DP CSE;
-   - `<АДРЕС_ХРАНИЛИЩА>` — адрес хранилища образов контейнеров в локальной сети;
-   - `<ПУТЬ_В_ХРАНИЛИЩЕ>` — путь в хранилище образов контейнеров, в который команда загрузит образы DP CSE. В примерах ниже используется путь `deckhouse/cse`;
-   - `<ПОЛЬЗОВАТЕЛЬ_ХРАНИЛИЩА>` — имя пользователя для аутентификации в хранилище образов контейнеров;
-   - `<ПАРОЛЬ_ХРАНИЛИЩА>` — пароль пользователя для аутентификации в хранилище образов контейнеров.
+    - `<ПУТЬ>` — путь к файлу архива или к директории поставки с архивами образов DP CSE;
+    - `<АДРЕС_ХРАНИЛИЩА>` — адрес хранилища образов контейнеров в локальной сети;
+    - `<ПУТЬ_В_ХРАНИЛИЩЕ>` — путь в хранилище образов контейнеров, в который команда загрузит образы DP CSE. В примерах ниже используется путь `deckhouse/cse`;
+    - `<ПОЛЬЗОВАТЕЛЬ_ХРАНИЛИЩА>` — имя пользователя для аутентификации в хранилище образов контейнеров;
+    - `<ПАРОЛЬ_ХРАНИЛИЩА>` — пароль пользователя для аутентификации в хранилище образов контейнеров.
 
    Если хранилище допускает анонимный доступ, не указывайте флаги `--registry-login` и `--registry-password`. Если хранилище работает по протоколу HTTP, добавьте флаг `--insecure`.
 
@@ -1850,8 +1864,8 @@ d8 system edit static-cluster-configuration
 apiVersion: deckhouse.io/v1
 kind: StaticClusterConfiguration
 internalNetworkCIDRs:
-- 10.244.0.0/16
-- 10.50.0.0/16
+  - 10.244.0.0/16
+  - 10.50.0.0/16
 ```
 
 Описание параметров:
@@ -2055,6 +2069,24 @@ spec:
   version: 1
   enabled: true
 ---
+# Регистрация событий безопасности (п. 5.5).
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: security-events-manager
+spec:
+  version: 1
+  enabled: true
+  settings:
+    securityEventConfig:
+      enabled: true
+      sourcesMasks:
+        - "podSecurityEventShipper/*"
+        - "clusterSecurityEventShipper/*"
+      destinations:
+        - cluster-loki
+      minimumSeverityThreshold: Low
+---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -2094,6 +2126,9 @@ spec:
       - MEDIUM
       - HIGH
       - CRITICAL
+    # Регистрация событий безопасности о находках всех уровней критичности (п. 5.1.3).
+    securityEvents:
+      minimumSeverity: LOW
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -2204,6 +2239,19 @@ spec:
   settings:
     controlPlaneConfigurator:
       dexCAMode: FromIngressSecret
+    # Парольная политика (п. 4.12.1.3). Значения обязательны для DP CSE.
+    passwordPolicy:
+      complexityLevel: Custom
+      custom:
+        minLength: 12
+        capitalized: true
+        numbers: true
+        specialCharacters: true
+      lockout:
+        maxAttempts: 4
+        lockDuration: 36500d
+        applyToConnectors:
+          - LDAP
   version: 2
 ---
 # Опциональный модуль (п. 7.1).
@@ -2399,22 +2447,82 @@ spec:
     kind: SSHCredentials
     name: ssh-credentials
 ---
-# Правило оповещения о событиях безопасности, обнаруженных модулем runtime-audit-engine.
-apiVersion: observability.deckhouse.io/v1alpha1
-kind: ClusterObservabilityMetricsRulesGroup
+# Правила оповещения о событиях безопасности (п. 5.3.1).
+apiVersion: security.deckhouse.io/v1alpha1
+kind: ClusterSecurityEventAlertRule
 metadata:
-  name: falco-critical-alerts
+  name: integrity-violation
 spec:
-  rules:
-  - alert: FalcoCriticalAlertsAreFiring
-    for: 1m
-    annotations:
-      description: |
-        There is a suspicious activity on a node {{ $labels.node }}.
-        Check your events journal for more details.
-      summary: Falco detects a critical security incident
-    expr: |
-      sum by (node) (rate(falcosecurity_falcosidekick_falco_events_total{priority_raw=~"error|critical|warning|notice"}[5m]) > 0)
+  groups:
+    - name: integrity
+      rules:
+        - alert: IntegrityViolation
+          mode: Match
+          match:
+            eventCodes:
+              - D8_CONTAINERD_INTEGRITY_VIOLATION
+              - D8_RUNTIME_MISSING_DIGITAL_SIGNATURE
+              - D8_RUNTIME_EVENT_WITH_DECKHOUSEIO_AND_SIGNATURE_ANNOTATION
+              - VIRT_VM_INTEGRITY_CHECK_FAILED
+            excludeSystemActors: false
+          severityLevel: 5
+          annotations:
+            summary: "Обнаружено нарушение целостности объекта контроля"
+---
+apiVersion: security.deckhouse.io/v1alpha1
+kind: ClusterSecurityEventAlertRule
+metadata:
+  name: security-incidents
+spec:
+  groups:
+    - name: incidents
+      rules:
+        - alert: SecurityIncident
+          mode: Match
+          match:
+            severityMin: High
+          severityLevel: 5
+          annotations:
+            summary: "Зарегистрировано событие безопасности высокой или критической важности"
+---
+apiVersion: security.deckhouse.io/v1alpha1
+kind: ClusterSecurityEventAlertRule
+metadata:
+  name: vulnerabilities-found
+spec:
+  groups:
+    - name: vulnerabilities
+      rules:
+        - alert: VulnerabilitiesFound
+          mode: Match
+          match:
+            eventCodes:
+              - D8_TRIVY_WORKLOAD_VULNERABILITIES_FOUND
+              - D8_TRIVY_NODE_VULNERABILITIES_FOUND
+              - D8_TRIVY_REGISTRY_IMAGE_VULNERABILITIES_FOUND
+              - D8_TRIVY_VULNERABLE_IMAGE_REJECTED
+            excludeSystemActors: false
+          severityLevel: 6
+          annotations:
+            summary: "Выявлены уязвимости в образах контейнеров"
+---
+# Нужно только в исполнениях Kubernetes+Virtualization и Virtualization.
+apiVersion: security.deckhouse.io/v1alpha1
+kind: ClusterSecurityEventAlertRule
+metadata:
+  name: virtualization-security-events
+spec:
+  groups:
+    - name: virtualization
+      rules:
+        - alert: VirtualizationSecurityEvent
+          mode: Match
+          match:
+            sources:
+              - virtualization-audit
+          severityLevel: 6
+          annotations:
+            summary: "Зарегистрировано событие безопасности средства виртуализации"
 ```
 
 Здесь:
@@ -2568,16 +2676,16 @@ d8 k patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nod
 1. В разделе «Управление системой» откройте «Узлы» → «Группы узлов», нажмите «Создать» и выберите тип группы «Static».
 1. В форме группы узлов задайте имя `system`. На вкладке «Состав группы» задайте количество узлов `2` и правило выбора статических узлов по лейблу `role: system`. На вкладке «Лейблы, аннотации, тейнты» добавьте лейбл узлов `node-role.deckhouse.io/system` с пустым значением и taint с ключом `dedicated.deckhouse.io`, значением `system` и эффектом `NoExecute`. Нажмите «Создать». Поля формы описаны в п. 4.19.7.
 
-   ![Форма создания группы узлов](images/admin-guide/image-4-5-2-1.png)
+    ![Форма создания группы узлов](images/admin-guide/image-4-5-2-1.png)
 
-   Рисунок 4.5.2.1 — Форма создания группы узлов
+    Рисунок 4.5.2.1 — Форма создания группы узлов
 
 1. Создайте так же группу `frontend`: правило выбора узлов по лейблу `role: frontend`, лейбл узлов `node-role.deckhouse.io/frontend`, taint со значением `frontend`.
 1. Откройте «Узлы» → «Статические узлы» → «Машины» и нажмите «Создать». Задайте имя машины `system-1`, IP-адрес узла `system-1`, учётные данные SSH `ssh-credentials` и лейбл `role: system`. Нажмите «Создать».
 
-   ![Создание статической машины](images/admin-guide/image-4-5-2-2.png)
+    ![Создание статической машины](images/admin-guide/image-4-5-2-2.png)
 
-   Рисунок 4.5.2.2 — Создание статической машины
+    Рисунок 4.5.2.2 — Создание статической машины
 
 1. Создайте так же машины `system-2` (лейбл `role: system`), `frontend-1` и `frontend-2` (лейбл `role: frontend`).
 1. Откройте «Узлы» → «Узлы» и дождитесь, пока frontend-узлы появятся в списке и перейдут в состояние `Ready`.
@@ -2589,122 +2697,122 @@ d8 k patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nod
 
 1. Создайте NodeGroup `system` и `frontend` и StaticInstance для их узлов. Для этого выполните на master-узле команду:
 
-   ```bash
-   d8 k apply -f - << EOF
-   apiVersion: deckhouse.io/v1
-   kind: NodeGroup
-   metadata:
-     name: system
-   spec:
-     nodeTemplate:
-       labels:
-         node-role.deckhouse.io/system: ""
-       taints:
-         - effect: NoExecute
-           key: dedicated.deckhouse.io
-           value: system
-     nodeType: Static
-     staticInstances:
-       count: 2
-       labelSelector:
-         matchLabels:
-           role: system
-   ---
-   apiVersion: deckhouse.io/v1
-   kind: NodeGroup
-   metadata:
-     name: frontend
-   spec:
-     nodeTemplate:
-       labels:
-         node-role.deckhouse.io/frontend: ""
-       taints:
-         - effect: NoExecute
-           key: dedicated.deckhouse.io
-           value: frontend
-     nodeType: Static
-     staticInstances:
-       count: 2
-       labelSelector:
-         matchLabels:
-           role: frontend
-   ---
-   apiVersion: deckhouse.io/v1alpha1
-   kind: StaticInstance
-   metadata:
-     name: system-1
-     labels:
-       role: system
-   spec:
-     address: '<IP_SYSTEM_1>'
-     credentialsRef:
-       kind: SSHCredentials
-       name: ssh-credentials
-   ---
-   apiVersion: deckhouse.io/v1alpha1
-   kind: StaticInstance
-   metadata:
-     name: system-2
-     labels:
-       role: system
-   spec:
-     address: '<IP_SYSTEM_2>'
-     credentialsRef:
-       kind: SSHCredentials
-       name: ssh-credentials
-   ---
-   apiVersion: deckhouse.io/v1alpha1
-   kind: StaticInstance
-   metadata:
-     name: frontend-1
-     labels:
-       role: frontend
-   spec:
-     address: '<IP_FRONTEND_1>'
-     credentialsRef:
-       kind: SSHCredentials
-       name: ssh-credentials
-   ---
-   apiVersion: deckhouse.io/v1alpha1
-   kind: StaticInstance
-   metadata:
-     name: frontend-2
-     labels:
-       role: frontend
-   spec:
-     address: '<IP_FRONTEND_2>'
-     credentialsRef:
-       kind: SSHCredentials
-       name: ssh-credentials
-   EOF
-   ```
+    ```bash
+    d8 k apply -f - << EOF
+    apiVersion: deckhouse.io/v1
+    kind: NodeGroup
+    metadata:
+      name: system
+    spec:
+      nodeTemplate:
+        labels:
+          node-role.deckhouse.io/system: ""
+        taints:
+          - effect: NoExecute
+            key: dedicated.deckhouse.io
+            value: system
+      nodeType: Static
+      staticInstances:
+        count: 2
+        labelSelector:
+          matchLabels:
+            role: system
+    ---
+    apiVersion: deckhouse.io/v1
+    kind: NodeGroup
+    metadata:
+      name: frontend
+    spec:
+      nodeTemplate:
+        labels:
+          node-role.deckhouse.io/frontend: ""
+        taints:
+          - effect: NoExecute
+            key: dedicated.deckhouse.io
+            value: frontend
+      nodeType: Static
+      staticInstances:
+        count: 2
+        labelSelector:
+          matchLabels:
+            role: frontend
+    ---
+    apiVersion: deckhouse.io/v1alpha1
+    kind: StaticInstance
+    metadata:
+      name: system-1
+      labels:
+        role: system
+    spec:
+      address: '<IP_SYSTEM_1>'
+      credentialsRef:
+        kind: SSHCredentials
+        name: ssh-credentials
+    ---
+    apiVersion: deckhouse.io/v1alpha1
+    kind: StaticInstance
+    metadata:
+      name: system-2
+      labels:
+        role: system
+    spec:
+      address: '<IP_SYSTEM_2>'
+      credentialsRef:
+        kind: SSHCredentials
+        name: ssh-credentials
+    ---
+    apiVersion: deckhouse.io/v1alpha1
+    kind: StaticInstance
+    metadata:
+      name: frontend-1
+      labels:
+        role: frontend
+    spec:
+      address: '<IP_FRONTEND_1>'
+      credentialsRef:
+        kind: SSHCredentials
+        name: ssh-credentials
+    ---
+    apiVersion: deckhouse.io/v1alpha1
+    kind: StaticInstance
+    metadata:
+      name: frontend-2
+      labels:
+        role: frontend
+    spec:
+      address: '<IP_FRONTEND_2>'
+      credentialsRef:
+        kind: SSHCredentials
+        name: ssh-credentials
+    EOF
+    ```
 
-   Здесь:
+    Здесь:
 
-   - `<IP_SYSTEM_1>` — IP-адрес узла `system-1`;
-   - `<IP_SYSTEM_2>` — IP-адрес узла `system-2`;
-   - `<IP_FRONTEND_1>` — IP-адрес узла `frontend-1`;
-   - `<IP_FRONTEND_2>` — IP-адрес узла `frontend-2`.
+    - `<IP_SYSTEM_1>` — IP-адрес узла `system-1`;
+    - `<IP_SYSTEM_2>` — IP-адрес узла `system-2`;
+    - `<IP_FRONTEND_1>` — IP-адрес узла `frontend-1`;
+    - `<IP_FRONTEND_2>` — IP-адрес узла `frontend-2`.
 
 1. Дождитесь, пока frontend-узлы войдут в кластер и перейдут в состояние `Ready`. Чтобы проверить состояние узлов, выполните команду:
 
-   ```bash
-   d8 k get nodes -l node-role.deckhouse.io/frontend
-   ```
+    ```bash
+    d8 k get nodes -l node-role.deckhouse.io/frontend
+    ```
 
 1. Перенесите IngressNginxController `main` с master-узлов на frontend-узлы. Команда удаляет из `nodeSelector` лейбл master-узлов, добавляет лейбл frontend-узлов и заменяет tolerations:
 
-   ```bash
-   d8 k patch ingressnginxcontroller main --type merge -p '{"spec":{"nodeSelector":{"node-role.kubernetes.io/master":null,"node-role.deckhouse.io/frontend":""},"tolerations":[{"effect":"NoExecute","key":"dedicated.deckhouse.io","value":"frontend"}]}}'
-   ```
+    ```bash
+    d8 k patch ingressnginxcontroller main --type merge -p '{"spec":{"nodeSelector":{"node-role.kubernetes.io/master":null,"node-role.deckhouse.io/frontend":""},"tolerations":[{"effect":"NoExecute","key":"dedicated.deckhouse.io","value":"frontend"}]}}'
+    ```
 
 1. Дождитесь, пока поды Ingress-контроллера запустятся на frontend-узлах. Запуск может занять несколько минут. Чтобы следить за состоянием подов, выполните команду:
 
-   ```bash
-   d8 k -n d8-ingress-nginx get pods -o wide -w
-   ```
+    ```bash
+    d8 k -n d8-ingress-nginx get pods -o wide -w
+    ```
 
-   Поды должны перейти в состояние `Running`, а в столбце `NODE` должны быть указаны frontend-узлы. Чтобы прекратить вывод, нажмите `Ctrl+C`.
+Поды должны перейти в состояние `Running`, а в столбце `NODE` должны быть указаны frontend-узлы. Чтобы прекратить вывод, нажмите `Ctrl+C`.
 
 {% endtab %}
 {% endtabs %}
@@ -2714,63 +2822,25 @@ d8 k patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nod
 
 Выполните шаги этого раздела для объектов, которые не включены в файл конфигурации установки (п. 4.5.1). Имена объектов совпадают с именами в файле конфигурации.
 
-Создайте правило оповещения о необычном поведении в кластере на основе журнала аудита. Правило срабатывает на события с приоритетами `critical`, `error`, `warning` и `notice`. Правило работает, если включён модуль `observability` (модуль включён по умолчанию). Чтобы создать правило, выполните следующие действия:
+Создайте правило оповещения о необычном поведении в кластере на основе журнала аудита. Для работы правила необходим модуль `observability` (включён по умолчанию). Правило срабатывает на события с приоритетами `critical`, `error`, `warning` и `notice`. Чтобы создать правило, выполните следующие действия:
 
 {% endraw %}
-{% tabs falco-alert-rule %}
+{% tabs security-event-alert-rules %}
 {% tab "Веб-интерфейс" %}
 
-{% raw %}
-
-1. В разделе «Управление системой» откройте «Мониторинг» → «Настройки уведомлений» → «Триггеры и метрики» и нажмите «Создать».
-1. В форме «Новая группа триггеров и метрик» задайте имя группы `falco-critical-alerts` и нажмите «Добавить триггер».
-1. В форме «Добавить триггер» на вкладке «Настройки» задайте:
-   - имя — `FalcoCriticalAlertsAreFiring`;
-   - «Выражение PromQL»:
-
-     ```text
-     sum by (node) (rate(falcosecurity_falcosidekick_falco_events_total{priority_raw=~"error|critical|warning|notice"}[5m]) > 0)
-     ```
-
-   - «Сводка» — `Falco detects a critical security incident`;
-   - описание — `There is a suspicious activity on a node {{ $labels.node }}. Check your events journal for more details.`
-
-   ![Форма добавления триггера](images/admin-guide/image-4-5-3-1.png)
-
-   Рисунок 4.5.3.1 — Форма добавления триггера
-
-1. На вкладке «Задержки уведомлений» задайте время, в течение которого условие должно выполняться для активации алерта, — `1m`.
-1. Добавьте триггер в группу и нажмите «Создать».
-{% endraw %}
+1. Нажмите кнопку «+» («YAML») на верхней панели.
+1. Вставьте манифесты ClusterSecurityEventAlertRule из п. 5.3.1 и нажмите «Создать».
 
 {% endtab %}
 {% tab "CLI" %}
 
-{% raw %}
-
-Выполните команду:
+Сохраните манифесты ClusterSecurityEventAlertRule из п. 5.3.1 в файл и примените его:
 
 ```bash
-d8 k apply -f - << EOF
-apiVersion: observability.deckhouse.io/v1alpha1
-kind: ClusterObservabilityMetricsRulesGroup
-metadata:
-  name: falco-critical-alerts
-spec:
-  rules:
-  - alert: FalcoCriticalAlertsAreFiring
-    for: 1m
-    annotations:
-      description: |
-        There is a suspicious activity on a node {{ $labels.node }}.
-        Check your events journal for more details.
-      summary: Falco detects a critical security incident
-    expr: |
-      sum by (node) (rate(falcosecurity_falcosidekick_falco_events_total{priority_raw=~"error|critical|warning|notice"}[5m]) > 0)
-EOF
+d8 k apply -f <ИМЯ_ФАЙЛА>
 ```
 
-{% endraw %}
+Здесь `<ИМЯ_ФАЙЛА>` — путь к файлу с манифестами.
 
 {% endtab %}
 {% endtabs %}
@@ -2785,12 +2855,12 @@ EOF
 1. В разделе «Управление системой» откройте «Безопасность» → «Управление доступом» → «Локальные пользователи» и нажмите «Создать». Задайте имя `admin`, адрес электронной почты `admin@example.com` и пароль пользователя. Нажмите «Создать».
 1. Откройте «Локальные группы» и нажмите «Создать». Задайте имя группы `admins`, добавьте в участники пользователя `admin` и нажмите «Создать».
 1. Откройте «Права доступа» и нажмите «Создать». В форме «Новое правило авторизации» задайте:
-   - «Уровень доступа» — `SuperAdmin`;
-   - включите «Разрешить выполнять port-forward»;
-   - «Доступ к неймспейсам» — «Все неймспейсы»; включите «Разрешить доступ в служебные неймспейсы»;
-   - в блоке «Пользователи и группы, к которым применяется правило» добавьте группу `admins`.
+    - «Уровень доступа» — `SuperAdmin`;
+    - включите «Разрешить выполнять port-forward»;
+    - «Доступ к неймспейсам» — «Все неймспейсы»; включите «Разрешить доступ в служебные неймспейсы»;
+    - в блоке «Пользователи и группы, к которым применяется правило» добавьте группу `admins`.
 
-   Нажмите «Создать». Поля формы описаны в п. 4.19.11.
+    Нажмите «Создать». Поля формы описаны в п. 4.19.11.
 
 {% endtab %}
 {% tab "CLI" %}
@@ -2811,6 +2881,40 @@ d8 iam access grant group admins --access-level SuperAdmin --scope all-namespace
 {% endtabs %}
 {% raw %}
 
+Создайте учётную запись администратора безопасности DP CSE и предоставьте ей уровень доступа `ClusterAdmin` (п. 4.12.3). Пользователь `admin` с уровнем `SuperAdmin` нужен для установки и восстановления; для повседневного администрирования безопасности используйте отдельную учётную запись. Для этого выполните следующие действия:
+
+{% endraw %}
+{% tabs create-security-admin %}
+{% tab "Веб-интерфейс" %}
+
+1. В разделе «Управление системой» откройте «Безопасность» → «Управление доступом» → «Локальные пользователи» и нажмите «Создать». Задайте имя, адрес электронной почты и пароль администратора безопасности. Нажмите «Создать».
+1. Откройте «Локальные группы» и нажмите «Создать». Задайте имя группы `security-admins`, добавьте в участники созданного пользователя и нажмите «Создать».
+1. Откройте «Права доступа» и нажмите «Создать». В форме «Новое правило авторизации» задайте «Уровень доступа» — `ClusterAdmin`, «Доступ к неймспейсам» — «Все неймспейсы» и добавьте группу `security-admins`. Нажмите «Создать».
+
+{% endtab %}
+{% tab "CLI" %}
+
+Создайте пользователя и добавьте его в группу `security-admins`. Команда запросит пароль пользователя:
+
+```bash
+d8 iam user create <ИМЯ_ПОЛЬЗОВАТЕЛЯ> --email <АДРЕС_ПОЧТЫ> --password-prompt --member-of security-admins --create-groups
+```
+
+Здесь:
+
+- `<ИМЯ_ПОЛЬЗОВАТЕЛЯ>` — имя учётной записи администратора безопасности;
+- `<АДРЕС_ПОЧТЫ>` — адрес электронной почты администратора безопасности.
+
+Предоставьте группе `security-admins` уровень доступа `ClusterAdmin` во всех неймспейсах:
+
+```bash
+d8 iam access grant group security-admins --access-level ClusterAdmin --scope all-namespaces
+```
+
+{% endtab %}
+{% endtabs %}
+{% raw %}
+
 Если IngressNginxController `main` не задан в файле конфигурации установки, создайте его для приёма входящего трафика. Для этого выполните следующие действия:
 
 {% endraw %}
@@ -2820,13 +2924,13 @@ d8 iam access grant group admins --access-level SuperAdmin --scope all-namespace
 1. В разделе «Управление системой» откройте «Сеть» → «Балансировка» → «Ingress-контроллеры» и нажмите «Создать». Откроется мастер «Создание Ingress NGINX Controller».
 1. На шаге «Основные» задайте имя `main`, Ingress-класс `nginx` и способ приёма трафика `HostWithFailover`.
 1. На шаге «Размещение и ресурсы» задайте селектор узлов и tolerations:
-   - если кластер состоит из одного узла — лейбл `node-role.kubernetes.io/master` с пустым значением и toleration с эффектом `NoSchedule` и оператором `Exists`;
-   - если в отказоустойчивом кластере выделены frontend-узлы — лейбл `node-role.deckhouse.io/frontend` с пустым значением и toleration с ключом `dedicated.deckhouse.io`, значением `frontend` и эффектом `NoExecute`.
+    - если кластер состоит из одного узла — лейбл `node-role.kubernetes.io/master` с пустым значением и toleration с эффектом `NoSchedule` и оператором `Exists`;
+    - если в отказоустойчивом кластере выделены frontend-узлы — лейбл `node-role.deckhouse.io/frontend` с пустым значением и toleration с ключом `dedicated.deckhouse.io`, значением `frontend` и эффектом `NoExecute`.
 1. Нажмите «Перейти к обзору», проверьте параметры и нажмите «Создать». Шаги мастера описаны в п. 4.19.9.
 
-   ![Мастер создания Ingress-контроллера](images/admin-guide/image-4-5-3-2.png)
+![Мастер создания Ingress-контроллера](images/admin-guide/image-4-5-3-2.png)
 
-   Рисунок 4.5.3.2 — Мастер создания Ingress-контроллера
+Рисунок 4.5.3.1 — Мастер создания Ingress-контроллера
 
 {% endtab %}
 {% tab "CLI" %}
@@ -2886,58 +2990,58 @@ EOF
 1. Создайте на DNS-сервере A-записи доменного имени кластера с выделенными IP-адресами, например wildcard-запись `*.kube.example.com`.
 1. Включите модуль `metallb`:
 
-   ```bash
-   d8 system module enable metallb
-   ```
+    ```bash
+    d8 system module enable metallb
+    ```
 
 1. Создайте MetalLoadBalancerClass `ingress` и укажите выделенные IP-адреса в параметре `addressPool`:
 
-   ```bash
-   d8 k apply -f - << EOF
-   apiVersion: network.deckhouse.io/v1alpha1
-   kind: MetalLoadBalancerClass
-   metadata:
-     name: ingress
-   spec:
-     addressPool:
-       - 192.168.2.100-192.168.2.101
-     isDefault: false
-     nodeSelector:
-       node-role.deckhouse.io/frontend: ""
-     type: L2
-   EOF
-   ```
+    ```bash
+    d8 k apply -f - << EOF
+    apiVersion: network.deckhouse.io/v1alpha1
+    kind: MetalLoadBalancerClass
+    metadata:
+      name: ingress
+    spec:
+      addressPool:
+        - 192.168.2.100-192.168.2.101
+      isDefault: false
+      nodeSelector:
+        node-role.deckhouse.io/frontend: ""
+      type: L2
+    EOF
+    ```
 
 1. Удалите IngressNginxController `main`:
 
-   ```bash
-   d8 k delete IngressNginxController main
-   ```
+    ```bash
+    d8 k delete IngressNginxController main
+    ```
 
 1. Создайте на frontend-узлах IngressNginxController `main` с типом входа `LoadBalancer`, который использует MetalLoadBalancerClass `ingress`:
 
-   ```bash
-   d8 k apply -f - << EOF
-   apiVersion: deckhouse.io/v2
-   kind: IngressNginxController
-   metadata:
-     name: main
-   spec:
-     ingressClass: nginx
-     inlet: LoadBalancer
-     loadBalancer:
-       loadBalancerClass: ingress
-       annotations:
-         # Количество адресов, которые будут выделены из пула, описанного в MetalLoadBalancerClass.
-         network.deckhouse.io/l2-load-balancer-external-ips-count: "2"
-     nodeSelector:
-       node-role.deckhouse.io/frontend: ""
-     tolerations:
-       - effect: NoExecute
-         key: dedicated.deckhouse.io
-         value: frontend
-   EOF
-   ```
+    ```bash
+    d8 k apply -f - << EOF
+    apiVersion: deckhouse.io/v2
+    kind: IngressNginxController
+    metadata:
+      name: main
+    spec:
+      ingressClass: nginx
+      inlet: LoadBalancer
+      loadBalancer:
+        loadBalancerClass: ingress
+        annotations:
+          # Количество адресов, которые будут выделены из пула, описанного в MetalLoadBalancerClass.
+          network.deckhouse.io/l2-load-balancer-external-ips-count: "2"
+      nodeSelector:
+        node-role.deckhouse.io/frontend: ""
+      tolerations:
+        - effect: NoExecute
+          key: dedicated.deckhouse.io
+          value: frontend
+    EOF
+    ```
 
 DNS-сервер поочерёдно возвращает выделенные IP-адреса в ответ на запросы к доменному имени кластера. Модуль `metallb` назначает каждому из двух frontend-узлов по одному выделенному IP-адресу. Поэтому трафик равномерно распределяется между узлами. Если один из frontend-узлов откажет, модуль `metallb` перенесёт IP-адрес этого узла на другой работающий frontend-узел.
 
@@ -2950,10 +3054,12 @@ d8 k -n d8-ingress-nginx get svc
 Пример вывода с назначенными IP-адресами:
 
 <!-- markdownlint-disable MD031 -->
+
 ```console
 NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP                   PORT(S)                      AGE
 main-load-balancer     LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.101   80:30689/TCP,443:30668/TCP   11s
 ```
+
 {: .nowrap-default }
 <!-- markdownlint-enable MD031 -->
 
@@ -3103,22 +3209,22 @@ docker run --rm --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/r
 
 1. Создайте ModuleConfig для включения модуля:
 
-   ```bash
-   d8 k apply -f - <<EOF
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     name: snapshot-controller
-   spec:
-     enabled: true
-   EOF
-   ```
+    ```bash
+    d8 k apply -f - <<EOF
+    apiVersion: deckhouse.io/v1alpha1
+    kind: ModuleConfig
+    metadata:
+      name: snapshot-controller
+    spec:
+      enabled: true
+    EOF
+    ```
 
 1. Дождитесь, когда модуль перейдёт в состояние `Ready`. Чтобы проверить состояние модуля, выполните команду:
 
-   ```bash
-   d8 k get modules snapshot-controller
-   ```
+    ```bash
+    d8 k get modules snapshot-controller
+    ```
 
 #### 4.6.1 Локальное хранилище Local Path Provisioner
 
@@ -3177,52 +3283,52 @@ spec:
 
 1. Создайте ModuleConfig для включения модуля:
 
-   ```bash
-   d8 k apply -f - <<EOF
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     name: sds-node-configurator
-   spec:
-     enabled: true
-     version: 1
-   EOF
-   ```
+    ```bash
+    d8 k apply -f - <<EOF
+    apiVersion: deckhouse.io/v1alpha1
+    kind: ModuleConfig
+    metadata:
+      name: sds-node-configurator
+    spec:
+      enabled: true
+      version: 1
+    EOF
+    ```
 
 1. Дождитесь, когда модуль перейдёт в состояние `Ready`. Поды в неймспейсе `d8-sds-node-configurator` на этом этапе можно не проверять. Чтобы проверить состояние модуля, выполните команду:
 
-   ```bash
-   d8 k get modules sds-node-configurator
-   ```
+    ```bash
+    d8 k get modules sds-node-configurator
+    ```
 
 Чтобы включить модуль `sds-local-volume`, выполните следующие действия:
 
 1. Создайте ModuleConfig для включения модуля. Команда ниже включает модуль с настройками по умолчанию. С такими настройками модуль создаст служебные поды компонента `sds-local-volume` на всех узлах кластера:
 
-   ```bash
-   d8 k apply -f - <<EOF
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     name: sds-local-volume
-   spec:
-     enabled: true
-     version: 2
-   EOF
-   ```
+    ```bash
+    d8 k apply -f - <<EOF
+    apiVersion: deckhouse.io/v1alpha1
+    kind: ModuleConfig
+    metadata:
+      name: sds-local-volume
+    spec:
+      enabled: true
+      version: 2
+    EOF
+    ```
 
 1. Дождитесь, когда модуль перейдёт в состояние `Ready`. Чтобы проверить состояние модуля, выполните команду:
 
-   ```bash
-   d8 k get modules sds-local-volume
-   ```
+    ```bash
+    d8 k get modules sds-local-volume
+    ```
 
 1. Убедитесь, что все поды в неймспейсах `d8-sds-local-volume` и `d8-sds-node-configurator` находятся в статусе `Running` или `Completed`. Поды должны быть запущены на всех узлах, на которых вы будете использовать ресурсы LVM:
 
-   ```bash
-   d8 k -n d8-sds-local-volume get pod -o wide
-   d8 k -n d8-sds-node-configurator get pod -o wide
-   ```
+    ```bash
+    d8 k -n d8-sds-local-volume get pod -o wide
+    d8 k -n d8-sds-node-configurator get pod -o wide
+    ```
 
 {% endtab %}
 {% endtabs %}
@@ -3241,29 +3347,29 @@ spec:
 1. В разделе «Системные неймспейсы» выберите неймспейс `d8-sds-local-volume` и откройте список подов («Контейнеризация» → «Pods»). Убедитесь, что на узле запущен под `sds-local-volume-csi-node`.
 1. В разделе «Управление системой» откройте «Хранилище» → «Локальные тома» → «Блочные устройства». Найдите свободные блочные устройства на узлах `worker-0`, `worker-1` и `worker-2` (статус «Свободно»).
 
-   ![Страница «Блочные устройства»](images/admin-guide/image-4-6-2-1.png)
+    ![Страница «Блочные устройства»](images/admin-guide/image-4-6-2-1.png)
 
-   Рисунок 4.6.2.1 — Страница «Блочные устройства»
+    Рисунок 4.6.2.1 — Страница «Блочные устройства»
 
 1. Откройте «Группы томов» и нажмите «Создать». В форме «Создать группу томов» задайте имя `vg-1-on-worker-0`, узел `worker-0`, имя группы томов на узле `vg-1` и селектор блочных устройств узла `worker-0`. Блок «Применяется для» показывает выбранные блочные устройства. Нажмите «Создать».
 
-   ![Форма создания группы томов](images/admin-guide/image-4-6-2-2.png)
+    ![Форма создания группы томов](images/admin-guide/image-4-6-2-2.png)
 
-   Рисунок 4.6.2.2 — Форма создания группы томов
+    Рисунок 4.6.2.2 — Форма создания группы томов
 
 1. Дождитесь, когда группа томов `vg-1-on-worker-0` перейдёт в состояние `Ready`.
 1. Создайте так же группы томов `vg-1-on-worker-1` и `vg-1-on-worker-2` для узлов `worker-1` и `worker-2` и дождитесь их готовности.
 1. Откройте «Хранилище» → «Классы хранилищ», нажмите «Создать» и выберите «LVM на выделенном узле».
 
-   ![Выбор типа класса хранилища](images/admin-guide/image-4-6-2-3.png)
+    ![Выбор типа класса хранилища](images/admin-guide/image-4-6-2-3.png)
 
-   Рисунок 4.6.2.3 — Выбор типа класса хранилища
+    Рисунок 4.6.2.3 — Выбор типа класса хранилища
 
 1. В форме задайте имя `local-storage-class`, тип LVM `Thick`, группы томов `vg-1-on-worker-0`, `vg-1-on-worker-1` и `vg-1-on-worker-2`, политику удаления PV `Delete` и режим привязки PV `WaitForFirstConsumer`. Нажмите «Создать».
 
-   ![Форма создания класса хранилища на узле](images/admin-guide/image-4-6-2-4.png)
+    ![Форма создания класса хранилища на узле](images/admin-guide/image-4-6-2-4.png)
 
-   Рисунок 4.6.2.4 — Форма создания класса хранилища на узле
+    Рисунок 4.6.2.4 — Форма создания класса хранилища на узле
 
 1. Убедитесь, что класс хранилища `local-storage-class` появился в списке на странице «Классы хранилищ».
 
@@ -3280,151 +3386,153 @@ d8 k -n d8-sds-local-volume get pod -o wide
 
 1. Получите список BlockDevice, доступных в кластере:
 
-   ```bash
-   d8 k get bd
-   ```
+    ```bash
+    d8 k get bd
+    ```
 
-   Пример вывода со списком блочных устройств на узлах `worker-0`, `worker-1` и `worker-2`:
+    Пример вывода со списком блочных устройств на узлах `worker-0`, `worker-1` и `worker-2`:
 
-   <!-- markdownlint-disable MD031 -->
-   ```console
-   NAME                                           NODE       CONSUMABLE   SIZE           PATH
-   dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa   worker-0   false        976762584Ki    /dev/nvme1n1
-   dev-0cfc0d07f353598e329d34f3821bed992c1ffbcd   worker-0   false        894006140416   /dev/nvme0n1p6
-   dev-7e4df1ddf2a1b05a79f9481cdf56d29891a9f9d0   worker-1   false        976762584Ki    /dev/nvme1n1
-   dev-b103062f879a2349a9c5f054e0366594568de68d   worker-1   false        894006140416   /dev/nvme0n1p6
-   dev-53d904f18b912187ac82de29af06a34d9ae23199   worker-2   false        976762584Ki    /dev/nvme1n1
-   dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1   worker-2   false        894006140416   /dev/nvme0n1p6
-   ```
-   {: .nowrap-default }
-   <!-- markdownlint-enable MD031 -->
+    <!-- markdownlint-disable MD031 -->
+
+    ```console
+    NAME                                           NODE       CONSUMABLE   SIZE           PATH
+    dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa   worker-0   false        976762584Ki    /dev/nvme1n1
+    dev-0cfc0d07f353598e329d34f3821bed992c1ffbcd   worker-0   false        894006140416   /dev/nvme0n1p6
+    dev-7e4df1ddf2a1b05a79f9481cdf56d29891a9f9d0   worker-1   false        976762584Ki    /dev/nvme1n1
+    dev-b103062f879a2349a9c5f054e0366594568de68d   worker-1   false        894006140416   /dev/nvme0n1p6
+    dev-53d904f18b912187ac82de29af06a34d9ae23199   worker-2   false        976762584Ki    /dev/nvme1n1
+    dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1   worker-2   false        894006140416   /dev/nvme0n1p6
+    ```
+
+    {: .nowrap-default }
+    <!-- markdownlint-enable MD031 -->
 
 1. Создайте LVMVolumeGroup для узла `worker-0`:
 
-   ```bash
-   d8 k apply -f - <<EOF
-   apiVersion: storage.deckhouse.io/v1alpha1
-   kind: LVMVolumeGroup
-   metadata:
-     # Подходит любое допустимое имя объекта в Kubernetes. Это имя LVMVolumeGroup будет использоваться при создании LocalStorageClass.
-     name: "vg-1-on-worker-0"
-   spec:
-     type: Local
-     local:
-       nodeName: "worker-0"
-     blockDeviceSelector:
-       matchExpressions:
-         - key: kubernetes.io/metadata.name
-           operator: In
-           values:
-             - dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa
-             - dev-0cfc0d07f353598e329d34f3821bed992c1ffbcd
-     # Имя группы томов LVM, которая будет создана из указанных блочных устройств на узле.
-     actualVGNameOnTheNode: "vg-1"
-   EOF
-   ```
+    ```bash
+    d8 k apply -f - <<EOF
+    apiVersion: storage.deckhouse.io/v1alpha1
+    kind: LVMVolumeGroup
+    metadata:
+      # Подходит любое допустимое имя объекта в Kubernetes. Это имя LVMVolumeGroup будет использоваться при создании LocalStorageClass.
+      name: "vg-1-on-worker-0"
+    spec:
+      type: Local
+      local:
+        nodeName: "worker-0"
+      blockDeviceSelector:
+        matchExpressions:
+          - key: kubernetes.io/metadata.name
+            operator: In
+            values:
+              - dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa
+              - dev-0cfc0d07f353598e329d34f3821bed992c1ffbcd
+      # Имя группы томов LVM, которая будет создана из указанных блочных устройств на узле.
+      actualVGNameOnTheNode: "vg-1"
+    EOF
+    ```
 
 1. Дождитесь, когда LVMVolumeGroup перейдёт в состояние `Ready`. Чтобы проверить состояние, выполните команду:
 
-   ```bash
-   d8 k get lvg vg-1-on-worker-0
-   ```
+    ```bash
+    d8 k get lvg vg-1-on-worker-0
+    ```
 
-   Состояние `Ready` означает, что на узле `worker-0` из блочных устройств `/dev/nvme1n1` и `/dev/nvme0n1p6` создана группа томов LVM с именем `vg-1`.
+    Состояние `Ready` означает, что на узле `worker-0` из блочных устройств `/dev/nvme1n1` и `/dev/nvme0n1p6` создана группа томов LVM с именем `vg-1`.
 
 1. Создайте LVMVolumeGroup для узла `worker-1`:
 
-   ```bash
-   d8 k apply -f - <<EOF
-   apiVersion: storage.deckhouse.io/v1alpha1
-   kind: LVMVolumeGroup
-   metadata:
-     name: "vg-1-on-worker-1"
-   spec:
-     type: Local
-     local:
-       nodeName: "worker-1"
-     blockDeviceSelector:
-       matchExpressions:
-         - key: kubernetes.io/metadata.name
-           operator: In
-           values:
-             - dev-7e4df1ddf2a1b05a79f9481cdf56d29891a9f9d0
-             - dev-b103062f879a2349a9c5f054e0366594568de68d
-     actualVGNameOnTheNode: "vg-1"
-   EOF
-   ```
+    ```bash
+    d8 k apply -f - <<EOF
+    apiVersion: storage.deckhouse.io/v1alpha1
+    kind: LVMVolumeGroup
+    metadata:
+      name: "vg-1-on-worker-1"
+    spec:
+      type: Local
+      local:
+        nodeName: "worker-1"
+      blockDeviceSelector:
+        matchExpressions:
+          - key: kubernetes.io/metadata.name
+            operator: In
+            values:
+              - dev-7e4df1ddf2a1b05a79f9481cdf56d29891a9f9d0
+              - dev-b103062f879a2349a9c5f054e0366594568de68d
+      actualVGNameOnTheNode: "vg-1"
+    EOF
+    ```
 
 1. Дождитесь, когда LVMVolumeGroup перейдёт в состояние `Ready`. Чтобы проверить состояние, выполните команду:
 
-   ```bash
-   d8 k get lvg vg-1-on-worker-1
-   ```
+    ```bash
+    d8 k get lvg vg-1-on-worker-1
+    ```
 
-   Состояние `Ready` означает, что на узле `worker-1` из блочных устройств `/dev/nvme1n1` и `/dev/nvme0n1p6` создана группа томов LVM с именем `vg-1`.
+    Состояние `Ready` означает, что на узле `worker-1` из блочных устройств `/dev/nvme1n1` и `/dev/nvme0n1p6` создана группа томов LVM с именем `vg-1`.
 
 1. Создайте LVMVolumeGroup для узла `worker-2`:
 
-   ```bash
-   d8 k apply -f - <<EOF
-   apiVersion: storage.deckhouse.io/v1alpha1
-   kind: LVMVolumeGroup
-   metadata:
-     name: "vg-1-on-worker-2"
-   spec:
-     type: Local
-     local:
-       nodeName: "worker-2"
-     blockDeviceSelector:
-       matchExpressions:
-         - key: kubernetes.io/metadata.name
-           operator: In
-           values:
-             - dev-53d904f18b912187ac82de29af06a34d9ae23199
-             - dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1
-     actualVGNameOnTheNode: "vg-1"
-   EOF
-   ```
+    ```bash
+    d8 k apply -f - <<EOF
+    apiVersion: storage.deckhouse.io/v1alpha1
+    kind: LVMVolumeGroup
+    metadata:
+      name: "vg-1-on-worker-2"
+    spec:
+      type: Local
+      local:
+        nodeName: "worker-2"
+      blockDeviceSelector:
+        matchExpressions:
+          - key: kubernetes.io/metadata.name
+            operator: In
+            values:
+              - dev-53d904f18b912187ac82de29af06a34d9ae23199
+              - dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1
+      actualVGNameOnTheNode: "vg-1"
+    EOF
+    ```
 
 1. Дождитесь, когда LVMVolumeGroup перейдёт в состояние `Ready`. Чтобы проверить состояние, выполните команду:
 
-   ```bash
-   d8 k get lvg vg-1-on-worker-2
-   ```
+    ```bash
+    d8 k get lvg vg-1-on-worker-2
+    ```
 
-   Состояние `Ready` означает, что на узле `worker-2` из блочных устройств `/dev/nvme1n1` и `/dev/nvme0n1p6` создана группа томов LVM с именем `vg-1`.
+    Состояние `Ready` означает, что на узле `worker-2` из блочных устройств `/dev/nvme1n1` и `/dev/nvme0n1p6` создана группа томов LVM с именем `vg-1`.
 
 1. Создайте LocalStorageClass:
 
-   ```bash
-   d8 k apply -f -<<EOF
-   apiVersion: storage.deckhouse.io/v1alpha1
-   kind: LocalStorageClass
-   metadata:
-     name: local-storage-class
-   spec:
-     lvm:
-       lvmVolumeGroups:
-         - name: vg-1-on-worker-0
-         - name: vg-1-on-worker-1
-         - name: vg-1-on-worker-2
-       type: Thick
-     reclaimPolicy: Delete
-     volumeBindingMode: WaitForFirstConsumer
-   EOF
-   ```
+    ```bash
+    d8 k apply -f -<<EOF
+    apiVersion: storage.deckhouse.io/v1alpha1
+    kind: LocalStorageClass
+    metadata:
+      name: local-storage-class
+    spec:
+      lvm:
+        lvmVolumeGroups:
+          - name: vg-1-on-worker-0
+          - name: vg-1-on-worker-1
+          - name: vg-1-on-worker-2
+        type: Thick
+      reclaimPolicy: Delete
+      volumeBindingMode: WaitForFirstConsumer
+    EOF
+    ```
 
 1. Дождитесь, когда LocalStorageClass перейдёт в состояние `Created`. Чтобы проверить состояние, выполните команду:
 
-   ```bash
-   d8 k get lsc local-storage-class
-   ```
+    ```bash
+    d8 k get lsc local-storage-class
+    ```
 
 1. Проверьте, что создан StorageClass `local-storage-class`:
 
-   ```bash
-   d8 k get sc local-storage-class
-   ```
+    ```bash
+    d8 k get sc local-storage-class
+    ```
 
 {% endtab %}
 {% endtabs %}
@@ -3543,11 +3651,13 @@ d8 k get sc
 Пример вывода с созданными StorageClass:
 
 <!-- markdownlint-disable MD031 -->
+
 ```console
 NAME          PROVISIONER           RECLAIMPOLICY   VOLUMEBINDINGMODE   ALLOWVOLUMEEXPANSION   AGE
 ceph-rbd-sc   rbd.csi.ceph.com      Delete          Immediate           true                   15s
 ceph-fs-sc    cephfs.csi.ceph.com   Delete          Immediate           true                   15s
 ```
+
 {: .nowrap-default }
 <!-- markdownlint-enable MD031 -->
 
@@ -3743,10 +3853,12 @@ d8 k get module csi-yadro-tatlin-unified
 Пример вывода для модуля в состоянии `Ready`:
 
 <!-- markdownlint-disable MD031 -->
+
 ```console
 NAME                       STAGE                  SOURCE      PHASE   ENABLED   READY
 csi-yadro-tatlin-unified   General Availability   deckhouse   Ready   True      True
 ```
+
 {: .nowrap-default }
 <!-- markdownlint-enable MD031 -->
 
@@ -3819,9 +3931,9 @@ dhctl bootstrap-phase abort --config config.yml
 1. Удалите из кластера все статические узлы, кроме master-узлов.
 1. Удалите кластер командой:
 
-   ```bash
-   dhctl destroy --config config.yml
-   ```
+    ```bash
+    dhctl destroy --config config.yml
+    ```
 
 Команда `dhctl destroy` подключается к master-узлу и удаляет из кластера объекты DP CSE, в том числе StorageClass, PersistentVolumeClaim и PersistentVolume. Затем команда удаляет все компоненты DP CSE и Kubernetes с master-узлов.
 
@@ -3906,13 +4018,13 @@ d8 k get modules
 {% endtabs %}
 {% raw %}
 
-Чтобы изменить глобальную конфигурацию DP CSE или конфигурацию модуля, создайте или отредактируйте соответствующий ModuleConfig. Например, чтобы изменить конфигурацию модуля `upmeter`, выполните следующие действия:
+Чтобы изменить глобальную конфигурацию DP CSE или конфигурацию модуля, создайте или отредактируйте соответствующий ModuleConfig. Например, чтобы изменить конфигурацию модуля `log-shipper`, выполните следующие действия:
 
 {% endraw %}
 {% tabs edit-moduleconfig %}
 {% tab "Веб-интерфейс" %}
 
-1. В разделе «Управление системой» откройте «Deckhouse» → «Модули» и выберите модуль `upmeter`. Глобальные настройки DP CSE находятся на странице «Глобальные настройки» (п. 4.19.6).
+1. В разделе «Управление системой» откройте «Deckhouse» → «Модули» и выберите модуль `log-shipper`. Глобальные настройки DP CSE находятся на странице «Глобальные настройки» (п. 4.19.6).
 1. На панели модуля в блоке «Дополнительные настройки» измените параметры на вкладке «Конфигурация» или «YAML».
 1. Нажмите «Применить».
 
@@ -3922,7 +4034,7 @@ d8 k get modules
 Выполните команду:
 
 ```bash
-d8 k edit moduleconfig/upmeter
+d8 k edit moduleconfig/log-shipper
 ```
 
 {% endtab %}
@@ -4030,6 +4142,10 @@ descheduler   false     2         12h
 
 Для локальной аутентификации в кластере создают объекты User для статических пользователей и объекты Group для статических групп. Объект User хранит данные пользователя, в том числе email и хеш пароля. Пароль в открытом виде DP CSE не сохраняет. Объект Group задаёт список пользователей, объединённых в группу.
 
+При вводе пароля форма входа отображает вводимые символы условными знаками. Если имя пользователя или пароль введены неверно, форма выводит сообщение об ошибке и предлагает ввести их ещё раз.
+
+Вход по имени пользователя и паролю — простая аутентификация в терминах ГОСТ Р 58833-2020. Чтобы использовать второй фактор, включите двухфакторную аутентификацию (п. 4.12.1.4).
+
 ##### 4.12.1.1 Создание статического пользователя
 
 Чтобы создать статического пользователя, выполните следующие действия:
@@ -4099,7 +4215,13 @@ d8 iam user create tmp-user --email tmp-user@example.com --generate-password --t
 {% endtabs %}
 {% raw %}
 
-Если в кластере включена парольная политика (п. 4.12.1.3), DP CSE может потребовать от пользователя при первом входе сменить пароль, заданный администратором.
+Пароль, заданный при создании пользователя, DP CSE проверяет на соответствие парольной политике (п. 4.12.1.3) при входе: если пароль ей не соответствует, пользователь должен сменить его. Чтобы пользователь в любом случае сменил пароль, установленный администратором, после первичной аутентификации, задайте или переустановите пароль операцией сброса пароля (описана ниже). После сброса пароля при следующем успешном входе DP CSE перенаправляет пользователя на страницу смены пароля.
+
+Идентификаторы и пароли разных пользователей не совпадают:
+
+- идентификаторы уникальны: DP CSE не позволяет создать два объекта User с одинаковым адресом электронной почты, регистр букв не учитывается;
+- первичный пароль пользователя администратор задаёт сбросом пароля с автоматической генерацией — командой `d8 iam user reset-password <ИМЯ_ПОЛЬЗОВАТЕЛЯ> --generate-password` (описана ниже) — и передаёт его пользователю. Сгенерированные пароли разных пользователей не совпадают;
+- при следующем входе пользователь обязан сменить сгенерированный пароль на собственный.
 
 {% endraw %}
 {% alert level="warning" %}
@@ -4118,14 +4240,14 @@ d8 iam user create tmp-user --email tmp-user@example.com --generate-password --t
 1. В разделе «Управление системой» откройте «Безопасность» → «Управление доступом» → «Операции над пользователями».
 1. Найдите пользователя в поле «Поиск по email, имени или коннектору». Чтобы показать только заблокированных пользователей, установите флажок «Только заблокированные».
 1. В столбце «Действия» строки пользователя нажмите кнопку операции:
-   - «Сбросить пароль» — введите новый пароль в поля «Новый пароль» и «Подтверждение нового пароля» и нажмите «Сбросить»;
-   - «Сбросить 2FA» — подтвердите сброс двухфакторной аутентификации;
-   - «Заблокировать» — задайте длительность блокировки в поле «Длительность» (например, `30m`) или выберите «Навсегда»;
-   - «Разблокировать» — подтвердите снятие блокировки.
+- «Сбросить пароль» — введите новый пароль в поля «Новый пароль» и «Подтверждение нового пароля» и нажмите «Сбросить»;
+- «Сбросить 2FA» — подтвердите сброс двухфакторной аутентификации;
+- «Заблокировать» — задайте длительность блокировки в поле «Длительность» (например, `30m`) или выберите «Навсегда»;
+- «Разблокировать» — подтвердите снятие блокировки.
 
-   ![Страница «Операции над пользователями»](images/admin-guide/image-4-12-1-1-1.png)
+![Страница «Операции над пользователями»](images/admin-guide/image-4-12-1-1-1.png)
 
-   Рисунок 4.12.1.1.1 — Страница «Операции над пользователями»
+Рисунок 4.12.1.1.1 — Страница «Операции над пользователями»
 
 {% endtab %}
 {% tab "CLI" %}
@@ -4248,7 +4370,7 @@ d8 iam get group admins
 {% endtabs %}
 {% raw %}
 
-Пример ModuleConfig с парольной политикой:
+В DP CSE парольная политика обязательна. Задайте её со следующими значениями:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -4260,16 +4382,33 @@ spec:
   enabled: true
   settings:
     passwordPolicy:
-      complexityLevel: Fair
-      passwordHistoryLimit: 10
+      complexityLevel: Custom
+      custom:
+        minLength: 12
+        capitalized: true
+        numbers: true
+        specialCharacters: true
       lockout:
-        lockDuration: 15m
-        maxAttempts: 3
-      rotation:
-        interval: "30d"
+        maxAttempts: 4
+        lockDuration: 36500d
+        applyToConnectors:
+          - LDAP
 ```
 
-Здесь:
+Эти значения обеспечивают следующие требования:
+
+- длина пароля — не менее 12 символов (`minLength: 12`);
+- алфавит пароля — пароль может содержать латинские буквы обоих регистров, цифры и специальные символы, а политика требует хотя бы одну заглавную букву, одну цифру и один специальный символ;
+- блокировка учётной записи после 4 неудачных попыток входа подряд (`maxAttempts: 4`), в том числе для пользователей провайдера аутентификации LDAP (`applyToConnectors`);
+- снятие блокировки администратором безопасности. Параметр `lockDuration` не допускает бессрочной блокировки, поэтому задаётся значение, превышающее срок эксплуатации, — `36500d`. Разблокирует пользователя администратор безопасности командой `d8 iam user unlock` или в веб-интерфейсе (п. 4.12.1.1).
+
+Порядок разблокировки через веб-интерфейс описан в п. 4.12.1.1.
+
+Параметры capitalized, numbers и specialCharacters устанавливают требования к составу пароля. Соответствие отдельному требованию об алфавите не менее 70 символов определяется допустимым набором символов в реализации механизма аутентификации.
+
+Значения можно ужесточить: увеличить `minLength`, уменьшить `maxAttempts`, включить `repeatedChars`, задать `passwordHistoryLimit` и `rotation`. Ослаблять их нельзя.
+
+Параметры парольной политики:
 
 - `complexityLevel` — уровень сложности пароля. Значение по умолчанию — `Fair`. Допустимые значения:
   - `None` — не менее 1 символа;
@@ -4323,13 +4462,13 @@ spec:
   settings:
     passwordPolicy:
       lockout:
-        maxAttempts: 3
-        lockDuration: 15m
+        maxAttempts: 4
+        lockDuration: 36500d
         applyToConnectors:
           - LDAP
 ```
 
-Блокировка по параметру `lockout` не зависит от блокировки пользователя администратором (п. 4.12.1.1). Как разблокировать пользователя вручную, описано в п. 4.12.1.1.
+Блокировка по параметру `lockout` действует независимо от блокировки пользователя администратором (п. 4.12.1.1). Операция разблокировки (`d8 iam user unlock`) снимает блокировку обоих видов.
 
 Чтобы защититься от перебора паролей, ограничьте число неудачных попыток аутентификации с одного IP-адреса. Ограничение задаёт параметр `rateLimit` модуля `user-authn`. Ограничение действует на эндпоинты Dex `POST /token` и `POST /auth/{connector}/login`:
 
@@ -4401,7 +4540,7 @@ spec:
 
 DP CSE поддерживает ролевое управление доступом с внешним провайдером аутентификации, который работает по протоколу LDAP или OIDC. Чтобы подключить внешний провайдер аутентификации, создайте кастомный ресурс DexProvider.
 
-Перед подключением настройте провайдер аутентификации в соответствии с ролевой моделью доступа DP CSE. Для этого в каталоге пользователей провайдера назначьте группы пользователям, которым нужен доступ к DP CSE. Группу выбирайте по нужному уровню прав (Технические условия, Приложение 1. Список ролей).
+Перед подключением настройте провайдер аутентификации в соответствии с ролевой моделью доступа DP CSE. Для этого в каталоге пользователей провайдера назначьте группы пользователям, которым нужен доступ к DP CSE. Группу выбирайте по нужному уровню прав (п. 4.12.3; Технические условия, Приложение 1. Список ролей).
 
 Пример DexProvider для подключения провайдера аутентификации LDAP по защищённому протоколу LDAPS:
 
@@ -4592,6 +4731,8 @@ d8 k apply -f dex-provider.yaml
 - `spec.ldap.insecureNoSSL` — булевый
 
   Подключаться к каталогу LDAP без TLS (порт 389). Пароли пользователей передаются по сети в открытом виде.
+
+  В DP CSE параметр должен иметь значение `false`. Для подключения к каталогу LDAP используйте TLS (порт 636) или `startTLS`.
 
   Несовместимо с параметрами `startTLS`, `insecureSkipVerify` и `rootCAData`. DP CSE отклонит объект DexProvider, в котором вместе с `insecureNoSSL: true` задан любой из этих параметров.
 
@@ -4897,7 +5038,9 @@ d8 k apply -f dex-provider.yaml
 
 #### 4.12.3 Авторизация
 
-Ролевую модель реализует модуль `user-authz`. Этот модуль должен быть включён в кластере. Модуль создаёт набор кластерных ролей (ClusterRole). Этот набор подходит для большинства задач по управлению доступом пользователей и групп.
+Для управления кластерами через модуль `commander` действует отдельная ролевая модель (п. 4.23.3).
+
+Ролевую модель доступа к ресурсам Kubernetes реализует модуль `user-authz`. Этот модуль должен быть включён в кластере. Модуль создаёт набор кластерных ролей (ClusterRole). Этот набор подходит для большинства задач по управлению доступом пользователей и групп.
 
 Особенности ролевой модели:
 
@@ -4929,9 +5072,9 @@ d8 k get clusterrole -A -o jsonpath="{range .items[?(@.metadata.annotations.user
 1. В блоке «Пользователи и группы, к которым применяется правило» добавьте пользователя (адрес электронной почты), группу или ServiceAccount.
 1. Нажмите «Создать». Поля формы описаны в п. 4.19.11.
 
-   ![Форма «Новое правило авторизации»](images/admin-guide/image-4-12-3-1.png)
+![Форма «Новое правило авторизации»](images/admin-guide/image-4-12-3-1.png)
 
-   Рисунок 4.12.3.1 — Форма «Новое правило авторизации»
+Рисунок 4.12.3.1 — Форма «Новое правило авторизации»
 
 Чтобы выдать права в одном неймспейсе (AuthorizationRule), откройте неймспейс и в меню неймспейса выберите «Безопасность» → правила авторизации.
 
@@ -5002,15 +5145,56 @@ ClusterAuthorizationRule, AuthorizationRule, RoleBinding и ClusterRoleBinding �
 
 Например, у пользователя есть ClusterAuthorizationRule с `accessLevel: Editor`, ограниченный неймспейсом `ns-a`, и RoleBinding с ролью `view` в неймспейсе `ns-b`. Тогда пользователь получит права уровня `Editor` в неймспейсе `ns-a` и права только на чтение в неймспейсе `ns-b`.
 
-Роли из документа «Deckhouse Platform. Технический проект» сопоставляются с уровнями доступа `user-authz` следующим образом:
+Роли, предусмотренные Техническими условиями, сопоставляются с уровнями доступа `user-authz` по исполнениям. Объекты доступа и права каждой роли приведены в списке ролей (Технические условия, Приложение 1. Список ролей).
 
-| Роль из «Deckhouse Platform. Технический проект» | Уровень доступа `user-authz` | Обоснование |
-| --- | --- | --- |
-| Разработчик образов контейнеров | `Editor` | `PrivilegedUser` не подходит: он не даёт создавать и изменять рабочие нагрузки, только `exec`, чтение секретов и удаление подов. Права ограничивайте нужными неймспейсами через `limitNamespaces` или `namespaceSelector` ClusterAuthorizationRule |
-| Администратор безопасности | `ClusterAdmin` | Соответствует по объёму прав: ClusterAuthorizationRule, ClusterRole/ClusterRoleBinding, DexProvider, User/Group, SecurityPolicy, политики Gatekeeper, ModuleConfig |
-| Администратор | `SuperAdmin` | Полный доступ ко всем действиям и ресурсам кластера |
+Роли средства контейнеризации (исполнения Kubernetes и Kubernetes+Virtualization):
 
-`ClusterAdmin` технически может расширить собственные полномочия через ClusterRoleBinding, поэтому разграничение между ролями «администратор безопасности» и «администратор» обеспечивается организационными мерами, а не ограничениями платформы.
+| Роль | Уровень доступа `user-authz` |
+| --- | --- |
+| Разработчик образов контейнеров | `Editor` |
+| Администратор безопасности | `ClusterAdmin` |
+| Администратор | `Admin` |
+
+Роли средства виртуализации (исполнения Virtualization и Kubernetes+Virtualization):
+
+| Роль | Уровень доступа `user-authz` |
+| --- | --- |
+| Разработчик виртуальной машины | `Editor` |
+| Администратор безопасности | `ClusterEditor` |
+| Администратор | `ClusterAdmin` |
+| Администратор виртуальной машины | `SuperAdmin` |
+
+Уровни доступа, которых нет в таблице соответствующего средства, являются дополнительными ролями DP CSE.
+
+Уровни доступа вложены: каждый следующий уровень включает права предыдущих в порядке `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`, `ClusterAdmin`; `SuperAdmin` имеет все права. Права пользователя в пределах назначенной роли ограничивайте неймспейсами через `limitNamespaces` или `namespaceSelector` ClusterAuthorizationRule либо назначением роли с сокращённым набором прав через RoleBinding.
+
+`ClusterAdmin` технически может расширить собственные полномочия через ClusterRoleBinding, поэтому разграничение между ролью `ClusterAdmin` и ролями с более широкими правами обеспечивается организационными мерами, а не ограничениями платформы.
+
+##### 4.12.3.1 Защита служебных объектов DP CSE
+
+DP CSE защищает от изменений служебные объекты, которые создаёт сама платформа (например, Deployment):
+
+- объекты с лейблом `heritage: deckhouse`;
+- объекты, имена которых начинаются с `d8ms-` или `d8a-`.
+
+Защиту обеспечивает политика проверки запросов к API Kubernetes (ValidatingAdmissionPolicy) модуля `deckhouse`. Политика запрещает создавать, изменять и удалять служебные объекты пользователям с любым уровнем доступа, включая `SuperAdmin`. Проверка выполняется для запросов пользователей, у которых по правилам RBAC есть право изменять эти объекты.
+
+Изменять служебные объекты политика разрешает только в двух случаях:
+
+- перезапуск рабочей нагрузки командой `d8 k rollout restart`;
+- изменение параметра `spec.scanInterval` в ModuleSource.
+
+Удалять служебный объект политика разрешает, если на нём есть лейбл `security.deckhouse.io/heritage-bypass: delete`. Этот лейбл ставит компонент DP CSE, который создаёт объект, при создании объекта. Пользователь не может поставить этот лейбл сам: добавление лейбла — это изменение объекта, которое политика запрещает. Для удаления объекта с этим лейблом также нужно право `delete` по правилам RBAC. Лейбл не разрешает изменять объект и не отменяет запрет для объектов с префиксами имени `d8ms-` и `d8a-`.
+
+Политика не проверяет запросы следующих субъектов:
+
+- сервисные аккаунты из неймспейсов `d8-*` и `kube-*`;
+- группы `system:nodes`, `system:serviceaccounts:kube-system` и `system:serviceaccounts:d8-system`;
+- пользователи `system:sudouser`, `dhctl`, `observability`, `system:apiserver`, `system:kube-controller-manager`, `system:kube-scheduler` и `system:volume-scheduler`.
+
+У пользователя `system:sudouser` права ClusterRole `cluster-admin`. От имени `system:sudouser` действуют через имперсонацию (флаг `--as=system:sudouser`). Для имперсонации нужно право `impersonate` на ресурс `users`. По умолчанию это право есть у уровня доступа `SuperAdmin` и у пользователей с ClusterRole `cluster-admin`. В журнале аудита Kubernetes API для таких запросов указываются реальный пользователь и `impersonatedUser: system:sudouser`.
+
+Защита служебных объектов относится к разграничению доступа и не является механизмом контроля целостности (п. 5.7).
 
 ### 4.13 Экспорт данных
 
@@ -5034,85 +5218,87 @@ ClusterAuthorizationRule, AuthorizationRule, RoleBinding и ClusterRoleBinding �
 
 1. Выведите список объектов VolumeSnapshotClass. VolumeSnapshotClass нужен, чтобы создать снимок тома:
 
-   ```bash
-   d8 k get volumesnapshotclass
-   ```
+    ```bash
+    d8 k get volumesnapshotclass
+    ```
 
-   Пример вывода:
+    Пример вывода:
 
-   ```console
-   NAME                              DRIVER                           DELETIONPOLICY   AGE
-   sds-local-volume-snapshot-class   local.csi.storage.deckhouse.io   Delete           22h
-   ```
+    ```console
+    NAME                              DRIVER                           DELETIONPOLICY   AGE
+    sds-local-volume-snapshot-class   local.csi.storage.deckhouse.io   Delete           22h
+    ```
 
 1. Создайте VolumeSnapshot `my-snapshot`:
 
-   ```bash
-   d8 k apply -f -<<EOF
-   apiVersion: snapshot.storage.k8s.io/v1
-   kind: VolumeSnapshot
-   metadata:
-     name: my-snapshot
-     namespace: <НЕЙМСПЕЙС>
-   spec:
-     volumeSnapshotClassName: <ИМЯ_КЛАССА_СНИМКОВ>
-     source:
-       persistentVolumeClaimName: <ИМЯ_PVC>
-   EOF
-   ```
+    ```bash
+    d8 k apply -f -<<EOF
+    apiVersion: snapshot.storage.k8s.io/v1
+    kind: VolumeSnapshot
+    metadata:
+      name: my-snapshot
+      namespace: <НЕЙМСПЕЙС>
+    spec:
+      volumeSnapshotClassName: <ИМЯ_КЛАССА_СНИМКОВ>
+      source:
+        persistentVolumeClaimName: <ИМЯ_PVC>
+    EOF
+    ```
 
-   Здесь:
+    Здесь:
 
-   - `<НЕЙМСПЕЙС>` — неймспейс, в котором находится PVC;
-   - `<ИМЯ_КЛАССА_СНИМКОВ>` — имя VolumeSnapshotClass из вывода предыдущей команды;
-   - `<ИМЯ_PVC>` — имя PVC, данные которого нужно экспортировать.
+    - `<НЕЙМСПЕЙС>` — неймспейс, в котором находится PVC;
+    - `<ИМЯ_КЛАССА_СНИМКОВ>` — имя VolumeSnapshotClass из вывода предыдущей команды;
+    - `<ИМЯ_PVC>` — имя PVC, данные которого нужно экспортировать.
 
 1. Убедитесь, что VolumeSnapshot создан и готов к использованию. Подготовка снимка занимает несколько минут:
 
-   ```bash
-   d8 k -n <НЕЙМСПЕЙС> get volumesnapshot my-snapshot
-   ```
+    ```bash
+    d8 k -n <НЕЙМСПЕЙС> get volumesnapshot my-snapshot
+    ```
 
-   Пример вывода:
+    Пример вывода:
 
-   <!-- markdownlint-disable MD031 -->
-   ```console
-   NAME          READYTOUSE   SOURCEPVC               SOURCESNAPSHOTCONTENT   RESTORESIZE   SNAPSHOTCLASS                     SNAPSHOTCONTENT                                    CREATIONTIME   AGE
-   my-snapshot   true         test-pvc-for-snapshot                           2Gi           sds-local-volume-snapshot-class   snapcontent-faf2ab1f-891d-4e5e-972c-334a490c99d8   3m             3m
-   ```
-   {: .nowrap-default }
-   <!-- markdownlint-enable MD031 -->
+    <!-- markdownlint-disable MD031 -->
 
-   Снимок готов, если в столбце `READYTOUSE` указано значение `true`.
+    ```console
+    NAME          READYTOUSE   SOURCEPVC               SOURCESNAPSHOTCONTENT   RESTORESIZE   SNAPSHOTCLASS                     SNAPSHOTCONTENT                                    CREATIONTIME   AGE
+    my-snapshot   true         test-pvc-for-snapshot                           2Gi           sds-local-volume-snapshot-class   snapcontent-faf2ab1f-891d-4e5e-972c-334a490c99d8   3m             3m
+    ```
+
+    {: .nowrap-default }
+    <!-- markdownlint-enable MD031 -->
+
+    Снимок готов, если в столбце `READYTOUSE` указано значение `true`.
 
 1. Создайте объект DataExport:
 
-   ```bash
-   d8 data export create -n <НЕЙМСПЕЙС> my-export vs/my-snapshot --ttl 30m
-   ```
+    ```bash
+    d8 data export create -n <НЕЙМСПЕЙС> my-export vs/my-snapshot --ttl 30m
+    ```
 
-   Здесь:
+    Здесь:
 
-   - `-n` — неймспейс экспортируемого объекта. В этом неймспейсе команда создаёт объект DataExport. Если флаг не указан, команда использует неймспейс `d8-storage-volume-data-manager`;
-   - `my-export` — имя объекта DataExport;
-   - `vs/my-snapshot` — тип и имя экспортируемого объекта. Допустимые типы: `pvc` (PersistentVolumeClaim), `vs` (VolumeSnapshot), `vd` (VirtualDisk), `vds` (VirtualDiskSnapshot);
-   - `--ttl` — время жизни экспорта после последнего обращения к нему (скачивания файла или просмотра директории). Когда это время истекает, модуль удаляет под экспорта. Условие `Ready` объекта DataExport переходит в значение `False` с причиной `Expired`. Значение по умолчанию — `2m`.
+    - `-n` — неймспейс экспортируемого объекта. В этом неймспейсе команда создаёт объект DataExport. Если флаг не указан, команда использует неймспейс `d8-storage-volume-data-manager`;
+    - `my-export` — имя объекта DataExport;
+    - `vs/my-snapshot` — тип и имя экспортируемого объекта. Допустимые типы: `pvc` (PersistentVolumeClaim), `vs` (VolumeSnapshot), `vd` (VirtualDisk), `vds` (VirtualDiskSnapshot);
+    - `--ttl` — время жизни экспорта после последнего обращения к нему (скачивания файла или просмотра директории). Когда это время истекает, модуль удаляет под экспорта. Условие `Ready` объекта DataExport переходит в значение `False` с причиной `Expired`. Значение по умолчанию — `2m`.
 
-   Чтобы скачивать данные извне кластера, добавьте флаг `--publish`.
+    Чтобы скачивать данные извне кластера, добавьте флаг `--publish`.
 
 1. Скачайте данные:
 
-   ```bash
-   d8 data export download -n <НЕЙМСПЕЙС> my-export -o data.img
-   ```
+    ```bash
+    d8 data export download -n <НЕЙМСПЕЙС> my-export -o data.img
+    ```
 
-   Для тома в режиме `Block` не указывайте путь внутри тома: команда скачивает образ блочного устройства. Для тома в режиме `Filesystem` укажите путь к файлу внутри тома, например `d8 data export download -n <НЕЙМСПЕЙС> my-export /mydir/file.txt -o file.txt`. Чтобы просмотреть содержимое директории тома, выполните команду `d8 data export list -n <НЕЙМСПЕЙС> my-export /mydir/`.
+    Для тома в режиме `Block` не указывайте путь внутри тома: команда скачивает образ блочного устройства. Для тома в режиме `Filesystem` укажите путь к файлу внутри тома, например `d8 data export download -n <НЕЙМСПЕЙС> my-export /mydir/file.txt -o file.txt`. Чтобы просмотреть содержимое директории тома, выполните команду `d8 data export list -n <НЕЙМСПЕЙС> my-export /mydir/`.
 
 1. После скачивания удалите объект DataExport:
 
-   ```bash
-   d8 data export delete -n <НЕЙМСПЕЙС> my-export
-   ```
+    ```bash
+    d8 data export delete -n <НЕЙМСПЕЙС> my-export
+    ```
 
 Если в команде `d8 data export download` вместо имени DataExport указать экспортируемый объект, команда может создать объект DataExport автоматически. Пример: `d8 data export download -n <НЕЙМСПЕЙС> vs/my-snapshot -o data.img`. Время жизни такого объекта DataExport задаёт флаг `--ttl`. Флаг `--cleanup=true` удаляет этот объект DataExport после скачивания без запроса подтверждения.
 
@@ -5152,62 +5338,62 @@ DP CSE собирает логи с узлов и подов кластера и
 1. В разделе «Управление системой» откройте «Журналирование» → «Отправка логов», нажмите «Добавить» и выберите тип хранилища Elasticsearch.
 1. В форме хранилища задайте название `es-storage`, адрес `http://192.168.1.1:9200`, индекс `logs-%F`, способ аутентификации «Basic», имя пользователя `elastic` и пароль. При необходимости задайте параметры TLS, буфера и дополнительные лейблы. Нажмите «Создать». Поля формы описаны в п. 4.19.13.
 
-   ![Добавление хранилища логов (на примере Loki)](images/admin-guide/image-4-15-1-1.png)
+    ![Добавление хранилища логов (на примере Loki)](images/admin-guide/image-4-15-1-1.png)
 
-   Рисунок 4.15.1.1 — Добавление хранилища логов (на примере Loki)
+    Рисунок 4.15.1.1 — Добавление хранилища логов (на примере Loki)
 
 1. Откройте «Журналирование» → «Сбор логов», нажмите «Добавить» и выберите тип источника KubernetesPods.
 1. В форме правила задайте название `all-logs` и в поле «Хранилище» выберите `es-storage`. При необходимости ограничьте сбор логов подами из определённых неймспейсов или с определёнными лейблами и настройте парсер многострочных логов. Нажмите «Создать».
 
-   ![Добавление правила сбора логов](images/admin-guide/image-4-15-1-2.png)
+    ![Добавление правила сбора логов](images/admin-guide/image-4-15-1-2.png)
 
-   Рисунок 4.15.1.2 — Добавление правила сбора логов
+    Рисунок 4.15.1.2 — Добавление правила сбора логов
 
 {% endtab %}
 {% tab "CLI" %}
 
 1. Включите модуль `log-shipper`:
 
-   ```bash
-   d8 system module enable log-shipper
-   ```
+    ```bash
+    d8 system module enable log-shipper
+    ```
 
 1. Создайте ClusterLoggingConfig, который задаёт правила сбора логов. В ClusterLoggingConfig также можно ограничить сбор логов подами из определённого неймспейса или с определённым лейблом и настроить парсинг многострочных логов.
 
-   Пример ClusterLoggingConfig, который собирает логи со всех подов и отправляет их в ClusterLogDestination `es-storage`:
+    Пример ClusterLoggingConfig, который собирает логи со всех подов и отправляет их в ClusterLogDestination `es-storage`:
 
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha2
-   kind: ClusterLoggingConfig
-   metadata:
-     name: all-logs
-   spec:
-     type: KubernetesPods
-     destinationRefs:
-     - es-storage
-   ```
+    ```yaml
+    apiVersion: deckhouse.io/v1alpha2
+    kind: ClusterLoggingConfig
+    metadata:
+      name: all-logs
+    spec:
+      type: KubernetesPods
+      destinationRefs:
+      - es-storage
+    ```
 
 1. Создайте ClusterLogDestination, который описывает параметры отправки логов в хранилище. В ClusterLogDestination задают хранилище, параметры подключения и буферизации. Также в ClusterLogDestination задают дополнительные лейблы, которые модуль `log-shipper` добавляет к логам перед отправкой.
 
-   Пример ClusterLogDestination `es-storage`, который отправляет логи в Elasticsearch:
+    Пример ClusterLogDestination `es-storage`, который отправляет логи в Elasticsearch:
 
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha2
-   kind: ClusterLogDestination
-   metadata:
-     name: es-storage
-   spec:
-     type: Elasticsearch
-     elasticsearch:
-       endpoint: http://192.168.1.1:9200
-       index: logs-%F
-       auth:
-         strategy: Basic
-         user: elastic
-         password: <ПАРОЛЬ_BASE64>
-   ```
+    ```yaml
+    apiVersion: deckhouse.io/v1alpha2
+    kind: ClusterLogDestination
+    metadata:
+      name: es-storage
+    spec:
+      type: Elasticsearch
+      elasticsearch:
+        endpoint: http://192.168.1.1:9200
+        index: logs-%F
+        auth:
+          strategy: Basic
+          user: elastic
+          password: <ПАРОЛЬ_BASE64>
+    ```
 
-   Здесь `<ПАРОЛЬ_BASE64>` — пароль пользователя в кодировке Base64.
+    Здесь `<ПАРОЛЬ_BASE64>` — пароль пользователя в кодировке Base64.
 
 {% endtab %}
 {% endtabs %}
@@ -5684,15 +5870,15 @@ spec:
 1. Удалите все объекты, созданные с помощью модуля: виртуальные машины, диски, образы и другие объекты.
 1. Убедитесь, что в кластере не осталось таких объектов:
 
-   ```bash
-   d8 k get virtualization,cvi -A
-   ```
+    ```bash
+    d8 k get virtualization,cvi -A
+    ```
 
 1. Добавьте на ModuleConfig `virtualization` аннотацию `modules.deckhouse.io/allow-disabling` со значением `true`:
 
-   ```bash
-   d8 k annotate moduleconfig virtualization modules.deckhouse.io/allow-disabling="true" --overwrite
-   ```
+    ```bash
+    d8 k annotate moduleconfig virtualization modules.deckhouse.io/allow-disabling="true" --overwrite
+    ```
 
 1. Выключите модуль в веб-интерфейсе DP CSE или командой `d8 system module disable virtualization`.
 
@@ -5931,48 +6117,48 @@ d8 k describe cvi myimage-pvc
 
 1. Подготовьте образ виртуальной машины. В закрытом контуре доступа к внешним ресурсам обычно нет, поэтому заранее загрузите образ и разместите его в доступном локальном хранилище. Если есть доступ к сети, скачайте образ по URL:
 
-   ```bash
-   curl -L <АДРЕС_ОБРАЗА> -o myimage-pvc.img
-   ```
+    ```bash
+    curl -L <АДРЕС_ОБРАЗА> -o myimage-pvc.img
+    ```
 
-   Здесь `<АДРЕС_ОБРАЗА>` — URL файла образа.
+    Здесь `<АДРЕС_ОБРАЗА>` — URL файла образа.
 
 1. На отдельной виртуальной машине, которая не входит в кластер DP CSE, создайте Dockerfile со следующим содержимым:
 
-   ```dockerfile
-   FROM scratch
-   COPY myimage-pvc.img /disk/myimage-pvc.img
-   ```
+    ```dockerfile
+    FROM scratch
+    COPY myimage-pvc.img /disk/myimage-pvc.img
+    ```
 
 1. Соберите контейнерный образ. В примере используется публичное хранилище docker.io. Чтобы выполнить команды, нужны учётная запись в выбранном хранилище и настроенное окружение сборки:
 
-   ```bash
-   docker build -t docker.io/<ИМЯ_ПОЛЬЗОВАТЕЛЯ>/myimage-pvc:latest .
-   ```
+    ```bash
+    docker build -t docker.io/<ИМЯ_ПОЛЬЗОВАТЕЛЯ>/myimage-pvc:latest .
+    ```
 
-   Здесь `<ИМЯ_ПОЛЬЗОВАТЕЛЯ>` — имя пользователя, указанное при регистрации в docker.io. Точка в конце команды задаёт директорию сборки, в которой находятся `Dockerfile` и файл образа.
+    Здесь `<ИМЯ_ПОЛЬЗОВАТЕЛЯ>` — имя пользователя, указанное при регистрации в docker.io. Точка в конце команды задаёт директорию сборки, в которой находятся `Dockerfile` и файл образа.
 
 1. Загрузите собранный образ в заранее подготовленное хранилище образов контейнеров, доступное из кластера DP CSE:
 
-   ```bash
-   docker push docker.io/<ИМЯ_ПОЛЬЗОВАТЕЛЯ>/myimage-pvc:latest
-   ```
+    ```bash
+    docker push docker.io/<ИМЯ_ПОЛЬЗОВАТЕЛЯ>/myimage-pvc:latest
+    ```
 
 1. Создайте ClusterVirtualImage, который использует этот образ:
 
-   ```bash
-   d8 k apply -f - <<EOF
-   apiVersion: virtualization.deckhouse.io/v1alpha2
-   kind: ClusterVirtualImage
-   metadata:
-     name: myimage-pvc
-   spec:
-     dataSource:
-       type: ContainerImage
-       containerImage:
-         image: docker.io/<ИМЯ_ПОЛЬЗОВАТЕЛЯ>/myimage-pvc:latest
-   EOF
-   ```
+    ```bash
+    d8 k apply -f - <<EOF
+    apiVersion: virtualization.deckhouse.io/v1alpha2
+    kind: ClusterVirtualImage
+    metadata:
+      name: myimage-pvc
+    spec:
+      dataSource:
+        type: ContainerImage
+        containerImage:
+          image: docker.io/<ИМЯ_ПОЛЬЗОВАТЕЛЯ>/myimage-pvc:latest
+    EOF
+    ```
 
 Чтобы загрузить образ из командной строки, сначала создайте ClusterVirtualImage:
 
@@ -6045,10 +6231,12 @@ d8 k get cvi myimage-pvc -o wide
 Пример вывода:
 
 <!-- markdownlint-disable MD031 -->
+
 ```console
 NAME          PHASE   CDROM   PROGRESS   STOREDSIZE   UNPACKEDSIZE   REGISTRY URL                                                                      AGE
 myimage-pvc   Ready   false   100%       285.9Mi      2.5Gi          dvcr.d8-virtualization.svc/cvi/myimage-pvc:eac95605-7e0b-4a32-bb50-cc7284fd89d0   122m
 ```
+
 {: .nowrap-default }
 <!-- markdownlint-enable MD031 -->
 
@@ -6582,52 +6770,52 @@ spec:
 
 1. Проверьте текущий статус виртуальной машины:
 
-   ```bash
-   d8 k get vm
-   ```
+    ```bash
+    d8 k get vm
+    ```
 
-   Пример вывода:
+    Пример вывода:
 
-   ```console
-   NAME       PHASE     UPTIME   NODE           IPADDRESS     AGE
-   linux-vm   Running   79m      virtlab-pt-1   10.66.10.14   79m
-   ```
+    ```console
+    NAME       PHASE     UPTIME   NODE           IPADDRESS     AGE
+    linux-vm   Running   79m      virtlab-pt-1   10.66.10.14   79m
+    ```
 
-   В этом примере ВМ запущена на узле `virtlab-pt-1`.
+    В этом примере ВМ запущена на узле `virtlab-pt-1`.
 
 1. Создайте VirtualMachineOperation (vmop) с типом `Evict`. Операция переносит виртуальную машину на другой узел с учётом требований к её размещению:
 
-   ```bash
-   d8 k create -f - <<EOF
-   apiVersion: virtualization.deckhouse.io/v1alpha2
-   kind: VirtualMachineOperation
-   metadata:
-     generateName: evict-linux-vm-
-   spec:
-     # Имя виртуальной машины.
-     virtualMachineName: linux-vm
-     # Операция для миграции.
-     type: Evict
-   EOF
-   ```
+    ```bash
+    d8 k create -f - <<EOF
+    apiVersion: virtualization.deckhouse.io/v1alpha2
+    kind: VirtualMachineOperation
+    metadata:
+      generateName: evict-linux-vm-
+    spec:
+      # Имя виртуальной машины.
+      virtualMachineName: linux-vm
+      # Операция для миграции.
+      type: Evict
+    EOF
+    ```
 
 1. Сразу после создания VirtualMachineOperation отследите миграцию:
 
-   ```bash
-   d8 k get vm -w
-   ```
+    ```bash
+    d8 k get vm -w
+    ```
 
-   Пример вывода:
+    Пример вывода:
 
-   ```console
-   NAME       PHASE       UPTIME   NODE           IPADDRESS     AGE
-   linux-vm   Running     79m      virtlab-pt-1   10.66.10.14   79m
-   linux-vm   Migrating   79m      virtlab-pt-1   10.66.10.14   79m
-   linux-vm   Migrating   79m      virtlab-pt-1   10.66.10.14   79m
-   linux-vm   Running     1s       virtlab-pt-2   10.66.10.14   79m
-   ```
+    ```console
+    NAME       PHASE       UPTIME   NODE           IPADDRESS     AGE
+    linux-vm   Running     79m      virtlab-pt-1   10.66.10.14   79m
+    linux-vm   Migrating   79m      virtlab-pt-1   10.66.10.14   79m
+    linux-vm   Migrating   79m      virtlab-pt-1   10.66.10.14   79m
+    linux-vm   Running     1s       virtlab-pt-2   10.66.10.14   79m
+    ```
 
-Чтобы прервать миграцию, удалите VirtualMachineOperation, пока операция находится в фазе `Pending` или `InProgress`.
+    Чтобы прервать миграцию, удалите VirtualMachineOperation, пока операция находится в фазе `Pending` или `InProgress`.
 
 {% endtab %}
 {% endtabs %}
@@ -6728,6 +6916,8 @@ DP CSE контролирует целостность в модуле `virtuali
 
 Дополнительно DP CSE контролирует целостность конфигурации виртуальных машин. Для каждой ВМ DP CSE вычисляет контрольную сумму SHA256 её конфигурации. Если контрольная сумма не совпадает с эталонной, DP CSE записывает в журнал событие нарушения целостности. Как включить аудит, описано в п. 4.16.8. Формат события описан в п. 7.3.
 
+Блокировку запуска виртуальной машины при выявлении нарушения целостности конфигурации её виртуального оборудования или файлов виртуальной базовой системы ввода-вывода (первичного загрузчика) обеспечивает механизм, описанный в п. 5.7.1.
+
 #### 4.16.8 Аудит событий безопасности модуля virtualization
 
 Модуль `virtualization` ведёт собственный журнал событий безопасности. В журнал попадают события доступа к виртуальным машинам, управления ими и настройками модуля, проверки целостности конфигурации и запрещённые операции.
@@ -6738,50 +6928,16 @@ DP CSE контролирует целостность в модуле `virtuali
 1. Включите аудит Kubernetes API. Для этого в ModuleConfig `control-plane-manager` установите для параметра `.spec.settings.apiserver.auditPolicyEnabled` значение `true`.
 1. В ModuleConfig `virtualization` установите для параметра `.spec.settings.audit.enabled` значение `true`. Для этого откройте ModuleConfig `virtualization` на редактирование командой `d8 k edit mc virtualization` и добавьте параметр:
 
-   ```yaml
-   spec:
-     settings:
-       audit:
-         enabled: true
-   ```
+    ```yaml
+    spec:
+      settings:
+        audit:
+          enabled: true
+    ```
 
-События собирает под `virtualization-audit-*` в неймспейсе `d8-virtualization`. Чтобы перенаправить их во внутреннее хранилище логов Loki (ClusterLogDestination `d8-loki`, его создаёт модуль `loki`), создайте ClusterLoggingConfig:
+События собирает под `virtualization-audit-*` в неймспейсе `d8-virtualization`. Модуль `virtualization` передаёт их модулю `security-events-manager` (ресурс PodSecurityEventShipper `virtualization-audit`), который регистрирует их как события безопасности с источником `virtualization-audit`. Дополнительно настраивать сбор событий не требуется: достаточно, чтобы был включён модуль `security-events-manager` (п. 5.5).
 
-```bash
-d8 k apply -f - <<EOF
-apiVersion: deckhouse.io/v1alpha2
-kind: ClusterLoggingConfig
-metadata:
-  name: virtualization-audit-logs
-spec:
-  destinationRefs:
-    - d8-loki
-  kubernetesPods:
-    namespaceSelector:
-      labelSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: d8-virtualization
-    labelSelector:
-      matchLabels:
-        app: virtualization-audit
-  type: KubernetesPods
-EOF
-```
-
-Чтобы просмотреть события в Grafana, используйте следующий запрос к Loki:
-
-```text
-{namespace="d8-virtualization", pod=~"virtualization-audit-.*"}
-```
-
-В записях журнала доступны следующие поля:
-
-- `type` — тип события;
-- `name` — описание события;
-- `request_subject` — имя пользователя или ServiceAccount;
-- `datetime` — время события;
-- `virtual_machine_name` — имя ВМ;
-- `source_ip` — IP-адрес источника (для запрещённых операций).
+События средства виртуализации просматриваются на странице «События безопасности» (п. 5.5) с фильтром «Источник» — `virtualization-audit`. Коды событий приведены в п. 7.3, правило оповещения о них — в п. 5.3.1.
 
 Система аудита фиксирует следующие события:
 
@@ -6962,31 +7118,31 @@ DP CSE добавляет подпись к записи, только когд�
 
 1. Убедитесь, что контроль целостности работает в режиме `Migrate`. Если в ModuleConfig `control-plane-manager` параметр `apiserver.signature` не задан, используется режим `Migrate`, и этот шаг можно пропустить.
 
-   Если задан другой режим, переведите контроль целостности в режим `Migrate`. Для этого откройте ModuleConfig `control-plane-manager` на редактирование командой `d8 k edit mc control-plane-manager` и установите для параметра `apiserver.signature` значение `Migrate`:
+    Если задан другой режим, переведите контроль целостности в режим `Migrate`. Для этого откройте ModuleConfig `control-plane-manager` на редактирование командой `d8 k edit mc control-plane-manager` и установите для параметра `apiserver.signature` значение `Migrate`:
 
-   ```yaml
-   spec:
-     settings:
-       apiserver:
-         signature: Migrate
-   ```
+    ```yaml
+    spec:
+      settings:
+        apiserver:
+          signature: Migrate
+    ```
 
-   При смене режима DP CSE перезапускает поды `kube-apiserver`. Поэтому API кластера может быть временно недоступен.
+    При смене режима DP CSE перезапускает поды `kube-apiserver`. Поэтому API кластера может быть временно недоступен.
 
 1. Дождитесь, пока очереди DP CSE опустеют. Чтобы проверить состояние очередей, выполните на master-узле команду:
 
-   ```bash
-   d8 system queue list
-   ```
+    ```bash
+    d8 system queue list
+    ```
 
-   Пример вывода для пустых очередей без ошибок:
+    Пример вывода для пустых очередей без ошибок:
 
-   ```console
-   Summary:
-   - 'main' queue: empty.
-   - 103 other queues (0 active, 103 empty): 0 tasks.
-   - no tasks to handle.
-   ```
+    ```console
+    Summary:
+    - 'main' queue: empty.
+    - 103 other queues (0 active, 103 empty): 0 tasks.
+    - no tasks to handle.
+    ```
 
 1. Мигрируйте данные. Миграцию выполняет команда `d8 tools sig-migrate`. Команда составляет список всех объектов Kubernetes (как в неймспейсах, так и кластерного уровня) и по очереди добавляет к ним аннотацию `d8-migration=<ВРЕМЕННАЯ_МЕТКА>`. Затем команда удаляет аннотации с префиксом `d8-migration-`. Здесь `<ВРЕМЕННАЯ_МЕТКА>` — метка времени, которую подставляет команда.
 
@@ -6996,61 +7152,61 @@ DP CSE добавляет подпись к записи, только когд�
    {% endalert %}
    {% raw %}
 
-   Если миграция длительная, запускайте её в терминальном мультиплексоре, например `screen` или `tmux`. Запустите команду от пользователя root на master-узле кластера:
+    Если миграция длительная, запускайте её в терминальном мультиплексоре, например `screen` или `tmux`. Запустите команду от пользователя root на master-узле кластера:
 
-   ```bash
-   d8 tools sig-migrate
-   ```
+    ```bash
+    d8 tools sig-migrate
+    ```
 
-   Чтобы запустить команду с другого компьютера, у которого есть доступ к API кластера, укажите файл kubeconfig и контекст флагами `--kubeconfig` и `--context`.
+    Чтобы запустить команду с другого компьютера, у которого есть доступ к API кластера, укажите файл kubeconfig и контекст флагами `--kubeconfig` и `--context`.
 
-   Флаги команды `d8 tools sig-migrate`:
+    Флаги команды `d8 tools sig-migrate`:
 
-   | Флаг | Описание |
-   | --- | --- |
-   | `--retry` | Обработать только объекты, которые не удалось обработать при предыдущем запуске |
-   | `--object` | Обработать объекты по идентификатору в формате `<НЕЙМСПЕЙС>/<ИМЯ>/<ИМЯ_РЕСУРСА>`, где `<НЕЙМСПЕЙС>` — неймспейс объекта, `<ИМЯ>` — имя объекта, `<ИМЯ_РЕСУРСА>` — имя ресурса. Для объектов кластерного уровня в качестве неймспейса укажите `clusterwide`. Имя ресурса должно совпадать с выводом `d8 k api-resources` |
-   | `--threads` | Число потоков для получения списка ресурсов и миграции. При значении 0 и меньше используется значение по умолчанию |
-   | `--measure-stages` | Выводить время выполнения основных этапов миграции |
-   | `--as` | ServiceAccount Kubernetes, от имени которого выполняются операции (impersonation) |
-   | `--log-level` | Уровень логирования: `INFO`, `DEBUG`, `TRACE`. Значение по умолчанию — `DEBUG` |
-   | `--kubeconfig` | Путь к файлу kubeconfig. По умолчанию используется значение переменной окружения `$KUBECONFIG`, а если она не задана — файл kubeconfig текущего пользователя ОС по умолчанию |
-   | `--context` | Имя контекста kubeconfig |
+    | Флаг | Описание |
+    | --- | --- |
+    | `--retry` | Обработать только объекты, которые не удалось обработать при предыдущем запуске |
+    | `--object` | Обработать объекты по идентификатору в формате `<НЕЙМСПЕЙС>/<ИМЯ>/<ИМЯ_РЕСУРСА>`, где `<НЕЙМСПЕЙС>` — неймспейс объекта, `<ИМЯ>` — имя объекта, `<ИМЯ_РЕСУРСА>` — имя ресурса. Для объектов кластерного уровня в качестве неймспейса укажите `clusterwide`. Имя ресурса должно совпадать с выводом `d8 k api-resources` |
+    | `--threads` | Число потоков для получения списка ресурсов и миграции. При значении 0 и меньше используется значение по умолчанию |
+    | `--measure-stages` | Выводить время выполнения основных этапов миграции |
+    | `--as` | ServiceAccount Kubernetes, от имени которого выполняются операции (impersonation) |
+    | `--log-level` | Уровень логирования: `INFO`, `DEBUG`, `TRACE`. Значение по умолчанию — `DEBUG` |
+    | `--kubeconfig` | Путь к файлу kubeconfig. По умолчанию используется значение переменной окружения `$KUBECONFIG`, а если она не задана — файл kubeconfig текущего пользователя ОС по умолчанию |
+    | `--context` | Имя контекста kubeconfig |
 
-   Если какие-либо объекты не удалось мигрировать, по окончании работы команда выведет предупреждение. Предупреждение содержит количество таких объектов, путь к файлу с ошибками, путь к списку необработанных объектов и инструкцию по повторному запуску.
+    Если какие-либо объекты не удалось мигрировать, по окончании работы команда выведет предупреждение. Предупреждение содержит количество таких объектов, путь к файлу с ошибками, путь к списку необработанных объектов и инструкцию по повторному запуску.
 
-   Пример вывода с ошибками:
+    Пример вывода с ошибками:
 
-   ```console
-   ⚠️  Migration completed with 5 failed object(s).
+    ```console
+    ⚠️  Migration completed with 5 failed object(s).
 
-   Some objects could not be annotated. Please check the error details:
-     Error log file: /tmp/failed_errors.txt
-     Failed objects list: /tmp/failed_annotations.txt
+    Some objects could not be annotated. Please check the error details:
+      Error log file: /tmp/failed_errors.txt
+      Failed objects list: /tmp/failed_annotations.txt
 
-   To investigate the issues:
-     1. Review the error log file to understand why objects failed
-     2. Check permissions and resource availability
-     3. Retry migration for failed objects only using:
-        d8 tools sig-migrate --retry
-   ```
+    To investigate the issues:
+      1. Review the error log file to understand why objects failed
+      2. Check permissions and resource availability
+      3. Retry migration for failed objects only using:
+         d8 tools sig-migrate --retry
+    ```
 
-   Чтобы повторить миграцию только для объектов, которые не удалось обработать, выполните команду с флагом `--retry`:
+    Чтобы повторить миграцию только для объектов, которые не удалось обработать, выполните команду с флагом `--retry`:
 
-   ```bash
-   d8 tools sig-migrate --retry
-   ```
+    ```bash
+    d8 tools sig-migrate --retry
+    ```
 
-   Если после трёх повторных запусков миграция объектов NodeGroup по-прежнему завершается ошибкой, замените в списке необработанных объектов версию API NodeGroup на `v1` и повторите миграцию:
+    Если после трёх повторных запусков миграция объектов NodeGroup по-прежнему завершается ошибкой, замените в списке необработанных объектов версию API NodeGroup на `v1` и повторите миграцию:
 
-   ```bash
-   sed -i '/nodegroups/s/v1alpha[^|]*/v1/g' /tmp/failed_annotations.txt
-   d8 tools sig-migrate --retry
-   ```
+    ```bash
+    sed -i '/nodegroups/s/v1alpha[^|]*/v1/g' /tmp/failed_annotations.txt
+    d8 tools sig-migrate --retry
+    ```
 
-   Миграция изменяет каждый объект в кластере. Если из-за сбоя в кластере какой-либо объект нельзя изменить, миграция не завершится. В этом случае устраните причину, по которой объект нельзя изменить, и повторите миграцию. Если ошибки миграции повторяются систематически, обратитесь в техническую поддержку.
+    Миграция изменяет каждый объект в кластере. Если из-за сбоя в кластере какой-либо объект нельзя изменить, миграция не завершится. В этом случае устраните причину, по которой объект нельзя изменить, и повторите миграцию. Если ошибки миграции повторяются систематически, обратитесь в техническую поддержку.
 
-   Повторяйте миграцию, пока команда не сообщит, что необработанных объектов не осталось, и пока не прекратится алерт `D8SignatureErrorsDetected`.
+    Повторяйте миграцию, пока команда не сообщит, что необработанных объектов не осталось, и пока не прекратится алерт `D8SignatureErrorsDetected`.
 
 1. Переведите контроль целостности в режим `Enforce`.
 
@@ -7060,20 +7216,20 @@ DP CSE добавляет подпись к записи, только когд�
    {% endalert %}
    {% raw %}
 
-   Для этого откройте ModuleConfig `control-plane-manager` на редактирование командой `d8 k edit mc control-plane-manager` и установите для параметра `apiserver.signature` значение `Enforce`:
+    Для этого откройте ModuleConfig `control-plane-manager` на редактирование командой `d8 k edit mc control-plane-manager` и установите для параметра `apiserver.signature` значение `Enforce`:
 
-   ```yaml
-   spec:
-     settings:
-       apiserver:
-         signature: Enforce
-   ```
+    ```yaml
+    spec:
+      settings:
+        apiserver:
+          signature: Enforce
+    ```
 
 1. Дождитесь, пока очереди DP CSE опустеют. Чтобы проверить состояние очередей, выполните на master-узле команду:
 
-   ```bash
-   d8 system queue list
-   ```
+    ```bash
+    d8 system queue list
+    ```
 
 ### 4.18 Доставка приложений
 
@@ -7127,11 +7283,11 @@ Argo CD отслеживает изменения, показывает расх
 
 1. Дождитесь, пока модуль перейдёт в состояние `Ready`.
 
-   Проверьте состояние модуля в веб-интерфейсе DP CSE или командой:
+Проверьте состояние модуля в веб-интерфейсе DP CSE или командой:
 
-   ```bash
-   d8 k get module operator-argo -w
-   ```
+  ```bash
+  d8 k get module operator-argo -w
+  ```
 
 После включения модуля `operator-argo` в кластере DP CSE станут доступны кастомные ресурсы Argo CD.
 
@@ -8625,7 +8781,7 @@ manifestTargets:
 | «Хранилище» | «Persistent Volume», «Классы хранилищ» (StorageClass и классы модулей хранения), «Снимки томов», «Локальные тома»: «Группы томов» (LVMVolumeGroup), «Логические тома», «Блочные устройства» (BlockDevice) | Настройка хранилищ (п. 4.6) |
 | «Безопасность» | «Обзор», «Управление доступом» (DexProvider, User, Group, UserOperation, ClusterAuthorizationRule, ClusterRole, NodeUser), «Политики и управление» (OperationPolicy, SecurityPolicy, ContainerdIntegrityPolicy), «Уязвимости», «Отчеты о соответствии», «Мониторинг», «Правила аудита», «Другие отчеты», «WAF & DLP» | Аутентификация и авторизация (п. 4.12), сканирование на уязвимости (п. 5.1), политики безопасности (п. 5.2), события безопасности (п. 5.5), контроль целостности (п. 5.7.4.2) |
 | «Виртуализация» | настройки модуля `virtualization`, классы ВМ (VirtualMachineClass), кластерные образы (ClusterVirtualImage), USB-устройства узлов (NodeUSBDevice) | Виртуализация (п. 4.16) |
-| «Мониторинг» | «Обзор данных», «Дашборды», «Активные алерты», «Настройки уведомлений», «Источники Grafana», «Обработка метрик», «Отправка метрик», «Состояние Prometheus», «Экспорт метрик доступности» | Правило оповещения (п. 4.5.3), уведомления на почту (п. 5.3), доступ к Grafana и Prometheus (п. 5.4), просмотр журналов событий безопасности (п. 5.5) |
+| «Мониторинг» | «Обзор данных», «Дашборды», «Активные алерты», «Настройки уведомлений», «Источники Grafana», «Обработка метрик», «Отправка метрик», «Состояние Prometheus»| Правило оповещения (п. 4.5.3), уведомления на почту (п. 5.3), доступ к Grafana и Prometheus (п. 5.4), просмотр журналов событий безопасности (п. 5.5) |
 | «Управляемые сервисы», «Helm-оператор» | классы управляемых сервисов, кластерные Helm-аддоны (HelmClusterAddon) | — |
 | «Журналирование» | «Отправка логов» (ClusterLogDestination), «Сбор логов» (ClusterLoggingConfig) | Логирование (п. 4.15) |
 | «Маркетплейс», «AI-модели», «GPU», «Другое» | репозитории пакетов, каталоги моделей, GPU, «Другие CRD» — кастомные ресурсы без отдельных страниц | — |
@@ -8635,10 +8791,10 @@ manifestTargets:
 Страница «Обзор» открывается после входа и при выборе названия группы в меню. На странице расположены:
 
 - панели Deckhouse и Kubernetes — версия DP CSE, доступное обновление и версия Kubernetes;
-- панель «Инструменты» — кнопки перехода в веб-интерфейсы модулей: «Commander», «Stronghold» (п. 4.20), «Документация», «Grafana» (п. 4.21) и «Prometheus» (если модуль `observability` выключен), «Мониторинг» и «Prometheus» (если модуль `observability` включён), «Статус-страница», «Генератор kubeconfig», «Hubble» (п. 5.8.4). Состав кнопок зависит от включённых модулей;
+- панель «Инструменты» — кнопки перехода в веб-интерфейсы модулей: `commander` (п. 4.23), «stronghold» (п. 4.20), «Документация», «grafana» (п. 4.21) и «prometheus», «Мониторинг», «Статус-страница», «Генератор kubeconfig», «Hubble» (п. 5.8.4). Состав кнопок зависит от включённых модулей;
 - панель «Предупреждения» — ошибки, ожидаемые обновления и активные алерты;
 - панель «Группы узлов с проблемами» — проблемные узлы по группам;
-- панель «Статусы подсистем» — доступность компонентов кластера по данным модуля `upmeter`;
+- панель «Статусы подсистем» — доступность компонентов кластера;
 - графики использования ресурсов кластера.
 
 ![Страница «Обзор»](images/admin-guide/image-4-19-6-1.png)
@@ -8928,9 +9084,9 @@ manifestTargets:
 
 Пункты «Обзор данных», «Дашборды» и «Активные алерты» описаны в п. 6.3.1 Руководства пользователя. В разделе «Управление системой» на этих страницах отображаются данные всего кластера. Отдельный веб-интерфейс Grafana описан в п. 4.21.
 
-Категория «Настройки уведомлений» отображается при включённом модуле `observability` и содержит пункты:
+Категория «Настройки уведомлений» содержит пункты:
 
-- «Триггеры и метрики» — группы правил ClusterObservabilityMetricsRulesGroup: триггеры (правила алертов) и вычисляемые метрики (п. 4.5.3);
+- «Триггеры и метрики» — группы правил ClusterObservabilityMetricsRulesGroup: триггеры (правила алертов) и вычисляемые метрики;
 - «Отключения уведомлений» — временные отключения уведомлений (ClusterObservabilityNotificationSilence);
 - «Правила уведомлений» — какие алерты и в какой канал отправляются (ClusterObservabilityNotificationPolicy, п. 5.3);
 - «Каналы уведомлений» — каналы доставки уведомлений (ClusterObservabilityNotificationChannel, п. 5.3).
@@ -8967,7 +9123,7 @@ manifestTargets:
 
 Рисунок 4.19.12.3 — Форма создания правила уведомлений
 
-Страница «Состояние Prometheus» содержит вкладки «Обзор» (поды Prometheus и их нагрузка), «Конфигурация» (настройки модуля `prometheus`, п. 5.4) и «Статус» (TSDB, алерты, объекты мониторинга, правила, конфигурация и флаги запуска выбранного экземпляра Prometheus; при включённом модуле `observability`).
+Страница «Состояние Prometheus» содержит вкладки «Обзор» (поды Prometheus и их нагрузка), «Конфигурация» (настройки модуля `prometheus`, п. 5.4) и «Статус» (TSDB, алерты, объекты мониторинга, правила, конфигурация и флаги запуска выбранного экземпляра Prometheus).
 
 ![Страница «Состояние Prometheus»](images/admin-guide/image-4-19-12-4.png)
 
@@ -8982,7 +9138,6 @@ manifestTargets:
 - «Обработка метрик» — правила обработки метрик и алертов CustomPrometheusRules: группы правил с именем, интервалом вычисления, производными метриками и алертами;
 - «Отправка метрик» — отправка метрик во внешнее хранилище (PrometheusRemoteWrite): URL, аутентификация, TLS, обработка метрик перед отправкой;
 - «Источники Grafana» — дополнительные источники данных (GrafanaAdditionalDatasource): название, тип, URL, способ доступа, аутентификация;
-- «Экспорт метрик доступности» — отправка метрик доступности компонентов кластера во внешнее хранилище (UpmeterRemoteWrite).
 
 ![Страница «Обработка метрик»](images/admin-guide/image-4-19-12-6.png)
 
@@ -9171,21 +9326,21 @@ Stronghold — хранилище секретов DP CSE (модуль `strongh
 
 1. В подразделе «Authentication Methods» нажмите кнопку добавления метода.
 
-   ![Добавление метода аутентификации](images/admin-guide/image-4-20-2-1-4.png)
+    ![Добавление метода аутентификации](images/admin-guide/image-4-20-2-1-4.png)
 
-   Рисунок 4.20.2.1.4 — Добавление метода аутентификации
+    Рисунок 4.20.2.1.4 — Добавление метода аутентификации
 
 1. Выберите метод аутентификации и нажмите кнопку «Next».
 
-   ![Выбор добавляемого метода аутентификации](images/admin-guide/image-4-20-2-1-5.png)
+    ![Выбор добавляемого метода аутентификации](images/admin-guide/image-4-20-2-1-5.png)
 
-   Рисунок 4.20.2.1.5 — Выбор добавляемого метода аутентификации
+    Рисунок 4.20.2.1.5 — Выбор добавляемого метода аутентификации
 
 1. Задайте поле «Path» и при необходимости параметры в блоке «Method Options». Блок по умолчанию свёрнут: чтобы развернуть его, нажмите на название блока.
 
-   ![Настройки добавляемого метода аутентификации](images/admin-guide/image-4-20-2-1-6.png)
+    ![Настройки добавляемого метода аутентификации](images/admin-guide/image-4-20-2-1-6.png)
 
-   Рисунок 4.20.2.1.6 — Настройки добавляемого метода аутентификации
+    Рисунок 4.20.2.1.6 — Настройки добавляемого метода аутентификации
 
 1. Нажмите кнопку «Enable Method». Кнопка «Back» возвращает к выбору метода без сохранения.
 
@@ -9211,15 +9366,15 @@ Stronghold — хранилище секретов DP CSE (модуль `strongh
 
 1. В подразделе «Groups» нажмите кнопку «Create group».
 
-   ![Добавление группы пользователей](images/admin-guide/image-4-20-2-2-4.png)
+    ![Добавление группы пользователей](images/admin-guide/image-4-20-2-2-4.png)
 
-   Рисунок 4.20.2.2.4 — Добавление группы пользователей
+    Рисунок 4.20.2.2.4 — Добавление группы пользователей
 
 1. Заполните форму создания группы и нажмите кнопку «Create». Кнопка «Back» возвращает к списку групп без сохранения.
 
-   ![Форма создания группы пользователей](images/admin-guide/image-4-20-2-2-5.png)
+    ![Форма создания группы пользователей](images/admin-guide/image-4-20-2-2-5.png)
 
-   Рисунок 4.20.2.2.5 — Форма создания группы пользователей
+    Рисунок 4.20.2.2.5 — Форма создания группы пользователей
 
 ##### 4.20.2.3 Сущности и алиасы
 
@@ -9249,24 +9404,24 @@ Stronghold — хранилище секретов DP CSE (модуль `strongh
 
 1. В подразделе «Entities» нажмите кнопку «Create entity».
 
-   ![Создание сущности](images/admin-guide/image-4-20-2-3-5.png)
+    ![Создание сущности](images/admin-guide/image-4-20-2-3-5.png)
 
-   Рисунок 4.20.2.3.5 — Создание сущности
+    Рисунок 4.20.2.3.5 — Создание сущности
 
 1. Заполните форму создания сущности и нажмите кнопку «Create». Кнопка «Back» возвращает к списку сущностей без сохранения.
 
-   ![Форма создания сущности](images/admin-guide/image-4-20-2-3-6.png)
+    ![Форма создания сущности](images/admin-guide/image-4-20-2-3-6.png)
 
-   Рисунок 4.20.2.3.6 — Форма создания сущности
+    Рисунок 4.20.2.3.6 — Форма создания сущности
 
 Чтобы добавить алиас для сущности, выполните следующие действия:
 
 1. На вкладке «Entities» нажмите кнопку с тремя точками в строке сущности и выберите пункт «Create alias».
 1. Заполните форму создания алиаса и нажмите кнопку «Create». Кнопка «Cancel» отменяет создание.
 
-   ![Создание алиаса](images/admin-guide/image-4-20-2-3-7.png)
+    ![Создание алиаса](images/admin-guide/image-4-20-2-3-7.png)
 
-   Рисунок 4.20.2.3.7 — Создание алиаса
+    Рисунок 4.20.2.3.7 — Создание алиаса
 
 Чтобы объединить сущности, нажмите кнопку «Merge entities» в подразделе «Entities» и заполните открывшуюся форму.
 
@@ -9412,7 +9567,7 @@ Stronghold CLI — инструмент для работы со Stronghold из
 
 Для визуализации метрик в DP CSE используется Grafana. Дашборды Grafana встроены в веб-интерфейс DP CSE (группа «Мониторинг», п. 4.19.12). Просмотр дашбордов, фильтрация данных, работа с панелями, создание и редактирование дашбордов, а также описание дашбордов приведены в п. 6.3.1 Руководства пользователя. В отдельном веб-интерфейсе Grafana с дашбордами работают так же. Доступ пользователей к Grafana настраивается в п. 5.4.
 
-Если в кластере выключен модуль `observability`, отдельный веб-интерфейс Grafana можно открыть кнопкой «Grafana» на панели «Инструменты» страницы «Обзор» веб-интерфейса DP CSE (п. 4.19.6). Отдельный веб-интерфейс Grafana также доступен по адресу `grafana.<ШАБЛОН_ИМЁН_КЛАСТЕРА>`.
+Отдельный веб-интерфейс Grafana доступен по адресу `grafana.<ШАБЛОН_ИМЁН_КЛАСТЕРА>`.
 
 Здесь `<ШАБЛОН_ИМЁН_КЛАСТЕРА>` — строка, которая соответствует шаблону DNS-имён кластера из глобального параметра `modules.publicDomainTemplate`.
 
@@ -9499,6 +9654,165 @@ Stronghold CLI — инструмент для работы со Stronghold из
 
 Если Kiali интегрирован с одной из поддерживаемых платформ распределённой трассировки (Jaeger или Grafana Tempo), дашборд этой платформы открывается пунктом «Distributed Tracing» бокового меню.
 
+### 4.23 Веб-интерфейс модуля `commander`
+
+Опциональный модуль `commander` предоставляет веб-интерфейс для централизованного управления кластерами DP CSE. Кластер, в котором включён модуль, становится управляющим, а подключённые к нему кластеры — прикладными. Отдельный кластер для модуля `commander` не обязателен; при совместном размещении с приложениями предусмотрите ресурсы для его компонентов.
+
+Пользовательские операции описаны в п. 6.3.6 Руководства пользователя. Веб-интерфейс модуля `commander` и веб-интерфейс DP CSE, предоставляемый модулем `console` (п. 4.19), имеют разные задачи и правила назначения прав.
+
+#### 4.23.1 Подготовка
+
+До включения модуля подготовьте:
+
+- внутреннее хранилище образов с необходимыми версиями DP CSE, модулей и образами `dhctl` для обслуживания прикладных кластеров; загрузку и перенос образов выполняйте по принятой в организации процедуре;
+- PostgreSQL версии 14 или новее с расширением `plpgsql`, базу данных и параметры подключения к ней. Для производственной эксплуатации используйте выделенную СУБД внутри контура;
+- внутренние DNS-записи и сертификаты HTTPS для модуля `commander` и Dex управляющего кластера. Имена должны разрешаться с рабочих мест и из прикладных кластеров, а цепочки сертификатов — быть доверенными для соответствующих клиентов;
+- аутентификацию через Dex управляющего кластера и подключённый внутренний провайдер идентификации (п. 4.12.2);
+- ресурсы для компонентов модуля `commander`. По умолчанию они размещаются на узлах с лейблом `node-role.deckhouse.io/commander`, при их отсутствии — на системных узлах. Для явного размещения задайте `nodeSelector` и при необходимости `tolerations` в ModuleConfig `commander`.
+
+Настройте сетевую доступность внутри контура:
+
+| Источник | Назначение | Назначение соединения |
+| --- | --- | --- |
+| Рабочее место администратора или пользователя | HTTPS-адреса модуля `commander` и Dex управляющего кластера | Вход и работа в веб-интерфейсе |
+| Прикладные кластеры | модуль `commander` и Dex управляющего кластера, обычно 443/TCP | Обратный TLS-туннель агента, обмен данными и аутентификация |
+| Серверы `dhctl` | Master-узлы прикладных кластеров, обычно 22/TCP | Установка, присоединение, отсоединение и удаление; резервный канал при недоступности туннеля |
+| Компоненты модуля `commander` | PostgreSQL на настроенном порту | Работа с базой данных |
+| Узлы с менеджером кластеров и серверами `dhctl`, узлы прикладных кластеров | Внутренние хранилища образов | Получение образов для установки, обслуживания и работы кластеров |
+| Серверы `dhctl`, если используется инфраструктурный провайдер | API внутренней платформы виртуализации или облачной инфраструктуры | Создание и изменение инфраструктуры |
+
+Учитывайте фактически настроенные порты, правила межсетевого экранирования и сетевые политики. В штатном режиме доступ к API Kubernetes прикладного кластера осуществляется через обратный туннель агента к управляющему кластеру.
+
+Для описанных операций используйте ресурсы, доступные внутри контура. В качестве хранилищ образов, СУБД и провайдера идентификации указывайте внутренние сервисы. Работа канала агента без HTTPS не поддерживается. Если HTTPS завершается на внешнем по отношению к кластеру балансировщике и его CA недоступен модулю `commander`, задайте PEM-сертификат доверенного CA в параметре `customCA` модуля.
+
+Перед установкой прикладного кластера проверьте доверие к сертификату внутреннего хранилища образов на узлах управляющего кластера, где будут запускаться серверы `dhctl`. Сертификат, введённый в форме хранилища образов модуля `commander`, сам по себе не настраивает доверие containerd на этих узлах. Если используется собственный CA, настройте доверие на соответствующих группах узлов через NodeGroupConfiguration. При отсутствии доверия поды `dhctl` могут перейти в состояние `ImagePullBackOff` с ошибкой `x509: certificate signed by unknown authority`.
+
+#### 4.23.2 Включение модуля
+
+Для подключения к выделенной СУБД создайте ModuleConfig `commander`. Пример с аутентификацией по клиентскому сертификату:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: commander
+spec:
+  enabled: true
+  version: 1
+  settings:
+    postgres:
+      mode: External
+      external:
+        host: <DNS-ИМЯ_СУБД>
+        port: "5432"
+        user: <ПОЛЬЗОВАТЕЛЬ_БД>
+        db: <ИМЯ_БД>
+        ssl:
+          secretName: postgres-ssl
+```
+
+Замените значения в угловых скобках параметрами внутренней СУБД. Настройте на сервере PostgreSQL аутентификацию по сертификату. В неймспейсе `d8-commander` создайте Secret `postgres-ssl` из выданных внутри контура клиентского сертификата, закрытого ключа и сертификата CA:
+
+```bash
+d8 k -n d8-commander create secret generic postgres-ssl \
+  --from-file=tls.crt=client.crt \
+  --from-file=tls.key=client.key \
+  --from-file=ca.crt=ca.crt
+```
+
+Порядок изменения ModuleConfig описан в п. 4.10–4.11. Дождитесь готовности подов в неймспейсе `d8-commander`:
+
+```bash
+d8 k -n d8-commander get pods
+```
+
+Адрес веб-интерфейса определяется глобальным параметром `modules.publicDomainTemplate`: при значении `%s.example.internal` интерфейс открывается по адресу `https://commander.example.internal`. Используйте фактическое внутреннее доменное имя. Проверка готовности включает открытие интерфейса, успешный вход и получение прав по п. 4.23.3.
+
+#### 4.23.3 Первичная настройка и назначение прав
+
+В модуле `commander` действуют собственные роли и назначения: глобальные — для всей инсталляции, роли рабочего пространства — для ресурсов выбранного рабочего пространства. Роли `user-authz` управляющего кластера не заменяют назначения модуля `commander`. Параметр `auth.allowedUserGroups` модуля ограничивает вход, но не выдаёт права внутри модуля `commander`.
+
+Пользователи модуля `commander` идентифицируются по адресу электронной почты, а группы — по имени группы, полученным из токена авторизации, сформированного по данным службы каталогов. Самостоятельные учётные записи пользователей и групп в модуле `commander` не создаются. При назначении роли указывайте идентификаторы, соответствующие данным провайдера аутентификации.
+
+Роли определяют разрешённые действия над собственными ресурсами модуля `commander`: просмотр, создание, изменение и удаление. Эффективные права пользователя формируются как объединение прав всех его назначений. Запрещающие правила не применяются. Чтобы отозвать право, исключите его из всех ролей и назначений, которые предоставляют это право пользователю непосредственно или через группу. Изменения прав доступа вступают в силу при очередном обращении пользователя к API модуля `commander`.
+
+Для машинного доступа используются токены интеграционного API. Токену задают область действия — все рабочие пространства либо одно рабочее пространство — и уровень доступа: только чтение или полный доступ. Назначение ролей токенам не применяется. Маркер доступа хранится в виде необратимого хэш-значения.
+
+На новой установке первый вошедший через Dex пользователь перенаправляется на страницу `/bootstrap`. Администратор, имеющий доступ к секретам управляющего кластера, получает одноразовый токен:
+
+```bash
+d8 k -n d8-commander get secret bootstrap-token -o jsonpath='{.data.token}' | base64 -d
+```
+
+Введите токен на странице первичной настройки и нажмите «Получить доступ». Пользователь получит права администратора, а использованный токен станет недействительным. При первичной настройке модуль `commander` создаёт предустановленную глобальную роль администратора и соответствующее назначение для пользователя, выполнившего настройку. Токен действует 5 минут с момента первого чтения его модулем `commander`. Если он истёк до использования, удалите Secret `bootstrap-token`: модуль `commander` выпустит новый токен и автоматически перезапустится. После успешной настройки удалять Secret не требуется.
+
+Для предоставления прав другим пользователям:
+
+1. Откройте «Пользователи и права» на экране рабочих пространств для глобального назначения или внутри рабочего пространства для назначения в его пределах.
+1. На вкладке «Роли» создайте роль, задайте имя, добавьте правила модуля `commander` с необходимыми ресурсами и действиями, сохраните роль.
+1. На вкладке «Назначения» создайте назначение, выберите роль и пользователей или группы. Допускается указание субъектов в формате `user:<login>` и `group:<name>`.
+1. Сохраните назначение и проверьте доступ пользователя к требуемому рабочему пространству и кластеру.
+
+Права на операции модуля `commander` и правила Kubernetes для доступа к ресурсам прикладного кластера задаются отдельно. Для встроенного администрирования кластера пользователь должен иметь необходимые права Kubernetes. Роли и назначения Kubernetes, заданные через модуль `commander`, синхронизируются агентом в прикладные кластеры.
+
+В составе роли можно задать правила доступа к ресурсам управляемых кластеров. Правило определяет группу API, тип ресурса, при необходимости имя ресурса и разрешённые действия. Состав доступных типов ресурсов зависит от модулей, установленных в управляемом кластере. Доступ к ресурсам внутри проектов определяется проектными ролями и назначениями участников проектов.
+
+Область управления модуля `commander` в прикладном кластере определяется шаблоном этого кластера и ограничивается описанными в нём ресурсами. Модуль `commander` передаёт правила доступа в управляемые кластеры и поддерживает их в заданном состоянии, в том числе после восстановления связи.
+
+Изменение переданных правил доступа в обход модуля `commander` блокируется политикой контроля допуска в управляемом кластере. Для регистрации таких попыток включите в управляемом кластере аудит Kubernetes API с уровнем не ниже `Metadata` для соответствующих ресурсов управления доступом. Эти события сохраняются в журнале аудита API управляемого кластера; в базу данных и журнал событий модуля `commander` они не передаются. Сбор журнала аудита API описан в п. 5.5.
+
+Не изменяйте вручную созданные модулем `commander` `DexProvider/commander` в прикладном кластере и парные DexClient и Secret в управляющем: от них зависит вход в прикладной кластер. Сохранение БД и ключей шифрования описано в п. 5.9.1.
+
+#### 4.23.4 Подготовка рабочего пространства и проверка готовности
+
+Перед предоставлением доступа пользователям подготовьте рабочее пространство:
+
+1. На экране рабочих пространств создайте рабочее пространство для нужной группы кластеров и задайте понятное название.
+1. В разделе «Пользователи и права» назначьте пользователям или группам роли для этого рабочего пространства. Отдельно задайте правила Kubernetes, необходимые для вкладки «Администрирование» прикладных кластеров.
+1. Подготовьте и проверьте шаблон для требуемого типа кластера. В шаблоне должны быть предусмотрены внутреннее хранилище образов, параметры сети и способ подключения, соответствующие инфраструктуре контура. Версия DP CSE должна соответствовать поставке.
+1. Если шаблон использует инвентарь, создайте необходимые каталоги и заполните записи для выделенных машин, сетей и других ресурсов. Для ресурсов, которые нельзя совместно использовать в нескольких кластерах, выберите эксклюзивный режим записей.
+1. В разделе «Инвентарь» на вкладке «Хранилище образов» подготовьте запись внутреннего хранилища. Проверьте адрес репозитория, параметры авторизации, протокол и сертификат. Настройки доверия на узлах проверьте отдельно по п. 4.23.1.
+1. Откройте меню с шестерёнкой в верхней панели рабочего пространства и выберите «Параметры». На вкладке «Настройки» задайте режим применения инфраструктурных изменений и интервал сверки. Если изменяете значения для работающего пространства, учитывайте переключатель «Переопределить для всех кластеров этого РП»: без него настройки по умолчанию предназначены для новых кластеров.
+1. Если требуется согласование установки новых кластеров, включите «Требовать согласование создания кластеров» и заполните поле «Согласующие» в разделе «Согласование создания кластеров». Укажите хотя бы одного пользователя или группу с префиксом `user:` или `group:`. Такое согласование относится к установке; подтверждение деструктивных изменений инфраструктуры запрашивается отдельно.
+
+По умолчанию модуль `commander` предлагает хранилище образов управляющего кластера. Используйте его для прикладных кластеров только при соответствии требуемой поставке и доступности из их инфраструктуры. Если пользователям рабочего пространства нельзя предоставлять адрес и учётные данные этого хранилища, проверьте настройку `spec.settings.featureFlags.showDefaultRegistry` модуля `commander` и подготовьте отдельную запись хранилища с подходящими правами доступа.
+
+До передачи рабочего пространства пользователям проверьте:
+
+| Проверка | Ожидаемый результат |
+| --- |-------------------------------------------------------------------------------------------------------------------------------|
+| Вход пользователя через внутренний Dex | Открывается модуль `commander`; доступны только назначенные пользователю объекты и действия                                  |
+| Доступность шаблона и инвентаря | Пользователь видит подготовленную версию шаблона и может заполнить обязательные параметры |
+| Доступ к образам | Управляющие компоненты и целевые узлы получают необходимые образы из внутреннего хранилища без ошибок авторизации и TLS |
+| Доступ к прикладной инфраструктуре | Серверы `dhctl` подключаются к master-узлам по заданным SSH-параметрам; при необходимости доступен API внутреннего провайдера |
+| Связь прикладного кластера с управляющим | После установки агент передаёт актуальные данные; инфраструктурный статус — «Готов», статус Kubernetes — «Настроен» |
+| Доступ к ресурсам прикладного кластера | Вкладка «Администрирование» предоставляет действия в пределах назначенных прав Kubernetes |
+
+Проверку установки проводите на выделенных для этого ресурсах. Пример создания статического кластера приведён в п. 6.3.6 Руководства пользователя.
+
+#### 4.23.5 Регистрация событий безопасности
+
+Модуль `commander` регистрирует события изменения собственных объектов и настроек доступа. Регистрации подлежат:
+
+- создание, изменение и удаление глобальных ролей и назначений;
+- создание, изменение и удаление ролей и назначений рабочих пространств;
+- создание, изменение и удаление кластеров и шаблонов кластеров;
+- создание, изменение и удаление токенов интеграционного API;
+- создание, изменение и удаление каталогов и записей инвентаря;
+- создание, изменение и удаление записей параметров хранилищ образов;
+- создание, изменение и удаление проектов и назначений участников проектов, изменение состава участников;
+- предоставление прав администратора при первичной настройке.
+
+Запись содержит идентификатор субъекта доступа, тип объекта, выполненное действие, дату и время, а также состояние объекта до и после изменения. Для событий, инициированных компонентами изделия, регистрируется субъект `system` с указанием источника события.
+
+Для просмотра событий откройте историю изменений соответствующего объекта в веб-интерфейсе модуля `commander`. При отборе записей используйте тип объекта, субъект доступа и временной диапазон. История изменений доступна только для чтения в пределах предоставленных пользователю прав.
+
+События сохраняются в базе данных модуля `commander` и выводятся в стандартный поток вывода компонентов. Для централизованного хранения настройте сбор событий модулем `log-shipper` и передачу в Loki или другое хранилище внутри контура. События истории изменений выделяются тегом `["audit"]`. Настройка сбора и доставки логов описана в п. 4.15.
+
+История модуля `commander` не заменяет журнал аудита Kubernetes API управляемого кластера. Попытки изменения переданных правил доступа в обход модуля `commander` регистрируются отдельно по правилам п. 4.23.3.
+
+Чувствительные поля объектов хранятся в базе данных модуля `commander` в зашифрованном виде и не выводятся в журнал событий безопасности. Ключи шифрования необходимо сохранять вместе с резервной копией базы данных (п. 5.9.1). Порядок хранения и удаления записей аудита описан в п. 5.6.
+
 ## 5 Описание параметров (настроек) безопасности
 
 ### 5.1 Настройка сканирования на уязвимости
@@ -9518,32 +9832,34 @@ Stronghold CLI — инструмент для работы со Stronghold из
 1. В разделе «Управление системой» откройте «Безопасность» → «Уязвимости» → «По рабочим нагрузкам» и перейдите на вкладку «Сканируемые неймспейсы».
 1. Включите сканирование неймспейсов с подами, образы которых нужно сканировать. На вкладке также можно запустить повторное сканирование кнопкой «Пересканировать».
 
-   Если в кластере нет неймспейсов, включённых в сканирование, сканируется неймспейс `default`. Как только сканирование включено хотя бы для одного неймспейса, сканирование неймспейса `default` прекращается. Чтобы продолжить сканировать неймспейс `default`, включите сканирование и для него.
+Если в кластере нет неймспейсов, включённых в сканирование, сканируется неймспейс `default`. Как только сканирование включено хотя бы для одного неймспейса, сканирование неймспейса `default` прекращается. Чтобы продолжить сканировать неймспейс `default`, включите сканирование и для него.
 
 {% endtab %}
 {% tab "CLI" %}
 
 1. Если модуль `operator-trivy` отключён, включите его командой:
 
-   ```bash
-   d8 system module enable operator-trivy
-   ```
+    ```bash
+    d8 system module enable operator-trivy
+    ```
 
 1. Обновите базы уязвимостей (п. 5.1.1).
 
 1. Установите лейбл `security-scanning.deckhouse.io/enabled` на неймспейсы с подами, образы которых нужно сканировать:
 
-   ```bash
-   d8 k label namespace <НЕЙМСПЕЙС> security-scanning.deckhouse.io/enabled=""
-   ```
+    ```bash
+    d8 k label namespace <НЕЙМСПЕЙС> security-scanning.deckhouse.io/enabled=""
+    ```
 
-   Здесь `<НЕЙМСПЕЙС>` — имя неймспейса.
+Здесь `<НЕЙМСПЕЙС>` — имя неймспейса.
 
-   Если в кластере нет неймспейсов с этим лейблом, сканируется неймспейс `default`. Как только лейбл появляется хотя бы у одного неймспейса, сканирование неймспейса `default` прекращается. Чтобы продолжить сканировать неймспейс `default`, установите лейбл и на него.
+Если в кластере нет неймспейсов с этим лейблом, сканируется неймспейс `default`. Как только лейбл появляется хотя бы у одного неймспейса, сканирование неймспейса `default` прекращается. Чтобы продолжить сканировать неймспейс `default`, установите лейбл и на него.
 
 {% endtab %}
 {% endtabs %}
 {% raw %}
+
+В DP CSE включите сканирование во всех неймспейсах с прикладной нагрузкой и сканирование хранилищ образов контейнеров, из которых запускаются образы (п. 5.1.2). Иначе уязвимости выявляются только в неймспейсе `default`. Не задавайте пустое значение параметра `scanPeriods.workloadRescanPeriod`: оно отключает повторное сканирование.
 
 Модуль сканирует образы, когда в неймспейсах с лейблом `security-scanning.deckhouse.io/enabled` развёртываются компоненты с новыми образами. Модуль повторяет сканирование, когда возраст отчёта превышает значение параметра `scanPeriods.workloadRescanPeriod` модуля `operator-trivy` (по умолчанию `24h`).
 
@@ -9557,15 +9873,15 @@ Stronghold CLI — инструмент для работы со Stronghold из
 
 1. Чтобы посмотреть уязвимости образов, в разделе «Управление системой» откройте «Безопасность» → «Уязвимости» → «По рабочим нагрузкам». На вкладке «Отчеты об уязвимостях» для каждого проверенного объекта указаны имя, неймспейс, тип и имя ресурса, контейнер и образ. Вкладка «Все CVE» содержит перечень обнаруженных уязвимостей, вкладка «Динамика» — изменение их количества во времени.
 
-   ![Вкладка «Отчеты об уязвимостях»](images/admin-guide/image-5-1-1.png)
+    ![Вкладка «Отчеты об уязвимостях»](images/admin-guide/image-5-1-1.png)
 
-   Рисунок 5.1.1 — Вкладка «Отчеты об уязвимостях»
+    Рисунок 5.1.1 — Вкладка «Отчеты об уязвимостях»
 
 1. Чтобы посмотреть результаты проверок соответствия, откройте «Безопасность» → «Отчеты о соответствии» и выберите отчёт. На вкладке «Результаты» перечислены проверки со статусом (PASSED или FAILED) и уровнем критичности. Кнопка «Экспорт» сохраняет список отчётов в файл.
 
-   ![Страница «Отчеты о соответствии»](images/admin-guide/image-5-1-2.png)
+    ![Страница «Отчеты о соответствии»](images/admin-guide/image-5-1-2.png)
 
-   Рисунок 5.1.2 — Страница «Отчеты о соответствии»
+    Рисунок 5.1.2 — Страница «Отчеты о соответствии»
 
 Результаты сканирования узлов кластера находятся в «Безопасность» → «Уязвимости» → «По узлам».
 
@@ -9714,8 +10030,8 @@ spec:
   maxTags: 50
   # Необязательный параметр. Учётные данные для приватного хранилища образов контейнеров.
   registrySecretRef:
-    name: image-pull-credentialssecret
-    namespace: myapp
+    name: image-pull-credentials-secret
+    namespace: d8-operator-trivy
 ```
 
 Поля RegistryScanTarget:
@@ -9728,8 +10044,31 @@ spec:
 | `maxRepositories` | Нет | Максимальное количество репозиториев, получаемых из каталога, если параметр `repositories` не задан. По умолчанию: `100`. Выбираются первые N репозиториев в лексикографическом порядке |
 | `tagFilter` | Нет | Регулярное выражение. Сканируются только теги, совпадающие с шаблоном |
 | `maxTags` | Нет | Максимальное количество тегов на репозиторий после фильтрации. По умолчанию: `100`. Выбираются первые N тегов в лексикографическом порядке |
-| `registrySecretRef` | Нет | Ссылка на Secret типа `kubernetes.io/dockerconfigjson` с учётными данными хранилища образов контейнеров |
+| `registrySecretRef` | Нет | Ссылка на Secret типа `kubernetes.io/dockerconfigjson` с учётными данными хранилища образов контейнеров. Secret должен находиться в неймспейсе `d8-operator-trivy` и не может называться `deckhouse-registry` или `system-registry` |
 | `insecure` | Нет | Разрешает использовать HTTP или отключает проверку TLS для этого хранилища образов контейнеров |
+
+Сканер читает Secret с учётными данными от имени собственного ServiceAccount, которому разрешено чтение Secret только в неймспейсе `d8-operator-trivy`.
+Поэтому параметр `registrySecretRef.namespace` принимает единственное значение — `d8-operator-trivy`, и RegistryScanTarget со ссылкой на другой неймспейс отклоняется при создании.
+Secret `deckhouse-registry` и `system-registry` хранят учётные данные хранилищ образов контейнеров самого модуля, поэтому ссылка на них также отклоняется.
+
+Secret в неймспейсе `d8-operator-trivy` создаёт администратор кластера.
+Роли модуля `operator-trivy` не дают доступа к Secret в неймспейсе модуля.
+
+Если учётные данные уже хранятся в Secret прикладного неймспейса, скопируйте этот Secret в неймспейс `d8-operator-trivy`:
+
+```bash
+d8 k get secret <ИМЯ_SECRET> -n <ИСХОДНЫЙ_НЕЙМСПЕЙС> -o json \
+  | jq 'del(.metadata.namespace, .metadata.uid, .metadata.resourceVersion, .metadata.creationTimestamp, .metadata.ownerReferences, .metadata.managedFields, .metadata.annotations."kubectl.kubernetes.io/last-applied-configuration")' \
+  | d8 k create -n d8-operator-trivy -f -
+```
+
+Здесь:
+
+- `<ИМЯ_SECRET>` — имя Secret с учётными данными;
+- `<ИСХОДНЫЙ_НЕЙМСПЕЙС>` — неймспейс, в котором находится Secret.
+
+Команда создаёт в неймспейсе `d8-operator-trivy` Secret с тем же именем.
+Укажите этот Secret в параметре `registrySecretRef` и обновляйте его при смене учётных данных.
 
 Если хранилищу образов контейнеров требуется сертификат удостоверяющего центра (УЦ), которого нет в системном хранилище доверенных сертификатов, добавьте его с помощью параметра `additionalRegistryCA` модуля `operator-trivy` (п. 5.1.3).
 
@@ -9775,9 +10114,9 @@ ModuleConfig `operator-trivy` содержит параметры запрета
 
 1. В разделе «Управление системой» откройте «Безопасность» → «Политики и управление» → «Запрет уязвимых образов». На странице отображаются состояние запрета, разрешённые уровни критичности, секреты для доступа к хранилищу образов контейнеров и список заблокированных образов.
 
-   ![Страница «Запрет уязвимых образов»](images/admin-guide/image-5-1-3-1.png)
+    ![Страница «Запрет уязвимых образов»](images/admin-guide/image-5-1-3-1.png)
 
-   Рисунок 5.1.3.1 — Страница «Запрет уязвимых образов»
+    Рисунок 5.1.3.1 — Страница «Запрет уязвимых образов»
 
 1. Нажмите кнопку «Открыть настройки модуля». Откроется панель модуля `operator-trivy`.
 1. В блоке «Дополнительные настройки» задайте параметры на вкладке «Конфигурация» или «YAML» и нажмите «Применить».
@@ -9820,7 +10159,7 @@ spec:
 
   По умолчанию: `false`. В DP CSE параметр должен иметь значение `true`. Это значение задают в файле конфигурации установки (п. 4.5.1).
 
-  Чтобы запрет действовал в неймспейсе, установите на него лейбл:
+  В DP CSE установите этот лейбл на все неймспейсы с прикладной нагрузкой. Чтобы запрет действовал в неймспейсе, установите на него лейбл:
 
   ```bash
   d8 k label namespace <НЕЙМСПЕЙС> security.deckhouse.io/trivy-provider=""
@@ -9871,6 +10210,16 @@ spec:
   Список адресов хранилищ образов контейнеров, к которым разрешены подключения по HTTP и подключения по HTTPS без проверки TLS-сертификата.
 
   Параметр применяется при сканировании рабочих нагрузок, при проверке запрета уязвимых образов (`denyVulnerableImages`) и при сканировании хранилищ образов контейнеров с помощью RegistryScanTarget.
+
+- `settings.securityEvents.minimumSeverity` — строка.
+
+  Наименьший уровень критичности находки, при котором модуль регистрирует событие безопасности.
+
+  Отчёт о сканировании создаёт событие безопасности, если его наиболее критичная находка имеет указанный уровень или выше. Событие получает уровень этой находки: CRITICAL соответствует `Critical`, HIGH — `High`, MEDIUM — `Medium`, LOW и UNKNOWN — `Low`. Отклонённые образы, ошибки сканирования хранилищ и невыполненные требования стандартов соответствия создают событие независимо от параметра. Коды событий приведены в п. 7.3.
+
+  Допустимые значения: `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`. По умолчанию: `HIGH`. В DP CSE параметр должен иметь значение `LOW`, чтобы регистрировалось выявление уязвимостей всех уровней критичности. Это значение задают в файле конфигурации установки (п. 4.5.1).
+
+  Событие указывает объект сканирования, образ, число найденных уязвимостей каждого уровня критичности и имя отчёта (поле `metadata.extra.reportName`). Идентификаторы уязвимостей (CVE и БДУ) содержатся в этом отчёте (п. 5.1).
 
 ### 5.2 Настройка политик безопасности
 
@@ -10027,7 +10376,150 @@ spec:
 
   Верхняя граница диапазона портов.
 
-### 5.3 Настройка уведомлений о событиях безопасности на почту
+#### 5.2.2 Изоляция контейнеров
+
+Политика `Baseline` запрещает запуск привилегированных контейнеров, использование пространств имён процессов, межпроцессного взаимодействия и сети узла (`hostPID`, `hostIPC`, `hostNetwork`), а также монтирование каталогов узла через тома `hostPath`.
+
+Эти ограничения применяются автоматически при выборе политики `Baseline` или `Restricted` и режима `Deny`. В неймспейсах с прикладной нагрузкой не переопределяйте политику на `Privileged` и режим применения на `Dryrun` или `Warn`.
+
+По умолчанию монтирование файловой системы хоста через `hostPath` запрещено полностью. Если такое монтирование необходимо, администратор кластера разрешает конкретные пути параметром `allowedHostPaths` ресурса SecurityPolicy, задавая для них `readOnly: true`.
+
+Pod Security Standards не ограничивают использование оперативной памяти и операции ввода-вывода. Требование обязательного указания лимитов памяти настраивается отдельно с помощью OperationPolicy.
+
+В DP CSE не назначайте неймспейсам с прикладной нагрузкой политику `Privileged`.
+
+### 5.3 Настройка оповещения о событиях безопасности
+
+Оповещение о событиях безопасности строится на правилах ClusterSecurityEventAlertRule модуля `security-events-manager`. Правило отбирает события безопасности по коду, источнику, категории, важности или субъекту и вызывает алерт `D8SecurityEventAlertFiring`, когда условие выполнено. Алерт отображается в веб-интерфейсе DP CSE как объект ClusterAlert и доставляется во все настроенные каналы уведомлений, в том числе на почту (п. 5.3.2).
+
+Правила вычисляются по событиям, сохранённым во внутреннем хранилище Loki. Поэтому для работы правил в параметре `securityEventConfig.destinations` модуля `security-events-manager` должен быть указан приёмник `cluster-loki` (п. 4.5.1).
+
+#### 5.3.1 Правила оповещения
+
+В DP CSE создайте правила оповещения, приведённые ниже. Они обеспечивают оповещение администратора безопасности о нарушениях целостности объектов контроля, об инцидентах безопасности, о выявленных уязвимостях и о событиях безопасности средства виртуализации. Правила также приведены в файле конфигурации установки (п. 4.5.1).
+
+Правило оповещения о нарушениях целостности объектов контроля срабатывает на каждое такое событие, в том числе вызванное компонентами DP CSE:
+
+```yaml
+apiVersion: security.deckhouse.io/v1alpha1
+kind: ClusterSecurityEventAlertRule
+metadata:
+  name: integrity-violation
+spec:
+  groups:
+    - name: integrity
+      rules:
+        - alert: IntegrityViolation
+          mode: Match
+          match:
+            eventCodes:
+              - D8_CONTAINERD_INTEGRITY_VIOLATION
+              - D8_RUNTIME_MISSING_DIGITAL_SIGNATURE
+              - D8_RUNTIME_EVENT_WITH_DECKHOUSEIO_AND_SIGNATURE_ANNOTATION
+              - VIRT_VM_INTEGRITY_CHECK_FAILED
+            excludeSystemActors: false
+          severityLevel: 5
+          annotations:
+            summary: "Обнаружено нарушение целостности объекта контроля"
+```
+
+Правило оповещения об инцидентах безопасности срабатывает на события высокой и критической важности из всех источников:
+
+```yaml
+apiVersion: security.deckhouse.io/v1alpha1
+kind: ClusterSecurityEventAlertRule
+metadata:
+  name: security-incidents
+spec:
+  groups:
+    - name: incidents
+      rules:
+        - alert: SecurityIncident
+          mode: Match
+          match:
+            severityMin: High
+          severityLevel: 5
+          annotations:
+            summary: "Зарегистрировано событие безопасности высокой или критической важности"
+```
+
+Правило оповещения администратора безопасности о выявленных уязвимостях срабатывает на каждое событие о найденных уязвимостях в образах рабочих нагрузок, на узлах и в хранилищах образов, а также на каждый отклонённый уязвимый образ. События регистрирует модуль `operator-trivy` от имени своего ServiceAccount, поэтому в правиле задано `excludeSystemActors: false`. Уровни критичности, при которых регистрируются события, задаёт параметр `securityEvents.minimumSeverity` модуля `operator-trivy` (п. 5.1.3):
+
+```yaml
+apiVersion: security.deckhouse.io/v1alpha1
+kind: ClusterSecurityEventAlertRule
+metadata:
+  name: vulnerabilities-found
+spec:
+  groups:
+    - name: vulnerabilities
+      rules:
+        - alert: VulnerabilitiesFound
+          mode: Match
+          match:
+            eventCodes:
+              - D8_TRIVY_WORKLOAD_VULNERABILITIES_FOUND
+              - D8_TRIVY_NODE_VULNERABILITIES_FOUND
+              - D8_TRIVY_REGISTRY_IMAGE_VULNERABILITIES_FOUND
+              - D8_TRIVY_VULNERABLE_IMAGE_REJECTED
+            excludeSystemActors: false
+          severityLevel: 6
+          annotations:
+            summary: "Выявлены уязвимости в образах контейнеров"
+```
+
+Правило оповещения о событиях безопасности средства виртуализации нужно в исполнениях Kubernetes+Virtualization и Virtualization. Оно срабатывает на все события источника `virtualization-audit`:
+
+```yaml
+apiVersion: security.deckhouse.io/v1alpha1
+kind: ClusterSecurityEventAlertRule
+metadata:
+  name: virtualization-security-events
+spec:
+  groups:
+    - name: virtualization
+      rules:
+        - alert: VirtualizationSecurityEvent
+          mode: Match
+          match:
+            sources:
+              - virtualization-audit
+          severityLevel: 6
+          annotations:
+            summary: "Зарегистрировано событие безопасности средства виртуализации"
+```
+
+Здесь:
+
+- `match` — условие отбора событий: коды событий (`eventCodes`), источники (`sources`), категории (`categories`), минимальная важность (`severityMin`), субъекты (`actors`). Условия объединяются по «И»;
+- `excludeSystemActors` — исключать ли события, вызванные компонентами DP CSE. Значение по умолчанию — `true`;
+- `severityLevel` — уровень важности алерта DP CSE. Не задавайте значение `4` и ниже: при включённом параметре `update.blockOnAlerts` модуля `deckhouse` такой алерт блокирует применение обновлений;
+- `annotations.summary` — текст уведомления.
+
+Другие правила администратор безопасности создаёт по своему усмотрению. Правило с порогом задаётся запросом LogQL в поле `expr`. Например, правило ниже срабатывает, когда один субъект получил пять и более отказов в доступе к Kubernetes API за 5 минут:
+
+```yaml
+apiVersion: security.deckhouse.io/v1alpha1
+kind: ClusterSecurityEventAlertRule
+metadata:
+  name: unauthorized-burst
+spec:
+  groups:
+    - name: auth
+      rules:
+        - alert: UnauthorizedBurst
+          mode: Expr
+          expr: |
+            sum by (actor_id) (
+              count_over_time({source_component="kube-audit", event_code="K8S_UNAUTHORIZED_REQUEST"} [5m])
+            ) >= 5
+          annotations:
+            summary: "Повторные отказы в доступе к Kubernetes API"
+```
+
+Чтобы создать правила, сохраните манифесты в файл и примените его командой `d8 k apply -f <ИМЯ_ФАЙЛА>` или вставьте их в редактор YAML, который открывает кнопка «+» на верхней панели веб-интерфейса DP CSE. Чтобы получить список сработавших алертов, выполните команду `d8 k get clusteralerts`.
+
+#### 5.3.2 Доставка уведомлений на почту
 
 Чтобы настроить отправку уведомлений о событиях безопасности на почту, выполните следующие действия:
 
@@ -10039,40 +10531,40 @@ spec:
 1. Создайте Secret `alertmanager-email` с ключом `password`, значение которого — пароль учётной записи почтового сервера.
 1. Нажмите кнопку «+» («YAML») на верхней панели и вставьте манифест CustomAlertmanager:
 
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: CustomAlertmanager
-   metadata:
-     name: email
-   spec:
-     type: Internal
-     internal:
-       receivers:
-         - name: email
-           emailConfigs:
-             - authPassword:
-                 key: password
-                 name: alertmanager-email
-               authUsername: <АДРЕС_ОТПРАВИТЕЛЯ>
-               from: <АДРЕС_ОТПРАВИТЕЛЯ>
-               sendResolved: true
-               smarthost: <АДРЕС_SMTP_СЕРВЕРА>:<ПОРТ>
-               to: <АДРЕС_ПОЛУЧАТЕЛЯ>
-       route:
-         groupBy:
-           - job
-         groupInterval: 5m
-         groupWait: 30s
-         receiver: email
-         repeatInterval: 12h
-   ```
+    ```yaml
+    apiVersion: deckhouse.io/v1alpha1
+    kind: CustomAlertmanager
+    metadata:
+      name: email
+    spec:
+      type: Internal
+      internal:
+        receivers:
+          - name: email
+            emailConfigs:
+              - authPassword:
+                  key: password
+                  name: alertmanager-email
+                authUsername: <АДРЕС_ОТПРАВИТЕЛЯ>
+                from: <АДРЕС_ОТПРАВИТЕЛЯ>
+                sendResolved: true
+                smarthost: <АДРЕС_SMTP_СЕРВЕРА>:<ПОРТ>
+                to: <АДРЕС_ПОЛУЧАТЕЛЯ>
+        route:
+          groupBy:
+            - job
+          groupInterval: 5m
+          groupWait: 30s
+          receiver: email
+          repeatInterval: 12h
+    ```
 
-   Здесь:
+    Здесь:
 
-   - `<АДРЕС_ОТПРАВИТЕЛЯ>` — адрес электронной почты, с которого отправляются уведомления (этот же адрес — имя учётной записи на почтовом сервере);
-   - `<АДРЕС_SMTP_СЕРВЕРА>` — адрес SMTP-сервера;
-   - `<ПОРТ>` — порт SMTP-сервера;
-   - `<АДРЕС_ПОЛУЧАТЕЛЯ>` — адрес электронной почты получателя уведомлений.
+    - `<АДРЕС_ОТПРАВИТЕЛЯ>` — адрес электронной почты, с которого отправляются уведомления (этот же адрес — имя учётной записи на почтовом сервере);
+    - `<АДРЕС_SMTP_СЕРВЕРА>` — адрес SMTP-сервера;
+    - `<ПОРТ>` — порт SMTP-сервера;
+    - `<АДРЕС_ПОЛУЧАТЕЛЯ>` — адрес электронной почты получателя уведомлений.
 
 1. Нажмите «Создать».
 
@@ -10081,60 +10573,60 @@ spec:
 
 1. Создайте в неймспейсе `d8-monitoring` Secret с паролем учётной записи почтового сервера:
 
-   ```bash
-   d8 k -n d8-monitoring create secret generic alertmanager-email --from-literal=password=<ПАРОЛЬ_SMTP>
-   ```
+    ```bash
+    d8 k -n d8-monitoring create secret generic alertmanager-email --from-literal=password=<ПАРОЛЬ_SMTP>
+    ```
 
-   Здесь `<ПАРОЛЬ_SMTP>` — пароль учётной записи почтового сервера.
+    Здесь `<ПАРОЛЬ_SMTP>` — пароль учётной записи почтового сервера.
 
 1. Создайте файл `email.yaml` с описанием CustomAlertmanager, например:
 
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: CustomAlertmanager
-   metadata:
-     name: email
-   spec:
-     type: Internal
-     internal:
-       receivers:
-         - name: email
-           emailConfigs:
-             - authPassword:
-                 key: password
-                 name: alertmanager-email
-               authUsername: <АДРЕС_ОТПРАВИТЕЛЯ>
-               from: <АДРЕС_ОТПРАВИТЕЛЯ>
-               sendResolved: true
-               smarthost: <АДРЕС_SMTP_СЕРВЕРА>:<ПОРТ>
-               to: <АДРЕС_ПОЛУЧАТЕЛЯ>
-       route:
-         groupBy:
-           - job
-         groupInterval: 5m
-         groupWait: 30s
-         receiver: email
-         repeatInterval: 12h
-   ```
+    ```yaml
+    apiVersion: deckhouse.io/v1alpha1
+    kind: CustomAlertmanager
+    metadata:
+      name: email
+    spec:
+      type: Internal
+      internal:
+        receivers:
+          - name: email
+            emailConfigs:
+              - authPassword:
+                  key: password
+                  name: alertmanager-email
+                authUsername: <АДРЕС_ОТПРАВИТЕЛЯ>
+                from: <АДРЕС_ОТПРАВИТЕЛЯ>
+                sendResolved: true
+                smarthost: <АДРЕС_SMTP_СЕРВЕРА>:<ПОРТ>
+                to: <АДРЕС_ПОЛУЧАТЕЛЯ>
+        route:
+          groupBy:
+            - job
+          groupInterval: 5m
+          groupWait: 30s
+          receiver: email
+          repeatInterval: 12h
+    ```
 
-   Здесь:
+    Здесь:
 
-   - `<АДРЕС_ОТПРАВИТЕЛЯ>` — адрес электронной почты, с которого отправляются уведомления (этот же адрес — имя учётной записи на почтовом сервере);
-   - `<АДРЕС_SMTP_СЕРВЕРА>` — адрес SMTP-сервера;
-   - `<ПОРТ>` — порт SMTP-сервера;
-   - `<АДРЕС_ПОЛУЧАТЕЛЯ>` — адрес электронной почты получателя уведомлений.
+    - `<АДРЕС_ОТПРАВИТЕЛЯ>` — адрес электронной почты, с которого отправляются уведомления (этот же адрес — имя учётной записи на почтовом сервере);
+    - `<АДРЕС_SMTP_СЕРВЕРА>` — адрес SMTP-сервера;
+    - `<ПОРТ>` — порт SMTP-сервера;
+    - `<АДРЕС_ПОЛУЧАТЕЛЯ>` — адрес электронной почты получателя уведомлений.
 
 1. Примените файл:
 
-   ```bash
-   d8 k apply -f email.yaml
-   ```
+    ```bash
+    d8 k apply -f email.yaml
+    ```
 
 {% endtab %}
 {% endtabs %}
 {% raw %}
 
-При включённом модуле `observability` уведомления об алертах также можно настроить каналами и правилами уведомлений («Мониторинг» → «Настройки уведомлений», п. 4.19.12).
+Уведомления об алертах также можно настроить каналами и правилами уведомлений («Мониторинг» → «Настройки уведомлений», п. 4.19.12).
 
 ### 5.4 Настройка доступа к журналам событий безопасности
 
@@ -10148,9 +10640,9 @@ spec:
 1. В секции «Аутентификация в Grafana и Prometheus» задайте группы пользователей, которым разрешён доступ в Grafana и Prometheus (параметр `auth.allowedUserGroups`), например `administrator` и `security`.
 1. Сохраните изменения.
 
-   ![Вкладка «Конфигурация» страницы «Состояние Prometheus»](images/admin-guide/image-5-4-1.png)
+    ![Вкладка «Конфигурация» страницы «Состояние Prometheus»](images/admin-guide/image-5-4-1.png)
 
-   Рисунок 5.4.1 — Вкладка «Конфигурация» страницы «Состояние Prometheus»
+    Рисунок 5.4.1 — Вкладка «Конфигурация» страницы «Состояние Prometheus»
 
 {% endtab %}
 {% tab "CLI" %}
@@ -10189,9 +10681,22 @@ d8 k apply -f prometheus.yaml
 
 ### 5.5 Просмотр журналов событий безопасности
 
-Журналы событий безопасности и результаты проверок доступны в веб-интерфейсе DP CSE и в объектах кластера.
+События безопасности DP CSE регистрирует модуль `security-events-manager`. Модуль собирает записи из источников, отбирает среди них события безопасности по определениям SecurityEventDefinition и формирует для каждого события запись в едином формате. Модуль `security-events-manager` обязателен (п. 7.1).
 
-Если включён модуль `security-events-manager`, события безопасности отображаются на странице «Безопасность» → «Мониторинг» → «События безопасности» раздела «Управление системой». Для отбора событий используйте фильтры «Диапазон времени», «Код события», «Severity», «Категория», «Источник», «Тип субъекта», «Субъект» и поле «Поиск в событии». Кнопка «Исключить системные» скрывает события, вызванные системными компонентами. Кнопка «Экспорт CSV» сохраняет события в файл.
+В DP CSE используются следующие источники событий безопасности:
+
+| Источник | Что регистрирует | Модуль |
+| --- | --- | --- |
+| `kube-audit` | Обращения к Kubernetes API: управление учётными записями, ролями и правами, доступ к секретам, создание и удаление подов, изменение конфигурации, отказы в доступе | `security-events-manager` |
+| `containerd-integrity` | Нарушения целостности образов при загрузке и запуске контейнеров | `security-events-manager` |
+| `runtime-audit-engine` | События ядра Linux и аудита Kubernetes API, выявленные правилами аудита: изменение запущенных контейнеров, нарушение подписи бинарных файлов и объектов etcd, обращения к каталогу образов | `runtime-audit-engine` |
+| `virtualization-audit` | Доступ к ВМ, управление ВМ и модулем, нарушения целостности конфигурации ВМ, запрещённые операции (п. 4.16.8) | `virtualization` |
+| `neuvector` | Срабатывания WAF и DLP (п. 5.11) | `neuvector` |
+| `operator-trivy` | Выявление уязвимостей в образах рабочих нагрузок, на узлах и в хранилищах образов, отклонение уязвимых образов, некорректность конфигурации и прав RBAC, невыполненные требования стандартов соответствия (п. 5.1) | `operator-trivy` |
+
+Каждая запись события безопасности содержит уникальный идентификатор (`id`), дату и время (`timestamp`), код события (`event.code`), категорию (`event.category`), важность (`event.severity`), результат (`event.outcome`), описание (`event.description`), субъект (`actor`), объект (`object`) и источник (`source`). Перечень событий приведён в п. 7.3.
+
+События безопасности отображаются на странице «Безопасность» → «Мониторинг» → «События безопасности» раздела «Управление системой». Для отбора событий используйте фильтры «Диапазон времени», «Код события», «Severity», «Категория», «Источник», «Тип субъекта», «Субъект» и поле «Поиск в событии». Кнопка «Исключить системные» скрывает события, вызванные системными компонентами. Кнопка «Экспорт CSV» сохраняет отобранные события в файл.
 
 ![Страница «События безопасности»](images/admin-guide/image-5-5-1.png)
 
@@ -10211,60 +10716,36 @@ d8 k apply -f prometheus.yaml
 
 - Runtime audit engine (каталог Kubernetes Cluster). Содержит сведения о работе модуля `runtime-audit-engine` и статистику срабатываний правил аудита: частоту срабатываний и наиболее часто срабатывающие правила.
 
-Модуль `runtime-audit-engine` анализирует события ядра Linux и аудита Kubernetes API. Обнаруженные события безопасности модуль записывает в журнал контейнера `falco` своих подов в неймспейсе `d8-runtime-audit-engine`. Эти события сохраняются в Loki (п. 5.6). Чтобы просмотреть их, выполните следующие действия:
+Отдельно настраивать сбор журнала контейнера `falco` или файла журнала аудита Kubernetes API (`/var/log/kube-audit/audit.log`) не требуется: события из них регистрируют источники `runtime-audit-engine` и `kube-audit`.
 
-{% endraw %}
-{% tabs view-falco-events %}
-{% tab "Веб-интерфейс" %}
-
-{% raw %}
-
-1. В разделе «Управление системой» откройте «Мониторинг» → «Обзор данных».
-1. Выберите источник данных `d8-loki`.
-1. Выполните запрос:
-
-   ```text
-   {namespace="d8-runtime-audit-engine", container="falco"}
-   ```
-
-{% endraw %}
-
-{% endtab %}
-{% tab "CLI" %}
-
-Выполните команду:
-
-```bash
-d8 k -n d8-runtime-audit-engine logs -l app=runtime-audit-engine -c falco
-```
-
-Команда выводит журнал контейнера `falco` с подов модуля. События, сохранённые в Loki, можно выгрузить командой `d8 backup loki` (п. 5.6.1).
-
-{% endtab %}
-{% endtabs %}
-{% raw %}
-
-API-сервер записывает журнал обращений к API-серверу (журнал аудита Kubernetes API) в файл `/var/log/kube-audit/audit.log` на master-узлах. Чтобы сохранять его в Loki и просматривать в Grafana, настройте сбор файла с помощью ClusterLoggingConfig, например:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha2
-kind: ClusterLoggingConfig
-metadata:
-  name: kube-audit
-spec:
-  type: File
-  file:
-    include:
-      - /var/log/kube-audit/audit.log
-  destinationRefs:
-    - d8-loki
-```
-
-Результаты сканирования на уязвимости и проверок соответствия (модуль `operator-trivy`) доступны в веб-интерфейсе DP CSE и в объектах кластера (п. 5.1).
+Результаты сканирования на уязвимости и проверок соответствия (модуль `operator-trivy`) регистрируются как события безопасности источника `operator-trivy`. Полные отчёты с идентификаторами уязвимостей доступны в веб-интерфейсе DP CSE и в объектах кластера (п. 5.1).
 
 ### 5.6 Хранение журналов событий безопасности
 
-В DP CSE журналы событий безопасности хранит модуль `loki`.
+Модуль `security-events-manager` доставляет события безопасности в приёмники ClusterSecurityEventDestination, перечисленные в параметре `securityEventConfig.destinations`. Стандартный приёмник `cluster-loki` сохраняет события во внутреннем хранилище модуля `loki`. Для работы страницы «События безопасности» (п. 5.5) и правил оповещения (п. 5.3.1) приёмник `cluster-loki` обязателен.
+
+Защита целостности журналов событий безопасности обеспечивается ограничением операций API Loki. В поставке DP CSE возможность удаления записей через API отключена. Дополнительная настройка со стороны администратора не требуется.
+
+Чтобы хранить события безопасности долговременно или передавать их во внешнюю систему анализа, создайте дополнительный приёмник ClusterSecurityEventDestination и добавьте его имя в параметр `securityEventConfig.destinations`. Поддерживаются приёмники типов `Loki`, `Elasticsearch`, `Kafka`, `SplunkHEC`, `Vector`, `Socket`, `File` и `Console`. Например, приёмник во внешний экземпляр Loki:
+
+```yaml
+apiVersion: security.deckhouse.io/v1alpha1
+kind: ClusterSecurityEventDestination
+metadata:
+  name: external-loki
+spec:
+  type: Loki
+  loki:
+    endpoint: https://<АДРЕС_LOKI>
+    tls:
+      verifyCertificate: true
+      verifyHostname: true
+      ca: <СЕРТИФИКАТ_УЦ>
+```
+
+Здесь `<АДРЕС_LOKI>` — адрес внешнего Loki, `<СЕРТИФИКАТ_УЦ>` — сертификат УЦ в формате PEM, закодированный в Base64.
+
+Параметры внутреннего хранилища задаёт модуль `loki`.
 
 Объём выделенного хранилища задаёт параметр `diskSizeGigabytes` в ModuleConfig `loki`. Объём соответствует размеру PersistentVolume. Администратор может изменить этот параметр при необходимости.
 
@@ -10321,11 +10802,19 @@ spec:
     - d8-loki
 ```
 
-Чтобы хранить журналы аудита долговременно или архивировать их, выгрузите логи командой `d8 backup loki` (п. 5.6.1). Выгруженные логи можно перенести и заархивировать по внутренним процедурам организации.
+Чтобы хранить события безопасности долговременно или архивировать их, выгрузите их командой `d8 backup loki` (п. 5.6.1). Выгруженные события можно перенести и заархивировать по внутренним процедурам организации. Дополнительно события можно передавать во внешнюю систему хранения через приёмник ClusterSecurityEventDestination, описанный выше.
 
 Чтобы хранить данные длительно или передавать их во внешние системы, можно использовать модуль `log-shipper`, интеграцию с внешним экземпляром Loki или объектное хранилище.
 
 Модуль `loki` контролирует выделенное пространство и очищает его. Логи переносят и архивируют дополнительными средствами DP CSE, вне автоматического процесса.
+
+Если включён модуль `commander`, учитывайте два места хранения событий: базу данных модуля `commander` и централизованное хранилище, в которое передаются журналы компонентов.
+
+По умолчанию записи аудита в базе данных модуля `commander` хранятся бессрочно. Для автоматического удаления записей по истечении установленного срока задайте число дней в параметре `spec.settings.featureFlags.auditsRetentionDays` ModuleConfig `commander`. Удаление выполняется ежедневно. Чтобы отключить автоматическое удаление, удалите этот параметр.
+
+Удаление объектов модуля `commander` не удаляет записи об их изменениях. Очистка архивных кластеров и шаблонов задаётся отдельно параметром `archiveRetentionDays` и не заменяет настройку срока хранения аудита.
+
+Архивирование централизованного журнала и освобождение места при достижении предельного объёма обеспечиваются средствами среды функционирования. Настройте передачу и сохранение событий в архив до их удаления из рабочего хранилища. Срок хранения записей в базе данных модуля `commander` и правила хранения централизованного журнала задавайте согласованно.
 
 #### 5.6.1 Выгрузка логов
 
@@ -10365,7 +10854,9 @@ d8 backup loki --help
 
 - при запуске контейнеров приложений;
 - во время работы контейнеров приложений;
-- при взаимодействии контейнеров с данными, хранимыми в кластере в etcd.
+- при взаимодействии контейнеров с данными, хранимыми в кластере в etcd;
+- при использовании файлов модулей, загруженных из источников модулей.
+  Защита служебных объектов DP CSE от изменений не относится к контролю целостности и описана в п. 4.12.3.1.
 
 #### 5.7.1 Контроль целостности при запуске контейнеров
 
@@ -10414,7 +10905,6 @@ d8 backup loki --help
 - `d8-static-routing-manager`;
 - `d8-storage-volume-data-manager`;
 - `d8-system`;
-- `d8-upmeter`;
 - `d8-user-authn`;
 - `d8-user-authz`;
 - `d8-virtualization`;
@@ -10439,7 +10929,7 @@ d8 backup loki --help
 1. Для контейнеров из защищаемых неймспейсов containerd проверяет подпись образа, контрольные суммы DM-Verity и целостность данных контейнера на узле.
 1. Если проверки проходят успешно, контейнер запускается. Если проверка завершается ошибкой, контейнер не запускается.
 
-Ошибки проверки записываются в журнал службы `containerd-deckhouse` с компонентом `integrity`. В DP CSE такие события дополнительно сохраняются в файл `/var/log/containerd/containerd-integrity.log`. Эти события могут передаваться в подсистему аудита событий безопасности.
+Ошибки проверки записываются в журнал службы `containerd-deckhouse` с компонентом `integrity`. В DP CSE такие события дополнительно сохраняются в файл `/var/log/containerd/containerd-integrity.log`. Модуль `security-events-manager` регистрирует их как события безопасности `D8_CONTAINERD_INTEGRITY_VIOLATION` (источник `containerd-integrity`, п. 5.5). Администратор безопасности получает о них уведомление по правилу `integrity-violation` (п. 5.3.1).
 
 #### 5.7.2 Контроль целостности работающих контейнеров
 
@@ -10507,86 +10997,92 @@ spec:
 
 1. Сгенерируйте пару ключей (публичный и приватный):
 
-   ```bash
-   d8 tools cosign generate-key-pair
-   ```
+    ```bash
+    d8 tools cosign generate-key-pair
+    ```
 
 1. Подпишите образ в хранилище образов контейнеров с помощью сгенерированного приватного ключа:
 
-   ```bash
-   d8 tools cosign sign --key <ПУТЬ_К_КЛЮЧУ> <АДРЕС_ОБРАЗА>
-   ```
+    ```bash
+    d8 tools cosign sign --key <ПУТЬ_К_КЛЮЧУ> <АДРЕС_ОБРАЗА>
+    ```
 
-   Здесь:
+    Здесь:
 
-   - `<ПУТЬ_К_КЛЮЧУ>` — путь к приватному ключу, сгенерированному на шаге 1;
-   - `<АДРЕС_ОБРАЗА>` — адрес образа в хранилище образов контейнеров, который указывается при запуске, например `registry.private.ru/labs/application/image:latest`.
+    - `<ПУТЬ_К_КЛЮЧУ>` — путь к приватному ключу, сгенерированному на шаге 1;
+    - `<АДРЕС_ОБРАЗА>` — адрес образа в хранилище образов контейнеров, который указывается при запуске, например `registry.private.ru/labs/application/image:latest`.
 
 1. Включите проверку подписи образов контейнеров в кластере DP CSE: задайте в SecurityPolicy параметр `policies.verifyImageSignatures` с публичным ключом, сгенерированным на шаге 1.
 
-   Пример SecurityPolicy для проверки подписи образов контейнеров, размещённых в хранилище `registry.private.ru` по пути `/labs/application/`:
+    Пример SecurityPolicy для проверки подписи образов контейнеров, размещённых в хранилище `registry.private.ru` по пути `/labs/application/`:
 
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: SecurityPolicy
-   metadata:
-     name: verify-image-test
-   spec:
-     enforcementAction: Deny
-     match:
-       namespaceSelector:
-         labelSelector:
-           matchLabels:
-             kubernetes.io/metadata.name: test-namespace
-     policies:
-       verifyImageSignatures:
-       - publicKeys:
-         - |-
-           -----BEGIN PUBLIC KEY-----
-           MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEhpqaufY9JSY+g4JZmmEWCxYp4BSj
-           YAzTW+LBJa6GwiJ+iWHMEw2w8aiVk7NSayEp5ZDZaBTmspT/dyuWSpazPQ==
-           -----END PUBLIC KEY-----
-         reference: registry.private.ru/labs/application/*
-   ```
+    ```yaml
+    apiVersion: deckhouse.io/v1alpha1
+    kind: SecurityPolicy
+    metadata:
+      name: verify-image-test
+    spec:
+      enforcementAction: Deny
+      match:
+        namespaceSelector:
+          labelSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: test-namespace
+      policies:
+        verifyImageSignatures:
+        - publicKeys:
+          - |-
+            -----BEGIN PUBLIC KEY-----
+            MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEhpqaufY9JSY+g4JZmmEWCxYp4BSj
+            YAzTW+LBJa6GwiJ+iWHMEw2w8aiVk7NSayEp5ZDZaBTmspT/dyuWSpazPQ==
+            -----END PUBLIC KEY-----
+          reference: registry.private.ru/labs/application/*
+    ```
+
+    SecurityPolicy с параметром `policies.verifyImageSignatures` проверяет подписи только образов, адреса которых соответствуют `reference`. Образы вне этой области политика не запрещает. Поэтому используйте её совместно с OperationPolicy: все образы, разрешённые параметром `policies.allowedRepos`, должны попадать в область проверки подписи.
+
+    В `policies.allowedRepos` указываются префиксы адресов образов: адрес разрешённого образа должен начинаться с одной из указанных строк. Символы подстановки и регулярные выражения не поддерживаются. В параметре `reference` можно указать точный адрес образа или шаблон адреса с символом `*`. Этот символ означает любую последовательность символов и допускается только один раз, в конце шаблона.
+
+    В приведённом примере OperationPolicy разрешает только образы, адреса которых начинаются с `registry.private.ru/labs/application/`, например `registry.private.ru/labs/application/image:latest`. SecurityPolicy проверяет подписи этих образов по шаблону `registry.private.ru/labs/application/*`. Таким образом, проверка подписи охватывает все образы, разрешённые OperationPolicy.
 
 1. Создайте OperationPolicy, которая запрещает в неймспейсе `test-namespace` запуск подов с образами из сторонних хранилищ образов контейнеров:
 
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: OperationPolicy
-   metadata:
-     name: test-operation-policy
-   spec:
-     enforcementAction: Deny
-     match:
-       namespaceSelector:
-         labelSelector:
-           matchLabels:
-             kubernetes.io/metadata.name: test-namespace
-     policies:
-       allowedRepos:
-       - registry.private.ru
-   ```
+    ```yaml
+    apiVersion: deckhouse.io/v1alpha1
+    kind: OperationPolicy
+    metadata:
+      name: test-operation-policy
+    spec:
+      enforcementAction: Deny
+      match:
+        namespaceSelector:
+          labelSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: test-namespace
+      policies:
+        allowedRepos:
+        - registry.private.ru/labs/application/
+    ```
 
 1. Проверьте работу механизма подписи образов: разверните в неймспейсе `test-namespace` поды с подписанным и неподписанным образами:
 
-   ```bash
-   d8 k -n test-namespace run signed-pod --image=<ПОДПИСАННЫЙ_ОБРАЗ>
-   d8 k -n test-namespace run unsigned-pod --image=<НЕПОДПИСАННЫЙ_ОБРАЗ>
-   ```
+    ```bash
+    d8 k -n test-namespace run signed-pod --image=<ПОДПИСАННЫЙ_ОБРАЗ>
+    d8 k -n test-namespace run unsigned-pod --image=<НЕПОДПИСАННЫЙ_ОБРАЗ>
+    ```
 
-   Здесь:
+    Здесь:
 
-   - `<ПОДПИСАННЫЙ_ОБРАЗ>` — образ из `registry.private.ru/labs/application/`, подписанный на шаге 2;
-   - `<НЕПОДПИСАННЫЙ_ОБРАЗ>` — образ из `registry.private.ru/labs/application/` без подписи.
+    - `<ПОДПИСАННЫЙ_ОБРАЗ>` — образ из `registry.private.ru/labs/application/`, подписанный на шаге 2;
+    - `<НЕПОДПИСАННЫЙ_ОБРАЗ>` — образ из `registry.private.ru/labs/application/` без подписи.
 
-   Если адрес образа контейнера совпадает со значением параметра `reference` в SecurityPolicy, а образ не подписан или подпись не соответствует указанным ключам, SecurityPolicy запрещает создание пода. Поэтому под `signed-pod` создаётся, а под `unsigned-pod` — нет.
+    Если адрес образа контейнера совпадает со значением параметра `reference` в SecurityPolicy, а образ не подписан или подпись не соответствует указанным ключам, SecurityPolicy запрещает создание пода. Поэтому под `signed-pod` создаётся, а под `unsigned-pod` — нет.
 
-   Пример вывода ошибки при создании пода с образом контейнера, не прошедшим проверку подписи:
+    Пример вывода ошибки при создании пода с образом контейнера, не прошедшим проверку подписи:
 
-   ```console
-   [verify-image-signatures] Image signature verification failed: registry.private.ru/labs/application/image:unsigned
-   ```
+    ```console
+    [verify-image-signatures] Image signature verification failed: registry.private.ru/labs/application/image:unsigned
+    ```
 
 ##### 5.7.4.2 Проверка целостности образа с помощью ContainerdIntegrityPolicy
 
@@ -10619,29 +11115,29 @@ spec:
 
 1. Создайте ContainerdIntegrityPolicy. Укажите в ней сертификат УЦ и лейбл, по которому выбираются защищаемые неймспейсы. Сохраните манифест в файл и примените его командой `d8 k apply -f <ИМЯ_ФАЙЛА>`. Пример манифеста:
 
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ContainerdIntegrityPolicy
-   metadata:
-     name: integrity-policy
-   spec:
-     ca: |
-       -----BEGIN CERTIFICATE-----
-       MIIGOTCCBCGgAwIBAgIJAOE/vJd8EB24MA0GCSqGSIb3DQEBBQUAMIGyMQswCQYD
-       ...
-       -----END CERTIFICATE-----
-     protectedNamespaces:
-       matchLabels:
-         integrity: enabled
-   ```
+    ```yaml
+    apiVersion: deckhouse.io/v1alpha1
+    kind: ContainerdIntegrityPolicy
+    metadata:
+      name: integrity-policy
+    spec:
+      ca: |
+        -----BEGIN CERTIFICATE-----
+        MIIGOTCCBCGgAwIBAgIJAOE/vJd8EB24MA0GCSqGSIb3DQEBBQUAMIGyMQswCQYD
+        ...
+        -----END CERTIFICATE-----
+      protectedNamespaces:
+        matchLabels:
+          integrity: enabled
+    ```
 
 1. Установите на нужный неймспейс лейбл, указанный в `protectedNamespaces.matchLabels`:
 
-   ```bash
-   d8 k label ns <НЕЙМСПЕЙС> integrity=enabled
-   ```
+    ```bash
+    d8 k label ns <НЕЙМСПЕЙС> integrity=enabled
+    ```
 
-   Здесь `<НЕЙМСПЕЙС>` — имя неймспейса, образы в котором нужно проверять.
+    Здесь `<НЕЙМСПЕЙС>` — имя неймспейса, образы в котором нужно проверять.
 
 {% endtab %}
 {% endtabs %}
@@ -10651,20 +11147,55 @@ spec:
 
 1. Убедитесь, что конфигурация применена на узлах. Для этого на любом узле с `ContainerdV2` проверьте, что файл `/etc/containerd/integrity/integrity.toml` содержит имя размеченного неймспейса и указанный сертификат УЦ. Сертификаты хранятся в файле в кодировке Base64. Список `ca_certs` может содержать несколько сертификатов — по одному от каждой применённой ContainerdIntegrityPolicy. Пример содержимого файла:
 
-   ```toml
-   namespaces = ["my-ns", "production", "kube-.+"]
-   ca_certs = ["<СЕРТИФИКАТ_УЦ_1>", "<СЕРТИФИКАТ_УЦ_2>"]
-   ```
+    ```toml
+    namespaces = ["my-ns", "production", "kube-.+"]
+    ca_certs = ["<СЕРТИФИКАТ_УЦ_1>", "<СЕРТИФИКАТ_УЦ_2>"]
+    ```
 
-   Здесь `<СЕРТИФИКАТ_УЦ_1>`, `<СЕРТИФИКАТ_УЦ_2>` — сертификаты УЦ в кодировке Base64.
+    Здесь `<СЕРТИФИКАТ_УЦ_1>`, `<СЕРТИФИКАТ_УЦ_2>` — сертификаты УЦ в кодировке Base64.
 
 1. Проверьте работу механизма: запустите в размеченном неймспейсе под с неподписанным образом или с образом, подпись которого не проходит проверку по указанному сертификату УЦ. containerd не запустит такой контейнер, а в событиях (Events) пода появится сообщение об ошибке:
 
-   ```console
-   manifest verification failed: manifest signature verification failed: signature bundle creation: unmarshaling map to bundle: no signature. component=integrity
-   ```
+    ```console
+    manifest verification failed: manifest signature verification failed: signature bundle creation: unmarshaling map to bundle: no signature. component=integrity
+    ```
 
-   Дополнительно ошибки проверки записываются в журнал службы `containerd-deckhouse` с компонентом `integrity` и сохраняются в файл `/var/log/containerd/containerd-integrity.log`.
+Дополнительно ошибки проверки записываются в журнал службы `containerd-deckhouse` с компонентом `integrity` и сохраняются в файл `/var/log/containerd/containerd-integrity.log`.
+
+#### 5.7.5 Защита целостности модулей
+
+DP CSE защищает от изменений файлы модулей, загруженных из источников модулей (ModuleSource), в том числе модулей, загруженных с помощью ModulePullOverride. Защищается всё содержимое образа модуля: хуки, шаблоны и чарты Helm, OpenAPI-схемы, CRD и файл `module.yaml`.
+Защиту выполняет контроллер DP CSE — под `deckhouse` в неймспейсе `d8-system`. Механизм не связан с контролем целостности при запуске контейнеров (п. 5.7.1) и не зависит от среды выполнения контейнеров.
+
+Механизм работает следующим образом:
+
+1. При установке модуля и при старте пода `deckhouse` контроллер собирает образ модуля в формате EROFS и с помощью утилиты `veritysetup` вычисляет для него дерево хешей и корневой хеш DM-Verity.
+1. Контроллер монтирует образ модуля только для чтения через устройство DM-Verity.
+1. При каждом чтении блока данных с диска ядро Linux сверяет блок с деревом хешей.
+   Файлы образа модуля хранятся на каждом master-узле, где работает под `deckhouse`:
+    - образ модуля — `/var/lib/deckhouse/downloaded/<ИМЯ_МОДУЛЯ>/<ВЕРСИЯ>.erofs`;
+    - дерево хешей — `/var/lib/deckhouse/downloaded/<ИМЯ_МОДУЛЯ>/<ВЕРСИЯ>.erofs.verity`.
+
+Здесь `<ИМЯ_МОДУЛЯ>` — имя модуля, `<ВЕРСИЯ>` — версия модуля.
+
+В контейнере `deckhouse` образ модуля смонтирован в директорию `/deckhouse/downloaded/modules/<ИМЯ_МОДУЛЯ>`.
+Настраивать механизм не нужно, выключить его нельзя. Контроллер включает защиту при старте пода `deckhouse`, если на узле:
+- загружен модуль ядра `erofs` (файловая система `erofs` указана в `/proc/filesystems`);
+- доступен модуль ядра `dm_verity`.
+
+Если файлы модуля изменены, механизм работает следующим образом:
+- Через смонтированную директорию изменить файлы модуля нельзя: файловая система доступна только для чтения, запись завершается ошибкой `Read-only file system`.
+- Если на диске изменён файл образа модуля `.erofs` (для этого нужны права root на master-узле), при чтении изменённого блока ядро Linux возвращает ошибку ввода-вывода и записывает в журнал ядра сообщение `device-mapper: verity: … data block … is corrupted`. Блоки, которые уже находятся в кеше, повторно не проверяются, поэтому ошибка может появиться не сразу.
+- Ошибка чтения приводит к сбою хуков или рендеринга модуля, задача повторяется в очереди DP CSE. Могут сработать алерты `D8DeckhouseModuleHookFailsTooOften`, `D8DeckhouseCouldNotRunModule` и `D8DeckhouseQueueIsHung`.
+  {% endraw %}
+  {% alert level="warning" %}
+  Механизм не проверяет подлинность (подпись) модуля и не обнаруживает подмену файла образа модуля `.erofs` на диске между перезапусками пода `deckhouse`.
+  {% endalert %}
+  {% raw %}
+  Механизм не защищает:
+- модули, встроенные в образ DP CSE (образы системных компонентов проверяет containerd, п. 5.7.1);
+- образы контейнеров компонентов модуля;
+- ModuleConfig и ресурсы модуля в кластере.
 
 ### 5.8 Управление информационными потоками
 
@@ -10910,13 +11441,13 @@ spec:
 
 1. В разделе «Управление системой» откройте «Сеть» → «Egress-шлюзы» → «Шлюзы» и нажмите «Создать».
 1. Задайте имя шлюза и на вкладке «Конфигурация» выберите «Метод определения исходящего IP-адреса»:
-   - «Виртуальный IP» — задайте виртуальный IP-адрес и имена сетевых интерфейсов, на которых он размещается (режим `VirtualIPAddress`);
-   - «На интерфейсе узла» — задайте имя сетевого интерфейса на egress-узлах (режим `PrimaryIPFromEgressGatewayNodeInterface`).
+    - «Виртуальный IP» — задайте виртуальный IP-адрес и имена сетевых интерфейсов, на которых он размещается (режим `VirtualIPAddress`);
+    - «На интерфейсе узла» — задайте имя сетевого интерфейса на egress-узлах (режим `PrimaryIPFromEgressGatewayNodeInterface`).
 1. В блоке «Применение шлюза» задайте селектор узлов, на которых может работать шлюз. Под селектором отображается список подходящих узлов. Нажмите «Создать».
 
-   ![Страница egress-шлюза](images/admin-guide/image-5-8-3-1.png)
+    ![Страница egress-шлюза](images/admin-guide/image-5-8-3-1.png)
 
-   Рисунок 5.8.3.1 — Страница egress-шлюза
+    Рисунок 5.8.3.1 — Страница egress-шлюза
 
 1. Откройте «Egress-шлюзы» → «Политики» и нажмите «Создать». Задайте имя политики, egress-шлюз, подсети назначения (и исключаемые из них диапазоны), селектор подов и неймспейсы, к подам которых применяется политика. Ниже формы отображается список подов, к которым применяется политика. Нажмите «Создать».
 
@@ -11064,6 +11595,14 @@ d8 backup etcd <ПУТЬ_К_СНИМКУ>
 
 Резервные копии конфигурации кластера и данных etcd переносите и храните по внутренним процедурам организации.
 
+Если включён модуль `commander`, отдельно сохраняйте резервную копию его базы данных PostgreSQL и Secret `commander-envs` из неймспейса `d8-commander`. Этот Secret содержит ключи шифрования данных модуля `commander`; без исходных ключей восстановить зашифрованные данные БД невозможно. Для сохранения ключей выполните команду:
+
+```bash
+d8 k -n d8-commander get secret commander-envs -o yaml > commander-envs-backup.yaml
+```
+
+Ограничьте доступ к файлу с ключами и храните его по внутренним процедурам организации. Резервное копирование PostgreSQL выполняйте средствами используемой СУБД; копия etcd не заменяет копию PostgreSQL.
+
 #### 5.9.2 Резервное копирование образов и конфигурации виртуальных машин
 
 Резервное копирование виртуальной машины выполняется с помощью снимков. Снимок диска виртуальной машины (VirtualDiskSnapshot) сохраняет образ диска, снимок виртуальной машины (VirtualMachineSnapshot) — конфигурацию виртуального оборудования и подключённые диски. Создание снимков и восстановление ВМ из снимка (операция VirtualMachineOperation с типом `Restore`) описаны в п. 6.5.6 «Руководства пользователя DP CSE».
@@ -11086,8 +11625,8 @@ d8 backup etcd <ПУТЬ_К_СНИМКУ>
 DP CSE контролирует запуск компонентов программного обеспечения и блокирует запуск компонентов, не входящих в перечень разрешённых, с нарушенной целостностью или не прошедших проверку подлинности. Эту функцию обеспечивает совокупность следующих механизмов:
 
 - проверка подписи и целостности образов системных контейнеров при их загрузке и запуске, обеспечение неизменности системных контейнеров — п. 5.7.1;
-- выявление и блокировка запуска образов контейнеров с известными уязвимостями критического и высокого уровня опасности — п. 5.1, п. 5.2;
-- политики Pod Security Standards, ограничивающие запуск непривилегированных и несоответствующих требованиям контейнеров — п. 5.2;
+- выявление и блокировка запуска образов контейнеров с известными уязвимостями критического и высокого уровня опасности — п. 5.1, п. 5.1.3;
+- политики Pod Security Standards, ограничивающие запуск привилегированных и несоответствующих требованиям контейнеров — п. 5.2;
 - аудит запуска процессов и исполняемых файлов в работающих контейнерах — п. 5.7.2.
 
 На узлах кластера с операционной системой Astra Linux дополнительно используется штатный режим замкнутой программной среды (ЗПС) операционной системы, управляемый утилитой `astra-digsig-control`. Включение и выключение режима ЗПС на узлах с Astra Linux описаны в разделе «Особенности обновления в Astra Linux» «Руководства по обновлению DP CSE».
@@ -11126,6 +11665,10 @@ spec:
 - NvAdmissionControlSecurityRule — правила контроля допуска (admission control) NeuVector;
 - NvResponseRuleSecurityRule — правила реакции на нарушения;
 - NvGroupDefinition, NvComplianceProfile, NvVulnerabilityProfile — определения групп, профили соответствия и профили уязвимостей.
+
+Правила WAF и DLP модуля `neuvector` блокируют запросы, только если политика нагрузки работает в режиме `Protect` (параметр `spec.target.policymode` ресурсов NvSecurityRule и NvClusterSecurityRule). В режимах `Discover` и `Monitor` нарушения только регистрируются. Чтобы WAF и DLP блокировали запросы к веб-приложению, задайте для его политики режим `Protect`.
+
+Срабатывания WAF и DLP модуль `security-events-manager` регистрирует как события безопасности `NV_WAF_THREAT_DETECTED`, `NV_WAF_THREAT_BLOCKED`, `NV_DLP_THREAT_DETECTED` и `NV_DLP_THREAT_BLOCKED` (источник `neuvector`, п. 5.5).
 
 Чтобы включить модуль `neuvector` и настроить правила WAF и DLP через веб-интерфейс, используйте категорию «WAF & DLP» в разделе «Управление системой» → «Безопасность» (категория доступна при включённом модуле `neuvector`, п. 4.19.11).
 
@@ -11196,7 +11739,7 @@ metadata:
 
 Количество запросов на прикладном уровне, а также количество и типы возвращаемых сервисами ошибок, собирают те же компоненты: `controller-*` модуля `ingress-nginx`, `proxy-{name}` модуля `alb`, `prometheus-main` модуля `prometheus`.
 
-Непрерывность регистрации событий о недоступности сервисов и интерфейсов обеспечивают компоненты `prometheus-main` модуля `prometheus`, `log-shipper-agent` модуля `log-shipper`, `loki` модуля `loki`, `upmeter-agent` и `upmeter` модуля `upmeter`, `controller-*` модуля `ingress-nginx`, `extended-monitoring-exporter` модуля `extended-monitoring`.
+Непрерывность регистрации событий о недоступности сервисов и интерфейсов обеспечивают компоненты `prometheus-main` модуля `prometheus`, `log-shipper-agent` модуля `log-shipper`, `loki` модуля `loki`, `controller-*` модуля `ingress-nginx`, `extended-monitoring-exporter` модуля `extended-monitoring`.
 
 ### 5.14 Балансировка нагрузки и масштабирование
 
@@ -11320,7 +11863,6 @@ spec:
           averageValue: "10"
 ```
 
-
 ### 5.15 Защита памяти
 
 Очистку остаточной информации при освобождении памяти средства вычислительной техники и изоляцию областей памяти обеспечивают средства ядра операционной системы узлов кластера и гипервизора.
@@ -11344,7 +11886,7 @@ crictl images
 crictl rmi <ID_ИЛИ_ИМЯ_ОБРАЗА>
 ```
 
-Выявление известных уязвимостей в образах при их создании, установке и хранении, а также оповещение о них обеспечивает модуль `operator-trivy` (п. 5.1). Нарушения целостности образов контейнеров компонент `logpipe` модуля `node-manager` записывает в файл `/var/log/containerd/containerd-integrity.log` — чтение, экспорт и анализ этих событий описаны в п. 5.7 «Контроль целостности».
+Выявление известных уязвимостей в образах при их создании, установке и хранении обеспечивает модуль `operator-trivy` (п. 5.1). Выявленные уязвимости модуль регистрирует как события безопасности (п. 7.3), оповещение о них описано в п. 5.3.1. Нарушения целостности образов контейнеров компонент `logpipe` модуля `node-manager` записывает в файл `/var/log/containerd/containerd-integrity.log`, а модуль `security-events-manager` регистрирует их как события безопасности `D8_CONTAINERD_INTEGRITY_VIOLATION` (п. 5.7.1). Просмотр, отбор и экспорт событий описаны в п. 5.5, оповещение — в п. 5.3.1.
 
 ### 5.17 Сегментация
 
@@ -11454,6 +11996,7 @@ spec:
 - `operator-trivy`;
 - `prometheus`;
 - `runtime-audit-engine`;
+- `security-events-manager`;
 - `user-authn`;
 - `user-authz`;
 - `virtualization` — в исполнениях Kubernetes+Virtualization и Virtualization;
@@ -11484,12 +12027,19 @@ spec:
 <!-- markdownlint-disable MD013 -->
 
 | Модуль | Параметр модуля или ресурс | Функция безопасности | Пояснение |
-| --- | --- | --- | --- |
+| --- | --- | --- |-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `operator-trivy` | `denyVulnerableImages.enabled`, `denyVulnerableImages.allowedSeverityLevels` | Запрет на создание образов контейнеров, содержащих известные уязвимости критического и высокого уровня опасности | Параметр `denyVulnerableImages.enabled` должен иметь значение `true`. Параметр `denyVulnerableImages.allowedSeverityLevels` не должен содержать значения `HIGH` и `CRITICAL`. Запрет действует в неймспейсах с лейблом `security.deckhouse.io/trivy-provider: ""`. Запрет работает, только если включён модуль `admission-policy-engine` |
-| `admission-policy-engine` | `podSecurityStandards.defaultPolicy`, `podSecurityStandards.enforcementAction` | Ограничение прав прикладного программного обеспечения, выполняемого внутри контейнера, на использование периферийных устройств, устройств хранения данных и съёмных машинных носителей информации (блочных устройств), входящих в состав информационной (автоматизированной) системы. Ограничение прав прикладного программного обеспечения, выполняемого внутри контейнера, на использование вычислительных ресурсов (оперативной памяти, операций ввода-вывода за период времени) хостовой операционной системы. Монтирование корневой файловой системы хостовой операционной системы в режиме «только для чтения» | Параметр `podSecurityStandards.enforcementAction` должен иметь значение `Deny` (значение по умолчанию). Параметр `podSecurityStandards.defaultPolicy` не должен иметь значение `Privileged` |
-| `loki` | `storageClass`, `storeSystemLogs` | Контроль целостности сведений о событиях безопасности самостоятельно. Сбор и хранение записей в журнале событий безопасности, которые позволяют определить, когда и какие действия происходили | Если глобальный параметр `modules.storageClass` не задан, параметр `storageClass` должен быть задан. Параметр `storeSystemLogs` должен иметь значение `true` (значение по умолчанию) |
-| `operator-trivy` | `severities` | Выявление известных уязвимостей при создании, установке образа контейнера в информационной (автоматизированной) системе и хранении образов контейнеров. Оповещение о выявленных уязвимостях в образах контейнеров разработчика образов контейнеров и администратора безопасности информационной (автоматизированной) системы | Параметр `severities` не должен быть задан или должен содержать все уровни критичности: `UNKNOWN`, `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`. Если параметр не задан, отчёты содержат уязвимости всех уровней критичности |
-| `runtime-audit-engine`, `prometheus`, `observability` | ClusterObservabilityMetricsRulesGroup | Контроль целостности образов контейнеров и исполняемых файлов контейнеров. Контроль целостности параметров настройки DP CSE | Должен быть создан объект ClusterObservabilityMetricsRulesGroup, который настраивает отправку информации о событии аудита в систему мониторинга (п. 4.5.1) |
+| `admission-policy-engine` | `podSecurityStandards.defaultPolicy`, `podSecurityStandards.enforcementAction`; SecurityPolicy: `allowedHostPaths`, `readOnly` | Ограничение доступа контейнеров к периферийным и блочным устройствам хоста. Ограничение монтирования файловой системы хоста | Задайте `podSecurityStandards.defaultPolicy: Baseline` или `Restricted` и `podSecurityStandards.enforcementAction: Deny`. По умолчанию `hostPath` запрещён. При необходимости разрешайте конкретные пути через `allowedHostPaths` ресурса SecurityPolicy с `readOnly: true` (п. 5.2.2) |
+| `loki` | `storageClass`, `storeSystemLogs` | Хранение событий безопасности во внутреннем хранилище (приёмник `cluster-loki` модуля `security-events-manager`) | Если глобальный параметр `modules.storageClass` не задан, параметр `storageClass` должен быть задан. Параметр `storeSystemLogs` должен иметь значение `true` (значение по умолчанию). Защита целостности журналов обеспечивается ограничением операций API Loki: возможность удаления записей через API отключена в поставке DP CSE (п. 5.6).                                                                     |
+| `operator-trivy` | `severities` | Выявление известных уязвимостей при создании, установке образа контейнера в информационной (автоматизированной) системе и хранении образов контейнеров | Параметр `severities` не должен быть задан или должен содержать все уровни критичности: `UNKNOWN`, `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`. Если параметр не задан, отчёты содержат уязвимости всех уровней критичности |
+| `operator-trivy` | `securityEvents.minimumSeverity` | Регистрация событий безопасности о выявлении известных уязвимостей с указанием критичности | Параметр должен иметь значение `LOW` (п. 5.1.3) |
+| `security-events-manager` | `securityEventConfig` | Регистрация событий безопасности, сбор и хранение записей в журнале событий безопасности, которые позволяют определить, когда и какие действия происходили | Параметр `securityEventConfig.enabled` должен иметь значение `true`, `securityEventConfig.sourcesMasks` — включать все источники (`podSecurityEventShipper/*`, `clusterSecurityEventShipper/*`), `securityEventConfig.destinations` — содержать `cluster-loki`, `securityEventConfig.minimumSeverityThreshold` — `Low` (п. 4.5.1) |
+| `security-events-manager` | ClusterSecurityEventAlertRule | Оповещение администратора безопасности о нарушении целостности объектов контроля, об инцидентах безопасности и о событиях безопасности средства виртуализации. Оповещение администратора безопасности о выявленных уязвимостях в образах контейнеров | Должны быть созданы правила `integrity-violation`, `security-incidents`, `vulnerabilities-found` и, в исполнениях с виртуализацией, `virtualization-security-events` (п. 5.3.1) |
+| `runtime-audit-engine` | Включение модуля | Контроль целостности исполняемых файлов контейнеров и параметров настройки DP CSE; регистрация изменений запущенных контейнеров | Модуль должен быть включён. Выявленные события регистрирует модуль `security-events-manager` (источник `runtime-audit-engine`) |
+| `user-authn` | `passwordPolicy` | Идентификация и аутентификация: требования к паролю, блокировка после неуспешных попыток входа | Значения: `complexityLevel: Custom`, `custom.minLength` — не менее `12`, `custom.capitalized`, `custom.numbers`, `custom.specialCharacters` — `true`, `lockout.maxAttempts` — не более `4`, `lockout.lockDuration` — `36500d`, `lockout.applyToConnectors` — `LDAP` (п. 4.12.1.3) |
+| `user-authn` | DexProvider, `spec.ldap.insecureNoSSL` | Защита аутентификационной информации при передаче | Параметр должен иметь значение `false` (п. 4.12.2) |
+| `operator-trivy` | Лейбл неймспейса `security-scanning.deckhouse.io/enabled` | Выявление известных уязвимостей при создании, установке и хранении образов контейнеров | Лейбл должен быть установлен на все неймспейсы с прикладной нагрузкой (п. 5.1) |
+| `operator-trivy`, `admission-policy-engine` | Лейбл неймспейса `security.deckhouse.io/trivy-provider` | Запрет на создание образов контейнеров, содержащих известные уязвимости критического и высокого уровня опасности | Лейбл должен быть установлен на все неймспейсы с прикладной нагрузкой (п. 5.1.3) |
 | `cni-cilium` | CiliumClusterwideNetworkPolicy | Фильтрация информационных потоков в соответствии с правилами управления потоками, установленными администратором безопасности; разрешение передачи информации в DP CSE только по маршруту, установленному администратором безопасности; возможность записи во временное хранилище информации о сетевых взаимодействиях для анализа администратором безопасности | Параметр `policyAuditMode` модуля `cni-cilium` должен иметь значение `false` (значение по умолчанию) |
 | `cni-cilium` | EgressGateway, EgressGatewayPolicy | Изменение (перенаправление) маршрута передачи информации в случаях, установленных администратором безопасности | — |
 | `control-plane-manager` | `apiserver.signature` | Режим работы контроля целостности данных, хранимых в etcd | Задайте для параметра `apiserver.signature` значение: `Enforce` — для кластеров, развёртываемых впервые, а также для существующих кластеров, в которых данные в etcd полностью преобразованы в новый формат; `Migrate` (значение по умолчанию) — для кластеров, в которых на момент включения функции данные в etcd хранятся в стандартном формате; `Rollback` — для кластеров, которым нужна обратная совместимость данных etcd и их резервных копий с классической версией Kubernetes (полное отключение функции безопасности). Чтобы перейти из режима `Rollback` в режим `Enforce`, сначала переведите контроль целостности в режим `Migrate` и выполните миграцию данных (п. 4.17) |
@@ -11503,6 +12053,8 @@ spec:
 
 DP CSE фиксирует ключевые события безопасности. Эти события нужны для контроля целостности, аудита и предотвращения несанкционированных операций в среде функционирования DP CSE. Способы просмотра журналов событий безопасности описаны в п. 5.5.
 
+При включённом модуле `commander` дополнительно регистрируются события, перечисленные в п. 4.23.5. Попытки изменения переданных правил доступа в обход модуля `commander` регистрируются в журнале аудита API управляемого кластера при выполнении условий п. 4.23.3.
+
 События делятся на системные и несистемные.
 
 Системными событиями называются действия, выполненные (достаточно одного условия):
@@ -11515,977 +12067,42 @@ DP CSE фиксирует ключевые события безопасност
   - `system:serviceaccount:kube-*`;
   - `system:serviceaccount:node-*`.
 
-Чтобы реализовать заявленные функции безопасности, DP CSE регистрирует следующие события:
+Чтобы реализовать заявленные функции безопасности, DP CSE регистрирует события безопасности, перечисленные ниже. События регистрирует модуль `security-events-manager` (п. 5.5); в таблице указаны коды событий (`event.code`) и источники (`source.component`). По коду события отбираются на странице «События безопасности» и в правилах оповещения (п. 5.3.1).
 
-<table>
-<thead>
-<tr>
-  <th>Регистрируемые события безопасности</th>
-  <th>События безопасности DP CSE</th>
-  <th>Пример вывода</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-  <td colspan="3"><strong>События безопасности средства контейнеризации</strong></td>
-</tr>
-<tr>
-  <td rowspan="2">Неуспешные попытки аутентификации пользователей средства контейнеризации</td>
-  <td><strong>Событие:</strong> Неуспешная попытка аутентификации в веб-интерфейсе DP CSE<br/><strong>Фильтр отбора событий:</strong> <code>failed login attempt: Invalid credentials</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;time&quot;: &quot;2025-11-18T07:52:55.091407385Z&quot;,
-  &quot;level&quot;: &quot;ERROR&quot;,
-  &quot;msg&quot;: &quot;failed login attempt: Invalid credentials.&quot;,
-  &quot;user&quot;: &quot;user@test.ru&quot;,
-  &quot;client_remote_addr&quot;: &quot;192.168.0.246&quot;,
-  &quot;request_id&quot;: &quot;1d80f05a-1601-410a-8195-cc9fdfee75bc&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td><strong>Событие:</strong> Неуспешная попытка аутентификации в сервисе kube-apiserver<br/><strong>Фильтр отбора событий:</strong> <code>Unauthorized K8s API request detected</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;hostname&quot;: &quot;cse-2-master-1&quot;,
-  &quot;output&quot;: &quot;13:38:46.928533000: Warning Unauthorized K8s API request detected\nuser=&lt;NA&gt;\nagents=curl/8.14.1\nverb=get\nuri=/1\nsourceips=[\&quot;192.168.0.246\&quot;,\&quot;192.168.0.12\&quot;]&quot;,
-  &quot;output_fields&quot;: {
-    &quot;evt.time&quot;: 1763473126928533000,
-    &quot;jevt.value[/requestURI]&quot;: &quot;/1&quot;,
-    &quot;jevt.value[/sourceIPs]&quot;: &quot;[\&quot;192.168.0.246\&quot;,\&quot;192.168.0.12\&quot;]&quot;,
-    &quot;jevt.value[/user/username]&quot;: null,
-    &quot;jevt.value[/userAgent]&quot;: &quot;curl/8.14.1&quot;,
-    &quot;jevt.value[/verb]&quot;: &quot;get&quot;
-  },
-  &quot;priority&quot;: &quot;Warning&quot;,
-  &quot;rule&quot;: &quot;Unauthorized request in Kubernetes API&quot;,
-  &quot;source&quot;: &quot;k8s_audit&quot;,
-  &quot;tags&quot;: [
-    &quot;k8s_auth_issues&quot;,
-    &quot;unauthorized&quot;
-  ],
-  &quot;time&quot;: &quot;2025-11-18T13:38:46.928533000Z&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td rowspan="2">Запуск и остановка контейнеров с указанием причины остановки</td>
-  <td><strong>Событие:</strong> Запуск контейнера<br/><strong>Фильтр отбора событий:</strong> <code>K8s Pod Created</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;hostname&quot;: &quot;cse-2-master-0&quot;,
-  &quot;output&quot;: &quot;10:04:22.866760000: Informational K8s Pod Created (user=kubernetes-admin pod=test-pod0 ns=default resource=pods resp=201 decision=allow reason=RBAC: allowed by ClusterRoleBinding \&quot;kubeadm:cluster-admins\&quot; of ClusterRole \&quot;cluster-admin\&quot; to Group \&quot;kubeadm:cluster-admins\&quot;)&quot;,
-  &quot;output_fields&quot;: {
-    &quot;evt.time&quot;: 1763546662866760000,
-    &quot;ka.auth.decision&quot;: &quot;allow&quot;,
-    &quot;ka.auth.reason&quot;: &quot;RBAC: allowed by ClusterRoleBinding \&quot;kubeadm:cluster-admins\&quot; of ClusterRole \&quot;cluster-admin\&quot; to Group \&quot;kubeadm:cluster-admins\&quot;&quot;,
-    &quot;ka.response.code&quot;: &quot;201&quot;,
-    &quot;ka.target.name&quot;: &quot;test-pod0&quot;,
-    &quot;ka.target.namespace&quot;: &quot;default&quot;,
-    &quot;ka.target.resource&quot;: &quot;pods&quot;,
-    &quot;ka.user.name&quot;: &quot;kubernetes-admin&quot;
-  },
-  &quot;priority&quot;: &quot;Informational&quot;,
-  &quot;rule&quot;: &quot;K8s Pod created&quot;,
-  &quot;source&quot;: &quot;k8s_audit&quot;,
-  &quot;tags&quot;: [
-    &quot;container_drift&quot;,
-    &quot;fstec&quot;
-  ],
-  &quot;time&quot;: &quot;2025-11-19T10:04:22.866760000Z&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td><strong>Событие:</strong> Остановка (удаление) контейнера<br/><strong>Фильтр отбора событий:</strong> <code>K8s Pod Deleted</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;hostname&quot;: &quot;cse-2-master-2&quot;,
-  &quot;output&quot;: &quot;10:12:49.236482000: Informational K8s Pod Deleted (user=system:node:cse-2-worker-2 pod=test-pod0 ns=default resource=pods resp=200 decision=allow reason=)&quot;,
-  &quot;output_fields&quot;: {
-    &quot;evt.time&quot;: 1763547169236482000,
-    &quot;ka.auth.decision&quot;: &quot;allow&quot;,
-    &quot;ka.auth.reason&quot;: &quot;&quot;,
-    &quot;ka.response.code&quot;: &quot;200&quot;,
-    &quot;ka.target.name&quot;: &quot;test-pod0&quot;,
-    &quot;ka.target.namespace&quot;: &quot;default&quot;,
-    &quot;ka.target.resource&quot;: &quot;pods&quot;,
-    &quot;ka.user.name&quot;: &quot;system:node:cse-2-worker-2&quot;
-  },
-  &quot;priority&quot;: &quot;Informational&quot;,
-  &quot;rule&quot;: &quot;K8s Pod deleted&quot;,
-  &quot;source&quot;: &quot;k8s_audit&quot;,
-  &quot;tags&quot;: [
-    &quot;container_drift&quot;,
-    &quot;fstec&quot;
-  ],
-  &quot;time&quot;: &quot;2025-11-19T10:12:49.236482000Z&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td rowspan="10">Модификация запускаемых контейнеров</td>
-  <td><strong>Событие:</strong> В контейнере запущен процесс управления пакетами<br/><strong>Фильтр отбора событий:</strong> <code>Package management process launched in container</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;hostname&quot;: &quot;cse-2-worker-1&quot;,
-  &quot;output&quot;: &quot;12:02:43.366871682: Error Package management process launched in container (user=root user_loginuid=-1 command=apt pid=772663 container_id=9d8dd712bf1b container_name=test123 image=docker.io/library/ubuntu:latest exe_flags=EXE_WRITABLE|EXE_LOWER_LAYER)&quot;,
-  &quot;output_fields&quot;: {
-    &quot;container.id&quot;: &quot;9d8dd712bf1b&quot;,
-    &quot;container.image.repository&quot;: &quot;docker.io/library/ubuntu&quot;,
-    &quot;container.image.tag&quot;: &quot;latest&quot;,
-    &quot;container.name&quot;: &quot;test123&quot;,
-    &quot;evt.arg.flags&quot;: &quot;EXE_WRITABLE|EXE_LOWER_LAYER&quot;,
-    &quot;evt.time&quot;: 1763553763366871800,
-    &quot;proc.cmdline&quot;: &quot;apt&quot;,
-    &quot;proc.pid&quot;: 772663,
-    &quot;user.loginuid&quot;: -1,
-    &quot;user.name&quot;: &quot;root&quot;
-  },
-  &quot;priority&quot;: &quot;Error&quot;,
-  &quot;rule&quot;: &quot;Launch Package Management Process in container&quot;,
-  &quot;source&quot;: &quot;syscall&quot;,
-  &quot;tags&quot;: [
-    &quot;container_drift&quot;,
-    &quot;fstec&quot;
-  ],
-  &quot;time&quot;: &quot;2025-11-19T12:02:43.366871682Z&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td><strong>Событие:</strong> Исполнение бинарного файла, не входящего в базовый образ контейнера. Злоумышленники часто применяют шаблон «drop and execute» после получения первоначального доступа.<br/><strong>Фильтр отбора событий:</strong> <code>Executing binary not part of base image</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;hostname&quot;: &quot;cse-2-worker-1&quot;,
-  &quot;output&quot;: &quot;12:20:35.191327872: Critical Executing binary not part of base image (user=root user_loginuid=-1 user_uid=0 comm=curl ya.ru exe=curl container_id=9d8dd712bf1b image=docker.io/library/ubuntu proc.name=curl proc.sname=bash proc.pname=bash proc.aname[2]=containerd-shim exe_flags=EXE_WRITABLE|EXE_UPPER_LAYER proc.exe_ino=1580515 proc.exe_ino.ctime=1763554824302013490 proc.exe_ino.mtime=1733935459000000000 proc.exe_ino.ctime_duration_proc_start=10886267891 proc.exepath=`/usr/bin/curl` proc.cwd=/ proc.tty=34817 container.start_ts=1763553758811466336 proc.sid=15 proc.vpgid=3161 evt.res=SUCCESS)&quot;,
-  &quot;output_fields&quot;: {
-    &quot;container.id&quot;: &quot;9d8dd712bf1b&quot;,
-    &quot;container.image.repository&quot;: &quot;docker.io/library/ubuntu&quot;,
-    &quot;container.start_ts&quot;: 1763553758811466200,
-    &quot;evt.arg.flags&quot;: &quot;EXE_WRITABLE|EXE_UPPER_LAYER&quot;,
-    &quot;evt.res&quot;: &quot;SUCCESS&quot;,
-    &quot;evt.time&quot;: 1763554835191327700,
-    &quot;proc.aname[2]&quot;: &quot;containerd-shim&quot;,
-    &quot;proc.cmdline&quot;: &quot;curl ya.ru&quot;,
-    &quot;proc.cwd&quot;: &quot;/&quot;,
-    &quot;proc.exe&quot;: &quot;curl&quot;,
-    &quot;proc.exe_ino&quot;: 1580515,
-    &quot;proc.exe_ino.ctime&quot;: 1763554824302013400,
-    &quot;proc.exe_ino.ctime_duration_proc_start&quot;: 10886267891,
-    &quot;proc.exe_ino.mtime&quot;: 1733935459000000000,
-    &quot;proc.exepath&quot;: &quot;`/usr/bin/curl`&quot;,
-    &quot;proc.name&quot;: &quot;curl&quot;,
-    &quot;proc.pname&quot;: &quot;bash&quot;,
-    &quot;proc.sid&quot;: 15,
-    &quot;proc.sname&quot;: &quot;bash&quot;,
-    &quot;proc.tty&quot;: 34817,
-    &quot;proc.vpgid&quot;: 3161,
-    &quot;user.loginuid&quot;: -1,
-    &quot;user.name&quot;: &quot;root&quot;,
-    &quot;user.uid&quot;: 0
-  },
-  &quot;priority&quot;: &quot;Critical&quot;,
-  &quot;rule&quot;: &quot;Drop and execute new binary in container&quot;,
-  &quot;source&quot;: &quot;syscall&quot;,
-  &quot;tags&quot;: [
-    &quot;container_drift&quot;,
-    &quot;fstec&quot;
-  ],
-  &quot;time&quot;: &quot;2025-11-19T12:20:35.191327872Z&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td><strong>Событие:</strong> В контейнере создан новый исполняемый файл путём изменения прав (chmod)<br/><strong>Фильтр отбора событий:</strong> <code>Drift detected \\(chmod\\)</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;hostname&quot;: &quot;cse-2-worker-1&quot;,
-  &quot;output&quot;: &quot;12:39:43.680836047: Error Drift detected (chmod), new executable created in a container (user=root user_loginuid=-1 command=chmod +x 1.sh pid=973196 filename=/1.sh name=&lt;NA&gt; mode=S_IXOTH|S_IROTH|S_IXGRP|S_IRGRP|S_IXUSR|S_IWUSR|S_IRUSR event=fchmodat)&quot;,
-  &quot;output_fields&quot;: {
-    &quot;evt.arg.filename&quot;: &quot;/1.sh&quot;,
-    &quot;evt.arg.mode&quot;: &quot;S_IXOTH|S_IROTH|S_IXGRP|S_IRGRP|S_IXUSR|S_IWUSR|S_IRUSR&quot;,
-    &quot;evt.arg.name&quot;: null,
-    &quot;evt.time&quot;: 1763555983680836000,
-    &quot;evt.type&quot;: &quot;fchmodat&quot;,
-    &quot;proc.cmdline&quot;: &quot;chmod +x 1.sh&quot;,
-    &quot;proc.pid&quot;: 973196,
-    &quot;user.loginuid&quot;: -1,
-    &quot;user.name&quot;: &quot;root&quot;
-  },
-  &quot;priority&quot;: &quot;Error&quot;,
-  &quot;rule&quot;: &quot;Container drift detected (chmod)&quot;,
-  &quot;source&quot;: &quot;syscall&quot;,
-  &quot;tags&quot;: [
-    &quot;container_drift&quot;,
-    &quot;fstec&quot;
-  ],
-  &quot;time&quot;: &quot;2025-11-19T12:39:43.680836047Z&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td><strong>Событие:</strong> В контейнере создан новый исполняемый файл с помощью операций open+create. Так часто действует вредоносное программное обеспечение.<br/><strong>Фильтр отбора событий:</strong> <code>Drift detected \\(open\\+create\\)</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;hostname&quot;: &quot;cse-2-worker-1&quot;,
-  &quot;output&quot;: &quot;13:15:03.343713276: Error Drift detected (open+create), new executable created in a container (user=root user_loginuid=-1 command=malw pid=1161187 filename=&lt;NA&gt; name=`/tmp/drift_test` mode=0755 event=openat)&quot;,
-  &quot;output_fields&quot;: {
-    &quot;evt.arg.filename&quot;: null,
-    &quot;evt.arg.mode&quot;: &quot;0755&quot;,
-    &quot;evt.arg.name&quot;: &quot;`/tmp/drift_test`&quot;,
-    &quot;evt.time&quot;: 1763558103343713300,
-    &quot;evt.type&quot;: &quot;openat&quot;,
-    &quot;proc.cmdline&quot;: &quot;malw&quot;,
-    &quot;proc.pid&quot;: 1161187,
-    &quot;user.loginuid&quot;: -1,
-    &quot;user.name&quot;: &quot;root&quot;
-  },
-  &quot;priority&quot;: &quot;Error&quot;,
-  &quot;rule&quot;: &quot;Container drift detected (open+create)&quot;,
-  &quot;source&quot;: &quot;syscall&quot;,
-  &quot;tags&quot;: [
-    &quot;container_drift&quot;,
-    &quot;fstec&quot;
-  ],
-  &quot;time&quot;: &quot;2025-11-19T13:15:03.343713276Z&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td><strong>Событие:</strong> Попытка изменить любой файл в пределах набора системных директорий с бинарными файлами.<br/><strong>Фильтр отбора событий:</strong> <code>File below known binary directory renamed/removed</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;hostname&quot;: &quot;cse-2-worker-2&quot;,
-  &quot;output&quot;: &quot;13:46:03.506551797: Error File below known binary directory renamed/removed (user=root user_loginuid=-1 command=ip6tables -t filter -S OLD_CILIUM_FORWARD pid=1204837 pcmdline=cilium-agent --config-dir=`/tmp/cilium/config-map` --prometheus-serve-addr=127.0.0.1:9092 operation=unlinkat file=&lt;NA&gt; res=-30(EROFS) dirfd=3(&lt;f&gt;`/usr/sbin`) name=iptables(`/usr/sbin/iptables`) flags=0 container_id=a85dcc476525 image=dev-registry-cse.deckhouse.ru`/sys/deckhouse-cse`)&quot;,
-  &quot;output_fields&quot;: {
-    &quot;container.id&quot;: &quot;a85dcc476525&quot;,
-    &quot;container.image.repository&quot;: &quot;dev-registry-cse.deckhouse.ru`/sys/deckhouse-cse`&quot;,
-    &quot;evt.args&quot;: &quot;res=-30(EROFS) dirfd=3(&lt;f&gt;`/usr/sbin`) name=iptables(`/usr/sbin/iptables`) flags=0&quot;,
-    &quot;evt.time&quot;: 1763559963506551800,
-    &quot;evt.type&quot;: &quot;unlinkat&quot;,
-    &quot;fd.name&quot;: null,
-    &quot;proc.cmdline&quot;: &quot;ip6tables -t filter -S OLD_CILIUM_FORWARD&quot;,
-    &quot;proc.pcmdline&quot;: &quot;cilium-agent --config-dir=`/tmp/cilium/config-map` --prometheus-serve-addr=127.0.0.1:9092&quot;,
-    &quot;proc.pid&quot;: 1204837,
-    &quot;user.loginuid&quot;: -1,
-    &quot;user.name&quot;: &quot;root&quot;
-  },
-  &quot;priority&quot;: &quot;Error&quot;,
-  &quot;rule&quot;: &quot;Modify binary dirs&quot;,
-  &quot;source&quot;: &quot;syscall&quot;,
-  &quot;tags&quot;: [
-    &quot;container_drift&quot;,
-    &quot;fstec&quot;
-  ],
-  &quot;time&quot;: &quot;2025-11-19T13:46:03.506551797Z&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td><strong>Событие:</strong> Попытка attach/exec в под.<br/><strong>Фильтр отбора событий:</strong> <code>Attach/Exec to pod</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;hostname&quot;: &quot;cse-2-master-0&quot;,
-  &quot;output&quot;: &quot;06:16:12.365352000: Notice Attach/Exec to pod (user=kubernetes-admin pod=test123 resource=pods ns=default action=exec command=bash)&quot;,
-  &quot;output_fields&quot;: {
-    &quot;evt.time&quot;: 1763619372365352000,
-    &quot;ka.target.name&quot;: &quot;test123&quot;,
-    &quot;ka.target.namespace&quot;: &quot;default&quot;,
-    &quot;ka.target.resource&quot;: &quot;pods&quot;,
-    &quot;ka.target.subresource&quot;: &quot;exec&quot;,
-    &quot;ka.uri.param[command]&quot;: &quot;bash&quot;,
-    &quot;ka.user.name&quot;: &quot;kubernetes-admin&quot;
-  },
-  &quot;priority&quot;: &quot;Notice&quot;,
-  &quot;rule&quot;: &quot;Attach/Exec Pod&quot;,
-  &quot;source&quot;: &quot;k8s_audit&quot;,
-  &quot;tags&quot;: [
-    &quot;container_image_access&quot;,
-    &quot;fstec&quot;
-  ],
-  &quot;time&quot;: &quot;2025-11-20T06:16:12.365352000Z&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td><strong>Событие:</strong> Создание временного (ephemeral) контейнера.<br/><strong>Фильтр отбора событий:</strong> <code>Ephemeral container is created in pod</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;hostname&quot;: &quot;cse-2-master-0&quot;,
-  &quot;output&quot;: &quot;06:27:03.543708000: Notice Ephemeral container is created in pod (user=kubernetes-admin pod=test123 resource=pods ns=default ephemeral_container_name=debugger-vrjf4 ephemeral_container_image=busybox)&quot;,
-  &quot;output_fields&quot;: {
-    &quot;evt.time&quot;: 1763620023543708000,
-    &quot;jevt.value[/requestObject/spec/ephemeralContainers/0/image]&quot;: &quot;busybox&quot;,
-    &quot;jevt.value[/requestObject/spec/ephemeralContainers/0/name]&quot;: &quot;debugger-vrjf4&quot;,
-    &quot;ka.target.name&quot;: &quot;test123&quot;,
-    &quot;ka.target.namespace&quot;: &quot;default&quot;,
-    &quot;ka.target.resource&quot;: &quot;pods&quot;,
-    &quot;ka.user.name&quot;: &quot;kubernetes-admin&quot;
-  },
-  &quot;priority&quot;: &quot;Notice&quot;,
-  &quot;rule&quot;: &quot;EphemeralContainers created&quot;,
-  &quot;source&quot;: &quot;k8s_audit&quot;,
-  &quot;tags&quot;: [
-    &quot;container_image_access&quot;,
-    &quot;fstec&quot;
-  ],
-  &quot;time&quot;: &quot;2025-11-20T06:27:03.543708000Z&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td><strong>Событие:</strong> Попытка изменить файл образа контейнера в директории <code>/var/lib/containerd</code>.<br/><strong>Фильтр отбора событий:</strong> <code>File below a known containerd directory opened for writing</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;hostname&quot;: &quot;cse-2-master-0&quot;,
-  &quot;output&quot;: &quot;06:31:57.318994093: Error File below a known containerd directory opened for writing (user=root user_loginuid=1001 command=tee `/var/lib/containerd/testfile` pid=853499 file=`/var/lib/containerd/testfile` parent=sudo pcmdline=sudo tee `/var/lib/containerd/testfile` gparent=sudo container_id=host image=)&quot;,
-  &quot;output_fields&quot;: {
-    &quot;container.id&quot;: &quot;host&quot;,
-    &quot;container.image.repository&quot;: &quot;&quot;,
-    &quot;evt.time&quot;: 1763620317318994200,
-    &quot;fd.name&quot;: &quot;`/var/lib/containerd/testfile`&quot;,
-    &quot;proc.aname[2]&quot;: &quot;sudo&quot;,
-    &quot;proc.cmdline&quot;: &quot;tee `/var/lib/containerd/testfile`&quot;,
-    &quot;proc.pcmdline&quot;: &quot;sudo tee `/var/lib/containerd/testfile`&quot;,
-    &quot;proc.pid&quot;: 853499,
-    &quot;proc.pname&quot;: &quot;sudo&quot;,
-    &quot;user.loginuid&quot;: 1001,
-    &quot;user.name&quot;: &quot;root&quot;
-  },
-  &quot;priority&quot;: &quot;Error&quot;,
-  &quot;rule&quot;: &quot;Write below containerd images dir&quot;,
-  &quot;source&quot;: &quot;syscall&quot;,
-  &quot;tags&quot;: [
-    &quot;container_image_drift&quot;,
-    &quot;fstec&quot;
-  ],
-  &quot;time&quot;: &quot;2025-11-20T06:31:57.318994093Z&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td><strong>Событие:</strong> Попытка прочитать файл образа контейнера в директории <code>/var/lib/containerd</code>.<br/><strong>Фильтр отбора событий:</strong> <code>File below a known containerd directory opened for reading</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;hostname&quot;: &quot;cse-2-worker-2&quot;,
-  &quot;output&quot;: &quot;07:05:22.961388994: Notice File below a known containerd directory opened for reading (user=root user_loginuid=-1 command=containerd pid=708001 file=`/var/lib/containerd/io.containerd.grpc.v1.cri/containers/7844711587a95f798f1a4ca5d0d9f86b5a98585e594b1cfc9ce9b60b06629891/.tmp-status209272341` parent=systemd pcmdline=systemd gparent=&lt;NA&gt; container_id=host image=)&quot;,
-  &quot;output_fields&quot;: {
-    &quot;container.id&quot;: &quot;host&quot;,
-    &quot;container.image.repository&quot;: &quot;&quot;,
-    &quot;evt.time&quot;: 1763622322961389000,
-    &quot;fd.name&quot;: &quot;`/var/lib/containerd/io.containerd.grpc.v1.cri/containers/7844711587a95f798f1a4ca5d0d9f86b5a98585e594b1cfc9ce9b60b06629891/.tmp-status209272341`&quot;,
-    &quot;proc.aname[2]&quot;: null,
-    &quot;proc.cmdline&quot;: &quot;containerd&quot;,
-    &quot;proc.pcmdline&quot;: &quot;systemd&quot;,
-    &quot;proc.pid&quot;: 708001,
-    &quot;proc.pname&quot;: &quot;systemd&quot;,
-    &quot;user.loginuid&quot;: -1,
-    &quot;user.name&quot;: &quot;root&quot;
-  },
-  &quot;priority&quot;: &quot;Notice&quot;,
-  &quot;rule&quot;: &quot;Read below containerd images dir&quot;,
-  &quot;source&quot;: &quot;syscall&quot;,
-  &quot;tags&quot;: [
-    &quot;container_image_access&quot;,
-    &quot;fstec&quot;
-  ],
-  &quot;time&quot;: &quot;2025-11-20T07:05:22.961388994Z&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td><strong>Событие:</strong> Контейнер в системном неймспейсе использует тег образа, а не sha256-сумму. Событие указывает на потенциальную ошибку настройки контроля целостности.<br/><strong>Фильтр отбора событий:</strong> <code>Not all containers are running with the sha256</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;hostname&quot;: &quot;cse-2-master-0&quot;,
-  &quot;output&quot;: &quot;07:28:31.005030000: Notice Not all containers are running with the sha256 sum as a tag in a system namespace, which is a potential integrity control mechanism misconfiguration (user=kubernetes-admin binding=test resource=pods resp=201 decision=allow reason=RBAC: allowed by ClusterRoleBinding \&quot;kubeadm:cluster-admins\&quot; of ClusterRole \&quot;cluster-admin\&quot; to Group \&quot;kubeadm:cluster-admins\&quot; image=(nginx))&quot;,
-  &quot;output_fields&quot;: {
-    &quot;evt.time&quot;: 1763623711005030000,
-    &quot;ka.auth.decision&quot;: &quot;allow&quot;,
-    &quot;ka.auth.reason&quot;: &quot;RBAC: allowed by ClusterRoleBinding \&quot;kubeadm:cluster-admins\&quot; of ClusterRole \&quot;cluster-admin\&quot; to Group \&quot;kubeadm:cluster-admins\&quot;&quot;,
-    &quot;ka.req.pod.containers.image&quot;: [
-      &quot;nginx&quot;
-    ],
-    &quot;ka.response.code&quot;: &quot;201&quot;,
-    &quot;ka.target.name&quot;: &quot;test&quot;,
-    &quot;ka.target.resource&quot;: &quot;pods&quot;,
-    &quot;ka.user.name&quot;: &quot;kubernetes-admin&quot;
-  },
-  &quot;priority&quot;: &quot;Notice&quot;,
-  &quot;rule&quot;: &quot;Container tag is not @sha256&quot;,
-  &quot;source&quot;: &quot;k8s_audit&quot;,
-  &quot;tags&quot;: [
-    &quot;fstec&quot;,
-    &quot;integrity_control&quot;
-  ],
-  &quot;time&quot;: &quot;2025-11-20T07:28:31.005030000Z&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td rowspan="11">Изменение ролевой модели</td>
-  <td><strong>Событие:</strong> Попытка создания ServiceAccount в неймспейсах kube-system, kube-public, default<br/><strong>Фильтр отбора событий:</strong> <code>Service account created in kube namespace</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;hostname&quot;: &quot;cse-2-master-0&quot;,
-  &quot;output&quot;: &quot;07:49:48.803021000: Warning Service account created in kube namespace (user=kubernetes-admin serviceaccount=test resource=serviceaccounts ns=kube-system)&quot;,
-  &quot;output_fields&quot;: {
-    &quot;evt.time&quot;: 1763624988803021000,
-    &quot;ka.target.name&quot;: &quot;test&quot;,
-    &quot;ka.target.namespace&quot;: &quot;kube-system&quot;,
-    &quot;ka.target.resource&quot;: &quot;serviceaccounts&quot;,
-    &quot;ka.user.name&quot;: &quot;kubernetes-admin&quot;
-  },
-  &quot;priority&quot;: &quot;Warning&quot;,
-  &quot;rule&quot;: &quot;ServiceAccount created in a system namespace&quot;,
-  &quot;source&quot;: &quot;k8s_audit&quot;,
-  &quot;tags&quot;: [
-    &quot;fstec&quot;,
-    &quot;rbac_drift&quot;
-  ],
-  &quot;time&quot;: &quot;2025-11-20T07:49:48.803021000Z&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td><strong>Событие:</strong> Попытка создания ClusterRoleBinding к роли cluster-admin.<br/><strong>Фильтр отбора событий:</strong> <code>Cluster Role Binding to cluster-admin role</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;hostname&quot;: &quot;cse-2-master-2&quot;,
-  &quot;output&quot;: &quot;08:41:27.516128000: Warning Cluster Role Binding to cluster-admin role (user=kubernetes-admin binding=test444 resource=clusterrolebindings subjects=&lt;NA&gt; role=cluster-admin resp=201 decision=allow reason=RBAC: allowed by ClusterRoleBinding \&quot;kubeadm:cluster-admins\&quot; of ClusterRole \&quot;cluster-admin\&quot; to Group \&quot;kubeadm:cluster-admins\&quot;)&quot;,
-  &quot;output_fields&quot;: {
-    &quot;evt.time&quot;: 1763628087516128000,
-    &quot;ka.auth.decision&quot;: &quot;allow&quot;,
-    &quot;ka.auth.reason&quot;: &quot;RBAC: allowed by ClusterRoleBinding \&quot;kubeadm:cluster-admins\&quot; of ClusterRole \&quot;cluster-admin\&quot; to Group \&quot;kubeadm:cluster-admins\&quot;&quot;,
-    &quot;ka.req.binding.role&quot;: &quot;cluster-admin&quot;,
-    &quot;ka.req.binding.subjects&quot;: null,
-    &quot;ka.response.code&quot;: &quot;201&quot;,
-    &quot;ka.target.name&quot;: &quot;test444&quot;,
-    &quot;ka.target.resource&quot;: &quot;clusterrolebindings&quot;,
-    &quot;ka.user.name&quot;: &quot;kubernetes-admin&quot;
-  },
-  &quot;priority&quot;: &quot;Warning&quot;,
-  &quot;rule&quot;: &quot;Attach to cluster-admin Role&quot;,
-  &quot;source&quot;: &quot;k8s_audit&quot;,
-  &quot;tags&quot;: [
-    &quot;fstec&quot;,
-    &quot;rbac_drift&quot;
-  ],
-  &quot;time&quot;: &quot;2025-11-20T08:41:27.516128000Z&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td><strong>Событие:</strong> Попытка создания Role/ClusterRole с подстановочными знаками («*») в ресурсах или действиях.<br/><strong>Фильтр отбора событий:</strong> <code>Created Role/ClusterRole with wildcard</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;hostname&quot;: &quot;cse-2-master-0&quot;,
-  &quot;output&quot;: &quot;09:08:25.846971000: Warning Created Role/ClusterRole with wildcard (user=kubernetes-admin role=user-editor resource=clusterroles rules=({\&quot;verbs\&quot;:[\&quot;get\&quot;],\&quot;apiGroups\&quot;:[\&quot;kuma.io\&quot;],\&quot;resources\&quot;:[\&quot;*\&quot;]}))&quot;,
-  &quot;output_fields&quot;: {
-    &quot;evt.time&quot;: 1763629705846971000,
-    &quot;ka.req.role.rules&quot;: [
-      &quot;{\&quot;verbs\&quot;:[\&quot;get\&quot;],\&quot;apiGroups\&quot;:[\&quot;kuma.io\&quot;],\&quot;resources\&quot;:[\&quot;*\&quot;]}&quot;
-    ],
-    &quot;ka.target.name&quot;: &quot;user-editor&quot;,
-    &quot;ka.target.resource&quot;: &quot;clusterroles&quot;,
-    &quot;ka.user.name&quot;: &quot;kubernetes-admin&quot;
-  },
-  &quot;priority&quot;: &quot;Warning&quot;,
-  &quot;rule&quot;: &quot;ClusterRole with wildcard created&quot;,
-  &quot;source&quot;: &quot;k8s_audit&quot;,
-  &quot;tags&quot;: [
-    &quot;fstec&quot;,
-    &quot;rbac_drift&quot;
-  ],
-  &quot;time&quot;: &quot;2025-11-20T09:08:25.846971000Z&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td><strong>Событие:</strong> Попытка создания Role/ClusterRole, обладающей правами на операции записи (create, modify, delete).<br/><strong>Фильтр отбора событий:</strong> <code>Created Role/ClusterRole with write privileges</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;hostname&quot;: &quot;cse-2-master-0&quot;,
-  &quot;output&quot;: &quot;09:28:35.509262000: Notice Created Role/ClusterRole with write privileges (user=kubernetes-admin role=user-editor resource=clusterroles rules=({\&quot;verbs\&quot;:[\&quot;get\&quot;,\&quot;create\&quot;],\&quot;apiGroups\&quot;:[\&quot;kuma.io\&quot;],\&quot;resources\&quot;:[\&quot;*\&quot;]}))&quot;,
-  &quot;output_fields&quot;: {
-    &quot;evt.time&quot;: 1763630915509262000,
-    &quot;ka.req.role.rules&quot;: [
-      &quot;{\&quot;verbs\&quot;:[\&quot;get\&quot;,\&quot;create\&quot;],\&quot;apiGroups\&quot;:[\&quot;kuma.io\&quot;],\&quot;resources\&quot;:[\&quot;*\&quot;]}&quot;
-    ],
-    &quot;ka.target.name&quot;: &quot;user-editor&quot;,
-    &quot;ka.target.resource&quot;: &quot;clusterroles&quot;,
-    &quot;ka.user.name&quot;: &quot;kubernetes-admin&quot;
-  },
-  &quot;priority&quot;: &quot;Notice&quot;,
-  &quot;rule&quot;: &quot;ClusterRole with write privileges created&quot;,
-  &quot;source&quot;: &quot;k8s_audit&quot;,
-  &quot;tags&quot;: [
-    &quot;fstec&quot;,
-    &quot;rbac_drift&quot;
-  ],
-  &quot;time&quot;: &quot;2025-11-20T09:28:35.509262000Z&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td><strong>Событие:</strong> Попытка создания Role/ClusterRole с возможностью выполнения команд (exec) в поде (с объектом pods/exec в массиве resources).<br/><strong>Фильтр отбора событий:</strong> <code>Created Role/ClusterRole with pod exec privileges</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;hostname&quot;: &quot;cse-2-master-0&quot;,
-  &quot;output&quot;: &quot;09:34:10.109024000: Warning Created Role/ClusterRole with pod exec privileges (user=kubernetes-admin role=user-editor resource=clusterroles rules=({\&quot;verbs\&quot;:[\&quot;get\&quot;,\&quot;create\&quot;],\&quot;apiGroups\&quot;:[\&quot;kuma.io\&quot;],\&quot;resources\&quot;:[\&quot;test\&quot;,\&quot;pods/exec\&quot;]}))&quot;,
-  &quot;output_fields&quot;: {
-    &quot;evt.time&quot;: 1763631250109024000,
-    &quot;ka.req.role.rules&quot;: [
-      &quot;{\&quot;verbs\&quot;:[\&quot;get\&quot;,\&quot;create\&quot;],\&quot;apiGroups\&quot;:[\&quot;kuma.io\&quot;],\&quot;resources\&quot;:[\&quot;test\&quot;,\&quot;pods/exec\&quot;]}&quot;
-    ],
-    &quot;ka.target.name&quot;: &quot;user-editor&quot;,
-    &quot;ka.target.resource&quot;: &quot;clusterroles&quot;,
-    &quot;ka.user.name&quot;: &quot;kubernetes-admin&quot;
-  },
-  &quot;priority&quot;: &quot;Warning&quot;,
-  &quot;rule&quot;: &quot;ClusterRole with Pod Exec created&quot;,
-  &quot;source&quot;: &quot;k8s_audit&quot;,
-  &quot;tags&quot;: [
-    &quot;fstec&quot;,
-    &quot;rbac_drift&quot;
-  ],
-  &quot;time&quot;: &quot;2025-11-20T09:34:10.109024000Z&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td><strong>Событие:</strong> Попытка изменить или удалить ClusterRole/Role, название которой начинается с system.<br/><strong>Фильтр отбора событий:</strong> <code>System ClusterRole/Role modified or deleted</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;hostname&quot;: &quot;cse-2-master-0&quot;,
-  &quot;output&quot;: &quot;09:39:25.003993000: Warning System ClusterRole/Role modified or deleted (user=kubernetes-admin role=system:test resource=clusterroles action=delete)&quot;,
-  &quot;output_fields&quot;: {
-    &quot;evt.time&quot;: 1763631565003993000,
-    &quot;ka.target.name&quot;: &quot;system:test&quot;,
-    &quot;ka.target.resource&quot;: &quot;clusterroles&quot;,
-    &quot;ka.user.name&quot;: &quot;kubernetes-admin&quot;,
-    &quot;ka.verb&quot;: &quot;delete&quot;
-  },
-  &quot;priority&quot;: &quot;Warning&quot;,
-  &quot;rule&quot;: &quot;System ClusterRole modified/deleted&quot;,
-  &quot;source&quot;: &quot;k8s_audit&quot;,
-  &quot;tags&quot;: [
-    &quot;fstec&quot;,
-    &quot;rbac_drift&quot;
-  ],
-  &quot;time&quot;: &quot;2025-11-20T09:39:25.003993000Z&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td><strong>Событие:</strong> Попытка создания ServiceAccount<br/><strong>Фильтр отбора событий:</strong> <code>K8s Serviceaccount Created</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;hostname&quot;: &quot;cse-2-master-1&quot;,
-  &quot;output&quot;: &quot;09:42:26.177759000: Notice K8s Serviceaccount Created (user=system:node:cse-2-worker-1 serviceaccount=cert-manager ns=d8-cert-manager resource=serviceaccounts resp=201 decision=allow reason=)&quot;,
-  &quot;output_fields&quot;: {
-    &quot;evt.time&quot;: 1763631746177759000,
-    &quot;ka.auth.decision&quot;: &quot;allow&quot;,
-    &quot;ka.auth.reason&quot;: &quot;&quot;,
-    &quot;ka.response.code&quot;: &quot;201&quot;,
-    &quot;ka.target.name&quot;: &quot;cert-manager&quot;,
-    &quot;ka.target.namespace&quot;: &quot;d8-cert-manager&quot;,
-    &quot;ka.target.resource&quot;: &quot;serviceaccounts&quot;,
-    &quot;ka.user.name&quot;: &quot;system:node:cse-2-worker-1&quot;
-  },
-  &quot;priority&quot;: &quot;Notice&quot;,
-  &quot;rule&quot;: &quot;K8s ServiceAccount created&quot;,
-  &quot;source&quot;: &quot;k8s_audit&quot;,
-  &quot;tags&quot;: [
-    &quot;fstec&quot;,
-    &quot;rbac_drift&quot;
-  ],
-  &quot;time&quot;: &quot;2025-11-20T09:42:26.177759000Z&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td><strong>Событие:</strong> Попытка удаления ServiceAccount<br/><strong>Фильтр отбора событий:</strong> <code>K8s Serviceaccount Deleted</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;hostname&quot;: &quot;cse-2-master-0&quot;,
-  &quot;output&quot;: &quot;09:44:58.733934000: Notice K8s Serviceaccount Deleted (user=kubernetes-admin serviceaccount=test ns=default resource=serviceaccounts resp=200 decision=allow reason=RBAC: allowed by ClusterRoleBinding \&quot;kubeadm:cluster-admins\&quot; of ClusterRole \&quot;cluster-admin\&quot; to Group \&quot;kubeadm:cluster-admins\&quot;)&quot;,
-  &quot;output_fields&quot;: {
-    &quot;evt.time&quot;: 1763631898733934000,
-    &quot;ka.auth.decision&quot;: &quot;allow&quot;,
-    &quot;ka.auth.reason&quot;: &quot;RBAC: allowed by ClusterRoleBinding \&quot;kubeadm:cluster-admins\&quot; of ClusterRole \&quot;cluster-admin\&quot; to Group \&quot;kubeadm:cluster-admins\&quot;&quot;,
-    &quot;ka.response.code&quot;: &quot;200&quot;,
-    &quot;ka.target.name&quot;: &quot;test&quot;,
-    &quot;ka.target.namespace&quot;: &quot;default&quot;,
-    &quot;ka.target.resource&quot;: &quot;serviceaccounts&quot;,
-    &quot;ka.user.name&quot;: &quot;kubernetes-admin&quot;
-  },
-  &quot;priority&quot;: &quot;Notice&quot;,
-  &quot;rule&quot;: &quot;K8s ServiceAccount deleted&quot;,
-  &quot;source&quot;: &quot;k8s_audit&quot;,
-  &quot;tags&quot;: [
-    &quot;fstec&quot;,
-    &quot;rbac_drift&quot;
-  ],
-  &quot;time&quot;: &quot;2025-11-20T09:44:58.733934000Z&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td><strong>Событие:</strong> Попытка создания Role или ClusterRole<br/><strong>Фильтр отбора событий:</strong> <code>K8s Cluster Role Created</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;hostname&quot;: &quot;cse-2-master-0&quot;,
-  &quot;output&quot;: &quot;09:39:07.355383000: Notice K8s Cluster Role Created (user=kubernetes-admin role=system:test resource=clusterroles rules=({\&quot;verbs\&quot;:[\&quot;get\&quot;],\&quot;apiGroups\&quot;:[\&quot;\&quot;],\&quot;resources\&quot;:[\&quot;*\&quot;]}) resp=201 decision=allow reason=RBAC: allowed by ClusterRoleBinding \&quot;kubeadm:cluster-admins\&quot; of ClusterRole \&quot;cluster-admin\&quot; to Group \&quot;kubeadm:cluster-admins\&quot;)&quot;,
-  &quot;output_fields&quot;: {
-    &quot;evt.time&quot;: 1763631547355383000,
-    &quot;ka.auth.decision&quot;: &quot;allow&quot;,
-    &quot;ka.auth.reason&quot;: &quot;RBAC: allowed by ClusterRoleBinding \&quot;kubeadm:cluster-admins\&quot; of ClusterRole \&quot;cluster-admin\&quot; to Group \&quot;kubeadm:cluster-admins\&quot;&quot;,
-    &quot;ka.req.role.rules&quot;: [
-      &quot;{\&quot;verbs\&quot;:[\&quot;get\&quot;],\&quot;apiGroups\&quot;:[\&quot;\&quot;],\&quot;resources\&quot;:[\&quot;*\&quot;]}&quot;
-    ],
-    &quot;ka.response.code&quot;: &quot;201&quot;,
-    &quot;ka.target.name&quot;: &quot;system:test&quot;,
-    &quot;ka.target.resource&quot;: &quot;clusterroles&quot;,
-    &quot;ka.user.name&quot;: &quot;kubernetes-admin&quot;
-  },
-  &quot;priority&quot;: &quot;Notice&quot;,
-  &quot;rule&quot;: &quot;K8s Role/ClusterRole created&quot;,
-  &quot;source&quot;: &quot;k8s_audit&quot;,
-  &quot;tags&quot;: [
-    &quot;fstec&quot;,
-    &quot;rbac_drift&quot;
-  ],
-  &quot;time&quot;: &quot;2025-11-20T09:39:07.355383000Z&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td><strong>Событие:</strong> Попытка создания ClusterRoleBinding<br/><strong>Фильтр отбора событий:</strong> <code>K8s Cluster Role Binding Created</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;hostname&quot;: &quot;cse-2-master-1&quot;,
-  &quot;output&quot;: &quot;10:08:06.223077000: Notice K8s Cluster Role Binding Created (user=kubernetes-admin binding=test444 resource=clusterrolebindings subjects=&lt;NA&gt; role=admins resp=201 decision=allow reason=RBAC: allowed by ClusterRoleBinding \&quot;kubeadm:cluster-admins\&quot; of ClusterRole \&quot;cluster-admin\&quot; to Group \&quot;kubeadm:cluster-admins\&quot;)&quot;,
-  &quot;output_fields&quot;: {
-    &quot;evt.time&quot;: 1763633286223077000,
-    &quot;ka.auth.decision&quot;: &quot;allow&quot;,
-    &quot;ka.auth.reason&quot;: &quot;RBAC: allowed by ClusterRoleBinding \&quot;kubeadm:cluster-admins\&quot; of ClusterRole \&quot;cluster-admin\&quot; to Group \&quot;kubeadm:cluster-admins\&quot;&quot;,
-    &quot;ka.req.binding.role&quot;: &quot;admins&quot;,
-    &quot;ka.req.binding.subjects&quot;: null,
-    &quot;ka.response.code&quot;: &quot;201&quot;,
-    &quot;ka.target.name&quot;: &quot;test444&quot;,
-    &quot;ka.target.resource&quot;: &quot;clusterrolebindings&quot;,
-    &quot;ka.user.name&quot;: &quot;kubernetes-admin&quot;
-  },
-  &quot;priority&quot;: &quot;Notice&quot;,
-  &quot;rule&quot;: &quot;K8s Role/ClusterRole binding created&quot;,
-  &quot;source&quot;: &quot;k8s_audit&quot;,
-  &quot;tags&quot;: [
-    &quot;fstec&quot;,
-    &quot;rbac_drift&quot;
-  ],
-  &quot;time&quot;: &quot;2025-11-20T10:08:06.223077000Z&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td><strong>Событие:</strong> Попытка удаления ClusterRoleBinding<br/><strong>Фильтр отбора событий:</strong> <code>K8s Cluster Role Binding Deleted</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;hostname&quot;: &quot;cse-2-master-2&quot;,
-  &quot;output&quot;: &quot;10:08:04.368957000: Notice K8s Cluster Role Binding Deleted (user=kubernetes-admin binding=test444 resource=clusterrolebindings resp=200 decision=allow reason=RBAC: allowed by ClusterRoleBinding \&quot;kubeadm:cluster-admins\&quot; of ClusterRole \&quot;cluster-admin\&quot; to Group \&quot;kubeadm:cluster-admins\&quot;)&quot;,
-  &quot;output_fields&quot;: {
-    &quot;evt.time&quot;: 1763633284368957000,
-    &quot;ka.auth.decision&quot;: &quot;allow&quot;,
-    &quot;ka.auth.reason&quot;: &quot;RBAC: allowed by ClusterRoleBinding \&quot;kubeadm:cluster-admins\&quot; of ClusterRole \&quot;cluster-admin\&quot; to Group \&quot;kubeadm:cluster-admins\&quot;&quot;,
-    &quot;ka.response.code&quot;: &quot;200&quot;,
-    &quot;ka.target.name&quot;: &quot;test444&quot;,
-    &quot;ka.target.resource&quot;: &quot;clusterrolebindings&quot;,
-    &quot;ka.user.name&quot;: &quot;kubernetes-admin&quot;
-  },
-  &quot;priority&quot;: &quot;Notice&quot;,
-  &quot;rule&quot;: &quot;K8s Role/ClusterRole binding deleted&quot;,
-  &quot;source&quot;: &quot;k8s_audit&quot;,
-  &quot;tags&quot;: [
-    &quot;fstec&quot;,
-    &quot;rbac_drift&quot;
-  ],
-  &quot;time&quot;: &quot;2025-11-20T10:08:04.368957000Z&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td>Выявление известных уязвимостей в образах контейнеров и некорректности конфигурации</td>
-  <td><strong>Событие:</strong> Создание отчётов ConfigAuditReport и VulnerabilityReport<br/><strong>Фильтр отбора событий:</strong> <code>K8s Security Reports Created</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;hostname&quot;: &quot;cse-2-master-2&quot;,
-  &quot;output&quot;: &quot;12:15:07.995425000: Notice K8s Security Reports Created. The report may contain vulnerability information. Check the object in the cluster (user=system:serviceaccount:d8-operator-trivy:operator-trivy, verb=create, ns=cve, resource=vulnerabilityreports, object=replicaset-loki-deployment-5549c44655-loki)&quot;,
-  &quot;output_fields&quot;: {
-    &quot;evt.time&quot;: 1763640907995425000,
-    &quot;ka.target.name&quot;: &quot;replicaset-loki-deployment-5549c44655-loki&quot;,
-    &quot;ka.target.namespace&quot;: &quot;cve&quot;,
-    &quot;ka.target.resource&quot;: &quot;vulnerabilityreports&quot;,
-    &quot;ka.user.name&quot;: &quot;system:serviceaccount:d8-operator-trivy:operator-trivy&quot;,
-    &quot;ka.verb&quot;: &quot;create&quot;
-  },
-  &quot;priority&quot;: &quot;Notice&quot;,
-  &quot;rule&quot;: &quot;Create Security Reports&quot;,
-  &quot;source&quot;: &quot;k8s_audit&quot;,
-  &quot;tags&quot;: [
-    &quot;fstec&quot;,
-    &quot;security_reports&quot;
-  ],
-  &quot;time&quot;: &quot;2025-11-20T12:15:07.995425000Z&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td rowspan="2">Факты нарушения целостности объектов контроля</td>
-  <td><strong>Событие:</strong> Один из двоичных файлов, используемых компонентами DP CSE в директории /opt/deckhouse/bin, не прошёл проверку подписи<br/><strong>Фильтр отбора событий:</strong> <code>Error Deckhouse binary</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;hostname&quot;: &quot;cse-2-master-0&quot;,
-  &quot;output&quot;: &quot;13:55:53.182087669: Error Deckhouse binary /opt/deckhouse/bin/ls is missing a proper digital signature&quot;,
-  &quot;output_fields&quot;: {
-    &quot;evt.time&quot;: 1763646953182087700,
-    &quot;fd.name&quot;: &quot;/opt/deckhouse/bin/ls&quot;
-  },
-  &quot;priority&quot;: &quot;Error&quot;,
-  &quot;rule&quot;: &quot;missing_digital_signature&quot;,
-  &quot;source&quot;: &quot;syscall&quot;,
-  &quot;tags&quot;: [
-    &quot;integrity_check&quot;,
-    &quot;subscription_check&quot;
-  ],
-  &quot;time&quot;: &quot;2025-11-20T13:55:53.182087669Z&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td><strong>Событие:</strong> Нарушение целостности объектов, хранимых в etcd<br/><strong>Фильтр отбора событий:</strong> <code>K8s audit event with deckhouse.io/signature annotation</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;hostname&quot;: &quot;adyakonov-static-master-0&quot;,
-  &quot;output&quot;: &quot;08:28:46.868800000: Notice [Falco] K8s audit event with deckhouse.io/signature annotation. Indicates that unsigned objects or objects with invalid signatures were found in the etcd database. (user=system:node:adyakonov-static-master-0 verb=create resource=serviceaccounts object=safe-agent-updater signature=Absent signature)&quot;,
-  &quot;output_fields&quot;: {
-    &quot;evt.time&quot;: 1763713726868800000,
-    &quot;jevt.value[/annotations/deckhouse.io~1signature]&quot;: &quot;Absent signature&quot;,
-    &quot;ka.target.name&quot;: &quot;safe-agent-updater&quot;,
-    &quot;ka.target.resource&quot;: &quot;serviceaccounts&quot;,
-    &quot;ka.user.name&quot;: &quot;system:node:adyakonov-static-master-0&quot;,
-    &quot;ka.verb&quot;: &quot;create&quot;
-  },
-  &quot;priority&quot;: &quot;Notice&quot;,
-  &quot;rule&quot;: &quot;Event with deckhouse.io/signature annotation&quot;,
-  &quot;source&quot;: &quot;k8s_audit&quot;,
-  &quot;tags&quot;: [
-    &quot;annotations&quot;,
-    &quot;audit&quot;,
-    &quot;deckhouse&quot;,
-    &quot;signature&quot;
-  ],
-  &quot;time&quot;: &quot;2025-11-21T08:28:46.868800000Z&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td colspan="3"><strong>События безопасности средства виртуализации</strong></td>
-</tr>
-<tr>
-  <td rowspan="2">Успешные и неуспешные попытки аутентификации пользователей DP CSE</td>
-  <td><strong>Событие:</strong> Неуспешная попытка аутентификации в веб-интерфейсе DP CSE<br/><strong>Фильтр отбора событий:</strong> <code>failed login attempt</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;time&quot;: &quot;2025-11-18T07:52:55.091407385Z&quot;,
-  &quot;level&quot;: &quot;ERROR&quot;,
-  &quot;msg&quot;: &quot;failed login attempt: Invalid credentials.&quot;,
-  &quot;user&quot;: &quot;user@test.ru&quot;,
-  &quot;client_remote_addr&quot;: &quot;192.168.0.246&quot;,
-  &quot;request_id&quot;: &quot;1d80f05a-1601-410a-8195-cc9fdfee75bc&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td><strong>Событие:</strong> Успешная попытка аутентификации в веб-интерфейсе DP CSE<br/><strong>Фильтр отбора событий:</strong> <code>login successful</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;time&quot;: &quot;2025-11-21T09:57:28.066435654Z&quot;,
-  &quot;level&quot;: &quot;INFO&quot;,
-  &quot;msg&quot;: &quot;login successful&quot;,
-  &quot;connector_id&quot;: &quot;local&quot;,
-  &quot;username&quot;: &quot;user&quot;,
-  &quot;preferred_username&quot;: &quot;&quot;,
-  &quot;email&quot;: &quot;name.surname@test.ru&quot;,
-  &quot;groups&quot;: null,
-  &quot;client_remote_addr&quot;: &quot;10.111.8.85&quot;,
-  &quot;request_id&quot;: &quot;5644ed82-b5f5-453c-ad51-661bd73efdfc&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td>Доступ пользователей DP CSE к виртуальным машинам</td>
-  <td><strong>Событие:</strong> Доступ пользователей к ВМ<br/><strong>Фильтр отбора событий:</strong> <code>Access to VM</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;type&quot;: &quot;Access to VM&quot;,
-  &quot;level&quot;: &quot;info&quot;,
-  &quot;name&quot;: &quot;Virtual machine &#x27;test-vm&#x27; connection has been initiated via console by &#x27;name.surname@test.ru&#x27;&quot;,
-  &quot;datetime&quot;: &quot;2025-11-22T07:43:43Z&quot;,
-  &quot;uid&quot;: &quot;a83162e5-1c85-4c57-9c22-ea508c75115e&quot;,
-  &quot;request_subject&quot;: &quot;name.surname@test.ru&quot;,
-  &quot;action_type&quot;: &quot;get&quot;,
-  &quot;node_network_address&quot;: &quot;10.12.0.200&quot;,
-  &quot;virtualmachine_uid&quot;: &quot;986d6e76-ec0d-43ab-a846-171d1ecae437&quot;,
-  &quot;virtualmachine_os&quot;: &quot;unknown&quot;,
-  &quot;storageclasses&quot;: &quot;local-storage-class&quot;,
-  &quot;qemu_version&quot;: &quot;v9.2.0&quot;,
-  &quot;libvirt_version&quot;: &quot;v10.9.0&quot;,
-  &quot;operation_result&quot;: &quot;unknown&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td rowspan="2">Создание и удаление виртуальных машин</td>
-  <td><strong>Событие:</strong> Создание ВМ<br/><strong>Фильтр отбора событий:</strong> <code>Virtual machine .* has been created</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;type&quot;: &quot;Manage VM&quot;,
-  &quot;level&quot;: &quot;info&quot;,
-  &quot;name&quot;: &quot;Virtual machine &#x27;test-vm&#x27; has been created by &#x27;kubernetes-admin&#x27;&quot;,
-  &quot;datetime&quot;: &quot;2025-11-22T07:41:04Z&quot;,
-  &quot;uid&quot;: &quot;dd7d9739-2980-4fa0-b21b-1967fff6bbc3&quot;,
-  &quot;request_subject&quot;: &quot;kubernetes-admin&quot;,
-  &quot;action_type&quot;: &quot;create&quot;,
-  &quot;node_network_address&quot;: &quot;unknown&quot;,
-  &quot;virtualmachine_uid&quot;: &quot;986d6e76-ec0d-43ab-a846-171d1ecae437&quot;,
-  &quot;virtualmachine_os&quot;: &quot;unknown&quot;,
-  &quot;storageclasses&quot;: &quot;&quot;,
-  &quot;qemu_version&quot;: &quot;&quot;,
-  &quot;libvirt_version&quot;: &quot;&quot;,
-  &quot;operation_result&quot;: &quot;allow&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td><strong>Событие:</strong> Удаление ВМ<br/><strong>Фильтр отбора событий:</strong> <code>Virtual machine .*has been deleted</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;type&quot;: &quot;Manage VM&quot;,
-  &quot;level&quot;: &quot;warn&quot;,
-  &quot;name&quot;: &quot;Virtual machine &#x27;test-vm&#x27; has been deleted by &#x27;kubernetes-admin&#x27;&quot;,
-  &quot;datetime&quot;: &quot;2025-11-22T07:28:29Z&quot;,
-  &quot;uid&quot;: &quot;45410e58-7bf0-4b13-87d2-b5b8b8f5f190&quot;,
-  &quot;request_subject&quot;: &quot;kubernetes-admin&quot;,
-  &quot;action_type&quot;: &quot;delete&quot;,
-  &quot;node_network_address&quot;: &quot;10.12.0.200&quot;,
-  &quot;virtualmachine_uid&quot;: &quot;f08d1586-ef97-44bd-bb13-f2b329bf43b3&quot;,
-  &quot;virtualmachine_os&quot;: &quot;unknown&quot;,
-  &quot;storageclasses&quot;: &quot;unknown&quot;,
-  &quot;qemu_version&quot;: &quot;v9.2.0&quot;,
-  &quot;libvirt_version&quot;: &quot;v10.9.0&quot;,
-  &quot;operation_result&quot;: &quot;allow&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td rowspan="2">Запуск и остановка DP CSE с указанием причины остановки</td>
-  <td><strong>Событие:</strong> Запуск или изменение настроек СВ<br/><strong>Фильтр отбора событий:</strong> <code>Module &#x27;virtualization&#x27; has been updated</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;type&quot;: &quot;Module control&quot;,
-  &quot;level&quot;: &quot;info&quot;,
-  &quot;name&quot;: &quot;Module &#x27;virtualization&#x27; has been updated by &#x27;kubernetes-admin&#x27;&quot;,
-  &quot;datetime&quot;: &quot;2025-11-24T09:10:29Z&quot;,
-  &quot;uid&quot;: &quot;10075456-a04c-4fd0-8e38-60e1a62f81a3&quot;,
-  &quot;request_subject&quot;: &quot;kubernetes-admin&quot;,
-  &quot;operation_result&quot;: &quot;allow&quot;,
-  &quot;action_type&quot;: &quot;patch&quot;,
-  &quot;component&quot;: &quot;virtualization&quot;,
-  &quot;node_network_address&quot;: &quot;unknown&quot;,
-  &quot;virtualization_version&quot;: &quot;v1.10.7&quot;,
-  &quot;virtualization_name&quot;: &quot;Deckhouse Virtualization Platform&quot;,
-  &quot;qemu_version&quot;: &quot;unknown&quot;,
-  &quot;libvirt_version&quot;: &quot;unknown&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td><strong>Событие:</strong> Остановка СВ<br/><strong>Фильтр отбора событий:</strong> <code>Module &#x27;virtualization&#x27; has been disabled</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;type&quot;: &quot;Module control&quot;,
-  &quot;level&quot;: &quot;warn&quot;,
-  &quot;name&quot;: &quot;Module &#x27;virtualization&#x27; has been disabled by &#x27;kubernetes-admin&#x27;&quot;,
-  &quot;datetime&quot;: &quot;2025-11-24T09:10:26Z&quot;,
-  &quot;uid&quot;: &quot;be3259e5-e986-4ea5-b15f-36322fd0d257&quot;,
-  &quot;request_subject&quot;: &quot;kubernetes-admin&quot;,
-  &quot;operation_result&quot;: &quot;allow&quot;,
-  &quot;action_type&quot;: &quot;patch&quot;,
-  &quot;component&quot;: &quot;virtualization&quot;,
-  &quot;node_network_address&quot;: &quot;unknown&quot;,
-  &quot;virtualization_version&quot;: &quot;v1.10.7&quot;,
-  &quot;virtualization_name&quot;: &quot;Deckhouse Virtualization Platform&quot;,
-  &quot;qemu_version&quot;: &quot;unknown&quot;,
-  &quot;libvirt_version&quot;: &quot;unknown&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td rowspan="3">Запуск и остановка виртуальных машин с указанием причины остановки</td>
-  <td><strong>Событие:</strong> Запуск ВМ<br/><strong>Фильтр отбора событий:</strong> <code>Virtual machine .* has been started</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;type&quot;: &quot;Control VM&quot;,
-  &quot;level&quot;: &quot;info&quot;,
-  &quot;name&quot;: &quot;Virtual machine &#x27;test-vm&#x27; has been started by &#x27;name.surname@test.ru&#x27;&quot;,
-  &quot;datetime&quot;: &quot;2025-11-24T09:05:39Z&quot;,
-  &quot;uid&quot;: &quot;cd88fc91-2c33-4bbb-90ca-4ff76e9c721d&quot;,
-  &quot;request_subject&quot;: &quot;name.surname@test.ru&quot;,
-  &quot;action_type&quot;: &quot;start&quot;,
-  &quot;node_network_address&quot;: &quot;unknown&quot;,
-  &quot;virtualmachine_uid&quot;: &quot;986d6e76-ec0d-43ab-a846-171d1ecae437&quot;,
-  &quot;virtualmachine_os&quot;: &quot;&quot;,
-  &quot;storageclasses&quot;: &quot;local-storage-class&quot;,
-  &quot;qemu_version&quot;: &quot;v9.2.0&quot;,
-  &quot;libvirt_version&quot;: &quot;v10.9.0&quot;,
-  &quot;operation_result&quot;: &quot;allow&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td><strong>Событие:</strong> Остановка ВМ с указанием причины остановки<br/><strong>Фильтр отбора событий:</strong> <code>Virtual machine .*has been stopped</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;type&quot;: &quot;Control VM&quot;,
-  &quot;level&quot;: &quot;warn&quot;,
-  &quot;name&quot;: &quot;Virtual machine &#x27;test-vm&#x27; has been stopped by &#x27;name.surname@test.ru&#x27;&quot;,
-  &quot;datetime&quot;: &quot;2025-11-24T08:46:02Z&quot;,
-  &quot;uid&quot;: &quot;00e14c65-25e5-445f-a5fc-3347d5130d53&quot;,
-  &quot;request_subject&quot;: &quot;name.surname@test.ru&quot;,
-  &quot;action_type&quot;: &quot;stop&quot;,
-  &quot;node_network_address&quot;: &quot;10.12.0.200&quot;,
-  &quot;virtualmachine_uid&quot;: &quot;986d6e76-ec0d-43ab-a846-171d1ecae437&quot;,
-  &quot;virtualmachine_os&quot;: &quot;&quot;,
-  &quot;storageclasses&quot;: &quot;local-storage-class&quot;,
-  &quot;qemu_version&quot;: &quot;v9.2.0&quot;,
-  &quot;libvirt_version&quot;: &quot;v10.9.0&quot;,
-  &quot;operation_result&quot;: &quot;allow&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td><strong>Событие:</strong> Перезапуск ВМ<br/><strong>Фильтр отбора событий:</strong> <code>Virtual machine .* has been restarted</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;type&quot;: &quot;Control VM&quot;,
-  &quot;level&quot;: &quot;warn&quot;,
-  &quot;name&quot;: &quot;Virtual machine &#x27;test-vm&#x27; has been restarted by &#x27;name.surname@test.ru&#x27;&quot;,
-  &quot;datetime&quot;: &quot;2025-11-24T08:46:04Z&quot;,
-  &quot;uid&quot;: &quot;9f768a9a-34ef-49d4-b12c-492c5f9aac25&quot;,
-  &quot;request_subject&quot;: &quot;name.surname@test.ru&quot;,
-  &quot;action_type&quot;: &quot;restart&quot;,
-  &quot;node_network_address&quot;: &quot;10.12.0.200&quot;,
-  &quot;virtualmachine_uid&quot;: &quot;986d6e76-ec0d-43ab-a846-171d1ecae437&quot;,
-  &quot;virtualmachine_os&quot;: &quot;&quot;,
-  &quot;storageclasses&quot;: &quot;local-storage-class&quot;,
-  &quot;qemu_version&quot;: &quot;v9.2.0&quot;,
-  &quot;libvirt_version&quot;: &quot;v10.9.0&quot;,
-  &quot;operation_result&quot;: &quot;allow&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td>Изменение ролевой модели</td>
-  <td>События аналогичны событиям средства контейнеризации</td>
-  <td></td>
-</tr>
-<tr>
-  <td>Изменение конфигурации DP CSE</td>
-  <td><strong>Событие:</strong> Изменение конфигурации СВ<br/><strong>Фильтр отбора событий:</strong> <code>Module &#x27;virtualization&#x27; has been updated</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;type&quot;: &quot;Module control&quot;,
-  &quot;level&quot;: &quot;info&quot;,
-  &quot;name&quot;: &quot;Module &#x27;virtualization&#x27; has been updated by &#x27;kubernetes-admin&#x27;&quot;,
-  &quot;datetime&quot;: &quot;2025-11-24T08:16:43Z&quot;,
-  &quot;uid&quot;: &quot;f4177935-4b15-4437-a886-f2171fe52ae9&quot;,
-  &quot;request_subject&quot;: &quot;kubernetes-admin&quot;,
-  &quot;operation_result&quot;: &quot;allow&quot;,
-  &quot;action_type&quot;: &quot;patch&quot;,
-  &quot;component&quot;: &quot;virtualization&quot;,
-  &quot;node_network_address&quot;: &quot;unknown&quot;,
-  &quot;virtualization_version&quot;: &quot;v1.10.7&quot;,
-  &quot;virtualization_name&quot;: &quot;Deckhouse Virtualization Platform&quot;,
-  &quot;qemu_version&quot;: &quot;unknown&quot;,
-  &quot;libvirt_version&quot;: &quot;unknown&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td>Изменение конфигураций виртуальных машин</td>
-  <td><strong>Событие:</strong> Изменение конфигурации ВМ<br/><strong>Фильтр отбора событий:</strong> <code>Virtual machine .*has been updated</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;type&quot;: &quot;Manage VM&quot;,
-  &quot;level&quot;: &quot;info&quot;,
-  &quot;name&quot;: &quot;Virtual machine &#x27;test-vm&#x27; has been updated by &#x27;name.surname@test.ru&#x27;&quot;,
-  &quot;datetime&quot;: &quot;2025-11-24T09:05:01Z&quot;,
-  &quot;uid&quot;: &quot;611f0dd3-cf37-4899-97d0-201170a95af7&quot;,
-  &quot;request_subject&quot;: &quot;name.surname@test.ru&quot;,
-  &quot;action_type&quot;: &quot;update&quot;,
-  &quot;node_network_address&quot;: &quot;10.12.0.200&quot;,
-  &quot;virtualmachine_uid&quot;: &quot;986d6e76-ec0d-43ab-a846-171d1ecae437&quot;,
-  &quot;virtualmachine_os&quot;: &quot;unknown&quot;,
-  &quot;storageclasses&quot;: &quot;local-storage-class&quot;,
-  &quot;qemu_version&quot;: &quot;v9.2.0&quot;,
-  &quot;libvirt_version&quot;: &quot;v10.9.0&quot;,
-  &quot;operation_result&quot;: &quot;allow&quot;
-}</code></pre></div></div></td>
-</tr>
-<tr>
-  <td>Факты нарушения целостности объектов контроля</td>
-  <td><strong>Событие:</strong> Нарушение контроля целостности конфигурации ВМ<br/><strong>Фильтр отбора событий:</strong> <code>Virtual machine .* config integrity check failed</code></td>
-  <td><div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  &quot;type&quot;: &quot;Integrity check&quot;,
-  &quot;level&quot;: &quot;critical&quot;,
-  &quot;name&quot;: &quot;Virtual machine &#x27;test-vm&#x27; config integrity check failed&quot;,
-  &quot;datetime&quot;: &quot;2025-11-25T05:46:50Z&quot;,
-  &quot;uid&quot;: &quot;a8344637-1ed8-4b06-b769-21fa4e73dd96&quot;,
-  &quot;request_subject&quot;: &quot;system:serviceaccount:d8-virtualization:kubevirt-internal-virtualization-handler&quot;,
-  &quot;operation_result&quot;: &quot;allow&quot;,
-  &quot;object_type&quot;: &quot;Virtual machine configuration&quot;,
-  &quot;virtual_machine_name&quot;: &quot;test-vm&quot;,
-  &quot;control_method&quot;: &quot;Integrity Check&quot;,
-  &quot;reaction_type&quot;: &quot;info&quot;,
-  &quot;integrity_check_algo&quot;: &quot;sha256&quot;,
-  &quot;reference_checksum&quot;: &quot;a57fee12cd9af67dd3105026d6f20ad3f30e4de8598fb4600f233be34fcbcc62&quot;,
-  &quot;current_checksum&quot;: &quot;4ca8a36fb8b3bf12a922530de0dae794acf5698bc4d77440c38a17bbcb0e97b5&quot;
-}</code></pre></div></div></td>
-</tr>
-</tbody>
-</table>
+События безопасности средства контейнеризации:
+
+| Регистрируемое событие | Коды событий безопасности | Источник |
+| --- | --- | --- |
+| Неуспешные попытки аутентификации пользователей средства контейнеризации | `K8S_UNAUTHORIZED_REQUEST`, `D8_RUNTIME_UNAUTHORIZED_REQUEST_TO_KUBERNETES_API` | `kube-audit`, `runtime-audit-engine` |
+| Создание, модификация и удаление образов контейнеров, получение доступа к образам контейнеров | `D8_RUNTIME_WRITE_BELOW_CONTAINERD_IMAGES_DIR`, `D8_RUNTIME_READ_BELOW_CONTAINERD_IMAGES_DIR` | `runtime-audit-engine` |
+| Запуск и остановка контейнеров | `K8S_POD_CREATED`, `K8S_POD_DELETED`, `D8_RUNTIME_K8S_POD_CREATED`, `D8_RUNTIME_K8S_POD_DELETED` | `kube-audit`, `runtime-audit-engine` |
+| Изменение ролевой модели | `K8S_ROLE_CREATED`, `K8S_ROLE_DELETED`, `K8S_RBAC_RESOURCES_MODIFIED`, `K8S_CLUSTERROLEBINDING_CREATED`, `K8S_CLUSTERROLEBINDING_DELETED`, `K8S_CLUSTER_ADMIN_BOUND`, `K8S_ROLE_WILDCARD_CREATED`, `K8S_ROLE_WRITE_CREATED`, `K8S_ROLE_POD_EXEC_CREATED`, `K8S_SYSTEM_ROLE_MODIFIED_DELETED`, `K8S_SERVICEACCOUNT_CREATED`, `K8S_SERVICEACCOUNT_DELETED`, `K8S_SA_CREATED_SYSTEM_NAMESPACE`, `D8_AUTHORIZATIONRULES_MODIFIED`, `D8_DECKHOUSE_USERS_MODIFIED`, `D8_DECKHOUSE_GROUPS_MODIFIED`, `D8_USER_LOCKED`, `D8_USER_UNLOCKED`, `D8_USER_PASSWORD_RESET` | `kube-audit` |
+| Модификация запускаемых контейнеров | `K8S_POD_EXEC_ATTACH`, `K8S_EPHEMERAL_CONTAINER_CREATED`, `D8_RUNTIME_ATTACH_AND_EXEC_POD`, `D8_RUNTIME_EPHEMERALCONTAINERS_CREATED`, `D8_RUNTIME_LAUNCH_PACKAGE_MANAGEMENT_PROCESS_IN_CONTAINER`, `D8_RUNTIME_DROP_AND_EXECUTE_NEW_BINARY_IN_CONTAINER`, `D8_RUNTIME_CONTAINER_DRIFT_DETECTED_CHMOD`, `D8_RUNTIME_CONTAINER_DRIFT_DETECTED_OPEN_AND_CREATE`, `D8_RUNTIME_MODIFY_BINARY_DIRS` | `kube-audit`, `runtime-audit-engine` |
+| Выявление известных уязвимостей в образах контейнеров с указанием критичности | `D8_TRIVY_WORKLOAD_VULNERABILITIES_FOUND`, `D8_TRIVY_NODE_VULNERABILITIES_FOUND`, `D8_TRIVY_REGISTRY_IMAGE_VULNERABILITIES_FOUND`, `D8_TRIVY_VULNERABLE_IMAGE_REJECTED`. Критичность указывает поле `event.severity` | `operator-trivy` |
+| Выявление некорректности конфигурации | `D8_TRIVY_MISCONFIGURATION_FOUND`, `D8_TRIVY_RBAC_ISSUES_FOUND`, `D8_TRIVY_WORKLOAD_EXPOSED_SECRETS_FOUND`, `D8_TRIVY_COMPLIANCE_CHECKS_FAILED` | `operator-trivy` |
+| Факты нарушения целостности объектов контроля | `D8_CONTAINERD_INTEGRITY_VIOLATION`, `D8_RUNTIME_MISSING_DIGITAL_SIGNATURE`, `D8_RUNTIME_EVENT_WITH_DECKHOUSEIO_AND_SIGNATURE_ANNOTATION`, `D8_RUNTIME_CONTAINER_TAG_IS_NOT_SHA256`, `K8S_SYSTEM_NAMESPACE_POD_NO_DIGEST` | `containerd-integrity`, `runtime-audit-engine`, `kube-audit` |
+
+<!-- Коды событий входа в веб-интерфейс DP CSE (модуль user-authn) будут добавлены после доработки модуля. -->
+
+События безопасности средства виртуализации регистрируются при включённом аудите модуля `virtualization` (п. 4.16.8):
+
+| Регистрируемое событие | Коды событий безопасности | Источник |
+| --- | --- | --- |
+| Успешные и неуспешные попытки аутентификации пользователей средства виртуализации | `K8S_UNAUTHORIZED_REQUEST` | `kube-audit` |
+| Доступ пользователей к виртуальным машинам | `VIRT_VM_ACCESS_CONSOLE`, `VIRT_VM_ACCESS_VNC`, `VIRT_VM_ACCESS_PORTFORWARD` | `virtualization-audit` |
+| Создание и удаление виртуальных машин | `VIRT_VM_CREATED`, `VIRT_VM_DELETED` | `virtualization-audit` |
+| Запуск и остановка средства виртуализации | `VIRT_MODULE_CREATED`, `VIRT_MODULE_DISABLED`, `VIRT_MODULE_DELETED`, `VIRT_COMPONENT_CREATED`, `VIRT_COMPONENT_DELETED` | `virtualization-audit` |
+| Запуск и остановка виртуальных машин с указанием причины остановки | `VIRT_VM_STARTED`, `VIRT_VM_STOPPED`, `VIRT_VM_RESTARTED`, `VIRT_VM_STOPPED_FROM_OS`, `VIRT_VM_RESTARTED_FROM_OS`, `VIRT_VM_KILLED_ABNORMAL`, `VIRT_VM_MIGRATED`, `VIRT_VM_EVICTED`. Причину остановки определяет код события | `virtualization-audit` |
+| Изменение ролевой модели | События средства контейнеризации из строки «Изменение ролевой модели» | `kube-audit` |
+| Изменение конфигурации средства виртуализации | `VIRT_MODULE_UPDATED`, `K8S_MODULECONFIG_MODIFIED` | `virtualization-audit`, `kube-audit` |
+| Изменение конфигураций виртуальных машин | `VIRT_VM_UPDATED` | `virtualization-audit` |
+| Факты нарушения целостности объектов контроля | `VIRT_VM_INTEGRITY_CHECK_FAILED` | `virtualization-audit` |
+| Попытки выполнения запрещённых операций | `VIRT_FORBIDDEN_OPERATION` | `virtualization-audit` |
+
+Кроме перечисленных, DP CSE регистрирует другие события безопасности, например доступ к секретам и их изменение (`K8S_SECRET_ACCESSED`, `K8S_SECRET_MODIFIED`), изменение политики аудита и хранилища журнала (`K8S_AUDIT_POLICY_SECRET_MODIFIED`, `K8S_SECURITY_LOG_PVC_CHANGED`), отказы политик контроля допуска (`K8S_ADMISSION_POLICY_DENIED`), подключение по SSH к узлам (`D8_RUNTIME_INBOUND_SSH_CONNECTION`), срабатывания WAF и DLP модуля `neuvector` (`NV_WAF_THREAT_DETECTED`, `NV_DLP_THREAT_DETECTED` и другие). Полный перечень событий отображается в фильтре «Код события» страницы «События безопасности» и в списке объектов SecurityEventDefinition:
+
+```bash
+d8 k get securityeventdefinitions
+```
 
 {% endraw %}
