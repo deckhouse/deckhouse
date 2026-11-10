@@ -5,24 +5,24 @@ subsystems:
 lang: en
 ---
 
-If a cloud cluster was installed using the `<PROVIDER>ClusterConfiguration` configuration (for example, DVPClusterConfiguration, AWSClusterConfiguration, and so on), this configuration must be migrated to the new ModuleConfig-based model.
+If a cloud cluster was installed using the `<PROVIDER>ClusterConfiguration` configuration (for example, DVPClusterConfiguration or AWSClusterConfiguration), this configuration must be migrated to the new ModuleConfig-based model.
 
 Deckhouse Platform is transitioning from a single `<PROVIDER>ClusterConfiguration` resource to a model where the cloud provider configuration is split across four separate resources:
 
-1. [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) for the `cloud-provider-<PROVIDER>` module — provider and layout settings;
-1. A Secret with credentials of the `cloud-provider.deckhouse.io/credentials` type — access to the cloud API;
-1. Provider InstanceClass (for example, [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass)) — virtual machine parameters;
-1. [NodeGroup](/modules/node-manager/cr.html#nodegroup) — node group configuration.
+- [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) of the `cloud-provider-<PROVIDER>` module: Provider and layout settings
+- Secret with credentials of the `cloud-provider.deckhouse.io/credentials` type: Access to the cloud API
+- Provider InstanceClass (for example, [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass)): Virtual machine parameters
+- [NodeGroup](/modules/node-manager/cr.html#nodegroup): Node group configuration
 
 {% alert level="warning" %}
-Migration is mandatory. This is not an optional step: support for `<PROVIDER>ClusterConfiguration` will be removed. Until the migration is completed, DP upgrades may be blocked.
+Migration is mandatory. This is not an optional step: support for `<PROVIDER>ClusterConfiguration` will be removed. Until the migration is completed, Deckhouse Platform updates may be blocked.
 {% endalert %}
 
-The migration is safe. It implies the applying of automatically prepared DP resources **does not cause nodes to be recreated**. However, explicit administrator action is required, as the resources have to be reviewed and applied manually.
+The migration is safe. Applying the resources automatically prepared by Deckhouse Platform **does not cause nodes to be recreated**. However, explicit administrator action is required, as the resources have to be reviewed and applied manually.
 
 ## How to migrate
 
-1. Wait for the migration alert. Each provider has its own, for example, [`D8CloudProviderDVPMigrationPending`](reference/alerts.html#cloud-provider-dvp-d8cloudproviderdvpmigrationpending) for DVP and [`D8CloudProviderYandexCloudMigrationPending`](reference/alerts.html#cloud-provider-yandex-d8cloudprovideryandexcloudmigrationpending) for Yandex Cloud. The alert means the module has detected the legacy configuration and prepared manifests for the transition.
+1. Wait for the migration alert. Each provider has its own, for example, [`D8CloudProviderDVPMigrationPending`](reference/alerts.html#cloud-provider-dvp-d8cloudproviderdvpmigrationpending) for DVP, [`D8CloudProviderYandexCloudMigrationPending`](reference/alerts.html#cloud-provider-yandex-d8cloudprovideryandexcloudmigrationpending) for Yandex Cloud, and [`D8CloudProviderZvirtMigrationPending`](reference/alerts.html#cloud-provider-zvirt-d8cloudproviderzvirtmigrationpending) for zVirt. The alert means the module has detected the legacy configuration and prepared manifests for the transition.
 
 1. Review the prepared resources in the `d8-migration-resources` Secret in the `d8-cloud-provider-<PROVIDER>` namespace:
 

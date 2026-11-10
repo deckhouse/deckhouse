@@ -54,7 +54,9 @@ Required and optional objects/resources that may be needed in the installation c
 
 1. [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) (**required**): Initial [configuration parameters](../admin/configuration/) necessary to start Deckhouse Platform.
 
-   > Starting with Deckhouse Platform 1.75, use the ModuleConfig `deckhouse` to configure access to the Deckhouse Platform container registry. Configuring access with InitConfiguration (via `imagesRepo`, `registryDockerCfg`, `registryScheme`, and `registryCA` parameters) is considered a legacy method.
+   {% alert level="info" %}
+   Starting with Deckhouse Platform 1.75, use the ModuleConfig `deckhouse` to configure access to the Deckhouse Platform container registry. Configuring access with InitConfiguration (via `imagesRepo`, `registryDockerCfg`, `registryScheme`, and `registryCA` parameters) is considered a legacy method.
+   {% endalert %}
 
 1. [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration): General cluster parameters, such as Kubernetes (control plane components) version, network settings, CRI parameters, etc. **Required**, except when Deckhouse Platform is installed into an already existing Kubernetes cluster.
 
@@ -64,7 +66,9 @@ Required and optional objects/resources that may be needed in the installation c
 
 1. `<PROVIDER>ClusterConfiguration`: Parameters for integration with a [cloud provider](../glossary.html#cloud-provider). **Required** when integrating Deckhouse Platform with a [supported cloud infrastructure](../admin/integrations/public/overview.html).
 
-   > When integrating with Deckhouse Virtualization, the DVPClusterConfiguration resource is not used. It is replaced by the [`cloud-provider-dvp`](/modules/cloud-provider-dvp/configuration.html) ModuleConfig and related resources described in [Layouts and configuration in DVP](../admin/integrations/virtualization/dvp/configuration-and-layout-scheme.html).
+   {% alert level="info" %}
+   The DVPClusterConfiguration, YandexClusterConfiguration, and ZvirtClusterConfiguration resources are deprecated. The parameters for integration with built-in virtualization, Yandex Cloud, and zVirt are set in the ModuleConfig of the [`cloud-provider-dvp`](/modules/cloud-provider-dvp/configuration.html), [`cloud-provider-yandex`](/modules/cloud-provider-yandex/configuration.html), and [`cloud-provider-zvirt`](/modules/cloud-provider-zvirt/configuration.html) modules and in the related resources. These resources are described in [Layouts and configuration in built-in virtualization](../admin/integrations/virtualization/dvp/configuration-and-layout-scheme.html), [Layouts and configuration in Yandex Cloud](../admin/integrations/public/yandex/layout.html), and [Layouts and configuration in zVirt](../admin/integrations/virtualization/zvirt/layout.html).
+   {% endalert %}
 
    Examples of resources configuring integration with a cloud provider:
 
@@ -76,8 +80,8 @@ Required and optional objects/resources that may be needed in the installation c
    * [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration): OpenStack, OVHcloud, Selectel, VK Cloud
    * [VsphereClusterConfiguration](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration): VMware vSphere
    * [VCDClusterConfiguration](/modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration): VMware Cloud Director
-   * [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration): Yandex Cloud
-   * [ZvirtClusterConfiguration](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration): zVirt
+   * [ModuleConfig `cloud-provider-yandex`](/modules/cloud-provider-yandex/configuration.html): Yandex Cloud (together with the `d8-credentials` Secret and [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) / [NodeGroup](/modules/node-manager/cr.html#nodegroup) resources)
+   * [ModuleConfig `cloud-provider-zvirt`](/modules/cloud-provider-zvirt/configuration.html): zVirt (together with the `d8-credentials` Secret and [ZvirtInstanceClass](/modules/cloud-provider-zvirt/cr.html#zvirtinstanceclass) / [NodeGroup](/modules/node-manager/cr.html#nodegroup) resources)
 
    To add cloud nodes, you also need `<PROVIDER>InstanceClass` objects (for example [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) for Yandex Cloud) that describe VM configuration in the node group (the [NodeGroup](/modules/node-manager/cr.html#nodegroup) object).
 
@@ -1047,7 +1051,9 @@ You can check the current status of versions in the [release channels](../glossa
   - `<LICENSE_KEY>`: Deckhouse Platform license key.
   - `/home/user/d8-bundle`: Directory where the image packages will be placed. It will be created if it does not exist.
 
-  > If the image download is interrupted, rerunning the command will resume the download, provided no more than one day has passed since the interruption.
+  {% alert level="info" %}
+  If the image download is interrupted, rerunning the command will resume the download, provided no more than one day has passed since the interruption.
+  {% endalert %}
 
   Example command to download all Deckhouse Platform EE versions starting from version 1.59 (specify your license key):
 
@@ -1165,7 +1171,7 @@ You can check the current status of versions in the [release channels](../glossa
   - `"module-name@>=1.3.0 <=1.4.0"`: Pulls versions in the range, honoring both the lower and upper boundaries.
   - `module-name@=v1.3.0`: Pulls exact tag match v1.3.0, publishing to all release channels.
   - `module-name@=v1.3.0+stable`: Pulls exact tag match v1.3.0, publishing to the stable release channel.
-  - `module-name@=bobV1`: Pulls exact tag match "bobV1", publishing to all release channels.
+  - `module-name@=bobV1`: Pulls exact tag match `bobV1`, publishing to all release channels.
 - `--exclude-module` / `-e` = `name`: Skip downloading a specific set of modules using a blacklist. Use multiple times to add more modules to the blacklist. Ignored if `--no-modules` or `--include-module` is used;
 - `--include-package` = `name[@version]`: Download only a specific set of packages using a whitelist. Versions and semver constraints use the same syntax as `--include-module`, including quoting rules.
 - `--exclude-package` = `name[@version]`: Skip downloading a specific set of packages using a blacklist. Ignored if `--include-package` is used.
@@ -1227,7 +1233,10 @@ If you need to install Deckhouse Platform with automatic updates disabled:
 
 1. Use the installer image tag corresponding to the desired version. For example, to install release `v1.44.3`, use the image `your.private.registry.com/deckhouse/install:v1.44.3`.
 1. Specify the appropriate version number in the [`deckhouse.devBranch`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-devbranch) parameter of [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration).  
-   > **Do not specify** the [`deckhouse.releaseChannel`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy-v1alpha2-spec-releasechannel) parameter in [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration).
+
+   {% alert level="warning" %}
+   **Do not specify** the [`deckhouse.releaseChannel`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy-v1alpha2-spec-releasechannel) parameter in [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration).
+   {% endalert %}
 
 If you want to disable automatic updates in an already running Deckhouse Platform installation (including patch updates), remove the [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) parameter from the `deckhouse` module configuration.
 

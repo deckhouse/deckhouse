@@ -66,7 +66,9 @@ relatedLinks:
 
 1. [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) (**обязательный**) — начальные [параметры конфигурации](../admin/configuration/), необходимые для запуска Deckhouse Platform.
 
-   > Начиная с версии Deckhouse Platform 1.75, используйте ModuleConfig `deckhouse` для настройки доступа к хранилищу образов Deckhouse Platform. Настройка доступа с помощью InitConfiguration (параметры `imagesRepo`, `registryDockerCfg`, `registryScheme`, `registryCA`) считается устаревшим способом.
+   {% alert level="info" %}
+   Начиная с версии Deckhouse Platform 1.75, используйте ModuleConfig `deckhouse` для настройки доступа к хранилищу образов Deckhouse Platform. Настройка доступа с помощью InitConfiguration (параметры `imagesRepo`, `registryDockerCfg`, `registryScheme`, `registryCA`) считается устаревшим способом.
+   {% endalert %}
 
 1. [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) — общие параметры кластера, такие как версия Kubernetes (компонентов control plane кластера), сетевые настройки, параметры CRI и т. д. Является **обязательным**, кроме случая, когда Deckhouse Platform устанавливается в уже существующий кластер Kubernetes.
 
@@ -76,7 +78,9 @@ relatedLinks:
 
 1. `<PROVIDER>ClusterConfiguration` — параметры интеграции с [облачным провайдером](../glossary.html#cloud-provider). Является **обязательным** при интеграции Deckhouse Platform с [поддерживаемой облачной инфраструктурой](../admin/integrations/public/overview.html).
 
-   > При интеграции с виртуализацией Deckhouse ресурс DVPClusterConfiguration не используется. Его заменяют ModuleConfig [`cloud-provider-dvp`](/modules/cloud-provider-dvp/configuration.html) и связанные с ним ресурсы, описанные в разделе [«Схемы размещения и настройка DVP»](../admin/integrations/virtualization/dvp/configuration-and-layout-scheme.html).
+   {% alert level="info" %}
+   Ресурсы DVPClusterConfiguration, YandexClusterConfiguration и ZvirtClusterConfiguration устарели. Параметры интеграции со встроенной виртуализацией, Yandex Cloud и zVirt задаются в ModuleConfig модулей [`cloud-provider-dvp`](/modules/cloud-provider-dvp/configuration.html), [`cloud-provider-yandex`](/modules/cloud-provider-yandex/configuration.html) и [`cloud-provider-zvirt`](/modules/cloud-provider-zvirt/configuration.html) и в связанных с ними ресурсах. Эти ресурсы описаны в разделах [«Схемы размещения и настройка встроенной виртуализации»](../admin/integrations/virtualization/dvp/configuration-and-layout-scheme.html), [«Схемы размещения и настройка Yandex Cloud»](../admin/integrations/public/yandex/layout.html) и [«Схемы размещения и настройка zVirt»](../admin/integrations/virtualization/zvirt/layout.html).
+   {% endalert %}
 
    Примеры ресурсов, настраивающих интеграцию Deckhouse Platform с облачным провайдером:
 
@@ -89,8 +93,8 @@ relatedLinks:
    * [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) — OpenStack, OVHcloud, Selectel, VK Cloud;
    * [VsphereClusterConfiguration](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration) — VMware vSphere;
    * [VCDClusterConfiguration](/modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration) — VMware Cloud Director;
-   * [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) — Yandex Cloud;
-   * [ZvirtClusterConfiguration](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration) — zVirt.
+   * [ModuleConfig `cloud-provider-yandex`](/modules/cloud-provider-yandex/configuration.html) — Yandex Cloud (вместе с секретом `d8-credentials` и ресурсами [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) / [NodeGroup](/modules/node-manager/cr.html#nodegroup));
+   * [ModuleConfig `cloud-provider-zvirt`](/modules/cloud-provider-zvirt/configuration.html) — zVirt (вместе с секретом `d8-credentials` и ресурсами [ZvirtInstanceClass](/modules/cloud-provider-zvirt/cr.html#zvirtinstanceclass) / [NodeGroup](/modules/node-manager/cr.html#nodegroup)).
 
    Для добавления облачных узлов в кластер также понадобятся объекты `<PROVIDER>InstanceClass` (например [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) для Yandex Cloud), которые описывают конфигурацию виртуальных машин в группе узлов (объект [NodeGroup](/modules/node-manager/cr.html#nodegroup)).
 
@@ -1058,7 +1062,9 @@ echo "$MYRESULTSTRING"
   - `<LICENSE_KEY>` — лицензионный ключ Deckhouse Platform;
   - `/home/user/d8-bundle` — директория, в которой будут расположены пакеты образов. Будет создана, если не существует.
 
-  > Если загрузка образов будет прервана, повторный вызов команды продолжит загрузку, если с момента ее остановки прошло не более суток.
+  {% alert level="info" %}
+  Если загрузка образов будет прервана, повторный вызов команды продолжит загрузку, если с момента ее остановки прошло не более суток.
+  {% endalert %}
 
   Пример команды для загрузки всех версий Deckhouse Platform EE, начиная с версии 1.59 (укажите лицензионный ключ):
 
@@ -1176,7 +1182,7 @@ echo "$MYRESULTSTRING"
   - `"module-name@>=1.3.0 <=1.4.0"` — загрузка версий в диапазоне с учетом нижней и верхней границы;
   - `module-name@=v1.3.0` — загрузка точного соответствия тегу v1.3.0, публикация во все каналы релизов;
   - `module-name@=v1.3.0+stable` — загрузка точного соответствия тегу v1.3.0, публикация в канал релизов stable;
-  - `module-name@=bobV1` — загрузка точного соответствия тегу "bobV1", публикация во все каналы релизов.
+  - `module-name@=bobV1` — загрузка точного соответствия тегу `bobV1`, публикация во все каналы релизов.
 - `--exclude-module` / `-e` = `name` — пропустить загрузку определенного набора модулей по принципу черного списка. Укажите несколько раз, чтобы добавить в черный список больше модулей. Игнорируется, если используются `--no-modules` или `--include-module`.
 - `--include-package` = `name[@version]` — загрузить определенный набор пакетов по принципу белого списка. Для указания версий и semver-ограничений используется тот же синтаксис, что и у `--include-module`, включая правила использования кавычек.
 - `--exclude-package` = `name[@version]` — пропустить загрузку определенного набора пакетов по принципу черного списка. Игнорируется, если используется `--include-package`.
@@ -1237,7 +1243,10 @@ echo "$MYRESULTSTRING"
 
 1. Используйте тег образа установщика соответствующей версии. Например, если вы хотите установить релиз `v1.44.3`, используйте образ `your.private.registry.com/deckhouse/install:v1.44.3`.
 1. Укажите соответствующий номер версии в [параметре `deckhouse.devBranch`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-devbranch) в [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration).
-   > **Не указывайте** [параметр `deckhouse.releaseChannel`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#module-v1alpha1-properties-releasechannel) в [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration).
+
+   {% alert level="warning" %}
+   **Не указывайте** [параметр `deckhouse.releaseChannel`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#module-v1alpha1-properties-releasechannel) в [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration).
+   {% endalert %}
 
 Если вы хотите отключить автоматические обновления для уже установленного Deckhouse Platform (включая обновления patch-релизов), удалите [параметр `releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) из конфигурации модуля `deckhouse`.
 

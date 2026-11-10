@@ -5,24 +5,24 @@ subsystems:
 lang: ru
 ---
 
-Если облачный кластер был установлен со схемой `<PROVIDER>ClusterConfiguration` (например, DVPClusterConfiguration, AWSClusterConfiguration и т. д.), эту конфигурацию нужно перенести на новую модель на базе ModuleConfig.
+Если облачный кластер был установлен со схемой `<PROVIDER>ClusterConfiguration` (например, DVPClusterConfiguration или AWSClusterConfiguration), эту конфигурацию нужно перенести на новую модель на базе ModuleConfig.
 
 Deckhouse Platform переходит от единого ресурса `<PROVIDER>ClusterConfiguration` к модели, в которой конфигурация облачного провайдера разделена между четырьмя отдельными ресурсами:
 
-1. [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) модуля `cloud-provider-<PROVIDER>` — настройки провайдера и схемы размещения;
-1. Секрет с учётными данными типа `cloud-provider.deckhouse.io/credentials` — доступ к API облака;
-1. InstanceClass провайдера (например, [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass)) — параметры виртуальных машин;
-1. [NodeGroup](/modules/node-manager/cr.html#nodegroup) — описание групп узлов.
+- [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) модуля `cloud-provider-<PROVIDER>` — настройки провайдера и схемы размещения;
+- секрет с учётными данными типа `cloud-provider.deckhouse.io/credentials` — доступ к API облака;
+- InstanceClass провайдера (например, [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass)) — параметры виртуальных машин;
+- [NodeGroup](/modules/node-manager/cr.html#nodegroup) — описание групп узлов.
 
 {% alert level="warning" %}
-Миграция обязательна. Это не опциональный шаг: поддержка `<PROVIDER>ClusterConfiguration` будет прекращена. Пока миграция не выполнена, обновление DP может быть заблокировано.
+Миграция обязательна. Это не опциональный шаг: поддержка `<PROVIDER>ClusterConfiguration` будет прекращена. Пока миграция не выполнена, обновление Deckhouse Platform может быть заблокировано.
 {% endalert %}
 
-Миграция безопасна. Она подразумевает применение автоматически подготовленных DP ресурсов и **не приводит к пересозданию узлов**. При этом требуется осознанное действие администратора, который просматривает и применяет подготовленные ресурсы вручную.
+Миграция безопасна. Применение ресурсов, автоматически подготовленных Deckhouse Platform, **не приводит к пересозданию узлов**. При этом требуется осознанное действие администратора, который просматривает и применяет подготовленные ресурсы вручную.
 
 ## Как выполнить миграцию
 
-1. Дождитесь появления алерта о необходимости миграции. У каждого провайдера он свой, например [`D8CloudProviderDVPMigrationPending`](reference/alerts.html#cloud-provider-dvp-d8cloudproviderdvpmigrationpending) для DVP и [`D8CloudProviderYandexCloudMigrationPending`](reference/alerts.html#cloud-provider-yandex-d8cloudprovideryandexcloudmigrationpending) для Yandex Cloud. Алерт означает, что модуль обнаружил устаревшую конфигурацию и подготовил манифесты для перехода.
+1. Дождитесь появления алерта о необходимости миграции. У каждого провайдера он свой, например [`D8CloudProviderDVPMigrationPending`](reference/alerts.html#cloud-provider-dvp-d8cloudproviderdvpmigrationpending) для DVP, [`D8CloudProviderYandexCloudMigrationPending`](reference/alerts.html#cloud-provider-yandex-d8cloudprovideryandexcloudmigrationpending) для Yandex Cloud и [`D8CloudProviderZvirtMigrationPending`](reference/alerts.html#cloud-provider-zvirt-d8cloudproviderzvirtmigrationpending) для zVirt. Алерт означает, что модуль обнаружил устаревшую конфигурацию и подготовил манифесты для перехода.
 
 1. Просмотрите подготовленные ресурсы в секрете `d8-migration-resources` в неймспейсе `d8-cloud-provider-<PROVIDER>`:
 
