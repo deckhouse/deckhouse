@@ -5,14 +5,14 @@
       {{ if eq (extra "lang") "en" }}
       Login Successful
       {{ else }}
-      Успешный вход
+      Вы вошли
       {{ end }}
   </h2>
   <div class="content-text">
       {{ if eq (extra "lang") "en" }}
       Please copy this code, switch to your application and paste it there:
       {{ else }}
-      Скопируйте этот код, переключитесь на ваше приложение и вставьте его туда:
+      Скопируйте код и вставьте его в приложение:
       {{ end }}
   </div>
   <input type="text" class="input" value="{{ .Code }}" />

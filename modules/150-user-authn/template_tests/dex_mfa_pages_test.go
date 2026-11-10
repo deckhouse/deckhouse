@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"regexp"
 
+	"github.com/Masterminds/sprig/v3"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -29,13 +30,14 @@ import (
 // renderDexPage renders a page of the Dex theme with the functions of dex it uses (server/templates/templates.go,
 // getFuncMap) for a frontend.extra.lang of lang.
 func renderDexPage(page, lang string, data any) string {
-	t := template.New("").Funcs(template.FuncMap{
+	t := template.New("").Funcs(sprig.FuncMap()).Funcs(template.FuncMap{
 		"extra": func(k string) string { return map[string]string{"lang": lang}[k] },
 		"url":   func(_, asset string) string { return asset },
 	})
 	t, err := t.ParseFiles(
 		filepath.Join(dexTemplatesDir, "header.html"),
 		filepath.Join(dexTemplatesDir, "footer.html"),
+		filepath.Join(dexTemplatesDir, "messages.html"),
 		filepath.Join(dexTemplatesDir, page),
 	)
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())

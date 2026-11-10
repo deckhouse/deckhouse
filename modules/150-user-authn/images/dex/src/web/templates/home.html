@@ -30,9 +30,9 @@
     <div class="dex-fact">
       <dt>
         {{ if .SessionExpiryIsIdle }}
-        {{ if eq (extra "lang") "en" }}Expires if idle{{ else }}Истекает при простое{{ end }}
+        {{ if eq (extra "lang") "en" }}Expires if idle{{ else }}Завершится при бездействии{{ end }}
         {{ else }}
-        {{ if eq (extra "lang") "en" }}Session ends{{ else }}Сеанс истекает{{ end }}
+        {{ if eq (extra "lang") "en" }}Session ends{{ else }}Сеанс завершится{{ end }}
         {{ end }}
       </dt>
       <dd><time datetime="{{ .SessionExpiresISO }}">{{ .SessionExpiresText }}</time></dd>
@@ -77,14 +77,14 @@
         {{ if eq (extra "lang") "en" }}
         Not signed in
         {{ else }}
-        Вход не выполнен
+        Вы не вошли
         {{ end }}
     </h2>
     <div class="content-text">
         {{ if eq (extra "lang") "en" }}
         Sign in from the application you want to use.
         {{ else }}
-        Войдите из приложения, которым хотите воспользоваться.
+        Чтобы войти, откройте нужное приложение.
         {{ end }}
     </div>
   </div>

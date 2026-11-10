@@ -13,7 +13,7 @@
       {{ if eq (extra "lang") "en" }}
       Do you want to log out?
       {{ else }}
-      Выйти из системы?
+      Выйти?
       {{ end }}
   </div>
   <form method="post" action="{{ .ReqPath }}" class="login-form">
@@ -40,7 +40,7 @@
       {{ if eq (extra "lang") "en" }}
       You have been successfully logged out.
       {{ else }}
-      Вы вышли из системы.
+      Вы вышли.
       {{ end }}
   </div>
   {{ else }}
@@ -48,14 +48,14 @@
       {{ if eq (extra "lang") "en" }}
       Session Not Found
       {{ else }}
-      Сеанс не найден
+      Вы не вошли
       {{ end }}
   </h2>
   <div class="content-text">
       {{ if eq (extra "lang") "en" }}
       No active session found.
       {{ else }}
-      Активный сеанс не найден.
+      Активного сеанса нет.
       {{ end }}
   </div>
   {{ end }}

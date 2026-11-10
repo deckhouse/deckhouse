@@ -100,7 +100,8 @@ fields when it decides who may write the provider. Rendered right after the conn
     issuer: "Deckhouse"
     dir: /web
     extra:
-      # TODO(nabokihms): make it configurable
+      # The language of a page when the browser prefers neither English nor Russian (Accept-Language);
+      # otherwise a page follows the browser (patch 350).
       lang: en
   {{- with $context.Values.userAuthn.passwordPolicy }}
   {{ if . }}

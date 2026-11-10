@@ -1,0 +1,139 @@
+{{- /* The Russian texts of the messages Dex writes in English: the error pages, the password policy and the scopes
+       of the consent page. A message
+       without a translation stays as Dex wrote it. Dex keeps a set of the templates per language (patch 350), and
+       the pages call these templates only for Russian. */ -}}
+
+{{- define "ru_error_type" -}}
+{{- $t := dict
+  "Bad Request" "Неверный запрос"
+  "Unauthorized" "Нужен вход"
+  "Forbidden" "Доступ запрещён"
+  "Not Found" "Не найдено"
+  "Method Not Allowed" "Запрос не поддерживается"
+  "Too Many Requests" "Слишком много запросов"
+  "Internal Server Error" "Внутренняя ошибка"
+  "Service Unavailable" "Сервис недоступен"
+-}}
+{{- if hasKey $t . }}{{ get $t . }}{{ else }}{{ . }}{{ end -}}
+{{- end -}}
+
+{{- define "ru_error_message" -}}
+{{- $t := dict
+  "Internal server error." "Внутренняя ошибка. Попробуйте позже."
+  "Database error." "Ошибка хранилища. Попробуйте позже."
+  "Requested resource does not exist." "Запрошенные данные не найдены. Начните вход заново."
+  "Requested resource does not exist" "Запрошенные данные не найдены. Начните вход заново."
+  "Login error." "Ошибка входа."
+  "Connector Login Error" "Ошибка входа."
+  "Unsupported request method." "Такой запрос не поддерживается."
+  "Method not allowed." "Такой запрос не поддерживается."
+  "Method not supported" "Такой запрос не поддерживается."
+  "Unauthorized request." "Запрос не прошёл проверку. Начните вход заново."
+  "Unauthorized request" "Запрос не прошёл проверку. Начните вход заново."
+  "Login process not yet finalized." "Вход ещё не завершён. Начните вход заново."
+  "Login process already finalized." "Вход уже завершён."
+  "User session error." "Ошибка сеанса. Начните вход заново."
+  "Page not found" "Страница не найдена."
+  "Invalid request" "Неверный запрос."
+  "bad request" "Неверный запрос."
+  "Connector failed to initialize." "Способ входа недоступен. Попробуйте позже."
+  "Connector failed to initialize" "Способ входа недоступен. Попробуйте позже."
+  "Unknown authenticator." "Неизвестный способ подтверждения входа."
+  "Not a TOTP authenticator." "Это не код из приложения-аутентификатора."
+  "MFA not enrolled." "Подтверждение входа не настроено."
+  "The login is no longer valid. Please sign in again." "Вход больше недействителен. Войдите снова."
+  "Session not found." "Вы не вошли."
+  "Invalid session." "Сеанс недействителен. Войдите снова."
+  "Invalid session cookie." "Сеанс недействителен. Войдите снова."
+  "No logout in progress." "Выход не начат."
+  "Invalid id_token_hint." "Неверный параметр id_token_hint."
+  "client_id does not match id_token_hint." "Параметр client_id не совпадает с id_token_hint."
+  "post_logout_redirect_uri requires id_token_hint or client_id." "Для post_logout_redirect_uri нужен id_token_hint или client_id."
+  "Unregistered post_logout_redirect_uri." "Адрес post_logout_redirect_uri не зарегистрирован."
+  "Account locked by an administrator. Contact your administrator." "Учётная запись заблокирована администратором. Обратитесь к администратору."
+  "Account temporarily locked" "Учётная запись временно заблокирована. Попробуйте позже."
+  "Invalid device code request type" "Неверный тип запроса кода устройства."
+  "Failed to connect to the database." "Не удалось подключиться к хранилищу. Попробуйте позже."
+  "Handling the / path error." "Внутренняя ошибка. Попробуйте позже."
+  "Health check failed." "Проверка состояния не прошла."
+  "This sign-in is already done for another account. Start the sign-in again." "Этот вход уже выполнен под другой учётной записью. Начните вход заново."
+  "The second factor of this application is misconfigured. Contact your administrator." "Подтверждение входа для этого приложения настроено неправильно. Обратитесь к администратору."
+  "Requested connector does not support this grant type." "Этот способ входа не поддерживает такой запрос."
+  "No connectors available for this client." "Для этого приложения нет способов входа."
+  "Connector not allowed for this client." "Этот способ входа недоступен для приложения."
+  "Bad connector ID" "Неизвестный способ входа."
+  "Connector ID does not match a valid Connector" "Неизвестный способ входа."
+  "Failed to retrieve connector list." "Не удалось загрузить способы входа. Попробуйте позже."
+  "Failed to retrieve client." "Не удалось загрузить данные приложения. Попробуйте позже."
+  "Invalid client." "Неизвестное приложение."
+  "Invalid client_id provided." "Неизвестное приложение."
+  "Invalid redirect URI." "Неверный адрес возврата."
+  "No user code received" "Код не получен."
+  "Approval rejected." "Доступ отклонён."
+  "Login error. Please contact your administrator or try again later." "Ошибка входа. Попробуйте позже или обратитесь к администратору."
+  "Authentication failed. Please contact your administrator or try again later." "Не удалось войти. Попробуйте позже или обратитесь к администратору."
+  "Internal server error. Please contact your administrator or try again later." "Внутренняя ошибка. Попробуйте позже или обратитесь к администратору."
+  "A database error occurred. Please try again later." "Ошибка хранилища. Попробуйте позже."
+  "Invalid request. Please try again." "Неверный запрос. Попробуйте ещё раз."
+  "You are not a member of any of the required groups to authenticate." "Вы не входите в группы, которым разрешён вход."
+  "Access denied. Please contact your administrator." "Доступ запрещён. Обратитесь к администратору."
+  "Logout is temporarily unavailable. Please try again." "Выход временно недоступен. Попробуйте ещё раз."
+  "Another method of the second factor is registered for your account. Sign in with it." "У вашей учётной записи уже есть другой способ подтверждения входа. Войдите с ним."
+  "Failed to parse request." "Не удалось разобрать запрос. Начните вход заново."
+  "Invalid client_id." "Неизвестное приложение."
+  "Unregistered redirect_uri." "Адрес redirect_uri не зарегистрирован для приложения."
+  "Request was missing parameters" "В запросе не хватает параметров."
+  "Authorization failed. Please try again." "Не удалось войти. Попробуйте ещё раз."
+  "Invalid or expired auth code." "Код авторизации неверный или устарел."
+  "Invalid or expired user code." "Код неверный или устарел."
+  "Failed to exchange auth code." "Не удалось обменять код авторизации. Попробуйте позже."
+  "Invalid or expired device code." "Код устройства неверный или устарел."
+-}}
+{{- if hasKey $t . }}{{ get $t . }}{{ else }}{{ . }}{{ end -}}
+{{- end -}}
+
+{{- /* The accesses of the consent page: the descriptions of the scopes Dex shows (scopeDescriptions), after
+       "Приложение … получит доступ:". */ -}}
+{{- define "ru_scope" -}}
+{{- $t := dict
+  "Have offline access" "к данным без вашего участия (офлайн-доступ)"
+  "View basic profile information" "к основным данным профиля"
+  "View your email address" "к адресу электронной почты"
+  "View your groups" "к списку ваших групп"
+-}}
+{{- if hasKey $t . }}{{ get $t . }}{{ else }}{{ . }}{{ end -}}
+{{- end -}}
+
+{{- /* The rules of the password policy, one per line ("• At least 8 characters"). */ -}}
+{{- define "ru_password_rules" -}}
+{{- $t := dict
+  "Password must contain:" "Пароль должен содержать:"
+  "• Upper and lowercase letters" "• Строчные и заглавные буквы"
+  "• At least one uppercase letter" "• Хотя бы одну заглавную букву"
+  "• At least one lowercase letter" "• Хотя бы одну строчную букву"
+  "• At least one number" "• Хотя бы одну цифру"
+  "• Special characters (!@#$%^&* etc.)" "• Спецсимволы (!@#$%^&* и т. п.)"
+  "• No more than 2 identical characters in a row" "• Не больше двух одинаковых символов подряд"
+-}}
+{{- $lines := list -}}
+{{- range splitList "\n" . -}}
+  {{- if hasKey $t . -}}
+    {{- $lines = append $lines (get $t .) -}}
+  {{- else -}}
+    {{- $lines = append $lines (regexReplaceAll "^• At least ([0-9]+) characters$" . "• Не менее ${1} символов") -}}
+  {{- end -}}
+{{- end -}}
+{{- join "\n" $lines -}}
+{{- end -}}
+
+{{- /* The rule a new password breaks. */ -}}
+{{- define "ru_password_refusal" -}}
+{{- $t := dict
+  "at least one lowercase letter required" "нужна хотя бы одна строчная буква"
+  "at least one uppercase letter required" "нужна хотя бы одна заглавная буква"
+  "at least one number required" "нужна хотя бы одна цифра"
+  "at least one special character (!@#$ etc.) required" "нужен хотя бы один спецсимвол (!@#$ и т. п.)"
+  "password contains 3 or more identical characters in a row" "три и больше одинаковых символа подряд"
+-}}
+{{- if hasKey $t . }}{{ get $t . }}{{ else }}{{ regexReplaceAll "^minimum ([0-9]+) characters required$" . "нужно не менее ${1} символов" }}{{ end -}}
+{{- end -}}

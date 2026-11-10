@@ -42,9 +42,12 @@
       Подтверждение входа для этого приложения настроено неправильно. Обратитесь к администратору.
       {{ end }}
   </div>
-  {{ else }}
+  {{ else if eq (extra "lang") "en" }}
   <h2 class="content-title">{{ .ErrType }}</h2>
   <div class="content-text">{{ .ErrMsg }}</div>
+  {{ else }}
+  <h2 class="content-title">{{ template "ru_error_type" .ErrType }}</h2>
+  <div class="content-text">{{ template "ru_error_message" .ErrMsg }}</div>
   {{ end }}
 </div>
 

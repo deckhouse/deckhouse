@@ -4,16 +4,16 @@
   {{ if eq .Mode "register" }}
   <h2 class="content-title">
     {{ if eq (extra "lang") "en" }}
-    Register security key
+    New passkey or security key
     {{ else }}
-    Регистрация ключа безопасности
+    Новый ключ доступа
     {{ end }}
   </h2>
   <div class="content-text">
     {{ if eq (extra "lang") "en" }}
-    Register a security key for two-factor authentication.
+    Register a passkey or security key: you will confirm your sign-ins with it.
     {{ else }}
-    Зарегистрируйте ключ безопасности для двухфакторной аутентификации.
+    Зарегистрируйте ключ доступа: им вы будете подтверждать вход.
     {{ end }}
   </div>
   {{ else }}
@@ -21,14 +21,14 @@
     {{ if eq (extra "lang") "en" }}
     Two-factor authentication
     {{ else }}
-    Второй фактор аутентификации
+    Подтверждение входа
     {{ end }}
   </h2>
   <div class="content-text">
     {{ if eq (extra "lang") "en" }}
-    Use your security key to verify your identity.
+    Use your passkey or security key to verify your identity.
     {{ else }}
-    Подтвердите вход ключом безопасности.
+    Подтвердите вход ключом доступа.
     {{ end }}
   </div>
   {{ end }}
@@ -37,17 +37,17 @@
     <div id="webauthn-error" class="form-error" style="display: none;"></div>
     <div id="webauthn-working" class="content-text" style="display: none;">
       {{ if eq (extra "lang") "en" }}
-      Waiting for security key...
+      Waiting for your passkey or security key...
       {{ else }}
-      Ожидание ключа безопасности...
+      Приложите или вставьте ключ…
       {{ end }}
     </div>
 
     <button id="webauthn-btn" type="button" class="btn btn-primary" onclick="startWebAuthn()">
       {{ if eq .Mode "register" }}
-      {{ if eq (extra "lang") "en" }}Register Security Key{{ else }}Зарегистрировать ключ{{ end }}
+      {{ if eq (extra "lang") "en" }}Register Passkey or Security Key{{ else }}Зарегистрировать ключ{{ end }}
       {{ else }}
-      {{ if eq (extra "lang") "en" }}Use Security Key{{ else }}Использовать ключ{{ end }}
+      {{ if eq (extra "lang") "en" }}Use Passkey or Security Key{{ else }}Подтвердить ключом{{ end }}
       {{ end }}
     </button>
   </div>
@@ -71,17 +71,17 @@
     authenticationFailed: "Authentication failed",
     status: "status",
     notAllowed: "Request was cancelled or timed out. Please try again.",
-    security: "Security key operation not allowed on this domain.",
+    security: "The browser does not allow the key on this site.",
     unexpected: "An unexpected error occurred."
   };
   {{ else }}
   const text = {
     registrationFailed: "Не удалось зарегистрировать ключ",
     authenticationFailed: "Не удалось проверить ключ",
-    status: "код",
-    notAllowed: "Запрос отменён или время ожидания истекло. Попробуйте ещё раз.",
-    security: "Операция с ключом безопасности на этом домене запрещена.",
-    unexpected: "Непредвиденная ошибка."
+    status: "код ошибки",
+    notAllowed: "Действие отменено или время ожидания истекло. Попробуйте ещё раз.",
+    security: "Браузер не разрешает использовать ключ на этом сайте.",
+    unexpected: "Что-то пошло не так. Попробуйте ещё раз."
   };
   {{ end }}
 

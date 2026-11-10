@@ -5,14 +5,14 @@
       {{ if eq (extra "lang") "en" }}
       Login Successful for {{ .ClientName }}
       {{ else }}
-      Успешный вход для {{ .ClientName }}
+      Вы вошли в {{ .ClientName }}
       {{ end }}
   </h2>
   <div class="content-text">
       {{ if eq (extra "lang") "en" }}
       Return to your device to continue
       {{ else }}
-      Продолжите на вашем устройстве
+      Вернитесь на устройство, с которого начали вход.
       {{ end }}
   </div>
 </div>

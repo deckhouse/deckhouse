@@ -1,0 +1,422 @@
+diff --git a/server/templates/language.go b/server/templates/language.go
+new file mode 100644
+index 00000000..5ff2e17d
+--- /dev/null
++++ b/server/templates/language.go
+@@ -0,0 +1,113 @@
++package templates
++
++// The language of the pages (Deckhouse patch 350). A theme chooses its texts by the frontend extra "lang"; dex
++// keeps a set of the templates for each language the Deckhouse theme has, with "lang" set to it, and renders a
++// page from the set of the language the browser prefers (Accept-Language). Without a preference for one of them
++// the page keeps the configured "lang".
++
++import (
++	"net/http"
++	"slices"
++	"strconv"
++	"strings"
++)
++
++// The languages of the pages of the Deckhouse theme.
++const (
++	languageEnglish = "en"
++	languageRussian = "ru"
++)
++
++// pageLanguages are the languages dex keeps a set of the templates for.
++var pageLanguages = []string{languageEnglish, languageRussian}
++
++// maxAcceptLanguageEntries bounds the work spent on one Accept-Language header.
++const maxAcceptLanguageEntries = 32
++
++// PreferredLanguage returns the language of the pages for an Accept-Language header (RFC 9110, section
++// 12.5.4), the same rule as the pages of dex-authenticator: "ru" when Russian has the highest weight of the
++// languages of the pages, "en" when English or "*" has. A language range matches by its primary subtag, so
++// "ru-RU" is Russian; a range with q=0 or a weight that does not parse is skipped. Of equal weights the first
++// wins, as browsers list the languages in the order of preference. ok is false when no range names a language
++// of the pages: the page keeps the configured language.
++func PreferredLanguage(acceptLanguage string) (lang string, ok bool) {
++	bestWeight := 0.0
++	for i, entry := range strings.Split(acceptLanguage, ",") {
++		if i == maxAcceptLanguageEntries {
++			break
++		}
++		tag, params, _ := strings.Cut(entry, ";")
++		primary, _, _ := strings.Cut(strings.TrimSpace(tag), "-")
++		var candidate string
++		switch strings.ToLower(primary) {
++		case languageRussian:
++			candidate = languageRussian
++		case languageEnglish, "*":
++			candidate = languageEnglish
++		default:
++			continue
++		}
++		weight, valid := languageWeight(params)
++		if !valid || weight <= bestWeight {
++			continue
++		}
++		lang, bestWeight, ok = candidate, weight, true
++	}
++	return lang, ok
++}
++
++// languageWeight parses the q parameter of a language range; without one the weight is 1.
++func languageWeight(params string) (float64, bool) {
++	for _, param := range strings.Split(params, ";") {
++		name, value, found := strings.Cut(strings.TrimSpace(param), "=")
++		if !found || !strings.EqualFold(strings.TrimSpace(name), "q") {
++			continue
++		}
++		weight, err := strconv.ParseFloat(strings.TrimSpace(value), 64)
++		// The negated range check also refuses NaN.
++		if err != nil || !(weight >= 0 && weight <= 1) {
++			return 0, false
++		}
++		return weight, true
++	}
++	return 1, true
++}
++
++// loadLanguages parses a set of the templates for each language of the pages, with the frontend extra "lang"
++// set to it.
++func loadLanguages(c Config, templatesDir, buildID string) (map[string]*Templates, error) {
++	byLang := make(map[string]*Templates, len(pageLanguages))
++	for _, lang := range pageLanguages {
++		extra := make(map[string]string, len(c.Extra)+1)
++		for k, v := range c.Extra {
++			extra[k] = v
++		}
++		extra["lang"] = lang
++		lc := c
++		lc.Extra = extra
++		t, err := loadTemplates(lc, templatesDir)
++		if err != nil {
++			return nil, err
++		}
++		t.buildID = buildID
++		byLang[lang] = t
++	}
++	return byLang, nil
++}
++
++// page returns the set of the templates in the language the request prefers, and marks the answer as varying
++// with Accept-Language, so that a cache does not serve a page in one language to a browser that asks for the
++// other. It is called before the status is written.
++func (t *Templates) page(r *http.Request, w http.ResponseWriter) *Templates {
++	if !slices.Contains(w.Header().Values("Vary"), "Accept-Language") {
++		w.Header().Add("Vary", "Accept-Language")
++	}
++	lang, ok := PreferredLanguage(r.Header.Get("Accept-Language"))
++	if !ok {
++		return t
++	}
++	if set, found := t.byLang[lang]; found {
++		return set
++	}
++	return t
++}
+diff --git a/server/templates/language_test.go b/server/templates/language_test.go
+new file mode 100644
+index 00000000..b32e19f0
+--- /dev/null
++++ b/server/templates/language_test.go
+@@ -0,0 +1,157 @@
++package templates
++
++import (
++	"net/http"
++	"net/http/httptest"
++	"strings"
++	"testing"
++	"testing/fstest"
++
++	"github.com/stretchr/testify/require"
++)
++
++func TestPreferredLanguage(t *testing.T) {
++	for _, tc := range []struct {
++		header string
++		want   string
++		ok     bool
++	}{
++		{header: "ru-RU", want: "ru", ok: true},
++		{header: "RU", want: "ru", ok: true},
++		{header: "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7", want: "ru", ok: true},
++		{header: "en;q=0.9", want: "en", ok: true},
++		{header: "en-US,en;q=0.9,ru;q=0.8", want: "en", ok: true},
++		{header: "ru;q=0.5, en;q=0.9", want: "en", ok: true},
++		{header: "fr-FR, ru;q=0.3", want: "ru", ok: true},
++		// Of equal weights the first wins.
++		{header: "en, ru", want: "en", ok: true},
++		{header: "ru, en", want: "ru", ok: true},
++		{header: "*", want: "en", ok: true},
++		{header: "ru;q=0.4, *;q=0.5", want: "en", ok: true},
++		// A weight that does not parse, or 0, skips the range.
++		{header: "ru;q=abc, en;q=0.1", want: "en", ok: true},
++		{header: "ru;q=0", ok: false},
++		{header: "ru;q=1.5", ok: false},
++		// No range names a language of the pages: the configured one stays.
++		{header: "", ok: false},
++		{header: "fr-FR,de;q=0.9", ok: false},
++		{header: ";;,,=q;garbage", ok: false},
++		// Only the first entries count.
++		{header: strings.Repeat("fr,", maxAcceptLanguageEntries) + "ru", ok: false},
++	} {
++		lang, ok := PreferredLanguage(tc.header)
++		require.Equal(t, tc.ok, ok, "%q", tc.header)
++		if tc.ok {
++			require.Equal(t, tc.want, lang, "%q", tc.header)
++		}
++	}
++}
++
++// languageWeb is a web directory whose every template prints the frontend extra "lang".
++func languageWeb() fstest.MapFS {
++	web := fstest.MapFS{
++		"static/main.css":        {Data: []byte("body {}")},
++		"themes/light/style.css": {Data: []byte("a {}")},
++		"robots.txt":             {Data: []byte("")},
++	}
++	for _, name := range append(requiredTmpls, "header.html", "footer.html") {
++		web["templates/"+name] = &fstest.MapFile{Data: []byte(`lang={{ extra "lang" }}`)}
++	}
++	return web
++}
++
++// languagePages renders every page of dex, each of them in the language of the request.
++func languagePages(tmpls *Templates) map[string]func(w http.ResponseWriter, r *http.Request) error {
++	return map[string]func(w http.ResponseWriter, r *http.Request) error{
++		"login": func(w http.ResponseWriter, r *http.Request) error {
++			return tmpls.Login(r, w, []ConnectorInfo{{ID: "local", Name: "Email"}})
++		},
++		"password": func(w http.ResponseWriter, r *http.Request) error {
++			return tmpls.Password(r, w, "/auth/local/login", "", "Email", false, "", nil)
++		},
++		"password change": func(w http.ResponseWriter, r *http.Request) error {
++			return tmpls.PasswordChange(r, w, PasswordChange{Username: "jane@example.com", Reason: "forced"})
++		},
++		"approval": func(w http.ResponseWriter, r *http.Request) error {
++			return tmpls.Approval(r, w, "req", "jane", "app", []string{"openid"})
++		},
++		"oob": func(w http.ResponseWriter, r *http.Request) error { return tmpls.OOB(r, w, "code") },
++		"error": func(w http.ResponseWriter, r *http.Request) error {
++			return tmpls.Err(r, w, http.StatusBadRequest, "bad request")
++		},
++		"expired sign-in": func(w http.ResponseWriter, r *http.Request) error {
++			return tmpls.LoginExpired(r, w, "https://app.example.com/")
++		},
++		"error with a code": func(w http.ResponseWriter, r *http.Request) error {
++			return tmpls.renderErr(r, w, http.StatusInternalServerError, "misconfigured", "mfa_misconfigured", "")
++		},
++		"device": func(w http.ResponseWriter, r *http.Request) error {
++			return tmpls.Device(r, w, "/device/auth/verify_code", "", false)
++		},
++		"device success": func(w http.ResponseWriter, r *http.Request) error { return tmpls.DeviceSuccess(r, w, "app") },
++		"totp verify": func(w http.ResponseWriter, r *http.Request) error {
++			return tmpls.TOTPVerifyWithChoice(r, w, "/mfa/totp", "dex", "local", "", true, "/mfa?choose=1")
++		},
++		"webauthn verify": func(w http.ResponseWriter, r *http.Request) error {
++			return tmpls.WebAuthnVerifyWithChoice(r, w, "login", "webauthn", "/mfa?choose=1")
++		},
++		"mfa choose": func(w http.ResponseWriter, r *http.Request) error {
++			return tmpls.MFAChoose(r, w, []MFAChoice{{Type: "TOTP", URL: "/mfa/totp"}}, true)
++		},
++		"home": func(w http.ResponseWriter, r *http.Request) error { return tmpls.Home(r, w, HomeData{}) },
++		"logout": func(w http.ResponseWriter, r *http.Request) error {
++			return tmpls.Logout(r, w, "", true, false)
++		},
++		"logout confirmation": func(w http.ResponseWriter, r *http.Request) error {
++			return tmpls.LogoutConfirmation(r, w, "app", "", "")
++		},
++	}
++}
++
++// TestPagesFollowTheBrowserLanguage: every page renders in the language the browser prefers, keeps the
++// configured one without a preference for a language of the pages, and varies with Accept-Language
++// (Deckhouse patch 350).
++func TestPagesFollowTheBrowserLanguage(t *testing.T) {
++	for _, configured := range []string{"en", "ru"} {
++		//nolint:dogsled // only the templates are needed here
++		_, _, _, tmpls, err := LoadWebConfig(Config{
++			WebFS: languageWeb(), IssuerURL: "https://dex.example.com", Extra: map[string]string{"lang": configured},
++		})
++		require.NoError(t, err)
++
++		for name, render := range languagePages(tmpls) {
++			for _, tc := range []struct {
++				header string
++				want   string
++			}{
++				{header: "ru-RU,ru;q=0.9,en;q=0.8", want: "ru"},
++				{header: "en-US,en;q=0.9,ru;q=0.8", want: "en"},
++				{header: "", want: configured},
++				{header: "fr-FR", want: configured},
++			} {
++				t.Run(configured+"/"+name+"/"+tc.header, func(t *testing.T) {
++					w := httptest.NewRecorder()
++					r := httptest.NewRequest(http.MethodGet, "/auth", nil)
++					if tc.header != "" {
++						r.Header.Set("Accept-Language", tc.header)
++					}
++					require.NoError(t, render(w, r))
++					require.Equal(t, "lang="+tc.want, w.Body.String())
++					require.Equal(t, []string{"Accept-Language"}, w.Header().Values("Vary"))
++				})
++			}
++		}
++	}
++}
++
++// The page keeps a Vary that is already set and adds Accept-Language once.
++func TestPageVaryKeepsOtherValues(t *testing.T) {
++	//nolint:dogsled // only the templates are needed here
++	_, _, _, tmpls, err := LoadWebConfig(Config{WebFS: languageWeb(), IssuerURL: "https://dex.example.com"})
++	require.NoError(t, err)
++	w := httptest.NewRecorder()
++	w.Header().Add("Vary", "Origin")
++	r := httptest.NewRequest(http.MethodGet, "/auth", nil)
++	require.NoError(t, tmpls.TOTPVerify(r, w, "/mfa/totp", "dex", "local", "", false))
++	require.Equal(t, []string{"Origin", "Accept-Language"}, w.Header().Values("Vary"))
++}
+diff --git a/server/templates/passwordchange.go b/server/templates/passwordchange.go
+index f0508f5c..1d885c19 100644
+--- a/server/templates/passwordchange.go
++++ b/server/templates/passwordchange.go
+@@ -37,6 +37,7 @@ type PasswordChange struct {
+ // that URI is ReqPath, as the page of the v2.44-based Deckhouse dex had it, and
+ // PostURL. A refused new password answers 400.
+ func (t *Templates) PasswordChange(r *http.Request, w http.ResponseWriter, p PasswordChange) error {
++	t = t.page(r, w)
+ 	type tooWeak struct {
+ 		Exists      bool
+ 		Description string
+diff --git a/server/templates/templates.go b/server/templates/templates.go
+index 757a5f65..ef99099f 100644
+--- a/server/templates/templates.go
++++ b/server/templates/templates.go
+@@ -66,6 +66,10 @@ type Templates struct {
+ 	homeTmpl           *template.Template
+ 	logoutTmpl         *template.Template
+ 
++	// byLang are the sets of the templates in each language of the pages, which page picks by the
++	// Accept-Language of a request (Deckhouse patch 350). Nil in a set of one language.
++	byLang map[string]*Templates
++
+ 	// buildID changes whenever the web assets do. Pages pass it to the header
+ 	// template as BuildIdentifier, which appends it to the stylesheet URLs, so a
+ 	// browser does not keep a stylesheet of the previous release.
+@@ -154,6 +158,9 @@ func LoadWebConfig(c Config) (http.Handler, http.Handler, http.HandlerFunc, *Tem
+ 		return nil, nil, nil, nil, err
+ 	}
+ 	templates.buildID = buildID
++	if templates.byLang, err = loadLanguages(c, "templates", buildID); err != nil {
++		return nil, nil, nil, nil, err
++	}
+ 
+ 	return static, theme, robots, templates, nil
+ }
+@@ -395,6 +402,7 @@ func sortConnectors(connectors []ConnectorInfo) {
+ }
+ 
+ func (t *Templates) Device(r *http.Request, w http.ResponseWriter, postURL string, userCode string, lastWasInvalid bool) error {
++	t = t.page(r, w)
+ 	if lastWasInvalid {
+ 		w.WriteHeader(http.StatusBadRequest)
+ 	}
+@@ -409,6 +417,7 @@ func (t *Templates) Device(r *http.Request, w http.ResponseWriter, postURL strin
+ }
+ 
+ func (t *Templates) DeviceSuccess(r *http.Request, w http.ResponseWriter, clientName string) error {
++	t = t.page(r, w)
+ 	data := struct {
+ 		ClientName      string
+ 		ReqPath         string
+@@ -418,6 +427,7 @@ func (t *Templates) DeviceSuccess(r *http.Request, w http.ResponseWriter, client
+ }
+ 
+ func (t *Templates) Login(r *http.Request, w http.ResponseWriter, connectors []ConnectorInfo) error {
++	t = t.page(r, w)
+ 	sortConnectors(connectors)
+ 	data := struct {
+ 		Connectors      []ConnectorInfo
+@@ -428,6 +438,7 @@ func (t *Templates) Login(r *http.Request, w http.ResponseWriter, connectors []C
+ }
+ 
+ func (t *Templates) Password(r *http.Request, w http.ResponseWriter, postURL, lastUsername, usernamePrompt string, lastWasInvalid bool, backLink string, rememberMe *bool) error {
++	t = t.page(r, w)
+ 	if lastWasInvalid {
+ 		w.WriteHeader(http.StatusUnauthorized)
+ 	}
+@@ -458,6 +469,7 @@ func (t *Templates) Password(r *http.Request, w http.ResponseWriter, postURL, la
+ }
+ 
+ func (t *Templates) Approval(r *http.Request, w http.ResponseWriter, authReqID, username, clientName string, scopes []string) error {
++	t = t.page(r, w)
+ 	accesses := []string{}
+ 	for _, scope := range scopes {
+ 		access, ok := scopeDescriptions[scope]
+@@ -486,6 +498,7 @@ func (t *Templates) TOTPVerify(r *http.Request, w http.ResponseWriter, postURL,
+ func (t *Templates) TOTPVerifyWithChoice(r *http.Request, w http.ResponseWriter, postURL, issuer, connector, qrCode string,
+ 	lastWasInvalid bool, otherMethodURL string,
+ ) error {
++	t = t.page(r, w)
+ 	if lastWasInvalid {
+ 		w.WriteHeader(http.StatusUnauthorized)
+ 	}
+@@ -512,6 +525,7 @@ type MFAChoice struct {
+ // MFAChoose renders the choice of a method of the second factor (Deckhouse patch 340). enroll is true when the
+ // user has registered none of them and registers the chosen one.
+ func (t *Templates) MFAChoose(r *http.Request, w http.ResponseWriter, choices []MFAChoice, enroll bool) error {
++	t = t.page(r, w)
+ 	w.Header().Set("Cache-Control", "no-store")
+ 	data := struct {
+ 		Choices         []MFAChoice
+@@ -558,12 +572,14 @@ func (t *Templates) HasHome() bool {
+ }
+ 
+ func (t *Templates) Home(r *http.Request, w http.ResponseWriter, data HomeData) error {
++	t = t.page(r, w)
+ 	data.ReqPath = r.URL.Path
+ 	data.BuildIdentifier = t.buildID
+ 	return renderTemplate(w, t.homeTmpl, data)
+ }
+ 
+ func (t *Templates) Logout(r *http.Request, w http.ResponseWriter, backURL string, loggedOut bool, showConfirmation bool) error {
++	t = t.page(r, w)
+ 	return renderTemplate(w, t.logoutTmpl, logoutData{
+ 		BackURL:          backURL,
+ 		LoggedOut:        loggedOut,
+@@ -577,6 +593,7 @@ func (t *Templates) Logout(r *http.Request, w http.ResponseWriter, backURL strin
+ // form posts the client, the address to return to and the state back, so the
+ // confirmed logout ends where the unconfirmed one was headed.
+ func (t *Templates) LogoutConfirmation(r *http.Request, w http.ResponseWriter, clientID, postLogoutRedirectURI, state string) error {
++	t = t.page(r, w)
+ 	return renderTemplate(w, t.logoutTmpl, logoutData{
+ 		ShowConfirmation:      true,
+ 		ReqPath:               r.URL.Path,
+@@ -607,6 +624,7 @@ func (t *Templates) WebAuthnVerify(r *http.Request, w http.ResponseWriter, mode,
+ // WebAuthnVerifyWithChoice is WebAuthnVerify with the link to the choice of another registered method of the
+ // second factor, empty when the user has no other (Deckhouse patch 340).
+ func (t *Templates) WebAuthnVerifyWithChoice(r *http.Request, w http.ResponseWriter, mode, authenticatorID, otherMethodURL string) error {
++	t = t.page(r, w)
+ 	data := struct {
+ 		// Mode must be server-controlled ("register" or "login") and never derived
+ 		// from user input to prevent XSS in the template's script context.
+@@ -620,6 +638,7 @@ func (t *Templates) WebAuthnVerifyWithChoice(r *http.Request, w http.ResponseWri
+ }
+ 
+ func (t *Templates) OOB(r *http.Request, w http.ResponseWriter, code string) error {
++	t = t.page(r, w)
+ 	data := struct {
+ 		Code            string
+ 		ReqPath         string
+@@ -645,6 +664,7 @@ func (t *Templates) Err(r *http.Request, w http.ResponseWriter, errCode int, err
+ // its own words, and ReturnURL is the application the page may send the user
+ // back to; both are empty on other errors (Deckhouse patch 280, see expired.go).
+ func (t *Templates) renderErr(r *http.Request, w http.ResponseWriter, errCode int, errMsg, code, returnURL string) error {
++	t = t.page(r, w)
+ 	w.WriteHeader(errCode)
+ 	data := struct {
+ 		ErrType         string

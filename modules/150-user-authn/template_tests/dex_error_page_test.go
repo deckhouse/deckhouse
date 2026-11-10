@@ -23,6 +23,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/Masterminds/sprig/v3"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -43,7 +44,7 @@ type dexErrorPageData struct {
 // loadDexErrorPage parses the error page of the theme with the functions of dex it uses
 // (server/templates/templates.go, getFuncMap) for a frontend.extra.lang of lang.
 func loadDexErrorPage(lang string) *template.Template {
-	t := template.New("").Funcs(template.FuncMap{
+	t := template.New("").Funcs(sprig.FuncMap()).Funcs(template.FuncMap{
 		"extra": func(k string) string { return map[string]string{"lang": lang}[k] },
 		"url":   func(_, asset string) string { return asset },
 	})
@@ -51,6 +52,7 @@ func loadDexErrorPage(lang string) *template.Template {
 		filepath.Join(dexTemplatesDir, "header.html"),
 		filepath.Join(dexTemplatesDir, "footer.html"),
 		filepath.Join(dexTemplatesDir, "error.html"),
+		filepath.Join(dexTemplatesDir, "messages.html"),
 	)
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 	return t
@@ -139,12 +141,25 @@ var _ = Describe("Module :: user-authn :: Dex error page", func() {
 		Expect(ru).NotTo(ContainSubstring("Internal Server Error"))
 	})
 
-	It("keeps the other errors as they are", func() {
-		for _, lang := range []string{"en", "ru"} {
-			page := renderDexErrorPage(lang, dexErrorPageData{ErrType: "Bad Request", ErrMsg: "User session error.", ReqPath: "/auth"})
-			Expect(heading.FindStringSubmatch(page)[1]).To(Equal("Bad Request"), lang)
-			Expect(page).To(ContainSubstring(`<div class="content-text">User session error.</div>`), lang)
-			Expect(strings.Contains(page, "The sign-in has expired")).To(BeFalse(), lang)
+	It("keeps the other errors as Dex writes them in English", func() {
+		page := renderDexErrorPage("en", dexErrorPageData{ErrType: "Bad Request", ErrMsg: "User session error.", ReqPath: "/auth"})
+		Expect(heading.FindStringSubmatch(page)[1]).To(Equal("Bad Request"))
+		Expect(page).To(ContainSubstring(`<div class="content-text">User session error.</div>`))
+		Expect(strings.Contains(page, "The sign-in has expired")).To(BeFalse())
+	})
+
+	// The Russian page translates the status and the messages Dex shows most (messages.html).
+	It("translates the other errors into Russian", func() {
+		text := regexp.MustCompile(`(?s)<div class="content-text">\s*(.*?)\s*</div>`)
+		for _, msg := range []string{"User session error.", "Unauthorized request.", "Login process not yet finalized.", "Database error."} {
+			page := renderDexErrorPage("ru", dexErrorPageData{ErrType: "Bad Request", ErrMsg: msg, ReqPath: "/auth"})
+			Expect(heading.FindStringSubmatch(page)[1]).To(MatchRegexp(russian.String()), msg)
+			Expect(text.FindStringSubmatch(page)[1]).To(MatchRegexp(`\p{Cyrillic}`), msg)
+			Expect(page).NotTo(ContainSubstring(msg))
 		}
+		// A message without a translation stays as Dex wrote it.
+		page := renderDexErrorPage("ru", dexErrorPageData{ErrType: "Teapot", ErrMsg: "Something rare.", ReqPath: "/auth"})
+		Expect(heading.FindStringSubmatch(page)[1]).To(Equal("Teapot"))
+		Expect(page).To(ContainSubstring("Something rare."))
 	})
 })

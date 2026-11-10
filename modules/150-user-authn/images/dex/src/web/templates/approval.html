@@ -15,7 +15,7 @@
         {{ if eq (extra "lang") "en" }}
         {{ .Client }} would like to:
         {{ else }}
-        {{ .Client }} получит доступ к:
+        Приложение {{ .Client }} получит доступ:
         {{ end }}
     </div>
     <ul class="list-checked">
@@ -25,7 +25,11 @@
           <path fill="currentColor" d="M512 64a448 448 0 1 1 0 896 448 448 0 0 1 0-896m-55.808 536.384-99.52-99.584a38.4 38.4 0 1 0-54.336 54.336l126.72 126.72a38.27 38.27 0 0 0 54.336 0l262.4-262.464a38.4 38.4 0 1 0-54.272-54.336z" />
         </svg>
         <span>
+          {{ if eq (extra "lang") "en" }}
           {{ $scope }}
+          {{ else }}
+          {{ template "ru_scope" $scope }}
+          {{ end }}
         </span>
       </li>
       {{ end }}
@@ -35,7 +39,7 @@
           {{ if eq (extra "lang") "en" }}
           {{ .Client }} has not requested any personal information:
           {{ else }}
-          {{ .Client }} не запрашивает доступа к персональной информации
+          Приложение {{ .Client }} не запрашивает доступ к личным данным.
           {{ end }}
       </div>
     {{ end }}
@@ -50,7 +54,7 @@
             {{ if eq (extra "lang") "en" }}
             Grant Access
             {{ else }}
-            Выдать доступ
+            Разрешить
             {{ end }}
         </button>
       </form>
@@ -63,7 +67,7 @@
             {{ if eq (extra "lang") "en" }}
             Cancel
             {{ else }}
-            Отменить
+            Отклонить
             {{ end }}
         </button>
       </form>

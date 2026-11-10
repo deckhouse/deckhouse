@@ -1247,6 +1247,40 @@ from the types with `require: Any`), the theme (`mfa_choose.html`, the link on
 **Depends on:** 210 (the chain stops at an unknown authenticator), 300
 (`session.MFASatisfied`).
 
+### 350-page-language.patch
+
+**Zone:** the language of the pages. A theme chooses its texts by the frontend
+extra `lang`, which upstream reads from the configuration, one language for
+every browser. The patch keeps a set of the templates for each language of the
+Deckhouse theme (`en`, `ru`), parsed with `lang` set to it
+(`templates/language.go`, `loadLanguages`), and every page (login, password,
+password change, approval, device, the second factor and its choice, home,
+logout, the errors with and without a code) renders from the set of the
+language the browser prefers:
+
+- `PreferredLanguage` reads `Accept-Language` the way the pages of
+  dex-authenticator do (its patch 015): `ru` when Russian has the highest
+  weight, `en` when English or `*` has; a range matches by its primary subtag,
+  `q=0` and a weight that does not parse skip it, of equal weights the first
+  wins, and only the first 32 ranges count.
+- with no range of a language of the pages (no header, other languages,
+  garbage) the page keeps the configured `lang`.
+- every page adds `Vary: Accept-Language` before its status, so a cache does
+  not serve one language to a browser that asks for the other.
+
+It comes after 340 because it covers the pages of 280, 300 and 340.
+
+**Consumer in Deckhouse:** the theme (`images/dex/src/web/templates`, the
+`extra "lang"` branches, `lang` of `<html>`, and `messages.html`, which
+translates the messages Dex writes in English: the error texts and the rules
+and refusals of the password policy of 220); `templates/dex/config.yaml` keeps
+`lang: en` as the language without a preference.
+
+**Upstream status:** Deckhouse only.
+
+**Depends on:** 270 (the build identifier of the sets), 280, 300, 340 (their
+pages).
+
 ### 400-connector-open-deadline.patch
 
 **Zone:** opening the connectors at startup. Dex opens every connector one by
