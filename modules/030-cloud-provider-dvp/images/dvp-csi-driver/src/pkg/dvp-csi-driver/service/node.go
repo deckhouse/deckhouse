@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// nolint:gci
 package service
 
 import (
@@ -27,13 +26,14 @@ import (
 	"os/exec"
 	"strings"
 
-	dvpapi "dvp-common/api"
-
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/klog/v2"
-	"k8s.io/utils/mount"
+	mount "k8s.io/mount-utils"
+	utilexec "k8s.io/utils/exec"
+
+	dvpapi "dvp-common/api"
 
 	"dvp-csi-driver/pkg/utils"
 )
@@ -43,6 +43,10 @@ type NodeService struct {
 	nodeName    string
 	dvpCloudAPI *dvpapi.DVPCloudAPI
 	volumeLocks *volumeLocks
+
+	mounter           mount.Interface
+	exec              utilexec.Interface
+	getDevicePathFunc func(context.Context, string) (string, error)
 }
 
 const (
@@ -66,6 +70,9 @@ func NewNode(
 		nodeName:    nodeName,
 		dvpCloudAPI: dvpCloudAPI,
 		volumeLocks: newVolumeLocks(),
+
+		mounter: mount.New(""),
+		exec:    utilexec.New(),
 	}
 }
 
@@ -74,47 +81,98 @@ func (n *NodeService) NodeStageVolume(
 	req *csi.NodeStageVolumeRequest,
 ) (*csi.NodeStageVolumeResponse, error) {
 	if len(req.VolumeId) == 0 {
-		return nil, fmt.Errorf("error required request parameter VolumeId wasn't set")
+		return nil, status.Error(codes.InvalidArgument, "volume id not provided")
 	}
 	diskName := req.VolumeId
 
-	klog.Infof("Staging volume %v with %+v", diskName, req)
+	klog.Infof("Staging volume %v", diskName)
 
-	if req.VolumeCapability.GetBlock() != nil {
+	volumeCapability := req.GetVolumeCapability()
+	if volumeCapability == nil {
+		return nil, status.Error(codes.InvalidArgument, "volume capability not provided")
+	}
+	if volumeCapability.GetBlock() != nil {
 		klog.Infof("Volume %v is a block volume, no need for staging", diskName)
 		return &csi.NodeStageVolumeResponse{}, nil
 	}
+	mountCapability := volumeCapability.GetMount()
+	if mountCapability == nil {
+		return nil, status.Error(codes.InvalidArgument, "mount volume capability not provided")
+	}
+	stagingTargetPath := req.GetStagingTargetPath()
+	if stagingTargetPath == "" {
+		return nil, status.Error(codes.InvalidArgument, "staging target path not provided")
+	}
 
-	device, err := n.getDevicePath(ctx, diskName)
+	lockKey := volumeLockKey(diskName, "stage")
+	if !n.volumeLocks.tryAcquire(lockKey) {
+		return nil, status.Errorf(codes.Aborted, "volume %q staging already in progress", diskName)
+	}
+	defer n.volumeLocks.release(lockKey)
+
+	device, err := n.resolveDevicePath(ctx, diskName)
 	if err != nil {
 		klog.Errorf("Failed to fetch device by for volume %v", diskName)
 		return nil, err
 	}
 
-	// is there a filesystem on this device?
-	filesystem, err := utils.GetDeviceInfo(device)
-	if err != nil {
-		klog.Errorf("Failed to fetch device info for volume %v", diskName)
-		return nil, err
+	if err := os.MkdirAll(stagingTargetPath, 0o750); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to create staging target path %s: %v", stagingTargetPath, err)
 	}
-	if filesystem != "" {
-		klog.Infof("Detected fs %s, returning", filesystem)
+
+	isMountPoint, err := n.mounter.IsMountPoint(stagingTargetPath)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to check staging target path %s mount point: %v", stagingTargetPath, err)
+	}
+	if isMountPoint {
+		klog.Infof("Staging target path %s is already mounted, skipping stage", stagingTargetPath)
 		return &csi.NodeStageVolumeResponse{}, nil
 	}
 
-	fsType := req.VolumeCapability.GetMount().FsType
-	// no filesystem - create it
-	klog.Infof("Creating FS %s on device %s", fsType, device)
-	err = utils.MakeFS(device, fsType)
-	if err != nil {
-		klog.Errorf("Could not create filesystem %s on %s", fsType, device)
-		return nil, err
+	fsType := mountCapability.GetFsType()
+	mounter := mount.NewSafeFormatAndMount(n.mounter, n.exec)
+	if err := mounter.FormatAndMountSensitive(device, stagingTargetPath, fsType, nil, mountCapability.GetMountFlags()); err != nil {
+		return nil, stageMountStatusError(device, stagingTargetPath, fsType, err)
 	}
 
 	return &csi.NodeStageVolumeResponse{}, nil
 }
 
-func (n *NodeService) NodeUnstageVolume(_ context.Context, _ *csi.NodeUnstageVolumeRequest) (*csi.NodeUnstageVolumeResponse, error) {
+func stageMountStatusError(source, target, fsType string, err error) error {
+	code := codes.Internal
+	var mountErr mount.MountError
+	if errors.As(err, &mountErr) {
+		switch mountErr.Type {
+		case mount.FilesystemMismatch, mount.UnformattedReadOnly, mount.HasFilesystemErrors:
+			code = codes.FailedPrecondition
+		case mount.GetDiskFormatFailed, mount.FormatFailed, mount.UnknownMountError:
+			code = codes.Internal
+		}
+	}
+
+	return status.Errorf(code, "failed to stage mount source %s to target %s with fs type %q: %v", source, target, fsType, err)
+}
+
+func (n *NodeService) NodeUnstageVolume(_ context.Context, req *csi.NodeUnstageVolumeRequest) (*csi.NodeUnstageVolumeResponse, error) {
+	diskName := req.GetVolumeId()
+	if diskName == "" {
+		return nil, status.Error(codes.InvalidArgument, "volume id not provided")
+	}
+	stagingTargetPath := req.GetStagingTargetPath()
+	if stagingTargetPath == "" {
+		return nil, status.Error(codes.InvalidArgument, "staging target path not provided")
+	}
+
+	lockKey := volumeLockKey(diskName, "stage")
+	if !n.volumeLocks.tryAcquire(lockKey) {
+		return nil, status.Errorf(codes.Aborted, "volume %q staging already in progress", diskName)
+	}
+	defer n.volumeLocks.release(lockKey)
+
+	if err := mount.CleanupMountPoint(stagingTargetPath, n.mounter, false); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to cleanup staging target path %s: %v", stagingTargetPath, err)
+	}
+
 	return &csi.NodeUnstageVolumeResponse{}, nil
 }
 
@@ -123,7 +181,7 @@ func (n *NodeService) NodePublishVolume(
 	req *csi.NodePublishVolumeRequest,
 ) (*csi.NodePublishVolumeResponse, error) {
 	if len(req.VolumeId) == 0 {
-		return nil, fmt.Errorf("error required request parameter VolumeId wasn't set")
+		return nil, status.Error(codes.InvalidArgument, "volume id not provided")
 	}
 	diskName := req.VolumeId
 
@@ -138,47 +196,102 @@ func (n *NodeService) NodePublishVolume(
 	}
 	defer n.volumeLocks.release(lockKey)
 
-	device, err := n.getDevicePath(ctx, diskName)
-	if err != nil {
-		klog.Errorf("Failed to fetch device by for volume %v", diskName)
-		return nil, err
+	volumeCapability := req.GetVolumeCapability()
+	if volumeCapability == nil {
+		return nil, status.Error(codes.InvalidArgument, "volume capability not provided")
 	}
 
-	if req.VolumeCapability.GetBlock() != nil {
-		return n.publishBlockVolume(req, device)
-	}
-
-	err = os.MkdirAll(targetPath, 0o644)
-	if err != nil {
-		return nil, errors.New(err.Error())
-	}
-
-	fsType := req.VolumeCapability.GetMount().FsType
-
-	mounter := mount.New("")
-	notMnt, err := mount.IsNotMountPoint(mounter, targetPath)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			return nil, fmt.Errorf("failed to check mount point %s: %w", targetPath, err)
+	if volumeCapability.GetBlock() != nil {
+		device, err := n.resolveDevicePath(ctx, diskName)
+		if err != nil {
+			klog.Errorf("Failed to fetch device by for volume %v", diskName)
+			return nil, err
 		}
 
-		notMnt = true
+		return n.publishBlockVolume(req, device)
 	}
-	if !notMnt {
+	if volumeCapability.GetMount() == nil {
+		return nil, status.Error(codes.InvalidArgument, "mount volume capability not provided")
+	}
+	stagingTargetPath := req.GetStagingTargetPath()
+	if stagingTargetPath == "" {
+		return nil, status.Error(codes.FailedPrecondition, "staging target path not provided")
+	}
+
+	err := os.MkdirAll(targetPath, 0o750)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to create target path %s: %v", targetPath, err)
+	}
+
+	isMountPoint, err := n.mounter.IsMountPoint(targetPath)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to check target path %s mount point: %v", targetPath, err)
+	}
+	if isMountPoint {
 		klog.Infof("Filesystem target path %s is already mounted, skipping publish", targetPath)
 		return &csi.NodePublishVolumeResponse{}, nil
 	}
-
-	klog.Infof("Mounting devicePath %s, on targetPath: %s with FS type: %s",
-		device, targetPath, fsType)
-
-	err = mounter.Mount(device, targetPath, fsType, []string{})
-	if err != nil {
-		klog.Errorf("Failed mounting %v", err)
+	if err := n.ensureFilesystemStaged(ctx, req); err != nil {
 		return nil, err
 	}
 
+	options := []string{"bind"}
+	if req.GetReadonly() {
+		options = append(options, "ro")
+	}
+
+	klog.Infof("Bind mounting staged path %s on target path %s", stagingTargetPath, targetPath)
+
+	err = n.mounter.Mount(stagingTargetPath, targetPath, "", options)
+	if err != nil {
+		klog.Errorf("Failed mounting %v", err)
+		return nil, status.Errorf(codes.Internal, "failed to bind mount staged path %s to target path %s: %v", stagingTargetPath, targetPath, err)
+	}
+
 	return &csi.NodePublishVolumeResponse{}, nil
+}
+
+func (n *NodeService) ensureFilesystemStaged(ctx context.Context, req *csi.NodePublishVolumeRequest) error {
+	stagingTargetPath := req.GetStagingTargetPath()
+	isMountPoint, err := n.mounter.IsMountPoint(stagingTargetPath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return status.Errorf(codes.Internal, "failed to check staging target path %s mount point: %v", stagingTargetPath, err)
+		}
+		isMountPoint = false
+	}
+	if isMountPoint {
+		return nil
+	}
+
+	_, err = n.NodeStageVolume(ctx, &csi.NodeStageVolumeRequest{
+		VolumeId:          req.GetVolumeId(),
+		PublishContext:    req.GetPublishContext(),
+		StagingTargetPath: stagingTargetPath,
+		VolumeCapability:  req.GetVolumeCapability(),
+		Secrets:           req.GetSecrets(),
+		VolumeContext:     req.GetVolumeContext(),
+	})
+	if err != nil {
+		return err
+	}
+
+	isMountPoint, err = n.mounter.IsMountPoint(stagingTargetPath)
+	if err != nil {
+		return status.Errorf(codes.Internal, "failed to check staging target path %s mount point after staging: %v", stagingTargetPath, err)
+	}
+	if !isMountPoint {
+		return status.Errorf(codes.FailedPrecondition, "staging target path %s is not mounted after staging", stagingTargetPath)
+	}
+
+	return nil
+}
+
+func (n *NodeService) resolveDevicePath(ctx context.Context, diskName string) (string, error) {
+	if n.getDevicePathFunc != nil {
+		return n.getDevicePathFunc(ctx, diskName)
+	}
+	return n.getDevicePath(ctx, diskName)
 }
 
 func (n *NodeService) getDevicePath(ctx context.Context, diskName string) (string, error) {
@@ -231,23 +344,22 @@ func (n *NodeService) publishBlockVolume(req *csi.NodePublishVolumeRequest, devi
 		}
 	}()
 
-	mounter := mount.New("")
-	notMnt, err := mount.IsNotMountPoint(mounter, req.TargetPath)
+	isMountPoint, err := n.mounter.IsMountPoint(req.TargetPath)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return nil, status.Errorf(codes.Internal, "failed to check mount point %s: %v", req.TargetPath, err)
 		}
 
-		notMnt = true
+		isMountPoint = false
 	}
-	if !notMnt {
+	if isMountPoint {
 		klog.Infof("Block target path %s is already mounted, skipping publish", req.TargetPath)
 		return &csi.NodePublishVolumeResponse{}, nil
 	}
 
 	klog.Infof("Publishing block volume, device: %s, req: %+v", device, req)
 
-	err = mounter.Mount(device, req.TargetPath, "", []string{"bind"})
+	err = n.mounter.Mount(device, req.TargetPath, "", []string{"bind"})
 	if err != nil {
 		if removeErr := os.Remove(req.TargetPath); removeErr != nil {
 			return nil, status.Errorf(codes.Internal, "Failed to remove mount target %v, err: %v, mount error: %v", req.TargetPath, removeErr, err)
@@ -276,9 +388,7 @@ func (n *NodeService) NodeUnpublishVolume(
 
 	klog.Infof("NodeUnpublishVolume: unmounting %s", target)
 
-	mounter := mount.New("")
-
-	err := mount.CleanupMountPoint(target, mounter, false)
+	err := mount.CleanupMountPoint(target, n.mounter, true)
 	if err == nil || strings.Contains(fmt.Sprint(err), "not mounted") {
 		klog.Infof("NodeUnpublishVolume: target %s already unmounted (or not a mount), ignoring: %v", target, err)
 	} else {

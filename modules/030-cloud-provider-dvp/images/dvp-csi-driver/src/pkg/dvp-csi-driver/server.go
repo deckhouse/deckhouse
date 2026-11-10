@@ -20,15 +20,20 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"reflect"
 	"sync"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/kubernetes-csi/csi-lib-utils/protosanitizer"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 	"k8s.io/klog/v2"
 
 	"dvp-csi-driver/internal/endpoint"
 )
+
+const strippedLogValue = "***stripped***"
 
 func NewNonBlockingGRPCServer() *nonBlockingGRPCServer {
 	return &nonBlockingGRPCServer{}
@@ -120,7 +125,7 @@ func logGRPC(
 
 	v5 := klog.V(5)
 	if v5.Enabled() {
-		v5.Infof("GRPC request: %s", protosanitizer.StripSecrets(req))
+		v5.Infof("GRPC request: %s", protosanitizer.StripSecrets(sanitizeGRPCLogValue(req)))
 	}
 	resp, err := handler(ctx, req)
 	if err != nil {
@@ -129,40 +134,126 @@ func logGRPC(
 	}
 
 	if v5.Enabled() {
-		v5.Infof("GRPC response: %s", protosanitizer.StripSecrets(resp))
-
-		// In JSON format, intentionally logging without stripping secret
-		// fields due to below reasons:
-		// - It's technically complicated because protosanitizer.StripSecrets does
-		//   not construct new objects, it just wraps the existing ones with a custom
-		//   String implementation. Therefore a simple json.Marshal(protosanitizer.StripSecrets(resp))
-		//   will still include secrets because it reads fields directly
-		//   and more complicated code would be needed.
-		// - This is indeed for verification in mock e2e tests. though
-		//   currently no test which look at secrets, but we might.
-		//   so conceptually it seems better to me to include secrets.
+		v5.Infof("GRPC response: %s", protosanitizer.StripSecrets(sanitizeGRPCLogValue(resp)))
 		logGRPCJson(info.FullMethod, req, resp, err)
 	}
 
 	return resp, err
 }
 
+func sanitizeGRPCLogValue(value interface{}) interface{} {
+	if value == nil || isNil(value) {
+		return value
+	}
+
+	msg, ok := value.(proto.Message)
+	if !ok {
+		return value
+	}
+
+	cloned := proto.Clone(msg)
+	if cloned == nil {
+		return nil
+	}
+
+	return sanitizeProtoMessage(cloned.ProtoReflect())
+}
+
+func sanitizeProtoMessage(msg protoreflect.Message) map[string]interface{} {
+	sanitized := make(map[string]interface{})
+	msg.Range(func(field protoreflect.FieldDescriptor, v protoreflect.Value) bool {
+		name := field.TextName()
+		switch {
+		case isCSISecretField(field):
+			sanitized[name] = strippedLogValue
+		case isCSIMountFlagsField(field):
+			sanitized[name] = stripRepeatedString(v.List())
+		default:
+			sanitized[name] = sanitizeProtoValue(field, v)
+		}
+		return true
+	})
+	return sanitized
+}
+
+func sanitizeProtoValue(field protoreflect.FieldDescriptor, v protoreflect.Value) interface{} {
+	if field.IsList() {
+		list := v.List()
+		result := make([]interface{}, list.Len())
+		for i := 0; i < list.Len(); i++ {
+			result[i] = sanitizeProtoSingleValue(field, list.Get(i))
+		}
+		return result
+	}
+
+	if field.IsMap() {
+		result := make(map[string]interface{})
+		v.Map().Range(func(key protoreflect.MapKey, value protoreflect.Value) bool {
+			result[key.String()] = sanitizeProtoSingleValue(field.MapValue(), value)
+			return true
+		})
+		return result
+	}
+
+	return sanitizeProtoSingleValue(field, v)
+}
+
+func sanitizeProtoSingleValue(field protoreflect.FieldDescriptor, v protoreflect.Value) interface{} {
+	switch field.Kind() {
+	case protoreflect.MessageKind, protoreflect.GroupKind:
+		return sanitizeProtoMessage(v.Message())
+	case protoreflect.EnumKind:
+		enumValue := field.Enum().Values().ByNumber(v.Enum())
+		if enumValue != nil {
+			return string(enumValue.Name())
+		}
+		return int32(v.Enum())
+	default:
+		return v.Interface()
+	}
+}
+
+func stripRepeatedString(list protoreflect.List) []string {
+	result := make([]string, list.Len())
+	for i := 0; i < list.Len(); i++ {
+		result[i] = strippedLogValue
+	}
+	return result
+}
+
+func isCSISecretField(field protoreflect.FieldDescriptor) bool {
+	value := proto.GetExtension(field.Options(), csi.E_CsiSecret)
+	secret, ok := value.(bool)
+	return ok && secret
+}
+
+func isCSIMountFlagsField(field protoreflect.FieldDescriptor) bool {
+	return field.Name() == "mount_flags" && field.ContainingMessage().FullName() == "csi.v1.VolumeCapability.MountVolume"
+}
+
+func isNil(value interface{}) bool {
+	rv := reflect.ValueOf(value)
+	switch rv.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return rv.IsNil()
+	default:
+		return false
+	}
+}
+
 // logGRPCJson logs the called GRPC call details in JSON format
 func logGRPCJson(method string, request, reply interface{}, err error) {
 	// Log JSON with the request and response for easier parsing
 	logMessage := struct {
-		Method   string      `json:"method"`
-		Request  interface{} `json:"request"`
-		Response interface{} `json:"response"`
-		// Error as string, for backward compatibility.
-		// "" on no error.
-		Error string `json:"error"`
-		// Full error dump, to be able to parse out full gRPC error code and message separately in a test.
-		FullError error `json:"full_error"`
+		Method    string      `json:"method"`
+		Request   interface{} `json:"request"`
+		Response  interface{} `json:"response"`
+		Error     string      `json:"error"`      // Backward compatibility; empty on no error.
+		FullError interface{} `json:"full_error"` // Full gRPC error for tests.
 	}{
 		Method:    method,
-		Request:   request,
-		Response:  reply,
+		Request:   sanitizeGRPCLogValue(request),
+		Response:  sanitizeGRPCLogValue(reply),
 		FullError: err,
 	}
 
@@ -172,7 +263,11 @@ func logGRPCJson(method string, request, reply interface{}, err error) {
 
 	msg, err := json.Marshal(logMessage)
 	if err != nil {
+		logMessage.Request = "<<json marshal failed>>"
+		logMessage.Response = "<<json marshal failed>>"
 		logMessage.Error = err.Error()
+		logMessage.FullError = logMessage.Error
+		msg, _ = json.Marshal(logMessage)
 	}
 	klog.V(5).Infof("gRPCCall: %s\n", msg)
 }

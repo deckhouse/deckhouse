@@ -17,17 +17,12 @@ limitations under the License.
 package utils
 
 import (
-	"bufio"
-	"bytes"
-	"errors"
 	"fmt"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 
 	"golang.org/x/sys/unix"
-	"k8s.io/klog/v2"
 )
 
 func StatFS(path string) (int64, int64, int64, int64, int64, int64, error) {
@@ -100,60 +95,4 @@ func GetDeviceByMountPoint(mp string) (string, error) {
 		return "", fmt.Errorf("could not parse command output: >%s<", string(out))
 	}
 	return s[1], nil
-}
-
-// getDeviceInfo will return the first Device which is a partition and its filesystem.
-// if the given Device disk has no partition then an empty zero valued device will return
-func GetDeviceInfo(device string) (string, error) {
-	devicePath, err := filepath.EvalSymlinks(device)
-	if err != nil {
-		klog.Errorf("Unable to evaluate symlink for device %s", device)
-		return "", errors.New(err.Error())
-	}
-
-	klog.Info("lsblk -nro FSTYPE ", devicePath)
-	cmd := exec.Command("lsblk", "-nro", "FSTYPE", devicePath)
-	out, err := cmd.Output()
-	exitError, incompleteCmd := err.(*exec.ExitError)
-	if err != nil && incompleteCmd {
-		return "", errors.New(err.Error() + "lsblk failed with " + string(exitError.Stderr))
-	}
-
-	reader := bufio.NewReader(bytes.NewReader(out))
-	line, _, err := reader.ReadLine()
-	if err != nil {
-		klog.Errorf("Error occurred while trying to read lsblk output")
-		return "", err
-	}
-	return string(line), nil
-}
-
-func MakeFS(device string, fsType string) error {
-	// caution, use force flag when creating the filesystem if it doesn't exit.
-	klog.Infof("Mounting device %s, with FS %s", device, fsType)
-
-	var cmd *exec.Cmd
-	var stdout, stderr bytes.Buffer
-
-	switch {
-	case strings.HasPrefix(fsType, "ext"):
-		cmd = exec.Command("mkfs", "-F", "-t", fsType, device)
-	case strings.HasPrefix(fsType, "xfs"):
-		cmd = exec.Command("mkfs", "-t", fsType, "-f", device)
-	default:
-		return errors.New(fsType + " is not supported, only xfs and ext are supported")
-	}
-
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	err := cmd.Run()
-	exitError, incompleteCmd := err.(*exec.ExitError)
-	if err != nil && incompleteCmd {
-		klog.Errorf("stdout: %s", stdout.String())
-		klog.Errorf("stderr: %s", stderr.String())
-		return errors.New(err.Error() + " mkfs failed with " + exitError.Error())
-	}
-
-	return nil
 }
