@@ -326,11 +326,12 @@ properties:
           enum: [TOTP, WebAuthn]
       require:
         type: string
-        enum: [All]
+        enum: [Any, All]
         description: |
           How the two methods of `methods` combine.
 
-          Required when `methods` lists two methods, and not allowed with one. With `All`, the user passes both methods, the code first and then the key. A user who has only one of them confirms the sign-in with it first and only then registers the other.
+          With `Any`, the user passes one of them. At the first sign-in the user chooses the method and registers it; later Dex asks for a registered method, the one used last first, and a user who has registered both can sign in another way. A user who has registered one method cannot register the other at a sign-in. To change the method, run a `Reset2FA` operation for the registered method or set `All`.
+          With `All`, the user passes both, the code first and then the key. A user who has only one of them confirms the sign-in with it first and only then registers the other.
       providerTypeOverrides:
         type: array
         description: |
@@ -356,7 +357,7 @@ properties:
                 enum: [TOTP, WebAuthn]
             require:
               type: string
-              enum: [All]
+              enum: [Any, All]
               description: |
                 How the two methods combine, as [`require`](#parameters-twofactor-require). Required with two methods, and not allowed with one.
       webAuthn:

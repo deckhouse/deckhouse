@@ -1,0 +1,1334 @@
+diff --git a/cmd/dex/config.go b/cmd/dex/config.go
+index 1377e701..60795c87 100644
+--- a/cmd/dex/config.go
++++ b/cmd/dex/config.go
+@@ -11,6 +11,7 @@ import (
+ 	"net/http"
+ 	"net/netip"
+ 	"os"
++	"slices"
+ 	"strings"
+ 
+ 	"github.com/go-jose/go-jose/v4"
+@@ -97,6 +98,10 @@ type MFAConfig struct {
+ 	// DefaultMFAChain is the default ordered list of authenticator IDs applied
+ 	// to clients that don't specify their own mfaChain. Empty means no MFA by default.
+ 	DefaultMFAChain []string `json:"defaultMFAChain"`
++
++	// OneOfConnectorTypes are the connector types whose users pass one authenticator of the chain, of their
++	// choice, instead of every one (Deckhouse). A Dex that does not know the field asks for the whole chain.
++	OneOfConnectorTypes []string `json:"oneOfConnectorTypes"`
+ }
+ 
+ // Validate the configuration
+@@ -199,6 +204,16 @@ func (c Config) validateMFA() error {
+ 		}
+ 	}
+ 
++	// A choice among no authenticators would let the users of the type in without a second factor (Deckhouse).
++	for _, connectorType := range mfa.OneOfConnectorTypes {
++		if _, ok := server.ConnectorsConfig[connectorType]; !ok && connectorType != connectors.LocalConnector {
++			return fmt.Errorf("mfa.oneOfConnectorTypes: unknown connector type %q", connectorType)
++		}
++		if !chainCovers(mfa, connectorType) {
++			return fmt.Errorf("mfa.oneOfConnectorTypes: no authenticator of mfa.defaultMFAChain applies to the connector type %q", connectorType)
++		}
++	}
++
+ 	for _, client := range c.StaticClients {
+ 		for _, authID := range client.MFAChain {
+ 			if !ids[authID] {
+@@ -210,6 +225,19 @@ func (c Config) validateMFA() error {
+ 	return nil
+ }
+ 
++// chainCovers reports whether an authenticator of the default chain applies to the connector type: an authenticator
++// without connector types applies to every one.
++func chainCovers(mfa MFAConfig, connectorType string) bool {
++	for _, authID := range mfa.DefaultMFAChain {
++		for _, auth := range mfa.Authenticators {
++			if auth.ID == authID && (len(auth.ConnectorTypes) == 0 || slices.Contains(auth.ConnectorTypes, connectorType)) {
++				return true
++			}
++		}
++	}
++	return false
++}
++
+ type password storage.Password
+ 
+ func (p *password) UnmarshalJSON(b []byte) error {
+diff --git a/cmd/dex/config_test.go b/cmd/dex/config_test.go
+index e831d381..369e3266 100644
+--- a/cmd/dex/config_test.go
++++ b/cmd/dex/config_test.go
+@@ -787,3 +787,34 @@ func TestValidateMFARefusesAnUnknownConnectorType(t *testing.T) {
+ 		}
+ 	}
+ }
++
++// A choice of the second factor names a connector type Dex knows, and at least one authenticator of the chain
++// applies to it: a choice among none would let its users in without a factor (Deckhouse patch 340).
++func TestValidateMFAOneOfConnectorTypes(t *testing.T) {
++	authenticators := []MFAAuthenticator{
++		{ID: "totp", Type: "TOTP", ConnectorTypes: []string{"local", "ldap"}},
++		{ID: "webauthn", Type: "WebAuthn", ConnectorTypes: []string{"local"}},
++	}
++	for _, tc := range []struct {
++		name    string
++		oneOf   []string
++		chain   []string
++		wantErr string
++	}{
++		{name: "both apply", oneOf: []string{"local"}, chain: []string{"totp", "webauthn"}},
++		{name: "one applies", oneOf: []string{"ldap"}, chain: []string{"totp", "webauthn"}},
++		{name: "an unknown type", oneOf: []string{"crowd"}, chain: []string{"totp", "webauthn"}, wantErr: "unknown connector type"},
++		{name: "none applies", oneOf: []string{"atlassian-crowd"}, chain: []string{"totp", "webauthn"}, wantErr: "no authenticator"},
++		{name: "none in the chain", oneOf: []string{"ldap"}, chain: []string{"webauthn"}, wantErr: "no authenticator"},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			c := Config{MFA: MFAConfig{Authenticators: authenticators, DefaultMFAChain: tc.chain, OneOfConnectorTypes: tc.oneOf}}
++			err := c.validateMFA()
++			if tc.wantErr != "" {
++				require.ErrorContains(t, err, tc.wantErr)
++			} else {
++				require.NoError(t, err)
++			}
++		})
++	}
++}
+diff --git a/cmd/dex/serve.go b/cmd/dex/serve.go
+index c4a507aa..ff928eeb 100644
+--- a/cmd/dex/serve.go
++++ b/cmd/dex/serve.go
+@@ -403,6 +403,7 @@ func runServe(options serveOptions) error {
+ 		IDTokensValidFor:           idTokensValidFor,
+ 		MFAProviders:               mfaProviders,
+ 		DefaultMFAChain:            c.MFA.DefaultMFAChain,
++		MFAOneOfConnectorTypes:     c.MFA.OneOfConnectorTypes,
+ 	}
+ 
+ 	if c.Expiry.AuthRequests != "" {
+diff --git a/server/config.go b/server/config.go
+index 3e956ac6..f92ad997 100644
+--- a/server/config.go
++++ b/server/config.go
+@@ -125,6 +125,10 @@ type Config struct {
+ 	// DefaultMFAChain is applied to clients that don't specify their own mfaChain.
+ 	DefaultMFAChain []string
+ 
++	// MFAOneOfConnectorTypes are the connector types whose users pass one authenticator of the chain, of their
++	// choice (Deckhouse, see mfa.Handler.OneOfConnectorTypes).
++	MFAOneOfConnectorTypes []string
++
+ 	// PasswordPolicy is the password policy of local users. Nil has no rules, but
+ 	// a password change an administrator forces still applies.
+ 	PasswordPolicy *passwordpolicy.Policy
+diff --git a/server/mfa/handler.go b/server/mfa/handler.go
+index 55c27a23..214ac880 100644
+--- a/server/mfa/handler.go
++++ b/server/mfa/handler.go
+@@ -7,6 +7,7 @@ import (
+ 	"log/slog"
+ 	"net/http"
+ 	"net/url"
++	"slices"
+ 	"time"
+ 
+ 	"github.com/dexidp/dex/server/connectors"
+@@ -46,6 +47,10 @@ type Handler struct {
+ 	DefaultMFAChain []string
+ 	Now             func() time.Time
+ 	Connectors      *connectors.Cache
++
++	// OneOfConnectorTypes are the connector types whose users pass one authenticator of the chain, of their
++	// choice, instead of every one (Deckhouse patch 340, see oneof.go).
++	OneOfConnectorTypes []string
+ }
+ 
+ // renderError renders a user-facing HTML error page.
+@@ -110,9 +115,14 @@ func (h *Handler) validateMFARequest(w http.ResponseWriter, r *http.Request) (*m
+ 
+ // ChainForClient returns the MFA chain a login of the connector to the client
+ // passes (Deckhouse: the login flow records it on the browser session, see
+-// session.Manager.RecordMFA).
++// session.Manager.RecordMFA). A choice of one authenticator is one entry (patch
++// 340, sessionChain).
+ func (h *Handler) ChainForClient(ctx context.Context, clientID, connectorID string) ([]string, error) {
+-	return h.chainForClient(ctx, clientID, connectorID)
++	rc, err := h.resolveChain(ctx, clientID, connectorID)
++	if err != nil {
++		return nil, err
++	}
++	return sessionChain(rc), nil
+ }
+ 
+ func (h *Handler) chainForClient(ctx context.Context, clientID, connectorID string) ([]string, error) {
+@@ -200,10 +210,23 @@ func (h *Handler) mfaPagePath(authenticatorID string) string {
+ // returns the URL for the next factor or marks MFA validated and returns the
+ // consent URL — the next step in the chain.
+ func (h *Handler) CompleteStep(ctx context.Context, authReq storage.AuthRequest, authenticatorID string) (string, error) {
+-	mfaChain, err := h.chainForClient(ctx, authReq.ClientID, authReq.ConnectorID)
++	rc, err := h.resolveChain(ctx, authReq.ClientID, authReq.ConnectorID)
+ 	if err != nil {
+ 		return "", fmt.Errorf("get MFA chain: %w", err)
+ 	}
++	mfaChain := rc.chain
++	// A factor outside the chain of the login completes nothing (Deckhouse patch 340): upstream marked the
++	// login validated after any factor that was not followed by another.
++	if !slices.Contains(mfaChain, authenticatorID) {
++		return "", notInChainError(authenticatorID, mfaChain)
++	}
++	// With a choice, one factor of the chain completes the login.
++	if rc.choice() {
++		if err := h.markValidated(ctx, authReq.ID); err != nil {
++			return "", fmt.Errorf("update auth request: %w", err)
++		}
++		return h.buildContinueURL(authReq), nil
++	}
+ 
+ 	// The next authenticator is the first of the chain, in the order for the user, the login has not passed
+ 	// (Deckhouse, see order.go). Upstream took the one after the current in the order of the chain.
+@@ -271,7 +294,8 @@ func (h *Handler) handleMFA(w http.ResponseWriter, r *http.Request) {
+ 		return
+ 	}
+ 
+-	chain, err := h.chainForClient(ctx, authReq.ClientID, authReq.ConnectorID)
++	rc, err := h.resolveChain(ctx, authReq.ClientID, authReq.ConnectorID)
++	chain := rc.chain
+ 	if err != nil {
+ 		h.Logger.ErrorContext(ctx, "failed to determine MFA chain", "err", err)
+ 		if _, ok := err.(unknownAuthenticatorError); ok { //nolint:errorlint // returned unwrapped, see the type
+@@ -292,6 +316,10 @@ func (h *Handler) handleMFA(w http.ResponseWriter, r *http.Request) {
+ 		http.Redirect(w, r, h.buildContinueURL(authReq), http.StatusSeeOther)
+ 		return
+ 	}
++	if rc.choice() {
++		h.routeChoice(w, r, authReq, chain)
++		return
++	}
+ 
+ 	// The first factor the login has not passed, the ones the user has first (Deckhouse, see order.go).
+ 	identity, err := h.loadIdentity(ctx, authReq)
+diff --git a/server/mfa/oneof.go b/server/mfa/oneof.go
+new file mode 100644
+index 00000000..cb469fc4
+--- /dev/null
++++ b/server/mfa/oneof.go
+@@ -0,0 +1,195 @@
++package mfa
++
++// A choice of the second factor (Deckhouse patch 340). For the connector types of OneOfConnectorTypes a login
++// passes one authenticator of its chain instead of every one: the user registers the method of their choice at
++// the first sign-in, Dex then asks for a registered method, the one used last first, and a user with several
++// registered methods can switch to another. A password alone adds a factor only to an account that has none, and
++// a login passes a factor of its chain:
++//
++//   - a method is registered only while the user has no other one of the connector, in the chain of the login or
++//     not: otherwise a password alone would add a factor of its own to an account protected by another one, also
++//     through a client that names a chain of its own. The check is repeated when the registration is written;
++//   - the choice offers the registered methods only, through addresses signed for the sign-in;
++//   - a factor completes the login only when it is in the chain of the login.
++
++import (
++	"context"
++	"errors"
++	"fmt"
++	"net/http"
++	"net/url"
++	"slices"
++	"sort"
++	"strings"
++	"time"
++
++	"github.com/dexidp/dex/server/internal"
++	"github.com/dexidp/dex/server/templates"
++	"github.com/dexidp/dex/storage"
++)
++
++// oneOfSeparator joins the authenticators of a one-of chain into the single entry the browser session records
++// (see ChainForClient): one passed factor of the group satisfies it, and the entry never matches the chain of
++// a login that asks for every factor.
++const oneOfSeparator = "|"
++
++// errEnrollmentClosed is returned from an UpdateUserIdentity closure when the user registered another method of
++// a one-of chain after the request had loaded the identity.
++var errEnrollmentClosed = errors.New("another method of the second factor is registered")
++
++// enrollmentClosedMsg is what a user sees when a registration is refused: another method is registered.
++const enrollmentClosedMsg = "Another method of the second factor is registered for your account. Sign in with it."
++
++// resolvedChain is the chain of a login: the authenticators that apply to its connector, in the order of the
++// chain, and whether the user passes one of them instead of every one.
++type resolvedChain struct {
++	chain []string
++	oneOf bool
++	// factors are the authenticators that apply to the connector, of the chain or not, sorted.
++	factors []string
++}
++
++// choice reports whether the login lets the user pass one of several authenticators.
++func (c resolvedChain) choice() bool { return c.oneOf && len(c.chain) > 1 }
++
++// choiceChain resolves the chain of the login for the checks of a choice. Without a connector type that lets
++// choose there is nothing to check, and nothing is resolved: the factor endpoints behave as upstream.
++func (h *Handler) choiceChain(ctx context.Context, authReq storage.AuthRequest) (resolvedChain, error) {
++	if len(h.OneOfConnectorTypes) == 0 {
++		return resolvedChain{}, nil
++	}
++	return h.resolveChain(ctx, authReq.ClientID, authReq.ConnectorID)
++}
++
++func (h *Handler) resolveChain(ctx context.Context, clientID, connectorID string) (resolvedChain, error) {
++	chain, err := h.chainForClient(ctx, clientID, connectorID)
++	if err != nil {
++		return resolvedChain{}, err
++	}
++	if len(chain) == 0 {
++		return resolvedChain{chain: chain}, nil
++	}
++	connectorType, err := h.getConnectorType(ctx, connectorID)
++	if err != nil {
++		return resolvedChain{}, err
++	}
++	var factors []string
++	for id, provider := range h.MFAProviders {
++		if provider.EnabledForConnectorType(connectorType) {
++			factors = append(factors, id)
++		}
++	}
++	slices.Sort(factors)
++	return resolvedChain{chain: chain, oneOf: slices.Contains(h.OneOfConnectorTypes, connectorType), factors: factors}, nil
++}
++
++// registeredOf returns the authenticators of chain the user has registered (see hasFactor), the one used last
++// first; without a record of use they keep the order of the chain.
++func (h *Handler) registeredOf(identity storage.UserIdentity, chain []string) []string {
++	var ids []string
++	for _, id := range chain {
++		if h.hasFactor(identity, id) {
++			ids = append(ids, id)
++		}
++	}
++	sort.SliceStable(ids, func(i, j int) bool {
++		return h.lastUsed(identity, ids[i]).After(h.lastUsed(identity, ids[j]))
++	})
++	return ids
++}
++
++// lastUsed is the last time the user passed the authenticator: the time step of the last accepted TOTP code, or
++// the last sign-in with (or the registration of) a WebAuthn credential. Zero when unknown.
++func (h *Handler) lastUsed(identity storage.UserIdentity, authenticatorID string) time.Time {
++	var last time.Time
++	if secret := identity.MFASecrets[authenticatorID]; secret != nil && secret.LastUsedCounter > 0 {
++		last = time.Unix(secret.LastUsedCounter*totpPeriod, 0)
++	}
++	for _, c := range identity.WebAuthnCredentials[authenticatorID] {
++		for _, t := range []time.Time{c.CreatedAt, c.LastUsedAt} {
++			if t.After(last) {
++				last = t
++			}
++		}
++	}
++	return last
++}
++
++// enrollmentClosed reports whether the user may not register authenticatorID: the login lets the user choose,
++// and another authenticator of the connector is registered, of the chain of the login or not.
++func (h *Handler) enrollmentClosed(rc resolvedChain, identity storage.UserIdentity, authenticatorID string) bool {
++	if !rc.choice() {
++		return false
++	}
++	for _, id := range rc.factors {
++		if id != authenticatorID && h.hasFactor(identity, id) {
++			return true
++		}
++	}
++	return false
++}
++
++// chooseURL is the signed address of the choice of a method for the sign-in.
++func (h *Handler) chooseURL(authReq storage.AuthRequest) string {
++	return internal.StepURL(h.IssuerURL.AbsPath("/mfa"), authReq, internal.StepMFA, url.Values{"choose": {"1"}})
++}
++
++// otherMethodURL is the link a factor page offers to another registered method, empty unless the user has more
++// than one.
++func (h *Handler) otherMethodURL(ctx context.Context, mfa *mfaRequestContext) string {
++	rc, err := h.choiceChain(ctx, mfa.authReq)
++	if err != nil || !rc.choice() {
++		return ""
++	}
++	if len(h.registeredOf(mfa.identity, rc.chain)) < 2 {
++		return ""
++	}
++	return h.chooseURL(mfa.authReq)
++}
++
++// routeChoice sends a login that lets the user choose to a factor: to the choice of the method to register when
++// none is registered, to the choice of a registered one when asked to, and to the one used last otherwise.
++func (h *Handler) routeChoice(w http.ResponseWriter, r *http.Request, authReq storage.AuthRequest, chain []string) {
++	ctx := r.Context()
++	identity, err := h.Storage.GetUserIdentity(ctx, authReq.Claims.UserID, authReq.ConnectorID)
++	if err != nil && !errors.Is(err, storage.ErrNotFound) {
++		h.Logger.ErrorContext(ctx, "failed to get user identity", "err", err)
++		h.renderError(r, w, http.StatusInternalServerError, "Database error.")
++		return
++	}
++
++	registered := h.registeredOf(identity, chain)
++	switch {
++	case len(registered) == 0:
++		h.renderChoice(w, r, authReq, chain, true)
++	case r.FormValue("choose") != "" && len(registered) > 1:
++		h.renderChoice(w, r, authReq, registered, false)
++	default:
++		http.Redirect(w, r, h.buildRedirectURL(authReq, registered[0]), http.StatusSeeOther)
++	}
++}
++
++func (h *Handler) renderChoice(w http.ResponseWriter, r *http.Request, authReq storage.AuthRequest, ids []string, enroll bool) {
++	choices := make([]templates.MFAChoice, 0, len(ids))
++	for _, id := range ids {
++		choices = append(choices, templates.MFAChoice{Type: h.MFAProviders[id].Type(), URL: h.buildRedirectURL(authReq, id)})
++	}
++	if err := h.Templates.MFAChoose(r, w, choices, enroll); err != nil {
++		h.Logger.ErrorContext(r.Context(), "server template error", "err", err)
++	}
++}
++
++// sessionChain is the chain the browser session records and checks for a login: a choice is one entry, the
++// authenticators joined, so that a session of a login that passed one of them never satisfies a login that asks
++// for every one.
++func sessionChain(rc resolvedChain) []string {
++	if !rc.choice() {
++		return rc.chain
++	}
++	return []string{strings.Join(rc.chain, oneOfSeparator)}
++}
++
++// notInChainError is the refusal of a factor that is not in the chain of the login.
++func notInChainError(authenticatorID string, chain []string) error {
++	return fmt.Errorf("authenticator %q is not in the MFA chain %v of the login", authenticatorID, chain)
++}
+diff --git a/server/mfa/oneof_test.go b/server/mfa/oneof_test.go
+new file mode 100644
+index 00000000..26c40aa6
+--- /dev/null
++++ b/server/mfa/oneof_test.go
+@@ -0,0 +1,440 @@
++package mfa
++
++import (
++	"context"
++	"net/http"
++	"net/http/httptest"
++	"net/url"
++	"strings"
++	"testing"
++	"time"
++
++	"github.com/go-webauthn/webauthn/webauthn"
++	"github.com/pquerna/otp/totp"
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/server/internal"
++	"github.com/dexidp/dex/server/session"
++	"github.com/dexidp/dex/storage"
++)
++
++// The tests of a choice of the second factor (Deckhouse patch 340). The "mock" connector of the test handler has
++// the type "mockCallback", which the handler lets choose.
++
++const choiceType = "mockCallback"
++
++// staleSecretStorage serves a Get of the identity without its TOTP secrets, while Update still sees them: a
++// request that loaded the account before a parallel one confirmed a code.
++type staleSecretStorage struct {
++	storage.Storage
++}
++
++func (s staleSecretStorage) GetUserIdentity(ctx context.Context, userID, connectorID string) (storage.UserIdentity, error) {
++	u, err := s.Storage.GetUserIdentity(ctx, userID, connectorID)
++	if err != nil {
++		return u, err
++	}
++	u.MFASecrets = map[string]*storage.MFASecret{}
++	return u, nil
++}
++
++type choiceFixture struct {
++	h       *Handler
++	router  http.Handler
++	store   storage.Storage
++	authReq storage.AuthRequest
++	key     *WebAuthnProvider
++}
++
++// newChoiceFixture is a handler with a TOTP and a WebAuthn authenticator, the chain [totp, webauthn], and a
++// signed-in login of user-1 through the "mock" connector; choice turns the choice on for its type. identity is
++// the stored identity of the user, without the user and connector IDs.
++func newChoiceFixture(t *testing.T, choice bool, identity storage.UserIdentity) choiceFixture {
++	t.Helper()
++	key, err := NewWebAuthnProvider("Test", "", nil, "", "", "http://localhost", nil)
++	require.NoError(t, err)
++	h, router, store := newTestHandler(t,
++		map[string]Provider{"totp": NewTOTPProvider("test-issuer", nil), "webauthn": key},
++		[]string{"totp", "webauthn"},
++	)
++	if choice {
++		h.OneOfConnectorTypes = []string{choiceType}
++	}
++	authReq := storage.AuthRequest{
++		ID: "choice-req", ClientID: "app", Expiry: time.Now().Add(time.Hour),
++		HMACKey: randomHMACKey(t), LoggedIn: true,
++		Claims:              storage.Claims{UserID: "user-1", Email: "user@example.com"},
++		ConnectorID:         "mock",
++		WebAuthnSessionData: []byte(`{}`),
++	}
++	ctx := t.Context()
++	require.NoError(t, store.CreateAuthRequest(ctx, authReq))
++	require.NoError(t, store.CreateClient(ctx, storage.Client{ID: "app", Secret: "s"}))
++	identity.UserID, identity.ConnectorID, identity.Claims = "user-1", "mock", authReq.Claims
++	require.NoError(t, store.CreateUserIdentity(ctx, identity))
++	return choiceFixture{h: h, router: router, store: store, authReq: authReq, key: key}
++}
++
++func (f choiceFixture) serve(t *testing.T, method, target string, form url.Values) *httptest.ResponseRecorder {
++	t.Helper()
++	var req *http.Request
++	if form != nil {
++		req = httptest.NewRequest(method, target, strings.NewReader(form.Encode()))
++		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++	} else {
++		req = httptest.NewRequest(method, target, nil)
++	}
++	rr := httptest.NewRecorder()
++	f.router.ServeHTTP(rr, req)
++	return rr
++}
++
++func (f choiceFixture) entry(t *testing.T, choose bool) *httptest.ResponseRecorder {
++	t.Helper()
++	extra := url.Values{}
++	if choose {
++		extra.Set("choose", "1")
++	}
++	return f.serve(t, http.MethodGet, internal.StepURL("/mfa", f.authReq, internal.StepMFA, extra), nil)
++}
++
++func (f choiceFixture) factorURL(id string) string {
++	return f.h.buildRedirectURL(f.authReq, id)
++}
++
++func (f choiceFixture) identity(t *testing.T) storage.UserIdentity {
++	t.Helper()
++	ident, err := f.store.GetUserIdentity(t.Context(), "user-1", "mock")
++	require.NoError(t, err)
++	return ident
++}
++
++func (f choiceFixture) validated(t *testing.T) bool {
++	t.Helper()
++	got, err := f.store.GetAuthRequest(t.Context(), f.authReq.ID)
++	require.NoError(t, err)
++	return got.MFAValidated
++}
++
++func confirmedTOTP(t *testing.T) (*storage.MFASecret, string) {
++	t.Helper()
++	k, err := totp.Generate(totp.GenerateOpts{Issuer: "test-issuer", AccountName: "user@example.com"})
++	require.NoError(t, err)
++	return &storage.MFASecret{AuthenticatorID: "totp", Type: "TOTP", Secret: k.String(), Confirmed: true}, k.Secret()
++}
++
++func unconfirmedTOTP(t *testing.T) (*storage.MFASecret, string) {
++	t.Helper()
++	s, code := confirmedTOTP(t)
++	s.Confirmed = false
++	return s, code
++}
++
++func aKey(lastUsed time.Time) map[string][]storage.WebAuthnCredential {
++	return map[string][]storage.WebAuthnCredential{"webauthn": {{CredentialID: []byte("cred"), PublicKey: []byte("pk"), LastUsedAt: lastUsed}}}
++}
++
++// The entry: nothing registered offers both methods to register, one registered goes to it (asked to choose or
++// not), both registered go to the one used last and offer the other on request.
++func TestChoiceEntry(t *testing.T) {
++	secret, _ := confirmedTOTP(t)
++	recent := time.Now().Add(-time.Minute)
++
++	t.Run("nothing registered: the choice of a method to register", func(t *testing.T) {
++		f := newChoiceFixture(t, true, storage.UserIdentity{})
++		rr := f.entry(t, false)
++		require.Equal(t, http.StatusOK, rr.Code)
++		require.Contains(t, rr.Body.String(), "Choose how you will confirm your sign-ins.")
++		require.Contains(t, rr.Body.String(), "authenticator=totp")
++		require.Contains(t, rr.Body.String(), "authenticator=webauthn")
++		require.False(t, f.validated(t))
++	})
++
++	t.Run("an unconfirmed secret is no registration", func(t *testing.T) {
++		pending, _ := unconfirmedTOTP(t)
++		f := newChoiceFixture(t, true, storage.UserIdentity{MFASecrets: map[string]*storage.MFASecret{"totp": pending}})
++		rr := f.entry(t, false)
++		require.Equal(t, http.StatusOK, rr.Code)
++		require.Contains(t, rr.Body.String(), "authenticator=webauthn")
++	})
++
++	for _, choose := range []bool{false, true} {
++		t.Run("only the key registered goes to the key, choose="+map[bool]string{false: "no", true: "yes"}[choose], func(t *testing.T) {
++			f := newChoiceFixture(t, true, storage.UserIdentity{WebAuthnCredentials: aKey(time.Time{})})
++			rr := f.entry(t, choose)
++			require.Equal(t, http.StatusSeeOther, rr.Code)
++			require.Contains(t, rr.Header().Get("Location"), "authenticator=webauthn")
++		})
++	}
++
++	t.Run("both registered, the key used last", func(t *testing.T) {
++		f := newChoiceFixture(t, true, storage.UserIdentity{
++			MFASecrets: map[string]*storage.MFASecret{"totp": secret}, WebAuthnCredentials: aKey(recent),
++		})
++		rr := f.entry(t, false)
++		require.Equal(t, http.StatusSeeOther, rr.Code)
++		require.Contains(t, rr.Header().Get("Location"), "authenticator=webauthn")
++	})
++
++	t.Run("both registered, the code used last", func(t *testing.T) {
++		used := *secret
++		used.LastUsedCounter = time.Now().Unix() / totpPeriod
++		f := newChoiceFixture(t, true, storage.UserIdentity{
++			MFASecrets: map[string]*storage.MFASecret{"totp": &used}, WebAuthnCredentials: aKey(recent.Add(-time.Hour)),
++		})
++		rr := f.entry(t, false)
++		require.Equal(t, http.StatusSeeOther, rr.Code)
++		require.Contains(t, rr.Header().Get("Location"), "authenticator=totp")
++	})
++
++	t.Run("both registered, no record of use: the code", func(t *testing.T) {
++		f := newChoiceFixture(t, true, storage.UserIdentity{
++			MFASecrets: map[string]*storage.MFASecret{"totp": secret}, WebAuthnCredentials: aKey(time.Time{}),
++		})
++		rr := f.entry(t, false)
++		require.Equal(t, http.StatusSeeOther, rr.Code)
++		require.Contains(t, rr.Header().Get("Location"), "authenticator=totp")
++	})
++
++	t.Run("both registered, asked to choose: both, nothing to register", func(t *testing.T) {
++		f := newChoiceFixture(t, true, storage.UserIdentity{
++			MFASecrets: map[string]*storage.MFASecret{"totp": secret}, WebAuthnCredentials: aKey(recent),
++		})
++		rr := f.entry(t, true)
++		require.Equal(t, http.StatusOK, rr.Code)
++		body := rr.Body.String()
++		require.Contains(t, body, "Choose how to confirm this sign-in.")
++		require.Contains(t, body, "authenticator=totp")
++		require.Contains(t, body, "authenticator=webauthn")
++		// The registered methods, the one used last first.
++		require.Less(t, strings.Index(body, "authenticator=webauthn"), strings.Index(body, "authenticator=totp"))
++	})
++
++	// Without the choice the chain asks for every factor, the one the user has first (see order.go).
++	t.Run("without the choice the chain asks for the key the user has first", func(t *testing.T) {
++		f := newChoiceFixture(t, false, storage.UserIdentity{WebAuthnCredentials: aKey(recent)})
++		rr := f.entry(t, false)
++		require.Equal(t, http.StatusSeeOther, rr.Code)
++		require.Contains(t, rr.Header().Get("Location"), "authenticator=webauthn")
++	})
++}
++
++// A user with one method registered cannot register the other through a signed address of it: the TOTP page
++// shows no secret, a code for an unconfirmed secret is refused, and the key registration answers 403. The login
++// is not validated.
++func TestChoiceRefusesTheRegistrationOfASecondMethod(t *testing.T) {
++	t.Run("TOTP page with a key registered", func(t *testing.T) {
++		f := newChoiceFixture(t, true, storage.UserIdentity{WebAuthnCredentials: aKey(time.Time{})})
++		rr := f.serve(t, http.MethodGet, f.factorURL("totp"), nil)
++		require.Equal(t, http.StatusForbidden, rr.Code)
++		require.NotContains(t, rr.Body.String(), "data:image/png")
++		require.Nil(t, f.identity(t).MFASecrets["totp"], "a secret was created")
++	})
++
++	t.Run("a code for an unconfirmed secret with a key registered", func(t *testing.T) {
++		pending, raw := unconfirmedTOTP(t)
++		f := newChoiceFixture(t, true, storage.UserIdentity{
++			MFASecrets: map[string]*storage.MFASecret{"totp": pending}, WebAuthnCredentials: aKey(time.Time{}),
++		})
++		code, err := totp.GenerateCode(raw, time.Now())
++		require.NoError(t, err)
++		rr := f.serve(t, http.MethodPost, f.factorURL("totp"), url.Values{"totp": {code}})
++		require.Equal(t, http.StatusForbidden, rr.Code)
++		require.False(t, f.identity(t).MFASecrets["totp"].Confirmed)
++		require.False(t, f.validated(t))
++	})
++
++	// The request loaded the identity before a key was stored: the check inside the update refuses.
++	t.Run("a code confirmed after a key was stored", func(t *testing.T) {
++		pending, raw := unconfirmedTOTP(t)
++		f := newChoiceFixture(t, true, storage.UserIdentity{
++			MFASecrets: map[string]*storage.MFASecret{"totp": pending}, WebAuthnCredentials: aKey(time.Time{}),
++		})
++		f.h.Storage = staleIdentityStorage{Storage: f.store}
++		code, err := totp.GenerateCode(raw, time.Now())
++		require.NoError(t, err)
++		rr := f.serve(t, http.MethodPost, f.factorURL("totp"), url.Values{"totp": {code}})
++		require.Equal(t, http.StatusForbidden, rr.Code)
++		require.False(t, f.identity(t).MFASecrets["totp"].Confirmed)
++		require.False(t, f.validated(t))
++	})
++
++	for _, step := range []string{"begin", "finish"} {
++		t.Run("key registration "+step+" with a confirmed code", func(t *testing.T) {
++			secret, _ := confirmedTOTP(t)
++			f := newChoiceFixture(t, true, storage.UserIdentity{MFASecrets: map[string]*storage.MFASecret{"totp": secret}})
++			ceremony := false
++			f.key.finishRegistration = func(webauthn.User, webauthn.SessionData, *http.Request) (*webauthn.Credential, error) {
++				ceremony = true
++				return &webauthn.Credential{ID: []byte("attacker")}, nil
++			}
++			rr := f.serve(t, http.MethodPost, strings.Replace(f.factorURL("webauthn"), "/mfa/webauthn?", "/mfa/webauthn/register/"+step+"?", 1), nil)
++			require.Equal(t, http.StatusForbidden, rr.Code)
++			require.False(t, ceremony, "the registration ran before the refusal")
++			require.Empty(t, f.identity(t).WebAuthnCredentials["webauthn"])
++			require.False(t, f.validated(t))
++		})
++	}
++
++	t.Run("key registration finish after a code was confirmed", func(t *testing.T) {
++		secret, _ := confirmedTOTP(t)
++		f := newChoiceFixture(t, true, storage.UserIdentity{MFASecrets: map[string]*storage.MFASecret{"totp": secret}})
++		f.h.Storage = staleSecretStorage{Storage: f.store}
++		f.key.finishRegistration = func(webauthn.User, webauthn.SessionData, *http.Request) (*webauthn.Credential, error) {
++			return &webauthn.Credential{ID: []byte("attacker")}, nil
++		}
++		rr := f.serve(t, http.MethodPost, strings.Replace(f.factorURL("webauthn"), "/mfa/webauthn?", "/mfa/webauthn/register/finish?", 1), nil)
++		require.Equal(t, http.StatusForbidden, rr.Code)
++		require.Empty(t, f.identity(t).WebAuthnCredentials["webauthn"])
++		require.False(t, f.validated(t))
++	})
++
++	t.Run("key page with a confirmed code", func(t *testing.T) {
++		secret, _ := confirmedTOTP(t)
++		f := newChoiceFixture(t, true, storage.UserIdentity{MFASecrets: map[string]*storage.MFASecret{"totp": secret}})
++		rr := f.serve(t, http.MethodGet, f.factorURL("webauthn"), nil)
++		require.Equal(t, http.StatusForbidden, rr.Code)
++	})
++
++	// Without the choice the chain asks for both: the second method is registered after the first is passed
++	// (see order.go).
++	t.Run("without the choice the key is registered after the code", func(t *testing.T) {
++		secret, _ := confirmedTOTP(t)
++		f := newChoiceFixture(t, false, storage.UserIdentity{MFASecrets: map[string]*storage.MFASecret{"totp": secret}})
++		require.Equal(t, http.StatusSeeOther, f.serve(t, http.MethodGet, f.factorURL("webauthn"), nil).Code)
++		next, err := f.h.CompleteStep(t.Context(), f.authReq, "totp")
++		require.NoError(t, err)
++		require.Equal(t, http.StatusOK, f.serve(t, http.MethodGet, next, nil).Code)
++	})
++}
++
++// narrowLogin stores the client "narrow" with a chain of its own, [totp], and a signed-in login of the user through
++// it.
++func (f choiceFixture) narrowLogin(t *testing.T) storage.AuthRequest {
++	t.Helper()
++	ctx := t.Context()
++	require.NoError(t, f.store.CreateClient(ctx, storage.Client{ID: "narrow", Secret: "s", MFAChain: []string{"totp"}}))
++	authReq := f.authReq
++	authReq.ID, authReq.ClientID = "narrow-req", "narrow"
++	require.NoError(t, f.store.CreateAuthRequest(ctx, authReq))
++	return authReq
++}
++
++// A client may name a chain of its own. Through it a password alone registers no factor for a user who has one
++// outside that chain: with the choice the new factor would pass a login of the default chain by itself. The login
++// cannot pass the factor the user has, so the registration is refused, with the choice or without it.
++func TestChoiceRefusesAFactorThroughAClientOfItsOwnChain(t *testing.T) {
++	for _, choice := range []bool{true, false} {
++		t.Run("choice="+map[bool]string{false: "no", true: "yes"}[choice], func(t *testing.T) {
++			f := newChoiceFixture(t, choice, storage.UserIdentity{WebAuthnCredentials: aKey(time.Time{})})
++			narrow := f.narrowLogin(t)
++			rr := f.serve(t, http.MethodGet, f.h.buildRedirectURL(narrow, "totp"), nil)
++			require.Equal(t, http.StatusForbidden, rr.Code)
++			require.NotContains(t, rr.Body.String(), "data:image/png")
++			require.Nil(t, f.identity(t).MFASecrets["totp"], "a secret was created")
++
++			// A secret left unconfirmed is not confirmed through the client either, and its code does not pass the
++			// login of the default chain.
++			pending, raw := unconfirmedTOTP(t)
++			ident := f.identity(t)
++			ident.MFASecrets = map[string]*storage.MFASecret{"totp": pending}
++			require.NoError(t, f.store.UpdateUserIdentity(t.Context(), "user-1", "mock", func(storage.UserIdentity) (storage.UserIdentity, error) {
++				return ident, nil
++			}))
++			code, err := totp.GenerateCode(raw, time.Now())
++			require.NoError(t, err)
++			rr = f.serve(t, http.MethodPost, f.h.buildRedirectURL(narrow, "totp"), url.Values{"totp": {code}})
++			require.Equal(t, http.StatusForbidden, rr.Code)
++			require.False(t, f.identity(t).MFASecrets["totp"].Confirmed)
++
++			f.serve(t, http.MethodPost, f.factorURL("totp"), url.Values{"totp": {code}})
++			require.False(t, f.identity(t).MFASecrets["totp"].Confirmed)
++			require.False(t, f.validated(t))
++		})
++	}
++
++	// A key of an authenticator that no longer applies to the connector type is no factor of the connector: the
++	// user registers the code.
++	t.Run("a key of another connector type", func(t *testing.T) {
++		f := newChoiceFixture(t, true, storage.UserIdentity{WebAuthnCredentials: aKey(time.Time{})})
++		other, err := NewWebAuthnProvider("Test", "", nil, "", "", "http://localhost", []string{"ldap"})
++		require.NoError(t, err)
++		f.h.MFAProviders["webauthn"] = other
++		rr := f.serve(t, http.MethodGet, f.h.buildRedirectURL(f.narrowLogin(t), "totp"), nil)
++		require.Equal(t, http.StatusOK, rr.Code)
++		require.NotNil(t, f.identity(t).MFASecrets["totp"])
++	})
++}
++
++// With the choice one factor of the chain completes the login, and a factor outside it completes nothing.
++func TestChoiceCompleteStep(t *testing.T) {
++	t.Run("one factor completes the login", func(t *testing.T) {
++		f := newChoiceFixture(t, true, storage.UserIdentity{})
++		next, err := f.h.CompleteStep(t.Context(), f.authReq, "totp")
++		require.NoError(t, err)
++		require.Contains(t, next, "/auth?")
++		require.True(t, f.validated(t))
++	})
++
++	t.Run("without the choice the code leads to the key", func(t *testing.T) {
++		f := newChoiceFixture(t, false, storage.UserIdentity{})
++		next, err := f.h.CompleteStep(t.Context(), f.authReq, "totp")
++		require.NoError(t, err)
++		require.Contains(t, next, "authenticator=webauthn")
++		require.False(t, f.validated(t))
++	})
++
++	for _, choice := range []bool{false, true} {
++		t.Run("a factor outside the chain", func(t *testing.T) {
++			f := newChoiceFixture(t, choice, storage.UserIdentity{})
++			_, err := f.h.CompleteStep(t.Context(), f.authReq, "other")
++			require.Error(t, err)
++			require.False(t, f.validated(t))
++		})
++	}
++}
++
++// The browser session records a choice as one entry, so a session of a login that passed one factor does not
++// satisfy a login that asks for both, and the other way round.
++func TestChoiceSessionChain(t *testing.T) {
++	choice := newChoiceFixture(t, true, storage.UserIdentity{})
++	both := newChoiceFixture(t, false, storage.UserIdentity{})
++
++	oneOf, err := choice.h.ChainForClient(t.Context(), "app", "mock")
++	require.NoError(t, err)
++	require.Equal(t, []string{"totp|webauthn"}, oneOf)
++	all, err := both.h.ChainForClient(t.Context(), "app", "mock")
++	require.NoError(t, err)
++	require.Equal(t, []string{"totp", "webauthn"}, all)
++
++	require.True(t, session.MFASatisfied(storage.AuthSession{MFAAuthenticators: oneOf}, oneOf))
++	require.False(t, session.MFASatisfied(storage.AuthSession{MFAAuthenticators: oneOf}, all))
++	require.False(t, session.MFASatisfied(storage.AuthSession{MFAAuthenticators: all}, oneOf))
++}
++
++// A factor page offers another method only to a user with more than one registered.
++func TestChoiceOtherMethodLink(t *testing.T) {
++	secret, _ := confirmedTOTP(t)
++	both := []string{"totp", "webauthn"}
++	for _, tc := range []struct {
++		name     string
++		choice   bool
++		identity storage.UserIdentity
++		pages    []string
++		want     bool
++	}{
++		{"both registered", true, storage.UserIdentity{MFASecrets: map[string]*storage.MFASecret{"totp": secret}, WebAuthnCredentials: aKey(time.Time{})}, both, true},
++		// The page of the key is closed to this user: registering one is refused.
++		{"only the code", true, storage.UserIdentity{MFASecrets: map[string]*storage.MFASecret{"totp": secret}}, []string{"totp"}, false},
++		{"both, without the choice", false, storage.UserIdentity{MFASecrets: map[string]*storage.MFASecret{"totp": secret}, WebAuthnCredentials: aKey(time.Time{})}, both, false},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			f := newChoiceFixture(t, tc.choice, tc.identity)
++			for _, id := range tc.pages {
++				rr := f.serve(t, http.MethodGet, f.factorURL(id), nil)
++				require.Equal(t, http.StatusOK, rr.Code, id)
++				require.Equal(t, tc.want, strings.Contains(rr.Body.String(), `id="other-method"`), id)
++			}
++		})
++	}
++}
+diff --git a/server/mfa/order.go b/server/mfa/order.go
+index 6fbeafa8..caf9d392 100644
+--- a/server/mfa/order.go
++++ b/server/mfa/order.go
+@@ -102,9 +102,9 @@ func (h *Handler) nextFactor(identity storage.UserIdentity, chain, passed []stri
+ }
+ 
+ // mayRegister reports whether the login may register authenticatorID: it has passed every other authenticator of
+-// the chain the user has.
+-func (h *Handler) mayRegister(identity storage.UserIdentity, chain, passed []string, authenticatorID string) bool {
+-	for _, id := range chain {
++// factors the user has.
++func (h *Handler) mayRegister(identity storage.UserIdentity, factors, passed []string, authenticatorID string) bool {
++	for _, id := range factors {
+ 		if id != authenticatorID && h.hasFactor(identity, id) && !slices.Contains(passed, id) {
+ 			return false
+ 		}
+@@ -127,10 +127,16 @@ type registration struct {
+ 	h               *Handler
+ 	chain, passed   []string
+ 	authenticatorID string
++	// choice is a login that passes one factor of its chain (patch 340): enrollmentClosed decides its
++	// registrations.
++	choice bool
++	// factors are the authenticators of the connector, of the chain or not (patch 340): a client may name a chain
++	// of its own, and a factor the user has outside it, which the login cannot pass, blocks the registration too.
++	factors []string
+ }
+ 
+ func (h *Handler) registration(ctx context.Context, authReq storage.AuthRequest, authenticatorID string) (registration, error) {
+-	chain, err := h.chainForClient(ctx, authReq.ClientID, authReq.ConnectorID)
++	rc, err := h.resolveChain(ctx, authReq.ClientID, authReq.ConnectorID)
+ 	if err != nil {
+ 		return registration{}, err
+ 	}
+@@ -140,15 +146,27 @@ func (h *Handler) registration(ctx context.Context, authReq storage.AuthRequest,
+ 	}
+ 	return registration{
+ 		h:               h,
+-		chain:           chain,
++		chain:           rc.chain,
+ 		passed:          readWebAuthnState(current.WebAuthnSessionData).passedBy(current),
+ 		authenticatorID: authenticatorID,
++		choice:          rc.choice(),
++		factors:         rc.factors,
+ 	}, nil
+ }
+ 
+ // allowed reports whether the login may register the factor for the user it was loaded for, or stored since.
+ func (g registration) allowed(identity storage.UserIdentity) bool {
+-	return g.h.mayRegister(identity, g.chain, g.passed, g.authenticatorID)
++	return g.choice || g.h.mayRegister(identity, g.factors, g.passed, g.authenticatorID)
++}
++
++// refuse answers a page that may not register its factor: back to the MFA entry while the chain of the login has a
++// factor of the user to pass first, refused when only a factor outside the chain blocks it (patch 340).
++func (g registration) refuse(w http.ResponseWriter, r *http.Request, authReq storage.AuthRequest, identity storage.UserIdentity) {
++	if !g.h.mayRegister(identity, g.chain, g.passed, g.authenticatorID) {
++		g.h.redirectToEntry(w, r, authReq)
++		return
++	}
++	g.h.renderError(r, w, http.StatusForbidden, enrollmentClosedMsg)
+ }
+ 
+ // webAuthnRegistration resolves the registration of a WebAuthn API request, answering the request itself when it
+diff --git a/server/mfa/totp.go b/server/mfa/totp.go
+index 7cf94cc4..051fb7f1 100644
+--- a/server/mfa/totp.go
++++ b/server/mfa/totp.go
+@@ -115,15 +115,27 @@ func (h *Handler) handleTOTP(w http.ResponseWriter, r *http.Request) {
+ 		return
+ 	}
+ 
+-	h.handleTOTPVerify(w, r, r.Context(), mfa.authReq, mfa.identity, mfa.authenticatorID, totpProvider)
++	h.handleTOTPVerify(w, r, r.Context(), mfa, totpProvider)
+ }
+ 
+ func (h *Handler) handleTOTPVerify(w http.ResponseWriter, r *http.Request, ctx context.Context,
+-	authReq storage.AuthRequest, identity storage.UserIdentity,
+-	authenticatorID string, totpProvider *TOTPProvider,
++	mfa *mfaRequestContext, totpProvider *TOTPProvider,
+ ) {
++	authReq, identity, authenticatorID := mfa.authReq, mfa.identity, mfa.authenticatorID
+ 	secret := identity.MFASecrets[authenticatorID]
+ 
++	// With a choice of the second factor, a secret is registered only while the user has no other method
++	// (Deckhouse patch 340): a confirmed secret is the user's own method and stays usable.
++	rc, err := h.choiceChain(ctx, authReq)
++	if err != nil {
++		h.Logger.ErrorContext(ctx, "failed to determine MFA chain", "err", err)
++		h.renderError(r, w, http.StatusInternalServerError, "Internal server error.")
++		return
++	}
++	if (secret == nil || !secret.Confirmed) && h.enrollmentClosed(rc, identity, authenticatorID) {
++		h.renderError(r, w, http.StatusForbidden, enrollmentClosedMsg)
++		return
++	}
+ 	// A code the user does not have yet is registered only after the factors the user has (Deckhouse, see
+ 	// order.go). A confirmed code is passed as before.
+ 	var gate *registration
+@@ -135,11 +147,12 @@ func (h *Handler) handleTOTPVerify(w http.ResponseWriter, r *http.Request, ctx c
+ 			return
+ 		}
+ 		if !g.allowed(identity) {
+-			h.redirectToEntry(w, r, authReq)
++			g.refuse(w, r, authReq, identity)
+ 			return
+ 		}
+ 		gate = &g
+ 	}
++	otherURL := h.otherMethodURL(ctx, mfa)
+ 
+ 	switch r.Method {
+ 	case http.MethodGet:
+@@ -175,7 +188,7 @@ func (h *Handler) handleTOTPVerify(w http.ResponseWriter, r *http.Request, ctx c
+ 			}
+ 		}
+ 
+-		h.renderTOTPPage(secret, false, totpProvider.issuer, authReq.ConnectorID, w, r)
++		h.renderTOTPPage(secret, false, totpProvider.issuer, authReq.ConnectorID, otherURL, w, r)
+ 
+ 	case http.MethodPost:
+ 		// TODO(nabokihms): this endpoint should be protected with a rate limit (like the auth endpoint).
+@@ -199,7 +212,7 @@ func (h *Handler) handleTOTPVerify(w http.ResponseWriter, r *http.Request, ctx c
+ 		ok, counter := validateTOTPCode(generated.Secret(), code, h.Now(), secret.LastUsedCounter)
+ 		if !ok {
+ 			h.logInvalidTOTP(ctx, authReq, authenticatorID)
+-			h.renderTOTPPage(secret, true, totpProvider.issuer, authReq.ConnectorID, w, r)
++			h.renderTOTPPage(secret, true, totpProvider.issuer, authReq.ConnectorID, otherURL, w, r)
+ 			return
+ 		}
+ 
+@@ -217,6 +230,10 @@ func (h *Handler) handleTOTPVerify(w http.ResponseWriter, r *http.Request, ctx c
+ 			if sec.LastUsedCounter >= counter {
+ 				return old, errTOTPReplay
+ 			}
++			// Another method may have been registered after the identity was loaded (Deckhouse patch 340).
++			if !sec.Confirmed && h.enrollmentClosed(rc, old, authenticatorID) {
++				return old, errEnrollmentClosed
++			}
+ 			// The user may have got another factor after the identity was loaded (Deckhouse, see order.go).
+ 			if !sec.Confirmed && (gate == nil || !gate.allowed(old)) {
+ 				return old, errNotPassedYet
+@@ -227,7 +244,11 @@ func (h *Handler) handleTOTPVerify(w http.ResponseWriter, r *http.Request, ctx c
+ 		}); err != nil {
+ 			if errors.Is(err, errTOTPReplay) || errors.Is(err, errTOTPNotEnrolled) {
+ 				h.logInvalidTOTP(ctx, authReq, authenticatorID)
+-				h.renderTOTPPage(secret, true, totpProvider.issuer, authReq.ConnectorID, w, r)
++				h.renderTOTPPage(secret, true, totpProvider.issuer, authReq.ConnectorID, otherURL, w, r)
++				return
++			}
++			if errors.Is(err, errEnrollmentClosed) {
++				h.renderError(r, w, http.StatusForbidden, enrollmentClosedMsg)
+ 				return
+ 			}
+ 			if errors.Is(err, errNotPassedYet) {
+@@ -263,7 +284,7 @@ func (h *Handler) logInvalidTOTP(ctx context.Context, authReq storage.AuthReques
+ 			"authenticator", authenticatorID)...)
+ }
+ 
+-func (h *Handler) renderTOTPPage(secret *storage.MFASecret, lastFail bool, issuer, connectorID string, w http.ResponseWriter, r *http.Request) {
++func (h *Handler) renderTOTPPage(secret *storage.MFASecret, lastFail bool, issuer, connectorID, otherURL string, w http.ResponseWriter, r *http.Request) {
+ 	// Prevent browser from caching the TOTP page (contains QR code with secret).
+ 	w.Header().Set("Cache-Control", "no-store")
+ 	var qrCode string
+@@ -276,7 +297,7 @@ func (h *Handler) renderTOTPPage(secret *storage.MFASecret, lastFail bool, issue
+ 			return
+ 		}
+ 	}
+-	if err := h.Templates.TOTPVerify(r, w, r.URL.String(), issuer, connectorID, qrCode, lastFail); err != nil {
++	if err := h.Templates.TOTPVerifyWithChoice(r, w, r.URL.String(), issuer, connectorID, qrCode, lastFail, otherURL); err != nil {
+ 		h.Logger.ErrorContext(r.Context(), "server template error", "err", err)
+ 	}
+ }
+diff --git a/server/mfa/webauthn.go b/server/mfa/webauthn.go
+index 34510b08..d316e5e1 100644
+--- a/server/mfa/webauthn.go
++++ b/server/mfa/webauthn.go
+@@ -170,6 +170,10 @@ func (h *Handler) handleWebAuthnRegisterBegin(w http.ResponseWriter, r *http.Req
+ 	}
+ 
+ 	ctx := r.Context()
++	if closed, err := h.webAuthnEnrollmentClosed(ctx, mfa); err != nil || closed {
++		h.refuseWebAuthnEnrollment(ctx, w, err)
++		return
++	}
+ 	gate, ok := h.webAuthnRegistration(w, r, mfa)
+ 	if !ok {
+ 		return
+@@ -218,6 +222,11 @@ func (h *Handler) handleWebAuthnRegisterFinish(w http.ResponseWriter, r *http.Re
+ 	}
+ 
+ 	ctx := r.Context()
++	rc, err := h.choiceChain(ctx, mfa.authReq)
++	if err != nil || h.enrollmentClosed(rc, mfa.identity, mfa.authenticatorID) {
++		h.refuseWebAuthnEnrollment(ctx, w, err)
++		return
++	}
+ 	gate, ok := h.webAuthnRegistration(w, r, mfa)
+ 	if !ok {
+ 		return
+@@ -249,6 +258,10 @@ func (h *Handler) handleWebAuthnRegisterFinish(w http.ResponseWriter, r *http.Re
+ 		if webAuthnRegistered(old, mfa.authenticatorID) {
+ 			return old, errWebAuthnAlreadyRegistered
+ 		}
++		// Another method may have been registered after the identity was loaded (Deckhouse patch 340).
++		if h.enrollmentClosed(rc, old, mfa.authenticatorID) {
++			return old, errEnrollmentClosed
++		}
+ 		// The user may have got another factor after the identity was loaded (Deckhouse, see order.go).
+ 		if !gate.allowed(old) {
+ 			return old, errNotPassedYet
+@@ -263,6 +276,10 @@ func (h *Handler) handleWebAuthnRegisterFinish(w http.ResponseWriter, r *http.Re
+ 			writeJSONError(w, http.StatusBadRequest, "A key is already registered.")
+ 			return
+ 		}
++		if errors.Is(err, errEnrollmentClosed) {
++			writeJSONError(w, http.StatusForbidden, enrollmentClosedMsg)
++			return
++		}
+ 		if errors.Is(err, errNotPassedYet) {
+ 			writeJSONError(w, http.StatusForbidden, notPassedYetMsg)
+ 			return
+@@ -343,6 +360,7 @@ func (h *Handler) handleWebAuthnLoginFinish(w http.ResponseWriter, r *http.Reque
+ 			if bytes.Equal(creds[i].CredentialID, credential.ID) {
+ 				creds[i].SignCount = credential.Authenticator.SignCount
+ 				creds[i].CloneWarning = credential.Authenticator.CloneWarning
++				creds[i].LastUsedAt = h.Now() // the method used last is asked for first (Deckhouse patch 340)
+ 				break
+ 			}
+ 		}
+@@ -482,6 +500,17 @@ func (h *Handler) handleWebAuthn(w http.ResponseWriter, r *http.Request) {
+ 	mode := "login"
+ 	if len(user.credentials) == 0 {
+ 		mode = "register"
++		// With a choice of the second factor, a key is registered only while the user has no other method
++		// (Deckhouse patch 340).
++		if closed, err := h.webAuthnEnrollmentClosed(r.Context(), mfa); err != nil || closed {
++			if err != nil {
++				h.Logger.ErrorContext(r.Context(), "failed to determine MFA chain", "err", err)
++				h.renderError(r, w, http.StatusInternalServerError, "Internal server error.")
++				return
++			}
++			h.renderError(r, w, http.StatusForbidden, enrollmentClosedMsg)
++			return
++		}
+ 		// A key the user does not have yet is registered only after the factors the user has (Deckhouse, see
+ 		// order.go).
+ 		gate, err := h.registration(r.Context(), mfa.authReq, mfa.authenticatorID)
+@@ -491,12 +520,33 @@ func (h *Handler) handleWebAuthn(w http.ResponseWriter, r *http.Request) {
+ 			return
+ 		}
+ 		if !gate.allowed(mfa.identity) {
+-			h.redirectToEntry(w, r, mfa.authReq)
++			gate.refuse(w, r, mfa.authReq, mfa.identity)
+ 			return
+ 		}
+ 	}
+ 
+-	if err := h.Templates.WebAuthnVerify(r, w, mode, mfa.authenticatorID); err != nil {
++	if err := h.Templates.WebAuthnVerifyWithChoice(r, w, mode, mfa.authenticatorID, h.otherMethodURL(r.Context(), mfa)); err != nil {
+ 		h.Logger.ErrorContext(r.Context(), "server template error", "err", err)
+ 	}
+ }
++
++// webAuthnEnrollmentClosed reports whether the user may not register a key for the authenticator of the request
++// (Deckhouse patch 340, see enrollmentClosed).
++func (h *Handler) webAuthnEnrollmentClosed(ctx context.Context, mfa *mfaRequestContext) (bool, error) {
++	rc, err := h.choiceChain(ctx, mfa.authReq)
++	if err != nil {
++		return false, err
++	}
++	return h.enrollmentClosed(rc, mfa.identity, mfa.authenticatorID), nil
++}
++
++// refuseWebAuthnEnrollment answers a registration that is not allowed (err is nil) or whose chain could not be
++// resolved.
++func (h *Handler) refuseWebAuthnEnrollment(ctx context.Context, w http.ResponseWriter, err error) {
++	if err != nil {
++		h.Logger.ErrorContext(ctx, "failed to determine MFA chain", "err", err)
++		writeJSONError(w, http.StatusInternalServerError, "Internal server error.")
++		return
++	}
++	writeJSONError(w, http.StatusForbidden, enrollmentClosedMsg)
++}
+diff --git a/server/server.go b/server/server.go
+index 9d59849a..b09d2b75 100644
+--- a/server/server.go
++++ b/server/server.go
+@@ -308,6 +308,8 @@ func (s *Server) mount(routes router.Mux, c Config, rc resolvedConfig) {
+ 		DefaultMFAChain: c.DefaultMFAChain,
+ 		Now:             rc.now,
+ 		Connectors:      s.connectors,
++
++		OneOfConnectorTypes: c.MFAOneOfConnectorTypes,
+ 	}
+ 
+ 	for _, h := range []router.Handler{
+diff --git a/server/templates/templates.go b/server/templates/templates.go
+index 45d56734..757a5f65 100644
+--- a/server/templates/templates.go
++++ b/server/templates/templates.go
+@@ -30,6 +30,7 @@ const (
+ 	tmplDeviceSuccess  = "device_success.html"
+ 	tmplTOTPVerify     = "totp_verify.html"
+ 	tmplWebAuthnVerify = "webauthn_verify.html"
++	tmplMFAChoose      = "mfa_choose.html"
+ 	tmplHome           = "home.html"
+ 	tmplLogout         = "logout.html"
+ )
+@@ -45,6 +46,7 @@ var requiredTmpls = []string{
+ 	tmplDeviceSuccess,
+ 	tmplTOTPVerify,
+ 	tmplWebAuthnVerify,
++	tmplMFAChoose,
+ 	tmplHome,
+ 	tmplLogout,
+ }
+@@ -60,6 +62,7 @@ type Templates struct {
+ 	deviceSuccessTmpl  *template.Template
+ 	totpVerifyTmpl     *template.Template
+ 	webauthnVerifyTmpl *template.Template
++	mfaChooseTmpl      *template.Template
+ 	homeTmpl           *template.Template
+ 	logoutTmpl         *template.Template
+ 
+@@ -285,6 +288,7 @@ func loadTemplates(c Config, templatesDir string) (*Templates, error) {
+ 		deviceSuccessTmpl:  tmpls.Lookup(tmplDeviceSuccess),
+ 		totpVerifyTmpl:     tmpls.Lookup(tmplTOTPVerify),
+ 		webauthnVerifyTmpl: tmpls.Lookup(tmplWebAuthnVerify),
++		mfaChooseTmpl:      tmpls.Lookup(tmplMFAChoose),
+ 		homeTmpl:           tmpls.Lookup(tmplHome),
+ 		logoutTmpl:         tmpls.Lookup(tmplLogout),
+ 	}, nil
+@@ -474,6 +478,14 @@ func (t *Templates) Approval(r *http.Request, w http.ResponseWriter, authReqID,
+ }
+ 
+ func (t *Templates) TOTPVerify(r *http.Request, w http.ResponseWriter, postURL, issuer, connector, qrCode string, lastWasInvalid bool) error {
++	return t.TOTPVerifyWithChoice(r, w, postURL, issuer, connector, qrCode, lastWasInvalid, "")
++}
++
++// TOTPVerifyWithChoice is TOTPVerify with the link to the choice of another registered method of the second
++// factor, empty when the user has no other (Deckhouse patch 340).
++func (t *Templates) TOTPVerifyWithChoice(r *http.Request, w http.ResponseWriter, postURL, issuer, connector, qrCode string,
++	lastWasInvalid bool, otherMethodURL string,
++) error {
+ 	if lastWasInvalid {
+ 		w.WriteHeader(http.StatusUnauthorized)
+ 	}
+@@ -483,12 +495,33 @@ func (t *Templates) TOTPVerify(r *http.Request, w http.ResponseWriter, postURL,
+ 		Issuer          string
+ 		Connector       string
+ 		QRCode          string
++		OtherMethodURL  string
+ 		ReqPath         string
+ 		BuildIdentifier string
+-	}{postURL, lastWasInvalid, issuer, connector, qrCode, r.URL.Path, t.buildID}
++	}{postURL, lastWasInvalid, issuer, connector, qrCode, otherMethodURL, r.URL.Path, t.buildID}
+ 	return renderTemplate(w, t.totpVerifyTmpl, data)
+ }
+ 
++// MFAChoice is a method of the second factor the user can choose: its type (TOTP, WebAuthn) and the signed
++// address of its page.
++type MFAChoice struct {
++	Type string
++	URL  string
++}
++
++// MFAChoose renders the choice of a method of the second factor (Deckhouse patch 340). enroll is true when the
++// user has registered none of them and registers the chosen one.
++func (t *Templates) MFAChoose(r *http.Request, w http.ResponseWriter, choices []MFAChoice, enroll bool) error {
++	w.Header().Set("Cache-Control", "no-store")
++	data := struct {
++		Choices         []MFAChoice
++		Enroll          bool
++		ReqPath         string
++		BuildIdentifier string
++	}{choices, enroll, r.URL.Path, t.buildID}
++	return renderTemplate(w, t.mfaChooseTmpl, data)
++}
++
+ type HomeData struct {
+ 	LoggedIn      bool
+ 	Username      string
+@@ -568,14 +601,21 @@ type logoutData struct {
+ }
+ 
+ func (t *Templates) WebAuthnVerify(r *http.Request, w http.ResponseWriter, mode, authenticatorID string) error {
++	return t.WebAuthnVerifyWithChoice(r, w, mode, authenticatorID, "")
++}
++
++// WebAuthnVerifyWithChoice is WebAuthnVerify with the link to the choice of another registered method of the
++// second factor, empty when the user has no other (Deckhouse patch 340).
++func (t *Templates) WebAuthnVerifyWithChoice(r *http.Request, w http.ResponseWriter, mode, authenticatorID, otherMethodURL string) error {
+ 	data := struct {
+ 		// Mode must be server-controlled ("register" or "login") and never derived
+ 		// from user input to prevent XSS in the template's script context.
+ 		Mode            string
+ 		AuthenticatorID string
++		OtherMethodURL  string
+ 		ReqPath         string
+ 		BuildIdentifier string
+-	}{mode, authenticatorID, r.URL.Path, t.buildID}
++	}{mode, authenticatorID, otherMethodURL, r.URL.Path, t.buildID}
+ 	return renderTemplate(w, t.webauthnVerifyTmpl, data)
+ }
+ 
+diff --git a/storage/storage.go b/storage/storage.go
+index 6c3b23e4..8284f4bf 100644
+--- a/storage/storage.go
++++ b/storage/storage.go
+@@ -537,6 +537,10 @@ type WebAuthnCredential struct {
+ 	BackupState     bool      `json:"backupState"`
+ 	DisplayName     string    `json:"displayName"`
+ 	CreatedAt       time.Time `json:"createdAt"`
++
++	// LastUsedAt is the last sign-in with the credential (Deckhouse). With a choice of the second factor, Dex asks
++	// first for the method the user used last. Zero for a credential not used since it was registered.
++	LastUsedAt time.Time `json:"lastUsedAt,omitzero"`
+ }
+ 
+ // UserIdentity represents persistent per-user identity data.
+diff --git a/web/templates/mfa_choose.html b/web/templates/mfa_choose.html
+new file mode 100644
+index 00000000..9fbda5c7
+--- /dev/null
++++ b/web/templates/mfa_choose.html
+@@ -0,0 +1,19 @@
++{{ template "header.html" . }}
++
++<div class="theme-panel">
++  <h2 class="theme-heading">Two-factor authentication</h2>
++  {{ if .Enroll }}
++  <p>Choose how you will confirm your sign-ins.</p>
++  {{ else }}
++  <p>Choose how to confirm this sign-in.</p>
++  {{ end }}
++  {{ range .Choices }}
++  <div class="theme-form-row">
++    <a class="dex-btn theme-btn-provider" href="{{ .URL }}">
++      {{ if eq .Type "WebAuthn" }}Security key{{ else }}Authenticator app{{ end }}
++    </a>
++  </div>
++  {{ end }}
++</div>
++
++{{ template "footer.html" . }}
+diff --git a/web/templates/totp_verify.html b/web/templates/totp_verify.html
+index 2e00c326..820fe59c 100644
+--- a/web/templates/totp_verify.html
++++ b/web/templates/totp_verify.html
+@@ -31,6 +31,9 @@
+ 
+     <button tabindex="2" id="submit-login" type="submit" class="dex-btn theme-btn--primary">Verify</button>
+   </form>
++  {{ if .OtherMethodURL }}
++  <p><a id="other-method" href="{{ .OtherMethodURL }}">Sign in another way</a></p>
++  {{ end }}
+ </div>
+ 
+ {{ template "footer.html" . }}
+diff --git a/web/templates/webauthn_verify.html b/web/templates/webauthn_verify.html
+index 7f5d90f3..c206f6ec 100644
+--- a/web/templates/webauthn_verify.html
++++ b/web/templates/webauthn_verify.html
+@@ -17,6 +17,9 @@
+   <button id="webauthn-btn" type="button" class="dex-btn theme-btn--primary" onclick="startWebAuthn()">
+     {{ if eq .Mode "register" }}Register Security Key{{ else }}Use Security Key{{ end }}
+   </button>
++  {{ if .OtherMethodURL }}
++  <p><a id="other-method" href="{{ .OtherMethodURL }}">Sign in another way</a></p>
++  {{ end }}
+ </div>
+ 
+ <script>

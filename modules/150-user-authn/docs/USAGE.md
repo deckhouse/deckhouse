@@ -1579,7 +1579,30 @@ The method works as follows:
 
 #### Several methods
 
-With two methods, `require` sets how they combine. With `All`, the user passes both methods, the code first and then the key. A user who has only one of them confirms the sign-in with it first and only then registers the other.
+If two methods are specified in the `methods` parameter, the `require` parameter defines how they are combined.
+With `Any`, the user passes one of them. At the first sign-in the user chooses the method and registers it. Later Dex asks for a registered method, the one used last first, and a user who has registered both can sign in another way. A user who has registered one method cannot register the other at a sign-in, because otherwise anyone who knows the password could add a method of their own. To let a user switch, remove the registered method with a `Reset2FA` operation.
+With `All`, the user passes both, the code first and then the key. A user who has only one of them confirms the sign-in with it first and only then registers the other.
+
+The following settings let each user choose a code or a key:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 4
+  enabled: true
+  settings:
+    twoFactor:
+      enabled: true
+      methods: [TOTP, WebAuthn]
+      require: Any
+      webAuthn:
+        rpID: example.com
+```
+
+A Deckhouse Platform version without `require: Any` refuses such settings. Before a rollback to it, switch `require` to `All` or keep one method.
 
 `providerTypeOverrides` sets other methods for one type of provider from `providerTypes`, for example a key for the users of the LDAP providers and a code for the local users:
 

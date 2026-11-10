@@ -47,6 +47,11 @@ func TestParseTwoFactorPolicy(t *testing.T) {
 		{name: "a method twice", value: `{"Local": {"methods": ["TOTP", "TOTP"], "require": "All"}}`, wantErr: true},
 		{name: "two methods without require", value: `{"Local": {"methods": ["TOTP", "WebAuthn"]}}`, wantErr: true},
 		{name: "two methods with an unknown require", value: `{"Local": {"methods": ["TOTP", "WebAuthn"], "require": "Most"}}`, wantErr: true},
+		{
+			name:  "a choice of one method",
+			value: `{"Local": {"methods": ["TOTP", "WebAuthn"], "require": "Any"}}`,
+			want:  TwoFactorPolicy{"Local": {Methods: []string{"TOTP", "WebAuthn"}, Require: "Any"}},
+		},
 		{name: "require with one method", value: `{"Local": {"methods": ["TOTP"], "require": "All"}}`, wantErr: true},
 	}
 	for _, tt := range tests {
@@ -85,6 +90,7 @@ func TestTwoFactorStatus(t *testing.T) {
 	totp := &TwoFactorRequirement{Methods: []string{"TOTP"}}
 	webAuthn := &TwoFactorRequirement{Methods: []string{"WebAuthn"}}
 	both := &TwoFactorRequirement{Methods: []string{"TOTP", "WebAuthn"}, Require: "All"}
+	either := &TwoFactorRequirement{Methods: []string{"TOTP", "WebAuthn"}, Require: "Any"}
 	confirmedSecret := &v1alpha1.UserAccountTOTP{Confirmed: true}
 	oneKey := &v1alpha1.UserAccountWebAuthn{Credentials: 1}
 
@@ -126,6 +132,27 @@ func TestTwoFactorStatus(t *testing.T) {
 			factors: storedFactors{WebAuthnKeys: 1},
 			req:     both,
 			want:    v1alpha1.UserAccountTwoFactor{Methods: []string{"TOTP", "WebAuthn"}, Require: "All", WebAuthn: oneKey},
+		},
+		{
+			name:    "either, only the key",
+			factors: storedFactors{WebAuthnKeys: 1},
+			req:     either,
+			want: v1alpha1.UserAccountTwoFactor{
+				Methods: []string{"TOTP", "WebAuthn"}, Require: "Any", Enrolled: true, Confirmed: true, WebAuthn: oneKey,
+			},
+		},
+		{
+			name:    "either, a secret not confirmed",
+			factors: storedFactors{TOTP: true},
+			req:     either,
+			want: v1alpha1.UserAccountTwoFactor{
+				Methods: []string{"TOTP", "WebAuthn"}, Require: "Any", Enrolled: true, TOTP: &v1alpha1.UserAccountTOTP{},
+			},
+		},
+		{
+			name: "either, nothing",
+			req:  either,
+			want: v1alpha1.UserAccountTwoFactor{Methods: []string{"TOTP", "WebAuthn"}, Require: "Any"},
 		},
 		{
 			name:    "both required, the secret not confirmed",

@@ -337,6 +337,30 @@ var _ = Describe("Module :: user-authn :: helm template :: dex-config", func() {
 		})
 	})
 
+	// require: Any lets the users of the type choose: the chain stays [totp, webauthn], so a Dex that does not know
+	// oneOfConnectorTypes asks for both. A type that requires both is not in the list.
+	Context("With a choice of one method", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("userAuthn.twoFactor.enabled", true)
+			hec.ValuesSet("userAuthn.twoFactor.methods", []string{"TOTP", "WebAuthn"})
+			hec.ValuesSet("userAuthn.twoFactor.require", "Any")
+			hec.ValuesSet("userAuthn.twoFactor.providerTypes", []string{"Local", "LDAP", "Crowd"})
+			hec.ValuesSet("userAuthn.twoFactor.providerTypeOverrides", []map[string]any{
+				{"providerType": "LDAP", "methods": []string{"TOTP", "WebAuthn"}, "require": "All"},
+			})
+			hec.HelmRender()
+		})
+
+		It("Should let only the types with Any choose", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			jsonConfig := renderedDexConfig(hec)
+
+			Expect(gjson.GetBytes(jsonConfig, "mfa.defaultMFAChain").Value()).To(Equal([]any{"totp", "webauthn"}))
+			Expect(gjson.GetBytes(jsonConfig, "mfa.authenticators.0.connectorTypes").Value()).To(Equal([]any{"local", "ldap", "atlassian-crowd"}))
+			Expect(gjson.GetBytes(jsonConfig, "mfa.oneOfConnectorTypes").Value()).To(Equal([]any{"local", "atlassian-crowd"}))
+		})
+	})
+
 	Context("With both methods required", func() {
 		BeforeEach(func() {
 			hec.ValuesSet("userAuthn.twoFactor.enabled", true)
@@ -354,6 +378,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex-config", func() {
 			Expect(gjson.GetBytes(jsonConfig, "mfa.authenticators.0.connectorTypes").Value()).To(Equal([]any{"local", "ldap"}))
 			Expect(gjson.GetBytes(jsonConfig, "mfa.authenticators.1.connectorTypes").Value()).To(Equal([]any{"local", "ldap"}))
 			Expect(gjson.GetBytes(jsonConfig, "mfa.defaultMFAChain").Value()).To(Equal([]any{"totp", "webauthn"}))
+			Expect(gjson.GetBytes(jsonConfig, "mfa.oneOfConnectorTypes").Exists()).To(BeFalse())
 		})
 	})
 

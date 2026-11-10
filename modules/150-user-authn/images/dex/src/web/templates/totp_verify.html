@@ -52,6 +52,13 @@
       {{ end }}
     </button>
   </form>
+  {{ if .OtherMethodURL }}
+  <div class="form-extra">
+    <a id="other-method" class="btn btn-primary-outline" href="{{ .OtherMethodURL }}">
+      {{ if eq (extra "lang") "en" }}Sign in another way{{ else }}Войти другим способом{{ end }}
+    </a>
+  </div>
+  {{ end }}
 </div>
 
 <script type="text/javascript">

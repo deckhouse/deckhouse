@@ -70,8 +70,8 @@ func (r TwoFactorRequirement) validate() error {
 		}
 	}
 	switch {
-	case len(r.Methods) == 2 && r.Require != v1alpha1.TwoFactorRequireAll:
-		return fmt.Errorf("require %q of two methods must be %s", r.Require, v1alpha1.TwoFactorRequireAll)
+	case len(r.Methods) == 2 && r.Require != v1alpha1.TwoFactorRequireAll && r.Require != v1alpha1.TwoFactorRequireAny:
+		return fmt.Errorf("require %q of two methods must be %s or %s", r.Require, v1alpha1.TwoFactorRequireAll, v1alpha1.TwoFactorRequireAny)
 	case len(r.Methods) == 1 && r.Require != "":
 		return fmt.Errorf("require %q is not allowed with one method", r.Require)
 	}
@@ -125,6 +125,15 @@ func twoFactorStatus(f storedFactors, req *TwoFactorRequirement) *v1alpha1.UserA
 
 	status.Methods = slices.Clone(req.Methods)
 	status.Require = req.Require
+	if req.Require == v1alpha1.TwoFactorRequireAny {
+		// One method of the user's choice: the account needs any of them.
+		for _, m := range req.Methods {
+			enrolled, confirmed := f.has(m)
+			status.Enrolled = status.Enrolled || enrolled
+			status.Confirmed = status.Confirmed || confirmed
+		}
+		return status
+	}
 	// One method, or both with require All: the account needs every method listed.
 	status.Enrolled, status.Confirmed = true, true
 	for _, m := range req.Methods {

@@ -165,14 +165,15 @@ spec:
                         Absent when 2FA is off or does not cover the type.
                     require:
                       type: string
-                      enum: [All]
+                      enum: [Any, All]
                       description: |
-                        How the two `methods` combine. With `All`, the user passes both. Absent with one method.
+                        How the two `methods` combine. With `Any`, the user passes one of them, with `All`, both.
+                        Absent with one method.
                     enrolled:
                       type: boolean
                       description: |
                         Whether the account has what `methods` and `require` ask for: a TOTP secret, at least one
-                        WebAuthn credential, or both.
+                        WebAuthn credential, both (`All`) or one of them (`Any`).
 
                         A secret or a key of a method that is not asked for does not count. Without `methods`, whether
                         the account has either. Dex creates the TOTP secret when it shows the user the QR code at a

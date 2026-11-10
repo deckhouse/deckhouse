@@ -1,8 +1,8 @@
 diff --git a/cmd/dex/config.go b/cmd/dex/config.go
-index 517c939c..161dab5a 100644
+index 147f7118..6cc8a3fe 100644
 --- a/cmd/dex/config.go
 +++ b/cmd/dex/config.go
-@@ -712,6 +712,9 @@ type Connector struct {
+@@ -740,6 +740,9 @@ type Connector struct {
  	AllowedEmails       []string `json:"allowedEmails"`
  	AllowedEmailDomains []string `json:"allowedEmailDomains"`
  	AllowedGroups       []string `json:"allowedGroups"`
@@ -12,7 +12,7 @@ index 517c939c..161dab5a 100644
  }
  
  // UnmarshalJSON allows Connector to implement the unmarshaler interface to
-@@ -728,6 +731,8 @@ func (c *Connector) UnmarshalJSON(b []byte) error {
+@@ -756,6 +759,8 @@ func (c *Connector) UnmarshalJSON(b []byte) error {
  		AllowedEmails       []string `json:"allowedEmails"`
  		AllowedEmailDomains []string `json:"allowedEmailDomains"`
  		AllowedGroups       []string `json:"allowedGroups"`
@@ -21,7 +21,7 @@ index 517c939c..161dab5a 100644
  	}
  	if err := configUnmarshaller(b, &conn); err != nil {
  		return fmt.Errorf("parse connector: %v", err)
-@@ -774,6 +779,8 @@ func (c *Connector) UnmarshalJSON(b []byte) error {
+@@ -802,6 +807,8 @@ func (c *Connector) UnmarshalJSON(b []byte) error {
  		AllowedEmails:       conn.AllowedEmails,
  		AllowedEmailDomains: conn.AllowedEmailDomains,
  		AllowedGroups:       conn.AllowedGroups,
@@ -30,7 +30,7 @@ index 517c939c..161dab5a 100644
  	}
  	return nil
  }
-@@ -795,6 +802,8 @@ func ToStorageConnector(c Connector) (storage.Connector, error) {
+@@ -823,6 +830,8 @@ func ToStorageConnector(c Connector) (storage.Connector, error) {
  		AllowedEmails:       c.AllowedEmails,
  		AllowedEmailDomains: c.AllowedEmailDomains,
  		AllowedGroups:       c.AllowedGroups,
@@ -40,7 +40,7 @@ index 517c939c..161dab5a 100644
  }
  
 diff --git a/cmd/dex/config_test.go b/cmd/dex/config_test.go
-index e831d381..a4d9e785 100644
+index 369e3266..3c0d9649 100644
 --- a/cmd/dex/config_test.go
 +++ b/cmd/dex/config_test.go
 @@ -343,6 +343,33 @@ connectors:
@@ -349,10 +349,10 @@ index 66a05c4e..0c2a81ae 100644
  	require.NoError(t, json.Unmarshal(raw, &decoded))
  
 diff --git a/storage/storage.go b/storage/storage.go
-index 6c3b23e4..d5fa161d 100644
+index 8284f4bf..a886f696 100644
 --- a/storage/storage.go
 +++ b/storage/storage.go
-@@ -933,6 +933,14 @@ type Connector struct {
+@@ -937,6 +937,14 @@ type Connector struct {
  	AllowedEmails       []string `json:"allowedEmails,omitempty"`
  	AllowedEmailDomains []string `json:"allowedEmailDomains,omitempty"`
  	AllowedGroups       []string `json:"allowedGroups,omitempty"`

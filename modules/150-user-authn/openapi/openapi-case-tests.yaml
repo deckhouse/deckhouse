@@ -93,6 +93,16 @@ positive:
       enabled: true
       methods: [TOTP, WebAuthn]
       require: All
+  # One of the methods, of the choice of the user; the users of LDAP providers pass both.
+  - twoFactor:
+      enabled: true
+      methods: [TOTP, WebAuthn]
+      require: Any
+      providerTypes: [Local, LDAP]
+      providerTypeOverrides:
+      - providerType: LDAP
+        methods: [TOTP, WebAuthn]
+        require: All
   # The users of LDAP providers use a key, the local users the default code.
   - twoFactor:
       enabled: true
@@ -197,11 +207,10 @@ negative:
   - twoFactor:
       enabled: true
       require: All
-  # A choice of the user (Any) comes with the Dex patch that implements it.
   - twoFactor:
       enabled: true
       methods: [TOTP, WebAuthn]
-      require: Any
+      require: Most
   # An override names a type of providerTypes, once, with the rules of methods and require.
   - twoFactor:
       enabled: true

@@ -1,8 +1,8 @@
 diff --git a/cmd/dex/config.go b/cmd/dex/config.go
-index 1377e701..2107e97f 100644
+index 60795c87..4e54fedb 100644
 --- a/cmd/dex/config.go
 +++ b/cmd/dex/config.go
-@@ -87,6 +87,10 @@ type Config struct {
+@@ -88,6 +88,10 @@ type Config struct {
  	// RateLimit limits failed attempts per client address on the login form, the
  	// token endpoint and the second factor.
  	RateLimit *RateLimit `json:"rateLimit"`
@@ -14,7 +14,7 @@ index 1377e701..2107e97f 100644
  
  // MFAConfig holds multi-factor authentication settings.
 diff --git a/cmd/dex/serve.go b/cmd/dex/serve.go
-index c4a507aa..11dc3c9c 100644
+index ff928eeb..d2fa4b69 100644
 --- a/cmd/dex/serve.go
 +++ b/cmd/dex/serve.go
 @@ -40,6 +40,7 @@ import (
@@ -25,7 +25,7 @@ index c4a507aa..11dc3c9c 100644
  	"github.com/dexidp/dex/server/apiserver"
  	"github.com/dexidp/dex/server/authflow"
  	"github.com/dexidp/dex/server/connectors"
-@@ -479,6 +480,11 @@ func runServe(options serveOptions) error {
+@@ -480,6 +481,11 @@ func runServe(options serveOptions) error {
  		logger.Warn(warning, "header", serverConfig.RealIPHeader)
  	}
  

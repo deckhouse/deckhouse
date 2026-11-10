@@ -38,8 +38,10 @@ const (
 	// TwoFactorMethodTOTP and TwoFactorMethodWebAuthn are the second factors of UserAccountTwoFactor.Methods.
 	TwoFactorMethodTOTP     = "TOTP"
 	TwoFactorMethodWebAuthn = "WebAuthn"
-	// TwoFactorRequireAll is UserAccountTwoFactor.Require when the user passes both methods.
+	// TwoFactorRequireAll is UserAccountTwoFactor.Require when the user passes both methods, and
+	// TwoFactorRequireAny when the user passes one of them.
 	TwoFactorRequireAll = "All"
+	TwoFactorRequireAny = "Any"
 
 	// MaxSessions bounds UserAccount.status.sessions; the most recently active are listed.
 	MaxSessions = 50
@@ -55,10 +57,10 @@ type UserAccountTwoFactor struct {
 	// Methods are the second factors the settings ask the users of the type of provider of the account for.
 	// Empty when the second factor does not cover the type, or the controller was not told the settings.
 	Methods []string `json:"methods,omitempty"`
-	// Require is how the two Methods combine (TwoFactorRequireAll); empty with one.
+	// Require is how the two Methods combine (TwoFactorRequireAll, TwoFactorRequireAny); empty with one.
 	Require string `json:"require,omitempty"`
 	// Enrolled tells whether the account has what Methods and Require ask for: a TOTP secret, at least one
-	// WebAuthn credential, or both. Without Methods, whether it has either.
+	// WebAuthn credential, both (All) or one of them (Any). Without Methods, whether it has either.
 	Enrolled bool `json:"enrolled"`
 	// Confirmed is Enrolled with the TOTP secret confirmed by a code; until then a sign-in shows the QR code
 	// again. A WebAuthn credential is complete at the registration.

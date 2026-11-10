@@ -18,7 +18,8 @@ patched source tree (`crds/pull_dex_crds.sh`), and the image build checks it.
 ### 100-storage-schema.patch
 
 **Zone:** storage schema. The patch that adds fields to Dex storage, apart
-from the one prefix of a connector (435), for
+from the one prefix of a connector (435) and the last use of a WebAuthn
+credential (340, inside the credentials every storage keeps as JSON), for
 the kubernetes and memory storages only: Deckhouse runs Dex on the kubernetes
 storage and the Dex tests run on the memory one. SQL, ent and etcd ignore these
 fields.
@@ -1190,6 +1191,61 @@ every browser session it ends, also when it revokes the whole pair); the
 **Upstream status:** Deckhouse only.
 
 **Depends on:** 290 (`Revocation`, `Recorder`), 300 (`backchannel.Notifier`).
+
+### 340-mfa-one-of.patch
+
+**Zone:** a choice of the second factor. Upstream asks a login for every
+authenticator of its chain that applies to its connector type. For the
+connector types of `mfa.oneOfConnectorTypes` a login passes one of them, of
+the user's choice (`twoFactor.require: Any`):
+
+- `/mfa`: with none of the chain registered (a confirmed TOTP secret, or a
+  WebAuthn credential), the page `mfa_choose.html` offers each authenticator
+  to register; with one, Dex goes to it; with several, to the one used last
+  (the time step of the last TOTP code, the last sign-in with or the
+  registration of a key, `WebAuthnCredential.LastUsedAt`), the TOTP first
+  without a record. `/mfa?choose=1` offers the registered ones, and the TOTP
+  and WebAuthn pages link to it (`OtherMethodURL`) when the user has several.
+- a method is registered only while the user has no other one: the TOTP
+  page refuses to show or confirm a secret, and the key page and
+  `register/begin`/`register/finish` refuse a key, with 403, when another
+  method is registered. The check is repeated inside `UpdateUserIdentity`, so
+  a registration that loaded the identity before another method was stored is
+  refused too. Otherwise a password alone would add a factor of its own to an
+  account protected by another one.
+- "another method" is any authenticator that applies to the connector type,
+  in the chain of the login or not (`resolvedChain.factors`), and the same set
+  gates the registration of a login that asks for every factor (`mayRegister`
+  of 210). A client may name a chain of its own (`mfaChain`): through a client
+  with `[totp]` a password would otherwise register a code for a user who has
+  only a key, and that code alone would then pass a login with the choice. The
+  login cannot pass a factor outside its chain, so its pages answer 403 instead
+  of sending the login back to `/mfa`.
+- `CompleteStep` completes the login after one factor of the chain, and,
+  whatever the chain, refuses a factor that is not in the chain of the login:
+  upstream marked a login validated after any factor that was not followed by
+  another.
+- the browser session records a choice as one entry, the authenticators joined
+  with `|` (`ChainForClient`, `sessionChain`), so a session of a login that
+  passed one factor never satisfies a login that asks for every one, after a
+  change of `require` too.
+- the configuration refuses a type of `oneOfConnectorTypes` that is no
+  connector type of Dex, or to which no authenticator of `defaultMFAChain`
+  applies: a choice among none would let its users in without a factor.
+
+A Dex without the patch ignores `oneOfConnectorTypes` (the configuration is
+read without strict field checks) and asks for the whole chain, never for
+less. Without `oneOfConnectorTypes` there is no choice, and of this patch only
+the factors outside the chain apply, to the registration.
+
+**Consumer in Deckhouse:** `templates/dex/config.yaml` (`oneOfConnectorTypes`
+from the types with `require: Any`), the theme (`mfa_choose.html`, the link on
+`totp_verify.html` and `webauthn_verify.html`).
+
+**Upstream status:** Deckhouse only.
+
+**Depends on:** 210 (the chain stops at an unknown authenticator), 300
+(`session.MFASatisfied`).
 
 ### 400-connector-open-deadline.patch
 

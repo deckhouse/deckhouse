@@ -195,10 +195,12 @@ fields when it decides who may write the provider. Rendered right after the conn
   {{- $policy := include "user_authn_two_factor_policy" . | fromJson }}
   {{- $totpTypes := list }}
   {{- $webAuthnTypes := list }}
+  {{- $oneOfTypes := list }}
   {{- range $type := $covered }}
     {{- $methods := (index $policy $type).methods }}
     {{- if has "TOTP" $methods }}{{ $totpTypes = append $totpTypes (index $connectorTypes $type) }}{{ end }}
     {{- if has "WebAuthn" $methods }}{{ $webAuthnTypes = append $webAuthnTypes (index $connectorTypes $type) }}{{ end }}
+    {{- if eq ((index $policy $type).require | default "") "Any" }}{{ $oneOfTypes = append $oneOfTypes (index $connectorTypes $type) }}{{ end }}
   {{- end }}
   {{- $webAuthn := .webAuthn | default dict }}
   mfa:
@@ -237,6 +239,14 @@ fields when it decides who may write the provider. Rendered right after the conn
     {{- end }}
     {{- if $webAuthnTypes }}
     - webauthn
+    {{- end }}
+    {{- /* The users of these connector types pass one authenticator of the chain, of their choice (require: Any,
+           patch 340). A Dex that does not know the field asks for the whole chain, never for less. */}}
+    {{- if $oneOfTypes }}
+    oneOfConnectorTypes:
+    {{- range $oneOfTypes }}
+    - {{ . }}
+    {{- end }}
     {{- end }}
   {{- end }}
   {{- end }}

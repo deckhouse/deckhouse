@@ -260,7 +260,7 @@ index 00000000..213e82e5
 +	require.True(t, strings.Contains(out, "did not answer within 200ms"), out)
 +}
 diff --git a/server/server.go b/server/server.go
-index 9d59849a..aa260dbe 100644
+index b09d2b75..bacccb38 100644
 --- a/server/server.go
 +++ b/server/server.go
 @@ -204,6 +204,9 @@ func (s *Server) openConnectors(ctx context.Context, c Config) error {

@@ -130,7 +130,7 @@ index 00000000..5fa36049
 +	(&tokenExchange{}).count("c", "oidc", nil)
 +}
 diff --git a/server/server.go b/server/server.go
-index fd4754b3..937c6b6f 100644
+index c99e2e8e..d8470f2a 100644
 --- a/server/server.go
 +++ b/server/server.go
 @@ -13,6 +13,7 @@ import (
@@ -141,7 +141,7 @@ index fd4754b3..937c6b6f 100644
  	"github.com/dexidp/dex/pkg/featureflags"
  	"github.com/dexidp/dex/server/authflow"
  	"github.com/dexidp/dex/server/backchannel"
-@@ -331,6 +332,7 @@ func (s *Server) mount(routes router.Mux, c Config, rc resolvedConfig) {
+@@ -333,6 +334,7 @@ func (s *Server) mount(routes router.Mux, c Config, rc resolvedConfig) {
  			Backchannel:         s.backchannel,
  
  			TokenExchangeDeniedClients: c.TokenExchangeDeniedClients,
@@ -149,7 +149,7 @@ index fd4754b3..937c6b6f 100644
  		},
  		&userinfo.Handler{
  			Issuer: s.issuerURL.String(),
-@@ -532,3 +534,47 @@ func (s *Server) startRevokedNotification(ctx context.Context, claimer storage.R
+@@ -534,3 +536,47 @@ func (s *Server) startRevokedNotification(ctx context.Context, claimer storage.R
  func (s *Server) renderError(r *http.Request, w http.ResponseWriter, status int, description string) {
  	templates.RenderError(s.templates, s.logger, r, w, status, description)
  }
