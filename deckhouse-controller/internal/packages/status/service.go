@@ -102,9 +102,9 @@ type Status struct {
 }
 
 type Tracking struct {
-	Completed int                 `json:"completed"`
-	Remaining int                 `json:"remaining"`
-	Report    progrep.StageReport `json:"report"`
+	Completed int                    `json:"completed"`
+	Remaining int                    `json:"remaining"`
+	Report    progrep.ProgressReport `json:"report"`
 }
 
 // Condition represents a single status condition for a package
@@ -244,28 +244,42 @@ func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {
 		Reason: ConditionReasonApplyingManifests,
 	})
 
-	for i := len(report.StageReports) - 1; i >= 0; i-- {
-		r := report.StageReports[i]
-		if len(r.Operations) == 0 {
-			continue
-		}
+	if len(report.Operations) > 0 {
+		completed, remaining := countProgress(report.Operations)
 
-		completed := 0
-		remaining := 0
-		for _, op := range r.Operations {
-			if op.Status == progrep.OperationStatusCompleted {
-				completed++
-			} else {
-				remaining++
-			}
-		}
-
-		status.Tracking = Tracking{Completed: completed, Remaining: remaining, Report: r}
-		break
+		status.Tracking = Tracking{Completed: completed, Remaining: remaining, Report: report}
 	}
 	s.mu.Unlock()
 
 	s.queue.Add(name)
+}
+
+// IsResourceOperation reports whether op acts on a Kubernetes resource.
+// Stage boundaries and release record updates carry no resource.
+func IsResourceOperation(op progrep.Operation) bool {
+	return op.Category == progrep.OperationCategoryResource ||
+		op.Category == progrep.OperationCategoryTrack
+}
+
+// countProgress returns the completed and the remaining resource operations of ops.
+// Other operations are skipped: they say nothing about the package resources.
+func countProgress(ops []progrep.Operation) (int, int) {
+	completed := 0
+	remaining := 0
+
+	for _, op := range ops {
+		if !IsResourceOperation(op) {
+			continue
+		}
+
+		if op.Status == progrep.OperationStatusCompleted {
+			completed++
+		} else {
+			remaining++
+		}
+	}
+
+	return completed, remaining
 }
 
 // UpdateSettings stores the effective settings of a package.

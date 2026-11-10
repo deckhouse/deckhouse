@@ -292,26 +292,36 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 		maps.Copy(labels, opts.ResourcesLabels)
 	}
 
-	// reportCh receives progress reports from nelm during resource tracking.
-	// A background goroutine converts each report into a tracking event and
-	// forwards it to the caller's callback.
+	// reportCh receives progress reports from nelm during resource tracking; a
+	// background goroutine forwards each one to the caller's callback.
 	//
-	// We must NOT close reportCh: when a Timeout is set, nelm's ReleaseInstall
-	// returns on ctx.Done() without joining the goroutine that actually runs
-	// the install. That detached goroutine keeps sending progress reports via
-	// sendNonBlocking, so closing the channel here would panic it with
-	// "send on closed channel" and crash the process. Instead we stop the
-	// forwarder via done and let the buffered channel be garbage-collected.
+	// We must not close reportCh: ReleaseInstall closes it when it returns. The ok
+	// check makes the forwarder leave on that close instead of reading an endless
+	// stream of empty reports. done stops the forwarder even if the channel stays
+	// open. The wait keeps a report from arriving after Install returned and the
+	// caller published the apply result.
 	reportCh := make(chan progrep.ProgressReport, 1)
 	done := make(chan struct{})
+
+	var wg sync.WaitGroup
+
+	// Deferred in this order so close(done) runs before the wait.
+	defer wg.Wait()
 	defer close(done)
 
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
+
 		for {
 			select {
 			case <-done:
 				return
-			case report := <-reportCh:
+			case report, ok := <-reportCh:
+				if !ok {
+					return
+				}
+
 				if opts.OnTrackingEvent != nil {
 					opts.OnTrackingEvent(releaseName, report)
 				}
@@ -319,7 +329,7 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 		}
 	}()
 
-	if err := action.ReleaseInstall(ctx, releaseName, namespace, action.ReleaseInstallOptions{
+	if _, err := action.ReleaseInstall(ctx, releaseName, namespace, action.ReleaseInstallOptions{
 		LegacyProgressReportCh: reportCh,
 		KubeConnectionOptions: common.KubeConnectionOptions{
 			KubeContextCurrent: c.kubeContext,
