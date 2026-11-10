@@ -3,7 +3,7 @@ module github.com/deckhouse/deckhouse/dhctl
 go 1.26.4
 
 require (
-	fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection v0.18.2
+	fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection v0.18.3
 	fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl v0.24.1
 	fox.flant.com/deckhouse/cluster-and-infrastructure/libs/oteljsonl v0.1.1
 	github.com/BurntSushi/toml v1.5.0

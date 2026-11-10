@@ -45,7 +45,10 @@ apiVersions:
           properties:
             key:
               type: string
-              description: Private SSH key.
+              description: |
+                Contents of the private SSH key.
+
+                This field does not support passing a certificate. To authenticate with a certificate in `gossh` mode, load the key together with its certificate into an ssh-agent accessible to dhctl through `SSH_AUTH_SOCK`. This method is unavailable when `legacyMode: true`.
             passphrase:
               type: string
               description: Password for SSH key.

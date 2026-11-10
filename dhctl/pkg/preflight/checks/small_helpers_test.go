@@ -21,6 +21,7 @@ import (
 	"syscall"
 	"testing"
 
+	sshutils "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -37,10 +38,14 @@ func TestIsSSHAuthError(t *testing.T) {
 		"Permission denied (publickey,password)",
 		// The same words from a backend that shouts them.
 		"SSH: UNABLE TO AUTHENTICATE",
+		// The server's MaxAuthTries.
+		"ssh: disconnect, reason 2: Too many authentication failures",
 	}
 	for _, text := range rejected {
 		assert.True(t, isSSHAuthError(errors.New(text)), "should be an auth failure: %s", text)
 	}
+	// lib-connection marks a rejection whose text names none of the markers.
+	assert.True(t, isSSHAuthError(fmt.Errorf("%w: ssh: handshake failed: EOF", sshutils.ErrSSHAuthentication)))
 
 	notRejected := []string{
 		"dial tcp 10.0.0.5:22: connect: connection refused",
@@ -74,6 +79,47 @@ func TestSSHLoginFailure(t *testing.T) {
 		assert.True(t, isPermanent(err))
 	})
 
+	t.Run("the server's MaxAuthTries ran out", func(t *testing.T) {
+		cause := errors.New("ssh: disconnect, reason 2: Too many authentication failures")
+
+		err := sshLoginFailure(hostLabelOfClient(client), cause)
+
+		var failure *preflight.Failure
+		require.ErrorAs(t, err, &failure)
+		// Either the user or the keys are wrong, or too many identities came first: both hints stay.
+		assert.Contains(t, failure.Observed, "MaxAuthTries")
+		assert.Contains(t, failure.Fix, "--ssh-user")
+		assert.Contains(t, failure.Fix, "remove the other keys from the ssh-agent")
+		assert.True(t, isPermanent(err))
+
+		// A machine the cloud just created gets the same hint.
+		err = freshMachineLoginFailure(hostLabelOfClient(client), "OpenStackClusterConfiguration", cause)
+		require.ErrorAs(t, err, &failure)
+		assert.Contains(t, failure.Observed, "MaxAuthTries")
+		assert.Contains(t, failure.Fix, "sshPublicKey")
+		assert.Contains(t, failure.Fix, "remove the other keys from the ssh-agent")
+	})
+
+	// lib-connection marks a failure of dhctl's own credentials, such as an ssh-agent that is the
+	// only source of keys and cannot list them. The server was never asked.
+	t.Run("dhctl could not use its own credentials", func(t *testing.T) {
+		cause := fmt.Errorf("ssh: handshake failed: %w: read SSH agent identities: EOF", sshutils.ErrSSHCredentials)
+
+		for name, err := range map[string]error{
+			"node":            sshLoginFailure(hostLabelOfClient(client), cause),
+			"freshly created": freshMachineLoginFailure(hostLabelOfClient(client), "OpenStackClusterConfiguration", cause),
+		} {
+			var failure *preflight.Failure
+			require.ErrorAs(t, err, &failure, name)
+			assert.Contains(t, failure.Observed, "could not use its SSH credentials", name)
+			assert.Contains(t, failure.Fix, "ssh-add -l", name)
+			assert.NotContains(t, failure.Fix, "22/TCP", name)
+			require.ErrorIs(t, err, cause, name)
+			assert.True(t, isPermanent(err), name)
+		}
+		assert.True(t, sshNeverConnected(cause))
+	})
+
 	t.Run("the machine was never reached", func(t *testing.T) {
 		cause := fmt.Errorf("dial tcp 10.0.0.5:22: %w", syscall.ECONNREFUSED)
 
@@ -86,6 +132,43 @@ func TestSSHLoginFailure(t *testing.T) {
 		// A machine that is still booting answers on the next attempt.
 		assert.False(t, isPermanent(err))
 	})
+}
+
+// TestNoConnection names what stopped the connection for every check behind ssh-credential.
+func TestNoConnection(t *testing.T) {
+	for name, tc := range map[string]struct {
+		cause    error
+		observed string
+		fix      string
+	}{
+		"dhctl's own credentials": {
+			cause:    fmt.Errorf("ssh: handshake failed: %w: read SSH agent identities: EOF", sshutils.ErrSSHCredentials),
+			observed: "could not use its SSH credentials",
+			fix:      "ssh-add -l",
+		},
+		"the node turned the credentials down": {
+			cause:    errors.New("ssh: handshake failed: ssh: unable to authenticate, attempted methods [none publickey]"),
+			observed: "did not accept the credentials",
+			fix:      "--preflight-skip-check=ssh-credential",
+		},
+		"the node was never reached": {
+			cause:    fmt.Errorf("dial tcp 10.0.0.5:22: %w", syscall.ECONNREFUSED),
+			observed: "connection was refused",
+			fix:      "--preflight-skip-check=ssh-credential",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			err := noConnection("", tc.cause)
+
+			var failure *preflight.Failure
+			require.ErrorAs(t, err, &failure)
+			assert.Contains(t, failure.Observed, tc.observed)
+			assert.Contains(t, failure.Fix, tc.fix)
+			assert.True(t, failure.StopsPhase)
+			assert.True(t, isPermanent(err))
+			require.ErrorIs(t, err, tc.cause)
+		})
+	}
 }
 
 // TestOneLineError keeps a per-instance line to one line: a dozen multi-line causes in one block

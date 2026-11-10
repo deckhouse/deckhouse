@@ -25,6 +25,7 @@ import (
 
 	libcon "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg"
 	sshconfig "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/config"
+	sshutils "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/utils"
 	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/retry"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -135,6 +136,99 @@ func TestSSHCredentialRun(t *testing.T) {
 		assert.Contains(t, failure.Observed, "rejected every authentication method")
 		// No key becomes the right key on a retry, and this check stops the whole phase.
 		assert.True(t, isPermanent(err))
+	})
+
+	// Resolving the connection fails first, and the resolver wraps the lib-connection error in
+	// noConnection. The wording still comes from the lib's own text.
+	t.Run("the connection never opened", func(t *testing.T) {
+		for name, tc := range map[string]struct {
+			cause    error
+			fresh    bool
+			observed string
+			details  string
+			fix      string
+		}{
+			"MaxAuthTries": {
+				cause:    fmt.Errorf("%w: ssh: disconnect, reason 2: Too many authentication failures; public key candidates in order: id_ed25519", sshutils.ErrSSHAuthentication),
+				observed: "MaxAuthTries",
+				details:  "public key candidates in order",
+			},
+			"a broken ssh-agent": {
+				cause:    fmt.Errorf("%w: read SSH agent identities: EOF", sshutils.ErrSSHCredentials),
+				observed: "could not use its SSH credentials",
+				details:  "read SSH agent identities",
+			},
+			// The legacy backend says nothing but the exit status, and lib-connection has already
+			// retried it: still final.
+			"the ssh binary exited 255": {
+				cause:    &fakeSSHExitError{status: 255},
+				observed: "exit status 255",
+				details:  "status 255",
+			},
+			// lib-connection has already waited; the fresh machine's boot wait never ran to be quoted.
+			// Its key still has to match the one the cloud put on it.
+			"a fresh machine": {
+				cause:    fmt.Errorf("%w: ssh: unable to authenticate", sshutils.ErrSSHAuthentication),
+				fresh:    true,
+				observed: "rejected every authentication method",
+				details:  "unable to authenticate",
+				fix:      "sshPublicKey",
+			},
+			"a fresh machine the ssh binary could not reach": {
+				cause:    &fakeSSHExitError{status: 255},
+				fresh:    true,
+				observed: "exit status 255",
+				details:  "status 255",
+				fix:      "sshPublicKey",
+			},
+		} {
+			t.Run(name, func(t *testing.T) {
+				check := SSHCredentialCheck{FreshlyCreated: tc.fresh, NodeInterface: func(context.Context) (libcon.Interface, error) {
+					return nil, noConnection("ubuntu@10.0.0.5", tc.cause)
+				}}
+
+				_, err := check.Run(t.Context())
+
+				var failure *preflight.Failure
+				require.ErrorAs(t, err, &failure)
+				assert.Contains(t, failure.Observed, tc.observed)
+				require.NotNil(t, failure.Err)
+				assert.Contains(t, failure.Err.Error(), tc.details)
+				assert.True(t, isPermanent(err))
+				if tc.fix == "" {
+					assert.NotContains(t, failure.Fix, "sshPublicKey")
+				} else {
+					assert.Contains(t, failure.Fix, tc.fix)
+					assert.Contains(t, failure.Fix, "login user of the node's image")
+					assert.NotContains(t, failure.Fix, "--ask-become-pass")
+					assert.NotContains(t, failure.Observed, "kept refusing")
+				}
+			})
+		}
+	})
+
+	t.Run("a rejection on the route through a bastion does not blame the node", func(t *testing.T) {
+		cfg := &sshconfig.ConnectionConfig{
+			Config: &sshconfig.Config{User: "ubuntu", BastionHost: "jump.example", BastionUser: "jump"},
+			Hosts:  []sshconfig.Host{{Host: "10.0.0.5"}},
+		}
+		cause := fmt.Errorf("%w: unable to authenticate", sshutils.ErrSSHAuthentication)
+		check := SSHCredentialCheck{FreshlyCreated: true, NodeInterface: func(context.Context) (libcon.Interface, error) {
+			return nil, nodeConnectionFailure(cfg, cause)
+		}}
+
+		_, err := check.Run(t.Context())
+
+		require.ErrorIs(t, err, cause)
+		var failure *preflight.Failure
+		require.ErrorAs(t, err, &failure)
+		assert.True(t, failure.StopsPhase)
+		assert.True(t, isPermanent(err))
+		assert.Contains(t, failure.Checked, "ubuntu@10.0.0.5 via bastion jump@jump.example:22")
+		assert.Contains(t, failure.Observed, "on this route")
+		assert.Contains(t, failure.Fix, "--ssh-bastion-user")
+		assert.Contains(t, failure.Fix, "--ssh-user")
+		assert.NotContains(t, failure.Fix, "sshPublicKey")
 	})
 
 	t.Run("dhctl is running against the local machine", func(t *testing.T) {

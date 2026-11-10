@@ -17,7 +17,10 @@ apiVersions:
         items:
           properties:
             key:
-              description: Приватный SSH-ключ.
+              description: |
+                Содержимое приватного SSH-ключа.
+
+                Передача сертификата в этом поле не поддерживается. Для подключения по сертификату при использовании `gossh` загрузите ключ вместе с сертификатом в ssh-agent, доступный dhctl через `SSH_AUTH_SOCK`. При `legacyMode: true` этот способ недоступен.
             passphrase:
               description: Пароль SSH-ключа.
       sshBastionHost:

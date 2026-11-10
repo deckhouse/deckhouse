@@ -544,6 +544,8 @@ Where:
 - `--ssh-agent-private-keys`: Private SSH key file for SSH connection.
 - `<SSH_PRIVATE_KEY_FILE>`: Name of private key. For example, for a key with RSA encryption it can be `id_rsa`, and for a key with ED25519 encryption it can be `id_ed25519`.
 
+If the server accepts only keys signed by an SSH certificate authority, put the certificate next to the private key as `<SSH_PRIVATE_KEY_FILE>-cert.pub`, for example `id_ed25519-cert.pub`. dhctl uses it automatically.
+
 ### Pre-installation checks
 
 {% alert level="info" %}

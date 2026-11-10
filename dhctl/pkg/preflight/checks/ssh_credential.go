@@ -16,6 +16,7 @@ package checks
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -23,6 +24,7 @@ import (
 
 	libcon "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg"
 	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh"
+	sshutils "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/utils"
 	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/retry"
 
@@ -141,14 +143,31 @@ func (*SSHCredentialCheck) RetryPolicy() preflight.RetryPolicy {
 func (c *SSHCredentialCheck) Run(ctx context.Context) (string, error) {
 	nodeInterface, err := c.NodeInterface(ctx)
 	if err != nil {
-		// Resolving the connection is itself a login attempt: the provider starts the client it
-		// hands back, with a retry loop of its own. So a credential the node refuses fails here,
-		// before the probe below, and arriving as a bare lib-connection string is how it used to
-		// reach the operator.
-		if sshNeverConnected(err) {
+		// The resolver already described both hops; the library does not identify
+		// which one rejected authentication.
+		var routeFailure *sshViaBastionFailure
+		if errors.As(err, &routeFailure) || !sshNeverConnected(err) {
+			return "", err
+		}
+
+		var wrapped *preflight.Failure
+		if !errors.As(err, &wrapped) || wrapped.Err == nil {
 			return "", c.loginFailure(nil, err)
 		}
-		return "", err
+		// noConnection's text is its own verdict, so the wording reads the lib-connection error
+		// under it (MaxAuthTries, the offered candidates). lib-connection has already retried, so
+		// the verdict stays final, and a fresh machine's boot wait never ran to be quoted.
+		failure := sshLoginFailure(c.endpointLabel(nil), wrapped.Err)
+
+		var described *preflight.Failure
+		if c.FreshlyCreated && !errors.Is(wrapped.Err, sshutils.ErrSSHCredentials) && errors.As(failure, &described) {
+			described.Fix = freshMachineLoginFix(c.providerDocument())
+			if isMaxAuthTries(wrapped.Err) {
+				described.Fix += " " + maxAuthTriesNote
+			}
+		}
+
+		return "", preflight.Permanent(failure)
 	}
 	wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper)
 	if !ok {
@@ -171,6 +190,17 @@ func (c *SSHCredentialCheck) Run(ctx context.Context) (string, error) {
 // ago and one that has been running for months are refusing for different reasons, and only the
 // second one is refusing for good.
 func (c *SSHCredentialCheck) loginFailure(client libcon.SSHClient, err error) error {
+	label := c.endpointLabel(client)
+	if c.FreshlyCreated {
+		return freshMachineLoginFailure(label, c.providerDocument(), err)
+	}
+
+	return sshLoginFailure(label, err)
+}
+
+// endpointLabel names the machine: from the session when there is one, otherwise from the
+// configuration, since a connection that never opened has nothing to read it back from.
+func (c *SSHCredentialCheck) endpointLabel(client libcon.SSHClient) string {
 	label := hostLabelOfClient(client)
 	if client == nil && c.Endpoint != nil {
 		if fromConfig := c.Endpoint(); fromConfig != "" {
@@ -178,10 +208,7 @@ func (c *SSHCredentialCheck) loginFailure(client libcon.SSHClient, err error) er
 		}
 	}
 
-	if c.FreshlyCreated {
-		return freshMachineLoginFailure(label, c.providerDocument(), err)
-	}
-	return sshLoginFailure(label, err)
+	return label
 }
 
 // freshMachineBudget is how long a machine the cloud has just created is given to accept a login.
@@ -220,20 +247,29 @@ func awaitFreshMachineLogin(ctx context.Context, client libcon.SSHClient, provid
 // freshMachineLoginFailure says which of the two readings the failure supports, for a machine the
 // cloud created moments ago. client may be nil: the connection can fail before there is one.
 func freshMachineLoginFailure(label, providerDocument string, err error) error {
+	if errors.Is(err, sshutils.ErrSSHCredentials) {
+		return localCredentialFailure(label, err)
+	}
+
 	waited := roundedBudget(freshMachineBudget.attempts, freshMachineBudget.wait)
 
 	if sshNeverConnected(err) {
-		return &preflight.Failure{
+		failure := &preflight.Failure{
 			Checked:  fmt.Sprintf("SSH login to %s", label),
 			Observed: fmt.Sprintf("the node answers and kept refusing the credential for %s", waited),
 			Expected: "a login user on the node that accepts the key",
 			// Deliberately not preflight.Permanent: the runner retrying the whole check would
 			// start the wait again, which is the one thing that must not happen here.
-			Fix: fmt.Sprintf("check --ssh-user against the login user of the node's image "+
-				"(ubuntu, ec2-user, debian, altlinux, opensuse). Check that the key passed to dhctl "+
-				"matches %s.sshPublicKey.", providerDocument),
+			Fix: freshMachineLoginFix(providerDocument),
 			Err: err,
 		}
+
+		if isMaxAuthTries(err) {
+			failure.Observed = maxAuthTriesObserved
+			failure.Fix += " " + maxAuthTriesNote
+		}
+
+		return failure
 	}
 
 	return &preflight.Failure{
@@ -246,6 +282,12 @@ func freshMachineLoginFailure(label, providerDocument string, err error) error {
 	}
 }
 
+func freshMachineLoginFix(providerDocument string) string {
+	return fmt.Sprintf("check --ssh-user against the login user of the node's image "+
+		"(ubuntu, ec2-user, debian, altlinux, opensuse). Check that the key passed to dhctl "+
+		"matches %s.sshPublicKey.", providerDocument)
+}
+
 // roundedBudget states the wait in a unit a reader thinks in.
 func roundedBudget(attempts int, wait time.Duration) string {
 	return (time.Duration(attempts) * wait).Round(time.Minute).String()
@@ -255,6 +297,10 @@ func roundedBudget(attempts int, wait time.Duration) string {
 // with each other: the credentials were rejected, or the machine was never reached. Both used to
 // arrive as one sentence with the raw x/crypto text appended.
 func sshLoginFailure(label string, err error) error {
+	if errors.Is(err, sshutils.ErrSSHCredentials) {
+		return localCredentialFailure(label, err)
+	}
+
 	failure := &preflight.Failure{
 		Checked: fmt.Sprintf("SSH login to %s", label),
 		Err:     err,
@@ -265,7 +311,13 @@ func sshLoginFailure(label string, err error) error {
 		failure.Observed = "the server rejected every authentication method offered"
 		failure.Expected = "an SSH user authorized on the node"
 		failure.Fix = "check --ssh-user, and that one of --ssh-agent-private-keys is authorized for it on the node. " +
+			"If the node trusts a CA, put the signed certificate next to the key as <key>-cert.pub. " +
 			"Pass --ask-become-pass if the user authenticates by password."
+		if isMaxAuthTries(err) {
+			failure.Observed = maxAuthTriesObserved
+			failure.Fix += " " + maxAuthTriesNote
+		}
+
 		return preflight.Permanent(failure)
 	}
 
@@ -280,7 +332,9 @@ func sshLoginFailure(label string, err error) error {
 		failure.Expected = "an SSH session the node accepts"
 		failure.Fix = "check --ssh-user against the login user of the node's image " +
 			"(ubuntu, ec2-user, debian, altlinux, opensuse — it differs per image), that one of " +
-			"--ssh-agent-private-keys is authorized for that user, and that 22/TCP is open from this host"
+			"--ssh-agent-private-keys (or its certificate, <key>-cert.pub) is authorized for that user, " +
+			"and that 22/TCP is open from this host"
+
 		return failure
 	}
 
@@ -299,20 +353,56 @@ const sshCouldNotOpenSession = 255
 // runs over ssh fails in its own terms when this happens — a port-forward reports a forwarding
 // problem, a command reports a command problem — and none of those are what went wrong.
 //
-// The default backend answers through isSSHAuthError; the exit status is the legacy backend's
-// only signal.
+// The default backend answers through isSSHAuthError, or ErrSSHCredentials when its own credentials
+// failed and the server was never asked; the exit status is the legacy backend's only signal.
 func sshNeverConnected(err error) bool {
-	if isSSHAuthError(err) {
+	if isSSHAuthError(err) || errors.Is(err, sshutils.ErrSSHCredentials) {
 		return true
 	}
 	status, ok := exitStatus(err)
 	return ok && status == sshCouldNotOpenSession
 }
 
+// localCredentialFailure is for an error marked with ErrSSHCredentials: dhctl could not use its own
+// credentials, so the server was never asked. lib-connection and the bastion check mark it for an
+// ssh-agent that is the only source of keys and cannot list them. Nothing changes on a second try.
+func localCredentialFailure(label string, err error) error {
+	return preflight.Permanent(localCredentialProblem(label, err))
+}
+
+// localCredentialProblem is localCredentialFailure that is retried, for an agent that may be slow.
+func localCredentialProblem(label string, err error) *preflight.Failure {
+	return &preflight.Failure{
+		Checked:  fmt.Sprintf("the SSH credentials for %s", label),
+		Observed: localCredentialObserved,
+		Expected: "a private key from --ssh-agent-private-keys or an ssh-agent that lists its keys",
+		Fix:      localCredentialFix,
+		Err:      err,
+	}
+}
+
+const (
+	localCredentialObserved = "dhctl could not use its SSH credentials, the server was not asked"
+	localCredentialFix      = "check that the ssh-agent at SSH_AUTH_SOCK runs and `ssh-add -l` lists the key, " +
+		"or pass --ssh-agent-private-keys"
+)
+
+// The server's MaxAuthTries ran out. Either nothing offered was authorized, or the authorized
+// identity came after too many others, so the usual checks stay and this note goes after them.
+const (
+	maxAuthTriesObserved = "the server stopped authentication at its MaxAuthTries"
+	maxAuthTriesNote     = "Every key and certificate offered counts as one try: pass fewer keys with " +
+		"--ssh-agent-private-keys, or remove the other keys from the ssh-agent."
+)
+
+func isMaxAuthTries(err error) bool {
+	return strings.Contains(strings.ToLower(err.Error()), "too many authentication failures")
+}
+
 // isSSHAuthError reports whether the server answered and turned the credentials down.
 //
-// This is the default backend's case: gossh returns what x/crypto produced, which says in words
-// what went wrong. There is no typed error to match on, so the text is what there is.
+// The default backend of lib-connection marks a rejection with ErrSSHAuthentication. The bastion
+// check calls x/crypto directly and only says it in words, so the text is matched too.
 //
 // "handshake failed" is deliberately not one of the markers. x/crypto uses it as the prefix for
 // every handshake failure, and an agreement failure — an sshd too old to share a key exchange or
@@ -320,11 +410,17 @@ func sshNeverConnected(err error) bool {
 // case always says so itself. (Host keys cannot be the cause: the backend sets
 // InsecureIgnoreHostKey.)
 func isSSHAuthError(err error) bool {
+	if errors.Is(err, sshutils.ErrSSHAuthentication) {
+		return true
+	}
+
 	text := strings.ToLower(err.Error())
 	for _, marker := range []string{
 		"unable to authenticate",
 		"no supported methods remain",
 		"permission denied",
+		// The server's MaxAuthTries, reached when it is offered more keys than it allows.
+		"too many authentication failures",
 	} {
 		if strings.Contains(text, marker) {
 			return true

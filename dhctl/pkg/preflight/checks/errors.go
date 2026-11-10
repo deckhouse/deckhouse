@@ -30,6 +30,7 @@ import (
 	libcon "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg"
 	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh"
 	sshconfig "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/config"
+	sshutils "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/utils"
 
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
@@ -273,7 +274,7 @@ var ErrNodeConnectionGone = errors.New("the SSH connection to the node is no lon
 func ResolveNodeInterface(ctx context.Context, initializer *providerinitializer.SSHProviderInitializer) (libcon.Interface, error) {
 	nodeInterface, err := helper.GetNodeInterface(ctx, initializer, initializer.GetSettings())
 	if err != nil {
-		return nil, noConnection(EndpointOfConfig(initializer.GetConfig())(), err)
+		return nil, nodeConnectionFailure(initializer.GetConfig(), err)
 	}
 
 	wrapper, overSSH := nodeInterface.(*ssh.NodeInterfaceWrapper)
@@ -293,6 +294,46 @@ func ResolveNodeInterface(ctx context.Context, initializer *providerinitializer.
 	}
 
 	return nodeInterface, nil
+}
+
+type sshViaBastionFailure struct{ *preflight.Failure }
+
+func (f *sshViaBastionFailure) Unwrap() error { return f.Failure }
+
+func nodeConnectionFailure(cfg *sshconfig.ConnectionConfig, err error) error {
+	label := EndpointOfConfig(cfg)()
+	if cfg == nil || !bastionConfigured(cfg.Config) || errors.Is(err, sshutils.ErrSSHCredentials) || !sshNeverConnected(err) {
+		return noConnection(label, err)
+	}
+
+	if label == "" {
+		label = "the node"
+	}
+
+	bastion := net.JoinHostPort(cfg.Config.BastionHost, bastionPort(cfg.Config))
+	if user := cfg.Config.BastionUser; user != "" {
+		bastion = user + "@" + bastion
+	}
+
+	// lib-connection uses the same authentication error for both hops.
+	failure := &preflight.Failure{
+		Checked:    fmt.Sprintf("SSH login to %s via bastion %s", label, bastion),
+		Observed:   "the SSH client could not open a session along this route",
+		Expected:   "an SSH login to the bastion and to the node",
+		Fix:        "check --ssh-bastion-user and the credentials for the bastion, then check --ssh-user and the credentials for the node",
+		Err:        err,
+		StopsPhase: true,
+	}
+	if isSSHAuthError(err) {
+		failure.Observed = "an SSH server on this route rejected authentication"
+	}
+
+	if isMaxAuthTries(err) {
+		failure.Observed = maxAuthTriesObserved
+		failure.Fix += ". " + maxAuthTriesNote
+	}
+
+	return preflight.Permanent(&sshViaBastionFailure{failure})
 }
 
 // noConnection is the one verdict for "there is no usable SSH connection", whichever check was
@@ -319,7 +360,11 @@ func noConnection(label string, err error) error {
 		StopsPhase: true,
 	}
 
-	if sshNeverConnected(err) {
+	switch {
+	case errors.Is(err, sshutils.ErrSSHCredentials):
+		failure.Observed = localCredentialObserved
+		failure.Fix = localCredentialFix
+	case sshNeverConnected(err):
 		failure.Observed = "the node did not accept the credentials it was offered"
 	}
 

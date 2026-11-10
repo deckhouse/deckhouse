@@ -46,7 +46,7 @@ func DefineSSHFlags(cmd *cobra.Command, opts *options.Options) {
 	StringSliceFlag(flags, Flag{
 		Name: "ssh-agent-private-keys",
 		Env:  "DHCTL_CLI_SSH_AGENT_PRIVATE_KEYS",
-		Help: "Paths to private keys. Those keys will be used to connect to servers and to the bastion. Can be specified multiple times (default: '~/.ssh/id_rsa')",
+		Help: "Paths to private keys. Those keys will be used to connect to servers and to the bastion. A user certificate in <key>-cert.pub next to a key is used as well. Can be specified multiple times (default: '~/.ssh/id_rsa')",
 	}, &o.AgentPrivateKeys)
 	StringFlag(flags, Flag{
 		Name: "ssh-bastion-host",

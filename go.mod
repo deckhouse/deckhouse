@@ -103,7 +103,7 @@ require (
 	atomicgo.dev/schedule v0.1.0 // indirect
 	cel.dev/expr v0.25.2 // indirect
 	dario.cat/mergo v1.0.2 // indirect
-	fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection v0.18.2 // indirect
+	fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection v0.18.3 // indirect
 	fox.flant.com/deckhouse/cluster-and-infrastructure/libs/oteljsonl v0.1.1 // indirect
 	github.com/ProtonMail/go-crypto v1.4.1 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
