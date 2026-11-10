@@ -393,6 +393,41 @@ To configure authentication, create a read-only service account in LDAP. Specify
 
 If LDAP allows anonymous read access, you can omit `bindDN` and `bindPW`.
 
+#### Nested groups
+
+By default, Dex adds to the token only the groups of which the user is a direct member. A group that contains the user's group is not added. To add the groups of the higher levels, set `recursionGroupAttr` in `userMatchers` to the attribute of a group that stores its members. Dex then looks for the groups that contain each found group, level by level, and adds them to the groups of the user. A cycle of groups ends the search.
+
+The following `groupSearch` adds the groups of every level through the `member` attribute:
+
+```yaml
+    groupSearch:
+      baseDN: cn=Users,dc=example,dc=com
+      filter: "(objectClass=group)"
+      userMatchers:
+      - userAttr: DN
+        groupAttr: member
+        recursionGroupAttr: member
+      nameAttr: cn
+```
+
+Dex makes one more search for every group of every level at each sign-in and each refresh of the tokens. Keep `baseDN` and `filter` of `groupSearch` narrow, and expect a longer sign-in on a deep hierarchy.
+
+#### Signing in with one of several attributes
+
+`userSearch.username` names one attribute that the entered username is compared with. To let users sign in with a login or an email, list the attributes in `userSearch.usernames` instead of `username` (set one of the two parameters). Dex searches for an entry in which any of them matches. A sign-in is refused if the username matches more than one entry.
+
+The following `userSearch` lets users sign in with `sAMAccountName` or `userPrincipalName`:
+
+```yaml
+    userSearch:
+      baseDN: cn=Users,dc=example,dc=com
+      filter: "(objectClass=person)"
+      usernames: [sAMAccountName, userPrincipalName]
+      idAttr: DN
+      emailAttr: userPrincipalName
+      nameAttr: cn
+```
+
 #### Configuring Basic Authentication
 
 To enable Basic Authentication for the Kubernetes API using LDAP credentials:
@@ -433,6 +468,10 @@ current-context: default
 #### Kerberos (SPNEGO) SSO for LDAP
 
 Dex supports passwordless Kerberos (SPNEGO) flow for the LDAP connector. When enabled, a browser that trusts the Dex host will send `Authorization: Negotiate …` and Dex will validate the Kerberos ticket using a service keytab, skip the login form, map the Kerberos principal to an LDAP username, query groups, and complete the OIDC flow.
+
+The principal mapped to a username is compared with every attribute listed in `userSearch.usernames` (or with `username`, when that is set), with the same filter as a password sign-in.
+With `usernameFromPrincipal: UserPrincipalName`, the principal is compared as `user@REALM`, with `Localpart` or `SAMAccountName` as the part before `@`. The value must match an attribute of the user's own entry.
+List only attributes whose values are unique in the directory and consistent with `usernameFromPrincipal`. If a value of another entry equals the principal, SSO stops working for that user (`multiple results`). A principal that matches none of the attributes of its own entry is matched to the entry of another user. The password is not checked on this path.
 
 Minimal example extending the LDAP provider spec:
 

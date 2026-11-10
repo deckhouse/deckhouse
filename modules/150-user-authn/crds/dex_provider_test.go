@@ -132,6 +132,72 @@ func TestDexProviderKerberosRequiresKeytab(t *testing.T) {
 	}
 }
 
+// The search of an LDAP provider names the user by one attribute (username) or by several (usernames), and the
+// groups of a user may be followed to their parents (recursionGroupAttr).
+func TestDexProviderLDAPSearch(t *testing.T) {
+	t.Parallel()
+
+	const exactlyOne = "Set exactly one of username and usernames."
+	userSearch := func(fields map[string]any) map[string]any {
+		search := map[string]any{"baseDN": "ou=people,dc=example,dc=org", "idAttr": "uid", "emailAttr": "mail"}
+		for k, v := range fields {
+			search[k] = v
+		}
+		return search
+	}
+	tooMany := make([]any, 9)
+	for i := range tooMany {
+		tooMany[i] = "attr"
+	}
+
+	for version, schema := range providerSchemas(t) {
+		for _, tc := range []struct {
+			name    string
+			search  map[string]any
+			groups  map[string]any
+			message string
+		}{
+			{name: "one attribute", search: userSearch(map[string]any{"username": "uid"})},
+			{name: "several attributes", search: userSearch(map[string]any{"usernames": []any{"uid", "mail"}})},
+			{name: "both", search: userSearch(map[string]any{"username": "uid", "usernames": []any{"mail"}}), message: exactlyOne},
+			{name: "neither", search: userSearch(nil), message: exactlyOne},
+			{name: "no attribute in the list", search: userSearch(map[string]any{"usernames": []any{}})},
+			{name: "an empty attribute", search: userSearch(map[string]any{"usernames": []any{""}})},
+			{name: "too many attributes", search: userSearch(map[string]any{"usernames": tooMany})},
+			{
+				name:   "recursion",
+				search: userSearch(map[string]any{"username": "uid"}),
+				groups: map[string]any{
+					"baseDN": "ou=groups,dc=example,dc=org", "nameAttr": "cn",
+					"userMatchers": []any{map[string]any{"userAttr": "DN", "groupAttr": "member", "recursionGroupAttr": "member"}},
+				},
+			},
+		} {
+			t.Run(version+"/"+tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				spec := ldapProviderSpec(nil)
+				ldap := spec["ldap"].(map[string]any)
+				ldap["userSearch"] = tc.search
+				if tc.groups != nil {
+					ldap["groupSearch"] = tc.groups
+				}
+				errs := validateProvider(t, version, schema, spec)
+				switch tc.name {
+				case "no attribute in the list", "too many attributes", "an empty attribute":
+					require.NotEmpty(t, errs)
+				case "both", "neither":
+					require.Len(t, errs, 1)
+					require.Equal(t, "spec.ldap.userSearch", errs[0].Field)
+					require.Equal(t, tc.message, errs[0].Detail)
+				default:
+					require.Empty(t, errs)
+				}
+			})
+		}
+	}
+}
+
 // Only the providers whose connectors exchange tokens in Dex may have token exchange enabled.
 func TestDexProviderTokenExchangeTypes(t *testing.T) {
 	t.Parallel()

@@ -350,8 +350,15 @@ fields when it decides who may write the provider. Rendered right after the conn
         {{- if $provider.ldap.startTLS }}
         startTLS: true
         {{- end }}
+        {{- /* Dex takes one attribute or a list under "username". The CRD keeps the string "username" for the objects that
+               exist and adds "usernames" for the list, since a structural schema cannot hold both types in one field. */}}
+        {{- $userSearch := deepCopy ($provider.ldap.userSearch | default dict) }}
+        {{- if $userSearch.usernames }}
+          {{- $_ := set $userSearch "username" $userSearch.usernames }}
+        {{- end }}
+        {{- $_ := unset $userSearch "usernames" }}
         userSearch:
-          {{- $provider.ldap.userSearch | toYaml | nindent 10 }}
+          {{- $userSearch | toYaml | nindent 10 }}
         {{- if $provider.ldap.groupSearch }}
         groupSearch:
           {{- $provider.ldap.groupSearch | toYaml | nindent 10 }}

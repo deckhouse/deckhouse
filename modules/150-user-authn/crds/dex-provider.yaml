@@ -513,7 +513,10 @@ spec:
                         Password of the service account set in `bindDN`.
                     userSearch:
                       type: object
-                      required: ['baseDN', 'username', 'idAttr', 'emailAttr']
+                      required: ['baseDN', 'idAttr', 'emailAttr']
+                      x-kubernetes-validations:
+                        - rule: "has(self.username) != has(self.usernames)"
+                          message: "Set exactly one of username and usernames."
                       description: 'User search maps a username and password entered by a user to a LDAP entry. [Details...](https://github.com/dexidp/dex/blob/3b7292a08fd2c61900f5e6c67f3aa2ee81827dea/Documentation/connectors/ldap.md#example-mapping-a-schema-to-a-search-config)'
                       properties:
                         baseDN:
@@ -530,6 +533,29 @@ spec:
                           description: |
                             Username attribute used for comparing user entries. This will be translated
                             and combined with the other filter as "(<attr>=<username>)".
+                        usernames:
+                          type: array
+                          minItems: 1
+                          maxItems: 8
+                          x-kubernetes-list-type: set
+                          x-doc-examples: [['uid', 'mail']]
+                          description: |
+                            Attributes that the entered username is compared with, instead of `username`.
+
+                            The search filter has the form `(|(<ATTR_1>=<USERNAME>)(<ATTR_2>=<USERNAME>))`, so a user can sign in, for
+                            example, with a login or an email. A sign-in is refused if the username matches more than one entry.
+
+                            The Kerberos principal mapped to a username (after `usernameFromPrincipal`) is compared with every attribute in
+                            the list the same way. List only attributes whose values are unique in the directory and consistent with
+                            `usernameFromPrincipal`. If a value of another entry equals the principal, SSO stops working for that user. A
+                            principal that matches none of the attributes of its own entry is matched to the entry of another user.
+
+                            Set either `username` or `usernames`.
+                          items:
+                            type: string
+                            minLength: 1
+                            maxLength: 256
+                            pattern: '^[^\r\n]*$'
                         idAttr:
                           type: string
                           x-doc-examples: ['uid']
@@ -587,6 +613,15 @@ spec:
                                 x-doc-examples: ['member']
                                 description: |
                                   The name of the attribute that stores the group member names.
+                              recursionGroupAttr:
+                                type: string
+                                x-doc-examples: ['member']
+                                description: |
+                                  Name of the group attribute that stores the DNs of its members.
+
+                                  When it is set, Dex also looks for the groups that contain the found groups, level by level, and adds them to the groups of the user. Use it for nested groups. The value is usually the same as `groupAttr`, for example `member`.
+
+                                  Dex makes one more search for every group of every level at each sign-in and each refresh of the tokens, so keep `baseDN` and `filter` of `groupSearch` narrow.
                     enableBasicAuth:
                       type: boolean
                       description: |
