@@ -211,7 +211,9 @@ type LicenseKeyInfo struct {
 	// +optional
 	Origin string `json:"origin,omitempty"`
 
-	// ValidUntil is the greatest expiration of the records of the key.
+	// ValidUntil is the greatest expiration of the records of the key that keep
+	// the cluster covered without a break; while nothing is active, the
+	// expiration of the key that ran out last.
 	// It is null for a key that never expires.
 	// +optional
 	ValidUntil *metav1.Time `json:"validUntil,omitempty"`
