@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"os"
 	"strings"
 	"time"
@@ -36,6 +37,7 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/restmapper"
+	toolscache "k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -137,8 +139,12 @@ func main() {
 
 	logger.Info("start multitenancy-manager")
 
+	// The watch error handler of the manager's cache: a kind of the grant model whose list or watch
+	// fails is read by the webhooks from the API server instead of a cache that stopped following it.
+	grantModelWatch := grantwebhooks.NewModelWatch()
+
 	// initialize runtime manager
-	runtimeManager, err := setupRuntimeManager(logger)
+	runtimeManager, err := setupRuntimeManager(logger, grantModelWatch.WatchError)
 	if err != nil {
 		fatal(logger, err, "set up runtime manager")
 	}
@@ -232,10 +238,21 @@ func main() {
 		fatal(logger, err, "add grants REST mapper reset")
 	}
 	jsonpathFactory := jsonpath.NewWithCache()
+	// The admission webhooks read the grant model (namespaces, projects, policies, references and
+	// definitions) from informers of the manager's cache registered here, on every replica, and the
+	// granted objects from the granted objects cache. Neither waits for a sync inside a request: a read
+	// of the manager's cache would start an informer lazily and block on its sync, which can exceed the
+	// webhook deadline and pile up into a queue lock. Until an informer has synced, and while its list or
+	// watch fails (grantModelWatch), the kind is read from the API server. The granted objects cache
+	// lists the definitions through it too.
+	grantModel, err := grantwebhooks.NewModelReader(context.Background(), runtimeManager.GetCache(), runtimeManager.GetAPIReader(), grantModelWatch)
+	if err != nil {
+		fatal(logger, err, "register the grant model informers of the webhooks")
+	}
 	// The granted objects are read from informers of a cache of their own, on every replica: the
 	// catalogs of all project namespaces and the webhooks would otherwise each list the whole granted
 	// kind from the API server. Until an informer has synced, the reads go to the API server.
-	grantObjects, err := newGrantObjectsCache(runtimeManager, grantsMapper)
+	grantObjects, err := newGrantObjectsCache(runtimeManager, grantsMapper, grantModel)
 	if err != nil {
 		fatal(logger, err, "set up the granted objects cache")
 	}
@@ -273,12 +290,7 @@ func main() {
 	if err = (&grantcontrollers.PolicyReconciler{Client: runtimeManager.GetClient(), Granted: grantObjects.Reader(runtimeManager.GetClient()), Mapper: grantsMapper}).SetupWithManager(runtimeManager); err != nil {
 		fatal(logger, err, "set up grant policy reconciler")
 	}
-	// The admission webhooks read the grant model with the direct (uncached) API reader: a read of the
-	// manager's cache lazily starts an informer and blocks on its sync inside the request, which can
-	// exceed the webhook deadline and pile up into a queue lock. The granted objects come from the
-	// granted objects cache, which never waits for a sync: it answers from the API server until its
-	// informer has synced.
-	grantWebhookReader := grantObjects.Reader(runtimeManager.GetAPIReader())
+	grantWebhookReader := grantObjects.Reader(grantModel)
 	grantwebhooks.NewIsGrantedValidator(logger, grantWebhookReader, grantsMapper, jsonpathFactory).InstallInto(runtimeManager.GetWebhookServer())
 	grantwebhooks.NewDefaultsMutator(logger, grantWebhookReader, grantsMapper, jsonpathFactory).InstallInto(runtimeManager.GetWebhookServer())
 	grantwebhooks.NewProtectValidator(logger, serviceAccount).InstallInto(runtimeManager.GetWebhookServer())
@@ -352,15 +364,16 @@ const (
 // newGrantObjectsCache makes the cache of the granted objects (see grantcache) and adds it, with the
 // sweep of the informers no definition needs, to the manager. The objects keep everything but their
 // managedFields: catalogFields, selectors and defaultFrom may read any other part of them.
-func newGrantObjectsCache(mgr ctrl.Manager, grantsMapper meta.RESTMapper) (*grantcache.Cache, error) {
-	// The definitions are read with the direct reader: on a replica that is not the leader nothing
-	// starts the manager's informer of them, and a webhook must not wait for its sync.
+func newGrantObjectsCache(mgr ctrl.Manager, grantsMapper meta.RESTMapper, definitions client.Reader) (*grantcache.Cache, error) {
+	// The definitions are read through the grant model reader of the webhooks: from the informer
+	// registered on every replica once it has synced, from the API server before that, so a webhook
+	// never waits for a sync.
 	objects, err := grantcache.Build(mgr.GetConfig(), cache.Options{
 		HTTPClient:       mgr.GetHTTPClient(),
 		Scheme:           mgr.GetScheme(),
 		Mapper:           mgr.GetRESTMapper(),
 		DefaultTransform: cache.TransformStripManagedFields(),
-	}, mgr.GetAPIReader(), mgr.GetAPIReader())
+	}, mgr.GetAPIReader(), definitions)
 	if err != nil {
 		return nil, err
 	}
@@ -412,7 +425,7 @@ func newScheme() (*runtime.Scheme, error) {
 	return scheme, nil
 }
 
-func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
+func setupRuntimeManager(logger logr.Logger, watchError toolscache.WatchErrorHandlerWithContext) (ctrl.Manager, error) {
 	scheme, err := newScheme()
 	if err != nil {
 		logger.Error(err, "failed to add scheme to runtime manager")
@@ -433,12 +446,16 @@ func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
 		WebhookServer:                 webhook.NewServer(webhook.Options{CertDir: "/certs"}),
 		// the ProjectQuota controller watches the ConfigMaps of the ledger and its certificate; nothing
 		// reads another ConfigMap or Secret through the cache
-		Cache: cache.Options{ByObject: map[client.Object]cache.ByObject{
+		Cache: cache.Options{DefaultWatchErrorHandler: watchError, ByObject: map[client.Object]cache.ByObject{
 			&corev1.ConfigMap{}: {Namespaces: map[string]cache.Config{quota.ConfigNamespace: {}}},
 			&corev1.Secret{}: {Namespaces: map[string]cache.Config{quota.ConfigNamespace: {}},
 				Field: fields.OneTermEqualSelector("metadata.name", quota.LedgerCertsSecretName)},
 			// the ProjectQuota controller sums the load balancers; the Services keep only what it counts by
 			&corev1.Service{}: {Transform: evaluator.TrimService},
+			// Every replica keeps the namespaces and the projects for the grant webhooks; nothing reads
+			// their managedFields from the cache (the Helm takeover reads them as unstructured, uncached).
+			&corev1.Namespace{}: {Transform: cache.TransformStripManagedFields()},
+			&v1alpha3.Project{}: {Transform: cache.TransformStripManagedFields()},
 		}},
 		// The grant-violation series (d8_cluster_objects_grant_violated), the project-name pairs
 		// (d8_multitenancy_project_named_like_additional_namespace), the handovers that have not

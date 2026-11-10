@@ -51,7 +51,8 @@ type DefaultsMutator struct {
 }
 
 // NewDefaultsMutator builds the /defaults mutating webhook. cl must never wait for an informer sync,
-// for the same reason as in the /is-granted validator (see NewIsGrantedValidator).
+// for the same reason as in the /is-granted validator, and it gets the same reader (see
+// NewIsGrantedValidator).
 func NewDefaultsMutator(log logr.Logger, cl client.Reader, mapper meta.RESTMapper, factory jsonpath.Factory) *DefaultsMutator {
 	return &DefaultsMutator{log: log.WithValues("component", "defaults"), cl: cl, mapper: mapper, factory: factory}
 }
@@ -107,7 +108,62 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 	if err != nil {
 		return nil, fmt.Errorf("references: %w", err)
 	}
-	if len(refs) == 0 {
+	// Defaulting is per path: None never fills in (opt-in toggle annotations stay absent). A request
+	// none of whose references defaults anything is answered before the object is even decoded.
+	type candidate struct {
+		mr resolve.MatchedReference
+		fp v1alpha1.FieldPath
+	}
+	active := make([]candidate, 0, len(refs))
+	for _, mr := range refs {
+		fp, ok := engine.SelectFieldPath(mr.Reference.Spec.FieldPaths, group, version, resourcePlural)
+		if ok && engine.DefaultingActive(fp) {
+			active = append(active, candidate{mr: mr, fp: fp})
+		}
+	}
+	if len(active) == 0 {
+		return allowedResponse(req.UID), nil
+	}
+
+	obj := map[string]any{}
+	if err := json.Unmarshal(req.Object.Raw, &obj); err != nil {
+		return nil, fmt.Errorf("decode object: %w", err)
+	}
+
+	// The fields that may be patched are found first; the namespace, its project and the grants are read
+	// only when there is one. FillEmpty patches only an empty field, so a workload that names its value
+	// itself costs no read beyond the references.
+	type target struct {
+		candidate
+		segs  []string
+		value string
+	}
+	var targets []target
+	for _, c := range active {
+		guard, err := engine.EvalMatch(m.factory, c.fp.Match, obj)
+		if err != nil || !guard {
+			continue
+		}
+		// A path this parser cannot handle is not defaultable. The GrantableClusterResourceReference
+		// validating webhook refuses such an entry at apply time, but it is not a guarantee: the object
+		// may be older than the webhook, or have been written while the webhook was unavailable
+		// (failurePolicy: Ignore). Skipping keeps validation working while defaulting stays off.
+		segs, ok := engine.ParsePathSegments(m.factory, c.fp.Path)
+		if !ok {
+			continue
+		}
+		parentOK, value := fieldState(obj, segs)
+		if !parentOK {
+			// A parent object is missing, so a JSON Patch "add" would be unsafe.
+			continue
+		}
+		// A set value is rewritten under Coerce only; FillEmpty leaves it as it is.
+		if value != "" && c.fp.Defaulting != v1alpha1.DefaultingCoerce {
+			continue
+		}
+		targets = append(targets, target{candidate: c, segs: segs, value: value})
+	}
+	if len(targets) == 0 {
 		return allowedResponse(req.UID), nil
 	}
 
@@ -123,42 +179,12 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 		return nil, fmt.Errorf("grants: %w", err)
 	}
 
-	obj := map[string]any{}
-	if err := json.Unmarshal(req.Object.Raw, &obj); err != nil {
-		return nil, fmt.Errorf("decode object: %w", err)
-	}
-
 	unresolvable := map[string]struct{}{}
 
 	var patches []jsonPatchOperation
 	var warnings []string
-	for _, mr := range refs {
-		fp, ok := engine.SelectFieldPath(mr.Reference.Spec.FieldPaths, group, version, resourcePlural)
-		if !ok {
-			continue
-		}
-		// Defaulting is per path: None never fills in (opt-in toggle annotations stay absent).
-		if !engine.DefaultingActive(fp) {
-			continue
-		}
-		guard, err := engine.EvalMatch(m.factory, fp.Match, obj)
-		if err != nil || !guard {
-			continue
-		}
-		// A path this parser cannot handle is not defaultable. The GrantableClusterResourceReference
-		// validating webhook refuses such an entry at apply time, but it is not a guarantee: the object
-		// may be older than the webhook, or have been written while the webhook was unavailable
-		// (failurePolicy: Ignore). Skipping keeps validation working while defaulting stays off.
-		segs, ok := engine.ParsePathSegments(m.factory, fp.Path)
-		if !ok {
-			continue
-		}
-		parentOK, value := fieldState(obj, segs)
-		if !parentOK {
-			// A parent object is missing, so a JSON Patch "add" would be unsafe.
-			continue
-		}
-
+	for _, t := range targets {
+		mr, fp, segs, value := t.mr, t.fp, t.segs, t.value
 		def := mr.Definition
 		if _, skip := unresolvable[def.Name]; skip {
 			continue

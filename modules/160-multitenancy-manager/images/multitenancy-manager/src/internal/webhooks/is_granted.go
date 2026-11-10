@@ -78,8 +78,9 @@ type IsGrantedValidator struct {
 // on its sync inside the admission request; on a large cluster that first sync can exceed the webhook
 // deadline, and the per-request cancellation prevents it from ever completing — every call then times
 // out and (with failurePolicy: Fail) piles up retries into a queue lock. The controller passes the
-// direct API reader, wrapped by grantcache for the granted objects, which answers from the API server
-// until its informer has synced.
+// ModelReader, which serves the grant model from informers registered at start and reads the API
+// server until they have synced and while their watch fails, wrapped by grantcache for the granted
+// objects, which also reads the API server until its informers have synced.
 func NewIsGrantedValidator(log logr.Logger, cl client.Reader, mapper meta.RESTMapper, factory jsonpath.Factory) *IsGrantedValidator {
 	return &IsGrantedValidator{log: log.WithValues("component", "is-granted"), cl: cl, mapper: mapper, factory: factory}
 }
@@ -142,22 +143,20 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 	if err != nil {
 		return nil, fmt.Errorf("references for request: %w", err)
 	}
-	if len(refs) == 0 {
-		return allowedResponse(req.UID), nil
+	type selected struct {
+		mr  resolve.MatchedReference
+		idx int
 	}
-
-	ns := &corev1.Namespace{}
-	if err := v.cl.Get(ctx, client.ObjectKey{Name: req.Namespace}, ns); err != nil {
-		if k8serrors.IsNotFound(err) {
-			return allowedResponse(req.UID), nil
+	sel := make([]selected, 0, len(refs))
+	for _, mr := range refs {
+		idx := engine.SelectFieldPathIndex(mr.Reference.Spec.FieldPaths, group, version, resourcePlural)
+		if idx < 0 {
+			continue
 		}
-		return nil, fmt.Errorf("get namespace: %w", err)
+		sel = append(sel, selected{mr: mr, idx: idx})
 	}
-	project := resolve.ProjectName(ns)
-
-	grants, err := resolve.GrantsForNamespace(ctx, v.cl, ns)
-	if err != nil {
-		return nil, fmt.Errorf("applicable grants: %w", err)
+	if len(sel) == 0 {
+		return allowedResponse(req.UID), nil
 	}
 
 	obj := map[string]any{}
@@ -172,17 +171,17 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 		}
 	}
 
-	// unresolvable holds the definitions skipped for a configuration error, so each is logged once per
-	// request. Availability is resolved per reference for the names it adds only (DecideNames): one
-	// read per name instead of a list of every granted object, so the decision does not slow down as
-	// the granted objects grow in number.
-	unresolvable := map[string]struct{}{}
-
-	for _, mr := range refs {
-		idx := engine.SelectFieldPathIndex(mr.Reference.Spec.FieldPaths, group, version, resourcePlural)
-		if idx < 0 {
-			continue
-		}
+	// The values each reference adds are collected first; the namespace, its project and the grants are
+	// read only when some reference adds a value, so a request that references nothing new (the field
+	// is empty, or an UPDATE keeps the old values) costs no read of the API server or the cache beyond
+	// the references.
+	type check struct {
+		mr    resolve.MatchedReference
+		added []string
+	}
+	var checks []check
+	for _, s := range sel {
+		mr, idx := s.mr, s.idx
 		fp := mr.Reference.Spec.FieldPaths[idx]
 		// A path of one reference that cannot be evaluated skips that reference only, deliberately
 		// failing open. The GrantableClusterResourceReference webhook rejects such a path, but it runs
@@ -231,7 +230,34 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 		if len(added) == 0 {
 			continue
 		}
+		checks = append(checks, check{mr: mr, added: added})
+	}
+	if len(checks) == 0 {
+		return allowedResponse(req.UID), nil
+	}
 
+	ns := &corev1.Namespace{}
+	if err := v.cl.Get(ctx, client.ObjectKey{Name: req.Namespace}, ns); err != nil {
+		if k8serrors.IsNotFound(err) {
+			return allowedResponse(req.UID), nil
+		}
+		return nil, fmt.Errorf("get namespace: %w", err)
+	}
+	project := resolve.ProjectName(ns)
+
+	grants, err := resolve.GrantsForNamespace(ctx, v.cl, ns)
+	if err != nil {
+		return nil, fmt.Errorf("applicable grants: %w", err)
+	}
+
+	// unresolvable holds the definitions skipped for a configuration error, so each is logged once per
+	// request. Availability is resolved per reference for the names it adds only (DecideNames): one
+	// read per name instead of a list of every granted object, so the decision does not slow down as
+	// the granted objects grow in number.
+	unresolvable := map[string]struct{}{}
+
+	for _, c := range checks {
+		mr, added := c.mr, c.added
 		def := mr.Definition
 		if _, skip := unresolvable[def.Name]; skip {
 			continue
