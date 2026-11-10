@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"user-authn-controller/internal/controller"
@@ -394,5 +395,32 @@ func TestIdentity_WebAuthnCredentialCountSurvivesTheCacheStrip(t *testing.T) {
 	}
 	if got := FromUnstructured(cached.(*unstructured.Unstructured)).WebAuthnCredentialCount(); got != 1 {
 		t.Errorf("WebAuthnCredentialCount() = %d after the strip, want 1", got)
+	}
+}
+
+func TestIdentity_LastActivityIsTheLatestOfTheTimes(t *testing.T) {
+	t.Parallel()
+
+	created := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	id := New("ann", "corp")
+	id.Object().SetCreationTimestamp(metav1.NewTime(created))
+	if got := id.LastActivity(); !got.Equal(created) {
+		t.Fatalf("LastActivity() = %v with no field, want the creation of the object %v", got, created)
+	}
+
+	for field, at := range map[string]time.Time{
+		fieldCreatedAt:         created.Add(time.Hour),
+		fieldLastLogin:         created.Add(48 * time.Hour),
+		fieldClaimsRefreshedAt: created.Add(24 * time.Hour),
+	} {
+		id.Object().Object[field] = FormatTime(at)
+	}
+	if got, want := id.LastActivity(), created.Add(48*time.Hour); !got.Equal(want) {
+		t.Errorf("LastActivity() = %v, want the last login %v", got, want)
+	}
+
+	id.Object().Object[fieldLastLogin] = "not a time"
+	if got, want := id.LastActivity(), created.Add(24*time.Hour); !got.Equal(want) {
+		t.Errorf("LastActivity() = %v with an unreadable last login, want %v", got, want)
 	}
 }

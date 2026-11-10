@@ -2,7 +2,8 @@
 {{- /* A UserIdentity holds the generation of its account. Deleted by hand, it comes back at generation 0, */}}
 {{- /* below the revocations the subscribers keep, and they refuse the new sign-ins of the user until the */}}
 {{- /* revocations expire. Only the components that own the object, and the cluster garbage collectors, */}}
-{{- /* delete it: user-authn-controller when a User is deleted, after it has carried the generation over. */}}
+{{- /* delete it: user-authn-controller when a User is deleted, after it has carried the generation over, and */}}
+{{- /* for a deleted DexProvider once its users have been idle for so long that no revocation is left. */}}
 {{- $policyName := "user-authn-useridentity-deletion.deckhouse.io" }}
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
@@ -30,6 +31,7 @@ spec:
     message: >-
       UserIdentity objects are managed by Dex and user-authn-controller. To remove a local user,
       delete the User. To reset 2FA or a lock, create a UserOperation of the Reset2FA or Unlock type.
+      The controller deletes the identities of a deleted DexProvider by itself.
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding

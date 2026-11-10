@@ -1,8 +1,8 @@
 diff --git a/cmd/dex/config.go b/cmd/dex/config.go
-index 0c7ef929..0e30f915 100644
+index 517c939c..161dab5a 100644
 --- a/cmd/dex/config.go
 +++ b/cmd/dex/config.go
-@@ -705,6 +705,9 @@ type Connector struct {
+@@ -712,6 +712,9 @@ type Connector struct {
  	AllowedEmails       []string `json:"allowedEmails"`
  	AllowedEmailDomains []string `json:"allowedEmailDomains"`
  	AllowedGroups       []string `json:"allowedGroups"`
@@ -12,7 +12,7 @@ index 0c7ef929..0e30f915 100644
  }
  
  // UnmarshalJSON allows Connector to implement the unmarshaler interface to
-@@ -721,6 +724,8 @@ func (c *Connector) UnmarshalJSON(b []byte) error {
+@@ -728,6 +731,8 @@ func (c *Connector) UnmarshalJSON(b []byte) error {
  		AllowedEmails       []string `json:"allowedEmails"`
  		AllowedEmailDomains []string `json:"allowedEmailDomains"`
  		AllowedGroups       []string `json:"allowedGroups"`
@@ -21,7 +21,7 @@ index 0c7ef929..0e30f915 100644
  	}
  	if err := configUnmarshaller(b, &conn); err != nil {
  		return fmt.Errorf("parse connector: %v", err)
-@@ -767,6 +772,8 @@ func (c *Connector) UnmarshalJSON(b []byte) error {
+@@ -774,6 +779,8 @@ func (c *Connector) UnmarshalJSON(b []byte) error {
  		AllowedEmails:       conn.AllowedEmails,
  		AllowedEmailDomains: conn.AllowedEmailDomains,
  		AllowedGroups:       conn.AllowedGroups,
@@ -30,7 +30,7 @@ index 0c7ef929..0e30f915 100644
  	}
  	return nil
  }
-@@ -788,6 +795,8 @@ func ToStorageConnector(c Connector) (storage.Connector, error) {
+@@ -795,6 +802,8 @@ func ToStorageConnector(c Connector) (storage.Connector, error) {
  		AllowedEmails:       c.AllowedEmails,
  		AllowedEmailDomains: c.AllowedEmailDomains,
  		AllowedGroups:       c.AllowedGroups,
@@ -40,7 +40,7 @@ index 0c7ef929..0e30f915 100644
  }
  
 diff --git a/cmd/dex/config_test.go b/cmd/dex/config_test.go
-index 8036610c..46364de1 100644
+index e831d381..a4d9e785 100644
 --- a/cmd/dex/config_test.go
 +++ b/cmd/dex/config_test.go
 @@ -343,6 +343,33 @@ connectors:

@@ -101,6 +101,11 @@ func newTestClient(t *testing.T, rec *calls, funcs interceptor.Funcs, objs ...cl
 			return err
 		},
 		Delete: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
+			if funcs.Delete != nil {
+				if err := funcs.Delete(ctx, c, obj, opts...); err != nil {
+					return err
+				}
+			}
 			err := c.Delete(ctx, obj, opts...)
 			if err == nil {
 				rec.add("delete " + kind(obj) + " " + obj.GetName())

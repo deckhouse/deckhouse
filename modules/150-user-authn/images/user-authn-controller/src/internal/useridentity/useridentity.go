@@ -59,6 +59,11 @@ const (
 	// pair before. Only the controller writes it, by one at a time (BumpGeneration); Dex reads it and
 	// keeps it when it writes the object. No annotation is generation 0.
 	GenerationAnnotation = "user-authn.deckhouse.io/generation"
+	// OrphanedSinceAnnotation holds when the controller first saw the identity without a DexProvider of its connector,
+	// in RFC 3339. The cleanup of the identities of deleted providers counts the retention from it as well as from the
+	// last activity, so a provider deleted and created again does not lose the identities of the users who have not
+	// signed in for long. The controller removes it when the provider is back. Dex keeps it when it writes the object.
+	OrphanedSinceAnnotation = "user-authn.deckhouse.io/orphaned-since"
 
 	// SourceOfflineSessions, SourcePassword, SourceUserOperation, and SourceUser name what the
 	// controller wrote into a UserIdentity from, in Record.Source. SourceUser is the generation a
@@ -70,15 +75,17 @@ const (
 )
 
 const (
-	fieldUserID       = "userID"
-	fieldConnectorID  = "connectorID"
-	fieldClaims       = "claims"
-	fieldMFASecrets   = "mfaSecrets"
-	fieldWebAuthn     = "webauthnCredentials"
-	fieldCreatedAt    = "createdAt"
-	fieldLastLogin    = "lastLogin"
-	fieldBlockedUntil = "blockedUntil"
-	fieldAttempts     = "incorrectPasswordLoginAttempts"
+	fieldUserID      = "userID"
+	fieldConnectorID = "connectorID"
+	fieldClaims      = "claims"
+	fieldMFASecrets  = "mfaSecrets"
+	fieldWebAuthn    = "webauthnCredentials"
+	fieldCreatedAt   = "createdAt"
+	fieldLastLogin   = "lastLogin"
+
+	fieldClaimsRefreshedAt = "claimsRefreshedAt"
+	fieldBlockedUntil      = "blockedUntil"
+	fieldAttempts          = "incorrectPasswordLoginAttempts"
 )
 
 // Claims mirrors the claims of a Dex UserIdentity.
@@ -256,6 +263,24 @@ func (i *Identity) LastLogin() (time.Time, error) {
 	return i.timeField(fieldLastLogin)
 }
 
+// ClaimsRefreshedAt returns claimsRefreshedAt, the last time Dex read the claims from the connector; zero when unset.
+func (i *Identity) ClaimsRefreshedAt() (time.Time, error) {
+	return i.timeField(fieldClaimsRefreshedAt)
+}
+
+// LastActivity is the latest of the creation of the account, its last login and the last read of its claims from
+// the connector, and of the creation of the object: when the pair was last in use. A field that cannot be read counts
+// as unset.
+func (i *Identity) LastActivity() time.Time {
+	latest := i.obj.GetCreationTimestamp().Time
+	for _, read := range []func() (time.Time, error){i.CreatedAt, i.LastLogin, i.ClaimsRefreshedAt} {
+		if t, err := read(); err == nil && t.After(latest) {
+			latest = t
+		}
+	}
+	return latest
+}
+
 // SetLastLogin sets lastLogin, or removes it when t is zero.
 func (i *Identity) SetLastLogin(t time.Time) error {
 	return i.setTimeField(fieldLastLogin, t)
@@ -272,6 +297,44 @@ func (i *Identity) AdminLock() (time.Time, bool) {
 		return time.Time{}, false
 	}
 	return *t, true
+}
+
+// OrphanedSince returns the time in OrphanedSinceAnnotation, if the annotation is set and parses.
+func (i *Identity) OrphanedSince() (time.Time, bool) {
+	value, ok := i.obj.GetAnnotations()[OrphanedSinceAnnotation]
+	if !ok {
+		return time.Time{}, false
+	}
+	t, err := controller.ParseRFC3339(value)
+	if err != nil || t == nil {
+		return time.Time{}, false
+	}
+	return *t, true
+}
+
+// SetOrphanedSince sets OrphanedSinceAnnotation to t.
+func (i *Identity) SetOrphanedSince(t time.Time) {
+	i.setAnnotation(OrphanedSinceAnnotation, FormatTime(t))
+}
+
+// ClearOrphanedSince removes OrphanedSinceAnnotation.
+func (i *Identity) ClearOrphanedSince() {
+	annotations := i.obj.GetAnnotations()
+	if _, ok := annotations[OrphanedSinceAnnotation]; !ok {
+		return
+	}
+	delete(annotations, OrphanedSinceAnnotation)
+	i.obj.SetAnnotations(annotations)
+}
+
+// LockedAt reports whether the account is locked at t: blockedUntil, whoever set it, or the lock an administrator
+// set, is after t.
+func (i *Identity) LockedAt(t time.Time) bool {
+	if blocked, err := i.BlockedUntil(); err == nil && blocked.After(t) {
+		return true
+	}
+	admin, ok := i.AdminLock()
+	return ok && admin.After(t)
 }
 
 // SetAdminLock sets AdminLockAnnotation to t.

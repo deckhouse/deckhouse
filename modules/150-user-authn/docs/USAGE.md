@@ -1252,6 +1252,10 @@ spec:
     for: "30m"
 ```
 
+#### Users of a deleted provider
+
+If you delete a DexProvider and create it again under the same name within 30 days, the second factor and the lock of its users are kept. If you create it later, the 2FA of a user who has not signed in for 30 days is registered again at the first sign-in. A user whose lock is still in force keeps the lock and the second factor until the lock ends.
+
 #### UserOperation lifecycle and side effects
 
 Using a UserOperation object has the following specifics:

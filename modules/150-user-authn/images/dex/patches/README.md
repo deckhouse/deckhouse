@@ -722,7 +722,11 @@ by all clients, the request context) are present in v2.46 with sessions off.
 the sign-in log lines, package `server/signinlog`, across the login form, the
 connector callback, SPNEGO, the password change page, the TOTP step, the
 password, refresh-token and token-exchange grants, the lockout, the
-allow-lists, the rate limit and the upstream refresh.
+allow-lists, the rate limit and the upstream refresh. The zone also takes the
+answer of a connector to a user without groups (the LDAP line and the SAML
+assertion without the attribute below): the level of the line and whether the
+user is refused are one decision, so they stay in one patch rather than split
+between this one and the connector zone.
 
 - Attributes: always `connector_id` and `client_id`; `user_id`, `username`,
   `preferred_username`, `email` when known, the email as the provider gives it;
@@ -736,6 +740,25 @@ allow-lists, the rate limit and the upstream refresh.
 - Values from users and providers go through `pkg/logsafe`: control
   characters dropped, 256 characters, 50 items.
 - Message texts are those of upstream and of the v2.44-based Dex.
+- A user in no group is not a failure. The LDAP connector logs `ldap: groups
+  search returned no groups` at `DEBUG` (upstream: `ERROR`, at every login of
+  such a user), and the SAML connector returns an empty list of groups when the
+  assertion carries no attribute for them, where upstream fails the login with
+  `no attribute with name "groups"` and the user sees a 500. With `allowedGroups`
+  set, a user without the attribute is in none of the allowed groups and gets
+  the refusal of the provider, as any user outside them.
+- The lines of the connectors that print the data of a user are at `DEBUG`
+  (upstream: `INFO`), which the default level of Dex does not show: SAML
+  `parsed and verified saml response attributes` (every attribute: email, name,
+  groups, roles); LDAP `performing ldap search` (the filter carries the entered
+  username or the DN), `username mapped to entry` and `LDAP search returned no
+  groups`; Kerberos `principal authenticated`, `LDAP user found` and `SPNEGO
+  login succeeded`; GitHub `user in org but no teams` and `user not in org or
+  application not authorized to read org data`. LDAP `no results returned for
+  filter`, the line of an unknown user, is at `DEBUG` too (upstream: `ERROR`):
+  its filter carries the entered username, and the attempt is still logged as
+  `failed login attempt: Invalid credentials.` at `WARN`. The lines of the
+  sign-in log above keep their levels.
 
 | Message | Level | Reason |
 |---|---|---|

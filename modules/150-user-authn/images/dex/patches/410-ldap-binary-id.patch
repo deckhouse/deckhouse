@@ -93,7 +93,7 @@ index 00000000..036cc1e2
 +	require.Equal(t, signIn.UserID, refreshed.UserID)
 +}
 diff --git a/connector/ldap/ldap.go b/connector/ldap/ldap.go
-index eeb64267..39b627a2 100644
+index 7e7a4e9a..8cb895c5 100644
 --- a/connector/ldap/ldap.go
 +++ b/connector/ldap/ldap.go
 @@ -498,13 +498,43 @@ func (c *ldapConnector) getAttr(e ldap.Entry, name string) string {

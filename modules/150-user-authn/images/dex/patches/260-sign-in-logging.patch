@@ -259,7 +259,7 @@ index 00000000..ff3e6280
 +	require.Equal(t, []string{"a"}, FetchedGroups([]string{"a"}))
 +}
 diff --git a/connector/github/github.go b/connector/github/github.go
-index b9ae1eba..e7c77da6 100644
+index b9ae1eba..a147df5a 100644
 --- a/connector/github/github.go
 +++ b/connector/github/github.go
 @@ -267,6 +267,9 @@ func (c *githubConnector) HandleCallback(s connector.Scopes, connData []byte, r
@@ -287,7 +287,7 @@ index b9ae1eba..e7c77da6 100644
  			inOrgNoTeams = true
  		} else if teams = groups_pkg.Filter(teams, org.Teams); len(teams) == 0 {
 -			c.logger.Info("user in org but no teams", "user", userName, "org", org.Name)
-+			c.logger.Info("user in org but no teams", "username", userName, "org", org.Name)
++			c.logger.Debug("user in org but no teams", "username", userName, "org", org.Name)
  		}
  
  		for _, teamName := range teams {
@@ -325,7 +325,7 @@ index b9ae1eba..e7c77da6 100644
  	case http.StatusNoContent:
  	case http.StatusFound, http.StatusNotFound:
 -		c.logger.Info("user not in org or application not authorized to read org data", "user", userName, "org", orgName)
-+		c.logger.Info("user not in org or application not authorized to read org data", "username", userName, "org", orgName)
++		c.logger.Debug("user not in org or application not authorized to read org data", "username", userName, "org", orgName)
  	default:
  		err = fmt.Errorf("github: unexpected return status: %q", resp.Status)
  	}
@@ -371,6 +371,48 @@ index 00000000..3fb48b2d
 +		t.Errorf("the org membership check does not list the user's groups, want nil, got %v", groupsErr.UserGroups)
 +	}
 +	expectEquals(t, groupsErr.Groups, []string{"org-1", "org-2:admins", "org-2:sre"})
++}
+diff --git a/connector/github/github_log_test.go b/connector/github/github_log_test.go
+new file mode 100644
+index 00000000..347c2051
+--- /dev/null
++++ b/connector/github/github_log_test.go
+@@ -0,0 +1,36 @@
++package github
++
++import (
++	"bytes"
++	"log/slog"
++	"net/http"
++	"net/http/httptest"
++	"strings"
++	"testing"
++)
++
++// The refusal of a user outside an organization names the user: Dex logs it at debug level only (Deckhouse).
++func TestUserNotInOrgIsLoggedAtDebugOnly(t *testing.T) {
++	s := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		w.WriteHeader(http.StatusNotFound)
++	}))
++	defer s.Close()
++
++	for _, tc := range []struct {
++		level slog.Level
++		want  bool
++	}{
++		{level: slog.LevelDebug, want: true},
++		{level: slog.LevelInfo},
++	} {
++		var out bytes.Buffer
++		c := githubConnector{apiURL: s.URL, logger: slog.New(slog.NewTextHandler(&out, &slog.HandlerOptions{Level: tc.level}))}
++		inOrg, err := c.userInOrg(t.Context(), newClient(), "jane-doe", "corp")
++		if err != nil || inOrg {
++			t.Fatalf("userInOrg = %v, %v; want false, nil", inOrg, err)
++		}
++		if got := strings.Contains(out.String(), "jane-doe"); got != tc.want {
++			t.Errorf("at level %v the username is logged: %v, want %v: %q", tc.level, got, tc.want, out.String())
++		}
++	}
 +}
 diff --git a/connector/gitlab/gitlab.go b/connector/gitlab/gitlab.go
 index 8eec5f06..93730509 100644
@@ -453,11 +495,69 @@ index 3944010a..70b8437e 100644
  			}
  		}
  	}
+diff --git a/connector/ldap/kerberos.go b/connector/ldap/kerberos.go
+index 1d5931d2..4598921f 100644
+--- a/connector/ldap/kerberos.go
++++ b/connector/ldap/kerberos.go
+@@ -239,7 +239,8 @@ func (c *ldapConnector) TrySPNEGO(ctx context.Context, s connector.Scopes, w htt
+ 	}
+ 
+ 	mapped := mapPrincipal(id.UserName(), id.Domain(), c.krbConf.UsernameFromPrincipal)
+-	c.logger.Info("kerberos: principal authenticated",
++	// The principal, the DN and the email are the data of the user: debug only (Deckhouse).
++	c.logger.Debug("kerberos: principal authenticated",
+ 		"principal", id.UserName(),
+ 		"realm", id.Domain(),
+ 		"auth_time", id.AuthTime(),
+@@ -252,7 +253,7 @@ func (c *ldapConnector) TrySPNEGO(ctx context.Context, s connector.Scopes, w htt
+ 			"principal", id.UserName(), "mapped", mapped, "err", err)
+ 		return nil, true, fmt.Errorf("ldap: user lookup failed for kerberos principal %q: %w", id.UserName(), err)
+ 	}
+-	c.logger.Info("kerberos: LDAP user found", "dn", userEntry.DN)
++	c.logger.Debug("kerberos: LDAP user found", "dn", userEntry.DN)
+ 
+ 	ident, err := c.identityFromEntry(userEntry)
+ 	if err != nil {
+@@ -288,7 +289,7 @@ func (c *ldapConnector) TrySPNEGO(ctx context.Context, s connector.Scopes, w htt
+ 		clearSPNEGOProbeCookie(w, r)
+ 	}
+ 
+-	c.logger.Info("kerberos: SPNEGO login succeeded",
++	c.logger.Debug("kerberos: SPNEGO login succeeded",
+ 		"username", ident.Username, "email", ident.Email, "groups_count", len(ident.Groups))
+ 	return &ident, true, nil
+ }
 diff --git a/connector/ldap/ldap.go b/connector/ldap/ldap.go
-index a5f791b8..eeb64267 100644
+index a5f791b8..7cef9434 100644
 --- a/connector/ldap/ldap.go
 +++ b/connector/ldap/ldap.go
-@@ -633,11 +633,12 @@ func (c *ldapConnector) Login(ctx context.Context, s connector.Scopes, username,
+@@ -580,7 +580,8 @@ func (c *ldapConnector) userEntry(conn *ldap.Conn, username string) (user ldap.E
+ 		req.Attributes = append(req.Attributes, c.UserSearch.PreferredUsernameAttrAttr)
+ 	}
+ 
+-	c.logger.Info("performing ldap search",
++	// The filter carries the entered username, and the entry is the user's: debug only (Deckhouse).
++	c.logger.Debug("performing ldap search",
+ 		"base_dn", req.BaseDN, "scope", scopeString(req.Scope), "filter", req.Filter)
+ 	resp, err := conn.Search(req)
+ 	if err != nil {
+@@ -589,11 +590,13 @@ func (c *ldapConnector) userEntry(conn *ldap.Conn, username string) (user ldap.E
+ 
+ 	switch n := len(resp.Entries); n {
+ 	case 0:
+-		c.logger.Error("no results returned for filter", "filter", filter)
++		// An unknown user is a refusal of the user, and the filter carries the entered username: debug only
++		// (Deckhouse).
++		c.logger.Debug("no results returned for filter", "filter", filter)
+ 		return ldap.Entry{}, false, nil
+ 	case 1:
+ 		user = *resp.Entries[0]
+-		c.logger.Info("username mapped to entry", "username", username, "user_dn", user.DN)
++		c.logger.Debug("username mapped to entry", "username", username, "user_dn", user.DN)
+ 		return user, true, nil
+ 	default:
+ 		return ldap.Entry{}, false, fmt.Errorf("ldap: filter returned multiple (%d) results: %q", n, filter)
+@@ -633,11 +636,12 @@ func (c *ldapConnector) Login(ctx context.Context, s connector.Scopes, username,
  			if ldapErr, ok := err.(*ldap.Error); ok {
  				switch ldapErr.ResultCode {
  				case ldap.LDAPResultInvalidCredentials:
@@ -472,6 +572,195 @@ index a5f791b8..eeb64267 100644
  					incorrectPass = true
  					return nil
  				}
+@@ -747,8 +751,9 @@ func (c *ldapConnector) groups(ctx context.Context, user ldap.Entry) ([]string,
+ 			}
+ 			gotGroups := len(obtained) != 0
+ 			if !gotGroups {
+-				// TODO(ericchiang): Is this going to spam the logs?
+-				c.logger.Error("ldap: groups search returned no groups", "filter", filter)
++				// A user in no group is a user like any other (Deckhouse): it is not an error, and it happens at
++				// every login of such a user, so it is a debug line.
++				c.logger.Debug("ldap: groups search returned no groups", "filter", filter)
+ 			}
+ 			groups = append(groups, obtained...)
+ 		}
+@@ -829,7 +834,8 @@ func (c *ldapConnector) queryGroups(ctx context.Context, memberAttr, dn string)
+ 
+ 	var entries []*ldap.Entry
+ 	if err := c.do(ctx, func(conn *ldap.Conn) error {
+-		c.logger.Info(
++		// The filter carries the DN or the attributes of the user: debug only (Deckhouse).
++		c.logger.Debug(
+ 			"performing ldap search",
+ 			"base_dn", req.BaseDN,
+ 			"scope", scopeString(req.Scope),
+@@ -838,7 +844,7 @@ func (c *ldapConnector) queryGroups(ctx context.Context, memberAttr, dn string)
+ 		resp, err := conn.Search(req)
+ 		if err != nil {
+ 			if ldapErr, ok := err.(*ldap.Error); ok && ldapErr.ResultCode == ldap.LDAPResultNoSuchObject {
+-				c.logger.Info("LDAP search returned no groups", "filter", filter)
++				c.logger.Debug("LDAP search returned no groups", "filter", filter)
+ 				return nil
+ 			}
+ 			return fmt.Errorf("ldap: search failed: %v", err)
+diff --git a/connector/ldap/ldap_test.go b/connector/ldap/ldap_test.go
+index 3335d56b..650338f1 100644
+--- a/connector/ldap/ldap_test.go
++++ b/connector/ldap/ldap_test.go
+@@ -1,12 +1,17 @@
+ package ldap
+ 
+ import (
++	"bytes"
+ 	"context"
+ 	"fmt"
+ 	"log/slog"
++	"net"
+ 	"os"
++	"strings"
+ 	"testing"
+ 
++	ber "github.com/go-asn1-ber/asn1-ber"
++	"github.com/go-ldap/ldap/v3"
+ 	"github.com/kylelemons/godebug/pretty"
+ 
+ 	"github.com/dexidp/dex/connector"
+@@ -742,3 +747,135 @@ func runTests(t *testing.T, connMethod connectionMethod, config *Config, tests [
+ 		})
+ 	}
+ }
++
++// A user in no group is not an error: the search that finds no group is logged at debug level, where the default
++// level of Dex does not show it (Deckhouse). The groups of the connector are searched on a server that answers every
++// search with no entry.
++func TestNoGroupsIsNotAnError(t *testing.T) {
++	addr := emptyLDAPServer(t)
++
++	for _, tc := range []struct {
++		level     slog.Level
++		wantDebug bool
++	}{
++		{level: slog.LevelDebug, wantDebug: true},
++		{level: slog.LevelInfo},
++	} {
++		var out bytes.Buffer
++		c := &ldapConnector{
++			Config: Config{Host: addr, InsecureNoSSL: true},
++			logger: slog.New(slog.NewTextHandler(&out, &slog.HandlerOptions{Level: tc.level})),
++		}
++		c.GroupSearch.BaseDN = "ou=groups,dc=example,dc=org"
++		c.GroupSearch.NameAttr = "cn"
++		c.GroupSearch.UserMatchers = []UserMatcher{{UserAttr: "DN", GroupAttr: "member"}}
++
++		groups, err := c.groups(t.Context(), ldap.Entry{DN: "cn=jane,ou=people,dc=example,dc=org"})
++		if err != nil {
++			t.Fatalf("groups: %v", err)
++		}
++		if len(groups) != 0 {
++			t.Fatalf("groups = %v, want none", groups)
++		}
++		logged := out.String()
++		if strings.Contains(logged, "level=ERROR") || strings.Contains(logged, "level=WARN") {
++			t.Errorf("a user without groups is logged as a failure: %q", logged)
++		}
++		if got := strings.Contains(logged, `level=DEBUG msg="ldap: groups search returned no groups"`); got != tc.wantDebug {
++			t.Errorf("at level %v the debug line is there: %v, want %v: %q", tc.level, got, tc.wantDebug, logged)
++		}
++	}
++}
++
++// emptyLDAPServer serves LDAP on a local port and answers a bind with success and a search with no entry.
++func emptyLDAPServer(t *testing.T) string {
++	t.Helper()
++	listener, err := net.Listen("tcp", "127.0.0.1:0")
++	if err != nil {
++		t.Fatal(err)
++	}
++	t.Cleanup(func() { listener.Close() })
++	go func() {
++		for {
++			conn, err := listener.Accept()
++			if err != nil {
++				return
++			}
++			go serveEmptyLDAP(conn)
++		}
++	}()
++	return listener.Addr().String()
++}
++
++func serveEmptyLDAP(conn net.Conn) {
++	defer conn.Close()
++	for {
++		packet, err := ber.ReadPacket(conn)
++		if err != nil || len(packet.Children) < 2 {
++			return
++		}
++		id := packet.Children[0].Value
++		var response uint8
++		switch packet.Children[1].Tag {
++		case ldap.ApplicationBindRequest:
++			response = ldap.ApplicationBindResponse
++		case ldap.ApplicationSearchRequest:
++			response = ldap.ApplicationSearchResultDone
++		default:
++			return
++		}
++		envelope := ber.Encode(ber.ClassUniversal, ber.TypeConstructed, ber.TagSequence, nil, "LDAP Response")
++		envelope.AppendChild(ber.NewInteger(ber.ClassUniversal, ber.TypePrimitive, ber.TagInteger, id, "Message ID"))
++		result := ber.Encode(ber.ClassApplication, ber.TypeConstructed, ber.Tag(response), nil, "Result")
++		result.AppendChild(ber.NewInteger(ber.ClassUniversal, ber.TypePrimitive, ber.TagEnumerated, uint64(ldap.LDAPResultSuccess), "Result Code"))
++		result.AppendChild(ber.NewString(ber.ClassUniversal, ber.TypePrimitive, ber.TagOctetString, "", "Matched DN"))
++		result.AppendChild(ber.NewString(ber.ClassUniversal, ber.TypePrimitive, ber.TagOctetString, "", "Diagnostic Message"))
++		envelope.AppendChild(result)
++		if _, err := conn.Write(envelope.Bytes()); err != nil {
++			return
++		}
++	}
++}
++
++// The search of a user carries the entered username in its filter, and the search of groups the DN of the user:
++// Dex logs them at debug level only (Deckhouse).
++func TestSearchesAreLoggedAtDebugOnly(t *testing.T) {
++	addr := emptyLDAPServer(t)
++
++	for _, tc := range []struct {
++		level slog.Level
++		want  bool
++	}{
++		{level: slog.LevelDebug, want: true},
++		{level: slog.LevelInfo},
++	} {
++		var out bytes.Buffer
++		c := &ldapConnector{
++			Config:        Config{Host: addr, InsecureNoSSL: true},
++			usernameAttrs: []string{"uid"},
++			logger:        slog.New(slog.NewTextHandler(&out, &slog.HandlerOptions{Level: tc.level})),
++		}
++		c.UserSearch.BaseDN = "ou=people,dc=example,dc=org"
++		c.UserSearch.Username = UsernameAttributes{"uid"}
++		c.GroupSearch.BaseDN = "ou=groups,dc=example,dc=org"
++		c.GroupSearch.NameAttr = "cn"
++		c.GroupSearch.UserMatchers = []UserMatcher{{UserAttr: "DN", GroupAttr: "member"}}
++
++		if err := c.do(t.Context(), func(conn *ldap.Conn) error {
++			_, _, err := c.userEntry(conn, "jane.doe")
++			return err
++		}); err != nil {
++			t.Fatalf("userEntry: %v", err)
++		}
++		if _, err := c.groups(t.Context(), ldap.Entry{DN: "cn=jane.doe,ou=people,dc=example,dc=org"}); err != nil {
++			t.Fatalf("groups: %v", err)
++		}
++		logged := out.String()
++		if got := strings.Contains(logged, "performing ldap search"); got != tc.want {
++			t.Errorf("at level %v the searches are logged: %v, want %v: %q", tc.level, got, tc.want, logged)
++		}
++		if got := strings.Contains(logged, "(uid=jane.doe)"); got != tc.want {
++			t.Errorf("at level %v the username is logged: %v, want %v: %q", tc.level, got, tc.want, logged)
++		}
++	}
++}
 diff --git a/connector/microsoft/microsoft.go b/connector/microsoft/microsoft.go
 index 202c5e91..6ad05694 100644
 --- a/connector/microsoft/microsoft.go
@@ -620,10 +909,20 @@ index 6eda2f15..9c12b941 100644
  	}
  
 diff --git a/connector/saml/saml.go b/connector/saml/saml.go
-index 8ef434b6..d3b1939a 100644
+index 8ef434b6..20e771a6 100644
 --- a/connector/saml/saml.go
 +++ b/connector/saml/saml.go
-@@ -447,7 +447,8 @@ func (p *provider) HandlePOST(s connector.Scopes, samlResponse, inResponseTo str
+@@ -426,7 +426,8 @@ func (p *provider) HandlePOST(s connector.Scopes, samlResponse, inResponseTo str
+ 	// Log the actual attributes we got back from the server. This helps debug
+ 	// configuration errors on the server side, where the SAML server doesn't
+ 	// send us the correct attributes.
+-	p.logger.Info("parsed and verified saml response attributes", "attributes", attributes)
++	// The values of every attribute (email, name, groups, roles) are the data of the user: debug only (Deckhouse).
++	p.logger.Debug("parsed and verified saml response attributes", "attributes", attributes)
+ 
+ 	// Grab the email.
+ 	if ident.Email, _ = attributes.get(p.emailAttr); ident.Email == "" {
+@@ -447,23 +448,23 @@ func (p *provider) HandlePOST(s connector.Scopes, samlResponse, inResponseTo str
  
  	if len(p.allowedGroups) > 0 && (!s.Groups || p.groupsAttr == "") {
  		// allowedGroups set but no groups or groupsAttr. Disallowing.
@@ -632,7 +931,33 @@ index 8ef434b6..d3b1939a 100644
 +		return ident, p.notInAllowedGroups(ident, nil)
  	}
  
- 	// Grab the groups.
+-	// Grab the groups.
++	// Grab the groups. A user in no group has no attribute for them at all: that is the user without groups, not a
++	// failure of the identity provider (Deckhouse), and the error would be a 500 for a user who did nothing wrong.
+ 	if p.groupsDelim != "" {
+-		groupsStr, ok := attributes.get(p.groupsAttr)
+-		if !ok {
+-			return ident, fmt.Errorf("no attribute with name %q: %s", p.groupsAttr, attributes.names())
+-		}
+-		// TODO(ericchiang): Do we need to further trim whitespace?
+-		ident.Groups = strings.Split(groupsStr, p.groupsDelim)
+-	} else {
+-		groups, ok := attributes.all(p.groupsAttr)
+-		if !ok {
+-			return ident, fmt.Errorf("no attribute with name %q: %s", p.groupsAttr, attributes.names())
++		if groupsStr, ok := attributes.get(p.groupsAttr); ok {
++			// TODO(ericchiang): Do we need to further trim whitespace?
++			ident.Groups = strings.Split(groupsStr, p.groupsDelim)
++		} else if p.groupsAttr != "" {
++			p.logger.Debug("saml: no groups attribute", "groupsAttr", p.groupsAttr, "attributes", attributes.names())
+ 		}
++	} else if groups, ok := attributes.all(p.groupsAttr); ok {
+ 		ident.Groups = groups
++	} else if p.groupsAttr != "" {
++		p.logger.Debug("saml: no groups attribute", "groupsAttr", p.groupsAttr, "attributes", attributes.names())
+ 	}
+ 
+ 	if len(p.allowedGroups) == 0 {
 @@ -476,7 +477,7 @@ func (p *provider) HandlePOST(s connector.Scopes, samlResponse, inResponseTo str
  
  	if len(groupMatches) == 0 {
@@ -730,6 +1055,152 @@ index 00000000..d4c45951
 +				Groups:     []string{"Nope"},
 +			}, groupsErr)
 +		})
++	}
++}
+diff --git a/connector/saml/saml_test.go b/connector/saml/saml_test.go
+index 3eba5cf8..105967a2 100644
+--- a/connector/saml/saml_test.go
++++ b/connector/saml/saml_test.go
+@@ -1,6 +1,7 @@
+ package saml
+ 
+ import (
++	"bytes"
+ 	"context"
+ 	"crypto/x509"
+ 	"encoding/base64"
+@@ -10,6 +11,7 @@ import (
+ 	"log/slog"
+ 	"os"
+ 	"sort"
++	"strings"
+ 	"testing"
+ 	"time"
+ 
+@@ -191,6 +193,79 @@ func TestGroupsWhitelistDisallowed(t *testing.T) {
+ 	test.run(t)
+ }
+ 
++// A user in no group has no attribute for the groups: that is a user without groups, not an error (Deckhouse).
++func TestUserWithoutGroupsAttribute(t *testing.T) {
++	test := responseTest{
++		caFile:       "testdata/ca.crt",
++		respFile:     "testdata/good-resp.xml",
++		now:          "2017-04-04T04:34:59.330Z",
++		usernameAttr: "Name",
++		emailAttr:    "email",
++		groupsAttr:   "memberOf",
++		inResponseTo: "6zmm5mguyebwvajyf2sdwwcw6m",
++		redirectURI:  "http://127.0.0.1:5556/dex/callback",
++		wantIdent: connector.Identity{
++			UserID:        "eric.chiang+okta@coreos.com",
++			Username:      "Eric",
++			Email:         "eric.chiang+okta@coreos.com",
++			EmailVerified: true,
++		},
++	}
++	test.run(t)
++}
++
++// With a list of allowed groups, a user without the attribute is in none of them: refused, as any other user outside.
++func TestGroupsWhitelistWithoutGroupsAttribute(t *testing.T) {
++	test := responseTest{
++		wantErr:       true,
++		caFile:        "testdata/ca.crt",
++		respFile:      "testdata/good-resp.xml",
++		now:           "2017-04-04T04:34:59.330Z",
++		usernameAttr:  "Name",
++		emailAttr:     "email",
++		groupsAttr:    "memberOf",
++		allowedGroups: []string{"Admins"},
++		inResponseTo:  "6zmm5mguyebwvajyf2sdwwcw6m",
++		redirectURI:   "http://127.0.0.1:5556/dex/callback",
++		wantIdent: connector.Identity{
++			UserID:        "eric.chiang+okta@coreos.com",
++			Username:      "Eric",
++			Email:         "eric.chiang+okta@coreos.com",
++			EmailVerified: true,
++		},
++	}
++	test.run(t)
++}
++
++func TestMissingGroupsAttributeIsLogged(t *testing.T) {
++	var buf bytes.Buffer
++	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
++	c := Config{
++		CA: "testdata/ca.crt", UsernameAttr: "Name", EmailAttr: "email", GroupsAttr: "memberOf",
++		RedirectURI: "http://127.0.0.1:5556/dex/callback", SSOURL: "http://foo.bar/",
++	}
++	conn, err := c.openConnector(logger)
++	if err != nil {
++		t.Fatal(err)
++	}
++	now, err := time.Parse(timeFormat, "2017-04-04T04:34:59.330Z")
++	if err != nil {
++		t.Fatal(err)
++	}
++	conn.now = func() time.Time { return now }
++	resp, err := os.ReadFile("testdata/good-resp.xml")
++	if err != nil {
++		t.Fatal(err)
++	}
++	_, err = conn.HandlePOST(connector.Scopes{Groups: true}, base64.StdEncoding.EncodeToString(resp), "6zmm5mguyebwvajyf2sdwwcw6m")
++	if err != nil {
++		t.Fatal(err)
++	}
++	if !bytes.Contains(buf.Bytes(), []byte("no groups attribute")) || !bytes.Contains(buf.Bytes(), []byte("memberOf")) {
++		t.Fatalf("debug line: %s", buf.String())
++	}
++}
++
+ func TestGroupsWhitelistDisallowedNoGroupsOnIdent(t *testing.T) {
+ 	test := responseTest{
+ 		wantErr:       true,
+@@ -916,3 +991,45 @@ func TestSAMLRefresh(t *testing.T) {
+ 		}
+ 	})
+ }
++
++// The attributes of a verified response carry the data of the user (email, name, groups, roles): Dex logs them at
++// debug level only, which its default level does not show (Deckhouse).
++func TestResponseAttributesAreLoggedAtDebugOnly(t *testing.T) {
++	for _, tc := range []struct {
++		level slog.Level
++		want  bool
++	}{
++		{level: slog.LevelDebug, want: true},
++		{level: slog.LevelInfo},
++	} {
++		var buf bytes.Buffer
++		logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: tc.level}))
++		c := Config{
++			CA: "testdata/ca.crt", UsernameAttr: "Name", EmailAttr: "email", GroupsAttr: "groups",
++			RedirectURI: "http://127.0.0.1:5556/dex/callback", SSOURL: "http://foo.bar/",
++		}
++		conn, err := c.openConnector(logger)
++		if err != nil {
++			t.Fatal(err)
++		}
++		now, err := time.Parse(timeFormat, "2017-04-04T04:34:59.330Z")
++		if err != nil {
++			t.Fatal(err)
++		}
++		conn.now = func() time.Time { return now }
++		resp, err := os.ReadFile("testdata/good-resp.xml")
++		if err != nil {
++			t.Fatal(err)
++		}
++		if _, err := conn.HandlePOST(connector.Scopes{Groups: true}, base64.StdEncoding.EncodeToString(resp), "6zmm5mguyebwvajyf2sdwwcw6m"); err != nil {
++			t.Fatal(err)
++		}
++		logged := buf.String()
++		if got := strings.Contains(logged, "parsed and verified saml response attributes"); got != tc.want {
++			t.Errorf("at level %v the attributes are logged: %v, want %v: %s", tc.level, got, tc.want, logged)
++		}
++		if !tc.want && strings.Contains(logged, "eric.chiang+okta@coreos.com") {
++			t.Errorf("at level %v the email of the user is logged: %s", tc.level, logged)
++		}
 +	}
 +}
 diff --git a/pkg/logsafe/logsafe.go b/pkg/logsafe/logsafe.go

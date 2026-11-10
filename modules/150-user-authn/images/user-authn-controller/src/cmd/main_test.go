@@ -293,3 +293,28 @@ func TestMinDeviceAge(t *testing.T) {
 		}
 	}
 }
+
+func TestOrphanedIdentityRetention(t *testing.T) {
+	for _, tc := range []struct {
+		value   string
+		want    time.Duration
+		wantErr bool
+	}{
+		{value: "", want: 30 * 24 * time.Hour},
+		{value: "5m", want: 5 * time.Minute},
+		{value: "0s", wantErr: true},
+		{value: "-1h", wantErr: true},
+		{value: "a month", wantErr: true},
+	} {
+		got, err := orphanedIdentityRetention(tc.value)
+		if tc.wantErr {
+			if err == nil {
+				t.Errorf("orphanedIdentityRetention(%q) = %v, want an error", tc.value, got)
+			}
+			continue
+		}
+		if err != nil || got != tc.want {
+			t.Errorf("orphanedIdentityRetention(%q) = %v, %v; want %v", tc.value, got, err, tc.want)
+		}
+	}
+}

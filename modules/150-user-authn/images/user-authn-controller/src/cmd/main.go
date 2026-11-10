@@ -43,6 +43,7 @@ import (
 	"user-authn-controller/internal/controller/allowedconnectors"
 	"user-authn-controller/internal/controller/dexclient"
 	"user-authn-controller/internal/controller/groupprefix"
+	"user-authn-controller/internal/controller/identitycleanup"
 	"user-authn-controller/internal/controller/identitymigration"
 	"user-authn-controller/internal/controller/kubernetesclient"
 	"user-authn-controller/internal/controller/providercheck"
@@ -90,6 +91,10 @@ const (
 	// kept after its creation.
 	revocationRetentionEnv = "REVOCATION_RETENTION"
 	operationRetentionEnv  = "USER_OPERATION_RETENTION"
+
+	// orphanedIdentityRetentionEnv is how long the pair of a deleted DexProvider may be idle before its UserIdentity is
+	// deleted; unset is identitycleanup.DefaultRetention (30 days). A short value is for a test run on a stand.
+	orphanedIdentityRetentionEnv = "ORPHANED_IDENTITY_RETENTION"
 
 	// passwordHistoryLimitEnv is userAuthn.passwordPolicy.passwordHistoryLimit, the history of
 	// replaced passwords Dex keeps; a ResetPassword operation adds the replaced hash to it. Unset
@@ -168,6 +173,10 @@ func setupRuntimeManager() (ctrl.Manager, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", twoFactorPolicyEnv, err)
 	}
+	orphanedRetention, err := orphanedIdentityRetention(os.Getenv(orphanedIdentityRetentionEnv))
+	if err != nil {
+		return nil, err
+	}
 
 	cfg, err := ctrl.GetConfig()
 	if err != nil {
@@ -213,6 +222,9 @@ func setupRuntimeManager() (ctrl.Manager, error) {
 	}
 	if err = groupprefix.Register(runtimeManager); err != nil {
 		return nil, fmt.Errorf("register groupprefix controller: %w", err)
+	}
+	if err = identitycleanup.Register(runtimeManager, orphanedRetention); err != nil {
+		return nil, fmt.Errorf("register identitycleanup: %w", err)
 	}
 	if err = identitymigration.Register(runtimeManager); err != nil {
 		return nil, fmt.Errorf("register identitymigration controller: %w", err)
@@ -281,6 +293,22 @@ func operationRetention(value string) (time.Duration, error) {
 	}
 	if retention <= 0 {
 		return 0, fmt.Errorf("%s %q is not positive", operationRetentionEnv, value)
+	}
+	return retention, nil
+}
+
+// orphanedIdentityRetention reads how long the pair of a deleted DexProvider may be idle before its UserIdentity is
+// deleted; unset is 30 days.
+func orphanedIdentityRetention(value string) (time.Duration, error) {
+	if value == "" {
+		return identitycleanup.DefaultRetention, nil
+	}
+	retention, err := time.ParseDuration(value)
+	if err != nil {
+		return 0, fmt.Errorf("parse %s: %w", orphanedIdentityRetentionEnv, err)
+	}
+	if retention <= 0 {
+		return 0, fmt.Errorf("%s %q is not positive", orphanedIdentityRetentionEnv, value)
 	}
 	return retention, nil
 }
