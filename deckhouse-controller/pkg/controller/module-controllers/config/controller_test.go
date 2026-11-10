@@ -32,6 +32,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"helm.sh/helm/v3/pkg/releaseutil"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -247,6 +248,18 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
+	suite.Run("enable module by bundle without explicit enabled", func() {
+		suite.setupTestController(string(suite.parseTestdata("enable-module-by-bundle.yaml")))
+		_, err := suite.r.handleModuleConfig(context.TODO(), suite.moduleConfig("test-module"))
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("disable module not in bundle without explicit enabled", func() {
+		suite.setupTestController(string(suite.parseTestdata("disable-module-not-in-bundle.yaml")))
+		_, err := suite.r.handleModuleConfig(context.TODO(), suite.moduleConfig("test-module"))
+		require.NoError(suite.T(), err)
+	})
+
 	suite.Run("global module config", func() {
 		suite.setupTestController(string(suite.parseTestdata("global-config.yaml")))
 		configModule := suite.moduleConfig("global")
@@ -277,6 +290,31 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		_, err := suite.r.handleModuleConfig(context.TODO(), suite.moduleConfig("test-module"))
 		require.NoError(suite.T(), err)
 	})
+}
+
+func (suite *ControllerTestSuite) TestExplicitEnabledOverridesBundle() {
+	for _, tc := range []struct {
+		name    string
+		enabled bool
+		want    corev1.ConditionStatus
+	}{
+		{name: "explicitly enabled", enabled: true, want: corev1.ConditionTrue},
+		{name: "explicitly disabled", enabled: false, want: corev1.ConditionFalse},
+	} {
+		suite.Run(tc.name, func() {
+			suite.setupTestController(string(suite.parseTestdata("enable-module-by-bundle.yaml")))
+			cfg := suite.moduleConfig("test-module")
+			cfg.Spec.Enabled = &tc.enabled
+			require.NoError(suite.T(), suite.client.Update(context.Background(), cfg))
+
+			_, err := suite.r.handleModuleConfig(context.Background(), cfg)
+			require.NoError(suite.T(), err)
+
+			module := new(v1alpha1.Module)
+			require.NoError(suite.T(), suite.client.Get(context.Background(), types.NamespacedName{Name: cfg.Name}, module))
+			assert.True(suite.T(), module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, tc.want))
+		})
+	}
 }
 
 func (suite *ControllerTestSuite) TestDeleteReconcile() {
