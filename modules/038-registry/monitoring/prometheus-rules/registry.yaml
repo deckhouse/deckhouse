@@ -654,8 +654,9 @@
         exactly that and no more — and on a master that shares its disk with the store, everything
         else on it then works with the minimum.
 
-        Set `storage.size` to what the store may take on each master: two releases of the image
-        set is the usual floor, and it has to fit on the disk under the store, above the reserve:
+        Set `storage.size` to what the store may take on each master: enough for three releases of
+        the image set together with the modules and the module catalog, and no more than fits on the
+        disk under the store above the reserve:
 
         ```
         d8 k get registrystorage registry -o json | jq '.status.replicas[] | {node, store}'

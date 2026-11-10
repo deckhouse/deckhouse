@@ -53,7 +53,7 @@ Server requirements:
 
 * **Bastion**: at least 4 CPU cores, 8 GB RAM, and 150 GB on fast storage. That much disk space is needed because the bastion host temporarily holds all Deckhouse Platform images used for installation. Images are downloaded from the public Deckhouse Platform registry to the bastion host before being pushed to the private container registry and packed into archives; these steps require substantial free space.
 * **VM for the private registry**: at least 4 CPU cores, 8 GB RAM, and at least 150 GB on fast storage for Deckhouse Platform images. Plan disk capacity with a margin, using the bundle size after `d8 mirror push` as a guide.
-* **Cluster nodes**: choose [resources for future cluster nodes](../requirements/#resource-requirements) based on expected workload. For example, the minimum recommended configuration is 4 CPU cores (_8 CPU cores recommended_), 8 GB RAM (_16 GB RAM recommended_), and 60 GB on fast storage (400+ IOPS) per node.
+* **Cluster nodes**: choose [resources for future cluster nodes](../requirements/#resource-requirements) based on expected workload. For example, the minimum recommended configuration is 4 CPU cores (_8 CPU cores recommended_), 8 GB RAM (_16 GB RAM recommended_), and 60 GB on fast storage (400+ IOPS) per node. If you plan to enable the in-cluster cache of the [`registry`](/modules/registry/) module, the master nodes also need disk space for the cache store (see ["Disk layout and size"](fs-requirements.html#registry-store-on-master-nodes)).
 
 ## Preparing a private container registry
 

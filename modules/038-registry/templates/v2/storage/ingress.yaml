@@ -11,7 +11,7 @@ refuses a handshake without the ingress's or the syncer's certificate. A replica
 predates that (the StatefulSet updates OnDelete) still takes a push on 4281 in air-gap until
 it is replaced.
 
-Rendered on every managed cluster, not only in air-gap.
+Rendered whenever the cache is on (with publicDomainTemplate and cert-manager), not only in air-gap.
 
 It used to appear exactly when air-gap was asked for, which made the documented order
 unwalkable: `d8 mirror push` needs this endpoint, the endpoint needed air-gap, and asking
@@ -33,8 +33,6 @@ helpers refuse an https mode they cannot satisfy — loudly enough to fail the w
 and, with it, the installation. The endpoint appears on a later converge instead.
 */ -}}
 {{- if eq (include "registry_v2_caches" .) "true" }}
-{{- $config := (.Values.registry.internal.v2).registryConfig | default dict }}
-{{- $upstream := ($config.primary | default dict).upstream }}
 {{- $pki := (.Values.registry.internal.v2).pki }}
 {{- if and $pki .Values.global.modules.publicDomainTemplate (.Values.global.enabledModules | has "cert-manager") }}
 ---
@@ -139,8 +137,8 @@ spec:
 # requests its own Certificate, and cert-manager fills the secret in. Without this the endpoint
 # still serves HTTPS — with the ingress controller's own self-signed certificate — and it does so
 # silently, on a cluster where every other name got a real one. That is the worst shape for it to
-# be wrong in: this is the write endpoint of an air-gapped registry, reachable from outside, and
-# the client that has to trust it is `d8 mirror push`.
+# be wrong in: this endpoint takes pushes into the cache from outside the cluster, and the client
+# that has to trust it is `d8 mirror push`.
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:

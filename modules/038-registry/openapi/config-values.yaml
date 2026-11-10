@@ -40,7 +40,7 @@ properties:
         Asking for `Unmanaged` on a cluster the module was managing does not take effect instantly: image references all over the cluster name the in-cluster registry, and they move to the upstream one only as each module's release is rendered again. So the module stops advertising its address at once and keeps serving it until nothing names it any more, which normally takes a few minutes. On a cluster that was installed with the module already managing, it also writes the registry it was fetching from back into the cluster's registry credentials — otherwise nothing would remember where images come from, since the installer had put the in-cluster registry there. Until then its components are still running, and `D8RegistryDrainStuck` reports a withdrawal that cannot finish.
       - `Managed` — the module owns the pull path: it configures the container runtime on every node through its node agent, and optionally runs an in-cluster cache.
 
-      There is no choice of implementation. A cluster that has never run the previous implementation of this module always uses the current one; a cluster that has runs the previous one until it is brought to its `Unmanaged` state, after which the migration completes on its own.
+      There is no choice of implementation. A cluster that has never run the v1 implementation of this module (DP up to and including 1.77) always uses the current one; a cluster that has runs the v1 implementation until it is brought to its `Unmanaged` state, after which the migration completes on its own.
     x-doc-default: 'Unmanaged'
   primary:
     type: object
@@ -211,7 +211,9 @@ properties:
 
           Independently of this value, the store never takes the space kept free on its filesystem: on a filesystem shared with the node, the kubelet's soft eviction threshold (10% of the filesystem, at most 40 GiB) plus a margin (10%, at most 20 GiB); on a disk of the store's own, the margin alone. So an unset or too large value cannot fill a master's disk — but it leaves the reserve as the only limit, which the `D8RegistryStoreUnbounded` alert reports.
 
-          Size it at two releases of the image set at least, and so that it fits on the disk under the store above the reserve.
+          The reserve is taken from the full size of the filesystem, while free space does not include the blocks the filesystem keeps for root. On ext4 these are 5% by default, so on a filesystem under 200 GiB the store and everything else on it get about 75% of the disk rather than 80%.
+
+          Size it for three releases of the image set (the deployed one, the previous one kept for a rollback, and the next one) together with the modules the cluster runs and the catalog of modules the module sources offer. A replica copies the next release ahead of the update only while the room it has left, in the budget and on the filesystem above the reserve, is at least a fifth of the budget (or of the filesystem, when `storage.size` is not set); with an upstream this applies to every replica. In an air-gapped cluster the next release arrives on the leader with `d8 mirror push` and needs that room, and the other replicas copy it from the leader under the same rule. The store holds the union of the releases' images: a layer they share is stored once. Make sure the value fits on the disk under the store above the reserve.
         x-examples:
           - 50Gi
       source:

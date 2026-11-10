@@ -27,6 +27,7 @@ Deckhouse Platform stores various types of data in specific file system director
 * `/var/lib/deckhouse/stronghold/` — data storage for [Stronghold](/products/stronghold/) (if the corresponding module is enabled);
 * `/var/log/pods/` — storage of pod logs;
 * `/opt/deckhouse/` — Deckhouse Platform service components such as kubelet, containerd, static utilities (e.g. lsblk), etc.;
+* `/opt/deckhouse/registry/` (`/var/lib/deckhouse/registry/` when the master NodeGroup has `systemType: DeckhouseEngine`) — the store of the [`registry`](/modules/registry/) module, on master nodes only. It holds the in-cluster cache ([`storage.cache`](/modules/registry/configuration.html#parameters-storage-cache)) or, in the v1 implementation (Deckhouse Platform up to and including 1.77), the data of the `Proxy` and `Local` modes. When the cache is turned off, the data is kept on purpose (see [how to remove leftover cache data](/modules/registry/faq.html#how-do-i-remove-leftover-cache-data-from-a-node)). See [below](#registry-store-on-master-nodes) for how much space the store needs;
 * `/opt/local-path-provisioner/` — directory for storing data when using [local storage Local Path Provisioner](../admin/configuration/storage/sds/local-path-provisioner.html). The directory is set in the required `spec.path` parameter of LocalPathProvisioner, and the [configuration examples](../admin/configuration/storage/sds/local-path-provisioner.html#example-localpathprovisioner-resources) use `/opt/local-path-provisioner`.
 
 ## Disk space recommendations
@@ -54,7 +55,9 @@ The table below shows the recommended amounts of space for the directories used 
       <td>1</td>
     </tr>
     <tr>
-      <td><code>/opt</code></td>
+      <td><code>/opt</code>
+      <p style="font-size: 0.9em; color: #666;">Not counting the <code>registry</code> module store: the in-cluster cache or the <code>Proxy</code> and <code>Local</code> modes of the v1 implementation (<a href="#registry-store-on-master-nodes">details...</a>).</p>
+      </td>
       <td>1</td>
     </tr>
     <tr>
@@ -185,6 +188,19 @@ spec:
 Deckhouse Platform has a built-in [vulnerability image scanning system](../admin/configuration/security/scanning.html) based on [Trivy](https://github.com/aquasecurity/trivy), which scans all container images used in the cluster's pods. Both public [vulnerability databases](../glossary.html#vulnerability-database) and enriched data from Astra Linux, ALT Linux and RED OS are used for scanning. The total amount of disk space occupied by databases is 5 GB, so it must be taken into account when choosing the disk partition configuration.
 
 Databases are stored on the cluster's system nodes, and if there are no such nodes in the cluster, the databases will be located on the worker node.
+
+### Registry store on master nodes
+
+The master node table above does not include the store of the in-cluster cache of the [`registry`](/modules/registry/) module. If the cache is enabled ([`storage.cache`](/modules/registry/configuration.html#parameters-storage-cache)), every master node keeps its own copy of the store in `/opt/deckhouse/registry` (`/var/lib/deckhouse/registry` when the master NodeGroup has `systemType: DeckhouseEngine`), and the file system that holds this directory needs extra space:
+
+- for the store budget set in [`storage.size`](/modules/registry/configuration.html#parameters-storage-size): plan for three releases of the image set the cluster uses (the deployed one, the previous one and the next one) together with its modules and the module catalog;
+- for the reserve that the store always leaves free for the node on that file system. Because of the reserve, the file system must be noticeably larger than `storage.size`, including when the store has a disk of its own.
+
+It is recommended to mount a separate disk at the store directory: if the store shares a disk with etcd, etcd slows down while the cache is being filled. Without a separate disk, reserve the space on the file system that holds the store directory (with a DeckhouseEngine master NodeGroup, the one that holds `/var/lib/deckhouse`). If `/opt` is a separate partition sized by the table above (1 GB), the store does not fit there.
+
+The `Proxy` and `Local` modes of the v1 implementation also keep their data in `/opt/deckhouse/registry`.
+
+For sizing details, see ["Requirements for using the module"](/modules/registry/#requirements-for-using-the-module) in the `registry` module documentation.
 
 ## If resource limits are configured
 

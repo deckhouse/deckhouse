@@ -103,9 +103,13 @@ storage2 == "replicates from the leader, :4281" ==> storage1
 ## Architecture, air-gapped
 
 With no upstream configured the cache is the only source of images, and `d8 mirror push`
-is the only way in. It arrives through the publication endpoint, which requires a client
-certificate from the ingress on top of credentials: this is the one path that can replace
-an image, so a leaked password must not be enough to use it.
+is the only way in. It arrives through the publication endpoint, which exists whenever the
+cache is on, `publicDomainTemplate` is set and cert-manager is enabled — with an upstream too,
+so that a bundle can be pushed before the upstream is removed. The endpoint always routes a
+push to the leader. It requires a client certificate from the ingress on top of write
+credentials: this is the one path that can replace an image, so a leaked password must not be
+enough to use it. The same certificate is what tells the storage whose word to take about the
+client address.
 
 The upstream is removed from the node layouts only once the cache leader holds the whole
 expected set — that is the single conditional transition in this design, and the only one
@@ -138,7 +142,7 @@ end
 end
 
 operator ==> ingress
-ingress == "client certificate + write credentials, :4283" ==> storage1
+ingress == "client certificate + write credentials, :4283, to the leader" ==> storage1
 storage2 == "replicates, :4281" ==> storage1
 agent1 ==> storage1
 agent1 ==> storage2

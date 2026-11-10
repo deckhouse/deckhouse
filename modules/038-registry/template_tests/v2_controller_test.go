@@ -1019,7 +1019,8 @@ var _ = Describe("Module :: registry :: helm template :: v2 publication endpoint
 
 			annotations := ingress.Field("metadata.annotations").Map()
 			// A client certificate is required on the write listener behind this path, so a
-			// leaked password alone cannot be used to replace an image around the ingress.
+			// leaked password alone cannot be used to replace an image around the ingress. It is
+			// also what tells the storage whose client address to trust.
 			Expect(annotations).To(HaveKey("nginx.ingress.kubernetes.io/proxy-ssl-secret"))
 			Expect(annotations["nginx.ingress.kubernetes.io/proxy-ssl-secret"].String()).
 				To(Equal("d8-system/registry-storage-ingress-client"))

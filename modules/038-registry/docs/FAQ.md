@@ -7,19 +7,19 @@ description: "Frequently asked questions about the Deckhouse Platform registry m
 
 There are two ways a Deckhouse Platform (DP) cluster's image pull path can be managed:
 
-- **the previous implementation** — the `registry` section of the
+- **the v1 implementation** (DP up to and including 1.77) — the `registry` section of the
   [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry), with the
   modes `Unmanaged`, `Direct`, `Proxy`, and `Local`;
 - **the current implementation** — this module, configured through the `registry` ModuleConfig.
 
-The migration is the handover of the pull path from the previous implementation to the module.
+The migration is the handover of the pull path from the v1 implementation to the module.
 It is not started by hand and has no command of its own: the module takes over automatically
-after the cluster is upgraded to the release that ships it. The only condition is that by then
-the previous implementation must have released the pull path. Both implementations configure
+after the cluster is upgraded to DP 1.78. The only condition is that by then
+the v1 implementation must have released the pull path. Both implementations configure
 the same thing on every node — which registry the container runtime pulls from and with which
 credentials — so they never manage a cluster at the same time.
 
-What has to be done for the handover, and when, depends on the mode the previous implementation
+What has to be done for the handover, and when, depends on the mode the v1 implementation
 is running in. The mode is set in the [`settings.registry.mode`](/modules/deckhouse/configuration.html#parameters-registry-mode) parameter of the `deckhouse`
 ModuleConfig:
 
@@ -39,20 +39,23 @@ migration: the handover happens on its own.
 | `Local` | [Follow the procedure for air-gapped clusters](#how-do-i-migrate-an-air-gapped-cluster-from-local-mode) | Before the upgrade |
 
 {% alert level="danger" %}
-Prepare the cluster **before** the upgrade: upgrading to the release with the module is blocked
+Prepare the cluster **before** the upgrade: upgrading to DP 1.78 is blocked
 while the cluster is running in `Proxy` or `Local` mode, or in `Direct` mode without a
-configured `registry` ModuleConfig. The new release contains neither the components of the
-previous implementation nor the code that switches its modes, so all preparation happens on the
-current release.
+configured `registry` ModuleConfig. DP 1.78 contains neither the components of the
+v1 implementation nor the code that switches its modes, so all preparation happens on
+DP 1.77.
 {% endalert %}
 
-`Direct` mode needs no mode switch. The module's settings are deliberately accepted one release
-early: written before the upgrade, they are stored without effect and take effect on the
+`Direct` mode needs no mode switch. The module's settings are deliberately accepted already in DP
+1.77: written before the upgrade, they are stored without effect and take effect on the
 module's first reconciliation after it.
+
+On nodes with containerd v1, a migration from or through `Unmanaged` restarts containerd. See
+[Does the migration restart containerd?](#does-the-migration-restart-containerd).
 
 The cluster records which implementation is actually running (see
 [the next question](#which-implementation-is-my-cluster-running)). While the handover is
-impossible, the upgrade to the release with the module is blocked, and the error message says
+impossible, the upgrade to DP 1.78 is blocked, and the error message says
 what to do.
 
 ## Which implementation is my cluster running?
@@ -62,10 +65,10 @@ Check whether the secret exists:
 
 ```bash
 d8 k -n d8-system get secret registry-v2-switch >/dev/null 2>&1 \
-  && echo "current implementation" || echo "previous implementation"
+  && echo "current implementation" || echo "v1 implementation"
 ```
 
-If the cluster is still on the previous implementation, the module reports the reason on every
+If the cluster is still on the v1 implementation, the module reports the reason on every
 reconciliation and fires the
 [`D8RegistryMigrationPending`](#what-do-the-registry-alerts-mean) alert. To see what it is
 waiting for:
@@ -90,7 +93,7 @@ only while the configuration is unchanged since the installer wrote it.
 
 ## How do I migrate from Unmanaged mode?
 
-In `Unmanaged` mode the previous implementation does not manage the pull path, so there is
+In `Unmanaged` mode the v1 implementation does not manage the pull path, so there is
 nothing to prepare: the handover happens on its own.
 
 1. If the cluster is switching to `Unmanaged` from another mode, wait for the transition to
@@ -100,10 +103,13 @@ nothing to prepare: the handover happens on its own.
    d8 k -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
    ```
 
-1. Upgrade the cluster to the release with the current implementation of the module (or, if it is already on it, just wait
-   for the next reconciliation). The module takes over automatically, and the behavior does not
-   change: the module's default mode is also `Unmanaged`, so the cluster keeps pulling from the
-   same registry as before.
+1. Upgrade the cluster to DP 1.78 (or, if it is already on it, just wait
+   for the next reconciliation). The module takes over automatically, and the pull source does
+   not change: the module's default mode is also `Unmanaged`, so the cluster keeps pulling from
+   the same registry as before. On containerd v1 nodes, however, the takeover restarts containerd
+   node by node if the v1 implementation left a node registry configuration, and enabling
+   `mode: Managed` in the next step restarts it (a second time, if the takeover already did; see
+   [Does the migration restart containerd?](#does-the-migration-restart-containerd)).
 
 1. To have the module manage the pull path, set [`mode: Managed`](configuration.html#parameters-mode) in the `registry` ModuleConfig
    and specify the registry to pull from. A ready-made configuration for your cluster is
@@ -112,7 +118,7 @@ nothing to prepare: the handover happens on its own.
 
 ## How do I migrate from Direct mode?
 
-In `Direct` mode the nodes pull images through an in-cluster address served by the previous
+In `Direct` mode the nodes pull images through an in-cluster address served by the v1
 implementation's proxy. The module serves the same address, so the migration is a direct
 handover of that address: no switch through `Unmanaged` is needed, and no components restart.
 
@@ -141,11 +147,11 @@ handover of that address: no switch through `Unmanaged` is needed, and no compon
              license: <LICENSE_KEY>
    ```
 
-   The previous release stores these settings without acting on them, so nothing changes in the
+   DP 1.77 stores these settings without acting on them, so nothing changes in the
    cluster until the upgrade.
 
 1. Upgrade the cluster. The handover happens on the module's next reconciliation, and pulls
-   keep working throughout: the Service and the proxy of the previous implementation keep
+   keep working throughout: the Service and the proxy of the v1 implementation keep
    serving the in-cluster address until the module's agent has taken it over on every node, and
    only then does the controller remove them.
 
@@ -158,7 +164,7 @@ handover of that address: no switch through `Unmanaged` is needed, and no compon
 
    For reference, the order and rough scale to expect: the handover is recorded a couple of
    minutes after the new version starts, the node agent appears on the nodes several minutes
-   later, and the objects of the previous implementation are removed shortly after that. Pulls
+   later, and the objects of the v1 implementation are removed shortly after that. Pulls
    keep working at every point in between.
 
 ## How do I migrate from Proxy mode?
@@ -169,7 +175,7 @@ done before the upgrade.
 
 1. In the `deckhouse` ModuleConfig, set [`registry.mode: Unmanaged`](/modules/deckhouse/configuration.html#parameters-registry-mode), keeping the same registry
    address and credentials — see
-   [the mode switching examples](examples.html#examples-for-the-previous-implementation). All
+   [the mode switching examples](examples.html#examples-for-the-v1-implementation). All
    nodes are reconfigured to pull directly from the external registry, so the caching `Proxy`
    provided is lost until you bring it back in step 4.
 
@@ -181,8 +187,11 @@ done before the upgrade.
    d8 k -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
    ```
 
-1. Upgrade the cluster. The handover happens on the module's next reconciliation and does not
-   change the behavior: in `Unmanaged` mode the module does not manage the pull path either.
+1. Upgrade the cluster. The handover happens on the module's next reconciliation, and the pull
+   source does not change: in `Unmanaged` mode the module does not manage the pull path either.
+   On containerd v1 nodes, however, the takeover restarts containerd node by node, and enabling
+   `mode: Managed` in the next step restarts it again (see
+   [Does the migration restart containerd?](#does-the-migration-restart-containerd)).
 
 1. To get in-cluster caching back, set [`mode: Managed`](configuration.html#parameters-mode) with `storage.cache: true` and the same
    upstream registry. Note that the module's cache is built differently from `Proxy`: a single
@@ -207,10 +216,10 @@ Before starting, make sure the control-plane nodes have free space for **four im
 Three copies exist at the peak — the `Local` store, the temporary registry, and the module's
 storage being filled — and the fourth set is headroom the node must not run out of.
 
-To get a sense of the scale, take a 13 GB image set (platform with modules): it occupies
-about 21 GB in the temporary registry (two releases — the one the cluster runs and the one it
-moves to) and grows the store from 13 to 21 GB, on top of the node's own image cache and
-the system. A 100 GB control-plane node peaks at around 38 GB that way, while a 50 GB node
+To get a sense of the scale, take an image set on the order of 13 GB (platform with modules):
+it occupies about 21 GB in the temporary registry (two releases — the one the cluster runs and
+the one it moves to) and grows the store from 13 to 21 GB, on top of the node's own image cache
+and the system. A 100 GB control-plane node peaks at around 38 GB that way, while a 50 GB node
 runs into pod eviction.
 
 The headroom is critical. When free disk space on a control-plane node runs low, kubelet
@@ -227,7 +236,7 @@ ran and the one the new cluster runs, which is where the peak size comes from.
 
 ### Procedure
 
-Steps 1–4 are performed before the upgrade, on the release that still contains the previous
+Steps 1–4 are performed before the upgrade, on DP 1.77, which still contains the v1
 implementation.
 
 1. Run a temporary OCI registry in a namespace of your own. Any registry implementation will
@@ -254,7 +263,7 @@ implementation.
    access to the DP registry, then `d8 mirror push` into the temporary one. This is the
    copy the disk budget above accounts for.
 
-1. Point the previous implementation at the temporary registry and switch it to `Unmanaged`:
+1. Point the v1 implementation at the temporary registry and switch it to `Unmanaged`:
    in the `deckhouse` ModuleConfig, set [`registry.mode: Unmanaged`](/modules/deckhouse/configuration.html#parameters-registry-mode) together with the address,
    the CA certificate, and the credentials of the temporary registry. The nodes start pulling
    from it. The `Local` store leaves the pull path, but its data stays where it is — under
@@ -268,8 +277,11 @@ implementation.
    d8 k -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
    ```
 
-1. Upgrade the cluster to the release with the module. The handover happens on the module's
-   next reconciliation; the cluster keeps pulling from the temporary registry throughout.
+1. Upgrade the cluster to DP 1.78. The handover happens on the module's
+   next reconciliation; the cluster keeps pulling from the temporary registry throughout. On
+   containerd v1 nodes the takeover restarts containerd node by node, and enabling
+   `mode: Managed` in the next step restarts it again (see
+   [Does the migration restart containerd?](#does-the-migration-restart-containerd)).
 
 1. Enable the module: [`mode: Managed`](configuration.html#parameters-mode) with `storage.cache: true`, the temporary registry as
    `primary.upstream` — **and `storage.source` in the same edit**. The module's storage starts
@@ -289,9 +301,8 @@ implementation.
      jq -r '.manifests[]?.digest' | sort -u | wc -l
    ```
 
-   Changing these settings restarts the registry process, so the RegistryStorage resource reports
-   `Failed` for about a minute with an error about reading its own store. This is expected;
-   wait for it to return to `Ready`.
+   Setting `storage.source` does not restart the storage: it is not part of the registry
+   process's configuration. The registry restarts in the next step, when the upstream is removed.
 
 1. Wait until the storage reports that it holds the whole set — `phase: Ready` with
    `safeToDropUpstream: true` — and remove `primary.upstream` from the `registry` ModuleConfig.
@@ -303,7 +314,45 @@ implementation.
    d8 k get registrystorage registry -o jsonpath='{.status.phase} {.status.safeToDropUpstream}{"\n"}'
    ```
 
+   Removing the upstream restarts the registry process. If the restarted registry spends more
+   than a few tens of seconds reading its store, the RegistryStorage resource reports `Failed`
+   with an error about reading the image set. This is expected; wait for it to return to `Ready`.
+
 1. Delete the temporary registry and reclaim its disk space.
+
+## Does the migration restart containerd?
+
+On nodes with containerd v1 ([`cri.type: Containerd`](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type)),
+it does. Nodes with containerd v2 always take their registry settings from the
+`/etc/containerd/registry.d` directory, and containerd is not restarted on them.
+
+On a containerd v1 node, `/etc/containerd/config.toml` points containerd at
+`/etc/containerd/registry.d` only while the cluster has a node registry configuration, the
+`registry-bashible-config` secret. Without that secret, the file describes the registry with its
+own `mirrors` and `configs` blocks. In `Unmanaged` mode the module removes the secret, including
+the one the v1 implementation left behind. A change of `config.toml` restarts containerd,
+and kubelet after it. Therefore, on containerd v1:
+
+- every switch between `Unmanaged` and `Managed`, in either direction, restarts containerd once.
+  From `Managed` to `Unmanaged`, the restart comes when the module stops serving, that is once no
+  workload names the in-cluster address `registry.d8-system.svc:5001` any more, not when the
+  ModuleConfig is changed;
+- a cluster where the v1 implementation left the secret restarts it twice on the way
+  through `Unmanaged`: when the module takes over after the upgrade, and again when
+  `mode: Managed` is enabled. That is a cluster switched from `Proxy` or `Local` to `Unmanaged`
+  with a registry address before the upgrade, and any other `Unmanaged` cluster with a registry
+  address;
+- a migration from `Direct` does not restart it: the node configuration is kept throughout.
+
+To check whether the secret is there, run
+`d8 k -n d8-system get secret registry-bashible-config`.
+
+containerd is not restarted on all nodes at once. The change reaches them as a regular node update, which
+waits for approval, and approval is granted one node at a time in each NodeGroup by default (see
+[`update.maxConcurrent`](/modules/node-manager/cr.html#nodegroup-v1-spec-update-maxconcurrent)).
+Running containers survive the restart. On the node being updated, image pulls in progress fail
+and kubelet retries them, and open `exec`, `attach`, `port-forward` and `logs -f` sessions are
+cut.
 
 ## What do the registry alerts mean?
 
@@ -697,13 +746,40 @@ Each master's store has two limits, and the registry checks both on every write:
   without a restart. The reserve applies whatever `storage.size` says, including when it is not
   set.
 
-When either is reached, the store refuses new writes and keeps serving everything it holds:
+The reserve is taken from the full size of the filesystem, while free space is counted the way
+the kubelet counts it: without the blocks the filesystem keeps for root. On ext4 these are 5% by
+default, so on a filesystem under 200 GiB the store and everything else on it get about 75% of
+the disk rather than 80%. On a filesystem dedicated to the store, the root reservation can be
+lowered with `tune2fs -m`.
 
-- a fill or a replication stops, and the replica reports why in `.status.replicas[].error`;
-- `d8 mirror push` gets `507 Insufficient Storage` with the reason and the way out;
-- a pull the store cannot keep is streamed from the upstream while there is one, so the nodes
-  do not notice; in an air-gapped cluster a release that is not in the store cannot be
-  installed.
+When either limit is reached, the store refuses new writes and keeps serving everything it holds:
+
+- a fill or a replication stops. Why the store refuses is in the replica's `store` field
+  (`writable: false` and `reason`, see below), and `.status.replicas[].error` holds the error of
+  the fill or replication that stopped;
+- `d8 mirror push` gets `507 Insufficient Storage` with the reason and the way out, before the
+  upload's data is sent. A blob larger than the space left can still be refused in the middle of
+  its upload, with `500`; push again once there is room;
+- a cache miss is served from the upstream while there is one, so the nodes do not notice: the
+  layers the store cannot keep are streamed through without being stored, and a manifest the
+  store cannot write fails at the store, so the agent takes the image from the upstream. In an
+  air-gapped cluster a release that is not in the store cannot be installed.
+
+The store keeps the deployed release and the previous one, for a rollback, together with the
+modules the cluster runs and the catalog of modules the module sources offer. It also needs room
+for the next release:
+
+- a replica copies the next release ahead of the update only while the room it has left in the
+  budget, and on the filesystem above the reserve, is at least a fifth of the budget (or of the
+  filesystem, when `storage.size` is not set); otherwise the copy ahead is skipped, and the
+  release is filled once it is deployed. With an upstream, this applies to every replica;
+- in an air-gapped cluster, the next release arrives with `d8 mirror push` on the leader, and the
+  garbage collection does not delete the deployed or the previous release to make room for it. The
+  followers copy it from the leader under the same rule, so a follower short of room gets the
+  release only once it is deployed.
+
+So size `storage.size` for three releases together with the modules and the catalog. The store
+holds the union of their images: a layer the releases share is stored once.
 
 Nothing is deleted to make room. Space is freed by the garbage collection, or made by raising
 `storage.size` or giving the store more disk.
@@ -795,6 +871,47 @@ If this file is missing, the agent has not applied a configuration yet: nothing 
 can pull, and the reason is in the agent's log. If the file is present and pulls still fail,
 the failure is beyond the agent — the metrics above name the target that failed and the error.
 
+containerd can also pull past the agent, and this is by design. `_default/hosts.toml` sets no
+`server`, so containerd keeps the original registry as the last host and goes there directly
+when the agent does not answer, or answers `404` or another error status. This way images from
+public registries can still be pulled while the agent is down, but the direct attempt gets nothing
+the agent adds:
+
+- no cluster credentials, only the pod's own pull secret, if it has one;
+- no RegistryUpstream routes or mirrors, and no cache;
+- no certificate authority of a private registry, so such a registry usually fails with `x509`;
+- no in-cluster address: `registry.d8-system.svc:5001` does not resolve on the node, so platform
+  images cannot be pulled this way at all.
+
+Which error containerd reports when a pull fails depends on the step that failed and on the
+containerd version. While resolving the image reference, a tag or a digest:
+
+- containerd 1.7 (`Containerd`) reports the first error it got other than `404`. If the agent
+  did not answer or answered with an error status, that is the agent's error, even though the
+  direct attempt was made after it: a refused connection or a TLS handshake timeout to the agent's
+  address, or an error status such as `502 Bad Gateway`. The error of the direct attempt
+  (`no such host`, `401`, `x509`) is reported only when the agent answered `404`, and then it
+  hides that the agent did not find the image.
+- containerd 2.2 (`ContainerdV2`) reports an error status other than `404` ahead of a `404`, and
+  a `404` ahead of a failed connection; of two errors of the same kind, it reports the agent's. So
+  an error status from the agent, such as `502 Bad Gateway`, is always what shows. A failed
+  connection to the agent shows only when the direct attempt failed to connect too, and a failed
+  connection of the direct attempt (`no such host`, `x509`) never shows. Otherwise the answer to
+  the direct attempt shows: its error status, such as `403`, or `not found` for its `404`. An
+  agent's `404` is reported as `not found` unless the registry answered the direct attempt with
+  an error status.
+
+Either way, check the agent's log and metrics first. When the direct attempt answers `404` too,
+as for a tag missing from a public registry, the pull is reported as `not found`. While fetching
+the manifest by digest, the image config and the layers, both versions report the agent's error
+whatever it was, `404` included: a layer the agent does not have is reported as `not found` even
+when the direct attempt then failed with another error.
+
+While the agent does not answer, pulls are also slow to fail or succeed: on a test cluster with
+the agent frozen, pulls of platform images failed after about 20 seconds (a TLS handshake timeout
+to the agent), and images from public registries arrived over the direct path after about 50
+seconds.
+
 ## Modules from other ModuleSources: what the cache holds and what to do before air-gap
 
 The cache holds every module the cluster runs, whichever ModuleSource it was installed from, and
@@ -828,14 +945,37 @@ d8 k patch modulesource "$NAME" --type merge -p "{\"spec\":{\"registry\":$REGIST
 After that the module's images are rendered with the in-cluster address and are served from the
 cache.
 
+## What does destroying an air-gapped cloud cluster need from the store?
+
+`dhctl destroy` of a cloud cluster whose provider is not built into the installer, such as
+Deckhouse Virtualization Platform, needs that provider's bundle: its schemas, OpenTofu modules
+and plugins. dhctl takes the bundle from its download directory (`--download-dir`, `/tmp/dhctl`
+by default) when it is there, and pulls it from the registry the cluster names otherwise. An
+air-gapped cluster names no upstream, so the bundle is pulled from the cluster's own store,
+through dhctl's SSH connection to a master. With the store empty or missing that image, destroy
+stops at `Get cluster configuration` with `MANIFEST_UNKNOWN`. The simplest way out is to run
+dhctl in a container that already has this bundle downloaded, such as the one a previous operation
+on this cluster ran in. Otherwise keep the store until the cluster is destroyed, or bring the bundle
+yourself: on a machine with access to the public registry, pull the digest the error names from the
+platform's image repository there, the one the cluster was installed from (for example,
+`registry.deckhouse.io/deckhouse/<edition>`; `system/deckhouse` in the error's address is only the
+store's name for that repository). A `d8 mirror` bundle of the release holds the image too. Unpack
+the image into the directory the error names.
+
 ## Image availability alerts from `extended-monitoring` for the in-cluster registry
 
 With the module in charge, every image reference in the cluster names `registry.d8-system.svc:5001`.
-That address is served on the nodes only — containerd hands the pull to the node agent on the
-loopback — so it does not resolve from a pod, and the image availability exporter of the
-`extended-monitoring` module, which checks images from a pod, reports every such image as
-`…ImageAvailabilityUnknownError` (`no such host`, later `x509: certificate signed by unknown
-authority`).
+Nodes pull by that address through the node agent on the loopback, not through cluster DNS. The
+image availability exporter of the `extended-monitoring` module checks images from a pod, where
+the name is looked up in cluster DNS instead, so it reports every such image as
+`…ImageAvailabilityUnknownError`:
+
+- without the in-cluster cache, or while no storage replica is ready, the name does not resolve
+  from a pod: `no such host`;
+- with the cache, the name is a headless Service that resolves to the master nodes running ready
+  storage replicas. The storage answers there with a certificate issued by the module's own
+  certificate authority, which the exporter does not trust: `x509: certificate signed by unknown
+  authority`.
 
 Nothing is wrong with the images: what the exporter would detect is covered by this module's own
 alerts — `D8RegistryStorageIncomplete`, `D8RegistryUpstreamProbeFailing`,
@@ -875,9 +1015,9 @@ Description of the response fields:
 - `leader` is the replica that fills from the upstream and serves as the replication source
   for the others. The election is deliberately not symmetric: once a replica holds the whole
   expected set, a leader that cannot complete it by itself steps aside for that replica. A leader
-  cannot complete the set by itself when there is no upstream, when its last pass failed, or when its
-  store refuses writes. This is what keeps an air-gapped cluster from deadlocking with an empty leader
-  and a full follower. A leader that is still completing the set from the upstream keeps leading:
+  cannot complete the set by itself when there is no upstream, when its last pass failed, when its
+  store refuses writes, or when it no longer renews its lease. This is what keeps an air-gapped
+  cluster from deadlocking with an empty leader and a full follower. A leader that is still completing the set from the upstream keeps leading:
   a follower copies from it and may finish first, and moving the lease then would gain nothing.
   A replica on a node unreachable for about two minutes is not counted in the election, and a replica whose
   registry stops answering or whose disk stops accepting writes reports it in `healthError` and `error`
@@ -1009,12 +1149,17 @@ account.
 Push to the platform's path, `<publication endpoint>/system/deckhouse`, as in the
 [air-gap example](examples.html#going-air-gapped); a push to any other path is refused.
 
-## The previous implementation
+## The v1 implementation
 
-The information below applies to a cluster still running the implementation of the module configured through the
+The information below applies to a cluster still running the v1 implementation of the module (DP up to and including 1.77), configured through the
 `deckhouse` ModuleConfig.
 
 ### How to Migrate to the registry module?
+
+This procedure moves a cluster from the deprecated format (without the `registry` module) to the
+v1 implementation. It is not a step of the migration to the current implementation: a cluster in
+the deprecated format needs no preparation for the upgrade to DP 1.78. See
+[how the migration works](#how-does-the-migration-to-the-registry-module-work).
 
 During the migration, Containerd v1 will switch to the new registry configuration format.
 Containerd v2 uses the new format by default. For more details, see the section [with a description of configuration methods](/modules/node-manager/latest/faq.html#how-to-add-configuration-for-an-additional-registry).

@@ -16,22 +16,22 @@ The pull paths for container images are managed using the [`registry`](/modules/
 DP supports two implementations of the `registry` module for managing container image download paths:
 
 - **The current implementation**. Used starting with DP 1.78. Container image pull paths are configured through the [`registry` ModuleConfig](/modules/registry/configuration.html). The implementation is described in the ["Current implementation"](#current-implementation) section.
-- **The previous implementation**. The [DP component registry](../../../glossary.html#component-registry) is configured through the [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry). The implementation is described in the ["Previous implementation"](#previous-implementation) section.
+- **The v1 implementation**. Used in DP up to and including 1.77. The [DP component registry](../../../glossary.html#component-registry) is configured through the [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry). The implementation is described in the ["V1 implementation"](#v1-implementation) section.
 
 {% alert level="warning" %}
-The previous implementation of the module is planned to be dropped in future [DP releases](../../../glossary.html#dp-release).
+DP 1.78 no longer contains the v1 implementation of the module.
 {% endalert %}
 
 The two implementations never manage a cluster at the same time: only one of them is active at any given moment.
-A cluster that has never run the previous implementation uses the current one right away.
-A cluster running the previous implementation keeps using it until the conditions for switching to the current one are met — control is then handed over to the current implementation automatically, with no separate command. The switching conditions and step-by-step instructions for each mode of the previous implementation are given in the ["Migrating from the previous implementation to the current one"](#migrating-from-the-previous-implementation-to-the-current-one) section below.
+A cluster that has never run the v1 implementation uses the current one right away.
+A cluster running the v1 implementation keeps using it until the conditions for switching to the current one are met — control is then handed over to the current implementation automatically, with no separate command. The switching conditions and step-by-step instructions for each mode of the v1 implementation are given in the ["Migrating from the v1 implementation to the current one"](#migrating-from-the-v1-implementation-to-the-current-one) section below.
 
 {% alert level="warning" %}
-In future DP releases, the previous implementation of the module is scheduled to be deprecated. It is recommended that you migrate to the current implementation in advance. Migration is possible starting with release 1.78.
+DP 1.78 no longer contains the v1 implementation of the module. The cluster switches to the current implementation after the upgrade to DP 1.78, and the preparation for that is done before the upgrade, on DP 1.77.
 {% endalert %}
 
 {% alert level="danger" %}
-Prepare your cluster in advance for the transition to the current implementation. After removing the previous implementation, the DP update will be blocked as long as the cluster is running in `Proxy` or `Local` mode of the previous implementation, or in `Direct` mode without a configured `registry` in ModuleConfig.
+Prepare your cluster in advance for the transition to the current implementation. The update to DP 1.78, which no longer contains the v1 implementation, is blocked as long as the cluster is running in `Proxy` or `Local` mode of the v1 implementation, or in `Direct` mode without a configured `registry` in ModuleConfig.
 {% endalert %}
 
 You can find out which implementation of the module the cluster uses by checking whether the `registry-v2-switch` secret exists. To do this, follow the [instructions](#checking-which-implementation-the-cluster-uses).
@@ -176,7 +176,7 @@ To see how the change takes effect, use the commands below.
 #### Enabling the in-cluster cache
 
 {% alert level="info" %}
-The in-cluster cache uses the disks of the master nodes and is supported on [static clusters](../../../glossary.html#static-cluster) only.
+The in-cluster cache uses the disks of the master nodes and works in both [static](../../../glossary.html#static-cluster) and [cloud](../../../glossary.html#cloud-cluster) clusters managed by Deckhouse Platform. In a cloud cluster, that is the master node's root disk unless a separate disk is mounted at the cache directory (`/opt/deckhouse/registry`, or `/var/lib/deckhouse/registry` when the master NodeGroup has `systemType: DeckhouseEngine`). Size that disk for [`storage.size`](/modules/registry/configuration.html#parameters-storage-size) and the reserve the store keeps free for the node, on top of what the node itself uses. For details, see ["Requirements for using the module"](/modules/registry/#requirements-for-using-the-module) in the `registry` module documentation.
 {% endalert %}
 
 To enable the in-cluster cache, add the [`storage.cache`](/modules/registry/configuration.html#parameters-storage-cache) setting to the `registry` ModuleConfig and specify the storage size:
@@ -227,6 +227,8 @@ To move the cluster to air-gapped, follow these steps:
      --registry-password "$(echo "$PUSH_SECRET" | jq -r .data.password | base64 -d)"
    ```
 
+   The publication endpoint (the `registry` domain built from [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate), `registry.example.com` here) exists only while the cache is enabled, `publicDomainTemplate` is set and the `cert-manager` module is enabled. For details, see ["Air-gapped clusters"](/modules/registry/#air-gapped-clusters) in the `registry` module documentation.
+
 1. Describe the expected image set in the cache and remove the `upstream` from the `registry` ModuleConfig:
 
    ```yaml
@@ -241,7 +243,7 @@ To move the cluster to air-gapped, follow these steps:
            expectedDigests: 459
    ```
 
-The upstream registry is removed from the nodes not at the moment the configuration is edited, but once the cache leader holds the whole expected image set — otherwise all nodes could be left with no image source. To check the status of the transition, use the following commands.
+The upstream registry is removed from the nodes not at the moment the configuration is edited, but once the cache leader holds the whole expected image set — otherwise all nodes could be left with no image source. When the upstream is removed, the registry restarts, and the RegistryStorage resource may briefly report `Failed`: this is expected, wait for it to return to `Ready`. To check the status of the transition, use the following commands.
 
 Check whether the cache leader holds the whole expected image set:
 
@@ -329,19 +331,19 @@ spec:
 
 After `mode: Unmanaged` is set, pull path management through the `registry` module is turned off. The cluster resumes downloading images from the container registry specified in the `deckhouse-registry` secret—that is, from the same source from which images were downloaded before the module was enabled. Cache data on the master nodes is deliberately preserved: when pull path management is turned on again, the cache is topped up only with the images missing from the container image registry rather than filled from scratch. If the cache is no longer needed, free up the space it occupies by following the [instructions](/modules/registry/faq.html#how-do-i-remove-leftover-cache-data-from-a-node) in the `registry` module documentation.
 
-## Previous implementation
+## V1 implementation
 
 {% alert level="warning" %}
-The previous implementation of the `registry` module described below is being phased out. For new clusters, and for existing ones at the first opportunity, use the [current implementation](#current-implementation).
+The v1 implementation of the `registry` module described below was used in DP up to and including 1.77. DP 1.78 no longer contains it. For new clusters, and for existing ones at the first opportunity, use the [current implementation](#current-implementation).
 {% endalert %}
 
-In the previous implementation, DP supports several management modes for the platform component registry settings: `Unmanaged`, `Direct`, `Proxy`, and `Local`. In `Direct`, `Proxy`, and `Local` modes, a fixed virtual address is used to access the [DP component registry](../../../glossary.html#component-registry). This eliminates the need to restart all control plane components and re-download images when the platform component registry changes.
+In the v1 implementation, DP supports several management modes for the platform component registry settings: `Unmanaged`, `Direct`, `Proxy`, and `Local`. In `Direct`, `Proxy`, and `Local` modes, a fixed virtual address is used to access the [DP component registry](../../../glossary.html#component-registry). This eliminates the need to restart all control plane components and re-download images when the platform component registry changes.
 
 In `Unmanaged` mode, no virtual address is used. The external registry is accessed directly: if the registry changes, all DP components are restarted.
 
 Switching between modes and registries is done via the [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry). The switch occurs automatically (see the switching examples below for more details).
 
-The architecture of the previous implementation's modes is described in the ["Registry module"](../../../architecture/deckhouse/registry.html) section.
+The architecture of the v1 implementation's modes is described in the ["Registry module"](../../../architecture/deckhouse/registry.html) section.
 
 Features of the DP component registry settings management modes:
 
@@ -351,30 +353,28 @@ Features of the DP component registry settings management modes:
 - `Unmanaged` (configurable mode): Works without an internal registry. No virtual address is used. The **external** registry is accessed directly.
 
 {% alert level="warning" %}
-This document refers to the configurable `Unmanaged` mode (of the previous implementation of the `registry` module) and the non-configurable `Unmanaged` mode (the fully deprecated format, without the `registry` module).
+This document refers to the configurable `Unmanaged` mode (of the v1 implementation of the `registry` module) and the non-configurable `Unmanaged` mode (the fully deprecated format, without the `registry` module).
 
 The non-configurable `Unmanaged` mode does not use the `registry` module at all (for example, in Managed Kubernetes clusters). The DP component registry configuration parameters are set during cluster installation or, in a deployed cluster, using the `helper change registry` utility (deprecated).
 {% endalert %}
 
 ### Restrictions on DP component registry settings
 
-There are a number of restrictions and considerations regarding cluster installation, the previous implementation's usage conditions, and switching between its modes.
+There are a number of restrictions and considerations regarding cluster installation, the v1 implementation's usage conditions, and switching between its modes.
 
 #### Restrictions during cluster installation
 
 The following restrictions apply when installing a cluster:
 
-- The DP cluster bootstrap is supported in `Direct`, `Unmanaged`, `Proxy`, and `Local` modes. Registry settings during cluster installation are configured via the [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry).
-- The cluster bootstrap in `Local` and `Proxy` modes is supported only on [static clusters](../../../glossary.html#static-cluster).
+- A new cluster cannot be installed with the v1 implementation: the installer refuses `Proxy` and `Local` in the [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry). A `Direct` section there is read only as the registry address, and the cluster is installed in `Unmanaged` mode. To install a cluster whose pull path the `registry` module manages, use the [current implementation](#current-implementation).
 - To launch a cluster in the non-configurable `Unmanaged` mode (Legacy, without using the `registry` module), registry parameters must be specified in [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo).
 
 #### Operating conditions restrictions
 
-To manage DP component registry settings using the previous implementation, the following conditions must be met:
+To manage DP component registry settings using the v1 implementation, the following conditions must be met:
 
 - CRI containerd or containerd v2 must be used on cluster nodes. To configure CRI, refer to the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri) configuration.
 - The cluster must be fully managed by DP. In Managed Kubernetes clusters, managing DP component registry settings via the `registry` module is not available.
-The `Local` and `Proxy` modes are only supported on static clusters.
 
 #### Restrictions on mode switching
 
@@ -383,437 +383,12 @@ Mode switching restrictions are as follows:
 - Changing registry parameters and switching modes is only available after the bootstrap phase is fully complete.
 - For the first switch, you must migrate user registry configurations. For more details, see the ["Registry Module: FAQ"](/modules/registry/faq.html) section.
 - Switching to the non-configurable `Unmanaged` mode (without using the `registry` module) is only available from the configurable `Unmanaged` mode. For more details, see the ["Registry Module: FAQ"](/modules/registry/faq.html) section.
-- Direct switching between `Local` and `Proxy` modes is only possible via the intermediate `Direct` or `Unmanaged` modes. Example switching sequence: `Local`/`Proxy` → `Direct` → `Proxy`/`Local`. Direct switching from `Local` mode to the non-configurable `Unmanaged` mode (without using the `registry` module) is also not supported: if necessary, switch via the intermediate `Direct` or `Unmanaged` mode.
 
-### Examples of switching between the previous implementation's modes
+### Examples of switching between the v1 implementation's modes
 
 {% alert level="warning" %}
 If a module's image wasn't pulled and the module wasn't reinstalled during the switch, follow the [instructions](../../../faq.html#what-should-i-do-if-the-module-image-did-not-download-and-the-mo) to resolve the issue.
 {% endalert %}
-
-#### Switching to Direct mode
-
-To switch an already running cluster to `Direct` mode, follow these steps:
-
-{% alert level="danger" %}
-On the first switch from `Unmanaged` to `Direct` mode, all DP components will be fully restarted.
-{% endalert %}
-
-1. If the cluster is using the non-configurable `Unmanaged` [registry mode](../../../glossary.html#registry-mode) (without using the `registry` module), perform the [migration to registry management format using the `registry` module](#migration-to-registry-management-format-using-the-registry-module) before switching.
-
-1. Make sure the `registry` module is enabled and running. To do this, execute the following command:
-
-   ```bash
-   d8 k get module registry -o wide
-   ```
-
-   Example output:
-
-   <!-- markdownlint-disable MD031 -->
-   ```console
-   NAME       WEIGHT ...  PHASE   ENABLED   DISABLED MESSAGE   READY
-   registry   38     ...  Ready   True                         True
-   ```
-   {: .nowrap-default }
-   <!-- markdownlint-enable MD031 -->
-
-1. Make sure all [master nodes](../../../glossary.html#master-node) are in the `Ready` state and do not have the `SchedulingDisabled` status, using the following command:
-
-   ```bash
-   d8 k get nodes
-   ```
-
-   Example output:
-
-   <!-- markdownlint-disable MD031 -->
-   ```console
-   NAME       STATUS   ROLES                 ...
-   master-0   Ready    control-plane,master  ...
-   master-1   Ready    control-plane,master  ...
-   master-2   Ready    control-plane,master  ...
-   ```
-   {: .nowrap-default }
-   <!-- markdownlint-enable MD031 -->
-
-   Example of output when the master node (`master-2` in the example) is in the `SchedulingDisabled` status:
-
-   <!-- markdownlint-disable MD031 -->
-   ```console
-   NAME       STATUS                      ROLES                 ...
-   master-0   Ready    control-plane,master  ...
-   master-1   Ready    control-plane,master  ...
-   master-2   Ready,SchedulingDisabled    control-plane,master  ...
-   ```
-   {: .nowrap-default }
-   <!-- markdownlint-enable MD031 -->
-
-1. Ensure the DP queue is empty and has no errors:
-
-   ```shell
-   d8 system queue list
-   ```
-
-   Example output:
-
-   ```console
-   Summary:
-   - 'main' queue: empty.
-   - 107 other queues (0 active, 107 empty): 0 tasks.
-   - no tasks to handle.
-   ```
-
-1. Set the `Direct` mode settings in the [ModuleConfig `deckhouse`](/modules/deckhouse/configuration.html#parameters-registry-direct). If you are using a registry other than `registry.deckhouse.io`, refer to the [`deckhouse`](/modules/deckhouse/) module configuration for correct setup.
-
-   Configuration example:
-
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     name: deckhouse
-   spec:
-     version: 1
-     enabled: true
-     settings:
-       registry:
-         mode: Direct
-         direct:
-           imagesRepo: registry.deckhouse.io/deckhouse/ee
-           scheme: HTTPS
-           license: <LICENSE_KEY> # Replace with your license key.
-   ```
-
-1. Check the registry mode switch status in the `registry-state` secret using the [instruction](#checking-the-registry-mode-switch-status-in-the-previous-implementation).
-
-   Example output:
-
-   ```yaml
-   conditions:
-   # ...
-     - lastTransitionTime: "..."
-       message: ""
-       reason: ""
-       status: "True"
-       type: Ready
-   hash: ..
-   mode: Direct
-   target_mode: Direct
-   ```
-
-1. If you need to disable automatic DP updates from the configured image registry, remove the `releaseChannel` parameter from the `deckhouse` module configuration.
-   After that, automatic platform updates will be disabled, and you will need to manage the DP version manually.
-
-#### Switching to Proxy mode
-
-{% alert level="danger" %}
-
-- On the first switch from `Unmanaged` to `Proxy` mode, all DP components will be fully restarted.
-- Switching from `Local` to `Proxy` is not supported. To switch from `Local`, you must switch the registry to another available mode (for example, `Direct`).
-{% endalert %}
-
-To switch an already running cluster to `Proxy` mode, follow these steps:
-
-1. If the cluster is using the non-configurable `Unmanaged` registry mode (without `registry` module), perform the [migration to registry management format using the `registry` module](#migration-to-registry-management-format-using-the-registry-module) before switching.
-
-1. Make sure the `registry` module is enabled and running. To do this, execute the following command:
-
-   ```bash
-   d8 k get module registry -o wide
-   ```
-
-   Example output:
-
-   <!-- markdownlint-disable MD031 -->
-   ```console
-   NAME       WEIGHT ...  PHASE   ENABLED   DISABLED MESSAGE   READY
-   registry   38     ...  Ready   True                         True
-   ```
-   {: .nowrap-default }
-   <!-- markdownlint-enable MD031 -->
-
-1. Make sure all master nodes are in the `Ready` state and do not have the `SchedulingDisabled` status, using the following command:
-
-   ```bash
-   d8 k get nodes
-   ```
-
-   Example output:
-
-   <!-- markdownlint-disable MD031 -->
-   ```console
-   NAME       STATUS   ROLES                 ...
-   master-0   Ready    control-plane,master  ...
-   master-1   Ready    control-plane,master  ...
-   master-2   Ready    control-plane,master  ...
-   ```
-   {: .nowrap-default }
-   <!-- markdownlint-enable MD031 -->
-
-   Example of output when the master node (`master-2` in the example) is in the `SchedulingDisabled` status:
-
-   <!-- markdownlint-disable MD031 -->
-   ```console
-   NAME       STATUS                      ROLES                 ...
-   master-0   Ready    control-plane,master  ...
-   master-1   Ready    control-plane,master  ...
-   master-2   Ready,SchedulingDisabled    control-plane,master  ...
-   ```
-   {: .nowrap-default }
-   <!-- markdownlint-enable MD031 -->
-
-1. Ensure the DP queue is empty and has no errors:
-
-   ```shell
-   d8 system queue list
-   ```
-
-   Example output:
-
-   ```console
-   Summary:
-   - 'main' queue: empty.
-   - 107 other queues (0 active, 107 empty): 0 tasks.
-   - no tasks to handle.
-   ```
-
-1. Set the `Proxy` mode settings in the [ModuleConfig `deckhouse`](/modules/deckhouse/configuration.html#parameters-registry-proxy). If you are using a registry other than `registry.deckhouse.io`, refer to the [`deckhouse`](/modules/deckhouse/) module configuration for correct setup.
-
-   Configuration example:
-
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     name: deckhouse
-   spec:
-     version: 1
-     enabled: true
-     settings:
-       registry:
-         mode: Proxy
-         proxy:
-           imagesRepo: registry.deckhouse.io/deckhouse/ee
-           scheme: HTTPS
-           license: <LICENSE_KEY> # Replace with your license key.
-   ```
-
-1. Check the registry mode switch status in the `registry-state` secret using the [instruction](#checking-the-registry-mode-switch-status-in-the-previous-implementation).
-
-   Example output:
-
-   ```yaml
-   conditions:
-   # ...
-     - lastTransitionTime: "..."
-       message: ""
-       reason: ""
-       status: "True"
-       type: Ready
-   hash: ..
-   mode: Proxy
-   target_mode: Proxy
-   ```
-
-1. If you need to disable automatic DP updates from the configured image registry, remove the `releaseChannel` parameter from the `deckhouse` module configuration.
-   After that, automatic platform updates will be disabled, and you will need to manage the DP version manually.
-
-#### Switching to Local mode
-
-{% alert level="danger" %}
-
-- On the first switch from `Unmanaged` to `Local` mode, all DP components will be fully restarted.
-- Switching from `Proxy` to `Local` is not supported. To switch from `Proxy`, you must switch the registry to another available mode (for example, `Direct`).
-{% endalert %}
-
-To switch an already running cluster to `Local` mode, follow these steps:
-
-1. If the cluster is using the non-configurable `Unmanaged` registry mode (without `registry` module), perform the [migration to registry management format using the `registry` module](#migration-to-registry-management-format-using-the-registry-module) before switching.
-
-1. Make sure the `registry` module is enabled and running. To do this, execute the following command:
-
-   ```bash
-   d8 k get module registry -o wide
-   ```
-
-   Example output:
-
-   <!-- markdownlint-disable MD031 -->
-   ```console
-   NAME       WEIGHT ...  PHASE   ENABLED   DISABLED MESSAGE   READY
-   registry   38     ...  Ready   True                         True
-   ```
-   {: .nowrap-default }
-   <!-- markdownlint-enable MD031 -->
-
-1. Make sure all master nodes are in the `Ready` state and do not have the `SchedulingDisabled` status, using the following command:
-
-   ```bash
-   d8 k get nodes
-   ```
-
-   Example output:
-
-   <!-- markdownlint-disable MD031 -->
-   ```console
-   NAME       STATUS   ROLES                 ...
-   master-0   Ready    control-plane,master  ...
-   master-1   Ready    control-plane,master  ...
-   master-2   Ready    control-plane,master  ...
-   ```
-   {: .nowrap-default }
-   <!-- markdownlint-enable MD031 -->
-
-   Example of output when the master node (`master-2` in the example) is in the `SchedulingDisabled` status:
-
-   <!-- markdownlint-disable MD031 -->
-   ```console
-   NAME       STATUS                      ROLES                 ...
-   master-0   Ready    control-plane,master  ...
-   master-1   Ready    control-plane,master  ...
-   master-2   Ready,SchedulingDisabled    control-plane,master  ...
-   ```
-   {: .nowrap-default }
-   <!-- markdownlint-enable MD031 -->
-
-1. Ensure the DP queue is empty and has no errors:
-
-   ```shell
-   d8 system queue list
-   ```
-
-   Example output:
-
-   ```console
-   Summary:
-   - 'main' queue: empty.
-   - 107 other queues (0 active, 107 empty): 0 tasks.
-   - no tasks to handle.
-   ```
-
-1. Prepare archives with DP images of the current version using the `d8 mirror` command.
-
-   Example:
-
-   ```bash
-   TAG=$(
-    d8 k -n d8-system get deployment/deckhouse -o yaml \
-    | yq -r '.spec.template.spec.containers[] | select(.name == "deckhouse").image | split(":")[-1]'
-   ) && echo "TAG: $TAG"
-
-   EDITION=$(
-    d8 k -n d8-system exec -it svc/deckhouse-leader -- deckhouse-controller global values -o yaml \
-    | yq .deckhouseEdition
-   ) && echo "EDITION: $EDITION"
-   ```
-
-   ```bash
-   d8 mirror pull \
-   --license="<LICENSE_KEY>" \
-   --source="registry.deckhouse.io/deckhouse/$EDITION" \
-   --deckhouse-tag="$TAG" \
-   /home/user/d8-bundle
-   ```
-
-1. Set the `Local` mode settings in the [ModuleConfig `deckhouse`](/modules/deckhouse/configuration.html#parameters-registry-mode).
-
-   Configuration example:
-
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     name: deckhouse
-   spec:
-     version: 1
-     enabled: true
-     settings:
-       registry:
-         mode: Local
-   ```
-
-1. Check the registry mode switch status in the `registry-state` secret using [the instruction](#checking-the-registry-mode-switch-status-in-the-previous-implementation). Wait for the `RegistryContainsRequiredImages` check to start in the status. The condition shows whether images are present or missing in the running local registry.
-
-   Example output:
-
-   ```yaml
-   conditions:
-   # ...
-   - lastTransitionTime: "..."
-     message: |-
-       Mode: Default
-       master-1: 0 of 166 items processed, 166 items with errors:
-       - source: module/control-plane-manager/control-plane-manager133
-         image: 10.128.0.5:5001/system/deckhouse@sha256:00202db19b40930f764edab5695f450cf709d50736e012055393447b3379414a
-         error: HEAD https://10.128.0.5:5001/v2/system/deckhouse/manifests/sha256:00202db19b40930f764edab5695f450cf709d50736e012055393447b3379414a: unexpected status code 404 Not Found (HEAD responses have no body, use GET for details)
-       - source: module/cloud-provider-yandex/cloud-metrics-exporter
-         image: 10.128.0.5:5001/system/deckhouse@sha256:05517a86fcf0ec4a62d14ed7dc4f9ffd91c05716b8b0e28263da59edf11f0fad
-         error: HEAD https://10.128.0.5:5001/v2/system/deckhouse/manifests/sha256:05517a86fcf0ec4a62d14ed7dc4f9ffd91c05716b8b0ed86d6a1f465f4556fb8: unexpected status code 404 Not Found (HEAD responses have no body, use GET for details)
-       - source: module/control-plane-manager/kube-controller-manager132
-         image: 10.128.0.5:5001/system/deckhouse@sha256:13f24cc717698682267ed2b428e7399b145a4d8ffe96ad1b7a0b3269b17c7e61
-         error: HEAD https://10.128.0.5:5001/v2/system/deckhouse/manifests/sha256:13f24cc717698682267ed2b428e7399b145a4d8ffe96ad1b7a0b3269b17c7e61: unexpected status code 404 Not Found (HEAD responses have no body, use GET for details)
-
-         ...and more
-     reason: Processing
-     status: "False"
-     type: RegistryContainsRequiredImages
-   ```
-
-1. Upload images to the local registry using the `d8 mirror` command. Images are pushed to the local registry via Ingress at `registry.${PUBLIC_DOMAIN}`.
-
-   Get the read-write user password for the local registry:
-
-   ```bash
-   d8 k -n d8-system get secret/registry-user-rw -o json | jq -r '.data | to_entries[] | "\(.key): \(.value | @base64d)"'
-   name: rw
-   password: KFVxXZGuqKkkumPz
-   passwordHash: $2a$10$Phjbr6iinLf00ZZDD2Y7O.p9H3nDOgYzFmpYKW5eydGvIsdaHQY0a
-   ```
-
-   Push images to the local registry:
-
-   ```bash
-   d8 mirror push \
-   --registry-login="rw" \
-   --registry-password="KFVxXZGuqKkkumPz" \
-   /home/user/d8-bundle \
-   registry.${PUBLIC_DOMAIN}/system/deckhouse
-   ```
-
-1. Check the registry mode switch status in the `registry-state` secret using the [instruction](#checking-the-registry-mode-switch-status-in-the-previous-implementation). After the images are uploaded, the `RegistryContainsRequiredImages` condition should be in the `Ready` state.
-
-   Example output:
-
-   ```yaml
-   conditions:
-   # ...
-   - lastTransitionTime: "..."
-     message: |-
-       Mode: Default
-       master-1: all 166 items are checked
-     reason: Ready
-     status: "True"
-     type: RegistryContainsRequiredImages
-   hash: ..
-   mode: Direct
-   target_mode: Local
-   ```
-
-1. Wait for the switch to complete. To check the switch status, use [the instruction](#checking-the-registry-mode-switch-status-in-the-previous-implementation).
-
-   Example output:
-
-   ```yaml
-   conditions:
-   # ...
-     - lastTransitionTime: "..."
-       message: ""
-       reason: ""
-       status: "True"
-       type: Ready
-   hash: ..
-   mode: Local
-   target_mode: Local
-   ```
 
 #### Switching to Unmanaged mode
 
@@ -822,8 +397,6 @@ To switch an already running cluster to `Unmanaged` mode, follow these steps:
 {% alert level="danger" %}
 Changing the registry in `Unmanaged` mode will restart all DP components.
 {% endalert %}
-
-1. If the cluster is using the non-configurable `Unmanaged` registry mode (without the `registry` module), perform the [migration to registry management format using the `registry` module](#migration-to-registry-management-format-using-the-registry-module) before switching.
 
 1. Make sure the `registry` module is enabled and running. To do this, execute the following command:
 
@@ -877,7 +450,7 @@ Changing the registry in `Unmanaged` mode will restart all DP components.
            license: <LICENSE_KEY> # Replace with your license key.
    ```
 
-1. Check the registry mode switch status in the `registry-state` secret using [the instruction](#checking-the-registry-mode-switch-status-in-the-previous-implementation).
+1. Check the registry mode switch status in the `registry-state` secret using [the instruction](#checking-the-registry-mode-switch-status-in-the-v1-implementation).
 
    Example output:
 
@@ -903,16 +476,16 @@ If you need to switch to the legacy registry management method (without the `reg
 Managing the DP component image registry without the `registry` module is a deprecated management format.
 {% endalert %}
 
-## Migrating from the previous implementation to the current one
+## Migrating from the v1 implementation to the current one
 
-This section describes the transition from the previous implementation of the `registry` module to the current one. If your cluster does not use the `registry` module at all (the fully deprecated format), first refer to the ["Migration to registry management format using the registry module"](#migration-to-registry-management-format-using-the-registry-module) section.
+This section describes the transition from the v1 implementation of the `registry` module to the current one. A cluster that does not use the `registry` module at all (the fully deprecated format) has nothing to hand over, since the v1 implementation never configured its nodes: it needs no preparation for the upgrade to DP 1.78 and keeps pulling images from the registry it was installed with.
 
-The migration is the handover of the pull path from the previous implementation to the current one.
-It does not need to be started manually, and there is no separate command for it: the `registry` module takes over control automatically after the cluster is upgraded to the release that ships the current implementation. The only condition is that by then the previous implementation must have released the pull path. Both implementations configure the same thing on every node — which container image registry the container runtime pulls images from and with which credentials — so they never manage a cluster at the same time.
+The migration is the handover of the pull path from the v1 implementation to the current one.
+It does not need to be started manually, and there is no separate command for it: the `registry` module takes over control automatically after the cluster is upgraded to DP 1.78. The only condition is that by then the v1 implementation must have released the pull path. Both implementations configure the same thing on every node — which container image registry the container runtime pulls images from and with which credentials — so they never manage a cluster at the same time.
 
 ### Determining the migration method and steps
 
-What needs to be done to hand over pull path management to the current implementation of the `registry` module, and when, depends on the mode the previous implementation is running in. The mode is set in the `settings.registry.mode` parameter of the `deckhouse` ModuleConfig. To view the mode, use the following command:
+What needs to be done to hand over pull path management to the current implementation of the `registry` module, and when, depends on the mode the v1 implementation is running in. The mode is set in the `settings.registry.mode` parameter of the `deckhouse` ModuleConfig. To view the mode, use the following command:
 
 ```bash
 d8 k get mc deckhouse -o jsonpath='{.spec.settings.registry.mode}'
@@ -920,24 +493,24 @@ d8 k get mc deckhouse -o jsonpath='{.spec.settings.registry.mode}'
 
 Empty output means `Unmanaged` mode: the registry settings of this cluster have never been set. Such a cluster needs no preliminary actions for the migration — the handover happens automatically.
 
-The actions required to migrate from the previous implementation to the current one are described in the table:
+The actions required to migrate from the v1 implementation to the current one are described in the table:
 
-| Mode of the previous implementation | What to do | When |
+| Mode of the v1 implementation | What to do | When |
 |---|---|---|
 | `Unmanaged` | [Nothing](#migrating-from-unmanaged-mode) — the handover happens on its own | — |
-| `Direct` | [Configure the `registry` ModuleConfig](#migrating-from-direct-mode): set `mode: Managed` and `primary.upstream` | Before upgrading to the [DP release](../../../glossary.html#dp-release) with the current implementation |
-| `Proxy` | [Switch the cluster to `Unmanaged`](#migrating-from-proxy-mode) | Before upgrading to the DP release with the current implementation |
-| `Local` | Follow the separate [procedure for air-gapped clusters](#migrating-an-air-gapped-cluster-from-local-mode) | Before upgrading to the DP release with the current implementation |
+| `Direct` | [Configure the `registry` ModuleConfig](#migrating-from-direct-mode): set `mode: Managed` and `primary.upstream` | Before upgrading to DP 1.78 |
+| `Proxy` | [Switch the cluster to `Unmanaged`](#migrating-from-proxy-mode) | Before upgrading to DP 1.78 |
+| `Local` | Follow the separate [procedure for air-gapped clusters](#migrating-an-air-gapped-cluster-from-local-mode) | Before upgrading to DP 1.78 |
 
 {% alert level="warning" %}
-In future DP releases, the previous implementation of the module is scheduled to be deprecated. It is recommended that you migrate to the current implementation in advance. Migration is possible starting with release 1.78.
+DP 1.78 no longer contains the v1 implementation of the module. The cluster switches to the current implementation after the upgrade to DP 1.78, and the preparation for that is done before the upgrade, on DP 1.77.
 {% endalert %}
 
 {% alert level="danger" %}
-Prepare your cluster in advance for the transition to the current implementation. After removing the previous implementation, the DP update will be blocked as long as the cluster is running in `Proxy` or `Local` mode of the previous implementation, or in `Direct` mode without a configured `registry` in ModuleConfig.
+Prepare your cluster in advance for the transition to the current implementation. The update to DP 1.78, which no longer contains the v1 implementation, is blocked as long as the cluster is running in `Proxy` or `Local` mode of the v1 implementation, or in `Direct` mode without a configured `registry` in ModuleConfig.
 {% endalert %}
 
-When the previous implementation is used in `Direct` mode, no mode switch is needed. The `registry` ModuleConfig settings are deliberately accepted one release early: written before the upgrade, they are stored without effect and take effect on the module's first reconciliation after the upgrade.
+When the v1 implementation is used in `Direct` mode, no mode switch is needed. The `registry` ModuleConfig settings are deliberately accepted already in DP 1.77: written before the upgrade, they are stored without effect and take effect on the module's first reconciliation after the upgrade.
 
 ### Checking which implementation the cluster uses
 
@@ -945,10 +518,10 @@ When the `registry` module takes over pull path management, it records that in t
 
 ```bash
 d8 k -n d8-system get secret registry-v2-switch >/dev/null 2>&1 \
-  && echo "current implementation" || echo "previous implementation"
+  && echo "current implementation" || echo "v1 implementation"
 ```
 
-If the cluster is still on the previous implementation, the module reports the reason on every reconciliation, and the [`D8RegistryMigrationPending`](../../../reference/alerts.html#registry-d8registrymigrationpending) alert fires in the cluster. To see which actions are required, use the following command:
+If the cluster is still on the v1 implementation, the module reports the reason on every reconciliation, and the [`D8RegistryMigrationPending`](../../../reference/alerts.html#registry-d8registrymigrationpending) alert fires in the cluster. To see which actions are required, use the following command:
 
 ```bash
 d8 k -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
@@ -956,11 +529,11 @@ d8 k -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64
 
 ### Migrating from Unmanaged mode
 
-In `Unmanaged` mode, the previous implementation does not manage the pull path, so no preliminary preparation for switching to the current implementation is required — the handover happens automatically.
+In `Unmanaged` mode, the v1 implementation does not manage the pull path, so no preliminary preparation for switching to the current implementation is required — the handover happens automatically.
 
 The migration procedure to the current implementation in this case is as follows:
 
-1. If the cluster on the previous implementation is being switched to `Unmanaged` from another mode, wait for the transition to complete. The status must show `mode: Unmanaged` with no pending target mode.
+1. If the cluster on the v1 implementation is being switched to `Unmanaged` from another mode, wait for the transition to complete. The status must show `mode: Unmanaged` with no pending target mode.
 
    To check, use the following command:
 
@@ -968,13 +541,13 @@ The migration procedure to the current implementation in this case is as follows
    d8 k -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
    ```
 
-1. Upgrade the cluster to the release with the current implementation of the module (or, if it has already been upgraded, wait for the next reconciliation). The module takes over image pull path management automatically, and the behavior does not change. The default mode of the `registry` module in the current implementation is also `Unmanaged`, so the cluster keeps pulling images from the same registry as before.
+1. Upgrade the cluster to DP 1.78 (or, if it has already been upgraded, wait for the next reconciliation). The module takes over image pull path management automatically, and the pull source does not change. The default mode of the `registry` module in the current implementation is also `Unmanaged`, so the cluster keeps pulling images from the same registry as before. On containerd v1 nodes, however, the takeover restarts containerd node by node if the v1 implementation left a node registry configuration, and enabling `mode: Managed` in the next step restarts it (a second time, if the takeover already did; see [Does the migration restart containerd?](/modules/registry/faq.html#does-the-migration-restart-containerd)).
 
 1. To have the module manage the pull paths, set [`mode: Managed`](/modules/registry/configuration.html#parameters-mode) in the `registry` ModuleConfig and specify the registry to pull images from. A ready-made configuration for your cluster is published in the `registry-suggested-config` secret. For a configuration example, see the ["Configuring pull path management for DP component images"](#configuring-pull-path-management-for-dp-component-images) section.
 
 ### Migrating from Direct mode
 
-In `Direct` mode of the previous implementation, nodes pull images through an in-cluster address served by the previous implementation's proxy. The current implementation serves the same address, so the migration is a direct handover of the address: no switch through `Unmanaged` is needed, and no components are restarted.
+In `Direct` mode of the v1 implementation, nodes pull images through an in-cluster address served by the v1 implementation's proxy. The current implementation serves the same address, so the migration is a direct handover of the address: no switch through `Unmanaged` is needed, and no components are restarted.
 
 The migration procedure to the current implementation in this case is as follows:
 
@@ -1003,9 +576,9 @@ The migration procedure to the current implementation in this case is as follows
              license: <LICENSE_KEY> # Replace with your license key.
    ```
 
-   The previous implementation stores these settings but does not act on them, so nothing changes in the cluster until the upgrade.
+   The v1 implementation stores these settings but does not act on them, so nothing changes in the cluster until the upgrade.
 
-1. Upgrade the cluster to the release that supports the current implementation. The handover of container image pull path management happens on the next reconciliation, and image pulls keep working throughout: the Service and the proxy of the previous implementation keep serving the in-cluster address until the agent of the current implementation takes it over on every node, and only then are they removed.
+1. Upgrade the cluster to DP 1.78. The handover of container image pull path management happens on the next reconciliation, and image pulls keep working throughout: the Service and the proxy of the v1 implementation keep serving the in-cluster address until the agent of the current implementation takes it over on every node, and only then are they removed.
 
 1. Track the progress of the handover using the following commands.
 
@@ -1021,11 +594,11 @@ The migration procedure to the current implementation in this case is as follows
      d8 k get registrynode -o custom-columns='NODE:.metadata.name,READY:.status.reconciled,SERVING:.status.proxyListening'
      ```
 
-   The handover is recorded a few minutes after the new version starts, the agent appears on the nodes a few minutes later, and the objects of the previous implementation are removed shortly after that. Image pulls keep working at each of these stages.
+   The handover is recorded a few minutes after the new version starts, the agent appears on the nodes a few minutes later, and the objects of the v1 implementation are removed shortly after that. Image pulls keep working at each of these stages.
 
 ### Migrating from Proxy mode
 
-When the previous implementation is used in `Proxy` mode, a proxy of its own, with its own certificates, is deployed on every node. The current implementation cannot adopt this state. So the cluster must first be switched to `Unmanaged`, and this can only be done before the upgrade.
+When the v1 implementation is used in `Proxy` mode, a proxy of its own, with its own certificates, is deployed on every node. The current implementation cannot adopt this state. So the cluster must first be switched to `Unmanaged`, and this can only be done before the upgrade.
 
 The migration procedure to the current implementation in this case is as follows:
 
@@ -1037,13 +610,13 @@ The migration procedure to the current implementation in this case is as follows
    d8 k -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
    ```
 
-1. Upgrade the cluster to the release that supports the current implementation. The handover happens on the next reconciliation and does not change the behavior: in `Unmanaged` mode, the current implementation does not manage the pull path either.
+1. Upgrade the cluster to DP 1.78. The handover happens on the next reconciliation, and the pull source does not change: in `Unmanaged` mode, the current implementation does not manage the pull path either. On containerd v1 nodes, however, the takeover restarts containerd node by node, and enabling `mode: Managed` in the next step restarts it again (see [Does the migration restart containerd?](/modules/registry/faq.html#does-the-migration-restart-containerd)).
 
-1. To get in-cluster caching back, set [`mode: Managed`](/modules/registry/configuration.html#parameters-mode) with [`storage.cache: true`](/modules/registry/configuration.html#parameters-storage-cache) and the same external registry. Note that the cache of the current implementation is built differently from `Proxy` mode of the previous implementation: a single store with replicas on the [master nodes](../../../glossary.html#master-node) instead of a proxy on every node. Before enabling it on a cluster with little free disk space on the master nodes, read [how the cache is filled and cleaned up](/modules/registry/faq.html#the-cache-keeps-growing-what-reclaims-it).
+1. To get in-cluster caching back, set [`mode: Managed`](/modules/registry/configuration.html#parameters-mode) with [`storage.cache: true`](/modules/registry/configuration.html#parameters-storage-cache) and the same external registry. Note that the cache of the current implementation is built differently from `Proxy` mode of the v1 implementation: a single store with replicas on the [master nodes](../../../glossary.html#master-node) instead of a proxy on every node. Before enabling it on a cluster with little free disk space on the master nodes, read [how the cache is filled and cleaned up](/modules/registry/faq.html#the-cache-keeps-growing-what-reclaims-it).
 
 ### Migrating an air-gapped cluster from Local mode
 
-In `Local` mode of the previous implementation, the cluster has no external image registry — its role is played by a registry inside the cluster itself. So the standard migration procedure does not work here, since it goes through `Unmanaged` mode, where every node pulls images directly from an external registry, and such a cluster has nowhere to pull them from.
+In `Local` mode of the v1 implementation, the cluster has no external image registry — its role is played by a registry inside the cluster itself. So the standard migration procedure does not work here, since it goes through `Unmanaged` mode, where every node pulls images directly from an external registry, and such a cluster has nowhere to pull them from.
 
 An external registry has to be connected to the cluster for the duration of the migration. It runs in the same cluster, but outside the DP namespaces. The cluster is switched to it and upgraded, and once the registry of the current implementation is filled with images, the temporary registry is removed.
 
@@ -1072,7 +645,7 @@ Migration procedure:
    d8 k -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
    ```
 
-1. Upgrade the cluster to the release with the current implementation. The handover happens on the next reconciliation, and the cluster keeps pulling images from the temporary registry throughout.
+1. Upgrade the cluster to DP 1.78. The handover happens on the next reconciliation, and the cluster keeps pulling images from the temporary registry throughout. On containerd v1 nodes the takeover restarts containerd node by node, and enabling `mode: Managed` in the next step restarts it again (see [Does the migration restart containerd?](/modules/registry/faq.html#does-the-migration-restart-containerd)).
 1. Enable the current implementation: set [`mode: Managed`](/modules/registry/configuration.html#parameters-mode) with [`storage.cache: true`](/modules/registry/configuration.html#parameters-storage-cache), specify the temporary registry as [`primary.upstream`](/modules/registry/configuration.html#parameters-primary-upstream) — **and add [`storage.source`](/modules/registry/latest/configuration.html#parameters-storage-source) in the same edit** (without it, the next step is rejected). The registry of the current implementation uses the same host path that `Local` used, so the images already on disk are not downloaded again.
 1. Wait until the storage reports that it holds the whole image set (`phase: Ready` and `safeToDropUpstream: true`), and remove `primary.upstream` from the `registry` ModuleConfig. The cluster is isolated again — now on the current implementation:
 
@@ -1080,12 +653,14 @@ Migration procedure:
    d8 k get registrystorage registry -o jsonpath='{.status.phase} {.status.safeToDropUpstream}{"\n"}'
    ```
 
+   Removing the upstream restarts the registry, and the RegistryStorage resource may briefly report `Failed`: this is expected, wait for it to return to `Ready`.
+
 1. Delete the temporary registry and reclaim its disk space.
 
 ## Migration to registry management format using the registry module
 
 {% alert level="info" %}
-This procedure moves a cluster from the deprecated format (without the `registry` module, configured only via `InitConfiguration`) to the **previous implementation** of the module. If your cluster already uses the previous implementation and you want to move straight to the current one, see the ["Migrating from the previous implementation to the current one"](#migrating-from-the-previous-implementation-to-the-current-one) section.
+This procedure applies to DP 1.77 and earlier only: it moves a cluster from the deprecated format (without the `registry` module, configured only via `InitConfiguration`) to the **v1 implementation** of the module, which DP 1.78 no longer contains. It is not a step of the migration to the current implementation: a cluster in the deprecated format needs no preparation for the upgrade to DP 1.78. See the ["Migrating from the v1 implementation to the current one"](#migrating-from-the-v1-implementation-to-the-current-one) section.
 {% endalert %}
 
 During the migration, containerd v1 will be switched to the new registry configuration scheme.
@@ -1138,7 +713,7 @@ If containerd v1 is used as the container runtime, you can choose one of the fol
            license: <LICENSE_KEY> # Replace with your license key.
    ```
 
-1. Wait for the switch to complete. Example [status output](#checking-the-registry-mode-switch-status-in-the-previous-implementation):
+1. Wait for the switch to complete. Example [status output](#checking-the-registry-mode-switch-status-in-the-v1-implementation):
 
    ```yaml
    conditions:
@@ -1247,7 +822,7 @@ If you need to add configurations for an additional image repository, refer to t
            license: <LICENSE_KEY> # Replace with your license key.
    ```
 
-1. After applying, wait for the following message in the [switch status](#checking-the-registry-mode-switch-status-in-the-previous-implementation):
+1. After applying, wait for the following message in the [switch status](#checking-the-registry-mode-switch-status-in-the-v1-implementation):
 
    Example output:
 
@@ -1301,7 +876,7 @@ If you need to add configurations for an additional image repository, refer to t
        [ -f "$file" ] && rm -f "$file"
    ```
 
-1. After removing the old configurations, make sure that the switch has resumed. Example of the [switch status](#checking-the-registry-mode-switch-status-in-the-previous-implementation):
+1. After removing the old configurations, make sure that the switch has resumed. Example of the [switch status](#checking-the-registry-mode-switch-status-in-the-v1-implementation):
 
    ```yaml
    conditions:
@@ -1313,7 +888,7 @@ If you need to add configurations for an additional image repository, refer to t
      type: ContainerdConfigPreflightReady
    ```
 
-1. Wait for the switch to complete. Example of the [switch status](#checking-the-registry-mode-switch-status-in-the-previous-implementation):
+1. Wait for the switch to complete. Example of the [switch status](#checking-the-registry-mode-switch-status-in-the-v1-implementation):
 
    ```yaml
    conditions:
@@ -1373,7 +948,7 @@ If you need to add configurations for an additional image repository, refer to t
            license: <LICENSE_KEY> # Replace with your license key.
    ```
 
-1. Check the switch status using the [instruction](#checking-the-registry-mode-switch-status-in-the-previous-implementation). Example output:
+1. Check the switch status using the [instruction](#checking-the-registry-mode-switch-status-in-the-v1-implementation). Example output:
 
    ```yaml
    conditions:
@@ -1403,7 +978,7 @@ If you need to add configurations for an additional image repository, refer to t
          mode: Unmanaged
    ```
 
-1. Check the switch status using the [instruction](#checking-the-registry-mode-switch-status-in-the-previous-implementation). Example output:
+1. Check the switch status using the [instruction](#checking-the-registry-mode-switch-status-in-the-v1-implementation). Example output:
 
    ```yaml
    conditions:
@@ -1472,7 +1047,7 @@ If you need to add configurations for an additional image repository, refer to t
    d8 k -n d8-system delete secret registry-bashible-config
    ```
 
-1. After deletion, wait for the switch to complete. Use the [instruction](#checking-the-registry-mode-switch-status-in-the-previous-implementation) to track the progress. Example output:
+1. After deletion, wait for the switch to complete. Use the [instruction](#checking-the-registry-mode-switch-status-in-the-v1-implementation) to track the progress. Example output:
 
    ```yaml
    conditions:
@@ -1502,9 +1077,9 @@ If you need to add configurations for an additional image repository, refer to t
      version: 1
    ```
 
-## Checking the registry mode switch status in the previous implementation
+## Checking the registry mode switch status in the v1 implementation
 
-The status of the [DP component registry](../../../glossary.html#component-registry) mode switch in the previous implementation can be retrieved using the following command:
+The status of the [DP component registry](../../../glossary.html#component-registry) mode switch in the v1 implementation can be retrieved using the following command:
 
 ```bash
 d8 k -n d8-system -o yaml get secret registry-state | yq -C -P '.data | del .state | map_values(@base64d) | .conditions = (.conditions | from_yaml)'

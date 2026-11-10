@@ -27,6 +27,7 @@ Deckhouse Platform размещает данные разных типов в о
 * `/var/lib/deckhouse/stronghold/` — хранилище данных [Stronghold](/products/stronghold/) (если включён соответствующий модуль);
 * `/var/log/pods/` — хранилище логов подов;
 * `/opt/deckhouse/` — служебные компоненты Deckhouse Platform, такие как kubelet, containerd, статические утилиты (например, `lsblk`) и т. д.;
+* `/opt/deckhouse/registry/` (`/var/lib/deckhouse/registry/`, если у NodeGroup master-узлов `systemType: DeckhouseEngine`) — хранилище модуля [`registry`](/modules/registry/), есть только на master-узлах. В нём находится внутрикластерный кеш ([`storage.cache`](/modules/registry/configuration.html#parameters-storage-cache)) или, в реализации v1 (Deckhouse Platform до версии 1.77 включительно), данные режимов `Proxy` и `Local`. При выключении кеша данные намеренно сохраняются (подробнее — в разделе [об удалении оставшихся данных кеша](/modules/registry/faq.html#как-удалить-с-узла-оставшиеся-данные-кеша)). Сколько места нужно хранилищу, описано [ниже](#хранилище-модуля-registry-на-master-узлах);
 * `/opt/local-path-provisioner/` — каталог для хранения данных при использовании [локального хранилища Local Path Provisioner](../admin/configuration/storage/sds/local-path-provisioner.html). Каталог задаётся в обязательном параметре `spec.path` LocalPathProvisioner, [примеры конфигурации](../admin/configuration/storage/sds/local-path-provisioner.html#примеры-ресурсов-localpathprovisioner) используют `/opt/local-path-provisioner`.
 
 ## Рекомендации по объёму дискового пространства
@@ -54,7 +55,9 @@ Deckhouse Platform размещает данные разных типов в о
       <td>1</td>
     </tr>
     <tr>
-      <td><code>/opt</code></td>
+      <td><code>/opt</code>
+      <p style="font-size: 0.9em; color: #666;">Без учёта хранилища модуля <code>registry</code>: внутрикластерного кеша или режимов <code>Proxy</code> и <code>Local</code> реализации v1 (<a href="#хранилище-модуля-registry-на-master-узлах">подробнее...</a>).</p>
+      </td>
       <td>1</td>
     </tr>
     <tr>
@@ -185,6 +188,19 @@ spec:
 Deckhouse Platform имеет встроенную [систему сканирования образов на уязвимости](../admin/configuration/security/scanning.html) на базе [Trivy](https://github.com/aquasecurity/trivy), которая сканирует все контейнерные образы, используемые в подах кластера. Для сканирования используются как публичные [базы уязвимостей](../glossary.html#vulnerability-database), так и обогащённые данные из Astra Linux, ALT Linux и РЕД ОС. Суммарный объём занимаемого базами дискового пространства составляет 5 ГБ, поэтому его необходимо учитывать при выборе конфигурации разделов диска.
 
 Базы данных хранятся на системных узлах кластера, а в случае, если такие узлы в кластере отсутствуют, базы будут расположены на worker-узле.
+
+### Хранилище модуля registry на master-узлах
+
+Таблица для master-узлов выше не учитывает хранилище внутрикластерного кеша модуля [`registry`](/modules/registry/). Если кеш включён ([`storage.cache`](/modules/registry/configuration.html#parameters-storage-cache)), на каждом master-узле есть своя копия хранилища в `/opt/deckhouse/registry` (`/var/lib/deckhouse/registry`, если у NodeGroup master-узлов `systemType: DeckhouseEngine`), и на файловой системе, где находится этот каталог, нужно дополнительное место:
+
+- под объём хранилища, заданный в [`storage.size`](/modules/registry/configuration.html#parameters-storage-size): закладывайте три релиза набора образов, который использует кластер (развёрнутый, предыдущий и следующий), вместе с его модулями и каталогом модулей;
+- под резерв, который хранилище всегда оставляет на этой файловой системе свободным для узла. Из-за резерва файловая система должна быть заметно больше `storage.size`, в том числе когда под хранилище выделен отдельный диск.
+
+В каталог хранилища рекомендуется смонтировать отдельный диск: если хранилище делит диск с etcd, etcd замедляется, пока кеш заполняется. Без отдельного диска место нужно выделить на файловой системе, где находится каталог хранилища (если у NodeGroup master-узлов `systemType: DeckhouseEngine` — на той, где находится `/var/lib/deckhouse`). Если `/opt` — отдельный раздел размером по таблице выше (1 ГБ), хранилище в него не поместится.
+
+Режимы `Proxy` и `Local` реализации v1 тоже хранят данные в `/opt/deckhouse/registry`.
+
+Подробнее о расчёте объёма — в разделе [«Требования к использованию модуля»](/modules/registry/#требования-к-использованию-модуля) документации модуля `registry`.
 
 ## Если настроены лимиты по ресурсам
 

@@ -5,10 +5,10 @@ description: "How a Deckhouse Platform cluster pulls container images: through a
 
 The module is used to manage the pull paths for container images of Deckhouse Platform (DP) components, and for images from additional registries (vendor or your own).
 
-The current and previous implementations of the module are described below.
+The current implementation of the module and the v1 implementation, used in DP up to and including 1.77, are described below.
 
 {% alert level="info" %}
-A cluster where the previous implementation of this module has never run uses the current one right away. A cluster where the previous implementation has run keeps using it until it is switched to the `Unmanaged` state, after which the migration completes on its own. The process is described in [How does the migration to the registry module work](faq.html#how-does-the-migration-to-the-registry-module-work).
+A cluster where the v1 implementation of this module has never run uses the current one right away. A cluster where the v1 implementation has run keeps using it until it is switched to the `Unmanaged` state, after which the migration completes on its own. The process is described in [How does the migration to the registry module work](faq.html#how-does-the-migration-to-the-registry-module-work).
 {% endalert %}
 
 ## Current implementation
@@ -94,7 +94,7 @@ A replica serves on port `4281/TCP` of its control-plane node: the agents of eve
 That address (which agents use to reach a replica) takes effect in two steps, and the order matters. Nodes are given it as soon as
 the module starts managing the pull path, through the same bashible rollout that installs the
 agent. The image references of the platform's own components move only after every node's agent
-has applied the configuration it was given: nothing resolves this address except the agent,
+has applied the configuration it was given: no node resolves this address except through the agent,
 so re-rendering the cluster onto it any earlier would point every workload at something that
 cannot be pulled yet. Until then, references keep naming the registry the cluster was
 installed with — which is also where they return if the module is set to `Unmanaged` or
@@ -117,16 +117,28 @@ disk degrades etcd while the cache is being filled.
 
 ##### The expected image set
 
-The cache holds the expected image set: the images of the deployed DP release and of the previous one (for a rollback), the images of the modules the cluster runs, and the catalogue of modules the module sources offer. Updates the cluster lists as pending — of DP and of modules — are copied too, ahead of time: the replicas receive an update before it is deployed, in an air-gapped cluster as soon as `d8 mirror push` has put it into the store. An update the source does not hold yet does not hold the cache back; it is copied when it is deployed at the latest. The replicas copy only while one of them is short of the set or a pending update has appeared; after that, nothing is copied until the set changes again.
+The cache holds the expected image set: the images of the deployed DP release and of the previous one (for a rollback), the images of the modules the cluster runs, and the catalog of modules the module sources offer. Updates the cluster lists as pending — of DP and of modules — are copied too, ahead of time: the replicas receive an update before it is deployed, in an air-gapped cluster as soon as `d8 mirror push` has put it into the store. An update the source does not hold yet does not hold the cache back; it is copied when it is deployed at the latest. The replicas copy only while one of them is short of the set or a pending update has appeared; after that, nothing is copied until the set changes again.
+
+##### Replication
+
+The followers copy from the leader's read port, the one the nodes pull through. A follower writes only into its own store, through its own write port, and no replica uses another replica's write port, so between control-plane nodes replication needs only the read port. The leader's write port still has to be reachable from the nodes that run the ingress controller: the publication endpoint forwards `d8 mirror push` to it (see [Air-gapped clusters](#air-gapped-clusters)). What a follower can get from the leader's read port depends on whether an upstream is set:
+
+- With an upstream, the leader's read port is a pull-through cache for the upstream's images: an image the leader does not hold yet, it fetches from the upstream to answer the follower, and keeps. A follower therefore does not wait for the leader to finish filling. An image that a replication pass still leaves missing (`pending_on_the_leader` in the syncer's `the replication finished` log line) is one the leader has not got yet: for example, a module from another module source, which the leader fills from that source's own registry rather than through the upstream, or an image the upstream could not serve at that moment. A later pass picks it up.
+- Without an upstream, the leader serves only what it holds. An image missing on the leader is missing at the source: `d8 mirror push` has not brought it yet.
+
+Only the copy ahead of pending updates is rate-limited: it reads from its source at no more than 16 MiB/s, so that it does not take a control-plane node's CPU away from etcd and the API server. The leader's fill of the expected set and the followers' replication of it are not limited: until a store holds the set, nodes pull through the upstream, and a follower without the set is a replica the cluster cannot fall back on (in an air-gapped cluster, there is nothing else to fall back on). The followers replicate independently of each other, so all of them read from the leader at the same time, each copying several layers at once, on top of the nodes' own pulls. None of this is configurable in the ModuleConfig.
 
 ##### Leader election
 
-Only a replica that already holds the whole expected image set can become the leader. The replica currently holding the lease steps aside once the expected set appears on another replica. A replica that does not hold the full expected image set cannot become the leader.
+The leader fills the store and is the source the other replicas copy from, so the lease is not handed out by a plain election:
 
-This rules out problems when the cluster goes air-gapped. If a replica without the full expected image set could become the leader, an air-gapped cluster could get stuck: a `d8 mirror push` request would land on it (because the ingress picked it), and:
+- When some replica holds the whole expected image set, a leader that cannot complete the set by itself steps aside for that replica. A leader cannot complete the set by itself when there is no upstream, when its last pass failed, when its store refuses writes, or when it has stopped renewing the lease.
+- A leader that is still completing the set from the upstream keeps the lease even if a follower finishes first: the follower copies from the leader, and moving the lease would gain nothing.
+- While no replica holds the whole set, as in a new cluster, the lease does not move: every move would start the fill over on another replica. If there is no leader at all, the lease goes to the replica that holds the most verified images; ties are broken by node name. A replica whose registry does not answer or whose disk refuses writes is passed over, and so is one whose store is out of room while another replica has room. A failed pass alone does not pass a replica over: what it holds is still counted from its store.
 
-- the other replicas could not replicate the expected image set (since the leader does not have it);
-- the leader could not obtain the full image set either (since the cluster is air-gapped).
+So an incomplete replica can be the leader, either while no replica is full or while it is filling from the upstream. The fields that show this are described in the [FAQ](faq.html#how-do-i-check-the-state-of-the-in-cluster-cache).
+
+The rule that a full replica takes over matters most in an air-gapped cluster. There the leader gets images only from `d8 mirror push`, which always lands on the leader, and the followers copy only what the leader holds. An incomplete leader beside a full follower (for example, a leader whose store was lost) could not complete the set, the followers would replicate its gaps, and the images on the full replica would reach nobody.
 
 A replica whose node has been reported unreachable for a minute (about two minutes after the node stops responding) is not counted in the election, so the replicas that are left do not wait for a leader whose node is gone. A replica whose registry stops answering or whose disk stops accepting writes reports an error and hands the lease over to a replica that holds the full expected image set, if there is one; otherwise it keeps the lease and only reports the error.
 
@@ -156,15 +168,18 @@ Do not delete the pod to hurry this along. The new pod pulls its images from the
 
 #### Air-gapped clusters
 
-If no upstream is set in [`primary.upstream`](configuration.html#parameters-primary-upstream), the in-cluster cache is the only source of images, and
-[`d8 mirror push`](/products/kubernetes-platform/documentation/v1/cli/d8/) is the only way into the registry. It arrives through a publication endpoint that requires
-a client certificate from the ingress in addition to credentials: this is the one path that can replace an image, and
-a leaked password must not be enough to use it. A push sent straight to a control-plane node, around the endpoint, is refused on either port of the cache. For what protects each port, including on a replica whose pod has not been replaced yet after an update, see [What protects the ports on control-plane nodes](#what-protects-the-ports-on-control-plane-nodes).
+If no upstream is set in [`primary.upstream`](configuration.html#parameters-primary-upstream), the in-cluster cache is the only source of images, and images get into it only with
+[`d8 mirror push`](/products/kubernetes-platform/documentation/v1/cli/d8/).
 
-The endpoint is not limited to air-gapped clusters: it exists in every cluster that has image caching enabled, so that
-images can be pushed into the store before the upstream is removed.
+`d8 mirror push` writes through the publication endpoint: the `registry-push` Ingress in the `d8-system` namespace, at the `registry` domain built from [publicDomainTemplate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate).
+The endpoint exists whenever the cache is enabled, `publicDomainTemplate` is set and the `cert-manager` module is enabled, including while an upstream is set, so that the images can be pushed before the upstream is removed.
+A push always lands on the leader; while there is no leader, it is refused.
 
-It also needs [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) to be set and the `cert-manager` module to be enabled. If either is missing, an air-gapped cluster has no way to write into the store: `4281/TCP` refuses writes, and `4283/TCP` admits only the ingress controller and the cache itself. To bring images in, either set `publicDomainTemplate` and enable `cert-manager` (the endpoint appears on the next run of the module), or set [`primary.upstream`](configuration.html#parameters-primary-upstream) to a registry the cluster can reach that holds the images, let the cache fill from it, and remove the upstream again.
+This is the one path that can replace an image, so a push needs both credentials with write access — the account in the `registry-storage-push` Secret in `d8-system`, meant for `d8 mirror push` — and the client certificate the ingress presents to the storage: a leaked password alone is not enough.
+The certificate is also what tells the storage that the client address passed by the ingress can be trusted. To limit who can reach the endpoint, set [`whitelistSourceRanges`](configuration.html#parameters-whitelistsourceranges).
+A push sent straight to a control-plane node, around the endpoint, is refused on either port of the cache. For what protects each port, including on a replica whose pod has not been replaced yet after an update, see [What protects the ports on control-plane nodes](#what-protects-the-ports-on-control-plane-nodes).
+
+If `publicDomainTemplate` is not set or the `cert-manager` module is disabled, an air-gapped cluster has no way to write into the store: `4281/TCP` refuses writes, and `4283/TCP` admits only the ingress controller and the cache itself. To bring images in, either set `publicDomainTemplate` and enable `cert-manager` (the endpoint appears on the next run of the module), or set [`primary.upstream`](configuration.html#parameters-primary-upstream) to a registry the cluster can reach that holds the images, let the cache fill from it, and remove the upstream again.
 
 ##### Installing from a bundle
 
@@ -215,33 +230,36 @@ Before enabling the `registry` module to manage the pull paths for container ima
 - The in-cluster cache uses disks on the control-plane nodes, in static and cloud clusters alike. In a cloud
   cluster that is the control-plane node's root disk unless another one is mounted at the cache directory
   (`/var/lib/deckhouse/registry` when the master NodeGroup has `systemType: DeckhouseEngine`, `/opt/deckhouse/registry`
-  otherwise), so size that disk for [`storage.size`](configuration.html#parameters-storage-size) on top of what the node
-  itself uses.
+  otherwise). That disk must hold [`storage.size`](configuration.html#parameters-storage-size) plus the reserve the
+  store keeps free for the node, on top of what the node itself uses. Size `storage.size` for three releases of the
+  image set together with the modules and the module catalog; see
+  [What happens when the cache's store is full?](faq.html#what-happens-when-the-caches-store-is-full).
 
-## The previous implementation
+## The v1 implementation
 
-The previous implementation of the module is described below; it is planned to be phased out in the future. It is kept
+The v1 implementation of the module, used in DP up to and including 1.77, is described below. DP 1.78 no longer contains it; the description is kept
 because clusters are still running on it, and moving to the new configuration is work for the administrator that has to be
 done before the cluster is upgraded, not after.
 
 {% alert level="danger" %}
-Prepare the cluster BEFORE upgrading to this release: the upgrade is blocked while the cluster uses the previous
+Prepare the cluster BEFORE upgrading to DP 1.78: the upgrade is blocked while the cluster uses the v1
 implementation and the module is running in `Proxy` or `Local` mode, or in `Direct` mode without a configured
 `registry` ModuleConfig.
 {% endalert %}
 
-Installing DP or upgrading to this release does not create any objects of the previous implementation. Switching the
-previous implementation's modes is performed by the code of the previous release — so all preparation happens before moving to this release. Preparation has the following specifics:
+Installing DP 1.78 or later, or upgrading to it, does not create any objects of the v1 implementation. A new
+installation with `Proxy` or `Local` in the `deckhouse` ModuleConfig is refused by the installer: configure this module
+instead. The v1 implementation's modes are switched only by the code of DP 1.77 and earlier — so all preparation happens before upgrading to DP 1.78. Preparation has the following specifics:
 
-- If the cluster uses the previous implementation of the `registry` module running in `Proxy` mode, it must be switched to `Unmanaged` mode.
-- If a cluster with the previous implementation of the `registry` module is air-gapped (the module runs in `Local` mode), switching straight to `Unmanaged` mode does not work. Air-gapped clusters have a separate procedure, described in
+- If the cluster uses the v1 implementation of the `registry` module running in `Proxy` mode, it must be switched to `Unmanaged` mode.
+- If a cluster with the v1 implementation of the `registry` module is air-gapped (the module runs in `Local` mode), switching straight to `Unmanaged` mode does not work. Air-gapped clusters have a separate procedure, described in
 [How do I migrate an air-gapped cluster from Local mode](faq.html#how-do-i-migrate-an-air-gapped-cluster-from-local-mode).
-- If the cluster uses the previous implementation of the `registry` module running in `Direct` mode, no mode switch is needed — only this module's configuration, written
-before the upgrade. Its objects are kept deliberately — the previous release marks them to survive
-its own removal — and they keep serving the in-cluster address nodes pull through, until this module's agent has taken that address over. The procedure is described in
+- If the cluster uses the v1 implementation of the `registry` module running in `Direct` mode, no mode switch is needed — only this module's configuration, written
+before the upgrade. Its objects are kept deliberately — DP 1.77 marks them to survive
+the removal of the v1 implementation — and they keep serving the in-cluster address nodes pull through, until this module's agent has taken that address over. The procedure is described in
 [migrating from Direct mode](faq.html#how-do-i-migrate-from-direct-mode).
 
-In the previous implementation of the module, working with the registry is configured not through the module's own settings, but through the [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry), and it works as a state machine with four modes:
+In the v1 implementation of the module, working with the registry is configured not through the module's own settings, but through the [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry), and it works as a state machine with four modes:
 
 - `Direct` — direct access to an external registry through the fixed address
   `registry.d8-system.svc:5001/system/deckhouse`. The fixed address is what keeps Deckhouse
@@ -255,11 +273,11 @@ In the previous implementation of the module, working with the registry is confi
   non-configurable form, set at
   [installation](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo).
 
-Of the four previous-implementation modes listed above, two survive an upgrade to this release, for different reasons. `Unmanaged` is the
+Of the four v1 modes listed above, two survive an upgrade to DP 1.78, for different reasons. `Unmanaged` is the
 mode whose objects served nothing to begin with, so removing them takes nothing away, and the
 handover happens on its own. `Direct` survives because the address its nodes pull images
-through is also served by the `registry` module: the previous release marks the objects behind that address
-so that they outlive its own removal, and they keep serving it until the
+through is also served by the `registry` module: DP 1.77 marks the objects behind that address
+so that they outlive the removal of the v1 implementation, and they keep serving it until the
 agent takes it over — meaning such a cluster needs this module's configuration rather than a mode
 switch. Both paths are described in [how does the migration to the `registry` module work](faq.html#how-does-the-migration-to-the-registry-module-work). The two
 implementations never manage a cluster at the same time: whichever one is active decides what gets
@@ -269,16 +287,13 @@ created at all, so there is no state where both configure the same node.
 
 ### Mode switching restrictions
 
-The restrictions on switching modes in the previous implementation of the module are as follows:
+The restrictions on switching modes in the v1 implementation are as follows:
 
 - Changing registry parameters and switching modes is only available after the bootstrap phase
   is fully complete.
 - For the first switch, migrate the user's registry configurations first — the procedure is described in the
   [FAQ](faq.html).
 - Switching to the non-configurable `Unmanaged` mode is only available from `Unmanaged`.
-- Switching between `Local` and `Proxy` is only possible through an intermediate `Direct` or
-  `Unmanaged` mode. For example: `Local` → `Direct` → `Proxy`.
-- Bootstrap in `Local` and `Proxy` modes is supported only on static clusters.
 
 ### Direct mode architecture
 

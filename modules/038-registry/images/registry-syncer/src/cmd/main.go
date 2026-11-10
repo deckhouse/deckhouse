@@ -336,7 +336,8 @@ type options struct {
 
 // defaultCopyRateMiB bounds the background copy to what a control-plane node can spare while it
 // runs etcd and the API server: measured at 0.02-0.05 of a core per MiB/s, so about half a core.
-// A pending release, some 15 GiB, still arrives in under 20 minutes.
+// A whole set of 11.8 GB took some 12 minutes at this rate (see Loop.copier), and a pending release
+// copies only the layers the store does not hold yet.
 //
 // Background is the copy ahead, not the copy of the set the cluster runs — the leader's fill or a
 // follower's replication: until a store holds that, a node pulls through the upstream, and a follower

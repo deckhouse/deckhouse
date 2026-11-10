@@ -581,7 +581,7 @@ There are two ways to work with the DP container image registry:
 
 {% alert level="warning" %}
 - Before proceeding, complete the preparatory steps described in the [Pre-switch preparation](#pre-switch-preparation) section.
-- This switching method must be performed only in `Unmanaged` mode. Make sure that the cluster uses the `registry` module. ModuleConfig `deckhouse` must contain the registry parameters of the previous DP edition in `Unmanaged` mode. If this is not the case, perform the [migration to using the registry module](../registry/managing-interaction.html#migration-to-registry-management-format-using-the-registry-module) and switch the registry to `Unmanaged` mode.
+- This switching method must be performed only in `Unmanaged` mode. Make sure that the cluster uses the `registry` module. ModuleConfig `deckhouse` must contain the registry parameters of the previous DP edition in `Unmanaged` mode. If this is not the case, use the ["Switching without the registry module"](#switching-without-the-registry-module) section: DP 1.78 and later no longer contain the v1 implementation of the `registry` module, so a cluster cannot be moved to it.
 - This method is not applicable for managed Kubernetes (EKS, AKS, GKE).
 {% endalert %}
 

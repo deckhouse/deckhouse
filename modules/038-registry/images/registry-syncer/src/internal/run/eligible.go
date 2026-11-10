@@ -45,8 +45,9 @@ func MayLead(
 // controller's registry-push EndpointSlice follows the leader, so short of pushing the whole
 // set again nothing recovers on its own.
 //
-// So a full replica leads and anything else follows — unless nobody is full, which is where
-// every cluster starts, and then someone has to lead in order to begin filling at all.
+// So a full replica leads, unless the leader can still complete the set from the upstream; and
+// while nobody is full, which is where every cluster starts, whoever leads keeps leading, because
+// someone has to lead in order to begin filling at all.
 //
 // A pure function of the reported state, because leadership decided wrongly is expensive to
 // notice: the cluster keeps serving images throughout, and the damage shows up only as a

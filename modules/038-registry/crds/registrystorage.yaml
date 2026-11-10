@@ -320,9 +320,9 @@ spec:
                   description: |
                     The node currently holding the storage leader lease.
 
-                    Not a plain election: the lease is only stood for by a replica that holds the whole expected set, and a replica that holds it steps aside when another one does. Leadership is not a symmetric role — the leader is the replication source every follower copies from, and the one whose completeness gates going air-gap.
+                    Not a plain election. Leadership is not a symmetric role — the leader is the replication source every follower copies from, and the one whose completeness gates going air-gap. Once some replica holds the whole expected set, a leader that cannot complete the set by itself steps aside for it: one with no upstream, one whose last pass failed, one whose store refuses writes, or one that has stopped renewing the lease. A leader still completing the set from the upstream keeps the lease even if a follower finishes first. While no replica is full, which is where every cluster starts, the lease does not move; with no leader at all, it goes to the replica holding the most verified images.
 
-                    Without that condition an air-gapped cluster can stall. `d8 mirror push` arrives through the publication endpoint and lands on whichever replica the ingress chose, not necessarily the leader; an empty leader has no upstream to fill itself from, the followers replicate its emptiness, and the replica holding the images sits idle. The exception is a cluster where no replica is full yet, which is where every cluster starts — then somebody has to lead in order to begin filling.
+                    Without that rule an air-gapped cluster can stall. `d8 mirror push` arrives through the publication endpoint and always lands on the leader; an incomplete leader beside a full follower (for example, one whose store was lost) has no upstream to fill itself from, the followers replicate its gaps, and the replica holding the images sits idle.
                 replicas:
                   type: array
                   description: |
