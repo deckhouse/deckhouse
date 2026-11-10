@@ -162,10 +162,23 @@ fields when it decides who may write the provider. Rendered right after the conn
       burst: {{ .perIP.burst | default 10 }}
   {{- end }}
   {{- end }}
-  {{- with $context.Values.userAuthn.staticUsers2FA }}
+  {{- with $context.Values.userAuthn.twoFactor }}
   {{- if .enabled }}
   {{- /* The authenticator ID is a contract: the user-authn controller and the transitional Dex patch keep the
-         TOTP secret of a user under mfaSecrets["totp"]. Patch 210 lets MFA work without sessions. */}}
+         TOTP secret of a user under mfaSecrets["totp"]. Patch 210 lets MFA work without sessions. Dex binds
+         the authenticator to the type of a connector, not to a provider, so every provider of a listed type
+         asks for the code. The validation of the settings and of the DexProvider refuses a listed type with
+         enableBasicAuth, which has no page for a code. */}}
+  {{- $connectorTypes := dict "Local" "local" "LDAP" "ldap" "Crowd" "atlassian-crowd" }}
+  {{- /* The webhooks refuse the combination too, but each compares the object with the snapshot of the others, and
+         one apply of both may pass them. The values here are the settings after the conversion of their version. */}}
+  {{- $covered := .providerTypes | default (list "Local") }}
+  {{- range $provider := $context.Values.userAuthn.internal.providers }}
+    {{- $basicAuth := or (and (eq $provider.type "LDAP") (dig "ldap" "enableBasicAuth" false $provider)) (and (eq $provider.type "Crowd") (dig "crowd" "enableBasicAuth" false $provider)) }}
+    {{- if and $basicAuth (has $provider.type $covered) }}
+      {{- fail (printf "twoFactor asks the users of the %s providers for the second factor, which Basic Authentication to the Kubernetes API cannot give: turn enableBasicAuth off in the DexProvider %q or remove %s from twoFactor.providerTypes" $provider.type $provider.id $provider.type) }}
+    {{- end }}
+  {{- end }}
   mfa:
     authenticators:
     - id: totp
@@ -173,7 +186,9 @@ fields when it decides who may write the provider. Rendered right after the conn
       config:
         issuer: {{ .issuerName | default "Deckhouse" | quote }}
       connectorTypes:
-      - local
+      {{- range $type := (.providerTypes | default (list "Local")) }}
+      - {{ index $connectorTypes $type }}
+      {{- end }}
     defaultMFAChain:
     - totp
   {{- end }}

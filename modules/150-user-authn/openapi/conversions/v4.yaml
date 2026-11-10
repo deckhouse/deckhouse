@@ -1,0 +1,6 @@
+version: 4
+conversions:
+  - if has("staticUsers2FA") then .twoFactor = .staticUsers2FA | del(.staticUsers2FA) end
+description:
+  ru: "Параметр `staticUsers2FA` переименован в `twoFactor`. Теперь второй фактор можно включить не только для локальных пользователей."
+  en: "The `staticUsers2FA` parameter is renamed `twoFactor`. The second factor can now be turned on for more than the local users."

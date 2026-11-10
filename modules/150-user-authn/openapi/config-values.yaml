@@ -1,4 +1,4 @@
-x-config-version: 3
+x-config-version: 4
 type: object
 properties:
   publishAPI:
@@ -277,24 +277,48 @@ properties:
             description: |
               Maximum bucket size defining the allowed number of failed authentication attempts from a single IP address
               before the throttling activates.
-  staticUsers2FA:
+  twoFactor:
     type: object
     default: {}
     required: [enabled]
     description: |
-      Two-factor authentication for local users.
+      Two-factor authentication (2FA) with a one-time code (TOTP) from an authenticator application.
+
+      The parameter replaces `staticUsers2FA` of the earlier versions of the settings, which covered local users only. The module converts `staticUsers2FA` to this parameter.
     properties:
       enabled:
         type: boolean
         default: false
         description: |
-          If set to `true`, the local users will be required to use two-factor authentication (2FA) when logging in.
+          If set to `true`, the users of the providers listed in `providerTypes` will be required to use two-factor authentication (2FA) when logging in.
       issuerName:
         type: string
         default: "Deckhouse"
         description: |
           The issuer name for the two-factor authentication (2FA) tokens.
           This name is visible to users in the 2FA application (e.g., Google Authenticator).
+      providerTypes:
+        type: array
+        default: [Local]
+        minItems: 1
+        uniqueItems: true
+        description: |
+          Types of the providers whose users have to pass the second factor:
+
+          * `Local`: The local users ([User](cr.html#user)).
+          * `LDAP`: The users of every [DexProvider](cr.html#dexprovider) of the `LDAP` type.
+          * `Crowd`: The users of every DexProvider of the `Crowd` type.
+
+          A user enrolls the authenticator at the first sign-in after the second factor is turned on. Until then, anyone who knows the password can enroll their own device, so ask the users to sign in right after the switch.
+
+          Adding a type does not end the refresh tokens or the Dex browser sessions issued before it. A refresh token keeps issuing tokens without the code until it expires, and a browser session created earlier passes without the code. After enabling 2FA, run a UserOperation of type `Logout` for the users of the providers of the listed types.
+
+          The second factor is not possible together with Basic Authentication to the Kubernetes API, which has no page for a code. A provider of a listed type cannot have `enableBasicAuth: true`. The module refuses a DexProvider that would have both, and refuses this setting while such a DexProvider exists.
+
+          The OIDC, SAML, GitHub, GitLab and Bitbucket Cloud providers are not on the list. The identity provider handles the second factor for them.
+        items:
+          type: string
+          enum: [Local, LDAP, Crowd]
   idTokenTTL:
     type: string
     pattern: '^([0-9]+h)?([0-9]+m)?([0-9]+s)?$'

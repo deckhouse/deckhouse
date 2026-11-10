@@ -351,7 +351,7 @@ spec:
 
 2FA позволяет повысить уровень безопасности, требуя ввести код из приложения-аутентификатора TOTP (например, Google Authenticator) при входе.
 
-Для настройки 2FA используйте поле [`staticUsers2FA`](/modules/user-authn/configuration.html#parameters-staticusers2fa) в конфигурации модуля `user-authn`:
+Для настройки 2FA используйте поле [`twoFactor`](/modules/user-authn/configuration.html#parameters-twofactor) в конфигурации модуля `user-authn`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -359,10 +359,10 @@ kind: ModuleConfig
 metadata:
   name: user-authn
 spec:
-  version: 3
+  version: 4
   enabled: true
   settings:
-    staticUsers2FA:
+    twoFactor:
       enabled: true
       issuerName: "awesome-app"
 ```

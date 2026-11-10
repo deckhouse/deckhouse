@@ -74,7 +74,7 @@ The [`kubeconfigGenerator`](configuration.html#parameters-kubeconfiggenerator) p
 The module ships Dex with additional capabilities:
 
 * Groups for static users (the [Group](cr.html#group) object)
-* Two-factor authentication (2FA) for static users (the [`staticUsers2FA`](configuration.html#parameters-staticusers2fa) parameter)
+* Two-factor authentication (2FA) for local users and the users of LDAP and Crowd providers (the [`twoFactor`](configuration.html#parameters-twofactor) parameter)
 * A password policy for static users: complexity, password history, rotation and lockout after failed sign-in attempts (the [`passwordPolicy`](configuration.html#parameters-passwordpolicy) parameter)
 * A forced password change at the next sign-in after an administrator resets the password
 * Lockout after failed sign-in attempts for LDAP and Atlassian Crowd users (the [`passwordPolicy.lockout.applyToConnectors`](configuration.html#parameters-passwordpolicy-lockout-applytoconnectors) parameter)

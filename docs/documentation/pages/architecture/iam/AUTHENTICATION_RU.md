@@ -41,7 +41,7 @@ Dex ограничивает частоту неудачных попыток в
 В DP используется Dex с дополнительными возможностями:
 
 * группы [статических пользователей](../../glossary.html#static-user) (объект [Group](/modules/user-authn/cr.html#group));
-* двухфакторная аутентификация (2FA) статических пользователей (параметр [`staticUsers2FA`](/modules/user-authn/configuration.html#parameters-staticusers2fa));
+* двухфакторная аутентификация (2FA) локальных пользователей и пользователей провайдеров LDAP и Atlassian Crowd (параметр [`twoFactor`](/modules/user-authn/configuration.html#parameters-twofactor));
 * парольная политика для статических пользователей: сложность, история паролей, ротация и блокировка после неудачных попыток входа (параметр [`passwordPolicy`](/modules/user-authn/configuration.html#parameters-passwordpolicy));
 * принудительная смена пароля при следующем входе после сброса пароля администратором;
 * блокировка после неудачных попыток входа для пользователей LDAP и Atlassian Crowd (параметр [`passwordPolicy.lockout.applyToConnectors`](/modules/user-authn/configuration.html#parameters-passwordpolicy-lockout-applytoconnectors));

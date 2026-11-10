@@ -182,7 +182,7 @@ spec:
             shellArgs: ["-c"]
             content: |
               bash ../../tests/common/scripts/expect-denied.sh manifests/denied/useroperation-target-reset.yaml \
-                'spec.target is only supported for Lock, Unlock, and Logout operations; ResetPassword, Reset2FA, and RequirePasswordChange apply to local users (spec.user) only.'
+                'spec.target is only supported for Lock, Unlock, Logout, and Reset2FA operations; ResetPassword and RequirePasswordChange apply to local users (spec.user) only.'
 
     - name: dex-authenticator-rules
       description: The DexAuthenticator webhook and CEL rules refuse invalid authenticators

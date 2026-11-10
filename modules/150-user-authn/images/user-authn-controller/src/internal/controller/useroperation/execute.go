@@ -213,11 +213,11 @@ func (r *Reconciler) executeRequirePasswordChange(ctx context.Context, op operat
 }
 
 func (r *Reconciler) executeReset2FA(ctx context.Context, op operation, now time.Time) (outcome, error) {
-	if op.Spec.User == "" {
-		return outcome{}, failed("Reset2FA requires spec.user; it is only supported for local users")
-	}
 	if op.Spec.Target != nil {
-		return outcome{}, failed("Reset2FA does not support an external target; it is only supported for local users")
+		return r.reset2FAExternal(ctx, op, now)
+	}
+	if op.Spec.User == "" {
+		return outcome{}, failed("Reset2FA requires spec.user or spec.target")
 	}
 
 	userPassword, found, err := r.lookupLocalPassword(ctx, op.Spec.User)
@@ -247,6 +247,31 @@ func (r *Reconciler) executeReset2FA(ctx context.Context, op operation, now time
 		return outcome{}, err
 	}
 	return r.logoutPair(ctx, op, pair, revocation.ReasonReset2FA)
+}
+
+// reset2FAExternal removes the second factor of a user of an external provider (LDAP, Atlassian Crowd), who
+// enrolled it at a sign-in through a provider with a second factor, and ends the sessions of the user, as the
+// reset of a local user does. The pair is the one spec.target names.
+func (r *Reconciler) reset2FAExternal(ctx context.Context, op operation, now time.Time) (outcome, error) {
+	target, err := r.findExternalTarget(ctx, op.Spec.Target)
+	if err != nil {
+		return outcome{}, err
+	}
+
+	r.log.Info("Resetting the second factor of an external user", append(operationLogKV(op),
+		"connectorID", target.pair.connectorID,
+		"userID", target.pair.userID,
+	)...)
+
+	// The old place goes first, as for a local user: a copy that read it before the reset would bring the
+	// secret back into the UserIdentity.
+	if _, err := r.deletePairSession(ctx, target.pair); err != nil {
+		return outcome{}, err
+	}
+	if err := r.resetIdentityMFA(ctx, target.pair, now); err != nil {
+		return outcome{}, err
+	}
+	return r.logoutPair(ctx, op, target.pair, revocation.ReasonReset2FA)
 }
 
 // deletePairSession deletes the OfflineSessions of the pair, the object named after the pair whose

@@ -74,7 +74,7 @@ OIDC-аутентификацию в `kube-apiserver` автоматически
 В модуле используется Dex с дополнительными возможностями:
 
 * группы статических пользователей (объект [Group](cr.html#group));
-* двухфакторная аутентификация (2FA) статических пользователей (параметр [`staticUsers2FA`](configuration.html#parameters-staticusers2fa));
+* двухфакторная аутентификация (2FA) локальных пользователей и пользователей провайдеров LDAP и Crowd (параметр [`twoFactor`](configuration.html#parameters-twofactor));
 * парольная политика для статических пользователей: сложность, история паролей, ротация и блокировка после неудачных попыток входа (параметр [`passwordPolicy`](configuration.html#parameters-passwordpolicy));
 * принудительная смена пароля при следующем входе после сброса пароля администратором;
 * блокировка после неудачных попыток входа для пользователей LDAP и Atlassian Crowd (параметр [`passwordPolicy.lockout.applyToConnectors`](configuration.html#parameters-passwordpolicy-lockout-applytoconnectors));

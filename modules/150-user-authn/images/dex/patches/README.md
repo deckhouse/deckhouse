@@ -264,7 +264,7 @@ Deckhouse runs with `skipApprovalScreen: true`.
 
 **Consumer in Deckhouse:** `UserAccount` (last login, second factor, lock for
 every provider), `UserOperation` `Lock` and `Unlock` (write `blockedUntil`),
-`staticUsers2FA` (rendered as `mfa.authenticators` without the sessions
+`twoFactor` (rendered as `mfa.authenticators` without the sessions
 switch), basic-auth-proxy (password grant).
 
 **Upstream status:** Deckhouse only: upstream keeps identities, MFA and the

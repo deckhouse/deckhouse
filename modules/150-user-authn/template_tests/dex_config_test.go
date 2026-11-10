@@ -112,8 +112,8 @@ var _ = Describe("Module :: user-authn :: helm template :: dex-config", func() {
 
 	Context("With 2FA", func() {
 		BeforeEach(func() {
-			hec.ValuesSet("userAuthn.staticUsers2FA.enabled", true)
-			hec.ValuesSet("userAuthn.staticUsers2FA.issuerName", "Deckhouse (Alpha)")
+			hec.ValuesSet("userAuthn.twoFactor.enabled", true)
+			hec.ValuesSet("userAuthn.twoFactor.issuerName", "Deckhouse (Alpha)")
 			hec.HelmRender()
 		})
 
@@ -142,9 +142,118 @@ var _ = Describe("Module :: user-authn :: helm template :: dex-config", func() {
 		})
 	})
 
+	Context("With 2FA for the users of LDAP and Crowd providers", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("userAuthn.twoFactor.enabled", true)
+			hec.ValuesSet("userAuthn.twoFactor.providerTypes", []string{"Local", "LDAP", "Crowd"})
+			hec.HelmRender()
+		})
+
+		It("Should bind the TOTP authenticator to the connector types of Dex", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			jsonConfig := renderedDexConfig(hec)
+
+			Expect(gjson.GetBytes(jsonConfig, "mfa.authenticators.0.connectorTypes").Value()).To(Equal([]any{"local", "ldap", "atlassian-crowd"}))
+		})
+	})
+
+	Context("With 2FA for the LDAP providers only", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("userAuthn.twoFactor.enabled", true)
+			hec.ValuesSet("userAuthn.twoFactor.providerTypes", []string{"LDAP"})
+			hec.HelmRender()
+		})
+
+		It("Should leave the local users without the second factor", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			jsonConfig := renderedDexConfig(hec)
+
+			Expect(gjson.GetBytes(jsonConfig, "mfa.authenticators.0.connectorTypes").Value()).To(Equal([]any{"ldap"}))
+		})
+	})
+
+	// The webhooks compare each object with a snapshot of the others, and one apply of both may pass them: the render
+	// refuses the combination too, on the settings after the conversion of their version.
+	Context("With 2FA for a type whose provider has Basic Authentication", func() {
+		for _, tc := range []struct {
+			name      string
+			types     []string
+			provider  string
+			wantError string
+		}{
+			{name: "LDAP covered", types: []string{"Local", "LDAP"}, provider: `
+- id: corp
+  type: LDAP
+  ldap: {host: ldap.example.com, enableBasicAuth: true}`, wantError: `twoFactor asks the users of the LDAP providers for the second factor, which Basic Authentication to the Kubernetes API cannot give: turn enableBasicAuth off in the DexProvider "corp"`},
+			{name: "Crowd covered", types: []string{"Crowd"}, provider: `
+- id: crowd
+  type: Crowd
+  crowd: {baseURL: https://crowd.example.com, clientID: id, clientSecret: secret, enableBasicAuth: true}`, wantError: `twoFactor asks the users of the Crowd providers`},
+			{name: "LDAP not covered", types: []string{"Local", "Crowd"}, provider: `
+- id: corp
+  type: LDAP
+  ldap: {host: ldap.example.com, enableBasicAuth: true}`},
+			{name: "LDAP covered without Basic Authentication", types: []string{"LDAP"}, provider: `
+- id: corp
+  type: LDAP
+  ldap: {host: ldap.example.com, enableBasicAuth: false}`},
+			{name: "OIDC with Basic Authentication", types: []string{"Local", "LDAP", "Crowd"}, provider: `
+- id: idp
+  type: OIDC
+  oidc: {issuer: https://idp.example.com, clientID: id, clientSecret: secret, enableBasicAuth: true}`},
+		} {
+			Context(tc.name, func() {
+				BeforeEach(func() {
+					hec.ValuesSet("userAuthn.twoFactor.enabled", true)
+					hec.ValuesSet("userAuthn.twoFactor.providerTypes", tc.types)
+					hec.ValuesSetFromYaml("userAuthn.internal.providers", tc.provider)
+					hec.HelmRender()
+				})
+
+				It("Should refuse the render only when the provider has Basic Authentication and its type is covered", func() {
+					if tc.wantError == "" {
+						Expect(hec.RenderError).ToNot(HaveOccurred())
+						return
+					}
+					Expect(hec.RenderError).To(HaveOccurred())
+					Expect(hec.RenderError.Error()).To(ContainSubstring(tc.wantError))
+				})
+			})
+		}
+
+		Context("with 2FA off", func() {
+			BeforeEach(func() {
+				hec.ValuesSet("userAuthn.twoFactor.enabled", false)
+				hec.ValuesSet("userAuthn.twoFactor.providerTypes", []string{"LDAP"})
+				hec.ValuesSetFromYaml("userAuthn.internal.providers", `
+- id: corp
+  type: LDAP
+  ldap: {host: ldap.example.com, enableBasicAuth: true}`)
+				hec.HelmRender()
+			})
+
+			It("Should render", func() {
+				Expect(hec.RenderError).ToNot(HaveOccurred())
+			})
+		})
+	})
+
+	Context("With the providers of 2FA listed but 2FA off", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("userAuthn.twoFactor.enabled", false)
+			hec.ValuesSet("userAuthn.twoFactor.providerTypes", []string{"LDAP"})
+			hec.HelmRender()
+		})
+
+		It("Should render no MFA", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			Expect(gjson.GetBytes(renderedDexConfig(hec), "mfa").Exists()).To(BeFalse())
+		})
+	})
+
 	Context("With 2FA and no issuer name", func() {
 		BeforeEach(func() {
-			hec.ValuesSet("userAuthn.staticUsers2FA.enabled", true)
+			hec.ValuesSet("userAuthn.twoFactor.enabled", true)
 			hec.HelmRender()
 		})
 

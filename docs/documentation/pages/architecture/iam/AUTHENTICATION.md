@@ -41,7 +41,7 @@ Dex also locks an account after failed sign-in attempts. Configure the lockout w
 DP ships Dex with additional capabilities:
 
 * Groups for [static users](../../glossary.html#static-user) (the [Group](/modules/user-authn/cr.html#group) object).
-* Two-factor authentication (2FA) for static users (the [`staticUsers2FA`](/modules/user-authn/configuration.html#parameters-staticusers2fa) parameter).
+* Two-factor authentication (2FA) for local users and for the users of LDAP and Atlassian Crowd providers (the [`twoFactor`](/modules/user-authn/configuration.html#parameters-twofactor) parameter).
 * A password policy for static users: complexity, password history, rotation and lockout after failed sign-in attempts (the [`passwordPolicy`](/modules/user-authn/configuration.html#parameters-passwordpolicy) parameter).
 * A forced password change at the next sign-in after an administrator resets the password.
 * Lockout after failed sign-in attempts for LDAP and Atlassian Crowd users (the [`passwordPolicy.lockout.applyToConnectors`](/modules/user-authn/configuration.html#parameters-passwordpolicy-lockout-applytoconnectors) parameter).

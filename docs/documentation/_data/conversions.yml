@@ -241,3 +241,9 @@ user-authn:
         ru: 'Значение `idTokenTTL` 6 часов и больше заменяется на `5h59m`: ключи подписи Dex ротируются каждые 6 часов.'
       conversions:
         - if (.idTokenTTL | type) == "string" and (.idTokenTTL | test("^([0-9]+h)?([0-9]+m)?([0-9]+s)?$")) and ((.idTokenTTL | capture("^((?<h>[0-9]+)h)?((?<m>[0-9]+)m)?((?<s>[0-9]+)s)?$") | ((.h // "0" | tonumber) * 3600 + (.m // "0" | tonumber) * 60 + (.s // "0" | tonumber))) >= 21600) then .idTokenTTL = "5h59m" end
+    - version: 4
+      description:
+        en: The `staticUsers2FA` parameter is renamed `twoFactor`. The second factor can now be turned on for more than the local users.
+        ru: Параметр `staticUsers2FA` переименован в `twoFactor`. Теперь второй фактор можно включить не только для локальных пользователей.
+      conversions:
+        - if has("staticUsers2FA") then .twoFactor = .staticUsers2FA | del(.staticUsers2FA) end

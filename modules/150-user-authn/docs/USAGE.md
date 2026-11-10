@@ -1062,7 +1062,7 @@ Do steps 1 and 2 one right after the other. Until the new password is set, any s
 
 Do not start with signing out on all devices: it makes the current browser new as well, and for `devices.trustedAfter` it can neither request a password change nor sign out a device that signs in again with the stolen password.
 
-A stolen password alone signs in to an account without 2FA. Enable 2FA for local users with the [`staticUsers2FA`](configuration.html#parameters-staticusers2fa) parameter.
+A compromised password alone signs in to an account without 2FA. Enable 2FA with the [`twoFactor`](configuration.html#parameters-twofactor) parameter.
 
 #### Creating UserOperation manually
 
@@ -1182,7 +1182,7 @@ spec:
 
 #### Operations on external users
 
-For users of external providers of any type (LDAP, Atlassian Crowd, OIDC, SAML, GitHub, GitLab, Bitbucket Cloud), use the [`spec.target`](cr.html#useroperation-v1-spec-target) field instead of `spec.user`. The `Lock`, `Unlock` and `Logout` operation types are supported for external users.
+For users of external providers of any type (LDAP, Atlassian Crowd, OIDC, SAML, GitHub, GitLab, Bitbucket Cloud), use the [`spec.target`](cr.html#useroperation-v1-spec-target) field instead of `spec.user`. The `Lock`, `Unlock`, `Logout` and `Reset2FA` operation types are supported for external users. Only the users of the LDAP and Atlassian Crowd providers can have a second factor. For a user of a provider of another type, `Reset2FA` only ends the sessions.
 
 The operation finds the user's account by the email the provider reported at the user's last sign-in. The `connectorID` and `userID` fields narrow the search down to one provider and one user ID. A lock applies to one pair of a provider and a user. It blocks only the account found and does not block a local user or a user of another provider with the same email. A local user is addressed by `spec.user` only. Dex checks the lock at every sign-in through the provider, at every refresh-token request, at token exchange, and at Basic Authentication to the API server through an LDAP provider. For a Crowd or OIDC provider, basic-auth-proxy checks the credentials with the provider directly, so the lock does not apply to Basic Authentication.
 
@@ -1453,7 +1453,7 @@ spec:
 
 ### Two-factor authentication (2FA)
 
-2FA increases security by requiring a code from a `TOTP` authenticator application (for example, Google Authenticator) during login.
+2FA increases security by requiring a code from a `TOTP` authenticator application (for example, Google Authenticator) during login. It can be required from the local users and from the users of the LDAP and Atlassian Crowd providers.
 
 {% raw %}
 
@@ -1463,28 +1463,38 @@ kind: ModuleConfig
 metadata:
   name: user-authn
 spec:
-  version: 3
+  version: 4
   enabled: true
   settings:
-    staticUsers2FA:
+    twoFactor:
       enabled: true
       issuerName: "awesome-app"
+      providerTypes: [Local, LDAP]
 ```
 
 {% endraw %}
 
 Field description:
 
-* `enabled`: Enables or disables 2FA for all static users.
+* `enabled`: Enables or disables 2FA.
 * `issuerName`: Name displayed in the authenticator application when adding an account.
+* `providerTypes`: Types of the providers whose users have to pass the second factor: `Local` (the built-in users), `LDAP` and `Crowd`. The users of every provider of a listed type are asked for the code. The OIDC, SAML, GitHub, GitLab and Bitbucket Cloud providers are not on the list. The identity provider handles the second factor for them.
+
+The `twoFactor` parameter replaces `staticUsers2FA`, which covered the local users only. A ModuleConfig of version 3 with `staticUsers2FA` keeps working, because the module converts it.
 
 {% alert level="info" %}
-After enabling 2FA, each user must register in the authenticator application during their first login.
+After enabling 2FA, each user must register in the authenticator application during their first login. Until then, anyone who knows the password can register their own device, so ask the users to sign in right after you turn 2FA on.
 {% endalert %}
 
-Dex asks a local user for the code at every sign-in. Users of external providers sign in without it.
+Dex asks the user for the code at a sign-in through a provider of a listed type, except while a browser session of Dex is valid. Sign-ins through the other providers go without it.
+Turning 2FA on for a provider type does not end the refresh tokens or the Dex browser sessions issued before. A refresh token keeps issuing tokens without the code until it expires (by default, up to `refreshTokenAbsoluteLifetime`, 4380h), and a browser session created before the change passes without the code.
+After enabling 2FA, run a UserOperation of type `Logout` for the users of the providers of the listed types.
 
-To make a user register the authenticator application again, for example after losing the device, reset the user's 2FA with `d8 iam user reset2fa <USERNAME>` or a UserOperation of the `Reset2FA` type. Other operations, including `Lock` and `ResetPassword`, keep the 2FA secret.
+Basic Authentication to the Kubernetes API (`enableBasicAuth` of an LDAP or Crowd provider) has no page for a code, so it is not possible for a provider of a listed type. The module refuses the settings that turn 2FA on while such a provider exists, and a provider that turns `enableBasicAuth` on while 2FA covers its type. To use both, give the Kubernetes API users a kubeconfig file with the web interface instead of Basic Authentication.
+
+To make a user register the authenticator application again, for example after losing the device, reset the user's 2FA.
+For a local user, use `d8 iam user reset2fa <USERNAME>` or a UserOperation of the `Reset2FA` type with `spec.user`. For a user of an external provider, use a UserOperation of the `Reset2FA` type with [`spec.target`](#operations-on-external-users).
+The operation also ends the sessions of the user. Other operations, including `Lock` and `ResetPassword`, keep the 2FA secret.
 
 ### Assigning permissions to a user or group
 

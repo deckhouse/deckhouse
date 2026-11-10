@@ -158,10 +158,10 @@ spec:
                 - required: [target]
               x-kubernetes-validations:
                 # target identifies a Dex account by email and is meaningful for
-                # Lock, Unlock, and Logout against its UserIdentity. ResetPassword,
-                # Reset2FA, and RequirePasswordChange operate on a local user (spec.user).
-                - rule: 'self.type in ["Lock", "Unlock", "Logout"] || !has(self.target)'
-                  message: 'spec.target is only supported for Lock, Unlock, and Logout operations; ResetPassword, Reset2FA, and RequirePasswordChange apply to local users (spec.user) only.'
+                # Lock, Unlock, Logout, and Reset2FA against its UserIdentity. ResetPassword
+                # and RequirePasswordChange operate on a local user (spec.user).
+                - rule: 'self.type in ["Lock", "Unlock", "Logout", "Reset2FA"] || !has(self.target)'
+                  message: 'spec.target is only supported for Lock, Unlock, Logout, and Reset2FA operations; ResetPassword and RequirePasswordChange apply to local users (spec.user) only.'
                 - rule: 'self.type == "Logout" || !has(self.logout)'
                   message: 'spec.logout is only supported for the Logout operation.'
                 - rule: '!has(self.logout) || [has(self.logout.session), has(self.logout.exceptSession), has(self.logout.grant), has(self.logout.exceptGrant)].filter(x, x).size() <= 1'
@@ -184,7 +184,7 @@ spec:
                   description: |
                     Identifier of an account of an external authentication provider, by email.
 
-                    The `Lock`, `Unlock`, and `Logout` operations against `target` apply to the Dex account
+                    The `Lock`, `Unlock`, `Logout`, and `Reset2FA` operations against `target` apply to the Dex account
                     (UserIdentity object) of the user whose email at the last sign-in was `email`. `connectorID`
                     and `userID` narrow the search down to one provider and one user ID. The operation fails if
                     no account has the email (the user has never signed in) or if more than one account matches;
@@ -233,7 +233,7 @@ spec:
                     Type of the user operation. Possible values:
                     
                     * `ResetPassword`: Password reset. Applies to local users (`spec.user`) only.
-                    * `Reset2FA`: Two-factor authentication reset. Applies to local users (`spec.user`) only.
+                    * `Reset2FA`: Two-factor authentication reset. Supports both local users (`spec.user`) and external users (`spec.target`). Of the external users, only the users of an LDAP or Atlassian Crowd provider can have a second factor. For a user of a provider of another type, the operation only ends the sessions.
                     * `Lock`: User lock. Supports both local users (`spec.user`) and external users (`spec.target`).
                     * `Unlock`: User unlock. Supports both local users (`spec.user`) and external users (`spec.target`).
                     * `Logout`: Ends the sessions of the user. Without [`logout`](#useroperation-v1-spec-logout), ends

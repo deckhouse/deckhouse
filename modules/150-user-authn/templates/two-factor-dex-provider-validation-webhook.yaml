@@ -1,0 +1,39 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ValidationWebhook
+metadata:
+  name: user-authn-two-factor-dex-provider
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | nindent 2 }}
+validationObject:
+  name: twofactor-basic-auth-providers.deckhouse.io
+  group: main
+  rules:
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["v1", "v1alpha1"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["dexproviders"]
+    scope:       "Cluster"
+context:
+  # The second factor settings of the module. The webhooks/validating/two_factor_dex_provider_test.py keeps a copy of the
+  # jqFilter. Deckhouse converts the settings of a version before 4 (openapi/conversions/v4.yaml: staticUsers2FA becomes
+  # twoFactor) before it uses them, and the filter does the same: a ModuleConfig of version 3 with providerTypes written
+  # into staticUsers2FA covers the providers of those types.
+  - name: modulesettings
+    kubernetes:
+      apiVersion: deckhouse.io/v1alpha1
+      kind: ModuleConfig
+      nameSelector:
+        matchNames:
+        - user-authn
+      queue: "user-authn-module-config"
+      jqFilter: |
+        (.spec.settings // {}) as $s
+        | (if (.spec.version // 0) < 4 and ($s | has("staticUsers2FA")) then $s.staticUsers2FA else $s.twoFactor end) as $tf
+        | {
+            "enabled": ($tf.enabled // false),
+            "providerTypes": ($tf.providerTypes // ["Local"])
+          }
+handler:
+  # The code of the hook is webhooks/validating/two_factor_dex_provider.py, where its unit tests import it.
+  python: |
+    {{- (required "webhooks/validating/two_factor_dex_provider.py is missing" (.Files.Get "webhooks/validating/two_factor_dex_provider.py")) | nindent 4 }}

@@ -128,6 +128,34 @@ publishAPI:
 			currentVersion:  1,
 			expectedVersion: 3,
 		},
+		{
+			name:            "should rename staticUsers2FA to twoFactor from 3 to 4 version",
+			settings:        "staticUsers2FA:\n  enabled: true\n  issuerName: Corp\n",
+			expected:        "twoFactor:\n  enabled: true\n  issuerName: Corp\n",
+			currentVersion:  3,
+			expectedVersion: 4,
+		},
+		{
+			name:            "should keep the other settings when renaming staticUsers2FA from 3 to 4 version",
+			settings:        "publishAPI:\n  enabled: true\nstaticUsers2FA:\n  enabled: false\n",
+			expected:        "publishAPI:\n  enabled: true\ntwoFactor:\n  enabled: false\n",
+			currentVersion:  3,
+			expectedVersion: 4,
+		},
+		{
+			name:            "should keep settings without staticUsers2FA from 3 to 4 version",
+			settings:        "publishAPI:\n  enabled: true\n",
+			expected:        "publishAPI:\n  enabled: true\n",
+			currentVersion:  3,
+			expectedVersion: 4,
+		},
+		{
+			name:            "should apply every conversion from 1 to 4 version",
+			settings:        "publishAPI:\n  enable: true\nidTokenTTL: 168h\nstaticUsers2FA:\n  enabled: true\n",
+			expected:        "publishAPI:\n  enabled: true\nidTokenTTL: 5h59m\ntwoFactor:\n  enabled: true\n",
+			currentVersion:  1,
+			expectedVersion: 4,
+		},
 	}
 
 	for _, c := range cases {

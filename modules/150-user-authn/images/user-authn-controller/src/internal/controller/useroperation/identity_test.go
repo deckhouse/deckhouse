@@ -32,6 +32,7 @@ import (
 	"user-authn-controller/internal/controller"
 	"user-authn-controller/internal/controller/identitymigration"
 	"user-authn-controller/internal/naming"
+	"user-authn-controller/internal/revocation"
 	"user-authn-controller/internal/useridentity"
 )
 
@@ -323,6 +324,78 @@ func TestReconcile_Reset2FAClearsUserIdentity(t *testing.T) {
 		t.Error("UserIdentity was written before the old place was cleared")
 	}
 	assertPhase(t, r, "user-operation-01", "Succeeded", operationTime)
+}
+
+// Reset2FA of a user of an external provider clears the second factor of that pair only and ends its sessions;
+// a local user with the same user ID keeps the secret and the sessions.
+func TestReconcile_Reset2FAExternal(t *testing.T) {
+	t.Parallel()
+
+	claims := useridentity.Claims{UserID: "admin", Email: "admin@corp.example.org"}
+	ldapIdentity := identityObj("admin", "corp-ldap", func(id *useridentity.Identity) {
+		id.SetClaims(claims)
+		id.SetGeneration(7)
+		id.SetTOTP(useridentity.MFASecret{Secret: totpSecret, Confirmed: true, CreatedAt: operationTime.Add(-time.Hour)})
+	})
+	ldapIdentity.Object["webauthnCredentials"] = map[string]any{"key": []any{map[string]any{"displayName": "yubikey"}}}
+
+	objs := []client.Object{}
+	for _, obj := range signedIn() {
+		// The identity of the LDAP user in the fixture is replaced by the one with a second factor.
+		if obj.GetName() == ldapIdentity.GetName() && obj.GetObjectKind().GroupVersionKind().Kind == controller.UserIdentityGVK.Kind {
+			continue
+		}
+		objs = append(objs, obj)
+	}
+	objs = append(objs, ldapIdentity, identityWithTOTP(t, "admin", naming.LocalConnectorID),
+		userOperationObj("op", operationTime, map[string]any{
+			"type": "Reset2FA", "initiatorType": "admin",
+			"target": map[string]any{"connectorID": "corp-ldap", "email": "admin@corp.example.org"},
+		}))
+	r := newTestReconciler(t, operationTime, objs...)
+	if _, err := r.Reconcile(t.Context(), opRequest("op")); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	assertPhase(t, r, "op", "Succeeded", operationTime)
+
+	ldap := getIdentity(t, r, "admin", "corp-ldap")
+	for _, field := range []string{"mfaSecrets", "webauthnCredentials"} {
+		if _, ok := ldap.Object().Object[field]; ok {
+			t.Errorf("the LDAP identity still has %s", field)
+		}
+	}
+	if got, _ := ldap.Claims(); got.Email != claims.Email {
+		t.Errorf("claims = %+v, want the email kept", got)
+	}
+	if g, _ := ldap.Generation(); g != 8 {
+		t.Errorf("LDAP generation = %d, want 8: the sessions end", g)
+	}
+	rev := getRevocationObj(t, r, revocation.PairName(ldapPair, 8))
+	if rev.ConnectorID != "corp-ldap" || rev.Reason != revocation.ReasonReset2FA {
+		t.Errorf("revocation = %+v", rev)
+	}
+	assertDeleted(t, r, controller.RefreshTokenGVK, naming.DexNamespace, "rt-ldap")
+	assertDeleted(t, r, controller.OfflineSessionsGVK, naming.DexNamespace, ldapPair)
+
+	local := getIdentity(t, r, "admin", naming.LocalConnectorID)
+	if _, ok := local.Object().Object["mfaSecrets"]; !ok {
+		t.Error("the local user lost the second factor")
+	}
+	getUnstructured(t, r, controller.RefreshTokenGVK, naming.DexNamespace, "rt-console")
+}
+
+// Without an account the operation fails like the other operations on an external target.
+func TestReconcile_Reset2FAExternalUnknownAccount(t *testing.T) {
+	t.Parallel()
+
+	r := newTestReconciler(t, operationTime, append(signedIn(), userOperationObj("op", operationTime, map[string]any{
+		"type": "Reset2FA", "initiatorType": "admin",
+		"target": map[string]any{"email": "nobody@example.org"},
+	}))...)
+	if _, err := r.Reconcile(t.Context(), opRequest("op")); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	assertPhase(t, r, "op", "Failed", operationTime)
 }
 
 func TestReconcile_Reset2FACreatesUserIdentityWhenMissing(t *testing.T) {

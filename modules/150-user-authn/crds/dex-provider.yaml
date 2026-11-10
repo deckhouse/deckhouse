@@ -290,6 +290,8 @@ spec:
 
                         Works only when the [`apiserver.publishAPI`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) parameter of the `control-plane-manager` module is enabled. Only one DexProvider in the cluster can have `enableBasicAuth` enabled.
 
+                        The parameter cannot be turned on while `twoFactor.providerTypes` includes `Crowd`, because Basic Authentication has no page for the second factor.
+
                         Basic Authentication bypasses `spec.allowedIdentities`. Therefore only a `SuperAdmin` can create a provider with this parameter enabled or enable the parameter in an existing provider.
 
                         A successful check is cached together with the user's groups for 2 minutes, and a failed check for 10 seconds. A user whose access is revoked in the identity provider can use the Kubernetes API until the cached result expires.
@@ -628,6 +630,8 @@ spec:
                         Enables Basic Authentication to the Kubernetes API server with the LDAP user's username and password.
 
                         Works only when the [`apiserver.publishAPI`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) parameter of the `control-plane-manager` module is enabled. Only one DexProvider in the cluster can have `enableBasicAuth` enabled.
+
+                        The parameter cannot be turned on while `twoFactor.providerTypes` includes `LDAP`, because Basic Authentication has no page for the second factor.
 
                         A successful check is cached together with the user's groups for 2 minutes, and a failed check for 10 seconds. A user whose access is revoked in the identity provider can use the Kubernetes API until the cached result expires.
                     kerberos:
