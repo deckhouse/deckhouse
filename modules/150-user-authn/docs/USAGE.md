@@ -541,6 +541,9 @@ spec:
 
 {% endraw %}
 
+In the authorization code flow, Dex accepts only the `S256` method of Proof Key for Code Exchange (PKCE). An application that sends a `code_challenge` with `code_challenge_method=plain`, or without `code_challenge_method` (the OAuth2 default is `plain`), is sent back to its redirect URI with the `invalid_request` error "Unsupported PKCE challenge method". Such an application has to switch to `S256`.
+PKCE stays optional, and an application that sends no `code_challenge` signs in without it. The device flow (`/device/code`) is not affected by this check. Dex accepts `plain` for it, because the device code itself serves as the secret.
+
 The DexClient group and email allow-lists are enforced on login and on every refresh-token request. Changing the lists denies further refresh for sessions that no longer match; those users must sign in again.
 
 After the DexClient is created, Dex registers a client with the `dex-client-myname@mynamespace` ID (**clientID**).

@@ -242,6 +242,12 @@ fields when it decides who may write the provider. Rendered right after the conn
     {{- end }}
     {{- /* The second factor is a step of its own since Dex v2.46 and does not need the approval page. */}}
     skipApprovalScreen: true
+    {{- /* Dex takes S256 and plain by default. A plain challenge equals the verifier, so an attacker who sees the
+           authorization request can redeem the code: it protects nothing. The list applies to /auth only: the device
+           flow (/device/code) takes plain whatever it says, and there the device code is the secret. PKCE itself stays optional, because Dex can
+           only require it for every client at once and the DexClient applications that do not send it would break. */}}
+    pkce:
+      codeChallengeMethodsSupported: ["S256"]
   {{- if or ($context.Values.userAuthn.internal.dexUsersCRDs) (and (eq (len $context.Values.userAuthn.internal.dexUsersCRDs) 0) (eq (len $context.Values.userAuthn.internal.providers) 0)) }}
   enablePasswordDB: true
   {{- end }}

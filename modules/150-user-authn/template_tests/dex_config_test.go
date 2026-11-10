@@ -80,6 +80,10 @@ var _ = Describe("Module :: user-authn :: helm template :: dex-config", func() {
 			Expect(gjson.GetBytes(jsonConfig, "twoFactorAuthn").Exists()).To(BeFalse())
 			Expect(gjson.GetBytes(jsonConfig, "oauth2.skipApprovalScreen").Type).To(Equal(gjson.True))
 
+			By("PKCE accepts only S256 and stays optional")
+			Expect(gjson.GetBytes(jsonConfig, "oauth2.pkce.codeChallengeMethodsSupported").Value()).To(Equal([]any{"S256"}))
+			Expect(gjson.GetBytes(jsonConfig, "oauth2.pkce.enforce").Exists()).To(BeFalse())
+
 			By("browser sessions stay off")
 			Expect(gjson.GetBytes(jsonConfig, "sessions").Exists()).To(BeFalse())
 

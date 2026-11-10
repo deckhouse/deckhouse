@@ -541,6 +541,9 @@ spec:
 
 {% endraw %}
 
+В authorization code flow Dex принимает только метод `S256` Proof Key for Code Exchange (PKCE). Приложение, которое отправляет `code_challenge` с `code_challenge_method=plain` или без `code_challenge_method` (по умолчанию в OAuth2 это `plain`), получает перенаправление на свой redirect URI с ошибкой `invalid_request` «Unsupported PKCE challenge method». Такое приложение должно перейти на `S256`.
+PKCE остаётся необязательным, и приложение, которое не отправляет `code_challenge`, входит без него. Device flow (`/device/code`) эта проверка не затрагивает. Dex принимает для него `plain`, потому что секретом служит сам device code.
+
 Списки разрешённых групп и адресов электронной почты в DexClient проверяются при входе и при каждом обновлении refresh-токена. Изменение списков запрещает дальнейшее обновление сессий, которые больше им не соответствуют; таким пользователям нужно войти заново.
 
 После создания такого ресурса в Dex будет зарегистрирован клиент с идентификатором (**clientID**) `dex-client-myname@mynamespace`.
