@@ -696,6 +696,54 @@ index 00000000..719939ca
 +	require.False(t, server.renderNotAllowed(httptest.NewRequest(http.MethodGet, "/", nil), rr, errors.New("storage down")))
 +	require.Equal(t, 0, rr.Body.Len(), "other errors are left to the caller")
 +}
+diff --git a/server/authflow/authorize.go b/server/authflow/authorize.go
+index 259e1251..f2d59819 100644
+--- a/server/authflow/authorize.go
++++ b/server/authflow/authorize.go
+@@ -59,23 +59,14 @@ func (h *Handler) handleAuthorization(w http.ResponseWriter, r *http.Request) {
+ 		return
+ 	}
+ 
+-	// Determine the grant type from the authorization request to filter connectors.
+-	grantType := h.grantTypeFromAuthRequest(r)
+-	connectors := make([]storage.Connector, 0, len(allConnectors))
+-	for _, c := range allConnectors {
+-		if conns.GrantTypeAllowed(c.GrantTypes, grantType) {
+-			connectors = append(connectors, c)
+-		}
+-	}
+-
+-	// Filter connectors based on the client's allowed connectors list.
++	// Filter connectors by the grant type of the request and the client's allowed connectors list.
+ 	// client_id is required per RFC 6749 §4.1.1.
+ 	client, authErr := h.getClientWithAuthError(ctx, r.Form.Get("client_id"))
+ 	if authErr != nil {
+ 		h.renderError(r, w, authErr.Status, authErr.Error())
+ 		return
+ 	}
+-	connectors = conns.Filter(connectors, client.AllowedConnectors)
++	connectors := h.offeredConnectors(r, client, allConnectors)
+ 
+ 	if len(connectors) == 0 {
+ 		h.renderError(r, w, http.StatusBadRequest, "No connectors available for this client.")
+@@ -184,3 +175,17 @@ func (h *Handler) getClientWithAuthError(ctx context.Context, clientID string) (
+ 	}
+ 	return client, nil
+ }
++
++// offeredConnectors returns the connectors of all that the sign-in page offers the client: those that allow the grant
++// type of the request and that the client allows. The page and the "Select another login method" link of the password
++// form (backLink) both use it, so they never disagree (Deckhouse).
++func (h *Handler) offeredConnectors(r *http.Request, client storage.Client, all []storage.Connector) []storage.Connector {
++	grantType := h.grantTypeFromAuthRequest(r)
++	offered := make([]storage.Connector, 0, len(all))
++	for _, c := range all {
++		if conns.GrantTypeAllowed(c.GrantTypes, grantType) {
++			offered = append(offered, c)
++		}
++	}
++	return conns.Filter(offered, client.AllowedConnectors)
++}
 diff --git a/server/authflow/callback.go b/server/authflow/callback.go
 index bdc2ee67..d2595476 100644
 --- a/server/authflow/callback.go
@@ -779,6 +827,80 @@ index 71e66364..6a06ea46 100644
  	require.NoError(t, server.Storage.CreateAuthRequest(ctx, authReq))
  
  	ident := connector.Identity{UserID: "user-1", Email: "user@example.com"}
+diff --git a/server/authflow/login.go b/server/authflow/login.go
+index e0584a7e..17478f04 100644
+--- a/server/authflow/login.go
++++ b/server/authflow/login.go
+@@ -6,6 +6,7 @@ package authflow
+ // connectors).
+ 
+ import (
++	"context"
+ 	"fmt"
+ 	"maps"
+ 	"net/http"
+@@ -138,23 +139,6 @@ func (h *Handler) handleConnectorLogin(w http.ResponseWriter, r *http.Request) {
+ 
+ 	scopes := tokens.ParseScopes(authReq.Scopes)
+ 
+-	// Work out where the "Select another login method" link should go.
+-	// Include prompt=select_account so that handleAuthorization skips
+-	// session-based connector reuse and shows the connector list.
+-	backLink := ""
+-	if h.Connectors.Len() > 1 {
+-		backLinkParams := make(url.Values)
+-		maps.Copy(backLinkParams, r.Form)
+-		if h.Sessions.Enabled() {
+-			backLinkParams.Set("prompt", "select_account")
+-		}
+-		backLinkURL := url.URL{
+-			Path:     h.IssuerURL.AbsPath("/auth"),
+-			RawQuery: backLinkParams.Encode(),
+-		}
+-		backLink = backLinkURL.String()
+-	}
+-
+ 	switch r.Method {
+ 	case http.MethodGet:
+ 		switch conn := conn.Connector.(type) {
+@@ -187,7 +171,7 @@ func (h *Handler) handleConnectorLogin(w http.ResponseWriter, r *http.Request) {
+ 			}
+ 			q := loginURL.Query()
+ 			q.Set("state", authReq.ID)
+-			q.Set("back", backLink)
++			q.Set("back", h.backLink(ctx, r, client))
+ 			loginURL.RawQuery = q.Encode()
+ 
+ 			http.Redirect(w, r, loginURL.String(), http.StatusFound)
+@@ -223,3 +207,28 @@ func (h *Handler) handleConnectorLogin(w http.ResponseWriter, r *http.Request) {
+ 		h.renderError(r, w, http.StatusBadRequest, "Unsupported request method.")
+ 	}
+ }
++
++// backLink is where the "Select another login method" link of the password form goes: the sign-in page, with
++// prompt=select_account so that handleAuthorization skips session-based connector reuse and shows the list. The page
++// offers the client its connectors (offeredConnectors), so with one connector to choose from the link would lead back
++// to the form the user is on, and there is none (Deckhouse). Only the password form shows the link, so only it pays for
++// the read of the connectors. A storage that cannot be read counts every connector of the cache, as before.
++func (h *Handler) backLink(ctx context.Context, r *http.Request, client storage.Client) string {
++	choices := h.Connectors.Len()
++	if all, err := h.Storage.ListConnectors(ctx); err == nil {
++		choices = len(h.offeredConnectors(r, client, all))
++	}
++	if choices <= 1 {
++		return ""
++	}
++	backLinkParams := make(url.Values)
++	maps.Copy(backLinkParams, r.Form)
++	if h.Sessions.Enabled() {
++		backLinkParams.Set("prompt", "select_account")
++	}
++	backLinkURL := url.URL{
++		Path:     h.IssuerURL.AbsPath("/auth"),
++		RawQuery: backLinkParams.Encode(),
++	}
++	return backLinkURL.String()
++}
 diff --git a/server/authflow/password.go b/server/authflow/password.go
 index e38d54d8..8a00f7fa 100644
 --- a/server/authflow/password.go
@@ -1600,6 +1722,70 @@ index 96ec3234..fa12a2c8 100644
  			require.NoError(t, s.storage.CreateAuthRequest(ctx, authReq))
  
  			rr := httptest.NewRecorder()
+diff --git a/server/server_authorize_test.go b/server/server_authorize_test.go
+index 58a73296..830a968d 100644
+--- a/server/server_authorize_test.go
++++ b/server/server_authorize_test.go
+@@ -395,3 +395,59 @@ func TestBackLinkIncludesPromptSelectAccount(t *testing.T) {
+ 	require.Equal(t, "select_account", backURL.Query().Get("prompt"),
+ 		"back link should include prompt=select_account")
+ }
++
++// The "Select another login method" link goes back to the page that offers the connectors of the client, so a client
++// with one connector to choose from gets none (Deckhouse).
++func TestBackLinkOnlyWhenTheClientHasAnotherConnector(t *testing.T) {
++	ctx := t.Context()
++
++	httpServer, s := newTestServerMultipleConnectors(t, nil)
++	defer httpServer.Close()
++
++	pwConn := storage.Connector{
++		ID:              "mockPw",
++		Type:            "mockPassword",
++		Name:            "MockPassword",
++		ResourceVersion: "1",
++		Config:          []byte(`{"username": "foo", "password": "bar"}`),
++	}
++	require.NoError(t, s.storage.CreateConnector(ctx, pwConn))
++	_, err := s.connectors.Open(pwConn)
++	require.NoError(t, err)
++
++	for i, tc := range []struct {
++		name    string
++		allowed []string
++		link    bool
++	}{
++		{name: "every connector is allowed", allowed: nil, link: true},
++		{name: "two connectors are allowed", allowed: []string{"mockPw", "mock"}, link: true},
++		{name: "only this connector is allowed", allowed: []string{"mockPw"}, link: false},
++		{name: "the others are not stored", allowed: []string{"mockPw", "no-such-connector"}, link: false},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			client := storage.Client{
++				ID:                fmt.Sprintf("client-%d", i),
++				Secret:            "secret",
++				RedirectURIs:      []string{"https://example.com/callback"},
++				Name:              "Test Client",
++				AllowedConnectors: tc.allowed,
++			}
++			require.NoError(t, s.storage.CreateClient(ctx, client))
++
++			rr := httptest.NewRecorder()
++			authURL := fmt.Sprintf("/auth/mockPw?client_id=%s&redirect_uri=%s&response_type=code&scope=openid",
++				client.ID, url.QueryEscape("https://example.com/callback"))
++			s.ServeHTTP(rr, httptest.NewRequest("GET", authURL, nil))
++			require.Equal(t, http.StatusFound, rr.Code)
++
++			loc, err := url.Parse(rr.Header().Get("Location"))
++			require.NoError(t, err)
++			if tc.link {
++				require.NotEmpty(t, loc.Query().Get("back"))
++			} else {
++				require.Empty(t, loc.Query().Get("back"))
++			}
++		})
++	}
++}
 diff --git a/server/server_login_test.go b/server/server_login_test.go
 index fa483b03..2b715ba0 100644
 --- a/server/server_login_test.go

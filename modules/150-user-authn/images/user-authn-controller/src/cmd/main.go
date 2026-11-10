@@ -40,6 +40,7 @@ import (
 
 	"user-authn-controller/api/v1alpha1"
 	"user-authn-controller/internal/controller"
+	"user-authn-controller/internal/controller/allowedconnectors"
 	"user-authn-controller/internal/controller/dexclient"
 	"user-authn-controller/internal/controller/identitymigration"
 	"user-authn-controller/internal/controller/kubernetesclient"
@@ -198,6 +199,9 @@ func setupRuntimeManager() (ctrl.Manager, error) {
 	}
 	if err = tlsconflict.Register(runtimeManager); err != nil {
 		return nil, fmt.Errorf("register tlsconflict controller: %w", err)
+	}
+	if err = allowedconnectors.Register(runtimeManager); err != nil {
+		return nil, fmt.Errorf("register allowedconnectors controller: %w", err)
 	}
 	if err = identitymigration.Register(runtimeManager); err != nil {
 		return nil, fmt.Errorf("register identitymigration controller: %w", err)

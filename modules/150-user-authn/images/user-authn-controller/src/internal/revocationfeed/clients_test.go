@@ -195,3 +195,35 @@ func TestAuthenticate(t *testing.T) {
 		})
 	}
 }
+
+// The controller that deletes the tokens a client no longer allows reads allowedConnectors from the cache, so the
+// transform keeps them, once and again: the second run of client-go over an object it has transformed must not lose them.
+func TestTransformClient_KeepsAllowedConnectors(t *testing.T) {
+	t.Parallel()
+
+	raw := rawClient("dex-client-app@ns", "s3cr3t", false)
+	raw.Object["allowedConnectors"] = []any{"local", "corp-ldap"}
+
+	once, err := TransformClient(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	twice, err := TransformClient(once)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, obj := range map[string]any{"once": once, "twice": twice} {
+		allowed, _, _ := unstructured.NestedStringSlice(obj.(*unstructured.Unstructured).Object, "allowedConnectors")
+		if len(allowed) != 2 || allowed[0] != "local" || allowed[1] != "corp-ldap" {
+			t.Errorf("allowedConnectors after %s = %v", name, allowed)
+		}
+	}
+
+	none, err := TransformClient(rawClient("dex-client-app@ns", "s3cr3t", false))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := none.(*unstructured.Unstructured).Object["allowedConnectors"]; ok {
+		t.Error("a client without allowedConnectors got the field")
+	}
+}

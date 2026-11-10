@@ -1,0 +1,31 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ValidationWebhook
+metadata:
+  name: user-authn-dex-client
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | nindent 2 }}
+validationObject:
+  name: dexclients-providers.deckhouse.io
+  group: main
+  # The hook only adds a warning. Ignore keeps create and update of DexClient working while the
+  # webhook handler is down; Fail would stop GitOps applies for that warning.
+  failurePolicy: Ignore
+  rules:
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["v1", "v1alpha1"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["dexclients"]
+    scope:       "Namespaced"
+context:
+  # The DexProviders, read through v1 whatever version their authors used.
+  - name: dexproviders
+    kubernetes:
+      apiVersion: deckhouse.io/v1
+      kind: DexProvider
+      queue: "dexproviders-list"
+      jqFilter: |
+        {"name": .metadata.name}
+handler:
+  # The code of the hook is webhooks/validating/dex_client_validation.py, where its unit tests import it.
+  python: |
+    {{- (required "webhooks/validating/dex_client_validation.py is missing" (.Files.Get "webhooks/validating/dex_client_validation.py")) | nindent 4 }}

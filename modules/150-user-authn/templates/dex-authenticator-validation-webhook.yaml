@@ -46,6 +46,14 @@ context:
             })
           ] | map(select(.listenerSetName != null)))
         }
+  # The DexProviders, read through v1 as well: allowedProviders that name none get a warning.
+  - name: dexproviders
+    kubernetes:
+      apiVersion: deckhouse.io/v1
+      kind: DexProvider
+      queue: "dexproviders-list"
+      jqFilter: |
+        {"name": .metadata.name}
 handler:
   # The code of the hook is webhooks/validating/dex_authenticator_validation.py, where its unit tests import it.
   python: |

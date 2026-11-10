@@ -49,6 +49,13 @@ allowedGroups:
   - {{ $group | quote }}
     {{- end }}
   {{- end }}
+  {{- /* The providers of the sign-in: Dex calls them connectors, and a connector ID is the name of its DexProvider. */}}
+  {{- if $crd.spec.allowedProviders }}
+allowedConnectors:
+    {{- range $provider := $crd.spec.allowedProviders }}
+  - {{ $provider | quote }}
+    {{- end }}
+  {{- end }}
 redirectURIs:
   {{- range $app := $crd.spec.applications }}
 - {{ printf "https://%s/dex-authenticator/callback" $app.domain | quote }}

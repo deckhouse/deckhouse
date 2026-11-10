@@ -600,6 +600,35 @@ Adding the annotation is restricted regardless of its value, including `"false"`
 The restriction does not apply to resources that already have the annotation. A user with permissions to modify such a resource can continue to modify it, including removing the annotation or changing its value to disable access.
 {% endalert %}
 
+### Limiting the providers of an application
+
+By default, the sign-in page of an application offers every DexProvider of the cluster and the built-in users ([User](cr.html#user)). To offer only some of them, list their names in `spec.allowedProviders` of the [DexClient](cr.html#dexclient-v1-spec-allowedproviders) or the [DexAuthenticator](cr.html#dexauthenticator-v1-spec-allowedproviders). The name of a DexProvider is its `metadata.name`. The built-in users are `local`.
+
+The following DexAuthenticator lets users sign in to the application only through the `corp-ldap` provider and as built-in users:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexAuthenticator
+metadata:
+  name: admin-panel
+  namespace: team
+spec:
+  applicationDomain: panel.example.com
+  applicationIngressClassName: nginx
+  allowedProviders:
+  - corp-ldap
+  - local
+```
+
+Dex hides the other providers on the sign-in page and refuses a sign-in through them even when the user opens the address of the provider directly. If the list holds one provider, the user goes straight to it, without the choice page. Dex also checks the provider at every refresh-token request and token exchange of the application, so a token issued through a provider that is no longer in the list stops refreshing, and its user has to sign in again.
+
+The list works together with the other limits: `allowedEmails` and `allowedGroups` of the application, and `allowedIdentities` of the provider. A user has to pass all of them. An empty or missing list allows every provider.
+`trustedPeers` is the exception. A peer client can ask for a token whose audience is this client through a provider the peer itself allows, and this client's `allowedProviders` is not checked for that token. The same exception applies to `allowedEmails` and `allowedGroups`.
+
+The users who signed in to the application through a provider that left the list have to sign in again even if the provider is added back. With [`sessions.enabled`](configuration.html#parameters-sessions-enabled), Dex keeps the browser session of such a user. Once the provider is back in the list, the user can be signed in by that session without entering the credentials until the session ends.
+
+A name that matches no DexProvider is accepted with a warning. Nobody can sign in through it until the provider is created. Therefore a DexAuthenticator or DexClient applied before its provider by a GitOps tool does not fail.
+
 ## Exchanging tokens of other issuers
 
 A [TokenExchangeProvider](cr.html#tokenexchangeprovider) lets Dex exchange a token of another issuer for its own token (RFC 8693 token exchange). The Kubernetes API server accepts the Dex token like the token of any other Dex user. Typical issuers are CI systems, the Dex of a neighbouring cluster and the ServiceAccount token issuer of another cluster.

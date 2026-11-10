@@ -34,6 +34,7 @@ import (
 // The ValidationWebhooks of the module and the files of webhooks/validating their handler is made of.
 var userAuthnValidationWebhooks = map[string][]string{
 	"user-authn-dex-authenticator": {"webhooks/validating/dex_authenticator_validation.py"},
+	"user-authn-dex-client":        {"webhooks/validating/dex_client_validation.py"},
 	"user-authn-group":             {"webhooks/validating/group.py"},
 	"user-authn-user":              {"webhooks/validating/user.py"},
 }
@@ -118,7 +119,7 @@ modules:
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			contexts := resource(webhook).Field("context").Array()
-			Expect(contexts).To(HaveLen(1))
+			Expect(contexts).To(HaveLen(2))
 			Expect(contexts[0].Get("name").String()).To(Equal("dexauthenticators"))
 			Expect(contexts[0].Get("kubernetes.apiVersion").String()).To(Equal("deckhouse.io/v1"))
 			Expect(contexts[0].Get("kubernetes.kind").String()).To(Equal("DexAuthenticator"))
@@ -129,6 +130,42 @@ modules:
 			copied := regexp.MustCompile(`(?s)\nJQ_FILTER = '''(.*?)'''`).FindSubmatch(test)
 			Expect(copied).NotTo(BeNil())
 			Expect(strings.TrimSpace(contexts[0].Get("kubernetes.jqFilter").String())).To(Equal(strings.TrimSpace(string(copied[1]))))
+		})
+
+		It("Should read the DexProviders through v1 to warn about allowedProviders that name none", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			contexts := resource(webhook).Field("context").Array()
+			Expect(contexts[1].Get("name").String()).To(Equal("dexproviders"))
+			Expect(contexts[1].Get("kubernetes.apiVersion").String()).To(Equal("deckhouse.io/v1"))
+			Expect(contexts[1].Get("kubernetes.kind").String()).To(Equal("DexProvider"))
+			// The hook reads item["filterResult"]["name"].
+			Expect(strings.TrimSpace(contexts[1].Get("kubernetes.jqFilter").String())).To(Equal(`{"name": .metadata.name}`))
+		})
+	})
+
+	Context("dex-client", func() {
+		const webhook = "user-authn-dex-client"
+
+		It("Should warn on creates and updates of DexClients of every version, and never on deletes", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			object := resource(webhook)
+			Expect(object.Field("validationObject.name").String()).To(Equal("dexclients-providers.deckhouse.io"))
+			Expect(object.Field("validationObject.rules").String()).To(MatchJSON(`[{
+				"apiGroups": ["deckhouse.io"], "apiVersions": ["v1", "v1alpha1"],
+				"operations": ["CREATE", "UPDATE"], "resources": ["dexclients"], "scope": "Namespaced"}]`))
+		})
+
+		It("Should read the DexProviders through v1", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			contexts := resource(webhook).Field("context").Array()
+			Expect(contexts).To(HaveLen(1))
+			Expect(contexts[0].Get("name").String()).To(Equal("dexproviders"))
+			Expect(contexts[0].Get("kubernetes.apiVersion").String()).To(Equal("deckhouse.io/v1"))
+			Expect(contexts[0].Get("kubernetes.kind").String()).To(Equal("DexProvider"))
+			Expect(strings.TrimSpace(contexts[0].Get("kubernetes.jqFilter").String())).To(Equal(`{"name": .metadata.name}`))
 		})
 	})
 })

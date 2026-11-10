@@ -176,10 +176,10 @@ index ff7e823d..e6ecccb5 100644
  	})
  	var blocked *useridentity.BlockedError
 diff --git a/server/authflow/login.go b/server/authflow/login.go
-index e0584a7e..d44f7562 100644
+index 17478f04..a3ab679d 100644
 --- a/server/authflow/login.go
 +++ b/server/authflow/login.go
-@@ -15,7 +15,9 @@ import (
+@@ -16,7 +16,9 @@ import (
  
  	"github.com/dexidp/dex/connector"
  	"github.com/dexidp/dex/server/connectors"
@@ -189,7 +189,7 @@ index e0584a7e..d44f7562 100644
  	"github.com/dexidp/dex/server/tokens"
  	"github.com/dexidp/dex/storage"
  )
-@@ -86,6 +88,12 @@ func (h *Handler) handleConnectorLogin(w http.ResponseWriter, r *http.Request) {
+@@ -87,6 +89,12 @@ func (h *Handler) handleConnectorLogin(w http.ResponseWriter, r *http.Request) {
  
  	// Actually create the auth request
  	authReq.Expiry = h.Now().Add(h.AuthRequestsValidFor)

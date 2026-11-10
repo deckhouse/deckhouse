@@ -63,6 +63,10 @@ type Spec struct {
 	AllowedGroups  []string       `json:"allowedGroups,omitempty"`
 	SecretMetadata SecretMetadata `json:"secretMetadata,omitempty"`
 
+	// AllowedProviders are the names of the DexProviders (and "local") the client signs users in
+	// through; Dex stores them as allowedConnectors of the client.
+	AllowedProviders []string `json:"allowedProviders,omitempty"`
+
 	PostLogoutRedirectURIs []string `json:"postLogoutRedirectURIs,omitempty"`
 	BackchannelLogoutURI   string   `json:"backchannelLogoutURI,omitempty"`
 	RefreshTokenLifetime   string   `json:"refreshTokenLifetime,omitempty"`
@@ -186,7 +190,7 @@ func oauth2ClientMetadata() adoption.Metadata {
 
 // oauth2ClientFields are the top-level fields of an OAuth2Client the controller owns.
 var oauth2ClientFields = []string{
-	"id", "name", "secret", "redirectURIs", "trustedPeers", "allowedEmails", "allowedGroups",
+	"id", "name", "secret", "redirectURIs", "trustedPeers", "allowedEmails", "allowedGroups", "allowedConnectors",
 	"postLogoutRedirectURIs", "backchannelLogoutURI", "refreshTokenLifetime",
 }
 
@@ -203,6 +207,9 @@ func oauth2ClientContent(c Client, id, secret string) map[string]any {
 		"trustedPeers":  c.Spec.TrustedPeers,
 		"allowedEmails": c.Spec.AllowedEmails,
 		"allowedGroups": c.Spec.AllowedGroups,
+
+		// The Dex name of allowedProviders: a connector ID is the name of its DexProvider.
+		"allowedConnectors": c.Spec.AllowedProviders,
 
 		"postLogoutRedirectURIs": c.Spec.PostLogoutRedirectURIs,
 	}

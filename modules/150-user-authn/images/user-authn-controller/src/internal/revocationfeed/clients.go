@@ -88,8 +88,8 @@ func ClientCache() (client.Object, cache.ByObject, error) {
 }
 
 // TransformClient reduces an OAuth2Client to what the feed and the watches of the controllers need:
-// the name, namespace, labels, annotations, and resourceVersion, the client id, and the SHA-256 and
-// the salt derived from the secret. The secret itself is not kept.
+// the name, namespace, labels, annotations, and resourceVersion, the client id, the allowedConnectors, and the SHA-256
+// and the salt derived from the secret. The secret itself is not kept.
 func TransformClient(obj any) (any, error) {
 	switch typed := obj.(type) {
 	case *unstructured.Unstructured:
@@ -121,6 +121,17 @@ func reduceClient(u *unstructured.Unstructured) *unstructured.Unstructured {
 	out.SetUID(u.GetUID())
 	if id, ok := u.Object["id"].(string); ok {
 		out.Object["id"] = id
+	}
+	// The connectors the client allows: the controller that deletes the tokens a client no longer allows reads them
+	// from here. They hold no secret. An object already transformed carries them the same way.
+	if allowed, ok := u.Object["allowedConnectors"].([]any); ok {
+		kept := make([]any, 0, len(allowed))
+		for _, connector := range allowed {
+			if name, ok := connector.(string); ok {
+				kept = append(kept, name)
+			}
+		}
+		out.Object["allowedConnectors"] = kept
 	}
 	if secret, ok := u.Object["secret"].(string); ok && secret != "" {
 		sum := sha256.Sum256([]byte(secret))

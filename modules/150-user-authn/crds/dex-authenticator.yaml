@@ -54,6 +54,9 @@ spec:
                 allowedGroups:
                   - everyone
                   - admins
+                allowedProviders:
+                  - local
+                  - corp-ldap
                 whitelistSourceRanges:
                   - 1.1.1.1/32
                   - 192.168.0.0/24
@@ -218,6 +221,25 @@ spec:
                     type: string
                     maxLength: 512
                     pattern: '^[^\r\n]*$'
+                allowedProviders:
+                  type: array
+                  x-kubernetes-list-type: set
+                  maxItems: 64
+                  description: |-
+                    Names of the DexProvider objects through which users can sign in to the application.
+
+                    Use `local` for the users of the built-in password database ([User](cr.html#user)).
+
+                    Checked on the sign-in page, on login, and on every refresh-token and token-exchange request. A provider outside the list is not offered on the sign-in page. If the list holds one provider, users go straight to it. Removing a provider from the list stops the refresh tokens that were issued through it.
+
+                    A name that matches no DexProvider is accepted with a warning. Nobody can sign in through it until the provider appears.
+
+                    **By default**, all providers can be used.
+                  x-doc-default: 'All providers are allowed.'
+                  items:
+                    type: string
+                    maxLength: 253
+                    pattern: '^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$'
                 whitelistSourceRanges:
                   type: array
                   description: |
@@ -604,6 +626,25 @@ spec:
                     type: string
                     maxLength: 512
                     pattern: '^[^\r\n]*$'
+                allowedProviders:
+                  type: array
+                  x-kubernetes-list-type: set
+                  maxItems: 64
+                  description: |-
+                    Names of the DexProvider objects through which users can sign in to the application.
+
+                    Use `local` for the users of the built-in password database ([User](cr.html#user)).
+
+                    Checked on the sign-in page, on login, and on every refresh-token and token-exchange request. A provider outside the list is not offered on the sign-in page. If the list holds one provider, users go straight to it. Removing a provider from the list stops the refresh tokens that were issued through it.
+
+                    A name that matches no DexProvider is accepted with a warning. Nobody can sign in through it until the provider appears.
+
+                    **By default**, all providers can be used.
+                  x-doc-default: 'All providers are allowed.'
+                  items:
+                    type: string
+                    maxLength: 253
+                    pattern: '^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$'
                 podMetadata:
                   type: object
                   description: |-

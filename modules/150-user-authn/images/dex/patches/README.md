@@ -184,6 +184,15 @@ application, and which identities a provider may assert. New package
 Refresh-token introspection reports the groups stored on the token, which the
 rotation overwrites with the connector's groups before narrowing, as in v2.44.
 
+The password form's "Select another login method" link goes back to the page
+that offers the client its connectors, so `handleConnectorLogin` shows it only
+when that page would offer more than one: the stored connectors that allow the
+grant and that the client's `allowedConnectors` lets through. Upstream counts
+every connector of the server, which left a link to the same form for a client
+limited to one provider. The page and the link share one filter
+(`offeredConnectors`), and only the password form, the one page with the link,
+reads the connectors for it.
+
 **Consumer in Deckhouse:** DexClient and DexAuthenticator `allowedEmails` and
 `allowedGroups`, DexProvider `allowedIdentities` (rendered by
 `templates/dex/config.yaml`, `dex_connector_identity_limits`); the

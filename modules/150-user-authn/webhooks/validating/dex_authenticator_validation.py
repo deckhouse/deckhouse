@@ -230,6 +230,33 @@ def check(binding_context: dict) -> Optional[str]:
     return None
 
 
+# The connector of the built-in password database; the other connectors are named after their DexProvider.
+LOCAL_PROVIDER = "local"
+
+
+def unknown_providers_warning(binding_context: dict) -> Optional[str]:
+    """Returns a warning that names the allowedProviders no DexProvider has, or None.
+
+    The name is a warning and not a refusal: a GitOps tool may apply the authenticator before its provider, and a
+    provider may be removed later, which the Dex client survives (nobody signs in through a name without a connector).
+    """
+    request = binding_context["review"]["request"]
+    obj = request["object"]
+    names = _get(obj, "spec", "allowedProviders") or []
+    if not names or _get(obj, "metadata", "deletionTimestamp"):
+        return None
+    known = {LOCAL_PROVIDER} | {(item.get("filterResult") or {}).get("name")
+                                for item in binding_context["snapshots"]["dexproviders"]}
+    unknown = [name for name in names if name not in known]
+    if not unknown:
+        return None
+    return ("allowedProviders names no DexProvider: " + ", ".join(f"'{name}'" for name in unknown)
+            + "; nobody can sign in through them until the provider is created")
+
+
 def validate(ctx: DotMap) -> tuple[Optional[str], bool]:
-    message = check(ctx.toDict())
-    return message, message is None
+    binding_context = ctx.toDict()
+    message = check(binding_context)
+    if message is not None:
+        return message, False
+    return unknown_providers_warning(binding_context), True

@@ -265,6 +265,17 @@ func grantsOfObj(t *testing.T, c client.Client, connID, userID string) map[strin
 	return grants
 }
 
+// refreshOfObj returns the refresh references of the OfflineSessions of the pair.
+func refreshOfObj(t *testing.T, c client.Client, connID, userID string) map[string]any {
+	t.Helper()
+	obj := controller.Object(controller.OfflineSessionsGVK)
+	if err := c.Get(t.Context(), types.NamespacedName{Namespace: naming.DexNamespace, Name: naming.OfflineTokenName(userID, connID)}, obj); err != nil {
+		t.Fatalf("get offlinesessions: %v", err)
+	}
+	refresh, _, _ := unstructured.NestedMap(obj.Object, "refresh")
+	return refresh
+}
+
 func identityObj(connID, userID string, generation uint64) *unstructured.Unstructured {
 	id := useridentity.New(userID, connID)
 	id.SetClaims(useridentity.Claims{UserID: userID, Email: userID + "@example.com"})

@@ -437,5 +437,43 @@ class TestSnapshots(unittest.TestCase):
         self.assertTrue(run(ctx)["allowed"])
 
 
+def provider_snapshot(name):
+    return {"filterResult": {"name": name}}
+
+
+class TestAllowedProviders(unittest.TestCase):
+    def request(self, providers, allowed_providers):
+        obj = authenticator("v1", "ns", "a", {"domain": "a.example.com", "ingressClassName": "nginx"})
+        if allowed_providers is not None:
+            obj["spec"]["allowedProviders"] = allowed_providers
+        ctx = review(obj)
+        ctx["snapshots"]["dexproviders"] = [provider_snapshot(name) for name in providers]
+        return run(ctx)
+
+    def test_known_providers_and_local_pass_without_a_warning(self):
+        response = self.request(["corp-ldap", "github"], ["corp-ldap", "local"])
+        self.assertTrue(response["allowed"])
+        self.assertNotIn("warnings", response)
+
+    def test_unknown_provider_is_allowed_with_a_warning(self):
+        response = self.request(["corp-ldap"], ["corp-ldap", "gitlab", "github"])
+        self.assertTrue(response["allowed"])
+        self.assertEqual(len(response["warnings"]), 1)
+        self.assertIn("'gitlab', 'github'", response["warnings"][0])
+        self.assertNotIn("corp-ldap", response["warnings"][0])
+
+    def test_no_allowed_providers_means_no_warning_and_no_provider_read(self):
+        self.assertNotIn("warnings", self.request([], None))
+        self.assertNotIn("warnings", self.request([], []))
+
+    def test_a_deleted_authenticator_is_not_warned_about(self):
+        obj = authenticator("v1", "ns", "a", {"domain": "a.example.com", "ingressClassName": "nginx"})
+        obj["spec"]["allowedProviders"] = ["gone"]
+        obj["metadata"]["deletionTimestamp"] = "2026-01-01T00:00:00Z"
+        ctx = review(obj)
+        ctx["snapshots"]["dexproviders"] = []
+        self.assertNotIn("warnings", run(ctx))
+
+
 if __name__ == "__main__":
     unittest.main()

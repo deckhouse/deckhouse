@@ -362,6 +362,44 @@ func TestReconcile_DroppedListIsRemovedFromClient(t *testing.T) {
 	}
 }
 
+func TestReconcile_AllowedProvidersAreAllowedConnectors(t *testing.T) {
+	t.Parallel()
+
+	dc := dexClient(map[string]any{"allowedProviders": []any{"corp-ldap", "local"}}, nil)
+	r, c := newTestReconciler(t, dc)
+	if _, err := r.Reconcile(t.Context(), testRequest); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	for _, id := range []string{"dex-client-grafana@monitoring", "dex-client-grafana:monitoring"} {
+		obj := getOAuth2Client(t, c, id)
+		got, _, _ := unstructured.NestedStringSlice(obj.Object, "allowedConnectors")
+		if len(got) != 2 || got[0] != "corp-ldap" || got[1] != "local" {
+			t.Errorf("%s allowedConnectors = %v, want [corp-ldap local]", id, got)
+		}
+		if _, found := obj.Object["allowedProviders"]; found {
+			t.Errorf("%s carries allowedProviders, which Dex does not know", id)
+		}
+	}
+
+	// Without the field the client allows every connector again: the list must not outlive the field.
+	live := controller.Object(controller.DexClientGVK)
+	if err := c.Get(t.Context(), testRequest.NamespacedName, live); err != nil {
+		t.Fatal(err)
+	}
+	unstructured.RemoveNestedField(live.Object, "spec", "allowedProviders")
+	if err := c.Update(t.Context(), live); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.Reconcile(t.Context(), testRequest); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	for _, id := range []string{"dex-client-grafana@monitoring", "dex-client-grafana:monitoring"} {
+		if _, found := getOAuth2Client(t, c, id).Object["allowedConnectors"]; found {
+			t.Errorf("%s keeps allowedConnectors after allowedProviders was removed", id)
+		}
+	}
+}
+
 func TestReconcile_LogoutFields(t *testing.T) {
 	t.Parallel()
 

@@ -70,6 +70,9 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
     - admins
     allowedEmails:
     - test@mail.io
+    allowedProviders:
+    - corp-ldap
+    - local
     nodeSelector:
       testnode: ""
     tolerations:
@@ -221,6 +224,9 @@ periodSeconds: 5
 			Expect(oauth2clientTest.Field("secret").String()).To(Equal("dexSecret"))
 			Expect(oauth2clientTest.Field("allowedEmails").String()).To(MatchJSON(`["test@mail.io"]`))
 			Expect(oauth2clientTest.Field("allowedGroups").String()).To(MatchJSON(`["everyone","admins"]`))
+			// The providers are the connectors of the client: Dex offers and accepts only them.
+			Expect(oauth2clientTest.Field("allowedConnectors").String()).To(MatchJSON(`["corp-ldap","local"]`))
+			Expect(oauth2clientTest.Field("allowedProviders").Exists()).To(BeFalse())
 
 			ingressTest := hec.KubernetesResource("Ingress", "d8-test", "test-dex-authenticator")
 			Expect(ingressTest.Exists()).To(BeTrue())
@@ -272,6 +278,7 @@ periodSeconds: 5
 			Expect(oauth2client2.Exists()).To(BeTrue())
 			Expect(oauth2client2.Field("redirectURIs").String()).To(MatchJSON(`["https://authenticator.com/dex-authenticator/callback","https://authenticator-two.com/dex-authenticator/callback"]`))
 			Expect(oauth2client2.Field("secret").String()).To(Equal("dexSecret"))
+			Expect(oauth2client2.Field("allowedConnectors").Exists()).To(BeFalse(), "no allowedProviders, so every connector is allowed")
 
 			ingressTest2 := hec.KubernetesResource("Ingress", "d8-test", "test-2-dex-authenticator")
 			Expect(ingressTest2.Exists()).To(BeTrue())
