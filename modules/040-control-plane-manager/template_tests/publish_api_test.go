@@ -17,6 +17,7 @@ limitations under the License.
 package template_tests
 
 import (
+	"encoding/base64"
 	"fmt"
 
 	. "github.com/onsi/ginkgo"
@@ -144,6 +145,47 @@ tls.key: KEYKEYKEY
 			Expect(hec.KubernetesResource("Certificate", "kube-system", "kubernetes-tls").Exists()).To(BeFalse())
 			Expect(hec.KubernetesResource("Secret", "kube-system", "kubernetes-tls-customcertificate").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("Secret", "kube-system", "d8-publish-api-config").Field("data.httpsMode").String()).To(Equal("R2xvYmFs"))
+		})
+	})
+
+	Context("With global CustomCertificate across default Gateway changes", func() {
+		It("Should preserve separate certificates and resolve all TLS references", func() {
+			const cert = "test-value"
+			const key = "dh-test-secret-0123456789abcdef"
+			hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.https.mode", "Global")
+			hec.ValuesSet("global.modules.https.mode", "CustomCertificate")
+			hec.ValuesSet("controlPlaneManager.internal.customCertificateData", map[string]string{"tls.crt": cert, "tls.key": key})
+			discovery := hec.ValuesGet("global.discovery").Value()
+
+			for _, gatewayEnabled := range []bool{false, true, false} {
+				By(fmt.Sprintf("rendering with default Gateway enabled=%t", gatewayEnabled))
+				hec.ValuesSet("global.discovery", discovery)
+				if gatewayEnabled {
+					hec.ValuesSet("global.discovery.gatewayAPIDefaultGateway", map[string]string{"name": "default", "namespace": "d8-ingress"})
+				}
+				hec.HelmRender(WithAPIVersions("gateway.networking.k8s.io/v1/ListenerSet"))
+				Expect(hec.RenderError).NotTo(HaveOccurred())
+
+				names := []string{"kubernetes-tls-customcertificate"}
+				if gatewayEnabled {
+					names = append(names, "kubernetes-httproute-tls-customcertificate")
+				}
+				for _, name := range names {
+					secret := hec.KubernetesResource("Secret", "kube-system", name)
+					Expect(secret.Exists()).To(BeTrue(), name)
+					Expect(secret.Field(`data.tls\.crt`).String()).To(Equal(base64.StdEncoding.EncodeToString([]byte(cert))))
+					Expect(secret.Field(`data.tls\.key`).String()).To(Equal(base64.StdEncoding.EncodeToString([]byte(key))))
+				}
+				ingress := hec.KubernetesResource("Ingress", "kube-system", "kubernetes-api")
+				Expect(ingress.Field("spec.tls.0.secretName").String()).To(Equal(names[0]))
+				listeners := hec.KubernetesResource("ListenerSet", "kube-system", "control-plane-manager")
+				Expect(listeners.Exists()).To(Equal(gatewayEnabled))
+				Expect(hec.KubernetesResource("Secret", "kube-system", "kubernetes-httproute-tls-customcertificate").Exists()).To(Equal(gatewayEnabled))
+				if gatewayEnabled {
+					Expect(listeners.Field("spec.listeners.0.tls.certificateRefs.0.name").String()).To(Equal(names[1]))
+					Expect(listeners.Field("spec.listeners.0.tls.certificateRefs.0.namespace").String()).To(Equal("kube-system"))
+				}
+			}
 		})
 	})
 

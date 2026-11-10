@@ -4,5 +4,7 @@ path = "gitleaks.base.toml"
 
 [allowlist]
 regexes = [
-  'kubernetesCni191'
+  'kubernetesCni191',
+  # Standard fake test values, using the same pattern as main.
+  'dh-test-secret-[0-9A-Za-z]*'
 ]

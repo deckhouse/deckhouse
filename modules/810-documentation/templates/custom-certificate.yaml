@@ -2,5 +2,5 @@
 {{- $moduleGateway := dict }}
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
 {{- if $moduleGateway }}
-{{- include "helm_lib_module_https_copy_custom_certificate" (list . "d8-system" "httproute-tls") -}}
+{{- include "helm_lib_module_https_copy_custom_certificate" (list . "d8-system" "httproute-tls") | nindent 0 -}}
 {{- end }}
