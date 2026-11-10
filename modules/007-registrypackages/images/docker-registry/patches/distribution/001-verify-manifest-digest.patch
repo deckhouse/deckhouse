@@ -1,0 +1,101 @@
+diff --git a/registry/client/repository.go b/registry/client/repository.go
+index fd42a1e..604a51a 100644
+--- a/registry/client/repository.go
++++ b/registry/client/repository.go
+@@ -16,6 +16,7 @@ import (
+ 
+ 	"github.com/distribution/reference"
+ 	"github.com/docker/distribution"
++	"github.com/docker/distribution/manifest/schema1"
+ 	v2 "github.com/docker/distribution/registry/api/v2"
+ 	"github.com/docker/distribution/registry/client/transport"
+ 	"github.com/docker/distribution/registry/storage/cache"
+@@ -448,6 +449,7 @@ func (ms *manifests) Get(ctx context.Context, dgst digest.Digest, options ...dis
+ 		}
+ 	}
+ 
++	byDigest := digestOrTag == ""
+ 	if digestOrTag == "" {
+ 		digestOrTag = dgst.String()
+ 		ref, err = reference.WithDigest(ms.name, dgst)
+@@ -502,6 +504,24 @@ func (ms *manifests) Get(ctx context.Context, dgst digest.Digest, options ...dis
+ 		if err != nil {
+ 			return nil, err
+ 		}
++		// GHSA-685w-q87j-wqw3: content fetched by digest must hash to that digest.
++		// A schema1 digest covers the payload without signatures.
++		if byDigest {
++			content := body
++			if sm, ok := m.(*schema1.SignedManifest); ok {
++				content = sm.Canonical
++			}
++			if err := dgst.Validate(); err != nil {
++				return nil, err
++			}
++			verifier := dgst.Verifier()
++			if _, err := verifier.Write(content); err != nil {
++				return nil, err
++			}
++			if !verifier.Verified() {
++				return nil, fmt.Errorf("manifest digest mismatch: requested %s but received content does not match", dgst)
++			}
++		}
+ 		return m, nil
+ 	}
+ 	return nil, HandleErrorResponse(resp)
+diff --git a/registry/client/repository_test.go b/registry/client/repository_test.go
+index befbdf3..30b7871 100644
+--- a/registry/client/repository_test.go
++++ b/registry/client/repository_test.go
+@@ -1361,3 +1361,51 @@ func TestSanitizeLocation(t *testing.T) {
+ 		}
+ 	}
+ }
++
++// TestManifestFetchByDigestVerifies is a regression test for GHSA-685w-q87j-wqw3:
++// content returned for a digest-pinned manifest must hash to that digest,
++// even when the server forges the Docker-Content-Digest header.
++func TestManifestFetchByDigestVerifies(t *testing.T) {
++	ctx := context.Background()
++	repo, _ := reference.WithName("test.example.com/repo")
++	_, pinnedDgst, _ := newRandomSchemaV1Manifest(repo, "latest", 6)
++	evil, _, _ := newRandomSchemaV1Manifest(repo, "latest", 6)
++	_, evilPayload, err := evil.Payload()
++	if err != nil {
++		t.Fatal(err)
++	}
++
++	var m testutil.RequestResponseMap
++	m = append(m, testutil.RequestResponseMapping{
++		Request: testutil.Request{
++			Method: "GET",
++			Route:  "/v2/" + repo.Name() + "/manifests/" + pinnedDgst.String(),
++		},
++		Response: testutil.Response{
++			StatusCode: http.StatusOK,
++			Body:       evilPayload,
++			Headers: http.Header(map[string][]string{
++				"Content-Length":        {fmt.Sprint(len(evilPayload))},
++				"Last-Modified":         {time.Now().Add(-1 * time.Second).Format(time.ANSIC)},
++				"Content-Type":          {schema1.MediaTypeSignedManifest},
++				"Docker-Content-Digest": {pinnedDgst.String()},
++			}),
++		},
++	})
++
++	e, c := testServer(m)
++	defer c()
++
++	r, err := NewRepository(repo, e, nil)
++	if err != nil {
++		t.Fatal(err)
++	}
++	ms, err := r.Manifests(ctx)
++	if err != nil {
++		t.Fatal(err)
++	}
++
++	if _, err := ms.Get(ctx, pinnedDgst); err == nil {
++		t.Fatal("expected digest mismatch error, but Get accepted substituted content")
++	}
++}

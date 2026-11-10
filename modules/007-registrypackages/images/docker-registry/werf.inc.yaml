@@ -26,6 +26,8 @@ shell:
   - cd /src/docker_auth
   - git apply /patches/docker_auth/*.patch --verbose
   - git clone --depth 1 --branch v{{ $docker_version }} {{ .SOURCE_REPO }}/distribution/distribution.git /src/distribution
+  - cd /src/distribution
+  - git apply /patches/distribution/*.patch --verbose
   - rm -rf /src/docker_auth/.git
   - rm -rf /src/distribution/.git
 ---
