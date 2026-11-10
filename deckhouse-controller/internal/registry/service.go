@@ -321,6 +321,103 @@ func safeJoin(root, name string) (string, error) {
 	return target, nil
 }
 
+func (s *Service) ImageExists(ctx context.Context, remote Remote, path, tag string) error {
+	_, span := otel.Tracer(tracerName).Start(ctx, "ImageExists")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("package", path))
+	span.SetAttributes(attribute.String("tag", tag))
+
+	logger := s.logger.With("package", path, "tag", tag)
+
+	logger.Debug("check package image exists")
+
+	// <registry>/<path>
+	cli, err := s.buildRegistryClient(remote, path)
+	if err != nil {
+		return fmt.Errorf("build registry client: %w", err)
+	}
+
+	// head <registry>/<path>:<tag>
+	if _, err := cli.Digest(ctx, tag); err != nil {
+		return fmt.Errorf("get image: %w", err)
+	}
+
+	return nil
+}
+
+// GetFileContent downloads image and extracts the file content from it
+// <registry>/<path>:<tag>
+func (s *Service) GetFileContent(ctx context.Context, remote Remote, path, tag, filePath string) ([]byte, error) {
+	_, span := otel.Tracer(tracerName).Start(ctx, "GetFileContent")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("package", path))
+	span.SetAttributes(attribute.String("tag", tag))
+	span.SetAttributes(attribute.String("file", filePath))
+
+	logger := s.logger.With("package", path, "tag", tag, "file", filePath)
+
+	logger.Debug("download image")
+
+	// <registry>/<path>
+	cli, err := s.buildRegistryClient(remote, path)
+	if err != nil {
+		return nil, fmt.Errorf("build registry client: %w", err)
+	}
+
+	// get <registry>/<path>:<tag>
+	img, err := cli.Image(ctx, tag)
+	if err != nil {
+		return nil, fmt.Errorf("get image: %w", err)
+	}
+
+	size, err := img.Size()
+	if err != nil {
+		return nil, fmt.Errorf("get image size: %w", err)
+	}
+
+	span.SetAttributes(attribute.Int64("size", size))
+
+	digest, err := img.Digest()
+	if err != nil {
+		return nil, fmt.Errorf("get image digest: %w", err)
+	}
+
+	span.SetAttributes(attribute.String("digest", digest.String()))
+
+	logger.Debug("extract image",
+		slog.String("digest", digest.String()),
+		slog.Int64("size", size))
+
+	rc, err := cr.Extract(img)
+	if err != nil {
+		return nil, fmt.Errorf("extract image: %w", err)
+	}
+	defer rc.Close()
+
+	tr := tar.NewReader(rc)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("read tar: %w", err)
+		}
+
+		if hdr.Name == filePath {
+			content, err := io.ReadAll(tr)
+			if err != nil {
+				return nil, fmt.Errorf("read file content: %w", err)
+			}
+			return content, nil
+		}
+	}
+
+	return nil, fmt.Errorf("file %s not found in the image", filePath)
+}
+
 type Remote struct {
 	Name         string `json:"name" yaml:"name"`
 	Repository   string `json:"repository" yaml:"repository"`

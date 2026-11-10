@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -30,6 +29,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
+	authenticationv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -1813,23 +1813,6 @@ func v2SettingsSchema() *openapi.OpenAPIV3Schema {
 	}
 }
 
-func newModuleConfigV2(enabled *bool, settings map[string]any, annotations map[string]string) *v1alpha1.ModuleConfig {
-	cfg := newModuleConfig(v2ModuleName, enabled, annotations)
-	cfg.Spec.Version = 1
-	if settings != nil {
-		cfg.Spec.Settings = v1alpha1.MakeMappedFields(settings)
-	}
-	return cfg
-}
-
-func newTestHandlerV2(t *testing.T, manager *fakeModulePackageManager, allowExperimental bool, objs ...client.Object) http.Handler {
-	t.Helper()
-
-	cli, metricStorage, settings := newTestDepsV2(t, allowExperimental, objs...)
-
-	return moduleConfigValidationHandlerV2(cli, manager, metricStorage, settings)
-}
-
 // newTestDepsV2 builds what both Module v2 handlers take besides the package manager.
 func newTestDepsV2(t *testing.T, allowExperimental bool, objs ...client.Object) (client.Client, metricstorage.Storage, *helpers.DeckhouseSettingsContainer) {
 	t.Helper()
@@ -1865,595 +1848,91 @@ func assertResponse(t *testing.T, resp *admissionv1.AdmissionResponse, wantAllow
 	assert.Contains(t, resp.Result.Message, wantMessage)
 }
 
-// TestModuleConfigValidationHandlerV2_Target covers resolving the Module and its package version.
-func TestModuleConfigValidationHandlerV2_Target(t *testing.T) {
-	draft := newMPV(nil, nil)
-	draft.Labels = map[string]string{v1alpha1.PackageLabelDraft: "true"}
+// TestModuleConfigValidationHandlerV2 covers the lock of a migrated config, the mirror of its Module.
+func TestModuleConfigValidationHandlerV2(t *testing.T) {
+	const user = "kubernetes-admin"
 
-	embedded := newModuleV2(false)
-	embedded.Annotations = map[string]string{v1beta1.ModuleAnnotationEmbedded: "true"}
-	embeddedDraft := newMPV(nil, nil)
-	embeddedDraft.Name = v2Repository + "-" + v2ModuleName
-	embeddedDraft.Labels = map[string]string{v1alpha1.PackageLabelDraft: "true"}
+	migrated := map[string]string{v1alpha1.ModuleConfigAnnotationMigrated: "true"}
 
-	tests := []struct {
-		name        string
-		objs        []client.Object
-		wantAllowed bool
-		wantMessage string
-		wantWarning string
-	}{
-		{
-			name:        "missing module is allowed with a warning",
-			wantAllowed: true,
-			wantWarning: "module not found",
-		},
-		{
-			name:        "missing package version is allowed with a warning",
-			objs:        []client.Object{newModuleV2(false)},
-			wantAllowed: true,
-			wantWarning: "package version",
-		},
-		{
-			name:        "draft package version is rejected",
-			objs:        []client.Object{newModuleV2(false), draft},
-			wantMessage: "is draft",
-		},
-		{
-			name:        "embedded module resolves the version object without a version suffix",
-			objs:        []client.Object{embedded, embeddedDraft},
-			wantMessage: "is draft",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			handler := newTestHandlerV2(t, &fakeModulePackageManager{}, false, tt.objs...)
-
-			resp := callHandler(t, handler, newModuleConfigAdmissionReview("CREATE", newModuleConfigV2(nil, nil, nil), nil))
-
-			assertResponse(t, resp, tt.wantAllowed, tt.wantMessage)
-			if tt.wantWarning != "" {
-				require.Len(t, resp.Warnings, 1)
-				assert.Contains(t, resp.Warnings[0], tt.wantWarning)
-			}
-		})
-	}
-}
-
-// TestModuleConfigValidationHandlerV2_Settings covers which side validates the settings: the runtime or the package version schema.
-func TestModuleConfigValidationHandlerV2_Settings(t *testing.T) {
-	tests := []struct {
-		name           string
-		installed      bool
-		dev            bool
-		convert        bool
-		version        int
-		settings       map[string]any
-		validateResult settingscheck.Result
-		wantAllowed    bool
-		wantMessage    string
-		wantRuntime    bool
-		wantWarnings   []string
-	}{
-		{
-			name:         "not installed: older settings are converted before the schema check",
-			convert:      true,
-			settings:     map[string]any{"count": "2"},
-			wantAllowed:  true,
-			wantWarnings: []string{"spec.version=1 is obsolete. Please migrate spec.settings to the latest version 2"},
-		},
-		{
-			name:         "an older settings version warns",
-			convert:      true,
-			settings:     map[string]any{"count": "2"},
-			wantAllowed:  true,
-			wantWarnings: []string{"spec.version=1 is obsolete. Please migrate spec.settings to the latest version 2"},
-		},
-		{
-			name:        "the latest settings version does not warn",
-			convert:     true,
-			version:     2,
-			settings:    map[string]any{"replicas": "2"},
-			wantAllowed: true,
-		},
-		{
-			name:        "not installed: latest settings are not converted",
-			convert:     true,
-			version:     2,
-			settings:    map[string]any{"count": "2"},
-			wantMessage: "spec.settings are not valid",
-		},
-		{
-			name:        "a settings version beyond the chain is rejected",
-			convert:     true,
-			version:     3,
-			settings:    map[string]any{"replicas": "2"},
-			wantMessage: "settings version 3 is not supported, the latest is 2",
-		},
-		{
-			name:        "a settings version beyond a package without conversions is rejected",
-			version:     2,
-			settings:    map[string]any{"replicas": "2"},
-			wantMessage: "the latest is 1",
-		},
-		{
-			name:           "installed: the runtime validates older settings at their version",
-			installed:      true,
-			convert:        true,
-			settings:       map[string]any{"count": "2"},
-			validateResult: settingscheck.Result{Valid: true},
-			wantAllowed:    true,
-			wantWarnings:   []string{"spec.version=1 is obsolete. Please migrate spec.settings to the latest version 2"},
-			wantRuntime:    true,
-		},
-		{
-			name:        "not installed: settings matching the package version schema are allowed",
-			settings:    map[string]any{"replicas": "2"},
-			wantAllowed: true,
-		},
-		{
-			name:        "not installed: settings violating the package version schema are rejected",
-			settings:    map[string]any{"storageClass": "fast"},
-			wantMessage: "spec.settings are not valid",
-		},
-		{
-			name:           "installed: the runtime validates and its warnings pass through",
-			installed:      true,
-			settings:       map[string]any{"storageClass": "fast"},
-			validateResult: settingscheck.Result{Valid: true, Warnings: []string{"deprecated field"}},
-			wantAllowed:    true,
-			wantRuntime:    true,
-			wantWarnings:   []string{"deprecated field"},
-		},
-		{
-			name:           "installed: a runtime rejection is returned",
-			installed:      true,
-			settings:       map[string]any{"replicas": "2"},
-			validateResult: settingscheck.Result{Valid: false, Message: "replicas out of range"},
-			wantMessage:    "replicas out of range",
-			wantRuntime:    true,
-		},
-		{
-			name:           "dev: only the dev build validates, the package version schema and chain are not used",
-			dev:            true,
-			convert:        true,
-			version:        3,
-			settings:       map[string]any{"storageClass": "fast"},
-			validateResult: settingscheck.Result{Valid: true},
-			wantAllowed:    true,
-			wantRuntime:    true,
-		},
-		{
-			name:           "dev: a dev build rejection is returned",
-			dev:            true,
-			settings:       map[string]any{"replicas": "2"},
-			validateResult: settingscheck.Result{Valid: false, Message: "replicas out of range"},
-			wantMessage:    "replicas out of range",
-			wantRuntime:    true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			manager := &fakeModulePackageManager{validateResult: tt.validateResult}
-			mpv := newMPV(nil, v2SettingsSchema())
-			if tt.convert {
-				mpv = withConversions(mpv, renameCountConversion)
-			}
-
-			module := newModuleV2(tt.installed)
-			if tt.dev {
-				module.Status.CurrentVersion = &v1beta1.ModuleStatusVersion{
-					Version: "dev-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-				}
-			}
-
-			handler := newTestHandlerV2(t, manager, false, module, mpv)
-
-			cfg := newModuleConfigV2(nil, tt.settings, nil)
-			if tt.version != 0 {
-				cfg.Spec.Version = tt.version
-			}
-
-			resp := callHandler(t, handler, newModuleConfigAdmissionReview("CREATE", cfg, nil))
-
-			assertResponse(t, resp, tt.wantAllowed, tt.wantMessage)
-			assert.Equal(t, tt.wantRuntime, manager.validateCalled)
-			if tt.wantRuntime {
-				assert.Equal(t, cfg.Spec.Version, manager.validateVersion, "the runtime converts from the request's version")
-			}
-			if tt.wantWarnings != nil || tt.wantAllowed {
-				assert.Equal(t, tt.wantWarnings, resp.Warnings)
-			}
-		})
-	}
-}
-
-// TestModuleConfigValidationHandlerV2_Transition covers the UPDATE-only rules: CEL transitions and immutable fields.
-func TestModuleConfigValidationHandlerV2_Transition(t *testing.T) {
-	tests := []struct {
-		name        string
-		ran         bool
-		convert     bool
-		oldSettings map[string]any
-		newSettings map[string]any
-		oldVersion  int
-		newVersion  int
-		wantAllowed bool
-		wantMessage string
-	}{
-		{
-			name:        "ran (checkpoint present): changing an immutable field is rejected",
-			ran:         true,
-			oldSettings: map[string]any{"replicas": "1", "storageClass": "slow"},
-			newSettings: map[string]any{"replicas": "1", "storageClass": "fast"},
-			wantMessage: "storageClass",
-		},
-		{
-			name:        "never activated: an immutable field is still open",
-			oldSettings: map[string]any{"replicas": "1", "storageClass": "slow"},
-			newSettings: map[string]any{"replicas": "1", "storageClass": "fast"},
-			wantAllowed: true,
-		},
-		{
-			name:        "a CEL transition rule rejects the change",
-			oldSettings: map[string]any{"replicas": "1", "tier": "gold"},
-			newSettings: map[string]any{"replicas": "1", "tier": "silver"},
-			wantMessage: "gold tier is sticky",
-		},
-		{
-			name:        "a settings version change compares both sides at the latest version",
-			ran:         true,
-			convert:     true,
-			oldSettings: map[string]any{"count": "1", "storageClass": "slow"},
-			newSettings: map[string]any{"replicas": "1", "storageClass": "fast"},
-			newVersion:  2,
-			wantMessage: "storageClass",
-		},
-		{
-			name:        "a settings version change keeping the values is allowed",
-			ran:         true,
-			convert:     true,
-			oldSettings: map[string]any{"count": "1", "storageClass": "slow", "tier": "gold"},
-			newSettings: map[string]any{"replicas": "1", "storageClass": "slow", "tier": "gold"},
-			newVersion:  2,
-			wantAllowed: true,
-		},
-		{
-			name:        "a settings version change runs the CEL transition rules",
-			convert:     true,
-			oldSettings: map[string]any{"count": "1", "tier": "gold"},
-			newSettings: map[string]any{"replicas": "1", "tier": "silver"},
-			newVersion:  2,
-			wantMessage: "gold tier is sticky",
-		},
-		{
-			name:        "old settings beyond the chain skip the transition rules",
-			ran:         true,
-			oldSettings: map[string]any{"replicas": "1", "storageClass": "slow", "tier": "gold"},
-			newSettings: map[string]any{"replicas": "1", "storageClass": "fast", "tier": "silver"},
-			oldVersion:  2,
-			wantAllowed: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			manager := &fakeModulePackageManager{validateResult: settingscheck.Result{Valid: true}}
-			module := newModuleV2(false)
-			if tt.ran {
-				module = ranModuleV2(`{"replicas":"1","storageClass":"slow"}`)
-			}
-
-			mpv := newMPV(nil, v2SettingsSchema())
-			if tt.convert {
-				mpv = withConversions(mpv, renameCountConversion)
-			}
-
-			handler := newTestHandlerV2(t, manager, false, module, mpv)
-
-			oldCfg := newModuleConfigV2(nil, tt.oldSettings, nil)
-			if tt.oldVersion != 0 {
-				oldCfg.Spec.Version = tt.oldVersion
-			}
-
-			newCfg := newModuleConfigV2(nil, tt.newSettings, nil)
-			if tt.newVersion != 0 {
-				newCfg.Spec.Version = tt.newVersion
-			}
-
-			resp := callHandler(t, handler, newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg))
-
-			assertResponse(t, resp, tt.wantAllowed, tt.wantMessage)
-		})
-	}
-}
-
-// TestModuleConfigValidationHandlerV2_ImmutableBeforeFirstRun (F50): the engine writes
-// status.currentVersion at activation, before the first run; a module whose first run failed has no
-// lastAppliedConfiguration, has frozen nothing, and its immutable fields stay open (decision 2026-10-09).
-func TestModuleConfigValidationHandlerV2_ImmutableBeforeFirstRun(t *testing.T) {
-	module := newModuleV2(true)
-	module.Status.Conditions = []metav1.Condition{{
-		Type: "Installed", Status: metav1.ConditionFalse, Reason: "ManifestsApplyFailed",
-	}}
-
-	manager := &fakeModulePackageManager{validateResult: settingscheck.Result{Valid: true}}
-	handler := newTestHandlerV2(t, manager, false, module, newMPV(nil, v2SettingsSchema()))
-
-	oldCfg := newModuleConfigV2(nil, map[string]any{"replicas": "1", "storageClass": "missing"}, nil)
-	newCfg := newModuleConfigV2(nil, map[string]any{"replicas": "1", "storageClass": "fast"}, nil)
-
-	resp := callHandler(t, handler, newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg))
-
-	assertResponse(t, resp, true, "")
-}
-
-// TestModuleConfigValidationHandlerV2_Enabling covers the checks a disabled module passes to be enabled.
-func TestModuleConfigValidationHandlerV2_Enabling(t *testing.T) {
-	meta := func(stage, group string, weight int32) *v1alpha1.ModulePackageVersionStatusMetadata {
-		return &v1alpha1.ModulePackageVersionStatusMetadata{
-			Stage:          stage,
-			ExclusiveGroup: group,
-			Weight:         weight,
-			Requirements: &v1alpha1.PackageRequirements{
-				Kubernetes: &v1alpha1.VersionConstraint{Constraint: ">= 1.28"},
-				Modules: &v1alpha1.PackageModulesRequirements{
-					Mandatory: []v1alpha1.PackageModuleDependency{{Name: "parent"}},
-				},
-			},
-		}
-	}
-	critical := func(m *v1alpha1.ModulePackageVersionStatusMetadata) *v1alpha1.ModulePackageVersionStatusMetadata {
-		m.Critical = true
-		return m
-	}
-
-	tests := []struct {
-		name              string
-		meta              *v1alpha1.ModulePackageVersionStatusMetadata
-		currentlyEnabled  bool
-		allowExperimental bool
-		checkErr          error
-		exclusiveErr      error
-		wantAllowed       bool
-		wantMessage       string
-		wantCheck         bool
-		wantOrder         schedule.Order
-		wantExclusive     string
-	}{
-		{
-			name:        "requirements are checked with a critical module's order",
-			meta:        critical(meta("", "", 20)),
-			wantAllowed: true,
-			wantCheck:   true,
-			wantOrder:   20,
-		},
-		{
-			name:        "a weighted non-critical module is functional",
-			meta:        meta("", "", 20),
-			wantAllowed: true,
-			wantCheck:   true,
-			wantOrder:   schedule.FunctionalOrder,
-		},
-		{
-			name:        "a module without weight takes the functional order",
-			meta:        meta("", "", 0),
-			wantAllowed: true,
-			wantCheck:   true,
-			wantOrder:   schedule.FunctionalOrder,
-		},
-		{
-			name:        "unmet requirements are rejected",
-			meta:        meta("", "", 0),
-			checkErr:    errors.New("parent is disabled"),
-			wantMessage: "parent is disabled",
-			wantCheck:   true,
-			wantOrder:   schedule.FunctionalOrder,
-		},
-		{
-			name:             "an already enabled module is not re-checked",
-			meta:             meta("", "", 0),
-			currentlyEnabled: true,
-			wantAllowed:      true,
-		},
-		{
-			name:        "an experimental module is rejected unless allowed",
-			meta:        meta("Experimental", "", 0),
-			wantMessage: "is experimental",
-		},
-		{
-			name:              "an allowed experimental module passes",
-			meta:              meta("Experimental", "", 0),
-			allowExperimental: true,
-			wantAllowed:       true,
-			wantCheck:         true,
-			wantOrder:         schedule.FunctionalOrder,
-		},
-		{
-			name:          "a conflict in the exclusive group is rejected",
-			meta:          meta("", "cni", 0),
-			exclusiveErr:  errors.New("another module enabled"),
-			wantMessage:   "exclusiveGroup cni",
-			wantCheck:     true,
-			wantOrder:     schedule.FunctionalOrder,
-			wantExclusive: "cni",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			manager := &fakeModulePackageManager{
-				enabled:      map[string]bool{v2ModuleName: tt.currentlyEnabled},
-				checkErr:     tt.checkErr,
-				exclusiveErr: tt.exclusiveErr,
-			}
-			handler := newTestHandlerV2(t, manager, tt.allowExperimental, newModuleV2(false), newMPV(tt.meta, nil))
-
-			resp := callHandler(t, handler, newModuleConfigAdmissionReview("CREATE", newModuleConfigV2(boolPtr(true), nil, nil), nil))
-
-			assertResponse(t, resp, tt.wantAllowed, tt.wantMessage)
-			require.Equal(t, tt.wantCheck, manager.checkCalled)
-			if tt.wantCheck {
-				assert.Equal(t, tt.wantOrder, manager.gotConstraints.Order)
-				assert.NotNil(t, manager.gotConstraints.Kubernetes)
-				assert.Contains(t, manager.gotConstraints.Dependencies, "parent")
-			}
-			assert.Equal(t, tt.wantExclusive, manager.gotExclusive)
-		})
-	}
-}
-
-// TestModuleConfigValidationHandlerV2_DisableConfirmation covers the confirmation the package version may ask for.
-func TestModuleConfigValidationHandlerV2_DisableConfirmation(t *testing.T) {
-	allowDisable := map[string]string{v1alpha1.PackageAnnotationAllowDisabling: "true"}
-	confirm := &v1alpha1.ModulePackageVersionStatusMetadata{
-		DisableOptions: &v1alpha1.PackageDisableOptions{
-			Confirmation: true,
-			Messages:     &v1alpha1.PackageDisableMessages{En: confirmationMessage},
-		},
-	}
-
-	tests := []struct {
-		name             string
-		operation        string
-		currentlyEnabled bool
-		newConfig        *v1alpha1.ModuleConfig
-		oldConfig        *v1alpha1.ModuleConfig
-		pullOverride     bool
-		wantAllowed      bool
-		wantMessage      string
-	}{
-		{
-			name:             "update: disabling an enabled module is rejected",
-			operation:        "UPDATE",
-			currentlyEnabled: true,
-			newConfig:        newModuleConfigV2(boolPtr(false), nil, nil),
-			oldConfig:        newModuleConfigV2(boolPtr(true), nil, nil),
-			wantMessage:      confirmationMessage,
-		},
-		{
-			name:             "update: the allow-disabling annotation lets it through",
-			operation:        "UPDATE",
-			currentlyEnabled: true,
-			newConfig:        newModuleConfigV2(boolPtr(false), nil, allowDisable),
-			oldConfig:        newModuleConfigV2(boolPtr(true), nil, nil),
-			wantAllowed:      true,
-		},
-		{
-			name:             "update: the rejection names the package annotation",
-			operation:        "UPDATE",
-			currentlyEnabled: true,
-			newConfig:        newModuleConfigV2(boolPtr(false), nil, nil),
-			oldConfig:        newModuleConfigV2(boolPtr(true), nil, nil),
-			wantMessage:      "Please annotate ModuleConfig with `" + v1alpha1.PackageAnnotationAllowDisabling + "=true`",
-		},
-		{
-			name:             "update: the legacy modules annotation no longer confirms",
-			operation:        "UPDATE",
-			currentlyEnabled: true,
-			newConfig:        newModuleConfigV2(boolPtr(false), nil, map[string]string{v1alpha1.ModuleConfigAnnotationAllowDisable: "true"}),
-			oldConfig:        newModuleConfigV2(boolPtr(true), nil, nil),
-			wantMessage:      confirmationMessage,
-		},
-		{
-			name:             "delete: the allow-disabling annotation lets it through",
-			operation:        "DELETE",
-			currentlyEnabled: true,
-			oldConfig:        newModuleConfigV2(boolPtr(true), nil, allowDisable),
-			wantAllowed:      true,
-		},
-		{
-			name:             "create: an explicit disable of a running module is rejected",
-			operation:        "CREATE",
-			currentlyEnabled: true,
-			newConfig:        newModuleConfigV2(boolPtr(false), nil, nil),
-			wantMessage:      confirmationMessage,
-		},
-		{
-			name:             "delete: removing the config of an enabled module is rejected",
-			operation:        "DELETE",
-			currentlyEnabled: true,
-			oldConfig:        newModuleConfigV2(boolPtr(true), nil, nil),
-			wantMessage:      confirmationMessage,
-		},
-		{
-			name:        "delete: a disabled module is not guarded",
-			operation:   "DELETE",
-			oldConfig:   newModuleConfigV2(boolPtr(false), nil, nil),
-			wantAllowed: true,
-		},
-		{
-			name:         "delete: a ModulePullOverride blocks the delete",
-			operation:    "DELETE",
-			oldConfig:    newModuleConfigV2(boolPtr(false), nil, nil),
-			pullOverride: true,
-			wantMessage:  "delete the ModulePullOverride",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			objs := []client.Object{newModuleV2(true), newMPV(confirm, nil)}
-			if tt.pullOverride {
-				objs = append(objs, &v1alpha2.ModulePullOverride{ObjectMeta: metav1.ObjectMeta{Name: v2ModuleName}})
-			}
-
-			manager := &fakeModulePackageManager{
-				enabled:        map[string]bool{v2ModuleName: tt.currentlyEnabled},
-				validateResult: settingscheck.Result{Valid: true},
-			}
-			handler := newTestHandlerV2(t, manager, false, objs...)
-
-			var obj any
-			if tt.newConfig != nil {
-				obj = tt.newConfig
-			}
-
-			resp := callHandler(t, handler, newModuleConfigAdmissionReview(tt.operation, obj, tt.oldConfig))
-
-			assertResponse(t, resp, tt.wantAllowed, tt.wantMessage)
-		})
-	}
-}
-
-// TestModuleConfigValidationHandlerV2_Common covers the checks that do not depend on the package version.
-func TestModuleConfigValidationHandlerV2_Common(t *testing.T) {
 	tests := []struct {
 		name        string
 		operation   string
+		username    string
 		config      *v1alpha1.ModuleConfig
+		oldConfig   *v1alpha1.ModuleConfig
 		wantAllowed bool
 		wantMessage string
 	}{
 		{
-			name:        "the Embedded source is forbidden",
-			operation:   "CREATE",
-			config:      newModuleConfigFull(v2ModuleName, nil, v1alpha1.ModuleSourceEmbedded, ""),
-			wantMessage: "'Embedded' is a forbidden source",
+			name:        "a user change of a migrated config is rejected",
+			operation:   "UPDATE",
+			username:    user,
+			config:      newModuleConfig(v2ModuleName, boolPtr(false), migrated),
+			oldConfig:   newModuleConfig(v2ModuleName, boolPtr(true), migrated),
+			wantMessage: "change the Module instead",
 		},
 		{
-			name:        "a missing update policy is rejected",
-			operation:   "CREATE",
-			config:      newModuleConfigFull(v2ModuleName, nil, "", "absent-policy"),
-			wantMessage: "the 'absent-policy' module policy does not exist",
+			name:        "a user dropping the mark is rejected",
+			operation:   "UPDATE",
+			username:    user,
+			config:      newModuleConfig(v2ModuleName, boolPtr(true), nil),
+			oldConfig:   newModuleConfig(v2ModuleName, boolPtr(true), migrated),
+			wantMessage: "change the Module instead",
 		},
 		{
-			name:        "connect is not applicable",
-			operation:   "CONNECT",
-			config:      newModuleConfigV2(nil, nil, nil),
-			wantMessage: "is not applicable",
+			name:        "a user marking a config migrated is rejected",
+			operation:   "CREATE",
+			username:    user,
+			config:      newModuleConfig(v2ModuleName, boolPtr(true), migrated),
+			wantMessage: "change the Module instead",
+		},
+		{
+			name:        "a user deleting a migrated config is rejected",
+			operation:   "DELETE",
+			username:    user,
+			oldConfig:   newModuleConfig(v2ModuleName, boolPtr(true), migrated),
+			wantMessage: "change the Module instead",
+		},
+		{
+			name:        "a user change of a config not migrated yet is allowed",
+			operation:   "UPDATE",
+			username:    user,
+			config:      newModuleConfig(v2ModuleName, boolPtr(false), nil),
+			oldConfig:   newModuleConfig(v2ModuleName, boolPtr(true), nil),
+			wantAllowed: true,
+		},
+		{
+			name:        "a Deckhouse service account changes a migrated config",
+			operation:   "UPDATE",
+			username:    "system:serviceaccount:d8-system:cni-migration",
+			config:      newModuleConfig(v2ModuleName, boolPtr(false), migrated),
+			oldConfig:   newModuleConfig(v2ModuleName, boolPtr(true), migrated),
+			wantAllowed: true,
+		},
+		{
+			name:        "dhctl changes a migrated config",
+			operation:   "UPDATE",
+			username:    "dhctl",
+			config:      newModuleConfig(v2ModuleName, boolPtr(false), migrated),
+			oldConfig:   newModuleConfig(v2ModuleName, boolPtr(true), migrated),
+			wantAllowed: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := newTestHandlerV2(t, &fakeModulePackageManager{}, false)
+			var obj, oldObj any
+			if tt.config != nil {
+				obj = tt.config
+			}
+			if tt.oldConfig != nil {
+				oldObj = tt.oldConfig
+			}
 
-			resp := callHandler(t, handler, newModuleConfigAdmissionReview(tt.operation, tt.config, nil))
+			review := newModuleConfigAdmissionReview(tt.operation, obj, oldObj)
+			review.Request.UserInfo = authenticationv1.UserInfo{Username: tt.username}
 
-			assertResponse(t, resp, tt.wantAllowed, tt.wantMessage)
+			assertResponse(t, callHandler(t, moduleConfigValidationHandlerV2(), review), tt.wantAllowed, tt.wantMessage)
 		})
 	}
 }

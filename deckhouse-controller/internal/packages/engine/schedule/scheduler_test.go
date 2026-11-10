@@ -277,7 +277,8 @@ func (s *SchedulerSuite) TestOrderTierGate() {
 
 // TestUnconvergedNamesRevisionAndBlocker confirms the debug view of the convergence: every
 // unconverged module with the revision being converged and what holds its gate, a tier named by the
-// nodes of the lowest unconverged one.
+// nodes of the nearest unconverged one below, so a functional module names the tier it waits on
+// directly and not the one that tier waits on.
 func (s *SchedulerSuite) TestUnconvergedNamesRevisionAndBlocker() {
 	s.activateGlobal()
 
@@ -295,10 +296,10 @@ func (s *SchedulerSuite) TestUnconvergedNamesRevisionAndBlocker() {
 	s.converge(globalName)
 
 	s.Equal(map[string]schedule.UnconvergedNode{
-		"deckhouse":    {Revision: "v1.0.0", Order: 2},
-		"cni":          {Revision: "v1.0.0", Order: 2},
-		"node-manager": {Revision: "v1.0.0", Order: 40, WaitsFor: "cni, deckhouse"},
-		"console":      {Revision: "v2.0.0", Order: schedule.FunctionalOrder, WaitsFor: "cni, deckhouse"},
+		"deckhouse":    {Revision: "v1.0.0"},
+		"cni":          {Revision: "v1.0.0"},
+		"node-manager": {Revision: "v1.0.0", WaitsFor: "cni, deckhouse"},
+		"console":      {Revision: "v2.0.0", WaitsFor: "node-manager"},
 	}, s.sched.Unconverged().Nodes)
 
 	s.converge("deckhouse")

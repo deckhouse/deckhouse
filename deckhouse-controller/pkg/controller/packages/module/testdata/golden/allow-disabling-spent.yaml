@@ -65,12 +65,3 @@ spec:
     repo: registry.example.com/test
     scheme: https
 status: {}
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: test-module
-  resourceVersion: "2"
-spec:
-  enabled: false
-status: {}

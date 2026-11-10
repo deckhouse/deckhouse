@@ -110,8 +110,7 @@ type Unconverged struct {
 // UnconvergedNode is one unconverged node; WaitsFor is empty while its gate is open.
 type UnconvergedNode struct {
 	Revision string // Revision is the node's revision, the one its Current runs.
-	Order    Order  // Order is the effective order the tier rule gates by.
-	// WaitsFor is global, the nodes of the lowest unconverged tier, or a dependency or AnyOf member.
+	// WaitsFor is global, the nodes of the nearest unconverged tier below, or a dependency or AnyOf member.
 	WaitsFor string
 }
 
@@ -126,29 +125,47 @@ func (s *Scheduler) Unconverged() Unconverged {
 	}
 
 	unconverged := s.lowestUnconverged()
-	front := s.tierFront(unconverged)
+	fronts := make(map[Order]string)
 
 	for _, n := range s.nodes {
 		if (n.module || n.name == GlobalNode) && !n.converged {
 			waitsFor := s.blockerOf(n, unconverged)
-			// The tier rule held it (blockerOf checks it right after the barrier): name the nodes
-			// that must converge first instead of the tier.
+			// The tier rule held it (blockerOf checks it right after the barrier): name the nodes of
+			// the nearest unconverged tier below instead of the tier, so the chain of tiers reads
+			// from the dump; that tier in turn names the one below it.
 			if waitsFor != GlobalNode && unconverged < n.effectiveOrder {
-				waitsFor = front
+				below := s.nearestUnconvergedBelow(n.effectiveOrder)
+				if _, ok := fronts[below]; !ok {
+					fronts[below] = s.tierFront(below)
+				}
+
+				waitsFor = fronts[below]
 			}
 
-			res.Nodes[n.name] = UnconvergedNode{Revision: n.revision, Order: n.effectiveOrder, WaitsFor: waitsFor}
+			res.Nodes[n.name] = UnconvergedNode{Revision: n.revision, WaitsFor: waitsFor}
 		}
 	}
 
 	return res
 }
 
+// nearestUnconvergedBelow returns the highest order of an unconverged node below order: s.mu held.
+func (s *Scheduler) nearestUnconvergedBelow(order Order) Order {
+	var nearest Order
+
+	for _, n := range s.nodes {
+		if !n.converged && n.effectiveOrder < order && n.effectiveOrder > nearest {
+			nearest = n.effectiveOrder
+		}
+	}
+
+	return nearest
+}
+
 // frontLimit bounds the names tierFront lists; the rest are counted.
 const frontLimit = 3
 
-// tierFront names the unconverged nodes of the lowest unconverged tier, sorted: what every node of a
-// higher tier waits for now.
+// tierFront names the unconverged nodes of the tier, sorted: what the nodes of the next higher tier wait for.
 func (s *Scheduler) tierFront(unconverged Order) string {
 	var names []string
 

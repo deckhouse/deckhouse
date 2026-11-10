@@ -61,8 +61,11 @@ webhooks:
     admissionReviewVersions:
       - v1
     matchPolicy: Equivalent
-    {{- /* Ignore: the controller writes Modules at startup, before its pod carries the leader label the service selects */}}
-    failurePolicy: Ignore
+    {{- /* The Module is the settings source: every user edit is checked. Deckhouse is excluded before any call, since it writes Modules at startup, before its pod carries the leader label the service selects */}}
+    matchConditions:
+      - name: exclude-deckhouse
+        expression: 'request.userInfo.username != "system:serviceaccount:d8-system:deckhouse"'
+    failurePolicy: Fail
     sideEffects: None
     clientConfig:
       caBundle: {{ .Values.deckhouse.internal.admissionWebhookCert.ca | b64enc }}
@@ -90,6 +93,12 @@ webhooks:
     admissionReviewVersions:
       - v1
     matchPolicy: Equivalent
+    {{- if .Values.deckhouse.enableModuleV2 }}
+    {{- /* A migrated ModuleConfig mirrors its Module: the webhook only keeps users off it. Deckhouse is excluded before any call, since it writes ModuleConfigs at startup, before its pod is behind the service */}}
+    matchConditions:
+      - name: exclude-deckhouse
+        expression: 'request.userInfo.username != "system:serviceaccount:d8-system:deckhouse"'
+    {{- end }}
     failurePolicy: Fail
     sideEffects: None
     clientConfig:

@@ -510,36 +510,6 @@ func (r *reconciler) commit(ctx context.Context, module, original *v1beta1.Modul
 		return fmt.Errorf("patch module '%s': %w", module.Name, err)
 	}
 
-	if disabled {
-		return r.spendConfigConfirmation(ctx, module.Name)
-	}
-
-	return nil
-}
-
-// spendConfigConfirmation removes the allow-disabling annotation from the module's ModuleConfig, if any.
-func (r *reconciler) spendConfigConfirmation(ctx context.Context, name string) error {
-	config := new(v1alpha1.ModuleConfig)
-	if err := r.client.Get(ctx, client.ObjectKey{Name: name}, config); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-
-		return fmt.Errorf("get module config '%s': %w", name, err)
-	}
-
-	if _, ok := config.Annotations[v1alpha1.PackageAnnotationAllowDisabling]; !ok {
-		return nil
-	}
-
-	patch := client.MergeFrom(config.DeepCopy())
-	delete(config.Annotations, v1alpha1.PackageAnnotationAllowDisabling)
-
-	if err := r.client.Patch(ctx, config, patch); err != nil {
-		r.logger.Error("failed to remove the allow-disabling annotation", slog.String("name", name), log.Err(err))
-		return fmt.Errorf("patch module config '%s': %w", name, err)
-	}
-
 	return nil
 }
 
@@ -641,16 +611,8 @@ func (r *reconciler) handleDelete(ctx context.Context, module *v1beta1.Module) (
 		}
 	}
 
-	// The package is named after the module, so the reference and the name agree; the reference is
-	// still preferred, and the name only carries a module attached before the reference was
-	// written.
-	pkgName := ctrlutils.OwnerRefName(module, v1alpha1.ModulePackageKind)
-	if pkgName == "" {
-		pkgName = module.Name
-	}
-
-	if err := r.detachPackage(ctx, pkgName); err != nil {
-		logger.Error("failed to detach the module package", slog.String("package", pkgName), log.Err(err))
+	if err := r.detachPackage(ctx, module.Name); err != nil {
+		logger.Error("failed to detach the module package", slog.String("package", module.Name), log.Err(err))
 		return ctrl.Result{}, err
 	}
 

@@ -26,10 +26,14 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -49,7 +53,7 @@ func DefineModuleConfigDebugCommands(rootCmd *cobra.Command, logger *log.Logger)
 
 	moduleCmd.AddCommand(&cobra.Command{
 		Use:   "enable MODULE_NAME",
-		Short: "Enable module via spec.enabled flag in the ModuleConfig resource. Use snake-case for the module name.",
+		Short: "Enable module via spec.enabled flag in the ModuleConfig resource, or in the Module resource with Module v2. Use snake-case for the module name.",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			logger.SetLevel(log.LevelError)
@@ -64,7 +68,7 @@ func DefineModuleConfigDebugCommands(rootCmd *cobra.Command, logger *log.Logger)
 
 	moduleCmd.AddCommand(&cobra.Command{
 		Use:   "disable MODULE_NAME",
-		Short: "Disable module via spec.enabled flag in the ModuleConfig resource. Use snake-case for the module name.",
+		Short: "Disable module via spec.enabled flag in the ModuleConfig resource, or in the Module resource with Module v2. Use snake-case for the module name.",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			logger.SetLevel(log.LevelError)
@@ -94,11 +98,31 @@ func moduleSwitch(kubeClient *kubeclient.Client, moduleName string, enabled bool
 	// log.SetFormatter(&log.TextFormatter{DisableTimestamp: true, ForceColors: true})
 	logger.SetLevel(log.LevelError)
 
-	if err := setModuleConfigEnabled(context.TODO(), kubeClient, moduleName, enabled); err != nil {
+	// with Module v2 the Module is the settings source and its ModuleConfig only a mirror
+	if app.ModuleV2Enabled() {
+		if err := setModuleEnabled(context.TODO(), kubeClient.Dynamic(), moduleName, enabled); err != nil {
+			return fmt.Errorf("%s module: %w", actionDesc, err)
+		}
+	} else if err := setModuleConfigEnabled(context.TODO(), kubeClient, moduleName, enabled); err != nil {
 		return fmt.Errorf("%s module: %w", actionDesc, err)
 	}
 
 	fmt.Printf("Module %s %sd\n", moduleName, actionDesc)
+	return nil
+}
+
+// setModuleEnabled sets spec.enabled of the Module; the Module must exist.
+func setModuleEnabled(ctx context.Context, dyn dynamic.Interface, name string, enabled bool) error {
+	patch := fmt.Appendf(nil, `{"spec":{"enabled":%t}}`, enabled)
+
+	if _, err := dyn.Resource(v1beta1.ModuleGVR).Patch(ctx, name, types.MergePatchType, patch, metav1.PatchOptions{}); err != nil {
+		if apierrors.IsNotFound(err) {
+			return errors.New("module not found")
+		}
+
+		return fmt.Errorf("patch the '%s' module: %w", name, err)
+	}
+
 	return nil
 }
 

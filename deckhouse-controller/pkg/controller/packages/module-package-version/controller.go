@@ -16,6 +16,7 @@ package modulepackageversion
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"maps"
@@ -24,7 +25,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metautils "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
@@ -293,13 +294,13 @@ func (r *reconciler) ensureModule(ctx context.Context, mpv *v1alpha1.ModulePacka
 		return fmt.Errorf("get module '%s': %w", mpv.Spec.PackageName, err)
 	}
 
-	latest, err := r.isLatestVersion(ctx, mpv)
+	release, err := r.isReleaseVersion(ctx, mpv)
 	if err != nil {
 		return err
 	}
 
 	// a later version decides once it is promoted
-	if !latest {
+	if !release {
 		return nil
 	}
 
@@ -324,34 +325,71 @@ func (r *reconciler) ensureModule(ctx context.Context, mpv *v1alpha1.ModulePacka
 	return nil
 }
 
-// isLatestVersion reports whether mpv is the highest version of its package in its repository,
-// drafts included. A version that does not parse never wins.
-func (r *reconciler) isLatestVersion(ctx context.Context, mpv *v1alpha1.ModulePackageVersion) (bool, error) {
-	current, err := semver.NewVersion(mpv.Spec.PackageVersion)
+// setModuleVersion reads the module version from the registry and writes it into the module spec.
+func (r *reconciler) isReleaseVersion(ctx context.Context, mpv *v1alpha1.ModulePackageVersion) (bool, error) {
+	repo := new(v1alpha1.PackageRepository)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: mpv.Spec.PackageRepositoryName}, repo); err != nil {
+		return false, fmt.Errorf("get package repository: %w", err)
+	}
+
+	releaseChannel, err := r.getDeckhouseReleaseChannel(ctx)
 	if err != nil {
-		return false, nil
+		return false, fmt.Errorf("get deckhouse release channel: %w", err)
 	}
 
-	versions := new(v1alpha1.ModulePackageVersionList)
-	if err = r.client.List(ctx, versions, client.MatchingLabels{
-		v1alpha1.PackageLabelRepository: mpv.Spec.PackageRepositoryName,
-		v1alpha1.PackageLabelPackage:    mpv.Spec.PackageName,
-	}); err != nil {
-		return false, fmt.Errorf("list module package versions of '%s': %w", mpv.Spec.PackageName, err)
+	releaseChannel = strings.ToLower(releaseChannel)
+
+	versionPath := fmt.Sprintf("%s/version", mpv.Spec.PackageName)
+	if mpv.IsLegacy() {
+		versionPath = fmt.Sprintf("%s/release", mpv.Spec.PackageName)
 	}
 
-	for _, item := range versions.Items {
-		if !item.DeletionTimestamp.IsZero() {
-			continue
+	raw, err := r.registry.GetFileContent(ctx, registry.BuildRemote(repo), versionPath, releaseChannel, "version.json")
+	if err != nil {
+		return false, fmt.Errorf("get module version from the registry: %w", err)
+	}
+
+	version := struct {
+		Version string `json:"version"`
+	}{}
+
+	if err := json.Unmarshal(raw, &version); err != nil {
+		return false, fmt.Errorf("unmarshal version file: %w", err)
+	}
+
+	return version.Version == mpv.Spec.PackageVersion, nil
+}
+
+// getDeckhouseReleaseChannel reads the channel from the deckhouse module config; with none set the build default applies.
+func (r *reconciler) getDeckhouseReleaseChannel(ctx context.Context) (string, error) {
+	config := new(v1alpha1.ModuleConfig)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: "deckhouse"}, config); err != nil {
+		if apierrors.IsNotFound(err) {
+			return app.DefaultReleaseChannel, nil
 		}
 
-		other, err := semver.NewVersion(item.Spec.PackageVersion)
-		if err == nil && other.GreaterThan(current) {
-			return false, nil
-		}
+		return "", fmt.Errorf("get module config '%s': %w", "deckhouse", err)
 	}
 
-	return true, nil
+	if config.Spec.Settings == nil {
+		return app.DefaultReleaseChannel, nil
+	}
+
+	settings := struct {
+		ReleaseChannel string `json:"releaseChannel"`
+	}{}
+
+	if err := json.Unmarshal(config.Spec.Settings.Raw, &settings); err != nil {
+		r.logger.Warn("the deckhouse module config settings do not parse, fall back to the build release channel", log.Err(err))
+
+		return app.DefaultReleaseChannel, nil
+	}
+
+	if settings.ReleaseChannel == "" {
+		return app.DefaultReleaseChannel, nil
+	}
+
+	return settings.ReleaseChannel, nil
 }
 
 // toEditionLicensing maps the published licensing onto the shape the edition resolves against.

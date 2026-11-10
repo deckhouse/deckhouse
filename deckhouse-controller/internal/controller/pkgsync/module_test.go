@@ -48,7 +48,7 @@ func TestSyncEmbeddedModules(t *testing.T) {
 		module := getModule(t, cl, "echo")
 		assert.Equal(t, "embedded", module.Spec.PackageRepositoryName)
 		assert.Equal(t, "v1.80.0", module.Spec.PackageVersion)
-		assert.True(t, module.IsEmbedded(), "an embedded module carries the embedded annotation")
+		assert.True(t, module.IsEmbedded(), "the embedded repository identifies embedded modules")
 	})
 
 	t.Run("the global module gets an object of its own", func(t *testing.T) {
@@ -79,7 +79,7 @@ func TestSyncEmbeddedModules(t *testing.T) {
 		assert.Equal(t, []string{"echo"}, listModuleNamesExceptGlobal(t, cl))
 	})
 
-	t.Run("an existing module keeps the annotations of other writers", func(t *testing.T) {
+	t.Run("an existing module is left unchanged", func(t *testing.T) {
 		dir := t.TempDir()
 		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
 
@@ -98,23 +98,27 @@ func TestSyncEmbeddedModules(t *testing.T) {
 		require.NoError(t, s.sync(ctx))
 
 		module := getModule(t, cl, "echo")
-		assert.Equal(t, "embedded", module.Spec.PackageRepositoryName, "the embedded copy outranks the repository the module came from")
-		assert.Equal(t, "v1.80.0", module.Spec.PackageVersion)
-		assert.True(t, module.IsEmbedded())
+		assert.Equal(t, "deckhouse-modules", module.Spec.PackageRepositoryName)
+		assert.Equal(t, "v1.2.3", module.Spec.PackageVersion)
+		assert.False(t, module.IsEmbedded())
 		assert.Equal(t, "echoes back", module.Annotations["en.meta.deckhouse.io/description"])
 	})
 
-	t.Run("a second pass writes nothing", func(t *testing.T) {
+	t.Run("a second pass preserves changes to an existing embedded module", func(t *testing.T) {
 		dir := t.TempDir()
 		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
 
 		s, cl := newTestSyncer(t, "v1.80.0", dir)
 		require.NoError(t, s.sync(ctx))
 
+		module := getModule(t, cl, "echo")
+		module.Spec.PackageVersion = "v1.81.0"
+		require.NoError(t, cl.Update(ctx, module))
 		version := getModule(t, cl, "echo").ResourceVersion
 
 		require.NoError(t, s.sync(ctx))
 		assert.Equal(t, version, getModule(t, cl, "echo").ResourceVersion)
+		assert.Equal(t, "v1.81.0", getModule(t, cl, "echo").Spec.PackageVersion)
 	})
 }
 
@@ -151,7 +155,7 @@ func TestSyncModulesFromModuleReleases(t *testing.T) {
 		assert.Empty(t, listModuleNamesExceptGlobal(t, cl))
 	})
 
-	t.Run("the embedded copy outranks a deployed release", func(t *testing.T) {
+	t.Run("an existing deployed module is preserved when an embedded copy exists", func(t *testing.T) {
 		dir := t.TempDir()
 		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
 
@@ -160,9 +164,9 @@ func TestSyncModulesFromModuleReleases(t *testing.T) {
 		require.NoError(t, s.sync(ctx))
 
 		module := getModule(t, cl, "echo")
-		assert.Equal(t, "embedded", module.Spec.PackageRepositoryName)
-		assert.Equal(t, "v1.80.0", module.Spec.PackageVersion)
-		assert.True(t, module.IsEmbedded())
+		assert.Equal(t, "example", module.Spec.PackageRepositoryName)
+		assert.Equal(t, "v1.2.3", module.Spec.PackageVersion)
+		assert.False(t, module.IsEmbedded())
 	})
 
 	t.Run("a module under a pull override migrates from its deployed release", func(t *testing.T) {
@@ -178,24 +182,6 @@ func TestSyncModulesFromModuleReleases(t *testing.T) {
 		module := getModule(t, cl, "echo")
 		assert.Equal(t, "v1.2.3", module.Spec.PackageVersion, "the override is ignored: the deployed release decides")
 		assert.Equal(t, "deckhouse-modules", module.Spec.PackageRepositoryName)
-	})
-
-	t.Run("a module that left the image loses the embedded mark", func(t *testing.T) {
-		existing := &v1beta1.Module{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        "echo",
-				Annotations: map[string]string{v1beta1.ModuleAnnotationEmbedded: "true"},
-			},
-			Spec: v1beta1.ModuleSpec{PackageRepositoryName: "embedded", PackageVersion: "v1.79.0"},
-		}
-
-		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), existing,
-			testModuleRelease("echo", "example", "1.2.3", v1alpha1.ModuleReleasePhaseDeployed))
-		require.NoError(t, s.sync(ctx))
-
-		module := getModule(t, cl, "echo")
-		assert.Equal(t, "example", module.Spec.PackageRepositoryName)
-		assert.False(t, module.IsEmbedded())
 	})
 
 	t.Run("every release is deleted, finalizers and all", func(t *testing.T) {
@@ -259,17 +245,47 @@ func TestSyncModulesFromModuleConfig(t *testing.T) {
 		assert.Equal(t, "NoResourceReconciliation", module.Spec.Maintenance)
 		require.NotNil(t, module.Spec.Settings)
 		assert.JSONEq(t, `{"logLevel":"Debug"}`, string(module.Spec.Settings.Raw))
+
+		assert.NotContains(t, getModuleConfig(t, cl, "echo").Annotations, v1alpha1.ModuleConfigAnnotationMigrated, "the ModuleConfig controller marks the config, not the sync")
 	})
 
-	t.Run("clears the settings of a module with no config", func(t *testing.T) {
+	t.Run("a migrated config is not applied again", func(t *testing.T) {
+		disabled := false
+		existing := &v1beta1.Module{
+			ObjectMeta: metav1.ObjectMeta{Name: "echo"},
+			Spec: v1beta1.ModuleSpec{
+				PackageRepositoryName: repositoryNameEmbedded,
+				PackageVersion:        "v1.80.0",
+				Enabled:               &disabled,
+				SettingsVersion:       2,
+				Settings:              &v1alpha1.MappedFields{Raw: []byte(`{"logLevel":"Info"}`)},
+			},
+		}
+
+		enabled := true
+		moduleConfig := testModuleConfig("echo")
+		moduleConfig.Annotations = map[string]string{v1alpha1.ModuleConfigAnnotationMigrated: "true"}
+		moduleConfig.Spec.Enabled = &enabled
+		moduleConfig.Spec.Version = 1
+		moduleConfig.Spec.Settings = &v1alpha1.MappedFields{Raw: []byte(`{"logLevel":"Debug"}`)}
+
+		s, cl := newTestSyncer(t, "v1.80.0", echoOnDisk(t), existing, moduleConfig)
+		require.NoError(t, s.sync(ctx))
+
+		assert.Equal(t, existing.Spec, getModule(t, cl, "echo").Spec, "the module is the source once the config is migrated")
+	})
+
+	t.Run("preserves the settings of an existing module with no config", func(t *testing.T) {
 		enabled := true
 		existing := &v1beta1.Module{
 			ObjectMeta: metav1.ObjectMeta{Name: "echo"},
 			Spec: v1beta1.ModuleSpec{
-				Enabled:         &enabled,
-				SettingsVersion: 2,
-				Maintenance:     "NoResourceReconciliation",
-				Settings:        &v1alpha1.MappedFields{Raw: []byte(`{"logLevel":"Debug"}`)},
+				PackageRepositoryName: repositoryNameEmbedded,
+				PackageVersion:        "v1.80.0",
+				Enabled:               &enabled,
+				SettingsVersion:       2,
+				Maintenance:           "NoResourceReconciliation",
+				Settings:              &v1alpha1.MappedFields{Raw: []byte(`{"logLevel":"Debug"}`)},
 			},
 		}
 
@@ -277,10 +293,37 @@ func TestSyncModulesFromModuleConfig(t *testing.T) {
 		require.NoError(t, s.sync(ctx))
 
 		module := getModule(t, cl, "echo")
-		assert.Nil(t, module.Spec.Enabled)
-		assert.Nil(t, module.Spec.Settings)
-		assert.Zero(t, module.Spec.SettingsVersion)
-		assert.Empty(t, module.Spec.Maintenance)
+		assert.Equal(t, existing.Spec, module.Spec)
+	})
+
+	t.Run("mirrors the config into an existing module", func(t *testing.T) {
+		disabled := false
+		existing := &v1beta1.Module{
+			ObjectMeta: metav1.ObjectMeta{Name: "echo"},
+			Spec: v1beta1.ModuleSpec{
+				PackageRepositoryName: repositoryNameEmbedded,
+				PackageVersion:        "v1.80.0",
+				Enabled:               &disabled,
+				SettingsVersion:       1,
+				Settings:              &v1alpha1.MappedFields{Raw: []byte(`{"logLevel":"Info"}`)},
+			},
+		}
+
+		enabled := true
+		moduleConfig := testModuleConfig("echo")
+		moduleConfig.Spec.Enabled = &enabled
+		moduleConfig.Spec.Version = 2
+		moduleConfig.Spec.Settings = &v1alpha1.MappedFields{Raw: []byte(`{"logLevel":"Debug"}`)}
+
+		s, cl := newTestSyncer(t, "v1.80.0", echoOnDisk(t), existing, moduleConfig)
+		require.NoError(t, s.sync(ctx))
+
+		module := getModule(t, cl, "echo")
+		require.NotNil(t, module.Spec.Enabled)
+		assert.True(t, *module.Spec.Enabled)
+		assert.Equal(t, 2, module.Spec.SettingsVersion)
+		require.NotNil(t, module.Spec.Settings)
+		assert.JSONEq(t, `{"logLevel":"Debug"}`, string(module.Spec.Settings.Raw))
 	})
 
 	t.Run("a config under deletion counts as gone", func(t *testing.T) {
@@ -326,13 +369,13 @@ func TestDeleteUnresolvableModules(t *testing.T) {
 	})
 
 	t.Run("an embedded module is kept", func(t *testing.T) {
-		embedded := &v1beta1.Module{ObjectMeta: metav1.ObjectMeta{
-			Name:        "shipped",
-			Annotations: map[string]string{v1beta1.ModuleAnnotationEmbedded: "true"},
-		}}
+		embedded := &v1beta1.Module{
+			ObjectMeta: metav1.ObjectMeta{Name: "shipped"},
+			Spec:       v1beta1.ModuleSpec{PackageRepositoryName: repositoryNameEmbedded},
+		}
 
 		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), embedded)
-		require.NoError(t, s.sync(ctx))
+		require.NoError(t, s.deleteUnresolvableModules(ctx))
 
 		assert.Equal(t, []string{"shipped"}, listModuleNamesExceptGlobal(t, cl))
 	})
@@ -452,7 +495,7 @@ func TestSyncModulesReleaseChannel(t *testing.T) {
 		assert.Empty(t, getModule(t, cl, "echo").Spec.ReleaseChannel, "the image ships it, off no channel")
 	})
 
-	t.Run("the channel of an existing embedded module is cleared", func(t *testing.T) {
+	t.Run("the channel and version of an existing embedded module are preserved", func(t *testing.T) {
 		existing := &v1beta1.Module{
 			ObjectMeta: metav1.ObjectMeta{Name: "echo"},
 			Spec: v1beta1.ModuleSpec{
@@ -466,8 +509,8 @@ func TestSyncModulesReleaseChannel(t *testing.T) {
 		require.NoError(t, s.sync(ctx))
 
 		module := getModule(t, cl, "echo")
-		assert.Empty(t, module.Spec.ReleaseChannel)
-		assert.Equal(t, "v1.80.0", module.Spec.PackageVersion, "every start brings the module to the image")
+		assert.Equal(t, "Stable", module.Spec.ReleaseChannel)
+		assert.Equal(t, "v1.79.0", module.Spec.PackageVersion)
 	})
 
 	t.Run("a released module follows the channel of its update policy", func(t *testing.T) {
@@ -529,6 +572,16 @@ func listModuleNames(t *testing.T, cl client.Client) []string {
 	}
 
 	return names
+}
+
+// getModuleConfig reads the module config back from the client.
+func getModuleConfig(t *testing.T, cl client.Client, name string) *v1alpha1.ModuleConfig {
+	t.Helper()
+
+	config := new(v1alpha1.ModuleConfig)
+	require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: name}, config))
+
+	return config
 }
 
 func getModule(t *testing.T, cl client.Client, name string) *v1beta1.Module {

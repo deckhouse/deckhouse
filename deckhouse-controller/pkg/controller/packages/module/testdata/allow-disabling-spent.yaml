@@ -11,15 +11,6 @@ spec:
   enabled: false
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: test-module
-  annotations:
-    packages.deckhouse.io/allow-disabling: "true"
-spec:
-  enabled: false
----
-apiVersion: deckhouse.io/v1alpha1
 kind: ModulePackage
 metadata:
   name: test-module

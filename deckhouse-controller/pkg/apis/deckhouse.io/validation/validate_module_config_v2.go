@@ -43,7 +43,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -67,7 +66,7 @@ func (m packageModuleManager) IsModuleEnabled(name string) bool {
 	return m.IsPackageEnabled(name)
 }
 
-// moduleRequest is the part of a ModuleConfig or a Module the package version checks read.
+// moduleRequest is the part of a Module the package version checks read.
 type moduleRequest struct {
 	name            string
 	enabled         *bool
@@ -78,23 +77,6 @@ type moduleRequest struct {
 	kind        string
 	settings    *v1alpha1.MappedFields
 	annotations map[string]string
-}
-
-// moduleConfigRequest reads a ModuleConfig; nil stays nil.
-func moduleConfigRequest(cfg *v1alpha1.ModuleConfig) *moduleRequest {
-	if cfg == nil {
-		return nil
-	}
-
-	return &moduleRequest{
-		name:            cfg.Name,
-		enabled:         cfg.Spec.Enabled,
-		settingsVersion: cfg.Spec.Version,
-		versionField:    "spec.version",
-		kind:            v1alpha1.ModuleConfigGVK.Kind,
-		settings:        cfg.Spec.Settings,
-		annotations:     cfg.Annotations,
-	}
 }
 
 // enabledOr resolves the enabled intent, falling back to def when it is unset.
@@ -154,7 +136,57 @@ func hasRun(lastApplied runtime.RawExtension) bool {
 	return len(lastApplied.Raw) > 0
 }
 
-// moduleValidatorV2 holds the package version checks shared by the ModuleConfig and Module webhooks.
+// moduleConfigValidationHandlerV2 keeps a migrated ModuleConfig, the mirror of its Module, to system accounts.
+func moduleConfigValidationHandlerV2() http.Handler {
+	wh, _ := kwhvalidating.NewWebhook(kwhvalidating.WebhookConfig{
+		ID:        "module-config-operations",
+		Validator: kwhvalidating.ValidatorFunc(validateModuleConfigV2),
+		// logger is nil, because webhook has Info level for reporting about http handler
+		// and we get a log of useless spam here. So we decided to use Noop logger here
+		Logger: nil,
+		Obj:    &v1alpha1.ModuleConfig{},
+	})
+
+	return kwhhttp.MustHandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: nil})
+}
+
+// validateModuleConfigV2 rejects a change of a migrated config, or marking one migrated, by anyone but a system account.
+func validateModuleConfigV2(_ context.Context, review *kwhmodel.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
+	if isSystemAccount(review.UserInfo.Username) {
+		return allowResult(nil)
+	}
+
+	migrated := isMigratedConfig(obj.GetAnnotations())
+	if !migrated && review.Operation == kwhmodel.OperationUpdate {
+		oldCfg := new(v1alpha1.ModuleConfig)
+		if err := decodeOldObject(review.OldObjectRaw, oldCfg); err != nil {
+			return nil, err
+		}
+
+		migrated = isMigratedConfig(oldCfg.Annotations)
+	}
+
+	if migrated {
+		return rejectResult(fmt.Sprintf("the '%s' ModuleConfig mirrors the '%s' Module: change the Module instead", obj.GetName(), obj.GetName()))
+	}
+
+	return allowResult(nil)
+}
+
+// isMigratedConfig reports whether the config annotations mark it migrated into its Module.
+func isMigratedConfig(annotations map[string]string) bool {
+	_, ok := annotations[v1alpha1.ModuleConfigAnnotationMigrated]
+	return ok
+}
+
+// isSystemAccount reports whether the user is a Deckhouse or Kubernetes service account, or dhctl.
+func isSystemAccount(username string) bool {
+	return strings.HasPrefix(username, "system:serviceaccount:d8-") ||
+		strings.HasPrefix(username, "system:serviceaccount:kube-") ||
+		username == "dhctl"
+}
+
+// moduleValidatorV2 holds the package version checks of the Module webhook.
 type moduleValidatorV2 struct {
 	client   client.Client
 	packages modulePackageManager
@@ -175,124 +207,6 @@ func newModuleValidatorV2(cli client.Client, packages modulePackageManager, metr
 			metricStorage: metricStorage,
 		},
 	}
-}
-
-// moduleConfigValidationHandlerV2 validates ModuleConfig admission requests against the package version of its Module.
-func moduleConfigValidationHandlerV2(
-	cli client.Client,
-	packages modulePackageManager,
-	metricStorage metricsstorage.Storage,
-	settings *helpers.DeckhouseSettingsContainer,
-) http.Handler {
-	validator := &moduleConfigValidatorV2{moduleValidatorV2: newModuleValidatorV2(cli, packages, metricStorage, settings)}
-
-	wh, _ := kwhvalidating.NewWebhook(kwhvalidating.WebhookConfig{
-		ID:        "module-config-operations",
-		Validator: kwhvalidating.ValidatorFunc(validator.validate),
-		// logger is nil, because webhook has Info level for reporting about http handler
-		// and we get a log of useless spam here. So we decided to use Noop logger here
-		Logger: nil,
-		Obj:    &v1alpha1.ModuleConfig{},
-	})
-
-	return kwhhttp.MustHandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: nil})
-}
-
-// moduleConfigValidatorV2 validates a ModuleConfig as the settings source of its Module.
-type moduleConfigValidatorV2 struct {
-	*moduleValidatorV2
-}
-
-// validate is the admission entrypoint.
-func (v *moduleConfigValidatorV2) validate(ctx context.Context, review *kwhmodel.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
-	cfg, ok := obj.(*v1alpha1.ModuleConfig)
-	if !ok {
-		return nil, fmt.Errorf("expect ModuleConfig as unstructured, got %T", obj)
-	}
-
-	switch review.Operation {
-	case kwhmodel.OperationDelete:
-		return v.validateDelete(ctx, cfg)
-
-	case kwhmodel.OperationConnect, kwhmodel.OperationUnknown:
-		return rejectResult(fmt.Sprintf("operation '%s' is not applicable", review.Operation))
-	}
-
-	var oldCfg *v1alpha1.ModuleConfig
-	if review.Operation == kwhmodel.OperationUpdate {
-		oldCfg = new(v1alpha1.ModuleConfig)
-		if err := decodeOldObject(review.OldObjectRaw, oldCfg); err != nil {
-			return nil, err
-		}
-	}
-
-	return v.validateApply(ctx, cfg, oldCfg)
-}
-
-// validateDelete runs the control-plane-manager guards, the disable confirmation and the pull override check.
-func (v *moduleConfigValidatorV2) validateDelete(ctx context.Context, cfg *v1alpha1.ModuleConfig) (*kwhvalidating.ValidatorResult, error) {
-	req := moduleConfigRequest(cfg)
-	if res, err := v.validateDeleteGuards(ctx, req); res != nil || err != nil {
-		return res, err
-	}
-
-	if !hasAllowDisablingAnnotation(cfg.Annotations) && v.packages.IsPackageEnabled(cfg.Name) {
-		target, _, err := v.resolveTarget(ctx, cfg.Name)
-		if err != nil {
-			return nil, err
-		}
-
-		if res, err := confirmationRejectionV2(req, target); res != nil || err != nil {
-			return res, err
-		}
-	}
-
-	exists, err := utils.ModulePullOverrideExists(ctx, v.client, cfg.Name)
-	if err != nil {
-		return nil, fmt.Errorf("get the '%s' module pull override: %w", cfg.Name, err)
-	}
-	if exists {
-		return rejectResult("delete the ModulePullOverride before deleting the module config")
-	}
-
-	v.shared.setAllowedToDisableMetric(cfg, 0)
-
-	return allowResult(nil)
-}
-
-// validateApply handles CREATE and UPDATE; oldCfg is nil on CREATE.
-func (v *moduleConfigValidatorV2) validateApply(ctx context.Context, cfg, oldCfg *v1alpha1.ModuleConfig) (*kwhvalidating.ValidatorResult, error) {
-	if cfg.Spec.Source == v1alpha1.ModuleSourceEmbedded {
-		return rejectResult("'Embedded' is a forbidden source")
-	}
-
-	if res, err := v.shared.validateUpdatePolicy(ctx, cfg); res != nil || err != nil {
-		return res, err
-	}
-
-	req, oldReq := moduleConfigRequest(cfg), moduleConfigRequest(oldCfg)
-
-	// the guards run before the target lookup, so deleting the Module cannot bypass them
-	if res, err := v.validateApplyGuards(ctx, req, oldReq); res != nil || err != nil {
-		return res, err
-	}
-
-	target, warning, err := v.resolveTarget(ctx, cfg.Name)
-	if err != nil {
-		return nil, err
-	}
-	if target == nil {
-		return allowResult([]string{warning})
-	}
-
-	warnings, res, err := v.validatePackage(ctx, req, oldReq, target)
-	if res != nil || err != nil {
-		return res, err
-	}
-
-	v.shared.setAllowedToDisableMetric(cfg, allowedToDisablePackageMetricValue(req, v.packages.IsPackageEnabled(cfg.Name)))
-
-	return allowResult(warnings)
 }
 
 // validateApplyGuards runs the control-plane-manager migration guards on CREATE and UPDATE.
@@ -551,15 +465,6 @@ func packageDisableRejection(options *v1alpha1.PackageDisableOptions, kind, subj
 func hasAllowDisablingAnnotation(annotations map[string]string) bool {
 	_, ok := annotations[v1alpha1.PackageAnnotationAllowDisabling]
 	return ok
-}
-
-// allowedToDisablePackageMetricValue is 1 when the config keeps the module enabled while confirming disabling, and 0 otherwise.
-func allowedToDisablePackageMetricValue(req *moduleRequest, defaultEnabled bool) float64 {
-	if hasAllowDisablingAnnotation(req.annotations) && req.enabledOr(defaultEnabled) {
-		return 1
-	}
-
-	return 0
 }
 
 // decodeOldObject decodes the stored object an UPDATE replaces; failing is the safe direction.

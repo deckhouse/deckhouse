@@ -32,7 +32,7 @@ import (
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
-// deckhouseServiceAccount is the identity the controller writes Modules under.
+// deckhouseServiceAccount is the identity Deckhouse writes its objects under.
 const deckhouseServiceAccount = "system:serviceaccount:d8-system:deckhouse"
 
 // moduleValidationHandlerV2 validates Module admission requests against the package version the Module selects.
@@ -56,7 +56,7 @@ func moduleValidationHandlerV2(
 	return kwhhttp.MustHandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: nil})
 }
 
-// moduleValidatorV2Handler validates a Module edited directly by a user.
+// moduleValidatorV2Handler validates a Module edit; the deckhouse service account is excluded by the webhook configuration.
 type moduleValidatorV2Handler struct {
 	*moduleValidatorV2
 }
@@ -83,11 +83,6 @@ func (v *moduleValidatorV2Handler) validate(ctx context.Context, review *kwhmode
 	module, ok := obj.(*v1beta1.Module)
 	if !ok {
 		return nil, fmt.Errorf("expect Module as unstructured, got %T", obj)
-	}
-
-	// the controller proxies ModuleConfig into Module, and that ModuleConfig passed its own webhook
-	if review.UserInfo.Username == deckhouseServiceAccount {
-		return allowResult(nil)
 	}
 
 	switch review.Operation {

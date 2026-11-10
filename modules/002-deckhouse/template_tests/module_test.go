@@ -25,6 +25,7 @@ import (
 
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	. "github.com/deckhouse/deckhouse/testing/helm"
+	"github.com/deckhouse/deckhouse/testing/library"
 )
 
 func Test(t *testing.T) {
@@ -194,6 +195,13 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 			return vwc.Field(`webhooks.#(name=="modules.deckhouse-webhook.deckhouse.io")`).String()
 		}
 
+		moduleConfigsWebhook := func() library.KubeResult {
+			vwc := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "deckhouse-webhook")
+			Expect(vwc.Exists()).To(BeTrue())
+
+			return vwc.Field(`webhooks.#(name=="module-configs.deckhouse-webhook.deckhouse.io")`)
+		}
+
 		render := func(enableModuleV2 bool) {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
@@ -214,6 +222,22 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 			render(true)
 
 			Expect(modulesWebhook()).To(MatchJSON(modulesWebhookJSON("v1beta1")))
+		})
+
+		It("validates ModuleConfigs without Module v2", func() {
+			render(false)
+
+			Expect(moduleConfigsWebhook().Exists()).To(BeTrue())
+			Expect(moduleConfigsWebhook().Get("matchConditions").Exists()).To(BeFalse())
+		})
+
+		It("keeps users off migrated ModuleConfigs with Module v2, Deckhouse excluded before any call", func() {
+			render(true)
+
+			webhook := moduleConfigsWebhook()
+			Expect(webhook.Exists()).To(BeTrue())
+			Expect(webhook.Get("failurePolicy").String()).To(Equal("Fail"))
+			Expect(webhook.Get("matchConditions").String()).To(MatchJSON(`[{"name": "exclude-deckhouse", "expression": "request.userInfo.username != \"system:serviceaccount:d8-system:deckhouse\""}]`))
 		})
 	})
 
@@ -687,14 +711,16 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 	})
 })
 
-// modulesWebhookJSON is the rendered Module webhook for the given API version.
+// modulesWebhookJSON is the rendered Module webhook for the given API version: every user edit is
+// checked, so it fails closed, and Deckhouse is excluded before any call.
 func modulesWebhookJSON(version string) string {
 	return `{
   "name": "modules.deckhouse-webhook.deckhouse.io",
   "rules": [{"apiGroups": ["deckhouse.io"], "apiVersions": ["` + version + `"], "resources": ["modules"], "operations": ["CREATE", "UPDATE", "DELETE"], "scope": "Cluster"}],
   "admissionReviewVersions": ["v1"],
   "matchPolicy": "Equivalent",
-  "failurePolicy": "Ignore",
+  "matchConditions": [{"name": "exclude-deckhouse", "expression": "request.userInfo.username != \"system:serviceaccount:d8-system:deckhouse\""}],
+  "failurePolicy": "Fail",
   "sideEffects": "None",
   "clientConfig": {"caBundle": "Yw==", "service": {"name": "deckhouse", "namespace": "d8-system", "port": 4223, "path": "/validate/` + version + `/modules"}}
 }`

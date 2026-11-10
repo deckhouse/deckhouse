@@ -43,6 +43,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/controllers/moduleconfig"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/disk"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine"
@@ -90,7 +91,7 @@ type Controller struct {
 	mu      sync.Mutex
 	stopped bool
 
-	manager *engine.Engine
+	engine *engine.Engine
 
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer
 
@@ -150,7 +151,7 @@ func Build(ctx context.Context, client *klient.Client, ms metricsstorage.Storage
 		ReleaseChannel: app.DefaultReleaseChannel,
 	})
 
-	manager, err := engine.Build(runtime.GetClient(), nil, ms, logger, engine.Config{EnableModuleV2: true})
+	pkgengine, err := engine.Build(runtime.GetClient(), nil, ms, logger, engine.Config{EnableModuleV2: true})
 	if err != nil {
 		return nil, fmt.Errorf("create package engine: %w", err)
 	}
@@ -162,7 +163,7 @@ func Build(ctx context.Context, client *klient.Client, ms metricsstorage.Storage
 
 	// TODO: get rid of stack extenders, its no longer needed, but deckhouse release controller still depends on it
 	exts := extenders.NewExtendersStack(app.Version, nil, nil, logger.Named("extenders"))
-	err = deckhouserelease.NewDeckhouseReleaseController(ctx, runtime, dc, exts, manager, deckhouseSettings, ms, logger)
+	err = deckhouserelease.NewDeckhouseReleaseController(ctx, runtime, dc, exts, pkgengine, deckhouseSettings, ms, logger)
 	if err != nil {
 		return nil, fmt.Errorf("create deckhouse release controller: %w", err)
 	}
@@ -182,12 +183,17 @@ func Build(ctx context.Context, client *klient.Client, ms metricsstorage.Storage
 		return nil, fmt.Errorf("register module package version controller: %w", err)
 	}
 
-	err = module.RegisterController(synced, runtime, manager, dc, logger)
+	err = module.RegisterController(synced, runtime, pkgengine, dc, logger)
 	if err != nil {
 		return nil, fmt.Errorf("register module controller: %w", err)
 	}
 
-	err = application.RegisterController(synced, runtime, manager, nil, deckhouseSettings, applicationsSettings, logger)
+	err = moduleconfig.RegisterController(synced, runtime, dc, logger)
+	if err != nil {
+		return nil, fmt.Errorf("register module config controller: %w", err)
+	}
+
+	err = application.RegisterController(synced, runtime, pkgengine, nil, deckhouseSettings, applicationsSettings, logger)
 	if err != nil {
 		return nil, fmt.Errorf("register application controller: %w", err)
 	}
@@ -217,7 +223,7 @@ func Build(ctx context.Context, client *klient.Client, ms metricsstorage.Storage
 		validation.RegisterAdmissionHandlersV2(
 			runtime.GetWebhookServer(),
 			runtime.GetClient(),
-			manager,
+			pkgengine,
 			ms,
 			config.NewSchemaStore(nil),
 			deckhouseSettings,
@@ -234,7 +240,7 @@ func Build(ctx context.Context, client *klient.Client, ms metricsstorage.Storage
 		ctrl: runtime,
 		sync: synced,
 
-		manager: manager,
+		engine: pkgengine,
 
 		embeddedPolicy: embeddedPolicy,
 
@@ -370,7 +376,7 @@ func (c *Controller) Start(ctx context.Context) error {
 	defer c.sync.Done()
 
 	// start the engine's services; the hook event loop must run before Boot
-	c.manager.Start()
+	c.engine.Start()
 
 	// starts all child controllers
 	go func() {
@@ -428,12 +434,12 @@ func (c *Controller) Stop() {
 	c.mu.Unlock()
 
 	c.sync.Wait()
-	c.manager.Stop()
+	c.engine.Stop()
 }
 
 // Engine returns the package engine.
 func (c *Controller) Engine() *engine.Engine {
-	return c.manager
+	return c.engine
 }
 
 // runSyncSettingsLoop updates the embedded policy, the Deckhouse settings and the global
@@ -443,13 +449,13 @@ func (c *Controller) runSyncSettingsLoop(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case config, ok := <-c.manager.GetDeckhouseSettingsCh():
+		case config, ok := <-c.engine.GetDeckhouseSettingsCh():
 			if !ok {
 				return
 			}
 
 			c.syncDeckhouseSettings(config)
-		case config, ok := <-c.manager.GetGlobalSettingsCh():
+		case config, ok := <-c.engine.GetGlobalSettingsCh():
 			if !ok {
 				return
 			}
@@ -574,7 +580,7 @@ func (c *Controller) bootPackages(ctx context.Context, applications []v1alpha1.A
 		bootModules = append(bootModules, boot)
 	}
 
-	return c.manager.Boot(ctx, global, bootApps, bootModules)
+	return c.engine.Boot(ctx, global, bootApps, bootModules)
 }
 
 // cleanupPackages hands the engine every package the cluster still claims, so it drops the rest.
@@ -615,7 +621,7 @@ func (c *Controller) cleanupPackages(ctx context.Context, applications []v1alpha
 		}
 	}
 
-	return c.manager.Cleanup(ctx, preserveApps, preserveModules)
+	return c.engine.Cleanup(ctx, preserveApps, preserveModules)
 }
 
 // restorable is application.Restorable for a module: Boot gets it and Cleanup keeps its image,

@@ -29,12 +29,6 @@ const (
 	ModuleKind     = "Module"
 
 	ModuleFinalizerStatisticRegistered = "module.deckhouse.io/statistic-registered"
-
-	// ModuleAnnotationEmbedded marks a module that is embedded in the Deckhouse image.
-	ModuleAnnotationEmbedded = "modules.deckhouse.io/embedded"
-
-	// ModuleAnnotationCritical marks a module whose definition declares it critical.
-	ModuleAnnotationCritical = "modules.deckhouse.io/critical"
 )
 
 var (
@@ -289,5 +283,5 @@ type ModuleList struct {
 
 // IsEmbedded returns true if the module is embedded in the Deckhouse image.
 func (m *Module) IsEmbedded() bool {
-	return m.Annotations[ModuleAnnotationEmbedded] == "true"
+	return m.Spec.PackageRepositoryName == "embedded"
 }

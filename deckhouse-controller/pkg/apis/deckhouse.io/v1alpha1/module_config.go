@@ -29,6 +29,9 @@ const (
 	ModuleConfigKind     = "ModuleConfig"
 
 	ModuleConfigAnnotationAllowDisable = "modules.deckhouse.io/allow-disabling"
+	// ModuleConfigAnnotationMigrated marks a config migrated into its Module: with Module v2 it is the Module's
+	// mirror, and only system accounts may change it.
+	ModuleConfigAnnotationMigrated = "modules.deckhouse.io/migrated-config"
 
 	// TODO: remove after 1.73+
 	ModuleConfigFinalizerOld = "modules.deckhouse.io/module-config"

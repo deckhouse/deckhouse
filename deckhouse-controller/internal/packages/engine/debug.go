@@ -143,10 +143,9 @@ type ConvergeDump struct {
 
 // ConvergePackageDump is one unconverged node: what it waits for and the failure its report holds.
 type ConvergePackageDump struct {
-	Version  string         `json:"version,omitempty" yaml:"version,omitempty"` // Version is the revision being converged.
-	Order    schedule.Order `json:"order" yaml:"order"`                         // Order is the effective order the tier rule gates by.
-	WaitsFor string         `json:"waitsFor,omitempty" yaml:"waitsFor,omitempty"`
-	Error    string         `json:"error,omitempty" yaml:"error,omitempty"`
+	Version  string `json:"version,omitempty" yaml:"version,omitempty"` // Version is the revision being converged.
+	WaitsFor string `json:"waitsFor,omitempty" yaml:"waitsFor,omitempty"`
+	Error    string `json:"error,omitempty" yaml:"error,omitempty"`
 }
 
 // Converge returns the global and module nodes core.Engine.Converged waits for, each with its
@@ -157,7 +156,7 @@ func (e *Engine) Converge() any {
 
 	d := ConvergeDump{Paused: unconverged.Paused, Packages: make(map[string]ConvergePackageDump)}
 	for name, n := range unconverged.Nodes {
-		w := ConvergePackageDump{Version: n.Revision, Order: n.Order, WaitsFor: n.WaitsFor}
+		w := ConvergePackageDump{Version: n.Revision, WaitsFor: n.WaitsFor}
 		if report, ok := e.core.Report(name); ok {
 			w.Error = failureOf(report)
 		}

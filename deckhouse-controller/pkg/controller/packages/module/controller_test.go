@@ -377,7 +377,6 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		annotations := suite.getModule(moduleName).Annotations
 		assert.NotContains(suite.T(), annotations, v1alpha1.PackageAnnotationAllowDisabling)
 		assert.Contains(suite.T(), annotations, "packages.deckhouse.io/keep-me")
-		assert.NotContains(suite.T(), suite.getModuleConfig(moduleName).Annotations, v1alpha1.PackageAnnotationAllowDisabling)
 	})
 
 	suite.Run("enabled module keeps the disable confirmation", func() {
