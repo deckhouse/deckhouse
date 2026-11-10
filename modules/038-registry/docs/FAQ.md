@@ -962,6 +962,129 @@ platform's image repository there, the one the cluster was installed from (for e
 store's name for that repository). A `d8 mirror` bundle of the release holds the image too. Unpack
 the image into the directory the error names.
 
+## How do I push a new DP release or a new module version into an air-gapped cluster?
+
+Once the upstream is removed from the configuration and the cluster has no internet access,
+`d8 mirror push` is the only way new images get into the in-cluster cache. The cache leader accepts
+the push, and the other replicas copy the images from it. As soon as a release is in the cache, the
+cluster sees it the same way it would see it in the upstream and updates by the usual rules: the
+release channel, the update windows, and manual approval if it is enabled.
+
+You don't need to bring the upstream back for this, and you don't need to change
+[`storage.source`](configuration.html#parameters-storage-source) either. The cache's completeness is
+checked against the image set the cluster needs, not against `expectedDigests`. Garbage collection
+keeps releases newer than the deployed one, so a pushed release stays in the store until it is
+deployed.
+
+### Step 1. Pull the images on a machine with internet access
+
+Get the DP edition and version running in the cluster:
+
+```bash
+d8 k -n d8-system get deployment deckhouse -o json | jq -r '.metadata.annotations | {"core.deckhouse.io/edition","core.deckhouse.io/version"}'
+```
+
+Pull the DP releases starting from the cluster's minor version. Minor versions are installed one
+after another, so the bundle has to contain every one in between, and `--since-version` pulls them:
+
+```bash
+d8 mirror pull --source='registry.deckhouse.ru/deckhouse/<EDITION>' --license='<LICENSE_KEY>' \
+  --since-version='<X.Y>' ./d8-bundle
+```
+
+To update only a module without pulling the platform, give its current version. The command pulls
+that version, the newer ones, and the versions on the release channels:
+
+```bash
+d8 mirror pull --source='registry.deckhouse.ru/deckhouse/<EDITION>' --license='<LICENSE_KEY>' \
+  --no-platform --include-module='<MODULE>@<VERSION>' ./d8-bundle
+```
+
+The [Updating DP in air-gapped environment](/products/kubernetes-platform/documentation/v1/guides/airgapped-update.html)
+guide explains how to make the bundle smaller and how to build the list of modules.
+
+Move the bundle to the machine you will run `d8 mirror push` from. Make sure the cache's store has
+room for it: a push into a full store gets `507 Insufficient Storage` (see
+[What happens when the cache's store is full?](#what-happens-when-the-caches-store-is-full)).
+
+### Step 2. Check the publication endpoint
+
+Images get into the cache only through the publication endpoint: the `registry-push` Ingress in the
+`d8-system` namespace, which passes the push on to the cache leader. A push sent straight to a
+master node, around the Ingress, is refused: the port that accepts writes there takes them only from
+the ingress controller and from the cache itself (see
+[What protects the ports on control-plane nodes](/modules/registry/#what-protects-the-ports-on-control-plane-nodes)).
+
+Check whether the cluster has the `registry-push` Ingress and whether an ingress controller serves it:
+
+```bash
+d8 k -n d8-system get ingress registry-push -o jsonpath='{.spec.ingressClassName}{"\t"}{.spec.rules[0].host}{"\n"}'
+d8 k get ingressclass
+```
+
+- The Ingress exists and its class is among the IngressClasses: go on to step 3.
+- The Ingress exists, but its class is not among the IngressClasses: set the
+  [`ingressClass`](configuration.html#parameters-ingressclass) parameter of the `registry` ModuleConfig
+  to the class of an existing controller, then go on to step 3.
+- There is no Ingress: it is created only when
+  [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate)
+  is set and the `cert-manager` module is enabled. Set the parameter and enable the module: the
+  Ingress appears on the next run of the `registry` module. If the cluster cannot have the Ingress,
+  set [`primary.upstream`](configuration.html#parameters-primary-upstream) to a registry the cluster
+  can reach that holds the images, let the cache fill from it, and remove the upstream again.
+
+Run the `d8 k` commands in the next steps where you have access to the cluster's API. If the bundle
+is on another machine, carry the values over to it.
+
+### Step 3. Push the images
+
+```bash
+HOST=$(d8 k -n d8-system get ingress registry-push -o jsonpath='{.spec.rules[0].host}')
+PUSH_SECRET=$(d8 k -n d8-system get secret registry-storage-push -o json)
+d8 mirror push ./d8-bundle "$HOST/system/deckhouse" \
+  --registry-login="$(echo "$PUSH_SECRET" | jq -r .data.username | base64 -d)" \
+  --registry-password="$(echo "$PUSH_SECRET" | jq -r .data.password | base64 -d)"
+```
+
+What the push needs:
+
+- The name in `$HOST` resolves to the ingress controller's address on the machine you push from.
+- If [`whitelistSourceRanges`](configuration.html#parameters-whitelistsourceranges) is set, that
+  machine's address is in the list.
+- The machine trusts the Ingress certificate. Let's Encrypt can't issue one for an air-gapped cluster,
+  so such clusters usually use their own ClusterIssuer or the `CustomCertificate` mode (the
+  [`https`](configuration.html#parameters-https) parameter). If the machine doesn't trust the
+  certificate authority, pass its certificate in the `SSL_CERT_FILE` environment variable.
+- The cache has a leader. While there is none, the push is refused; look at the replicas in the
+  RegistryStorage status (see
+  [How do I check the state of the in-cluster cache?](#how-do-i-check-the-state-of-the-in-cluster-cache)).
+  If the leader changed during the push, for example because a master node rebooted, run the
+  command again.
+
+Do not push while a garbage collection is running: check `d8 k get registryoperation` first. A push
+that overlaps a collection can fail, and it can also report success and leave an image incomplete.
+If a push overlapped a collection, run it again after the collection finishes (see
+[When it runs, and what happens during a run?](#when-it-runs-and-what-happens-during-a-run)).
+
+### Step 4. Check that the release has reached the cluster
+
+Check the state of the cache. The other replicas copy the new release from the leader before it is
+deployed:
+
+```bash
+d8 k get registrystorage registry -o jsonpath='{.status}' | jq '{phase,fill,leader,allReplicasFull}'
+```
+
+Check that the cluster sees the new DP release or module release:
+
+```bash
+d8 k get deckhousereleases
+d8 k get modulereleases
+```
+
+From here on the release is deployed according to the [DP update settings](/modules/deckhouse/configuration.html#parameters-update)
+and the module update settings.
+
 ## Image availability alerts from `extended-monitoring` for the in-cluster registry
 
 With the module in charge, every image reference in the cluster names `registry.d8-system.svc:5001`.

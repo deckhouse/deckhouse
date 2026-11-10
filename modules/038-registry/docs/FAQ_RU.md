@@ -896,6 +896,128 @@ Deckhouse Virtualization Platform), использует бандл этого �
 в адресе из ошибки — лишь имя этого репозитория в хранилище). Этот образ входит и в бандл
 `d8 mirror` этого релиза. Распакуйте образ в каталог, указанный в ошибке.
 
+## Как загрузить новый релиз DP или новую версию модуля в изолированный кластер?
+
+Когда upstream убран из конфигурации и из кластера нет доступа в интернет, новые образы
+попадают во внутрикластерный кеш только через `d8 mirror push`. Push принимает лидер кеша,
+остальные реплики копируют образы с него. Как только релиз оказался в кеше, кластер видит его
+так же, как видел бы в upstream, и обновляется по обычным правилам: по каналу обновлений, в окна
+обновлений, с ручным подтверждением, если оно включено.
+
+Возвращать upstream для этого не нужно, менять [`storage.source`](configuration.html#parameters-storage-source)
+тоже. Полнота кеша проверяется по набору образов, который нужен кластеру, а не по
+`expectedDigests`. Сборка мусора не удаляет релизы новее развёрнутого, поэтому загруженный
+релиз останется в хранилище до развёртывания.
+
+### Шаг 1. Скачайте образы на машине с доступом в интернет
+
+Узнайте редакцию и версию DP в кластере:
+
+```bash
+d8 k -n d8-system get deployment deckhouse -o json | jq -r '.metadata.annotations | {"core.deckhouse.io/edition","core.deckhouse.io/version"}'
+```
+
+Скачайте релизы DP, начиная с минорной версии кластера. Минорные версии устанавливаются по
+очереди, поэтому в пакете должны быть все промежуточные, и `--since-version` их скачивает:
+
+```bash
+d8 mirror pull --source='registry.deckhouse.ru/deckhouse/<EDITION>' --license='<LICENSE_KEY>' \
+  --since-version='<X.Y>' ./d8-bundle
+```
+
+Чтобы обновить только модуль, не скачивая платформу, укажите его текущую версию. Будут скачаны
+эта версия, более новые и версии на каналах обновлений:
+
+```bash
+d8 mirror pull --source='registry.deckhouse.ru/deckhouse/<EDITION>' --license='<LICENSE_KEY>' \
+  --no-platform --include-module='<MODULE>@<VERSION>' ./d8-bundle
+```
+
+Как сократить объём пакета и уточнить список модулей, описано в руководстве
+[«Обновление DP в закрытом окружении»](/products/kubernetes-platform/documentation/v1/guides/airgapped-update.html).
+
+Перенесите пакет на машину, с которой будете выполнять `d8 mirror push`. Проверьте, что в хранилище
+кеша хватит места: при заполненном хранилище push получает `507 Insufficient Storage` (подробнее — в
+разделе [«Что происходит, когда хранилище кеша заполнено»](#что-происходит-когда-хранилище-кеша-заполнено)).
+
+### Шаг 2. Проверьте эндпоинт публикации
+
+Образы попадают в кеш только через эндпоинт публикации — Ingress `registry-push` в неймспейсе
+`d8-system`, который передаёт push лидеру кеша. Push, отправленный напрямую на master-узел в обход
+Ingress, отклоняется: порт, который там принимает запись, принимает её только от ingress-контроллера
+и от самого кеша (подробнее — в разделе
+[«Чем защищены порты на master-узлах»](/modules/registry/#чем-защищены-порты-на-master-узлах)).
+
+Проверьте, есть ли в кластере Ingress `registry-push` и обслуживает ли его ingress-контроллер:
+
+```bash
+d8 k -n d8-system get ingress registry-push -o jsonpath='{.spec.ingressClassName}{"\t"}{.spec.rules[0].host}{"\n"}'
+d8 k get ingressclass
+```
+
+- Ingress есть, и его класс есть среди IngressClass — переходите к шагу 3.
+- Ingress есть, но его класса нет среди IngressClass — укажите в параметре
+  [`ingressClass`](configuration.html#parameters-ingressclass) ModuleConfig `registry` класс
+  существующего контроллера, после чего переходите к шагу 3.
+- Ingress нет — он создаётся, только если задан
+  [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate)
+  и включён модуль `cert-manager`. Задайте параметр и включите модуль: Ingress появится при
+  следующем запуске модуля `registry`. Если Ingress в кластере невозможен, укажите в
+  [`primary.upstream`](configuration.html#parameters-primary-upstream) доступный из кластера
+  registry, в котором есть нужные образы, дождитесь, пока кеш наполнится из него, и снова уберите
+  upstream.
+
+Команды `d8 k` в следующих шагах выполняются там, где есть доступ к API кластера. Если пакет
+лежит на другой машине, перенесите туда полученные значения.
+
+### Шаг 3. Загрузите образы
+
+```bash
+HOST=$(d8 k -n d8-system get ingress registry-push -o jsonpath='{.spec.rules[0].host}')
+PUSH_SECRET=$(d8 k -n d8-system get secret registry-storage-push -o json)
+d8 mirror push ./d8-bundle "$HOST/system/deckhouse" \
+  --registry-login="$(echo "$PUSH_SECRET" | jq -r .data.username | base64 -d)" \
+  --registry-password="$(echo "$PUSH_SECRET" | jq -r .data.password | base64 -d)"
+```
+
+Что нужно для загрузки:
+
+- Имя из `$HOST` разрешается в адрес ingress-контроллера на машине, с которой выполняется push.
+- Если задан [`whitelistSourceRanges`](configuration.html#parameters-whitelistsourceranges),
+  адрес этой машины входит в список.
+- Машина доверяет сертификату Ingress. В изолированном кластере Let's Encrypt сертификат не выпустит,
+  поэтому обычно используется собственный ClusterIssuer или режим `CustomCertificate` (параметр
+  [`https`](configuration.html#parameters-https)). Сертификат центра сертификации, которому машина
+  не доверяет, передайте через переменную окружения `SSL_CERT_FILE`.
+- У кеша есть лидер. Пока лидера нет, push отклоняется; состояние реплик смотрите в статусе
+  RegistryStorage (подробнее — в разделе
+  [«Как посмотреть состояние внутрикластерного кеша»](#как-посмотреть-состояние-внутрикластерного-кеша)).
+  Если лидер сменился во время push, например из-за перезагрузки master-узла, выполните команду
+  ещё раз.
+
+Не выполняйте push, пока идёт сборка мусора: сначала проверьте `d8 k get registryoperation`. Push,
+который пересёкся со сборкой, может завершиться ошибкой, а может сообщить об успехе и оставить образ
+неполным. Если push пересёкся со сборкой, повторите его после её окончания (подробнее — в разделе
+[«Когда запускается сборка мусора и что происходит во время неё?»](#когда-запускается-сборка-мусора-и-что-происходит-во-время-неё)).
+
+### Шаг 4. Проверьте, что релиз дошёл до кластера
+
+Проверьте состояние кеша. Остальные реплики копируют новый релиз с лидера до его развёртывания:
+
+```bash
+d8 k get registrystorage registry -o jsonpath='{.status}' | jq '{phase,fill,leader,allReplicasFull}'
+```
+
+Проверьте, что кластер увидел новый релиз DP или модуля:
+
+```bash
+d8 k get deckhousereleases
+d8 k get modulereleases
+```
+
+Дальше релиз разворачивается по настройкам [обновления DP](/modules/deckhouse/configuration.html#parameters-update)
+и модулей.
+
 ## Алерты доступности образов от `extended-monitoring` для внутрикластерного реестра
 
 Когда реестром управляет модуль, все ссылки на образы в кластере указывают на
