@@ -366,6 +366,17 @@ properties:
         description: |
           Parameters of the `WebAuthn` method.
         properties:
+          maxCredentials:
+            type: integer
+            default: 3
+            minimum: 1
+            maximum: 10
+            description: |
+              How many keys a user may register.
+
+              The first key is registered at the first sign-in that asks for one. A user adds a further key on the page that confirms a sign-in with a key, after a registered key has confirmed it. A password alone never adds a key.
+
+              Lowering the limit keeps the keys users have; a user with as many keys as the limit, or more, adds none.
           rpID:
             type: string
             maxLength: 253

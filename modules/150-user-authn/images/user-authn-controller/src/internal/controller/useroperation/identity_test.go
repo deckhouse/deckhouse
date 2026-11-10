@@ -378,6 +378,36 @@ func TestReconcile_Reset2FAOfOneMethod(t *testing.T) {
 	}
 }
 
+// A Reset2FA of the keys removes every key of the user, however many the limit let them register, and keeps the
+// TOTP secret.
+func TestReconcile_Reset2FAOfEveryKey(t *testing.T) {
+	t.Parallel()
+
+	key := func(name string) map[string]any { return map[string]any{"displayName": name} }
+	enrolled := identityWithTOTP(t, "admin", naming.LocalConnectorID)
+	enrolled.Object["webauthnCredentials"] = map[string]any{"webauthn": []any{key("phone"), key("laptop"), key("yubikey")}}
+	r := newTestReconciler(t, operationTime,
+		passwordObj("admin", nil),
+		enrolled,
+		userOperationObj("op", operationTime, map[string]any{
+			"type": "Reset2FA", "initiatorType": "Admin", "user": "admin",
+			"reset2FA": map[string]any{"methods": []any{"WebAuthn"}},
+		}),
+	)
+	if _, err := r.Reconcile(t.Context(), opRequest("op")); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	assertPhase(t, r, "op", "Succeeded", operationTime)
+
+	id := getIdentity(t, r, "admin", naming.LocalConnectorID)
+	if _, ok := id.Object().Object["webauthnCredentials"]; ok {
+		t.Error("keys are left")
+	}
+	if _, ok := id.Object().Object["mfaSecrets"]; !ok {
+		t.Error("the TOTP secret was removed")
+	}
+}
+
 // Reset2FA of a user of an external provider clears the second factor of that pair only and ends its sessions;
 // a local user with the same user ID keeps the secret and the sessions.
 func TestReconcile_Reset2FAExternal(t *testing.T) {

@@ -98,6 +98,7 @@ var _ = Describe("Module :: user-authn :: Dex pages in both languages", func() {
 		{"totp, with another method", "totp_verify.html", with(strs("Connector", "Issuer", "PostURL", "QRCode"), "OtherMethodURL", "/mfa?choose=1", "Invalid", false)},
 		{"webauthn, registration", "webauthn_verify.html", with(strs("OtherMethodURL"), "Mode", "register")},
 		{"webauthn, with another method", "webauthn_verify.html", with(strs(), "Mode", "login", "OtherMethodURL", "/mfa?choose=1")},
+		{"webauthn, adding a key", "webauthn_verify.html", with(strs("OtherMethodURL"), "Mode", "login", "CanAddKey", true)},
 	}
 
 	It("covers every page of the theme with Russian texts", func() {
@@ -114,6 +115,17 @@ var _ = Describe("Module :: user-authn :: Dex pages in both languages", func() {
 				Expect(covered).To(HaveKey(f.Name()), "a page of the theme with Russian texts and no test of its languages")
 			}
 		}
+	})
+
+	// "Add a key" shows while the user may register one more key (Deckhouse patch 360), and the page then waits
+	// for the user instead of asking for the key at once.
+	It("offers to add a key only when the user may", func() {
+		with := renderDexPage("webauthn_verify.html", "en", map[string]any{"Mode": "login", "OtherMethodURL": "", "CanAddKey": true, "ReqPath": "/mfa/webauthn", "BuildIdentifier": "b1"})
+		Expect(with).To(ContainSubstring(`id="add-key-btn"`))
+		Expect(with).To(MatchRegexp(`const canAddKey = \s*true\s*;`))
+		without := renderDexPage("webauthn_verify.html", "en", map[string]any{"Mode": "login", "OtherMethodURL": "", "CanAddKey": false, "ReqPath": "/mfa/webauthn", "BuildIdentifier": "b1"})
+		Expect(without).NotTo(ContainSubstring(`id="add-key-btn"`))
+		Expect(without).To(MatchRegexp(`const canAddKey = \s*false\s*;`))
 	})
 
 	for _, p := range pages {

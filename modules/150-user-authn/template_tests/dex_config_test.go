@@ -246,6 +246,11 @@ var _ = Describe("Module :: user-authn :: helm template :: dex-config", func() {
 			hec.HelmRender()
 		})
 
+		It("Should let a user register three keys by default", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			Expect(gjson.GetBytes(renderedDexConfig(hec), "mfa.authenticators.0.config.maxCredentials").Int()).To(BeEquivalentTo(3))
+		})
+
 		It("Should render the WebAuthn authenticator, with no attestation and the domain of the issuer", func() {
 			Expect(hec.RenderError).ToNot(HaveOccurred())
 			jsonConfig := renderedDexConfig(hec)
@@ -254,7 +259,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex-config", func() {
 				"authenticators": [{
 					"id": "webauthn",
 					"type": "WebAuthn",
-					"config": {"rpDisplayName": "Deckhouse (Alpha)", "attestationPreference": "none"},
+					"config": {"rpDisplayName": "Deckhouse (Alpha)", "attestationPreference": "none", "maxCredentials": 3},
 					"connectorTypes": ["local"]
 				}],
 				"defaultMFAChain": ["webauthn"]

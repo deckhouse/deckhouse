@@ -88,6 +88,17 @@ positive:
       methods: [WebAuthn]
       webAuthn:
         rpID: dex.corp.example.com
+  # The limit of keys of a user.
+  - twoFactor:
+      enabled: true
+      methods: [WebAuthn]
+      webAuthn:
+        maxCredentials: 1
+  - twoFactor:
+      enabled: true
+      methods: [WebAuthn]
+      webAuthn:
+        maxCredentials: 10
   # Both methods, the code and then the key.
   - twoFactor:
       enabled: true
@@ -189,6 +200,17 @@ negative:
   - twoFactor:
       enabled: true
       methods: [SMS]
+  # A user has one key or more, and ten at most.
+  - twoFactor:
+      enabled: true
+      methods: [WebAuthn]
+      webAuthn:
+        maxCredentials: 0
+  - twoFactor:
+      enabled: true
+      methods: [WebAuthn]
+      webAuthn:
+        maxCredentials: 11
   # methods: none, the same twice, more than the two there are.
   - twoFactor:
       enabled: true

@@ -1,0 +1,1039 @@
+diff --git a/cmd/dex/config.go b/cmd/dex/config.go
+index 60795c87..002488c2 100644
+--- a/cmd/dex/config.go
++++ b/cmd/dex/config.go
+@@ -949,4 +949,7 @@ type WebAuthnConfig struct {
+ 	// Timeout is the duration allowed for the browser WebAuthn ceremony
+ 	// (registration or login). Defaults to "60s".
+ 	Timeout string `json:"timeout"`
++	// MaxCredentials is how many keys a user may register (Deckhouse patch 360). A key beyond the first is
++	// added only in a sign-in the user has just confirmed with a registered key. Zero means one.
++	MaxCredentials int `json:"maxCredentials"`
+ }
+diff --git a/cmd/dex/serve.go b/cmd/dex/serve.go
+index ff928eeb..167fe4a1 100644
+--- a/cmd/dex/serve.go
++++ b/cmd/dex/serve.go
+@@ -1011,6 +1011,10 @@ func buildMFAProviders(authenticators []MFAAuthenticator, issuerURL string, logg
+ 			if err != nil {
+ 				return nil, fmt.Errorf("mfa.authenticators: create the WebAuthn authenticator %q: %v", auth.ID, err)
+ 			}
++			if cfg.MaxCredentials < 0 {
++				return nil, fmt.Errorf("mfa.authenticators: maxCredentials of the WebAuthn authenticator %q is negative", auth.ID)
++			}
++			provider.SetMaxCredentials(cfg.MaxCredentials)
+ 			providers[auth.ID] = provider
+ 		default:
+ 			return nil, fmt.Errorf("mfa.authenticators: unknown type %q of %q", auth.Type, auth.ID)
+diff --git a/cmd/dex/serve_test.go b/cmd/dex/serve_test.go
+index af972a6c..f540ba79 100644
+--- a/cmd/dex/serve_test.go
++++ b/cmd/dex/serve_test.go
+@@ -9,6 +9,9 @@ import (
+ 
+ 	"github.com/stretchr/testify/assert"
+ 	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/server/mfa"
++	"github.com/dexidp/dex/storage"
+ )
+ 
+ func TestNewLogger(t *testing.T) {
+@@ -248,6 +251,13 @@ func TestBuildMFAProviders(t *testing.T) {
+ 			},
+ 			wantErr: `create the WebAuthn authenticator "webauthn"`,
+ 		},
++		{
++			name: "a negative limit of keys",
++			authenticators: []MFAAuthenticator{
++				{ID: "webauthn", Type: "WebAuthn", Config: json.RawMessage(`{"maxCredentials":-1}`)},
++			},
++			wantErr: `maxCredentials of the WebAuthn authenticator "webauthn" is negative`,
++		},
+ 		{
+ 			name: "a WebAuthn config that is no object",
+ 			authenticators: []MFAAuthenticator{
+@@ -298,3 +308,15 @@ func TestBuildMFAProviders(t *testing.T) {
+ 		})
+ 	}
+ }
++
++// The limit of keys reaches the WebAuthn authenticator (Deckhouse patch 360).
++func TestBuildMFAProvidersLimitOfKeys(t *testing.T) {
++	providers, err := buildMFAProviders([]MFAAuthenticator{
++		{ID: "webauthn", Type: "WebAuthn", Config: json.RawMessage(`{"maxCredentials":5}`)},
++	}, "https://dex.example.com", slog.New(slog.DiscardHandler))
++	require.NoError(t, err)
++	identity := storage.UserIdentity{WebAuthnCredentials: map[string][]storage.WebAuthnCredential{"webauthn": make([]storage.WebAuthnCredential, 4)}}
++	require.True(t, providers["webauthn"].(*mfa.WebAuthnProvider).CanAdd(identity, "webauthn"))
++	identity.WebAuthnCredentials["webauthn"] = make([]storage.WebAuthnCredential, 5)
++	require.False(t, providers["webauthn"].(*mfa.WebAuthnProvider).CanAdd(identity, "webauthn"))
++}
+diff --git a/server/mfa/keys_test.go b/server/mfa/keys_test.go
+new file mode 100644
+index 00000000..1b3932bb
+--- /dev/null
++++ b/server/mfa/keys_test.go
+@@ -0,0 +1,452 @@
++package mfa
++
++import (
++	"context"
++	"encoding/base64"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"net/http"
++	"net/http/httptest"
++	"strings"
++	"sync"
++	"testing"
++	"time"
++
++	"github.com/go-webauthn/webauthn/webauthn"
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/server/internal"
++	"github.com/dexidp/dex/storage"
++)
++
++// The tests of several keys per user (Deckhouse patch 360): a key beyond the first is added only after a
++// registered key confirmed the sign-in, and only under the limit.
++
++// fewerKeysStorage serves a Get of the identity with one key fewer than it has, while Update sees them all: a
++// request that loaded the account before a parallel one added a key.
++type fewerKeysStorage struct {
++	storage.Storage
++}
++
++func (s fewerKeysStorage) GetUserIdentity(ctx context.Context, userID, connectorID string) (storage.UserIdentity, error) {
++	u, err := s.Storage.GetUserIdentity(ctx, userID, connectorID)
++	if err != nil {
++		return u, err
++	}
++	keys := u.WebAuthnCredentials["webauthn"]
++	if len(keys) > 0 {
++		u.WebAuthnCredentials = map[string][]storage.WebAuthnCredential{"webauthn": keys[:len(keys)-1]}
++	}
++	return u, nil
++}
++
++type keysFixture struct {
++	h       *Handler
++	router  http.Handler
++	store   storage.Storage
++	authReq storage.AuthRequest
++	key     *WebAuthnProvider
++	// ceremonies counts the registration ceremonies that ran.
++	ceremonies *int
++}
++
++// newKeysFixture is a handler with a WebAuthn authenticator of the limit, a user with keys keys, and a sign-in
++// whose WebAuthn state is state. totp adds a confirmed TOTP authenticator, the chain [totp, webauthn] and a
++// choice (require: Any).
++func newKeysFixture(t *testing.T, limit, keys int, state string, totp bool) keysFixture {
++	t.Helper()
++	key, err := NewWebAuthnProvider("Test", "", nil, "", "", "http://localhost", nil)
++	require.NoError(t, err)
++	key.SetMaxCredentials(limit)
++	ceremonies := 0
++	key.finishRegistration = func(webauthn.User, webauthn.SessionData, *http.Request) (*webauthn.Credential, error) {
++		ceremonies++
++		return &webauthn.Credential{ID: []byte(fmt.Sprintf("new-%d", ceremonies))}, nil
++	}
++	providers := map[string]Provider{"webauthn": key}
++	chain := []string{"webauthn"}
++	if totp {
++		providers["totp"] = NewTOTPProvider("test-issuer", nil)
++		chain = []string{"totp", "webauthn"}
++	}
++	h, router, store := newTestHandler(t, providers, chain)
++	if totp {
++		h.OneOfConnectorTypes = []string{choiceType}
++	}
++	authReq := storage.AuthRequest{
++		ID: "keys-req", ClientID: "app", Expiry: time.Now().Add(time.Hour),
++		HMACKey: randomHMACKey(t), LoggedIn: true,
++		Claims:              storage.Claims{UserID: "user-1", Email: "user@example.com"},
++		ConnectorID:         "mock",
++		WebAuthnSessionData: []byte(state),
++	}
++	ctx := t.Context()
++	require.NoError(t, store.CreateAuthRequest(ctx, authReq))
++	require.NoError(t, store.CreateClient(ctx, storage.Client{ID: "app", Secret: "s"}))
++	identity := storage.UserIdentity{UserID: "user-1", ConnectorID: "mock", Claims: authReq.Claims}
++	for i := 0; i < keys; i++ {
++		if identity.WebAuthnCredentials == nil {
++			identity.WebAuthnCredentials = map[string][]storage.WebAuthnCredential{}
++		}
++		identity.WebAuthnCredentials["webauthn"] = append(identity.WebAuthnCredentials["webauthn"],
++			storage.WebAuthnCredential{CredentialID: []byte(fmt.Sprintf("old-%d", i)), PublicKey: []byte("pk")})
++	}
++	if totp {
++		secret, _ := confirmedTOTP(t)
++		identity.MFASecrets = map[string]*storage.MFASecret{"totp": secret}
++	}
++	require.NoError(t, store.CreateUserIdentity(ctx, identity))
++	return keysFixture{h: h, router: router, store: store, authReq: authReq, key: key, ceremonies: &ceremonies}
++}
++
++const (
++	unconfirmed = `{}`
++	// confirmed is a sign-in a registered key confirmed for adding a key: a begin takes the confirmation over.
++	confirmed = `{"deckhouseKeyConfirmedFor":"webauthn","deckhouseKeyUserID":"user-1","deckhouseKeyConnectorID":"mock"}`
++	// adding is a registration of a further key that took the confirmation over: its finish uses it up.
++	adding = `{"deckhouseKeyAddingFor":"webauthn","deckhouseKeyUserID":"user-1","deckhouseKeyConnectorID":"mock"}`
++)
++
++// stateFor is the state a step of the registration of a further key needs.
++func stateFor(step string) string {
++	if step == "begin" {
++		return confirmed
++	}
++	return adding
++}
++
++func (f keysFixture) post(t *testing.T, step string) *httptest.ResponseRecorder {
++	t.Helper()
++	return f.postFor(t, step, "webauthn")
++}
++
++func (f keysFixture) postFor(t *testing.T, step, authenticatorID string) *httptest.ResponseRecorder {
++	t.Helper()
++	hmacVal := internal.SignStep(f.authReq, internal.Authenticator(authenticatorID))
++	rr := httptest.NewRecorder()
++	f.router.ServeHTTP(rr, httptest.NewRequest(http.MethodPost,
++		"/mfa/webauthn/register/"+step+"?req="+f.authReq.ID+"&hmac="+hmacVal+"&authenticator="+authenticatorID, nil))
++	return rr
++}
++
++func (f keysFixture) page(t *testing.T) *httptest.ResponseRecorder {
++	t.Helper()
++	rr := httptest.NewRecorder()
++	f.router.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, f.h.buildRedirectURL(f.authReq, "webauthn"), nil))
++	return rr
++}
++
++func (f keysFixture) keys(t *testing.T) int {
++	t.Helper()
++	ident, err := f.store.GetUserIdentity(t.Context(), "user-1", "mock")
++	require.NoError(t, err)
++	return len(ident.WebAuthnCredentials["webauthn"])
++}
++
++func (f keysFixture) state(t *testing.T) (webAuthnState, bool) {
++	t.Helper()
++	got, err := f.store.GetAuthRequest(t.Context(), f.authReq.ID)
++	require.NoError(t, err)
++	return readWebAuthnState(got.WebAuthnSessionData), got.MFAValidated
++}
++
++// A key confirmed the sign-in, and there is room: the new key is stored, the confirmation is used up, and the
++// sign-in completes.
++func TestKeysAddAfterAConfirmation(t *testing.T) {
++	f := newKeysFixture(t, 3, 1, confirmed, false)
++
++	require.Equal(t, http.StatusOK, f.post(t, "begin").Code)
++	rr := f.post(t, "finish")
++	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++	require.Equal(t, 2, f.keys(t))
++	state, validated := f.state(t)
++	require.Empty(t, state.KeyConfirmedFor+state.KeyAddingFor, "the confirmation must be used once")
++	require.True(t, validated)
++
++	// The confirmation does not add a third key: the completed sign-in moves on.
++	rr = f.post(t, "finish")
++	require.NotEqual(t, http.StatusOK, rr.Code)
++	require.Equal(t, 2, f.keys(t))
++}
++
++// A password alone never adds a key to an account that has one, whatever the limit.
++func TestKeysRefuseAKeyWithoutAConfirmation(t *testing.T) {
++	for _, step := range []string{"begin", "finish"} {
++		t.Run(step, func(t *testing.T) {
++			f := newKeysFixture(t, 3, 1, unconfirmed, false)
++			rr := f.post(t, step)
++			require.Contains(t, []int{http.StatusForbidden, http.StatusBadRequest}, rr.Code)
++			require.Contains(t, rr.Body.String(), "A key is already registered.")
++			require.Equal(t, 1, f.keys(t))
++			require.Zero(t, *f.ceremonies, "the registration ran without a confirmation")
++			_, validated := f.state(t)
++			require.False(t, validated)
++		})
++	}
++}
++
++// At the limit, and over a limit lowered below the keys the user has, no key is added and the keys stay.
++func TestKeysRefuseAKeyOverTheLimit(t *testing.T) {
++	for _, tc := range []struct {
++		name        string
++		limit, keys int
++	}{
++		{name: "at the limit", limit: 3, keys: 3},
++		{name: "a lowered limit", limit: 2, keys: 3},
++	} {
++		for _, step := range []string{"begin", "finish"} {
++			t.Run(tc.name+"/"+step, func(t *testing.T) {
++				f := newKeysFixture(t, tc.limit, tc.keys, stateFor(step), false)
++				rr := f.post(t, step)
++				require.Contains(t, []int{http.StatusForbidden, http.StatusBadRequest}, rr.Code)
++				require.Contains(t, rr.Body.String(), webAuthnLimitMsg)
++				require.Equal(t, tc.keys, f.keys(t))
++				require.Zero(t, *f.ceremonies)
++			})
++		}
++	}
++}
++
++// The request loaded the account before a parallel one added a key: the limit is checked again inside the update.
++func TestKeysCheckTheLimitInTheUpdate(t *testing.T) {
++	f := newKeysFixture(t, 2, 2, adding, false)
++	f.h.Storage = fewerKeysStorage{Storage: f.store}
++
++	rr := f.post(t, "finish")
++	require.Equal(t, http.StatusBadRequest, rr.Code, rr.Body.String())
++	require.Contains(t, rr.Body.String(), webAuthnLimitMsg)
++	require.Equal(t, 2, f.keys(t))
++	_, validated := f.state(t)
++	require.False(t, validated)
++}
++
++// The ceremony of a new key takes the confirmation over with its session: a second begin needs a key to confirm the
++// sign-in again.
++func TestKeysBeginTakesTheConfirmationOver(t *testing.T) {
++	f := newKeysFixture(t, 3, 1, confirmed, false)
++
++	rr := f.post(t, "begin")
++	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++	state, _ := f.state(t)
++	require.Empty(t, state.KeyConfirmedFor)
++	require.Equal(t, "webauthn", state.KeyAddingFor)
++	require.NotEmpty(t, state.Challenge, "the session of the ceremony is stored")
++
++	rr = f.post(t, "begin")
++	require.Equal(t, http.StatusForbidden, rr.Code)
++	require.Contains(t, rr.Body.String(), keyNotConfirmedMsg)
++}
++
++// A finish that fails uses the confirmation up: neither a finish nor a new begin adds a key without another
++// confirmation by a registered key.
++func TestKeysAFailedFinishUsesTheConfirmationUp(t *testing.T) {
++	f := newKeysFixture(t, 3, 1, confirmed, false)
++	f.key.finishRegistration = func(webauthn.User, webauthn.SessionData, *http.Request) (*webauthn.Credential, error) {
++		return nil, errors.New("the browser refused")
++	}
++	require.Equal(t, http.StatusOK, f.post(t, "begin").Code)
++	require.Equal(t, http.StatusBadRequest, f.post(t, "finish").Code)
++	state, _ := f.state(t)
++	require.Empty(t, state.KeyConfirmedFor+state.KeyAddingFor)
++
++	f.key.finishRegistration = func(webauthn.User, webauthn.SessionData, *http.Request) (*webauthn.Credential, error) {
++		return &webauthn.Credential{ID: []byte("attacker")}, nil
++	}
++	rr := f.post(t, "begin")
++	require.Equal(t, http.StatusForbidden, rr.Code)
++	rr = f.post(t, "finish")
++	require.Equal(t, http.StatusBadRequest, rr.Code)
++	require.Contains(t, rr.Body.String(), keyNotConfirmedMsg)
++	require.Equal(t, 1, f.keys(t))
++	_, validated := f.state(t)
++	require.False(t, validated)
++}
++
++// Of parallel finishes under one confirmation one adds a key.
++func TestKeysParallelFinishesAddOneKey(t *testing.T) {
++	for range 20 {
++		f := newKeysFixture(t, 5, 1, adding, false)
++		var mu sync.Mutex
++		ids := 0
++		f.key.finishRegistration = func(webauthn.User, webauthn.SessionData, *http.Request) (*webauthn.Credential, error) {
++			mu.Lock()
++			defer mu.Unlock()
++			ids++
++			return &webauthn.Credential{ID: []byte(fmt.Sprintf("parallel-%d", ids))}, nil
++		}
++		codes := make([]int, 2)
++		var wg sync.WaitGroup
++		for i := range codes {
++			wg.Add(1)
++			go func() {
++				defer wg.Done()
++				codes[i] = f.post(t, "finish").Code
++			}()
++		}
++		wg.Wait()
++		// The other one is refused, or sent on when the sign-in has completed already.
++		ok := 0
++		for _, code := range codes {
++			if code == http.StatusOK {
++				ok++
++			}
++		}
++		require.Equal(t, 1, ok, "%v", codes)
++		require.Equal(t, 2, f.keys(t))
++	}
++}
++
++// A confirmation by a key of one authenticator adds no key to another: the chain [webauthn, webauthn2] asks for
++// both, and a key of the first does not stand for the second. A completed step uses the confirmation up.
++func TestKeysTheConfirmationIsOfItsAuthenticator(t *testing.T) {
++	second, err := NewWebAuthnProvider("Test", "", nil, "", "", "http://localhost", nil)
++	require.NoError(t, err)
++	stored := false
++	second.finishRegistration = func(webauthn.User, webauthn.SessionData, *http.Request) (*webauthn.Credential, error) {
++		stored = true
++		return &webauthn.Credential{ID: []byte("attacker")}, nil
++	}
++	for _, step := range []string{"begin", "finish"} {
++		t.Run(step, func(t *testing.T) {
++			f := newKeysFixture(t, 3, 1, stateFor(step), false)
++			f.h.MFAProviders["webauthn2"] = second
++			f.h.DefaultMFAChain = []string{"webauthn", "webauthn2"}
++			require.NoError(t, f.store.UpdateUserIdentity(t.Context(), "user-1", "mock", func(old storage.UserIdentity) (storage.UserIdentity, error) {
++				old.WebAuthnCredentials["webauthn2"] = []storage.WebAuthnCredential{{CredentialID: []byte("b"), PublicKey: []byte("pk")}}
++				return old, nil
++			}))
++			rr := f.postFor(t, step, "webauthn2")
++			require.Contains(t, []int{http.StatusForbidden, http.StatusBadRequest}, rr.Code)
++			require.Contains(t, rr.Body.String(), keyNotConfirmedMsg)
++			require.False(t, stored)
++			_, validated := f.state(t)
++			require.False(t, validated)
++		})
++	}
++
++	t.Run("a completed step", func(t *testing.T) {
++		f := newKeysFixture(t, 3, 1, confirmed, false)
++		_, err := f.h.CompleteStep(t.Context(), f.authReq, "webauthn")
++		require.NoError(t, err)
++		state, _ := f.state(t)
++		require.Empty(t, state.KeyConfirmedFor+state.KeyAddingFor)
++	})
++}
++
++// A confirmation by a key of one user adds no key for another: the sign-in of user-1 carries a confirmation given
++// by a key of another user, or of the same user of another connector.
++func TestKeysTheConfirmationIsOfItsUser(t *testing.T) {
++	for _, tc := range []struct{ name, user, connector string }{
++		{name: "another user", user: "user-2", connector: "mock"},
++		{name: "another connector", user: "user-1", connector: "other"},
++		{name: "no user", user: "", connector: ""},
++	} {
++		for _, step := range []string{"begin", "finish"} {
++			t.Run(tc.name+"/"+step, func(t *testing.T) {
++				field := "deckhouseKeyConfirmedFor"
++				if step == "finish" {
++					field = "deckhouseKeyAddingFor"
++				}
++				state := fmt.Sprintf(`{%q:"webauthn","deckhouseKeyUserID":%q,"deckhouseKeyConnectorID":%q}`, field, tc.user, tc.connector)
++				f := newKeysFixture(t, 3, 1, state, false)
++				rr := f.post(t, step)
++				require.Contains(t, []int{http.StatusForbidden, http.StatusBadRequest}, rr.Code)
++				require.Contains(t, rr.Body.String(), keyNotConfirmedMsg)
++				require.Equal(t, 1, f.keys(t))
++				require.Zero(t, *f.ceremonies)
++				_, validated := f.state(t)
++				require.False(t, validated)
++			})
++		}
++	}
++
++	t.Run("a confirmation records its user", func(t *testing.T) {
++		f := newKeysFixture(t, 3, 1, unconfirmed, false)
++		require.NoError(t, f.h.setKeyConfirmed(t.Context(), f.authReq, "webauthn"))
++		state, _ := f.state(t)
++		require.Equal(t, "webauthn", state.keyConfirmedFor(f.authReq))
++		other := f.authReq
++		other.Claims.UserID = "user-2"
++		require.Empty(t, state.keyConfirmedFor(other))
++	})
++}
++
++// With a choice of the second factor, a user who has both methods adds a key: the key is the user's own method,
++// not a second one.
++func TestKeysAddWithAChoice(t *testing.T) {
++	f := newKeysFixture(t, 3, 1, adding, true)
++
++	rr := f.post(t, "finish")
++	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++	require.Equal(t, 2, f.keys(t))
++}
++
++// The page offers to add a key after the registered one, while there is room.
++func TestKeysPageOffersToAdd(t *testing.T) {
++	for _, tc := range []struct {
++		name        string
++		limit, keys int
++		want        bool
++	}{
++		{name: "room for one more", limit: 3, keys: 1, want: true},
++		{name: "at the limit", limit: 2, keys: 2, want: false},
++		{name: "one key allowed", limit: 0, keys: 1, want: false},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			f := newKeysFixture(t, tc.limit, tc.keys, unconfirmed, false)
++			rr := f.page(t)
++			require.Equal(t, http.StatusOK, rr.Code)
++			require.Equal(t, tc.want, strings.Contains(rr.Body.String(), `id="add-key-btn"`))
++		})
++	}
++}
++
++// The ceremony of a new key excludes the keys the user has, so the browser does not register one of them again.
++func TestKeysBeginExcludesTheKeysOfTheUser(t *testing.T) {
++	f := newKeysFixture(t, 3, 2, confirmed, false)
++
++	rr := f.post(t, "begin")
++	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++	var creation struct {
++		PublicKey struct {
++			ExcludeCredentials []struct {
++				ID string `json:"id"`
++			} `json:"excludeCredentials"`
++		} `json:"publicKey"`
++	}
++	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &creation))
++	require.Len(t, creation.PublicKey.ExcludeCredentials, 2)
++	for i, c := range creation.PublicKey.ExcludeCredentials {
++		require.Equal(t, base64.RawURLEncoding.EncodeToString([]byte(fmt.Sprintf("old-%d", i))), c.ID)
++	}
++}
++
++// A key the user has is refused as a new one, also for a request that loaded the account before a parallel one
++// stored that key: the check is inside the update.
++func TestKeysRefuseAKeyTheUserHas(t *testing.T) {
++	for _, tc := range []struct {
++		name  string
++		stale bool
++	}{
++		{name: "a key the request saw"},
++		{name: "a key stored after the request read the account", stale: true},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			f := newKeysFixture(t, 3, 2, adding, false)
++			if tc.stale {
++				f.h.Storage = fewerKeysStorage{Storage: f.store}
++			}
++			// The browser answers with the last key of the user, the one the stale read does not show.
++			f.key.finishRegistration = func(webauthn.User, webauthn.SessionData, *http.Request) (*webauthn.Credential, error) {
++				return &webauthn.Credential{ID: []byte("old-1")}, nil
++			}
++			rr := f.post(t, "finish")
++			require.Equal(t, http.StatusBadRequest, rr.Code, rr.Body.String())
++			require.Contains(t, rr.Body.String(), webAuthnDuplicateMsg)
++			require.Equal(t, 2, f.keys(t))
++			_, validated := f.state(t)
++			require.False(t, validated)
++		})
++	}
++}
+diff --git a/server/mfa/order.go b/server/mfa/order.go
+index caf9d392..56ff3ddf 100644
+--- a/server/mfa/order.go
++++ b/server/mfa/order.go
+@@ -23,15 +23,56 @@ import (
+ 	"github.com/dexidp/dex/storage"
+ )
+ 
+-// webAuthnState is what an auth request keeps of the second factor: the WebAuthn ceremony in progress and the
+-// authenticators passed in the login. It is stored in WebAuthnSessionData with the session embedded, so the data of
+-// an earlier dex reads the same.
++// webAuthnState is what an auth request keeps of the second factor: the WebAuthn ceremony in progress, the
++// authenticators passed in the login, and the confirmation of this sign-in by a registered key for adding another
++// one (patch 360). It is stored in WebAuthnSessionData with the session embedded, so the data of an earlier dex
++// reads the same.
+ type webAuthnState struct {
+ 	webauthn.SessionData
+ 	Passed []string `json:"deckhousePassed,omitempty"`
+ 	// PassedUserID and PassedConnectorID are the user the factors of Passed belong to.
+ 	PassedUserID      string `json:"deckhousePassedUserID,omitempty"`
+ 	PassedConnectorID string `json:"deckhousePassedConnectorID,omitempty"`
++	// KeyConfirmedFor is the authenticator a registered key of which confirmed the sign-in for adding a key. The
++	// registration of a key for it takes the confirmation over.
++	KeyConfirmedFor string `json:"deckhouseKeyConfirmedFor,omitempty"`
++	// KeyAddingFor is the authenticator whose registration of a further key took the confirmation over: the
++	// session is the ceremony of that registration, and its finish uses the confirmation up.
++	KeyAddingFor string `json:"deckhouseKeyAddingFor,omitempty"`
++	// KeyUserID and KeyConnectorID are the user whose key gave the confirmation of KeyConfirmedFor or KeyAddingFor.
++	KeyUserID      string `json:"deckhouseKeyUserID,omitempty"`
++	KeyConnectorID string `json:"deckhouseKeyConnectorID,omitempty"`
++}
++
++// keyConfirmedFor and keyAddingFor return KeyConfirmedFor and KeyAddingFor when the user of authReq gave the
++// confirmation, and "" otherwise: as with Passed, a key of one user never confirms the sign-in of another.
++func (s webAuthnState) keyConfirmedFor(authReq storage.AuthRequest) string {
++	if !s.keyOf(authReq) {
++		return ""
++	}
++	return s.KeyConfirmedFor
++}
++
++func (s webAuthnState) keyAddingFor(authReq storage.AuthRequest) string {
++	if !s.keyOf(authReq) {
++		return ""
++	}
++	return s.KeyAddingFor
++}
++
++func (s webAuthnState) keyOf(authReq storage.AuthRequest) bool {
++	return s.KeyUserID == authReq.Claims.UserID && s.KeyConnectorID == authReq.ConnectorID
++}
++
++// confirmKey records that a registered key of the authenticator of the user of authReq has confirmed the sign-in
++// for adding another one; dropKey drops a confirmation.
++func (s *webAuthnState) confirmKey(authenticatorID string, authReq storage.AuthRequest) {
++	s.KeyConfirmedFor, s.KeyAddingFor = authenticatorID, ""
++	s.KeyUserID, s.KeyConnectorID = authReq.Claims.UserID, authReq.ConnectorID
++}
++
++func (s *webAuthnState) dropKey() {
++	s.KeyConfirmedFor, s.KeyAddingFor, s.KeyUserID, s.KeyConnectorID = "", "", "", ""
+ }
+ 
+ func readWebAuthnState(data []byte) webAuthnState {
+@@ -191,6 +232,8 @@ func (h *Handler) recordPassed(ctx context.Context, authReqID, authenticatorID s
+ 			state.Passed = append(state.Passed, authenticatorID)
+ 		}
+ 		state.PassedUserID, state.PassedConnectorID = old.Claims.UserID, old.ConnectorID
++		// A completed step uses up a confirmation for adding a key (patch 360).
++		state.dropKey()
+ 		data, err := json.Marshal(state)
+ 		if err != nil {
+ 			return old, fmt.Errorf("marshal state: %w", err)
+diff --git a/server/mfa/webauthn.go b/server/mfa/webauthn.go
+index d316e5e1..31bdf45b 100644
+--- a/server/mfa/webauthn.go
++++ b/server/mfa/webauthn.go
+@@ -6,8 +6,10 @@ import (
+ 	"encoding/json"
+ 	"errors"
+ 	"fmt"
++	"maps"
+ 	"net/http"
+ 	"net/url"
++	"slices"
+ 	"time"
+ 
+ 	gowebauthn "github.com/go-webauthn/webauthn/protocol"
+@@ -20,6 +22,37 @@ import (
+ // registration stored a credential after this request had loaded an identity without one.
+ var errWebAuthnAlreadyRegistered = errors.New("webauthn credential already registered")
+ 
++// errWebAuthnLimit is returned from the UpdateUserIdentity closure when the user has as many keys as the limit
++// allows (Deckhouse patch 360).
++var errWebAuthnLimit = errors.New("webauthn credential limit reached")
++
++// webAuthnLimitMsg is the refusal of a key beyond the limit.
++const webAuthnLimitMsg = "The limit of keys is reached."
++
++// errWebAuthnDuplicate is returned from the UpdateUserIdentity closure when the new credential is one the user
++// already has (Deckhouse patch 360).
++var errWebAuthnDuplicate = errors.New("webauthn credential already registered for the user")
++
++// webAuthnDuplicateMsg is the refusal of a key the user has registered already.
++const webAuthnDuplicateMsg = "This key is already registered."
++
++// errKeyNotConfirmed is returned from an UpdateAuthRequest closure when no key of the authenticator confirmed the
++// sign-in for adding a key, or another request took the confirmation (Deckhouse patch 360).
++var errKeyNotConfirmed = errors.New("no registered key confirmed the sign-in for adding a key")
++
++// keyNotConfirmedMsg is the refusal of a further key without the confirmation of the sign-in.
++const keyNotConfirmedMsg = "A key is already registered."
++
++// webAuthnHasCredential reports whether the user has the credential with the ID.
++func webAuthnHasCredential(identity storage.UserIdentity, authenticatorID string, id []byte) bool {
++	for _, c := range identity.WebAuthnCredentials[authenticatorID] {
++		if bytes.Equal(c.CredentialID, id) {
++			return true
++		}
++	}
++	return false
++}
++
+ // webAuthnRegistered reports a credential of this authenticator. Registration is offered only
+ // while the account has none: a second key would let a password alone finish the second factor.
+ func webAuthnRegistered(identity storage.UserIdentity, authenticatorID string) bool {
+@@ -30,6 +63,8 @@ func webAuthnRegistered(identity storage.UserIdentity, authenticatorID string) b
+ type WebAuthnProvider struct {
+ 	wan            *webauthn.WebAuthn
+ 	connectorTypes map[string]struct{}
++	// maxCredentials is how many keys a user may register; below 1 means one (Deckhouse patch 360).
++	maxCredentials int
+ 
+ 	// finishRegistration, when set, stands in for wan.FinishRegistration so a test can
+ 	// reach the storage update without a live authenticator. Nil uses the library.
+@@ -99,6 +134,23 @@ func NewWebAuthnProvider(rpDisplayName, rpID string, rpOrigins []string,
+ 
+ func (p *WebAuthnProvider) Type() string { return "WebAuthn" }
+ 
++// SetMaxCredentials sets how many keys a user may register (Deckhouse patch 360); below 1 means one.
++func (p *WebAuthnProvider) SetMaxCredentials(n int) { p.maxCredentials = n }
++
++// limit is how many keys a user may register.
++func (p *WebAuthnProvider) limit() int {
++	if p.maxCredentials < 1 {
++		return 1
++	}
++	return p.maxCredentials
++}
++
++// CanAdd reports whether the user may register one more key: under the limit. A limit lowered below the keys a
++// user has keeps them, and adds none until fewer are left.
++func (p *WebAuthnProvider) CanAdd(identity storage.UserIdentity, authenticatorID string) bool {
++	return len(identity.WebAuthnCredentials[authenticatorID]) < p.limit()
++}
++
+ func (p *WebAuthnProvider) EnabledForConnectorType(connectorType string) bool {
+ 	if len(p.connectorTypes) == 0 {
+ 		return true
+@@ -164,35 +216,58 @@ func (h *Handler) handleWebAuthnRegisterBegin(w http.ResponseWriter, r *http.Req
+ 	if !ok {
+ 		return
+ 	}
+-	if webAuthnRegistered(mfa.identity, mfa.authenticatorID) {
+-		writeJSONError(w, http.StatusForbidden, "A key is already registered.")
++	if msg, ok := h.webAuthnMayAdd(mfa, provider, readWebAuthnState(mfa.authReq.WebAuthnSessionData).keyConfirmedFor(mfa.authReq)); !ok {
++		writeJSONError(w, http.StatusForbidden, msg)
+ 		return
+ 	}
+ 
+ 	ctx := r.Context()
+-	if closed, err := h.webAuthnEnrollmentClosed(ctx, mfa); err != nil || closed {
+-		h.refuseWebAuthnEnrollment(ctx, w, err)
+-		return
+-	}
+-	gate, ok := h.webAuthnRegistration(w, r, mfa)
+-	if !ok {
+-		return
+-	}
+-	if !gate.allowed(mfa.identity) {
+-		writeJSONError(w, http.StatusForbidden, notPassedYetMsg)
+-		return
++	adding := webAuthnRegistered(mfa.identity, mfa.authenticatorID)
++	if !adding {
++		if closed, err := h.webAuthnEnrollmentClosed(ctx, mfa); err != nil || closed {
++			h.refuseWebAuthnEnrollment(ctx, w, err)
++			return
++		}
++		gate, ok := h.webAuthnRegistration(w, r, mfa)
++		if !ok {
++			return
++		}
++		if !gate.allowed(mfa.identity) {
++			writeJSONError(w, http.StatusForbidden, notPassedYetMsg)
++			return
++		}
+ 	}
++	// The keys the user has are excluded, so the browser does not register one of them again: the library adds
++	// them to excludeCredentials only when asked to.
+ 	user := buildWebAuthnUser(mfa.identity, mfa.authenticatorID)
+-	user.credentials = nil // the account has none yet; do not exclude a credential that is not there
+ 
+-	creation, session, err := provider.wan.BeginRegistration(user)
++	creation, session, err := provider.wan.BeginRegistration(user,
++		webauthn.WithExclusions(webauthn.Credentials(user.credentials).CredentialDescriptors()))
+ 	if err != nil {
+ 		h.Logger.ErrorContext(ctx, "failed to begin webauthn registration", "err", err)
+ 		writeJSONError(w, http.StatusInternalServerError, "Internal server error.")
+ 		return
+ 	}
+ 
+-	if err := h.storeWebAuthnSession(ctx, mfa.authReq.ID, session); err != nil {
++	if adding {
++		// The registration of a further key takes the confirmation over, in the same update as its session: a
++		// second registration needs a key to confirm the sign-in again.
++		err = h.updateWebAuthnState(ctx, mfa.authReq.ID, func(state *webAuthnState) error {
++			if state.keyConfirmedFor(mfa.authReq) != mfa.authenticatorID {
++				return errKeyNotConfirmed
++			}
++			state.SessionData = *session
++			state.KeyConfirmedFor, state.KeyAddingFor = "", mfa.authenticatorID
++			return nil
++		})
++	} else {
++		err = h.storeWebAuthnSession(ctx, mfa.authReq.ID, session)
++	}
++	if errors.Is(err, errKeyNotConfirmed) {
++		writeJSONError(w, http.StatusForbidden, keyNotConfirmedMsg)
++		return
++	}
++	if err != nil {
+ 		h.Logger.ErrorContext(ctx, "failed to store session data", "err", err)
+ 		writeJSONError(w, http.StatusInternalServerError, "Internal server error.")
+ 		return
+@@ -216,34 +291,64 @@ func (h *Handler) handleWebAuthnRegisterFinish(w http.ResponseWriter, r *http.Re
+ 	if !ok {
+ 		return
+ 	}
+-	if webAuthnRegistered(mfa.identity, mfa.authenticatorID) {
+-		writeJSONError(w, http.StatusBadRequest, "A key is already registered.")
++	if msg, ok := h.webAuthnMayAdd(mfa, provider, readWebAuthnState(mfa.authReq.WebAuthnSessionData).keyAddingFor(mfa.authReq)); !ok {
++		writeJSONError(w, http.StatusBadRequest, msg)
+ 		return
+ 	}
+ 
+ 	ctx := r.Context()
++	adding := webAuthnRegistered(mfa.identity, mfa.authenticatorID)
++	// A further key uses the confirmation up before anything else: a finish that fails, for any reason, leaves no
++	// confirmation for another one, and of parallel finishes one gets it. The session is the one stored with it.
++	var session *webauthn.SessionData
++	if adding {
++		err := h.updateWebAuthnState(ctx, mfa.authReq.ID, func(state *webAuthnState) error {
++			if state.keyAddingFor(mfa.authReq) != mfa.authenticatorID {
++				return errKeyNotConfirmed
++			}
++			taken := state.SessionData
++			session = &taken
++			state.SessionData = webauthn.SessionData{}
++			state.dropKey()
++			return nil
++		})
++		if errors.Is(err, errKeyNotConfirmed) {
++			writeJSONError(w, http.StatusBadRequest, keyNotConfirmedMsg)
++			return
++		}
++		if err != nil {
++			h.Logger.ErrorContext(ctx, "failed to update session data", "err", err)
++			writeJSONError(w, http.StatusInternalServerError, "Internal server error.")
++			return
++		}
++	}
++
+ 	rc, err := h.choiceChain(ctx, mfa.authReq)
+-	if err != nil || h.enrollmentClosed(rc, mfa.identity, mfa.authenticatorID) {
++	if err != nil || !webAuthnRegistered(mfa.identity, mfa.authenticatorID) && h.enrollmentClosed(rc, mfa.identity, mfa.authenticatorID) {
+ 		h.refuseWebAuthnEnrollment(ctx, w, err)
+ 		return
+ 	}
+-	gate, ok := h.webAuthnRegistration(w, r, mfa)
+-	if !ok {
+-		return
+-	}
+-	if !gate.allowed(mfa.identity) {
+-		writeJSONError(w, http.StatusForbidden, notPassedYetMsg)
+-		return
+-	}
+-	session, err := h.loadWebAuthnSession(mfa.authReq)
+-	if err != nil {
+-		h.Logger.ErrorContext(ctx, "failed to load session data", "err", err)
+-		writeJSONError(w, http.StatusBadRequest, "Invalid session.")
+-		return
++	// A first key is registered only after the factors the user has (see order.go); a further key has the
++	// confirmation of this sign-in.
++	var gate registration
++	if !adding {
++		g, ok := h.webAuthnRegistration(w, r, mfa)
++		if !ok {
++			return
++		}
++		if !g.allowed(mfa.identity) {
++			writeJSONError(w, http.StatusForbidden, notPassedYetMsg)
++			return
++		}
++		gate = g
++		if session, err = h.loadWebAuthnSession(mfa.authReq); err != nil {
++			h.Logger.ErrorContext(ctx, "failed to load session data", "err", err)
++			writeJSONError(w, http.StatusBadRequest, "Invalid session.")
++			return
++		}
+ 	}
+ 
+ 	user := buildWebAuthnUser(mfa.identity, mfa.authenticatorID)
+-	user.credentials = nil
+ 
+ 	credential, err := provider.finishWebAuthnRegistration(user, *session, r)
+ 	if err != nil {
+@@ -254,22 +359,34 @@ func (h *Handler) handleWebAuthnRegisterFinish(w http.ResponseWriter, r *http.Re
+ 
+ 	newCred := convertCredential(credential, h.Now())
+ 	if err := h.Storage.UpdateUserIdentity(ctx, mfa.authReq.Claims.UserID, mfa.authReq.ConnectorID, func(old storage.UserIdentity) (storage.UserIdentity, error) {
+-		// A parallel finish may have stored a key after this request loaded the identity.
+-		if webAuthnRegistered(old, mfa.authenticatorID) {
++		// A parallel finish may have stored a key after this request loaded the identity: a first key needs an
++		// account without one, a further key the confirmation of this sign-in, and either needs room (Deckhouse
++		// patch 360).
++		if webAuthnRegistered(old, mfa.authenticatorID) && !adding {
+ 			return old, errWebAuthnAlreadyRegistered
+ 		}
++		if !provider.CanAdd(old, mfa.authenticatorID) {
++			return old, errWebAuthnLimit
++		}
++		// A browser that ignored the exclusions registers a key the user has again: refused.
++		if webAuthnHasCredential(old, mfa.authenticatorID, newCred.CredentialID) {
++			return old, errWebAuthnDuplicate
++		}
+ 		// Another method may have been registered after the identity was loaded (Deckhouse patch 340).
+-		if h.enrollmentClosed(rc, old, mfa.authenticatorID) {
++		if !webAuthnRegistered(old, mfa.authenticatorID) && h.enrollmentClosed(rc, old, mfa.authenticatorID) {
+ 			return old, errEnrollmentClosed
+ 		}
+ 		// The user may have got another factor after the identity was loaded (Deckhouse, see order.go).
+-		if !gate.allowed(old) {
++		if !webAuthnRegistered(old, mfa.authenticatorID) && (adding || !gate.allowed(old)) {
+ 			return old, errNotPassedYet
+ 		}
+-		if old.WebAuthnCredentials == nil {
+-			old.WebAuthnCredentials = make(map[string][]storage.WebAuthnCredential)
++		// A new map: the memory storage shares the one of the identity with the requests that read it.
++		creds := maps.Clone(old.WebAuthnCredentials)
++		if creds == nil {
++			creds = make(map[string][]storage.WebAuthnCredential)
+ 		}
+-		old.WebAuthnCredentials[mfa.authenticatorID] = append(old.WebAuthnCredentials[mfa.authenticatorID], newCred)
++		creds[mfa.authenticatorID] = append(slices.Clone(creds[mfa.authenticatorID]), newCred)
++		old.WebAuthnCredentials = creds
+ 		return old, nil
+ 	}); err != nil {
+ 		if errors.Is(err, errWebAuthnAlreadyRegistered) {
+@@ -284,6 +401,14 @@ func (h *Handler) handleWebAuthnRegisterFinish(w http.ResponseWriter, r *http.Re
+ 			writeJSONError(w, http.StatusForbidden, notPassedYetMsg)
+ 			return
+ 		}
++		if errors.Is(err, errWebAuthnLimit) {
++			writeJSONError(w, http.StatusBadRequest, webAuthnLimitMsg)
++			return
++		}
++		if errors.Is(err, errWebAuthnDuplicate) {
++			writeJSONError(w, http.StatusBadRequest, webAuthnDuplicateMsg)
++			return
++		}
+ 		h.Logger.ErrorContext(ctx, "failed to store credential", "err", err)
+ 		writeJSONError(w, http.StatusInternalServerError, "Internal server error.")
+ 		return
+@@ -382,6 +507,18 @@ func (h *Handler) handleWebAuthnLoginFinish(w http.ResponseWriter, r *http.Reque
+ 		return
+ 	}
+ 
++	// "Add a key" (Deckhouse patch 360): the registered key has confirmed the sign-in, and the user registers a
++	// new one next. The login completes after the registration.
++	if r.FormValue("addKey") != "" && provider.CanAdd(mfa.identity, mfa.authenticatorID) {
++		if err := h.setKeyConfirmed(ctx, mfa.authReq, mfa.authenticatorID); err != nil {
++			h.Logger.ErrorContext(ctx, "failed to update session data", "err", err)
++			writeJSONError(w, http.StatusInternalServerError, "Internal server error.")
++			return
++		}
++		writeJSON(w, map[string]string{"status": "ok", "register": "true"})
++		return
++	}
++
+ 	h.writeCompleteMFAStepResponse(w, r, mfa)
+ }
+ 
+@@ -413,12 +550,33 @@ func (h *Handler) validateWebAuthnAPIRequest(w http.ResponseWriter, r *http.Requ
+ 	return mfa, webauthnProvider, true
+ }
+ 
+-// storeWebAuthnSession marshals and stores WebAuthn session data in the auth request.
++// storeWebAuthnSession marshals and stores WebAuthn session data in the auth request, keeping the factors the login
++// passed (see order.go). A new ceremony drops a confirmation for adding a key (Deckhouse patch 360).
+ func (h *Handler) storeWebAuthnSession(ctx context.Context, authReqID string, session *webauthn.SessionData) error {
++	return h.updateWebAuthnState(ctx, authReqID, func(state *webAuthnState) error {
++		state.SessionData = *session
++		state.dropKey()
++		return nil
++	})
++}
++
++// setKeyConfirmed records that a registered key of the authenticator of the user of authReq has confirmed the
++// sign-in for adding another one.
++func (h *Handler) setKeyConfirmed(ctx context.Context, authReq storage.AuthRequest, authenticatorID string) error {
++	return h.updateWebAuthnState(ctx, authReq.ID, func(state *webAuthnState) error {
++		state.confirmKey(authenticatorID, authReq)
++		return nil
++	})
++}
++
++// updateWebAuthnState changes the WebAuthn state of the auth request in one update; an error of change leaves the
++// request as it was.
++func (h *Handler) updateWebAuthnState(ctx context.Context, authReqID string, change func(*webAuthnState) error) error {
+ 	return h.Storage.UpdateAuthRequest(ctx, authReqID, func(old storage.AuthRequest) (storage.AuthRequest, error) {
+-		// The factors the login passed are kept with the session (Deckhouse, see order.go).
+ 		state := readWebAuthnState(old.WebAuthnSessionData)
+-		state.SessionData = *session
++		if err := change(&state); err != nil {
++			return old, err
++		}
+ 		data, err := json.Marshal(state)
+ 		if err != nil {
+ 			return old, fmt.Errorf("marshal session: %w", err)
+@@ -437,6 +595,24 @@ func (h *Handler) loadWebAuthnSession(authReq storage.AuthRequest) (*webauthn.Se
+ 	return &session, nil
+ }
+ 
++// webAuthnMayAdd reports whether the user may register a key now: a first key, as before, or a further one when a
++// registered key of the authenticator has confirmed this sign-in (confirmedFor, the step of the confirmation the
++// request needs) and the user has fewer keys than the limit. A password alone never adds a key to an account that
++// has one (Deckhouse patch 360). The request takes the confirmation in an update of its own after this check. msg
++// is the refusal.
++func (h *Handler) webAuthnMayAdd(mfa *mfaRequestContext, provider *WebAuthnProvider, confirmedFor string) (msg string, ok bool) {
++	if !webAuthnRegistered(mfa.identity, mfa.authenticatorID) {
++		return "", true
++	}
++	if confirmedFor != mfa.authenticatorID {
++		return keyNotConfirmedMsg, false
++	}
++	if !provider.CanAdd(mfa.identity, mfa.authenticatorID) {
++		return webAuthnLimitMsg, false
++	}
++	return "", true
++}
++
+ // writeCompleteMFAStepResponse completes the MFA step and writes a JSON redirect response.
+ func (h *Handler) writeCompleteMFAStepResponse(w http.ResponseWriter, r *http.Request, mfa *mfaRequestContext) {
+ 	ctx := r.Context()
+@@ -525,7 +701,11 @@ func (h *Handler) handleWebAuthn(w http.ResponseWriter, r *http.Request) {
+ 		}
+ 	}
+ 
+-	if err := h.Templates.WebAuthnVerifyWithChoice(r, w, mode, mfa.authenticatorID, h.otherMethodURL(r.Context(), mfa)); err != nil {
++	canAdd := false
++	if provider, ok := h.MFAProviders[mfa.authenticatorID].(*WebAuthnProvider); ok && mode == "login" {
++		canAdd = provider.CanAdd(mfa.identity, mfa.authenticatorID)
++	}
++	if err := h.Templates.WebAuthnVerifyWithKeys(r, w, mode, mfa.authenticatorID, h.otherMethodURL(r.Context(), mfa), canAdd); err != nil {
+ 		h.Logger.ErrorContext(r.Context(), "server template error", "err", err)
+ 	}
+ }
+diff --git a/server/templates/templates.go b/server/templates/templates.go
+index ef99099f..9fa58e02 100644
+--- a/server/templates/templates.go
++++ b/server/templates/templates.go
+@@ -624,6 +624,12 @@ func (t *Templates) WebAuthnVerify(r *http.Request, w http.ResponseWriter, mode,
+ // WebAuthnVerifyWithChoice is WebAuthnVerify with the link to the choice of another registered method of the
+ // second factor, empty when the user has no other (Deckhouse patch 340).
+ func (t *Templates) WebAuthnVerifyWithChoice(r *http.Request, w http.ResponseWriter, mode, authenticatorID, otherMethodURL string) error {
++	return t.WebAuthnVerifyWithKeys(r, w, mode, authenticatorID, otherMethodURL, false)
++}
++
++// WebAuthnVerifyWithKeys is WebAuthnVerifyWithChoice that offers to add a key after the registered one confirms the
++// sign-in, while the user has fewer keys than the limit (Deckhouse patch 360).
++func (t *Templates) WebAuthnVerifyWithKeys(r *http.Request, w http.ResponseWriter, mode, authenticatorID, otherMethodURL string, canAddKey bool) error {
+ 	t = t.page(r, w)
+ 	data := struct {
+ 		// Mode must be server-controlled ("register" or "login") and never derived
+@@ -631,9 +637,10 @@ func (t *Templates) WebAuthnVerifyWithChoice(r *http.Request, w http.ResponseWri
+ 		Mode            string
+ 		AuthenticatorID string
+ 		OtherMethodURL  string
++		CanAddKey       bool
+ 		ReqPath         string
+ 		BuildIdentifier string
+-	}{mode, authenticatorID, otherMethodURL, r.URL.Path, t.buildID}
++	}{mode, authenticatorID, otherMethodURL, canAddKey, r.URL.Path, t.buildID}
+ 	return renderTemplate(w, t.webauthnVerifyTmpl, data)
+ }
+ 
+diff --git a/web/templates/webauthn_verify.html b/web/templates/webauthn_verify.html
+index c206f6ec..e3c96d10 100644
+--- a/web/templates/webauthn_verify.html
++++ b/web/templates/webauthn_verify.html
+@@ -17,6 +17,9 @@
+   <button id="webauthn-btn" type="button" class="dex-btn theme-btn--primary" onclick="startWebAuthn()">
+     {{ if eq .Mode "register" }}Register Security Key{{ else }}Use Security Key{{ end }}
+   </button>
++  {{ if .CanAddKey }}
++  <p><button id="add-key-btn" type="button" class="dex-btn" onclick="addKey()">Add a key</button></p>
++  {{ end }}
+   {{ if .OtherMethodURL }}
+   <p><a id="other-method" href="{{ .OtherMethodURL }}">Sign in another way</a></p>
+   {{ end }}

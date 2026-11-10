@@ -50,6 +50,18 @@
       {{ if eq (extra "lang") "en" }}Use Passkey or Security Key{{ else }}Подтвердить ключом{{ end }}
       {{ end }}
     </button>
+    {{ if .CanAddKey }}
+    <button id="add-key-btn" type="button" class="btn btn-primary-outline" onclick="addKey()">
+      {{ if eq (extra "lang") "en" }}Add a key{{ else }}Добавить ключ{{ end }}
+    </button>
+    <div id="add-key-hint" class="content-text">
+      {{ if eq (extra "lang") "en" }}
+      First confirm the sign-in with a key you have, then use the new one.
+      {{ else }}
+      Сначала подтвердите вход имеющимся ключом, затем приложите новый.
+      {{ end }}
+    </div>
+    {{ end }}
   </div>
   {{ if .OtherMethodURL }}
   <div class="form-extra">
@@ -63,6 +75,7 @@
 <script>
 (function() {
   const mode = {{ .Mode }};
+  const canAddKey = {{ .CanAddKey }};
   const basePath = window.location.pathname.replace(/\/mfa\/webauthn$/, "");
 
   {{ if eq (extra "lang") "en" }}
@@ -71,7 +84,12 @@
     authenticationFailed: "Authentication failed",
     status: "status",
     notAllowed: "Request was cancelled or timed out. Please try again.",
+    keyExists: "This key is already added. Use another key.",
+    aborted: "The request to the key was interrupted. Please try again.",
     security: "The browser does not allow the key on this site.",
+    notSupported: "The browser or the key does not support this sign-in. Use another key or browser.",
+    constraint: "The key does not support the required check. Use another key.",
+    keyFailed: "The key reported an error. Try again or use another key.",
     unexpected: "An unexpected error occurred."
   };
   {{ else }}
@@ -80,7 +98,12 @@
     authenticationFailed: "Не удалось проверить ключ",
     status: "код ошибки",
     notAllowed: "Действие отменено или время ожидания истекло. Попробуйте ещё раз.",
+    keyExists: "Этот ключ уже добавлен. Приложите другой ключ.",
+    aborted: "Запрос к ключу прерван. Попробуйте ещё раз.",
     security: "Браузер не разрешает использовать ключ на этом сайте.",
+    notSupported: "Браузер или ключ не поддерживает такой вход. Используйте другой ключ или браузер.",
+    constraint: "Ключ не поддерживает нужную проверку. Приложите другой ключ.",
+    keyFailed: "Ключ сообщил об ошибке. Попробуйте ещё раз или приложите другой ключ.",
     unexpected: "Что-то пошло не так. Попробуйте ещё раз."
   };
   {{ end }}
@@ -101,7 +124,25 @@
     document.getElementById("webauthn-error").style.display = "block";
     document.getElementById("webauthn-working").style.display = "none";
     document.getElementById("webauthn-btn").style.display = "";
+    setAddKeyVisible(true);
   }
+
+  function setAddKeyVisible(visible) {
+    ["add-key-btn", "add-key-hint"].forEach(function(id) {
+      const el = document.getElementById(id);
+      if (el) { el.style.display = visible ? "" : "none"; }
+    });
+  }
+
+  // "Add a key": a registered key confirms the sign-in, then the browser registers a new one, and the sign-in
+  // goes on. Dex refuses the new key without the confirmation.
+  window.addKey = function() {
+    document.getElementById("webauthn-error").style.display = "none";
+    document.getElementById("webauthn-working").style.display = "block";
+    document.getElementById("webauthn-btn").style.display = "none";
+    setAddKeyVisible(false);
+    doLogin(true);
+  };
 
   function bufferToBase64url(buffer) {
     const bytes = new Uint8Array(buffer);
@@ -137,12 +178,28 @@
     }
   }
 
+  // The errors of the browser by their name (DOMException), with the text of the page instead of the message of the
+  // browser. InvalidStateError comes from create() for a key the user has: the page excludes those keys.
+  const domErrors = {
+    NotAllowedError: text.notAllowed,
+    InvalidStateError: text.keyExists,
+    AbortError: text.aborted,
+    SecurityError: text.security,
+    NotSupportedError: text.notSupported,
+    ConstraintError: text.constraint,
+    UnknownError: text.keyFailed
+  };
+
   function formatError(err) {
-    if (err.name === "NotAllowedError") {
-      return text.notAllowed;
+    if (!window.PublicKeyCredential) {
+      return text.notSupported;
     }
-    if (err.name === "SecurityError") {
-      return text.security;
+    if (Object.prototype.hasOwnProperty.call(domErrors, err.name)) {
+      return domErrors[err.name];
+    }
+    // Another error of the browser has an English message: the page shows its own text instead.
+    if (typeof DOMException !== "undefined" && err instanceof DOMException) {
+      return text.unexpected;
     }
     return err.message || text.unexpected;
   }
@@ -151,6 +208,7 @@
     document.getElementById("webauthn-error").style.display = "none";
     document.getElementById("webauthn-working").style.display = "block";
     document.getElementById("webauthn-btn").style.display = "none";
+    setAddKeyVisible(false);
 
     if (mode === "register") {
       doRegister();
@@ -191,7 +249,7 @@
       .catch(function(err) { showError(formatError(err)); });
   }
 
-  function doLogin() {
+  function doLogin(addKey) {
     fetch(basePath + "/mfa/webauthn/login/begin?" + apiParams(), {method: "POST"})
       .then(function(resp) { return handleFetchError(resp, text.authenticationFailed); })
       .then(function(options) {
@@ -211,7 +269,7 @@
             userHandle: assertion.response.userHandle ? bufferToBase64url(assertion.response.userHandle) : ""
           }
         });
-        return fetch(basePath + "/mfa/webauthn/login/finish?" + apiParams(), {
+        return fetch(basePath + "/mfa/webauthn/login/finish?" + apiParams() + (addKey ? "&addKey=1" : ""), {
           method: "POST",
           headers: {"Content-Type": "application/json"},
           body: body
@@ -219,13 +277,15 @@
       })
       .then(function(resp) { return handleFetchError(resp, text.authenticationFailed); })
       .then(function(result) {
+        if (result.register) { doRegister(); return; }
         if (result.redirect) { window.location.href = result.redirect; }
       })
       .catch(function(err) { showError(formatError(err)); });
   }
 
-  // Auto-start login flow (not registration — user should click to register).
-  if (mode === "login") {
+  // Auto-start login flow (not registration — user should click to register). A user who may add a key chooses
+  // first: the automatic sign-in would complete before "Add a key" could be pressed.
+  if (mode === "login" && !canAddKey) {
     startWebAuthn();
   }
 })();

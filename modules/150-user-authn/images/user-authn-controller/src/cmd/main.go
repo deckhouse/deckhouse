@@ -85,6 +85,9 @@ const (
 	// twoFactorPolicyEnv is the second factors of each type of provider while 2FA is on, as JSON
 	// (useraccount.TwoFactorPolicy); UserAccount.status.twoFactor describes them. Unset when 2FA is off.
 	twoFactorPolicyEnv = "TWO_FACTOR_POLICY"
+	// twoFactorMaxCredentialsEnv is how many WebAuthn keys a user may register, which
+	// UserAccount.status.twoFactor.webAuthn shows. Unset when 2FA is off.
+	twoFactorMaxCredentialsEnv = "TWO_FACTOR_WEBAUTHN_MAX_CREDENTIALS"
 
 	// revocationRetentionEnv keeps the revocations longer than revocation.Retention of the ID token
 	// lifetime; a shorter value is raised to it. operationRetentionEnv is how long a UserOperation is
@@ -173,6 +176,10 @@ func setupRuntimeManager() (ctrl.Manager, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", twoFactorPolicyEnv, err)
 	}
+	maxCredentials, err := useraccount.ParseMaxCredentials(os.Getenv(twoFactorMaxCredentialsEnv))
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", twoFactorMaxCredentialsEnv, err)
+	}
 	orphanedRetention, err := orphanedIdentityRetention(os.Getenv(orphanedIdentityRetentionEnv))
 	if err != nil {
 		return nil, err
@@ -199,7 +206,7 @@ func setupRuntimeManager() (ctrl.Manager, error) {
 		return nil, err
 	}
 
-	if err = useraccount.Register(runtimeManager, deviceAge, twoFactor); err != nil {
+	if err = useraccount.Register(runtimeManager, deviceAge, twoFactor, maxCredentials); err != nil {
 		return nil, fmt.Errorf("register useraccount controller: %w", err)
 	}
 	if err = user.Register(runtimeManager); err != nil {

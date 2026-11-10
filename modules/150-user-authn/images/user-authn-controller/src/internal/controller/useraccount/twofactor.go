@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"strconv"
 
 	"user-authn-controller/api/v1alpha1"
 )
@@ -33,6 +34,9 @@ const ProviderTypeLocal = "Local"
 type TwoFactorRequirement struct {
 	Methods []string `json:"methods"`
 	Require string   `json:"require,omitempty"`
+	// MaxCredentials is how many WebAuthn keys a user may register; it is the same for every type, and the
+	// controller sets it from its own variable, not from the policy.
+	MaxCredentials int `json:"-"`
 }
 
 // TwoFactorPolicy is the second factors of each type of provider twoFactor covers, by the type: Local, LDAP,
@@ -87,6 +91,18 @@ func (p TwoFactorPolicy) For(providerType string) *TwoFactorRequirement {
 	return &req
 }
 
+// ParseMaxCredentials reads the limit of WebAuthn keys of a user; an empty value is no limit to show.
+func ParseMaxCredentials(value string) (int, error) {
+	if value == "" {
+		return 0, nil
+	}
+	n, err := strconv.Atoi(value)
+	if err != nil || n < 1 {
+		return 0, fmt.Errorf("the limit of keys %q must be a positive integer", value)
+	}
+	return n, nil
+}
+
 // storedFactors is what Dex keeps of the second factors of an account, as the informer cache keeps it: whether
 // there is a TOTP secret and whether a code confirmed it, and the number of WebAuthn credentials.
 type storedFactors struct {
@@ -120,7 +136,7 @@ func twoFactorStatus(f storedFactors, req *TwoFactorRequirement) *v1alpha1.UserA
 		status.TOTP = &v1alpha1.UserAccountTOTP{Confirmed: f.TOTPConfirmed}
 	}
 	if f.WebAuthnKeys > 0 {
-		status.WebAuthn = &v1alpha1.UserAccountWebAuthn{Credentials: f.WebAuthnKeys}
+		status.WebAuthn = &v1alpha1.UserAccountWebAuthn{Credentials: f.WebAuthnKeys, MaxCredentials: req.MaxCredentials}
 	}
 
 	status.Methods = slices.Clone(req.Methods)

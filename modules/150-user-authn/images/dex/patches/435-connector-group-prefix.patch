@@ -1,5 +1,5 @@
 diff --git a/cmd/dex/config.go b/cmd/dex/config.go
-index 147f7118..6cc8a3fe 100644
+index 53407abf..0062018f 100644
 --- a/cmd/dex/config.go
 +++ b/cmd/dex/config.go
 @@ -740,6 +740,9 @@ type Connector struct {

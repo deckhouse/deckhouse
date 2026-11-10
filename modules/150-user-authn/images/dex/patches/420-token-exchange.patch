@@ -1,5 +1,5 @@
 diff --git a/cmd/dex/config.go b/cmd/dex/config.go
-index 60795c87..4e54fedb 100644
+index 002488c2..0fcb195b 100644
 --- a/cmd/dex/config.go
 +++ b/cmd/dex/config.go
 @@ -88,6 +88,10 @@ type Config struct {
@@ -14,7 +14,7 @@ index 60795c87..4e54fedb 100644
  
  // MFAConfig holds multi-factor authentication settings.
 diff --git a/cmd/dex/serve.go b/cmd/dex/serve.go
-index ff928eeb..d2fa4b69 100644
+index 167fe4a1..85de6102 100644
 --- a/cmd/dex/serve.go
 +++ b/cmd/dex/serve.go
 @@ -40,6 +40,7 @@ import (

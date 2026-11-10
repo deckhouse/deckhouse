@@ -64,6 +64,9 @@ type Reconciler struct {
 	// twoFactor is the second factors of each type of provider; nil when 2FA is off. status.twoFactor of an
 	// account describes what it asks the users of the type of the account for.
 	twoFactor TwoFactorPolicy
+	// maxCredentials is how many WebAuthn keys a user may register, which status.twoFactor.webAuthn shows;
+	// zero when the controller was not told.
+	maxCredentials int
 }
 
 // New constructs a Reconciler. now defaults to time.Now when nil.
@@ -76,10 +79,11 @@ func New(c client.Client, log logr.Logger, now func() time.Time) *Reconciler {
 
 // Register wires the UserAccount reconciler onto the manager. establishedAge is the minimum device
 // age of user-api. twoFactor is the second factors of each type of provider, nil when 2FA is off.
-func Register(mgr manager.Manager, establishedAge time.Duration, twoFactor TwoFactorPolicy) error {
+func Register(mgr manager.Manager, establishedAge time.Duration, twoFactor TwoFactorPolicy, maxCredentials int) error {
 	r := New(mgr.GetClient(), mgr.GetLogger().WithName("useraccount"), nil)
 	r.establishedAge = establishedAge
 	r.twoFactor = twoFactor
+	r.maxCredentials = maxCredentials
 	if err := r.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("setup useraccount controller: %w", err)
 	}
@@ -257,7 +261,7 @@ func (r *Reconciler) desiredLocal(ctx context.Context, name string, now time.Tim
 			ident = &found
 		}
 	}
-	desired := projectLocal(pw, ident, user, r.twoFactor.For(ProviderTypeLocal), now)
+	desired := projectLocal(pw, ident, user, r.requirement(ProviderTypeLocal), now)
 	var known map[string]time.Time
 	if ident != nil {
 		known = ident.KnownDevices
@@ -304,7 +308,7 @@ func (r *Reconciler) desiredExternal(ctx context.Context, name string, now time.
 	if !ok {
 		return nil, nil
 	}
-	desired := projectExternal(src, provider.Type, r.twoFactor.For(provider.Type), now)
+	desired := projectExternal(src, provider.Type, r.requirement(provider.Type), now)
 	var known map[string]time.Time
 	if identPtr != nil {
 		known = identPtr.KnownDevices
@@ -836,6 +840,16 @@ func sessionEqual(a, b v1alpha1.UserAccountSession) bool {
 		metaTimeEqual(a.SignedInAt, b.SignedInAt) &&
 		metaTimeEqual(a.KnownSince, b.KnownSince) &&
 		metaTimeEqual(a.LastActivity, b.LastActivity)
+}
+
+// requirement is what the second factor asks the users of providerType for, with the limit of keys; nil when it
+// does not cover the type.
+func (r *Reconciler) requirement(providerType string) *TwoFactorRequirement {
+	req := r.twoFactor.For(providerType)
+	if req != nil {
+		req.MaxCredentials = r.maxCredentials
+	}
+	return req
 }
 
 func twoFactorEqual(a, b *v1alpha1.UserAccountTwoFactor) bool {

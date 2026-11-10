@@ -239,7 +239,8 @@ the pair generation (290), not of a lock re-check. New package
   authenticators that exist. `buildMFAProviders` of `cmd/dex/serve.go`
   returns the error;
 - WebAuthn registration refuses an identity that already has a credential for
-  the authenticator. Upstream checks that only when it chooses the HTML mode,
+  the authenticator (a further key comes with 360, after a registered key
+  confirms the sign-in). Upstream checks that only when it chooses the HTML mode,
   and `register/begin` and `register/finish` nil the stored credentials, so a
   password alone can add a second key and mark the login's second factor done.
   Both endpoints refuse (`403` and `400`), and `register/finish` checks again
@@ -1280,6 +1281,51 @@ and refusals of the password policy of 220); `templates/dex/config.yaml` keeps
 
 **Depends on:** 270 (the build identifier of the sets), 280, 300, 340 (their
 pages).
+
+### 360-webauthn-more-keys.patch
+
+**Zone:** several WebAuthn keys per user. 210 lets an account register a key
+only while it has none. The WebAuthn config gets `maxCredentials` (zero or
+unset means one, as before; a negative value stops the start), and a user
+adds a key up to it:
+
+- the key page, while the user has fewer keys than the limit, offers "Add a
+  key" (`CanAddKey` of `WebAuthnVerifyWithKeys`). `login/finish` with
+  `addKey=1` checks the registered key as a sign-in does and then, instead of
+  completing the second factor, records in the auth request which
+  authenticator's key has confirmed it (`deckhouseKeyConfirmedFor` in
+  `WebAuthnSessionData`, next to the session of the ceremony, which an earlier
+  dex reads the same).
+- `register/begin` of a further key takes the confirmation of its
+  authenticator over in the same `UpdateAuthRequest` as the session of its
+  ceremony (`deckhouseKeyAddingFor`), and `register/finish` takes it from there
+  in one update before the ceremony runs. A finish that fails, for any reason,
+  leaves no confirmation, a second begin needs a key to confirm the sign-in
+  again, and of parallel finishes one stores a key. A confirmation by a key of
+  one authenticator adds no key to another, and a completed step, a new
+  ceremony and the end of the login drop it. The confirmation records the user
+  and the connector whose key gave it (`deckhouseKeyUserID`,
+  `deckhouseKeyConnectorID`), as the passes of 210 do: a confirmation of
+  another user, or recorded without one, counts for nothing.
+- a further key needs the limit too, and `register/finish` checks it again
+  inside `UpdateUserIdentity`, so a parallel registration cannot pass it. The
+  keys the user has go to `excludeCredentials` of the ceremony
+  (`WithExclusions`: the library adds none by itself), so the browser does not
+  register one of them again, and `register/finish` refuses a credential ID the
+  user has inside `UpdateUserIdentity`, for a browser that ignores the list.
+  The login completes after the new key. A password alone never adds a key to
+  an account that has one.
+- a limit lowered below the keys a user has keeps them and adds none.
+- with a choice of the second factor (340), adding a key is not a second
+  method: the user already has the key.
+
+**Consumer in Deckhouse:** `templates/dex/config.yaml`
+(`maxCredentials` from `twoFactor.webAuthn.maxCredentials`, 3 by default), the
+theme (the button and the flow on `webauthn_verify.html`).
+
+**Upstream status:** Deckhouse only.
+
+**Depends on:** 210 (one key per account), 340 (the choice), 350 (the page).
 
 ### 400-connector-open-deadline.patch
 

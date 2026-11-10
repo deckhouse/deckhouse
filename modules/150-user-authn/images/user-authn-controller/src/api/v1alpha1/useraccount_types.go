@@ -81,6 +81,8 @@ type UserAccountTOTP struct {
 type UserAccountWebAuthn struct {
 	// Credentials is the number of the credentials, over every authenticator.
 	Credentials int `json:"credentials"`
+	// MaxCredentials is how many credentials the account may register; zero when the controller was not told.
+	MaxCredentials int `json:"maxCredentials,omitempty"`
 }
 
 // UserAccountStatus is the observed account state projected from Dex.

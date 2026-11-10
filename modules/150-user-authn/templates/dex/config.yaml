@@ -229,6 +229,7 @@ fields when it decides who may write the provider. Rendered right after the conn
         rpID: {{ $webAuthn.rpID | quote }}
         {{- end }}
         attestationPreference: "none"
+        maxCredentials: {{ $webAuthn.maxCredentials | default 3 }}
       connectorTypes:
       {{- range $webAuthnTypes }}
       - {{ . }}

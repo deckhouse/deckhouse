@@ -94,6 +94,9 @@ spec:
         # while 2FA is off.
         - name: TWO_FACTOR_POLICY
           value: {{ include "user_authn_two_factor_policy" . | quote }}
+        # The limit of keys of a user, which status.twoFactor.webAuthn shows.
+        - name: TWO_FACTOR_WEBAUTHN_MAX_CREDENTIALS
+          value: {{ dig "webAuthn" "maxCredentials" 3 . | quote }}
         {{- end }}
         {{- end }}
         {{- with dig "retention" "revocations" "" .Values.userAuthn }}

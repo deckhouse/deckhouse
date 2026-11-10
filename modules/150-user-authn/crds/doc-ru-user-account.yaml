@@ -155,6 +155,10 @@ spec:
                         credentials:
                           description: |
                             Число зарегистрированных ключей безопасности.
+                        maxCredentials:
+                          description: |
+                            Сколько учётных данных может зарегистрировать учётная запись (`twoFactor.webAuthn.maxCredentials`
+                            модуля).
                 sessions:
                   description: |
                     Устройства, на которых выполнен вход в учётную запись. Первыми идут устройства с самой свежей

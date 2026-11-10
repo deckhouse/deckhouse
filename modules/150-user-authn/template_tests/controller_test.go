@@ -125,6 +125,17 @@ var _ = Describe("Module :: user-authn :: helm template :: controller", func() {
 			`{"Local": {"methods": ["TOTP", "WebAuthn"], "require": "All"}, "LDAP": {"methods": ["WebAuthn"]}}`))
 	})
 
+	It("Should tell the controller the limit of keys", func() {
+		hec.ValuesSet("userAuthn.twoFactor.enabled", true)
+		hec.ValuesSet("userAuthn.twoFactor.methods", []string{"WebAuthn"})
+		hec.ValuesSet("userAuthn.twoFactor.webAuthn.maxCredentials", 5)
+		hec.HelmRender()
+		Expect(hec.RenderError).ShouldNot(HaveOccurred())
+
+		deployment := hec.KubernetesResource("Deployment", "d8-user-authn", "user-authn-controller")
+		Expect(deployment.Field(`spec.template.spec.containers.0.env.#(name=="TWO_FACTOR_WEBAUTHN_MAX_CREDENTIALS").value`).String()).To(Equal("5"))
+	})
+
 	It("Should tell the controller nothing while 2FA is off", func() {
 		hec.ValuesSet("userAuthn.twoFactor.enabled", false)
 		hec.HelmRender()

@@ -1574,7 +1574,9 @@ The method works as follows:
   A change of `rpID`, or of `publicDomainTemplate` while `rpID` is not set, makes every registered key unusable. A user with such a key can neither sign in nor register a new one. Reset the second factor of the user with a UserOperation of type `Reset2FA`, and the user registers a key again at the next sign-in.
 * Dex accepts a security key of any make and model and does not check which key it is.
 * The browser has to support WebAuthn.
-* The user registers the key at the first sign-in after the method is turned on, as the user of TOTP registers the application. Dex lets a user register a key only while the account has none, and the page offers no second key. A user whose key is lost, or who wants another key, needs a `Reset2FA` operation, after which the next sign-in registers a key again. Until the registration, anyone who knows the password can register their own key, so ask the users to sign in right after the switch.
+* The user registers the key at the first sign-in after the method is turned on, as the user of TOTP registers the application. The maximum number of keys that a user can have is specified in the [`webAuthn.maxCredentials`](configuration.html#parameters-twofactor-webauthn-maxcredentials) parameter (3 by default). A user adds one with the "Add a key" button on the page that confirms a sign-in with a key, after a registered key has confirmed it.
+  Until the registration, anyone who knows the password can register their own key, so ask the users to sign in right after the switch.
+* A single key cannot be removed. If any of the keys has been lost or compromised, reset the user's `WebAuthn` method with a [`Reset2FA` operation](#the-second-factor-of-an-account). Until then, such a key still confirms a sign-in for whoever knows the password. The operation removes every key of the user, and the user registers the keys again at the next sign-in.
 * When the methods change, the TOTP secret and the keys the user had stay until a `Reset2FA`, so asking for a method again brings them back.
 
 #### Several methods

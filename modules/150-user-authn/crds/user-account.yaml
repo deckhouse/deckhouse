@@ -211,6 +211,11 @@ spec:
                           type: integer
                           description: |
                             Number of registered security keys.
+                        maxCredentials:
+                          type: integer
+                          description: |
+                            How many credentials the account may register (`twoFactor.webAuthn.maxCredentials` of the
+                            module).
                 sessions:
                   type: array
                   maxItems: 50

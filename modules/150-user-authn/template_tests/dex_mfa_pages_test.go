@@ -102,12 +102,13 @@ var _ = Describe("Module :: user-authn :: Dex second factor pages", func() {
 		{"totp_verify.html", func(other string) any {
 			return struct {
 				PostURL, Issuer, Connector, QRCode, OtherMethodURL, ReqPath, BuildIdentifier string
-				Invalid                                                                     bool
+				Invalid                                                                      bool
 			}{PostURL: "/mfa/totp", Issuer: "Deckhouse", Connector: "local", OtherMethodURL: other}
 		}},
 		{"webauthn_verify.html", func(other string) any {
 			return struct {
 				Mode, AuthenticatorID, OtherMethodURL, ReqPath, BuildIdentifier string
+				CanAddKey                                                       bool
 			}{Mode: "login", AuthenticatorID: "webauthn", OtherMethodURL: other}
 		}},
 	} {
@@ -122,4 +123,39 @@ var _ = Describe("Module :: user-authn :: Dex second factor pages", func() {
 			Expect(renderDexPage(tc.page, "en", tc.data(""))).NotTo(ContainSubstring(`id="other-method"`))
 		})
 	}
+
+	// The browser refuses a key with a DOMException whose message is in English; the page shows its own text by the
+	// name of the error.
+	It("shows its own text for the errors of the browser on webauthn_verify.html", func() {
+		block := func(page, name string) map[string]string {
+			body := regexp.MustCompile(`(?s)const ` + name + ` = \{(.*?)\};`).FindStringSubmatch(page)
+			ExpectWithOffset(1, body).To(HaveLen(2), name)
+			entries := map[string]string{}
+			for _, m := range regexp.MustCompile(`(\w+): (?:"([^"]*)"|text\.(\w+))`).FindAllStringSubmatch(body[1], -1) {
+				entries[m[1]] = m[2] + m[3]
+			}
+			return entries
+		}
+		texts := map[string]map[string]string{}
+		for _, lang := range []string{"en", "ru"} {
+			page := renderDexPage("webauthn_verify.html", lang, map[string]any{"Mode": "register", "OtherMethodURL": "", "CanAddKey": false, "ReqPath": "/mfa/webauthn", "BuildIdentifier": "b1"})
+			texts[lang] = block(page, "text")
+			errs := block(page, "domErrors")
+			for _, name := range []string{"NotAllowedError", "InvalidStateError", "AbortError", "SecurityError", "NotSupportedError", "ConstraintError", "UnknownError"} {
+				Expect(errs).To(HaveKey(name), lang)
+				Expect(texts[lang]).To(HaveKey(errs[name]), lang+" "+name)
+			}
+			Expect(errs["InvalidStateError"]).To(Equal("keyExists"))
+			Expect(page).To(ContainSubstring(`err instanceof DOMException) {
+      return text.unexpected;`))
+		}
+		Expect(texts["en"]["keyExists"]).To(Equal("This key is already added. Use another key."))
+		for key, en := range texts["en"] {
+			if key == "status" {
+				continue
+			}
+			Expect(texts["ru"][key]).To(MatchRegexp(russian.String()), key)
+			Expect(texts["ru"][key]).NotTo(Equal(en), key)
+		}
+	})
 })

@@ -68,6 +68,39 @@ func TestParseTwoFactorPolicy(t *testing.T) {
 	}
 }
 
+func TestParseMaxCredentials(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		value   string
+		want    int
+		wantErr bool
+	}{
+		{value: "", want: 0},
+		{value: "3", want: 3},
+		{value: "0", wantErr: true},
+		{value: "-1", wantErr: true},
+		{value: "three", wantErr: true},
+	} {
+		got, err := ParseMaxCredentials(tc.value)
+		if (err != nil) != tc.wantErr || got != tc.want {
+			t.Errorf("ParseMaxCredentials(%q) = %d, %v; want %d, error %v", tc.value, got, err, tc.want, tc.wantErr)
+		}
+	}
+}
+
+// The block of the keys shows the limit with the number of keys.
+func TestTwoFactorStatusLimitOfKeys(t *testing.T) {
+	t.Parallel()
+
+	req := &TwoFactorRequirement{Methods: []string{"WebAuthn"}, MaxCredentials: 3}
+	got := twoFactorStatus(storedFactors{WebAuthnKeys: 2}, req)
+	want := &v1alpha1.UserAccountWebAuthn{Credentials: 2, MaxCredentials: 3}
+	if got == nil || !reflect.DeepEqual(got.WebAuthn, want) {
+		t.Errorf("webAuthn = %+v, want %+v", got, want)
+	}
+}
+
 func TestTwoFactorPolicyFor(t *testing.T) {
 	t.Parallel()
 
