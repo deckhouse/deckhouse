@@ -835,7 +835,7 @@ func (c *BashibleContext) runModuleSourceCRDQueue(ctx context.Context) {
 				var ms ModuleSource
 				err := fromUnstructured(event.oldObject, &ms)
 				if err != nil {
-					klog.Errorf("Action: delete, moduleSource: %s - convert from unstructured failed: %v", event.newObject.GetName(), err)
+					klog.Errorf("Action: delete, moduleSource: %s - convert from unstructured failed: %v", event.oldObject.GetName(), err)
 					continue
 				}
 				c.RemoveModuleSourceCA(&ms)

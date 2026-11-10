@@ -31,11 +31,14 @@ type ModuleSourceSpec struct {
 	Registry ModuleSourceSpecRegistry `json:"registry"`
 }
 
+// ModuleSourceSpecRegistry leaves out dockerCfg on purpose: bashible needs only the CA,
+// and the field is x-kubernetes-sensitive-data. Without the modulesources/sensitive
+// subresource the API returns "<omitted>" there, which is not base64 and fails decoding
+// into []byte for the whole object.
 type ModuleSourceSpecRegistry struct {
-	Scheme    string `json:"scheme,omitempty"`
-	Repo      string `json:"repo"`
-	DockerCFG []byte `json:"dockerCfg"`
-	CA        string `json:"ca"`
+	Scheme string `json:"scheme,omitempty"`
+	Repo   string `json:"repo"`
+	CA     string `json:"ca"`
 }
 
 func (ms ModuleSource) IsEqual(newMs ModuleSource) bool {
