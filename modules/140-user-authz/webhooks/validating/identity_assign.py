@@ -951,6 +951,11 @@ def target_groups_roles(snapshots: Any, group_names: Iterable[str]) -> List[str]
 # Connecting a provider is not a role assignment by itself: dex asserts an
 # email and a set of groups, and the grants behind those strings are whatever
 # the cluster already holds. What a provider can assert is bounded on two axes.
+# `spec.groupPrefix` goes in front of every group the provider asserts. Everything Dex-side then
+# names the groups with it: the groups of the tokens, the rules of the cluster, and the lists
+# that bound them (allowedIdentities.groups), while the group filters of a connector type name
+# the groups of the identity provider, which get the prefix when they pass through Dex.
+#
 # The email axis is bounded only by `spec.allowedIdentities` (emails, domains);
 # the group axis by the same block and by the connector's own group filters,
 # where dex demonstrably narrows the claim to a list (see research R3.1). An
@@ -962,6 +967,7 @@ def target_groups_roles(snapshots: Any, group_names: Iterable[str]) -> List[str]
 # dex applies, see _dex_basic_auth_bypass.
 
 DEX_ALLOWED_IDENTITIES = "allowedIdentities"
+DEX_GROUP_PREFIX = "groupPrefix"
 
 # Fields whose change neither moves the identity source nor widens the space.
 # `enabled` is handled separately: switching a provider off is free, switching
@@ -1075,8 +1081,32 @@ def _connector_group_filter(spec: dict) -> Optional[frozenset]:
     return None
 
 
+def dex_group_prefix(spec: Any) -> str:
+    """The prefix dex puts in front of the groups the provider asserts, or "".
+
+    Basic auth of an OIDC or a Crowd provider does not pass through dex, so the prefix does not apply to it
+    (the CRD refuses the two together; a spec that has both is measured as if it had no prefix).
+    """
+    spec = _dict(spec)
+    prefix = spec.get(DEX_GROUP_PREFIX)
+    if not isinstance(prefix, str) or _dex_basic_auth_bypass(spec):
+        return ""
+    return prefix
+
+
+def _prefixed(prefix: str, names: Iterable[str]) -> frozenset:
+    # A group that starts with the prefix already keeps its name, as in dex.
+    return frozenset(n if n.startswith(prefix) else prefix + n for n in names)
+
+
 def dex_group_filter(spec: Any) -> Optional[frozenset]:
-    """Group names dex narrows the claim to, or None when the group axis is open."""
+    """Group names dex narrows the claim to, with the prefix, or None when the group axis is open.
+
+    The names of allowedIdentities.groups are those of the tokens, with the prefix; the filters of the
+    connector type name the groups of the identity provider and get the prefix in front. A name of
+    allowedIdentities.groups without the prefix can never be asserted: dex puts the prefix in front of the
+    group before it compares, so such a name matches nothing.
+    """
     spec = _dict(spec)
     bypass = _dex_basic_auth_bypass(spec)
     if bypass == "OIDC":
@@ -1084,11 +1114,18 @@ def dex_group_filter(spec: Any) -> Optional[frozenset]:
     if bypass == "Crowd":
         # a Crowd basic auth login keeps only crowd.groups, whatever allowedIdentities says
         return _connector_group_filter(spec)
+    prefix = dex_group_prefix(spec)
     universal = _clean_strings(_dict(spec.get(DEX_ALLOWED_IDENTITIES)).get("groups"), lower=False)
+    # A list that names nothing but groups dex can never assert still closes the axis, to nothing.
+    listed = bool(universal)
     connector = _connector_group_filter(spec)
-    if universal and connector is not None:
+    if prefix:
+        universal = [g for g in universal if g.startswith(prefix)]
+        if connector is not None:
+            connector = _prefixed(prefix, connector)
+    if listed and connector is not None:
         return frozenset(universal) & connector
-    if universal:
+    if listed:
         return frozenset(universal)
     return connector
 
@@ -1135,7 +1172,12 @@ def dex_target_roles(spec: Any, snapshots: Any) -> List[str]:
             _, _, domain = lowered.rpartition("@")
             return bool(domain) and domain in domains
 
-    if group_filter is None:
+    prefix = dex_group_prefix(spec)
+    if group_filter is None and prefix:
+        # an open group axis, but every group dex asserts has the prefix
+        def groups_wanted(subject: str) -> bool:
+            return _dex_assertable(subject) and subject.startswith(prefix)
+    elif group_filter is None:
         groups_wanted = _dex_assertable
     else:
         def groups_wanted(subject: str) -> bool:

@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"time"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,11 +46,12 @@ func (r *Revoker) DeleteClientTokensOutside(ctx context.Context, clientID string
 }
 
 // tokenOwner is whose refresh token it is: the client it was issued to, the connector it was issued through and the
-// user.
+// user, and when it was issued (zero when the object does not say).
 type tokenOwner struct {
 	clientID    string
 	connectorID string
 	userID      string
+	createdAt   time.Time
 }
 
 // deleteTokens deletes the refresh tokens that match, and the references to them in the OfflineSessions of their
@@ -70,6 +72,11 @@ func (r *Revoker) deleteTokens(ctx context.Context, match func(tokenOwner) bool,
 		owner.clientID, _, _ = unstructured.NestedString(item.Object, "clientID")
 		owner.connectorID, _, _ = unstructured.NestedString(item.Object, "connectorID")
 		owner.userID, _, _ = unstructured.NestedString(item.Object, "claims", "userID")
+		// Dex marshals the time of the issue without a json tag, so the field is CreatedAt, with the capital letter,
+		// and unstructured does not match names without case.
+		if created, _, _ := unstructured.NestedString(item.Object, "CreatedAt"); created != "" {
+			owner.createdAt, _ = time.Parse(time.RFC3339Nano, created)
+		}
 		if !match(owner) {
 			continue
 		}

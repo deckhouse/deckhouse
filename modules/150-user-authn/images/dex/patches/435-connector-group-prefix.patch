@@ -1,0 +1,369 @@
+diff --git a/cmd/dex/config.go b/cmd/dex/config.go
+index 0c7ef929..0e30f915 100644
+--- a/cmd/dex/config.go
++++ b/cmd/dex/config.go
+@@ -705,6 +705,9 @@ type Connector struct {
+ 	AllowedEmails       []string `json:"allowedEmails"`
+ 	AllowedEmailDomains []string `json:"allowedEmailDomains"`
+ 	AllowedGroups       []string `json:"allowedGroups"`
++
++	// GroupPrefix is put in front of every group the connector asserts.
++	GroupPrefix string `json:"groupPrefix"`
+ }
+ 
+ // UnmarshalJSON allows Connector to implement the unmarshaler interface to
+@@ -721,6 +724,8 @@ func (c *Connector) UnmarshalJSON(b []byte) error {
+ 		AllowedEmails       []string `json:"allowedEmails"`
+ 		AllowedEmailDomains []string `json:"allowedEmailDomains"`
+ 		AllowedGroups       []string `json:"allowedGroups"`
++
++		GroupPrefix string `json:"groupPrefix"`
+ 	}
+ 	if err := configUnmarshaller(b, &conn); err != nil {
+ 		return fmt.Errorf("parse connector: %v", err)
+@@ -767,6 +772,8 @@ func (c *Connector) UnmarshalJSON(b []byte) error {
+ 		AllowedEmails:       conn.AllowedEmails,
+ 		AllowedEmailDomains: conn.AllowedEmailDomains,
+ 		AllowedGroups:       conn.AllowedGroups,
++
++		GroupPrefix: conn.GroupPrefix,
+ 	}
+ 	return nil
+ }
+@@ -788,6 +795,8 @@ func ToStorageConnector(c Connector) (storage.Connector, error) {
+ 		AllowedEmails:       c.AllowedEmails,
+ 		AllowedEmailDomains: c.AllowedEmailDomains,
+ 		AllowedGroups:       c.AllowedGroups,
++
++		GroupPrefix: c.GroupPrefix,
+ 	}, nil
+ }
+ 
+diff --git a/cmd/dex/config_test.go b/cmd/dex/config_test.go
+index 8036610c..46364de1 100644
+--- a/cmd/dex/config_test.go
++++ b/cmd/dex/config_test.go
+@@ -343,6 +343,33 @@ connectors:
+ 	require.Equal(t, []string{"staff"}, conn.AllowedGroups)
+ }
+ 
++// TestUnmarshalConnectorGroupPrefix reads the prefix a connector puts in front of its groups; a config that
++// dropped it would let the groups of two connectors meet in one name.
++func TestUnmarshalConnectorGroupPrefix(t *testing.T) {
++	rawConfig := []byte(`
++connectors:
++- type: mockCallback
++  id: corp
++  name: Corp
++  groupPrefix: "corp:"
++- type: mockCallback
++  id: other
++  name: Other
++`)
++
++	var c Config
++	require.NoError(t, yaml.Unmarshal(rawConfig, &c))
++	require.Len(t, c.StaticConnectors, 2)
++
++	corp, err := ToStorageConnector(c.StaticConnectors[0])
++	require.NoError(t, err)
++	require.Equal(t, "corp:", corp.GroupPrefix)
++
++	other, err := ToStorageConnector(c.StaticConnectors[1])
++	require.NoError(t, err)
++	require.Empty(t, other.GroupPrefix)
++}
++
+ func TestUnmarshalConfigWithEnvNoExpand(t *testing.T) {
+ 	// If the env variable DEX_EXPAND_ENV is set and has a "falsy" value, os.ExpandEnv is disabled.
+ 	// ParseBool: "It accepts 1, t, T, TRUE, true, True, 0, f, F, FALSE, false, False."
+diff --git a/server/allowlist/allowlist.go b/server/allowlist/allowlist.go
+index 26191d4c..db3f490f 100644
+--- a/server/allowlist/allowlist.go
++++ b/server/allowlist/allowlist.go
+@@ -61,10 +61,26 @@ func (e *NotAllowedError) Error() string {
+ // connector, and narrows claims.Groups to the groups both admit. A refused user
+ // gets *NotAllowedError, and claims are left as they were.
+ //
++// The connector's GroupPrefix goes in front of the groups first, so the lists
++// of the client and of the connector, and the groups that end up in the
++// tokens, all name the groups with it. Every path that issues tokens calls
++// Apply with the groups of the connector, or with the groups stored on a
++// refresh token, which came from the connector: prefixing a group that has the
++// prefix already changes nothing, so the stored ones are safe.
++//
+ // The connector is read from s, which serves the connectors of the config file
+ // too. One missing from storage refuses the user: the login that got this far
+ // had it, so it was removed meanwhile, not unrestricted.
+ func Apply(ctx context.Context, s storage.Storage, client storage.Client, connectorID string, claims *storage.Claims) error {
++	// The connector is read before the client's lists, which compare the groups
++	// with the prefix. A failed read is dealt with where it used to be, after
++	// the refusals of the client, which never needed the connector.
++	conn, connErr := s.GetConnector(ctx, connectorID)
++	userGroups := claims.Groups
++	if connErr == nil {
++		userGroups = PrefixGroups(conn.GroupPrefix, claims.Groups)
++	}
++
+ 	// conn is the connector read so far, empty before it is read.
+ 	refuse := func(rule Rule, conn storage.Connector) error {
+ 		e := &NotAllowedError{Rule: rule, ClientID: client.ID, ConnectorID: connectorID}
+@@ -76,24 +92,23 @@ func Apply(ctx context.Context, s storage.Storage, client storage.Client, connec
+ 		case ClientEmails, ConnectorEmails, ConnectorNotFound, ReservedPrefix:
+ 			return e
+ 		}
+-		e.UserGroups = slices.Clone(claims.Groups)
++		e.UserGroups = slices.Clone(userGroups)
+ 		return e
+ 	}
+ 
+-	admitted, rule := admitByClient(client, claims.Email, claims.Groups)
++	admitted, rule := admitByClient(client, claims.Email, userGroups)
+ 	if rule != "" {
+ 		return refuse(rule, storage.Connector{})
+ 	}
+ 
+-	conn, err := s.GetConnector(ctx, connectorID)
+ 	switch {
+-	case errors.Is(err, storage.ErrNotFound):
++	case errors.Is(connErr, storage.ErrNotFound):
+ 		return refuse(ConnectorNotFound, storage.Connector{})
+-	case err != nil:
+-		return fmt.Errorf("get connector %q: %w", connectorID, err)
++	case connErr != nil:
++		return fmt.Errorf("get connector %q: %w", connectorID, connErr)
+ 	}
+ 
+-	if reservedNameUsed(conn, claims.Email, claims.Groups) != "" {
++	if reservedNameUsed(conn, claims.Email, userGroups) != "" {
+ 		return refuse(ReservedPrefix, conn)
+ 	}
+ 
+@@ -106,6 +121,26 @@ func Apply(ctx context.Context, s storage.Storage, client storage.Client, connec
+ 	return nil
+ }
+ 
++// PrefixGroups returns groups with prefix in front of each, or groups as they
++// are for an empty prefix. A group that starts with the prefix keeps its name,
++// and an empty one is dropped, which would otherwise become the prefix alone.
++func PrefixGroups(prefix string, groups []string) []string {
++	if prefix == "" {
++		return groups
++	}
++	out := make([]string, 0, len(groups))
++	for _, g := range groups {
++		switch {
++		case g == "":
++		case strings.HasPrefix(g, prefix):
++			out = append(out, g)
++		default:
++			out = append(out, prefix+g)
++		}
++	}
++	return out
++}
++
+ // admitByClient returns the groups of a user the client admits, or the rule
+ // that refuses the user. Emails compare exactly.
+ func admitByClient(c storage.Client, email string, userGroups []string) ([]string, Rule) {
+diff --git a/server/allowlist/allowlist_test.go b/server/allowlist/allowlist_test.go
+index c0fb0ed3..f0190bd8 100644
+--- a/server/allowlist/allowlist_test.go
++++ b/server/allowlist/allowlist_test.go
+@@ -4,6 +4,7 @@ import (
+ 	"context"
+ 	"errors"
+ 	"log/slog"
++	"slices"
+ 	"testing"
+ 
+ 	"github.com/stretchr/testify/require"
+@@ -290,6 +291,120 @@ func TestApply(t *testing.T) {
+ 	}
+ }
+ 
++func TestPrefixGroups(t *testing.T) {
++	tests := []struct {
++		name     string
++		prefix   string
++		groups   []string
++		expected []string
++	}{
++		{name: "no prefix keeps the groups", groups: []string{"admins", "dev"}, expected: []string{"admins", "dev"}},
++		{name: "no prefix keeps nil", expected: nil},
++		{name: "prefix goes in front", prefix: "corp:", groups: []string{"admins", "dev"}, expected: []string{"corp:admins", "corp:dev"}},
++		{name: "a prefixed group keeps its name", prefix: "corp:", groups: []string{"corp:admins", "dev"}, expected: []string{"corp:admins", "corp:dev"}},
++		{name: "twice changes nothing", prefix: "corp:", groups: PrefixGroups("corp:", []string{"admins"}), expected: []string{"corp:admins"}},
++		{name: "an empty group is dropped", prefix: "corp:", groups: []string{"", "dev"}, expected: []string{"corp:dev"}},
++		{name: "no groups stay none", prefix: "corp:", expected: []string{}},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			require.Equal(t, tc.expected, PrefixGroups(tc.prefix, tc.groups))
++		})
++	}
++}
++
++// TestApplyGroupPrefix shows that the lists of the client and of the connector compare the groups with the prefix,
++// that the groups come out with it, and that applying it to the groups of a refresh token changes nothing.
++func TestApplyGroupPrefix(t *testing.T) {
++	ctx := t.Context()
++	s := storage.WithStaticConnectors(memory.New(slog.New(slog.DiscardHandler)), []storage.Connector{
++		{ID: "corp", Type: "mock", Name: "Corp", GroupPrefix: "corp:", AllowedGroups: []string{"corp:staff", "corp:admins"}},
++		{ID: "system", Type: "mock", Name: "System", GroupPrefix: "system:"},
++	})
++
++	tests := []struct {
++		name           string
++		client         storage.Client
++		connectorID    string
++		groups         []string
++		expectedGroups []string
++		expectedRule   Rule
++		expectedUser   []string
++		expectedList   []string
++	}{
++		{
++			name:           "the connector list names the groups with the prefix",
++			connectorID:    "corp",
++			groups:         []string{"staff", "guests"},
++			expectedGroups: []string{"corp:staff"},
++		},
++		{
++			name:         "a connector list of the names without the prefix admits nothing",
++			connectorID:  "corp",
++			groups:       []string{"guests"},
++			expectedRule: ConnectorGroups,
++			expectedUser: []string{"corp:guests"},
++			expectedList: []string{"corp:staff", "corp:admins"},
++		},
++		{
++			name:           "the client list names the groups with the prefix",
++			client:         storage.Client{ID: "app", AllowedGroups: []string{"corp:admins"}},
++			connectorID:    "corp",
++			groups:         []string{"staff", "admins"},
++			expectedGroups: []string{"corp:admins"},
++		},
++		{
++			name:         "a client list of the names without the prefix admits nothing",
++			client:       storage.Client{ID: "app", AllowedGroups: []string{"admins"}},
++			connectorID:  "corp",
++			groups:       []string{"staff", "admins"},
++			expectedRule: ClientGroups,
++			expectedUser: []string{"corp:staff", "corp:admins"},
++			expectedList: []string{"admins"},
++		},
++		{
++			name:           "groups that carry the prefix already are the same after it",
++			connectorID:    "corp",
++			groups:         []string{"corp:staff", "admins"},
++			expectedGroups: []string{"corp:staff", "corp:admins"},
++		},
++		{
++			name:         "a prefix of a reserved name is refused",
++			connectorID:  "system",
++			groups:       []string{"masters"},
++			expectedRule: ReservedPrefix,
++		},
++	}
++	// The reserved prefixes are set once for the process, as at startup.
++	SetReservedPrefixes([]string{"system:"})
++	t.Cleanup(func() { SetReservedPrefixes(nil) })
++
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			claims := storage.Claims{UserID: "ann", Email: "ann@corp.example", Groups: append([]string(nil), tc.groups...)}
++
++			err := Apply(ctx, s, tc.client, tc.connectorID, &claims)
++			if tc.expectedRule == "" {
++				require.NoError(t, err)
++				require.Equal(t, tc.expectedGroups, claims.Groups)
++
++				// The groups of a refresh token come back through Apply.
++				again := storage.Claims{UserID: "ann", Email: "ann@corp.example", Groups: slices.Clone(claims.Groups)}
++				require.NoError(t, Apply(ctx, s, tc.client, tc.connectorID, &again))
++				require.Equal(t, claims.Groups, again.Groups)
++				return
++			}
++
++			var notAllowed *NotAllowedError
++			require.ErrorAs(t, err, &notAllowed)
++			require.Equal(t, tc.expectedRule, notAllowed.Rule)
++			require.Equal(t, tc.expectedUser, notAllowed.UserGroups)
++			require.Equal(t, tc.expectedList, notAllowed.AllowedGroups)
++			require.Equal(t, tc.groups, claims.Groups, "a refusal must leave the claims as they were")
++		})
++	}
++}
++
+ // failingConnectorStorage fails every connector read.
+ type failingConnectorStorage struct {
+ 	storage.Storage
+diff --git a/storage/kubernetes/types.go b/storage/kubernetes/types.go
+index c9c45f14..79318b5d 100644
+--- a/storage/kubernetes/types.go
++++ b/storage/kubernetes/types.go
+@@ -904,6 +904,8 @@ type Connector struct {
+ 	AllowedEmails       []string `json:"allowedEmails,omitempty"`
+ 	AllowedEmailDomains []string `json:"allowedEmailDomains,omitempty"`
+ 	AllowedGroups       []string `json:"allowedGroups,omitempty"`
++
++	GroupPrefix string `json:"groupPrefix,omitempty"`
+ }
+ 
+ func (cli *client) fromStorageConnector(c storage.Connector) Connector {
+@@ -925,6 +927,8 @@ func (cli *client) fromStorageConnector(c storage.Connector) Connector {
+ 		AllowedEmails:       c.AllowedEmails,
+ 		AllowedEmailDomains: c.AllowedEmailDomains,
+ 		AllowedGroups:       c.AllowedGroups,
++
++		GroupPrefix: c.GroupPrefix,
+ 	}
+ }
+ 
+@@ -940,6 +944,8 @@ func toStorageConnector(c Connector) storage.Connector {
+ 		AllowedEmails:       c.AllowedEmails,
+ 		AllowedEmailDomains: c.AllowedEmailDomains,
+ 		AllowedGroups:       c.AllowedGroups,
++
++		GroupPrefix: c.GroupPrefix,
+ 	}
+ }
+ 
+diff --git a/storage/kubernetes/types_test.go b/storage/kubernetes/types_test.go
+index 66a05c4e..0c2a81ae 100644
+--- a/storage/kubernetes/types_test.go
++++ b/storage/kubernetes/types_test.go
+@@ -307,11 +307,13 @@ func TestConnectorAllowListsRoundTrip(t *testing.T) {
+ 		AllowedEmails:       []string{"boss@partner.example"},
+ 		AllowedEmailDomains: []string{"corp.example"},
+ 		AllowedGroups:       []string{"staff"},
++		GroupPrefix:         "corp:",
+ 	}
+ 
+ 	raw, err := json.Marshal(cli.fromStorageConnector(want))
+ 	require.NoError(t, err)
+ 	require.Contains(t, string(raw), `"allowedEmailDomains":["corp.example"]`)
++	require.Contains(t, string(raw), `"groupPrefix":"corp:"`)
+ 	var decoded Connector
+ 	require.NoError(t, json.Unmarshal(raw, &decoded))
+ 
+diff --git a/storage/storage.go b/storage/storage.go
+index 6c3b23e4..d5fa161d 100644
+--- a/storage/storage.go
++++ b/storage/storage.go
+@@ -933,6 +933,14 @@ type Connector struct {
+ 	AllowedEmails       []string `json:"allowedEmails,omitempty"`
+ 	AllowedEmailDomains []string `json:"allowedEmailDomains,omitempty"`
+ 	AllowedGroups       []string `json:"allowedGroups,omitempty"`
++
++	// GroupPrefix is put in front of every group this connector asserts, for
++	// every connector type alike, so the groups of two connectors never meet in
++	// a name. A group that already starts with it is left as it is: applying
++	// the prefix twice changes nothing. The lists that name groups of Dex
++	// (AllowedGroups here, the allowed groups of a client) compare them with
++	// the prefix. Empty puts nothing in front.
++	GroupPrefix string `json:"groupPrefix,omitempty"`
+ }
+ 
+ // VerificationKey is a rotated signing key which can still be used to verify

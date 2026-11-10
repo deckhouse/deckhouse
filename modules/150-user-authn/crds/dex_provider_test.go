@@ -19,6 +19,7 @@ package crds_test
 import (
 	"context"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -196,6 +197,104 @@ func TestDexProviderLDAPSearch(t *testing.T) {
 			})
 		}
 	}
+}
+
+// groupPrefix goes in front of every group a provider asserts. The API server refuses a prefix the API server or the
+// peering reserve, one that is no name, and one that Basic Authentication of an OIDC or Crowd provider would let
+// pass without it (basic-auth-proxy passes the groups of such a provider as they are).
+func TestDexProviderGroupPrefix(t *testing.T) {
+	t.Parallel()
+
+	const (
+		reserved   = "spec.groupPrefix must not start with system: or peering:, which the Kubernetes API server and the peering reserve."
+		basicAuth  = "spec.groupPrefix cannot be set with enableBasicAuth of an OIDC or Crowd provider: Basic Authentication passes the groups of such a provider as they are, without the prefix."
+		unprefixed = "Every name in spec.allowedIdentities.groups must start with spec.groupPrefix: Dex compares the groups after it adds the prefix, so a name without it matches nothing."
+	)
+	withPrefix := func(spec map[string]any, prefix any) map[string]any {
+		spec["groupPrefix"] = prefix
+		return spec
+	}
+	crowd := func(basicAuth bool) map[string]any {
+		return map[string]any{"type": "Crowd", "displayName": "Crowd", "crowd": map[string]any{
+			"baseURL": "https://crowd.example.com", "clientID": "id", "clientSecret": "secret", "enableBasicAuth": basicAuth}}
+	}
+
+	for version, schema := range providerSchemas(t) {
+		for _, tc := range []struct {
+			name    string
+			spec    map[string]any
+			message string
+			invalid bool
+		}{
+			{name: "an LDAP provider", spec: withPrefix(ldapProviderSpec(nil), "corp-ldap:")},
+			{name: "a prefix with a slash and a dot", spec: withPrefix(ldapProviderSpec(nil), "idp.example.com/ldap:")},
+			{name: "a prefix with two colons", spec: withPrefix(ldapProviderSpec(nil), "corp:ldap:")},
+			{name: "a prefix without a separator", spec: withPrefix(ldapProviderSpec(nil), "corp"), invalid: true},
+			{name: "a prefix that ends with a dash", spec: withPrefix(ldapProviderSpec(nil), "corp-"), invalid: true},
+			{name: "a prefix that ends with a slash", spec: withPrefix(ldapProviderSpec(nil), "idp.example.com/"), invalid: true},
+			{name: "a colon alone", spec: withPrefix(ldapProviderSpec(nil), ":"), invalid: true},
+			{name: "an OIDC provider", spec: withPrefix(oidcProviderSpec(false), "idp:")},
+			{name: "no prefix", spec: ldapProviderSpec(nil)},
+			{name: "system:", spec: withPrefix(ldapProviderSpec(nil), "system:"), message: reserved},
+			{name: "system:masters:", spec: withPrefix(ldapProviderSpec(nil), "system:masters:"), message: reserved},
+			{name: "peering:", spec: withPrefix(ldapProviderSpec(nil), "peering:"), message: reserved},
+			{name: "an empty prefix", spec: withPrefix(ldapProviderSpec(nil), ""), invalid: true},
+			{name: "a prefix with a space", spec: withPrefix(ldapProviderSpec(nil), "corp ldap:"), invalid: true},
+			{name: "a prefix with a line break", spec: withPrefix(ldapProviderSpec(nil), "corp\nldap:"), invalid: true},
+			{name: "a prefix that starts with a separator", spec: withPrefix(ldapProviderSpec(nil), ":corp:"), invalid: true},
+			{name: "a prefix of 65 characters", spec: withPrefix(ldapProviderSpec(nil), strings.Repeat("a", 64)+":"), invalid: true},
+			{name: "OIDC with Basic Authentication", spec: withPrefix(oidcProviderSpec(true), "idp:"), message: basicAuth},
+			{name: "Crowd with Basic Authentication", spec: withPrefix(crowd(true), "crowd:"), message: basicAuth},
+			{name: "Crowd without Basic Authentication", spec: withPrefix(crowd(false), "crowd:")},
+			// Basic Authentication of an LDAP provider goes through Dex, which puts the prefix in front.
+			{name: "groups that start with the prefix", spec: func() map[string]any {
+				spec := withPrefix(ldapProviderSpec(nil), "corp-ldap:")
+				spec["allowedIdentities"] = map[string]any{"groups": []any{"corp-ldap:admins"}}
+				return spec
+			}()},
+			{name: "a group without the prefix", spec: func() map[string]any {
+				spec := withPrefix(ldapProviderSpec(nil), "corp-ldap:")
+				spec["allowedIdentities"] = map[string]any{"groups": []any{"admins"}}
+				return spec
+			}(), message: unprefixed},
+			{name: "one of the groups without the prefix", spec: func() map[string]any {
+				spec := withPrefix(ldapProviderSpec(nil), "corp-ldap:")
+				spec["allowedIdentities"] = map[string]any{"groups": []any{"corp-ldap:admins", "developers"}}
+				return spec
+			}(), message: unprefixed},
+			{name: "groups without a prefix on the provider", spec: func() map[string]any {
+				spec := ldapProviderSpec(nil)
+				spec["allowedIdentities"] = map[string]any{"groups": []any{"admins"}}
+				return spec
+			}()},
+			{name: "LDAP with Basic Authentication", spec: func() map[string]any {
+				spec := ldapProviderSpec(nil)
+				spec["ldap"].(map[string]any)["enableBasicAuth"] = true
+				return withPrefix(spec, "ldap:")
+			}()},
+		} {
+			t.Run(version+"/"+tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				errs := validateProvider(t, version, schema, tc.spec)
+				switch {
+				case tc.message != "":
+					require.Len(t, errs, 1)
+					require.Equal(t, "spec", errs[0].Field)
+					require.Equal(t, tc.message, errs[0].Detail)
+				case tc.invalid:
+					require.NotEmpty(t, errs)
+				default:
+					require.Empty(t, errs)
+				}
+			})
+		}
+	}
+}
+
+func oidcProviderSpec(basicAuth bool) map[string]any {
+	return map[string]any{"type": "OIDC", "displayName": "OIDC", "oidc": map[string]any{
+		"issuer": "https://idp.example.com", "clientID": "id", "clientSecret": "secret", "enableBasicAuth": basicAuth}}
 }
 
 // Only the providers whose connectors exchange tokens in Dex may have token exchange enabled.

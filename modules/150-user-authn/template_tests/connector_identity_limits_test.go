@@ -18,6 +18,7 @@ package template_tests
 
 import (
 	"encoding/base64"
+	"fmt"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -153,5 +154,114 @@ var _ = Describe("Module :: user-authn :: helm template :: connector identity li
 			Expect(c.Get("allowedEmailDomains").Exists()).To(BeFalse())
 			Expect(c.Get("allowedGroups").Exists()).To(BeFalse())
 		})
+	})
+
+	Context("With groupPrefix", func() {
+		BeforeEach(func() {
+			hec.ValuesSetFromYaml("userAuthn.internal.providers", `
+- id: corp-ldap
+  displayName: Corp
+  type: LDAP
+  groupPrefix: "corp-ldap:"
+  ldap:
+    host: ldap.example.com:636
+    bindDN: cn=svc
+    bindPW: secret
+    userSearch:
+      baseDN: dc=example
+      username: mail
+      idAttr: DN
+      emailAttr: mail
+  allowedIdentities:
+    groups:
+    - "corp-ldap:staff"
+- id: gitlab
+  displayName: GitLab
+  type: Gitlab
+  groupPrefix: "gl:"
+  gitlab:
+    clientID: clientID
+    clientSecret: secret
+    baseURL: https://gitlab.example.com
+- id: idp
+  displayName: Idp
+  type: OIDC
+  groupPrefix: "it's:"
+  oidc:
+    issuer: https://issuer.example.com
+    clientID: clientID
+    clientSecret: secret
+- id: open
+  displayName: Open
+  type: OIDC
+  oidc:
+    issuer: https://open.example.com
+    clientID: clientID
+    clientSecret: secret`)
+			hec.HelmRender()
+		})
+
+		It("Should render the prefix at the connector level for every type, next to the lists that compare with it", func() {
+			c := connectors()
+			Expect(c.Array()).To(HaveLen(4))
+
+			ldap := c.Get("0")
+			Expect(ldap.Get("groupPrefix").String()).To(Equal("corp-ldap:"))
+			Expect(ldap.Get("allowedGroups").String()).To(MatchJSON(`["corp-ldap:staff"]`))
+			// the prefix is a limit of the connector, not an option of its config
+			Expect(ldap.Get("config.groupPrefix").Exists()).To(BeFalse())
+
+			Expect(c.Get("1.groupPrefix").String()).To(Equal("gl:"))
+			Expect(c.Get("1.config.groupPrefix").Exists()).To(BeFalse())
+		})
+
+		It("Should quote the prefix", func() {
+			Expect(connectors().Get("2.groupPrefix").String()).To(Equal("it's:"))
+		})
+
+		It("Should put no prefix in front of the groups of a provider without one", func() {
+			open := connectors().Get("3")
+			Expect(open.Get("id").String()).To(Equal("open"))
+			Expect(open.Get("groupPrefix").Exists()).To(BeFalse())
+		})
+	})
+
+	// The webhooks compare each DexProvider with a snapshot of the others, and one apply of two may pass them: the
+	// render refuses two prefixes of which one starts with the other.
+	Context("With group prefixes that meet", func() {
+		for _, tc := range []struct {
+			name      string
+			prefixes  []string
+			wantError string
+		}{
+			{name: "equal", prefixes: []string{"corp:", "corp:"}, wantError: `groupPrefix "corp:" of the DexProvider "p1" can name the same groups as groupPrefix "corp:" of the DexProvider "p0"`},
+			{name: "the second starts with the first", prefixes: []string{"corp:", "corp:ldap:"}, wantError: `groupPrefix "corp:ldap:" of the DexProvider "p1"`},
+			{name: "the first starts with the second", prefixes: []string{"corp:ldap:", "corp:"}, wantError: `groupPrefix "corp:" of the DexProvider "p1"`},
+			{name: "apart", prefixes: []string{"corp:", "corp2:", "gl:"}},
+			{name: "one without a prefix", prefixes: []string{"corp:", ""}},
+		} {
+			Context(tc.name, func() {
+				BeforeEach(func() {
+					providers := ""
+					for i, prefix := range tc.prefixes {
+						providers += fmt.Sprintf("\n- id: p%d\n  displayName: P%d\n  type: OIDC\n  oidc: {issuer: https://idp%d.example.com, clientID: id, clientSecret: secret}", i, i, i)
+						if prefix != "" {
+							providers += fmt.Sprintf("\n  groupPrefix: %q", prefix)
+						}
+					}
+					hec.ValuesSetFromYaml("userAuthn.internal.providers", providers)
+					hec.HelmRender()
+				})
+
+				It("Should refuse the render only when one prefix starts with another", func() {
+					if tc.wantError == "" {
+						Expect(hec.RenderError).ToNot(HaveOccurred())
+						return
+					}
+					Expect(hec.RenderError).To(HaveOccurred())
+					Expect(hec.RenderError.Error()).To(ContainSubstring(tc.wantError))
+				})
+			})
+		}
 	})
 })

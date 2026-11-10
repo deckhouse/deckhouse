@@ -894,7 +894,7 @@ def oidc(**extra):
             "oidc": {"issuer": "https://idp", "clientID": "a", "clientSecret": "s",
                      "scopes": ["openid", "email", "groups"]}}
     for k, v in extra.items():
-        if k in ("allowedIdentities", "tokenExchange"):
+        if k in ("allowedIdentities", "tokenExchange", "groupPrefix"):
             spec[k] = v
         else:
             spec["oidc"][k] = v
@@ -1016,6 +1016,105 @@ class TestDexBasicAuthFilters(unittest.TestCase):
         spec = {"type": "LDAP", "ldap": {"host": "x"}, "oidc": {"enableBasicAuth": True},
                 "allowedIdentities": self.CLOSED}
         self.assertIsNotNone(assign.dex_email_filter(spec))
+
+
+class TestDexGroupPrefix(unittest.TestCase):
+    """The prefix goes in front of every group the provider asserts: the groups it can reach are those with it."""
+
+    CLOSED_EMAIL = {"emailDomains": ["nobody.example"]}
+
+    def snaps(self):
+        snaps = dex_snaps()
+        snaps[assign.CAR_SNAP] = list(snaps[assign.CAR_SNAP]) + [
+            car("corp-ops", "Editor", groups=["corp:ops"]),
+            car("corp-trap", "SuperAdmin", groups=["corp:gate-trap"]),
+            car("system-prefixed", "SuperAdmin", groups=["system:corp:x"]),
+        ]
+        return snaps
+
+    def test_no_prefix_changes_nothing(self):
+        self.assertEqual(assign.dex_group_prefix(oidc()), "")
+        self.assertIsNone(assign.dex_group_filter(oidc()))
+        self.assertEqual(assign.dex_group_filter(oidc(allowedGroups=["devs"])), frozenset({"devs"}))
+
+    def test_prefix_is_read(self):
+        self.assertEqual(assign.dex_group_prefix(oidc(groupPrefix="corp:")), "corp:")
+        self.assertEqual(assign.dex_group_prefix({"type": "LDAP", "groupPrefix": "ldap:"}), "ldap:")
+
+    def test_prefix_that_is_no_string_is_none(self):
+        self.assertEqual(assign.dex_group_prefix(oidc(groupPrefix=5)), "")
+
+    def test_open_group_axis_stays_open_with_a_prefix(self):
+        self.assertIsNone(assign.dex_group_filter(oidc(groupPrefix="corp:")))
+
+    def test_connector_filter_gets_the_prefix(self):
+        self.assertEqual(assign.dex_group_filter(oidc(groupPrefix="corp:", allowedGroups=["devs", "corp:ops"])),
+                         frozenset({"corp:devs", "corp:ops"}))
+
+    def test_universal_list_names_the_groups_of_the_tokens(self):
+        spec = oidc(groupPrefix="corp:", allowedIdentities={"groups": ["corp:devs"]})
+        self.assertEqual(assign.dex_group_filter(spec), frozenset({"corp:devs"}))
+
+    def test_universal_list_without_the_prefix_matches_nothing(self):
+        # dex puts the prefix in front before it compares, so "devs" can never be asserted
+        spec = oidc(groupPrefix="corp:", allowedIdentities={"groups": ["devs"]})
+        self.assertEqual(assign.dex_group_filter(spec), frozenset())
+
+    def test_universal_list_and_connector_filter_intersect_with_the_prefix(self):
+        spec = oidc(groupPrefix="corp:", allowedGroups=["devs", "ops"],
+                    allowedIdentities={"groups": ["corp:ops", "corp:qa"]})
+        self.assertEqual(assign.dex_group_filter(spec), frozenset({"corp:ops"}))
+
+    def test_basic_auth_of_oidc_ignores_the_prefix(self):
+        # basic-auth-proxy passes the groups as they are
+        spec = oidc(groupPrefix="corp:", enableBasicAuth=True)
+        self.assertEqual(assign.dex_group_prefix(spec), "")
+        self.assertIsNone(assign.dex_group_filter(spec))
+
+    def test_open_group_axis_reaches_only_the_groups_with_the_prefix(self):
+        targets = assign.dex_target_roles(
+            oidc(groupPrefix="corp:", allowedIdentities=self.CLOSED_EMAIL), self.snaps())
+        self.assertEqual(sorted(targets), ["user-authz:editor", "user-authz:super-admin"])
+        # the grants of groups of another namespace are out of reach: superadmins, gate-trap, devs
+        without = assign.dex_target_roles(oidc(allowedIdentities=self.CLOSED_EMAIL), self.snaps())
+        self.assertIn("d8:manage:security:viewer", without)
+        self.assertNotIn("d8:manage:security:viewer", targets)
+
+    def test_prefix_leaves_the_email_axis_alone(self):
+        targets = assign.dex_target_roles(oidc(groupPrefix="corp:"), self.snaps())
+        self.assertIn("user-authz:cluster-admin", targets)
+        self.assertIn("user-authz:super-admin", targets)
+
+    def test_group_of_the_gate_trap_is_out_of_reach_with_a_prefix(self):
+        spec = oidc(groupPrefix="corp:", allowedIdentities={"emailDomains": ["nobody.example"], "groups": ["gate-trap"]})
+        self.assertEqual(assign.dex_target_roles(spec, self.snaps()), [])
+
+    def test_prefixed_group_of_the_gate_trap_is_reachable(self):
+        spec = oidc(groupPrefix="corp:",
+                    allowedIdentities={"emailDomains": ["nobody.example"], "groups": ["corp:gate-trap"]})
+        self.assertEqual(assign.dex_target_roles(spec, self.snaps()), ["user-authz:super-admin"])
+
+    def test_connector_filter_names_the_group_of_the_identity_provider(self):
+        spec = oidc(groupPrefix="corp:", allowedGroups=["gate-trap"],
+                    allowedIdentities={"emailDomains": ["nobody.example"]})
+        self.assertEqual(assign.dex_target_roles(spec, self.snaps()), ["user-authz:super-admin"])
+
+    def test_system_prefixed_group_is_never_reachable(self):
+        spec = oidc(groupPrefix="system:corp:", allowedIdentities={"emailDomains": ["nobody.example"]})
+        self.assertEqual(assign.dex_target_roles(spec, self.snaps()), [])
+
+    def test_changing_the_prefix_is_not_a_benign_update(self):
+        old = oidc(groupPrefix="corp:", allowedIdentities={"groups": ["corp:devs"]})
+        new = oidc(groupPrefix="other:", allowedIdentities={"groups": ["corp:devs"]})
+        self.assertFalse(assign.dex_benign_update(old, new))
+
+    def test_adding_a_prefix_is_not_a_benign_update(self):
+        self.assertFalse(assign.dex_benign_update(oidc(), oidc(groupPrefix="corp:")))
+
+    def test_narrowing_with_a_prefix_is_a_benign_update(self):
+        old = oidc(groupPrefix="corp:", allowedIdentities={"groups": ["corp:devs", "corp:ops"]})
+        new = oidc(groupPrefix="corp:", allowedIdentities={"groups": ["corp:devs"]})
+        self.assertTrue(assign.dex_benign_update(old, new))
 
 
 class TestDexTargetRoles(unittest.TestCase):

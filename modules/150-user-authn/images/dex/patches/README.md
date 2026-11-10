@@ -17,7 +17,8 @@ patched source tree (`crds/pull_dex_crds.sh`), and the image build checks it.
 
 ### 100-storage-schema.patch
 
-**Zone:** storage schema. The only patch that adds fields to Dex storage, for
+**Zone:** storage schema. The patch that adds fields to Dex storage, apart
+from the one prefix of a connector (435), for
 the kubernetes and memory storages only: Deckhouse runs Dex on the kubernetes
 storage and the Dex tests run on the memory one. SQL, ent and etcd ignore these
 fields.
@@ -1362,6 +1363,92 @@ DexProvider.
 **Upstream status:** Deckhouse only.
 
 **Depends on:** 425 (the grant it wraps).
+
+### 435-connector-group-prefix.patch
+
+**Zone:** the groups a connector asserts. `GroupPrefix` on a connector, for
+every connector type alike (the config file takes `groupPrefix` on each
+connector, as it takes the allow-lists of 200), in the kubernetes and memory
+storages like the fields of 100. Two providers can report a group of the same
+name, and a rule for that name then applies to the members of both; the prefix
+names the groups of one provider apart.
+
+- `allowlist.Apply` puts the prefix in front of every group first. It is the
+  one call every path that issues tokens makes with what the connector (or a
+  refresh token that came from it) gave: the login form, the connector
+  callback, SPNEGO and the password change page of 220 in `finalizeLogin`, the
+  password, refresh-token and token-exchange grants, and the login from a
+  browser session. So the lists of the client, the lists of the connector
+  (`allowedGroups`), the reserved prefixes of 420 and the groups of the tokens
+  all see the groups with the prefix;
+- a group that starts with the prefix keeps its name, and an empty group is
+  dropped. Applying the prefix twice therefore changes nothing, which the
+  refresh needs: the claims stored on a refresh token pass through `Apply`
+  again, and a connector that does not refresh the groups returns what it was
+  given. Nothing marks a group as prefixed (a mark on the refresh token or in
+  the answer of a connector would reach every zone that reads them), so the
+  patch keeps the rule and makes it safe by what the Deckhouse side demands of
+  the prefixes: every prefix ends with a colon (the schema of the DexProvider),
+  and no prefix of a DexProvider is equal to, or starts with, another's or a
+  group prefix of a TokenExchangeProvider (two admission webhooks). A name that
+  starts with a prefix is a name of that provider only when every provider that
+  can emit such names has its own prefix. A provider without a prefix passes
+  the names as they are — OIDC, a GitHub team `org:team`, GitLab, SAML and the
+  local groups — and can emit `<prefix>...`. When the rules rely on prefixed
+  groups, set a prefix on every provider. What stays is inside one provider: its group
+  `corp-ldap:admins` and its group `admins` are the same group once the prefix
+  is applied, and the owner of the directory chooses both names;
+- the claims stored on a refresh token are sometimes prefixed and sometimes not.
+  The login and the password grant store what `Apply` returned, so the groups
+  are prefixed. A refresh outside the reuse window stores what the connector
+  (or the `UserIdentity`, which keeps the connector's own groups) gave, before
+  `Apply` runs on it, so they are not. Inside the reuse window the stored claims
+  are left as they are. The tokens a refresh issues then go through `Apply`
+  with the current prefix. Only what reads the stored claims directly
+  (introspection) sees them without that pass;
+- a change of the prefix does not rewrite the claims already stored. Inside the
+  reuse window (`reuseInterval`, 2 minutes in `templates/dex/config.yaml`) a
+  refresh keeps those claims, and a second `Apply` puts the new prefix in front
+  of the old one (`new:old:admins`) until the token expires or the controller
+  deletes it. Outside the window the groups are read again without the prefix,
+  and one `Apply` names `new:admins`. The local connector is created without a
+  `groupPrefix` (`cmd/dex/serve.go`), and a browser session takes the groups
+  from the user identity (or the local password), stored before the prefix, so
+  neither stacks prefixes. With `allowedGroups` set to the new prefix the
+  doubled name is refused, and it matches no rule for `new:admins`. The
+  user-authn-controller deletes the refresh tokens of a DexProvider when its
+  `groupPrefix` changes (`internal/controller/groupprefix`), on the first pass
+  and once more 30 minutes later, since a sign-in that a Dex pod still on the
+  old configuration served in between has the old prefix. The second pass waits
+  out that margin and deletes the tokens issued before the change and those 30
+  minutes. A token a pod still on the old configuration issues later than 30
+  minutes can keep the old names. The users whose tokens went sign in again;
+- the connector is read before the lists of the client, since they compare the
+  groups with the prefix. A failed read waits for where it was handled before,
+  after the refusals of the client, which never needed the connector, so the
+  answers do not change for a connector without a prefix;
+- a refusal reports the groups of the user with the prefix, as compared;
+- what the prefix does not reach: the group filters inside a connector
+  (`oidc.allowedGroups`, `gitlab.groups`, `ldap.groupSearch`) run before and
+  name the groups of the identity provider; Basic Authentication of an OIDC or
+  a Crowd provider, which basic-auth-proxy answers without Dex (the DexProvider
+  refuses the two together); the groups on the refresh token itself, which
+  introspection reports before any list narrowed them, as in 200; the
+  `UserIdentity`, which keeps the connector's own groups.
+
+**Consumer in Deckhouse:** DexProvider `spec.groupPrefix`, rendered on the
+connector by `templates/dex/config.yaml`
+(`dex_connector_identity_limits`); the identity-assign webhook of user-authz
+reads it to tell which groups a provider can assert
+(`webhooks/validating/identity_assign.py`, `dex_group_prefix`).
+
+**Upstream status:** Deckhouse only. The OIDC connector of upstream has
+`claimModifications.modifyGroupNames`, with a prefix and a suffix, for that
+connector alone and before its own filters.
+
+**Depends on:** 100 (the field in storage), 200 (`allowlist.Apply`, the
+connector fields of the config file). 420 adds the reserved prefix check to
+`Apply`, which compares the groups with the prefix as well.
 
 ### 998-fix-cve.patch
 

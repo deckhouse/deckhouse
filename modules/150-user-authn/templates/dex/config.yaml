@@ -29,6 +29,11 @@ fields when it decides who may write the provider. Rendered right after the conn
       {{- end }}
     {{- end }}
   {{- end }}
+  {{- /* Patch 435: the prefix goes in front of every group the connector asserts, before the lists compare them, so
+         allowedGroups above and the lists of the clients name the groups with it. */}}
+  {{- with .groupPrefix }}
+      groupPrefix: {{ . | quote }}
+  {{- end }}
 {{- end }}
 
 {{- /* The grants the connector of a DexProvider serves (connector grantTypes, Dex #4619): every grant of Dex, and
@@ -282,6 +287,22 @@ fields when it decides who may write the provider. Rendered right after the conn
   logger:
     level: info
     format: json
+  {{- /* Two group prefixes of which one starts with the other name the same groups: Dex keeps a group that already
+         starts with the prefix. The webhooks refuse such a pair too, but each compares the object with a snapshot of
+         the others, and one apply of both may pass them. The disabled providers are not in the list, as for the
+         webhooks. TokenExchangeProvider group prefixes are not in these values: for a DexProvider and a
+         TokenExchangeProvider, only the admission webhooks guarantee that the prefixes do not meet. */}}
+  {{- $prefixed := list }}
+  {{- range $provider := $context.Values.userAuthn.internal.providers }}
+    {{- with $provider.groupPrefix }}
+      {{- range $other := $prefixed }}
+        {{- if or (hasPrefix $other.prefix $provider.groupPrefix) (hasPrefix $provider.groupPrefix $other.prefix) }}
+          {{- fail (printf "groupPrefix %q of the DexProvider %q can name the same groups as groupPrefix %q of the DexProvider %q: the prefixes must differ and neither may start with the other" $provider.groupPrefix $provider.id $other.prefix $other.id) }}
+        {{- end }}
+      {{- end }}
+      {{- $prefixed = append $prefixed (dict "id" $provider.id "prefix" $provider.groupPrefix) }}
+    {{- end }}
+  {{- end }}
   {{- $passwordConnector := "" }}
   {{- range $provider := $context.Values.userAuthn.internal.providers }}
     {{- if and (eq $provider.type "LDAP") ($provider.ldap.enableBasicAuth) }}

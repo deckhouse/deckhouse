@@ -292,6 +292,15 @@ rules:
   - configmaps
   verbs:
   - create
+# The prefixes the groupprefix controller saw at its last pass (internal/controller/groupprefix).
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  resourceNames:
+  - dexprovider-group-prefixes
+  verbs:
+  - update
 # Revocation objects live in this namespace only: the controller writes the revocations of
 # UserOperations and deleted Users, the revocation feed reads them all, and the leader deletes them
 # past retention.

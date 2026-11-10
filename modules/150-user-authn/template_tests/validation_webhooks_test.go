@@ -33,12 +33,14 @@ import (
 
 // The ValidationWebhooks of the module and the files of webhooks/validating their handler is made of.
 var userAuthnValidationWebhooks = map[string][]string{
-	"user-authn-dex-authenticator":        {"webhooks/validating/dex_authenticator_validation.py"},
-	"user-authn-dex-client":               {"webhooks/validating/dex_client_validation.py"},
-	"user-authn-group":                    {"webhooks/validating/group.py"},
-	"user-authn-two-factor-dex-provider":  {"webhooks/validating/two_factor_dex_provider.py"},
-	"user-authn-two-factor-module-config": {"webhooks/validating/two_factor_module_config.py"},
-	"user-authn-user":                     {"webhooks/validating/user.py"},
+	"user-authn-dex-authenticator":           {"webhooks/validating/dex_authenticator_validation.py"},
+	"user-authn-dex-client":                  {"webhooks/validating/dex_client_validation.py"},
+	"user-authn-group":                       {"webhooks/validating/group.py"},
+	"user-authn-group-prefix-dex-provider":   {"webhooks/validating/group_prefix_dex_provider.py"},
+	"user-authn-group-prefix-token-exchange": {"webhooks/validating/group_prefix_token_exchange.py"},
+	"user-authn-two-factor-dex-provider":     {"webhooks/validating/two_factor_dex_provider.py"},
+	"user-authn-two-factor-module-config":    {"webhooks/validating/two_factor_module_config.py"},
+	"user-authn-user":                        {"webhooks/validating/user.py"},
 }
 
 var _ = Describe("Module :: user-authn :: helm template :: validation webhooks", func() {
@@ -143,6 +145,71 @@ modules:
 			Expect(contexts[1].Get("kubernetes.kind").String()).To(Equal("DexProvider"))
 			// The hook reads item["filterResult"]["name"].
 			Expect(strings.TrimSpace(contexts[1].Get("kubernetes.jqFilter").String())).To(Equal(`{"name": .metadata.name}`))
+		})
+	})
+
+	Context("group-prefix-dex-provider", func() {
+		const webhook = "user-authn-group-prefix-dex-provider"
+
+		It("Should check the right requests", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			object := resource(webhook)
+			Expect(object.Field("validationObject.name").String()).To(Equal("groupprefix-dex-providers.deckhouse.io"))
+			Expect(object.Field("validationObject.rules").String()).To(MatchJSON(`[{
+				"apiGroups": ["deckhouse.io"], "apiVersions": ["v1", "v1alpha1"],
+				"operations": ["CREATE", "UPDATE"], "resources": ["dexproviders"], "scope": "Cluster"}]`))
+		})
+
+		It("Should read the objects with the jqFilters the python tests run", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			contexts := resource(webhook).Field("context").Array()
+			Expect(contexts).To(HaveLen(2))
+			Expect(contexts[0].Get("name").String()).To(Equal("dexproviders"))
+			Expect(contexts[0].Get("kubernetes.apiVersion").String()).To(Equal("deckhouse.io/v1"))
+			Expect(contexts[0].Get("kubernetes.kind").String()).To(Equal("DexProvider"))
+			Expect(contexts[1].Get("name").String()).To(Equal("tokenexchangeproviders"))
+			Expect(contexts[1].Get("kubernetes.kind").String()).To(Equal("TokenExchangeProvider"))
+
+			test, err := os.ReadFile(filepath.Join(moduleDir, "webhooks/validating/group_prefix_dex_provider_test.py"))
+			Expect(err).ShouldNot(HaveOccurred())
+			dexProviders := regexp.MustCompile(`(?s)\nJQ_FILTER = '''(.*?)'''`).FindSubmatch(test)
+			Expect(dexProviders).NotTo(BeNil())
+			Expect(strings.TrimSpace(contexts[0].Get("kubernetes.jqFilter").String())).To(Equal(strings.TrimSpace(string(dexProviders[1]))))
+			exchanges := regexp.MustCompile(`(?s)\nTEP_JQ_FILTER = '''(.*?)'''`).FindSubmatch(test)
+			Expect(exchanges).NotTo(BeNil())
+			Expect(strings.TrimSpace(contexts[1].Get("kubernetes.jqFilter").String())).To(Equal(strings.TrimSpace(string(exchanges[1]))))
+		})
+	})
+
+	Context("group-prefix-token-exchange", func() {
+		const webhook = "user-authn-group-prefix-token-exchange"
+
+		It("Should check the right requests", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			object := resource(webhook)
+			Expect(object.Field("validationObject.name").String()).To(Equal("groupprefix-token-exchange-providers.deckhouse.io"))
+			Expect(object.Field("validationObject.rules").String()).To(MatchJSON(`[{
+				"apiGroups": ["deckhouse.io"], "apiVersions": ["v1alpha1"],
+				"operations": ["CREATE", "UPDATE"], "resources": ["tokenexchangeproviders"], "scope": "Cluster"}]`))
+		})
+
+		It("Should read the DexProviders with the jqFilter the python tests run", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			contexts := resource(webhook).Field("context").Array()
+			Expect(contexts).To(HaveLen(1))
+			Expect(contexts[0].Get("name").String()).To(Equal("dexproviders"))
+			Expect(contexts[0].Get("kubernetes.apiVersion").String()).To(Equal("deckhouse.io/v1"))
+			Expect(contexts[0].Get("kubernetes.kind").String()).To(Equal("DexProvider"))
+
+			test, err := os.ReadFile(filepath.Join(moduleDir, "webhooks/validating/group_prefix_token_exchange_test.py"))
+			Expect(err).ShouldNot(HaveOccurred())
+			copied := regexp.MustCompile(`(?s)\nJQ_FILTER = '''(.*?)'''`).FindSubmatch(test)
+			Expect(copied).NotTo(BeNil())
+			Expect(strings.TrimSpace(contexts[0].Get("kubernetes.jqFilter").String())).To(Equal(strings.TrimSpace(string(copied[1]))))
 		})
 	})
 

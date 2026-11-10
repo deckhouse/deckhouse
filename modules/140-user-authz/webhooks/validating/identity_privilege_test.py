@@ -1249,7 +1249,7 @@ def dex_oidc(**extra):
                      "promptType": "login",
                      "scopes": ["openid", "profile", "email", "groups"]}}
     for k, v in extra.items():
-        if k in ("allowedIdentities", "displayName", "enabled"):
+        if k in ("allowedIdentities", "displayName", "enabled", "groupPrefix"):
             spec[k] = v
         else:
             spec["oidc"][k] = v
@@ -1276,6 +1276,9 @@ def dex_extra():
                               "groupSubjects": [], "saSubjects": []}},
             {"filterResult": {"name": "trap", "accessLevel": "SuperAdmin", "additionalRoles": [],
                               "userSubjects": [], "groupSubjects": ["gate-trap"],
+                              "saSubjects": []}},
+            {"filterResult": {"name": "corp-trap", "accessLevel": "SuperAdmin", "additionalRoles": [],
+                              "userSubjects": [], "groupSubjects": ["corp:gate-trap"],
                               "saSubjects": []}},
         ],
         assign.CRB_SNAP: [
@@ -1337,6 +1340,32 @@ class TestDexProviderGate(unittest.TestCase):
 
     def test_clusteradmin_cannot_create_closed_provider_reaching_superadmin_group(self):
         self.denied(dex_ctx("CREATE", P4_TRAP, username=CLUSTER_ADMIN), "user-authz:super-admin")
+
+    # A groupPrefix puts the same string in front of every group the provider asserts, so only the groups that
+    # start with it are in reach, and allowedIdentities.groups names them with it.
+    def test_clusteradmin_creates_email_closed_provider_whose_prefix_reaches_no_grant(self):
+        form = dex_oidc(groupPrefix="partner:", allowedIdentities={"emailDomains": ["contractor.example"]})
+        self.allowed(dex_ctx("CREATE", form, username=CLUSTER_ADMIN))
+
+    def test_clusteradmin_cannot_create_email_closed_provider_whose_prefix_reaches_a_superadmin_group(self):
+        form = dex_oidc(groupPrefix="corp:", allowedIdentities={"emailDomains": ["contractor.example"]})
+        self.denied(dex_ctx("CREATE", form, username=CLUSTER_ADMIN), "user-authz:super-admin")
+
+    def test_clusteradmin_cannot_create_provider_listing_the_prefixed_trap_group(self):
+        form = dex_oidc(groupPrefix="corp:", allowedIdentities={"emailDomains": ["contractor.example"],
+                                                                "groups": ["corp:gate-trap"]})
+        self.denied(dex_ctx("CREATE", form, username=CLUSTER_ADMIN), "user-authz:super-admin")
+
+    def test_clusteradmin_creates_provider_listing_the_trap_group_without_the_prefix(self):
+        # dex puts the prefix in front before it compares: "gate-trap" can never be asserted
+        form = dex_oidc(groupPrefix="corp:", allowedIdentities={"emailDomains": ["contractor.example"],
+                                                                "groups": ["gate-trap"]})
+        self.allowed(dex_ctx("CREATE", form, username=CLUSTER_ADMIN))
+
+    def test_clusteradmin_cannot_add_a_prefix_that_reaches_a_superadmin_group(self):
+        old = P4_CLEAN
+        new = dex_oidc(groupPrefix="corp:", allowedIdentities={"emailDomains": ["contractor.example"]})
+        self.denied(dex_ctx("UPDATE", new, old_spec=old, username=CLUSTER_ADMIN), "user-authz:super-admin")
 
     def test_clusteradmin_cannot_create_closed_provider_with_basic_auth(self):
         # basic auth of an OIDC provider bypasses dex and its allowedIdentities (card 71728749)

@@ -379,6 +379,8 @@ properties:
               properties:
                 enabled:
                   type: boolean
+            groupPrefix:
+              type: string
             allowedIdentities:
               type: object
               properties:

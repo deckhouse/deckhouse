@@ -98,6 +98,51 @@ If the check fails, the error lists the roles that the provider could reach, for
 dexproviders.deckhouse.io "corp": the provider can assert identities that already carry roles [user-authz:super-admin]; the requester's can-assign range is basic<=ClusterAdmin and does not cover them. Narrow spec.allowedIdentities (emails, emailDomains, groups) or ask a SuperAdmin
 ```
 
+### Prefix for the groups of a provider
+
+The cluster knows the groups a provider reports by their names, so a rule for the group `admins` applies to every member of any group `admins`. When two providers report a group of the same name, for example an LDAP directory and a GitLab, the members of both get the rights of the rule.
+
+[`spec.groupPrefix`](cr.html#dexprovider-v1-spec-groupprefix) of a DexProvider puts a prefix in front of every group the provider asserts, whatever its type. With `groupPrefix: corp-ldap:`, the group `admins` of the directory is `corp-ldap:admins` in the tokens, in the rules (the subjects of the AuthorizationRule objects) and in the `allowedGroups` of DexClient and DexAuthenticator.
+A prefix keeps the groups of the providers apart only when every provider that can emit such names has its own prefix. A provider without a prefix passes the group names as they are (OIDC, a GitHub team named `org:team`, GitLab, SAML and the local groups) and can emit a name that starts with the prefix. When the rules rely on prefixed groups, set a prefix on every provider.
+
+The following provider prefixes the groups of an LDAP directory with `corp-ldap:`:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: corp-ldap
+spec:
+  type: LDAP
+  displayName: Corp
+  groupPrefix: "corp-ldap:"
+  allowedIdentities:
+    groups:
+    - "corp-ldap:admins"
+    - "corp-ldap:developers"
+  ldap:
+    host: ldap.example.com:636
+    userSearch:
+      baseDN: ou=people,dc=example,dc=com
+      username: mail
+      idAttr: DN
+      emailAttr: mail
+```
+
+Keep the following in mind when you set a prefix:
+
+* There is no prefix by default. The prefix renames the groups, and the rules written for the old names stop applying to the users of the provider and so would lock them out. An existing provider takes the prefix only when you set it. Rewrite the rules first, then set the prefix.
+* Rewrite the subjects of ClusterAuthorizationRule and AuthorizationRule, the groups of ClusterRoleBinding and RoleBinding, `auth.allowedUserGroups` in the ModuleConfig of `openvpn`, `documentation`, `istio`, `cilium-hubble` and `deckhouse-tools` (those modules render a DexAuthenticator from the setting), `allowedIdentities.groups` of the DexProvider and `allowedGroups` of DexAuthenticator and DexClient.
+* After the prefix is set or changed, the users of the provider sign in again, and the new tokens carry the prefix.
+* The access and ID tokens already issued keep the old names only until they expire. A rule that still names a group without the prefix, including a cluster-admin rule, stops matching as soon as those tokens are gone.
+* A token that a Dex pod still running the old configuration issues later than 30 minutes after the change can keep the old names. The rules rewritten for the prefix do not match them.
+* The lists that name the groups of Dex take the names with the prefix: `allowedIdentities.groups` of the provider, and `allowedGroups` of a DexClient or a DexAuthenticator. Every name in `allowedIdentities.groups` must start with `groupPrefix`, otherwise the API refuses the manifest, because Dex adds the prefix before it compares.
+* The group settings of the provider type (for example, `oidc.allowedGroups`, `gitlab.groups`, `crowd.groups` and `ldap.groupSearch`) are about the groups of the identity provider and take its names, without the prefix.
+* A group that already starts with the prefix keeps its name.
+* The prefix ends with a colon, as in `corp-ldap:`, and differs from the prefix of every other DexProvider and from the group prefixes of every TokenExchangeProvider. Neither of two prefixes may start with the other. The admission webhooks refuse a prefix that breaks this, whichever of the objects is created or changed last.
+* The prefix cannot start with `system:`, which the Kubernetes API server reserves, or with `peering:`, which is reserved for the ServiceAccounts of the `d8-peering` namespace. It cannot be set together with `enableBasicAuth` of an `OIDC` or `Crowd` provider, because basic-auth-proxy checks the credentials with such a provider directly and passes its groups as they are, so the prefix would not apply to them. Basic Authentication of an `LDAP` provider goes through Dex and gets the prefix.
+* With a prefix, the provider can assert only groups that start with it. Therefore the check of who may create or change the provider (["Limiting the identities of a provider"](#limiting-the-identities-of-a-provider)) counts, of the roles granted to groups, only the roles of the groups with this prefix.
+
 ### GitHub
 
 The example shows the provider's settings for integration with GitHub.

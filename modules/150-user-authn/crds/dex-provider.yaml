@@ -40,6 +40,12 @@ spec:
               x-kubernetes-validations:
                 - rule: "!has(self.tokenExchange) || !has(self.tokenExchange.enabled) || !self.tokenExchange.enabled || self.type in ['OIDC', 'Gitlab']"
                   message: "Only OIDC and Gitlab providers can exchange tokens: spec.tokenExchange.enabled must not be true for another type."
+                - rule: "!has(self.groupPrefix) || (!self.groupPrefix.startsWith('system:') && !self.groupPrefix.startsWith('peering:'))"
+                  message: "spec.groupPrefix must not start with system: or peering:, which the Kubernetes API server and the peering reserve."
+                - rule: "!has(self.groupPrefix) || !has(self.allowedIdentities) || !has(self.allowedIdentities.groups) || self.allowedIdentities.groups.all(g, g.startsWith(self.groupPrefix))"
+                  message: "Every name in spec.allowedIdentities.groups must start with spec.groupPrefix: Dex compares the groups after it adds the prefix, so a name without it matches nothing."
+                - rule: "!has(self.groupPrefix) || !((self.type == 'OIDC' && has(self.oidc) && has(self.oidc.enableBasicAuth) && self.oidc.enableBasicAuth) || (self.type == 'Crowd' && has(self.crowd) && has(self.crowd.enableBasicAuth) && self.crowd.enableBasicAuth))"
+                  message: "spec.groupPrefix cannot be set with enableBasicAuth of an OIDC or Crowd provider: Basic Authentication passes the groups of such a provider as they are, without the prefix."
               properties:
                 enabled:
                   type: boolean
@@ -69,6 +75,38 @@ spec:
                   type: string
                   description: |
                     The provider name to show on the authentication provider selection page. The selection page will not be displayed if there is only one provider configured.
+                groupPrefix:
+                  type: string
+                  minLength: 2
+                  maxLength: 64
+                  pattern: '^[A-Za-z0-9][A-Za-z0-9._:/-]*:$'
+                  x-doc-examples: ['corp-ldap:']
+                  description: |
+                    Prefix that Dex puts in front of every group the provider asserts, whatever the type of the provider.
+
+                    With a prefix, the groups of this provider are named `<PREFIX><GROUP>` in the tokens and in the rules of the
+                    cluster, for example `corp-ldap:admins`. The prefix keeps them apart from the groups of another provider only
+                    when every provider that can emit such names has its own prefix.
+
+                    The prefix must end with a colon, as in `corp-ldap:`. It must differ from the prefix of every other DexProvider
+                    and of every TokenExchangeProvider group, and neither of two prefixes may start with the other. The admission
+                    webhooks refuse such a prefix.
+
+                    Every name in `allowedIdentities.groups` must start with the prefix, otherwise the API refuses the manifest,
+                    because Dex adds the prefix before it compares. The group settings of the provider type (for example,
+                    `oidc.allowedGroups`, `gitlab.groups` and `ldap.groupSearch`) take the names of the identity provider, without
+                    the prefix.
+
+                    The prefix cannot start with `system:`, which the Kubernetes API server reserves, or with `peering:`, which is
+                    reserved for the ServiceAccounts of the `d8-peering` namespace. It cannot be set together with `enableBasicAuth`
+                    of an `OIDC` or `Crowd` provider, because basic-auth-proxy checks the credentials with such a provider directly
+                    and passes its groups as they are.
+
+                    Setting or changing the prefix renames the groups of the provider, and the rules written for the old names stop
+                    applying to its users. Rewrite the rules before you set the prefix, as described in
+                    [Prefix for the groups of a provider](usage.html#prefix-for-the-groups-of-a-provider).
+
+                    **By default**, no prefix.
                 allowedIdentities:
                   type: object
                   description: |
@@ -113,14 +151,16 @@ spec:
                         minLength: 1
                     groups:
                       type: array
+                      maxItems: 1024
                       description: |
-                        Group names this provider may assert.
+                        Group names this provider may assert, with the [`groupPrefix`](#dexprovider-v1-spec-groupprefix) in front when it is set.
 
                         Applied on top of the provider-specific group filters
                         (`allowedGroups`, `groups`, `teams`, `orgs[].teams`), if any.
                       items:
                         type: string
                         minLength: 1
+                        maxLength: 256
                 github:
                   type: object
                   required: ['clientID', 'clientSecret']
@@ -838,6 +878,12 @@ spec:
               x-kubernetes-validations:
                 - rule: "!has(self.tokenExchange) || !has(self.tokenExchange.enabled) || !self.tokenExchange.enabled || self.type in ['OIDC', 'Gitlab']"
                   message: "Only OIDC and Gitlab providers can exchange tokens: spec.tokenExchange.enabled must not be true for another type."
+                - rule: "!has(self.groupPrefix) || (!self.groupPrefix.startsWith('system:') && !self.groupPrefix.startsWith('peering:'))"
+                  message: "spec.groupPrefix must not start with system: or peering:, which the Kubernetes API server and the peering reserve."
+                - rule: "!has(self.groupPrefix) || !has(self.allowedIdentities) || !has(self.allowedIdentities.groups) || self.allowedIdentities.groups.all(g, g.startsWith(self.groupPrefix))"
+                  message: "Every name in spec.allowedIdentities.groups must start with spec.groupPrefix: Dex compares the groups after it adds the prefix, so a name without it matches nothing."
+                - rule: "!has(self.groupPrefix) || !((self.type == 'OIDC' && has(self.oidc) && has(self.oidc.enableBasicAuth) && self.oidc.enableBasicAuth) || (self.type == 'Crowd' && has(self.crowd) && has(self.crowd.enableBasicAuth) && self.crowd.enableBasicAuth))"
+                  message: "spec.groupPrefix cannot be set with enableBasicAuth of an OIDC or Crowd provider: Basic Authentication passes the groups of such a provider as they are, without the prefix."
               properties:
                 enabled:
                   type: boolean
@@ -867,6 +913,38 @@ spec:
                   type: string
                   description: |
                     The provider name to show on the authentication provider selection page. The selection page will not be displayed if there is only one provider configured.
+                groupPrefix:
+                  type: string
+                  minLength: 2
+                  maxLength: 64
+                  pattern: '^[A-Za-z0-9][A-Za-z0-9._:/-]*:$'
+                  x-doc-examples: ['corp-ldap:']
+                  description: |
+                    Prefix that Dex puts in front of every group the provider asserts, whatever the type of the provider.
+
+                    With a prefix, the groups of this provider are named `<PREFIX><GROUP>` in the tokens and in the rules of the
+                    cluster, for example `corp-ldap:admins`. The prefix keeps them apart from the groups of another provider only
+                    when every provider that can emit such names has its own prefix.
+
+                    The prefix must end with a colon, as in `corp-ldap:`. It must differ from the prefix of every other DexProvider
+                    and of every TokenExchangeProvider group, and neither of two prefixes may start with the other. The admission
+                    webhooks refuse such a prefix.
+
+                    Every name in `allowedIdentities.groups` must start with the prefix, otherwise the API refuses the manifest,
+                    because Dex adds the prefix before it compares. The group settings of the provider type (for example,
+                    `oidc.allowedGroups`, `gitlab.groups` and `ldap.groupSearch`) take the names of the identity provider, without
+                    the prefix.
+
+                    The prefix cannot start with `system:`, which the Kubernetes API server reserves, or with `peering:`, which is
+                    reserved for the ServiceAccounts of the `d8-peering` namespace. It cannot be set together with `enableBasicAuth`
+                    of an `OIDC` or `Crowd` provider, because basic-auth-proxy checks the credentials with such a provider directly
+                    and passes its groups as they are.
+
+                    Setting or changing the prefix renames the groups of the provider, and the rules written for the old names stop
+                    applying to its users. Rewrite the rules before you set the prefix, as described in
+                    [Prefix for the groups of a provider](usage.html#prefix-for-the-groups-of-a-provider).
+
+                    **By default**, no prefix.
                 allowedIdentities:
                   type: object
                   description: |
@@ -911,14 +989,16 @@ spec:
                         minLength: 1
                     groups:
                       type: array
+                      maxItems: 1024
                       description: |
-                        Group names this provider may assert.
+                        Group names this provider may assert, with the [`groupPrefix`](#dexprovider-v1-spec-groupprefix) in front when it is set.
 
                         Applied on top of the provider-specific group filters
                         (`allowedGroups`, `groups`, `teams`, `orgs[].teams`), if any.
                       items:
                         type: string
                         minLength: 1
+                        maxLength: 256
                 github:
                   type: object
                   required: ['clientID', 'clientSecret']

@@ -1,0 +1,33 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ValidationWebhook
+metadata:
+  name: user-authn-group-prefix-token-exchange
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | nindent 2 }}
+validationObject:
+  name: groupprefix-token-exchange-providers.deckhouse.io
+  group: main
+  rules:
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["v1alpha1"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["tokenexchangeproviders"]
+    scope:       "Cluster"
+context:
+  # The DexProviders, read through v1 whatever version their authors used. The
+  # webhooks/validating/group_prefix_token_exchange_test.py keeps a copy of the jqFilter.
+  - name: dexproviders
+    kubernetes:
+      apiVersion: deckhouse.io/v1
+      kind: DexProvider
+      queue: "dexproviders-list"
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "enabled": (.spec.enabled != false),
+          "groupPrefix": (.spec.groupPrefix // "")
+        }
+handler:
+  # The code of the hook is webhooks/validating/group_prefix_token_exchange.py, where its unit tests import it.
+  python: |
+    {{- (required "webhooks/validating/group_prefix_token_exchange.py is missing" (.Files.Get "webhooks/validating/group_prefix_token_exchange.py")) | nindent 4 }}
