@@ -72,6 +72,7 @@ type operationSpec struct {
 	ResetPassword *resetPassword   `json:"resetPassword,omitempty"`
 	Lock          *lockSpec        `json:"lock,omitempty"`
 	Logout        *logoutSpec      `json:"logout,omitempty"`
+	Reset2FA      *reset2FASpec    `json:"reset2FA,omitempty"`
 }
 
 // operationTarget names an account by email; connectorID and userID narrow it down.
@@ -90,6 +91,34 @@ type logoutSpec struct {
 	Grant         string `json:"grant,omitempty"`
 	ExceptGrant   string `json:"exceptGrant,omitempty"`
 }
+
+// reset2FASpec narrows a Reset2FA down to some of the second factors; without it every one is removed.
+type reset2FASpec struct {
+	Methods []string `json:"methods,omitempty"`
+}
+
+// reset2FAMethods tells which second factors a Reset2FA removes: the methods of spec.reset2FA, or both.
+func (s operationSpec) reset2FAMethods() (bool, bool) {
+	if s.Reset2FA == nil || len(s.Reset2FA.Methods) == 0 {
+		return true, true
+	}
+	var totp, webAuthn bool
+	for _, m := range s.Reset2FA.Methods {
+		switch m {
+		case methodTOTP:
+			totp = true
+		case methodWebAuthn:
+			webAuthn = true
+		}
+	}
+	return totp, webAuthn
+}
+
+const (
+	// methodTOTP and methodWebAuthn are the values of spec.reset2FA.methods.
+	methodTOTP     = "TOTP"
+	methodWebAuthn = "WebAuthn"
+)
 
 type resetPassword struct {
 	NewPasswordHash string `json:"newPasswordHash"`

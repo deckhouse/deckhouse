@@ -197,7 +197,7 @@ index e69d5da3..5758a618 100644
  		}
  		h.Logger.ErrorContext(ctx, "failed to get auth request", "err", err)
 diff --git a/server/mfa/handler.go b/server/mfa/handler.go
-index bd397e79..fa84e17b 100644
+index 5830b203..1375b15b 100644
 --- a/server/mfa/handler.go
 +++ b/server/mfa/handler.go
 @@ -2,6 +2,7 @@ package mfa
@@ -230,7 +230,22 @@ index bd397e79..fa84e17b 100644
  	if err != nil {
  		h.Logger.ErrorContext(ctx, "failed to get auth request", "err", err)
  		h.renderError(r, w, http.StatusInternalServerError, "Database error.")
-@@ -198,6 +207,11 @@ func (h *Handler) handleMFA(w http.ResponseWriter, r *http.Request) {
+@@ -153,9 +162,13 @@ func (e unknownAuthenticatorError) Error() string {
+ // cause is the configuration of the client, not the storage, and only an administrator can fix it (Deckhouse).
+ const misconfiguredSignIn = "The second factor of this application is misconfigured. Contact your administrator."
+ 
++// ErrCodeMisconfigured is the ErrCode of that page: the theme explains it in the language of the frontend
++// (Deckhouse, see templates.ErrCodeLoginExpired).
++const ErrCodeMisconfigured = "mfa_misconfigured"
++
+ // renderMisconfigured renders the page of a chain that names an unknown authenticator with 500.
+ func (h *Handler) renderMisconfigured(r *http.Request, w http.ResponseWriter) {
+-	h.renderError(r, w, http.StatusInternalServerError, misconfiguredSignIn)
++	templates.RenderErrorWithCode(h.Templates, h.Logger, r, w, http.StatusInternalServerError, misconfiguredSignIn, ErrCodeMisconfigured)
+ }
+ 
+ // getConnectorType returns the type of the connector with the given ID.
+@@ -224,6 +237,11 @@ func (h *Handler) handleMFA(w http.ResponseWriter, r *http.Request) {
  	ctx := r.Context()
  
  	authReq, err := h.Storage.GetAuthRequest(ctx, r.FormValue("req"))
@@ -277,10 +292,10 @@ index fa12a2c8..b11d8238 100644
  }
 diff --git a/server/server_login_expired_test.go b/server/server_login_expired_test.go
 new file mode 100644
-index 00000000..d496b234
+index 00000000..c5b55df3
 --- /dev/null
 +++ b/server/server_login_expired_test.go
-@@ -0,0 +1,253 @@
+@@ -0,0 +1,276 @@
 +package server
 +
 +import (
@@ -534,6 +549,29 @@ index 00000000..d496b234
 +	assert.Equal(t, http.StatusBadRequest, rr.Code)
 +	assert.Equal(t, "code= return= msg=User session error.", rr.Body.String())
 +}
++
++// TestMFAMisconfiguredPage: a client whose MFA chain names an authenticator Dex does not have gets the
++// error page with the code of a misconfigured second factor, which the theme explains in the language of
++// the frontend; the message stays for a theme that does not know the code (Deckhouse).
++func TestMFAMisconfiguredPage(t *testing.T) {
++	s, _ := newLoginExpiredServer(t)
++	require.NoError(t, s.storage.CreateClient(t.Context(), storage.Client{
++		ID: "misconfigured", Secret: "s", RedirectURIs: []string{"foo://bar.com/"}, MFAChain: []string{"webauthn"},
++	}))
++	req := storage.AuthRequest{
++		ID: "misconfigured-req", ClientID: "misconfigured", ConnectorID: "mock", RedirectURI: "foo://bar.com/",
++		ResponseTypes: []string{"code"}, Expiry: time.Now().Add(time.Hour), LoggedIn: true,
++		Claims:  storage.Claims{UserID: "u1", Username: "Jane", Email: "u1@example.com"},
++		HMACKey: []byte("0123456789abcdef0123456789abcdef"),
++	}
++	require.NoError(t, s.storage.CreateAuthRequest(t.Context(), req))
++
++	rr := serveRequest(s, rateLimitedRequest(http.MethodGet, internal.StepURL("/mfa", req, internal.StepMFA, nil), nil))
++
++	assert.Equal(t, http.StatusInternalServerError, rr.Code, rr.Body.String())
++	assert.Equal(t, "code="+mfa.ErrCodeMisconfigured+" return= msg=The second factor of this application is misconfigured. Contact your administrator.",
++		rr.Body.String())
++}
 diff --git a/server/signinlog/expired.go b/server/signinlog/expired.go
 new file mode 100644
 index 00000000..1420aa4c
@@ -571,10 +609,10 @@ index 00000000..1420aa4c
 +}
 diff --git a/server/templates/expired.go b/server/templates/expired.go
 new file mode 100644
-index 00000000..5fd44a0b
+index 00000000..14371be0
 --- /dev/null
 +++ b/server/templates/expired.go
-@@ -0,0 +1,32 @@
+@@ -0,0 +1,40 @@
 +package templates
 +
 +import (
@@ -604,6 +642,14 @@ index 00000000..5fd44a0b
 +// RenderLoginExpired is RenderError for an expired sign-in.
 +func RenderLoginExpired(t *Templates, logger *slog.Logger, r *http.Request, w http.ResponseWriter, returnURL string) {
 +	if err := t.LoginExpired(r, w, returnURL); err != nil {
++		logger.ErrorContext(r.Context(), "server template error", "err", err)
++	}
++}
++
++// RenderErrorWithCode is RenderError with an ErrCode that a theme may explain in
++// its own words, as for an expired sign-in (Deckhouse).
++func RenderErrorWithCode(t *Templates, logger *slog.Logger, r *http.Request, w http.ResponseWriter, status int, msg, code string) {
++	if err := t.renderErr(r, w, status, msg, code, ""); err != nil {
 +		logger.ErrorContext(r.Context(), "server template error", "err", err)
 +	}
 +}

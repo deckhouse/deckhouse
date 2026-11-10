@@ -229,6 +229,53 @@ the pair generation (290), not of a lock re-check. New package
   from the session: the user goes on to the login, which refuses him (with
   230, the lock page), and the session serves again once the lock ends;
 - MFA configuration no longer requires `DEX_SESSIONS_ENABLED`;
+- an MFA authenticator that cannot be built stops the start: a config that
+  does not parse, a WebAuthn authenticator that Dex refuses (a timeout that
+  is no duration, for example) or an unknown type. Upstream logged the error
+  and went on without the authenticator, and a login that asked for it then
+  passed with no second factor, since the chain of a login keeps only the
+  authenticators that exist. `buildMFAProviders` of `cmd/dex/serve.go`
+  returns the error;
+- WebAuthn registration refuses an identity that already has a credential for
+  the authenticator. Upstream checks that only when it chooses the HTML mode,
+  and `register/begin` and `register/finish` nil the stored credentials, so a
+  password alone can add a second key and mark the login's second factor done.
+  Both endpoints refuse (`403` and `400`), and `register/finish` checks again
+  inside `UpdateUserIdentity`, so two ceremonies started while the account had
+  no key cannot both store one;
+- for the same reason, the chain of a client that names an authenticator Dex
+  does not have (an `mfaChain` of a client in the storage; the configuration
+  checks only its own chains) stops the login with a 500 instead of skipping
+  the authenticator; the page says that the second factor of the application
+  is misconfigured, instead of upstream's "Database error." (with 280, the
+  page carries `ErrCode` `mfa_misconfigured`, which the theme explains in the
+  language of the frontend), and the log line names the client and the
+  authenticator. `validateMFA` refuses a `connectorTypes` entry that is
+  no connector type of Dex (`crowd` for `atlassian-crowd`), which would bind
+  the authenticator to no connector;
+- a chain that asks for every factor is passed in the order for the user
+  (`server/mfa/order.go`): first the factors the user has, then the
+  registration of the missing ones, each group in the order of the chain. A
+  TOTP secret not confirmed yet counts as missing. Upstream sent every login
+  to the first factor of the chain, so a user who had only a key registered a
+  code with the password alone before the key was asked for. The factors a
+  login passed are kept in the auth request, next to the WebAuthn session
+  (`WebAuthnSessionData`, key `deckhousePassed`), and a registration before
+  every factor the user has is passed sends the page back to `/mfa`, and the
+  WebAuthn API answers it with `403`, also inside `UpdateUserIdentity`. A user
+  with every factor, or none, passes the chain in its order, as upstream. The
+  passes record the user and the connector they belong to
+  (`deckhousePassedUserID`, `deckhousePassedConnectorID`): passes of another
+  user, or recorded without one, count for nothing;
+- a login into an auth request that another user has signed in is refused with
+  400 ("This sign-in is already done for another account. Start the sign-in
+  again."): the login form checks it before the password policy, and
+  `finalizeLogin` checks it for every connector and again inside
+  `UpdateAuthRequest`. Upstream overwrote the claims of the request and kept
+  `MFAValidated`, so a user who passed their own second factor and then posted
+  the password of another user to the same `state` got a code for that user
+  without the second factor of that user. The same user signing in again (a
+  second click, the back button) goes on;
 - the password grant records the identity too; the password, refresh-token and
   token-exchange grants refuse a blocked pair with `access_denied` and HTTP 429
   and keep the refresh token. A pair without an identity is not locked (with
@@ -333,6 +380,14 @@ one and keep the owner out. Without a second factor (2FA off, or a client
 without an MFA chain) the page opens right after the login form. A storage that
 does not keep the field gets the page at once rather than a login that skips
 it.
+
+The kept page opens only for the user the login is complete for, and the login
+form writes neither the binding nor the kept page into a request another user
+has signed in (400 "This sign-in is already done for another account. Start the
+sign-in again.", as in 210). So the login of another user posted to the same
+`state` at the same time, which writes its page before the first login
+completes and is refused only after, leaves no page that changes the password
+of that user after the second factor of the first one.
 
 The URL alone, which passes through the browser history and the access log of
 ingress-nginx, opens nothing, so the page does not ask for the current
@@ -766,7 +821,9 @@ of them with one page:
   application and sign in again.", `ErrCode` `login_expired` and `ReturnURL`.
   The error page gets `ErrCode` and `ReturnURL` on every error, empty on the
   others, so a theme tells the case apart without matching the message; a theme
-  that does not know the code shows the message.
+  that does not know the code shows the message. `templates.RenderErrorWithCode`
+  renders another case with its own code: the misconfigured second factor of
+  210 (`mfa_misconfigured`, 500).
 - `ReturnURL` is the application to go back to: the origin (`https://host[:port]/`)
   of the `redirect_uri` in the connector selection link of the login form
   (`back`, `/auth?client_id=...&redirect_uri=...`). The connector selection

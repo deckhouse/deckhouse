@@ -64,6 +64,13 @@ func TestUserOperationTarget(t *testing.T) {
 			{"ResetPassword of a target", map[string]any{"type": "ResetPassword", "target": target}, false},
 			{"RequirePasswordChange of a target", map[string]any{"type": "RequirePasswordChange", "target": target}, false},
 			{"Reset2FA of a user and a target", map[string]any{"type": "Reset2FA", "user": "jane", "target": target}, false},
+			// reset2FA.methods narrows a Reset2FA to some of the methods. A method listed twice is refused by the API
+			// server (x-kubernetes-list-type: set), which this validation does not run.
+			{"Reset2FA of the key", map[string]any{"type": "Reset2FA", "target": target, "reset2FA": map[string]any{"methods": []any{"WebAuthn"}}}, true},
+			{"Reset2FA of both", map[string]any{"type": "Reset2FA", "user": "jane", "reset2FA": map[string]any{"methods": []any{"TOTP", "WebAuthn"}}}, true},
+			{"Reset2FA of no method", map[string]any{"type": "Reset2FA", "user": "jane", "reset2FA": map[string]any{"methods": []any{}}}, false},
+			{"Reset2FA of an unknown method", map[string]any{"type": "Reset2FA", "user": "jane", "reset2FA": map[string]any{"methods": []any{"SMS"}}}, false},
+			{"reset2FA of a Logout", map[string]any{"type": "Logout", "user": "jane", "reset2FA": map[string]any{"methods": []any{"TOTP"}}}, false},
 		} {
 			t.Run(version+"/"+tc.name, func(t *testing.T) {
 				object := map[string]any{

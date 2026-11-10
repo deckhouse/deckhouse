@@ -1,5 +1,5 @@
 diff --git a/cmd/dex/config.go b/cmd/dex/config.go
-index 06526908..0c7ef929 100644
+index 2107e97f..517c939c 100644
 --- a/cmd/dex/config.go
 +++ b/cmd/dex/config.go
 @@ -91,6 +91,16 @@ type Config struct {
@@ -20,10 +20,10 @@ index 06526908..0c7ef929 100644
  
  // MFAConfig holds multi-factor authentication settings.
 diff --git a/cmd/dex/serve.go b/cmd/dex/serve.go
-index a7411f40..02479080 100644
+index 11dc3c9c..d58b9431 100644
 --- a/cmd/dex/serve.go
 +++ b/cmd/dex/serve.go
-@@ -478,6 +478,11 @@ func runServe(options serveOptions) error {
+@@ -485,6 +485,11 @@ func runServe(options serveOptions) error {
  		logger.Info("config reserved name prefixes", "prefixes", c.ReservedNamePrefixes)
  	}
  

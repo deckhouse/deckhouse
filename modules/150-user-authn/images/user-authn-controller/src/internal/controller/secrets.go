@@ -29,9 +29,10 @@ import (
 
 // secretFields are the top-level keys of Dex storage objects that hold credentials:
 // Password hash and previousHashes, connectorData of OfflineSessions and RefreshToken, the TOTP
-// secret of OfflineSessions, refresh token values, the WebAuthn credentials of UserIdentity, and
-// the cookie secret and nonce of AuthSession. The TOTP secrets of UserIdentity (mfaSecrets) are
-// reduced to mfaSecretFlags instead.
+// secret of OfflineSessions, refresh token values, and the cookie secret and nonce of AuthSession.
+// The TOTP secrets of UserIdentity (mfaSecrets) are reduced to mfaSecretFlags instead, and its
+// WebAuthn credentials (webauthnCredentials) to as many empty entries as there are credentials,
+// since UserAccount shows whether the user has a key.
 var secretFields = []string{
 	"hash",
 	"previousHashes",
@@ -39,7 +40,6 @@ var secretFields = []string{
 	"totp",
 	"token",
 	"obsoleteToken",
-	"webauthnCredentials",
 	"secret",
 	"nonce",
 }
@@ -69,7 +69,7 @@ var refFields = []string{
 
 // SecretFields returns Dex credential keys stripped from the informer cache
 // and UserAccount. The references of OfflineSessions.refresh and grants are reduced to refFields,
-// and UserIdentity.mfaSecrets to mfaSecretFlags.
+// UserIdentity.mfaSecrets to mfaSecretFlags, and UserIdentity.webauthnCredentials to a count.
 func SecretFields() []string {
 	return slices.Clone(secretFields)
 }
@@ -156,6 +156,39 @@ func stripSecretKeys(m map[string]any) {
 	reduceRefs(m, "refresh")
 	reduceRefs(m, "grants")
 	reduceMFASecretsToFlags(m)
+	reduceWebAuthnToCount(m)
+}
+
+// reduceWebAuthnToCount keeps UserIdentity.webauthnCredentials as a map of the authenticator IDs to lists of empty
+// entries, one per credential: the keys, the public keys and the counters are dropped, and the count stays.
+// Empty or malformed maps are removed.
+func reduceWebAuthnToCount(m map[string]any) {
+	raw, ok := m["webauthnCredentials"]
+	if !ok {
+		return
+	}
+	byAuthenticator, ok := raw.(map[string]any)
+	if !ok {
+		delete(m, "webauthnCredentials")
+		return
+	}
+	reduced := make(map[string]any, len(byAuthenticator))
+	for id, v := range byAuthenticator {
+		credentials, ok := v.([]any)
+		if !ok || len(credentials) == 0 {
+			continue
+		}
+		entries := make([]any, len(credentials))
+		for i := range entries {
+			entries[i] = map[string]any{}
+		}
+		reduced[id] = entries
+	}
+	if len(reduced) == 0 {
+		delete(m, "webauthnCredentials")
+		return
+	}
+	m["webauthnCredentials"] = reduced
 }
 
 // reduceMFASecretsToFlags keeps UserIdentity.mfaSecrets keys and each entry's mfaSecretFlags,

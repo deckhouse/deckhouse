@@ -61,6 +61,9 @@ type Reconciler struct {
 	// establishedAge is how long a device must have been signed in to act on the others through
 	// user-api: when the list is cut, such devices are kept first.
 	establishedAge time.Duration
+	// twoFactor is the second factors of each type of provider; nil when 2FA is off. status.twoFactor of an
+	// account describes what it asks the users of the type of the account for.
+	twoFactor TwoFactorPolicy
 }
 
 // New constructs a Reconciler. now defaults to time.Now when nil.
@@ -72,10 +75,11 @@ func New(c client.Client, log logr.Logger, now func() time.Time) *Reconciler {
 }
 
 // Register wires the UserAccount reconciler onto the manager. establishedAge is the minimum device
-// age of user-api.
-func Register(mgr manager.Manager, establishedAge time.Duration) error {
+// age of user-api. twoFactor is the second factors of each type of provider, nil when 2FA is off.
+func Register(mgr manager.Manager, establishedAge time.Duration, twoFactor TwoFactorPolicy) error {
 	r := New(mgr.GetClient(), mgr.GetLogger().WithName("useraccount"), nil)
 	r.establishedAge = establishedAge
+	r.twoFactor = twoFactor
 	if err := r.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("setup useraccount controller: %w", err)
 	}
@@ -253,7 +257,7 @@ func (r *Reconciler) desiredLocal(ctx context.Context, name string, now time.Tim
 			ident = &found
 		}
 	}
-	desired := projectLocal(pw, ident, user, now)
+	desired := projectLocal(pw, ident, user, r.twoFactor.For(ProviderTypeLocal), now)
 	var known map[string]time.Time
 	if ident != nil {
 		known = ident.KnownDevices
@@ -300,7 +304,7 @@ func (r *Reconciler) desiredExternal(ctx context.Context, name string, now time.
 	if !ok {
 		return nil, nil
 	}
-	desired := projectExternal(src, provider.Type, now)
+	desired := projectExternal(src, provider.Type, r.twoFactor.For(provider.Type), now)
 	var known map[string]time.Time
 	if identPtr != nil {
 		known = identPtr.KnownDevices
@@ -835,6 +839,16 @@ func sessionEqual(a, b v1alpha1.UserAccountSession) bool {
 }
 
 func twoFactorEqual(a, b *v1alpha1.UserAccountTwoFactor) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return slices.Equal(a.Methods, b.Methods) && a.Require == b.Require &&
+		a.Enrolled == b.Enrolled && a.Confirmed == b.Confirmed &&
+		ptrEqual(a.TOTP, b.TOTP) && ptrEqual(a.WebAuthn, b.WebAuthn)
+}
+
+// ptrEqual compares two optional values of a comparable type.
+func ptrEqual[T comparable](a, b *T) bool {
 	if a == nil || b == nil {
 		return a == b
 	}

@@ -164,6 +164,8 @@ spec:
                   message: 'spec.target is only supported for Lock, Unlock, Logout, and Reset2FA operations; ResetPassword and RequirePasswordChange apply to local users (spec.user) only.'
                 - rule: 'self.type == "Logout" || !has(self.logout)'
                   message: 'spec.logout is only supported for the Logout operation.'
+                - rule: 'self.type == "Reset2FA" || !has(self.reset2FA)'
+                  message: 'spec.reset2FA is only supported for the Reset2FA operation.'
                 - rule: '!has(self.logout) || [has(self.logout.session), has(self.logout.exceptSession), has(self.logout.grant), has(self.logout.exceptGrant)].filter(x, x).size() <= 1'
                   message: 'spec.logout accepts at most one of session, exceptSession, grant, and exceptGrant.'
                 - rule: 'self.type != "RequirePasswordChange" || has(self.user)'
@@ -317,6 +319,23 @@ spec:
                         a browser session of Dex. Every browser session of the user ends, except the one the kept
                         refresh token was issued in, and every other refresh token is revoked. A token issued while
                         the operation runs can survive it. The operation fails if the user has no such refresh token.
+                reset2FA:
+                  type: object
+                  description: |
+                    Narrows a `Reset2FA` down. Without it, `Reset2FA` removes every second factor of the user.
+                  properties:
+                    methods:
+                      type: array
+                      minItems: 1
+                      x-kubernetes-list-type: set
+                      items:
+                        type: string
+                        enum: [TOTP, WebAuthn]
+                      description: |
+                        Second factors to remove: `TOTP`, the secret of the authenticator application, and
+                        `WebAuthn`, the security keys. The other method stays. The user registers a removed method
+                        again at the next sign-in that asks for it. The sessions of the user end whichever methods
+                        are listed.
             status:
               type: object
               properties:

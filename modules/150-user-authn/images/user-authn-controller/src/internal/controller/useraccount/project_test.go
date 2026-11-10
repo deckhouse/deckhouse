@@ -55,7 +55,7 @@ func TestProjectLocalAttemptsLockEmail(t *testing.T) {
 		Groups: []string{"admins"},
 	}
 
-	got := projectLocal(pw, nil, user, now)
+	got := projectLocal(pw, nil, user, nil, now)
 	if got.Status.Email != "jane@example.com" {
 		t.Errorf("email = %q", got.Status.Email)
 	}
@@ -133,7 +133,7 @@ func TestProjectLocalExpiredLockedUntil(t *testing.T) {
 				LockedUntil: &expired,
 				Annotations: tt.annotations,
 			}
-			got := projectLocal(pw, nil, nil, now)
+			got := projectLocal(pw, nil, nil, nil, now)
 			if got.Status.Locked != tt.wantLocked {
 				t.Errorf("locked = %v, want %v", got.Status.Locked, tt.wantLocked)
 			}

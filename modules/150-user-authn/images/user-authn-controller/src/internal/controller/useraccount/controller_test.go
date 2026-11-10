@@ -19,6 +19,7 @@ package useraccount
 import (
 	"context"
 	"encoding/json"
+	"reflect"
 	"slices"
 	"sync/atomic"
 	"testing"
@@ -557,7 +558,6 @@ func TestReconcile_ExternalFromUserIdentity(t *testing.T) {
 				id.SetAdminLock(adminLock)
 			},
 			expectEmail: "bob@example.com", expectLocked: true, expectUntil: &adminLock, expectByAdmin: true,
-			expectTwoFactor: &v1alpha1.UserAccountTwoFactor{},
 		},
 		{
 			name: "dex zero blockedUntil is not a lock",
@@ -655,11 +655,12 @@ func TestReconcile_ExternalFromUserIdentity(t *testing.T) {
 			if tt.expectLastLogin != nil && (s.LastLogin == nil || !s.LastLogin.Equal(&metav1.Time{Time: *tt.expectLastLogin})) {
 				t.Errorf("lastLogin = %v, want %v", s.LastLogin, tt.expectLastLogin)
 			}
-			if tt.expectTwoFactor != nil && (s.TwoFactor == nil || *s.TwoFactor != *tt.expectTwoFactor) {
+			if tt.expectTwoFactor != nil && !reflect.DeepEqual(s.TwoFactor, tt.expectTwoFactor) {
 				t.Errorf("twoFactor = %+v, want %+v", s.TwoFactor, tt.expectTwoFactor)
 			}
-			if tt.identity == nil && s.TwoFactor != nil {
-				t.Errorf("twoFactor = %+v, want none without a UserIdentity", s.TwoFactor)
+			// The second factor covers no OIDC provider: no block, whatever the UserIdentity holds.
+			if tt.expectTwoFactor == nil && s.TwoFactor != nil {
+				t.Errorf("twoFactor = %+v, want none for a type the second factor does not cover", s.TwoFactor)
 			}
 		})
 	}
@@ -696,6 +697,12 @@ func TestReconcile_LocalLockFromUserIdentity(t *testing.T) {
 	}
 }
 
+var (
+	totp = []string{v1alpha1.TwoFactorMethodTOTP}
+	both = []string{v1alpha1.TwoFactorMethodTOTP, v1alpha1.TwoFactorMethodWebAuthn}
+	all  = v1alpha1.TwoFactorRequireAll
+)
+
 func TestReconcile_LocalFromMigratedUserIdentity(t *testing.T) {
 	t.Parallel()
 
@@ -714,14 +721,16 @@ func TestReconcile_LocalFromMigratedUserIdentity(t *testing.T) {
 			name:            "before the copy the Password lock is in force",
 			migrated:        false,
 			expectLocked:    true,
-			expectTwoFactor: v1alpha1.UserAccountTwoFactor{Enrolled: true},
+			expectTwoFactor: v1alpha1.UserAccountTwoFactor{Methods: totp, Enrolled: true, TOTP: &v1alpha1.UserAccountTOTP{}},
 		},
 		{
-			name:            "after the copy the Password lock is history",
-			migrated:        true,
-			totpConfirmed:   true,
-			expectLocked:    false,
-			expectTwoFactor: v1alpha1.UserAccountTwoFactor{Enrolled: true, Confirmed: true},
+			name:          "after the copy the Password lock is history",
+			migrated:      true,
+			totpConfirmed: true,
+			expectLocked:  false,
+			expectTwoFactor: v1alpha1.UserAccountTwoFactor{
+				Methods: totp, Enrolled: true, Confirmed: true, TOTP: &v1alpha1.UserAccountTOTP{Confirmed: true},
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -745,6 +754,7 @@ func TestReconcile_LocalFromMigratedUserIdentity(t *testing.T) {
 				}
 			}
 			r := newTestReconciler(t, now, pw, id.Object())
+			r.twoFactor = TwoFactorPolicy{ProviderTypeLocal: {Methods: totp}}
 			name := naming.LocalName("jane@example.com")
 
 			if _, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: name}}); err != nil {
@@ -765,10 +775,124 @@ func TestReconcile_LocalFromMigratedUserIdentity(t *testing.T) {
 			if s.LastLogin == nil || !s.LastLogin.Equal(&metav1.Time{Time: lastLogin}) {
 				t.Errorf("lastLogin = %v, want %v", s.LastLogin, lastLogin)
 			}
-			if s.TwoFactor == nil || *s.TwoFactor != tt.expectTwoFactor {
+			if s.TwoFactor == nil || !reflect.DeepEqual(*s.TwoFactor, tt.expectTwoFactor) {
 				t.Errorf("twoFactor = %+v, want %+v", s.TwoFactor, tt.expectTwoFactor)
 			}
 		})
+	}
+}
+
+// The second factor of an account shows both kinds: a TOTP secret (confirmed by a code) and WebAuthn credentials
+// (complete at the registration). The identity goes through the strip of the informer cache, as in the controller,
+// and its credentials have the fields Dex writes.
+func TestReconcile_TwoFactorWebAuthn(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
+	key := map[string]any{
+		"credentialID": "AAECAw==", "publicKey": "BAUGBw==", "attestationType": "none", "aaguid": "AAAAAAAAAAAAAAAAAAAAAA==",
+		"signCount": int64(3), "cloneWarning": false, "transport": []any{"usb"}, "backupEligible": false, "backupState": false,
+		"displayName": "yubikey", "createdAt": "2026-08-01T10:00:00Z",
+	}
+
+	tests := []struct {
+		name    string
+		secrets map[string]any
+		keys    map[string]any
+		want    v1alpha1.UserAccountTwoFactor
+	}{
+		{name: "nothing", want: v1alpha1.UserAccountTwoFactor{Methods: both, Require: all}},
+		{
+			name: "one key",
+			keys: map[string]any{"webauthn": []any{key}},
+			want: v1alpha1.UserAccountTwoFactor{Methods: both, Require: all, WebAuthn: &v1alpha1.UserAccountWebAuthn{Credentials: 1}},
+		},
+		{
+			name: "two keys",
+			keys: map[string]any{"webauthn": []any{key, key}},
+			want: v1alpha1.UserAccountTwoFactor{Methods: both, Require: all, WebAuthn: &v1alpha1.UserAccountWebAuthn{Credentials: 2}},
+		},
+		{
+			name:    "a TOTP secret not confirmed and a key",
+			secrets: map[string]any{"totp": map[string]any{"authenticatorID": "totp", "type": "TOTP", "confirmed": false}},
+			keys:    map[string]any{"webauthn": []any{key}},
+			want: v1alpha1.UserAccountTwoFactor{
+				Methods: both, Require: all, Enrolled: true,
+				TOTP: &v1alpha1.UserAccountTOTP{}, WebAuthn: &v1alpha1.UserAccountWebAuthn{Credentials: 1},
+			},
+		},
+		{
+			name:    "a TOTP secret not confirmed and no key",
+			secrets: map[string]any{"totp": map[string]any{"authenticatorID": "totp", "type": "TOTP", "confirmed": false}},
+			want:    v1alpha1.UserAccountTwoFactor{Methods: both, Require: all, TOTP: &v1alpha1.UserAccountTOTP{}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			pw := passwordUnstructured("pw-jane", map[string]any{"email": "jane@example.com", "username": "jane", "userID": "jane"})
+			id := useridentity.New("jane", naming.LocalConnectorID)
+			if tt.secrets != nil {
+				id.Object().Object["mfaSecrets"] = tt.secrets
+			}
+			if tt.keys != nil {
+				id.Object().Object["webauthnCredentials"] = tt.keys
+			}
+			cached, err := controller.StripDexSecrets(id.Object())
+			if err != nil {
+				t.Fatalf("StripDexSecrets: %v", err)
+			}
+			r := newTestReconciler(t, now, pw, cached.(*unstructured.Unstructured))
+			r.twoFactor = TwoFactorPolicy{ProviderTypeLocal: {Methods: both, Require: all}}
+			name := naming.LocalName("jane@example.com")
+
+			if _, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: name}}); err != nil {
+				t.Fatalf("Reconcile: %v", err)
+			}
+
+			var ua v1alpha1.UserAccount
+			if err := r.client.Get(t.Context(), types.NamespacedName{Name: name}, &ua); err != nil {
+				t.Fatalf("get useraccount: %v", err)
+			}
+			if ua.Status.TwoFactor == nil || !reflect.DeepEqual(*ua.Status.TwoFactor, tt.want) {
+				t.Errorf("twoFactor = %+v, want %+v", ua.Status.TwoFactor, tt.want)
+			}
+		})
+	}
+}
+
+// After the local users switch from TOTP to WebAuthn, a confirmed TOTP secret without a key is not an
+// enrollment of what they are asked for: status.twoFactor names WebAuthn, shows the secret, and enrolled stays
+// false.
+func TestReconcile_TwoFactorFollowsTheActiveMethod(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
+	pw := passwordUnstructured("pw-jane", map[string]any{"email": "jane@example.com", "username": "jane", "userID": "jane"})
+	id := useridentity.New("jane", naming.LocalConnectorID)
+	id.Object().Object["mfaSecrets"] = map[string]any{"totp": map[string]any{"authenticatorID": "totp", "type": "TOTP", "confirmed": true}}
+	cached, err := controller.StripDexSecrets(id.Object())
+	if err != nil {
+		t.Fatalf("StripDexSecrets: %v", err)
+	}
+	r := newTestReconciler(t, now, pw, cached.(*unstructured.Unstructured))
+	r.twoFactor = TwoFactorPolicy{ProviderTypeLocal: {Methods: []string{v1alpha1.TwoFactorMethodWebAuthn}}}
+	name := naming.LocalName("jane@example.com")
+
+	if _, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: name}}); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+
+	var ua v1alpha1.UserAccount
+	if err := r.client.Get(t.Context(), types.NamespacedName{Name: name}, &ua); err != nil {
+		t.Fatalf("get useraccount: %v", err)
+	}
+	want := v1alpha1.UserAccountTwoFactor{
+		Methods: []string{v1alpha1.TwoFactorMethodWebAuthn},
+		TOTP:    &v1alpha1.UserAccountTOTP{Confirmed: true},
+	}
+	if ua.Status.TwoFactor == nil || !reflect.DeepEqual(*ua.Status.TwoFactor, want) {
+		t.Errorf("twoFactor = %+v, want %+v", ua.Status.TwoFactor, want)
 	}
 }
 
@@ -958,5 +1082,54 @@ func TestMapDexProviderIncludesUserIdentities(t *testing.T) {
 	reqs := r.mapDexProvider(t.Context(), providerUnstructured("corp-oidc", "OIDC"))
 	if len(reqs) != 1 || reqs[0].Name != naming.ExternalName("corp-oidc", "sub-1") {
 		t.Errorf("requests = %v", reqs)
+	}
+}
+
+// The account of a provider takes the second factors of the type of the provider, and a local account those of
+// Local: an LDAP user asked for a key is not enrolled with a TOTP secret, and the local user is.
+func TestReconcile_TwoFactorOfTheTypeOfTheProvider(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
+	secret := map[string]any{"totp": map[string]any{"authenticatorID": "totp", "type": "TOTP", "confirmed": true}}
+	external := useridentity.New("sub-1", "corp-ldap")
+	external.SetClaims(useridentity.Claims{UserID: "sub-1", Email: "bob@example.com"})
+	external.Object().Object["mfaSecrets"] = secret
+	local := useridentity.New("jane", naming.LocalConnectorID)
+	local.Object().Object["mfaSecrets"] = secret
+	pw := passwordUnstructured("pw-jane", map[string]any{"email": "jane@example.com", "username": "jane", "userID": "jane"})
+
+	r := newTestReconciler(t, now, providerUnstructured("corp-ldap", "LDAP"), external.Object(), pw, local.Object())
+	r.twoFactor = TwoFactorPolicy{
+		ProviderTypeLocal: {Methods: []string{v1alpha1.TwoFactorMethodTOTP}},
+		"LDAP":            {Methods: []string{v1alpha1.TwoFactorMethodWebAuthn}},
+	}
+	confirmedSecret := &v1alpha1.UserAccountTOTP{Confirmed: true}
+
+	for _, tc := range []struct {
+		name string
+		want v1alpha1.UserAccountTwoFactor
+	}{
+		{
+			name: naming.ExternalName("corp-ldap", "sub-1"),
+			want: v1alpha1.UserAccountTwoFactor{Methods: []string{v1alpha1.TwoFactorMethodWebAuthn}, TOTP: confirmedSecret},
+		},
+		{
+			name: naming.LocalName("jane@example.com"),
+			want: v1alpha1.UserAccountTwoFactor{
+				Methods: []string{v1alpha1.TwoFactorMethodTOTP}, Enrolled: true, Confirmed: true, TOTP: confirmedSecret,
+			},
+		},
+	} {
+		if _, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: tc.name}}); err != nil {
+			t.Fatalf("Reconcile %s: %v", tc.name, err)
+		}
+		var ua v1alpha1.UserAccount
+		if err := r.client.Get(t.Context(), types.NamespacedName{Name: tc.name}, &ua); err != nil {
+			t.Fatalf("get useraccount %s: %v", tc.name, err)
+		}
+		if ua.Status.TwoFactor == nil || !reflect.DeepEqual(*ua.Status.TwoFactor, tc.want) {
+			t.Errorf("%s: twoFactor = %+v, want %+v", tc.name, ua.Status.TwoFactor, tc.want)
+		}
 	}
 }

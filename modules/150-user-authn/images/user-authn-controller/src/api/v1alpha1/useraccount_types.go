@@ -35,6 +35,12 @@ const (
 	// browser: kubeconfig, device flow, an application of its own, basic authentication.
 	SessionKindGrant = "Grant"
 
+	// TwoFactorMethodTOTP and TwoFactorMethodWebAuthn are the second factors of UserAccountTwoFactor.Methods.
+	TwoFactorMethodTOTP     = "TOTP"
+	TwoFactorMethodWebAuthn = "WebAuthn"
+	// TwoFactorRequireAll is UserAccountTwoFactor.Require when the user passes both methods.
+	TwoFactorRequireAll = "All"
+
 	// MaxSessions bounds UserAccount.status.sessions; the most recently active are listed.
 	MaxSessions = 50
 )
@@ -43,13 +49,36 @@ const (
 // Password, OfflineSessions, and UserIdentity; there is no user-editable specification.
 type UserAccountSpec struct{}
 
-// UserAccountTwoFactor is the second factor (TOTP) Dex keeps for the account, without secrets.
+// UserAccountTwoFactor is the second factor Dex keeps for the account, without secrets: what the settings ask
+// the users of its type of provider for, whether the account has it, and each method the account has.
 type UserAccountTwoFactor struct {
-	// Enrolled tells whether Dex holds a TOTP secret for the account.
+	// Methods are the second factors the settings ask the users of the type of provider of the account for.
+	// Empty when the second factor does not cover the type, or the controller was not told the settings.
+	Methods []string `json:"methods,omitempty"`
+	// Require is how the two Methods combine (TwoFactorRequireAll); empty with one.
+	Require string `json:"require,omitempty"`
+	// Enrolled tells whether the account has what Methods and Require ask for: a TOTP secret, at least one
+	// WebAuthn credential, or both. Without Methods, whether it has either.
 	Enrolled bool `json:"enrolled"`
-	// Confirmed tells whether the user entered a code for the secret; until then a sign-in shows
-	// the QR code again.
+	// Confirmed is Enrolled with the TOTP secret confirmed by a code; until then a sign-in shows the QR code
+	// again. A WebAuthn credential is complete at the registration.
 	Confirmed bool `json:"confirmed"`
+	// TOTP is the TOTP secret of the account; nil when there is none.
+	TOTP *UserAccountTOTP `json:"totp,omitempty"`
+	// WebAuthn are the WebAuthn credentials (security keys) of the account; nil when there is none.
+	WebAuthn *UserAccountWebAuthn `json:"webAuthn,omitempty"`
+}
+
+// UserAccountTOTP is the TOTP secret of an account, without the secret.
+type UserAccountTOTP struct {
+	// Confirmed tells whether the user entered a code for the secret.
+	Confirmed bool `json:"confirmed"`
+}
+
+// UserAccountWebAuthn are the WebAuthn credentials of an account, without the keys.
+type UserAccountWebAuthn struct {
+	// Credentials is the number of the credentials, over every authenticator.
+	Credentials int `json:"credentials"`
 }
 
 // UserAccountStatus is the observed account state projected from Dex.

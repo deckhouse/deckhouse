@@ -1,5 +1,5 @@
 diff --git a/cmd/dex/config.go b/cmd/dex/config.go
-index cf66caa0..bee3d5bd 100644
+index cf66caa0..fcda65c6 100644
 --- a/cmd/dex/config.go
 +++ b/cmd/dex/config.go
 @@ -154,9 +154,8 @@ func (c Config) validateMFA() error {
@@ -14,11 +14,25 @@ index cf66caa0..bee3d5bd 100644
  
  	knownTypes := map[string]bool{"TOTP": true, "WebAuthn": true}
  	ids := make(map[string]bool, len(mfa.Authenticators))
+@@ -173,6 +172,13 @@ func (c Config) validateMFA() error {
+ 		if !knownTypes[auth.Type] {
+ 			return fmt.Errorf("mfa.authenticators: unknown type %q for authenticator %q", auth.Type, auth.ID)
+ 		}
++		// A connector type that Dex does not know binds the authenticator to no connector, and the users of the type
++		// meant (a typo such as "crowd" for "atlassian-crowd") would sign in without it (Deckhouse).
++		for _, connectorType := range auth.ConnectorTypes {
++			if _, ok := server.ConnectorsConfig[connectorType]; !ok && connectorType != connectors.LocalConnector {
++				return fmt.Errorf("mfa.authenticators: authenticator %q names the unknown connector type %q", auth.ID, connectorType)
++			}
++		}
+ 	}
+ 
+ 	for _, authID := range mfa.DefaultMFAChain {
 diff --git a/cmd/dex/config_test.go b/cmd/dex/config_test.go
-index 7d756623..8036610c 100644
+index 7d756623..e831d381 100644
 --- a/cmd/dex/config_test.go
 +++ b/cmd/dex/config_test.go
-@@ -750,3 +750,15 @@ enablePasswordDB: true
+@@ -750,3 +750,40 @@ enablePasswordDB: true
  		})
  	}
  }
@@ -34,6 +48,219 @@ index 7d756623..8036610c 100644
 +	}}
 +	require.NoError(t, c.validateMFA())
 +}
++
++// An authenticator bound to a connector type Dex does not know would ask nobody, and the users of the type meant would
++// sign in without it (Deckhouse).
++func TestValidateMFARefusesAnUnknownConnectorType(t *testing.T) {
++	for _, tc := range []struct {
++		types   []string
++		wantErr bool
++	}{
++		{types: []string{"local", "ldap", "atlassian-crowd"}},
++		{types: nil},
++		{types: []string{"crowd"}, wantErr: true},
++		{types: []string{"local", "LDAP"}, wantErr: true},
++	} {
++		c := Config{MFA: MFAConfig{
++			Authenticators:  []MFAAuthenticator{{ID: "totp", Type: "TOTP", ConnectorTypes: tc.types}},
++			DefaultMFAChain: []string{"totp"},
++		}}
++		err := c.validateMFA()
++		if tc.wantErr {
++			require.ErrorContains(t, err, "unknown connector type", "%v", tc.types)
++		} else {
++			require.NoError(t, err, "%v", tc.types)
++		}
++	}
++}
+diff --git a/cmd/dex/serve.go b/cmd/dex/serve.go
+index 271a9047..3a047e9d 100644
+--- a/cmd/dex/serve.go
++++ b/cmd/dex/serve.go
+@@ -370,6 +370,13 @@ func runServe(options serveOptions) error {
+ 		return fmt.Errorf("unknown signer type %q", c.Signer.Type)
+ 	}
+ 
++	// An authenticator that cannot be built stops the start. Dex used to log it and go on without the
++	// authenticator, and a login that asked for it then passed with no second factor.
++	mfaProviders, err := buildMFAProviders(c.MFA.Authenticators, c.Issuer, logger)
++	if err != nil {
++		return fmt.Errorf("invalid config: %v", err)
++	}
++
+ 	serverConfig := server.Config{
+ 		AllowedGrantTypes:      c.OAuth2.GrantTypes,
+ 		SupportedResponseTypes: c.OAuth2.ResponseTypes,
+@@ -393,7 +400,7 @@ func runServe(options serveOptions) error {
+ 		ContinueOnConnectorFailure: featureflags.ContinueOnConnectorFailure.Enabled(),
+ 		Signer:                     signerInstance,
+ 		IDTokensValidFor:           idTokensValidFor,
+-		MFAProviders:               buildMFAProviders(c.MFA.Authenticators, c.Issuer, logger),
++		MFAProviders:               mfaProviders,
+ 		DefaultMFAChain:            c.MFA.DefaultMFAChain,
+ 	}
+ 
+@@ -920,9 +927,9 @@ func parseSessionConfig(s *Sessions) (*session.Config, error) {
+ 	return sc, nil
+ }
+ 
+-func buildMFAProviders(authenticators []MFAAuthenticator, issuerURL string, logger *slog.Logger) map[string]mfa.Provider {
++func buildMFAProviders(authenticators []MFAAuthenticator, issuerURL string, logger *slog.Logger) (map[string]mfa.Provider, error) {
+ 	if len(authenticators) == 0 {
+-		return nil
++		return nil, nil
+ 	}
+ 
+ 	providers := make(map[string]mfa.Provider, len(authenticators))
+@@ -931,28 +938,24 @@ func buildMFAProviders(authenticators []MFAAuthenticator, issuerURL string, logg
+ 		case "TOTP":
+ 			var cfg TOTPConfig
+ 			if err := json.Unmarshal(auth.Config, &cfg); err != nil {
+-				logger.Error("failed to parse TOTP config", "id", auth.ID, "err", err)
+-				continue
++				return nil, fmt.Errorf("mfa.authenticators: parse the TOTP config of %q: %v", auth.ID, err)
+ 			}
+ 			providers[auth.ID] = mfa.NewTOTPProvider(cfg.Issuer, auth.ConnectorTypes)
+-			logger.Info("MFA authenticator configured", "id", auth.ID, "type", auth.Type)
+ 		case "WebAuthn":
+ 			var cfg WebAuthnConfig
+ 			if err := json.Unmarshal(auth.Config, &cfg); err != nil {
+-				logger.Error("failed to parse WebAuthn config", "id", auth.ID, "err", err)
+-				continue
++				return nil, fmt.Errorf("mfa.authenticators: parse the WebAuthn config of %q: %v", auth.ID, err)
+ 			}
+ 			provider, err := mfa.NewWebAuthnProvider(cfg.RPDisplayName, cfg.RPID, cfg.RPOrigins,
+ 				cfg.AttestationPreference, cfg.Timeout, issuerURL, auth.ConnectorTypes)
+ 			if err != nil {
+-				logger.Error("failed to create WebAuthn provider", "id", auth.ID, "err", err)
+-				continue
++				return nil, fmt.Errorf("mfa.authenticators: create the WebAuthn authenticator %q: %v", auth.ID, err)
+ 			}
+ 			providers[auth.ID] = provider
+-			logger.Info("MFA authenticator configured", "id", auth.ID, "type", auth.Type)
+ 		default:
+-			logger.Error("unknown MFA authenticator type, skipping", "id", auth.ID, "type", auth.Type)
++			return nil, fmt.Errorf("mfa.authenticators: unknown type %q of %q", auth.Type, auth.ID)
+ 		}
++		logger.Info("MFA authenticator configured", "id", auth.ID, "type", auth.Type)
+ 	}
+-	return providers
++	return providers, nil
+ }
+diff --git a/cmd/dex/serve_test.go b/cmd/dex/serve_test.go
+index 1e7aa846..af972a6c 100644
+--- a/cmd/dex/serve_test.go
++++ b/cmd/dex/serve_test.go
+@@ -2,6 +2,7 @@ package main
+ 
+ import (
+ 	"crypto/tls"
++	"encoding/json"
+ 	"log/slog"
+ 	"strings"
+ 	"testing"
+@@ -218,3 +219,82 @@ func TestParseCipherSuites(t *testing.T) {
+ 		})
+ 	}
+ }
++
++func TestBuildMFAProviders(t *testing.T) {
++	logger := slog.New(slog.DiscardHandler)
++	const issuer = "https://dex.example.com"
++
++	tests := []struct {
++		name           string
++		authenticators []MFAAuthenticator
++		wantIDs        []string
++		wantErr        string
++	}{
++		{
++			name: "no authenticators",
++		},
++		{
++			name: "TOTP and WebAuthn",
++			authenticators: []MFAAuthenticator{
++				{ID: "totp", Type: "TOTP", Config: json.RawMessage(`{"issuer":"Dex"}`), ConnectorTypes: []string{"local"}},
++				{ID: "webauthn", Type: "WebAuthn", Config: json.RawMessage(`{"rpID":"example.com","attestationPreference":"none","timeout":"90s"}`), ConnectorTypes: []string{"ldap"}},
++			},
++			wantIDs: []string{"totp", "webauthn"},
++		},
++		{
++			name: "a WebAuthn timeout that is no duration",
++			authenticators: []MFAAuthenticator{
++				{ID: "webauthn", Type: "WebAuthn", Config: json.RawMessage(`{"timeout":"soon"}`)},
++			},
++			wantErr: `create the WebAuthn authenticator "webauthn"`,
++		},
++		{
++			name: "a WebAuthn config that is no object",
++			authenticators: []MFAAuthenticator{
++				{ID: "webauthn", Type: "WebAuthn", Config: json.RawMessage(`"rpID"`)},
++			},
++			wantErr: `parse the WebAuthn config of "webauthn"`,
++		},
++		{
++			name: "a TOTP config that is no object",
++			authenticators: []MFAAuthenticator{
++				{ID: "totp", Type: "TOTP", Config: json.RawMessage(`[]`)},
++			},
++			wantErr: `parse the TOTP config of "totp"`,
++		},
++		{
++			name: "an unknown type",
++			authenticators: []MFAAuthenticator{
++				{ID: "sms", Type: "SMS", Config: json.RawMessage(`{}`)},
++			},
++			wantErr: `unknown type "SMS" of "sms"`,
++		},
++		{
++			// One bad authenticator stops the start even when a good one comes first: a login that asked for
++			// the bad one would otherwise pass without it.
++			name: "a bad authenticator after a good one",
++			authenticators: []MFAAuthenticator{
++				{ID: "totp", Type: "TOTP", Config: json.RawMessage(`{"issuer":"Dex"}`)},
++				{ID: "webauthn", Type: "WebAuthn", Config: json.RawMessage(`{"timeout":"soon"}`)},
++			},
++			wantErr: `"webauthn"`,
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			providers, err := buildMFAProviders(tt.authenticators, issuer, logger)
++			if tt.wantErr != "" {
++				require.ErrorContains(t, err, tt.wantErr)
++				require.Nil(t, providers)
++				return
++			}
++			require.NoError(t, err)
++			ids := make([]string, 0, len(providers))
++			for id := range providers {
++				ids = append(ids, id)
++			}
++			require.ElementsMatch(t, tt.wantIDs, ids)
++		})
++	}
++}
+diff --git a/server/authflow/allowlist.go b/server/authflow/allowlist.go
+index 9b80788a..2e258b9b 100644
+--- a/server/authflow/allowlist.go
++++ b/server/authflow/allowlist.go
+@@ -39,8 +39,13 @@ func (h *Handler) checkAllowLists(ctx context.Context, clientID, connectorID str
+ 
+ // renderNotAllowed renders the page of a login that an allow-list refused and
+ // reports whether err is such a refusal. The page does not say which list
+-// refused the user.
++// refused the user. The login of a user into an auth request another user has
++// signed in is refused here too (Deckhouse).
+ func (h *Handler) renderNotAllowed(r *http.Request, w http.ResponseWriter, err error) bool {
++	if errors.Is(err, errLoginOfAnotherUser) {
++		h.renderError(r, w, http.StatusBadRequest, ErrMsgLoginOfAnotherUser)
++		return true
++	}
+ 	var notAllowed *allowlist.NotAllowedError
+ 	if !errors.As(err, &notAllowed) {
+ 		return false
 diff --git a/server/authflow/dispatch.go b/server/authflow/dispatch.go
 index 02d81d86..6216acb8 100644
 --- a/server/authflow/dispatch.go
@@ -133,10 +360,10 @@ index 00000000..e0813f6f
 +	require.Equal(t, authTime.Add(time.Second), lastLogin(), "LastLogin never moves back")
 +}
 diff --git a/server/authflow/finalize.go b/server/authflow/finalize.go
-index 9029116e..efa37e77 100644
+index 9029116e..1f776ed9 100644
 --- a/server/authflow/finalize.go
 +++ b/server/authflow/finalize.go
-@@ -8,33 +8,16 @@ import (
+@@ -8,33 +8,37 @@ import (
  	"context"
  	"errors"
  	"fmt"
@@ -148,6 +375,22 @@ index 9029116e..efa37e77 100644
  	"github.com/dexidp/dex/storage"
  )
  
++// errLoginOfAnotherUser refuses the login of a user into an auth request that
++// another user has signed in: the request keeps what the login of that user has
++// passed, its second factor first, and a code issued from it would carry them
++// over to the other user (Deckhouse).
++var errLoginOfAnotherUser = errors.New("the auth request is signed in by another user")
++
++// ErrMsgLoginOfAnotherUser is the refusal of such a login.
++const ErrMsgLoginOfAnotherUser = "This sign-in is already done for another account. Start the sign-in again."
++
++// loginOfAnotherUser reports whether authReq is signed in by a user other than
++// userID. The same user signing in again (a second click, the back button of the
++// browser) goes on.
++func loginOfAnotherUser(authReq storage.AuthRequest, userID string) bool {
++	return authReq.LoggedIn && authReq.Claims.UserID != userID
++}
++
  // finalizeLogin associates the user's identity with the current AuthRequest, then returns
  // the approval page's path.
  func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity, authReq storage.AuthRequest, conn connector.Connector) (storage.AuthRequest, error) {
@@ -166,12 +409,16 @@ index 9029116e..efa37e77 100644
 -		case !errors.Is(err, storage.ErrNotFound):
 -			return storage.AuthRequest{}, fmt.Errorf("failed to look up user identity: %w", err)
 -		}
--	}
++	if loginOfAnotherUser(authReq, identity.UserID) {
++		h.Logger.WarnContext(ctx, "login refused: the auth request is signed in by another user",
++			"connector_id", authReq.ConnectorID, "client_id", authReq.ClientID, "user_id", identity.UserID)
++		return storage.AuthRequest{}, errLoginOfAnotherUser
+ 	}
 -
  	claims := storage.Claims{
  		UserID:            identity.UserID,
  		Username:          identity.Username,
-@@ -43,6 +26,7 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
+@@ -43,6 +47,7 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
  		EmailVerified:     identity.EmailVerified,
  		Groups:            identity.Groups,
  	}
@@ -179,7 +426,7 @@ index 9029116e..efa37e77 100644
  
  	// The allow-lists of the client and the connector decide whether the user
  	// may sign in here at all, so a refused login records nothing. The request
-@@ -52,11 +36,33 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
+@@ -52,15 +57,42 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
  		return storage.AuthRequest{}, err
  	}
  
@@ -206,6 +453,11 @@ index 9029116e..efa37e77 100644
 +	}
 +
  	updater := func(a storage.AuthRequest) (storage.AuthRequest, error) {
++		// A parallel login of another user may have signed the request in since
++		// it was read.
++		if loginOfAnotherUser(a, issued.UserID) {
++			return a, errLoginOfAnotherUser
++		}
  		a.LoggedIn = true
  		a.Claims = issued
  		a.ConnectorData = identity.ConnectorData
@@ -214,7 +466,12 @@ index 9029116e..efa37e77 100644
  		return a, nil
  	}
  	if err := h.Storage.UpdateAuthRequest(ctx, authReq.ID, updater); err != nil {
-@@ -121,40 +127,6 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
+-		return storage.AuthRequest{}, fmt.Errorf("failed to update auth request: %v", err)
++		return storage.AuthRequest{}, fmt.Errorf("failed to update auth request: %w", err)
+ 	}
+ 	// Keep the in-memory copy in sync with what was persisted so later reads
+ 	// (the next-step decision below) see the identity we just stored.
+@@ -121,40 +153,6 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
  		}
  	}
  
@@ -340,6 +597,26 @@ index 6a06ea46..a78e8be9 100644
 +	require.Equal(t, "user@example.com", ui.Claims.Email)
 +	require.True(t, ui.LastLogin.IsZero())
 +}
+diff --git a/server/authflow/password.go b/server/authflow/password.go
+index 8a00f7fa..a69525b2 100644
+--- a/server/authflow/password.go
++++ b/server/authflow/password.go
+@@ -116,6 +116,15 @@ func (h *Handler) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+ 			h.Logger.ErrorContext(r.Context(), "failed login attempt: Invalid credentials.", "user", username)
+ 			return
+ 		}
++		// Refused early on the request read above (Deckhouse, see
++		// loginOfAnotherUser); every write of this login into the request checks
++		// again on what is stored.
++		if loginOfAnotherUser(authReq, identity.UserID) {
++			h.Logger.WarnContext(r.Context(), "login refused: the auth request is signed in by another user",
++				"connector_id", authReq.ConnectorID, "client_id", authReq.ClientID, "user_id", identity.UserID)
++			h.renderError(r, w, http.StatusBadRequest, ErrMsgLoginOfAnotherUser)
++			return
++		}
+ 		authReq, err = h.finalizeLogin(r.Context(), identity, authReq, conn.Connector)
+ 		if err != nil {
+ 			if h.renderNotAllowed(r, w, err) {
 diff --git a/server/authflow/sessionlogin.go b/server/authflow/sessionlogin.go
 index bd0200a7..eca470fd 100644
 --- a/server/authflow/sessionlogin.go
@@ -755,6 +1032,981 @@ index 00000000..b9cc60b4
 +	t.Cleanup(func() { s.Close() })
 +	return s
 +}
+diff --git a/server/mfa/handler.go b/server/mfa/handler.go
+index bd397e79..a8b319bc 100644
+--- a/server/mfa/handler.go
++++ b/server/mfa/handler.go
+@@ -125,13 +125,39 @@ func (h *Handler) chainForClient(ctx context.Context, clientID, connectorID stri
+ 	var chain []string
+ 	for _, authID := range source {
+ 		provider, ok := h.MFAProviders[authID]
+-		if ok && provider.EnabledForConnectorType(connectorType) {
++		if !ok {
++			// Skipping an authenticator Dex does not have would empty the chain and let the user in without the
++			// second factor (Deckhouse): the configuration checks the chains it knows, and a client from the storage
++			// may name anything, so the login stops instead.
++			return nil, unknownAuthenticatorError{clientID: clientID, authenticatorID: authID}
++		}
++		if provider.EnabledForConnectorType(connectorType) {
+ 			chain = append(chain, authID)
+ 		}
+ 	}
+ 	return chain, nil
+ }
+ 
++// unknownAuthenticatorError is the refusal of a chain that names an authenticator Dex does not have (Deckhouse).
++// chainForClient returns it unwrapped, so handleMFA can tell it from a storage error.
++type unknownAuthenticatorError struct {
++	clientID        string
++	authenticatorID string
++}
++
++func (e unknownAuthenticatorError) Error() string {
++	return fmt.Sprintf("the MFA chain of client %q names the unknown authenticator %q", e.clientID, e.authenticatorID)
++}
++
++// misconfiguredSignIn is what the user sees when the chain of the client names an unknown authenticator: the
++// cause is the configuration of the client, not the storage, and only an administrator can fix it (Deckhouse).
++const misconfiguredSignIn = "The second factor of this application is misconfigured. Contact your administrator."
++
++// renderMisconfigured renders the page of a chain that names an unknown authenticator with 500.
++func (h *Handler) renderMisconfigured(r *http.Request, w http.ResponseWriter) {
++	h.renderError(r, w, http.StatusInternalServerError, misconfiguredSignIn)
++}
++
+ // getConnectorType returns the type of the connector with the given ID.
+ func (h *Handler) getConnectorType(ctx context.Context, connectorID string) (string, error) {
+ 	conn, err := h.Connectors.Get(ctx, connectorID)
+@@ -159,16 +185,18 @@ func (h *Handler) CompleteStep(ctx context.Context, authReq storage.AuthRequest,
+ 		return "", fmt.Errorf("get MFA chain: %w", err)
+ 	}
+ 
+-	// Find the next authenticator in the chain after the current one.
+-	var nextAuthenticator string
+-	for i, id := range mfaChain {
+-		if id == authenticatorID && i+1 < len(mfaChain) {
+-			nextAuthenticator = mfaChain[i+1]
+-			break
+-		}
++	// The next authenticator is the first of the chain, in the order for the user, the login has not passed
++	// (Deckhouse, see order.go). Upstream took the one after the current in the order of the chain.
++	passed, err := h.recordPassed(ctx, authReq.ID, authenticatorID)
++	if err != nil {
++		return "", fmt.Errorf("update auth request: %w", err)
++	}
++	identity, err := h.loadIdentity(ctx, authReq)
++	if err != nil {
++		return "", fmt.Errorf("get user identity: %w", err)
+ 	}
+ 
+-	if nextAuthenticator != "" {
++	if nextAuthenticator := h.nextFactor(identity, mfaChain, passed); nextAuthenticator != "" {
+ 		return h.buildRedirectURL(authReq, nextAuthenticator), nil
+ 	}
+ 
+@@ -221,6 +249,10 @@ func (h *Handler) handleMFA(w http.ResponseWriter, r *http.Request) {
+ 	chain, err := h.chainForClient(ctx, authReq.ClientID, authReq.ConnectorID)
+ 	if err != nil {
+ 		h.Logger.ErrorContext(ctx, "failed to determine MFA chain", "err", err)
++		if _, ok := err.(unknownAuthenticatorError); ok { //nolint:errorlint // returned unwrapped, see the type
++			h.renderMisconfigured(r, w)
++			return
++		}
+ 		h.renderError(r, w, http.StatusInternalServerError, "Database error.")
+ 		return
+ 	}
+@@ -235,7 +267,19 @@ func (h *Handler) handleMFA(w http.ResponseWriter, r *http.Request) {
+ 		http.Redirect(w, r, h.buildContinueURL(authReq), http.StatusSeeOther)
+ 		return
+ 	}
+-	http.Redirect(w, r, h.buildRedirectURL(authReq, chain[0]), http.StatusSeeOther)
++
++	// The first factor the login has not passed, the ones the user has first (Deckhouse, see order.go).
++	identity, err := h.loadIdentity(ctx, authReq)
++	if err != nil {
++		h.Logger.ErrorContext(ctx, "failed to get user identity", "err", err)
++		h.renderError(r, w, http.StatusInternalServerError, "Database error.")
++		return
++	}
++	next := h.nextFactor(identity, chain, readWebAuthnState(authReq.WebAuthnSessionData).passedBy(authReq))
++	if next == "" {
++		next = h.orderForIdentity(identity, chain)[0]
++	}
++	http.Redirect(w, r, h.buildRedirectURL(authReq, next), http.StatusSeeOther)
+ }
+ 
+ // buildRedirectURL builds an HMAC-protected redirect URL for the given authenticator.
+diff --git a/server/mfa/handler_test.go b/server/mfa/handler_test.go
+index b9b91313..03e52b9a 100644
+--- a/server/mfa/handler_test.go
++++ b/server/mfa/handler_test.go
+@@ -184,3 +184,30 @@ func TestMFAEntry(t *testing.T) {
+ 		require.True(t, updated.MFAValidated, "MFA must be marked satisfied so the dispatcher does not loop back to /mfa")
+ 	})
+ }
++
++// A client whose chain names an authenticator Dex does not have (an OAuth2Client written by hand with mfaChain
++// ["webauthn"] while only TOTP is configured) must not sign in without the second factor: the login stops (Deckhouse).
++func TestMFAEntryRefusesAChainWithAnUnknownAuthenticator(t *testing.T) {
++	ctx := t.Context()
++	_, router, store := newTestHandler(t, map[string]Provider{"totp": NewTOTPProvider("test-issuer", nil)}, nil)
++
++	authReq := storage.AuthRequest{
++		ID: "mfa-unknown-req", ClientID: "app", Expiry: time.Now().Add(time.Hour),
++		HMACKey: randomHMACKey(t), LoggedIn: true,
++		Claims:      storage.Claims{UserID: "user-1", Email: "user@example.com"},
++		ConnectorID: "mock",
++	}
++	require.NoError(t, store.CreateAuthRequest(ctx, authReq))
++	require.NoError(t, store.CreateClient(ctx, storage.Client{ID: "app", Secret: "s", MFAChain: []string{"webauthn"}}))
++
++	w := httptest.NewRecorder()
++	router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/mfa?req="+authReq.ID+"&hmac="+internal.SignStep(authReq, internal.StepMFA), nil))
++
++	require.Equal(t, http.StatusInternalServerError, w.Code)
++	// The page names the cause the user can report, the configuration, not the storage.
++	require.Contains(t, w.Body.String(), misconfiguredSignIn)
++	require.NotContains(t, w.Body.String(), "Database error.")
++	updated, err := store.GetAuthRequest(ctx, authReq.ID)
++	require.NoError(t, err)
++	require.False(t, updated.MFAValidated, "a chain with an unknown authenticator must not count as passed")
++}
+diff --git a/server/mfa/order.go b/server/mfa/order.go
+new file mode 100644
+index 00000000..6fbeafa8
+--- /dev/null
++++ b/server/mfa/order.go
+@@ -0,0 +1,195 @@
++package mfa
++
++// The order of the factors of a login (Deckhouse). A login whose chain asks for every factor passes first the
++// factors the user has, in the order of the chain, and registers the missing ones after them, in the order of the
++// chain too. Upstream sent every login to the first factor of the chain, so a user who had only a key registered a
++// code with the password alone, before the key was asked for. A user who has every factor, or none, passes the
++// chain in its order, as upstream.
++//
++// The factors passed in the login are kept in the auth request, and a factor that the user does not have yet is
++// registered only after every factor the user has is passed in the login, whatever address the request comes to.
++
++import (
++	"context"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"net/http"
++	"slices"
++
++	"github.com/go-webauthn/webauthn/webauthn"
++
++	"github.com/dexidp/dex/server/internal"
++	"github.com/dexidp/dex/storage"
++)
++
++// webAuthnState is what an auth request keeps of the second factor: the WebAuthn ceremony in progress and the
++// authenticators passed in the login. It is stored in WebAuthnSessionData with the session embedded, so the data of
++// an earlier dex reads the same.
++type webAuthnState struct {
++	webauthn.SessionData
++	Passed []string `json:"deckhousePassed,omitempty"`
++	// PassedUserID and PassedConnectorID are the user the factors of Passed belong to.
++	PassedUserID      string `json:"deckhousePassedUserID,omitempty"`
++	PassedConnectorID string `json:"deckhousePassedConnectorID,omitempty"`
++}
++
++func readWebAuthnState(data []byte) webAuthnState {
++	var state webAuthnState
++	_ = json.Unmarshal(data, &state) // no data, or data that does not parse, is no state
++	return state
++}
++
++// passedBy returns the authenticators the user of authReq passed in the login. The passes recorded for another user,
++// who signed the request in before, count for nothing: a factor of one user never stands for a factor of another.
++func (s webAuthnState) passedBy(authReq storage.AuthRequest) []string {
++	if s.PassedUserID != authReq.Claims.UserID || s.PassedConnectorID != authReq.ConnectorID {
++		return nil
++	}
++	return s.Passed
++}
++
++// errNotPassedYet is returned from an UpdateUserIdentity closure when the identity got a factor the login has not
++// passed after the request had loaded it.
++var errNotPassedYet = errors.New("a factor of the user is not passed in the login")
++
++// notPassedYetMsg is the answer of the WebAuthn API to a registration before the factors the user has.
++const notPassedYetMsg = "Confirm the sign-in with the second factor you have first."
++
++// hasFactor reports whether the user has the authenticator: a TOTP secret confirmed by a code, or at least one
++// WebAuthn credential. A TOTP secret not confirmed yet is missing.
++func (h *Handler) hasFactor(identity storage.UserIdentity, authenticatorID string) bool {
++	provider, ok := h.MFAProviders[authenticatorID]
++	if !ok {
++		return false
++	}
++	switch provider.Type() {
++	case "TOTP":
++		secret := identity.MFASecrets[authenticatorID]
++		return secret != nil && secret.Confirmed
++	case "WebAuthn":
++		return webAuthnRegistered(identity, authenticatorID)
++	default:
++		return false
++	}
++}
++
++// orderForIdentity returns chain with the authenticators the user has first and the missing ones after them.
++func (h *Handler) orderForIdentity(identity storage.UserIdentity, chain []string) []string {
++	ordered := make([]string, 0, len(chain))
++	for _, id := range chain {
++		if h.hasFactor(identity, id) {
++			ordered = append(ordered, id)
++		}
++	}
++	for _, id := range chain {
++		if !h.hasFactor(identity, id) {
++			ordered = append(ordered, id)
++		}
++	}
++	return ordered
++}
++
++// nextFactor returns the first authenticator of the ordered chain the login has not passed, empty when it passed
++// every one.
++func (h *Handler) nextFactor(identity storage.UserIdentity, chain, passed []string) string {
++	for _, id := range h.orderForIdentity(identity, chain) {
++		if !slices.Contains(passed, id) {
++			return id
++		}
++	}
++	return ""
++}
++
++// mayRegister reports whether the login may register authenticatorID: it has passed every other authenticator of
++// the chain the user has.
++func (h *Handler) mayRegister(identity storage.UserIdentity, chain, passed []string, authenticatorID string) bool {
++	for _, id := range chain {
++		if id != authenticatorID && h.hasFactor(identity, id) && !slices.Contains(passed, id) {
++			return false
++		}
++	}
++	return true
++}
++
++// loadIdentity returns the identity of the login; a login without one has no factor.
++func (h *Handler) loadIdentity(ctx context.Context, authReq storage.AuthRequest) (storage.UserIdentity, error) {
++	identity, err := h.Storage.GetUserIdentity(ctx, authReq.Claims.UserID, authReq.ConnectorID)
++	if err != nil && !errors.Is(err, storage.ErrNotFound) {
++		return storage.UserIdentity{}, err
++	}
++	return identity, nil
++}
++
++// registration is what a request that registers a factor checks against: the chain of the login and the
++// authenticators it passed. The auth request is read again, so the passes are current.
++type registration struct {
++	h               *Handler
++	chain, passed   []string
++	authenticatorID string
++}
++
++func (h *Handler) registration(ctx context.Context, authReq storage.AuthRequest, authenticatorID string) (registration, error) {
++	chain, err := h.chainForClient(ctx, authReq.ClientID, authReq.ConnectorID)
++	if err != nil {
++		return registration{}, err
++	}
++	current, err := h.Storage.GetAuthRequest(ctx, authReq.ID)
++	if err != nil {
++		return registration{}, err
++	}
++	return registration{
++		h:               h,
++		chain:           chain,
++		passed:          readWebAuthnState(current.WebAuthnSessionData).passedBy(current),
++		authenticatorID: authenticatorID,
++	}, nil
++}
++
++// allowed reports whether the login may register the factor for the user it was loaded for, or stored since.
++func (g registration) allowed(identity storage.UserIdentity) bool {
++	return g.h.mayRegister(identity, g.chain, g.passed, g.authenticatorID)
++}
++
++// webAuthnRegistration resolves the registration of a WebAuthn API request, answering the request itself when it
++// cannot.
++func (h *Handler) webAuthnRegistration(w http.ResponseWriter, r *http.Request, mfa *mfaRequestContext) (registration, bool) {
++	gate, err := h.registration(r.Context(), mfa.authReq, mfa.authenticatorID)
++	if err != nil {
++		h.Logger.ErrorContext(r.Context(), "failed to determine MFA chain", "err", err)
++		writeJSONError(w, http.StatusInternalServerError, "Internal server error.")
++		return registration{}, false
++	}
++	return gate, true
++}
++
++// recordPassed adds the authenticator to the ones the user of the login passed and returns them.
++func (h *Handler) recordPassed(ctx context.Context, authReqID, authenticatorID string) ([]string, error) {
++	var passed []string
++	err := h.Storage.UpdateAuthRequest(ctx, authReqID, func(old storage.AuthRequest) (storage.AuthRequest, error) {
++		state := readWebAuthnState(old.WebAuthnSessionData)
++		state.Passed = state.passedBy(old)
++		if !slices.Contains(state.Passed, authenticatorID) {
++			state.Passed = append(state.Passed, authenticatorID)
++		}
++		state.PassedUserID, state.PassedConnectorID = old.Claims.UserID, old.ConnectorID
++		data, err := json.Marshal(state)
++		if err != nil {
++			return old, fmt.Errorf("marshal state: %w", err)
++		}
++		old.WebAuthnSessionData = data
++		passed = state.Passed
++		return old, nil
++	})
++	return passed, err
++}
++
++// entryURL is the signed address of the MFA entry, which sends the login to its next factor.
++func (h *Handler) entryURL(authReq storage.AuthRequest) string {
++	return internal.StepURL(h.IssuerURL.AbsPath("/mfa"), authReq, internal.StepMFA, nil)
++}
++
++// redirectToEntry sends a request for a factor the login cannot register yet back to the MFA entry.
++func (h *Handler) redirectToEntry(w http.ResponseWriter, r *http.Request, authReq storage.AuthRequest) {
++	http.Redirect(w, r, h.entryURL(authReq), http.StatusSeeOther)
++}
+diff --git a/server/mfa/order_test.go b/server/mfa/order_test.go
+new file mode 100644
+index 00000000..aa1436b8
+--- /dev/null
++++ b/server/mfa/order_test.go
+@@ -0,0 +1,249 @@
++package mfa
++
++import (
++	"net/http"
++	"net/http/httptest"
++	"net/url"
++	"strings"
++	"testing"
++	"time"
++
++	"github.com/go-webauthn/webauthn/webauthn"
++	"github.com/pquerna/otp"
++	"github.com/pquerna/otp/totp"
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/server/internal"
++	"github.com/dexidp/dex/storage"
++)
++
++// orderTest is a login of a client whose chain asks for every factor, a code and a key, in that order (Deckhouse).
++type orderTest struct {
++	h       *Handler
++	router  http.Handler
++	store   storage.Storage
++	authReq storage.AuthRequest
++}
++
++func newOrderTest(t *testing.T, identity storage.UserIdentity) orderTest {
++	t.Helper()
++	key, err := NewWebAuthnProvider("Test", "", nil, "", "", "http://localhost", nil)
++	require.NoError(t, err)
++	key.finishRegistration = func(webauthn.User, webauthn.SessionData, *http.Request) (*webauthn.Credential, error) {
++		return &webauthn.Credential{ID: []byte("new-key")}, nil
++	}
++	h, router, store := newTestHandler(t,
++		map[string]Provider{"totp": NewTOTPProvider("test-issuer", nil), "webauthn": key}, nil)
++
++	ctx := t.Context()
++	authReq := storage.AuthRequest{
++		ID: "order-req", ClientID: "app", Expiry: time.Now().Add(time.Hour),
++		HMACKey: randomHMACKey(t), LoggedIn: true,
++		Claims:      storage.Claims{UserID: "user-1", Email: "user@example.com"},
++		ConnectorID: "mock",
++	}
++	require.NoError(t, store.CreateAuthRequest(ctx, authReq))
++	require.NoError(t, store.CreateClient(ctx, storage.Client{ID: "app", Secret: "s", MFAChain: []string{"totp", "webauthn"}}))
++	identity.UserID, identity.ConnectorID, identity.Claims = "user-1", "mock", authReq.Claims
++	require.NoError(t, store.CreateUserIdentity(ctx, identity))
++	return orderTest{h: h, router: router, store: store, authReq: authReq}
++}
++
++func (o orderTest) serve(t *testing.T, method, target string, form url.Values) *httptest.ResponseRecorder {
++	t.Helper()
++	var req *http.Request
++	if form != nil {
++		req = httptest.NewRequest(method, target, strings.NewReader(form.Encode()))
++		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++	} else {
++		req = httptest.NewRequest(method, target, nil)
++	}
++	w := httptest.NewRecorder()
++	o.router.ServeHTTP(w, req)
++	return w
++}
++
++// entry is where the /mfa entry sends the login.
++func (o orderTest) entry(t *testing.T) string {
++	t.Helper()
++	w := o.serve(t, http.MethodGet, "/mfa?req="+o.authReq.ID+"&hmac="+url.QueryEscape(internal.SignStep(o.authReq, internal.StepMFA)), nil)
++	require.Equal(t, http.StatusSeeOther, w.Code)
++	return w.Header().Get("Location")
++}
++
++// factorURL is the signed address of the page of a factor, as the server hands it out.
++func (o orderTest) factorURL(authenticatorID string) string {
++	return o.h.buildRedirectURL(o.authReq, authenticatorID)
++}
++
++func (o orderTest) identity(t *testing.T) storage.UserIdentity {
++	t.Helper()
++	identity, err := o.store.GetUserIdentity(t.Context(), "user-1", "mock")
++	require.NoError(t, err)
++	return identity
++}
++
++func (o orderTest) validated(t *testing.T) bool {
++	t.Helper()
++	authReq, err := o.store.GetAuthRequest(t.Context(), o.authReq.ID)
++	require.NoError(t, err)
++	return authReq.MFAValidated
++}
++
++func totpCode(t *testing.T, keyURL string) string {
++	t.Helper()
++	key, err := otp.NewKeyFromURL(keyURL)
++	require.NoError(t, err)
++	code, err := totp.GenerateCodeCustom(key.Secret(), time.Now(), totpOpts())
++	require.NoError(t, err)
++	return code
++}
++
++func orderCode(t *testing.T) *storage.MFASecret {
++	t.Helper()
++	key, err := totp.Generate(totp.GenerateOpts{Issuer: "test-issuer", AccountName: "user@example.com"})
++	require.NoError(t, err)
++	return &storage.MFASecret{AuthenticatorID: "totp", Type: "TOTP", Secret: key.String(), Confirmed: true}
++}
++
++func orderKey() map[string][]storage.WebAuthnCredential {
++	return map[string][]storage.WebAuthnCredential{"webauthn": {{CredentialID: []byte("key-1"), PublicKey: []byte("pk")}}}
++}
++
++// A user who has only a key passes it first, and registers the code after it: the password alone registers
++// nothing in an account protected by the key.
++func TestOrderAUserWithAKeyPassesItBeforeRegisteringACode(t *testing.T) {
++	o := newOrderTest(t, storage.UserIdentity{WebAuthnCredentials: orderKey()})
++
++	first := o.entry(t)
++	require.Contains(t, first, "/mfa/webauthn?")
++	require.Contains(t, first, "authenticator=webauthn")
++
++	// The page of the code before the key: back to the entry, and no secret.
++	for _, method := range []string{http.MethodGet, http.MethodPost} {
++		w := o.serve(t, method, o.factorURL("totp"), url.Values{"totp": {"123456"}})
++		require.Equal(t, http.StatusSeeOther, w.Code, method)
++		require.Contains(t, w.Header().Get("Location"), "/mfa?", method)
++		require.Nil(t, o.identity(t).MFASecrets["totp"], method)
++	}
++	require.False(t, o.validated(t))
++
++	// The key passes: the code is registered next, and the login completes with it.
++	next, err := o.h.CompleteStep(t.Context(), o.authReq, "webauthn")
++	require.NoError(t, err)
++	require.Contains(t, next, "/mfa/totp?")
++	require.Equal(t, http.StatusOK, o.serve(t, http.MethodGet, next, nil).Code)
++	secret := o.identity(t).MFASecrets["totp"]
++	require.NotNil(t, secret)
++	require.False(t, secret.Confirmed)
++
++	w := o.serve(t, http.MethodPost, next, url.Values{"totp": {totpCode(t, secret.Secret)}})
++	require.Equal(t, http.StatusSeeOther, w.Code)
++	require.Contains(t, w.Header().Get("Location"), "/auth?")
++	require.True(t, o.identity(t).MFASecrets["totp"].Confirmed)
++	require.True(t, o.validated(t))
++}
++
++// A code registration someone started is not a factor of the user: it is confirmed only after the key.
++func TestOrderAnUnconfirmedCodeCountsAsMissing(t *testing.T) {
++	started := orderCode(t)
++	started.Confirmed = false
++	o := newOrderTest(t, storage.UserIdentity{
++		WebAuthnCredentials: orderKey(),
++		MFASecrets:          map[string]*storage.MFASecret{"totp": started},
++	})
++
++	require.Contains(t, o.entry(t), "authenticator=webauthn")
++	w := o.serve(t, http.MethodPost, o.factorURL("totp"), url.Values{"totp": {totpCode(t, started.Secret)}})
++	require.Equal(t, http.StatusSeeOther, w.Code)
++	require.Contains(t, w.Header().Get("Location"), "/mfa?")
++	require.False(t, o.identity(t).MFASecrets["totp"].Confirmed)
++	require.False(t, o.validated(t))
++}
++
++// A user who has only a code passes it first, and registers a key after it.
++func TestOrderAUserWithACodePassesItBeforeRegisteringAKey(t *testing.T) {
++	o := newOrderTest(t, storage.UserIdentity{MFASecrets: map[string]*storage.MFASecret{"totp": orderCode(t)}})
++
++	require.Contains(t, o.entry(t), "authenticator=totp")
++
++	// The key before the code: the page sends back to the entry, the registration is refused.
++	w := o.serve(t, http.MethodGet, o.factorURL("webauthn"), nil)
++	require.Equal(t, http.StatusSeeOther, w.Code)
++	require.Contains(t, w.Header().Get("Location"), "/mfa?")
++	query := o.factorURL("webauthn")[strings.Index(o.factorURL("webauthn"), "?"):]
++	for _, step := range []string{"begin", "finish"} {
++		w := o.serve(t, http.MethodPost, "/mfa/webauthn/register/"+step+query, nil)
++		require.Equal(t, http.StatusForbidden, w.Code, step)
++	}
++	require.Empty(t, o.identity(t).WebAuthnCredentials["webauthn"])
++
++	// The code passes: the key is registered next.
++	next, err := o.h.CompleteStep(t.Context(), o.authReq, "totp")
++	require.NoError(t, err)
++	require.Contains(t, next, "/mfa/webauthn?")
++	require.Equal(t, http.StatusOK, o.serve(t, http.MethodGet, next, nil).Code)
++	query = next[strings.Index(next, "?"):]
++	require.Equal(t, http.StatusOK, o.serve(t, http.MethodPost, "/mfa/webauthn/register/begin"+query, nil).Code)
++	w = o.serve(t, http.MethodPost, "/mfa/webauthn/register/finish"+query, nil)
++	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
++	require.Len(t, o.identity(t).WebAuthnCredentials["webauthn"], 1)
++	require.True(t, o.validated(t))
++}
++
++// A user who has every factor, or none, passes them in the order of the chain.
++func TestOrderFollowsTheChainForAllOrNone(t *testing.T) {
++	for _, tc := range []struct {
++		name     string
++		identity func(t *testing.T) storage.UserIdentity
++	}{
++		{name: "none", identity: func(*testing.T) storage.UserIdentity { return storage.UserIdentity{} }},
++		{name: "all", identity: func(t *testing.T) storage.UserIdentity {
++			return storage.UserIdentity{
++				MFASecrets:          map[string]*storage.MFASecret{"totp": orderCode(t)},
++				WebAuthnCredentials: orderKey(),
++			}
++		}},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			o := newOrderTest(t, tc.identity(t))
++			require.Contains(t, o.entry(t), "authenticator=totp")
++			require.Equal(t, http.StatusOK, o.serve(t, http.MethodGet, o.factorURL("totp"), nil).Code)
++
++			next, err := o.h.CompleteStep(t.Context(), o.authReq, "totp")
++			require.NoError(t, err)
++			require.Contains(t, next, "authenticator=webauthn")
++			next, err = o.h.CompleteStep(t.Context(), o.authReq, "webauthn")
++			require.NoError(t, err)
++			require.Contains(t, next, "/auth?")
++			require.True(t, o.validated(t))
++		})
++	}
++}
++
++// The factors passed in a login count for the user who passed them. A request another user signed in before keeps
++// that user's passes, also from a dex that recorded no user with them: they let the next user neither skip a factor
++// nor register one before it.
++func TestOrderPassesOfAnotherUserCountForNothing(t *testing.T) {
++	for _, tc := range []struct{ name, state string }{
++		{name: "passed by another user", state: `{"deckhousePassed":["totp"],"deckhousePassedUserID":"user-0","deckhousePassedConnectorID":"mock"}`},
++		{name: "passed through another connector", state: `{"deckhousePassed":["totp"],"deckhousePassedUserID":"user-1","deckhousePassedConnectorID":"other"}`},
++		{name: "recorded with no user", state: `{"deckhousePassed":["totp"]}`},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			o := newOrderTest(t, storage.UserIdentity{MFASecrets: map[string]*storage.MFASecret{"totp": orderCode(t)}})
++			require.NoError(t, o.store.UpdateAuthRequest(t.Context(), o.authReq.ID, func(a storage.AuthRequest) (storage.AuthRequest, error) {
++				a.WebAuthnSessionData = []byte(tc.state)
++				return a, nil
++			}))
++
++			require.Contains(t, o.entry(t), "authenticator=totp", "the code of this user is asked first")
++			w := o.serve(t, http.MethodGet, o.factorURL("webauthn"), nil)
++			require.Equal(t, http.StatusSeeOther, w.Code, "the key is not registered before the code of this user")
++			w = o.serve(t, http.MethodPost, strings.Replace(o.factorURL("webauthn"), "/mfa/webauthn?", "/mfa/webauthn/register/begin?", 1), nil)
++			require.Equal(t, http.StatusForbidden, w.Code)
++			require.Empty(t, o.identity(t).WebAuthnCredentials["webauthn"])
++			require.False(t, o.validated(t))
++		})
++	}
++}
+diff --git a/server/mfa/totp.go b/server/mfa/totp.go
+index 9b7fab48..77379500 100644
+--- a/server/mfa/totp.go
++++ b/server/mfa/totp.go
+@@ -123,6 +123,23 @@ func (h *Handler) handleTOTPVerify(w http.ResponseWriter, r *http.Request, ctx c
+ ) {
+ 	secret := identity.MFASecrets[authenticatorID]
+ 
++	// A code the user does not have yet is registered only after the factors the user has (Deckhouse, see
++	// order.go). A confirmed code is passed as before.
++	var gate *registration
++	if secret == nil || !secret.Confirmed {
++		g, err := h.registration(ctx, authReq, authenticatorID)
++		if err != nil {
++			h.Logger.ErrorContext(ctx, "failed to determine MFA chain", "err", err)
++			h.renderError(r, w, http.StatusInternalServerError, "Internal server error.")
++			return
++		}
++		if !g.allowed(identity) {
++			h.redirectToEntry(w, r, authReq)
++			return
++		}
++		gate = &g
++	}
++
+ 	switch r.Method {
+ 	case http.MethodGet:
+ 		if secret == nil {
+@@ -198,6 +215,10 @@ func (h *Handler) handleTOTPVerify(w http.ResponseWriter, r *http.Request, ctx c
+ 			if sec.LastUsedCounter >= counter {
+ 				return old, errTOTPReplay
+ 			}
++			// The user may have got another factor after the identity was loaded (Deckhouse, see order.go).
++			if !sec.Confirmed && (gate == nil || !gate.allowed(old)) {
++				return old, errNotPassedYet
++			}
+ 			sec.Confirmed = true
+ 			sec.LastUsedCounter = counter
+ 			return old, nil
+@@ -206,6 +227,10 @@ func (h *Handler) handleTOTPVerify(w http.ResponseWriter, r *http.Request, ctx c
+ 				h.renderTOTPPage(secret, true, totpProvider.issuer, authReq.ConnectorID, w, r)
+ 				return
+ 			}
++			if errors.Is(err, errNotPassedYet) {
++				h.redirectToEntry(w, r, authReq)
++				return
++			}
+ 			h.Logger.ErrorContext(ctx, "failed to update MFA secret", "err", err)
+ 			h.renderError(r, w, http.StatusInternalServerError, "Internal server error.")
+ 			return
+diff --git a/server/mfa/webauthn.go b/server/mfa/webauthn.go
+index 196f1910..34510b08 100644
+--- a/server/mfa/webauthn.go
++++ b/server/mfa/webauthn.go
+@@ -4,6 +4,7 @@ import (
+ 	"bytes"
+ 	"context"
+ 	"encoding/json"
++	"errors"
+ 	"fmt"
+ 	"net/http"
+ 	"net/url"
+@@ -15,10 +16,24 @@ import (
+ 	"github.com/dexidp/dex/storage"
+ )
+ 
++// errWebAuthnAlreadyRegistered is returned from the UpdateUserIdentity closure when a parallel
++// registration stored a credential after this request had loaded an identity without one.
++var errWebAuthnAlreadyRegistered = errors.New("webauthn credential already registered")
++
++// webAuthnRegistered reports a credential of this authenticator. Registration is offered only
++// while the account has none: a second key would let a password alone finish the second factor.
++func webAuthnRegistered(identity storage.UserIdentity, authenticatorID string) bool {
++	return len(identity.WebAuthnCredentials[authenticatorID]) > 0
++}
++
+ // WebAuthnProvider implements WebAuthn-based multi-factor authentication.
+ type WebAuthnProvider struct {
+ 	wan            *webauthn.WebAuthn
+ 	connectorTypes map[string]struct{}
++
++	// finishRegistration, when set, stands in for wan.FinishRegistration so a test can
++	// reach the storage update without a live authenticator. Nil uses the library.
++	finishRegistration func(webauthn.User, webauthn.SessionData, *http.Request) (*webauthn.Credential, error)
+ }
+ 
+ // NewWebAuthnProvider creates a new WebAuthn MFA provider.
+@@ -149,10 +164,22 @@ func (h *Handler) handleWebAuthnRegisterBegin(w http.ResponseWriter, r *http.Req
+ 	if !ok {
+ 		return
+ 	}
++	if webAuthnRegistered(mfa.identity, mfa.authenticatorID) {
++		writeJSONError(w, http.StatusForbidden, "A key is already registered.")
++		return
++	}
+ 
+ 	ctx := r.Context()
++	gate, ok := h.webAuthnRegistration(w, r, mfa)
++	if !ok {
++		return
++	}
++	if !gate.allowed(mfa.identity) {
++		writeJSONError(w, http.StatusForbidden, notPassedYetMsg)
++		return
++	}
+ 	user := buildWebAuthnUser(mfa.identity, mfa.authenticatorID)
+-	user.credentials = nil // don't exclude existing credentials during registration
++	user.credentials = nil // the account has none yet; do not exclude a credential that is not there
+ 
+ 	creation, session, err := provider.wan.BeginRegistration(user)
+ 	if err != nil {
+@@ -170,14 +197,35 @@ func (h *Handler) handleWebAuthnRegisterBegin(w http.ResponseWriter, r *http.Req
+ 	writeJSON(w, creation)
+ }
+ 
++// finishWebAuthnRegistration runs the ceremony. A test sets finishRegistration to reach the
++// storage update without a live authenticator.
++func (p *WebAuthnProvider) finishWebAuthnRegistration(user webauthn.User, session webauthn.SessionData, r *http.Request) (*webauthn.Credential, error) {
++	if p.finishRegistration != nil {
++		return p.finishRegistration(user, session, r)
++	}
++	return p.wan.FinishRegistration(user, session, r)
++}
++
+ // handleWebAuthnRegisterFinish completes the WebAuthn registration ceremony.
+ func (h *Handler) handleWebAuthnRegisterFinish(w http.ResponseWriter, r *http.Request) {
+ 	mfa, provider, ok := h.validateWebAuthnAPIRequest(w, r)
+ 	if !ok {
+ 		return
+ 	}
++	if webAuthnRegistered(mfa.identity, mfa.authenticatorID) {
++		writeJSONError(w, http.StatusBadRequest, "A key is already registered.")
++		return
++	}
+ 
+ 	ctx := r.Context()
++	gate, ok := h.webAuthnRegistration(w, r, mfa)
++	if !ok {
++		return
++	}
++	if !gate.allowed(mfa.identity) {
++		writeJSONError(w, http.StatusForbidden, notPassedYetMsg)
++		return
++	}
+ 	session, err := h.loadWebAuthnSession(mfa.authReq)
+ 	if err != nil {
+ 		h.Logger.ErrorContext(ctx, "failed to load session data", "err", err)
+@@ -188,7 +236,7 @@ func (h *Handler) handleWebAuthnRegisterFinish(w http.ResponseWriter, r *http.Re
+ 	user := buildWebAuthnUser(mfa.identity, mfa.authenticatorID)
+ 	user.credentials = nil
+ 
+-	credential, err := provider.wan.FinishRegistration(user, *session, r)
++	credential, err := provider.finishWebAuthnRegistration(user, *session, r)
+ 	if err != nil {
+ 		h.Logger.ErrorContext(ctx, "webauthn registration failed", "err", err)
+ 		writeJSONError(w, http.StatusBadRequest, "Registration failed: "+err.Error())
+@@ -197,12 +245,28 @@ func (h *Handler) handleWebAuthnRegisterFinish(w http.ResponseWriter, r *http.Re
+ 
+ 	newCred := convertCredential(credential, h.Now())
+ 	if err := h.Storage.UpdateUserIdentity(ctx, mfa.authReq.Claims.UserID, mfa.authReq.ConnectorID, func(old storage.UserIdentity) (storage.UserIdentity, error) {
++		// A parallel finish may have stored a key after this request loaded the identity.
++		if webAuthnRegistered(old, mfa.authenticatorID) {
++			return old, errWebAuthnAlreadyRegistered
++		}
++		// The user may have got another factor after the identity was loaded (Deckhouse, see order.go).
++		if !gate.allowed(old) {
++			return old, errNotPassedYet
++		}
+ 		if old.WebAuthnCredentials == nil {
+ 			old.WebAuthnCredentials = make(map[string][]storage.WebAuthnCredential)
+ 		}
+ 		old.WebAuthnCredentials[mfa.authenticatorID] = append(old.WebAuthnCredentials[mfa.authenticatorID], newCred)
+ 		return old, nil
+ 	}); err != nil {
++		if errors.Is(err, errWebAuthnAlreadyRegistered) {
++			writeJSONError(w, http.StatusBadRequest, "A key is already registered.")
++			return
++		}
++		if errors.Is(err, errNotPassedYet) {
++			writeJSONError(w, http.StatusForbidden, notPassedYetMsg)
++			return
++		}
+ 		h.Logger.ErrorContext(ctx, "failed to store credential", "err", err)
+ 		writeJSONError(w, http.StatusInternalServerError, "Internal server error.")
+ 		return
+@@ -333,11 +397,14 @@ func (h *Handler) validateWebAuthnAPIRequest(w http.ResponseWriter, r *http.Requ
+ 
+ // storeWebAuthnSession marshals and stores WebAuthn session data in the auth request.
+ func (h *Handler) storeWebAuthnSession(ctx context.Context, authReqID string, session *webauthn.SessionData) error {
+-	data, err := json.Marshal(session)
+-	if err != nil {
+-		return fmt.Errorf("marshal session: %w", err)
+-	}
+ 	return h.Storage.UpdateAuthRequest(ctx, authReqID, func(old storage.AuthRequest) (storage.AuthRequest, error) {
++		// The factors the login passed are kept with the session (Deckhouse, see order.go).
++		state := readWebAuthnState(old.WebAuthnSessionData)
++		state.SessionData = *session
++		data, err := json.Marshal(state)
++		if err != nil {
++			return old, fmt.Errorf("marshal session: %w", err)
++		}
+ 		old.WebAuthnSessionData = data
+ 		return old, nil
+ 	})
+@@ -415,6 +482,18 @@ func (h *Handler) handleWebAuthn(w http.ResponseWriter, r *http.Request) {
+ 	mode := "login"
+ 	if len(user.credentials) == 0 {
+ 		mode = "register"
++		// A key the user does not have yet is registered only after the factors the user has (Deckhouse, see
++		// order.go).
++		gate, err := h.registration(r.Context(), mfa.authReq, mfa.authenticatorID)
++		if err != nil {
++			h.Logger.ErrorContext(r.Context(), "failed to determine MFA chain", "err", err)
++			h.renderError(r, w, http.StatusInternalServerError, "Internal server error.")
++			return
++		}
++		if !gate.allowed(mfa.identity) {
++			h.redirectToEntry(w, r, mfa.authReq)
++			return
++		}
+ 	}
+ 
+ 	if err := h.Templates.WebAuthnVerify(r, w, mode, mfa.authenticatorID); err != nil {
+diff --git a/server/mfa/webauthn_test.go b/server/mfa/webauthn_test.go
+index b57ff775..ad742695 100644
+--- a/server/mfa/webauthn_test.go
++++ b/server/mfa/webauthn_test.go
+@@ -1,17 +1,36 @@
+ package mfa
+ 
+ import (
++	"context"
++	"fmt"
+ 	"net/http"
+ 	"net/http/httptest"
+ 	"testing"
+ 	"time"
+ 
++	"github.com/go-webauthn/webauthn/webauthn"
+ 	"github.com/stretchr/testify/require"
+ 
+ 	"github.com/dexidp/dex/server/internal"
+ 	"github.com/dexidp/dex/storage"
+ )
+ 
++// staleIdentityStorage serves a Get of the identity with no credentials, while Update still
++// sees the key already stored. That is a finish that loaded the account before a parallel
++// finish wrote the key.
++type staleIdentityStorage struct {
++	storage.Storage
++}
++
++func (s staleIdentityStorage) GetUserIdentity(ctx context.Context, userID, connectorID string) (storage.UserIdentity, error) {
++	u, err := s.Storage.GetUserIdentity(ctx, userID, connectorID)
++	if err != nil {
++		return u, err
++	}
++	u.WebAuthnCredentials = map[string][]storage.WebAuthnCredential{}
++	return u, nil
++}
++
+ func TestWebAuthnHandlersMissingHMAC(t *testing.T) {
+ 	provider, err := NewWebAuthnProvider("Test", "", nil, "", "", "http://localhost", nil)
+ 	require.NoError(t, err)
+@@ -53,6 +72,7 @@ func TestWebAuthnVerifyPageRender(t *testing.T) {
+ 		ConnectorID: "mock",
+ 	}
+ 	require.NoError(t, store.CreateAuthRequest(ctx, authReq))
++	require.NoError(t, store.CreateClient(ctx, storage.Client{ID: "example-app", Secret: "secret"}))
+ 
+ 	// Create user identity without WebAuthn credentials (enrollment mode).
+ 	require.NoError(t, store.CreateUserIdentity(ctx, storage.UserIdentity{
+@@ -216,3 +236,107 @@ func TestBuildWebAuthnUser(t *testing.T) {
+ 	user3 := buildWebAuthnUser(identity, "unknown")
+ 	require.Empty(t, user3.WebAuthnCredentials())
+ }
++
++// An account that already has a key must not be able to register another one through the JSON
++// endpoints: that would mark the second factor done with only the password.
++func TestWebAuthnRegisterRefusesAnAccountThatAlreadyHasAKey(t *testing.T) {
++	provider, err := NewWebAuthnProvider("Test", "", nil, "", "", "http://localhost", nil)
++	require.NoError(t, err)
++	_, router, store := newTestHandler(t, map[string]Provider{"webauthn-1": provider}, []string{"webauthn-1"})
++
++	ctx := t.Context()
++	authReq := storage.AuthRequest{
++		ID:          "test-webauthn-register-bypass",
++		ClientID:    "example-app",
++		Expiry:      time.Now().Add(time.Hour),
++		HMACKey:     randomHMACKey(t),
++		LoggedIn:    true,
++		Claims:      storage.Claims{UserID: "user-1", Email: "user@example.com"},
++		ConnectorID: "mock",
++	}
++	require.NoError(t, store.CreateAuthRequest(ctx, authReq))
++	require.NoError(t, store.CreateUserIdentity(ctx, storage.UserIdentity{
++		UserID:      "user-1",
++		ConnectorID: "mock",
++		Claims:      authReq.Claims,
++		WebAuthnCredentials: map[string][]storage.WebAuthnCredential{
++			"webauthn-1": {{CredentialID: []byte("cred"), PublicKey: []byte("pk")}},
++		},
++	}))
++	hmacVal := internal.SignStep(authReq, internal.Authenticator("webauthn-1"))
++	query := "req=" + authReq.ID + "&hmac=" + hmacVal + "&authenticator=webauthn-1"
++
++	for _, tc := range []struct {
++		name string
++		step string
++		want int
++	}{
++		{name: "begin", step: "begin", want: http.StatusForbidden},
++		{name: "finish", step: "finish", want: http.StatusBadRequest},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			rr := httptest.NewRecorder()
++			req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/mfa/webauthn/register/%s?%s", tc.step, query), nil)
++			router.ServeHTTP(rr, req)
++			require.Equal(t, tc.want, rr.Code)
++			require.Contains(t, rr.Body.String(), "A key is already registered.")
++		})
++	}
++
++	got, err := store.GetAuthRequest(ctx, authReq.ID)
++	require.NoError(t, err)
++	require.False(t, got.MFAValidated)
++	ident, err := store.GetUserIdentity(ctx, "user-1", "mock")
++	require.NoError(t, err)
++	require.Len(t, ident.WebAuthnCredentials["webauthn-1"], 1)
++}
++
++// The finish that loaded an identity with no key must still refuse when the stored identity
++// already holds one: the check inside UpdateUserIdentity is what a parallel finish races against.
++func TestWebAuthnRegisterFinishRefusesAKeyStoredBeforeTheUpdate(t *testing.T) {
++	provider, err := NewWebAuthnProvider("Test", "", nil, "", "", "http://localhost", nil)
++	require.NoError(t, err)
++	provider.finishRegistration = func(webauthn.User, webauthn.SessionData, *http.Request) (*webauthn.Credential, error) {
++		return &webauthn.Credential{ID: []byte("second")}, nil
++	}
++	h, router, store := newTestHandler(t, map[string]Provider{"webauthn-1": provider}, []string{"webauthn-1"})
++	h.Storage = staleIdentityStorage{Storage: store}
++
++	ctx := t.Context()
++	authReq := storage.AuthRequest{
++		ID:                  "test-webauthn-register-race",
++		ClientID:            "example-app",
++		Expiry:              time.Now().Add(time.Hour),
++		HMACKey:             randomHMACKey(t),
++		LoggedIn:            true,
++		Claims:              storage.Claims{UserID: "user-1", Email: "user@example.com"},
++		ConnectorID:         "mock",
++		WebAuthnSessionData: []byte(`{}`),
++	}
++	require.NoError(t, store.CreateAuthRequest(ctx, authReq))
++	require.NoError(t, store.CreateClient(ctx, storage.Client{ID: "example-app", Secret: "secret"}))
++	require.NoError(t, store.CreateUserIdentity(ctx, storage.UserIdentity{
++		UserID:      "user-1",
++		ConnectorID: "mock",
++		Claims:      authReq.Claims,
++		WebAuthnCredentials: map[string][]storage.WebAuthnCredential{
++			"webauthn-1": {{CredentialID: []byte("first"), PublicKey: []byte("pk")}},
++		},
++	}))
++	hmacVal := internal.SignStep(authReq, internal.Authenticator("webauthn-1"))
++
++	rr := httptest.NewRecorder()
++	req := httptest.NewRequest(http.MethodPost, "/mfa/webauthn/register/finish?req="+authReq.ID+"&hmac="+hmacVal+"&authenticator=webauthn-1", nil)
++	router.ServeHTTP(rr, req)
++
++	ident, err := store.GetUserIdentity(ctx, "user-1", "mock")
++	require.NoError(t, err)
++	require.Len(t, ident.WebAuthnCredentials["webauthn-1"], 1)
++	require.Equal(t, []byte("first"), ident.WebAuthnCredentials["webauthn-1"][0].CredentialID)
++	require.Equal(t, http.StatusBadRequest, rr.Code)
++	require.Contains(t, rr.Body.String(), "A key is already registered.")
++
++	got, err := store.GetAuthRequest(ctx, authReq.ID)
++	require.NoError(t, err)
++	require.False(t, got.MFAValidated)
++}
 diff --git a/server/server_grant_lock_test.go b/server/server_grant_lock_test.go
 new file mode 100644
 index 00000000..b582d81d
@@ -1165,6 +2417,160 @@ index 2b715ba0..8d5c9ace 100644
 +	require.Equal(t, secret, stored.MFASecrets["totp"].Secret)
 +	require.True(t, stored.MFASecrets["totp"].Confirmed)
 +	require.True(t, stored.LastLogin.IsZero(), "the login is complete only after the code")
++}
+diff --git a/server/server_relogin_test.go b/server/server_relogin_test.go
+new file mode 100644
+index 00000000..63db5fa7
+--- /dev/null
++++ b/server/server_relogin_test.go
+@@ -0,0 +1,148 @@
++package server
++
++import (
++	"net/http"
++	"net/http/httptest"
++	"net/url"
++	"strings"
++	"testing"
++	"time"
++
++	"github.com/pquerna/otp/totp"
++	"github.com/stretchr/testify/require"
++	"golang.org/x/crypto/bcrypt"
++
++	"github.com/dexidp/dex/server/connectors"
++	"github.com/dexidp/dex/server/mfa"
++	"github.com/dexidp/dex/storage"
++)
++
++// The tests of a login into an auth request another user has signed in (Deckhouse).
++
++const (
++	reloginRequest = "relogin-req"
++	// reloginSecret is the TOTP secret of both users.
++	reloginSecret = "JBSWY3DPEHPK3PXP"
++)
++
++type reloginUser struct{ id, email, password string }
++
++var (
++	reloginOwner  = reloginUser{id: "owner-id", email: "owner@example.com", password: "Owner-" + "passw0rd"}
++	reloginVictim = reloginUser{id: "victim-id", email: "victim@example.com", password: "Victim-" + "passw0rd"}
++)
++
++// newReloginServer serves the local connector with two users, each with a
++// confirmed TOTP secret, the chain [totp], and an auth request of the form.
++func newReloginServer(t *testing.T) *Server {
++	t.Helper()
++	ctx := t.Context()
++	httpServer, s := newTestServer(t, func(c *Config) {
++		c.PasswordConnector = "local"
++		c.MFAProviders = map[string]mfa.Provider{"totp": mfa.NewTOTPProvider("dex", nil)}
++		c.DefaultMFAChain = []string{"totp"}
++		c.SkipApprovalScreen = true
++	})
++	t.Cleanup(httpServer.Close)
++
++	require.NoError(t, s.storage.CreateClient(ctx, storage.Client{
++		ID: "test", Secret: "barfoo", RedirectURIs: []string{"https://client.example/cb"},
++	}))
++	localConn := storage.Connector{ID: "local", Type: connectors.LocalConnector, Name: "Email", ResourceVersion: "1"}
++	require.NoError(t, s.storage.CreateConnector(ctx, localConn))
++	_, err := s.connectors.Open(localConn)
++	require.NoError(t, err)
++
++	for _, u := range []reloginUser{reloginOwner, reloginVictim} {
++		hash, err := bcrypt.GenerateFromPassword([]byte(u.password), bcrypt.DefaultCost)
++		require.NoError(t, err)
++		require.NoError(t, s.storage.CreatePassword(ctx, storage.Password{
++			Email: u.email, Username: strings.Split(u.email, "@")[0], UserID: u.id, Hash: hash, HashUpdatedAt: time.Now(),
++		}))
++		require.NoError(t, s.storage.CreateUserIdentity(ctx, storage.UserIdentity{
++			UserID: u.id, ConnectorID: "local", Claims: storage.Claims{UserID: u.id, Email: u.email},
++			MFASecrets: map[string]*storage.MFASecret{"totp": {
++				AuthenticatorID: "totp", Type: "TOTP", Confirmed: true,
++				Secret: "otpauth://totp/dex:" + u.email + "?issuer=dex&secret=" + reloginSecret,
++			}},
++		}))
++	}
++	require.NoError(t, s.storage.CreateAuthRequest(ctx, storage.AuthRequest{
++		ID: reloginRequest, ClientID: "test", ConnectorID: "local",
++		ResponseTypes: []string{"code"}, Scopes: []string{"openid"}, RedirectURI: "https://client.example/cb",
++		Expiry: time.Now().Add(time.Hour), HMACKey: []byte("0123456789abcdef0123456789abcdef"),
++	}))
++	return s
++}
++
++func reloginPost(s *Server, target string, form url.Values) *httptest.ResponseRecorder {
++	req := httptest.NewRequest(http.MethodPost, target, strings.NewReader(form.Encode()))
++	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++	rr := httptest.NewRecorder()
++	s.ServeHTTP(rr, req)
++	return rr
++}
++
++// reloginFollow serves rr's redirects within dex and returns the first answer
++// that is not one, with the address it answered. A redirect to the client ends
++// the walk: it carries the code.
++func reloginFollow(t *testing.T, s *Server, rr *httptest.ResponseRecorder) (*httptest.ResponseRecorder, string) {
++	t.Helper()
++	target := ""
++	for range 6 {
++		location := rr.Header().Get("Location")
++		if (rr.Code != http.StatusSeeOther && rr.Code != http.StatusFound) || strings.HasPrefix(location, "https://client.example/") {
++			return rr, target
++		}
++		next, err := url.Parse(location)
++		require.NoError(t, err)
++		target = next.RequestURI()
++		rr = httptest.NewRecorder()
++		s.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, target, nil))
++	}
++	t.Fatalf("too many redirects, last to %s", target)
++	return nil, ""
++}
++
++func reloginLogin(s *Server, u reloginUser) *httptest.ResponseRecorder {
++	return reloginPost(s, "/auth/local/login?state="+reloginRequest, url.Values{"login": {u.email}, "password": {u.password}})
++}
++
++// A user who signed the request in and passed their own second factor cannot
++// hand the login over to another user by posting that user's password to the
++// same request: the login is refused, no code is issued, and the request keeps
++// the user who signed it in.
++func TestReloginOfAnotherUserIsRefused(t *testing.T) {
++	ctx := t.Context()
++	s := newReloginServer(t)
++
++	page, totpURL := reloginFollow(t, s, reloginLogin(s, reloginOwner))
++	require.True(t, strings.HasPrefix(totpURL, "/mfa/totp?"), "%s: %s", totpURL, page.Body.String())
++	code, err := totp.GenerateCode(reloginSecret, time.Now())
++	require.NoError(t, err)
++	rr := reloginPost(s, totpURL, url.Values{"totp": {code}})
++	require.Equal(t, http.StatusSeeOther, rr.Code, rr.Body.String())
++	authReq, err := s.storage.GetAuthRequest(ctx, reloginRequest)
++	require.NoError(t, err)
++	require.True(t, authReq.MFAValidated)
++
++	rr, _ = reloginFollow(t, s, reloginLogin(s, reloginVictim))
++	require.False(t, strings.HasPrefix(rr.Header().Get("Location"), "https://client.example/"),
++		"a code was issued for the other user without their second factor: %s", rr.Header().Get("Location"))
++	require.Equal(t, http.StatusBadRequest, rr.Code, rr.Body.String())
++
++	authReq, err = s.storage.GetAuthRequest(ctx, reloginRequest)
++	require.NoError(t, err)
++	require.Equal(t, reloginOwner.id, authReq.Claims.UserID, "the request keeps the user who signed it in")
++}
++
++// The same user may sign in again (a second click on the button, the back
++// button of the browser): the login goes on to the second factor.
++func TestReloginOfTheSameUserGoesOn(t *testing.T) {
++	s := newReloginServer(t)
++
++	_, first := reloginFollow(t, s, reloginLogin(s, reloginOwner))
++	require.True(t, strings.HasPrefix(first, "/mfa/totp?"), first)
++	page, again := reloginFollow(t, s, reloginLogin(s, reloginOwner))
++	require.True(t, strings.HasPrefix(again, "/mfa/totp?"), "%s: %s", again, page.Body.String())
 +}
 diff --git a/server/useridentity/useridentity.go b/server/useridentity/useridentity.go
 new file mode 100644

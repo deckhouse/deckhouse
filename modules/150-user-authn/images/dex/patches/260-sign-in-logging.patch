@@ -985,7 +985,7 @@ index 40b91ca8..c0fb0ed3 100644
  		})
  	}
 diff --git a/server/authflow/allowlist.go b/server/authflow/allowlist.go
-index 9b80788a..be1e5f08 100644
+index 2e258b9b..df8c88d8 100644
 --- a/server/authflow/allowlist.go
 +++ b/server/authflow/allowlist.go
 @@ -10,6 +10,7 @@ import (
@@ -1047,7 +1047,7 @@ index da53ded5..f43e66eb 100644
  	// Connector callbacks don't render the remember_me checkbox, so we use the server default.
  	// The password login handler reads r.FormValue("remember_me") from the submitted form instead.
 diff --git a/server/authflow/finalize.go b/server/authflow/finalize.go
-index 62bcaffc..4038c148 100644
+index f68fe334..25eef4df 100644
 --- a/server/authflow/finalize.go
 +++ b/server/authflow/finalize.go
 @@ -10,7 +10,9 @@ import (
@@ -1060,7 +1060,7 @@ index 62bcaffc..4038c148 100644
  	"github.com/dexidp/dex/server/tokens"
  	"github.com/dexidp/dex/server/useridentity"
  	"github.com/dexidp/dex/storage"
-@@ -51,11 +53,12 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
+@@ -72,11 +74,12 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
  	var blocked *useridentity.BlockedError
  	switch {
  	case errors.As(err, &blocked):
@@ -1076,7 +1076,7 @@ index 62bcaffc..4038c148 100644
  		return storage.AuthRequest{}, err
  	}
  
-@@ -73,16 +76,12 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
+@@ -99,16 +102,12 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
  	// (the next-step decision below) see the identity we just stored.
  	authReq, _ = updater(authReq)
  
@@ -1097,7 +1097,7 @@ index 62bcaffc..4038c148 100644
  
  	offlineAccessRequested := false
  	for _, scope := range authReq.Scopes {
-@@ -138,3 +137,16 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
+@@ -164,3 +163,16 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
  	// create the session and advance the flow.
  	return h.Storage.GetAuthRequest(ctx, authReq.ID)
  }
@@ -1144,7 +1144,7 @@ index 05b74f54..28a6501f 100644
  }
  
 diff --git a/server/authflow/password.go b/server/authflow/password.go
-index 26a6c7d3..694b9cfd 100644
+index 9fe04a1f..48ccbb24 100644
 --- a/server/authflow/password.go
 +++ b/server/authflow/password.go
 @@ -12,6 +12,7 @@ import (
@@ -1207,10 +1207,10 @@ index 26a6c7d3..694b9cfd 100644
 +				authReq.ConnectorID, authReq.ClientID, signinlog.IdentityUser(identity).Typed(username))...)
  			return
  		}
- 		if conn.Type == connectors.LocalConnector {
-@@ -134,14 +138,16 @@ func (h *Handler) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
- 			rememberMe := r.FormValue("remember_me") == "on"
- 			changeURL, err := h.passwordChangeRedirect(ctx, w, authReq, username, &password, rememberMe)
+ 		// Refused early on the request read above (Deckhouse, see
+@@ -146,7 +150,8 @@ func (h *Handler) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+ 				return
+ 			}
  			if err != nil {
 -				h.Logger.ErrorContext(ctx, "failed to apply the password policy", "err", err)
 +				h.Logger.ErrorContext(ctx, "failed to apply the password policy",
@@ -1218,8 +1218,9 @@ index 26a6c7d3..694b9cfd 100644
  				h.renderError(r, w, http.StatusInternalServerError, ErrMsgLoginError)
  				return
  			}
- 			if changeURL != "" {
- 				deferred, err := h.deferPasswordChange(ctx, authReq, changeURL)
+@@ -156,7 +161,8 @@ func (h *Handler) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+ 					return
+ 				}
  				if err != nil {
 -					h.Logger.ErrorContext(ctx, "failed to put the password change off", "err", err)
 +					h.Logger.ErrorContext(ctx, "failed to put the password change off",
@@ -1227,7 +1228,7 @@ index 26a6c7d3..694b9cfd 100644
  					h.renderError(r, w, http.StatusInternalServerError, ErrMsgLoginError)
  					return
  				}
-@@ -156,7 +162,7 @@ func (h *Handler) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+@@ -171,7 +177,7 @@ func (h *Handler) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
  					if h.renderNotAllowed(r, w, err) || h.renderLocked(r, w, err) {
  						return
  					}
@@ -1236,7 +1237,7 @@ index 26a6c7d3..694b9cfd 100644
  					h.renderError(r, w, http.StatusInternalServerError, "Login error.")
  					return
  				}
-@@ -164,15 +170,16 @@ func (h *Handler) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+@@ -179,15 +185,16 @@ func (h *Handler) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
  				return
  			}
  		}
@@ -1256,7 +1257,7 @@ index 26a6c7d3..694b9cfd 100644
  		rememberMe := r.FormValue("remember_me") == "on"
  		if err := h.Sessions.CreateOrUpdateAuthSession(ctx, r, w, authReq, rememberMe); err != nil {
 diff --git a/server/authflow/passwordchange.go b/server/authflow/passwordchange.go
-index d2cfc3c9..f7113660 100644
+index 1e491bc8..7e532765 100644
 --- a/server/authflow/passwordchange.go
 +++ b/server/authflow/passwordchange.go
 @@ -53,6 +53,7 @@ import (
@@ -1268,7 +1269,7 @@ index d2cfc3c9..f7113660 100644
  	"github.com/dexidp/dex/server/tokens"
  	"github.com/dexidp/dex/server/useridentity"
 @@ -108,8 +109,8 @@ func (h *Handler) passwordChangeRedirect(ctx context.Context, w http.ResponseWri
- 	if err := h.bindPasswordChange(ctx, w, authReq); err != nil {
+ 	if err := h.bindPasswordChange(ctx, w, authReq, stored.UserID); err != nil {
  		return "", err
  	}
 -	h.Logger.InfoContext(ctx, "password change required",
@@ -1278,7 +1279,7 @@ index d2cfc3c9..f7113660 100644
  
  	q := url.Values{
  		"req":          {authReq.ID},
-@@ -240,8 +241,8 @@ func (h *Handler) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
+@@ -262,8 +263,8 @@ func (h *Handler) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
  	username := strings.ToLower(r.FormValue("username"))
  	// The answer does not say which binding failed.
  	if !verifyPasswordChange(authReq, r.FormValue("hmac"), username) || !boundToBrowser(r, authReq) {
@@ -1289,7 +1290,7 @@ index d2cfc3c9..f7113660 100644
  		h.renderError(r, w, http.StatusUnauthorized, "Unauthorized request.")
  		return
  	}
-@@ -259,8 +260,8 @@ func (h *Handler) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
+@@ -281,8 +282,8 @@ func (h *Handler) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
  			return
  		}
  		if outstanding || !authReq.LoggedIn {
@@ -1300,7 +1301,7 @@ index d2cfc3c9..f7113660 100644
  			h.renderError(r, w, http.StatusUnauthorized, "Unauthorized request.")
  			return
  		}
-@@ -297,15 +298,15 @@ func (h *Handler) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
+@@ -332,15 +333,15 @@ func (h *Handler) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
  	}
  	// A pair locked since the login form keeps its password.
  	err = useridentity.CheckBlocked(ctx, h.Storage, stored.UserID, authReq.ConnectorID, h.Now())
@@ -1319,7 +1320,7 @@ index d2cfc3c9..f7113660 100644
  		return
  	}
  	if err := h.unbindPasswordChange(ctx, w, authReq); err != nil {
-@@ -324,22 +325,24 @@ func (h *Handler) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
+@@ -359,22 +360,24 @@ func (h *Handler) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
  			Email:  stored.Email,
  		})
  		if err != nil {
@@ -1347,7 +1348,7 @@ index d2cfc3c9..f7113660 100644
  	}
  	if err := h.Sessions.CreateOrUpdateAuthSession(ctx, r, w, authReq, r.FormValue("remember_me") == "on"); err != nil {
  		h.Logger.ErrorContext(ctx, "failed to create/update auth session", "err", err)
-@@ -350,7 +353,7 @@ func (h *Handler) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
+@@ -385,7 +388,7 @@ func (h *Handler) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
  // changePassword replaces the password of the stored user of page with the new
  // one the form posts, when the policy accepts it. Otherwise it answers the
  // request and reports false.
@@ -1356,7 +1357,7 @@ index d2cfc3c9..f7113660 100644
  	ctx := r.Context()
  	next := r.PostFormValue("newPassword")
  
-@@ -376,7 +379,7 @@ func (h *Handler) changePassword(w http.ResponseWriter, r *http.Request, connect
+@@ -411,7 +414,7 @@ func (h *Handler) changePassword(w http.ResponseWriter, r *http.Request, connect
  		h.renderError(r, w, http.StatusInternalServerError, ErrMsgLoginError)
  		return false
  	}
@@ -1365,7 +1366,7 @@ index d2cfc3c9..f7113660 100644
  	return true
  }
  
-@@ -411,6 +414,19 @@ func (h *Handler) renderPasswordChange(w http.ResponseWriter, r *http.Request, p
+@@ -446,6 +449,19 @@ func (h *Handler) renderPasswordChange(w http.ResponseWriter, r *http.Request, p
  	}
  }
  
@@ -2129,7 +2130,7 @@ index c5d6ddec..7d647ca3 100644
  	}
  	return true
 diff --git a/server/mfa/totp.go b/server/mfa/totp.go
-index 9b7fab48..d9fb5efd 100644
+index 77379500..7cf94cc4 100644
 --- a/server/mfa/totp.go
 +++ b/server/mfa/totp.go
 @@ -14,6 +14,7 @@ import (
@@ -2140,7 +2141,7 @@ index 9b7fab48..d9fb5efd 100644
  	"github.com/dexidp/dex/storage"
  )
  
-@@ -180,6 +181,7 @@ func (h *Handler) handleTOTPVerify(w http.ResponseWriter, r *http.Request, ctx c
+@@ -197,6 +198,7 @@ func (h *Handler) handleTOTPVerify(w http.ResponseWriter, r *http.Request, ctx c
  
  		ok, counter := validateTOTPCode(generated.Secret(), code, h.Now(), secret.LastUsedCounter)
  		if !ok {
@@ -2148,7 +2149,7 @@ index 9b7fab48..d9fb5efd 100644
  			h.renderTOTPPage(secret, true, totpProvider.issuer, authReq.ConnectorID, w, r)
  			return
  		}
-@@ -203,6 +205,7 @@ func (h *Handler) handleTOTPVerify(w http.ResponseWriter, r *http.Request, ctx c
+@@ -224,6 +226,7 @@ func (h *Handler) handleTOTPVerify(w http.ResponseWriter, r *http.Request, ctx c
  			return old, nil
  		}); err != nil {
  			if errors.Is(err, errTOTPReplay) || errors.Is(err, errTOTPNotEnrolled) {
@@ -2156,7 +2157,7 @@ index 9b7fab48..d9fb5efd 100644
  				h.renderTOTPPage(secret, true, totpProvider.issuer, authReq.ConnectorID, w, r)
  				return
  			}
-@@ -227,6 +230,14 @@ func (h *Handler) handleTOTPVerify(w http.ResponseWriter, r *http.Request, ctx c
+@@ -252,6 +255,14 @@ func (h *Handler) handleTOTPVerify(w http.ResponseWriter, r *http.Request, ctx c
  	}
  }
  

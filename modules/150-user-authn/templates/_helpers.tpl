@@ -41,3 +41,22 @@
   {{- with regexFind "[0-9]+s$" . }}{{ $seconds = add $seconds (trimSuffix "s" . | atoi) }}{{ end -}}
   {{- $seconds -}}
 {{- end -}}
+
+{{- /* The second factors of each type of provider twoFactor covers, as JSON: {"LDAP": {"methods": ["WebAuthn"]}, */ -}}
+{{- /* "Local": {"methods": ["TOTP", "WebAuthn"], "require": "All"}}. A type takes its providerTypeOverrides entry, */ -}}
+{{- /* or methods and require. The Dex config and the user-authn controller read the same map. The argument is */ -}}
+{{- /* userAuthn.twoFactor after the conversion of its version. */ -}}
+{{- define "user_authn_two_factor_policy" -}}
+  {{- $policy := dict -}}
+  {{- $overrides := dict -}}
+  {{- range $o := .providerTypeOverrides | default list -}}
+    {{- $_ := set $overrides $o.providerType $o -}}
+  {{- end -}}
+  {{- range $type := .providerTypes | default (list "Local") -}}
+    {{- $source := index $overrides $type | default $ -}}
+    {{- $entry := dict "methods" ($source.methods | default (list "TOTP")) -}}
+    {{- if $source.require }}{{ $_ := set $entry "require" $source.require }}{{ end -}}
+    {{- $_ := set $policy $type $entry -}}
+  {{- end -}}
+  {{- $policy | toJson -}}
+{{- end -}}

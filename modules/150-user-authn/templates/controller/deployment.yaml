@@ -88,6 +88,14 @@ spec:
         # ResetPassword operation keeps the replaced hash in it, so the forced change cannot set it again.
         - name: PASSWORD_HISTORY_LIMIT
           value: {{ dig "passwordPolicy" "passwordHistoryLimit" 0 .Values.userAuthn | quote }}
+        {{- with .Values.userAuthn.twoFactor }}
+        {{- if .enabled }}
+        # The second factors of each type of provider, which status.twoFactor of a UserAccount describes. Unset
+        # while 2FA is off.
+        - name: TWO_FACTOR_POLICY
+          value: {{ include "user_authn_two_factor_policy" . | quote }}
+        {{- end }}
+        {{- end }}
         {{- with dig "retention" "revocations" "" .Values.userAuthn }}
         # Never shorter than the ID token lifetime and an hour: the controller raises it to that.
         - name: REVOCATION_RETENTION

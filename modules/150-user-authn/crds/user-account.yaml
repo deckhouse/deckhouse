@@ -145,23 +145,71 @@ spec:
                 twoFactor:
                   type: object
                   description: |
-                    State of the 2FA (TOTP) of the account in Dex, without secrets.
+                    State of the 2FA of the account in Dex, without secrets.
 
-                    Set after the first sign-in of the account through Dex.
+                    The field shows what the settings ask the users of the type of provider of the account for,
+                    whether the account has it, and each method it has.
+
+                    Set after the first sign-in of the account through Dex. Absent when the second factor does not
+                    cover the type of provider of the account.
                   properties:
+                    methods:
+                      type: array
+                      items:
+                        type: string
+                        enum: [TOTP, WebAuthn]
+                      description: |
+                        Second factors the settings ask the users of the type of provider of the account for
+                        (`twoFactor.methods` of the module, or its `providerTypeOverrides` entry for the type).
+
+                        Absent when 2FA is off or does not cover the type.
+                    require:
+                      type: string
+                      enum: [All]
+                      description: |
+                        How the two `methods` combine. With `All`, the user passes both. Absent with one method.
                     enrolled:
                       type: boolean
                       description: |
-                        Whether Dex keeps a TOTP secret for the account.
+                        Whether the account has what `methods` and `require` ask for: a TOTP secret, at least one
+                        WebAuthn credential, or both.
 
-                        Dex creates the secret when it shows the user the QR code at a sign-in.
+                        A secret or a key of a method that is not asked for does not count. Without `methods`, whether
+                        the account has either. Dex creates the TOTP secret when it shows the user the QR code at a
+                        sign-in.
                     confirmed:
                       type: boolean
                       description: |
-                        Whether the user has entered a code for the TOTP secret.
+                        Whether the account has what `methods` and `require` ask for, with the TOTP secret confirmed by
+                        a code.
 
-                        Until then, a sign-in shows the QR code again. A UserOperation of the `Reset2FA` type removes
-                        the secret.
+                        A WebAuthn credential is complete at the registration.
+
+                        Until the code, a sign-in shows the QR code again.
+                    totp:
+                      type: object
+                      description: |
+                        TOTP secret of the account. Absent when there is none.
+
+                        A UserOperation of the `Reset2FA` type removes it, unless `spec.reset2FA.methods` lists only
+                        `WebAuthn`.
+                      properties:
+                        confirmed:
+                          type: boolean
+                          description: |
+                            Whether the user has entered a code for the secret.
+                    webAuthn:
+                      type: object
+                      description: |
+                        WebAuthn credentials (security keys) of the account. Absent when there is none.
+
+                        A UserOperation of the `Reset2FA` type removes them, unless `spec.reset2FA.methods` lists only
+                        `TOTP`.
+                      properties:
+                        credentials:
+                          type: integer
+                          description: |
+                            Number of registered security keys.
                 sessions:
                   type: array
                   maxItems: 50

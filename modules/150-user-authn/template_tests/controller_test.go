@@ -111,6 +111,29 @@ var _ = Describe("Module :: user-authn :: helm template :: controller", func() {
 		Expect(service.Field("spec.publishNotReadyAddresses").Bool()).To(BeFalse())
 	})
 
+	It("Should tell the controller the second factors of each type of provider", func() {
+		hec.ValuesSet("userAuthn.twoFactor.enabled", true)
+		hec.ValuesSet("userAuthn.twoFactor.methods", []string{"TOTP", "WebAuthn"})
+		hec.ValuesSet("userAuthn.twoFactor.require", "All")
+		hec.ValuesSet("userAuthn.twoFactor.providerTypes", []string{"Local", "LDAP"})
+		hec.ValuesSet("userAuthn.twoFactor.providerTypeOverrides", []map[string]any{{"providerType": "LDAP", "methods": []string{"WebAuthn"}}})
+		hec.HelmRender()
+		Expect(hec.RenderError).ShouldNot(HaveOccurred())
+
+		deployment := hec.KubernetesResource("Deployment", "d8-user-authn", "user-authn-controller")
+		Expect(deployment.Field(`spec.template.spec.containers.0.env.#(name=="TWO_FACTOR_POLICY").value`).String()).To(MatchJSON(
+			`{"Local": {"methods": ["TOTP", "WebAuthn"], "require": "All"}, "LDAP": {"methods": ["WebAuthn"]}}`))
+	})
+
+	It("Should tell the controller nothing while 2FA is off", func() {
+		hec.ValuesSet("userAuthn.twoFactor.enabled", false)
+		hec.HelmRender()
+		Expect(hec.RenderError).ShouldNot(HaveOccurred())
+
+		deployment := hec.KubernetesResource("Deployment", "d8-user-authn", "user-authn-controller")
+		Expect(deployment.Field(`spec.template.spec.containers.0.env.#(name=="TWO_FACTOR_POLICY")`).Exists()).To(BeFalse())
+	})
+
 	It("Should keep revocations for the ID token lifetime and an hour", func() {
 		hec.ValuesSet("userAuthn.idTokenTTL", "2h20m4s")
 		hec.HelmRender()

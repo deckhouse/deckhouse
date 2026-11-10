@@ -326,6 +326,58 @@ func TestReconcile_Reset2FAClearsUserIdentity(t *testing.T) {
 	assertPhase(t, r, "user-operation-01", "Succeeded", operationTime)
 }
 
+// spec.reset2FA.methods removes one method and keeps the other. The old place, where the Dex of 1.77 kept the TOTP
+// secret, goes with the secret only. The sessions of the user end either way.
+func TestReconcile_Reset2FAOfOneMethod(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		method      string
+		cleared     string
+		kept        string
+		sessionGone bool
+	}{
+		{method: "WebAuthn", cleared: "webauthnCredentials", kept: "mfaSecrets", sessionGone: false},
+		{method: "TOTP", cleared: "mfaSecrets", kept: "webauthnCredentials", sessionGone: true},
+	} {
+		t.Run(tc.method, func(t *testing.T) {
+			t.Parallel()
+			enrolled := identityWithTOTP(t, "admin", naming.LocalConnectorID)
+			enrolled.Object["webauthnCredentials"] = map[string]any{"webauthn": []any{map[string]any{"displayName": "yubikey"}}}
+			sessionName := naming.OfflineTokenName("admin", naming.LocalConnectorID)
+			r := newTestReconciler(t, operationTime,
+				passwordObj("admin", nil),
+				sessionObj(sessionName, map[string]any{"userID": "admin", "connID": naming.LocalConnectorID}),
+				enrolled,
+				userOperationObj("op", operationTime, map[string]any{
+					"type": "Reset2FA", "initiatorType": "Admin", "user": "admin",
+					"reset2FA": map[string]any{"methods": []any{tc.method}},
+				}),
+			)
+			if _, err := r.Reconcile(t.Context(), opRequest("op")); err != nil {
+				t.Fatalf("Reconcile: %v", err)
+			}
+			assertPhase(t, r, "op", "Succeeded", operationTime)
+
+			id := getIdentity(t, r, "admin", naming.LocalConnectorID)
+			if _, ok := id.Object().Object[tc.cleared]; ok {
+				t.Errorf("%s is still set", tc.cleared)
+			}
+			if _, ok := id.Object().Object[tc.kept]; !ok {
+				t.Errorf("%s was removed", tc.kept)
+			}
+			if g, _ := id.Generation(); g == 0 {
+				t.Error("the generation did not change: the sessions of the user must end")
+			}
+			err := r.client.Get(t.Context(), types.NamespacedName{Namespace: naming.DexNamespace, Name: sessionName},
+				controller.Object(controller.OfflineSessionsGVK))
+			if gone := apierrors.IsNotFound(err); gone != tc.sessionGone {
+				t.Errorf("OfflineSessions deleted = %v, want %v (err %v)", gone, tc.sessionGone, err)
+			}
+		})
+	}
+}
+
 // Reset2FA of a user of an external provider clears the second factor of that pair only and ends its sessions;
 // a local user with the same user ID keeps the secret and the sessions.
 func TestReconcile_Reset2FAExternal(t *testing.T) {

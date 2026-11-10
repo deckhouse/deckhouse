@@ -281,8 +281,17 @@ properties:
     type: object
     default: {}
     required: [enabled]
+    x-deckhouse-validations:
+      - expression: '(has(self.methods) && size(self.methods) == 2) == has(self.require)'
+        message: twoFactor.require is set exactly when twoFactor.methods lists two methods.
+      - expression: '!has(self.providerTypeOverrides) || self.providerTypeOverrides.all(o, o.providerType in (has(self.providerTypes) ? self.providerTypes : [''Local'']))'
+        message: every providerType of twoFactor.providerTypeOverrides must be listed in twoFactor.providerTypes.
+      - expression: '!has(self.providerTypeOverrides) || self.providerTypeOverrides.all(o, size(self.providerTypeOverrides.filter(p, p.providerType == o.providerType)) == 1)'
+        message: a providerType appears in twoFactor.providerTypeOverrides once.
+      - expression: '!has(self.providerTypeOverrides) || self.providerTypeOverrides.all(o, (size(o.methods) == 2) == has(o.require))'
+        message: the require of an override is set exactly when its methods list two methods.
     description: |
-      Two-factor authentication (2FA) with a one-time code (TOTP) from an authenticator application.
+      Two-factor authentication (2FA) with a one-time code (TOTP) from an authenticator application, with a security key (WebAuthn), or with both, as [`methods`](#parameters-twofactor-methods) and [`require`](#parameters-twofactor-require) set.
 
       The parameter replaces `staticUsers2FA` of the earlier versions of the settings, which covered local users only. The module converts `staticUsers2FA` to this parameter.
     properties:
@@ -296,7 +305,86 @@ properties:
         default: "Deckhouse"
         description: |
           The issuer name for the two-factor authentication (2FA) tokens.
-          This name is visible to users in the 2FA application (e.g., Google Authenticator).
+          This name is visible to users in the 2FA application (e.g., Google Authenticator) and in the dialog of the browser that registers a security key.
+      methods:
+        type: array
+        default: [TOTP]
+        minItems: 1
+        maxItems: 2
+        uniqueItems: true
+        description: |
+          Second factors of the users of the types in `providerTypes`, unless [`providerTypeOverrides`](#parameters-twofactor-providertypeoverrides) sets others for a type:
+
+          * `TOTP`: A one-time code from an authenticator application (for example, Google Authenticator).
+          * `WebAuthn`: A security key (for example, YubiKey), or the Touch ID or Windows Hello of the device. The key confirms a sign-in only for the domain it is bound to, so a fake sign-in page on another domain gets no response it can reuse.
+
+          With two methods, [`require`](#parameters-twofactor-require) sets how they combine.
+
+          A user registers a method at the first sign-in that asks for it (and until then anyone who knows the password can register their own device). The secret or the keys the user had for a method that is no longer asked for stay until a `Reset2FA` operation, so asking for the method again brings them back.
+        items:
+          type: string
+          enum: [TOTP, WebAuthn]
+      require:
+        type: string
+        enum: [All]
+        description: |
+          How the two methods of `methods` combine.
+
+          Required when `methods` lists two methods, and not allowed with one. With `All`, the user passes both methods, the code first and then the key. A user who has only one of them confirms the sign-in with it first and only then registers the other.
+      providerTypeOverrides:
+        type: array
+        description: |
+          Second factors of the users of one type of provider, instead of `methods` and `require`. The type must be listed in `providerTypes`, and each type appears once.
+        items:
+          type: object
+          required: [providerType, methods]
+          properties:
+            providerType:
+              type: string
+              enum: [Local, LDAP, Crowd]
+              description: |
+                Type of provider, one of `providerTypes`.
+            methods:
+              type: array
+              minItems: 1
+              maxItems: 2
+              uniqueItems: true
+              description: |
+                Second factors of the users of this type, as [`methods`](#parameters-twofactor-methods).
+              items:
+                type: string
+                enum: [TOTP, WebAuthn]
+            require:
+              type: string
+              enum: [All]
+              description: |
+                How the two methods combine, as [`require`](#parameters-twofactor-require). Required with two methods, and not allowed with one.
+      webAuthn:
+        type: object
+        default: {}
+        description: |
+          Parameters of the `WebAuthn` method.
+        properties:
+          rpID:
+            type: string
+            maxLength: 253
+            pattern: '^(localhost|[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+)$'
+            x-deckhouse-validations:
+              - expression: '!self.matches(''^[0-9]{1,3}(\\.[0-9]{1,3}){3}$'')'
+                message: rpID must be a domain name, not an IP address.
+              - expression: '!self.matches(''(^|.*\\.)([0-9]+|0x[0-9a-f]+|0b[01]+|0o[0-7]+)$'')'
+                message: the final label of rpID must not be a number, or Dex does not start.
+            x-doc-examples: ['example.com']
+            description: |
+              Domain a registered key is bound to (the relying party ID). A key works only for this domain and its subdomains.
+
+              The browser takes a domain that is the domain of the Dex address (`dex.<PUBLIC_DOMAIN>`) or its parent, down to a registrable domain (`example.com`), and refuses any other. By default, it is the domain of the Dex address, so a change of `publicDomainTemplate` makes every registered key useless, and every user has to register again. Set it to the stable parent domain to keep the keys through such a change.
+
+              Setting or changing the parameter makes the keys registered before it useless as well.
+
+              A user whose key has become useless can neither sign in nor register a new key, because Dex offers the registration only to an account that has no keys, and the old key cannot be used. Reset the second factor of such a user with a UserOperation of type `Reset2FA`; the user registers a key again at the next sign-in.
+
+              Dex accepts `localhost` and a lowercase domain of two or more labels, such as `example.com` or `dex.example.com`. It refuses any other single label, a final label that is a number (`corp.123`, and a hexadecimal, binary or octal form such as `0x1`), and an IP address.
       providerTypes:
         type: array
         default: [Local]
@@ -548,7 +636,7 @@ properties:
         default: '24h'
         x-examples: ['24h', '720h']
         description: |
-          How long a [UserOperation](cr.html#useroperation) object is kept after its creation. Then it is deleted,
+          How long a UserOperation object is kept after its creation. Then it is deleted,
           and the history of operations of the web interface no longer shows it.
 
           Set as a string of whole hours, minutes, and seconds, in this order: `30m`, `2h30m`, `24h`.

@@ -27,6 +27,21 @@
     </a>
   </div>
   {{ end }}
+  {{ else if eq .ErrCode "mfa_misconfigured" }}
+  <h2 class="content-title">
+      {{ if eq (extra "lang") "en" }}
+      The second factor is misconfigured
+      {{ else }}
+      Ошибка настройки входа
+      {{ end }}
+  </h2>
+  <div class="content-text">
+      {{ if eq (extra "lang") "en" }}
+      The second factor of this application is misconfigured. Contact your administrator.
+      {{ else }}
+      Подтверждение входа для этого приложения настроено неправильно. Обратитесь к администратору.
+      {{ end }}
+  </div>
   {{ else }}
   <h2 class="content-title">{{ .ErrType }}</h2>
   <div class="content-text">{{ .ErrMsg }}</div>

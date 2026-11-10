@@ -1453,7 +1453,7 @@ spec:
 
 ### Two-factor authentication (2FA)
 
-2FA increases security by requiring a code from a `TOTP` authenticator application (for example, Google Authenticator) during login. It can be required from the local users and from the users of the LDAP and Atlassian Crowd providers.
+2FA increases security by requiring a code from a `TOTP` authenticator application (for example, Google Authenticator) or a security key (`WebAuthn`) during login. It can be required from the local users and from the users of the LDAP and Atlassian Crowd providers.
 
 {% raw %}
 
@@ -1477,8 +1477,12 @@ spec:
 Field description:
 
 * `enabled`: Enables or disables 2FA.
-* `issuerName`: Name displayed in the authenticator application when adding an account.
-* `providerTypes`: Types of the providers whose users have to pass the second factor: `Local` (the built-in users), `LDAP` and `Crowd`. The users of every provider of a listed type are asked for the code. The OIDC, SAML, GitHub, GitLab and Bitbucket Cloud providers are not on the list. The identity provider handles the second factor for them.
+* `issuerName`: Name displayed in the authenticator application when adding an account (with `WebAuthn`, in the dialog of the browser that registers the key).
+* `methods`: The second factors: `TOTP` (the default), `WebAuthn`, or both, see [Several methods](#several-methods).
+* `require`: How two `methods` combine. Required with two methods, not allowed with one.
+* `providerTypeOverrides`: Other `methods` for one type of provider, see [Several methods](#several-methods).
+* `webAuthn`: Parameters of the `WebAuthn` method, see [Security keys](#security-keys-webauthn).
+* `providerTypes`: Types of the providers whose users have to pass the second factor: `Local` (the built-in users), `LDAP` and `Crowd`. The users of every provider of a listed type are asked for it. The OIDC, SAML, GitHub, GitLab and Bitbucket Cloud providers are not on the list. The identity provider handles the second factor for them.
 
 The `twoFactor` parameter replaces `staticUsers2FA`, which covered the local users only. A ModuleConfig of version 3 with `staticUsers2FA` keeps working, because the module converts it.
 
@@ -1486,15 +1490,96 @@ The `twoFactor` parameter replaces `staticUsers2FA`, which covered the local use
 After enabling 2FA, each user must register in the authenticator application during their first login. Until then, anyone who knows the password can register their own device, so ask the users to sign in right after you turn 2FA on.
 {% endalert %}
 
-Dex asks the user for the code at a sign-in through a provider of a listed type, except while a browser session of Dex is valid. Sign-ins through the other providers go without it.
+Dex asks the user for the code (or the key) at a sign-in through a provider of a listed type, except while a browser session of Dex is valid. Sign-ins through the other providers go without it.
 Turning 2FA on for a provider type does not end the refresh tokens or the Dex browser sessions issued before. A refresh token keeps issuing tokens without the code until it expires (by default, up to `refreshTokenAbsoluteLifetime`, 4380h), and a browser session created before the change passes without the code.
 After enabling 2FA, run a UserOperation of type `Logout` for the users of the providers of the listed types.
 
 Basic Authentication to the Kubernetes API (`enableBasicAuth` of an LDAP or Crowd provider) has no page for a code, so it is not possible for a provider of a listed type. The module refuses the settings that turn 2FA on while such a provider exists, and a provider that turns `enableBasicAuth` on while 2FA covers its type. To use both, give the Kubernetes API users a kubeconfig file with the web interface instead of Basic Authentication.
 
-To make a user register the authenticator application again, for example after losing the device, reset the user's 2FA.
-For a local user, use `d8 iam user reset2fa <USERNAME>` or a UserOperation of the `Reset2FA` type with `spec.user`. For a user of an external provider, use a UserOperation of the `Reset2FA` type with [`spec.target`](#operations-on-external-users).
-The operation also ends the sessions of the user. Other operations, including `Lock` and `ResetPassword`, keep the 2FA secret.
+#### Security keys (WebAuthn)
+
+With `methods: [WebAuthn]`, Dex asks the user to touch a security key (for example, a YubiKey) or to confirm the sign-in with the Touch ID or Windows Hello of the device, instead of entering a code. The key confirms a sign-in only for the domain it is bound to, so a fake sign-in page on another domain gets no response it can reuse.
+
+The following settings ask the users for a security key:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 4
+  enabled: true
+  settings:
+    twoFactor:
+      enabled: true
+      methods: [WebAuthn]
+      issuerName: "Example"
+      webAuthn:
+        rpID: example.com
+```
+
+The method works as follows:
+
+* A key is bound to the domain set by the [`rpID`](configuration.html#parameters-twofactor-webauthn-rpid) parameter. By default, it is the domain of the Dex address (`dex.<PUBLIC_DOMAIN>`). To keep the keys through a change of `publicDomainTemplate`, set `rpID` to the stable parent domain of the Dex address, for example `example.com` for `dex.example.com`.
+  A change of `rpID`, or of `publicDomainTemplate` while `rpID` is not set, makes every registered key unusable. A user with such a key can neither sign in nor register a new one. Reset the second factor of the user with a UserOperation of type `Reset2FA`, and the user registers a key again at the next sign-in.
+* Dex accepts a security key of any make and model and does not check which key it is.
+* The browser has to support WebAuthn.
+* The user registers the key at the first sign-in after the method is turned on, as the user of TOTP registers the application. Dex lets a user register a key only while the account has none, and the page offers no second key. A user whose key is lost, or who wants another key, needs a `Reset2FA` operation, after which the next sign-in registers a key again. Until the registration, anyone who knows the password can register their own key, so ask the users to sign in right after the switch.
+* When the methods change, the TOTP secret and the keys the user had stay until a `Reset2FA`, so asking for a method again brings them back.
+
+#### Several methods
+
+With two methods, `require` sets how they combine. With `All`, the user passes both methods, the code first and then the key. A user who has only one of them confirms the sign-in with it first and only then registers the other.
+
+`providerTypeOverrides` sets other methods for one type of provider from `providerTypes`, for example a key for the users of the LDAP providers and a code for the local users:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 4
+  enabled: true
+  settings:
+    twoFactor:
+      enabled: true
+      methods: [TOTP]
+      providerTypes: [Local, LDAP, Crowd]
+      providerTypeOverrides:
+      - providerType: LDAP
+        methods: [WebAuthn]
+      - providerType: Crowd
+        methods: [TOTP, WebAuthn]
+        require: All
+      webAuthn:
+        rpID: example.com
+```
+
+A type without an entry takes `methods` and `require`. Each type appears once, and only a type listed in `providerTypes`.
+
+#### The second factor of an account
+
+[UserAccount](cr.html#useraccount) shows in `status.twoFactor` the `methods` and `require` asked of the users of its type of provider, and in `enrolled` whether the account has them. `totp` and `webAuthn` show the TOTP secret and the number of keys the account has, including those of a method no longer asked for, which do not count for `enrolled`.
+
+To make a user register the second factor again, for example after losing the device, reset the user's 2FA.
+For a local user, use `d8 iam user reset2fa <USERNAME>` or a UserOperation of the `Reset2FA` type with `spec.user`. For a user of an external provider, use a UserOperation of the `Reset2FA` type with [`spec.target`](#operations-on-external-users). Without other parameters the operation removes every method. To remove one, list it in `spec.reset2FA.methods`:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: reset-key-jane
+spec:
+  type: Reset2FA
+  initiatorType: admin
+  user: jane
+  reset2FA:
+    methods: [WebAuthn]
+```
+
+The operation also ends the sessions of the user. Other operations, including `Lock` and `ResetPassword`, keep the second factor.
 
 ### Assigning permissions to a user or group
 

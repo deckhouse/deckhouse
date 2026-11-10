@@ -80,6 +80,9 @@ const (
 	// deviceAgeEnv is the minimum device age of user-api: the devices that old are kept first when
 	// the device list of a UserAccount is cut.
 	deviceAgeEnv = "MIN_DEVICE_AGE"
+	// twoFactorPolicyEnv is the second factors of each type of provider while 2FA is on, as JSON
+	// (useraccount.TwoFactorPolicy); UserAccount.status.twoFactor describes them. Unset when 2FA is off.
+	twoFactorPolicyEnv = "TWO_FACTOR_POLICY"
 
 	// revocationRetentionEnv keeps the revocations longer than revocation.Retention of the ID token
 	// lifetime; a shorter value is raised to it. operationRetentionEnv is how long a UserOperation is
@@ -160,6 +163,10 @@ func setupRuntimeManager() (ctrl.Manager, error) {
 	if err != nil {
 		return nil, err
 	}
+	twoFactor, err := useraccount.ParseTwoFactorPolicy(os.Getenv(twoFactorPolicyEnv))
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", twoFactorPolicyEnv, err)
+	}
 
 	cfg, err := ctrl.GetConfig()
 	if err != nil {
@@ -182,7 +189,7 @@ func setupRuntimeManager() (ctrl.Manager, error) {
 		return nil, err
 	}
 
-	if err = useraccount.Register(runtimeManager, deviceAge); err != nil {
+	if err = useraccount.Register(runtimeManager, deviceAge, twoFactor); err != nil {
 		return nil, fmt.Errorf("register useraccount controller: %w", err)
 	}
 	if err = user.Register(runtimeManager); err != nil {

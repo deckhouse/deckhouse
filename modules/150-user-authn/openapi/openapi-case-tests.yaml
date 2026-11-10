@@ -62,6 +62,54 @@ positive:
       dexAuthenticatorRedisURL: "redis://localhost:6380/0"
   - internal:
       dexAuthenticatorRedisURL: "redis://dex-authenticator-redis.d8-user-authn:6379/"
+  - twoFactor:
+      enabled: true
+  - twoFactor:
+      enabled: true
+      issuerName: Corp
+      providerTypes: [Local, LDAP, Crowd]
+  - twoFactor:
+      enabled: true
+      methods: [WebAuthn]
+      webAuthn:
+        rpID: example.com
+  - twoFactor:
+      enabled: true
+      methods: [WebAuthn]
+      webAuthn:
+        rpID: dex.example.com
+  - twoFactor:
+      enabled: true
+      methods: [WebAuthn]
+      webAuthn:
+        rpID: localhost
+  - twoFactor:
+      enabled: true
+      methods: [WebAuthn]
+      webAuthn:
+        rpID: dex.corp.example.com
+  # Both methods, the code and then the key.
+  - twoFactor:
+      enabled: true
+      methods: [TOTP, WebAuthn]
+      require: All
+  # The users of LDAP providers use a key, the local users the default code.
+  - twoFactor:
+      enabled: true
+      providerTypes: [Local, LDAP]
+      providerTypeOverrides:
+      - providerType: LDAP
+        methods: [WebAuthn]
+  - twoFactor:
+      enabled: true
+      methods: [WebAuthn]
+      providerTypes: [Local, LDAP, Crowd]
+      providerTypeOverrides:
+      - providerType: Local
+        methods: [TOTP, WebAuthn]
+        require: All
+      - providerType: Crowd
+        methods: [TOTP]
 negative:
   values:
   - devices:
@@ -118,6 +166,135 @@ negative:
         minLength: 10
   - idTokenTTL: 6h
   - idTokenTTL: 24h
+  # The second factor: a type of provider with no second factor, none at all, or the same one twice.
+  - twoFactor:
+      enabled: true
+      providerTypes: [OIDC]
+  - twoFactor:
+      enabled: true
+      providerTypes: []
+  - twoFactor:
+      enabled: true
+      providerTypes: [LDAP, LDAP]
+  - twoFactor:
+      enabled: true
+      methods: [SMS]
+  # methods: none, the same twice, more than the two there are.
+  - twoFactor:
+      enabled: true
+      methods: []
+  - twoFactor:
+      enabled: true
+      methods: [TOTP, TOTP]
+  # require is chosen explicitly with two methods, and means nothing with one.
+  - twoFactor:
+      enabled: true
+      methods: [TOTP, WebAuthn]
+  - twoFactor:
+      enabled: true
+      methods: [TOTP]
+      require: All
+  - twoFactor:
+      enabled: true
+      require: All
+  # A choice of the user (Any) comes with the Dex patch that implements it.
+  - twoFactor:
+      enabled: true
+      methods: [TOTP, WebAuthn]
+      require: Any
+  # An override names a type of providerTypes, once, with the rules of methods and require.
+  - twoFactor:
+      enabled: true
+      providerTypeOverrides:
+      - providerType: LDAP
+        methods: [WebAuthn]
+  - twoFactor:
+      enabled: true
+      providerTypes: [Local, LDAP]
+      providerTypeOverrides:
+      - providerType: LDAP
+        methods: [WebAuthn]
+      - providerType: LDAP
+        methods: [TOTP]
+  - twoFactor:
+      enabled: true
+      providerTypes: [LDAP]
+      providerTypeOverrides:
+      - providerType: LDAP
+        methods: [TOTP, WebAuthn]
+  - twoFactor:
+      enabled: true
+      providerTypes: [LDAP]
+      providerTypeOverrides:
+      - providerType: LDAP
+        methods: [WebAuthn]
+        require: All
+  - twoFactor:
+      enabled: true
+      providerTypes: [LDAP]
+      providerTypeOverrides:
+      - providerType: LDAP
+  - twoFactor:
+      enabled: true
+      providerTypes: [OIDC]
+      providerTypeOverrides:
+      - providerType: OIDC
+        methods: [TOTP]
+  # protocol.ValidateRPID of go-webauthn v0.18.2: a single label other than localhost is not a domain,
+  # and a final label that is a number (decimal, or 0x/0b/0o) is refused. Dex does not start with either.
+  - twoFactor:
+      enabled: true
+      methods: [WebAuthn]
+      webAuthn:
+        rpID: a
+  - twoFactor:
+      enabled: true
+      methods: [WebAuthn]
+      webAuthn:
+        rpID: corp.123
+  - twoFactor:
+      enabled: true
+      methods: [WebAuthn]
+      webAuthn:
+        rpID: example.0x1
+  # A relying party ID is a domain name, the same one protocol.ValidateRPID of go-webauthn v0.18.2 accepts:
+  # no empty label, no label that starts or ends with a hyphen, not an IP address, no scheme, port or path.
+  # Dex refuses to start with a value it rejects.
+  - twoFactor:
+      enabled: true
+      methods: [WebAuthn]
+      webAuthn:
+        rpID: https://example.com
+  - twoFactor:
+      enabled: true
+      methods: [WebAuthn]
+      webAuthn:
+        rpID: example.com:443
+  - twoFactor:
+      enabled: true
+      methods: [WebAuthn]
+      webAuthn:
+        rpID: Example.com
+  - twoFactor:
+      enabled: true
+      methods: [WebAuthn]
+      webAuthn:
+        rpID: ""
+  - twoFactor:
+      enabled: true
+      methods: [WebAuthn]
+      webAuthn:
+        rpID: a..b
+  - twoFactor:
+      enabled: true
+      methods: [WebAuthn]
+      webAuthn:
+        rpID: a-.b
+  - twoFactor:
+      enabled: true
+      methods: [WebAuthn]
+      webAuthn:
+        rpID: 1.2.3.4
   - idTokenTTL: 0s
   - idTokenTTL: 0m0s
   # An unused session must not outlive the session (a week by default).

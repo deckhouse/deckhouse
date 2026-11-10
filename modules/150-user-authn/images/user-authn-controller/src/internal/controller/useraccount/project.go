@@ -86,7 +86,8 @@ type externalSource struct {
 	Attempts  int64
 	Lock      lockState
 	LastLogin *time.Time
-	TwoFactor *v1alpha1.UserAccountTwoFactor
+	// Factors are the second factors of the UserIdentity; nil without one.
+	Factors *storedFactors
 }
 
 func newExternalSource(sess *sessionView, ident *identityView) externalSource {
@@ -116,12 +117,14 @@ func newExternalSource(sess *sessionView, ident *identityView) externalSource {
 		src.Attempts = ident.Attempts
 	}
 	src.LastLogin = ident.LastLogin
-	twoFactor := ident.TwoFactor
-	src.TwoFactor = &twoFactor
+	factors := ident.Factors
+	src.Factors = &factors
 	return src
 }
 
-func projectLocal(pw passwordView, ident *identityView, user *userView, now time.Time) desiredAccount {
+// projectLocal projects a local account; req is what the second factor asks the local users for, nil when it
+// does not cover them.
+func projectLocal(pw passwordView, ident *identityView, user *userView, req *TwoFactorRequirement, now time.Time) desiredAccount {
 	lock := enforcedLock(lockState{until: pw.LockedUntil, byAdmin: hasAdminLock(pw.Annotations)}, ident)
 	locked := timeLockActive(lock.until, now)
 	lockedByAdmin := locked && lock.byAdmin
@@ -168,7 +171,7 @@ func projectLocal(pw passwordView, ident *identityView, user *userView, now time
 			ExpireAt:               expireAt,
 			Groups:                 groups,
 			LastLogin:              identityLastLogin(ident),
-			TwoFactor:              identityTwoFactor(ident),
+			TwoFactor:              identityTwoFactor(ident, req),
 		},
 	}
 }
@@ -180,15 +183,20 @@ func identityLastLogin(ident *identityView) *metav1.Time {
 	return metaTimePtr(ident.LastLogin)
 }
 
-func identityTwoFactor(ident *identityView) *v1alpha1.UserAccountTwoFactor {
+func identityTwoFactor(ident *identityView, req *TwoFactorRequirement) *v1alpha1.UserAccountTwoFactor {
 	if ident == nil {
 		return nil
 	}
-	twoFactor := ident.TwoFactor
-	return &twoFactor
+	return twoFactorStatus(ident.Factors, req)
 }
 
-func projectExternal(src externalSource, providerType string, now time.Time) desiredAccount {
+// projectExternal projects an external account of a provider of providerType; req is what the second factor asks
+// the users of that type for, nil when it does not cover them.
+func projectExternal(src externalSource, providerType string, req *TwoFactorRequirement, now time.Time) desiredAccount {
+	var twoFactor *v1alpha1.UserAccountTwoFactor
+	if src.Factors != nil {
+		twoFactor = twoFactorStatus(*src.Factors, req)
+	}
 	locked := timeLockActive(src.Lock.until, now)
 	lockedByAdmin := locked && src.Lock.byAdmin
 
@@ -210,7 +218,7 @@ func projectExternal(src externalSource, providerType string, now time.Time) des
 			LockedUntil:            metaTimePtr(src.Lock.until),
 			LockedByAdministrator:  lockedByAdmin,
 			LastLogin:              metaTimePtr(src.LastLogin),
-			TwoFactor:              src.TwoFactor,
+			TwoFactor:              twoFactor,
 		},
 	}
 }

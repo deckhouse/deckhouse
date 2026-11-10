@@ -115,6 +115,30 @@ var _ = Describe("Module :: user-authn :: Dex error page", func() {
 		Expect(renderDexErrorPage("en", data)).NotTo(ContainSubstring("javascript:"))
 	})
 
+	// A client whose MFA chain names an authenticator Dex does not have (patch 210, the code of patch 280).
+	misconfigured := dexErrorPageData{
+		ErrType: "Internal Server Error",
+		ErrMsg:  "The second factor of this application is misconfigured. Contact your administrator.",
+		ErrCode: "mfa_misconfigured",
+		ReqPath: "/mfa",
+	}
+
+	It("explains a misconfigured second factor in English", func() {
+		page := renderDexErrorPage("en", misconfigured)
+		Expect(heading.FindStringSubmatch(page)[1]).To(Equal("The second factor is misconfigured"))
+		Expect(page).To(ContainSubstring("Contact your administrator."))
+		Expect(page).NotTo(ContainSubstring("Internal Server Error"))
+		Expect(page).NotTo(ContainSubstring("Database error"))
+	})
+
+	It("explains a misconfigured second factor in Russian", func() {
+		en, ru := renderDexErrorPage("en", misconfigured), renderDexErrorPage("ru", misconfigured)
+		Expect(heading.FindStringSubmatch(ru)[1]).To(MatchRegexp(russian.String()))
+		Expect(heading.FindStringSubmatch(ru)[1]).NotTo(Equal(heading.FindStringSubmatch(en)[1]))
+		Expect(ru).NotTo(ContainSubstring("Contact your administrator"))
+		Expect(ru).NotTo(ContainSubstring("Internal Server Error"))
+	})
+
 	It("keeps the other errors as they are", func() {
 		for _, lang := range []string{"en", "ru"} {
 			page := renderDexErrorPage(lang, dexErrorPageData{ErrType: "Bad Request", ErrMsg: "User session error.", ReqPath: "/auth"})

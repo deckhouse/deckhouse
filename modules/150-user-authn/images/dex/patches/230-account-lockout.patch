@@ -102,10 +102,10 @@ index 5538d7ee..bc4e61d5 100644
  
  func TestPasswordPolicyServerPolicy(t *testing.T) {
 diff --git a/cmd/dex/serve.go b/cmd/dex/serve.go
-index a01447db..a05a7ea4 100644
+index 91e28645..1064dcf0 100644
 --- a/cmd/dex/serve.go
 +++ b/cmd/dex/serve.go
-@@ -429,6 +429,9 @@ func runServe(options serveOptions) error {
+@@ -436,6 +436,9 @@ func runServe(options serveOptions) error {
  	if serverConfig.PasswordPolicy, err = c.PasswordPolicy.serverPolicy(); err != nil {
  		return fmt.Errorf("invalid password policy config: %v", err)
  	}

@@ -179,18 +179,60 @@ fields when it decides who may write the provider. Rendered right after the conn
       {{- fail (printf "twoFactor asks the users of the %s providers for the second factor, which Basic Authentication to the Kubernetes API cannot give: turn enableBasicAuth off in the DexProvider %q or remove %s from twoFactor.providerTypes" $provider.type $provider.id $provider.type) }}
     {{- end }}
   {{- end }}
+  {{- /* Each method is one authenticator, bound to the connector types whose methods list it; the chain is the code,
+         then the key, and Dex drops from it for a login the authenticators not bound to its connector type. So a type
+         with one method is asked for it, and a type with both (require: All) for both. An authenticator with no
+         connector types would apply to every connector, so it is not rendered at all. The ID of the authenticator
+         names the key of the secret (TOTP) or of the credentials (WebAuthn) in the UserIdentity of a user: "totp" is
+         the ID the controller reads, and it counts the credentials of every authenticator. userVerification and
+         authenticatorAttachment of Dex are not set: Dex v2.46 reads them and uses neither. The relying party ID is the
+         domain of the issuer unless set, and the origin is the issuer. */}}
+  {{- $policy := include "user_authn_two_factor_policy" . | fromJson }}
+  {{- $totpTypes := list }}
+  {{- $webAuthnTypes := list }}
+  {{- range $type := $covered }}
+    {{- $methods := (index $policy $type).methods }}
+    {{- if has "TOTP" $methods }}{{ $totpTypes = append $totpTypes (index $connectorTypes $type) }}{{ end }}
+    {{- if has "WebAuthn" $methods }}{{ $webAuthnTypes = append $webAuthnTypes (index $connectorTypes $type) }}{{ end }}
+  {{- end }}
+  {{- $webAuthn := .webAuthn | default dict }}
   mfa:
     authenticators:
+    {{- if $totpTypes }}
     - id: totp
       type: TOTP
       config:
         issuer: {{ .issuerName | default "Deckhouse" | quote }}
       connectorTypes:
-      {{- range $type := (.providerTypes | default (list "Local")) }}
-      - {{ index $connectorTypes $type }}
+      {{- range $totpTypes }}
+      - {{ . }}
       {{- end }}
+    {{- end }}
+    {{- if $webAuthnTypes }}
+    - id: webauthn
+      type: WebAuthn
+      config:
+        rpDisplayName: {{ .issuerName | default "Deckhouse" | quote }}
+        {{- if $webAuthn.rpID }}
+        {{- $dexHost := include "helm_lib_module_public_domain" (list $context "dex") }}
+        {{- if and (ne $webAuthn.rpID $dexHost) (not (hasSuffix (printf ".%s" $webAuthn.rpID) $dexHost)) }}
+        {{- fail (printf "twoFactor.webAuthn.rpID %q must be the domain of Dex (%s) or a parent domain of it: the browser refuses a key bound to another domain" $webAuthn.rpID $dexHost) }}
+        {{- end }}
+        rpID: {{ $webAuthn.rpID | quote }}
+        {{- end }}
+        attestationPreference: "none"
+      connectorTypes:
+      {{- range $webAuthnTypes }}
+      - {{ . }}
+      {{- end }}
+    {{- end }}
     defaultMFAChain:
+    {{- if $totpTypes }}
     - totp
+    {{- end }}
+    {{- if $webAuthnTypes }}
+    - webauthn
+    {{- end }}
   {{- end }}
   {{- end }}
   signer:

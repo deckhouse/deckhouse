@@ -231,10 +231,15 @@ func (r *Reconciler) executeReset2FA(ctx context.Context, op operation, now time
 		pair = localPair(*userPassword)
 	}
 
-	// OfflineSessions is where the Dex of 1.77 keeps the TOTP secret; it goes first, as in Unlock.
-	deleted, err := r.deletePairSession(ctx, pair)
-	if err != nil {
-		return outcome{}, err
+	// OfflineSessions is where the Dex of 1.77 keeps the TOTP secret; it goes first, as in Unlock. A reset of the
+	// keys alone keeps it: the keys were never kept there.
+	totp, webAuthn := op.Spec.reset2FAMethods()
+	deleted := false
+	if totp {
+		var err error
+		if deleted, err = r.deletePairSession(ctx, pair); err != nil {
+			return outcome{}, err
+		}
 	}
 	if !found {
 		// Without a Password there is no local user to sign in, and the copy creates no
@@ -243,7 +248,7 @@ func (r *Reconciler) executeReset2FA(ctx context.Context, op operation, now time
 			append(operationLogKV(op), "user", op.Spec.User, "offlineSessionsDeleted", deleted)...)
 		return outcome{}, nil
 	}
-	if err := r.resetIdentityMFA(ctx, pair, now); err != nil {
+	if err := r.resetIdentityMFA(ctx, pair, totp, webAuthn, now); err != nil {
 		return outcome{}, err
 	}
 	return r.logoutPair(ctx, op, pair, revocation.ReasonReset2FA)
@@ -264,11 +269,14 @@ func (r *Reconciler) reset2FAExternal(ctx context.Context, op operation, now tim
 	)...)
 
 	// The old place goes first, as for a local user: a copy that read it before the reset would bring the
-	// secret back into the UserIdentity.
-	if _, err := r.deletePairSession(ctx, target.pair); err != nil {
-		return outcome{}, err
+	// secret back into the UserIdentity. A reset of the keys alone keeps it.
+	totp, webAuthn := op.Spec.reset2FAMethods()
+	if totp {
+		if _, err := r.deletePairSession(ctx, target.pair); err != nil {
+			return outcome{}, err
+		}
 	}
-	if err := r.resetIdentityMFA(ctx, target.pair, now); err != nil {
+	if err := r.resetIdentityMFA(ctx, target.pair, totp, webAuthn, now); err != nil {
 		return outcome{}, err
 	}
 	return r.logoutPair(ctx, op, target.pair, revocation.ReasonReset2FA)

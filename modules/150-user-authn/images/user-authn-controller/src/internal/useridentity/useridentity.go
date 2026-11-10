@@ -349,9 +349,31 @@ func (i *Identity) ConfirmTOTP() {
 	entry["confirmed"] = true
 }
 
+// WebAuthnCredentialCount is the number of the WebAuthn credentials of the account, over every authenticator.
+// Dex keeps them by the ID of the authenticator; their content is never read here.
+func (i *Identity) WebAuthnCredentialCount() int {
+	byAuthenticator, _ := i.obj.Object[fieldWebAuthn].(map[string]any)
+	count := 0
+	for _, credentials := range byAuthenticator {
+		list, _ := credentials.([]any)
+		count += len(list)
+	}
+	return count
+}
+
 // ClearMFA removes every second factor, as Dex's ResetMFA does.
 func (i *Identity) ClearMFA() {
+	i.ClearTOTP()
+	i.ClearWebAuthn()
+}
+
+// ClearTOTP removes the TOTP secret and keeps the WebAuthn credentials. Dex keeps only TOTP secrets in mfaSecrets.
+func (i *Identity) ClearTOTP() {
 	delete(i.obj.Object, fieldMFASecrets)
+}
+
+// ClearWebAuthn removes the WebAuthn credentials of every authenticator and keeps the TOTP secret.
+func (i *Identity) ClearWebAuthn() {
 	delete(i.obj.Object, fieldWebAuthn)
 }
 

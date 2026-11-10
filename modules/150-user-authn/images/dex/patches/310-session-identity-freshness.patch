@@ -1,8 +1,8 @@
 diff --git a/cmd/dex/config.go b/cmd/dex/config.go
-index c235debc..8d50bd62 100644
+index d8665974..ef59b9cc 100644
 --- a/cmd/dex/config.go
 +++ b/cmd/dex/config.go
-@@ -831,6 +831,22 @@ type Sessions struct {
+@@ -838,6 +838,22 @@ type Sessions struct {
  	// SSOSharedWithDefault is the default SSO sharing policy for clients without explicit ssoSharedWith.
  	// "all" = share with all clients, "none" = share with no one (default: "none").
  	SSOSharedWithDefault string `json:"ssoSharedWithDefault"`
@@ -73,10 +73,10 @@ index 00000000..28de4f0f
 +	}
 +}
 diff --git a/cmd/dex/serve.go b/cmd/dex/serve.go
-index 17c15f10..8aaf24f0 100644
+index da56d3ad..07d67694 100644
 --- a/cmd/dex/serve.go
 +++ b/cmd/dex/serve.go
-@@ -921,6 +921,15 @@ func parseSessionConfig(s *Sessions) (*session.Config, error) {
+@@ -928,6 +928,15 @@ func parseSessionConfig(s *Sessions) (*session.Config, error) {
  		if s.SSOSharedWithDefault != "" {
  			sc.SSOSharedWithDefault = s.SSOSharedWithDefault
  		}
@@ -92,7 +92,7 @@ index 17c15f10..8aaf24f0 100644
  	}
  	if sc.AbsoluteLifetime <= 0 {
  		return nil, fmt.Errorf("absoluteLifetime must be positive, got %v", sc.AbsoluteLifetime)
-@@ -943,6 +952,22 @@ func parseSessionConfig(s *Sessions) (*session.Config, error) {
+@@ -950,6 +959,22 @@ func parseSessionConfig(s *Sessions) (*session.Config, error) {
  	return sc, nil
  }
  
@@ -112,9 +112,9 @@ index 17c15f10..8aaf24f0 100644
 +	return d, nil
 +}
 +
- func buildMFAProviders(authenticators []MFAAuthenticator, issuerURL string, logger *slog.Logger) map[string]mfa.Provider {
+ func buildMFAProviders(authenticators []MFAAuthenticator, issuerURL string, logger *slog.Logger) (map[string]mfa.Provider, error) {
  	if len(authenticators) == 0 {
- 		return nil
+ 		return nil, nil
 diff --git a/server/authflow/finalize.go b/server/authflow/finalize.go
 index bf9314ba..ff7e823d 100644
 --- a/server/authflow/finalize.go

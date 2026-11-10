@@ -25,6 +25,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"user-authn-controller/internal/controller"
 	"user-authn-controller/internal/naming"
 )
 
@@ -334,4 +335,64 @@ func loadFixture(t *testing.T) *unstructured.Unstructured {
 		t.Fatalf("decode fixture: %v", err)
 	}
 	return obj
+}
+
+func TestIdentity_WebAuthnCredentialCount(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		credentials any
+		want        int
+	}{
+		{name: "none", want: 0},
+		{name: "an empty map", credentials: map[string]any{}, want: 0},
+		{name: "an authenticator without keys", credentials: map[string]any{"webauthn": []any{}}, want: 0},
+		{name: "one key", credentials: map[string]any{"webauthn": []any{map[string]any{"displayName": "yubikey"}}}, want: 1},
+		{
+			name: "keys of two authenticators",
+			credentials: map[string]any{
+				"webauthn": []any{map[string]any{}, map[string]any{}},
+				"other":    []any{map[string]any{}},
+			},
+			want: 3,
+		},
+		{name: "not a map", credentials: "keys", want: 0},
+		{name: "a list that is no list", credentials: map[string]any{"webauthn": "keys"}, want: 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			id := New("jane", "local")
+			if tt.credentials != nil {
+				id.Object().Object[fieldWebAuthn] = tt.credentials
+			}
+			if got := id.WebAuthnCredentialCount(); got != tt.want {
+				t.Errorf("WebAuthnCredentialCount() = %d, want %d", got, tt.want)
+			}
+		})
+	}
+}
+
+// UserAccount counts the keys of the identity the informer cache serves, which has gone through the strip of the
+// controller package: the keys are dropped there, the count must stay.
+func TestIdentity_WebAuthnCredentialCountSurvivesTheCacheStrip(t *testing.T) {
+	t.Parallel()
+
+	id := New("jane", "local")
+	id.Object().Object[fieldWebAuthn] = map[string]any{
+		"webauthn": []any{map[string]any{"id": "AAA", "publicKey": "BBB", "signCount": int64(2)}},
+	}
+	if got := id.WebAuthnCredentialCount(); got != 1 {
+		t.Fatalf("WebAuthnCredentialCount() = %d before the strip, want 1", got)
+	}
+
+	cached, err := controller.StripDexSecrets(id.Object())
+	if err != nil {
+		t.Fatalf("StripDexSecrets: %v", err)
+	}
+	if got := FromUnstructured(cached.(*unstructured.Unstructured)).WebAuthnCredentialCount(); got != 1 {
+		t.Errorf("WebAuthnCredentialCount() = %d after the strip, want 1", got)
+	}
 }

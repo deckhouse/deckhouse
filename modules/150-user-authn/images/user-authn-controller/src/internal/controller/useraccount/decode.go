@@ -28,7 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 
-	"user-authn-controller/api/v1alpha1"
 	"user-authn-controller/internal/controller"
 	"user-authn-controller/internal/useridentity"
 )
@@ -106,7 +105,8 @@ type identityView struct {
 	Migrated  bool
 	Attempts  int64
 	LastLogin *time.Time
-	TwoFactor v1alpha1.UserAccountTwoFactor
+	// Factors are the second factors Dex keeps for the pair.
+	Factors storedFactors
 	// KnownDevices is when Dex first saw each browser of the pair complete a login, by the hash of its
 	// device mark.
 	KnownDevices map[string]time.Time
@@ -362,8 +362,9 @@ func decodeIdentity(obj *unstructured.Unstructured) (identityView, error) {
 	if !lastLogin.IsZero() {
 		view.LastLogin = &lastLogin
 	}
+	view.Factors = storedFactors{WebAuthnKeys: id.WebAuthnCredentialCount()}
 	if totp != nil {
-		view.TwoFactor = v1alpha1.UserAccountTwoFactor{Enrolled: true, Confirmed: totp.Confirmed}
+		view.Factors.TOTP, view.Factors.TOTPConfirmed = true, totp.Confirmed
 	}
 	return view, nil
 }

@@ -173,8 +173,7 @@ func TestStripDexSecretsRemovesUserIdentityAndSessionSecrets(t *testing.T) {
 				},
 				"webauthnCredentials": map[string]any{"key": []any{map[string]any{"publicKey": "AAA"}}},
 			},
-			stripped: []string{"webauthnCredentials"},
-			kept:     []string{"userID", "connectorID", "claims", "blockedUntil", "mfaSecrets"},
+			kept: []string{"userID", "connectorID", "claims", "blockedUntil", "mfaSecrets", "webauthnCredentials"},
 		},
 		{
 			name: "auth session",
@@ -274,6 +273,65 @@ func TestStripDexSecretsReducesMFASecretsToFlags(t *testing.T) {
 	}
 	if _, exists := got.(*unstructured.Unstructured).Object["mfaSecrets"]; exists {
 		t.Error("mfaSecrets without an entry was kept")
+	}
+}
+
+func TestStripDexSecretsReducesWebAuthnCredentialsToACount(t *testing.T) {
+	t.Parallel()
+
+	original := &unstructured.Unstructured{Object: map[string]any{
+		"kind":   "UserIdentity",
+		"userID": "jane",
+		"webauthnCredentials": map[string]any{
+			"webauthn": []any{
+				map[string]any{"id": "secret-id-1", "publicKey": "secret-key-1", "signCount": int64(3)},
+				map[string]any{"id": "secret-id-2", "publicKey": "secret-key-2"},
+			},
+			"empty":  []any{},
+			"broken": "not a list",
+		},
+	}}
+
+	got, err := StripDexSecrets(original)
+	if err != nil {
+		t.Fatalf("StripDexSecrets: %v", err)
+	}
+	stripped := got.(*unstructured.Unstructured)
+	byAuthenticator, ok := stripped.Object["webauthnCredentials"].(map[string]any)
+	if !ok {
+		t.Fatalf("webauthnCredentials missing or wrong type: %T", stripped.Object["webauthnCredentials"])
+	}
+	if len(byAuthenticator) != 1 {
+		t.Errorf("webauthnCredentials = %v, want only the authenticator with keys", byAuthenticator)
+	}
+	list, _ := byAuthenticator["webauthn"].([]any)
+	if len(list) != 2 {
+		t.Fatalf("webauthnCredentials.webauthn = %v, want two entries", list)
+	}
+	for _, entry := range list {
+		if m, ok := entry.(map[string]any); !ok || len(m) != 0 {
+			t.Errorf("an entry still holds %v", entry)
+		}
+	}
+	raw, err := json.Marshal(stripped.Object)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), "secret-") {
+		t.Errorf("stripped object still holds a credential: %s", raw)
+	}
+	if len(original.Object["webauthnCredentials"].(map[string]any)["webauthn"].([]any)[0].(map[string]any)) != 3 {
+		t.Error("the original was mutated")
+	}
+
+	for _, malformed := range []any{"keys", map[string]any{}, map[string]any{"webauthn": []any{}}} {
+		got, err := StripDexSecrets(&unstructured.Unstructured{Object: map[string]any{"webauthnCredentials": malformed}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, exists := got.(*unstructured.Unstructured).Object["webauthnCredentials"]; exists {
+			t.Errorf("webauthnCredentials %v was kept", malformed)
+		}
 	}
 }
 

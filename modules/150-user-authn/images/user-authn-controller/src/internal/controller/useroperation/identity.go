@@ -105,10 +105,15 @@ func (r *Reconciler) unlockIdentity(ctx context.Context, p identityPair, now tim
 	})
 }
 
-// resetIdentityMFA removes every second factor of the pair, as Dex's ResetMFA does.
-func (r *Reconciler) resetIdentityMFA(ctx context.Context, p identityPair, now time.Time) error {
+// resetIdentityMFA removes the TOTP secret, the WebAuthn credentials, or both (as Dex's ResetMFA does) of the pair.
+func (r *Reconciler) resetIdentityMFA(ctx context.Context, p identityPair, totp, webAuthn bool, now time.Time) error {
 	return r.mutateIdentity(ctx, p, now, func(id *useridentity.Identity, rec *useridentity.Record) error {
-		id.ClearMFA()
+		if totp {
+			id.ClearTOTP()
+		}
+		if webAuthn {
+			id.ClearWebAuthn()
+		}
 		rec.ClearedAt = useridentity.FormatTime(now)
 		return nil
 	})

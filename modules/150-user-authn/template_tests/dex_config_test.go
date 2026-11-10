@@ -238,6 +238,170 @@ var _ = Describe("Module :: user-authn :: helm template :: dex-config", func() {
 		})
 	})
 
+	Context("With WebAuthn", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("userAuthn.twoFactor.enabled", true)
+			hec.ValuesSet("userAuthn.twoFactor.methods", []string{"WebAuthn"})
+			hec.ValuesSet("userAuthn.twoFactor.issuerName", "Deckhouse (Alpha)")
+			hec.HelmRender()
+		})
+
+		It("Should render the WebAuthn authenticator, with no attestation and the domain of the issuer", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			jsonConfig := renderedDexConfig(hec)
+
+			Expect(gjson.GetBytes(jsonConfig, "mfa").Raw).To(MatchJSON(`{
+				"authenticators": [{
+					"id": "webauthn",
+					"type": "WebAuthn",
+					"config": {"rpDisplayName": "Deckhouse (Alpha)", "attestationPreference": "none"},
+					"connectorTypes": ["local"]
+				}],
+				"defaultMFAChain": ["webauthn"]
+			}`))
+		})
+	})
+
+	Context("With a relying party ID", func() {
+		for _, tc := range []struct {
+			name      string
+			rpID      string
+			wantError string
+		}{
+			{name: "the Dex host", rpID: "dex.example.com"},
+			{name: "a parent domain", rpID: "example.com"},
+			{name: "a typo", rpID: "exmaple.com", wantError: `twoFactor.webAuthn.rpID "exmaple.com" must be the domain of Dex`},
+			{name: "a sibling", rpID: "other.example.com", wantError: `twoFactor.webAuthn.rpID "other.example.com"`},
+		} {
+			Context(tc.name, func() {
+				BeforeEach(func() {
+					hec.ValuesSet("userAuthn.twoFactor.enabled", true)
+					hec.ValuesSet("userAuthn.twoFactor.methods", []string{"WebAuthn"})
+					hec.ValuesSet("userAuthn.twoFactor.webAuthn.rpID", tc.rpID)
+					hec.HelmRender()
+				})
+
+				It("Should accept the Dex domain and its parents only", func() {
+					if tc.wantError == "" {
+						Expect(hec.RenderError).ToNot(HaveOccurred())
+						Expect(gjson.GetBytes(renderedDexConfig(hec), "mfa.authenticators.0.config.rpID").String()).To(Equal(tc.rpID))
+						return
+					}
+					Expect(hec.RenderError).To(HaveOccurred())
+					Expect(hec.RenderError.Error()).To(ContainSubstring(tc.wantError))
+				})
+			})
+		}
+	})
+
+	Context("With WebAuthn bound to a domain", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("userAuthn.twoFactor.enabled", true)
+			hec.ValuesSet("userAuthn.twoFactor.methods", []string{"WebAuthn"})
+			hec.ValuesSet("userAuthn.twoFactor.webAuthn.rpID", "example.com")
+			hec.ValuesSet("userAuthn.twoFactor.providerTypes", []string{"Local", "LDAP"})
+			hec.HelmRender()
+		})
+
+		It("Should render the relying party ID and ask nothing about the make of the key", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			jsonConfig := renderedDexConfig(hec)
+
+			authenticator := gjson.GetBytes(jsonConfig, "mfa.authenticators.0")
+			Expect(authenticator.Get("config.rpID").String()).To(Equal("example.com"))
+			Expect(authenticator.Get("config.attestationPreference").String()).To(Equal("none"))
+			Expect(authenticator.Get("connectorTypes").Value()).To(Equal([]any{"local", "ldap"}))
+			// Dex v2.46 reads these two and uses neither, so they stay out of the config.
+			Expect(authenticator.Get("config.userVerification").Exists()).To(BeFalse())
+			Expect(authenticator.Get("config.authenticatorAttachment").Exists()).To(BeFalse())
+			// The origin is the issuer, whatever the relying party ID is.
+			Expect(authenticator.Get("config.rpOrigins").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("With the method named TOTP", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("userAuthn.twoFactor.enabled", true)
+			hec.ValuesSet("userAuthn.twoFactor.methods", []string{"TOTP"})
+			hec.ValuesSet("userAuthn.twoFactor.webAuthn.rpID", "example.com")
+			hec.HelmRender()
+		})
+
+		It("Should ignore the WebAuthn parameters", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			jsonConfig := renderedDexConfig(hec)
+
+			Expect(gjson.GetBytes(jsonConfig, "mfa.authenticators.#").Int()).To(BeEquivalentTo(1))
+			Expect(gjson.GetBytes(jsonConfig, "mfa.authenticators.0.id").String()).To(Equal("totp"))
+			Expect(gjson.GetBytes(jsonConfig, "mfa.defaultMFAChain").Value()).To(Equal([]any{"totp"}))
+		})
+	})
+
+	Context("With both methods required", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("userAuthn.twoFactor.enabled", true)
+			hec.ValuesSet("userAuthn.twoFactor.methods", []string{"TOTP", "WebAuthn"})
+			hec.ValuesSet("userAuthn.twoFactor.require", "All")
+			hec.ValuesSet("userAuthn.twoFactor.providerTypes", []string{"Local", "LDAP"})
+			hec.HelmRender()
+		})
+
+		It("Should ask for the code and then the key", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			jsonConfig := renderedDexConfig(hec)
+
+			Expect(gjson.GetBytes(jsonConfig, "mfa.authenticators.#.id").Value()).To(Equal([]any{"totp", "webauthn"}))
+			Expect(gjson.GetBytes(jsonConfig, "mfa.authenticators.0.connectorTypes").Value()).To(Equal([]any{"local", "ldap"}))
+			Expect(gjson.GetBytes(jsonConfig, "mfa.authenticators.1.connectorTypes").Value()).To(Equal([]any{"local", "ldap"}))
+			Expect(gjson.GetBytes(jsonConfig, "mfa.defaultMFAChain").Value()).To(Equal([]any{"totp", "webauthn"}))
+		})
+	})
+
+	Context("With a method for each type of provider", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("userAuthn.twoFactor.enabled", true)
+			hec.ValuesSet("userAuthn.twoFactor.providerTypes", []string{"Local", "LDAP", "Crowd"})
+			hec.ValuesSet("userAuthn.twoFactor.providerTypeOverrides", []map[string]any{
+				{"providerType": "LDAP", "methods": []string{"WebAuthn"}},
+				{"providerType": "Crowd", "methods": []string{"TOTP", "WebAuthn"}, "require": "All"},
+			})
+			hec.HelmRender()
+		})
+
+		// Dex drops from the chain of a login the authenticators not bound to its connector type: a local user is
+		// asked for the code, an LDAP user for the key, a Crowd user for both.
+		It("Should bind each authenticator to the types that use it", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			jsonConfig := renderedDexConfig(hec)
+
+			Expect(gjson.GetBytes(jsonConfig, "mfa.authenticators.#.id").Value()).To(Equal([]any{"totp", "webauthn"}))
+			Expect(gjson.GetBytes(jsonConfig, "mfa.authenticators.0.connectorTypes").Value()).To(Equal([]any{"local", "atlassian-crowd"}))
+			Expect(gjson.GetBytes(jsonConfig, "mfa.authenticators.1.connectorTypes").Value()).To(Equal([]any{"ldap", "atlassian-crowd"}))
+			Expect(gjson.GetBytes(jsonConfig, "mfa.defaultMFAChain").Value()).To(Equal([]any{"totp", "webauthn"}))
+		})
+	})
+
+	// Dex applies an authenticator with no connector types to every connector, the OIDC and SAML providers too: a
+	// method no type uses must not be rendered with an empty list.
+	Context("With a method that no type uses", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("userAuthn.twoFactor.enabled", true)
+			hec.ValuesSet("userAuthn.twoFactor.methods", []string{"TOTP"})
+			hec.ValuesSet("userAuthn.twoFactor.providerTypes", []string{"Local"})
+			hec.ValuesSet("userAuthn.twoFactor.providerTypeOverrides", []map[string]any{{"providerType": "Local", "methods": []string{"WebAuthn"}}})
+			hec.HelmRender()
+		})
+
+		It("Should leave its authenticator out", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			jsonConfig := renderedDexConfig(hec)
+
+			Expect(gjson.GetBytes(jsonConfig, "mfa.authenticators.#.id").Value()).To(Equal([]any{"webauthn"}))
+			Expect(gjson.GetBytes(jsonConfig, "mfa.authenticators.0.connectorTypes").Value()).To(Equal([]any{"local"}))
+			Expect(gjson.GetBytes(jsonConfig, "mfa.defaultMFAChain").Value()).To(Equal([]any{"webauthn"}))
+		})
+	})
+
 	Context("With the providers of 2FA listed but 2FA off", func() {
 		BeforeEach(func() {
 			hec.ValuesSet("userAuthn.twoFactor.enabled", false)
