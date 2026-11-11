@@ -1,0 +1,174 @@
+candi:
+  fixes:
+    - summary: A GPU problem no longer blocks node convergence.
+      impact: >-
+        On a NodeGroup with `spec.gpu`, a failing GPU check used to abort the bashible run and be retried
+        forever, so the node never configured kubelet and never received updates from any other module.
+        Such a node now converges and only its GPU stays unusable. If `/usr/bin/nvidia-container-runtime`
+        is absent, containerd is now configured with `runc` as the default runtime instead of `nvidia`;
+        on a node whose configuration previously selected `nvidia` this changes the containerd config
+        and therefore restarts containerd. Previously such a node could not start any container at all.
+    - summary: GPU compute capability check no longer requires `bc`.
+    - summary: >-
+        Persist `net.core.bpf_jit_harden` for GPU nodes in an own sysctl drop-in instead of editing distribution
+        files that may be absent.
+    - summary: >-
+        bashible verifies the rpp-get binary against the image digest from its bundle before running it;
+        a substituted bootstrap proxy on a master can no longer hand a binary to the nodes.
+      impact: >-
+        A node that joins while a registry-packages-proxy pod of the previous release is still running
+        on a master waits until a pod of this release answers.
+    - summary: >-
+        Fixed an intermittent bootstrap hang where kube-apiserver never started because kubelet read its
+        manifest while it was being written.
+    - summary: >-
+        A new cloud node sets up the provider network before it installs bootstrap packages, so it can
+        download them from a master in another zone.
+chrony:
+  fixes:
+    - summary: Fixed known vulnerabilities in chrony-exporter.
+cloud-provider-dvp:
+  fixes:
+    - summary: >-
+        Fixes DVP CSI staging so volumes with filesystems detected by Kubernetes SafeFormatAndMount are
+        preserved and unformatted volumes are formatted without using lsblk.
+    - summary: Creates ModuleConfig/cloud-provider-dvp automatically when it is missing.
+cni-cilium:
+  fixes:
+    - summary: >-
+        The ipv4-options-guard sidecar no longer writes to the host `/etc`, so Cilium agents start on
+        Deckhouse Engine nodes.
+      impact: Cilium agent pods will be restarted.
+cni-flannel:
+  fixes:
+    - summary: >-
+        The ipv4-options-guard sidecar no longer writes to the host `/etc`, so Flannel pods start on Deckhouse
+        Engine nodes.
+      impact: Flannel pods will be restarted.
+cni-simple-bridge:
+  fixes:
+    - summary: >-
+        The ipv4-options-guard sidecar no longer writes to the host `/etc`, so simple-bridge pods start
+        on Deckhouse Engine nodes.
+      impact: simple-bridge pods will be restarted.
+common:
+  fixes:
+    - summary: Fixed known vulnerabilities in the cni-migration-controller and cni-migration-init-checker
+        images.
+      impact: >-
+        Pods of the kube-proxy, cni-cilium, cni-flannel, and cni-simple-bridge agent DaemonSets will be
+        restarted because their cni-migration-init-checker init container image is updated.
+    - summary: added mountpoint in ipv4-options-guard
+    - summary: >-
+        Updated `golang.org/x/net`, `golang.org/x/text`, `google.golang.org/grpc` and `github.com/klauspost/compress`
+        in CSI sidecars to fix CVEs.
+control-plane-manager:
+  fixes:
+    - summary: Preserve custom TLS certificates when enabling a default Gateway.
+    - summary: The migration hook for the api listener is added.
+deckhouse:
+  fixes:
+    - summary: >-
+        Fixed a memory leak in webhook-handler, which kept the kubernetes monitors of replaced hooks running
+        after every hook reload.
+deckhouse-controller:
+  fixes:
+    - summary: >-
+        Fixed image pulls for modules served by ModulePullOverride when another source updates its registry
+        or the override is not ready during Deckhouse startup.
+dhctl:
+  fixes:
+    - summary: Fixed known vulnerabilities in dhctl dependencies.
+docs:
+  features:
+    - summary: Implement glossary with term linking.
+    - summary: >-
+        Added the "System requirements" page with deployment options and resource requirements for containers,
+        virtual machines and combined workloads.
+  fixes:
+    - summary: Move the language switch from the header to the footer
+documentation:
+  fixes:
+    - summary: Add the language switch to the footer.
+istio:
+  fixes:
+    - summary: Fixed CVEs in the istio module images (go-jose, golang.org/x/net).
+      impact: istiod, istio-cni, ingress gateways, Kiali, api-proxy and metadata-exporter pods will be
+        restarted.
+local-path-provisioner:
+  fixes:
+    - summary: Updated `golang.org/x/net`, `golang.org/x/text` and `github.com/klauspost/compress` to
+        fix CVEs.
+metallb:
+  fixes:
+    - summary: >-
+        Fixed BGP migration to preserve pool allocation flags and allow users to manage migrated resources
+        after switching ModuleConfig to version 3.
+node-manager:
+  features:
+    - summary: Alert when a NodeGroup uses the deprecated built-in GPU support while the `gpu` module
+        is disabled.
+  fixes:
+    - summary: >-
+        Master controllers leave an unreachable master after about 100 seconds and are not evicted from
+        a single master.
+    - summary: >-
+        Master controllers no longer tolerate keys from `customTolerationKeys`, so a key that repeats
+        a built-in one no longer blocks pod updates.
+      impact: >-
+        node-controller, capi-controller-manager, machine-controller-manager and bashible-apiserver do
+        not run on a master tainted with a key from `global.modules.placement.customTolerationKeys`. Remove
+        such taints from the master NodeGroup before the update.
+    - summary: >-
+        A node-manager release no longer waits for capi-controller-manager when neither capi nor its webhooks
+        change.
+    - summary: >-
+        Fixed known vulnerabilities in the bashible-apiserver, node-controller, node-group-exporter, kubernetes-api-proxy,
+        d8-shutdown-inhibitor and capi-controller-manager images.
+    - summary: Fixed constant NodeGroup status updates by node-controller on every Node update.
+registry:
+  fixes:
+    - summary: Fixed known vulnerabilities in the docker-auth image.
+      impact: The registry in-cluster proxy and node services pods will be restarted.
+    - summary: Fixed known vulnerabilities in the nodeservices-manager, docker-auth, mirrorer and syncer
+        images.
+    - summary: >-
+        The update to DP 1.78 is held as soon as `registry.mode` `Proxy` or `Local`, or a switch between
+        `Direct` and `Unmanaged`, is set in the `deckhouse` ModuleConfig, and the message of the held
+        release lists the migration steps for each mode.
+      impact: >-
+        A cluster that uses `Proxy` or `Local` of the previous registry implementation, or `Direct` without
+        the `registry` ModuleConfig, is not updated to DP 1.78, as before. This now also applies from
+        the moment such a mode is set in the `deckhouse` ModuleConfig, before the switch starts. Migrate
+        as described in "Migrating from the previous implementation to the current one" in the registry
+        documentation. Clusters already prepared for the migration are not affected.
+registry-packages-proxy:
+  fixes:
+    - summary: >-
+        The bootstrap port serves the manifest and the layer of the rpp-get image, so a node can verify
+        the binary it installs.
+    - summary: Fixed known vulnerabilities in registry-packages-proxy.
+registrypackages:
+  fixes:
+    - summary: Fixed known vulnerabilities in the cfssl and d8-bcheck packages.
+    - summary: Bump golang.org/x/net to v0.62.0 in d8-bcheck to fix CVE-2026-78661 and CVE-2026-97045.
+    - summary: Fixed known vulnerabilities in the rpp-get package.
+    - summary: Fixed known vulnerabilities in auth_server and registry of the docker-registry package.
+    - summary: >-
+        rpp-get tries every registry-packages-proxy endpoint before an attempt fails and retries connection
+        timeouts, so a node that reaches only the master of its own zone during bootstrap joins the cluster.
+service-with-healthchecks:
+  fixes:
+    - summary: Go dependencies are updated.
+      impact: The controller and agent pods will be restarted.
+terraform-manager:
+  fixes:
+    - summary: Fixed known vulnerabilities in opentofu.
+      impact: The terraform-manager pods will be restarted.
+    - summary: Fixed known vulnerabilities in opentofu and in the terraform-manager-dvp image.
+tools:
+  fixes:
+    - summary: The e2e directories of modules no longer reach the Deckhouse image.
+user-authn:
+  fixes:
+    - summary: Default DKP gateway requirement is removed from dex-authenticator template.
