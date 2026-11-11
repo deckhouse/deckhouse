@@ -168,7 +168,7 @@ func TestTheMutableRenderIsWhatTheAPIServerStores(t *testing.T) {
 
 	stored := &internalv1alpha1.NodeConfig{}
 	require.NoError(t, c.Get(t.Context(), types.NamespacedName{Name: "bashible-0"}, stored))
-	require.True(t, specUpToDate(stored, desired), "stored:   %+v\nrendered: %+v", stored.Spec, desired.Spec)
+	require.True(t, specUpToDate(stored, desired, false), "stored:   %+v\nrendered: %+v", stored.Spec, desired.Spec)
 }
 
 // A bashible node's document names only what the agent does there: a section it
@@ -205,7 +205,7 @@ func TestAStoredDocumentWithEmptySectionsIsUpToDate(t *testing.T) {
 
 	stored := &internalv1alpha1.NodeConfig{ObjectMeta: desired.ObjectMeta}
 	require.NoError(t, json.Unmarshal(asStored, &stored.Spec))
-	require.True(t, specUpToDate(stored, desired))
+	require.True(t, specUpToDate(stored, desired, false))
 }
 
 func staticPodNames(pods []internalv1alpha1.StaticPod) []string {

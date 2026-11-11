@@ -30,7 +30,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/structured-merge-diff/v6/fieldpath"
 
+	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
 // machineFields are the spec paths the machine owns (withoutMachineFields): never
@@ -42,11 +44,22 @@ var machineFields = fieldpath.NewSet(
 	fieldpath.MakePathOrDie("spec", "kubelet", "registerWithTaints"),
 )
 
+// ntpFields is spec.network.ntp. It is the machine's like the rest of the network, except on
+// an Engine master (ownsNTP).
+var ntpFields = fieldpath.MakePrefixMatcherOrDie("spec", "network", "ntp")
+
+// ownsNTP reports whether spec.network.ntp is node-controller's: on an Engine master (renderNTP).
+// There the render's servers replace the machine's, and none rendered removes them.
+func ownsNTP(ng *v1.NodeGroup) bool {
+	return !IsMutable(ng) && ng.Name == nodecommon.MasterNodeGroupName
+}
+
 // takeOver hands fieldManager the spec fields other writers own by update (the node registering
 // its object, a cloud node's create, a hand edit), the machine's fields aside: a field two
 // managers own stays when one stops applying it, and a value the render dropped would stay.
-func (r *Reconciler) takeOver(ctx context.Context, existing *internalv1alpha1.NodeConfig, logger logr.Logger) (*internalv1alpha1.NodeConfig, error) {
-	entries, taken, err := takeOverSpec(existing.ManagedFields, metav1.NewTime(time.Now()))
+// With ownNTP, spec.network.ntp is taken over too.
+func (r *Reconciler) takeOver(ctx context.Context, existing *internalv1alpha1.NodeConfig, ownNTP bool, logger logr.Logger) (*internalv1alpha1.NodeConfig, error) {
+	entries, taken, err := takeOverSpec(existing.ManagedFields, metav1.NewTime(time.Now()), ownNTP)
 	if err != nil {
 		return nil, fmt.Errorf("read the field owners of NodeConfig %s: %w", existing.Name, err)
 	}
@@ -76,8 +89,9 @@ func (r *Reconciler) takeOver(ctx context.Context, existing *internalv1alpha1.No
 
 // takeOverSpec moves the non-machine spec fields of every update entry of the main
 // resource into fieldManager's apply entry, creating it if needed; an entry left with
-// nothing is dropped. Reports false when no entry owned such a field.
-func takeOverSpec(entries []metav1.ManagedFieldsEntry, now metav1.Time) ([]metav1.ManagedFieldsEntry, bool, error) {
+// nothing is dropped. With ownNTP, spec.network.ntp counts as non-machine. Reports false
+// when no entry owned such a field.
+func takeOverSpec(entries []metav1.ManagedFieldsEntry, now metav1.Time, ownNTP bool) ([]metav1.ManagedFieldsEntry, bool, error) {
 	spec := fieldpath.MakePrefixMatcherOrDie("spec")
 	taken := &fieldpath.Set{}
 	kept := make([]metav1.ManagedFieldsEntry, 0, len(entries))
@@ -95,6 +109,9 @@ func takeOverSpec(entries []metav1.ManagedFieldsEntry, now metav1.Time) ([]metav
 			return nil, false, fmt.Errorf("decode the fields of %s: %w", entry.Manager, err)
 		}
 		specFields := fields.FilterIncludeMatches(spec).RecursiveDifference(machineFields)
+		if ownNTP {
+			specFields = specFields.Union(fields.FilterIncludeMatches(ntpFields))
+		}
 		if specFields.Empty() {
 			kept = append(kept, entry)
 			continue

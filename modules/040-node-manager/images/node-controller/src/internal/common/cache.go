@@ -121,12 +121,13 @@ func CacheOptions() (cache.Options, client.Options) {
 					"d8-system": {
 						FieldSelector: fields.SelectorFromSet(fields.Set{"metadata.name": "d8-deckhouse-version-info"}),
 					},
-					// Unfiltered for the same reason: two ConfigMaps are read here —
-					// bashible-apiserver-files (the release's image digests, watched by the
-					// nodeconfig controller) and bashible-bootstrap-templates (the candi
-					// templates the bootstrap render needs, watched by the bootstrap-secrets
-					// controller) — and one field selector cannot name both. The namespace
-					// belongs to this module and holds a handful of ConfigMaps.
+					// Unfiltered for the same reason: three ConfigMaps are read here —
+					// bashible-apiserver-files (the release's image digests),
+					// bashible-bootstrap-templates (the candi templates, also watched by the
+					// bootstrap-secrets controller) and chrony-early-time-sync (the chrony
+					// module's boot-time NTP servers) — and one field selector cannot name them
+					// all. The nodeconfig controller watches all three through this scope, so
+					// narrowing it silences those watches. The namespace holds a handful of ConfigMaps.
 					"d8-cloud-instance-manager": {},
 				},
 			},

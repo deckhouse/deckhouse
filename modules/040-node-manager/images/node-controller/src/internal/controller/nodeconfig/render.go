@@ -76,7 +76,7 @@ func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv
 		// it: the apply of an existing object leaves storage to the machine.
 		Storage:          internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{DiskSelector: &internalv1alpha1.DiskSelector{Size: systemDiskSelectorSize}}},
 		Kernel:           kernel,
-		Network:          renderNetwork(node),
+		Network:          renderNetwork(ng, node, in.BootTimeNTPServers),
 		Kubelet:          renderKubelet(ng, node, in),
 		ContainerRuntime: runtime,
 		// Every node, not only control-plane: containerd pulls the pause image
@@ -91,14 +91,20 @@ func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv
 }
 
 // withoutMachineFields is the part of a spec node-controller owns once the object exists: the
-// status token, registration taints, network and storage are the machine's. The bootstrap token
-// is never applied either: one copied into the object is taken over, so the apply removes it.
-func withoutMachineFields(spec internalv1alpha1.NodeSpec) internalv1alpha1.NodeSpec {
+// status token, registration taints, network (but the NTP servers with ownNTP) and storage are
+// the machine's. The bootstrap token is never applied: the apply removes a copied one.
+func withoutMachineFields(spec internalv1alpha1.NodeSpec, ownNTP bool) internalv1alpha1.NodeSpec {
+	ntp := spec.Network.NTP
+
 	spec.StatusToken = ""
 	spec.Kubelet.RegisterWithTaints = nil
 	spec.Kubelet.BootstrapToken = ""
 	spec.Network = internalv1alpha1.Network{}
 	spec.Storage = internalv1alpha1.Storage{}
+
+	if ownNTP {
+		spec.Network.NTP = ntp
+	}
 	return spec
 }
 
@@ -124,11 +130,21 @@ func renderKernel() internalv1alpha1.Kernel {
 // renderNetwork keeps the hostname the node booted with. The Deckhouse Engine init
 // renders it from this config on every boot, so losing it here would leave the
 // node nameless after a reboot.
-func renderNetwork(node *corev1.Node) internalv1alpha1.Network {
+func renderNetwork(ng *v1.NodeGroup, node *corev1.Node, bootTimeNTPServers []string) internalv1alpha1.Network {
 	return internalv1alpha1.Network{
 		Hostname:   node.Name,
+		NTP:        renderNTP(ng, bootTimeNTPServers),
 		Interfaces: []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}},
 	}
+}
+
+// renderNTP gives the NTP servers of the boot-time clock step to the masters alone, as
+// modules/470-chrony/templates/early-time-sync.yaml does on bashible nodes.
+func renderNTP(ng *v1.NodeGroup, servers []string) internalv1alpha1.NTP {
+	if ng.Name != nodecommon.MasterNodeGroupName {
+		return internalv1alpha1.NTP{}
+	}
+	return internalv1alpha1.NTP{Servers: servers}
 }
 
 func renderExtensions(digests map[string]string) []internalv1alpha1.Extension {

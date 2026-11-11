@@ -3,7 +3,30 @@ positive:
   - ntpServers:
     - pool.ntp.org
     - ntp.ubuntu.com
+  - ntpServers:
+    - pool.ntp.org.
+    - 192.0.2.10
+    - time_server-1.example.com
+  - ntpServers: []
+  - ntpServers:
+    - "2001:db8::1"
+    - "pool.ntp.org:123"
+  - earlyTimeSync:
+      enabled: false
+  - earlyTimeSync:
+      enabled: true
+      timeoutSeconds: 30
+  - earlyTimeSync:
+      timeoutSeconds: 60
 negative:
   config_values:
   - ntpservers:
     - a:b
+  - earlyTimeSync:
+      enabled: "yes"
+  - earlyTimeSync:
+      mode: Strict
+  - earlyTimeSync:
+      timeoutSeconds: 29
+  - earlyTimeSync:
+      timeoutSeconds: 61

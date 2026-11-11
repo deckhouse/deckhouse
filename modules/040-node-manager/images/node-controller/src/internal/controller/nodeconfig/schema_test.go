@@ -27,6 +27,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
@@ -38,7 +39,7 @@ import (
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
-// nodeConfigAPI is one API server holding the NodeConfig CRD alone, shared by the
+// nodeConfigAPI is one API server holding the NodeConfig CRD, shared by the
 // tests that ask what it stores or refuses; started on first use, stopped by TestMain.
 var nodeConfigAPI struct {
 	once   sync.Once
@@ -55,6 +56,10 @@ func nodeConfigAPIClient(t *testing.T) client.Client {
 	nodeConfigAPI.once.Do(func() {
 		scheme := k8sruntime.NewScheme()
 		if nodeConfigAPI.err = internalv1alpha1.AddToScheme(scheme); nodeConfigAPI.err != nil {
+			return
+		}
+		// Nodes too: a pass of apply() lists the group's.
+		if nodeConfigAPI.err = corev1.AddToScheme(scheme); nodeConfigAPI.err != nil {
 			return
 		}
 		nodeConfigAPI.env, _, nodeConfigAPI.client, nodeConfigAPI.err = testenv.Start(scheme,

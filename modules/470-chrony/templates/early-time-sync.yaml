@@ -1,0 +1,71 @@
+{{- $earlyTimeSync := .Values.chrony.earlyTimeSync }}
+{{- $servers := include "early_time_sync_servers" . | fromJsonArray }}
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: early-time-sync-before-kubelet.sh
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  weight: 100
+  nodeGroups: ["master"]
+  bundles: ["*"]
+  content: |
+    # Copyright 2026 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+  {{- if and $servers $earlyTimeSync.enabled }}
+
+    install -d -m 0755 /etc/systemd/system/nodelet.service.d /etc/systemd/system/kubelet.service.d
+
+    bb-event-on 'd8-early-time-sync-changed' '_configure_d8_early_time_sync'
+    function _configure_d8_early_time_sync() {
+      systemctl daemon-reload
+    }
+
+    # Report a failed nodelet start that left no metric.
+    if [ -f /etc/systemd/system/nodelet.service.d/20-d8-early-time-sync.conf ] &&
+      [ ! -e /var/run/node-exporter-textfile/d8_early_time_sync.prom ] &&
+      systemctl is-failed -q nodelet.service; then
+      install -d -m 0755 /var/run/node-exporter-textfile
+      printf '%s\n' \
+        '# HELP d8_early_time_sync_success Whether the clock was synchronized from NTP before kubelet started on the last boot.' \
+        '# TYPE d8_early_time_sync_success gauge' \
+        'd8_early_time_sync_success 0' >/var/run/node-exporter-textfile/.d8_early_time_sync.prom.tmp
+      mv -f /var/run/node-exporter-textfile/.d8_early_time_sync.prom.tmp /var/run/node-exporter-textfile/d8_early_time_sync.prom
+    fi
+
+    bb-sync-file /etc/systemd/system/nodelet.service.d/20-d8-early-time-sync.conf - d8-early-time-sync-changed <<"EOF"
+    [Service]
+    Environment="NODELET_BOOT_NTP_SERVERS={{ join " " $servers }}"
+    Environment=NODELET_BOOT_NTP_TIMEOUT={{ $earlyTimeSync.timeoutSeconds }}s
+    TimeoutStartSec={{ add $earlyTimeSync.timeoutSeconds 5 }}
+    EOF
+
+    # nodelet is enabled for multi-user.target. After waits for its readiness
+    # notification on boot, without making kubelet fail if the agent cannot start.
+    bb-sync-file /etc/systemd/system/kubelet.service.d/20-d8-early-time-sync.conf - d8-early-time-sync-changed <<"EOF"
+    [Unit]
+    After=nodelet.service
+    EOF
+
+  {{- else }}
+
+    # Boot-time synchronization is disabled: remove what a previous configuration installed.
+    if [ -f /etc/systemd/system/kubelet.service.d/20-d8-early-time-sync.conf ] || [ -f /etc/systemd/system/nodelet.service.d/20-d8-early-time-sync.conf ]; then
+      rm -f /etc/systemd/system/kubelet.service.d/20-d8-early-time-sync.conf
+      rm -f /etc/systemd/system/nodelet.service.d/20-d8-early-time-sync.conf
+      systemctl daemon-reload
+    fi
+    rm -f /var/run/node-exporter-textfile/d8_early_time_sync.prom
+  {{- end }}

@@ -61,7 +61,7 @@ func TestTheApplySetLeavesTheMachineFieldsOut(t *testing.T) {
 		},
 	}
 
-	applied := withoutMachineFields(registered)
+	applied := withoutMachineFields(registered, false)
 
 	require.Equal(t, internalv1alpha1.NodeSpec{
 		NodeName: "master-0",
@@ -70,13 +70,13 @@ func TestTheApplySetLeavesTheMachineFieldsOut(t *testing.T) {
 	require.NotEmpty(t, registered.Storage.Mounts, "the spec it was taken from is not changed")
 
 	rendered := &internalv1alpha1.NodeConfig{Spec: renderSpecOf(applied)}
-	require.True(t, specUpToDate(&internalv1alpha1.NodeConfig{Spec: registered}, rendered),
+	require.True(t, specUpToDate(&internalv1alpha1.NodeConfig{Spec: registered}, rendered, false),
 		"a node keeping what it registered with is not drift")
 
 	withToken := registered
 	withToken.Kubelet.BootstrapToken = "abcdef.0123456789abcdef"
-	require.Empty(t, withoutMachineFields(withToken).Kubelet.BootstrapToken, "the apply never carries the token")
-	require.False(t, specUpToDate(&internalv1alpha1.NodeConfig{Spec: withToken}, rendered),
+	require.Empty(t, withoutMachineFields(withToken, false).Kubelet.BootstrapToken, "the apply never carries the token")
+	require.False(t, specUpToDate(&internalv1alpha1.NodeConfig{Spec: withToken}, rendered, false),
 		"a token copied into the object is a change the apply removes")
 }
 
@@ -105,7 +105,7 @@ func TestRenderKernelPublishesEveryKeyANodeMustKeep(t *testing.T) {
 		Kernel: internalv1alpha1.Kernel{Sysctl: map[string]internalv1alpha1.SysctlValue{"kernel.panic": "0"}},
 	}
 	require.False(t, specUpToDate(&internalv1alpha1.NodeConfig{Spec: stale},
-		&internalv1alpha1.NodeConfig{Spec: internalv1alpha1.NodeSpec{Kernel: renderKernel()}}))
+		&internalv1alpha1.NodeConfig{Spec: internalv1alpha1.NodeSpec{Kernel: renderKernel()}}, false))
 }
 
 // kubelet exits when --node-labels carries a label it may not accept, so a node
@@ -477,7 +477,7 @@ func TestARegisteredNodeIsNotPatchedToDropItsRegistrationTaints(t *testing.T) {
 	registered := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0", CreationTimestamp: metav1.Now()}}
 	dayTwo := renderSpec(ng, registered, clusterInputs{})
 
-	require.True(t, specUpToDate(&internalv1alpha1.NodeConfig{Spec: bootstrap}, &internalv1alpha1.NodeConfig{Spec: dayTwo}),
+	require.True(t, specUpToDate(&internalv1alpha1.NodeConfig{Spec: bootstrap}, &internalv1alpha1.NodeConfig{Spec: dayTwo}, false),
 		"the node it was written for reads as up to date")
 }
 
@@ -1005,4 +1005,54 @@ func TestRenderUpdatePolicyCarriesEveryWindow(t *testing.T) {
 	r.recordClampedSettings(ng)
 	close(recorder.Events)
 	require.Empty(t, recorder.Events, "nothing was clamped")
+}
+
+// Only the control plane steps its clock at boot, as on bashible nodes. A bashible
+// node's document carries no network at all.
+func TestOnlyMastersGetTheBootTimeNTPServers(t *testing.T) {
+	in := clusterInputs{BootTimeNTPServers: []string{"pool.ntp.org"}}
+
+	master := renderSpec(immutableGroup("master"), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "master-0"}}, in)
+	require.Equal(t, []string{"pool.ntp.org"}, master.Network.NTP.Servers)
+
+	worker := renderSpec(immutableGroup("worker"), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0"}}, in)
+	require.Empty(t, worker.Network.NTP.Servers)
+
+	require.True(t, ownsNTP(immutableGroup("master")))
+	require.False(t, ownsNTP(immutableGroup("worker")))
+	mutableMaster := immutableGroup("master")
+	mutableMaster.Spec.SystemType = v1.SystemTypeGenericOS
+	require.False(t, ownsNTP(mutableMaster), "a bashible master has no network section at all")
+
+	raw, err := json.Marshal(renderMutableSpec(&corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "master-0"}}, "master", in))
+	require.NoError(t, err)
+	require.NotContains(t, string(raw), `"ntp"`)
+}
+
+// The apply carries the NTP servers alone of the network, and only when they are
+// node-controller's: nothing else of the machine's network is claimed.
+func TestTheApplyCarriesTheNTPServersAloneOfTheNetwork(t *testing.T) {
+	spec := internalv1alpha1.NodeSpec{Network: internalv1alpha1.Network{
+		Hostname:   "master-0",
+		DNS:        internalv1alpha1.DNS{Servers: []string{"10.0.0.10"}},
+		NTP:        internalv1alpha1.NTP{Servers: []string{"pool.ntp.org"}},
+		Interfaces: []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}},
+	}}
+
+	raw, err := json.Marshal(withoutMachineFields(spec, true))
+	require.NoError(t, err)
+	require.JSONEq(t, `{"systemType":"","nodeName":"","network":{"ntp":{"servers":["pool.ntp.org"]}}}`, string(raw))
+
+	raw, err = json.Marshal(withoutMachineFields(spec, false))
+	require.NoError(t, err)
+	require.NotContains(t, string(raw), `"network"`)
+}
+
+// The bounds the reader holds the chrony module's list to are the agent's schema.
+func TestTheNTPServerBoundsMatchTheShippedCRD(t *testing.T) {
+	servers := crdField(t, nodeConfigCRDSchema(t), "spec", "network", "ntp", "servers")
+	require.Equal(t, float64(maxNTPServers), servers["maxItems"])
+	items, ok := servers["items"].(map[string]any)
+	require.True(t, ok, "the CRD has no network.ntp.servers items")
+	require.Equal(t, float64(maxNTPServerLength), items["maxLength"])
 }

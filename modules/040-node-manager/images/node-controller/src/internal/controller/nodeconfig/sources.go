@@ -56,6 +56,9 @@ type clusterInputs struct {
 	// A multi-homed node picks the interface addressed inside one of them; a
 	// cluster that never said has none, and every node picks for itself.
 	InternalNetworkCIDRs []string
+	// BootTimeNTPServers are the servers masters step their clock by at boot, already
+	// held to the agent's bounds; none while that synchronization is off (renderNTP).
+	BootTimeNTPServers []string
 	// KubernetesVersion is the cluster's minor version, e.g. "1.34". kubelet's
 	// feature gates depend on it (bashible turns DRA gates on by version), so a
 	// node not told the version cannot follow.
@@ -116,9 +119,8 @@ type sourceReader struct {
 	rootHash *rootHashResolver
 }
 
-// readClusterInputs collects everything a NodeConfig is rendered from. Every
-// read is fail-closed: falling back on a default would roll a wrong value out
-// node by node. The cost: while any read fails, no immutable node is rendered.
+// readClusterInputs collects the common inputs for immutable nodes. A failed
+// read stops the render rather than rolling out a fallback value node by node.
 func (s *sourceReader) readClusterInputs(ctx context.Context, kubernetesVersion string) (clusterInputs, error) {
 	in := clusterInputs{KubernetesVersion: kubernetesVersion}
 	if err := s.readClusterState(ctx, &in); err != nil {
@@ -162,6 +164,41 @@ func (s *sourceReader) readClusterState(ctx context.Context, in *clusterInputs) 
 
 	in.InternalNetworkCIDRs, err = s.readInternalNetworkCIDRs(ctx)
 	return err
+}
+
+// readBootTimeNTPServers returns the NTP servers of the boot-time clock step; none without
+// the ConfigMap. Names past the agent's schema are dropped, since it refuses a document whole.
+func (s *sourceReader) readBootTimeNTPServers(ctx context.Context) ([]string, error) {
+	cm := &corev1.ConfigMap{}
+	err := s.Reader.Get(ctx, types.NamespacedName{Namespace: cloudInstanceManagerNS, Name: bootTimeSyncConfigMapName}, cm)
+	if apierrors.IsNotFound(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read %s/%s: %w", cloudInstanceManagerNS, bootTimeSyncConfigMapName, err)
+	}
+	raw, ok := cm.Data[bootTimeSyncServersKey]
+	if !ok {
+		return nil, nil
+	}
+
+	var published []string
+	if err := json.Unmarshal([]byte(raw), &published); err != nil {
+		return nil, fmt.Errorf("parse %s in %s/%s: %w", bootTimeSyncServersKey, cloudInstanceManagerNS, bootTimeSyncConfigMapName, err)
+	}
+
+	var servers []string
+
+	for _, server := range published {
+		if len(servers) == maxNTPServers {
+			break
+		}
+		if server == "" || len(server) > maxNTPServerLength {
+			continue
+		}
+		servers = append(servers, server)
+	}
+	return servers, nil
 }
 
 // readInternalNetworkCIDRs returns the subnets the cluster's own traffic runs

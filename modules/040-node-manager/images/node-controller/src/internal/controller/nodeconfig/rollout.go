@@ -169,7 +169,7 @@ func (r *Reconciler) rolloutBudget(ctx context.Context, ng *v1.NodeGroup, p *pas
 
 	budget := &rolloutBudget{
 		concurrency: groupConcurrency(ng, len(configs.Items)),
-		updating:    membersOfUpdating(configs.Items, desired, IsMutable(ng)),
+		updating:    membersOfUpdating(configs.Items, desired, ng),
 	}
 	p.rollouts[ng.Name] = budget
 	return budget, nil
@@ -179,7 +179,8 @@ func (r *Reconciler) rolloutBudget(ctx context.Context, ng *v1.NodeGroup, p *pas
 // now, unproven. A node stuck on an older spec is broken, not mid-rollout, and
 // counting it locks the cure out of a group that is already broken.
 func membersOfUpdating(configs []internalv1alpha1.NodeConfig,
-	desired map[string]internalv1alpha1.NodeSpec, mutable bool) map[string]struct{} {
+	desired map[string]internalv1alpha1.NodeSpec, ng *v1.NodeGroup) map[string]struct{} {
+	mutable, ownNTP := IsMutable(ng), ownsNTP(ng)
 	updating := make(map[string]struct{})
 	for i := range configs {
 		nc := &configs[i]
@@ -195,7 +196,7 @@ func membersOfUpdating(configs []internalv1alpha1.NodeConfig,
 		}
 		// The comparison apply() makes: a node keeping what it booted with is not
 		// drift, and reading it as drift would free a slot the node is holding.
-		if !apiequality.Semantic.DeepEqual(withoutMachineFields(nc.Spec), withoutMachineFields(want)) {
+		if !apiequality.Semantic.DeepEqual(withoutMachineFields(nc.Spec, ownNTP), withoutMachineFields(want, ownNTP)) {
 			continue
 		}
 		updating[nc.Name] = struct{}{}

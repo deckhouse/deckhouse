@@ -1,0 +1,17 @@
+{{- $earlyTimeSync := .Values.chrony.earlyTimeSync }}
+{{- $servers := include "early_time_sync_servers" . | fromJsonArray }}
+{{- if and $servers $earlyTimeSync.enabled }}
+---
+# NTP servers of the boot-time clock step on Deckhouse Engine master nodes. node-controller
+# reads this ConfigMap and puts them into spec.network.ntp.servers of their NodeConfigs, and
+# nodelet steps the clock by them before it starts kubelet. Without it, as when the module is
+# disabled, they get none. Bashible nodes get early-time-sync.yaml instead.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: chrony-early-time-sync
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony")) | nindent 2 }}
+data:
+  servers: {{ $servers | toJson | quote }}
+{{- end }}

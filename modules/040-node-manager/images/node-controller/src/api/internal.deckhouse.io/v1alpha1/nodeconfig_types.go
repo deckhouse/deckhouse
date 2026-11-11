@@ -574,9 +574,10 @@ type Network struct {
 	// Hostname of the node. Equal to the Kubernetes node name.
 	Hostname string `json:"hostname,omitempty"`
 	// DNS is the resolver configuration.
-	DNS DNS `json:"dns,omitempty"`
-	// NTP is the time synchronization configuration.
-	NTP NTP `json:"ntp,omitempty"`
+	DNS DNS `json:"dns,omitzero"`
+	// NTP is the time synchronization configuration. Maintainers: omitzero, as DNS, so that an
+	// apply carrying only ntp claims nothing else of the network.
+	NTP NTP `json:"ntp,omitzero"`
 	// Interfaces are the network interfaces of the node.
 	Interfaces []NetworkInterface `json:"interfaces,omitempty"`
 	// Routes are static routes.
@@ -593,7 +594,8 @@ type DNS struct {
 
 // NTP is the time synchronization configuration.
 type NTP struct {
-	// Servers are the NTP servers, by host name or IP address.
+	// Servers are the NTP servers, each a host name or an IPv4 address. Immutable nodes only:
+	// nodelet steps the clock by them once per boot, before kubelet starts.
 	Servers []string `json:"servers,omitempty"`
 }
 

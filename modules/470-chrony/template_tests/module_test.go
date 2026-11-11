@@ -17,6 +17,8 @@ limitations under the License.
 package template_tests
 
 import (
+	"os/exec"
+	"strings"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -55,6 +57,29 @@ ntpServers: ["pool.ntp.org", "ntp.ubuntu.com"]
 `
 )
 
+func expectValidBash(script string) {
+	cmd := exec.Command("bash", "-n")
+	cmd.Stdin = strings.NewReader(script)
+	output, err := cmd.CombinedOutput()
+	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "invalid bash: %s", output)
+}
+
+func expectEarlyTimeSyncCleanup(f *Config) {
+	Expect(f.RenderError).ShouldNot(HaveOccurred())
+	earlyTimeSync := f.KubernetesGlobalResource("NodeGroupConfiguration", "early-time-sync-before-kubelet.sh")
+	Expect(earlyTimeSync.Exists()).To(BeTrue())
+	// Without the ConfigMap node-controller gives Engine masters no NTP servers.
+	Expect(f.KubernetesResource("ConfigMap", "d8-cloud-instance-manager", "chrony-early-time-sync").Exists()).To(BeFalse())
+
+	content := earlyTimeSync.Field("spec.content").String()
+	expectValidBash(content)
+	Expect(content).To(ContainSubstring("rm -f /etc/systemd/system/kubelet.service.d/20-d8-early-time-sync.conf"))
+	Expect(content).To(ContainSubstring("rm -f /etc/systemd/system/nodelet.service.d/20-d8-early-time-sync.conf"))
+	Expect(content).NotTo(ContainSubstring("bb-sync-file"))
+	Expect(content).To(ContainSubstring("/var/run/node-exporter-textfile/d8_early_time_sync.prom"))
+	Expect(content).To(ContainSubstring("systemctl daemon-reload"))
+}
+
 var _ = Describe("Module :: chrony :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
@@ -62,7 +87,7 @@ var _ = Describe("Module :: chrony :: helm template ::", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("chrony", moduleValues)
+			f.ValuesSetFromYamlWithOpenAPIDefaults("chrony", moduleValues)
 			f.HelmRender()
 		})
 
@@ -71,12 +96,31 @@ var _ = Describe("Module :: chrony :: helm template ::", func() {
 
 			namespace := f.KubernetesGlobalResource("Namespace", "d8-chrony")
 			registrySecret := f.KubernetesResource("Secret", "d8-chrony", "deckhouse-registry")
+			earlyTimeSync := f.KubernetesGlobalResource("NodeGroupConfiguration", "early-time-sync-before-kubelet.sh")
 
 			chronyDaemonSetTest := f.KubernetesResource("DaemonSet", "d8-chrony", "chrony")
 			chronyMasterDaemonsetTest := f.KubernetesResource("DaemonSet", "d8-chrony", "chrony-master")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
+			Expect(earlyTimeSync.Exists()).To(BeTrue())
+			Expect(earlyTimeSync.Field("spec.nodeGroups").String()).To(MatchJSON(`["master"]`))
+
+			content := earlyTimeSync.Field("spec.content").String()
+			expectValidBash(content)
+			Expect(content).To(ContainSubstring("\n[Unit]\nAfter=nodelet.service\n"))
+			Expect(content).NotTo(ContainSubstring("Wants=nodelet.service"))
+			Expect(content).NotTo(ContainSubstring("\nRequires="))
+			Expect(content).To(ContainSubstring("'d8_early_time_sync_success 0'"))
+			Expect(content).To(ContainSubstring("systemctl is-failed -q nodelet.service"))
+			Expect(content).To(ContainSubstring("bb-sync-file /etc/systemd/system/nodelet.service.d/20-d8-early-time-sync.conf"))
+			Expect(content).To(ContainSubstring("\nEnvironment=\"NODELET_BOOT_NTP_SERVERS=pool.ntp.org ntp.ubuntu.com\"\n"))
+			Expect(content).To(ContainSubstring("\nEnvironment=NODELET_BOOT_NTP_TIMEOUT=30s\nTimeoutStartSec=35\n"))
+			Expect(content).NotTo(ContainSubstring("-sync-clock"))
+
+			engineTimeSync := f.KubernetesResource("ConfigMap", "d8-cloud-instance-manager", "chrony-early-time-sync")
+			Expect(engineTimeSync.Exists()).To(BeTrue())
+			Expect(engineTimeSync.Field("data.servers").String()).To(MatchJSON(`["pool.ntp.org","ntp.ubuntu.com"]`))
 
 			Expect(chronyDaemonSetTest.Exists()).To(BeTrue())
 			Expect(chronyMasterDaemonsetTest.Exists()).To(BeTrue())
@@ -161,7 +205,7 @@ var _ = Describe("Module :: chrony :: helm template ::", func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSetFromYaml("global.discovery.apiVersions", `["deckhouse.io/v1alpha1/SecurityPolicyException"]`)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("chrony", moduleValues)
+			f.ValuesSetFromYamlWithOpenAPIDefaults("chrony", moduleValues)
 			f.HelmRender()
 		})
 
@@ -214,5 +258,77 @@ var _ = Describe("Module :: chrony :: helm template ::", func() {
 				}
 			})
 		}
+	})
+	Context("Custom early time sync timeout", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("chrony", moduleValues)
+			f.ValuesSet("chrony.earlyTimeSync.timeoutSeconds", 60)
+			f.HelmRender()
+		})
+
+		It("Waits for the configured time", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			content := f.KubernetesGlobalResource("NodeGroupConfiguration", "early-time-sync-before-kubelet.sh").Field("spec.content").String()
+			Expect(content).To(ContainSubstring("\nEnvironment=NODELET_BOOT_NTP_TIMEOUT=60s\nTimeoutStartSec=65\n"))
+		})
+	})
+
+	Context("Early time sync disabled", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("chrony", moduleValues)
+			f.ValuesSet("chrony.earlyTimeSync.enabled", false)
+			f.HelmRender()
+		})
+
+		It("Removes the boot-time synchronization settings", func() {
+			expectEarlyTimeSyncCleanup(f)
+		})
+	})
+
+	Context("Empty ntpServers", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("chrony", `ntpServers: []`)
+			f.HelmRender()
+		})
+
+		It("Removes the boot-time synchronization settings", func() {
+			expectEarlyTimeSyncCleanup(f)
+		})
+	})
+
+	Context("ntpServers the boot-time sync cannot take", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("chrony", `ntpServers: ["2001:db8::1", "pool.ntp.org:123", "pool.ntp.org\nEOF", "ntp.example.com"]`)
+			f.HelmRender()
+		})
+
+		It("Skips them on both kinds of nodes", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			content := f.KubernetesGlobalResource("NodeGroupConfiguration", "early-time-sync-before-kubelet.sh").Field("spec.content").String()
+			Expect(content).To(ContainSubstring("\nEnvironment=\"NODELET_BOOT_NTP_SERVERS=ntp.example.com\"\n"))
+			servers := f.KubernetesResource("ConfigMap", "d8-cloud-instance-manager", "chrony-early-time-sync").Field("data.servers").String()
+			Expect(servers).To(Equal(`["ntp.example.com"]`))
+		})
+	})
+
+	Context("No ntpServers the boot-time sync can take", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("chrony", `ntpServers: ["2001:db8::1"]`)
+			f.HelmRender()
+		})
+
+		It("Removes the boot-time synchronization settings", func() {
+			expectEarlyTimeSyncCleanup(f)
+		})
 	})
 })

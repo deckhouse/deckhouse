@@ -35,6 +35,8 @@ type pass struct {
 	// Kubernetes version: the ~6 uncached reads readClusterInputs performs are
 	// done once per distinct version rather than once per node.
 	inputs map[string]clusterInputsResult
+	// bootTimeNTP is read once per pass, and only for Engine masters.
+	bootTimeNTP *bootTimeNTPResult
 	// derivedVersion is the Kubernetes version derived from cluster state, read
 	// once per pass: derived_status computes it from the cluster configuration
 	// and the control plane alone, so every group gets the same answer.
@@ -59,6 +61,11 @@ type pass struct {
 type clusterInputsResult struct {
 	inputs clusterInputs
 	err    error
+}
+
+type bootTimeNTPResult struct {
+	servers []string
+	err     error
 }
 
 // versionResult is one attempt at deriving the cluster's Kubernetes version,
@@ -114,12 +121,21 @@ func (r *Reconciler) clusterInputs(ctx context.Context, ng *v1.NodeGroup, p *pas
 	if err != nil {
 		return clusterInputs{}, err
 	}
-	if result, ok := p.inputs[version]; ok {
+	result, ok := p.inputs[version]
+	if !ok {
+		result.inputs, result.err = r.sources.readClusterInputs(ctx, version)
+		p.inputs[version] = result
+	}
+	if result.err != nil || !ownsNTP(ng) {
 		return result.inputs, result.err
 	}
-	in, err := r.sources.readClusterInputs(ctx, version)
-	p.inputs[version] = clusterInputsResult{inputs: in, err: err}
-	return in, err
+	if p.bootTimeNTP == nil {
+		servers, err := r.sources.readBootTimeNTPServers(ctx)
+		p.bootTimeNTP = &bootTimeNTPResult{servers: servers, err: err}
+	}
+	in := result.inputs
+	in.BootTimeNTPServers = p.bootTimeNTP.servers
+	return in, p.bootTimeNTP.err
 }
 
 // mutableInputs returns the render inputs of a node bashible manages, read once

@@ -20,6 +20,14 @@ type:
      nodeGroups: ["*"]
      bundles: ["*"]
      content: |
+       if [ -f /etc/systemd/system/kubelet.service.d/20-d8-early-time-sync.conf ] || [ -f /etc/systemd/system/nodelet.service.d/20-d8-early-time-sync.conf ]; then
+         rm -f /etc/systemd/system/kubelet.service.d/20-d8-early-time-sync.conf
+         rm -f /etc/systemd/system/nodelet.service.d/20-d8-early-time-sync.conf
+         systemctl daemon-reload
+       fi
+       rm -f /var/run/node-exporter-textfile/d8_early_time_sync.prom
        systemctl enable systemd-timesyncd
        systemctl start systemd-timesyncd
    ```
+
+   Скрипт удаляет drop-in-файлы ранней синхронизации времени и файл метрики, которые остаются на узлах после отключения модуля.

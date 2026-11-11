@@ -26,6 +26,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 )
 
@@ -66,7 +67,7 @@ func TestTheApplyKeepsTheMachineFieldsAndDropsWhatTheRenderLeftOut(t *testing.T)
 	}
 	require.NoError(t, c.Create(ctx, registered, client.FieldOwner("nodelet")))
 
-	rendered := withoutMachineFields(registered.Spec)
+	rendered := withoutMachineFields(registered.Spec, false)
 	rendered.Kubelet.MaxPods = 0
 	rendered.Kubelet.NodeLabels = map[string]internalv1alpha1.NodeLabelValue{"role": "worker"}
 	rendered.Extensions = rendered.Extensions[:1]
@@ -76,7 +77,7 @@ func TestTheApplyKeepsTheMachineFieldsAndDropsWhatTheRenderLeftOut(t *testing.T)
 	r.Client = c
 	existing := &internalv1alpha1.NodeConfig{}
 	require.NoError(t, c.Get(ctx, client.ObjectKey{Name: "owned-0"}, existing))
-	existing, err := r.takeOver(ctx, existing, logr.Discard())
+	existing, err := r.takeOver(ctx, existing, false, logr.Discard())
 	require.NoError(t, err)
 	require.NotNil(t, existing)
 	current, err := r.applySpec(ctx, existing, rendered, logr.Discard())
@@ -100,9 +101,71 @@ func TestTheApplyKeepsTheMachineFieldsAndDropsWhatTheRenderLeftOut(t *testing.T)
 	require.Equal(t, ptr.To(true), stored.Spec.Kubelet.ServerTLSBootstrap)
 
 	// And a second pass finds nothing left to take over.
-	_, taken, err := takeOverSpec(stored.ManagedFields, metav1.Now())
+	_, taken, err := takeOverSpec(stored.ManagedFields, metav1.Now(), false)
 	require.NoError(t, err)
 	require.False(t, taken)
+}
+
+// On an Engine master node-controller sets the NTP servers and removes them when switched off,
+// even ones the machine registered with. Any other node keeps the machine's own.
+func TestTheNTPServersAreNodeControllersOnAnEngineMasterAlone(t *testing.T) {
+	c := nodeConfigAPIClient(t)
+	ctx := t.Context()
+	r := &Reconciler{sources: &sourceReader{Reader: c}}
+	r.Client = c
+
+	register := func(name string) *internalv1alpha1.NodeConfig {
+		t.Helper()
+		nc := &internalv1alpha1.NodeConfig{
+			ObjectMeta: metav1.ObjectMeta{Name: name},
+			Spec: internalv1alpha1.NodeSpec{
+				SystemType:  internalv1alpha1.SystemTypeDeckhouseEngine,
+				NodeName:    name,
+				OSImage:     internalv1alpha1.OSImage{Digest: "sha256:" + strings.Repeat("a", 64)},
+				StatusToken: "status-token",
+				Network: internalv1alpha1.Network{
+					Hostname: name,
+					NTP:      internalv1alpha1.NTP{Servers: []string{"ntp.machine.example"}},
+				},
+			},
+		}
+		require.NoError(t, c.Create(ctx, nc, client.FieldOwner("nodelet")))
+		return nc
+	}
+	// pass is one pass of apply() for the node's group.
+	pass := func(ng *v1.NodeGroup, name string, render internalv1alpha1.NodeSpec) *internalv1alpha1.NodeConfig {
+		t.Helper()
+		desired := &internalv1alpha1.NodeConfig{ObjectMeta: metav1.ObjectMeta{Name: name}, Spec: render}
+		_, err := r.apply(ctx, ng, nil, desired, logr.Discard(), newPass())
+		require.NoError(t, err)
+		stored := &internalv1alpha1.NodeConfig{}
+		require.NoError(t, c.Get(ctx, client.ObjectKey{Name: name}, stored))
+		return stored
+	}
+	render := func(nc *internalv1alpha1.NodeConfig, servers ...string) internalv1alpha1.NodeSpec {
+		spec := nc.Spec
+		spec.Network = internalv1alpha1.Network{Hostname: nc.Name, NTP: internalv1alpha1.NTP{Servers: servers}}
+		return spec
+	}
+	master, worker := immutableGroup("master"), immutableGroup("worker")
+
+	first := register("master-ntp-0")
+	stored := pass(master, first.Name, render(first, "pool.ntp.org"))
+	require.Equal(t, []string{"pool.ntp.org"}, stored.Spec.Network.NTP.Servers, "the render's servers replace the machine's")
+	require.Equal(t, first.Name, stored.Spec.Network.Hostname, "the rest of the network stays the machine's")
+	stored = pass(master, first.Name, render(first))
+	require.Empty(t, stored.Spec.Network.NTP.Servers, "switched off, the servers are removed")
+	require.Equal(t, first.Name, stored.Spec.Network.Hostname)
+
+	// Registered with servers, switched off before the first apply.
+	second := register("master-ntp-1")
+	stored = pass(master, second.Name, render(second))
+	require.Empty(t, stored.Spec.Network.NTP.Servers, "servers the machine registered with are removed too")
+	require.Equal(t, second.Name, stored.Spec.Network.Hostname)
+
+	third := register("worker-ntp")
+	stored = pass(worker, third.Name, render(third))
+	require.Equal(t, []string{"ntp.machine.example"}, stored.Spec.Network.NTP.Servers, "a worker keeps the machine's")
 }
 
 func extensionNames(extensions []internalv1alpha1.Extension) []string {
@@ -134,7 +197,7 @@ func TestTakeOverSpecMovesOnlyTheRenderedSpec(t *testing.T) {
 		},
 	}
 
-	kept, taken, err := takeOverSpec(entries, metav1.Now())
+	kept, taken, err := takeOverSpec(entries, metav1.Now(), false)
 	require.NoError(t, err)
 	require.True(t, taken)
 

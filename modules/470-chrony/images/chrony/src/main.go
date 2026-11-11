@@ -42,6 +42,12 @@ type ChronyConfigTemplateData struct {
 	HostIP               string
 }
 
+func chronydArgs() []string {
+	// No -s: without rtcfile it steps the clock forward to the drift file mtime and would
+	// undo the boot-time step when the drift file was written while the clock ran ahead.
+	return []string{"-4", "-d", "-f", chronyConfPath}
+}
+
 func main() {
 	ntpServers := os.Getenv("NTP_SERVERS")
 
@@ -74,7 +80,7 @@ func main() {
 		log.Fatal(errors.Wrapf(err, "failed to remove %s file", chronydPidFilePath))
 	}
 
-	cmd := exec.Command(chronydPath, "-4", "-d", "-s", "-f", chronyConfPath)
+	cmd := exec.Command(chronydPath, chronydArgs()...)
 	cmd.Env = os.Environ()
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout

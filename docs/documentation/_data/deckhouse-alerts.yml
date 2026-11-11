@@ -8329,6 +8329,57 @@ alerts:
         Node {{ $labels.node }} is stuck in draining.
       severity: "6"
       markupFormat: markdown
+    - name: NodeTimeNotSynchronizedAtBoot
+      sourceFile: modules/470-chrony/monitoring/prometheus-rules/chrony.yaml
+      moduleUrl: 470-chrony
+      module: chrony
+      edition: ce
+      description: |
+        During the last boot of the master node `{{$labels.node}}`, the clock was not synchronized from NTP before kubelet started. Either no NTP server answered within the waiting time, the servers that answered disagreed with each other, nodelet could not run the synchronization, or the synchronization hung and systemd stopped it. kubelet and the control plane started with a clock taken from the RTC or the hypervisor. If that clock was wrong, the control plane could issue tokens and certificates with incorrect timestamps.
+
+        To resolve the issue:
+
+        1. Check the synchronization log on the node. On a node managed by bashible, run:
+
+           ```bash
+           journalctl -u nodelet.service -b
+           ```
+
+           A Deckhouse Engine node has no SSH access. Read the log from a debug pod, where `<IMAGE>` is any image available to the cluster that has the `chroot` utility:
+
+           ```bash
+           d8 k -n kube-system debug node/{{$labels.node}} -i --profile=sysadmin --image=<IMAGE> -- chroot /host journalctl --no-pager -u nodelet.service -b | grep -E 'clock|NTP'
+           ```
+
+        2. On a node managed by bashible, check that the installed `nodelet.service` has `Type=notify` and that nodelet started. If the package is missing or outdated, bashible installs it on its next run. To start that run sooner, run the following command on the node:
+
+           ```bash
+           rm -f /var/lib/bashible/configuration_checksum
+           ```
+
+        3. Otherwise, ensure the NTP servers defined in the [chrony configuration](https://deckhouse.io/modules/chrony/configuration.html) are reachable through the node network and their names are resolvable by the node DNS settings, without Kubernetes DNS. If the log reports `the NTP servers disagree` or `the addresses of <SERVER> disagree`, use servers whose answers agree with each other.
+        4. The alert stays active until the node boots again and the synchronization succeeds. On a node managed by bashible, disabling boot-time synchronization also clears it. After you have checked the clock on the node, you can clear the alert without a reboot. On a node managed by bashible, run on the node:
+
+           ```bash
+           systemctl reset-failed nodelet.service
+           rm -f /var/run/node-exporter-textfile/d8_early_time_sync.prom
+           ```
+
+           If `nodelet.service` is in the `failed` state, `systemctl reset-failed` keeps bashible from writing the failure metric again.
+
+           On a Deckhouse Engine node, remove the file from a debug pod, as in step 1:
+
+           ```bash
+           d8 k -n kube-system debug node/{{$labels.node}} -i --profile=sysadmin --image=<IMAGE> -- chroot /host rm -f /var/run/node-exporter-textfile/d8_early_time_sync.prom
+           ```
+
+           Each debug command leaves a `node-debugger-*` pod in the `kube-system` namespace. Delete it with `d8 k -n kube-system delete pod <POD_NAME>`, using the name the command printed.
+
+           The alert resolves about 10 minutes after the file is removed.
+      summary: |
+        Master node {{$labels.node}} started kubelet before its clock was synchronized.
+      severity: "5"
+      markupFormat: markdown
     - name: NodeTimeOutOfSync
       sourceFile: modules/470-chrony/monitoring/prometheus-rules/chrony.yaml
       moduleUrl: 470-chrony

@@ -46,6 +46,12 @@ func RenderBootstrapSpec(ctx context.Context, cl client.Client, reader client.Re
 	if err != nil {
 		return internalv1alpha1.NodeSpec{}, err
 	}
+	if ownsNTP(ng) {
+		in.BootTimeNTPServers, err = sources.readBootTimeNTPServers(ctx)
+		if err != nil {
+			return internalv1alpha1.NodeSpec{}, err
+		}
+	}
 
 	// Zero CreationTimestamp makes registration taints render.
 	spec := renderSpec(ng, registeringNode(ng, machineName), in)

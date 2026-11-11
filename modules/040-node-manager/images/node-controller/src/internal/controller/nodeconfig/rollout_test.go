@@ -313,7 +313,7 @@ func TestBudgetIgnoresNodesStuckOnAnOlderSpec(t *testing.T) {
 
 	updating := membersOfUpdating(configs, map[string]internalv1alpha1.NodeSpec{
 		"n1": desired, "n2": desired, "n3": desired,
-	}, false)
+	}, immutableGroup("worker"))
 
 	if _, ok := updating["n1"]; ok {
 		t.Fatal("a node stuck on an older spec occupies a rollout slot it does not use")
@@ -332,7 +332,7 @@ func TestBudgetIgnoresOrphans(t *testing.T) {
 	desired := internalv1alpha1.NodeSpec{NodeName: "gone", OSImage: internalv1alpha1.OSImage{Digest: testOSImageDigest}}
 	configs := []internalv1alpha1.NodeConfig{notApplied("gone", desired)}
 
-	if updating := membersOfUpdating(configs, map[string]internalv1alpha1.NodeSpec{}, false); len(updating) != 0 {
+	if updating := membersOfUpdating(configs, map[string]internalv1alpha1.NodeSpec{}, immutableGroup("worker")); len(updating) != 0 {
 		t.Fatalf("membersOfUpdating() = %v, want empty: an orphan holds no slot", updating)
 	}
 }
@@ -347,7 +347,7 @@ func TestBudgetIgnoresBootstrapOnlyFields(t *testing.T) {
 	updating := membersOfUpdating(
 		[]internalv1alpha1.NodeConfig{notApplied("n1", bootstrapped)},
 		map[string]internalv1alpha1.NodeSpec{"n1": desired},
-		false,
+		immutableGroup("worker"),
 	)
 
 	if _, ok := updating["n1"]; !ok {
@@ -656,7 +656,7 @@ func TestAnEngineNodeWithoutAnAgentHoldsItsSlot(t *testing.T) {
 	desired := internalv1alpha1.NodeSpec{NodeName: "n1", OSImage: internalv1alpha1.OSImage{Digest: testOSImageDigest}}
 	silent := internalv1alpha1.NodeConfig{ObjectMeta: metav1.ObjectMeta{Name: "n1", Generation: 1}, Spec: desired}
 
-	updating := membersOfUpdating([]internalv1alpha1.NodeConfig{silent}, map[string]internalv1alpha1.NodeSpec{"n1": desired}, false)
+	updating := membersOfUpdating([]internalv1alpha1.NodeConfig{silent}, map[string]internalv1alpha1.NodeSpec{"n1": desired}, immutableGroup("worker"))
 
 	require.Contains(t, updating, "n1")
 }
@@ -677,7 +677,7 @@ func TestABashibleNodeWhoseAgentReportedHoldsItsSlot(t *testing.T) {
 		"reported conditions only":     conditionsOnly,
 	} {
 		t.Run(name, func(t *testing.T) {
-			updating := membersOfUpdating([]internalv1alpha1.NodeConfig{nc}, map[string]internalv1alpha1.NodeSpec{"n1": desired}, true)
+			updating := membersOfUpdating([]internalv1alpha1.NodeConfig{nc}, map[string]internalv1alpha1.NodeSpec{"n1": desired}, mutableGroup("worker", v1.SystemTypeGenericOS))
 
 			require.Contains(t, updating, "n1")
 		})

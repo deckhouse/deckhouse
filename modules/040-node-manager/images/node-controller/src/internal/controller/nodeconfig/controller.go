@@ -160,17 +160,8 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 		watched.SetGroupVersionKind(gvk)
 		w.Watches(watched, allMapper, builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 	}
-	// The image digests and the platform document of the release. Without this
-	// watch a new release re-renders nothing until some unrelated input moves:
-	// nothing else enqueues a pass, and no resync period is set.
-	w.Watches(&corev1.ConfigMap{}, allMapper, builder.WithPredicates(predicate.NewPredicateFuncs(
-		func(obj client.Object) bool {
-			if obj.GetNamespace() != cloudInstanceManagerNS {
-				return false
-			}
-			return obj.GetName() == imagesDigestsConfigMapName || obj.GetName() == platformTemplatesConfigMapName
-		},
-	)))
+	// Nothing else enqueues a pass for these inputs, and no resync period is set.
+	w.Watches(&corev1.ConfigMap{}, allMapper, builder.WithPredicates(predicate.NewPredicateFuncs(isRenderInputConfigMap)))
 	// Without this watch, an operator editing the network group has nothing enqueuing a pass: it
 	// touches neither a NodeGroup nor a Node.
 	moduleConfigGVK := network.ModuleConfigGVK()
@@ -392,7 +383,7 @@ func (r *Reconciler) renderNode(ctx context.Context, ng *v1.NodeGroup, node *cor
 // when the node has none or another writer got there first. The status belongs
 // to the node-local agent and is never touched here.
 func (r *Reconciler) apply(ctx context.Context, ng *v1.NodeGroup, node *corev1.Node, desired *internalv1alpha1.NodeConfig, logger logr.Logger, p *pass) (*internalv1alpha1.NodeConfig, error) {
-	if cached := r.unchanged(ctx, desired); cached != nil {
+	if cached := r.unchanged(ctx, ng, desired); cached != nil {
 		logger.V(1).Info("NodeConfig spec unchanged", "node", desired.Name)
 		return cached, nil
 	}
@@ -407,11 +398,12 @@ func (r *Reconciler) apply(ctx context.Context, ng *v1.NodeGroup, node *corev1.N
 		return nil, fmt.Errorf("get NodeConfig %s: %w", desired.Name, err)
 	}
 
-	if existing, err = r.takeOver(ctx, existing, logger); existing == nil {
+	ntp := ownsNTP(ng)
+	if existing, err = r.takeOver(ctx, existing, ntp, logger); existing == nil {
 		return nil, err
 	}
-	desired.Spec = withoutMachineFields(desired.Spec)
-	specChanged := !specUpToDate(existing, desired)
+	desired.Spec = withoutMachineFields(desired.Spec, ntp)
+	specChanged := !specUpToDate(existing, desired, ntp)
 
 	if !metadataUpToDate(existing, desired) {
 		if existing, err = r.patchMetadata(ctx, existing, desired, logger); existing == nil {
@@ -446,15 +438,30 @@ func (r *Reconciler) apply(ctx context.Context, ng *v1.NodeGroup, node *corev1.N
 	return r.patch(ctx, ng, existing, desired, logger, budget)
 }
 
+// isRenderInputConfigMap matches the ConfigMaps a render reads: the image digests and the
+// platform document of the release, and the NTP servers of the boot-time clock step.
+func isRenderInputConfigMap(obj client.Object) bool {
+	if obj.GetNamespace() != cloudInstanceManagerNS {
+		return false
+	}
+
+	switch obj.GetName() {
+	case imagesDigestsConfigMapName, platformTemplatesConfigMapName, bootTimeSyncConfigMapName:
+		return true
+	}
+
+	return false
+}
+
 // unchanged returns the cached object when the pass has nothing to write to it. A node asking
 // to be interrupted is read live all the same: the answer creates a NodeOperation, and the
 // cache may still hold a request the node has withdrawn.
-func (r *Reconciler) unchanged(ctx context.Context, desired *internalv1alpha1.NodeConfig) *internalv1alpha1.NodeConfig {
+func (r *Reconciler) unchanged(ctx context.Context, ng *v1.NodeGroup, desired *internalv1alpha1.NodeConfig) *internalv1alpha1.NodeConfig {
 	cached := &internalv1alpha1.NodeConfig{}
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: desired.Name}, cached); err != nil {
 		return nil
 	}
-	if !specUpToDate(cached, desired) || !metadataUpToDate(cached, desired) {
+	if !specUpToDate(cached, desired, ownsNTP(ng)) || !metadataUpToDate(cached, desired) {
 		return nil
 	}
 	if disruptionRequested(cached) {
@@ -593,12 +600,13 @@ func fromUnstructured(in *unstructured.Unstructured, out *internalv1alpha1.NodeC
 }
 
 // specUpToDate reports whether the object already carries the rendered spec, the
-// machine's own fields aside. A bootstrap token left on the object is a change.
-func specUpToDate(existing, desired *internalv1alpha1.NodeConfig) bool {
+// machine's own fields aside (ownNTP: the NTP servers are not among them). A
+// bootstrap token left on the object is a change.
+func specUpToDate(existing, desired *internalv1alpha1.NodeConfig, ownNTP bool) bool {
 	if existing.Spec.Kubelet.BootstrapToken != "" {
 		return false
 	}
-	return apiequality.Semantic.DeepEqual(withoutMachineFields(existing.Spec), withoutMachineFields(desired.Spec))
+	return apiequality.Semantic.DeepEqual(withoutMachineFields(existing.Spec, ownNTP), withoutMachineFields(desired.Spec, ownNTP))
 }
 
 // metadataUpToDate reports whether the object carries the labels and owner. Ownership is

@@ -8,5 +8,38 @@ properties:
     - ["pool.ntp.org"]
     - ["pool.ntp.org", "ntp.ubuntu.com", "time.google.com"]
     description: |
-      NTP servers to sync.
+      NTP servers used for time synchronization.
+
+      Each server is specified as a host name or an IPv4 address, without a port.
+
+      On master nodes, these servers are also used for boot-time synchronization, before kubelet starts. On Deckhouse Engine nodes, boot-time synchronization uses the first 16 of them.
+      Boot-time synchronization is configured by [earlyTimeSync](#parameters-earlytimesync).
+      An empty list disables boot-time synchronization.
     default: ["pool.ntp.org"]
+
+  earlyTimeSync:
+    type: object
+    default: {}
+    description: |
+      Time synchronization on master nodes during boot, before kubelet starts.
+
+      It prevents control plane static Pods from starting with an incorrect time received from the real-time clock (RTC) or the hypervisor.
+      Enabling and changing the settings take effect on the next boot of the node. Disabling takes effect as soon as the configuration is applied.
+    properties:
+      enabled:
+        type: boolean
+        default: true
+        description: |
+          Enables boot-time synchronization, before kubelet starts.
+
+      timeoutSeconds:
+        type: integer
+        minimum: 30
+        maximum: 60
+        default: 30
+        description: |
+          Maximum time to wait for synchronization before kubelet starts, in seconds.
+
+          On nodes managed by bashible, the wait starts once the node network is available. If within this time no NTP server responds, or the servers that respond disagree, kubelet starts with an unverified clock. On Deckhouse Engine nodes, the parameter does not apply: the wait is at most 30 seconds.
+
+          If a master node already configured for boot-time synchronization cannot reach the NTP servers, for example in an air-gapped cluster with the default `pool.ntp.org`, the check waits for the full time. Set reachable servers in [ntpServers](#parameters-ntpservers) or disable boot-time synchronization.

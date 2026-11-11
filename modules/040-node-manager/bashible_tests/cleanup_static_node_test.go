@@ -33,6 +33,17 @@ func TestTheStaticNodeCleanupRemovesTheAgent(t *testing.T) {
 	require.Contains(t, bashArray(t, script, "PATHS_TO_REMOVE"), "/var/lib/nodelet")
 	requireBashSyntax(t, script)
 }
+
+func TestTheStaticNodeCleanupRemovesTheEarlyTimeSync(t *testing.T) {
+	chdirToRepositoryRoot(t)
+
+	script := renderFile(t, "candi/bashible/cleanup_static_node.sh.tpl", bashibleContext("Normal", map[string]any{}))
+
+	files := bashArray(t, script, "SYSTEMD_FILES")
+	require.Contains(t, files, "/etc/systemd/system/nodelet.service.d/20-d8-early-time-sync.conf")
+	require.Contains(t, files, "/etc/systemd/system/kubelet*")
+}
+
 func bashArray(t *testing.T, script, name string) []string {
 	t.Helper()
 	_, rest, found := strings.Cut(script, "\n"+name+"=(\n")

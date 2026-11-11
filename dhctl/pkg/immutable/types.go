@@ -152,10 +152,9 @@ type kernel struct {
 	Sysctl map[string]string `json:"sysctl,omitempty"`
 }
 
-// network holds the hostname and the interfaces the node brings up. No ntp,
-// deliberately: the NodeConfig CRD has the field, but nothing on the node reads
-// it — the Deckhouse Engine init parses it and never uses it, nodelet ignores
-// it entirely.
+// network holds the hostname and the interfaces the node brings up. No ntp:
+// node-controller fills it on master nodes from the chrony module settings once
+// the cluster is up, so the first boot of a master steps no clock.
 type network struct {
 	Hostname   string             `json:"hostname,omitempty"`
 	Interfaces []networkInterface `json:"interfaces,omitempty"`

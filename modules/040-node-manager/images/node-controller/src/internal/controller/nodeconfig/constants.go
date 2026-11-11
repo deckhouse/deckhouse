@@ -46,6 +46,12 @@ const (
 	platformTemplatesConfigMapName = "bashible-bootstrap-templates"
 	platformDocumentKey            = "nodeconfig-mutable.yaml.tpl"
 
+	// bootTimeSyncConfigMapName lists the NTP servers master nodes step their clock by at
+	// boot, before kubelet starts (modules/470-chrony/templates/early-time-sync-engine.yaml).
+	// It exists only while that synchronization is on; bootTimeSyncServersKey holds a JSON list.
+	bootTimeSyncConfigMapName = "chrony-early-time-sync"
+	bootTimeSyncServersKey    = "servers"
+
 	// registryPackagesProxyTokenSecret authenticates the node against the
 	// registry packages proxy it pulls system extensions from.
 	registryPackagesProxyTokenSecret = "registry-packages-proxy-token"
@@ -207,6 +213,13 @@ const defaultPodSubnetNodeCIDRPrefix = 24
 // maxPodsCeiling is what the agent's schema accepts (Maximum=1000), which is the
 // top of the bashible ladder too, so only an operator's own number can reach it.
 const maxPodsCeiling = 1000
+
+// maxNTPServers and maxNTPServerLength are the agent's schema bounds of
+// spec.network.ntp.servers: a document past them is refused whole.
+const (
+	maxNTPServers      = 16
+	maxNTPServerLength = 253
+)
 
 // reservedLabelNamespaces are the label namespaces a node may not put itself
 // into; kubeletLabelNamespaces are the ones inside them kubelet does accept

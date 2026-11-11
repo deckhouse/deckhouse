@@ -65,6 +65,7 @@ SERVICES_TO_REMOVE=(
 SYSTEMD_FILES=(
   /etc/systemd/system/bashible.*
   /etc/systemd/system/nodelet.service
+  /etc/systemd/system/nodelet.service.d/20-d8-early-time-sync.conf
   /etc/systemd/system/sysctl-tuner.*
   /etc/systemd/system/old-csi-mount-cleaner.*
   /etc/systemd/system/d8-containerd-cgroup-migration.*

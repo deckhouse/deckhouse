@@ -19,6 +19,9 @@ package nodeconfig
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -757,4 +760,64 @@ func TestTheRegistryComesFromTheModulesConfiguration(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "registry.d8-system.svc:5001/system/deckhouse", imagesRepo)
 	})
+}
+
+// The chrony module publishes bashible's list; the agent's schema is narrower, and a
+// document past it is refused whole.
+func TestReadBootTimeNTPServers(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	published := func(value string) client.Client {
+		return fake.NewClientBuilder().WithScheme(scheme).WithObjects(&corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Namespace: cloudInstanceManagerNS, Name: bootTimeSyncConfigMapName},
+			Data:       map[string]string{bootTimeSyncServersKey: value},
+		}).Build()
+	}
+	many := make([]string, 0, 20)
+	for i := range 20 {
+		many = append(many, fmt.Sprintf("ntp%d.example.com", i))
+	}
+	manyJSON, err := json.Marshal(many)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name   string
+		client client.Client
+		want   []string
+	}{
+		{name: "the module default", client: published(`["pool.ntp.org"]`), want: []string{"pool.ntp.org"}},
+		{name: "more servers than the schema takes", client: published(string(manyJSON)), want: many[:16]},
+		{
+			name:   "an empty or too long name",
+			client: published(`["", "` + strings.Repeat("a", 254) + `", "pool.ntp.org"]`),
+			want:   []string{"pool.ntp.org"},
+		},
+		{
+			name:   "a name exactly at the length bound",
+			client: published(`["` + strings.Repeat("a", 253) + `"]`),
+			want:   []string{strings.Repeat("a", 253)},
+		},
+		{name: "no server", client: published(`[]`)},
+		// The step is off, or the chrony module is disabled.
+		{name: "no ConfigMap", client: fake.NewClientBuilder().WithScheme(scheme).Build()},
+		{
+			name: "a ConfigMap without the key",
+			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(&corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{Namespace: cloudInstanceManagerNS, Name: bootTimeSyncConfigMapName},
+			}).Build(),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := (&sourceReader{Reader: tt.client}).readBootTimeNTPServers(t.Context())
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
+		})
+	}
+
+	// A hand-edited value that does not parse stops the render, as every other read does: the
+	// masters keep the servers they have.
+	_, err = (&sourceReader{Reader: published("servers: [")}).readBootTimeNTPServers(t.Context())
+	require.Error(t, err)
 }
