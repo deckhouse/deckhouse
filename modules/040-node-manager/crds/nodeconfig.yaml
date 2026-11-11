@@ -200,8 +200,7 @@ spec:
                   InternalNetworkCIDRs are the subnets the cluster's own traffic runs on.
                   The node picks the interface holding an address inside one of them and
                   registers with that address; a node with one NIC needs none of this.
-                  The pattern is StaticClusterConfiguration's own
-                  (candi/openapi/static_cluster_configuration.yaml): IPv4 only.
+                  IPv4 only.
                 items:
                   maxLength: 43
                   pattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$
@@ -225,10 +224,17 @@ spec:
                         parameters.
                       properties:
                         name:
+                          description: Module name, as `lsmod` lists it. A `-` and
+                            a `_` in the name are the same.
                           maxLength: 64
                           minLength: 1
                           type: string
                         params:
+                          description: |-
+                            Module parameters, passed to `insmod` in this order, for example `debug=1`.
+
+                            A changed list applies the next time the module loads: a loaded module is
+                            not reloaded.
                           items:
                             maxLength: 256
                             type: string
@@ -248,6 +254,14 @@ spec:
                         CRD CEL cost.
                       maxLength: 1024
                       type: string
+                    description: |-
+                      Kernel parameters the node sets at runtime, keyed by their dotted name, for
+                      example `net.ipv4.ip_forward`.
+
+                      A key the kernel does not have is skipped. The keys the node agent requires
+                      keep its values, and `vm.overcommit_memory` can only be `1`. The size of the
+                      connection tracking table, which the node computes from its cores, yields to a
+                      value set here.
                     maxProperties: 256
                     type: object
                     x-kubernetes-validations:
@@ -330,15 +344,12 @@ spec:
                     type: integer
                   nodeLabels:
                     additionalProperties:
-                      description: |-
-                        NodeLabelValue carries a label value unvalidated: a NodeGroup takes any
-                        string (crds/node_group.yaml:1915), and refusing one here costs the group its
-                        whole configuration instead of costing the node one label.
+                      description: NodeLabelValue carries a label value unvalidated,
+                        as a NodeGroup takes it.
                       type: string
                     description: |-
                       NodeLabels are labels added to the node object when kubelet registers.
-                      A NodeGroup caps neither their number nor their shape
-                      (crds/node_group.yaml:1915), so neither does this.
+                      A NodeGroup caps neither their number nor their shape, so neither does this.
                     type: object
                   registerWithTaints:
                     description: |-
@@ -347,18 +358,25 @@ spec:
                     items:
                       description: |-
                         Taint represents a Kubernetes taint applied to a node during registration.
-                        Key, value and effect take what a NodeGroup takes (crds/node_group.yaml:1944):
-                        bare strings and an optional effect, so a taint copied from one still fits.
+                        Key, value and effect take what a NodeGroup takes: bare strings and an
+                        optional effect, so a taint copied from one still fits.
                       properties:
                         effect:
+                          description: |-
+                            Taint effect. A taint without an effect is skipped: kubelet registers a taint
+                            only with one of these.
                           enum:
                           - NoSchedule
                           - PreferNoSchedule
                           - NoExecute
                           type: string
                         key:
+                          description: |-
+                            Taint key. A taint kubelet cannot register, such as one whose key is not a
+                            qualified name, is skipped, and the other taints are registered.
                           type: string
                         value:
+                          description: Taint value.
                           type: string
                       required:
                       - key
@@ -385,8 +403,9 @@ spec:
                   serverTLSBootstrap:
                     description: |-
                       ServerTLSBootstrap makes kubelet request a serving certificate from the
-                      cluster instead of signing its own. Default true. The zero master sets it
-                      to false: nothing approves serving CSRs until Deckhouse is installed.
+                      cluster instead of signing its own.
+
+                      Defaults to `true` when unset.
                     type: boolean
                 type: object
               network:
@@ -396,6 +415,8 @@ spec:
                     description: DNS resolver configuration.
                     properties:
                       search:
+                        description: Search domains for host names that are not fully
+                          qualified, tried in this order.
                         items:
                           maxLength: 253
                           type: string
@@ -448,6 +469,7 @@ spec:
                           - message: the gateway must be an IP address
                             rule: isIP(self)
                         name:
+                          description: Interface name, for example `eth0`.
                           maxLength: 253
                           minLength: 1
                           type: string
@@ -468,6 +490,11 @@ spec:
                     description: NTP time-sync configuration.
                     properties:
                       servers:
+                        description: NTP servers, each a host name or an IPv4 address.
+                          On Immutable nodes the time-sync feature checks them once
+                          per boot, before kubelet starts, and waits at most 30 seconds
+                          for a usable answer. The deckhouse chrony module keeps the
+                          clock in time after that.
                         items:
                           maxLength: 253
                           type: string
@@ -475,6 +502,8 @@ spec:
                         type: array
                     type: object
                   routes:
+                    description: Static routes, added on every interface listed in
+                      `interfaces`.
                     items:
                       description: Route is a static route.
                       properties:
@@ -486,6 +515,8 @@ spec:
                           - message: the gateway must be an IP address
                             rule: isIP(self)
                         name:
+                          description: Label for the route. It does not change how
+                            the route is applied.
                           maxLength: 253
                           type: string
                         networks:
@@ -867,9 +898,7 @@ spec:
                   StatusToken is the bearer presented to the node's :50000 status port.
                   Whoever writes the document mints it (dhctl, or the NodeConfigTemplate
                   render for a hand-installed machine); the cluster carries it over
-                  untouched, having no way to tell the node a new one. Deliberately not
-                  marked sensitive: the apiserver would answer "<omitted>" and the
-                  carry-over would write that back, destroying the token.
+                  untouched, having no way to tell the node a new one.
                 maxLength: 4096
                 type: string
               storage:
@@ -1079,7 +1108,11 @@ spec:
                 description: UpdatePolicy controls how and when the node is updated.
                 properties:
                   mode:
-                    description: Mode is the update mode.
+                    description: |-
+                      Update mode.
+
+                      The node checks the value and does not act on it: in either mode it updates
+                      within `windows`.
                     enum:
                     - Manual
                     - Automatic
@@ -1095,9 +1128,10 @@ spec:
                       properties:
                         days:
                           description: |-
-                            Days of the week the window applies to.
+                            Days of the week the window applies to, as calendar days in UTC.
 
-                            When empty, the window applies every day.
+                            A time matches when its own day is listed, also in the part of a window that
+                            runs past midnight. When empty, the window applies every day.
                           items:
                             enum:
                             - Mon
@@ -1119,7 +1153,10 @@ spec:
                           description: |-
                             End of the window, same format as `from`.
 
-                            A window whose end is before its start runs over midnight.
+                            A window whose end is before its start runs over midnight. The part after
+                            midnight belongs to its own calendar day: with `days: [Sat]`, a window from
+                            `22:00` to `04:00` allows Saturday 00:00 to 04:00 and Saturday 22:00 to
+                            midnight, and not Sunday 01:00.
                           pattern: ^(?:\d|[01]\d|2[0-3]):[0-5]\d$
                           type: string
                       required:
@@ -1223,6 +1260,7 @@ spec:
                       one.
                   - Subsystem conditions, one per subsystem the pass ran or skipped:
 
+                    - `BootTimeSyncConfigured`
                     - `APIEndpointsReachable`
                     - `SysctlApplied`
                     - `KernelModulesLoaded`
