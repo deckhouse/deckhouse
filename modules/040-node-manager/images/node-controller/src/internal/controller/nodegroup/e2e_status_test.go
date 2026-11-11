@@ -17,6 +17,8 @@ limitations under the License.
 package nodegroup
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -298,6 +300,42 @@ var _ = Describe("NodeGroup status controller", func() {
 				synced, processedCheckSum := processedDeckhouse(name)
 				g.Expect(processedCheckSum).NotTo(BeEmpty())
 				g.Expect(synced).To(Equal("False"))
+			}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+		})
+
+		It("does not rewrite the NodeGroup on Node updates that leave its status unchanged", func() {
+			name := uniqueNG("no-churn")
+			createNodeGroup(staticNodeGroup(name))
+			node := createGroupNode(name+"-n1", name, true, "", nil)
+
+			Eventually(func(g Gomega) {
+				_, processedCheckSum := processedDeckhouse(name)
+				g.Expect(processedCheckSum).NotTo(BeEmpty())
+				g.Expect(getNG(name).Status.Nodes).To(Equal(int32(1)))
+			}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+			settled := ""
+			Eventually(func() bool {
+				previous := settled
+				settled = getNG(name).ResourceVersion
+				return settled == previous
+			}, testenv.EventuallyTimeout, time.Second).Should(BeTrue())
+
+			// processed.lastTimestamp has second resolution, so the updates span several seconds.
+			for _, value := range []string{"1", "2", "3"} {
+				Expect(k8sClient.Get(suiteCtx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+				node.Annotations = map[string]string{"no-churn-touch": value}
+				Expect(k8sClient.Update(suiteCtx, node)).To(Succeed())
+
+				Consistently(func() string {
+					return getNG(name).ResourceVersion
+				}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Equal(settled))
+			}
+
+			// Positive control: the controller still reacts to a Node change that moves the status.
+			createGroupNode(name+"-n2", name, true, "", nil)
+			Eventually(func(g Gomega) {
+				g.Expect(getNG(name).Status.Nodes).To(Equal(int32(2)))
 			}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 		})
 	})

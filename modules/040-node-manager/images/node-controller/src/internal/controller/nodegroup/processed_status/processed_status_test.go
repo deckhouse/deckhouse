@@ -185,6 +185,83 @@ func TestPatchProcessedStatus_SetsSyncedTrueWhenChecksumMatches(t *testing.T) {
 	}
 }
 
+func TestPatchProcessedStatus_SkipsWriteWhenUnchanged(t *testing.T) {
+	t.Setenv("TEST_CONDITIONS_CALC_NOW_TIME", "2021-01-01T13:30:00Z")
+	t.Setenv("TEST_CONDITIONS_CALC_CHKSUM", "samesum")
+
+	tests := []struct {
+		name      string
+		observed  string
+		expSynced string
+	}{
+		{name: "observed matches processed", observed: "samesum", expSynced: "True"},
+		{name: "observed differs from processed", observed: "oldsum", expSynced: "False"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ng := newNodeGroupUnstructured("worker")
+			if err := unstructured.SetNestedField(ng.Object, tc.observed, "status", "deckhouse", "observed", "checkSum"); err != nil {
+				t.Fatalf("seed observed checksum: %v", err)
+			}
+
+			h := newFakeClientWithNG(t, ng)
+			s := &Service{Client: h.client}
+			if err := s.PatchProcessedStatus(context.Background(), "worker"); err != nil {
+				t.Fatalf("first PatchProcessedStatus: %v", err)
+			}
+			first := fetchNG(t, h, "worker")
+
+			t.Setenv("TEST_CONDITIONS_CALC_NOW_TIME", "2021-01-01T13:31:00Z")
+			if err := s.PatchProcessedStatus(context.Background(), "worker"); err != nil {
+				t.Fatalf("second PatchProcessedStatus: %v", err)
+			}
+			second := fetchNG(t, h, "worker")
+
+			synced, _, _ := unstructured.NestedString(second.Object, "status", "deckhouse", "synced")
+			if synced != tc.expSynced {
+				t.Fatalf("expected synced=%s, got %q", tc.expSynced, synced)
+			}
+			if second.GetResourceVersion() != first.GetResourceVersion() {
+				t.Fatalf("expected no status write, resourceVersion %q became %q", first.GetResourceVersion(), second.GetResourceVersion())
+			}
+		})
+	}
+}
+
+func TestPatchProcessedStatus_RewritesWhenObservedChanges(t *testing.T) {
+	t.Setenv("TEST_CONDITIONS_CALC_NOW_TIME", "2021-01-01T13:30:00Z")
+	t.Setenv("TEST_CONDITIONS_CALC_CHKSUM", "newsum")
+
+	ng := newNodeGroupUnstructured("worker")
+	if err := unstructured.SetNestedField(ng.Object, "oldsum", "status", "deckhouse", "observed", "checkSum"); err != nil {
+		t.Fatalf("seed observed checksum: %v", err)
+	}
+
+	h := newFakeClientWithNG(t, ng)
+	s := &Service{Client: h.client}
+	if err := s.PatchProcessedStatus(context.Background(), "worker"); err != nil {
+		t.Fatalf("first PatchProcessedStatus: %v", err)
+	}
+
+	current := fetchNG(t, h, "worker")
+	if err := unstructured.SetNestedField(current.Object, "newsum", "status", "deckhouse", "observed", "checkSum"); err != nil {
+		t.Fatalf("update observed checksum: %v", err)
+	}
+	if err := h.client.Status().Update(context.Background(), current); err != nil {
+		t.Fatalf("store observed checksum: %v", err)
+	}
+
+	if err := s.PatchProcessedStatus(context.Background(), "worker"); err != nil {
+		t.Fatalf("second PatchProcessedStatus: %v", err)
+	}
+
+	got := fetchNG(t, h, "worker")
+	synced, _, _ := unstructured.NestedString(got.Object, "status", "deckhouse", "synced")
+	if synced != "True" {
+		t.Fatalf("expected synced=True once observed matches, got %q", synced)
+	}
+}
+
 func TestPatchProcessedStatus_FilterError(t *testing.T) {
 	t.Setenv("TEST_CONDITIONS_CALC_NOW_TIME", "2021-01-01T13:30:00Z")
 

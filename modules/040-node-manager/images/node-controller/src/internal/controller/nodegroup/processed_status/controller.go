@@ -59,14 +59,20 @@ func (s *Service) PatchProcessedStatus(ctx context.Context, ngName string) error
 		return fmt.Errorf("cannot get observed checksum status field: %v", err)
 	}
 
-	if !found || objCheckSum != observedCheckSum {
-		if err := unstructured.SetNestedField(current.Object, "False", "status", "deckhouse", "synced"); err != nil {
-			return fmt.Errorf("cannot set synced status field: %v", err)
-		}
-	} else {
-		if err := unstructured.SetNestedField(current.Object, "True", "status", "deckhouse", "synced"); err != nil {
-			return fmt.Errorf("cannot set synced status field: %v", err)
-		}
+	synced := "False"
+	if found && objCheckSum == observedCheckSum {
+		synced = "True"
+	}
+
+	// Rewriting lastTimestamp on every reconcile turned each Node event into a NodeGroup write.
+	currentSynced, _, _ := unstructured.NestedString(current.Object, "status", "deckhouse", "synced")
+	processedCheckSum, _, _ := unstructured.NestedString(current.Object, "status", "deckhouse", "processed", "checkSum")
+	if currentSynced == synced && processedCheckSum == objCheckSum {
+		return nil
+	}
+
+	if err := unstructured.SetNestedField(current.Object, synced, "status", "deckhouse", "synced"); err != nil {
+		return fmt.Errorf("cannot set synced status field: %v", err)
 	}
 
 	if err := unstructured.SetNestedStringMap(current.Object, map[string]string{
