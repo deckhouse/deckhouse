@@ -36,9 +36,10 @@ function restoreData() {
 
 $(document).ready(function () {
   const publicDomainTemplatePattern = /^(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/;
+  const numericTopLevelDomainPattern = /\.[0-9]+$/;
   const httpPrefixPattern = /^(http|https):\/\//i;
   $('#clusterdomain').change(function () {
-    if (!$(this).val().match(publicDomainTemplatePattern)) {
+    if (!$(this).val().match(publicDomainTemplatePattern) || $(this).val().match(numericTopLevelDomainPattern)) {
       $(this).addClass('invalid');
       $(this).parent().find('.invalid-message-main').addClass('active');
     } else if ($(this).val().match(/\.example\.com/)) {
