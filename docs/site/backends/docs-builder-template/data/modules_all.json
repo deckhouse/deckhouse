@@ -839,6 +839,18 @@
       "ssdlc"
     ]
   },
+  "peering": {
+    "extensions": [
+      "cluster_union"
+    ],
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "network",
+      "ssdlc"
+    ]
+  },
   "prompp": {
     "editions": [
       "ce",
@@ -1022,6 +1034,18 @@
     "tags": [
       "storage",
       "certified",
+      "ssdlc"
+    ]
+  },
+  "sds-nfs": {
+    "extensions": [
+      "advanced_storage"
+    ],
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "storage",
       "ssdlc"
     ]
   },
@@ -1246,6 +1270,20 @@
     "tags": [
       "security",
       "web ui",
+      "ssdlc"
+    ]
+  },
+  "system-s3": {
+    "editions": [
+      "ce",
+      "core",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "tags": [
+      "storage",
       "ssdlc"
     ]
   },
