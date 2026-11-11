@@ -49,15 +49,17 @@ If you see `MetadataLoaded=True` in the output, it means that the package's Open
 
 ### Packages available in a project
 
-If the `multitenancy-manager` module is enabled, each project namespace has an [AvailableClusterResource](/modules/multitenancy-manager/cr.html#availableclusterresource) named `applicationpackages` that lists the packages available to the project. Unlike ApplicationPackage objects, it can be read with the roles of the namespace. To view it, use the following command:
+If the `multitenancy-manager` module is enabled, each project namespace has an [AvailableClusterResource](/modules/multitenancy-manager/cr.html#availableclusterresource) named `applicationpackages` that lists the packages available for installation in the project. Unlike ApplicationPackage objects, it can be read with the roles of the namespace.
+
+To view the `applicationpackages` contents, use the following command:
 
 ```bash
 d8 k get available applicationpackages -n <NAMESPACE> -o yaml
 ```
 
-Example output (abridged):
+Abridged example output:
 
-```yaml
+```console
 status:
   grantedResourceKind: ApplicationPackage
   availableCount: 2
@@ -89,7 +91,7 @@ An Application of a package that is not available to the project is rejected wit
 [multitenancy] Application "<APPLICATION_NAME>" references "<PACKAGE_NAME>" which is not available to project "<PROJECT_NAME>". Ask the cluster administrator to grant it.
 ```
 
-The cluster administrator selects the packages available to a project with a ClusterResourceGrantPolicy for the `applicationpackages` resource (for details, refer to ["Package access"](../../admin/configuration/marketplace/package-access.html)). By default, every package is available to every project. An application installed before its package became unavailable to the project keeps working.
+The cluster administrator selects the packages available for installation in a project with a ClusterResourceGrantPolicy for the `applicationpackages` resource (for details, refer to ["Configuring package access"](../../admin/configuration/marketplace/package-access.html)). By default, every package is available to every project. An application installed before its package became unavailable to the project keeps working.
 
 ## Installing an application
 

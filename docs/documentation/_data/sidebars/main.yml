@@ -1047,8 +1047,8 @@ entries:
                     ru: Сканирование
                   url: /admin/configuration/marketplace/scanning.html
                 - title:
-                    en: Package access
-                    ru: Доступ к пакетам
+                    en: Configuring package access
+                    ru: Настройка доступа к пакетам
                   url: /admin/configuration/marketplace/package-access.html
         - title:
             en: Platform update

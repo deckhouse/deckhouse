@@ -1,18 +1,20 @@
 ---
-title: Доступ к пакетам
+title: Настройка доступа к пакетам
 permalink: ru/admin/configuration/marketplace/package-access.html
 description: "Выбор пакетов приложений, которые пользователи проектов могут устанавливать из Deckhouse Platform Marketplace, с помощью ClusterResourceGrantPolicy."
 lang: ru
 search: ClusterResourceGrantPolicy, applicationpackages, ApplicationPackage, доступ к пакетам, пакеты в проекте, multitenancy-manager
 ---
 
-По умолчанию пользователь, которому разрешено создавать объекты Application в неймспейсе, может установить приложение из любого пакета. Если включён модуль [`multitenancy-manager`](/modules/multitenancy-manager/), администратор кластера может выбрать пакеты, доступные в каждом [проекте](../../../glossary.html#project) и в каждом неймспейсе проекта. Application с недоступным пакетом отклоняется.
+По умолчанию пользователь, которому разрешено создавать объекты Application в неймспейсе, может устанавливать приложения из любых пакетов. Если включён модуль [`multitenancy-manager`](/modules/multitenancy-manager/), администратор кластера может ограничить набор пакетов, доступных для установки в каждом [проекте](../../../glossary.html#project) и каждом неймспейсе проекта. Запрос на создание Application с недоступным пакетом будет отклонён.
 
-Deckhouse Platform регистрирует ApplicationPackage как cluster-wide-ресурс модуля с именем `applicationpackages`, и модуль проверяет поле `spec.packageName` объектов Application в неймспейсах проектов. Доступные пакеты выбираются с помощью [ClusterResourceGrantPolicy](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy) для ресурса `applicationpackages`. Политика не выдаёт прав RBAC: чтобы установить приложение, пользователю по-прежнему нужна роль, которая разрешает создавать объекты Application в неймспейсе. Устройство механизма описано [в документации модуля `multitenancy-manager`](/modules/multitenancy-manager/#управление-доступом-к-cluster-wide-ресурсам).
+Для управления доступом к пакетам Deckhouse Platform регистрирует ApplicationPackage как cluster-wide-ресурс с именем `applicationpackages`. Модуль `multitenancy-manager` проверяет значение [поля `spec.packageName`](../../../reference/api/cr.html#application-v1alpha1-spec-packagename) объектов Application в неймспейсах проектов. Доступ к пакетам настраивается с помощью [ресурса ClusterResourceGrantPolicy](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy). При этом политика не предоставляет права RBAC: для установки приложения пользователю по-прежнему нужны права на создание объектов Application в соответствующем неймспейсе.
+
+Подробнее о механизме управления доступом — [в документации модуля `multitenancy-manager`](/modules/multitenancy-manager/#управление-доступом-к-cluster-wide-ресурсам).
 
 ## Разрешение пакетов в проекте
 
-Чтобы разрешить в проекте `my-project` только пакеты `postgres` и `redis`, создайте следующий ClusterResourceGrantPolicy:
+Чтобы разрешить в проекте `my-project` установку только пакетов `postgres` и `redis`, создайте следующую политику ClusterResourceGrantPolicy:
 
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha2
@@ -30,17 +32,22 @@ spec:
         - redis
 ```
 
-В `allowed` указываются имена объектов ApplicationPackage — те же, что в поле `spec.packageName` объекта Application. Чтобы получить список пакетов, выполните `d8 k get ap`.
+В поле `allowed` указываются имена объектов ApplicationPackage, соответствующие значениям [поля `spec.packageName`](../../../reference/api/cr.html#application-v1alpha1-spec-packagename) объекта Application. Чтобы получить список доступных пакетов, выполните команду `d8 k get ap`.
 
-Модуль ставит на каждый Project лейбл `projects.deckhouse.io/project: <PROJECT_NAME>`, поэтому политика применяется ко всем неймспейсам `my-project`, включая дополнительные неймспейсы, созданные позже. Чтобы выбрать несколько проектов, используйте лейбл `projects.deckhouse.io/project-template: <PROJECT_TEMPLATE_NAME>`, который выбирает проекты одного шаблона, или собственный лейбл на объектах Project, например `team: payments`.
+Модуль `multitenancy-manager` автоматически добавляет каждому объекту Project лейбл `projects.deckhouse.io/project: <PROJECT_NAME>`, в результате чего политика применяется ко всем неймспейсам выбранного проекта, включая дополнительные неймспейсы, созданные после применения политики.
 
-Если к проекту применяется политика с `allowed`, пакеты, которых нет в списке, в нём недоступны. Если к проекту применяется несколько политик, их списки `allowed` складываются.
+Чтобы применить политику к нескольким проектам, используйте один из лейблов:
+
+- лейбл `projects.deckhouse.io/project-template: <PROJECT_TEMPLATE_NAME>`, который выбирает все проекты, созданные по одному шаблону;
+- собственный лейбл на объектах Project, например `team: payments`, чтобы выбрать произвольную группу проектов.
+
+Если к проекту применяется политика с полем `allowed`, пакеты, которые не перечислены в нём, становятся недоступны к установке. Если к проекту применяется несколько политик, их списки `allowed` объединяются.
 
 ## Разрешение пакетов в одном неймспейсе проекта
 
-Политика с [`namespaceSelector`](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy-v1alpha2-spec-namespaceselector) применяется только к неймспейсам, лейблы которых соответствуют селектору. Остальные неймспейсы проекта она не ограничивает: если их не ограничивает другая политика, в них доступны все пакеты.
+С помощью [параметра `namespaceSelector`](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy-v1alpha2-spec-namespaceselector) можно ограничить действие политики отдельными неймспейсами проекта. Политика применяется только к неймспейсам, лейблы которых соответствуют селектору. На остальные неймспейсы проекта такая политика не распространяется. Если их не ограничивает другая политика, в них доступны все пакеты.
 
-Чтобы разрешить пакет `postgres` только в неймспейсе `my-project-db` проекта `my-project`, а в остальных неймспейсах проекта не разрешать ни одного пакета, создайте две политики:
+Например, чтобы разрешить установку пакета `postgres` только в неймспейсе `my-project-db` проекта `my-project`, а в остальных неймспейсах проекта запретить установку любых пакетов, создайте две политики:
 
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha2
@@ -72,13 +79,15 @@ spec:
         - postgres
 ```
 
-Первая политика делает все пакеты недоступными во всех неймспейсах проекта. Вторая разрешает `postgres` в `my-project-db`: пакет, который разрешает одна политика, доступен, даже если другая политика задаёт `availabilityDefault: None`.
+Первая политика (`my-project-no-packages`) делает все пакеты недоступными для установки во всех неймспейсах проекта. Вторая (`my-project-db-packages`) разрешает пакет `postgres` в неймспейсе `my-project-db`. Если пакет разрешён хотя бы одной политикой, он доступен для установки, даже если другая политика задаёт [`availabilityDefault: None`](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-availabilitydefault).
 
-Условие `NewNamespacesCovered` в статусе второй политики имеет значение `False`, потому что новый дополнительный неймспейс проекта не соответствует её `namespaceSelector`. Такие неймспейсы охватывает первая политика, поэтому пакеты в них недоступны.
+Условие `NewNamespacesCovered` в статусе второй политики имеет значение `False`, потому что новый дополнительный неймспейс проекта не соответствует её `namespaceSelector`. Однако такие неймспейсы охватывает первая политика, поэтому установка пакетов в них запрещена.
 
 ## Запрет отдельных пакетов
 
-Чтобы сделать недоступными отдельные пакеты и оставить доступными остальные, перечислите их в [`denied`](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-denied). Следующая политика делает пакет `experimental-db` недоступным во всех проектах:
+Чтобы запретить установку отдельных пакетов, сохранив доступ к остальным, перечислите их имена в поле [`denied`](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-denied).
+
+Пример политики, которая запрещает установку пакета `experimental-db` во всех проектах:
 
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha2
@@ -93,11 +102,13 @@ spec:
         - experimental-db
 ```
 
-Пустой `projectSelector` выбирает все проекты. Запрещённый пакет недоступен, даже если другая политика его разрешает.
+Пустой [параметр `projectSelector`](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy-v1alpha2-spec-projectselector) выбирает все проекты. Пакет, указанный в `denied`, недоступен для установки, даже если он разрешён другой политикой.
 
 ## Пакеты в шаблоне проекта и в проекте
 
-Те же правила можно задать в `spec.resources` шаблона проекта, чтобы они действовали во всех проектах, созданных из этого шаблона, или в [`spec.grants.resources`](/modules/multitenancy-manager/cr.html#project-v1alpha3-spec-grants) отдельного объекта Project. Например, чтобы разрешить в проектах шаблона только `postgres` и `redis`, добавьте в шаблон следующую запись:
+Правила доступа к пакетам можно задать [в поле `spec.resources`](/modules/multitenancy-manager/cr.html#projecttemplate-v1alpha2-spec-resources) шаблона проекта, чтобы они действовали во всех проектах, созданных по этому шаблону, или в поле [`spec.grants.resources`](/modules/multitenancy-manager/cr.html#project-v1alpha3-spec-grants) объекта Project для отдельного проекта.
+
+Например, чтобы разрешить в проектах шаблона установку только пакетов `postgres` и `redis`, добавьте в шаблон следующую запись:
 
 ```yaml
 spec:
@@ -112,27 +123,33 @@ spec:
 
 ## Проверка доступных пакетов
 
-Пакеты, доступные в неймспейсе, перечислены в объекте [AvailableClusterResource](/modules/multitenancy-manager/cr.html#availableclusterresource) `applicationpackages` этого неймспейса. Этот же список видят пользователи проекта:
+Пакеты, доступные для установки в неймспейсе, перечислены [в объекте AvailableClusterResource](/modules/multitenancy-manager/cr.html#availableclusterresource) под именем `applicationpackages` в соответствующем неймспейсе. Этот же список доступен пользователям проекта.
+
+Чтобы просмотреть список, выполните следующую команду:
 
 ```shell
 d8 k get available applicationpackages -n <NAMESPACE> -o yaml
 ```
 
-Запросы компонентов платформы и участников группы `system:masters` не проверяются. Чтобы проверить политику, отправьте запрос от имени пользователя проекта, например серверный пробный запуск (dry run), который ничего не создаёт:
+Запросы от компонентов платформы и участников группы `system:masters` не проходят проверку политик. Для проверки ограничений используйте учётную запись пользователя проекта.
+
+Например, чтобы выполнить серверный пробный запуск (dry run) манифеста Application без создания объекта, выполните следующую команду:
 
 ```shell
 d8 k apply -f application.yaml --dry-run=server --as <USER_NAME>
 ```
 
-## Приложения, установленные до ограничения
+## Приложения, установленные до введения ограничений
 
-Политика не удаляет установленные приложения. При изменении Application его пакет проверяется, только если меняется сам пакет, поэтому приложение, установленное до того, как его пакет стал недоступен проекту, продолжает работать.
+Введение ограничений из политики не приводит к удалению ранее установленных приложений. При изменении существующего объекта Application доступность его пакета проверяется только в том случае, если меняется сам пакет. Поэтому приложение, установленное до того, как его пакет стал недоступен в проекте, продолжает работать.
 
-Такие приложения учитывает метрика `d8_cluster_objects_grant_violated`, и срабатывает алерт [ClusterResourceGrantPolicyViolation](../../../reference/alerts.html#multitenancy-manager-clusterresourcegrantpolicyviolation). Алерт перестаёт срабатывать, когда пакет снова становится доступен проекту или Application удаляют.
+Такие приложения учитывает метрика `d8_cluster_objects_grant_violated`, и срабатывает [алерт `ClusterResourceGrantPolicyViolation`](../../../reference/alerts.html#multitenancy-manager-clusterresourcegrantpolicyviolation). Алерт перестаёт срабатывать, когда пакет снова становится доступен в проекте или при удалении соответствующего объекта Application.
 
 ## Ограничения
 
-- Политики действуют только в неймспейсах проектов. На неймспейсы виртуальных проектов `default` и `deckhouse`, например на неймспейс `default`, они не распространяются, поэтому там можно установить любой пакет.
-- Политика выбирает пакеты по имени. Она не ограничивает репозиторий, из которого устанавливается доступный пакет (`spec.packageRepositoryName`), и его версию.
-- Политика не скрывает пакеты: любой аутентифицированный пользователь может читать объекты ApplicationPackageVersion всех пакетов, в том числе недоступных проекту. В поле `status.usedBy` версии перечислены приложения, установленные из неё, и их неймспейсы во всех проектах.
-- Пока контроллер модуля `multitenancy-manager` недоступен, объекты Application в неймспейсах проектов нельзя создать или изменить. Чтобы контроллер оставался доступным, включите [`highAvailability`](/modules/multitenancy-manager/configuration.html#parameters-highavailability).
+При настройке доступа к пакетам учитывайте следующие особенности и ограничения:
+
+- Политики действуют только в неймспейсах проектов. На неймспейсы виртуальных проектов `default` и `deckhouse` они не распространяются, поэтому там можно устанавливать приложения из любых пакетов.
+- Политика выбирает доступные пакеты по имени. Она не ограничивает репозиторий, из которого устанавливается доступный пакет (`spec.packageRepositoryName`), и его версию.
+- Политика не скрывает недоступные пакеты. Любой аутентифицированный пользователь может читать объекты ApplicationPackageVersion всех пакетов, в том числе недоступных в его проекте. В поле `status.usedBy` версии перечислены приложения, установленные из неё, и их неймспейсы во всех проектах.
+- При недоступности контроллера модуля `multitenancy-manager` объекты Application в неймспейсах проектов нельзя создать или изменить. Чтобы контроллер оставался доступным, включите [параметр `highAvailability`](/modules/multitenancy-manager/configuration.html#parameters-highavailability) в настройках модуля `multitenancy-manager`.

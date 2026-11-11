@@ -49,15 +49,17 @@ d8 k get ap redis \
 
 ### Пакеты, доступные в проекте
 
-Если включён модуль `multitenancy-manager`, в каждом неймспейсе проекта есть объект [AvailableClusterResource](/modules/multitenancy-manager/cr.html#availableclusterresource) с именем `applicationpackages`, в котором перечислены пакеты, доступные проекту. В отличие от объектов ApplicationPackage, его можно прочитать с ролями неймспейса. Чтобы его просмотреть, выполните следующую команду:
+Если включён модуль `multitenancy-manager`, в каждом неймспейсе проекта есть объект [AvailableClusterResource](/modules/multitenancy-manager/cr.html#availableclusterresource) с именем `applicationpackages`, в котором перечислены пакеты, доступные для установки в проекте. В отличие от объектов ApplicationPackage, его можно прочитать с ролями неймспейса.
+
+Чтобы просмотреть содержимое объекта `applicationpackages`, выполните следующую команду:
 
 ```bash
 d8 k get available applicationpackages -n <NAMESPACE> -o yaml
 ```
 
-Пример вывода (сокращённый):
+Сокращённый пример вывода:
 
-```yaml
+```console
 status:
   grantedResourceKind: ApplicationPackage
   availableCount: 2
@@ -89,7 +91,7 @@ Application с пакетом, который недоступен проект�
 [multitenancy] Application "<APPLICATION_NAME>" references "<PACKAGE_NAME>" which is not available to project "<PROJECT_NAME>". Ask the cluster administrator to grant it.
 ```
 
-Пакеты, доступные проекту, администратор кластера выбирает с помощью ClusterResourceGrantPolicy для ресурса `applicationpackages` (подробнее — в разделе [«Доступ к пакетам»](../../admin/configuration/marketplace/package-access.html)). По умолчанию проекту доступны все пакеты. Приложение, установленное до того, как его пакет стал недоступен проекту, продолжает работать.
+Пакеты, доступные для установки в проекте, администратор кластера выбирает с помощью ClusterResourceGrantPolicy для ресурса `applicationpackages` (подробнее — в разделе [«Настройка доступа к пакетам»](../../admin/configuration/marketplace/package-access.html)). По умолчанию в проекте доступны все пакеты. Приложение, установленное до того, как его пакет стал недоступен в проекте, продолжает работать.
 
 ## Установка приложения
 

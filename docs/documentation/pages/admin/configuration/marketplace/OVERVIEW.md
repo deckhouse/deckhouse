@@ -40,8 +40,8 @@ The following resources are used for working with the Marketplace:
 | [ApplicationPackage](../../../reference/api/cr.html#applicationpackage) | `ap` | Cluster | Package summary: the repositories it's available in, the versions the [release channels](../../../glossary.html#release-channel) point to, and the applications that use it |
 | [Application](../../../reference/api/cr.html#application) | — | Namespace | Installed [application instance](../../../glossary.html#application-instance) managed by a user |
 
-The ["Package repositories"](package-repository.html) section describes how to connect a repository and check its status.
+The Marketplace documentation includes the following sections:
 
-The ["Scanning"](scanning.html) section describes how to monitor scanning operations and trigger a scanning manually.
-
-The ["Package access"](package-access.html) section describes how to choose the packages available in projects.
+- ["Package repositories"](package-repository.html) describes how to connect a repository and check its status.
+- ["Scanning"](scanning.html) describes how to monitor scanning operations and trigger a scanning manually.
+- ["Configuring package access"](package-access.html) describes how to configure access to packages in projects.
