@@ -42,15 +42,15 @@ In the current implementation, container image pull paths are configured through
 
 ### Modes of operation
 
-In the current implementation, DP supports the following container image pull path management modes (the mode is set with the [`mode`](/modules/registry/cr.html#registryconfig-v1alpha1-spec-mode) parameter in the `registry` ModuleConfig):
+In the current implementation, DP supports the following container image pull path management modes (the mode is set with the [`mode`](/modules/registry/latest/configuration.html#parameters-mode) parameter in the `registry` ModuleConfig):
 
 - `Unmanaged` (the default mode). The `registry` module does not manage the pull paths of DP component images: the cluster pulls images from the registry it was installed with (the registry is specified during cluster bootstrap in the [`deckhouse`](../../../reference/api/cr.html#initconfiguration-deckhouse) parameter in InitConfiguration).
 - `Managed`. In this mode, the `registry` module manages the pull paths for container images. The following independent settings are used in this mode:
 
-  - [`primary.upstream`](/modules/registry/configuration.html#parameters-primary-upstream) — the container image registry DP component images are pulled from. If the parameter is not set, the cluster is considered isolated (air-gapped). In an isolated cluster, the only source of container images is the [in-cluster cache](../../../glossary.html#in-cluster-cache), which is filled with the [`d8 mirror push`](../../../cli/d8/reference/#d8-mirror-push) command.
-  - [`storage.cache`](/modules/registry/configuration.html#parameters-storage-cache) — controls the in-cluster cache on the [master nodes](../../../glossary.html#master-node). If the parameter is enabled, a container image registry is deployed on the master nodes, and all nodes pull images from it, with the upstream registry staying a fallback path while the cache is being filled.
+  - [`primary.upstream`](/modules/registry/latest/configuration.html#parameters-primary-upstream) — the container image registry DP component images are pulled from. If the parameter is not set, the cluster is considered isolated (air-gapped). In an isolated cluster, the only source of container images is the [in-cluster cache](../../../glossary.html#in-cluster-cache), which is filled with the [`d8 mirror push`](../../../cli/d8/reference/#d8-mirror-push) command.
+  - [`storage.cache`](/modules/registry/latest/configuration.html#parameters-storage-cache) — controls the in-cluster cache on the [master nodes](../../../glossary.html#master-node). If the parameter is enabled, a container image registry is deployed on the master nodes, and all nodes pull images from it, with the upstream registry staying a fallback path while the cache is being filled.
 
-The [`primary.upstream`](/modules/registry/configuration.html#parameters-primary-upstream) and [`storage.cache`](/modules/registry/configuration.html#parameters-storage-cache) parameters together cover every supported configuration:
+The [`primary.upstream`](/modules/registry/latest/configuration.html#parameters-primary-upstream) and [`storage.cache`](/modules/registry/latest/configuration.html#parameters-storage-cache) parameters together cover every supported configuration:
 
 | `primary.upstream` | `storage.cache` | What the cluster does |
 |---|---|---|
@@ -61,20 +61,36 @@ The [`primary.upstream`](/modules/registry/configuration.html#parameters-primary
 
 You can reconfigure cache enablement and disablement, change the image storage location, and change your credentials at any time. However, when removing an upstream registry to transition to an isolated state, the module waits until the entire expected set of images appears in the intra-cluster cache—only then does it stop using the upstream registry. If the upstream registry stopped being used before the in-cluster cache held the whole expected image set, nodes could be left with no image source while the cache is being filled.
 
-For more details on the architecture of the current implementation (the node agent, the in-cluster cache, leader replica election, how isolated clusters work), see the [`registry` module documentation](/modules/registry/#current-implementation).
+For more details on the architecture of the current implementation (the node agent, the in-cluster cache, leader replica election, how isolated clusters work), see the [`registry` module documentation](/modules/registry/latest/#current-implementation).
 
 ### Garbage collection
 
-Registry replicas perform garbage collection on a scheduled basis.
+Deckhouse Platform has a garbage collection mechanism for the container image registry. Each registry replica runs the operation on its own store. Garbage collection does not block image pulls from the store.
 
-Garbage collection is enabled by default and runs once a day at night (at 3:17 a.m. Moscow Standard Time).
-If you need to disable or configure garbage collection, use the [`storage.garbageCollection`](/modules/registry/configuration.html#parameters-storage-garbagecollection) parameter in the `registry` ModuleConfig.
+Garbage collection starts in the following cases:
+
+- Once a day at night (at 3:17 a.m. Moscow Standard Time). Garbage collection is enabled by default. It is scheduled at night because filling the replica's store is paused during the operation. A `d8 mirror push` command started during garbage collection can therefore fail.
+- When all replicas have received a new image set: after a Deckhouse Platform update or after the `registry` module is enabled or updated.
+- When the image store refuses writes because it has exceeded its designated storage limit or reached the reserved free space threshold on its filesystem.
+
+For details about when garbage collection starts and what happens during the operation, see the [documentation for the `registry` module](/modules/registry/latest/faq.html#when-it-runs-and-what-happens-during-a-run).
+
+You can also [start garbage collection manually](#running-garbage-collection-manually).
+
+If you need to disable or configure garbage collection, use the [`storage.garbageCollection`](/modules/registry/latest/configuration.html#parameters-storage-garbagecollection) parameter in the `registry` ModuleConfig.
 
 {% alert level="warning" %}
 Disabling garbage collection only makes sense if the storage uses a disk with sufficient capacity to accommodate unlimited storage growth.
 {% endalert %}
 
-To view the status and schedule of trash collection, use the commands below.
+To view the status and schedule of garbage collection, use the commands below.
+
+- List the recent collections — what started them, how they went, and how much they freed. A finished
+collection is kept for a day:
+
+  ```bash
+  d8 k get registryoperation -o wide
+  ```
 
 - View the time of the last garbage collection on each replica and any errors, if any:
 
@@ -101,13 +117,66 @@ Collection removes the images of the releases the cluster has moved past. It kee
   anything pushed by hand. The collector cannot know what these mean, so it does not touch
   them.
 
-Garbage collection is performed with caution. In an isolated cluster, removing a blob that is still needed is irreversible without re-executing the `d8 mirror push` command, while storing an unnecessary blob only takes up disk space. Therefore, if the garbage collector does nothing with an object because it cannot explicitly determine whether it needs to be removed (for example, when a deployed release is not found).
+It also removes blobs that no image references, such as those left by an interrupted fill or by a
+collection whose cleanup failed. A collection removes them even when there are no images to delete.
 
-For more information about how the garbage collector works, see [the `registry` module documentation](/modules/registry/faq.html#the-cache-keeps-growing-what-reclaims-it).
+The collector is deliberately cautious. In an isolated cluster, deleting a blob that is still needed is unrecoverable without another `d8 mirror push`, while keeping an unneeded one merely costs disk space. So a run that cannot determine what to keep — for example, when no deployed release is found — does nothing at all.
+
+For more information about how the garbage collector works, see [the `registry` module documentation](/modules/registry/latest/faq.html#the-cache-keeps-growing-what-reclaims-it).
+
+#### Running garbage collection manually
+
+{% alert level="info" %}
+Garbage collection created manually runs even when automatic collection is disabled.
+{% endalert %}
+
+Before starting garbage collection manually, assess whether it is needed. See the ["Is a collection worth running now?"](/modules/registry/latest/faq.html#is-a-collection-worth-running-now) section of the `registry` module FAQ.
+
+To start garbage collection manually, create a [RegistryOperation](/modules/registry/latest/cr.html#registryoperation) object of type `GarbageCollection`:
+
+```bash
+d8 k create -f - <<EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: RegistryOperation
+metadata:
+  generateName: gc-manual-
+spec:
+  type: GarbageCollection
+  cause: Free space before pushing a new release.
+EOF
+```
+
+It runs even when automatic collection is disabled. Replicas collect one at a time, exactly as on schedule. A replica starts only when its store is not being written to: while the cache is being filled or a `d8 mirror push` is in progress, the replica waits, and the reason is shown in `status.replicas[].reason`. A store that refuses writes is not waited for: a fill cannot go on until the collection frees room. A replica still held back an hour after the operation was accepted fails with the reason `DeadlineExceeded`. An operation created while another one is running fails with the reason `AnotherOperationActive`.
+
+Follow the operation and see what it removed:
+
+```bash
+d8 k get registryoperation <NAME> -o jsonpath='{.status}' | jq \
+  '{phase, reason, message, garbageCollection}'
+```
+
+To cancel an operation, including one a replica is already running, set the cancel label on it:
+
+```bash
+d8 k label registryoperation <NAME> registry.deckhouse.io/cancel=true
+```
+
+What was deleted before the cancellation stays deleted.
+
+If a replica's `syncer` container stops answering while the replica collects or waits for its turn, for example because its master went `NotReady`, the replica fails with the reason `ReplicaLost`, so that the operation does not hold every collection after it for a day:
+
+- A replica that was collecting, once it has not held the Lease `registry-storage-gc` in the `d8-system` namespace for five minutes.
+- A replica that was waiting, once its node has not been `Ready` for ten minutes. A master that is back sooner keeps its replica's turn.
+
+A replica that waits on a node that stays `Ready` while its `syncer` does not answer is released by the cancel label, by the 24-hour timeout (the reason `TimedOut`), or by deleting the operation:
+
+```bash
+d8 k delete registryoperation <NAME>
+```
 
 ### Additional container image registries
 
-[`primary.upstream`](/modules/registry/configuration.html#parameters-primary-upstream) is the only image registry configured in the `registry` ModuleConfig itself. It is used to pull DP component images. If you need additional registries (a vendor's, one needed by some module, or your own), add them using the [RegistryUpstream](/modules/registry/cr.html#registryupstream) custom resource.
+[`primary.upstream`](/modules/registry/latest/configuration.html#parameters-primary-upstream) is the only image registry configured in the `registry` ModuleConfig itself. It is used to pull DP component images. If you need additional registries (a vendor's, one needed by some module, or your own), add them using the [RegistryUpstream](/modules/registry/latest/cr.html#registryupstream) custom resource.
 
 An example of adding an additional registry is given in the ["Adding an additional container image registry"](#adding-an-additional-container-image-registry) section.
 
@@ -126,7 +195,7 @@ If a module's image wasn't pulled again and the module wasn't reinstalled while 
 
 #### Configuring pull path management for DP component images
 
-To enable pull path management for DP component container images with the `registry` module, enable the module in `Managed` mode and specify the image registry details in [`primary.upstream`](/modules/registry/configuration.html#parameters-primary-upstream). Example of the `registry` ModuleConfig:
+To enable pull path management for DP component container images with the `registry` module, enable the module in `Managed` mode and specify the image registry details in [`primary.upstream`](/modules/registry/latest/configuration.html#parameters-primary-upstream). Example of the `registry` ModuleConfig:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -179,7 +248,7 @@ To see how the change takes effect, use the commands below.
 The in-cluster cache uses the disks of the master nodes and works in both [static](../../../glossary.html#static-cluster) and [cloud](../../../glossary.html#cloud-cluster) clusters managed by Deckhouse Platform. In a cloud cluster, that is the master node's root disk unless a separate disk is mounted at the cache directory (`/opt/deckhouse/registry`, or `/var/lib/deckhouse/registry` when the master NodeGroup has `systemType: DeckhouseEngine`). Size that disk for [`storage.size`](/modules/registry/configuration.html#parameters-storage-size) and the reserve the store keeps free for the node, on top of what the node itself uses. For details, see ["Requirements for using the module"](/modules/registry/#requirements-for-using-the-module) in the `registry` module documentation.
 {% endalert %}
 
-To enable the in-cluster cache, add the [`storage.cache`](/modules/registry/configuration.html#parameters-storage-cache) setting to the `registry` ModuleConfig and specify the storage size:
+To enable the in-cluster cache, add the [`storage.cache`](/modules/registry/latest/configuration.html#parameters-storage-cache) setting to the `registry` ModuleConfig and specify the storage size:
 
 ```yaml
 spec:
@@ -204,11 +273,11 @@ To check how full the in-cluster cache is, use the following command:
 d8 k get registrystorage registry -o jsonpath='{.status}' | jq '{phase,fill,leader,allReplicasFull}'
 ```
 
-Turning the cache off is the same change in reverse, and just as safe. The blobs on disk are left untouched, and when the cache is turned on again, it is refilled from the data already accumulated. If you turn the in-cluster cache off and do not plan to turn it on again, remove the leftover cache data from the cluster nodes. For detailed instructions, see the [`registry` module FAQ](/modules/registry/faq.html#how-do-i-remove-leftover-cache-data-from-a-node).
+Turning the cache off is the same change in reverse, and just as safe. The blobs on disk are left untouched, and when the cache is turned on again, it is refilled from the data already accumulated. If you turn the in-cluster cache off and do not plan to turn it on again, remove the leftover cache data from the cluster nodes. For detailed instructions, see the [`registry` module FAQ](/modules/registry/latest/faq.html#how-do-i-remove-leftover-cache-data-from-a-node).
 
 #### Switching the cluster into an air-gapped state
 
-An isolated cluster has no upstream registry (it is not set in [`primary.upstream`](/modules/registry/configuration.html#parameters-primary-upstream)). For such a cluster, the cache is the only source of images. The [`d8 mirror push`](../../../cli/d8/reference/#d8-mirror-push) command is used to fill the storage. To verify that all required images are present in the cache, specify the expected set of images [in the `storage.source` parameter](/modules/registry/configuration.html#parameters-storage-source)
+An isolated cluster has no upstream registry (it is not set in [`primary.upstream`](/modules/registry/latest/configuration.html#parameters-primary-upstream)). For such a cluster, the cache is the only source of images. The [`d8 mirror push`](../../../cli/d8/reference/#d8-mirror-push) command is used to fill the storage. To verify that all required images are present in the cache, specify the expected set of images [in the `storage.source` parameter](/modules/registry/latest/configuration.html#parameters-storage-source)
 
 To move the cluster to air-gapped, follow these steps:
 
@@ -263,7 +332,7 @@ d8 k get registryconfig registry -o jsonpath='{.status.effectiveUpstream}' | jq
 Requests to additional registries are always routed through the node agent (credentials and the certificate authority are kept in one place), and images from them are not cached.
 {% endalert %}
 
-To add an additional image registry (not for DP [system components](../../../glossary.html#system-component)), use the [RegistryUpstream](/modules/registry/cr.html#registryupstream) resource. Example:
+To add an additional image registry (not for DP [system components](../../../glossary.html#system-component)), use the [RegistryUpstream](/modules/registry/latest/cr.html#registryupstream) resource. Example:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -317,11 +386,11 @@ spec:
     image: private.example.com/team/app:v1
 ```
 
-It is worth creating a [RegistryUpstream](/modules/registry/cr.html#registryupstream) for the registry only if you want the cluster to hold the credentials instead of every workload doing so individually, or if the registry needs a certificate authority the nodes do not have.
+It is worth creating a [RegistryUpstream](/modules/registry/latest/cr.html#registryupstream) for the registry only if you want the cluster to hold the credentials instead of every workload doing so individually, or if the registry needs a certificate authority the nodes do not have.
 
 #### Turning off pull path management
 
-To turn off pull path management, set [`mode: Unmanaged`](/modules/registry/configuration.html#parameters-mode) in the `registry` ModuleConfig:
+To turn off pull path management, set [`mode: Unmanaged`](/modules/registry/latest/configuration.html#parameters-mode) in the `registry` ModuleConfig:
 
 ```yaml
 spec:
@@ -329,7 +398,7 @@ spec:
     mode: Unmanaged
 ```
 
-After `mode: Unmanaged` is set, pull path management through the `registry` module is turned off. The cluster resumes downloading images from the container registry specified in the `deckhouse-registry` secret—that is, from the same source from which images were downloaded before the module was enabled. Cache data on the master nodes is deliberately preserved: when pull path management is turned on again, the cache is topped up only with the images missing from the container image registry rather than filled from scratch. If the cache is no longer needed, free up the space it occupies by following the [instructions](/modules/registry/faq.html#how-do-i-remove-leftover-cache-data-from-a-node) in the `registry` module documentation.
+After `mode: Unmanaged` is set, pull path management through the `registry` module is turned off. The cluster resumes downloading images from the container registry specified in the `deckhouse-registry` secret—that is, from the same source from which images were downloaded before the module was enabled. Cache data on the master nodes is deliberately preserved: when pull path management is turned on again, the cache is topped up only with the images missing from the container image registry rather than filled from scratch. If the cache is no longer needed, free up the space it occupies by following the [instructions](/modules/registry/latest/faq.html#how-do-i-remove-leftover-cache-data-from-a-node) in the `registry` module documentation.
 
 ## V1 implementation
 
@@ -645,8 +714,8 @@ Migration procedure:
    d8 k -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
    ```
 
-1. Upgrade the cluster to DP 1.78. The handover happens on the next reconciliation, and the cluster keeps pulling images from the temporary registry throughout. On containerd v1 nodes the takeover restarts containerd node by node, and enabling `mode: Managed` in the next step restarts it again (see [Does the migration restart containerd?](/modules/registry/faq.html#does-the-migration-restart-containerd)).
-1. Enable the current implementation: set [`mode: Managed`](/modules/registry/configuration.html#parameters-mode) with [`storage.cache: true`](/modules/registry/configuration.html#parameters-storage-cache), specify the temporary registry as [`primary.upstream`](/modules/registry/configuration.html#parameters-primary-upstream) — **and add [`storage.source`](/modules/registry/latest/configuration.html#parameters-storage-source) in the same edit** (without it, the next step is rejected). The registry of the current implementation uses the same host path that `Local` used, so the images already on disk are not downloaded again.
+1. Upgrade the cluster to DP 1.78. The handover happens on the next reconciliation, and the cluster keeps pulling images from the temporary registry throughout. On containerd v1 nodes the takeover restarts containerd node by node, and enabling [`mode: Managed`](/modules/registry/latest/configuration.html#parameters-mode) in the next step restarts it again (for more details, see the ["Does the migration restart containerd?"](/modules/registry/faq.html#does-the-migration-restart-containerd)).
+1. Enable the current implementation: set [`mode: Managed`](/modules/registry/latest/configuration.html#parameters-mode) with [`storage.cache: true`](/modules/registry/registry/configuration.html#parameters-storage-cache), specify the temporary registry as [`primary.upstream`](/modules/registry/registry/configuration.html#parameters-primary-upstream) — **and add [`storage.source`](/modules/registry/latest/configuration.html#parameters-storage-source) in the same edit** (without it, the next step is rejected). The registry of the current implementation uses the same host path that `Local` used, so the images already on disk are not downloaded again.
 1. Wait until the storage reports that it holds the whole image set (`phase: Ready` and `safeToDropUpstream: true`), and remove `primary.upstream` from the `registry` ModuleConfig. The cluster is isolated again — now on the current implementation:
 
    ```bash
@@ -686,7 +755,7 @@ If containerd v1 is used as the container runtime, you can choose one of the fol
 
 ### For containerd v2
 
-1. Switch to using the `registry` module. To do this, specify the `Unmanaged` mode parameters in the `deckhouse` ModuleConfig. If you are using a registry other than `registry.deckhouse.io`, refer to the [`deckhouse`](/modules/deckhouse/latest/configuration.html) module configuration for correct setup.
+1. Switch to using the `registry` module. To do this, specify the `Unmanaged` mode parameters in the `deckhouse` ModuleConfig. If you are using a registry other than `registry.deckhouse.io`, refer to the [`deckhouse`](/modules/deckhouse/configuration.html) module configuration for correct setup.
 
    You can view the current registry settings using the following command:
 
@@ -795,7 +864,7 @@ If you need to add configurations for an additional image repository, refer to t
    ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http private.registry.example/registry/path:tag
    ```
 
-1. Switch to using the `registry` module. To do this, specify the `Unmanaged` mode parameters in the `deckhouse` ModuleConfig. If you are using a registry other than `registry.deckhouse.io`, refer to the [`deckhouse`](/modules/deckhouse/latest/configuration.html) module configuration for correct setup.
+1. Switch to using the `registry` module. To do this, specify the `Unmanaged` mode parameters in the `deckhouse` ModuleConfig. If you are using a registry other than `registry.deckhouse.io`, refer to the [`deckhouse`](/modules/deckhouse/configuration.html) module configuration for correct setup.
 
    You can view the current registry settings using the following command:
 
