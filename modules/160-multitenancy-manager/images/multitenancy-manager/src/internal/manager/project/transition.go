@@ -146,7 +146,7 @@ var handoverPendingProjects = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 //	max by (project) (d8_multitenancy_project_kept_objects) > 0
 var keptObjectsProjects = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 	Name: "d8_multitenancy_project_kept_objects",
-	Help: "The number of objects of a release rendered from a Helm text that were left in place, no longer managed.",
+	Help: "The number of objects a project release left in place and no longer manages, from a Helm text or from a native release that manifests take over.",
 }, []string{"project"})
 
 func init() {
@@ -169,16 +169,41 @@ func (m *Manager) beforeUpgrade(project *v1alpha3.Project) helm.BeforeUpgrade {
 	}
 }
 
-// prepareUpgrade keeps for the handover every live object the upgrade drops that the standard fields
-// replace, and on a switch from a Helm text to structured fields leaves every other dropped object in
-// place. It does nothing for an upgrade that drops no AuthorizationRule or ResourceQuota and is no
-// switch. Every dropped object is read and sorted out before anything is written, and the record goes
+// prepareUpgrade hands over to the release the objects of the manifests that the upgrade adds to it
+// (handOverManifestObjects), keeps for the handover every live object the upgrade drops that the
+// standard fields replace, and leaves in place every other dropped object on a switch from a Helm text
+// to structured fields and every dropped object that the manifests of the template render. Past the
+// objects of the manifests, it does nothing for an upgrade that drops no AuthorizationRule or
+// ResourceQuota and is no switch. Every dropped object is read and sorted out before anything is written, and the record goes
 // to the stored status before the first mark: a pass that stops halfway leaves no mark that is not on
 // record, and the next pass, or the cleanup, finds what it marked.
 func (m *Manager) prepareUpgrade(ctx context.Context, project *v1alpha3.Project, change helm.ReleaseChange) error {
+	if err := m.handOverManifestObjects(ctx, project, change); err != nil {
+		return err
+	}
+
 	switching := change.Deployed.HelmText && change.Native
 	dropped := droppedObjects(project.Name, change)
-	if len(dropped) == 0 || !switching && !slices.ContainsFunc(dropped, isRuleOrQuota) {
+	if len(dropped) == 0 {
+		return nil
+	}
+	// An object that leaves the release while the manifests of the template render it, such as the
+	// NetworkPolicy named isolated once networkPolicy.mode goes and the manifests take it on, is left
+	// in place as on a switch, and the manifests take it over in the same reconcile: deleted by the
+	// upgrade and created again by the manifests, the project would be without it in between.
+	var rendered map[releaseKey]struct{}
+	if !switching {
+		keys, err := m.manifestsKeys(ctx, project)
+		if err != nil {
+			return err
+		}
+		rendered = keys
+	}
+	byManifests := func(object helm.ReleaseObject) bool {
+		_, ok := rendered[keyOf(object, project.Name)]
+		return ok
+	}
+	if !switching && !slices.ContainsFunc(dropped, isRuleOrQuota) && !slices.ContainsFunc(dropped, byManifests) {
 		return nil
 	}
 	// Without the main namespace the standard fields cannot be created, and the upgrade that brings
@@ -211,7 +236,10 @@ func (m *Manager) prepareUpgrade(ctx context.Context, project *v1alpha3.Project,
 			// It grants only to administrators removed from the project, and the upgrade deletes it: a
 			// revocation is never delayed, so the mark of an earlier pass goes.
 			unmark = append(unmark, live)
-		case switching:
+		case switching || byManifests(object):
+			// switching leaves an object of a Helm text that the structured fields do not render.
+			// byManifests leaves an object of the native release that manifests render, so the
+			// upgrade does not delete it before manifests take it over. Both go through keptObjects.
 			leave = append(leave, live)
 		case keptByHandover(live):
 			// marked by an earlier pass, and an edit of a Helm text deletes what it drops
@@ -558,7 +586,8 @@ func (m *Manager) liveObject(ctx context.Context, object helm.ReleaseObject, nam
 	return live, nil
 }
 
-// leaveObject leaves a live object of a Helm text release in place for good: helm.sh/resource-policy:
+// leaveObject leaves a live object in place for good, a Helm text object or one the native release
+// drops for manifests: helm.sh/resource-policy:
 // keep, so the upgrade does not delete it; no handover mark, so the cleanup does not either; no
 // heritage label, so it is not the module's any more; and the kept-from-helm-template label, which
 // lists it and under which the d8-multitenancy-manager-kept-objects admission policy lets only a

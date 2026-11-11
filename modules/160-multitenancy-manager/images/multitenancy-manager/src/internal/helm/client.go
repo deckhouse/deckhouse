@@ -334,6 +334,9 @@ func (c *Client) release(ctx context.Context, project *v1alpha3.Project, source 
 		if err != nil {
 			return ReleaseOutcome{}, fmt.Errorf("read what the upgrade changes: %w", err)
 		}
+		// Helm stores the upgrade as one more than the newest revision, failed ones included. The
+		// history here is newest first, after a pending revision was rolled back.
+		change.NextRevision = releases[0].Version + 1
 		if err = source.beforeUpgrade(ctx, change); err != nil {
 			return ReleaseOutcome{}, err
 		}

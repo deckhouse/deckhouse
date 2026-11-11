@@ -58,6 +58,8 @@ type fakeHelmClient struct {
 	// change, when set, is what an upgrade does to the deployed release: Upgrade and UpgradeManifests
 	// hand it to their BeforeUpgrade and return its error.
 	change *helm.ReleaseChange
+	// upgradeErr is returned after BeforeUpgrade, the way an upgrade that did not deploy fails.
+	upgradeErr error
 	// current is what CurrentRelease returns.
 	current      *helm.ProjectRelease
 	currentCalls int
@@ -97,6 +99,9 @@ func (f *fakeHelmClient) upgrade(ctx context.Context, beforeUpgrade helm.BeforeU
 		if err := beforeUpgrade(ctx, *f.change); err != nil {
 			return helm.ReleaseOutcome{}, err
 		}
+	}
+	if f.upgradeErr != nil {
+		return helm.ReleaseOutcome{}, f.upgradeErr
 	}
 	return f.applyResult, nil
 }

@@ -82,9 +82,16 @@ type ReleaseObject struct {
 type ReleaseChange struct {
 	Deployed *ProjectRelease
 	Targets  []ReleaseObject
+	// Manifest is the post-rendered manifest the targets are read from: the objects as the upgrade
+	// writes them.
+	Manifest string
 	// Native reports that the upgrade renders the release natively, from the structured fields of a
 	// template.
 	Native bool
+	// NextRevision is the version Helm will store for this upgrade: one more than the newest revision
+	// already in the history. It is known before the upgrade runs. Zero means the caller did not fill
+	// it, and a handover recorded with zero is rolled back rather than treated as deployed.
+	NextRevision int
 }
 
 // BeforeUpgrade runs where an upgrade is about to replace a deployed revision, and an error stops the
@@ -181,11 +188,12 @@ func (c *Client) releaseChange(
 	if err != nil {
 		return ReleaseChange{}, fmt.Errorf("post render: %w", err)
 	}
-	targets, err := manifestObjects(out.String())
+	manifest := out.String()
+	targets, err := manifestObjects(manifest)
 	if err != nil {
 		return ReleaseChange{}, fmt.Errorf("read the post-rendered manifests: %w", err)
 	}
-	return ReleaseChange{Deployed: summary, Targets: targets, Native: manifests != ""}, nil
+	return ReleaseChange{Deployed: summary, Targets: targets, Manifest: manifest, Native: manifests != ""}, nil
 }
 
 // manifestObjects lists the objects of a manifest, sorted by kind, namespace and name.

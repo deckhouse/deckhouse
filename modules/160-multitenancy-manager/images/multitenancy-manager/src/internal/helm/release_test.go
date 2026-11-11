@@ -332,6 +332,7 @@ func TestClient_ReleaseChange(t *testing.T) {
 			{APIVersion: "v1", Kind: "ConfigMap", Namespace: "proj", Name: "native", Heritage: true},
 			{APIVersion: "v1", Kind: "Namespace", Name: "proj", Heritage: true},
 		}, change.Targets)
+		assert.Contains(t, change.Manifest, "name: native", "the manifest the targets are read from goes with them")
 	})
 }
 
@@ -419,6 +420,7 @@ func TestClient_ReleaseRunsBeforeUpgrade(t *testing.T) {
 	assert.False(t, changes[0].Native)
 	assert.True(t, changes[0].Deployed.HelmText)
 	assert.Equal(t, 1, changes[0].Deployed.Revision)
+	assert.Equal(t, 2, changes[0].NextRevision, "Helm stores the upgrade as one more than the newest revision")
 	assert.Contains(t, changes[0].Deployed.Objects, ReleaseObject{APIVersion: "v1", Kind: "ConfigMap", Namespace: "proj", Name: "first", Heritage: true})
 	assert.Equal(t, []ReleaseObject{
 		{APIVersion: "v1", Kind: "ConfigMap", Namespace: "proj", Name: "second", Heritage: true},
@@ -442,6 +444,7 @@ func TestClient_ReleaseRunsBeforeUpgrade(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, changes, 2)
 	assert.True(t, changes[1].Native)
+	assert.Equal(t, 3, changes[1].NextRevision)
 	assert.True(t, changes[1].Deployed.HelmText, "the revision replaced is the one the Helm text rendered")
 
 	current, err = c.CurrentRelease(ctx, project.Name)

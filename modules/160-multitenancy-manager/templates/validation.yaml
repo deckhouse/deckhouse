@@ -28,23 +28,6 @@ spec:
       expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system"].exists(e, (e in request.userInfo.groups)))'
     - name: 'exclude-users'
       expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl", "observability"].exists(e, (e == request.userInfo.username)))'
-    - name: 'exclude-restartedAt'
-      # This condition exempts a rollout restart, which needs two objects to compare; on CREATE
-      # there is only one. Said outright rather than left to the has() chain below, which reaches
-      # the same answer only because a presence test on a null oldObject is false rather than an
-      # error.
-      expression: 'oldObject == null || !((has(object.spec) && has(object.spec.template) && has(object.spec.template.metadata)
-          && has(oldObject.spec) && has(oldObject.spec.template) && has(oldObject.spec.template.metadata))
-          && ((!has(oldObject.spec.template.metadata.annotations) && has(object.spec.template.metadata.annotations)
-          && "kubectl.kubernetes.io/restartedAt" in object.spec.template.metadata.annotations)
-          || (has(oldObject.spec.template.metadata.annotations) && has(object.spec.template.metadata.annotations)
-          && !("kubectl.kubernetes.io/restartedAt" in oldObject.spec.template.metadata.annotations)
-          && "kubectl.kubernetes.io/restartedAt" in object.spec.template.metadata.annotations)
-          || (has(oldObject.spec.template.metadata.annotations) && has(object.spec.template.metadata.annotations)
-          && "kubectl.kubernetes.io/restartedAt" in oldObject.spec.template.metadata.annotations
-          && "kubectl.kubernetes.io/restartedAt" in object.spec.template.metadata.annotations
-          && oldObject.spec.template.metadata.annotations["kubectl.kubernetes.io/restartedAt"]
-          != object.spec.template.metadata.annotations["kubectl.kubernetes.io/restartedAt"])))'
   variables:
     # DELETE carries no object, so the one to name in the message is whichever of the two is there.
     # A messageExpression that fails is not an error the apiserver reports: it falls back to the
@@ -86,6 +69,7 @@ spec:
       expression: '(has(object.spec) ? object.spec : {}) == (has(oldObject.spec) ? oldObject.spec : {}) && (has(object.metadata.finalizers) ? object.metadata.finalizers : []) == (has(oldObject.metadata.finalizers) ? oldObject.metadata.finalizers : []) && (has(object.metadata.ownerReferences) ? object.metadata.ownerReferences : []) == (has(oldObject.metadata.ownerReferences) ? oldObject.metadata.ownerReferences : [])'
     - name: namespaceMetadataEdit
       expression: 'variables.isNamespaceUpdate && variables.namespaceBodyUntouched && variables.managedLabelsUntouched && variables.managedAnnotationsUntouched'
+    {{- include "mtm.rollout_restart_variables" . | nindent 4 }}
   validations:
     # Two doors: the controller, and -- on a project namespace only -- a metadata edit that leaves the
     # keys the module owns alone. Adoption turns every user namespace into a project namespace, so
@@ -93,7 +77,7 @@ spec:
     # would be refused to cluster administrators for the life of the cluster.
     # An update that drops the heritage label itself is not seen here at all (the binding selects a
     # Namespace by the labels of the NEW object); the namespace-ownership policy below refuses it.
-    - expression: 'request.userInfo.username == "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager" || variables.namespaceMetadataEdit'
+    - expression: 'request.userInfo.username == "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager" || variables.namespaceMetadataEdit || variables.rolloutRestart'
       reason: Forbidden
       message: 'This resource is managed by the multitenancy-manager module. Manual modification is forbidden.'
       # A cluster-scoped object has no namespace to name, and now that CREATE is matched it reaches
@@ -121,10 +105,93 @@ spec:
       matchLabels:
         heritage: multitenancy-manager
 ---
-# The objects a switch of a project from a Helm text leaves in place (status.keptObjects) lose the
-# heritage label, so the policy above no longer holds them, and the project no longer manages them.
-# They may still be what keeps the project in bounds, such as a NetworkPolicy, a LimitRange or a
-# quota the text rendered, so the users of the project must not be the ones to change them. While an
+# The objects that spec.manifests of a template applies carry the projects.deckhouse.io/source: manifests
+# label. They are the template's, which cluster administrators write, as the objects of the release
+# are, but the policy above does not hold them: they may not carry its heritage label. Without this
+# policy a project administrator could change or delete them, and the change stood until the
+# manifests were applied again, up to ten minutes later (manifestsReapply in
+# internal/manager/project/manifests.go). Here the user that the manifests of the project are applied
+# as is the only one that may create, change or delete them, next to the controller, which hands such
+# an object over to the release, the service accounts of the d8-* namespaces, and the cluster
+# components that the policy above lets through. The label protects the objects from every user.
+# A superadmin still changes them as system:sudouser, which this policy excludes. Module service
+# accounts of the d8-* namespaces and the system components above pass as well. A rollout restart
+# is let through only when that annotation is the only change, as above. Everybody else changes
+# them through the template.
+#
+# CREATE and the label are matched so that nobody else puts the label on an object: the manifests take
+# such an object over and later delete it. There is one door for a person: a requester who may update
+# the kind across the cluster may put the two labels on an object that has not got the label of the
+# manifests yet, which hands it over to the manifests, as the documentation of manifests describes.
+# Subresources, such as scale and status, are not matched, as above.
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}-manifests-objects
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["*"]
+        apiVersions: ["*"]
+        operations:  ["CREATE", "UPDATE", "DELETE"]
+        resources:   ["*"]
+        scope: "Namespaced"
+  matchConditions:
+    - name: 'exclude-groups'
+      expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system"].exists(e, (e in request.userInfo.groups)))'
+    - name: 'exclude-users'
+      expression: '!(["system:serviceaccount:d8-multitenancy-manager:multitenancy-manager", "system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl", "observability"].exists(e, (e == request.userInfo.username)))'
+    # Every service account of a module namespace. The same prefix the platform policies use. A match
+    # condition that is false skips the policy, so these accounts change the object.
+    - name: 'exclude-d8-serviceaccounts'
+      expression: '!request.userInfo.username.startsWith("system:serviceaccount:d8-")'
+  variables:
+    - name: oldLabels
+      expression: 'oldObject != null && has(oldObject.metadata.labels) ? oldObject.metadata.labels : {}'
+    - name: newLabels
+      expression: 'object != null && has(object.metadata.labels) ? object.metadata.labels : {}'
+    # The project an object belongs to, by its label; a delete has only the old object.
+    - name: project
+      expression: 'object != null ? ("projects.deckhouse.io/project" in variables.newLabels ? variables.newLabels["projects.deckhouse.io/project"] : "") : ("projects.deckhouse.io/project" in variables.oldLabels ? variables.oldLabels["projects.deckhouse.io/project"] : "")'
+    # An update keeps the project of the object: an object of the manifests of one project is not
+    # moved to another one. An object that lost the project label, or never had one, is not such a
+    # move: the manifests of its project put the label back on the next apply. An empty old value is
+    # that case. A non-empty old value that differs from the new one is a move, and it is refused.
+    - name: sameProject
+      expression: 'oldObject == null || object == null || !("projects.deckhouse.io/project" in variables.oldLabels) || variables.oldLabels["projects.deckhouse.io/project"] == "" || variables.oldLabels["projects.deckhouse.io/project"] == variables.project'
+    - name: byTheManifests
+      expression: 'variables.project != "" && variables.sameProject && request.userInfo.username == "system:multitenancy-manager:project:" + variables.project'
+    # The door for a person: an update that puts the label of the manifests on an object that has not
+    # got it yet, with the label of a project.
+    - name: handOver
+      expression: 'request.operation == "UPDATE" && variables.project != "" && !("projects.deckhouse.io/source" in variables.oldLabels && variables.oldLabels["projects.deckhouse.io/source"] == "manifests")'
+    {{- include "mtm.rollout_restart_variables" . | nindent 4 }}
+  validations:
+    # Without a namespace the check asks about every namespace, which a RoleBinding does not grant.
+    - expression: 'variables.rolloutRestart || variables.byTheManifests || variables.handOver && authorizer.group(request.resource.group).resource(request.resource.resource).check("update").allowed()'
+      reason: Forbidden
+      messageExpression: 'variables.project != "" ? ''This resource is created by the manifests of the ProjectTemplate of the '' + variables.project + '' Project. Manual modification is forbidden: change spec.manifests of the ProjectTemplate.'' : ''Only the manifests of a project put the projects.deckhouse.io/source: manifests label on an object, together with the projects.deckhouse.io/project label.'''
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}-manifests-objects
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}-manifests-objects
+  validationActions: [Deny, Audit]
+  matchResources:
+    objectSelector:
+      matchLabels:
+        projects.deckhouse.io/source: manifests
+---
+# The objects a project release leaves in place (status.keptObjects) lose the heritage label, so the
+# policy above no longer holds them, and the project no longer manages them. A switch off a Helm text
+# leaves them, and so does a move of an object from the native release to manifests. They may still
+# be what keeps the project in bounds, such as a NetworkPolicy, a LimitRange or a quota the release
+# rendered, so the users of the project must not be the ones to change them. While an
 # object carries the kept-from-helm-template label, only a requester who may make the same change to
 # its kind across the cluster may change or delete it. A cluster administrator may, a holder of a role
 # in the project namespaces may not. Removing the label is such a change too, and it hands the object
@@ -166,7 +233,7 @@ spec:
     # Without a namespace the check asks about every namespace, which a RoleBinding does not grant.
     - expression: 'authorizer.group(request.resource.group).resource(request.resource.resource).check(variables.verb).allowed()'
       reason: Forbidden
-      messageExpression: '''This object was left in place when its project moved off a Helm text. Only a requester who may '' + variables.verb + '' '' + request.resource.resource + '' across the cluster may change it, and a cluster administrator hands it over to the project by removing the projects.deckhouse.io/kept-from-helm-template label.'''
+      messageExpression: '''This object was left in place when its project release stopped holding it. Only a requester who may '' + variables.verb + '' '' + request.resource.resource + '' across the cluster may change it, and a cluster administrator hands it over to the project by removing the projects.deckhouse.io/kept-from-helm-template label.'''
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding

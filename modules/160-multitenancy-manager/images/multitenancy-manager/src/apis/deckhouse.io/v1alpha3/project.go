@@ -362,8 +362,24 @@ type ProjectStatus struct {
 	// halfway leaves no applied object off it.
 	ManifestObjects []ManifestObject `json:"manifestObjects,omitempty"`
 
+	// HandingOver lists objects of spec.manifests that an upgrade of the project release is taking
+	// over, and the revision that upgrade is expected to deploy. The controller writes an entry
+	// before it changes the object, drops the entry once that revision is deployed and holds the
+	// object, and puts the object back under manifests when the upgrade does not.
+	HandingOver []HandingOverObject `json:"handingOver,omitempty"`
+
 	// Current state.
 	State string `json:"state,omitempty"`
+}
+
+// HandingOverObject is one object in status.handingOver.
+type HandingOverObject struct {
+	APIVersion string `json:"apiVersion"`
+	Kind       string `json:"kind"`
+	Namespace  string `json:"namespace,omitempty"`
+	Name       string `json:"name"`
+	// Revision is the release revision the upgrade is expected to deploy.
+	Revision int `json:"revision"`
 }
 
 // KeptObject identifies an object in status.keptObjects.
@@ -463,6 +479,9 @@ func (p *ProjectStatus) DeepCopyInto(newObj *ProjectStatus) {
 	}
 	if p.ManifestObjects != nil {
 		newObj.ManifestObjects = slices.Clone(p.ManifestObjects)
+	}
+	if p.HandingOver != nil {
+		newObj.HandingOver = slices.Clone(p.HandingOver)
 	}
 	if p.Usage != nil {
 		newObj.Usage = p.Usage.DeepCopy()

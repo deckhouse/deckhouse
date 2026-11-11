@@ -52,6 +52,7 @@ const (
 	keptObjectsPolicyName        = "d8-multitenancy-manager-kept-objects"
 	namespaceOwnershipPolicyName = "d8-multitenancy-manager-namespace-ownership"
 	manifestsPolicyName          = "d8-multitenancy-manager-manifests"
+	manifestsObjectsPolicyName   = "d8-multitenancy-manager-manifests-objects"
 	v1alpha1TemplateCreatePolicy = "d8-multitenancy-manager-v1alpha1-template-create"
 
 	controllerServiceAccount = "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"
@@ -809,6 +810,52 @@ var _ = Describe("Module :: multitenancy-manager :: helm template :: heritage po
 			}
 		}
 	})
+
+	It("lets a rollout restart of a heritage workload through only when nothing else changes", func() {
+		policy := compileRenderedPolicy(hec.KubernetesGlobalResource("ValidatingAdmissionPolicy", "d8-multitenancy-manager").ToYaml())
+		labels := map[string]string{"heritage": "multitenancy-manager"}
+		restart := func(deployment *unstructured.Unstructured) {
+			Expect(unstructured.SetNestedStringMap(deployment.Object, map[string]string{"kubectl.kubernetes.io/restartedAt": "2026-10-30T12:00:00Z"},
+				"spec", "template", "metadata", "annotations")).To(Succeed())
+		}
+		restartAndScale := func(deployment *unstructured.Unstructured) {
+			restart(deployment)
+			Expect(unstructured.SetNestedField(deployment.Object, int64(5), "spec", "replicas")).To(Succeed())
+		}
+		// An image change is a field of the pod template, next to the annotation a restart sets.
+		restartAndChangeImage := func(deployment *unstructured.Unstructured) {
+			restart(deployment)
+			Expect(unstructured.SetNestedSlice(deployment.Object, []any{map[string]any{"name": "web", "image": "evil:latest"}},
+				"spec", "template", "spec", "containers")).To(Succeed())
+		}
+		cases := []struct {
+			name      string
+			edit      func(*unstructured.Unstructured)
+			newLabels map[string]string
+			allowed   bool
+		}{
+			{name: "a project administrator restarts a rollout", edit: restart, allowed: true},
+			{name: "a project administrator restarts a rollout and scales", edit: restartAndScale},
+			{name: "a project administrator restarts a rollout and changes the image", edit: restartAndChangeImage},
+			{name: "a project administrator restarts a rollout and takes the heritage label off", edit: restart,
+				newLabels: map[string]string{"app": "web"}},
+			{name: "a project administrator scales", edit: func(deployment *unstructured.Unstructured) {
+				Expect(unstructured.SetNestedField(deployment.Object, int64(5), "spec", "replicas")).To(Succeed())
+			}},
+		}
+		for _, tc := range cases {
+			newLabels := labels
+			if tc.newLabels != nil {
+				newLabels = tc.newLabels
+			}
+			allowed, message, err := policy.admit(manifestsObjectWrite(projectAdministrator, admission.Update, labels, newLabels, tc.edit, nil), nil)
+			Expect(err).ToNot(HaveOccurred(), tc.name)
+			Expect(allowed).To(Equal(tc.allowed), tc.name)
+			if !allowed {
+				Expect(message).To(ContainSubstring("This resource is managed by proj Project"), tc.name)
+			}
+		}
+	})
 })
 
 // projectNamespaceUpdate is an update of the main namespace of the proj project that edit makes. The stored
@@ -826,5 +873,286 @@ func projectNamespaceUpdate(username string, owners []any, edit func(*unstructur
 	updated := stored.DeepCopy()
 	edit(updated)
 	return admission.NewAttributesRecord(updated, stored, gvk, "", "proj", gvr, "", admission.Update, nil, false,
+		&user.DefaultInfo{Name: username, Groups: groupsOf(username)})
+}
+
+var _ = Describe("Module :: multitenancy-manager :: helm template :: manifests objects policy", func() {
+	hec := SetupHelmConfig("")
+
+	BeforeEach(func() {
+		renderPolicies(hec)
+	})
+
+	It("binds the objects that carry the label of the manifests", func() {
+		binding := hec.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", manifestsObjectsPolicyName)
+		Expect(binding.Exists()).To(BeTrue())
+		Expect(binding.Field("spec.policyName").String()).To(Equal(manifestsObjectsPolicyName))
+		Expect(binding.Field("spec.matchResources.objectSelector.matchLabels").String()).
+			To(MatchJSON(`{"projects.deckhouse.io/source":"manifests"}`))
+	})
+
+	It("leaves the objects of the manifests to the manifests of their project", func() {
+		policy := compileRenderedPolicy(hec.KubernetesGlobalResource("ValidatingAdmissionPolicy", manifestsObjectsPolicyName).ToYaml())
+
+		// A cluster administrator may update deployments everywhere; the users of the project only in
+		// its namespace, as a RoleBinding grants them.
+		authz := authorizer.AuthorizerFunc(func(_ context.Context, attributes authorizer.Attributes) (authorizer.Decision, string, error) {
+			if attributes.GetUser().GetName() == "admin@example.com" || attributes.GetNamespace() == "proj" {
+				return authorizer.DecisionAllow, "", nil
+			}
+			return authorizer.DecisionNoOpinion, "", nil
+		})
+		ofManifests := map[string]string{"projects.deckhouse.io/project": "proj", "projects.deckhouse.io/source": "manifests"}
+		ofAnotherProject := map[string]string{"projects.deckhouse.io/project": "other", "projects.deckhouse.io/source": "manifests"}
+		own := map[string]string{"app": "web"}
+		// A switch from a Helm text leaves an object with the label of its project.
+		leftFromHelm := map[string]string{"projects.deckhouse.io/project": "proj", "projects.deckhouse.io/kept-from-helm-template": "true"}
+		restart := func(deployment *unstructured.Unstructured) {
+			Expect(unstructured.SetNestedStringMap(deployment.Object, map[string]string{"kubectl.kubernetes.io/restartedAt": "2026-10-30T12:00:00Z"},
+				"spec", "template", "metadata", "annotations")).To(Succeed())
+		}
+		scale := func(deployment *unstructured.Unstructured) {
+			Expect(unstructured.SetNestedField(deployment.Object, int64(5), "spec", "replicas")).To(Succeed())
+		}
+		restartAndScale := func(deployment *unstructured.Unstructured) {
+			restart(deployment)
+			scale(deployment)
+		}
+		// An image change is a field of the pod template, next to the annotation a restart sets.
+		restartAndChangeImage := func(deployment *unstructured.Unstructured) {
+			restart(deployment)
+			Expect(unstructured.SetNestedSlice(deployment.Object, []any{map[string]any{"name": "app", "image": "nginx:other"}},
+				"spec", "template", "spec", "containers")).To(Succeed())
+		}
+		restartAndRelabelPod := func(deployment *unstructured.Unstructured) {
+			restart(deployment)
+			Expect(unstructured.SetNestedStringMap(deployment.Object, map[string]string{"app": "other"},
+				"spec", "template", "metadata", "labels")).To(Succeed())
+		}
+		restartAndAnnotateObject := func(deployment *unstructured.Unstructured) {
+			restart(deployment)
+			deployment.SetAnnotations(map[string]string{"note": "changed"})
+		}
+		restartKeepingPodAnnotation := func(deployment *unstructured.Unstructured) {
+			Expect(unstructured.SetNestedStringMap(deployment.Object, map[string]string{
+				"app": "keep", "kubectl.kubernetes.io/restartedAt": "2026-10-30T12:00:00Z",
+			}, "spec", "template", "metadata", "annotations")).To(Succeed())
+		}
+		restartChangingPodAnnotation := func(deployment *unstructured.Unstructured) {
+			Expect(unstructured.SetNestedStringMap(deployment.Object, map[string]string{
+				"app": "changed", "kubectl.kubernetes.io/restartedAt": "2026-10-30T12:00:00Z",
+			}, "spec", "template", "metadata", "annotations")).To(Succeed())
+		}
+		// The API server writes these on the update, the generation bump of a pod-template change included.
+		restartWithApiserverFields := func(deployment *unstructured.Unstructured) {
+			restart(deployment)
+			deployment.SetResourceVersion("9")
+			deployment.SetGeneration(4)
+			deployment.SetManagedFields([]metav1.ManagedFieldsEntry{{Manager: "kubectl"}})
+		}
+		restartAndSetStatus := func(deployment *unstructured.Unstructured) {
+			restart(deployment)
+			Expect(unstructured.SetNestedField(deployment.Object, int64(1), "status", "replicas")).To(Succeed())
+		}
+		restartAndChangeFinalizers := func(deployment *unstructured.Unstructured) {
+			restart(deployment)
+			deployment.SetFinalizers([]string{"example.com/keep"})
+		}
+		restartAndChangeOwnerReferences := func(deployment *unstructured.Unstructured) {
+			restart(deployment)
+			Expect(unstructured.SetNestedSlice(deployment.Object, []any{map[string]any{
+				"apiVersion": "apps/v1", "kind": "ReplicaSet", "name": "web", "uid": "abc",
+			}}, "metadata", "ownerReferences")).To(Succeed())
+		}
+		podAnnotation := func(deployment *unstructured.Unstructured) {
+			Expect(unstructured.SetNestedStringMap(deployment.Object, map[string]string{"app": "keep"},
+				"spec", "template", "metadata", "annotations")).To(Succeed())
+		}
+
+		cases := []struct {
+			name      string
+			username  string
+			operation admission.Operation
+			oldLabels map[string]string
+			newLabels map[string]string
+			edit      func(*unstructured.Unstructured)
+			// seed changes the stored object and the new one, before edit.
+			seed    func(*unstructured.Unstructured)
+			allowed bool
+		}{
+			{name: "the manifests create an object", username: projectUser, operation: admission.Create,
+				newLabels: ofManifests, allowed: true},
+			{name: "the manifests change an object", username: projectUser, operation: admission.Update,
+				oldLabels: ofManifests, newLabels: ofManifests, edit: scale, allowed: true},
+			{name: "the manifests delete an object", username: projectUser, operation: admission.Delete,
+				oldLabels: ofManifests, allowed: true},
+			{name: "the manifests take over an object left from a Helm text", username: projectUser, operation: admission.Update,
+				oldLabels: leftFromHelm, newLabels: ofManifests, allowed: true},
+			{name: "the manifests of another project change an object", username: "system:multitenancy-manager:project:other",
+				operation: admission.Update, oldLabels: ofManifests, newLabels: ofManifests, edit: scale},
+			{name: "the manifests move an object to another project", username: projectUser, operation: admission.Update,
+				oldLabels: ofManifests, newLabels: ofAnotherProject},
+			{name: "the manifests put the project label back", username: projectUser, operation: admission.Update,
+				oldLabels: map[string]string{"projects.deckhouse.io/source": "manifests"}, newLabels: ofManifests, allowed: true},
+			{name: "the manifests put an empty project label back", username: projectUser, operation: admission.Update,
+				oldLabels: map[string]string{"projects.deckhouse.io/source": "manifests", "projects.deckhouse.io/project": ""}, newLabels: ofManifests, allowed: true},
+			{name: "a project administrator puts the project label back", username: projectAdministrator, operation: admission.Update,
+				oldLabels: map[string]string{"projects.deckhouse.io/source": "manifests"}, newLabels: ofManifests},
+			{name: "a cluster administrator puts the project label back", username: "admin@example.com", operation: admission.Update,
+				oldLabels: map[string]string{"projects.deckhouse.io/source": "manifests"}, newLabels: ofManifests},
+			{name: "the controller hands an object over to the release", username: controllerServiceAccount, operation: admission.Update,
+				oldLabels: ofManifests, newLabels: own, allowed: true},
+			{name: "the namespace controller deletes an object", username: "system:serviceaccount:kube-system:namespace-controller",
+				operation: admission.Delete, oldLabels: ofManifests, allowed: true},
+			{name: "a project administrator changes an object", username: projectAdministrator, operation: admission.Update,
+				oldLabels: ofManifests, newLabels: ofManifests, edit: scale},
+			{name: "a module service account changes an object", username: "system:serviceaccount:d8-virtualization:virtualization-controller",
+				operation: admission.Update, oldLabels: ofManifests, newLabels: ofManifests, edit: scale, allowed: true},
+			{name: "a project administrator deletes an object", username: projectAdministrator, operation: admission.Delete,
+				oldLabels: ofManifests},
+			{name: "a project administrator takes the label off", username: projectAdministrator, operation: admission.Update,
+				oldLabels: ofManifests, newLabels: own},
+			{name: "a project administrator restarts a rollout", username: projectAdministrator, operation: admission.Update,
+				oldLabels: ofManifests, newLabels: ofManifests, edit: restart, allowed: true},
+			{name: "a project administrator restarts a rollout and keeps another pod annotation", username: projectAdministrator,
+				operation: admission.Update, oldLabels: ofManifests, newLabels: ofManifests, edit: restartKeepingPodAnnotation, seed: podAnnotation, allowed: true},
+			{name: "a project administrator restarts a rollout while the API server bumps its fields", username: projectAdministrator,
+				operation: admission.Update, oldLabels: ofManifests, newLabels: ofManifests, edit: restartWithApiserverFields, allowed: true},
+			{name: "the manifests restart a rollout and scale", username: projectUser, operation: admission.Update,
+				oldLabels: ofManifests, newLabels: ofManifests, edit: restartAndScale, allowed: true},
+			{name: "a project administrator restarts a rollout and scales", username: projectAdministrator, operation: admission.Update,
+				oldLabels: ofManifests, newLabels: ofManifests, edit: restartAndScale},
+			{name: "a project administrator restarts a rollout and changes the image", username: projectAdministrator, operation: admission.Update,
+				oldLabels: ofManifests, newLabels: ofManifests, edit: restartAndChangeImage},
+			{name: "a project administrator restarts a rollout and relabels the pod", username: projectAdministrator, operation: admission.Update,
+				oldLabels: ofManifests, newLabels: ofManifests, edit: restartAndRelabelPod},
+			{name: "a project administrator restarts a rollout and annotates the object", username: projectAdministrator, operation: admission.Update,
+				oldLabels: ofManifests, newLabels: ofManifests, edit: restartAndAnnotateObject},
+			{name: "a project administrator restarts a rollout and changes another pod annotation", username: projectAdministrator,
+				operation: admission.Update, oldLabels: ofManifests, newLabels: ofManifests, edit: restartChangingPodAnnotation, seed: podAnnotation},
+			{name: "a project administrator restarts a rollout and changes the status", username: projectAdministrator, operation: admission.Update,
+				oldLabels: ofManifests, newLabels: ofManifests, edit: restartAndSetStatus},
+			{name: "a project administrator restarts a rollout and changes finalizers", username: projectAdministrator, operation: admission.Update,
+				oldLabels: ofManifests, newLabels: ofManifests, edit: restartAndChangeFinalizers},
+			{name: "a project administrator restarts a rollout and changes ownerReferences", username: projectAdministrator, operation: admission.Update,
+				oldLabels: ofManifests, newLabels: ofManifests, edit: restartAndChangeOwnerReferences},
+			{name: "a project administrator restarts a rollout and takes the label off", username: projectAdministrator, operation: admission.Update,
+				oldLabels: ofManifests, newLabels: own, edit: restart},
+			{name: "a project administrator creates an object with the label", username: projectAdministrator,
+				operation: admission.Create, newLabels: ofManifests},
+			{name: "a project administrator hands an object over", username: projectAdministrator, operation: admission.Update,
+				oldLabels: own, newLabels: ofManifests},
+			{name: "a cluster administrator changes an object", username: "admin@example.com", operation: admission.Update,
+				oldLabels: ofManifests, newLabels: ofManifests, edit: scale},
+			{name: "a cluster administrator creates an object with the label", username: "admin@example.com",
+				operation: admission.Create, newLabels: ofManifests},
+			{name: "a cluster administrator hands an object over", username: "admin@example.com", operation: admission.Update,
+				oldLabels: own, newLabels: ofManifests, allowed: true},
+		}
+		for _, tc := range cases {
+			allowed, message, err := policy.admit(manifestsObjectWrite(tc.username, tc.operation, tc.oldLabels, tc.newLabels, tc.edit, tc.seed), authz)
+			Expect(err).ToNot(HaveOccurred(), tc.name)
+			Expect(allowed).To(Equal(tc.allowed), tc.name)
+			if !allowed {
+				Expect(message).To(SatisfyAny(
+					ContainSubstring("Manual modification is forbidden: change spec.manifests of the ProjectTemplate"),
+					ContainSubstring("Only the manifests of a project put the projects.deckhouse.io/source: manifests label"),
+				), tc.name)
+			}
+		}
+	})
+
+	It("evaluates the rollout restart on objects that have no pod template", func() {
+		policy := compileRenderedPolicy(hec.KubernetesGlobalResource("ValidatingAdmissionPolicy", manifestsObjectsPolicyName).ToYaml())
+		labels := map[string]string{"projects.deckhouse.io/project": "proj", "projects.deckhouse.io/source": "manifests"}
+		write := func(gvk schema.GroupVersionKind, gvr schema.GroupVersionResource, operation admission.Operation, mutate func(*unstructured.Unstructured)) admission.Attributes {
+			object := func() *unstructured.Unstructured {
+				item := new(unstructured.Unstructured)
+				item.SetGroupVersionKind(gvk)
+				item.SetNamespace("proj")
+				item.SetName("job")
+				item.SetLabels(labels)
+				return item
+			}
+			var oldObject, newObject runtime.Object
+			if operation != admission.Create {
+				oldObject = object()
+			}
+			if operation != admission.Delete {
+				updated := object()
+				if mutate != nil {
+					mutate(updated)
+				}
+				newObject = updated
+			}
+			return admission.NewAttributesRecord(newObject, oldObject, gvk, "proj", "job", gvr, "", operation, nil, false,
+				&user.DefaultInfo{Name: projectAdministrator, Groups: groupsOf(projectAdministrator)})
+		}
+		cronGVK := schema.GroupVersionKind{Group: "batch", Version: "v1", Kind: "CronJob"}
+		cronGVR := schema.GroupVersionResource{Group: "batch", Version: "v1", Resource: "cronjobs"}
+		cmGVK := schema.GroupVersionKind{Version: "v1", Kind: "ConfigMap"}
+		cmGVR := schema.GroupVersionResource{Version: "v1", Resource: "configmaps"}
+
+		// The pod template of a CronJob is not spec.template. Setting restartedAt there is not a
+		// rollout restart, and the comparison must not fail closed with an evaluation error.
+		allowed, _, err := policy.admit(write(cronGVK, cronGVR, admission.Update, func(object *unstructured.Unstructured) {
+			Expect(unstructured.SetNestedStringMap(object.Object, map[string]string{"kubectl.kubernetes.io/restartedAt": "2026-10-30T12:00:00Z"},
+				"spec", "jobTemplate", "spec", "template", "metadata", "annotations")).To(Succeed())
+		}), nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(allowed).To(BeFalse())
+
+		allowed, _, err = policy.admit(write(cmGVK, cmGVR, admission.Update, func(object *unstructured.Unstructured) {
+			object.Object["data"] = map[string]any{"team": "other"}
+		}), nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(allowed).To(BeFalse())
+
+		allowed, _, err = policy.admit(write(cmGVK, cmGVR, admission.Create, nil), nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(allowed).To(BeFalse())
+
+		allowed, _, err = policy.admit(write(cmGVK, cmGVR, admission.Delete, nil), nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(allowed).To(BeFalse())
+	})
+})
+
+// manifestsObjectWrite is a write of the web Deployment in the main namespace of the project: a create
+// when oldLabels is nil, a delete when newLabels is nil, an update otherwise, with edit applied to
+// the new object.
+func manifestsObjectWrite(username string, operation admission.Operation, oldLabels, newLabels map[string]string,
+	edit func(*unstructured.Unstructured), seed func(*unstructured.Unstructured)) admission.Attributes {
+	gvk := schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"}
+	gvr := schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}
+	deployment := func(labels map[string]string) *unstructured.Unstructured {
+		object := new(unstructured.Unstructured)
+		object.SetGroupVersionKind(gvk)
+		object.SetNamespace("proj")
+		object.SetName("web")
+		object.SetLabels(labels)
+		object.Object["spec"] = map[string]any{"replicas": int64(1), "template": map[string]any{"metadata": map[string]any{}}}
+		return object
+	}
+	// A missing side stays a nil interface: a typed nil pointer counts as present.
+	var oldObject, newObject runtime.Object
+	if oldLabels != nil {
+		stored := deployment(oldLabels)
+		if seed != nil {
+			seed(stored)
+		}
+		oldObject = stored
+	}
+	if newLabels != nil {
+		updated := deployment(newLabels)
+		if seed != nil {
+			seed(updated)
+		}
+		if edit != nil {
+			edit(updated)
+		}
+		newObject = updated
+	}
+	return admission.NewAttributesRecord(newObject, oldObject, gvk, "proj", "web", gvr, "", operation, nil, false,
 		&user.DefaultInfo{Name: username, Groups: groupsOf(username)})
 }

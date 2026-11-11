@@ -178,6 +178,12 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 	// read, before any step that can stop the reconcile, so they outlive a restart.
 	m.publishSeries(project)
 
+	// A handover of manifests objects that a previous pass did not finish is completed from the
+	// journal before this pass upgrades again. An empty journal returns without reading the release.
+	if err := m.finishManifestHandover(ctx, project); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	if namespacemanager.IsLeftoverWrap(project) {
 		deleted, err := namespacemanager.New(m.client, m.logger).CompleteLeftover(ctx, project)
 		if err != nil {
@@ -432,6 +438,9 @@ func (m *Manager) upgradeResources(ctx context.Context, project *v1alpha3.Projec
 			return nil, fmt.Errorf("render the project template: %w", err)
 		}
 		outcome, err := m.helmClient.UpgradeManifests(ctx, project, manifests, m.beforeUpgrade(project), reapply)
+		if ferr := m.finishManifestHandover(ctx, project); ferr != nil {
+			return nil, ferr
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -451,6 +460,9 @@ func (m *Manager) upgradeResources(ctx context.Context, project *v1alpha3.Projec
 
 	legacy := LegacyTemplate(template)
 	outcome, err := m.helmClient.Upgrade(ctx, project, legacy, m.beforeUpgrade(project), reapply)
+	if ferr := m.finishManifestHandover(ctx, project); ferr != nil {
+		return nil, ferr
+	}
 	if err != nil {
 		return nil, err
 	}

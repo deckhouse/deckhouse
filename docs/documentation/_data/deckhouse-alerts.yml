@@ -7878,7 +7878,7 @@ alerts:
       module: multitenancy-manager
       edition: ce
       description: |-
-        The release of project `{{ $labels.project }}` no longer holds {{ $value }} objects that the Helm text of a `resourcesTemplate` had rendered, because the project switched to structured fields, or because `.spec.quota` stopped covering a quota kept for a handover. Examples are AuthorizationRule or RoleBinding objects, quotas, network policies, workloads or their volumes. Instead of deleting them, the controller left them in place:
+        The release of project `{{ $labels.project }}` no longer holds {{ $value }} objects, and the controller left them in place instead of deleting them. That happens when the project switches off a Helm text in `resourcesTemplate` and the structured fields do not render the object. It also happens when `.spec.quota` stops covering a quota kept for a handover. The release of the structured fields leaves an object in place too when `manifests` of the template render it, so that `manifests` take it over. Examples are AuthorizationRule or RoleBinding objects, quotas, network policies, workloads or their volumes. The objects left in place behave as follows:
 
         - They keep working as before. The rules and the bindings keep granting access, the quotas keep applying, and the workloads keep running.
         - The project no longer manages them. A change of the template or of the project does not change them. When the project is deleted, the ones in its namespaces go with the namespaces, and the controller deletes the cluster-scoped ones that still carry the label.
@@ -7887,7 +7887,7 @@ alerts:
         The project lists them in `.status.keptObjects` until each of them is deleted, loses the label, is rendered by the template again, or is taken over by the `manifests` of the template. Decide for each object:
 
         - If it is still needed, describe it in the template or in the project, for example with a ProjectRoleBinding in place of an AuthorizationRule or a RoleBinding, or with a limit in `.spec.quota`, and then delete the object. Or remove the label to hand it over to the project, whose users may then change and delete it.
-        - If it is in a namespace of the project, `manifests` of the template can take it over. Once `manifests` renders an object of the same kind, namespace and name, the controller applies it as the `system:multitenancy-manager:project:{{ $labels.project }}` user, removes the label and takes the object off the list. The object then has what `manifests` renders, and a field that the Helm text set and `manifests` leaves out is removed.
+        - If it is in a namespace of the project, `manifests` of the template can take it over. Once `manifests` renders an object of the same kind, namespace and name, the controller applies it as the `system:multitenancy-manager:project:{{ $labels.project }}` user, removes the label and takes the object off the list. The object then has what `manifests` renders, and a field that the release set and `manifests` leaves out is removed.
         - If it is not needed, delete it. An access it grants ends only when it is deleted.
         - If the template renders an object of the same kind and name again, the project release takes it over. The controller then removes the label, puts the `heritage: multitenancy-manager` label back and removes the `helm.sh/resource-policy: keep` annotation, unless the template sets it itself.
 
@@ -7913,7 +7913,7 @@ alerts:
 
         The controller looks at the list every 10 minutes, and at a reconcile of the project at most once a minute.
       summary: |
-        Project {{ $labels.project }} has {{ $value }} objects left from the Helm text of its template.
+        Project {{ $labels.project }} has {{ $value }} objects its release left in place.
       severity: "7"
       markupFormat: markdown
     - name: MultitenancyManagerProjectNamedLikeAdditionalNamespace
