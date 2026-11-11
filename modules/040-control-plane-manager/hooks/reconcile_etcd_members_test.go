@@ -101,17 +101,21 @@ status:
 	Context("Multimaster cluster set", func() {
 		BeforeEach(func() {
 			setEtcdMembers()
-			f.BindingContexts.Set(f.KubeStateSet(testETCDSecret + reconcileStartState))
-			f.RunHook()
 		})
 
-		It("Hook is running successfully", func() {
-			Expect(f).Should(ExecuteSuccessfully())
+		Context("All masters are in the cluster", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(testETCDSecret + reconcileStartState))
+				f.RunHook()
+			})
+
+			It("Hook is running successfully", func() {
+				Expect(f).Should(ExecuteSuccessfully())
+			})
 		})
 
 		Context("main-master-2 was removed", func() {
 			BeforeEach(func() {
-				setEtcdMembers()
 				f.BindingContexts.Set(f.KubeStateSet(testETCDSecret + reconcileChangedState))
 				f.RunHook()
 			})
@@ -125,7 +129,6 @@ status:
 
 		Context("All old masters were removed", func() {
 			BeforeEach(func() {
-				setEtcdMembers()
 				f.BindingContexts.Set(f.KubeStateSet(testETCDSecret + `
 ---
 apiVersion: v1

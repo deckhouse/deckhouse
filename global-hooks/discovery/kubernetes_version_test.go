@@ -386,54 +386,59 @@ status:
 				Set(func(_ *http.Request) (*http.Response, error) {
 					return versionsResponse(initialVersion), nil
 				})
-			f.BindingContexts.Set(f.KubeStateSet(endpointsState))
-			f.RunHook()
 		})
 
-		It("does not set k8s version with versions array with one version into values", func() {
-			Expect(f).NotTo(ExecuteSuccessfully())
-			assertNoValues()
-		})
-
-		It("does not write k8s version into file", func() {
-			Expect(f).NotTo(ExecuteSuccessfully())
-			assertNoFile()
-		})
-
-		Context("control plane manager is disabled", func() {
+		Context("Only endpoints", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", []byte(globalValuesWithoutCPMYaml))
-
+				f.BindingContexts.Set(f.KubeStateSet(endpointsState))
 				f.RunHook()
 			})
 
-			It("sets k8s version with versions array with one version into values", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				assertValues(initialVersion, []string{initialVersion})
+			It("does not set k8s version with versions array with one version into values", func() {
+				Expect(f).NotTo(ExecuteSuccessfully())
+				assertNoValues()
 			})
 
-			It("sets k8s version into file", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				assertVersionInFile(initialVersion)
+			It("does not write k8s version into file", func() {
+				Expect(f).NotTo(ExecuteSuccessfully())
+				assertNoFile()
 			})
 
-			Context("Change version", func() {
+			Context("control plane manager is disabled", func() {
 				BeforeEach(func() {
-					dependency.TestDC.HTTPClient.DoMock.
-						Set(func(_ *http.Request) (*http.Response, error) {
-							return versionsResponse(verToChange), nil
-						})
+					f.ValuesSetFromYaml("global", []byte(globalValuesWithoutCPMYaml))
+
 					f.RunHook()
 				})
 
-				It("changes k8s version with versions array with one version into values", func() {
+				It("sets k8s version with versions array with one version into values", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					assertValues(verToChange, []string{verToChange})
+					assertValues(initialVersion, []string{initialVersion})
 				})
 
-				It("changes k8s version into file", func() {
+				It("sets k8s version into file", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					assertVersionInFile(verToChange)
+					assertVersionInFile(initialVersion)
+				})
+
+				Context("Change version", func() {
+					BeforeEach(func() {
+						dependency.TestDC.HTTPClient.DoMock.
+							Set(func(_ *http.Request) (*http.Response, error) {
+								return versionsResponse(verToChange), nil
+							})
+						f.RunHook()
+					})
+
+					It("changes k8s version with versions array with one version into values", func() {
+						Expect(f).To(ExecuteSuccessfully())
+						assertValues(verToChange, []string{verToChange})
+					})
+
+					It("changes k8s version into file", func() {
+						Expect(f).To(ExecuteSuccessfully())
+						assertVersionInFile(verToChange)
+					})
 				})
 			})
 		})
@@ -490,6 +495,9 @@ status:
 						return versionsResponse(initialVersion), nil
 					})
 
+				f.BindingContexts.Set(f.KubeStateSet(endpointsState))
+				f.RunHook()
+
 				f.BindingContexts.Set(f.KubeStateSet(endpointsState + podStatus))
 				f.RunHook()
 			})
@@ -517,58 +525,63 @@ status:
 					ver := initVers[indexOf(host, endpointsMul)]
 					return versionsResponse(ver), nil
 				})
-			f.BindingContexts.Set(f.KubeStateSet(endpoindsState))
-			f.RunHook()
 		})
 
-		It("does not set k8s version with versions array with one version into values", func() {
-			Expect(f).NotTo(ExecuteSuccessfully())
-			assertNoValues()
-		})
-
-		It("does not write k8s version into file", func() {
-			Expect(f).NotTo(ExecuteSuccessfully())
-			assertNoFile()
-		})
-
-		Context("control plane manager is disabled", func() {
+		Context("Only endpoints", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", []byte(globalValuesWithoutCPMYaml))
-
+				f.BindingContexts.Set(f.KubeStateSet(endpoindsState))
 				f.RunHook()
 			})
 
-			It("sets k8s version with versions array with one version into values", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				assertValues(k8sVer, initVers)
+			It("does not set k8s version with versions array with one version into values", func() {
+				Expect(f).NotTo(ExecuteSuccessfully())
+				assertNoValues()
 			})
 
-			It("sets k8s version into file", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				assertVersionInFile(k8sVer)
+			It("does not write k8s version into file", func() {
+				Expect(f).NotTo(ExecuteSuccessfully())
+				assertNoFile()
 			})
 
-			Context("Change version", func() {
-				changeVers := []string{"1.21.20", "1.19.4", "1.20.2"}
-				k8sVer := changeVers[1]
+			Context("control plane manager is disabled", func() {
 				BeforeEach(func() {
-					dependency.TestDC.HTTPClient.DoMock.
-						Set(func(req *http.Request) (*http.Response, error) {
-							host := strings.Split(req.Host, ":")[0]
-							ver := changeVers[indexOf(host, endpointsMul)]
-							return versionsResponse(ver), nil
-						})
+					f.ValuesSetFromYaml("global", []byte(globalValuesWithoutCPMYaml))
+
 					f.RunHook()
 				})
 
-				It("changes k8s version with versions array with one version into values", func() {
+				It("sets k8s version with versions array with one version into values", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					assertValues(k8sVer, changeVers)
+					assertValues(k8sVer, initVers)
 				})
 
-				It("changes k8s version into file", func() {
+				It("sets k8s version into file", func() {
 					Expect(f).To(ExecuteSuccessfully())
 					assertVersionInFile(k8sVer)
+				})
+
+				Context("Change version", func() {
+					changeVers := []string{"1.21.20", "1.19.4", "1.20.2"}
+					k8sVer := changeVers[1]
+					BeforeEach(func() {
+						dependency.TestDC.HTTPClient.DoMock.
+							Set(func(req *http.Request) (*http.Response, error) {
+								host := strings.Split(req.Host, ":")[0]
+								ver := changeVers[indexOf(host, endpointsMul)]
+								return versionsResponse(ver), nil
+							})
+						f.RunHook()
+					})
+
+					It("changes k8s version with versions array with one version into values", func() {
+						Expect(f).To(ExecuteSuccessfully())
+						assertValues(k8sVer, changeVers)
+					})
+
+					It("changes k8s version into file", func() {
+						Expect(f).To(ExecuteSuccessfully())
+						assertVersionInFile(k8sVer)
+					})
 				})
 			})
 		})
