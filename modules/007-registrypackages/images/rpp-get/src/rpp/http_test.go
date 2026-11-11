@@ -19,8 +19,11 @@ package rpp
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -104,7 +107,40 @@ func TestBuildPackageURL(t *testing.T) {
 	}
 }
 
+func neverGiveUp() bool { return false }
+
+func dialTimeoutError(t *testing.T, endpoints ...string) error {
+	t.Helper()
+
+	client := newTestClient(t, endpoints)
+	unroutable(t, client, endpoints...)
+
+	_, err := client.httpClient.Get(t.Context(), "sha256:abc123", neverGiveUp)
+	require.Error(t, err)
+
+	return err
+}
+
+func responseHeaderTimeoutError(t *testing.T) error {
+	t.Helper()
+
+	server := httptest.NewTLSServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		<-r.Context().Done()
+	}))
+	t.Cleanup(server.Close)
+
+	client := newTestClient(t, []string{serverHost(t, server)})
+	client.httpClient.client.Transport.(*http.Transport).ResponseHeaderTimeout = time.Millisecond
+
+	_, err := client.httpClient.Get(t.Context(), "sha256:abc123", neverGiveUp)
+	require.Error(t, err)
+
+	return err
+}
+
 func TestShouldRetryFetch(t *testing.T) {
+	dialTimeout := dialTimeoutError(t, otherZoneMaster)
+
 	tests := []struct {
 		name      string
 		err       error
@@ -112,7 +148,28 @@ func TestShouldRetryFetch(t *testing.T) {
 	}{
 		{name: "nil error", err: nil, wantRetry: false},
 		{name: "context canceled", err: context.Canceled, wantRetry: false},
-		{name: "context deadline exceeded", err: context.DeadlineExceeded, wantRetry: false},
+		{name: "context deadline exceeded", err: context.DeadlineExceeded, wantRetry: true},
+		{name: "dial timeout", err: dialTimeout, wantRetry: true},
+		{name: "response header timeout", err: responseHeaderTimeoutError(t), wantRetry: true},
+		{name: "every endpoint timed out", err: dialTimeoutError(t, otherZoneMaster, thirdZoneMaster), wantRetry: true},
+		{
+			name:      "one endpoint timed out, another answered 404",
+			err:       errors.Join(&httpStatusError{statusCode: http.StatusNotFound}, dialTimeout),
+			wantRetry: true,
+		},
+		{
+			name:      "one endpoint timed out, another answered 503",
+			err:       errors.Join(&httpStatusError{statusCode: http.StatusServiceUnavailable}, dialTimeout),
+			wantRetry: true,
+		},
+		{
+			name: "every endpoint answered for good",
+			err: errors.Join(
+				&httpStatusError{statusCode: http.StatusNotFound},
+				&httpStatusError{statusCode: http.StatusForbidden},
+			),
+			wantRetry: false,
+		},
 		{name: "invalid digest", err: errInvalidDigest, wantRetry: false},
 		{name: "no endpoints", err: errNoEndpoints, wantRetry: false},
 		{name: "no token", err: errNoToken, wantRetry: false},
@@ -157,6 +214,29 @@ func TestShouldRetryFetch(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := shouldRetryFetch(tt.err)
 			assert.Equal(t, tt.wantRetry, got)
+		})
+	}
+}
+
+func TestShouldRetryInstall(t *testing.T) {
+	tests := []struct {
+		name      string
+		err       error
+		wantRetry bool
+	}{
+		{name: "nil error", err: nil, wantRetry: false},
+		{name: "context canceled", err: context.Canceled, wantRetry: false},
+		{
+			name:      "fetch that timed out",
+			err:       fmt.Errorf("jq: fetch sha256:abc123: %w", dialTimeoutError(t, otherZoneMaster)),
+			wantRetry: true,
+		},
+		{name: "install script failed", err: errors.New("jq: run install script: exit status 1"), wantRetry: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.wantRetry, shouldRetryInstall(tt.err))
 		})
 	}
 }

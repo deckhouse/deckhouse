@@ -35,6 +35,7 @@ type config struct {
 	installedStore string
 	retries        int
 	retryDelay     time.Duration
+	failedSince    time.Time
 	resultPath     string
 	rppRepository  string
 	rppPath        string
@@ -186,30 +187,48 @@ func (c *cliConfig) resolveFromKube(ctx context.Context) error {
 }
 
 func (c *cliConfig) retryKubeFetch(ctx context.Context, clientFn func(attempt int) (kube.Client, error)) error {
-	var lastErr error
-	for attempt := 1; attempt <= kubeRetries; attempt++ {
+	var (
+		lastErr     error
+		failedSince time.Time
+	)
+
+	for attempt := 1; ; attempt++ {
 		if attempt > 1 {
-			log.Printf("kube-apiserver request failed (attempt %d/%d): %s; retrying in %s",
-				attempt-1, kubeRetries, friendlyKubeError(lastErr), kubeRetryDelay)
+			if time.Since(failedSince)+kubeRetryDelay >= kubeRetryBudget {
+				return fmt.Errorf("kube-apiserver unreachable after %d attempts: %s (last error: %w)",
+					attempt-1, friendlyKubeError(lastErr), lastErr)
+			}
+
+			log.Printf("kube-apiserver request failed (attempt %d): %s; retrying in %s",
+				attempt-1, friendlyKubeError(lastErr), kubeRetryDelay)
+
 			if err := waitRetry(ctx, kubeRetryDelay); err != nil {
 				return err
 			}
 		}
+
+		began := time.Now()
+
 		client, err := clientFn(attempt)
 		if err != nil {
 			return fmt.Errorf("init kube client: %w", err)
 		}
-		if err := c.fetchFromKube(ctx, client); err != nil {
-			lastErr = err
-			if !kube.ShouldRetry(lastErr) {
-				return lastErr
-			}
-			continue
+
+		lastErr = c.fetchFromKube(ctx, client)
+		if lastErr == nil {
+			c.failedSince = failedSince
+
+			return nil
 		}
-		return nil
+
+		if !kube.ShouldRetry(lastErr) {
+			return lastErr
+		}
+
+		if failedSince.IsZero() {
+			failedSince = began
+		}
 	}
-	return fmt.Errorf("kube-apiserver unreachable after %d attempts: %s (last error: %w)",
-		kubeRetries, friendlyKubeError(lastErr), lastErr)
 }
 
 func (c *cliConfig) fetchFromKube(ctx context.Context, kubeClient kube.Client) error {

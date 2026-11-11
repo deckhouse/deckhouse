@@ -19,6 +19,9 @@ package main
 import (
 	"errors"
 	"time"
+
+	"rpp-get/kube"
+	"rpp-get/rpp"
 )
 
 const (
@@ -33,13 +36,14 @@ const (
 )
 
 const (
-	kubeRetries    = 30
-	kubeRetryDelay = 5 * time.Second
+	kubeRetryDelay = 2 * time.Second
+	// An attempt is two requests. None starts unless it ends within the window downloads share.
+	kubeRetryBudget = rpp.RetryWindow - 2*kube.RequestTimeout
 )
 
 const (
 	defaultRetries    = 30
-	defaultRetryDelay = 5 * time.Second
+	defaultRetryDelay = 2 * time.Second
 )
 
 var errNoBootstrapAPIServerEndpoints = errors.New("bootstrap-token mode requires kube-apiserver endpoints")

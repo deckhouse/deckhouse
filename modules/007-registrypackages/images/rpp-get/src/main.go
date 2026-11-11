@@ -130,6 +130,7 @@ func run(ctx context.Context, logger *log.Logger) error {
 			return err
 		}
 		client.UpdateAuth(cfg.endpoints, cfg.token)
+		client.OutageBegan(cfg.failedSince)
 
 		return client.InstallMissing(ctx, statuses)
 	}
@@ -139,6 +140,7 @@ func run(ctx context.Context, logger *log.Logger) error {
 	}
 
 	client.UpdateAuth(cfg.endpoints, cfg.token)
+	client.OutageBegan(cfg.failedSince)
 
 	switch cfg.mode {
 	case modeFetch:

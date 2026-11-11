@@ -26,6 +26,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -65,6 +66,10 @@ type Client struct {
 	httpClient     *httpClient
 	logger         *log.Logger
 	resultRecorder *ResultRecorder
+
+	now           func() time.Time
+	outageMu      sync.Mutex
+	outageStarted time.Time
 }
 
 func NewClient(cfg Config, logger *log.Logger, recorder *ResultRecorder) *Client {
@@ -73,6 +78,7 @@ func NewClient(cfg Config, logger *log.Logger, recorder *ResultRecorder) *Client
 		httpClient:     newHTTPClient(cfg),
 		logger:         logger,
 		resultRecorder: recorder,
+		now:            time.Now,
 	}
 }
 
@@ -219,7 +225,7 @@ func (c *Client) newPackageRef(packageWithDigest string) (packageRef, error) {
 }
 
 func (c *Client) installPackage(ctx context.Context, ref packageRef) error {
-	return c.retry(ctx, ref, packageInstallAttempts, shouldRetryInstall, func() error {
+	return c.retry(ctx, ref, packageInstallAttempts, c.shouldRetryInstall, func() error {
 		err := c.installPackageOnce(ctx, ref)
 		if err == nil {
 			return nil
@@ -321,19 +327,82 @@ func (c *Client) fetchArchive(ctx context.Context, ref packageRef) error {
 		return ref.wrapErr("create fetched store", err)
 	}
 
-	if err := c.retry(ctx, ref, c.cfg.Retries, shouldRetryFetch, func() error {
+	refusals := 0
+	shouldRetry := func(err error) bool {
+		if c.outageBudgetSpent() {
+			return false
+		}
+
+		if shouldRetryFetch(err) {
+			return true
+		}
+
+		refusals++
+
+		return everyEndpointRefused(err) && refusals < refusalAttempts
+	}
+	if err := c.retry(ctx, ref, c.cfg.Retries, shouldRetry, func() error {
 		return c.downloadOnce(ctx, ref)
 	}); err != nil {
-		return ref.errorf("fetch %s: %w", ref.digest, err)
+		if c.outageBudgetSpent() {
+			c.logf(ref, "nothing has been downloaded for %s, giving up", outageBudget)
+		}
+
+		return &downloadError{err: ref.errorf("fetch %s: %w", ref.digest, err)}
 	}
 
 	return nil
 }
 
+// OutageBegan carries over how long the run has already failed to reach the cluster, so that
+// downloads continue that wait instead of starting a new one.
+func (c *Client) OutageBegan(at time.Time) {
+	c.outageMu.Lock()
+	defer c.outageMu.Unlock()
+
+	c.outageStarted = at
+}
+
+func (c *Client) roundFailed(started time.Time) {
+	c.outageMu.Lock()
+	defer c.outageMu.Unlock()
+
+	if c.outageStarted.IsZero() {
+		c.outageStarted = started
+	}
+}
+
+func (c *Client) outageBudgetSpent() bool {
+	c.outageMu.Lock()
+	defer c.outageMu.Unlock()
+
+	return !c.outageStarted.IsZero() && c.now().Sub(c.outageStarted) >= outageBudget
+}
+
+type downloadError struct {
+	err error
+}
+
+func (e *downloadError) Error() string { return e.err.Error() }
+func (e *downloadError) Unwrap() error { return e.err }
+
+func (c *Client) shouldRetryInstall(err error) bool {
+	var download *downloadError
+	if errors.As(err, &download) && c.outageBudgetSpent() {
+		return false
+	}
+
+	return shouldRetryInstall(err)
+}
+
 func (c *Client) downloadOnce(ctx context.Context, ref packageRef) error {
 	start := time.Now()
-	response, err := c.httpClient.Get(ctx, ref.digest)
+	began := c.now()
+
+	response, err := c.httpClient.Get(ctx, ref.digest, c.outageBudgetSpent)
 	if err != nil {
+		c.roundFailed(began)
+
 		return err
 	}
 	defer response.Body.Close()
@@ -351,6 +420,8 @@ func (c *Client) downloadOnce(ctx context.Context, ref packageRef) error {
 		mbps := float64(n) / 1024.0 / 1024.0 / bodyDur.Seconds()
 		throughput = fmt.Sprintf(", %.2f MB/s", mbps)
 	}
+
+	c.OutageBegan(time.Time{})
 	c.logf(ref, "archive downloaded from %s: %d bytes, http=%s body=%s%s",
 		response.Request.URL.Host, n, httpDur.Truncate(time.Millisecond), bodyDur.Truncate(time.Millisecond), throughput)
 	return nil
@@ -598,8 +669,5 @@ func (c *Client) writeResult(action, packageName string) error {
 }
 
 func shouldRetryInstall(err error) bool {
-	if err == nil {
-		return false
-	}
-	return !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded)
+	return err != nil && !errors.Is(err, context.Canceled)
 }

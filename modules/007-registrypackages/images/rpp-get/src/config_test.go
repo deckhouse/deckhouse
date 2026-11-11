@@ -17,8 +17,15 @@ limitations under the License.
 package main
 
 import (
+	"context"
+	"errors"
 	"os"
 	"testing"
+	"testing/synctest"
+	"time"
+
+	"rpp-get/kube"
+	"rpp-get/rpp"
 )
 
 func TestParseConfig(t *testing.T) {
@@ -256,5 +263,91 @@ func TestResolveKubeAPIServerEndpointsFlagTakesPrecedenceOverEnv(t *testing.T) {
 	}
 	if value != "10.0.0.9:6443" {
 		t.Errorf("resolveKubeAPIServerEndpoints: value = %q, want %q", value, "10.0.0.9:6443")
+	}
+}
+
+type slowKubeClient struct {
+	calls    *int
+	failures int
+}
+
+func (s slowKubeClient) GetRPPEndpoints(context.Context) ([]string, error) {
+	*s.calls++
+
+	time.Sleep(kube.RequestTimeout)
+
+	if *s.calls <= s.failures {
+		return nil, errors.New("dial tcp: i/o timeout")
+	}
+
+	return []string{"192.0.2.1:4219"}, nil
+}
+
+func (s slowKubeClient) GetRPPToken(context.Context) (string, error) { return "token", nil }
+
+func TestAskingAnUnreachableAPIServerUsesTheWholeWindow(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		calls := 0
+		cli := &cliConfig{}
+		started := time.Now()
+
+		err := cli.retryKubeFetch(t.Context(), func(int) (kube.Client, error) {
+			return slowKubeClient{calls: &calls, failures: 1 << 30}, nil
+		})
+		if err == nil {
+			t.Fatal("retryKubeFetch() error = nil, want the timeout")
+		}
+
+		spent := time.Since(started)
+		if spent > rpp.RetryWindow {
+			t.Fatalf("gave up after %s, want within %s", spent, rpp.RetryWindow)
+		}
+
+		if unused := rpp.RetryWindow - spent; unused >= 2*kube.RequestTimeout+kubeRetryDelay {
+			t.Fatalf("gave up %s before the window ended, with time for one more attempt", unused)
+		}
+	})
+}
+
+func TestDownloadsContinueTheWaitForTheAPIServer(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		calls := 0
+		cli := &cliConfig{}
+		started := time.Now()
+
+		err := cli.retryKubeFetch(t.Context(), func(int) (kube.Client, error) {
+			return slowKubeClient{calls: &calls, failures: 3}, nil
+		})
+		if err != nil {
+			t.Fatalf("retryKubeFetch() error = %v", err)
+		}
+
+		if !cli.failedSince.Equal(started) {
+			t.Fatalf("failedSince = %s after the first attempt began, want that moment", cli.failedSince.Sub(started))
+		}
+	})
+}
+
+type answeringKubeClient struct{}
+
+func (answeringKubeClient) GetRPPEndpoints(context.Context) ([]string, error) {
+	return []string{"192.0.2.1:4219"}, nil
+}
+
+func (answeringKubeClient) GetRPPToken(context.Context) (string, error) { return "token", nil }
+
+func TestAnAPIServerThatAnswersAtOnceStartsNoWait(t *testing.T) {
+	calls := 0
+	cli := &cliConfig{}
+
+	err := cli.retryKubeFetch(t.Context(), func(int) (kube.Client, error) {
+		return answeringKubeClient{}, nil
+	})
+	if err != nil || calls != 0 {
+		t.Fatalf("retryKubeFetch() error = %v", err)
+	}
+
+	if !cli.failedSince.IsZero() {
+		t.Fatalf("failedSince = %s, want none", cli.failedSince)
 	}
 }

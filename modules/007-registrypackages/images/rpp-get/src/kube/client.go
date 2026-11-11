@@ -40,7 +40,7 @@ const (
 	defaultBootstrapTokenPath = "/var/lib/bashible/bootstrap-token"
 	defaultBootstrapCAPath    = "/var/lib/bashible/ca.crt"
 
-	requestTimeout = 10 * time.Second
+	RequestTimeout = 10 * time.Second
 
 	defaultRPPNamespace       = "d8-cloud-instance-manager"
 	defaultRPPTokenSecretName = "registry-packages-proxy-token"
@@ -103,7 +103,8 @@ func NewKubeletClient() (Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("build kube client config: %w", err)
 	}
-	cfg.Timeout = requestTimeout
+
+	cfg.Timeout = RequestTimeout
 
 	return newAPIClient(cfg)
 }
@@ -125,7 +126,7 @@ func NewBootstrapClient(endpoint string) (Client, error) {
 		TLSClientConfig: rest.TLSClientConfig{
 			CAFile: defaultBootstrapCAPath,
 		},
-		Timeout: requestTimeout,
+		Timeout: RequestTimeout,
 	})
 }
 
