@@ -18,6 +18,8 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"net"
 	"os"
 	"strings"
 	"time"
@@ -30,6 +32,7 @@ import (
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -90,6 +93,13 @@ var (
 	helmTemplatesPath = "helmlib"
 	// path to default project templates
 	templatesPath = "templates"
+	// convertedCRDs are the CRDs the controller reads that the module converts with its ConversionWebhook
+	// resources (templates/*-conversion-webhook.yaml).
+	convertedCRDs = []string{
+		"clusterresourcegrantpolicies.multitenancy.deckhouse.io",
+		"projects.deckhouse.io",
+		"projecttemplates.deckhouse.io",
+	}
 	// helm release namespace (same value Helm later writes on adopted objects)
 	helmNamespace = helm.ReleaseStorageNamespace
 	// controller service account (centralized in internal/rolebinding so the value cannot drift)
@@ -121,6 +131,14 @@ const (
 	previousPodsInterval = 5 * time.Second
 	previousPodsTimeout  = 10 * time.Minute
 
+	// The controller process waits for the conversion webhook of convertedCRDs, checking every
+	// crdConversionInterval; see startup.CRDConversion.
+	crdConversionInterval = 2 * time.Second
+
+	// healthProbeAddress serves the probes of the kubelet: by the manager, and before the manager is
+	// created by startup.ServeProbesWhile.
+	healthProbeAddress = ":9090"
+
 	// logLevelEnv selects the zap level (debug, info, warn, error); the default is info, as in
 	// user-authz-controller.
 	logLevelEnv     = "LOG_LEVEL"
@@ -138,6 +156,20 @@ func main() {
 	setupLogging()
 
 	logger.Info("start multitenancy-manager")
+
+	ctx := ctrl.SetupSignalHandler()
+
+	// Wait for the conversion webhook before the manager exists: its caches, controllers and webhooks
+	// would read the objects of a CRD that converts with strategy None and keep that reading. The wait
+	// is in the controller and not in a hook before the Helm release of the module, because that
+	// release carries the ConversionWebhook resources the conversion comes from.
+	if err := waitForCRDConversion(ctx, logger); err != nil {
+		if ctx.Err() != nil {
+			logger.Info("stopped while waiting for the conversion of the CRDs")
+			return
+		}
+		fatal(logger, err, "wait for the conversion of the CRDs")
+	}
 
 	// The watch error handler of the manager's cache: a kind of the grant model whose list or watch
 	// fails is read by the webhooks from the API server instead of a cache that stopped following it.
@@ -348,7 +380,7 @@ func main() {
 	projectnamespacewebhook.Register(runtimeManager)
 
 	// start runtime manager
-	if err = runtimeManager.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err = runtimeManager.Start(ctx); err != nil {
 		fatal(logger, err, "start runtime manager")
 	}
 }
@@ -389,6 +421,32 @@ func newGrantObjectsCache(mgr ctrl.Manager, grantsMapper meta.RESTMapper, defini
 		return nil, err
 	}
 	return objects, nil
+}
+
+// waitForCRDConversion blocks until every CRD of convertedCRDs converts through the webhook, answering
+// the probes of the kubelet meanwhile. It reads the CRDs with a client of its own: the manager is
+// created only after it returns.
+func waitForCRDConversion(ctx context.Context, logger logr.Logger) error {
+	scheme := runtime.NewScheme()
+	if err := apiextensionsv1.AddToScheme(scheme); err != nil {
+		return fmt.Errorf("add the CRD types to the scheme: %w", err)
+	}
+	reader, err := client.New(ctrl.GetConfigOrDie(), client.Options{Scheme: scheme})
+	if err != nil {
+		return fmt.Errorf("create the client: %w", err)
+	}
+	listener, err := net.Listen("tcp", healthProbeAddress)
+	if err != nil {
+		return fmt.Errorf("listen for the probes: %w", err)
+	}
+
+	conversion := &startup.CRDConversion{
+		Reader:   reader,
+		Logger:   logger.WithName("crd-conversion"),
+		Names:    convertedCRDs,
+		Interval: crdConversionInterval,
+	}
+	return startup.ServeProbesWhile(ctx, listener, conversion.Wait)
 }
 
 // fatal logs the error with context and terminates the process; used for unrecoverable startup
@@ -442,7 +500,7 @@ func setupRuntimeManager(logger logr.Logger, watchError toolscache.WatchErrorHan
 		RetryPeriod:                   ptr.To(retryPeriod),
 		Scheme:                        scheme,
 		GracefulShutdownTimeout:       ptr.To(10 * time.Second),
-		HealthProbeBindAddress:        ":9090",
+		HealthProbeBindAddress:        healthProbeAddress,
 		WebhookServer:                 webhook.NewServer(webhook.Options{CertDir: "/certs"}),
 		// the ProjectQuota controller watches the ConfigMaps of the ledger and its certificate; nothing
 		// reads another ConfigMap or Secret through the cache

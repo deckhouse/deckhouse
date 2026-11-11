@@ -1,0 +1,55 @@
+- name: d8.multitenancy-manager.controller-availability
+  rules:
+  - alert: MultitenancyManagerControllerUnavailable
+    # No pod of the Deployment is available. A rollout that keeps an old pod available is the
+    # MultitenancyManagerPreviousRevisionStillRunning alert instead.
+    expr: |
+      (
+        kube_deployment_status_replicas_available{namespace="d8-multitenancy-manager", deployment="multitenancy-manager"} == 0
+      )
+      and on (namespace, deployment)
+      (
+        kube_deployment_spec_replicas{namespace="d8-multitenancy-manager", deployment="multitenancy-manager"} > 0
+      )
+    for: 10m
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: multitenancy-manager
+      d8_component: multitenancy-manager
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: The multitenancy-manager controller has had no available pods for more than 10 minutes.
+      description: |-
+        The `multitenancy-manager` Deployment in the `d8-multitenancy-manager` namespace has had no available pods for more than 10 minutes.
+
+        While this alert is active, projects are not reconciled, and the admission webhooks of the module, which refuse a request when they cannot be reached, refuse to create or change Project, ProjectTemplate and the other objects they check.
+
+        Steps to troubleshoot:
+
+        1. Check the pods of the controller:
+
+           ```bash
+           d8 k -n d8-multitenancy-manager get pods -l app=multitenancy-manager
+           d8 k -n d8-multitenancy-manager describe pods -l app=multitenancy-manager
+           ```
+
+        1. A pod that is running but not ready may wait for the conversion of the CRDs. The controller does not start until each of the `clusterresourcegrantpolicies.multitenancy.deckhouse.io`, `projects.deckhouse.io` and `projecttemplates.deckhouse.io` CRDs converts through the webhook: until then, the API server would show it objects of an older version with only `apiVersion` rewritten. Look for the wait in the log:
+
+           ```bash
+           d8 k -n d8-multitenancy-manager logs deploy/multitenancy-manager -c multitenancy-manager | grep 'conversion'
+           ```
+
+           - `hold the controller until the webhook-handler of the deckhouse module registers the conversion webhook of the CRDs` means that the controller waits; the line names the CRDs and their current conversion strategy.
+           - `the CRDs convert through the webhook` or `the CRDs already convert through the webhook` means that the wait is over.
+
+        1. If the controller waits, check the conversion strategy of the CRDs and the ConversionWebhook resources of the module. The `webhook-handler` of the `deckhouse` module sets the strategy to `Webhook` for every ConversionWebhook resource:
+
+           ```bash
+           d8 k get crd clusterresourcegrantpolicies.multitenancy.deckhouse.io projects.deckhouse.io projecttemplates.deckhouse.io -o custom-columns=NAME:.metadata.name,STRATEGY:.spec.conversion.strategy
+           d8 k get conversionwebhooks.deckhouse.io clusterresourcegrantpolicies.multitenancy.deckhouse.io projects.deckhouse.io projecttemplates.deckhouse.io
+           d8 k -n d8-system logs deploy/webhook-handler -c handler --tail=200
+           ```
+
+           Do not set the strategy by hand: the conversion has to be served by the `webhook-handler`, which registers it once it has loaded the ConversionWebhook resource.
