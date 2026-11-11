@@ -23,8 +23,10 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -47,13 +49,23 @@ var _ reconcile.Reconciler = (*Reconciler)(nil)
 // this pool.
 const maxConcurrentReconciles = 8
 
+const (
+	// recorderName is the controller in the events it records.
+	recorderName = "user-controller"
+	// reasonEmailTooLong is the event of a User whose email Dex cannot name a Password after.
+	reasonEmailTooLong = "EmailTooLong"
+	actionReconcile    = "Reconcile"
+)
+
 // Reconciler syncs deckhouse.io User objects into Dex Password objects and User.status.
 type Reconciler struct {
 	client    client.Client
 	apiReader client.Reader
 	revoker   *revoke.Revoker
-	log       logr.Logger
-	now       func() time.Time
+	// recorder records the events of the Users; nil records none.
+	recorder events.EventRecorder
+	log      logr.Logger
+	now      func() time.Time
 }
 
 // New constructs a Reconciler. now defaults to time.Now when nil.
@@ -73,6 +85,7 @@ func New(c client.Client, apiReader client.Reader, log logr.Logger, now func() t
 // Register wires the User/Password reconciler onto the manager.
 func Register(mgr manager.Manager) error {
 	r := New(mgr.GetClient(), mgr.GetAPIReader(), mgr.GetLogger().WithName("user"), nil)
+	r.recorder = mgr.GetEventRecorder(recorderName)
 	if err := r.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("setup user controller: %w", err)
 	}
@@ -147,9 +160,14 @@ func (r *Reconciler) reconcileUser(ctx context.Context, user userView, now time.
 	}
 
 	email := strings.ToLower(user.Email)
-	live, err := r.reconcilePassword(ctx, user, email, groups, now)
-	if err != nil {
-		return 0, err
+	var live passwordView
+	if naming.PasswordNameFits(email) {
+		live, err = r.reconcilePassword(ctx, user, email, groups, now)
+		if err != nil {
+			return 0, err
+		}
+	} else {
+		r.emailTooLong(user, email)
 	}
 
 	ident, err := r.localIdentity(ctx, live, user.Name)
@@ -168,6 +186,23 @@ func (r *Reconciler) reconcileUser(ctx context.Context, user userView, now time.
 		return 0, err
 	}
 	return controller.RequeueAfterTime(lock.until, now), nil
+}
+
+// emailTooLong reports a User whose email is longer than Dex can name its Password after: the
+// create of the Password would fail at every reconcile. The CRD refuses such an email; a User
+// created before it keeps everything but the Password, and cannot sign in.
+func (r *Reconciler) emailTooLong(user userView, email string) {
+	r.log.Info("the email of the user is too long for Dex, the user cannot sign in",
+		"user", user.Name, "bytes", len(email), "maxBytes", naming.MaxLocalEmailBytes)
+	if r.recorder == nil {
+		return
+	}
+	obj := controller.Object(controller.UserGVK)
+	obj.SetName(user.Name)
+	obj.SetUID(user.UID)
+	r.recorder.Eventf(obj, nil, corev1.EventTypeWarning, reasonEmailTooLong, actionReconcile,
+		"spec.email is %d bytes long, more than %d: Dex cannot name the password of the user after it, "+
+			"and the user cannot sign in until the email is shortened", len(email), naming.MaxLocalEmailBytes)
 }
 
 func (r *Reconciler) getUser(ctx context.Context, name string) (userView, bool, error) {

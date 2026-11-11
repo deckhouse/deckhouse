@@ -673,13 +673,20 @@ the connector at refresh and none of this applies.
     not fetch the keys of the provider to verify the ID token of the answer
     (the keys are fetched on every start of dex and every rotation of the keys;
     go-oidc v3.21.0 passes that failure on only as the text `fetching keys`, so
-    the connector matches the text), or other clients kept rotating the shared
-    credential. Nothing stored is touched.
+    the connector matches the text), other clients kept rotating the shared
+    credential, or the password store of a local user did not answer (any
+    failure of the read but "not found", the Kubernetes API throttling dex with
+    429 among them; the local connector has no credential, so without the mark
+    its failure counted as nothing to refresh with and ended the session).
+    Nothing stored is touched.
   - 500 as before for a failure the connector does not explain (LDAP errors
     other than a missing user, a plain error text, a 4xx answer to the token
     request without an OAuth2 error of the provider, which a proxy in front of
     the provider gives, `{"error":"Forbidden"}` of a Spring gateway among them)
-    and for the storage of dex.
+    and for the storage of dex. A failure to read the connector of the token
+    from the storage, but "not found", is 500 `server_error` too
+    (`connectors.ErrStorageUnavailable`); it was 400 `invalid_request`,
+    "Requested connector does not exist.", for every grant.
   The refresh token is kept either way. The `failed to refresh identity` line
   is WARN for the first answer and ERROR for the others (260).
 

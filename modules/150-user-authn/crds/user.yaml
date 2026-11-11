@@ -38,8 +38,15 @@ spec:
                 email:
                   type: string
                   minLength: 1
+                  # Dex names the Password of the user after the email: base32 of the email and its
+                  # 8-byte checksum. A name is at most 253 characters, so an email is at most 150 bytes.
+                  # The rules sit on the field, so a User created before them can still be updated.
+                  maxLength: 150
+                  x-kubernetes-validations:
+                    - rule: "size(bytes(self)) <= 150"
+                      message: "The email must be at most 150 bytes long: Dex names the object that keeps the password of the user after the email, and a longer email makes the name longer than the 253 characters a Kubernetes object name may have."
                   description: |
-                    User email. Must be in lowercase.
+                    User email. Must be in lowercase and at most 150 bytes long (150 characters of Latin letters, digits and punctuation): Dex names the object that keeps the password of the user after the email, and the name of a Kubernetes object is at most 253 characters.
 
                     To grant this user access, use the `email` value as the `User` subject name in a RoleBinding or ClusterRoleBinding of the [granular role-based model](/modules/user-authz/#granular-role-based-model).
 
@@ -168,8 +175,15 @@ spec:
                 email:
                   type: string
                   minLength: 1
+                  # Dex names the Password of the user after the email: base32 of the email and its
+                  # 8-byte checksum. A name is at most 253 characters, so an email is at most 150 bytes.
+                  # The rules sit on the field, so a User created before them can still be updated.
+                  maxLength: 150
+                  x-kubernetes-validations:
+                    - rule: "size(bytes(self)) <= 150"
+                      message: "The email must be at most 150 bytes long: Dex names the object that keeps the password of the user after the email, and a longer email makes the name longer than the 253 characters a Kubernetes object name may have."
                   description: |
-                    User email. Must be in lowercase.
+                    User email. Must be in lowercase and at most 150 bytes long (150 characters of Latin letters, digits and punctuation): Dex names the object that keeps the password of the user after the email, and the name of a Kubernetes object is at most 253 characters.
 
                     To grant this user access, use the `email` value as the `User` subject name in a RoleBinding or ClusterRoleBinding of the [granular role-based model](/modules/user-authz/#granular-role-based-model).
 

@@ -77,6 +77,8 @@ spec:
 
                     Checked on the sign-in page, on login, and on every refresh-token and token-exchange request. A provider outside the list is not offered on the sign-in page. If the list holds one provider, users go straight to it. Removing a provider from the list stops the refresh tokens that were issued through it.
 
+                    The DexClient can also exchange tokens through every TokenExchangeProvider that lists it in `spec.clients`, even when that provider is not in this list.
+
                     A name that matches no DexProvider is accepted with a warning. Nobody can sign in through it until the provider appears.
 
                     **By default**, all providers can be used.

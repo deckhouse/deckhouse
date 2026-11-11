@@ -732,8 +732,11 @@ func newTestReconciler(t *testing.T, objs ...client.Object) (*Reconciler, client
 	if err := clientgoscheme.AddToScheme(scheme); err != nil {
 		t.Fatal(err)
 	}
-	mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{{Group: "deckhouse.io", Version: "v1"}, {Group: "dex.coreos.com", Version: "v1"}})
+	mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{
+		{Group: "deckhouse.io", Version: "v1"}, {Group: "deckhouse.io", Version: "v1alpha1"}, {Group: "dex.coreos.com", Version: "v1"},
+	})
 	mapper.Add(controller.DexClientGVK, meta.RESTScopeNamespace)
+	mapper.Add(controller.TokenExchangeProviderGVK, meta.RESTScopeRoot)
 	mapper.Add(controller.OAuth2ClientGVK, meta.RESTScopeNamespace)
 	mapper.Add(corev1.SchemeGroupVersion.WithKind("Secret"), meta.RESTScopeNamespace)
 

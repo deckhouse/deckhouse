@@ -767,6 +767,7 @@ The client exchanges a token at the Dex token endpoint with `connector_id` set t
 A TokenExchangeProvider has the following features:
 
 * It serves token exchange only and is not shown on the sign-in page.
+* A DexClient listed in `spec.clients` can exchange tokens through the provider even when its `allowedProviders` does not name the provider.
 * A token of the issuer is accepted only as a JWT ID token. Access tokens are not accepted.
 * A change of the object takes effect without a restart of Dex and applies to new exchanges. Dex tokens issued earlier stay valid until they expire. They are refused earlier if the provider loses its connector, that is, if the object is deleted or created again under the same name, or if the provider gives way to an earlier one (`PrefixConflict`). The refusal works under the same condition as for a deleted object, described below. After `PrefixConflict` is gone, the provider gets a connector with a new `status.connectorID`.
 * A change refused as invalid (`InvalidSpec`, for example a malformed key or `caData` without a certificate) is not applied. The provider keeps working with its previous spec until the spec is fixed.

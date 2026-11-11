@@ -19,16 +19,13 @@ package tokenexchangeprovider
 import (
 	"crypto/ecdh"
 	"crypto/ed25519"
-	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
@@ -51,13 +48,6 @@ const (
 	ProviderLabel = "user-authn.deckhouse.io/token-exchange-provider"
 	// Finalizer holds a TokenExchangeProvider until the tokens of its connector are revoked.
 	Finalizer = "user-authn.deckhouse.io/token-exchange-provider"
-
-	// connectorIDPrefix starts every connector ID, so none collides with the connectors of the
-	// Dex config, which win over the storage on the same ID.
-	connectorIDPrefix = "tep-"
-	// uidLength is how much of the UID the connector ID carries: a provider deleted and created
-	// again under the same name gets another connector, which no revocation of the old one names.
-	uidLength = 8
 )
 
 // ReservedPrefixes are the name prefixes the Dex config reserves (reservedNamePrefixes in
@@ -174,23 +164,7 @@ func Decode(obj *unstructured.Unstructured) (Spec, error) {
 
 // ConnectorID is the ID of the first Dex connector of the provider name with the UID uid.
 func ConnectorID(name, uid string) string {
-	return connectorIDAt(name, uid, 0)
-}
-
-// connectorIDAt is the ID of the nth connector of the provider: a connector that was revoked (the
-// provider lost its names to an earlier one) is never used again, since its revocation refuses
-// every token issued through it, so the next one gets the next ID. The ID keeps the length of the
-// first one, which fits label values.
-func connectorIDAt(name, uid string, n int) string {
-	if n == 0 {
-		uid = strings.ReplaceAll(uid, "-", "")
-		if len(uid) > uidLength {
-			uid = uid[:uidLength]
-		}
-		return connectorIDPrefix + name + "-" + uid
-	}
-	sum := sha256.Sum256([]byte(uid + "/" + strconv.Itoa(n)))
-	return connectorIDPrefix + name + "-" + hex.EncodeToString(sum[:])[:uidLength]
+	return naming.TokenExchangeConnectorID(name, uid, 0)
 }
 
 // validate checks what the CRD schema cannot: Dex refuses to open a connector with them, and a

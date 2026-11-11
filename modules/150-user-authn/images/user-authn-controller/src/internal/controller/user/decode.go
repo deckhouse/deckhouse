@@ -22,6 +22,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
 
 	"user-authn-controller/internal/controller"
 )
@@ -64,6 +65,7 @@ type passwordView struct {
 
 type userView struct {
 	Name      string
+	UID       types.UID
 	Email     string
 	Password  string
 	TTL       string
@@ -185,6 +187,7 @@ func decodeUser(obj *unstructured.Unstructured) (userView, error) {
 	}
 	return userView{
 		Name:      fields.Name,
+		UID:       obj.GetUID(),
 		Email:     fields.Spec.Email,
 		Password:  fields.Spec.Password,
 		TTL:       fields.Spec.TTL,

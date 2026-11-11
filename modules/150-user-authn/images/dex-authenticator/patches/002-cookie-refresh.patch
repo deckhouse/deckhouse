@@ -756,10 +756,10 @@ index 00000000..d49197ee
 +}
 diff --git a/pkg/middleware/deckhouse_refresh_unavailable_test.go b/pkg/middleware/deckhouse_refresh_unavailable_test.go
 new file mode 100644
-index 00000000..d1a5fa01
+index 00000000..26a39857
 --- /dev/null
 +++ b/pkg/middleware/deckhouse_refresh_unavailable_test.go
-@@ -0,0 +1,398 @@
+@@ -0,0 +1,671 @@
 +package middleware
 +
 +import (
@@ -770,6 +770,8 @@ index 00000000..d1a5fa01
 +	"net/http"
 +	"net/http/httptest"
 +	"net/url"
++	"sync"
++	"sync/atomic"
 +	"testing"
 +	"time"
 +
@@ -1158,11 +1160,299 @@ index 00000000..d1a5fa01
 +		assert.Empty(t, loader.unavailable.since)
 +	})
 +}
++
++// expiringLock is the lock of one session in the store, which every copy of the session the store
++// loads shares, with the expiry of the Redis lock: it is free again once the duration given to
++// Obtain has passed. Like the Redis client, it releases nothing on a context that is done.
++type expiringLock struct {
++	mu      sync.Mutex
++	holder  *expiringLockHandle
++	expires time.Time
++	// notHeld counts the releases of a lock that had expired or passed to another request.
++	notHeld int
++	// expiration is the duration of the last lock obtained.
++	expiration time.Duration
++}
++
++type expiringLockHandle struct {
++	lock *expiringLock
++}
++
++func (h *expiringLockHandle) Obtain(_ context.Context, expiration time.Duration) error {
++	l := h.lock
++	l.mu.Lock()
++	defer l.mu.Unlock()
++	if l.holder != nil && time.Now().Before(l.expires) {
++		return sessionsapi.ErrLockNotObtained
++	}
++	l.holder, l.expires, l.expiration = h, time.Now().Add(expiration), expiration
++	return nil
++}
++
++func (h *expiringLockHandle) Peek(context.Context) (bool, error) {
++	l := h.lock
++	l.mu.Lock()
++	defer l.mu.Unlock()
++	return l.holder != nil && time.Now().Before(l.expires), nil
++}
++
++func (h *expiringLockHandle) Refresh(context.Context, time.Duration) error { return nil }
++
++func (h *expiringLockHandle) Release(ctx context.Context) error {
++	if err := ctx.Err(); err != nil {
++		return err
++	}
++	l := h.lock
++	l.mu.Lock()
++	defer l.mu.Unlock()
++	if l.holder != h || !time.Now().Before(l.expires) {
++		l.notHeld++
++		return sessionsapi.ErrNotLocked
++	}
++	l.holder = nil
++	return nil
++}
++
++// isFree reports whether no request holds the lock.
++func (l *expiringLock) isFree() bool {
++	l.mu.Lock()
++	defer l.mu.Unlock()
++	return l.holder == nil || !time.Now().Before(l.expires)
++}
++
++// lockedSessionStore keeps one session behind an expiringLock and counts the refreshes of a dex that
++// takes refreshDelay to answer each of them.
++type lockedSessionStore struct {
++	lock *expiringLock
++
++	mu      sync.Mutex
++	session sessionsapi.SessionState
++	cleared bool
++
++	refreshDelay time.Duration
++	refreshes    atomic.Int32
++}
++
++func newLockedSessionStore(refreshDelay time.Duration) *lockedSessionStore {
++	createdAt := time.Now().Add(-time.Hour)
++	return &lockedSessionStore{
++		lock:         &expiringLock{},
++		session:      sessionsapi.SessionState{CreatedAt: &createdAt, RefreshToken: "refresh-token", IDToken: "id-token"},
++		refreshDelay: refreshDelay,
++	}
++}
++
++func (s *lockedSessionStore) loader() *storedSessionLoader {
++	return newStoredSessionLoader(&StoredSessionLoaderOptions{
++		SessionStore: &fakeSessionStore{
++			LoadFunc: func(*http.Request) (*sessionsapi.SessionState, error) {
++				s.mu.Lock()
++				defer s.mu.Unlock()
++				loaded := s.session
++				loaded.Lock = &expiringLockHandle{lock: s.lock}
++				return &loaded, nil
++			},
++			SaveFunc: func(_ http.ResponseWriter, _ *http.Request, ss *sessionsapi.SessionState) error {
++				s.mu.Lock()
++				defer s.mu.Unlock()
++				s.session = *ss
++				s.session.Lock = nil
++				return nil
++			},
++			ClearFunc: func(http.ResponseWriter, *http.Request) error {
++				s.mu.Lock()
++				defer s.mu.Unlock()
++				s.cleared = true
++				return nil
++			},
++		},
++		RefreshPeriod: time.Minute,
++		RefreshSession: func(ctx context.Context, ss *sessionsapi.SessionState) (bool, error) {
++			n := s.refreshes.Add(1)
++			select {
++			case <-ctx.Done():
++				return false, fmt.Errorf("failed to get token: %w", ctx.Err())
++			case <-time.After(s.refreshDelay):
++			}
++			ss.RefreshToken = fmt.Sprintf("rotated-refresh-token-%d", n)
++			return true, nil
++		},
++		ValidateSession: func(context.Context, *sessionsapi.SessionState) bool { return true },
++	})
++}
++
++func serveSession(ctx context.Context, loader *storedSessionLoader) *middlewareapi.RequestScope {
++	scope := &middlewareapi.RequestScope{}
++	req := middlewareapi.AddRequestScope(httptest.NewRequestWithContext(ctx, http.MethodGet, "/", nil), scope)
++	loader.loadSession(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})).ServeHTTP(httptest.NewRecorder(), req)
++	return scope
++}
++
++// One refresh of a session runs at a time, for as long as it runs: the lock of the session outlives
++// the refresh, and a request that waits for it gets the refreshed session or, once its own wait runs
++// out, the answer of a provider that does not answer, without a refresh of its own.
++func TestRefreshLockOutlivesTheRefresh(t *testing.T) {
++	tests := []struct {
++		name          string
++		refreshDelay  time.Duration
++		obtainTimeout time.Duration
++		requests      int
++		// laterUnavailable is how many requests after the first answer that the session cannot be
++		// refreshed now.
++		laterUnavailable int
++	}{
++		{
++			name:         "a refresh longer than the lock of upstream",
++			refreshDelay: 2500 * time.Millisecond,
++			requests:     3,
++		},
++		{
++			name:             "the wait for the lock runs out",
++			refreshDelay:     600 * time.Millisecond,
++			obtainTimeout:    200 * time.Millisecond,
++			requests:         3,
++			laterUnavailable: 2,
++		},
++		{
++			name:         "a healthy dex",
++			refreshDelay: 20 * time.Millisecond,
++			requests:     10,
++		},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			t.Parallel()
++			store := newLockedSessionStore(tc.refreshDelay)
++			loader := store.loader()
++			if tc.obtainTimeout > 0 {
++				loader.obtainTimeout = tc.obtainTimeout
++			}
++
++			scopes := make([]*middlewareapi.RequestScope, tc.requests)
++			var wg sync.WaitGroup
++			wg.Go(func() { scopes[0] = serveSession(t.Context(), loader) })
++			// The other requests of the session come once the first holds the lock.
++			require.Eventually(t, func() bool { return store.refreshes.Load() == 1 }, time.Second, time.Millisecond)
++			for i := 1; i < tc.requests; i++ {
++				wg.Go(func() { scopes[i] = serveSession(t.Context(), loader) })
++			}
++			wg.Wait()
++
++			assert.EqualValues(t, 1, store.refreshes.Load(), "one refresh through dex for the session")
++			assert.NotNil(t, scopes[0].Session, "the refreshing request gets the session")
++			assert.False(t, scopes[0].SessionUnavailable)
++			unavailable := 0
++			for i, scope := range scopes[1:] {
++				if scope.SessionUnavailable {
++					unavailable++
++					continue
++				}
++				assert.NotNil(t, scope.Session, "request %d gets the refreshed session", i+1)
++			}
++			assert.Equal(t, tc.laterUnavailable, unavailable)
++			assert.False(t, store.cleared, "the session is kept")
++			assert.Zero(t, store.lock.notHeld, "the lock is held until its refresh releases it")
++			assert.True(t, store.lock.isFree())
++			assert.Equal(t, "rotated-refresh-token-1", store.session.RefreshToken)
++		})
++	}
++}
++
++// The lock of a session lives longer than the refresh it guards, whatever the refresh timeout is.
++func TestRefreshLockLongerThanTheRefreshTimeout(t *testing.T) {
++	tests := []struct {
++		name           string
++		refreshTimeout time.Duration
++	}{
++		{name: "the default refresh timeout", refreshTimeout: sessionRefreshTimeout},
++		{name: "a longer refresh timeout", refreshTimeout: 3 * sessionRefreshTimeout},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			store := newLockedSessionStore(0)
++			loader := store.loader()
++			loader.refreshTimeout = tc.refreshTimeout
++
++			serveSession(t.Context(), loader)
++			assert.EqualValues(t, 1, store.refreshes.Load())
++			assert.Greater(t, store.lock.expiration, tc.refreshTimeout)
++		})
++	}
++}
++
++// The lock is released when the client that started the refresh has hung up: the other requests of
++// the session would otherwise wait for it to expire.
++func TestRefreshLockReleasedForAClientThatHungUp(t *testing.T) {
++	store := newLockedSessionStore(20 * time.Millisecond)
++	ctx, cancel := context.WithCancel(t.Context())
++	cancel()
++
++	scope := serveSession(ctx, store.loader())
++	assert.NotNil(t, scope.Session)
++	assert.EqualValues(t, 1, store.refreshes.Load())
++	assert.True(t, store.lock.isFree(), "the lock is released")
++}
++
++// A refresh the provider does not answer leaves a session that cannot be trusted without it. The stub
++// of a session restored from the cookie has no ID token: it is not given to the provider to verify,
++// which can only fail ("malformed jwt"). A stored session with an ID token is verified as before.
++func TestRefreshUnavailableValidatesOnlyAnIDToken(t *testing.T) {
++	tests := []struct {
++		name          string
++		idToken       string
++		wantValidated bool
++	}{
++		{name: "the stub of a cookie", wantValidated: false},
++		{name: "a stored session", idToken: "id-token", wantValidated: true},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			createdAt := time.Now().Add(-time.Hour)
++			var validated bool
++			loader := newStoredSessionLoader(&StoredSessionLoaderOptions{
++				SessionStore: &fakeSessionStore{
++					LoadFunc: func(*http.Request) (*sessionsapi.SessionState, error) {
++						return &sessionsapi.SessionState{CreatedAt: &createdAt, RefreshToken: "refresh-token", IDToken: tc.idToken, Lock: &testLock{}}, nil
++					},
++				},
++				RefreshPeriod: time.Minute,
++				RefreshSession: func(context.Context, *sessionsapi.SessionState) (bool, error) {
++					return false, fmt.Errorf("unable to redeem refresh token: %w", fmt.Errorf("failed to get token: %w", context.DeadlineExceeded))
++				},
++				ValidateSession: func(context.Context, *sessionsapi.SessionState) bool {
++					validated = true
++					return false
++				},
++			})
++
++			scope := serveSession(t.Context(), loader)
++			assert.True(t, scope.SessionUnavailable, "a provider that does not answer leaves the session unavailable")
++			assert.Equal(t, tc.wantValidated, validated)
++		})
++	}
++}
 diff --git a/pkg/middleware/stored_session.go b/pkg/middleware/stored_session.go
-index 53238f19..6cb0328a 100644
+index 53238f19..51172433 100644
 --- a/pkg/middleware/stored_session.go
 +++ b/pkg/middleware/stored_session.go
-@@ -30,6 +30,15 @@ const (
+@@ -21,15 +21,27 @@ const (
+ 	// TODO: This should probably be configurable by the end user.
+ 	sessionRefreshObtainTimeout = 5 * time.Second
+ 
+-	// Maximum time allowed for a session refresh attempt.
+-	// If the refresh request isn't finished within this time, the lock will be
+-	// released.
+-	// TODO: This should probably be configurable by the end user.
+-	sessionRefreshLockDuration = 2 * time.Second
++	// sessionRefreshLockMargin is how much longer than sessionRefreshTimeout the lock of a session
++	// lives (Deckhouse patch 002): the reload of the session before the refresh and the release of
++	// the lock after it. The refresh at the provider, the save of the session and its validation are
++	// bounded by the refresh timeout, so the lock outlives every refresh, and no other request of the
++	// session starts a second refresh of the same refresh token while one runs. The 2 seconds of
++	// upstream expired in the middle of a refresh through a loaded dex, which then rotated the same
++	// token for every request that took the expired lock.
++	sessionRefreshLockMargin = 5 * time.Second
+ 
  	// How long to wait after failing to obtain the lock before trying again.
  	// TODO: This should probably be configurable by the end user.
  	sessionRefreshRetryPeriod = 10 * time.Millisecond
@@ -1178,7 +1468,7 @@ index 53238f19..6cb0328a 100644
  )
  
  // isFatalRefreshError checks if a refresh error indicates a revoked or
-@@ -49,6 +58,7 @@ func isFatalRefreshError(err error) bool {
+@@ -49,6 +61,7 @@ func isFatalRefreshError(err error) bool {
  	fatalErrors := []string{
  		"invalid_grant",  // refresh token revoked, expired, or session terminated
  		"invalid_client", // client credentials no longer valid
@@ -1186,7 +1476,7 @@ index 53238f19..6cb0328a 100644
  	}
  
  	for _, fe := range fatalErrors {
-@@ -83,13 +93,18 @@ type StoredSessionLoaderOptions struct {
+@@ -83,13 +96,18 @@ type StoredSessionLoaderOptions struct {
  // If no session is found, the request will be passed to the nex handler.
  // If a session was loader by a previous handler, it will not be replaced.
  func NewStoredSessionLoader(opts *StoredSessionLoaderOptions) alice.Constructor {
@@ -1207,7 +1497,7 @@ index 53238f19..6cb0328a 100644
  }
  
  // storedSessionLoader is responsible for loading sessions from cookie
-@@ -99,6 +114,11 @@ type storedSessionLoader struct {
+@@ -99,6 +117,14 @@ type storedSessionLoader struct {
  	refreshPeriod    time.Duration
  	sessionRefresher func(context.Context, *sessionsapi.SessionState) (bool, error)
  	sessionValidator func(context.Context, *sessionsapi.SessionState) bool
@@ -1216,10 +1506,13 @@ index 53238f19..6cb0328a 100644
 +	unavailable *unavailableSince
 +	// refreshTimeout bounds the refresh and the validation that follows it (Deckhouse patch 002).
 +	refreshTimeout time.Duration
++	// obtainTimeout bounds the wait of a request for the lock of its session, held by the refresh
++	// of another request of the session; zero is sessionRefreshObtainTimeout (Deckhouse patch 002).
++	obtainTimeout time.Duration
  }
  
  // loadSession attempts to load a session as identified by the request cookies.
-@@ -116,7 +136,13 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
+@@ -116,7 +142,13 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
  		}
  
  		session, err := s.getValidatedSession(rw, req)
@@ -1234,7 +1527,7 @@ index 53238f19..6cb0328a 100644
  			// In the case when there was an error loading the session,
  			// we should clear the session
  			logger.Errorf("Error loading cookied session: %v, removing session", err)
-@@ -143,7 +169,7 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
+@@ -143,7 +175,7 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
  
  	err = s.refreshSessionIfNeeded(rw, req, session)
  	if err != nil {
@@ -1243,21 +1536,44 @@ index 53238f19..6cb0328a 100644
  	}
  
  	return session, nil
-@@ -165,11 +191,11 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
+@@ -159,17 +191,21 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
+ 	}
+ 
+ 	var lockObtained bool
+-	ctx, cancel := context.WithTimeout(context.Background(), sessionRefreshObtainTimeout)
++	obtainTimeout := s.obtainTimeout
++	if obtainTimeout == 0 {
++		obtainTimeout = sessionRefreshObtainTimeout
++	}
++	ctx, cancel := context.WithTimeout(context.Background(), obtainTimeout)
+ 	defer cancel()
+ 
  	for !lockObtained {
  		select {
  		case <-ctx.Done():
 -			return errors.New("timeout obtaining session lock")
 +			return fmt.Errorf("%w: timeout obtaining session lock", errRefreshUnavailable)
  		default:
- 			err := session.ObtainLock(req.Context(), sessionRefreshLockDuration)
+-			err := session.ObtainLock(req.Context(), sessionRefreshLockDuration)
++			err := session.ObtainLock(req.Context(), s.refreshTimeout+sessionRefreshLockMargin)
  			if err != nil && !errors.Is(err, sessionsapi.ErrLockNotObtained) {
 -				return fmt.Errorf("error occurred while trying to obtain lock: %v", err)
 +				return fmt.Errorf("%w: error occurred while trying to obtain lock: %w", errRefreshUnavailable, err)
  			} else if errors.Is(err, sessionsapi.ErrLockNotObtained) {
  				time.Sleep(sessionRefreshRetryPeriod)
  				continue
-@@ -215,12 +241,23 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
+@@ -185,7 +221,9 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
+ 		if session == nil {
+ 			return
+ 		}
+-		if err := session.ReleaseLock(req.Context()); err != nil {
++		// A client that hung up still releases the lock, which would otherwise keep the other
++		// requests of the session waiting until it expires (Deckhouse patch 002).
++		if err := session.ReleaseLock(context.WithoutCancel(req.Context())); err != nil {
+ 			logger.Errorf("unable to release lock: %v", err)
+ 		}
+ 	}()
+@@ -215,12 +253,23 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
  
  	// We are holding the lock and the session needs a refresh
  	logger.Printf("Refreshing session - User: %s; SessionAge: %s", session.User, session.Age())
@@ -1284,7 +1600,7 @@ index 53238f19..6cb0328a 100644
  			logger.Printf("Fatal refresh error detected (session revoked or invalid), clearing session for user: %s", session.User)
  
  			// Clear the session from storage (Redis) and remove the cookie
-@@ -229,7 +266,7 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
+@@ -229,7 +278,7 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
  			}
  
  			// Return error immediately to force re-authentication
@@ -1293,12 +1609,19 @@ index 53238f19..6cb0328a 100644
  		}
  
  		// For non-fatal errors (network issues, timeouts), keep the session
-@@ -237,7 +274,22 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
+@@ -237,7 +286,29 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
  	}
  
  	// Validate all sessions after any Redeem/Refresh operation (fail or success)
 -	return s.validateSession(req.Context(), session)
-+	validateErr := s.validateSession(refreshCtx, session)
++	var validateErr error
++	if isProviderUnavailable(refreshErr) && session.IDToken == "" {
++		// The stub of a session restored from the cookie has no ID token for the provider to verify
++		// (Deckhouse patch 002): it cannot be trusted without the refresh, as below.
++		validateErr = errors.New("session has no ID token")
++	} else {
++		validateErr = s.validateSession(refreshCtx, session)
++	}
 +	if validateErr != nil && isProviderUnavailable(refreshErr) {
 +		// The provider did not say whether the refresh token is still good, and the session
 +		// cannot be trusted without the refresh: the stub of a session restored from the
@@ -1317,7 +1640,7 @@ index 53238f19..6cb0328a 100644
  }
  
  // needsRefresh determines whether we should attempt to refresh a session or not.
-@@ -250,7 +302,7 @@ func needsRefresh(refreshPeriod time.Duration, session *sessionsapi.SessionState
+@@ -250,7 +321,7 @@ func needsRefresh(refreshPeriod time.Duration, session *sessionsapi.SessionState
  func (s *storedSessionLoader) refreshSession(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) error {
  	refreshed, err := s.sessionRefresher(req.Context(), session)
  	if err != nil && !errors.Is(err, providers.ErrNotImplemented) {

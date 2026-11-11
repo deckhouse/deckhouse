@@ -263,8 +263,8 @@ func (r *Reconciler) connectorID(ctx context.Context, obj *unstructured.Unstruct
 			return current, err
 		}
 	}
-	for n := range maxConnectorIDs {
-		id := connectorIDAt(obj.GetName(), string(obj.GetUID()), n)
+	for n := range naming.MaxTokenExchangeConnectorIDs {
+		id := naming.TokenExchangeConnectorID(obj.GetName(), string(obj.GetUID()), n)
 		revoked, err := r.revoked(ctx, id)
 		if err != nil {
 			return "", err
@@ -273,22 +273,13 @@ func (r *Reconciler) connectorID(ctx context.Context, obj *unstructured.Unstruct
 			return id, nil
 		}
 	}
-	return "", fmt.Errorf("all %d connector IDs of %s are revoked", maxConnectorIDs, obj.GetName())
+	return "", fmt.Errorf("all %d connector IDs of %s are revoked", naming.MaxTokenExchangeConnectorIDs, obj.GetName())
 }
 
 // ownsConnectorID reports whether id is one of the IDs of the provider.
 func ownsConnectorID(obj *unstructured.Unstructured, id string) bool {
-	for n := range maxConnectorIDs {
-		if connectorIDAt(obj.GetName(), string(obj.GetUID()), n) == id {
-			return true
-		}
-	}
-	return false
+	return naming.IsTokenExchangeConnectorID(obj.GetName(), string(obj.GetUID()), id)
 }
-
-// maxConnectorIDs bounds the IDs connectorID tries; revocations expire, so a provider never needs
-// more than a few.
-const maxConnectorIDs = 100
 
 // revoked reports whether a revocation of the connector id exists. It reads past the cache: a
 // revocation that was just written must not be missed.

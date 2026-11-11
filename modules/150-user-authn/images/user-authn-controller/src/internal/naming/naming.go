@@ -32,6 +32,15 @@ const (
 
 const maxObjectNameLength = 63
 
+// maxDexObjectNameLength is the longest name of a Dex storage object: a Kubernetes object name,
+// a DNS subdomain.
+const maxDexObjectNameLength = 253
+
+// MaxLocalEmailBytes is the longest email of a local user, in bytes. Dex names the Password of
+// the user ToFnvLikeDex of the email: the unpadded base32 of the email and the 8 bytes of its
+// checksum, 8/5 as long. (150+8)*8/5 rounds up to 253, the longest object name; 151 bytes make 255.
+const MaxLocalEmailBytes = 150
+
 // dexEncoding matches Dex's lowercase base32 alphabet used for Kubernetes object names.
 var dexEncoding = base32.NewEncoding("abcdefghijklmnopqrstuvwxyz234567")
 
@@ -40,6 +49,12 @@ var dexEncoding = base32.NewEncoding("abcdefghijklmnopqrstuvwxyz234567")
 // OfflineTokenName for OfflineSessions.
 func ToFnvLikeDex(s string) string {
 	return strings.TrimRight(dexEncoding.EncodeToString(fnv.New64().Sum([]byte(s))), "=")
+}
+
+// PasswordNameFits reports whether the name of the Password Dex keeps for a local user with this
+// email fits an object name. Dex lowercases the email before it names the Password.
+func PasswordNameFits(email string) bool {
+	return len(ToFnvLikeDex(strings.ToLower(email))) <= maxDexObjectNameLength
 }
 
 // OfflineTokenName matches Dex offlineTokenName: hash.Write(userID); hash.Write(connID); Sum(nil).

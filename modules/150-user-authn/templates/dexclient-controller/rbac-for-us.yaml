@@ -21,6 +21,15 @@ rules:
   - get
   - list
   - watch
+# A DexClient that limits its providers allows the connectors of the TokenExchangeProviders that list it.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - tokenexchangeproviders
+  verbs:
+  - get
+  - list
+  - watch
 # The credentials Secret of a DexClient lives in the namespace of the DexClient, and RBAC cannot
 # narrow a grant by label (the label-scoped informer only saves memory), so this grant covers every
 # Secret in the cluster: a compromise of this pod reads and writes all of them, which is as much as

@@ -52,6 +52,43 @@ func TestToFnvLikeDex(t *testing.T) {
 	}
 }
 
+// emailOfBytes is an email of n bytes: local part a repeated, at example.com.
+func emailOfBytes(n int, local string) string {
+	const domain = "@example.com"
+	return strings.Repeat(local, (n-len(domain))/len(local)) + domain
+}
+
+func TestPasswordNameFits(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		email      string
+		nameLength int
+		fits       bool
+	}{
+		{name: "one byte below the limit", email: emailOfBytes(MaxLocalEmailBytes-1, "a"), nameLength: 252, fits: true},
+		{name: "at the limit", email: emailOfBytes(MaxLocalEmailBytes, "a"), nameLength: 253, fits: true},
+		{name: "one byte above the limit", email: emailOfBytes(MaxLocalEmailBytes+1, "a"), nameLength: 255},
+		{name: "the longest address of RFC 5321", email: emailOfBytes(254, "a"), nameLength: 420},
+		{name: "uppercase at the limit", email: emailOfBytes(MaxLocalEmailBytes, "A"), nameLength: 253, fits: true},
+		{name: "two-byte letters at the limit", email: emailOfBytes(MaxLocalEmailBytes, "\u00fc"), nameLength: 253, fits: true},
+		{name: "two-byte letters above the limit in bytes, not in letters", email: emailOfBytes(MaxLocalEmailBytes+2, "\u00fc"), nameLength: 256},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := len(ToFnvLikeDex(strings.ToLower(tt.email))); got != tt.nameLength {
+				t.Errorf("the Password name of a %d-byte email is %d characters, want %d", len(tt.email), got, tt.nameLength)
+			}
+			if got := PasswordNameFits(tt.email); got != tt.fits {
+				t.Errorf("PasswordNameFits(%d bytes) = %v, want %v", len(tt.email), got, tt.fits)
+			}
+		})
+	}
+}
+
 func TestOfflineTokenNameDiffersFromConcatenatedToFnv(t *testing.T) {
 	t.Parallel()
 

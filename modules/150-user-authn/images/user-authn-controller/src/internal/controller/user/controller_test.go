@@ -19,6 +19,7 @@ package user
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -30,6 +31,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/validation"
+	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -93,6 +97,70 @@ func TestReconcile_CreatePassword(t *testing.T) {
 	}
 
 	assertNoUserAccount(t, r, adminEmail)
+}
+
+// A Password named after an email longer than naming.MaxLocalEmailBytes would be longer than an
+// object name may be: the API server refuses it. The User keeps its status, gets an event and
+// does not fail its reconcile.
+func TestReconcile_EmailLength(t *testing.T) {
+	t.Parallel()
+
+	const domain = "@example.com"
+	emailOf := func(n int) string { return strings.Repeat("a", n-len(domain)) + domain }
+	tests := []struct {
+		name         string
+		email        string
+		wantPassword bool
+	}{
+		{name: "at the limit", email: emailOf(naming.MaxLocalEmailBytes), wantPassword: true},
+		{name: "one byte above the limit", email: emailOf(naming.MaxLocalEmailBytes + 1)},
+		{name: "the longest address of RFC 5321", email: emailOf(254)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
+			c := newFakeClientBuilder(t, namespaceObj(), userObj(adminUserName, tt.email, adminPassword, "30m")).
+				WithInterceptorFuncs(interceptor.Funcs{
+					// The fake client does not check names; the API server does.
+					Create: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+						if errs := validation.IsDNS1123Subdomain(obj.GetName()); len(errs) != 0 {
+							return apierrors.NewInvalid(obj.GetObjectKind().GroupVersionKind().GroupKind(), obj.GetName(),
+								field.ErrorList{field.Invalid(field.NewPath("metadata", "name"), obj.GetName(), strings.Join(errs, "; "))})
+						}
+						return cl.Create(ctx, obj, opts...)
+					},
+				}).
+				Build()
+			recorder := events.NewFakeRecorder(10)
+			r := New(c, c, logr.Discard(), func() time.Time { return now })
+			r.recorder = recorder
+
+			for range 2 {
+				if _, err := r.Reconcile(t.Context(), userReq(adminUserName)); err != nil {
+					t.Fatalf("Reconcile: %v", err)
+				}
+			}
+
+			if got := passwordExists(t, r, passwordName(tt.email)); got != tt.wantPassword {
+				t.Errorf("password exists = %v, want %v", got, tt.wantPassword)
+			}
+			if _, found, _ := unstructured.NestedString(getUser(t, r, adminUserName).Object, "status", "expireAt"); !found {
+				t.Error("status.expireAt is not set")
+			}
+			var got []string
+			for len(recorder.Events) > 0 {
+				got = append(got, <-recorder.Events)
+			}
+			switch {
+			case tt.wantPassword && len(got) != 0:
+				t.Errorf("events = %q, want none", got)
+			case !tt.wantPassword && (len(got) == 0 || !strings.HasPrefix(got[0], "Warning "+reasonEmailTooLong+" ")):
+				t.Errorf("events = %q, want a Warning %s", got, reasonEmailTooLong)
+			}
+		})
+	}
 }
 
 func TestReconcile_SkipIfEqual(t *testing.T) {

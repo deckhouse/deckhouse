@@ -1060,8 +1060,46 @@ index 00000000..9ad11449
 +		})
 +	}
 +}
+diff --git a/server/connectors/connectors.go b/server/connectors/connectors.go
+index a028d549..020d73d7 100644
+--- a/server/connectors/connectors.go
++++ b/server/connectors/connectors.go
+@@ -2,6 +2,7 @@ package connectors
+ 
+ import (
+ 	"context"
++	"errors"
+ 	"fmt"
+ 	"sync"
+ 
+@@ -17,6 +18,13 @@ type Connector struct {
+ 	GrantTypes      []string
+ }
+ 
++// ErrStorageUnavailable reports that the connector could not be read from the
++// storage of dex for a reason other than its absence, the Kubernetes API
++// throttling dex among others (Deckhouse). The read says nothing about the
++// connector: the token endpoint answers a server error, not that the connector
++// does not exist, which a client takes for a refusal.
++var ErrStorageUnavailable = errors.New("connector storage unavailable")
++
+ // ResolveFunc builds the underlying connector implementation for a stored
+ // connector. The server injects it so that connector construction (the local
+ // password DB and the connector-config registry) stays in the server package.
+@@ -99,7 +107,10 @@ func (c *Cache) Close(id string) {
+ func (c *Cache) Get(ctx context.Context, id string) (Connector, error) {
+ 	storageConnector, err := c.storage.GetConnector(ctx, id)
+ 	if err != nil {
+-		return Connector{}, fmt.Errorf("failed to get connector object from storage: %v", err)
++		if errors.Is(err, storage.ErrNotFound) {
++			return Connector{}, fmt.Errorf("failed to get connector object from storage: %w", err)
++		}
++		return Connector{}, fmt.Errorf("failed to get connector object from storage: %w: %v", ErrStorageUnavailable, err)
+ 	}
+ 
+ 	c.mu.Lock()
 diff --git a/server/connectors/password.go b/server/connectors/password.go
-index 8b5fb8ca..8fa14cb4 100644
+index 8b5fb8ca..d6595ace 100644
 --- a/server/connectors/password.go
 +++ b/server/connectors/password.go
 @@ -2,7 +2,6 @@ package connectors
@@ -1082,14 +1120,18 @@ index 8b5fb8ca..8fa14cb4 100644
  func resolvePasswordName(p storage.Password) string {
  	if p.Name != "" {
  		return p.Name
-@@ -71,14 +73,14 @@ func (db passwordDB) Refresh(ctx context.Context, s connector.Scopes, identity c
+@@ -71,14 +73,17 @@ func (db passwordDB) Refresh(ctx context.Context, s connector.Scopes, identity c
  	p, err := db.s.GetPassword(ctx, identity.Email)
  	if err != nil {
  		if err == storage.ErrNotFound {
 -			return connector.Identity{}, errors.New("user not found")
 +			return connector.Identity{}, errUserNotFound
  		}
- 		return connector.Identity{}, fmt.Errorf("get password: %v", err)
+-		return connector.Identity{}, fmt.Errorf("get password: %v", err)
++		// The password store is the provider of a local user: a store that fails
++		// to answer, the Kubernetes API throttling dex among others, says nothing
++		// about the user, and the refresh may succeed later.
++		return connector.Identity{}, fmt.Errorf("get password: %w: %v", connector.ErrUpstreamUnavailable, err)
  	}
  
  	// User removed but a new user with the same email exists.
@@ -1101,10 +1143,10 @@ index 8b5fb8ca..8fa14cb4 100644
  	// If a user has updated their username, that will be reflected in the
 diff --git a/server/connectors/password_test.go b/server/connectors/password_test.go
 new file mode 100644
-index 00000000..3123452f
+index 00000000..fcb6b497
 --- /dev/null
 +++ b/server/connectors/password_test.go
-@@ -0,0 +1,57 @@
+@@ -0,0 +1,59 @@
 +package connectors
 +
 +import (
@@ -1132,7 +1174,7 @@ index 00000000..3123452f
 +
 +// The refresh of a local user deleted from the password store, or replaced by
 +// another user with the same email, is refused for good; a storage that fails
-+// to answer says nothing about the user.
++// to answer says nothing about the user and is a provider that did not answer.
 +func TestPasswordDBRefreshIdentityGone(t *testing.T) {
 +	store := memory.New(slog.New(slog.DiscardHandler))
 +	require.NoError(t, store.CreatePassword(context.Background(), storage.Password{
@@ -1140,20 +1182,22 @@ index 00000000..3123452f
 +	}))
 +
 +	tests := []struct {
-+		name    string
-+		storage storage.Storage
-+		ident   connector.Identity
-+		isGone  bool
++		name          string
++		storage       storage.Storage
++		ident         connector.Identity
++		isGone        bool
++		isUnavailable bool
 +	}{
 +		{name: "user deleted", storage: store, ident: connector.Identity{UserID: "john-id", Email: "john@example.com"}, isGone: true},
 +		{name: "email reused by another user", storage: store, ident: connector.Identity{UserID: "old-jane-id", Email: "jane@example.com"}, isGone: true},
-+		{name: "storage failing", storage: failingPasswordStorage{store}, ident: connector.Identity{UserID: "jane-id", Email: "jane@example.com"}},
++		{name: "storage failing", storage: failingPasswordStorage{store}, ident: connector.Identity{UserID: "jane-id", Email: "jane@example.com"}, isUnavailable: true},
 +	}
 +	for _, tc := range tests {
 +		t.Run(tc.name, func(t *testing.T) {
 +			_, err := NewPasswordDB(tc.storage).(connector.RefreshConnector).Refresh(context.Background(), connector.Scopes{}, tc.ident)
 +			require.Error(t, err)
 +			assert.Equal(t, tc.isGone, errors.Is(err, connector.ErrIdentityGone), "error: %v", err)
++			assert.Equal(t, tc.isUnavailable, connector.Unavailable(err), "error: %v", err)
 +		})
 +	}
 +
@@ -1180,6 +1224,20 @@ index 00000000..82908f5f
 +	_, isSAML := c.(connector.SAMLConnector)
 +	return isSAML
 +}
+diff --git a/server/grants/grants.go b/server/grants/grants.go
+index aef60db4..7e439800 100644
+--- a/server/grants/grants.go
++++ b/server/grants/grants.go
+@@ -343,6 +343,9 @@ func (h *Handler) resolveConnector(ctx context.Context, connID string, client st
+ 	conn, err := h.Connectors.Get(ctx, connID)
+ 	if err != nil {
+ 		h.Logger.ErrorContext(ctx, "failed to get connector", "connector_id", connID, "err", err)
++		if errors.Is(err, connectors.ErrStorageUnavailable) {
++			return connectors.Connector{}, &oauth2.Error{Type: oauth2.ServerError, Status: http.StatusInternalServerError}
++		}
+ 		return connectors.Connector{}, &oauth2.Error{Type: oauth2.InvalidRequest, Description: "Requested connector does not exist.", Status: http.StatusBadRequest}
+ 	}
+ 	if !connectors.GrantTypeAllowed(conn.GrantTypes, grantType) {
 diff --git a/server/grants/refresh.go b/server/grants/refresh.go
 index 57f74a2f..7c75e07a 100644
 --- a/server/grants/refresh.go
@@ -1332,10 +1390,10 @@ index 57f74a2f..7c75e07a 100644
  // parseRefreshToken decodes the refresh_token parameter, tolerating the legacy
 diff --git a/server/server_grant_refresh_upstream_test.go b/server/server_grant_refresh_upstream_test.go
 new file mode 100644
-index 00000000..d6f9d8f0
+index 00000000..f53aee5a
 --- /dev/null
 +++ b/server/server_grant_refresh_upstream_test.go
-@@ -0,0 +1,1254 @@
+@@ -0,0 +1,1395 @@
 +package server
 +
 +import (
@@ -1361,6 +1419,7 @@ index 00000000..d6f9d8f0
 +	"github.com/dexidp/dex/server/internal"
 +	"github.com/dexidp/dex/server/tokens"
 +	"github.com/dexidp/dex/storage"
++	"github.com/dexidp/dex/storage/memory"
 +)
 +
 +// Tests of the upstream refresh (250-upstream-refresh): the upstream credential
@@ -2402,6 +2461,146 @@ index 00000000..d6f9d8f0
 +			return old, nil
 +		}))
 +	return session, nil
++}
++
++// errThrottled is the answer of a Kubernetes API that throttles dex: API Priority
++// and Fairness rejects the request with 429 when its queue is full.
++var errThrottled = errors.New(`GET https://10.222.0.1:443/apis/dex.coreos.com/v1/namespaces/d8-user-authn/passwords/x: Too Many Requests: response from server "Too many requests, please try again later."`)
++
++// throttledPasswordStore is the password store of local users that fails every
++// read of a password while throttled is set.
++type throttledPasswordStore struct {
++	storage.Storage
++	throttled bool
++}
++
++func (s *throttledPasswordStore) GetPassword(ctx context.Context, email string) (storage.Password, error) {
++	if s.throttled {
++		return storage.Password{}, errThrottled
++	}
++	return s.Storage.GetPassword(ctx, email)
++}
++
++// The refresh of a local user reads its password: a password store that fails to
++// answer is a provider that did not answer, and the refresh token is kept for the
++// next attempt; a user deleted from the store, or replaced by another one with the
++// same email, is refused as before.
++func TestUpstreamRefreshLocalPasswordStore(t *testing.T) {
++	jane := storage.Password{Email: "jane@example.com", Username: "jane", UserID: upstreamUserID, Hash: []byte("$2a$10$")}
++	replaced := jane
++	replaced.UserID = "2"
++	tests := []struct {
++		name      string
++		password  *storage.Password
++		throttled bool
++		status    int
++		expected  string
++	}{
++		{
++			name:      "password store throttled",
++			password:  &jane,
++			throttled: true,
++			status:    http.StatusServiceUnavailable,
++			expected:  "temporarily_unavailable",
++		},
++		{
++			name:     "user deleted",
++			status:   http.StatusBadRequest,
++			expected: "invalid_grant",
++		},
++		{
++			name:     "email reused by another user",
++			password: &replaced,
++			status:   http.StatusBadRequest,
++			expected: "invalid_grant",
++		},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			const clientID, refreshID = "kubeconfig-generator", "cli-refresh-id"
++			clk := &testClock{now: time.Now()}
++			httpServer, s := newTestServer(t, rotatingPolicy(clk))
++			defer httpServer.Close()
++
++			// A store of its own: a read of the password from the memory storage of
++			// the server, under its lock of the refresh token, would deadlock.
++			passwords := &throttledPasswordStore{Storage: memory.New(slog.New(slog.DiscardHandler)), throttled: tc.throttled}
++			if tc.password != nil {
++				require.NoError(t, passwords.CreatePassword(t.Context(), *tc.password))
++			}
++			registerUpstreamConnector(t, s, connectors.LocalConnector, connectors.NewPasswordDB(passwords))
++			registerClients(t, s, clientID)
++			createRefreshToken(t, s, connectors.LocalConnector, refreshID, clientID, nil, clk.now)
++			createOfflineSession(t, s, connectors.LocalConnector, map[string]string{clientID: refreshID}, nil)
++
++			rr := refreshTokenRequest(t, t.Context(), s, clientID, requestToken(refreshID))
++			requireOAuth2Error(t, rr, tc.status, tc.expected)
++
++			stored, err := s.storage.GetRefresh(t.Context(), refreshID)
++			require.NoError(t, err)
++			require.Equal(t, "token-"+refreshID, stored.Token, "the refresh token is not rotated")
++			if !tc.throttled {
++				return
++			}
++			passwords.throttled = false
++			requireRefreshSucceeds(t, s, clientID, requestToken(refreshID))
++		})
++	}
++}
++
++// connectorReadStorage fails every read of a connector with err.
++type connectorReadStorage struct {
++	storage.Storage
++	err error
++}
++
++func (s *connectorReadStorage) GetConnector(ctx context.Context, id string) (storage.Connector, error) {
++	if s.err != nil {
++		return storage.Connector{}, s.err
++	}
++	return s.Storage.GetConnector(ctx, id)
++}
++
++// The token endpoint reads the connector of the refresh token: a storage that
++// fails to answer is a server error, which keeps the refresh token; a connector
++// that is gone is refused as before.
++func TestRefreshConnectorRead(t *testing.T) {
++	tests := []struct {
++		name     string
++		err      error
++		status   int
++		expected string
++	}{
++		{name: "storage throttled", err: errThrottled, status: http.StatusInternalServerError, expected: "server_error"},
++		{name: "connector deleted", err: storage.ErrNotFound, status: http.StatusBadRequest, expected: "invalid_request"},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			const clientID, refreshID = "kubeconfig-generator", "cli-refresh-id"
++			clk := &testClock{now: time.Now()}
++			var reads *connectorReadStorage
++			httpServer, s := newTestServer(t, func(c *Config) {
++				rotatingPolicy(clk)(c)
++				reads = &connectorReadStorage{Storage: c.Storage}
++				c.Storage = reads
++			})
++			defer httpServer.Close()
++
++			upstream := newRotatingUpstream()
++			registerUpstreamConnector(t, s, upstreamConnID, upstream)
++			registerClients(t, s, clientID)
++			createRefreshToken(t, s, upstreamConnID, refreshID, clientID, nil, clk.now)
++			createOfflineSession(t, s, upstreamConnID, map[string]string{clientID: refreshID}, upstream.mint())
++
++			reads.err = tc.err
++			rr := refreshTokenRequest(t, t.Context(), s, clientID, requestToken(refreshID))
++			requireOAuth2Error(t, rr, tc.status, tc.expected)
++			require.Zero(t, upstream.calls, "the provider is not asked")
++
++			reads.err = nil
++			requireRefreshSucceeds(t, s, clientID, requestToken(refreshID))
++		})
++	}
 +}
 +
 +// A request that keeps losing the race for the shared credential gives up after

@@ -246,6 +246,8 @@ spec:
                   minItems: 1
                   description: |
                     Dex clients that may exchange tokens through this provider. Other clients are refused before their token is checked.
+
+                    A listed DexClient can exchange tokens through this provider even when its `allowedProviders` does not name the provider.
                   items:
                     type: object
                     required: ['dexClient']

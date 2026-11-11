@@ -85,6 +85,10 @@ type Client struct {
 	UID         types.UID
 	Annotations map[string]string
 	Spec        Spec
+
+	// TokenExchangeConnectors are the connectors of the TokenExchangeProviders that list the client.
+	// The reconciler reads them only for a client with allowedProviders.
+	TokenExchangeConnectors []string
 }
 
 // Decode reads a DexClient.
@@ -208,8 +212,9 @@ func oauth2ClientContent(c Client, id, secret string) map[string]any {
 		"allowedEmails": c.Spec.AllowedEmails,
 		"allowedGroups": c.Spec.AllowedGroups,
 
-		// The Dex name of allowedProviders: a connector ID is the name of its DexProvider.
-		"allowedConnectors": c.Spec.AllowedProviders,
+		// The Dex name of allowedProviders: a connector ID is the name of its DexProvider. The
+		// connectors of the token exchange providers of the client come after them.
+		"allowedConnectors": allowedConnectors(c),
 
 		"postLogoutRedirectURIs": c.Spec.PostLogoutRedirectURIs,
 	}

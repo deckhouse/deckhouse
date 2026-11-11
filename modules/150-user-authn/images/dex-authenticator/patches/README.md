@@ -48,6 +48,14 @@ into the image. To run them, apply the patches to a clone of the tag and run `go
     never reached the user. 10 seconds is far above a refresh through dex, its upstream provider included, and with
     the 5-second wait for the lock well below the timeout of the ingress. A client that gives up does not cancel the
     refresh: its outcome still counts, and a rotated refresh token is still saved.
+  - The lock of the session lives as long as the refresh may take and 5 seconds more, 15 seconds instead of the 2 of
+    upstream, and is released even when the client has hung up. With 2 seconds the lock expired in the middle of a
+    refresh through a loaded dex, the next request of the session took it and refreshed the same token again, and the
+    first holder logged `unable to release lock`. A request that waits for the lock gets the session the holder
+    refreshed, or the 503 above once its own 5 seconds run out; it never refreshes the session a second time. A
+    refresh dex completes after the deadline is lost: the next one presents the old token, which dex takes within its
+    reuse interval. After a refresh dex did not answer, the stub, which has no ID token, is not verified, so its
+    failure no longer logs `malformed jwt`.
   - Behind ingress-nginx a 503 of the auth subrequest is neither 401 nor 403, so ingress-nginx does not redirect to
     the sign-in page: it answers its own 500 page and does not pass `Retry-After` on. The user reloads the page once
     dex is back and is still signed in, or, past the period above, is sent to sign in.

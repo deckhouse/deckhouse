@@ -118,8 +118,9 @@ func (m *DexProviderTokenExchange) Run(ctx context.Context) error {
 		if _, set, _ := unstructured.NestedFieldNoCopy(provider.Object, "spec", "tokenExchange", "enabled"); set {
 			continue
 		}
-		// Every DexClient may use every connector: DexClient has no allowedConnectors, so an annotated one makes
-		// every exchanging provider a way into the Kubernetes API.
+		// A DexClient without allowedProviders may use every connector, and the migration does not narrow the
+		// providers down by allowedProviders, so one annotated client makes every exchanging provider a way into
+		// the Kubernetes API.
 		on := len(exchanging) > 0
 		if err := unstructured.SetNestedField(provider.Object, on, "spec", "tokenExchange", "enabled"); err != nil {
 			return fmt.Errorf("set token exchange of %s: %w", provider.GetName(), err)

@@ -1,0 +1,52 @@
+# Dex keeps its whole state in objects of dex.coreos.com in d8-user-authn: every sign-in, refresh
+# and logout reads and writes them through the API server. Without a schema of their own these
+# requests match the default service-accounts schema and share the workload-low level with every
+# service account of the cluster, so a burst of sign-ins or refreshes waits in the queues of other
+# controllers and is rejected with 429 once they are full. Dex gets a level of its own: it no longer
+# queues behind others, and a burst of Dex queues behind Dex only. Only the storage requests of Dex
+# match; the CRDs it reads at start and everything else of its ServiceAccount keep the default
+# schemas.
+apiVersion: flowcontrol.apiserver.k8s.io/v1
+kind: FlowSchema
+metadata:
+  name: d8-user-authn-dex
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
+spec:
+  matchingPrecedence: 1100
+  priorityLevelConfiguration:
+    name: d8-user-authn-dex
+  distinguisherMethod:
+    type: ByUser
+  rules:
+  - subjects:
+    - kind: ServiceAccount
+      serviceAccount:
+        name: dex
+        namespace: d8-{{ .Chart.Name }}
+    resourceRules:
+    - apiGroups: ["dex.coreos.com"]
+      resources: ["*"]
+      namespaces: ["d8-{{ .Chart.Name }}"]
+      verbs: ["get", "list", "create", "update", "delete"]
+---
+# 20 shares are about 40 seats of the 600 a kube-apiserver has with the default limits, next to the
+# default levels of Kubernetes and Deckhouse; every other level gives up about 7% of its seats. Half of
+# them are lent to other levels while Dex is idle, and Dex borrows the seats others lend when it needs
+# more. Every request of Dex is one flow, so it waits in the shortest of the 8 queues of its hand: up
+# to 400 requests, then 429.
+apiVersion: flowcontrol.apiserver.k8s.io/v1
+kind: PriorityLevelConfiguration
+metadata:
+  name: d8-user-authn-dex
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
+spec:
+  type: Limited
+  limited:
+    nominalConcurrencyShares: 20
+    lendablePercent: 50
+    limitResponse:
+      type: Queue
+      queuing:
+        queues: 8
+        handSize: 8
+        queueLengthLimit: 50

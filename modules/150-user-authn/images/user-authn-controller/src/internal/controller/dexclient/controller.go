@@ -100,9 +100,9 @@ func New(c client.Client, reader client.Reader, recorder events.EventRecorder, l
 
 // Register wires the DexClient reconciler onto the manager.
 //
-// Required RBAC: dexclients get, list, watch; secrets get, list, watch, create, update, delete
-// cluster-wide; oauth2clients get, list, watch, create, update, delete in d8-user-authn; events
-// create, patch.
+// Required RBAC: dexclients and tokenexchangeproviders get, list, watch; secrets get, list, watch,
+// create, update, delete cluster-wide; oauth2clients get, list, watch, create, update, delete in
+// d8-user-authn; events create, patch.
 func Register(mgr manager.Manager) error {
 	r := New(mgr.GetClient(), mgr.GetAPIReader(), mgr.GetEventRecorder(recorderName), mgr.GetLogger().WithName("dexclient"))
 	if err := r.SetupWithManager(mgr); err != nil {
@@ -137,6 +137,7 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 			builder.WithPredicates(predicate.NewPredicateFuncs(isCredentialsSecret)), builder.OnlyMetadata).
 		Watches(controller.Object(controller.OAuth2ClientGVK), handler.EnqueueRequestsFromMapFunc(mapOAuth2Client),
 			builder.WithPredicates(predicate.NewPredicateFuncs(isDexClientOAuth2Client))).
+		Watches(controller.Object(controller.TokenExchangeProviderGVK), handler.EnqueueRequestsFromMapFunc(mapTokenExchangeProvider)).
 		Complete(r)
 }
 
@@ -224,6 +225,13 @@ func (r *Reconciler) event(obj runtime.Object, reason string, err error) {
 }
 
 func (r *Reconciler) apply(ctx context.Context, c Client) error {
+	if len(c.Spec.AllowedProviders) > 0 {
+		var err error
+		if c.TokenExchangeConnectors, err = r.tokenExchangeConnectors(ctx, c.Name, c.Namespace); err != nil {
+			return err
+		}
+	}
+
 	secret, err := r.getSecret(ctx, c.Namespace, c.Name)
 	if err != nil {
 		return err

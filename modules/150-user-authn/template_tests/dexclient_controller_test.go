@@ -104,6 +104,9 @@ var _ = Describe("Module :: user-authn :: helm template :: dexclient-controller"
 		Expect(secrets).To(HaveLen(1))
 		Expect(verbsOf(secrets[0])).To(ConsistOf("get", "list", "watch", "create", "update", "delete"))
 		Expect(rulesFor(dexClusterRole.Field("rules").Result, "dexclients")).To(HaveLen(1))
+		providers := rulesFor(dexClusterRole.Field("rules").Result, "tokenexchangeproviders")
+		Expect(providers).To(HaveLen(1))
+		Expect(verbsOf(providers[0])).To(ConsistOf("get", "list", "watch"))
 		Expect(hec.KubernetesGlobalResource("ClusterRoleBinding", "d8:user-authn:dexclient-controller").Field("subjects.0.name").String()).To(Equal("dexclient-controller"))
 
 		dexRole := hec.KubernetesResource("Role", "d8-user-authn", "dexclient-controller")

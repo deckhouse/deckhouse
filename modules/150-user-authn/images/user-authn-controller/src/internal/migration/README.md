@@ -72,10 +72,10 @@ see [`internal/adoption`](../adoption/README.md).
   `dexclient.deckhouse.io/allow-access-to-kubernetes: "true"` and is not being deleted, `false` otherwise. Such
   a client is a trusted peer of the `kubernetes` client and could exchange a token of the provider's issuer for
   one the Kubernetes API accepts, so a cluster that may be doing it keeps it; one that cannot loses nothing.
-  DexClient has no `allowedConnectors`, so an annotated client may use every provider. Other types are not
-  touched: their connectors do not exchange tokens. Then the ConfigMap
-  `d8-user-authn/dexprovider-token-exchange-migration`, which lists the providers turned on and off and the
-  annotated clients.
+  A DexClient without `allowedProviders` may use every provider, and the migration does not narrow them down
+  by `allowedProviders`, so one annotated client keeps every provider on. Other types are not touched: their
+  connectors do not exchange tokens. Then the ConfigMap `d8-user-authn/dexprovider-token-exchange-migration`,
+  which lists the providers turned on and off and the annotated clients.
 - **Not counted:** the other trusted peers of the `kubernetes` client. A DexAuthenticator with
   `dexauthenticator.deckhouse.io/allow-access-to-kubernetes: "true"` is one, and patch 425 does not refuse it,
   but its oauth2-proxy never exchanges tokens: only someone who took its client secret from the Secret in the
