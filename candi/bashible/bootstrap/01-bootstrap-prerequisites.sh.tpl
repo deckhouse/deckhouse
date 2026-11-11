@@ -41,15 +41,15 @@ bb-minget-install
   installer reports a failure to someone who can act on it.
 */}}
 bb-rpp-get-install{{ if ne .runType "ClusterBootstrap" }} 0{{ end }}
-{{ with .images.registrypackages }}
-/opt/deckhouse/bin/rpp-get install "jq:{{ .jq }}" "curl:{{ .d8Curl }}" "tailLog:{{ .tailLog }}"
-export PATH="/opt/deckhouse/bin:/usr/local/bin:$PATH"
-{{- end }}
 {{- if and (ne .nodeGroup.nodeType "Static") ( .nodeGroup.cloudProviderType )}}
   {{- if $bootstrap_script_network := $.Files.Get (printf "deckhouse/candi/cloud-providers/%s/bashible/bootstrap-networks.sh.tpl" .nodeGroup.cloudProviderType) | default ($.Files.Get (printf "candi/cloud-providers/%s/bashible/bootstrap-networks.sh.tpl" .nodeGroup.cloudProviderType) ) }}
     {{- $bootstrap_script_network = regexReplaceAll "^#!/bin/bash\n" $bootstrap_script_network "" }}
     {{- tpl ($bootstrap_script_network) $ | nindent 0 }}
   {{- end }}
+{{- end }}
+{{ with .images.registrypackages }}
+/opt/deckhouse/bin/rpp-get install "jq:{{ .jq }}" "curl:{{ .d8Curl }}" "tailLog:{{ .tailLog }}"
+export PATH="/opt/deckhouse/bin:/usr/local/bin:$PATH"
 {{- end }}
 mkdir -p /var/lib/bashible
 bb-discover-node-name
