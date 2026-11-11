@@ -1,5 +1,5 @@
-{{- $version := "v0.1.17" }}
-{{- $kernelVersion := "v6.12.109-lvc30-1-signed" }}
+{{- $version := "v0.1.19" }}
+{{- $kernelVersion := "v6.12.109-lvc30-5-signed" }}
 {{- /*
   The engine release tags carry io.deckhouse.engine.rootfs.roothash. It survives
   inheritance - removeLabels in werf.yaml names what it strips rather than taking
