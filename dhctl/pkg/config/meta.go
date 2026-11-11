@@ -424,22 +424,14 @@ type cloudProviderModuleSettings struct {
 //
 // Users can supply multiple ModuleConfigs with the same name (e.g. a base v1
 // "enabled: true" entry plus a v2 overlay with the actual settings). We pick
-// the *last* entry that carries non-empty Spec.Settings so that overlays win.
+// the *last* entry that carries non-empty Spec.Settings so that overlays win;
+// if none of them carry settings, we fall back to the last *enabled* matching
+// entry (e.g. a plain "enabled: true" MC) so the external validator still sees
+// that the MC is present rather than treating it as absent. A later disabled
+// duplicate must not shadow it.
 // Nothing is applied unless one of them is enabled.
 func (m *MetaConfig) applyCloudProviderModuleSettings() error {
-	if !m.HasProviderModuleConfig() {
-		return nil
-	}
-	name := CloudProviderModuleName(m.ProviderName)
-	var picked *ModuleConfig
-	for _, mc := range m.ModuleConfigs {
-		if mc.GetName() == name && len(mc.Spec.Settings) > 0 {
-			picked = mc
-		}
-	}
-	if picked == nil && m.externalProviderModuleConfig != nil && len(m.externalProviderModuleConfig.Spec.Settings) > 0 {
-		picked = m.externalProviderModuleConfig
-	}
+	picked := m.findProviderModuleConfigForSettings()
 	if picked == nil {
 		return nil
 	}
@@ -447,6 +439,13 @@ func (m *MetaConfig) applyCloudProviderModuleSettings() error {
 	mcMap, err := moduleConfigToMap(picked)
 	if err != nil {
 		return err
+	}
+	// External validators decode settings into a pointer (S is *<provider>settings.ModuleConfigSettings);
+	// an explicit empty object keeps it non-nil instead of an absent key decoding to a nil pointer.
+	if spec, ok := mcMap["spec"].(map[string]interface{}); ok {
+		if _, hasSettings := spec["settings"]; !hasSettings {
+			spec["settings"] = map[string]interface{}{}
+		}
 	}
 	if m.CloudProviderVars == nil {
 		m.CloudProviderVars = &CloudProviderVars{}
@@ -461,6 +460,58 @@ func (m *MetaConfig) applyCloudProviderModuleSettings() error {
 		}
 	}
 	return nil
+}
+
+func (m *MetaConfig) findProviderModuleConfigForSettings() *ModuleConfig {
+	if m == nil || m.ProviderName == "" {
+		return nil
+	}
+
+	name := CloudProviderModuleName(m.ProviderName)
+	var picked, lastEnabled *ModuleConfig
+	var lastSource string
+	var lastEnabledValue *bool
+
+	remember := func(mc *ModuleConfig) {
+		if mc == nil || mc.GetName() != name {
+			return
+		}
+		if mc.Spec.Enabled != nil && !*mc.Spec.Enabled {
+			return
+		}
+		if mc.Spec.Source != "" {
+			lastSource = mc.Spec.Source
+		}
+		if moduleConfigEnabled(mc) {
+			lastEnabled = mc
+			lastEnabledValue = mc.Spec.Enabled
+		}
+		if len(mc.Spec.Settings) > 0 {
+			picked = mc
+		}
+	}
+
+	for _, mc := range m.ModuleConfigs {
+		remember(mc)
+	}
+	remember(m.externalProviderModuleConfig)
+
+	if lastEnabled == nil {
+		return nil
+	}
+	if picked == nil {
+		picked = lastEnabled
+	}
+
+	copy := *picked
+	copy.Spec = picked.Spec
+	if copy.Spec.Source == "" {
+		copy.Spec.Source = lastSource
+	}
+	if copy.Spec.Enabled == nil {
+		copy.Spec.Enabled = lastEnabledValue
+	}
+	return &copy
 }
 
 func moduleConfigToMap(mc *ModuleConfig) (map[string]interface{}, error) {
@@ -703,12 +754,19 @@ func (m *MetaConfig) HasClusterConfiguration() bool {
 }
 
 // findProviderModuleConfig returns the enabled cloud-provider-<name>
-// ModuleConfig, or nil. Used to detect whether the cluster is on the new
-// mc-flow provider format.
+// ModuleConfig that marks the new mc-flow provider format, or nil. A cluster that
+// carries ProviderClusterConfiguration stays on the legacy flow whatever
+// ModuleConfig comes with it: that ModuleConfig only enables the module and is
+// handed to the validator through CloudProviderVars.Settings.
 func (m *MetaConfig) findProviderModuleConfig() *ModuleConfig {
-	if m == nil || m.ProviderName == "" {
+	if m == nil || m.ProviderName == "" || m.HasLegacyProviderConfig() {
 		return nil
 	}
+
+	return m.findEnabledProviderModuleConfig()
+}
+
+func (m *MetaConfig) findEnabledProviderModuleConfig() *ModuleConfig {
 	name := CloudProviderModuleName(m.ProviderName)
 	for _, mc := range m.ModuleConfigs {
 		if mc.GetName() == name && moduleConfigEnabled(mc) {
@@ -721,21 +779,38 @@ func (m *MetaConfig) findProviderModuleConfig() *ModuleConfig {
 	return nil
 }
 
+func (m *MetaConfig) hasProviderModuleNodeSettings() bool {
+	name := CloudProviderModuleName(m.ProviderName)
+	for _, mc := range m.ModuleConfigs {
+		if mc.GetName() == name && moduleConfigEnabled(mc) && moduleConfigHasNodeSettings(mc) {
+			return true
+		}
+	}
+	return m.externalProviderModuleConfig != nil &&
+		moduleConfigEnabled(m.externalProviderModuleConfig) &&
+		moduleConfigHasNodeSettings(m.externalProviderModuleConfig)
+}
+
 // HasProviderModuleConfig reports whether the cluster carries an enabled
 // cloud-provider-<name> ModuleConfig (the new mc-flow provider format).
 func (m *MetaConfig) HasProviderModuleConfig() bool {
 	return m.findProviderModuleConfig() != nil
 }
 
+// HasEnabledProviderModuleConfig reports whether the cluster carries an enabled
+// cloud-provider-<name> ModuleConfig at all, whichever flow the cluster is on.
+func (m *MetaConfig) HasEnabledProviderModuleConfig() bool {
+	return m != nil && m.ProviderName != "" && m.findEnabledProviderModuleConfig() != nil
+}
+
 // HasProviderNodeSettings reports whether the enabled cloud-provider-<name> ModuleConfig carries the
 // node settings of the new provider model (settings.nodes.parameters). A ModuleConfig that only
 // switches the module on, as a legacy cluster has, does not.
 func (m *MetaConfig) HasProviderNodeSettings() bool {
-	mc := m.findProviderModuleConfig()
-	if mc == nil {
-		return false
-	}
+	return m != nil && m.ProviderName != "" && m.hasProviderModuleNodeSettings()
+}
 
+func moduleConfigHasNodeSettings(mc *ModuleConfig) bool {
 	parameters, found, err := unstructured.NestedFieldNoCopy(map[string]any(mc.Spec.Settings), "nodes", "parameters")
 	if err != nil || !found {
 		return false

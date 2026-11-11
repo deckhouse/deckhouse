@@ -200,6 +200,20 @@ func TestValidateProvisionedStorageClassesWithoutModuleConfig(t *testing.T) {
 	}
 }
 
+func TestValidateProvisionedStorageClassesWithNilSettings(t *testing.T) {
+	t.Parallel()
+
+	state := provisionedStorageClassesState(
+		ycsettingsv2.ProvisionedStorageClass{Name: "sc-a", Type: "network-ssd"},
+		ycsettingsv2.ProvisionedStorageClass{Name: "sc-a", Type: "network-ssd"},
+	)
+	state.ModuleConfig.Spec.Settings = nil
+
+	if result := ValidateProvisionedStorageClasses(state); result.HasErrors() {
+		t.Fatalf("ValidateProvisionedStorageClasses() = %q, want no errors", result.Error())
+	}
+}
+
 func TestValidateProvisionedStorageClassesNilState(t *testing.T) {
 	t.Parallel()
 
@@ -255,6 +269,17 @@ func TestValidateNodeGroupExternalIPAddressesWithoutModuleConfig(t *testing.T) {
 
 	state := externalIPState("master", 3, map[string][]string{"master": {"1.1.1.1"}})
 	state.ModuleConfig = nil
+
+	if result := ValidateNodeGroupExternalIPAddresses(state); result.HasErrors() {
+		t.Fatalf("ValidateNodeGroupExternalIPAddresses() = %q, want no errors", result.Error())
+	}
+}
+
+func TestValidateNodeGroupExternalIPAddressesWithNilSettings(t *testing.T) {
+	t.Parallel()
+
+	state := externalIPState("master", 3, map[string][]string{"master": {"1.1.1.1"}})
+	state.ModuleConfig.Spec.Settings = nil
 
 	if result := ValidateNodeGroupExternalIPAddresses(state); result.HasErrors() {
 		t.Fatalf("ValidateNodeGroupExternalIPAddresses() = %q, want no errors", result.Error())
@@ -369,6 +394,17 @@ func TestValidateWithNATInstanceLayoutWithoutModuleConfig(t *testing.T) {
 
 	state := natInstanceLayoutState(LayoutWithNATInstance, ycsettingsv2.NATInstanceParameters{})
 	state.ModuleConfig = nil
+
+	if result := ValidateWithNATInstanceLayout(state); result.HasErrors() {
+		t.Fatalf("ValidateWithNATInstanceLayout() = %q, want no errors", result.Error())
+	}
+}
+
+func TestValidateWithNATInstanceLayoutWithNilSettings(t *testing.T) {
+	t.Parallel()
+
+	state := natInstanceLayoutState(LayoutWithNATInstance, ycsettingsv2.NATInstanceParameters{})
+	state.ModuleConfig.Spec.Settings = nil
 
 	if result := ValidateWithNATInstanceLayout(state); result.HasErrors() {
 		t.Fatalf("ValidateWithNATInstanceLayout() = %q, want no errors", result.Error())

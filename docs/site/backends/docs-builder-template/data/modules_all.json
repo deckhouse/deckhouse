@@ -74,6 +74,28 @@
       "ssdlc"
     ]
   },
+  "cloud-provider-dvp": {
+    "editions": [
+      "ce",
+      "core",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "extensions": [
+      "on_prem_iaas"
+    ],
+    "external": "true",
+    "path": "/modules/cloud-provider-dvp/",
+    "tags": [
+      "virtualization",
+      "cloud",
+      "ssdlc"
+    ]
+  },
   "code": {
     "editions": [
       "ee",

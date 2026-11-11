@@ -86,8 +86,7 @@ properties:
     properties:
       parameters:
         additionalProperties: false
-        description: Contains settings to connect to the Deckhouse Kubernetes Platform
-          API.
+        description: Contains settings to connect to the Deckhouse Platform API.
         properties:
           namespace:
             description: |-

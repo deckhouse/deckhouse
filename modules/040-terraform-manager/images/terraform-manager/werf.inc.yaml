@@ -1,0 +1,14 @@
+# Shared image for external cloud providers (currently dvp and yandex).
+# Their candi, terraform plugin and validator ship in the provider's
+# terraform-manager OCI bundle, which dhctl downloads at runtime (see
+# DHCTL_IMAGES_DIGESTS_FILE in the terraform-manager templates), so nothing
+# provider-specific is baked here. templates/_helpers.tpl falls back to this
+# image when no terraformManager<Provider> image exists.
+#
+# The base is pinned to the opentofu variant: external providers carry no
+# candi/terraform_versions.yml entry to look useOpentofu up in, and every
+# external provider runs on opentofu.
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: terraform-manager/base-terraform-manager-opentofu
+
+{{ include "image_spec_for_infrastructure_manager" . }}

@@ -30,11 +30,6 @@
     "cloud",
     "ssdlc"
   ],
-  "cloud-provider-dvp": [
-    "virtualization",
-    "cloud",
-    "ssdlc"
-  ],
   "cloud-provider-dynamix": [
     "bare metal",
     "cloud",

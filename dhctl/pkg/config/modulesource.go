@@ -21,6 +21,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -185,10 +186,14 @@ func (md *ModuleDocs) readModuleConfig(doc string, obj *unstructured.Unstructure
 		return fmt.Errorf("unmarshal ModuleConfig %q: %w", obj.GetName(), err)
 	}
 
-	// A base "enabled: true" entry plus a settings overlay is a legal shape, and only one of
-	// them names the source, so last-wins would drop it.
-	if prev := md.ProviderConfigs[obj.GetName()]; prev != nil && prev.Spec.Source != "" && mc.Spec.Source == "" {
-		mc.Spec.Source = prev.Spec.Source
+	// A base provider ModuleConfig plus a settings overlay is legal, so keep fields omitted by the overlay.
+	if prev := md.ProviderConfigs[obj.GetName()]; prev != nil {
+		if prev.Spec.Source != "" && mc.Spec.Source == "" {
+			mc.Spec.Source = prev.Spec.Source
+		}
+		if prev.Spec.Enabled != nil && *prev.Spec.Enabled && mc.Spec.Enabled == nil {
+			mc.Spec.Enabled = prev.Spec.Enabled
+		}
 	}
 
 	md.ProviderConfigs[obj.GetName()] = mc
@@ -330,6 +335,13 @@ func resolveModuleProviderBundle(ctx context.Context, provider string, lookup pr
 	moduleName := CloudProviderModuleName(provider)
 
 	sourceName := md.providerSource(moduleName)
+	if sourceName == "" {
+		sourceName, err = md.discoverModuleSource(ctx, moduleName)
+		if err != nil {
+			return providerBundleRef{}, err
+		}
+	}
+
 	catalogRepo, conf, err := md.moduleRepo(moduleName, sourceName)
 	if err != nil {
 		return providerBundleRef{}, err
@@ -345,7 +357,7 @@ func resolveModuleProviderBundle(ctx context.Context, provider string, lookup pr
 
 	svc := moduleCatalog(conf, catalogRepo).Module(moduleName)
 
-	moduleTag, err := md.moduleTag(ctx, svc, moduleName, moduleRepo, provider)
+	moduleTag, err := md.moduleTag(ctx, svc, moduleName, moduleRepo, provider, sourceName)
 	if err != nil {
 		return providerBundleRef{}, err
 	}
@@ -448,7 +460,7 @@ func recordBundleDigest(dir, digest string) error {
 // Which image of the module to read. The controller pulls exactly <repo>/<module>:<imageTag> for
 // an override: no release image, no version.json, no "v" prefix. Without one the release channel
 // names a release image, and its version.json names the module image.
-func (md *ModuleDocs) moduleTag(ctx context.Context, svc *module.Service, moduleName, moduleRepo, provider string) (string, error) {
+func (md *ModuleDocs) moduleTag(ctx context.Context, svc *module.Service, moduleName, moduleRepo, provider, sourceName string) (string, error) {
 	if tag := md.ImageTags[moduleName]; tag != "" {
 		return tag, nil
 	}
@@ -457,7 +469,7 @@ func (md *ModuleDocs) moduleTag(ctx context.Context, svc *module.Service, module
 
 	rel, err := svc.Releases().Fetch(ctx, channel)
 	if err != nil {
-		return "", fmt.Errorf("resolve %s/release:%s: %w%s", moduleRepo, channel, err, repoHint(err, provider, md.providerSource(moduleName)))
+		return "", fmt.Errorf("resolve %s/release:%s: %w%s", moduleRepo, channel, err, repoHint(err, provider, sourceName))
 	}
 
 	version, err := rel.Version()
@@ -500,6 +512,159 @@ func (md *ModuleDocs) moduleRepo(moduleName, sourceName string) (string, *image.
 		return "", nil, err
 	}
 	return path.Join(conf.GetRegistry(), modulesRepoSuffix), conf, nil
+}
+
+// moduleSourceCandidate is a repository the module may be published in. An empty name is the default
+// repository: the deckhouse ModuleSource helm creates in every cluster, which config.yml cannot carry.
+type moduleSourceCandidate struct {
+	name string
+	repo string
+	conf *image.RegistryConfig
+	err  error
+}
+
+// sourceCandidates lists the ModuleSources of the configuration plus the default repository, unless
+// a ModuleSource of the configuration already stands for it under its name.
+func (md *ModuleDocs) sourceCandidates() []moduleSourceCandidate {
+	candidates := make([]moduleSourceCandidate, 0, len(md.Sources)+1)
+
+	for _, s := range md.Sources {
+		c := moduleSourceCandidate{name: s.GetName(), repo: s.Spec.Registry.Repo}
+		c.conf, c.err = s.RegistryConfig()
+		candidates = append(candidates, c)
+	}
+
+	if md.source(defaultModuleSourceName) == nil {
+		c := moduleSourceCandidate{repo: modulesRepoSuffix}
+		conf, err := buildRegistryConfig(md.docs)
+		if err != nil {
+			c.err = err
+		} else {
+			c.conf = conf
+			c.repo = path.Join(conf.GetRegistry(), modulesRepoSuffix)
+		}
+		candidates = append(candidates, c)
+	}
+
+	return candidates
+}
+
+// sourceHasModuleImage tells whether the source serves the image the chain reads next: the module
+// image at the ModulePullOverride's tag, or else the release image of the channel. A tag in the
+// catalog is not enough. The controller makes a source the module's own only when it downloads the
+// module's metadata from the release channel, so a repository that keeps nothing but dev builds
+// (mr-tagged module images, no release channels) lists the module and never serves it.
+func (md *ModuleDocs) sourceHasModuleImage(ctx context.Context, svc *module.Service, moduleName string) (bool, error) {
+	var err error
+
+	if tag := md.ImageTags[moduleName]; tag != "" {
+		_, err = svc.GetDigest(ctx, tag)
+	} else {
+		_, err = svc.Releases().Fetch(ctx, md.releaseChannelTag())
+	}
+
+	if errors.Is(err, registry.ErrImageNotFound) {
+		return false, nil
+	}
+
+	return err == nil, err
+}
+
+// discoverModuleSource picks the repository of a module whose ModuleConfig names no source. It
+// repeats what the controller does once the cluster is up: every ModuleSource is asked which modules
+// it publishes, and a module that exactly one source actually serves is taken from it (module-config
+// controller, processModule; source controller, releaseEnsureAllowed). Several sources are a
+// Conflict there and an error here, not a pick.
+//
+// An empty answer means the default repository. A configuration without ModuleSources has no one to
+// ask, so it keeps that answer without a registry request.
+func (md *ModuleDocs) discoverModuleSource(ctx context.Context, moduleName string) (string, error) {
+	if len(md.Sources) == 0 {
+		return "", nil
+	}
+
+	var (
+		offered []moduleSourceCandidate
+		failed  []error
+	)
+
+	// One by one: the sources are few, and each request is bounded by registryRequestTimeout.
+	for _, c := range md.sourceCandidates() {
+		label := c.name
+		if label == "" {
+			label = defaultModuleSourceName
+		}
+
+		if c.err != nil {
+			failed = append(failed, fmt.Errorf("ModuleSource %q: %w", label, c.err))
+			continue
+		}
+
+		catalog := moduleCatalog(c.conf, c.repo)
+
+		names, err := catalog.List(ctx)
+		if err != nil {
+			failed = append(failed, fmt.Errorf("list modules of ModuleSource %q (%s): %w", label, c.repo, err))
+			continue
+		}
+
+		if !slices.Contains(names, moduleName) {
+			continue
+		}
+
+		ok, err := md.sourceHasModuleImage(ctx, catalog.Module(moduleName), moduleName)
+		if err != nil {
+			failed = append(failed, fmt.Errorf("read module %q of ModuleSource %q (%s): %w", moduleName, label, c.repo, err))
+			continue
+		}
+
+		if ok {
+			offered = append(offered, c)
+		}
+	}
+
+	logger := dhlog.FromContext(ctx)
+
+	switch {
+	case len(offered) > 1:
+		labels := make([]string, 0, len(offered))
+		for _, c := range offered {
+			if c.name == "" {
+				labels = append(labels, defaultModuleSourceName)
+				continue
+			}
+			labels = append(labels, c.name)
+		}
+
+		return "", fmt.Errorf("module %q is published by several ModuleSources (%s), set spec.source in its ModuleConfig to choose one", moduleName, strings.Join(labels, ", "))
+
+	case len(offered) == 1:
+		for _, err := range failed {
+			// The one that did not answer may publish the module too, which the controller would call a conflict.
+			logger.WarnContext(ctx, fmt.Sprintf("Module %s source lookup: %v", moduleName, err))
+		}
+
+		logger.InfoContext(ctx, fmt.Sprintf("Module %s is published by ModuleSource %q only, using it", moduleName, firstNonEmpty(offered[0].name, defaultModuleSourceName)))
+
+		return offered[0].name, nil
+
+	case len(failed) > 0:
+		return "", fmt.Errorf("find out which ModuleSource publishes module %q: %w", moduleName, errors.Join(failed...))
+
+	default:
+		return "", fmt.Errorf("module %q is published by none of the ModuleSources in the configuration nor by the default module repository, "+
+			"add the ModuleSource that publishes it or set spec.source in its ModuleConfig", moduleName)
+	}
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if v != "" {
+			return v
+		}
+	}
+
+	return ""
 }
 
 // The module image tag the controller builds from a release version: "v" plus the version. Not

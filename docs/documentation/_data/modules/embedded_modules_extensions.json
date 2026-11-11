@@ -9,11 +9,6 @@
       "cluster_union"
     ]
   },
-  "cloud-provider-dvp": {
-    "extensions": [
-      "on_prem_iaas"
-    ]
-  },
   "cloud-provider-dynamix": {
     "extensions": [
       "on_prem_iaas"

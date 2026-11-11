@@ -155,7 +155,6 @@
     "chrony" "cluster"
     "cloud-provider-aws" "cluster"
     "cloud-provider-azure" "cluster"
-    "cloud-provider-dvp" "cluster"
     "cloud-provider-dynamix" "cluster"
     "cloud-provider-gcp" "cluster"
     "cloud-provider-huaweicloud" "cluster"

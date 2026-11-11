@@ -115,8 +115,8 @@ var _ = BeforeSuite(func() {
 			testenv.WithNodeManager(testenv.NodeBootstrapConfigTemplateCRDFile)),
 		filepath.Join(testdataDir(), "dvpinstanceclass-crd.yaml"),
 		filepath.Join(testdataDir(), "deckhousemachinetemplate-crd.yaml"),
+		filepath.Join(testdataDir(), "deckhousecluster-crd.yaml"),
 	)
-	crdPaths = append(crdPaths, testenv.ModuleCRDPaths("030-cloud-provider-dvp/crds/external/deckhouseclusters.yaml")...)
 	testEnv, cfg, k8sClient, err = testenv.Start(
 		scheme,
 		crdPaths...,

@@ -177,8 +177,8 @@ func (r *Status) applyConsumersForKind(ctx context.Context, gvk schema.GroupVers
 
 		// An accepted write that does not come back in the response is a kind that is not
 		// keeping the field: it is put on cooldown and retried later, in case its CRD schema
-		// gains the field. The DVP CRD schema declares no status at all:
-		// modules/030-cloud-provider-dvp/crds/instance_class.yaml.
+		// gains the field. The DVPInstanceClass CRD shipped by the external cloud-provider-dvp
+		// module declares no status at all.
 		stored, _, err := unstructured.NestedStringSlice(item.Object, "status", "nodeGroupConsumers")
 		if err != nil || !slices.Equal(stored, desired) {
 			r.markConsumersUnstorable(ctx, gvk)
@@ -196,7 +196,7 @@ func (r *Status) markConsumersUnstorable(ctx context.Context, gvk schema.GroupVe
 	log.FromContext(ctx).Info("instance class kind does not keep status.nodeGroupConsumers, skipping it until the cooldown expires: "+
 		"its classes publish no consumers and the deletion webhook denies nothing "+
 		"(internal/webhook/instanceclass_webhook.go denies on len(oldObject.Status.NodeGroupConsumers) > 0); "+
-		"the CRD schema has to declare the field, as in modules/030-cloud-provider-dvp/crds/instance_class.yaml it does not",
+		"the CRD schema has to declare the field",
 		"gvk", gvk.String(), "cooldown", statusResyncInterval.String())
 }
 

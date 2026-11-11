@@ -59,6 +59,20 @@
     "external": "true",
     "path": "/modules/ansible/"
   },
+  "cloud-provider-dvp": {
+    "editions": [
+      "ce",
+      "core",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/modules/cloud-provider-dvp/"
+  },
   "cloud-provider-vsphere": {
     "editionFullyAvailable": [
       "se-plus",

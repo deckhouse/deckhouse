@@ -18,9 +18,9 @@ import (
 	"strings"
 	"testing"
 
-	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 
+	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	"github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/internal/testprovider"
 )
 
@@ -156,6 +156,7 @@ func TestStateBuilderBuildWithCompleteResources(t *testing.T) {
 				"provider": map[string]any{
 					"parameters": map[string]any{"namespace": cfg.NamespaceName},
 				},
+				"nodes": map[string]any{"disabled": true},
 			}),
 			Secrets: map[string]map[string]any{
 				cpapi.CredentialSecretName: {

@@ -74,7 +74,6 @@ editions:
   - cert-manager
   - chrony
   - cilium-hubble
-  - cloud-provider-dvp
   - cni-cilium
   - common
   - control-plane-manager

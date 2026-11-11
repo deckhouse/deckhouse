@@ -51,7 +51,9 @@ func IsNewResourcesComplete[
 	if state.ModuleConfig == nil ||
 		state.ModuleConfig.Spec.Version < 2 ||
 		!isModuleConfigEnabled(state.ModuleConfig) ||
-		!state.ModuleConfig.Spec.Settings.HasProviderSection() {
+		!state.ModuleConfig.Spec.Settings.HasProviderSection() ||
+		// The runtime hook treats migration as complete only when both provider and nodes are set.
+		!state.ModuleConfig.Spec.Settings.HasNodesSection() {
 		return false
 	}
 

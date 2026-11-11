@@ -86,3 +86,37 @@ var _ = Describe("Module :: terraform-manager :: helm template :: in-cluster dhc
 		}
 	})
 })
+
+var _ = Describe("Module :: terraform-manager :: helm template :: provider images", func() {
+	f := SetupHelmConfig(`{"terraformManager":{"autoConvergerEnabled":true,"autoConvergerPeriod":"1h","internal":{}}}`)
+
+	// In-tree providers (aws) render their own terraformManager<Provider> image; external
+	// providers (dvp, yandex) ship no per-provider image and must fall back to the shared
+	// terraformManager one.
+	assertManagerImage := func(provider, expectedImageKey string) {
+		f.ValuesSetFromYaml("global", globalValues)
+		f.ValuesSet("global.clusterConfiguration.cloud.provider", provider)
+		f.ValuesSet("global.modulesImages", GetModulesImages())
+		f.HelmRender()
+
+		Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+		expected := "registry.example.com@" + f.ValuesGet("global.modulesImages.digests.terraformManager."+expectedImageKey).String()
+		for _, name := range []string{"terraform-auto-converger", "terraform-state-exporter"} {
+			deployment := f.KubernetesResource("Deployment", "d8-system", name)
+			Expect(deployment.Exists()).To(BeTrue(), name)
+
+			containers := deployment.Field("spec.template.spec.containers").Array()
+			Expect(containers).NotTo(BeEmpty(), name)
+			Expect(containers[0].Get("image").String()).To(Equal(expected), name)
+		}
+	}
+
+	It("renders the per-provider image for an in-tree provider", func() {
+		assertManagerImage("AWS", "terraformManagerAws")
+	})
+
+	It("falls back to the shared image for an external provider", func() {
+		assertManagerImage("DVP", "terraformManager")
+	})
+})

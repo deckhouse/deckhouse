@@ -145,13 +145,13 @@ func TestProviderSettingsLoadedAndStoreInCache(t *testing.T) {
 }
 
 // An external provider ships its settings inside its OCI bundle, not in the
-// candi image. The fixture is the artifact werf actually packs (see
-// modules/030-cloud-provider-dvp/images/terraform-manager/werf.inc.yaml), not a
-// hand-written copy: the real file carries no `terraform:` key, and a fixture
-// that invents one hides that the loader rejects it.
-func TestBundleSettingsForDVPComeFromModuleFiles(t *testing.T) {
+// candi image. The fixture mirrors the shape DVP's bundle actually shipped
+// before it moved out of this repository (see testdata/dvp-bundle): the real
+// file carries no `terraform:` key, and a fixture that invents one hides that
+// the loader rejects it.
+func TestBundleSettingsForDVPComeFromBundle(t *testing.T) {
 	downloadDir := t.TempDir()
-	bundleDir := installProviderBundle(t, downloadDir, "dvp@sha256:current", "030-cloud-provider-dvp")
+	bundleDir := installDVPBundle(t, downloadDir, "dvp@sha256:current")
 
 	store, err := loadOrGetStore(t.Context(), writeCandiVersions(t), bundleDir)
 	require.NoError(t, err)
@@ -182,7 +182,7 @@ func TestBundleDeliveredAfterFirstBuildIsPickedUp(t *testing.T) {
 	require.NoError(t, err)
 	require.NotContains(t, before, "dvp", "bundle not delivered yet")
 
-	bundleDir := installProviderBundle(t, downloadDir, "dvp@sha256:current", "030-cloud-provider-dvp")
+	bundleDir := installDVPBundle(t, downloadDir, "dvp@sha256:current")
 
 	after, err := loadOrGetStore(t.Context(), candiFile, bundleDir)
 	require.NoError(t, err)
@@ -234,6 +234,27 @@ func installProviderBundle(t *testing.T, downloadDir, dirName, moduleDir string)
 
 	for _, name := range []string{versionFile, planRulesFilename} {
 		data, err := os.ReadFile(filepath.Join(moduleCandi, name))
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(tm, name), data, 0o644))
+	}
+
+	return bundleDir
+}
+
+// installDVPBundle lays out an unpacked bundle from the fixture in
+// testdata/dvp-bundle, shaped like the real bundle DVP shipped before it moved
+// out of this repository, so the test breaks whenever that shape stops loading.
+// It returns the bundle directory.
+func installDVPBundle(t *testing.T, downloadDir, dirName string) string {
+	t.Helper()
+
+	fixtureDir := filepath.Join("testdata", "dvp-bundle")
+	bundleDir := filepath.Join(downloadDir, dirName)
+	tm := filepath.Join(bundleDir, "terraform-manager")
+	require.NoError(t, os.MkdirAll(tm, 0o755))
+
+	for _, name := range []string{versionFile, planRulesFilename} {
+		data, err := os.ReadFile(filepath.Join(fixtureDir, name))
 		require.NoError(t, err)
 		require.NoError(t, os.WriteFile(filepath.Join(tm, name), data, 0o644))
 	}

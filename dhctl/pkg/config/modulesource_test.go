@@ -1085,6 +1085,7 @@ spec:
 `})
 	require.NoError(t, err)
 	require.Equal(t, "dev", md.providerSource("cloud-provider-dvp"))
+	require.True(t, moduleConfigEnabled(md.ProviderConfigs["cloud-provider-dvp"]))
 	require.NotEmpty(t, md.ProviderConfigs["cloud-provider-dvp"].Spec.Settings, "the settings overlay must still win")
 }
 
@@ -1504,4 +1505,260 @@ func TestAProviderFromASourceIsReadInTheClusterTheWayTheModuleSays(t *testing.T)
 		require.Equal(t, "registry-ro", conf.GetUsername())
 		require.Contains(t, conf.GetCA(), "fake-registry-storage-ca")
 	})
+}
+
+const (
+	testDefaultCatalog = "r.example.com/test/modules"
+	testEECatalog      = "r.example.com/ee/modules"
+	testDevCatalog     = "r.example.com/dev/modules"
+)
+
+const testBareProviderMCDoc = `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-dvp
+spec:
+  enabled: true
+  version: 1
+`
+
+func testNamedModuleSourceDoc(t *testing.T, name, repo, dockerCfg string) string {
+	t.Helper()
+
+	if dockerCfg == "" {
+		dockerCfg = testDockerCfg(t, repo)
+	}
+
+	return `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  name: ` + name + `
+spec:
+  registry:
+    repo: ` + repo + `
+    dockerCfg: ` + dockerCfg + `
+`
+}
+
+// publishTestModule makes the catalog list the module and serves the chain a bare ModuleConfig
+// walks: the stable release image and the module image it names.
+func publishTestModule(t *testing.T, stand *moduleStand, catalog string) {
+	t.Helper()
+
+	moduleRepo := catalog + "/cloud-provider-dvp"
+
+	stand.
+		addImage(t, catalog, "cloud-provider-dvp", map[string]string{"module.yaml": "name: cloud-provider-dvp\n"}).
+		addImage(t, moduleRepo+"/release", "stable", map[string]string{"version.json": `{"version": "1.0.0"}`}).
+		addImage(t, moduleRepo, "v1.0.0", map[string]string{"images_digests.json": `{"terraformManager": "` + testBundleDigest + `"}`})
+}
+
+// A ModuleConfig without spec.source is resolved the way the controller does it once the cluster is
+// up: the one ModuleSource that publishes the module is the source, wherever it sits relative to the
+// default repository. The default repository is where a bare ModuleConfig used to be sent whatever
+// the ModuleSources said.
+func TestResolveModuleProviderBundleDiscoversTheSourcePublishingTheModule(t *testing.T) {
+	stubEmbeddedDigests(t, `{"cloudProviderDvp": {"terraformManager": "sha256:embedded"}}`)
+
+	stand := newModuleStand(testDefaultCatalog)
+	publishTestModule(t, stand, testEECatalog)
+	// The other two repositories publish something, only not this module.
+	stand.addImage(t, testDefaultCatalog, "cloud-provider-other", map[string]string{"module.yaml": "name: other\n"})
+	stand.addImage(t, testDevCatalog, "cloud-provider-another", map[string]string{"module.yaml": "name: another\n"})
+	stubModuleCatalog(t, stand)
+
+	ref, err := resolveModuleProviderBundle(context.Background(), "dvp", configModuleDocs([]string{
+		ensureRegistryMCDoc,
+		testNamedModuleSourceDoc(t, "dev", testDevCatalog, ""),
+		testNamedModuleSourceDoc(t, "ee", testEECatalog, ""),
+		testBareProviderMCDoc,
+	}), testModuleOptions(t))
+	require.NoError(t, err)
+
+	require.Equal(t, testEECatalog+"/cloud-provider-dvp@"+testBundleDigest, ref.Image)
+	require.Equal(t, testBundleDigest, ref.Digest)
+	require.Equal(t, "user", ref.Registry.GetUsername(), "the credentials are the ModuleSource's, not the deckhouse registry's")
+	require.NotContains(t, stand.tags, testDefaultCatalog+"/cloud-provider-dvp/release", "the default repository must not be read")
+}
+
+// The default repository stands for the deckhouse ModuleSource of the cluster, so a module it
+// publishes is found there while the configuration's own ModuleSources do not carry it.
+func TestResolveModuleProviderBundleDiscoversTheDefaultRepository(t *testing.T) {
+	stubEmbeddedDigests(t, `{"cloudProviderDvp": {"terraformManager": "sha256:embedded"}}`)
+
+	stand := newModuleStand(testDefaultCatalog)
+	publishTestModule(t, stand, testDefaultCatalog)
+	stand.addImage(t, testDevCatalog, "cloud-provider-another", map[string]string{"module.yaml": "name: another\n"})
+	stubModuleCatalog(t, stand)
+
+	ref, err := resolveModuleProviderBundle(context.Background(), "dvp", configModuleDocs([]string{
+		ensureRegistryMCDoc,
+		testNamedModuleSourceDoc(t, "dev", testDevCatalog, ""),
+		testBareProviderMCDoc,
+	}), testModuleOptions(t))
+	require.NoError(t, err)
+
+	require.Equal(t, testDefaultCatalog+"/cloud-provider-dvp@"+testBundleDigest, ref.Image)
+	require.Equal(t, "test-user", ref.Registry.GetUsername())
+}
+
+// Several sources publishing the module is a Conflict for the controller, which keeps the module
+// from starting until the ModuleConfig names one. Picking one here would install a bundle the
+// cluster may then refuse to run.
+func TestResolveModuleProviderBundleSeveralSourcesIsAConflict(t *testing.T) {
+	stand := newModuleStand(testDefaultCatalog)
+	publishTestModule(t, stand, testEECatalog)
+	publishTestModule(t, stand, testDefaultCatalog)
+	stubModuleCatalog(t, stand)
+
+	_, err := resolveModuleProviderBundle(context.Background(), "dvp", configModuleDocs([]string{
+		ensureRegistryMCDoc,
+		testNamedModuleSourceDoc(t, "ee", testEECatalog, ""),
+		testBareProviderMCDoc,
+	}), testModuleOptions(t))
+	require.ErrorContains(t, err, "several ModuleSources (ee, deckhouse)")
+	require.ErrorContains(t, err, "spec.source")
+}
+
+func TestResolveModuleProviderBundleNoSourcePublishesTheModule(t *testing.T) {
+	stand := newModuleStand(testDefaultCatalog)
+	stand.addImage(t, testEECatalog, "cloud-provider-other", map[string]string{"module.yaml": "name: other\n"})
+	stand.addImage(t, testDefaultCatalog, "cloud-provider-other", map[string]string{"module.yaml": "name: other\n"})
+	stubModuleCatalog(t, stand)
+
+	_, err := resolveModuleProviderBundle(context.Background(), "dvp", configModuleDocs([]string{
+		ensureRegistryMCDoc,
+		testNamedModuleSourceDoc(t, "ee", testEECatalog, ""),
+		testBareProviderMCDoc,
+	}), testModuleOptions(t))
+	require.ErrorContains(t, err, "published by none of the ModuleSources")
+}
+
+// A source that cannot be asked is not a reason to stop while another one answers, but it is the
+// reason when nothing answers: the silent one may be the one that publishes the module.
+func TestResolveModuleProviderBundleUnreadableSource(t *testing.T) {
+	const brokenCfg = "not-base64!"
+
+	docs := func(t *testing.T) []string {
+		return []string{
+			ensureRegistryMCDoc,
+			testNamedModuleSourceDoc(t, "broken", testDevCatalog, brokenCfg),
+			testNamedModuleSourceDoc(t, "ee", testEECatalog, ""),
+			testBareProviderMCDoc,
+		}
+	}
+
+	t.Run("another source answers", func(t *testing.T) {
+		stubEmbeddedDigests(t, `{"cloudProviderDvp": {"terraformManager": "sha256:embedded"}}`)
+
+		stand := newModuleStand(testDefaultCatalog)
+		publishTestModule(t, stand, testEECatalog)
+		stubModuleCatalog(t, stand)
+
+		ref, err := resolveModuleProviderBundle(context.Background(), "dvp", configModuleDocs(docs(t)), testModuleOptions(t))
+		require.NoError(t, err)
+		require.Equal(t, testEECatalog+"/cloud-provider-dvp@"+testBundleDigest, ref.Image)
+	})
+
+	t.Run("nothing answers", func(t *testing.T) {
+		stand := newModuleStand(testDefaultCatalog)
+		stand.addImage(t, testEECatalog, "cloud-provider-other", map[string]string{"module.yaml": "name: other\n"})
+		stubModuleCatalog(t, stand)
+
+		_, err := resolveModuleProviderBundle(context.Background(), "dvp", configModuleDocs(docs(t)), testModuleOptions(t))
+		require.ErrorContains(t, err, `ModuleSource "broken"`)
+	})
+}
+
+// A named source needs no asking: spec.source is the operator's decision and outranks discovery,
+// even when another source publishes the same module.
+func TestResolveModuleProviderBundleNamedSourceSkipsDiscovery(t *testing.T) {
+	stubEmbeddedDigests(t, `{"cloudProviderDvp": {"terraformManager": "sha256:embedded"}}`)
+
+	stand := newModuleStand(testDefaultCatalog)
+	publishTestModule(t, stand, testEECatalog)
+	publishTestModule(t, stand, testDevCatalog)
+	stubModuleCatalog(t, stand)
+
+	ref, err := resolveModuleProviderBundle(context.Background(), "dvp", configModuleDocs([]string{
+		ensureRegistryMCDoc,
+		testNamedModuleSourceDoc(t, "dev", testDevCatalog, ""),
+		testNamedModuleSourceDoc(t, "ee", testEECatalog, ""),
+		testBareProviderMCDoc + "  source: ee\n",
+	}), testModuleOptions(t))
+	require.NoError(t, err)
+	require.Equal(t, testEECatalog+"/cloud-provider-dvp@"+testBundleDigest, ref.Image)
+}
+
+// listTestModule makes the catalog list the module without serving any image of it.
+func listTestModule(t *testing.T, stand *moduleStand, catalog string) {
+	t.Helper()
+	stand.addImage(t, catalog, "cloud-provider-dvp", map[string]string{"module.yaml": "name: cloud-provider-dvp\n"})
+}
+
+// The development registry lists the module and keeps nothing but mr-tagged builds of it, the
+// published registry carries the release channels. Both answer the catalog, and the controller
+// still settles on the second: only there can it download the module's metadata from the channel.
+func TestResolveModuleProviderBundleSkipsASourceWithoutTheReleaseChannel(t *testing.T) {
+	stubEmbeddedDigests(t, `{"cloudProviderDvp": {"terraformManager": "sha256:embedded"}}`)
+
+	stand := newModuleStand(testDefaultCatalog)
+	listTestModule(t, stand, testDefaultCatalog)
+	stand.addImage(t, testDefaultCatalog+"/cloud-provider-dvp", "vmr78", map[string]string{"images_digests.json": `{"terraformManager": "sha256:dev"}`})
+	publishTestModule(t, stand, testEECatalog)
+	stubModuleCatalog(t, stand)
+
+	ref, err := resolveModuleProviderBundle(context.Background(), "dvp", configModuleDocs([]string{
+		ensureRegistryMCDoc,
+		testNamedModuleSourceDoc(t, "ee", testEECatalog, ""),
+		testBareProviderMCDoc,
+	}), testModuleOptions(t))
+	require.NoError(t, err)
+	require.Equal(t, testEECatalog+"/cloud-provider-dvp@"+testBundleDigest, ref.Image)
+}
+
+// A ModulePullOverride pins a module image tag instead of a channel, so the source that serves
+// that tag is the one asked, not the one that carries the channel.
+func TestResolveModuleProviderBundlePullOverrideSelectsTheSourceServingTheTag(t *testing.T) {
+	stubEmbeddedDigests(t, `{"cloudProviderDvp": {"terraformManager": "sha256:embedded"}}`)
+
+	stand := newModuleStand(testDefaultCatalog)
+	listTestModule(t, stand, testDefaultCatalog)
+	stand.addImage(t, testDefaultCatalog+"/cloud-provider-dvp", "mr78", map[string]string{"images_digests.json": `{"terraformManager": "` + testBundleDigest + `"}`})
+	publishTestModule(t, stand, testEECatalog)
+	stubModuleCatalog(t, stand)
+
+	ref, err := resolveModuleProviderBundle(context.Background(), "dvp", configModuleDocs([]string{
+		ensureRegistryMCDoc,
+		testNamedModuleSourceDoc(t, "ee", testEECatalog, ""),
+		testBareProviderMCDoc,
+		`
+apiVersion: deckhouse.io/v1alpha2
+kind: ModulePullOverride
+metadata:
+  name: cloud-provider-dvp
+spec:
+  imageTag: mr78
+`,
+	}), testModuleOptions(t))
+	require.NoError(t, err)
+	require.Equal(t, testDefaultCatalog+"/cloud-provider-dvp@"+testBundleDigest, ref.Image)
+	require.Equal(t, "mr78", stand.tags[testDefaultCatalog+"/cloud-provider-dvp"])
+}
+
+// Listed everywhere and served nowhere is the same answer as not listed: there is nothing to read.
+func TestResolveModuleProviderBundleListedButServedNowhere(t *testing.T) {
+	stand := newModuleStand(testDefaultCatalog)
+	listTestModule(t, stand, testDefaultCatalog)
+	listTestModule(t, stand, testEECatalog)
+	stubModuleCatalog(t, stand)
+
+	_, err := resolveModuleProviderBundle(context.Background(), "dvp", configModuleDocs([]string{
+		ensureRegistryMCDoc,
+		testNamedModuleSourceDoc(t, "ee", testEECatalog, ""),
+		testBareProviderMCDoc,
+	}), testModuleOptions(t))
+	require.ErrorContains(t, err, "published by none of the ModuleSources")
 }

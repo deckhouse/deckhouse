@@ -204,8 +204,9 @@ func TestCloudProviderGetReadsTheBundleOfTheMetaConfig(t *testing.T) {
 	bundleDir := filepath.Join(t.TempDir(), "dvp@sha256:aaa")
 	tm := filepath.Join(bundleDir, "terraform-manager")
 	require.NoError(t, os.MkdirAll(tm, 0o755))
+	// DVP moved out of this repository; the fixture keeps the shape of the bundle it shipped.
 	for _, name := range []string{"terraform_versions.yml", "plan_rules.yml"} {
-		data, err := os.ReadFile(filepath.Join("..", "..", "..", "modules", "030-cloud-provider-dvp", "candi", name))
+		data, err := os.ReadFile(filepath.Join("cloud", "fsprovider", "testdata", "dvp-bundle", name))
 		require.NoError(t, err)
 		require.NoError(t, os.WriteFile(filepath.Join(tm, name), data, 0o644))
 	}

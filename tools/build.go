@@ -53,7 +53,6 @@ var cloudProviderNameRegexp = regexp.MustCompile(`cloud-provider-([a-zA-Z0-9]+)`
 // into installer, candi or terraform-manager images. Keep in sync with the
 // external-provider list in .werf/defines/installer.tmpl.
 var externalCloudProviders = map[string]struct{}{
-	"dvp":    {},
 	"yandex": {},
 	"zvirt":  {},
 }
@@ -1019,7 +1018,7 @@ func fileExists(parts ...string) (bool, error) {
 }
 
 func extractCloudProviderName(path string) string {
-	nameMatch := cloudProviderNameRegexp.FindSubmatch([]byte(path))
+	nameMatch := cloudProviderNameRegexp.FindSubmatch([]byte(filepath.Base(path)))
 	if len(nameMatch) == 0 {
 		return ""
 	}

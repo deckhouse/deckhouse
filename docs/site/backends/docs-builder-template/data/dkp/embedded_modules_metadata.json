@@ -399,38 +399,6 @@
         }
       ]
     },
-    "cloud-provider-dvp": {
-      "name": "cloud-provider-dvp",
-      "critical": true,
-      "weight": 30,
-      "subsystems": [
-        "infrastructure"
-      ],
-      "namespace": "d8-cloud-provider-dvp",
-      "stage": "General Availability",
-      "descriptions": {
-        "en": "Manages interaction with Deckhouse Virtualization Platform resources. Allows to use DVP resources for provisioning nodes.",
-        "ru": "Управляет взаимодействием с ресурсами Deckhouse Virtualization Platform. Позволяет использовать ресурсы DVP при создании узлов."
-      },
-      "accessibility": {
-        "editions": {
-          "_default": {
-            "available": true
-          }
-        }
-      },
-      "oss": [
-        {
-          "name": "Deckhouse Virtualization Platform Terraform provider",
-          "link": "https://github.com/hashicorp/terraform-provider-kubernetes",
-          "description": "Terraform provider for Kubernetes API resources used with Deckhouse Virtualization Platform.",
-          "logo": "/images/logos/terraform.svg",
-          "license": "Mozilla Public License 2.0",
-          "id": "terraform-provider-kubernetes",
-          "version": "2.38.0"
-        }
-      ]
-    },
     "cloud-provider-dynamix": {
       "name": "cloud-provider-dynamix",
       "critical": true,
@@ -2352,18 +2320,6 @@
       "versions": [],
       "modules": [
         "kube-dns"
-      ]
-    },
-    "Deckhouse Virtualization Platform Terraform provider": {
-      "link": "https://github.com/hashicorp/terraform-provider-kubernetes",
-      "description": "Terraform provider for Kubernetes API resources used with Deckhouse Virtualization Platform.",
-      "logo": "/images/logos/terraform.svg",
-      "license": "Mozilla Public License 2.0",
-      "versions": [
-        "2.38.0"
-      ],
-      "modules": [
-        "cloud-provider-dvp"
       ]
     },
     "Descheduler": {

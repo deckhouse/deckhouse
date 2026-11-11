@@ -1,3 +1,0 @@
-{{- if not (default false (dig "storage" "disabled" false .Values.cloudProviderDvp)) }}
-{{- include "helm_lib_csi_controller_rbac" . }}
-{{- end }}

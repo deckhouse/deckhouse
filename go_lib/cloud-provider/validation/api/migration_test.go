@@ -151,6 +151,25 @@ func TestIsNewResourcesCompleteRequiresProviderSection(t *testing.T) {
 	}
 }
 
+func TestIsNewResourcesCompleteRequiresNodesSection(t *testing.T) {
+	t.Parallel()
+	state := newCompleteMigrationState()
+	state.ModuleConfig.Spec.Settings = &testprovider.Settings{
+		Provider: state.ModuleConfig.Spec.Settings.Provider,
+	}
+	if IsNewResourcesComplete(state) {
+		t.Fatal("IsNewResourcesComplete() = true, want false without nodes section")
+	}
+}
+
+func TestIsNewResourcesCompleteWhenProviderAndNodesSectionsPresent(t *testing.T) {
+	t.Parallel()
+	state := newCompleteMigrationState()
+	if !IsNewResourcesComplete(state) {
+		t.Fatal("IsNewResourcesComplete() = false, want true with both provider and nodes sections present")
+	}
+}
+
 func TestMigrationStatusIncompleteWhenModuleConfigMissing(t *testing.T) {
 	t.Parallel()
 

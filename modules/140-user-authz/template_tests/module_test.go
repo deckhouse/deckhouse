@@ -314,7 +314,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 				retiredSelector("deckhouse", "manager"),
 			))
 			infrastructure := selectors("d8:manage:infrastructure:manager")
-			Expect(infrastructure).To(HaveLen(44))
+			Expect(infrastructure).To(HaveLen(42))
 			Expect(infrastructure).To(ContainElements(
 				retiredSelector("infrastructure", "viewer"),
 				retiredSelector("infrastructure", "manager"),

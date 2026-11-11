@@ -45,7 +45,6 @@ type helmClusterFixture struct {
 // normalized only by decoding Secret.data, the same transformation the Kubernetes API performs.
 func TestClusterTemplatesMatchHelm(t *testing.T) {
 	fixtures := []helmClusterFixture{
-		{name: "dvp", path: "modules/030-cloud-provider-dvp", apiVersion: "infrastructure.cluster.x-k8s.io/v1alpha1", kind: "DeckhouseCluster", provider: map[string]any{}},
 		{name: "yandex", path: "modules/030-cloud-provider-yandex", apiVersion: "infrastructure.cluster.x-k8s.io/v1alpha1", kind: "YandexCluster", provider: map[string]any{
 			"folderID": "folder-id", "zoneToSubnetIdMap": map[string]any{"ru-central1-a": "subnet-a", "ru-central1-b": "subnet-b"},
 		}},

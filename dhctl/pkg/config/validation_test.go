@@ -85,8 +85,9 @@ func TestValidateInitConfiguration(t *testing.T) {
 	newStore := newSchemaStore(nil, []string{schemasDir, deckhouseSchemasDir})
 
 	tests := map[string]struct {
-		config      string
-		errContains string
+		config        string
+		errContains   string
+		errSubstrings []string
 	}{
 		"ok": {
 			config: `
@@ -154,25 +155,26 @@ kind: ClusterConfiguration
 metadata:
   name: deckhouse
 `,
-			// kubernetesVersion, podSubnetCIDR and serviceSubnetCIDR are deliberately absent from
-			// this list: all three moved to ModuleConfig control-plane-manager and were dropped
-			// from the ClusterConfiguration `required` set, so a document without them is now
-			// schema-valid on that point.
-			errContains: `ValidationFailed: [1] deckhouse.io/v1alpha1, Kind=ClusterConfiguration "deckhouse": "ClusterConfiguration, deckhouse.io/v1" document validation failed: 2 errors occurred:
-	* .metadata is a forbidden property
-	* .clusterType is required
-
-; unknown kind, expected one of ("InitConfiguration", "ModuleConfig")`,
+			errSubstrings: []string{
+				`ValidationFailed: [1] deckhouse.io/v1alpha1, Kind=ClusterConfiguration "deckhouse": "ClusterConfiguration, deckhouse.io/v1" document validation failed`,
+				`* .metadata is a forbidden property`,
+				`* .clusterType is required`,
+				`unknown kind, expected one of ("InitConfiguration", "ModuleConfig")`,
+			},
 		},
 	}
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			err := ValidateInitConfiguration(t.Context(), tt.config, newStore, validateOpts...)
-			if tt.errContains == "" {
+			if tt.errContains == "" && len(tt.errSubstrings) == 0 {
 				require.NoError(t, err)
 			} else {
+				require.Error(t, err)
 				require.ErrorContains(t, err, tt.errContains)
+				for _, substring := range tt.errSubstrings {
+					require.ErrorContains(t, err, substring)
+				}
 			}
 		})
 	}

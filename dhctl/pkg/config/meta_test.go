@@ -32,10 +32,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
 func TestEffectiveClusterPrefix(t *testing.T) {
@@ -1055,6 +1054,146 @@ func TestApplyModuleConfigSettings_SkipsModuleConfigWithoutEnabled(t *testing.T)
 	require.Nil(t, m.CloudProviderVars)
 }
 
+func TestApplyModuleConfigSettings_ForwardsEmptySettingsModuleConfig(t *testing.T) {
+	mc := &ModuleConfig{Spec: ModuleConfigSpec{Enabled: boolPtr(true)}}
+	mc.SetName("cloud-provider-dvp")
+
+	m := &MetaConfig{
+		ProviderName:  "dvp",
+		ModuleConfigs: []*ModuleConfig{mc},
+	}
+
+	require.NoError(t, m.applyCloudProviderModuleSettings())
+
+	require.NotNil(t, m.CloudProviderVars)
+	spec, ok := m.CloudProviderVars.Settings["spec"].(map[string]interface{})
+	require.True(t, ok, "expected spec object in CloudProviderVars.Settings")
+	require.Equal(t, true, spec["enabled"])
+	require.Equal(t, map[string]interface{}{}, spec["settings"], "expected spec.settings to be an explicit empty object so external validators decode a non-nil pointer")
+}
+
+func TestApplyModuleConfigSettings_NonEmptyOverlayWinsOverEmpty(t *testing.T) {
+	settings := SettingsValues{"masterPool": map[string]interface{}{"replicas": 3}}
+
+	t.Run("empty then non-empty", func(t *testing.T) {
+		empty := &ModuleConfig{Spec: ModuleConfigSpec{Enabled: boolPtr(true)}}
+		empty.SetName("cloud-provider-dvp")
+		full := &ModuleConfig{Spec: ModuleConfigSpec{Version: 2, Settings: settings}}
+		full.SetName("cloud-provider-dvp")
+
+		m := &MetaConfig{
+			ProviderName:  "dvp",
+			ModuleConfigs: []*ModuleConfig{empty, full},
+		}
+
+		require.NoError(t, m.applyCloudProviderModuleSettings())
+
+		spec := m.CloudProviderVars.Settings["spec"].(map[string]interface{})
+		specSettings, ok := spec["settings"].(map[string]interface{})
+		require.True(t, ok)
+		masterPool := specSettings["masterPool"].(map[string]interface{})
+		require.Equal(t, float64(3), masterPool["replicas"])
+	})
+
+	t.Run("non-empty then empty", func(t *testing.T) {
+		full := &ModuleConfig{Spec: ModuleConfigSpec{Version: 2, Settings: settings}}
+		full.SetName("cloud-provider-dvp")
+		empty := &ModuleConfig{Spec: ModuleConfigSpec{Enabled: boolPtr(true)}}
+		empty.SetName("cloud-provider-dvp")
+
+		m := &MetaConfig{
+			ProviderName:  "dvp",
+			ModuleConfigs: []*ModuleConfig{full, empty},
+		}
+
+		require.NoError(t, m.applyCloudProviderModuleSettings())
+
+		spec := m.CloudProviderVars.Settings["spec"].(map[string]interface{})
+		specSettings, ok := spec["settings"].(map[string]interface{})
+		require.True(t, ok)
+		masterPool := specSettings["masterPool"].(map[string]interface{})
+		require.Equal(t, float64(3), masterPool["replicas"])
+	})
+}
+
+func TestApplyModuleConfigSettings_DisabledDuplicateWithoutSettingsDoesNotShadowEnabled(t *testing.T) {
+	enabled := &ModuleConfig{Spec: ModuleConfigSpec{Enabled: boolPtr(true)}}
+	enabled.SetName("cloud-provider-dvp")
+	disabled := &ModuleConfig{Spec: ModuleConfigSpec{Enabled: boolPtr(false)}}
+	disabled.SetName("cloud-provider-dvp")
+
+	m := &MetaConfig{
+		ProviderName:  "dvp",
+		ModuleConfigs: []*ModuleConfig{enabled, disabled},
+	}
+
+	require.NoError(t, m.applyCloudProviderModuleSettings())
+
+	spec := m.CloudProviderVars.Settings["spec"].(map[string]interface{})
+	require.Equal(t, true, spec["enabled"], "the enabled ModuleConfig must be forwarded, not the later disabled duplicate")
+}
+
+func TestApplyModuleConfigSettings_UnrelatedModuleNameIsIgnored(t *testing.T) {
+	mc := &ModuleConfig{Spec: ModuleConfigSpec{Enabled: boolPtr(true)}}
+	mc.SetName("cloud-provider-aws")
+
+	m := &MetaConfig{
+		ProviderName:  "dvp",
+		ModuleConfigs: []*ModuleConfig{mc},
+	}
+
+	require.NoError(t, m.applyCloudProviderModuleSettings())
+
+	require.Nil(t, m.CloudProviderVars)
+}
+
+func TestApplyModuleConfigSettings_ForwardsEmptySettingsExternalProviderModuleConfig(t *testing.T) {
+	mc := &ModuleConfig{Spec: ModuleConfigSpec{Enabled: boolPtr(true)}}
+	mc.SetName("cloud-provider-dvp")
+
+	m := &MetaConfig{
+		ProviderName:                 "dvp",
+		externalProviderModuleConfig: mc,
+	}
+
+	require.NoError(t, m.applyCloudProviderModuleSettings())
+
+	require.NotNil(t, m.CloudProviderVars)
+	spec, ok := m.CloudProviderVars.Settings["spec"].(map[string]interface{})
+	require.True(t, ok, "expected spec object in CloudProviderVars.Settings")
+	require.Equal(t, true, spec["enabled"])
+	require.Equal(t, map[string]interface{}{}, spec["settings"], "expected spec.settings to be an explicit empty object so external validators decode a non-nil pointer")
+}
+
+func TestApplyModuleConfigSettingsForwardsLegacyDVPSourceOnlyMarker(t *testing.T) {
+	mc := &ModuleConfig{Spec: ModuleConfigSpec{Enabled: boolPtr(true), Source: "deckhouse"}}
+	mc.APIVersion = "deckhouse.io/v1alpha1"
+	mc.Kind = "ModuleConfig"
+	mc.SetName("cloud-provider-dvp")
+
+	m := &MetaConfig{
+		ProviderName:          "dvp",
+		ProviderClusterConfig: map[string]json.RawMessage{"layout": json.RawMessage(`"Standard"`)},
+		ModuleConfigs:         []*ModuleConfig{mc},
+	}
+
+	require.True(t, m.HasLegacyProviderConfig())
+	require.False(t, m.HasProviderModuleConfig())
+	require.False(t, m.HasProviderNodeSettings())
+	require.NoError(t, m.applyCloudProviderModuleSettings())
+
+	require.NotNil(t, m.CloudProviderVars)
+	require.Equal(t, "ModuleConfig", m.CloudProviderVars.Settings["kind"])
+	metadata, ok := m.CloudProviderVars.Settings["metadata"].(map[string]interface{})
+	require.True(t, ok)
+	require.Equal(t, "cloud-provider-dvp", metadata["name"])
+	spec, ok := m.CloudProviderVars.Settings["spec"].(map[string]interface{})
+	require.True(t, ok)
+	require.Equal(t, true, spec["enabled"])
+	require.Equal(t, "deckhouse", spec["source"])
+	require.Equal(t, map[string]interface{}{}, spec["settings"])
+}
+
 // mcFlowResources mirrors a DVP bootstrap config: the CloudPermanent node
 // groups live in the resources documents, not in a ProviderClusterConfiguration.
 const mcFlowResources = `
@@ -1199,6 +1338,34 @@ func TestPrepareKeepsProviderClusterConfigNodeGroups(t *testing.T) {
 	require.Len(t, m.TerraNodeGroupSpecs, 1)
 	require.Equal(t, "legacy", m.TerraNodeGroupSpecs[0].Name)
 	require.Equal(t, 7, m.TerraNodeGroupSpecs[0].Replicas)
+}
+
+func TestPrepareLegacyDVPKeepsProviderClusterConfigFlowWithMarker(t *testing.T) {
+	mc := &ModuleConfig{Spec: ModuleConfigSpec{Enabled: boolPtr(true), Source: "deckhouse"}}
+	mc.SetName("cloud-provider-dvp")
+	m := cloudMetaConfig(mcFlowResources)
+	m.ModuleConfigs = []*ModuleConfig{mc}
+	m.ProviderClusterConfig = map[string]json.RawMessage{
+		"layout":          json.RawMessage(`"Standard"`),
+		"masterNodeGroup": json.RawMessage(`{"replicas":1}`),
+		"nodeGroups":      json.RawMessage(`[{"name":"legacy","replicas":7}]`),
+	}
+
+	m, err := m.Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+
+	require.True(t, m.HasLegacyProviderConfig())
+	require.False(t, m.HasProviderModuleConfig())
+	require.False(t, m.HasProviderNodeSettings())
+	require.Equal(t, "standard", m.Layout)
+	require.Equal(t, 1, m.MasterNodeGroupSpec.Replicas)
+	require.Len(t, m.TerraNodeGroupSpecs, 1)
+	require.Equal(t, "legacy", m.TerraNodeGroupSpecs[0].Name)
+	require.Equal(t, 7, m.TerraNodeGroupSpecs[0].Replicas)
+	spec := m.CloudProviderVars.Settings["spec"].(map[string]interface{})
+	require.Equal(t, true, spec["enabled"])
+	require.Equal(t, "deckhouse", spec["source"])
+	require.Equal(t, map[string]interface{}{}, spec["settings"])
 }
 
 // An explicitly empty nodeGroups list in the provider cluster configuration is
@@ -1596,4 +1763,47 @@ func TestHasProviderNodeSettings(t *testing.T) {
 			require.Equal(t, tt.want, m.HasProviderNodeSettings())
 		})
 	}
+}
+
+// ProviderClusterConfiguration keeps the cluster on the legacy flow whatever enabled
+// cloud-provider-<name> ModuleConfig comes with it, for every provider alike.
+func TestHasProviderModuleConfigIsFalseWithLegacyProviderConfig(t *testing.T) {
+	enabledModuleConfig := func(providerName, source string, settings map[string]any) *ModuleConfig {
+		moduleConfig := &ModuleConfig{}
+		moduleConfig.SetName("cloud-provider-" + providerName)
+		moduleConfig.Spec.Enabled = ptr.To(true)
+		moduleConfig.Spec.Source = source
+		moduleConfig.Spec.Settings = settings
+
+		return moduleConfig
+	}
+	nodeSettings := map[string]any{"nodes": map[string]any{"parameters": map[string]any{"layout": "Standard"}}}
+
+	tests := map[string]struct {
+		providerName string
+		moduleConfig *ModuleConfig
+	}{
+		"source-only ModuleConfig":         {"yandex", enabledModuleConfig("yandex", "deckhouse", nil)},
+		"bare ModuleConfig":                {"dvp", enabledModuleConfig("dvp", "", nil)},
+		"ModuleConfig with node settings":  {"dvp", enabledModuleConfig("dvp", "deckhouse", nodeSettings)},
+		"ModuleConfig of another provider": {"yandex", enabledModuleConfig("dvp", "deckhouse", nil)},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			m := &MetaConfig{
+				ProviderName:          tt.providerName,
+				ProviderClusterConfig: map[string]json.RawMessage{"layout": json.RawMessage(`"Standard"`)},
+				ModuleConfigs:         []*ModuleConfig{tt.moduleConfig},
+			}
+
+			require.False(t, m.HasProviderModuleConfig())
+		})
+	}
+
+	t.Run("without legacy config the ModuleConfig is the marker", func(t *testing.T) {
+		m := &MetaConfig{ProviderName: "yandex", ModuleConfigs: []*ModuleConfig{enabledModuleConfig("yandex", "", nil)}}
+
+		require.True(t, m.HasProviderModuleConfig())
+	})
 }

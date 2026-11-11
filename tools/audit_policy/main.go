@@ -146,12 +146,16 @@ func generateBasicTargetsCode(workDir string, output string) error {
 		}
 	}
 
+	// These namespaces belong to modules that have been fully moved to external modules:
 	// d8-monitoring hosts the monitoring stack (prometheus, monitoring-kubernetes,
-	// monitoring-custom, monitoring-applications, etc.), which has been fully moved to
-	// external modules. No embedded module declares this namespace anymore, but the
-	// namespace still exists at runtime and its API operations must stay audited, so
-	// keep it in the basic audit targets explicitly.
+	// monitoring-custom, monitoring-applications, etc.), d8-cloud-provider-dvp holds
+	// cloud-provider-dvp with the credentials Secret for the parent DVP cluster. No embedded
+	// module declares them anymore, but they still exist at runtime and their API operations
+	// must stay audited, so keep them in the basic audit targets explicitly. The service
+	// accounts of cloud-provider-dvp come from the module itself through a ConfigMap labeled
+	// control-plane-manager.deckhouse.io/extra-audit-policy-config.
 	namespacesMap["d8-monitoring"] = struct{}{}
+	namespacesMap["d8-cloud-provider-dvp"] = struct{}{}
 
 	namespaces := make([]string, 0, len(namespacesMap))
 	sas := make([]string, 0, len(sasMap))

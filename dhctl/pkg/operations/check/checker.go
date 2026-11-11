@@ -265,7 +265,7 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 // so the cluster has no ModuleConfig, and the check would fail with "cannot be empty" until it has.
 // A legacy desired configuration always keeps the comparison.
 func providerConfigurationChecks(ctx context.Context, desired, inCluster *config.MetaConfig) ([]checkFunc, error) {
-	if !desired.HasLegacyProviderConfig() && (desired.HasProviderModuleConfig() || inCluster.HasProviderModuleConfig()) {
+	if !desired.HasLegacyProviderConfig() && (desired.HasEnabledProviderModuleConfig() || inCluster.HasEnabledProviderModuleConfig()) {
 		return nil, nil
 	}
 

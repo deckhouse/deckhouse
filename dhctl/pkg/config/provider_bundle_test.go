@@ -97,11 +97,35 @@ cloud:
 func ensureTestGlobalOptions(t *testing.T) *options.GlobalOptions {
 	t.Helper()
 	downloadDir := t.TempDir()
+	candiDir := t.TempDir()
+	writeTestCoreSchema(t, candiDir, ClusterConfigurationKind)
+	writeTestCoreSchema(t, candiDir, "InitConfiguration")
 	return &options.GlobalOptions{
-		CandiDir:    t.TempDir(),
+		CandiDir:    candiDir,
 		ModulesDir:  t.TempDir(),
 		DownloadDir: downloadDir,
 	}
+}
+
+func writeTestCoreSchema(t *testing.T, candiDir, kind string) {
+	t.Helper()
+	relPath := strings.ToLower(strings.TrimSuffix(kind, "Configuration")) + "_configuration.yaml"
+	schemaPath := filepath.Join(candiDir, "openapi", relPath)
+	require.NoError(t, os.MkdirAll(filepath.Dir(schemaPath), 0o755))
+	schema := fmt.Sprintf(`kind: %s
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    type: object
+    additionalProperties: true
+    required: [apiVersion, kind]
+    properties:
+      apiVersion:
+        type: string
+      kind:
+        type: string
+`, kind)
+	require.NoError(t, os.WriteFile(schemaPath, []byte(schema), 0o644))
 }
 
 func stubProviderDigest(t *testing.T, digest string, calls *atomic.Int32) {
@@ -443,6 +467,32 @@ spec:
 	}
 }
 
+func TestEnsureProviderBundleDVPWithSourceOnlyModuleConfigResolves(t *testing.T) {
+	const moduleRepo = "r.example.com/test/modules/cloud-provider-dvp"
+
+	reg := newModuleStand(moduleRepo).
+		addImage(t, moduleRepo+"/release", "stable", map[string]string{"version.json": `{"version": "1.0.0"}`}).
+		addImage(t, moduleRepo, "v1.0.0", map[string]string{"images_digests.json": `{"terraformManager": "` + testBundleDigest + `"}`})
+	stubModuleCatalog(t, reg)
+
+	docs := []string{
+		ensureRegistryMCDoc,
+		ensureClusterConfigDoc("DVP"), `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-dvp
+spec:
+  enabled: true
+  version: 1
+  source: deckhouse
+`,
+	}
+	ref, err := resolveModuleProviderBundle(context.Background(), "dvp", configModuleDocs(docs), testModuleOptions(t))
+	require.NoError(t, err)
+	require.Equal(t, moduleRepo+"@"+testBundleDigest, ref.Image)
+}
+
 // The download dir is shared with every other cluster driven from this machine, so a bundle found
 // there may belong to another cluster and must not stand in for the one this cluster runs.
 func TestEnsureProviderBundleFromClusterReturnsTheLookupError(t *testing.T) {
@@ -729,6 +779,86 @@ func TestParseConfigFromDataEnsureProviderUsesTheBundleDirHandedIn(t *testing.T)
 	require.NoError(t, err)
 	require.Equal(t, bundleDir, metaConfig.ProviderBundleDir)
 	require.Zero(t, digestCalls.Load(), "a bundle dir was handed in, nothing may be resolved")
+}
+
+const dvpLegacyConfigWithBareModuleConfig = `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Cloud
+cloud:
+  provider: DVP
+  prefix: test
+kubernetesVersion: "1.33"
+podSubnetCIDR: 10.222.0.0/16
+serviceSubnetCIDR: 10.111.0.0/16
+clusterDomain: cluster.local
+---
+apiVersion: deckhouse.io/v1
+kind: DVPClusterConfiguration
+layout: Standard
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-dvp
+spec:
+  enabled: true
+  version: 1
+`
+
+func TestParseConfigFromDataEnsureProviderKeepsLegacyFlowWithBareModuleConfig(t *testing.T) {
+	globalOptions := ensureTestGlobalOptions(t)
+	bundleDir := filepath.Join(globalOptions.DownloadDir, "dvp@sha256:supplied")
+	writeTestProviderSchema(t, bundleDir, "DVPClusterConfiguration")
+	require.NoError(t, NewSchemaStore(globalOptions).LoadProviderDir("dvp", "sha256:supplied", bundleDir))
+
+	metaConfig, err := ParseConfigFromDataEnsureProvider(t.Context(), dvpLegacyConfigWithBareModuleConfig, DummyValidatorProvider(), globalOptions, ValidateOptionProviderBundleDir(bundleDir))
+	require.NoError(t, err)
+	require.True(t, metaConfig.HasLegacyProviderConfig())
+	require.False(t, metaConfig.HasProviderModuleConfig())
+	require.Equal(t, "ModuleConfig", metaConfig.CloudProviderVars.Settings["kind"])
+}
+
+func TestParseConfigFromDataEnsureProviderAllowsDVPSourceWithSuppliedBundleDir(t *testing.T) {
+	globalOptions := ensureTestGlobalOptions(t)
+	bundleDir := filepath.Join(globalOptions.DownloadDir, "dvp@sha256:supplied-source")
+	writeTestProviderSchema(t, bundleDir, "DVPClusterConfiguration")
+	require.NoError(t, NewSchemaStore(globalOptions).LoadProviderDir("dvp", "sha256:supplied-source", bundleDir))
+
+	metaConfig, err := ParseConfigFromDataEnsureProvider(t.Context(), dvpLegacyConfigWithBareModuleConfig+"  source: deckhouse\n", DummyValidatorProvider(), globalOptions, ValidateOptionProviderBundleDir(bundleDir))
+	require.NoError(t, err)
+	require.Equal(t, bundleDir, metaConfig.ProviderBundleDir)
+	require.True(t, metaConfig.HasLegacyProviderConfig())
+	require.False(t, metaConfig.HasProviderModuleConfig())
+	require.False(t, metaConfig.HasProviderNodeSettings())
+	require.NotNil(t, metaConfig.CloudProviderVars)
+	require.Equal(t, "ModuleConfig", metaConfig.CloudProviderVars.Settings["kind"])
+	spec, ok := metaConfig.CloudProviderVars.Settings["spec"].(map[string]interface{})
+	require.True(t, ok)
+	require.Equal(t, true, spec["enabled"])
+	require.Equal(t, "deckhouse", spec["source"])
+	require.Equal(t, map[string]interface{}{}, spec["settings"])
+}
+
+func TestParseConfigFromDataEnsureProviderKeepsDVPSourceEnabledAcrossOverlays(t *testing.T) {
+	globalOptions := ensureTestGlobalOptions(t)
+	bundleDir := filepath.Join(globalOptions.DownloadDir, "dvp@sha256:supplied-overlay")
+	writeTestProviderSchema(t, bundleDir, "DVPClusterConfiguration")
+	require.NoError(t, NewSchemaStore(globalOptions).LoadProviderDir("dvp", "sha256:supplied-overlay", bundleDir))
+
+	metaConfig, err := ParseConfigFromDataEnsureProvider(t.Context(), dvpLegacyConfigWithBareModuleConfig+`  source: deckhouse
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-dvp
+spec:
+  version: 1
+`, DummyValidatorProvider(), globalOptions, ValidateOptionProviderBundleDir(bundleDir))
+	require.NoError(t, err)
+	require.Equal(t, bundleDir, metaConfig.ProviderBundleDir)
+	require.True(t, metaConfig.HasLegacyProviderConfig())
+	require.False(t, metaConfig.HasProviderModuleConfig())
 }
 
 func TestUseUnpackedProviderBundle(t *testing.T) {

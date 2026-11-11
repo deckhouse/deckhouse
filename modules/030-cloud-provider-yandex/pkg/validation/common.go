@@ -70,7 +70,8 @@ func ValidateNodeGroupExternalIPAddresses(state *State) cpvalapi.Result {
 
 	result := cpvalapi.Result{}
 
-	if state.ModuleConfig == nil {
+	// Settings is a pointer (S is *ModuleConfigSettings); a ModuleConfig with no settings forwarded decodes it as nil.
+	if state.ModuleConfig == nil || state.ModuleConfig.Spec.Settings == nil {
 		return result
 	}
 
@@ -118,7 +119,8 @@ func ValidateWithNATInstanceLayout(state *State) cpvalapi.Result {
 
 	result := cpvalapi.Result{}
 
-	if state.ModuleConfig == nil {
+	// Settings is a pointer (S is *ModuleConfigSettings); a ModuleConfig with no settings forwarded decodes it as nil.
+	if state.ModuleConfig == nil || state.ModuleConfig.Spec.Settings == nil {
 		return result
 	}
 
@@ -164,7 +166,8 @@ func ValidateProvisionedStorageClasses(state *State) cpvalapi.Result {
 
 	result := cpvalapi.Result{}
 
-	if state.ModuleConfig == nil {
+	// Settings is a pointer (S is *ModuleConfigSettings); a ModuleConfig with no settings forwarded decodes it as nil.
+	if state.ModuleConfig == nil || state.ModuleConfig.Spec.Settings == nil {
 		return result
 	}
 

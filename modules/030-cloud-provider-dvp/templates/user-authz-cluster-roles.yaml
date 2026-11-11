@@ -1,5 +1,0 @@
-{{- $userAuthzConfig := dict -}}
-{{- $_ := set $userAuthzConfig "providerName" "cloud-provider-dvp" -}}
-{{- $_ := set $userAuthzConfig "capiResources" (list "deckhouseclusters" "deckhousemachines" "deckhousemachinetemplates") -}}
-{{- $_ := set $userAuthzConfig "instanceClassResource" "dvpinstanceclasses" -}}
-{{- include "helm_lib_cloud_provider_user_authz_cluster_roles" (list . $userAuthzConfig) }}
