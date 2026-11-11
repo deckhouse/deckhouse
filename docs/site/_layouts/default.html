@@ -31,6 +31,10 @@
       });
     }
   });
+  // The Russian bar has no Modules item: modules are part of the documentation.
+  if (window.location.pathname.toLowerCase().includes('/modules/') && !$('.header.header__product-menu li.active').length) {
+    $('.header.header__product-menu [data-nav-doc]').addClass('active');
+  }
 </script>
 
 {% if site.google_analytics %}

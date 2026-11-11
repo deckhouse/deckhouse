@@ -6,6 +6,9 @@
   #bottom-header-nav, .nav__trigger, .menu-item-has-children--bottom and the
   ".header.header__product-menu ul.nav li" selector used by the inline scripts in the
   layouts are all preserved.
+
+  data-nav-doc marks the documentation item. This bar has no Modules item, as modules are
+  part of the documentation, so the inline scripts light this item on /modules/ pages.
 {%- endcomment -%}
 {%- assign productCode = page.product_code | default: "deckhouse-platform" %}
 {%- if productCode == "kubernetes-platform" %}{% assign productCode = "deckhouse-platform" %}{% endif %}
@@ -118,7 +121,7 @@
         {%- for item in productMenuData.items %}
           {%- if item.url == "/solutions/" or item.url == "/solutions" %}{% assign isSolutions = true %}{% else %}{% assign isSolutions = false %}{% endif %}
           {%- if item.rel == "doc" %}{% assign itemClass='class="header__navigation-item active"' %}{% elsif isSolutions %}{% assign itemClass='class="header__navigation-item header__navigation-item--solutions menu-item-has-children menu-item-has-children--bottom"' %}{% elsif item.items %}{% assign itemClass='class="header__navigation-item menu-item-has-children menu-item-has-children--bottom"' %}{%- else %}{% assign itemClass='class="header__navigation-item"' %}{% endif %}
-          <li {{ itemClass }} {%- if item.items or isSolutions %} data-proofer-ignore{% endif %}>
+          <li {{ itemClass }} {%- if item.rel == "doc" %} data-nav-doc{% endif %} {%- if item.items or isSolutions %} data-proofer-ignore{% endif %}>
             <a href="{{ item.url }}"{% if item.target.size > 0 %} target="{{ item.target }}"{% endif %}>{{ item.title }}</a>
             {% if isSolutions %}
               {{ solutionsPanel }}
@@ -140,7 +143,7 @@
           {%- endif %}
         {%- endfor %}
       {%- else %}
-        <li class="header__navigation-item active" data-proofer-ignore>
+        <li class="header__navigation-item active" data-nav-doc data-proofer-ignore>
           <a href="#">{{ site.data.i18n.common['documentation'][page.lang] | capitalize }}</a>
         </li>
       {%- endif %}
