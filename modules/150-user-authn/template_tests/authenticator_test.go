@@ -83,6 +83,9 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
       labels:
         custom-label: custom-value
         app: overridden
+        name: overridden
+        heritage: overridden
+        maintenance.deckhouse.io/no-resource-reconciliation: "true"
       annotations:
         sidecar.istio.io/inject: "false"
         checksum/config: overridden
@@ -255,6 +258,9 @@ periodSeconds: 5
 `))
 			Expect(deploymentTest.Field("spec.template.metadata.labels.custom-label").String()).To(Equal("custom-value"))
 			Expect(deploymentTest.Field("spec.template.metadata.labels.app").String()).To(Equal("dex-authenticator"))
+			Expect(deploymentTest.Field("spec.template.metadata.labels.name").String()).To(Equal("test"))
+			Expect(deploymentTest.Field("spec.template.metadata.labels.heritage").String()).To(Equal("deckhouse"))
+			Expect(deploymentTest.Field("spec.template.metadata.labels.maintenance\\.deckhouse\\.io/no-resource-reconciliation").Exists()).To(BeFalse())
 			Expect(deploymentTest.Field("spec.template.metadata.annotations.sidecar\\.istio\\.io/inject").String()).To(Equal("false"))
 			Expect(deploymentTest.Field("spec.template.metadata.annotations.checksum/config").Exists()).To(BeTrue())
 			Expect(deploymentTest.Field("spec.template.metadata.annotations.checksum/config").String()).ToNot(Equal("overridden"))
@@ -304,6 +310,7 @@ periodSeconds: 5
 
 			deploymentTest2 := hec.KubernetesResource("Deployment", "d8-test", "test-2-dex-authenticator")
 			Expect(deploymentTest2.Exists()).To(BeTrue())
+			Expect(deploymentTest2.Field("spec.template.metadata.labels.heritage").String()).To(Equal("deckhouse"))
 			Expect(deploymentTest2.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON(`{"node-role.deckhouse.io/system": ""}`))
 			Expect(deploymentTest2.Field("spec.template.spec.tolerations").Exists()).To(BeTrue()) // default taints
 

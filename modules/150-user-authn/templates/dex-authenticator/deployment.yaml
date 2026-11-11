@@ -135,13 +135,16 @@ spec:
   template:
     metadata:
       labels:
-        {{- with $crd.spec.podMetadata }}
-          {{- with .labels }}
-{{ toYaml . | nindent 8 }}
-          {{- end }}
-        {{- end }}
-        app: dex-authenticator
-        name: {{ $crd.name | quote}}
+        {{- /* The pods run in the namespace of the CR. heritage puts them under the heritage-subresources */}}
+        {{- /* webhook: no exec, attach or port-forward into oauth2-proxy and its Redis for the namespace owner. */}}
+        {{- /* The keys of the module are dropped from podMetadata.labels instead of being rendered twice. */}}
+        {{- /* The maintenance label is dropped too: it takes an object out of the heritage-label-objects */}}
+        {{- /* binding, and the owner of the CR could then remove heritage from the pod and connect to it. */}}
+        {{- $podLabels := omit (dig "podMetadata" "labels" dict $crd.spec | default dict) "app" "name" "heritage" "maintenance.deckhouse.io/no-resource-reconciliation" }}
+        {{- $_ := set $podLabels "app" "dex-authenticator" }}
+        {{- $_ := set $podLabels "name" $crd.name }}
+        {{- $_ := set $podLabels "heritage" "deckhouse" }}
+        {{- toYaml $podLabels | nindent 8 }}
       annotations:
         {{- with $crd.spec.podMetadata }}
           {{- with .annotations }}
