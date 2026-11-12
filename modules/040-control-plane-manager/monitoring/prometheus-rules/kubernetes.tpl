@@ -90,6 +90,7 @@ Consider enabling the `control-plane-manager` module for advanced debugging.
     expr: absent(up{job="kube-apiserver"} == 1)
     for: 20m
     labels:
+      d8_module: control-plane-manager
       severity_level: "3"
     annotations:
       plk_protocol_version: "1"
@@ -98,6 +99,7 @@ Consider enabling the `control-plane-manager` module for advanced debugging.
   - alert: K8sCertificateExpiration
     expr: sum(label_replace(rate(apiserver_client_certificate_expiration_seconds_bucket{le="604800", job=~"kubelet|kube-apiserver"}[1m]) > 0, "component", "$1", "job", "(.*)")) by (component, node)
     labels:
+      d8_module: control-plane-manager
       severity_level: "6"
     annotations:
       plk_protocol_version: "1"
@@ -109,6 +111,7 @@ Consider enabling the `control-plane-manager` module for advanced debugging.
   - alert: K8sCertificateExpiration
     expr: sum(label_replace(rate(apiserver_client_certificate_expiration_seconds_bucket{le="86400", job=~"kubelet|kube-apiserver"}[1m]) > 0, "component", "$1", "job", "(.*)")) by (component, node)
     labels:
+      d8_module: control-plane-manager
       severity_level: "5"
     annotations:
       plk_protocol_version: "1"

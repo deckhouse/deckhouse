@@ -44,6 +44,7 @@
     - alert: D8KubeEtcdDatabaseSizeCloseToTheLimit
       expr: max by (node) (etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3"}) >= scalar(max(last_over_time(d8_etcd_quota_backend_total[6h])) * 0.95)
       labels:
+        d8_module: control-plane-manager
         severity_level: "3"
         tier: cluster
       for: "10m"

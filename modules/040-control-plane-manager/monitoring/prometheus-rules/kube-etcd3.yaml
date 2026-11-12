@@ -5,6 +5,7 @@
     expr: max by (job) (up{job="kube-etcd3"} == 0)
     for: 1m
     labels:
+      d8_module: control-plane-manager
       severity_level: "5"
       tier: cluster
     annotations:
@@ -33,6 +34,7 @@
     expr: absent(up{job="kube-etcd3"}) == 1
     for: 1m
     labels:
+      d8_module: control-plane-manager
       severity_level: "5"
       tier: cluster
     annotations:
@@ -61,6 +63,7 @@
     expr: max by (node) (etcd_server_has_leader{job="kube-etcd3"}) == 0
     for: 1m
     labels:
+      d8_module: control-plane-manager
       severity_level: "4"
       tier: cluster
     annotations:
@@ -82,6 +85,7 @@
   - alert: KubeEtcdHighNumberOfLeaderChanges
     expr: max by (node) (increase(etcd_server_leader_changes_seen_total{job="kube-etcd3"}[10m]) > 3)
     labels:
+      d8_module: control-plane-manager
       severity_level: "5"
       tier: cluster
     annotations:
@@ -104,6 +108,7 @@
     expr: count(up{job="kube-etcd3"} == 0) > (count(up{job="kube-etcd3"}) / 2 - 1)
     for: 3m
     labels:
+      d8_module: control-plane-manager
       severity_level: "4"
       tier: cluster
     annotations:
@@ -125,6 +130,7 @@
     expr: max by (node) (histogram_quantile(0.99, rate(etcd_disk_wal_fsync_duration_seconds_bucket{job="kube-etcd3"}[5m])) > 0.5)
     for: 10m
     labels:
+      d8_module: control-plane-manager
       severity_level: "7"
       tier: cluster
     annotations:

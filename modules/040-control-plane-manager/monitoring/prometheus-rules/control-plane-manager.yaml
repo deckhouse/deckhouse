@@ -64,6 +64,7 @@
     for: 10m
     expr: max by (k8s_version) (d8_kubernetes_version{k8s_version="1.33"}) == 1
     labels:
+      d8_module: control-plane-manager
       severity_level: "7"
       tier: cluster
     annotations:
@@ -80,6 +81,7 @@
     for: 10m
     expr: sum(rate(serviceaccount_stale_tokens_total[10m])) by (token_namespace, token_name) > 0
     labels:
+      d8_module: control-plane-manager
       severity_level: "8"
       tier: cluster
     annotations:
