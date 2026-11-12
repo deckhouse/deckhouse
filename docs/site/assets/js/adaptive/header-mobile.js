@@ -9,6 +9,14 @@ document.addEventListener('DOMContentLoaded', function () {
     const modulesName = document.createElement('p');
     modulesName.className = 'module-name';
 
+    // The Russian bar has no Modules item: modules are part of the documentation. Pages of
+    // older documentation versions ship a script that clears the bar on /modules/, and this
+    // file comes from the site on every page and runs after it, so the item is lit here.
+    if (window.location.pathname.toLowerCase().includes('/modules/') && !document.querySelector('.header__product-menu li.active')) {
+        const docNavItem = document.querySelector('.header__product-menu [data-nav-doc]');
+        if (docNavItem) docNavItem.classList.add('active');
+    }
+
     let burgerInited = false;
 
     // Width at which the row collapses into the burger. The Russian header asks for 1200
