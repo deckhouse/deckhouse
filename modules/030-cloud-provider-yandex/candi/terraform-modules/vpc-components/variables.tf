@@ -35,6 +35,11 @@ variable "node_network_cidr" {
   default = null
 }
 
+variable "zones" {
+  type    = list(string)
+  default = []
+}
+
 variable "existing_zone_to_subnet_id_map" {
   type    = map(any)
   default = {}

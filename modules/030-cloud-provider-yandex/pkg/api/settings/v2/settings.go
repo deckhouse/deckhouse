@@ -136,12 +136,26 @@ type NodesParameters struct {
 	// +deckhouse:ru:description:value="Доступные схемы размещения описаны в разделе [«Схемы размещения»](layouts.html)."
 	// +kubebuilder:validation:Enum=Standard;WithoutNAT;WithNATInstance
 	Layout string `json:"layout"`
-	// This subnet will be split into **three** equal parts.
+	// IP address range for node subnets.
 	//
-	// They will serve as a basis for subnets in three Yandex Cloud zones.
-	// +deckhouse:ru:description:value="Данная подсеть будет разделена на **четыре** равные части."
+	// Deckhouse Platform divides the range into four equal parts:
+	//
+	// - `ru-central1-a` uses the first part.
+	// - `ru-central1-b` uses the second part.
+	// - `ru-central1-e` uses the third part.
+	// - `ru-central1-d` uses the fourth part.
+	//
+	// Instructions for using the `ru-central1-f` zone are provided in ["Using the ru-central1-f zone"](examples.html#using-the-ru-central1-f-zone).
+	// +deckhouse:ru:description:value="Диапазон IP-адресов для подсетей узлов."
 	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="Они будут использоваться в качестве основы для подсетей в четырёх зонах Yandex Cloud."
+	// +deckhouse:ru:description:value="Deckhouse Platform делит диапазон на четыре равные части:"
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="- `ru-central1-a` использует первую часть."
+	// +deckhouse:ru:description:value="- `ru-central1-b` использует вторую часть."
+	// +deckhouse:ru:description:value="- `ru-central1-e` использует третью часть."
+	// +deckhouse:ru:description:value="- `ru-central1-d` использует четвёртую часть."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="Как использовать зону `ru-central1-f`, описано [в разделе «Использование зоны ru-central1-f»](examples.html#использование-зоны-ru-central1-f)."
 	NodeNetworkCIDR string `json:"nodeNetworkCIDR"`
 	// Settings for the [`WithNATInstance`](https://deckhouse.io/modules/cloud-provider-yandex/layouts.html#withnatinstance) layout.
 	// +deckhouse:ru:description:value="Настройки для схемы размещения [`WithNATInstance`](https://deckhouse.ru/modules/cloud-provider-yandex/layouts.html#withnatinstance)."
@@ -213,10 +227,19 @@ type NodesParameters struct {
 	// +deckhouse:ru:description:value="Если поменять лейблы в рабочем кластере, после применения изменений необходимо пересоздать все машины."
 	// +optional
 	Labels map[string]string `json:"labels,omitempty"`
-	// Limits the zones the cluster creates nodes in. When the parameter is not set, every zone covered by the cluster subnets is used.
-	// +deckhouse:ru:description:value="Ограничивает набор зон, в которых создаются узлы кластера. Если параметр не задан, используются все зоны, которые покрывают подсети кластера."
+	// Limits the zones where the cloud provider places cluster nodes.
+	//
+	// You can list up to four zones. If the parameter is not set, Deckhouse Platform uses `ru-central1-a`, `ru-central1-b`, `ru-central1-d`, and `ru-central1-e`.
+	//
+	// Instructions for using the `ru-central1-f` zone are provided in ["Using the ru-central1-f zone"](examples.html#using-the-ru-central1-f-zone).
+	// +deckhouse:ru:description:value="Ограничивает набор зон, в которых облачный провайдер размещает узлы кластера."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="Можно указать не более четырёх зон. Если параметр не задан, Deckhouse Platform использует `ru-central1-a`, `ru-central1-b`, `ru-central1-d` и `ru-central1-e`."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="Как использовать зону `ru-central1-f`, описано [в разделе «Использование зоны ru-central1-f»](examples.html#использование-зоны-ru-central1-f)."
+	// +kubebuilder:validation:MaxItems=4
 	// +kubebuilder:validation:UniqueItems=true
-	// +kubebuilder:validation:items:Enum=ru-central1-a;ru-central1-b;ru-central1-d;ru-central1-e
+	// +kubebuilder:validation:items:Enum=ru-central1-a;ru-central1-b;ru-central1-d;ru-central1-e;ru-central1-f
 	// +optional
 	Zones []string `json:"zones,omitempty"`
 }

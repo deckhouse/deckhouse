@@ -74,8 +74,24 @@ locals {
   # which try() alone does not.
   _node_params = try(module.migration.settings.spec.settings.nodes.parameters, {})
 
-  layout                         = try(local._node_params.layout, "")
-  zones                          = try(tolist(local._node_params.zones), [])
+  layout = try(local._node_params.layout, "")
+  zones  = try(tolist(local._node_params.zones), [])
+
+  # Raw explicit zones, before the migration module resolves its default: an
+  # adopted subnet map without an explicit selection keeps the discovery zone
+  # list on the static set (the legacy behavior node-manager relies on for
+  # NodeGroup default zones), while node placement still uses every zone the
+  # map covers. The migration module decides which configuration source wins,
+  # so the explicit list comes from it: a stale PCC Secret left behind after
+  # migration must not override the ModuleConfig selection.
+  raw_zones = module.migration.explicit_zones
+
+  # The pinned static subnet set; mirrors static_zone_slots in vpc-components.
+  static_zones = ["ru-central1-a", "ru-central1-b", "ru-central1-d", "ru-central1-e"]
+
+  # Static discovery zones of an adopted map. Empty when the map has no static
+  # zones at all — then discovery falls back to every adopted zone.
+  adopted_static_discovery_zones = tolist(setintersection(keys(module.vpc_components.zone_to_subnet_id_map), local.static_zones))
   node_network_cidr              = try(local._node_params.nodeNetworkCIDR, "")
   existing_network_id            = try(local._node_params.existingNetworkID, "")
   existing_zone_to_subnet_id_map = try(tomap(local._node_params.existingZoneToSubnetIDMap), {})

@@ -306,7 +306,7 @@ in a DP cluster deployed in Yandex Cloud.
 ### Internal node addressing
 
 The [`nodeNetworkCIDR`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-nodenetworkcidr) parameter defines the IP address range that is split between [availability zones](../../../../glossary.html#availability-zone)
-and applied to the internal node interfaces. The parameter belongs to the `nodes.parameters` section of the ModuleConfig resource of the [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module:
+and applied to the internal node interfaces. The parameter belongs to the `nodes.parameters` section of the [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) resource of the [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -321,14 +321,20 @@ spec:
         nodeNetworkCIDR: 192.168.12.0/24
 ```
 
-DP divides this subnet into four equal parts and creates one internal subnet from each of them in every availability zone:
+Deckhouse Platform divides [`nodeNetworkCIDR`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-nodenetworkcidr) into four equal parts and creates internal subnets for nodes in the corresponding availability zones. Each default zone has a fixed part of the range:
 
-- ru-central1-a
-- ru-central1-b
-- ru-central1-e
-- ru-central1-d
+| Zone | Part of the range |
+| --- | --- |
+| `ru-central1-a` | First |
+| `ru-central1-b` | Second |
+| `ru-central1-e` | Third |
+| `ru-central1-d` | Fourth |
 
-The nodes of the matching zone are connected to the created subnet. The division happens in every [layout](../../../../glossary.html#layout). When the [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap) parameter is set, DP creates no subnets and uses the ones listed there.
+You can list up to four zones in [`zones`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-zones). If the parameter is not set, Deckhouse Platform uses all four zones in the table.
+
+Instructions for using the `ru-central1-f` zone are provided in ["Using the ru-central1-f zone"](/modules/cloud-provider-yandex/examples.html#using-the-ru-central1-f-zone).
+
+Nodes connect to the subnet in their zone. The range is divided this way in every [layout](../../../../glossary.html#layout). If [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap) is set, Deckhouse Platform uses the mapped subnets without creating new ones.
 
 {% alert level="info" %}
 A subnet accepts only one route table, so two clusters with the [`cni-simple-bridge`](/modules/cni-simple-bridge/) module cannot use the same subnets.

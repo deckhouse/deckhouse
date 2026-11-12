@@ -135,9 +135,16 @@ properties:
             type: string
           nodeNetworkCIDR:
             description: |-
-              This subnet will be split into **three** equal parts.
+              IP address range for node subnets.
 
-              They will serve as a basis for subnets in three Yandex Cloud zones.
+              Deckhouse Platform divides the range into four equal parts:
+
+              - `ru-central1-a` uses the first part.
+              - `ru-central1-b` uses the second part.
+              - `ru-central1-e` uses the third part.
+              - `ru-central1-d` uses the fourth part.
+
+              Instructions for using the `ru-central1-f` zone are provided in ["Using the ru-central1-f zone"](examples.html#using-the-ru-central1-f-zone).
             type: string
           sshPublicKey:
             description: A public key for accessing nodes.
@@ -195,15 +202,21 @@ properties:
                 type: object
             type: object
           zones:
-            description: Limits the zones the cluster creates nodes in. When the parameter
-              is not set, every zone covered by the cluster subnets is used.
+            description: |-
+              Limits the zones where the cloud provider places cluster nodes.
+
+              You can list up to four zones. If the parameter is not set, Deckhouse Platform uses `ru-central1-a`, `ru-central1-b`, `ru-central1-d`, and `ru-central1-e`.
+
+              Instructions for using the `ru-central1-f` zone are provided in ["Using the ru-central1-f zone"](examples.html#using-the-ru-central1-f-zone).
             items:
               enum:
               - ru-central1-a
               - ru-central1-b
               - ru-central1-d
               - ru-central1-e
+              - ru-central1-f
               type: string
+            maxItems: 4
             type: array
             uniqueItems: true
         required:

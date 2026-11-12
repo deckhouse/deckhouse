@@ -46,6 +46,19 @@ locals {
   # to 10; candi's cluster_configuration.yaml has no schema default.
   _default_etcd_disk_size_gb = 10
 
+  # Every zone currently supported. Zones outside the default set
+  # (ru-central1-f and any future ones) are opt-in via an explicit `zones`
+  # list, so existing clusters that never set `zones` keep their current zones
+  # and subnets.
+  _supported_zones = ["ru-central1-a", "ru-central1-b", "ru-central1-d", "ru-central1-e", "ru-central1-f"]
+
+  # Pinned statically on purpose. Deriving the default from the supported list
+  # (for example, "first four in alphabetical order") would silently shift it
+  # when a zone is added to or removed from the supported set — and a changed
+  # default re-sorts node placement and re-carves subnets on a plain Deckhouse
+  # update, without any action from the user.
+  _default_zones = ["ru-central1-a", "ru-central1-b", "ru-central1-d", "ru-central1-e"]
+
   # --- PCC shorthand ---------------------------------------------------------
 
   _pcc = var.providerClusterConfiguration
@@ -362,10 +375,46 @@ locals {
   # The synthesised objects and the cluster objects never have identical static
   # types, so the choice is made on the JSON encoding and decoded back into a
   # single dynamic value.
-  resolved_settings         = jsondecode(local.use_pcc ? jsonencode(local._pcc_module_config) : jsonencode(var.settings))
+  _resolved_settings_raw    = jsondecode(local.use_pcc ? jsonencode(local._pcc_module_config) : jsonencode(var.settings))
   resolved_node_groups      = jsondecode(local.use_pcc ? jsonencode(local._pcc_node_groups) : jsonencode(var.nodeGroups))
   resolved_instance_classes = jsondecode(local.use_pcc ? jsonencode(local._pcc_instance_classes) : jsonencode(var.instanceClasses))
   resolved_secrets          = jsondecode(local.use_pcc ? jsonencode(local._pcc_credential_secrets) : jsonencode(var.secrets))
+
+  # Normalize the global zone list once. An explicit non-empty selection is
+  # preserved as is. Otherwise a cluster that adopts existing subnets keeps
+  # placing nodes in every adopted zone, exactly as it did before the default
+  # set existed: narrowing such a cluster to the default on upgrade would move
+  # nodes out of adopted zones the user never named in `zones` (and recreate
+  # masters with their etcd disks). Only when nothing is adopted does the
+  # statically pinned default apply. The result is never written back into the
+  # cluster resources; it only steers subnet creation and node placement in
+  # this run.
+  _mc_zones      = try(tolist(local._resolved_settings_raw.spec.settings.nodes.parameters.zones), [])
+  _adopted_zones = sort(keys(try(tomap(local._resolved_settings_raw.spec.settings.nodes.parameters.existingZoneToSubnetIDMap), {})))
+  _global_zones  = length(local._mc_zones) > 0 ? local._mc_zones : (length(local._adopted_zones) > 0 ? local._adopted_zones : local._default_zones)
+
+  _raw_spec     = try(local._resolved_settings_raw.spec, {})
+  _raw_settings = try(local._raw_spec.settings, {})
+  _raw_nodes    = try(local._raw_settings.nodes, {})
+  _raw_params   = try(local._raw_nodes.parameters, {})
+
+  # A null raw value means "not configured" (destroy or empty inputs); the null
+  # arm unifies with any object type, which a conditional on two different
+  # object shapes would not.
+  resolved_settings = local._resolved_settings_raw == null ? null : jsondecode(jsonencode(merge(
+    local._resolved_settings_raw,
+    {
+      spec = merge(local._raw_spec, {
+        settings = merge(local._raw_settings, {
+          nodes = merge(local._raw_nodes, {
+            parameters = merge(local._raw_params, {
+              zones = local._global_zones
+            })
+          })
+        })
+      })
+    }
+  )))
 
   _node_params = try(local.resolved_settings.spec.settings.nodes.parameters, {})
 

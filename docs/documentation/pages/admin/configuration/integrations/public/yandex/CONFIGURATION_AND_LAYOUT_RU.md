@@ -296,7 +296,7 @@ spec:
 
 ### Внутренняя адресация узлов кластера
 
-[Параметр `nodeNetworkCIDR`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-nodenetworkcidr) задаёт диапазон IP-адресов, который распределяется между [зонами доступности](../../../../glossary.html#availability-zone) и применяется к внутренним интерфейсам узлов. Параметр задаётся в секции `nodes.parameters` ресурса ModuleConfig модуля [`cloud-provider-yandex`](/modules/cloud-provider-yandex/):
+[Параметр `nodeNetworkCIDR`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-nodenetworkcidr) задаёт диапазон IP-адресов, который распределяется между [зонами доступности](../../../../glossary.html#availability-zone) и применяется к внутренним интерфейсам узлов. Параметр задаётся в секции `nodes.parameters` ресурса [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) модуля [`cloud-provider-yandex`](/modules/cloud-provider-yandex/):
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -311,14 +311,20 @@ spec:
         nodeNetworkCIDR: 192.168.12.0/24
 ```
 
-Платформа делит эту подсеть на четыре равные части и создаёт из них по одной внутренней подсети в каждой зоне доступности:
+Deckhouse Platform делит [`nodeNetworkCIDR`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-nodenetworkcidr) на четыре равные части и создаёт внутренние подсети для узлов соответствующих зон доступности. За каждой зоной по умолчанию закреплена своя часть диапазона:
 
-- ru-central1-a
-- ru-central1-b
-- ru-central1-e
-- ru-central1-d
+| Зона | Часть диапазона |
+| --- | --- |
+| `ru-central1-a` | Первая |
+| `ru-central1-b` | Вторая |
+| `ru-central1-e` | Третья |
+| `ru-central1-d` | Четвёртая |
 
-К созданной подсети подключаются узлы соответствующей зоны. Деление выполняется во всех [схемах размещения](../../../../glossary.html#layout). Если задан [параметр `existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap), DP подсети не создаёт и использует указанные в нём.
+В [параметре `zones`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-zones) можно указать не более четырёх зон. Если параметр не задан, Deckhouse Platform использует все четыре зоны из таблицы.
+
+Как использовать зону `ru-central1-f`, описано [в разделе «Использование зоны ru-central1-f»](/modules/cloud-provider-yandex/examples.html#использование-зоны-ru-central1-f).
+
+Узлы подключаются к подсети соответствующей зоны. Деление диапазона выполняется во всех [схемах размещения](../../../../glossary.html#layout). Если задан [параметр `existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap), Deckhouse Platform использует указанные в нём подсети и не создаёт новые.
 
 {% alert level="info" %}
 К подсети привязывается только одна таблица маршрутизации, поэтому два кластера с модулем [`cni-simple-bridge`](/modules/cni-simple-bridge/) не могут использовать одни и те же подсети. Чтобы развернуть такие кластеры в общих подсетях, используйте модуль [`cni-cilium`](/modules/cni-cilium/).

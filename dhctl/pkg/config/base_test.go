@@ -837,6 +837,76 @@ provider:
 			require.YAMLEq(t, cloudConfig, string(cloudConfigFromMetaConfig))
 		})
 
+		t.Run("valid config with four zones including ru-central1-f", func(t *testing.T) {
+			const cloudConfig = `
+apiVersion: deckhouse.io/v1
+kind: YandexClusterConfiguration
+layout: WithoutNAT
+masterNodeGroup:
+  replicas: 1
+  instanceClass:
+    etcdDiskSizeGb: 10
+    platform: standard-v2
+    cores: 4
+    memory: 8192
+    imageID: imageId
+sshPublicKey: ssh-rsa AAAAB3NzaC
+nodeNetworkCIDR: 10.100.0.0/21
+zones:
+  - ru-central1-a
+  - ru-central1-b
+  - ru-central1-d
+  - ru-central1-f
+provider:
+  cloudID: cloudId
+  folderID: folderId
+  serviceAccountJSON: "{}"
+`
+			tst := createTestParseConfigFromCluster(t, testParams)
+
+			createCloudConfigSecret(t, tst, pointer.String(cloudConfig))
+			metaConfig := doParseFromClusterNoError(t, tst)
+
+			require.NotEmpty(t, metaConfig.ProviderClusterConfig)
+		})
+
+		t.Run("invalid config with five zones", func(t *testing.T) {
+			const cloudConfig = `
+apiVersion: deckhouse.io/v1
+kind: YandexClusterConfiguration
+layout: WithoutNAT
+masterNodeGroup:
+  replicas: 1
+  instanceClass:
+    etcdDiskSizeGb: 10
+    platform: standard-v2
+    cores: 4
+    memory: 8192
+    imageID: imageId
+sshPublicKey: ssh-rsa AAAAB3NzaC
+nodeNetworkCIDR: 10.100.0.0/21
+zones:
+  - ru-central1-a
+  - ru-central1-b
+  - ru-central1-d
+  - ru-central1-e
+  - ru-central1-f
+provider:
+  cloudID: cloudId
+  folderID: folderId
+  serviceAccountJSON: "{}"
+`
+			tst := createTestParseConfigFromCluster(t, testParams)
+
+			createCloudConfigSecret(t, tst, pointer.String(cloudConfig))
+			metaConfig, err := parseConfigFromCluster(t.Context(), tst.kubeCl, tst.validatorProvider, globalOptions(), "")
+
+			require.Error(t, err)
+			require.Nil(t, metaConfig)
+			require.Contains(t, err.Error(), "zones")
+			require.Contains(t, err.Error(), "4")
+		})
+
 		t.Run("invalid config", func(t *testing.T) {
 			const cloudConfig = `
 apiVersion: deckhouse.io/v1

@@ -200,6 +200,7 @@ properties:
                     - ru-central1-b
                     - ru-central1-d
                     - ru-central1-e
+                    - ru-central1-f
                 uniqueItems: true
               instanceClass:
                 type: object
@@ -344,6 +345,7 @@ properties:
                       - ru-central1-b
                       - ru-central1-d
                       - ru-central1-e
+                      - ru-central1-f
                   uniqueItems: true
                 nodeTemplate:
                   description: |
@@ -430,9 +432,16 @@ properties:
           nodeNetworkCIDR:
             type: string
             description: |
-              This subnet will be split into **three** equal parts.
+              IP address range for node subnets.
 
-              They will serve as a basis for subnets in three Yandex Cloud zones.
+              Deckhouse Platform divides the range into four equal parts:
+
+              - `ru-central1-a` uses the first part.
+              - `ru-central1-b` uses the second part.
+              - `ru-central1-e` uses the third part.
+              - `ru-central1-d` uses the fourth part.
+
+              Instructions for using the `ru-central1-f` zone are provided in ["Using the ru-central1-f zone"](examples.html#using-the-ru-central1-f-zone).
             x-unsafe: true
           existingZoneToSubnetIDMap:
             type: object
@@ -445,6 +454,7 @@ properties:
                 ru-central1-b: e2lu8r1tbbtryhdpa9ro
                 ru-central1-d: e2lu8r1tbbtryhdpa9ro
                 ru-central1-e: e2lu8r1tbbtryhdpa9ro
+                ru-central1-f: e2lu8r1tbbtryhdpa9ro
             additionalProperties:
               type: string
             pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
@@ -585,14 +595,20 @@ properties:
           zones:
             type: array
             description: |
-              The globally restricted set of zones that this cloud provider works with.
+              Limits the zones that the cloud provider works with.
+
+              You can list up to four zones. If the parameter is not set, Deckhouse Platform uses `ru-central1-a`, `ru-central1-b`, `ru-central1-d`, and `ru-central1-e`.
+
+              Instructions for using the `ru-central1-f` zone are provided in ["Using the ru-central1-f zone"](examples.html#using-the-ru-central1-f-zone).
             items:
               enum:
                 - ru-central1-a
                 - ru-central1-b
                 - ru-central1-d
                 - ru-central1-e
+                - ru-central1-f
             uniqueItems: true
+            maxItems: 4
         oneOf:
           - required: [layout]
             properties:

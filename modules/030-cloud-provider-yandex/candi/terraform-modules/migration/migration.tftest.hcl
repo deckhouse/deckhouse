@@ -111,6 +111,11 @@ run "state_a_standard_minimal" {
   }
 
   assert {
+    condition     = jsonencode(output.explicit_zones) == jsonencode(["ru-central1-a", "ru-central1-b", "ru-central1-d"])
+    error_message = "expected the PCC zones to pass through as explicit zones while the PCC is authoritative"
+  }
+
+  assert {
     condition     = output.settings.spec.settings.nodes.parameters.existingNetworkID == "" && length(output.settings.spec.settings.nodes.parameters.existingZoneToSubnetIDMap) == 0
     error_message = "expected no existing network to be referenced"
   }
@@ -349,6 +354,13 @@ run "state_a_standard_explicit_instance_class" {
   assert {
     condition     = output.nodeGroups.master.spec.cloudInstances.zones == null
     error_message = "expected no explicit zones when neither the PCC nor the node group sets them"
+  }
+
+  # The resolved settings carry the statically pinned default zones,
+  # without ru-central1-f.
+  assert {
+    condition     = jsonencode(output.settings.spec.settings.nodes.parameters.zones) == jsonencode(["ru-central1-a", "ru-central1-b", "ru-central1-d", "ru-central1-e"])
+    error_message = "expected the default zone set when the PCC does not list zones"
   }
 }
 
@@ -832,6 +844,7 @@ run "transition_fully_migrated_switches_to_resources" {
       layout          = "Standard"
       sshPublicKey    = "ssh-rsa STALE"
       nodeNetworkCIDR = "10.60.0.0/16"
+      zones           = ["ru-central1-a", "ru-central1-b", "ru-central1-d"]
       masterNodeGroup = {
         replicas      = 1
         instanceClass = { cores = 4, memory = 8192, imageID = "fd8master" }
@@ -906,6 +919,11 @@ run "transition_fully_migrated_switches_to_resources" {
   assert {
     condition     = nonsensitive(output.secrets)["d8-cloud-provider-yandex/d8-credentials"].stringData.secret == "{\"id\":\"sa-fresh\"}"
     error_message = "expected credentials to come from the Secret, not from the stale PCC"
+  }
+
+  assert {
+    condition     = length(output.explicit_zones) == 0
+    error_message = "expected explicit zones to follow the ModuleConfig (unset), not the stale PCC zones"
   }
 }
 
@@ -1975,5 +1993,367 @@ run "state_b_empty_pcc_object_is_no_pcc" {
   assert {
     condition     = keys(output.nodeGroups) == ["master"] && keys(output.instanceClasses) == ["master-fc613b4dfd67"]
     error_message = "expected the cluster resources to pass through unchanged"
+  }
+}
+
+# A ModuleConfig without zones resolves to the statically pinned default set,
+# without ru-central1-f.
+run "state_b_default_zones_when_unset" {
+  command = plan
+
+  variables {
+    secrets = {
+      "d8-cloud-provider-yandex/d8-credentials" = {
+        apiVersion = "v1"
+        kind       = "Secret"
+        metadata   = { name = "d8-credentials", namespace = "d8-cloud-provider-yandex" }
+        stringData = { authScheme = "serviceAccount", secret = "{\"id\":\"sa\"}" }
+        type       = "cloud-provider.deckhouse.io/credentials"
+      }
+    }
+
+    settings = {
+      apiVersion = "deckhouse.io/v1alpha1"
+      kind       = "ModuleConfig"
+      metadata   = { name = "cloud-provider-yandex" }
+      spec = {
+        enabled = true
+        version = 2
+        settings = {
+          provider = { parameters = { cloudID = "cloud-mc", folderID = "folder-mc" } }
+          nodes    = { parameters = { sshPublicKey = "ssh-rsa AAAA", layout = "Standard", nodeNetworkCIDR = "10.70.0.0/16" } }
+        }
+      }
+    }
+  }
+
+  assert {
+    condition     = jsonencode(output.settings.spec.settings.nodes.parameters.zones) == jsonencode(["ru-central1-a", "ru-central1-b", "ru-central1-d", "ru-central1-e"])
+    error_message = "expected the default zone set when the ModuleConfig does not list zones"
+  }
+}
+
+# An explicit empty list resolves to the default set the same way.
+run "state_b_default_zones_when_empty" {
+  command = plan
+
+  variables {
+    secrets = {
+      "d8-cloud-provider-yandex/d8-credentials" = {
+        apiVersion = "v1"
+        kind       = "Secret"
+        metadata   = { name = "d8-credentials", namespace = "d8-cloud-provider-yandex" }
+        stringData = { authScheme = "serviceAccount", secret = "{\"id\":\"sa\"}" }
+        type       = "cloud-provider.deckhouse.io/credentials"
+      }
+    }
+
+    settings = {
+      apiVersion = "deckhouse.io/v1alpha1"
+      kind       = "ModuleConfig"
+      metadata   = { name = "cloud-provider-yandex" }
+      spec = {
+        enabled = true
+        version = 2
+        settings = {
+          provider = { parameters = { cloudID = "cloud-mc", folderID = "folder-mc" } }
+          nodes    = { parameters = { sshPublicKey = "ssh-rsa AAAA", layout = "Standard", nodeNetworkCIDR = "10.70.0.0/16", zones = [] } }
+        }
+      }
+    }
+  }
+
+  assert {
+    condition     = jsonencode(output.settings.spec.settings.nodes.parameters.zones) == jsonencode(["ru-central1-a", "ru-central1-b", "ru-central1-d", "ru-central1-e"])
+    error_message = "expected the default zone set when the ModuleConfig lists no zones"
+  }
+}
+
+# An explicit selection with ru-central1-f passes through unchanged.
+run "state_b_explicit_zones_with_f" {
+  command = plan
+
+  variables {
+    secrets = {
+      "d8-cloud-provider-yandex/d8-credentials" = {
+        apiVersion = "v1"
+        kind       = "Secret"
+        metadata   = { name = "d8-credentials", namespace = "d8-cloud-provider-yandex" }
+        stringData = { authScheme = "serviceAccount", secret = "{\"id\":\"sa\"}" }
+        type       = "cloud-provider.deckhouse.io/credentials"
+      }
+    }
+
+    settings = {
+      apiVersion = "deckhouse.io/v1alpha1"
+      kind       = "ModuleConfig"
+      metadata   = { name = "cloud-provider-yandex" }
+      spec = {
+        enabled = true
+        version = 2
+        settings = {
+          provider = { parameters = { cloudID = "cloud-mc", folderID = "folder-mc" } }
+          nodes    = { parameters = { sshPublicKey = "ssh-rsa AAAA", layout = "Standard", nodeNetworkCIDR = "10.70.0.0/16", zones = ["ru-central1-a", "ru-central1-b", "ru-central1-d", "ru-central1-f"] } }
+        }
+      }
+    }
+  }
+
+  assert {
+    condition     = jsonencode(output.settings.spec.settings.nodes.parameters.zones) == jsonencode(["ru-central1-a", "ru-central1-b", "ru-central1-d", "ru-central1-f"])
+    error_message = "expected an explicit zone selection to pass through unchanged"
+  }
+
+  assert {
+    condition     = jsonencode(output.explicit_zones) == jsonencode(["ru-central1-a", "ru-central1-b", "ru-central1-d", "ru-central1-f"])
+    error_message = "expected the ModuleConfig zones to be exported as explicit zones before default resolution"
+  }
+}
+
+# More than four zones in a ModuleConfig is rejected at the resolver boundary,
+# even when the input bypassed the OpenAPI maxItems bound.
+run "negative_too_many_zones_module_config" {
+  command = plan
+
+  variables {
+    secrets = {
+      "d8-cloud-provider-yandex/d8-credentials" = {
+        apiVersion = "v1"
+        kind       = "Secret"
+        metadata   = { name = "d8-credentials", namespace = "d8-cloud-provider-yandex" }
+        stringData = { authScheme = "serviceAccount", secret = "{\"id\":\"sa\"}" }
+        type       = "cloud-provider.deckhouse.io/credentials"
+      }
+    }
+
+    settings = {
+      apiVersion = "deckhouse.io/v1alpha1"
+      kind       = "ModuleConfig"
+      metadata   = { name = "cloud-provider-yandex" }
+      spec = {
+        enabled = true
+        version = 2
+        settings = {
+          provider = { parameters = { cloudID = "cloud-mc", folderID = "folder-mc" } }
+          nodes = {
+            parameters = {
+              sshPublicKey    = "ssh-rsa AAAA"
+              layout          = "Standard"
+              nodeNetworkCIDR = "10.70.0.0/16"
+              zones           = ["ru-central1-a", "ru-central1-b", "ru-central1-d", "ru-central1-e", "ru-central1-f"]
+            }
+          }
+        }
+      }
+    }
+  }
+
+  expect_failures = [output.settings]
+}
+
+# More than four zones in a YandexClusterConfiguration is rejected the same way.
+run "negative_too_many_zones_pcc" {
+  command = plan
+
+  variables {
+    providerClusterConfiguration = {
+      apiVersion      = "deckhouse.io/v1"
+      kind            = "YandexClusterConfiguration"
+      layout          = "Standard"
+      sshPublicKey    = "ssh-rsa AAAA"
+      nodeNetworkCIDR = "10.0.0.0/16"
+      zones           = ["ru-central1-a", "ru-central1-b", "ru-central1-d", "ru-central1-e", "ru-central1-f"]
+      masterNodeGroup = {
+        replicas      = 1
+        instanceClass = { cores = 2, memory = 4096, imageID = "fd8" }
+      }
+      provider = {
+        cloudID            = "cloud-1"
+        folderID           = "folder-1"
+        serviceAccountJSON = "{\"id\":\"sa\"}"
+      }
+    }
+  }
+
+  expect_failures = [output.settings]
+}
+
+# A PCC that adopts subnets without listing zones keeps placing nodes in every
+# adopted zone: the default set must not narrow placement to a/b/d/e.
+run "state_a_adopted_zones_when_unset" {
+  command = plan
+
+  variables {
+    providerClusterConfiguration = {
+      apiVersion      = "deckhouse.io/v1"
+      kind            = "YandexClusterConfiguration"
+      layout          = "Standard"
+      sshPublicKey    = "ssh-rsa AAAA"
+      nodeNetworkCIDR = "10.0.0.0/16"
+      existingZoneToSubnetIDMap = {
+        ru-central1-a = "e9b-subnet-a"
+        ru-central1-b = "e9b-subnet-b"
+        ru-central1-f = "e9b-subnet-f"
+      }
+      masterNodeGroup = {
+        replicas      = 1
+        instanceClass = { cores = 2, memory = 4096, imageID = "fd8" }
+      }
+      provider = {
+        cloudID            = "cloud-1"
+        folderID           = "folder-1"
+        serviceAccountJSON = "{\"id\":\"sa\"}"
+      }
+    }
+  }
+
+  assert {
+    condition     = jsonencode(output.settings.spec.settings.nodes.parameters.zones) == jsonencode(["ru-central1-a", "ru-central1-b", "ru-central1-f"])
+    error_message = "expected the adopted map keys to become the zone set when zones are unset"
+  }
+}
+
+# The same for a ModuleConfig cluster: adopted map keys win over the default.
+run "state_b_adopted_zones_when_unset" {
+  command = plan
+
+  variables {
+    secrets = {
+      "d8-cloud-provider-yandex/d8-credentials" = {
+        apiVersion = "v1"
+        kind       = "Secret"
+        metadata   = { name = "d8-credentials", namespace = "d8-cloud-provider-yandex" }
+        stringData = { authScheme = "serviceAccount", secret = "{\"id\":\"sa\"}" }
+        type       = "cloud-provider.deckhouse.io/credentials"
+      }
+    }
+
+    settings = {
+      apiVersion = "deckhouse.io/v1alpha1"
+      kind       = "ModuleConfig"
+      metadata   = { name = "cloud-provider-yandex" }
+      spec = {
+        enabled = true
+        version = 2
+        settings = {
+          provider = { parameters = { cloudID = "cloud-mc", folderID = "folder-mc" } }
+          nodes = {
+            parameters = {
+              sshPublicKey    = "ssh-rsa AAAA"
+              layout          = "Standard"
+              nodeNetworkCIDR = "10.70.0.0/16"
+              existingZoneToSubnetIDMap = {
+                ru-central1-a = "e9b-subnet-a"
+                ru-central1-b = "e9b-subnet-b"
+                ru-central1-f = "e9b-subnet-f"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  assert {
+    condition     = jsonencode(output.settings.spec.settings.nodes.parameters.zones) == jsonencode(["ru-central1-a", "ru-central1-b", "ru-central1-f"])
+    error_message = "expected the adopted map keys to become the zone set when zones are unset"
+  }
+}
+
+# An explicit zone list wins over the adopted map keys.
+run "state_b_explicit_zones_win_over_adopted_map" {
+  command = plan
+
+  variables {
+    secrets = {
+      "d8-cloud-provider-yandex/d8-credentials" = {
+        apiVersion = "v1"
+        kind       = "Secret"
+        metadata   = { name = "d8-credentials", namespace = "d8-cloud-provider-yandex" }
+        stringData = { authScheme = "serviceAccount", secret = "{\"id\":\"sa\"}" }
+        type       = "cloud-provider.deckhouse.io/credentials"
+      }
+    }
+
+    settings = {
+      apiVersion = "deckhouse.io/v1alpha1"
+      kind       = "ModuleConfig"
+      metadata   = { name = "cloud-provider-yandex" }
+      spec = {
+        enabled = true
+        version = 2
+        settings = {
+          provider = { parameters = { cloudID = "cloud-mc", folderID = "folder-mc" } }
+          nodes = {
+            parameters = {
+              sshPublicKey    = "ssh-rsa AAAA"
+              layout          = "Standard"
+              nodeNetworkCIDR = "10.70.0.0/16"
+              zones           = ["ru-central1-a", "ru-central1-d"]
+              existingZoneToSubnetIDMap = {
+                ru-central1-a = "e9b-subnet-a"
+                ru-central1-b = "e9b-subnet-b"
+                ru-central1-f = "e9b-subnet-f"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  assert {
+    condition     = jsonencode(output.settings.spec.settings.nodes.parameters.zones) == jsonencode(["ru-central1-a", "ru-central1-d"])
+    error_message = "expected the explicit zone selection to win over the adopted map"
+  }
+}
+
+# Adopted maps are not capped at four zones: they were never schema-bounded and
+# keep working without a `zones` list.
+run "state_b_adopted_five_zones_no_cap" {
+  command = plan
+
+  variables {
+    secrets = {
+      "d8-cloud-provider-yandex/d8-credentials" = {
+        apiVersion = "v1"
+        kind       = "Secret"
+        metadata   = { name = "d8-credentials", namespace = "d8-cloud-provider-yandex" }
+        stringData = { authScheme = "serviceAccount", secret = "{\"id\":\"sa\"}" }
+        type       = "cloud-provider.deckhouse.io/credentials"
+      }
+    }
+
+    settings = {
+      apiVersion = "deckhouse.io/v1alpha1"
+      kind       = "ModuleConfig"
+      metadata   = { name = "cloud-provider-yandex" }
+      spec = {
+        enabled = true
+        version = 2
+        settings = {
+          provider = { parameters = { cloudID = "cloud-mc", folderID = "folder-mc" } }
+          nodes = {
+            parameters = {
+              sshPublicKey    = "ssh-rsa AAAA"
+              layout          = "Standard"
+              nodeNetworkCIDR = "10.70.0.0/16"
+              existingZoneToSubnetIDMap = {
+                ru-central1-a = "e9b-subnet-a"
+                ru-central1-b = "e9b-subnet-b"
+                ru-central1-d = "e9b-subnet-d"
+                ru-central1-e = "e9b-subnet-e"
+                ru-central1-f = "e9b-subnet-f"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  assert {
+    condition     = length(output.settings.spec.settings.nodes.parameters.zones) == 5
+    error_message = "expected all five adopted zones to be used without the four-zone cap"
   }
 }

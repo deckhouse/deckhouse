@@ -56,7 +56,7 @@ positive:
           zones:
             - ru-central1-a
 
-    # all available zones
+    # four zones including ru-central1-f (the maximum allowed)
     - provider:
         parameters:
           cloudID: test-cloud-id
@@ -70,8 +70,7 @@ positive:
             - ru-central1-a
             - ru-central1-b
             - ru-central1-d
-            - ru-central1-e
-
+            - ru-central1-f
     # ==========================================
     # dhcpOptions
     # ==========================================
@@ -964,6 +963,23 @@ negative:
           zones:
             - us-west-1
 
+    # five zones: more than the four-zone maximum
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+          zones:
+            - ru-central1-a
+            - ru-central1-b
+            - ru-central1-d
+            - ru-central1-e
+            - ru-central1-f
+
     # ==========================================
     # Invalid value types
     # ==========================================
@@ -1405,3 +1421,42 @@ negative:
           zones:
             - ru-central1-a
             - ru-central1-a
+
+    # ==========================================
+    # Internal: providerClusterConfiguration
+    # with five top-level zones (above the
+    # four-zone maximum)
+    # ==========================================
+
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      internal:
+        providerClusterConfiguration:
+          apiVersion: deckhouse.io/v1
+          kind: YandexClusterConfiguration
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+          zones:
+            - ru-central1-a
+            - ru-central1-b
+            - ru-central1-d
+            - ru-central1-e
+            - ru-central1-f
+          masterNodeGroup:
+            replicas: 1
+            instanceClass:
+              cores: 4
+              memory: 8192
+              imageID: fd85m9q2qspfnsv055rh
+          provider:
+            cloudID: test-cloud-id
+            folderID: test-folder-id
+            serviceAccountJSON: '{"id": "id"}'

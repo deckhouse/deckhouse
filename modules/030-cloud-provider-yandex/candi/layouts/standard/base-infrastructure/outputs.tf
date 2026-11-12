@@ -13,13 +13,11 @@
 # limitations under the License.
 
 # `zones` intentionally treats an empty restriction list the same as an absent one
-# and falls back to every zone the subnets cover. Before the migration the test was
-# `lookup(providerClusterConfiguration, "zones", null) != null`, so an explicit
-# `zones: []` intersected down to an empty list. That is the wrong answer twice over:
-# an empty list is self-contradictory for a "globally restricted set of zones", and
-# node-manager derives its default zone set from this output, so it would end up with
-# no zones at all (040-node-manager hooks/get_crds.go). Neither PCC nor ModuleConfig
-# constrains the list, so `zones: []` is accepted upstream and has to be handled here.
+# and falls back to every zone the subnets cover. The migration module resolves an
+# absent, null or empty list to the default zone set for every configured cluster,
+# so the fallback below is reachable only in unconfigured or destroy runs, where
+# node-manager must still not end up with an empty zone set
+# (040-node-manager hooks/get_crds.go).
 #
 # The discovery-data schemas no longer help: candi/openapi/cloud_discovery_data.yaml
 # and openapi/values.yaml used to reject an empty `zones` via `minItems: 1`, but that
@@ -33,8 +31,16 @@ output "cloud_discovery_data" {
     "routeTableID"                  = module.vpc_components.route_table_id
     "defaultLbTargetGroupNetworkId" = local.network_id
     "internalNetworkIDs"            = [local.network_id]
-    "zones"                         = length(local.zones) > 0 ? tolist(setintersection(keys(module.vpc_components.zone_to_subnet_id_map), local.zones)) : keys(module.vpc_components.zone_to_subnet_id_map)
-    "zoneToSubnetIdMap"             = module.vpc_components.zone_to_subnet_id_map
-    "shouldAssignPublicIPAddress"   = false
+    "zones" = (
+      # An adopted map without an explicit selection keeps the discovery list on
+      # the static zones, the way it behaved before dynamic zones existed:
+      # node-manager derives NodeGroup default zones from this list, and adopted
+      # zones outside the static set must not become placement defaults.
+      length(local.existing_zone_to_subnet_id_map) > 0 && length(local.raw_zones) == 0
+      ? (length(local.adopted_static_discovery_zones) > 0 ? local.adopted_static_discovery_zones : keys(module.vpc_components.zone_to_subnet_id_map))
+      : (length(local.zones) > 0 ? tolist(setintersection(keys(module.vpc_components.zone_to_subnet_id_map), local.zones)) : keys(module.vpc_components.zone_to_subnet_id_map))
+    )
+    "zoneToSubnetIdMap"           = module.vpc_components.zone_to_subnet_id_map
+    "shouldAssignPublicIPAddress" = false
   }
 }

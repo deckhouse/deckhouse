@@ -15,12 +15,20 @@
 locals {
   mapping = local.existing_zone_to_subnet_id_map
 
-  zone_to_subnet = length(local.mapping) == 0 ? {
-    "ru-central1-a" = length(data.yandex_vpc_subnet.kube_a) > 0 ? data.yandex_vpc_subnet.kube_a[0] : object({})
-    "ru-central1-b" = length(data.yandex_vpc_subnet.kube_b) > 0 ? data.yandex_vpc_subnet.kube_b[0] : object({})
-    "ru-central1-e" = length(data.yandex_vpc_subnet.kube_e) > 0 ? data.yandex_vpc_subnet.kube_e[0] : object({})
-    "ru-central1-d" = length(data.yandex_vpc_subnet.kube_d) > 0 ? data.yandex_vpc_subnet.kube_d[0] : object({})
-  } : data.yandex_vpc_subnet.existing
+  # Zones outside the static a/b/e/d set are discovered generically and depend
+  # on the global zone list only: a node group can narrow the placement but can
+  # never enable a zone the cluster did not select.
+  static_zones      = ["ru-central1-a", "ru-central1-b", "ru-central1-e", "ru-central1-d"]
+  dynamic_zones     = sort(setsubtract(local.cluster_zones, local.static_zones))
+  has_dynamic_zones = length(local.dynamic_zones) > 0
+
+  zone_to_subnet = length(local.mapping) == 0 ? merge(
+    length(data.yandex_vpc_subnet.kube_a) > 0 ? { "ru-central1-a" = data.yandex_vpc_subnet.kube_a[0] } : {},
+    length(data.yandex_vpc_subnet.kube_b) > 0 ? { "ru-central1-b" = data.yandex_vpc_subnet.kube_b[0] } : {},
+    length(data.yandex_vpc_subnet.kube_e) > 0 ? { "ru-central1-e" = data.yandex_vpc_subnet.kube_e[0] } : {},
+    length(data.yandex_vpc_subnet.kube_d) > 0 ? { "ru-central1-d" = data.yandex_vpc_subnet.kube_d[0] } : {},
+    { for zone, subnet in data.yandex_vpc_subnet.dynamic : zone => subnet },
+  ) : data.yandex_vpc_subnet.existing
 
   actual_zones    = length(local.cluster_zones) > 0 ? tolist(setintersection(keys(local.zone_to_subnet), local.cluster_zones)) : keys(local.zone_to_subnet)
   zones           = local.node_group_zones != null ? tolist(setintersection(local.actual_zones, local.node_group_zones)) : local.actual_zones
@@ -40,24 +48,34 @@ data "yandex_vpc_subnet" "existing" {
   subnet_id = each.value
 }
 
+# In legacy mode (no dynamic zone selected globally) vpc-components creates all
+# four static subnets, so all four are read. With a dynamic zone selected only
+# the selected static subnets exist, and reading an omitted one would fail.
 data "yandex_vpc_subnet" "kube_a" {
-  count = length(local.mapping) == 0 ? 1 : 0
+  count = length(local.mapping) == 0 && (!local.has_dynamic_zones || contains(local.cluster_zones, "ru-central1-a")) ? 1 : 0
   name  = "${local.prefix}-a"
 }
 
 data "yandex_vpc_subnet" "kube_b" {
-  count = length(local.mapping) == 0 ? 1 : 0
+  count = length(local.mapping) == 0 && (!local.has_dynamic_zones || contains(local.cluster_zones, "ru-central1-b")) ? 1 : 0
   name  = "${local.prefix}-b"
 }
 
 data "yandex_vpc_subnet" "kube_e" {
-  count = length(local.mapping) == 0 ? 1 : 0
+  count = length(local.mapping) == 0 && (!local.has_dynamic_zones || contains(local.cluster_zones, "ru-central1-e")) ? 1 : 0
   name  = "${local.prefix}-e"
 }
 
 data "yandex_vpc_subnet" "kube_d" {
-  count = length(local.mapping) == 0 ? 1 : 0
+  count = length(local.mapping) == 0 && (!local.has_dynamic_zones || contains(local.cluster_zones, "ru-central1-d")) ? 1 : 0
   name  = "${local.prefix}-d"
+}
+
+# Subnets in dynamic zones carry the zone suffix in their name, the same way
+# vpc-components names them.
+data "yandex_vpc_subnet" "dynamic" {
+  for_each = length(local.mapping) == 0 ? toset(local.dynamic_zones) : toset([])
+  name     = "${local.prefix}-${trimprefix(each.key, "ru-central1-")}"
 }
 
 locals {

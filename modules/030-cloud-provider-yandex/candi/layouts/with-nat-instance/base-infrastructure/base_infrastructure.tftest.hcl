@@ -372,3 +372,324 @@ run "existing_route_table_id_is_honored" {
     error_message = "expected nodes.parameters.existingRouteTableID to reach vpc-components and be published as-is, proving no route table was created"
   }
 }
+
+# A dynamic zone in the global zone list flows through the layout: the
+# discovery data includes ru-central1-f and excludes the omitted ru-central1-e,
+# while the NAT outputs keep their shape.
+run "state_b_dynamic_zone_discovery" {
+  command = plan
+
+  variables {
+    nodeGroups = {
+      master = {
+        apiVersion = "deckhouse.io/v1"
+        kind       = "NodeGroup"
+        metadata   = { name = "master" }
+        spec = {
+          nodeType = "CloudPermanent"
+          cloudInstances = {
+            classReference = { kind = "YandexInstanceClass", name = "master-fc613b4dfd67" }
+            minPerZone     = 1
+            maxPerZone     = 1
+          }
+        }
+      }
+    }
+
+    instanceClasses = {
+      "master-fc613b4dfd67" = {
+        apiVersion = "deckhouse.io/v1"
+        kind       = "YandexInstanceClass"
+        metadata   = { name = "master-fc613b4dfd67" }
+        spec       = { cores = 4, memory = 8192, imageID = "fd8" }
+      }
+    }
+
+    secrets = {
+      "d8-cloud-provider-yandex/d8-credentials" = {
+        apiVersion = "v1"
+        kind       = "Secret"
+        metadata   = { name = "d8-credentials", namespace = "d8-cloud-provider-yandex" }
+        stringData = { authScheme = "serviceAccount", secret = "{\"id\":\"sa\"}" }
+        type       = "cloud-provider.deckhouse.io/credentials"
+      }
+    }
+
+    settings = {
+      apiVersion = "deckhouse.io/v1alpha1"
+      kind       = "ModuleConfig"
+      metadata   = { name = "cloud-provider-yandex" }
+      spec = {
+        enabled = true
+        version = 2
+        settings = {
+          provider = { parameters = { cloudID = "cloud-b", folderID = "folder-b" } }
+          nodes = {
+            parameters = {
+              sshPublicKey    = "ssh-rsa STATE_B"
+              layout          = "WithNATInstance"
+              nodeNetworkCIDR = "10.70.0.0/16"
+              zones           = ["ru-central1-a", "ru-central1-b", "ru-central1-d", "ru-central1-f"]
+              withNATInstance = {
+                internalSubnetCIDR = "10.70.4.0/24"
+                natInstanceResources = {
+                  cores    = 2
+                  memory   = 4096
+                  platform = "standard-v2"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  override_module {
+    target = module.vpc_components
+    outputs = {
+      route_table_id = "route-table-b"
+      zone_to_subnet_id_map = {
+        "ru-central1-a" = "subnet-a"
+        "ru-central1-b" = "subnet-b"
+        "ru-central1-d" = "subnet-d"
+        "ru-central1-f" = "subnet-f"
+      }
+      nat_instance_name = "test-prefix-nat"
+      nat_instance_zone = "ru-central1-a"
+    }
+  }
+
+  override_module {
+    target  = module.monitoring-service-account
+    outputs = { apiKey = "exporter-key" }
+  }
+
+  override_resource {
+    target = yandex_vpc_network.kube
+    values = { id = "network-created-b" }
+  }
+
+  assert {
+    condition     = jsonencode(output.cloud_discovery_data.zones) == jsonencode(["ru-central1-a", "ru-central1-b", "ru-central1-d", "ru-central1-f"])
+    error_message = "expected the dynamic zone in the discovery data and the omitted ru-central1-e excluded"
+  }
+
+  assert {
+    condition     = output.cloud_discovery_data.zoneToSubnetIdMap["ru-central1-f"] == "subnet-f" && !contains(keys(output.cloud_discovery_data.zoneToSubnetIdMap), "ru-central1-e")
+    error_message = "expected the discovery subnet map to carry ru-central1-f without ru-central1-e"
+  }
+
+  assert {
+    condition     = output.cloud_discovery_data.natInstanceName == "test-prefix-nat"
+    error_message = "expected the NAT instance name to keep being published"
+  }
+}
+
+# An adopted map with a zone outside the static set and no explicit `zones`
+# must keep the discovery zone list on the static zones (node-manager derives
+# NodeGroup default zones from it), while the map itself keeps ru-central1-f.
+run "adopted_map_without_zones_keeps_static_discovery" {
+  command = plan
+
+  variables {
+    providerClusterConfiguration = {
+      apiVersion      = "deckhouse.io/v1"
+      kind            = "YandexClusterConfiguration"
+      layout          = "WithNATInstance"
+      sshPublicKey    = "ssh-rsa AAAA"
+      nodeNetworkCIDR = "10.0.0.0/16"
+      existingZoneToSubnetIDMap = {
+        "ru-central1-a" = "subnet-a"
+        "ru-central1-b" = "subnet-b"
+        "ru-central1-f" = "subnet-f"
+      }
+      masterNodeGroup = {
+        replicas      = 1
+        instanceClass = { cores = 4, memory = 8192, imageID = "fd8" }
+      }
+      provider = {
+        cloudID            = "cloud-1"
+        folderID           = "folder-1"
+        serviceAccountJSON = "{\"id\":\"sa\"}"
+      }
+    }
+  }
+
+  override_module {
+    target = module.vpc_components
+    outputs = {
+      route_table_id = "route-table-a"
+      zone_to_subnet_id_map = {
+        "ru-central1-a" = "subnet-a"
+        "ru-central1-b" = "subnet-b"
+        "ru-central1-f" = "subnet-f"
+      }
+      nat_instance_name = "test-prefix-nat"
+      nat_instance_zone = "ru-central1-a"
+    }
+  }
+
+  override_module {
+    target  = module.monitoring-service-account
+    outputs = { apiKey = "exporter-key" }
+  }
+
+  override_resource {
+    target = yandex_vpc_network.kube
+    values = { id = "network-created" }
+  }
+
+  assert {
+    condition     = jsonencode(output.cloud_discovery_data.zones) == jsonencode(["ru-central1-a", "ru-central1-b"])
+    error_message = "expected the discovery zone list to stay on the static zones for an adopted map without explicit zones"
+  }
+
+  assert {
+    condition     = output.cloud_discovery_data.zoneToSubnetIdMap["ru-central1-f"] == "subnet-f"
+    error_message = "expected the adopted ru-central1-f subnet to stay in the subnet map"
+  }
+}
+
+# State C regression: the migration is complete (ModuleConfig v2 plus the
+# cluster resources below), yet a stale PCC Secret still lists zones. The
+# stale list must not reach raw_zones: with PCC-first precedence the static
+# discovery guard was defeated and ru-central1-f leaked into the discovery
+# zone list.
+run "state_c_stale_pcc_zones_keep_static_discovery" {
+  command = plan
+
+  variables {
+    providerClusterConfiguration = {
+      apiVersion      = "deckhouse.io/v1"
+      kind            = "YandexClusterConfiguration"
+      layout          = "WithNATInstance"
+      sshPublicKey    = "ssh-rsa STALE"
+      nodeNetworkCIDR = "10.0.0.0/16"
+      zones           = ["ru-central1-a", "ru-central1-b", "ru-central1-d"]
+      existingZoneToSubnetIDMap = {
+        "ru-central1-a" = "subnet-a"
+        "ru-central1-b" = "subnet-b"
+        "ru-central1-f" = "subnet-f"
+      }
+      masterNodeGroup = {
+        replicas      = 1
+        instanceClass = { cores = 4, memory = 8192, imageID = "fd8" }
+      }
+      provider = {
+        cloudID            = "cloud-1"
+        folderID           = "folder-1"
+        serviceAccountJSON = "{\"id\":\"sa\"}"
+      }
+    }
+
+    nodeGroups = {
+      master = {
+        apiVersion = "deckhouse.io/v1"
+        kind       = "NodeGroup"
+        metadata   = { name = "master" }
+        spec = {
+          nodeType = "CloudPermanent"
+          cloudInstances = {
+            classReference = { kind = "YandexInstanceClass", name = "master-fc613b4dfd67" }
+            minPerZone     = 1
+            maxPerZone     = 1
+          }
+        }
+      }
+    }
+
+    instanceClasses = {
+      "master-fc613b4dfd67" = {
+        apiVersion = "deckhouse.io/v1"
+        kind       = "YandexInstanceClass"
+        metadata   = { name = "master-fc613b4dfd67" }
+        spec       = { cores = 4, memory = 8192, imageID = "fd8", platformID = "standard-v2", diskType = "network-ssd" }
+      }
+    }
+
+    secrets = {
+      "d8-cloud-provider-yandex/d8-credentials" = {
+        apiVersion = "v1"
+        kind       = "Secret"
+        metadata   = { name = "d8-credentials", namespace = "d8-cloud-provider-yandex" }
+        stringData = { authScheme = "serviceAccount", secret = "{\"id\":\"sa\"}" }
+        type       = "cloud-provider.deckhouse.io/credentials"
+      }
+      "d8-cloud-provider-yandex/d8-credentials-exporter" = {
+        apiVersion = "v1"
+        kind       = "Secret"
+        metadata   = { name = "d8-credentials-exporter", namespace = "d8-cloud-provider-yandex" }
+        stringData = { authScheme = "apiToken", secret = "exporter-from-secret" }
+        type       = "cloud-provider.deckhouse.io/credentials"
+      }
+    }
+
+    settings = {
+      apiVersion = "deckhouse.io/v1alpha1"
+      kind       = "ModuleConfig"
+      metadata   = { name = "cloud-provider-yandex" }
+      spec = {
+        enabled = true
+        version = 2
+        settings = {
+          provider = { parameters = { cloudID = "cloud-b", folderID = "folder-b" } }
+          nodes = {
+            parameters = {
+              sshPublicKey    = "ssh-rsa STATE_B"
+              layout          = "WithNATInstance"
+              nodeNetworkCIDR = "10.70.0.0/16"
+              existingZoneToSubnetIDMap = {
+                ru-central1-a = "subnet-a"
+                ru-central1-b = "subnet-b"
+                ru-central1-f = "subnet-f"
+              }
+              withNATInstance = {
+                internalSubnetCIDR = "10.70.4.0/24"
+                natInstanceResources = {
+                  cores    = 2
+                  memory   = 4096
+                  platform = "standard-v2"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  override_module {
+    target = module.vpc_components
+    outputs = {
+      route_table_id = "route-table-b"
+      zone_to_subnet_id_map = {
+        "ru-central1-a" = "subnet-a"
+        "ru-central1-b" = "subnet-b"
+        "ru-central1-f" = "subnet-f"
+      }
+      nat_instance_name = "test-prefix-nat"
+      nat_instance_zone = "ru-central1-a"
+    }
+  }
+
+  override_module {
+    target  = module.monitoring-service-account
+    outputs = { apiKey = "exporter-from-secret" }
+  }
+
+  override_resource {
+    target = yandex_vpc_network.kube
+    values = { id = "network-created-b" }
+  }
+
+  assert {
+    condition     = jsonencode(output.cloud_discovery_data.zones) == jsonencode(["ru-central1-a", "ru-central1-b"])
+    error_message = "expected the stale PCC zones to be ignored: an adopted map without explicit zones keeps the static discovery zones"
+  }
+
+  assert {
+    condition     = output.cloud_discovery_data.zoneToSubnetIdMap["ru-central1-f"] == "subnet-f"
+    error_message = "expected the adopted ru-central1-f subnet to stay in the subnet map"
+  }
+}

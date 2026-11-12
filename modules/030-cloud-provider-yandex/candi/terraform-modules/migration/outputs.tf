@@ -14,7 +14,7 @@
 
 output "settings" {
   description = "Resolved ModuleConfig object for cloud-provider-yandex."
-  value       = jsondecode(local.use_pcc ? jsonencode(local._pcc_module_config) : jsonencode(var.settings))
+  value       = local.resolved_settings
 
   # The configuration checks live on the outputs rather than in a validation block of their own:
   # they depend on locals that resolve the source of truth (use_pcc, _mc_version), and a
@@ -54,6 +54,16 @@ output "settings" {
     error_message = "ERROR: unknown layout '${local._layout}': expected one of ${join(", ", local._known_layouts)}."
   }
 
+  # The OpenAPI schema bounds an explicit list with maxItems; this precondition
+  # is the infrastructure-side defense for explicit lists that bypass the
+  # schema. Zones derived from an adopted subnet map are intentionally not
+  # capped: such maps were never schema-bounded, and their zones keep working
+  # without being listed in `zones`.
+  precondition {
+    condition     = !local._configured || length(local._mc_zones) <= 4
+    error_message = "ERROR: at most four zones are allowed in `nodes.parameters.zones` (YandexClusterConfiguration `zones`), got ${length(local._mc_zones)}: ${join(", ", local._mc_zones)}."
+  }
+
   precondition {
     condition     = length(local._dangling_class_references) == 0
     error_message = <<-EOT
@@ -90,6 +100,16 @@ output "settings" {
     EOT
   }
 
+}
+
+# The winning source's explicit zone list before the default/adopted-map
+# resolution (local._global_zones). Layouts use it to decide whether an
+# adopted subnet map keeps static-only discovery zones; reading it from
+# here instead of re-deriving the PCC-vs-ModuleConfig precedence keeps a
+# stale PCC Secret from overriding the ModuleConfig after migration.
+output "explicit_zones" {
+  description = "Explicit zones of the winning configuration source, before default resolution; empty when unset."
+  value       = local._mc_zones
 }
 
 output "nodeGroups" {

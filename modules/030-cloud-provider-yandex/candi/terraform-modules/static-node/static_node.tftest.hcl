@@ -643,3 +643,180 @@ run "state_b_unknown_network_type_is_rejected" {
 
   expect_failures = [yandex_compute_instance.static]
 }
+
+# A dynamic zone selected at the cluster level participates in static node
+# placement: with the global zones [a,b,d,f] the fourth node (nodeIndex 3)
+# lands in ru-central1-f.
+run "state_b_dynamic_zone_static_placement" {
+  command = plan
+
+  variables {
+    nodeIndex = 3
+    nodeGroups = {
+      worker = {
+        apiVersion = "deckhouse.io/v1"
+        kind       = "NodeGroup"
+        metadata   = { name = "worker" }
+        spec = {
+          nodeType = "CloudPermanent"
+          cloudInstances = {
+            classReference = { kind = "YandexInstanceClass", name = "worker-87eba76e7f31" }
+            minPerZone     = 4
+            maxPerZone     = 4
+          }
+        }
+      }
+    }
+
+    instanceClasses = {
+      "worker-87eba76e7f31" = {
+        apiVersion = "deckhouse.io/v1"
+        kind       = "YandexInstanceClass"
+        metadata   = { name = "worker-87eba76e7f31" }
+        spec       = { cores = 4, memory = 4096, imageID = "fd8worker", platformID = "standard-v3" }
+      }
+    }
+
+    secrets = {
+      "d8-cloud-provider-yandex/d8-credentials" = {
+        apiVersion = "v1"
+        kind       = "Secret"
+        metadata   = { name = "d8-credentials", namespace = "d8-cloud-provider-yandex" }
+        stringData = { authScheme = "serviceAccount", secret = "{\"id\":\"sa\"}" }
+        type       = "cloud-provider.deckhouse.io/credentials"
+      }
+    }
+
+    settings = {
+      apiVersion = "deckhouse.io/v1alpha1"
+      kind       = "ModuleConfig"
+      metadata   = { name = "cloud-provider-yandex" }
+      spec = {
+        enabled = true
+        version = 2
+        settings = {
+          provider = { parameters = { cloudID = "cloud-b", folderID = "folder-b" } }
+          nodes = {
+            parameters = {
+              sshPublicKey    = "ssh-rsa STATE_B"
+              layout          = "Standard"
+              nodeNetworkCIDR = "10.70.0.0/16"
+              zones           = ["ru-central1-a", "ru-central1-b", "ru-central1-d", "ru-central1-f"]
+            }
+          }
+        }
+      }
+    }
+  }
+
+  override_data {
+    target = data.yandex_vpc_subnet.kube_a
+    values = { id = "subnet-a", zone = "ru-central1-a" }
+  }
+  override_data {
+    target = data.yandex_vpc_subnet.kube_b
+    values = { id = "subnet-b", zone = "ru-central1-b" }
+  }
+  override_data {
+    target = data.yandex_vpc_subnet.kube_d
+    values = { id = "subnet-d", zone = "ru-central1-d" }
+  }
+  override_data {
+    target = data.yandex_vpc_subnet.dynamic
+    values = { id = "subnet-f", zone = "ru-central1-f" }
+  }
+
+  assert {
+    condition     = yandex_compute_instance.static.zone == "ru-central1-f"
+    error_message = "expected static node 3 to land in ru-central1-f"
+  }
+
+  assert {
+    condition     = yandex_compute_instance.static.network_interface[0].subnet_id == "subnet-f"
+    error_message = "expected the static node internal interface in the ru-central1-f subnet"
+  }
+}
+
+# An adopted ru-central1-f subnet participates the same way: the existing map
+# drives the lookup and no subnet data source by name is read.
+run "state_b_adopted_dynamic_zone_static_placement" {
+  command = plan
+
+  variables {
+    nodeIndex = 3
+    nodeGroups = {
+      worker = {
+        apiVersion = "deckhouse.io/v1"
+        kind       = "NodeGroup"
+        metadata   = { name = "worker" }
+        spec = {
+          nodeType = "CloudPermanent"
+          cloudInstances = {
+            classReference = { kind = "YandexInstanceClass", name = "worker-87eba76e7f31" }
+            minPerZone     = 4
+            maxPerZone     = 4
+          }
+        }
+      }
+    }
+
+    instanceClasses = {
+      "worker-87eba76e7f31" = {
+        apiVersion = "deckhouse.io/v1"
+        kind       = "YandexInstanceClass"
+        metadata   = { name = "worker-87eba76e7f31" }
+        spec       = { cores = 4, memory = 4096, imageID = "fd8worker", platformID = "standard-v3" }
+      }
+    }
+
+    secrets = {
+      "d8-cloud-provider-yandex/d8-credentials" = {
+        apiVersion = "v1"
+        kind       = "Secret"
+        metadata   = { name = "d8-credentials", namespace = "d8-cloud-provider-yandex" }
+        stringData = { authScheme = "serviceAccount", secret = "{\"id\":\"sa\"}" }
+        type       = "cloud-provider.deckhouse.io/credentials"
+      }
+    }
+
+    settings = {
+      apiVersion = "deckhouse.io/v1alpha1"
+      kind       = "ModuleConfig"
+      metadata   = { name = "cloud-provider-yandex" }
+      spec = {
+        enabled = true
+        version = 2
+        settings = {
+          provider = { parameters = { cloudID = "cloud-b", folderID = "folder-b" } }
+          nodes = {
+            parameters = {
+              sshPublicKey    = "ssh-rsa STATE_B"
+              layout          = "Standard"
+              nodeNetworkCIDR = "10.70.0.0/16"
+              zones           = ["ru-central1-a", "ru-central1-b", "ru-central1-d", "ru-central1-f"]
+              existingZoneToSubnetIDMap = {
+                ru-central1-a = "e9b-subnet-a"
+                ru-central1-b = "e9b-subnet-b"
+                ru-central1-d = "e9b-subnet-d"
+                ru-central1-f = "e9b-subnet-f"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  override_data {
+    target = data.yandex_vpc_subnet.existing
+    values = { id = "subnet-adopted", zone = "ru-central1-f" }
+  }
+
+  # The override gives every adopted subnet the same attributes, so the exact
+  # index picked by the round-robin is not observable; the assertion is that
+  # placement over an adopted map with a dynamic zone plans at all.
+  assert {
+    condition     = yandex_compute_instance.static.zone == "ru-central1-f" && yandex_compute_instance.static.network_interface[0].subnet_id == "subnet-adopted"
+    error_message = "expected the static node to use an adopted subnet when ru-central1-f is adopted"
+  }
+}
