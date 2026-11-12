@@ -2258,3 +2258,89 @@ func (suite *ReleaseControllerTestSuite) getMetricValue(metricFamilies []*promdt
 
 	return -1 // Not found
 }
+
+// deletedReleaseYAML is a deployed release under deletion and its module served by it.
+const deletedReleaseYAML = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  deletionTimestamp: "2024-05-03T21:00:00Z"
+  finalizers:
+    - modules.deckhouse.io/exist-on-fs
+  labels:
+    module: parca
+    source: foxtrot
+    status: deployed
+  name: parca-v1.4.3
+spec:
+  moduleName: parca
+  version: 1.4.3
+  weight: 900
+status:
+  phase: Terminating
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: parca
+properties:
+  source: %s
+  version: v1.4.3
+  updatePolicy: foxtrot-alpha
+status:
+  phase: Ready
+  hooksState: "ok"
+  conditions:
+    - type: EnabledByModuleConfig
+      status: "True"
+    - type: EnabledByModuleManager
+      status: "True"
+    - type: IsReady
+      status: "True"
+    - type: LastReleaseDeployed
+      status: "True"
+`
+
+func (suite *ReleaseControllerTestSuite) TestDeleteDeployedRelease() {
+	suite.Run("downloaded module is reset to not installed", func() {
+		suite.testDataFileName = ""
+		uninstalled := ""
+		suite.setupReleaseController(fmt.Sprintf(deletedReleaseYAML, "foxtrot"), withInstaller(&installermock.Installer{
+			UninstallFunc: func(_ context.Context, module string) error {
+				uninstalled = module
+				return nil
+			},
+		}))
+
+		_, err := suite.ctr.deleteRelease(context.TODO(), suite.getModuleRelease("parca-v1.4.3"))
+		require.NoError(suite.T(), err)
+		suite.Equal("parca", uninstalled)
+
+		module := new(v1alpha1.Module)
+		require.NoError(suite.T(), suite.client.Get(context.TODO(), client.ObjectKey{Name: "parca"}, module))
+		suite.Empty(module.Properties.Version)
+		suite.Equal("foxtrot", module.Properties.Source)
+		suite.Equal("foxtrot-alpha", module.Properties.UpdatePolicy)
+		suite.Equal(v1alpha1.ModulePhaseAvailable, module.Status.Phase)
+		suite.Empty(module.Status.HooksState)
+		suite.True(module.IsCondition(v1alpha1.ModuleConditionIsReady, corev1.ConditionFalse))
+		suite.True(module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, corev1.ConditionFalse))
+		suite.True(module.IsCondition(v1alpha1.ModuleConditionLastReleaseDeployed, corev1.ConditionUnknown))
+		suite.True(module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue))
+	})
+
+	suite.Run("embedded module keeps its status", func() {
+		suite.testDataFileName = ""
+		suite.setupReleaseController(fmt.Sprintf(deletedReleaseYAML, "Embedded"))
+
+		_, err := suite.ctr.deleteRelease(context.TODO(), suite.getModuleRelease("parca-v1.4.3"))
+		require.NoError(suite.T(), err)
+
+		module := new(v1alpha1.Module)
+		require.NoError(suite.T(), suite.client.Get(context.TODO(), client.ObjectKey{Name: "parca"}, module))
+		suite.Equal("v1.4.3", module.Properties.Version)
+		suite.Equal(v1alpha1.ModulePhaseReady, module.Status.Phase)
+		suite.True(module.IsCondition(v1alpha1.ModuleConditionIsReady, corev1.ConditionTrue))
+	})
+}

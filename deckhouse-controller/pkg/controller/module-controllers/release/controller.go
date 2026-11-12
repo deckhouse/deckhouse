@@ -1883,6 +1883,13 @@ func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.Module
 		}
 
 		r.exts.DeleteConstraints(release.GetModuleName())
+
+		if err := r.resetUninstalledModule(ctx, release.GetModuleName()); err != nil {
+			r.log.Error("failed to reset uninstalled module", slog.String("release", release.GetName()), log.Err(err))
+
+			return ctrl.Result{}, fmt.Errorf("reset uninstalled module: %w", err)
+		}
+
 		// TODO(yalosev): we have to disable module here somehow.
 		// otherwise, hooks from file system will fail
 
@@ -1900,6 +1907,52 @@ func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.Module
 	}
 
 	return ctrl.Result{}, nil
+}
+
+// resetUninstalledModule marks a downloaded module not installed after its deployed release is uninstalled.
+// The module manager no longer reports it, so nothing else replaces the status of the removed release.
+func (r *reconciler) resetUninstalledModule(ctx context.Context, moduleName string) error {
+	module := new(v1alpha1.Module)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
+		return client.IgnoreNotFound(err)
+	}
+
+	// the embedded copy keeps serving the module
+	if module.IsEmbedded() {
+		return nil
+	}
+
+	deployed, err := utils.ModulePullOverrideHasDeployed(ctx, r.client, moduleName)
+	if err != nil {
+		return fmt.Errorf("get module pull override: %w", err)
+	}
+
+	// the override keeps serving the module
+	if deployed {
+		return nil
+	}
+
+	err = ctrlutils.UpdateWithRetry(ctx, r.client, module, func() error {
+		module.Properties.Version = ""
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("clear module version: %w", err)
+	}
+
+	err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, module, func() error {
+		module.Status.Phase = v1alpha1.ModulePhaseAvailable
+		module.Status.HooksState = ""
+		module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, "", "")
+		module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
+		module.SetConditionUnknown(v1alpha1.ModuleConditionLastReleaseDeployed, "", "")
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("set module not installed: %w", err)
+	}
+
+	return nil
 }
 
 // deleteOutdatedModuleReleases finds and deletes all outdated releases of the module in
