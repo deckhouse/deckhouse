@@ -45,7 +45,7 @@ else
   export WERF_DEV=true
 fi
 
-${WERF_BINARY} build website-docs/web/static website-docs/modules-embedded/static-artifact website-docs/pdf-builder
+${WERF_BINARY} build --final-images-only=false website-docs/web/static website-docs/modules-embedded/static-artifact website-docs/pdf-builder
 
 STATIC_IMAGE=$(${WERF_BINARY} stage image website-docs/web/static)
 MODULES_IMAGE=$(${WERF_BINARY} stage image website-docs/modules-embedded/static-artifact)

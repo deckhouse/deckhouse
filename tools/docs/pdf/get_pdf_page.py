@@ -32,8 +32,8 @@ SIDEBAR_YAML = "main.yml"
 
 # H1 before embedded-modules block in merged HTML.
 MODULES_SECTION_H1: Dict[str, str] = {
-    "ru": "Встроенные модули Deckhouse Kubernetes Platform",
-    "en": "Embedded Deckhouse Kubernetes Platform modules",
+    "ru": "Встроенные модули Deckhouse Platform",
+    "en": "Embedded Deckhouse Platform modules",
 }
 
 
@@ -1376,19 +1376,19 @@ def _wkhtml_ui_strings(
     lang: str,
     doc_version: str,
     guide_title_en: str = "Administrator's guide",
-    guide_title_ru: str = "Справочник администратора",
+    guide_title_ru: str = "Руководство администратора",
 ) -> Tuple[str, str, str]:
     """Header left, footer right, TOC title for wkhtmltopdf."""
     if lang == "en":
         guide_title = guide_title_en
         if doc_version:
             header_left = (
-                f"Deckhouse Kubernetes Platform {doc_version}. "
+                f"Deckhouse Platform {doc_version}. "
                 f"{guide_title} - [section]"
             )
         else:
             header_left = (
-                f"Deckhouse Kubernetes Platform. "
+                f"Deckhouse Platform. "
                 f"{guide_title} - [section]"
             )
         footer_right = "Page [page]"
@@ -1397,12 +1397,12 @@ def _wkhtml_ui_strings(
         guide_title = guide_title_ru
         if doc_version:
             header_left = (
-                f"Deckhouse Kubernetes Platform {doc_version}. "
+                f"Deckhouse Platform {doc_version}. "
                 f"{guide_title} - [section]"
             )
         else:
             header_left = (
-                f"Deckhouse Kubernetes Platform. {guide_title} - [section]"
+                f"Deckhouse Platform. {guide_title} - [section]"
             )
         footer_right = "Страница [page]"
         toc_header = "Содержание"
@@ -1450,7 +1450,7 @@ if __name__ == "__main__":
     _exc_raw = os.environ.get("EXCLUDE_SECTIONS", "").strip()
     exclude_sections = [s.strip() for s in _exc_raw.split(",") if s.strip()] or None
     guide_title_en = os.environ.get("GUIDE_TITLE_EN", "").strip() or "Administrator's guide"
-    guide_title_ru = os.environ.get("GUIDE_TITLE_RU", "").strip() or "Справочник администратора"
+    guide_title_ru = os.environ.get("GUIDE_TITLE_RU", "").strip() or "Руководство администратора"
     langs_to_build = selected_pdf_langs()
 
     _cover_tmpdir = tempfile.mkdtemp(prefix="pdf-cover-")
@@ -1473,9 +1473,9 @@ if __name__ == "__main__":
         )
 
         cover_title = (
-            f"Deckhouse Kubernetes Platform {guide_title_en}"
+            f"Deckhouse Platform {guide_title_en}"
             if lang == "en"
-            else f"Deckhouse Kubernetes Platform {guide_title_ru}"
+            else f"Deckhouse Platform {guide_title_ru}"
         )
         cover_path = generate_cover_html(lang, cover_title, doc_version, _cover_tmpdir)
         toc_xsl_path = _generate_localized_toc_xsl(toc_header, _cover_tmpdir)
