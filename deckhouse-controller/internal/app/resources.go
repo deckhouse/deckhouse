@@ -23,3 +23,7 @@ const (
 	// SecretDiscovery holds cluster discovery data.
 	SecretDiscovery = "deckhouse-discovery"
 )
+
+// PackageRepositoryDeckhouseModules is the PackageRepository serving the modules of the "deckhouse"
+// ModuleSource; the modules moved out of the image go there.
+const PackageRepositoryDeckhouseModules = "deckhouse-modules"

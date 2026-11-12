@@ -150,7 +150,7 @@ func TestMigratedModulesCheck_DistinctErrors(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Name: "test-release"},
 				Spec: v1alpha1.DeckhouseReleaseSpec{
 					Version:      "v1.60.0",
-					Requirements: map[string]string{MigratedModulesRequirementFieldName: moduleName},
+					Requirements: map[string]string{"migratedModules": moduleName},
 				},
 			}
 

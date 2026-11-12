@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -46,6 +47,8 @@ const (
 
 	DeckhouseReleaseAnnotationDryrun            = "dryrun"
 	DeckhouseReleaseAnnotationTriggeredByDryrun = "triggered_by_dryrun"
+
+	migratedModulesRequirementFieldName = "migratedModules"
 )
 
 var DeckhouseReleaseGVK = schema.GroupVersionKind{
@@ -203,6 +206,18 @@ func (in *DeckhouseRelease) GetModuleName() string {
 // GetUpdateSpec returns the optional update spec of the related release
 func (in *DeckhouseRelease) GetUpdateSpec() *UpdateSpec {
 	return nil
+}
+
+func (in *DeckhouseRelease) GetMigratedModules() []string {
+	var modules []string
+
+	for _, module := range strings.Split(in.GetRequirements()[migratedModulesRequirementFieldName], ",") {
+		if module = strings.TrimSpace(module); module != "" {
+			modules = append(modules, module)
+		}
+	}
+
+	return modules
 }
 
 type DeckhouseReleaseSpec struct {

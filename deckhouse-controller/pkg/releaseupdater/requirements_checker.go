@@ -21,8 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"slices"
-	"strings"
 
 	"go.opentelemetry.io/otel"
 	corev1 "k8s.io/api/core/v1"
@@ -33,6 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
@@ -45,7 +44,6 @@ const (
 	deckhouseClusterKubernetesConfigMap = "d8-cluster-kubernetes"
 	k8sAutomaticUpdateMode              = "Automatic"
 	reqCheckerServiceName               = "requirements-checker"
-	MigratedModulesRequirementFieldName = "migratedModules"
 )
 
 type RequirementsChecker[T any] interface {
@@ -411,26 +409,17 @@ func (c *migratedModulesCheck) GetName() string {
 func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.DeckhouseRelease) error {
 	c.metricStorage.Grouped().ExpireGroupMetrics(metrics.MigratedModuleNotFoundGroup)
 	c.metricStorage.Grouped().ExpireGroupMetrics(metrics.MigratedModuleNotDownloadedGroup)
-	requirements := dr.GetRequirements()
-	migratedModules, exists := requirements[MigratedModulesRequirementFieldName]
-	if !exists || migratedModules == "" {
-		return nil
-	}
 
-	modules := strings.Split(migratedModules, ",")
-	for i, module := range modules {
-		modules[i] = strings.TrimSpace(module)
-	}
-
-	modules = slices.DeleteFunc(modules, func(module string) bool {
-		return module == ""
-	})
-
+	modules := dr.GetMigratedModules()
 	if len(modules) == 0 {
 		return nil
 	}
 
 	c.logger.Debug("checking migrated modules", slog.Any("modules", modules))
+
+	if app.ModuleV2Enabled() {
+		return c.verifyV2(ctx, modules)
+	}
 
 	// Fetch ModuleConfigs and ModuleSources
 	moduleList := &v1alpha1.ModuleList{}
@@ -498,6 +487,69 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 	}
 
 	c.logger.Debug("all migrated modules validation passed")
+
+	return nil
+}
+
+// verifyV2 requires a ready ModulePackageVersion (loaded and still in the registry) in the
+// deckhouse-modules repository for every enabled migrated module: after the upgrade pkgsync moves
+// the module onto the latest one. A module the cluster does not run is not checked.
+func (c *migratedModulesCheck) verifyV2(ctx context.Context, modules []string) error {
+	moduleList := new(v1beta1.ModuleList)
+	if err := c.k8sclient.List(ctx, moduleList); err != nil {
+		return fmt.Errorf("list modules: %w", err)
+	}
+
+	enabled := make(map[string]bool, len(moduleList.Items))
+	for i := range moduleList.Items {
+		if status := moduleList.Items[i].Status.Enabled; status != nil && *status {
+			enabled[moduleList.Items[i].Name] = true
+		}
+	}
+
+	versions := new(v1alpha1.ModulePackageVersionList)
+	err := c.k8sclient.List(ctx, versions, client.MatchingLabels{
+		v1alpha1.PackageLabelRepository: app.PackageRepositoryDeckhouseModules,
+	})
+	if err != nil {
+		return fmt.Errorf("list module package versions: %w", err)
+	}
+
+	for _, module := range modules {
+		if !enabled[module] {
+			continue
+		}
+
+		found, ready := false, false
+
+		for i := range versions.Items {
+			if versions.Items[i].Spec.PackageName != module {
+				continue
+			}
+
+			found = true
+			if !versions.Items[i].IsDraft() && !versions.Items[i].IsMissingFromRegistry() {
+				ready = true
+				break
+			}
+		}
+
+		if ready {
+			continue
+		}
+
+		if !found {
+			c.setMigratedModuleNotFoundAlert(module)
+
+			return fmt.Errorf(`migrated module '%s' has no version in the '%s' repository: publish it there before upgrading`,
+				module, app.PackageRepositoryDeckhouseModules)
+		}
+
+		c.setMigratedModuleNotDownloadedAlert(module)
+
+		return fmt.Errorf(`migrated module '%s' has no ready version in the '%s' repository yet: wait for its versions to be loaded before upgrading`,
+			module, app.PackageRepositoryDeckhouseModules)
+	}
 
 	return nil
 }

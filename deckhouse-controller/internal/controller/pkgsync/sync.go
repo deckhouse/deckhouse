@@ -31,7 +31,7 @@ const (
 	// repositoryNameDeckhouseModules serves the modules of the "deckhouse"
 	// ModuleSource. The plain "deckhouse" name belongs to the application-packages
 	// repository, while the module source points at <registry>/modules.
-	repositoryNameDeckhouseModules = "deckhouse-modules"
+	repositoryNameDeckhouseModules = app.PackageRepositoryDeckhouseModules
 
 	// repositoryNameEmbedded stands for the Deckhouse image itself and
 	// resolves to no PackageRepository object.
@@ -58,6 +58,10 @@ type syncer struct {
 
 	embeddedModulesDir string
 	globalHooksDir     string
+
+	// placed names the released modules syncModules placed this run, from their release or out of
+	// the image; syncModuleConfigs gives them their channel.
+	placed map[string]bool
 
 	logger *log.Logger
 }

@@ -196,6 +196,12 @@ func (m *ModulePackageVersion) IsDraft() bool {
 	return m.hasTrueLabel(PackageLabelDraft)
 }
 
+// IsMissingFromRegistry reports whether the version controller found the version's bundle image gone
+// from the registry; an unchecked version counts as present.
+func (m *ModulePackageVersion) IsMissingFromRegistry() bool {
+	return m.Labels[PackageLabelExistInRegistry] == "false"
+}
+
 // IsLegacy reports whether this package version was produced from a legacy ModuleRelease
 // rather than discovered as a package in a repository.
 func (m *ModulePackageVersion) IsLegacy() bool {

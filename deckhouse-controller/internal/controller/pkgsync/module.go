@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"slices"
 
+	"github.com/Masterminds/semver/v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metautils "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,12 +50,10 @@ var legacyModuleConditions = []string{
 
 // syncModules migrates deployed modules and creates missing embedded modules on every start.
 func (s *syncer) syncModules(ctx context.Context) error {
-	configs, err := s.getModuleConfigs(ctx)
-	if err != nil {
-		return fmt.Errorf("get module configs: %w", err)
-	}
+	// the released modules the passes below place; syncModuleConfigs gives them their channel
+	s.placed = make(map[string]bool)
 
-	if err := s.syncDeployedModules(ctx, configs); err != nil {
+	if err := s.syncDeployedModules(ctx); err != nil {
 		return fmt.Errorf("sync deployed modules: %w", err)
 	}
 
@@ -74,7 +73,7 @@ func (s *syncer) syncModules(ctx context.Context) error {
 		return fmt.Errorf("delete unresolvable modules: %w", err)
 	}
 
-	if err := s.syncModuleConfigs(ctx, configs); err != nil {
+	if err := s.syncModuleConfigs(ctx); err != nil {
 		return fmt.Errorf("sync module configs: %w", err)
 	}
 
@@ -113,29 +112,41 @@ func (s *syncer) syncGlobalModule(ctx context.Context) error {
 	// embeddedPackageVersion reduces the Deckhouse version to
 	embeddedPackageVersion := app.EmbeddedPackageVersion()
 
-	if err := s.ensureModule(ctx, packageNameGlobal, repositoryNameEmbedded, embeddedPackageVersion, "", nil); err != nil {
+	if err := s.ensureModule(ctx, packageNameGlobal, repositoryNameEmbedded, embeddedPackageVersion); err != nil {
 		return fmt.Errorf("ensure global module: %w", err)
 	}
 
 	return nil
 }
 
-// syncEmbeddedModules creates missing Modules for modules the running image ships, on the reserved
-// embedded repository, off no channel. A dir holding no readable definition is skipped with a warning.
-// A stale embedded module is deleted force-removed: the image no longer ships it, so Boot skips it
-// and the Module controller's remove deletes its release by name before the finalizer goes.
+// syncEmbeddedModules brings the Modules in line with the modules the running image ships: a shipped
+// module without a Module gets one, and a stale embedded Module is migrated or removed.
 func (s *syncer) syncEmbeddedModules(ctx context.Context) error {
-	dirEntries, err := os.ReadDir(s.embeddedModulesDir)
+	shipped, err := s.readEmbeddedModules()
 	if err != nil {
-		return fmt.Errorf("read embedded modules dir: %w", err)
+		return fmt.Errorf("read embedded modules: %w", err)
 	}
 
-	// every module of one build carries the same version, the one
-	// embeddedPackageVersion reduces the Deckhouse version to
-	embeddedPackageVersion := app.EmbeddedPackageVersion()
+	if err := s.createEmbeddedModules(ctx, shipped); err != nil {
+		return fmt.Errorf("create embedded modules: %w", err)
+	}
+
+	if err := s.dropStaleEmbeddedModules(ctx, shipped); err != nil {
+		return fmt.Errorf("drop stale embedded modules: %w", err)
+	}
+
+	return nil
+}
+
+// readEmbeddedModules returns the names of the modules the running image ships. A dir holding no
+// readable definition is skipped with a warning.
+func (s *syncer) readEmbeddedModules() ([]string, error) {
+	dirEntries, err := os.ReadDir(s.embeddedModulesDir)
+	if err != nil {
+		return nil, fmt.Errorf("read embedded modules dir: %w", err)
+	}
 
 	modules := make([]string, 0, len(dirEntries))
-	modulesSet := make(map[string]bool, len(dirEntries))
 	for _, dirEntry := range dirEntries {
 		if !dirEntry.IsDir() || slices.Contains(app.DummyModules, dirEntry.Name()) {
 			continue
@@ -151,85 +162,217 @@ func (s *syncer) syncEmbeddedModules(ctx context.Context) error {
 		}
 
 		modules = append(modules, def.Name)
-		modulesSet[def.Name] = true
 	}
 
-	for _, module := range modules {
+	return modules, nil
+}
+
+// createEmbeddedModules creates the Module of every shipped module the cluster does not carry yet, on
+// the reserved embedded repository, off no channel.
+func (s *syncer) createEmbeddedModules(ctx context.Context, shipped []string) error {
+	// every module of one build carries the same version, the one
+	// embeddedPackageVersion reduces the Deckhouse version to
+	embeddedPackageVersion := app.EmbeddedPackageVersion()
+
+	for _, module := range shipped {
 		if err := s.reader.Get(ctx, client.ObjectKey{Name: module}, new(v1beta1.Module)); err == nil {
 			continue
 		} else if !apierrors.IsNotFound(err) {
 			return fmt.Errorf("get embedded module %s: %w", module, err)
 		}
 
-		if err := s.createModule(ctx, module, repositoryNameEmbedded, embeddedPackageVersion, "", nil); err != nil {
+		if err := s.createModule(ctx, module, repositoryNameEmbedded, embeddedPackageVersion); err != nil {
 			return fmt.Errorf("create embedded module %s: %w", module, err)
-		}
-	}
-
-	existing := new(v1beta1.ModuleList)
-	if err := s.reader.List(ctx, existing); err != nil {
-		return fmt.Errorf("list modules: %w", err)
-	}
-
-	for _, module := range existing.Items {
-		if module.Name == packageNameGlobal || !module.IsEmbedded() {
-			continue
-		}
-
-		if _, ok := modulesSet[module.Name]; ok {
-			continue
-		}
-
-		if module.Annotations[v1alpha1.PackageAnnotationForceRemove] != "true" {
-			patch := client.MergeFrom(module.DeepCopy())
-			setModuleAnnotation(&module, v1alpha1.PackageAnnotationForceRemove)
-			if err := s.writer.Patch(ctx, &module, patch); client.IgnoreNotFound(err) != nil {
-				return fmt.Errorf("mark module force-removed: %w", err)
-			}
-		}
-
-		if err := s.writer.Delete(ctx, &module); client.IgnoreNotFound(err) != nil {
-			return fmt.Errorf("delete module: %w", err)
 		}
 	}
 
 	return nil
 }
 
-// syncDeployedModules writes a Module for every module running a deployed release. The channel and
-// the update settings come from the update policy the module names; with none, Deckhouse ones apply.
-func (s *syncer) syncDeployedModules(ctx context.Context, configs map[string]*v1alpha1.ModuleConfig) error {
-	updatePolicies, err := s.getUpdatePolicies(ctx)
-	if err != nil {
-		return fmt.Errorf("get update policies: %w", err)
+// dropStaleEmbeddedModules handles every embedded Module the image no longer ships. One the release of
+// the image migrates and the cluster runs moves onto the deckhouse-modules repository; any other, a
+// disabled migrated one included, is force-removed. One already being deleted is left to its remove.
+func (s *syncer) dropStaleEmbeddedModules(ctx context.Context, shipped []string) error {
+	modules := new(v1beta1.ModuleList)
+	if err := s.reader.List(ctx, modules); err != nil {
+		return fmt.Errorf("list modules: %w", err)
 	}
 
-	deckhouseReleaseChannel := s.getDeckhouseReleaseChannel(configs)
+	migrated, err := s.getMigratedModules(ctx)
+	if err != nil {
+		return fmt.Errorf("get migrated modules: %w", err)
+	}
 
+	for i := range modules.Items {
+		module := &modules.Items[i]
+		if module.Name == packageNameGlobal || !module.IsEmbedded() || slices.Contains(shipped, module.Name) {
+			continue
+		}
+
+		if migrated[module.Name] && isModuleEnabled(module) && module.DeletionTimestamp.IsZero() {
+			if err := s.migrateModule(ctx, module); err != nil {
+				return fmt.Errorf("migrate module %s: %w", module.Name, err)
+			}
+
+			continue
+		}
+
+		if err := s.forceRemoveModule(ctx, module); err != nil {
+			return fmt.Errorf("force-remove module %s: %w", module.Name, err)
+		}
+	}
+
+	return nil
+}
+
+// isModuleEnabled reports whether the cluster runs the module, as status.enabled decided.
+func isModuleEnabled(module *v1beta1.Module) bool {
+	return module.Status.Enabled != nil && *module.Status.Enabled
+}
+
+// forceRemoveModule deletes the module force-removed: Boot skips it and the Module controller's
+// remove deletes its release by name before the finalizer goes.
+func (s *syncer) forceRemoveModule(ctx context.Context, module *v1beta1.Module) error {
+	if module.Annotations[v1alpha1.PackageAnnotationForceRemove] != "true" {
+		patch := client.MergeFrom(module.DeepCopy())
+		setModuleAnnotation(module, v1alpha1.PackageAnnotationForceRemove)
+		if err := s.writer.Patch(ctx, module, patch); client.IgnoreNotFound(err) != nil {
+			return fmt.Errorf("mark module force-removed: %w", err)
+		}
+	}
+
+	if err := s.writer.Delete(ctx, module); client.IgnoreNotFound(err) != nil {
+		return fmt.Errorf("delete module: %w", err)
+	}
+
+	return nil
+}
+
+// getMigratedModules reads the modules the release of the running image moves out of it, from its
+// migratedModules requirement; none without such a release, as for a dev build. The releases are
+// read from the cache, synced before the sync runs.
+func (s *syncer) getMigratedModules(ctx context.Context) (map[string]bool, error) {
+	migrated := make(map[string]bool)
+
+	current, err := semver.NewVersion(app.Version)
+	if err != nil {
+		return migrated, nil
+	}
+
+	releases := new(v1alpha1.DeckhouseReleaseList)
+	if err := s.writer.List(ctx, releases); err != nil {
+		return nil, fmt.Errorf("list deckhouse releases: %w", err)
+	}
+
+	for i := range releases.Items {
+		release := &releases.Items[i]
+		if version := release.GetVersion(); version == nil || !version.Equal(current) {
+			continue
+		}
+
+		for _, module := range release.GetMigratedModules() {
+			migrated[module] = true
+		}
+
+		break
+	}
+
+	return migrated, nil
+}
+
+// migrateModule moves a module the image no longer ships onto the deckhouse-modules repository at
+// its latest ready version; syncModuleConfigs gives it its channel. An installed module keeps
+// running: its current version becomes that version too, so Boot restores it from the repository.
+// The status goes first, so a start that fails in between finds the module still embedded and
+// migrates it again.
+func (s *syncer) migrateModule(ctx context.Context, module *v1beta1.Module) error {
+	version, err := s.getLatestModuleVersion(ctx, module.Name)
+	if err != nil {
+		return fmt.Errorf("get latest version: %w", err)
+	}
+
+	if module.Status.CurrentVersion != nil && module.Status.CurrentVersion.Version != "" {
+		patch := client.MergeFrom(module.DeepCopy())
+		module.Status.CurrentVersion = &v1beta1.ModuleStatusVersion{Version: version}
+		if err := s.writer.Status().Patch(ctx, module, patch); err != nil {
+			return fmt.Errorf("patch module current version: %w", err)
+		}
+	}
+
+	patch := client.MergeFrom(module.DeepCopy())
+	applyModuleVersion(module, repositoryNameDeckhouseModules, version)
+	if err := s.writer.Patch(ctx, module, patch); err != nil {
+		return fmt.Errorf("patch module: %w", err)
+	}
+
+	s.placed[module.Name] = true
+
+	s.logger.Info("migrate module out of the image",
+		slog.String("name", module.Name),
+		slog.String("repository", repositoryNameDeckhouseModules),
+		slog.String("version", version))
+
+	return nil
+}
+
+// getLatestModuleVersion returns the highest version of the module's ready package versions (loaded
+// and still in the registry) in the deckhouse-modules repository; none is an error, the release
+// requirement guarantees one for an enabled module.
+func (s *syncer) getLatestModuleVersion(ctx context.Context, moduleName string) (string, error) {
+	versions := new(v1alpha1.ModulePackageVersionList)
+	err := s.reader.List(ctx, versions, client.MatchingLabels{
+		v1alpha1.PackageLabelRepository: repositoryNameDeckhouseModules,
+		v1alpha1.PackageLabelPackage:    moduleName,
+	})
+	if err != nil {
+		return "", fmt.Errorf("list module package versions: %w", err)
+	}
+
+	var (
+		latest    string
+		latestVer *semver.Version
+	)
+
+	for i := range versions.Items {
+		mpv := &versions.Items[i]
+		if mpv.IsDraft() || mpv.IsMissingFromRegistry() {
+			continue
+		}
+
+		parsed, err := semver.NewVersion(mpv.Spec.PackageVersion)
+		if err != nil {
+			continue
+		}
+
+		if latestVer == nil || parsed.GreaterThan(latestVer) {
+			latest, latestVer = mpv.Spec.PackageVersion, parsed
+		}
+	}
+
+	if latest == "" {
+		return "", fmt.Errorf("no ready version in the '%s' repository", repositoryNameDeckhouseModules)
+	}
+
+	return latest, nil
+}
+
+// syncDeployedModules writes a Module for every module running a deployed release;
+// syncModuleConfigs gives it its channel.
+func (s *syncer) syncDeployedModules(ctx context.Context) error {
 	deployed, err := s.getDeployedModuleReleases(ctx)
 	if err != nil {
 		return fmt.Errorf("get deployed module releases: %w", err)
 	}
 
 	for _, release := range deployed {
-		config := configs[release.GetModuleName()]
 		moduleName := release.GetModuleName()
-		moduleVersion := release.GetModuleVersion()
 		repositoryName := packageRepositoryNameForModuleSource(release.GetModuleSource())
 
-		releaseChannel := deckhouseReleaseChannel
-
-		var update *v1beta1.ModuleUpdate
-		if config != nil {
-			if policy, ok := updatePolicies[config.Spec.UpdatePolicy]; ok {
-				releaseChannel = policy.Spec.ReleaseChannel
-				update = moduleUpdateFromPolicy(policy)
-			}
-		}
-
-		if err := s.ensureModule(ctx, moduleName, repositoryName, moduleVersion, releaseChannel, update); err != nil {
+		if err := s.ensureModule(ctx, moduleName, repositoryName, release.GetModuleVersion()); err != nil {
 			return fmt.Errorf("ensure module %s: %w", moduleName, err)
 		}
+
+		s.placed[moduleName] = true
 	}
 
 	if err := s.deleteModuleReleases(ctx); err != nil {
@@ -358,6 +501,21 @@ func (s *syncer) getUpdatePolicies(ctx context.Context) (map[string]*v1alpha2.Mo
 	return updatePolicies, nil
 }
 
+// moduleUpdateOf returns the channel and the update settings of the policy the config names; with no
+// config or policy, the Deckhouse channel and no update settings.
+func moduleUpdateOf(config *v1alpha1.ModuleConfig, policies map[string]*v1alpha2.ModuleUpdatePolicy, deckhouseChannel string) (string, *v1beta1.ModuleUpdate) {
+	if config == nil {
+		return deckhouseChannel, nil
+	}
+
+	policy, ok := policies[config.Spec.UpdatePolicy]
+	if !ok {
+		return deckhouseChannel, nil
+	}
+
+	return policy.Spec.ReleaseChannel, moduleUpdateFromPolicy(policy)
+}
+
 // moduleUpdateFromPolicy converts the update settings of the policy into the module ones.
 // The Ignore mode has no module counterpart, so it yields none and the Deckhouse settings apply.
 func moduleUpdateFromPolicy(policy *v1alpha2.ModuleUpdatePolicy) *v1beta1.ModuleUpdate {
@@ -380,7 +538,7 @@ func moduleUpdateFromPolicy(policy *v1alpha2.ModuleUpdatePolicy) *v1beta1.Module
 
 // ensureModule brings the module in line with the files it runs, creating it when
 // the cluster carries none. The module has other writers, so a patch with no drift is not sent.
-func (s *syncer) ensureModule(ctx context.Context, moduleName, repositoryName, packageVersion, releaseChannel string, update *v1beta1.ModuleUpdate) error {
+func (s *syncer) ensureModule(ctx context.Context, moduleName, repositoryName, packageVersion string) error {
 	module := new(v1beta1.Module)
 
 	if err := s.reader.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
@@ -388,12 +546,12 @@ func (s *syncer) ensureModule(ctx context.Context, moduleName, repositoryName, p
 			return fmt.Errorf("get the '%s' module: %w", moduleName, err)
 		}
 
-		return s.createModule(ctx, moduleName, repositoryName, packageVersion, releaseChannel, update)
+		return s.createModule(ctx, moduleName, repositoryName, packageVersion)
 	}
 
 	patch := client.MergeFrom(module.DeepCopy())
 
-	applyModuleVersion(module, repositoryName, packageVersion, releaseChannel, update)
+	applyModuleVersion(module, repositoryName, packageVersion)
 
 	patchData, err := patch.Data(module)
 	if err != nil {
@@ -414,10 +572,10 @@ func (s *syncer) ensureModule(ctx context.Context, moduleName, repositoryName, p
 }
 
 // createModule writes a module the cluster does not carry yet.
-func (s *syncer) createModule(ctx context.Context, moduleName, repositoryName, packageVersion, releaseChannel string, update *v1beta1.ModuleUpdate) error {
+func (s *syncer) createModule(ctx context.Context, moduleName, repositoryName, packageVersion string) error {
 	module := &v1beta1.Module{ObjectMeta: metav1.ObjectMeta{Name: moduleName}}
 
-	applyModuleVersion(module, repositoryName, packageVersion, releaseChannel, update)
+	applyModuleVersion(module, repositoryName, packageVersion)
 
 	if err := s.writer.Create(ctx, module); err != nil && !apierrors.IsAlreadyExists(err) {
 		return fmt.Errorf("create the '%s' module: %w", moduleName, err)
@@ -428,14 +586,10 @@ func (s *syncer) createModule(ctx context.Context, moduleName, repositoryName, p
 	return nil
 }
 
-// applyModuleVersion writes the package coordinates, the update settings and marks where the files
-// came from and whether the module is critical; the update settings and both marks are reconciled
-// both ways.
-func applyModuleVersion(module *v1beta1.Module, repositoryName, packageVersion, releaseChannel string, update *v1beta1.ModuleUpdate) {
+// applyModuleVersion writes the package coordinates: the repository and the version.
+func applyModuleVersion(module *v1beta1.Module, repositoryName, packageVersion string) {
 	module.Spec.PackageRepositoryName = repositoryName
 	module.Spec.PackageVersion = packageVersion
-	module.Spec.ReleaseChannel = releaseChannel
-	module.Spec.Update = update
 }
 
 // setModuleAnnotation marks the key true, allocating the map when the module carries none.
@@ -447,25 +601,51 @@ func setModuleAnnotation(module *v1beta1.Module, key string) {
 	module.Annotations[key] = "true"
 }
 
-// syncModuleConfigs migrates every module config not migrated yet into the module of the same name,
-// after the passes above created and deleted the modules. The config is not written here: the
-// ModuleConfig controller marks it migrated when it first mirrors the module, so the start never waits
-// on the ModuleConfig webhook. A module with no config, or one being deleted, is left as is.
-func (s *syncer) syncModuleConfigs(ctx context.Context, configs map[string]*v1alpha1.ModuleConfig) error {
+// syncModuleConfigs carries what the module configs decide into the modules, after the passes above
+// created and deleted them; it is the only pass that reads the configs. A released module the sync
+// placed (from its release or out of the image) follows the channel and the update settings of the
+// update policy its config names; with none, the Deckhouse channel. A config not migrated yet is
+// migrated into the module of the same name. The config is not written here: the ModuleConfig
+// controller marks it migrated when it first mirrors the module, so the start never waits on the
+// ModuleConfig webhook. A module being deleted is left as is.
+func (s *syncer) syncModuleConfigs(ctx context.Context) error {
+	configs, err := s.getModuleConfigs(ctx)
+	if err != nil {
+		return fmt.Errorf("get module configs: %w", err)
+	}
+
 	modules := new(v1beta1.ModuleList)
 	if err := s.reader.List(ctx, modules); err != nil {
 		return fmt.Errorf("list modules: %w", err)
 	}
 
+	updatePolicies, err := s.getUpdatePolicies(ctx)
+	if err != nil {
+		return fmt.Errorf("get update policies: %w", err)
+	}
+
+	deckhouseReleaseChannel := s.getDeckhouseReleaseChannel(configs)
+
 	for i := range modules.Items {
 		module := &modules.Items[i]
-
-		config, ok := configs[module.Name]
-		if !ok || !module.DeletionTimestamp.IsZero() || isMigrated(config) {
+		if !module.DeletionTimestamp.IsZero() {
 			continue
 		}
 
-		if err := s.migrateModuleConfig(ctx, module, config); err != nil {
+		config, ok := configs[module.Name]
+
+		if s.placed[module.Name] {
+			channel, update := moduleUpdateOf(config, updatePolicies, deckhouseReleaseChannel)
+			if err := s.patchModule(ctx, module, func() { module.Spec.ReleaseChannel, module.Spec.Update = channel, update }); err != nil {
+				return fmt.Errorf("set the channel of the '%s' module: %w", module.Name, err)
+			}
+		}
+
+		if !ok || isMigrated(config) {
+			continue
+		}
+
+		if err := s.patchModule(ctx, module, func() { applyModuleConfig(module, config) }); err != nil {
 			return fmt.Errorf("migrate the '%s' module config: %w", module.Name, err)
 		}
 
@@ -475,10 +655,10 @@ func (s *syncer) syncModuleConfigs(ctx context.Context, configs map[string]*v1al
 	return nil
 }
 
-// migrateModuleConfig copies the config into the module spec, sending no patch without drift.
-func (s *syncer) migrateModuleConfig(ctx context.Context, module *v1beta1.Module, config *v1alpha1.ModuleConfig) error {
+// patchModule applies mutate to the module spec and patches it, sending no patch without drift.
+func (s *syncer) patchModule(ctx context.Context, module *v1beta1.Module, mutate func()) error {
 	patch := client.MergeFrom(module.DeepCopy())
-	applyModuleConfig(module, config)
+	mutate()
 
 	patchData, err := patch.Data(module)
 	if err != nil {
