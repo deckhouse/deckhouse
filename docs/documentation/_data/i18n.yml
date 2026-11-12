@@ -532,7 +532,7 @@ common:
     ru: "Выберите руководство для скачивания:"
   pdf_admin_guide:
     en: "Administrator's guide"
-    ru: Справочник администратора
+    ru: Руководство администратора
   pdf_user_guide:
     en: "User's guide"
     ru: Руководство пользователя
