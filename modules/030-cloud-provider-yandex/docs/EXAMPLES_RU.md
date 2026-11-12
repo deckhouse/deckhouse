@@ -19,6 +19,62 @@ spec:
     - enp6t4snovl2ko4p15em
 ```
 
+## Использование зоны ru-central1-f
+
+Чтобы размещать узлы в зоне `ru-central1-f`, явно укажите её в параметре [`zones`](cluster_configuration.html#yandexclusterconfiguration-zones) вместо одной из зон по умолчанию. В `zones` можно указать не более четырёх зон.
+
+1. Выберите одну из зон по умолчанию, которую заменит `ru-central1-f`.
+1. Укажите `ru-central1-f` и остальные выбранные зоны в параметре [`zones`](cluster_configuration.html#yandexclusterconfiguration-zones) ресурса [YandexClusterConfiguration](cluster_configuration.html#yandexclusterconfiguration). Пример:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1
+   kind: YandexClusterConfiguration
+   layout: Standard
+   nodeNetworkCIDR: 10.241.32.0/20
+   sshPublicKey: ssh-rsa AAAAB3Nza...
+   zones:
+     - ru-central1-a
+     - ru-central1-b
+     - ru-central1-d
+     - ru-central1-f
+   ```
+
+   В примере исключена зона `ru-central1-e`.
+
+   Deckhouse Platform создаёт подсеть в `ru-central1-f`, используя часть [`nodeNetworkCIDR`](cluster_configuration.html#yandexclusterconfiguration-nodenetworkcidr), закреплённую за исключённой зоной. В работающем кластере с зонами по умолчанию замена `ru-central1-e` на `ru-central1-f` удаляет подсеть в `ru-central1-e` и создаёт новую в `ru-central1-f`. Подсети остальных выбранных зон сохраняются.
+
+### Использование существующих подсетей
+
+Если задан параметр [`existingZoneToSubnetIDMap`](cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap), Deckhouse Platform использует указанные в параметре подсети, не создавая и не удаляя их. Ограничение в четыре зоны на `existingZoneToSubnetIDMap` не распространяется. Если [`zones`](cluster_configuration.html#yandexclusterconfiguration-zones) не задан, узлы размещаются во всех зонах `existingZoneToSubnetIDMap`, включая зоны вне набора по умолчанию.
+
+### Изменение зон в работающем кластере
+
+Чтобы добавить `ru-central1-f`, обновите параметр [`zones`](cluster_configuration.html#yandexclusterconfiguration-zones).
+
+{% alert level="info" %}
+При добавлении `ru-central1-f` Deckhouse Platform удаляет подсети исключённых зон по умолчанию. При замене `[ru-central1-a, ru-central1-b]` на `[ru-central1-a, ru-central1-b, ru-central1-f]` удаляются подсети в `ru-central1-d` и `ru-central1-e`. В `ru-central1-f` создаётся подсеть с диапазоном адресов одной из удалённых подсетей.
+{% endalert %}
+
+При изменении списка зон возможен конфликт диапазонов. Он возникает, если подсеть добавляемой зоны по умолчанию должна использовать диапазон подсети `ru-central1-f`. Deckhouse Platform отклоняет такое изменение с ошибкой. Чтобы устранить конфликт, примените изменения в два этапа:
+
+1. Удалите `ru-central1-f` из [`zones`](cluster_configuration.html#yandexclusterconfiguration-zones) и примените изменения. Deckhouse Platform удалит подсеть в `ru-central1-f`.
+1. Укажите итоговый список зон с `ru-central1-f` и повторно примените изменения.
+
+Например, такой конфликт возможен при замене `ru-central1-d` на `ru-central1-e` с сохранением `ru-central1-f` в списке.
+
+Если конфликта нет, список зон можно изменить напрямую. Подсеть `ru-central1-f` сохраняет свой диапазон адресов.
+
+Если в схеме [`WithNATInstance`](layouts.html#withnatinstance) подсети NAT-инстанса не заданы явно, его размещение определяется по списку [`zones`](cluster_configuration.html#yandexclusterconfiguration-zones):
+
+| Список зон | Размещение NAT-инстанса |
+| --- | --- |
+| Содержит только зоны по умолчанию | NAT-инстанс остаётся в `ru-central1-a` |
+| Содержит зону вне набора по умолчанию, а `ru-central1-a` исключена | NAT-инстанс пересоздаётся в первой по алфавиту зоне из списка `zones` |
+
+{% alert level="warning" %}
+Исходящий трафик кластера прерывается на время пересоздания NAT-инстанса.
+{% endalert %}
+
 ## Пример custom resource `YandexInstanceClass`
 
 ```yaml

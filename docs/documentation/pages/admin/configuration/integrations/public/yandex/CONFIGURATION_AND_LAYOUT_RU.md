@@ -330,22 +330,31 @@ provider:
 
 ### Внутренняя адресация узлов кластера
 
-[Параметр `nodeNetworkCIDR`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-nodenetworkcidr) используется для задания диапазона IP-адресов, который будет распределён между [зонами доступности](../../../../glossary.html#availability-zone) и применён к внутренним интерфейсам узлов.
+[Параметр `nodeNetworkCIDR`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-nodenetworkcidr) задаёт диапазон IP-адресов, который распределяется между [зонами доступности](../../../../glossary.html#availability-zone) и применяется к внутренним интерфейсам узлов. Параметр задаётся в ресурсе [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration):
 
 ```yaml
-nodeNetworkCIDR: 192.168.12.13/24
+apiVersion: deckhouse.io/v1
+kind: YandexClusterConfiguration
+nodeNetworkCIDR: 192.168.12.0/24
 ```
 
-В зависимости от выбранной схемы размещения (Standard или WithNATInstance), эта подсеть будет автоматически разделена на три равные части для каждой зоны размещения:
+Deckhouse Platform делит [`nodeNetworkCIDR`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-nodenetworkcidr) на четыре равные части и создаёт внутренние подсети для узлов соответствующих зон доступности. За каждой зоной по умолчанию закреплена своя часть диапазона:
 
-- ru-central1-a
-- ru-central1-b
-- ru-central1-d
+| Зона | Часть диапазона |
+| --- | --- |
+| `ru-central1-a` | Первая |
+| `ru-central1-b` | Вторая |
+| `ru-central1-e` | Третья |
+| `ru-central1-d` | Четвёртая |
 
-Каждая из этих частей будет использоваться как отдельная внутренняя подсеть (subnet), к которой будут подключены узлы, создаваемые в соответствующей зоне.
+В [параметре `zones`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-zones) можно указать не более четырёх зон. Если параметр не задан, Deckhouse Platform использует все четыре зоны из таблицы.
+
+Как использовать зону `ru-central1-f`, описано [в разделе «Использование зоны ru-central1-f»](/modules/cloud-provider-yandex/examples.html#использование-зоны-ru-central1-f).
+
+Узлы подключаются к подсети соответствующей зоны. Деление диапазона выполняется во всех [схемах размещения](../../../../glossary.html#layout). Если задан [параметр `existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap), Deckhouse Platform использует указанные в нём подсети и не создаёт новые.
 
 {% alert level="info" %}
-В случае, если вы планируете использовать одну и ту же подсеть в нескольких кластерах (например, с [`cni-simple-bridge`](/modules/cni-simple-bridge/)), необходимо учитывать ограничения: один кластер = одна таблица маршрутизации = одна подсеть. Разворачивание двух кластеров в одних и тех же подсетях с `cni-simple-bridge` невозможно. Если требуется использовать одинаковые подсети — используйте [`cni-cilium`](/modules/cni-cilium/).
+К подсети привязывается только одна таблица маршрутизации, поэтому два кластера с модулем [`cni-simple-bridge`](/modules/cni-simple-bridge/) не могут использовать одни и те же подсети. Чтобы развернуть такие кластеры в общих подсетях, используйте модуль [`cni-cilium`](/modules/cni-cilium/).
 {% endalert %}
 
 ### Назначение внешних IP-адресов и исходящего трафика

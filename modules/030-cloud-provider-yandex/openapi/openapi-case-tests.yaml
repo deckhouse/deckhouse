@@ -18,6 +18,31 @@ positive:
     - storageClass:
         default: "ssd"
         exclude: ["disk-type", "ssd-.*"]
+  values:
+    # four zones including ru-central1-f (the maximum allowed)
+    - internal:
+        providerClusterConfiguration:
+          apiVersion: deckhouse.io/v1
+          kind: YandexClusterConfiguration
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+          zones:
+            - ru-central1-a
+            - ru-central1-b
+            - ru-central1-d
+            - ru-central1-f
+          masterNodeGroup:
+            replicas: 1
+            instanceClass:
+              cores: 4
+              memory: 8192
+              imageID: fd85m9q2qspfnsv055rh
+          provider:
+            cloudID: test-cloud-id
+            folderID: test-folder-id
+            serviceAccountJSON: '{"id": "id"}'
+
 negative:
   configValues:
     - storageClass:
@@ -28,3 +53,29 @@ negative:
         default: ["must be string"]
     - storageClass:
         default: {"key": "must be string"}
+
+  values:
+    # five zones: more than the four-zone maximum
+    - internal:
+        providerClusterConfiguration:
+          apiVersion: deckhouse.io/v1
+          kind: YandexClusterConfiguration
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+          zones:
+            - ru-central1-a
+            - ru-central1-b
+            - ru-central1-d
+            - ru-central1-e
+            - ru-central1-f
+          masterNodeGroup:
+            replicas: 1
+            instanceClass:
+              cores: 4
+              memory: 8192
+              imageID: fd85m9q2qspfnsv055rh
+          provider:
+            cloudID: test-cloud-id
+            folderID: test-folder-id
+            serviceAccountJSON: '{"id": "id"}'

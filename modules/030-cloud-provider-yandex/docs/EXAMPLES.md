@@ -19,6 +19,60 @@ spec:
     - enp6t4snovl2ko4p15em
 ```
 
+## Using the ru-central1-f zone
+
+To place nodes in `ru-central1-f`, explicitly list it in [`zones`](cluster_configuration.html#yandexclusterconfiguration-zones) in place of one of the default zones. You can list up to four zones in `zones`. If the parameter is not set, Deckhouse Platform uses `ru-central1-a`, `ru-central1-b`, `ru-central1-d`, and `ru-central1-e`.
+
+1. Select one of the default zones to replace with `ru-central1-f`. The following example excludes `ru-central1-e`.
+1. List `ru-central1-f` and the other selected zones in the [`zones`](cluster_configuration.html#yandexclusterconfiguration-zones) parameter of the [YandexClusterConfiguration](cluster_configuration.html#yandexclusterconfiguration) resource:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1
+   kind: YandexClusterConfiguration
+   layout: Standard
+   nodeNetworkCIDR: 10.241.32.0/20
+   sshPublicKey: ssh-rsa AAAAB3Nza...
+   zones:
+     - ru-central1-a
+     - ru-central1-b
+     - ru-central1-d
+     - ru-central1-f
+   ```
+
+   Deckhouse Platform creates a subnet in `ru-central1-f` using the part of [`nodeNetworkCIDR`](cluster_configuration.html#yandexclusterconfiguration-nodenetworkcidr) assigned to the excluded zone. In a running cluster with the default zones, replacing `ru-central1-e` with `ru-central1-f` deletes the subnet in `ru-central1-e` and creates a new one in `ru-central1-f`. Subnets in the other selected zones are retained.
+
+### Using existing subnets
+
+If [`existingZoneToSubnetIDMap`](cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap) is set, Deckhouse Platform uses the subnets specified by the parameter without creating or deleting them. The four-zone limit does not apply to `existingZoneToSubnetIDMap`. If [`zones`](cluster_configuration.html#yandexclusterconfiguration-zones) is not set, nodes are placed in all zones specified in `existingZoneToSubnetIDMap`, including zones outside the default set.
+
+### Changing zones in a running cluster
+
+To add `ru-central1-f`, update [`zones`](cluster_configuration.html#yandexclusterconfiguration-zones).
+
+{% alert level="info" %}
+When you add `ru-central1-f`, Deckhouse Platform deletes subnets in the excluded default zones. Replacing `[ru-central1-a, ru-central1-b]` with `[ru-central1-a, ru-central1-b, ru-central1-f]` deletes the subnets in `ru-central1-d` and `ru-central1-e`. A subnet in `ru-central1-f` is created using the address range of one of the deleted subnets.
+{% endalert %}
+
+Changing the zone list may cause an address range conflict. This occurs if a subnet in a default zone you add needs to use the address range of the `ru-central1-f` subnet. Deckhouse Platform rejects such a change with an error. To resolve the conflict, apply the changes in two stages:
+
+1. Remove `ru-central1-f` from [`zones`](cluster_configuration.html#yandexclusterconfiguration-zones) and apply the changes. Deckhouse Platform deletes the subnet in `ru-central1-f`.
+1. Set the final zone list including `ru-central1-f` and apply the changes again.
+
+For example, this conflict may occur when replacing `ru-central1-d` with `ru-central1-e` while keeping `ru-central1-f` in the list.
+
+If there is no conflict, you can change the zone list directly. The `ru-central1-f` subnet retains its address range.
+
+If NAT subnets are not explicitly specified in the [`WithNATInstance`](layouts.html#withnatinstance) layout, NAT instance placement is determined by [`zones`](cluster_configuration.html#yandexclusterconfiguration-zones):
+
+| Zone list | NAT instance placement |
+| --- | --- |
+| Contains only default zones | The NAT instance remains in `ru-central1-a` |
+| Contains a zone outside the default set and excludes `ru-central1-a` | The NAT instance is recreated in the alphabetically first zone in `zones` |
+
+{% alert level="warning" %}
+Cluster egress is interrupted while the NAT instance is recreated.
+{% endalert %}
+
 ## An example of the `YandexInstanceClass` custom resource
 
 ```yaml

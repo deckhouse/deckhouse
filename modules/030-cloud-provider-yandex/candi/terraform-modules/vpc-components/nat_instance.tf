@@ -29,26 +29,43 @@ data "yandex_vpc_subnet" "external_subnet" {
 
 locals {
   user_internal_subnet_zone = var.nat_instance_internal_subnet_id == null ? null : data.yandex_vpc_subnet.user_internal_subnet[0].zone
-  external_subnet_zone = var.nat_instance_external_subnet_id == null ? null : join("", data.yandex_vpc_subnet.external_subnet.*.zone) # https://github.com/hashicorp/terraform/issues/23222#issuecomment-547462883
-  internal_subnet_zone = local.user_internal_subnet_zone == null ? (local.external_subnet_zone == null ? "ru-central1-a" : local.external_subnet_zone) : local.user_internal_subnet_zone
+  external_subnet_zone      = var.nat_instance_external_subnet_id == null ? null : join("", data.yandex_vpc_subnet.external_subnet.*.zone) # https://github.com/hashicorp/terraform/issues/23222#issuecomment-547462883
+  # Legacy mode keeps the historical ru-central1-a fallback. With a dynamic
+  # zone selected, ru-central1-a may not even have a subnet, so the NAT
+  # instance goes to the alphabetically first selected zone instead.
+  default_nat_zone     = local.has_dynamic ? sort(var.zones)[0] : "ru-central1-a"
+  internal_subnet_zone = local.user_internal_subnet_zone == null ? (local.external_subnet_zone == null ? local.default_nat_zone : local.external_subnet_zone) : local.user_internal_subnet_zone
 
   # used for backward compatability
-  zone_to_subnet_id = tomap({
-    "ru-central1-a" = local.should_create_subnets ? yandex_vpc_subnet.kube_a[0].id : (local.not_have_existing_subnet_a ? null : data.yandex_vpc_subnet.kube_a[0].id)
-    "ru-central1-b" = local.should_create_subnets ? yandex_vpc_subnet.kube_b[0].id : (local.not_have_existing_subnet_b ? null : data.yandex_vpc_subnet.kube_b[0].id)
-    "ru-central1-e" = local.should_create_subnets ? yandex_vpc_subnet.kube_e[0].id : (local.not_have_existing_subnet_e ? null : data.yandex_vpc_subnet.kube_e[0].id)
-    "ru-central1-d" = local.should_create_subnets ? yandex_vpc_subnet.kube_d[0].id : (local.not_have_existing_subnet_d ? null : data.yandex_vpc_subnet.kube_d[0].id)
-  })
+  # one(x[*].attr) instead of x[0].attr: a conditional in HCL evaluates both arms, so the
+  # indexed form fails whenever the resource has no instances even though the guarding
+  # condition says it does not. one() yields the same value for a count = 1 resource and
+  # null for an empty one, which is exactly what the guard means — see the join() workaround
+  # a few lines above for the same non-short-circuit gotcha.
+  zone_to_subnet_id = merge(
+    tomap({
+      "ru-central1-a" = local.should_create_subnets ? one(yandex_vpc_subnet.kube_a[*].id) : (local.not_have_existing_subnet_a ? null : one(data.yandex_vpc_subnet.kube_a[*].id))
+      "ru-central1-b" = local.should_create_subnets ? one(yandex_vpc_subnet.kube_b[*].id) : (local.not_have_existing_subnet_b ? null : one(data.yandex_vpc_subnet.kube_b[*].id))
+      "ru-central1-e" = local.should_create_subnets ? one(yandex_vpc_subnet.kube_e[*].id) : (local.not_have_existing_subnet_e ? null : one(data.yandex_vpc_subnet.kube_e[*].id))
+      "ru-central1-d" = local.should_create_subnets ? one(yandex_vpc_subnet.kube_d[*].id) : (local.not_have_existing_subnet_d ? null : one(data.yandex_vpc_subnet.kube_d[*].id))
+    }),
+    { for zone, subnet in yandex_vpc_subnet.dynamic : zone => subnet.id },
+    { for zone, subnet in data.yandex_vpc_subnet.dynamic : zone => subnet.id },
+  )
 
   # used for backward compatability
   # we can not use one map because we will get cycle
   # local.nat_instance_internal_address_calculated uses in route table and yandex_vpc_subnet.kube_* depend on route table
-  zone_to_cidr = tomap({
-    "ru-central1-a" = local.should_create_subnets ? local.kube_a_v4_cidr_block : (local.not_have_existing_subnet_a ? null : data.yandex_vpc_subnet.kube_a[0].v4_cidr_blocks[0])
-    "ru-central1-b" = local.should_create_subnets ? local.kube_b_v4_cidr_block : (local.not_have_existing_subnet_b ? null : data.yandex_vpc_subnet.kube_b[0].v4_cidr_blocks[0])
-    "ru-central1-e" = local.should_create_subnets ? local.kube_e_v4_cidr_block : (local.not_have_existing_subnet_e ? null : data.yandex_vpc_subnet.kube_e[0].v4_cidr_blocks[0])
-    "ru-central1-d" = local.should_create_subnets ? local.kube_d_v4_cidr_block : (local.not_have_existing_subnet_d ? null : data.yandex_vpc_subnet.kube_d[0].v4_cidr_blocks[0])
-  })
+  zone_to_cidr = merge(
+    tomap({
+      "ru-central1-a" = local.should_create_subnets ? local.kube_a_v4_cidr_block : (local.not_have_existing_subnet_a ? null : try(one(data.yandex_vpc_subnet.kube_a[*].v4_cidr_blocks)[0], null))
+      "ru-central1-b" = local.should_create_subnets ? local.kube_b_v4_cidr_block : (local.not_have_existing_subnet_b ? null : try(one(data.yandex_vpc_subnet.kube_b[*].v4_cidr_blocks)[0], null))
+      "ru-central1-e" = local.should_create_subnets ? local.kube_e_v4_cidr_block : (local.not_have_existing_subnet_e ? null : try(one(data.yandex_vpc_subnet.kube_e[*].v4_cidr_blocks)[0], null))
+      "ru-central1-d" = local.should_create_subnets ? local.kube_d_v4_cidr_block : (local.not_have_existing_subnet_d ? null : try(one(data.yandex_vpc_subnet.kube_d[*].v4_cidr_blocks)[0], null))
+    }),
+    { for zone, slot in local.dynamic_zone_slots : zone => cidrsubnet(var.node_network_cidr, 2, slot) },
+    { for zone, subnet in data.yandex_vpc_subnet.dynamic : zone => try(subnet.v4_cidr_blocks[0], null) },
+  )
 
   # if user set internal subnet id for nat instance get cidr from its subnet
   user_internal_subnet_cidr = var.nat_instance_internal_subnet_id == null ? null : data.yandex_vpc_subnet.user_internal_subnet[0].v4_cidr_blocks[0]

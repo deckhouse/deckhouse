@@ -42,6 +42,14 @@ locals {
   prefix = var.clusterConfiguration.cloud.prefix
   existing_network_id = lookup(var.providerClusterConfiguration, "existingNetworkID", "")
   node_network_cidr = var.providerClusterConfiguration.nodeNetworkCIDR
+  zones             = lookup(var.providerClusterConfiguration, "zones", [])
+
+  # The pinned static subnet set; mirrors static_zone_slots in vpc-components.
+  static_zones = ["ru-central1-a", "ru-central1-b", "ru-central1-d", "ru-central1-e"]
+
+  # Static discovery zones of an adopted map. Empty when the map has no static
+  # zones at all — then discovery falls back to every adopted zone.
+  adopted_static_discovery_zones = tolist(setintersection(keys(module.vpc_components.zone_to_subnet_id_map), local.static_zones))
   existing_zone_to_subnet_id_map = lookup(var.providerClusterConfiguration, "existingZoneToSubnetIDMap", {})
   nat_instance_internal_subnet_id = lookup(var.providerClusterConfiguration.withNATInstance, "internalSubnetID", null)
   nat_instance_internal_subnet_cidr = lookup(var.providerClusterConfiguration.withNATInstance, "internalSubnetCIDR", null)
