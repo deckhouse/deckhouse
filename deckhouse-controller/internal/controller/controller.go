@@ -412,8 +412,8 @@ func (c *Controller) Start(ctx context.Context) error {
 
 	// The controllers wait for the sync, so nothing applies a package before Boot. A leak must
 	// not stop the boot.
-	if err := c.cleanupPackages(ctx, applications.Items, modules.Items); err != nil {
-		c.logger.Warn("failed to cleanup packages", log.Err(err))
+	if err := c.cleanupDisks(ctx, applications.Items, modules.Items); err != nil {
+		c.logger.Warn("failed to cleanup disks", log.Err(err))
 	}
 
 	if err := c.bootPackages(ctx, applications.Items, modules.Items); err != nil {
@@ -437,8 +437,8 @@ func (c *Controller) Stop() {
 	c.engine.Stop()
 }
 
-// Engine returns the package engine.
-func (c *Controller) Engine() *engine.Engine {
+// PackageEngine returns the package engine.
+func (c *Controller) PackageEngine() *engine.Engine {
 	return c.engine
 }
 
@@ -583,12 +583,12 @@ func (c *Controller) bootPackages(ctx context.Context, applications []v1alpha1.A
 	return c.engine.Boot(ctx, global, bootApps, bootModules)
 }
 
-// cleanupPackages hands the engine every package the cluster still claims, so it drops the rest.
+// cleanupDisks hands the engine every package the cluster still claims, so it drops the rest.
 // A terminating instance is kept as in bootPackages: Boot needs its image to uninstall it. An
 // embedded module's image is the deckhouse image, not the disk's, so it names nothing. No Module
 // listed at all is refused: the sync has just written the global and the embedded ones, so an
 // empty list is a read gone wrong, and acting on it would purge every module image.
-func (c *Controller) cleanupPackages(ctx context.Context, applications []v1alpha1.Application, modules []v1beta1.Module) error {
+func (c *Controller) cleanupDisks(ctx context.Context, applications []v1alpha1.Application, modules []v1beta1.Module) error {
 	if len(modules) == 0 {
 		return errors.New("no module listed")
 	}
@@ -621,10 +621,10 @@ func (c *Controller) cleanupPackages(ctx context.Context, applications []v1alpha
 		}
 	}
 
-	return c.engine.Cleanup(ctx, preserveApps, preserveModules)
+	return c.engine.DiskCleanup(ctx, preserveApps, preserveModules)
 }
 
-// restorable is application.Restorable for a module: Boot gets it and Cleanup keeps its image,
+// restorable is application.Restorable for a module: Boot gets it and DiskCleanup keeps its image,
 // except one being deleted with no activated version or removedWithoutRestore.
 func restorable(module *v1beta1.Module) bool {
 	if module.DeletionTimestamp.IsZero() {

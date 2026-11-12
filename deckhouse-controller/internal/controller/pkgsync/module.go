@@ -122,7 +122,8 @@ func (s *syncer) syncGlobalModule(ctx context.Context) error {
 
 // syncEmbeddedModules creates missing Modules for modules the running image ships, on the reserved
 // embedded repository, off no channel. A dir holding no readable definition is skipped with a warning.
-// Stale embedded modules have their finalizers removed before deletion to bypass controller cleanup.
+// A stale embedded module is deleted force-removed: the image no longer ships it, so Boot skips it
+// and the Module controller's remove deletes its release by name before the finalizer goes.
 func (s *syncer) syncEmbeddedModules(ctx context.Context) error {
 	dirEntries, err := os.ReadDir(s.embeddedModulesDir)
 	if err != nil {
@@ -179,11 +180,11 @@ func (s *syncer) syncEmbeddedModules(ctx context.Context) error {
 			continue
 		}
 
-		if len(module.Finalizers) > 0 {
+		if module.Annotations[v1alpha1.PackageAnnotationForceRemove] != "true" {
 			patch := client.MergeFrom(module.DeepCopy())
-			module.Finalizers = nil
+			setModuleAnnotation(&module, v1alpha1.PackageAnnotationForceRemove)
 			if err := s.writer.Patch(ctx, &module, patch); client.IgnoreNotFound(err) != nil {
-				return fmt.Errorf("remove module finalizers: %w", err)
+				return fmt.Errorf("mark module force-removed: %w", err)
 			}
 		}
 

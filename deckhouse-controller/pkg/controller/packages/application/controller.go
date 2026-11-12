@@ -140,7 +140,7 @@ type packageManager interface {
 	Report(name string) (model.Report, bool)
 	Observed(name string) observed.Observation
 	GetAppStatusQueue() workqueue.TypedRateLimitingInterface[string]
-	Cleanup(ctx context.Context, apps, modules []disk.PreservePackage) error
+	DiskCleanup(ctx context.Context, apps, modules []disk.PreservePackage) error
 	Boot(ctx context.Context, global []byte, bootApps []engine.BootApplication, bootModules []engine.BootModule) error
 }
 
@@ -186,7 +186,7 @@ func (r *reconciler) preflight(ctx context.Context) error {
 	}
 
 	// A leak must not stop the boot.
-	if err := r.manager.Cleanup(ctx, preserve, nil); err != nil {
+	if err := r.manager.DiskCleanup(ctx, preserve, nil); err != nil {
 		r.logger.Warn("failed to cleanup application packages", log.Err(err))
 	}
 
@@ -536,7 +536,7 @@ func (r *reconciler) detachPackage(ctx context.Context, app *v1alpha1.Applicatio
 	return nil
 }
 
-// PreserveOf is what Cleanup keeps of an installed application: the images of the version it asks
+// PreserveOf is what DiskCleanup keeps of an installed application: the images of the version it asks
 // for (Application.TargetVersion) and the one it runs (status), one entry each.
 func PreserveOf(app *v1alpha1.Application) []disk.PreservePackage {
 	preserve := []disk.PreservePackage{
@@ -552,7 +552,7 @@ func PreserveOf(app *v1alpha1.Application) []disk.PreservePackage {
 	return preserve
 }
 
-// Restorable reports whether Boot gets app and Cleanup keeps its image: always, except one being
+// Restorable reports whether Boot gets app and DiskCleanup keeps its image: always, except one being
 // deleted with no activated version (nothing to uninstall) or force-removed (its release is
 // deleted by name).
 func Restorable(app *v1alpha1.Application) bool {

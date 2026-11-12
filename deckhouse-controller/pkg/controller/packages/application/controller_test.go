@@ -751,7 +751,7 @@ func TestPreflightPreservesEveryApplication(t *testing.T) {
 		{Name: "other-test", Repository: "deckhouse", Version: "v2.0.0"},
 	}, manager.cleanups[0])
 
-	// Nothing was activated yet, so Boot restores no version; it is called once, after Cleanup.
+	// Nothing was activated yet, so Boot restores no version; it is called once, after DiskCleanup.
 	require.Len(t, manager.boots, 1)
 	assert.Len(t, manager.boots[0], 2)
 	for _, boot := range manager.boots[0] {
@@ -940,7 +940,7 @@ func (s *packageManagerStub) GetAppStatusQueue() workqueue.TypedRateLimitingInte
 	return s.queue
 }
 
-func (s *packageManagerStub) Cleanup(_ context.Context, preserve, _ []disk.PreservePackage) error {
+func (s *packageManagerStub) DiskCleanup(_ context.Context, preserve, _ []disk.PreservePackage) error {
 	s.cleanups = append(s.cleanups, preserve)
 
 	return nil

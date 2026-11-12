@@ -43,7 +43,7 @@ import (
 // The facade: the API the controllers, the boot code and the status side call, in controller
 // terms, translated to the core. It holds no lifecycle policy. Calling order:
 //
-//	Build → Start → Cleanup → Boot → (Resume, without EnableModuleV2) → Apply*/Remove*/... → Stop
+//	Build → Start → DiskCleanup → Boot → (Resume, without EnableModuleV2) → Apply*/Remove*/... → Stop
 
 const (
 	defaultNamespace = "default"
@@ -134,7 +134,7 @@ type BootModule struct {
 	Removing bool
 }
 
-// Cleanup brings the disks to a consistent state before Boot: each removes the images and mounts
+// DiskCleanup brings the disks to a consistent state before Boot: each removes the images and mounts
 // its list does not name. It is the only place files are purged. The lists name every version the
 // cluster claims, packages being deleted included unless their release is deleted by name: Boot
 // restores them to uninstall them. Releases are left alone: a package's release goes with its
@@ -142,7 +142,7 @@ type BootModule struct {
 // addon-operator's and modules is ignored; with it the module list is acted on whatever it holds,
 // so the caller must not pass one it failed to read. Every failure is returned; none stops the
 // other parts.
-func (e *Engine) Cleanup(ctx context.Context, apps, modules []disk.PreservePackage) error {
+func (e *Engine) DiskCleanup(ctx context.Context, apps, modules []disk.PreservePackage) error {
 	var errs error
 
 	if err := e.appsDisk.Cleanup(ctx, withVersion(apps)); err != nil {

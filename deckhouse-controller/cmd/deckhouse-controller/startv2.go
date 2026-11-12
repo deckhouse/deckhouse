@@ -129,17 +129,17 @@ func startV2(logger *log.Logger) func(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("create deckhouse controller: %w", err)
 		}
 
-		packageEngine := deckhouse.Engine()
+		engine := deckhouse.PackageEngine()
 
 		deps := apiv1.Deps{
-			Packages:     packageEngine,
-			Queues:       packageEngine,
-			Scheduler:    packageEngine,
-			Converge:     packageEngine,
+			Packages:     engine,
+			Queues:       engine,
+			Scheduler:    engine,
+			Converge:     engine,
 			Requirements: d8requirements.DumpValues,
 		}
 
-		server := apiserver.New(ms, packageEngine, deps, logger)
+		server := apiserver.New(ms, engine, deps, logger)
 		if err := server.Start(); err != nil {
 			return fmt.Errorf("start server: %w", err)
 		}

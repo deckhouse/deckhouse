@@ -264,7 +264,7 @@ func Build(cli kclient.Client, moduleManager moduleManager, metricStorage metric
 	return e, nil
 }
 
-// Start starts the services that run independently of the lifecycle. Called once, before Cleanup
+// Start starts the services that run independently of the lifecycle. Called once, before DiskCleanup
 // and Boot. Non-blocking. The hook event loop starts before Boot, during which Global's hooks
 // start (the restored Currents' follow in their first runs), and before the cron manager, whose
 // channel only the loop drains. The hook lanes start with their package's hooks.
