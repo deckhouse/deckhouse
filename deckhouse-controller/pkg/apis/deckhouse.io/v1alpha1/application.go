@@ -316,9 +316,9 @@ type ApplicationContainerResourceRequest struct {
 	//
 	// Resource requests or limits defined in the package cannot be removed. Their values can only be overridden.
 	//
-	// If the application deploys a VerticalPodAutoscaler for the workload, the specified `cpu` and `memory` requests are set as both `minAllowed` and `maxAllowed` in its policy for the container, so VPA does not change them, and the [`ApplicationVerticalPodAutoscalerPinned`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#deckhouse-applicationverticalpodautoscalerpinned) alert is triggered. If `cpu` or `memory` limits are specified, VPA does not change the container's limits (`controlledValues: RequestsOnly`).
+	// If VerticalPodAutoscaler controls the container's `cpu` or `memory`, a request set for that resource remains fixed. If a `cpu` or `memory` limit is set, VPA does not change the container's limits. The [`ApplicationVerticalPodAutoscalerPinned`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#deckhouse-applicationverticalpodautoscalerpinned) alert is triggered if a request or limit is set for a resource controlled by VPA.
 	//
-	// To let VPA change the container's `cpu` and `memory` requests, specify the range in `min` and `max` instead. A container with `min` or `max` cannot have `cpu` or `memory` requests or limits.
+	// To let VPA choose requests within a range, set `min` and `max` instead of `cpu` and `memory` requests and limits.
 	// +optional
 	// +crd-enricher:raw:properties.claims.description="List of resource claims used by the container.\n\nEach entry references a resource claim defined in `pod.spec.resourceClaims`. Requires the `DynamicResourceAllocation` feature gate to be enabled.\n\nThis field is immutable. It can only be set for containers."
 	// +crd-enricher:raw:properties.claims.items.description="Resource claim used by the container."

@@ -233,10 +233,15 @@ The [`spec.resourceRequests`](../../reference/api/cr.html#application-v1alpha1-s
 
 ### Autoscaling
 
-If the package deploys a HorizontalPodAutoscaler or a VerticalPodAutoscaler for a workload, you can either fix the values the autoscaler maintains or set a range for them:
+If the package deploys a HorizontalPodAutoscaler or a VerticalPodAutoscaler for a workload, you can fix the values it controls or set a range for them:
 
-- `replicas` and the `cpu` and `memory` requests in `resources.requests` are fixed values. Deckhouse Platform sets them in the workload and as both bounds of the autoscaler, so the autoscaler doesn't change them. In this case, the `ApplicationHorizontalPodAutoscalerPinned` or `ApplicationVerticalPodAutoscalerPinned` alert is triggered.
-- `minReplicas` and `maxReplicas` set the range of replicas for HorizontalPodAutoscaler. `resources.min` and `resources.max` set the range of the container's `cpu` and `memory` requests for VerticalPodAutoscaler. Deckhouse Platform sets a range only in the autoscaler, which keeps changing the workload within it.
+- HorizontalPodAutoscaler. If `replicas` is greater than zero, Deckhouse Platform sets this value in the workload and as both HPA bounds. The number of replicas is fixed, and the `ApplicationHorizontalPodAutoscalerPinned` alert is triggered. With `replicas: 0`, the value applies only to the workload, and the HPA bounds remain unchanged.
+
+  To let HPA choose the number of replicas within a range, set `minReplicas` and `maxReplicas`.
+
+- VerticalPodAutoscaler. If a `cpu` or `memory` request is set in `resources.requests` and VPA controls that resource, Deckhouse Platform sets the request in the workload and as both bounds of the VPA policy. The request is fixed, and the `ApplicationVerticalPodAutoscalerPinned` alert is triggered. If a `cpu` or `memory` limit is set, VPA does not change the container's limits; if VPA controls the corresponding resource, the `ApplicationVerticalPodAutoscalerPinned` alert is also triggered.
+
+  To let VPA choose the container's `cpu` or `memory` requests within a range, set `resources.min` and `resources.max`.
 
 Example manifest where HorizontalPodAutoscaler keeps from 2 to 10 replicas of the `d8a-shop-backend` Deployment, VerticalPodAutoscaler chooses the requests of the `backend` container within the range, and the `proxy` container has fixed requests and limits:
 
@@ -273,13 +278,14 @@ spec:
               memory: 256Mi
 ```
 
-A range always has both bounds and takes the place of the fixed values it bounds, so an Application is rejected if:
+A range always has both bounds and takes the place of the fixed values it bounds. An Application is rejected in the following cases:
 
-- `minReplicas` is set without `maxReplicas`, or the other way round;
-- `min` and `max` of a container are not set together for the same resources;
-- `replicas` is set together with `minReplicas` and `maxReplicas`;
-- `minReplicas` is greater than `maxReplicas`, or a replicas range is set for a workload other than Deployment, StatefulSet, or ReplicaSet;
-- a container with `min` and `max` has `cpu` or `memory` requests or limits (`ephemeral-storage` is allowed, since VerticalPodAutoscaler doesn't manage it);
+- `minReplicas` is set without `maxReplicas`, or the other way round.
+- `min` and `max` of a container are not set together for the same resources.
+- `min` and `max` are set, but neither contains `cpu` or `memory`.
+- `replicas` is set together with `minReplicas` and `maxReplicas`.
+- `minReplicas` is greater than `maxReplicas`, or a replicas range is set for a workload other than Deployment, StatefulSet, or ReplicaSet.
+- A container with `min` and `max` has `cpu` or `memory` requests or limits (`ephemeral-storage` is allowed, since VerticalPodAutoscaler doesn't manage it).
 - `min` of a resource is greater than its `max`.
 
 The error names the workload and the container and explains how to fix the problem. For example:

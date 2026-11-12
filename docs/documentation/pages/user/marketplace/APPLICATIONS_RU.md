@@ -233,10 +233,15 @@ spec:
 
 ### Автомасштабирование
 
-Если пакет развёртывает для нагрузки HorizontalPodAutoscaler или VerticalPodAutoscaler, можно либо закрепить значения, которые он поддерживает, либо задать для них диапазон:
+Если пакет развёртывает для рабочей нагрузки HorizontalPodAutoscaler или VerticalPodAutoscaler, можно закрепить значения, которыми он управляет, или задать для них диапазон:
 
-- `replicas` и запросы `cpu` и `memory` в `resources.requests` — фиксированные значения. Deckhouse Platform записывает их в нагрузку и в обе границы HorizontalPodAutoscaler или VerticalPodAutoscaler, поэтому они не меняются. При этом срабатывает алерт `ApplicationHorizontalPodAutoscalerPinned` или `ApplicationVerticalPodAutoscalerPinned`.
-- `minReplicas` и `maxReplicas` задают диапазон количества реплик для HorizontalPodAutoscaler. `resources.min` и `resources.max` задают диапазон запросов `cpu` и `memory` контейнера для VerticalPodAutoscaler. Deckhouse Platform записывает диапазон только в HorizontalPodAutoscaler или VerticalPodAutoscaler, и тот продолжает менять нагрузку в его пределах.
+- HorizontalPodAutoscaler. Если `replicas` больше нуля, Deckhouse Platform устанавливает это значение для рабочей нагрузки и в обе границы HPA. Количество реплик фиксируется, и срабатывает алерт `ApplicationHorizontalPodAutoscalerPinned`. При `replicas: 0` значение применяется только к рабочей нагрузке, а границы HPA не меняются.
+
+  Чтобы HPA выбирал количество реплик в заданном диапазоне, укажите `minReplicas` и `maxReplicas`.
+
+- VerticalPodAutoscaler. Если в `resources.requests` задан запрос `cpu` или `memory` и VPA управляет этим ресурсом, Deckhouse Platform устанавливает запрос для рабочей нагрузки и в обе границы политики VPA. Запрос фиксируется, и срабатывает алерт `ApplicationVerticalPodAutoscalerPinned`. Если задано ограничение `cpu` или `memory`, VPA не меняет ограничения контейнера; если VPA управляет соответствующим ресурсом, также срабатывает алерт `ApplicationVerticalPodAutoscalerPinned`.
+
+  Чтобы VPA выбирал запросы `cpu` или `memory` контейнера в заданном диапазоне, укажите `resources.min` и `resources.max`.
 
 Пример манифеста, в котором HorizontalPodAutoscaler поддерживает от 2 до 10 реплик Deployment `d8a-shop-backend`, VerticalPodAutoscaler выбирает запросы контейнера `backend` в пределах диапазона, а у контейнера `proxy` фиксированные запросы и ограничения:
 
@@ -277,6 +282,7 @@ spec:
 
 - `minReplicas` указан без `maxReplicas` или наоборот;
 - `min` и `max` контейнера заданы не вместе или для разных ресурсов;
+- `min` и `max` заданы, но не содержат ни `cpu`, ни `memory`;
 - `replicas` указан вместе с `minReplicas` и `maxReplicas`;
 - `minReplicas` больше `maxReplicas` или диапазон реплик задан для нагрузки, отличной от Deployment, StatefulSet и ReplicaSet;
 - для контейнера с `min` и `max` заданы запросы или ограничения `cpu` или `memory` (`ephemeral-storage` задавать можно: VerticalPodAutoscaler им не управляет);

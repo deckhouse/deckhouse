@@ -104,9 +104,9 @@ spec:
 
                                 Удалить ограничение или запрос ресурсов, заданный в пакете, нельзя — можно только изменить его значение.
 
-                                Если приложение развёртывает для нагрузки VerticalPodAutoscaler, указанные запросы `cpu` и `memory` записываются в его политику для контейнера одновременно как `minAllowed` и `maxAllowed`, поэтому VPA их не меняет, и срабатывает алерт [`ApplicationVerticalPodAutoscalerPinned`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#deckhouse-applicationverticalpodautoscalerpinned). Если указаны ограничения `cpu` или `memory`, VPA не меняет ограничения контейнера (`controlledValues: RequestsOnly`).
+                                Если VerticalPodAutoscaler управляет `cpu` или `memory` контейнера, заданный для этого ресурса запрос остаётся фиксированным. При заданном ограничении `cpu` или `memory` VPA не меняет ограничения контейнера. Если запрос или ограничение задано для ресурса, которым управляет VPA, срабатывает алерт [`ApplicationVerticalPodAutoscalerPinned`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#deckhouse-applicationverticalpodautoscalerpinned).
 
-                                Чтобы VPA мог менять запросы `cpu` и `memory` контейнера, укажите вместо них диапазон в `min` и `max`. Для контейнера с `min` или `max` нельзя задать запросы и ограничения `cpu` и `memory`.
+                                Чтобы VPA мог выбирать запросы в заданном диапазоне, укажите `min` и `max` вместо запросов и ограничений `cpu` и `memory`.
                               properties:
                                 claims:
                                   description: |-

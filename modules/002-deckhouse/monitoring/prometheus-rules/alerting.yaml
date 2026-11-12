@@ -296,9 +296,9 @@
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
       summary: |
-        VerticalPodAutoscaler is disabled for container `{{ $labels.container }}` of {{ $labels.kind }} `{{ $labels.workload }}` of Application `{{ $labels.name }}` in namespace `{{ $labels.namespace }}`.
+        VerticalPodAutoscaler does not manage at least one resource range of container `{{ $labels.container }}` of {{ $labels.kind }} `{{ $labels.workload }}` of Application `{{ $labels.name }}` in namespace `{{ $labels.namespace }}`.
       description: |
-        The `spec.resourceRequests` parameter of Application `{{ $labels.name }}` in namespace `{{ $labels.namespace }}` sets a resource range (`min` and `max`) for container `{{ $labels.container }}` of {{ $labels.kind }} `{{ $labels.workload }}`, but no VerticalPodAutoscaler of the application sets the resources of this container. Deckhouse Platform applies the range as fixed resources instead: the container gets `min` as the requests and `max` as the limits.
+        The `spec.resourceRequests` parameter of Application `{{ $labels.name }}` in namespace `{{ $labels.namespace }}` sets a resource range (`min` and `max`) for container `{{ $labels.container }}` of {{ $labels.kind }} `{{ $labels.workload }}`, but at least one resource in the range is not managed by a VerticalPodAutoscaler of the application. Deckhouse Platform applies the range for each such resource as fixed values instead: the container gets `min` as the request and `max` as the limit.
 
         To fix the issue, do one of the following:
 
@@ -340,11 +340,11 @@
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
       summary: |
-        VerticalPodAutoscaler doesn't change the resources of container `{{ $labels.container }}` of {{ $labels.kind }} `{{ $labels.workload }}` of Application `{{ $labels.name }}` in namespace `{{ $labels.namespace }}`.
+        Fixed resource settings limit VerticalPodAutoscaler for container `{{ $labels.container }}` of {{ $labels.kind }} `{{ $labels.workload }}` of Application `{{ $labels.name }}` in namespace `{{ $labels.namespace }}`.
       description: |
-        The `spec.resourceRequests` parameter of Application `{{ $labels.name }}` in namespace `{{ $labels.namespace }}` sets fixed `cpu` or `memory` resources (`requests` or `limits`) for container `{{ $labels.container }}` of {{ $labels.kind }} `{{ $labels.workload }}`, which a VerticalPodAutoscaler of the application sizes. Deckhouse Platform sets both bounds of the VerticalPodAutoscaler to the requests, so it doesn't change them.
+        The `spec.resourceRequests` parameter of Application `{{ $labels.name }}` in namespace `{{ $labels.namespace }}` sets fixed `cpu` or `memory` requests or limits for container `{{ $labels.container }}` of {{ $labels.kind }} `{{ $labels.workload }}`. If a request is set for a resource managed by VerticalPodAutoscaler, Deckhouse Platform sets both VPA bounds to that request. If a limit is set, Deckhouse Platform sets `controlledValues: RequestsOnly`: VPA can change requests that are not fixed by the Application, but does not change limits.
 
-        To let VerticalPodAutoscaler change the resources, replace the fixed `cpu` and `memory` requests and limits with a range: set `min` and `max`.
+        To let VerticalPodAutoscaler manage the requests within a range, replace the fixed `cpu` and `memory` requests and limits with `min` and `max`.
 
         To view the resource settings of the application, run the following command:
 
