@@ -192,6 +192,12 @@ func TestLoadHandlerGetLocalPath(t *testing.T) {
 			"/app/hugo/data/modules/moduleName/stable/openapi",
 			true,
 		},
+		{"candi/openapi", "/app/hugo/data/modules/moduleName/stable/candi/openapi", true},
+		{"candi/openapi/cluster_configuration.yaml", "/app/hugo/data/modules/moduleName/stable/candi/openapi/cluster_configuration.yaml", true},
+		{"./candi/openapi/doc-ru-cluster_configuration.yaml", "/app/hugo/data/modules/moduleName/stable/candi/openapi/doc-ru-cluster_configuration.yaml", true},
+		{"candi/openapi/cloud_discovery_data.yaml", "", false},
+		{"candi/openapi/README.md", "", false},
+		{"candi/terraform/main.tf", "", false},
 		// Test cases for internal directories exclusion
 		{
 			"docs/internal/README.md",
@@ -273,6 +279,8 @@ func TestUploadCreatesRootFiles(t *testing.T) {
 		{"docs/README.md", "# doc\n"},
 		{"crds/backup.yaml", "kind: CRD\n"},
 		{"openapi/config-values.yaml", "type: object\n"},
+		{"candi/openapi/cluster_configuration.yaml", "kind: DVPClusterConfiguration\n"},
+		{"candi/openapi/doc-ru-cluster_configuration.yaml", "apiVersions: []\n"},
 	}
 
 	buf := new(bytes.Buffer)
@@ -294,11 +302,13 @@ func TestUploadCreatesRootFiles(t *testing.T) {
 	}
 
 	want := map[string]string{
-		filepath.Join(baseDir, "data/modules/test-module/stable/module.yaml"):                "name: test\n",
-		filepath.Join(baseDir, "data/modules/test-module/stable/oss.yaml"):                   "- name: lib\n",
-		filepath.Join(baseDir, "data/modules/test-module/stable/crds/backup.yaml"):           "kind: CRD\n",
-		filepath.Join(baseDir, "data/modules/test-module/stable/openapi/config-values.yaml"): "type: object\n",
-		filepath.Join(baseDir, "content/modules/test-module/stable/README.md"):               "# doc\n",
+		filepath.Join(baseDir, "data/modules/test-module/stable/candi/openapi/cluster_configuration.yaml"):        "kind: DVPClusterConfiguration\n",
+		filepath.Join(baseDir, "data/modules/test-module/stable/candi/openapi/doc-ru-cluster_configuration.yaml"): "apiVersions: []\n",
+		filepath.Join(baseDir, "data/modules/test-module/stable/module.yaml"):                                     "name: test\n",
+		filepath.Join(baseDir, "data/modules/test-module/stable/oss.yaml"):                                        "- name: lib\n",
+		filepath.Join(baseDir, "data/modules/test-module/stable/crds/backup.yaml"):                                "kind: CRD\n",
+		filepath.Join(baseDir, "data/modules/test-module/stable/openapi/config-values.yaml"):                      "type: object\n",
+		filepath.Join(baseDir, "content/modules/test-module/stable/README.md"):                                    "# doc\n",
 	}
 	for path, body := range want {
 		got, err := os.ReadFile(path)

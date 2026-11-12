@@ -83,6 +83,8 @@ func IsDocsPath(path string) bool {
 	return strings.HasPrefix(path, "docs") ||
 		strings.HasPrefix(path, "crds") ||
 		strings.HasPrefix(path, "openapi") ||
+		path == "candi/openapi/cluster_configuration.yaml" ||
+		path == "candi/openapi/doc-ru-cluster_configuration.yaml" ||
 		path == "module.yaml" ||
 		path == "oss.yaml"
 }

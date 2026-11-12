@@ -21,6 +21,8 @@ The docs-builder takes these files from the module repository:
 | `openapi/config-values.yaml` | The `CONFIGURATION` page |
 | `openapi/doc-<lang>-config-values.yaml` | Translations of the `CONFIGURATION` page |
 | `openapi/conversions/v<N>.yaml` | Conversions of module settings between schema versions |
+| `candi/openapi/cluster_configuration.yaml` | The provider settings on the `CLUSTER_CONFIGURATION` page |
+| `candi/openapi/doc-ru-cluster_configuration.yaml` | Russian descriptions of the provider settings |
 | `module.yaml` | Lifecycle stage (`stage`), requirements (`requirements`) and the module description in the modules list (`descriptions`) |
 | `oss.yaml` | Third-party components |
 
@@ -38,13 +40,16 @@ or moved under `docs/internal/`.
 - An English page is `<NAME>.md`, a Russian page is `<NAME>.ru.md`.
   The docs-builder also accepts `<NAME>_RU.md` and renames it to `.ru.md`, but new files use `.ru.md`.
 - `README` is the module overview. In the module menu it is always the first page, regardless of `weight`.
-- The docs-builder does not create the `CONFIGURATION` and `CR` pages.
-  Create `docs/CONFIGURATION.md` and `docs/CR.md` (or `docs/CRD.md`) with front matter;
+- The docs-builder does not create the `CONFIGURATION`, `CR` and `CLUSTER_CONFIGURATION` pages.
+  Create `docs/CONFIGURATION.md`, `docs/CR.md` (or `docs/CRD.md`) and `docs/CLUSTER_CONFIGURATION.md` as needed, with front matter;
   the template appends the generated content after the page body:
   - on `CONFIGURATION`: the sections about enabling and configuring the module and changing its release channel,
     the `enablingNote` alert, the requirements from `module.yaml`, the conversions and the parameters.
     All of them are rendered only if `openapi/config-values.yaml` exists;
-  - on `CR`: a note that the CRDs are not removed when the module is disabled, and the custom resources from `crds/`.
+  - on `CR`: a note that the CRDs are not removed when the module is disabled, and the custom resources from `crds/`;
+  - on `CLUSTER_CONFIGURATION`: the provider configuration from `candi/openapi/cluster_configuration.yaml`,
+    including its description, API versions, examples and parameters. Russian descriptions come from
+    `candi/openapi/doc-ru-cluster_configuration.yaml`, with English as the fallback.
 - A page is rendered as `<name>.html` in lowercase: `USER_GUIDE.md` becomes `user_guide.html`.
 
 ## Page parameters

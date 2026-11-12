@@ -4,7 +4,7 @@ Context:
 .name — module name
 .channel — module channel
 .data — module data (usually, it is hugo.Data.modules.<MODULE_NAME> structure)
-.type — resource to render. Can be: "crds" or "configuration"
+.type — resource to render. Can be: "crds", "configuration" or "cluster_configuration"
 .lang — language to use for rendering
 .pageParams — the page parameters (.Page.Params)
 */}}
@@ -20,6 +20,40 @@ Context:
     {{- if hasPrefix $crdName "doc-" }}{{ continue }}{{ end }}
     {{- $langData := index $moduleData.crds (printf "doc-%s-%s" $lang $crdName) }}
     {{- partial "openapi/format-crd" ( dict "data" $crdData "langData" $langData ) }}
+  {{- end }}
+{{- else if and (eq .type "cluster_configuration") $moduleData.candi $moduleData.candi.openapi }}
+  {{- $schemas := $moduleData.candi.openapi }}
+  {{- with index $schemas "cluster_configuration" }}
+    {{- $langData := index $schemas (printf "doc-%s-cluster_configuration" $lang) }}
+    {{- $data := . }}
+    {{- $resourceName := lower $data.kind }}
+
+    <h2 id="{{ $resourceName }}">{{ $data.kind }}</h2>
+
+    {{- range $data.apiVersions }}
+      {{- $version := .apiVersion }}
+      {{- $schema := .openAPISpec }}
+      {{- $langSchema := dict }}
+      {{- with $langData.apiVersions }}
+        {{- with where . "apiVersion" $version }}
+          {{- $langSchema = (index . 0).openAPISpec }}
+        {{- end }}
+      {{- end }}
+
+      <p><font size="-1">{{ T "version" | humanize }}: {{ $version }}</font></p>
+      <div class="resources__prop_description">{{ partial "openapi/format-description" (or $langSchema.description $schema.description) }}</div>
+
+      {{- if or (isset $schema "x-doc-examples") (isset $schema "x-doc-example") (isset $schema "example") (isset $schema "x-examples") }}
+        {{- template "format-example" (dict "attributes" $schema "langData" $langSchema "linkAnchor" $resourceName "name" "") }}
+      {{- end }}
+
+      <ul class="resources">
+        {{- range $name, $property := $schema.properties }}
+          {{- $propertyLangData := index $langSchema.properties $name }}
+          {{- partial "openapi/format-schema" (dict "name" $name "data" $property "langData" $propertyLangData "parent" $schema "resourceName" $resourceName "required" $schema.required) }}
+        {{- end }}
+      </ul>
+    {{- end }}
   {{- end }}
 {{- else if and (eq .type "configuration") $moduleData.openapi }}
     {{- $cfgData := index $moduleData.openapi "config-values" }}

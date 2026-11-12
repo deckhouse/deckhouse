@@ -38,6 +38,10 @@ func TestIsDocsPath(t *testing.T) {
 		{"openapi", true},
 		{"openapi/config-values.yaml", true},
 		{"openapi/conversions/v1.yaml", true},
+		{"candi/openapi/cluster_configuration.yaml", true},
+		{"candi/openapi/doc-ru-cluster_configuration.yaml", true},
+		{"candi/openapi/cloud_discovery_data.yaml", false},
+		{"candi/terraform/main.tf", false},
 		// module metadata — the whole point of this test: these must be
 		// included so the in-cluster docs builder receives module.yaml/oss.yaml.
 		{"module.yaml", true},
@@ -77,6 +81,9 @@ func TestExtractDocumentation(t *testing.T) {
 		{name: "docs/README.md", body: "# doc\n"},
 		{name: "crds/backup.yaml", body: "kind: CRD\n"},
 		{name: "openapi/config-values.yaml", body: "type: object\n"},
+		{name: "candi/openapi/cluster_configuration.yaml", body: "kind: DVPClusterConfiguration\n"},
+		{name: "candi/openapi/doc-ru-cluster_configuration.yaml", body: "apiVersions: []\n"},
+		{name: "candi/openapi/cloud_discovery_data.yaml", body: "type: object\n"},
 		// must be excluded
 		{name: "Chart.yaml", body: "name: test\n"},
 		{name: "hooks/main.go", body: "package main\n"},
@@ -90,6 +97,8 @@ func TestExtractDocumentation(t *testing.T) {
 
 	got := tarNames(t, out)
 	want := []string{
+		"candi/openapi/cluster_configuration.yaml",
+		"candi/openapi/doc-ru-cluster_configuration.yaml",
 		"crds/backup.yaml",
 		"docs",
 		"docs/README.md",
