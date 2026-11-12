@@ -170,8 +170,6 @@ mount:
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
 - id: DECKHOUSE_PRIVATE_REPO
   value: {{ .DECKHOUSE_PRIVATE_REPO }}
 - id: CI_JOB_TOKEN
@@ -267,8 +265,6 @@ secrets:
   value: {{ .GOPROXY }}
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
-- id: DECKHOUSE_PRIVATE_REPO
-  value: {{ .DECKHOUSE_PRIVATE_REPO }}
 - id: CI_JOB_TOKEN
   env: CI_JOB_TOKEN
 shell:
