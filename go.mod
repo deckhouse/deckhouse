@@ -11,13 +11,13 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fatih/color v1.19.0 // indirect
-	github.com/flant/addon-operator v1.26.5
+	github.com/flant/addon-operator v1.26.6
 	github.com/flant/kube-client v1.10.0
 	github.com/flant/shell-operator v1.21.5
 	github.com/go-openapi/spec v0.22.9
 	github.com/gojuno/minimock/v3 v3.4.7
 	github.com/google/go-cmp v0.7.0
-	github.com/google/go-containerregistry v0.21.3 // v0.21.4-v0.21.6 issues: realm handling fixed in v0.21.6 (https://github.com/google/go-containerregistry/pull/2243), but pull hang introduced in this version and still not fixed (https://github.com/google/go-containerregistry/issues/2341).
+	github.com/google/go-containerregistry v0.21.4 // v0.21.4-v0.21.6 issues: realm handling fixed in v0.21.6 (https://github.com/google/go-containerregistry/pull/2243), but pull hang introduced in this version and still not fixed (https://github.com/google/go-containerregistry/issues/2341).
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/iancoleman/strcase v0.3.0
@@ -63,7 +63,7 @@ require (
 	github.com/deckhouse/deckhouse/pkg/log v0.3.0
 	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.4.0
 	github.com/deckhouse/deckhouse/pkg/registry v0.0.2-0.20260916084840-a97e86c61556
-	github.com/deckhouse/module-sdk v0.13.0
+	github.com/deckhouse/module-sdk v0.14.0
 	github.com/ettle/strcase v0.2.0
 	github.com/evanphx/json-patch v5.9.11+incompatible
 	github.com/fsnotify/fsnotify v1.9.0
@@ -203,7 +203,6 @@ require (
 	github.com/djherbis/nio/v3 v3.0.1 // indirect
 	github.com/dlclark/regexp2 v1.11.5 // indirect
 	github.com/docker/cli v29.4.0+incompatible // indirect
-	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.5 // indirect
 	github.com/dominikbraun/graph v0.23.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect

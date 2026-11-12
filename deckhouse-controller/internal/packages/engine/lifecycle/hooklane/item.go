@@ -30,6 +30,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/observed"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -145,6 +146,11 @@ func (l *Lanes) exec(ctx context.Context, it *item) error {
 
 	if !it.runsHook() {
 		l.object.UnlockKubernetesMonitors(it.hook, it.monitor())
+		return nil
+	}
+
+	if hooks.IsReadinessHook(it.hook) {
+		l.probe(ctx, it)
 		return nil
 	}
 

@@ -291,6 +291,11 @@ var summaryTable = map[phase]map[string]advice{
 			"Reconcile failed: the module does not allow the requested replicas; previously applied manifests stay in place",
 			"The condition message names the workload. Change or remove its replicas in the module's resource requests; until then the replicas stay as they are.",
 		},
+		reasonReadinessProbeFailed: {
+			stateDegraded,
+			"Reconcile failed: the module's readiness probe reports it not ready",
+			"The Ready condition message is the probe's. Check the module's workloads and the services it depends on; the probe runs again on its schedule.",
+		},
 		"Degraded": {
 			stateDegraded,
 			"Reconcile failed: workload health monitor reports degraded",
@@ -455,9 +460,10 @@ func suspendedFor(f *facts) advice {
 
 // reconcileSummaryChain lists the internal gates that degrade a running
 // module, in priority order: hook and manifest failures, then settings, then
-// workload health. Only a False Scaled is a degradation.
+// the readiness probe, then workload health. Only a False probe or Scaled is
+// a degradation: one that has not reported yet is not.
 func (f *facts) reconcileSummaryChain() []*signal {
-	return []*signal{&f.hooks, &f.manifests, &f.configured, &f.scaled}
+	return []*signal{&f.hooks, &f.manifests, &f.configured, &f.probe, &f.scaled}
 }
 
 // workloadReason returns the health monitor's verdict on the module workload.

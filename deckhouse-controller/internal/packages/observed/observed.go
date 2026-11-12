@@ -13,14 +13,14 @@
 // limitations under the License.
 
 // Package observed holds what the cluster-facing services observe about each package: workload
-// health, the release progress, the endpoints, whether the release has workloads, and the last
-// failure of a hook that ran outside the package's operations. It is the observed half of a
-// package's status; the other is the engine's lifecycle Report.
+// health, the release progress, the endpoints, whether the release has workloads, the last
+// failure of a hook that ran outside the package's operations and the last verdict of its readiness
+// probe. It is the observed half of a package's status; the other is the engine's lifecycle Report.
 //
 //   - Observations are never lifecycle inputs: a flapping pod must not start a run or change
 //     convergence, so the engine core never imports this package.
 //   - Each field has one writer: the release service (tracking, URLs, "no workloads"), the health
-//     callback (health) and the hook lanes (the hook failure); the composition root forgets a
+//     callback (health) and the hook lanes (the hook failure, the probe); the composition root forgets a
 //     package once its removal is reported done. Writers declare their own narrow interfaces.
 //   - The status projection joins both halves by name; both notify through the same status
 //     queues.
@@ -101,8 +101,14 @@ type HookFailure struct {
 	Since time.Time `json:"since" yaml:"since"`
 }
 
-// Observation is everything observed about one package. Returned by value; its slices and the
-// hook failure are copies the caller may keep.
+// Probe is the last verdict of a package's readiness probe: the readiness hook its SDK declares.
+type Probe struct {
+	Ready   bool   `json:"ready" yaml:"ready"`
+	Message string `json:"message" yaml:"message"` // Message says why the package is not ready.
+}
+
+// Observation is everything observed about one package. Returned by value; its slices, the hook
+// failure and the probe are copies the caller may keep.
 type Observation struct {
 	Health      Health   `json:"health" yaml:"health"`
 	Tracking    Tracking `json:"tracking" yaml:"tracking"`
@@ -111,6 +117,9 @@ type Observation struct {
 	// HookFailure is the last failure of a runtime or synchronization hook; nil when none is
 	// outstanding.
 	HookFailure *HookFailure `json:"hookFailure" yaml:"hookFailure"`
+	// Probe is the last verdict of the readiness probe; nil while none is in force (no readiness
+	// hook, or its lanes are not running).
+	Probe *Probe `json:"probe" yaml:"probe"`
 }
 
 // Store is the observation store. Safe for concurrent use. Every write that changes the stored
@@ -152,6 +161,11 @@ func (s *Store) Get(name string) Observation {
 	if o.HookFailure != nil {
 		failure := *o.HookFailure
 		res.HookFailure = &failure
+	}
+
+	if o.Probe != nil {
+		probe := *o.Probe
+		res.Probe = &probe
 	}
 
 	return res
@@ -264,6 +278,34 @@ func (s *Store) ResetHookFailure(name string) {
 		}
 
 		o.HookFailure = nil
+
+		return true
+	})
+}
+
+// RecordProbe records the verdict of a readiness probe run. A repeated verdict changes nothing and
+// does not notify. Writer: the hook lanes.
+func (s *Store) RecordProbe(name string, p Probe) {
+	s.update(name, func(o *Observation) bool {
+		if o.Probe != nil && *o.Probe == p {
+			return false
+		}
+
+		o.Probe = &p
+
+		return true
+	})
+}
+
+// ResetProbe clears the verdict: the package's hook lanes stopped, so the probe no longer runs and
+// its last verdict says nothing about the package. Writer: the hook lanes (their stop).
+func (s *Store) ResetProbe(name string) {
+	s.update(name, func(o *Observation) bool {
+		if o.Probe == nil {
+			return false
+		}
+
+		o.Probe = nil
 
 		return true
 	})

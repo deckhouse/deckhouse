@@ -39,6 +39,9 @@
 //	                   Report store, the backoff and the clock.
 //	engine/schedule/   the scheduler: the convergence protocol and the graph (protocol.go,
 //	                   then scheduler.go); rule/ holds the rules a node's decision folds.
+//	engine/objectpatcher/
+//	                   the patcher of the hooks' patches; under Module v2 a readiness hook's patch
+//	                   of the Module status becomes the probe's verdict.
 //	engine/enginetest/ the scenario kit over fakes; tests only.
 //
 // core, lifecycle and schedule make up the core and, by convention, import no Kubernetes client:

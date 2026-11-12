@@ -35,6 +35,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/lifecycle/retry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/observed"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -390,7 +391,7 @@ func event(monitor, id string) kemtypes.KubeEvent {
 	}
 }
 
-// failures records the observation store's hook-failure calls.
+// failures records the observation store's hook-failure and probe calls.
 type failures struct{ calls *calls }
 
 func (f failures) RecordHookFailure(_, hook, reason, _ string) {
@@ -398,6 +399,11 @@ func (f failures) RecordHookFailure(_, hook, reason, _ string) {
 }
 func (f failures) ClearHookFailure(_, hook string) { f.calls.add("clear-failure:" + hook) }
 func (f failures) ResetHookFailure(name string)    { f.calls.add("reset-failures:" + name) }
+
+func (f failures) RecordProbe(_ string, verdict observed.Probe) {
+	f.calls.add(fmt.Sprintf("probe:%t:%s", verdict.Ready, verdict.Message))
+}
+func (f failures) ResetProbe(name string) { f.calls.add("reset-probe:" + name) }
 
 // pauser records the drift monitor's pauses.
 type pauser struct{ calls *calls }

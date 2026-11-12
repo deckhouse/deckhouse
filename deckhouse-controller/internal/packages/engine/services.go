@@ -39,6 +39,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/hookcache"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/disk/erofs"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/disk/symlink"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/objectpatcher"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/health"
 	globalmodule "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules/global"
@@ -247,8 +248,9 @@ func newKubeClient(opts kubeClientOptions, logger *log.Logger) (*klient.Client, 
 }
 
 // buildObjectPatcher creates the patcher of the hooks' patches; its timeout keeps a slow API call
-// from hanging a hook.
-func buildObjectPatcher(logger *log.Logger) (*objectpatch.ObjectPatcher, error) {
+// from hanging a hook. Under Module v2 the hooks' patches of the Module status are intercepted
+// (objectpatcher).
+func buildObjectPatcher(moduleV2 bool, logger *log.Logger) (*objectpatch.ObjectPatcher, error) {
 	client, err := newKubeClient(kubeClientOptions{
 		name:         "object-patcher-client",
 		metricPrefix: "packages_object_patcher_",
@@ -260,7 +262,7 @@ func buildObjectPatcher(logger *log.Logger) (*objectpatch.ObjectPatcher, error) 
 		return nil, err
 	}
 
-	return objectpatch.NewObjectPatcher(client, logger.Named("object-patcher")), nil
+	return objectpatcher.New(client, moduleV2, logger.Named("object-patcher")), nil
 }
 
 // buildKubeEventsManager creates the manager of the hooks' watches; it writes its snapshot, event,

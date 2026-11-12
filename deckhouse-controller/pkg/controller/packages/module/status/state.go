@@ -32,6 +32,7 @@ const (
 	reasonDegraded                 = "Degraded"
 	reasonHookInitializationFailed = "HookInitializationFailed"
 	reasonSyncHookFailed           = "SyncHookFailed"
+	reasonReadinessProbeFailed     = "ReadinessProbeFailed"
 )
 
 // globalModuleName is the Module of Global, which the engine runs without a lifecycle of its own.
@@ -63,6 +64,8 @@ type facts struct {
 	installed         signal // the release is installed (Report.Current.Installed)
 	scaled            signal
 	maintenance       signal
+	// probe is the readiness probe's verdict: Unknown without a readiness hook or before it ran.
+	probe signal
 
 	// candidateConfigured is the Candidate's own settings verdict: the update's settings gate while
 	// there is a Candidate, so the running version's rejection never blocks the update.
@@ -187,6 +190,7 @@ func buildFacts(in input) facts {
 	}
 
 	f.scaled = scaledSignal(in.Observation)
+	f.probe = probeSignal(in.Observation.Probe)
 
 	f.removeError = rep.RemoveError
 	f.updating = isUpdating(in, stale)
@@ -342,6 +346,20 @@ func scaledSignal(o observed.Observation) signal {
 	}
 
 	return signal{}
+}
+
+// probeSignal translates the readiness probe's last verdict. Unknown until the probe reported, so
+// a package whose probe has not run holds nothing: an older module-sdk probes only once the Module
+// reports a phase it waits for, and holding that phase for the probe would wait forever.
+func probeSignal(p *observed.Probe) signal {
+	switch {
+	case p == nil:
+		return signal{}
+	case p.Ready:
+		return signal{status: metav1.ConditionTrue}
+	default:
+		return falseSignal(reasonReadinessProbeFailed, p.Message)
+	}
 }
 
 // orDefault returns s, or def when s is empty.

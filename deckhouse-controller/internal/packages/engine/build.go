@@ -157,7 +157,7 @@ func Build(cli kclient.Client, moduleManager moduleManager, metricStorage metric
 	reg := registry.NewService(dependency.NewDependencyContainer(), logger)
 	e.appsDisk, e.modulesDisk = buildDisks(reg, logger)
 
-	patcher, err := buildObjectPatcher(logger)
+	patcher, err := buildObjectPatcher(cfg.EnableModuleV2, logger)
 	if err != nil {
 		return nil, fmt.Errorf("build object patcher: %w", err)
 	}

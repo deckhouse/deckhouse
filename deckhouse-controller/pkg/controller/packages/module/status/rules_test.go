@@ -478,6 +478,22 @@ func TestReconcile(t *testing.T) {
 			}),
 			summary: stateDegraded,
 		},
+		{
+			name:   "readiness probe failed",
+			report: func() model.Report { return running(v1) },
+			obs:    observed.Observation{Health: ready.Health, Probe: &observed.Probe{Message: "database is down"}},
+			want: healthy(map[string]cond{
+				ConditionReady: wantFalse(reasonReadinessProbeFailed),
+			}),
+			summary: stateDegraded,
+		},
+		{
+			name:    "readiness probe passed",
+			report:  func() model.Report { return running(v1) },
+			obs:     observed.Observation{Health: ready.Health, Probe: &observed.Probe{Ready: true}},
+			want:    healthy(nil),
+			summary: stateReady,
+		},
 	}
 
 	for _, tt := range tests {

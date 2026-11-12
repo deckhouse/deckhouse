@@ -191,7 +191,7 @@ func searchBatchAppHooks(namespace, name, path string, logger *log.Logger) (*hoo
 			readinessLoaded = true
 
 			// add readiness hook
-			nestedHookName := fmt.Sprintf("%s-readiness", hookName)
+			nestedHookName := hooks.ReadinessHookName(hookName)
 			hookLogger := logger.Named("batch-hook")
 
 			hook := kind.NewApplicationBatchHook(nestedHookName,
@@ -211,6 +211,11 @@ func searchBatchAppHooks(namespace, name, path string, logger *log.Logger) (*hoo
 		}
 
 		for key, cfg := range hookConfig.Hooks {
+			// The readiness hook is listed among the hooks too, under its key; it is added above, once.
+			if key == kind.BatchHookReadyKey {
+				continue
+			}
+
 			nestedHookName := fmt.Sprintf("%s:%s:%s", hookName, cfg.Metadata.Name, key)
 			hookLogger := logger.Named("batch-hook")
 
@@ -267,7 +272,7 @@ func searchBatchModuleHooks(name, path string, logger *log.Logger) (*hookLoadRes
 			readinessLoaded = true
 
 			// add readiness hook
-			nestedHookName := fmt.Sprintf("%s-readiness", hookName)
+			nestedHookName := hooks.ReadinessHookName(hookName)
 			hookLogger := logger.Named("batch-hook")
 
 			hook := kind.NewBatchHook(nestedHookName,
@@ -287,6 +292,11 @@ func searchBatchModuleHooks(name, path string, logger *log.Logger) (*hookLoadRes
 		}
 
 		for key, cfg := range hookConfig.Hooks {
+			// The readiness hook is listed among the hooks too, under its key; it is added above, once.
+			if key == kind.BatchHookReadyKey {
+				continue
+			}
+
 			nestedHookName := fmt.Sprintf("%s:%s:%s", hookName, cfg.Metadata.Name, key)
 			hookLogger := logger.Named("batch-hook")
 

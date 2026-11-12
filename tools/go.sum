@@ -172,8 +172,8 @@ github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/deckhouse/deckhouse/pkg/metrics-storage v0.4.0 h1:Ot0Gr6ztPug72iDa5xGxfnvJATCvj0aPUBqgA2bUrMc=
 github.com/deckhouse/deckhouse/pkg/metrics-storage v0.4.0/go.mod h1:yXbj0xVrP+krr9j+IKGHZJjfnYd+0pCBF6EQiOm4wZ4=
-github.com/deckhouse/module-sdk v0.13.0 h1:z7GJZkP8e3MvK2BgTwRthd8bjI4tDesztmMZSvyiVws=
-github.com/deckhouse/module-sdk v0.13.0/go.mod h1:tdxodxZQvlHG2vSIHs3LtUPtcWtJR5VYuZoV8gudDE8=
+github.com/deckhouse/module-sdk v0.14.0 h1:6ngD45gsPq0Ie4sLHlNOseZ1+fVzWlPPk7cUVJlAPWI=
+github.com/deckhouse/module-sdk v0.14.0/go.mod h1:Duf+9VFNnqNRqmbksRoeZXjugDD+WHHTydmSlXcmgmk=
 github.com/denis-tingajkin/go-header v0.4.2 h1:jEeSF4sdv8/3cT/WY8AgDHUoItNSoEZ7qg9dX7pc218=
 github.com/denis-tingajkin/go-header v0.4.2/go.mod h1:eLRHAVXzE5atsKAnNRDB90WHCFFnBUn4RN0nRcs1LJA=
 github.com/dgrijalva/jwt-go v3.2.0+incompatible/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
@@ -182,8 +182,6 @@ github.com/dlclark/regexp2 v1.11.5 h1:Q/sSnsKerHeCkc/jSTNq1oCm7KiVgUMZRDUoRu0JQZ
 github.com/dlclark/regexp2 v1.11.5/go.mod h1:DHkYz0B9wPfa6wondMfaivmHpzrQ3v9q8cnmRbL6yW8=
 github.com/docker/cli v29.4.0+incompatible h1:+IjXULMetlvWJiuSI0Nbor36lcJ5BTcVpUmB21KBoVM=
 github.com/docker/cli v29.4.0+incompatible/go.mod h1:JLrzqnKDaYBop7H2jaqPtU4hHvMKP+vjCwu2uszcLI8=
-github.com/docker/distribution v2.8.3+incompatible h1:AtKxIZ36LoNK51+Z6RpzLpddBirtxJnzDrHLEKxTAYk=
-github.com/docker/distribution v2.8.3+incompatible/go.mod h1:J2gT2udsDAN96Uj4KfcMRqY0/ypR+oyYUYmja8H+y+w=
 github.com/docker/docker-credential-helpers v0.9.5 h1:EFNN8DHvaiK8zVqFA2DT6BjXE0GzfLOZ38ggPTKePkY=
 github.com/docker/docker-credential-helpers v0.9.5/go.mod h1:v1S+hepowrQXITkEfw6o4+BMbGot02wiKpzWhGUZK6c=
 github.com/dustin/go-humanize v0.0.0-20171111073723-bb3d318650d4/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
@@ -214,8 +212,8 @@ github.com/fatih/structtag v1.2.0 h1:/OdNE99OxoI/PqaW/SuSK9uxxT3f/tcSZgon/ssNSx4
 github.com/fatih/structtag v1.2.0/go.mod h1:mBJUNpUnHmRKrKlQQlmCrh5PuhftFbNv8Ys4/aAZl94=
 github.com/felixge/httpsnoop v1.1.0 h1:3YtUj32ZZkqZtt3sZZsClsymw/QDuVfpNhoA31zeORc=
 github.com/felixge/httpsnoop v1.1.0/go.mod h1:Zqxgdd+1Rkcz8euOqdr7lqgCRJztwr5hp9vDSi5UZCE=
-github.com/flant/addon-operator v1.26.5 h1:9P5X16xwqXCGvHuPs/0ha0V9M9QADdvEtM/NBx1ORSc=
-github.com/flant/addon-operator v1.26.5/go.mod h1:mfjVCXO+RnNakCEs3xzBdmovR8Mslliagi5j/irxM3g=
+github.com/flant/addon-operator v1.26.6 h1:2hCu6YSbk1sk6OiR/6v+9pSruZq5KcOXtRwP0CNYvbU=
+github.com/flant/addon-operator v1.26.6/go.mod h1:Gu15E8F46F1bRZLdIulB2HmYS+FRdjn/9RW3Aykcaa4=
 github.com/flant/kube-client v1.10.0 h1:PcS+44RhssIL2t2XrZ+Qxq8u3lMgVxfMbHl+O5a9sPM=
 github.com/flant/kube-client v1.10.0/go.mod h1:KOaTG+1iLMIGToSczxtzbACBDVdWPK5UqMqyWjd0nsQ=
 github.com/flant/shell-operator v1.21.5 h1:xE8j7KDekZsczj/jTO7mgvmVvbKkAz/LYa0gXz1CCJ0=
@@ -426,8 +424,8 @@ github.com/google/go-cmp v0.5.5/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/
 github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
 github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
 github.com/google/go-cmp v0.7.0/go.mod h1:pXiqmnSA92OHEEa9HXL2W4E7lf9JzCmGVUdgjX3N/iU=
-github.com/google/go-containerregistry v0.21.3 h1:Xr+yt3VvwOOn/5nJzd7UoOhwPGiPkYW0zWDLLUXqAi4=
-github.com/google/go-containerregistry v0.21.3/go.mod h1:D5ZrJF1e6dMzvInpBPuMCX0FxURz7GLq2rV3Us9aPkc=
+github.com/google/go-containerregistry v0.21.4 h1:VrhlIQtdhE6riZW//MjPrcJ1snAjPoCCpPHqGOygrv8=
+github.com/google/go-containerregistry v0.21.4/go.mod h1:kxgc23zQ2qMY/hAKt0wCbB/7tkeovAP2mE2ienynJUw=
 github.com/google/gofuzz v1.0.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
 github.com/google/martian v2.1.0+incompatible/go.mod h1:9I4somxYTbIHy5NJKHRl3wXiIaQGbYVAs8BPL6v8lEs=
 github.com/google/martian/v3 v3.0.0/go.mod h1:y5Zk1BBys9G+gd6Jrk0W3cC1+ELVxBWuIGO+w/tUAp0=

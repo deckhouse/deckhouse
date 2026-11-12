@@ -17,12 +17,14 @@ package hooklane_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/flant/shell-operator/pkg/executor"
 	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
 	kemtypes "github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -508,6 +510,41 @@ func (s *lanesSuite) TestScheduleTickRuns() {
 	s.router.RouteSchedule(context.Background(), "* * * * *")
 
 	s.True(s.calls.waitFor("run:tick:schedule"))
+}
+
+// The run of a readiness hook is the probe: its outcome is recorded as the probe's verdict, never as
+// a hook failure, and a failed probe does not hold the items queued behind it.
+func (s *lanesSuite) TestFailedProbeIsAVerdictAndDoesNotBlockItsLane() {
+	probe := hooks.ReadinessHookName("hooks/probe")
+	runs := 0
+	o := &object{name: "app", calls: s.calls, queues: []string{"main"},
+		schedule: []hooks.ControllableHook{scheduleHook(probe, "main", "* * * * *")},
+		kube:     []hooks.ControllableHook{kubeHook(s.calls, "other", binding{queue: "main", noSync: true})},
+		run: func(_ context.Context, hook string, _ []bctx.BindingContext) error {
+			if hook != probe {
+				return nil
+			}
+
+			runs++
+			if runs > 1 {
+				return nil
+			}
+
+			// What a module-sdk hook whose probe failed prints on stderr, wrapped on the way up.
+			envelope := `{"message":"execute: hook reconcile func: database is down"}` + "\n"
+			return fmt.Errorf("exec hook: %w", &executor.StderrError{Message: envelope})
+		}}
+	s.mustStart(o)
+
+	s.router.RouteSchedule(context.Background(), "* * * * *")
+	s.Require().True(s.calls.waitFor("probe:false:database is down"))
+
+	s.router.RouteKubeEvent(context.Background(), event("other-0", "e1"))
+	s.Require().True(s.calls.waitFor("run:other:e1"), "the item behind a failed probe runs")
+	s.NotContains(s.calls.list(), "record-failure:"+probe+":"+observed.HookReasonEvent)
+
+	s.router.RouteSchedule(context.Background(), "* * * * *")
+	s.True(s.calls.waitFor("probe:true:"))
 }
 
 // Serve delivers what the managers' channels carry, kube events and schedule ticks, and returns

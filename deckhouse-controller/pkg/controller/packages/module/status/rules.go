@@ -338,8 +338,8 @@ func mapUpdateInstalled(f *facts) metav1.Condition {
 	return metav1.Condition{}
 }
 
-// mapReady tracks user-facing readiness: only hook and manifest failures break it (settings alone
-// leave the running version as it is).
+// mapReady tracks user-facing readiness: hook and manifest failures and a failed readiness probe
+// break it (settings alone leave the running version as it is).
 func mapReady(f *facts) metav1.Condition {
 	ph := phaseOf(f)
 
@@ -350,6 +350,9 @@ func mapReady(f *facts) metav1.Condition {
 	}
 	if c, ok := settingsChanged(f, ph, ConditionReady); ok {
 		return c
+	}
+	if f.probe.isFalse() {
+		return emit(ConditionReady, metav1.ConditionFalse, &f.probe)
 	}
 	if f.scaled.isTrue() {
 		return emit(ConditionReady, metav1.ConditionTrue, &f.scaled)

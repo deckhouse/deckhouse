@@ -37,6 +37,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/observed"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -66,12 +67,15 @@ type pauser interface {
 	ResumeMonitor(name string)
 }
 
-// failureRecorder is the part of the observation store the lanes write: one slot per package,
-// recorded by a failed run, cleared by a success and reset by the stop.
+// failureRecorder is the part of the observation store the lanes write: per package, the hook
+// failure, recorded by a failed run, cleared by a success and reset by the stop, and the readiness
+// probe's verdict, recorded by every run of the readiness hook and reset by the stop.
 type failureRecorder interface {
 	RecordHookFailure(name, hook, reason, message string)
 	ClearHookFailure(name, hook string)
 	ResetHookFailure(name string)
+	RecordProbe(name string, verdict observed.Probe)
+	ResetProbe(name string)
 }
 
 // Lanes are the started lanes of one package, by queue.
@@ -282,6 +286,7 @@ func (l *Lanes) Stop() {
 
 		l.object.DisableHooks()
 		l.router.failures.ResetHookFailure(l.name)
+		l.router.failures.ResetProbe(l.name)
 	})
 }
 
