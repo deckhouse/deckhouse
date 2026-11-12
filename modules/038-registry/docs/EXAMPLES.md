@@ -210,9 +210,15 @@ Pulls naming `images.virtualization.example.com` are then routed to `vendor.exam
 by the agent on every node, with the credentials and certificate authority held by the cluster
 rather than by each workload. Nothing on any node is reconfigured for this.
 
-After creating the RegistryUpstream, check that it was accepted: a conflict with the primary registry, or with another resource
-claiming the same name, is refused rather than merged. So is an invalid field, such as a `ca` that is not a PEM certificate, and a
-resource that does not fit into the limits on all accepted resources together (256 resources, 256 KiB of `spec`):
+After creating the RegistryUpstream, check that it has been accepted. The object is rejected in the following cases:
+
+- It conflicts with the primary registry or another object claiming the same `match` value. The object is rejected rather than merged.
+- It contains an invalid field, such as a `ca` that is not a PEM certificate.
+- Adding the object exceeds either of the following limits:
+  - Settings from no more than 256 RegistryUpstream objects can be applied at a time.
+  - The combined size of the accepted objects' `spec` fields in JSON format must not exceed 256 KiB.
+
+To check whether the object has been accepted, run the following command:
 
 ```bash
 d8 k get registryupstreams -o custom-columns=\

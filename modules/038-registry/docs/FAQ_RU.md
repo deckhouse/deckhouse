@@ -895,7 +895,7 @@ Deckhouse Virtualization Platform), использует бандл этого �
 в адресе из ошибки — лишь имя этого репозитория в хранилище). Этот образ входит и в бандл
 `d8 mirror` этого релиза. Распакуйте образ в каталог, указанный в ошибке.
 
-## Как загрузить новый релиз DP или новую версию модуля в изолированный кластер?
+## Как загрузить новый релиз Deckhouse Platform или новую версию модуля в изолированный кластер?
 
 Когда upstream убран из конфигурации и из кластера нет доступа в интернет, новые образы
 попадают во внутрикластерный кеш только через `d8 mirror push`. Push принимает лидер кеша,
@@ -910,13 +910,13 @@ Deckhouse Virtualization Platform), использует бандл этого �
 
 ### Шаг 1. Скачайте образы на машине с доступом в интернет
 
-Узнайте редакцию и версию DP в кластере:
+Узнайте редакцию и версию Deckhouse Platform в кластере:
 
 ```bash
 d8 k -n d8-system get deployment deckhouse -o json | jq -r '.metadata.annotations | {"core.deckhouse.io/edition","core.deckhouse.io/version"}'
 ```
 
-Скачайте релизы DP, начиная с минорной версии кластера. Минорные версии устанавливаются по
+Скачайте релизы Deckhouse Platform, начиная с минорной версии кластера. Минорные версии устанавливаются по
 очереди, поэтому в пакете должны быть все промежуточные, и `--since-version` их скачивает:
 
 ```bash
@@ -962,8 +962,8 @@ d8 k get ingressclass
   [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate)
   и включён модуль `cert-manager`. Задайте параметр и включите модуль: Ingress появится при
   следующем запуске модуля `registry`. Если Ingress в кластере невозможен, укажите в
-  [`primary.upstream`](configuration.html#parameters-primary-upstream) доступный из кластера
-  registry, в котором есть нужные образы, дождитесь, пока кеш наполнится из него, и снова уберите
+  [`primary.upstream`](configuration.html#parameters-primary-upstream) доступное из кластера
+  хранилище образов контейнеров, в котором есть нужные образы, дождитесь, пока кеш наполнится из него, и снова уберите
   upstream.
 
 Команды `d8 k` в следующих шагах выполняются там, где есть доступ к API кластера. Если пакет
@@ -1007,14 +1007,14 @@ d8 mirror push ./d8-bundle "$HOST/system/deckhouse" \
 d8 k get registrystorage registry -o jsonpath='{.status}' | jq '{phase,fill,leader,allReplicasFull}'
 ```
 
-Проверьте, что кластер увидел новый релиз DP или модуля:
+Проверьте, что кластер увидел новый релиз Deckhouse Platform или модуля:
 
 ```bash
 d8 k get deckhousereleases
 d8 k get modulereleases
 ```
 
-Дальше релиз разворачивается по настройкам [обновления DP](/modules/deckhouse/configuration.html#parameters-update)
+Дальше релиз разворачивается по настройкам [обновления Deckhouse Platform](/modules/deckhouse/configuration.html#parameters-update)
 и модулей.
 
 ## Алерты доступности образов от `extended-monitoring` для внутрикластерного реестра

@@ -962,7 +962,7 @@ platform's image repository there, the one the cluster was installed from (for e
 store's name for that repository). A `d8 mirror` bundle of the release holds the image too. Unpack
 the image into the directory the error names.
 
-## How do I push a new DP release or a new module version into an air-gapped cluster?
+## How do I push a new Deckhouse Platform release or a new module version into an air-gapped cluster?
 
 Once the upstream is removed from the configuration and the cluster has no internet access,
 `d8 mirror push` is the only way new images get into the in-cluster cache. The cache leader accepts
@@ -978,17 +978,17 @@ deployed.
 
 ### Step 1. Pull the images on a machine with internet access
 
-Get the DP edition and version running in the cluster:
+Get the Deckhouse Platform edition and version running in the cluster:
 
 ```bash
 d8 k -n d8-system get deployment deckhouse -o json | jq -r '.metadata.annotations | {"core.deckhouse.io/edition","core.deckhouse.io/version"}'
 ```
 
-Pull the DP releases starting from the cluster's minor version. Minor versions are installed one
+Pull the Deckhouse Platform releases starting from the cluster's minor version. Minor versions are installed one
 after another, so the bundle has to contain every one in between, and `--since-version` pulls them:
 
 ```bash
-d8 mirror pull --source='registry.deckhouse.ru/deckhouse/<EDITION>' --license='<LICENSE_KEY>' \
+d8 mirror pull --source='registry.deckhouse.io/deckhouse/<EDITION>' --license='<LICENSE_KEY>' \
   --since-version='<X.Y>' ./d8-bundle
 ```
 
@@ -996,7 +996,7 @@ To update only a module without pulling the platform, give its current version. 
 that version, the newer ones, and the versions on the release channels:
 
 ```bash
-d8 mirror pull --source='registry.deckhouse.ru/deckhouse/<EDITION>' --license='<LICENSE_KEY>' \
+d8 mirror pull --source='registry.deckhouse.io/deckhouse/<EDITION>' --license='<LICENSE_KEY>' \
   --no-platform --include-module='<MODULE>@<VERSION>' ./d8-bundle
 ```
 
@@ -1075,14 +1075,14 @@ deployed:
 d8 k get registrystorage registry -o jsonpath='{.status}' | jq '{phase,fill,leader,allReplicasFull}'
 ```
 
-Check that the cluster sees the new DP release or module release:
+Check that the cluster sees the new Deckhouse Platform release or module release:
 
 ```bash
 d8 k get deckhousereleases
 d8 k get modulereleases
 ```
 
-From here on the release is deployed according to the [DP update settings](/modules/deckhouse/configuration.html#parameters-update)
+From here on the release is deployed according to the [Deckhouse Platform update settings](/modules/deckhouse/configuration.html#parameters-update)
 and the module update settings.
 
 ## Image availability alerts from `extended-monitoring` for the in-cluster registry

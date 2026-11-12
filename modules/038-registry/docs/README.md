@@ -38,9 +38,20 @@ The [`primary.upstream`](configuration.html#parameters-primary-upstream) and [`s
 | not set | `true` | Air-gapped. The cache is the only source, and `d8 mirror push` is the only way in |
 | not set | `false` | The configuration is rejected: nodes would have nowhere to pull images from |
 
-If the installation configuration specifies no registry at all (no registry parameters in [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse), no `registry` section in the `deckhouse` ModuleConfig and no `registry` ModuleConfig), the installer creates the `registry` ModuleConfig with `mode: Managed` and `primary.upstream` pointing to the public CE registry `registry.deckhouse.io/deckhouse/ce`, and warns about it in its output. This applies only when the configuration contains a ClusterConfiguration and the container runtime is managed by Deckhouse Platform (`defaultCRI` is `Containerd` or `ContainerdV2`). In a managed Kubernetes cluster (without ClusterConfiguration) and with `defaultCRI: NotManaged` the installer does not create this ModuleConfig.
+#### Installer behavior when no container image registry is configured
 
-Under the same conditions the installer refuses a configuration in which the `registry` ModuleConfig sets `mode: Unmanaged` (or omits `mode`, which means the same) or `enabled: false` and no registry is specified anywhere else: the nodes would have nowhere to pull images from. Specify the registry nodes pull from directly in the [`deckhouse`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse) parameter of InitConfiguration (`imagesRepo` and `registryDockerCfg`), or set `mode: Managed` with `primary.upstream` in the `registry` ModuleConfig. A private or mirror registry the images were pushed to with `d8 mirror push` can serve as `primary.upstream`. To install an air-gapped cluster from an image bundle instead, set `enabled: true` and `mode: Managed` with `storage.cache: true` and `storage.source` and without `primary.upstream`, and pass the bundle to the installer with the `--img-bundle-path` flag.
+The installer creates the `registry` ModuleConfig with `mode: Managed` and `primary.upstream` pointing to the public Deckhouse Open/CE registry `registry.deckhouse.io/deckhouse/ce`, and warns about it in its output when the installation configuration specifies no container image registry in any of the following places:
+
+- [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse)
+- The `registry` section of the `deckhouse` ModuleConfig
+- The `registry` ModuleConfig (the ModuleConfig is absent)
+
+This applies only when the installation configuration contains a ClusterConfiguration and the container runtime is managed by Deckhouse Platform (`defaultCRI` is `Containerd` or `ContainerdV2`). In a Managed Kubernetes cluster (without ClusterConfiguration) and with `defaultCRI: NotManaged`, the installer does not create this ModuleConfig.
+
+Under the same conditions, the installer rejects a configuration in which the `registry` ModuleConfig sets `mode: Unmanaged` (or omits `mode`, which means the same) or `enabled: false` and no registry is specified elsewhere. In this case, the nodes would have nowhere to pull images from. Specify the registry from which nodes pull images directly in one of the following ways:
+
+- Via the [`deckhouse`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse) parameter in InitConfiguration (`imagesRepo` and `registryDockerCfg`).
+- By setting `mode: Managed` with `primary.upstream` in the `registry` ModuleConfig. A private or mirror registry populated with `d8 mirror push` can serve as `primary.upstream`. To install an air-gapped cluster from an image bundle instead, set `enabled: true` and `mode: Managed` with `storage.cache: true` and `storage.source`, without `primary.upstream`, and pass the bundle to the installer with the `--img-bundle-path` flag.
 
 The installer also refuses a `registry` ModuleConfig that specifies `primary` or `storage` without `mode: Managed`, as the module's schema does: in the default `Unmanaged` mode these settings would have no effect.
 

@@ -55,7 +55,7 @@ spec:
 
             A `match` already claimed by another object, or one that would shadow the primary path, is rejected rather than silently merged. See `status.conflict`.
 
-            Objects are accepted oldest first. All accepted objects together are limited to 256 objects and 256 KiB of `spec` (measured as JSON): an object that does not fit is rejected, and an object accepted earlier is never pushed out by a newer one.
+            Objects are accepted in creation order, starting with the earliest created object. Settings from no more than 256 objects are applied at a time. The combined size of their `spec` fields in JSON format must not exceed 256 KiB. If adding the next object exceeds either limit, its settings are not applied. Creating a new object does not displace a previously accepted object from the node configuration.
 
             With the module disabled or in `Unmanaged` mode, there is no agent on the nodes. The objects are then arbitrated by the same rules by `node-manager`, which writes `status` and hands the accepted ones to the nodes. The nodes apply them directly to the container runtime configuration: the runtime pulls from the upstream and its mirrors without a proxy. A `match` equal to the registry of a `ModuleSource` is accepted: on Immutable nodes the object takes over that registry together with its certificate authority, while nodes configured by bashible, apart from those with containerd v1 described below, keep the registry as the `ModuleSource` configures it. While the module configures no node — it is disabled or in `Unmanaged` mode — nodes with containerd v1 (`Containerd`) do not apply an upstream with `path`, or one whose registry is already configured on the node or named twice in the object. Such an object stays accepted, and the message of its `Accepted` condition names the node groups that do not apply it and why.
           required:
@@ -95,7 +95,9 @@ spec:
                       minLength: 1
                       maxLength: 255
                       description: |
-                        The registry host, optionally with a port. An IPv6 address is written in brackets, followed by a port.
+                        Registry URL, optionally with a port.
+
+                        An IPv6 address is written in brackets, followed by a port.
                       x-doc-example: 'registry-vendor.example.com'
                     path:
                       type: string
@@ -157,7 +159,9 @@ spec:
                             minLength: 1
                             maxLength: 255
                             description: |
-                              The mirror host, optionally with a port. An IPv6 address is written in brackets, followed by a port.
+                              Mirror URL, optionally with a port.
+
+                              An IPv6 address is written in brackets, followed by a port.
                           path:
                             type: string
                             maxLength: 1024
@@ -205,7 +209,7 @@ spec:
                 conflict:
                   type: string
                   description: |
-                    Why the object was rejected: which object already holds the `match`, that the `match` would shadow the primary path, which field of `spec` is invalid, or that the object does not fit into the limits of all accepted objects.
+                    Reason for rejecting the object: the `match` value is already used by another object, `match` intercepts requests to the primary image registry (Primary), a field in `spec` is invalid, or adding the object exceeds the limit on the number of accepted objects or the combined size of their `spec` fields.
 
                     Empty when the object is accepted.
                 conditions:

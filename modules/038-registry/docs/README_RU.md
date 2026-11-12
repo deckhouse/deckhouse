@@ -44,9 +44,20 @@ description: "Как кластер Deckhouse Platform загружает обр
 | не задан | `true` | Air-gap. Кеш — единственный источник, путь внутрь — `d8 mirror push` |
 | не задан | `false` | Конфигурация отвергается: узлам было бы неоткуда загружать образы |
 
-Если в конфигурации установки хранилище образов контейнеров не задано нигде (нет параметров хранилища в [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse), нет секции `registry` в ModuleConfig `deckhouse` и нет ModuleConfig `registry`), установщик создаёт ModuleConfig `registry` с `mode: Managed` и `primary.upstream`, указывающим на публичное хранилище CE `registry.deckhouse.io/deckhouse/ce`, и предупреждает об этом в своём выводе. Это происходит, только если в конфигурации есть ClusterConfiguration и среда исполнения контейнеров управляется Deckhouse Platform (`defaultCRI` — `Containerd` или `ContainerdV2`). В управляемом кластере Kubernetes (без ClusterConfiguration) и при `defaultCRI: NotManaged` установщик этот ModuleConfig не создаёт.
+#### Поведение установщика, если не указано хранилище образов контейнеров
 
-При тех же условиях установщик отклоняет конфигурацию, в которой ModuleConfig `registry` задаёт `mode: Unmanaged` (или не задаёт `mode`, что означает то же самое) или `enabled: false`, а хранилище не указано больше нигде: узлам неоткуда было бы загружать образы. Укажите хранилище, из которого узлы загружают образы напрямую, в параметре [`deckhouse`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse) InitConfiguration (`imagesRepo` и `registryDockerCfg`) или задайте в ModuleConfig `registry` `mode: Managed` с `primary.upstream`. В качестве `primary.upstream` подойдёт и приватное хранилище или зеркало, в которое образы загружены командой `d8 mirror push`. Чтобы вместо этого установить изолированный кластер из бандла образов, задайте `enabled: true` и `mode: Managed` с `storage.cache: true` и `storage.source` без `primary.upstream` и передайте бандл установщику флагом `--img-bundle-path`.
+Установщик создаёт ModuleConfig `registry` с `mode: Managed` и `primary.upstream`, указывающим на публичное хранилище Deckhouse Open/CE `registry.deckhouse.io/deckhouse/ce`, и предупреждает об этом в своём выводе, если в конфигурации установки хранилище образов контейнеров не задано ни в одном из следующих мест:
+
+- в [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse);
+- в секции `registry` в ModuleConfig `deckhouse`;
+- в ModuleConfig `registry` (ModuleConfig отсутствует).
+
+Это происходит, только если в конфигурации установки есть ClusterConfiguration и среда исполнения контейнеров управляется Deckhouse Platform (`defaultCRI` — `Containerd` или `ContainerdV2`). В Managed Kubernetes-кластере (без ClusterConfiguration) и при `defaultCRI: NotManaged` установщик этот ModuleConfig не создаёт.
+
+При тех же условиях установщик отклоняет конфигурацию, в которой ModuleConfig `registry` задаёт `mode: Unmanaged` (или не задаёт `mode`, что означает то же самое) или `enabled: false`, а хранилище не указано больше нигде. В таком случае узлам неоткуда было бы загружать образы. Укажите хранилище, из которого узлы загружают образы напрямую, одним из следующих способов:
+
+- в параметре [`deckhouse`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse) InitConfiguration (`imagesRepo` и `registryDockerCfg`);
+- в ModuleConfig `registry` `mode: Managed` с `primary.upstream`. В качестве `primary.upstream` подойдёт приватное хранилище или зеркало, в которое образы загружены командой `d8 mirror push`. Чтобы вместо этого установить изолированный кластер из бандла образов, задайте `enabled: true` и `mode: Managed` с `storage.cache: true` и `storage.source` без `primary.upstream` и передайте бандл установщику флагом `--img-bundle-path`.
 
 Установщик также отклоняет ModuleConfig `registry`, в котором `primary` или `storage` заданы без `mode: Managed`, как это делает схема модуля: в режиме `Unmanaged`, который действует по умолчанию, эти настройки ни на что бы не влияли.
 
