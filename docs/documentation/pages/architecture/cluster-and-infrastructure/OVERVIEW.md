@@ -34,3 +34,5 @@ The Cluster & Infrastructure subsystem also includes the following modules:
   * [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/)
   * [`cloud-provider-yandex`](/modules/cloud-provider-yandex/)
   * [`cloud-provider-zvirt`](/modules/cloud-provider-zvirt/)
+
+* The [`infra-provider-baremetal`](/modules/infra-provider-baremetal/) module, which creates CloudEphemeral nodes on physical servers.

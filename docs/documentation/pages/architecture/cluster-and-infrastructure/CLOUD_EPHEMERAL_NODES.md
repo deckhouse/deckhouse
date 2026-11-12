@@ -116,7 +116,7 @@ The following external components interact with the module:
 ## Architecture features specific to CloudEphemeral nodes
 
 1. Nodes are ephemeral and automatically created and deleted by the module.
-1. A configured [cloud provider](../../../glossary.html#cloud-provider) module (`cloud-provider-*`) is required for interaction with cloud infrastructure. It also includes csi-driver and cloud-controller-manager.
+1. A configured [cloud provider](../../../glossary.html#cloud-provider) module (`cloud-provider-*`) is required for interaction with cloud infrastructure. It also includes csi-driver and cloud-controller-manager. Nodes on physical servers are created using the [`infra-provider-baremetal`](/modules/infra-provider-baremetal/) module, which does not include csi-driver or cloud-controller-manager.
 1. **Capi-controller-manager** manages the lifecycle of the cluster and its nodes through higher-level custom resources, without directly provisioning infrastructure. It generates infrastructure-specific custom resources, leaving provisioning to the `cloud-provider` module.
 1. **Cluster-autoscaler** enables node autoscaling.
 1. Node reservation is supported.

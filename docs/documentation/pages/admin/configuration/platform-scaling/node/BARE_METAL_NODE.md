@@ -135,6 +135,12 @@ DP supports automatic addition of physical (bare-metal) servers to the cluster w
 
 After the node group is created, a script for adding servers to the group will become available. DP will wait for the required number of StaticInstance objects that match the specified labels. As soon as such an object appears, DP will use the provided IP address and SSH connection parameters to run the `bootstrap.sh` script and add the server to the group.
 
+### Creating nodes through BMC
+
+If servers have baseboard management controllers (BMCs) with Redfish or IPMI support, Deckhouse Platform can install an operating system on them and join them to the cluster by itself. The [`infra-provider-baremetal`](/modules/infra-provider-baremetal/) module provides this capability. With it, [`node-manager`](/modules/node-manager/) creates nodes on such servers in node groups with the `CloudEphemeral` type and scales them automatically.
+
+The setup procedure is described on the [Usage](/modules/infra-provider-baremetal/usage.html) page of the `infra-provider-baremetal` module.
+
 ## Modifying a static cluster configuration
 
 The [static cluster](../../../../glossary.html#static-cluster) settings are stored in the [StaticClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration) structure.

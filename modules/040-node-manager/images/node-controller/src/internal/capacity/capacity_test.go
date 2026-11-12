@@ -212,10 +212,12 @@ func TestCapacityExtractor(t *testing.T) {
 		err := yaml.Unmarshal([]byte(outOfTreeSpecWithCapacity), &instanceClass)
 		require.NoError(t, err)
 		catalog := NewInstanceTypesCatalog(make([]InstanceType, 0))
-		capac, err := CalculateNodeTemplateCapacity(instanceClass["kind"].(string), instanceClass["spec"], catalog)
-		require.NoError(t, err)
-		assert.Equal(t, "16Gi", capac.Memory.String())
-		assert.Equal(t, "8", capac.CPU.String())
+		for _, kind := range []string{instanceClass["kind"].(string), "BareMetalInstanceClass"} {
+			capac, err := CalculateNodeTemplateCapacity(kind, instanceClass["spec"], catalog)
+			require.NoError(t, err, kind)
+			assert.Equal(t, "16Gi", capac.Memory.String(), kind)
+			assert.Equal(t, "8", capac.CPU.String(), kind)
+		}
 	})
 
 	// Without a case and without spec.capacity there is nothing to derive capacity from.

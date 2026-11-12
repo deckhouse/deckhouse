@@ -53,8 +53,9 @@ var cloudProviderNameRegexp = regexp.MustCompile(`cloud-provider-([a-zA-Z0-9]+)`
 // into installer, candi or terraform-manager images. Keep in sync with the
 // external-provider list in .werf/defines/installer.tmpl.
 var externalCloudProviders = map[string]struct{}{
-	"yandex": {},
-	"zvirt":  {},
+	"baremetal": {},
+	"yandex":    {},
+	"zvirt":     {},
 }
 
 var workDir = cwd()
@@ -310,6 +311,10 @@ func writeSections(settings writeSettings) {
 		log.Fatalf("globbing: %v", err)
 	}
 	addNewFileEntry := func(file string) {
+		if strings.HasPrefix(filepath.Base(file), ".") {
+			return
+		}
+
 		// remove /ee/modules/040-node-manager/templates/nvidia-gpu in CSE
 		if strings.Contains(file, "/ee/modules/040-node-manager/templates/nvidia-gpu") && settings.Edition == "CSE" {
 			return
@@ -446,33 +451,10 @@ func writeCandiCloudProvidersSections(settings writeSettings) {
 	var addEntries []addEntry
 
 	addNewFileEntry := func(file string) {
-		candiPath := filepath.Join(file, "candi")
-		info, err := os.Lstat(candiPath)
-		if err != nil {
-			log.Fatalf("cannot lstat file %s: %v", file, err)
-		}
-
-		if info.Mode()&os.ModeSymlink != 0 {
-			return
-		}
-
 		cloudProviderName := extractCloudProviderName(file)
 
-		// External providers are downloaded by dhctl at runtime, not baked —
-		// except for bashible.
-		//
-		// TODO(candi): drop this exception once bashible steps are read from the
-		// unpacked bundle. https://flant.kaiten.ru/space/667674/boards/card/68389405
-		//
-		// dhctl resolves a provider's node bootstrap steps only under
-		// <candi>/cloud-providers/<name>/bashible, with no bundle fallback:
-		// dhctl/pkg/template/{bundle.go,bootstrap.go} and the $.Files.Get in
-		// candi/bashible/bootstrap/01-bootstrap-prerequisites.sh.tpl. Both fail
-		// silently on a missing path, so an external provider whose candi carries
-		// bashible steps (yandex: bootstrap-networks.sh.tpl,
-		// 000_set_cloud_variables.sh.tpl) would boot nodes without them.
 		if _, external := externalCloudProviders[cloudProviderName]; external {
-			bashiblePath := filepath.Join(candiPath, "bashible")
+			bashiblePath := filepath.Join(file, "candi", "bashible")
 			if _, err := os.Stat(bashiblePath); err != nil {
 				return
 			}
@@ -483,7 +465,16 @@ func writeCandiCloudProvidersSections(settings writeSettings) {
 				ExcludePaths:      settings.ExcludePaths,
 				StageDependencies: settings.StageDependencies,
 			})
+			return
+		}
 
+		candiPath := filepath.Join(file, "candi")
+		info, err := os.Lstat(candiPath)
+		if err != nil {
+			log.Fatalf("cannot lstat file %s: %v", file, err)
+		}
+
+		if info.Mode()&os.ModeSymlink != 0 {
 			return
 		}
 

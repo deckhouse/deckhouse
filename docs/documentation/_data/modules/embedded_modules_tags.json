@@ -108,6 +108,9 @@
     "web ui",
     "ssdlc"
   ],
+  "infra-provider-baremetal": [
+    "bare metal"
+  ],
   "ingress-nginx": [
     "network",
     "balancing",

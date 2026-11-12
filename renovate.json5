@@ -65,6 +65,12 @@
       "groupSlug": "025-static-routing-manager"
     },
     {
+      "description": "Group 030-infra-provider-baremetal dependency updates",
+      "matchFileNames": ["**/modules/030-infra-provider-baremetal/**"],
+      "groupName": "030-infra-provider-baremetal dependencies",
+      "groupSlug": "030-infra-provider-baremetal"
+    },
+    {
       "description": "Group 031-local-path-provisioner dependency updates",
       "matchFileNames": ["**/modules/031-local-path-provisioner/**"],
       "groupName": "031-local-path-provisioner dependencies",

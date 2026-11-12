@@ -34,4 +34,6 @@ extractedLinksMax: 0
   * [`cloud-provider-vcd`](/modules/cloud-provider-vcd/);
   * [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/);
   * [`cloud-provider-yandex`](/modules/cloud-provider-yandex/);
-  * [`cloud-provider-zvirt`](/modules/cloud-provider-zvirt/).
+  * [`cloud-provider-zvirt`](/modules/cloud-provider-zvirt/);
+
+* модуль [`infra-provider-baremetal`](/modules/infra-provider-baremetal/), который создаёт CloudEphemeral-узлы на физических серверах.

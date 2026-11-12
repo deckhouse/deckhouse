@@ -107,26 +107,29 @@ git:
 #   Editions - $.Editions
 {{- define "dev_prebuild_setup_ln_node_manager" }}
 {{- $context := . -}}
-# Add cloud-instance-manager provider directories
 {{- $providers := list }}
 {{- range $_, $edition := $context.Editions }}
   {{- if $edition.terraformProviders }}
     {{- range $_, $tfProvider := $edition.terraformProviders }}
       {{- $tf := index $context.TF $tfProvider }}
         {{- $cloudName := lower $tf.cloudName }}
-        {{- $providers = append $providers $cloudName }}
+        {{- $providers = append $providers (dict "dir" (printf "030-cloud-provider-%s" $cloudName) "provider" $cloudName) }}
     {{- end }}
   {{- end }}
 {{- end }}
-{{- /* external cloud providers: it carries no terraform_versions.yml
-       entry, but it ships the cloud-instance-manager templates linked below. */}}
-{{- $providers = append $providers "dvp" }}
-{{- $providers = append $providers "yandex" }}
-{{- $providers = append $providers "zvirt" }}
-rm /deckhouse/modules/040-node-manager/cloud-providers/*
-for item in {{ join " " $providers }}; do
-  if [ -d /deckhouse/modules/030-cloud-provider-${item}/cloud-instance-manager ]; then
-    ln -s /deckhouse/modules/030-cloud-provider-${item}/cloud-instance-manager/ /deckhouse/modules/040-node-manager/cloud-providers/${item}
+{{- $providers = append $providers (dict "dir" "030-cloud-provider-yandex" "provider" "yandex") }}
+{{- $providers = append $providers (dict "dir" "030-cloud-provider-dvp" "provider" "dvp") }}
+{{- $providers = append $providers (dict "dir" "030-cloud-provider-zvirt" "provider" "zvirt") }}
+{{- $providers = append $providers (dict "dir" "030-infra-provider-baremetal" "provider" "baremetal") }}
+rm /deckhouse/modules/040-node-manager/capi/* /deckhouse/modules/040-node-manager/cloud-providers/*
+{{- range $_, $item := $providers }}
+{{- $dir := index $item "dir" }}
+{{- $provider := index $item "provider" }}
+if [ -d /deckhouse/modules/{{ $dir }}/capi ]; then
+  ln -s /deckhouse/modules/{{ $dir }}/capi /deckhouse/modules/040-node-manager/capi/{{ $provider }}
   fi
-done
+if [ -d /deckhouse/modules/{{ $dir }}/cloud-instance-manager ]; then
+  ln -s /deckhouse/modules/{{ $dir }}/cloud-instance-manager/ /deckhouse/modules/040-node-manager/cloud-providers/{{ $provider }}
+  fi
+{{- end }}
 {{- end }}

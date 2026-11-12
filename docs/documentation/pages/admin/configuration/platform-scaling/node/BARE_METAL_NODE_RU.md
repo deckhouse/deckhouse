@@ -136,6 +136,12 @@ lang: ru
 
 После создания [группы узлов](../../../../glossary.html#node-group) появится скрипт для добавления серверов в группу. DP будет ожидать появления требуемого числа объектов StaticInstance, подходящих по лейблам. Как только такой объект появится, DP использует указанный IP и параметры для подключения по SSH, выполнит скрипт `bootstrap.sh` и добавит сервер в группу.
 
+### Создание узлов через BMC
+
+Если серверы оснащены контроллерами управления (BMC) с поддержкой Redfish или IPMI, Deckhouse Platform может самостоятельно устанавливать на них операционную систему и подключать их к кластеру. Эту возможность предоставляет модуль [`infra-provider-baremetal`](/modules/infra-provider-baremetal/). С ним [`node-manager`](/modules/node-manager/) создаёт узлы на таких серверах в группах узлов с типом `CloudEphemeral` и масштабирует их автоматически.
+
+Порядок настройки описан на странице [«Использование»](/modules/infra-provider-baremetal/usage.html) модуля `infra-provider-baremetal`.
+
 ## Изменение конфигурации статического кластера
 
 Настройки [статического кластера](../../../../glossary.html#static-cluster) хранятся в структуре [StaticClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration).

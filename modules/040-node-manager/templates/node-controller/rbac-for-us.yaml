@@ -196,6 +196,7 @@ rules:
   - deckhouseclusters
   - dynamixclusters
   - huaweicloudclusters
+  - metal3clusters
   - openstackclusters
   - vcdclusters
   - vsphereclusters
@@ -233,6 +234,7 @@ rules:
   resources:
   - dynamixmachinetemplates
   - huaweicloudmachinetemplates
+  - metal3machinetemplates
   - openstackmachinetemplates
   - staticmachinetemplates
   - vcdmachinetemplates
@@ -349,6 +351,7 @@ rules:
   - yandexinstanceclasses
   - dynamixinstanceclasses
   - huaweicloudinstanceclasses
+  - baremetalinstanceclasses
   - openstackinstanceclasses
   - vcdinstanceclasses
   - vsphereinstanceclasses

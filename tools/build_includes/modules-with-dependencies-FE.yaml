@@ -440,6 +440,15 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/modules/030-infra-provider-baremetal/hooks
+  to: /deckhouse/modules/030-infra-provider-baremetal/hooks
+  excludePaths:
+    - '**/*_test.go'
+    - '**/*.sh'
+    - '**/AGENTS.md'
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/modules/110-istio/hooks/ee
   to: /deckhouse/modules/110-istio/hooks/ee
   excludePaths:

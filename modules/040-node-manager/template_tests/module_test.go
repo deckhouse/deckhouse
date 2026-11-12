@@ -1990,6 +1990,85 @@ internal:
 				})
 			})
 		})
+
+		Context("Baremetal", func() {
+			const nodeManagerBaremetal = `
+internal:
+  capiControllerManagerEnabled: true
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  instancePrefix: myprefix
+  clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
+  cloudProvider:
+    type: baremetal
+    machineClassKind: ""
+    capiClusterKind: "Metal3Cluster"
+    capiClusterAPIVersion: "infrastructure.cluster.x-k8s.io/v1beta1"
+    capiClusterName: "baremetal"
+    capiMachineTemplateKind: "Metal3MachineTemplate"
+    capiMachineTemplateAPIVersion: "infrastructure.cluster.x-k8s.io/v1beta1"
+    baremetal: {}
+  nodeGroups:
+    - cloudInstances:
+        classReference:
+          kind: BareMetalInstanceClass
+          name: worker
+        maxPerZone: 5
+        minPerZone: 4
+        zones:
+          - default
+      name: worker
+      nodeType: CloudEphemeral
+  machineControllerManagerEnabled: false
+`
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
+				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerBaremetal)
+				setBashibleAPIServerTLSValues(f)
+				f.HelmRender()
+			})
+
+			It("must configure Metal3 CAPI resources", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				assertClusterResources(f, "baremetal")
+
+				metal3Cluster := f.KubernetesResource("Metal3Cluster", "d8-cloud-instance-manager", "baremetal")
+				Expect(metal3Cluster.Exists()).To(BeFalse())
+
+				template := f.KubernetesResource("Metal3MachineTemplate", "d8-cloud-instance-manager", "worker-50710a9d")
+				Expect(template.Exists()).To(BeFalse())
+
+				dataTemplate := f.KubernetesResource("Metal3DataTemplate", "d8-cloud-instance-manager", "baremetal-metadata-v1")
+				Expect(dataTemplate.Exists()).To(BeFalse())
+
+				nodeControllerRole := f.KubernetesGlobalResource("ClusterRole", "d8:node-manager:node-controller")
+				Expect(nodeControllerRole.Field("rules").String()).To(ContainSubstring("metal3machinetemplates"))
+				Expect(nodeControllerRole.Field("rules").String()).To(ContainSubstring("baremetalinstanceclasses"))
+
+				capiControllerRole := f.KubernetesGlobalResource("ClusterRole", "d8:node-manager:capi-controller-manager:manager-role")
+				Expect(capiControllerRole.Field("rules").String()).To(ContainSubstring("metal3clusters"))
+				Expect(capiControllerRole.Field("rules").String()).NotTo(ContainSubstring("metal3dataclaims"))
+				Expect(capiControllerRole.Field("rules").String()).NotTo(ContainSubstring("metal3datas"))
+				Expect(capiControllerRole.Field("rules").String()).NotTo(ContainSubstring("metal3datatemplates"))
+				Expect(capiControllerRole.Field("rules").String()).To(ContainSubstring("metal3machines"))
+				Expect(capiControllerRole.Field("rules").String()).To(ContainSubstring("metal3machinetemplates"))
+
+				clusterAutoscalerRole := f.KubernetesGlobalResource("ClusterRole", "d8:node-manager:cluster-autoscaler")
+				Expect(clusterAutoscalerRole.Field("rules").String()).To(ContainSubstring("metal3machinetemplates"))
+			})
+		})
 	})
 })
 

@@ -303,6 +303,26 @@ var _ = Describe("Module :: cniCilium :: helm template ::", func() {
 
 	})
 
+	Context("Static cluster with infra-provider-baremetal", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("global.enabledModules", `[vertical-pod-autoscaler, prometheus, operator-prometheus, infra-provider-baremetal]`)
+			f.ValuesSetFromYaml("cniCilium", cniCiliumValues)
+			f.HelmRender()
+		})
+
+		It("tolerates the CSI bootstrap taint on Cilium DaemonSets", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			for _, daemonSetName := range []string{"agent", "safe-agent-updater"} {
+				daemonSet := f.KubernetesResource("DaemonSet", "d8-cni-cilium", daemonSetName)
+				Expect(daemonSet.Exists()).To(BeTrue())
+				Expect(daemonSet.Field("spec.template.spec.tolerations").String()).To(ContainSubstring("node.deckhouse.io/csi-not-bootstrapped"))
+			}
+		})
+	})
+
 	Context("ConfigMap cilium-config rendering (hubble enabled, extended metrics + flow logs)", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)

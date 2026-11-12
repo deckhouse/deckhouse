@@ -1334,6 +1334,31 @@
   stageDependencies:
     setup:
         - '**/*'
+- add: /ee/modules/030-infra-provider-baremetal
+  to: /deckhouse/modules/030-infra-provider-baremetal
+  excludePaths:
+    - docs
+    - README.md
+    - '*-threat-model.md'
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
+    - apis
+    - requirements
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+    - e2e
+    - '**/AGENTS.md'
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/modules/040-control-plane-manager/openapi/config-values.yaml
   to: /deckhouse/modules/040-control-plane-manager/openapi/config-values.yaml
   stageDependencies:

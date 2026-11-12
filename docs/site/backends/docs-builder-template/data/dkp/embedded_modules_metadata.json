@@ -1385,6 +1385,68 @@
       },
       "oss": []
     },
+    "infra-provider-baremetal": {
+      "name": "infra-provider-baremetal",
+      "critical": true,
+      "weight": 30,
+      "subsystems": [
+        "cluster"
+      ],
+      "namespace": "d8-infra-provider-baremetal",
+      "stage": "Experimental",
+      "descriptions": {
+        "en": "Manages physical host resources for provisioning nodes.",
+        "ru": "Управляет физическими серверами для создания узлов."
+      },
+      "accessibility": {
+        "editions": {
+          "ee": {
+            "available": true
+          },
+          "fe": {
+            "available": true
+          }
+        }
+      },
+      "oss": [
+        {
+          "name": "Cluster API Provider Metal3",
+          "link": "https://github.com/metal3-io/cluster-api-provider-metal3",
+          "description": "Infrastructure provider for Kubernetes Cluster API backed by Metal3.",
+          "logo": "/images/logos/kubernetes.svg",
+          "license": "Apache License 2.0",
+          "id": "capm3-metal3",
+          "version": "v1.9.5"
+        },
+        {
+          "name": "Metal3 Bare Metal Operator",
+          "link": "https://github.com/metal3-io/baremetal-operator",
+          "description": "Kubernetes operator for provisioning bare metal hosts with Ironic.",
+          "logo": "/images/logos/kubernetes.svg",
+          "license": "Apache License 2.0",
+          "id": "baremetal-operator-metal3",
+          "version": "v0.13.1"
+        },
+        {
+          "name": "Ironic Standalone Operator",
+          "link": "https://github.com/metal3-io/ironic-standalone-operator",
+          "description": "Kubernetes operator managing standalone Ironic deployments for Metal3.",
+          "logo": "/images/logos/kubernetes.svg",
+          "license": "Apache License 2.0",
+          "id": "ironic-standalone-operator-metal3",
+          "version": "v0.10.0"
+        },
+        {
+          "name": "Metal3 Ironic Image",
+          "link": "https://github.com/metal3-io/ironic-image",
+          "description": "Container image to run OpenStack Ironic as part of Metal3.",
+          "logo": "/images/logos/kubernetes.svg",
+          "license": "Apache License 2.0",
+          "id": "ironic-image-metal3",
+          "version": "v34.0.0"
+        }
+      ]
+    },
     "istio": {
       "name": "istio",
       "stage": "General Availability",
@@ -2290,6 +2352,18 @@
         "node-manager"
       ]
     },
+    "Cluster API Provider Metal3": {
+      "link": "https://github.com/metal3-io/cluster-api-provider-metal3",
+      "description": "Infrastructure provider for Kubernetes Cluster API backed by Metal3.",
+      "logo": "/images/logos/kubernetes.svg",
+      "license": "Apache License 2.0",
+      "versions": [
+        "v1.9.5"
+      ],
+      "modules": [
+        "infra-provider-baremetal"
+      ]
+    },
     "Cluster Autoscaler": {
       "link": "https://github.com/gardener/autoscaler",
       "description": "Kubernetes autoscaler that automatically adjusts the size of the cluster.",
@@ -2498,6 +2572,18 @@
         "cilium-hubble"
       ]
     },
+    "Ironic Standalone Operator": {
+      "link": "https://github.com/metal3-io/ironic-standalone-operator",
+      "description": "Kubernetes operator managing standalone Ironic deployments for Metal3.",
+      "logo": "/images/logos/kubernetes.svg",
+      "license": "Apache License 2.0",
+      "versions": [
+        "v0.10.0"
+      ],
+      "modules": [
+        "infra-provider-baremetal"
+      ]
+    },
     "Istio": {
       "link": "https://github.com/istio/istio",
       "description": "An open platform to connect, manage, and secure microservices.",
@@ -2606,6 +2692,30 @@
       "versions": [],
       "modules": [
         "local-path-provisioner"
+      ]
+    },
+    "Metal3 Bare Metal Operator": {
+      "link": "https://github.com/metal3-io/baremetal-operator",
+      "description": "Kubernetes operator for provisioning bare metal hosts with Ironic.",
+      "logo": "/images/logos/kubernetes.svg",
+      "license": "Apache License 2.0",
+      "versions": [
+        "v0.13.1"
+      ],
+      "modules": [
+        "infra-provider-baremetal"
+      ]
+    },
+    "Metal3 Ironic Image": {
+      "link": "https://github.com/metal3-io/ironic-image",
+      "description": "Container image to run OpenStack Ironic as part of Metal3.",
+      "logo": "/images/logos/kubernetes.svg",
+      "license": "Apache License 2.0",
+      "versions": [
+        "v34.0.0"
+      ],
+      "modules": [
+        "infra-provider-baremetal"
       ]
     },
     "MetalLB": {

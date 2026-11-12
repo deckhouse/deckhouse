@@ -34,13 +34,13 @@ spec:
                   description: |
                     Ссылка на объект `InstanceClass`.
 
-                    Уникален для каждого модуля `cloud-provider-*`.
+                    Уникален для каждого модуля `cloud-provider-*` или `infra-provider-*`.
                   properties:
                     kind:
                       description: |
                         Тип объекта (например, `OpenStackInstanceClass`).
 
-                        Тип объекта указан в документации соответствующего модуля облачного провайдера.
+                        Тип объекта указан в документации соответствующего модуля облачного или инфраструктурного провайдера.
                     name:
                       description: |
                         Имя нужного объекта `InstanceClass` (например, `finland-medium`).
