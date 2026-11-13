@@ -5,6 +5,7 @@ additional_property_name: item (key) name
 pattern_property_name: regular expression for parameter name
 search_placeholder_text: Search documentation
 search_context_dkpdocs_and_modules: The search is performed throughout Deckhouse Platform documentation and modules.
+search_context_module_version: "<span>The search is performed throughout the chosen version of the <strong>{{ .module }}</strong> module and the Deckhouse Platform documentation.</span>"
 search_context_modules: The search is performed throughout modules, excluding the Deckhouse Platform documentation.
 search_context_only_product_docs: The search is performed throughout the product documentation, excluding modules.
 modules: modules
@@ -93,7 +94,7 @@ module_release_channel_details_content: |
   To change the module release channel, follow the steps in [How do I change the release channel for a module?](/products/kubernetes-platform/documentation/v1/faq.html#how-do-i-change-the-release-channel-for-a-module).
 module_versions: Module versions
 module_version: Module version
-embedded_in_dkp: Embedded in DP
+embedded_in_dkp: Embedded in Deckhouse Platform
 module_crd_warning_1: Deckhouse Platform installs CRDs but does not remove them when a module is disabled. If you no longer need the created CRDs, delete them.
 ossPageBlock1: |
   <h2>Third-party components</h2>
@@ -215,3 +216,22 @@ details_default_summary: Details
 no_custom_configuration: The module has no configuration parameters.
 description_configuration: Deckhouse Platform — configuration parameters of the <MODULENAME> module.
 description_cr: Deckhouse Platform — custom resources of the <MODULENAME> module.
+module_no_docs: No documentation in the published versions
+module_pending: The documentation of the module is loading, the description will appear later
+version_menu_installed: Installed
+version_menu_pending: The versions of the channels appear once their documentation is loaded
+version_menu_other: Show other versions
+version_dialog_title: "### module versions"
+version_dialog_hint: The first time a version opens, its documentation takes a few seconds to prepare.
+version_dialog_filter: Filter versions, for example 1.4
+version_dialog_close: Close
+version_dialog_prev: Previous
+version_dialog_next: Next
+version_dialog_page: "Page {page} of {pages}"
+version_dialog_count: "{count} versions"
+version_dialog_empty: No versions match the filter.
+version_dialog_loading: Loading the versions
+version_dialog_failed: Could not get the list of versions. Try again later.
+version_dialog_incomplete: "The list may be incomplete: the registry did not give all the versions. Try again later."
+version_dialog_shown: Currently shown
+version_dialog_installed: Installed in the cluster

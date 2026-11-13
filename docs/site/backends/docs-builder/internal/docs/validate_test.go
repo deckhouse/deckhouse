@@ -16,9 +16,6 @@ package docs
 
 import (
 	"testing"
-
-	"github.com/deckhouse/deckhouse/pkg/log"
-	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 func TestValidateModuleName(t *testing.T) {
@@ -52,33 +49,6 @@ func TestValidateModuleName(t *testing.T) {
 	}
 }
 
-func TestValidateChannels(t *testing.T) {
-	tests := []struct {
-		name     string
-		channels []string
-		wantErr  bool
-	}{
-		{"default stable", []string{"stable"}, false},
-		{"all release channels", []string{"alpha", "beta", "early-access", "rock-solid", "stable"}, false},
-		{"empty list", []string{}, true},
-		{"nil list", nil, true},
-		{"one empty channel", []string{"stable", ""}, true},
-		{"traversal channel", []string{"../../../../../../app/hugo/content"}, true},
-		{"dot in channel", []string{"a.b"}, true},
-		{"slash in channel", []string{"a/b"}, true},
-		{"one bad among good", []string{"stable", "../evil"}, true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := validateChannels(tt.channels)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("validateChannels(%v) error = %v, wantErr %v", tt.channels, err, tt.wantErr)
-			}
-		})
-	}
-}
-
 func TestEnsureWithinBase(t *testing.T) {
 	const base = "/app/hugo"
 
@@ -102,29 +72,5 @@ func TestEnsureWithinBase(t *testing.T) {
 				t.Errorf("ensureWithinBase(%q, %q) error = %v, wantErr %v", base, tt.path, err, tt.wantErr)
 			}
 		})
-	}
-}
-
-func TestUploadRejectsTraversal(t *testing.T) {
-	svc := NewService("/app/hugo/", "", false, log.NewNop(), metricsstorage.NewMetricStorage())
-
-	if err := svc.Upload(nil, "../../../../app", "v1.0.0", []string{"stable"}); err == nil {
-		t.Error("Upload with traversal moduleName: expected error, got nil")
-	}
-
-	if err := svc.Upload(nil, "pwn", "v1.0.0", []string{"../../../../../../app/hugo/content"}); err == nil {
-		t.Error("Upload with traversal channel: expected error, got nil")
-	}
-}
-
-func TestDeleteRejectsTraversal(t *testing.T) {
-	svc := NewService("/app/hugo/", "", false, log.NewNop(), metricsstorage.NewMetricStorage())
-
-	if err := svc.Delete("../../../../app", []string{"stable"}); err == nil {
-		t.Error("Delete with traversal moduleName: expected error, got nil")
-	}
-
-	if err := svc.Delete("pwn", []string{"../../../../../../app/hugo/content"}); err == nil {
-		t.Error("Delete with traversal channel: expected error, got nil")
 	}
 }

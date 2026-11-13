@@ -42,7 +42,6 @@ var deckhouseConfigurationResources = []string{
 	"clusterlicenses",
 	"deckhousereleases",
 	"moduleconfigs",
-	"moduledocumentations",
 	"modulepulloverrides",
 	"modulereleases",
 	"modules",

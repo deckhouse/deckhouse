@@ -1,5 +1,6 @@
 {{/*
-  Hugo partial that retrieves the modules and their stablest channel (excluding rock-solid)
+  Hugo partial that retrieves the module of a site of one module version
+  (docs-builder renders every version as a site of its own)
 
   Returns a data structure containing array of items with the following fields:
   - name: module name
@@ -13,47 +14,11 @@
   {{ end }}
 */}}
 
-{{- $modulesList := hugo.Data.modules.channels -}}
-{{- $channelsInfo := hugo.Data.channels.info -}}
-{{- $modulesEditions := hugo.Data.modules_all -}}
-{{- $lang := site.Language.Lang -}}
 {{- $modulesData := slice -}}
 
-{{- range $module, $data := $modulesList -}}
-  {{- $moduleChannel := "" -}}
-  {{- $moduleVersion := "" -}}
-
-  {{/* Find the stablest channel (excluding rock-solid) */}}
-  {{- range sort $channelsInfo "stability" "desc" -}}
-    {{- $code := .code -}}
-    {{- if eq $code "rock-solid" -}}
-      {{- continue -}}
-    {{- end -}}
-
-    {{/* Check if this channel exists for the module */}}
-    {{- with $.GetPage (printf "modules/%s/%s/README.md" $module $code) -}}
-
-      {{- if not $moduleChannel -}}
-        {{- $moduleChannel = $code -}}
-        {{/* Get version from channels data */}}
-        {{- if isset (index $modulesList $module) "channels" -}}
-          {{- if isset (index (index $modulesList $module) "channels") $code -}}
-            {{- $moduleVersion = index (index (index $modulesList $module) "channels") $code "version" -}}
-          {{- end -}}
-        {{- end -}}
-      {{- end -}}
-    {{- end -}}
-  {{- end -}}
-
-  {{/* Only include modules that have a valid channel */}}
-  {{- if $moduleChannel -}}
-    {{- $moduleData := dict
-        "name" $module
-        "channel" $moduleChannel
-        "version" $moduleVersion
-    -}}
-    {{- $modulesData = $modulesData | append $moduleData -}}
-  {{- end -}}
+{{/* A site of one module version (docs-builder RenderVersion) indexes that version only */}}
+{{- with hugo.Data.version_site -}}
+  {{- $modulesData = $modulesData | append (dict "name" .module "channel" .version "version" .version) -}}
 {{- end -}}
 
 {{- return $modulesData -}}

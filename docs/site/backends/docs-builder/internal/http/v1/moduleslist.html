@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="{{.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+{{- if .Refresh}}
+<meta http-equiv="refresh" content="{{.Refresh}}">
+{{- end}}
+<title>{{.T.Title}}</title>
+{{.Chrome.Head}}
+</head>
+<body>
+{{template "chrome" .}}
+<dialog class="odp-dialog" open autofocus closedby="none" aria-labelledby="odp-title">
+<div class="odp-dialog__body">
+  <h1 class="odp-title" id="odp-title">{{.T.Title}}</h1>
+  {{- if .ListURL}}
+  <p class="odp-problem">{{.T.Preparing}}</p>
+  <p class="odp-actions"><a class="button button_alt" href="{{.ListURL}}">{{.T.ToList}}</a></p>
+  {{- else}}
+  <p class="odp-hint">{{.T.Preparing}}</p>
+  <div class="odp-meter odp-meter--single" aria-hidden="true"><span class="active"></span></div>
+  {{- end}}
+</div>
+</dialog>
+{{template "dialog-script"}}
+</body>
+</html>

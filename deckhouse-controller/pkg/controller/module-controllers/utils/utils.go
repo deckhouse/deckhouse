@@ -16,7 +16,6 @@ package utils //nolint:revive
 
 import (
 	"context"
-	"crypto/md5"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -32,7 +31,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
@@ -421,99 +419,6 @@ func GetClusterUUID(ctx context.Context, cli client.Client) string {
 
 	// generate a random UUID if the key is missing
 	return uuid.Must(uuid.NewV4()).String()
-}
-
-// EnsureModuleDocumentation creates or updates module documentation
-func EnsureModuleDocumentation(
-	ctx context.Context,
-	cli client.Client,
-	moduleName, moduleSource, moduleChecksum, moduleVersion, modulePath string,
-	ownerRef metav1.OwnerReference,
-) error {
-	md := new(v1alpha1.ModuleDocumentation)
-	if err := cli.Get(ctx, client.ObjectKey{Name: moduleName}, md); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return fmt.Errorf("get the '%s' module documentation: %w", moduleName, err)
-		}
-		md = &v1alpha1.ModuleDocumentation{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       v1alpha1.ModuleDocumentationGVK.Kind,
-				APIVersion: v1alpha1.ModuleDocumentationGVK.GroupVersion().String(),
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: moduleName,
-				Labels: map[string]string{
-					v1alpha1.ModuleReleaseLabelModule: moduleName,
-					v1alpha1.ModuleReleaseLabelSource: moduleSource,
-				},
-				OwnerReferences: []metav1.OwnerReference{ownerRef},
-			},
-			Spec: v1alpha1.ModuleDocumentationSpec{
-				Version:  moduleVersion,
-				Path:     modulePath,
-				Checksum: moduleChecksum,
-			},
-		}
-
-		if err = cli.Create(ctx, md); err != nil {
-			return fmt.Errorf("create the '%s' module documentation: %w", md.Name, err)
-		}
-	}
-
-	// Check if path needs to be migrated from old format (e.g., "/module/v1.0.0" or "/module/dev")
-	// to new format ("/modules/module")
-	needsPathUpdate := !strings.HasPrefix(md.Spec.Path, "/modules/")
-
-	if md.Spec.Version != moduleVersion || md.Spec.Checksum != moduleChecksum || needsPathUpdate {
-		// update module documentation
-		md.Spec.Path = modulePath
-		md.Spec.Version = moduleVersion
-		md.Spec.Checksum = moduleChecksum
-		md.SetOwnerReferences([]metav1.OwnerReference{ownerRef})
-
-		if err := cli.Update(ctx, md); err != nil {
-			return fmt.Errorf("update the '%s' module documentation: %w", md.Name, err)
-		}
-	}
-
-	return nil
-}
-
-// DeleteModuleDocumentation deletes module documentation, ignoring NotFound
-func DeleteModuleDocumentation(ctx context.Context, cli client.Client, moduleName string) error {
-	md := &v1alpha1.ModuleDocumentation{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: moduleName,
-		},
-	}
-
-	if err := cli.Delete(ctx, md); err != nil && !apierrors.IsNotFound(err) {
-		return fmt.Errorf("delete the '%s' module documentation: %w", moduleName, err)
-	}
-
-	return nil
-}
-
-// EnsureModuleDocumentationForRelease ensures module documentation from a deployed release
-func EnsureModuleDocumentationForRelease(ctx context.Context, cli client.Client, release *v1alpha1.ModuleRelease) error {
-	// mount point path: /modules/<module>
-	modulePath := fmt.Sprintf("/modules/%s", release.GetModuleName())
-	moduleVersion := "v" + release.GetVersion().String()
-
-	moduleChecksum := release.Labels[v1alpha1.ModuleReleaseLabelReleaseChecksum]
-	if moduleChecksum == "" {
-		moduleChecksum = fmt.Sprintf("%x", md5.Sum([]byte(moduleVersion)))
-	}
-
-	ownerRef := metav1.OwnerReference{
-		APIVersion: v1alpha1.ModuleReleaseGVK.GroupVersion().String(),
-		Kind:       v1alpha1.ModuleReleaseGVK.Kind,
-		Name:       release.GetName(),
-		UID:        release.GetUID(),
-		Controller: ptr.To(true),
-	}
-
-	return EnsureModuleDocumentation(ctx, cli, release.GetModuleName(), release.GetModuleSource(), moduleChecksum, moduleVersion, modulePath, ownerRef)
 }
 
 // GetNotificationConfig gets config from discovery secret

@@ -1,0 +1,204 @@
+/* The versions of a module: the channel menu of a module page, the dialog
+   with every version (version-dialog.js), the cards of the list of modules
+   and the pages docs-builder answers with while a version is prepared
+   (internal/http/v1 of docs-builder). The pages themselves carry no styles:
+   a page rendered by an older template takes the current look of the site. */
+
+/* The channel menu of a module from sources (module-version-menu.js): the
+   channel and its version share one baseline, the version is smaller and
+   centring the items would put it higher. */
+[data-vmenu-items] .submenu-item-link { align-items: baseline; }
+[data-vmenu-items] .submenu-item-channel { width: auto; min-width: 90px; margin-right: 8px; }
+[data-vmenu-items] .submenu-item-dot { align-self: center; }
+
+/* "Show other versions" at the end of the channel menu. */
+.vmenu-other { margin-top: 10px; padding-top: 10px; border-top: 1px solid #e3e7f0; list-style: none; }
+.vmenu-other__button {
+  width: 100%; padding: 6px 0; border: 0; background: none; cursor: pointer;
+  font: inherit; font-size: 14px; color: #0d69f2; text-align: left; white-space: nowrap;
+}
+.vmenu-other__button:hover { text-decoration: underline; }
+.vmenu-other__button:focus-visible { outline: 2px solid #0d69f2; outline-offset: 2px; border-radius: 2px; }
+
+/* The dialog with every version. The padding is on the body: a click on the
+   dialog itself is a click on the backdrop. The dialog may sit in the channel
+   menu of the site, which does not wrap its text. */
+.vmenu-dialog {
+  white-space: normal;
+  width: min(640px, calc(100vw - 32px)); height: min(720px, calc(100vh - 48px));
+  padding: 0; border: 0; border-radius: 12px; color: #0d1b4b;
+  box-shadow: 0 24px 64px rgba(13, 27, 75, .22), 0 2px 6px rgba(13, 27, 75, .08);
+}
+.vmenu-dialog[open] { display: flex; }
+.vmenu-dialog__body {
+  flex: 1 1 auto; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 14px;
+  padding: 28px 28px 20px;
+}
+.vmenu-dialog::backdrop { background: rgba(13, 27, 75, .36); }
+.vmenu-dialog__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.vmenu-dialog__title { min-width: 0; margin: 0; font-size: 22px; line-height: 1.25; font-weight: 600; overflow-wrap: anywhere; }
+.vmenu-dialog__close {
+  flex: none; width: 32px; height: 32px; margin: -4px -6px 0 0; display: grid; place-items: center;
+  border: 0; border-radius: 8px; background: none; color: #5e6697; cursor: pointer;
+}
+.vmenu-dialog__close:hover { background: #f1f4fa; color: #0d1b4b; }
+.vmenu-dialog__close:focus-visible, .vmenu-dialog__page-button:focus-visible, .vmenu-dialog__item a:focus-visible {
+  outline: 2px solid #0d69f2; outline-offset: 2px;
+}
+.vmenu-dialog__hint { margin: -6px 0 0; font-size: 14px; line-height: 1.45; color: #5e6697; }
+.vmenu-dialog__filter {
+  width: 100%; box-sizing: border-box; padding: 11px 14px; font: inherit; font-size: 15px;
+  color: #0d1b4b; background: #f5f7fb; border: 1px solid #e3e7f0; border-radius: 8px;
+}
+.vmenu-dialog__filter:focus { outline: none; border-color: #0d69f2; background: #fff; box-shadow: 0 0 0 3px rgba(13, 105, 242, .14); }
+.vmenu-dialog__status { margin: 0; font-size: 13px; color: #5e6697; min-height: 18px; }
+.vmenu-dialog__list { list-style: none; margin: 0 -8px; padding: 0; overflow-y: auto; min-height: 0; flex: 1 1 auto; }
+.vmenu-dialog__item a {
+  display: flex; align-items: center; gap: 10px; padding: 9px 8px 9px 14px; border-radius: 8px;
+  color: #0d1b4b; text-decoration: none; border-left: 3px solid transparent;
+}
+.vmenu-dialog__item a:hover { background: #f1f4fa; }
+.vmenu-dialog__item--shown a { border-left-color: #0d69f2; background: #f5f8ff; }
+.vmenu-dialog__version { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; min-width: 92px; }
+.vmenu-dialog__badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.vmenu-dialog__badge {
+  font-size: 12px; line-height: 1; padding: 5px 8px; border-radius: 999px;
+  color: #0d69f2; background: #e8f0fe;
+}
+.vmenu-dialog__badge--installed { color: #047857; background: #e3f6ee; }
+.vmenu-dialog__badge--shown { color: #5e6697; background: #eef1f7; }
+.vmenu-dialog__pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 12px; border-top: 1px solid #e3e7f0; }
+.vmenu-dialog__pager[hidden] { display: none; }
+.vmenu-dialog__page { font-size: 13px; color: #5e6697; font-variant-numeric: tabular-nums; }
+/* The buttons of the site (site.css), smaller: the pager is a footer. */
+.vmenu-dialog__page-button { padding: 6px 14px; font-size: 14px; }
+.vmenu-dialog__page-button:disabled { opacity: .3; cursor: not-allowed; }
+
+/* The list of modules: a module none of whose versions has documentation is
+   shown, not linked; a module whose version is being prepared says so. */
+.button-tile--no-docs { cursor: default; background: #f5f7fb; box-shadow: none; }
+.button-tile--no-docs .button-tile__title, .button-tile--no-docs .button-tile__descr { color: #5e6697; }
+.button-tile__no-docs { margin: 12px 0 0; font-size: 13px; color: #5e6697; }
+.button-tile__pending { font-size: 13px; color: #5e6697; }
+
+/* The pages of docs-builder: a card shown as a modal dialog over the site
+   while a version is prepared, the list of the versions of a module and the
+   list of modules being built. The card looks like the versions dialog. */
+.odp-dialog {
+  --odp-text: #0d1b4b;
+  --odp-muted: #5e6697;
+  --odp-accent: #0d69f2;
+  --odp-highlight: #f5f8ff;
+  --odp-line: #e3e7f0;
+  --odp-done: #047857;
+  --odp-done-bg: #e3f6ee;
+  --odp-fail: #b42318;
+  --odp-fail-bg: #fdf0ef;
+
+  width: min(520px, calc(100vw - 32px)); max-height: min(720px, calc(100vh - 48px));
+  padding: 0; border: 0; border-radius: 12px; background: #fff; color: var(--odp-text);
+  font: inherit; box-shadow: 0 24px 64px rgba(13, 27, 75, .22), 0 2px 6px rgba(13, 27, 75, .08);
+}
+.odp-stage { min-height: 60vh; }
+/* Without scripts the dialog is not modal, and stands where it is in the
+   page, under the footer: it is placed like a modal one. */
+.odp-dialog[open] { display: flex; position: fixed; inset: 0; margin: auto; }
+.odp-dialog:focus { outline: none; }
+.odp-dialog [hidden] { display: none !important; }
+.odp-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.odp-dialog::backdrop { background: rgba(13, 27, 75, .36); }
+.odp-dialog__body {
+  flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 14px;
+  padding: 28px 28px 24px;
+}
+.odp-dialog .odp-title {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px;
+  margin: 0; font-size: 22px; line-height: 1.25; font-weight: 600; color: var(--odp-text);
+  word-break: break-word;
+}
+.odp-version {
+  font-size: 13px; line-height: 1; font-weight: 600; padding: 6px 9px; border-radius: 999px;
+  color: var(--odp-accent); background: #e8f0fe; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.odp-dialog p { margin: 0; }
+.odp-hint { font-size: 14px; line-height: 1.5; color: var(--odp-muted); }
+
+/* The stages of a render: the meter shows how far it is, the list names
+   the stage. */
+.odp-progress { display: flex; flex-direction: column; gap: 14px; }
+.odp-meter { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 4px; }
+.odp-meter span {
+  position: relative; height: 6px; overflow: hidden; border-radius: 3px; background: var(--odp-line);
+}
+.odp-meter--single { grid-template-columns: 1fr; }
+.odp-meter span.done { background: var(--odp-accent); }
+.odp-meter span.active::after {
+  content: ""; position: absolute; inset: 0; width: 45%; border-radius: 3px;
+  background: var(--odp-accent); animation: odp-slide 1.3s ease-in-out infinite;
+}
+.odp-dialog .odp-steps { list-style: none; margin: 0 -8px; padding: 0; }
+.odp-dialog .odp-steps li {
+  display: flex; align-items: center; gap: 12px; margin: 0; padding: 9px 8px 9px 11px;
+  border-left: 3px solid transparent; border-radius: 8px; font-size: 15px; color: var(--odp-muted);
+}
+.odp-dialog .odp-steps li::before {
+  content: ""; flex: none; box-sizing: border-box; width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid var(--odp-line); background: #fff;
+}
+.odp-dialog .odp-steps li.done { color: var(--odp-text); }
+.odp-dialog .odp-steps li.done::before {
+  border-color: var(--odp-done); background: var(--odp-done)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 6.2l2 2 4-4.4' fill='none' stroke='%23fff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    center / 12px no-repeat;
+}
+.odp-dialog .odp-steps li.active {
+  border-left-color: var(--odp-accent); background: var(--odp-highlight); color: var(--odp-text); font-weight: 600;
+}
+.odp-dialog .odp-steps li.active::before {
+  border-color: var(--odp-accent); border-right-color: transparent; animation: odp-spin .8s linear infinite;
+}
+
+/* A version that can not be shown. */
+.odp-dialog .odp-problem { font-size: 15px; font-weight: 600; color: var(--odp-fail); }
+.odp-dialog .odp-reason {
+  padding: 10px 14px; border-radius: 8px; border-left: 3px solid var(--odp-fail);
+  background: var(--odp-fail-bg); font-size: 14px; color: var(--odp-text); word-break: break-word;
+}
+.odp-dialog .odp-reason:empty { display: none; }
+.odp-block { display: flex; flex-direction: column; gap: 12px; }
+/* The action is a button of the site (site.css). */
+.odp-actions { display: flex; padding-top: 16px; border-top: 1px solid var(--odp-line); }
+.odp-dialog a:focus-visible { outline: 2px solid var(--odp-accent); outline-offset: 2px; }
+
+/* The versions of a module. */
+.odp-dialog .odp-versions { list-style: none; margin: 0 -8px; padding: 0; overflow-y: auto; min-height: 0; flex: 1 1 auto; }
+.odp-dialog .odp-versions li {
+  position: relative; display: flex; align-items: center; gap: 10px; margin: 0;
+  padding: 9px 8px 9px 14px; border-radius: 8px;
+}
+.odp-dialog .odp-versions li:hover { background: #f1f4fa; }
+.odp-dialog .odp-versions a {
+  min-width: 92px; font-size: 15px; font-weight: 600; color: var(--odp-text); text-decoration: none;
+  font-variant-numeric: tabular-nums;
+}
+/* The whole row opens the version. */
+.odp-dialog .odp-versions a::after { content: ""; position: absolute; inset: 0; border-radius: 8px; }
+.odp-dialog .odp-versions a:focus-visible { outline: none; }
+.odp-dialog .odp-versions a:focus-visible::after { outline: 2px solid var(--odp-accent); outline-offset: -2px; }
+.odp-dialog .ready {
+  font-size: 12px; line-height: 1; padding: 5px 8px; border-radius: 999px;
+  color: var(--odp-done); background: var(--odp-done-bg); white-space: nowrap;
+}
+
+@keyframes odp-spin { to { transform: rotate(360deg); } }
+@keyframes odp-slide { from { transform: translateX(-100%); } to { transform: translateX(230%); } }
+@media (prefers-reduced-motion: reduce) {
+  .odp-dialog .odp-steps li.active::before { animation: none; border-right-color: var(--odp-accent); }
+  .odp-meter span.active::after { animation: none; width: 50%; }
+}
+@media (max-width: 480px) {
+  .vmenu-dialog__body { padding: 20px 16px 16px; }
+  .vmenu-dialog__title { font-size: 19px; }
+  .odp-dialog__body { padding: 20px 16px 16px; }
+  .odp-dialog .odp-title { font-size: 19px; }
+}

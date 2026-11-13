@@ -1,0 +1,17 @@
+{{- /* The Secret of the user's S3 storage may be in any namespace, and a
+  pod mounts Secrets of its own namespace only: hooks/s3_connection.go reads
+  it into the values, and its copy is rendered here. */}}
+{{- if and (eq (include "documentation_s3" .) "External") .Values.documentation.internal.s3Connection }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: documentation-s3-connection
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "documentation")) | nindent 2 }}
+type: Opaque
+data:
+  {{- range $key, $value := .Values.documentation.internal.s3Connection }}
+  {{ $key | quote }}: {{ $value | quote }}
+  {{- end }}
+{{- end }}

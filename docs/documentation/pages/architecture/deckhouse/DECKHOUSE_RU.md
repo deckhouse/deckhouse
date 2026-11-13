@@ -39,7 +39,6 @@ description: Архитектура модуля deckhouse в Deckhouse Platform
   - [CNIMigration](../../reference/api/cr.html#cnimigration) — процесс миграции сетевого плагина [Container Network Interface (CNI)](https://github.com/containernetworking/cni), содержит параметры и статус миграции;
   - [CNINodeMigration](../../reference/api/cr.html#cninodemigration) — статус и управление миграцией CNI на уровне отдельных узлов;
   - ObjectKeeper — ресурс, обеспечивающий связь между другими ресурсами Kubernetes с использованием `ownerReference`;
-  - [ModuleDocumentation](../../reference/api/cr.html#moduledocumentation) — описание параметров для генерации и хранения документации модулей;
 
 - управление кастомными ресурсами под управлением модулей DP:
   - [ConversionWebhook](/modules/deckhouse/latest/cr.html#conversionwebhook) — настройки и обработчики вебхуков для конверсий ресурсов;

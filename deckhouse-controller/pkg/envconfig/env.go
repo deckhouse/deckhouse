@@ -94,13 +94,6 @@ const (
 	// EnvPackageNelmTimeout bounds each nelm release operation on the packages
 	// path (render, apply, uninstall). A Go duration string (e.g. "30m").
 	EnvPackageNelmTimeout = "PACKAGE_NELM_TIMEOUT"
-
-	// EnvDocumentationBuildTimeout caps a single upload+build round-trip from the
-	// module-documentation controller to a docs-builder. Every build triggers a
-	// full-site Hugo rebuild serialized across all modules, so this must exceed the
-	// worst-case build time; too low a value cancels healthy builds and churns the
-	// builder. A Go duration string (e.g. "120s", "2m").
-	EnvDocumentationBuildTimeout = "DOCUMENTATION_BUILD_TIMEOUT"
 )
 
 // EnvOr returns the value of the env var name, or defaultValue when it is unset or empty.
@@ -192,11 +185,4 @@ func PackageNelmTimeout() time.Duration {
 		return d
 	}
 	return defaultPackageNelmTimeout
-}
-
-// DocumentationBuildTimeout is the per-request timeout the module-documentation
-// controller applies to docs-builder upload/build calls. Defaults to 120s when
-// DOCUMENTATION_BUILD_TIMEOUT is unset or unparseable.
-func DocumentationBuildTimeout() time.Duration {
-	return EnvDurationOr(EnvDocumentationBuildTimeout, 120*time.Second)
 }

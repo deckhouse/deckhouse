@@ -166,7 +166,7 @@ func (suite *OverrideControllerTestSuite) TestHandleModuleOverride() {
 	})
 
 	// When the registry digest matches status.imageDigest, the module is left as is:
-	// nothing is downloaded and no ModuleDocumentation is (re)created.
+	// nothing is downloaded.
 	suite.Run("up-to-date module", func() {
 		suite.setupController(suite.fetchTestFileData("up-to-date.yaml"), withInstaller(&installermock.Installer{
 			GetImageDigestFunc: func(context.Context, *v1alpha1.ModuleSource, string, string) (string, error) {
@@ -184,8 +184,7 @@ func (suite *OverrideControllerTestSuite) TestHandleModuleOverride() {
 	})
 
 	// The renew annotation forces a redeploy even though the digest is unchanged: the
-	// module is downloaded and installed, ModuleDocumentation is (re)created, and the
-	// one-shot annotation is dropped so it triggers only once.
+	// module is downloaded and installed, and the one-shot annotation is dropped so it triggers only once.
 	suite.Run("renew forces redeploy", func() {
 		moduleDir := filepath.Join(suite.TmpDir(), "downloaded")
 
@@ -361,10 +360,6 @@ func (suite *OverrideControllerTestSuite) assembleInitObject(manifest string) cl
 		require.NoError(suite.T(), yaml.Unmarshal(raw, release))
 		obj = release
 
-	case v1alpha1.ModuleDocumentationGVK.Kind:
-		documentation := new(v1alpha1.ModuleDocumentation)
-		require.NoError(suite.T(), yaml.Unmarshal(raw, documentation))
-		obj = documentation
 	}
 
 	return obj
@@ -393,7 +388,6 @@ func (suite *OverrideControllerTestSuite) fetchResults() []byte {
 		Kinds: []schema.GroupVersionKind{
 			v1alpha2.ModulePullOverrideGVK,
 			v1alpha1.ModuleGVK,
-			v1alpha1.ModuleDocumentationGVK,
 		},
 		ObjectNormalizers: []reconcilertest.ObjectNormalizer{
 			stripDeletionTimestamp,

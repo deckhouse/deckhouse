@@ -38,7 +38,6 @@ The module manages the following custom resources in the `deckhouse.io` API grou
   - [CNIMigration](../../reference/api/cr.html#cnimigration): [Container Network Interface (CNI)](https://github.com/containernetworking/cni) migration process, including migration parameters and status.
   - [CNINodeMigration](../../reference/api/cr.html#cninodemigration): Status and management of CNI migration at the individual node level.
   - ObjectKeeper: A resource that links Kubernetes resources using `ownerReference`.
-  - [ModuleDocumentation](../../reference/api/cr.html#moduledocumentation): Description of parameters for generating and storing module documentation.
 
 - Management of custom resources controlled by DP modules:
   - [ConversionWebhook](/modules/deckhouse/latest/cr.html#conversionwebhook): Settings and handlers for resource conversion webhooks.

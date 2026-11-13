@@ -12,17 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package pprof provides an opt-in HTTP server exposing the runtime profiling
-// endpoints from net/http/pprof.
+//go:build pprof
+
+// Package pprof serves the runtime profiling endpoints of net/http/pprof in
+// a development build of docs-builder: images built for a merge request or a
+// branch carry the pprof build tag, release images do not and have none of
+// it (pprof_off.go). See modules/810-documentation/docs/internal/PROFILING.md.
 package pprof
 
 import (
+	"log/slog"
 	"net/http"
 	httppprof "net/http/pprof"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-// NewServer returns an HTTP server exposing the pprof handlers.
-func NewServer(addr string) *http.Server {
+// Address is reachable from inside the pod only: kubectl port-forward.
+const Address = "127.0.0.1:6060"
+
+// NewServer returns the HTTP server of the pprof handlers on Address.
+func NewServer(logger *log.Logger) *http.Server {
+	logger.Info("pprof listens", slog.String("address", Address))
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/debug/pprof/", httppprof.Index)
 	mux.HandleFunc("/debug/pprof/cmdline", httppprof.Cmdline)
@@ -31,7 +43,7 @@ func NewServer(addr string) *http.Server {
 	mux.HandleFunc("/debug/pprof/trace", httppprof.Trace)
 
 	return &http.Server{
-		Addr:    addr,
+		Addr:    Address,
 		Handler: mux,
 	}
 }

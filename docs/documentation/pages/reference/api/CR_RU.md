@@ -19,7 +19,6 @@ search: global custom resources, global configuration, global parameters, гло
 
 {{ site.data.schemas.crds.module | format_crd: "global" }}
 {{ site.data.schemas.crds.module-config | format_crd: "global" }}
-{{ site.data.schemas.crds.module-documentation | format_crd: "global" }}
 {{ site.data.schemas.crds.module-pull-override | format_crd: "global" }}
 {{ site.data.schemas.crds.module-release | format_crd: "global" }}
 {{ site.data.schemas.crds.module-settings-definition | format_crd: "global" }}

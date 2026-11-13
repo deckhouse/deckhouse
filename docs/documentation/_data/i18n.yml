@@ -203,11 +203,14 @@ common:
     en: Search Documentation
     ru: Поиск по документации
   search_context_dkpdocs_and_modules:
-    en: The search is performed throughout DP documentation and modules.
-    ru: Поиск выполняется по всей документации DP и модулям.
+    en: The search is performed throughout Deckhouse Platform documentation and modules.
+    ru: Поиск выполняется по всей документации Deckhouse Platform и модулям.
+  search_context_module_and_dkpdocs:
+    en: The search is performed throughout the <strong>###</strong> module and the Deckhouse Platform documentation.
+    ru: Поиск выполняется по модулю <strong>###</strong> и документации Deckhouse Platform.
   search_context_modules:
-    en: The search is performed throughout modules, excluding the DP documentation.
-    ru: Поиск выполняется по всем модулям, не включая документацию DP.
+    en: The search is performed throughout modules, excluding the Deckhouse Platform documentation.
+    ru: Поиск выполняется по всем модулям, не включая документацию Deckhouse Platform.
   search_context_only_product_docs:
     en: The search is performed throughout the product documentation, excluding modules.
     ru: Поиск выполняется по всей документации продукта, не включая модули.

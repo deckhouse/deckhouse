@@ -4,8 +4,8 @@ memory: 50Mi
 {{- end }}
 
 {{- define "builder_resources" }}
-cpu: 100m
-memory: 128Mi
+cpu: 250m
+memory: 256Mi
 {{- end }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
@@ -22,7 +22,7 @@ spec:
     kind: Deployment
     name: documentation
   updatePolicy:
-    updateMode: "Initial"
+    updateMode: "InPlaceOrRecreate"
 
   resourcePolicy:
     containerPolicies:
@@ -32,11 +32,20 @@ spec:
       maxAllowed:
         cpu: 200m
         memory: 100Mi
+    # VPA scales the limits with the requests in the proportion set in the
+    # deployment (CPU 250m:1, memory 256Mi:2Gi). The CPU request is kept at
+    # 250m, so the limit stays one core: rendering a module version on demand
+    # is CPU-bound, and the idle builder made VPA lower the request to 100m,
+    # the limit to 400m. Measured 2026-11-03: the builder was throttled in 60%
+    # of the CFS periods, a render took 2.9 times longer than on one core.
+    # Memory is not scaled: a limit below GOMEMLIMIT would get the full site
+    # build OOM-killed.
     - containerName: "builder"
       minAllowed:
-        {{- include "builder_resources" . | nindent 8 }}
+        cpu: 250m
+        memory: 256Mi
       maxAllowed:
-        cpu: 200m
-        memory: 2Gi
+        cpu: 250m
+        memory: 256Mi
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}

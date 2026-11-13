@@ -1,0 +1,33 @@
+{{- /*
+  The pages of docs-builder are a card shown as a modal dialog over the site:
+  its header and footer come from the SSI includes of .Chrome, the card looks
+  like the versions dialog of a module page and takes its styles from the
+  site (module-versions.css, linked by the head include): a page needs no
+  styles of its own. The dialog takes the focus itself: Tab leads to its
+  links.
+*/ -}}
+{{- /* The site around the dialog: the same wrappers as baseof.html. */ -}}
+{{define "chrome"}}
+<div class="content">
+{{.Chrome.Header}}
+<div class="container odp-stage"></div>
+</div>
+{{.Chrome.Footer}}
+{{end}}
+
+{{- /* The dialog is open in the markup, so it shows without scripts, and
+  turns modal here: the site behind it is dimmed and out of reach. It is the
+  content of the page: Esc keeps it open. */ -}}
+{{define "dialog-script"}}
+<script>
+(function () {
+  var dialog = document.querySelector(".odp-dialog");
+  if (!dialog || typeof dialog.showModal !== "function") { return; }
+  function open() { if (!dialog.open) { dialog.showModal(); } }
+  dialog.removeAttribute("open");
+  open();
+  dialog.addEventListener("cancel", function (e) { e.preventDefault(); });
+  dialog.addEventListener("close", open);
+})();
+</script>
+{{end}}

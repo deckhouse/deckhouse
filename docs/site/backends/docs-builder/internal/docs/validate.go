@@ -21,14 +21,13 @@ import (
 	"strings"
 )
 
-// nameRegexp restricts module and channel names to a strict allow-list.
+// nameRegexp restricts module names to a strict allow-list.
 //
 // It mirrors the RFC 1123 label naming used by Kubernetes object names (where
 // legitimate module names originate) and, crucially, forbids every character
 // usable for path traversal — a matching value contains no '/', '.' or '..'.
-// This is the primary guard against CWE-22: moduleName and channel are
-// attacker-controllable request parameters that get joined into filesystem
-// paths (see cleanModulesFiles and getLocalPath).
+// This is the primary guard against CWE-22: the module name comes from a
+// request and gets joined into filesystem paths (see getLocalPath).
 var nameRegexp = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`)
 
 // validateModuleName rejects a module name that could escape the base
@@ -41,24 +40,8 @@ func validateModuleName(moduleName string) error {
 	return nil
 }
 
-// validateChannels rejects an empty channel list or any channel name that
-// could escape the base directory when joined into a filesystem path.
-func validateChannels(channels []string) error {
-	if len(channels) == 0 {
-		return fmt.Errorf("no channels provided")
-	}
-
-	for _, channel := range channels {
-		if !nameRegexp.MatchString(channel) {
-			return fmt.Errorf("invalid channel %q: must match %s", channel, nameRegexp.String())
-		}
-	}
-
-	return nil
-}
-
 // ensureWithinBase reports an error if the cleaned path escapes baseDir. It is
-// a defense-in-depth complement to validateModuleName/validateChannels: even if
+// a defense-in-depth complement to validateModuleName: even if
 // some new path segment were to slip past name validation, a write or delete
 // outside baseDir is still refused.
 func ensureWithinBase(baseDir, path string) error {

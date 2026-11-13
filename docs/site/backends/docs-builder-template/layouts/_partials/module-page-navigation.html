@@ -24,7 +24,7 @@
 {{- end -}}
 
 {{- $moduleTitle := "" -}}
-{{- $pathMatch := findRESubmatch `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/*$` .File.Dir 1 -}}
+{{- $pathMatch := findRESubmatch `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9.-]+)/*$` .File.Dir 1 -}}
 {{- if $pathMatch -}}
   {{- $pathElements := index $pathMatch 0 -}}
   {{- $currentModuleName := index $pathElements 1 -}}

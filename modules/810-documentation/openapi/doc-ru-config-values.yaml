@@ -5,36 +5,43 @@ properties:
       Класс Ingress-контроллера веб-интерфейса документации.
 
       Опциональный параметр, по умолчанию используется глобальное значение `modules.ingressClass`.
+  highAvailability:
+    description: |
+      Ручное управление режимом отказоустойчивости.
+
+      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](/products/kubernetes-platform/documentation/v1/reference/api/global.html#параметры) про режим отказоустойчивости.
+
+      В режиме отказоустойчивости документация работает в двух репликах на разных узлах. Требования к узлам и роль S3 описаны в разделе «Режим отказоустойчивости» на странице примеров конфигурации модуля.
   auth:
     description: |
       Опции, связанные с аутентификацией и авторизацией доступа к веб-интерфейсу документации.
     properties:
       externalAuthentication:
         description: |
-          Параметры для подключения внешней аутентификации (используется механизм Ingress NGINX [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+          Параметры внешней аутентификации. Используется механизм Ingress NGINX [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) на основе модуля Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
 
-          > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/modules/user-authn/).
+          > Внешняя аутентификация включается автоматически, если включён модуль [user-authn](https://deckhouse.io/modules/user-authn/).
         properties:
           authURL:
             description: |
               URL сервиса аутентификации.
 
-              Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
+              Если пользователь прошёл аутентификацию, сервис должен возвращать код ответа HTTP 200.
           authSignInURL:
             description: |
               URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP, отличный от 200).
       allowedUserEmails:
         description: |
-          Массив адресов электронной почты, пользователям которых разрешен доступ к веб-интерфейсу.
+          Массив адресов электронной почты, пользователям которых разрешён доступ к веб-интерфейсу.
 
-          Используется, если включен модуль [`user-authn`](/modules/user-authn/) или задан параметр `externalAuthentication`.
+          Используется, если включён модуль [`user-authn`](/modules/user-authn/) или задан параметр `externalAuthentication`.
       allowedUserGroups:
         description: |
-          Массив групп, пользователям которых разрешен доступ к просмотру документации.
+          Массив групп, пользователям которых разрешён доступ к просмотру документации.
 
-          Используется, если включен модуль `user-authn` или задан параметр `externalAuthentication`.
+          Используется, если включён модуль `user-authn` или задан параметр `externalAuthentication`.
 
-          > **Внимание.** При использовании совместно с модулем `user-authn` необходимо также добавить разрешенные группы в соответствующее поле в настройках `DexProvider`.
+          > **Внимание.** Если модуль работает вместе с модулем `user-authn`, добавьте разрешённые группы в настройки DexProvider.
   https:
     description: |
       Тип используемого сертификата.
@@ -44,8 +51,8 @@ properties:
       mode:
         description: |
           Режим работы HTTPS:
-          - `CertManager` — доступ по HTTPS с заказом сертификата согласно ClusterIssuer'у, заданному в параметре `certManager.clusterIssuerName`.
-          - `CustomCertificate` — доступ по HTTPS с использованием сертификата из пространства имен `d8-system`.
+          - `CertManager` — доступ по HTTPS с заказом сертификата согласно ClusterIssuer, заданному в параметре `certManager.clusterIssuerName`.
+          - `CustomCertificate` — доступ по HTTPS с использованием сертификата из неймспейса `d8-system`.
           - `Disabled` — доступ только по HTTP.
           - `OnlyInURI` — доступ по HTTP с внешним HTTPS-балансировщиком. Балансировщик терминирует HTTPS, и все ссылки в [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) генерируются с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
       certManager:
@@ -53,23 +60,63 @@ properties:
         properties:
           clusterIssuerName:
             description: |
-              Тип ресурса ClusterIssuer, используемого для заказа SSL-сертификата (доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но можно определить свои).
+              ClusterIssuer, используемый для заказа SSL-сертификата (доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но можно определить свои).
       customCertificate:
-        description: Настройки для использования пользовательского сертификата.
+        description: Настройки пользовательского сертификата.
         properties:
           secretName:
             description: |
-              Имя ресурса Secret в пространстве имен `d8-system`, который будет использоваться для веб-интерфейса документации.
+              Имя Secret в неймспейсе `d8-system`, который будет использоваться для веб-интерфейса документации.
 
               Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если значение не указано или указано `false`, `nodeSelector` будет определяться [автоматически](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или равно `false`, Deckhouse Platform определяет `nodeSelector` [автоматически](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
-    type: array
     description: |
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если значение не указано или указано `false`, `tolerations` будет определяться [автоматически](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или равно `false`, Deckhouse Platform определяет `tolerations` [автоматически](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  moduleStorage:
+    description: |
+      Хранение документации версий модулей, которая готовится при первом открытии версии.
+    properties:
+      s3:
+        description: |
+          Где хранится подготовленная документация версий модулей, кроме кеша пода документации.
+        properties:
+          type:
+            description: |
+              - `Disabled` — только в поде: после перезапуска пода версии готовятся заново при открытии. В режиме отказоустойчивости каждая реплика сама готовит и хранит версии. Документация расходует вдвое больше CPU и отправляет вдвое больше запросов в хранилище образов контейнеров. Для этого режима включите S3.
+              - `System` — также в системном хранилище S3 модуля [system-s3](https://deckhouse.ru/modules/system-s3/): после перезапуска пода версии открываются из него за доли секунды. Модуль создаёт для этого бакет на 5 ГиБ. Требует включённого модуля `system-s3`: без него версии хранятся только в поде, и срабатывает алерт `D8DocumentationSystemS3Disabled`.
+              - `External` — также в вашем хранилище S3, которое задаётся в разделе `external`.
+          external:
+            description: |
+              Ваше хранилище S3 для `type: External`. Модуль берёт настройки подключения и ключи из Secret. Список ключей Secret описан в разделе «Своё хранилище S3» на странице примеров конфигурации модуля.
+            properties:
+              secretRef:
+                description: |
+                  Secret с подключением и ключами хранилища S3, в любом неймспейсе.
+
+                  Deckhouse Platform копирует его в Secret `documentation-s3-connection` в `d8-system`. Этот Secret использует под документации. После того как вы создадите или измените Secret, под документации перезапустится в течение 5 минут. Пока Secret не создан, версии хранятся только в поде.
+                properties:
+                  namespace:
+                    description: |
+                      Неймспейс Secret.
+                  name:
+                    description: |
+                      Имя Secret.
+              prefix:
+                description: |
+                  Часть бакета, которую использует модуль: ключи всех объектов, которые он читает, записывает и удаляет, начинаются с этого префикса. Остальные объекты бакета модуль не трогает, поэтому бакет можно делить с другими.
+              size:
+                description: |
+                  Сколько места модуль может занять в бакете под префиксом. Когда занято больше 80%, модуль удаляет сохранённые версии, пока не останется 60%, в таком порядке:
+
+                  1. Копии, заменённые после обновления шаблона документации.
+                  2. Версии, которые открывали читатели.
+                  3. Версии, которые использует поиск.
+
+                  Внутри каждой группы первыми удаляются версии, сохранённые раньше остальных.

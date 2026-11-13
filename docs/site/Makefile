@@ -5,9 +5,7 @@ export WERF_PLATFORM=linux/amd64
 ROOT_DIR := ../..
 WERF_BIN := $(ROOT_DIR)/bin/werf
 MODULE_PATH ?=
-CHANNEL ?= alpha
-MODULE_VERSION ?= v0.1.0
-HUGO_IMAGE ?= ghcr.io/gohugoio/hugo:v0.168.0
+HUGO_IMAGE ?= ghcr.io/gohugoio/hugo:v0.169.0
 AI_EXPORT_SRC ?= backends/docs-builder-template
 
 WERF_REPO ?= :local
@@ -39,24 +37,21 @@ dev: werf-bin ## Start documentation containers in a werf watch mode (rebuilding
 		@echo -n "\nwerf: "; $(WERF_BIN) version
 		@$(WERF_BIN) compose up --follow --docker-compose-command-options='-d --force-recreate' --dev --env development --repo $(WERF_REPO)
 
-external-module: werf-bin ## Watch external module docs and run the local portal
-		##~ Options: MODULE_PATH=/path/to/module [CHANNEL=alpha] [MODULE_VERSION=v0.1.0] [USE_LOCALHOST_REPO=1]
-		@set -e; \
-		if [ "$(USE_LOCALHOST_REPO)" = "1" ]; then \
+external-module: werf-bin ## Serve the documentation of a module repository with the local portal, rendered anew on every change
+		##~ Options: MODULE_PATH=/path/to/module-repository (or a directory of module repositories) [USE_LOCALHOST_REPO=1]
+		##~ docs-builder (the builder container) renders the modules under MODULE_PATH as on the public
+		##~ site; edit the files of the module and reload the page a few seconds later.
+		@test -n "$(MODULE_PATH)" || { echo "MODULE_PATH is required: a module repository (module.yaml, docs/), or a directory of them" >&2; exit 1; }
+		@test -d "$(MODULE_PATH)" || { echo "MODULE_PATH is not a directory: $(MODULE_PATH)" >&2; exit 1; }
+		@if [ "$(USE_LOCALHOST_REPO)" = "1" ]; then \
 			$(MAKE) registry; \
-			echo "\nStarting external module documentation using $(WERF_REPO) registry..."; \
+			echo "\nStarting the documentation of $(MODULE_PATH) using $(WERF_REPO) registry..."; \
 		else \
-			echo "\nStarting external module documentation using local docker images store..."; \
-		fi; \
-		MODULE_PATH="$(MODULE_PATH)" CHANNEL="$(CHANNEL)" MODULE_VERSION="$(MODULE_VERSION)" MODE=serve $(ROOT_DIR)/tools/docs/external-module-docs.sh & \
-		HUGO_PID=$$!; \
-		cleanup() { kill $$HUGO_PID 2>/dev/null || true; }; \
-		trap cleanup EXIT INT TERM; \
-		sleep 2; \
-		kill -0 $$HUGO_PID; \
-		$(MAKE) free-port-80; \
-		echo -n "\nwerf: "; $(WERF_BIN) version; \
-		$(WERF_BIN) compose up --follow --docker-compose-command-options='-d --force-recreate' --dev --env development --repo $(WERF_REPO)
+			echo "\nStarting the documentation of $(MODULE_PATH) using local docker images store..."; \
+		fi
+		@$(MAKE) free-port-80
+		@echo -n "\nwerf: "; $(WERF_BIN) version
+		@MODULE_PATH="$(abspath $(MODULE_PATH))" $(WERF_BIN) compose up --follow --docker-compose-command-options='-d --force-recreate' --dev --env development --repo $(WERF_REPO)
 
 ai-export: ## Generate the AI export (per-page .md, external-llms.txt, external-corpus.json) for external modules
 		##~ Options: [AI_EXPORT_SRC=backends/docs-builder-template] [HUGO_IMAGE=ghcr.io/gohugoio/hugo:vX.Y.Z]
@@ -123,7 +118,7 @@ clean: werf-bin ## Clean up werf artifacts in localhost repo mode
 		fi
 
 down: ## Stop and remove all site containers and networks
-		docker rm -f site-site-1 site_site_1 site-router-1  site_router_1  site-front-1 site_front_1 site-frontend-1 site_frontend_1 2>/dev/null || true ; docker network rm deckhouse 2>/dev/null || true
+		docker rm -f site-site-1 site_site_1 site-router-1  site_router_1  site-front-1 site_front_1 site-frontend-1 site_frontend_1 site-builder-1 site_builder_1 2>/dev/null || true ; docker network rm deckhouse 2>/dev/null || true
 		$(MAKE) registry-down
 		@echo "❌ Local Docker registry has been stopped"
 

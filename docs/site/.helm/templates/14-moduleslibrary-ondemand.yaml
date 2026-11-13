@@ -1,0 +1,105 @@
+# The connection of docs-builder to the site bucket, which keeps the module
+# versions it renders on demand (--ondemand-s3-dir).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: moduleslibrary-ondemand-s3
+  labels:
+    service: moduleslibrary
+    app.kubernetes.io/part-of: deckhouse-docs
+type: Opaque
+stringData:
+  S3_ENDPOINT: {{ printf "https://%s" .Values.global.doc_s3_ep | quote }}
+  S3_BUCKET: {{ .Values.global.doc_s3_bucket | quote }}
+  S3_REGION: {{ .Values.global.doc_s3_region | quote }}
+  AWS_ACCESS_KEY_ID: {{ .Values.global.doc_s3_access_key_id | quote }}
+  AWS_SECRET_ACCESS_KEY: {{ .Values.global.doc_s3_secret_access_key | quote }}
+---
+# The credentials of the module registries docs-builder reads
+# (--ondemand-registry-auths).
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/dockerconfigjson
+metadata:
+  name: watch-registry-auths
+  labels:
+    service: moduleslibrary
+    app.kubernetes.io/part-of: deckhouse-docs
+data:
+  .dockerconfigjson: {{ .Values.global.moduleWatcherAuths }}
+{{- if (pluck $.Values.web.env .Values.observability.enable | first | default .Values.observability.enable._default) }}
+---
+apiVersion: observability.deckhouse.io/v1alpha1
+kind: ClusterObservabilityMetricsRulesGroup
+metadata:
+  name: moduleslibrary-ondemand
+spec:
+  rules:
+    - alert: DocsModulesNoLeader
+      expr: count(docs_builder_ondemand_leader) > 0 and sum(docs_builder_ondemand_leader) == 0
+      for: 10m
+      labels:
+        severity_level: "7"
+        d8_component: moduleslibrary
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        summary: No replica of moduleslibrary reads the module registries.
+        description: |
+          No replica holds the `docs-builder-ondemand-leader` Lease: the versions of the release channels
+          and the search are not updated. Check the Lease and the logs of the `builder` container.
+    - alert: DocsModulesReplicaReadsRegistry
+      expr: max(docs_builder_ondemand_follow_fallback) == 1
+      for: 5m
+      labels:
+        severity_level: "8"
+        d8_component: moduleslibrary
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        summary: A replica of moduleslibrary can not read the site bucket and reads the registries itself.
+        description: |
+          A replica could not read the versions of the leader from the site bucket for 10 minutes.
+          Check the S3 connection of the `builder` container (Secret `moduleslibrary-ondemand-s3`).
+    - alert: DocsModulesVersionsNotUpdated
+      expr: time() - max(docs_builder_ondemand_pin_last_success_timestamp_seconds) > 3600
+      for: 15m
+      labels:
+        severity_level: "8"
+        d8_component: moduleslibrary
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        summary: The release channels of modules on the site were not updated for an hour.
+        description: |
+          The leader updates the versions of the release channels every 15 minutes; the last update finished
+          more than an hour ago, or none has finished in the hour since the leader started reading the
+          registries. Check the logs of the `builder` container.
+    - alert: DocsModulesVersionNotRenderedAnew
+      expr: max(docs_builder_ondemand_rerender_failed_archives) > 0
+      labels:
+        severity_level: "9"
+        d8_component: moduleslibrary
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        summary: Some module versions can not be rendered with the current site template.
+        description: |
+          After a change of the site template some versions in the bucket could not be rendered anew; they
+          are served as rendered before. Find them in the logs of the `builder` container:
+          "the template can not render the version".
+    - alert: DocsModulesPinnedVersionsTooLarge
+      expr: max(docs_builder_ondemand_cache_pinned_bytes) > max(docs_builder_ondemand_cache_pinned_budget_bytes)
+      for: 30m
+      labels:
+        severity_level: "8"
+        d8_component: moduleslibrary
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        summary: The module versions of the search and the release channels take more of the cache volume than planned.
+        description: |
+          docs-builder never evicts the versions of the search and of the release channels; they take more than
+          the cache volume (`docsBuilder.ondemand.cacheSize`) less the 2 GiB of versions readers open. Versions
+          readers open are evicted sooner, and a full volume evicts the pod, which then takes the versions from the bucket again. Raise `docsBuilder.ondemand.cacheSize`.
+{{- end }}

@@ -35,17 +35,8 @@ moduleWatcher:
       - registry.deckhouse.io/deckhouse/ee/modules
     web-test2:
       - registry.deckhouse.io/deckhouse/fe/modules
-  scanInterval:
-    _default: 15s
-    web-production: 5m
-  logLevel:
-    _default: debug
-    web-production: info
 
 docsBuilder:
-  highAvailability:
-    _default: false
-    web-production: true
   goMemLimit:
     _default: "1800MiB"
     web-production: "3600MiB"
@@ -60,6 +51,23 @@ docsBuilder:
     web-test2: "2"
   hugoNumWorkerMultiplier:
     _default: "2"
+  # Any version of any module rendered on demand (docs-builder) from the
+  # registries of moduleWatcher, with the versions of the release channels.
+  # Rendered versions are kept in the site bucket under
+  # deckhouse-<env>/modules-ondemand/; with more than one replica one of them
+  # reads the registry (a Lease) and the others take the versions from S3.
+  ondemand:
+    # How often a replica that does not read the registry takes the
+    # versions from S3.
+    followInterval:
+      _default: 1m
+    # The part of the bucket the versions may take; chosen after measuring.
+    s3Size:
+      _default: 10Gi
+    # The cache volume of a pod: 2 GiB of versions opened by readers, the
+    # rest for the versions of the channels and the renders in progress.
+    cacheSize:
+      _default: 6Gi
 
 vpa:
   updateMode:
@@ -73,14 +81,6 @@ resources:
       _default:
         _default: 32Mi
         web-production: 128Mi
-      # Explicit requests for registry-modules-watcher by environment.
-      registryModulesWatcher:
-        _default:
-          _default: 128Mi
-          web-production: 256Mi
-          web-stage: 256Mi
-          web-test: 256Mi
-          web-test2: 256Mi
       moduleslibrary:
         # Explicit per-container requests for the web container.
         web:

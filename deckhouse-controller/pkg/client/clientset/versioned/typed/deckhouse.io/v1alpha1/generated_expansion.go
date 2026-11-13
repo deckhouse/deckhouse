@@ -27,8 +27,6 @@ type ModuleExpansion interface{}
 
 type ModuleConfigExpansion interface{}
 
-type ModuleDocumentationExpansion interface{}
-
 type ModulePackageExpansion interface{}
 
 type ModulePackageVersionExpansion interface{}

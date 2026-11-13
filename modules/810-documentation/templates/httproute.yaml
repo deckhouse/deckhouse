@@ -129,6 +129,8 @@ metadata:
   annotations:
     web.deckhouse.io/export-name: "documentation"
     web.deckhouse.io/export-icon: "/public/img/docs.png"
+    # A user stays on one replica, as with the Ingress (see ingress.yaml).
+    alb.network.deckhouse.io/session-affinity: '{"mode":"cookie","path":"/","cookieName":"d8-documentation-affinity","ttl":0}'
     alb.network.deckhouse.io/backend-tls-settings: '{"mode": "MUTUAL", "caCertificates": "/etc/kube-rbac-proxy-client-ssl/ca.crt", "clientCertificate": "/etc/kube-rbac-proxy-client-ssl/client.crt", "privateKey": "/etc/kube-rbac-proxy-client-ssl/client.key", "insecureSkipVerify": true}'
   {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.documentation.auth.externalAuthentication }}
     alb.network.deckhouse.io/auth-signin: {{ replace "$host" (include "helm_lib_module_public_domain" (list . "documentation")) .Values.documentation.auth.externalAuthentication.authSignInURL | quote }}

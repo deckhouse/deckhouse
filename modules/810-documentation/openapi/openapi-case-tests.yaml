@@ -1,6 +1,29 @@
 positive:
   configValues:
     - {}
+    # prepared module versions kept in the system S3 storage
+    - moduleStorage: { s3: { type: "System" } }
+    - moduleStorage: { s3: { type: "Disabled" } }
+    # prepared module versions kept in an S3 storage of the user
+    - moduleStorage:
+        s3:
+          type: "External"
+          external:
+            secretRef: { namespace: "d8-system", name: "documentation-s3" }
+            prefix: "clusters/main/documentation/"
+            size: "20Gi"
+    - moduleStorage:
+        s3:
+          type: "External"
+          external: { secretRef: { namespace: "d8-system", name: "documentation-s3" } }
+    # a Secret in a namespace of the user
+    - moduleStorage:
+        s3:
+          type: "External"
+          external: { secretRef: { namespace: "documentation-storage", name: "documentation-s3" } }
+    # replicas
+    - highAvailability: true
+    - highAvailability: false
     # only node selector
     - nodeSelector: { "disk-type": "ssd" }
 
@@ -49,5 +72,55 @@ positive:
 negative:
   configValues:
     - { somethingInConfig: yes }
+    # the former forms of the setting
+    - moduleStorage: { s3: "System" }
+    - moduleVersions: { s3: { type: "System" } }
+    # an S3 storage of the user without the Secret
+    - moduleStorage: { s3: { type: "External" } }
+    - moduleStorage: { s3: { type: "External", external: {} } }
+    # a namespace that can not exist
+    - moduleStorage:
+        s3:
+          type: "External"
+          external: { secretRef: { namespace: "Documentation", name: "documentation-s3" } }
+    # a prefix outside of a folder or with a step up
+    - moduleStorage:
+        s3:
+          type: "External"
+          external: { secretRef: { namespace: "d8-system", name: "documentation-s3" }, prefix: "" }
+    - moduleStorage:
+        s3:
+          type: "External"
+          external: { secretRef: { namespace: "d8-system", name: "documentation-s3" }, prefix: "documentation" }
+    - moduleStorage:
+        s3:
+          type: "External"
+          external: { secretRef: { namespace: "d8-system", name: "documentation-s3" }, prefix: "../documentation/" }
+    - moduleStorage:
+        s3:
+          type: "External"
+          external: { secretRef: { namespace: "d8-system", name: "documentation-s3" }, size: "5G" }
+    - moduleStorage:
+        s3:
+          type: "External"
+          external: { secretRef: { namespace: "d8-system", name: "documentation-s3" }, size: "0Gi" }
+    - moduleStorage:
+        s3:
+          type: "External"
+          external: { secretRef: { namespace: "d8-system", name: "documentation-s3" }, prefix: "a//b/" }
+    # a Secret name Kubernetes does not accept, or none
+    - moduleStorage:
+        s3:
+          type: "External"
+          external: { secretRef: { namespace: "d8-system" } }
+    - moduleStorage:
+        s3:
+          type: "External"
+          external: { secretRef: { namespace: "d8-system", name: "Documentation-S3" } }
+    - moduleStorage:
+        s3:
+          type: "External"
+          external: { secretRef: { namespace: "d8-system", name: "a..b" } }
+    - highAvailability: "yes"
   values:
     - { somethingInConfig: yes }

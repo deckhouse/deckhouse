@@ -211,5 +211,8 @@ Run from the root of the DP repository:
 make -C docs/site external-module MODULE_PATH=<MODULE_REPO>
 ```
 
-Open `http://localhost/products/kubernetes-platform/documentation/v1/` and go to `/modules/<module-name>/`.
+`<MODULE_REPO>` is the module repository, or a directory of module repositories: every one with a `module.yaml` is served.
+The portal runs with docs-builder, which renders the modules as the public site does, including the list of modules, the version menu and the search.
+Open `http://localhost/products/kubernetes-platform/documentation/v1/modules/` and go to the module.
+Edit the files of the module and reload the page: the module is rendered anew a few seconds after a file changes.
 Stop the preview with `make -C docs/site down`.

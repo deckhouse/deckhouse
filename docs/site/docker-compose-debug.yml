@@ -25,19 +25,31 @@ services:
       - apparmor:unconfined
     ports:
       - "2345:2345"
+  # See docker-compose.yml.
+  builder:
+    image: $WERF_WEBSITE_DOCS_BUILDER_DOCKER_IMAGE_NAME
+    # The image runs as the deckhouse user (64535), who can not write the
+    # cache volume Docker creates for root; the frontend reads it as any user.
+    user: "0:0"
+    command:
+      - "--ondemand-cache-dir=/app/ondemand"
+      - "--ondemand-local-modules-dir=/app/local-modules"
+    volumes:
+      - "ondemand:/app/ondemand"
+      - "${MODULE_PATH:-.werf/local-modules}:/app/local-modules/modules:ro"
   frontend:
     image: $WERF_WEB_FRONTEND_DOCKER_IMAGE_NAME
+    depends_on:
+      - builder
     volumes:
       - ".werf/nginx-local.conf:/etc/nginx/nginx.conf:ro"
       - ".werf/entrypoint-local.sh:/entrypoint.sh:ro"
       - ".helm/channels.yaml:/app/channels.yaml:ro"
-      - "./backends/docs-builder-template/public/en/modules:/app/modules-from-source/en/modules:ro"
-      - "./backends/docs-builder-template/public/ru/modules:/app/modules-from-source/ru/modules:ro"
-      - "./backends/docs-builder-template/public/en/search/search.json:/app/modules-from-source/en/search-external-modules-index.json:ro"
-      - "./backends/docs-builder-template/public/ru/search/search.json:/app/modules-from-source/ru/search-external-modules-index.json:ro"
+      - "ondemand:/app/ondemand:ro"
       - "channels-conf:/app/channels-data"
     ports:
       - "80:80"
 
 volumes:
   channels-conf:
+  ondemand:

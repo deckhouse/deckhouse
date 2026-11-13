@@ -55,7 +55,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	deckhouserelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/docbuilder"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/objectkeeper"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
 	applicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application-package-version"
@@ -73,8 +72,6 @@ import (
 )
 
 const (
-	docsLeaseLabel = "deckhouse.io/documentation-builder-sync"
-
 	// gracefulShutdownTimeout bounds the controller-runtime manager shutdown.
 	gracefulShutdownTimeout = 10 * time.Second
 
@@ -208,11 +205,6 @@ func Build(ctx context.Context, client *klient.Client, ms metricsstorage.Storage
 		return nil, fmt.Errorf("register package repository operation controller: %w", err)
 	}
 
-	err = docbuilder.RegisterController(runtime, dc, logger.Named("module-documentation-controller"))
-	if err != nil {
-		return nil, fmt.Errorf("register module documentation controller: %w", err)
-	}
-
 	err = objectkeeper.RegisterController(runtime, dc, logger.Named("objectkeeper-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register objectkeeper controller: %w", err)
@@ -300,14 +292,6 @@ func buildControllerOpts(ctx context.Context, scheme *runtime.Scheme, webhookSer
 // syncs and wedges WaitForCacheSync, so the gated ones follow the flag that installs them.
 func buildCacheByObject() map[client.Object]cache.ByObject {
 	return map[client.Object]cache.ByObject{
-		// for ModuleDocumentation controller
-		&coordv1.Lease{}: {
-			Namespaces: map[string]cache.Config{
-				app.NamespaceDeckhouse: {
-					LabelSelector: labels.SelectorFromSet(map[string]string{docsLeaseLabel: ""}),
-				},
-			},
-		},
 		// for ModuleRelease controller and DeckhouseRelease controller
 		&corev1.Secret{}: {
 			Namespaces: map[string]cache.Config{
@@ -343,7 +327,6 @@ func buildCacheByObject() map[client.Object]cache.ByObject {
 		// for deckhouse.io apis
 		&v1alpha1.Module{}:                     {},
 		&v1alpha1.ModuleConfig{}:               {},
-		&v1alpha1.ModuleDocumentation{}:        {},
 		&v1alpha1.ModuleRelease{}:              {},
 		&v1alpha1.ModuleSource{}:               {},
 		&v1alpha2.ModuleUpdatePolicy{}:         {},

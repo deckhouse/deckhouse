@@ -1,3 +1,132 @@
+{{- /* Compression of the pages that carry SSI includes. */ -}}
+{{- define "documentation_gzip_after_ssi" -}}
+# The pages carry SSI includes: a gzip copy sent as is would keep them
+# unexpanded, without the header and the scripts. The pages are compressed
+# after SSI instead.
+gzip on;
+gzip_types text/css application/javascript application/json text/plain image/svg+xml text/markdown application/xml text/xml;
+gzip_vary on;
+# Also behind a proxy that adds Via.
+gzip_proxied any;
+{{- end }}
+{{- /*
+  Documentation of a specific module version, rendered on demand by
+  docs-builder into the cache volume shared with nginx (/app/ondemand). Under
+  .site the volume mirrors the URL layout with links to the rendered versions,
+  so nginx serves a rendered page as a plain file and reports the access over
+  syslog: opened versions are evicted last. A page that is not there, and the
+  list of module versions, go to docs-builder, which renders the version and
+  answers with a placeholder meanwhile. Comes before the generic module
+  location, which would take the version for a page path.
+*/ -}}
+{{- define "documentation_ondemand_locations" }}
+location ~ ^/(ru|en)/modules/[a-z0-9-]+/(v[0-9]+\.[0-9]+\.[0-9]+[^/]*/|versions/$) {
+  root /app/ondemand/.site;
+  access_log syslog:server=127.0.0.1:5514,nohostname,tag=docs_ondemand ondemand_access;
+  {{- include "documentation_gzip_after_ssi" . | nindent 2 }}
+  try_files $uri $uri/ @ondemand_render;
+}
+
+location @ondemand_render {
+  proxy_pass http://127.0.0.1:8081;
+}
+
+# The read-only API of on-demand rendering: render status for the placeholder
+# page, the list of module versions and the menu of a module
+# (/api/v2/modules/{module}/menu). The rest of the docs-builder API stays
+# internal.
+location ^~ /api/v2/ {
+  limit_except GET { deny all; }
+  proxy_pass http://127.0.0.1:8081;
+}
+
+# Pages of a directory of .site served at another address: a development
+# branch of a module (ModulePullOverride, see documentation_ondemand_branch)
+# and the version a module serves without a version in the address (see
+# documentation_modules_locations).
+location ^~ /ondemand-branch/ {
+  internal;
+  root /app/ondemand/.site;
+  {{- include "documentation_gzip_after_ssi" . | nindent 2 }}
+  rewrite ^/ondemand-branch(/.*)$ $1 break;
+}
+{{- end }}
+
+{{- /* The URL of a development branch, /<lang>/modules/<module>/<branch>/, looks
+  like a page of the module, so the generic module location first looks the
+  branch up among the versions docs-builder has published. */}}
+{{- define "documentation_ondemand_branch" -}}
+set $ondemand_branch_dir "";
+set $ondemand_branch_slash "";
+set $ondemand_doc_dir "";
+if ($uri ~ "^/(?<ondemand_lang>ru|en)/modules/(?<ondemand_module>[a-z0-9-]+)/(?<ondemand_tag>[a-z0-9_][a-z0-9_.-]*)(?<ondemand_rest>/.*)?$") {
+  set $ondemand_branch_dir /app/ondemand/.site/$ondemand_lang/modules/$ondemand_module/$ondemand_tag;
+  set $ondemand_doc_dir /app/ondemand/.site/$ondemand_lang/modules/$ondemand_module/stable/$ondemand_tag;
+}
+# A directory of the module pages wins over a branch of the same name.
+if (-d $ondemand_doc_dir) {
+  set $ondemand_branch_dir "";
+}
+# The branch typed without the trailing slash.
+if ($ondemand_rest = "") {
+  set $ondemand_branch_slash $ondemand_branch_dir;
+  set $ondemand_branch_dir "";
+}
+if (-d $ondemand_branch_dir) {
+  rewrite ^ /ondemand-branch$uri last;
+}
+if (-d $ondemand_branch_slash) {
+  rewrite ^ $uri/ redirect;
+}
+{{- end }}
+{{- /* The list of modules and the pages of a module without a version
+  (/<lang>/modules/<module>/[<channel>/]<page>). docs-builder builds the list and links the
+  version it serves for a module, the installed one or that of the most
+  stable release channel of a disabled module, as
+  .site/<lang>/modules/<module>/stable. A
+  module docs-builder has not published yet goes to it: the list answers
+  with a placeholder, a module page leads to its version. An embedded
+  module comes with the image. */}}
+{{- define "documentation_modules_locations" }}
+location ~* ^/(?<list_lang>ru|en)/modules/$ {
+  {{- include "documentation_gzip_after_ssi" . | nindent 2 }}
+  try_files /ondemand/.index/$list_lang/modules/index.html @ondemand_render;
+}
+
+{{ include "documentation_ondemand_locations" . }}
+
+location ~* ^/(?<module_lang>ru|en)/modules/(?<module>[^/]+)/((alpha|beta|early-access|stable|rock-solid|latest)/)?(?<doc_path>.*)$ {
+  {{- include "documentation_ondemand_branch" . | nindent 2 }}
+
+  set $embedded_module_path "embedded-modules/$module_lang/modules/$module";
+  set $embedded_module_url "/embedded-modules/$module_lang/modules/$module/$doc_path";
+
+  # A directory of the module typed without the trailing slash: the
+  # relative links of its page need it, at the address as it was typed.
+  set $module_dir "";
+  if (-d /app/ondemand/.site/$module_lang/modules/$module/stable/$doc_path) {
+    set $module_dir "1";
+  }
+  if ($uri ~ /$) {
+    set $module_dir "";
+  }
+  if ($module_dir) {
+    return 301 $uri/$is_args$args;
+  }
+  if (-d /app/ondemand/.site/$module_lang/modules/$module/stable) {
+    rewrite ^ /ondemand-branch/$module_lang/modules/$module/stable/$doc_path last;
+  }
+
+  if (-d $document_root/$embedded_module_path) {
+    # Use internal redirect to serve embedded modules
+    rewrite ^ $embedded_module_url last;
+  }
+
+  # docs-builder leads to the version; its 404 gets the 404 page.
+  proxy_intercept_errors on;
+  proxy_pass http://127.0.0.1:8081;
+}
+{{- end }}
 ---
 kind: ConfigMap
 apiVersion: v1
@@ -34,6 +163,7 @@ data:
       scgi_temp_path        /tmp/scgi_temp;
 
       access_log off;
+      log_format ondemand_access '$uri';
 
       log_format json_combined escape=json '{ "time_local": "$time_local", '
         '"host": "$host", '
@@ -74,6 +204,8 @@ data:
         rewrite ^/(ru/)?modules/[0-9]+-(?<module_doc>[^/]+/.*)$ /$1modules/$module_doc redirect;
         rewrite ^/(ru/)?modules/(?<module>[^/.]+)$ /$redirection_lang/modules/$module/$is_args$args redirect;
         rewrite ^/(ru/)?modules/(?<module>[^/.]+)/(?<channel>alpha|beta|early-access|stable|rock-solid)$ /ru/modules/$module/$channel/ redirect;
+        # A module version or the versions page typed without the trailing slash.
+        rewrite ^/ru/modules/(?<ondemand_module>[a-z0-9-]+)/(?<ondemand_version>v[0-9]+\.[0-9]+\.[0-9]+[^/]*|versions)$ /ru/modules/$ondemand_module/$ondemand_version/ redirect;
         rewrite ^/?!(ru/|en/|assets/|css/|js/|images/|presentations/|includes/|[a-z0-9]+\.[a-z0-9]+).*$ /$redirection_lang/$uri$is_args$args redirect;
         rewrite ^/modules/.*$ /$redirection_lang$uri$is_args$args redirect;
         rewrite ^/(products/kubernetes-platform/)?documentation/v[\d]+[^\/]*/(?<path>.*)?$ /$redirection_lang/$path$is_args$args redirect;
@@ -110,7 +242,12 @@ data:
 
         # Search index for modules from sources
         location ~* ^/(ru|en)/modules/search-external-modules-index.json$  {
-            try_files /search-external-modules-index/$redirection_lang/search.json =404;
+            # docs-builder writes a gzip copy next to its files.
+            gzip_static on;
+            gzip_vary on;
+            # Also behind a proxy that adds Via.
+            gzip_proxied any;
+            try_files /ondemand/.index/$redirection_lang/search.json =404;
         }
 
         # Search index for embedder modules
@@ -118,33 +255,7 @@ data:
             try_files /embedded-modules/$redirection_lang/search-embedded-modules-index.json =404;
         }
 
-        # Modules from source index page
-        location ~* ^/(ru|en)/modules/$ {
-            try_files /modules/$redirection_lang/index.html =404;
-        }
-
-        location ~* ^/(ru|en)/modules/(?<module>[^/]+)/((alpha|beta|early-access|stable|rock-solid|latest)/)?(?<doc_path>.*)$ {
-            set $embedded_module_path "embedded-modules/$redirection_lang/modules/$module";
-            set $embedded_module_url "/embedded-modules/$redirection_lang/modules/$module/$doc_path";
-            set $external_module_path "modules/$redirection_lang/$module/stable";
-            set $external_module_url "/external-modules/$redirection_lang/$module/stable/$doc_path";
-
-            if (-d $document_root/$external_module_path) {
-               # Use internal redirect to serve modules from source
-               rewrite ^ $external_module_url last;
-            }
-
-            if (-d $document_root/$embedded_module_path) {
-               # Use internal redirect to serve embedded modules
-               rewrite ^ $embedded_module_url last;
-            }
-        }
-
-        # Internal location for modules from source
-        location ~* ^/external-modules/(?<doc_path>.*) {
-            internal;
-            try_files /modules/$doc_path /modules/$doc_path/readme.html /modules/$doc_path/ =404;
-        }
+        {{- include "documentation_modules_locations" . | nindent 8 }}
 
         # Internal location for embedded modules
         location ~* ^/embedded-modules/(ru|en)/modules/.*$ {
@@ -187,6 +298,7 @@ data:
       scgi_temp_path        /tmp/scgi_temp;
 
       access_log off;
+      log_format ondemand_access '$uri';
 
       log_format json_combined escape=json '{ "time_local": "$time_local", '
         '"host": "$host", '
@@ -263,6 +375,8 @@ data:
         rewrite ^/(ru/|en/)?modules/[0-9]+-(?<module_doc>[^/]+/.*)$ /$1modules/$module_doc redirect;
         rewrite ^/(ru/|en/)?modules/(?<module>[^/.]+)$ /$redirection_lang/modules/$module/$is_args$args redirect;
         rewrite ^/(ru/|en/)?modules/(?<module>[^/.]+)/(?<channel>alpha|beta|early-access|stable|rock-solid)$ /modules/$module/$channel/ redirect;
+        # A module version or the versions page typed without the trailing slash.
+        rewrite ^/(?<ondemand_lang>ru|en)/modules/(?<ondemand_module>[a-z0-9-]+)/(?<ondemand_version>v[0-9]+\.[0-9]+\.[0-9]+[^/]*|versions)$ /$ondemand_lang/modules/$ondemand_module/$ondemand_version/ redirect;
         rewrite ^/?!(ru/|en/|assets/|css/|js/|images/|presentations/|includes/|[a-z0-9]+\.[a-z0-9]+).*$ /$redirection_lang/$uri$is_args$args redirect;
         rewrite ^/modules/.*$ /$redirection_lang$uri$is_args$args redirect;
         rewrite ^/(products/kubernetes-platform/)?documentation/v[\d]+[^\/]*/(?<path>.*)?$ /$redirection_lang/$path$is_args$args redirect;
@@ -299,7 +413,12 @@ data:
 
         # Search index for modules from sources
         location ~* ^/(?<lang>ru|en)/modules/search-external-modules-index.json$  {
-            try_files /search-external-modules-index/$lang/search.json =404;
+            # docs-builder writes a gzip copy next to its files.
+            gzip_static on;
+            gzip_vary on;
+            # Also behind a proxy that adds Via.
+            gzip_proxied any;
+            try_files /ondemand/.index/$lang/search.json =404;
         }
 
         # Search index for embedder modules
@@ -318,40 +437,24 @@ data:
         }
 
         location ~* ^/(?<lang>ru|en)/modules/external-llms\.txt$  {
-            try_files /modules/$lang/external-llms.txt =404;
+            # docs-builder writes a gzip copy next to its files.
+            gzip_static on;
+            gzip_vary on;
+            # Also behind a proxy that adds Via.
+            gzip_proxied any;
+            try_files /ondemand/.index/$lang/llms.txt =404;
         }
 
         location ~* ^/(?<lang>ru|en)/modules/external-corpus\.json$  {
-            try_files /modules/$lang/external-corpus.json =404;
+            # docs-builder writes a gzip copy next to its files.
+            gzip_static on;
+            gzip_vary on;
+            # Also behind a proxy that adds Via.
+            gzip_proxied any;
+            try_files /ondemand/.index/$lang/corpus.json =404;
         }
 
-        # Modules from source index page
-        location ~* ^/(ru|en)/modules/$ {
-            try_files /modules/$1/index.html =404;
-        }
-
-        location ~* ^/(?<lang>ru|en)/modules/(?<module>[^/]+)/((alpha|beta|early-access|stable|rock-solid|latest)/)?(?<doc_path>.*)$ {
-            set $embedded_module_path "embedded-modules/$lang/modules/$module";
-            set $embedded_module_url "/embedded-modules/$lang/modules/$module/$doc_path";
-            set $external_module_path "modules/$lang/$module/stable";
-            set $external_module_url "/external-modules/$lang/$module/stable/$doc_path";
-
-            if (-d $document_root/$external_module_path) {
-               # Use internal redirect to serve modules from source
-               rewrite ^ $external_module_url last;
-            }
-
-            if (-d $document_root/$embedded_module_path) {
-               # Use internal redirect to serve embedded modules
-               rewrite ^ $embedded_module_url last;
-            }
-        }
-
-        # Internal location for modules from source
-        location ~* ^/external-modules/(?<doc_path>.*) {
-            internal;
-            try_files /modules/$doc_path /modules/$doc_path/readme.html /modules/$doc_path/ =404;
-        }
+        {{- include "documentation_modules_locations" . | nindent 8 }}
 
         # Internal location for embedded modules
         location ~* ^/embedded-modules/(ru|en)/modules/.*$ {

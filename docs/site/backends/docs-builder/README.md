@@ -1,185 +1,61 @@
 # Docs Builder
 
-A Go-based HTTP service built on [Hugo](https://gohugo.io/) that manages the complete documentation lifecycle for Deckhouse Platform modules. The service handles documentation uploading, building, and serving with support for multiple publication channels and languages.
+A Go HTTP service built on [Hugo](https://gohugo.io/) that renders the documentation of Deckhouse Platform modules on demand. It runs next to nginx: nginx serves the rendered pages from a shared cache volume and asks docs-builder for a page it does not have yet.
 
-## Architecture Overview
+## How it works
 
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Client API    │───▶│   Docs Builder   │───▶│   Hugo Engine   │
-│  (Upload/Build) │    │     Service      │    │   (Generation)  │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-                                │
-                                ▼
-                       ┌──────────────────┐
-                       │  Static Files    │
-                       │   (Serve/Host)   │
-                       └──────────────────┘
-```
+1. A reader opens a page of a module version. nginx does not find it in the cache volume and passes the request to docs-builder.
+2. docs-builder answers with a placeholder page, downloads the module image from the registry and renders the version as a Hugo site of its own (EN and RU).
+3. The rendered pages land in the cache volume, the placeholder reloads, and nginx serves the pages from then on.
 
-Docs Builder handles the complete documentation lifecycle:
-- **Reception:** Accepting module documentation uploads as tar archives
-- **Processing:** Extracting and organizing content by module, version, and channel
-- **Building:** Generating static sites using Hugo with multilingual support (EN/RU)
-- **Hosting:** Serving documentation for end users
-- **High Availability:** Leader election for multi-instance deployments
+docs-builder also builds:
 
-## Operating Modes
+- the page of the list of modules from the modules it knows;
+- the search index, `llms.txt` and the corpus of the AI export from one version of every module: the installed one (or the branch of a ModulePullOverride) of an enabled module of a cluster, the most stable release channel otherwise.
 
-### 1. Frontend Mode
-**Purpose:** Public-facing documentation website
-**Example:** [Deckhouse documentation site](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-overview.html)
-**Features:**
-- Full module documentation across all channels
-- Public internet accessibility
-- Complete feature documentation
+Modules come from one of two places:
 
-### 2. Cluster Documentation Mode
-**Purpose:** Internal cluster documentation
-**Features:**
-- Kubernetes cluster-internal access only
-- Documentation limited to installed modules
-- Runtime-specific configuration examples
+- **Cluster** (module `documentation`): every module with a registry source, enabled or not, from the `Module` and `ModuleSource` objects and the package repositories (`ModulePackage`, `PackageRepository`); embedded modules come with the Deckhouse image. A module whose `Module` has the source `Embedded` is embedded even when a source offers it too (a module moving out of Deckhouse): Deckhouse runs the embedded copy, so docs-builder offers no version of it. Once the source changes, the next pass of the pinned versions (every 15 minutes) makes it a module from a source.
+- **Public site**: the registries given in `--ondemand-registries`, with a page per release channel.
+- **Local modules** (a developer's machine, `make -C docs/site external-module` of the DP repository): the module repositories under `--ondemand-local-modules-dir`, each served as one version (`--ondemand-local-version`) of the public site, without a cluster or a registry. The files are polled every second; a module whose files changed is rendered anew and the pages are replaced at once.
 
-## API Reference
+With S3 (`--ondemand-s3-dir`) rendered versions survive restarts and are shared by the replicas. The replica holding the `docs-builder-ondemand-leader` Lease reads the registry; the others follow what it recorded in S3.
 
-### Documentation Management
-| Method | Endpoint | Description | Parameters |
-|--------|----------|-------------|------------|
-| `GET`  | `/api/v1/doc` | Retrieve all modules with versions and channels | None |
-| `POST` | `/api/v1/doc/{moduleName}/{version}` | Upload module documentation tar archive | `channels` (query): comma-separated channel list (default: stable) |
-| `DELETE` | `/api/v1/doc/{moduleName}` | Remove module documentation | `channels` (query): comma-separated channel list (default: stable) |
-| `POST` | `/api/v1/build` | Trigger complete site rebuild | None |
+## API
 
-### Health & Status
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET`  | `/readyz` | Readiness probe - returns 200 when service is ready to serve traffic |
-| `GET`  | `/healthz` | Health probe - returns 200 when service is running |
-
-### Request Examples
-```bash
-# Upload documentation
-curl -X POST \
-  'http://localhost:8081/api/v1/doc/mymodule/v1.2.3?channels=alpha,beta' \
-  --data-binary @module-docs.tar
-
-# Get all documentation info
-curl http://localhost:8081/api/v1/doc
-
-# Trigger rebuild
-curl -X POST http://localhost:8081/api/v1/build
-
-# Delete module documentation
-curl -X DELETE 'http://localhost:8081/api/v1/doc/mymodule?channels=alpha,beta'
-```
+| `GET`  | `/{lang}/modules/` | Page of the list of modules (a placeholder until it is built) |
+| `GET`  | `/{lang}/modules/{module}/...` | Pages of a module version, rendered on demand |
+| `GET`  | `/{lang}/modules/{module}/versions/` | Page with the versions of a module |
+| `GET`  | `/api/v2/render/{module}/{version}` | State of the render of a version, polled by the placeholder |
+| `GET`  | `/api/v2/modules/{module}/versions` | Versions of a module |
+| `GET`  | `/api/v2/modules/{module}/menu` | Menu of a module |
+| `GET`  | `/readyz` | 200 once the pod may take traffic (with S3: once it took the versions from there) |
+| `GET`  | `/healthz` | 200 while the service runs; 500 once a pass of the pinned versions is 10 minutes past its deadline of an hour |
 
 ## Configuration
 
-### Command-Line Flags
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--address` | `:8081` | HTTP server bind address and port |
-| `--src` | `/app/hugo/` | Hugo source files directory |
-| `--dst` | `/mount/` | Built site output directory |
-| `--highAvailability` | `false` | Enable HA mode with Kubernetes leader election |
+Flags are listed by `docs-builder -help`. `--ondemand-cache-dir` is required.
 
-### Environment Variables
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `LOG_LEVEL` | `info` | Logging level: debug, info, warn, error, fatal |
-| `POD_NAME` | | Pod name for HA mode (required in HA) |
-| `POD_IP` | | Pod IP for HA mode (required in HA) |
-| `POD_NAMESPACE` | | Pod namespace for HA mode (required in HA) |
-| `CLUSTER_DOMAIN` | | Kubernetes cluster domain for HA mode |
+| Variable | Description |
+|----------|-------------|
+| `LOG_LEVEL` | Logging level: debug, info, warn, error, fatal |
+| `POD_NAME` | Identity in the leader Lease (the host name when empty) |
+| `POD_NAMESPACE` | Namespace of the leader Lease |
 
-## Directory Structure
+## Module archive
+
+A module version is rendered from these files of the module image:
 
 ```
-docs-builder/
-├── main.go                     # Application entry point
-├── go.mod                      # Go module dependencies
-├── internal/
-│   ├── docs/                   # Core documentation service
-│   │   ├── service.go          # Main service logic
-│   │   ├── build.go            # Hugo build functionality
-│   │   ├── upload.go           # Documentation upload handling
-│   │   ├── delete.go           # Documentation removal
-│   │   ├── info.go             # Documentation info retrieval
-│   │   └── channel_mapping.go  # Channel version management
-│   └── http/v1/
-│       └── handler.go          # HTTP API handlers
-└── pkg/
-    ├── hugo/                   # Hugo integration
-    │   ├── hugobuilder.go      # Hugo build wrapper
-    │   ├── commandeer.go       # Hugo command interface
-    │   └── server.go           # Hugo server mode
-    └── k8s/
-        └── manager.go          # Kubernetes lease management
+├── docs/          → content/modules/{module}/{version}/
+├── openapi/       → data/modules/{module}/{version}/
+├── crds/          → data/modules/{module}/{version}/
+├── module.yaml    → data/modules/{module}/{version}/
+└── oss.yaml       → data/modules/{module}/{version}/
 ```
 
-## File Processing
-
-### Upload Archive Structure
-The service expects tar archives with the following structure:
-```
-module-archive.tar
-├── docs/                       # Content files → content/modules/{module}/{channel}/
-│   ├── README.md              # Module documentation
-│   ├── FAQ.md                 # FAQ documentation
-│   └── configuration.md       # Configuration docs
-├── openapi/                   # API specs → data/modules/{module}/{channel}/
-│   ├── config-values.yaml     # Configuration schema
-│   └── doc-*-config-values.yaml # Generated config docs
-├── crds/                      # CRDs → data/modules/{module}/{channel}/
-│   └── *.yaml                 # Custom Resource Definitions
-├── module.yaml                # Module metadata → data/modules/{module}/{channel}/
-└── oss.yaml                   # OSS metadata → data/modules/{module}/{channel}/
-```
-
-### Language Support
-- **English:** Default documentation files (`.md`)
-- **Russian:** Files with `_RU.md` suffix (converted to `.ru.md`)
-
-### Channel Management
-- Supports multiple publication channels (stable, alpha, beta, etc.)
-- Version mapping maintained in `data/channel-mapping.yaml`
-- Automatic cleanup of broken modules during build
-
-## High Availability Features
-
-When `--highAvailability` is enabled:
-
-1. **Leader Election:** Uses Kubernetes coordination leases
-2. **Lease Management:**
-   - Lease duration: 35 seconds
-   - Renew period: 30 seconds
-   - Garbage collection: 90 seconds
-3. **Service Discovery:** Automatic pod address registration
-4. **Graceful Shutdown:** Lease cleanup on termination
-
-## Error Handling
-
-### Build Error Recovery
-- **Broken Module Detection:** Automatic parsing of Hugo build errors
-- **Cleanup Strategy:** Removes corrupted modules and rebuilds
-- **Channel Mapping Updates:** Maintains consistency after cleanup
-- **Logging:** Comprehensive error tracking and module removal logging
-
-### Validation
-- **Path Traversal Protection:** Prevents malicious archive paths
-- **File Type Filtering:** Processes only supported file types
-- **Permission Management:** Secure file permission handling (user-only access)
-
-## Dependencies
-
-### Core Dependencies
-- **Hugo:** v0.168.0 - Static site generator
-- **Kubernetes Client:** v0.28.3 - K8s API integration
-- **Deckhouse Logger:** Custom structured logging
-- **Afero/Fsync:** File system operations
-
-### Key Features from Dependencies
-- **Hugo Extensions:** Goldmark, i18n, asset processing
-- **File Operations:** Atomic file syncing, overlay filesystems
-- **Kubernetes Integration:** Lease-based coordination, service discovery
+- Files with the `_RU.md` suffix become `.ru.md`.
+- `docs/internal`, `docs/development` and similar directories are skipped.
+- A module whose files break the Hugo build is dropped from the site and the error is logged.

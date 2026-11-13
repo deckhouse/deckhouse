@@ -3,7 +3,10 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 {{ if eq .ModuleName "documentation" }}
 from: common/distroless
 {{ else }}
-from: scratch
+# common/distroless is built by the werf of Deckhouse only; base/distroless of
+# the base images has the CA certificates docs-builder needs to read the
+# module registries over TLS.
+from: {{ index $.Images "base/distroless" }}
 {{ end }}
 import:
 - from: {{ .ModuleName }}/{{ .ImageName }}-artifact
@@ -17,9 +20,6 @@ import:
     - embedded_modules.json
     - editions.json
   before: setup
-{{- if ne .ModuleName "website-docs" }}
-{{- include "image mount points" . }}
-{{- end }}
 imageSpec:
   config:
     workingDir: "/app"
@@ -160,9 +160,13 @@ shell:
   - cd /src
   - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
-  - go build -ldflags '-s -w' .
+  # Images built for a merge request or a branch carry pprof on
+  # 127.0.0.1:6060 (modules/810-documentation/docs/internal/PROFILING.md);
+  # release images and the public site have none.
+  - go build {{ if and (ne .ModuleName "website-docs") (eq (env "CI_COMMIT_TAG" "") "") }}-tags pprof {{ end }}-ldflags '-s -w' .
   - chown -R 64535:64535 /src
-  - chmod 0700 /src/docs-builder
+  # The pod of the public site runs as 65534, not as the owner.
+  - chmod {{ if eq .ModuleName "website-docs" }}0755{{ else }}0700{{ end }} /src/docs-builder
 {{ if ne .ModuleName "website-docs" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -176,6 +180,11 @@ git:
   - '**/*.go'
   - '**/*.mod'
   - '**/*.sum'
+  # The CPU profile of docs-builder: go build applies it (-pgo=auto).
+  - default.pgo
+  # Pages and their texts embedded into the binary (go:embed).
+  - '**/*.html'
+  - '**/i18n/*.yaml'
 {{ if eq .ModuleName "website-docs" }}
   stageDependencies:
     install:

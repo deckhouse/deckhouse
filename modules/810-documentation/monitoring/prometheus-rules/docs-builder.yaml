@@ -1,30 +1,141 @@
 - name: d8.documentation.docs-builder
   rules:
-  - alert: ModuleDocumentationRenderError
+  # The replicas sharing S3 (moduleStorage.s3) elect the one that reads the
+  # registry. Without S3 only the time of the last update of the versions
+  # (docs_builder_ondemand_pin_last_success_timestamp_seconds) is reported.
+  - alert: D8DocumentationNoLeader
     expr: |
-      max by (module) (docs_builder_module_render_error) > 0
-    for: 5m
+      count(docs_builder_ondemand_leader) > 0 and sum(docs_builder_ondemand_leader) == 0
+    for: 10m
     labels:
-      severity_level: "6"
+      severity_level: "7"
       tier: cluster
       d8_module: documentation
       d8_component: docs-builder
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      summary: Documentation rendering failed for module `{{ $labels.module }}`.
+      summary: No documentation replica reads the registry.
       description: |-
-        An error occurred while rendering documentation for the `{{ $labels.module }}` module.
-        The broken module was removed from the documentation site during Hugo build.
+        No replica of the documentation holds the `docs-builder-ondemand-leader` Lease in `d8-system`.
+        The versions of modules the search uses are not updated; versions users open are still prepared.
 
-        Check the `ModuleDocumentation` resource status for details:
-
-        ```bash
-        d8 k get moduledocumentations {{ $labels.module }} -o yaml
-        ```
-
-        Check docs-builder logs for more information:
+        Check the Lease and the logs of docs-builder:
 
         ```bash
-        d8 k -n d8-system logs -l app=docs-builder | grep -i "removed broken module"
+        d8 k -n d8-system get lease docs-builder-ondemand-leader -o yaml
+        d8 k -n d8-system logs -l app=documentation -c builder --tail=-1 | grep -i lead
         ```
+  - alert: D8DocumentationReplicaReadsRegistry
+    expr: |
+      max(docs_builder_ondemand_follow_fallback) == 1
+    for: 5m
+    labels:
+      severity_level: "8"
+      tier: cluster
+      d8_module: documentation
+      d8_component: docs-builder
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: A documentation replica can not read S3 and reads the registry itself.
+      description: |-
+        A replica of the documentation could not read the versions of the leader from S3 for 10 minutes
+        and prepares them from the registry itself until S3 answers again.
+
+        Check the S3 storage of the documentation (`moduleStorage.s3` of the `documentation` ModuleConfig)
+        and the logs of docs-builder:
+
+        ```bash
+        d8 k -n d8-system logs -l app=documentation -c builder --tail=-1 | grep -i s3
+        ```
+  - alert: D8DocumentationModuleVersionsNotUpdated
+    expr: |
+      time() - max(docs_builder_ondemand_pin_last_success_timestamp_seconds) > 3600
+    for: 15m
+    labels:
+      severity_level: "8"
+      tier: cluster
+      d8_module: documentation
+      d8_component: docs-builder
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: The versions of modules in the documentation search were not updated for an hour.
+      description: |-
+        docs-builder updates the versions of modules the search and the AI export use every 15 minutes;
+        the last update finished more than an hour ago, or none has finished in the hour since docs-builder
+        started reading the registry.
+
+        Check the logs of docs-builder:
+
+        ```bash
+        d8 k -n d8-system logs -l app=documentation -c builder --tail=-1 | grep -i -E "resolve|render pinned"
+        ```
+  - alert: D8DocumentationVersionNotRenderedAnew
+    expr: |
+      max(docs_builder_ondemand_rerender_failed_archives) > 0
+    labels:
+      severity_level: "9"
+      tier: cluster
+      d8_module: documentation
+      d8_component: docs-builder
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Some module versions in S3 can not be prepared with the current look of the documentation.
+      description: |-
+        After an update of the documentation look, {{ $value }} module versions kept in S3 could not be prepared again.
+        They open as they were prepared before the update.
+
+        Find them in the logs of docs-builder:
+
+        ```bash
+        d8 k -n d8-system logs -l app=documentation -c builder --tail=-1 | grep "the template can not render the version"
+        ```
+  - alert: D8DocumentationModulesListNotBuilt
+    expr: |
+      max(docs_builder_ondemand_modules_list_failed) > 0
+    for: 30m
+    labels:
+      severity_level: "8"
+      tier: cluster
+      d8_module: documentation
+      d8_component: docs-builder
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: The page of the list of modules in the documentation is not updated.
+      description: |-
+        docs-builder could not build the page of the list of modules for 30 minutes.
+        The page shows the list as it was built before, or says that the list is being prepared.
+
+        Check the logs of docs-builder:
+
+        ```bash
+        d8 k -n d8-system logs -l app=documentation -c builder --tail=-1 | grep "write the list of modules"
+        ```
+  - alert: D8DocumentationPinnedVersionsTooLarge
+    expr: |
+      max(docs_builder_ondemand_cache_pinned_bytes) > max(docs_builder_ondemand_cache_pinned_budget_bytes)
+    for: 30m
+    labels:
+      severity_level: "8"
+      tier: cluster
+      d8_module: documentation
+      d8_component: docs-builder
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: The module versions the documentation keeps at all times take more space than planned.
+      description: |-
+        docs-builder keeps the versions of modules the search uses on the cache volume of the pod and never evicts them.
+        They take {{ $value | humanize1024 }}B, more than the space set aside for them.
+
+        Versions users open are evicted sooner and prepared again more often. If the volume fills up,
+        Kubernetes evicts the documentation pod, and the versions are prepared again unless they are kept in S3.
+
+        The size is in the `docs_builder_ondemand_cache_pinned_bytes` metric, the space set aside in
+        `docs_builder_ondemand_cache_pinned_budget_bytes`: the cache volume of the pod less 2 GiB of versions users open.
+        The space is not configurable: report the alert to the Deckhouse technical support with the number
+        of modules enabled in the cluster.

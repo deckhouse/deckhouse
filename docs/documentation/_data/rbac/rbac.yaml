@@ -685,7 +685,6 @@ modules:
           resources:
           - deckhousereleases
           - moduleconfigs
-          - moduledocumentations
           - modulepulloverrides
           - modulereleases
           - modules
@@ -702,7 +701,6 @@ modules:
           resources:
           - deckhousereleases
           - moduleconfigs
-          - moduledocumentations
           - modulepulloverrides
           - modulereleases
           - modules

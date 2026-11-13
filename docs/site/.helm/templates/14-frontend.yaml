@@ -137,7 +137,7 @@ kind: Service
 metadata:
   name: frontend
   labels:
-    prometheus.deckhouse.io/custom-target: registry-modules-watcher-frontend
+    prometheus.deckhouse.io/custom-target: docs-frontend
 spec:
   clusterIP: None
   selector:

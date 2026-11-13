@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="{{.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>{{.Module}} - {{.T.Title}}</title>
+{{.Chrome.Head}}
+</head>
+<body>
+{{template "chrome" .}}
+<dialog class="odp-dialog" open autofocus closedby="none" aria-labelledby="odp-title">
+<div class="odp-dialog__body">
+  <h1 class="odp-title" id="odp-title">{{.T.Title}} <span class="odp-version">{{.Module}}</span></h1>
+  {{- if .NotFound}}
+  <p class="odp-problem">{{.T.NotFound}}</p>
+  {{- else if .Failed}}
+  <p class="odp-problem">{{.T.Failed}}</p>
+  {{- else if not .Versions}}
+  <p class="odp-hint">{{.T.Empty}}</p>
+  {{- else}}
+  <p class="odp-hint">{{.T.Intro}}</p>
+  <ol class="odp-versions">
+    {{- range .Versions}}
+    <li><a href="{{.URL}}" rel="nofollow">{{.Version}}</a>{{if .Ready}}<span class="ready">{{$.T.Ready}}</span>{{end}}</li>
+    {{- end}}
+  </ol>
+  {{- end}}
+  <p class="odp-actions"><a class="button button_alt" href="{{.ModuleURL}}">{{.T.Current}}</a></p>
+</div>
+</dialog>
+{{template "dialog-script"}}
+</body>
+</html>

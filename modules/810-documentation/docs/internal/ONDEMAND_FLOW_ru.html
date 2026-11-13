@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Документация по запросу</title>
+<!-- Исходник ONDEMAND_FLOW-*.png. ?slide=N (1-5) показывает один слайд 1600x900. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #eef2f1;
+    --card: #ffffff;
+    --ink: #17212b;
+    --muted: #5a6672;
+    --rule: #c9d3d2;
+    --page: #2f5bea;
+    --list: #0f7b6c;
+    --versions: #b4237a;
+    --index: #c98a00;
+    --s3: #e3e9f7;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: Onest, system-ui, sans-serif; }
+  .slide { width: 1600px; height: 900px; margin: 0 auto 32px; background: var(--paper); position: relative; overflow: hidden; }
+  body.one .slide { display: none; margin: 0; }
+  body.one .slide.on { display: block; }
+  svg { display: block; width: 1600px; height: 900px; }
+  .h1 { font-size: 40px; font-weight: 700; letter-spacing: -0.02em; fill: var(--ink); }
+  .lede { font-size: 18px; fill: var(--muted); }
+  .t { font-size: 17px; font-weight: 600; fill: var(--ink); }
+  .s { font-size: 14px; fill: var(--muted); }
+  .c { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12.5px; fill: var(--muted); }
+  .n { font-size: 14px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
+  .zone { font-size: 14px; font-weight: 600; }
+  .line { fill: none; stroke-width: 10; stroke-linecap: round; stroke-linejoin: round; }
+  .thin { fill: none; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+  .card { fill: var(--card); stroke: var(--rule); stroke-width: 1.5; }
+  .stop { fill: var(--card); stroke-width: 4; }
+</style>
+</head>
+<body>
+
+<!-- 1. A page of a module version -->
+<section class="slide" id="s1">
+<svg viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg">
+  <text x="80" y="92" class="h1">Читатель открывает страницу версии модуля</text>
+  <text x="80" y="128" class="lede">Путь одинаковый в кластере (810-documentation) и на публичном сайте. Шаги 6, 7 и 10 выполняются только с S3.</text>
+
+  <!-- S3 band -->
+  <rect x="960" y="250" width="330" height="520" rx="22" fill="var(--s3)"/>
+  <text x="980" y="282" class="zone" fill="var(--page)">Только в режиме S3</text>
+
+  <!-- no S3 bypass -->
+  <path d="M 860 380 C 920 330, 920 330, 980 330 L 1340 330 C 1380 330, 1390 350, 1400 380" class="thin" stroke="#9aa8b6" stroke-dasharray="2 9"/>
+  <text x="1080" y="318" class="s">без S3: сразу рендер</text>
+
+  <!-- main line -->
+  <path d="M 120 380 L 1400 380 C 1460 380, 1490 420, 1490 470 L 1490 560 C 1490 610, 1460 640, 1400 640 L 860 640" class="line" stroke="var(--page)"/>
+  <!-- spurs -->
+  <path d="M 300 380 L 300 230" class="line" stroke="var(--page)" opacity="0.35"/>
+  <path d="M 660 380 L 660 230" class="line" stroke="var(--page)" opacity="0.35"/>
+  <!-- the placeholder polls while the render runs in the background -->
+  <path d="M 860 496 L 860 620" class="thin" stroke="var(--page)" stroke-dasharray="3 9"/>
+  <rect x="560" y="500" width="276" height="104" rx="16" class="card"/>
+  <text x="580" y="528" class="t">Если не вышло</text>
+  <text x="580" y="550" class="s">502: отсчёт и автоповтор,</text>
+  <text x="580" y="570" class="s">не больше 3 раз во вкладке</text>
+  <text x="580" y="590" class="s">503: очередь полна, через 60 с</text>
+  <text x="876" y="560" class="s">опрос статуса</text>
+  <text x="876" y="580" class="s">раз в 1 с</text>
+
+  <g>
+    <circle cx="120" cy="380" r="16" class="stop" stroke="var(--page)"/><text x="120" y="380" class="n" fill="var(--page)">1</text>
+    <text x="96" y="430" class="t">Читатель</text>
+    <text x="96" y="452" class="s">/modules/&lt;m&gt;/&lt;v&gt;/…</text>
+
+    <circle cx="300" cy="380" r="16" class="stop" stroke="var(--page)"/><text x="300" y="380" class="n" fill="var(--page)">2</text>
+    <text x="276" y="430" class="t">nginx ищет</text>
+    <text x="276" y="452" class="t">в горячем кэше</text>
+    <text x="276" y="474" class="c">try_files $uri $uri/</text>
+    <text x="276" y="492" class="c">@ondemand_render</text>
+    <rect x="216" y="168" width="168" height="62" rx="31" class="card"/>
+    <text x="300" y="196" class="t" text-anchor="middle">Нашёл: отдаёт</text>
+    <text x="300" y="216" class="s" text-anchor="middle">статику с SSI</text>
+
+    <circle cx="480" cy="380" r="16" class="stop" stroke="var(--page)"/><text x="480" y="380" class="n" fill="var(--page)">3</text>
+    <text x="440" y="300" class="t">docs-builder</text>
+    <text x="440" y="322" class="s">версия уже опубликована</text>
+    <text x="440" y="342" class="s">или рендерится?</text>
+
+    <circle cx="660" cy="380" r="16" class="stop" stroke="var(--page)"/><text x="660" y="380" class="n" fill="var(--page)">4</text>
+    <text x="620" y="430" class="t">Список тегов</text>
+    <text x="620" y="452" class="s">есть ли такая версия?</text>
+    <rect x="560" y="168" width="200" height="62" rx="31" class="card"/>
+    <text x="660" y="196" class="t" text-anchor="middle">Нет: страница 404</text>
+    <text x="660" y="216" class="s" text-anchor="middle">ссылка на список модулей</text>
+
+    <circle cx="860" cy="380" r="16" class="stop" stroke="var(--page)"/><text x="860" y="380" class="n" fill="var(--page)">5</text>
+    <text x="820" y="430" class="t">Заглушка 202</text>
+    <text x="820" y="452" class="s">отдаётся сразу,</text>
+    <text x="820" y="472" class="s">дальше всё фоном</text>
+
+    <circle cx="1040" cy="380" r="16" class="stop" stroke="var(--page)"/><text x="1040" y="380" class="n" fill="var(--page)">6</text>
+    <text x="1000" y="430" class="t">Архив в S3</text>
+    <text x="1000" y="452" class="s">под текущий шаблон</text>
+
+    <circle cx="1200" cy="380" r="16" class="stop" stroke="var(--page)"/><text x="1200" y="380" class="n" fill="var(--page)">7</text>
+    <text x="1160" y="430" class="t">Архив в S3</text>
+    <text x="1160" y="452" class="s">под прошлый шаблон:</text>
+    <text x="1160" y="472" class="s">текст тот же, лидер</text>
+    <text x="1160" y="492" class="s">перерисует фоном</text>
+
+    <circle cx="1400" cy="380" r="16" class="stop" stroke="var(--page)"/><text x="1400" y="380" class="n" fill="var(--page)">8</text>
+    <text x="1340" y="430" class="t">Рендер</text>
+    <text x="1340" y="452" class="s">Hugo, из образа</text>
+    <text x="1340" y="472" class="s">модуля в registry</text>
+
+    <circle cx="1400" cy="640" r="16" class="stop" stroke="var(--page)"/><text x="1400" y="640" class="n" fill="var(--page)">9</text>
+    <text x="1340" y="690" class="t">Публикация</text>
+    <text x="1340" y="712" class="t">в горячий кэш</text>
+    <text x="1340" y="734" class="s">после рендера или из S3</text>
+
+    <circle cx="1200" cy="640" r="16" class="stop" stroke="var(--page)"/><text x="1200" y="640" class="n" fill="var(--page)">10</text>
+    <text x="1000" y="690" class="t">Загрузка архива в S3</text>
+    <text x="1000" y="712" class="s">фоном; архив из S3</text>
+    <text x="1000" y="732" class="s">загружается заново,</text>
+    <text x="1000" y="752" class="s">чтобы обновить возраст</text>
+
+    <circle cx="860" cy="640" r="20" stroke="var(--page)" stroke-width="4" style="fill: var(--page)"/><text x="860" y="640" class="n" fill="#fff">11</text>
+    <text x="826" y="634" class="t" text-anchor="end">Страница обновляется</text>
+    <text x="826" y="656" class="s" text-anchor="end">nginx отдаёт её из горячего кэша</text>
+  </g>
+
+  <!-- footnotes -->
+  <g>
+    <rect x="80" y="790" width="440" height="72" rx="14" class="card"/>
+    <text x="104" y="820" class="t">Горячий кэш</text>
+    <text x="104" y="844" class="c">emptyDir /app/ondemand: пишет builder, читает nginx</text>
+    <rect x="550" y="790" width="470" height="72" rx="14" class="card"/>
+    <text x="574" y="820" class="t">Ветки из ModulePullOverride</text>
+    <text x="574" y="844" class="s">только горячий кэш, в S3 не попадают</text>
+    <rect x="1050" y="790" width="470" height="72" rx="14" class="card"/>
+    <text x="1074" y="820" class="t">Ключ архива в S3</text>
+    <text x="1074" y="844" class="c">&lt;prefix&gt;&lt;m&gt;/&lt;v&gt;/&lt;rev&gt;[.ai].tar.gz</text>
+  </g>
+</svg>
+</section>
+
+<!-- 2. Modules list -->
+<section class="slide" id="s2">
+<svg viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg">
+  <text x="80" y="92" class="h1">Список модулей и закреплённые версии</text>
+  <text x="80" y="128" class="lede">Список собирает лидер. Остальные реплики берут targets.json из S3, ветки MPO рендерят сами.</text>
+
+  <!-- lease -->
+  <rect x="80" y="180" width="250" height="96" rx="16" class="card"/>
+  <text x="104" y="212" class="t">Lease</text>
+  <text x="104" y="234" class="c">docs-builder-ondemand-leader</text>
+  <text x="104" y="256" class="s">15 с, продление 10 с, повтор 2 с</text>
+
+  <!-- leader lane -->
+  <text x="80" y="356" class="zone" fill="var(--list)">Лидер</text>
+  <path d="M 150 400 L 1330 400 C 1400 400, 1430 440, 1430 490 L 1430 520" class="line" stroke="var(--list)"/>
+  <!-- follower lane -->
+  <text x="80" y="656" class="zone" fill="var(--list)" opacity="0.75">Остальные реплики</text>
+  <path d="M 960 650 L 1330 650 C 1400 650, 1430 630, 1430 590" class="line" stroke="var(--list)" opacity="0.45"/>
+  <!-- targets.json hand-over -->
+  <path d="M 960 418 L 960 632" class="thin" stroke="var(--list)" stroke-dasharray="3 9"/>
+  <rect x="775" y="600" width="170" height="56" rx="12" fill="var(--s3)"/>
+  <text x="790" y="624" class="c">targets.json</text>
+  <text x="790" y="644" class="s">читается раз в 1 мин</text>
+
+  <!-- terminal: nginx -->
+  <rect x="1345" y="520" width="170" height="70" rx="35" fill="var(--list)"/>
+  <text x="1430" y="551" class="t" text-anchor="middle" style="fill: #fff">nginx отдаёт</text>
+  <text x="1430" y="572" class="s" text-anchor="middle" style="fill: #dff3ef">статичный список</text>
+
+  <g>
+    <circle cx="150" cy="400" r="16" class="stop" stroke="var(--list)"/><text x="150" y="400" class="n" fill="var(--list)">1</text>
+    <text x="120" y="450" class="t">Запуск Pinner</text>
+    <text x="120" y="472" class="s">раз в 15 мин</text>
+
+    <circle cx="330" cy="400" r="16" class="stop" stroke="var(--list)"/><text x="330" y="400" class="n" fill="var(--list)">2</text>
+    <text x="300" y="450" class="t">Список модулей</text>
+    <text x="300" y="472" class="s">кластер: Module,</text>
+    <text x="300" y="490" class="s">ModuleSource, MPO</text>
+    <text x="300" y="508" class="s">сайт: заданные registry</text>
+
+    <circle cx="540" cy="400" r="16" class="stop" stroke="var(--list)"/><text x="540" y="400" class="n" fill="var(--list)">3</text>
+    <text x="500" y="320" class="t">Одна целевая версия</text>
+    <text x="500" y="342" class="s">на модуль, параллельно</text>
+    <rect x="480" y="440" width="275" height="206" rx="16" class="card"/>
+    <text x="500" y="470" class="s">берётся первая подходящая:</text>
+    <text x="500" y="496" class="s">0. источник Embedded: пропуск,</text>
+    <text x="518" y="516" class="s">встроенная документация</text>
+    <text x="500" y="540" class="s">1. тег из ModulePullOverride</text>
+    <text x="500" y="562" class="s">2. установленная версия</text>
+    <text x="500" y="584" class="s">3. самый стабильный канал,</text>
+    <text x="518" y="604" class="s">HEAD и digest</text>
+    <text x="500" y="626" class="s">4. последний тег</text>
+
+    <circle cx="760" cy="400" r="16" class="stop" stroke="var(--list)"/><text x="760" y="400" class="n" fill="var(--list)">4</text>
+    <text x="715" y="320" class="t">Запись всех карточек</text>
+    <text x="715" y="342" class="s">до рендера; описания</text>
+    <text x="715" y="362" class="s">страница дополнит сама</text>
+
+    <circle cx="960" cy="400" r="16" class="stop" stroke="var(--list)"/><text x="960" y="400" class="n" fill="var(--list)">5</text>
+    <text x="920" y="320" class="t">Запись targets.json</text>
+    <text x="920" y="342" class="s">в S3</text>
+
+    <circle cx="1150" cy="400" r="16" class="stop" stroke="var(--list)"/><text x="1150" y="400" class="n" fill="var(--list)">6</text>
+    <text x="1110" y="450" class="t">Рендер целевых версий</text>
+    <text x="1110" y="472" class="s">по одной: релизы,</text>
+    <text x="1110" y="490" class="s">ветки, каналы;</text>
+    <text x="1110" y="508" class="s">список обновляется раз в 10 с</text>
+
+    <circle cx="1330" cy="400" r="16" class="stop" stroke="var(--list)"/><text x="1330" y="400" class="n" fill="var(--list)">7</text>
+    <text x="1270" y="320" class="t">Закрепление, индекс, список</text>
+    <text x="1270" y="342" class="s">и снова targets.json</text>
+
+    <circle cx="1150" cy="650" r="14" class="stop" stroke="var(--list)" opacity="0.8"/>
+    <text x="1060" y="700" class="t">Публикация архивов</text>
+    <text x="1060" y="722" class="s">из S3</text>
+    <circle cx="1330" cy="650" r="14" class="stop" stroke="var(--list)" opacity="0.8"/>
+    <text x="1280" y="700" class="t">Ссылки на каналы,</text>
+    <text x="1280" y="722" class="s">сборка индекса и списка</text>
+  </g>
+
+  <g>
+    <rect x="80" y="770" width="460" height="96" rx="14" class="card"/>
+    <text x="104" y="800" class="t">Без S3</text>
+    <text x="104" y="824" class="s">Lease нет: каждая реплика запускает свой Pinner.</text>
+    <text x="104" y="846" class="s">Читатель закреплён за подом cookie на 24 ч.</text>
+    <rect x="570" y="770" width="460" height="96" rx="14" class="card"/>
+    <text x="594" y="800" class="t">Подстраховка</text>
+    <text x="594" y="824" class="s">реплика запускает Pinner сама,</text>
+    <text x="594" y="846" class="s">если S3 не отвечает 10 мин</text>
+    <rect x="1060" y="770" width="460" height="96" rx="14" class="card"/>
+    <text x="1084" y="800" class="t">Пустые состояния</text>
+    <text x="1084" y="824" class="s">До первого списка: 503, обновление раз в 5 с.</text>
+    <text x="1084" y="846" class="s">Модуль без документации: своя карточка.</text>
+  </g>
+</svg>
+</section>
+
+<!-- 3. Versions dialog and indexes -->
+<section class="slide" id="s3">
+<svg viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg">
+  <text x="80" y="92" class="h1">Окно версий и поисковые индексы</text>
+  <text x="80" y="128" class="lede">Внешние модули читают registry. Встроенные модули есть только на публичном сайте, их загружает CI.</text>
+
+  <!-- external -->
+  <text x="80" y="200" class="zone" fill="var(--versions)">Внешний модуль, кластер и сайт</text>
+  <path d="M 120 250 L 700 250" class="line" stroke="var(--versions)"/>
+  <circle cx="120" cy="250" r="16" class="stop" stroke="var(--versions)"/><text x="120" y="250" class="n" fill="var(--versions)">1</text>
+  <text x="96" y="300" class="t">Окно открывается</text>
+  <text x="96" y="322" class="c">кластер: /api/v2/modules/&lt;m&gt;/versions</text>
+  <text x="96" y="342" class="c">сайт: /modules/.versions/&lt;m&gt;</text>
+  <circle cx="450" cy="250" r="16" class="stop" stroke="var(--versions)"/><text x="450" y="250" class="n" fill="var(--versions)">2</text>
+  <text x="430" y="300" class="t">docs-builder</text>
+  <text x="430" y="322" class="s">список тегов</text>
+  <text x="430" y="342" class="s">из кэша</text>
+  <circle cx="700" cy="250" r="16" class="stop" stroke="var(--versions)"/><text x="700" y="250" class="n" fill="var(--versions)">3</text>
+  <text x="620" y="300" class="t">Registry tags/list</text>
+  <text x="620" y="322" class="s">TTL 30 мин в кластере,</text>
+  <text x="620" y="342" class="s">5 мин на сайте;</text>
+  <text x="620" y="362" class="s">после ошибки повтор</text>
+  <text x="620" y="382" class="s">через 1 мин</text>
+
+  <g transform="translate(0 40)">
+  <!-- embedded -->
+  <text x="80" y="430" class="zone" fill="var(--versions)">Встроенный модуль, только публичный сайт</text>
+  <path d="M 120 480 L 640 480 C 700 480, 720 510, 720 560 L 720 600 C 720 650, 700 680, 640 680 L 410 680" class="line" stroke="var(--versions)" opacity="0.7"/>
+  <circle cx="120" cy="480" r="16" class="stop" stroke="var(--versions)"/><text x="120" y="480" class="n" fill="var(--versions)">1</text>
+  <text x="96" y="530" class="t">Джоба загрузки в CI</text>
+  <text x="96" y="552" class="s">push в release-1.NN или main</text>
+  <circle cx="380" cy="480" r="16" class="stop" stroke="var(--versions)"/><text x="380" y="480" class="n" fill="var(--versions)">2</text>
+  <text x="350" y="530" class="t">Бакет сайта</text>
+  <text x="350" y="552" class="c">&lt;v1.NN|latest&gt;/modules/</text>
+  <text x="350" y="572" class="c">deckhouse-&lt;env&gt;/embedded_modules_list.json</text>
+  <circle cx="640" cy="480" r="16" class="stop" stroke="var(--versions)"/><text x="640" y="480" class="n" fill="var(--versions)">3</text>
+  <text x="600" y="410" class="t">CronJob в 02:00</text>
+  <text x="600" y="432" class="s">и Job при установке</text>
+  <text x="600" y="452" class="s">или обновлении чарта</text>
+  <circle cx="640" cy="680" r="16" class="stop" stroke="var(--versions)"/><text x="640" y="680" class="n" fill="var(--versions)">4</text>
+  <text x="520" y="730" class="t">ConfigMap истории</text>
+  <text x="520" y="752" class="s">изменение перезапускает под</text>
+  <circle cx="410" cy="680" r="16" class="stop" stroke="var(--versions)"/><text x="410" y="680" class="n" fill="var(--versions)">5</text>
+  <text x="300" y="730" class="t">docs-builder</text>
+  <text x="300" y="752" class="c">/modules/.versions/&lt;m&gt;</text>
+  <rect x="80" y="650" width="190" height="60" rx="30" fill="var(--versions)"/>
+  <text x="175" y="686" class="t" text-anchor="middle" style="fill: #fff">Окно версий</text>
+  <path d="M 270 680 L 394 680" class="thin" stroke="var(--versions)"/>
+  <text x="96" y="800" class="s">Страницы: nginx проксирует бакет, proxy_cache 30 мин.</text>
+  <text x="96" y="822" class="s">Кластер: статичная копия в образе web, рендера нет.</text>
+
+  </g>
+
+  <!-- divider -->
+  <line x1="850" y1="190" x2="850" y2="840" stroke="var(--rule)" stroke-width="1.5"/>
+
+  <!-- indexes -->
+  <text x="910" y="200" class="zone" fill="#9a6a00">Индексы поиска и для AI</text>
+  <path d="M 950 260 L 950 690" class="line" stroke="var(--index)"/>
+  <circle cx="950" cy="260" r="16" class="stop" stroke="var(--index)"/><text x="950" y="260" class="n" fill="#9a6a00">1</text>
+  <text x="990" y="254" class="t">Каждая целевая версия даёт свои файлы</text>
+  <text x="990" y="276" class="c">search.json  llms.txt  corpus.json</text>
+  <circle cx="950" cy="400" r="16" class="stop" stroke="var(--index)"/><text x="950" y="400" class="n" fill="#9a6a00">2</text>
+  <text x="990" y="394" class="t">WriteIndex их объединяет</text>
+  <text x="990" y="416" class="s">пересборка только при смене целевых версий</text>
+  <circle cx="950" cy="540" r="16" class="stop" stroke="var(--index)"/><text x="950" y="540" class="n" fill="#9a6a00">3</text>
+  <text x="990" y="534" class="t">Хранятся в горячем кэше</text>
+  <text x="990" y="556" class="c">.index/&lt;lang&gt;/search.json, llms.txt, corpus.json</text>
+  <circle cx="950" cy="690" r="20" stroke="var(--index)" stroke-width="4" style="fill: var(--index)"/><text x="950" y="690" class="n" fill="#fff">4</text>
+  <text x="990" y="684" class="t">nginx их отдаёт</text>
+  <text x="990" y="706" class="c">search-external-modules-index.json</text>
+  <text x="990" y="724" class="c">external-llms.txt  external-corpus.json</text>
+  <rect x="910" y="770" width="610" height="72" rx="14" class="card"/>
+  <text x="934" y="800" class="t">В общий индекс попадают только целевые версии</text>
+  <text x="934" y="824" class="s">У любой версии есть свой search.json, его загружают только её страницы</text>
+</svg>
+</section>
+
+<!-- 4. Storage and background loops -->
+<section class="slide" id="s4">
+<svg viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg">
+  <text x="80" y="92" class="h1">Где хранятся версии и что работает в фоне</text>
+  <text x="80" y="128" class="lede">Два уровня хранения и периодические циклы на одной оси времени.</text>
+
+  <!-- hot -->
+  <rect x="80" y="180" width="680" height="262" rx="22" class="card"/>
+  <circle cx="128" cy="226" r="14" fill="var(--page)"/>
+  <text x="156" y="232" class="t">Горячий кэш, в каждом поде</text>
+  <text x="112" y="272" class="c">emptyDir /app/ondemand: 4Gi кластер, 6Gi сайт</text>
+  <text x="112" y="304" class="s">Версии читателей: LRU сверх 2 ГиБ или после 7 дней без обращений</text>
+  <text x="112" y="330" class="s">Закреплённые версии не вытесняются</text>
+  <text x="112" y="356" class="s">Время обращения берётся из access log nginx (syslog, UDP 5514)</text>
+  <text x="112" y="382" class="c">&lt;m&gt;/&lt;v&gt;/&lt;lang&gt;/, nginx видит через симлинки .site/</text>
+  <text x="112" y="410" class="s">Бюджет закреплённых: объём минус 2 ГиБ, метрика и алерт</text>
+
+  <!-- s3 -->
+  <rect x="840" y="180" width="680" height="262" rx="22" fill="var(--s3)"/>
+  <circle cx="888" cy="226" r="14" fill="var(--list)"/>
+  <text x="916" y="232" class="t">S3, общий для всех реплик</text>
+  <text x="872" y="272" class="s">Режимы кластера: Disabled, System (бакет с токеном STS), External</text>
+  <text x="872" y="298" class="s">Сайт: префикс deckhouse-&lt;env&gt;/modules-ondemand/</text>
+  <text x="872" y="330" class="c">&lt;prefix&gt;&lt;m&gt;/&lt;v&gt;/&lt;rev&gt;[.ai].tar.gz</text>
+  <text x="872" y="352" class="c">&lt;prefix&gt;targets.json</text>
+  <text x="872" y="384" class="s">Квота: раз в час вытеснение с 80% до 60%</text>
+  <text x="872" y="410" class="c">ошибки загрузки: s3_upload_failures_total</text>
+
+  <!-- time axis, log scale: x = 120 + 220 * log10(seconds) -->
+  <text x="80" y="510" class="zone" fill="var(--ink)">Фоновые циклы</text>
+  <line x1="120" y1="640" x2="1520" y2="640" stroke="var(--ink)" stroke-width="2"/>
+  <g class="s">
+    <line x1="274" y1="632" x2="274" y2="648" stroke="var(--ink)" stroke-width="2"/><text x="274" y="672" text-anchor="middle">5 с</text>
+    <line x1="511" y1="632" x2="511" y2="648" stroke="var(--ink)" stroke-width="2"/><text x="511" y="672" text-anchor="middle">1 мин</text>
+    <line x1="731" y1="632" x2="731" y2="648" stroke="var(--ink)" stroke-width="2"/><text x="731" y="672" text-anchor="middle">10 мин</text>
+    <line x1="899" y1="632" x2="899" y2="648" stroke="var(--ink)" stroke-width="2"/><text x="899" y="672" text-anchor="middle">1 ч</text>
+    <line x1="1203" y1="632" x2="1203" y2="648" stroke="var(--ink)" stroke-width="2"/><text x="1203" y="672" text-anchor="middle">24 ч</text>
+  </g>
+
+  <!-- above the axis -->
+  <line x1="274" y1="600" x2="274" y2="632" stroke="var(--list)" stroke-width="2"/>
+  <circle cx="274" cy="590" r="12" fill="var(--list)"/>
+  <text x="294" y="596" class="s">старт реплики, с удвоением</text>
+  <line x1="511" y1="600" x2="511" y2="632" stroke="var(--page)" stroke-width="2"/>
+  <circle cx="511" cy="590" r="12" fill="var(--page)"/>
+  <circle cx="511" cy="556" r="12" fill="var(--list)"/>
+  <text x="532" y="596" class="s">вытеснение из горячего кэша</text>
+  <text x="532" y="562" class="s">реплика читает targets.json</text>
+  <line x1="770" y1="560" x2="770" y2="648" stroke="var(--list)" stroke-width="2"/>
+  <circle cx="770" cy="550" r="14" fill="var(--list)"/>
+  <text x="792" y="557" class="t">Pinner, раз в 15 мин</text>
+  <line x1="1203" y1="600" x2="1203" y2="632" stroke="var(--versions)" stroke-width="2"/>
+  <circle cx="1203" cy="590" r="12" fill="var(--versions)"/>
+  <text x="1224" y="596" class="s">повтор неудавшихся версий</text>
+  <!-- below the axis -->
+  <line x1="731" y1="684" x2="731" y2="706" stroke="var(--list)" stroke-width="2"/>
+  <circle cx="731" cy="716" r="12" fill="var(--list)"/>
+  <text x="710" y="722" class="s" text-anchor="end">повторный проход по старым шаблонам,</text>
+  <text x="710" y="742" class="s" text-anchor="end">после 3 пустых проходов - стоп</text>
+  <text x="710" y="762" class="s" text-anchor="end">реплика берёт на себя Pinner</text>
+  <line x1="899" y1="684" x2="899" y2="706" stroke="var(--index)" stroke-width="2"/>
+  <circle cx="899" cy="716" r="12" fill="var(--index)"/>
+  <text x="920" y="722" class="s">вытеснение из S3, на лидере</text>
+
+  <rect x="80" y="778" width="1440" height="104" rx="14" class="card"/>
+  <text x="104" y="814" class="t">При старте</text>
+  <text x="104" y="840" class="s">Кэш загружается с диска, затем читается targets.json. Под становится ready после восстановления из S3, не дольше 5 мин.</text>
+  <text x="104" y="866" class="s">Лидер сразу ставит в очередь архивы под прошлый шаблон и перерисовывает их по одному.</text>
+</svg>
+</section>
+
+<!-- 5. Pinned versions and the cache volume -->
+<section class="slide" id="s5">
+<svg viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg">
+  <text x="80" y="92" class="h1">Какие версии закреплены и сколько им места</text>
+  <text x="80" y="128" class="lede">Закреплённые версии не вытесняются. Остальная часть тома - версии, которые открывают читатели.</text>
+
+  <!-- cluster -->
+  <text x="80" y="200" class="zone" fill="var(--list)">Кластер: на модуль одна цель</text>
+  <path d="M 250 354 C 290 354, 290 282, 330 282" class="thin" stroke="var(--list)"/>
+  <path d="M 250 354 L 330 372" class="thin" stroke="#9aa8b6" stroke-dasharray="3 8"/>
+  <path d="M 250 354 C 290 354, 290 462, 330 462" class="thin" stroke="var(--list)" stroke-dasharray="3 8"/>
+  <rect x="100" y="326" width="150" height="56" rx="28" fill="var(--list)"/>
+  <text x="175" y="360" class="t" text-anchor="middle" style="fill: #fff">console</text>
+  <rect x="330" y="250" width="400" height="64" rx="14" fill="var(--card)" stroke="var(--rule)" stroke-width="1.5"/>
+    <text x="350" y="277" class="t">Цель: v1.70.5</text>
+    <text x="350" y="299" class="s">установленная, с файлами поиска и AI</text>
+  <rect x="330" y="340" width="400" height="64" rx="14" fill="none" stroke="#9aa8b6" stroke-width="1.5" stroke-dasharray="4 6"/>
+    <text x="350" y="367" class="t">Ожидающий релиз: v1.71.0</text>
+    <text x="350" y="389" class="s">собран заранее, но не закреплён: вытесняется</text>
+  <rect x="330" y="430" width="400" height="64" rx="14" fill="var(--card)" stroke="var(--rule)" stroke-width="1.5"/>
+    <text x="350" y="457" class="t">Прежняя цель</text>
+    <text x="350" y="479" class="s">держится, пока новая не опубликована</text>
+
+  <line x1="800" y1="190" x2="800" y2="540" stroke="var(--rule)" stroke-width="1.5"/>
+
+  <!-- site -->
+  <text x="840" y="200" class="zone" fill="var(--list)">Публичный сайт: 5 каналов, на диске только разные версии</text>
+  <path d="M 990 257 C 1060 257, 1060 282, 1130 282" class="thin" stroke="var(--list)"/>
+  <path d="M 990 307 C 1060 307, 1060 282, 1130 282" class="thin" stroke="var(--list)"/>
+  <path d="M 990 357 L 1130 372" class="thin" stroke="var(--list)"/>
+  <path d="M 990 407 C 1060 407, 1060 462, 1130 462" class="thin" stroke="var(--list)"/>
+  <path d="M 990 457 L 1130 462" class="thin" stroke="var(--list)"/>
+  <rect x="860" y="240" width="130" height="34" rx="17" fill="var(--s3)"/>
+    <text x="925" y="262" class="s" text-anchor="middle" style="fill: var(--ink)">alpha</text>
+  <rect x="860" y="290" width="130" height="34" rx="17" fill="var(--s3)"/>
+    <text x="925" y="312" class="s" text-anchor="middle" style="fill: var(--ink)">beta</text>
+  <rect x="860" y="340" width="130" height="34" rx="17" fill="var(--s3)"/>
+    <text x="925" y="362" class="s" text-anchor="middle" style="fill: var(--ink)">early-access</text>
+  <rect x="860" y="390" width="130" height="34" rx="17" fill="var(--s3)"/>
+    <text x="925" y="412" class="s" text-anchor="middle" style="fill: var(--ink)">stable</text>
+  <rect x="860" y="440" width="130" height="34" rx="17" fill="var(--s3)"/>
+    <text x="925" y="462" class="s" text-anchor="middle" style="fill: var(--ink)">rock-solid</text>
+  <rect x="1130" y="250" width="390" height="64" rx="14" fill="var(--card)" stroke="var(--rule)" stroke-width="1.5"/>
+    <text x="1150" y="277" class="t">v1.72.0</text>
+    <text x="1150" y="299" class="s">версия канала, без файлов поиска</text>
+  <rect x="1130" y="340" width="390" height="64" rx="14" fill="var(--card)" stroke="var(--rule)" stroke-width="1.5"/>
+    <text x="1150" y="367" class="t">v1.71.1</text>
+    <text x="1150" y="389" class="s">версия канала, без файлов поиска</text>
+  <rect x="1130" y="430" width="390" height="64" rx="14" fill="var(--card)" stroke="var(--list)" stroke-width="1.5"/>
+    <text x="1150" y="457" class="t">v1.70.5 - цель модуля</text>
+    <text x="1150" y="479" class="s">самый стабильный канал, с поиском и AI</text>
+  <text x="860" y="530" class="s">Канал - ссылка на каталог версии: 5 каналов дали здесь 3 копии.</text>
+
+  <!-- volume bars: 200 px per GiB from x=300 -->
+  <text x="80" y="600" class="zone" fill="var(--ink)">Том кэша пода</text>
+  <text x="80" y="660" class="t">Кластер, 4 ГиБ</text>
+  <rect x="300" y="632" width="400" height="44" rx="10" fill="var(--page)"/>
+  <rect x="704" y="632" width="400" height="44" rx="10" fill="var(--list)"/>
+  <rect x="704" y="632" width="50" height="44" rx="10" fill="#0a5148"/>
+  <text x="316" y="660" class="s" style="fill: #fff">Читатели: 2 ГиБ, ~1500 по 1,3 МБ</text>
+  <text x="770" y="660" class="s" style="fill: #fff">Закреплённые: 2 ГиБ, ~600 по 3,5 МБ</text>
+  <text x="704" y="700" class="s">занято 254 МБ</text>
+
+  <text x="80" y="760" class="t">Сайт, 6 ГиБ</text>
+  <rect x="300" y="732" width="400" height="44" rx="10" fill="var(--page)"/>
+  <rect x="704" y="732" width="800" height="44" rx="10" fill="var(--list)"/>
+  <text x="316" y="760" class="s" style="fill: #fff">Читатели: 2 ГиБ, ~1500 по 1,3 МБ</text>
+  <text x="720" y="760" class="s" style="fill: #fff">Закреплённые: 4 ГиБ; цели по 3,5 МБ, версии каналов по 1,3 МБ</text>
+
+  <text x="80" y="840" class="s">Общие индексы поиска и AI лежат в доле закреплённых: около 80 МБ на 118 модулей.</text>
+  <text x="80" y="862" class="s">Замер на dev-cluster 2026-11-04, на сайте объём не замерялся. Если закреплённые не помещаются, срабатывает алерт.</text>
+</svg>
+</section>
+
+<script>
+  var n = new URLSearchParams(location.search).get('slide');
+  var s = n && document.getElementById('s' + n);
+  if (s) { document.body.classList.add('one'); s.classList.add('on'); }
+</script>
+</body>
+</html>

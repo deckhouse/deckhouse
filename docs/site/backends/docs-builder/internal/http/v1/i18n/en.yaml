@@ -1,0 +1,36 @@
+# Texts of the on-demand documentation pages. {module} and {version} are
+# replaced with the module name and version.
+placeholder:
+  docs: "Module documentation"
+  preparing: "Preparing the documentation of this version. It usually takes a few seconds; the page opens by itself."
+  queued: "Waiting in the queue"
+  download: "Downloading the documentation from the registry"
+  render: "Building the pages"
+  notFound: "Version {version} of the {module} module is not found or has no documentation."
+  noPage: "Version {version} has no such page."
+  failed: "Could not prepare the documentation of this version."
+  retry: "You can try again in a minute: reload the page."
+  retryIn: "Trying again in ### s."
+  reasons:
+    timeout: "Preparing took too long."
+    registry: "The documentation could not be downloaded from the registry."
+    build: "The pages could not be built."
+    busy: "Too many versions are being prepared right now."
+  currentVersion: "Open the documentation of the current module version"
+  versionStart: "Open the first page of version {version}"
+  toList: "Open the list of modules"
+versions:
+  title: "Module versions"
+  intro: "The documentation of a version is prepared when it is opened for the first time; it takes a few seconds."
+  ready: "opens at once"
+  empty: "No published versions found."
+  notFound: "The {module} module is not published in a registry: its documentation exists for the current version only."
+  failed: "Could not get the list of versions from the registry. Reload the page later."
+  current: "Documentation of the current module version"
+modulesList:
+  title: "Modules"
+  preparing: "The list of modules is being prepared. The page opens by itself in a few seconds."
+  branch: "The documentation of branch ### is being prepared. The page opens by itself in a minute or so."
+  module: "The documentation of the module is being prepared. The page opens by itself once its version is published."
+  noDocs: "The published versions of the module have no documentation."
+  toList: "Open the list of modules"

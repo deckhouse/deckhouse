@@ -14,6 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Renders the documentation of a module repository with Hugo once, into
+# OUTPUT_DIR. Called by tools/docs/check-external-module.sh.
+#
+# For a live preview on the local portal run
+# `make docs-external-module MODULE_PATH=/path/to/module` instead.
+
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -23,13 +29,11 @@ OUTPUT_DIR="${OUTPUT_DIR:-${TEMPLATE_DIR}/public}"
 MODULE_PATH="${MODULE_PATH:-}"
 CHANNEL="${CHANNEL:-alpha}"
 MODULE_VERSION="${MODULE_VERSION:-v0.1.0}"
-HUGO_IMAGE="${HUGO_IMAGE:-ghcr.io/gohugoio/hugo:v0.168.0}"
-MODE="${MODE:-build}"
-POLL_INTERVAL="${POLL_INTERVAL:-700ms}"
+HUGO_IMAGE="${HUGO_IMAGE:-ghcr.io/gohugoio/hugo:v0.169.0}"
 
 if [[ -z "${MODULE_PATH}" ]]; then
   echo "MODULE_PATH is required." >&2
-  echo "Example: make docs-external-module MODULE_PATH=/path/to/module" >&2
+  echo "Example: MODULE_PATH=/path/to/module tools/docs/external-module-docs.sh" >&2
   exit 1
 fi
 
@@ -59,11 +63,6 @@ fi
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "docker is required and was not found in PATH." >&2
-  exit 1
-fi
-
-if [[ "${MODE}" != "build" && "${MODE}" != "serve" ]]; then
-  echo "Unsupported MODE: ${MODE}. Expected: build or serve." >&2
   exit 1
 fi
 
@@ -122,144 +121,79 @@ echo "  version: ${MODULE_VERSION}"
 echo "  source:  ${MODULE_PATH}"
 echo "  output:  ${OUTPUT_DIR}"
 echo "  image:   ${HUGO_IMAGE}"
-echo "  mode:    ${MODE}"
 
-if [[ "${MODE}" == "serve" ]]; then
-  docker_args=(
-    run --rm
-    --user "$(id -u):$(id -g)"
-    --volume "${OUTPUT_DIR}:/out"
-    --volume "${TEMPLATE_DIR}/config:/src/config:ro"
-    --volume "${TEMPLATE_DIR}/i18n:/src/i18n:ro"
-    --volume "${TEMPLATE_DIR}/layouts:/src/layouts:ro"
-    --volume "${TEMPLATE_DIR}/data/dkp:/src/data/dkp:ro"
-    --volume "${TEMPLATE_DIR}/data/channels.yaml:/src/data/channels.yaml:ro"
-    --volume "${TEMPLATE_DIR}/data/helpers.yaml:/src/data/helpers.yaml:ro"
-    --volume "${TEMPLATE_DIR}/data/modules_all.json:/src/data/modules_all.json:ro"
-    --volume "${TMP_DIR}/data/modules/channels.yaml:/src/data/modules/channels.yaml:ro"
-    --volume "${TEMPLATE_DIR}/content/modules/_index.md:/src/content/modules/_index.md:ro"
-    --volume "${TEMPLATE_DIR}/content/modules/_index.ru.md:/src/content/modules/_index.ru.md:ro"
-    --volume "${TEMPLATE_DIR}/content/search:/src/content/search:ro"
-    --volume "${MODULE_PATH}/docs:/src/content/modules/${MODULE_NAME}/${CHANNEL}:ro"
-    --volume "${MODULE_PATH}/module.yaml:/src/data/modules/${MODULE_NAME}/${CHANNEL}/module.yaml:ro"
-  )
+mkdir -p \
+  "${TMP_DIR}/content/modules/${MODULE_NAME}/${CHANNEL}" \
+  "${TMP_DIR}/content/search" \
+  "${TMP_DIR}/data/modules/${MODULE_NAME}/${CHANNEL}"
 
-  if [[ -f "${MODULE_PATH}/oss.yaml" ]]; then
-    docker_args+=(--volume "${MODULE_PATH}/oss.yaml:/src/data/modules/${MODULE_NAME}/${CHANNEL}/oss.yaml:ro")
-  fi
+cp -R "${TEMPLATE_DIR}/config" "${TMP_DIR}/config"
+cp -R "${TEMPLATE_DIR}/i18n" "${TMP_DIR}/i18n"
+cp -R "${TEMPLATE_DIR}/layouts" "${TMP_DIR}/layouts"
+cp "${TEMPLATE_DIR}/data/channels.yaml" "${TMP_DIR}/data/channels.yaml"
+cp "${TEMPLATE_DIR}/data/helpers.yaml" "${TMP_DIR}/data/helpers.yaml"
+cp "${TEMPLATE_DIR}/data/modules_all.json" "${TMP_DIR}/data/modules_all.json"
+cp -R "${TEMPLATE_DIR}/data/dkp" "${TMP_DIR}/data/dkp"
+cp "${TEMPLATE_DIR}/content/modules/_index.md" "${TMP_DIR}/content/modules/_index.md"
+cp "${TEMPLATE_DIR}/content/modules/_index.ru.md" "${TMP_DIR}/content/modules/_index.ru.md"
+cp "${TEMPLATE_DIR}/content/search/search.md" "${TMP_DIR}/content/search/search.md"
+cp "${TEMPLATE_DIR}/content/search/search.ru.md" "${TMP_DIR}/content/search/search.ru.md"
 
-  if [[ -f "${MODULE_PATH}/openapi/config-values.yaml" ]]; then
-    docker_args+=(--volume "${MODULE_PATH}/openapi/config-values.yaml:/src/data/modules/${MODULE_NAME}/${CHANNEL}/openapi/config-values.yaml:ro")
-  fi
+cp -R "${MODULE_PATH}/docs/." "${TMP_DIR}/content/modules/${MODULE_NAME}/${CHANNEL}/"
+cp "${MODULE_PATH}/module.yaml" "${TMP_DIR}/data/modules/${MODULE_NAME}/${CHANNEL}/module.yaml"
 
-  if [[ -f "${MODULE_PATH}/openapi/doc-ru-config-values.yaml" ]]; then
-    docker_args+=(--volume "${MODULE_PATH}/openapi/doc-ru-config-values.yaml:/src/data/modules/${MODULE_NAME}/${CHANNEL}/openapi/doc-ru-config-values.yaml:ro")
-  fi
+if [[ -f "${MODULE_PATH}/oss.yaml" ]]; then
+  cp "${MODULE_PATH}/oss.yaml" "${TMP_DIR}/data/modules/${MODULE_NAME}/${CHANNEL}/oss.yaml"
+fi
 
-  if [[ -d "${MODULE_PATH}/crds" ]]; then
-    shopt -s nullglob
-    root_crds=("${MODULE_PATH}"/crds/*.yaml "${MODULE_PATH}"/crds/*.yml)
-    shopt -u nullglob
+if [[ -f "${MODULE_PATH}/openapi/config-values.yaml" || -f "${MODULE_PATH}/openapi/doc-ru-config-values.yaml" ]]; then
+  mkdir -p "${TMP_DIR}/data/modules/${MODULE_NAME}/${CHANNEL}/openapi"
+fi
 
-    for crd in "${root_crds[@]}"; do
-      docker_args+=(--volume "${crd}:/src/data/modules/${MODULE_NAME}/${CHANNEL}/crds/$(basename "${crd}"):ro")
-    done
-  fi
+if [[ -f "${MODULE_PATH}/openapi/config-values.yaml" ]]; then
+  cp "${MODULE_PATH}/openapi/config-values.yaml" "${TMP_DIR}/data/modules/${MODULE_NAME}/${CHANNEL}/openapi/config-values.yaml"
+fi
 
-  docker_args+=(
-    --workdir /src
-    --entrypoint hugo
-    "${HUGO_IMAGE}"
-    server
-    --noBuildLock
-    --source /src
-    --destination /out
-    --environment production
-    --bind 0.0.0.0
-    --disableFastRender
-    --forceSyncStatic
-    --ignoreCache
-    --renderStaticToDisk
-    --disableLiveReload
-    --poll "${POLL_INTERVAL}"
-  )
+if [[ -f "${MODULE_PATH}/openapi/doc-ru-config-values.yaml" ]]; then
+  cp "${MODULE_PATH}/openapi/doc-ru-config-values.yaml" "${TMP_DIR}/data/modules/${MODULE_NAME}/${CHANNEL}/openapi/doc-ru-config-values.yaml"
+fi
 
-  docker "${docker_args[@]}"
-else
-  mkdir -p \
-    "${TMP_DIR}/content/modules/${MODULE_NAME}/${CHANNEL}" \
-    "${TMP_DIR}/content/search" \
-    "${TMP_DIR}/data/modules/${MODULE_NAME}/${CHANNEL}"
+if [[ -d "${MODULE_PATH}/crds" ]]; then
+  shopt -s nullglob
+  root_crds=("${MODULE_PATH}"/crds/*.yaml "${MODULE_PATH}"/crds/*.yml)
+  shopt -u nullglob
 
-  cp -R "${TEMPLATE_DIR}/config" "${TMP_DIR}/config"
-  cp -R "${TEMPLATE_DIR}/i18n" "${TMP_DIR}/i18n"
-  cp -R "${TEMPLATE_DIR}/layouts" "${TMP_DIR}/layouts"
-  cp "${TEMPLATE_DIR}/data/channels.yaml" "${TMP_DIR}/data/channels.yaml"
-  cp "${TEMPLATE_DIR}/data/helpers.yaml" "${TMP_DIR}/data/helpers.yaml"
-  cp "${TEMPLATE_DIR}/data/modules_all.json" "${TMP_DIR}/data/modules_all.json"
-  cp -R "${TEMPLATE_DIR}/data/dkp" "${TMP_DIR}/data/dkp"
-  cp "${TEMPLATE_DIR}/content/modules/_index.md" "${TMP_DIR}/content/modules/_index.md"
-  cp "${TEMPLATE_DIR}/content/modules/_index.ru.md" "${TMP_DIR}/content/modules/_index.ru.md"
-  cp "${TEMPLATE_DIR}/content/search/search.md" "${TMP_DIR}/content/search/search.md"
-  cp "${TEMPLATE_DIR}/content/search/search.ru.md" "${TMP_DIR}/content/search/search.ru.md"
-
-  cp -R "${MODULE_PATH}/docs/." "${TMP_DIR}/content/modules/${MODULE_NAME}/${CHANNEL}/"
-  cp "${MODULE_PATH}/module.yaml" "${TMP_DIR}/data/modules/${MODULE_NAME}/${CHANNEL}/module.yaml"
-
-  if [[ -f "${MODULE_PATH}/oss.yaml" ]]; then
-    cp "${MODULE_PATH}/oss.yaml" "${TMP_DIR}/data/modules/${MODULE_NAME}/${CHANNEL}/oss.yaml"
-  fi
-
-  if [[ -f "${MODULE_PATH}/openapi/config-values.yaml" || -f "${MODULE_PATH}/openapi/doc-ru-config-values.yaml" ]]; then
-    mkdir -p "${TMP_DIR}/data/modules/${MODULE_NAME}/${CHANNEL}/openapi"
-  fi
-
-  if [[ -f "${MODULE_PATH}/openapi/config-values.yaml" ]]; then
-    cp "${MODULE_PATH}/openapi/config-values.yaml" "${TMP_DIR}/data/modules/${MODULE_NAME}/${CHANNEL}/openapi/config-values.yaml"
-  fi
-
-  if [[ -f "${MODULE_PATH}/openapi/doc-ru-config-values.yaml" ]]; then
-    cp "${MODULE_PATH}/openapi/doc-ru-config-values.yaml" "${TMP_DIR}/data/modules/${MODULE_NAME}/${CHANNEL}/openapi/doc-ru-config-values.yaml"
-  fi
-
-  if [[ -d "${MODULE_PATH}/crds" ]]; then
-    shopt -s nullglob
-    root_crds=("${MODULE_PATH}"/crds/*.yaml "${MODULE_PATH}"/crds/*.yml)
-    shopt -u nullglob
-
-    if (( ${#root_crds[@]} > 0 )); then
-      mkdir -p "${TMP_DIR}/data/modules/${MODULE_NAME}/${CHANNEL}/crds"
-      cp "${root_crds[@]}" "${TMP_DIR}/data/modules/${MODULE_NAME}/${CHANNEL}/crds/"
-    fi
-  fi
-
-  docker run --rm \
-    --user "$(id -u):$(id -g)" \
-    --volume "${TMP_DIR}:/src" \
-    --volume "${OUTPUT_DIR}:/out" \
-    --workdir /src \
-    --entrypoint hugo \
-    "${HUGO_IMAGE}" \
-    --noBuildLock \
-    --source /src \
-    --destination /out \
-    --environment production
-
-  missing_pages=()
-  for lang in en ru; do
-    page="${OUTPUT_DIR}/${lang}/modules/${MODULE_NAME}/${CHANNEL}/readme.html"
-    if [[ ! -s "${page}" ]]; then
-      missing_pages+=("${page}")
-    fi
-  done
-
-  if (( ${#missing_pages[@]} > 0 )); then
-    echo "Hugo build did not produce the expected rendered pages:" >&2
-    for page in "${missing_pages[@]}"; do
-      echo "  ${page}" >&2
-    done
-    exit 1
+  if (( ${#root_crds[@]} > 0 )); then
+    mkdir -p "${TMP_DIR}/data/modules/${MODULE_NAME}/${CHANNEL}/crds"
+    cp "${root_crds[@]}" "${TMP_DIR}/data/modules/${MODULE_NAME}/${CHANNEL}/crds/"
   fi
 fi
 
+docker run --rm \
+  --user "$(id -u):$(id -g)" \
+  --volume "${TMP_DIR}:/src" \
+  --volume "${OUTPUT_DIR}:/out" \
+  --workdir /src \
+  --entrypoint hugo \
+  "${HUGO_IMAGE}" \
+  --noBuildLock \
+  --source /src \
+  --destination /out \
+  --environment production
+
+missing_pages=()
+for lang in en ru; do
+  page="${OUTPUT_DIR}/${lang}/modules/${MODULE_NAME}/${CHANNEL}/readme.html"
+  if [[ ! -s "${page}" ]]; then
+    missing_pages+=("${page}")
+  fi
+done
+
+if (( ${#missing_pages[@]} > 0 )); then
+  echo "Hugo build did not produce the expected rendered pages:" >&2
+  for page in "${missing_pages[@]}"; do
+    echo "  ${page}" >&2
+  done
+  exit 1
+fi
 echo "External module documentation is available in ${OUTPUT_DIR}"

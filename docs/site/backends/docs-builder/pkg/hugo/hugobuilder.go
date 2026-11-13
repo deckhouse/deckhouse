@@ -38,10 +38,6 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-// TODO: refactor hugo build to one structure
-// mutex for entire hugo
-var mu sync.Mutex
-
 type hugoBuilder struct {
 	c *command
 
@@ -108,9 +104,6 @@ func (b *hugoBuilder) buildSites(ctx context.Context) error {
 		return fmt.Errorf("hugo: %w", err)
 	}
 
-	mu.Lock()
-	defer mu.Unlock()
-
 	// Last cancellation checkpoint before the heavy render. hugo's
 	// HugoSites.Build takes no context (v0.168.0 builds under an internal
 	// context.Background), so once this call starts it runs to completion;
@@ -119,8 +112,9 @@ func (b *hugoBuilder) buildSites(ctx context.Context) error {
 		return err
 	}
 
-	// NoBuildLock is true to prevent hugo creating lock file
-	// we use mutex to lock the entire hugo build
+	// No lock file of hugo and no lock here: every build gets a site
+	// directory of its own (a temporary one of the on-demand store), so two
+	// never share one.
 	err = h.Build(hugolib.BuildCfg{NoBuildLock: true})
 	if err != nil {
 		return fmt.Errorf("build: %w", err)

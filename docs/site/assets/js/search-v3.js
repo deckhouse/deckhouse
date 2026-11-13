@@ -73,6 +73,10 @@ class ModuleSearch {
       api: this.pageSize,
       document: this.pageSize
     };
+    // The tab of the results the user opened, and the tab that is shown: the
+    // default one until the user opens a tab, see resultScopes().
+    this.chosenScope = '';
+    this.activeScope = '';
     this.isDataLoaded = false;
     this.isLoadingInBackground = false;
     this.searchIndexLoadPromise = null; // Shared by concurrent loadSearchIndex() callers
@@ -143,7 +147,10 @@ class ModuleSearch {
         error: 'An error occurred during search.',
         showMorePattern: 'Show {count} more',
         showMoreRemainingPattern: 'Show {count} more ({remaining} left)',
-        modulesMore: '... and +{count} more'
+        modulesMore: '... and +{count} more',
+        platform: 'Deckhouse Platform',
+        all: 'All',
+        nothingFound: 'nothing found'
       },
       ru: {
         api: 'API',
@@ -156,7 +163,10 @@ class ModuleSearch {
         error: 'An error occurred during search.',
         showMorePattern: 'Показать еще {count}',
         showMoreRemainingPattern: 'Показать еще {count} (осталось {remaining})',
-        modulesMore: '... и ещё {count}'
+        modulesMore: '... и ещё {count}',
+        platform: 'Deckhouse Platform',
+        all: 'Все',
+        nothingFound: 'ничего не найдено'
       }
     };
 
@@ -832,6 +842,11 @@ class ModuleSearch {
         const showMoreButton = e.target.closest('.tile__pagination');
         if (showMoreButton) {
           this.loadMore(showMoreButton.dataset.groupType);
+        }
+
+        const tab = e.target.closest('.results-tab');
+        if (tab && tab.getAttribute('aria-disabled') !== 'true') {
+          this.openScope(tab.dataset.scope);
         }
       }
     });
@@ -1855,7 +1870,7 @@ class ModuleSearch {
       }
 
       // Store current results and display them
-      this.currentResults = this.groupResults(boostedResults);
+      this.currentResults = this.groupResults(boostedResults.filter(result => this.inScope(result)));
       this.currentHighlightQuery = highlightQuery; // Store the query to use for highlighting
       this.currentHighlightTerms = Array.from(new Set(highlightTerms.filter(Boolean)));
       this.displayResults();
@@ -1949,42 +1964,219 @@ class ModuleSearch {
       ? this.currentHighlightTerms
       : [this.currentHighlightQuery || this.lastQuery];
 
-    // Display Modules as a row at the top
-    if (this.currentResults.modules.length > 0) {
-      resultsHtml += this.renderModulesRow(this.currentResults.modules, highlightTerms);
-    }
-
     // The four API subgroups are a single list for the user: they share one header,
     // so they are concatenated in priority order and paginated by one counter.
     // Rendering them separately would put up to four "show more" buttons in the
     // block, each extending its own subgroup somewhere in the middle of the list.
-    const apiResults = [
+    let apiResults = [
       ...this.currentResults.isResourceNameMatch,
       ...this.currentResults.nameMatch,
       ...this.currentResults.isResourceOther,
       ...this.currentResults.parameterOther
     ];
+    let documentResults = this.currentResults.document;
+    let moduleResults = this.currentResults.modules;
 
-    if (apiResults.length > 0) {
-      resultsHtml += `
-        <div class="results-group">
-          <div class="results-group-header">${this.t('api')}</div>
-          ${this.renderResultGroup(apiResults, highlightTerms, 'api')}
-        </div>
-      `;
-    }
+    // The results are one list under a row of tabs, the same on every page:
+    // a tab per scope with the number of its results, then everything. A tab
+    // filters the list; a scope with nothing found stays in the row, disabled,
+    // so that the row tells where the search went and what it gave.
+    const scopes = this.resultScopes().map(scope => ({
+      ...scope,
+      count: [moduleResults, apiResults, documentResults]
+        .reduce((sum, results) => sum + results.filter(result => this.isInScope(result, scope.name)).length, 0)
+    }));
+    // The tab the user opened, else the default one, else the first with
+    // results. The choice of the user is kept apart: a tab shown instead of
+    // an empty one must not replace it for the next query.
+    const withResults = scopes.filter(scope => scope.count > 0);
+    const active = withResults.find(scope => scope.name === this.chosenScope)
+      || withResults.find(scope => scope.default)
+      || withResults[0]
+      || scopes[0];
+    this.activeScope = active.name;
 
-    // Display documentation results (only from documents array)
-    if (this.currentResults.document.length > 0) {
-      resultsHtml += `
-        <div class="results-group">
-          <div class="results-group-header">${this.t('documentation')}</div>
-          ${this.renderResultGroup(this.currentResults.document, highlightTerms, 'document')}
-        </div>
-      `;
+    // On a page of a module what is found in the module goes first.
+    const order = results => {
+      const filtered = results.filter(result => this.isInScope(result, active.name));
+      if (active.name !== 'all' || this.currentModule() === '') {
+        return filtered;
+      }
+      return [
+        ...filtered.filter(result => this.resultScope(result) === 'module'),
+        ...filtered.filter(result => this.resultScope(result) !== 'module')
+      ];
+    };
+    apiResults = order(apiResults);
+    documentResults = order(documentResults);
+    moduleResults = order(moduleResults);
+
+    resultsHtml += this.renderTabs(scopes, active.name);
+    if (moduleResults.length > 0) {
+      resultsHtml += this.renderModulesRow(moduleResults, highlightTerms);
     }
+    resultsHtml += this.renderGroup(apiResults, this.t('api'), 'api', highlightTerms);
+    // The documentation of one product has neither scopes nor API results:
+    // its only group needs no header.
+    const documentHeader = scopes.length < 2 && apiResults.length === 0 ? '' : this.t('documentation');
+    resultsHtml += this.renderGroup(documentResults, documentHeader, 'document', highlightTerms);
 
     this.searchResults.innerHTML = resultsHtml;
+  }
+
+  // The tabs of the results: the platform, the module or the modules, then
+  // everything. On a page of a module the scopes are the platform and the
+  // module, and the tab of the module is open by default. Elsewhere they are
+  // the platform and the modules, when the indexes of the modules are
+  // searched: the tab of the modules is open by default on the list of
+  // modules, the tab of the platform on the other pages. A search in the
+  // documentation of one product has no scopes to tell apart.
+  resultScopes() {
+    const all = { name: 'all', title: this.t('all') };
+    const platform = { name: 'platform', title: this.t('platform') };
+    const module = this.currentModule();
+    if (module !== '') {
+      const version = this.currentModuleVersion();
+      return [
+        platform,
+        {
+          name: 'module',
+          title: version ? `${module} <span class="results-tab-version">${version}</span>` : module,
+          default: true
+        },
+        all
+      ];
+    }
+    if (/\/modules\//.test(this.options.searchIndexPath || '')) {
+      // The list of modules: /modules/ on the site, /<lang>/modules/ in a cluster.
+      const onModulesList = /^(?:\/(?:ru|en))?\/modules\/?$/.test(window.location.pathname);
+
+      return [
+        { ...platform, default: !onModulesList },
+        { name: 'modules', title: this.t('modules'), default: onModulesList },
+        all
+      ];
+    }
+
+    return [all];
+  }
+
+  // The scope of a result: 'module' for the module of the page, 'modules' for
+  // any module on a page that is not of a module, 'platform' for the rest.
+  resultScope(result) {
+    const module = this.currentModule();
+    const doc = this.resultDoc(result);
+    if (module !== '') {
+      return result._isModulePage || (doc || {}).module === module ? 'module' : 'platform';
+    }
+
+    return result._isModulePage || /\/modules\//.test((doc || {})._indexSource || '') ? 'modules' : 'platform';
+  }
+
+  isInScope(result, scope) {
+    return scope === 'all' || this.resultScope(result) === scope;
+  }
+
+  // The row of tabs; nothing when there are no scopes to choose from, as in
+  // the documentation of one product: a lone "All" tab filters nothing.
+  renderTabs(scopes, activeName) {
+    if (scopes.length < 2) {
+      return '';
+    }
+
+    const tabs = scopes.map(scope => {
+      const active = scope.name === activeName ? ' results-tab--active' : '';
+      // Not the disabled attribute: a disabled button gets no mouse events,
+      // so a click on it would take the focus from the search field and
+      // close the dropdown.
+      const disabled = scope.count === 0 ? ' aria-disabled="true"' : '';
+
+      return `<button type="button" class="results-tab${active}" data-scope="${scope.name}"${disabled}>${scope.title} <span class="results-tab-count">(${scope.count === 0 ? this.t('nothingFound') : scope.count})</span></button>`;
+    }).join('');
+
+    return `<div class="results-tabs">${tabs}</div>`;
+  }
+
+  // Opens a tab of the results: the list starts over, from its top.
+  openScope(name) {
+    this.chosenScope = name;
+    this.resetPagination();
+    this.displayResults();
+    this.searchResults.scrollTop = 0;
+  }
+
+  // A group of results under a header, with its own "show more" counter;
+  // nothing for no results, no header for an empty one.
+  renderGroup(results, header, groupType, highlightTerms) {
+    if (results.length === 0) {
+      return '';
+    }
+
+    return `
+      <div class="results-group">
+        ${header ? `<div class="results-group-header">${header}</div>` : ''}
+        ${this.renderResultGroup(results, highlightTerms, groupType)}
+      </div>
+    `;
+  }
+
+  // The module of the page the search is opened on, from its address:
+  // /modules/<module>/ on the site, /<lang>/modules/<module>/ in a cluster.
+  // Empty elsewhere, the list of modules included.
+  currentModule() {
+    const match = window.location.pathname.match(/^(?:\/(?:ru|en))?\/modules\/([a-z0-9-]+)\//);
+
+    return match ? match[1] : '';
+  }
+
+  // The version of the module the page shows, from the configuration of its
+  // version menu (module-version-badge.html of docs-builder-template); empty
+  // on a page without one, e.g. an embedded module or an older page.
+  currentModuleVersion() {
+    const config = document.querySelector('[data-vmenu-config]');
+    if (!config) {
+      return '';
+    }
+    try {
+      const version = JSON.parse(config.textContent).version || '';
+      return /^v\d/.test(version) ? version : '';
+    } catch (error) {
+      return '';
+    }
+  }
+
+  // Whether the result is in the scope of the page: on a page of a module,
+  // that module and the documentation of the platform, not the other
+  // modules. The indexes of the modules are served under /modules/; the
+  // documentation of the platform is kept whatever its index calls the
+  // module of a parameter ("global"). Elsewhere every result is in scope.
+  inScope(result) {
+    const module = this.currentModule();
+    if (module === '') {
+      return true;
+    }
+    if (result._isModulePage) {
+      return result._moduleName === module;
+    }
+    const doc = this.resultDoc(result);
+    if (!doc || !/\/modules\//.test(doc._indexSource || '')) {
+      return true;
+    }
+
+    return doc.module === module;
+  }
+
+  // The document or the parameter of a search result.
+  resultDoc(result) {
+    const docId = result.ref || '';
+    if (docId.startsWith('doc_')) {
+      return this.searchData.documents[parseInt(docId.replace('doc_', ''))];
+    }
+    if (docId.startsWith('param_')) {
+      return this.searchData.parameters[parseInt(docId.replace('param_', ''))];
+    }
+
+    return undefined;
   }
 
   renderModulesRow(results, highlightTerms) {
@@ -2088,6 +2280,8 @@ class ModuleSearch {
       if (!doc) return;
 
       let title, module, description, breadcrumbs;
+      // In the tab of the module its name is on the tab.
+      const inModuleTab = this.activeScope === 'module';
 
       // Markup is chosen per result, not per group: the API block mixes subgroups,
       // and doc.type is set for every grouped result by groupResults().
@@ -2096,7 +2290,7 @@ class ModuleSearch {
       if (isParameter) {
         // For configuration results (parameters) and isResource parameters
         title = this.highlightText(doc.name || '', highlightTerms);
-        module = doc.module ? `<div class="result-module">${doc.module}</div>` : '';
+        module = doc.module && !inModuleTab ? `<div class="result-module">${doc.module}</div>` : '';
         if (doc.resName != doc.name) {
           module += doc.resName ? `<div class="result-module">${doc.resName}</div>` : '';
         }
@@ -2105,7 +2299,7 @@ class ModuleSearch {
       } else {
         // For other documentation
         title = this.highlightText(doc.title || '', highlightTerms);
-        module = doc.module ? `<div class="result-module">${doc.module}</div>` : '';
+        module = doc.module && !inModuleTab ? `<div class="result-module">${doc.module}</div>` : '';
         breadcrumbs = this.renderBreadcrumbsRow(doc.bc, highlightTerms);
         description = this.highlightText(this.getRelevantContentSnippet(doc.content || '', highlightTerms), highlightTerms);
       }

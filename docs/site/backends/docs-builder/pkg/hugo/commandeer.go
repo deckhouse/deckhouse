@@ -188,6 +188,9 @@ type Flags struct {
 	RenderToMemory  bool
 	CfgFile         string
 	CfgDir          string
+	// WrapDestination, when set, wraps the filesystem Hugo publishes to, so
+	// the caller can change files as Hugo writes them.
+	WrapDestination func(afero.Fs) afero.Fs
 }
 
 func (c *command) isVerbose() bool {
@@ -260,6 +263,10 @@ func (c *command) ConfigFromProvider(key int32, cfg config.Provider) (*commonCon
 				cfg.Set("publishDirDynamic", "/")
 				cfg.Set("publishDirStatic", "/")
 			}
+		}
+
+		if c.flags.WrapDestination != nil {
+			destinationFs = c.flags.WrapDestination(destinationFs)
 		}
 
 		fs := hugofs.NewFromSourceAndDestination(sourceFs, destinationFs, cfg)

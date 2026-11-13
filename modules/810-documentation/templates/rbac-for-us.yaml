@@ -16,15 +16,11 @@ metadata:
 rules:
   - apiGroups: ["coordination.k8s.io"]
     resources: ["leases"]
+    # The Lease of the replica that reads the registry (client-go leader election).
     verbs:
     - get
-    - list
-    - watch
     - create
     - update
-    - patch
-    - delete
-    - deletecollection
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -39,4 +35,85 @@ subjects:
 roleRef:
   kind: Role
   name: documentation:leases-edit
+  apiGroup: rbac.authorization.k8s.io
+---
+# The CA and the read-only account of the store of the registry module: a
+# source on its in-cluster registry is read from the store too. The node
+# agents read the store with the same account.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: d8-system
+  name: documentation:registry-storage-client
+  {{- include "helm_lib_module_labels" (list . (dict "app" "docs-builder")) | nindent 2 }}
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["registry-storage-client"]
+    verbs:
+    - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: documentation:registry-storage-client
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "docs-builder")) | nindent 2 }}
+subjects:
+  - kind: ServiceAccount
+    name: documentation
+    namespace: d8-system
+roleRef:
+  kind: Role
+  name: documentation:registry-storage-client
+  apiGroup: rbac.authorization.k8s.io
+---
+# docs-builder renders any version of a module on demand: it finds the
+# registry of the module through Module and ModuleSource objects, and with
+# the v2 module manager through ModulePackage and PackageRepository objects.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:documentation:module-sources
+  {{- include "helm_lib_module_labels" (list . (dict "app" "docs-builder")) | nindent 2 }}
+rules:
+  - apiGroups: ["deckhouse.io"]
+    resources: ["modules", "modulesources", "modulepackages", "packagerepositories"]
+    verbs:
+    - get
+  # The search index takes one version of every module: the installed one,
+  # the branch of a pull override, or a release channel. The versions of the
+  # pending module releases are rendered ahead.
+  - apiGroups: ["deckhouse.io"]
+    resources: ["modules", "modulepulloverrides", "modulereleases", "modulepackages"]
+    verbs:
+    - list
+  # Without it kube-apiserver masks the credentials of spec.registry
+  # (x-kubernetes-sensitive-data).
+  - apiGroups: ["deckhouse.io"]
+    resources: ["modulesources/sensitive", "packagerepositories/sensitive"]
+    verbs:
+    - get
+  # Only the node agent serves the in-cluster registry of the registry module
+  # (registry.d8-system.svc:5001), and docs-builder runs in the pod network:
+  # a source there is read from the upstream of the module's configuration
+  # and from its store.
+  - apiGroups: ["deckhouse.io"]
+    resources: ["registryconfigs"]
+    resourceNames: ["registry"]
+    verbs:
+    - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:documentation:module-sources
+  {{- include "helm_lib_module_labels" (list . (dict "app" "docs-builder")) | nindent 2 }}
+subjects:
+  - kind: ServiceAccount
+    name: documentation
+    namespace: d8-system
+roleRef:
+  kind: ClusterRole
+  name: d8:documentation:module-sources
   apiGroup: rbac.authorization.k8s.io

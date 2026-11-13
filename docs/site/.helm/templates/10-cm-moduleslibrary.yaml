@@ -46,12 +46,29 @@ data:
         '"http_referrer": "$http_referer", '
         '"http_user_agent": "$http_user_agent" }';
 
+      # The page path of a version for docs-builder (ListenAccessLog): opened
+      # versions are evicted last.
+      log_format ondemand_access '/$lang$uri';
+
       keepalive_timeout  65;
 
       ssi off;
       gzip off;
       port_in_redirect off;
       absolute_redirect off;
+
+      # A directory typed without the trailing slash gets one: the relative
+      # links of its page need it. An address with the slash checks a path
+      # that is never there, so the only if of the location is false for it:
+      # an if that is true without returning drops try_files ("if is evil"),
+      # and a version not rendered yet would get a 404 instead of
+      # docs-builder.
+      map $uri $ondemand_dir_check {
+          # Evaluated anew on each use: a cached value would outlive a rewrite.
+          volatile;
+          ~/$      /nonexistent;
+          default  $request_filename;
+      }
 
       map $host $lang {
           hostnames;
@@ -98,6 +115,7 @@ data:
         rewrite ^/modules$ /modules/ redirect;
         rewrite ^/modules/(?<module>[^/.]+)$ /modules/$module/ redirect;
         rewrite ^/modules/(?<module>[^/.]+)/(?<channel>alpha|beta|early-access|stable|rock-solid)$ /modules/$module/$channel/ redirect;
+        rewrite ^/modules/(?<module>[^/.]+)/(?<version>v[0-9]+\.[0-9]+\.[0-9]+[^/]*)$ /modules/$module/$version/ redirect;
 
         location /link_test_report.txt {
             deny all;
@@ -109,24 +127,114 @@ data:
             return 200;
         }
 
-        # Modules library root folder
+        # The list of modules, built by docs-builder. It answers with a
+        # placeholder until the list is built.
         location ~* ^/modules/$  {
-            try_files /$lang/modules/index.html =404;
+            # A page with SSI includes, like the version pages: no gzip copy.
+            try_files /ondemand/.index/$lang/modules/index.html @ondemand_render;
         }
 
-        # Search index for modules from sources
+        # Search index of the modules, built by docs-builder from the versions
+        # of the stable channels.
         location ~* ^/modules/search-external-modules-index.json$  {
-            try_files /$lang/search-external-modules-index/search.json =404;
+            # docs-builder writes a gzip copy of its own index; it carries no
+            # SSI includes, so the ingress passes it as is.
+            gzip_static on;
+            gzip_vary on;
+            try_files /ondemand/.index/$lang/search.json =404;
         }
 
-        # AI export of the modules from sources (see internal/aiexport of docs-builder).
+        # AI export of the modules (see internal/aiexport of docs-builder).
         # The per-page .md files are served by the generic module locations below.
         location ~* ^/modules/external-llms\.txt$  {
-            try_files /$lang/modules/external-llms.txt =404;
+            # docs-builder writes a gzip copy of its own index; it carries no
+            # SSI includes, so the ingress passes it as is.
+            gzip_static on;
+            gzip_vary on;
+            try_files /ondemand/.index/$lang/llms.txt =404;
         }
 
         location ~* ^/modules/external-corpus\.json$  {
-            try_files /$lang/modules/external-corpus.json =404;
+            # docs-builder writes a gzip copy of its own index; it carries no
+            # SSI includes, so the ingress passes it as is.
+            gzip_static on;
+            gzip_vary on;
+            try_files /ondemand/.index/$lang/corpus.json =404;
+        }
+
+        # The cache volume of docs-builder: served only through the locations
+        # that rewrite to it.
+        location ^~ /ondemand/ {
+            internal;
+            # A directory typed without the trailing slash: the relative
+            # links of its page need it.
+            if (-d $ondemand_dir_check) {
+                return 301 $ondemand_request_path/$is_args$args;
+            }
+        }
+
+        # A version of a module, rendered by docs-builder on the first visit,
+        # and the list of the versions of a module. A page that is not on the
+        # cache volume goes to docs-builder, which renders the version and
+        # answers with a placeholder meanwhile. The pages of a version are
+        # the same files the channels pointing at it serve, so the version
+        # URL is kept out of search engines by the header, not by the page.
+        location ~ ^/modules/[a-z0-9-]+/(v[0-9]+\.[0-9]+\.[0-9]+[^/]*/|versions/$) {
+            root /app/ondemand/.site/$lang;
+            add_header X-Robots-Tag "noindex" always;
+            access_log syslog:server=127.0.0.1:5514,nohostname,tag=docs_ondemand ondemand_access;
+            set $ondemand_request_path $uri;
+            # A directory typed without the trailing slash: the relative
+            # links of its page need it.
+            if (-d $ondemand_dir_check) {
+                return 301 $ondemand_request_path/$is_args$args;
+            }
+            try_files $uri $uri/ @ondemand_render;
+        }
+
+        location @ondemand_render {
+            # docs-builder answers the pages it writes itself (placeholder,
+            # versions, not found).
+            proxy_intercept_errors off;
+            add_header X-Robots-Tag "noindex" always;
+            rewrite ^ /$lang$uri break;
+            proxy_pass http://127.0.0.1:8081;
+        }
+
+        # A module address the bucket does not have, as it was requested.
+        # The 404 of docs-builder gets the 404 page of the site.
+        location @ondemand_module {
+            recursive_error_pages on;
+            add_header X-Robots-Tag "noindex" always;
+            rewrite ^ /$lang$ondemand_request_path break;
+            proxy_pass http://127.0.0.1:8081;
+        }
+
+        # The render status the placeholder follows.
+        location ~ ^/modules/\.render/(?<render_module>[a-z0-9-]+)/(?<render_version>[^/]+)$ {
+            limit_except GET {
+                deny all;
+            }
+            proxy_intercept_errors off;
+            proxy_pass http://127.0.0.1:8081/api/v2/render/$render_module/$render_version;
+        }
+
+        # The menu of a module.
+        location ~ ^/modules/\.menu/(?<menu_module>[a-z0-9-]+)$ {
+            limit_except GET {
+                deny all;
+            }
+            proxy_intercept_errors off;
+            proxy_pass http://127.0.0.1:8081/api/v2/modules/$menu_module/menu;
+        }
+
+        # The versions of a module.
+        location ~ ^/modules/\.versions/(?<versions_module>[a-z0-9-]+)$ {
+            limit_except GET {
+                deny all;
+            }
+            proxy_intercept_errors off;
+            proxy_pass http://127.0.0.1:8081/api/v2/modules/$versions_module/versions;
         }
 
         # Search index for embedded modules
@@ -181,9 +289,10 @@ data:
             set $channel_name "$2";
             set $module_doc "$3";
 
-            # Modules from sources (they are served locally.)
-            if (-d $document_root/$lang/modules/$module/$channel) {
-               rewrite ^/modules/[^/]+/[^/]+/.*$ /$lang/modules/$module/$channel/$module_doc last;
+            # The version the channel points at, rendered by docs-builder.
+            set $ondemand_request_path $uri;
+            if (-d /app/ondemand/.site/$lang/modules/$module/$channel) {
+               rewrite ^/modules/[^/]+/[^/]+/.*$ /ondemand/.site/$lang/modules/$module/$channel/$module_doc last;
             }
 
             # Redirect for channel names to their corresponding versions for modules served from S3.
@@ -198,10 +307,17 @@ data:
             set $channel_name "stable";
             set $module_doc "$2";
 
-            # Modules from sources (they are served locally.)
-            if (-d $document_root/$lang/modules/$module/${channel_name})  {
-               rewrite ^/ /$lang/modules/$module/$channel_name/$module_doc last;
+            # The version of the stable channel, rendered by docs-builder.
+            set $ondemand_request_path $uri;
+            if (-d /app/ondemand/.site/$lang/modules/$module/${channel_name}) {
+               rewrite ^/ /ondemand/.site/$lang/modules/$module/$channel_name/$module_doc last;
             }
+
+            # Not in the bucket either: a module docs-builder has not
+            # published yet, which leads to its version, or a page that is
+            # not there.
+            # The bucket answers 403 for a key it does not have.
+            error_page 403 404 = @ondemand_module;
 
             # Serve doc for the stable channel. Don't redirect as it shoud be SEO friendly.
             rewrite /$    /deckhouse-{{ $.Values.werf.env }}/$channel_version/modules/$lang/modules/$module/${module_doc}index.html break;

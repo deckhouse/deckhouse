@@ -5,6 +5,7 @@ additional_property_name: имя параметра (ключ объекта)
 pattern_property_name: регулярное выражение для имени параметра
 search_placeholder_text: Поиск по документации
 search_context_dkpdocs_and_modules: Поиск выполняется по всей документации Deckhouse Platform и модулям.
+search_context_module_version: "<span>Поиск выполняется по выбранной версии модуля <strong>{{ .module }}</strong> и документации Deckhouse Platform.</span>"
 search_context_modules: Поиск выполняется по всем модулям, не включая документацию Deckhouse Platform.
 search_context_only_product_docs: Поиск выполняется по всей документации продукта, не включая модули.
 modules: модули
@@ -92,7 +93,7 @@ module_release_channel_details_content: |
   Чтобы сменить канал обновлений модуля, выполните действия из раздела [Как сменить канал обновлений для модуля?](/products/kubernetes-platform/documentation/v1/faq.html#как-сменить-канал-обновлений-для-модуля).
 module_versions: Версии модуля
 module_version: Версия модуля
-embedded_in_dkp: Встроенный в DP
+embedded_in_dkp: Встроенный в Deckhouse Platform
 module_crd_warning_1: Deckhouse Platform устанавливает CRD, но не удаляет их при отключении модуля. Если вам больше не нужны созданные CRD, удалите их.
 ossPageBlock1: |
   <h2>Внешние компоненты</h2>
@@ -216,3 +217,22 @@ details_default_summary: Подробнее
 no_custom_configuration: У модуля нет параметров для настройки.
 description_configuration: Deckhouse Platform — параметры конфигурации модуля <MODULENAME>.
 description_cr: Deckhouse Platform — кастомные ресурсы модуля <MODULENAME>.
+module_no_docs: В опубликованных версиях нет документации
+module_pending: Документация модуля загружается, описание появится позже
+version_menu_installed: Установлена
+version_menu_pending: Версии каналов появятся, когда загрузится их документация
+version_menu_other: Показать другие версии
+version_dialog_title: "Версии модуля ###"
+version_dialog_hint: При первом открытии документация версии готовится несколько секунд.
+version_dialog_filter: Фильтр по версии, например 1.4
+version_dialog_close: Закрыть
+version_dialog_prev: Назад
+version_dialog_next: Вперёд
+version_dialog_page: "Страница {page} из {pages}"
+version_dialog_count: "Версий: {count}"
+version_dialog_empty: Нет версий по этому фильтру.
+version_dialog_loading: Загружаем список версий
+version_dialog_failed: Не удалось получить список версий. Повторите позже.
+version_dialog_incomplete: "Список может быть неполным: не удалось получить версии из registry. Повторите позже."
+version_dialog_shown: Показывается сейчас
+version_dialog_installed: Установлена в кластере

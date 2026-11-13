@@ -16,8 +16,9 @@ spec:
     matchNames:
       - d8-system
   podMetricsEndpoints:
-  - port: http-metrics
-    scheme: http
+  - port: https
+    scheme: https
+    path: /metrics
     tlsConfig:
       insecureSkipVerify: true
     bearerTokenSecret:

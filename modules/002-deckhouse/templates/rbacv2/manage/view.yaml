@@ -24,7 +24,6 @@ rules:
   - deckhousereleases
   - effectivelicenses
   - moduleconfigs
-  - moduledocumentations
   - modulepulloverrides
   - modulereleases
   - modules

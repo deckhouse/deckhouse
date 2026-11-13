@@ -23,7 +23,6 @@ rules:
   - clusterlicenses
   - deckhousereleases
   - moduleconfigs
-  - moduledocumentations
   - modulepulloverrides
   - modulereleases
   - modules

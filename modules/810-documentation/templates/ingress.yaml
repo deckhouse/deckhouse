@@ -65,6 +65,16 @@ metadata:
   annotations:
     web.deckhouse.io/export-name: "documentation"
     web.deckhouse.io/export-icon: "/public/img/docs.png"
+    # A user stays on one replica: it keeps the versions they open and the render the placeholder follows.
+    nginx.ingress.kubernetes.io/affinity: cookie
+    nginx.ingress.kubernetes.io/affinity-mode: persistent
+    nginx.ingress.kubernetes.io/session-cookie-name: d8-documentation-affinity
+    nginx.ingress.kubernetes.io/session-cookie-path: /
+    # A day: the cookie outlives a closed browser, so a reader coming back keeps the replica with their versions.
+    nginx.ingress.kubernetes.io/session-cookie-max-age: "86400"
+  {{- if ne (include "helm_lib_module_https_mode" .) "Disabled" }}
+    nginx.ingress.kubernetes.io/session-cookie-secure: "true"
+  {{- end }}
   {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.documentation.auth.externalAuthentication }}
     nginx.ingress.kubernetes.io/auth-signin: {{ .Values.documentation.auth.externalAuthentication.authSignInURL | quote }}
     nginx.ingress.kubernetes.io/auth-url: {{ .Values.documentation.auth.externalAuthentication.authURL | quote }}

@@ -185,10 +185,13 @@ var (
 
 	// StorageHost is the store under the name of its Service, at the port its replicas serve on:
 	// what a process with no agent to go through dials to read the store itself, with the store's
-	// authority and read-only account. Two do:
+	// authority and read-only account. Three do:
 	//
 	//   - dhctl in the cluster on an air-gapped cluster: terraform-manager's infrastructure
 	//     auto-converger and its state exporter, which run in the pod network;
+	//   - docs-builder of the documentation module, in the pod network, on any cluster with the
+	//     store: it reads module images from the store first, as the agent does. A Go module of its
+	//     own, it keeps this address as a literal (docs/site/backends/docs-builder/internal/registry);
 	//   - registry-packages-proxy, in the host network of a master, while that master has no agent
 	//     yet. That is the window in which the agent itself is installed, from a package fetched
 	//     through this proxy, so it cannot wait for the agent. In practice that is the first master

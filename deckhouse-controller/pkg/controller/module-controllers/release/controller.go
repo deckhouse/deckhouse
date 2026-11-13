@@ -34,7 +34,6 @@ import (
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -122,8 +121,6 @@ func RegisterController(
 	if err := ctrl.NewControllerManagedBy(runtimeManager).
 		Named(controllerName).
 		For(&v1alpha1.ModuleRelease{}).
-		// for reconcile documentation if accidentally removed
-		Owns(&v1alpha1.ModuleDocumentation{}).
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: maxConcurrentReconciles,
@@ -448,9 +445,8 @@ func (r *reconciler) patchManualRelease(ctx context.Context, release *v1alpha1.M
 //  4. Metadata Maintenance: Ensure proper finalizers, labels, and annotations are present
 //  5. Source Finalizer Management: Protect module sources from deletion while releases exist
 //  6. Override Detection: Respect module pull overrides that may bypass normal processing
-//  7. Documentation Updates: Synchronize module documentation with deployed release version
-//  8. Cleanup Operations: Remove outdated releases while preserving required retention count
-//  9. Settings Ownership: Maintain proper ownership of ModuleSettingsDefinition resources
+//  7. Cleanup Operations: Remove outdated releases while preserving required retention count
+//  8. Settings Ownership: Maintain proper ownership of ModuleSettingsDefinition resources
 //
 // Pending Release Impact on Readiness:
 //   - If pending releases exist with lower versions: Module readiness remains uncertain
@@ -467,7 +463,6 @@ func (r *reconciler) patchManualRelease(ctx context.Context, release *v1alpha1.M
 //   - Deployed releases add finalizers to prevent premature deletion
 //   - ModuleSource resources gain finalizers to prevent deletion while releases exist
 //   - ModuleSettingsDefinition ownership is established for proper lifecycle management
-//   - Documentation resources are linked to releases for coordinated updates
 //
 // Override Handling:
 //   - ModulePullOverride resources can bypass normal release processing
@@ -480,7 +475,7 @@ func (r *reconciler) patchManualRelease(ctx context.Context, release *v1alpha1.M
 //
 //	Scenario 1 - Standard Deployed Release Maintenance:
 //	Input: Deployed v1.68.0, No pending releases, No overrides
-//	Flow: Readiness✓→Metadata✓→Documentation✓→Cleanup✓→Settings✓
+//	Flow: Readiness✓→Metadata✓→Cleanup✓→Settings✓
 //	Result: RequeueAfter 0s, all maintenance completed
 //
 //	Scenario 2 - Reload Request Processing:
@@ -664,39 +659,6 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 		Name:       release.GetName(),
 		UID:        release.GetUID(),
 		Controller: ptr.To(true),
-	}
-
-	// do not (re)create documentation for a disabled module
-	module := new(v1alpha1.Module)
-	if err = r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, module); err != nil {
-		r.log.Error("failed to get module", slog.String("module", release.GetModuleName()), log.Err(err))
-
-		return res, fmt.Errorf("get module: %w", err)
-	}
-
-	// ensure documentation for any enabled module, regardless of how it is enabled
-	// (by module config, by bundle or by an enabled script) - EnabledByModuleManager
-	// reflects the effective enabled state, unlike EnabledByModuleConfig which is only
-	// set for modules enabled explicitly via a ModuleConfig
-	if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, corev1.ConditionTrue) {
-		if r.installer.IsEmbeddedPresent(release.GetModuleName()) {
-			// The embedded copy serves the module, so the release is only staged and the
-			// /modules/<name> mount a ModuleDocumentation points at is never created, while
-			// the docs of the running (embedded) version ship with the documentation image.
-			// A ModuleDocumentation left over from a Deckhouse that predates this guard makes
-			// the docbuilder stat a path that cannot appear until the embedded copy is dropped
-			// on upgrade, and retry it forever, so delete it. The branch below recreates it
-			// once the module is activated.
-			if err = utils.DeleteModuleDocumentation(ctx, r.client, release.GetModuleName()); err != nil {
-				r.log.Error("failed to delete stale module documentation", slog.String("module", release.GetModuleName()), log.Err(err))
-
-				return res, fmt.Errorf("delete stale module documentation: %w", err)
-			}
-		} else if err = utils.EnsureModuleDocumentationForRelease(ctx, r.client, release); err != nil {
-			r.log.Error("failed to ensure module documentation", slog.String("module", release.GetModuleName()), log.Err(err))
-
-			return res, fmt.Errorf("ensure module documentation: %w", err)
-		}
 	}
 
 	r.log.Debug("delete outdated releases for module", slog.String("module", release.GetModuleName()))

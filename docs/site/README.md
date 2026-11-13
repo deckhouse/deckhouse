@@ -52,7 +52,7 @@ This also stops and removes the local Docker registry if it was started.
 
 ### Running the documentation site with an external module
 
-Use this mode when you want to preview documentation from an external module repository together with the local portal.
+Use this mode to preview the documentation of a module repository together with the local portal, as the public site renders it.
 
 1. Run the following command from `docs/site`:
 
@@ -60,33 +60,19 @@ Use this mode when you want to preview documentation from an external module rep
    make external-module MODULE_PATH=/path/to/module
    ```
 
-1. Optional arguments:
+   `MODULE_PATH` is the module repository (with `module.yaml` and `docs/`), or a directory of module repositories: every one with a `module.yaml` is served.
 
-   - `CHANNEL` — defaults to `alpha`;
-   - `MODULE_VERSION` — defaults to `v0.1.0`.
+1. Open the list of modules at <http://localhost/products/kubernetes-platform/documentation/v1/modules/> and go to the module.
 
-   Example:
+The pages are rendered by docs-builder (the `builder` container) from the files of the repository, the same way the public site renders a published version: the module appears on the list of modules, its version menu and the versions dialog work, and the search covers its pages. Every module is served as the version `v0.0.0-local` of its stable channel, so its pages are available under `/modules/<module-name>/` and `/modules/<module-name>/v0.0.0-local/`.
 
-   ```bash
-   make external-module MODULE_PATH=<MODULE_PATH> CHANNEL=stable MODULE_VERSION=v1.2.3
-   ```
-
-1. Open the DP documentation in your browser at <http://localhost/products/kubernetes-platform/documentation/v1/>.
-
-The external module pages are available under `/modules/<module-name>/<channel>/`.
-
-If you edit files in the external module repository, Hugo rebuilds the generated files automatically and the portal picks up the changes.
-
-The workflow watches:
+If you edit files in the module repository, docs-builder renders the module anew within a few seconds: reload the page to see the change. The render takes the files a published module image carries:
 
 - `docs/`;
 - `module.yaml`;
 - `oss.yaml`;
-- `openapi/config-values.yaml`;
-- `openapi/doc-ru-config-values.yaml`;
-- root-level files in `crds/`.
-
-YAML files from subdirectories inside `crds/` are ignored.
+- `openapi/`;
+- root-level YAML files in `crds/`.
 
 #### Stopping the external module workflow
 
@@ -770,6 +756,7 @@ This feature allows you to display a contextual message above the "ready" search
 - It appears above the "What are we looking for?" message
 - If no `data-search-context` attribute is provided, the normal ready message is displayed
 - The context message is hidden when search results are shown
+- Above the results there is a row of tabs with the number of results in each: the search scopes, then `All`. On a module page the scopes are Deckhouse Platform and the module, and the module tab is open by default; on other pages that search the module indexes they are Deckhouse Platform and the modules: the modules tab is open by default on the modules list page, the Deckhouse Platform tab on the others. If the default tab has no results, the first tab with results is open. A tab filters the results, and a scope with nothing found is shown disabled. A page that searches one product documentation without the module indexes has no scopes, so the row is not shown
 
 ### Internationalization
 
@@ -970,7 +957,7 @@ A page is exported if it is `searchable: true`, or if it is a `CONFIGURATION`/`C
 
 ### External modules (Hugo + docs-builder)
 
-Hugo does not write the export itself. The `ai` output format renders a manifest, `<lang>/ai/ai.json`, listing every module page with its metadata; the Go exporter (`backends/docs-builder/internal/aiexport`) then converts the rendered HTML and writes the `.md` files, `external-llms.txt` and `external-corpus.json`. In a cluster this is a step of the docs-builder build.
+Hugo does not write the export itself. The `ai` output format renders a manifest, `<lang>/ai/ai.json`, listing every module page with its metadata; the Go exporter (`backends/docs-builder/internal/aiexport`) then converts the rendered HTML and writes the `.md` files, `external-llms.txt` and `external-corpus.json`. docs-builder runs it for every module version it renders and merges the files of one version of every module into `external-llms.txt` and `external-corpus.json`.
 
 The names here are fixed rather than configurable: the modules library shares its URL space with the documentation, so the artifacts have to be told apart by name.
 
@@ -990,7 +977,7 @@ Both generators emit the same document shape (optional fields — `module`, `mod
 make ai-export
 ```
 
-docs-builder is an HTTP service that expects a Kubernetes API, so the target does not run it: it renders the site with Hugo and calls the exporter directly over the result. It expects a prepared `content/modules` + `data/modules` tree — by default `backends/docs-builder-template`, override with `AI_EXPORT_SRC=/path/to/tree`. A module missing from `data/modules/channels.yaml` is silently skipped, as it is on the site.
+The target runs Hugo and the exporter directly over a prepared tree and needs no docs-builder container. It expects a prepared `content/modules` + `data/modules` tree - by default `backends/docs-builder-template`, override with `AI_EXPORT_SRC=/path/to/tree`. A module missing from `data/modules/channels.yaml` is silently skipped, as it is on the site.
 
 ### Serving
 

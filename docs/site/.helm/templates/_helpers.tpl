@@ -4,12 +4,6 @@ resources:
     memory: {{ pluck .Values.web.env .Values.resources.requests.memory._default | first | default .Values.resources.requests.memory._default._default }}
 {{- end }}
 
-{{- define "resources-registry-modules-watcher" }}
-resources:
-  requests:
-    memory: {{ pluck .Values.web.env .Values.resources.requests.memory.registryModulesWatcher._default | first | default .Values.resources.requests.memory.registryModulesWatcher._default._default }}
-{{- end }}
-
 {{- define "resources-moduleslibrary-builder" }}
 resources:
   requests:

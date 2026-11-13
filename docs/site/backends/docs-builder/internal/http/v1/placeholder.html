@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="{{.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+{{- if .InProgress}}
+<noscript><meta http-equiv="refresh" content="2"></noscript>
+{{- end}}
+<title>{{.Module}} {{.Version}} - {{.T.Docs}}</title>
+{{.Chrome.Head}}
+</head>
+<body>
+{{template "chrome" .}}
+<dialog class="odp-dialog" open autofocus closedby="none" aria-labelledby="odp-title">
+<div class="odp-dialog__body" aria-live="polite">
+  <h1 class="odp-title" id="odp-title">{{.Module}} <span class="odp-version">{{.Version}}</span></h1>
+
+  <div class="odp-progress" id="progress"{{if not .InProgress}} hidden{{end}}>
+    <p class="odp-hint">{{.T.Preparing}}</p>
+    <p class="odp-sr" id="stage"></p>
+    <div class="odp-meter" aria-hidden="true">
+      {{- range .Steps}}
+      <span data-step="{{.Key}}"{{if .State}} class="{{.State}}"{{end}}></span>
+      {{- end}}
+    </div>
+    <ol class="odp-steps">
+      {{- range .Steps}}
+      <li data-step="{{.Key}}"{{if .State}} class="{{.State}}"{{end}}>{{.Label}}</li>
+      {{- end}}
+    </ol>
+  </div>
+
+  <div class="odp-block" id="not-found"{{if not (and .Status.NotFound (not .NoPage))}} hidden{{end}}>
+    <p class="odp-problem">{{.T.NotFound}}</p>
+    <p class="odp-actions"><a class="button button_alt" href="{{.ListURL}}">{{.T.ToList}}</a></p>
+  </div>
+
+  <div class="odp-block" id="no-page"{{if not .NoPage}} hidden{{end}}>
+    <p class="odp-problem">{{.T.NoPage}}</p>
+    <p class="odp-actions"><a class="button button_alt" href="{{.VersionURL}}">{{.T.VersionStart}}</a></p>
+  </div>
+
+  <div class="odp-block" id="failed"{{if not .Failed}} hidden{{end}}>
+    <p class="odp-problem">{{.T.Failed}}</p>
+    <p class="odp-reason" id="reason">{{index .T.Reasons .Status.Error}}</p>
+    <p class="odp-hint" id="retry">{{.T.Retry}}</p>
+    <p class="odp-actions"><a class="button button_alt" href="{{.ModuleURL}}">{{.T.CurrentVersion}}</a></p>
+  </div>
+</div>
+</dialog>
+{{template "dialog-script"}}
+{{- if or .InProgress .Failed}}
+<script>
+(function () {
+  var statusURL = {{.StatusURL}};
+  var reasons = {{.T.Reasons}};
+  var retryIn = {{.T.RetryIn}};
+  var order = ["queued", "download", "render"];
+  // A failed render is retried by reloading the page, a few times per tab:
+  // a forgotten tab must not ask the registry every minute. Without
+  // sessionStorage there is no automatic retry, the hint says to reload.
+  var retriesKey = "odp-retries:" + statusURL, maxRetries = 3;
+
+  function retries() {
+    try { return Number(sessionStorage.getItem(retriesKey)) || 0; } catch (e) { return maxRetries; }
+  }
+
+  function countDown(seconds) {
+    if (!(seconds > 0) || retries() >= maxRetries) { return; }
+    var hint = document.getElementById("retry");
+    (function tick() {
+      if (seconds <= 0) {
+        try { sessionStorage.setItem(retriesKey, String(retries() + 1)); } catch (e) { return; }
+        return location.reload();
+      }
+      hint.textContent = retryIn.replace("###", seconds);
+      seconds--;
+      setTimeout(tick, 1000);
+    })();
+  }
+
+  function show(id) {
+    ["progress", "not-found", "no-page", "failed"].forEach(function (block) {
+      document.getElementById(block).hidden = block !== id;
+    });
+  }
+
+  function mark(stage) {
+    var current = order.indexOf(stage);
+    document.querySelectorAll("[data-step]").forEach(function (el) {
+      var i = order.indexOf(el.dataset.step);
+      el.className = i < current ? "done" : i === current ? "active" : "";
+      // The live region announces text: the stage is written into it.
+      if (i === current && el.tagName === "LI") { document.getElementById("stage").textContent = el.textContent; }
+    });
+  }
+
+  // The status that can not be read is asked again, not forever: after
+  // maxPollFailures in a row, about a minute, which outlasts a restart of
+  // docs-builder, the tab shows the failure and stops asking.
+  var pollFailures = 0, maxPollFailures = 30;
+
+  function pollFailed() {
+    if (++pollFailures < maxPollFailures) { return setTimeout(poll, 2000); }
+    document.getElementById("reason").textContent = "";
+    show("failed");
+    // docs-builder may be away for longer than that: the page is reloaded
+    // later, a few times per tab, as after a failed render.
+    countDown(60);
+  }
+
+  function poll() {
+    fetch(statusURL, { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (st) {
+        if (!st) { return pollFailed(); }
+        pollFailures = 0;
+        // The render is gone (docs-builder restarted, or the version was
+        // evicted at once): reloading the page starts it again.
+        if (!st.stage) { return location.reload(); }
+        if (st.stage === "done") {
+          // Rendered: a later failure of this version gets its retries again.
+          try { sessionStorage.removeItem(retriesKey); } catch (e) { /* no storage, no retries */ }
+          return location.reload();
+        }
+        if (st.stage === "failed") {
+          if (st.notFound) { return show("not-found"); }
+          document.getElementById("reason").textContent = reasons[st.error] || "";
+          show("failed");
+          return countDown(st.retryIn);
+        }
+        mark(st.stage);
+        setTimeout(poll, 1000);
+      })
+      .catch(pollFailed);
+  }
+
+  {{- if .InProgress}}
+  setTimeout(poll, 1000);
+  {{- else}}
+  countDown({{.Status.RetryIn}});
+  {{- end}}
+})();
+</script>
+{{- end}}
+</body>
+</html>

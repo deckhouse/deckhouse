@@ -20,7 +20,7 @@ async function initializeChannelMenu() {
         updateCurrentVersion();
     } catch (error) {
         console.error('Failed to initialize app:', error);
-        showError('Failed to load application data');
+        updateCurrentVersion();
     }
 }
 
@@ -43,6 +43,17 @@ function formatChannelName(channelName) {
         .replace(/\b\w/g, l => l.toUpperCase());
 }
 
+// The version or channel of a module address: /modules/MODULE/SEGMENT/.
+const versionSegment = /\/modules\/([^\/]+)\/(v[0-9]+\.[0-9]+|alpha|beta|early-access|stable|rock-solid|latest)\//;
+
+// The address of the same page in another version or channel.
+function versionHref(path, value) {
+    if (versionSegment.test(path)) {
+        return path.replace(versionSegment, `/modules/$1/${value}/`);
+    }
+    return path.replace(/\/modules\/([^/]+)\//, `/modules/$1/${value}/`);
+}
+
 // Get current channel from URL and update the doc-current-version element
 function updateCurrentVersion() {
     const currentVersionElement = document.getElementById('doc-current-version');
@@ -53,7 +64,7 @@ function updateCurrentVersion() {
 
     // Extract channel from URL pattern /modules/CHANNEL/...
     const urlPath = window.location.pathname;
-    const channelMatch = urlPath.match(/\/modules\/([^\/]+)\/(v[0-9]+\.[0-9]+|alpha|beta|early-access|stable|rock-solid|latest|)\//);
+    const channelMatch = urlPath.match(versionSegment);
 
     let currentChannel = 'stable'; // default fallback
     let extractedChannel = null;
@@ -69,8 +80,8 @@ function updateCurrentVersion() {
 
     // Try to find the actual channel name from the channels data
     // This will be called after the channels data is loaded
-    if (window.channelsData && extractedChannel) {
-        const matchingChannels = window.channelsData.filter(channel => {
+    if (extractedChannel) {
+        const matchingChannels = (window.channelsData || []).filter(channel => {
             // Check if the channel name or version matches the extracted channel
             return channel.name === extractedChannel || channel.version === extractedChannel;
         });
@@ -88,6 +99,10 @@ function updateCurrentVersion() {
             } else {
                 currentChannel = matchingChannels[0].name;
             }
+        } else if (/^v[0-9]/.test(extractedChannel)) {
+            // A version no channel points to, picked in the versions dialog.
+            currentVersionElement.textContent = extractedChannel;
+            return;
         }
     }
 
@@ -147,29 +162,9 @@ function renderMenu(settings) {
         let channelUrl = '#';
 
         if (channel.version) {
-            const currentUrl = window.location.pathname;
-
-            if (isEmbeddedModule) {
-                // For embedded modules, use channel version in the link
-                const urlVersion = `${channel.version}`;
-                if (currentUrl.match(/\/modules\/[^\/]+\/(v[0-9]+\.[0-9]+|alpha|beta|early-access|stable|rock-solid|latest|)\//)) {
-                    // Current URL has version, replace it with channel version
-                    channelUrl = currentUrl.replace(/\/(v[0-9]+\.[0-9]+|alpha|beta|early-access|stable|rock-solid|latest)\//, `/${urlVersion}/`);
-                } else if (currentUrl.includes('/modules/')) {
-                    // Current URL is /modules/MODULE/, add version
-                    channelUrl = currentUrl.replace(/\/modules\/([^/]+)\//, `/modules/$1/${urlVersion}/`);
-                }
-            } else {
-                // For modules from source use channel name instead of channel version in the link
-                const channelName = channel.name;
-                if (currentUrl.match(/\/modules\/[^\/]+\/(alpha|beta|early-access|stable|rock-solid|latest)\//)) {
-                    // Current URL has channel, replace it
-                    channelUrl = currentUrl.replace(/\/(alpha|beta|early-access|stable|rock-solid|latest)\//, `/${channelName}/`);
-                } else if (currentUrl.includes('/modules/')) {
-                    // Current URL is /modules/MODULE/, add channel name
-                    channelUrl = currentUrl.replace(/\/modules\/([^/]+)\//, `/modules/$1/${channelName}/`);
-                }
-            }
+            // Embedded modules link the version of the channel, modules from
+            // sources the channel itself.
+            channelUrl = versionHref(window.location.pathname, isEmbeddedModule ? channel.version : channel.name);
         } else {
             // No version available, use current URL
             channelUrl = window.location.pathname;
@@ -205,8 +200,61 @@ function renderMenu(settings) {
         submenu.appendChild(submenuItem);
     });
 
+    if (isEmbeddedModule) {
+        addOtherVersions(submenu);
+    }
+
     submenuContainer.appendChild(submenu);
     menuContainer.appendChild(submenuContainer);
+}
+
+// "Show other versions" of an embedded module: the dialog of
+// version-dialog.js with every minor version of Deckhouse whose documentation
+// of the module the site keeps; docs-builder lists them from the history of
+// the embedded modules. The texts are in version-dialog-i18n.js.
+function addOtherVersions(submenu) {
+    const moduleMatch = window.location.pathname.match(/\/modules\/([^\/]+)\//);
+    const lang = (document.documentElement.lang || '').startsWith('ru') ? 'ru' : 'en';
+    const t = (window.versionDialogTexts || {})[lang];
+    if (!t || typeof window.createVersionDialog !== 'function') {
+        console.warn('versions dialog: version-dialog-i18n.js or version-dialog.js is not loaded');
+    }
+    if (!moduleMatch || !t || typeof window.createVersionDialog !== 'function') {
+        return;
+    }
+    const module = moduleMatch[1];
+
+    // The version of the page: in the address, or that of its channel.
+    const segment = (window.location.pathname.match(versionSegment) || [])[2] || 'stable';
+    const channels = window.channelsData || [];
+    const channelOf = name => channels.find(channel => channel.name === name);
+    const shownVersion = /^v[0-9]/.test(segment) ? segment : ((channelOf(segment) || {}).version || segment);
+
+    const dialog = window.createVersionDialog({
+        module,
+        texts: t,
+        shownVersion,
+        embedded: true,
+        href: version => versionHref(window.location.pathname, version),
+        load: () => fetch(`/modules/.versions/${module}`, { headers: { Accept: 'application/json' } })
+            // 404: no minor version kept the module yet, latest only.
+            .then(response => (response.ok ? response.json() : response.status === 404 ? { versions: [] } : Promise.reject(response.status))),
+        badges: version => channels.filter(channel => channel.version === version)
+            .map(channel => [formatChannelName(channel.name), '']),
+    });
+    if (!dialog) {
+        return;
+    }
+
+    const other = document.createElement('li');
+    other.className = 'vmenu-other';
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'vmenu-other__button';
+    button.textContent = t.other;
+    button.addEventListener('click', () => dialog.open());
+    other.append(button);
+    submenu.append(other);
 }
 
 // Initialize the app when the page loads

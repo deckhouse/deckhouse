@@ -826,7 +826,6 @@ read-write:
     - deckhouse.io/dexproviders
     - deckhouse.io/groups
     - deckhouse.io/moduleconfigs
-    - deckhouse.io/moduledocumentations
     - deckhouse.io/modulepulloverrides
     - deckhouse.io/modulereleases
     - deckhouse.io/modules

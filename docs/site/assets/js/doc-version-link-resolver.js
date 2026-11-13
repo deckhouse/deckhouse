@@ -1,5 +1,6 @@
 (function () {
-  const MENU_LINK_SELECTOR = '#doc-versions-menu a.submenu-item-link, #doc-versions-menu a.submenu-embedded-link';
+  // The version dialog of an embedded module (channel-menu-module.js) leads to a version too.
+  const MENU_LINK_SELECTOR = '#doc-versions-menu a.submenu-item-link, #doc-versions-menu a.submenu-embedded-link, .vmenu-dialog[data-embedded] a';
   const CHANNEL_NAMES = new Set(['alpha', 'beta', 'early-access', 'stable', 'rock-solid', 'latest']);
   const PRODUCT_VERSION_RE = /^v\d+\.\d+$/;
   const CACHE_KEY = 'doc-version-link-resolver-cache';

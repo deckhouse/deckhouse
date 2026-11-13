@@ -74,14 +74,6 @@ spec:
               port: 8080
             {{- include "readiness_probe_moduleslibrary" . | indent 12 }}
           volumeMounts:
-            - mountPath: /app/en/modules
-              name: modules-docs-en
-            - mountPath: /app/ru/modules
-              name: modules-docs-ru
-            - mountPath: /app/en/search-external-modules-index
-              name: modules-searchindex-en
-            - mountPath: /app/ru/search-external-modules-index
-              name: modules-searchindex-ru
             - name: nginx-config
               mountPath: /usr/conf/nginx.conf
               subPath: nginx.conf
@@ -89,10 +81,22 @@ spec:
               name: web-tmp
             - name: channels-data
               mountPath: /app/channels-data
+            - name: ondemand-cache
+              mountPath: /app/ondemand
+              readOnly: true
         - name: builder
           command:
             - "/app/server"
-            - "-highAvailability={{pluck .Values.werf.env .Values.docsBuilder.highAvailability | first | default .Values.docsBuilder.highAvailability._default}}"
+            - --ondemand-cache-dir=/app/ondemand
+            - --ondemand-cache-size={{ pluck .Values.web.env .Values.docsBuilder.ondemand.cacheSize | first | default .Values.docsBuilder.ondemand.cacheSize._default }}
+            - --ondemand-registries={{ (pluck .Values.werf.env .Values.moduleWatcher.registries | first | default .Values.moduleWatcher.registries._default) | join "," }}
+            - --ondemand-registry-auths=/etc/ondemand-registry/.dockerconfigjson
+            - --ondemand-s3-dir=/etc/ondemand-s3
+            - --ondemand-s3-size={{ pluck .Values.web.env .Values.docsBuilder.ondemand.s3Size | first | default .Values.docsBuilder.ondemand.s3Size._default }}
+            # Next to the documentation of the platform in the site bucket,
+            # outside of the versions its jobs sync with --delete.
+            - --ondemand-s3-prefix=deckhouse-{{ .Values.werf.env }}/modules-ondemand/
+            - --ondemand-follow-interval={{ pluck .Values.web.env .Values.docsBuilder.ondemand.followInterval | first | default .Values.docsBuilder.ondemand.followInterval._default }}
           image: {{ index .Values.werf.image "website-docs/builder" }}
           {{- include "resources-moduleslibrary-builder" . | nindent 10 }}
           env:
@@ -104,10 +108,6 @@ spec:
               value: {{ pluck .Values.web.env .Values.docsBuilder.hugoMemoryLimit | first | default .Values.docsBuilder.hugoMemoryLimit._default | quote }}
             - name: HUGO_NUMWORKERMULTIPLIER
               value: {{ pluck .Values.web.env .Values.docsBuilder.hugoNumWorkerMultiplier | first | default .Values.docsBuilder.hugoNumWorkerMultiplier._default | quote }}
-            - name: POD_IP
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.podIP
             - name: POD_NAME
               valueFrom:
                 fieldRef:
@@ -118,8 +118,6 @@ spec:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: metadata.namespace
-            - name: CLUSTER_DOMAIN
-              value: "cluster.local"
           ports:
           - containerPort: 8081
             name: http
@@ -143,21 +141,19 @@ spec:
               port: 8081
             {{- include "readiness_probe_moduleslibrary" . | indent 12 }}
           volumeMounts:
-            - mountPath: "/mount/public/en/modules"
-              name: modules-docs-en
-            - mountPath: "/mount/public/ru/modules"
-              name: modules-docs-ru
-            - mountPath: "/mount/public/en/search"
-              name: modules-searchindex-en
-            - mountPath: "/mount/public/ru/search"
-              name: modules-searchindex-ru
-            - mountPath: "/app/hugo"
-              name: builder-hugo
             - mountPath: "/tmp"
               name: builder-tmp
             - mountPath: "/app/hugo-init/data/embedded_modules_list.json"
               name: embedded-modules-history-data
               subPath: embedded_modules_list.json
+            - name: ondemand-cache
+              mountPath: /app/ondemand
+            - name: ondemand-s3
+              mountPath: /etc/ondemand-s3/connection
+              readOnly: true
+            - name: ondemand-registry
+              mountPath: /etc/ondemand-registry
+              readOnly: true
       volumes:
         - name: nginx-config
           configMap:
@@ -169,28 +165,36 @@ spec:
           emptyDir: {}
         - name: web-tmp
           emptyDir: {}
-        - name: modules-docs-en
-          emptyDir: {}
-        - name: modules-docs-ru
-          emptyDir: {}
-        - name: modules-searchindex-en
-          emptyDir: {}
-        - name: modules-searchindex-ru
-          emptyDir: {}
-        - name: builder-hugo
-          emptyDir: {}
         - name: builder-tmp
           emptyDir: {}
         - name: embedded-modules-history-data
           configMap:
             name: embedded-modules-history-data
+        - name: ondemand-cache
+          emptyDir:
+            sizeLimit: {{ pluck .Values.web.env .Values.docsBuilder.ondemand.cacheSize | first | default .Values.docsBuilder.ondemand.cacheSize._default }}
+        # The connection to the site bucket: the keys of the deploy and the CA
+        # its jobs trust, one file per setting (see s3cache of docs-builder).
+        - name: ondemand-s3
+          projected:
+            sources:
+              - secret:
+                  name: moduleslibrary-ondemand-s3
+              - configMap:
+                  name: doc-s3-ca-bundle
+                  items:
+                    - key: ca.yaml
+                      path: S3_CA_CERT
+        - name: ondemand-registry
+          secret:
+            secretName: watch-registry-auths
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: moduleslibrary
   labels:
-    prometheus.deckhouse.io/custom-target: registry-modules-watcher-frontend
+    prometheus.deckhouse.io/custom-target: docs-frontend
 spec:
   clusterIP: None
   selector:

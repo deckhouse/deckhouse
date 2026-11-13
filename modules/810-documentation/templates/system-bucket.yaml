@@ -1,0 +1,43 @@
+{{- /* Prepared documentation of module versions kept in the system S3 storage
+  (moduleStorage.s3.type: System). docs-builder reads the connection ConfigMap the
+  system-s3 module writes for the bucket and gets short-lived keys through STS
+  with the ServiceAccount token; the Role below is what lets it ask. */}}
+{{- if eq (include "documentation_s3" .) "System" }}
+---
+apiVersion: storage.deckhouse.io/v1alpha1
+kind: SystemBucket
+metadata:
+  name: documentation
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "documentation")) | nindent 2 }}
+spec:
+  # About 2-4 thousand versions: one archive of 1-3 MB per version.
+  size: {{ include "documentation_s3_size" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: documentation:system-bucket
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "documentation")) | nindent 2 }}
+rules:
+  - apiGroups: ["storage.deckhouse.io"]
+    resources: ["systembuckets/read", "systembuckets/write"]
+    resourceNames: ["documentation"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: documentation:system-bucket
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "documentation")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: documentation:system-bucket
+subjects:
+  - kind: ServiceAccount
+    name: documentation
+    namespace: d8-system
+{{- end }}

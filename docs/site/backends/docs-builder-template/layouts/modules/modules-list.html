@@ -55,66 +55,30 @@
 {{- $lang := site.Language.Lang }}
 {{- $buildEdition := or (getenv "HUGO_D8_EDITION") "EE" }}
 {{- $editionsSortedList := sort hugo.Data.helpers.editions "weight" }}
-{{- $modulesChannelsData := hugo.Data.modules.channels }}
-{{- $channelsInfo := hugo.Data.channels.info }}
 {{- $modulesList := slice }}
 {{- $embeddedModulesList := hugo.Data.dkp.embedded_modules.entries }}
 {{- $embeddedModulesEditionsGlobal := hugo.Data.dkp.editions }}
 {{- $modulesEditions := hugo.Data.modules_all }}
-{{- $pages := (where $.Site.RegularPages ".Section" "modules").ByWeight }}
-{{- $ctx := $ }}
 
-{{- $_pathElements := index ( findRESubmatch  `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/*$` .File.Dir 1 ) 0 }}
-{{- $currentModuleName := index $_pathElements 1 }}
-{{- $currentModuleChannel := index $_pathElements 2 }}
 
-{{- range $module, $data := $modulesChannelsData }}
-  {{- $moduleTitle := "" }}
-  {{- $moduleChannel := "" }}
-  {{- $moduleDescription := "" }}
-  {{- $moduleTags := slice }}
-
+{{- /* The modules from sources come from docs-builder (data/modules_list.json):
+  every module of the cluster or of the registries of the site, enabled or
+  not, with the title, the description and the stage of the version it
+  serves. A module whose version is not rendered yet has its name only. */}}
+{{- range hugo.Data.modules_list.modules }}
+  {{- $module := .module }}
   {{- /* Skip the embedded module if there is external module with the same name */}}
-  {{- $embeddedModuleWithTheSameName := (where $embeddedModulesList "module" $module) }}
-  {{- if gt ($embeddedModuleWithTheSameName | len) 0 }}
+  {{- if gt ((where $embeddedModulesList "module" $module) | len) 0 }}
     {{- warnf "Found embedded module %s and external modules with the same name. Use only external module." $module }}
   {{- end }}
-
-  {{- $moduleTags = index (index $modulesEditions $module) "tags" }}
-
-  {{- range sort $channelsInfo "stability" "desc" }}
-    {{- /* Skip rock-solid channel */}}
-    {{- if eq .code "rock-solid"  }}{{ continue }}{{ end }}
-
-    {{- /* The condition to select the data from the available stablest module channel */}}
-    {{- if gt ( $moduleTitle | len ) 0  }}{{ continue }}{{ end }}
-
-    {{- $channel := .code }}
-    {{- with $.GetPage ( printf "modules/%s/%s/README.md" $module $channel ) }}
-      {{- if .Params.menuTitle }}{{ $moduleTitle = .Params.menuTitle }}
-      {{- else if .LinkTitle }}{{ $moduleTitle = .LinkTitle }}
-      {{- end }}
-      {{- if not $moduleChannel }}{{ $moduleChannel = $channel }}{{ end }}
-      {{- if not $moduleDescription }}{{ $moduleDescription = .Description }}{{ end }}
-    {{- end }}
-  {{- end -}}
-
-  {{- $moduleData := index (index hugo.Data.modules $module) $moduleChannel }}
-  {{- $moduleMetadata := index $moduleData "module" }}
-  {{- $moduleOss := index $moduleData "oss" }}
-  {{- if and $moduleMetadata $moduleOss }}
-    {{- $moduleMetadata = merge $moduleMetadata (dict "oss" $moduleOss) }}
-  {{- end -}}
-
-  {{- if not $moduleTitle }}{{ $moduleTitle = $module }}{{ end }}
-  {{- if (not $moduleChannel ) }}{{ continue }}{{ end }}
-  {{- $modulesList = $modulesList | append (dict "module" $module "title" $moduleTitle "channel" $moduleChannel "description" $moduleDescription "metadata" $moduleMetadata "tags" $moduleTags "url" (printf "%s/%s/" $module $moduleChannel ) ) }}
+  {{- $moduleTitle := or (index (default dict .title) $lang) $module }}
+  {{- $moduleDescription := default "" (index (default dict .description) $lang) }}
+  {{- $moduleTags := index (default dict (index $modulesEditions $module)) "tags" }}
+  {{- $modulesList = $modulesList | append (dict "module" $module "title" $moduleTitle "description" $moduleDescription "metadata" (dict "stage" .stage) "tags" $moduleTags "url" (printf "%s/" $module) "noDocs" .noDocs "pending" .pending) }}
 {{- end }}
 
-{{- warnf "Found %d modules from sources." ($modulesList | len) }}
 
 {{- if $embeddedModulesList }}
-  {{- warnf "Found %d embedded modules." ( $embeddedModulesList | len) }}
   {{- $filteredEmbeddedModules := slice }}
   {{- range $embeddedModulesList }}
     {{- $externalModuleWithSameName := (where $modulesList "module" .module) }}
@@ -230,7 +194,11 @@
         {{- $_extensions := default slice (index $moduleExtensionsSource "extensions") | append (default slice (index $moduleExtensionsSource "extensionsWithRestrictions")) | uniq }}
         {{- $moduleExtensionsString := delimit $_extensions "," }}
 
-        <a class="button-tile" data-editions="{{ $moduleEditionsString }}" data-extensions="{{ $moduleExtensionsString }}" href="{{ .url }}">
+        {{- if .noDocs }}
+        <div class="button-tile button-tile--no-docs" data-module="{{ .module }}" data-editions="{{ $moduleEditionsString }}" data-extensions="{{ $moduleExtensionsString }}">
+        {{- else }}
+        <a class="button-tile" data-module="{{ .module }}" data-editions="{{ $moduleEditionsString }}" data-extensions="{{ $moduleExtensionsString }}" href="{{ .url }}">
+        {{- end }}
 
         {{- if and $moduleStage (in (slice "Preview" "Experimental" "General Availability" "Deprecated" ) $moduleStage) }}
           {{- if eq $moduleStage "General Availability" }}
@@ -246,9 +214,13 @@
           <span class='button-tile__stage'></span>
         {{- end }}
           <h2 class="button-tile__title">{{ .module }}</h2>
+          {{- if and .pending (not $moduleDescription) }}
+          <p class="button-tile__descr button-tile__pending">{{ T "module_pending" }}</p>
+          {{- else }}
           <p class="button-tile__descr">
             {{ $moduleDescription }}
           </p>
+          {{- end }}
           <div class="button-tile__bottom">
             <div class="button-tile__tags">
 
@@ -268,12 +240,52 @@
                <p class="button-tile__descr tile__descr--time">{{ .WordCount }} words</p>
             </div> */}}
           </div>
+        {{- if .noDocs }}
+          <p class="button-tile__no-docs">{{ T "module_no_docs" }}</p>
+        </div>
+        {{- else }}
         </a>
+        {{- end }}
       {{- end }}
 
       </div>
 
     <script type="text/javascript" src='/assets/js/tile.js?v={{ .Site.Lastmod | time.Format ":date_long" | hash.FNV32a }}'></script>
+    {{- /* docs-builder rewrites the list while it renders the versions of the
+    modules (every 10 seconds): the descriptions of the cards still being
+    prepared are taken from the new page in place, without a reload that would
+    reset the filters and the scroll. */}}
+    <script>
+    (function () {
+      var pendingSelector = '.button-tile__pending';
+      var tries = 0, maxTries = 60;
+      function refresh() {
+        var pending = document.querySelectorAll(pendingSelector);
+        if (!pending.length || ++tries > maxTries) { return; }
+        fetch(location.pathname, { cache: 'no-store' })
+          .then(function (r) { return r.ok ? r.text() : ''; })
+          .then(function (html) {
+            if (html) {
+              var page = new DOMParser().parseFromString(html, 'text/html');
+              pending.forEach(function (descr) {
+                var tile = descr.closest('[data-module]');
+                var freshTile = tile && page.querySelector('[data-module="' + tile.dataset.module + '"]');
+                var fresh = freshTile && freshTile.querySelector('.button-tile__descr');
+                if (fresh && !fresh.classList.contains('button-tile__pending')) {
+                  // A module that turned out to have no documentation says so.
+                  var noDocs = freshTile.querySelector('.button-tile__no-docs');
+                  descr.textContent = fresh.textContent.trim() || (noDocs ? noDocs.textContent : '');
+                  descr.classList.remove('button-tile__pending');
+                }
+              });
+            }
+            setTimeout(refresh, 10000);
+          })
+          .catch(function () { setTimeout(refresh, 10000); });
+      }
+      setTimeout(refresh, 10000);
+    })();
+    </script>
     {{- if ne site.Params.mode "module" }}
       {{ "<!--noindex-->" | safeHTML }}
       {{- "<!--#include virtual=\"/includes/feedback.html\" -->"  | safeHTML }}

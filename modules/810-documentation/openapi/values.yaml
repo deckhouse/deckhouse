@@ -24,6 +24,18 @@ properties:
             type: string
             x-examples:
               - plainstring
+      s3ConnectionChecksum:
+        type: string
+        description: The checksum of the ConfigMap system-s3 writes for the SystemBucket, kept by the s3_connection hook; a change of it restarts the documentation pod.
+        x-examples: ["0d2b3f4c"]
+      s3Connection:
+        type: object
+        description: The keys of the Secret of the S3 storage of the user with their base64-encoded values, copied by the s3_connection hook.
+        additionalProperties:
+          type: string
+        x-examples:
+          - S3_ENDPOINT: aHR0cHM6Ly9zMy5leGFtcGxlLmNvbQ==
+            S3_BUCKET: ZG9jdW1lbnRhdGlvbg==
       auth:
         type: object
         default: {}

@@ -1,0 +1,38 @@
+// The interface texts of the version dialog of an embedded module
+// (channel-menu-module.js), loaded before it.
+window.versionDialogTexts = {
+    ru: {
+        other: 'Показать другие версии',
+        title: 'Версии модуля ###',
+        hint: 'Документация модуля в минорных версиях Deckhouse Platform.',
+        filter: 'Фильтр по версии, например 1.6',
+        close: 'Закрыть',
+        prev: 'Назад',
+        next: 'Вперёд',
+        page: 'Страница {page} из {pages}',
+        count: 'Версий: {count}',
+        empty: 'Нет версий по этому фильтру.',
+        none: 'Других версий нет.',
+        loading: 'Загружаем список версий',
+        failed: 'Не удалось получить список версий. Повторите позже.',
+        incomplete: 'Список может быть неполным: не удалось получить версии из registry. Повторите позже.',
+        shown: 'Показывается сейчас',
+    },
+    en: {
+        other: 'Show other versions',
+        title: 'Versions of the ### module',
+        hint: 'The documentation of the module in the minor versions of Deckhouse Platform.',
+        filter: 'Filter by version, for example 1.6',
+        close: 'Close',
+        prev: 'Previous',
+        next: 'Next',
+        page: 'Page {page} of {pages}',
+        count: 'Versions: {count}',
+        empty: 'No versions match the filter.',
+        none: 'No other versions.',
+        loading: 'Loading the versions',
+        failed: 'Could not get the versions. Try again later.',
+        incomplete: 'The list may be incomplete: the registry did not give all the versions. Try again later.',
+        shown: 'Currently shown',
+    },
+};

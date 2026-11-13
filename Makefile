@@ -307,8 +307,6 @@ cve-base-images-check-default-user: bin/jq ## Check CVE in our base images.
 ##@ Documentation
 
 MODULE_PATH ?=
-CHANNEL ?= alpha
-MODULE_VERSION ?= v0.1.0
 DOC_VERSION ?=
 
 .PHONY: docs
@@ -329,19 +327,10 @@ docs-generate-pdf: ## Generate PDF documentation.
 	bash tools/docs/pdf/generate-pdf.sh
 
 .PHONY: docs-external-module
-docs-external-module: yq bin/werf ## Build an external module docs and run the local portal.
-  ##~ Options: MODULE_PATH=/path/to/module [CHANNEL=alpha] [MODULE_VERSION=v0.1.0]
-	MODULE_PATH="$(MODULE_PATH)" CHANNEL="$(CHANNEL)" MODULE_VERSION="$(MODULE_VERSION)" ./tools/docs/external-module-docs.sh
-	@echo "Building documentation containers..."
-	@echo -n "werf: "; bin/werf version
-	@$(MAKE) -C docs/site free-port-80
-	@cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --env local --repo ":local"
-	echo "Open http://localhost/products/kubernetes-platform/documentation/v1/ to access documentation..."
-
-.PHONY: docs-external-module-clean
-docs-external-module-clean: ## Remove generated external module documentation output.
-	rm -rf docs/site/backends/docs-builder-template/public
-	@echo "Removed docs/site/backends/docs-builder-template/public"
+docs-external-module: ## Run the local portal with the documentation of a module repository, rendered anew on every change.
+  ##~ Options: MODULE_PATH=/path/to/module-repository (or a directory of module repositories)
+	@$(MAKE) -C docs/site external-module MODULE_PATH="$(MODULE_PATH)"
+	echo "Open http://localhost/products/kubernetes-platform/documentation/v1/modules/ to access the modules..."
 
 .PHONY: docs-dev
 docs-dev: bin/werf ## Run containers with the documentation in the dev mode (allow uncommited files).
@@ -354,7 +343,7 @@ docs-dev: bin/werf ## Run containers with the documentation in the dev mode (all
 .PHONY: docs-down
 docs-down: ## Stop all the documentation containers (e.g. site_site_1 - for Linux, and site-site-1 for MacOs)
 	echo "Removing documentation related containers..."
-	@docker rm -f site-site-1 site_site_1 site-router-1  site_router_1  site-front-1 site_front_1 site-frontend-1 site_frontend_1 2>/dev/null || true ; docker network rm deckhouse 2>/dev/null || true
+	@docker rm -f site-site-1 site_site_1 site-router-1  site_router_1  site-front-1 site_front_1 site-frontend-1 site_frontend_1 site-builder-1 site_builder_1 2>/dev/null || true ; docker network rm deckhouse 2>/dev/null || true
 
 .PHONY: docs-linkscheck
 docs-linkscheck: bin/werf ## Build documentation and run checker of html links.

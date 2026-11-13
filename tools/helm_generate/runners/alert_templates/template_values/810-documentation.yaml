@@ -1,0 +1,6 @@
+documentation:
+  moduleStorage:
+    s3:
+      type: System
+global:
+  enabledModules: []

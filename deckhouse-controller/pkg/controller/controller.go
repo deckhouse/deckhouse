@@ -63,7 +63,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	deckhouserelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release"
 	moduleconfig "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/config"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/docbuilder"
 	moduleoverride "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/override"
 	modulerelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release"
 	modulesource "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/source"
@@ -87,8 +86,6 @@ import (
 )
 
 const (
-	docsLeaseLabel = "deckhouse.io/documentation-builder-sync"
-
 	bootstrappedGlobalValue = "clusterIsBootstrapped"
 	defaultModuleVersion    = "v2.0.0"
 
@@ -167,14 +164,6 @@ func NewDeckhouseController(
 		Cache: cache.Options{
 			DefaultTransform: cache.TransformStripManagedFields(),
 			ByObject: map[client.Object]cache.ByObject{
-				// for ModuleDocumentation controller
-				&coordv1.Lease{}: {
-					Namespaces: map[string]cache.Config{
-						app.NamespaceDeckhouse: {
-							LabelSelector: labels.SelectorFromSet(map[string]string{docsLeaseLabel: ""}),
-						},
-					},
-				},
 				// for ModuleRelease controller and DeckhouseRelease controller
 				&corev1.Secret{}: {
 					Namespaces: map[string]cache.Config{
@@ -213,14 +202,13 @@ func NewDeckhouseController(
 					Transform: ctrlutils.TransformStripNode,
 				},
 				// for deckhouse.io apis
-				&v1alpha1.Module{}:              {},
-				&v1alpha1.ModuleConfig{}:        {},
-				&v1alpha1.ModuleDocumentation{}: {},
-				&v1alpha1.ModuleRelease{}:       {},
-				&v1alpha1.ModuleSource{}:        {},
-				&v1alpha2.ModuleUpdatePolicy{}:  {},
-				&v1alpha2.ModulePullOverride{}:  {},
-				&v1alpha1.DeckhouseRelease{}:    {},
+				&v1alpha1.Module{}:             {},
+				&v1alpha1.ModuleConfig{}:       {},
+				&v1alpha1.ModuleRelease{}:      {},
+				&v1alpha1.ModuleSource{}:       {},
+				&v1alpha2.ModuleUpdatePolicy{}: {},
+				&v1alpha2.ModulePullOverride{}: {},
+				&v1alpha1.DeckhouseRelease{}:   {},
 			},
 		},
 	}
@@ -372,11 +360,6 @@ func NewDeckhouseController(
 	err = moduleoverride.RegisterController(runtimeManager, operator.ModuleManager, loader, edition, dc, logger.Named("module-pull-override-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register module pull override controller: %w", err)
-	}
-
-	err = docbuilder.RegisterController(runtimeManager, dc, logger.Named("module-documentation-controller"))
-	if err != nil {
-		return nil, fmt.Errorf("register module documentation controller: %w", err)
 	}
 
 	err = objectkeeper.RegisterController(runtimeManager, dc, logger.Named("objectkeeper-controller"))

@@ -4,9 +4,18 @@ properties:
     type: string
     pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
     description: |
-      The class of the Ingress controller of the documentation web UI.
+      Class of the Ingress controller of the documentation web UI.
 
       An optional parameter; by default, the `modules.ingressClass` global value is used.
+  highAvailability:
+    type: boolean
+    x-examples: [true, false]
+    description: |
+      Manually enable the high availability mode.
+
+      By default, Deckhouse Platform automatically decides whether to enable the HA mode. Learn more about the [high availability mode for modules](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters).
+
+      In the HA mode the documentation runs in two replicas on different nodes; the "High availability mode" section of the usage page of the module tells what it needs and why S3 helps.
   auth:
     type: object
     default: {}
@@ -24,7 +33,7 @@ properties:
             type: string
             default: ""
             description: |
-              The URL of the authentication service.
+              URL of the authentication service.
 
               If the user is authenticated, the service should return an HTTP 200 response code.
             x-examples:
@@ -33,7 +42,7 @@ properties:
             type: string
             default: ""
             description: |
-              The URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response.
+              URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response).
             x-examples:
               - https://$host/dex-authenticator/sign_in
       allowedUserEmails:
@@ -41,7 +50,7 @@ properties:
         items:
           type: string
         description: |
-          An array of emails of users that can access module's public web interfaces.
+          Array of emails of users that can access module's public web interfaces.
 
           This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
       allowedUserGroups:
@@ -50,11 +59,11 @@ properties:
           type: string
         default: []
         description: |
-          An array of groups whose users can browse the documentation.
+          Array of groups whose users can browse the documentation.
 
           This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
 
-          > **Caution!** Note that you must add those groups to the appropriate field in the `DexProvider` config if this module is used together with the `user-authn` one.
+          > **Caution!** If the module works together with the `user-authn` module, add the allowed groups to the DexProvider configuration.
         x-examples:
           - ["admin", "users"]
           - []
@@ -78,7 +87,7 @@ properties:
         type: string
         default: "CertManager"
         description: |
-          The HTTPS usage mode:
+          HTTPS usage mode:
           - `CertManager` — the web UI is accessed over HTTPS using a certificate obtained from a clusterIssuer specified in the `certManager.clusterIssuerName` parameter.
           - `CustomCertificate` — the web UI is accessed over HTTPS using a certificate from the `d8-system` namespace.
           - `Disabled` — in this mode, the documentation web UI can only be accessed over HTTP.
@@ -108,7 +117,7 @@ properties:
           secretName:
             type: string
             description: |
-              The name of the secret in the `d8-system` namespace to use with the documentation web UI.
+              Name of the Secret in the `d8-system` namespace to use with the documentation web UI.
 
               This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
   nodeSelector:
@@ -119,7 +128,7 @@ properties:
     x-examples:
       - disktype: ssd
     description: |
-      The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
+      Same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
 
       If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
   tolerations:
@@ -144,6 +153,80 @@ properties:
           value: "value1"
           effect: "NoSchedule"
     description: |
-      The same as in the pods' `spec.tolerations` parameter in Kubernetes;
+      Same as in the pods' `spec.tolerations` parameter in Kubernetes;
 
       If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+  moduleStorage:
+    type: object
+    default: {}
+    description: |
+      Storage of the documentation of module versions, prepared when a version is opened for the first time.
+    properties:
+      s3:
+        type: object
+        default: {}
+        description: |
+          Where the prepared documentation of module versions is kept besides the cache of the documentation pod.
+        # The external section is required with type: External.
+        anyOf:
+          - properties:
+              type:
+                enum: ["Disabled", "System"]
+          - required: [external]
+        properties:
+          type:
+            type: string
+            enum: ["Disabled", "System", "External"]
+            default: "Disabled"
+            description: |
+              - `Disabled` — only in the pod: after a restart of the pod the versions are prepared again when opened. In the high availability mode each replica prepares and keeps the versions on its own, with twice the CPU and the requests to the registry; turn S3 on for that mode.
+              - `System` — also in the system S3 storage of the [system-s3](https://deckhouse.io/modules/system-s3/) module: after a restart of the pod the versions open from it in a fraction of a second. The module creates a 5 GiB bucket for it. Requires the `system-s3` module to be enabled: without it the versions are kept in the pod only, and the `D8DocumentationSystemS3Disabled` alert fires.
+              - `External` — also in an S3 storage of your own, set in the `external` section.
+          external:
+            type: object
+            required: [secretRef]
+            description: |
+              S3 storage of your own for `type: External`. The connection and the keys are taken from a Secret; the keys it holds are listed in the "S3 storage of your own" section of the usage page of the module.
+            properties:
+              secretRef:
+                type: object
+                required: [namespace, name]
+                description: |
+                  Secret with the connection and the keys of the S3 storage, in any namespace.
+
+                  Deckhouse Platform copies it into the `documentation-s3-connection` Secret in `d8-system`. The documentation pod uses that Secret. After the Secret is created or changed, the documentation pod restarts within 5 minutes. Until the Secret appears, the versions are kept in the pod only.
+                properties:
+                  namespace:
+                    type: string
+                    maxLength: 63
+                    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+                    x-examples: ["d8-system", "documentation-storage"]
+                    description: |
+                      Namespace of the Secret.
+                  name:
+                    type: string
+                    maxLength: 253
+                    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                    x-examples: ["documentation-s3"]
+                    description: |
+                      Name of the Secret.
+              prefix:
+                type: string
+                default: "documentation/"
+                pattern: '^([A-Za-z0-9][A-Za-z0-9._-]*/)+$'
+                x-examples: ["documentation/", "clusters/main/documentation/"]
+                description: |
+                  Part of the bucket the module uses: every object it reads, writes or deletes has a key starting with this prefix. Other objects of the bucket stay untouched, so the bucket may be shared.
+              size:
+                type: string
+                default: "5Gi"
+                pattern: '^[1-9][0-9]*(Mi|Gi|Ti)$'
+                x-examples: ["5Gi", "20Gi"]
+                description: |
+                  How much of the bucket the module may take under the prefix. Above 80% of it the module deletes stored versions until 60% is left, in this order:
+
+                  1. Copies replaced after an update of the documentation template.
+                  2. Versions opened by readers.
+                  3. Versions used by the search.
+
+                  Within each group the versions stored longest ago go first.

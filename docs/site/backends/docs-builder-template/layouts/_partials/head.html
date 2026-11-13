@@ -21,7 +21,9 @@
 {{- if lt ( $description | len ) 20 }}{{ $description = .Site.Params.description }}{{ end }}
 
 {{- $canonicalURL := strings.TrimSuffix "readme.html" .RelPermalink }}
-{{- $canonicalURL = replaceRE "^(/modules/[a-zA-Z0-9-]+)/(alpha|beta|early-access|stable|rock-solid)/(.*)$" "$1/$3" $canonicalURL 1 }}
+{{- /* Channels and versions (docs-builder RenderVersion) of a module point at the module itself. */ -}}
+{{- $channelOrVersion := `(/modules/[a-zA-Z0-9-]+)/(alpha|beta|early-access|stable|rock-solid|v[0-9][^/]*)/` }}
+{{- $canonicalURL = replaceRE (printf "^%s" $channelOrVersion) "$1/" $canonicalURL 1 }}
 {{- if ne site.Params.mode "module" -}}
   {{- $canonicalURL = printf "%s%s" site.BaseURL (strings.TrimLeft "/" $canonicalURL) -}}
 {{- end -}}
@@ -40,7 +42,7 @@
 {{- end -}}
 
 {{- $metaTitle := printf "%s | %s" $pageTitleForHead .Site.Title }}
-{{- $modulePathMatch := findRESubmatch `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/*$` .File.Dir 1 }}
+{{- $modulePathMatch := findRESubmatch `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9.-]+)/*$` .File.Dir 1 }}
 {{- if $modulePathMatch }}
   {{- $captures := index $modulePathMatch 0 }}
   {{- if ge (len $captures) 2 }}
@@ -52,7 +54,7 @@
 {{- $escapedCanonicalURL := $canonicalURL | htmlEscape }}
 {{- $escapedDescription := $description | htmlEscape }}
 {{- $escapedMetaTitle := $metaTitle | htmlEscape }}
-{{- $ogURL := strings.TrimSuffix "readme.html" .Permalink }}
+{{- $ogURL := replaceRE $channelOrVersion "$1/" (strings.TrimSuffix "readme.html" .Permalink) 1 }}
 {{- $escapedOGURL := $ogURL | htmlEscape }}
 
 <title>{{ $metaTitle }}</title>

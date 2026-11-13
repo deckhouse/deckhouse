@@ -211,7 +211,6 @@ rules:
   - deckhousereleases
   - modulesources
   - modulereleases
-  - moduledocumentations
   - modulesettingsdefinitions
   - moduleupdatepolicies
   - modulepulloverrides

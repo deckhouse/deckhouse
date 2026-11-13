@@ -46,6 +46,11 @@ var skipFiles = map[string]struct{}{
 	"modules/140-user-authz/docs/internal/RBACV2_MODULE_MIGRATION.md":        {},
 	"modules/140-user-authz/docs/internal/RBACV2_MODULE_MIGRATION_PROMPT.md": {},
 	"modules/140-user-authz/docs/internal/rbacv2-migrate-module.sh":          {},
+
+	// The search of the documentation keeps its Russian interface texts in an i18n dictionary in the script.
+	"docs/site/assets/js/search-v3.js": {},
+	// The Russian interface texts of the version dialog of an embedded module (channel-menu-module.js).
+	"docs/site/assets/js/version-dialog-i18n.js": {},
 }
 
 func RunNoCyrillicValidation(info *DiffInfo, title string, description string) (exitCode int) {

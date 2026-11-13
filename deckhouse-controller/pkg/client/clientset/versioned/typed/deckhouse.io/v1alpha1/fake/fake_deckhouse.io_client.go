@@ -49,10 +49,6 @@ func (c *FakeDeckhouseV1alpha1) ModuleConfigs() v1alpha1.ModuleConfigInterface {
 	return newFakeModuleConfigs(c)
 }
 
-func (c *FakeDeckhouseV1alpha1) ModuleDocumentations() v1alpha1.ModuleDocumentationInterface {
-	return newFakeModuleDocumentations(c)
-}
-
 func (c *FakeDeckhouseV1alpha1) ModulePackages() v1alpha1.ModulePackageInterface {
 	return newFakeModulePackages(c)
 }

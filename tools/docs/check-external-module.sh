@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-DEFAULT_HUGO_IMAGE="ghcr.io/gohugoio/hugo:v0.168.0"
+DEFAULT_HUGO_IMAGE="ghcr.io/gohugoio/hugo:v0.169.0"
 DEFAULT_DECKHOUSE_REF="main"
 DEFAULT_DECKHOUSE_REPO_URL="https://github.com/deckhouse/deckhouse.git"
 
@@ -45,7 +45,7 @@ Options (CLI flags override the matching environment variables):
   --channel <name>           Release channel to render (default: alpha).
   --version <ver>            Module version label (default: git describe of --module-path, or v0.0.0-dev).
   --output <dir>             Directory for the rendered site (default: temporary directory, removed on exit).
-  --hugo-image <image>       Hugo docker image (default: ghcr.io/gohugoio/hugo:v0.168.0).
+  --hugo-image <image>       Hugo docker image (default: ghcr.io/gohugoio/hugo:v0.169.0).
   --deckhouse-repo <path>    Existing checkout of the deckhouse repo. Skips the sparse clone below.
   --deckhouse-ref <ref>      Branch/tag to fetch when cloning deckhouse (default: main).
   --repo-url <url>           deckhouse repo URL used for the sparse clone

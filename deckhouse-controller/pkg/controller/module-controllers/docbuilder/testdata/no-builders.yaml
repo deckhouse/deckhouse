@@ -1,8 +1,0 @@
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleDocumentation
-metadata:
-  name: testmodule
-spec:
-  version: v1.0.0
-  checksum: abc
-  path: /modules/testmodule

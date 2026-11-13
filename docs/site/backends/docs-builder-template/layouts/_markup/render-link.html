@@ -14,4 +14,19 @@
 {{- if and (not $keep) .Title -}}
   {{- $attrs = printf " title=\"%s\"" .Title -}}
 {{- end -}}
-{{- partial "helpers/rewrite-link" (dict "href" .Destination "inner" .Text "attrs" $attrs "keep" $keep) -}}
+{{- /*
+  On a site of one module version (docs-builder RenderVersion writes
+  data/version_site.json), keep links to the same module inside that version:
+  /modules/<module>/x.html -> /<lang>/modules/<module>/<version>/x.html. Links
+  that already name a channel or a version and links to other modules are left
+  untouched.
+*/ -}}
+{{- $dest := .Destination -}}
+{{- with hugo.Data.version_site -}}
+  {{- $own := printf `^(/(ru|en))?/modules/%s/` .module -}}
+  {{- $pinned := printf `^(/(ru|en))?/modules/%s/(alpha|beta|early-access|stable|rock-solid|latest|v[0-9][^/]*|%s)/` .module (replaceRE `\.` `\.` .version) -}}
+  {{- if and (findRE $own $dest 1) (not (findRE $pinned $dest 1)) -}}
+    {{- $dest = replaceRE $own (printf "/%s/modules/%s/%s/" $.Page.Language.Lang .module .version) $dest 1 -}}
+  {{- end -}}
+{{- end -}}
+{{- partial "helpers/rewrite-link" (dict "href" $dest "inner" .Text "attrs" $attrs "keep" $keep) -}}
