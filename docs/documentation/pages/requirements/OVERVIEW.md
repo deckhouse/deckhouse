@@ -27,7 +27,7 @@ This page describes the requirements for cluster nodes and the environment that 
 Before the installation, check the following:
 
 - The [deployment option](#deployment-options) is chosen: how many nodes the cluster has, how roles are distributed between them, and whether the cluster tolerates a node failure.
-- Nodes have the CPU, memory and disks from the [tables](#resource-requirements) for the chosen deployment option and workload type: [running containers](#containers), [running virtual machines](#virtual-machines) or [combined workloads](#combined).
+- Nodes have the CPU, memory and disks from the [tables](#resource-requirements) for the chosen deployment option and workload type: [running containers](#containers), [running virtualization](#virtual-machines) or [combined workloads](#combined).
 - Nodes have fast disks (400+ IOPS), and the disk layout follows the [disk layout and size recommendations](../guides/fs-requirements.html).
 - Nodes meet the [node requirements](#node-requirements): CPU architecture, operating system, kernel version and installed software.
 - For an installation into an existing Kubernetes cluster, its version is in the [list of supported Kubernetes versions](../reference/supported_versions.html#kubernetes), and the node OS is in the [list of supported OS](../reference/supported_versions.html#linux).
@@ -97,7 +97,7 @@ The table lists the Deckhouse Platform resource requirements for running contain
 {% include admin/requirements-table.liquid data="dp-containers-requirements" %}
 
 {% endtab %}
-{% tab "For virtual machines" %}
+{% tab "For virtualization" %}
 
 {: #virtual-machines .anchored}
 
