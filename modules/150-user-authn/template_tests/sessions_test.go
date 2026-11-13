@@ -134,6 +134,13 @@ var _ = Describe("Module :: user-authn :: helm template :: sessions of dex", fun
 				NotTo(ContainElement("--restart-login-without-csrf-cookie"))
 		})
 
+		// The upstream refresh token of a user is spent only when the stored identity is older than
+		// maxAge, with the sessions of dex off too.
+		It("reads the identity from the provider after idTokenTTL", func() {
+			Expect(gjson.GetBytes(renderedDexConfig(hec), "identityRefresh").String()).
+				To(MatchJSON(`{"maxAge": "15m", "gracePeriod": "0s"}`))
+		})
+
 		It("keeps the cookie key", func() {
 			secret := hec.KubernetesResource("Secret", "d8-user-authn", "dex-sessions-cookie-key")
 			Expect(secret.Exists()).To(BeTrue())
@@ -168,9 +175,10 @@ var _ = Describe("Module :: user-authn :: helm template :: sessions of dex", fun
 				"validIfNotUsedFor": "24h",
 				"rememberMeCheckedByDefault": false,
 				"ssoSharedWithDefault": "none",
-				"cookieEncryptionKey": "` + sessionsCookieKey + `",
-				"identityRefresh": {"maxAge": "15m", "gracePeriod": "0s"}
+				"cookieEncryptionKey": "` + sessionsCookieKey + `"
 			}`))
+			Expect(gjson.GetBytes(renderedDexConfig(hec), "identityRefresh").String()).
+				To(MatchJSON(`{"maxAge": "15m", "gracePeriod": "0s"}`))
 		})
 
 		It("binds the tokens of every DexAuthenticator to the session", func() {
@@ -234,9 +242,10 @@ identityRefresh:
 				"validIfNotUsedFor": "30m",
 				"rememberMeCheckedByDefault": true,
 				"ssoSharedWithDefault": "none",
-				"cookieEncryptionKey": "` + sessionsCookieKey + `",
-				"identityRefresh": {"maxAge": "5m", "gracePeriod": "1m"}
+				"cookieEncryptionKey": "` + sessionsCookieKey + `"
 			}`))
+			Expect(gjson.GetBytes(renderedDexConfig(hec), "identityRefresh").String()).
+				To(MatchJSON(`{"maxAge": "5m", "gracePeriod": "1m"}`))
 		})
 	})
 

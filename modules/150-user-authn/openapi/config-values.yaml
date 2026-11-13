@@ -551,10 +551,19 @@ properties:
         description: |
           Freshness of the user data that Dex stores at the sign-in, such as the groups of the user.
 
-          With sessions on, Dex serves the stored data until it is older than `maxAge`, and then reads it from the
-          provider again. If the provider answers that the user no longer exists or is no longer allowed in, Dex
-          ends all the sessions and tokens of the user of this provider.
+          Dex serves the stored data until it is older than `maxAge`, and then reads it from the provider again. This
+          holds with sessions on or off: a refresh of the tokens of an application reaches the provider only when the
+          stored data is older than `maxAge`. A user disabled at the provider therefore keeps refreshing the tokens
+          until then. If the provider answers that the user no longer exists or is no longer allowed in, Dex ends all
+          the sessions and tokens of the user of this provider.
           The data of local users is read again every time.
+
+          A provider that answers with a server error (HTTP 5xx) looks to Dex like a provider that is down. Once the
+          stored data is older than `maxAge`, Dex answers the refresh of the tokens with 503 and keeps the tokens, and
+          DexAuthenticator sends the user to the sign-in [`idTokenTTL`](#parameters-idtokenttl) after the first such
+          error. Dex of the upstream project (dexidp/dex) and Deckhouse Dex before version 1.78 may answer the refresh
+          of a deleted local or LDAP user this way. Behind such a provider, a deleted user sees an error page for about
+          `idTokenTTL` and then the sign-in page.
 
           A sign-in from a session needs fresh data too. Dex keeps no credentials of a user of an external provider
           to read the data in the background, so once the data is older than `maxAge`, such a user signs in to the

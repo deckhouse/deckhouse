@@ -38,12 +38,12 @@ index 167fe4a1..85de6102 100644
  	if rl := serverConfig.RateLimit; rl != nil {
  		logger.Info("config rate limit of failed attempts per client address",
 diff --git a/connector/connector.go b/connector/connector.go
-index b6dca2f8..4347e332 100644
+index 6fb41583..cd82cff3 100644
 --- a/connector/connector.go
 +++ b/connector/connector.go
-@@ -200,6 +200,13 @@ type RefreshConnector interface {
- 	Refresh(ctx context.Context, s Scopes, identity Identity) (Identity, error)
- }
+@@ -265,6 +265,13 @@ func (e *RefreshedError) Error() string { return e.Err.Error() }
+ 
+ func (e *RefreshedError) Unwrap() error { return e.Err }
  
 +// ClientRestrictedConnector is implemented by a connector that admits only some
 +// clients to the token-exchange grant (Deckhouse). The grant asks it before

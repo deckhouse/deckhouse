@@ -696,10 +696,10 @@ index 419d51c8..a29f8ace 100644
  		&deviceCode{storage: h.Storage, now: h.Now, logger: h.Logger},
 diff --git a/server/grants/lock.go b/server/grants/lock.go
 new file mode 100644
-index 00000000..dcb7e3c4
+index 00000000..7626990a
 --- /dev/null
 +++ b/server/grants/lock.go
-@@ -0,0 +1,29 @@
+@@ -0,0 +1,43 @@
 +package grants
 +
 +import (
@@ -727,6 +727,66 @@ index 00000000..dcb7e3c4
 +	default:
 +		logger.ErrorContext(ctx, "failed to read the user identity", append(attrs, "err", err)...)
 +		return &oauth2.Error{Type: oauth2.ServerError, Status: http.StatusInternalServerError}
++	}
++}
++
++// refreshRefusal is the answer to a refresh that identityError refused. A locked
++// account gets invalid_grant with HTTP 400 in place of access_denied, with the
++// same description: RFC 6749, section 5.2, answers invalid_grant for a refresh
++// token that cannot be used, a client ends the session on it, and a downstream
++// dex takes HTTP 429 for a provider that did not answer. The password and the
++// token exchange grants keep access_denied. Any other answer is returned as it
++// is.
++func refreshRefusal(oerr *oauth2.Error) *oauth2.Error {
++	if oerr == nil || oerr.Type != oauth2.AccessDenied {
++		return oerr
++	}
++	return &oauth2.Error{Type: oauth2.InvalidGrant, Description: oerr.Description, Status: http.StatusBadRequest}
++}
+diff --git a/server/grants/lock_test.go b/server/grants/lock_test.go
+new file mode 100644
+index 00000000..6b867d83
+--- /dev/null
++++ b/server/grants/lock_test.go
+@@ -0,0 +1,40 @@
++package grants
++
++import (
++	"net/http"
++	"testing"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/server/oauth2"
++)
++
++func TestRefreshRefusal(t *testing.T) {
++	tests := []struct {
++		name string
++		in   *oauth2.Error
++		want *oauth2.Error
++	}{
++		{name: "no refusal"},
++		{
++			name: "automatic lock",
++			in:   &oauth2.Error{Type: oauth2.AccessDenied, Description: "Account locked", Status: http.StatusTooManyRequests},
++			want: &oauth2.Error{Type: oauth2.InvalidGrant, Description: "Account locked", Status: http.StatusBadRequest},
++		},
++		{
++			name: "lock of an administrator",
++			in:   &oauth2.Error{Type: oauth2.AccessDenied, Description: "Account locked by an administrator", Status: http.StatusForbidden},
++			want: &oauth2.Error{Type: oauth2.InvalidGrant, Description: "Account locked by an administrator", Status: http.StatusBadRequest},
++		},
++		{
++			name: "server error",
++			in:   &oauth2.Error{Type: oauth2.ServerError, Status: http.StatusInternalServerError},
++			want: &oauth2.Error{Type: oauth2.ServerError, Status: http.StatusInternalServerError},
++		},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			require.Equal(t, tc.want, refreshRefusal(tc.in))
++		})
 +	}
 +}
 diff --git a/server/grants/password.go b/server/grants/password.go
@@ -781,7 +841,7 @@ index 03c43ed5..9391d36b 100644
  
  	return issueTokens(ctx, g.logger, g.issuer, auth, "", shouldIssueRefreshToken(conn, req.Scopes))
 diff --git a/server/grants/refresh.go b/server/grants/refresh.go
-index 8c4912f9..57f74a2f 100644
+index 8c4912f9..c8404742 100644
 --- a/server/grants/refresh.go
 +++ b/server/grants/refresh.go
 @@ -15,6 +15,7 @@ import (
@@ -792,21 +852,22 @@ index 8c4912f9..57f74a2f 100644
  	"github.com/dexidp/dex/storage"
  )
  
-@@ -86,6 +87,14 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+@@ -84,6 +85,15 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+ 	if oerr := g.checkAllowLists(ctx, client, refreshToken, &stored,
+ 		"refresh denied by access filter"); oerr != nil {
  		return nil, oerr
- 	}
- 
-+	// A locked account gets no new tokens. The refresh token is kept, so the
-+	// session continues once the lock ends.
++	}
++
++	// A locked account gets no new tokens: the refresh is refused with
++	// invalid_grant (see refreshRefusal). The refresh token is kept, so a client
++	// that still holds it goes on once the lock ends.
 +	err := useridentity.CheckBlocked(ctx, g.storage, refreshToken.Claims.UserID, refreshToken.ConnectorID, g.now())
 +	if oerr := identityError(ctx, g.logger, err,
 +		"connector_id", refreshToken.ConnectorID, "client_id", client.ID, "user_id", refreshToken.Claims.UserID); oerr != nil {
-+		return nil, oerr
-+	}
-+
++		return nil, refreshRefusal(oerr)
+ 	}
+ 
  	// Resolved before anything is rotated or read from the connector: a token whose
- 	// session has ended is not going to produce a token set. Skipped outright when
- 	// sessions are off — nothing was ever bound to one, so the read would only
 diff --git a/server/grants/tokenexchange.go b/server/grants/tokenexchange.go
 index e93e84aa..780dcc53 100644
 --- a/server/grants/tokenexchange.go
@@ -2009,10 +2070,10 @@ index b57ff775..ad742695 100644
 +}
 diff --git a/server/server_grant_lock_test.go b/server/server_grant_lock_test.go
 new file mode 100644
-index 00000000..b582d81d
+index 00000000..2d40c110
 --- /dev/null
 +++ b/server/server_grant_lock_test.go
-@@ -0,0 +1,212 @@
+@@ -0,0 +1,230 @@
 +package server
 +
 +import (
@@ -2096,6 +2157,20 @@ index 00000000..b582d81d
 +	}
 +	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
 +	require.Equal(t, oauth2.AccessDenied, resp.Error)
++}
++
++// requireLockedRefreshRefused checks the answer to the refresh of a locked
++// account: invalid_grant with HTTP 400 and the description of the lock.
++func requireLockedRefreshRefused(t *testing.T, rr *httptest.ResponseRecorder, description string) {
++	t.Helper()
++	require.Equal(t, http.StatusBadRequest, rr.Code, rr.Body.String())
++	var resp struct {
++		Error       string `json:"error"`
++		Description string `json:"error_description"`
++	}
++	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
++	require.Equal(t, oauth2.InvalidGrant, resp.Error)
++	require.Equal(t, description, resp.Description)
 +}
 +
 +// A login through the password grant is recorded like a browser login, sessions
@@ -2190,6 +2265,10 @@ index 00000000..b582d81d
 +	require.Equal(t, http.StatusOK, passwordGrant(t, s).Code)
 +}
 +
++// The refresh of a locked account is invalid_grant, as RFC 6749, section 5.2,
++// has it for a refresh token that cannot be used: the client ends the session
++// instead of waiting, as on HTTP 429. The password grant and the token exchange
++// keep access_denied.
 +func TestRefreshOfLockedAccount(t *testing.T) {
 +	_, s := newLockTestServer(t)
 +	rr := passwordGrant(t, s)
@@ -2202,7 +2281,7 @@ index 00000000..b582d81d
 +	refresh := url.Values{"grant_type": {oauth2.GrantTypeRefreshToken}, "refresh_token": {tokens.RefreshToken}}
 +
 +	setBlockedUntil(t, s, "test", time.Now().Add(time.Hour))
-+	requireAccountLocked(t, postToken(t, s, refresh))
++	requireLockedRefreshRefused(t, postToken(t, s, refresh), "Account locked")
 +
 +	// The refresh token survives the lock.
 +	setBlockedUntil(t, s, "test", time.Time{})

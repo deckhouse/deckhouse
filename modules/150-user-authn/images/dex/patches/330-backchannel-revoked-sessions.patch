@@ -368,7 +368,7 @@ index ac608700..9d59849a 100644
  // server still serves directly (e.g. /healthz).
  func (s *Server) renderError(r *http.Request, w http.ResponseWriter, status int, description string) {
 diff --git a/server/server_revocation_test.go b/server/server_revocation_test.go
-index eb11e489..64b94f4b 100644
+index 71bd12c3..48387fc5 100644
 --- a/server/server_revocation_test.go
 +++ b/server/server_revocation_test.go
 @@ -686,6 +686,7 @@ func sessionRevocation(t *testing.T, sessionID string) storage.Revocation {
@@ -380,7 +380,7 @@ index eb11e489..64b94f4b 100644
  }
  
 diff --git a/storage/kubernetes/storage.go b/storage/kubernetes/storage.go
-index 0f4d7ab8..5d1e504c 100644
+index 577f0013..ae23f769 100644
 --- a/storage/kubernetes/storage.go
 +++ b/storage/kubernetes/storage.go
 @@ -8,6 +8,7 @@ import (
@@ -399,10 +399,12 @@ index 0f4d7ab8..5d1e504c 100644
  )
  
  const (
-@@ -974,6 +976,61 @@ func (cli *client) RevocationExists(ctx context.Context, typ storage.RevocationT
+@@ -980,8 +982,63 @@ func (cli *client) RevocationExists(ctx context.Context, typ storage.RevocationT
+ 		return false, fmt.Errorf("get revocation %s: %w", name, err)
+ 	}
  	return true, nil
- }
- 
++}
++
 +// PendingSessionRevocations lists the Revocation objects of browser sessions without
 +// the claimed label, oldest first (Deckhouse). The handle is the object name.
 +// Every replica lists every few seconds, so the list is served from the cache of
@@ -427,8 +429,8 @@ index 0f4d7ab8..5d1e504c 100644
 +		return a.CreatedAt.Compare(b.CreatedAt)
 +	})
 +	return pending, nil
-+}
-+
+ }
+ 
 +// ClaimRevocation sets the claimed label on the Revocation object handle (Deckhouse).
 +// The write carries the resourceVersion that was read: of two replicas claiming at
 +// once, one gets a conflict and leaves the revocation to the other.

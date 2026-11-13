@@ -461,7 +461,7 @@ index a29f8ace..19f84fa7 100644
  		&authorizationCode{issuer: h.Issuer, storage: h.Storage, connectors: h.Connectors, now: h.Now, logger: h.Logger},
  		&refresh{storage: h.Storage, issuer: h.Issuer, policy: h.RefreshPolicy, sessions: h.Sessions, sessionsEnabled: h.SessionsEnabled, now: h.Now, logger: h.Logger},
 diff --git a/server/grants/lock.go b/server/grants/lock.go
-index dcb7e3c4..ed7ba32c 100644
+index 7626990a..c2d7a1e4 100644
 --- a/server/grants/lock.go
 +++ b/server/grants/lock.go
 @@ -12,8 +12,9 @@ import (
@@ -1302,10 +1302,10 @@ index fc8495cf..eb55db2a 100644
  			Storage:         s.storage,
 diff --git a/server/server_lockout_test.go b/server/server_lockout_test.go
 new file mode 100644
-index 00000000..92f4ed60
+index 00000000..e3619243
 --- /dev/null
 +++ b/server/server_lockout_test.go
-@@ -0,0 +1,331 @@
+@@ -0,0 +1,351 @@
 +package server
 +
 +import (
@@ -1426,6 +1426,26 @@ index 00000000..92f4ed60
 +	requireAccountLocked(t, localPasswordGrant(t, s, "wrong"))
 +
 +	assert.Zero(t, failedAttempts(t, s))
++}
++
++// The refresh of an account an administrator locked is invalid_grant like the
++// refresh of an automatic lock, with the description of the administrator's lock.
++func TestRefreshOfAdministratorLockedAccount(t *testing.T) {
++	_, s := newLockTestServer(t)
++	rr := passwordGrant(t, s)
++	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++	var tokens struct {
++		RefreshToken string `json:"refresh_token"`
++	}
++	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &tokens))
++	refresh := url.Values{"grant_type": {oauth2.GrantTypeRefreshToken}, "refresh_token": {tokens.RefreshToken}}
++
++	until := time.Now().Add(time.Hour).UTC()
++	require.NoError(t, s.storage.UpdateUserIdentity(t.Context(), mockUserID, "test", func(u storage.UserIdentity) (storage.UserIdentity, error) {
++		u.BlockedUntil, u.AdminLockedUntil = until, until
++		return u, nil
++	}))
++	requireLockedRefreshRefused(t, postToken(t, s, refresh), "Account locked by an administrator")
 +}
 +
 +// The lock of an administrator gets its own answer, 403, whatever the password;

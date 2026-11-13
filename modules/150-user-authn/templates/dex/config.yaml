@@ -268,9 +268,14 @@ fields when it decides who may write the provider. Rendered right after the conn
     trustedAfter: {{ dig "devices" "trustedAfter" "24h" $context.Values.userAuthn | quote }}
     maxPerClient: {{ dig "devices" "maxPerApplication" 10 $context.Values.userAuthn }}
     maxKnown: {{ dig "devices" "rememberedBrowsers" 20 $context.Values.userAuthn }}
+  # Dex serves the identity it stored for a user until it is older than maxAge, with the sessions of Dex on or off:
+  # only then a refresh reads the provider and spends the upstream refresh token of the user.
+  {{- $identityRefresh := dig "sessions" "identityRefresh" dict $context.Values.userAuthn }}
+  identityRefresh:
+    maxAge: {{ $identityRefresh.maxAge | default $context.Values.userAuthn.idTokenTTL | default "10m" | quote }}
+    gracePeriod: {{ $identityRefresh.gracePeriod | default "0s" | quote }}
   {{- with $context.Values.userAuthn.sessions }}
   {{- if .enabled }}
-  {{- $identityRefresh := .identityRefresh | default dict }}
   {{- $absoluteLifetime := .absoluteLifetime | default "168h" }}
   {{- $validIfNotUsedFor := .validIfNotUsedFor | default "24h" }}
   {{- /* Dex refuses an idle timeout longer than the lifetime. The settings refuse it when both are set; the
@@ -291,9 +296,6 @@ fields when it decides who may write the provider. Rendered right after the conn
     {{- with $context.Values.userAuthn.internal.dexSessionsCookieKey }}
     cookieEncryptionKey: {{ . | quote }}
     {{- end }}
-    identityRefresh:
-      maxAge: {{ $identityRefresh.maxAge | default $context.Values.userAuthn.idTokenTTL | default "10m" | quote }}
-      gracePeriod: {{ $identityRefresh.gracePeriod | default "0s" | quote }}
   {{- end }}
   {{- end }}
   logger:

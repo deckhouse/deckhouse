@@ -1064,10 +1064,10 @@ index c2680d6d..fdcb40b9 100644
  		&deviceCode{storage: h.Storage, now: h.Now, logger: h.Logger},
  	)
 diff --git a/server/grants/refresh.go b/server/grants/refresh.go
-index fb2b5a9f..77d20841 100644
+index 0ce2196e..24cb913e 100644
 --- a/server/grants/refresh.go
 +++ b/server/grants/refresh.go
-@@ -99,14 +99,13 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+@@ -100,14 +100,13 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
  		return nil, g.revoked(ctx, refreshToken)
  	}
  
@@ -1086,7 +1086,7 @@ index fb2b5a9f..77d20841 100644
  			return nil, oerr
  		}
  	}
-@@ -176,6 +175,14 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+@@ -177,6 +176,14 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
  		return nil, &oauth2.Error{Type: oauth2.InvalidRequest, Status: http.StatusInternalServerError}
  	}
  
@@ -1101,22 +1101,22 @@ index fb2b5a9f..77d20841 100644
  	ts := tokens.TokenSet{AccessToken: accessToken, IDToken: idToken, RefreshToken: rawNewToken, Expiry: expiry}
  	return ts.Response(g.now()), nil
  }
-@@ -215,72 +222,45 @@ func (g *refresh) revoked(ctx context.Context, refreshToken *storage.RefreshToke
+@@ -216,72 +223,45 @@ func (g *refresh) revoked(ctx context.Context, refreshToken *storage.RefreshToke
  	}
  }
  
 -// sessionID returns the sid for the refreshed tokens, and refuses the refresh when
 -// the session has ended and the client asked its tokens to end with it.
 +// sessionID returns the sid for the refreshed tokens.
-+//
-+// The sid names where a token came from and is carried across refreshes unchanged;
-+// stripping it would cut the token loose from the session whose end is to revoke it.
  //
 -// The sid names where a token came from and is carried across refreshes unchanged,
 -// dead session or not; stripping it would make the token active again at the next
 -// refresh, undoing what introspection just reported. Whether the token is still good
 -// for anything is the client's RefreshTokenLifetime, read the same way here and in
 -// introspection (see sessionAlive in server/introspection).
++// The sid names where a token came from and is carried across refreshes unchanged;
++// stripping it would cut the token loose from the session whose end is to revoke it.
+ //
 +// A token bound to its session (the client's RefreshTokenLifetime) is not refused
 +// because the session has since gone idle or reached its lifetime (Deckhouse): those
 +// close the window in which the browser signs in without a password, not the
@@ -1125,7 +1125,7 @@ index fb2b5a9f..77d20841 100644
 +// announced (see server/revocation) — or when its pair is revoked, as every token does.
 +// Introspection does not look at the session either (see introspectAccessToken in
 +// server/introspection).
- //
++//
  // Origin comes from the stored reference and nowhere else: a token minted outside a
  // browser flow has none and must not acquire one from whatever session its user
  // happens to have open.
@@ -1140,16 +1140,16 @@ index fb2b5a9f..77d20841 100644
  	if err != nil {
 -		if !errors.Is(err, storage.ErrNotFound) {
 -			g.logger.ErrorContext(ctx, "refresh: failed to read offline session for sid", "err", err)
--		}
++		if errors.Is(err, storage.ErrNotFound) {
++			return "", nil
+ 		}
 -		if bound {
 -			// Nothing to check the token against. For a standalone token that costs
 -			// only its sid, which can make it look less bound than it is but never
 -			// more; for a bound one it would mean handing out a token whose whole
 -			// validity rests on a session nobody could read.
 -			return "", sessionEndedError()
-+		if errors.Is(err, storage.ErrNotFound) {
-+			return "", nil
- 		}
+-		}
 -		return "", nil
 +		g.logger.ErrorContext(ctx, "refresh: failed to read offline session for sid", "err", err)
 +		return "", &oauth2.Error{Type: oauth2.InvalidRequest, Status: http.StatusInternalServerError}
@@ -1971,7 +1971,7 @@ index 9443e742..f8f7a599 100644
  	server.ServeHTTP(rr, req)
  
 diff --git a/server/server_revocation_test.go b/server/server_revocation_test.go
-index c8ab57b4..df082eca 100644
+index ed104487..52606a41 100644
 --- a/server/server_revocation_test.go
 +++ b/server/server_revocation_test.go
 @@ -719,6 +719,7 @@ func TestLogoutRecordsSessionRevocation(t *testing.T) {
@@ -2950,10 +2950,10 @@ index b848c8bc..45d56734 100644
  
  func (t *Templates) WebAuthnVerify(r *http.Request, w http.ResponseWriter, mode, authenticatorID string) error {
 diff --git a/storage/kubernetes/storage.go b/storage/kubernetes/storage.go
-index 5942565c..e65b4f34 100644
+index 22d171d2..262f6d4d 100644
 --- a/storage/kubernetes/storage.go
 +++ b/storage/kubernetes/storage.go
-@@ -924,6 +924,29 @@ func (cli *client) CreateRevocation(ctx context.Context, r storage.Revocation) e
+@@ -932,6 +932,29 @@ func (cli *client) CreateRevocation(ctx context.Context, r storage.Revocation) e
  	return cli.post(resourceRevocation, revocation)
  }
  

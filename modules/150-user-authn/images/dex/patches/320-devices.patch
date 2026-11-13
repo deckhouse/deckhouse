@@ -1,18 +1,18 @@
 diff --git a/cmd/dex/config.go b/cmd/dex/config.go
-index ef59b9cc..1377e701 100644
+index 72658dae..dce58785 100644
 --- a/cmd/dex/config.go
 +++ b/cmd/dex/config.go
-@@ -81,6 +81,9 @@ type Config struct {
+@@ -80,6 +80,9 @@ type Config struct {
+ 
  	// PasswordPolicy is the password policy of local users (passwordpolicy.go).
  	PasswordPolicy *PasswordPolicy `json:"passwordPolicy"`
- 
++
 +	// Devices limits the devices of a user (Deckhouse).
 +	Devices *Devices `json:"devices"`
-+
- 	// RateLimit limits failed attempts per client address on the login form, the
- 	// token endpoint and the second factor.
- 	RateLimit *RateLimit `json:"rateLimit"`
-@@ -821,6 +824,20 @@ type RefreshToken struct {
+ 
+ 	// IdentityRefresh controls how long dex serves the identity stored at the
+ 	// last login before it reads it from the connector again, whether sessions
+@@ -826,6 +829,20 @@ type RefreshToken struct {
  	ValidIfNotUsedFor string `json:"validIfNotUsedFor"`
  }
  
@@ -471,7 +471,7 @@ index 72a909f2..c17ad0de 100644
  
  	// The allow-lists of the client and the connector decide whether the user
 diff --git a/server/grants/refresh.go b/server/grants/refresh.go
-index df68d06d..787aa588 100644
+index f81ff087..8b4c73bf 100644
 --- a/server/grants/refresh.go
 +++ b/server/grants/refresh.go
 @@ -65,6 +65,13 @@ func (g *refresh) ConnectorID(ctx context.Context, req *Request, client storage.
@@ -488,7 +488,7 @@ index df68d06d..787aa588 100644
  		return "", refreshLookupError(err)
  	}
  
-@@ -161,6 +168,7 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+@@ -164,6 +171,7 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
  		AuthTime:    authTime,
  		SessionID:   sessionID,
  		Generation:  refreshToken.Generation,
@@ -496,7 +496,7 @@ index df68d06d..787aa588 100644
  	}
  
  	// The connector may have returned another email or other groups: the
-@@ -288,7 +296,7 @@ func (g *refresh) endPair(ctx context.Context, userID, connectorID string) {
+@@ -301,7 +309,7 @@ func (g *refresh) endPair(ctx context.Context, userID, connectorID string) {
  	if err != nil && !errors.Is(err, storage.ErrNotFound) {
  		g.logger.ErrorContext(ctx, "failed to get offline sessions", "err", err)
  	}
@@ -505,7 +505,7 @@ index df68d06d..787aa588 100644
  		refresh, err := g.storage.GetRefresh(ctx, ref.ID)
  		if err != nil {
  			continue
-@@ -377,7 +385,7 @@ func (g *refresh) sessionID(ctx context.Context, refreshToken *storage.RefreshTo
+@@ -390,7 +398,7 @@ func (g *refresh) sessionID(ctx context.Context, refreshToken *storage.RefreshTo
  		return "", &oauth2.Error{Type: oauth2.InvalidRequest, Status: http.StatusInternalServerError}
  	}
  
@@ -726,11 +726,11 @@ index 637bd901..36413f45 100644
  // whose identity provider answered that the user is gone or no longer let in
  // (Deckhouse). Every one is tried; the errors are returned together.
 diff --git a/server/server.go b/server/server.go
-index d1d97de0..ac608700 100644
+index c19bb5b2..0901e2a2 100644
 --- a/server/server.go
 +++ b/server/server.go
-@@ -110,6 +110,12 @@ func newServer(ctx context.Context, c Config) (*Server, error) {
- 		IssuerURL: s.issuerURL,
+@@ -111,6 +111,12 @@ func newServer(ctx context.Context, c Config) (*Server, error) {
+ 		IssuerURL:       s.issuerURL,
  	}
  	s.issuer = tokens.NewIssuer(s.storage, c.Signer, s.issuerURL.URL, rc.idTokensValidFor, rc.now, s.logger)
 +	if c.Devices.TrustedAfter != nil {
@@ -742,7 +742,7 @@ index d1d97de0..ac608700 100644
  	s.connectors = connectors.NewCache(s.storage, connectors.Resolver(s.storage, s.logger, ConnectorsConfig))
  	s.backchannel = &backchannel.Notifier{
  		Storage:   s.storage,
-@@ -134,6 +140,13 @@ func newServer(ctx context.Context, c Config) (*Server, error) {
+@@ -135,6 +141,13 @@ func newServer(ctx context.Context, c Config) (*Server, error) {
  	// The storage given to the server, not the key cache around it: the cache
  	// hides the methods of the storage beyond storage.Storage.
  	s.revocations = revocation.NewRecorder(c.Storage, rc.now)
@@ -756,7 +756,7 @@ index d1d97de0..ac608700 100644
  	if !s.revocations.Enabled() {
  		s.logger.WarnContext(ctx, "revocation events are disabled: the storage does not support them")
  	}
-@@ -165,7 +178,7 @@ func newServer(ctx context.Context, c Config) (*Server, error) {
+@@ -166,7 +179,7 @@ func newServer(ctx context.Context, c Config) (*Server, error) {
  	s.mux = r
  
  	c.Signer.Start(ctx)
@@ -765,7 +765,7 @@ index d1d97de0..ac608700 100644
  
  	return s, nil
  }
-@@ -449,8 +462,9 @@ func (k *keyCacher) GetKeys(ctx context.Context) (storage.Keys, error) {
+@@ -450,8 +463,9 @@ func (k *keyCacher) GetKeys(ctx context.Context) (storage.Keys, error) {
  	return storageKeys, nil
  }
  
@@ -776,7 +776,7 @@ index d1d97de0..ac608700 100644
  		for {
  			select {
  			case <-ctx.Done():
-@@ -464,11 +478,25 @@ func (s *Server) startGarbageCollection(ctx context.Context, frequency time.Dura
+@@ -465,11 +479,25 @@ func (s *Server) startGarbageCollection(ctx context.Context, frequency time.Dura
  						"device_requests", r.DeviceRequests, "device_tokens", r.DeviceTokens,
  						"auth_sessions", r.AuthSessions)
  				}
@@ -1117,7 +1117,7 @@ index f8f7a599..5a7d42b3 100644
  }
  
 diff --git a/server/server_revocation_test.go b/server/server_revocation_test.go
-index df082eca..eb11e489 100644
+index 52606a41..71bd12c3 100644
 --- a/server/server_revocation_test.go
 +++ b/server/server_revocation_test.go
 @@ -668,7 +668,7 @@ func newLogoutTestSession(t *testing.T, s *Server, logoutState *storage.LogoutSt
@@ -1273,12 +1273,12 @@ index 994587b9..b5f3b83a 100644
  	signingAlg, err := i.signer.Algorithm(ctx)
  	if err != nil {
 diff --git a/server/tokens/issuer_test.go b/server/tokens/issuer_test.go
-index a857ce0a..57e59aa0 100644
+index cee6302d..a1c63a58 100644
 --- a/server/tokens/issuer_test.go
 +++ b/server/tokens/issuer_test.go
-@@ -70,12 +70,29 @@ func TestIssuerIssue(t *testing.T) {
- 	require.NoError(t, err)
+@@ -74,14 +74,31 @@ func TestIssuerIssue(t *testing.T) {
  	require.Contains(t, sess.Refresh, "client-1")
+ 	require.Equal(t, auth.ConnectorData, sess.ConnectorData)
  
 +	// The tokens name the grant they came with (Deckhouse).
 +	require.Equal(t, rt.RefreshId, jwtClaim(t, ts.IDToken, "d8_gid"))
@@ -1291,8 +1291,8 @@ index a857ce0a..57e59aa0 100644
  	require.NotEmpty(t, ts2.IDToken)
  	require.Empty(t, ts2.RefreshToken)
 +	require.Nil(t, jwtClaim(t, ts2.IDToken, "d8_gid"), "no grant, no d8_gid")
-+}
-+
+ }
+ 
 +// jwtClaim returns a claim of the payload of a JWT, nil when absent.
 +func jwtClaim(t *testing.T, jwt, name string) any {
 +	t.Helper()
@@ -1303,14 +1303,16 @@ index a857ce0a..57e59aa0 100644
 +	claims := map[string]any{}
 +	require.NoError(t, json.Unmarshal(payload, &claims))
 +	return claims[name]
- }
- 
++}
++
  // TestIssuerGenerationClaim checks "d8_gen": present exactly when the pair has
+ // a generation, so tokens of generation 0, all tokens before generations
+ // existed among them, look as they did.
 diff --git a/server/tokens/refresh_store.go b/server/tokens/refresh_store.go
-index 7b02178b..e0437c01 100644
+index 6e9ed345..5b16089e 100644
 --- a/server/tokens/refresh_store.go
 +++ b/server/tokens/refresh_store.go
-@@ -6,6 +6,9 @@ import (
+@@ -5,6 +5,9 @@ import (
  	"errors"
  	"fmt"
  	"log/slog"
@@ -1320,11 +1322,10 @@ index 7b02178b..e0437c01 100644
  	"time"
  
  	"github.com/dexidp/dex/connector"
-@@ -20,19 +23,54 @@ type RefreshStore struct {
- 	storage storage.Storage
+@@ -20,6 +23,23 @@ type RefreshStore struct {
  	now     func() time.Time
  	logger  *slog.Logger
-+
+ 
 +	// OnEvict, when set, is told of a refresh token about to be deleted because
 +	// its client has MaxGrantsPerClient newer ones for the pair (Deckhouse).
 +	OnEvict func(ctx context.Context, refresh storage.RefreshToken)
@@ -1341,6 +1342,12 @@ index 7b02178b..e0437c01 100644
 +	// evict its own tokens, not the owner's. Zero prefers none: the token used
 +	// longest ago goes, whatever its age. DefaultProtectedGrantAge unless configured.
 +	ProtectedGrantAge time.Duration
++
+ 	// UpstreamLeaseTTL is how long a request may spend the upstream credential
+ 	// of an offline session before another request takes the lease over
+ 	// (Deckhouse; see refresh_lease.go). DefaultUpstreamLeaseTTL unless
+@@ -39,12 +59,22 @@ type RefreshStore struct {
+ 	LeaseTicker func(d time.Duration) (<-chan time.Time, func())
  }
  
 +// DefaultMaxGrantsPerClient is RefreshStore.MaxGrantsPerClient unless configured
@@ -1353,17 +1360,16 @@ index 7b02178b..e0437c01 100644
 +
  // NewRefreshStore returns a store backed by the given storage.
  func NewRefreshStore(storage storage.Storage, now func() time.Time, logger *slog.Logger) *RefreshStore {
--	return &RefreshStore{storage: storage, now: now, logger: logger}
-+	return &RefreshStore{
-+		storage:            storage,
-+		now:                now,
-+		logger:             logger,
+ 	return &RefreshStore{
+ 		storage:            storage,
+ 		now:                now,
+ 		logger:             logger,
 +		MaxGrantsPerClient: DefaultMaxGrantsPerClient,
 +		ProtectedGrantAge:  DefaultProtectedGrantAge,
-+	}
- }
- 
- // Create issues a new refresh token for the authorization and records it in the
+ 		UpstreamLeaseTTL:   DefaultUpstreamLeaseTTL,
+ 		UpstreamPollPeriod: DefaultUpstreamPollPeriod,
+ 		Sleep:              sleep,
+@@ -67,6 +97,10 @@ func sleep(ctx context.Context, d time.Duration) error {
  // user's offline session. On any offline-session failure the refresh token is
  // rolled back so no orphaned token is left behind.
  func (rt *RefreshStore) Create(ctx context.Context, auth Authorization) (string, error) {
@@ -1371,13 +1377,19 @@ index 7b02178b..e0437c01 100644
 +	if id == "" {
 +		id = storage.NewID()
 +	}
+ 	// The upstream credential of the login goes to the offline session, which
+ 	// the login updated already (authflow) and which every client of the user
+ 	// spends in turn. A copy on the token would be spent as soon as another
+@@ -79,7 +113,7 @@ func (rt *RefreshStore) Create(ctx context.Context, auth Authorization) (string,
+ 		connectorData = auth.ConnectorData
+ 	}
  	refresh := storage.RefreshToken{
 -		ID:            storage.NewID(),
 +		ID:            id,
  		Token:         storage.NewID(),
  		ClientID:      auth.Client.ID,
  		ConnectorID:   auth.ConnectorID,
-@@ -43,6 +81,9 @@ func (rt *RefreshStore) Create(ctx context.Context, auth Authorization) (string,
+@@ -90,6 +124,9 @@ func (rt *RefreshStore) Create(ctx context.Context, auth Authorization) (string,
  		CreatedAt:     rt.now(),
  		LastUsed:      rt.now(),
  		Generation:    auth.Generation,
@@ -1387,7 +1399,7 @@ index 7b02178b..e0437c01 100644
  	}
  
  	rawToken, err := internal.Marshal(&internal.RefreshToken{RefreshId: refresh.ID, Token: refresh.Token})
-@@ -62,15 +103,27 @@ func (rt *RefreshStore) Create(ctx context.Context, auth Authorization) (string,
+@@ -109,15 +146,27 @@ func (rt *RefreshStore) Create(ctx context.Context, auth Authorization) (string,
  		}
  	}
  
@@ -1421,7 +1433,7 @@ index 7b02178b..e0437c01 100644
  	switch {
  	case err != nil && err != storage.ErrNotFound:
  		rollback()
-@@ -80,37 +133,219 @@ func (rt *RefreshStore) Create(ctx context.Context, auth Authorization) (string,
+@@ -127,39 +176,221 @@ func (rt *RefreshStore) Create(ctx context.Context, auth Authorization) (string,
  			UserID:        refresh.Claims.UserID,
  			ConnID:        refresh.ConnectorID,
  			Refresh:       map[string]*storage.RefreshTokenRef{tokenRef.ClientID: &tokenRef},
@@ -1444,13 +1456,27 @@ index 7b02178b..e0437c01 100644
 -			if err := rt.storage.DeleteRefresh(ctx, oldRef.ID); err != nil && err != storage.ErrNotFound {
 -				rollback()
 -				return "", fmt.Errorf("delete previous refresh token: %w", err)
+-			}
+-		}
+-		if err := rt.storage.UpdateOfflineSessions(ctx, session.UserID, session.ConnID, func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
+-			old.Refresh[tokenRef.ClientID] = &tokenRef
+-			// The login replaced the shared credential when it finished (authflow),
+-			// and a refresh of another client may have rotated it since: the
+-			// credential of the code is only a seed for a session that has none,
+-			// as after the password grant (see refresh_upstream.go).
+-			if len(old.ConnectorData) == 0 && len(auth.ConnectorData) > 0 {
+-				old.ConnectorData = auth.ConnectorData
+-			}
+-			return old, nil
+-		}); err != nil {
 +		if err := rt.addGrant(ctx, refresh, &tokenRef, auth); err != nil {
-+			rollback()
+ 			rollback()
+-			return "", fmt.Errorf("update offline session: %w", err)
 +			return "", err
-+		}
-+	}
-+
-+	return rawToken, nil
+ 		}
+ 	}
+ 
+ 	return rawToken, nil
 +}
 +
 +// addGrant adds the grant tokenRef of a new login to the offline session of the
@@ -1478,10 +1504,10 @@ index 7b02178b..e0437c01 100644
 +			old.Refresh = make(map[string]*storage.RefreshTokenRef)
 +		}
 +		old.Refresh[tokenRef.ClientID] = tokenRef
-+		// The upstream credential of this login is kept on the refresh token
-+		// created above. Publishing it here as well would hand one single-use
-+		// credential to every client of the user, so it only seeds a session
-+		// that has none (see refresh_upstream.go).
++		// The login replaced the shared credential when it finished (authflow),
++		// and a refresh of another client may have rotated it since: the
++		// credential of the code is only a seed for a session that has none,
++		// as after the password grant (see refresh_upstream.go).
 +		if len(old.ConnectorData) == 0 && len(auth.ConnectorData) > 0 {
 +			old.ConnectorData = auth.ConnectorData
 +		}
@@ -1570,20 +1596,12 @@ index 7b02178b..e0437c01 100644
 +		if pa, pb := protected(a), protected(b); pa != pb {
 +			if pa {
 +				return 1
- 			}
++			}
 +			return -1
 +		}
 +		if c := a.LastUsed.Compare(b.LastUsed); c != 0 {
 +			return c
- 		}
--		if err := rt.storage.UpdateOfflineSessions(ctx, session.UserID, session.ConnID, func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
--			old.Refresh[tokenRef.ClientID] = &tokenRef
--			// The upstream credential of this login is kept on the refresh token
--			// created above. Publishing it here as well would hand one single-use
--			// credential to every client of the user, so it only seeds a session
--			// that has none (see refresh_upstream.go).
--			if len(old.ConnectorData) == 0 && len(auth.ConnectorData) > 0 {
--				old.ConnectorData = auth.ConnectorData
++		}
 +		return strings.Compare(a.ID, b.ID)
 +	})
 +	evicted := others[:excess]
@@ -1591,8 +1609,8 @@ index 7b02178b..e0437c01 100644
 +		delete(grants, ref.ID)
 +	}
 +	return evicted
-+}
-+
+ }
+ 
 +// deleteEvicted deletes the refresh tokens evicted by a new login, telling
 +// OnEvict of each first. Failures are logged: a token left behind has no
 +// reference and is refused at its next use.
@@ -1601,12 +1619,8 @@ index 7b02178b..e0437c01 100644
 +		if rt.OnEvict != nil {
 +			if refresh, err := rt.storage.GetRefresh(ctx, ref.ID); err == nil {
 +				rt.OnEvict(ctx, refresh)
- 			}
--			return old, nil
--		}); err != nil {
--			rollback()
--			return "", fmt.Errorf("update offline session: %w", err)
- 		}
++			}
++		}
 +		if err := rt.storage.DeleteRefresh(ctx, ref.ID); err != nil && !errors.Is(err, storage.ErrNotFound) {
 +			rt.logger.ErrorContext(ctx, "failed to delete an evicted refresh token", "token_id", ref.ID, "err", err)
 +		}
@@ -1639,10 +1653,9 @@ index 7b02178b..e0437c01 100644
 +	if err != nil && !errors.Is(err, errNoClientState) && !errors.Is(err, storage.ErrNotFound) {
 +		rt.logger.ErrorContext(ctx, "failed to remove an evicted client from its browser session",
 +			"session_id", ref.SessionID, "client_id", ref.ClientID, "err", err)
- 	}
++	}
 +}
- 
--	return rawToken, nil
++
 +// setLatest points Refresh at the newest grant left of the client, or removes
 +// the client from it (Deckhouse): Refresh names the last grant of each client.
 +func setLatest(o *storage.OfflineSessions, clientID string) {
@@ -1657,11 +1670,13 @@ index 7b02178b..e0437c01 100644
 +		return
 +	}
 +	o.Refresh[clientID] = latest
- }
- 
++}
++
  // IdentityFromClaims projects stored claims into a connector identity. The
-@@ -262,12 +497,17 @@ func (rt *RefreshStore) updateOfflineSession(ctx context.Context, refresh *stora
- 	spent, source, accepted := src.spent()
+ // refresh flow intentionally leaves UserID untouched by later updates.
+ func IdentityFromClaims(claims storage.Claims) connector.Identity {
+@@ -305,12 +536,17 @@ func (rt *RefreshStore) updateOfflineSession(ctx context.Context, refresh *stora
+ 	var isReleased bool
  
  	offlineSessionUpdater := func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
 -		ref, ok := old.Refresh[refresh.ClientID]
@@ -1678,9 +1693,9 @@ index 7b02178b..e0437c01 100644
 +		}
 +		old.Grants = grants
  
- 		// Publish a rotated credential only while the session still holds the one
- 		// this request spent, or none: a request that lost the race to this one may
-@@ -296,8 +536,10 @@ func (rt *RefreshStore) updateOfflineSession(ctx context.Context, refresh *stora
+ 		publishSpent(&old, src)
+ 		isReleased = lease.releaseIn(&old)
+@@ -333,8 +569,10 @@ func (rt *RefreshStore) updateOfflineSession(ctx context.Context, refresh *stora
  // of the same client may have replaced it already, and must keep its own.
  func (rt *RefreshStore) RevokeGrant(ctx context.Context, refresh *storage.RefreshToken) error {
  	err := rt.storage.UpdateOfflineSessions(ctx, refresh.Claims.UserID, refresh.ConnectorID, func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
@@ -1692,7 +1707,7 @@ index 7b02178b..e0437c01 100644
  		}
  		return old, nil
  	})
-@@ -311,6 +553,54 @@ func (rt *RefreshStore) RevokeGrant(ctx context.Context, refresh *storage.Refres
+@@ -348,6 +586,54 @@ func (rt *RefreshStore) RevokeGrant(ctx context.Context, refresh *storage.Refres
  	return nil
  }
  
@@ -1747,7 +1762,7 @@ index 7b02178b..e0437c01 100644
  // RevokeClients deletes the refresh tokens issued to the named clients for the
  // user/connector pair, in one pass over the offline session. Every other client's
  // token is left alone. See RevokeAll for the unscoped variant.
-@@ -326,18 +616,31 @@ func (rt *RefreshStore) RevokeClients(ctx context.Context, userID, connectorID s
+@@ -363,18 +649,31 @@ func (rt *RefreshStore) RevokeClients(ctx context.Context, userID, connectorID s
  		}
  	}
  
@@ -1782,7 +1797,7 @@ index 7b02178b..e0437c01 100644
  }
  
  // revoke deletes the refresh tokens of every client matching the predicate and
-@@ -348,7 +651,7 @@ func (rt *RefreshStore) RevokeAll(ctx context.Context, userID, connectorID strin
+@@ -385,7 +684,7 @@ func (rt *RefreshStore) RevokeAll(ctx context.Context, userID, connectorID strin
  // session update would have its reference wiped, we snapshot the token IDs,
  // remove only those references (the updater sees the latest state, so a
  // concurrently added reference survives), then delete the tokens.
@@ -1791,7 +1806,7 @@ index 7b02178b..e0437c01 100644
  	offlineSessions, err := rt.storage.GetOfflineSessions(ctx, userID, connectorID)
  	if err != nil {
  		if !errors.Is(err, storage.ErrNotFound) {
-@@ -357,9 +660,10 @@ func (rt *RefreshStore) revoke(ctx context.Context, userID, connectorID string,
+@@ -394,9 +693,10 @@ func (rt *RefreshStore) revoke(ctx context.Context, userID, connectorID string,
  		return
  	}
  
@@ -1805,7 +1820,7 @@ index 7b02178b..e0437c01 100644
  			tokenIDs[ref.ID] = struct{}{}
  		}
  	}
-@@ -369,9 +673,13 @@ func (rt *RefreshStore) revoke(ctx context.Context, userID, connectorID string,
+@@ -406,9 +706,13 @@ func (rt *RefreshStore) revoke(ctx context.Context, userID, connectorID string,
  	}
  
  	if err := rt.storage.UpdateOfflineSessions(ctx, userID, connectorID, func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
@@ -1821,7 +1836,7 @@ index 7b02178b..e0437c01 100644
  		}
  		return old, nil
 diff --git a/server/tokens/refresh_store_test.go b/server/tokens/refresh_store_test.go
-index e6853fc0..ebd50a6b 100644
+index 622b51ab..b0256d69 100644
 --- a/server/tokens/refresh_store_test.go
 +++ b/server/tokens/refresh_store_test.go
 @@ -2,7 +2,11 @@ package tokens
@@ -1836,43 +1851,53 @@ index e6853fc0..ebd50a6b 100644
  	"testing"
  	"time"
  
-@@ -25,34 +29,408 @@ func TestRefreshStoreCreate(t *testing.T) {
+@@ -25,40 +29,414 @@ func TestRefreshStoreCreate(t *testing.T) {
  	ctx := context.Background()
  	rt, store := newTestStore(t)
  	auth := testAuthorization()
 +	auth.IPAddress, auth.UserAgent, auth.DeviceHash = "203.0.113.7", "test-agent", "device-hash-1"
  
 -	first, err := rt.Create(ctx, auth)
--	require.NoError(t, err)
++	first := createdID(t, rt, auth)
++	stored, err := store.GetRefresh(ctx, first)
+ 	require.NoError(t, err)
 -	var firstTok internal.RefreshToken
 -	require.NoError(t, internal.Unmarshal(first, &firstTok))
 -
 -	stored, err := store.GetRefresh(ctx, firstTok.RefreshId)
-+	first := createdID(t, rt, auth)
-+	stored, err := store.GetRefresh(ctx, first)
- 	require.NoError(t, err)
+-	require.NoError(t, err)
  	require.Equal(t, "client-1", stored.ClientID)
- 	require.Equal(t, auth.ConnectorData, stored.ConnectorData)
+ 	// The upstream credential seeds the offline session and stays off the
+ 	// token, which would hold a copy spent at the next refresh of another
+ 	// client (refresh_upstream.go).
+ 	require.Empty(t, stored.ConnectorData)
 +	require.Equal(t, "203.0.113.7", stored.IPAddress)
 +	require.Equal(t, "device-hash-1", stored.DeviceHash)
  
  	sess, err := store.GetOfflineSessions(ctx, "u1", "mock")
  	require.NoError(t, err)
+ 	require.Equal(t, auth.ConnectorData, sess.ConnectorData)
 -	require.Contains(t, sess.Refresh, "client-1")
 +	require.Equal(t, first, sess.Refresh["client-1"].ID)
 +	require.Equal(t, "test-agent", sess.Grants[first].UserAgent)
 +	require.Equal(t, "device-hash-1", sess.Grants[first].DeviceHash)
-+
+ 
+-	// A second create for the same client replaces the old token.
+-	second, err := rt.Create(ctx, auth)
 +	// A second login of the client is another device (Deckhouse): the first token
 +	// stays, Refresh names the newer one.
 +	second := createdID(t, rt, auth)
 +	_, err = store.GetRefresh(ctx, first)
-+	require.NoError(t, err)
+ 	require.NoError(t, err)
+-	var secondTok internal.RefreshToken
+-	require.NoError(t, internal.Unmarshal(second, &secondTok))
+-	require.NotEqual(t, firstTok.RefreshId, secondTok.RefreshId)
 +	sess, err = store.GetOfflineSessions(ctx, "u1", "mock")
 +	require.NoError(t, err)
 +	require.Equal(t, second, sess.Refresh["client-1"].ID)
 +	require.Len(t, sess.Grants, 2)
-+
+ 
+-	_, err = store.GetRefresh(ctx, firstTok.RefreshId)
 +	// The password grant repeats for one user: it replaces every grant of the
 +	// client.
 +	replace := auth
@@ -2024,14 +2049,9 @@ index e6853fc0..ebd50a6b 100644
 +	require.NoError(t, rt.DeleteIfExpired(ctx, fresh, strategy))
 +	_, err = store.GetRefresh(ctx, fresh)
 +	require.NoError(t, err, "a token that is not expired stays")
- 
--	// A second create for the same client replaces the old token.
--	second, err := rt.Create(ctx, auth)
++
 +	n, err = rt.DeleteExpired(ctx, strategy)
- 	require.NoError(t, err)
--	var secondTok internal.RefreshToken
--	require.NoError(t, internal.Unmarshal(second, &secondTok))
--	require.NotEqual(t, firstTok.RefreshId, secondTok.RefreshId)
++	require.NoError(t, err)
 +	require.Equal(t, 2, n)
 +	for _, id := range []string{old, unused} {
 +		_, err = store.GetRefresh(ctx, id)
@@ -2051,8 +2071,7 @@ index e6853fc0..ebd50a6b 100644
 +	auth := testAuthorization()
 +	var evicted []string
 +	rt.OnEvict = func(_ context.Context, refresh storage.RefreshToken) { evicted = append(evicted, refresh.ID) }
- 
--	_, err = store.GetRefresh(ctx, firstTok.RefreshId)
++
 +	var ids []string
 +	for i := 0; i < DefaultMaxGrantsPerClient; i++ {
 +		ids = append(ids, createdID(t, rt, auth))
@@ -2119,7 +2138,7 @@ index e6853fc0..ebd50a6b 100644
 +		}
 +	}
 +}
- 
++
 +// TestRefreshStoreCreateEvictsYoungFirst: a device signed in ProtectedGrantAge ago (a day by default)
 +// is kept while the client has younger ones, however long ago it was used; it goes
 +// only once every other one is that old (Deckhouse).
@@ -2153,7 +2172,7 @@ index e6853fc0..ebd50a6b 100644
 +	require.NoError(t, err)
 +	require.Contains(t, sess.Grants, ids[0], "the old device is kept")
 +	require.NotContains(t, sess.Grants, ids[1], "the young one used longest ago goes")
-+
+ 
 +	// Once every other device is old, the one used longest ago goes, old or not.
 +	setGrants(func(_ string, ref *storage.RefreshTokenRef) { ref.CreatedAt = time.Now().Add(-48 * time.Hour) })
 +	createdID(t, rt, auth)
@@ -2162,8 +2181,8 @@ index e6853fc0..ebd50a6b 100644
 -	require.Equal(t, secondTok.RefreshId, sess.Refresh["client-1"].ID)
 +	require.NotContains(t, sess.Grants, ids[0])
 +	require.Len(t, sess.Grants, DefaultMaxGrantsPerClient)
-+}
-+
+ }
+ 
 +// TestRefreshStoreCreateProtectedGrantAge: the age that keeps a device from
 +// eviction is configured; zero prefers none, and the device used longest ago goes
 +// however old it is (Deckhouse).
@@ -2256,9 +2275,11 @@ index e6853fc0..ebd50a6b 100644
 +
 +func grantIDs(o storage.OfflineSessions) []string {
 +	return slices.Sorted(maps.Keys(o.Grants))
- }
- 
++}
++
  func TestRefreshStoreRotate(t *testing.T) {
+ 	ctx := context.Background()
+ 	rt, store := newTestStore(t)
 diff --git a/server/useridentity/useridentity.go b/server/useridentity/useridentity.go
 index ca19a5d3..67423e53 100644
 --- a/server/useridentity/useridentity.go
@@ -2711,7 +2732,7 @@ index 00000000..070abe54
 +	require.Equal(t, []string{"fresh"}, slices.Sorted(maps.Keys(sessions.Grants)))
 +}
 diff --git a/storage/kubernetes/storage.go b/storage/kubernetes/storage.go
-index e65b4f34..0f4d7ab8 100644
+index 262f6d4d..577f0013 100644
 --- a/storage/kubernetes/storage.go
 +++ b/storage/kubernetes/storage.go
 @@ -7,6 +7,8 @@ import (
@@ -2723,15 +2744,16 @@ index e65b4f34..0f4d7ab8 100644
  	"strings"
  	"time"
  
-@@ -400,8 +402,33 @@ func (cli *client) ListClients(ctx context.Context) ([]storage.Client, error) {
+@@ -407,9 +409,34 @@ func (cli *client) GetConnector(ctx context.Context, id string) (storage.Connect
+ func (cli *client) ListClients(ctx context.Context) ([]storage.Client, error) {
  	return nil, errors.New("not implemented")
  }
- 
++
 +// refreshTokensPageSize is how many refresh tokens a page of their list holds.
 +// Every token of the cluster is listed once an hour per replica (Deckhouse patch
 +// 320, the sweep of the expired tokens), so the list is read in pages.
 +var refreshTokensPageSize = 500
-+
+ 
 +// ListRefreshTokens lists every refresh token, page by page (Deckhouse patch
 +// 320). Upstream leaves it unimplemented for this storage.
  func (cli *client) ListRefreshTokens(ctx context.Context) ([]storage.RefreshToken, error) {

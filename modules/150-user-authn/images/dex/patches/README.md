@@ -18,8 +18,10 @@ patched source tree (`crds/pull_dex_crds.sh`), and the image build checks it.
 ### 100-storage-schema.patch
 
 **Zone:** storage schema. The patch that adds fields to Dex storage, apart
-from the one prefix of a connector (435) and the last use of a WebAuthn
-credential (340, inside the credentials every storage keeps as JSON), for
+from the one prefix of a connector (435), the last use of a WebAuthn
+credential (340, inside the credentials every storage keeps as JSON) and the
+lease on the upstream credential of an offline session (250,
+`OfflineSessions.upstreamLease`), for
 the kubernetes and memory storages only: Deckhouse runs Dex on the kubernetes
 storage and the Dex tests run on the memory one. SQL, ent and etcd ignore these
 fields.
@@ -308,11 +310,13 @@ the pair generation (290), not of a lock re-check. New package
   the password of another user to the same `state` got a code for that user
   without the second factor of that user. The same user signing in again (a
   second click, the back button) goes on;
-- the password grant records the identity too; the password, refresh-token and
-  token-exchange grants refuse a blocked pair with `access_denied` and HTTP 429
-  and keep the refresh token. A pair without an identity is not locked (with
-  150, a pair whose old storage holds a lock in force reads as an identity
-  with it);
+- the password grant records the identity too; the password and token-exchange
+  grants refuse a blocked pair with `access_denied` and HTTP 429, the
+  refresh-token grant with `invalid_grant` and HTTP 400 and the same description
+  (RFC 6749 §5.2: a client ends the session on it, where it waits on a 429),
+  and all keep the refresh token. A pair without an identity is not locked
+  (with 150, a pair whose old storage holds a lock in force reads as an
+  identity with it);
 - the allow-lists of 200 come first, so the identity records the connector's
   claims and a user both locked and not allowed gets the 401 of 200;
 - a login writes the identity only for new claims or a `LastLogin` to move.
@@ -479,11 +483,13 @@ lockout live in `UserIdentity.blockedUntil` (upstream field);
   hash is compared; an LDAP or Crowd user after the connector has looked him up
   and before the result is used. Answers to an automatic lock: 429 "Account
   temporarily locked" (form), `access_denied` with 429 "Account locked"
-  (password, refresh-token and token-exchange grants), as in v2.44. Answers to
-  the lock of an administrator (`blockedUntil` equals `AdminLockedUntil` of
-  100): 403 "Account locked by an administrator. Contact your administrator."
-  (form), `access_denied` with 403 "Account locked by an administrator"
-  (grants); v2.44 answered it as an automatic lock. With 150, a pair locked
+  (password and token-exchange grants), as in v2.44, and `invalid_grant` with
+  400 "Account locked" (refresh-token grant, see 210). Answers to the lock of
+  an administrator (`blockedUntil` equals `AdminLockedUntil` of 100): 403
+  "Account locked by an administrator. Contact your administrator." (form),
+  `access_denied` with 403 "Account locked by an administrator" (password and
+  token-exchange grants; a refresh gets `invalid_grant` with 400 and the same
+  description); v2.44 answered it as an automatic lock. With 150, a pair locked
   only in the storage of the v2.44-based Dex and without a `UserIdentity` yet
   is refused here like any other, with the answer to an automatic lock.
 - a lock that `finalizeLogin` (210) finds gets the same page, 403 or 429,
@@ -645,33 +651,87 @@ from every peer (#3661); v2.46 takes it only from `trustedProxies` (#4933).
 
 ### 250-upstream-refresh.patch
 
-**Zone:** upstream refresh, with sessions off (`DEX_SESSIONS_ENABLED` unset:
-the refresh grant asks the connector). With sessions on, v2.46 does not call
-the connector at refresh and none of this applies.
+**Zone:** upstream refresh. With sessions on or off, a refresh asks the
+connector only when the claims stored for the pair are older than
+`identityRefresh.maxAge` (310); then everything below applies.
 
-- One holder per upstream credential. A login keeps the credential it obtained
-  on the refresh token it issues and only seeds an offline session that has
-  none. A refresh offers the token's own credential first, then the shared one
-  of the offline session, and writes a rotated credential back to the object it
-  was read from. A request that lost the race for the shared credential
-  continues from the winner's successor (at most two more attempts, then
-  `temporarily_unavailable`: the credential is alive). A shared credential the provider
-  refused and nobody rotated is dropped, so the next login of any client
-  restores it. A credential rotated during a request that fails afterwards is
-  still stored. Refreshes inside the reuse interval keep the stored credential.
-  Upstream credentials are no longer logged. New file
-  `server/tokens/refresh_upstream.go` (`RefreshStore.RotateUpstream`,
-  `tokens.Upstream`).
+- One upstream credential per pair (user, connector), the shared one of the
+  offline session, spent by one request at a time. RFC 6749 §6: the client
+  must discard a refresh token once a new one is issued; RFC 9700 §4.14.2: a
+  provider may revoke the whole grant when a spent token is presented again.
+  - A login replaces the shared credential with the one it obtained when that
+    carries a refresh token (`connector.RefreshCredentialReporter`: OIDC and
+    GitLab tell; other connectors count any data): a provider may end the
+    refresh tokens of the earlier logins of the user to the same client, as
+    dex does, so the latest login's is the one known to be alive. A login
+    without a refresh token (Google without consent, `promptType: login`)
+    keeps the shared one. A login that only seeded an empty session left a
+    dead shared credential in place, and two applications of one user sent
+    each other to the login. The identity of a SAML login always replaces the
+    shared one (D10). The code exchange after the login leaves the session
+    alone, so it does not undo a rotation another client made in between.
+  - A refresh token keeps no copy of the credential (SAML keeps its identity):
+    a copy is spent as soon as another client refreshes, and presenting it
+    then is the reuse some providers revoke the grant for. A token issued
+    before keeps its own copy, offered only when the session has none, moved
+    to the session once spent, and dropped once the provider refuses it.
+  - A lease on the offline session (`upstreamLease` of the OfflineSessions
+    object; the SQL, ent and etcd storages do not keep it) lets one request of
+    the pair, on any replica, read the connector at a time. It lasts 10 s: the
+    5 s of the connector call, 3 s for a write and 2 s for clocks of the
+    replicas that differ. The holder renews it in the background every third
+    of that while it holds it, so a slow storage cannot let it expire under a
+    live call; a holder that finds it lost before the call (taken over or not
+    renewed in time) never presents the credential it read, but starts over
+    from the current one, twice at most, then answers 503. The first write
+    after the call publishes the successor, only over the credential the
+    request spent; the lease is released once the stored claims and the token
+    are written too, so a request waiting for it finds the claims fresh. A
+    request that waits for the lease looks again after 50 ms, backing off to
+    every 500 ms (24 looks in a lease time, each a read of the storage, where
+    looking every 50 ms made 201), and, once it holds it, serves the claims the holder stored if they
+    are fresh now, or reads the connector with the credential the holder
+    left; after the lease time by the clock (the storage reads between the
+    looks do not stretch it) it gets 503. A refresh inside the reuse
+    interval mints nothing, and a pair with no credential to spend (a local
+    user) has nothing to guard: neither takes the lease. The connector is
+    always asked for offline access, so it returns the successor whatever
+    the client asked for.
+  - A request that lost the race for the shared credential to a dex without
+    the lease (during an update) waits for the winner's successor up to the
+    5 s of a connector call by the clock, looking again with the same backoff
+    (14 looks; counting the looks alone made the wait 6.5 s on Kubernetes),
+    then continues from it
+    or gets 503 (`temporarily_unavailable`: the credential is alive). A shared
+    credential the provider refused and nobody rotated is dropped, so the next
+    login of any client restores it.
+  - A credential is dead only on `invalid_grant`, GitHub's
+    `bad_refresh_token`, or 400 `invalid_request` with "already been claimed"
+    in its description, the answer of dex up to v2.45 to a refresh token it no
+    longer holds (RFC 6749 §5.2). An `invalid_grant` "Account locked" or
+    "Account locked by an administrator", the refusal of a locked account by
+    Deckhouse dex (210; 1.77 with its patch 019), refuses the refresh but
+    leaves the credential alive: it is not dropped and no rotation is waited
+    for, so the refresh goes on once the lock ends, without a login.
+  - A rotated credential is stored as soon as the token endpoint returned it:
+    OIDC and GitLab report it with `connector.RefreshedError` when building
+    the identity fails afterwards (user info, groups, the keys of the
+    provider), and the refresh stores it before it answers.
+  - The GitLab connector asks a login for the scopes of the groups (`openid`,
+    and `read_api` with `inheritedGroups`) whatever the client asked for: the
+    credential serves every client of the user.
+  - Refreshes inside the reuse interval keep the stored credential. Upstream
+    credentials are not logged. New files `server/tokens/refresh_upstream.go`
+    (`RefreshStore.RotateUpstream`, `tokens.Upstream`) and
+    `server/tokens/refresh_lease.go`.
 - Detached context. The connector call runs on `context.WithoutCancel` of the
   request, so a client that hangs up does not lose a rotated refresh token:
-  GitLab, GitHub and OIDC providers with rotation. It is bound to 5 s: the
-  call runs under the lock of the refresh token, which the kubernetes storage
-  holds for 10 s, and a call that outlives the lock lets a request on another
-  replica take it and spend the same upstream credential. Half of the lock
-  leaves room for the API calls under it and for clocks of the replicas that
-  differ. A provider slower than that gets 503, as an unreachable one; a
-  credential it rotated after the bound is lost, so the next refresh of that
-  token is refused by the provider and answers `invalid_grant`.
+  GitLab, GitHub and OIDC providers with rotation. It runs outside the
+  storage transactions, under the lease of the offline session, and is bound
+  to 5 s so that it and the writes after it end within the lease. A provider
+  slower than that gets 503, as an unreachable one; a credential it rotated
+  after the bound is lost, so the next refresh is refused by the provider and
+  answers `invalid_grant`.
 - Three answers to a failed upstream refresh (behaviour change). The token
   endpoint answers:
   - 400 `invalid_grant` ("The identity provider refused to refresh the
@@ -679,11 +739,14 @@ the connector at refresh and none of this applies.
     refresh the identity until the user logs in again: refresh token refused
     (`invalid_grant`, GitHub's `bad_refresh_token`), any other 4xx answer to the
     token request with an OAuth2 error of RFC 6749 §5.2 in its body
-    (`invalid_request`, `invalid_client`, `unauthorized_client`,
-    `unsupported_grant_type`, `invalid_scope`; `connector.OAuth2Refusal`) but
-    408 and 429, user deleted or deactivated, access token revoked,
+    (`invalid_request`, `unauthorized_client`, `unsupported_grant_type`,
+    `invalid_scope`; `connector.OAuth2Refusal`) but 408, 429, `invalid_client`
+    and any answer with 401, `access_denied` with a 4xx other than 401 and 408
+    (`connector.AccessDenied`: the refusal of a locked account by Deckhouse dex
+    up to v1.78, 429 or 403), user deleted or deactivated, access token revoked,
     `connector.UserNotInRequiredGroupsError`, nothing to refresh with (no
-    credential stored). `connector.ErrIdentityGone` carries the answer about the
+    credential stored; a connector that needs one, OIDC or GitLab, is not
+    asked then). `connector.ErrIdentityGone` carries the answer about the
     user from LDAP (user not found, the username now names another entry),
     Atlassian Crowd (`USER_NOT_FOUND`, `INACTIVE_ACCOUNT`), GitHub, GitLab and
     Bitbucket Cloud (401 from the API) and the local password store (user
@@ -696,17 +759,24 @@ the connector at refresh and none of this applies.
     Google and Bitbucket wrap the token error with `%w`.
   - 503 `temporarily_unavailable` instead of 500 when the provider did not
     answer: the connection failed or timed out, the provider answered 408, 429
-    or a 5xx status (`connector.Unavailable`; the OIDC connector marks a 429 or
-    5xx of user info with `connector.ErrUpstreamUnavailable`, since go-oidc
-    reports that status only in the text of the error), the OIDC connector could
-    not fetch the keys of the provider to verify the ID token of the answer
+    without `access_denied` or a 5xx status (`connector.Unavailable`; the OIDC
+    connector marks a 429 or 5xx of user info with
+    `connector.ErrUpstreamUnavailable`, since go-oidc reports that status only
+    in the text of the error), the OIDC connector could not fetch the keys of the provider to verify the ID token of the answer
     (the keys are fetched on every start of dex and every rotation of the keys;
     go-oidc v3.21.0 passes that failure on only as the text `fetching keys`, so
     the connector matches the text), other clients kept rotating the shared
     credential, or the password store of a local user did not answer (any
     failure of the read but "not found", the Kubernetes API throttling dex with
     429 among them; the local connector has no credential, so without the mark
-    its failure counted as nothing to refresh with and ended the session).
+    its failure counted as nothing to refresh with and ended the session), or
+    the provider refused the client credentials of dex (`invalid_client`, or
+    an OAuth2 error answered with 401). The last is a misconfiguration of dex,
+    which a login hits too, so the sessions are kept until it is fixed. The
+    description of this answer names none of `invalid_grant`, `invalid_client`
+    and `access_denied`, which DexAuthenticator takes for a final refusal.
+    `unauthorized_client` and `unsupported_grant_type` stay a refusal: they may
+    last while logins work, and a 503 would keep users on an error page.
     Nothing stored is touched.
   - 500 as before for a failure the connector does not explain (LDAP errors
     other than a missing user, a plain error text, a 4xx answer to the token
@@ -716,20 +786,21 @@ the connector at refresh and none of this applies.
     from the storage, but "not found", is 500 `server_error` too
     (`connectors.ErrStorageUnavailable`); it was 400 `invalid_request`,
     "Requested connector does not exist.", for every grant.
+  - 400 `invalid_grant` instead of 500 for a refresh token whose ID no
+    Kubernetes object can be named after (a garbage string, which is taken for
+    a raw ID): the Kubernetes storage answers `storage.ErrNotFound` for it
+    without asking the API server, as the other storages do.
   The refresh token is kept either way. The `failed to refresh identity` line
   is WARN for the first answer and ERROR for the others (260).
 
-  Limitation: the OIDC connector stores the refresh token the provider issued
-  only once it has built the identity from the answer (the connector data is
-  made at the end of `createIdentity`). When the provider has accepted the
-  refresh but building the identity fails for a temporary reason, dex answers
-  503 and drops the new refresh token: the keys of the provider cannot be
-  fetched to verify the ID token, user info answers 429 or 5xx, or user info
-  is unreachable or does not answer in time. A provider
-  whose refresh tokens serve once (Keycloak with "Revoke Refresh Token", Okta
-  after its grace period, Auth0 with reuse detection, which revokes the whole
-  family) then refuses the next refresh with the old token, and the session
-  ends with `invalid_grant` despite the 503.
+  A refresh token the provider issued is kept even when building the identity
+  from the answer fails afterwards for a temporary reason (the keys of the
+  provider cannot be fetched to verify the ID token, user info answers 429 or
+  5xx or does not answer in time, the groups of GitLab cannot be read): the
+  connector reports it with `connector.RefreshedError`, and the refresh stores
+  it before it answers 503. A provider whose refresh tokens serve once
+  (Keycloak with "Revoke Refresh Token", Okta after its grace period, Auth0
+  with reuse detection) therefore accepts the next refresh.
 - SAML. The connector data of SAML is the identity of a login, not a
   credential. A SAML login replaces it on the offline session, and every
   refresh token refreshes to the offline session's, the latest login's; the
@@ -739,9 +810,6 @@ Already in v2.46 and not duplicated: the connector is called only when a token
 is actually minted. Kept anyway: the call is memoized per request, because the
 kubernetes storage reruns the refresh token updater on conflicts, which would
 spend a rotated upstream token twice.
-
-Not changed: memory storage only (not Deckhouse): a refresh of a local user
-deadlocks, as upstream does one step earlier.
 
 **Consumer in Deckhouse:** no config. kubeconfig clients and DexAuthenticator
 start a new login on `invalid_grant` instead of failing with a server error.
@@ -1090,13 +1158,17 @@ password change flag), 290 (the `session` revocation of `/logout`).
 
 ### 310-session-identity-freshness.patch
 
-**Zone:** freshness of the identity while sessions are on. Upstream serves the
-claims stored at the last login and never asks the connector again, so a user
-deleted, locked or moved between groups at the provider keeps the access Dex
-gave. Here the stored claims are served while younger than
-`sessions.identityRefresh.maxAge` (default 0: read at every refresh, as
-without sessions), counted from `claimsRefreshedAt` (100) or, for an identity
-stored before it, from the last login.
+**Zone:** freshness of the identity, with sessions on or off. Upstream serves
+the claims stored at the last login and never asks the connector again, so a
+user deleted, locked or moved between groups at the provider keeps the access
+Dex gave. Here the stored claims are served while younger than
+`identityRefresh.maxAge` (default 0: read at every refresh), counted from
+`claimsRefreshedAt` (100) or, for an identity stored before it, from the last
+login. The top-level `identityRefresh` of the config file is read whether
+sessions are on or not; `sessions.identityRefresh` stays accepted, and the
+top-level one wins. With sessions off this is what spares the upstream
+credential of the pair (250) a call at every refresh of every client: a user
+disabled at the provider keeps refreshing tokens up to `maxAge`.
 
 - a refresh with stale claims reads the identity through the connector the
   way a refresh without sessions does (250, with the groups whatever the token
@@ -1105,7 +1177,8 @@ stored before it, from the last login.
   (`connector.ErrIdentityGone`, the groups the connector requires) ends the
   pair: every browser session and refresh token of the pair is recorded as a
   revocation with the reason `IdentityGone` (290) and goes; the refresh gets
-  `invalid_grant`. A refused credential alone ends only the token, as in 250;
+  `invalid_grant`. A refused credential alone ends no session: the token gets
+  `invalid_grant`, and a shared credential nobody rotated is dropped, as in 250;
 - a provider that does not answer leaves the stored claims served up to
   `identityRefresh.gracePeriod` past `maxAge` (default 0), and the refresh
   fails with 503 after it (500 for a failure the connector does not explain),
@@ -1120,14 +1193,16 @@ stored before it, from the last login.
 - a refresh without a stored identity reads the connector, as without
   sessions, instead of failing with 500.
 
-**Consumer in Deckhouse:** `templates/dex/config.yaml`
-(`sessions.identityRefresh`, `maxAge` defaults to `idTokenTTL`).
+**Consumer in Deckhouse:** `templates/dex/config.yaml` renders the top-level
+`identityRefresh` always, from the setting `sessions.identityRefresh`
+(`maxAge` defaults to `idTokenTTL`, `gracePeriod` to 0s).
 
 **Upstream status:** Deckhouse only.
 
 **Depends on:** 100 (`claimsRefreshedAt`), 210 (`useridentity.Record`), 250
-(`RotateUpstream`, `UpstreamError`), 290 (`Recorder`), 300 (the order of the
-session login checks).
+(`RotateUpstream`, `UpstreamError`, the stored-claims hooks `Upstream.Stored`
+and `Upstream.Read` that run under the lease), 290 (`Recorder`), 300 (the order
+of the session login checks).
 
 ### 320-devices.patch
 

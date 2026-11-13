@@ -369,18 +369,18 @@ index 6c4afd2e..a6e2b551 100644
  	return issueTokens(ctx, g.logger, g.issuer, auth, "", shouldIssueRefreshToken(conn, req.Scopes))
  }
 diff --git a/server/grants/refresh.go b/server/grants/refresh.go
-index ed9992d7..fb2b5a9f 100644
+index 18827fcb..0ce2196e 100644
 --- a/server/grants/refresh.go
 +++ b/server/grants/refresh.go
-@@ -90,11 +90,14 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
- 
- 	// A locked account gets no new tokens. The refresh token is kept, so the
- 	// session continues once the lock ends.
+@@ -91,11 +91,14 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+ 	// A locked account gets no new tokens: the refresh is refused with
+ 	// invalid_grant (see refreshRefusal). The refresh token is kept, so a client
+ 	// that still holds it goes on once the lock ends.
 -	err := useridentity.CheckBlocked(ctx, g.storage, refreshToken.Claims.UserID, refreshToken.ConnectorID, g.now())
 +	generation, err := useridentity.State(ctx, g.storage, refreshToken.Claims.UserID, refreshToken.ConnectorID, g.now())
  	if oerr := identityError(ctx, g.logger, err, refreshLocked,
  		refreshToken.ConnectorID, client.ID, signinlog.ClaimsUser(refreshToken.Claims)); oerr != nil {
- 		return nil, oerr
+ 		return nil, refreshRefusal(oerr)
  	}
 +	if refreshToken.Generation != generation {
 +		return nil, g.revoked(ctx, refreshToken)
@@ -388,7 +388,7 @@ index ed9992d7..fb2b5a9f 100644
  
  	// Resolved before anything is rotated or read from the connector: a token whose
  	// session has ended is not going to produce a token set. Skipped outright when
-@@ -152,6 +155,7 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+@@ -153,6 +156,7 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
  		Nonce:       refreshToken.Nonce,
  		AuthTime:    authTime,
  		SessionID:   sessionID,
@@ -396,7 +396,7 @@ index ed9992d7..fb2b5a9f 100644
  	}
  
  	// The connector may have returned another email or other groups: the
-@@ -194,6 +198,23 @@ func (g *refresh) checkAllowLists(ctx context.Context, client storage.Client, re
+@@ -195,6 +199,23 @@ func (g *refresh) checkAllowLists(ctx context.Context, client storage.Client, re
  	return oerr
  }
  
@@ -1193,7 +1193,7 @@ index 806bc4ac..5820e918 100644
  
 diff --git a/server/server_revocation_test.go b/server/server_revocation_test.go
 new file mode 100644
-index 00000000..c8ab57b4
+index 00000000..ed104487
 --- /dev/null
 +++ b/server/server_revocation_test.go
 @@ -0,0 +1,769 @@
@@ -1421,7 +1421,7 @@ index 00000000..c8ab57b4
 +
 +	setGeneration(t, s, mockUserID, "test", 1)
 +	setBlockedUntil(t, s, "test", time.Now().Add(time.Hour))
-+	requireAccountLocked(t, postToken(t, s, refresh))
++	requireLockedRefreshRefused(t, postToken(t, s, refresh), "Account locked")
 +	_, err := s.storage.GetRefresh(t.Context(), refreshID(t, resp.RefreshToken))
 +	require.NoError(t, err)
 +}
@@ -2170,18 +2170,18 @@ index d5540adf..a857ce0a 100644
 +	return claims
 +}
 diff --git a/server/tokens/refresh_store.go b/server/tokens/refresh_store.go
-index e390ed1e..7b02178b 100644
+index aee47b80..12b343d8 100644
 --- a/server/tokens/refresh_store.go
 +++ b/server/tokens/refresh_store.go
-@@ -42,6 +42,7 @@ func (rt *RefreshStore) Create(ctx context.Context, auth Authorization) (string,
- 		ConnectorData: auth.ConnectorData,
+@@ -86,6 +86,7 @@ func (rt *RefreshStore) Create(ctx context.Context, auth Authorization) (string,
+ 		ConnectorData: connectorData,
  		CreatedAt:     rt.now(),
  		LastUsed:      rt.now(),
 +		Generation:    auth.Generation,
  	}
  
  	rawToken, err := internal.Marshal(&internal.RefreshToken{RefreshId: refresh.ID, Token: refresh.Token})
-@@ -290,6 +291,26 @@ func (rt *RefreshStore) updateOfflineSession(ctx context.Context, refresh *stora
+@@ -333,6 +334,26 @@ func (rt *RefreshStore) updateOfflineSession(ctx context.Context, refresh *stora
  	return nil
  }
  

@@ -159,7 +159,7 @@ index 00000000..775d523e
 +	})
 +}
 diff --git a/connector/connector.go b/connector/connector.go
-index d08d086d..d78db7fd 100644
+index 43a9777c..6fb41583 100644
 --- a/connector/connector.go
 +++ b/connector/connector.go
 @@ -17,12 +17,54 @@ import (
@@ -180,8 +180,8 @@ index d08d086d..d78db7fd 100644
  
  func (e *UserNotInRequiredGroupsError) Error() string {
  	return fmt.Sprintf("user %q is not in any of the required groups %v", e.UserID, e.Groups)
- }
- 
++}
++
 +// AsUserNotInRequiredGroups reports whether err's chain holds a
 +// UserNotInRequiredGroupsError, with the fields the connector did not know when
 +// it refused the user filled in from identity.
@@ -203,8 +203,8 @@ index d08d086d..d78db7fd 100644
 +		e.Email = identity.Email
 +	}
 +	return e, true
-+}
-+
+ }
+ 
 +// FetchedGroups returns groups as read from the provider: never nil, so that a
 +// user without groups is told apart from a user whose groups were not read.
 +func FetchedGroups(groups []string) []string {
@@ -442,18 +442,10 @@ index 8eec5f06..93730509 100644
  		return filteredGroups, nil
  	} else if groupScope {
 diff --git a/connector/gitlab/gitlab_test.go b/connector/gitlab/gitlab_test.go
-index aba2e960..44cb25a9 100644
+index 8905e071..cd1cc073 100644
 --- a/connector/gitlab/gitlab_test.go
 +++ b/connector/gitlab/gitlab_test.go
-@@ -4,6 +4,7 @@ import (
- 	"context"
- 	"crypto/tls"
- 	"encoding/json"
-+	"errors"
- 	"fmt"
- 	"io"
- 	"log/slog"
-@@ -433,7 +434,18 @@ func TestLoginWithTeamNonWhitelisted(t *testing.T) {
+@@ -451,7 +451,18 @@ func TestLoginWithTeamNonWhitelisted(t *testing.T) {
  	_, err = c.HandleCallback(connector.Scopes{Groups: true}, nil, req)
  
  	expectNotNil(t, err, "HandleCallback error")
@@ -1518,7 +1510,7 @@ index da53ded5..f43e66eb 100644
  	// Connector callbacks don't render the remember_me checkbox, so we use the server default.
  	// The password login handler reads r.FormValue("remember_me") from the submitted form instead.
 diff --git a/server/authflow/finalize.go b/server/authflow/finalize.go
-index f68fe334..25eef4df 100644
+index 3c300a0e..89f08846 100644
 --- a/server/authflow/finalize.go
 +++ b/server/authflow/finalize.go
 @@ -10,7 +10,9 @@ import (
@@ -1547,7 +1539,7 @@ index f68fe334..25eef4df 100644
  		return storage.AuthRequest{}, err
  	}
  
-@@ -99,16 +102,12 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
+@@ -99,17 +102,13 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
  	// (the next-step decision below) see the identity we just stored.
  	authReq, _ = updater(authReq)
  
@@ -1557,20 +1549,21 @@ index f68fe334..25eef4df 100644
 -		email += " (unverified)"
 +		user.Email += " (unverified)"
  	}
--
++	h.Logger.InfoContext(ctx, "login successful", append(signinlog.Attrs(authReq.ConnectorID, authReq.ClientID, user),
++		"groups", signinlog.Groups(issued.Groups))...)
+ 
 -	h.Logger.InfoContext(ctx, "login successful",
 -		"connector_id", authReq.ConnectorID, "client_id", authReq.ClientID,
 -		"user_id", claims.UserID,
 -		"username", claims.Username, "preferred_username", claims.PreferredUsername,
 -		"email", email, "groups", issued.Groups)
-+	h.Logger.InfoContext(ctx, "login successful", append(signinlog.Attrs(authReq.ConnectorID, authReq.ClientID, user),
-+		"groups", signinlog.Groups(issued.Groups))...)
- 
+-
  	offlineAccessRequested := false
  	for _, scope := range authReq.Scopes {
-@@ -164,3 +163,16 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
- 	// create the session and advance the flow.
- 	return h.Storage.GetAuthRequest(ctx, authReq.ID)
+ 		if scope == tokens.ScopeOfflineAccess {
+@@ -192,3 +191,16 @@ func replacesSharedCredential(conn connector.Connector, data []byte) bool {
+ 	}
+ 	return true
  }
 +
 +// logFinalizeError logs a login that finalizeLogin failed for u. Its refusals,
@@ -2167,7 +2160,7 @@ index baf7b016..14c21105 100644
  	}
  }
 diff --git a/server/grants/lock.go b/server/grants/lock.go
-index ed7ba32c..23468500 100644
+index c2d7a1e4..6670e6f5 100644
 --- a/server/grants/lock.go
 +++ b/server/grants/lock.go
 @@ -7,6 +7,7 @@ import (
@@ -2178,7 +2171,7 @@ index ed7ba32c..23468500 100644
  	"github.com/dexidp/dex/server/useridentity"
  )
  
-@@ -14,20 +15,29 @@ import (
+@@ -14,24 +15,33 @@ import (
  // lock to the token response, or returns nil when err is nil. A locked account
  // gets access_denied: with HTTP 403 for the lock of an administrator, with HTTP
  // 429 for an automatic lock after failed password attempts, as from the
@@ -2205,13 +2198,17 @@ index ed7ba32c..23468500 100644
  		return &oauth2.Error{Type: oauth2.ServerError, Status: http.StatusInternalServerError}
  	}
  }
-+
+ 
 +// Log messages of a token request refused for a locked account, as the
 +// v2.44-based Deckhouse dex wrote them.
 +const (
 +	tokenRequestLocked = "token request for locked account"
 +	refreshLocked      = "refresh denied: account locked"
 +)
++
+ // refreshRefusal is the answer to a refresh that identityError refused. A locked
+ // account gets invalid_grant with HTTP 400 in place of access_denied, with the
+ // same description: RFC 6749, section 5.2, answers invalid_grant for a refresh
 diff --git a/server/grants/password.go b/server/grants/password.go
 index 2e0572ca..6c4afd2e 100644
 --- a/server/grants/password.go
@@ -2269,7 +2266,7 @@ index 2e0572ca..6c4afd2e 100644
  	}
  	auth.Claims = issued
 diff --git a/server/grants/refresh.go b/server/grants/refresh.go
-index 7c75e07a..ed9992d7 100644
+index fc4d495b..18827fcb 100644
 --- a/server/grants/refresh.go
 +++ b/server/grants/refresh.go
 @@ -14,6 +14,7 @@ import (
@@ -2280,7 +2277,7 @@ index 7c75e07a..ed9992d7 100644
  	"github.com/dexidp/dex/server/tokens"
  	"github.com/dexidp/dex/server/useridentity"
  	"github.com/dexidp/dex/storage"
-@@ -83,15 +84,15 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+@@ -83,7 +84,7 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
  	// them before anything is rotated or read from the connector.
  	stored := refreshToken.Claims
  	if oerr := g.checkAllowLists(ctx, client, refreshToken, &stored,
@@ -2289,17 +2286,18 @@ index 7c75e07a..ed9992d7 100644
  		return nil, oerr
  	}
  
- 	// A locked account gets no new tokens. The refresh token is kept, so the
- 	// session continues once the lock ends.
+@@ -91,8 +92,8 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+ 	// invalid_grant (see refreshRefusal). The refresh token is kept, so a client
+ 	// that still holds it goes on once the lock ends.
  	err := useridentity.CheckBlocked(ctx, g.storage, refreshToken.Claims.UserID, refreshToken.ConnectorID, g.now())
 -	if oerr := identityError(ctx, g.logger, err,
 -		"connector_id", refreshToken.ConnectorID, "client_id", client.ID, "user_id", refreshToken.Claims.UserID); oerr != nil {
 +	if oerr := identityError(ctx, g.logger, err, refreshLocked,
 +		refreshToken.ConnectorID, client.ID, signinlog.ClaimsUser(refreshToken.Claims)); oerr != nil {
- 		return nil, oerr
+ 		return nil, refreshRefusal(oerr)
  	}
  
-@@ -181,8 +182,7 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+@@ -182,8 +183,7 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
  // log line of the refusal.
  func (g *refresh) checkAllowLists(ctx context.Context, client storage.Client, refreshToken *storage.RefreshToken, claims *storage.Claims, msg string) *oauth2.Error {
  	err := allowlist.Apply(ctx, g.storage, client, refreshToken.ConnectorID, claims)
@@ -2309,7 +2307,7 @@ index 7c75e07a..ed9992d7 100644
  
  	var notAllowed *allowlist.NotAllowedError
  	if errors.As(err, &notAllowed) {
-@@ -324,9 +324,7 @@ func (g *refresh) rotateError(ctx context.Context, err error, refreshToken *stor
+@@ -325,9 +325,7 @@ func (g *refresh) rotateError(ctx context.Context, err error, refreshToken *stor
  	var upstreamErr *tokens.UpstreamError
  	switch {
  	case errors.As(err, &upstreamErr) && upstreamErr.Refused:
@@ -2320,7 +2318,7 @@ index 7c75e07a..ed9992d7 100644
  		return &oauth2.Error{
  			Type:        oauth2.InvalidGrant,
  			Description: "The identity provider refused to refresh the identity.",
-@@ -342,11 +340,23 @@ func (g *refresh) rotateError(ctx context.Context, err error, refreshToken *stor
+@@ -343,11 +341,23 @@ func (g *refresh) rotateError(ctx context.Context, err error, refreshToken *stor
  	case errors.As(err, &upstreamErr):
  		// Logged where the connector failed.
  	default:
@@ -2667,7 +2665,7 @@ index 7bb04066..c18506d0 100644
  	}
 diff --git a/server/server_signinlog_test.go b/server/server_signinlog_test.go
 new file mode 100644
-index 00000000..ff17a471
+index 00000000..c097a0e5
 --- /dev/null
 +++ b/server/server_signinlog_test.go
 @@ -0,0 +1,186 @@
@@ -2792,9 +2790,9 @@ index 00000000..ff17a471
 +	assert.Equal(t, "test", line["username"])
 +	assert.Contains(t, line, "blocked_until")
 +
-+	requireAccountLocked(t, postToken(t, s, url.Values{
++	requireLockedRefreshRefused(t, postToken(t, s, url.Values{
 +		"grant_type": {oauth2.GrantTypeRefreshToken}, "refresh_token": {issued.RefreshToken},
-+	}))
++	}), "Account locked")
 +	line = logs.last(t, "refresh denied: account locked")
 +	requireRefusal(t, line, "account_locked", "test")
 +	assert.Equal(t, mockUserID, line["user_id"])
@@ -3299,10 +3297,10 @@ index 00000000..79847a96
 +	}
 +}
 diff --git a/server/tokens/refresh_upstream.go b/server/tokens/refresh_upstream.go
-index ecae6ce5..677b1dea 100644
+index da98493b..dc7fb89b 100644
 --- a/server/tokens/refresh_upstream.go
 +++ b/server/tokens/refresh_upstream.go
-@@ -25,6 +25,7 @@ import (
+@@ -29,6 +29,7 @@ import (
  
  	"github.com/dexidp/dex/connector"
  	"github.com/dexidp/dex/server/internal"
@@ -3310,7 +3308,7 @@ index ecae6ce5..677b1dea 100644
  	"github.com/dexidp/dex/storage"
  )
  
-@@ -143,6 +144,9 @@ type upstreamRefresher struct {
+@@ -209,6 +210,9 @@ type upstreamRefresher struct {
  	credentials []credentialRef
  	logger      *slog.Logger
  	connectorID string
@@ -3318,11 +3316,11 @@ index ecae6ce5..677b1dea 100644
 +	clientID string
 +	user     signinlog.User
  
- 	isDone bool
- 	ident  connector.Identity
-@@ -194,8 +198,15 @@ func (u *upstreamRefresher) identity(ctx context.Context, base connector.Identit
- 			return u.ident, nil
- 		}
+ 	// leased is the lease the credential is spent under, nil for none.
+ 	leased *upstreamLease
+@@ -288,8 +292,15 @@ func (u *upstreamRefresher) prepare(ctx context.Context, base connector.Identity
+ 
+ 		unavailable := connector.Unavailable(err) || clientRefused(err)
  
 -		u.logger.ErrorContext(ctx, "failed to refresh identity",
 -			"connector_id", u.connectorID, "credential_source", credential.source.String(), "err", err)
@@ -3330,24 +3328,33 @@ index ecae6ce5..677b1dea 100644
 +		// error. Whether the refresh is refused is logged once all credentials
 +		// are tried (grants), with the reason.
 +		level := slog.LevelError
-+		if refreshRefused(err) && !connector.Unavailable(err) {
++		if refreshRefused(err) && !unavailable {
 +			level = slog.LevelWarn
 +		}
 +		u.logger.Log(ctx, level, "failed to refresh identity", append(signinlog.Failed(err, u.connectorID, u.clientID, u.user),
 +			"credential_source", credential.source.String())...)
- 		u.isRefused = credentialRefused(err)
- 		switch {
- 		case connector.Unavailable(err):
-@@ -287,6 +298,8 @@ func (rt *RefreshStore) RotateUpstream(ctx context.Context, storageToken *storag
+ 		// A provider that did not answer, or refused dex itself, said nothing
+ 		// about the credential.
+ 		u.isRefused = credentialRefused(err) && !unavailable
+@@ -547,6 +558,8 @@ func (rt *RefreshStore) rotateLeased(ctx context.Context, lease *upstreamLease,
  			credentials: credentials,
  			logger:      rt.logger,
  			connectorID: storageToken.ConnectorID,
 +			clientID:    storageToken.ClientID,
 +			user:        signinlog.User{ID: storageToken.Claims.UserID},
+ 			leased:      lease,
+ 			mustPrepare: true,
  		}
- 
- 		rawToken, ident, err := rt.rotate(ctx, storageToken, requestToken, strategy, refresher)
-@@ -431,7 +444,7 @@ func (rt *RefreshStore) retireDeadSharedCredential(ctx context.Context, token *s
+@@ -654,6 +667,8 @@ func (rt *RefreshStore) rotateReplayed(ctx context.Context, storageToken *storag
+ 		credentials: upstreamCredentials(*storageToken, session, upstream.IsLoginIdentity),
+ 		logger:      rt.logger,
+ 		connectorID: storageToken.ConnectorID,
++		clientID:    storageToken.ClientID,
++		user:        signinlog.User{ID: storageToken.Claims.UserID},
+ 	}
+ 	return rt.rotate(ctx, storageToken, requestToken, strategy, refresher)
+ }
+@@ -823,7 +838,7 @@ func (rt *RefreshStore) retireDeadSharedCredential(ctx context.Context, token *s
  		rt.logger.ErrorContext(ctx, "failed to retire refused upstream credential", "err", err)
  	default:
  		rt.logger.WarnContext(ctx, "upstream provider refused the credential shared by the clients of the user, dropped it so that the next login restores it",
@@ -3357,28 +3364,27 @@ index ecae6ce5..677b1dea 100644
  }
  
 diff --git a/server/tokens/refresh_upstream_test.go b/server/tokens/refresh_upstream_test.go
-index 983e54eb..151a29bf 100644
+index 8d89a0ea..893f86d8 100644
 --- a/server/tokens/refresh_upstream_test.go
 +++ b/server/tokens/refresh_upstream_test.go
-@@ -1,8 +1,13 @@
+@@ -1,10 +1,13 @@
  package tokens
  
  import (
 +	"bytes"
-+	"context"
+ 	"context"
 +	"encoding/json"
  	"errors"
  	"fmt"
-+	"log/slog"
+ 	"log/slog"
 +	"net/http"
  	"net/url"
  	"testing"
- 
-@@ -107,3 +112,45 @@ func TestNotFinal(t *testing.T) {
- 	other := errors.New("storage")
+ 	"time"
+@@ -141,6 +144,50 @@ func TestNotFinal(t *testing.T) {
  	assert.Equal(t, other, notFinal(other))
  }
-+
+ 
 +// The answer of a provider that refuses the refresh is a warning, a provider that
 +// did not answer, or failed in a way the connector does not explain, an error.
 +func TestUpstreamRefreshFailureLogLevel(t *testing.T) {
@@ -3394,6 +3400,8 @@ index 983e54eb..151a29bf 100644
 +		{name: "request refused", err: answered(http.StatusBadRequest), level: "WARN"},
 +		{name: "no refresh token", err: fmt.Errorf("oidc: %w", connector.ErrRefreshRefused), level: "WARN"},
 +		{name: "throttled", err: answered(http.StatusTooManyRequests), level: "ERROR"},
++		{name: "account locked", err: fmt.Errorf("oidc: failed to get refresh token: %w",
++			&oauth2.RetrieveError{Response: &http.Response{StatusCode: http.StatusTooManyRequests}, ErrorCode: "access_denied"}), level: "WARN"},
 +		{name: "provider failed", err: answered(http.StatusBadGateway), level: "ERROR"},
 +		{name: "unexplained", err: errors.New("gitlab: get groups: 502 Bad Gateway"), level: "ERROR"},
 +	}
@@ -3420,3 +3428,7 @@ index 983e54eb..151a29bf 100644
 +		})
 +	}
 +}
++
+ // ctxStorage fails every update whose context has ended, as a storage that
+ // honours its context does.
+ type ctxStorage struct {

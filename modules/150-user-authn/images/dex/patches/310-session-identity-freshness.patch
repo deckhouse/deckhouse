@@ -1,20 +1,34 @@
 diff --git a/cmd/dex/config.go b/cmd/dex/config.go
-index d8665974..ef59b9cc 100644
+index d8665974..72658dae 100644
 --- a/cmd/dex/config.go
 +++ b/cmd/dex/config.go
-@@ -838,6 +838,22 @@ type Sessions struct {
+@@ -81,6 +81,11 @@ type Config struct {
+ 	// PasswordPolicy is the password policy of local users (passwordpolicy.go).
+ 	PasswordPolicy *PasswordPolicy `json:"passwordPolicy"`
+ 
++	// IdentityRefresh controls how long dex serves the identity stored at the
++	// last login before it reads it from the connector again, whether sessions
++	// are enabled or not (Deckhouse). It wins over sessions.identityRefresh.
++	IdentityRefresh *IdentityRefresh `json:"identityRefresh"`
++
+ 	// RateLimit limits failed attempts per client address on the login form, the
+ 	// token endpoint and the second factor.
+ 	RateLimit *RateLimit `json:"rateLimit"`
+@@ -838,8 +843,26 @@ type Sessions struct {
  	// SSOSharedWithDefault is the default SSO sharing policy for clients without explicit ssoSharedWith.
  	// "all" = share with all clients, "none" = share with no one (default: "none").
  	SSOSharedWithDefault string `json:"ssoSharedWithDefault"`
 +	// IdentityRefresh controls how long dex serves the identity stored at the last
-+	// login before it reads it from the connector again (Deckhouse).
++	// login before it reads it from the connector again (Deckhouse). The
++	// top-level identityRefresh wins over it.
 +	IdentityRefresh *IdentityRefresh `json:"identityRefresh"`
-+}
-+
-+// IdentityRefresh is how long the stored identity of a user stays good while
-+// sessions are on (Deckhouse). A refresh token is refreshed with the stored claims
-+// while they are younger than MaxAge, and with claims read from the connector
-+// after; a login from a session after MaxAge signs the user in again.
+ }
+ 
++// IdentityRefresh is how long the stored identity of a user stays good
++// (Deckhouse). A refresh token is refreshed with the stored claims while they are
++// younger than MaxAge, and with claims read from the connector after, which
++// spends the upstream refresh token; a login from a session after MaxAge signs
++// the user in again.
 +type IdentityRefresh struct {
 +	// MaxAge is the age of the stored claims after which they are read again.
 +	// Defaults to 0: read at every refresh, as without sessions.
@@ -22,15 +36,17 @@ index d8665974..ef59b9cc 100644
 +	// GracePeriod is how much longer than MaxAge the stored claims are served when
 +	// the connector fails to answer. Defaults to 0.
 +	GracePeriod string `json:"gracePeriod"`
- }
- 
++}
++
  // MFAAuthenticator defines a multi-factor authentication provider.
+ type MFAAuthenticator struct {
+ 	ID     string          `json:"id"`
 diff --git a/cmd/dex/config_identityrefresh_test.go b/cmd/dex/config_identityrefresh_test.go
 new file mode 100644
-index 00000000..28de4f0f
+index 00000000..1788f1cd
 --- /dev/null
 +++ b/cmd/dex/config_identityrefresh_test.go
-@@ -0,0 +1,41 @@
+@@ -0,0 +1,87 @@
 +package main
 +
 +import (
@@ -39,6 +55,8 @@ index 00000000..28de4f0f
 +
 +	"github.com/stretchr/testify/assert"
 +	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/server/session"
 +)
 +
 +// TestParseSessionConfigIdentityRefresh: how long the stored identity is served
@@ -72,14 +90,73 @@ index 00000000..28de4f0f
 +		})
 +	}
 +}
++
++// TestResolveIdentityRefresh: the identity refresh applies whether sessions are
++// enabled or not (Deckhouse). The top-level identityRefresh wins over
++// sessions.identityRefresh, which stays accepted alone.
++func TestResolveIdentityRefresh(t *testing.T) {
++	tenMinutes := &IdentityRefresh{MaxAge: "10m", GracePeriod: "30s"}
++	tests := []struct {
++		name    string
++		config  Config
++		want    *session.IdentityRefresh
++		wantErr bool
++	}{
++		{name: "neither", config: Config{}},
++		{name: "sessions without identityRefresh", config: Config{Sessions: &Sessions{}}},
++		{
++			name:   "top-level",
++			config: Config{IdentityRefresh: tenMinutes},
++			want:   &session.IdentityRefresh{MaxAge: 10 * time.Minute, GracePeriod: 30 * time.Second},
++		},
++		{
++			name:   "sessions only",
++			config: Config{Sessions: &Sessions{IdentityRefresh: tenMinutes}},
++			want:   &session.IdentityRefresh{MaxAge: 10 * time.Minute, GracePeriod: 30 * time.Second},
++		},
++		{
++			name:   "top-level wins",
++			config: Config{IdentityRefresh: &IdentityRefresh{MaxAge: "5m"}, Sessions: &Sessions{IdentityRefresh: tenMinutes}},
++			want:   &session.IdentityRefresh{MaxAge: 5 * time.Minute},
++		},
++		{name: "negative max age", config: Config{IdentityRefresh: &IdentityRefresh{MaxAge: "-1m"}}, wantErr: true},
++		{name: "not a duration", config: Config{IdentityRefresh: &IdentityRefresh{GracePeriod: "soon"}}, wantErr: true},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			got, err := resolveIdentityRefresh(tc.config)
++			if tc.wantErr {
++				require.Error(t, err)
++				return
++			}
++			require.NoError(t, err)
++			assert.Equal(t, tc.want, got)
++		})
++	}
++}
 diff --git a/cmd/dex/serve.go b/cmd/dex/serve.go
-index da56d3ad..07d67694 100644
+index da56d3ad..1f6423db 100644
 --- a/cmd/dex/serve.go
 +++ b/cmd/dex/serve.go
-@@ -928,6 +928,15 @@ func parseSessionConfig(s *Sessions) (*session.Config, error) {
+@@ -451,6 +451,13 @@ func runServe(options serveOptions) error {
+ 			"absolute_lifetime", sessionConfig.AbsoluteLifetime,
+ 			"valid_if_not_used_for", sessionConfig.ValidIfNotUsedFor,
+ 		)
++	}
++
++	if serverConfig.IdentityRefresh, err = resolveIdentityRefresh(c); err != nil {
++		return fmt.Errorf("invalid identity refresh config: %v", err)
++	}
++	if r := serverConfig.IdentityRefresh; r != nil {
++		logger.Info("config identity refresh", "max_age", r.MaxAge, "grace_period", r.GracePeriod)
+ 	}
+ 
+ 	serverConfig.RealIPHeader = c.Web.ClientRemoteIP.Header
+@@ -927,6 +934,15 @@ func parseSessionConfig(s *Sessions) (*session.Config, error) {
+ 		}
  		if s.SSOSharedWithDefault != "" {
  			sc.SSOSharedWithDefault = s.SSOSharedWithDefault
- 		}
++		}
 +		if r := s.IdentityRefresh; r != nil {
 +			var err error
 +			if sc.IdentityMaxAge, err = parseNonNegativeDuration("identityRefresh.maxAge", r.MaxAge); err != nil {
@@ -88,12 +165,37 @@ index da56d3ad..07d67694 100644
 +			if sc.IdentityGracePeriod, err = parseNonNegativeDuration("identityRefresh.gracePeriod", r.GracePeriod); err != nil {
 +				return nil, err
 +			}
-+		}
+ 		}
  	}
  	if sc.AbsoluteLifetime <= 0 {
- 		return nil, fmt.Errorf("absoluteLifetime must be positive, got %v", sc.AbsoluteLifetime)
-@@ -950,6 +959,22 @@ func parseSessionConfig(s *Sessions) (*session.Config, error) {
+@@ -948,8 +964,48 @@ func parseSessionConfig(s *Sessions) (*session.Config, error) {
+ 		return nil, fmt.Errorf("ssoSharedWithDefault must be \"none\" or \"all\", got %q", sc.SSOSharedWithDefault)
+ 	}
  	return sc, nil
++}
++
++// resolveIdentityRefresh returns the identity refresh of c (Deckhouse): the
++// top-level identityRefresh, or sessions.identityRefresh when only that one is
++// set, whether sessions are enabled or not; nil when neither is.
++func resolveIdentityRefresh(c Config) (*session.IdentityRefresh, error) {
++	r := c.IdentityRefresh
++	if r == nil && c.Sessions != nil {
++		r = c.Sessions.IdentityRefresh
++	}
++	if r == nil {
++		return nil, nil
++	}
++	var (
++		resolved session.IdentityRefresh
++		err      error
++	)
++	if resolved.MaxAge, err = parseNonNegativeDuration("identityRefresh.maxAge", r.MaxAge); err != nil {
++		return nil, err
++	}
++	if resolved.GracePeriod, err = parseNonNegativeDuration("identityRefresh.gracePeriod", r.GracePeriod); err != nil {
++		return nil, err
++	}
++	return &resolved, nil
  }
  
 +// parseNonNegativeDuration parses the duration of the option name; an empty one
@@ -285,6 +387,22 @@ index 01a07921..1de93c98 100644
  	}
  	h := &Handler{
  		Storage:   memory.New(nil),
+diff --git a/server/config.go b/server/config.go
+index 25200b26..1c90f2f7 100644
+--- a/server/config.go
++++ b/server/config.go
+@@ -116,6 +116,11 @@ type Config struct {
+ 	// SessionConfig holds session settings. Nil when sessions are disabled.
+ 	SessionConfig *session.Config
+ 
++	// IdentityRefresh is how long the identity stored for a user is served
++	// before it is read from the connector again, whether sessions are enabled
++	// or not (Deckhouse). Nil leaves it to SessionConfig.
++	IdentityRefresh *session.IdentityRefresh
++
+ 	// MFAProviders maps authenticator IDs to their provider implementations.
+ 	MFAProviders map[string]mfa.Provider
+ 
 diff --git a/server/grants/grants.go b/server/grants/grants.go
 index fdcb40b9..1a3b037d 100644
 --- a/server/grants/grants.go
@@ -330,7 +448,7 @@ index a6e2b551..72a909f2 100644
  	})
  	if oerr := identityError(ctx, g.logger, err, tokenRequestLocked,
 diff --git a/server/grants/refresh.go b/server/grants/refresh.go
-index 77d20841..df68d06d 100644
+index 24cb913e..f81ff087 100644
 --- a/server/grants/refresh.go
 +++ b/server/grants/refresh.go
 @@ -10,9 +10,11 @@ import (
@@ -354,26 +472,40 @@ index 77d20841..df68d06d 100644
  	now             func() time.Time
  	logger          *slog.Logger
  }
-@@ -113,11 +117,16 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
- 	var userIdent *storage.UserIdentity
- 	if g.sessionsEnabled {
- 		ui, err := g.storage.GetUserIdentity(ctx, refreshToken.Claims.UserID, refreshToken.ConnectorID)
--		if err != nil {
-+		switch {
-+		case err == nil:
-+			userIdent = &ui
-+		case errors.Is(err, storage.ErrNotFound):
-+			// No identity to serve stored claims from (Deckhouse): the refresh reads
-+			// the connector, as without sessions.
-+		default:
- 			g.logger.ErrorContext(ctx, "failed to get user identity", "err", err)
- 			return nil, &oauth2.Error{Type: oauth2.InvalidRequest, Status: http.StatusInternalServerError}
+@@ -111,18 +115,25 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
  		}
--		userIdent = &ui
  	}
  
++	// The identity is stored at every login, whether sessions are on or not
++	// (authflow), and served while it is fresh in both cases (Deckhouse): a
++	// refresh then spends no upstream credential.
+ 	var userIdent *storage.UserIdentity
+-	if g.sessionsEnabled {
+-		ui, err := g.storage.GetUserIdentity(ctx, refreshToken.Claims.UserID, refreshToken.ConnectorID)
+-		if err != nil {
+-			g.logger.ErrorContext(ctx, "failed to get user identity", "err", err)
+-			return nil, &oauth2.Error{Type: oauth2.InvalidRequest, Status: http.StatusInternalServerError}
+-		}
++	ui, err := g.storage.GetUserIdentity(ctx, refreshToken.Claims.UserID, refreshToken.ConnectorID)
++	switch {
++	case err == nil:
+ 		userIdent = &ui
++	case errors.Is(err, storage.ErrNotFound):
++		// No identity to serve stored claims from (Deckhouse): the refresh reads
++		// the connector.
++	default:
++		g.logger.ErrorContext(ctx, "failed to get user identity", "err", err)
++		return nil, &oauth2.Error{Type: oauth2.InvalidRequest, Status: http.StatusInternalServerError}
+ 	}
+ 
++	// auth_time is the login of the browser session, which only sessions keep.
  	authTime := time.Time{}
-@@ -130,20 +139,17 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+-	if userIdent != nil {
++	if userIdent != nil && g.sessionsEnabled {
+ 		authTime = userIdent.LastLogin
+ 	}
+ 
+@@ -131,21 +142,18 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
  		ident       connector.Identity
  	)
  	if userIdent != nil {
@@ -392,25 +524,25 @@ index 77d20841..df68d06d 100644
  		// Otherwise re-read the identity from the connector.
  		rawNewToken, ident, err = g.issuer.Refresh.RotateUpstream(ctx, refreshToken, req.refreshID, g.policy,
  			upstream(conn, scopes))
--	}
--	if err != nil {
--		return nil, g.rotateError(ctx, err, refreshToken)
 +		if err != nil {
 +			return nil, g.rotateError(ctx, err, refreshToken)
 +		}
  	}
+-	if err != nil {
+-		return nil, g.rotateError(ctx, err, refreshToken)
+-	}
  
  	auth := tokens.Authorization{
-@@ -187,6 +193,125 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+ 		Client:      client,
+@@ -188,6 +196,135 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
  	return ts.Response(g.now()), nil
  }
  
-+// rotateStored rotates the refresh token of a pair whose identity dex stores, as it
-+// does with sessions on. Upstream serves the stored claims and never asks the
-+// connector; here (Deckhouse) they are served while younger than the sessions'
-+// identityRefresh maxAge (see session.Manager.ClaimsFresh), and read from the
-+// connector after, the way a refresh without sessions reads them, and stored for
-+// the refreshes to come.
++// rotateStored rotates the refresh token of a pair whose identity dex stores.
++// Upstream serves the stored claims with sessions on and never asks the
++// connector; here (Deckhouse) they are served, with sessions on or off, while
++// younger than identityRefresh maxAge (see session.Manager.ClaimsFresh), and read
++// from the connector after, and stored for the refreshes to come.
 +//
 +// A provider that answers the user is gone or no longer let in ends everything
 +// the pair holds (see endPair); another answer that cannot refresh the identity is
@@ -437,15 +569,26 @@ index 77d20841..df68d06d 100644
 +	// with the groups whatever this token asked for. The token carries only what
 +	// it asked for (see tokens.Issuer).
 +	up := upstream(conn, append(slices.Clone(scopes), tokens.ScopeGroups))
-+	rawNewToken, ident, err := g.issuer.Refresh.RotateUpstream(ctx, refreshToken, req.refreshID, g.policy, up)
-+	if err == nil {
-+		// A local user's claims are read at every refresh anyway (see
-+		// session.Manager.ClaimsFresh): storing them would only cost a write.
-+		if up.Refresh != nil && ui.ConnectorID != connectors.LocalConnector {
++	// A request that waited for another one to read the identity is served what
++	// that one stored, and spends no credential of its own.
++	up.Stored = func(ctx context.Context) (connector.Identity, bool) {
++		fresh, err := g.storage.GetUserIdentity(ctx, ui.UserID, ui.ConnectorID)
++		if err != nil || !g.sessions.ClaimsFresh(fresh, g.now()) {
++			return connector.Identity{}, false
++		}
++		return tokens.IdentityFromClaims(fresh.Claims), true
++	}
++	// A local user's claims are read at every refresh anyway (see
++	// session.Manager.ClaimsFresh): storing them would only cost a write.
++	if up.Refresh != nil && ui.ConnectorID != connectors.LocalConnector {
++		up.Read = func(ctx context.Context, ident connector.Identity) {
 +			if err := useridentity.Refreshed(ctx, g.storage, ui.UserID, ui.ConnectorID, tokens.ClaimsFromIdentity(ident), now); err != nil {
 +				g.logger.ErrorContext(ctx, "failed to store the identity read from the connector", "err", err)
 +			}
 +		}
++	}
++	rawNewToken, ident, err := g.issuer.Refresh.RotateUpstream(ctx, refreshToken, req.refreshID, g.policy, up)
++	if err == nil {
 +		return rawNewToken, ident, nil
 +	}
 +
@@ -614,10 +757,28 @@ index 8eeff33f..637bd901 100644
  
  // record creates rev. A revocation recorded before, by a repeated request, is
 diff --git a/server/server.go b/server/server.go
-index e9364419..d1d97de0 100644
+index e9364419..c19bb5b2 100644
 --- a/server/server.go
 +++ b/server/server.go
-@@ -308,6 +308,7 @@ func (s *Server) mount(routes router.Mux, c Config, rc resolvedConfig) {
+@@ -103,11 +103,12 @@ func newServer(ctx context.Context, c Config) (*Server, error) {
+ 		logger:    c.Logger,
+ 	}
+ 	s.sessions = &session.Manager{
+-		Storage:   s.storage,
+-		Config:    c.SessionConfig,
+-		Now:       rc.now,
+-		Logger:    s.logger,
+-		IssuerURL: s.issuerURL,
++		Storage:         s.storage,
++		Config:          c.SessionConfig,
++		IdentityRefresh: c.IdentityRefresh,
++		Now:             rc.now,
++		Logger:          s.logger,
++		IssuerURL:       s.issuerURL,
+ 	}
+ 	s.issuer = tokens.NewIssuer(s.storage, c.Signer, s.issuerURL.URL, rc.idTokensValidFor, rc.now, s.logger)
+ 	s.connectors = connectors.NewCache(s.storage, connectors.Resolver(s.storage, s.logger, ConnectorsConfig))
+@@ -308,6 +309,7 @@ func (s *Server) mount(routes router.Mux, c Config, rc resolvedConfig) {
  			SupportedGrantTypes: rc.grantTypes,
  			Lockout:             guard,
  			Revocations:         s.revocations,
@@ -675,6 +836,220 @@ index 938ad81b..2ef6df5e 100644
  					}
  				}
  			})
+diff --git a/server/server_grant_refresh_upstream_state_test.go b/server/server_grant_refresh_upstream_state_test.go
+index 8ba73a90..6fd4d1ab 100644
+--- a/server/server_grant_refresh_upstream_state_test.go
++++ b/server/server_grant_refresh_upstream_state_test.go
+@@ -21,6 +21,7 @@ import (
+ 	"github.com/dexidp/dex/server/connectors"
+ 	"github.com/dexidp/dex/server/internal"
+ 	dexoauth2 "github.com/dexidp/dex/server/oauth2"
++	"github.com/dexidp/dex/server/session"
+ 	"github.com/dexidp/dex/server/tokens"
+ 	"github.com/dexidp/dex/storage"
+ )
+@@ -302,8 +303,7 @@ type worldOptions struct {
+ var worldClients = []string{"webapp", "kubeconfig-generator", "grafana"}
+ 
+ // newUpstreamWorld starts replicas of dex on one memory storage, with
+-// sessions off. maxAge is the identity refresh maxAge of their config, which
+-// takes effect with identityRefresh (310).
++// sessions off and the identity refresh maxAge of the config, if any.
+ func newUpstreamWorld(t *testing.T, kind providerKind, replicas int, maxAge time.Duration, opts ...worldOptions) *upstreamWorld {
+ 	t.Helper()
+ 	var opt worldOptions
+@@ -343,6 +343,9 @@ func newUpstreamWorld(t *testing.T, kind providerKind, replicas int, maxAge time
+ 				c.RefreshTokenPolicy = tokens.NewRefreshStrategy(true, 0, 0, 0, time.Now)
+ 			}
+ 			c.SessionConfig = nil
++			if maxAge > 0 {
++				c.IdentityRefresh = &session.IdentityRefresh{MaxAge: maxAge}
++			}
+ 		})
+ 		t.Cleanup(httpServer.Close)
+ 		if i == 0 {
+@@ -513,7 +516,28 @@ func TestUpstreamCredentialStates(t *testing.T) {
+ 				w.clk.advance(3 * time.Minute)
+ 				w.requireRefresh("webapp", 0, http.StatusOK)
+ 				w.login("kubeconfig-generator", 0)
++				w.requireRefresh("kubeconfig-generator", 0, http.StatusOK)
++			},
++		},
++		{
++			name:   "fresh claims spend nothing, stale ones refresh",
++			maxAge: 10 * time.Minute,
++			run: func(t *testing.T, w *upstreamWorld) {
++				w.login("webapp", 0)
++				w.login("kubeconfig-generator", 0)
++				// A login without the groups scope stores claims of unknown age:
++				// the first refresh reads them, for every client.
++				w.clk.advance(3 * time.Minute)
++				w.requireRefresh("webapp", 0, http.StatusOK)
++				w.requireRefresh("kubeconfig-generator", 0, http.StatusOK)
++				calls, _, _, _ := w.provider.snapshot()
++				require.Equal(t, 1, calls, "claims younger than maxAge are served without the provider, sessions off")
++
++				w.clk.advance(10 * time.Minute)
++				w.requireRefresh("webapp", 0, http.StatusOK)
+ 				w.requireRefresh("kubeconfig-generator", 0, http.StatusOK)
++				calls, _, _, _ = w.provider.snapshot()
++				require.Equal(t, 2, calls, "one refresh reads the stale claims for every client")
+ 			},
+ 		},
+ 		{
+@@ -780,7 +804,71 @@ func requireNotFatalForDexAuthenticator(t *testing.T, rr *httptest.ResponseRecor
+ 	t.Helper()
+ 	for _, fatal := range []string{"invalid_grant", "invalid_client", "access_denied"} {
+ 		require.NotContains(t, rr.Body.String(), fatal)
++	}
++}
++
++// A request that waited for the lease while another refreshed the identity is
++// served the claims that one stored, and spends no credential (sessions off,
++// identityRefresh maxAge set). Real goroutines: the holder answers only once
++// the waiter is waiting.
++func TestUpstreamLeaseWaiterServedStoredClaims(t *testing.T) {
++	w := newUpstreamWorld(t, rotatingProvider, 2, 10*time.Minute)
++	w.login("webapp", 0)
++	w.login("kubeconfig-generator", 1)
++	w.clk.advance(11 * time.Minute)
++
++	waiting := make(chan struct{})
++	for _, s := range w.servers {
++		s.issuer.Refresh.UpstreamPollPeriod = time.Millisecond
++		s.issuer.Refresh.Sleep = func(ctx context.Context, d time.Duration) error {
++			select {
++			case waiting <- struct{}{}:
++			default:
++			}
++			time.Sleep(d)
++			return ctx.Err()
++		}
++	}
++	release := make(chan struct{})
++	w.provider.during = func() { <-release }
++
++	webToken := w.tokens["webapp"]
++	var wg sync.WaitGroup
++	var holder *httptest.ResponseRecorder
++	holderWorld := &upstreamWorld{t: t, clk: w.clk, provider: w.provider, servers: w.servers,
++		tokens: map[string]*internal.RefreshToken{"webapp": webToken}}
++	wg.Go(func() { holder = holderWorld.refresh("webapp", 0) })
++
++	// The holder is at the provider; the waiter polls for the lease.
++	waiterWorld := &upstreamWorld{t: t, clk: w.clk, provider: w.provider, servers: w.servers,
++		tokens: map[string]*internal.RefreshToken{"kubeconfig-generator": w.tokens["kubeconfig-generator"]}}
++	var waiter *httptest.ResponseRecorder
++	for {
++		calls, _, _, _ := w.provider.snapshot()
++		if calls == 1 {
++			break
++		}
++		time.Sleep(time.Millisecond)
++	}
++	waiterDone := make(chan struct{})
++	wg.Go(func() {
++		defer close(waiterDone)
++		waiter = waiterWorld.refresh("kubeconfig-generator", 1)
++	})
++	// Once the waiter waits for the lease, the holder gets its answer. A
++	// waiter that does not wait ends first, and fails the checks below.
++	select {
++	case <-waiting:
++	case <-waiterDone:
+ 	}
++	close(release)
++	wg.Wait()
++
++	require.Equal(t, http.StatusOK, holder.Code, holder.Body.String())
++	require.Equal(t, http.StatusOK, waiter.Code, waiter.Body.String())
++	calls, _, maxInFlight, _ := w.provider.snapshot()
++	require.Equal(t, 1, calls, "the waiter is served the claims the holder read")
++	require.Equal(t, 1, maxInFlight)
+ }
+ 
+ // The provider has spent the shared credential, and its answer, with the write
+@@ -1028,4 +1116,80 @@ func TestUpstreamRotationRefusedOwnCopyIsNotOfferedAgain(t *testing.T) {
+ 	rr = refreshTokenRequest(t, t.Context(), s, clientID, requestToken(refreshID))
+ 	requireOAuth2Error(t, rr, http.StatusBadRequest, "invalid_grant")
+ 	require.Equal(t, 1, upstream.reused, "never again")
++}
++
++// writeOrderStorage records the writes made once armed: which object, and for
++// an offline session the credential and whether a lease is held.
++type writeOrderStorage struct {
++	storage.Storage
++
++	mu      sync.Mutex
++	isArmed bool
++	writes  []string
++}
++
++func (s *writeOrderStorage) record(write string) {
++	s.mu.Lock()
++	defer s.mu.Unlock()
++	if s.isArmed {
++		s.writes = append(s.writes, write)
++	}
++}
++
++func (s *writeOrderStorage) UpdateOfflineSessions(ctx context.Context, userID, connID string, updater func(storage.OfflineSessions) (storage.OfflineSessions, error)) error {
++	return s.Storage.UpdateOfflineSessions(ctx, userID, connID, func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
++		updated, err := updater(old)
++		if err == nil {
++			s.record(fmt.Sprintf("offline session %s, leased %t", updated.ConnectorData, !updated.UpstreamLease.IsZero()))
++		}
++		return updated, err
++	})
++}
++
++func (s *writeOrderStorage) UpdateRefreshToken(ctx context.Context, id string, updater func(storage.RefreshToken) (storage.RefreshToken, error)) error {
++	s.record("refresh token")
++	return s.Storage.UpdateRefreshToken(ctx, id, updater)
++}
++
++func (s *writeOrderStorage) UpdateUserIdentity(ctx context.Context, userID, connID string, updater func(storage.UserIdentity) (storage.UserIdentity, error)) error {
++	s.record("user identity")
++	return s.Storage.UpdateUserIdentity(ctx, userID, connID, updater)
+ }
++
++// Once the provider has spent the credential, the first write publishes its
++// successor: until it lands, the credential other requests would read is
++// spent, so that window is one write. The lease is released only after the
++// claims read are stored, with the last write: a request waiting for the lease
++// is served those claims instead of spending the successor at once.
++func TestUpstreamPublishIsTheFirstWriteAfterTheSpend(t *testing.T) {
++	var order *writeOrderStorage
++	w := newUpstreamWorld(t, rotatingProvider, 1, 10*time.Minute, worldOptions{wrap: func(_ int, s storage.Storage) storage.Storage {
++		order = &writeOrderStorage{Storage: s}
++		return order
++	}})
++	w.login("webapp", 0)
++	w.clk.advance(11 * time.Minute)
++	w.provider.mu.Lock()
++	w.provider.afterSpend = func() {
++		order.mu.Lock()
++		order.isArmed = true
++		order.mu.Unlock()
++	}
++	w.provider.mu.Unlock()
++
++	w.requireRefresh("webapp", 0, http.StatusOK)
++	successor := w.session().ConnectorData
++	order.mu.Lock()
++	defer order.mu.Unlock()
++	require.NotEmpty(t, order.writes)
++	require.Equal(t, fmt.Sprintf("offline session %s, leased true", successor), order.writes[0],
++		"the successor is the first write, under the lease")
++	claims := slices.Index(order.writes, "user identity")
++	released := slices.Index(order.writes, fmt.Sprintf("offline session %s, leased false", successor))
++	require.NotEqual(t, -1, claims, "the claims read are stored")
++	require.NotEqual(t, -1, released, "the lease is released")
++	require.Less(t, claims, released, "the lease outlives the write of the claims: %v", order.writes)
++	for _, write := range order.writes[:released] {
++		require.NotContains(t, write, "leased false", "no write frees the lease before: %v", order.writes)
++	}
++}
 diff --git a/server/server_identity_refresh_test.go b/server/server_identity_refresh_test.go
 new file mode 100644
 index 00000000..34ec03dd
@@ -964,7 +1339,7 @@ index 00000000..34ec03dd
 +	return c.identity, nil
 +}
 diff --git a/server/session/session.go b/server/session/session.go
-index 65412ff5..188a114f 100644
+index 65412ff5..c63a415c 100644
 --- a/server/session/session.go
 +++ b/server/session/session.go
 @@ -6,6 +6,7 @@ import (
@@ -975,7 +1350,7 @@ index 65412ff5..188a114f 100644
  	"net"
  	"net/http"
  	"slices"
-@@ -27,8 +28,54 @@ type Config struct {
+@@ -27,15 +28,87 @@ type Config struct {
  	// SSOSharedWithDefault is the default SSO sharing policy for clients without explicit SSOSharedWith.
  	// "all" = share with all clients, "none" or "" = share with no one (default).
  	SSOSharedWithDefault string
@@ -987,26 +1362,48 @@ index 65412ff5..188a114f 100644
 +	IdentityGracePeriod time.Duration
  }
  
++// IdentityRefresh is how long the claims stored at a login, or read since, are
++// served before they are read from the connector again (Deckhouse), whether
++// sessions are on or not.
++type IdentityRefresh struct {
++	// MaxAge is the age of the stored claims after which they are read again.
++	MaxAge time.Duration
++	// GracePeriod is how much longer than MaxAge they are served when the
++	// connector fails to answer.
++	GracePeriod time.Duration
++}
++
++// identityRefresh returns the IdentityRefresh in force: the Manager's own, or
++// the one of the session configuration, or none, which reads the claims at every
++// refresh.
++func (m *Manager) identityRefresh() IdentityRefresh {
++	switch {
++	case m.IdentityRefresh != nil:
++		return *m.IdentityRefresh
++	case m.Config != nil:
++		return IdentityRefresh{MaxAge: m.Config.IdentityMaxAge, GracePeriod: m.Config.IdentityGracePeriod}
++	}
++	return IdentityRefresh{}
++}
++
 +// ClaimsFresh reports whether the claims stored for ui may be served at now
 +// without reading them from the connector (Deckhouse): they are younger than
-+// IdentityMaxAge. The claims of a local user are never served stored: reading them
-+// again costs one read of its password, and a deleted user or a changed group then
-+// shows at once.
++// the identity refresh max age. The claims of a local user are never served
++// stored: reading them again costs one read of its password, and a deleted user
++// or a changed group then shows at once.
 +func (m *Manager) ClaimsFresh(ui storage.UserIdentity, now time.Time) bool {
-+	if m.Config == nil || ui.ConnectorID == localConnector {
++	if ui.ConnectorID == localConnector {
 +		return false
 +	}
-+	return claimsAge(ui, now) < m.Config.IdentityMaxAge
++	return claimsAge(ui, now) < m.identityRefresh().MaxAge
 +}
 +
 +// ClaimsUsable reports whether the stored claims of ui may still be served at now
-+// when the connector failed to answer (Deckhouse): they are younger than
-+// IdentityMaxAge and IdentityGracePeriod together.
++// when the connector failed to answer (Deckhouse): they are younger than the
++// identity refresh max age and grace period together.
 +func (m *Manager) ClaimsUsable(ui storage.UserIdentity, now time.Time) bool {
-+	if m.Config == nil {
-+		return false
-+	}
-+	return claimsAge(ui, now) < m.Config.IdentityMaxAge+m.Config.IdentityGracePeriod
++	r := m.identityRefresh()
++	return claimsAge(ui, now) < r.MaxAge+r.GracePeriod
 +}
 +
 +// claimsAge is how long ago the stored claims of ui were read from the connector.
@@ -1029,7 +1426,23 @@ index 65412ff5..188a114f 100644
 +
  // Manager owns the session lifecycle. Construct it with New.
  type Manager struct {
- 	Storage   storage.Storage
+-	Storage   storage.Storage
+-	Config    *Config
+-	Now       func() time.Time
+-	Logger    *slog.Logger
+-	IssuerURL oauth2.IssuerURL
++	Storage storage.Storage
++	Config  *Config
++	// IdentityRefresh, when set, overrides the IdentityMaxAge and
++	// IdentityGracePeriod of Config, and applies with sessions off too
++	// (Deckhouse).
++	IdentityRefresh *IdentityRefresh
++	Now             func() time.Time
++	Logger          *slog.Logger
++	IssuerURL       oauth2.IssuerURL
+ }
+ 
+ // Enabled reports whether sessions are configured.
 diff --git a/server/useridentity/useridentity.go b/server/useridentity/useridentity.go
 index 1c71a378..ca19a5d3 100644
 --- a/server/useridentity/useridentity.go
