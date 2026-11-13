@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ondemand
+package cache
 
 import (
 	"archive/tar"
@@ -36,6 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"github.com/flant/docs-builder/internal/docs"
+	"github.com/flant/docs-builder/internal/ondemand"
 	"github.com/flant/docs-builder/internal/registry"
 )
 
@@ -61,19 +62,19 @@ func newMemCold() *memCold {
 	return &memCold{objects: make(map[string][]byte), modified: make(map[string]time.Time)}
 }
 
-func (m *memCold) List(_ context.Context, prefix string) ([]ColdObject, error) {
+func (m *memCold) List(_ context.Context, prefix string) ([]ondemand.ColdObject, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if prefix == "" {
 		m.bucketLists++
 	}
 	if m.notReady {
-		return nil, ErrColdNotReady
+		return nil, ondemand.ErrColdNotReady
 	}
-	var out []ColdObject
+	var out []ondemand.ColdObject
 	for k, b := range m.objects {
 		if strings.HasPrefix(k, prefix) {
-			out = append(out, ColdObject{Key: k, Size: int64(len(b)), LastModified: m.modified[k]})
+			out = append(out, ondemand.ColdObject{Key: k, Size: int64(len(b)), LastModified: m.modified[k]})
 		}
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Key < out[j].Key })
@@ -85,14 +86,14 @@ func (m *memCold) Get(_ context.Context, key string, w io.Writer) error {
 	defer m.mu.Unlock()
 	m.gets++
 	if m.notReady {
-		return ErrColdNotReady
+		return ondemand.ErrColdNotReady
 	}
 	if m.failGet {
 		return errors.New("S3 is down")
 	}
 	b, ok := m.objects[key]
 	if !ok {
-		return ErrColdNotFound
+		return ondemand.ErrColdNotFound
 	}
 	_, err := w.Write(b)
 	return err
@@ -107,7 +108,7 @@ func (m *memCold) Put(_ context.Context, key, path string) error {
 	defer m.mu.Unlock()
 	m.puts++
 	if m.notReady {
-		return ErrColdNotReady
+		return ondemand.ErrColdNotReady
 	}
 	if m.failPut {
 		return errors.New("S3 is down")
@@ -125,7 +126,7 @@ func (m *memCold) Delete(_ context.Context, key string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.notReady {
-		return ErrColdNotReady
+		return ondemand.ErrColdNotReady
 	}
 	delete(m.objects, key)
 	return nil
@@ -195,10 +196,10 @@ func (m *memCold) waitPuts(t *testing.T, n int) {
 	}
 }
 
-func newColdStore(t *testing.T, f *fakeRender, cold *memCold) *Store {
+func newColdStore(t *testing.T, f *fakeRender, cold *memCold, configure ...func(*Config)) *Store {
 	t.Helper()
 
-	return coldStoreAt(t, f, cold, "rev1")
+	return coldStoreAt(t, f, cold, "rev1", configure...)
 }
 
 // waitBackground waits for the work the store runs in the background: the
@@ -235,7 +236,7 @@ func TestStoreColdCacheAndPinnedVersions(t *testing.T) {
 	// A reader's archive has no AI export: the pinned version is rendered.
 	renderDone(t, s, "echo", "v1.0.0")
 	cold.waitFor(t, "echo/v1.0.0/rev1.tar.gz")
-	if err := s.RenderPinned(context.Background(), Target{Module: "echo", Version: "v1.0.0"}); err != nil {
+	if err := s.RenderPinned(context.Background(), ondemand.Target{Module: "echo", Version: "v1.0.0"}); err != nil {
 		t.Fatal(err)
 	}
 	if n := f.calls.Load(); n != 2 {
@@ -250,7 +251,7 @@ func TestStoreColdCacheAndPinnedVersions(t *testing.T) {
 	// so the pinner has nothing to render.
 	restarted := newColdStore(t, f, cold)
 	renderDone(t, restarted, "echo", "v1.0.0")
-	if err := restarted.RenderPinned(context.Background(), Target{Module: "echo", Version: "v1.0.0"}); err != nil {
+	if err := restarted.RenderPinned(context.Background(), ondemand.Target{Module: "echo", Version: "v1.0.0"}); err != nil {
 		t.Fatal(err)
 	}
 	if n := f.calls.Load(); n != 2 {
@@ -258,7 +259,7 @@ func TestStoreColdCacheAndPinnedVersions(t *testing.T) {
 	}
 
 	// A development branch is not kept: it changes with every push.
-	if err := s.RenderPinned(context.Background(), Target{Module: "echo", Version: "main", Rev: "sha256:aaa"}); err != nil {
+	if err := s.RenderPinned(context.Background(), ondemand.Target{Module: "echo", Version: "main", Rev: "sha256:aaa"}); err != nil {
 		t.Fatal(err)
 	}
 	waitBackground(s)
@@ -315,7 +316,7 @@ func TestStoreKeepsBranchOutOfColdCache(t *testing.T) {
 	// targets.json written before the branch had a revision: the restore
 	// leaves it to a render instead of taking it from S3.
 	before, _ := counts()
-	if ok, err := newStore(override).restorePinned(context.Background(), Target{Module: "echo", Version: "v1.0.0"}, true); ok || err != nil {
+	if ok, err := newStore(override).restorePinned(context.Background(), ondemand.Target{Module: "echo", Version: "v1.0.0"}, true); ok || err != nil {
 		t.Fatalf("restorePinned = %v, %v for a branch, want false, nil", ok, err)
 	}
 	if g, _ := counts(); g != before {
@@ -349,7 +350,7 @@ func TestStoreKeepsBranchCreatedDuringRenderOutOfColdCache(t *testing.T) {
 	}
 	override.Store(true)
 	close(f.release)
-	waitStage(t, s, "echo", "v1.0.0", StageDone)
+	waitStage(t, s, "echo", "v1.0.0", ondemand.StageDone)
 
 	// Uploads run in the background: the branch would have gone up before
 	// the release version that was rendered after it.
@@ -527,7 +528,7 @@ func TestUnpackVersionRejectsPathsOutside(t *testing.T) {
 func TestEvictCold(t *testing.T) {
 	day := func(d int) time.Time { return time.Date(2026, 11, d, 0, 0, 0, 0, time.UTC) }
 	cold := newMemCold()
-	for _, o := range []ColdObject{
+	for _, o := range []ondemand.ColdObject{
 		// Replaced by the archive of rev2: goes first although it is newer.
 		{Key: "e/v1.0.0/rev1.tar.gz", Size: 10, LastModified: day(9)},
 		{Key: "e/v1.0.0/rev2.tar.gz", Size: 10, LastModified: day(8)},
@@ -611,7 +612,7 @@ func TestPinnerRestoresFromColdCacheBeforeResolving(t *testing.T) {
 	var mu sync.Mutex
 	var order []string
 	render := s.cfg.Render
-	s.cfg.Render = func(ctx context.Context, module, version, workDir, outDir string, withAI bool, stage func(Stage)) error {
+	s.cfg.Render = func(ctx context.Context, module, version, workDir, outDir string, withAI bool, stage func(ondemand.Stage)) error {
 		mu.Lock()
 		order = append(order, module)
 		mu.Unlock()
@@ -714,10 +715,10 @@ func TestPinnerRestoresFromColdCacheBeforeResolving(t *testing.T) {
 }
 
 func TestParseIndexed(t *testing.T) {
-	echo := []Target{{Module: "echo", Version: "v1.0.0"}}
+	echo := []ondemand.Target{{Module: "echo", Version: "v1.0.0"}}
 	for _, tt := range []struct {
 		name, raw string
-		want      []Target
+		want      []ondemand.Target
 		err       string
 	}{
 		{"an object", `{"targets":[{"module":"echo","version":"v1.0.0"}]}`, echo, ""},
@@ -752,9 +753,9 @@ func TestParseIndexedSkipsInvalidNames(t *testing.T) {
 		"modules": [{"module":"echo"}, {"module":"a/b"}]
 	}`
 	want := indexedState{
-		Targets:  []Target{{Module: "echo", Version: "v1.0.0"}},
-		Channels: map[string]Channels{"echo": {"stable": "v1.0.0"}},
-		Modules:  []Listed{{Module: "echo"}},
+		Targets:  []ondemand.Target{{Module: "echo", Version: "v1.0.0"}},
+		Channels: map[string]ondemand.Channels{"echo": {"stable": "v1.0.0"}},
+		Modules:  []ondemand.Listed{{Module: "echo"}},
 	}
 
 	got, err := parseIndexed([]byte(raw), log.NewNop())

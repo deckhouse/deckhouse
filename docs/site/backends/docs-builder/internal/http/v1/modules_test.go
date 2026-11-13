@@ -23,11 +23,12 @@ import (
 	"testing"
 
 	"github.com/flant/docs-builder/internal/ondemand"
+	"github.com/flant/docs-builder/internal/ondemand/cache"
 )
 
 func TestModuleAddressLeadsToTarget(t *testing.T) {
 	h := newOnDemandHandler(t)
-	s := h.onDemand.Store.(*ondemand.Store)
+	s := h.onDemand.Store.(*cache.Store)
 	s.SetTargets([]ondemand.Target{
 		{Module: "echo", Version: "v1.0.0"},
 		{Module: "branch", Version: "main", Rev: "sha256:aaa"},
@@ -96,7 +97,7 @@ func TestModuleAddressLeadsToTarget(t *testing.T) {
 // address of the module, until the branch moves on.
 func TestModuleAddressOfFailedBranch(t *testing.T) {
 	h := newOnDemandHandler(t)
-	s := h.onDemand.Store.(*ondemand.Store)
+	s := h.onDemand.Store.(*cache.Store)
 	branch := ondemand.Target{Module: "branch", Version: "broken", Rev: "sha256:aaa"}
 	s.SetTargets([]ondemand.Target{branch})
 	if err := s.RenderPinned(context.Background(), branch); err == nil {
@@ -146,7 +147,7 @@ func TestModulesListPlaceholder(t *testing.T) {
 
 func TestModuleMenu(t *testing.T) {
 	h := newOnDemandHandler(t)
-	s := h.onDemand.Store.(*ondemand.Store)
+	s := h.onDemand.Store.(*cache.Store)
 	if err := s.WriteList(context.Background(), []ondemand.Listed{{Module: "echo", Enabled: true}, {Module: "bare"}}, nil); err != nil {
 		t.Fatal(err)
 	}

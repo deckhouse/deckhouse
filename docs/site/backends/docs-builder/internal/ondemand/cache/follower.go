@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ondemand
+package cache
 
 import (
 	"bytes"
@@ -23,6 +23,7 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"github.com/flant/docs-builder/internal/metrics"
+	"github.com/flant/docs-builder/internal/ondemand"
 )
 
 // FollowFirstEvery is how often a follower looks for the targets of the
@@ -39,16 +40,16 @@ const FollowFallbackAfter = 10 * time.Minute
 // list of modules, the channel links, the search index and the metrics.
 type followerStore interface {
 	coldGetList(ctx context.Context, key string) ([]byte, error)
-	restoreAll(ctx context.Context, targets []Target, chans map[string]Channels, logger *log.Logger) (int, bool)
+	restoreAll(ctx context.Context, targets []ondemand.Target, chans map[string]ondemand.Channels, logger *log.Logger) (int, bool)
 
-	renderPinned(ctx context.Context, t Target, withAI bool) error
-	published(t Target) bool
+	renderPinned(ctx context.Context, t ondemand.Target, withAI bool) error
+	published(t ondemand.Target) bool
 
-	SetTargets(targets []Target)
-	WriteList(ctx context.Context, modules []Listed, targets []Target) error
-	SetChannels(chans map[string]Channels)
+	SetTargets(targets []ondemand.Target)
+	WriteList(ctx context.Context, modules []ondemand.Listed, targets []ondemand.Target) error
+	SetChannels(chans map[string]ondemand.Channels)
 
-	WriteIndex(targets []Target) error
+	WriteIndex(targets []ondemand.Target) error
 	saveIndexedLocal(state indexedState) (string, error)
 
 	SetGauge(name string, v float64)
@@ -94,7 +95,7 @@ func (f *Follower) Sync(ctx context.Context) (bool, bool) {
 		// The leader has written no targets.json yet. A cold cache that is
 		// not set up yet, unlike for the store, is S3 not answering: the
 		// fallback reads the registry then.
-		if kindOf(err) == missing {
+		if ondemand.KindOf(err) == ondemand.Missing {
 			return true, true
 		}
 		f.logger.Warn("get the targets of the leader from S3", log.Err(err))
@@ -263,8 +264,8 @@ func startFallback(ctx context.Context, fallback func(context.Context)) context.
 // unless the same revision is published here already. It reports that a
 // branch is published (linked), so its channels are to be linked again, and
 // that a branch failed for a reason that passes (the registry, the pod) or
-// for one that does not (see lasting).
-func (f *Follower) renderBranches(ctx context.Context, targets []Target) (bool, bool, bool) {
+// for one that does not (see Lasting).
+func (f *Follower) renderBranches(ctx context.Context, targets []ondemand.Target) (bool, bool, bool) {
 	var linked, passing, lastingFailure bool
 	for _, t := range targets {
 		if t.Rev == "" {
@@ -280,7 +281,7 @@ func (f *Follower) renderBranches(ctx context.Context, targets []Target) (bool, 
 		if ctx.Err() != nil {
 			return linked, true, lastingFailure
 		}
-		if lasting(err) {
+		if ondemand.Lasting(err) {
 			lastingFailure = true
 		} else {
 			passing = true

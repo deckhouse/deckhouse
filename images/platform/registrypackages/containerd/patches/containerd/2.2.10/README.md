@@ -123,3 +123,9 @@ Any options supported by [deprecated `registry.configs.*.auth`](https://github.c
 Fsyncs an EROFS layer blob and its directory entry in `snapshotter.Commit()`, after the blob is converted and before the metadata transaction that marks the snapshot committed.
 
 Without it the blob stays in the page cache while the snapshot metadata is already fsynced to boltdb, so an unclean shutdown leaves a committed snapshot whose `layer.erofs` is truncated or empty and can never be mounted again. Reported upstream as [containerd#14164](https://github.com/containerd/containerd/issues/14164).
+
+## 006-apparmor-stacked-peer.patch
+
+Allows `signal` and `ptrace` between processes of one container when the kernel stacks the default AppArmor profile as `cri-containerd.apparmor.d//&unconfined`.
+
+With `kernel.apparmor_restrict_unprivileged_unconfined=1` (the Ubuntu default), newer Ubuntu kernels convert runc's `change_onexec` into a stack. The default profile allows only the literal profile name as a peer, so signals inside the container are denied: PostgreSQL cannot wake its own processes, nginx cannot reload workers. Backport of [containerd#14487](https://github.com/containerd/containerd/pull/14487) ([containerd#14485](https://github.com/containerd/containerd/issues/14485)), not merged upstream yet. Drop it after a bump to a release that contains the fix.

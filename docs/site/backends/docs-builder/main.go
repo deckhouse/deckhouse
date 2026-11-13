@@ -39,6 +39,7 @@ import (
 	"github.com/flant/docs-builder/internal/metrics"
 	"github.com/flant/docs-builder/internal/ondemand"
 	"github.com/flant/docs-builder/internal/ondemand/accesslog"
+	"github.com/flant/docs-builder/internal/ondemand/cache"
 	"github.com/flant/docs-builder/internal/ondemand/leader"
 	"github.com/flant/docs-builder/internal/pprof"
 	"github.com/flant/docs-builder/internal/s3cache"
@@ -250,10 +251,10 @@ type onDemandParts struct {
 	// store is OnDemand.Store with what the pod runs of it besides the
 	// handlers: the eviction, the access log, the work of the leader and of
 	// a follower.
-	store     *ondemand.Store
-	newPinner func() *ondemand.Pinner
+	store     *cache.Store
+	newPinner func() *cache.Pinner
 	// newFallbackPinner reads the registry for a follower S3 does not answer.
-	newFallbackPinner func() *ondemand.Pinner
+	newFallbackPinner func() *cache.Pinner
 	// evictCold is nil without S3: every replica then reads the registry
 	// itself, there is no leader.
 	evictCold func(context.Context)
@@ -288,7 +289,7 @@ func newOnDemand(cfg config, logger *log.Logger, ms *metricsstorage.MetricStorag
 		pinnedBudget = size.Value() - onDemandMaxSize
 	}
 
-	store := ondemand.NewStore(ondemand.Config{
+	store := cache.NewStore(cache.Config{
 		Dir:                cfg.cacheDir,
 		MaxSize:            onDemandMaxSize,
 		PinnedBudget:       pinnedBudget,
@@ -318,14 +319,14 @@ func newOnDemand(cfg config, logger *log.Logger, ms *metricsstorage.MetricStorag
 
 	// A pass of any pinner of the pod stuck past its deadline fails the
 	// liveness probe.
-	passes := ondemand.NewPassWatch()
-	newPinner := func() *ondemand.Pinner {
-		p := ondemand.NewPinner(mode.resolver, store, onDemandPinRetryAfter, logger)
+	passes := cache.NewPassWatch()
+	newPinner := func() *cache.Pinner {
+		p := cache.NewPinner(mode.resolver, store, onDemandPinRetryAfter, logger)
 		p.Watch = passes
 		return p
 	}
-	newFallbackPinner := func() *ondemand.Pinner {
-		p := ondemand.NewFallbackPinner(mode.resolver, store, onDemandPinRetryAfter, logger)
+	newFallbackPinner := func() *cache.Pinner {
+		p := cache.NewFallbackPinner(mode.resolver, store, onDemandPinRetryAfter, logger)
 		p.Watch = passes
 		return p
 	}
@@ -380,7 +381,7 @@ func newColdBucket(s3Dir, s3Size, s3Prefix, templateDir string, logger *log.Logg
 	// hashed at the start. Without a revision nothing is read from S3 or
 	// written there, while the replicas still elect a leader and follow it:
 	// a template that can not be read stops the start instead.
-	revision, err := ondemand.TemplateRevision(templateDir)
+	revision, err := cache.TemplateRevision(templateDir)
 	if err != nil {
 		return nil, 0, "", fmt.Errorf("template revision: %w", err)
 	}
@@ -417,7 +418,7 @@ func runLeaderAndFollower(ctx context.Context, eg *errgroup.Group, parts onDeman
 		return nil
 	})
 	eg.Go(func() error {
-		ondemand.NewFollower(parts.store, onDemandPinRetryAfter, logger).Run(ctx, followEvery, term.leading.Load, markReady, func(fctx context.Context) {
+		cache.NewFollower(parts.store, onDemandPinRetryAfter, logger).Run(ctx, followEvery, term.leading.Load, markReady, func(fctx context.Context) {
 			parts.newFallbackPinner().Run(fctx, onDemandPinEvery)
 		})
 		return nil

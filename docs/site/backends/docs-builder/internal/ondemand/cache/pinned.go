@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ondemand
+package cache
 
 import (
 	"cmp"
@@ -32,31 +32,9 @@ import (
 
 	"github.com/flant/docs-builder/internal/docs"
 	"github.com/flant/docs-builder/internal/metrics"
+	"github.com/flant/docs-builder/internal/ondemand"
 	"github.com/flant/docs-builder/internal/registry"
 )
-
-// Target is the version of a module that represents it in the search index
-// and llms.txt. The JSON names are those of targets.json; decoding ignores their case, so
-// files written before the tags still read.
-type Target struct {
-	Module  string `json:"module"`
-	Version string `json:"version"`
-	// Rev changes when the same version name gets new content: the image
-	// digest of a development branch. Empty for a release version.
-	Rev string `json:"rev,omitempty"`
-}
-
-// TargetChannels are tried in this order for a module that is not enabled:
-// the most stable one first. rock-solid is left out, as on the module pages.
-var TargetChannels = []string{"stable", "early-access", "beta", "alpha"}
-
-// SiteChannels are the release channels with pages of their own on the
-// public site, /modules/<module>/<channel>/.
-var SiteChannels = []string{"alpha", "beta", "early-access", "stable", "rock-solid"}
-
-// Channels maps the release channels of a module to the versions they point
-// at.
-type Channels map[string]string
 
 // resolveParallel is how many modules ResolveChannels looks up at once.
 const resolveParallel = 8
@@ -87,22 +65,22 @@ type Resolver struct {
 type TargetPolicy interface {
 	// Resolve returns the target of the module, nil when nothing it has
 	// published can be rendered, and the versions of its release channels.
-	Resolve(ctx context.Context, m registry.Module) (*Target, Channels, error)
+	Resolve(ctx context.Context, m registry.Module) (*ondemand.Target, ondemand.Channels, error)
 }
 
 // Resolution is what a pass of the Resolver found.
 type Resolution struct {
 	// Targets sorted by module.
-	Targets []Target
+	Targets []ondemand.Target
 	// Channels are the release channels of the modules on the public site.
 	// In a cluster a module has one, stable, pointing at its target: the
 	// address of the module without a version serves the target.
-	Channels map[string]Channels
+	Channels map[string]ondemand.Channels
 	// Unresolved is how many modules could not be resolved this time; such
 	// a module has no channels, the caller keeps the ones it had.
 	Unresolved int
 	// Modules are all the modules, for the list of modules.
-	Modules []Listed
+	Modules []ondemand.Listed
 	// Unpublished are the modules with no source or no release repository
 	// this time: no target, no documentation on their cards.
 	Unpublished map[string]bool
@@ -112,7 +90,7 @@ type Resolution struct {
 // channels of the modules and the list of modules. A module whose version
 // can not be found this time keeps its target from prev, so a registry
 // hiccup does not drop it from the search.
-func (r Resolver) ResolveChannels(ctx context.Context, prev map[string]Target) (Resolution, error) {
+func (r Resolver) ResolveChannels(ctx context.Context, prev map[string]ondemand.Target) (Resolution, error) {
 	timeout := cmp.Or(r.timeout, resolveTimeout)
 	lctx, cancel := context.WithTimeout(ctx, timeout)
 	modules, err := r.Modules(lctx)
@@ -123,8 +101,8 @@ func (r Resolver) ResolveChannels(ctx context.Context, prev map[string]Target) (
 
 	// Each module costs a few requests to the API server and the registry;
 	// one by one they took most of a minute for 90 modules.
-	found := make([]*Target, len(modules))
-	foundChannels := make([]Channels, len(modules))
+	found := make([]*ondemand.Target, len(modules))
+	foundChannels := make([]ondemand.Channels, len(modules))
 	noDocs := make([]bool, len(modules))
 	unpublished := make([]bool, len(modules))
 	var failed atomic.Int32
@@ -136,7 +114,7 @@ func (r Resolver) ResolveChannels(ctx context.Context, prev map[string]Target) (
 			ctx, cancel := context.WithTimeout(ctx, timeout)
 			defer cancel()
 			t, chans, err := r.Policy.Resolve(ctx, m)
-			if Unpublished(err) {
+			if ondemand.Unpublished(err) {
 				// No source, no release repository: nothing published, as
 				// with no versions. Not a failure: it stays so.
 				t, chans, err = nil, nil, nil
@@ -159,10 +137,10 @@ func (r Resolver) ResolveChannels(ctx context.Context, prev map[string]Target) (
 	_ = g.Wait()
 
 	res := Resolution{
-		Targets:    make([]Target, 0, len(modules)),
-		Channels:   make(map[string]Channels),
+		Targets:    make([]ondemand.Target, 0, len(modules)),
+		Channels:   make(map[string]ondemand.Channels),
 		Unresolved: int(failed.Load()),
-		Modules:    make([]Listed, 0, len(modules)),
+		Modules:    make([]ondemand.Listed, 0, len(modules)),
 
 		Unpublished: make(map[string]bool),
 	}
@@ -176,11 +154,11 @@ func (r Resolver) ResolveChannels(ctx context.Context, prev map[string]Target) (
 		if len(foundChannels[i]) > 0 {
 			res.Channels[modules[i].Name] = foundChannels[i]
 		}
-		res.Modules = append(res.Modules, Listed{Module: modules[i].Name, Enabled: modules[i].Enabled, Stage: modules[i].Stage, NoDocs: noDocs[i]})
+		res.Modules = append(res.Modules, ondemand.Listed{Module: modules[i].Name, Enabled: modules[i].Enabled, Stage: modules[i].Stage, NoDocs: noDocs[i]})
 	}
 
-	slices.SortFunc(res.Targets, func(a, b Target) int { return strings.Compare(a.Module, b.Module) })
-	slices.SortFunc(res.Modules, func(a, b Listed) int { return strings.Compare(a.Module, b.Module) })
+	slices.SortFunc(res.Targets, func(a, b ondemand.Target) int { return strings.Compare(a.Module, b.Module) })
+	slices.SortFunc(res.Modules, func(a, b ondemand.Listed) int { return strings.Compare(a.Module, b.Module) })
 
 	return res, nil
 }
@@ -191,31 +169,31 @@ func (r Resolver) ResolveChannels(ctx context.Context, prev map[string]Target) (
 // channel tags gets its newest version as stable. No module is enabled
 // there: the site documents what the registries publish.
 type SitePolicy struct {
-	Channels func(ctx context.Context, module string) (Channels, error)
+	Channels func(ctx context.Context, module string) (ondemand.Channels, error)
 	Latest   func(ctx context.Context, module string) (string, error)
 }
 
 // Resolve picks the versions of the release channels of the module and the
 // target among them (TargetPolicy).
-func (p SitePolicy) Resolve(ctx context.Context, m registry.Module) (*Target, Channels, error) {
+func (p SitePolicy) Resolve(ctx context.Context, m registry.Module) (*ondemand.Target, ondemand.Channels, error) {
 	chans, err := p.Channels(ctx, m.Name)
-	if errors.Is(err, ErrNoChannel) {
+	if errors.Is(err, ondemand.ErrNoChannel) {
 		var latest string
 		if latest, err = p.Latest(ctx, m.Name); err == nil && latest != "" {
-			chans = Channels{"stable": latest}
+			chans = ondemand.Channels{"stable": latest}
 		}
 	}
 	if err != nil {
 		return nil, nil, err
 	}
 
-	for _, channel := range TargetChannels {
+	for _, channel := range ondemand.TargetChannels {
 		if version, ok := chans[channel]; ok {
-			return &Target{Module: m.Name, Version: version}, chans, nil
+			return &ondemand.Target{Module: m.Name, Version: version}, chans, nil
 		}
 	}
 	if version, ok := chans["rock-solid"]; ok {
-		return &Target{Module: m.Name, Version: version}, chans, nil
+		return &ondemand.Target{Module: m.Name, Version: version}, chans, nil
 	}
 
 	// Nothing published that docs-builder can render.
@@ -240,21 +218,21 @@ type ClusterPolicy struct {
 }
 
 // Resolve picks the target of the module (TargetPolicy).
-func (p ClusterPolicy) Resolve(ctx context.Context, m registry.Module) (*Target, Channels, error) {
+func (p ClusterPolicy) Resolve(ctx context.Context, m registry.Module) (*ondemand.Target, ondemand.Channels, error) {
 	t, err := p.target(ctx, m)
 	if err != nil || t == nil {
 		return nil, nil, err
 	}
 
-	return t, Channels{"stable": t.Version}, nil
+	return t, ondemand.Channels{"stable": t.Version}, nil
 }
 
-func (p ClusterPolicy) target(ctx context.Context, m registry.Module) (*Target, error) {
+func (p ClusterPolicy) target(ctx context.Context, m registry.Module) (*ondemand.Target, error) {
 	if m.Enabled && m.Override != nil {
 		if err := docs.ValidateModuleTag(m.Name, m.Override.Tag); err == nil {
 			// A branch always has a revision, so it never counts as a release:
 			// the digest, or the tag until the cluster has pulled the image.
-			return &Target{Module: m.Name, Version: m.Override.Tag, Rev: cmp.Or(m.Override.Digest, m.Override.Tag)}, nil
+			return &ondemand.Target{Module: m.Name, Version: m.Override.Tag, Rev: cmp.Or(m.Override.Digest, m.Override.Tag)}, nil
 		}
 		// A tag that can not be a page path (an upper-case branch name, which
 		// Hugo would lower-case): the module is shown as if it were disabled.
@@ -262,11 +240,11 @@ func (p ClusterPolicy) target(ctx context.Context, m registry.Module) (*Target, 
 	}
 
 	if m.Enabled && docs.ValidateModuleVersion(m.Name, m.Version) == nil {
-		return &Target{Module: m.Name, Version: m.Version}, nil
+		return &ondemand.Target{Module: m.Name, Version: m.Version}, nil
 	}
 
 	version, err := p.ChannelVersion(ctx, m.Name)
-	if errors.Is(err, ErrNoChannel) {
+	if errors.Is(err, ondemand.ErrNoChannel) {
 		version, err = p.Latest(ctx, m.Name)
 	}
 	if err != nil {
@@ -277,24 +255,24 @@ func (p ClusterPolicy) target(ctx context.Context, m registry.Module) (*Target, 
 		return nil, nil
 	}
 
-	return &Target{Module: m.Name, Version: version}, nil
+	return &ondemand.Target{Module: m.Name, Version: version}, nil
 }
 
 // pinnerStore is what a Pinner needs of the Store: the pinned versions, the
 // cold cache, the list of modules, the channel links, the search index, the
 // metrics, and where its state is recorded.
 type pinnerStore interface {
-	Pin(targets, channels []Target)
-	renderPinned(ctx context.Context, t Target, withAI bool) error
-	published(t Target) bool
+	Pin(targets, channels []ondemand.Target)
+	renderPinned(ctx context.Context, t ondemand.Target, withAI bool) error
+	published(t ondemand.Target) bool
 
-	restoreAll(ctx context.Context, targets []Target, chans map[string]Channels, logger *log.Logger) (int, bool)
+	restoreAll(ctx context.Context, targets []ondemand.Target, chans map[string]ondemand.Channels, logger *log.Logger) (int, bool)
 
-	SetTargets(targets []Target)
-	WriteList(ctx context.Context, modules []Listed, targets []Target) error
-	SetChannels(chans map[string]Channels)
+	SetTargets(targets []ondemand.Target)
+	WriteList(ctx context.Context, modules []ondemand.Listed, targets []ondemand.Target) error
+	SetChannels(chans map[string]ondemand.Channels)
 
-	WriteIndex(targets []Target) error
+	WriteIndex(targets []ondemand.Target) error
 
 	SetGauge(name string, v float64)
 	initPinSuccessMetric(at time.Time)
@@ -309,7 +287,7 @@ type recordStore interface {
 	loadIndexed(ctx context.Context) (indexedState, error)
 	saveIndexed(ctx context.Context, state indexedState) error
 	saveIndexedLocal(state indexedState) (string, error)
-	uploadMissing(ctx context.Context, pinned []Target) error
+	uploadMissing(ctx context.Context, pinned []ondemand.Target) error
 }
 
 // Pinner keeps the target versions rendered and pinned in the store and the
@@ -323,18 +301,18 @@ type Pinner struct {
 	logger     *log.Logger
 	now        func() time.Time
 
-	targets map[string]Target
+	targets map[string]ondemand.Target
 	// indexed is the target of every module the index was last built from;
 	// the first sync reads it from the volume, so a restart keeps it.
-	indexed     map[string]Target
+	indexed     map[string]ondemand.Target
 	indexedRead bool
 	// channels are the versions of the release channels of every module on
 	// the public site; a module the registry does not answer for keeps its
 	// last ones.
-	channels map[string]Channels
+	channels map[string]ondemand.Channels
 	// saved is what saveIndexed recorded last, so an unchanged pass does not
 	// upload it again.
-	saved []Target
+	saved []ondemand.Target
 	// savedChannels is the JSON of the channels saveIndexed recorded last.
 	savedChannels string
 
@@ -351,15 +329,15 @@ type Pinner struct {
 	// the Hugo build or the AI export from being downloaded again on every
 	// sync: the images of a version do not change. Other failures are not
 	// kept and are tried on the next sync.
-	failed map[Target]time.Time
+	failed map[ondemand.Target]time.Time
 	// upcoming are the versions the cluster is about to update to, as of the
 	// last pass; warmed are those of them rendered once.
-	upcoming []Target
-	warmed   map[Target]bool
+	upcoming []ondemand.Target
+	warmed   map[ondemand.Target]bool
 	// listed are the modules of the last pass for the list of modules;
 	// noDocs are the targets whose versions have no documentation pages.
-	listed []Listed
-	noDocs map[Target]bool
+	listed []ondemand.Listed
+	noDocs map[ondemand.Target]bool
 	// unpublished are the modules of the last pass with no source or no
 	// release repository.
 	unpublished map[string]bool
@@ -367,7 +345,7 @@ type Pinner struct {
 	savedModules string
 	// served are the channels as the last pass linked them: a channel keeps
 	// its version there until the new one is published, over many passes.
-	served map[string]Channels
+	served map[string]ondemand.Channels
 	// progress shows readers what a pass has published so far, at most
 	// every progressEvery; set while a pass renders.
 	progress      func()
@@ -399,12 +377,12 @@ func NewPinner(resolver Resolver, store pinnerStore, retryAfter time.Duration, l
 		retryAfter: retryAfter,
 		logger:     logger,
 		now:        time.Now,
-		targets:    make(map[string]Target),
-		indexed:    make(map[string]Target),
-		channels:   make(map[string]Channels),
-		failed:     make(map[Target]time.Time),
-		warmed:     make(map[Target]bool),
-		noDocs:     make(map[Target]bool),
+		targets:    make(map[string]ondemand.Target),
+		indexed:    make(map[string]ondemand.Target),
+		channels:   make(map[string]ondemand.Channels),
+		failed:     make(map[ondemand.Target]time.Time),
+		warmed:     make(map[ondemand.Target]bool),
+		noDocs:     make(map[ondemand.Target]bool),
 
 		progressEvery: progressEvery,
 		passTimeout:   passTimeout,
@@ -432,7 +410,7 @@ type stateRecord interface {
 	save(ctx context.Context, state indexedState) error
 	// uploadMissing uploads the archives of the pinned versions the cold
 	// cache lacks.
-	uploadMissing(ctx context.Context, pinned []Target) error
+	uploadMissing(ctx context.Context, pinned []ondemand.Target) error
 }
 
 // coldRecord records the state on the volume and in S3, for the followers
@@ -447,7 +425,7 @@ func (r coldRecord) save(ctx context.Context, state indexedState) error {
 	return r.store.saveIndexed(ctx, state)
 }
 
-func (r coldRecord) uploadMissing(ctx context.Context, pinned []Target) error {
+func (r coldRecord) uploadMissing(ctx context.Context, pinned []ondemand.Target) error {
 	return r.store.uploadMissing(ctx, pinned)
 }
 
@@ -468,7 +446,7 @@ func (r volumeRecord) save(_ context.Context, state indexedState) error {
 	return err
 }
 
-func (volumeRecord) uploadMissing(context.Context, []Target) error { return nil }
+func (volumeRecord) uploadMissing(context.Context, []ondemand.Target) error { return nil }
 
 // Run syncs the targets right away and then periodically, or when kicked,
 // until ctx is done.
@@ -546,7 +524,7 @@ func (p *Pinner) sync(ctx context.Context) {
 	targets, resolved, unresolved := p.keepUnpublishedOnce(res, prev), res.Channels, res.Unresolved
 	p.listed = res.Modules
 	// Before the list is written: its cards tell the new targets.
-	p.targets = make(map[string]Target, len(targets))
+	p.targets = make(map[string]ondemand.Target, len(targets))
 	for _, t := range targets {
 		p.targets[t.Module] = t
 	}
@@ -582,14 +560,14 @@ func (p *Pinner) sync(ctx context.Context) {
 			keep = append(keep, old)
 		}
 	}
-	p.store.Pin(keep, slices.Concat(chanTargets, channelTargets(byModule(targets), linked)))
+	p.store.Pin(keep, slices.Concat(chanTargets, channelTargets(ondemand.ByModule(targets), linked)))
 
 	// One by one: a reader opening another version gets the other render slot.
 	// Development branches go last: they are rendered from the registry every
 	// time, while release versions mostly come from the cold cache. The
 	// versions of the channels go after the search.
-	releases := slices.DeleteFunc(slices.Clone(targets), func(t Target) bool { return t.Rev != "" })
-	branches := slices.DeleteFunc(slices.Clone(targets), func(t Target) bool { return t.Rev == "" })
+	releases := slices.DeleteFunc(slices.Clone(targets), func(t ondemand.Target) bool { return t.Rev != "" })
+	branches := slices.DeleteFunc(slices.Clone(targets), func(t ondemand.Target) bool { return t.Rev == "" })
 	p.progress = func() {
 		if p.now().Sub(p.progressAt) < p.progressEvery {
 			return
@@ -610,7 +588,7 @@ func (p *Pinner) sync(ctx context.Context) {
 	}
 
 	index := p.cardTargets(targets)
-	p.indexed = byModule(index)
+	p.indexed = ondemand.ByModule(index)
 	served := p.servedChannels(linked)
 	p.served = served
 	p.store.SetChannels(served)
@@ -640,9 +618,9 @@ func (p *Pinner) sync(ctx context.Context) {
 // anything: the uploads of the last pass are over by then, and one still
 // running is only uploaded twice. A follower reading the registry itself
 // records nothing in the cold cache (volumeRecord).
-func (p *Pinner) uploadMissing(ctx context.Context, linked map[string]Channels) {
+func (p *Pinner) uploadMissing(ctx context.Context, linked map[string]ondemand.Channels) {
 	pinned := slices.Concat(slices.Collect(maps.Values(p.indexed)), channelTargets(p.indexed, linked))
-	if err := p.record.uploadMissing(ctx, pinned); err != nil && ctx.Err() == nil && !coldMissing(err) {
+	if err := p.record.uploadMissing(ctx, pinned); err != nil && ctx.Err() == nil && !ondemand.ColdMissing(err) {
 		p.logger.Warn("upload the versions missing from S3", log.Err(err))
 	}
 }
@@ -651,7 +629,7 @@ func (p *Pinner) uploadMissing(ctx context.Context, linked map[string]Channels) 
 // module unpublished for the first pass in a row, its card not marked: a
 // registry uploading the module anew or a Module made again answers "not
 // found" for a while. Unpublished on the next pass too, it goes.
-func (p *Pinner) keepUnpublishedOnce(res Resolution, prev map[string]Target) []Target {
+func (p *Pinner) keepUnpublishedOnce(res Resolution, prev map[string]ondemand.Target) []ondemand.Target {
 	targets := res.Targets
 	for module := range res.Unpublished {
 		t, ok := prev[module]
@@ -666,7 +644,7 @@ func (p *Pinner) keepUnpublishedOnce(res Resolution, prev map[string]Target) []T
 		}
 	}
 	p.unpublished = res.Unpublished
-	slices.SortFunc(targets, func(a, b Target) int { return strings.Compare(a.Module, b.Module) })
+	slices.SortFunc(targets, func(a, b ondemand.Target) int { return strings.Compare(a.Module, b.Module) })
 
 	return targets
 }
@@ -700,8 +678,8 @@ func (p *Pinner) readIndexed(ctx context.Context) {
 
 // publishedOf are the targets that are published: only they are worth
 // restoring after a restart.
-func (p *Pinner) publishedOf(targets []Target) []Target {
-	out := make([]Target, 0, len(targets))
+func (p *Pinner) publishedOf(targets []ondemand.Target) []ondemand.Target {
+	out := make([]ondemand.Target, 0, len(targets))
 	for _, t := range targets {
 		if p.store.published(t) {
 			out = append(out, t)
@@ -717,13 +695,13 @@ func (p *Pinner) publishedOf(targets []Target) []Target {
 // a wrong path to the registry turns every module so, and the second pass
 // takes them all off the site (keepUnpublishedOnce). Nor is a target failing
 // for another lasting reason, such as the Hugo build.
-func (p *Pinner) nothingToPublish(targets []Target) bool {
-	return len(p.unpublished) == 0 && !slices.ContainsFunc(targets, func(t Target) bool { return !p.noDocs[t] })
+func (p *Pinner) nothingToPublish(targets []ondemand.Target) bool {
+	return len(p.unpublished) == 0 && !slices.ContainsFunc(targets, func(t ondemand.Target) bool { return !p.noDocs[t] })
 }
 
 // save records the state in targets.json unless it is what was recorded
 // last.
-func (p *Pinner) save(ctx context.Context, saved []Target, chans map[string]Channels, modules []Listed) {
+func (p *Pinner) save(ctx context.Context, saved []ondemand.Target, chans map[string]ondemand.Channels, modules []ondemand.Listed) {
 	if !p.indexedRead {
 		return
 	}
@@ -746,8 +724,8 @@ func (p *Pinner) save(ctx context.Context, saved []Target, chans map[string]Chan
 
 // cardTargets are the targets as they are served: until the new target of
 // a module is published, the one the index was built from.
-func (p *Pinner) cardTargets(targets []Target) []Target {
-	out := make([]Target, 0, len(targets))
+func (p *Pinner) cardTargets(targets []ondemand.Target) []ondemand.Target {
+	out := make([]ondemand.Target, 0, len(targets))
 	for _, t := range targets {
 		if !p.store.published(t) {
 			if old, ok := p.indexed[t.Module]; ok && p.store.published(old) {
@@ -764,9 +742,9 @@ func (p *Pinner) cardTargets(targets []Target) []Target {
 // last pass and returns them as targets.json keeps them. A card showing a
 // published version is neither without documentation nor failed, whatever
 // its new target is.
-func (p *Pinner) writeList(ctx context.Context, targets []Target) []Listed {
-	cards := byModule(targets)
-	modules := make([]Listed, 0, len(p.listed))
+func (p *Pinner) writeList(ctx context.Context, targets []ondemand.Target) []ondemand.Listed {
+	cards := ondemand.ByModule(targets)
+	modules := make([]ondemand.Listed, 0, len(p.listed))
 	for _, m := range p.listed {
 		t, ok := p.targets[m.Module]
 		if card, shown := cards[m.Module]; ok && (!shown || !p.store.published(card)) {
@@ -787,7 +765,7 @@ func (p *Pinner) writeList(ctx context.Context, targets []Target) []Listed {
 
 // upcomingTargets are the versions the cluster is about to update to that
 // are neither targets nor versions of channels.
-func (p *Pinner) upcomingTargets(ctx context.Context, chanTargets []Target) []Target {
+func (p *Pinner) upcomingTargets(ctx context.Context, chanTargets []ondemand.Target) []ondemand.Target {
 	if p.resolver.Upcoming == nil {
 		return nil
 	}
@@ -805,9 +783,9 @@ func (p *Pinner) upcomingTargets(ctx context.Context, chanTargets []Target) []Ta
 	for _, m := range p.listed {
 		listed[m.Module] = true
 	}
-	var out []Target
+	var out []ondemand.Target
 	for _, r := range releases {
-		t := Target{Module: r.Module, Version: r.Version}
+		t := ondemand.Target{Module: r.Module, Version: r.Version}
 		if !listed[t.Module] || docs.ValidateModuleVersion(t.Module, t.Version) != nil || p.targets[t.Module] == t || slices.Contains(chanTargets, t) || slices.Contains(out, t) {
 			continue
 		}
@@ -831,7 +809,7 @@ func (p *Pinner) warmUp(ctx context.Context) {
 		if p.warmed[t] {
 			continue
 		}
-		if p.renderEach(ctx, []Target{t}, false) && !p.failedNow(t) {
+		if p.renderEach(ctx, []ondemand.Target{t}, false) && !p.failedNow(t) {
 			p.warmed[t] = true
 		}
 		if ctx.Err() != nil {
@@ -842,23 +820,23 @@ func (p *Pinner) warmUp(ctx context.Context) {
 
 // failedNow reports a version that failed for a reason that does not change
 // and waits for retryAfter.
-func (p *Pinner) failedNow(t Target) bool {
+func (p *Pinner) failedNow(t ondemand.Target) bool {
 	at, ok := p.failed[t]
 
 	return ok && p.now().Sub(at) < p.retryAfter
 }
 
-func compareTargets(a, b Target) int {
+func compareTargets(a, b ondemand.Target) int {
 	return strings.Compare(a.Module+"/"+a.Version, b.Module+"/"+b.Version)
 }
 
 // channelTargets are the versions release channels point at besides the
 // targets, one per version: they get pages of their own, not the search.
-func channelTargets(targets map[string]Target, channels map[string]Channels) []Target {
-	var out []Target
+func channelTargets(targets map[string]ondemand.Target, channels map[string]ondemand.Channels) []ondemand.Target {
+	var out []ondemand.Target
 	for module, chans := range channels {
 		for _, version := range chans {
-			t := Target{Module: module, Version: version}
+			t := ondemand.Target{Module: module, Version: version}
 			// The target itself is rendered as one: in a cluster its stable
 			// channel is the target, a development branch included.
 			if targets[module].Version != version && !slices.Contains(out, t) {
@@ -875,7 +853,7 @@ func channelTargets(targets map[string]Target, channels map[string]Channels) []T
 // without. It reports whether every target is published, those that can not
 // be (no documentation, Hugo failing on it) aside: a failure of the
 // registry or of the pod is not.
-func (p *Pinner) renderEach(ctx context.Context, targets []Target, withAI bool) bool {
+func (p *Pinner) renderEach(ctx context.Context, targets []ondemand.Target, withAI bool) bool {
 	ok := true
 	for _, t := range targets {
 		if p.failedNow(t) {
@@ -887,9 +865,9 @@ func (p *Pinner) renderEach(ctx context.Context, targets []Target, withAI bool) 
 			}
 			// What does not change until the template or the image does:
 			// waits for retryAfter and does not hold the update back.
-			if lasting(err) {
+			if ondemand.Lasting(err) {
 				p.failed[t] = p.now()
-				if kindOf(err) == noDocs {
+				if ondemand.KindOf(err) == ondemand.NoDocs {
 					p.noDocs[t] = true
 				}
 			} else {
@@ -912,19 +890,19 @@ func (p *Pinner) renderEach(ctx context.Context, targets []Target, withAI bool) 
 // version of a channel once it is published, the one it had before
 // (linked) until then. With no linked it is the channels whose versions are
 // published.
-func (p *Pinner) servedChannels(linked map[string]Channels) map[string]Channels {
-	out := make(map[string]Channels)
+func (p *Pinner) servedChannels(linked map[string]ondemand.Channels) map[string]ondemand.Channels {
+	out := make(map[string]ondemand.Channels)
 	for module, chans := range p.channels {
 		for channel, version := range chans {
-			if !p.store.published(Target{Module: module, Version: version}) {
+			if !p.store.published(ondemand.Target{Module: module, Version: version}) {
 				old, ok := linked[module][channel]
-				if !ok || !p.store.published(Target{Module: module, Version: old}) {
+				if !ok || !p.store.published(ondemand.Target{Module: module, Version: old}) {
 					continue
 				}
 				version = old
 			}
 			if out[module] == nil {
-				out[module] = make(Channels)
+				out[module] = make(ondemand.Channels)
 			}
 			out[module][channel] = version
 		}
@@ -942,11 +920,11 @@ func (p *Pinner) restore(ctx context.Context) {
 	if len(p.indexed) == 0 && len(p.channels) == 0 && len(p.listed) == 0 {
 		return
 	}
-	targets := make([]Target, 0, len(p.indexed))
+	targets := make([]ondemand.Target, 0, len(p.indexed))
 	for _, t := range p.indexed {
 		targets = append(targets, t)
 	}
-	slices.SortFunc(targets, func(a, b Target) int { return strings.Compare(a.Module, b.Module) })
+	slices.SortFunc(targets, func(a, b ondemand.Target) int { return strings.Compare(a.Module, b.Module) })
 
 	// Every module is on the list at once, by its name until its version
 	// comes from S3; nothing recorded yet (a new volume and bucket) waits
@@ -967,13 +945,4 @@ func (p *Pinner) restore(ctx context.Context) {
 	if len(p.listed) > 0 || len(targets) > 0 {
 		p.writeList(ctx, targets)
 	}
-}
-
-func byModule(targets []Target) map[string]Target {
-	out := make(map[string]Target, len(targets))
-	for _, t := range targets {
-		out[t.Module] = t
-	}
-
-	return out
 }

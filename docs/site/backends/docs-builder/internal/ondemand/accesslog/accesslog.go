@@ -27,7 +27,7 @@ import (
 )
 
 // Recorder records an access to a version, which delays its eviction
-// (ondemand.Store.Touch).
+// (cache.Store.Touch).
 type Recorder interface {
 	Touch(module, version string)
 }

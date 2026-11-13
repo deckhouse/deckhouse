@@ -12,7 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ondemand
+// Package cache keeps the rendered versions of modules on the cache volume
+// nginx serves: the Store renders a version on request, the Pinner keeps the
+// target versions rendered and pinned, and a Follower keeps a pod that is not
+// the leader in step with it.
+package cache
 
 import (
 	"context"
@@ -33,11 +37,11 @@ import (
 
 	"github.com/flant/docs-builder/internal/docs"
 	"github.com/flant/docs-builder/internal/metrics"
+	"github.com/flant/docs-builder/internal/ondemand"
+	"github.com/flant/docs-builder/internal/ondemand/catalog"
+	"github.com/flant/docs-builder/internal/ondemand/channels"
+	"github.com/flant/docs-builder/internal/ondemand/index"
 )
-
-// errNoAIExport means a pinned version is published, but its AI export
-// failed: the reason is in the log of the render.
-var errNoAIExport = errors.New("rendered without the AI export")
 
 // indexPages are the names of the main page of a directory: Hugo renders the
 // README of a module as readme.html, other sections as index.html.
@@ -90,10 +94,10 @@ type Config struct {
 	// they are not downloaded again a minute later.
 	NotFoundRetryAfter time.Duration
 
-	Render RenderFunc
+	Render ondemand.RenderFunc
 	// RenderList, when set, builds the page of the list of modules
 	// (WriteList).
-	RenderList RenderListFunc
+	RenderList ondemand.RenderListFunc
 	// Relisted, when set, is told of a module that joins or leaves the list
 	// of modules, e.g. one Deckhouse runs the embedded copy of now or no
 	// more: its cached versions are no longer right (versions.Versions.Forget).
@@ -104,7 +108,7 @@ type Config struct {
 	// Cold, when set, keeps archives of rendered release versions outside
 	// the pod: a miss looks there before rendering, a render is uploaded.
 	// Development branches change with every push and are not kept.
-	Cold ColdCache
+	Cold ondemand.ColdCache
 	// IndexAtModuleRoot makes the links of the search index and llms.txt
 	// lead to the module (/modules/<module>/) instead of the version of its
 	// target: the public site serves the target there, as its stable channel.
@@ -122,19 +126,6 @@ type Config struct {
 
 // ErrBusy means too many versions are being rendered to start one more.
 var ErrBusy = errors.New("too many module versions are being prepared, try again in a minute")
-
-// Status of a module version in the store.
-type Status struct {
-	Stage Stage `json:"stage"`
-	// Error is the reason of a failed render, one of the Reason constants.
-	Error string `json:"error,omitempty"`
-	// NotFound marks a failed render of a version that does not exist or has
-	// no documentation, as opposed to a render that broke.
-	NotFound bool `json:"notFound,omitempty"`
-	// RetryIn is how many seconds are left until a render that broke may be
-	// started again; zero for a version that does not exist.
-	RetryIn int `json:"retryIn,omitempty"`
-}
 
 type published struct {
 	size       int64
@@ -157,7 +148,7 @@ type published struct {
 }
 
 type render struct {
-	status   Status
+	status   ondemand.Status
 	failedAt time.Time
 	// done is closed when the render finishes, either way.
 	done chan struct{}
@@ -185,7 +176,7 @@ type Store struct {
 	pinnedChannels map[string]bool
 	// failedBranches are the development branches among the targets whose
 	// last render failed for a lasting reason, with how it failed.
-	failedBranches map[Target]Status
+	failedBranches map[ondemand.Target]ondemand.Status
 	// pinnedOnce is set by the first Pin; started is when the store was made.
 	pinnedOnce bool
 	started    time.Time
@@ -194,11 +185,13 @@ type Store struct {
 	pinSuccessInit sync.Once
 
 	// catalog, channels and index are the list of modules, the links of the
-	// release channels and the search index with targets.json: they are made
-	// of the versions the store publishes.
-	catalog  *catalog
-	channels *channelLinks
-	index    *searchIndex
+	// release channels and the search index: they are made of the versions
+	// the store publishes. indexed keeps the targets the index was built
+	// from (targets.json).
+	catalog  *catalog.Catalog
+	channels *channels.Links
+	index    *index.Index
+	indexed  *indexedTargets
 	// cold keeps the archives of the versions outside the pod; rerender
 	// renders anew those of older templates in the render slots.
 	cold     *coldArchives
@@ -221,7 +214,7 @@ func NewStore(cfg Config) *Store {
 		renders:  make(map[string]*render),
 		pinned:   make(map[string]bool),
 
-		failedBranches: make(map[Target]Status),
+		failedBranches: make(map[ondemand.Target]ondemand.Status),
 	}
 	s.cold = &coldArchives{
 		ColdCache:  cfg.Cold,
@@ -233,24 +226,25 @@ func NewStore(cfg Config) *Store {
 		metrics:    cfg.Metrics,
 		putPause:   coldPutPause,
 	}
-	s.channels = newChannelLinks(cfg.Dir, cfg.Logger, s.published)
-	s.catalog = &catalog{
-		dir:       cfg.Dir,
-		logger:    cfg.Logger,
-		render:    cfg.RenderList,
-		relisted:  cfg.Relisted,
-		published: s.published,
-		gauge:     s.SetGauge,
-		targets:   make(map[string]Target),
-	}
-	s.index = &searchIndex{
-		dir:          cfg.Dir,
-		logger:       cfg.Logger,
-		atModuleRoot: cfg.IndexAtModuleRoot,
-		publication:  s.publication,
-		stable:       s.channels.stableOf,
-		cold:         s.cold,
-	}
+	s.channels = channels.New(cfg.Dir, cfg.Logger, s.published)
+	s.catalog = catalog.New(catalog.Config{
+		Dir:       cfg.Dir,
+		Pages:     filepath.Join(cfg.Dir, indexDir),
+		Tmp:       filepath.Join(cfg.Dir, tmpDir),
+		Logger:    cfg.Logger,
+		Render:    cfg.RenderList,
+		Relisted:  cfg.Relisted,
+		Published: s.published,
+		Gauge:     s.SetGauge,
+	})
+	s.index = index.New(index.Config{
+		Dir:          cfg.Dir,
+		Out:          filepath.Join(cfg.Dir, indexDir),
+		AtModuleRoot: cfg.IndexAtModuleRoot,
+		Publication:  s.publication,
+		Stable:       s.channels.Stable,
+	})
+	s.indexed = &indexedTargets{dir: cfg.Dir, logger: cfg.Logger, cold: s.cold}
 	s.rerender = &rerenderer{
 		cold:    s.cold,
 		slots:   s.sem,
@@ -291,7 +285,7 @@ func (s *Store) Load() error {
 	if err := s.loadVersions(); err != nil {
 		return err
 	}
-	s.channels.keep(s.site)
+	s.channels.Keep(siteDir, s.site)
 
 	return s.swapSite(newSite, oldSite)
 }
@@ -382,21 +376,21 @@ func (s *Store) loadVersion(module string, v fs.DirEntry) error {
 
 // Status reports whether the version is rendered, being rendered or failed.
 // An unknown version has an empty Stage.
-func (s *Store) Status(module, version string) Status {
+func (s *Store) Status(module, version string) ondemand.Status {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	return s.statusLocked(key(module, version))
 }
 
-func (s *Store) statusLocked(k string) Status {
+func (s *Store) statusLocked(k string) ondemand.Status {
 	if _, ok := s.versions[k]; ok {
-		return Status{Stage: StageDone}
+		return ondemand.Status{Stage: ondemand.StageDone}
 	}
 
 	if r, ok := s.renders[k]; ok {
 		st := r.status
-		if st.Stage == StageFailed && !st.NotFound {
+		if st.Stage == ondemand.StageFailed && !st.NotFound {
 			// At least a second: past RetryAfter the next request starts it.
 			left := s.cfg.RetryAfter - s.now().Sub(r.failedAt)
 			st.RetryIn = max(1, int((left+time.Second-1)/time.Second))
@@ -405,16 +399,16 @@ func (s *Store) statusLocked(k string) Status {
 		return st
 	}
 
-	return Status{}
+	return ondemand.Status{}
 }
 
 // Start begins rendering the version in the background unless it is already
 // rendered, being rendered or failed less than RetryAfter ago, and returns
 // its status. Concurrent requests for one version share one render. With
 // MaxQueue renders unfinished it returns ErrBusy.
-func (s *Store) Start(module, version string) (Status, error) {
+func (s *Store) Start(module, version string) (ondemand.Status, error) {
 	if err := docs.ValidateModuleVersion(module, version); err != nil {
-		return Status{}, err
+		return ondemand.Status{}, err
 	}
 
 	k := key(module, version)
@@ -432,15 +426,15 @@ func (s *Store) Start(module, version string) (Status, error) {
 
 	active := 0
 	for _, r := range s.renders {
-		if r.status.Stage != StageFailed {
+		if r.status.Stage != ondemand.StageFailed {
 			active++
 		}
 	}
 	if active >= s.cfg.MaxQueue {
-		return Status{}, ErrBusy
+		return ondemand.Status{}, ErrBusy
 	}
 
-	r := &render{status: Status{Stage: StageQueued}, done: make(chan struct{})}
+	r := &render{status: ondemand.Status{Stage: ondemand.StageQueued}, done: make(chan struct{})}
 	s.renders[k] = r
 
 	// A pinned version a reader opens first gets the AI export right away, so
@@ -468,8 +462,8 @@ func (s *Store) HasPage(module, version, lang, page string) bool {
 		return true
 	}
 
-	for _, index := range indexPages {
-		if _, err := os.Stat(filepath.Join(p, index)); err == nil {
+	for _, page := range indexPages {
+		if _, err := os.Stat(filepath.Join(p, page)); err == nil {
 			return true
 		}
 	}
@@ -517,7 +511,7 @@ func (s *Store) refreshStale(module, version string, withAI bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), s.cfg.RenderTimeout)
 	defer cancel()
 
-	if _, err := s.renderAndPublish(ctx, module, version, withAI, "", coldFresh, func(Stage) {}); err != nil && !errors.Is(err, errNotInCold) {
+	if _, err := s.renderAndPublish(ctx, module, version, withAI, "", coldFresh, func(ondemand.Stage) {}); err != nil && !errors.Is(err, errNotInCold) {
 		s.cfg.Logger.Warn("replace a version served from an archive of an older template", slog.String("module", module), slog.String("version", version), log.Err(err))
 	}
 }
@@ -559,14 +553,14 @@ func (s *Store) run(ctx context.Context, module, version string, r *render, with
 	ctx, cancel := context.WithTimeout(ctx, s.cfg.RenderTimeout)
 	defer cancel()
 
-	size, err := s.renderAndPublish(ctx, module, version, withAI, rev, coldOrRender, func(stage Stage) {
+	size, err := s.renderAndPublish(ctx, module, version, withAI, rev, coldOrRender, func(stage ondemand.Stage) {
 		s.mu.Lock()
 		r.status.Stage = stage
 		s.mu.Unlock()
 	})
 
 	s.mu.Lock()
-	result := StageDone
+	result := ondemand.StageDone
 	if err != nil {
 		r.status = failedStatus(err)
 		r.failedAt = s.now()
@@ -595,7 +589,7 @@ func (s *Store) run(ctx context.Context, module, version string, r *render, with
 // version already published is replaced: it goes to the trash first. With
 // coldOnly or coldFresh a version missing from the cold cache is not
 // rendered: errNotInCold.
-func (s *Store) renderAndPublish(ctx context.Context, module, version string, withAI bool, rev string, mode coldMode, stage func(Stage)) (int64, error) {
+func (s *Store) renderAndPublish(ctx context.Context, module, version string, withAI bool, rev string, mode coldMode, stage func(ondemand.Stage)) (int64, error) {
 	tmp := filepath.Join(s.cfg.Dir, tmpDir)
 	if err := os.MkdirAll(tmp, 0700); err != nil {
 		return 0, fmt.Errorf("mkdir tmp: %w", err)
@@ -620,11 +614,11 @@ func (s *Store) renderAndPublish(ctx context.Context, module, version string, wi
 	var found, archive string
 	var stale bool
 	if revision != "" {
-		stage(StageDownload)
+		stage(ondemand.StageDownload)
 		start := time.Now()
 		found, archive, stale = s.cold.fetch(ctx, revision, module, version, outDir, withAI, mode)
 		if found != "" {
-			ObserveStage(s.cfg.Metrics, "download", "cold", start)
+			ondemand.ObserveStage(s.cfg.Metrics, "download", "cold", start)
 		}
 	}
 	defer func() {
@@ -685,7 +679,7 @@ func (s *Store) renderAndPublish(ctx context.Context, module, version string, wi
 	if err != nil {
 		return 0, err
 	}
-	ObserveStage(s.cfg.Metrics, "publish", "", publishStart)
+	ondemand.ObserveStage(s.cfg.Metrics, "publish", "", publishStart)
 
 	switch {
 	case fromCold:
@@ -780,7 +774,7 @@ func (s *Store) putBackLocked(k, old string, prev *published, cause error) (stri
 // index and llms.txt are built from, and the versions of their release
 // channels. They are not evicted; a version that is no longer pinned is
 // evicted by the usual rules.
-func (s *Store) Pin(targets, channels []Target) {
+func (s *Store) Pin(targets, channels []ondemand.Target) {
 	pinned := make(map[string]bool, len(targets)+len(channels))
 	for _, t := range targets {
 		pinned[key(t.Module, t.Version)] = true
@@ -802,6 +796,80 @@ func (s *Store) Pin(targets, channels []Target) {
 	s.mu.Unlock()
 }
 
+// LinkChannels points the release channels of the module at their published
+// versions for nginx (channels.Links).
+func (s *Store) LinkChannels(module string, chans ondemand.Channels) {
+	s.channels.Link(s.site, module, chans)
+}
+
+// SetChannels links the release channels of every module in chans
+// (LinkChannels) and removes the channel links of the modules no longer in
+// it.
+func (s *Store) SetChannels(chans map[string]ondemand.Channels) {
+	s.channels.Set(s.site, chans)
+}
+
+// WriteIndex merges the search indexes and the AI exports of the published
+// targets into the files of indexDir (index).
+func (s *Store) WriteIndex(targets []ondemand.Target) error {
+	return s.index.WriteIndex(targets)
+}
+
+// WriteList builds the page of the list of modules (catalog).
+func (s *Store) WriteList(ctx context.Context, modules []ondemand.Listed, targets []ondemand.Target) error {
+	return s.catalog.WriteList(ctx, modules, targets)
+}
+
+// SetTargets records the target of every module (catalog). A development
+// branch that is no target any more, or has moved on, fails no more.
+func (s *Store) SetTargets(targets []ondemand.Target) {
+	s.catalog.SetTargets(targets)
+
+	byName := ondemand.ByModule(targets)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for t := range s.failedBranches {
+		if byName[t.Module] != t {
+			delete(s.failedBranches, t)
+		}
+	}
+	s.SetGauge(metrics.DocsBuilderOnDemandFailedBranches, float64(len(s.failedBranches)))
+}
+
+// Target returns the target of the module (catalog).
+func (s *Store) Target(module string) (ondemand.Target, bool) {
+	return s.catalog.Target(module)
+}
+
+// Pending reports a module on the list whose target this pod does not know
+// yet (catalog).
+func (s *Store) Pending(module string) bool {
+	return s.catalog.Pending(module)
+}
+
+// NoDocs reports a module on the list whose published versions have no
+// documentation (catalog).
+func (s *Store) NoDocs(module string) bool {
+	return s.catalog.NoDocs(module)
+}
+
+// Menu returns the version menu of the module: whether it is enabled, from
+// the list, and the channels as their links point; false when the module is
+// neither on the list nor linked.
+func (s *Store) Menu(module string) (ondemand.ModuleMenu, bool) {
+	m, listed := s.catalog.Listed(module)
+	chans, linked := s.channels.Served(module)
+	if !listed && !linked {
+		return ondemand.ModuleMenu{}, false
+	}
+	if chans == nil {
+		chans = ondemand.Channels{}
+	}
+
+	return ondemand.ModuleMenu{Enabled: m.Enabled, Channels: chans}, true
+}
+
 // RenderPinned renders a pinned version with the AI export unless it is
 // already published that way from the same revision. A version published
 // from an archive of an older template is replaced once the cold cache has
@@ -811,11 +879,11 @@ func (s *Store) Pin(targets, channels []Target) {
 // leaves the other slots to the readers. The render is registered like a
 // reader's one: a reader opening the version meanwhile shares it, and a
 // reader's render already running is waited for first.
-func (s *Store) RenderPinned(ctx context.Context, t Target) error {
+func (s *Store) RenderPinned(ctx context.Context, t ondemand.Target) error {
 	return s.renderPinned(ctx, t, true)
 }
 
-func (s *Store) renderPinned(ctx context.Context, t Target, withAI bool) (err error) {
+func (s *Store) renderPinned(ctx context.Context, t ondemand.Target, withAI bool) (err error) {
 	if err := docs.ValidateModuleTag(t.Module, t.Version); err != nil {
 		return err
 	}
@@ -836,7 +904,7 @@ func (s *Store) renderPinned(ctx context.Context, t Target, withAI bool) (err er
 			return nil
 		}
 
-		if r, ok := s.renders[k]; ok && r.status.Stage != StageFailed {
+		if r, ok := s.renders[k]; ok && r.status.Stage != ondemand.StageFailed {
 			done := r.done
 			s.mu.Unlock()
 
@@ -848,7 +916,7 @@ func (s *Store) renderPinned(ctx context.Context, t Target, withAI bool) (err er
 			}
 		}
 
-		r := &render{status: Status{Stage: StageQueued}, done: make(chan struct{})}
+		r := &render{status: ondemand.Status{Stage: ondemand.StageQueued}, done: make(chan struct{})}
 		s.renders[k] = r
 		s.mu.Unlock()
 
@@ -860,7 +928,7 @@ func (s *Store) renderPinned(ctx context.Context, t Target, withAI bool) (err er
 		v, ok := s.versions[k]
 		s.mu.Unlock()
 		if ok && withAI && !v.ai {
-			return errNoAIExport
+			return ondemand.ErrNoAIExport
 		}
 
 		return nil
@@ -868,13 +936,27 @@ func (s *Store) renderPinned(ctx context.Context, t Target, withAI bool) (err er
 }
 
 // failedStatus is the status of a render that failed with err.
-func failedStatus(err error) Status {
-	k := kindOf(err)
+func failedStatus(err error) ondemand.Status {
+	k := ondemand.KindOf(err)
 
-	return Status{
-		Stage:    StageFailed,
+	return ondemand.Status{
+		Stage:    ondemand.StageFailed,
 		Error:    reason(err),
-		NotFound: k == missing || k == noDocs,
+		NotFound: k == ondemand.Missing || k == ondemand.NoDocs,
+	}
+}
+
+func reason(err error) string {
+	switch {
+	case errors.Is(err, context.DeadlineExceeded):
+		return ondemand.ReasonTimeout
+	// The image is fetched, its files are the reason.
+	case ondemand.KindOf(err) == ondemand.Unrenderable:
+		return ondemand.ReasonBuild
+	case errors.Is(err, ondemand.ErrFetch):
+		return ondemand.ReasonRegistry
+	default:
+		return ondemand.ReasonBuild
 	}
 }
 
@@ -882,15 +964,15 @@ func failedStatus(err error) Status {
 // lasting reason, so its address tells it instead of waiting for it; a
 // render that went well forgets it, one failing for a passing reason leaves
 // it as it was.
-func (s *Store) recordBranch(t Target, err error) {
+func (s *Store) recordBranch(t ondemand.Target, err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	switch {
 	// Published without the AI export: the pages are served.
-	case err == nil || errors.Is(err, errNoAIExport):
+	case err == nil || errors.Is(err, ondemand.ErrNoAIExport):
 		delete(s.failedBranches, t)
-	case lasting(err):
+	case ondemand.Lasting(err):
 		s.failedBranches[t] = failedStatus(err)
 	default:
 		return
@@ -900,7 +982,7 @@ func (s *Store) recordBranch(t Target, err error) {
 
 // BranchFailure reports how the development branch failed to render for a
 // lasting reason; false while it may still be published.
-func (s *Store) BranchFailure(t Target) (Status, bool) {
+func (s *Store) BranchFailure(t ondemand.Target) (ondemand.Status, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -919,7 +1001,7 @@ func (s *Store) BranchFailure(t Target) (Status, bool) {
 // target. A version missing from the cold cache, a development branch and a
 // version being rendered are left to RenderPinned. It takes no render slot:
 // it is a download of a few megabytes.
-func (s *Store) restorePinned(ctx context.Context, t Target, withAI bool) (bool, error) {
+func (s *Store) restorePinned(ctx context.Context, t ondemand.Target, withAI bool) (bool, error) {
 	if err := docs.ValidateModuleTag(t.Module, t.Version); err != nil {
 		return false, err
 	}
@@ -938,9 +1020,9 @@ func (s *Store) restorePinned(ctx context.Context, t Target, withAI bool) (bool,
 	if published {
 		mode = coldFresh
 	}
-	_, err := s.renderAndPublish(ctx, t.Module, t.Version, withAI, "", mode, func(Stage) {})
+	_, err := s.renderAndPublish(ctx, t.Module, t.Version, withAI, "", mode, func(ondemand.Stage) {})
 	if errors.Is(err, errNotInCold) && withAI && !published {
-		_, err = s.renderAndPublish(ctx, t.Module, t.Version, false, "", coldOnly, func(Stage) {})
+		_, err = s.renderAndPublish(ctx, t.Module, t.Version, false, "", coldOnly, func(ondemand.Stage) {})
 	}
 	// A published version stays served as it was until the archive is there.
 	if errors.Is(err, errNotInCold) {
@@ -955,7 +1037,7 @@ func (s *Store) restorePinned(ctx context.Context, t Target, withAI bool) (bool,
 
 // publishedAsWanted reports whether the version of the target is published
 // from this template revision, with the AI export when withAI.
-func (s *Store) publishedAsWanted(t Target, withAI bool) bool {
+func (s *Store) publishedAsWanted(t ondemand.Target, withAI bool) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -966,7 +1048,7 @@ func (s *Store) publishedAsWanted(t Target, withAI bool) bool {
 
 // published reports whether a version of the target is published, from
 // any revision.
-func (s *Store) published(t Target) bool {
+func (s *Store) published(t ondemand.Target) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -975,18 +1057,18 @@ func (s *Store) published(t Target) bool {
 	return ok
 }
 
-// publication returns how the version of the target is published; false
-// when it is not.
-func (s *Store) publication(t Target) (published, bool) {
+// publication returns how the version of the target is published, for the
+// index; false when it is not.
+func (s *Store) publication(t ondemand.Target) (index.Published, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	v, ok := s.versions[key(t.Module, t.Version)]
 	if !ok {
-		return published{}, false
+		return index.Published{}, false
 	}
 
-	return *v, true
+	return index.Published{Rev: v.rev, AI: v.ai}, true
 }
 
 // hasAIExport reports whether a version on the volume was rendered with the
@@ -1115,7 +1197,7 @@ func (s *Store) evict() {
 
 // retryable reports whether a render failed long enough ago to run again.
 func (s *Store) retryable(r *render) bool {
-	if r.status.Stage != StageFailed {
+	if r.status.Stage != ondemand.StageFailed {
 		return false
 	}
 
@@ -1172,7 +1254,7 @@ func (s *Store) initPinSuccessMetric(at time.Time) {
 	s.pinSuccessInit.Do(func() { s.SetGauge(metrics.DocsBuilderOnDemandPinSuccessSeconds, float64(at.Unix())) })
 }
 
-func (s *Store) reportRender(result Stage, notFound bool, d time.Duration) {
+func (s *Store) reportRender(result ondemand.Stage, notFound bool, d time.Duration) {
 	if s.cfg.Metrics == nil {
 		return
 	}

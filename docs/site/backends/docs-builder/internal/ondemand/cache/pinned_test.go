@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ondemand
+package cache
 
 import (
 	"bytes"
@@ -40,6 +40,7 @@ import (
 
 	"github.com/flant/docs-builder/internal/docs"
 	"github.com/flant/docs-builder/internal/metrics"
+	"github.com/flant/docs-builder/internal/ondemand"
 	"github.com/flant/docs-builder/internal/registry"
 )
 
@@ -68,7 +69,7 @@ func TestResolverPicksTheVersionOfEveryModule(t *testing.T) {
 				case channel[module] != "":
 					return channel[module], nil
 				}
-				return "", ErrNoChannel
+				return "", ondemand.ErrNoChannel
 			},
 			Latest: func(_ context.Context, module string) (string, error) { return latest[module], nil },
 			Logger: log.NewNop(),
@@ -76,13 +77,13 @@ func TestResolverPicksTheVersionOfEveryModule(t *testing.T) {
 		Logger: log.NewNop(),
 	}
 
-	res, err := r.ResolveChannels(context.Background(), map[string]Target{"flaky": {Module: "flaky", Version: "v2.0.0"}})
+	res, err := r.ResolveChannels(context.Background(), map[string]ondemand.Target{"flaky": {Module: "flaky", Version: "v2.0.0"}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	got := res.Targets
 
-	want := []Target{
+	want := []ondemand.Target{
 		{Module: "alb", Version: "pr-7", Rev: "pr-7"},
 		{Module: "console", Version: "main", Rev: "sha256:aaa"},
 		{Module: "echo", Version: "v0.17.0"},
@@ -100,9 +101,9 @@ func TestStoreKeepsPinnedVersions(t *testing.T) {
 	f := &fakeRender{size: 100}
 	s, c := newTestStore(t, f, 10000)
 
-	pinned := Target{Module: "echo", Version: "v1.0.0"}
-	channel := Target{Module: "echo", Version: "v0.9.0"}
-	s.Pin([]Target{pinned}, []Target{channel})
+	pinned := ondemand.Target{Module: "echo", Version: "v1.0.0"}
+	channel := ondemand.Target{Module: "echo", Version: "v0.9.0"}
+	s.Pin([]ondemand.Target{pinned}, []ondemand.Target{channel})
 	if err := s.RenderPinned(context.Background(), pinned); err != nil {
 		t.Fatal(err)
 	}
@@ -142,17 +143,17 @@ func TestStoreRenderPinnedOnlyWhenNeeded(t *testing.T) {
 	// A reader opened the version first: it has no AI export yet.
 	renderDone(t, s, "echo", "v1.0.0")
 
-	release := Target{Module: "echo", Version: "v1.0.0"}
-	branch := Target{Module: "echo", Version: "main", Rev: "sha256:aaa"}
+	release := ondemand.Target{Module: "echo", Version: "v1.0.0"}
+	branch := ondemand.Target{Module: "echo", Version: "main", Rev: "sha256:aaa"}
 	for _, step := range []struct {
-		target Target
+		target ondemand.Target
 		calls  int32
 	}{
 		{release, 2}, // re-rendered with the AI export
 		{release, 2}, // up to date
 		{branch, 3},
 		{branch, 3},
-		{Target{Module: "echo", Version: "main", Rev: "sha256:bbb"}, 4}, // a new push to the branch
+		{ondemand.Target{Module: "echo", Version: "main", Rev: "sha256:bbb"}, 4}, // a new push to the branch
 	} {
 		if err := s.RenderPinned(context.Background(), step.target); err != nil {
 			t.Fatal(err)
@@ -184,7 +185,7 @@ func TestPinnerRetries(t *testing.T) {
 			s, _ := newTestStore(t, f, 1000)
 			fail := atomic.Bool{}
 			fail.Store(true)
-			s.cfg.Render = func(ctx context.Context, module, version, workDir, outDir string, withAI bool, stage func(Stage)) error {
+			s.cfg.Render = func(ctx context.Context, module, version, workDir, outDir string, withAI bool, stage func(ondemand.Stage)) error {
 				if fail.Load() {
 					f.calls.Add(1)
 					return tt.err
@@ -229,7 +230,7 @@ func TestPinnerWarmsUpTheVersionsToUpdateTo(t *testing.T) {
 	f := &fakeRender{size: 10}
 	s, _ := newTestStore(t, f, 1000)
 	var noDocs atomic.Int32
-	s.cfg.Render = func(ctx context.Context, module, version, workDir, outDir string, withAI bool, stage func(Stage)) error {
+	s.cfg.Render = func(ctx context.Context, module, version, workDir, outDir string, withAI bool, stage func(ondemand.Stage)) error {
 		if version == "v1.2.0" {
 			noDocs.Add(1)
 			return docs.ErrNoPages
@@ -286,7 +287,7 @@ func TestPinnerWarmUpRetries(t *testing.T) {
 	noDocs.Store(true)
 	broken.Store(true)
 	var calls atomic.Int32
-	s.cfg.Render = func(ctx context.Context, module, version, workDir, outDir string, withAI bool, stage func(Stage)) error {
+	s.cfg.Render = func(ctx context.Context, module, version, workDir, outDir string, withAI bool, stage func(ondemand.Stage)) error {
 		calls.Add(1)
 		switch {
 		case version == "v1.1.0" && noDocs.Load():
@@ -322,7 +323,7 @@ func TestPinnerWarmUpRetries(t *testing.T) {
 	pass() // the installed version, v1.1.0 without documentation, v1.2.0 broken
 	broken.Store(false)
 	pass() // v1.2.0 again: a broken render is tried on the next pass
-	if !exists(filepath.Join(s.cfg.Dir, "echo", "v1.2.0")) || p.warmed[Target{Module: "echo", Version: "v1.1.0"}] {
+	if !exists(filepath.Join(s.cfg.Dir, "echo", "v1.2.0")) || p.warmed[ondemand.Target{Module: "echo", Version: "v1.1.0"}] {
 		t.Fatal("a broken render is not tried again, or a version without documentation is taken for rendered")
 	}
 
@@ -341,14 +342,14 @@ func TestPinnerWarmUpRetries(t *testing.T) {
 	c.add(time.Hour)
 	s.now = c.now
 	pass()
-	if !p.warmed[Target{Module: "echo", Version: "v1.1.0"}] {
+	if !p.warmed[ondemand.Target{Module: "echo", Version: "v1.1.0"}] {
 		t.Fatal("the version is not rendered ahead after retryAfter")
 	}
 
 	// A version no longer to update to leaves the rendered set.
 	upcoming = upcoming[1:]
 	pass()
-	if p.warmed[Target{Module: "echo", Version: "v1.1.0"}] {
+	if p.warmed[ondemand.Target{Module: "echo", Version: "v1.1.0"}] {
 		t.Fatal("a version no longer to update to stays in the rendered set")
 	}
 }
@@ -357,7 +358,7 @@ func TestPinnerChannelWithoutDocsWaitsForRetryAfter(t *testing.T) {
 	f := &fakeRender{size: 10}
 	s, _ := newTestStore(t, f, 1000)
 	var noDocs atomic.Int32
-	s.cfg.Render = func(ctx context.Context, module, version, workDir, outDir string, withAI bool, stage func(Stage)) error {
+	s.cfg.Render = func(ctx context.Context, module, version, workDir, outDir string, withAI bool, stage func(ondemand.Stage)) error {
 		if version == "v1.1.0" {
 			noDocs.Add(1)
 			return docs.ErrNoPages
@@ -368,8 +369,8 @@ func TestPinnerChannelWithoutDocsWaitsForRetryAfter(t *testing.T) {
 	r := Resolver{
 		Modules: func(context.Context) ([]registry.Module, error) { return []registry.Module{{Name: "echo"}}, nil },
 		Policy: SitePolicy{
-			Channels: func(context.Context, string) (Channels, error) {
-				return Channels{"stable": "v1.0.0", "beta": "v1.1.0"}, nil
+			Channels: func(context.Context, string) (ondemand.Channels, error) {
+				return ondemand.Channels{"stable": "v1.0.0", "beta": "v1.1.0"}, nil
 			},
 		},
 		Logger: log.NewNop(),
@@ -387,7 +388,7 @@ func TestWriteIndex(t *testing.T) {
 	f := &fakeRender{size: 10}
 	s, _ := newTestStore(t, f, 1000)
 
-	targets := []Target{{Module: "alb", Version: "v0.17.1"}, {Module: "echo", Version: "v1.0.0"}, {Module: "missing", Version: "v1.0.0"}}
+	targets := []ondemand.Target{{Module: "alb", Version: "v0.17.1"}, {Module: "echo", Version: "v1.0.0"}, {Module: "missing", Version: "v1.0.0"}}
 	for _, tt := range targets[:2] {
 		if err := s.RenderPinned(context.Background(), tt); err != nil {
 			t.Fatal(err)
@@ -488,16 +489,16 @@ func TestResolveChannelsGivesUpOnASilentRegistry(t *testing.T) {
 		Logger:  log.NewNop(),
 		timeout: 200 * time.Millisecond,
 	}
-	last := Target{Module: "echo", Version: "v1.1.0"}
+	last := ondemand.Target{Module: "echo", Version: "v1.1.0"}
 
 	done := make(chan Resolution, 1)
 	go func() {
-		res, _ := resolver.ResolveChannels(context.Background(), map[string]Target{"echo": last})
+		res, _ := resolver.ResolveChannels(context.Background(), map[string]ondemand.Target{"echo": last})
 		done <- res
 	}()
 	select {
 	case res := <-done:
-		if res.Unresolved != 1 || !reflect.DeepEqual(res.Targets, []Target{last}) {
+		if res.Unresolved != 1 || !reflect.DeepEqual(res.Targets, []ondemand.Target{last}) {
 			t.Fatalf("unresolved %d, targets %v; want the module failed with its last target", res.Unresolved, res.Targets)
 		}
 	case <-time.After(10 * time.Second):
@@ -510,7 +511,7 @@ func TestResolveChannelsGivesUpOnASilentRegistry(t *testing.T) {
 func TestPinnerPassEndsByItsDeadline(t *testing.T) {
 	s, _ := newTestStore(t, &fakeRender{}, 1000)
 	s.cfg.RenderTimeout = time.Hour
-	s.cfg.Render = func(ctx context.Context, _, _, _, _ string, _ bool, _ func(Stage)) error {
+	s.cfg.Render = func(ctx context.Context, _, _, _, _ string, _ bool, _ func(ondemand.Stage)) error {
 		<-ctx.Done()
 		return ctx.Err()
 	}
@@ -612,7 +613,7 @@ func TestPinnerPassWithNothingToPublishIsAnUpdate(t *testing.T) {
 			}
 			s, c := newTestStore(t, &fakeRender{}, 1000)
 			s.cfg.Metrics = ms
-			s.cfg.Render = func(context.Context, string, string, string, string, bool, func(Stage)) error {
+			s.cfg.Render = func(context.Context, string, string, string, string, bool, func(ondemand.Stage)) error {
 				return docs.ErrNoPages
 			}
 			r := Resolver{
@@ -646,14 +647,14 @@ func TestPinnerPassUnpublishingEveryModuleIsNoUpdate(t *testing.T) {
 	s, c := newTestStore(t, &fakeRender{size: 10}, 1000)
 	s.cfg.Metrics = ms
 	var gone atomic.Bool
-	notFound := fmt.Errorf("%w: source main: %w", ErrNoVersions, &transport.Error{StatusCode: http.StatusNotFound})
+	notFound := fmt.Errorf("%w: source main: %w", ondemand.ErrNoVersions, &transport.Error{StatusCode: http.StatusNotFound})
 	r := siteResolver()
 	r.Policy = SitePolicy{
-		Channels: func(context.Context, string) (Channels, error) {
+		Channels: func(context.Context, string) (ondemand.Channels, error) {
 			if gone.Load() {
-				return nil, ErrNoChannel
+				return nil, ondemand.ErrNoChannel
 			}
-			return Channels{"stable": "v1.0.0"}, nil
+			return ondemand.Channels{"stable": "v1.0.0"}, nil
 		},
 		Latest: func(context.Context, string) (string, error) { return "", notFound },
 	}
@@ -687,7 +688,7 @@ func TestPinnerPassPublishingNothingIsNoUpdate(t *testing.T) {
 		err  error
 	}{
 		{"the Hugo build fails", fmt.Errorf("%w: template error", docs.ErrBuild)},
-		{"the version is not found", fmt.Errorf("%w: no source has it", ErrVersionNotFound)},
+		{"the version is not found", fmt.Errorf("%w: no source has it", ondemand.ErrVersionNotFound)},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ms := metricsstorage.NewMetricStorage(metricsstorage.WithNewRegistry())
@@ -696,7 +697,7 @@ func TestPinnerPassPublishingNothingIsNoUpdate(t *testing.T) {
 			}
 			s, c := newTestStore(t, &fakeRender{}, 1000)
 			s.cfg.Metrics = ms
-			s.cfg.Render = func(context.Context, string, string, string, string, bool, func(Stage)) error {
+			s.cfg.Render = func(context.Context, string, string, string, string, bool, func(ondemand.Stage)) error {
 				return tt.err
 			}
 			r := Resolver{
@@ -737,12 +738,12 @@ func TestStoreReaderSharesPinnedRender(t *testing.T) {
 	f := &fakeRender{size: 10, release: make(chan struct{})}
 	s, _ := newTestStore(t, f, 1000)
 
-	target := Target{Module: "echo", Version: "v1.0.0"}
+	target := ondemand.Target{Module: "echo", Version: "v1.0.0"}
 	done := make(chan error)
 	go func() { done <- s.RenderPinned(context.Background(), target) }()
 
-	waitStage(t, s, "echo", "v1.0.0", StageDownload)
-	if st, err := s.Start("echo", "v1.0.0"); err != nil || st.Stage != StageDownload {
+	waitStage(t, s, "echo", "v1.0.0", ondemand.StageDownload)
+	if st, err := s.Start("echo", "v1.0.0"); err != nil || st.Stage != ondemand.StageDownload {
 		t.Fatalf("reader during the pinned render: %+v, %v; want the shared download stage", st, err)
 	}
 
@@ -765,10 +766,12 @@ func TestStoreRenderPinnedWaitsForReaderRender(t *testing.T) {
 	if _, err := s.Start("echo", "v1.0.0"); err != nil {
 		t.Fatal(err)
 	}
-	waitStage(t, s, "echo", "v1.0.0", StageDownload)
+	waitStage(t, s, "echo", "v1.0.0", ondemand.StageDownload)
 
 	done := make(chan error)
-	go func() { done <- s.RenderPinned(context.Background(), Target{Module: "echo", Version: "v1.0.0"}) }()
+	go func() {
+		done <- s.RenderPinned(context.Background(), ondemand.Target{Module: "echo", Version: "v1.0.0"})
+	}()
 
 	close(f.release)
 	if err := <-done; err != nil {
@@ -790,18 +793,18 @@ func TestWriteIndexKeepsFilesWhenNothingNew(t *testing.T) {
 
 	// No target is published (a registry outage at start): no empty index
 	// hides the one nginx falls back to.
-	if err := s.WriteIndex([]Target{{Module: "echo", Version: "v1.0.0"}}); err != nil {
+	if err := s.WriteIndex([]ondemand.Target{{Module: "echo", Version: "v1.0.0"}}); err != nil {
 		t.Fatal(err)
 	}
 	if exists(search) {
 		t.Fatal("an index is written without any published version")
 	}
 
-	target := Target{Module: "echo", Version: "v1.0.0"}
+	target := ondemand.Target{Module: "echo", Version: "v1.0.0"}
 	if err := s.RenderPinned(context.Background(), target); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.WriteIndex([]Target{target}); err != nil {
+	if err := s.WriteIndex([]ondemand.Target{target}); err != nil {
 		t.Fatal(err)
 	}
 	// A file written again would lose the time set here.
@@ -810,7 +813,7 @@ func TestWriteIndexKeepsFilesWhenNothingNew(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := s.WriteIndex([]Target{target}); err != nil {
+	if err := s.WriteIndex([]ondemand.Target{target}); err != nil {
 		t.Fatal(err)
 	}
 	info, err := os.Stat(search)
@@ -822,31 +825,13 @@ func TestWriteIndexKeepsFilesWhenNothingNew(t *testing.T) {
 	}
 }
 
-func TestMergeCorpusWithoutDocuments(t *testing.T) {
-	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "corpus.json"), []byte(`{"version":1}`), 0600); err != nil {
-		t.Fatal(err)
-	}
-
-	var buf bytes.Buffer
-	if err := mergeCorpus([]string{dir}, &buf); err != nil {
-		t.Fatal(err)
-	}
-	var corpus struct {
-		Documents []json.RawMessage `json:"documents"`
-	}
-	if err := json.Unmarshal(buf.Bytes(), &corpus); err != nil || len(corpus.Documents) != 0 {
-		t.Fatalf("corpus %q, err %v", buf.String(), err)
-	}
-}
-
 func TestStorePinnedAboveMaxSizeKeepReaderVersions(t *testing.T) {
 	// A version takes size plus a few hundred bytes of search.json, llms.txt
 	// and corpus.json.
 	f := &fakeRender{size: 100}
 	s, _ := newTestStore(t, f, 400)
 
-	pinned := []Target{{Module: "alb", Version: "v1.0.0"}, {Module: "echo", Version: "v1.0.0"}}
+	pinned := []ondemand.Target{{Module: "alb", Version: "v1.0.0"}, {Module: "echo", Version: "v1.0.0"}}
 	s.Pin(pinned, nil)
 	for _, tt := range pinned {
 		if err := s.RenderPinned(context.Background(), tt); err != nil {
@@ -867,13 +852,13 @@ func TestStoreRenderPinnedReportsMissingAIExport(t *testing.T) {
 	f := &fakeRender{size: 10}
 	s, _ := newTestStore(t, f, 1000)
 	// The export failed: RenderVersion only logs it.
-	s.cfg.Render = func(ctx context.Context, module, version, workDir, outDir string, _ bool, stage func(Stage)) error {
+	s.cfg.Render = func(ctx context.Context, module, version, workDir, outDir string, _ bool, stage func(ondemand.Stage)) error {
 		return f.render(ctx, module, version, workDir, outDir, false, stage)
 	}
 
-	target := Target{Module: "echo", Version: "v1.0.0"}
-	if err := s.RenderPinned(context.Background(), target); !errors.Is(err, errNoAIExport) {
-		t.Fatalf("err = %v, want errNoAIExport", err)
+	target := ondemand.Target{Module: "echo", Version: "v1.0.0"}
+	if err := s.RenderPinned(context.Background(), target); !errors.Is(err, ondemand.ErrNoAIExport) {
+		t.Fatalf("err = %v, want ErrNoAIExport", err)
 	}
 	if s.versions[key("echo", "v1.0.0")].ai {
 		t.Fatal("the version is marked as rendered with the AI export")
@@ -884,8 +869,8 @@ func TestStoreReaderRendersPinnedVersionWithAIExport(t *testing.T) {
 	f := &fakeRender{size: 10}
 	s, _ := newTestStore(t, f, 1000)
 
-	target := Target{Module: "echo", Version: "v1.0.0"}
-	s.Pin([]Target{target}, nil)
+	target := ondemand.Target{Module: "echo", Version: "v1.0.0"}
+	s.Pin([]ondemand.Target{target}, nil)
 	renderDone(t, s, "echo", "v1.0.0")
 	if err := s.RenderPinned(context.Background(), target); err != nil {
 		t.Fatal(err)
@@ -900,7 +885,7 @@ func TestPinnerKeepsPreviousTargetUntilTheNewOneIsPublished(t *testing.T) {
 	f := &fakeRender{size: 10}
 	s, c := newTestStore(t, f, 1000)
 	var broken atomic.Bool
-	s.cfg.Render = func(ctx context.Context, module, version, workDir, outDir string, withAI bool, stage func(Stage)) error {
+	s.cfg.Render = func(ctx context.Context, module, version, workDir, outDir string, withAI bool, stage func(ondemand.Stage)) error {
 		if version == "v2.0.0" && broken.Load() {
 			return docs.ErrNoPages
 		}
@@ -950,7 +935,7 @@ func TestPinnerKeepsPreviousTargetUntilTheNewOneIsPublished(t *testing.T) {
 	// Its card shows the published version: it has documentation.
 	var state indexedState
 	readJSON(t, filepath.Join(s.cfg.Dir, indexDir, indexedFile), &state)
-	if want := []Listed{{Module: "echo"}}; !reflect.DeepEqual(state.Modules, want) {
+	if want := []ondemand.Listed{{Module: "echo"}}; !reflect.DeepEqual(state.Modules, want) {
 		t.Fatalf("modules = %+v, want %+v", state.Modules, want)
 	}
 
@@ -996,7 +981,9 @@ func TestPinnerKeepsPreviousTargetAcrossRestart(t *testing.T) {
 	// After a restart the channel points at a version without documentation.
 	version.Store("v2.0.0")
 	cfg := s.cfg
-	cfg.Render = func(context.Context, string, string, string, string, bool, func(Stage)) error { return docs.ErrNoPages }
+	cfg.Render = func(context.Context, string, string, string, string, bool, func(ondemand.Stage)) error {
+		return docs.ErrNoPages
+	}
 	s = NewStore(cfg)
 	s.now = c.now
 	if err := s.Load(); err != nil {
@@ -1052,7 +1039,7 @@ func TestPinnerBuildFailureDoesNotHoldTheUpdate(t *testing.T) {
 	f := &fakeRender{size: 10}
 	s, c := newTestStore(t, f, 1000)
 	render := s.cfg.Render
-	s.cfg.Render = func(ctx context.Context, module, version, workDir, outDir string, withAI bool, stage func(Stage)) error {
+	s.cfg.Render = func(ctx context.Context, module, version, workDir, outDir string, withAI bool, stage func(ondemand.Stage)) error {
 		if module == "broken" {
 			f.calls.Add(1)
 			return fmt.Errorf("%w: template error", docs.ErrBuild)
@@ -1078,7 +1065,7 @@ func TestPinnerBuildFailureDoesNotHoldTheUpdate(t *testing.T) {
 	if f.calls.Load() != calls {
 		t.Errorf("renders %d -> %d: the module Hugo can not build is rendered on every pass", calls, f.calls.Load())
 	}
-	if _, ok := p.failed[Target{Module: "broken", Version: "v1.0.0"}]; !ok {
+	if _, ok := p.failed[ondemand.Target{Module: "broken", Version: "v1.0.0"}]; !ok {
 		t.Error("the module Hugo can not build is not kept as failed")
 	}
 }
@@ -1088,12 +1075,12 @@ func TestPinnerBuildFailureDoesNotHoldTheUpdate(t *testing.T) {
 func TestPinnerSavesNothingUntilTargetsAreRead(t *testing.T) {
 	cold := newMemCold()
 	putIndexed(t, cold, indexedState{
-		Targets: []Target{{Module: "alb", Version: "v0.17.1"}},
-		Modules: []Listed{{Module: "alb"}},
+		Targets: []ondemand.Target{{Module: "alb", Version: "v0.17.1"}},
+		Modules: []ondemand.Listed{{Module: "alb"}},
 	})
 	good := slices.Clone(cold.objects[indexedFile])
 	s := newColdStore(t, &fakeRender{size: 10}, cold)
-	s.cfg.Render = func(context.Context, string, string, string, string, bool, func(Stage)) error {
+	s.cfg.Render = func(context.Context, string, string, string, string, bool, func(ondemand.Stage)) error {
 		return errors.New("registry is down")
 	}
 	restored := 0
@@ -1124,7 +1111,7 @@ func TestPinnerSavesNothingUntilTargetsAreRead(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Saved by the second pass, once read.
-	if want := []Listed{{Module: "echo"}}; !reflect.DeepEqual(state.Modules, want) {
+	if want := []ondemand.Listed{{Module: "echo"}}; !reflect.DeepEqual(state.Modules, want) {
 		t.Fatalf("modules = %+v, want %+v", state.Modules, want)
 	}
 	if restored != 1 {
@@ -1136,10 +1123,10 @@ func TestPinnerSavesNothingUntilTargetsAreRead(t *testing.T) {
 // even when the file is read on the second pass only.
 func TestPinnerKeepsIndexedTargetReadLate(t *testing.T) {
 	cold := newMemCold()
-	alb := Target{Module: "alb", Version: "v0.17.1"}
+	alb := ondemand.Target{Module: "alb", Version: "v0.17.1"}
 	putIndexed(t, cold, indexedState{
-		Targets: []Target{alb, {Module: "echo", Version: "v1.0.0"}},
-		Modules: []Listed{{Module: "alb"}, {Module: "echo"}},
+		Targets: []ondemand.Target{alb, {Module: "echo", Version: "v1.0.0"}},
+		Modules: []ondemand.Listed{{Module: "alb"}, {Module: "echo"}},
 	})
 	s := newColdStore(t, &fakeRender{size: 10}, cold)
 	r := Resolver{
@@ -1185,7 +1172,10 @@ func TestPinnerKeepsIndexedTargetReadLate(t *testing.T) {
 // link, so nginx serves the embedded copy. Back on a source, the next pass
 // links it again.
 func TestPinnerFollowsAModuleBetweenEmbeddedAndASource(t *testing.T) {
-	s, c := newTestStore(t, &fakeRender{size: 10}, 1000)
+	var relisted []string
+	s, c := newTestStore(t, &fakeRender{size: 10}, 1000, func(cfg *Config) {
+		cfg.Relisted = func(module string) { relisted = append(relisted, module) }
+	})
 	var external atomic.Bool
 	external.Store(true)
 	r := Resolver{
@@ -1205,8 +1195,6 @@ func TestPinnerFollowsAModuleBetweenEmbeddedAndASource(t *testing.T) {
 		},
 		Logger: log.NewNop(),
 	}
-	var relisted []string
-	s.catalog.relisted = func(module string) { relisted = append(relisted, module) }
 	p := NewPinner(r, s, time.Hour, log.NewNop())
 	p.now = c.now
 	stable := filepath.Join(s.cfg.Dir, s.site, "en", "modules", "echo", "stable")

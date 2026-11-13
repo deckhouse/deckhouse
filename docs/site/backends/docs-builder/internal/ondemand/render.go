@@ -16,7 +16,6 @@ package ondemand
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
@@ -45,18 +44,17 @@ const (
 	ReasonBusy     = "busy"
 )
 
-func reason(err error) string {
-	switch {
-	case errors.Is(err, context.DeadlineExceeded):
-		return ReasonTimeout
-	// The image is fetched, its files are the reason.
-	case kindOf(err) == unrenderable:
-		return ReasonBuild
-	case errors.Is(err, ErrFetch):
-		return ReasonRegistry
-	default:
-		return ReasonBuild
-	}
+// Status of a module version in the store.
+type Status struct {
+	Stage Stage `json:"stage"`
+	// Error is the reason of a failed render, one of the Reason constants.
+	Error string `json:"error,omitempty"`
+	// NotFound marks a failed render of a version that does not exist or has
+	// no documentation, as opposed to a render that broke.
+	NotFound bool `json:"notFound,omitempty"`
+	// RetryIn is how many seconds are left until a render that broke may be
+	// started again; zero for a version that does not exist.
+	RetryIn int `json:"retryIn,omitempty"`
 }
 
 // RenderFunc renders a module version into outDir/<lang>/, using workDir for

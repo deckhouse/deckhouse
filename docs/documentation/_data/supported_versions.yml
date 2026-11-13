@@ -58,19 +58,19 @@ osDistributions:
         editions: [ce, be, se, se-plus, ee]
         note_content:
           ru: |
-            <b>CentOS 7 и 8</b> более не поддерживаются разработчиками дистрибутива CentOS
+            <b>CentOS 7</b> более не поддерживаются разработчиками дистрибутива CentOS
           en: |
-            <b>CentOS 7 and 8</b> are no longer supported by CentOS developers
+            <b>CentOS 7</b> are no longer supported by CentOS developers
       - version: '8'
         editions: [ce, be, se, se-plus, ee]
         note_content:
           ru: |
-            <b>CentOS 7 и 8</b> более не поддерживаются разработчиками дистрибутива CentOS
+            <b>CentOS 8</b> более не поддерживаются разработчиками дистрибутива CentOS
           en: |
-            <b>CentOS 7 and 8</b> are no longer supported by CentOS developers
+            <b>CentOS 8</b> are no longer supported by CentOS developers
       - version: '9'
         editions: [ce, be, se, se-plus, ee]
-      - version: '10*'
+      - version: '10'
         editions: [ce, be, se, se-plus, ee]
         note_content:
           ru: |
@@ -128,10 +128,13 @@ osDistributions:
       - version: '18.04'
         editions: [ce, be, se, se-plus, ee]
         note_content:
-          ru: <b>Ubuntu 18.04</b> и <b>20.04</b> более не поддерживаются разработчиками дистрибутива Ubuntu
-          en: <b>Ubuntu 18.04</b> and <b>20.04</b> are no longer supported by Ubuntu developers
+          ru: <b>Ubuntu 18.04</b> более не поддерживаются разработчиками дистрибутива Ubuntu
+          en: <b>Ubuntu 18.04</b> are no longer supported by Ubuntu developers
       - version: '20.04'
         editions: [ce, be, se, se-plus, ee]
+        note_content:
+          ru: <b>Ubuntu 20.04</b> более не поддерживаются разработчиками дистрибутива Ubuntu
+          en: <b>Ubuntu 20.04</b> are no longer supported by Ubuntu developers
       - version: '22.04'
         editions: [ce, be, se, se-plus, ee]
       - version: '24.04'

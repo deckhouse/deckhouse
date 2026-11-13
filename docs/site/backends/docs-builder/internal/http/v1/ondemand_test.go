@@ -32,6 +32,7 @@ import (
 
 	"github.com/flant/docs-builder/internal/docs"
 	"github.com/flant/docs-builder/internal/ondemand"
+	"github.com/flant/docs-builder/internal/ondemand/cache"
 	"github.com/flant/docs-builder/internal/ondemand/versions"
 )
 
@@ -77,7 +78,7 @@ func newOnDemandHandlerBlocking(t *testing.T, block chan struct{}) *DocsBuilderH
 
 	h := NewHandler(log.NewNop())
 	h.EnableOnDemand(OnDemand{
-		Store: ondemand.NewStore(ondemand.Config{
+		Store: cache.NewStore(cache.Config{
 			Dir:                t.TempDir(),
 			MaxSize:            1 << 20,
 			MaxIdle:            time.Hour,
@@ -291,7 +292,7 @@ func TestModuleVersions(t *testing.T) {
 		}
 		return path
 	}
-	h.onDemand.Embedded = ondemand.NewEmbeddedVersions(history(`{"latest":["cert-manager"],"v1.9":["cert-manager","echo"],"v1.10":["cert-manager"],"v1.8":["dashboard"]}`))
+	h.onDemand.Embedded = cache.NewEmbeddedVersions(history(`{"latest":["cert-manager"],"v1.9":["cert-manager","echo"],"v1.10":["cert-manager"],"v1.8":["dashboard"]}`))
 	rec = get(h, "/api/v2/modules/cert-manager/versions")
 	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil || rec.Code != http.StatusOK {
 		t.Fatalf("embedded: code %d, err %v", rec.Code, err)
@@ -310,7 +311,7 @@ func TestModuleVersions(t *testing.T) {
 
 	// A history that cannot be read is an error, the dialog says so; a
 	// module without versions would be "no versions match".
-	h.onDemand.Embedded = ondemand.NewEmbeddedVersions(history(`{"v1.8":["dashboard"]}`))
+	h.onDemand.Embedded = cache.NewEmbeddedVersions(history(`{"v1.8":["dashboard"]}`))
 	if code := get(h, "/api/v2/modules/cert-manager/versions").Code; code != http.StatusNotFound {
 		t.Fatalf("a module neither in the registry nor embedded: code %d, want 404", code)
 	}
@@ -318,7 +319,7 @@ func TestModuleVersions(t *testing.T) {
 		"corrupt": history(`{"v1.9":`),
 		"missing": filepath.Join(t.TempDir(), "absent.json"),
 	} {
-		h.onDemand.Embedded = ondemand.NewEmbeddedVersions(path)
+		h.onDemand.Embedded = cache.NewEmbeddedVersions(path)
 		if code := get(h, "/api/v2/modules/cert-manager/versions").Code; code != http.StatusBadGateway {
 			t.Fatalf("%s history: code %d, want 502", name, code)
 		}

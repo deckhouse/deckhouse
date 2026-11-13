@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ondemand
+package cache
 
 import (
 	"context"
@@ -29,6 +29,7 @@ import (
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 
 	"github.com/flant/docs-builder/internal/metrics"
+	"github.com/flant/docs-builder/internal/ondemand"
 	"github.com/flant/docs-builder/internal/registry"
 )
 
@@ -36,8 +37,8 @@ func siteResolver() Resolver {
 	return Resolver{
 		Modules: func(context.Context) ([]registry.Module, error) { return []registry.Module{{Name: "echo"}}, nil },
 		Policy: SitePolicy{
-			Channels: func(context.Context, string) (Channels, error) {
-				return Channels{"alpha": "v2.0.0", "stable": "v1.0.0"}, nil
+			Channels: func(context.Context, string) (ondemand.Channels, error) {
+				return ondemand.Channels{"alpha": "v2.0.0", "stable": "v1.0.0"}, nil
 			},
 		},
 		Logger: log.NewNop(),
@@ -46,7 +47,10 @@ func siteResolver() Resolver {
 
 // leaderWithFollower runs a pass of the leader on the bucket and returns a
 // follower on an empty volume of its own.
-func leaderWithFollower(t *testing.T) (*fakeRender, *memCold, *Store, *Follower) {
+// leaderWithFollower is a leader that pinned the versions of siteResolver
+// on a bucket, and a follower of it; configure sets up the store of the
+// follower.
+func leaderWithFollower(t *testing.T, configure ...func(*Config)) (*fakeRender, *memCold, *Store, *Follower) {
 	t.Helper()
 
 	cold := newMemCold()
@@ -56,7 +60,7 @@ func leaderWithFollower(t *testing.T) (*fakeRender, *memCold, *Store, *Follower)
 	cold.waitFor(t, "echo/v2.0.0/rev1.tar.gz")
 	cold.waitFor(t, "echo/v1.0.0/rev1.ai.tar.gz")
 
-	s := newColdStore(t, f, cold)
+	s := newColdStore(t, f, cold, configure...)
 
 	return f, cold, s, NewFollower(s, time.Hour, log.NewNop())
 }
@@ -72,7 +76,7 @@ func TestFollowerTakesVersionsOfLeader(t *testing.T) {
 		t.Fatalf("renders %d -> %d: a follower renders nothing the leader recorded", renders, n)
 	}
 	for _, v := range []string{"v1.0.0", "v2.0.0"} {
-		if !s.published(Target{Module: "echo", Version: v}) {
+		if !s.published(ondemand.Target{Module: "echo", Version: v}) {
 			t.Errorf("%s is not published from S3", v)
 		}
 	}
@@ -141,7 +145,7 @@ func TestFollowerFallsBackToRegistry(t *testing.T) {
 		started.Add(1)
 		<-fctx.Done()
 		// The fallback served targets of its own up to its end.
-		s.SetTargets([]Target{{Module: "echo", Version: "v9.9.9"}})
+		s.SetTargets([]ondemand.Target{{Module: "echo", Version: "v9.9.9"}})
 		stopped.Add(1)
 	})
 
@@ -299,7 +303,7 @@ func TestFollowerWaitsForArchiveOfLeader(t *testing.T) {
 		t.Fatal(err)
 	}
 	leader := newColdStore(t, f, cold)
-	if err := leader.RenderPinned(context.Background(), Target{Module: "echo", Version: "v1.0.0"}); err != nil {
+	if err := leader.RenderPinned(context.Background(), ondemand.Target{Module: "echo", Version: "v1.0.0"}); err != nil {
 		t.Fatal(err)
 	}
 	cold.waitFor(t, "echo/v1.0.0/rev1.ai.tar.gz")
@@ -310,18 +314,18 @@ func TestFollowerWaitsForArchiveOfLeader(t *testing.T) {
 	if answered, complete := fl.Sync(context.Background()); !answered || complete {
 		t.Fatalf("answered %v, complete %v: want an incomplete sync", answered, complete)
 	}
-	if !s.published(Target{Module: "echo", Version: "v1.0.0"}) {
+	if !s.published(ondemand.Target{Module: "echo", Version: "v1.0.0"}) {
 		t.Fatal("the version with an archive is not published")
 	}
 	if v := metricValue(t, ms, metrics.DocsBuilderOnDemandFollowMissing); v != "1" {
 		t.Fatalf("missing versions = %q, want 1", v)
 	}
 
-	if err := leader.RenderPinned(context.Background(), Target{Module: "alb", Version: "v2.0.0"}); err != nil {
+	if err := leader.RenderPinned(context.Background(), ondemand.Target{Module: "alb", Version: "v2.0.0"}); err != nil {
 		t.Fatal(err)
 	}
 	cold.waitFor(t, "alb/v2.0.0/rev1.ai.tar.gz")
-	if _, complete := fl.Sync(context.Background()); !complete || !s.published(Target{Module: "alb", Version: "v2.0.0"}) {
+	if _, complete := fl.Sync(context.Background()); !complete || !s.published(ondemand.Target{Module: "alb", Version: "v2.0.0"}) {
 		t.Fatal("the archive uploaded later is not taken")
 	}
 	if v := metricValue(t, ms, metrics.DocsBuilderOnDemandFollowMissing); v != "0" {
@@ -475,11 +479,11 @@ func TestPinnerUploadsWhatTheColdCacheLacks(t *testing.T) {
 	}
 
 	// A development branch stays out of S3, however it is served.
-	branch := Target{Module: "console", Version: "main", Rev: "sha256:aaa"}
+	branch := ondemand.Target{Module: "console", Version: "main", Rev: "sha256:aaa"}
 	if err := leader.RenderPinned(ctx, branch); err != nil {
 		t.Fatal(err)
 	}
-	if err := leader.uploadMissing(ctx, []Target{branch}); err != nil {
+	if err := leader.uploadMissing(ctx, []ondemand.Target{branch}); err != nil {
 		t.Fatal(err)
 	}
 	waitBackground(leader)
@@ -550,12 +554,12 @@ func TestFollowerServesTargetWithoutAIExportAsLeader(t *testing.T) {
 	f.noAI.Store(true)
 	leader := newColdStore(t, f, cold)
 	ctx := context.Background()
-	echo := Target{Module: "echo", Version: "v1.0.0"}
-	if err := leader.RenderPinned(ctx, echo); !errors.Is(err, errNoAIExport) {
-		t.Fatalf("err = %v, want errNoAIExport", err)
+	echo := ondemand.Target{Module: "echo", Version: "v1.0.0"}
+	if err := leader.RenderPinned(ctx, echo); !errors.Is(err, ondemand.ErrNoAIExport) {
+		t.Fatalf("err = %v, want ErrNoAIExport", err)
 	}
 	waitBackground(leader)
-	putIndexed(t, cold, indexedState{Targets: []Target{echo}, Modules: []Listed{{Module: "echo"}}})
+	putIndexed(t, cold, indexedState{Targets: []ondemand.Target{echo}, Modules: []ondemand.Listed{{Module: "echo"}}})
 
 	s := newColdStore(t, f, cold)
 	fl := NewFollower(s, time.Hour, log.NewNop())
@@ -597,12 +601,12 @@ func TestFollowerTakesAIExportOfReadersVersionBecomingTarget(t *testing.T) {
 	waitBackground(s)
 
 	ctx := context.Background()
-	echo := Target{Module: "echo", Version: "v1.0.0"}
+	echo := ondemand.Target{Module: "echo", Version: "v1.0.0"}
 	if err := leader.RenderPinned(ctx, echo); err != nil {
 		t.Fatal(err)
 	}
 	waitBackground(leader)
-	putIndexed(t, cold, indexedState{Targets: []Target{echo}, Modules: []Listed{{Module: "echo"}}})
+	putIndexed(t, cold, indexedState{Targets: []ondemand.Target{echo}, Modules: []ondemand.Listed{{Module: "echo"}}})
 
 	fl := NewFollower(s, time.Hour, log.NewNop())
 	_, complete := fl.Sync(ctx)
@@ -684,7 +688,7 @@ func TestFollowerLooksForTheFirstTargetsOften(t *testing.T) {
 
 	// The first look finds nothing: targets.json is written after it.
 	cold.waitGets(t, 1)
-	putIndexed(t, cold, indexedState{Modules: []Listed{{Module: "echo"}}, Targets: []Target{{Module: "echo", Version: "v1.0.0"}}})
+	putIndexed(t, cold, indexedState{Modules: []ondemand.Listed{{Module: "echo"}}, Targets: []ondemand.Target{{Module: "echo", Version: "v1.0.0"}}})
 	deadline := time.Now().Add(5 * time.Second)
 	for {
 		if _, ok := s.Target("echo"); ok {

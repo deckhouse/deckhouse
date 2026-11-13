@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ondemand
+package cache
 
 import (
 	"context"
@@ -27,6 +27,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
+	"github.com/flant/docs-builder/internal/ondemand"
 	"github.com/flant/docs-builder/internal/registry"
 )
 
@@ -36,14 +37,14 @@ func TestResolverChannels(t *testing.T) {
 			return []registry.Module{{Name: "echo"}, {Name: "bare"}, {Name: "solid"}}, nil
 		},
 		Policy: SitePolicy{
-			Channels: func(_ context.Context, module string) (Channels, error) {
+			Channels: func(_ context.Context, module string) (ondemand.Channels, error) {
 				switch module {
 				case "echo":
-					return Channels{"alpha": "v2.0.0", "stable": "v1.0.0", "rock-solid": "v0.9.0"}, nil
+					return ondemand.Channels{"alpha": "v2.0.0", "stable": "v1.0.0", "rock-solid": "v0.9.0"}, nil
 				case "solid":
-					return Channels{"rock-solid": "v0.9.0"}, nil
+					return ondemand.Channels{"rock-solid": "v0.9.0"}, nil
 				}
-				return nil, ErrNoChannel
+				return nil, ondemand.ErrNoChannel
 			},
 			Latest: func(context.Context, string) (string, error) { return "v3.0.0", nil },
 		},
@@ -55,11 +56,11 @@ func TestResolverChannels(t *testing.T) {
 		t.Fatal(err)
 	}
 	targets, chans := res.Targets, res.Channels
-	wantTargets := []Target{{Module: "bare", Version: "v3.0.0"}, {Module: "echo", Version: "v1.0.0"}, {Module: "solid", Version: "v0.9.0"}}
+	wantTargets := []ondemand.Target{{Module: "bare", Version: "v3.0.0"}, {Module: "echo", Version: "v1.0.0"}, {Module: "solid", Version: "v0.9.0"}}
 	if !reflect.DeepEqual(targets, wantTargets) {
 		t.Errorf("targets = %v, want %v", targets, wantTargets)
 	}
-	wantChans := map[string]Channels{
+	wantChans := map[string]ondemand.Channels{
 		"echo": {"alpha": "v2.0.0", "stable": "v1.0.0", "rock-solid": "v0.9.0"},
 		// A module without channel tags gets its newest version as stable.
 		"bare":  {"stable": "v3.0.0"},
@@ -85,14 +86,14 @@ func TestPinnerServesChannels(t *testing.T) {
 	f := &fakeRender{size: 10}
 	s, _ := newTestStore(t, f, 1000)
 	var mu sync.Mutex
-	chans := Channels{"alpha": "v2.0.0", "beta": "v2.0.0", "stable": "v1.0.0"}
+	chans := ondemand.Channels{"alpha": "v2.0.0", "beta": "v2.0.0", "stable": "v1.0.0"}
 	r := Resolver{
 		Modules: func(context.Context) ([]registry.Module, error) { return []registry.Module{{Name: "echo"}}, nil },
 		Policy: SitePolicy{
-			Channels: func(context.Context, string) (Channels, error) {
+			Channels: func(context.Context, string) (ondemand.Channels, error) {
 				mu.Lock()
 				defer mu.Unlock()
-				out := Channels{}
+				out := ondemand.Channels{}
 				for k, v := range chans {
 					out[k] = v
 				}
@@ -125,13 +126,13 @@ func TestPinnerServesChannels(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := map[string]Channels{"echo": {"alpha": "v2.0.0", "beta": "v2.0.0", "stable": "v1.0.0"}}; !reflect.DeepEqual(state.Channels, want) {
+	if want := map[string]ondemand.Channels{"echo": {"alpha": "v2.0.0", "beta": "v2.0.0", "stable": "v1.0.0"}}; !reflect.DeepEqual(state.Channels, want) {
 		t.Errorf("recorded channels %v, want %v", state.Channels, want)
 	}
 
 	// alpha moves on, beta goes away.
 	mu.Lock()
-	chans = Channels{"alpha": "v3.0.0", "stable": "v1.0.0"}
+	chans = ondemand.Channels{"alpha": "v3.0.0", "stable": "v1.0.0"}
 	mu.Unlock()
 	p.sync(context.Background())
 	if got := channelLink(t, s, "echo", "alpha"); got != filepath.Join("..", "..", "..", "..", "echo", "v3.0.0", "en") {
@@ -153,12 +154,11 @@ func TestPinnerServesChannels(t *testing.T) {
 
 func TestSiteIndexLeadsToModuleRoot(t *testing.T) {
 	f := &fakeRender{size: 10}
-	s, _ := newTestStore(t, f, 1000)
-	s.index.atModuleRoot = true
+	s, _ := newTestStore(t, f, 1000, func(cfg *Config) { cfg.IndexAtModuleRoot = true })
 	renderDone(t, s, "echo", "v1.0.0")
-	s.LinkChannels("echo", Channels{"stable": "v1.0.0"})
+	s.LinkChannels("echo", ondemand.Channels{"stable": "v1.0.0"})
 
-	if err := s.WriteIndex([]Target{{Module: "echo", Version: "v1.0.0"}}); err != nil {
+	if err := s.WriteIndex([]ondemand.Target{{Module: "echo", Version: "v1.0.0"}}); err != nil {
 		t.Fatal(err)
 	}
 	var search struct {
@@ -174,12 +174,11 @@ func TestSiteIndexLeadsToModuleRoot(t *testing.T) {
 // the version.
 func TestSiteIndexWithoutStable(t *testing.T) {
 	f := &fakeRender{size: 10}
-	s, _ := newTestStore(t, f, 1000)
-	s.index.atModuleRoot = true
+	s, _ := newTestStore(t, f, 1000, func(cfg *Config) { cfg.IndexAtModuleRoot = true })
 	renderDone(t, s, "echo", "v2.0.0")
-	s.LinkChannels("echo", Channels{"alpha": "v2.0.0"})
+	s.LinkChannels("echo", ondemand.Channels{"alpha": "v2.0.0"})
 
-	if err := s.WriteIndex([]Target{{Module: "echo", Version: "v2.0.0"}}); err != nil {
+	if err := s.WriteIndex([]ondemand.Target{{Module: "echo", Version: "v2.0.0"}}); err != nil {
 		t.Fatal(err)
 	}
 	var search struct {
@@ -197,10 +196,10 @@ func TestPinnerKeepsChannelUntilNewVersionIsPublished(t *testing.T) {
 	f := &fakeRender{size: 10}
 	s, c := newTestStore(t, f, 1000)
 	var mu sync.Mutex
-	chans := Channels{"alpha": "v2.0.0", "stable": "v1.0.0"}
+	chans := ondemand.Channels{"alpha": "v2.0.0", "stable": "v1.0.0"}
 	var broken bool
 	render := s.cfg.Render
-	s.cfg.Render = func(ctx context.Context, module, version, workDir, outDir string, withAI bool, stage func(Stage)) error {
+	s.cfg.Render = func(ctx context.Context, module, version, workDir, outDir string, withAI bool, stage func(ondemand.Stage)) error {
 		mu.Lock()
 		b := broken && version == "v3.0.0"
 		mu.Unlock()
@@ -212,10 +211,10 @@ func TestPinnerKeepsChannelUntilNewVersionIsPublished(t *testing.T) {
 	r := Resolver{
 		Modules: func(context.Context) ([]registry.Module, error) { return []registry.Module{{Name: "echo"}}, nil },
 		Policy: SitePolicy{
-			Channels: func(context.Context, string) (Channels, error) {
+			Channels: func(context.Context, string) (ondemand.Channels, error) {
 				mu.Lock()
 				defer mu.Unlock()
-				out := Channels{}
+				out := ondemand.Channels{}
 				for k, v := range chans {
 					out[k] = v
 				}
@@ -229,7 +228,7 @@ func TestPinnerKeepsChannelUntilNewVersionIsPublished(t *testing.T) {
 	p.sync(context.Background())
 
 	mu.Lock()
-	chans = Channels{"alpha": "v3.0.0", "stable": "v1.0.0"}
+	chans = ondemand.Channels{"alpha": "v3.0.0", "stable": "v1.0.0"}
 	broken = true
 	mu.Unlock()
 	p.sync(context.Background())
@@ -259,17 +258,19 @@ func TestPinnerKeepsChannelUntilNewVersionIsPublished(t *testing.T) {
 func TestPinnerKeepsChannelsMissingForAPass(t *testing.T) {
 	// The lookup of every pass: the tags, then the tags gone right after a
 	// lookup found them, then gone still (registrydocs.Channels).
-	lookups := []func() (Channels, error){
-		func() (Channels, error) { return Channels{"stable": "v1.0.0", "alpha": "v2.0.0"}, nil },
-		func() (Channels, error) { return nil, ErrChannelsGone },
-		func() (Channels, error) { return nil, ErrNoChannel },
+	lookups := []func() (ondemand.Channels, error){
+		func() (ondemand.Channels, error) {
+			return ondemand.Channels{"stable": "v1.0.0", "alpha": "v2.0.0"}, nil
+		},
+		func() (ondemand.Channels, error) { return nil, ondemand.ErrChannelsGone },
+		func() (ondemand.Channels, error) { return nil, ondemand.ErrNoChannel },
 	}
 	var pass atomic.Int32
 	s, _ := newTestStore(t, &fakeRender{size: 10}, 1000)
 	resolver := Resolver{
 		Modules: func(context.Context) ([]registry.Module, error) { return []registry.Module{{Name: "echo"}}, nil },
 		Policy: SitePolicy{
-			Channels: func(context.Context, string) (Channels, error) { return lookups[pass.Load()]() },
+			Channels: func(context.Context, string) (ondemand.Channels, error) { return lookups[pass.Load()]() },
 			Latest:   func(context.Context, string) (string, error) { return "v3.0.0-rc.1", nil },
 		},
 		Logger: log.NewNop(),
@@ -306,8 +307,8 @@ func TestSetChannelsRemovesGoneModules(t *testing.T) {
 	renderDone(t, s, "echo", "v1.0.0")
 	renderDone(t, s, "alb", "v1.0.0")
 
-	s.SetChannels(map[string]Channels{"echo": {"stable": "v1.0.0"}, "alb": {"stable": "v1.0.0"}})
-	s.SetChannels(map[string]Channels{"alb": {"stable": "v1.0.0"}})
+	s.SetChannels(map[string]ondemand.Channels{"echo": {"stable": "v1.0.0"}, "alb": {"stable": "v1.0.0"}})
+	s.SetChannels(map[string]ondemand.Channels{"alb": {"stable": "v1.0.0"}})
 
 	if got := channelLink(t, s, "echo", "stable"); got != "" {
 		t.Errorf("echo/stable -> %q, want no link for a gone module", got)
@@ -315,7 +316,7 @@ func TestSetChannelsRemovesGoneModules(t *testing.T) {
 	if got := channelLink(t, s, "alb", "stable"); got == "" {
 		t.Error("alb/stable lost its link")
 	}
-	if _, ok := s.channels.stable["echo"]; ok {
+	if s.channels.Stable("echo") != "" {
 		t.Error("the gone module is still at its root for the search")
 	}
 }
@@ -326,7 +327,7 @@ func TestLinkChannelsSkipsInvalidNames(t *testing.T) {
 	f := &fakeRender{size: 10}
 	s, _ := newTestStore(t, f, 1000)
 	renderDone(t, s, "echo", "v1.0.0")
-	s.SetChannels(map[string]Channels{"echo": {"stable": "v1.0.0"}})
+	s.SetChannels(map[string]ondemand.Channels{"echo": {"stable": "v1.0.0"}})
 
 	// The module ".." is the directory above the modules: a file named as
 	// a channel there is not a channel link to remove.
@@ -334,7 +335,7 @@ func TestLinkChannelsSkipsInvalidNames(t *testing.T) {
 	if err := os.WriteFile(outside, nil, 0600); err != nil {
 		t.Fatal(err)
 	}
-	s.SetChannels(map[string]Channels{"echo": {"stable": "v1.0.0"}, "..": {"alpha": "v1.0.0"}})
+	s.SetChannels(map[string]ondemand.Channels{"echo": {"stable": "v1.0.0"}, "..": {"alpha": "v1.0.0"}})
 	if !exists(outside) {
 		t.Fatal("a file outside the module is removed as a channel link")
 	}
@@ -343,7 +344,7 @@ func TestLinkChannelsSkipsInvalidNames(t *testing.T) {
 	}
 
 	// A version that is not one makes no link.
-	s.LinkChannels("echo", Channels{"stable": "../../../../outside", "beta": "v1.0.0"})
+	s.LinkChannels("echo", ondemand.Channels{"stable": "../../../../outside", "beta": "v1.0.0"})
 	if got := channelLink(t, s, "echo", "stable"); got != "" {
 		t.Fatalf("echo/stable -> %q, want no link", got)
 	}

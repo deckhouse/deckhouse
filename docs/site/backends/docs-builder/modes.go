@@ -32,6 +32,7 @@ import (
 	"github.com/flant/docs-builder/internal/docs"
 	"github.com/flant/docs-builder/internal/local"
 	"github.com/flant/docs-builder/internal/ondemand"
+	"github.com/flant/docs-builder/internal/ondemand/cache"
 	"github.com/flant/docs-builder/internal/ondemand/versions"
 	"github.com/flant/docs-builder/internal/registry"
 	"github.com/flant/docs-builder/internal/registrydocs"
@@ -43,7 +44,7 @@ import (
 type modeParts struct {
 	versions *versions.Versions
 	render   ondemand.RenderFunc
-	resolver ondemand.Resolver
+	resolver cache.Resolver
 	// isBranch tells the version a ModulePullOverride pulls: a cluster only,
 	// the public site has none.
 	isBranch func(ctx context.Context, module, version string) (bool, error)
@@ -52,7 +53,7 @@ type modeParts struct {
 	// switch, so the parts never disagree.
 	site bool
 	// embedded is the history of the embedded modules: the public site only.
-	embedded *ondemand.EmbeddedVersions
+	embedded *cache.EmbeddedVersions
 	// watch, with local modules, kicks the pinner when their files change.
 	watch func(ctx context.Context, kick func())
 	// kube is the cluster the leader Lease is kept in; none with local
@@ -96,9 +97,9 @@ func clusterMode(logger *log.Logger, ms *metricsstorage.MetricStorage) (modePart
 	return modeParts{
 		versions: published,
 		render:   registrydocs.Render(sources, clients, docs.HugoInitDir, logger, ms),
-		resolver: ondemand.Resolver{
+		resolver: cache.Resolver{
 			Modules: sources.Modules,
-			Policy:  ondemand.ClusterPolicy{ChannelVersion: registrydocs.ChannelVersion(sources, clients), Latest: published.Latest, Logger: logger},
+			Policy:  cache.ClusterPolicy{ChannelVersion: registrydocs.ChannelVersion(sources, clients), Latest: published.Latest, Logger: logger},
 			// A cluster renders ahead the versions it is about to update to.
 			Upcoming: sources.PendingReleases,
 			Logger:   logger,
@@ -139,14 +140,14 @@ func siteMode(cfg config, logger *log.Logger, ms *metricsstorage.MetricStorage) 
 	return modeParts{
 		versions: published,
 		render:   registrydocs.Render(sources, clients, docs.HugoInitDir, logger, ms),
-		resolver: ondemand.Resolver{
+		resolver: cache.Resolver{
 			Modules: sources.Modules,
-			Policy:  ondemand.SitePolicy{Channels: registrydocs.Channels(sources, clients), Latest: published.Latest},
+			Policy:  cache.SitePolicy{Channels: registrydocs.Channels(sources, clients), Latest: published.Latest},
 			Logger:  logger,
 		},
 		site: true,
 		// The history of the embedded modules, mounted from a ConfigMap.
-		embedded: ondemand.NewEmbeddedVersions(filepath.Join(docs.HugoInitDir, "data", "embedded_modules_list.json")),
+		embedded: cache.NewEmbeddedVersions(filepath.Join(docs.HugoInitDir, "data", "embedded_modules_list.json")),
 		kube:     kube,
 	}, nil
 }
@@ -165,11 +166,11 @@ func localMode(cfg config, logger *log.Logger, ms *metricsstorage.MetricStorage)
 	return modeParts{
 		versions: published,
 		render:   modules.Render(docs.HugoInitDir),
-		resolver: ondemand.Resolver{
+		resolver: cache.Resolver{
 			Modules: modules.Modules,
 			// Each module is the branch of its files, as a ModulePullOverride
 			// pulls one.
-			Policy: ondemand.ClusterPolicy{ChannelVersion: modules.Version, Latest: published.Latest, Logger: logger},
+			Policy: cache.ClusterPolicy{ChannelVersion: modules.Version, Latest: published.Latest, Logger: logger},
 			Logger: logger,
 		},
 		site:  true,
