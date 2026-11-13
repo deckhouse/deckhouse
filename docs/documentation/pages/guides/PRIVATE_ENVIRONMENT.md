@@ -1182,7 +1182,7 @@ You should see a container named `squid` in the list.
     modules:
       # Template for system application URLs in the cluster.
       # With %s.test.local, Grafana is served at grafana.test.local.
-      # MUST NOT match clusterDomain in ClusterConfiguration.
+      # MUST NOT match network.clusterDomain of the control-plane-manager module.
       # You may change this now or after installation.
       publicDomainTemplate: "%s.test.local"
       # How Deckhouse Platform modules terminate HTTPS.
@@ -1230,15 +1230,6 @@ You should see a container named `squid` in the list.
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
-# Cluster Pod address space.
-# You may want to change this. Make sure it does not overlap with serviceSubnetCIDR and internalNetworkCIDRs.
-podSubnetCIDR: 10.111.0.0/16
-# Cluster Service address space.
-# You may want to change this. Make sure it does not overlap with podSubnetCIDR and internalNetworkCIDRs.
-serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "Automatic"
-# Cluster domain.
-clusterDomain: "cluster.local"
 # The default container runtime type used on cluster nodes (in NodeGroups).
 defaultCRI: "ContainerdV2"
 # Proxy server settings.
@@ -1246,6 +1237,37 @@ proxy:
   httpProxy: http://proxy.local:3128
   httpsProxy: https://proxy.local:3128
   noProxy: ["registry.local", "proxy.local", "10.128.0.8", "10.128.0.32", "10.128.0.18"]
+---
+# control-plane-manager module settings.
+# https://deckhouse.io/modules/control-plane-manager/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    kubernetesVersion: "Default"
+    network:
+      # Cluster Pod address space.
+      # You may want to change this. Make sure it does not overlap with serviceSubnetCIDR and internalNetworkCIDRs.
+      podSubnetCIDR: 10.111.0.0/16
+      # Cluster Service address space.
+      # You may want to change this. Make sure it does not overlap with podSubnetCIDR and internalNetworkCIDRs.
+      serviceSubnetCIDR: 10.222.0.0/16
+      # Cluster domain.
+      clusterDomain: "cluster.local"
+    apiserver:
+      # Enable access to the Kubernetes API server via Ingress.
+      # https://deckhouse.io/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi
+      publishAPI:
+        ingress:
+          enabled: true
+          https:
+            mode: Global
+            global:
+              kubeconfigGeneratorMasterCA: ""
 ---
 # deckhouse module settings.
 # https://deckhouse.io/modules/deckhouse/configuration.html
@@ -1289,7 +1311,7 @@ spec:
     modules:
       # A template used to construct the addresses of system applications in the cluster.
       # For example, with %s.test.local, Grafana will be available at 'grafana.test.local'.
-      # The domain MUST NOT match the value specified in the clusterDomain parameter of the ClusterConfiguration resource.
+      # The domain MUST NOT match the value specified in the network.clusterDomain parameter of the control-plane-manager module.
       # You can set your own value right away, or follow the guide and change it after installation.
       publicDomainTemplate: "%s.test.local"
       # The HTTPS implementation method used by Deckhouse Platform modules.
@@ -1310,25 +1332,6 @@ spec:
   settings:
     controlPlaneConfigurator:
       dexCAMode: FromIngressSecret
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: control-plane-manager
-spec:
-  version: 3
-  enabled: true
-  settings:
-    apiserver:
-      # Enable access to the Kubernetes API server via Ingress.
-      # https://deckhouse.io/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi
-      publishAPI:
-        ingress:
-          enabled: true
-          https:
-            mode: Global
-            global:
-              kubeconfigGeneratorMasterCA: ""
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig

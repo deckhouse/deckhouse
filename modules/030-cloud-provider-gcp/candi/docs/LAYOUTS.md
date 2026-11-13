@@ -20,7 +20,7 @@ Two layouts are supported. Below is more information about each of them.
 When a cluster is created, the module creates the following firewall rules in the cluster VPC:
 
 - `<CLUSTER_PREFIX>-ssh-and-ping` — allow incoming traffic over the ICMP and TCP (port `22`) protocols to nodes with the `<CLUSTER_PREFIX>` network tag from CIDRs listed in [`sshAllowList`](cluster_configuration.html#gcpclusterconfiguration-sshallowlist) (default `0.0.0.0/0`)
-- `<CLUSTER_PREFIX>-intercommunication` — allow any traffic between nodes with the `<CLUSTER_PREFIX>` network tag, and from the pod subnet ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr))
+- `<CLUSTER_PREFIX>-intercommunication` — allow any traffic between nodes with the `<CLUSTER_PREFIX>` network tag, and from the pod subnet ([`podSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-podsubnetcidr))
 
 Apply custom firewall rules to nodes via additional network tags ([`additionalNetworkTags`](cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags)):
 
@@ -100,7 +100,7 @@ provider:
 When a cluster is created, the module creates the following firewall rules in the cluster VPC:
 
 - `<CLUSTER_PREFIX>-ssh-and-ping` — allow incoming traffic over the ICMP and TCP (port `22`) protocols to nodes with the `<CLUSTER_PREFIX>` network tag from CIDRs listed in [`sshAllowList`](cluster_configuration.html#gcpclusterconfiguration-sshallowlist) (default `0.0.0.0/0`)
-- `<CLUSTER_PREFIX>-intercommunication` — allow any traffic between nodes with the `<CLUSTER_PREFIX>` network tag, and from the pod subnet ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr))
+- `<CLUSTER_PREFIX>-intercommunication` — allow any traffic between nodes with the `<CLUSTER_PREFIX>` network tag, and from the pod subnet ([`podSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-podsubnetcidr))
 
 Apply custom firewall rules to nodes via additional network tags ([`additionalNetworkTags`](cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags)):
 

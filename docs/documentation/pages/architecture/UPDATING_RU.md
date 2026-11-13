@@ -54,21 +54,21 @@ Deckhouse Platform использует **пять каналов обновле
 
 ### Обновление патч-версий
 
-Обновление patch-версий компонентов control plane (в рамках одной минорной версии, например, с `1.27.3` на `1.27.5`) происходит автоматически вместе с обновлением версии Deckhouse. Пользователь не может управлять установкой patch-версий вручную — процесс полностью автоматизирован внутри платформы.
+Обновление patch-версий компонентов control plane (в рамках одной минорной версии, например, с `1.35.3` на `1.35.5`) происходит автоматически вместе с обновлением версии Deckhouse. Пользователь не может управлять установкой patch-версий вручную — процесс полностью автоматизирован внутри платформы.
 
 ### Автоматическое обновление минорных версий
 
-Для автоматического обновления минорной версии control plane (например, с `1.28.*` на `1.30.*`) укажите [`kubernetesVersion: Automatic`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) в ресурсе [ClusterConfiguration](../glossary.html#cluster-configuration). Будет выбрана минорная версия Kubernetes, используемая в DP по умолчанию на момент обновления.
+Для автоматического обновления минорной версии control plane (например, с `1.34.*` на `1.35.*`) укажите [`kubernetesVersion: Default`](/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) в ModuleConfig `control-plane-manager`. Будет выбрана минорная версия Kubernetes, используемая в DP по умолчанию на момент обновления.
 
 ### Ручное обновление минорных версий
 
-Для ручного обновления минорной версии control plane (например, с `1.28.*` до `1.30.*`), укажите нужную версию в параметре [`kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) ресурса ClusterConfiguration. Например: `kubernetesVersion: 1.30`.
+Для ручного обновления минорной версии control plane (например, с `1.34.*` до `1.35.*`), укажите нужную версию в параметре [`kubernetesVersion`](/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) модуля `control-plane-manager`. Например: `kubernetesVersion: 1.35`.
 
 ```shell
-d8 system edit cluster-configuration
+d8 k edit mc control-plane-manager
 ```
 
-Команда запускает обновление до минорной версии Kubernetes, используемой в DP по умолчанию на момент обновления. Чтобы отследить ход обновления, ориентируйтесь на версию Kubernetes, указанную в выводе команды описания узлов:
+Команда открывает ModuleConfig `control-plane-manager` на редактирование. После сохранения DP начинает обновление до заданной версии. Чтобы отследить ход обновления, ориентируйтесь на версию Kubernetes, указанную в выводе команды описания узлов:
 
 ```shell
 d8 k get nodes
@@ -81,7 +81,7 @@ d8 k get nodes
 
 При обновлении до новой [минорной версии](../glossary.html#minor-version) (**upgrade**):
 
-- Если нужно поднять версию сразу на несколько минорных релизов (например, с `1.28` до `1.30`), обновление происходит поэтапно: с `1.28` до `1.29` и затем с `1.29` до `1.30`.
+- Если нужно поднять версию сразу на несколько минорных релизов (например, с `1.33` до `1.35`), обновление происходит поэтапно: с `1.33` до `1.34` и затем с `1.34` до `1.35`.
 - На каждом этапе сначала обновляется control plane, а затем выполняется обновление kubelet на узлах.
 
 При откате до предыдущей версии (**downgrade**, не поддерживается для [редакций](../glossary.html#edition) CSE):

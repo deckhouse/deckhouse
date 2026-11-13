@@ -11,11 +11,11 @@ Available only in DP [Enterprise Edition](../../../../glossary.html#edition) (EE
 
 ### Requirements for clusters
 
-* Cluster domains in the [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter
-  of the [ClusterConfiguration](../../../../glossary.html#cluster-configuration) resource must be the same for all [multicluster](../../../../glossary.html#multicluster) members. The default value is `cluster.local`.
+* Cluster domains in the [`clusterDomain`](/modules/control-plane-manager/configuration.html#parameters-network-clusterdomain) parameter
+  of the ClusterConfiguration resource must be the same for all [multicluster](../../../../glossary.html#multicluster) members. The default value is `cluster.local`.
 
-* Pod and Service subnets in the [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr)
-  and [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) parameters
+* Pod and Service subnets in the [`podSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-podsubnetcidr)
+  and [`serviceSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-servicesubnetcidr) parameters
   of the ClusterConfiguration resource must be unique for each multicluster member.
 
   > - When analyzing HTTP and HTTPS traffic _(in Istio terminology)_,

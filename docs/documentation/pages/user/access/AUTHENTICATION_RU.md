@@ -128,7 +128,7 @@ DP позволяет настраивать аутентификацию как
    - `nginx.ingress.kubernetes.io/auth-url: https://<NAME>-dex-authenticator.<NS>.svc.<CLUSTER_DOMAIN>/dex-authenticator/auth`, где:
       - `<NAME>` — значение параметра `metadata.name` DexAuthenticator;
       - `<NS>` — значение параметра `metadata.namespace` DexAuthenticator;
-      - `<C_DOMAIN>` — домен кластера (параметр [clusterDomain](../../reference/api/cr.html#clusterconfiguration-clusterdomain) [ClusterConfiguration](../../glossary.html#cluster-configuration), по умолчанию — `cluster.local`).
+      - `<C_DOMAIN>` — домен кластера (параметр [`network.clusterDomain`](/modules/control-plane-manager/configuration.html#parameters-network-clusterdomain) модуля `control-plane-manager`, по умолчанию — `cluster.local`).
 
    Пример (для DexAuthenticator с именем `app-name`, в неймспейсе `app-ns`):
 

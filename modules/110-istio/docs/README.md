@@ -255,8 +255,8 @@ Below are their fundamental differences:
 
 #### Requirements for clusters
 
-- Each cluster must have a unique domain in the [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter of the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) resource. None of the clusters should use the default `cluster.local`.
-- Pod and Service subnets in the [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) parameters of the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) resource may overlap.
+- Each cluster must have a unique domain set in the [`clusterDomain`](/modules/control-plane-manager/configuration.html#parameters-network-clusterdomain) parameter of the `control-plane-manager` module. None of the clusters should use the default `cluster.local`.
+- Pod and Service subnets in the [`podSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-podsubnetcidr) and [`serviceSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-servicesubnetcidr) parameters of the `control-plane-manager` module may overlap.
 
 Istio uses traffic analysis as follows:
 
@@ -264,7 +264,7 @@ Istio uses traffic analysis as follows:
 - TCP traffic — decisions are based only on the destination IP address and port number.
 
 {% alert level="warning" %}
-`cluster.local` is an unmodified alias for the local cluster domain. Using `cluster.local` as a principal in `AuthorizationPolicy` always refers to the local cluster, even if another cluster in the mesh has [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) explicitly set to `cluster.local` ([Istio trust domain migration best practices](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices)).
+`cluster.local` is an unmodified alias for the local cluster domain. Using `cluster.local` as a principal in `AuthorizationPolicy` always refers to the local cluster, even if another cluster in the mesh has [`clusterDomain`](/modules/control-plane-manager/configuration.html#parameters-network-clusterdomain) explicitly set to `cluster.local` ([Istio trust domain migration best practices](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices)).
 {% endalert %}
 
 {% alert level="info" %}
@@ -364,8 +364,8 @@ In the IstioFederation `status.conditions`, the `PublicMetadataExchangeReady`, `
 
 #### Requirements for clusters
 
-- Cluster domains in the [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter of the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) resource must be the same for all multicluster members. The default value is `cluster.local`.
-- Pod and Service subnets in the [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) parameters of the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) resource must be unique for each multicluster member.
+- Cluster domains in the [`clusterDomain`](/modules/control-plane-manager/configuration.html#parameters-network-clusterdomain) parameter of the `control-plane-manager` module must be the same for all multicluster members. The default value is `cluster.local`.
+- Pod and Service subnets in the [`podSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-podsubnetcidr) and [`serviceSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-servicesubnetcidr) parameters of the `control-plane-manager` module must be unique for each multicluster member.
 
 Istio uses traffic analysis as follows:
 

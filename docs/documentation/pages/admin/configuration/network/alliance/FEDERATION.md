@@ -11,15 +11,15 @@ Available only in DP [Enterprise Edition](../../../../glossary.html#edition) (EE
 
 ### Requirements for clusters
 
-* Each cluster must have a unique domain in the [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter of the [ClusterConfiguration](../../../../glossary.html#cluster-configuration) resource.
+* Each cluster must have a unique domain in the [`clusterDomain`](/modules/control-plane-manager/configuration.html#parameters-network-clusterdomain) parameter of the `control-plane-manager` module.
   Note that none of the clusters should use the domain `cluster.local`, which is the default setting.
 
   > `cluster.local` can't be used as it's an unmodified alias for the local cluster domain.
   > When specifying `cluster.local` as a principals in the AuthorizationPolicy,
-  > it will always refer to the local cluster, even if there is another cluster in the mesh with [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) explicitly defined as `cluster.local`
+  > it will always refer to the local cluster, even if there is another cluster in the mesh with [`clusterDomain`](/modules/control-plane-manager/configuration.html#parameters-network-clusterdomain) explicitly defined as `cluster.local`
   > (for details, refer to the [Istio documentation](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices)).
 
-* There are no requirements for unique subnets of modules and services in the [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) parameters of the resource [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) when clusters are operating in a [federation](../../../../glossary.html#federation).
+* There are no requirements for unique subnets of modules and services in the [`podSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-podsubnetcidr) and [`serviceSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-servicesubnetcidr) parameters of the `control-plane-manager` module when clusters are operating in a [federation](../../../../glossary.html#federation).
 
   > When analyzing traffic, Istio uses:
   > - For HTTP and HTTPS requests — headers.

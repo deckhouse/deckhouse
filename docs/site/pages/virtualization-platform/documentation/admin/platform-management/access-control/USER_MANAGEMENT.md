@@ -74,7 +74,7 @@ spec:
 To control the cluster remotely using command-line utilities like `d8` or `kubectl`,
 create a configuration file:
 
-1. In the ModuleConfig resource of the `user-authn` module, enable access to the DVP API by setting the `.spec.settings.publishAPI.enabled` parameter to `true`.
+1. In the ModuleConfig resource of the `control-plane-manager` module, enable access to the DVP API by setting the [`.spec.settings.apiserver.publishAPI.ingress.enabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-enabled) parameter to `true`.
 1. Using the kubeconfigurator web interface, generate a `kubeconfig` file for remote access to the cluster.
     The `kubeconfig` name is reserved for accessing the web interface that generates the `kubeconfig` file.
     The access URL is determined by the value of the `publicDomainTemplate` parameter.

@@ -14,12 +14,12 @@ lang: ru
 
 ### Требования к кластерам
 
-* Каждый кластер должен иметь уникальное значение параметра [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) в ресурсе [ClusterConfiguration](../../../../glossary.html#cluster-configuration). Обратите внимание, что ни один из кластеров не должен иметь домен `cluster.local`, который является значением по умолчанию.
+* Каждый кластер должен иметь уникальное значение параметра [`clusterDomain`](/modules/control-plane-manager/configuration.html#parameters-network-clusterdomain) в ModuleConfig `control-plane-manager`. Обратите внимание, что ни один из кластеров не должен иметь домен `cluster.local`, который является значением по умолчанию.
 
   > Значение `cluster.local` использовать нельзя, так как это зарезервированный псевдоним для домена локального кластера.
-  > Если в AuthorizationPolicy указать `cluster.local` как principals, правило будет применяться только к локальному кластеру, даже если в Service mesh существует кластер, у которого [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) явно определен как `cluster.local` (Подробнее — [в документации Istio](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices)).
+  > Если в AuthorizationPolicy указать `cluster.local` как principals, правило будет применяться только к локальному кластеру, даже если в Service mesh существует кластер, у которого [`clusterDomain`](/modules/control-plane-manager/configuration.html#parameters-network-clusterdomain) явно определен как `cluster.local` (Подробнее — [в документации Istio](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices)).
 
-* Требования к уникальности подсетей сервисов и подов в параметрах [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) и [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr) ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) при работе кластеров в [федерации](../../../../glossary.html#federation) отсутствуют.
+* Требования к уникальности подсетей сервисов и подов в параметрах [`serviceSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-servicesubnetcidr) и [`podSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-podsubnetcidr) модуля `control-plane-manager` при работе кластеров в [федерации](../../../../glossary.html#federation) отсутствуют.
 
   > При анализе трафика Istio использует:
   > - для HTTP/HTTPS-запросов — заголовки;

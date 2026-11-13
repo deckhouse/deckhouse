@@ -14,7 +14,7 @@ The [publicDomainTemplate](#parameters-modules-publicdomaintemplate) parameter s
 
 If you don't have access to wildcard DNS records, you can use [sslip.io](https://sslip.io) or similar services for testing purposes.
 
-The domain specified in the template must not match or be a subdomain of the domain specified in the [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter. We do not recommend changing the `clusterDomain` value unless absolutely necessary.
+The domain specified in the template must not match or be a subdomain of the domain specified in the [`network.clusterDomain`](/modules/control-plane-manager/configuration.html#parameters-network-clusterdomain) parameter of the `control-plane-manager` module. We do not recommend changing the cluster domain unless absolutely necessary.
 
 For the template to function correctly, you must first configure DNS services both in the networks where the cluster nodes will be located and in the networks from which clients will access the platform’s service web interfaces.
 
@@ -35,10 +35,6 @@ spec:
     defaultClusterStorageClass: 'default-fast'
     modules:
       publicDomainTemplate: '%s.kube.company.my'
-      resourcesRequests:
-        controlPlane:
-          cpu: 1000m
-          memory: 500M
       placement:
         customTolerationKeys:
         - dedicated.example.com

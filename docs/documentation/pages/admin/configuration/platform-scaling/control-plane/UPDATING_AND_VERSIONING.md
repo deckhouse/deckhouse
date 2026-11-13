@@ -9,35 +9,36 @@ The control plane update process in DP is fully automated.
 
 - DP supports the latest five Kubernetes versions.
 - You can roll back the control plane one [minor version](../../../../glossary.html#minor-version) and upgrade forward several minor versions — one at a time.
-- [Patch versions](../../../../glossary.html#patch-version) (e.g., `1.27.3` → `1.27.5`) are updated automatically with Deckhouse and cannot be managed manually.
-- Minor versions are set manually using the [`kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter in the [ClusterConfiguration](../../../../glossary.html#cluster-configuration) resource.
+- [Patch versions](../../../../glossary.html#patch-version) (e.g., `1.35.3` → `1.35.5`) are updated automatically with Deckhouse and cannot be managed manually.
+- Minor versions are set manually using the [`kubernetesVersion`](/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) parameter in the `control-plane-manager` ModuleConfig.
 
 ### Changing the Kubernetes version
 
 You can downgrade only one minor version from the highest version ever used in the cluster. Upgrades proceed one minor version at a time.
 
-1. Open the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) editor:
+1. Open the `control-plane-manager` ModuleConfig editor:
 
    ```shell
-   d8 system edit cluster-configuration
+   d8 k edit mc control-plane-manager
    ```
 
-1. Set the target Kubernetes version using the `kubernetesVersion` field:
+1. Set the target Kubernetes version using the `settings.kubernetesVersion` parameter:
 
    ```yaml
-   apiVersion: deckhouse.io/v1
-   kind: ClusterConfiguration
-   cloud:
-     prefix: demo-stand
-     provider: Yandex
-   clusterDomain: cloud.education
-   clusterType: Cloud
-   defaultCRI: Containerd
-   kubernetesVersion: "1.30"
-   podSubnetCIDR: 10.111.0.0/16
-   podSubnetNodeCIDRPrefix: "24"
-   serviceSubnetCIDR: 10.222.0.0/16
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: control-plane-manager
+   spec:
+     version: 3
+     enabled: true
+     settings:
+       kubernetesVersion: "1.35"
    ```
+
+   {% alert level="info" %}
+   The kubernetesVersion field in [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration), previously used to select the Kubernetes version, has been deprecated. Until the `settings.kubernetesVersion` parameter of the `control-plane-manager` module is set, this field determines the cluster's Kubernetes version. Once the parameter is set, its value is used instead. Do not change the Kubernetes version via ClusterConfiguration.
+   {% endalert %}
 
 1. Save the changes.
 1. Wait for the update to complete. You can track the update progress with the `d8 k get no` command. The update can be considered complete when the updated version appears in the `VERSION` column of each cluster node in the command output.
@@ -67,7 +68,7 @@ The `d8-cluster-kubernetes` ConfigMap displays:
 
 During `ControlPlaneUpdating`, `status.progress` reflects overall upgrade progress across intermediate minor versions. For a multi-hop upgrade (for example, 1.33 → 1.35), the percentage increases as each hop completes, not only when every control plane component reaches the final target.
 
-Minor versions in the ConfigMap (`spec`, `status`, and metadata labels such as `k8s-version` and `max-k8s-version`) use the same string format as in ClusterConfiguration, meaning without a `v` prefix (for example, `"1.33"`).
+Minor versions in the ConfigMap (`spec`, `status`, and metadata labels such as `k8s-version` and `max-k8s-version`) use the same string format as the `kubernetesVersion` parameter, meaning without a `v` prefix (for example, `"1.33"`).
 
 You can see in real time which components are being updated, at what stage the process is, and whether the update has "stuck" on any node or component.
 

@@ -34,10 +34,32 @@ For example, when planning the cluster parameters, the following values were cho
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
-podSubnetCIDR: 10.88.0.0/16
-serviceSubnetCIDR: 10.99.0.0/16
-kubernetesVersion: "Automatic"
-clusterDomain: "cluster.local"
+---
+# control-plane-manager module settings.
+# https://deckhouse.io/modules/control-plane-manager/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    kubernetesVersion: "Default"
+    network:
+      podSubnetCIDR: 10.88.0.0/16
+      serviceSubnetCIDR: 10.99.0.0/16
+      clusterDomain: "cluster.local"
+    apiserver:
+      # Enabling access to the Kubernetes API through Ingress.
+      # https://deckhouse.io/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi
+      publishAPI:
+        ingress:
+          enabled: true
+          https:
+            mode: Global
+            global:
+              kubeconfigGeneratorMasterCA: ""
 ---
 apiVersion: deckhouse.io/v1
 kind: StaticClusterConfiguration
@@ -75,14 +97,6 @@ spec:
   settings:
     controlPlaneConfigurator:
       dexCAMode: DoNotNeed
-    # Enabling access to the Kubernetes API through Ingress.
-    # https://deckhouse.io/modules/user-authn/configuration.html#parameters-publishapi
-    publishAPI:
-      enabled: true
-      https:
-        mode: Global
-        global:
-          kubeconfigGeneratorMasterCA: ""
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -209,7 +223,7 @@ After the installation is successfully completed, you can exit the running conta
 List of checks performed by the installer before starting platform installation:
 
 1. General checks:
-   - The values of the parameters [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) and [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) do not match.
+   - The values of the parameters [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) and [`clusterDomain`](/modules/control-plane-manager/configuration.html#parameters-network-clusterdomain) do not match.
    - The authentication data for the container image registry specified in the installation configuration is correct.
    - The host name meets the following requirements:
      - The length does not exceed 63 characters;

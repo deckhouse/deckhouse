@@ -1223,7 +1223,7 @@ Status: Downloaded newer image for ubuntu/squid:latest
     modules:
       # Шаблон, который будет использоваться для составления адресов системных приложений в кластере.
       # Например, Grafana для %s.test.local будет доступна на домене 'grafana.test.local'.
-      # Домен НЕ ДОЛЖЕН совпадать с указанным в параметре clusterDomain ресурса ClusterConfiguration.
+      # Домен НЕ ДОЛЖЕН совпадать с указанным в параметре network.clusterDomain модуля control-plane-manager.
       # Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
       publicDomainTemplate: "%s.test.local"
       # Способ реализации протокола HTTPS, используемый модулями Deckhouse Platform.
@@ -1271,15 +1271,6 @@ Status: Downloaded newer image for ubuntu/squid:latest
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
-# Адресное пространство подов кластера.
-# Возможно, захотите изменить. Убедитесь, что не будет пересечений с serviceSubnetCIDR и internalNetworkCIDRs.
-podSubnetCIDR: 10.111.0.0/16
-# Адресное пространство сети сервисов кластера.
-# Возможно, захотите изменить. Убедитесь, что не будет пересечений с podSubnetCIDR и internalNetworkCIDRs.
-serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "Automatic"
-# Домен кластера.
-clusterDomain: "cluster.local"
 # Тип container runtime, используемый на узлах кластера (в NodeGroup’ах) по умолчанию.
 defaultCRI: "ContainerdV2"
 # Настройки proxy-сервера.
@@ -1287,6 +1278,37 @@ proxy:
   httpProxy: http://proxy.local:3128
   httpsProxy: https://proxy.local:3128
   noProxy: ["registry.local", "proxy.local", "10.128.0.8", "10.128.0.32", "10.128.0.18"]
+---
+# Настройки модуля control-plane-manager.
+# https://deckhouse.ru/modules/control-plane-manager/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    kubernetesVersion: "Default"
+    network:
+      # Адресное пространство подов кластера.
+      # Возможно, захотите изменить. Убедитесь, что не будет пересечений с serviceSubnetCIDR и internalNetworkCIDRs.
+      podSubnetCIDR: 10.111.0.0/16
+      # Адресное пространство сети сервисов кластера.
+      # Возможно, захотите изменить. Убедитесь, что не будет пересечений с podSubnetCIDR и internalNetworkCIDRs.
+      serviceSubnetCIDR: 10.222.0.0/16
+      # Домен кластера.
+      clusterDomain: "cluster.local"
+    apiserver:
+      # Включение доступа к API-серверу Kubernetes через Ingress.
+      # https://deckhouse.ru/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi
+      publishAPI:
+        ingress:
+          enabled: true
+          https:
+            mode: Global
+            global:
+              kubeconfigGeneratorMasterCA: ""
 ---
 # Настройки модуля deckhouse.
 # https://deckhouse.ru/modules/deckhouse/configuration.html
@@ -1330,7 +1352,7 @@ spec:
     modules:
       # Шаблон, который будет использоваться для составления адресов системных приложений в кластере.
       # Например, Grafana для %s.test.local будет доступна на домене 'grafana.test.local'.
-      # Домен НЕ ДОЛЖЕН совпадать с указанным в параметре clusterDomain ресурса ClusterConfiguration.
+      # Домен НЕ ДОЛЖЕН совпадать с указанным в параметре network.clusterDomain модуля control-plane-manager.
       # Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
       publicDomainTemplate: "%s.test.local"
       # Способ реализации протокола HTTPS, используемый модулями Deckhouse Platform.
@@ -1351,25 +1373,6 @@ spec:
   settings:
     controlPlaneConfigurator:
       dexCAMode: FromIngressSecret
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: control-plane-manager
-spec:
-  version: 3
-  enabled: true
-  settings:
-    apiserver:
-      # Включение доступа к API-серверу Kubernetes через Ingress.
-      # https://deckhouse.ru/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi
-      publishAPI:
-        ingress:
-          enabled: true
-          https:
-            mode: Global
-            global:
-              kubeconfigGeneratorMasterCA: ""
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig

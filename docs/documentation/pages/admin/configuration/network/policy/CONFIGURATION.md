@@ -46,7 +46,7 @@ When choosing a policy format, consider what each engine supports:
 If the underlying infrastructure restricts network communication between servers, make sure the following conditions are met:
 
 - Pod traffic tunneling is enabled: [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode) for CNI Cilium, [`podNetworkMode`](/modules/cni-flannel/configuration.html#parameters-podnetworkmode) for CNI Flannel. Additionally, allow inter-node communication over the VXLAN port from the [platform component network interaction list](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html).
-- Traffic between pod subnets ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr)) encapsulated in VXLAN is allowed, if the network inspects traffic inside the tunnel.
+- Traffic between pod subnets ([`podSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-podsubnetcidr)) encapsulated in VXLAN is allowed, if the network inspects traffic inside the tunnel.
 - Communication with external systems the cluster integrates with (LDAP, SMTP, external APIs) is allowed.
 - Local communication inside each cluster node is allowed.
 - Inter-node communication is allowed on the ports listed in the [platform component network interaction list](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html). Most ports are in the 4200–4299 range; new platform components are assigned ports from the same range when possible.

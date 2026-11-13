@@ -71,28 +71,29 @@ A full list of supported versions is available in the [corresponding table](../s
 ### Patch version updates
 
 Patch updates to control plane components
-(within the same minor version, for example, from `1.27.3` to `1.27.5`)
+(within the same minor version, for example, from `1.35.3` to `1.35.5`)
 are applied automatically together with DP updates.
 Users cannot manage patch updates manually.
 The process is fully automated by the platform.
 
 ### Automatic minor version updates
 
-To automatically update the control plane to a new [minor version](../glossary.html#minor-version) (for example, from `1.28.*` to `1.30.*`),
-specify [`kubernetesVersion: Automatic`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) in the [ClusterConfiguration](../glossary.html#cluster-configuration) resource.
+To automatically update the control plane to a new [minor version](../glossary.html#minor-version) (for example, from `1.34.*` to `1.35.*`),
+specify [`kubernetesVersion: Default`](/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) in the `control-plane-manager` ModuleConfig.
 DP will select the default Kubernetes version at the time of the update.
 
 ### Manual minor version updates
 
-To manually update the control plane to a new minor version (for example, from `1.28.*` to `1.30.*`),
-specify the target version in the [`kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter of the ClusterConfiguration resource.
-For example, `kubernetesVersion: 1.30`.
+To manually update the control plane to a new minor version (for example, from `1.34.*` to `1.35.*`),
+specify the target version in the [`kubernetesVersion`](/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) parameter of the `control-plane-manager` module.
+For example, `kubernetesVersion: 1.35`.
 
 ```shell
-d8 system edit cluster-configuration
+d8 k edit mc control-plane-manager
 ```
 
-This command initiates an upgrade to the default minor Kubernetes version used by DP at the time.
+The command opens the `control-plane-manager` ModuleConfig for editing.
+After the change is saved, DP starts the upgrade to the specified version.
 To track the upgrade progress, check the Kubernetes version in the output of the node description command:
 
 ```shell
@@ -107,8 +108,8 @@ d8 k get nodes
 
 When performing a minor version upgrade:
 
-- If bumping for more than one minor version (for example, from `1.28` to `1.30`),
-  the update happens in stages: `1.28` → `1.29` → `1.30`.
+- If bumping for more than one minor version (for example, from `1.33` to `1.35`),
+  the update happens in stages: `1.33` → `1.34` → `1.35`.
 - At each step, the control plane is updated first, followed by the kubelet upgrade on the nodes.
 
 When performing a downgrade:

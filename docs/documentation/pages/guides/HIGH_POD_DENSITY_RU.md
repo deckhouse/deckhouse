@@ -10,7 +10,7 @@ lang: ru
 {% alert %}
 Для узлов с высокой плотностью размещения подов:
 
-- заранее спланируйте размер подсети узла (параметр [`podSubnetNodeCIDRPrefix`](../reference/api/cr.html#clusterconfiguration-podsubnetnodecidrprefix)) — [лимит подов на узел](../glossary.html#pod-limit-per-node) подстроится автоматически;
+- заранее спланируйте размер подсети узла (параметр [`podSubnetNodeCIDRPrefix`](/modules/control-plane-manager/configuration.html#parameters-network-podsubnetnodecidrprefix)) — [лимит подов на узел](../glossary.html#pod-limit-per-node) подстроится автоматически;
 - используйте ядро Linux версии 6.12 или новее;
 - используйте быстрый локальный диск (NVMe или SSD) и не используйте сетевую файловую систему;
 - используйте лёгкие образы приложений с минимальным количеством слоёв (например, `distroless`).
@@ -21,7 +21,7 @@ lang: ru
 ## Лимит подов на узел
 
 {% alert %}
-Лимит подов на узел в DP вычисляется на основе размера подсети узла, задаваемого параметром [`podSubnetNodeCIDRPrefix`](../reference/api/cr.html#clusterconfiguration-podsubnetnodecidrprefix). Чтобы узел вмещал до 1000 подов, при развёртывании кластера задайте значение ≤ `21`.
+Лимит подов на узел в DP вычисляется на основе размера подсети узла, задаваемого параметром [`podSubnetNodeCIDRPrefix`](/modules/control-plane-manager/configuration.html#parameters-network-podsubnetnodecidrprefix). Чтобы узел вмещал до 1000 подов, при развёртывании кластера задайте значение ≤ `21`.
 {% endalert %}
 
 Размер подсети, выделяемой узлу, определяет максимальное количество подов, которые могут быть на нём размещены:

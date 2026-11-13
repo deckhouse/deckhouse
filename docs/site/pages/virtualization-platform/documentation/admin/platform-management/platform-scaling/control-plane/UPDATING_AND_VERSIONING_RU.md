@@ -10,32 +10,33 @@ lang: ru
 
 - В DVP поддерживаются последние пять версий Kubernetes.
 - Control plane можно откатывать на одну минорную версию назад и обновлять на несколько версий вперёд — шаг за шагом, по одной версии за раз.
-- Patch-версии (например, `1.27.3` → `1.27.5`) обновляются автоматически вместе с версией Deckhouse, и управлять этим процессом нельзя.
-- Minor-версии задаются вручную в параметре `kubernetesVersion` в ресурсе ClusterConfiguration.
+- Patch-версии (например, `1.35.3` → `1.35.5`) обновляются автоматически вместе с версией Deckhouse, и управлять этим процессом нельзя.
+- Minor-версии задаются вручную в [параметре `kubernetesVersion`](/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) ModuleConfig `control-plane-manager`.
 
 ### Изменение версии Kubernetes
 
-1. Откройте редактирование [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration):
+1. Откройте редактирование ModuleConfig `control-plane-manager`:
 
    ```shell
-   d8 system edit cluster-configuration
+   d8 k edit mc control-plane-manager
    ```
 
-1. Установите желаемую версию Kubernetes (`kubernetesVersion`):
+1. Установите желаемую версию Kubernetes в параметре `settings.kubernetesVersion`:
 
    ```yaml
-   apiVersion: deckhouse.io/v1
-   kind: ClusterConfiguration
-   cloud:
-     prefix: demo-stand
-     provider: Yandex
-   clusterDomain: cloud.education
-   clusterType: Cloud
-   defaultCRI: Containerd
-   kubernetesVersion: "1.30"
-   podSubnetCIDR: 10.111.0.0/16
-   podSubnetNodeCIDRPrefix: "24"
-   serviceSubnetCIDR: 10.222.0.0/16
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: control-plane-manager
+   spec:
+     version: 3
+     enabled: true
+     settings:
+       kubernetesVersion: "1.35"
    ```
+
+   {% alert level="info" %}
+   Поле `kubernetesVersion` [ресурса ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration), которое использовалось ранее для выбора версии Kubernetes, устарело. Пока параметр `settings.kubernetesVersion` модуля `control-plane-manager` не задан, версию Kubernetes определяет это поле. Если параметр задан, используется его значение.
+   {% endalert %}
 
 1. Сохраните изменения.

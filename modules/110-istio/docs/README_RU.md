@@ -257,8 +257,8 @@ Istio-proxy, работающий как сайдкар-контейнер, по
 
 #### Требования к кластерам
 
-- У каждого кластера должен быть уникальный домен в параметре [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration). Ни один из кластеров не должен использовать домен `cluster.local`, который является значением по умолчанию.
-- Уникальность подсетей сервисов и подов в параметрах [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) и [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr) ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) при работе [в федерации](#федерация) не требуется.
+- У каждого кластера должен быть указан уникальный домен в параметре [`clusterDomain`](/modules/control-plane-manager/configuration.html#parameters-network-clusterdomain) модуля `control-plane-manager`. Ни один из кластеров не должен использовать домен `cluster.local`, который является значением по умолчанию.
+- Уникальность подсетей сервисов и подов в параметрах [`serviceSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-servicesubnetcidr) и [`podSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-podsubnetcidr) модуля `control-plane-manager` при работе [в федерации](#федерация) не требуется.
 
 При анализе трафика Istio использует:
 
@@ -369,8 +369,8 @@ d8 k -n d8-istio get serviceentry,destinationrule
 
 #### Требования к кластерам
 
-- Домены кластеров в параметре [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) должны быть одинаковыми для всех участников мультикластера. По умолчанию значение параметра — `cluster.local`.
-- Подсети сервисов и подов в параметрах [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) и [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr) ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) должны быть уникальными для каждого кластера.
+- Домены кластеров в параметре [`clusterDomain`](/modules/control-plane-manager/configuration.html#parameters-network-clusterdomain) модуля `control-plane-manager` должны быть одинаковыми для всех участников мультикластера. По умолчанию значение параметра — `cluster.local`.
+- Подсети сервисов и подов в параметрах [`serviceSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-servicesubnetcidr) и [`podSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-podsubnetcidr) модуля `control-plane-manager` должны быть уникальными для каждого кластера.
 
 При анализе трафика Istio использует:
 

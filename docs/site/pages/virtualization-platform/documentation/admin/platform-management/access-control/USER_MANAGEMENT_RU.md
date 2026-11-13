@@ -71,7 +71,7 @@ spec:
 
 Для того чтобы удалённо управлять кластером с помощью утилит командной строки (`d8` или `kubectl`), необходимо создать конфигурационный файл:
 
-1. Включите доступ к API платформы, установив параметр `.spec.settings.publishAPI.enabled` в значении `true` в ресурсе ModuleConfig модуля`user-authn`.
+1. Включите доступ к API платформы, установив [параметр `.spec.settings.apiserver.publishAPI.ingress.enabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-enabled) в значение `true` в ресурсе ModuleConfig модуля `control-plane-manager`.
 1. Через веб-интерфейс kubeconfigurator, сгенерируйте `kubeconfig`-файл для удалённого доступа к кластеру. Для доступа к веб-интерфейсу, позволяющему сгенерировать `kubeconfig`, зарезервировано имя `kubeconfig`. URL для доступа зависит от значения параметра `publicDomainTemplate`.
 
     Чтобы узнать адрес, по которому доступен сервис, выполните следующую команду:

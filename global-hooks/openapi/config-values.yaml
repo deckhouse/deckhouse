@@ -164,7 +164,7 @@ properties:
 
           **Pay attention to the following:**
           - If this parameter is not specified, Ingress resources will not be created.
-          - The domain specified in the template must not match or be a subdomain of the domain specified in the [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter. It is not recommended to change the `clusterDomain` value unless absolutely necessary.
+          - The domain specified in the template must not match or be a subdomain of the domain specified in the [`network.clusterDomain`](/modules/control-plane-manager/configuration.html#parameters-network-clusterdomain) parameter of the `control-plane-manager` module. It is not recommended to change the cluster domain unless absolutely necessary.
           - For the template to function correctly, you must first configure DNS services both in the networks where the cluster nodes will be located and in the networks from which clients will access the platform’s service web interfaces.
           - If the template matches the domain of the node network, use only A records to assign addresses of the nodes’ Frontend interfaces to the platform’s service web interfaces.
           For example, if the nodes are registered under the `company.my` zone and the template is `%s.company.my`.
@@ -349,7 +349,7 @@ properties:
           **Usage notes:**
 
           - If this parameter is not specified, Ingress resources will not be created.
-          - The domain specified in the template must not match or be a subdomain of the domain specified in the [`clusterDomain`](cr.html#clusterconfiguration-clusterdomain) parameter. Changing the `clusterDomain` value is not recommended unless necessary.
+          - The domain specified in the template must not match or be a subdomain of the domain specified in the [`network.clusterDomain`](/modules/control-plane-manager/configuration.html#parameters-network-clusterdomain) parameter of the `control-plane-manager` module. Changing the cluster domain is not recommended unless necessary.
           - Before using the template, configure DNS services both in the networks where the cluster nodes will be located and in the networks from which clients will access the service web interfaces.
           - If the template domain matches the domain of the node network, use only A records to assign addresses of the frontend nodes to the platform service web interfaces.
           For example, if the nodes are registered under the `company.my` zone, the template must be `%s.%s.company.my`.

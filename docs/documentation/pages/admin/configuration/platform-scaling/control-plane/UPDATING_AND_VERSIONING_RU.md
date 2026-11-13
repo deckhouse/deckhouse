@@ -10,35 +10,36 @@ lang: ru
 
 - В DP поддерживаются последние пять версий Kubernetes.
 - Control plane можно откатывать на одну [минорную версию](../../../../glossary.html#minor-version) назад и обновлять на несколько версий вперёд — шаг за шагом, по одной версии за раз.
-- Patch-версии (например, `1.27.3` → `1.27.5`) обновляются автоматически вместе с версией Deckhouse, и управлять этим процессом нельзя.
-- Minor-версии задаются вручную в [параметре `kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) в ресурсе [ClusterConfiguration](../../../../glossary.html#cluster-configuration).
+- Patch-версии (например, `1.35.3` → `1.35.5`) обновляются автоматически вместе с версией Deckhouse, и управлять этим процессом нельзя.
+- Minor-версии задаются вручную в [параметре `kubernetesVersion`](/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) ModuleConfig `control-plane-manager`.
 
 ### Изменение версии Kubernetes
 
 Понижение версии возможно только на одну минорную назад от максимальной версии, когда-либо использовавшейся в кластере. Обновление вперёд — по одной минорной версии за раз.
 
-1. Откройте редактирование [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration):
+1. Откройте редактирование ModuleConfig `control-plane-manager`:
 
    ```shell
-   d8 system edit cluster-configuration
+   d8 k edit mc control-plane-manager
    ```
 
-1. Установите желаемую версию Kubernetes (`kubernetesVersion`):
+1. Установите желаемую версию Kubernetes в параметре `settings.kubernetesVersion`:
 
    ```yaml
-   apiVersion: deckhouse.io/v1
-   kind: ClusterConfiguration
-   cloud:
-     prefix: demo-stand
-     provider: Yandex
-   clusterDomain: cloud.education
-   clusterType: Cloud
-   defaultCRI: Containerd
-   kubernetesVersion: "1.30"
-   podSubnetCIDR: 10.111.0.0/16
-   podSubnetNodeCIDRPrefix: "24"
-   serviceSubnetCIDR: 10.222.0.0/16
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: control-plane-manager
+   spec:
+     version: 3
+     enabled: true
+     settings:
+       kubernetesVersion: "1.35"
    ```
+
+   {% alert level="info" %}
+   Поле `kubernetesVersion` [ресурса ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration), которое использовалось ранее для выбора версии Kubernetes, устарело. Пока параметр `settings.kubernetesVersion` модуля `control-plane-manager` не задан, версию Kubernetes определяет это поле. Если параметр задан, используется его значение. Не изменяйте версию Kubernetes через ClusterConfiguration.
+   {% endalert %}
 
 1. Сохраните изменения.
 1. Дождитесь окончания обновления. Отслеживать ход обновления можно с помощью команды `d8 k get no`. Обновление можно считать завершенным, когда в выводе команды у каждого узла кластера в колонке `VERSION` появится обновленная версия.
@@ -68,7 +69,7 @@ lang: ru
 
 В фазе `ControlPlaneUpdating` поле `status.progress` отражает общий прогресс обновления с учётом промежуточных минорных версий. При обновлении через несколько минорных версий (например, 1.33 → 1.35) процент растёт по мере завершения каждого шага, а не только когда все компоненты control plane достигнут финальной целевой версии.
 
-Минорные версии в ConfigMap (`spec`, `status`, а также метки `k8s-version` и `max-k8s-version`) задаются в том же формате, что и в ClusterConfiguration — без префикса `v` (например, `"1.33"`).
+Минорные версии в ConfigMap (`spec`, `status`, а также метки `k8s-version` и `max-k8s-version`) задаются в том же формате, что и в параметре `kubernetesVersion`, — без префикса `v` (например, `"1.33"`).
 
 Это позволяет в реальном времени видеть, какие компоненты обновляются, на каком этапе находится процесс, и не остановилось ли обновление на каком-либо узле или компоненте.
 

@@ -10,7 +10,7 @@ When you plan to place and run more than 100 pods on a single node, a number of 
 {% alert %}
 For nodes with high pod density:
 
-- Plan the node subnet size in advance (via [`podSubnetNodeCIDRPrefix`](../reference/api/cr.html#clusterconfiguration-podsubnetnodecidrprefix)) — the [pod limit per node](../glossary.html#pod-limit-per-node) will adjust automatically.
+- Plan the node subnet size in advance (via [`podSubnetNodeCIDRPrefix`](/modules/control-plane-manager/configuration.html#parameters-network-podsubnetnodecidrprefix)) — the [pod limit per node](../glossary.html#pod-limit-per-node) will adjust automatically.
 - Use a Linux kernel version 6.12 or newer.
 - Use a fast local disk (NVMe or SSD) and do not use a network file system.
 - Use lightweight application images with minimum amount of layers (for example, `distroless`).
@@ -21,7 +21,7 @@ For such scenarios, Deckhouse Platform (DP) configures control plane components 
 ## Pod limit per node
 
 {% alert %}
-The pod limit per node in DP is calculated based on the node subnet size set via the [`podSubnetNodeCIDRPrefix`](../reference/api/cr.html#clusterconfiguration-podsubnetnodecidrprefix) parameter. To fit up to 1000 pods on a node, set the value ≤ `21` when deploying the cluster.
+The pod limit per node in DP is calculated based on the node subnet size set via the [`podSubnetNodeCIDRPrefix`](/modules/control-plane-manager/configuration.html#parameters-network-podsubnetnodecidrprefix) parameter. To fit up to 1000 pods on a node, set the value ≤ `21` when deploying the cluster.
 {% endalert %}
 
 The subnet size allocated to a node determines the maximum number of pods that can be allocated to a node:

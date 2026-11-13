@@ -289,7 +289,7 @@ Ingress позволяет управлять входящими HTTP/HTTPS-за
    - `nginx.ingress.kubernetes.io/auth-url: https://<NAME>-dex-authenticator.<NS>.svc.{{ C_DOMAIN }}/dex-authenticator/auth`, где:
      - `NAME` — значение параметра `metadata.name` ресурса DexAuthenticator;
      - `NS` — значение параметра `metadata.namespace` ресурса DexAuthenticator;
-     - `C_DOMAIN` — домен кластера (параметр `clusterDomain`) ресурса ClusterConfiguration).
+     - `C_DOMAIN` — домен кластера (параметр `network.clusterDomain` модуля `control-plane-manager`).
 
    Пример аннотаций на Ingress-ресурсе приложения, для подключения его к `Dex`:
 

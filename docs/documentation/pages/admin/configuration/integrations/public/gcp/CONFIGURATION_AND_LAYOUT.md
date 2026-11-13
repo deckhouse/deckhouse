@@ -29,7 +29,7 @@ Deckhouse Platform (DP) supports two layouts for deploying resources in GCP.
 When a cluster is created, DP creates the following firewall rules in the cluster VPC:
 
 - `<CLUSTER_PREFIX>-ssh-and-ping`: Allows incoming traffic over the ICMP and TCP (port `22`) protocols to nodes with the `<CLUSTER_PREFIX>` network tag from the CIDRs listed in [`sshAllowList`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-sshallowlist) (default `0.0.0.0/0`).
-- `<CLUSTER_PREFIX>-intercommunication`: Allows any traffic between nodes with the `<CLUSTER_PREFIX>` network tag, as well as from the pod subnet ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr)).
+- `<CLUSTER_PREFIX>-intercommunication`: Allows any traffic between nodes with the `<CLUSTER_PREFIX>` network tag, as well as from the pod subnet ([`podSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-podsubnetcidr)).
 
 Custom firewall rules are applied to nodes through additional network tags ([`additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags)):
 
@@ -112,7 +112,7 @@ provider:
 When a cluster is created, DP creates the following firewall rules in the cluster VPC:
 
 - `<CLUSTER_PREFIX>-ssh-and-ping`: Allows incoming traffic over the ICMP and TCP (port `22`) protocols to nodes with the `<CLUSTER_PREFIX>` network tag from the CIDRs listed in [`sshAllowList`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-sshallowlist) (default `0.0.0.0/0`).
-- `<CLUSTER_PREFIX>-intercommunication`: Allows any traffic between nodes with the `<CLUSTER_PREFIX>` network tag, as well as from the pod subnet ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr)).
+- `<CLUSTER_PREFIX>-intercommunication`: Allows any traffic between nodes with the `<CLUSTER_PREFIX>` network tag, as well as from the pod subnet ([`podSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-podsubnetcidr)).
 
 Custom firewall rules are applied to nodes through additional network tags ([`additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags)):
 

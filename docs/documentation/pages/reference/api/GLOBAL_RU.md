@@ -20,7 +20,7 @@ search: global settings, global configuration, platform settings, default settin
 
 Если у вас нет возможности заводить wildcard-записи DNS, для тестирования можно воспользоваться сервисом [sslip.io](https://sslip.io) или его аналогами.
 
-Домен, указанный в шаблоне, не может совпадать или быть поддоменом домена, заданного в параметре [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain). Мы не рекомендуем менять значение `clusterDomain` без особой необходимости.
+Домен, указанный в шаблоне, не может совпадать или быть поддоменом домена, заданного в параметре [`network.clusterDomain`](/modules/control-plane-manager/configuration.html#parameters-network-clusterdomain) модуля `control-plane-manager`. Мы не рекомендуем менять домен кластера без особой необходимости.
 
 Для корректной работы шаблона необходимо предварительно настроить службы DNS как в сетях, где будут располагаться узлы кластера, так и в сетях, из которых к служебным веб-интерфейсам платформы будут обращаться клиенты.
 
@@ -41,10 +41,6 @@ spec:
     defaultClusterStorageClass: 'default-fast'
     modules:
       publicDomainTemplate: '%s.kube.company.my'
-      resourcesRequests:
-        controlPlane:
-          cpu: 1000m
-          memory: 500M
       placement:
         customTolerationKeys:
         - dedicated.example.com

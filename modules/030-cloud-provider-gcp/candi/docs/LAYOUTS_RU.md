@@ -20,7 +20,7 @@ description: "Описание схем размещения и взаимоде
 При создании кластера модуль создаёт в VPC кластера следующие правила файрвола:
 
 - `<CLUSTER_PREFIX>-ssh-and-ping` — разрешение входящего трафика по протоколам ICMP и TCP (порт `22`) к узлам с network tag `<CLUSTER_PREFIX>` из CIDR, указанных в [`sshAllowList`](cluster_configuration.html#gcpclusterconfiguration-sshallowlist) (по умолчанию `0.0.0.0/0`);
-- `<CLUSTER_PREFIX>-intercommunication` — разрешение любого трафика между узлами с network tag `<CLUSTER_PREFIX>`, а также из подсети подов ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr)).
+- `<CLUSTER_PREFIX>-intercommunication` — разрешение любого трафика между узлами с network tag `<CLUSTER_PREFIX>`, а также из подсети подов ([`podSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-podsubnetcidr)).
 
 Собственные правила файрвола применяются к узлам через дополнительные network tags ([`additionalNetworkTags`](cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags)):
 
@@ -102,7 +102,7 @@ provider:
 При создании кластера модуль создаёт в VPC кластера следующие правила файрвола:
 
 - `<CLUSTER_PREFIX>-ssh-and-ping` — разрешение входящего трафика по протоколам ICMP и TCP (порт `22`) к узлам с network tag `<CLUSTER_PREFIX>` из CIDR, указанных в [`sshAllowList`](cluster_configuration.html#gcpclusterconfiguration-sshallowlist) (по умолчанию `0.0.0.0/0`);
-- `<CLUSTER_PREFIX>-intercommunication` — разрешение любого трафика между узлами с network tag `<CLUSTER_PREFIX>`, а также из подсети подов ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr)).
+- `<CLUSTER_PREFIX>-intercommunication` — разрешение любого трафика между узлами с network tag `<CLUSTER_PREFIX>`, а также из подсети подов ([`podSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-podsubnetcidr)).
 
 Собственные правила файрвола применяются к узлам через дополнительные network tags ([`additionalNetworkTags`](cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags)):
 

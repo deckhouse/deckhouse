@@ -12,23 +12,49 @@ cloud:
   # [<ru>] Префикс объектов, создаваемых в облаке при установке.
   # [<ru>] Возможно, захотите изменить.
   prefix: cloud-demo
-# [<en>] Address space of the cluster's Pods.
-# [<ru>] Адресное пространство подов кластера.
-# [<en>] You might consider changing this. Ensure that there are no overlaps with serviceSubnetCIDR.
-# [<ru>] Возможно, захотите изменить. Убедитесь, что не будет пересечений с serviceSubnetCIDR.
-podSubnetCIDR: 10.111.0.0/16
-# [<en>] Address space of the cluster's services.
-# [<ru>] Адресное пространство сети сервисов кластера.
-# [<en>] You might consider changing this. Ensure that there are no overlaps with podSubnetCIDR.
-# [<ru>] Возможно, захотите изменить. Убедитесь, что не будет пересечений с podSubnetCIDR.
-serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "Automatic"
-# [<en>] Cluster domain (used for local routing).
-# [<ru>] Домен кластера.
-clusterDomain: "cluster.local"
 # [<en>] The container runtime type that used on cluster nodes (NodeGroups) by default.
 # [<ru>] Тип container runtime, используемый на узлах кластера (в NodeGroup’ах) по умолчанию.
 defaultCRI: "ContainerdV2"
+---
+# [<en>] control-plane-manager module settings.
+# [<en>] https://deckhouse.io/modules/control-plane-manager/configuration.html
+# [<ru>] Настройки модуля control-plane-manager.
+# [<ru>] https://deckhouse.ru/modules/control-plane-manager/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    kubernetesVersion: "Default"
+    network:
+      # [<en>] Address space of the cluster's Pods.
+      # [<ru>] Адресное пространство подов кластера.
+      # [<en>] You might consider changing this. Ensure that there are no overlaps with serviceSubnetCIDR.
+      # [<ru>] Возможно, захотите изменить. Убедитесь, что не будет пересечений с serviceSubnetCIDR.
+      podSubnetCIDR: 10.111.0.0/16
+      # [<en>] Address space of the cluster's services.
+      # [<ru>] Адресное пространство сети сервисов кластера.
+      # [<en>] You might consider changing this. Ensure that there are no overlaps with podSubnetCIDR.
+      # [<ru>] Возможно, захотите изменить. Убедитесь, что не будет пересечений с podSubnetCIDR.
+      serviceSubnetCIDR: 10.222.0.0/16
+      # [<en>] Cluster domain (used for local routing).
+      # [<ru>] Домен кластера.
+      clusterDomain: "cluster.local"
+    apiserver:
+      # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
+      # [<ru>] https://deckhouse.ru/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi
+      # [<en>] Enabling access to the API server through Ingress.
+      # [<en>] https://deckhouse.io/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi
+      publishAPI:
+        ingress:
+          enabled: true
+          https:
+            mode: Global
+            global:
+              kubeconfigGeneratorMasterCA: ""
 ---
 # [<en>] Deckhouse module settings.
 # [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
@@ -73,11 +99,11 @@ spec:
     modules:
       # [<en>] Template that will be used for system apps domains within the cluster.
       # [<en>] E.g., Grafana for %s.example.com will be available as 'grafana.example.com'.
-      # [<en>] The domain MUST NOT match the one specified in the clusterDomain parameter of the ClusterConfiguration resource.
+      # [<en>] The domain MUST NOT match the one specified in the network.clusterDomain parameter of the control-plane-manager module.
       # [<en>] You can change it to your own or follow the steps in the guide and change it after installation.
       # [<ru>] Шаблон, который будет использоваться для составления адресов системных приложений в кластере.
       # [<ru>] Например, Grafana для %s.example.com будет доступна на домене 'grafana.example.com'.
-      # [<ru>] Домен НЕ ДОЛЖЕН совпадать с указанным в параметре clusterDomain ресурса ClusterConfiguration.
+      # [<ru>] Домен НЕ ДОЛЖЕН совпадать с указанным в параметре network.clusterDomain модуля control-plane-manager.
       # [<ru>] Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
       publicDomainTemplate: "%s.example.com"
 ---
@@ -95,16 +121,6 @@ spec:
   settings:
     controlPlaneConfigurator:
       dexCAMode: DoNotNeed
-    # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
-    # [<ru>] https://deckhouse.ru/modules/user-authn/configuration.html#parameters-publishapi
-    # [<en>] Enabling access to the API server through Ingress.
-    # [<en>] https://deckhouse.io/modules/user-authn/configuration.html#parameters-publishapi
-    publishAPI:
-      enabled: true
-      https:
-        mode: Global
-        global:
-          kubeconfigGeneratorMasterCA: ""
 ---
 # [<en>] Cloud provider settings.
 # [<en>] https://deckhouse.io/modules/cloud-provider-aws/cluster_configuration.html

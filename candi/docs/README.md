@@ -24,12 +24,24 @@ Example:
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
-podSubnetCIDR: 10.111.0.0/16
-podSubnetNodeCIDRPrefix: "24"
-serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: 1.33
 defaultCRI: "ContainerdV2"
-clusterDomain: cluster.local
+---
+# control-plane-manager module settings.
+# https://deckhouse.io/modules/control-plane-manager/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    kubernetesVersion: "Default"
+    network:
+      podSubnetCIDR: 10.111.0.0/16
+      podSubnetNodeCIDRPrefix: "24"
+      serviceSubnetCIDR: 10.222.0.0/16
+      clusterDomain: cluster.local
 ---
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration

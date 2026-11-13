@@ -25,7 +25,7 @@ DP поддерживает две схемы размещения ресурс�
 При создании кластера DP создаёт в VPC кластера следующие правила файрвола:
 
 - `<CLUSTER_PREFIX>-ssh-and-ping` — разрешение входящего трафика по протоколам ICMP и TCP (порт `22`) к узлам с network tag `<CLUSTER_PREFIX>` из CIDR, указанных в [`sshAllowList`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-sshallowlist) (по умолчанию `0.0.0.0/0`);
-- `<CLUSTER_PREFIX>-intercommunication` — разрешение любого трафика между узлами с network tag `<CLUSTER_PREFIX>`, а также из подсети подов ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr)).
+- `<CLUSTER_PREFIX>-intercommunication` — разрешение любого трафика между узлами с network tag `<CLUSTER_PREFIX>`, а также из подсети подов ([`podSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-podsubnetcidr)).
 
 Собственные правила файрвола применяются к узлам через дополнительные network tags ([`additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags)):
 
@@ -107,7 +107,7 @@ provider:
 При создании кластера DP создаёт в VPC кластера следующие правила файрвола:
 
 - `<CLUSTER_PREFIX>-ssh-and-ping` — разрешение входящего трафика по протоколам ICMP и TCP (порт `22`) к узлам с network tag `<CLUSTER_PREFIX>` из CIDR, указанных в [`sshAllowList`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-sshallowlist) (по умолчанию `0.0.0.0/0`);
-- `<CLUSTER_PREFIX>-intercommunication` — разрешение любого трафика между узлами с network tag `<CLUSTER_PREFIX>`, а также из подсети подов ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr)).
+- `<CLUSTER_PREFIX>-intercommunication` — разрешение любого трафика между узлами с network tag `<CLUSTER_PREFIX>`, а также из подсети подов ([`podSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-podsubnetcidr)).
 
 Собственные правила файрвола применяются к узлам через дополнительные network tags ([`additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags)):
 
@@ -279,7 +279,7 @@ spec:
 d8 k get mc global -o jsonpath='{.spec.settings.prefix}{"\n"}'
 ```
 
-Если значение пустое, возьмите его из устаревшего параметра [`cloud.prefix`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-cloud-prefix) ресурса [ClusterConfiguration](../../../../glossary.html#cluster-configuration) (префикс перенесён в ModuleConfig `global`):
+Если значение пустое, возьмите его из устаревшего параметра [`cloud.prefix`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-cloud-prefix) модуля `control-plane-manager` (префикс перенесён в ModuleConfig `global`):
 
 ```shell
 d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' \

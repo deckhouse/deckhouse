@@ -14,9 +14,9 @@ lang: ru
 
 ### Требования к кластерам
 
-* У всех кластеров, входящих в [мультикластер](../../../../glossary.html#multicluster), значение параметра [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) ресурса [ClusterConfiguration](../../../../glossary.html#cluster-configuration) должно совпадать. По умолчанию используется значение `cluster.local`.
+* У всех кластеров, входящих в [мультикластер](../../../../glossary.html#multicluster), значение параметра [`clusterDomain`](/modules/control-plane-manager/configuration.html#parameters-network-clusterdomain) модуля `control-plane-manager` должно совпадать. По умолчанию используется значение `cluster.local`.
 
-* Подсети сервисов и подов в параметрах [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) и [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr) ресурса ClusterConfiguration должны быть уникальными для каждого кластера.
+* Подсети сервисов и подов в параметрах [`serviceSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-servicesubnetcidr) и [`podSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-podsubnetcidr) модуля `control-plane-manager` должны быть уникальными для каждого кластера.
 
   > - При анализе HTTP и HTTPS запросов *(в терминологии Istio)* идентифицировать их и принять решение о дальнейшей маршрутизации, запрещении или разрешении возможно по заголовкам.
   > - А при анализе TCP запросов *(в терминологии Istio)* идентифицировать их и принять решение о дальнейшей маршрутизации, запрещении или разрешении возможно только по IP-адресу назначения и номеру порта.

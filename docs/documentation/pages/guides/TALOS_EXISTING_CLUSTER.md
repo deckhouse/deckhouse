@@ -278,7 +278,7 @@ spec:
       publicDomainTemplate: "%s.example.com"
 ```
 
-The domain in [`publicDomainTemplate`](../reference/api/global.html#parameters-modules-publicdomaintemplate) must not match or be a subdomain of the domain specified in [`clusterDomain`](../reference/api/cr.html#clusterconfiguration-clusterdomain). Before using the template, configure DNS services in both the networks where cluster nodes are located and the networks from which clients access the platform service web interfaces.
+The domain in [`publicDomainTemplate`](../reference/api/global.html#parameters-modules-publicdomaintemplate) must not match or be a subdomain of the domain specified in [`clusterDomain`](/modules/control-plane-manager/configuration.html#parameters-network-clusterdomain). Before using the template, configure DNS services in both the networks where cluster nodes are located and the networks from which clients access the platform service web interfaces.
 
 If the nodes have custom taints and DP components must run on them, add the corresponding values to [`global.spec.settings.modules.placement.customTolerationKeys`](../reference/api/global.html#parameters-modules-placement-customtolerationkeys). Do not add an example taint unless it exists in the cluster.
 

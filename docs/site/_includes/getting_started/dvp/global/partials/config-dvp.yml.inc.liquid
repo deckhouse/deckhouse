@@ -5,23 +5,49 @@
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
-# [<en>] Address space of the cluster Pods.
-# [<ru>] Адресное пространство подов кластера.
-# [<en>] You might consider changing this. Ensure that there are no overlaps with other subnets.
-# [<ru>] Возможно, захотите изменить. Убедитесь, что не будет пересечений с другими подсетями.
-podSubnetCIDR: <POD_SUBNET_CIDR>
-# [<en>] Address space of the cluster services.
-# [<ru>] Адресное пространство сети сервисов кластера.
-# [<en>] You might consider changing this. Ensure that there are no overlaps with other subnets.
-# [<ru>] Возможно, захотите изменить. Убедитесь, что не будет пересечений с другими подсетями.
-serviceSubnetCIDR: <SERVICE_SUBNET_CIDR>
-kubernetesVersion: "Automatic"
-# [<en>] Cluster domain (used for local routing).
-# [<ru>] Домен кластера.
-clusterDomain: "internal.cluster.local"
 # [<en>] Default container runtime on cluster nodes (NodeGroups).
 # [<ru>] Тип container runtime, используемый на узлах кластера (в NodeGroup’ах) по умолчанию.
 defaultCRI: "ContainerdV2"
+---
+# [<en>] control-plane-manager module settings.
+# [<en>] https://deckhouse.io/modules/control-plane-manager/configuration.html
+# [<ru>] Настройки модуля control-plane-manager.
+# [<ru>] https://deckhouse.ru/modules/control-plane-manager/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    kubernetesVersion: "Default"
+    network:
+      # [<en>] Address space of the cluster Pods.
+      # [<ru>] Адресное пространство подов кластера.
+      # [<en>] You might consider changing this. Ensure that there are no overlaps with other subnets.
+      # [<ru>] Возможно, захотите изменить. Убедитесь, что не будет пересечений с другими подсетями.
+      podSubnetCIDR: <POD_SUBNET_CIDR>
+      # [<en>] Address space of the cluster services.
+      # [<ru>] Адресное пространство сети сервисов кластера.
+      # [<en>] You might consider changing this. Ensure that there are no overlaps with other subnets.
+      # [<ru>] Возможно, захотите изменить. Убедитесь, что не будет пересечений с другими подсетями.
+      serviceSubnetCIDR: <SERVICE_SUBNET_CIDR>
+      # [<en>] Cluster domain (used for local routing).
+      # [<ru>] Домен кластера.
+      clusterDomain: "internal.cluster.local"
+    apiserver:
+      # [<en>] Enabling access to the API server through Ingress.
+      # [<en>] https://deckhouse.io/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi
+      # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
+      # [<ru>] https://deckhouse.ru/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi
+      publishAPI:
+        ingress:
+          enabled: true
+          https:
+            mode: Global
+            global:
+              kubeconfigGeneratorMasterCA: ""
 ---
 # [<en>] Deckhouse module settings.
 # [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
@@ -121,17 +147,7 @@ metadata:
 spec:
   version: 2
   enabled: true
-  settings:
-    # [<en>] Enabling access to the API server through Ingress.
-    # [<en>] https://deckhouse.io/modules/user-authn/configuration.html#parameters-publishapi
-    # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
-    # [<ru>] https://deckhouse.ru/modules/user-authn/configuration.html#parameters-publishapi
-    publishAPI:
-      enabled: true
-      https:
-        mode: Global
-        global:
-          kubeconfigGeneratorMasterCA: ""
+  settings: {}
 ---
 # [<en>] cni-cilium module settings.
 # [<en>] https://deckhouse.io/modules/cni-cilium/configuration.html

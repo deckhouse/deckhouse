@@ -128,7 +128,7 @@ To enable authentication for an application deployed in DP, follow these steps:
 
      - `<NAME>` is the value of `metadata.name` from the DexAuthenticator;
      - `<NS>` is the value of `metadata.namespace` from the DexAuthenticator;
-     - `<CLUSTER_DOMAIN>` is the cluster domain (defined in the `clusterDomain` field of the [ClusterConfiguration](../../reference/api/cr.html#clusterconfiguration-clusterdomain), by default it is `cluster.local`).
+     - `<CLUSTER_DOMAIN>` is the cluster domain (defined in the [`network.clusterDomain`](/modules/control-plane-manager/configuration.html#parameters-network-clusterdomain) parameter of the `control-plane-manager` module, by default it is `cluster.local`).
 
         Example (for a DexAuthenticator named `app-name` in namespace `app-ns`):
 

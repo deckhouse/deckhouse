@@ -278,7 +278,7 @@ spec:
       publicDomainTemplate: "%s.example.com"
 ```
 
-Домен в [`publicDomainTemplate`](../reference/api/global.html#parameters-modules-publicdomaintemplate) не должен совпадать с доменом, указанным в [`clusterDomain`](../reference/api/cr.html#clusterconfiguration-clusterdomain), или быть его поддоменом. Перед использованием шаблона настройте DNS-сервисы в сетях, где расположены узлы кластера, и в сетях, из которых клиенты обращаются к веб-интерфейсам сервисов платформы.
+Домен в [`publicDomainTemplate`](../reference/api/global.html#parameters-modules-publicdomaintemplate) не должен совпадать с доменом, указанным в [`clusterDomain`](/modules/control-plane-manager/configuration.html#parameters-network-clusterdomain), или быть его поддоменом. Перед использованием шаблона настройте DNS-сервисы в сетях, где расположены узлы кластера, и в сетях, из которых клиенты обращаются к веб-интерфейсам сервисов платформы.
 
 Если на узлах есть нестандартные taints и компоненты DP должны на них запускаться, добавьте соответствующие значения в [`global.spec.settings.modules.placement.customTolerationKeys`](../reference/api/global.html#parameters-modules-placement-customtolerationkeys). Не добавляйте примерный taint, если его нет в кластере.
 

@@ -35,10 +35,32 @@ YAML-файл конфигурации установки содержит па�
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
-podSubnetCIDR: 10.88.0.0/16
-serviceSubnetCIDR: 10.99.0.0/16
-kubernetesVersion: "Automatic"
-clusterDomain: "cluster.local"
+---
+# Настройки модуля control-plane-manager.
+# https://deckhouse.ru/modules/control-plane-manager/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    kubernetesVersion: "Default"
+    network:
+      podSubnetCIDR: 10.88.0.0/16
+      serviceSubnetCIDR: 10.99.0.0/16
+      clusterDomain: "cluster.local"
+    apiserver:
+      # Включение доступа к Kubernetes API через Ingress.
+      # https://deckhouse.ru/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi
+      publishAPI:
+        ingress:
+          enabled: true
+          https:
+            mode: Global
+            global:
+              kubeconfigGeneratorMasterCA: ""
 ---
 apiVersion: deckhouse.io/v1
 kind: StaticClusterConfiguration
@@ -76,14 +98,6 @@ spec:
   settings:
     controlPlaneConfigurator:
       dexCAMode: DoNotNeed
-    # Включение доступа к Kubernetes API через Ingress.
-    # https://deckhouse.ru/modules/user-authn/configuration.html#parameters-publishapi
-    publishAPI:
-      enabled: true
-      https:
-        mode: Global
-        global:
-          kubeconfigGeneratorMasterCA: ""
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -214,7 +228,7 @@ registry.deckhouse.ru/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
 Список проверок, выполняемых инсталлятором перед началом установки платформы:
 
 1. Общие проверки:
-   - Значения параметров [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) и [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) не совпадают.
+   - Значения параметров [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) и [`clusterDomain`](/modules/control-plane-manager/configuration.html#parameters-network-clusterdomain) не совпадают.
    - Данные аутентификации для хранилища образов контейнеров, указанные в конфигурации установки, корректны.
    - Имя хоста соответствует следующим требованиям:
      - Длина не более 63 символов;

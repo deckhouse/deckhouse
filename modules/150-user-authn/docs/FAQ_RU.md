@@ -68,7 +68,7 @@ title: "Модуль user-authn: FAQ"
 - `nginx.ingress.kubernetes.io/auth-url: https://<SERVICE_NAME>.<NS>.svc.{{ C_DOMAIN }}/dex-authenticator/auth`, где:
   - `SERVICE_NAME` — имя сервиса (Service) аутентификатора. Как правило, оно соответствует формату `<NAME>-dex-authenticator` (`<NAME>` — это `metadata.name` ресурса [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator));
   - `NS` — значение параметра `metadata.namespace` ресурса [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator);
-  - `C_DOMAIN` — домен кластера (параметр [clusterDomain](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration)).
+  - `C_DOMAIN` — домен кластера (параметр [`clusterDomain`](/modules/control-plane-manager/configuration.html#parameters-network-clusterdomain) модуля `control-plane-manager`).
 
 {% endraw %}
 

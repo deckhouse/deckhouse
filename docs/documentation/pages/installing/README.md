@@ -124,10 +124,30 @@ clusterType: Cloud
 cloud:
   provider: Azure
   prefix: cloud-demo
-podSubnetCIDR: 10.111.0.0/16
-serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "Automatic"
-clusterDomain: cluster.local
+---
+# control-plane-manager module settings.
+# https://deckhouse.io/modules/control-plane-manager/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    kubernetesVersion: "Default"
+    network:
+      podSubnetCIDR: 10.111.0.0/16
+      serviceSubnetCIDR: 10.222.0.0/16
+      clusterDomain: cluster.local
+    apiserver:
+      publishAPI:
+        ingress:
+          enabled: true
+          https:
+            mode: Global
+            global:
+              kubeconfigGeneratorMasterCA: ""
 ---
 apiVersion: deckhouse.io/v1
 kind: AzureClusterConfiguration
@@ -188,12 +208,6 @@ spec:
   settings:
     controlPlaneConfigurator:
       dexCAMode: DoNotNeed
-    publishAPI:
-      enabled: true
-      https:
-        mode: Global
-        global:
-          kubeconfigGeneratorMasterCA: ""
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -278,10 +292,30 @@ clusterType: Cloud
 cloud:
   provider: Azure
   prefix: cloud-demo
-podSubnetCIDR: 10.111.0.0/16
-serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "Automatic"
-clusterDomain: cluster.local
+---
+# control-plane-manager module settings.
+# https://deckhouse.io/modules/control-plane-manager/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    kubernetesVersion: "Default"
+    network:
+      podSubnetCIDR: 10.111.0.0/16
+      serviceSubnetCIDR: 10.222.0.0/16
+      clusterDomain: cluster.local
+    apiserver:
+      publishAPI:
+        ingress:
+          enabled: true
+          https:
+            mode: Global
+            global:
+              kubeconfigGeneratorMasterCA: ""
 ---
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
@@ -340,12 +374,6 @@ spec:
   settings:
     controlPlaneConfigurator:
       dexCAMode: DoNotNeed
-    publishAPI:
-      enabled: true
-      https:
-        mode: Global
-        global:
-          kubeconfigGeneratorMasterCA: ""
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -1291,14 +1319,26 @@ clusterType: Cloud
 cloud:
   provider: OpenStack
   prefix: main
-podSubnetCIDR: 10.111.0.0/16
-serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "Automatic"
 cri: "Containerd"
-clusterDomain: "cluster.local"
 proxy:
   httpProxy: "http://user:password@proxy.company.my:3128"
   httpsProxy: "https://user:password@proxy.company.my:8443"
+---
+# control-plane-manager module settings.
+# https://deckhouse.io/modules/control-plane-manager/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    kubernetesVersion: "Default"
+    network:
+      podSubnetCIDR: 10.111.0.0/16
+      serviceSubnetCIDR: 10.222.0.0/16
+      clusterDomain: "cluster.local"
 ```
 
 {% raw %}
