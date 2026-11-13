@@ -204,6 +204,44 @@ The lock check is connector-scoped: local users read `Password` only, everyone
 else reads `OfflineSessions` only. A local `UserOperation` Lock therefore does
 not block an LDAP login with the same email, and the reverse.
 
+### 019-refresh-refusals-invalid-grant.patch
+
+Answer a refresh token that cannot be used with 400 `invalid_grant`, as RFC
+6749 §5.2 has it, Dex v2.46 does and the Deckhouse Dex of 1.78 does, instead of
+400 `invalid_request`, 429 `access_denied` or 500. Clients end the session on
+`invalid_grant`; a Dex that refreshes through this one took 429 and 500 for a
+provider that did not answer and kept the user signed in.
+
+- Refresh token claimed, unknown or expired: `invalid_grant` with the same
+  description ("Refresh token is invalid or has already been claimed by another
+  client.", "Refresh token expired."). A garbage refresh token, taken for a raw
+  ID that no Kubernetes object can be named after, is unknown too: the
+  Kubernetes storage answers `storage.ErrNotFound` for it without asking the
+  API server, where it answered 500.
+- Refresh of a locked account (018): `invalid_grant` "Account locked" instead
+  of 429 `access_denied`. The password grant and the token exchange keep 429
+  `access_denied`, the login form its page.
+- User gone: `connector.ErrIdentityGone` marks the answer of the local password
+  store (user deleted, or replaced by a new user with the same email) and of the
+  LDAP connector (user not found, the username now names another entry). The
+  refresh gets `invalid_grant` "The identity provider refused to refresh the
+  identity." The shared upstream credential of 017 is not touched.
+- Stored credential refused by the upstream provider (OAuth2 `invalid_grant`,
+  `credentialRefused` of 017, for example another Dex or Keycloak): the same
+  `invalid_grant`, as the Deckhouse Dex of 1.78 answers it. Whether 017 tries
+  another credential or drops the dead shared one is decided as before, by
+  `credentialRefused` alone.
+- Refusal of a locked account by an upstream Deckhouse Dex (`invalid_grant`
+  "Account locked" or "Account locked by an administrator", 1.77 with this
+  patch and 1.78): `invalid_grant` for the client too, but it is no credential
+  refusal (`lockRefusal`): 017 keeps the shared credential and waits for no
+  rotation, so the refresh goes on once the lock ends, without a login. Only
+  the exact descriptions of Dex count.
+- Any other failure of a connector stays 500, a provider that did not answer
+  among them. So does the refresh of a pair whose shared credential 017
+  dropped, until the next login: the connector gets no credential to refresh
+  with (the Dex of 1.78 answers it with `invalid_grant`).
+
 ### 998-fix-cve.patch
 
 #### Fix CVEs
