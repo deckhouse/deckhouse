@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -195,6 +196,9 @@ func (s *Service) computeAndApplyConditions(ev string, app *v1alpha1.Application
 			}
 		}
 
+		// The notified mark Boot restores; cleared once a new version is installed or the update is cancelled.
+		setNotified(app, report.Notified)
+
 		// The settings checkpoint Boot restores, as effective values.
 		if values := report.Current.AppliedValues; values != nil {
 			if raw, err := json.Marshal(values); err == nil {
@@ -216,5 +220,31 @@ func (s *Service) computeAndApplyConditions(ev string, app *v1alpha1.Application
 		State:   summary.state,
 		Message: summary.message,
 		Tip:     summary.tip,
+	}
+}
+
+// setNotified writes status.update.notified from the engine's notified mark; a status.update left empty is removed.
+// The time is kept in seconds, as the resource stores it, so an unchanged mark patches nothing.
+func setNotified(app *v1alpha1.Application, notified model.Notified) {
+	var mark *v1alpha1.ApplicationStatusUpdateNotified
+	if !notified.IsZero() {
+		mark = &v1alpha1.ApplicationStatusUpdateNotified{
+			Version: notified.Version,
+			Time:    metav1.NewTime(notified.At.UTC().Truncate(time.Second)),
+		}
+	}
+
+	if app.Status.Update == nil {
+		if mark == nil {
+			return
+		}
+
+		app.Status.Update = new(v1alpha1.ApplicationStatusUpdate)
+	}
+
+	app.Status.Update.Notified = mark
+
+	if u := app.Status.Update; len(u.Plan) == 0 && u.AutomaticVersion == "" && u.Notified == nil {
+		app.Status.Update = nil
 	}
 }

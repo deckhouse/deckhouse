@@ -602,7 +602,7 @@ spec:
                 x-kubernetes-preserve-unknown-fields: true
               update:
                 description: |-
-                  Update of the application: the update plan and the version the automatic update moves to next.
+                  Update of the application: the update plan, the version the automatic update moves to next and the notification sent about the pending update.
 
                   Empty before the first version is installed.
                 properties:
@@ -611,6 +611,23 @@ spec:
                       only after the previous one is installed and ready. Empty in
                       the `Manual` update mode.
                     type: string
+                  notified:
+                    description: |-
+                      Notification sent about the pending update: the version it announced and when it was sent.
+
+                      It is sent to the webhook of the global [`applications.update.notification`](global.html#parameters-applications-update-notification) settings, or of the [`update.notification`](/modules/deckhouse/configuration.html#parameters-update-notification) settings of the `deckhouse` module if `applications.update` is not configured. The update is installed no earlier than `minimalNotificationTime` after the notification. Cleared once a new version is installed or the update is cancelled.
+                    properties:
+                      time:
+                        description: Time the notification was sent.
+                        format: date-time
+                        type: string
+                      version:
+                        description: Version the notification announced.
+                        type: string
+                    required:
+                    - time
+                    - version
+                    type: object
                   plan:
                     description: Update path after the automatic version in every
                       update mode. The path follows the compatibility rules to the

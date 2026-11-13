@@ -70,6 +70,7 @@ type Kit struct {
 	Orphans  *Orphans
 	CRDs     *CRDs
 	Webhooks *Webhooks
+	Notifier *Notifier
 	// Global is the fake global module; nil without WithGlobal.
 	Global *GlobalModule
 	// GlobalSettings is Global's boot checkpoint, empty values by default; set it before Boot (nil:
@@ -145,6 +146,7 @@ func New(t testing.TB, opts ...Option) *Kit {
 	k.Orphans = &Orphans{kit: k}
 	k.CRDs = &CRDs{kit: k}
 	k.Webhooks = &Webhooks{kit: k}
+	k.Notifier = &Notifier{kit: k}
 
 	if o.global {
 		k.Global = &GlobalModule{Package: newPackage(k, model.KindModule,

@@ -123,6 +123,11 @@ var summaryTable = map[phase]map[string]advice{
 			"Update is waiting for the update window; previous version is still serving",
 			"No action is required: the update starts in the next update window. Change the update windows in spec.update to start it earlier.",
 		},
+		model.ReasonWaitingNotification: {
+			stateUpdating,
+			"Update is waiting for the update notification; previous version is still serving",
+			"No action is required: the update starts once the notification is sent and its minimal notification time has passed. If the notification fails, check the webhook in the global applications.update.notification settings, or in the update.notification settings of the deckhouse module when applications.update is not set.",
+		},
 		reasonRequirementsUnmet: {
 			stateUpdating,
 			"Update is blocked: the new version's requirements are not satisfied; previous version is still serving",

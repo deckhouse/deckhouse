@@ -532,6 +532,12 @@ func TestUpdate(t *testing.T) {
 			summary: stateUpdating,
 		},
 		{
+			name:    "waiting for the notification",
+			report:  candidate(model.CandidateReport{Blocked: model.ReasonWaitingNotification}),
+			want:    healthy(map[string]cond{ConditionUpdateInstalled: wantFalse(model.ReasonWaitingNotification)}),
+			summary: stateUpdating,
+		},
+		{
 			name:    "requirements of the new version: RequirementsUnmet",
 			report:  candidate(model.CandidateReport{Blocked: model.ReasonRequirementsNotMet, Reason: "DependencyNotEnabled"}),
 			want:    healthy(map[string]cond{ConditionUpdateInstalled: wantFalse(reasonRequirementsUnmet)}),

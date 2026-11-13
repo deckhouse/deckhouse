@@ -584,6 +584,10 @@ func BootOf(ctx context.Context, cli client.Reader, app *v1alpha1.Application) (
 
 	boot.CurrentVersion = app.Status.CurrentVersion.Version
 
+	if u := app.Status.Update; u != nil && u.Notified != nil {
+		boot.Notified = model.Notified{Version: u.Notified.Version, At: u.Notified.Time.Time}
+	}
+
 	repo := new(v1alpha1.PackageRepository)
 	if err := cli.Get(ctx, client.ObjectKey{Name: app.Spec.PackageRepositoryName}, repo); err != nil {
 		return engine.BootApplication{}, fmt.Errorf("get package repository '%s': %w", app.Spec.PackageRepositoryName, err)

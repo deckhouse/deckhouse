@@ -117,8 +117,13 @@ type Reconciler struct {
 	config *model.Configuration
 	// configChecksum is config's configstate.Key, computed once per configuration.
 	configChecksum string
-	// wake is the one timer: the window gate, a preparation retry or a settings-check retry,
-	// whichever is first.
+	// notified is the notification sent for the pending update; zero when none is. Cleared at
+	// activation or when the update is cancelled (UpToDate).
+	notified model.Notified
+	// notification is the announcement in progress; nil when none is.
+	notification *notification
+	// wake is the one timer: the notification or the window gate, a preparation retry, a
+	// settings-check retry or a notification retry, whichever is first.
 	wake retry.Timer
 
 	// activated is Current's revision for readers outside the loop (Activated); the loop stores it
@@ -169,6 +174,13 @@ func (r *Reconciler) Start(parent context.Context) {
 	if cp := r.restored; cp != nil {
 		// An embedded module may be restored with a newer version than status.currentVersion.
 		r.reporter.SetActivated(cp.Revision.Image.Version)
+
+		// A notification of the restored version was consumed by its activation.
+		if cp.Notified.Version != "" && cp.Notified.Version != cp.Revision.Image.Version {
+			r.notified = cp.Notified
+			r.reporter.SetNotified(cp.Notified)
+		}
+
 		r.current = r.startCurrent(ctx, cp.Revision, cp.Configuration != nil)
 		r.activated.Store(&cp.Revision)
 

@@ -39,10 +39,11 @@ const (
 	Uninstall Kind = "uninstall"
 	Sync      Kind = "sync"
 	Prepare   Kind = "prepare" // Prepare attaches and loads a candidate (the package Reconciler's).
+	Notify    Kind = "notify"  // Notify sends the update notification (the package Reconciler's).
 )
 
-// Condition is the condition a failing step reports on; unused by Prepare, whose failure goes to
-// the Candidate section.
+// Condition is the condition a failing step reports on; unused by Prepare and Notify, whose
+// failures go to the Candidate section.
 type Condition int
 
 const (

@@ -36,6 +36,7 @@ func checkpoint(k *et.Kit, desired model.Desired) model.BootPackage {
 		Version:  r.CurrentVersion,
 		Source:   desired.Source,
 		Embedded: desired.Embedded,
+		Notified: r.Notified,
 	}
 
 	if desired.Kind == model.KindModule {

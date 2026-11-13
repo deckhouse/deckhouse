@@ -43,6 +43,8 @@ func (r *Reconciler) loop(ctx context.Context) {
 		case <-r.in.Ready():
 		case res := <-r.preparationDone():
 			r.preparationFinished(res)
+		case res := <-r.notificationDone():
+			r.notificationFinished(res)
 		case <-r.wake.C():
 		}
 
@@ -99,12 +101,18 @@ func (r *Reconciler) reconcile(ctx context.Context, in reconcilerInput) {
 
 	d := gate.Decide(ctx, gi, deps)
 
+	// Only the notification gate asks for a send; any other decision makes it moot.
+	if !d.Notify {
+		r.stopNotification()
+	}
+
 	var windowAt time.Time
 
 	switch d.Kind {
 	case gate.UpToDate:
 		r.stopCandidate(ctx)
 		r.reporter.SetCandidate(model.CandidateReport{})
+		r.clearNotified()
 	case gate.Prepare:
 		r.prepare(ctx, desired)
 		r.reporter.SetCandidate(model.CandidateReport{
@@ -121,8 +129,17 @@ func (r *Reconciler) reconcile(ctx context.Context, in reconcilerInput) {
 		}
 
 		windowAt = d.WakeAt
+		message := d.Message
 
-		r.reporter.SetCandidate(model.CandidateReport{Version: desired.Version, Blocked: d.Reason, Reason: d.Cause, Message: d.Message})
+		if d.Notify {
+			r.notify(ctx, desired, d.ApplyAt)
+
+			if err := r.notification.failure; err != nil {
+				message = "send the update notification: " + err.Error()
+			}
+		}
+
+		r.reporter.SetCandidate(model.CandidateReport{Version: desired.Version, Blocked: d.Reason, Reason: d.Cause, Message: message})
 	case gate.Activate:
 		r.activate(ctx, r.config, r.configChecksum)
 	}
@@ -130,11 +147,15 @@ func (r *Reconciler) reconcile(ctx context.Context, in reconcilerInput) {
 	r.resetWake(windowAt, gi.Now)
 }
 
-// resetWake sets the one timer to the earliest of the window gate's wake, the retry of a failed
-// preparation and the retry of a settings check that failed to decide, or stops it. now is the
-// time the gates decided at.
+// resetWake sets the one timer to the earliest of the notification or window gate's wake, the
+// retry of a failed preparation, the retry of a settings check that failed to decide and the retry
+// of a failed notification, or stops it. now is the time the gates decided at.
 func (r *Reconciler) resetWake(windowAt, now time.Time) {
 	at := windowAt
+
+	if retryAt := r.notificationRetry(); !retryAt.IsZero() && (at.IsZero() || retryAt.Before(at)) {
+		at = retryAt
+	}
 
 	if c := r.candidate; c != nil {
 		if retryAt := c.backoff.Until(); c.op == nil && c.outcome().Step != "" && (at.IsZero() || retryAt.Before(at)) {
@@ -157,6 +178,7 @@ func (r *Reconciler) gateInput(in reconcilerInput) gate.Input {
 		Name:     r.name,
 		Desired:  *in.desired,
 		Settings: r.config.Settings,
+		Notified: r.notified,
 		Now:      r.clock.Now(),
 	}
 

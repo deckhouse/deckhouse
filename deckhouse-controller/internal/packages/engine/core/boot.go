@@ -247,6 +247,7 @@ func (e *Engine) restore(ctx context.Context, packages []model.BootPackage) ([]*
 				Revision:      *rev,
 				Configuration: checkpointConfiguration(pkg, latestSettingsVersion(rev.Package)),
 				Removing:      pkg.Removing,
+				Notified:      pkg.Notified,
 			}
 
 			return nil

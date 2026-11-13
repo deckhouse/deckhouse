@@ -19,6 +19,7 @@ import (
 	"math/rand/v2"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -452,6 +453,32 @@ func (s *UpdaterSuite) TestUpdateClearsBeforeInstall() {
 	s.Nil(s.get(cli, app).Status.Update)
 }
 
+func (s *UpdaterSuite) TestUpdateKeepsNotified() {
+	app := installedApp("v1.2.3", "")
+	app.Spec.Update = &v1alpha1.ApplicationUpdate{Mode: string(v1alpha2.UpdateModeAuto)}
+	app.Status.Update = &v1alpha1.ApplicationStatusUpdate{Notified: notified("v1.3.0")}
+	cli := s.client(app, apvList("v1.2.5", "v1.3.0")...)
+
+	s.update(cli, app)
+
+	s.Equal("v1.3.0", s.get(cli, app).Status.Update.AutomaticVersion)
+	s.Equal("v1.3.0", s.get(cli, app).Status.Update.Notified.Version, "the notified mark is the status service's")
+}
+
+func (s *UpdaterSuite) TestUpdateKeepsNotifiedWithoutPlan() {
+	app := installedApp("v1.2.3", "")
+	app.Spec.Update = nil
+	app.Status.Update = &v1alpha1.ApplicationStatusUpdate{Plan: []string{"v1.3.0"}, Notified: notified("v1.3.0")}
+	cli := s.client(app)
+
+	s.update(cli, app)
+
+	got := s.get(cli, app).Status.Update
+	s.Require().NotNil(got, "a notified mark keeps status.update")
+	s.Empty(got.Plan)
+	s.Equal("v1.3.0", got.Notified.Version)
+}
+
 func (s *UpdaterSuite) TestUpdateKeepsCurrentWithoutOwnPackageVersions() {
 	app := installedApp("v1.2.3", "")
 	other := apvList("v1.2.5")
@@ -709,6 +736,14 @@ func (s *UpdaterSuite) report(cli client.Client, app *v1alpha1.Application, cond
 	patch := client.MergeFrom(got.DeepCopy())
 	setCondition(got, condType, condStatus)
 	s.Require().NoError(cli.Status().Patch(context.Background(), got, patch))
+}
+
+// notified is the notified mark of version sent at a fixed time.
+func notified(version string) *v1alpha1.ApplicationStatusUpdateNotified {
+	return &v1alpha1.ApplicationStatusUpdateNotified{
+		Version: version,
+		Time:    metav1.NewTime(time.Date(2026, 11, 12, 10, 0, 0, 0, time.UTC)),
+	}
 }
 
 // installedApp returns a ready application of the "console" package running current in AutoPatch, with the given

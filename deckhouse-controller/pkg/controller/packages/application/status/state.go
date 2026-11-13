@@ -204,6 +204,8 @@ func buildUpdateFacts(rep model.Report, activated bool, f *facts) {
 		}
 	case u.Blocked == model.ReasonWaitingWindow:
 		f.updateGate = falseSignal(model.ReasonWaitingWindow, u.Message)
+	case u.Blocked == model.ReasonWaitingNotification:
+		f.updateGate = falseSignal(model.ReasonWaitingNotification, u.Message)
 	case u.Blocked == model.ReasonSettingsInvalid:
 		f.configured = falseSignal(model.ReasonSettingsInvalid, u.Message)
 		f.candidateConfigured = f.configured

@@ -15,8 +15,8 @@
 // Package model is the vocabulary of the package lifecycle: the data that flows between Engine,
 // the package Reconciler, Current and Global, and the Report. It holds types, not behaviour.
 //
-// Dependency interfaces live with their consumers. The two interfaces here are carrier types:
-// Package, the loaded package object, and Windows, the update calendar inside Policy. A value
-// handed from one component to the next needs one type both can name; each consumer still calls
-// it through its own narrow interface.
+// Dependency interfaces live with their consumers. The three interfaces here are carrier types:
+// Package, the loaded package object, and Windows and Notifier, the update calendar and the update
+// notification webhook inside Policy. A value handed from one component to the next needs one type
+// both can name; each consumer still calls it through its own narrow interface.
 package model

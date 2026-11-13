@@ -15,6 +15,7 @@
 package model
 
 import (
+	"context"
 	"time"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule"
@@ -63,7 +64,45 @@ type Windows interface {
 type Policy struct {
 	Mode    UpdateMode
 	Windows Windows // Windows nil means any time.
-	Force   bool    // Force skips the window check.
+	Force   bool    // Force skips the notification and the window checks.
+	// Notification announces an update in the Auto mode before it activates; nil announces nothing.
+	Notification *Notification
+}
+
+// Notification is the update notification policy (applications.update.notification).
+type Notification struct {
+	// MinimalTime is the least time between the notification and the activation.
+	MinimalTime time.Duration
+	// Patches announces patch updates too (releaseType All); otherwise only minor and major ones.
+	Patches bool
+	// Notifier sends the announcement; nil announces nothing.
+	Notifier Notifier
+}
+
+// Notifier sends update announcements to one webhook (engine/notify.Notifier satisfies it), carried
+// to the package Reconciler, which declares its own interface over it.
+type Notifier interface {
+	Notify(ctx context.Context, a Announcement) error
+}
+
+// Notified is a sent update notification; the zero value means none.
+type Notified struct {
+	Version string    `json:"version" yaml:"version"` // Version is the announced version.
+	At      time.Time `json:"at" yaml:"at"`           // At is when the notification was sent.
+}
+
+// IsZero reports whether no notification is recorded.
+func (n Notified) IsZero() bool {
+	return n.Version == ""
+}
+
+// Announcement is one update notification the package Reconciler asks the notifier to send.
+type Announcement struct {
+	Name    string // Name is the package name; namespace.name for an application.
+	Kind    Kind
+	From    string    // From is Current's version.
+	Version string    // Version is the version the update activates.
+	ApplyAt time.Time // ApplyAt is when the update is expected to activate.
 }
 
 // Desired is the full desired state of one package, always passed whole, so the latest one is all
@@ -124,6 +163,9 @@ type BootPackage struct {
 	// Removing: the resource is being deleted. The package is restored only to be uninstalled as
 	// at runtime (hooks, release, purge), since a restart interrupted its removal.
 	Removing bool
+	// Notified is the notification sent for the pending update, so a restart does not send it again
+	// and still keeps its MinimalTime.
+	Notified Notified
 }
 
 // Restored is a restored package as the package Reconciler starts it.
@@ -134,4 +176,5 @@ type Restored struct {
 	Configuration *Configuration
 	// Removing starts the package Reconciler removing, before any run (BootPackage.Removing).
 	Removing bool
+	Notified Notified // Notified is BootPackage.Notified.
 }

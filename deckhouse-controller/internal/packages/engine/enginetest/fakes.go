@@ -593,6 +593,35 @@ func (w *Webhooks) EnsureWebhooks(ctx context.Context, view model.ModuleView) er
 	return w.kit.Faults.hit(ctx, "webhooks:"+view.Name)
 }
 
+// Notifier fakes the update notification webhook: records "notify:<name>@<version>" (fault key).
+type Notifier struct {
+	kit *Kit
+
+	mu   sync.Mutex
+	sent []model.Announcement
+}
+
+// Notify records the announcement unless its fault fails it.
+func (n *Notifier) Notify(ctx context.Context, a model.Announcement) error {
+	if err := n.kit.Faults.hit(ctx, "notify:"+a.Name+"@"+a.Version); err != nil {
+		return err
+	}
+
+	n.mu.Lock()
+	n.sent = append(n.sent, a)
+	n.mu.Unlock()
+
+	return nil
+}
+
+// Sent returns the announcements sent so far, in order.
+func (n *Notifier) Sent() []model.Announcement {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
+	return slices.Clone(n.sent)
+}
+
 // Window is an update window that opens at a set time; the zero value is closed forever.
 type Window struct {
 	mu    sync.Mutex

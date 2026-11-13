@@ -24,8 +24,10 @@
 //
 //	UpToDate  the desired version is Current's; a Candidate is dropped.
 //	Prepare   attach and load the desired revision; a failed attempt is retried with backoff.
-//	Blocked   a requirement, the settings or the update window stop it. The prepared Candidate is
-//	          kept and the timer wakes the gate again (the window's start, a retry).
+//	Blocked   a requirement, the settings, the update notification or the update window stop it.
+//	          The prepared Candidate is kept and the timer wakes the gate again (the window's
+//	          start, the notification's minimal time, a retry). The notification gate also asks
+//	          the package Reconciler to send the notification.
 //	Activate  every gate passed: the Candidate becomes Current.
 //
 // A file is a lifecycle stage:
@@ -34,6 +36,8 @@
 //	               checkpoint.
 //	loop.go        the loop and reconcile: one decision per wake, the one timer; the settings memo.
 //	prepare.go     the Candidate: attach, load, the retry backoff.
+//	notify.go      the update notification: the send, its retry, the sent notification, which
+//	               the activation or a cancelled update clears.
 //	activate.go    the switch: AddNode first, stop the old Current, start the new one, detach the
 //	               old image. The point of no return; there is no rollback. Restore, the same
 //	               preparation once at Boot.

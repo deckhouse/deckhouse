@@ -376,7 +376,7 @@ type ApplicationStatus struct {
 	// +optional
 	CurrentVersion *ApplicationStatusVersion `json:"currentVersion,omitempty"`
 
-	// Update of the application: the update plan and the version the automatic update moves to next.
+	// Update of the application: the update plan, the version the automatic update moves to next and the notification sent about the pending update.
 	//
 	// Empty before the first version is installed.
 	// +optional
@@ -414,7 +414,8 @@ type ApplicationStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
-// ApplicationStatusUpdate is the automatic update state of the application, recomputed on every reconcile.
+// ApplicationStatusUpdate is the automatic update state of the application: the plan and the automatic version are
+// recomputed on every reconcile, the notified mark is written by the package engine.
 type ApplicationStatusUpdate struct {
 	// Update path after the automatic version in every update mode. The path follows the compatibility rules to the newest version in the cluster, or to the newest version the rules reach; each step is the newest version from which the end of the path is still reached.
 	// +optional
@@ -423,6 +424,21 @@ type ApplicationStatusUpdate struct {
 	// Version the automatic update installs next. It changes only after the previous one is installed and ready. Empty in the `Manual` update mode.
 	// +optional
 	AutomaticVersion string `json:"automaticVersion,omitempty"`
+
+	// Notification sent about the pending update: the version it announced and when it was sent.
+	//
+	// It is sent to the webhook of the global [`applications.update.notification`](global.html#parameters-applications-update-notification) settings, or of the [`update.notification`](/modules/deckhouse/configuration.html#parameters-update-notification) settings of the `deckhouse` module if `applications.update` is not configured. The update is installed no earlier than `minimalNotificationTime` after the notification. Cleared once a new version is installed or the update is cancelled.
+	// +optional
+	Notified *ApplicationStatusUpdateNotified `json:"notified,omitempty"`
+}
+
+// ApplicationStatusUpdateNotified is the update notification sent for the pending update.
+type ApplicationStatusUpdateNotified struct {
+	// Version the notification announced.
+	Version string `json:"version"`
+
+	// Time the notification was sent.
+	Time metav1.Time `json:"time"`
 }
 
 // ApplicationStatusSummary aggregates the high-level lifecycle state, message

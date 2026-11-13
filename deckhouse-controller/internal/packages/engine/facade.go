@@ -30,6 +30,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/disk"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/core"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/lifecycle/model"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/notify"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/observed"
@@ -116,6 +117,8 @@ type BootApplication struct {
 	// Removing: the Application is being deleted and has a CurrentVersion; Boot restores it to
 	// uninstall it (model.BootPackage.Removing).
 	Removing bool
+	// Notified is status.update.notified (model.BootPackage.Notified).
+	Notified model.Notified
 }
 
 // BootModule is what Boot needs of an installed Module; global is not passed.
@@ -186,6 +189,7 @@ func (e *Engine) Boot(ctx context.Context, global []byte, bootApps []BootApplica
 			ResourceRequests: a.ResourceRequests,
 			Source:           model.Source{Repository: a.Repository, Package: a.PackageName},
 			Removing:         a.Removing,
+			Notified:         a.Notified,
 		})
 	}
 
@@ -409,8 +413,9 @@ func (e *Engine) Ready() bool {
 }
 
 // policyOf translates the update settings: Manual updates at once; any other mode, AutoPatch
-// included, is Auto and waits for the windows for every version the controller asks for, unless
-// applyNow (the apply-now annotation naming that version) forces it.
+// included, is Auto and announces the update when a notification webhook is set, then waits for the
+// windows for every version the controller asks for, unless applyNow (the apply-now annotation
+// naming that version) forces it.
 func policyOf(settings releaseupdater.Settings, applyNow bool) model.Policy {
 	policy := model.Policy{Mode: model.UpdateModeAuto, Force: applyNow}
 	if settings.InManualMode() {
@@ -422,7 +427,31 @@ func policyOf(settings releaseupdater.Settings, applyNow bool) model.Policy {
 		policy.Windows = settings.Windows
 	}
 
+	if config := settings.NotificationConfig; config.WebhookURL != "" {
+		policy.Notification = &model.Notification{
+			MinimalTime: config.MinimalNotificationTime.Duration,
+			Patches:     config.ReleaseType == releaseupdater.ReleaseTypeAll,
+			Notifier:    notify.New(notifyConfigOf(config)),
+		}
+	}
+
 	return policy
+}
+
+// notifyConfigOf translates the webhook of the notification settings.
+func notifyConfigOf(config releaseupdater.NotificationConfig) notify.Config {
+	out := notify.Config{WebhookURL: config.WebhookURL, SkipTLSVerify: config.SkipTLSVerify}
+
+	if auth := config.Auth; auth != nil {
+		switch {
+		case auth.Basic != nil:
+			out.Auth = notify.Auth{Username: auth.Basic.Username, Password: auth.Basic.Password}
+		case auth.Token != nil:
+			out.Auth = notify.Auth{Token: *auth.Token}
+		}
+	}
+
+	return out
 }
 
 // publishMaintenance keeps the maintenance gauge of every application the sink was notified of in

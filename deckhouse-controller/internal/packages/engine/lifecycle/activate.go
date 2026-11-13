@@ -39,8 +39,8 @@ const detachTimeout = 30 * time.Second
 // activate makes the prepared revision Current, with the configuration that passed every gate:
 //  1. AddNode it; a rejection changes nothing (rejectCandidate);
 //  2. take what the candidate prepared and stop the old Current;
-//  3. report CurrentVersion and clear the Candidate section in one write: the point of no return,
-//     and the status never shows the activated version as a pending candidate;
+//  3. report CurrentVersion and clear the Candidate section and the notification in one write: the
+//     point of no return, and the status never shows the activated version as a pending candidate;
 //  4. start the new Current and push it config;
 //  5. detach the old Current's image.
 //
@@ -83,6 +83,7 @@ func (r *Reconciler) activate(ctx context.Context, config *model.Configuration, 
 	}
 
 	r.reporter.SetActivated(rev.Image.Version)
+	r.notified = model.Notified{}
 	r.logger.Info("activated", slog.String("version", rev.Image.Version))
 
 	r.current = r.startCurrent(ctx, rev, false)

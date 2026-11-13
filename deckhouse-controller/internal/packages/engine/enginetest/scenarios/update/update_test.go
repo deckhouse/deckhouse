@@ -504,6 +504,80 @@ func (s *updateSuite) TestC10NewerPushReleasesTheDevCandidate() {
 	s.Equal([]string{mod + "@" + devB}, k.Disk.Attached())
 }
 
+// C11: an update in the Auto mode is announced once, before it activates, and activates after the
+// notification's minimal time; the activation clears the notification.
+func (s *updateSuite) TestC11AnnouncedBeforeActivation() {
+	k := s.k
+	start := k.Clock.Now()
+
+	mark := k.Mark()
+	k.ApplyModule(s.announced(v2, time.Hour), true)
+
+	r := k.WaitReport(mod, "announced, waiting for the minimal time", func(r model.Report) bool {
+		return r.Notified.Version == v2 && strings.Contains(r.Candidate.Message, "waiting until")
+	})
+	s.Equal(model.ReasonWaitingNotification, r.Candidate.Blocked)
+	s.Equal(start, r.Notified.At)
+	s.Equal(v1, r.CurrentVersion)
+	s.Equal([]model.Announcement{{Name: mod, Kind: model.KindModule, From: v1, Version: v2, ApplyAt: start.Add(time.Hour)}},
+		k.Notifier.Sent())
+
+	s.Equal(time.Hour, k.AdvanceToNextTimer("the notification's minimal time"))
+	s.waitRunning(v2)
+	s.Equal(1, k.Count(mark, "notify:"+mod+"@"+v2), "announced once")
+	s.True(k.Report(mod).Notified.IsZero(), "the activation cleared the notification")
+	s.inOrder(mark, "load:"+mod+"@"+v2, "notify:"+mod+"@"+v2, "add-node:"+mod+"@"+v2)
+}
+
+// C11: a failed notification holds the update and is retried after its backoff.
+func (s *updateSuite) TestC11FailedNotificationIsRetried() {
+	k := s.k
+	k.Faults.FailTimes("notify:"+mod+"@"+v2, 1, errors.New("webhook is down"))
+
+	mark := k.Mark()
+	k.ApplyModule(s.announced(v2, 0), true)
+
+	r := k.WaitReport(mod, "the notification failed", func(r model.Report) bool {
+		return strings.Contains(r.Candidate.Message, "webhook is down")
+	})
+	s.Equal(model.ReasonWaitingNotification, r.Candidate.Blocked)
+	s.Equal(v1, r.CurrentVersion, "a failed notification holds the update")
+
+	s.Equal(retry.Min, k.AdvanceToNextTimer("the notification's retry"))
+	s.waitRunning(v2)
+	s.Equal(2, k.Count(mark, "notify:"+mod+"@"+v2))
+}
+
+// C11: a cancelled update clears its notification, so the version wanted again is announced again.
+func (s *updateSuite) TestC11CancelledUpdateClearsTheNotification() {
+	k := s.k
+
+	mark := k.Mark()
+	k.ApplyModule(s.announced(v2, time.Hour), true)
+	k.WaitReport(mod, "announced", func(r model.Report) bool { return r.Notified.Version == v2 })
+
+	k.ApplyModule(s.announced(v1, time.Hour), true)
+	r := k.WaitReport(mod, "the update was cancelled", func(r model.Report) bool {
+		return r.Notified.IsZero() && r.Candidate == model.CandidateReport{}
+	})
+	s.Equal(v1, r.CurrentVersion)
+
+	k.ApplyModule(s.announced(v2, time.Hour), true)
+	k.WaitReport(mod, "announced again", func(r model.Report) bool { return r.Notified.Version == v2 })
+	s.Equal(2, k.Count(mark, "notify:"+mod+"@"+v2), "the cancelled notification does not count")
+}
+
+// announced is mod at version with a notification of minimal time in the Auto mode.
+func (s *updateSuite) announced(version string, minimal time.Duration) model.Desired {
+	d := et.Module(mod, version)
+	d.Policy = model.Policy{
+		Mode:         model.UpdateModeAuto,
+		Notification: &model.Notification{MinimalTime: minimal, Notifier: s.k.Notifier},
+	}
+
+	return d
+}
+
 func (s *updateSuite) waitRunning(version string) {
 	s.T().Helper()
 	s.k.WaitReport(mod, "running "+version, func(r model.Report) bool {

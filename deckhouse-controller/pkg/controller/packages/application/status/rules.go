@@ -40,8 +40,8 @@ const (
 	ConditionInstalled = "Installed"
 
 	// ConditionUpdateInstalled reflects installing a new version over a
-	// running application: False while the update is blocked (WaitingWindow,
-	// RequirementsUnmet, SettingsInvalid), its preparation failed
+	// running application: False while the update is blocked (WaitingNotification,
+	// WaitingWindow, RequirementsUnmet, SettingsInvalid), its preparation failed
 	// (AttachFailed, LoadFromFilesystemFailed), it is being applied
 	// (ApplyingManifests) or the new version's first run failed
 	// (HookInitializationFailed, HookFailed, ManifestsApplyFailed,

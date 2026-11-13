@@ -34,6 +34,10 @@ type Report struct {
 	// RemoveError is the last failure of the by-name release delete of a remove without a Current;
 	// cleared when the delete succeeds. While it is set, Removed stays false.
 	RemoveError string `json:"removeError" yaml:"removeError"`
+	// Notified is the notification sent for the pending update, written only by the package
+	// Reconciler and cleared at activation or when the update is cancelled
+	// (status.update.notified).
+	Notified Notified `json:"notified" yaml:"notified"`
 }
 
 // Condition is one internal condition of the Current section. The zero value is "not reported":
@@ -78,6 +82,9 @@ const (
 	// revision.
 	ReasonRequirementsNotMet = "RequirementsNotMet"
 	ReasonWaitingWindow      = "WaitingWindow"
+	// ReasonWaitingNotification: the update is not announced yet, or its notification's minimal
+	// time has not passed.
+	ReasonWaitingNotification = "WaitingNotification"
 	// ReasonAttachFailed: the attach step failed (download, verification and mount are one call).
 	ReasonAttachFailed             = "AttachFailed"
 	ReasonLoadFromFilesystemFailed = "LoadFromFilesystemFailed"
@@ -155,7 +162,7 @@ type Decision struct {
 type CandidateReport struct {
 	Version string `json:"version" yaml:"version"` // Version is the desired version being evaluated.
 	// Blocked is the reason of the gate that blocks: ReasonSettingsInvalid,
-	// ReasonRequirementsNotMet or ReasonWaitingWindow. Nothing is broken; the world must change.
+	// ReasonRequirementsNotMet, ReasonWaitingNotification or ReasonWaitingWindow. Nothing is broken; the world must change.
 	Blocked string `json:"blocked" yaml:"blocked"`
 	// Step is the preparation step that failed (attach, load); the package Reconciler retries it.
 	Step string `json:"step" yaml:"step"`

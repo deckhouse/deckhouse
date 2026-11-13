@@ -26,7 +26,7 @@ import (
 )
 
 // remove removes the package from the graph and uninstalls it, blocking until done or cancelled:
-// stop the preparation; RemoveNode; uninstall (Current.Uninstall: Current owns the hooks the
+// stop the preparation and the notification; RemoveNode; uninstall (Current.Uninstall: Current owns the hooks the
 // deletion hooks need and retries itself; without a Current, delete the release by name, without
 // deletion hooks); detach Current's image; report Removed. The node goes first: a deletion is never
 // undone, and a node left to an uninstall that keeps failing would hold readiness and every higher
@@ -34,6 +34,7 @@ import (
 // package to remove it again; RemoveNode of an absent node is a no-op.
 func (r *Reconciler) remove(ctx context.Context) {
 	r.stopCandidate(ctx)
+	r.dropNotification()
 
 	r.deps.Scheduler.RemoveNode(r.name)
 
@@ -111,5 +112,6 @@ func (r *Reconciler) deleteRelease(ctx context.Context) bool {
 
 func (r *Reconciler) shutdown(ctx context.Context) {
 	r.stopCandidate(ctx)
+	r.dropNotification()
 	r.current.Stop()
 }

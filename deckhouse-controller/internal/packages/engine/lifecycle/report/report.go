@@ -62,13 +62,24 @@ func (r *Reporter) SetCandidate(ur model.CandidateReport) {
 	})
 }
 
-// SetActivated records the activated version and clears the Candidate section in one write, so no
-// reader sees the activated version as a pending candidate.
+// SetActivated records the activated version and clears the Candidate section and the notification
+// in one write, so no reader sees the activated version as a pending candidate or still announced.
 func (r *Reporter) SetActivated(version string) {
 	r.write(func(rep *model.Report) bool {
-		changed := rep.CurrentVersion != version || rep.Candidate != model.CandidateReport{}
+		changed := rep.CurrentVersion != version || rep.Candidate != model.CandidateReport{} || !rep.Notified.IsZero()
 		rep.CurrentVersion = version
 		rep.Candidate = model.CandidateReport{}
+		rep.Notified = model.Notified{}
+
+		return changed
+	})
+}
+
+// SetNotified records the notification sent for the pending update.
+func (r *Reporter) SetNotified(notified model.Notified) {
+	r.write(func(rep *model.Report) bool {
+		changed := rep.Notified.Version != notified.Version || !rep.Notified.At.Equal(notified.At)
+		rep.Notified = notified
 
 		return changed
 	})

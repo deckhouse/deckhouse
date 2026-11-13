@@ -69,6 +69,11 @@ type object struct{ model.Package }
 func (object) GetConstraints() schedule.Constraints { return constraints }
 func (object) GetVersion() *semver.Version          { return semver.MustParse("2.0.0") }
 
+// fakeNotifier is a notifier the gate never calls.
+type fakeNotifier struct{}
+
+func (fakeNotifier) Notify(context.Context, model.Announcement) error { return nil }
+
 type fakeWindows struct{ allowed bool }
 
 func (f fakeWindows) IsAllowed(time.Time) bool            { return f.allowed }
@@ -78,6 +83,13 @@ func TestDecide(t *testing.T) {
 	current := &model.Image{Version: "v1"}
 	ready := &Prepared{Ready: true, Object: object{}}
 	outside := model.Policy{Mode: model.UpdateModeAuto, Windows: fakeWindows{}}
+	// announce notifies an update with an hour's minimal time; announceOutside also has a closed window.
+	announce := model.Policy{Mode: model.UpdateModeAuto, Notification: &model.Notification{MinimalTime: time.Hour, Notifier: fakeNotifier{}}}
+	announceOutside := announce
+	announceOutside.Windows = fakeWindows{}
+	notified := model.Notified{Version: "v2", At: now.Add(-30 * time.Minute)}
+	elapsed := model.Notified{Version: "v2", At: now.Add(-time.Hour)} // elapsed: the minimal time has passed.
+	patchCurrent := &model.Image{Version: "v1.2.0"}
 
 	tests := []struct {
 		name     string
@@ -199,6 +211,107 @@ func TestDecide(t *testing.T) {
 			in: Input{Desired: model.Desired{Version: "v2", Policy: outside}, Current: current,
 				Prepared: &Prepared{Step: "load", Reason: model.ReasonLoadFromFilesystemFailed, Message: "load"}},
 			want: Decision{Kind: Prepare, Step: "load", Reason: model.ReasonLoadFromFilesystemFailed, Message: "load"},
+		},
+		// notification
+		{
+			name: "an update is announced before it activates",
+			in:   Input{Desired: model.Desired{Version: "v2", Policy: announce}, Current: current, Prepared: ready},
+			want: Decision{
+				Kind: Blocked, Reason: model.ReasonWaitingNotification, Notify: true, ApplyAt: now.Add(time.Hour),
+				Message: "waiting for the update notification to be sent",
+			},
+		},
+		{
+			name: "the announced apply time is the next window start",
+			in:   Input{Desired: model.Desired{Version: "v2", Policy: announceOutside}, Current: current, Prepared: ready},
+			want: Decision{
+				Kind: Blocked, Reason: model.ReasonWaitingNotification, Notify: true, ApplyAt: nextWindow,
+				Message: "waiting for the update notification to be sent",
+			},
+		},
+		{
+			name: "announced: waits for the minimal time",
+			in: Input{Desired: model.Desired{Version: "v2", Policy: announce}, Current: current, Prepared: ready,
+				Notified: notified},
+			want: Decision{
+				Kind: Blocked, Reason: model.ReasonWaitingNotification, WakeAt: now.Add(30 * time.Minute),
+				Message: "the update was announced, waiting until 2026-10-08T12:30:00Z",
+			},
+		},
+		{
+			name: "announced and the minimal time passed",
+			in: Input{Desired: model.Desired{Version: "v2", Policy: announce}, Current: current, Prepared: ready,
+				Notified: elapsed},
+			want: Decision{Kind: Activate},
+		},
+		{
+			name: "the window after the notification",
+			in: Input{Desired: model.Desired{Version: "v2", Policy: announceOutside}, Current: current, Prepared: ready,
+				Notified: elapsed},
+			want: Decision{
+				Kind: Blocked, Reason: model.ReasonWaitingWindow, WakeAt: nextWindow,
+				Message: "waiting for the update window at 2026-10-08T15:00:00Z",
+			},
+		},
+		{
+			name: "a notification of another version is sent again",
+			in: Input{Desired: model.Desired{Version: "v3", Policy: announce}, Current: current, Prepared: ready,
+				Notified: notified},
+			want: Decision{
+				Kind: Blocked, Reason: model.ReasonWaitingNotification, Notify: true, ApplyAt: now.Add(time.Hour),
+				Message: "waiting for the update notification to be sent",
+			},
+		},
+		{
+			name:     "final before the notification",
+			in:       Input{Desired: model.Desired{Version: "v2", Policy: announce}, Current: current, Prepared: ready},
+			settings: errors.New("invalid"),
+			want:     Decision{Kind: Blocked, Reason: model.ReasonSettingsInvalid, Message: "invalid"},
+		},
+		{
+			name: "a patch update is not announced without patches",
+			in:   Input{Desired: model.Desired{Version: "v1.2.1", Policy: announce}, Current: patchCurrent, Prepared: ready},
+			want: Decision{Kind: Activate},
+		},
+		{
+			name: "a patch update is announced with patches",
+			in: Input{Desired: model.Desired{Version: "v1.2.1", Policy: model.Policy{Mode: model.UpdateModeAuto,
+				Notification: &model.Notification{Patches: true, Notifier: fakeNotifier{}}}}, Current: patchCurrent, Prepared: ready},
+			want: Decision{
+				Kind: Blocked, Reason: model.ReasonWaitingNotification, Notify: true, ApplyAt: now,
+				Message: "waiting for the update notification to be sent",
+			},
+		},
+		{
+			name: "a minor update is announced without patches",
+			in:   Input{Desired: model.Desired{Version: "v1.3.0", Policy: announce}, Current: patchCurrent, Prepared: ready},
+			want: Decision{
+				Kind: Blocked, Reason: model.ReasonWaitingNotification, Notify: true, ApplyAt: now.Add(time.Hour),
+				Message: "waiting for the update notification to be sent",
+			},
+		},
+		{
+			name: "manual mode announces nothing",
+			in: Input{Desired: model.Desired{Version: "v2", Policy: model.Policy{Mode: model.UpdateModeManual,
+				Notification: announce.Notification}}, Current: current, Prepared: ready},
+			want: Decision{Kind: Activate},
+		},
+		{
+			name: "force skips the notification",
+			in: Input{Desired: model.Desired{Version: "v2", Policy: model.Policy{Mode: model.UpdateModeAuto,
+				Notification: announce.Notification, Force: true}}, Current: current, Prepared: ready},
+			want: Decision{Kind: Activate},
+		},
+		{
+			name: "no notifier announces nothing",
+			in: Input{Desired: model.Desired{Version: "v2", Policy: model.Policy{Mode: model.UpdateModeAuto,
+				Notification: &model.Notification{MinimalTime: time.Hour}}}, Current: current, Prepared: ready},
+			want: Decision{Kind: Activate},
+		},
+		{
+			name: "a first install announces nothing",
+			in:   Input{Desired: model.Desired{Version: "v1", Policy: announce}, Prepared: ready},
+			want: Decision{Kind: Activate},
 		},
 		// window
 		{

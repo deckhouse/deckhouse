@@ -16,6 +16,7 @@ package boot_test
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -129,6 +130,57 @@ func (s *restartSuite) TestF3RestartWhileUpdateIsBlocked() {
 	window.OpenAt(k2.Clock.Now())
 	k2.ApplyModule(v2, true)
 	running(k2, "m", "v2.0.0")
+}
+
+// F3: a restart while an announced update waits for the notification's minimal time sends no
+// second notification and keeps the minimal time counted from the first one.
+func (s *restartSuite) TestF3RestartWhileAnnouncedUpdateWaits() {
+	announced := func(k *et.Kit) model.Desired {
+		d := et.Module("m", "v2.0.0")
+		d.Policy = model.Policy{
+			Mode:         model.UpdateModeAuto,
+			Notification: &model.Notification{MinimalTime: time.Hour, Notifier: k.Notifier},
+		}
+
+		return d
+	}
+
+	k1 := et.New(s.T(), et.WithGlobal())
+	k1.MustBoot()
+	k1.ApplyModule(et.Module("m", "v1.0.0"), true)
+	running(k1, "m", "v1.0.0")
+
+	k1.ApplyModule(announced(k1), true)
+	k1.WaitReport("m", "announced", func(r model.Report) bool { return r.Notified.Version == "v2.0.0" })
+
+	bp := checkpoint(k1, et.Module("m", "v1.0.0"))
+	k1.Shutdown()
+	s.Equal(model.Notified{Version: "v2.0.0", At: et.Epoch}, bp.Notified)
+
+	k2 := et.New(s.T(), et.WithGlobal())
+	k2.MustBoot(bp)
+	k2.ApplyModule(announced(k2), true)
+
+	r := k2.WaitReport("m", "waiting for the minimal time after the restart", func(r model.Report) bool {
+		return r.Candidate.Blocked == model.ReasonWaitingNotification && strings.Contains(r.Candidate.Message, "waiting until")
+	})
+	s.Equal(bp.Notified, r.Notified)
+	s.Empty(k2.Notifier.Sent(), "the restored notification is not sent again")
+
+	s.Equal(time.Hour, k2.AdvanceToNextTimer("the notification's minimal time"))
+	running(k2, "m", "v2.0.0")
+}
+
+// F3: a restored notification of the restored version itself was consumed by its activation.
+func (s *restartSuite) TestF3RestoredNotificationOfTheCurrentVersionIsDropped() {
+	bp := enabled(et.Restored(et.Module("m", "v1.0.0"), addonutils.Values{}))
+	bp.Notified = model.Notified{Version: "v1.0.0", At: et.Epoch}
+
+	k := et.New(s.T(), et.WithGlobal())
+	k.MustBoot(bp)
+
+	r := running(k, "m", "v1.0.0")
+	s.True(r.Notified.IsZero())
 }
 
 // F4: a restart between the activation of v2 and its first successful run restores v2 with v1's

@@ -64,6 +64,8 @@ type Input struct {
 	// Prepared is the latest result of the preparation of the desired revision; nil when there is
 	// none.
 	Prepared *Prepared
+	// Notified is the notification sent for the pending update; zero when none was.
+	Notified model.Notified
 	Now      time.Time
 }
 
@@ -103,7 +105,11 @@ type Decision struct {
 	Cause   string
 	Message string
 	Step    string    // Step is the failed preparation step (Prepare).
-	WakeAt  time.Time // WakeAt is when the window gate wants to be evaluated again (Blocked).
+	WakeAt  time.Time // WakeAt is when the notification or window gate wants to decide again (Blocked).
+	// Notify: the update must be announced before it goes on; ApplyAt is when it is expected to
+	// activate, for the announcement (Blocked, ReasonWaitingNotification).
+	Notify  bool
+	ApplyAt time.Time
 }
 
 // windows is the update calendar as the window gate reads it (model.Windows).
@@ -118,12 +124,13 @@ type packageObject interface {
 }
 
 // Decide runs the gates in their contract order, current → requirements → prepared → final
-// (settings of an update, constraints, dependents) → window, and returns the first that stops;
-// Activate when none does. Every wake decides from the start. The gates before prepared check requirements only,
-// before anything is downloaded: settings can be checked only once the revision is loaded. The
-// window comes last, so the revision is downloaded, loaded and checked ahead and the activation
-// happens at the window start; meanwhile the package Reconciler keeps the prepared candidate, and
-// every wake (a settings change among them) runs the final gate again.
+// (settings of an update, constraints, dependents) → notification → window, and returns the first
+// that stops; Activate when none does. Every wake decides from the start. The gates before prepared
+// check requirements only, before anything is downloaded: settings can be checked only once the
+// revision is loaded. The notification and the window come last, so only an update ready to
+// activate is announced, and the revision is downloaded, loaded and checked ahead and the
+// activation happens at the window start; meanwhile the package Reconciler keeps the prepared
+// candidate, and every wake (a settings change among them) runs the final gate again.
 func Decide(ctx context.Context, in Input, deps Deps) Decision {
 	// Current: the same version. A version names one image (versions are immutable), so no
 	// preparation ever attaches Current's own instance.
@@ -174,9 +181,35 @@ func Decide(ctx context.Context, in Input, deps Deps) Decision {
 		return requirementsBlocked(err)
 	}
 
-	// Window: passes for a first install (no Current to protect), in manual mode, with Force,
-	// without windows or inside one. The notification before a window is the controller's.
 	policy := in.Desired.Policy
+
+	// Notification: an update in the Auto mode is announced before it activates, and activates no
+	// earlier than the notification's minimal time after it. The package Reconciler sends it.
+	if announced(in) {
+		n := policy.Notification
+
+		if in.Notified.Version != in.Desired.Version {
+			return Decision{
+				Kind:    Blocked,
+				Reason:  model.ReasonWaitingNotification,
+				Message: "waiting for the update notification to be sent",
+				Notify:  true,
+				ApplyAt: applyTime(in.Now, n.MinimalTime, policy.Windows),
+			}
+		}
+
+		if until := in.Notified.At.Add(n.MinimalTime); in.Now.Before(until) {
+			return Decision{
+				Kind:    Blocked,
+				Reason:  model.ReasonWaitingNotification,
+				Message: "the update was announced, waiting until " + until.UTC().Format(time.RFC3339),
+				WakeAt:  until,
+			}
+		}
+	}
+
+	// Window: passes for a first install (no Current to protect), in manual mode, with Force,
+	// without windows or inside one.
 	if in.Current == nil || policy.Mode == model.UpdateModeManual || policy.Force || policy.Windows == nil {
 		return Decision{Kind: Activate}
 	}
@@ -194,6 +227,50 @@ func Decide(ctx context.Context, in Input, deps Deps) Decision {
 		Message: "waiting for the update window at " + next.UTC().Format(time.RFC3339),
 		WakeAt:  next,
 	}
+}
+
+// announced reports whether the update must be announced: an update of a Current (a first install
+// has nothing to announce) in the Auto mode without Force, with a notification policy and its
+// notifier that cover its version (a patch update only with Patches; an unparsable version is never a patch).
+func announced(in Input) bool {
+	policy := in.Desired.Policy
+	if in.Current == nil || policy.Mode == model.UpdateModeManual || policy.Force ||
+		policy.Notification == nil || policy.Notification.Notifier == nil {
+		return false
+	}
+
+	return policy.Notification.Patches || !patchUpdate(in.Current.Version, in.Desired.Version)
+}
+
+// patchUpdate reports whether to differs from from in the patch version only.
+func patchUpdate(from, to string) bool {
+	f, err := semver.NewVersion(from)
+	if err != nil {
+		return false
+	}
+
+	t, err := semver.NewVersion(to)
+	if err != nil {
+		return false
+	}
+
+	return f.Major() == t.Major() && f.Minor() == t.Minor()
+}
+
+// applyTime is when an update announced at now is expected to activate: after the minimal time,
+// at the next window start when that falls outside the windows.
+func applyTime(now time.Time, minimal time.Duration, policyWindows model.Windows) time.Time {
+	at := now.Add(minimal)
+	if policyWindows == nil {
+		return at
+	}
+
+	var w windows = policyWindows
+	if w.IsAllowed(at) {
+		return at
+	}
+
+	return w.NextAllowedTime(at)
 }
 
 // requirementsBlocked is the decision of a requirements gate that err rejected.

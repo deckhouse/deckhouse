@@ -39,9 +39,9 @@ func NewUpdater(cli client.Client) *Updater {
 	return &Updater{client: cli}
 }
 
-// Update patches status.update of the application; a not yet installed application clears it. The plan is the whole
-// path after automaticVersion in every mode, so it shows where the application may go next; automaticVersion is
-// empty in Manual mode.
+// Update patches status.update of the application; a not yet installed application clears it, except the notified
+// mark, which only the status service writes. The plan is the whole path after automaticVersion in every mode, so it
+// shows where the application may go next; automaticVersion is empty in Manual mode.
 func (u *Updater) Update(ctx context.Context, app *v1alpha1.Application) error {
 	var desired *v1alpha1.ApplicationStatusUpdate
 
@@ -75,6 +75,15 @@ func (u *Updater) Update(ctx context.Context, app *v1alpha1.Application) error {
 		if len(desired.Plan) == 0 && desired.AutomaticVersion == "" {
 			desired = nil
 		}
+	}
+
+	// The notified mark is the package engine's, which the status service writes: carried over as is.
+	if app.Status.Update != nil && app.Status.Update.Notified != nil {
+		if desired == nil {
+			desired = new(v1alpha1.ApplicationStatusUpdate)
+		}
+
+		desired.Notified = app.Status.Update.Notified
 	}
 
 	if equality.Semantic.DeepEqual(app.Status.Update, desired) {

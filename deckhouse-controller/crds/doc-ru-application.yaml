@@ -321,7 +321,7 @@ spec:
                         Версия установленного приложения в формате SemVer.
                 update:
                   description: |
-                    Обновление приложения: план обновления и версия, на которую автоматическое обновление перейдет следующей.
+                    Обновление приложения: план обновления, версия, на которую автоматическое обновление перейдет следующей, и отправленное оповещение о предстоящем обновлении.
 
                     Пусто до установки первой версии.
                   properties:
@@ -331,6 +331,18 @@ spec:
                     automaticVersion:
                       description: |
                         Версия, которую автоматическое обновление установит следующей. Меняется только после того, как предыдущая установлена и готова. Пусто в режиме обновления `Manual`.
+                    notified:
+                      description: |
+                        Оповещение, отправленное о предстоящем обновлении: объявленная версия и время отправки.
+
+                        Оповещение отправляется на вебхук из глобальных параметров [`applications.update.notification`](global.html#parameters-applications-update-notification) или, если `applications.update` не задан, из параметров [`update.notification`](/modules/deckhouse/configuration.html#parameters-update-notification) модуля `deckhouse`. Обновление устанавливается не раньше чем через `minimalNotificationTime` после оповещения. Очищается после установки новой версии или отмены обновления.
+                      properties:
+                        version:
+                          description: |
+                            Версия, о которой было отправлено оповещение.
+                        time:
+                          description: |
+                            Время отправки оповещения.
                 urls:
                   description: |
                     URL-адреса эндпоинтов приложения, полученные из ресурсов Ingress, HTTPRoute и ServiceAccount чарта приложения с аннотацией `packages.deckhouse.io/application-endpoint-description`. Для ServiceAccount это внутрикластерный адрес API Kubernetes — `https://kubernetes.default.svc/`.
