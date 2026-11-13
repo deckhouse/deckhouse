@@ -43,8 +43,6 @@ var userAuthzValidationWebhooks = map[string][]string{
 	"user-authz-rbacv2-cluster-roles":       {"webhooks/validating/cluster_roles.py"},
 	"user-authz-rbacv2-role-escalation":     {"webhooks/validating/role_escalation.py"},
 	"user-authz-role-binding":               {"webhooks/validating/role_binding.py"},
-	"user-authz-system-resources-edit":      {"webhooks/validating/system_resources.py"},
-	"user-authz-system-resources-exec":      {"webhooks/validating/system_resources.py"},
 	"user-authz-system-roles":               {"webhooks/validating/system_roles.py"},
 }
 
@@ -504,87 +502,6 @@ var _ = Describe("Module :: user-authz :: helm template :: validation webhooks",
 				"metadata": map[string]interface{}{"name": "plain"},
 				"spec":     map[string]interface{}{},
 			}))
-		})
-	})
-
-	Context("system-resources", func() {
-		// Both webhooks are fail-closed and the exec one matches every pod in the cluster, so the
-		// bypass has to be evaluated by the API server: an unavailable webhook-handler must not block
-		// exec for the cluster administrators trying to diagnose it.
-		It("Should exclude the bypass groups and the privileged users in matchConditions of both webhooks", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-			groups := pythonStrings("webhooks/validating/system_resources.py", "BYPASS_GROUPS")
-			users := pythonStrings("webhooks/validating/system_resources.py", "PRIVILEGED_USERS")
-			prefixes := pythonStrings("webhooks/validating/system_resources.py", "PRIVILEGED_USER_PREFIXES")
-			for _, webhook := range []string{"user-authz-system-resources-edit", "user-authz-system-resources-exec"} {
-				all := expressions(webhook)
-				for _, group := range groups {
-					Expect(all).To(ContainElement(fmt.Sprintf(`!("%s" in request.userInfo.groups)`, group)), webhook)
-				}
-				for _, user := range users {
-					Expect(all).To(ContainElement(fmt.Sprintf(`"%s" != request.userInfo.username`, user)), webhook)
-				}
-				for _, prefix := range prefixes {
-					Expect(all).To(ContainElement(fmt.Sprintf(`!request.userInfo.username.startsWith("%s")`, prefix)), webhook)
-				}
-			}
-		})
-
-		// The edit webhook matches every namespaced CREATE, UPDATE and DELETE, so its only-marked-objects
-		// condition is what keeps ordinary objects off the handler. It has to look for the very
-		// markings the hook checks, or a renamed label would leave the protection never called.
-		It("Should pre-filter the edit webhook on the markings the hook checks", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-			expression := matchConditions("user-authz-system-resources-edit")["only-marked-objects"]
-			Expect(expression).NotTo(BeEmpty())
-			file := "webhooks/validating/system_resources.py"
-			label := pythonConstant(moduleDir, file, "SYSTEM_RESOURCE_LABEL")
-			value := pythonConstant(moduleDir, file, "SYSTEM_RESOURCE_VALUE")
-			heritage := pythonConstant(moduleDir, file, "HERITAGE_LABEL")
-			multitenancy := pythonConstant(moduleDir, file, "HERITAGE_MULTITENANCY")
-			for _, object := range []string{"object", "oldObject"} {
-				for _, labels := range []string{
-					object + ".metadata.labels",
-					object + ".spec.template.metadata.labels",
-					object + ".spec.jobTemplate.spec.template.metadata.labels",
-				} {
-					Expect(expression).To(ContainSubstring(fmt.Sprintf(
-						"('%s' in %s && %s['%s'] == '%s')", label, labels, labels, label, value)))
-					Expect(expression).To(ContainSubstring(fmt.Sprintf(
-						"('%s' in %s && %s['%s'] == '%s')", heritage, labels, labels, heritage, multitenancy)))
-				}
-				// has() tests only its last field. An unguarded has(object.spec.template...) errors
-				// on a ConfigMap, and false || <error> would fail the request closed.
-				Expect(expression).To(ContainSubstring(fmt.Sprintf(
-					"has(%s.spec) && type(%s.spec) == map && has(%s.spec.template) && type(%s.spec.template) == map && has(%s.spec.template.metadata) && type(%s.spec.template.metadata) == map && has(%s.spec.template.metadata.labels) && type(%s.spec.template.metadata.labels) == map",
-					object, object, object, object, object, object, object, object)))
-				Expect(expression).To(ContainSubstring(fmt.Sprintf(
-					"has(%s.spec) && type(%s.spec) == map && has(%s.spec.jobTemplate) && type(%s.spec.jobTemplate) == map && has(%s.spec.jobTemplate.spec) && type(%s.spec.jobTemplate.spec) == map && has(%s.spec.jobTemplate.spec.template) && type(%s.spec.jobTemplate.spec.template) == map && has(%s.spec.jobTemplate.spec.template.metadata) && type(%s.spec.jobTemplate.spec.template.metadata) == map && has(%s.spec.jobTemplate.spec.template.metadata.labels) && type(%s.spec.jobTemplate.spec.template.metadata.labels) == map",
-					object, object, object, object, object, object, object, object, object, object, object, object)))
-			}
-		})
-
-		// Without CREATE anybody who may create an object could create it already marked, and the
-		// object would then be locked against its own author and the namespace admin.
-		It("Should review creates of marked objects as well as their updates and deletes", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-			rules := resource("user-authz-system-resources-edit").Field("validationObject.rules").Array()
-			Expect(rules).To(HaveLen(1))
-			Expect(rules[0].Get("operations").String()).To(MatchJSON(`["CREATE","UPDATE","DELETE"]`))
-			Expect(rules[0].Get("resources").String()).To(MatchJSON(`["*"]`))
-			Expect(rules[0].Get("scope").String()).To(Equal("Namespaced"))
-		})
-
-		It("Should name the webhooks the way the hook dispatches on them", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-			Expect(resource("user-authz-system-resources-edit").Field("validationObject.name").String()).
-				To(Equal(pythonConstant(moduleDir, "webhooks/validating/system_resources.py", "BINDING_EDIT")))
-			Expect(resource("user-authz-system-resources-exec").Field("validationObject.name").String()).
-				To(Equal(pythonConstant(moduleDir, "webhooks/validating/system_resources.py", "BINDING_EXEC")))
 		})
 	})
 

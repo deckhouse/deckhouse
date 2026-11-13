@@ -26,9 +26,9 @@ rules:
   resources: ["secrets","endpoints","configmaps","namespaces", "nodes", "services"]
   verbs: ["get", "list", "watch"]
 - apiGroups: [""]
-  # pods: live `get` of the exec target pod by the user-authz rbacv2-system-resource-exec webhook and
-  # the heritage-subresources webhook (the admission object is PodExecOptions, so the target pod is
-  # fetched on demand — no all-pods watch).
+  # pods: live `get` of the exec, attach and port-forward target pod by the heritage-subresources
+  # webhook (the admission object is a PodExecOptions, PodAttachOptions or PodPortForwardOptions, so
+  # the target pod is fetched on demand — no all-pods watch).
   resources: ["pods"]
   verbs: ["get"]
 - apiGroups: ["apps"]
@@ -42,12 +42,6 @@ rules:
 - apiGroups: ["rbac.authorization.k8s.io"]
   resources: ["clusterroles", "clusterrolebindings"]
   verbs: ["get", "list", "watch"]
-- apiGroups: ["rbac.authorization.k8s.io"]
-  # rolebindings: live-listed on demand by the user-authz rbacv2-system-resource-* webhooks to
-  # determine whether the requester is a superadmin (no informer / cluster-wide watch). The
-  # clusterrolebindings they list are covered by the watch rule above.
-  resources: ["rolebindings"]
-  verbs: ["get", "list"]
 - apiGroups: ["network.deckhouse.io"]
   resources: ["metalloadbalancerclasses"]
   verbs: ["get","list","watch"]

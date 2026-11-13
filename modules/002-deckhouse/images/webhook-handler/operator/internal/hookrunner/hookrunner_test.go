@@ -233,7 +233,7 @@ func TestRunner_HookCodeIsCachedPerContent(t *testing.T) {
 func TestRunner_HookCanRunSubprocesses(t *testing.T) {
 	r := startServer(t)
 
-	// system_resources.py shells out to kubectl; the server ignores SIGCHLD, its children must not.
+	// heritage.py shells out to kubectl; the server ignores SIGCHLD, its children must not.
 	hook := writeHook(t, t.TempDir(), "sub.py", `#!/usr/bin/python3
 import subprocess
 proc = subprocess.run(["sh", "-c", "echo child; exit 4"], capture_output=True, text=True)

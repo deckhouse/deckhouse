@@ -7,9 +7,8 @@ spec:
     Exercise the validating webhooks of user-authz against the live API server and match the
     exact messages of webhooks/validating/*.py: ClusterAuthorizationRule subjects, the
     multitenancy-only fields and RE2 patterns, ClusterRoleBindings to scoped roles, reserved
-    ClusterRole names and aggregation labels, the heritage label, project-management
-    escalation through a Role, and exec into, edits of and creation of objects marked
-    deckhouse.io/system-resource=true. Rejections are checked with --dry-run=server or with
+    ClusterRole names and aggregation labels, the heritage label and project-management
+    escalation through a Role. Rejections are checked with --dry-run=server or with
     actions that change nothing, so a regression cannot leave objects behind.
   timeouts:
     apply: 60s
@@ -41,7 +40,7 @@ spec:
             content: bash ../common/scripts/ensure-user-authz.sh
 
     - name: setup
-      description: Create an Editor and a SuperAdmin rule, a system pod, a plain pod, a system ConfigMap and a plain ConfigMap
+      description: Create an Editor and a SuperAdmin rule
       try:
         - description: Apply the Editor and SuperAdmin ClusterAuthorizationRules
           apply:
@@ -62,35 +61,6 @@ spec:
               kind: ClusterRoleBinding
               metadata:
                 name: user-authz:e2e-authz-wh-editor:editor
-        - description: Create the system pod and the plain pod
-          apply:
-            file: manifests/pods.yaml
-        - description: Create the system ConfigMap
-          apply:
-            file: manifests/system-configmap.yaml
-        - description: Create the plain ConfigMap
-          apply:
-            file: manifests/plain-configmap.yaml
-        - description: Assert the system pod is Running
-          assert:
-            resource:
-              apiVersion: v1
-              kind: Pod
-              metadata:
-                labels:
-                  app: e2e-authz-wh-system
-              status:
-                phase: Running
-        - description: Assert the plain pod is Running
-          assert:
-            resource:
-              apiVersion: v1
-              kind: Pod
-              metadata:
-                labels:
-                  app: e2e-authz-wh-plain
-              status:
-                phase: Running
 
     - name: car-subjects
       description: cluster_authorization_rule.py rejects malformed subjects
@@ -290,102 +260,3 @@ spec:
               bash ../common/scripts/expect.sh allowed \
                 -- kubectl -n "${NAMESPACE}" --as e2e-authz-wh-superadmin create role e2e-authz-wh-reader \
                   --dry-run=server --verb=get --resource=pods
-
-    - name: system-resource-exec
-      description: >-
-        system_resources.py rejects exec into a pod labeled deckhouse.io/system-resource=true for
-        an Editor, and lets the Editor exec into other pods and a SuperAdmin into the system pod
-      try:
-        - description: Editor exec into the system pod is rejected
-          script:
-            content: |
-              bash ../common/scripts/expect.sh denied \
-                'Pod "e2e-authz-wh-system" is a Deckhouse system resource (label deckhouse.io/system-resource=true); exec into it is allowed only for a superadmin of this namespace or project, a system superadmin or a cluster administrator' \
-                -- kubectl -n "${NAMESPACE}" --as e2e-authz-wh-editor exec e2e-authz-wh-system -c agnhost -- /agnhost
-        - description: Editor exec into the plain pod is allowed
-          script:
-            content: |
-              bash ../common/scripts/expect.sh allowed \
-                -- kubectl -n "${NAMESPACE}" --as e2e-authz-wh-editor exec e2e-authz-wh-plain -c agnhost -- /agnhost
-        - description: SuperAdmin exec into the system pod is allowed
-          script:
-            content: |
-              bash ../common/scripts/expect.sh allowed \
-                -- kubectl -n "${NAMESPACE}" --as e2e-authz-wh-superadmin exec e2e-authz-wh-system -c agnhost -- /agnhost
-
-    - name: system-resource-edit
-      description: system_resources.py rejects edits of an object labeled deckhouse.io/system-resource=true by an Editor
-      try:
-        - description: Editor update of the system ConfigMap is rejected
-          script:
-            content: |
-              bash ../common/scripts/expect.sh denied \
-                'ConfigMap "e2e-authz-wh-system" is a Deckhouse system resource (label deckhouse.io/system-resource=true) placed in this namespace. It can be modified or deleted only by a superadmin of this namespace or project, a system superadmin or a cluster administrator' \
-                -- kubectl -n "${NAMESPACE}" --as e2e-authz-wh-editor label configmap e2e-authz-wh-system \
-                  --dry-run=server e2e-authz-touched=true
-        - description: Editor deletion of the system ConfigMap is rejected
-          script:
-            content: |
-              bash ../common/scripts/expect.sh denied \
-                'ConfigMap "e2e-authz-wh-system" is a Deckhouse system resource' \
-                -- kubectl -n "${NAMESPACE}" --as e2e-authz-wh-editor delete configmap e2e-authz-wh-system --dry-run=server
-        - description: SuperAdmin update of the system ConfigMap is allowed
-          script:
-            content: |
-              bash ../common/scripts/expect.sh allowed \
-                -- kubectl -n "${NAMESPACE}" --as e2e-authz-wh-superadmin label configmap e2e-authz-wh-system \
-                  --dry-run=server e2e-authz-touched=true
-        - description: Editor adding the label to the plain ConfigMap is rejected
-          script:
-            content: |
-              bash ../common/scripts/expect.sh denied \
-                'ConfigMap "e2e-authz-wh-plain" is a Deckhouse system resource' \
-                -- kubectl -n "${NAMESPACE}" --as e2e-authz-wh-editor label configmap e2e-authz-wh-plain \
-                  --dry-run=server deckhouse.io/system-resource=true
-
-    - name: system-resource-create
-      description: >-
-        system_resources.py rejects creating an object labeled deckhouse.io/system-resource=true for
-        an Editor, and lets the Editor create it without the label and a SuperAdmin with it
-      try:
-        - description: Editor creation of a ConfigMap with the label is rejected
-          script:
-            content: |
-              bash ../common/scripts/expect.sh denied \
-                'ConfigMap "e2e-authz-wh-created" cannot be created with the label deckhouse.io/system-resource=true: the label marks Deckhouse system resources, and only a superadmin of this namespace or project, a system superadmin or a cluster administrator' \
-                -- kubectl -n "${NAMESPACE}" --as e2e-authz-wh-editor apply --dry-run=server -f - <<'YAML'
-              apiVersion: v1
-              kind: ConfigMap
-              metadata:
-                name: e2e-authz-wh-created
-                labels:
-                  deckhouse.io/system-resource: "true"
-              data:
-                purpose: e2e
-              YAML
-        - description: Editor creation of the same ConfigMap without the label is allowed
-          script:
-            content: |
-              bash ../common/scripts/expect.sh allowed \
-                -- kubectl -n "${NAMESPACE}" --as e2e-authz-wh-editor apply --dry-run=server -f - <<'YAML'
-              apiVersion: v1
-              kind: ConfigMap
-              metadata:
-                name: e2e-authz-wh-created
-              data:
-                purpose: e2e
-              YAML
-        - description: SuperAdmin creation of a ConfigMap with the label is allowed
-          script:
-            content: |
-              bash ../common/scripts/expect.sh allowed \
-                -- kubectl -n "${NAMESPACE}" --as e2e-authz-wh-superadmin apply --dry-run=server -f - <<'YAML'
-              apiVersion: v1
-              kind: ConfigMap
-              metadata:
-                name: e2e-authz-wh-created
-                labels:
-                  deckhouse.io/system-resource: "true"
-              data:
-                purpose: e2e
-              YAML

@@ -81,8 +81,7 @@ type Input struct {
 //
 // On UPDATE the old object counts as well. Reading only the incoming object would let one request
 // both strip the label and make the change the label exists to prevent, since by the time the
-// validation runs the marking is already gone. modules/140-user-authz/webhooks/validating/
-// system_resources.py reads its markings from both objects for the same reason.
+// validation runs the marking is already gone.
 func ResolveManagedBy(operation admissionv1.Operation, object, oldObject map[string]string) string {
 	if object[v1alpha3.ResourceLabelManagedBy] == v1alpha3.ManagedByController {
 		return v1alpha3.ManagedByController

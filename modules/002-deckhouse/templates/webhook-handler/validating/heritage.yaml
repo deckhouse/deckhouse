@@ -23,11 +23,10 @@ validationObject:
   # and does not need it to be up: that includes exec into the webhook-handler pods themselves when
   # they are what is broken.
   #
-  # Plus one exemption of its own, `system:masters`, as on the user-authz exec webhook of this
-  # handler: super-admin.conf on a master node is the way in when the handler is down, since the
-  # webhook fails closed on every exec and scale, labeled target or not. `kubeadm:cluster-admins`
-  # (admin.conf) stays subject to the check. The template tests hold the webhook to exactly
-  # label-objects plus this group.
+  # Plus one exemption of its own, `system:masters`: super-admin.conf on a master node is the way in
+  # when the handler is down, since the webhook fails closed on every exec and scale, labeled target
+  # or not. `kubeadm:cluster-admins` (admin.conf) stays subject to the check. The template tests hold
+  # the webhook to exactly label-objects plus this group.
   matchConditions:
   - name: exclude-groups
     expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system"].exists(e, (e in request.userInfo.groups)))'
@@ -58,8 +57,7 @@ validationObject:
     scope:       "Namespaced"
   # Fail closed, as the policy this completes: an open port-forward is the hole being closed, and an
   # unavailable handler must not reopen it. What it costs while the handler is down is exec,
-  # port-forward and manual scaling for users outside the exemptions above, the same as the
-  # user-authz exec webhook on this handler already costs for exec.
+  # port-forward and manual scaling for users outside the exemptions above.
   failurePolicy: Fail
   # One live read by name per request; anything slower than this is an API server in trouble.
   timeoutSeconds: 5

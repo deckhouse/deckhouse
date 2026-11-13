@@ -34,9 +34,8 @@ from dotmap import DotMap
 # Neither admission object carries the labels the decision is made of: a CONNECT reviews a
 # PodExecOptions / PodAttachOptions / PodPortForwardOptions, and a scale reviews a Scale, whose
 # metadata holds the name, namespace and uid of the parent and nothing else. So the hook reads the
-# target live, one object by name, the way the user-authz exec webhook on the same handler does: no
-# standing watch on every Pod and every scalable kind, and nothing to wait for before the hook can
-# answer.
+# target live, one object by name: no standing watch on every Pod and every scalable kind, and
+# nothing to wait for before the hook can answer.
 #
 # Who may do all of this is decided by the matchConditions of the ValidationWebhook, which repeat the
 # exemptions of label-objects.deckhouse.io and add `system:masters`; a request that reaches the hook
@@ -58,9 +57,12 @@ MAINTENANCE_VALUES = {"", "true"}
 
 CONNECT_SUBRESOURCES = {"exec", "attach", "portforward"}
 
-# kubectl ships in the webhook-handler image; see webhooks/validating/system_resources.py of
-# user-authz for why the reads do not go through Python's own HTTP client. `--raw` takes the path as
-# it is, so a read costs no discovery round trip.
+# Reads go through the kubectl binary that ships in the webhook-handler image, not through Python's
+# own HTTP client. That client needs the `ssl` module for HTTPS to the API server, and the CPython of
+# the image links `_ssl` against libssl.so.3 and libcrypto.so.3, which the final image does not have:
+# `import ssl` raises ImportError when the handler loads the hook config, and since the handler fails
+# closed, that one error takes down every webhook on it. kubectl reads the in-cluster ServiceAccount
+# credentials itself. `--raw` takes the path as it is, so a read costs no discovery round trip.
 #
 # No other flag may go with it. kubectl uses its in-cluster config only while no client-config flag
 # is set; with `--request-timeout=3s` the kubectl of the image dialed localhost:8080 instead, every

@@ -288,19 +288,16 @@ d8 k -n <namespace_name> debug -it <pod_name> --image=ubuntu <container_name>
 * `kubectl exec`, `kubectl attach`, `kubectl cp` и `kubectl port-forward` для любых подов;
 * `kubectl scale` для любых ресурсов Deployment, StatefulSet, ReplicaSet и ReplicationController.
 
-Для доступа к поду с целью диагностики можно использовать `system:sudouser` в группе `system:sudousers` или `super-admin.conf` на master-узле.
+Для доступа к поду с целью диагностики можно использовать `system:sudouser` или `super-admin.conf` на master-узле.
 
 Пример выполнения команды в поде от имени `system:sudouser`:
 
 ```shell
-d8 k --as=system:sudouser --as-group=system:sudousers -n d8-system exec -it <POD_NAME> -- sh
+d8 k --as=system:sudouser -n d8-system exec -it <POD_NAME> -- sh
 ```
 
 {% alert level="warning" %}
-Обратите внимание:
-
-* для выполнения команды необходимы права на impersonate пользователя `system:sudouser` и группы `system:sudousers`;
-* необходимо указывать группу, поскольку модуль `user-authz` проверяет разрешение на операцию `exec` через тот же `webhook-handler` и использует для исключения группу, а не имя пользователя.
+Для выполнения команды необходимы права на impersonate пользователя `system:sudouser`.
 {% endalert %}
 
 ## Как отлаживать проблемы на узлах с помощью ephemeral containers?

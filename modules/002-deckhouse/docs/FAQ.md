@@ -288,19 +288,16 @@ Requests are validated by the `webhook-handler` Pods in the `d8-system` namespac
 * `kubectl exec`, `kubectl attach`, `kubectl cp`, and `kubectl port-forward` for any Pod.
 * `kubectl scale` for any Deployment, StatefulSet, ReplicaSet, or ReplicationController resource.
 
-To access a Pod for diagnostics, you can use `system:sudouser` in the `system:sudousers` group or `super-admin.conf` on a master node.
+To access a Pod for diagnostics, you can use `system:sudouser` or `super-admin.conf` on a master node.
 
 Example of executing a command in a Pod as `system:sudouser`:
 
 ```shell
-d8 k --as=system:sudouser --as-group=system:sudousers -n d8-system exec -it <POD_NAME> -- sh
+d8 k --as=system:sudouser -n d8-system exec -it <POD_NAME> -- sh
 ```
 
 {% alert level="warning" %}
-Note the following:
-
-* You must have permission to impersonate both the `system:sudouser` user and the `system:sudousers` group.
-* You must specify the group because the `user-authz` module checks permissions for the `exec` operation through the same `webhook-handler` and uses the group, rather than the username, to determine whether the restriction applies.
+You must have permission to impersonate the `system:sudouser` user.
 {% endalert %}
 
 ## How to debug node problems with ephemeral containers?

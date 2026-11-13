@@ -253,12 +253,11 @@ var _ = Describe("Module :: deckhouse :: webhook-handler ::", func() {
 				"control-plane.deckhouse.io/controlplaneoperations": rbacReadVerbs,
 
 				// What the hooks read on demand.
-				"pods":                                   {"get"},
-				"apps/deployments":                       {"get"},
-				"apps/statefulsets":                      {"get"},
-				"apps/replicasets":                       {"get"},
-				"replicationcontrollers":                 {"get"},
-				"rbac.authorization.k8s.io/rolebindings": {"get", "list"},
+				"pods":                   {"get"},
+				"apps/deployments":       {"get"},
+				"apps/statefulsets":      {"get"},
+				"apps/replicasets":       {"get"},
+				"replicationcontrollers": {"get"},
 			}), "the pods and the parents of a scale are read one by one, never watched")
 		})
 

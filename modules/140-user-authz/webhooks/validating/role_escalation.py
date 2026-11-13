@@ -56,8 +56,7 @@ PRIVILEGED_USERS = {
     "system:serviceaccount:kube-system:clusterrole-aggregation-controller",
 }
 
-# Break-glass cluster administrators. Same set as system_resources.py — a namespace admin is never
-# in these groups.
+# Break-glass cluster administrators. A namespace admin is never in these groups.
 BYPASS_GROUPS = {
     "system:masters",
     "kubeadm:cluster-admins",

@@ -5,8 +5,8 @@ metadata:
   annotations:
     en.meta.deckhouse.io/title: "Project Superadmin"
     ru.meta.deckhouse.io/title: "Суперадминистратор проекта"
-    en.meta.deckhouse.io/description: "Project Administrator plus management of system resources placed in project namespaces."
-    ru.meta.deckhouse.io/description: "Права администратора проекта плюс управление системными ресурсами в пространствах имён проекта."
+    en.meta.deckhouse.io/description: "Project Administrator plus minting ServiceAccount tokens and making requests on behalf of ServiceAccounts."
+    ru.meta.deckhouse.io/description: "Права администратора проекта плюс выпуск токенов ServiceAccount и запросы от их имени."
     rbac.deckhouse.io/bindable-only-via: "ProjectRoleBinding,ClusterProjectRoleBinding"
   labels:
     heritage: deckhouse
