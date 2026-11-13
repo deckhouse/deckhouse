@@ -31,7 +31,7 @@ To create the ServiceAccount and assign a role to it, you need [administrator pe
 {%- if page.gs_installer %}
    Specify the same namespace in the "Project" field of the cloud provider connection parameters at the ["Basic installation parameters"](step5.html) step.
 {%- else %}
-   Specify the same namespace in the `provider.namespace` parameter of the `config.yml` file at the ["Installation"](step4.html) step.
+   Specify the same namespace in the `provider.parameters.namespace` parameter of the `config.yml` file at the ["Installation"](step4.html) step.
 {%- endif %}
 
 1. Assign a role to the user by running:
@@ -92,7 +92,7 @@ To create the ServiceAccount and assign a role to it, you need [administrator pe
    EOF
    ```
 
-   Encode the generated kubeconfig file using Base64 encoding (it appears in the initial configuration file as follows):
+   Encode the generated kubeconfig using Base64 (put it in the `d8-credentials` Secret in the `stringData.secret` field of the initial configuration file):
 
    ```bash
    base64 kubeconfig | tr -d '\n'

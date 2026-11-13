@@ -112,90 +112,143 @@ spec:
     controlPlaneConfigurator:
       dexCAMode: DoNotNeed
 ---
-# [<en>] Cloud provider settings.
-# [<en>] https://deckhouse.io/modules/030-cloud-provider-dvp/cluster_configuration.html
-# [<ru>] Настройки облачного провайдера.
-# [<ru>] https://deckhouse.ru/modules/030-cloud-provider-dvp/cluster_configuration.html
+# [<en>] Cloud provider DVP module settings.
+# [<en>] https://deckhouse.io/modules/cloud-provider-dvp/configuration.html
+# [<ru>] Настройки модуля облачного провайдера DVP.
+# [<ru>] https://deckhouse.ru/modules/cloud-provider-dvp/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-dvp
+spec:
+  version: 2
+  enabled: true
+  settings:
+    nodes:
+      parameters:
+        # [<en>] Layout name.
+        # [<ru>] Название схемы размещения.
+        layout: Standard
+        # [<en>] Public SSH key for accessing cloud nodes.
+        # [<en>] This key will be added to the user on created nodes (the user name depends on the image used).
+        # [<ru>] Публичная часть SSH-ключа для доступа к узлам облака.
+        # [<ru>] Этот ключ будет добавлен пользователю на созданных узлах (имя пользователя зависит от используемого образа).
+        sshPublicKey: *!CHANGE_SSH_KEY*
+        # [<en>] Static IP addresses (or Auto for automatic IP address assignment) for NodeGroup replicas.
+        # [<ru>] Статические IP-адреса (или Auto для автоматического назначения) для реплик NodeGroup.
+        ipAddresses:
+          master:
+            - Auto
+    provider:
+      parameters:
+        # [<en>] Namespace in which DP cluster resources will be created.
+        # [<en>] Specify the namespace where you created the ServiceAccount at the "Preparing environment" step.
+        # [<en>] https://deckhouse.io/products/kubernetes-platform/gs/dvp-provider/step3.html
+        # [<ru>] Неймспейс, в котором будут созданы ресурсы кластера DP.
+        # [<ru>] Укажите неймспейс, в котором вы создали ServiceAccount на шаге «Подготовка окружения».
+        # [<ru>] https://deckhouse.ru/products/kubernetes-platform/gs/dvp-provider/step3.html
+        namespace: *!CHANGE_NAMESPACE*
+---
+# [<en>] Credentials for connecting to the parent DVP cluster API.
+# [<ru>] Учётные данные для подключения к API родительского кластера DVP.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-credentials
+  namespace: d8-cloud-provider-dvp
+type: cloud-provider.deckhouse.io/credentials
+stringData:
+  authScheme: kubeconfig
+  # [<en>] Kubeconfig to connect to the DVP API, Base64-encoded.
+  # [<ru>] Kubeconfig для подключения к API DVP в кодировке Base64.
+  secret: *!CHANGE_KUBERNETES_CONFIG_BASE64*
+---
+# [<en>] Instance class for master nodes.
+# [<en>] https://deckhouse.io/modules/cloud-provider-dvp/cr.html
+# [<ru>] Инстанс-класс для master-узлов.
+# [<ru>] https://deckhouse.ru/modules/cloud-provider-dvp/cr.html
+apiVersion: deckhouse.io/v1alpha1
+kind: DVPInstanceClass
+metadata:
+  name: master
+spec:
+  # [<en>] Virtual machine settings for the created master node.
+  # [<ru>] Настройки виртуальной машины для созданного master-узла.
+  virtualMachine:
+    # [<en>] CPU settings for the virtual machine.
+    # [<ru>] Настройки процессора для виртуальной машины.
+    cpu:
+      # [<en>] Number of CPU cores for the virtual machine.
+      # [<ru>] Количество ядер процессора для виртуальной машины.
+      cores: 4
+      # [<en>] Guaranteed share of CPU that will be allocated to the virtual machine.
+      # [<ru>] Процент гарантированной доли CPU, которая будет выделена для виртуальной машины.
+      coreFraction: 100%
+    # [<en>] Specifies the memory settings for the virtual machine.
+    # [<ru>] Определяет параметры памяти для виртуальной машины.
+    memory:
+      # [<en>] Amount of memory resources allowed for the virtual machine.
+      # [<ru>] Количество ресурсов памяти, разрешенных для виртуальной машины.
+      size: 8Gi
+    # [<en>] The name of the VirtualMachineClass.
+    # [<ru>] Имя VirtualMachineClass.
+    virtualMachineClassName: *!CHANGE_VIRTUAL_MACHINE_CLASS_NAME*
+  # [<en>] Specifies settings for the root disk of the virtual machine.
+  # [<ru>] Указывает настройки для корневого диска виртуальной машины.
+  rootDisk:
+    # [<en>] Root disk size.
+    # [<ru>] Размер корневого диска.
+    size: 50Gi
+    # [<en>] Name of the existing StorageClass will be used to create the virtual machine's root disk.
+    # [<ru>] Имя существующего StorageClass будет использоваться для создания корневого диска виртуальной машины.
+    storageClass: *!CHANGE_STORAGE_CLASS*
+    # [<en>] Image parameters that will be used to create the virtual machine's root disk.
+    # [<ru>] Параметры образа, который будет использоваться для создания корневого диска виртуальной машины.
+    image:
+      # [<en>] Kind of the image source.
+      # [<en>] You might consider changing this.
+      # [<ru>] Тип источника образа.
+      # [<ru>] Возможно, захотите изменить.
+      kind: ClusterVirtualImage
+      # [<en>] Name of the image that will be used to create the root disk.
+      # [<en>] The installation requires Linux OS images with cloud-init pre-installed.
+      # [<ru>] Имя образа, который будет использоваться для создания корневого диска.
+      # [<ru>] Для установки требуются образы ОС Linux с предустановленным cloud-init.
+      name: *!CHANGE_NAME*
+  # [<en>] Settings for the etcd data disk.
+  # [<ru>] Настройки для диска данных etcd.
+  etcdDisk:
+    # [<en>] Etcd disk size.
+    # [<ru>] Размер диска etcd.
+    size: 15Gi
+    # [<en>] Name of the existing StorageClass will be used to create the etcd data disk.
+    # [<ru>] Имя существующего StorageClass будет использоваться для создания диска данных etcd.
+    storageClass: *!CHANGE_STORAGE_CLASS*
+---
+# [<en>] Master node group.
+# [<en>] https://deckhouse.io/modules/node-manager/cr.html#nodegroup
+# [<ru>] Группа master-узлов.
+# [<ru>] https://deckhouse.ru/modules/node-manager/cr.html#nodegroup
 apiVersion: deckhouse.io/v1
-kind: DVPClusterConfiguration
-layout: Standard
-masterNodeGroup:
-  replicas: 1
-  instanceClass:
-    # [<en>] Virtual machine settings for the created master node.
-    # [<ru>] Настройки виртуальной машины для созданного master-узла.
-    virtualMachine:
-      # [<en>] CPU settings for the virtual machine.
-      # [<ru>] Настройки процессора для виртуальной машины.
-      cpu:
-        # [<en>] Number of CPU cores for the virtual machine.
-        # [<ru>] Количество ядер процессора для виртуальной машины.
-        cores: 4
-        # [<en>] Guaranteed share of CPU that will be allocated to the virtual machine.
-        # [<ru>] Процент гарантированной доли CPU, которая будет выделена для виртуальной машины.
-        coreFraction: 100%
-      # [<en>] Specifies the memory settings for the virtual machine.
-      # [<ru>] Определяет параметры памяти для виртуальной машины.
-      memory:
-        # [<en>] Amount of memory resources allowed for the virtual machine.
-        # [<ru>] Количество ресурсов памяти, разрешенных для виртуальной машины.
-        size: 8Gi
-      # [<en>] The name of the VirtualMachineClass.
-      # [<ru>] Имя VirtualMachineClass.
-      virtualMachineClassName: *!CHANGE_VIRTUAL_MACHINE_CLASS_NAME*
-      # [<en>] Static IP addresses (or Auto for automatic IP address assignment) to be assigned to the network interfaces of the virtual machines. The number of addresses must match the number of replicas being created — each IP address will be assigned to a specific virtual machine replica.
-      # [<ru>] Статические IP-адреса (или Auto для автоматического назначения IP-адреса), назначаемые сетевым интерфейсам виртуальных машин. Количество адресов должно соответствовать числу создаваемых реплик — каждый IP-адрес будет закреплён за конкретной репликой.
-      ipAddresses:
-        - Auto
-    # [<en>] Specifies settings for the root disk of the virtual machine.
-    # [<ru>] Указывает настройки для корневого диска виртуальной машины.
-    rootDisk:
-      # [<en>] Root disk size.
-      # [<ru>] Размер корневого диска.
-      size: 50Gi
-      # [<en>] Name of the existing StorageClass will be used to create the virtual machine's root disk.
-      # [<ru>] Имя существующего StorageClass будет использоваться для создания корневого диска виртуальной машины.
-      storageClass: *!CHANGE_STORAGE_CLASS*
-      # [<en>] Image parameters that will be used to create the virtual machine's root disk.
-      # [<ru>] Параметры образа, который будет использоваться для создания корневого диска виртуальной машины.
-      image:
-        # [<en>] Kind of the image source.
-        # [<en>] You might consider changing this.
-        # [<ru>] Тип источника образа.
-        # [<ru>] Возможно, захотите изменить.
-        kind: ClusterVirtualImage
-        # [<en>] Name of the image that will be used to create the root disk.
-        # [<en>] The installation requires Linux OS images with cloud-init pre-installed.
-        # [<ru>] Имя образа, который будет использоваться для создания корневого диска.
-        # [<ru>] Для установки требуются образы ОС Linux с предустановленным cloud-init.
-        name: *!CHANGE_NAME*
-    # [<en>] Settings for the etcd data disk.
-    # [<ru>] Настройки для диска данных etcd.
-    etcdDisk:
-      # [<en>] Etcd disk size.
-      # [<ru>] Размер диска etcd.
-      size: 15Gi
-      # [<en>] Name of the existing StorageClass will be used to create the etcd data disk.
-      # [<ru>] Имя существующего StorageClass будет использоваться для создания диска данных etcd.
-      storageClass: *!CHANGE_STORAGE_CLASS*
-# [<en>] Public SSH key for accessing cloud nodes.
-# [<en>] This key will be added to the user on created nodes (the user name depends on the image used).
-# [<ru>] Публичная часть SSH-ключа для доступа к узлам облака.
-# [<ru>] Этот ключ будет добавлен пользователю на созданных узлах (имя пользователя зависит от используемого образа).
-sshPublicKey: *!CHANGE_SSH_KEY*
-# [<en>] Contains settings to connect to the Deckhouse Platform API.
-# [<ru>] Содержит настройки для подключения к API Deckhouse Platform.
-provider:
-  # [<en>] Kubeconfig to connect to Deckhouse Platform API, Base64-encoded.
-  # [<ru>] Kubeconfig для подключения к API Deckhouse Platform в кодировке Base64.
-  kubeconfigDataBase64: *!CHANGE_KUBERNETES_CONFIG_BASE64*
-  # [<en>] Namespace in which DP cluster resources will be created.
-  # [<en>] Specify the namespace where you created the ServiceAccount at the "Preparing environment" step.
-  # [<en>] https://deckhouse.io/products/kubernetes-platform/gs/dvp-provider/step3.html
-  # [<ru>] Неймспейс, в котором будут созданы ресурсы кластера DP.
-  # [<ru>] Укажите неймспейс, в котором вы создали ServiceAccount на шаге «Подготовка окружения».
-  # [<ru>] https://deckhouse.ru/products/kubernetes-platform/gs/dvp-provider/step3.html
-  namespace: *!CHANGE_NAMESPACE*
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: CloudPermanent
+  cloudInstances:
+    classReference:
+      kind: DVPInstanceClass
+      name: master
+    # [<en>] The maximum number of instances for the group in each zone.
+    # [<ru>] Максимальное количество инстансов в каждой зоне.
+    maxPerZone: 1
+    # [<en>] The minimum number of instances for the group in each zone.
+    # [<ru>] Минимальное количество инстансов в каждой зоне.
+    minPerZone: 1
+  nodeTemplate:
+    labels:
+      node-role.kubernetes.io/control-plane: ""
+      node-role.kubernetes.io/master: ""
 ---
 # [<en>] Section containing parameters of instance class for worker nodes.
 # [<en>] https://deckhouse.io/modules/cloud-provider-dvp/cr.html
