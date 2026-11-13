@@ -71,7 +71,7 @@ func TestCreateRootCertIfNotExists_FailsOnInvalidCA(t *testing.T) {
 	cfg := makeTestConfig(t, dir)
 	spec := getRootCertSpec(CACertName)
 
-	// Write a soon-to-expire CA so that validateCert fails.
+	// Write a soon-to-expire CA so that validateRootCert fails.
 	expiredCert, expiredKey := makeExpiringSoonCACert(t, "kubernetes")
 	err := writeCertAndKey(dir, "ca", expiredCert, expiredKey)
 	require.NoError(t, err)
@@ -82,6 +82,38 @@ func TestCreateRootCertIfNotExists_FailsOnInvalidCA(t *testing.T) {
 	var certErr *CertValidationError
 	require.ErrorAs(t, err, &certErr)
 	assert.Equal(t, "ca", certErr.BaseName)
+}
+
+// Clusters bootstrapped long ago may have root CAs whose CommonName differs from the one
+// used for newly generated CAs (e.g. CN=kubernetes for every CA). Such CAs must be reused as is.
+func TestCreateRootCertIfNotExists_ReusesExistingWithLegacySubject(t *testing.T) {
+	tests := []struct {
+		name       RootCertName
+		commonName string
+	}{
+		{name: CACertName, commonName: "legacy-ca"},
+		{name: FrontProxyCACertName, commonName: "kubernetes"},
+		{name: EtcdCACertName, commonName: "kubernetes"},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.name), func(t *testing.T) {
+			dir := t.TempDir()
+			cfg := makeTestConfig(t, dir)
+			spec := getRootCertSpec(tt.name)
+
+			legacyCert, legacyKey := makeTestCACert(t, tt.commonName)
+			require.NoError(t, writeCertAndKey(dir, string(tt.name), legacyCert, legacyKey))
+
+			var rep PKIApplyReport
+			cert, _, err := createRootCertIfNotExists(cfg, spec, &rep)
+			require.NoError(t, err)
+			require.Len(t, rep.Entries, 1)
+			assert.Equal(t, PKIActionUnchanged, rep.Entries[0].Action)
+			assert.Equal(t, legacyCert.SerialNumber, cert.SerialNumber)
+			assert.Equal(t, tt.commonName, cert.Subject.CommonName)
+		})
+	}
 }
 
 func TestCreateLeafCertIfNotExists_CreatesNew(t *testing.T) {

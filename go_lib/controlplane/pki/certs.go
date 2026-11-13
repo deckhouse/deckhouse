@@ -52,14 +52,14 @@ func createCertTree(cfg config, rep *PKIApplyReport) error {
 // createRootCertIfNotExists loads an existing CA from disk and validates it, or creates a new one.
 //
 // Intentional asymmetry with createLeafCertIfNotExists:
-// if the existing CA fails validation, a CertValidationError is returned and the process stops.
+// if the existing CA fails validation (it expires soon), a CertValidationError is returned and the process stops.
+// The Subject of an existing CA is not validated, see validateRootCert.
 // CA certificates are never silently regenerated because doing so would invalidate all leaf
 // certificates signed by that CA, requiring a full cluster PKI rotation.
 func createRootCertIfNotExists(cfg config, spec rootCertSpec, rep *PKIApplyReport) (*x509.Certificate, crypto.Signer, error) {
 	oldCert, oldKey, err := readCertAndKey(cfg.pkiDir, spec.BaseName)
-	newCertCfg := spec.BuildConfig(cfg)
 	if err == nil {
-		if err := validateRootCert(oldCert, newCertCfg); err != nil {
+		if err := validateRootCert(oldCert); err != nil {
 			return nil, nil, &CertValidationError{
 				BaseName: spec.BaseName,
 				Reason:   err.Error(),
@@ -78,7 +78,7 @@ func createRootCertIfNotExists(cfg config, spec rootCertSpec, rep *PKIApplyRepor
 		return nil, nil, fmt.Errorf("failed to generate new key for CA %q: %w", spec.BaseName, err)
 	}
 
-	newCert, err := pkiutil.NewSelfSignedCACert(newCertCfg, newKey)
+	newCert, err := pkiutil.NewSelfSignedCACert(spec.BuildConfig(cfg), newKey)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to generate CA %q: %w", spec.BaseName, err)
 	}

@@ -61,6 +61,16 @@ func TestValidateCert_FailsEncryptionAlgorithmMismatch(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestValidateRootCert_IgnoresSubject(t *testing.T) {
+	cert, _ := makeTestCACert(t, "kubernetes")
+	assert.NoError(t, validateRootCert(cert))
+}
+
+func TestValidateRootCert_FailsExpiringSoon(t *testing.T) {
+	cert, _ := makeExpiringSoonCACert(t, "etcd-ca")
+	assert.Error(t, validateRootCert(cert))
+}
+
 func TestCertificateExpiresSoon(t *testing.T) {
 	expiresIn10Days := makeCertExpiringIn(t, 10*24*time.Hour)
 	expiresIn60Days := makeCertExpiringIn(t, 60*24*time.Hour)
