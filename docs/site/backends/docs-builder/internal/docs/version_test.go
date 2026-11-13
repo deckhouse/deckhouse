@@ -194,7 +194,9 @@ func TestRenderVersionIndex(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !bytes.Contains(page, []byte("/en/modules/echo/v0.18.0/search.json")) {
+			// Without the language: the site tells the languages by the domain,
+			// and the template adds the language only in the module mode.
+			if !bytes.Contains(page, []byte(",/modules/echo/v0.18.0/search.json:")) {
 				t.Error("the version page does not search the version index")
 			}
 			if !bytes.Contains(page, []byte(`href="./faq.html"`)) {

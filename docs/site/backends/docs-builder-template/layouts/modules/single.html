@@ -42,7 +42,7 @@
     <div class="container">
       <div class="input-wrapper">
         <input type="text" id="search-input" placeholder='{{ T "search_placeholder_text" }}' class="input"
-        data-search-index-path='{{ if eq site.Params.mode "module" }}/{{ $lang }}{{ else }}/products/kubernetes-platform/documentation/v1{{ end }}/search.json:2.0:{{ $cachingTime }},{{ if eq site.Params.mode "module" }}/{{ $lang }}{{ end }}/modules/search-embedded-modules-index.json:1.0:{{$cachingTime}},{{ with hugo.Data.version_site }}/{{ $lang }}/modules/{{ .module }}/{{ .version }}/search.json:1.0:{{ $cachingTime }}{{ else }}{{ if eq site.Params.mode "module" }}/{{ $lang }}{{ end }}/modules/search-external-modules-index.json:1.0:{{$cachingTime}}{{ end }}'
+        data-search-index-path='{{ if eq site.Params.mode "module" }}/{{ $lang }}{{ else }}/products/kubernetes-platform/documentation/v1{{ end }}/search.json:2.0:{{ $cachingTime }},{{ if eq site.Params.mode "module" }}/{{ $lang }}{{ end }}/modules/search-embedded-modules-index.json:1.0:{{$cachingTime}},{{ with hugo.Data.version_site }}{{ if eq site.Params.mode "module" }}/{{ $lang }}{{ end }}/modules/{{ .module }}/{{ .version }}/search.json:1.0:{{ $cachingTime }}{{ else }}{{ if eq site.Params.mode "module" }}/{{ $lang }}{{ end }}/modules/search-external-modules-index.json:1.0:{{$cachingTime}}{{ end }}'
         data-search-context='{{ with hugo.Data.version_site }}{{ T "search_context_module_version" (dict "module" .module) }}{{ else }}{{ T "search_context_dkpdocs_and_modules" }}{{ end }}'
         >
         <div id="search-results" class="results" style="display: none"></div>
