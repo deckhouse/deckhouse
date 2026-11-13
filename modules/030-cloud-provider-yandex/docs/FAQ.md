@@ -409,3 +409,11 @@ d8 k get mc cloud-provider-yandex -o jsonpath='{.spec.settings.nodes.parameters.
 ## Long switching to nodes in lower-priority groups
 
 If switching to nodes in lower-priority groups takes a long time (for example, when node groups with preemptible instances are set to the highest priority and, if such instances are unavailable, switching to nodes from other groups takes a very long time), follow the [instructions](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-it-takes-a-long-time-to-switch-to-custom-nodes-in).
+
+## Replacing the OS image on the nodes
+
+The [`imageID`](cr.html#yandexinstanceclass-v1-spec-imageid) parameter of YandexInstanceClass defines the image for `CloudEphemeral` nodes. With a [ModuleConfig-based provider configuration](/products/kubernetes-platform/documentation/v1/faq.html#how-to-migrate-a-cloud-provider-to-moduleconfig-based-configurat), this parameter also defines the image for `CloudPermanent` nodes and master nodes.
+
+With a YandexClusterConfiguration-based configuration, the image for `CloudPermanent` nodes and master nodes is set by `imageID` in `nodeGroups[].instanceClass` and `masterNodeGroup.instanceClass`, respectively.
+
+The replacement procedure is described in ["How do I replace the OS image in a cloud cluster?"](/products/kubernetes-platform/documentation/v1/faq.html#how-do-i-replace-the-os-image-in-a-cloud-cluster).

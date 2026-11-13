@@ -134,6 +134,8 @@ After completing these steps, the node will no longer be considered a master nod
 
 The OS change method depends on the cluster type: in a cloud cluster, nodes are replaced with `dhctl converge`; in a static cluster, nodes are replaced manually, one at a time.
 
+For moving the nodes of the other types to a new image, see ["How do I replace the OS image in a cloud cluster?"](../../../../faq.html#how-do-i-replace-the-os-image-in-a-cloud-cluster).
+
 #### In a cloud cluster
 
 To change the OS image of master nodes in a cloud multi-master cluster, follow these steps:

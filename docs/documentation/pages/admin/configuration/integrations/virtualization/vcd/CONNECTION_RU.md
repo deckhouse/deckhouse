@@ -412,6 +412,10 @@ shutdown -P now
 
    ![Настройка шаблона, vCenter 5](../../../../images/cloud-provider-vcd/template/vCenter5.png)
 
+### Замена образа ОС
+
+Deckhouse Platform создаёт узлы из шаблона виртуальной машины, который указывается в параметре [`template`](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass-v1-spec-template) ресурса VCDInstanceClass для узлов типа `CloudEphemeral` и в секции `instanceClass` ресурса VCDClusterConfiguration для узлов типа `CloudPermanent` и master-узлов. Чтобы перевести узлы кластера на новый образ ОС, подготовьте на его основе новый шаблон и выполните шаги из раздела [«Как заменить образ ОС в облачном кластере?»](../../../../faq.html#как-заменить-образ-ос-в-облачном-кластере).
+
 ## Использование хранилища
 
 * VCD поддерживает CSI. Диски создаются как VCD Independent Disks.

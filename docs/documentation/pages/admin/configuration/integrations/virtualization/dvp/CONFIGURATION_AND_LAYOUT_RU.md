@@ -241,3 +241,11 @@ spec:
       - zone-b
       - zone-c
 ```
+
+## Замена образа ОС
+
+Параметр [`rootDisk.image`](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass-v1alpha1-spec-rootdisk-image) ресурса DVPInstanceClass задаёт образ узлов типа `CloudEphemeral`. При настройке провайдера через ModuleConfig этот параметр также задаёт образ узлов типа `CloudPermanent` и master-узлов.
+
+При настройке через DVPClusterConfiguration образ узлов типа `CloudPermanent` и master-узлов задаётся параметром `rootDisk.image` в секциях `nodeGroups[].instanceClass` и `masterNodeGroup.instanceClass` соответственно.
+
+Порядок замены описан в разделе [«Как заменить образ ОС в облачном кластере?»](../../../../faq.html#как-заменить-образ-ос-в-облачном-кластере).

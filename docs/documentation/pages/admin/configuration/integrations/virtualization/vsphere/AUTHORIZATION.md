@@ -131,6 +131,10 @@ For more details, see the [documentation](https://techdocs.broadcom.com/us/en/vm
 DP uses the `ens192` interface as the default interface for VMs in vSphere. Therefore, when using static IP addresses in [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork), you must create an interface named `ens192` in the OS image as the default interface.
 {% endalert %}
 
+### Replacing the OS image
+
+Deckhouse Platform creates the nodes from a virtual machine template that is specified in the [`template`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-template) parameter of the VsphereInstanceClass resource for `CloudEphemeral` nodes and in the `instanceClass` section of the VsphereClusterConfiguration resource for `CloudPermanent` nodes and master nodes. To move the cluster nodes to a new OS image, prepare a new template based on it and follow the steps from ["How do I replace the OS image in a cloud cluster?"](../../../../faq.html#how-do-i-replace-the-os-image-in-a-cloud-cluster).
+
 ## vSphere configuration
 
 ### Configuration in vSphere Client

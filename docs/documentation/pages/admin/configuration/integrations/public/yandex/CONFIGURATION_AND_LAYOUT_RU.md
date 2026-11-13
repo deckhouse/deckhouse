@@ -556,3 +556,11 @@ spec:
    - `--ssh-user` — пользователь на целевых узлах кластера;
    - `--ssh-agent-private-keys` — путь до приватного SSH-ключа;
    - `--config` — путь до конфигурационного файла DP.
+
+## Замена образа ОС
+
+Параметр [`imageID`](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass-v1-spec-imageid) ресурса YandexInstanceClass задаёт образ узлов типа `CloudEphemeral`. При [настройке провайдера через ModuleConfig](../../../../faq.html#как-мигрировать-облачный-провайдер-на-конфигурацию-через-modulec) этот параметр также задаёт образ узлов типа `CloudPermanent` и master-узлов.
+
+При настройке через YandexClusterConfiguration образ узлов типа `CloudPermanent` и master-узлов задаётся параметром `imageID` в секциях `nodeGroups[].instanceClass` и `masterNodeGroup.instanceClass` соответственно.
+
+Порядок замены описан в разделе [«Как заменить образ ОС в облачном кластере?»](../../../../faq.html#как-заменить-образ-ос-в-облачном-кластере).

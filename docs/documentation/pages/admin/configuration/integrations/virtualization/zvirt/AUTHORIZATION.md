@@ -100,6 +100,14 @@ The template is created from a virtual machine (VM) with the OS cloud image atta
 
    ![Checking the created template](../../../../images/cloud-provider-zvirt/template/template-list-en.png)
 
+## Replacing the OS image
+
+The [`template`](/modules/cloud-provider-zvirt/cr.html#zvirtinstanceclass-v1-spec-template) parameter of ZvirtInstanceClass defines the image for `CloudEphemeral` nodes. With a ModuleConfig-based provider configuration, this parameter also defines the image for `CloudPermanent` nodes and master nodes.
+
+With a ZvirtClusterConfiguration-based configuration, the image for `CloudPermanent` nodes and master nodes is set by `template` in `nodeGroups[].instanceClass` and `masterNodeGroup.instanceClass`, respectively.
+
+The replacement procedure is described in ["How do I replace the OS image in a cloud cluster?"](../../../../faq.html#how-do-i-replace-the-os-image-in-a-cloud-cluster).
+
 ## Credentials Secret
 
 The zVirt user login and password are stored in a separate Secret rather than in the [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig). The [`cloud-provider-zvirt`](/modules/cloud-provider-zvirt/) module reads it and passes the credentials to its components that access the zVirt API.

@@ -240,3 +240,11 @@ spec:
       - zone-b
       - zone-c
 ```
+
+## Replacing the OS image
+
+The [`rootDisk.image`](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass-v1alpha1-spec-rootdisk-image) parameter of DVPInstanceClass defines the image for `CloudEphemeral` nodes. With a ModuleConfig-based provider configuration, this parameter also defines the image for `CloudPermanent` nodes and master nodes.
+
+With a DVPClusterConfiguration-based configuration, the image for `CloudPermanent` nodes and master nodes is set by `rootDisk.image` in `nodeGroups[].instanceClass` and `masterNodeGroup.instanceClass`, respectively.
+
+The replacement procedure is described in ["How do I replace the OS image in a cloud cluster?"](../../../../faq.html#how-do-i-replace-the-os-image-in-a-cloud-cluster).

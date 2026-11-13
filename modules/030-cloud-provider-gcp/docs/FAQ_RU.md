@@ -71,3 +71,9 @@ spec:
 {% alert level="warning" %}
 Изменение параметра [`preemptible`](cr.html#gcpinstanceclass-v1-spec-preemptible) в существующем GCPInstanceClass приводит к пересозданию всех узлов соответствующей группы.
 {% endalert %}
+
+## Как заменить образ ОС на узлах?
+
+Образ ОС задаётся параметром [`image`](cr.html#gcpinstanceclass-v1-spec-image) ресурса GCPInstanceClass для узлов типа `CloudEphemeral` и в секции `instanceClass` ресурса GCPClusterConfiguration для узлов типа `CloudPermanent` и master-узлов.
+
+Порядок замены описан в разделе [«Как заменить образ ОС в облачном кластере?»](/products/kubernetes-platform/documentation/v1/faq.html#как-заменить-образ-ос-в-облачном-кластере).

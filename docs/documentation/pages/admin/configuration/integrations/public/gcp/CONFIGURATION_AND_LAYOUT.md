@@ -301,3 +301,7 @@ d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."
 Preemptible virtual machines in Google Cloud are called preemptible instances. To make a [node group](../../../../glossary.html#node-group) order them, set the [`preemptible`](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass-v1-spec-preemptible) parameter of the GCPInstanceClass resource to `true`.
 
 How to create such nodes and how they behave is described in ["How to create preemptible nodes in GCP?"](/modules/cloud-provider-gcp/faq.html#how-to-create-preemptible-nodes-in-gcp).
+
+## Replacing the OS image
+
+The OS image of the nodes is set by the [`image`](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass-v1-spec-image) parameter of the GCPInstanceClass resource for `CloudEphemeral` nodes and in the `instanceClass` section of the GCPClusterConfiguration resource for `CloudPermanent` nodes and master nodes. To move the cluster nodes to a new image, follow the steps from ["How do I replace the OS image in a cloud cluster?"](../../../../faq.html#how-do-i-replace-the-os-image-in-a-cloud-cluster).

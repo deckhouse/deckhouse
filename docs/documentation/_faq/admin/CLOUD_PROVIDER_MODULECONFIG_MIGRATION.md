@@ -5,7 +5,7 @@ subsystems:
 lang: en
 ---
 
-If a cloud cluster was installed using the `<PROVIDER>ClusterConfiguration` configuration (for example, DVPClusterConfiguration or AWSClusterConfiguration), this configuration must be migrated to the new ModuleConfig-based model.
+Migration to the new ModuleConfig-based configuration model is supported only for built-in virtualization (DVP), Yandex Cloud, and zVirt. If the cluster uses DVPClusterConfiguration, YandexClusterConfiguration, or ZvirtClusterConfiguration, migrate its configuration using the procedure below.
 
 Deckhouse Platform is transitioning from a single `<PROVIDER>ClusterConfiguration` resource to a model where the cloud provider configuration is split across four separate resources:
 
@@ -20,7 +20,7 @@ Migration is mandatory. This is not an optional step: support for `<PROVIDER>Clu
 
 The migration is safe. Applying the resources automatically prepared by Deckhouse Platform **does not cause nodes to be recreated**. However, explicit administrator action is required, as the resources have to be reviewed and applied manually.
 
-## How to migrate
+#### How to migrate
 
 1. Wait for the migration alert. Each provider has its own, for example, [`D8CloudProviderDVPMigrationPending`](reference/alerts.html#cloud-provider-dvp-d8cloudproviderdvpmigrationpending) for DVP, [`D8CloudProviderYandexCloudMigrationPending`](reference/alerts.html#cloud-provider-yandex-d8cloudprovideryandexcloudmigrationpending) for Yandex Cloud, and [`D8CloudProviderZvirtMigrationPending`](reference/alerts.html#cloud-provider-zvirt-d8cloudproviderzvirtmigrationpending) for zVirt. The alert means the module has detected the legacy configuration and prepared manifests for the transition.
 
@@ -52,7 +52,7 @@ The migration is safe. Applying the resources automatically prepared by Deckhous
 
 1. Wait until the alert disappears. The module clears it automatically once it detects that all required resources are in place.
 
-## How to delete the legacy secret
+#### How to delete the legacy secret
 
 After the migration of a cluster deployed in built-in virtualization, Yandex Cloud, or zVirt, the provider settings are defined in ModuleConfig, and you can manually delete the legacy `d8-provider-cluster-configuration` Secret in the `kube-system` namespace.
 

@@ -291,3 +291,7 @@ d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."
 Прерываемые виртуальные машины в Google Cloud называются preemptible-инстансами. Чтобы [группа узлов](../../../../glossary.html#node-group) заказывала их, установите параметр [`preemptible`](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass-v1-spec-preemptible) ресурса GCPInstanceClass в `true`.
 
 Порядок создания таких узлов и особенности их работы описаны в разделе [«Как создать прерываемые узлы в GCP?»](/modules/cloud-provider-gcp/faq.html#как-создать-прерываемые-узлы-в-gcp).
+
+## Замена образа ОС
+
+Образ ОС узлов задаётся параметром [`image`](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass-v1-spec-image) ресурса GCPInstanceClass для узлов типа `CloudEphemeral` и в секции `instanceClass` ресурса GCPClusterConfiguration для узлов типа `CloudPermanent` и master-узлов. Чтобы перевести узлы кластера на новый образ, выполните шаги из раздела [«Как заменить образ ОС в облачном кластере?»](../../../../faq.html#как-заменить-образ-ос-в-облачном-кластере).

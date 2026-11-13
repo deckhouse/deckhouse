@@ -294,3 +294,7 @@ IPv4 CIDR у обоих VPC должен различаться.
 Прерываемые виртуальные машины в AWS называются spot-инстансами. Чтобы [группа узлов](../../../../glossary.html#node-group) заказывала их, установите параметр [`spot`](/modules/cloud-provider-aws/cr.html#awsinstanceclass-v1-spec-spot) ресурса AWSInstanceClass в `true`.
 
 Порядок создания таких узлов и особенности их работы описаны в разделе [«Как создать прерываемые узлы в AWS?»](/modules/cloud-provider-aws/faq.html#как-создать-прерываемые-узлы-в-aws).
+
+## Замена образа ОС
+
+Образ ОС узлов задаётся параметром [`ami`](/modules/cloud-provider-aws/cr.html#awsinstanceclass-v1-spec-ami) ресурса AWSInstanceClass для узлов типа `CloudEphemeral` и в секции `instanceClass` ресурса AWSClusterConfiguration для узлов типа `CloudPermanent` и master-узлов. Чтобы перевести узлы кластера на новый образ, выполните шаги из раздела [«Как заменить образ ОС в облачном кластере?»](../../../../faq.html#как-заменить-образ-ос-в-облачном-кластере).

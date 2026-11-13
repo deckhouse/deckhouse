@@ -184,6 +184,12 @@ Consider the following limitations:
 Changing the [`spot`](cr.html#awsinstanceclass-v1-spec-spot) parameter in an existing AWSInstanceClass causes all nodes of the corresponding group to be recreated.
 {% endalert %}
 
+## How do I replace the OS image on the nodes?
+
+The OS image is set by the [`ami`](cr.html#awsinstanceclass-v1-spec-ami) parameter of the AWSInstanceClass resource for `CloudEphemeral` nodes and in the `instanceClass` section of the AWSClusterConfiguration resource for `CloudPermanent` nodes and master nodes.
+
+The replacement procedure is described in ["How do I replace the OS image in a cloud cluster?"](/products/kubernetes-platform/documentation/v1/faq.html#how-do-i-replace-the-os-image-in-a-cloud-cluster).
+
 ## What to do if switching to nodes in lower-priority groups takes a long time?
 
 If switching to nodes in lower-priority groups takes a long time (for example, when node groups with spot instances are set to the highest priority and, if such instances are unavailable, switching to nodes from other groups takes a very long time), follow the [instructions](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-it-takes-a-long-time-to-switch-to-custom-nodes-in).

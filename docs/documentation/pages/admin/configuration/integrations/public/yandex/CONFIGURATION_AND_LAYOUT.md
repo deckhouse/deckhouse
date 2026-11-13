@@ -574,3 +574,11 @@ To configure access, follow these steps:
    - `--ssh-user`: User on the target cluster nodes.
    - `--ssh-agent-private-keys`: Path to the private SSH key.
    - `--config`: Path to the DP configuration file.
+
+## Replacing the OS image
+
+The [`imageID`](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass-v1-spec-imageid) parameter of YandexInstanceClass defines the image for `CloudEphemeral` nodes. With a [ModuleConfig-based provider configuration](../../../../faq.html#how-to-migrate-a-cloud-provider-to-moduleconfig-based-configurat), this parameter also defines the image for `CloudPermanent` nodes and master nodes.
+
+With a YandexClusterConfiguration-based configuration, the image for `CloudPermanent` nodes and master nodes is set by `imageID` in `nodeGroups[].instanceClass` and `masterNodeGroup.instanceClass`, respectively.
+
+The replacement procedure is described in ["How do I replace the OS image in a cloud cluster?"](../../../../faq.html#how-do-i-replace-the-os-image-in-a-cloud-cluster).

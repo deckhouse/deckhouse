@@ -409,3 +409,11 @@ d8 k get mc cloud-provider-yandex -o jsonpath='{.spec.settings.nodes.parameters.
 ## Длительное переключение на заказ узлов в менее приоритетных группах
 
 Если переключение на заказ узлов в менее приоритетных группах занимает много времени (например, когда для групп узлов с preemptible-инстансами установлен наивысший приоритет и при недоступности таких инстансов заказ узлов из других групп происходит очень долго), воспользуйтесь [инструкцией](/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-переключение-на-заказ-узлов-в-менее-приоритетных).
+
+## Замена образа ОС на узлах
+
+Параметр [`imageID`](cr.html#yandexinstanceclass-v1-spec-imageid) ресурса YandexInstanceClass задаёт образ узлов типа `CloudEphemeral`. При [настройке провайдера через ModuleConfig](/products/kubernetes-platform/documentation/v1/faq.html#как-мигрировать-облачный-провайдер-на-конфигурацию-через-modulec) этот параметр также задаёт образ узлов типа `CloudPermanent` и master-узлов.
+
+При настройке через YandexClusterConfiguration образ узлов типа `CloudPermanent` и master-узлов задаётся параметром `imageID` в секциях `nodeGroups[].instanceClass` и `masterNodeGroup.instanceClass` соответственно.
+
+Порядок замены описан в разделе [«Как заменить образ ОС в облачном кластере?»](/products/kubernetes-platform/documentation/v1/faq.html#как-заменить-образ-ос-в-облачном-кластере).

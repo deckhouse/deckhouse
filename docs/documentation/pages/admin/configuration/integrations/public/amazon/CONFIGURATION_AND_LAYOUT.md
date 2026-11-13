@@ -306,3 +306,7 @@ Compatibility with other parameters:
 Preemptible virtual machines in AWS are called Spot Instances. To make a [node group](../../../../glossary.html#node-group) order them, set the [`spot`](/modules/cloud-provider-aws/cr.html#awsinstanceclass-v1-spec-spot) parameter of the AWSInstanceClass resource to `true`.
 
 How to create such nodes and how they behave is described in ["How to create preemptible nodes in AWS?"](/modules/cloud-provider-aws/faq.html#how-to-create-preemptible-nodes-in-aws).
+
+## Replacing the OS image
+
+The OS image of the nodes is set by the [`ami`](/modules/cloud-provider-aws/cr.html#awsinstanceclass-v1-spec-ami) parameter of the AWSInstanceClass resource for `CloudEphemeral` nodes and in the `instanceClass` section of the AWSClusterConfiguration resource for `CloudPermanent` nodes and master nodes. To move the cluster nodes to a new image, follow the steps from ["How do I replace the OS image in a cloud cluster?"](../../../../faq.html#how-do-i-replace-the-os-image-in-a-cloud-cluster).

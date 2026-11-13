@@ -140,6 +140,10 @@ DP создаёт диски виртуальных машин с типом `ea
 DP использует интерфейс `ens192`, как интерфейс по умолчанию для виртуальных машин в vSphere. Поэтому, при использовании статических IP-адресов в [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork), вы должны в образе ОС создать интерфейс с именем `ens192`, как интерфейс по умолчанию.
 {% endalert %}
 
+### Замена образа ОС
+
+Deckhouse Platform создаёт узлы из шаблона виртуальной машины, который указывается в параметре [`template`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-template) ресурса VsphereInstanceClass для узлов типа `CloudEphemeral` и в секции `instanceClass` ресурса VsphereClusterConfiguration для узлов типа `CloudPermanent` и master-узлов. Чтобы перевести узлы кластера на новый образ ОС, подготовьте на его основе новый шаблон и выполните шаги из раздела [«Как заменить образ ОС в облачном кластере?»](../../../../faq.html#как-заменить-образ-ос-в-облачном-кластере).
+
 ## Конфигурация vSphere
 
 ### Настройка через vSphere Client

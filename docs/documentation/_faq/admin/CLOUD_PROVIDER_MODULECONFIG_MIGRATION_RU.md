@@ -5,7 +5,7 @@ subsystems:
 lang: ru
 ---
 
-Если облачный кластер был установлен со схемой `<PROVIDER>ClusterConfiguration` (например, DVPClusterConfiguration или AWSClusterConfiguration), эту конфигурацию нужно перенести на новую модель на базе ModuleConfig.
+Переход на новую модель конфигурации через ModuleConfig поддерживается только для встроенной виртуализации (DVP), Yandex Cloud и zVirt. Если кластер использует DVPClusterConfiguration, YandexClusterConfiguration или ZvirtClusterConfiguration, перенесите конфигурацию по инструкции ниже.
 
 Deckhouse Platform переходит от единого ресурса `<PROVIDER>ClusterConfiguration` к модели, в которой конфигурация облачного провайдера разделена между четырьмя отдельными ресурсами:
 
@@ -20,7 +20,7 @@ Deckhouse Platform переходит от единого ресурса `<PROVI
 
 Миграция безопасна. Применение ресурсов, автоматически подготовленных Deckhouse Platform, **не приводит к пересозданию узлов**. При этом требуется осознанное действие администратора, который просматривает и применяет подготовленные ресурсы вручную.
 
-## Как выполнить миграцию
+#### Как выполнить миграцию
 
 1. Дождитесь появления алерта о необходимости миграции. У каждого провайдера он свой, например [`D8CloudProviderDVPMigrationPending`](reference/alerts.html#cloud-provider-dvp-d8cloudproviderdvpmigrationpending) для DVP, [`D8CloudProviderYandexCloudMigrationPending`](reference/alerts.html#cloud-provider-yandex-d8cloudprovideryandexcloudmigrationpending) для Yandex Cloud и [`D8CloudProviderZvirtMigrationPending`](reference/alerts.html#cloud-provider-zvirt-d8cloudproviderzvirtmigrationpending) для zVirt. Алерт означает, что модуль обнаружил устаревшую конфигурацию и подготовил манифесты для перехода.
 
@@ -52,7 +52,7 @@ Deckhouse Platform переходит от единого ресурса `<PROVI
 
 1. Дождитесь исчезновения алерта. Модуль снимет его автоматически, когда обнаружит, что все необходимые ресурсы применены.
 
-## Как удалить устаревший секрет
+#### Как удалить устаревший секрет
 
 После миграции кластера, развёрнутого во встроенной виртуализации, в Yandex Cloud или в zVirt, настройки провайдера задаются через ModuleConfig, а устаревший секрет `d8-provider-cluster-configuration` в неймспейсе `kube-system` можно удалить вручную.
 

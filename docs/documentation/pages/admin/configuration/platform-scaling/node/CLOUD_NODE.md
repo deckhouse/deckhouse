@@ -98,6 +98,8 @@ Regardless of the cloud provider used, its settings can be modified using the fo
 d8 system edit provider-cluster-configuration
 ```
 
+For moving the nodes to a new operating system image, see ["How do I replace the OS image in a cloud cluster?"](../../../../faq.html#how-do-i-replace-the-os-image-in-a-cloud-cluster).
+
 ## NodeGroup autoscaling
 
 In Deckhouse Platform (DP), [node group autoscaling](../../../../glossary.html#node-group-autoscaling) is performed based on resource demands (CPU and memory) by the `Cluster Autoscaler` component, which is part of the [`node-manager`](/modules/node-manager/) module.

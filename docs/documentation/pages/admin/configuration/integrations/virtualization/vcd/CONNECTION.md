@@ -407,6 +407,10 @@ shutdown -P now
 
    ![Template setup, vCenter 5](../../../../images/cloud-provider-vcd/template/vCenter5.png)
 
+### Replacing the OS image
+
+Deckhouse Platform creates the nodes from a virtual machine template that is specified in the [`template`](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass-v1-spec-template) parameter of the VCDInstanceClass resource for `CloudEphemeral` nodes and in the `instanceClass` section of the VCDClusterConfiguration resource for `CloudPermanent` nodes and master nodes. To move the cluster nodes to a new OS image, prepare a new template based on it and follow the steps from ["How do I replace the OS image in a cloud cluster?"](../../../../faq.html#how-do-i-replace-the-os-image-in-a-cloud-cluster).
+
 ## Storage usage
 
 * VCD supports CSI. Disks are created as VCD Independent Disks.

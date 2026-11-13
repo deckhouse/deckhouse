@@ -71,3 +71,9 @@ Consider the following limitations:
 {% alert level="warning" %}
 Changing the [`preemptible`](cr.html#gcpinstanceclass-v1-spec-preemptible) parameter in an existing GCPInstanceClass causes all nodes of the corresponding group to be recreated.
 {% endalert %}
+
+## How do I replace the OS image on the nodes?
+
+The OS image is set by the [`image`](cr.html#gcpinstanceclass-v1-spec-image) parameter of the GCPInstanceClass resource for `CloudEphemeral` nodes and in the `instanceClass` section of the GCPClusterConfiguration resource for `CloudPermanent` nodes and master nodes.
+
+The replacement procedure is described in ["How do I replace the OS image in a cloud cluster?"](/products/kubernetes-platform/documentation/v1/faq.html#how-do-i-replace-the-os-image-in-a-cloud-cluster).

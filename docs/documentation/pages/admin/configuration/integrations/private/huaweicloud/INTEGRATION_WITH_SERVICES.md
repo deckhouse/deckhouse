@@ -28,3 +28,7 @@ spec:
   rootDiskSize: 50
   rootDiskType: SSD
 ```
+
+## Replacing the OS image
+
+The OS image of the nodes is set by the [`imageName`](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass-v1-spec-imagename) parameter of the HuaweiCloudInstanceClass resource for `CloudEphemeral` nodes and in the `instanceClass` section of the HuaweiCloudClusterConfiguration resource for `CloudPermanent` nodes and master nodes. To move the cluster nodes to a new image, follow the steps from ["How do I replace the OS image in a cloud cluster?"](../../../../faq.html#how-do-i-replace-the-os-image-in-a-cloud-cluster).

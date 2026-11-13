@@ -56,3 +56,7 @@ peeredVNets:                            # Необязательный пара�
   - resourceGroupName: kube-bastion    # Обязательный параметр.
     vnetName: kube-bastion-vnet        # Обязательный параметр.
 ```
+
+## Замена образа ОС
+
+Образ ОС узлов задаётся параметром [`urn`](/modules/cloud-provider-azure/cr.html#azureinstanceclass-v1-spec-urn) ресурса AzureInstanceClass для узлов типа `CloudEphemeral` и в секции `instanceClass` ресурса AzureClusterConfiguration для узлов типа `CloudPermanent` и master-узлов. Чтобы перевести узлы кластера на новый образ, выполните шаги из раздела [«Как заменить образ ОС в облачном кластере?»](../../../../faq.html#как-заменить-образ-ос-в-облачном-кластере).

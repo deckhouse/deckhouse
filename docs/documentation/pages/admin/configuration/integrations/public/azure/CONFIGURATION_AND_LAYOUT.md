@@ -56,3 +56,7 @@ peeredVNets:                           # Optional.
   - resourceGroupName: kube-bastion    # Required.
     vnetName: kube-bastion-vnet        # Required.
 ```
+
+## Replacing the OS image
+
+The OS image of the nodes is set by the [`urn`](/modules/cloud-provider-azure/cr.html#azureinstanceclass-v1-spec-urn) parameter of the AzureInstanceClass resource for `CloudEphemeral` nodes and in the `instanceClass` section of the AzureClusterConfiguration resource for `CloudPermanent` nodes and master nodes. To move the cluster nodes to a new image, follow the steps from ["How do I replace the OS image in a cloud cluster?"](../../../../faq.html#how-do-i-replace-the-os-image-in-a-cloud-cluster).

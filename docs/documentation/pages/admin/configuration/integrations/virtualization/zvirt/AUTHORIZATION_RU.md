@@ -101,6 +101,14 @@ Cloud-образ операционной системы (ОС) загружае
 
    ![Проверка создания шаблона](../../../../images/cloud-provider-zvirt/template/template-list-ru.png)
 
+## Замена образа ОС
+
+Параметр [`template`](/modules/cloud-provider-zvirt/cr.html#zvirtinstanceclass-v1-spec-template) ресурса ZvirtInstanceClass задаёт образ узлов типа `CloudEphemeral`. При настройке провайдера через ModuleConfig этот параметр также задаёт образ узлов типа `CloudPermanent` и master-узлов.
+
+При настройке через ZvirtClusterConfiguration образ узлов типа `CloudPermanent` и master-узлов задаётся параметром `template` в секциях `nodeGroups[].instanceClass` и `masterNodeGroup.instanceClass` соответственно.
+
+Порядок замены описан в разделе [«Как заменить образ ОС в облачном кластере?»](../../../../faq.html#как-заменить-образ-ос-в-облачном-кластере).
+
 ## Секрет с учётными данными
 
 Логин и пароль пользователя zVirt хранятся не в [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig), а в отдельном секрете. Модуль [`cloud-provider-zvirt`](/modules/cloud-provider-zvirt/) читает его и передаёт учётные данные своим компонентам, которые обращаются к API zVirt.

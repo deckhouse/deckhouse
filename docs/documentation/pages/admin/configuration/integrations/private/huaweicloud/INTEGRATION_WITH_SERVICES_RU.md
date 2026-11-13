@@ -27,3 +27,7 @@ spec:
   rootDiskSize: 50
   rootDiskType: SSD
 ```
+
+## Замена образа ОС
+
+Образ ОС узлов задаётся параметром [`imageName`](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass-v1-spec-imagename) ресурса HuaweiCloudInstanceClass для узлов типа `CloudEphemeral` и в секции `instanceClass` ресурса HuaweiCloudClusterConfiguration для узлов типа `CloudPermanent` и master-узлов. Чтобы перевести узлы кластера на новый образ, выполните шаги из раздела [«Как заменить образ ОС в облачном кластере?»](../../../../faq.html#как-заменить-образ-ос-в-облачном-кластере).
