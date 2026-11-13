@@ -20,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	addontypes "github.com/flant/addon-operator/pkg/hook/types"
 	addonhooks "github.com/flant/addon-operator/pkg/module_manager/models/hooks"
 	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
 	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
@@ -29,6 +30,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 // Hook represents a module-scoped hook that executes during a module's lifecycle.
@@ -201,8 +203,14 @@ var (
 	}
 )
 
+// groupedStorage is the part of the metric storage the package gauges need.
+type groupedStorage interface {
+	Grouped() metricsstorage.GroupedStorage
+}
+
 // runStorage is the part of the metric storage the run metrics need.
 type runStorage interface {
+	groupedStorage
 	HistogramObserve(metric string, value float64, labels map[string]string, buckets []float64)
 	CounterAdd(metric string, value float64, labels map[string]string)
 }
@@ -254,6 +262,16 @@ func RecordRun(ctx context.Context, storage runStorage, names RunMetrics, labels
 
 	storage.HistogramObserve(names.Seconds, took.Seconds(), labels, nil)
 
+	// A run ended by ctx is the lane stopping: its duration says nothing about the hook.
+	if ctx.Err() == nil {
+		pkgName := labels[metrics.LabelPackage]
+		if pkgName == "" {
+			pkgName = metrics.GlobalPackage
+		}
+
+		metrics.SetHookLastRun(storage.Grouped(), pkgName, labels[metrics.LabelHook], labels[metrics.LabelBinding], took)
+	}
+
 	switch BindingType(contexts) {
 	case string(shtypes.OnKubernetesEvent), string(shtypes.Schedule):
 	default:
@@ -268,6 +286,23 @@ func RecordRun(ctx context.Context, storage runStorage, names RunMetrics, labels
 		storage.CounterAdd(names.AllowedErrors, 1, labels)
 	default:
 		storage.CounterAdd(names.Errors, 1, labels)
+	}
+}
+
+// RecordPhase records how long the onStartup, beforeHelm or afterHelm hooks of pkg took; a hook of
+// another binding records nothing. Without a storage it records nothing.
+func RecordPhase(storage groupedStorage, pkg string, binding shtypes.BindingType, took time.Duration) {
+	if storage == nil {
+		return
+	}
+
+	switch binding {
+	case shtypes.OnStartup:
+		metrics.SetPackageStartup(storage.Grouped(), pkg, metrics.PhaseOnStartup, took)
+	case addontypes.BeforeHelm:
+		metrics.SetPackageRun(storage.Grouped(), pkg, metrics.PhaseBeforeHelm, took)
+	case addontypes.AfterHelm:
+		metrics.SetPackageRun(storage.Grouped(), pkg, metrics.PhaseAfterHelm, took)
 	}
 }
 

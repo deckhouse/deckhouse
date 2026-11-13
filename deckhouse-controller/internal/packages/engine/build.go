@@ -56,6 +56,8 @@ const (
 
 	// liveTicksPeriod is addon-operator's tick, so the Heartbeat panel and alert keep thresholds.
 	liveTicksPeriod = 10 * time.Second
+	// lanesPeriod is how often the hook lane gauges are written.
+	lanesPeriod = 5 * time.Second
 )
 
 // Config is the option the callers decide on.
@@ -246,6 +248,7 @@ func Build(cli kclient.Client, moduleManager moduleManager, metricStorage metric
 				Hooks:            e.hookRouter,
 				Orphans:          orphanPurge{service: orphanService, logger: logger},
 				ModulesNamespace: app.NamespaceDeckhouse,
+				Metrics:          packageGauges(metricStorage),
 				Logger:           logger,
 			},
 			Releases: e.nelm,
@@ -357,6 +360,11 @@ func (e *Engine) runSink() {
 
 	published := make(map[string]string, 2)
 
+	lanes := time.NewTicker(lanesPeriod)
+	defer lanes.Stop()
+
+	lanePackages := make(map[string]struct{})
+
 	for {
 		select {
 		case <-e.done:
@@ -369,6 +377,47 @@ func (e *Engine) runSink() {
 			e.sink.resync()
 		case <-liveTicks:
 			e.metrics.CounterAdd(metrics.ShellLiveTicks, 1, map[string]string{})
+		case <-lanes.C:
+			lanePackages = e.publishLanes(lanePackages)
 		}
 	}
+}
+
+// packageGauges is the metric storage's grouped gauges; nil without a storage.
+func packageGauges(metricStorage metricsstorage.Storage) metrics.PackageGauges {
+	if metricStorage == nil {
+		return nil
+	}
+
+	return metricStorage.Grouped()
+}
+
+// publishLanes writes the gauges of every hook lane and drops those of the packages in published
+// that no longer have lanes; it returns the packages that have them now.
+func (e *Engine) publishLanes(published map[string]struct{}) map[string]struct{} {
+	gauges := packageGauges(e.metrics)
+	if gauges == nil {
+		return published
+	}
+
+	samples := e.hookRouter.Samples()
+	current := make(map[string]struct{}, len(published))
+
+	for _, s := range samples {
+		current[s.Package] = struct{}{}
+
+		metrics.SetHooklaneLength(gauges, s.Package, s.Lane, s.Length)
+
+		for _, state := range hooklane.States() {
+			metrics.SetHooklaneState(gauges, s.Package, s.Lane, string(state), state == s.State)
+		}
+	}
+
+	for name := range published {
+		if _, ok := current[name]; !ok {
+			metrics.ExpireHooklane(gauges, name)
+		}
+	}
+
+	return current
 }

@@ -246,7 +246,7 @@ func (a *Application) addHooks(found ...hooks.Hook) error {
 			kubeCfg.Monitor.Metadata.MetricLabels = map[string]string{
 				pkg.MetricKeyHook:      hook.GetName(),
 				pkg.MetricKeyBinding:   kubeCfg.BindingName,
-				pkg.MetricKeyModule:    a.GetName(),
+				metrics.LabelPackage:   a.GetName(),
 				metrics.LabelNamespace: a.GetNamespace(),
 				pkg.MetricKeyQueue:     kubeCfg.Queue,
 				pkg.MetricKeyKind:      kubeCfg.Monitor.Kind,
@@ -777,6 +777,8 @@ func (a *Application) RunHooksByBinding(ctx context.Context, binding shtypes.Bin
 		return nil
 	}
 
+	started := time.Now()
+
 	for _, hook := range a.hooks.GetHooksByBinding(binding) {
 		bc := bctx.BindingContext{
 			Binding: string(binding),
@@ -798,6 +800,8 @@ func (a *Application) RunHooksByBinding(ctx context.Context, binding shtypes.Bin
 	if binding == shtypes.OnStartup {
 		a.running.Store(true)
 	}
+
+	hooks.RecordPhase(a.metricStorage, a.GetName(), binding, time.Since(started))
 
 	return nil
 }
@@ -828,7 +832,7 @@ func (a *Application) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.Bin
 
 	// namespace tells apart one application installed in several namespaces.
 	usageLabels := map[string]string{
-		pkg.MetricKeyModule:    a.GetName(),
+		metrics.LabelPackage:   a.GetName(),
 		metrics.LabelNamespace: a.GetNamespace(),
 		pkg.MetricKeyHook:      h.GetName(),
 		pkg.MetricKeyBinding:   hooks.BindingType(bctx),

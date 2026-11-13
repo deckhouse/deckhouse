@@ -99,20 +99,20 @@ const (
 	// LabelKind is the Kubernetes kind a hook's binding watches.
 	LabelKind = "kind"
 
+	// LabelPackage is the label key for the package (module, application or global) a metric describes.
+	LabelPackage = "package"
+
+	// LabelPhase is the label key for the phase of a package's run or startup.
+	LabelPhase = "phase"
+
+	// LabelLane is the label key for the hook lane of a package.
+	LabelLane = "lane"
+
+	// LabelState is the label key for the state of a hook lane.
+	LabelState = "state"
+
 	// LabelQueue is the label key for the task queue name.
 	LabelQueue = "queue"
-
-	// LabelQueueName is the label key for the task queue name in the task queue operation and compaction metrics.
-	LabelQueueName = "queue_name"
-
-	// LabelQueueAction is the label key for the task queue operation.
-	LabelQueueAction = "queue_action"
-
-	// LabelTaskType is the label key for the task type.
-	LabelTaskType = "task_type"
-
-	// LabelActivation is the label key for the event type that triggered a module, hook or converge run.
-	LabelActivation = "activation"
 
 	// LabelOperation is the label key for the Helm operation.
 	LabelOperation = "operation"

@@ -31,18 +31,6 @@ const (
 	ShellLiveTicks = "deckhouse_live_ticks"
 
 	// ============================================================================
-	// Task Queue Metrics
-	// ============================================================================
-	// TasksQueueActionDurationSeconds measures task queue operation durations
-	TasksQueueActionDurationSeconds = "deckhouse_tasks_queue_action_duration_seconds"
-	// ShellTasksQueueLength shows the current length of the task queue
-	ShellTasksQueueLength = "deckhouse_tasks_queue_length"
-	// TasksQueueCompactionOperationsTotal counts compaction operations per hook
-	TasksQueueCompactionOperationsTotal = "d8_telemetry_deckhouse_tasks_queue_compaction_operations_total"
-	// TasksQueueCompactionTasksByHook shows the number of tasks in queue for each hook when count exceeds 20. Updated every 10 seconds.
-	TasksQueueCompactionTasksByHook = "d8_telemetry_deckhouse_tasks_queue_compaction_tasks_by_hook"
-
-	// ============================================================================
 	// Hook Execution Metrics
 	// ============================================================================
 	// Kubernetes Bindings
@@ -60,9 +48,6 @@ const (
 	HookRunErrorsTotal        = "deckhouse_hook_run_errors_total"
 	HookRunAllowedErrorsTotal = "deckhouse_hook_run_allowed_errors_total"
 	HookRunSuccessTotal       = "deckhouse_hook_run_success_total"
-
-	// Task Queue Wait Time
-	ShellTaskWaitInQueueSecondsTotal = "deckhouse_task_wait_in_queue_seconds_total"
 
 	// ============================================================================
 	// Kubernetes Events Manager Metrics
@@ -215,28 +200,15 @@ func registerHookExecutionMetrics(metricStorage metricsstorage.Storage) error {
 		return fmt.Errorf("can not register %s: %w", HookRunSuccessTotal, err)
 	}
 
-	// Register queue wait time metric
-	_, err = metricStorage.RegisterCounter(
-		ShellTaskWaitInQueueSecondsTotal, executionLabels,
-		options.WithHelp("Counter of seconds that hooks waited in queue before execution"),
-	)
-	if err != nil {
-		return fmt.Errorf("can not register %s: %w", ShellTaskWaitInQueueSecondsTotal, err)
-	}
-
 	return nil
 }
 
-// RegisterShellOperatorMetrics registers the built-in shell-operator metrics: common,
-// task queue and Kubernetes events manager metrics. kubeEventManagerLabels are the label
+// RegisterShellOperatorMetrics registers the built-in shell-operator metrics: common and
+// Kubernetes events manager metrics. kubeEventManagerLabels are the label
 // names of the Kubernetes events manager metrics, supplied by the embedding operator.
 func RegisterShellOperatorMetrics(metricStorage metricsstorage.Storage, kubeEventManagerLabels []string) error {
 	if err := RegisterShellCommonMetrics(metricStorage); err != nil {
 		return fmt.Errorf("register common metrics: %w", err)
-	}
-
-	if err := RegisterShellTaskQueueMetrics(metricStorage); err != nil {
-		return fmt.Errorf("register task queue metrics: %w", err)
 	}
 
 	if err := RegisterKubeEventsManagerMetrics(metricStorage, kubeEventManagerLabels); err != nil {
@@ -255,64 +227,6 @@ func RegisterShellCommonMetrics(metricStorage metricsstorage.Storage) error {
 	)
 	if err != nil {
 		return fmt.Errorf("failed to register %s: %w", ShellLiveTicks, err)
-	}
-
-	return nil
-}
-
-// RegisterShellTaskQueueMetrics registers metrics related to task queue operations and performance.
-// Used by both shell-operator and addon-operator to monitor queue health and performance.
-func RegisterShellTaskQueueMetrics(metricStorage metricsstorage.Storage) error {
-	// Task queue operation labels
-	queueActionLabels := []string{LabelQueueName, LabelQueueAction}
-	queueLabels := []string{LabelQueue}
-
-	// High-resolution buckets for queue operations (microseconds to milliseconds)
-	queueOperationBuckets := []float64{
-		0.0,
-		0.0001, 0.0002, 0.0005, // 100, 200, 500 microseconds
-		0.001, 0.002, 0.005, // 1,2,5 milliseconds
-		0.01, 0.02, 0.05, // 10,20,50 milliseconds
-		0.1, 0.2, 0.5, // 100,200,500 milliseconds
-	}
-
-	// Register queue operation duration metric
-	_, err := metricStorage.RegisterHistogram(
-		TasksQueueActionDurationSeconds, queueActionLabels, queueOperationBuckets,
-		options.WithHelp("Histogram of task queue operation durations in seconds"),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to register %s: %w", TasksQueueActionDurationSeconds, err)
-	}
-
-	// Register queue length metric
-	_, err = metricStorage.RegisterGauge(
-		ShellTasksQueueLength, queueLabels,
-		options.WithHelp("Gauge showing the length of the task queue"),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to register %s: %w", ShellTasksQueueLength, err)
-	}
-
-	// Compaction metrics labels
-	compactionLabels := []string{LabelQueueName, LabelHook}
-
-	// Register compaction operations counter
-	_, err = metricStorage.RegisterCounter(
-		TasksQueueCompactionOperationsTotal, compactionLabels,
-		options.WithHelp("Counter of compaction operations per hook"),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to register %s: %w", TasksQueueCompactionOperationsTotal, err)
-	}
-
-	// Register compaction tasks by hook gauge
-	_, err = metricStorage.RegisterGauge(
-		TasksQueueCompactionTasksByHook, compactionLabels,
-		options.WithHelp("Gauge showing the number of tasks in queue for each hook when the count exceeds 20. Updated every 10 seconds by sampling the queue state."),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to register %s: %w", TasksQueueCompactionTasksByHook, err)
 	}
 
 	return nil

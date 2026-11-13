@@ -111,7 +111,7 @@ func startV2(logger *log.Logger) func(cmd *cobra.Command, args []string) error {
 
 		// The kube events manager's metrics carry the labels the packages set on their monitors
 		// (namespace: applications only).
-		kubeEventsLabels := []string{metrics.LabelHook, metrics.LabelBinding, metrics.LabelModule, metrics.LabelNamespace, metrics.LabelQueue, metrics.LabelKind}
+		kubeEventsLabels := []string{metrics.LabelHook, metrics.LabelBinding, metrics.LabelPackage, metrics.LabelNamespace, metrics.LabelQueue, metrics.LabelKind}
 		if err := metrics.RegisterShellOperatorMetrics(ms, kubeEventsLabels); err != nil {
 			return fmt.Errorf("register shell operator metrics: %w", err)
 		}

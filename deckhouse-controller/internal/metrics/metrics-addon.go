@@ -15,12 +15,8 @@
 package metrics
 
 import (
-	"context"
 	"fmt"
-	"strings"
 	"time"
-
-	"github.com/flant/shell-operator/pkg/task/queue"
 
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/options"
@@ -110,10 +106,6 @@ const (
 	// ============================================================================
 	// Helm Operations Metrics
 	// ============================================================================
-	// ModuleHelmSeconds measures Helm operation time for modules
-	ModuleHelmSeconds = "deckhouse_module_helm_seconds"
-	// HelmOperationSeconds measures specific Helm operation durations
-	HelmOperationSeconds = "deckhouse_helm_operation_seconds"
 	// HelmFallbackTotal counts how many times nelm operations had to fall back to helm3lib
 	HelmFallbackTotal = "deckhouse_helm_fallback_total"
 	// HelmFallbackTelemetryTotal mirrors HelmFallbackTotal under the d8_telemetry_ prefix so
@@ -122,24 +114,11 @@ const (
 	HelmFallbackTelemetryTotal = "d8_telemetry_helm_fallback_total"
 
 	// ============================================================================
-	// Task Queue Metrics
-	// ============================================================================
-	// AddonTaskWaitInQueueSecondsTotal measures time tasks wait in queue
-	AddonTaskWaitInQueueSecondsTotal = "deckhouse_task_wait_in_queue_seconds_total"
-	// AddonTasksQueueLength shows current length of task queues
-	AddonTasksQueueLength = "deckhouse_tasks_queue_length"
-	// TasksQueueHeadInfo shows the head element of each non-empty task queue (module, task_type, hook)
-	TasksQueueHeadInfo = "deckhouse_tasks_queue_head_info"
-
-	// ============================================================================
 	// Live Ticks Metrics
 	// ============================================================================
 	// AddonLiveTicks is a counter that increases every 10 seconds to indicate addon-operator is alive
 	AddonLiveTicks = "deckhouse_live_ticks"
 )
-
-// tasksQueueHeadInfoMetricGroup is the metric group name (without prefix) for tasks_queue_head_info.
-const tasksQueueHeadInfoMetricGroup = "tasks_queue_head_info"
 
 // Standard histogram buckets for timing metrics (1ms to 10s)
 var buckets1msTo10s = []float64{
@@ -156,7 +135,7 @@ var buckets1msTo10s = []float64{
 // ============================================================================
 
 // RegisterAddonHookMetrics registers all addon-operator specific metrics with the provided storage.
-// This includes configuration, module, hook, convergence, Helm, and task queue metrics.
+// This includes configuration, module, hook, convergence and Helm metrics.
 // Returns an error if any metric registration fails.
 func RegisterAddonHookMetrics(metricStorage metricsstorage.Storage) error {
 	// Register configuration metrics
@@ -187,11 +166,6 @@ func RegisterAddonHookMetrics(metricStorage metricsstorage.Storage) error {
 	// Register Helm metrics
 	if err := registerHelmMetrics(metricStorage); err != nil {
 		return fmt.Errorf("register helm metrics: %w", err)
-	}
-
-	// Register task queue metrics
-	if err := registerAddonTaskQueueMetrics(metricStorage); err != nil {
-		return fmt.Errorf("register task queue metrics: %w", err)
 	}
 
 	return nil
@@ -242,7 +216,7 @@ func registerModuleMetrics(metricStorage metricsstorage.Storage) error {
 
 	_, err = metricStorage.RegisterHistogram(
 		ModuleRunSeconds,
-		[]string{LabelModule, LabelActivation},
+		[]string{LabelModule},
 		buckets1msTo10s,
 		options.WithHelp("Histogram of module execution times in seconds"),
 	)
@@ -283,11 +257,10 @@ func registerModuleMetrics(metricStorage metricsstorage.Storage) error {
 // registerModuleHookMetrics registers metrics related to module hook execution
 func registerModuleHookMetrics(metricStorage metricsstorage.Storage) error {
 	moduleHookLabels := []string{
-		LabelModule,
+		LabelPackage,
 		LabelHook,
 		LabelBinding,
 		LabelQueue,
-		LabelActivation,
 	}
 
 	_, err := metricStorage.RegisterHistogram(
@@ -365,7 +338,6 @@ func registerGlobalHookMetrics(metricStorage metricsstorage.Storage) error {
 		LabelHook,
 		LabelBinding,
 		LabelQueue,
-		LabelActivation,
 	}
 
 	_, err := metricStorage.RegisterHistogram(
@@ -441,7 +413,7 @@ func registerGlobalHookMetrics(metricStorage metricsstorage.Storage) error {
 func registerConvergenceMetrics(metricStorage metricsstorage.Storage) error {
 	_, err := metricStorage.RegisterCounter(
 		ConvergenceSeconds,
-		[]string{LabelActivation},
+		[]string{},
 		options.WithHelp("Counter of convergence duration in seconds"),
 	)
 	if err != nil {
@@ -450,7 +422,7 @@ func registerConvergenceMetrics(metricStorage metricsstorage.Storage) error {
 
 	_, err = metricStorage.RegisterCounter(
 		ConvergenceTotal,
-		[]string{LabelActivation},
+		[]string{},
 		options.WithHelp("Counter of convergence executions"),
 	)
 	if err != nil {
@@ -462,27 +434,7 @@ func registerConvergenceMetrics(metricStorage metricsstorage.Storage) error {
 
 // registerHelmMetrics registers metrics related to Helm operations
 func registerHelmMetrics(metricStorage metricsstorage.Storage) error {
-	_, err := metricStorage.RegisterHistogram(
-		ModuleHelmSeconds,
-		[]string{LabelModule, LabelActivation},
-		buckets1msTo10s,
-		options.WithHelp("Histogram of Helm operation times for modules in seconds"),
-	)
-	if err != nil {
-		return fmt.Errorf("can not register %s: %w", ModuleHelmSeconds, err)
-	}
-
-	_, err = metricStorage.RegisterHistogram(
-		HelmOperationSeconds,
-		[]string{LabelModule, LabelActivation, LabelOperation},
-		buckets1msTo10s,
-		options.WithHelp("Histogram of specific Helm operation durations in seconds"),
-	)
-	if err != nil {
-		return fmt.Errorf("can not register %s: %w", HelmOperationSeconds, err)
-	}
-
-	_, err = metricStorage.RegisterCounter(
+	_, err := metricStorage.RegisterCounter(
 		HelmFallbackTotal,
 		[]string{LabelModule, LabelOperation, LabelErrorType},
 		options.WithHelp("Counter of nelm Helm operations that fell back to helm3lib, labeled by module, operation and error type"),
@@ -498,20 +450,6 @@ func registerHelmMetrics(metricStorage metricsstorage.Storage) error {
 	)
 	if err != nil {
 		return fmt.Errorf("can not register %s: %w", HelmFallbackTelemetryTotal, err)
-	}
-
-	return nil
-}
-
-// registerAddonTaskQueueMetrics registers metrics related to task queue operations
-func registerAddonTaskQueueMetrics(metricStorage metricsstorage.Storage) error {
-	_, err := metricStorage.RegisterCounter(
-		AddonTaskWaitInQueueSecondsTotal,
-		[]string{LabelModule, LabelHook, LabelBinding, LabelQueue},
-		options.WithHelp("Counter of seconds that tasks waited in queue before execution"),
-	)
-	if err != nil {
-		return fmt.Errorf("can not register %s: %w", AddonTaskWaitInQueueSecondsTotal, err)
 	}
 
 	return nil
@@ -539,75 +477,4 @@ func StartAddonLiveTicksUpdater(metricStorage metricsstorage.Storage) {
 			time.Sleep(10 * time.Second)
 		}
 	}()
-}
-
-// StartAddonTasksQueueLengthUpdater starts a goroutine that periodically updates
-// the tasks_queue_length and tasks_queue_head_info metrics every 5 seconds.
-// These metrics show the number of pending tasks and the head element info
-// (module, task_type, hook) of each non-empty queue.
-// headInfoExtractor is a callback that extracts (module, hook) from a task's raw metadata.
-func StartAddonTasksQueueLengthUpdater(metricStorage metricsstorage.Storage, tqs *queue.TaskQueueSet, headInfoExtractor func(metadata interface{}) (module, hook string)) {
-	// Register the tasks queue length gauge
-	_, _ = metricStorage.RegisterGauge(
-		AddonTasksQueueLength,
-		[]string{LabelQueue},
-		options.WithHelp("Gauge showing the length of the task queue"),
-	)
-
-	// Register the tasks queue head info gauge
-	_, _ = metricStorage.RegisterGauge(
-		TasksQueueHeadInfo,
-		[]string{LabelQueue, LabelModule, LabelTaskType, LabelHook},
-		options.WithHelp("Head info of each non-empty task queue (module, task_type, hook)"),
-	)
-
-	// Start the updater goroutine
-	go func() {
-		for {
-			// Gather task queues lengths.
-			tqs.IterateSnapshot(context.TODO(), func(_ context.Context, q *queue.TaskQueue) {
-				queueLen := float64(q.Length())
-				metricStorage.GaugeSet(AddonTasksQueueLength, queueLen, map[string]string{LabelQueue: q.Name})
-			})
-
-			// Publish head_info for each non-empty queue, expiring old series first.
-			updateTasksQueueHeadInfo(tqs, metricStorage, headInfoExtractor)
-
-			time.Sleep(5 * time.Second)
-		}
-	}()
-}
-
-// updateTasksQueueHeadInfo publishes head_info metrics for all non-empty queues,
-// properly expiring old series before republishing to prevent phantom series
-// from persisting after a queue head changes.
-func updateTasksQueueHeadInfo(tqs *queue.TaskQueueSet, metricStorage metricsstorage.Storage, headInfoExtractor func(metadata interface{}) (module, hook string)) {
-	metricStorage.Grouped().ExpireGroupMetricByName(tasksQueueHeadInfoMetricGroup, TasksQueueHeadInfo)
-
-	tqs.IterateSnapshot(context.TODO(), func(_ context.Context, q *queue.TaskQueue) {
-		t := q.GetFirst()
-		if t == nil {
-			return
-		}
-
-		module, hook := headInfoExtractor(t.GetMetadata())
-
-		// Normalize ParallelModuleRun synthetic module names:
-		// "Parallel run for a, b, c" -> "" to avoid false joins with deckhouse_mm_module_info.
-		if strings.HasPrefix(module, "Parallel run for ") {
-			module = ""
-		}
-
-		metricStorage.Grouped().GaugeSet(
-			tasksQueueHeadInfoMetricGroup,
-			TasksQueueHeadInfo,
-			1,
-			map[string]string{
-				LabelQueue:    q.Name,
-				LabelModule:   module,
-				LabelTaskType: string(t.GetType()),
-				LabelHook:     hook,
-			},
-		)
-	})
 }

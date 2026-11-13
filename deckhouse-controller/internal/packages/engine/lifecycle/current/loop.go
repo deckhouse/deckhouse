@@ -23,6 +23,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/lifecycle/model"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/lifecycle/operation"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/lifecycle/retry"
@@ -185,11 +186,21 @@ func (r *Reconciler) finishOperation(res operation.Result) bool {
 		r.state.disabled = true
 		r.state.applied = res.Key
 		r.reportSuccess(operation.Disable, st.steps, r.state.settings.Accepted)
+		r.expireMetrics()
 	case operation.Uninstall:
+		r.expireMetrics()
+
 		return true
 	}
 
 	return false
+}
+
+// expireMetrics drops the package's gauges: a disabled or removed package has no last run to show.
+func (r *Reconciler) expireMetrics() {
+	if r.deps.Metrics != nil {
+		metrics.ExpirePackage(r.deps.Metrics, r.name)
+	}
 }
 
 func (r *Reconciler) exit() {

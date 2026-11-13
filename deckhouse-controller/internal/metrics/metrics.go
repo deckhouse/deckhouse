@@ -188,6 +188,10 @@ func RegisterDeckhouseControllerMetrics(metricStorage metricsstorage.Storage) er
 		return fmt.Errorf("register module installer metrics: %w", err)
 	}
 
+	if err := registerPackageMetrics(metricStorage); err != nil {
+		return fmt.Errorf("register package metrics: %w", err)
+	}
+
 	return nil
 }
 

@@ -202,11 +202,11 @@ func (m *Module) addHooks(found ...hooks.Hook) error {
 			kubeCfg.Monitor.Metadata.LogLabels[pkg.LogKeyHook] = hook.GetName()
 			kubeCfg.Monitor.Metadata.LogLabels["hook.type"] = "package"
 
-			// module tells apart the series of same-named hooks of different modules.
+			// package tells apart the series of same-named hooks of different packages.
 			kubeCfg.Monitor.Metadata.MetricLabels = map[string]string{
 				pkg.MetricKeyHook:    hook.GetName(),
 				pkg.MetricKeyBinding: kubeCfg.BindingName,
-				pkg.MetricKeyModule:  m.GetName(),
+				metrics.LabelPackage: m.GetName(),
 				pkg.MetricKeyQueue:   kubeCfg.Queue,
 				pkg.MetricKeyKind:    kubeCfg.Monitor.Kind,
 			}
@@ -575,6 +575,8 @@ func (m *Module) RunHooksByBinding(ctx context.Context, binding shtypes.BindingT
 		return nil
 	}
 
+	started := time.Now()
+
 	for _, hook := range m.hooks.GetHooksByBinding(binding) {
 		bc := bctx.BindingContext{
 			Binding: string(binding),
@@ -596,6 +598,8 @@ func (m *Module) RunHooksByBinding(ctx context.Context, binding shtypes.BindingT
 	if binding == shtypes.OnStartup {
 		m.running.Store(true)
 	}
+
+	hooks.RecordPhase(m.metricStorage, m.GetName(), binding, time.Since(started))
 
 	return nil
 }
@@ -625,7 +629,7 @@ func (m *Module) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.BindingC
 	queue, allowFailure := hooks.RunBinding(h, bctx)
 
 	usageLabels := map[string]string{
-		pkg.MetricKeyModule:  m.GetName(),
+		metrics.LabelPackage: m.GetName(),
 		pkg.MetricKeyHook:    h.GetName(),
 		pkg.MetricKeyBinding: hooks.BindingType(bctx),
 		pkg.MetricKeyQueue:   queue,

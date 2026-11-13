@@ -21,6 +21,7 @@ import (
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/lifecycle/hooklane"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/lifecycle/model"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/lifecycle/retry"
@@ -38,8 +39,9 @@ type Deps struct {
 	Hooks            hookLanes
 	Orphans          orphanPurger
 	ModulesNamespace string
-	Clock            retry.Clock // Clock nil means the wall clock.
-	Logger           *log.Logger // Logger nil means a no-op logger.
+	Metrics          metrics.PackageGauges // Metrics records the init_hooks phase; nil records none.
+	Clock            retry.Clock           // Clock nil means the wall clock.
+	Logger           *log.Logger           // Logger nil means a no-op logger.
 }
 
 // Config is what the package Reconciler passes to Start.

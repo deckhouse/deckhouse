@@ -53,11 +53,6 @@ import (
 const (
 	nelmServiceTracer = "nelm-service"
 
-	// Operations of helm_operation_seconds: addon-operator's template and upgrade, and delete.
-	operationTemplate = "template"
-	operationUpgrade  = "upgrade"
-	operationDelete   = "delete"
-
 	chartFile    = "Chart.yaml" // Helm chart metadata file
 	templatesDir = "templates"  // Helm templates directory
 	chartsDir    = "charts"     // Helm subcharts directory
@@ -140,7 +135,7 @@ type Service struct {
 
 	// observations receive the release progress, the endpoints and "no workloads" (observe.go).
 	observations observations
-	// metrics receive the helm timings addon-operator wrote; nil records none.
+	// metrics receive the helm phase of a run and the autoscaler gauges; nil records none.
 	metrics metricsstorage.Storage
 
 	logger *log.Logger
@@ -148,7 +143,7 @@ type Service struct {
 
 // NewService creates a new nelm service for managing Helm releases. observations receive what the
 // service observes while it renders, applies and deletes releases (observed.Store); metricStorage
-// the timings of those operations.
+// the helm phase of a run.
 func NewService(kubeClient *klient.Client, observations observations, metricStorage metricsstorage.Storage, logger *log.Logger) *Service {
 	timeout := envconfig.PackageNelmTimeout()
 
@@ -283,9 +278,7 @@ func (s *Service) Delete(ctx context.Context, namespace, name string) error {
 
 	s.logger.Debug("delete nelm release", slog.String("name", name), slog.String("namespace", namespace))
 
-	started := time.Now()
 	err := s.client.Delete(ctx, namespace, name, s.trackUninstall)
-	s.observeOperation(operationDelete, namespace, name, started)
 
 	if err != nil {
 		return err
@@ -355,7 +348,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package, ap
 		return ErrPackageNotHelm
 	}
 
-	defer s.observeUpgrade(namespace, pkg.GetName(), time.Now())
+	defer s.observeUpgrade(pkg.GetName(), time.Now())
 
 	// Once the release is marked as under maintenance, stop reconciling: skip the
 	// upgrade and drop monitoring so deleted resources are not restored.
@@ -420,7 +413,6 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package, ap
 	}
 
 	// Render chart to get manifests for checksum calculation
-	renderStarted := time.Now()
 	renderedManifests, patches, autoscalers, err := s.renderWithFallbacks(ctx, namespace, pkg, nelm.InstallOptions{
 		Path:            pkg.GetPath(),
 		ValuesPaths:     []string{valuesPath},
@@ -428,7 +420,6 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package, ap
 		ResourcesLabels: resourcesLabels,
 		RenderPatches:   patches,
 	})
-	s.observeOperation(operationTemplate, namespace, pkg.GetName(), renderStarted)
 
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -492,7 +483,6 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package, ap
 	}
 
 	// Install or upgrade the release
-	installStarted := time.Now()
 	err = s.client.Install(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
 		OnTrackingEvent: s.trackApply(progress),
 		TrackingOptions: trackingOptions,
@@ -508,7 +498,6 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package, ap
 		},
 		ResourcesLabels: resourcesLabels,
 	})
-	s.observeOperation(operationUpgrade, namespace, pkg.GetName(), installStarted)
 
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -998,27 +987,11 @@ func joinResources(resources []string) string {
 		strings.Join(resources[:maxNamedResources], ", "), len(resources)-maxNamedResources)
 }
 
-// observeOperation records one helm operation of a release, failed or not.
-func (s *Service) observeOperation(operation, namespace, name string, started time.Time) {
+// observeUpgrade records a whole Upgrade of a release as the helm phase of the package's run.
+func (s *Service) observeUpgrade(name string, started time.Time) {
 	if s.metrics == nil {
 		return
 	}
 
-	s.metrics.HistogramObserve(metrics.HelmOperationSeconds, time.Since(started).Seconds(), map[string]string{
-		metrics.LabelModule:    name,
-		metrics.LabelNamespace: namespace,
-		metrics.LabelOperation: operation,
-	}, nil)
-}
-
-// observeUpgrade records a whole Upgrade of a release, as addon-operator's module_helm_seconds.
-func (s *Service) observeUpgrade(namespace, name string, started time.Time) {
-	if s.metrics == nil {
-		return
-	}
-
-	s.metrics.HistogramObserve(metrics.ModuleHelmSeconds, time.Since(started).Seconds(), map[string]string{
-		metrics.LabelModule:    name,
-		metrics.LabelNamespace: namespace,
-	}, nil)
+	metrics.SetPackageRun(s.metrics.Grouped(), name, metrics.PhaseHelm, time.Since(started))
 }

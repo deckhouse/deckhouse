@@ -15,6 +15,7 @@
 package debug
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -22,6 +23,7 @@ import (
 	"net/url"
 	"os"
 	"slices"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
@@ -256,7 +258,7 @@ func printLanes(name string) error {
 	return w.Flush()
 }
 
-// printConverge prints Converged, or one row per node the convergence waits for.
+// printConverge prints Converged, or one row per node the convergence waits for, as a queue.
 func printConverge() error {
 	client, err := newSocketClient(packagesDebugSocket)
 	if err != nil {
@@ -291,26 +293,51 @@ func printConverge() error {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "PACKAGE\tVERSION\tSTATE\tWAITS-FOR\tERROR")
 
-	for _, name := range slices.Sorted(maps.Keys(dump.Packages)) {
-		p := dump.Packages[name]
-
-		version, state, waitsFor, failure := "-", "running", "-", "-"
-		if p.Version != "" {
-			version = p.Version
-		}
-
-		if p.WaitsFor != "" {
-			state, waitsFor = "waiting", p.WaitsFor
-		}
-
-		if p.Error != "" {
-			state, failure = "error", p.Error
-		}
-
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", name, version, state, waitsFor, failure)
+	for _, r := range convergeRows(dump.Packages) {
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", r.name, r.version, r.state, r.waitsFor, r.failure)
 	}
 
 	return w.Flush()
+}
+
+// convergeRow is one printed node of the convergence.
+type convergeRow struct {
+	name, version, state, waitsFor, failure string
+}
+
+// convergeRows lists the nodes as a queue: the running ones first, then the failed, then the
+// waiting grouped by what they wait for, each group by name.
+func convergeRows(packages map[string]engine.ConvergePackageDump) []convergeRow {
+	rows := make([]convergeRow, 0, len(packages))
+
+	for name, p := range packages {
+		r := convergeRow{name: name, version: "-", state: "running", waitsFor: "-", failure: "-"}
+		if p.Version != "" {
+			r.version = p.Version
+		}
+
+		if p.WaitsFor != "" {
+			r.state, r.waitsFor = "waiting", p.WaitsFor
+		}
+
+		if p.Error != "" {
+			r.state, r.failure = "error", p.Error
+		}
+
+		rows = append(rows, r)
+	}
+
+	rank := map[string]int{"running": 0, "error": 1, "waiting": 2}
+
+	slices.SortFunc(rows, func(a, b convergeRow) int {
+		return cmp.Or(
+			cmp.Compare(rank[a.state], rank[b.state]),
+			strings.Compare(a.waitsFor, b.waitsFor),
+			strings.Compare(a.name, b.name),
+		)
+	})
+
+	return rows
 }
 
 // namedURL narrows a dump to a single package; an empty name means every package.

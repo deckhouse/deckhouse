@@ -172,3 +172,39 @@ func (ln *lane) dump() LaneDump {
 
 	return d
 }
+
+// States lists every state a lane can be in.
+func States() []State {
+	return []State{StateIdle, StateRunning, StateRetrying, StateThrottled, StateStopping}
+}
+
+// Sample is one lane in the numbers the lane metrics publish.
+type Sample struct {
+	Package string
+	Lane    string
+	State   State
+	Length  int // Length is the items in the lane, the one in flight included.
+}
+
+// Samples returns one sample per lane of every package.
+func (r *Router) Samples() []Sample {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var res []Sample
+
+	for owner, l := range r.lanes {
+		for queue, ln := range l.lanes {
+			res = append(res, ln.sample(owner, queue))
+		}
+	}
+
+	return res
+}
+
+func (ln *lane) sample(owner, queue string) Sample {
+	ln.mu.Lock()
+	defer ln.mu.Unlock()
+
+	return Sample{Package: owner, Lane: queue, State: ln.state, Length: len(ln.items)}
+}

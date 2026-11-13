@@ -15,27 +15,18 @@
 package engine
 
 import (
-	"sync/atomic"
 	"time"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
-// Activations of the convergence metrics, as addon-operator names the startup one.
-const (
-	activationOperatorStartup = "OperatorStartup" // activationOperatorStartup: from Resume to the first convergence.
-	activationEvent           = "Event"           // activationEvent: any later period the graph was unconverged.
-)
-
 // convergence turns the scheduler's convergence changes (schedule.WithConvergenceHook) into
-// deckhouse_convergence_seconds and deckhouse_convergence_total. Its changed runs under the
-// scheduler's lock, so the calls never overlap.
+// deckhouse_convergence_seconds, deckhouse_convergence_total and deckhouse_convergence_last_seconds.
+// Its changed runs under the scheduler's lock, so the calls never overlap.
 type convergence struct {
 	metrics metricsstorage.Storage
 	since   time.Time
-	// started: the startup convergence is over, so the next periods are activationEvent.
-	started atomic.Bool
 }
 
 // changed opens a period on false and records it on true.
@@ -45,12 +36,13 @@ func (c *convergence) changed(converged bool) {
 		return
 	}
 
-	activation := activationEvent
-	if !c.started.Swap(true) {
-		activation = activationOperatorStartup
+	// No period was opened (the graph started converged): there is nothing to measure.
+	if c.since.IsZero() {
+		return
 	}
 
-	labels := map[string]string{metrics.LabelActivation: activation}
-	c.metrics.CounterAdd(metrics.ConvergenceSeconds, time.Since(c.since).Seconds(), labels)
-	c.metrics.CounterAdd(metrics.ConvergenceTotal, 1, labels)
+	took := time.Since(c.since)
+	c.metrics.CounterAdd(metrics.ConvergenceSeconds, took.Seconds(), map[string]string{})
+	c.metrics.CounterAdd(metrics.ConvergenceTotal, 1, map[string]string{})
+	c.metrics.GaugeSet(metrics.ConvergenceLastSeconds, took.Seconds(), map[string]string{})
 }

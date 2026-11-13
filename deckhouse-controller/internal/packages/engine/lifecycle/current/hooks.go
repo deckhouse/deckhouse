@@ -20,6 +20,8 @@ import (
 
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 )
 
 // startHooks runs once per enable; a failed start stops what it started (hooklane Start). The
@@ -30,12 +32,18 @@ func (r *Reconciler) startHooks(ctx context.Context, st *operationState) error {
 		return nil
 	}
 
+	started := r.clock.Now()
+
 	stop, err := r.deps.Hooks.Start(ctx, r.ctx, r.pkg, r.changed)
 	if err != nil {
 		return fmt.Errorf("start hooks: %w", err)
 	}
 
 	st.hooksStop = stop
+
+	if r.deps.Metrics != nil {
+		metrics.SetPackageStartup(r.deps.Metrics, r.name, metrics.PhaseInitHooks, r.clock.Now().Sub(started))
+	}
 
 	return nil
 }

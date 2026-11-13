@@ -241,6 +241,48 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 		})
 	})
 
+	// The Module v2 runtime has no task queues, so the main dashboard is swapped for its own.
+	Context("The main Grafana dashboard", func() {
+		definition := func(name string) string {
+			dashboard := f.KubernetesGlobalResource("GrafanaDashboardDefinition", name)
+			Expect(dashboard.Exists()).To(BeTrue())
+
+			return dashboard.Field("spec.definition").String()
+		}
+
+		render := func(enableModuleV2 bool) {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSet("global.clusterIsBootstrapped", true)
+			f.ValuesSetFromYaml("deckhouse", moduleValuesForMasterNode)
+			f.ValuesSet("deckhouse.enableModuleV2", enableModuleV2)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+		}
+
+		It("shows the task queues without Module v2", func() {
+			render(false)
+
+			main := definition("d8-deckhouse-main-deckhouse")
+			Expect(main).To(ContainSubstring("deckhouse_tasks_queue_length"))
+			Expect(main).ToNot(ContainSubstring("deckhouse_hooklane_state"))
+		})
+
+		It("shows the hook lanes with Module v2", func() {
+			render(true)
+
+			main := definition("d8-deckhouse-main-deckhouse")
+			Expect(main).To(ContainSubstring("deckhouse_hooklane_state"))
+			Expect(main).ToNot(ContainSubstring("deckhouse_tasks_queue_length"))
+		})
+
+		It("keeps the other dashboards of the module with Module v2", func() {
+			render(true)
+
+			Expect(f.KubernetesGlobalResource("GrafanaDashboardDefinition", "d8-deckhouse-kubernetes-cluster-webhook-handler").Exists()).To(BeTrue())
+		})
+	})
+
 	// The previous implementation's registry contour is gone: nothing writes `deckhouse.registry.*`
 	// on a cluster the registry module runs, which from this release is every cluster, so a
 	// `registry-config` rendered from it would name the registry the cluster was installed or

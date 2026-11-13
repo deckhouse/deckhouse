@@ -484,6 +484,35 @@ func (s *lanesSuite) TestDumpDuringARun() {
 	s.Equal(hooklane.StateRunning, summary[0].State)
 }
 
+// The samples show the lane the way the metrics publish it: the length counts the run in
+// flight with what waits.
+func (s *lanesSuite) TestSamplesDuringARun() {
+	block := newBlocker()
+	o := &object{name: "app", calls: s.calls, queues: []string{"main"},
+		kube: []hooks.ControllableHook{kubeHook(s.calls, "h", binding{queue: "main", noSync: true})},
+		run: func(ctx context.Context, _ string, contexts []bctx.BindingContext) error {
+			if ids(contexts) == "e1" {
+				return block.wait(ctx, false)
+			}
+
+			return nil
+		}}
+	s.mustStart(o)
+	defer close(block.release)
+
+	s.router.RouteKubeEvent(context.Background(), event("h-0", "e1"))
+	s.Require().True(s.calls.waitFor("run:h:e1"))
+	s.router.RouteKubeEvent(context.Background(), event("h-0", "e2"))
+
+	samples := s.router.Samples()
+
+	s.Require().Len(samples, 1)
+	s.Equal("app", samples[0].Package)
+	s.Equal("main", samples[0].Lane)
+	s.Equal(hooklane.StateRunning, samples[0].State)
+	s.Equal(2, samples[0].Length)
+}
+
 // Every run that changes the values checksum calls changed: a synchronization too.
 func (s *lanesSuite) TestSynchronizationThatPatchesValuesCallsChanged() {
 	o := &object{name: "app", calls: s.calls, queues: []string{"main"},

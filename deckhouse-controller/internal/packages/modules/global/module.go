@@ -182,11 +182,11 @@ func (m *Module) addHooks(found ...hooks.GlobalHook) error {
 			kubeCfg.Monitor.Metadata.LogLabels[pkg.LogKeyHook] = hook.GetName()
 			kubeCfg.Monitor.Metadata.LogLabels["hook.type"] = "package"
 
-			// An empty module keeps the label set of the module hooks, as addon-operator does.
+			// An empty package keeps the label set of the module hooks, as addon-operator does.
 			kubeCfg.Monitor.Metadata.MetricLabels = map[string]string{
 				pkg.MetricKeyHook:    hook.GetName(),
 				pkg.MetricKeyBinding: kubeCfg.BindingName,
-				pkg.MetricKeyModule:  "",
+				metrics.LabelPackage: "",
 				pkg.MetricKeyQueue:   kubeCfg.Queue,
 				pkg.MetricKeyKind:    kubeCfg.Monitor.Kind,
 			}
