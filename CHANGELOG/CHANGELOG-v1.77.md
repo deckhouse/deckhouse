@@ -318,6 +318,9 @@
  - **[cloud-provider-vsphere]** Migrated cloud-provider RBAC v1 `user-authz` ClusterRoles to a shared `helm-lib` template. [#19964](https://github.com/deckhouse/deckhouse/pull/19964)
  - **[cloud-provider-vsphere]** Migrated from Terraform to OpenTofu. [#19645](https://github.com/deckhouse/deckhouse/pull/19645)
  - **[cloud-provider-vsphere]** Migrated remaining cloud-provider Go artifact builds to the unified `builder/golang` image. [#20084](https://github.com/deckhouse/deckhouse/pull/20084)
+ - **[cloud-provider-yandex]** Add ru-central1-f zone support via explicit zone selection with a four-zone limit.
+    Existing clusters are unaffected; the default zone set (ru-central1-a, ru-central1-b, ru-central1-d, ru-central1-e) is statically pinned. To use ru-central1-f, list it in `zones` instead of one of the default zones; the dropped zone's subnet is replaced by a new subnet in ru-central1-f and the nodes in it are recreated.
+ - **[cloud-provider-yandex]** Add ru-central1-f zone support via explicit zone selection with a four-zone limit.
  - **[cloud-provider-yandex]** Added CAPI support for the Yandex provider. [#19432](https://github.com/deckhouse/deckhouse/pull/19432)
  - **[cloud-provider-yandex]** Added oss.yaml files for cloud provider modules. [#18989](https://github.com/deckhouse/deckhouse/pull/18989)
  - **[cloud-provider-yandex]** Enabled the security policy check and added SecurityPolicyException rendering for Yandex CCM and CSI components. [#18899](https://github.com/deckhouse/deckhouse/pull/18899)
@@ -501,6 +504,7 @@
     After the update, the default policy on these clusters becomes less strict: it is switched back to `Privileged`.
     To keep the `Baseline` policy, set `settings.podSecurityStandards.defaultPolicy: Baseline` explicitly in the `admission-policy-engine` ModuleConfig.
  - **[admission-policy-engine]** Made Gatekeeper pods tolerate the csi-not-bootstrapped taint to prevent webhook deadlock during worker node replacement. [#19383](https://github.com/deckhouse/deckhouse/pull/19383)
+ - **[admission-policy-engine]** Pods with a Localhost AppArmor profile set in `securityContext` are no longer denied by the Baseline policy.
  - **[admission-policy-engine]** Restored the `Privileged` default PSS policy for clusters bootstrapped before v1.55 (without the `install-data` ConfigMap). [#23259](https://github.com/deckhouse/deckhouse/pull/23259)
     Clusters bootstrapped before v1.55 were switched to the `Baseline` default PSS policy in 1.77, which denies privileged workloads in user namespaces.
     After the update, the default policy on these clusters becomes less strict: it is switched back to `Privileged`, and privileged pods in user namespaces pass admission again.
@@ -734,6 +738,7 @@
  - **[common]** Updated NGINX to 1.30.2 in `ingress-nginx`. [#20173](https://github.com/deckhouse/deckhouse/pull/20173)
     All Ingress NGINX Controller pods will be restarted.
  - **[common]** Updated `golang.org/x/net`, `golang.org/x/text`, `google.golang.org/grpc` and `github.com/klauspost/compress` in CSI sidecars to fix CVEs.
+ - **[common]** Updated `golang.org/x/net`, `golang.org/x/text`, `google.golang.org/grpc` and `github.com/klauspost/compress` in the Kubernetes 1.31 CSI sidecars of CSE to fix CVEs.
  - **[common]** fix cve [#21986](https://github.com/deckhouse/deckhouse/pull/21986)
  - **[common]** kube-apiserver returns a single short validation error for an invalid `fieldManager` instead of an error for every invalid character.
  - **[control-plane-manager]** A new etcd `maxDbSize` is applied without a `deckhouse` restart.
@@ -751,6 +756,7 @@
     the `default-scheduler` profile is not affected. Pods using this profile must declare resource
     `requests` — the scheduler scores nodes using `NonZeroRequested`, substituting 100m CPU / 200Mi
     memory for containers without requests, which makes bin packing operate on synthetic numbers.
+ - **[control-plane-manager]** Fixed ControlPlaneOperation failures on clusters whose root CAs have a non-default subject.
  - **[control-plane-manager]** Fixed Helm adoption of `kubeadm:cluster-admins` ClusterRoleBinding on upgrade from a DKP version prior to 1.76. [#20877](https://github.com/deckhouse/deckhouse/pull/20877)
     If your cluster was previously upgraded to DKP 1.76.0 from a version earlier than 1.76 and was not patched, `kubectl logs` and `kubectl exec` may fail cluster-wide for all users. Apply the manual workaround from the [PR description](https://github.com/deckhouse/deckhouse/pull/20877) before upgrading.
  - **[control-plane-manager]** Fixed ModuleConfig deletion in control-plane-manager. [#21094](https://github.com/deckhouse/deckhouse/pull/21094)
@@ -872,6 +878,7 @@
  - **[dhctl]** Refuse to create the legacy provider Secret when editing the config of a ModuleConfig-driven cluster. [#21396](https://github.com/deckhouse/deckhouse/pull/21396)
  - **[dhctl]** Replaced app package references with the options package in multiple files. [#19702](https://github.com/deckhouse/deckhouse/pull/19702)
  - **[dhctl]** Restoring of handling api_server_url and api_server_token in dhctl [#23293](https://github.com/deckhouse/deckhouse/pull/23293)
+ - **[dhctl]** The bootstrap terminal no longer shows glued lines, FAILED for bashible step attempts that recovered, or "Unhandled Error" from client-go.
  - **[dhctl]** Wait for stronghold cluster sync before node deletion [#19643](https://github.com/deckhouse/deckhouse/pull/19643)
  - **[docs]** Add info about kernel requirement for containerdv2 migration. [#19437](https://github.com/deckhouse/deckhouse/pull/19437)
  - **[docs]** Change security events docs [#20993](https://github.com/deckhouse/deckhouse/pull/20993)
@@ -1092,6 +1099,8 @@
  - **[registrypackages]** Bumped `containerd` to 1.7.36 / 2.2.9 and OpenTelemetry to 1.45.0 in `containerd` and `crictl` to fix CVEs.
  - **[registrypackages]** Bumped containerd to 1.7.35/2.2.8; bumped grpc, x/crypto, and websocket in containerd, crictl, and Kubernetes 1.32–1.36 gomod patches. [#23087](https://github.com/deckhouse/deckhouse/pull/23087)
  - **[registrypackages]** Close CVEs in `cfssl`, `docker-registry` and `rpp-get` by bumping vulnerable Go dependencies, and build `yq` from `pm` at 4.53.6. [#22684](https://github.com/deckhouse/deckhouse/pull/22684)
+ - **[registrypackages]** Fix AppArmor denying signals between processes of one container on Ubuntu kernels 7.0.0-41 and later.
+    containerd restarts on all nodes. On nodes where the old AppArmor profile is already loaded, the fix applies after a node reboot.
  - **[registrypackages]** Fix dm-verity devices that could never be closed for containerd 2.2.7 (CSE only). [#22807](https://github.com/deckhouse/deckhouse/pull/22807)
  - **[registrypackages]** Fixed known vulnerabilities in the kubernetes-cni package.
  - **[registrypackages]** Fsync the EROFS layer blob in `containerd` before committing snapshot metadata, so an unclean shutdown can no longer leave an unmountable image layer. [#23145](https://github.com/deckhouse/deckhouse/pull/23145)
@@ -1135,6 +1144,8 @@
     A cluster still on 1.76 whose user-authn ModuleConfig sets idTokenTTL to 6h or more updates to this release without Deckhouse crash-looping, and stays on it until idTokenTTL is lowered below 6h. A cluster already crash-looping on 1.77.0 or 1.77.1 does not recover by itself, since the release controller runs in the pod that is down; set failurePolicy Ignore on the module-configs.deckhouse-webhook.deckhouse.io webhook of the deckhouse-webhook ValidatingWebhookConfiguration, lower idTokenTTL below 6h, and restart the deckhouse pod.
  - **[user-authn]** Commander releases older than 1.18 can grant Kubernetes API access on DexClient again. [#22521](https://github.com/deckhouse/deckhouse/pull/22521)
  - **[user-authn]** Default DKP gateway requirement is removed from dex-authenticator template.
+ - **[user-authn]** Dex answers the refresh of a locked user, of a user deleted from the local store or LDAP, and of a claimed or expired refresh token with `invalid_grant` (HTTP 400), so that applications and a Dex that signs in through this one send the user to sign in.
+    Dex pods restart. A client of Dex that expects HTTP 429 on the refresh of a locked user, HTTP 500 for a deleted one, or `invalid_request` for a claimed or expired refresh token gets HTTP 400 `invalid_grant`. The password and token exchange grants and the sign-in page answer as before.
  - **[user-authn]** DexClient and DexAuthenticator now honour the value of the allow-access-to-kubernetes annotation instead of merely its presence. [#21979](https://github.com/deckhouse/deckhouse/pull/21979)
     The `dexclient.deckhouse.io/allow-access-to-kubernetes` and
     `dexauthenticator.deckhouse.io/allow-access-to-kubernetes` annotations were previously
@@ -1313,6 +1324,7 @@
     Kubelet configuration changes on nodes and is applied through the normal node reconfiguration flow.
  - **[candi]** Updated base images to v1.3.22 to address yq CVEs. [#21864](https://github.com/deckhouse/deckhouse/pull/21864)
  - **[candi]** base images updated to 3.1.23
+ - **[candi]** base images updated to v3.1.27
  - **[candi]** base_images - fix base/distroless final image [#22345](https://github.com/deckhouse/deckhouse/pull/22345)
     low
  - **[candi]** bump cosign to 3.1.3/2.6.5 [#22761](https://github.com/deckhouse/deckhouse/pull/22761)
