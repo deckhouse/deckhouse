@@ -729,12 +729,19 @@ spec:
 в неймспейсах, кроме `d8-*` и `kube-*`, через Gatekeeper.
 Это позволяет создавать пользовательские политики для разрешения или запрета операций `kubectl exec` и `kubectl attach`.
 
-#### Поды с лейблом `heritage: deckhouse`
+#### Поды с лейблом heritage: deckhouse
 
-Exec, attach, port-forward и debug в поды [системных компонентов](../../../glossary.html#system-component)
-с лейблом `heritage: deckhouse` запрещает модуль `deckhouse` всем, кроме системных пользователей Deckhouse,
-независимо от того, включён ли `admission-policy-engine`.
-Подробнее — в [FAQ модуля `deckhouse`](/modules/deckhouse/faq.html).
+Модуль `deckhouse` запрещает всем пользователям, кроме системных пользователей Deckhouse Platform, выполнение следующих операций в подах [системных компонентов](../../../glossary.html#system-component)
+с лейблом `heritage: deckhouse`:
+
+- `kubectl exec`;
+- `kubectl attach`;
+- `kubectl cp`;
+- `kubectl port-forward`;
+- `kubectl debug`.
+
+Запрет действует независимо от того, включён ли в кластере модуль `admission-policy-engine`.
+Подробнее — [в FAQ модуля `deckhouse`](/modules/deckhouse/faq.html#кто-может-выполнять-exec-в-поды-deckhouse-platform-и-масштабировать-объекты-deckhouse-platform).
 
 #### Пример пользовательской политики
 

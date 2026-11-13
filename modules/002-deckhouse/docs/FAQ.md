@@ -263,30 +263,45 @@ More info in [official documentation](https://kubernetes.io/docs/tasks/debug/deb
 
 An ephemeral container cannot be added to a Pod labeled `heritage: deckhouse`, see the next section.
 
-## Who can exec into Deckhouse Pods and scale Deckhouse objects?
+## Who can run exec into Deckhouse Platform pods and scale Deckhouse Platform objects?
 
-Only Deckhouse system users. The `deckhouse` module denies the following operations to everyone else, cluster administrators and superadmins included, in every namespace:
+Only Deckhouse Platform system users.
+For all other users, including those with the `ClusterAdmin` and `SuperAdmin` roles, the `deckhouse` module prohibits the following operations in any namespace:
 
-- `kubectl exec`, `kubectl attach`, `kubectl cp`, `kubectl port-forward` and `kubectl debug` into a Pod labeled `heritage: deckhouse`. A port-forward to a Service ends up in one of its Pods and is denied the same way;
-- `kubectl scale` of a Deployment, StatefulSet, ReplicaSet or ReplicationController labeled `heritage: deckhouse`, unless the object is under maintenance, that is, labeled `maintenance.deckhouse.io/no-resource-reconciliation`.
+* `kubectl exec`, `kubectl attach`, `kubectl cp`, `kubectl port-forward` and `kubectl debug` into a Pod labeled `heritage: deckhouse`. The restriction also applies to `kubectl port-forward` to Services if the request is directed to a protected Pod.
+* `kubectl scale` of Deployment, StatefulSet, ReplicaSet or ReplicationController resources labeled `heritage: deckhouse`, unless the object is under maintenance, that is, labeled `maintenance.deckhouse.io/no-resource-reconciliation`.
 
-The label is checked on the object itself: a Pod without `heritage: deckhouse` is not protected, even if its Deployment carries the label.
+The `heritage: deckhouse` label is checked on the object itself. For example, if a Deployment has this label but a Pod created by it does not, the access restrictions do not apply to that Pod.
 
-The checks do not apply to:
+These restrictions do not apply to the following users and components:
 
-- `system:sudouser`;
-- `dhctl` and `observability`;
-- service accounts from `d8-*` and `kube-*` namespaces (`system:serviceaccount:d8-*`, `system:serviceaccount:kube-*`), the Deckhouse controllers and the horizontal pod autoscaler of `kube-controller-manager` among them;
-- the Kubernetes control plane components (`system:apiserver`, `system:kube-controller-manager`, `system:kube-scheduler`, `system:volume-scheduler`) and nodes (the `system:nodes` group);
-- the `system:masters` group, that is, `super-admin.conf` on a master node. `admin.conf` (the `kubeadm:cluster-admins` group) is subject to the checks.
+* `system:sudouser`.
+* `dhctl` and `observability`.
+* Service accounts from `d8-*` and `kube-*` namespaces (`system:serviceaccount:d8-*`, `system:serviceaccount:kube-*`), including the Deckhouse Platform controllers and the Horizontal Pod Autoscaler from `kube-controller-manager`.
+* Kubernetes control plane components (`system:apiserver`, `system:kube-controller-manager`, `system:kube-scheduler`, `system:volume-scheduler`) and nodes belonging to the `system:nodes` group.
+* Members of the `system:masters` group, that is, when using `super-admin.conf` on a master node. The restrictions still apply when using `admin.conf` (the `kubeadm:cluster-admins` group).
 
-Apart from `system:masters`, these are the users who may also change objects labeled `heritage: deckhouse`. The checks do not depend on the `admission-policy-engine` module.
+Except for `system:masters`, these are the same users that are allowed to modify resources with the `heritage: deckhouse` label. The restrictions apply regardless of whether the `admission-policy-engine` module is enabled in the cluster.
 
-The checks run in the `webhook-handler` Pods of the `d8-system` namespace and fail closed. While `webhook-handler` is unavailable, `kubectl exec`, `attach`, `cp`, `port-forward` into any Pod and `kubectl scale` of any Deployment, StatefulSet, ReplicaSet or ReplicationController are denied in every namespace for everyone but the users listed above, whether or not the target is labeled. To get in for diagnostics, run the command as `system:sudouser` in the `system:sudousers` group, which needs the right to impersonate both, or use `super-admin.conf` on a master node. The group is needed for exec because the `user-authz` module checks exec on the same `webhook-handler` and exempts the group rather than the user:
+Requests are validated by the `webhook-handler` Pods in the `d8-system` namespace. If these Pods are unavailable, requests are rejected. In this case, the following operations are blocked in all namespaces for all users except those listed above, regardless of whether the `heritage: deckhouse` label is present:
+
+* `kubectl exec`, `kubectl attach`, `kubectl cp`, and `kubectl port-forward` for any Pod.
+* `kubectl scale` for any Deployment, StatefulSet, ReplicaSet, or ReplicationController resource.
+
+To access a Pod for diagnostics, you can use `system:sudouser` in the `system:sudousers` group or `super-admin.conf` on a master node.
+
+Example of executing a command in a Pod as `system:sudouser`:
 
 ```shell
-d8 k --as=system:sudouser --as-group=system:sudousers -n d8-system exec -it <pod_name> -- sh
+d8 k --as=system:sudouser --as-group=system:sudousers -n d8-system exec -it <POD_NAME> -- sh
 ```
+
+{% alert level="warning" %}
+Note the following:
+
+* You must have permission to impersonate both the `system:sudouser` user and the `system:sudousers` group.
+* You must specify the group because the `user-authz` module checks permissions for the `exec` operation through the same `webhook-handler` and uses the group, rather than the username, to determine whether the restriction applies.
+{% endalert %}
 
 ## How to debug node problems with ephemeral containers?
 

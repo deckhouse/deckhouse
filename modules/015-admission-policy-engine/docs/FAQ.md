@@ -593,7 +593,17 @@ spec:
 
 The `admission-policy-engine` module webhook routes `CONNECT` requests for `pods/exec` and `pods/attach` in namespaces other than `d8-*` and `kube-*` through Gatekeeper. This allows creating custom policies to allow or deny `kubectl exec` and `kubectl attach` operations.
 
-Exec, attach, port-forward and debug into Pods labeled `heritage: deckhouse` are denied by the `deckhouse` module for everyone but Deckhouse system users, whether or not `admission-policy-engine` is enabled. See [the FAQ of the `deckhouse` module](/modules/deckhouse/faq.html).
+The `deckhouse` module denies the following operations into pods of [system components](/products/kubernetes-platform/documentation/v1/glossary.html#system-component)
+labeled `heritage: deckhouse` for all users, but the Deckhouse Platform system users:
+
+- `kubectl exec`
+- `kubectl attach`
+- `kubectl cp`
+- `kubectl port-forward`
+- `kubectl debug`
+
+The operations are denied regardless of whether the `admission-policy-engine` module is enabled in the cluster.
+For details, refer to the [FAQ](/modules/deckhouse/faq.html#who-can-run-exec-into-deckhouse-platform-pods-and-scale-deckhouse-platform-objects) of the `deckhouse` module.
 
 ### Built-in policy for finalizers
 

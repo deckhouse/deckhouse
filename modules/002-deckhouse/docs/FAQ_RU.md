@@ -31,7 +31,7 @@ title: "Модуль deckhouse: FAQ"
    ```
 
 {% alert level="warning" %}
-В Deckhouse установлен срок хранения логов — 7 дней. Однако, в соответствии с требованиями безопасности указанными в kube-bench, логи должны храниться не менее 30 дней. Используйте отдельное хранилище для логов, если вам необходимо хранить логи более 7 дней.
+В Deckhouse установлен срок хранения логов — 7 дней. Однако, в соответствии с требованиями безопасности, указанными в kube-bench, логи должны храниться не менее 30 дней. Используйте отдельное хранилище для логов, если вам необходимо хранить логи более 7 дней.
 {% endalert %}
 
 ## Как собрать информацию для отладки?
@@ -42,7 +42,7 @@ title: "Модуль deckhouse: FAQ"
    d8 system collect-debug-info > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
    ```
 
-1. Отправьте полученный архив [команде Deckhouse](https://github.com/deckhouse/deckhouse/issues/new/choose) для дальнейшего расследования.
+1. Отправьте полученный архив [команде Deckhouse](https://github.com/deckhouse/deckhouse/issues/new/choose) для дальнейшей диагностики.
 
 > Флаг `--exclude` исключает указанные элементы из архива. Пример:
 
@@ -56,7 +56,7 @@ title: "Модуль deckhouse: FAQ"
   d8 system collect-debug-info --list-exclude
   ```
 
-<p>Ниже перечислены сведения, формируемые при выполнении архива. Названия в колонке «Файл в архиве» соответствуют элементам верхнего уровня внутри итогового архива <code>tar.gz</code>. Отдельные чувствительные значения (например, <code>kubeRBACProxyCA</code> и <code>registry.dockercfg</code>) исключаются из выборки.</p>
+<p>Ниже перечислены сведения, включаемые в архив. Названия в колонке «Файл в архиве» соответствуют элементам верхнего уровня внутри итогового архива <code>tar.gz</code>. Отдельные чувствительные значения (например, <code>kubeRBACProxyCA</code> и <code>registry.dockercfg</code>) исключаются из выборки.</p>
 
 <table>
 <thead>
@@ -259,34 +259,49 @@ title: "Модуль deckhouse: FAQ"
 d8 k -n <namespace_name> debug -it <pod_name> --image=ubuntu <container_name>
 ```
 
-Подробнее можно почитать в [официальной документации](https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/#ephemeral-container).
+Подробнее — в [официальной документации](https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/#ephemeral-container).
 
-В под с лейблом `heritage: deckhouse` ephemeral container добавить нельзя, см. следующий раздел.
+В под с лейблом `heritage: deckhouse` ephemeral container добавить нельзя, подробнее — в следующем разделе.
 
-## Кто может выполнять exec в поды Deckhouse и масштабировать объекты Deckhouse?
+## Кто может выполнять exec в поды Deckhouse Platform и масштабировать объекты Deckhouse Platform?
 
-Только системные пользователи Deckhouse. Всем остальным, включая администраторов кластера и суперадминов, модуль `deckhouse` запрещает в любом неймспейсе:
+Только системные пользователи Deckhouse Platform.
+Всем остальным, включая пользователей с ролями `ClusterAdmin` и `SuperAdmin`, модуль `deckhouse` запрещает следующие операции в любом неймспейсе:
 
-- `kubectl exec`, `kubectl attach`, `kubectl cp`, `kubectl port-forward` и `kubectl debug` в под с лейблом `heritage: deckhouse`. Port-forward к сервису попадает в один из его подов и запрещается так же;
-- `kubectl scale` для Deployment, StatefulSet, ReplicaSet и ReplicationController с лейблом `heritage: deckhouse`, если объект не находится в режиме обслуживания, то есть не помечен лейблом `maintenance.deckhouse.io/no-resource-reconciliation`.
+* `kubectl exec`, `kubectl attach`, `kubectl cp`, `kubectl port-forward` и `kubectl debug` в под с лейблом `heritage: deckhouse`. Запрет также распространяется на `kubectl port-forward` к сервисам, если запрос направляется в защищённый под;
+* `kubectl scale` для ресурсов Deployment, StatefulSet, ReplicaSet и ReplicationController с лейблом `heritage: deckhouse`, если объект не находится в режиме обслуживания, то есть не помечен лейблом `maintenance.deckhouse.io/no-resource-reconciliation`.
 
-Лейбл проверяется на самом объекте: под без `heritage: deckhouse` не защищён, даже если лейбл есть у его Deployment.
+Наличие лейбла `heritage: deckhouse` проверяется на самом объекте. Например, если лейбл указан у Deployment, но отсутствует у созданного им пода, ограничения доступа к этому поду не применяются.
 
-Запреты не действуют на:
+Перечисленные ограничения не распространяются на следующих пользователей и компоненты:
 
-- `system:sudouser`;
-- `dhctl` и `observability`;
-- сервисные аккаунты из неймспейсов `d8-*` и `kube-*` (`system:serviceaccount:d8-*`, `system:serviceaccount:kube-*`), в том числе контроллеры Deckhouse и horizontal pod autoscaler из `kube-controller-manager`;
-- компоненты control plane Kubernetes (`system:apiserver`, `system:kube-controller-manager`, `system:kube-scheduler`, `system:volume-scheduler`) и узлы (группа `system:nodes`);
-- группу `system:masters`, то есть `super-admin.conf` на master-узле. На `admin.conf` (группа `kubeadm:cluster-admins`) запреты действуют.
+* `system:sudouser`;
+* `dhctl` и `observability`;
+* сервисные аккаунты из неймспейсов `d8-*` и `kube-*` (`system:serviceaccount:d8-*`, `system:serviceaccount:kube-*`), в том числе контроллеры Deckhouse Platform и Horizontal Pod Autoscaler из `kube-controller-manager`;
+* компоненты control plane Kubernetes (`system:apiserver`, `system:kube-controller-manager`, `system:kube-scheduler`, `system:volume-scheduler`) и узлы, входящие в группу `system:nodes`;
+* пользователи группы `system:masters`, то есть при использовании `super-admin.conf` на master-узле. При использовании `admin.conf` (группа `kubeadm:cluster-admins`) ограничения продолжают действовать.
 
-Кроме `system:masters`, это те же пользователи, которым разрешено изменять объекты с лейблом `heritage: deckhouse`. Запреты не зависят от модуля `admission-policy-engine`.
+За исключением `system:masters`, это те же пользователи, которым разрешено изменять объекты с лейблом `heritage: deckhouse`. Запреты не зависят от включения модуля `admission-policy-engine` в кластере.
 
-Проверку выполняют поды `webhook-handler` в неймспейсе `d8-system`, и при их отказе запрос отклоняется. Пока `webhook-handler` недоступен, `kubectl exec`, `attach`, `cp`, `port-forward` в любой под и `kubectl scale` любых Deployment, StatefulSet, ReplicaSet и ReplicationController запрещены во всех неймспейсах всем, кроме перечисленных выше пользователей, независимо от лейбла. Чтобы попасть в под для диагностики, выполните команду от имени `system:sudouser` в группе `system:sudousers` (для этого нужно право на impersonate обоих) или воспользуйтесь `super-admin.conf` на master-узле. Группа нужна для exec: модуль `user-authz` проверяет exec на том же `webhook-handler` и исключает группу, а не пользователя:
+Проверку запросов выполняют поды `webhook-handler` в неймспейсе `d8-system`, и при их недоступности запрос отклоняется. В этом случае для всех пользователей, кроме перечисленных выше исключений, во всех неймспейсах блокируются следующие операции независимо от наличия лейбла `heritage: deckhouse`:
+
+* `kubectl exec`, `kubectl attach`, `kubectl cp` и `kubectl port-forward` для любых подов;
+* `kubectl scale` для любых ресурсов Deployment, StatefulSet, ReplicaSet и ReplicationController.
+
+Для доступа к поду с целью диагностики можно использовать `system:sudouser` в группе `system:sudousers` или `super-admin.conf` на master-узле.
+
+Пример выполнения команды в поде от имени `system:sudouser`:
 
 ```shell
-d8 k --as=system:sudouser --as-group=system:sudousers -n d8-system exec -it <pod_name> -- sh
+d8 k --as=system:sudouser --as-group=system:sudousers -n d8-system exec -it <POD_NAME> -- sh
 ```
+
+{% alert level="warning" %}
+Обратите внимание:
+
+* для выполнения команды необходимы права на impersonate пользователя `system:sudouser` и группы `system:sudousers`;
+* необходимо указывать группу, поскольку модуль `user-authz` проверяет разрешение на операцию `exec` через тот же `webhook-handler` и использует для исключения группу, а не имя пользователя.
+{% endalert %}
 
 ## Как отлаживать проблемы на узлах с помощью ephemeral containers?
 
