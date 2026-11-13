@@ -1,0 +1,24 @@
+{{- /* The publish API HTTPRoute of control-plane-manager reaches basic-auth-proxy through the ExternalName Service */}}
+{{- /* kube-system/basic-auth-proxy, an alias of this module's Service. ALB follows an alias to a Service in another */}}
+{{- /* namespace only when a ReferenceGrant permits it, as for a direct reference; without this grant the route answers 500. */}}
+{{- /* Rendered under the same Gateway conditions as that route (see 040-control-plane-manager kubernetes-api/httproute.yaml). */}}
+{{- $moduleGateway := dict }}
+{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
+{{- if and $moduleGateway .Values.global.modules.publicDomainTemplate (include "is_basic_auth_enabled" .) (include "helm_lib_api_version_exists" (list . "gateway.networking.k8s.io/v1/ReferenceGrant")) }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: ReferenceGrant
+metadata:
+  name: basic-auth-proxy
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "basic-auth-proxy")) | nindent 2 }}
+spec:
+  from:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    namespace: kube-system
+  to:
+  - group: ""
+    kind: Service
+    name: basic-auth-proxy
+{{- end }}

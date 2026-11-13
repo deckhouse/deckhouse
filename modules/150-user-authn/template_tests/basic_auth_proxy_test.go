@@ -174,7 +174,61 @@ var _ = Describe("Module :: user-authn :: helm template :: basic auth proxy", fu
 			Expect(hec.RenderError).ToNot(HaveOccurred())
 			Expect(hec.KubernetesResource("SecurityPolicyException", "d8-system", "user-authn-proxy-cert-generate-job").Exists()).To(BeFalse())
 		})
+
+		It("Should not render the ReferenceGrant without its API", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			Expect(hec.KubernetesResource("ReferenceGrant", "d8-user-authn", "basic-auth-proxy").Exists()).To(BeFalse())
+		})
 	})
+
+	// The publish API HTTPRoute in kube-system reaches the proxy through an ExternalName Service there,
+	// which ALB follows to another namespace only with a ReferenceGrant. The route is a system interface
+	// served on the DKP default Gateway.
+	Context("With an OIDC provider, the DKP default Gateway and the ReferenceGrant API", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("global.discovery.gatewayAPIDefaultGateway", map[string]string{"name": "default", "namespace": "d8-alb"})
+			hec.ValuesSetFromYaml("userAuthn.internal.providers", oidcProvider)
+			hec.HelmRender(WithAPIVersions("gateway.networking.k8s.io/v1/ReferenceGrant"))
+		})
+
+		It("Should permit HTTPRoutes of kube-system to reference only the basic-auth-proxy Service", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			grant := hec.KubernetesResource("ReferenceGrant", "d8-user-authn", "basic-auth-proxy")
+			Expect(grant.Exists()).To(BeTrue())
+			Expect(grant.Field("apiVersion").String()).To(Equal("gateway.networking.k8s.io/v1"))
+			Expect(grant.Field("spec.from").String()).To(MatchJSON(`[{"group":"gateway.networking.k8s.io","kind":"HTTPRoute","namespace":"kube-system"}]`))
+			Expect(grant.Field("spec.to").String()).To(MatchJSON(`[{"group":"","kind":"Service","name":"basic-auth-proxy"}]`))
+		})
+	})
+
+	grantSkippedCases := []struct {
+		name           string
+		defaultGateway bool
+		publish        bool
+		apiVersion     string
+	}{
+		{"without the DKP default Gateway", false, true, "gateway.networking.k8s.io/v1/ReferenceGrant"},
+		{"with publishAPI disabled", true, false, "gateway.networking.k8s.io/v1/ReferenceGrant"},
+		{"with only the v1beta1 ReferenceGrant API", true, true, "gateway.networking.k8s.io/v1beta1/ReferenceGrant"},
+	}
+
+	for _, c := range grantSkippedCases {
+		Context("With an OIDC provider "+c.name, func() {
+			BeforeEach(func() {
+				if c.defaultGateway {
+					hec.ValuesSet("global.discovery.gatewayAPIDefaultGateway", map[string]string{"name": "default", "namespace": "d8-alb"})
+				}
+				hec.ValuesSet("userAuthn.internal.publishAPI.enabled", c.publish)
+				hec.ValuesSetFromYaml("userAuthn.internal.providers", oidcProvider)
+				hec.HelmRender(WithAPIVersions(c.apiVersion))
+			})
+
+			It("Should not render the ReferenceGrant", func() {
+				Expect(hec.RenderError).ToNot(HaveOccurred())
+				Expect(hec.KubernetesResource("ReferenceGrant", "d8-user-authn", "basic-auth-proxy").Exists()).To(BeFalse())
+			})
+		})
+	}
 
 	Context("With an OIDC provider and the SecurityPolicyException API", func() {
 		BeforeEach(func() {
