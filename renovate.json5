@@ -167,12 +167,6 @@
       "groupSlug": "160-multitenancy-manager"
     },
     {
-      "description": "Group 300-prometheus dependency updates",
-      "matchFileNames": ["**/modules/300-prometheus/**"],
-      "groupName": "300-prometheus dependencies",
-      "groupSlug": "300-prometheus"
-    },
-    {
       "description": "Group 302-vertical-pod-autoscaler dependency updates",
       "matchFileNames": ["**/modules/302-vertical-pod-autoscaler/**"],
       "groupName": "302-vertical-pod-autoscaler dependencies",

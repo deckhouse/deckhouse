@@ -17,7 +17,6 @@ import (
 	_ "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee"
 	_ "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/lib/crd"
 	_ "github.com/deckhouse/deckhouse/ee/modules/150-user-authn/hooks"
-	_ "github.com/deckhouse/deckhouse/ee/modules/300-prometheus/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/450-network-gateway/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/se-plus/modules/021-cni-cilium/hooks/ee"
 	_ "github.com/deckhouse/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/hooks"

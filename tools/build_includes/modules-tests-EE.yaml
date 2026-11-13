@@ -975,21 +975,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/modules/300-prometheus/hooks/common_test.go
-  to: /deckhouse/modules/300-prometheus/hooks/common_test.go
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/300-prometheus/hooks/custom_logo.go
-  to: /deckhouse/modules/300-prometheus/hooks/custom_logo.go
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/300-prometheus/hooks/custom_logo_test.go
-  to: /deckhouse/modules/300-prometheus/hooks/custom_logo_test.go
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/modules/380-metallb/templates/controller
   to: /deckhouse/modules/380-metallb/templates/controller
   excludePaths:

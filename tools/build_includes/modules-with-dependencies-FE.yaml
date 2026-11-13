@@ -482,21 +482,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/modules/300-prometheus/hooks/common_test.go
-  to: /deckhouse/modules/300-prometheus/hooks/common_test.go
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/300-prometheus/hooks/custom_logo.go
-  to: /deckhouse/modules/300-prometheus/hooks/custom_logo.go
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/300-prometheus/hooks/custom_logo_test.go
-  to: /deckhouse/modules/300-prometheus/hooks/custom_logo_test.go
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/modules/450-keepalived/hooks
   to: /deckhouse/modules/450-keepalived/hooks
   excludePaths:
