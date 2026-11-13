@@ -25,12 +25,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+
+	registryimagev1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/registry.deckhouse.io/v1alpha1"
 )
 
 // Paths inside an installer image that name the platform's image set.
@@ -102,6 +105,21 @@ type Release struct {
 	// degradation and not a failure — see ModuleCatalogue. Optional: nil means the reason is dropped,
 	// which is why the loop sets it to a log line.
 	CatalogueUnavailable func(error)
+
+	// Attribute is told what each reference Discover enumerates is: which release, module and image
+	// declares it. Optional. What lists the images of the cache by component reads it; nothing that
+	// decides what to copy or delete does.
+	Attribute Attribute
+}
+
+// Attribute is told that a reference belongs to the set because of owner. A reference may be told
+// several owners: an image shared by two releases, or by two modules.
+type Attribute func(reference name.Reference, owner registryimagev1alpha1.ImageOwner)
+
+func (a Attribute) call(reference name.Reference, owner registryimagev1alpha1.ImageOwner) {
+	if a != nil {
+		a(reference, owner)
+	}
 }
 
 func (r Release) Discover(
@@ -141,8 +159,11 @@ func (r Release) Discover(
 
 		// The release's own image, by tag.
 		add(platform.Tag(version))
+		r.Attribute.call(platform.Tag(version), registryimagev1alpha1.ImageOwner{
+			Kind: registryimagev1alpha1.OwnerRelease, Module: "deckhouse", Versions: []string{version},
+		})
 
-		declared, err := r.declaredImages(ctx, platform, installers, puller, version)
+		declared, err := r.declaredImages(ctx, platform, installers, puller, version, r.Attribute)
 		if err != nil {
 			return nil, fmt.Errorf("reading the image set of %s: %w", version, err)
 		}
@@ -165,7 +186,7 @@ func (r Release) Discover(
 
 	// The modules the cluster keeps, in the same set and deduplicated against it. Not the ones it is
 	// about to update to: those are Optional.
-	moduleReferences, err := ModuleReferences(ctx, source, puller, keptModules(r.Modules, false))
+	moduleReferences, err := moduleReferences(ctx, source, puller, keptModules(r.Modules, false), r.Attribute)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +197,7 @@ func (r Release) Discover(
 	// And the catalogue of modules the source offers, which is what the platform reads to know what
 	// it CAN install — as opposed to what this cluster already runs. Without it an air-gapped cluster
 	// pulls everything it has and can enumerate nothing; see ModuleCatalogue.
-	catalogue, err := ModuleCatalogue(ctx, source, r.CatalogueUnavailable)
+	catalogue, err := moduleCatalogue(ctx, source, r.CatalogueUnavailable, r.Attribute)
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +209,7 @@ func (r Release) Discover(
 	// repointed at the store after the move to air-gap lists to know what it offers. Of the modules it
 	// keeps: a source only a pending update comes from is Optional's, so that a source failing to answer
 	// for an update does not fail the copy of the set the cluster runs.
-	sourceCatalogues, err := SourceCatalogues(ctx, source, keptModules(r.Modules, false), r.CatalogueUnavailable)
+	sourceCatalogues, err := sourceCatalogues(ctx, source, keptModules(r.Modules, false), r.CatalogueUnavailable, r.Attribute)
 	if err != nil {
 		return nil, err
 	}
@@ -262,7 +283,7 @@ func (r Release) OptionalParts(
 		} else {
 			platform := registry.Repo(source.Repository)
 			installers := registry.Repo(source.Repository, installerRepository)
-			if declared, err := r.declaredImages(ctx, platform, installers, puller, version); err != nil {
+			if declared, err := r.declaredImages(ctx, platform, installers, puller, version, nil); err != nil {
 				part.Err = err
 			} else {
 				part.References = append([]name.Reference{platform.Tag(version)}, declared...)
@@ -347,6 +368,7 @@ func keptModules(modules []ModuleRef, pending bool) []ModuleRef {
 // declaredImages enumerates one version's image set, read out of the platform image or its installer.
 func (r Release) declaredImages(
 	ctx context.Context, platform, installers name.Repository, puller *remote.Puller, version string,
+	attribute Attribute,
 ) ([]name.Reference, error) {
 	// The platform's own image first, the installer only if that fails. Both carry the same
 	// account of the set; the difference is that the first is the image this cluster runs, so it is
@@ -372,19 +394,29 @@ func (r Release) declaredImages(
 
 	// Tags take precedence over digests, as in `d8 mirror pull`: where a release records
 	// both, the tags are the ones it is published under.
+	owner := func(image moduleImage) registryimagev1alpha1.ImageOwner {
+		return registryimagev1alpha1.ImageOwner{
+			Kind: registryimagev1alpha1.OwnerPlatform, Module: image.module, Image: image.image,
+			Versions: []string{version},
+		}
+	}
 	var references []name.Reference
 	switch {
 	case len(tags) > 0:
 		for _, tag := range tags {
-			references = append(references, platform.Tag(tag))
+			reference := platform.Tag(tag.value)
+			references = append(references, reference)
+			attribute.call(reference, owner(tag))
 		}
 	case len(digests) > 0:
 		for _, digest := range digests {
-			parsed, err := v1.NewHash(digest)
+			parsed, err := v1.NewHash(digest.value)
 			if err != nil {
-				return nil, fmt.Errorf("%q is not a digest: %w", digest, err)
+				return nil, fmt.Errorf("%q is not a digest: %w", digest.value, err)
 			}
-			references = append(references, platform.Digest(parsed.String()))
+			reference := platform.Digest(parsed.String())
+			references = append(references, reference)
+			attribute.call(reference, owner(digest))
 		}
 	default:
 		// Refused rather than treated as an empty set. An image this cannot be read out of
@@ -402,7 +434,7 @@ func (r Release) declaredImages(
 // file, which `d8 mirror pull` prefers where a release publishes one, keeps its own path in both.
 func (r Release) imageSet(
 	ctx context.Context, puller *remote.Puller, reference name.Reference, digestsPath string,
-) ([]string, []string, error) {
+) ([]moduleImage, []moduleImage, error) {
 	descriptor, err := puller.Get(ctx, reference)
 	if err != nil {
 		return nil, nil, fmt.Errorf("reading %s: %w", reference, err)
@@ -412,7 +444,7 @@ func (r Release) imageSet(
 		return nil, nil, fmt.Errorf("opening %s: %w", reference, err)
 	}
 
-	tags, digests, err := readImageSet(mutate.Extract(image), digestsPath)
+	tags, digests, err := readImageSetByModule(mutate.Extract(image), digestsPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("reading the image set out of %s: %w", reference, err)
 	}
@@ -424,11 +456,15 @@ func (r Release) imageSet(
 	return tags, digests, nil
 }
 
-// readImageSet pulls the two metadata files out of a flattened image.
-//
-// Returns the values only: the files are keyed by module and then by image name, and nothing
-// here needs either — every value is a reference under the platform's own repository.
-func readImageSet(content io.ReadCloser, digestsPath string) ([]string, []string, error) {
+// moduleImage is one value of images_digests.json or images_tags.json with the module and the image
+// it is keyed by: every value is a reference under the platform's own repository, and the keys are
+// what lists the images of the cache by component.
+type moduleImage struct {
+	module, image, value string
+}
+
+// readImageSetByModule pulls the two metadata files out of a flattened image.
+func readImageSetByModule(content io.ReadCloser, digestsPath string) ([]moduleImage, []moduleImage, error) {
 	defer func() { _ = content.Close() }()
 
 	var rawTags, rawDigests []byte
@@ -466,8 +502,9 @@ func readImageSet(content io.ReadCloser, digestsPath string) ([]string, []string
 	return tags, digests, nil
 }
 
-// flatten turns a module-to-image-to-value mapping into the values it holds.
-func flatten(raw []byte, what string) ([]string, error) {
+// flatten turns a module-to-image-to-value mapping into the values it holds, each with its keys,
+// sorted by module and image.
+func flatten(raw []byte, what string) ([]moduleImage, error) {
 	if len(raw) == 0 {
 		return nil, nil
 	}
@@ -477,13 +514,19 @@ func flatten(raw []byte, what string) ([]string, error) {
 		return nil, fmt.Errorf("decoding %s: %w", what, err)
 	}
 
-	var values []string
-	for _, images := range byModule {
-		for _, value := range images {
+	var flat []moduleImage
+	for module, images := range byModule {
+		for image, value := range images {
 			if value != "" {
-				values = append(values, value)
+				flat = append(flat, moduleImage{module: module, image: image, value: value})
 			}
 		}
 	}
-	return values, nil
+	sort.Slice(flat, func(i, j int) bool {
+		if flat[i].module != flat[j].module {
+			return flat[i].module < flat[j].module
+		}
+		return flat[i].image < flat[j].image
+	})
+	return flat, nil
 }

@@ -91,6 +91,19 @@ type Values struct {
 	// platform renders every image reference in one pass. This is what keeps the
 	// second from running ahead of the first.
 	ImageAddress string `json:"imageAddress,omitempty"`
+
+	// APIServerCert is the serving certificate of registry-controller's aggregated API, written by
+	// the hook in apiserver_cert.go. Carried here, though no hook of this package reads it, because
+	// every write of this struct replaces the whole object: a field missing here is erased by the
+	// next hook that runs, and the controller is left waiting for a Secret that is never rendered.
+	APIServerCert *CertValues `json:"apiserverCert,omitempty"`
+}
+
+// CertValues is a certificate in the shape the go_lib TLS hooks write it.
+type CertValues struct {
+	CA  string `json:"ca,omitempty"`
+	Crt string `json:"crt,omitempty"`
+	Key string `json:"key,omitempty"`
 }
 
 // DrainState is what a drain looks like from the outside.

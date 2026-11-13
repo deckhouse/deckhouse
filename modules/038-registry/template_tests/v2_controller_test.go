@@ -60,6 +60,10 @@ const v2Enabled = `
 internal:
   v2:
     enabled: true
+    apiserverCert:
+      ca: APISERVER-CA
+      crt: APISERVER-CRT
+      key: APISERVER-KEY
     bashibleConfig:
       agent:
         endpoint: 127.0.0.1:5001
@@ -353,6 +357,39 @@ var _ = Describe("Module :: registry :: helm template :: v2 controller", func() 
 			// POD_NAMESPACE scopes the leader election lease; without it the manager
 			// would try to elect in the wrong namespace.
 			Expect(container.Get("env.0.name").String()).To(Equal("POD_NAMESPACE"))
+		})
+
+		It("serves the images of the cache as registry.deckhouse.io through an APIService", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			apiService := f.KubernetesGlobalResource("APIService", "v1alpha1.registry.deckhouse.io")
+			Expect(apiService.Exists()).To(BeTrue())
+			Expect(apiService.Field("spec.group").String()).To(Equal("registry.deckhouse.io"))
+			Expect(apiService.Field("spec.service.name").String()).To(Equal("registry-controller"))
+			Expect(apiService.Field("spec.caBundle").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("APISERVER-CA"))))
+
+			service := f.KubernetesResource("Service", "d8-system", "registry-controller")
+			Expect(service.Exists()).To(BeTrue())
+			Expect(service.Field("spec.selector.app").String()).To(Equal("registry-controller"))
+			Expect(service.Field("spec.ports.0.targetPort").String()).To(Equal("apiserver"))
+
+			secret := f.KubernetesResource("Secret", "d8-system", "registry-controller-apiserver-tls")
+			Expect(secret.Exists()).To(BeTrue())
+
+			deployment := f.KubernetesResource("Deployment", "d8-system", "registry-controller")
+			container := deployment.Field("spec.template.spec.containers.0")
+			Expect(container.Get("ports").String()).To(ContainSubstring(`"name":"apiserver"`))
+			Expect(container.Get("volumeMounts").String()).To(ContainSubstring("/etc/registry-controller/apiserver"))
+			Expect(deployment.Field("spec.template.spec.volumes").String()).To(ContainSubstring("registry-controller-apiserver-tls"))
+
+			// Delegated authentication and authorization.
+			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:registry:controller:auth-delegator").
+				Field("roleRef.name").String()).To(Equal("system:auth-delegator"))
+			Expect(f.KubernetesResource("RoleBinding", "kube-system", "d8:registry:controller:extension-apiserver-authentication-reader").
+				Exists()).To(BeTrue())
+			// And the index of each replica, through the storage pods' proxy.
+			Expect(f.KubernetesResource("Role", "d8-system", "registry:controller").Field("rules").String()).
+				To(ContainSubstring("statefulsets/images"))
 		})
 
 		It("grants the controller its own resources and the nodes theirs", func() {
@@ -765,6 +802,33 @@ var _ = Describe("Module :: registry :: helm template :: v2 storage", func() {
 			// The storage pods and nothing else: every image reference in the cluster is built
 			// from this name.
 			Expect(service.Field("spec.selector.app").String()).To(Equal("registry-storage"))
+		})
+
+		It("serves the index of the store through the proxy, on its own subresource and the registry's certificate", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			pod := f.KubernetesResource("StatefulSet", "d8-system", "registry-storage").Field("spec.template.spec")
+			var proxy gjson.Result
+			pod.Get("containers").ForEach(func(_, container gjson.Result) bool {
+				if container.Get("name").String() == "kube-rbac-proxy" {
+					proxy = container
+				}
+				return true
+			})
+			Expect(proxy.Exists()).To(BeTrue())
+			Expect(proxy.Get("args").String()).To(ContainSubstring("--tls-cert-file=/pki/distribution.crt"))
+			Expect(proxy.Get("volumeMounts").String()).To(ContainSubstring(`"mountPath":"/pki"`))
+
+			config := ""
+			proxy.Get("env").ForEach(func(_, env gjson.Result) bool {
+				if env.Get("name").String() == "KUBE_RBAC_PROXY_CONFIG" {
+					config = env.Get("value").String()
+				}
+				return true
+			})
+			Expect(config).To(ContainSubstring("upstream: http://127.0.0.1:4284/images"))
+			// Not the metrics' subresource: being allowed to scrape is not being allowed to read the store.
+			Expect(config).To(ContainSubstring("subresource: images"))
 		})
 
 		It("lets a syncer write only its own report and take the lease", func() {

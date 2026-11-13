@@ -17,10 +17,16 @@ limitations under the License.
 package main
 
 import (
+	"context"
+	"errors"
 	"flag"
+	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -42,6 +48,8 @@ import (
 	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 
+	"github.com/deckhouse/registry-controller/internal/apiserver"
+	"github.com/deckhouse/registry-controller/internal/images"
 	"github.com/deckhouse/registry-controller/internal/register"
 	_ "github.com/deckhouse/registry-controller/internal/register/controllers"
 )
@@ -150,6 +158,8 @@ func main() {
 		disabledControllers     string
 		maxConcurrentReconciles int
 		storePath               string
+		apiserverPort           int
+		apiserverCertDir        string
 	)
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "127.0.0.1:4281",
@@ -166,6 +176,11 @@ func main() {
 		"Where the store keeps its blobs on a node. Reported in RegistryStorage so an operator "+
 			"knows which directory holds them; the module passes the one it mounts, which differs "+
 			"on a node whose root filesystem is read-only.")
+
+	flag.IntVar(&apiserverPort, "apiserver-port", 4286,
+		"The port the aggregated API of registry.deckhouse.io is served on; 0 serves none.")
+	flag.StringVar(&apiserverCertDir, "apiserver-cert-dir", "/etc/registry-controller/apiserver",
+		"Where the serving certificate of the aggregated API is mounted, as tls.crt and tls.key.")
 
 	logs.AddGoFlags(flag.CommandLine)
 	flag.Parse()
@@ -200,10 +215,98 @@ func main() {
 		os.Exit(1)
 	}
 
+	ctx := ctrl.SetupSignalHandler()
+
+	// The aggregated API of registry.deckhouse.io: the images of the cache. On every replica, not
+	// the leader alone, since the Service the APIService points at balances over all of them. It
+	// reads uncached — the cluster as it is, and the storage's authority, which the cache keeps out.
+	if apiserverPort > 0 {
+		serving := make(chan struct{})
+		go serveAggregatedAPI(ctx, setupLog, apiserver.Options{
+			BindPort: apiserverPort,
+			CertFile: filepath.Join(apiserverCertDir, "tls.crt"),
+			KeyFile:  filepath.Join(apiserverCertDir, "tls.key"),
+			Images:   &apiserver.ImageStorage{Collector: &images.Collector{Reader: mgr.GetAPIReader()}},
+			Serving:  serving,
+		})
+		if err := mgr.AddReadyzCheck("aggregated-api", aggregatedAPIReady(serving, aggregatedAPIStartupGrace)); err != nil {
+			setupLog.Error(err, "unable to set up the aggregated API ready check")
+			os.Exit(1)
+		}
+	}
+
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
+	}
+}
+
+// aggregatedAPIStartupGrace is how long a replica whose aggregated API does not answer still counts as
+// ready. The controller is what keeps the cache working, and the images listing is not: a server that
+// cannot start must not hold the reconcilers' replica out of the rollout for good.
+const aggregatedAPIStartupGrace = 2 * time.Minute
+
+// serveAggregatedAPI serves the API until ctx is done. Its death is fatal: this replica stays in the
+// Endpoints the APIService points at, so a pod that outlives its API server fails discovery of the
+// group for every client.
+//
+// It waits for the serving certificate first. The Secret is an optional volume, so that the controller
+// that keeps the cache working does not hang in ContainerCreating for the listing's sake; the kubelet
+// writes the files into the volume once the Secret appears, and the API starts then.
+func serveAggregatedAPI(ctx context.Context, log logr.Logger, opts apiserver.Options) {
+	if !waitForFiles(ctx, log, certificateWait, opts.CertFile, opts.KeyFile) {
+		return
+	}
+	if err := apiserver.Run(ctx, opts); err != nil {
+		log.Error(err, "problem running the aggregated API server")
+		os.Exit(1)
+	}
+}
+
+// certificateWait is how often a replica started without the serving certificate looks for it again.
+const certificateWait = 5 * time.Second
+
+// waitForFiles reports, once every path exists, true; false if ctx ends first. Says once that it waits.
+func waitForFiles(ctx context.Context, log logr.Logger, every time.Duration, paths ...string) bool {
+	said := false
+	for {
+		missing := ""
+		for _, path := range paths {
+			if _, err := os.Stat(path); err != nil {
+				missing = path
+				break
+			}
+		}
+		if missing == "" {
+			return true
+		}
+		if !said {
+			log.Info("the aggregated API waits for its serving certificate", "missing", missing)
+			said = true
+		}
+		select {
+		case <-ctx.Done():
+			return false
+		case <-time.After(every):
+		}
+	}
+}
+
+// aggregatedAPIReady keeps the replica out of the Endpoints until its aggregated API answers, and
+// gives up keeping it out after grace — see aggregatedAPIStartupGrace.
+func aggregatedAPIReady(serving <-chan struct{}, grace time.Duration) healthz.Checker {
+	deadline := time.Now().Add(grace)
+	return func(*http.Request) error {
+		select {
+		case <-serving:
+			return nil
+		default:
+		}
+		if time.Now().After(deadline) {
+			return nil
+		}
+		return errors.New("the aggregated API server is not answering yet")
 	}
 }
 

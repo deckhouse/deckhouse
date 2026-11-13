@@ -24,14 +24,32 @@ import (
 
 // RegistryOperationType is what an operation does.
 //
-// +kubebuilder:validation:Enum=GarbageCollection
+// +kubebuilder:validation:Enum=GarbageCollection;Verify;Repair
 type RegistryOperationType string
 
 const (
 	// OperationGarbageCollection collects the cache: every storage replica removes what the releases
 	// the cluster has moved past left in its store.
 	OperationGarbageCollection RegistryOperationType = "GarbageCollection"
+
+	// OperationVerify checks the store: every replica reads the blobs it holds and compares each with
+	// its digest. What it finds broken goes into RegistryStorage.status.replicas[].corruptedBlobs, and
+	// the controller asks for a Repair. It only reads, so it waits for nothing but its turn.
+	OperationVerify RegistryOperationType = "Verify"
+
+	// OperationRepair checks the images it names and replaces the blobs of theirs that are broken or
+	// missing with a whole copy from another replica or the upstream. It never deletes an image:
+	// removing a manifest repairs nothing, because the broken blob is usually shared and stays.
+	OperationRepair RegistryOperationType = "Repair"
 )
+
+// MaxOperationDigests is how many digests a Verify or a Repair may name. Each replica reports a
+// result for each, and the status of the operation has to stay small.
+const MaxOperationDigests = 50
+
+// CorruptionDetectedCause is the cause of a Repair the controller creates because a replica found
+// broken blobs in its store.
+const CorruptionDetectedCause = "CorruptionDetected"
 
 // OperationCancelLabel cancels a RegistryOperation when set to "true".
 //
@@ -82,6 +100,14 @@ const (
 	// CollectedReleaseAnnotation is the Deckhouse release that was deployed when that collection was
 	// created, which tells an update of the platform from any other change of the set.
 	CollectedReleaseAnnotation = "registry.deckhouse.io/gc-collected-release"
+
+	// RepairRequestedAnnotation is the broken blobs the controller last created a Repair for, as a
+	// fingerprint, when, from which of them, and the Repair's name:
+	// "<fingerprint>@<RFC 3339>@<offset>@<operation>". The same blobs are not asked for again until some
+	// time has passed, so that a store nothing can repair is not repaired in a loop — unless that Repair
+	// was refused for another operation and never ran. Asked for again, the next of them are. Removed
+	// once no replica records a broken blob, so that one found broken again later is asked for at once.
+	RepairRequestedAnnotation = "registry.deckhouse.io/repair-requested"
 
 	// RefusalCollectedAnnotation is the Deckhouse release a collection was created for because the
 	// store refused writes. One such collection per release: a store that a collection could not free
@@ -211,6 +237,9 @@ const (
 
 	// ReasonOperationReplicaGone: the replica left the storage.
 	ReasonOperationReplicaGone = "ReplicaGone"
+
+	// ReasonOperationUnknownNode: the operation names a node that runs no replica of the storage.
+	ReasonOperationUnknownNode = "UnknownNode"
 )
 
 // RegistryOperationSpec is what an operation does. Immutable, so that what was asked for stays what
@@ -222,6 +251,61 @@ type RegistryOperationSpec struct {
 	// Cause is why the operation was created, for a person reading it.
 	// +optional
 	Cause string `json:"cause,omitempty"`
+
+	// Verify narrows a Verify. Absent means every blob of every replica.
+	// +optional
+	Verify *VerifySpec `json:"verify,omitempty"`
+
+	// Repair is what a Repair repairs. Required for a Repair, and only for it.
+	// +optional
+	Repair *RepairSpec `json:"repair,omitempty"`
+}
+
+// VerifySpec narrows a Verify.
+type VerifySpec struct {
+	// Digests are the images, or single blobs, to check: an image is checked with every blob it
+	// names. Empty means every blob of the store.
+	// +optional
+	// +kubebuilder:validation:MaxItems=50
+	Digests []string `json:"digests,omitempty"`
+
+	// Nodes are the replicas to check, by node. Empty means every replica.
+	// +optional
+	Nodes []string `json:"nodes,omitempty"`
+}
+
+// RepairSpec is what a Repair repairs.
+type RepairSpec struct {
+	// Digests are the images, or single blobs, to check and repair: an image with every blob it names.
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=50
+	Digests []string `json:"digests"`
+
+	// Nodes are the replicas to repair, by node. Empty means every replica.
+	// +optional
+	Nodes []string `json:"nodes,omitempty"`
+}
+
+// Nodes are the replicas the operation is for, by node. Empty means every replica.
+func (s *RegistryOperationSpec) Nodes() []string {
+	switch {
+	case s.Type == OperationVerify && s.Verify != nil:
+		return s.Verify.Nodes
+	case s.Type == OperationRepair && s.Repair != nil:
+		return s.Repair.Nodes
+	}
+	return nil
+}
+
+// Digests are the images or blobs the operation is about. Empty means the whole store.
+func (s *RegistryOperationSpec) Digests() []string {
+	switch {
+	case s.Type == OperationVerify && s.Verify != nil:
+		return s.Verify.Digests
+	case s.Type == OperationRepair && s.Repair != nil:
+		return s.Repair.Digests
+	}
+	return nil
 }
 
 // RegistryOperationStatus is the progress of an operation.
@@ -320,6 +404,79 @@ type ReplicaOperationStatus struct {
 	// GarbageCollection is what this replica collected. Only for a GarbageCollection that ran.
 	// +optional
 	GarbageCollection *GarbageCollectionResult `json:"garbageCollection,omitempty"`
+
+	// Verify is what this replica found. Only for a Verify that ran.
+	// +optional
+	Verify *VerifyResult `json:"verify,omitempty"`
+
+	// Repair is what this replica did about each digest. Only for a Repair that ran.
+	// +optional
+	Repair *RepairResult `json:"repair,omitempty"`
+}
+
+// VerifyResult is what one replica's Verify found.
+type VerifyResult struct {
+	// CheckedBlobs is how many blobs were read and compared with their digests.
+	CheckedBlobs int32 `json:"checkedBlobs"`
+
+	// CheckedBytes is how many bytes were read.
+	CheckedBytes int64 `json:"checkedBytes"`
+
+	// CorruptedBlobs are the blobs whose content does not match their digest, sorted, at most
+	// MaxOperationDigests of them.
+	// +optional
+	CorruptedBlobs []string `json:"corruptedBlobs,omitempty"`
+
+	// CorruptedCount is how many blobs were found broken, CorruptedBlobs and those past its limit.
+	// +optional
+	CorruptedCount int32 `json:"corruptedCount,omitempty"`
+
+	// MissingDigests are the digests asked about that this replica does not hold at all.
+	// +optional
+	MissingDigests []string `json:"missingDigests,omitempty"`
+}
+
+// DigestRepairOutcome is what a Repair did about one digest on one replica.
+//
+// +kubebuilder:validation:Enum=Intact;Repaired;NotHeld;Failed
+type DigestRepairOutcome string
+
+const (
+	// DigestIntact: every blob matched its digest, and nothing was changed.
+	DigestIntact DigestRepairOutcome = "Intact"
+
+	// DigestRepaired: broken or missing blobs were replaced with whole copies.
+	DigestRepaired DigestRepairOutcome = "Repaired"
+
+	// DigestNotHeld: the replica holds neither an image nor a blob by that digest.
+	DigestNotHeld DigestRepairOutcome = "NotHeld"
+
+	// DigestFailed: a blob could not be replaced; the message says why.
+	DigestFailed DigestRepairOutcome = "Failed"
+)
+
+// RepairResult is what one replica's Repair did.
+type RepairResult struct {
+	// Digests is one entry per digest of the operation.
+	// +optional
+	Digests []DigestRepair `json:"digests,omitempty"`
+}
+
+// DigestRepair is what a Repair did about one digest.
+type DigestRepair struct {
+	// Digest the operation named.
+	Digest string `json:"digest"`
+
+	// Outcome is what was done.
+	Outcome DigestRepairOutcome `json:"outcome"`
+
+	// RepairedBlobs is how many blobs were replaced.
+	// +optional
+	RepairedBlobs int32 `json:"repairedBlobs,omitempty"`
+
+	// Message says why it failed, or where the blobs came from.
+	// +optional
+	Message string `json:"message,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -327,7 +484,7 @@ type ReplicaOperationStatus struct {
 // +kubebuilder:resource:scope=Cluster,path=registryoperations,singular=registryoperation,shortName=rop
 
 // RegistryOperation is an operation every storage replica performs on its store, one replica at a
-// time: for now, a garbage collection.
+// time: a garbage collection, a check of the blobs, or a repair of named images.
 type RegistryOperation struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

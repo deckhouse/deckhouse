@@ -52,11 +52,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
+	registryimagev1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/registry.deckhouse.io/v1alpha1"
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 
 	"github.com/deckhouse/registry-syncer/internal/distribution"
 	"github.com/deckhouse/registry-syncer/internal/fill"
 	"github.com/deckhouse/registry-syncer/internal/gc"
+	"github.com/deckhouse/registry-syncer/internal/integrity"
 	"github.com/deckhouse/registry-syncer/internal/metrics"
 	"github.com/deckhouse/registry-syncer/internal/report"
 	"github.com/deckhouse/registry-syncer/internal/run"
@@ -236,6 +238,10 @@ func main() {
 		storeRecheck   time.Duration
 		storeHostPath  string
 		logLevel       string
+
+		scrubCycle      time.Duration
+		scrubMaxRateMiB int
+		verifyRateMiB   int
 	)
 
 	flag.StringVar(&configPath, "config-path", "/config/config.yaml",
@@ -274,6 +280,13 @@ func main() {
 		"The store's directory on the node: which directory a disk for it is mounted at or above, and "+
 			"what to change the owner of when the registry cannot write to it.")
 	flag.StringVar(&logLevel, "log-level", "info", "Log level: debug, info, warn or error.")
+	flag.DurationVar(&scrubCycle, "scrub-cycle", integrity.DefaultScrubCycle,
+		"How often the background check means to read the whole store and compare every blob with its "+
+			"digest; 0 turns it off. A store too large to read in this time at --scrub-max-rate-mib takes longer.")
+	flag.IntVar(&scrubMaxRateMiB, "scrub-max-rate-mib", integrity.DefaultScrubMaxRate>>20,
+		"The fastest, in MiB/s, the background check reads the store.")
+	flag.IntVar(&verifyRateMiB, "verify-rate-mib", integrity.DefaultVerifyRate>>20,
+		"How fast, in MiB/s, a Verify or a Repair reads the store.")
 	flag.Parse()
 
 	log := newLogger(logLevel)
@@ -310,6 +323,10 @@ func main() {
 		copyRateMiB:    copyRateMiB,
 		storeRecheck:   storeRecheck,
 		storeHostPath:  storeHostPath,
+
+		scrubCycle:      scrubCycle,
+		scrubMaxRateMiB: scrubMaxRateMiB,
+		verifyRateMiB:   verifyRateMiB,
 	}); err != nil {
 		log.Error("the syncer stopped", "error", err.Error())
 		os.Exit(1)
@@ -332,6 +349,10 @@ type options struct {
 	copyRateMiB    int
 	storeRecheck   time.Duration
 	storeHostPath  string
+
+	scrubCycle      time.Duration
+	scrubMaxRateMiB int
+	verifyRateMiB   int
 }
 
 // defaultCopyRateMiB bounds the background copy to what a control-plane node can spare while it
@@ -455,8 +476,13 @@ func serve(ctx context.Context, log *slog.Logger, opts options) error {
 	tracker := &leadership{gauge: collected.Leader}
 	loop.Leadership = tracker
 
+	// The checks of the store and the index of its images. Started before the loop, which asks the
+	// ledger what is broken on its first pass.
+	checks := newIntegrityParts(log, opts.nodeName, loop, loop.Publisher, collected)
+	checks.start(ctx, kubeClient, opts)
+
 	go func() {
-		if err := serveMetrics(ctx, opts.metricsAddress, registry); err != nil {
+		if err := serveMetrics(ctx, opts.metricsAddress, registry, checks.indexer); err != nil {
 			// Never fatal. Filling a cache must not depend on whether anyone is watching.
 			log.Error("the metrics listener stopped", "error", err.Error())
 		}
@@ -547,7 +573,7 @@ func serve(ctx context.Context, log *slog.Logger, opts options) error {
 	// A second lease, separate from the one above: the replica filling the cache is the last
 	// one that should pause its writes, so "who fills" and "whose turn is it to collect" must be
 	// free to be different replicas.
-	go startCollector(ctx, log, opts, kubeClient, clientset, loop, collected)
+	go startCollector(ctx, log, opts, kubeClient, clientset, loop, collected, checks)
 
 	candidate := &run.Candidate{Log: log, Eligible: candidacy.eligible, Elect: elect}
 	candidate.Run(ctx)
@@ -998,7 +1024,7 @@ func leaseAt(lease *coordinationv1.Lease, now time.Time) run.Lease {
 func startCollector(
 	ctx context.Context, log *slog.Logger, opts options,
 	kubeClient client.Client, clientset kubernetes.Interface, loop *run.Loop,
-	collected *metrics.Metrics,
+	collected *metrics.Metrics, checks *integrityParts,
 ) {
 	if opts.namespace == "" {
 		log.Warn("no namespace, so no garbage collection; the store will grow without bound")
@@ -1063,10 +1089,15 @@ func startCollector(
 			// collect nothing: the store cannot be compared with anything while the set is still
 			// going in. Only a copy this replica makes, though: see Loop.OwesCopy. And only one that
 			// can go in: a store that refuses writes fails every fill at its first blob, and waiting
-			// for it would wait out the one thing that can give the room back.
+			// for it would wait out the one thing that can give the room back. Nor one that only a
+			// Repair can finish: a store short of the set by broken blobs alone is not completed by a
+			// fill, and the Repair waits for the operation that would be waiting here — the collection
+			// would hold out until its deadline. A store short of other images too still owes the fill,
+			// and waits for it. A pass in flight holds it back either way, through Filling.
 			return gc.Plan{
-				Known:       true,
-				FillPending: spec.NeedSync && !loop.Complete() && loop.OwesCopy() && !loop.StoreRefusesWrites(),
+				Known: true,
+				FillPending: spec.NeedSync && !loop.Complete() && loop.OwesCopy() && !loop.StoreRefusesWrites() &&
+					!loop.OwesOnlyRepair(),
 			}
 		},
 		// Filling has priority: a collection reclaims what nothing declares, and a fill is putting
@@ -1089,6 +1120,11 @@ func startCollector(
 			Identity:  opts.nodeName,
 		},
 		Operations: &gc.ClusterOperations{Client: kubeClient, Node: opts.nodeName},
+		// A check and a repair take their turn in the same queue: one replica reads its disk at a time.
+		Verify: checks.verifier(opts).Verify,
+		Repair: checks.repairer(opts, loop).Repair,
+		// What an operation changed or found is in the index at once, not at its next rebuild.
+		Done: func(*gc.Operation) { checks.indexer.Kick() },
 		Collect: func(ctx context.Context) (gc.Report, error) {
 			collecting.Store(true)
 			defer func() {
@@ -1220,9 +1256,15 @@ func newCollector(
 }
 
 // serveMetrics answers the scraper beside it, and nothing else.
-func serveMetrics(ctx context.Context, address string, registry *prometheus.Registry) error {
+//
+// And the index of the store's images, which registry-controller reads through the same proxy — see
+// images.Indexer. Never read from the disk on a request.
+func serveMetrics(ctx context.Context, address string, registry *prometheus.Registry, index http.Handler) error {
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
+	if index != nil {
+		mux.Handle(registryimagev1alpha1.IndexPath, index)
+	}
 
 	server := &http.Server{
 		Addr:              address,

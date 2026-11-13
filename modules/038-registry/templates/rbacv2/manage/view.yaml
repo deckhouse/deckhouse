@@ -12,20 +12,30 @@ metadata:
     rbac.deckhouse.io/namespace: d8-system
   name: d8:system-capability:registry:view
   annotations:
-    en.meta.deckhouse.io/title: "Module registry: view node settings"
-    ru.meta.deckhouse.io/title: "Модуль registry: просмотр настроек узлов"
-    en.meta.deckhouse.io/description: "Read-only access to the registry settings compiled for each node. The module configuration holds registry credentials, so reading it comes with the edit capability."
-    ru.meta.deckhouse.io/description: "Доступ только на чтение к настройкам registry, собранным для каждого узла. Конфигурация модуля содержит учётные данные registry, поэтому её чтение входит в право управления."
+    en.meta.deckhouse.io/title: "Module registry: view node settings and cached images"
+    ru.meta.deckhouse.io/title: "Модуль registry: просмотр настроек узлов и образов в кеше"
+    en.meta.deckhouse.io/description: "Read-only access to the registry settings compiled for each node, to the images of the in-cluster cache (RegistryImage) and to the operations on it (RegistryOperation). The module configuration holds registry credentials, so reading it comes with the edit capability."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к настройкам registry, собранным для каждого узла, к образам во внутрикластерном кеше (RegistryImage) и к операциям над ним (RegistryOperation). Конфигурация модуля содержит учётные данные registry, поэтому её чтение входит в право управления."
 # ModuleConfig/registry, RegistryConfig, RegistryUpstream and RegistryStorage all carry credentials
 # inline: the license key or the upstream password, and the bearer token of the storage. The viewer
 # of the subsystem reads no Secrets, so none of them is here. A RegistryNode names its credentials
 # instead of holding them, which is what makes it readable by every node.
+#
+# RegistryImage and RegistryOperation hold none either: digests, module names, sizes and progress.
 rules:
 - apiGroups:
   - deckhouse.io
   resources:
   - registrynodes
+  - registryoperations
   verbs:
   - get
   - list
   - watch
+- apiGroups:
+  - registry.deckhouse.io
+  resources:
+  - registryimages
+  verbs:
+  - get
+  - list

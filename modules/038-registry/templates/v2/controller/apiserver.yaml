@@ -1,0 +1,61 @@
+{{- /*
+The aggregated API of registry.deckhouse.io, served by registry-controller: RegistryImage, the
+images of the cache, assembled on every request from the replicas' indexes and never stored.
+
+A group of its own, because an APIService takes the whole group and deckhouse.io is served by
+custom resources.
+
+While no controller replica answers, discovery of this group fails, and that reaches past the
+listing: the namespace controller cannot finish deleting any namespace (NamespaceDeletionDiscoveryFailure),
+the garbage collector skips the group, and clients that discover every group warn. Nothing is lost,
+and it all resumes once a replica answers; D8RegistryControllerDown says so.
+*/ -}}
+{{- if eq (include "registry_v2_manages" .) "true" }}
+{{- $cert := ((.Values.registry.internal).v2).apiserverCert | default dict }}
+{{- if $cert.crt }}
+---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/tls
+metadata:
+  name: registry-controller-apiserver-tls
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-controller")) | nindent 2 }}
+data:
+  ca.crt: {{ $cert.ca | b64enc }}
+  tls.crt: {{ $cert.crt | b64enc }}
+  tls.key: {{ $cert.key | b64enc }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry-controller
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-controller")) | nindent 2 }}
+spec:
+  type: ClusterIP
+  selector:
+    app: registry-controller
+  ports:
+  - name: apiserver
+    port: 443
+    targetPort: apiserver
+    protocol: TCP
+---
+apiVersion: apiregistration.k8s.io/v1
+kind: APIService
+metadata:
+  name: v1alpha1.registry.deckhouse.io
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-controller")) | nindent 2 }}
+spec:
+  caBundle: {{ $cert.ca | b64enc | quote }}
+  group: registry.deckhouse.io
+  groupPriorityMinimum: 1000
+  versionPriority: 15
+  service:
+    name: registry-controller
+    namespace: d8-system
+    port: 443
+  version: v1alpha1
+{{- end }}
+{{- end }}

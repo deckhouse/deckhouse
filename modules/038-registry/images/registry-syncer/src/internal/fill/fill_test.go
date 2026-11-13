@@ -632,7 +632,7 @@ func TestTakeCountsOnlyImagesTheStoreCanServe(t *testing.T) {
 		blob(t, root, config, []byte(`{}`))
 		blob(t, root, layer, []byte("layer"))
 
-		survey, err := Take(root, scope, map[string]struct{}{digestOne: {}}, nil)
+		survey, err := Take(root, scope, map[string]struct{}{digestOne: {}}, nil, nil)
 		require.NoError(t, err)
 		assert.EqualValues(t, 1, survey.Declared, "everything it names is here, so it is held")
 		assert.EqualValues(t, 1, survey.Total)
@@ -644,7 +644,7 @@ func TestTakeCountsOnlyImagesTheStoreCanServe(t *testing.T) {
 		blob(t, root, digestOne, imageManifest(config, missing))
 		blob(t, root, config, []byte(`{}`))
 
-		survey, err := Take(root, scope, map[string]struct{}{digestOne: {}}, nil)
+		survey, err := Take(root, scope, map[string]struct{}{digestOne: {}}, nil, nil)
 		require.NoError(t, err)
 		assert.EqualValues(t, 0, survey.Declared,
 			"a manifest without its layers cannot be served, and counting it authorizes an air-gap the cluster cannot survive")
@@ -655,7 +655,7 @@ func TestTakeCountsOnlyImagesTheStoreCanServe(t *testing.T) {
 		root := store(t)
 		revisionLink(t, root, scope, digestOne)
 
-		survey, err := Take(root, scope, map[string]struct{}{digestOne: {}}, nil)
+		survey, err := Take(root, scope, map[string]struct{}{digestOne: {}}, nil, nil)
 		require.NoError(t, err)
 		assert.EqualValues(t, 0, survey.Declared, "a link without the manifest itself holds nothing")
 	})
@@ -674,13 +674,13 @@ func TestTakeCountsOnlyImagesTheStoreCanServe(t *testing.T) {
 		blob(t, root, config, []byte(`{}`))
 		blob(t, root, layer, []byte("layer"))
 
-		survey, err := Take(root, scope, map[string]struct{}{digestOne: {}}, nil)
+		survey, err := Take(root, scope, map[string]struct{}{digestOne: {}}, nil, nil)
 		require.NoError(t, err)
 		assert.EqualValues(t, 0, survey.Declared, "half an index is not an image anybody can pull")
 
 		// And with the second child's layer in place it becomes servable.
 		blob(t, root, missing, []byte("layer"))
-		survey, err = Take(root, scope, map[string]struct{}{digestOne: {}}, nil)
+		survey, err = Take(root, scope, map[string]struct{}{digestOne: {}}, nil, nil)
 		require.NoError(t, err)
 		assert.EqualValues(t, 1, survey.Declared)
 	})

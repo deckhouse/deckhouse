@@ -32,6 +32,7 @@ package report
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 	"unicode/utf8"
 
@@ -582,6 +583,10 @@ func Merge(replicas *[]registryv1alpha1.StorageReplicaStatus, state State) bool 
 		// The same for the health watch, which owns HealthError: a pass knows nothing about it,
 		// and the watch writes it again only while something is wrong.
 		entry.HealthError = (*replicas)[i].HealthError
+		// And for the integrity check and the index of the images — see MergeIntegrity.
+		entry.CorruptedBlobs = (*replicas)[i].CorruptedBlobs
+		entry.Images = (*replicas)[i].Images
+		entry.ScrubbedAt = (*replicas)[i].ScrubbedAt
 		// A report that did not measure the store — the one announcing a pass, say — keeps the
 		// last measurement rather than erasing it, or the status would flap between the two.
 		if entry.Store == nil {
@@ -767,4 +772,89 @@ func MergeProgress(replicas *[]registryv1alpha1.StorageReplicaStatus, state Stat
 		DeclaredDigests: state.DeclaredDigests,
 	})
 	return true
+}
+
+// Integrity is what the checks of the store and the index of its images say about one replica.
+type Integrity struct {
+	// Node the replica runs on.
+	Node string
+
+	// CorruptedBlobs are the blobs found broken, sorted and limited — see integrity.Ledger.List.
+	CorruptedBlobs []string
+
+	// Images counts the images by state. Nil leaves the last count.
+	Images *registryv1alpha1.ReplicaImages
+
+	// ScrubbedAt is when the scrub last read the whole store. Nil leaves the last one.
+	ScrubbedAt *time.Time
+
+	// ShortOfSet says that an image of the set references one of CorruptedBlobs: the store does not hold
+	// the set, whatever the last pass reported.
+	ShortOfSet bool
+}
+
+// PublishIntegrity records what the checks of the store found and how many images it holds.
+//
+// A finding that leaves the store short of the set takes Full back in the same write, and on a leader
+// the two permissions derived from it, as Publish does for a leader that is not full. Left to the next
+// pass, Full stood beside the finding for half a minute on a stand: the other replicas took the replica
+// for one that holds the set whole, and a leader stepping down could hand it the lease. Only ever taken
+// back here; the pass that reads the store after the Repair earns it again.
+func (p *Publisher) PublishIntegrity(ctx context.Context, integrity Integrity) error {
+	if integrity.Node == "" {
+		return fmt.Errorf("an integrity report needs the node it came from")
+	}
+	return p.publish(ctx, func(storage *registryv1alpha1.RegistryStorage) bool {
+		changed := MergeIntegrity(&storage.Status.Replicas, integrity)
+		if !integrity.ShortOfSet {
+			return changed
+		}
+		for i := range storage.Status.Replicas {
+			entry := &storage.Status.Replicas[i]
+			if entry.Node != integrity.Node || !entry.Full {
+				continue
+			}
+			entry.Full = false
+			changed = true
+			if entry.Role == registryv1alpha1.ReplicaRoleLeader {
+				storage.Status.SafeToDropUpstream = false
+				storage.Status.AllReplicasFull = false
+			}
+		}
+		return changed
+	})
+}
+
+// MergeIntegrity sets the three fields the integrity check and the index of images own, and leaves
+// every other field alone. Never creates an entry: a replica that has not reported a pass has nothing
+// to say about images either, and an entry without a role and an address would only confuse.
+func MergeIntegrity(replicas *[]registryv1alpha1.StorageReplicaStatus, integrity Integrity) bool {
+	for i := range *replicas {
+		entry := &(*replicas)[i]
+		if entry.Node != integrity.Node {
+			continue
+		}
+		changed := false
+		corrupted := integrity.CorruptedBlobs
+		if len(corrupted) == 0 {
+			corrupted = nil
+		}
+		if !equality.Semantic.DeepEqual(entry.CorruptedBlobs, corrupted) {
+			entry.CorruptedBlobs = slices.Clone(corrupted)
+			changed = true
+		}
+		if integrity.Images != nil && !equality.Semantic.DeepEqual(entry.Images, integrity.Images) {
+			entry.Images = integrity.Images.DeepCopy()
+			changed = true
+		}
+		if integrity.ScrubbedAt != nil {
+			stamp := metav1.NewTime(integrity.ScrubbedAt.Truncate(time.Second))
+			if entry.ScrubbedAt == nil || !entry.ScrubbedAt.Equal(&stamp) {
+				entry.ScrubbedAt = &stamp
+				changed = true
+			}
+		}
+		return changed
+	}
+	return false
 }

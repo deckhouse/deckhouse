@@ -39,6 +39,7 @@ import (
 
 	"github.com/deckhouse/registry-syncer/internal/fill"
 	"github.com/deckhouse/registry-syncer/internal/report"
+	"github.com/deckhouse/registry-syncer/internal/storetest"
 )
 
 // TestWhyStepDownWantsAReplicaFullForThisSet: a leader short of the set hands the lease over only to a
@@ -1511,4 +1512,43 @@ func TestTheFirstPassUnderAnAirGapRequestWalksTheStore(t *testing.T) {
 	require.NoError(t, loop.once(context.Background()))
 	assert.False(t, replicaOf(t, c, "master-0").Full, "the store as it is now, not the reading from before the request")
 	assert.True(t, loop.airGapSeen.Load())
+}
+
+// TestAPassDoesNotPutBackTheFullAFindingTookBack: a pass that read the store, or carried its Full over,
+// before a blob of the set was found broken publishes that Full after the finding took it back — see
+// report.Integrity.ShortOfSet — unless it sees the finding came in while it ran. A broken blob no image of
+// the set references takes nothing back.
+func TestAPassDoesNotPutBackTheFullAFindingTookBack(t *testing.T) {
+	ten := fullLeader()
+	ten.VerifiedDigests, ten.DeclaredDigests, ten.AheadSet = 10, 10, ""
+
+	for name, ofTheSet := range map[string]bool{"a blob of the set": true, "a blob of no image of the set": false} {
+		t.Run(name, func(t *testing.T) {
+			loop, c, _, _ := idleCluster(t, true, 12, ten)
+			image, blobs := storetest.Image(t, loop.DataDir, "system/deckhouse", "layer")
+			_, other := storetest.Image(t, loop.DataDir, "system/deckhouse/pulled", "other")
+			loop.declaredMu.Lock()
+			loop.declared, loop.declaredFor = map[string]struct{}{image: {}}, "v1.76.6"
+			loop.declaredMu.Unlock()
+
+			broken := other[1]
+			if ofTheSet {
+				broken = blobs[1]
+			}
+			// Found while the pass runs: the first look at the recorded blobs is the pass's own.
+			bad := map[string]bool{}
+			loop.Corrupted = func() map[string]bool {
+				if len(bad) == 0 {
+					bad[broken] = true
+					loop.CorruptionChanged()
+					return nil
+				}
+				return bad
+			}
+
+			require.NoError(t, loop.once(context.Background()))
+			assert.Equal(t, !ofTheSet, statusOf(t, c).Status.Replicas[0].Full)
+			assert.Equal(t, !ofTheSet, loop.Complete())
+		})
+	}
 }

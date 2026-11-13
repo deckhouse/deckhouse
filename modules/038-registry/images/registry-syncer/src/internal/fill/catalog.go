@@ -188,7 +188,9 @@ type Survey struct {
 	MissingTags []string
 }
 
-func Take(root, scope string, declared map[string]struct{}, tags []string) (Survey, error) {
+// Take reads the store once — see Survey. The blobs of bad are taken for absent: an image that
+// references one is not held, however much of it is on the disk.
+func Take(root, scope string, declared map[string]struct{}, tags []string, bad map[string]bool) (Survey, error) {
 	var survey Survey
 
 	manifests, err := HeldManifests(root, scope)
@@ -201,7 +203,7 @@ func Take(root, scope string, declared map[string]struct{}, tags []string) (Surv
 	// Only the declared set is checked this way. Total is a report of what the store has touched and
 	// nothing decides on it, so paying for a layer walk of every manifest in the store, most of which
 	// are sediment from proxying, would buy nothing.
-	content := newBlobs(root)
+	content := newBlobsExcluding(root, bad)
 
 	seen := make(map[string]struct{}, len(manifests))
 	ours := make(map[string]struct{}, len(declared))

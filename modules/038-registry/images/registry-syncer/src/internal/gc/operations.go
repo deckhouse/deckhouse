@@ -33,8 +33,7 @@ import (
 	"github.com/deckhouse/registry-syncer/internal/report"
 )
 
-// ClusterOperations reads the RegistryOperation objects of type GarbageCollection and writes this
-// replica's entry in them.
+// ClusterOperations reads the RegistryOperation objects and writes this replica's entry in them.
 //
 // Read straight from the API server rather than from an informer: the syncer keeps no cache, and what
 // is read is a few small objects every quarter of a minute.
@@ -116,7 +115,9 @@ func (c *ClusterOperations) Report(ctx context.Context, name string, progress Pr
 
 // owes reports whether this replica still has to do something about an operation.
 func (c *ClusterOperations) owes(item *registryv1alpha1.RegistryOperation) bool {
-	if item.Spec.Type != registryv1alpha1.OperationGarbageCollection {
+	switch item.Spec.Type {
+	case registryv1alpha1.OperationGarbageCollection, registryv1alpha1.OperationVerify, registryv1alpha1.OperationRepair:
+	default:
 		return false
 	}
 	switch item.Status.Phase {
@@ -130,7 +131,12 @@ func (c *ClusterOperations) owes(item *registryv1alpha1.RegistryOperation) bool 
 }
 
 func toOperation(item *registryv1alpha1.RegistryOperation, node string) *Operation {
-	operation := &Operation{Name: item.Name, Canceled: item.Canceled()}
+	operation := &Operation{
+		Name:     item.Name,
+		Type:     item.Spec.Type,
+		Digests:  append([]string(nil), item.Spec.Digests()...),
+		Canceled: item.Canceled(),
+	}
 	if entry := item.Status.Replica(node); entry != nil {
 		operation.PassedGate = entry.Phase == registryv1alpha1.ReplicaOperationRunning ||
 			(entry.Phase == registryv1alpha1.ReplicaOperationWaiting && entry.Reason == registryv1alpha1.ReasonOperationTurn)
@@ -166,6 +172,15 @@ func apply(entry *registryv1alpha1.ReplicaOperationStatus, progress Progress) {
 		}
 		entry.GarbageCollection = result
 	}
+	entry.Verify = progress.Verify.DeepCopy()
+	if entry.Verify != nil {
+		// The status is read by every replica and the controller; the list is bounded, and so is
+		// what a missing digest can add.
+		if len(entry.Verify.MissingDigests) > registryv1alpha1.MaxOperationDigests {
+			entry.Verify.MissingDigests = entry.Verify.MissingDigests[:registryv1alpha1.MaxOperationDigests]
+		}
+	}
+	entry.Repair = progress.Repair.DeepCopy()
 }
 
 // stamp converts a time to what the API server stores: a time it rounds down otherwise compares

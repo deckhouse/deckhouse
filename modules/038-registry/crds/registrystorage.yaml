@@ -401,6 +401,47 @@ spec:
                           Why the last attempt to reclaim did not finish, empty when it did.
 
                           Separate from `error`, which is about filling. A store that cannot be reclaimed still serves every image it holds, so the two say different things about how worried to be.
+                      corruptedBlobs:
+                        type: array
+                        maxItems: 100
+                        description: |
+                          The blobs of this replica's store whose content does not match their digest, sorted, at most 100. Usually empty.
+
+                          Found by the background check, which reads the whole store about once an hour, by a `RegistryOperation` of type `Verify`, or by a `Repair` that could not finish. An image that references such a blob is not counted as held: while an image of the set does, the replica is not `full`, and a leader hands the lease to a replica that holds the set whole.
+
+                          The module creates a `RegistryOperation` of type `Repair` for these blobs as soon as no other operation runs, and again four hours after a repair that did not fix them.
+                        items:
+                          type: string
+                      images:
+                        type: object
+                        description: |
+                          How many images this replica holds, by state. The images themselves are listed by `kubectl get registryimages`.
+                        properties:
+                          present:
+                            type: integer
+                            format: int32
+                            description: Images of the set the replica holds whole.
+                          missing:
+                            type: integer
+                            format: int32
+                            description: Images of the set the replica does not hold at all.
+                          incomplete:
+                            type: integer
+                            format: int32
+                            description: Images of the set the replica holds without some of their blobs.
+                          corrupted:
+                            type: integer
+                            format: int32
+                            description: Images, of the set or not, that reference a broken blob.
+                          outOfSet:
+                            type: integer
+                            format: int32
+                            description: Images the replica holds that no release or module of the cluster declares — pulled through the cache on request, or left by an older release.
+                      scrubbedAt:
+                        type: string
+                        format: date-time
+                        description: |
+                          When the background check last finished reading the whole store and comparing every blob with its digest.
                       syncerStartedAt:
                         type: string
                         format: date-time

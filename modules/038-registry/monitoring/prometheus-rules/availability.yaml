@@ -47,6 +47,11 @@
         RegistryUpstream, a leader moving to another master, an air-gap transition — none of it
         reaches the nodes until the controller is back.
 
+        Beyond the registry, no namespace in the cluster can finish deleting: the controller also
+        serves the `registry.deckhouse.io` API (the `RegistryImage` listing), and while nobody answers
+        for it, discovery of that group fails and namespaces stay `Terminating` with the condition
+        `NamespaceDeletionDiscoveryFailure`. They are deleted once a replica answers again.
+
         And while this is firing, most other `D8Registry*` alerts are blind: they read what the
         controller exports, so they stay silent whatever happens in the meantime. The exceptions
         are `D8RegistryStorageLeaderAbsent`, which reads the cache replicas themselves, and the

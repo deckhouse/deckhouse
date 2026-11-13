@@ -27,7 +27,9 @@ spec:
         {{- include "registry_controller_resources" $ | nindent 8 }}
       maxAllowed:
         cpu: 50m
-        memory: 128Mi
+        # The aggregated API of registry.deckhouse.io runs in the same process, and assembling the
+        # images of a cache holds the indexes of every replica in memory for the request.
+        memory: 256Mi
     # Every container of the pod, the proxy included. A container the autoscaler has no policy for
     # is still one it manages, only with no bounds: the proxy started with no requests at all, since
     # the template leaves them to the autoscaler, and nothing capped what it would recommend.
@@ -83,6 +85,14 @@ spec:
       automountServiceAccountToken: true
       serviceAccountName: registry-controller
       terminationGracePeriodSeconds: 10
+      volumes:
+      # Optional: the controller keeps the cache working, the listing it serves does not. Without the
+      # Secret the pod starts anyway and its aggregated API waits for the files the kubelet writes in
+      # once the Secret appears.
+      - name: apiserver-tls
+        secret:
+          secretName: registry-controller-apiserver-tls
+          optional: true
       # No imagePullSecrets, deliberately.
       #
       # Credentials for the registry this cluster pulls from live on the NODE, not in a pod spec: the
@@ -131,6 +141,14 @@ spec:
         # nothing reaches it but the kube-rbac-proxy in the same pod.
         - name: healthz
           containerPort: 4282
+        # The aggregated API of registry.deckhouse.io — the images of the cache — which the
+        # APIService routes to through the registry-controller Service.
+        - name: apiserver
+          containerPort: 4286
+        volumeMounts:
+        - name: apiserver-tls
+          mountPath: /etc/registry-controller/apiserver
+          readOnly: true
         livenessProbe:
           httpGet:
             path: /healthz

@@ -86,6 +86,8 @@ const stepDownRecheck = time.Minute
 // Or, Counted, what the store's own count refutes: Total digests on the disk altogether, against the
 // Checked its report says it verified of the set, Missing of them at the least — see refutedByCount.
 // Release is not looked at then.
+//
+// Or, Corrupted, how many images of the set reference a blob found broken — see corruptedOfSet.
 type Shortfall struct {
 	Release     string
 	ReleaseHeld bool
@@ -93,6 +95,7 @@ type Shortfall struct {
 	Missing     int
 	Counted     bool
 	Total       int
+	Corrupted   int
 }
 
 // refutedByCount is the third finding, beside ShortOfSet's two, and the one that costs nothing: a Full
@@ -323,6 +326,14 @@ func (l *Loop) ShortOfSet(ctx context.Context, deployed string) (Shortfall, bool
 	l.sampleMu.Lock()
 	defer l.sampleMu.Unlock()
 
+	// A third finding, conclusive at once and before the sample: an image of the set references a blob
+	// this replica found broken. The registry serves that blob as it is and every pull of the image
+	// fails, so the replica does not hold the set whatever else it holds — and in air-gap a replica
+	// that does is where the nodes should pull from, and where a Repair here takes its whole copy.
+	if corrupted := l.corruptedOfSet(deployed); corrupted > 0 {
+		return Shortfall{Release: deployed, ReleaseHeld: true, Corrupted: corrupted}, true
+	}
+
 	if !l.sampleCleanAt.IsZero() && time.Since(l.sampleCleanAt) < stepDownRecheck {
 		return Shortfall{}, false
 	}
@@ -353,6 +364,65 @@ func (l *Loop) ShortOfSet(ctx context.Context, deployed string) (Shortfall, bool
 		l.sampleCleanAt = time.Now()
 		return short, false
 	}
+}
+
+// RepairOwed reports that an image of the set references a blob recorded as broken here, so that this
+// store cannot become complete before a Repair replaces it: a fill does not, since the blob is in the
+// store and a copy skips what is there. Whatever waits for the store to become complete waits for that
+// Repair, and the Repair may be waiting for it in turn — see gc.Plan.FillPending.
+func (l *Loop) RepairOwed() bool {
+	l.declaredMu.Lock()
+	deployed := l.declaredFor
+	l.declaredMu.Unlock()
+	return deployed != "" && l.corruptedOfSet(deployed) > 0
+}
+
+// OwesOnlyRepair is RepairOwed when broken blobs are all the store lacks: with them taken for whole, it
+// holds every image of the set and resolves the release. Then a fill has nothing left to finish, and a
+// collection that waited for one would wait for the Repair; a store short of other images still owes a
+// fill, and the collection waits for it — see gc.Plan.FillPending. Reads the store's manifests and the
+// sizes of their blobs, so only once a blob of the set is recorded as broken, which is rare.
+func (l *Loop) OwesOnlyRepair() bool {
+	if !l.RepairOwed() {
+		return false
+	}
+	l.declaredMu.Lock()
+	declared, deployed := l.declared, l.declaredFor
+	l.declaredMu.Unlock()
+	if len(declared) == 0 {
+		return false
+	}
+	survey, err := fill.Take(l.dataDir(), strings.Trim(constant.Path, "/"), declared, []string{deployed}, nil)
+	if err != nil {
+		l.Log.Debug("cannot tell whether the store lacks anything but broken blobs", "error", err.Error())
+		return false
+	}
+	return int(survey.Declared) >= len(declared) && len(survey.MissingTags) == 0
+}
+
+// corruptedOfSet is how many images of the set the last pass read reference a blob recorded as broken.
+// Zero while nothing is recorded, which is nearly always, and then nothing is read; zero too when the
+// set was read for another release, or the store cannot be read.
+func (l *Loop) corruptedOfSet(deployed string) int {
+	if l.Corrupted == nil {
+		return 0
+	}
+	bad := l.Corrupted()
+	if len(bad) == 0 {
+		return 0
+	}
+	l.declaredMu.Lock()
+	declared, declaredFor := l.declared, l.declaredFor
+	l.declaredMu.Unlock()
+	if declared == nil || declaredFor != deployed {
+		return 0
+	}
+	corrupted, err := fill.CorruptedOfSet(l.dataDir(), declared, bad)
+	if err != nil {
+		l.Log.Debug("cannot tell which images of the set reference broken blobs", "error", err.Error())
+		return 0
+	}
+	return corrupted
 }
 
 // sampleStore reads a sample of the set off the disk — see ShortOfSet — waiting for it no longer than
@@ -467,7 +537,7 @@ func (l *Loop) StepDown(ctx context.Context, short Shortfall, full *registryv1al
 	l.Log.Warn("this replica leads, but its store does not hold the set that another replica holds whole, "+
 		"so it gives up the lease and copies the set from the new leader",
 		"release", short.Release, "release_held", short.ReleaseHeld,
-		"sampled", short.Checked, "missing", short.Missing,
+		"sampled", short.Checked, "missing", short.Missing, "corrupted_images", short.Corrupted,
 		"full_replica", full.Node, "set", full.VerifiedSet)
 	l.demote(ctx)
 }
@@ -563,7 +633,7 @@ func (l *Loop) TakeBackFull(ctx context.Context, short Shortfall) {
 		l.Log.Warn("this replica leads, but its store does not hold the set its report says it holds, and no other "+
 			"replica holds the set whole, so it keeps the lease, takes the report back and fills or counts the store again",
 			"release", short.Release, "release_held", short.ReleaseHeld,
-			"sampled", short.Checked, "missing", short.Missing)
+			"sampled", short.Checked, "missing", short.Missing, "corrupted_images", short.Corrupted)
 	}
 
 	if l.Publisher == nil {

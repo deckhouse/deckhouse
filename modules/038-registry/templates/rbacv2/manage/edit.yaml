@@ -14,8 +14,8 @@ metadata:
   annotations:
     en.meta.deckhouse.io/title: "Module registry: edit configuration"
     ru.meta.deckhouse.io/title: "Модуль registry: управление конфигурацией"
-    en.meta.deckhouse.io/description: "Manage the registry module configuration and the additional registries (RegistryUpstream), and read the resolved configuration together with the registry credentials."
-    ru.meta.deckhouse.io/description: "Управление конфигурацией модуля registry и дополнительными registry (RegistryUpstream), чтение итоговой конфигурации вместе с учётными данными registry."
+    en.meta.deckhouse.io/description: "Manage the registry module configuration and the additional registries (RegistryUpstream), run operations on the in-cluster cache (RegistryOperation: garbage collection, verification, repair), and read the resolved configuration together with the registry credentials."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией модуля registry и дополнительными registry (RegistryUpstream), запуск операций над внутрикластерным кешем (RegistryOperation: сборка мусора, проверка, ремонт), чтение итоговой конфигурации вместе с учётными данными registry."
 rules:
 # Reading the configuration is reading the registry credentials (the license key or the upstream
 # password), so it belongs with the write verbs, not with the read-only capability. Deleting it is
@@ -61,3 +61,23 @@ rules:
   - patch
   - delete
   - deletecollection
+# Operations on the cache: create one, cancel it with the label, delete it. The spec is immutable.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - registryoperations
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - patch
+  - update
+  - delete
+- apiGroups:
+  - registry.deckhouse.io
+  resources:
+  - registryimages
+  verbs:
+  - get
+  - list

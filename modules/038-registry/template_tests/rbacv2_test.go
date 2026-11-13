@@ -61,13 +61,18 @@ var _ = Describe("Module :: registry :: helm template :: rbacv2", func() {
 			BeforeEach(func() { renderWith(values) })
 
 			// The CRDs are installed either way, so the rights to them are too.
-			It("gives the viewer only the per-node settings, which hold no credentials", func() {
+			It("gives the viewer only what holds no credentials: the per-node settings, the operations and the cached images", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 				view := f.KubernetesGlobalResource("ClusterRole", "d8:system-capability:registry:view")
 				Expect(view.Exists()).To(BeTrue())
 				Expect(view.Field(`metadata.labels.rbac\.deckhouse\.io/aggregate-to-cluster-as`).String()).To(Equal("viewer"))
-				Expect(grantedVerbs(view)).To(Equal(map[string][]string{"registrynodes": readVerbs}))
+				Expect(grantedVerbs(view)).To(Equal(map[string][]string{
+					"registrynodes":      readVerbs,
+					"registryoperations": readVerbs,
+					// A virtual resource: no watch is served.
+					"registryimages": {"get", "list"},
+				}))
 			})
 
 			It("lets the manager read the configuration and write only what the module does not own", func() {
@@ -85,7 +90,12 @@ var _ = Describe("Module :: registry :: helm template :: rbacv2", func() {
 				Expect(granted["registrystorages"]).To(ConsistOf(readVerbs))
 				Expect(granted["registryupstreams"]).To(ConsistOf(
 					"get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"))
-				Expect(granted).To(HaveLen(4), "no status subresource and nothing outside the module")
+				// Operations on the cache are created by hand, canceled with a label and deleted; their
+				// status is the controller's and the replicas'.
+				Expect(granted["registryoperations"]).To(ConsistOf(
+					"get", "list", "watch", "create", "patch", "update", "delete"))
+				Expect(granted["registryimages"]).To(ConsistOf("get", "list"))
+				Expect(granted).To(HaveLen(6), "no status subresource and nothing outside the module")
 
 				edit.Field("rules").ForEach(func(_, rule gjson.Result) bool {
 					for _, resource := range rule.Get("resources").Array() {

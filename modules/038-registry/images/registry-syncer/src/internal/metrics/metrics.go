@@ -88,6 +88,23 @@ type Metrics struct {
 	// about a store nobody has looked at, which is the one answer this exists to give truthfully.
 	Reclaimable          *prometheus.GaugeVec
 	ReclaimableEstimated *prometheus.GaugeVec
+
+	// ScrubbedBytes counts what the background check and the operations read of the store to
+	// compare it with its digests, by who read it: scrub, verify or repair.
+	ScrubbedBytes *prometheus.CounterVec
+
+	// LastScrub is when the background check last finished reading the whole store.
+	LastScrub prometheus.Gauge
+
+	// CorruptedBlobs is how many blobs of the store are recorded as broken and not repaired.
+	CorruptedBlobs prometheus.Gauge
+
+	// Images counts the images of the store by state and by whether the cluster declares them —
+	// the counts RegistryStorage carries, not one series per image.
+	Images *prometheus.GaugeVec
+
+	// IndexDuration is how long reading the store into the index of its images took.
+	IndexDuration prometheus.Histogram
 }
 
 // New registers the collectors and returns them.
@@ -146,13 +163,43 @@ func New(registry prometheus.Registerer) *Metrics {
 	// Set here rather than by the caller: this runs once, at startup, and a start time nobody
 	// remembered to set would read 0 — which would make the alert that depends on it fire on
 	// every cluster instead of none, the same way the zero it exists to disambiguate did.
+	m.ScrubbedBytes = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "d8_registry_storage_checked_bytes_total",
+		Help: "Bytes of the store read to compare blobs with their digests, by reader: scrub, verify or repair.",
+	}, []string{"reader"})
+	m.LastScrub = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "d8_registry_storage_last_scrub_timestamp_seconds",
+		Help: "When the background check last finished reading this replica's whole store.",
+	})
+	m.CorruptedBlobs = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "d8_registry_storage_corrupted_blobs",
+		Help: "Blobs of this replica's store whose content does not match their digest, not repaired yet.",
+	})
+	m.Images = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "d8_registry_storage_images",
+		Help: "Images of this replica's store by state: present, missing, incomplete, corrupted, out_of_set.",
+	}, []string{"state"})
+	m.IndexDuration = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name:    "d8_registry_storage_index_duration_seconds",
+		Help:    "How long reading the store into the index of its images took.",
+		Buckets: []float64{0.1, 0.5, 1, 2, 5, 10, 30, 60, 120},
+	})
+
 	m.Started.Set(float64(time.Now().Unix()))
 
 	registry.MustRegister(m.Leader, m.FillDuration, m.References, m.Passes,
 		m.Collections, m.Reclaimed, m.LastCollection, m.Started,
-		m.Reclaimable, m.ReclaimableEstimated)
+		m.Reclaimable, m.ReclaimableEstimated,
+		m.ScrubbedBytes, m.LastScrub, m.CorruptedBlobs, m.Images, m.IndexDuration)
 	return m
 }
+
+// Reader names of ScrubbedBytes.
+const (
+	ReaderScrub  = "scrub"
+	ReaderVerify = "verify"
+	ReaderRepair = "repair"
+)
 
 // SetReclaimable records an estimate of what a garbage collection would free, and when it was made.
 func (m *Metrics) SetReclaimable(bytes int64, at time.Time) {

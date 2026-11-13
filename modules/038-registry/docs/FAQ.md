@@ -440,6 +440,11 @@ a state that is easy to miss otherwise.
   data from the store, so if it has stopped, the disk will eventually fill up. See
   [what cleans the cache up](#the-cache-keeps-growing-what-reclaims-it).
 
+`D8RegistryStoreCorrupted`
+: A replica holds blobs whose content does not match their digest, and the repair the module
+  started on its own has not fixed them for two hours. Pulls of the affected images from that
+  replica fail. See [how to check and repair the images](#how-do-i-check-and-repair-images-in-the-cache).
+
 `D8RegistryStaleCacheData`
 : A node holds cache data that nothing uses. See
   [how to remove it](#how-do-i-remove-leftover-cache-data-from-a-node).
@@ -1151,6 +1156,135 @@ Description of the response fields:
   With no such replica it keeps leading, reports `full: false` and `verifiedDigests: 0` all the same,
   and fills the set again from the upstream (in an air-gapped cluster, it counts its store again, and
   the set comes back only with a new `d8 mirror push`).
+
+## Which images are in the cache?
+
+Every image of the cache, by the digest of its manifest, is listed by the RegistryImage resource
+of the `registry.deckhouse.io` group. It is not stored anywhere: each request asks every replica of
+the cache, and each replica answers from an index it keeps in memory and rebuilds by reading its
+store every two minutes and after every operation. The answer is never older than that, and
+reading it puts no load on the disks of the master nodes.
+
+```bash
+d8 k get registryimages
+d8 k get registryimages -o wide
+d8 k get registryimages -l registry.deckhouse.io/module=prometheus
+d8 k get registryimages -l registry.deckhouse.io/state=Corrupted
+d8 k get registryimages -l registry.deckhouse.io/in-set=false
+d8 k get registryimage sha256-<digest> -o yaml
+d8 k explain registryimages
+```
+
+What an image says:
+
+- `owners` — every place the image is used: the module and the image name from
+  `images_digests.json`, and the Deckhouse Platform releases or module versions that declare it.
+  One digest can be used by several modules, and all of them are listed.
+- `inSet` — whether a release or a module of the cluster declares the image. An image outside the
+  set was pulled through the cache on request, or was left by an older release; the garbage
+  collection removes it. Such images cannot be removed by hand.
+- `state` and `replicas[].state` — where the image is on each replica:
+  - `Present` — the replica holds the manifest and every blob of the image;
+  - `Missing` — an image of the set the replica does not hold at all;
+  - `Incomplete` — the replica holds the manifest without some of its blobs, which a pull-through
+    cache leaves after it served the manifest alone;
+  - `Corrupted` — a blob of the image does not match its digest;
+  - `Unknown` — the replica did not answer, or has not read its store since it started. When no
+    replica can answer, the request fails with `ServiceUnavailable` and names each replica's reason,
+    rather than listing no images.
+- `size` — the full size of the image: its manifest and every layer, each counted once.
+- `reclaimableSize` — how much the cache would free on a replica if this image alone were removed.
+
+An image is made of layers, and a layer that several images share is stored once. So the sizes of all
+images add up to more than the cache takes on disk, and removing one image frees only the layers no
+other image uses: `reclaimableSize`, not `size`. The images of the platform share few layers, so
+the two are usually close.
+
+The counts by state are also in the status of RegistryStorage, under `replicas[].images`, and stay
+there while registry-controller is not running. While it is not running, the `registry.deckhouse.io`
+group is not served: `kubectl api-resources` reports an error for it, and namespaces being deleted stay
+`Terminating` with the `NamespaceDeletionDiscoveryFailure` condition until a replica of the controller
+answers again. The `D8RegistryControllerDown` alert fires then.
+
+Reading RegistryImage needs the `get` and `list` verbs on `registryimages` of the
+`registry.deckhouse.io` group; the RBACv2 capability `registry.view` grants them.
+
+### Which images take the most space?
+
+Sort the list by `size` or `reclaimableSize`. kubectl sorts in ascending order, so the largest images
+are at the end of the output, and images without a size, such as `Missing` ones, are at the start.
+Sorting works together with any label selector.
+
+```bash
+# The 20 largest images.
+d8 k get registryimages --sort-by=.size | tail -n 20
+# The 20 images that take the most space on their own: layers no other image uses.
+# With -o wide both sizes are shown.
+d8 k get registryimages --sort-by=.reclaimableSize -o wide | tail -n 20
+# The largest images outside the set, which the garbage collection removes.
+d8 k get registryimages -l registry.deckhouse.io/in-set=false --sort-by=.reclaimableSize -o wide | tail -n 20
+# The images of one module by size.
+d8 k get registryimages -l registry.deckhouse.io/module=prometheus --sort-by=.size
+```
+
+## How do I check and repair images in the cache?
+
+Every replica reads its whole store in the background about once an hour and compares every blob
+with its digest. It reads slowly, about 4 MiB/s on a store of 15 GB and never more than 16 MiB/s,
+and tells the kernel to drop what it read from the page cache, so that etcd and the API server on
+the same master do not notice. Pulls are not blocked. When the last full pass finished is in
+`RegistryStorage.status.replicas[].scrubbedAt`.
+
+A blob that does not match its digest is recorded in `RegistryStorage.status.replicas[].corruptedBlobs`,
+and the images that use it read `Corrupted`. What happens next needs nobody:
+
+- the replica is no longer `full` while an image of the set uses the broken blob. A leader then
+  hands the lease to a replica that holds the set whole, and the nodes pull from it;
+- the module creates a RegistryOperation of type `Repair` for the broken blobs as soon as no other
+  operation runs. The repair downloads a whole copy of each broken blob from another replica, or,
+  while the cluster has an upstream, from the upstream, checks it against its digest and only then
+  puts it in place of the broken one. Nothing is removed: a blob for which no whole copy is found
+  stays as it was;
+- a repair takes up to 50 blobs. A repair that did not fix everything is repeated four hours later,
+  with the next 50 when there are more, and after two hours the `D8RegistryStoreCorrupted` alert
+  fires.
+
+To check now rather than wait for the background check, create a `Verify`. It reads at up to
+32 MiB/s, a store of 15 GB in about eight minutes per replica, one replica at a time:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: RegistryOperation
+metadata:
+  generateName: verify-
+spec:
+  type: Verify
+  # Optional: only these images or blobs, and only these replicas.
+  verify:
+    digests: ["sha256:<digest>"]
+    nodes: ["<master-node>"]
+```
+
+To repair images by hand, for example after pushing a release again with `d8 mirror push`, create
+a `Repair` with their digests (up to 50):
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: RegistryOperation
+metadata:
+  generateName: repair-
+spec:
+  type: Repair
+  repair:
+    digests: ["sha256:<digest>"]
+```
+
+A repair of a whole image answers `Intact` when every blob matches its digest: an image is addressed
+by its content, and downloading it again would bring the same bytes. The outcome for each digest is
+in `status.replicas[].repair.digests` of the operation. Only one operation runs at a time; one created
+while a garbage collection runs fails with `AnotherOperationActive` and has to be created again.
+
+Creating operations needs the RBACv2 capability `registry.edit`.
 
 ## How is the cache updated?
 

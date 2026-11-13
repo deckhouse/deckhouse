@@ -38,8 +38,9 @@ rules:
     resources: ["registrystorages/status", "registrynodes/status"]
     verbs: ["get", "update", "patch"]
   # Operations on the storage. The controller creates the garbage collections the module asks for
-  # itself — on the schedule and after a new image set — accepts every operation, sums up what the
-  # replicas report and deletes the finished ones a day later.
+  # itself — on the schedule and after a new image set — and the repairs of broken blobs the replicas
+  # report, accepts every operation, sums up what the replicas report and deletes the finished ones a
+  # day later.
   - apiGroups: ["deckhouse.io"]
     resources: ["registryoperations"]
     verbs: ["get", "list", "watch", "create", "delete"]
@@ -187,6 +188,12 @@ rules:
   - apiGroups: ["apps"]
     resources: ["statefulsets"]
     verbs: ["get", "list", "watch"]
+  # The index of each replica's store, which the aggregated API merges into RegistryImage. Asked of
+  # the kube-rbac-proxy of each storage pod, which authorizes it as this subresource; nothing stores it.
+  - apiGroups: ["apps"]
+    resources: ["statefulsets/images"]
+    resourceNames: ["registry-storage"]
+    verbs: ["get"]
   # The publication endpoint's one EndpointSlice, which points it at the storage leader. The Service
   # has no selector, so nothing else writes it.
   - apiGroups: ["discovery.k8s.io"]
@@ -403,6 +410,39 @@ subjects:
 roleRef:
   kind: Role
   name: {{ .Chart.Name }}:storage
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# The aggregated API of registry.deckhouse.io authenticates and authorizes every request with the
+# cluster's API server: TokenReview and SubjectAccessReview through system:auth-delegator, and the
+# client CA of the front proxy from extension-apiserver-authentication.
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:{{ .Chart.Name }}:controller:auth-delegator
+  {{- include "helm_lib_module_labels" (list . (dict "app" (printf "%s-controller" .Chart.Name))) | nindent 2 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Chart.Name }}-controller
+    namespace: d8-system
+roleRef:
+  kind: ClusterRole
+  name: system:auth-delegator
+  apiGroup: rbac.authorization.k8s.io
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:{{ .Chart.Name }}:controller:extension-apiserver-authentication-reader
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" (printf "%s-controller" .Chart.Name))) | nindent 2 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Chart.Name }}-controller
+    namespace: d8-system
+roleRef:
+  kind: Role
+  name: extension-apiserver-authentication-reader
   apiGroup: rbac.authorization.k8s.io
 
 ---

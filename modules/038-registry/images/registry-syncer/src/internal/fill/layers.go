@@ -46,10 +46,21 @@ type blobs struct {
 	// known caches the answer per digest. Layers are shared heavily between images of one release —
 	// without this, a survey of four hundred manifests stats the same base layers hundreds of times.
 	known map[string]bool
+
+	// bad are the blobs found broken: on the disk, and not held. A broken blob serves content that
+	// does not match its digest, and every client refuses it.
+	bad map[string]bool
 }
 
 func newBlobs(root string) *blobs {
 	return &blobs{root: root, known: make(map[string]bool)}
+}
+
+// newBlobsExcluding is newBlobs that counts the given blobs as absent.
+func newBlobsExcluding(root string, bad map[string]bool) *blobs {
+	content := newBlobs(root)
+	content.bad = bad
+	return content
 }
 
 // path is where the registry keeps a blob's content: blobs/<algorithm>/<first two>/<hex>/data.
@@ -65,6 +76,10 @@ func (b *blobs) path(digest string) (string, bool) {
 func (b *blobs) present(digest string) bool {
 	if answer, cached := b.known[digest]; cached {
 		return answer
+	}
+	if b.bad[digest] {
+		b.known[digest] = false
+		return false
 	}
 
 	path, ok := b.path(digest)
@@ -109,7 +124,7 @@ func (b *blobs) complete(digest string, depth int) (bool, error) {
 	}
 
 	path, ok := b.path(digest)
-	if !ok {
+	if !ok || b.bad[digest] {
 		return false, nil
 	}
 
@@ -234,4 +249,75 @@ func releaseHeld(content *blobs, scope, release string) (bool, error) {
 		return false, fmt.Errorf("reading the manifest of %s: %w", release, err)
 	}
 	return true, nil
+}
+
+// CorruptedOfSet is how many images of the set reference a broken blob, down through image indexes —
+// a store whose set is otherwise whole is not complete while one of them does. Zero without broken
+// blobs, and then nothing is read.
+//
+// Reads the manifests of the whole set, which the survey does too; it is asked only while a replica
+// knows of broken blobs, which is rare.
+func CorruptedOfSet(root string, declared map[string]struct{}, bad map[string]bool) (int, error) {
+	if len(bad) == 0 {
+		return 0, nil
+	}
+	content := newBlobs(root)
+	affected := 0
+	for digest := range declared {
+		if !Resolved(digest) {
+			continue
+		}
+		hit, err := content.references(digest, bad, 0)
+		if err != nil {
+			var unreadable *fs.PathError
+			if errors.As(err, &unreadable) {
+				return 0, err
+			}
+			continue
+		}
+		if hit {
+			affected++
+		}
+	}
+	return affected, nil
+}
+
+// references reports whether the manifest, or anything it names down through an index, is one of
+// bad. A manifest the store does not hold names nothing.
+func (b *blobs) references(digest string, bad map[string]bool, depth int) (bool, error) {
+	if bad[digest] {
+		return true, nil
+	}
+	if depth > 4 {
+		return false, fmt.Errorf("manifest %s nests deeper than any image does", digest)
+	}
+	path, ok := b.path(digest)
+	if !ok {
+		return false, nil
+	}
+	content, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	} else if err != nil {
+		return false, fmt.Errorf("reading manifest %s: %w", digest, err)
+	}
+	var body manifestBody
+	if err := json.Unmarshal(content, &body); err != nil {
+		return false, fmt.Errorf("parsing manifest %s: %w", digest, err)
+	}
+	if bad[body.Config.Digest] {
+		return true, nil
+	}
+	for _, layer := range body.Layers {
+		if bad[layer.Digest] {
+			return true, nil
+		}
+	}
+	for _, child := range body.Manifests {
+		hit, err := b.references(child.Digest, bad, depth+1)
+		if err != nil || hit {
+			return hit, err
+		}
+	}
+	return false, nil
 }

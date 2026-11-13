@@ -23,12 +23,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+
+	registryimagev1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/registry.deckhouse.io/v1alpha1"
 )
 
 // modulesRepository is where a module's package lives under the platform's own repository:
@@ -151,6 +154,14 @@ type ModuleSource struct {
 func ModuleReferences(
 	ctx context.Context, source Registry, puller *remote.Puller, modules []ModuleRef,
 ) ([]name.Reference, error) {
+	return moduleReferences(ctx, source, puller, modules, nil)
+}
+
+// moduleReferences is ModuleReferences that also tells attribute which module and image each
+// reference is. A nil attribute is told nothing.
+func moduleReferences(
+	ctx context.Context, source Registry, puller *remote.Puller, modules []ModuleRef, attribute Attribute,
+) ([]name.Reference, error) {
 	if len(modules) == 0 {
 		return nil, nil
 	}
@@ -197,8 +208,9 @@ func ModuleReferences(
 		// cannot reinstall the module.
 		packaged := repository.Tag(module.Version)
 		add(packaged)
+		attribute.call(packaged, moduleOwner(module, ""))
 
-		digests, err := moduleImageSet(ctx, from, packaged)
+		images, err := moduleImageSet(ctx, from, packaged)
 		if absentAtSource(err) {
 			// Not there yet — a leader still filling, a follower's own store before its first pass.
 			// The package stays in the set, so a store without it is incomplete; what it consists of
@@ -210,23 +222,41 @@ func ModuleReferences(
 			return nil, fmt.Errorf("reading the image set of module %s: %w", module.Name, err)
 		}
 
-		for _, digest := range digests {
-			parsed, err := v1.NewHash(digest)
+		for _, image := range images {
+			parsed, err := v1.NewHash(image.digest)
 			if err != nil {
 				return nil, fmt.Errorf("module %s declares %q, which is not a digest: %w",
-					module.Name, digest, err)
+					module.Name, image.digest, err)
 			}
-			add(repository.Digest(parsed.String()))
+			reference := repository.Digest(parsed.String())
+			add(reference)
+			attribute.call(reference, moduleOwner(module, image.name))
 		}
 	}
 
 	return references, nil
 }
 
-// moduleImageSet reads the digests a module package declares.
+// moduleOwner is a module as the owner of one of its images, or of its package when image is empty.
+func moduleOwner(module ModuleRef, image string) registryimagev1alpha1.ImageOwner {
+	return registryimagev1alpha1.ImageOwner{
+		Kind:     registryimagev1alpha1.OwnerModule,
+		Module:   module.Name,
+		Image:    image,
+		Versions: []string{module.Version},
+		Source:   module.Source.Name,
+	}
+}
+
+// namedDigest is one image a package declares: its name and its digest.
+type namedDigest struct {
+	name, digest string
+}
+
+// moduleImageSet reads the images a module package declares.
 func moduleImageSet(
 	ctx context.Context, puller *remote.Puller, reference name.Reference,
-) ([]string, error) {
+) ([]namedDigest, error) {
 	descriptor, err := puller.Get(ctx, reference)
 	if err != nil {
 		return nil, fmt.Errorf("reading %s: %w", reference, err)
@@ -236,12 +266,12 @@ func moduleImageSet(
 		return nil, fmt.Errorf("opening %s: %w", reference, err)
 	}
 
-	digests, err := readModuleDigests(mutate.Extract(image))
+	images, err := readModuleImages(mutate.Extract(image))
 	if err != nil {
 		return nil, fmt.Errorf("reading the image set out of %s: %w", reference, err)
 	}
 
-	return digests, nil
+	return images, nil
 }
 
 // readModuleDigests pulls the digest map out of a flattened module package.
@@ -249,6 +279,19 @@ func moduleImageSet(
 // An absent or empty file is not an error: a module can legitimately consist of no images of its own —
 // several do, being nothing but templates and hooks that run in the platform's own image.
 func readModuleDigests(content io.ReadCloser) ([]string, error) {
+	images, err := readModuleImages(content)
+	if err != nil {
+		return nil, err
+	}
+	digests := make([]string, 0, len(images))
+	for _, image := range images {
+		digests = append(digests, image.digest)
+	}
+	return digests, nil
+}
+
+// readModuleImages is readModuleDigests with the name of each image kept, sorted by name.
+func readModuleImages(content io.ReadCloser) ([]namedDigest, error) {
 	defer func() { _ = content.Close() }()
 
 	var raw []byte
@@ -279,14 +322,15 @@ func readModuleDigests(content io.ReadCloser) ([]string, error) {
 		return nil, fmt.Errorf("decoding %s: %w", moduleDigestsFile, err)
 	}
 
-	digests := make([]string, 0, len(byImage))
-	for _, digest := range byImage {
+	images := make([]namedDigest, 0, len(byImage))
+	for image, digest := range byImage {
 		if digest != "" {
-			digests = append(digests, digest)
+			images = append(images, namedDigest{name: image, digest: digest})
 		}
 	}
+	sort.Slice(images, func(i, j int) bool { return images[i].name < images[j].name })
 
-	return digests, nil
+	return images, nil
 }
 
 // ModuleCatalogue enumerates the tags of the modules repository itself — one per module the source
@@ -306,6 +350,12 @@ func readModuleDigests(content io.ReadCloser) ([]string, error) {
 // air-gap without a catalogue — so the caller is told and can log the reason.
 func ModuleCatalogue(
 	ctx context.Context, source Registry, unavailable func(error),
+) ([]name.Reference, error) {
+	return moduleCatalogue(ctx, source, unavailable, nil)
+}
+
+func moduleCatalogue(
+	ctx context.Context, source Registry, unavailable func(error), attribute Attribute,
 ) ([]name.Reference, error) {
 	registry, err := parseRegistry(source)
 	if err != nil {
@@ -331,9 +381,16 @@ func ModuleCatalogue(
 		if tag == "" {
 			continue
 		}
-		references = append(references, repository.Tag(tag))
+		reference := repository.Tag(tag)
+		references = append(references, reference)
+		attribute.call(reference, catalogueOwner(tag, ""))
 	}
 	return references, nil
+}
+
+// catalogueOwner is an entry of a catalogue of modules: the module it offers, and the source.
+func catalogueOwner(module, source string) registryimagev1alpha1.ImageOwner {
+	return registryimagev1alpha1.ImageOwner{Kind: registryimagev1alpha1.OwnerCatalogue, Module: module, Source: source}
 }
 
 // SourceCatalogues enumerates the catalogue of every other ModuleSource the cluster installs modules
@@ -346,6 +403,12 @@ func ModuleCatalogue(
 // than a failure.
 func SourceCatalogues(
 	ctx context.Context, source Registry, modules []ModuleRef, unavailable func(error),
+) ([]name.Reference, error) {
+	return sourceCatalogues(ctx, source, modules, unavailable, nil)
+}
+
+func sourceCatalogues(
+	ctx context.Context, source Registry, modules []ModuleRef, unavailable func(error), attribute Attribute,
 ) ([]name.Reference, error) {
 	seen := map[string]bool{}
 	var references []name.Reference
@@ -376,7 +439,9 @@ func SourceCatalogues(
 		}
 		for _, tag := range tags {
 			if tag != "" {
-				references = append(references, repository.Tag(tag))
+				reference := repository.Tag(tag)
+				references = append(references, reference)
+				attribute.call(reference, catalogueOwner(tag, module.Source.Name))
 			}
 		}
 	}

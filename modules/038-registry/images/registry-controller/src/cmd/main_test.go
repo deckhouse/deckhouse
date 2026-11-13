@@ -17,7 +17,13 @@ limitations under the License.
 package main
 
 import (
+	"context"
+	"os"
+	"path/filepath"
 	"testing"
+	"time"
+
+	"github.com/go-logr/logr"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -113,4 +119,22 @@ func TestServicesAreNotCached(t *testing.T) {
 		}
 	}
 	assert.True(t, found, "the Service must be read uncached: its grant is name-scoped")
+}
+
+// A replica started before its serving certificate exists waits for it instead of dying: the Secret is
+// an optional volume, and the kubelet writes the files in once it appears.
+func TestTheAggregatedAPIWaitsForItsCertificate(t *testing.T) {
+	dir := t.TempDir()
+	cert, key := filepath.Join(dir, "tls.crt"), filepath.Join(dir, "tls.key")
+
+	go func() {
+		time.Sleep(30 * time.Millisecond)
+		_ = os.WriteFile(cert, []byte("cert"), 0o600)
+		_ = os.WriteFile(key, []byte("key"), 0o600)
+	}()
+	assert.True(t, waitForFiles(context.Background(), logr.Discard(), 10*time.Millisecond, cert, key))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	assert.False(t, waitForFiles(ctx, logr.Discard(), 10*time.Millisecond, filepath.Join(dir, "absent")))
 }

@@ -363,6 +363,25 @@ func accept(
 	}
 	sort.Strings(nodes)
 
+	// A Verify or a Repair may name its replicas. One that names a node without a replica is refused
+	// whole rather than run on the rest: what was asked for is not what would run.
+	if asked := operation.Spec.Nodes(); len(asked) > 0 {
+		var unknown []string
+		for _, node := range asked {
+			if !slices.Contains(nodes, node) {
+				unknown = append(unknown, node)
+			}
+		}
+		if len(unknown) > 0 {
+			refuse(registryv1alpha1.OperationFailed, registryv1alpha1.ReasonOperationUnknownNode,
+				fmt.Sprintf("No replica of the storage runs on %s.", strings.Join(unknown, ", ")))
+			return
+		}
+		nodes = slices.Clone(asked)
+		sort.Strings(nodes)
+		nodes = slices.Compact(nodes)
+	}
+
 	deadline := metav1.NewTime(now.Add(registryv1alpha1.OperationStartDeadline))
 	status.Phase, status.Reason, status.Message = registryv1alpha1.OperationPending, registryv1alpha1.ReasonOperationAccepted, ""
 	status.AcceptedAt = &now
@@ -634,6 +653,61 @@ func summarize(operation *registryv1alpha1.RegistryOperation, now metav1.Time) {
 		status.Phase, status.Reason = registryv1alpha1.OperationSucceeded, registryv1alpha1.ReasonOperationCompleted
 		status.Message = fmt.Sprintf("%d of %d replicas finished.", succeeded, all)
 	}
+	if found := findings(operation); found != "" {
+		status.Message += " " + found
+	}
+}
+
+// findings sums what a Verify found or a Repair did over the replicas, for the message of a finished
+// operation; the details stay in each replica's entry. Empty when no replica got as far as a result:
+// "No broken blobs found" after a Verify that failed everywhere says the opposite of what is known.
+func findings(operation *registryv1alpha1.RegistryOperation) string {
+	switch operation.Spec.Type {
+	case registryv1alpha1.OperationVerify:
+		var corrupted int32
+		var broken []string
+		checked, unchecked := 0, 0
+		for _, entry := range operation.Status.Replicas {
+			if entry.Verify != nil && entry.Verify.CorruptedCount > 0 {
+				corrupted += entry.Verify.CorruptedCount
+				broken = append(broken, entry.Node)
+			}
+			switch entry.Phase {
+			case registryv1alpha1.ReplicaOperationSucceeded:
+				checked++
+			case registryv1alpha1.ReplicaOperationFailed, registryv1alpha1.ReplicaOperationCanceled:
+				unchecked++
+			}
+		}
+		switch {
+		case corrupted > 0:
+			return fmt.Sprintf("%d broken blobs found on %s; a Repair is created for them.", corrupted, strings.Join(broken, ", "))
+		case checked == 0:
+			return ""
+		case unchecked > 0:
+			return "No broken blobs found on the replicas that finished."
+		}
+		return "No broken blobs found."
+	case registryv1alpha1.OperationRepair:
+		counts := map[registryv1alpha1.DigestRepairOutcome]int{}
+		reported := false
+		for _, entry := range operation.Status.Replicas {
+			if entry.Repair == nil {
+				continue
+			}
+			reported = true
+			for _, digest := range entry.Repair.Digests {
+				counts[digest.Outcome]++
+			}
+		}
+		if !reported {
+			return ""
+		}
+		return fmt.Sprintf("Digests over the replicas: %d repaired, %d intact, %d not held, %d failed.",
+			counts[registryv1alpha1.DigestRepaired], counts[registryv1alpha1.DigestIntact],
+			counts[registryv1alpha1.DigestNotHeld], counts[registryv1alpha1.DigestFailed])
+	}
+	return ""
 }
 
 // skippedFor reports whether an entry was skipped for the reason.

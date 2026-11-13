@@ -76,10 +76,16 @@ type Lease interface {
 	Hold(ctx context.Context, work func(context.Context) error) error
 }
 
-// Operation is a RegistryOperation of type GarbageCollection, as this replica sees it.
+// Operation is a RegistryOperation, as this replica sees it.
 type Operation struct {
 	// Name of the RegistryOperation.
 	Name string
+
+	// Type is what the operation does. Empty reads as a garbage collection.
+	Type registryv1alpha1.RegistryOperationType
+
+	// Digests are what a Verify or a Repair is about. Empty means the whole store.
+	Digests []string
 
 	// Deadline is when a replica still held back by a store that is being written to gives up. Zero
 	// means none.
@@ -106,6 +112,27 @@ type Progress struct {
 
 	// Report is what the collection did. Nil until it has run.
 	Report *Report
+
+	// Verify and Repair are what a Verify or a Repair found and did. Nil until it has run.
+	Verify *registryv1alpha1.VerifyResult
+	Repair *registryv1alpha1.RepairResult
+}
+
+// collects reports whether the operation is a garbage collection: the one that deletes, and so the one
+// held back by a store being written to and run with this replica's writes paused.
+func (o *Operation) collects() bool {
+	return o.Type == "" || o.Type == registryv1alpha1.OperationGarbageCollection
+}
+
+// what names the operation in a message.
+func (o *Operation) what() string {
+	switch o.Type {
+	case registryv1alpha1.OperationVerify:
+		return "check"
+	case registryv1alpha1.OperationRepair:
+		return "repair"
+	}
+	return "collection"
 }
 
 // ErrNotOwed is what Report says about an operation this replica no longer owes: it is gone, it
@@ -113,7 +140,7 @@ type Progress struct {
 // reports late does not reopen an entry — and whoever reported must not go on as if it had been.
 var ErrNotOwed = errors.New("the operation is gone or no longer owed by this replica")
 
-// Operations are the garbage collections this replica is asked to run.
+// Operations are the operations this replica is asked to run.
 type Operations interface {
 	// Next returns the oldest operation this replica still owes, or nil.
 	Next(ctx context.Context) (*Operation, error)
@@ -144,8 +171,17 @@ type Worker struct {
 	// Lease serialises collection across replicas, so that at most one collects at any moment.
 	Lease Lease
 
-	// Collect does the work.
+	// Collect does the work of a garbage collection.
 	Collect func(ctx context.Context) (Report, error)
+
+	// Verify does the work of a Verify, and Repair of a Repair. Nil refuses the operation on this
+	// replica.
+	Verify func(ctx context.Context, digests []string) (registryv1alpha1.VerifyResult, error)
+	Repair func(ctx context.Context, digests []string) (registryv1alpha1.RepairResult, error)
+
+	// Done is told when an operation that changed or read the store has finished on this replica,
+	// whatever its outcome. Optional.
+	Done func(operation *Operation)
 
 	// Pushing reports whether somebody is pushing into this store from outside right now. Nil means
 	// never.
@@ -298,7 +334,7 @@ func (r *serving) report(ctx context.Context, progress Progress) {
 	}
 	if err := r.worker.Operations.Report(ctx, r.name, progress); err != nil {
 		if !errors.Is(err, ErrNotOwed) {
-			r.log.Warn("cannot record the progress of the garbage collection", "error", err.Error())
+			r.log.Warn("cannot record the progress of the operation", "error", err.Error())
 		}
 		return
 	}
@@ -313,7 +349,7 @@ func (r *serving) start(ctx context.Context, progress Progress) bool {
 	case errors.Is(err, ErrNotOwed):
 		return false
 	case err != nil:
-		r.log.Warn("cannot record the progress of the garbage collection", "error", err.Error())
+		r.log.Warn("cannot record the progress of the operation", "error", err.Error())
 	default:
 		r.written = &progress
 	}
@@ -326,16 +362,16 @@ func (r *serving) settle(ctx context.Context, progress Progress) {
 	for {
 		err := r.worker.Operations.Report(ctx, r.name, progress)
 		if errors.Is(err, ErrNotOwed) {
-			r.log.Info("the garbage collection was settled on this replica by somebody else",
+			r.log.Info("the operation was settled on this replica by somebody else",
 				"phase", progress.Phase, "reason", progress.Reason)
 			return
 		}
 		if err == nil {
-			r.log.Info("the garbage collection is settled on this replica",
+			r.log.Info("the operation is settled on this replica",
 				"phase", progress.Phase, "reason", progress.Reason)
 			return
 		}
-		r.log.Warn("cannot record the outcome of the garbage collection", "error", err.Error())
+		r.log.Warn("cannot record the outcome of the operation", "error", err.Error())
 		if !r.worker.sleep(ctx, operationPoll) {
 			return
 		}
@@ -344,7 +380,8 @@ func (r *serving) settle(ctx context.Context, progress Progress) {
 
 func sameProgress(a, b Progress) bool {
 	return a.Phase == b.Phase && a.Reason == b.Reason && a.Message == b.Message &&
-		sameTime(a.StartedAt, b.StartedAt) && sameTime(a.FinishedAt, b.FinishedAt) && a.Report == nil && b.Report == nil
+		sameTime(a.StartedAt, b.StartedAt) && sameTime(a.FinishedAt, b.FinishedAt) &&
+		a.Report == nil && b.Report == nil && a.Verify == nil && b.Verify == nil && a.Repair == nil && b.Repair == nil
 }
 
 func sameTime(a, b *time.Time) bool {
@@ -356,21 +393,21 @@ func sameTime(a, b *time.Time) bool {
 
 // serve works on one operation until this replica has settled it.
 func (w *Worker) serve(ctx context.Context, operation *Operation) {
-	run := &serving{worker: w, log: w.Log.With("operation", operation.Name), name: operation.Name}
-	run.log.Info("a garbage collection is asked for")
+	run := &serving{worker: w, log: w.Log.With("operation", operation.Name, "type", operation.Type), name: operation.Name}
+	run.log.Info("an operation is asked for")
 	passedGate := operation.PassedGate
 
 	for ctx.Err() == nil {
 		current, err := w.Operations.Get(ctx, operation.Name)
 		if err != nil {
-			run.log.Warn("cannot read the garbage collection again", "error", err.Error())
+			run.log.Warn("cannot read the operation again", "error", err.Error())
 			if !w.sleep(ctx, operationPoll) {
 				return
 			}
 			continue
 		}
 		if current == nil {
-			run.log.Info("the garbage collection is gone or no longer owed by this replica")
+			run.log.Info("the operation is gone or no longer owed by this replica")
 			return
 		}
 		passedGate = passedGate || current.PassedGate
@@ -396,9 +433,15 @@ func (w *Worker) serve(ctx context.Context, operation *Operation) {
 		}
 
 		// The set cannot be compared with a store it is still going into, and a push from outside
-		// cannot be swept from under.
+		// cannot be swept from under. Only a collection waits for that: a check reads, and a repair
+		// replaces a blob with the same content, renamed into place — a fill or a push beside it loses
+		// nothing. And a replica with a broken blob is not complete, so its fill is owed for as long as
+		// the repair has not run: a repair that waited for the fill would wait for itself. A collection
+		// would too — the Repair is not even asked for while it is active — which is why Plan does not
+		// call a fill owed that only a Repair can finish.
 		var reason, message string
 		switch {
+		case !current.collects():
 		case plan.FillPending || w.filling():
 			reason, message = registryv1alpha1.ReasonOperationFilling,
 				"The store is being filled; the collection starts when the fill is done."
@@ -431,7 +474,7 @@ func (w *Worker) serve(ctx context.Context, operation *Operation) {
 		}
 
 		passedGate = true
-		if w.fire(ctx, run) {
+		if w.fire(ctx, run, current) {
 			return
 		}
 	}
@@ -443,11 +486,11 @@ func (w *Worker) serve(ctx context.Context, operation *Operation) {
 // The wait for the turn and the collection are bounded apart, each by the window. One bound over both
 // left the last of three replicas what the first two had not used of it — twenty minutes, on a store
 // that takes an hour — and killed its collection as a failure.
-func (w *Worker) fire(parent context.Context, run *serving) bool {
+func (w *Worker) fire(parent context.Context, run *serving, operation *Operation) bool {
 	run.report(parent, Progress{
 		Phase:   registryv1alpha1.ReplicaOperationWaiting,
 		Reason:  registryv1alpha1.ReasonOperationTurn,
-		Message: "Another replica is collecting; this one goes next.",
+		Message: "Another replica is running an operation; this one goes next.",
 	})
 
 	ctx, cancel := context.WithCancel(parent)
@@ -501,7 +544,7 @@ func (w *Worker) fire(parent context.Context, run *serving) bool {
 	var (
 		mu         sync.Mutex
 		started    *time.Time
-		report     Report
+		report     performed
 		collectErr error
 	)
 	err := w.Lease.Hold(ctx, func(leaseCtx context.Context) error {
@@ -512,13 +555,16 @@ func (w *Worker) fire(parent context.Context, run *serving) bool {
 		// The store is looked at again with the turn in hand. What was checked before the wait is
 		// hours old on the third of three replicas, and a push started meanwhile has its layers on
 		// disk and no manifest yet: exactly what a sweep removes. A store being written to gives the
-		// turn back, and the replica waits for it to go quiet as it did before.
-		release, quiet := w.quiet()
-		if !quiet {
-			turn.Store(turnBusy)
-			return nil
+		// turn back, and the replica waits for it to go quiet as it did before. Only for a
+		// collection — see serve.
+		if operation.collects() {
+			release, quiet := w.quiet()
+			if !quiet {
+				turn.Store(turnBusy)
+				return nil
+			}
+			defer release()
 		}
-		defer release()
 
 		collectCtx, stop := context.WithTimeout(leaseCtx, w.window())
 		defer stop()
@@ -534,7 +580,7 @@ func (w *Worker) fire(parent context.Context, run *serving) bool {
 		started = &now
 		mu.Unlock()
 
-		got, gotErr := w.collect(collectCtx)
+		got, gotErr := w.perform(collectCtx, operation)
 		mu.Lock()
 		report, collectErr = got, gotErr
 		mu.Unlock()
@@ -553,23 +599,29 @@ func (w *Worker) fire(parent context.Context, run *serving) bool {
 	if collectErr != nil && err != nil {
 		cause = err
 	}
-	w.publish(parent, started, canceled.Load() && collectErr != nil, finished, cause)
+	if operation.collects() {
+		w.publish(parent, started, canceled.Load() && collectErr != nil, finished, cause)
+	}
+	if started != nil && w.Done != nil {
+		w.Done(operation)
+	}
 
 	outcome := Progress{StartedAt: started, FinishedAt: &finished}
 	if started != nil {
-		outcome.Report = &report
+		outcome.Report, outcome.Verify, outcome.Repair = report.collected, report.verify, report.repair
 	}
 
 	switch {
 	case started != nil && collectErr == nil:
 		// Finished whole before a cancellation reached it: what it did is what happened.
 		outcome.Phase, outcome.Reason = registryv1alpha1.ReplicaOperationSucceeded, ""
-		outcome.Message = removedMessage(report)
+		outcome.Message = report.message
 	case canceled.Load():
 		outcome.Phase, outcome.Reason = registryv1alpha1.ReplicaOperationCanceled, registryv1alpha1.ReasonOperationCanceled
 		outcome.Message = "The operation was canceled while this replica waited for its turn."
 		if started != nil {
-			outcome.Message = "The operation was canceled while this replica was collecting; what it had deleted stays deleted."
+			outcome.Message = fmt.Sprintf("The operation was canceled during the %s on this replica; what it had done stays done.",
+				operation.what())
 		}
 	case turn.Load() == turnGone:
 		run.log.Info("the operation is gone or no longer owed by this replica, so it does not take its turn")
@@ -620,6 +672,75 @@ func removedMessage(report Report) string {
 		message += fmt.Sprintf("; the sweep removed %d blobs", report.RemovedBlobs)
 	}
 	return message + "."
+}
+
+// performed is what an operation did on this replica, by its type.
+type performed struct {
+	collected *Report
+	verify    *registryv1alpha1.VerifyResult
+	repair    *registryv1alpha1.RepairResult
+	message   string
+}
+
+// perform runs the operation's work.
+func (w *Worker) perform(ctx context.Context, operation *Operation) (performed, error) {
+	switch operation.Type {
+	case registryv1alpha1.OperationVerify:
+		if w.Verify == nil {
+			return performed{}, errors.New("this replica does not run checks")
+		}
+		result, err := w.Verify(ctx, operation.Digests)
+		return performed{verify: &result, message: verifiedMessage(result)}, err
+	case registryv1alpha1.OperationRepair:
+		if w.Repair == nil {
+			return performed{}, errors.New("this replica does not run repairs")
+		}
+		result, err := w.Repair(ctx, operation.Digests)
+		if err == nil {
+			err = repairFailure(result)
+		}
+		return performed{repair: &result, message: repairedMessage(result)}, err
+	}
+	report, err := w.collect(ctx)
+	return performed{collected: &report, message: removedMessage(report)}, err
+}
+
+// verifiedMessage says what a check found.
+func verifiedMessage(result registryv1alpha1.VerifyResult) string {
+	message := fmt.Sprintf("Checked %d blobs, %d MiB", result.CheckedBlobs, result.CheckedBytes>>20)
+	if result.CorruptedCount > 0 {
+		message += fmt.Sprintf("; %d do not match their digests and are to be repaired", result.CorruptedCount)
+	}
+	if len(result.MissingDigests) > 0 {
+		message += fmt.Sprintf("; %d of the digests asked about are not held", len(result.MissingDigests))
+	}
+	return message + "."
+}
+
+// repairedMessage says what a repair did, digest by digest in the result and summed here.
+func repairedMessage(result registryv1alpha1.RepairResult) string {
+	counts := map[registryv1alpha1.DigestRepairOutcome]int{}
+	for _, entry := range result.Digests {
+		counts[entry.Outcome]++
+	}
+	return fmt.Sprintf("Repaired %d, intact %d, not held %d, failed %d.",
+		counts[registryv1alpha1.DigestRepaired], counts[registryv1alpha1.DigestIntact],
+		counts[registryv1alpha1.DigestNotHeld], counts[registryv1alpha1.DigestFailed])
+}
+
+// repairFailure fails a repair on this replica when a digest could not be repaired: the operation is
+// then Failed, which is what an operator and the controller's retry look for.
+func repairFailure(result registryv1alpha1.RepairResult) error {
+	failed := 0
+	for _, entry := range result.Digests {
+		if entry.Outcome == registryv1alpha1.DigestFailed {
+			failed++
+		}
+	}
+	if failed == 0 {
+		return nil
+	}
+	return fmt.Errorf("%d of %d digests could not be repaired; see repair.digests", failed, len(result.Digests))
 }
 
 // collect runs one collection.

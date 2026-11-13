@@ -33,6 +33,23 @@ properties:
               status.
 
               Empty once the handover has happened.
+          apiserverCert:
+            type: object
+            default: {}
+            description: |
+              The serving certificate of registry-controller's aggregated API,
+              `registry.deckhouse.io`, which serves the images of the cache. Generated
+              by the module hook; the APIService trusts its authority.
+            properties:
+              crt:
+                type: string
+                x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+              key:
+                type: string
+                x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+              ca:
+                type: string
+                x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
           storePath:
             type: string
             description: |

@@ -59,6 +59,10 @@ type fakeOperations struct {
 	passed   bool
 	deadline time.Time
 	written  []Progress
+
+	// kind and digests make it a Verify or a Repair; empty is a garbage collection.
+	kind    registryv1alpha1.RegistryOperationType
+	digests []string
 }
 
 func newFakeOperations() *fakeOperations {
@@ -69,7 +73,10 @@ func (f *fakeOperations) current() *Operation {
 	if !f.present || !f.owed {
 		return nil
 	}
-	return &Operation{Name: "gc-manual-1", Deadline: f.deadline, Canceled: f.canceled, PassedGate: f.passed}
+	return &Operation{
+		Name: "gc-manual-1", Type: f.kind, Digests: f.digests,
+		Deadline: f.deadline, Canceled: f.canceled, PassedGate: f.passed,
+	}
 }
 
 func (f *fakeOperations) Next(context.Context) (*Operation, error) {

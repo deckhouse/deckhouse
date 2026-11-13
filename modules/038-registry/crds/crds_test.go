@@ -508,3 +508,54 @@ func TestRegistryUpstreamLimits(t *testing.T) {
 	require.NotNil(t, upstream.Properties["mirrors"].MaxItems)
 	assert.Equal(t, int64(8), *upstream.Properties["mirrors"].MaxItems)
 }
+
+// TestAVerifyAndARepairSayWhatTheyAreAbout: a Repair without digests is nothing to run, a digest list on
+// a garbage collection is a request nobody would honour, and neither may change once created.
+func TestAVerifyAndARepairSayWhatTheyAreAbout(t *testing.T) {
+	s := structuralOf(t, loadCRD(t, "registryoperation.yaml"), "v1alpha1")
+	digest := "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+
+	for name, spec := range map[string]map[string]any{
+		"a verify of everything": {"type": "Verify"},
+		"a verify of one node":   {"type": "Verify", "verify": map[string]any{"nodes": []any{"master-0"}}},
+		"a repair":               {"type": "Repair", "repair": map[string]any{"digests": []any{digest}}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			assert.Empty(t, validateSpec(t, s, spec))
+		})
+	}
+
+	for name, tt := range map[string]struct {
+		spec    map[string]any
+		wantErr string
+	}{
+		"a repair of nothing": {
+			spec: map[string]any{"type": "Repair"}, wantErr: "spec.repair is required for a Repair",
+		},
+		"a collection with a repair": {
+			spec:    map[string]any{"type": "GarbageCollection", "repair": map[string]any{"digests": []any{digest}}},
+			wantErr: "spec.repair is required for a Repair and allowed for nothing else",
+		},
+		"a repair with a verify": {
+			spec: map[string]any{
+				"type": "Repair", "repair": map[string]any{"digests": []any{digest}}, "verify": map[string]any{},
+			},
+			wantErr: "spec.verify is allowed only for a Verify",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			errs := validateSpec(t, s, tt.spec)
+			require.NotEmpty(t, errs)
+			assert.Contains(t, errs.ToAggregate().Error(), tt.wantErr)
+		})
+	}
+
+	repair := func(digests ...any) map[string]any {
+		return map[string]any{"spec": map[string]any{"type": "Repair", "repair": map[string]any{"digests": digests}}}
+	}
+	other := "sha256:fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210"
+	errs := validateUpdate(t, s, repair(digest, other), repair(digest))
+	require.NotEmpty(t, errs, "the digests of a repair do not change")
+	assert.Contains(t, errs.ToAggregate().Error(), "the spec of an operation is immutable")
+	assert.Empty(t, validateUpdate(t, s, repair(digest), repair(digest)))
+}

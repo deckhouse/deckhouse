@@ -25,6 +25,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -37,11 +38,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
+	registryimagev1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/registry.deckhouse.io/v1alpha1"
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 
 	"github.com/deckhouse/registry-syncer/internal/distribution"
 	"github.com/deckhouse/registry-syncer/internal/fill"
 	"github.com/deckhouse/registry-syncer/internal/gc"
+	"github.com/deckhouse/registry-syncer/internal/integrity"
 	"github.com/deckhouse/registry-syncer/internal/metrics"
 	"github.com/deckhouse/registry-syncer/internal/report"
 )
@@ -200,6 +203,8 @@ type Loop struct {
 	declared    map[string]struct{}
 	declaredFor string
 	declaredAt  time.Time
+	// declaredOwners is what declares each digest of declared, read with it — see DeclaredOwners.
+	declaredOwners map[string][]registryimagev1alpha1.ImageOwner
 
 	// lastTotalDigests is the last measured size of the store, carried between passes.
 	//
@@ -347,6 +352,14 @@ type Loop struct {
 	storeProbing      chan error
 	storeProbeStarted time.Time
 
+	// Corrupted is the blobs of this replica's store found broken and not repaired yet. Nil means none.
+	//
+	// A broken blob is taken for absent wherever the store is read for the set: an image that
+	// references one is not held, so neither is the set, and a leader that finds that hands the lease
+	// to a replica that holds it whole — see ShortOfSet. Changes are announced through
+	// CorruptionChanged.
+	Corrupted func() map[string]bool
+
 	// StoreSample reads a sample of the set off this replica's disk. Nil means fill.Sample. A field so
 	// that a test can make the disk slow, failing or short of the set — see ShortOfSet.
 	StoreSample func(root, scope, release string, digests []string) (fill.SampleResult, error)
@@ -374,6 +387,12 @@ type Loop struct {
 	// it would put Full back on the leader the controller is about to drop the upstream on. Changed under
 	// reportMu.
 	losses atomic.Uint64
+
+	// corruptions counts the changes of the blobs recorded as broken — see CorruptionChanged — so that a
+	// pass can tell one came in while it ran. A Full read off the store, or carried over from the status,
+	// before a blob of the set was found broken is from before the finding, and published after it would
+	// put back the Full the finding took — see report.Integrity.ShortOfSet — until the next pass.
+	corruptions atomic.Uint64
 
 	// reportMu orders a pass's report against a step-down's: a pass that carried Full over before the
 	// step-down must not publish it after the demotion, and one that read the store must not have its
@@ -410,8 +429,12 @@ func (l *Loop) surveyStore(declared map[string]struct{}, deployed string) (fill.
 		return l.survey, nil
 	}
 
+	var bad map[string]bool
+	if l.Corrupted != nil {
+		bad = l.Corrupted()
+	}
 	survey, err := fill.Take(l.dataDir(), strings.Trim(constant.Path, "/"), declared,
-		[]string{deployed})
+		[]string{deployed}, bad)
 	if err != nil {
 		if stale {
 			// Not walked, so the survey it was not to be answered from still is not.
@@ -425,6 +448,19 @@ func (l *Loop) surveyStore(declared map[string]struct{}, deployed string) (fill.
 	// walk.
 	l.survey, l.surveyedAt, l.surveyedFor = survey, time.Now(), len(declared)
 	return survey, nil
+}
+
+// CorruptionChanged says that the blobs recorded as broken changed: found broken, or repaired. The last
+// survey no longer says what the store holds of the set, and the next idle pass reads the store again
+// rather than carrying its report over — the way a pass finds a store no longer complete, or complete
+// again after a Repair.
+func (l *Loop) CorruptionChanged() {
+	l.corruptions.Add(1)
+	l.surveyStale.Store(true)
+	l.lastStoreCheck.Store(0)
+	l.sampleMu.Lock()
+	l.sampleCleanAt = time.Time{}
+	l.sampleMu.Unlock()
 }
 
 // declaredSet is what the CLUSTER needs, as digests, cached for the same minute as the survey.
@@ -465,13 +501,44 @@ func (l *Loop) declaredSet(ctx context.Context) (map[string]struct{}, string, er
 		return nil, "", err
 	}
 
-	declared, err := fill.DeclaredDigests(ctx, local, versionsOf(releases), modules)
+	declared, err := fill.DeclareSet(ctx, local, versionsOf(releases), modules)
 	if err != nil {
 		return nil, "", err
 	}
 
-	l.declared, l.declaredFor, l.declaredAt = declared, releases.Deployed, time.Now()
-	return declared, releases.Deployed, nil
+	l.declared, l.declaredFor, l.declaredAt = declared.Digests, releases.Deployed, time.Now()
+	l.declaredOwners = declared.Owners
+	return declared.Digests, releases.Deployed, nil
+}
+
+// DeclaredOwners is the set the cluster needs and what declares each of its digests, from the same
+// reading every count of the set uses — see declaredSet. For the listing of the cache's images, which
+// must not call an image missing that the count calls held, or the other way round.
+//
+// The last reading for the deployed release, however old, and a new one only when there is none: the
+// listing is rebuilt every few minutes, and reading the set means reading the platform's image to its
+// end, which an idle replica otherwise does a few times a day. A set that changes — an update, a module
+// enabled — makes the loop read it again for the fill it asks for, and the listing follows.
+func (l *Loop) DeclaredOwners(ctx context.Context) (map[string]struct{}, map[string][]registryimagev1alpha1.ImageOwner, error) {
+	releases, err := gc.FromCluster(ctx, l.Client)
+	if err != nil {
+		return nil, nil, err
+	}
+	l.declaredMu.Lock()
+	if l.declared != nil && l.declaredFor == releases.Deployed {
+		declared, owners := l.declared, l.declaredOwners
+		l.declaredMu.Unlock()
+		return declared, owners, nil
+	}
+	l.declaredMu.Unlock()
+
+	declared, _, err := l.declaredSet(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	l.declaredMu.Lock()
+	defer l.declaredMu.Unlock()
+	return declared, l.declaredOwners, nil
 }
 
 // announceStart says that a fill or a replication has begun, so the storage does not read `Idle`
@@ -951,7 +1018,9 @@ func (l *Loop) Run(ctx context.Context) error {
 
 func (l *Loop) once(ctx context.Context) error {
 	// Before anything this pass reads: a loss found after this has its reading come too late — see losses.
+	// And so has a broken blob — see corruptions.
 	losses := l.losses.Load()
+	corruptions := l.corruptions.Load()
 
 	spec, err := l.desiredState(ctx)
 	if err != nil {
@@ -1254,6 +1323,14 @@ func (l *Loop) once(ctx context.Context) error {
 	// fill would, published at its end, put back what the store watcher had long since replaced.
 	state.Store = l.measureStore(spec)
 
+	// A blob found broken while the pass ran: its Full is from before the finding. Kept only when no
+	// image of the set references a broken blob, which reads the set's manifests — rarely, so outside
+	// reportMu. A finding between this look and the write below is caught there, without one.
+	corruptionsSeen := l.corruptions.Load()
+	if state.Full && corruptionsSeen != corruptions && l.RepairOwed() {
+		state.Full = false
+	}
+
 	// A replica that handed the lease over for a store that did not hold the set, or kept it and took its
 	// report back, says so until a pass copies into the store or counts it — see StepDown and
 	// TakeBackFull. Whatever this pass carried over was read from the status, and the status may be from
@@ -1265,6 +1342,10 @@ func (l *Loop) once(ctx context.Context) error {
 	masked := l.lost.Load() && (!read || l.losses.Load() != losses)
 	if masked {
 		state.Full, state.VerifiedSet, state.VerifiedDigests = false, "", 0
+	}
+	if l.corruptions.Load() != corruptionsSeen {
+		// Not looked at: the next pass reads the store again — see CorruptionChanged.
+		state.Full = false
 	}
 
 	// Remembered for the garbage collection, which asks on its own schedule: an incomplete store
@@ -2550,4 +2631,60 @@ func trimSlashes(path string) string {
 		path = path[:len(path)-1]
 	}
 	return path
+}
+
+// RepairSources are where a Repair on this replica takes whole copies of blobs from, in order: the other
+// replicas, the leader first and then those holding the set, through their serving listeners; and,
+// while the cluster has an upstream, this replica's own serving listener, which fetches from the
+// upstream once the broken copy is moved out of its way.
+//
+// The other replicas first, because asking them takes nothing away: the own listener needs the broken
+// copy gone first, and an upstream that does not answer then leaves the blob missing rather than broken.
+// With an upstream, another replica's listener is a pull-through cache too, and answers from the
+// upstream what its own store does not hold.
+func (l *Loop) RepairSources(ctx context.Context) ([]integrity.Source, error) {
+	storage := &registryv1alpha1.RegistryStorage{}
+	if err := l.Client.Get(ctx, types.NamespacedName{Name: registryv1alpha1.SingletonName}, storage); err != nil {
+		return nil, fmt.Errorf("reading the storage: %w", err)
+	}
+
+	peers := make([]registryv1alpha1.StorageReplicaStatus, 0, len(storage.Status.Replicas))
+	for _, replica := range storage.Status.Replicas {
+		if replica.Node != l.Node && replica.Address != "" {
+			peers = append(peers, replica)
+		}
+	}
+	rank := func(replica registryv1alpha1.StorageReplicaStatus) int {
+		switch {
+		case replica.Node == storage.Status.Leader || replica.Role == registryv1alpha1.ReplicaRoleLeader:
+			return 0
+		case replica.Full:
+			return 1
+		}
+		return 2
+	}
+	sort.SliceStable(peers, func(i, j int) bool { return rank(peers[i]) < rank(peers[j]) })
+
+	var sources []integrity.Source
+	if len(peers) > 0 {
+		options, err := fill.RegistryOptions(l.LocalCA, l.LocalUser, l.LocalPassword)
+		if err != nil {
+			return nil, fmt.Errorf("the other replicas: %w", err)
+		}
+		for _, peer := range peers {
+			sources = append(sources, integrity.Source{
+				Name:     "replica " + peer.Node,
+				Registry: fill.Registry{Address: peer.Address, Options: options},
+			})
+		}
+	}
+
+	if spec := l.Desired(); spec != nil && spec.Upstream != nil {
+		local, err := l.localRegistry()
+		if err != nil {
+			return nil, err
+		}
+		sources = append(sources, integrity.Source{Name: "the upstream", Registry: local, Quarantine: true})
+	}
+	return sources, nil
 }

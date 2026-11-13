@@ -360,6 +360,52 @@ type StorageReplicaStatus struct {
 	// that node's clock, so skew between nodes does not enter.
 	// +optional
 	SyncerStartedAt *metav1.Time `json:"syncerStartedAt,omitempty"`
+
+	// CorruptedBlobs are the blobs of this replica's store whose content does not match their digest,
+	// sorted, at most MaxCorruptedBlobs of them. Usually empty.
+	//
+	// Found by the background check of the store, by a Verify, or by a Repair that could not finish.
+	// Kept here rather than only in the syncer's memory so that a restart does not forget them: a
+	// broken blob is not counted as held until a Repair replaces it, and the controller asks for that
+	// Repair when this list is not empty.
+	//
+	// A broken blob that an image of the set references takes Full away, and a leader hands the lease
+	// to a replica that holds the set whole.
+	// +optional
+	CorruptedBlobs []string `json:"corruptedBlobs,omitempty"`
+
+	// Images counts the images this replica holds, by state. Absent until the replica has indexed its
+	// store.
+	// +optional
+	Images *ReplicaImages `json:"images,omitempty"`
+
+	// ScrubbedAt is when the background check last finished reading the whole store. Absent until it
+	// has once.
+	// +optional
+	ScrubbedAt *metav1.Time `json:"scrubbedAt,omitempty"`
+}
+
+// MaxCorruptedBlobs is how many broken blobs a replica lists in its status.
+const MaxCorruptedBlobs = 100
+
+// ReplicaImages counts one replica's images by state. The images themselves are listed by the
+// RegistryImage resource of registry.deckhouse.io, which is not stored.
+type ReplicaImages struct {
+	// Present is how many images of the set the replica holds whole.
+	Present int32 `json:"present"`
+
+	// Missing is how many images of the set the replica does not hold at all.
+	Missing int32 `json:"missing"`
+
+	// Incomplete is how many images of the set the replica holds without some of their blobs.
+	Incomplete int32 `json:"incomplete"`
+
+	// Corrupted is how many images, of the set or not, reference a broken blob.
+	Corrupted int32 `json:"corrupted"`
+
+	// OutOfSet is how many images the replica holds that no release or module of the cluster
+	// declares: pulled through the cache, or left by an older release.
+	OutOfSet int32 `json:"outOfSet"`
 }
 
 // StoreRefusal names what a store refuses writes on: one of its two limits, or a directory the

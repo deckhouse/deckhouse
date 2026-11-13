@@ -5136,6 +5136,11 @@ alerts:
         RegistryUpstream, a leader moving to another master, an air-gap transition — none of it
         reaches the nodes until the controller is back.
 
+        Beyond the registry, no namespace in the cluster can finish deleting: the controller also
+        serves the `registry.deckhouse.io` API (the `RegistryImage` listing), and while nobody answers
+        for it, discovery of that group fails and namespaces stay `Terminating` with the condition
+        `NamespaceDeletionDiscoveryFailure`. They are deleted once a replica answers again.
+
         And while this is firing, most other `D8Registry*` alerts are blind: they read what the
         controller exports, so they stay silent whatever happens in the meantime. The exceptions
         are `D8RegistryStorageLeaderAbsent`, which reads the cache replicas themselves, and the
@@ -5664,6 +5669,42 @@ alerts:
       summary: |
         The in-cluster registry cache cannot be updated to its new revision.
       severity: "6"
+      markupFormat: markdown
+    - name: D8RegistryStoreCorrupted
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/registry.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        A replica of the in-cluster cache holds blobs whose content does not match their digest, and
+        they have not been repaired for two hours. Every pull of an image that uses such a blob from
+        this replica fails; while an image of the cluster's set uses one, the replica is not full, and a
+        leader hands the lease to a replica that holds the set whole.
+
+        The module creates a `RegistryOperation` of type `Repair` for these blobs on its own, and
+        repeats it four hours after one that did not fix them. Where to look:
+
+        ```
+        d8 k get registrystorage registry -o jsonpath='{.status.replicas}' | jq 'map({node, full, corruptedBlobs})'
+        d8 k get registryoperation -o wide
+        d8 k get registryimages -l registry.deckhouse.io/state=Corrupted
+        ```
+
+        `status.replicas[].repair.digests[].message` of the last `Repair` says why a blob could not
+        be repaired. The usual reasons:
+
+        - no whole copy anywhere: the cache has one replica and no upstream, or every replica holds
+          the blob broken — as after a `d8 mirror push` of a broken bundle. Push the release again with
+          `d8 mirror push`, then create a `Repair` for the digests by hand;
+        - another operation held the queue, such as a long garbage collection: the repair runs once it
+          finishes;
+        - the other replicas could not be reached from this one.
+
+        The disk under the store is worth checking too: blobs that go bad on their own are a sign of
+        a failing disk.
+      summary: |
+        The registry cache holds broken blobs that were not repaired.
+      severity: "5"
       markupFormat: markdown
     - name: D8RegistryStoreNearlyFull
       sourceFile: modules/038-registry/monitoring/prometheus-rules/registry.yaml
