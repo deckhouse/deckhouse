@@ -29,13 +29,14 @@ import (
 
 	"github.com/flant/docs-builder/internal/docs"
 	"github.com/flant/docs-builder/internal/ondemand"
+	"github.com/flant/docs-builder/internal/ondemand/cache"
 )
 
 // busyRetryIn is how many seconds a reader waits for a render slot when the
 // queue of renders is full.
 const busyRetryIn = 60
 
-// Store is what the handlers need of the rendered versions (ondemand.Store):
+// Store is what the handlers need of the rendered versions (cache.Store):
 // their status, the start of a render, the pages that are published, and the
 // targets and the version menus of the modules.
 type Store interface {
@@ -69,11 +70,11 @@ type OnDemand struct {
 	Ready func() bool
 	// Live, when set, fails /healthz with the error it returns: a pass of
 	// the pinned versions stuck past its deadline, which only a restart
-	// gets going again (ondemand.PassWatch).
+	// gets going again (cache.PassWatch).
 	Live func() error
 	// Embedded, on the public site, lists the versions of a module embedded
 	// into Deckhouse, which has no registry of its own.
-	Embedded *ondemand.EmbeddedVersions
+	Embedded *cache.EmbeddedVersions
 }
 
 // EnableOnDemand serves the pages of module versions that nginx did not find
@@ -120,7 +121,7 @@ func (h *DocsBuilderHandler) handleVersionPage(w http.ResponseWriter, r *http.Re
 	}
 
 	st, err := h.start(r, module, version)
-	if errors.Is(err, ondemand.ErrBusy) {
+	if errors.Is(err, cache.ErrBusy) {
 		w.Header().Set("Retry-After", strconv.Itoa(busyRetryIn))
 		h.writePlaceholder(w, http.StatusServiceUnavailable, lang, module, version, ondemand.Status{Stage: ondemand.StageFailed, Error: ondemand.ReasonBusy, RetryIn: busyRetryIn})
 		return

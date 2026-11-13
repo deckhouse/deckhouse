@@ -23,7 +23,7 @@ import (
 // The failures of the ports of the store, in its own terms: what the cluster,
 // the registry or S3 answered is wrapped in one of these by the code that
 // reads them, so the store acts on a failure without knowing where it came
-// from. kindOf tells what each one means.
+// from. KindOf tells what each one means.
 var (
 	// ErrNoVersions means the module has no versions to render: no source of
 	// it, or no release repository in its sources (TagLister, the lookups of
@@ -56,61 +56,65 @@ var (
 	ErrColdNotReady = errors.New("the cold cache is not ready")
 )
 
-// kind is what a failure means to the store.
-type kind int
+// ErrNoAIExport means a pinned version is published, but its AI export
+// failed: the reason is in the log of the render.
+var ErrNoAIExport = errors.New("rendered without the AI export")
+
+// Kind is what a failure means to the store.
+type Kind int
 
 const (
-	// passing: the registry, S3 or the pod failed, and the next try may go
+	// Passing: the registry, S3 or the pod failed, and the next try may go
 	// well.
-	passing kind = iota
-	// missing: the module, the version or the object is not there.
-	missing
-	// noDocs: the version has no documentation pages.
-	noDocs
-	// unrenderable: the template can not render the version, or not with
+	Passing Kind = iota
+	// Missing: the module, the version or the object is not there.
+	Missing
+	// NoDocs: the version has no documentation pages.
+	NoDocs
+	// Unrenderable: the template can not render the version, or not with
 	// the AI export, until the template or the image changes.
-	unrenderable
-	// notReady: the cold cache is not set up yet.
-	notReady
+	Unrenderable
+	// NotReady: the cold cache is not set up yet.
+	NotReady
 )
 
-// kindOf classifies a failure by the errors above and those of docs and of
+// KindOf classifies a failure by the errors above and those of docs and of
 // the store it wraps. A new kind of error goes here, and every decision on
-// failures follows: lasting, Unpublished, coldMissing, the status of a
+// failures follows: Lasting, Unpublished, ColdMissing, the status of a
 // render and its reason.
-func kindOf(err error) kind {
+func KindOf(err error) Kind {
 	switch {
 	case errors.Is(err, ErrNoVersions), errors.Is(err, ErrVersionNotFound), errors.Is(err, ErrColdNotFound):
-		return missing
+		return Missing
 	case errors.Is(err, docs.ErrNoPages):
-		return noDocs
-	case errors.Is(err, docs.ErrBuild), errors.Is(err, docs.ErrDocsTooLarge), errors.Is(err, errNoAIExport):
-		return unrenderable
+		return NoDocs
+	case errors.Is(err, docs.ErrBuild), errors.Is(err, docs.ErrDocsTooLarge), errors.Is(err, ErrNoAIExport):
+		return Unrenderable
 	case errors.Is(err, ErrColdNotReady):
-		return notReady
+		return NotReady
 	}
 
-	return passing
+	return Passing
 }
 
-// lasting reports whether a render failed for a reason that does not change
+// Lasting reports whether a render failed for a reason that does not change
 // until the template or the image does: trying it again at once fails again.
-func lasting(err error) bool {
-	k := kindOf(err)
+func Lasting(err error) bool {
+	k := KindOf(err)
 
-	return k == missing || k == noDocs || k == unrenderable
+	return k == Missing || k == NoDocs || k == Unrenderable
 }
 
 // Unpublished tells an error of a listing that means the module has no
 // versions to render.
 func Unpublished(err error) bool {
-	return kindOf(err) == missing
+	return KindOf(err) == Missing
 }
 
-// coldMissing reports whether err means the object is not in the cold cache,
+// ColdMissing reports whether err means the object is not in the cold cache,
 // or the cache is not set up yet.
-func coldMissing(err error) bool {
-	k := kindOf(err)
+func ColdMissing(err error) bool {
+	k := KindOf(err)
 
-	return k == missing || k == notReady
+	return k == Missing || k == NotReady
 }

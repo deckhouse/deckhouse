@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ondemand
+package cache
 
 import (
 	"context"
@@ -29,6 +29,8 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"github.com/flant/docs-builder/internal/metrics"
+	"github.com/flant/docs-builder/internal/ondemand"
+	"github.com/flant/docs-builder/internal/ondemand/atomicfile"
 )
 
 // rerenderQuietPasses is how many passes in a row finding no archive of an
@@ -72,7 +74,7 @@ type rerenderer struct {
 	idlePoll time.Duration
 	// render renders a version (Config.Render); timeout bounds the render
 	// of an archive with its upload (Config.RenderTimeout).
-	render  RenderFunc
+	render  ondemand.RenderFunc
 	timeout time.Duration
 	dir     string
 	logger  *log.Logger
@@ -97,7 +99,7 @@ func (r *rerenderer) run(ctx context.Context, every time.Duration) {
 				quiet++
 			} else {
 				quiet = 0
-				if err != nil && ctx.Err() == nil && !coldMissing(err) {
+				if err != nil && ctx.Err() == nil && !ondemand.ColdMissing(err) {
 					r.logger.Warn("render archives of older templates", log.Err(err))
 				}
 			}
@@ -136,13 +138,13 @@ func (r *rerenderer) pass(ctx context.Context, revision string) (int, error) {
 		return current[prefix+coldAISuffix] || !a.withAI && current[prefix+coldArchiveSuffix]
 	}
 
-	var stale []ColdObject
+	var stale []ondemand.ColdObject
 	for _, o := range objects {
 		if a, ok := parseColdKey(o.Key); ok && a.revision != revision && !covered(a) && !slices.Contains(failed.Archives, o.Key) {
 			stale = append(stale, o)
 		}
 	}
-	slices.SortFunc(stale, func(a, b ColdObject) int {
+	slices.SortFunc(stale, func(a, b ondemand.ColdObject) int {
 		aAI, bAI := isAIKey(a.Key), isAIKey(b.Key)
 		if aAI != bAI {
 			if aAI {
@@ -233,21 +235,6 @@ func (r *rerenderer) waitIdle(ctx context.Context) error {
 	return nil
 }
 
-// busy reports whether a render of a reader or of a pinned version is queued
-// or running.
-func (s *Store) busy() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	for _, r := range s.renders {
-		if r.status.Stage != StageFailed {
-			return true
-		}
-	}
-
-	return false
-}
-
 // renderAnew renders the version of an archive of another revision in one
 // render slot, uploads it under this revision and removes the old archive.
 // The version this pod serves from the old archive is replaced. It returns
@@ -274,10 +261,10 @@ func (r *rerenderer) renderAnew(ctx context.Context, revision string, a coldArch
 	defer os.RemoveAll(workDir)
 
 	outDir := filepath.Join(workDir, "out")
-	if err := r.render(ctx, a.module, a.version, workDir, outDir, a.withAI, func(Stage) {}); err != nil {
+	if err := r.render(ctx, a.module, a.version, workDir, outDir, a.withAI, func(ondemand.Stage) {}); err != nil {
 		// Only what the new template can not do: a failure of the registry,
 		// of S3 or of the pod is tried again on the next pass.
-		if ctx.Err() == nil && lasting(err) {
+		if ctx.Err() == nil && ondemand.Lasting(err) {
 			return false, fmt.Errorf("%w: %w", errCannotRerender, err)
 		}
 		return false, err
@@ -286,7 +273,7 @@ func (r *rerenderer) renderAnew(ctx context.Context, revision string, a coldArch
 	// An archive with the AI export is not replaced by one without it: the
 	// followers take a target from S3 only and would serve it without one.
 	if a.withAI && !withAI {
-		return false, fmt.Errorf("%w: %w", errCannotRerender, errNoAIExport)
+		return false, fmt.Errorf("%w: %w", errCannotRerender, ondemand.ErrNoAIExport)
 	}
 
 	archive := r.cold.pack(outDir)
@@ -314,33 +301,6 @@ func (r *rerenderer) renderAnew(ctx context.Context, revision string, a coldArch
 	return withAI, nil
 }
 
-// replaceStale publishes the version rendered in outDir when this pod serves
-// it from an archive of another revision.
-func (s *Store) replaceStale(module, version, outDir string, withAI bool) {
-	s.mu.Lock()
-	v, ok := s.versions[key(module, version)]
-	stale := ok && v.stale
-	s.mu.Unlock()
-	if !stale {
-		return
-	}
-
-	size, err := dirSize(outDir)
-	if err == nil {
-		err = os.Chmod(outDir, 0755)
-	}
-	var old string
-	if err == nil {
-		old, err = s.publish(module, version, outDir, &published{size: size, ai: withAI})
-	}
-	if old != "" {
-		os.RemoveAll(old)
-	}
-	if err != nil {
-		s.cfg.Logger.Warn("publish the version rendered anew", slog.String("module", module), slog.String("version", version), log.Err(err))
-	}
-}
-
 // loadFailed reads the archives the revision could not render. S3 not
 // answering is an error: the list is still there. A list that does not
 // parse is reported and taken for an empty one: the pass writes it anew, at
@@ -350,7 +310,7 @@ func (r *rerenderer) loadFailed(ctx context.Context, revision string) (rerenderF
 	var failed rerenderFailed
 	raw, err := r.cold.getList(ctx, rerenderFailedKey(revision))
 	if err != nil {
-		if coldMissing(err) {
+		if ondemand.ColdMissing(err) {
 			return failed, nil
 		}
 		return failed, fmt.Errorf("get the failed renders from S3: %w", err)
@@ -364,7 +324,7 @@ func (r *rerenderer) loadFailed(ctx context.Context, revision string) (rerenderF
 }
 
 func (r *rerenderer) saveFailed(ctx context.Context, revision string, failed rerenderFailed) error {
-	path, err := writeTemp(filepath.Join(r.dir, tmpDir, "rerender.json"), func(w io.Writer) error { return json.NewEncoder(w).Encode(failed) })
+	path, err := atomicfile.Temp(filepath.Join(r.dir, tmpDir, "rerender.json"), func(w io.Writer) error { return json.NewEncoder(w).Encode(failed) })
 	if err != nil {
 		return err
 	}
@@ -375,10 +335,4 @@ func (r *rerenderer) saveFailed(ctx context.Context, revision string, failed rer
 	}
 
 	return nil
-}
-
-// Rerender renders anew the archives of the cold cache that another template
-// revision rendered (rerenderer).
-func (s *Store) Rerender(ctx context.Context, every time.Duration) {
-	s.rerender.run(ctx, every)
 }

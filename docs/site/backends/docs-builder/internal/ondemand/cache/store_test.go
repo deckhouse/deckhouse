@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ondemand
+package cache
 
 import (
 	"context"
@@ -34,6 +34,7 @@ import (
 
 	"github.com/flant/docs-builder/internal/docs"
 	"github.com/flant/docs-builder/internal/metrics"
+	"github.com/flant/docs-builder/internal/ondemand"
 )
 
 // fakeRender writes size bytes of pages for every version it renders.
@@ -47,13 +48,13 @@ type fakeRender struct {
 	noAI atomic.Bool
 }
 
-func (f *fakeRender) render(_ context.Context, module, version, _, outDir string, withAI bool, stage func(Stage)) error {
+func (f *fakeRender) render(_ context.Context, module, version, _, outDir string, withAI bool, stage func(ondemand.Stage)) error {
 	f.calls.Add(1)
-	stage(StageDownload)
+	stage(ondemand.StageDownload)
 	if f.release != nil {
 		<-f.release
 	}
-	stage(StageRender)
+	stage(ondemand.StageRender)
 
 	files := map[string]string{
 		"index.html":  strings.Repeat("x", f.size),
@@ -138,7 +139,7 @@ func newTestStore(t *testing.T, f *fakeRender, maxSize int64, configure ...func(
 	return s, c
 }
 
-func waitStage(t *testing.T, s *Store, module, version string, want Stage) Status {
+func waitStage(t *testing.T, s *Store, module, version string, want ondemand.Stage) ondemand.Status {
 	t.Helper()
 
 	deadline := time.Now().Add(5 * time.Second)
@@ -160,7 +161,7 @@ func renderDone(t *testing.T, s *Store, module, version string) {
 	if _, err := s.Start(module, version); err != nil {
 		t.Fatal(err)
 	}
-	waitStage(t, s, module, version, StageDone)
+	waitStage(t, s, module, version, ondemand.StageDone)
 }
 
 func exists(path string) bool {
@@ -190,7 +191,7 @@ func TestStoreRendersAndPublishes(t *testing.T) {
 		t.Fatal("a language the version does not have is linked")
 	}
 
-	if st, _ := s.Start("echo", "v1.2.3"); st.Stage != StageDone || f.calls.Load() != 1 {
+	if st, _ := s.Start("echo", "v1.2.3"); st.Stage != ondemand.StageDone || f.calls.Load() != 1 {
 		t.Fatalf("second start: stage %q, renders %d", st.Stage, f.calls.Load())
 	}
 
@@ -215,9 +216,9 @@ func TestStoreSharesOneRenderPerVersion(t *testing.T) {
 	}
 	wg.Wait()
 
-	waitStage(t, s, "echo", "v1.2.3", StageDownload)
+	waitStage(t, s, "echo", "v1.2.3", ondemand.StageDownload)
 	close(f.release)
-	waitStage(t, s, "echo", "v1.2.3", StageDone)
+	waitStage(t, s, "echo", "v1.2.3", ondemand.StageDone)
 
 	if n := f.calls.Load(); n != 1 {
 		t.Fatalf("renders = %d, want 1", n)
@@ -232,8 +233,8 @@ func TestStoreFailedRender(t *testing.T) {
 	if _, err := s.Start("echo", "v1.2.3"); err != nil {
 		t.Fatal(err)
 	}
-	st := waitStage(t, s, "echo", "v1.2.3", StageFailed)
-	if st.Error != ReasonBuild {
+	st := waitStage(t, s, "echo", "v1.2.3", ondemand.StageFailed)
+	if st.Error != ondemand.ReasonBuild {
 		t.Fatalf("error = %q", st.Error)
 	}
 	if st.RetryIn != 60 {
@@ -249,7 +250,7 @@ func TestStoreFailedRender(t *testing.T) {
 		t.Fatal("a failed render is published")
 	}
 
-	if st, _ := s.Start("echo", "v1.2.3"); st.Stage != StageFailed || f.calls.Load() != 1 {
+	if st, _ := s.Start("echo", "v1.2.3"); st.Stage != ondemand.StageFailed || f.calls.Load() != 1 {
 		t.Fatalf("start before RetryAfter: stage %q, renders %d", st.Stage, f.calls.Load())
 	}
 
@@ -270,7 +271,7 @@ func TestStoreForgetsOldFailures(t *testing.T) {
 	if _, err := s.Start("echo", "v1.2.3"); err != nil {
 		t.Fatal(err)
 	}
-	waitStage(t, s, "echo", "v1.2.3", StageFailed)
+	waitStage(t, s, "echo", "v1.2.3", ondemand.StageFailed)
 
 	c.add(time.Minute)
 	s.evict()
@@ -312,7 +313,7 @@ func TestStoreEvictsLeastRecentlyOpenedAboveMaxSize(t *testing.T) {
 		if _, err := os.Lstat(filepath.Join(s.cfg.Dir, siteDir, "en", "modules", "echo", v)); (err == nil) != want {
 			t.Errorf("%s linked = %v, want %v", v, err == nil, want)
 		}
-		if got := s.Status("echo", v).Stage == StageDone; got != want {
+		if got := s.Status("echo", v).Stage == ondemand.StageDone; got != want {
 			t.Errorf("%s in store = %v, want %v", v, got, want)
 		}
 	}
@@ -364,7 +365,7 @@ func TestStoreWaitsForPinBeforeEvicting(t *testing.T) {
 
 		c.add(2 * cfg.MaxIdle)
 		s.evict()
-		if st := s.Status("echo", "v1.0.0"); st.Stage != StageDone {
+		if st := s.Status("echo", "v1.0.0"); st.Stage != ondemand.StageDone {
 			t.Fatalf("stage %q before the first Pin, want done: the idle version is evicted", st.Stage)
 		}
 
@@ -382,7 +383,7 @@ func TestStoreWaitsForPinBeforeEvicting(t *testing.T) {
 
 	t.Run("a pinned version stays", func(t *testing.T) {
 		s, _ := restarted(t)
-		s.Pin([]Target{{Module: "echo", Version: "v1.0.0"}}, nil)
+		s.Pin([]ondemand.Target{{Module: "echo", Version: "v1.0.0"}}, nil)
 		s.evict()
 		if !exists(filepath.Join(s.cfg.Dir, "echo", "v1.0.0")) {
 			t.Fatal("the pinned version is evicted")
@@ -424,7 +425,7 @@ func TestStoreLoad(t *testing.T) {
 	}
 
 	for _, kv := range [][2]string{{"echo", "v1.2.3"}, {"console", "v1.70.5"}} {
-		if st := s.Status(kv[0], kv[1]); st.Stage != StageDone {
+		if st := s.Status(kv[0], kv[1]); st.Stage != ondemand.StageDone {
 			t.Errorf("%s %s: stage %q, want done", kv[0], kv[1], st.Stage)
 		}
 	}
@@ -479,14 +480,14 @@ func TestStoreRefusesRendersAboveMaxQueue(t *testing.T) {
 	}
 
 	close(f.release)
-	waitStage(t, s, "echo", "v3.0.0", StageDone)
+	waitStage(t, s, "echo", "v3.0.0", ondemand.StageDone)
 	for _, v := range []string{"v1.0.0", "v2.0.0"} {
-		waitStage(t, s, "echo", v, StageDone)
+		waitStage(t, s, "echo", v, ondemand.StageDone)
 	}
 	if _, err := s.Start("echo", "v4.0.0"); err != nil {
 		t.Fatalf("after the queue drained: %v", err)
 	}
-	waitStage(t, s, "echo", "v4.0.0", StageDone)
+	waitStage(t, s, "echo", "v4.0.0", ondemand.StageDone)
 }
 
 func TestStoreKeepsVersionLinkedWhenEvictionFails(t *testing.T) {
@@ -511,7 +512,7 @@ func TestStoreKeepsVersionLinkedWhenEvictionFails(t *testing.T) {
 	if !exists(filepath.Join(s.cfg.Dir, siteDir, "en", "modules", "echo", "v1.0.0", "index.html")) {
 		t.Fatal("a version that failed to be evicted is no longer linked for nginx")
 	}
-	if st := s.Status("echo", "v1.0.0"); st.Stage != StageDone {
+	if st := s.Status("echo", "v1.0.0"); st.Stage != ondemand.StageDone {
 		t.Fatalf("stage %q, want done", st.Stage)
 	}
 }
@@ -519,19 +520,19 @@ func TestStoreKeepsVersionLinkedWhenEvictionFails(t *testing.T) {
 func TestStoreKeepsNotFoundLonger(t *testing.T) {
 	f := &fakeRender{size: 10}
 	s, c := newTestStore(t, f, 1000)
-	s.cfg.Render = func(context.Context, string, string, string, string, bool, func(Stage)) error {
+	s.cfg.Render = func(context.Context, string, string, string, string, bool, func(ondemand.Stage)) error {
 		f.calls.Add(1)
-		return fmt.Errorf("source deckhouse: %w", ErrVersionNotFound)
+		return fmt.Errorf("source deckhouse: %w", ondemand.ErrVersionNotFound)
 	}
 
 	if _, err := s.Start("echo", "v9.9.9"); err != nil {
 		t.Fatal(err)
 	}
-	waitStage(t, s, "echo", "v9.9.9", StageFailed)
+	waitStage(t, s, "echo", "v9.9.9", ondemand.StageFailed)
 
 	c.add(time.Minute) // RetryAfter of a broken render
 	s.evict()
-	if st, _ := s.Start("echo", "v9.9.9"); st.Stage != StageFailed || !st.NotFound || f.calls.Load() != 1 {
+	if st, _ := s.Start("echo", "v9.9.9"); st.Stage != ondemand.StageFailed || !st.NotFound || f.calls.Load() != 1 {
 		t.Fatalf("after RetryAfter: %+v, renders %d; want the not-found result kept", st, f.calls.Load())
 	}
 
@@ -539,7 +540,7 @@ func TestStoreKeepsNotFoundLonger(t *testing.T) {
 	if _, err := s.Start("echo", "v9.9.9"); err != nil {
 		t.Fatal(err)
 	}
-	waitStage(t, s, "echo", "v9.9.9", StageFailed)
+	waitStage(t, s, "echo", "v9.9.9", ondemand.StageFailed)
 	if n := f.calls.Load(); n != 2 {
 		t.Fatalf("renders = %d after NotFoundRetryAfter, want 2", n)
 	}
@@ -557,7 +558,7 @@ func TestStoreCountsFailedBranches(t *testing.T) {
 	s.cfg.Metrics = ms
 	var mode atomic.Value
 	mode.Store("broken")
-	s.cfg.Render = func(ctx context.Context, module, version, workDir, outDir string, withAI bool, stage func(Stage)) error {
+	s.cfg.Render = func(ctx context.Context, module, version, workDir, outDir string, withAI bool, stage func(ondemand.Stage)) error {
 		switch mode.Load() {
 		case "broken":
 			return fmt.Errorf("hugo: %w", docs.ErrBuild)
@@ -576,11 +577,11 @@ func TestStoreCountsFailedBranches(t *testing.T) {
 		}
 		return ""
 	}
-	branch := Target{Module: "echo", Version: "main", Rev: "sha256:aaa"}
+	branch := ondemand.Target{Module: "echo", Version: "main", Rev: "sha256:aaa"}
 	fail := func() {
 		t.Helper()
 		mode.Store("broken")
-		s.SetTargets([]Target{branch})
+		s.SetTargets([]ondemand.Target{branch})
 		if err := s.RenderPinned(context.Background(), branch); err == nil {
 			t.Fatal("the broken branch rendered")
 		}
@@ -597,8 +598,8 @@ func TestStoreCountsFailedBranches(t *testing.T) {
 
 	fail()
 	mode.Store("no AI")
-	if err := s.RenderPinned(context.Background(), branch); !errors.Is(err, errNoAIExport) {
-		t.Fatalf("err = %v, want errNoAIExport", err)
+	if err := s.RenderPinned(context.Background(), branch); !errors.Is(err, ondemand.ErrNoAIExport) {
+		t.Fatalf("err = %v, want ErrNoAIExport", err)
 	}
 	if _, failed := s.BranchFailure(branch); failed || gauge() != "0" {
 		t.Fatalf("published without the AI export: recorded %v, gauge %q", failed, gauge())
@@ -636,7 +637,7 @@ func TestStoreReportsPinnedSize(t *testing.T) {
 	renderDone(t, s, "echo", "v1.1.0")
 	renderDone(t, s, "echo", "v1.2.0")
 	// A version listed both as a target and as a channel counts as a target.
-	s.Pin([]Target{{Module: "echo", Version: "v1.1.0"}}, []Target{{Module: "echo", Version: "v1.2.0"}, {Module: "echo", Version: "v1.1.0"}})
+	s.Pin([]ondemand.Target{{Module: "echo", Version: "v1.1.0"}}, []ondemand.Target{{Module: "echo", Version: "v1.2.0"}, {Module: "echo", Version: "v1.1.0"}})
 
 	kinds := func() string {
 		var out []string
@@ -743,10 +744,23 @@ func TestStoreKeepsReplacedVersionWhenPublishFails(t *testing.T) {
 	if !exists(filepath.Join(s.cfg.Dir, siteDir, "en", "modules", "echo", "v1.0.0", "index.html")) {
 		t.Fatal("the replaced version is no longer linked for nginx")
 	}
-	if st := s.Status("echo", "v1.0.0"); st.Stage != StageDone {
+	if st := s.Status("echo", "v1.0.0"); st.Stage != ondemand.StageDone {
 		t.Fatalf("stage %q, want done", st.Stage)
 	}
 	if entries, _ := os.ReadDir(filepath.Join(s.cfg.Dir, trashDir)); len(entries) != 0 {
 		t.Fatalf("trash left: %v", entries)
+	}
+}
+
+func TestReason(t *testing.T) {
+	for err, want := range map[error]string{
+		fmt.Errorf("hugo build: %w", context.DeadlineExceeded):                                    ondemand.ReasonTimeout,
+		fmt.Errorf("%w: source deckhouse: unauthorized", ondemand.ErrFetch):                       ondemand.ReasonRegistry,
+		fmt.Errorf("%w: %w", ondemand.ErrFetch, fmt.Errorf("pull: %w", context.DeadlineExceeded)): ondemand.ReasonTimeout,
+		errors.New("hugo build: template error"):                                                  ondemand.ReasonBuild,
+	} {
+		if got := reason(err); got != want {
+			t.Errorf("reason(%v) = %q, want %q", err, got, want)
+		}
 	}
 }

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ondemand
+package cache
 
 import (
 	"context"
@@ -26,17 +26,19 @@ import (
 	"time"
 
 	"github.com/flant/docs-builder/internal/docs"
+	"github.com/flant/docs-builder/internal/ondemand"
 )
 
 // coldStoreAt is a pod with an empty volume whose template revision is
 // revision, on the bucket cold.
-func coldStoreAt(t *testing.T, f *fakeRender, cold *memCold, revision string) *Store {
+func coldStoreAt(t *testing.T, f *fakeRender, cold *memCold, revision string, configure ...func(*Config)) *Store {
 	t.Helper()
 
-	s, _ := newTestStore(t, f, 1<<20, func(cfg *Config) {
+	onCold := func(cfg *Config) {
 		cfg.Cold = cold
 		cfg.Revision = func() string { return revision }
-	})
+	}
+	s, _ := newTestStore(t, f, 1<<20, append([]func(*Config){onCold}, configure...)...)
 	s.cold.putPause = time.Millisecond
 
 	return s
@@ -94,7 +96,7 @@ func TestRerenderKeepsArchiveTheTemplateCannotRender(t *testing.T) {
 	s := coldStoreAt(t, f, cold, "rev2")
 	render := s.rerender.render
 	var renderErr error
-	s.rerender.render = func(ctx context.Context, module, version, workDir, outDir string, withAI bool, stage func(Stage)) error {
+	s.rerender.render = func(ctx context.Context, module, version, workDir, outDir string, withAI bool, stage func(ondemand.Stage)) error {
 		if renderErr != nil {
 			f.calls.Add(1)
 			return renderErr
@@ -104,7 +106,7 @@ func TestRerenderKeepsArchiveTheTemplateCannotRender(t *testing.T) {
 
 	// A failure of the registry or of the pod is tried again on the next
 	// pass, the archive is not listed as failed.
-	for _, transient := range []error{fmt.Errorf("%w: registry is down", ErrFetch), errors.New("no space left on device")} {
+	for _, transient := range []error{fmt.Errorf("%w: registry is down", ondemand.ErrFetch), errors.New("no space left on device")} {
 		renderErr = transient
 		if _, err := s.rerender.pass(context.Background(), "rev2"); err != nil {
 			t.Fatal(err)
@@ -142,7 +144,7 @@ func TestRerenderKeepsAIExportOfArchive(t *testing.T) {
 	cold := newMemCold()
 	f := &fakeRender{size: 10}
 	old := coldStoreAt(t, f, cold, "rev1")
-	if err := old.RenderPinned(context.Background(), Target{Module: "echo", Version: "v1.0.0"}); err != nil {
+	if err := old.RenderPinned(context.Background(), ondemand.Target{Module: "echo", Version: "v1.0.0"}); err != nil {
 		t.Fatal(err)
 	}
 	waitBackground(old)

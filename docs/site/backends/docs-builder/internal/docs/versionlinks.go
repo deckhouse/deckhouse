@@ -50,7 +50,7 @@ type versionLinksFs struct {
 const ownLinkPattern = `(\b(?:href|src)=["'])(?:/(?:%s))?/modules/%s/%s/`
 
 // VersionLinksRule names how the links of a version are rewritten. It is a
-// part of the template revision (ondemand.TemplateRevision): a change of the
+// part of the template revision (cache.TemplateRevision): a change of the
 // rule renders the archives in S3 anew.
 const VersionLinksRule = ownLinkPattern + " -> relative to the root of the version"
 

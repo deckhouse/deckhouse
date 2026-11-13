@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ondemand
+package cache
 
 import (
 	"context"
@@ -36,6 +36,7 @@ import (
 
 	"github.com/flant/docs-builder/internal/docs"
 	"github.com/flant/docs-builder/internal/metrics"
+	"github.com/flant/docs-builder/internal/ondemand"
 	"github.com/flant/docs-builder/internal/registry"
 )
 
@@ -64,9 +65,27 @@ func listedCards(t *testing.T, s *Store) []card {
 	return page.Modules
 }
 
+// card is a module on the page of the list of modules, as the templates
+// read it (hugo.Data.modules_list).
+type card struct {
+	Module      string            `json:"module"`
+	Title       map[string]string `json:"title,omitempty"`
+	Description map[string]string `json:"description,omitempty"`
+	Stage       string            `json:"stage,omitempty"`
+	Enabled     bool              `json:"enabled,omitempty"`
+	NoDocs      bool              `json:"noDocs,omitempty"`
+	Pending     bool              `json:"pending,omitempty"`
+}
+
+// modulesListPage is the page of the list of modules of a language in the
+// cache volume, served at /<lang>/modules/.
+func modulesListPage(lang string) string {
+	return filepath.Join(indexDir, lang, "modules", "index.html")
+}
+
 // summaryRender is fakeRender that also writes the summary of the module.
-func summaryRender(f *fakeRender) RenderFunc {
-	return func(ctx context.Context, module, version, workDir, outDir string, withAI bool, stage func(Stage)) error {
+func summaryRender(f *fakeRender) ondemand.RenderFunc {
+	return func(ctx context.Context, module, version, workDir, outDir string, withAI bool, stage func(ondemand.Stage)) error {
 		if err := f.render(ctx, module, version, workDir, outDir, withAI, stage); err != nil {
 			return err
 		}
@@ -78,22 +97,21 @@ func summaryRender(f *fakeRender) RenderFunc {
 
 func TestWriteList(t *testing.T) {
 	f := &fakeRender{size: 10}
-	s, _ := newTestStore(t, f, 1<<20)
-	s.cfg.Render = summaryRender(f)
 	l := &listRender{}
-	s.catalog.render = l.render
+	s, _ := newTestStore(t, f, 1<<20, func(cfg *Config) { cfg.RenderList = l.render })
+	s.cfg.Render = summaryRender(f)
 	ctx := context.Background()
 
-	if err := s.renderPinned(ctx, Target{Module: "echo", Version: "v1.0.0"}, false); err != nil {
+	if err := s.renderPinned(ctx, ondemand.Target{Module: "echo", Version: "v1.0.0"}, false); err != nil {
 		t.Fatal(err)
 	}
-	modules := []Listed{
+	modules := []ondemand.Listed{
 		{Module: "echo", Enabled: true, Stage: "General Availability"},
 		{Module: "alb", Stage: "Experimental"},
 		{Module: "bare", NoDocs: true},
 		{Module: "broken", Failed: true},
 	}
-	targets := []Target{{Module: "echo", Version: "v1.0.0"}, {Module: "alb", Version: "v2.0.0"}, {Module: "broken", Version: "v1.0.0"}}
+	targets := []ondemand.Target{{Module: "echo", Version: "v1.0.0"}, {Module: "alb", Version: "v2.0.0"}, {Module: "broken", Version: "v1.0.0"}}
 
 	// A gzip copy an older docs-builder left on the volume.
 	if err := os.MkdirAll(filepath.Dir(filepath.Join(s.cfg.Dir, modulesListPage("en"))), 0755); err != nil {
@@ -141,20 +159,19 @@ func TestWriteList(t *testing.T) {
 	}
 
 	// A pass that listed no modules: the list is empty, not the old one.
-	if err := s.WriteList(ctx, []Listed{}, targets); err != nil || len(listedCards(t, s)) != 0 {
+	if err := s.WriteList(ctx, []ondemand.Listed{}, targets); err != nil || len(listedCards(t, s)) != 0 {
 		t.Fatalf("no modules: err %v, cards %+v", err, listedCards(t, s))
 	}
 }
 
 func TestPinnerListsEveryModule(t *testing.T) {
 	f := &fakeRender{size: 10}
-	s, _ := newTestStore(t, f, 1<<20)
 	l := &listRender{}
-	s.catalog.render = l.render
+	s, _ := newTestStore(t, f, 1<<20, func(cfg *Config) { cfg.RenderList = l.render })
 	var firstList []card
 	var firstState indexedState
 	render := summaryRender(f)
-	s.cfg.Render = func(ctx context.Context, module, version, workDir, outDir string, withAI bool, stage func(Stage)) error {
+	s.cfg.Render = func(ctx context.Context, module, version, workDir, outDir string, withAI bool, stage func(ondemand.Stage)) error {
 		// The list is there before the first render, on the followers too.
 		if firstList == nil {
 			firstList = listedCards(t, s)
@@ -177,7 +194,7 @@ func TestPinnerListsEveryModule(t *testing.T) {
 		Policy: ClusterPolicy{
 			ChannelVersion: func(_ context.Context, module string) (string, error) {
 				if module == "none" {
-					return "", ErrNoChannel
+					return "", ondemand.ErrNoChannel
 				}
 				return "v2.0.0", nil
 			},
@@ -222,7 +239,7 @@ func TestPinnerListsEveryModule(t *testing.T) {
 	// The modules go to targets.json for the followers and the restart.
 	var state indexedState
 	readJSON(t, filepath.Join(s.cfg.Dir, indexDir, indexedFile), &state)
-	wantModules := []Listed{
+	wantModules := []ondemand.Listed{
 		{Module: "echo", Enabled: true, Stage: "General Availability"},
 		{Module: "empty", NoDocs: true},
 		{Module: "none", NoDocs: true},
@@ -233,9 +250,8 @@ func TestPinnerListsEveryModule(t *testing.T) {
 }
 
 func TestFollowerListsModulesOfLeader(t *testing.T) {
-	_, cold, s, fl := leaderWithFollower(t)
 	l := &listRender{}
-	s.catalog.render = l.render
+	_, cold, s, fl := leaderWithFollower(t, func(cfg *Config) { cfg.RenderList = l.render })
 
 	// The leader recorded no list (its RenderList is not set, as in a
 	// docs-builder before the list): the modules come from the targets.
@@ -252,7 +268,7 @@ func TestFollowerListsModulesOfLeader(t *testing.T) {
 		t.Fatalf("cards = %+v, want %+v", got, want)
 	}
 
-	state.Modules = []Listed{{Module: "echo"}, {Module: "later", Stage: "Preview"}}
+	state.Modules = []ondemand.Listed{{Module: "echo"}, {Module: "later", Stage: "Preview"}}
 	putIndexed(t, cold, state)
 	fl.Sync(context.Background())
 	if got, want := listedCards(t, s), []card{{Module: "echo"}, {Module: "later", Stage: "Preview", Pending: true}}; !reflect.DeepEqual(got, want) {
@@ -302,15 +318,15 @@ func TestResolverKeepsModuleWhoseVersionFails(t *testing.T) {
 		Logger: log.NewNop(),
 	}
 
-	res, err := r.ResolveChannels(context.Background(), map[string]Target{"echo": {Module: "echo", Version: "v1.0.0"}})
+	res, err := r.ResolveChannels(context.Background(), map[string]ondemand.Target{"echo": {Module: "echo", Version: "v1.0.0"}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	// A registry that does not answer is no reason to mark it without docs.
-	if want := []Listed{{Module: "echo"}}; !reflect.DeepEqual(res.Modules, want) {
+	if want := []ondemand.Listed{{Module: "echo"}}; !reflect.DeepEqual(res.Modules, want) {
 		t.Fatalf("modules = %+v, want %+v", res.Modules, want)
 	}
-	if want := []Target{{Module: "echo", Version: "v1.0.0"}}; !reflect.DeepEqual(res.Targets, want) || res.Unresolved != 1 {
+	if want := []ondemand.Target{{Module: "echo", Version: "v1.0.0"}}; !reflect.DeepEqual(res.Targets, want) || res.Unresolved != 1 {
 		t.Fatalf("targets = %+v, unresolved %d; want the previous target, 1", res.Targets, res.Unresolved)
 	}
 }
@@ -322,13 +338,13 @@ func TestResolverModuleWithoutReleaseRepository(t *testing.T) {
 	notFound := &transport.Error{StatusCode: http.StatusNotFound}
 	// The newest version of the module, as versions.Versions.Latest gives it.
 	latest := func(context.Context, string) (string, error) {
-		return "", fmt.Errorf("%w: source main: %w", ErrNoVersions, notFound)
+		return "", fmt.Errorf("%w: source main: %w", ondemand.ErrNoVersions, notFound)
 	}
 	for _, site := range []bool{false, true} {
 		r := Resolver{
 			Modules: func(context.Context) ([]registry.Module, error) { return []registry.Module{{Name: "echo"}}, nil },
 			Policy: ClusterPolicy{
-				ChannelVersion: func(context.Context, string) (string, error) { return "", ErrNoChannel },
+				ChannelVersion: func(context.Context, string) (string, error) { return "", ondemand.ErrNoChannel },
 				Latest:         latest,
 				Logger:         log.NewNop(),
 			},
@@ -336,19 +352,19 @@ func TestResolverModuleWithoutReleaseRepository(t *testing.T) {
 		}
 		if site {
 			r.Policy = SitePolicy{
-				Channels: func(context.Context, string) (Channels, error) { return nil, ErrNoChannel },
+				Channels: func(context.Context, string) (ondemand.Channels, error) { return nil, ondemand.ErrNoChannel },
 				Latest:   latest,
 			}
 		}
 
-		res, err := r.ResolveChannels(context.Background(), map[string]Target{"echo": {Module: "echo", Version: "v1.0.0"}})
+		res, err := r.ResolveChannels(context.Background(), map[string]ondemand.Target{"echo": {Module: "echo", Version: "v1.0.0"}})
 		if err != nil {
 			t.Fatal(err)
 		}
 		if res.Unresolved != 0 || len(res.Targets) != 0 {
 			t.Fatalf("site %v: unresolved %d, targets %v", site, res.Unresolved, res.Targets)
 		}
-		if want := []Listed{{Module: "echo", NoDocs: true}}; !reflect.DeepEqual(res.Modules, want) {
+		if want := []ondemand.Listed{{Module: "echo", NoDocs: true}}; !reflect.DeepEqual(res.Modules, want) {
 			t.Fatalf("site %v: modules = %+v, want %+v", site, res.Modules, want)
 		}
 		if !res.Unpublished["echo"] {
@@ -363,7 +379,7 @@ func TestResolverModuleWithoutReleaseRepository(t *testing.T) {
 func TestPinnerDropsUnpublishedModuleOnTheSecondPass(t *testing.T) {
 	s, _ := newTestStore(t, &fakeRender{size: 10}, 1000)
 	var gone atomic.Bool
-	notFound := fmt.Errorf("%w: source main: %w", ErrNoVersions, &transport.Error{StatusCode: http.StatusNotFound})
+	notFound := fmt.Errorf("%w: source main: %w", ondemand.ErrNoVersions, &transport.Error{StatusCode: http.StatusNotFound})
 	r := Resolver{
 		Modules: func(context.Context) ([]registry.Module, error) {
 			return []registry.Module{{Name: "bare"}, {Name: "echo"}}, nil
@@ -385,16 +401,16 @@ func TestPinnerDropsUnpublishedModuleOnTheSecondPass(t *testing.T) {
 		readJSON(t, filepath.Join(s.cfg.Dir, indexDir, indexedFile), &state)
 		return state
 	}
-	echo := Target{Module: "echo", Version: "v1.0.0"}
+	echo := ondemand.Target{Module: "echo", Version: "v1.0.0"}
 
 	p.sync(context.Background())
 	gone.Store(true)
 	p.sync(context.Background())
 	got := state()
-	if want := []Target{echo}; !reflect.DeepEqual(got.Targets, want) {
+	if want := []ondemand.Target{echo}; !reflect.DeepEqual(got.Targets, want) {
 		t.Fatalf("first unpublished pass: targets %v, want %v", got.Targets, want)
 	}
-	if want := []Listed{{Module: "bare", NoDocs: true}, {Module: "echo"}}; !reflect.DeepEqual(got.Modules, want) {
+	if want := []ondemand.Listed{{Module: "bare", NoDocs: true}, {Module: "echo"}}; !reflect.DeepEqual(got.Modules, want) {
 		t.Fatalf("first unpublished pass: modules %+v, want %+v", got.Modules, want)
 	}
 
@@ -403,7 +419,7 @@ func TestPinnerDropsUnpublishedModuleOnTheSecondPass(t *testing.T) {
 	if len(got.Targets) != 0 {
 		t.Fatalf("second unpublished pass: targets %v, want none", got.Targets)
 	}
-	if want := []Listed{{Module: "bare", NoDocs: true}, {Module: "echo", NoDocs: true}}; !reflect.DeepEqual(got.Modules, want) {
+	if want := []ondemand.Listed{{Module: "bare", NoDocs: true}, {Module: "echo", NoDocs: true}}; !reflect.DeepEqual(got.Modules, want) {
 		t.Fatalf("second unpublished pass: modules %+v, want %+v", got.Modules, want)
 	}
 }
@@ -423,15 +439,14 @@ func TestStopFallbackWaitsForIt(t *testing.T) {
 
 func TestFallbackPinnerListsFromTheVolume(t *testing.T) {
 	cold := newMemCold()
-	s := newColdStore(t, &fakeRender{size: 10}, cold)
 	l := &listRender{}
-	s.catalog.render = l.render
+	s := newColdStore(t, &fakeRender{size: 10}, cold, func(cfg *Config) { cfg.RenderList = l.render })
 	NewFallbackPinner(siteResolver(), s, time.Hour, log.NewNop()).sync(context.Background())
 
 	// A restart of the pod while S3 does not answer starts from these.
 	var state indexedState
 	readJSON(t, filepath.Join(s.cfg.Dir, indexDir, indexedFile), &state)
-	if want := []Listed{{Module: "echo"}}; !reflect.DeepEqual(state.Modules, want) {
+	if want := []ondemand.Listed{{Module: "echo"}}; !reflect.DeepEqual(state.Modules, want) {
 		t.Fatalf("modules on the volume = %+v, want %+v", state.Modules, want)
 	}
 	if _, ok := s.Menu("echo"); !ok || len(listedCards(t, s)) != 1 {
@@ -443,7 +458,7 @@ func TestChannelKeepsPublishedVersionOverPasses(t *testing.T) {
 	f := &fakeRender{size: 10}
 	s, _ := newTestStore(t, f, 1<<20)
 	render := s.cfg.Render
-	s.cfg.Render = func(ctx context.Context, module, version, workDir, outDir string, withAI bool, stage func(Stage)) error {
+	s.cfg.Render = func(ctx context.Context, module, version, workDir, outDir string, withAI bool, stage func(ondemand.Stage)) error {
 		if version == "v2.0.0" {
 			return docs.ErrNoPages
 		}
@@ -454,8 +469,8 @@ func TestChannelKeepsPublishedVersionOverPasses(t *testing.T) {
 	r := Resolver{
 		Modules: func(context.Context) ([]registry.Module, error) { return []registry.Module{{Name: "echo"}}, nil },
 		Policy: SitePolicy{
-			Channels: func(context.Context, string) (Channels, error) {
-				return Channels{"stable": stable.Load().(string)}, nil
+			Channels: func(context.Context, string) (ondemand.Channels, error) {
+				return ondemand.Channels{"stable": stable.Load().(string)}, nil
 			},
 		},
 		Logger: log.NewNop(),
@@ -486,16 +501,16 @@ func TestFollowerServesTheBranchOfAPullOverride(t *testing.T) {
 	ctx := context.Background()
 
 	// The module ran v1.0.0 before: its version is here, linked as stable.
-	if err := s.renderPinned(ctx, Target{Module: "console", Version: "v1.0.0"}, false); err != nil {
+	if err := s.renderPinned(ctx, ondemand.Target{Module: "console", Version: "v1.0.0"}, false); err != nil {
 		t.Fatal(err)
 	}
-	s.SetChannels(map[string]Channels{"console": {"stable": "v1.0.0"}})
+	s.SetChannels(map[string]ondemand.Channels{"console": {"stable": "v1.0.0"}})
 
-	branch := Target{Module: "console", Version: "main", Rev: "sha256:aaa"}
+	branch := ondemand.Target{Module: "console", Version: "main", Rev: "sha256:aaa"}
 	state := indexedState{
-		Targets:  []Target{branch},
-		Channels: map[string]Channels{"console": {"stable": "main"}},
-		Modules:  []Listed{{Module: "console", Enabled: true}},
+		Targets:  []ondemand.Target{branch},
+		Channels: map[string]ondemand.Channels{"console": {"stable": "main"}},
+		Modules:  []ondemand.Listed{{Module: "console", Enabled: true}},
 	}
 	putIndexed(t, cold, state)
 
@@ -541,9 +556,9 @@ func TestFollowerRetriesALastingBranchFailureLater(t *testing.T) {
 	ctx := context.Background()
 
 	putIndexed(t, cold, indexedState{
-		Targets:  []Target{{Module: "console", Version: "main", Rev: "sha256:aaa"}},
-		Channels: map[string]Channels{"console": {"stable": "main"}},
-		Modules:  []Listed{{Module: "console", Enabled: true}},
+		Targets:  []ondemand.Target{{Module: "console", Version: "main", Rev: "sha256:aaa"}},
+		Channels: map[string]ondemand.Channels{"console": {"stable": "main"}},
+		Modules:  []ondemand.Listed{{Module: "console", Enabled: true}},
 	})
 
 	f.fail.Store(true)
@@ -567,13 +582,12 @@ func TestFollowerRetriesALastingBranchFailureLater(t *testing.T) {
 // the pass ends.
 func TestPinnerShowsProgressOfThePass(t *testing.T) {
 	f := &fakeRender{size: 10}
-	s, _ := newTestStore(t, f, 1<<20)
 	l := &listRender{}
-	s.catalog.render = l.render
+	s, _ := newTestStore(t, f, 1<<20, func(cfg *Config) { cfg.RenderList = l.render })
 	render := summaryRender(f)
 	var seen []card
 	var seenState indexedState
-	s.cfg.Render = func(ctx context.Context, module, version, workDir, outDir string, withAI bool, stage func(Stage)) error {
+	s.cfg.Render = func(ctx context.Context, module, version, workDir, outDir string, withAI bool, stage func(ondemand.Stage)) error {
 		if module == "zeta" && seen == nil {
 			seen = listedCards(t, s)
 			readJSON(t, filepath.Join(s.cfg.Dir, indexDir, indexedFile), &seenState)
@@ -603,7 +617,7 @@ func TestPinnerShowsProgressOfThePass(t *testing.T) {
 		t.Fatalf("list while zeta renders = %+v, want %+v", seen, want)
 	}
 	// The followers get the published version from targets.json.
-	if want := []Target{{Module: "alpha", Version: "v1.0.0"}}; !reflect.DeepEqual(seenState.Targets, want) {
+	if want := []ondemand.Target{{Module: "alpha", Version: "v1.0.0"}}; !reflect.DeepEqual(seenState.Targets, want) {
 		t.Fatalf("targets.json while zeta renders = %+v, want %+v", seenState.Targets, want)
 	}
 }
@@ -611,11 +625,10 @@ func TestPinnerShowsProgressOfThePass(t *testing.T) {
 // A restarted leader lists the modules of the saved targets.json before
 // the registry answers.
 func TestPinnerListsSavedModulesBeforeTheRegistry(t *testing.T) {
-	s, _ := newTestStore(t, &fakeRender{size: 10}, 1000)
-	s.catalog.render = (&listRender{}).render
+	s, _ := newTestStore(t, &fakeRender{size: 10}, 1000, func(cfg *Config) { cfg.RenderList = (&listRender{}).render })
 	if _, err := s.saveIndexedLocal(indexedState{
-		Targets: []Target{{Module: "echo", Version: "v1.0.0"}},
-		Modules: []Listed{{Module: "echo", Enabled: true}, {Module: "later"}},
+		Targets: []ondemand.Target{{Module: "echo", Version: "v1.0.0"}},
+		Modules: []ondemand.Listed{{Module: "echo", Enabled: true}, {Module: "later"}},
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -651,10 +664,9 @@ func TestWriteListReportsFailure(t *testing.T) {
 	if err := metrics.RegisterMetrics(ms); err != nil {
 		t.Fatal(err)
 	}
-	s, _ := newTestStore(t, &fakeRender{size: 10}, 1000)
-	s.cfg.Metrics = ms
 	l := &listRender{}
-	s.catalog.render = l.render
+	s, _ := newTestStore(t, &fakeRender{size: 10}, 1000, func(cfg *Config) { cfg.RenderList = l.render })
+	s.cfg.Metrics = ms
 	gauge := func() string {
 		rec := httptest.NewRecorder()
 		ms.Handler().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/metrics", nil))
@@ -665,7 +677,7 @@ func TestWriteListReportsFailure(t *testing.T) {
 		}
 		return ""
 	}
-	write := func() { _ = s.WriteList(context.Background(), []Listed{{Module: "echo"}}, nil) }
+	write := func() { _ = s.WriteList(context.Background(), []ondemand.Listed{{Module: "echo"}}, nil) }
 
 	l.fail.Store(true)
 	write()
