@@ -94,6 +94,8 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-cloud-provider-zvirt:cloud-data-discoverer",
 	"system:serviceaccount:d8-cloud-provider-zvirt:validation-webhook",
 	"system:serviceaccount:d8-cni-cilium:agent",
+	"system:serviceaccount:d8-cni-cilium:clustermesh-apiserver",
+	"system:serviceaccount:d8-cni-cilium:clustermesh-controller",
 	"system:serviceaccount:d8-cni-cilium:egress-gateway-agent",
 	"system:serviceaccount:d8-cni-cilium:operator",
 	"system:serviceaccount:d8-cni-cilium:relay",

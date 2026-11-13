@@ -413,6 +413,15 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/modules/021-cni-cilium/hooks/clustermesh
+  to: /deckhouse/modules/021-cni-cilium/hooks/clustermesh
+  excludePaths:
+    - '**/*_test.go'
+    - '**/*.sh'
+    - '**/AGENTS.md'
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/modules/030-cloud-provider-dynamix/hooks
   to: /deckhouse/modules/030-cloud-provider-dynamix/hooks
   excludePaths:

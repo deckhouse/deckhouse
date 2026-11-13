@@ -517,6 +517,11 @@ groups:
     description:
       en: "Healthcheck of the `opagent` agent of the `observability` module"
       ru: "Healthcheck агента `opagent` модуля `observability`"
+  - ports: "4294"
+    protocol: TCP
+    description:
+      en: CNI Cilium ClusterMesh etcd on control-plane nodes, connected to by kvstoremesh on the control-plane nodes of the peer clusters
+      ru: etcd ClusterMesh CNI Cilium на control-plane-узлах, к нему подключается kvstoremesh с control-plane-узлов соседних кластеров
   - ports: "4295&#8209;4297"
     protocol: UDP
     description:

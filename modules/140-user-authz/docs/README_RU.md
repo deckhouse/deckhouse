@@ -592,6 +592,8 @@ read:
     - mutations.gatekeeper.sh/assignmetadata
     - mutations.gatekeeper.sh/modifyset
     - namespaces
+    - network.deckhouse.io/clustermeshes
+    - network.deckhouse.io/clusternetworkpeers
     - network.deckhouse.io/egressgatewaypolicies
     - network.deckhouse.io/egressgateways
     - network.deckhouse.io/metalloadbalancerbgppeers
@@ -773,6 +775,7 @@ write:
     - extensions.istio.io/wasmplugins
     - extensions/daemonsets
     - gateway.networking.k8s.io/gatewayclasses
+    - network.deckhouse.io/clusternetworkpeers
     - network.deckhouse.io/egressgatewaypolicies
     - network.deckhouse.io/egressgateways
     - storage.k8s.io/storageclasses

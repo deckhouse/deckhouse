@@ -394,6 +394,19 @@ alerts:
         Objects in namespace {{ $labels.project }} use cluster-wide resources that are not available to its project.
       severity: "6"
       markupFormat: markdown
+    - name: CniCiliumClusterMeshPeeringModuleDisabled
+      sourceFile: ee/modules/021-cni-cilium/monitoring/prometheus-rules/clustermesh.yaml
+      moduleUrl: 021-cni-cilium
+      module: cni-cilium
+      edition: ee
+      description: |
+        ClusterMesh connects the clusters peered by the `peering` module. With the module disabled, no new mesh with a peer comes up, and the meshes already configured are not updated.
+
+        To resolve this issue, enable the `peering` module, or set `clusterMesh.enabled: false` in the `cni-cilium` ModuleConfig.
+      summary: |
+        ClusterMesh is enabled, but the peering module is disabled.
+      severity: "4"
+      markupFormat: markdown
     - name: CniCiliumNonStandardVXLANPortFound
       sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/configmap.yaml
       moduleUrl: 021-cni-cilium

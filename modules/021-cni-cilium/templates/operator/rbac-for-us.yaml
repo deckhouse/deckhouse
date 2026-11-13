@@ -62,6 +62,22 @@ rules:
   - get
   - list
   - watch
+  {{- if include "cni_cilium_clustermesh_enabled" . }}
+  # EndpointSlice synchronization of global services with the peers' backends
+  - create
+  - update
+  - delete
+  - deletecollection
+  {{- end }}
+{{- if include "cni_cilium_clustermesh_enabled" . }}
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+{{- end }}
 - apiGroups:
   - ""
   resources:

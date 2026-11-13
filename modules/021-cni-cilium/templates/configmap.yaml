@@ -19,7 +19,17 @@ data:
   default-lb-service-ipam: none
   #
   identity-allocation-mode: crd
+  {{- if include "cni_cilium_clustermesh_enabled" . }}
+  cluster-name: {{ include "clustermesh_cluster_name" . | quote }}
+  cluster-id: {{ .Values.cniCilium.clusterMesh.clusterID | quote }}
+  # one file per peer, rendered by clustermesh-controller into the cilium-clustermesh secret
+  clustermesh-config: /var/lib/cilium/clustermesh/
+  # The operator creates EndpointSlices of the peers' backends for global services that import them, so that
+  # a global headless service resolves in DNS to the pods of the peers too (beta in upstream).
+  clustermesh-enable-endpoint-sync: "true"
+  {{- else }}
   cluster-name: default # make sense only for cluster mesh
+  {{- end }}
   vlan-bpf-bypass: "0"
 
   debug: {{ .Values.cniCilium.debugLogging | quote }}

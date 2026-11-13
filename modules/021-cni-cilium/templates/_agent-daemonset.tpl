@@ -204,6 +204,11 @@ spec:
         - name: hubble-tls
           mountPath: /var/lib/cilium/tls/hubble
           readOnly: true
+        {{- if include "cni_cilium_clustermesh_enabled" $context }}
+        - name: clustermesh-secrets
+          mountPath: /var/lib/cilium/clustermesh
+          readOnly: true
+        {{- end }}
         - name: tmp
           mountPath: /tmp
         - name: root-config
@@ -704,6 +709,29 @@ spec:
                 path: server.crt
               - key: tls.key
                 path: server.key
+      {{- if include "cni_cilium_clustermesh_enabled" $context }}
+      # The agents read the peers from the local kvstoremesh cache: one config file per peer from
+      # cilium-clustermesh (rendered by clustermesh-controller), and the client certificate of the
+      # local-<cluster> etcd user. Items of cilium-clustermesh are not listed, so that adding or
+      # removing a peer updates the files without restarting the agents.
+      - name: clustermesh-secrets
+        projected:
+          defaultMode: 0400
+          sources:
+          - secret:
+              name: cilium-clustermesh
+              optional: true
+          - secret:
+              name: clustermesh-apiserver-local-cert
+              optional: true
+              items:
+              - key: tls.key
+                path: local-etcd-client.key
+              - key: tls.crt
+                path: local-etcd-client.crt
+              - key: ca.crt
+                path: local-etcd-client-ca.crt
+      {{- end }}
       - name: root-config
         emptyDir: {}
       - name: var-lib-cilium-include-bpf

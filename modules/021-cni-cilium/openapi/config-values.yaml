@@ -1,4 +1,11 @@
 type: object
+x-deckhouse-validations:
+  - expression: "!has(self.clusterMesh) || !self.clusterMesh.enabled || has(self.clusterMesh.clusterID)"
+    message: "clusterMesh.clusterID is required when clusterMesh.enabled is true"
+  - expression: "!has(self.clusterMesh) || !self.clusterMesh.enabled || (has(self.tunnelMode) && self.tunnelMode == 'VXLAN')"
+    message: "clusterMesh requires tunnelMode: VXLAN, set explicitly in this ModuleConfig"
+  - expression: "!has(self.clusterMesh) || !self.clusterMesh.enabled || !has(self.encryption) || !has(self.encryption.mode) || self.encryption.mode == 'Disabled'"
+    message: "clusterMesh requires encryption.mode: Disabled"
 properties:
   sctpEnabled:
     type: boolean
@@ -384,3 +391,54 @@ properties:
           The filter needs the `nf_tables` kernel module in the nft mode and the `ip_tables`, `iptable_raw`, `xt_tcpudp` and `xt_u32` kernel modules in the legacy mode.
 
           By default, kernel modules are not loaded: if a module of the mode selected by iptables-wrapper is not loaded, the filter uses the other mode when its modules are loaded, and the node is reported as unprotected otherwise. Set to `true` to load the modules of the selected mode.
+  clusterMesh:
+    type: object
+    default: {}
+    x-experimental: true
+    x-doc-d8Editions:
+      - ee
+    description: |
+      **Experimental**.
+
+      Cilium ClusterMesh: direct pod-to-pod connectivity with the clusters this cluster is peered with by the `peering` module.
+
+      Peers are connected by `ClusterNetworkPeer` objects, one per `ClusterPeer`, created on both sides. Requires `tunnelMode: VXLAN` and `encryption.mode: Disabled` on every cluster of the mesh, the same VXLAN port, and non-overlapping pod subnets.
+
+      The cluster name in the mesh is the cluster UUID without dashes (32 characters).
+
+      > The cluster name and ID become part of every Cilium identity. Enabling ClusterMesh on a running cluster reallocates identities: plan pod restarts.
+    properties:
+      enabled:
+        type: boolean
+        default: false
+        description: |
+          Enable ClusterMesh.
+      clusterID:
+        type: integer
+        minimum: 1
+        maximum: 255
+        description: |
+          Cluster ID in the mesh. Must be unique among all clusters this cluster is meshed with, and among their own peers.
+        x-examples: [11]
+      inlet:
+        type: string
+        enum: ["HostPort"]
+        default: "HostPort"
+        description: |
+          How `clustermesh-apiserver` is exposed to the peers.
+
+          - `HostPort`: one replica per control-plane node, each on a host port. A peer connects to one replica at a time and moves to another only when that one fails, so a reconnection does not land on a different etcd instance at random.
+      hostPort:
+        type: object
+        default: {}
+        description: |
+          Settings for the `HostPort` inlet.
+        properties:
+          port:
+            type: integer
+            minimum: 1024
+            maximum: 65535
+            default: 4294
+            description: |
+              Host port of the etcd of `clustermesh-apiserver` on control-plane nodes. Must be reachable from the control-plane nodes of the peer clusters, where their kvstoremesh runs. Must not collide with another host port of the platform. Must not be 2379, which the control-plane etcd uses.
+            x-examples: [4294]

@@ -207,6 +207,87 @@ TC program skips the nodeport path, so the option would silently reach the pod.
 
 Not upstream; keep until the fixed kernel is the minimum supported one.
 
+## 023-clustermesh-peer-nodes-without-tunnel.patch
+
+With the host firewall on, upstream gives every remote node address a tunnel
+IP in the ipcache (`nodeAddressHasTunnelIP`), and ClusterMesh makes the peer's
+nodes remote nodes too. A peer node that reaches one of our services through a
+load balancer outside both clusters -- one that DNATs to a NodePort and keeps
+the client address (a hypervisor's MetalLB, a cloud NLB with client IP
+preservation) -- then breaks: the NodePort reply path (`bpf/lib/nodeport.h`,
+after the reverse DNAT) finds the client in the ipcache with a tunnel endpoint
+and sends the SYN-ACK through VXLAN straight to the peer node, from
+nodeIP:nodePort instead of the VIP, and the peer resets it. Pods are hit the
+same way, since their traffic to the VIP is masqueraded to the node address.
+
+The patch gives the InternalIP and ExternalIP of nodes from another cluster no
+tunnel IP. They stay remote-node in the ipcache, so:
+
+- replies to them leave by the native route, back through the load balancer;
+- pod-to-peer-node traffic is masqueraded to the node address
+  (`__snat_v4_needs_masquerade`, overlay branch) -- this is what kvstoremesh,
+  a pod, uses to reach the peer's etcd on its host port.
+
+The cost: the tunnel exists upstream so that a remote node's host firewall sees
+the identity of the pod (cilium/cilium d20d90564c). The peer's host firewall
+now sees our pods reaching its nodes as our remote-node identity, so its host
+policies cannot tell our pods apart on the node addresses.
+
+Keep when porting:
+
+- not `SkipTunnel`: that flag also skips the masquerade, and pod traffic to the
+  peer's nodes would leave with a pod address;
+- the nodes of this cluster and every CiliumInternalIP keep the tunnel IP; node
+  encryption and `join-cluster` keep the upstream behavior;
+- upsert and removal (`NodeUpdated`, `removeNodeFromIPCache`) must compute the
+  tunnel IP the same way, or the ipcache entry is not removed.
+
+Upstream has no fix (2026-11): the same reply tunneled past an external load
+balancer is reported for one cluster in cilium/cilium#39773 (open). The one
+attempt to set `SkipTunnel` in OSS (cilium/cilium#36978, plumbing 9715b5ce22)
+was reverted (3864540c18, 07f37d3a5b; on v1.17 by #38101 after #38099, pod to
+remote node traffic left unmasqueraded).
+
+## 024-deckhouse-global-service-annotations.patch
+
+Replaces the upstream ClusterMesh service annotations with two Deckhouse ones.
+
+`network.deckhouse.io/global-service-mode` replaces `service.cilium.io/global`
+(`io.cilium/global-service`) and `service.cilium.io/shared`
+(`io.cilium/shared-service`):
+
+| Value | Upstream equivalent | Meaning |
+|---|---|---|
+| `Local`, missing or unknown | `global: "false"` | The service is local |
+| `ImportOnly` | `global: "true"`, `shared: "false"` | Takes the peers' backends, does not offer its own |
+| `ImportAndExport` | `global: "true"`, `shared: "true"` | Takes the peers' backends and offers its own |
+
+`network.deckhouse.io/global-service-traffic-distribution` replaces
+`service.cilium.io/affinity` (`io.cilium/service-affinity`) and is read only
+when the mode is `ImportOnly` or `ImportAndExport`:
+
+| Value | Upstream equivalent |
+|---|---|
+| `Any`, missing or unknown | `none` |
+| `PreferLocalCluster` | `local` |
+| `PreferRemoteCluster` | `remote` |
+
+The values are compared case-insensitively. An unknown mode keeps the service
+local, so a typo does not send traffic to the peers.
+
+`pkg/k8s/service_cache.go`: when a peer's service goes away, upstream sends the
+update only to a local service that is shared. An `ImportOnly` service takes the
+peer's backends but is not shared, so it kept forwarding to them. The event is
+now gated on taking the peers' backends (`IncludeExternal`) instead.
+
+Read in `pkg/k8s/service.go` (agent and clustermesh-apiserver) and in
+`pkg/clustermesh/endpointslicesync` (operator); the MCS-API service controller
+sets `global-service-mode: ImportAndExport` on the services it derives. The module
+enables EndpointSlice synchronization together with ClusterMesh, so a global headless
+service that imports the peers' backends resolves to their pods; MCS-API stays off and
+is patched only so that it keeps working if enabled. The upstream tests that fed the old annotations are rewritten, and
+the unit tests check that the upstream names are ignored.
+
 ## vendor/
 
 Patches for vendored dependencies, applied after `go mod vendor`. See `vendor/README.md`.

@@ -1,0 +1,612 @@
+diff --git a/pkg/annotation/k8s.go b/pkg/annotation/k8s.go
+index d6e0804074..9464ba8c99 100644
+--- a/pkg/annotation/k8s.go
++++ b/pkg/annotation/k8s.go
+@@ -5,6 +5,7 @@ package annotation
+ 
+ import (
+ 	"regexp"
++	"strings"
+ 
+ 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+ )
+@@ -105,6 +106,26 @@ const (
+ 	SharedService      = ServicePrefix + "/shared"
+ 	SharedServiceAlias = Prefix + "/shared-service"
+ 
++	// DeckhouseGlobalServiceMode replaces GlobalService and SharedService: whether the service
++	// takes the backends of the peer clusters and whether it offers its own to them.
++	// Allowed values (case-insensitive; a missing or unknown value means Local):
++	//  - Local: the service is local, as without the annotation.
++	//  - ImportOnly: the service takes the backends of the peers and does not offer its own.
++	//  - ImportAndExport: the service takes the backends of the peers and offers its own.
++	DeckhouseGlobalServiceMode = "network.deckhouse.io/global-service-mode"
++
++	// DeckhouseGlobalServiceTrafficDistribution replaces ServiceAffinity: which backends the
++	// clients of this cluster prefer. Read only when the service imports.
++	// Allowed values (case-insensitive; a missing or unknown value means Any):
++	//  - Any: the backends of all clusters, without preference.
++	//  - PreferLocalCluster: the local backends while some are ready.
++	//  - PreferRemoteCluster: the backends of the peers while some are ready.
++	DeckhouseGlobalServiceTrafficDistribution = "network.deckhouse.io/global-service-traffic-distribution"
++
++	DeckhouseGlobalServiceModeLocal           = "Local"
++	DeckhouseGlobalServiceModeImportOnly      = "ImportOnly"
++	DeckhouseGlobalServiceModeImportAndExport = "ImportAndExport"
++
+ 	// ServiceAffinity / ServiceAffinityAlias annotations determines the
+ 	// preferred endpoint destination.
+ 	// Allowed values:
+@@ -197,6 +218,19 @@ var (
+ 	CiliumPrefixRegex = regexp.MustCompile(`^([A-Za-z0-9]+\.)*cilium.io/`)
+ )
+ 
++// DeckhouseGlobalServiceModeOf returns the DeckhouseGlobalServiceMode of the object in its
++// canonical spelling: Local for a missing or unknown value.
++func DeckhouseGlobalServiceModeOf(obj metav1.Object) string {
++	value, _ := Get(obj, DeckhouseGlobalServiceMode)
++	switch {
++	case strings.EqualFold(value, DeckhouseGlobalServiceModeImportOnly):
++		return DeckhouseGlobalServiceModeImportOnly
++	case strings.EqualFold(value, DeckhouseGlobalServiceModeImportAndExport):
++		return DeckhouseGlobalServiceModeImportAndExport
++	}
++	return DeckhouseGlobalServiceModeLocal
++}
++
+ // Get returns the annotation value associated with the given key, or any of
+ // the additional aliases if not found.
+ func Get(obj metav1.Object, key string, aliases ...string) (value string, ok bool) {
+diff --git a/pkg/annotation/k8s_test.go b/pkg/annotation/k8s_test.go
+index fd4e9d606e..ace1b1ff8e 100644
+--- a/pkg/annotation/k8s_test.go
++++ b/pkg/annotation/k8s_test.go
+@@ -59,3 +59,19 @@ func TestGet(t *testing.T) {
+ 		})
+ 	}
+ }
++
++func TestDeckhouseGlobalServiceModeOf(t *testing.T) {
++	withMode := func(mode string) *corev1.Service {
++		svc := &corev1.Service{}
++		svc.SetAnnotations(map[string]string{DeckhouseGlobalServiceMode: mode})
++		return svc
++	}
++
++	require.Equal(t, DeckhouseGlobalServiceModeLocal, DeckhouseGlobalServiceModeOf(&corev1.Service{}))
++	require.Equal(t, DeckhouseGlobalServiceModeLocal, DeckhouseGlobalServiceModeOf(withMode("Local")))
++	require.Equal(t, DeckhouseGlobalServiceModeImportOnly, DeckhouseGlobalServiceModeOf(withMode("ImportOnly")))
++	require.Equal(t, DeckhouseGlobalServiceModeImportOnly, DeckhouseGlobalServiceModeOf(withMode("importonly")))
++	require.Equal(t, DeckhouseGlobalServiceModeImportAndExport, DeckhouseGlobalServiceModeOf(withMode("ImportAndExport")))
++	require.Equal(t, DeckhouseGlobalServiceModeLocal, DeckhouseGlobalServiceModeOf(withMode("")))
++	require.Equal(t, DeckhouseGlobalServiceModeLocal, DeckhouseGlobalServiceModeOf(withMode("true")))
++}
+diff --git a/pkg/clustermesh/endpointslicesync/endpointslice_test.go b/pkg/clustermesh/endpointslicesync/endpointslice_test.go
+index b169401b54..a157745206 100644
+--- a/pkg/clustermesh/endpointslicesync/endpointslice_test.go
++++ b/pkg/clustermesh/endpointslicesync/endpointslice_test.go
+@@ -44,7 +44,7 @@ func createService(name string) *slim_corev1.Service {
+ 			Name:      name,
+ 			Namespace: name,
+ 			Annotations: map[string]string{
+-				annotation.GlobalService:                   "true",
++				annotation.DeckhouseGlobalServiceMode:      annotation.DeckhouseGlobalServiceModeImportAndExport,
+ 				annotation.GlobalServiceSyncEndpointSlices: "true",
+ 			},
+ 		},
+@@ -255,3 +255,23 @@ func Test_meshEndpointSlice_Reconcile(t *testing.T) {
+ 		}, timeout, tick, "endpointslice is not reconciled correctly")
+ 	})
+ }
++
++func TestDoesServiceSyncEndpointSliceDeckhouseMode(t *testing.T) {
++	withMode := func(mode string) *slim_corev1.Service {
++		svc := createService("svc")
++		svc.Annotations[annotation.DeckhouseGlobalServiceMode] = mode
++		return svc
++	}
++
++	// Only a service that takes the backends of the peers gets their EndpointSlices.
++	require.True(t, doesServiceSyncEndpointSlice(withMode(annotation.DeckhouseGlobalServiceModeImportOnly)))
++	require.True(t, doesServiceSyncEndpointSlice(withMode(annotation.DeckhouseGlobalServiceModeImportAndExport)))
++	require.False(t, doesServiceSyncEndpointSlice(withMode(annotation.DeckhouseGlobalServiceModeLocal)))
++	require.False(t, doesServiceSyncEndpointSlice(withMode("true")))
++
++	// The upstream annotation is replaced, not aliased.
++	svc := createService("svc")
++	delete(svc.Annotations, annotation.DeckhouseGlobalServiceMode)
++	svc.Annotations[annotation.GlobalService] = "true"
++	require.False(t, doesServiceSyncEndpointSlice(svc))
++}
+diff --git a/pkg/clustermesh/endpointslicesync/service_informer.go b/pkg/clustermesh/endpointslicesync/service_informer.go
+index 174f3c1e33..be3540e9a8 100644
+--- a/pkg/clustermesh/endpointslicesync/service_informer.go
++++ b/pkg/clustermesh/endpointslicesync/service_informer.go
+@@ -64,12 +64,12 @@ func newNotFoundError(message string) *errors.StatusError {
+ }
+ 
+ func doesServiceSyncEndpointSlice(svc *slim_corev1.Service) bool {
+-	value, ok := annotation.Get(svc, annotation.GlobalService)
+-	if !ok || strings.ToLower(value) != "true" {
++	// Only a service that takes the backends of the peers gets their EndpointSlices.
++	if annotation.DeckhouseGlobalServiceModeOf(svc) == annotation.DeckhouseGlobalServiceModeLocal {
+ 		return false
+ 	}
+ 
+-	value, ok = annotation.Get(svc, annotation.GlobalServiceSyncEndpointSlices)
++	value, ok := annotation.Get(svc, annotation.GlobalServiceSyncEndpointSlices)
+ 	if !ok {
+ 		// If the service is headless we sync the EndpointSlice by default
+ 		return svc.Spec.ClusterIP == v1.ClusterIPNone
+diff --git a/pkg/clustermesh/mcsapi/service_controller.go b/pkg/clustermesh/mcsapi/service_controller.go
+index 10bd3632d2..d0f9b57e19 100644
+--- a/pkg/clustermesh/mcsapi/service_controller.go
++++ b/pkg/clustermesh/mcsapi/service_controller.go
+@@ -215,7 +215,7 @@ func (r *mcsAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
+ 	if svc.Annotations == nil {
+ 		svc.Annotations = map[string]string{}
+ 	}
+-	svc.Annotations[annotation.GlobalService] = "true"
++	svc.Annotations[annotation.DeckhouseGlobalServiceMode] = annotation.DeckhouseGlobalServiceModeImportAndExport
+ 
+ 	svc.Labels = maps.Clone(svcImport.Labels)
+ 	if svc.Labels == nil {
+diff --git a/pkg/clustermesh/mcsapi/service_controller_test.go b/pkg/clustermesh/mcsapi/service_controller_test.go
+index 3d68836f10..2d18b8118b 100644
+--- a/pkg/clustermesh/mcsapi/service_controller_test.go
++++ b/pkg/clustermesh/mcsapi/service_controller_test.go
+@@ -50,8 +50,8 @@ var (
+ 				Name:      "full",
+ 				Namespace: "default",
+ 				Annotations: map[string]string{
+-					annotation.GlobalService: "not-used",
+-					"test-annotation":        "copied",
++					annotation.DeckhouseGlobalServiceMode: "not-used",
++					"test-annotation":                     "copied",
+ 				},
+ 				Labels: map[string]string{
+ 					mcsapiv1alpha1.LabelSourceCluster: "not-used",
+@@ -150,7 +150,7 @@ var (
+ 				Name:      "import-only",
+ 				Namespace: "default",
+ 				Annotations: map[string]string{
+-					annotation.GlobalService: "not-used",
++					annotation.DeckhouseGlobalServiceMode: "not-used",
+ 				},
+ 				Labels: map[string]string{
+ 					mcsapiv1alpha1.LabelSourceCluster: "not-used",
+@@ -282,7 +282,7 @@ func Test_mcsDerivedService_Reconcile(t *testing.T) {
+ 			require.Equal(t, key.Name, svc.Labels[mcsapiv1alpha1.LabelServiceName])
+ 			require.Equal(t, "copied", svc.Labels["test-label"])
+ 
+-			require.Equal(t, "true", svc.Annotations[annotation.GlobalService])
++			require.Equal(t, annotation.DeckhouseGlobalServiceModeImportAndExport, svc.Annotations[annotation.DeckhouseGlobalServiceMode])
+ 			require.Equal(t, "copied", svc.Annotations["test-annotation"])
+ 
+ 			require.Len(t, svc.Spec.Ports, 2)
+@@ -326,7 +326,7 @@ func Test_mcsDerivedService_Reconcile(t *testing.T) {
+ 
+ 		require.Equal(t, "cluster1", svc.Labels[mcsapiv1alpha1.LabelSourceCluster])
+ 
+-		require.Equal(t, "true", svc.Annotations[annotation.GlobalService])
++		require.Equal(t, annotation.DeckhouseGlobalServiceModeImportAndExport, svc.Annotations[annotation.DeckhouseGlobalServiceMode])
+ 
+ 		require.Len(t, svc.Spec.Ports, 1)
+ 		require.Equal(t, "my-port-2", svc.Spec.Ports[0].Name)
+diff --git a/pkg/clustermesh/services_test.go b/pkg/clustermesh/services_test.go
+index ab2f967883..ff92490ef1 100644
+--- a/pkg/clustermesh/services_test.go
++++ b/pkg/clustermesh/services_test.go
+@@ -180,7 +180,7 @@ func TestClusterMeshServicesGlobal(t *testing.T) {
+ 			Name:      "foo",
+ 			Namespace: "default",
+ 			Annotations: map[string]string{
+-				"service.cilium.io/global": "true",
++				"network.deckhouse.io/global-service-mode": "ImportAndExport",
+ 			},
+ 		},
+ 		Spec: slim_corev1.ServiceSpec{
+@@ -252,7 +252,7 @@ func TestClusterMeshServicesUpdate(t *testing.T) {
+ 			Name:      "foo",
+ 			Namespace: "default",
+ 			Annotations: map[string]string{
+-				"service.cilium.io/global": "true",
++				"network.deckhouse.io/global-service-mode": "ImportAndExport",
+ 			},
+ 		},
+ 		Spec: slim_corev1.ServiceSpec{
+diff --git a/pkg/k8s/service.go b/pkg/k8s/service.go
+index 67c7b6329c..5aa2dcccbd 100644
+--- a/pkg/k8s/service.go
++++ b/pkg/k8s/service.go
+@@ -33,35 +33,27 @@ const (
+ )
+ 
+ func getAnnotationIncludeExternal(svc *slim_corev1.Service) bool {
+-	if value, ok := annotation.Get(svc, annotation.GlobalService, annotation.GlobalServiceAlias); ok {
+-		return strings.ToLower(value) == "true"
+-	}
+-
+-	return false
++	// Both non-local modes take the backends of the peer clusters.
++	return annotation.DeckhouseGlobalServiceModeOf(svc) != annotation.DeckhouseGlobalServiceModeLocal
+ }
+ 
+ func getAnnotationShared(svc *slim_corev1.Service) bool {
+-	// The SharedService annotation is ignored if the service is not declared as global.
+-	if !getAnnotationIncludeExternal(svc) {
+-		return false
+-	}
+-
+-	if value, ok := annotation.Get(svc, annotation.SharedService, annotation.SharedServiceAlias); ok {
+-		return strings.ToLower(value) == "true"
+-	}
+-
+-	// A global service is marked as shared by default.
+-	return true
++	return annotation.DeckhouseGlobalServiceModeOf(svc) == annotation.DeckhouseGlobalServiceModeImportAndExport
+ }
+ 
+ func getAnnotationServiceAffinity(svc *slim_corev1.Service) string {
+-	// The ServiceAffinity annotation is ignored if the service is not declared as global.
++	// The traffic distribution is ignored if the service does not take the backends of the peers.
+ 	if !getAnnotationIncludeExternal(svc) {
+ 		return serviceAffinityNone
+ 	}
+ 
+-	if value, ok := annotation.Get(svc, annotation.ServiceAffinity, annotation.ServiceAffinityAlias); ok {
+-		return strings.ToLower(value)
++	if value, ok := annotation.Get(svc, annotation.DeckhouseGlobalServiceTrafficDistribution); ok {
++		switch {
++		case strings.EqualFold(value, "PreferLocalCluster"):
++			return serviceAffinityLocal
++		case strings.EqualFold(value, "PreferRemoteCluster"):
++			return serviceAffinityRemote
++		}
+ 	}
+ 
+ 	return serviceAffinityNone
+diff --git a/pkg/k8s/service_cache.go b/pkg/k8s/service_cache.go
+index a8133af650..d415ff7f2d 100644
+--- a/pkg/k8s/service_cache.go
++++ b/pkg/k8s/service_cache.go
+@@ -802,8 +802,10 @@ func (s *ServiceCache) mergeExternalServiceDeleteLocked(service *serviceStore.Cl
+ 
+ 		endpoints, serviceReady := s.correlateEndpoints(id)
+ 
+-		// Only send event notification if service is shared.
+-		if ok && svc.Shared {
++		// Only send event notification if the service takes the backends of the peers.
++		// Deckhouse: gated on IncludeExternal, not Shared, so that an ImportOnly service
++		// (IncludeExternal without Shared) drops the backends of a peer that went away.
++		if ok && svc.IncludeExternal {
+ 			event := ServiceEvent{
+ 				Action:       UpdateService,
+ 				ID:           id,
+diff --git a/pkg/k8s/service_cache_test.go b/pkg/k8s/service_cache_test.go
+index 319d242525..85a6965c45 100644
+--- a/pkg/k8s/service_cache_test.go
++++ b/pkg/k8s/service_cache_test.go
+@@ -518,7 +518,7 @@ func TestExternalServiceMerging(t *testing.T) {
+ 			Name:      "foo",
+ 			Namespace: "bar",
+ 			Annotations: map[string]string{
+-				"service.cilium.io/global": "true",
++				"network.deckhouse.io/global-service-mode": "ImportAndExport",
+ 			},
+ 		},
+ 		Spec: slim_corev1.ServiceSpec{
+@@ -747,7 +747,7 @@ func TestExternalServiceMerging(t *testing.T) {
+ 					"foo": "bar",
+ 				},
+ 				Annotations: map[string]string{
+-					"service.cilium.io/global": "true",
++					"network.deckhouse.io/global-service-mode": "ImportAndExport",
+ 				},
+ 			},
+ 			Spec: slim_corev1.ServiceSpec{
+@@ -852,73 +852,79 @@ func TestExternalServiceMerging(t *testing.T) {
+ }
+ 
+ func TestExternalServiceMergingNoLocalEndpoints(t *testing.T) {
+-	db, nodeAddrs := newDB(t)
+-	svcCache := NewServiceCache(db, nodeAddrs, NewSVCMetricsNoop())
+-	swg := lock.NewStoppableWaitGroup()
+-
+-	svcID := svcCache.UpdateService(&slim_corev1.Service{
+-		ObjectMeta: slim_metav1.ObjectMeta{
+-			Namespace: "bar", Name: "foo",
+-			Annotations: map[string]string{
+-				"service.cilium.io/global": "true",
+-			},
+-		},
+-		Spec: slim_corev1.ServiceSpec{
+-			ClusterIP: "127.0.0.1",
+-			Type:      slim_corev1.ServiceTypeClusterIP,
+-			Ports: []slim_corev1.ServicePort{
+-				{
+-					Name:     "foo",
+-					Protocol: slim_corev1.ProtocolTCP,
+-					Port:     80,
++	// ImportOnly takes the backends of the peers like ImportAndExport, so it must drop them on
++	// their deletion too, although it does not export its own.
++	for _, mode := range []string{"ImportAndExport", "ImportOnly"} {
++		t.Run(mode, func(t *testing.T) {
++			db, nodeAddrs := newDB(t)
++			svcCache := NewServiceCache(db, nodeAddrs, NewSVCMetricsNoop())
++			swg := lock.NewStoppableWaitGroup()
++
++			svcID := svcCache.UpdateService(&slim_corev1.Service{
++				ObjectMeta: slim_metav1.ObjectMeta{
++					Namespace: "bar", Name: "foo",
++					Annotations: map[string]string{
++						"network.deckhouse.io/global-service-mode": mode,
++					},
+ 				},
+-			},
+-		},
+-	}, swg)
++				Spec: slim_corev1.ServiceSpec{
++					ClusterIP: "127.0.0.1",
++					Type:      slim_corev1.ServiceTypeClusterIP,
++					Ports: []slim_corev1.ServicePort{
++						{
++							Name:     "foo",
++							Protocol: slim_corev1.ProtocolTCP,
++							Port:     80,
++						},
++					},
++				},
++			}, swg)
+ 
+-	clusterService := serviceStore.ClusterService{
+-		Cluster: "cluster1", Namespace: "bar", Name: "foo",
+-		Backends: map[string]serviceStore.PortConfiguration{
+-			"10.0.0.1": map[string]*loadbalancer.L4Addr{
+-				"http": {Protocol: loadbalancer.TCP, Port: 80},
+-			},
+-		},
+-		IncludeExternal: true, Shared: true,
+-	}
++			clusterService := serviceStore.ClusterService{
++				Cluster: "cluster1", Namespace: "bar", Name: "foo",
++				Backends: map[string]serviceStore.PortConfiguration{
++					"10.0.0.1": map[string]*loadbalancer.L4Addr{
++						"http": {Protocol: loadbalancer.TCP, Port: 80},
++					},
++				},
++				IncludeExternal: true, Shared: true,
++			}
+ 
+-	recv := func(t *testing.T, ch <-chan ServiceEvent) ServiceEvent {
+-		t.Helper()
+-		select {
+-		case ev := <-ch:
+-			return ev
+-		case <-time.After(2 * time.Second):
+-			t.Fatal("Timeout out waiting to receive the expected event")
+-			return ServiceEvent{}
+-		}
+-	}
++			recv := func(t *testing.T, ch <-chan ServiceEvent) ServiceEvent {
++				t.Helper()
++				select {
++				case ev := <-ch:
++					return ev
++				case <-time.After(2 * time.Second):
++					t.Fatal("Timeout out waiting to receive the expected event")
++					return ServiceEvent{}
++				}
++			}
+ 
+-	// Merge the backends from a remote cluster
+-	svcCache.MergeExternalServiceUpdate(&clusterService, swg)
++			// Merge the backends from a remote cluster
++			svcCache.MergeExternalServiceUpdate(&clusterService, swg)
+ 
+-	event := recv(t, svcCache.Events)
+-	require.Equal(t, UpdateService, event.Action)
+-	require.Equal(t, svcID, event.ID)
+-	require.Len(t, event.Endpoints.Backends, 1)
++			event := recv(t, svcCache.Events)
++			require.Equal(t, UpdateService, event.Action)
++			require.Equal(t, svcID, event.ID)
++			require.Len(t, event.Endpoints.Backends, 1)
+ 
+-	// Delete the backends from a remote cluster
+-	svcCache.MergeExternalServiceDelete(&clusterService, swg)
++			// Delete the backends from a remote cluster
++			svcCache.MergeExternalServiceDelete(&clusterService, swg)
+ 
+-	event = recv(t, svcCache.Events)
+-	require.Equal(t, DeleteService, event.Action)
+-	require.Equal(t, svcID, event.ID)
++			event = recv(t, svcCache.Events)
++			require.Equal(t, DeleteService, event.Action)
++			require.Equal(t, svcID, event.ID)
+ 
+-	// Merge again the backends from a remote cluster
+-	svcCache.MergeExternalServiceUpdate(&clusterService, swg)
++			// Merge again the backends from a remote cluster
++			svcCache.MergeExternalServiceUpdate(&clusterService, swg)
+ 
+-	event = recv(t, svcCache.Events)
+-	require.Equal(t, UpdateService, event.Action)
+-	require.Equal(t, svcID, event.ID)
+-	require.Len(t, event.Endpoints.Backends, 1)
++			event = recv(t, svcCache.Events)
++			require.Equal(t, UpdateService, event.Action)
++			require.Equal(t, svcID, event.ID)
++			require.Len(t, event.Endpoints.Backends, 1)
++		})
++	}
+ }
+ 
+ func TestExternalServiceDeletion(t *testing.T) {
+@@ -1078,7 +1084,7 @@ func TestNonSharedService(t *testing.T) {
+ 			Name:      "foo",
+ 			Namespace: "bar",
+ 			Annotations: map[string]string{
+-				"service.cilium.io/global": "false",
++				"network.deckhouse.io/global-service-mode": "Local",
+ 			},
+ 		},
+ 		Spec: slim_corev1.ServiceSpec{
+diff --git a/pkg/k8s/service_test.go b/pkg/k8s/service_test.go
+index 0d0fe1abc1..13cbae4d31 100644
+--- a/pkg/k8s/service_test.go
++++ b/pkg/k8s/service_test.go
+@@ -23,89 +23,81 @@ import (
+ 	serviceStore "github.com/cilium/cilium/pkg/service/store"
+ )
+ 
+-func TestGetAnnotationIncludeExternal(t *testing.T) {
+-	svc := &slim_corev1.Service{ObjectMeta: slim_metav1.ObjectMeta{
+-		Name: "foo",
+-	}}
+-	require.False(t, getAnnotationIncludeExternal(svc))
+-
+-	svc = &slim_corev1.Service{ObjectMeta: slim_metav1.ObjectMeta{
+-		Annotations: map[string]string{"service.cilium.io/global": "True"},
+-	}}
+-	require.True(t, getAnnotationIncludeExternal(svc))
+-
+-	svc = &slim_corev1.Service{ObjectMeta: slim_metav1.ObjectMeta{
+-		Annotations: map[string]string{"service.cilium.io/global": "false"},
+-	}}
+-	require.False(t, getAnnotationIncludeExternal(svc))
++func withAnnotations(annotations map[string]string) *slim_corev1.Service {
++	return &slim_corev1.Service{ObjectMeta: slim_metav1.ObjectMeta{Name: "foo", Annotations: annotations}}
++}
+ 
+-	svc = &slim_corev1.Service{ObjectMeta: slim_metav1.ObjectMeta{
+-		Annotations: map[string]string{"service.cilium.io/global": ""},
+-	}}
+-	require.False(t, getAnnotationIncludeExternal(svc))
++func withMode(mode string) *slim_corev1.Service {
++	return withAnnotations(map[string]string{"network.deckhouse.io/global-service-mode": mode})
++}
+ 
+-	svc = &slim_corev1.Service{ObjectMeta: slim_metav1.ObjectMeta{
+-		Annotations: map[string]string{"io.cilium/global-service": "True"},
+-	}}
+-	require.True(t, getAnnotationIncludeExternal(svc))
++func TestGetAnnotationIncludeExternal(t *testing.T) {
++	require.False(t, getAnnotationIncludeExternal(withAnnotations(nil)))
++	require.False(t, getAnnotationIncludeExternal(withMode("Local")))
++	require.True(t, getAnnotationIncludeExternal(withMode("ImportOnly")))
++	require.True(t, getAnnotationIncludeExternal(withMode("ImportAndExport")))
++	require.True(t, getAnnotationIncludeExternal(withMode("importandexport")))
++
++	// An unknown or empty mode keeps the service local: a typo must not send traffic to the peers.
++	require.False(t, getAnnotationIncludeExternal(withMode("")))
++	require.False(t, getAnnotationIncludeExternal(withMode("true")))
++	require.False(t, getAnnotationIncludeExternal(withMode("Import")))
++
++	// The upstream annotations are replaced, not aliased.
++	require.False(t, getAnnotationIncludeExternal(withAnnotations(map[string]string{
++		"service.cilium.io/global": "true", "io.cilium/global-service": "true",
++	})))
+ }
+ 
+ func TestGetAnnotationShared(t *testing.T) {
+-	svc := &slim_corev1.Service{ObjectMeta: slim_metav1.ObjectMeta{
+-		Name: "foo",
+-	}}
+-	require.False(t, getAnnotationShared(svc))
+-	svc = &slim_corev1.Service{ObjectMeta: slim_metav1.ObjectMeta{
+-		Annotations: map[string]string{"service.cilium.io/global": "true"},
+-	}}
+-	require.True(t, getAnnotationShared(svc))
+-
+-	svc = &slim_corev1.Service{ObjectMeta: slim_metav1.ObjectMeta{
+-		Annotations: map[string]string{"service.cilium.io/shared": "true"},
+-	}}
+-	require.False(t, getAnnotationShared(svc))
+-
+-	svc = &slim_corev1.Service{ObjectMeta: slim_metav1.ObjectMeta{
+-		Annotations: map[string]string{"service.cilium.io/global": "true", "service.cilium.io/shared": "True"},
+-	}}
+-	require.True(t, getAnnotationShared(svc))
+-
+-	svc = &slim_corev1.Service{ObjectMeta: slim_metav1.ObjectMeta{
+-		Annotations: map[string]string{"service.cilium.io/global": "true", "service.cilium.io/shared": "false"},
+-	}}
+-	require.False(t, getAnnotationShared(svc))
+-
+-	svc = &slim_corev1.Service{ObjectMeta: slim_metav1.ObjectMeta{
+-		Annotations: map[string]string{"service.cilium.io/global": "true", "io.cilium/shared-service": "false"},
+-	}}
+-	require.False(t, getAnnotationShared(svc))
++	require.False(t, getAnnotationShared(withAnnotations(nil)))
++	require.False(t, getAnnotationShared(withMode("Local")))
++	require.False(t, getAnnotationShared(withMode("ImportOnly")))
++	require.True(t, getAnnotationShared(withMode("ImportAndExport")))
++	require.True(t, getAnnotationShared(withMode("IMPORTANDEXPORT")))
++	require.False(t, getAnnotationShared(withMode("Export")))
++
++	// The upstream annotations are ignored: Deckhouse replaces them.
++	require.True(t, getAnnotationShared(withAnnotations(map[string]string{
++		"network.deckhouse.io/global-service-mode": "ImportAndExport", "service.cilium.io/shared": "false",
++	})))
++	require.True(t, getAnnotationShared(withAnnotations(map[string]string{
++		"network.deckhouse.io/global-service-mode": "ImportAndExport", "io.cilium/shared-service": "false",
++	})))
++	require.False(t, getAnnotationShared(withAnnotations(map[string]string{
++		"service.cilium.io/global": "true", "service.cilium.io/shared": "true",
++	})))
+ }
+ 
+ func TestGetAnnotationServiceAffinity(t *testing.T) {
+-	svc := &slim_corev1.Service{ObjectMeta: slim_metav1.ObjectMeta{
+-		Annotations: map[string]string{"service.cilium.io/global": "true", "service.cilium.io/affinity": "local"},
+-	}}
+-	require.Equal(t, serviceAffinityLocal, getAnnotationServiceAffinity(svc))
+-
+-	svc = &slim_corev1.Service{ObjectMeta: slim_metav1.ObjectMeta{
+-		Annotations: map[string]string{"service.cilium.io/global": "true", "service.cilium.io/affinity": "remote"},
+-	}}
+-	require.Equal(t, serviceAffinityRemote, getAnnotationServiceAffinity(svc))
++	importing := func(mode, distribution string) *slim_corev1.Service {
++		return withAnnotations(map[string]string{
++			"network.deckhouse.io/global-service-mode":                 mode,
++			"network.deckhouse.io/global-service-traffic-distribution": distribution,
++		})
++	}
++	for _, mode := range []string{"ImportOnly", "ImportAndExport"} {
++		require.Equal(t, serviceAffinityLocal, getAnnotationServiceAffinity(importing(mode, "PreferLocalCluster")))
++		require.Equal(t, serviceAffinityRemote, getAnnotationServiceAffinity(importing(mode, "PreferRemoteCluster")))
++		require.Equal(t, serviceAffinityRemote, getAnnotationServiceAffinity(importing(mode, "preferremotecluster")))
++		require.Equal(t, serviceAffinityNone, getAnnotationServiceAffinity(importing(mode, "Any")))
++		// An unknown distribution means Any.
++		require.Equal(t, serviceAffinityNone, getAnnotationServiceAffinity(importing(mode, "local")))
++	}
++	require.Equal(t, serviceAffinityNone, getAnnotationServiceAffinity(withMode("ImportOnly")))
+ 
+-	svc = &slim_corev1.Service{ObjectMeta: slim_metav1.ObjectMeta{
+-		Annotations: map[string]string{"service.cilium.io/global": "true", "io.cilium/service-affinity": "local"},
+-	}}
+-	require.Equal(t, serviceAffinityLocal, getAnnotationServiceAffinity(svc))
++	// The distribution is ignored on a service that does not import.
++	require.Equal(t, serviceAffinityNone, getAnnotationServiceAffinity(importing("Local", "PreferRemoteCluster")))
++	require.Equal(t, serviceAffinityNone, getAnnotationServiceAffinity(withAnnotations(map[string]string{
++		"network.deckhouse.io/global-service-traffic-distribution": "PreferRemoteCluster",
++	})))
+ 
+-	svc = &slim_corev1.Service{ObjectMeta: slim_metav1.ObjectMeta{
+-		Annotations: map[string]string{"service.cilium.io/affinity": "remote"},
+-	}}
+-	require.Equal(t, serviceAffinityNone, getAnnotationServiceAffinity(svc))
++	// The upstream annotation is replaced, not aliased.
++	require.Equal(t, serviceAffinityNone, getAnnotationServiceAffinity(withAnnotations(map[string]string{
++		"network.deckhouse.io/global-service-mode": "ImportAndExport", "service.cilium.io/affinity": "local",
++	})))
+ 
+-	svc = &slim_corev1.Service{ObjectMeta: slim_metav1.ObjectMeta{
+-		Annotations: map[string]string{},
+-	}}
+-	require.Equal(t, serviceAffinityNone, getAnnotationServiceAffinity(svc))
++	require.Equal(t, serviceAffinityNone, getAnnotationServiceAffinity(withAnnotations(map[string]string{})))
+ }
+ 
+ func TestGetTopologyAware(t *testing.T) {

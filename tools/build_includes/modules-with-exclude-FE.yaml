@@ -1234,6 +1234,61 @@
   stageDependencies:
     setup:
         - '**/*'
+- add: /ee/modules/021-cni-cilium/templates/clustermesh
+  to: /deckhouse/modules/021-cni-cilium/templates/clustermesh
+  excludePaths:
+    - docs
+    - README.md
+    - '*-threat-model.md'
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
+    - apis
+    - requirements
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+    - e2e
+    - '**/AGENTS.md'
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/modules/021-cni-cilium/crds/clustermesh
+  to: /deckhouse/modules/021-cni-cilium/crds/clustermesh
+  excludePaths:
+    - docs
+    - README.md
+    - '*-threat-model.md'
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
+    - apis
+    - requirements
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+    - e2e
+    - '**/AGENTS.md'
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/modules/021-cni-cilium/monitoring/prometheus-rules/clustermesh.yaml
+  to: /deckhouse/modules/021-cni-cilium/monitoring/prometheus-rules/clustermesh.yaml
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/modules/030-cloud-provider-dynamix
   to: /deckhouse/modules/030-cloud-provider-dynamix
   excludePaths:

@@ -1,0 +1,90 @@
+diff --git a/pkg/node/manager/manager.go b/pkg/node/manager/manager.go
+index 02863fbc7e..86af238363 100644
+--- a/pkg/node/manager/manager.go
++++ b/pkg/node/manager/manager.go
+@@ -566,11 +566,17 @@ func (m *manager) checkpoint() error {
+ 	return f.CloseAtomicallyReplace()
+ }
+ 
+-func (m *manager) nodeAddressHasTunnelIP(address nodeTypes.Address) bool {
++func (m *manager) nodeAddressHasTunnelIP(n *nodeTypes.Node, address nodeTypes.Address) bool {
+ 	// If the host firewall is enabled, all traffic to remote nodes must go
+ 	// through the tunnel to preserve the source identity as part of the
+ 	// encapsulation. In encryption case we also want to use vxlan device
+ 	// to create symmetric traffic when sending nodeIP->pod and pod->nodeIP.
++	// Not for ClusterMesh peer nodes: a reply tunneled to them would bypass the
++	// external load balancer they reached us through (see patches/README.md).
++	if m.conf.EnableHostFirewall && !m.conf.NodeEncryptionEnabled() && !m.conf.JoinCluster &&
++		address.Type != addressing.NodeCiliumInternalIP && n.Cluster != m.conf.ClusterName {
++		return false
++	}
+ 	return address.Type == addressing.NodeCiliumInternalIP || m.conf.NodeEncryptionEnabled() ||
+ 		m.conf.EnableHostFirewall || m.conf.JoinCluster
+ }
+@@ -677,7 +683,7 @@ func (m *manager) NodeUpdated(n nodeTypes.Node) {
+ 		}
+ 
+ 		var tunnelIP netip.Addr
+-		if m.nodeAddressHasTunnelIP(address) {
++		if m.nodeAddressHasTunnelIP(&n, address) {
+ 			tunnelIP = nodeIP
+ 		}
+ 
+@@ -883,7 +889,7 @@ func (m *manager) removeNodeFromIPCache(oldNode nodeTypes.Node, resource ipcache
+ 		}
+ 
+ 		var oldTunnelIP netip.Addr
+-		if m.nodeAddressHasTunnelIP(address) {
++		if m.nodeAddressHasTunnelIP(&oldNode, address) {
+ 			oldTunnelIP = oldNodeIP
+ 		}
+ 
+diff --git a/pkg/node/manager/manager_test.go b/pkg/node/manager/manager_test.go
+index 2ad148a4e2..90fdfd1988 100644
+--- a/pkg/node/manager/manager_test.go
++++ b/pkg/node/manager/manager_test.go
+@@ -644,6 +644,44 @@ func TestIpcacheHealthIP(t *testing.T) {
+ 	}
+ }
+ 
++// With the host firewall on, ClusterMesh peer node addresses get no tunnel IP;
++// this cluster's nodes and every CiliumInternalIP keep it.
++func TestNodeAddressTunnelIPForPeerNodes(t *testing.T) {
++	setup(t)
++
++	for _, tc := range []struct {
++		name        string
++		encryptNode bool
++		joinCluster bool
++		cluster     string
++		addrType    addressing.AddressType
++		want        bool
++	}{
++		{name: "local node InternalIP", cluster: "c1", addrType: addressing.NodeInternalIP, want: true},
++		{name: "local node CiliumInternalIP", cluster: "c1", addrType: addressing.NodeCiliumInternalIP, want: true},
++		{name: "peer node InternalIP", cluster: "c2", addrType: addressing.NodeInternalIP, want: false},
++		{name: "peer node ExternalIP", cluster: "c2", addrType: addressing.NodeExternalIP, want: false},
++		{name: "peer node CiliumInternalIP", cluster: "c2", addrType: addressing.NodeCiliumInternalIP, want: true},
++		{name: "peer node InternalIP with node encryption", encryptNode: true, cluster: "c2", addrType: addressing.NodeInternalIP, want: true},
++		{name: "peer node InternalIP with join-cluster", joinCluster: true, cluster: "c2", addrType: addressing.NodeInternalIP, want: true},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			h, _ := cell.NewSimpleHealth()
++			mngr, err := New(&option.DaemonConfig{
++				ClusterName:        "c1",
++				EnableHostFirewall: true,
++				EncryptNode:        tc.encryptNode,
++				EnableIPSec:        tc.encryptNode,
++				JoinCluster:        tc.joinCluster,
++			}, newIPcacheMock(), newIPSetMock(), nil, NewNodeMetrics(), h)
++			require.NoError(t, err)
++			n := nodeTypes.Node{Name: "node1", Cluster: tc.cluster}
++			got := mngr.nodeAddressHasTunnelIP(&n, nodeTypes.Address{Type: tc.addrType, IP: net.ParseIP("10.0.0.2")})
++			require.Equal(t, tc.want, got)
++		})
++	}
++}
++
+ func TestNodeEncryption(t *testing.T) {
+ 	setup(t)
+ 

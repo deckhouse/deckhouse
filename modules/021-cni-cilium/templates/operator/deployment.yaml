@@ -53,7 +53,12 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized" "with-cloud-provider-uninitialized") | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "operator")) | nindent 6 }}
+      {{- if include "cni_cilium_clustermesh_enabled" . }}
+      {{- /* fsGroup lets the deckhouse user read the clustermesh secrets mounted 0400 root: Cilium skips an unreadable config without a word. */}}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs" . | nindent 6 }}
+      {{- else }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      {{- end }}
       automountServiceAccountToken: true
       imagePullSecrets:
       - name: deckhouse-registry
@@ -95,6 +100,11 @@ spec:
         - mountPath: /tmp/cilium/config-map
           name: cilium-config-path
           readOnly: true
+        {{- if include "cni_cilium_clustermesh_enabled" . }}
+        - mountPath: /var/lib/cilium/clustermesh
+          name: clustermesh-secrets
+          readOnly: true
+        {{- end }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
@@ -158,3 +168,26 @@ spec:
       - configMap:
           name: cilium-config
         name: cilium-config-path
+      {{- if include "cni_cilium_clustermesh_enabled" . }}
+      # EndpointSlice synchronization reads the peers from the local kvstoremesh cache, like the agents:
+      # one config file per peer from cilium-clustermesh and the client certificate of the local-<cluster>
+      # etcd user. Items of cilium-clustermesh are not listed, so that adding or removing a peer updates
+      # the files without restarting the operator.
+      - name: clustermesh-secrets
+        projected:
+          defaultMode: 0400
+          sources:
+          - secret:
+              name: cilium-clustermesh
+              optional: true
+          - secret:
+              name: clustermesh-apiserver-local-cert
+              optional: true
+              items:
+              - key: tls.key
+                path: local-etcd-client.key
+              - key: tls.crt
+                path: local-etcd-client.crt
+              - key: ca.crt
+                path: local-etcd-client-ca.crt
+      {{- end }}

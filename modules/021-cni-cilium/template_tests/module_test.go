@@ -168,28 +168,45 @@ func getSubdirs(dir string) ([]string, error) {
 	return subdirs, nil
 }
 
-const (
-	ciliumEETempaltesPath = "/deckhouse/ee/se-plus/modules/021-cni-cilium/templates/"
-	ciliumCETempaltesPath = "/deckhouse/modules/021-cni-cilium/templates/"
+// The repository root: the tests run from modules/021-cni-cilium/template_tests.
+var repoRoot = func() string {
+	wd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	return filepath.Join(wd, "..", "..", "..")
+}()
+
+var (
+	// Templates of the edition overlays, rendered together with the module as in the editions that have them.
+	ciliumEETemplatesPaths = []string{
+		filepath.Join(repoRoot, "ee/se-plus/modules/021-cni-cilium/templates") + "/",
+		filepath.Join(repoRoot, "ee/modules/021-cni-cilium/templates") + "/",
+	}
+	ciliumCETempaltesPath = filepath.Join(repoRoot, "modules/021-cni-cilium/templates") + "/"
 )
 
 var _ = Describe("Module :: cniCilium :: helm template ::", func() {
 
 	BeforeSuite(func() {
-		subDirs, err := getSubdirs(ciliumEETempaltesPath)
-		Expect(err).ShouldNot(HaveOccurred())
-		for _, subDir := range subDirs {
-			err := os.Symlink(ciliumEETempaltesPath+subDir, ciliumCETempaltesPath+subDir)
+		for _, eePath := range ciliumEETemplatesPaths {
+			subDirs, err := getSubdirs(eePath)
 			Expect(err).ShouldNot(HaveOccurred())
+			for _, subDir := range subDirs {
+				err := os.Symlink(eePath+subDir, ciliumCETempaltesPath+subDir)
+				Expect(err).ShouldNot(HaveOccurred())
+			}
 		}
 	})
 
 	AfterSuite(func() {
-		subDirs, err := getSubdirs(ciliumEETempaltesPath)
-		Expect(err).ShouldNot(HaveOccurred())
-		for _, subDir := range subDirs {
-			err := os.Remove(ciliumCETempaltesPath + subDir)
+		for _, eePath := range ciliumEETemplatesPaths {
+			subDirs, err := getSubdirs(eePath)
 			Expect(err).ShouldNot(HaveOccurred())
+			for _, subDir := range subDirs {
+				err := os.Remove(ciliumCETempaltesPath + subDir)
+				Expect(err).ShouldNot(HaveOccurred())
+			}
 		}
 	})
 

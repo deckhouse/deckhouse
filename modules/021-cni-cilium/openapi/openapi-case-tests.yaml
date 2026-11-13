@@ -1,5 +1,11 @@
 positive:
   configValues:
+  - tunnelMode: VXLAN
+    clusterMesh:
+      enabled: true
+      clusterID: 11
+      hostPort:
+        port: 4294
   - debugLogging: true
     labelsRegex:
     - "k8s:!app\\.kubernetes\\.io"
@@ -57,6 +63,11 @@ positive:
             key: KEY
 
 negative:
+  configValues:
+  - clusterMesh:
+      clusterID: 256
+  - clusterMesh:
+      inlet: LoadBalancer
   values:
   - internal:
       maglevHash: ""
