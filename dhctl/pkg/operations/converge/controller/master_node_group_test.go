@@ -20,12 +20,11 @@ import (
 	"fmt"
 	"testing"
 
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/settings"
+	sshconfig "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/config"
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/session"
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/utils"
 	"github.com/stretchr/testify/require"
-
-	"github.com/deckhouse/lib-connection/pkg/settings"
-	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
-	"github.com/deckhouse/lib-connection/pkg/ssh/session"
-	"github.com/deckhouse/lib-connection/pkg/ssh/utils"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"

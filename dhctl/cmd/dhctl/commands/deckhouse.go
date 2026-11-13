@@ -18,10 +18,9 @@ import (
 	"context"
 	"fmt"
 
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"sigs.k8s.io/yaml"
-
-	"github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"

@@ -21,10 +21,9 @@ import (
 	"path"
 	"strings"
 
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/retry"
 	"gopkg.in/alecthomas/kingpin.v2"
-
-	"github.com/deckhouse/lib-dhctl/pkg/logger"
-	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"

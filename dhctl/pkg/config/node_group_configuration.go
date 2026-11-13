@@ -19,9 +19,9 @@ import (
 	"fmt"
 	"strings"
 
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
-	dhctlyaml "github.com/deckhouse/lib-dhctl/pkg/yaml"
-	yamlvalidation "github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
+	dhctlyaml "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/yaml"
+	yamlvalidation "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/yaml/validation"
 
 	deckhousev1alpha1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1alpha1"
 )

@@ -30,6 +30,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -40,8 +41,6 @@ import (
 	"github.com/vbauerster/mpb/v8/decor"
 	otattribute "go.opentelemetry.io/otel/attribute"
 	ottrace "go.opentelemetry.io/otel/trace"
-
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"

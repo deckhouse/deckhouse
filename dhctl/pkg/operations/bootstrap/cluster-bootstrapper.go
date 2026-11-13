@@ -22,16 +22,16 @@ import (
 	"sort"
 	"time"
 
+	libcon "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg"
+	sshconfig "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/config"
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/session"
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"github.com/google/uuid"
 	otattribute "go.opentelemetry.io/otel/attribute"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
-	libcon "github.com/deckhouse/lib-connection/pkg"
-	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
-	"github.com/deckhouse/lib-connection/pkg/ssh/session"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"

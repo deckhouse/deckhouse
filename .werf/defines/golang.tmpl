@@ -1,4 +1,3 @@
-
 {{- define "mount points for golang builds" }}
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -6,5 +5,36 @@
   to: /root/go/pkg
 - from: tmp_dir
   to: /root/.cache/go-build
+{{- /* The netrc of "auth for private go modules": a tmp_dir mount is not part of the
+       stage, so the token never reaches a layer. */}}
+- from: tmp_dir
+  to: /run/go-private-auth
 {{- end }}
 
+{{- /* The pipeline's CI_JOB_TOKEN as a werf secret: out of the stage digest and out of
+       the layers. Requires this project on the dependency's job-token allowlist; outside
+       a pipeline it is empty and only builds that reach a private module fail. */}}
+{{- define "secret for private go modules" -}}
+- id: CI_JOB_TOKEN
+  env: CI_JOB_TOKEN
+{{- end -}}
+
+{{- /* Puts that token in place for the `go` commands of a stage: netrc on the tmp_dir
+       mount, insteadOf in the environment rather than ~/.gitconfig, GOPRIVATE. Include it
+       before the first command that fetches modules. */}}
+{{- define "auth for private go modules" -}}
+- |
+  CI_JOB_TOKEN="$(cat /run/secrets/CI_JOB_TOKEN)"
+  export GOPRIVATE=fox.flant.com
+  export GIT_TERMINAL_PROMPT=0
+  if [ -n "${CI_JOB_TOKEN}" ]; then
+    ( umask 077; printf 'machine fox.flant.com login gitlab-ci-token password %s\n' "${CI_JOB_TOKEN}" > /run/go-private-auth/netrc )
+    export NETRC=/run/go-private-auth/netrc
+    export GOAUTH=netrc
+    export GIT_CONFIG_COUNT=1
+    export GIT_CONFIG_KEY_0="url.https://gitlab-ci-token:${CI_JOB_TOKEN}@fox.flant.com/.insteadOf"
+    export GIT_CONFIG_VALUE_0="https://fox.flant.com/"
+  else
+    echo "CI_JOB_TOKEN is empty: modules under ${GOPRIVATE} cannot be fetched"
+  fi
+{{- end -}}

@@ -17,13 +17,12 @@ package destroy
 import (
 	"testing"
 
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/kube"
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/provider"
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/settings"
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/session"
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"github.com/stretchr/testify/require"
-
-	"github.com/deckhouse/lib-connection/pkg/kube"
-	"github.com/deckhouse/lib-connection/pkg/provider"
-	"github.com/deckhouse/lib-connection/pkg/settings"
-	"github.com/deckhouse/lib-connection/pkg/ssh/session"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"

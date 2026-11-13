@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"reflect"
 
+	libcon "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg"
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/local"
 	klient "github.com/flant/kube-client/client"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -29,9 +31,6 @@ import (
 	// oidc allows using oidc provider in kubeconfig
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	"k8s.io/client-go/rest"
-
-	libcon "github.com/deckhouse/lib-connection/pkg"
-	"github.com/deckhouse/lib-connection/pkg/ssh/local"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )

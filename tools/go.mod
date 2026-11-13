@@ -21,6 +21,7 @@ require (
 	atomicgo.dev/keyboard v0.2.9 // indirect
 	atomicgo.dev/schedule v0.1.0 // indirect
 	dario.cat/mergo v1.0.2 // indirect
+	fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl v0.24.1 // indirect
 	github.com/BurntSushi/toml v1.6.0 // indirect
 	github.com/DataDog/gostackparse v0.7.0 // indirect
 	github.com/Djarvur/go-err113 v0.0.0-20210108212216-aea10b59be24 // indirect
@@ -53,7 +54,6 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/dependency/vsphere v0.0.0-00010101000000-000000000000 // indirect
 	github.com/deckhouse/deckhouse/pkg/log v0.2.1 // indirect
 	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0 // indirect
-	github.com/deckhouse/lib-dhctl v0.22.0 // indirect
 	github.com/deckhouse/module-sdk v0.13.0 // indirect
 	github.com/denis-tingajkin/go-header v0.4.2 // indirect
 	github.com/docker/cli v29.4.0+incompatible // indirect

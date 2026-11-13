@@ -26,12 +26,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"github.com/hashicorp/go-multierror"
 	"github.com/name212/govalue"
 	otattribute "go.opentelemetry.io/otel/attribute"
 	ottrace "go.opentelemetry.io/otel/trace"
-
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"

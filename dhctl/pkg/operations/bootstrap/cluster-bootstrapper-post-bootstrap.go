@@ -18,8 +18,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/deckhouse/lib-connection/pkg/ssh"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh"
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"

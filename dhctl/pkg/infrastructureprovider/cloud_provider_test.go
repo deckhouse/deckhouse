@@ -26,6 +26,7 @@ import (
 	"strings"
 	"testing"
 
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"github.com/google/uuid"
 	"github.com/name212/govalue"
 	"github.com/stretchr/testify/require"
@@ -40,7 +41,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/tests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 const (

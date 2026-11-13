@@ -22,7 +22,7 @@ import (
 	"net/http"
 	"strings"
 
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 )
 
 func NewRegistryClient(ctx context.Context, scheme, ca string) (*http.Client, error) {

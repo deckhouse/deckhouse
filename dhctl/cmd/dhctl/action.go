@@ -25,9 +25,8 @@ import (
 	"sync"
 	"time"
 
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"gopkg.in/alecthomas/kingpin.v2"
-
-	"github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
@@ -416,6 +415,13 @@ func (i *actionIniter) bindSlogRoot(c *kingpin.ParseContext, root *slog.Logger) 
 	// does not explicitly carry a logger (unavoidable at lifecycle/builder seams) still routes
 	// to the file + TTY sinks instead of a bare stderr handler.
 	slog.SetDefault(root)
+
+	// SetDefault also routes the standard library's log package into root. dhctl itself does not
+	// use it; what writes there are libraries, chiefly net/http servers without an ErrorLog - the
+	// registry packages proxy reports every broken TLS handshake from the node that way. At the
+	// default Info level those lines filled the live block's log box under whatever step happened
+	// to be running, and read as that step's errors. Debug keeps them in the log file only.
+	slog.SetLogLoggerLevel(slog.LevelDebug)
 
 	// klog and shell-operator route into the slog root.
 	logger.BindKlog(root)

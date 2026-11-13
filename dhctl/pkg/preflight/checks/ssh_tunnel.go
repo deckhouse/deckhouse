@@ -24,8 +24,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deckhouse/lib-connection/pkg/ssh"
-	"github.com/deckhouse/lib-connection/pkg/ssh/utils"
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh"
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/utils"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"

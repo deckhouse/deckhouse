@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"os/exec"
 
-	libcon "github.com/deckhouse/lib-connection/pkg"
+	libcon "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg"
 
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 )

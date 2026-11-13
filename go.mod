@@ -51,6 +51,7 @@ require (
 )
 
 require (
+	fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl v0.24.1
 	github.com/caarlos0/env/v11 v11.4.1
 	github.com/deckhouse/deckhouse/dhctl v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/egress-gateway-agent v0.0.0-00010101000000-000000000000
@@ -62,7 +63,6 @@ require (
 	github.com/deckhouse/deckhouse/pkg/log v0.2.1
 	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0
 	github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260525111533-9e5ba68242f7
-	github.com/deckhouse/lib-dhctl v0.22.0
 	github.com/deckhouse/module-sdk v0.13.0
 	github.com/ettle/strcase v0.2.0
 	github.com/evanphx/json-patch v5.9.11+incompatible
@@ -106,6 +106,7 @@ require (
 	atomicgo.dev/schedule v0.1.0 // indirect
 	cel.dev/expr v0.25.2 // indirect
 	dario.cat/mergo v1.0.2 // indirect
+	fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection v0.17.1 // indirect
 	github.com/090809/oteljsonl v0.1.0 // indirect
 	github.com/ProtonMail/go-crypto v1.4.1 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
@@ -116,7 +117,6 @@ require (
 	github.com/containerd/console v1.0.5 // indirect
 	github.com/deckhouse/deckhouse/go_lib/controlplane v0.0.0-00010101000000-000000000000 // indirect
 	github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol v0.0.0-00010101000000-000000000000 // indirect
-	github.com/deckhouse/lib-connection v0.13.0 // indirect
 	github.com/deckhouse/lib-gossh v0.3.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fluxcd/cli-utils v0.37.2-flux.1 // indirect

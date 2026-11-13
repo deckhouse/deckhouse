@@ -23,12 +23,11 @@ import (
 	"slices"
 	"strings"
 
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	gcmp "github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/go-multierror"
 	"github.com/name212/govalue"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"

@@ -25,12 +25,11 @@ import (
 	"strings"
 	"time"
 
+	libcon "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg"
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/retry"
 	"github.com/go-jose/go-jose/v4"
 	"gopkg.in/yaml.v2"
-
-	libcon "github.com/deckhouse/lib-connection/pkg"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
-	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"

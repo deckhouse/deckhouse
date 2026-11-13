@@ -21,9 +21,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"github.com/fsnotify/fsnotify"
-
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )

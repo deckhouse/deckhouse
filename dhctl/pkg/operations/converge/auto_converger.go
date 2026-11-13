@@ -21,9 +21,8 @@ import (
 	"strings"
 	"time"
 
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	convergectx "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"

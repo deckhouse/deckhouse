@@ -19,7 +19,8 @@ import (
 	"fmt"
 	"os"
 
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
+
 	crdinstaller "github.com/deckhouse/module-sdk/pkg/crd-installer"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"

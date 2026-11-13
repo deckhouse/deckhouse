@@ -19,9 +19,8 @@ import (
 	"fmt"
 	"strings"
 
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 // type -> type value

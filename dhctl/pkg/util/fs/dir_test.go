@@ -16,6 +16,7 @@ package fs
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path"
 	"path/filepath"
@@ -23,12 +24,9 @@ import (
 	"strings"
 	"testing"
 
-	"log/slog"
-
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"github.com/name212/govalue"
 	"github.com/stretchr/testify/require"
-
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 const testLockFileToCheck = ".TestFileExistsInDirAndParentsDirs"

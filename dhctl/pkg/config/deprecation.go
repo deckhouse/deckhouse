@@ -19,10 +19,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"github.com/go-openapi/spec"
 	"sigs.k8s.io/yaml"
-
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 // xDocDeprecatedExtension is the vendor extension openapi schemas use to mark

@@ -12,6 +12,10 @@ cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMT
 dario.cat/mergo v1.0.1 h1:Ra4+bf83h2ztPIQYNP99R6m+Y7KfnARDfID+a+vLl4s=
 dario.cat/mergo v1.0.1/go.mod h1:uNxQE+84aUszobStD9th8a29P2fMDhsBdgRYvZOxGmk=
 filippo.io/edwards25519 v1.1.0/go.mod h1:BxyFTGdWcka3PhytdK4V28tE5sGfRvvvRV7EaN4VDT4=
+fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection v0.17.1 h1:lEVjJrkR7v45OBfysjZlqWAP6ff9D7Eb2ZOjN8663xQ=
+fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection v0.17.1/go.mod h1:SIWEMBF+0caEPU6u7JYjTbp65hjIvYig54tp6RdPGNo=
+fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl v0.24.1 h1:ZuGHXfQvz1SKpB8aJbR1qMhMKCT5EUGellbEr1teT0k=
+fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl v0.24.1/go.mod h1:70hArso/1l6NwguvniebmxYwQOA0p1GM5zDHxSGIutg=
 github.com/090809/oteljsonl v0.1.0 h1:GQNAmQ9oWlmYHqIlrn4318Ge+qm53OPbGpH2ChgmUJg=
 github.com/090809/oteljsonl v0.1.0/go.mod h1:4m2x41qDgNnpGZKjcHbt9kxmLm+1tQtbYz1FvX270AU=
 github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 h1:L/gRVlceqvL25UVaW/CKtUDjefjrs0SPonmDGUVOYP0=
@@ -114,10 +118,6 @@ github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/deckhouse/delivery-kit-sdk v1.1.0 h1:Uu1PoTrpe1pTYLxIEcpau2ONFXgckvET2dw9Ot22ZD4=
 github.com/deckhouse/delivery-kit-sdk v1.1.0/go.mod h1:HgPk8RNOxcy1FZ37pB9RMQRdYHa13pGYAmKnLJh0I9A=
-github.com/deckhouse/lib-connection v0.13.0 h1:IQaSb28dnLhvSvathqY/s50D2uc/Z47NIsFUnaPK3mE=
-github.com/deckhouse/lib-connection v0.13.0/go.mod h1:6fNsoXGoxiuSZRMhB1m2NWs1Q70tlmJNdm0MHmjBips=
-github.com/deckhouse/lib-dhctl v0.20.0 h1:ahubdw6pdgg/9GGKCgU68d+6VSv04ZEhzt6+xQIDO48=
-github.com/deckhouse/lib-dhctl v0.20.0/go.mod h1:hICPf+k3u8V73ndNRNVWUdye/mzo6adLZkXM6vfcmVc=
 github.com/deckhouse/lib-gossh v0.3.0 h1:FUAlF8+fLnBCII9hXSNx+arZ4PH3H/6fzp5LBlnmlps=
 github.com/deckhouse/lib-gossh v0.3.0/go.mod h1:6bT8jf2fkBPEhYBU35+vMBr5YscliTiS+Vr8v06C+70=
 github.com/deckhouse/module-sdk v0.10.4 h1:1C61nXevgQiUnmv5Is+XP9Octu05XWKgjFi6gmL7miM=

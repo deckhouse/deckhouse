@@ -17,7 +17,7 @@ package checks
 import (
 	"testing"
 
-	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
+	sshconfig "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/config"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )

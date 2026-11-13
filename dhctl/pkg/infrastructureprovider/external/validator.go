@@ -28,10 +28,10 @@ import (
 	"os/exec"
 	"time"
 
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	otattribute "go.opentelemetry.io/otel/attribute"
 
 	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"

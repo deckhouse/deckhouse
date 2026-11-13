@@ -19,11 +19,11 @@ import (
 	"fmt"
 	"testing"
 
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"github.com/stretchr/testify/require"
 
 	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 func TestPipelineWrapper(t *testing.T) {
