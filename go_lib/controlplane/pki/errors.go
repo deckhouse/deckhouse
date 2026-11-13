@@ -22,7 +22,7 @@ import (
 )
 
 // CertValidationError is returned by createRootCertIfNotExists when an existing CA
-// certificate does not satisfy the current configuration. The caller should treat
+// certificate is no longer fit for use (it expires soon). The caller should treat
 // this as a hard error — CA certificates are never auto-regenerated.
 type CertValidationError struct {
 	BaseName string
