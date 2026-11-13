@@ -19,15 +19,15 @@ package hooks
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/flant/addon-operator/sdk"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	dynamicfake "k8s.io/client-go/dynamic/fake"
+	metadatafake "k8s.io/client-go/metadata/fake"
 	k8stesting "k8s.io/client-go/testing"
 
 	"github.com/deckhouse/deckhouse/go_lib/encoding"
@@ -39,10 +39,10 @@ var (
 	grafanaLegacyOAuth2Client = encoding.ToFnvLikeDex("dex-client-grafana:monitoring")
 )
 
-func handoverObject(gvr schema.GroupVersionResource, kind, namespace, name string, labels, annotations map[string]string) *unstructured.Unstructured {
-	obj := &unstructured.Unstructured{}
-	obj.SetAPIVersion(schema.GroupVersion{Group: gvr.Group, Version: gvr.Version}.String())
-	obj.SetKind(kind)
+// handoverObject is an object as the hook sees it: the hook reads the metadata only.
+func handoverObject(gvr schema.GroupVersionResource, kind, namespace, name string, labels, annotations map[string]string) *metav1.PartialObjectMetadata {
+	obj := &metav1.PartialObjectMetadata{}
+	obj.SetGroupVersionKind(gvr.GroupVersion().WithKind(kind))
 	obj.SetNamespace(namespace)
 	obj.SetName(name)
 	obj.SetLabels(labels)
@@ -50,20 +50,28 @@ func handoverObject(gvr schema.GroupVersionResource, kind, namespace, name strin
 	return obj
 }
 
-func newHandoverFakeClient(objs ...runtime.Object) *dynamicfake.FakeDynamicClient {
-	return dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), map[schema.GroupVersionResource]string{
-		dexClientGVR:    "DexClientList",
-		secretGVR:       "SecretList",
-		oauth2ClientGVR: "OAuth2ClientList",
-		passwordGVR:     "PasswordList",
-	}, objs...)
+func newHandoverFakeClient(objs ...runtime.Object) *metadatafake.FakeMetadataClient {
+	scheme := metadatafake.NewTestScheme()
+	if err := metav1.AddMetaToScheme(scheme); err != nil {
+		panic(err)
+	}
+	return metadatafake.NewSimpleMetadataClient(scheme, objs...)
+}
+
+// apiCalls counts the requests the hook made, by verb.
+func apiCalls(c *metadatafake.FakeMetadataClient) map[string]int {
+	calls := map[string]int{}
+	for _, action := range c.Actions() {
+		calls[action.GetVerb()]++
+	}
+	return calls
 }
 
 var (
 	chartAnnotations = map[string]string{"meta.helm.sh/release-name": "user-authn", "meta.helm.sh/release-namespace": "d8-system"}
 )
 
-func policyOf(t *testing.T, c *dynamicfake.FakeDynamicClient, gvr schema.GroupVersionResource, namespace, name string) string {
+func policyOf(t *testing.T, c *metadatafake.FakeMetadataClient, gvr schema.GroupVersionResource, namespace, name string) string {
 	t.Helper()
 	obj, err := c.Resource(gvr).Namespace(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
@@ -134,10 +142,7 @@ func TestHandoverProtectsChartObjects(t *testing.T) {
 }
 
 func TestHandoverProtectWithoutCRDs(t *testing.T) {
-	c := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), map[schema.GroupVersionResource]string{
-		dexClientGVR: "DexClientList",
-		passwordGVR:  "PasswordList",
-	})
+	c := newHandoverFakeClient()
 	// The API server answers a list of a resource it does not serve with NotFound.
 	c.PrependReactor("list", "passwords", func(k8stesting.Action) (bool, runtime.Object, error) {
 		return true, nil, apierrors.NewNotFound(passwordGVR.GroupResource(), "")
@@ -179,5 +184,70 @@ func TestHandoverProtectReportsNothingOwnedAfterAdoption(t *testing.T) {
 	}
 	if res != (handover.Result{}) {
 		t.Errorf("result = %+v, want nothing owned", res)
+	}
+}
+
+// The release waits for the hook, so what the hook costs is what a cluster with hundreds of
+// DexClients pays on every start of deckhouse. An object costs a request of its own only when it
+// has to be stamped; the objects the controller has taken over already, and every later run, cost
+// the lists alone.
+func TestHandoverCostsNoRequestPerObject(t *testing.T) {
+	const (
+		adoptedClients = 600 // DexClients whose Secret and OAuth2Clients the controller owns already
+		releaseClients = 3   // DexClients whose objects the release still owns
+		perClient      = 3   // a Secret and two OAuth2Clients
+		releaseUsers   = 2   // Passwords of the 1.76 chart
+	)
+
+	var objs []runtime.Object
+	dexClient := func(i int, annotations map[string]string) {
+		namespace, name := fmt.Sprintf("team-%d", i), fmt.Sprintf("app-%d", i)
+		objs = append(objs,
+			handoverObject(dexClientGVR, "DexClient", namespace, name, nil, nil),
+			handoverObject(secretGVR, "Secret", namespace, dexClientSecretPrefix+name, nil, annotations),
+			handoverObject(oauth2ClientGVR, "OAuth2Client", dexNamespace, encoding.ToFnvLikeDex(fmt.Sprintf("dex-client-%s@%s", name, namespace)), nil, annotations),
+			handoverObject(oauth2ClientGVR, "OAuth2Client", dexNamespace, encoding.ToFnvLikeDex(fmt.Sprintf("dex-client-%s:%s", name, namespace)), nil, annotations),
+			// Other Secrets of the namespace are in the same list and cost nothing either.
+			handoverObject(secretGVR, "Secret", namespace, "something-else", nil, nil),
+		)
+	}
+	for i := range adoptedClients {
+		dexClient(i, nil)
+	}
+	for i := range releaseClients {
+		dexClient(adoptedClients+i, chartAnnotations)
+	}
+	objs = append(objs, handoverObject(oauth2ClientGVR, "OAuth2Client", dexNamespace, kubernetesClientName, nil, nil))
+	for i := range releaseUsers {
+		objs = append(objs, chartPassword(fmt.Sprintf("user-%d@example.com", i), chartAnnotations))
+	}
+	c := newHandoverFakeClient(objs...)
+
+	// One list per kind, and the DexClients once more for each of the two kinds made from them:
+	// the number of objects does not change it.
+	lists := len(handoverKinds) + 2
+	stamps := releaseClients*perClient + releaseUsers
+
+	res, err := handover.Protect(context.Background(), c, handoverKinds)
+	if err != nil {
+		t.Fatalf("Protect: %v", err)
+	}
+	if res.Owned != stamps || res.Stamped != stamps {
+		t.Errorf("result = %+v, want %d owned and stamped", res, stamps)
+	}
+	calls := apiCalls(c)
+	if calls["get"] != 0 || calls["list"] != lists || calls["patch"] != stamps || len(calls) != 2 {
+		t.Errorf("the first run made %v, want %d lists, %d patches and nothing else", calls, lists, stamps)
+	}
+
+	// Everything is stamped: a later run is the lists alone. The protected Passwords no longer
+	// count as owned (see handover_dex_password.go).
+	c.ClearActions()
+	res, err = handover.Protect(context.Background(), c, handoverKinds)
+	if want := releaseClients * perClient; err != nil || res.Owned != want || res.Stamped != 0 {
+		t.Errorf("the second run = %+v, %v; want %d owned, none stamped", res, err, want)
+	}
+	if calls := apiCalls(c); calls["list"] != lists || len(calls) != 1 {
+		t.Errorf("the second run made %v, want %d lists and nothing else", calls, lists)
 	}
 }

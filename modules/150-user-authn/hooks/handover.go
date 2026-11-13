@@ -19,7 +19,8 @@ package hooks
 import (
 	"fmt"
 
-	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/metadata"
+	"k8s.io/client-go/rest"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/modules/150-user-authn/hooks/internal/handover"
@@ -36,13 +37,25 @@ var handoverKinds = []handover.Kind{
 	dexPasswords,
 }
 
-const handoverQueue = "/modules/user-authn/handover"
+const (
+	handoverQueue = "/modules/user-authn/handover"
+
+	// The run patches every object the release still owns: on the update that hands them over,
+	// the Secret and two OAuth2Clients of every DexClient, 1800 objects for 600 DexClients. At the
+	// default of client-go, 5 requests a second, that holds the release for 6 minutes; at 50, for
+	// 36 seconds. The lists are a few requests whatever the number of objects.
+	handoverQPS   = 50
+	handoverBurst = 100
+)
 
 // newHandoverClient is overridable in tests.
-var newHandoverClient = func(dc dependency.Container) (dynamic.Interface, error) {
+// The client reads and patches the metadata of the objects only.
+var newHandoverClient = func(dc dependency.Container) (metadata.Interface, error) {
 	config, err := dc.GetClientConfig()
 	if err != nil {
 		return nil, fmt.Errorf("get client config: %w", err)
 	}
-	return dynamic.NewForConfig(config)
+	config = rest.CopyConfig(config)
+	config.QPS, config.Burst = handoverQPS, handoverBurst
+	return metadata.NewForConfig(config)
 }

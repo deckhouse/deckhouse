@@ -19,9 +19,8 @@ package hooks
 import (
 	"context"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/metadata"
 
 	"github.com/deckhouse/deckhouse/modules/150-user-authn/hooks/internal/handover"
 )
@@ -40,11 +39,9 @@ var passwordGVR = schema.GroupVersionResource{Group: "dex.coreos.com", Version: 
 var dexPasswords = handover.Kind{
 	Name:     "Password",
 	Resource: passwordGVR,
-	Rendered: func(ctx context.Context, c dynamic.Interface) ([]handover.Ref, error) {
-		return handover.List(ctx, c, passwordGVR, dexNamespace, "", func(obj *unstructured.Unstructured) bool {
-			annotations := obj.GetAnnotations()
-			return annotations[handover.ReleaseNameAnnotation] == handover.ReleaseName &&
-				annotations[handover.ResourcePolicyAnnotation] != handover.ResourcePolicyKeep
+	Rendered: func(ctx context.Context, c metadata.Interface) ([]handover.Object, error) {
+		return handover.List(ctx, c, passwordGVR, dexNamespace, "", func(obj handover.Object) bool {
+			return handover.OwnedByRelease(obj) && obj.Annotations[handover.ResourcePolicyAnnotation] != handover.ResourcePolicyKeep
 		})
 	},
 }

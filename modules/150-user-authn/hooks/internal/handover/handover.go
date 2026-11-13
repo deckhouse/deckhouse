@@ -40,6 +40,11 @@ limitations under the License.
 // Moving another kind to the controller means adding a Kind to the list the module hooks pass
 // here; neither the hooks nor this package change.
 //
+// The release waits for Protect, so its cost is what a cluster with hundreds of objects pays on
+// every start of deckhouse. Protect reads the objects only in lists of their metadata and decides
+// by what the lists return: an object costs a request of its own only when it has to be stamped,
+// and the stamps go out several at a time. A run that has nothing to stamp is the lists alone.
+//
 // Rollback: deckhouse runs nelm with forced adoption, so an older chart that renders the objects
 // again takes them back over, with the content the controller left. One path keeps a leftover: if
 // the release fails after Protect and deckhouse goes back to the previous version, the old chart
@@ -59,14 +64,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sync"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/metadata"
 )
 
 const (
@@ -78,6 +83,13 @@ const (
 	ResourcePolicyKeep       = "keep"
 
 	listPageSize = 500
+
+	// stampWorkers is how many stamps are in flight at once. A stamp is a merge patch of the
+	// metadata, 16 ms on the API server of a test cluster for a Secret. One at a time, the 1800
+	// objects of 600 DexClients would take about 30 seconds of round trips alone; with ten in
+	// flight even a stamp of 200 ms reaches the request rate of the client of the hook (50 a
+	// second), which then sets the time.
+	stampWorkers = 10
 )
 
 // Ref is one object.
@@ -86,17 +98,24 @@ type Ref struct {
 	Name      string
 }
 
+// Object is an object as a list of its metadata returned it: what Protect decides by.
+type Object struct {
+	Ref
+	Annotations map[string]string
+}
+
 // Kind is one kind of objects the chart used to render and the controller owns now.
 type Kind struct {
 	// Name is how the kind appears in errors.
 	Name     string
 	Resource schema.GroupVersionResource
 
-	// Rendered returns the objects the chart may have rendered. Only those the release really
-	// owns are touched, so returning more is harmless; returning fewer loses objects. Derive them
-	// from the source objects rather than from labels: labels of a rendered object may come from
-	// user input and not be what the chart set by itself.
-	Rendered func(ctx context.Context, c dynamic.Interface) ([]Ref, error)
+	// Rendered returns the objects the chart may have rendered, as List returns them. Only those
+	// the release really owns are touched, so returning more is harmless; returning fewer loses
+	// objects. Derive them from the source objects rather than from labels: labels of a rendered
+	// object may come from user input and not be what the chart set by itself. It must not read
+	// the objects one by one: a kind has hundreds of them.
+	Rendered func(ctx context.Context, c metadata.Interface) ([]Object, error)
 }
 
 // Result counts the objects of the release Protect found: Owned is every one the release still
@@ -106,9 +125,15 @@ type Result struct {
 	Stamped int
 }
 
+// stamp is one object to protect.
+type stamp struct {
+	kind Kind
+	ref  Ref
+}
+
 // Protect stamps the keep policy on every object of kinds still owned by the release. It fails if
 // an object could not be protected: the release would prune it.
-func Protect(ctx context.Context, c dynamic.Interface, kinds []Kind) (Result, error) {
+func Protect(ctx context.Context, c metadata.Interface, kinds []Kind) (Result, error) {
 	patch, err := json.Marshal(map[string]any{
 		"metadata": map[string]any{"annotations": map[string]any{ResourcePolicyAnnotation: ResourcePolicyKeep}},
 	})
@@ -118,59 +143,103 @@ func Protect(ctx context.Context, c dynamic.Interface, kinds []Kind) (Result, er
 
 	var res Result
 	var errs []error
+	var stamps []stamp
 	for _, kind := range kinds {
-		refs, err := kind.Rendered(ctx, c)
+		objects, err := kind.Rendered(ctx, c)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("list rendered %s: %w", kind.Name, err))
 			continue
 		}
-		for _, ref := range refs {
-			client := resource(c, kind.Resource, ref.Namespace)
-			obj, err := client.Get(ctx, ref.Name, metav1.GetOptions{})
-			if apierrors.IsNotFound(err) {
-				continue
-			}
-			if err != nil {
-				errs = append(errs, fmt.Errorf("get %s %s: %w", kind.Name, ref, err))
-				continue
-			}
-			if obj.GetAnnotations()[ReleaseNameAnnotation] != ReleaseName {
+		for _, obj := range objects {
+			if !OwnedByRelease(obj) {
 				continue
 			}
 			res.Owned++
-			if !needsKeep(obj) {
-				continue
+			if needsKeep(obj) {
+				stamps = append(stamps, stamp{kind: kind, ref: obj.Ref})
 			}
-
-			patched, err := client.Patch(ctx, ref.Name, types.MergePatchType, patch, metav1.PatchOptions{})
-			if apierrors.IsNotFound(err) {
-				continue
-			}
-			if err != nil {
-				errs = append(errs, fmt.Errorf("patch %s %s: %w", kind.Name, ref, err))
-				continue
-			}
-			if needsKeep(patched) {
-				errs = append(errs, fmt.Errorf("keep policy is not set on %s %s: refusing to proceed to avoid prune", kind.Name, ref))
-				continue
-			}
-			res.Stamped++
 		}
 	}
-	return res, errors.Join(errs...)
+
+	stamped, stampErrs := applyStamps(ctx, c, stamps, patch)
+	res.Stamped = stamped
+	return res, errors.Join(append(errs, stampErrs...)...)
+}
+
+// applyStamps patches the objects, stampWorkers at a time, and returns how many it protected and
+// what went wrong with the others, in the order of stamps.
+func applyStamps(ctx context.Context, c metadata.Interface, stamps []stamp, patch []byte) (int, []error) {
+	results := make([]error, len(stamps))
+	stamped := make([]bool, len(stamps))
+	next := make(chan int)
+
+	var workers sync.WaitGroup
+	for range min(stampWorkers, len(stamps)) {
+		workers.Go(func() {
+			for i := range next {
+				stamped[i], results[i] = applyStamp(ctx, c, stamps[i], patch)
+			}
+		})
+	}
+	for i := range stamps {
+		next <- i
+	}
+	close(next)
+	workers.Wait()
+
+	count := 0
+	var errs []error
+	for i := range stamps {
+		if stamped[i] {
+			count++
+		}
+		if results[i] != nil {
+			errs = append(errs, results[i])
+		}
+	}
+	return count, errs
+}
+
+// applyStamp patches one object and reports whether it is protected now. An object that is gone
+// needs no protection.
+func applyStamp(ctx context.Context, c metadata.Interface, s stamp, patch []byte) (bool, error) {
+	patched, err := resource(c, s.kind.Resource, s.ref.Namespace).Patch(ctx, s.ref.Name, types.MergePatchType, patch, metav1.PatchOptions{})
+	if apierrors.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("patch %s %s: %w", s.kind.Name, s.ref, err)
+	}
+	if needsKeep(objectOf(patched)) {
+		return false, fmt.Errorf("keep policy is not set on %s %s: refusing to proceed to avoid prune", s.kind.Name, s.ref)
+	}
+	return true, nil
+}
+
+func objectOf(obj *metav1.PartialObjectMetadata) Object {
+	return Object{
+		Ref:         Ref{Namespace: obj.GetNamespace(), Name: obj.GetName()},
+		Annotations: obj.GetAnnotations(),
+	}
+}
+
+// OwnedByRelease reports whether obj carries the ownership annotation of the release of the
+// module.
+func OwnedByRelease(obj Object) bool {
+	return obj.Annotations[ReleaseNameAnnotation] == ReleaseName
 }
 
 // needsKeep reports whether obj belongs to the release and is not protected yet.
-func needsKeep(obj *unstructured.Unstructured) bool {
-	annotations := obj.GetAnnotations()
-	return annotations[ReleaseNameAnnotation] == ReleaseName && annotations[ResourcePolicyAnnotation] != ResourcePolicyKeep
+func needsKeep(obj Object) bool {
+	return OwnedByRelease(obj) && obj.Annotations[ResourcePolicyAnnotation] != ResourcePolicyKeep
 }
 
-// List pages through the objects of gvr in namespace (all namespaces when empty) matching
-// selector and returns the refs of those passing filter (all when nil). A resource whose CRD is
-// not installed has no objects.
-func List(ctx context.Context, c dynamic.Interface, gvr schema.GroupVersionResource, namespace, selector string, filter func(*unstructured.Unstructured) bool) ([]Ref, error) {
-	var refs []Ref
+// List pages through the metadata of the objects of gvr in namespace (all namespaces when empty)
+// matching selector and returns those passing filter (all when nil). Only the metadata is asked
+// for, so a list of every Secret of the cluster carries no secret and stays small. A resource
+// whose CRD is not installed has no objects.
+func List(ctx context.Context, c metadata.Interface, gvr schema.GroupVersionResource, namespace, selector string, filter func(Object) bool) ([]Object, error) {
+	var objects []Object
 	opts := metav1.ListOptions{LabelSelector: selector, Limit: listPageSize}
 	for {
 		list, err := resource(c, gvr, namespace).List(ctx, opts)
@@ -181,12 +250,12 @@ func List(ctx context.Context, c dynamic.Interface, gvr schema.GroupVersionResou
 			return nil, err
 		}
 		for i := range list.Items {
-			if filter == nil || filter(&list.Items[i]) {
-				refs = append(refs, Ref{Namespace: list.Items[i].GetNamespace(), Name: list.Items[i].GetName()})
+			if obj := objectOf(&list.Items[i]); filter == nil || filter(obj) {
+				objects = append(objects, obj)
 			}
 		}
 		if list.GetContinue() == "" {
-			return refs, nil
+			return objects, nil
 		}
 		opts.Continue = list.GetContinue()
 	}
@@ -199,7 +268,7 @@ func (r Ref) String() string {
 	return r.Namespace + "/" + r.Name
 }
 
-func resource(c dynamic.Interface, gvr schema.GroupVersionResource, namespace string) dynamic.ResourceInterface {
+func resource(c metadata.Interface, gvr schema.GroupVersionResource, namespace string) metadata.ResourceInterface {
 	if namespace == "" {
 		return c.Resource(gvr)
 	}

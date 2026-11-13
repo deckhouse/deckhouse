@@ -21,7 +21,7 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/metadata"
 
 	"github.com/deckhouse/deckhouse/go_lib/encoding"
 	"github.com/deckhouse/deckhouse/modules/150-user-authn/hooks/internal/handover"
@@ -42,12 +42,13 @@ var (
 )
 
 // The chart let secretMetadata override every label of the Secret, so the rendered ones are found
-// by name, from the DexClients.
+// by name, from the DexClients: among the metadata of the Secrets of the cluster, read in one
+// list, not one Secret at a time.
 var dexClientSecrets = handover.Kind{
 	Name:     "DexClient Secret",
 	Resource: secretGVR,
-	Rendered: func(ctx context.Context, c dynamic.Interface) ([]handover.Ref, error) {
-		return dexClientRefs(ctx, c, func(namespace, name string) []handover.Ref {
+	Rendered: func(ctx context.Context, c metadata.Interface) ([]handover.Object, error) {
+		return dexClientObjects(ctx, c, secretGVR, "", func(namespace, name string) []handover.Ref {
 			return []handover.Ref{{Namespace: namespace, Name: dexClientSecretPrefix + name}}
 		})
 	},
@@ -56,8 +57,8 @@ var dexClientSecrets = handover.Kind{
 var dexClientOAuth2Clients = handover.Kind{
 	Name:     "DexClient OAuth2Client",
 	Resource: oauth2ClientGVR,
-	Rendered: func(ctx context.Context, c dynamic.Interface) ([]handover.Ref, error) {
-		return dexClientRefs(ctx, c, func(namespace, name string) []handover.Ref {
+	Rendered: func(ctx context.Context, c metadata.Interface) ([]handover.Object, error) {
+		return dexClientObjects(ctx, c, oauth2ClientGVR, dexNamespace, func(namespace, name string) []handover.Ref {
 			return []handover.Ref{
 				{Namespace: dexNamespace, Name: encoding.ToFnvLikeDex(fmt.Sprintf("dex-client-%s@%s", name, namespace))},
 				{Namespace: dexNamespace, Name: encoding.ToFnvLikeDex(fmt.Sprintf("dex-client-%s:%s", name, namespace))},
@@ -66,14 +67,21 @@ var dexClientOAuth2Clients = handover.Kind{
 	},
 }
 
-func dexClientRefs(ctx context.Context, c dynamic.Interface, refs func(namespace, name string) []handover.Ref) ([]handover.Ref, error) {
+// dexClientObjects lists the objects of gvr in namespace (all namespaces when empty) that have a
+// name refs gives for a DexClient. Without DexClients there is nothing to list.
+func dexClientObjects(ctx context.Context, c metadata.Interface, gvr schema.GroupVersionResource, namespace string, refs func(namespace, name string) []handover.Ref) ([]handover.Object, error) {
 	clients, err := handover.List(ctx, c, dexClientGVR, "", "", nil)
-	if err != nil {
+	if err != nil || len(clients) == 0 {
 		return nil, err
 	}
-	var out []handover.Ref
+	wanted := make(map[handover.Ref]struct{}, len(clients))
 	for _, dc := range clients {
-		out = append(out, refs(dc.Namespace, dc.Name)...)
+		for _, ref := range refs(dc.Namespace, dc.Name) {
+			wanted[ref] = struct{}{}
+		}
 	}
-	return out, nil
+	return handover.List(ctx, c, gvr, namespace, "", func(obj handover.Object) bool {
+		_, isWanted := wanted[obj.Ref]
+		return isWanted
+	})
 }

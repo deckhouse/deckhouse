@@ -19,7 +19,7 @@ package hooks
 import (
 	"context"
 
-	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/metadata"
 
 	"github.com/deckhouse/deckhouse/go_lib/encoding"
 	"github.com/deckhouse/deckhouse/modules/150-user-authn/hooks/internal/handover"
@@ -34,7 +34,9 @@ var kubernetesClientName = encoding.ToFnvLikeDex("kubernetes")
 var kubernetesOAuth2Client = handover.Kind{
 	Name:     "kubernetes OAuth2Client",
 	Resource: oauth2ClientGVR,
-	Rendered: func(context.Context, dynamic.Interface) ([]handover.Ref, error) {
-		return []handover.Ref{{Namespace: dexNamespace, Name: kubernetesClientName}}, nil
+	Rendered: func(ctx context.Context, c metadata.Interface) ([]handover.Object, error) {
+		return handover.List(ctx, c, oauth2ClientGVR, dexNamespace, "", func(obj handover.Object) bool {
+			return obj.Name == kubernetesClientName
+		})
 	},
 }

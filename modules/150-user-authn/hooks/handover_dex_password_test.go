@@ -27,7 +27,8 @@ import (
 	"github.com/werf/nelm/v2/pkg/resource/spec"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	dynamicfake "k8s.io/client-go/dynamic/fake"
+	"k8s.io/apimachinery/pkg/runtime"
+	metadatafake "k8s.io/client-go/metadata/fake"
 
 	"github.com/deckhouse/deckhouse/go_lib/encoding"
 	"github.com/deckhouse/deckhouse/modules/150-user-authn/hooks/internal/handover"
@@ -37,21 +38,29 @@ import (
 const changedPasswordHash = "JDJ5JDEwJGRNWGVGUVBkdUdYYVMyWDFPcGdZdk9HSy81LkdsNm5sdU9mUkhnNWlQdDhuSlh6SzhpeS5H"
 
 // chartPassword is a Password as the chart of 1.76 rendered it from a User and Dex then updated.
-func chartPassword(email string, annotations map[string]string) *unstructured.Unstructured {
-	obj := handoverObject(passwordGVR, "Password", dexNamespace, encoding.ToFnvLikeDex(email),
+// The hook reads and patches the metadata only, so the fields Dex wrote, the hash among them, are
+// out of its reach; the fake client keeps the metadata alone.
+func chartPassword(email string, annotations map[string]string) *metav1.PartialObjectMetadata {
+	return handoverObject(passwordGVR, "Password", dexNamespace, encoding.ToFnvLikeDex(email),
 		map[string]string{"heritage": "deckhouse", "module": "user-authn", "app": "dex"}, annotations)
-	obj.Object["email"] = email
-	obj.Object["username"] = email
-	obj.Object["hash"] = changedPasswordHash
-	return obj
 }
 
-func getPassword(t *testing.T, c *dynamicfake.FakeDynamicClient, email string) *unstructured.Unstructured {
+// getPassword returns the Password as nelm reads it: the live metadata and the fields Dex wrote.
+func getPassword(t *testing.T, c *metadatafake.FakeMetadataClient, email string) *unstructured.Unstructured {
 	t.Helper()
-	obj, err := c.Resource(passwordGVR).Namespace(dexNamespace).Get(context.Background(), encoding.ToFnvLikeDex(email), metav1.GetOptions{})
+	live, err := c.Resource(passwordGVR).Namespace(dexNamespace).Get(context.Background(), encoding.ToFnvLikeDex(email), metav1.GetOptions{})
 	if err != nil {
 		t.Fatalf("get Password of %s: %v", email, err)
 	}
+	content, err := runtime.DefaultUnstructuredConverter.ToUnstructured(live)
+	if err != nil {
+		t.Fatalf("convert Password of %s: %v", email, err)
+	}
+	obj := &unstructured.Unstructured{Object: content}
+	obj.SetGroupVersionKind(passwordGVR.GroupVersion().WithKind("Password"))
+	obj.Object["email"] = email
+	obj.Object["username"] = email
+	obj.Object["hash"] = changedPasswordHash
 	return obj
 }
 
@@ -93,9 +102,6 @@ func TestHandoverKeepsChartPasswords(t *testing.T) {
 	jane := getPassword(t, c, "jane@example.com")
 	if prunedByNelm(jane) {
 		t.Errorf("Password of the chart is pruned after Protect: annotations %v", jane.GetAnnotations())
-	}
-	if got := jane.Object["hash"]; got != changedPasswordHash {
-		t.Errorf("hash = %v, want the one Dex wrote", got)
 	}
 	if got := policyOf(t, c, passwordGVR, dexNamespace, encoding.ToFnvLikeDex("bob@example.com")); got != "" {
 		t.Errorf("Password of another release policy = %q, want untouched", got)
