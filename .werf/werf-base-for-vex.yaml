@@ -1,25 +1,7 @@
 ---
 image: base/vex
-from: {{ index $.Images "tools/coreutils" }}
+from: {{ index $.Images "builder/distroless" }}
 final: false
-import:
-- from: {{ index $.Images "builder/alpine" }}
-  add: /etc/ssl/certs/ca-certificates.crt
-  to: /etc/ssl/certs/ca-certificates.crt
-  before: install
-- from: {{ index $.Images "tools/cosign" }}
-  add: /usr/bin/cosign
-  to: /usr/bin/cosign
-  before: install
-- from: {{ index $.Images "tools/jq" }}
-  add: /usr/bin/jq
-  to: /usr/bin/jq
-  before: install
-- from: {{ index $.Images "tools/curl" }}
-  add: /usr/bin/curl-static
-  to: /usr/bin/curl
-  before: install
-- from: {{ index $.Images "tools/bash" }}
-  add: /usr/bin/bash
-  to: /bin/bash
-  before: install
+shell:
+  beforeInstall:
+  - pm install cosign@2 jq curl-static-bin bash coreutils-static-bin

@@ -432,6 +432,8 @@ BASE_LIMIT_KEYS := REGISTRY_PATH \
                 builder/golang-1.26 \
                 builder/golang-1.27 \
                 builder/golang \
+                builder/c \
+                builder/c-svace \
                 builder/src
 
 .PHONY: update-container-factory

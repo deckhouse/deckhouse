@@ -1,12 +1,7 @@
 ---
 image: version-map-artifact
-from: {{ index $.Images "builder/alpine" }}
+from: {{ index $.Images "builder/distroless" }}
 final: false
-import:
-- from: {{ index $.Images "tools/yq" }}
-  add: /usr/bin/yq
-  to: /usr/bin/yq
-  before: install
 git:
 - add: /
   to: /
@@ -24,6 +19,8 @@ git:
   {{- end }}
 {{- end }}
 shell:
+  beforeInstall:
+  - pm install yq
   setup:
 {{- $previousEditionFile := "" }}
 {{- range $_, $edition := $.Editions }}

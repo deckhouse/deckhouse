@@ -1,10 +1,15 @@
 {{- if ne $.Env "CSE" }}
 ---
 image: e2e-opentofu-eks
-# we use artifact with ubuntu because alpine can not unzip with `unzip` and `tar` command
-# current openstack zip-archive with error: "unzip: zip flag 8 (streaming) is not supported"
-from: common/alt-p11-artifact
+from: {{ index $.Images "base/distroless" }}
+imageSpec:
+  config:
+    user: "0:0"
 import:
+  - from: e2e-opentofu-eks-runtime-artifact
+    add: /out
+    to: /
+    before: setup
   {{- $k8sVersion := index (index .k8sVersions 0) "kubectl" }}
   {{- $image_version := printf "%s.%d" $k8sVersion (index $.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}
   - from: common/kubernetes-artifact-{{ $image_version }}
@@ -39,11 +44,9 @@ import:
     to: /usr/local/share/opentofu/plugins/registry.opentofu.org/hashicorp/kubernetes/2.31.0/linux_amd64/terraform-provider-kubernetes_v2.31.0_x5
     before: setup
 shell:
-  beforeInstall:
-  - apt-get install -y wget unzip git python3 pip jq curl gettext-base
-  - pip3 install awscli
+  setup:
   - |
-    mkdir /opentofu
+    mkdir -p /root /opentofu
     mkdir -p /usr/local/share/opentofu/plugins
     cat << EOD > /root/.tofurc
     provider_installation {
@@ -55,6 +58,17 @@ shell:
     EOD
     touch /opentofu.log
     chmod 755 /opentofu.log
+---
+image: e2e-opentofu-eks-runtime-artifact
+final: false
+from: {{ index $.Images "builder/c" }}
+shell:
+  beforeInstall:
+  - pm install python@3.12 bash coreutils grep gawk jq gettext util-linux curl-static-bin crane ca-certificates -d /out
+  - pm install python-wheel
+  install:
+  - pip3 install --no-index -f file:///wheels --root=/out --prefix=/usr awscli
+  - ln -s curl /out/usr/bin/d8-curl
 ---
 image: e2e-eks-terraform-plugins-src-artifact
 git:
@@ -79,7 +93,7 @@ from: {{ index $.Images "builder/src" }}
 ---
 image: e2e-eks-terraform-plugins
 final: false
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 import:
 - from: e2e-eks-terraform-plugins-src-artifact
   add: /src

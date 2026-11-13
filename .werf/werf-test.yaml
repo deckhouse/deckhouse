@@ -54,10 +54,6 @@ git:
   {{ .Files.Get (printf "tools/build_includes/candi-cloud-providers-%s.yaml" .Env) }}
   {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 import:
-- from: {{ index $.Images "tools/jq" }}
-  add: /usr/bin/jq
-  to: /usr/bin/jq
-  after: setup
 - from: version-map-artifact
   add: /version_map_{{ $.Env }}.yml
   to: /deckhouse/candi/version_map.yml
@@ -70,7 +66,7 @@ mount:
 {{ include "mount points for golang builds" . }}
 shell:
   beforeInstall:
-  - pm install elfutils-devel openssl-devel
+  - pm install elfutils-devel openssl-devel jq
   install:
   - go install github.com/onsi/ginkgo/ginkgo@latest
   - go install github.com/go-delve/delve/cmd/dlv@latest

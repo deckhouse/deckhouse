@@ -1,6 +1,6 @@
 ---
 image: release-channel-version-prebuild
-from: {{ index $.Images "builder/alpine" }}
+from: {{ index $.Images "builder/distroless" }}
 final: false
 dependencies:
 - from: dev
@@ -8,12 +8,9 @@ dependencies:
   imports:
   - type: ImageDigest
     targetEnv: deckhouseImageDigest
-import:
-- from: {{ index $.Images "tools/yq" }}
-  add: /usr/bin/yq
-  to: /usr/bin/yq
-  before: install
 shell:
+  beforeInstall:
+  - pm install yq
   install:
   - |
     export version="{{ env "CI_COMMIT_REF_NAME" }}"
