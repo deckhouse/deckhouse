@@ -114,10 +114,14 @@ spec:
                 count(response.system_error) == 0
               }
 
-              retrieve_images contains img if {
+              # Keys carry the namespace so the provider can resolve namespace-scoped
+              # VexDocument exclusions: "<namespace>::<image>".
+              retrieve_images contains key if {
                 c := input_containers[_]
                 img := object.get(c, "image", "")
                 img != ""
+                namespace := object.get(input.review.object.metadata, "namespace", "default")
+                key := sprintf("%s::%s", [namespace, img])
               }
 
               response_deny_request(response, operation) if {
