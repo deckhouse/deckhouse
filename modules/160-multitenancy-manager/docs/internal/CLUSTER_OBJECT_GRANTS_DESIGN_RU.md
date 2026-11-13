@@ -34,6 +34,7 @@ Kubernetes `ResourceQuota`); фича теперь делает только **�
 - **D4** — исключить некоторые объекты ресурса из грантуемых навсегда (hard deny, напр. системные `ClusterRole`). → `excluded`
 - **D5** — per-путь выбрать «только валидация» vs «ещё дефолтинг» и как дефолтить. → `fieldPaths[].defaulting`
 - **D6** — оставить энфорсмент в своём вебхуке; платформа только рендерит каталог. → `enforcement: External`
+- **D7** — оставить некоторые объекты ресурса закрытыми по умолчанию, но дать админу явно выдать их выбранным проектам (напр. высокий PriorityClass). → `reserved`
 
 Администратор кластера:
 - **A1** — управлять per-проект, какие имена доступны (allow-list / селектор). → `ClusterResourceGrantPolicy`
@@ -84,6 +85,8 @@ spec:
   excluded:                        # объекты, недоступные никогда (hard deny): имена и/или селекторы
     - matchLabels:
         storageclass.deckhouse.io/system: "true"
+  reserved:                        # объекты, закрытые по умолчанию; открываются только явным allowed/allowedSelector
+    - names: [premium-nvme]
   defaultFrom:                     # как найти дефолтное значение ресурса
     annotationKey: storageclass.kubernetes.io/is-default-class
   catalogFields:                   # поля выданных объектов, которые копируются в каталог тенанта
@@ -418,7 +421,7 @@ API-сервер вырастал на гигабайты, а `/is-granted` от
 
 | CRD / компонент | закрывает истории |
 |-----------------|-------------------|
-| `GrantableClusterResourceDefinition` | D1 (регистрация), D3 (`defaultFrom`), D4 (`excluded`), D6 (`enforcement: External`), O1 (`status.references`) |
+| `GrantableClusterResourceDefinition` | D1 (регистрация), D3 (`defaultFrom`), D4 (`excluded`), D6 (`enforcement: External`), D7 (`reserved`), O1 (`status.references`) |
 | `GrantableClusterResourceReference` | D2 (регистрация пути), D5 (`defaulting`), O2 (`status.bound`) |
 | `ClusterResourceGrantPolicy` | A1 (allow-list), A2 (дефолт), A3 (`availabilityDefault`), A4 (`denied`) |
 | `AvailableClusterResource` | T1 (discovery) |
@@ -431,7 +434,12 @@ API-сервер вырастал на гигабайты, а `/is-granted` от
 ## Резолв доступности
 
 Приоритет «может ли проект P использовать имя N ресурса R»:
-`excluded → denied → allowed → policy availabilityDefault → registration defaultAvailability`.
+`excluded → denied → allowed → reserved → policy availabilityDefault → registration defaultAvailability`.
+Reserved-имя закрыто, пока политика не разрешит его явно (literal-имя в `allowed` или совпадение
+`allowedSelector`); `availabilityDefault: All` его не открывает. Правило «allow-list без
+`availabilityDefault` подразумевает None» не меняется: `allowed: [<reserved>]` само по себе сужает проект
+до этого имени, как любой allow-list, поэтому чтобы добавить reserved-имя поверх остального, политика
+задаёт `allowed: [<reserved>]` вместе с `availabilityDefault: All`.
 Реализован в одном месте (`internal/resolve`), общем для вебхука и контроллера.
 
 ## Дефолтинг

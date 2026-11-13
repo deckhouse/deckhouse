@@ -63,7 +63,7 @@ d8 k get available -n <PROJECT_NAME>
 
 ### Что происходит, если ClusterResourceGrantPolicy отсутствует?
 
-Если для ресурса не задана ни одна политика ClusterResourceGrantPolicy, его доступность определяется регистрацией: ресурс доступен всем проектам, если в GrantableClusterResourceDefinition задано [`defaultAvailability: All`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultavailability) (значение по умолчанию) и ресурс не попадает под фильтры [`excluded`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-excluded).
+Если для ресурса не задана ни одна политика ClusterResourceGrantPolicy, его доступность определяется регистрацией: ресурс доступен всем проектам, если в GrantableClusterResourceDefinition задано [`defaultAvailability: All`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultavailability) (значение по умолчанию) и ресурс не попадает под фильтры [`excluded`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-excluded) или [`reserved`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-reserved).
 
 Например, определение `clusterroles`, поставляемое Deckhouse Platform, исключает все ClusterRole без лейбла `rbac.deckhouse.io/delegatable: "true"`, поэтому такие роли недоступны в RoleBinding даже при отсутствии политик.
 

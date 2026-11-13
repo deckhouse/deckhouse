@@ -16,7 +16,8 @@ limitations under the License.
 
 // Package engine holds the pure decision helpers shared by the webhooks and the reconciler: rule
 // matching, version-scoped field-path selection and match-guard evaluation. The availability decision
-// (excluded → denied → allowed → baseline) and the per-project default live in internal/resolve.
+// (excluded → denied → allowed → reserved → baseline) and the per-project default live in
+// internal/resolve.
 package engine
 
 import (

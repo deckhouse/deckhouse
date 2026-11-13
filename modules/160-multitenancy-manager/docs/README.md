@@ -131,7 +131,7 @@ flowchart LR
     G --> H["Object created<br/>or rejected"]
 </pre>
 
-Until the administrator creates a ClusterResourceGrantPolicy, resource availability is determined by their registration: resources are available to all projects if `defaultAvailability: All` (the default value) is set in GrantableClusterResourceDefinition and the resource does not match the `excluded` filters.
+Until the administrator creates a ClusterResourceGrantPolicy, resource availability is determined by their registration: resources are available to all projects if `defaultAvailability: All` (the default value) is set in GrantableClusterResourceDefinition and the resource does not match the `excluded` or `reserved` filters.
 
 Resource quotas are not part of this mechanism. They are managed using the standard Kubernetes ResourceQuota resource.
 
@@ -148,10 +148,11 @@ If multiple rules apply to a cluster-wide resource, its availability is determin
 1. The [`excluded`](./cr.html#grantableclusterresourcedefinition-v1alpha1-spec-excluded) value in GrantableClusterResourceDefinition: the resource is unavailable regardless of policy settings.
 1. The [`denied`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-denied) and [`deniedSelector`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-deniedselector) values in the corresponding ClusterResourceGrantPolicy entry.
 1. The [`allowed`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowed) and [`allowedSelector`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowedselector) values in the corresponding ClusterResourceGrantPolicy entry.
+1. The [`reserved`](./cr.html#grantableclusterresourcedefinition-v1alpha1-spec-reserved) value in GrantableClusterResourceDefinition: a reserved resource that the previous steps have not made available is unavailable. The next steps do not apply to it, so `availabilityDefault: All` does not make it available.
 1. The [`availabilityDefault`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-availabilitydefault) value in the ClusterResourceGrantPolicy entries that apply to the project. If an entry sets `allowed` or `allowedSelector` without `availabilityDefault`, every resource not on its lists is unavailable. If one applicable entry sets `All`, it wins over `None` in the others.
 1. The [`defaultAvailability`](./cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultavailability) value in GrantableClusterResourceDefinition.
 
-The first matching step decides. Steps 2–4 combine the entries of all ClusterResourceGrantPolicy objects that apply to the project, including the service policies of its template and of the project itself.
+The first matching step decides. Steps 2, 3 and 5 combine the entries of all ClusterResourceGrantPolicy objects that apply to the project, including the service policies of its template and of the project itself.
 
 #### Assigning default values
 

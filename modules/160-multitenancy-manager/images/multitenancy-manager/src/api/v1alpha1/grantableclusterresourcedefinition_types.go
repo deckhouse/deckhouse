@@ -122,6 +122,15 @@ type GrantableClusterResourceDefinitionSpec struct {
 	// +optional
 	Excluded []ResourceFilter `json:"excluded,omitempty"`
 
+	// Reserved lists filters of objects not available to tenants by default: only a grant policy entry
+	// that names the object in allowed or matches it with allowedSelector opens it. A policy
+	// availabilityDefault of All and the registration defaultAvailability do not open it, and excluded
+	// and denied still win over an explicit allow. An object is reserved if it matches ANY of the
+	// filters. Selectors match the labels of live granted objects only; a name without an object is
+	// reserved only when listed in names.
+	// +optional
+	Reserved []ResourceFilter `json:"reserved,omitempty"`
+
 	// DefaultFrom marks the cluster-wide default object by annotation (fallback default).
 	// +optional
 	DefaultFrom *DefaultFrom `json:"defaultFrom,omitempty"`

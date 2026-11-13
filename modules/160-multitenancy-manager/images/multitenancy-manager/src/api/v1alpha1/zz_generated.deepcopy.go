@@ -302,6 +302,13 @@ func (in *GrantableClusterResourceDefinitionSpec) DeepCopyInto(out *GrantableClu
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.Reserved != nil {
+		in, out := &in.Reserved, &out.Reserved
+		*out = make([]ResourceFilter, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.DefaultFrom != nil {
 		in, out := &in.DefaultFrom, &out.DefaultFrom
 		*out = new(DefaultFrom)

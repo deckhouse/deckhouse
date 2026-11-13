@@ -137,7 +137,7 @@ flowchart LR
     G --> H["Объект создан<br/>или отклонён"]
 </pre>
 
-Пока администратор не создал ClusterResourceGrantPolicy, доступность ресурсов определяется их регистрацией: ресурсы доступны всем проектам, если в GrantableClusterResourceDefinition задано `defaultAvailability: All` (значение по умолчанию) и ресурс не попадает под фильтры `excluded`.
+Пока администратор не создал ClusterResourceGrantPolicy, доступность ресурсов определяется их регистрацией: ресурсы доступны всем проектам, если в GrantableClusterResourceDefinition задано `defaultAvailability: All` (значение по умолчанию) и ресурс не попадает под фильтры `excluded` или `reserved`.
 
 Квотирование ресурсов не является частью данного механизма — оно делегировано стандартному
 ресурсу Kubernetes ResourceQuota.
@@ -155,10 +155,11 @@ flowchart LR
 1. Значение [`excluded`](./cr.html#grantableclusterresourcedefinition-v1alpha1-spec-excluded) в GrantableClusterResourceDefinition — ресурс недоступен независимо от настроек политик.
 1. Значение [`denied`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-denied) и [`deniedSelector`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-deniedselector) в соответствующей записи ClusterResourceGrantPolicy.
 1. Значение [`allowed`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowed) и [`allowedSelector`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowedselector) в соответствующей записи ClusterResourceGrantPolicy.
+1. Значение [`reserved`](./cr.html#grantableclusterresourcedefinition-v1alpha1-spec-reserved) в GrantableClusterResourceDefinition — зарезервированный ресурс, который не стал доступен на предыдущих шагах, недоступен. Следующие шаги к нему не применяются, поэтому `availabilityDefault: All` не делает его доступным.
 1. Значение [`availabilityDefault`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-availabilitydefault) в записях ClusterResourceGrantPolicy, которые применяются к проекту. Если в записи задан `allowed` или `allowedSelector` без `availabilityDefault`, все ресурсы вне её списков недоступны. Если хотя бы одна применимая запись задаёт `All`, это значение имеет приоритет над `None` в других записях.
 1. Значение [`defaultAvailability`](./cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultavailability) в GrantableClusterResourceDefinition.
 
-Решает первый подходящий шаг. Шаги 2–4 объединяют записи всех ClusterResourceGrantPolicy, которые применяются к проекту, включая служебные политики его шаблона и самого проекта.
+Решает первый подходящий шаг. Шаги 2, 3 и 5 объединяют записи всех ClusterResourceGrantPolicy, которые применяются к проекту, включая служебные политики его шаблона и самого проекта.
 
 #### Подстановка значений по умолчанию
 

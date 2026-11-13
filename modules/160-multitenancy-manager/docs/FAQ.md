@@ -63,7 +63,7 @@ For a configuration example, refer to ["Denying individual resources"](usage.htm
 
 ### What happens if there is no ClusterResourceGrantPolicy?
 
-If no ClusterResourceGrantPolicy is configured for a resource, its availability is determined by its registration. The resource is available to all projects if [`defaultAvailability: All`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultavailability) (the default value) is set in GrantableClusterResourceDefinition and the resource does not match the [`excluded`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-excluded) filters.
+If no ClusterResourceGrantPolicy is configured for a resource, its availability is determined by its registration. The resource is available to all projects if [`defaultAvailability: All`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultavailability) (the default value) is set in GrantableClusterResourceDefinition and the resource does not match the [`excluded`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-excluded) or [`reserved`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-reserved) filters.
 
 For example, the `clusterroles` definition provided by Deckhouse Platform excludes every ClusterRole without the `rbac.deckhouse.io/delegatable: "true"` label. Therefore, such roles are unavailable in RoleBinding even when no policies are configured.
 

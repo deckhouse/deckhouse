@@ -34,6 +34,7 @@ Module developer:
 - **D4** — exclude some objects of my resource from ever being grantable (hard deny, e.g. system `ClusterRole`s). → `excluded`
 - **D5** — per path, choose validate-only vs also-default, and how to default. → `fieldPaths[].defaulting`
 - **D6** — keep enforcement in my own webhook; the platform only renders the catalog. → `enforcement: External`
+- **D7** — keep some objects of my resource closed by default, while an admin can still grant them to chosen projects explicitly (e.g. a high PriorityClass). → `reserved`
 
 Cluster admin:
 - **A1** — control, per project, which granted names are usable (allow-list / selector). → `ClusterResourceGrantPolicy`
@@ -92,6 +93,8 @@ spec:
   excluded:                        # objects never available to tenants (hard deny); names and/or selectors
     - matchLabels:
         storageclass.deckhouse.io/system: "true"
+  reserved:                        # objects closed by default, opened only by an explicit allowed/allowedSelector
+    - names: [premium-nvme]
   defaultFrom:                     # how to discover the resource's cluster-wide default value
     annotationKey: storageclass.kubernetes.io/is-default-class
   catalogFields:                   # fields of the granted objects copied into the tenant catalog
@@ -126,6 +129,7 @@ status:
 | `enforcement` | `Managed` (default) or `External` |
 | `defaultAvailability` | baseline when no policy decides: `All` (default) or `None` |
 | `excluded` | objects never available, regardless of policy (hard deny) |
+| `reserved` | objects closed by default; only a policy's explicit `allowed` name or `allowedSelector` match opens one, `availabilityDefault: All` and `defaultAvailability` do not |
 | `defaultFrom.annotationKey` | annotation marking the resource's cluster default (fallback default) |
 | `catalogFields[]` | fields of the granted objects shown in the catalog (`name` + singular JSONPath `path`), see [Catalog fields](#catalog-fields) |
 | `status.references[]` | reference objects bound to this definition (name + matched resources) |
@@ -449,7 +453,7 @@ the granted resource's schema (an `x-...` extension saying "show to tenants") lo
 
 | CRD / component | stories closed |
 |-----------------|----------------|
-| `GrantableClusterResourceDefinition` | D1 (register), D3 (`defaultFrom`), D4 (`excluded`), D6 (`enforcement: External`), O1 (`status.references`) |
+| `GrantableClusterResourceDefinition` | D1 (register), D3 (`defaultFrom`), D4 (`excluded`), D6 (`enforcement: External`), D7 (`reserved`), O1 (`status.references`) |
 | `GrantableClusterResourceReference` | D2 (register a path), D5 (`defaulting`), O2 (`status.bound`) |
 | `ClusterResourceGrantPolicy` | A1 (allow-list), A2 (default), A3 (`availabilityDefault`), A4 (`denied`) |
 | `AvailableClusterResource` | T1 (discovery) |
@@ -461,7 +465,12 @@ Every story has an owner; no story is left uncovered, and nothing in the model e
 ## Availability resolution
 
 Precedence for "may project P use granted name N of resource R":
-`excluded → denied → allowed → policy availabilityDefault → registration defaultAvailability`.
+`excluded → denied → allowed → reserved → policy availabilityDefault → registration defaultAvailability`.
+A reserved name is closed unless a policy allows it explicitly (a literal `allowed` name or an
+`allowedSelector` match); `availabilityDefault: All` does not reach it. The rule "an allow-list without
+`availabilityDefault` implies None" is unchanged: `allowed: [<reserved>]` alone narrows the project to
+that name like any allow-list, so to add a reserved name on top of everything else a policy sets
+`allowed: [<reserved>]` together with `availabilityDefault: All`.
 This lives in a single place (`internal/resolve`) shared by the webhook and the reconciler.
 
 ## Defaulting

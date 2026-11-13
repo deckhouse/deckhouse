@@ -38,7 +38,7 @@ import (
 
 // TestResolveNamesMatchesResolve checks that, for every name it was asked about, ResolveNames decides
 // as Resolve does, agrees on membership in the available set and on the effective default, over a
-// matrix of excluded filters, entries (literal and selector, allow and deny, baselines, defaults),
+// matrix of excluded and reserved filters, entries (literal and selector, allow and deny, baselines, defaults),
 // registration defaults and names with and without an object. Names without an object are the trap:
 // a NotIn or DoesNotExist selector matches an empty label set, and Resolve never matches selectors
 // against a name it did not list.
@@ -65,8 +65,17 @@ func TestResolveNamesMatchesResolve(t *testing.T) {
 		"tier-notin":   {{MatchExpressions: sel("tier", metav1.LabelSelectorOpNotIn, "gold").MatchExpressions}},
 		"no-tier-name": {{MatchExpressions: sel("tier", metav1.LabelSelectorOpDoesNotExist).MatchExpressions}, {Names: []string{"literal"}}},
 	}
+	// The reserved sets overlap the excluded ones (silver, ghost, sys) on purpose.
+	reservedSets := map[string][]v1alpha1.ResourceFilter{
+		"none":          nil,
+		"names":         {{Names: []string{"gold", "ghost", "literal"}}},
+		"tier-notin":    {{MatchExpressions: sel("tier", metav1.LabelSelectorOpNotIn, "silver").MatchExpressions}},
+		"no-tier-names": {{MatchExpressions: sel("tier", metav1.LabelSelectorOpDoesNotExist).MatchExpressions}, {Names: []string{"silver"}}},
+	}
 	entrySets := map[string][]v1alpha1.GrantResource{
 		"none":            nil,
+		"all-only":        {{AvailabilityDefault: v1alpha1.AvailabilityAll}},
+		"allow-all":       {{Allowed: []string{"gold", "ghost"}, AvailabilityDefault: v1alpha1.AvailabilityAll}},
 		"allow-names":     {{Allowed: []string{"gold", "ghost", "literal"}}},
 		"allow-selector":  {{AllowedSelector: sel("tier", metav1.LabelSelectorOpIn, "gold")}},
 		"deny-no-tier":    {{AvailabilityDefault: v1alpha1.AvailabilityAll, DeniedSelector: sel("tier", metav1.LabelSelectorOpDoesNotExist)}},
@@ -85,44 +94,47 @@ func TestResolveNamesMatchesResolve(t *testing.T) {
 	ctx := context.Background()
 	cl := newClient(t, objs...)
 	for exName, excluded := range excludedSets {
-		for _, availability := range []v1alpha1.AvailabilityDefault{v1alpha1.AvailabilityAll, v1alpha1.AvailabilityNone} {
-			for _, defaultFrom := range []bool{false, true} {
-				reg := roleReg(excluded)
-				reg.Spec.DefaultAvailability = availability
-				if defaultFrom {
-					reg.Spec.DefaultFrom = &v1alpha1.DefaultFrom{AnnotationKey: defaultKey}
-				}
-				for enName, entries := range entrySets {
-					full, err := Resolve(ctx, cl, testMapper(), reg, entries)
-					if err != nil {
-						t.Fatal(err)
+		for resName, reserved := range reservedSets {
+			for _, availability := range []v1alpha1.AvailabilityDefault{v1alpha1.AvailabilityAll, v1alpha1.AvailabilityNone} {
+				for _, defaultFrom := range []bool{false, true} {
+					reg := roleReg(excluded)
+					reg.Spec.Reserved = reserved
+					reg.Spec.DefaultAvailability = availability
+					if defaultFrom {
+						reg.Spec.DefaultFrom = &v1alpha1.DefaultFrom{AnnotationKey: defaultKey}
 					}
-					for _, name := range names {
-						t.Run(fmt.Sprintf("%s/%s/defaultFrom=%v/%s/%s", exName, availability, defaultFrom, enName, name), func(t *testing.T) {
-							narrow, err := ResolveNames(ctx, cl, testMapper(), reg, entries, []string{name})
-							if err != nil {
-								t.Fatal(err)
-							}
-							if got, want := narrow.Decide(name), full.Decide(name); got != want {
-								t.Errorf("Decide = %v, Resolve says %v", got, want)
-							}
-							if got, want := narrow.IsAvailable(name), full.IsAvailable(name); got != want {
-								t.Errorf("IsAvailable = %v, Resolve says %v", got, want)
-							}
-							if got, want := narrow.Default(), full.Default(); got != want {
-								t.Errorf("Default = %q, Resolve says %q", got, want)
-							}
-							decided, err := DecideNames(ctx, cl, testMapper(), reg, entries, []string{name})
-							if err != nil {
-								t.Fatal(err)
-							}
-							if got, want := decided.Decide(name), full.Decide(name); got != want {
-								t.Errorf("DecideNames: Decide = %v, Resolve says %v", got, want)
-							}
-							if got, want := decided.IsAvailable(name), full.IsAvailable(name); got != want {
-								t.Errorf("DecideNames: IsAvailable = %v, Resolve says %v", got, want)
-							}
-						})
+					for enName, entries := range entrySets {
+						full, err := Resolve(ctx, cl, testMapper(), reg, entries)
+						if err != nil {
+							t.Fatal(err)
+						}
+						for _, name := range names {
+							t.Run(fmt.Sprintf("%s/%s/%s/defaultFrom=%v/%s/%s", exName, resName, availability, defaultFrom, enName, name), func(t *testing.T) {
+								narrow, err := ResolveNames(ctx, cl, testMapper(), reg, entries, []string{name})
+								if err != nil {
+									t.Fatal(err)
+								}
+								if got, want := narrow.Decide(name), full.Decide(name); got != want {
+									t.Errorf("Decide = %v, Resolve says %v", got, want)
+								}
+								if got, want := narrow.IsAvailable(name), full.IsAvailable(name); got != want {
+									t.Errorf("IsAvailable = %v, Resolve says %v", got, want)
+								}
+								if got, want := narrow.Default(), full.Default(); got != want {
+									t.Errorf("Default = %q, Resolve says %q", got, want)
+								}
+								decided, err := DecideNames(ctx, cl, testMapper(), reg, entries, []string{name})
+								if err != nil {
+									t.Fatal(err)
+								}
+								if got, want := decided.Decide(name), full.Decide(name); got != want {
+									t.Errorf("DecideNames: Decide = %v, Resolve says %v", got, want)
+								}
+								if got, want := decided.IsAvailable(name), full.IsAvailable(name); got != want {
+									t.Errorf("DecideNames: IsAvailable = %v, Resolve says %v", got, want)
+								}
+							})
+						}
 					}
 				}
 			}

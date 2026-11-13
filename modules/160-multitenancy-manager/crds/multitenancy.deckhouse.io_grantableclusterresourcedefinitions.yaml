@@ -227,6 +227,61 @@ spec:
                     description: Kind of the cluster-wide resource (for example, StorageClass).
                     type: string
                 type: object
+              reserved:
+                description: |-
+                  Filters for reserved cluster-wide resources that are unavailable to projects by default.
+
+                  A reserved resource becomes available to a project only if a ClusterResourceGrantPolicy that applies to the project lists it in [`allowed`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowed) or matches it with [`allowedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowedselector). [`availabilityDefault: All`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-availabilitydefault) in a policy and `defaultAvailability` do not make it available. The `excluded` filters and the `denied` and `deniedSelector` values of a policy take precedence over `allowed` and `allowedSelector`.
+
+                  A resource is considered reserved if it matches at least one of the specified filters.
+                items:
+                  description: Filter for cluster-wide resources by name and labels.
+                  properties:
+                    matchExpressions:
+                      description: |-
+                        List of label selector expressions for cluster-wide resources.
+
+                        All expressions must match.
+                      items:
+                        description: |-
+                          Label selector expression.
+                        properties:
+                          key:
+                            description: Label key to which the expression applies.
+                            type: string
+                          operator:
+                            description: |-
+                              Operator that defines the relationship between the key and the set of values.
+                            type: string
+                          values:
+                            description: |-
+                              List of label values.
+
+                              For the `In` and `NotIn` operators, the list must contain at least one value. For the `Exists` and `DoesNotExist` operators, the list must be empty.
+                            items:
+                              type: string
+                            type: array
+                            x-kubernetes-list-type: atomic
+                        required:
+                        - key
+                        - operator
+                        type: object
+                      type: array
+                    matchLabels:
+                      additionalProperties:
+                        type: string
+                      description: |-
+                        Set of labels for cluster-wide resources.
+
+                        All specified labels must match.
+                      type: object
+                    names:
+                      description: List of cluster-wide resource names.
+                      items:
+                        type: string
+                      type: array
+                  type: object
+                type: array
             type: object
           status:
             description: GrantableClusterResourceDefinition status.

@@ -1479,9 +1479,55 @@ spec:
       availabilityDefault: All
 ```
 
-The registered resources are available to all projects by default, so `availabilityDefault: All` changes something only where another policy restricts the resource. There it overrides the `allowed` and `allowedSelector` lists of every policy that applies to the project, the policies of its template included. `denied`, `deniedSelector` and the `excluded` filters of the registration still apply.
+The registered resources are available to all projects by default, so `availabilityDefault: All` changes something only where another policy restricts the resource. There it overrides the `allowed` and `allowedSelector` lists of every policy that applies to the project, the policies of its template included. `denied`, `deniedSelector` and the `excluded` filters of the registration still apply. The resources that match the `reserved` filters of the registration stay unavailable, see ["Granting a reserved resource"](#granting-a-reserved-resource).
 
 Usually, explicitly specifying allowed resources using [`allowed`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowed) or [`allowedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowedselector) is sufficient for access management. Use `availabilityDefault: All` when the selected projects need access to all resources of the specified type.
+
+#### Granting a reserved resource
+
+A GrantableClusterResourceDefinition can mark some resources as reserved with [`reserved`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-reserved). A reserved resource is unavailable to projects by default, even when the other resources of its type are available. It becomes available to a project only if a policy that applies to the project lists it in [`allowed`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowed) or matches it with [`allowedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowedselector). `availabilityDefault: All` and `defaultAvailability` do not make it available. `denied`, `deniedSelector` and the `excluded` filters take precedence over `allowed` and `allowedSelector` here as well.
+
+An `allowedSelector` opens every reserved resource it matches. A broad or negative selector (`Exists`, `NotIn`, `DoesNotExist`) written for ordinary resources therefore also grants the reserved resources that happen to match it. To grant a reserved resource, name it in `allowed` or use a selector that targets it explicitly.
+
+In the following examples, the `myclusterresources` registration reserves the `premium` and `internal` resources.
+
+To grant a reserved resource without narrowing the other resources of the type, list it in `allowed` and set `availabilityDefault: All`:
+
+```yaml
+apiVersion: multitenancy.deckhouse.io/v1alpha2
+kind: ClusterResourceGrantPolicy
+metadata:
+  name: grant-premium
+spec:
+  projectSelector:
+    matchLabels:
+      tier: critical
+  resources:
+    - resourceName: myclusterresources
+      allowed:
+        - premium
+      availabilityDefault: All
+```
+
+The selected projects get every resource of the type that is not reserved, and `premium`. The `internal` resource stays unavailable, because `availabilityDefault: All` does not open reserved resources. `availabilityDefault: All` also overrides the `allowed` and `allowedSelector` lists of the other policies that apply to the project (see ["Granting access to all resources of a specific type"](#granting-access-to-all-resources-of-a-specific-type)).
+
+`allowed` without `availabilityDefault` makes every resource not on its list unavailable, as in any other policy. If a project must stay restricted to a list, for example by the policy of its template, grant the reserved resource with `allowed` alone: the `allowed` lists of all policies that apply to the project add up. Alternatively, list in one policy every resource the project needs, the reserved one included.
+
+To make a reserved resource the project default, specify it in both `allowed` and [`default`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-default) of the same entry. A default that the project may not use is ignored. This also applies to a reserved resource marked as the default by `defaultFrom`: it becomes the project default only where a policy allows it.
+
+The table shows what a project gets for typical combinations of policies. The registration reserves `premium` and `internal`, excludes `system` with `excluded`, and has `defaultAvailability: All`. The `premium` resource carries the `tier: critical` label. "Policies of the project" lists the entries of all policies that apply to the project.
+
+| Policies of the project | `standard` | `premium` (reserved) | `internal` (reserved) | `system` (excluded) |
+| --- | --- | --- | --- | --- |
+| None | available | — | — | — |
+| `availabilityDefault: All` | available | — | — | — |
+| `allowed: [premium]` | — | available | — | — |
+| `allowed: [premium]` and `availabilityDefault: All` | available | available | — | — |
+| `allowedSelector` matching `tier: critical` | — | available | — | — |
+| `allowed: [standard]` in the template policy and `allowed: [premium]` in another policy | available | available | — | — |
+| `allowed: [premium]` and, in another policy, `denied: [premium]` | — | — | — | — |
+| `allowed: [system]` | — | — | — | — |
+| `allowed: [system]` and `availabilityDefault: All` | available | — | — | — |
 
 #### Denying individual resources
 
@@ -1671,7 +1717,7 @@ AvailableClusterResource reports the project default in `status.default` and mar
 - the grant policy sets no `default`, and the registration has no `defaultFrom`;
 - the resource is granted as a list of values rather than as objects of the cluster, and `defaultFrom` does not apply to it;
 - `defaultFrom` is set, but not exactly one object has the annotation set to `true`;
-- a default is set, but the project may not use it, for example the default StorageClass of the cluster is not among the names granted to the project.
+- a default is set, but the project may not use it, for example the default StorageClass of the cluster is not among the names granted to the project, or the default is a [reserved](#granting-a-reserved-resource) resource that no policy allows for the project.
 
 Then the field stays empty, and the object is created or rejected by the usual rules.
 
@@ -1761,6 +1807,8 @@ To add access management for a new cluster-wide resource:
    ```
 
    In this example, the registered resources are available to projects by default. Resources with the `my.example.com/internal` label are excluded from the available resources.
+
+   To keep some resources unavailable by default but let an administrator grant them to individual projects, list them in [`reserved`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-reserved) instead of `excluded`. An administrator grants such a resource as described in ["Granting a reserved resource"](#granting-a-reserved-resource).
 
    Only a cluster-scoped resource can be specified in `grantedResource`. A definition of a namespaced resource (for example, Secret) is refused when it is created or updated. If such a definition is stored anyway, it is not processed: no project gets its AvailableClusterResource, and the `GrantedResourceValid` condition is `False` (read more in section ["Checking resource registration status"](#checking-resource-registration-status)). A resource whose CRD is not installed yet is accepted: its scope is checked once the resource is served.
 

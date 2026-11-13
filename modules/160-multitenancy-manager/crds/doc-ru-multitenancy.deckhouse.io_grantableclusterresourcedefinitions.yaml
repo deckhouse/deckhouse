@@ -123,6 +123,42 @@ spec:
                         Для основной API-группы укажите пустую строку (`""`).
                     kind:
                       description: Тип (kind) cluster-wide-ресурса (например, StorageClass).
+                reserved:
+                  description: |-
+                    Фильтры зарезервированных cluster-wide-ресурсов, которые по умолчанию недоступны проектам.
+
+                    Зарезервированный ресурс становится доступен проекту, только если применимая к проекту ClusterResourceGrantPolicy указывает его в [`allowed`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowed) или выбирает через [`allowedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowedselector). [`availabilityDefault: All`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-availabilitydefault) в политике и `defaultAvailability` не делают его доступным. Фильтры `excluded` и параметры `denied` и `deniedSelector` политики имеют приоритет над `allowed` и `allowedSelector`.
+
+                    Ресурс считается зарезервированным, если соответствует хотя бы одному из указанных фильтров.
+                  items:
+                    description: Фильтр cluster-wide-ресурсов по именам и лейблам.
+                    properties:
+                      matchExpressions:
+                        description: |-
+                          Список выражений селектора лейблов cluster-wide-ресурсов.
+
+                          Все выражения должны выполняться одновременно.
+                        items:
+                          description: |-
+                            Выражение селектора лейблов.
+                          properties:
+                            key:
+                              description: Ключ лейбла, к которому применяется выражение.
+                            operator:
+                              description: |-
+                                Оператор, определяющий отношение ключа к набору значений.
+                            values:
+                              description: |-
+                                Список значений лейбла.
+
+                                Для операторов `In` и `NotIn` список должен содержать хотя бы одно значение. Для операторов `Exists` и `DoesNotExist` список должен быть пустым.
+                      matchLabels:
+                        description: |-
+                          Набор лейблов cluster-wide-ресурсов.
+
+                          Все указанные лейблы должны совпадать.
+                      names:
+                        description: Список имён cluster-wide-ресурсов.
             status:
               description: Состояние GrantableClusterResourceDefinition.
               properties:

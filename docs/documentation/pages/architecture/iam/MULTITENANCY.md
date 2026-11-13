@@ -56,7 +56,7 @@ The mechanism uses four custom resources:
 * [ClusterResourceGrantPolicy](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy) defines access rules. In the `v1alpha2` version, a cluster administrator selects the projects to which the policy applies by the labels of Project objects (`projectSelector`) and narrows the choice by the labels of project namespaces (`namespaceSelector`). The policy also defines the allowed and denied resources, as well as the resource used by default.
 * In every namespace of every project, the controller keeps an [AvailableClusterResource](/modules/multitenancy-manager/cr.html#availableclusterresource) for each GrantableClusterResourceDefinition. It lists the cluster-wide resources available to the project under the policies that apply and is read-only.
 
-Until the administrator creates a ClusterResourceGrantPolicy, resource availability is determined by their registration: resources are available to all projects if `defaultAvailability: All` (the default value) is set in GrantableClusterResourceDefinition and the resource does not match the `excluded` filters.
+Until the administrator creates a ClusterResourceGrantPolicy, resource availability is determined by their registration: resources are available to all projects if `defaultAvailability: All` (the default value) is set in GrantableClusterResourceDefinition and the resource does not match the `excluded` or `reserved` filters.
 
 Access checks are performed only for objects in project namespaces. If an access policy changes, cluster-wide resources already used by existing objects remain available to those objects.
 

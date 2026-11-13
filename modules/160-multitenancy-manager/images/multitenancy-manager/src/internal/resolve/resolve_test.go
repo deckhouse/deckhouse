@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -340,5 +341,237 @@ func TestResolveTreatsAListNotFoundAsNotServed(t *testing.T) {
 	}
 	if mapper.resets != 1 {
 		t.Fatalf("the mapper must be reset once, got %d", mapper.resets)
+	}
+}
+
+// reservedReg is an object-backed registration (ClusterRole) with production-high reserved by name and
+// every object labelled reserved=true reserved by selector.
+func reservedReg(defAvail v1alpha1.AvailabilityDefault, excluded []v1alpha1.ResourceFilter) *v1alpha1.GrantableClusterResourceDefinition {
+	reg := roleReg(excluded)
+	reg.Spec.DefaultAvailability = defAvail
+	reg.Spec.Reserved = []v1alpha1.ResourceFilter{
+		{Names: []string{"production-high"}},
+		{MatchLabels: map[string]string{"reserved": "true"}},
+	}
+	return reg
+}
+
+func reservedObjects() []client.Object {
+	return []client.Object{
+		clusterRole("develop", nil),
+		clusterRole("staging", map[string]string{"reserved": "false"}),
+		clusterRole("production-high", nil),
+		clusterRole("deployment-machinery", map[string]string{"reserved": "true"}),
+	}
+}
+
+// availableSet resolves the registration and returns the names Decide allows among the live objects,
+// checking that the catalog (Available) lists exactly the same names.
+func availableSet(t *testing.T, reg *v1alpha1.GrantableClusterResourceDefinition, entries []v1alpha1.GrantResource, objs []client.Object) []string {
+	t.Helper()
+	resolved, err := Resolve(context.Background(), newClient(t, objs...), testMapper(), reg, entries)
+	if err != nil {
+		t.Fatalf("resolve: %v", err)
+	}
+	var decided []string
+	for _, o := range objs {
+		if resolved.Decide(o.GetName()) {
+			decided = append(decided, o.GetName())
+		}
+	}
+	slices.Sort(decided)
+	catalog := []string{}
+	for _, a := range resolved.Available() {
+		catalog = append(catalog, a.Name)
+	}
+	if !slices.Equal(catalog, append([]string{}, decided...)) {
+		t.Fatalf("catalog %v differs from the decided names %v", catalog, decided)
+	}
+	return decided
+}
+
+func TestDecideReserved(t *testing.T) {
+	allowed := func(names ...string) v1alpha1.GrantResource { return v1alpha1.GrantResource{Allowed: names} }
+	all := v1alpha1.AvailabilityAll
+	cases := []struct {
+		name     string
+		defAvail v1alpha1.AvailabilityDefault
+		excluded []v1alpha1.ResourceFilter
+		entries  []v1alpha1.GrantResource
+		want     []string
+	}{
+		{
+			name: "no policy: reserved closed, the others open",
+			want: []string{"develop", "staging"},
+		},
+		{
+			name:    "allowed opens the reserved name and narrows the rest as any allow-list",
+			entries: []v1alpha1.GrantResource{allowed("production-high")},
+			want:    []string{"production-high"},
+		},
+		{
+			name:    "allowed with availabilityDefault All adds the reserved name to the open ones",
+			entries: []v1alpha1.GrantResource{{Allowed: []string{"production-high"}, AvailabilityDefault: all}},
+			want:    []string{"develop", "production-high", "staging"},
+		},
+		{
+			name:    "availabilityDefault All alone does not open reserved",
+			entries: []v1alpha1.GrantResource{{AvailabilityDefault: all}},
+			want:    []string{"develop", "staging"},
+		},
+		{
+			name:    "availabilityDefault All in another entry does not open reserved",
+			entries: []v1alpha1.GrantResource{allowed("develop"), {AvailabilityDefault: all}},
+			want:    []string{"develop", "staging"},
+		},
+		{
+			name: "allowedSelector opens the reserved objects it matches",
+			entries: []v1alpha1.GrantResource{{
+				AllowedSelector:     &metav1.LabelSelector{MatchLabels: map[string]string{"reserved": "true"}},
+				AvailabilityDefault: all,
+			}},
+			want: []string{"deployment-machinery", "develop", "staging"},
+		},
+		{
+			name:    "a template allow-list and a second policy allowing a reserved name add up",
+			entries: []v1alpha1.GrantResource{allowed("develop", "staging"), allowed("production-high")},
+			want:    []string{"develop", "production-high", "staging"},
+		},
+		{
+			name:    "denied wins over an explicit allow of a reserved name",
+			entries: []v1alpha1.GrantResource{{Allowed: []string{"production-high"}, AvailabilityDefault: all}, {Denied: []string{"production-high"}}},
+			want:    []string{"develop", "staging"},
+		},
+		{
+			name:     "excluded wins over an explicit allow of a reserved name",
+			excluded: []v1alpha1.ResourceFilter{{Names: []string{"production-high"}}},
+			entries:  []v1alpha1.GrantResource{{Allowed: []string{"production-high"}, AvailabilityDefault: all}},
+			want:     []string{"develop", "staging"},
+		},
+		{
+			name:     "registration None: All opens the others, reserved only by allowed",
+			defAvail: v1alpha1.AvailabilityNone,
+			entries:  []v1alpha1.GrantResource{{Allowed: []string{"production-high"}, AvailabilityDefault: all}},
+			want:     []string{"develop", "production-high", "staging"},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			defAvail := c.defAvail
+			if defAvail == "" {
+				defAvail = v1alpha1.AvailabilityAll
+			}
+			got := availableSet(t, reservedReg(defAvail, c.excluded), c.entries, reservedObjects())
+			if !slices.Equal(got, c.want) {
+				t.Fatalf("available = %v, want %v", got, c.want)
+			}
+		})
+	}
+}
+
+// A reserved value of a value-backed registration (no objects) is reserved by its literal name.
+func TestDecideReservedValueBacked(t *testing.T) {
+	reg := valueReg(v1alpha1.AvailabilityAll, nil)
+	reg.Spec.Reserved = []v1alpha1.ResourceFilter{{Names: []string{"internal"}}}
+	if decide(t, reg, nil, "internal") {
+		t.Fatal("a reserved value must be closed without a policy")
+	}
+	if !decide(t, reg, nil, "public") {
+		t.Fatal("a value that is not reserved must stay open")
+	}
+	if decide(t, reg, []v1alpha1.GrantResource{{AvailabilityDefault: v1alpha1.AvailabilityAll}}, "internal") {
+		t.Fatal("availabilityDefault All must not open a reserved value")
+	}
+	resolved, err := Resolve(context.Background(), newClient(t), testMapper(), reg, []v1alpha1.GrantResource{{Allowed: []string{"internal"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !resolved.Decide("internal") || !resolved.IsAvailable("internal") {
+		t.Fatal("an explicitly allowed reserved value must be available")
+	}
+}
+
+// A default naming a reserved object counts only when the project is granted the object: an entry
+// that sets default alone, or a defaultFrom annotation on a reserved object, leaves no default.
+func TestDefaultReserved(t *testing.T) {
+	const key = "example.com/is-default"
+	objs := reservedObjects()
+	objs[2].SetAnnotations(map[string]string{key: "true"}) // production-high
+	cases := []struct {
+		name        string
+		defaultFrom bool
+		entries     []v1alpha1.GrantResource
+		want        string
+	}{
+		{name: "default alone", entries: []v1alpha1.GrantResource{{Default: "production-high"}}, want: ""},
+		{name: "default with availabilityDefault All", entries: []v1alpha1.GrantResource{{Default: "production-high", AvailabilityDefault: v1alpha1.AvailabilityAll}}, want: ""},
+		{name: "default with allowed", entries: []v1alpha1.GrantResource{{Default: "production-high", Allowed: []string{"production-high"}, AvailabilityDefault: v1alpha1.AvailabilityAll}}, want: "production-high"},
+		{name: "defaultFrom without a grant", defaultFrom: true, want: ""},
+		{name: "defaultFrom with allowed", defaultFrom: true, entries: []v1alpha1.GrantResource{{Allowed: []string{"production-high"}, AvailabilityDefault: v1alpha1.AvailabilityAll}}, want: "production-high"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			reg := reservedReg(v1alpha1.AvailabilityAll, nil)
+			if c.defaultFrom {
+				reg.Spec.DefaultFrom = &v1alpha1.DefaultFrom{AnnotationKey: key}
+			}
+			resolved, err := Resolve(context.Background(), newClient(t, objs...), testMapper(), reg, c.entries)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := resolved.Default(); got != c.want {
+				t.Fatalf("Default = %q, want %q", got, c.want)
+			}
+		})
+	}
+}
+
+// An invalid reserved selector fails the resolve and is named as reserved, not excluded.
+func TestResolveInvalidReservedSelector(t *testing.T) {
+	reg := roleReg(nil)
+	reg.Spec.Reserved = []v1alpha1.ResourceFilter{{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: "k", Operator: "Bogus"}}}}
+	_, err := Resolve(context.Background(), newClient(t), testMapper(), reg, nil)
+	if err == nil || !strings.Contains(err.Error(), "invalid reserved selector") {
+		t.Fatalf("want an invalid reserved selector error, got %v", err)
+	}
+}
+
+// The table in docs/USAGE.md, "Granting a reserved resource": keep the two in sync.
+func TestUsageReservedTable(t *testing.T) {
+	reg := roleReg([]v1alpha1.ResourceFilter{{Names: []string{"system"}}})
+	reg.Spec.DefaultAvailability = v1alpha1.AvailabilityAll
+	reg.Spec.Reserved = []v1alpha1.ResourceFilter{{Names: []string{"premium", "internal"}}}
+	objs := []client.Object{
+		clusterRole("standard", nil),
+		clusterRole("premium", map[string]string{"tier": "critical"}),
+		clusterRole("internal", nil),
+		clusterRole("system", nil),
+	}
+	all := v1alpha1.AvailabilityAll
+	cases := []struct {
+		name    string
+		entries []v1alpha1.GrantResource
+		want    []string
+	}{
+		{name: "no policy", want: []string{"standard"}},
+		{name: "availabilityDefault All", entries: []v1alpha1.GrantResource{{AvailabilityDefault: all}}, want: []string{"standard"}},
+		{name: "allowed premium", entries: []v1alpha1.GrantResource{{Allowed: []string{"premium"}}}, want: []string{"premium"}},
+		{name: "allowed premium and availabilityDefault All", entries: []v1alpha1.GrantResource{{Allowed: []string{"premium"}, AvailabilityDefault: all}}, want: []string{"premium", "standard"}},
+		{
+			name:    "allowedSelector matching premium",
+			entries: []v1alpha1.GrantResource{{AllowedSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"tier": "critical"}}}},
+			want:    []string{"premium"},
+		},
+		{name: "template allows standard, another policy allows premium", entries: []v1alpha1.GrantResource{{Allowed: []string{"standard"}}, {Allowed: []string{"premium"}}}, want: []string{"premium", "standard"}},
+		{name: "allowed premium, another policy denies premium", entries: []v1alpha1.GrantResource{{Allowed: []string{"premium"}}, {Denied: []string{"premium"}}}, want: nil},
+		{name: "allowed system", entries: []v1alpha1.GrantResource{{Allowed: []string{"system"}}}, want: nil},
+		{name: "allowed system and availabilityDefault All", entries: []v1alpha1.GrantResource{{Allowed: []string{"system"}, AvailabilityDefault: all}}, want: []string{"standard"}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := availableSet(t, reg, c.entries, objs); !slices.Equal(got, c.want) {
+				t.Fatalf("available = %v, want %v", got, c.want)
+			}
+		})
 	}
 }

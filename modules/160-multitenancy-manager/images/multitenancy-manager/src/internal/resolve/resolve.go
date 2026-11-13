@@ -15,8 +15,8 @@ limitations under the License.
 */
 
 // Package resolve turns the cluster-scoped grant model (GrantableClusterResourceDefinition + ClusterResourceGrantPolicy)
-// into per-project decisions: which grants apply to a namespace, and the resolved allow/deny/excluded
-// name sets and default for a registration. Selector-based rules are expanded against the live granted
+// into per-project decisions: which grants apply to a namespace, and the resolved allow/deny/excluded/
+// reserved name sets and default for a registration. Selector-based rules are expanded against the live granted
 // objects so the webhook and reconciler share identical semantics.
 package resolve
 
@@ -184,10 +184,12 @@ func ReferencesForRequest(ctx context.Context, cl client.Reader, group, version,
 
 // Resolved holds the resolved availability for one registration in one project.
 type Resolved struct {
-	Reg       *v1alpha1.GrantableClusterResourceDefinition
-	allowed   map[string]struct{}
-	denied    map[string]struct{}
-	excluded  map[string]struct{}
+	Reg      *v1alpha1.GrantableClusterResourceDefinition
+	allowed  map[string]struct{}
+	denied   map[string]struct{}
+	excluded map[string]struct{}
+	// reserved are the names the registration keeps closed unless a grant allows them explicitly.
+	reserved  map[string]struct{}
 	liveNames []string
 	// liveObjects are the listed granted objects by name, kept for the catalog field projection.
 	liveObjects map[string]map[string]any
@@ -208,7 +210,10 @@ type Resolved struct {
 }
 
 // Decide reports whether the project may use the granted object of the given name, applying the
-// precedence excluded → denied → allowed → grant availabilityDefault → registration defaultAvailability.
+// precedence excluded → denied → allowed → reserved → grant availabilityDefault → registration
+// defaultAvailability. A reserved name is opened only by an explicit allow (a literal allowed name or
+// an allowedSelector match): neither availabilityDefault All of a grant nor the registration baseline
+// reaches it.
 func (r *Resolved) Decide(name string) bool {
 	if _, ok := r.excluded[name]; ok {
 		return false
@@ -218,6 +223,9 @@ func (r *Resolved) Decide(name string) bool {
 	}
 	if _, ok := r.allowed[name]; ok {
 		return true
+	}
+	if _, ok := r.reserved[name]; ok {
+		return false
 	}
 	if r.anyAll {
 		return true
@@ -232,7 +240,8 @@ func (r *Resolved) Decide(name string) bool {
 func (r *Resolved) Default() string { return r.def }
 
 // availableNames returns the set of names available to this project: the live objects that Decide()
-// allows, plus any explicitly allowed name (e.g. value-backed values). It is memoized and independent
+// allows, plus any explicitly allowed name (e.g. value-backed values) that is neither excluded nor
+// denied; an explicit allow opens a reserved name, so reserved is not checked here. It is memoized and independent
 // of the chosen default, so it can be reused for membership tests during Resolve.
 func (r *Resolved) availableNames() map[string]struct{} {
 	if r.availableSet != nil {
@@ -394,7 +403,8 @@ func (m *FieldsMemo) Forget(keep map[types.UID]struct{}) {
 }
 
 // Resolve builds the resolved availability for a registration given the applicable grant entries. For
-// object-backed resources it lists the live granted objects to expand allowed/denied/excluded selectors.
+// object-backed resources it lists the live granted objects to expand allowed/denied/excluded/reserved
+// selectors.
 //
 // cl serves the granted objects; the controller passes a cache-backed reader (see grantcache), so the
 // list is read with UnsafeDisableDeepCopy: the objects are only read, never changed or kept beyond
@@ -455,9 +465,10 @@ func Resolve(
 // ones), and a catalog field projection makes no sense on the result, so it is for the webhooks and
 // checks that decide on a known set of names.
 //
-// A name without an object is decided by the literal lists and the baselines alone, as in Resolve,
-// where selectors only ever see listed objects: matching them against an empty label set would let a
-// NotIn or DoesNotExist selector decide about an object that does not exist.
+// A name without an object is decided by the literal lists (allowed, denied, excluded and reserved
+// names) and the baselines alone, as in Resolve, where selectors only ever see listed objects: matching
+// them against an empty label set would let a NotIn or DoesNotExist selector decide about an object
+// that does not exist.
 //
 // A kind the API server does not serve any more (its CRD was deleted while the mapper still maps it)
 // is reported with ErrGrantedResourceNotServed and the mapper is reset, as Resolve does on its list.
@@ -586,13 +597,14 @@ func objectNotFound(err error, name string) bool {
 }
 
 // newResolved collects what the entries and the registration say by name: the literal allowed and
-// denied names, the first explicit default, the baselines and the excluded names.
+// denied names, the first explicit default, the baselines and the excluded and reserved names.
 func newResolved(reg *v1alpha1.GrantableClusterResourceDefinition, entries []v1alpha1.GrantResource) *Resolved {
 	r := &Resolved{
 		Reg:      reg,
 		allowed:  map[string]struct{}{},
 		denied:   map[string]struct{}{},
 		excluded: map[string]struct{}{},
+		reserved: map[string]struct{}{},
 	}
 
 	// Literal names and defaults from grant entries.
@@ -616,7 +628,8 @@ func newResolved(reg *v1alpha1.GrantableClusterResourceDefinition, entries []v1a
 			// No explicit baseline: an allow-list (names or selector) means "restrict to it", so the
 			// baseline for everything else is None. This lets a grant omit availabilityDefault in the
 			// common allow-list case; set it explicitly only to flip the baseline without a list
-			// (All to open a project fully, None to lock it down).
+			// (All to open a project fully, None to lock it down). Reserved names do not change this: an
+			// allow-list of reserved names alone narrows the project to them, like any other allow-list.
 			if len(e.Allowed) > 0 || e.AllowedSelector != nil {
 				r.anyNone = true
 			}
@@ -628,6 +641,12 @@ func newResolved(reg *v1alpha1.GrantableClusterResourceDefinition, entries []v1a
 			r.excluded[n] = struct{}{}
 		}
 	}
+	// Registration reserved literal names (union across all reserved filters).
+	for i := range reg.Spec.Reserved {
+		for _, n := range reg.Spec.Reserved[i].Names {
+			r.reserved[n] = struct{}{}
+		}
+	}
 	return r
 }
 
@@ -636,6 +655,7 @@ func newResolved(reg *v1alpha1.GrantableClusterResourceDefinition, entries []v1a
 // recompilations.
 type liveMatcher struct {
 	excluded []labels.Selector
+	reserved []labels.Selector
 	allowed  []labels.Selector
 	denied   []labels.Selector
 }
@@ -643,16 +663,26 @@ type liveMatcher struct {
 func newLiveMatcher(reg *v1alpha1.GrantableClusterResourceDefinition, entries []v1alpha1.GrantResource) (*liveMatcher, error) {
 	m := &liveMatcher{
 		excluded: make([]labels.Selector, 0, len(reg.Spec.Excluded)),
+		reserved: make([]labels.Selector, 0, len(reg.Spec.Reserved)),
 		allowed:  make([]labels.Selector, len(entries)),
 		denied:   make([]labels.Selector, len(entries)),
 	}
 	for i := range reg.Spec.Excluded {
-		sel, err := filterSelector(&reg.Spec.Excluded[i])
+		sel, err := filterSelector("excluded", &reg.Spec.Excluded[i])
 		if err != nil {
 			return nil, err
 		}
 		if sel != nil {
 			m.excluded = append(m.excluded, sel)
+		}
+	}
+	for i := range reg.Spec.Reserved {
+		sel, err := filterSelector("reserved", &reg.Spec.Reserved[i])
+		if err != nil {
+			return nil, err
+		}
+		if sel != nil {
+			m.reserved = append(m.reserved, sel)
 		}
 	}
 	for j := range entries {
@@ -671,6 +701,12 @@ func (r *Resolved) addLive(m *liveMatcher, obj *unstructured.Unstructured) {
 	for _, sel := range m.excluded {
 		if sel.Matches(objLabels) {
 			r.excluded[name] = struct{}{}
+			break
+		}
+	}
+	for _, sel := range m.reserved {
+		if sel.Matches(objLabels) {
+			r.reserved[name] = struct{}{}
 			break
 		}
 	}
@@ -721,13 +757,15 @@ func (r *Resolved) isAvailable(name string) bool {
 	return ok
 }
 
-func filterSelector(f *v1alpha1.ResourceFilter) (labels.Selector, error) {
+// filterSelector compiles the label part of a registration filter; field names the filter list
+// (excluded or reserved) in the error.
+func filterSelector(field string, f *v1alpha1.ResourceFilter) (labels.Selector, error) {
 	if f == nil || (len(f.MatchLabels) == 0 && len(f.MatchExpressions) == 0) {
 		return nil, nil
 	}
 	sel, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{MatchLabels: f.MatchLabels, MatchExpressions: f.MatchExpressions})
 	if err != nil {
-		return nil, fmt.Errorf("invalid excluded selector: %w", err)
+		return nil, fmt.Errorf("invalid %s selector: %w", field, err)
 	}
 	return sel, nil
 }
