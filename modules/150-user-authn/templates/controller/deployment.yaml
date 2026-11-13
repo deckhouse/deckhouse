@@ -82,6 +82,11 @@ spec:
         # The trusted devices are kept first when the device list of a UserAccount is cut.
         - name: MIN_DEVICE_AGE
           value: {{ dig "devices" "trustedAfter" "24h" .Values.userAuthn | quote }}
+        # The end of a device listed in a UserAccount: the same lifetimes as expiry.refreshTokens of Dex.
+        - name: REFRESH_TOKEN_ABSOLUTE_LIFETIME
+          value: {{ .Values.userAuthn.refreshTokenAbsoluteLifetime | default "4380h" | quote }}
+        - name: REFRESH_TOKEN_VALID_IF_NOT_USED_FOR
+          value: {{ .Values.userAuthn.refreshTokenValidIfNotUsedFor | default "2190h" | quote }}
         - name: USER_OPERATION_RETENTION
           value: {{ dig "retention" "userOperations" "24h" .Values.userAuthn | quote }}
         # The password history Dex keeps (templates/dex/config.yaml), none without a password policy: a

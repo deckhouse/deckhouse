@@ -19,6 +19,7 @@ package useraccount
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"slices"
 	"sync/atomic"
@@ -281,17 +282,17 @@ func TestReconcile_SkipIfEqualDoesNotUpdate(t *testing.T) {
 
 	var statusUpdates atomic.Int32
 	scheme := newTestScheme(t)
-	c := fake.NewClientBuilder().
+	c := withIndexes(fake.NewClientBuilder()).
 		WithScheme(scheme).
 		WithRESTMapper(newTestMapper()).
 		WithStatusSubresource(&v1alpha1.UserAccount{}).
 		WithObjects(pw).
 		WithInterceptorFuncs(interceptor.Funcs{
-			SubResourceUpdate: func(ctx context.Context, cl client.Client, subResourceName string, obj client.Object, opts ...client.SubResourceUpdateOption) error {
+			SubResourcePatch: func(ctx context.Context, cl client.Client, subResourceName string, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
 				if subResourceName == "status" {
 					statusUpdates.Add(1)
 				}
-				return cl.SubResource(subResourceName).Update(ctx, obj, opts...)
+				return cl.SubResource(subResourceName).Patch(ctx, obj, patch, opts...)
 			},
 		}).
 		Build()
@@ -341,11 +342,10 @@ func TestReconcile_ExternalDoesNotListPasswords(t *testing.T) {
 
 	var passwordLists atomic.Int32
 	scheme := newTestScheme(t)
-	c := fake.NewClientBuilder().
+	c := withIndexes(fake.NewClientBuilder()).
 		WithScheme(scheme).
 		WithRESTMapper(newTestMapper()).
 		WithStatusSubresource(&v1alpha1.UserAccount{}).
-		WithIndex(controller.Object(controller.AuthSessionGVK), controller.AuthSessionPairField, controller.AuthSessionPair).
 		WithObjects(sess, provider).
 		WithInterceptorFuncs(interceptor.Funcs{
 			List: func(ctx context.Context, cl client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
@@ -383,16 +383,21 @@ func TestReconcile_HonorsCanceledContext(t *testing.T) {
 	}
 }
 
+// withIndexes registers every cache index of the controller, as the manager does.
+func withIndexes(b *fake.ClientBuilder) *fake.ClientBuilder {
+	for _, index := range controller.Indexes() {
+		b = b.WithIndex(index.Object, index.Field, index.Extract)
+	}
+	return b
+}
+
 func newTestReconciler(t *testing.T, now time.Time, objs ...client.Object) *Reconciler {
 	t.Helper()
 	scheme := newTestScheme(t)
-	c := fake.NewClientBuilder().
+	c := withIndexes(fake.NewClientBuilder()).
 		WithScheme(scheme).
 		WithRESTMapper(newTestMapper()).
 		WithStatusSubresource(&v1alpha1.UserAccount{}).
-		WithIndex(controller.Object(controller.PasswordGVK), controller.PasswordPairField, controller.PasswordPair).
-		WithIndex(controller.Object(controller.AuthSessionGVK), controller.AuthSessionPairField, controller.AuthSessionPair).
-		WithIndex(controller.Object(controller.RefreshTokenGVK), controller.RefreshTokenPairField, controller.RefreshTokenPair).
 		WithObjects(objs...).
 		Build()
 	return New(c, logr.Discard(), func() time.Time { return now })
@@ -965,8 +970,13 @@ func TestReconcile_LocalListsDevices(t *testing.T) {
 
 	r := newTestReconciler(t, now, pw, offline, tokenConsole, tokenKube, live, ended, other)
 	name := naming.LocalName("jane@example.com")
-	if _, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: name}}); err != nil {
+	res, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: name}})
+	if err != nil {
 		t.Fatalf("Reconcile: %v", err)
+	}
+	// The browser ends first, in an hour: the next pass drops it though Dex writes nothing then.
+	if want := time.Hour + time.Second; res.RequeueAfter != want {
+		t.Errorf("RequeueAfter = %v, want %v, a second after the nearest end", res.RequeueAfter, want)
 	}
 
 	var ua v1alpha1.UserAccount
@@ -979,11 +989,14 @@ func TestReconcile_LocalListsDevices(t *testing.T) {
 			ID: "g-kube", Kind: v1alpha1.SessionKindGrant, Clients: []string{"kubeconfig-generator"},
 			IPAddress: "198.51.100.2", UserAgent: "kubectl",
 			SignedInAt: metaTimeOrNil(now.Add(-30 * time.Minute)), LastActivity: hour(12),
+			// Never refreshed: unused for refreshTokenValidIfNotUsedFor from the sign-in.
+			EndsAt: metaTimeOrNil(now.Add(-30*time.Minute + DefaultRefreshTokenValidIfNotUsedFor)),
 		},
 		{
 			ID: "sid-1", Kind: v1alpha1.SessionKindBrowser, Clients: []string{"console"},
 			IPAddress: "203.0.113.7", UserAgent: "Firefox",
 			SignedInAt: metaTimeOrNil(now.Add(-3 * time.Hour)), LastActivity: hour(11),
+			EndsAt: metaTimeOrNil(now.Add(time.Hour)),
 		},
 	}
 	if !slices.EqualFunc(ua.Status.Sessions, want, sessionEqual) {
@@ -992,6 +1005,183 @@ func TestReconcile_LocalListsDevices(t *testing.T) {
 	}
 	if ua.Status.SessionsTruncated {
 		t.Error("sessionsTruncated = true, want false")
+	}
+}
+
+// An hour of work: the browser refreshes the tokens of its applications every 5 minutes, and Dex
+// records each refresh as a use of the session, and a kubeconfig refreshes its token as often. Each
+// refresh moves the end of a device by 5 minutes, less than the tolerance of 15: the status is
+// written once in 3 refreshes of a device, and once more when the hour of the last activity changes,
+// at most 2 × 4 + 1 = 9 times instead of 24. The stored end is never later than the real one, never
+// lags it by the tolerance or more, and never is in the past. A write of Dex that changes nothing the
+// status shows (a field it does not list, a time within the same second: Dex writes nanoseconds, the
+// status keeps seconds) writes nothing.
+func TestReconcile_StatusWritesOfAnActiveSession(t *testing.T) {
+	t.Parallel()
+
+	start := time.Date(2026, 10, 16, 12, 32, 10, 123456789, time.UTC)
+	const (
+		step  = 5 * time.Minute
+		steps = 12
+	)
+	ts := func(t time.Time) string { return t.Format(time.RFC3339Nano) }
+	pair := naming.OfflineTokenName("jane", naming.LocalConnectorID)
+	offline := func(used time.Time) map[string]any {
+		return map[string]any{
+			"g-console": map[string]any{
+				"ID": "g-console", "ClientID": "console", "SessionID": "sid-1",
+				"CreatedAt": ts(start.Add(-time.Hour)), "LastUsed": ts(used),
+			},
+			"g-kube": map[string]any{
+				"ID": "g-kube", "ClientID": "kubeconfig-generator",
+				"CreatedAt": ts(start.Add(-2 * time.Hour)), "LastUsed": ts(used),
+			},
+		}
+	}
+	browser := func(used time.Time) map[string]any {
+		return map[string]any{
+			"clientStates":   map[string]any{"console": map[string]any{}},
+			"createdAt":      ts(start.Add(-time.Hour)),
+			"lastActivity":   ts(used),
+			"idleExpiry":     ts(used.Add(24 * time.Hour)),
+			"absoluteExpiry": ts(start.Add(167 * time.Hour)),
+		}
+	}
+
+	var writes, updates atomic.Int32
+	now := start
+	c := withIndexes(fake.NewClientBuilder()).
+		WithScheme(newTestScheme(t)).
+		WithRESTMapper(newTestMapper()).
+		WithStatusSubresource(&v1alpha1.UserAccount{}).
+		WithObjects(
+			passwordUnstructured("pw-jane", map[string]any{"email": "jane@example.com", "username": "jane", "userID": "jane"}),
+			sessionUnstructured(pair, map[string]any{"userID": "jane", "connID": naming.LocalConnectorID, "grants": offline(start)}),
+			refreshTokenUnstructured("g-console", "jane", naming.LocalConnectorID),
+			refreshTokenUnstructured("g-kube", "jane", naming.LocalConnectorID),
+			authSessionUnstructured("sid-1", "jane", naming.LocalConnectorID, browser(start)),
+		).
+		WithInterceptorFuncs(interceptor.Funcs{
+			SubResourcePatch: func(ctx context.Context, cl client.Client, sub string, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
+				if _, ok := obj.(*v1alpha1.UserAccount); ok {
+					writes.Add(1)
+				}
+				return cl.SubResource(sub).Patch(ctx, obj, patch, opts...)
+			},
+			SubResourceUpdate: func(ctx context.Context, cl client.Client, sub string, obj client.Object, opts ...client.SubResourceUpdateOption) error {
+				updates.Add(1)
+				return cl.SubResource(sub).Update(ctx, obj, opts...)
+			},
+			Update: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
+				if _, ok := obj.(*v1alpha1.UserAccount); ok {
+					updates.Add(1)
+				}
+				return cl.Update(ctx, obj, opts...)
+			},
+		}).
+		Build()
+	r := New(c, logr.Discard(), func() time.Time { return now })
+	name := naming.LocalName("jane@example.com")
+	req := reconcile.Request{NamespacedName: types.NamespacedName{Name: name}}
+	if _, err := r.Reconcile(t.Context(), req); err != nil {
+		t.Fatalf("first Reconcile: %v", err)
+	}
+	writes.Store(0)
+
+	set := func(gvk schema.GroupVersionKind, objName, field string, value map[string]any) {
+		t.Helper()
+		obj := controller.Object(gvk)
+		if err := c.Get(t.Context(), types.NamespacedName{Namespace: naming.DexNamespace, Name: objName}, obj); err != nil {
+			t.Fatal(err)
+		}
+		if field == "" {
+			for k, v := range value {
+				obj.Object[k] = v
+			}
+		} else {
+			obj.Object[field] = value
+		}
+		if err := c.Update(t.Context(), obj); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// sessionUsed and kubeUsed are the last uses Dex has written; real is the end it enforces.
+	sessionUsed, kubeUsed := start, start
+	real := func() map[string]time.Time {
+		return map[string]time.Time{
+			"sid-1":  sessionUsed.Add(24 * time.Hour).Truncate(time.Second),
+			"g-kube": kubeUsed.Add(DefaultRefreshTokenValidIfNotUsedFor).Truncate(time.Second),
+		}
+	}
+	pass := func(what string) int32 {
+		t.Helper()
+		before := writes.Load()
+		res, err := r.Reconcile(t.Context(), req)
+		if err != nil {
+			t.Fatalf("Reconcile after %s: %v", what, err)
+		}
+		var ua v1alpha1.UserAccount
+		if err := c.Get(t.Context(), req.NamespacedName, &ua); err != nil {
+			t.Fatal(err)
+		}
+		for _, s := range ua.Status.Sessions {
+			want := real()[s.ID]
+			switch {
+			case s.EndsAt == nil:
+				t.Errorf("after %s: %s has no end", what, s.ID)
+			case s.EndsAt.After(want):
+				t.Errorf("after %s: %s ends at %v, later than the real end %v", what, s.ID, s.EndsAt.Time, want)
+			case want.Sub(s.EndsAt.Time) >= endsAtTolerance:
+				t.Errorf("after %s: %s ends at %v, %v before the real end", what, s.ID, s.EndsAt.Time, want.Sub(s.EndsAt.Time))
+			case !s.EndsAt.After(now):
+				t.Errorf("after %s: %s ends at %v, in the past", what, s.ID, s.EndsAt.Time)
+			}
+			// A kept end is written by a pass before it comes within its tolerance of now.
+			if due := s.EndsAt.Add(-endsAtTolerance); !s.EndsAt.Time.Equal(want) && (res.RequeueAfter == 0 || now.Add(res.RequeueAfter).After(due)) {
+				t.Errorf("after %s: RequeueAfter = %v, want a pass by %v", what, res.RequeueAfter, due)
+			}
+		}
+		return writes.Load() - before
+	}
+	var total int32
+	for i := 1; i <= steps; i++ {
+		now = start.Add(time.Duration(i) * step)
+		set(controller.AuthSessionGVK, "sid-1", "", browser(now))
+		sessionUsed = now
+		total += pass(fmt.Sprintf("the use of the session at step %d", i))
+		set(controller.OfflineSessionsGVK, pair, "grants", offline(now))
+		kubeUsed = now
+		total += pass(fmt.Sprintf("the refreshes at step %d", i))
+	}
+	t.Logf("status writes in an hour: %d", total)
+	if total > 9 || total < 4 {
+		t.Errorf("status writes in an hour = %d, want 4 to 9", total)
+	}
+	if got := pass("a pass with nothing changed"); got != 0 {
+		t.Errorf("status writes of a pass with nothing changed = %d, want 0", got)
+	}
+	// Dex writes the objects again within the same second, the session with a new nonce.
+	again := now.Add(300 * time.Millisecond)
+	session := browser(again)
+	session["nonce"] = "another-nonce"
+	set(controller.AuthSessionGVK, "sid-1", "", session)
+	if got := pass("a write of Dex within the same second"); got != 0 {
+		t.Errorf("status writes after a write of Dex within the same second = %d, want 0", got)
+	}
+	set(controller.OfflineSessionsGVK, pair, "grants", offline(again))
+	if got := pass("a refresh within the same second"); got != 0 {
+		t.Errorf("status writes after a refresh within the same second = %d, want 0", got)
+	}
+
+	if got := updates.Load(); got != 0 {
+		t.Errorf("updates = %d, want none: the status goes in a patch", got)
+	}
+	var ua v1alpha1.UserAccount
+	if err := c.Get(t.Context(), req.NamespacedName, &ua); err != nil {
+		t.Fatal(err)
+	}
+	if len(ua.Status.Sessions) != 2 {
+		t.Fatalf("sessions = %+v, want the browser and the kubeconfig", ua.Status.Sessions)
 	}
 }
 

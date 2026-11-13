@@ -43,14 +43,27 @@ import (
 type outcome struct {
 	// revocation is set by the operations that revoke credentials.
 	revocation *revoke.Result
+	// note replaces the message of the counts: a logout that found nothing to end says so.
+	note string
 }
 
 func revoked(res revoke.Result) outcome {
 	return outcome{revocation: &res}
 }
 
+// noSessionMessage and noGrantMessage are status.message of a logout of a session or grant the user
+// does not have: it is gone, or it is someone else's, which the message does not tell apart. user-api
+// reads them.
+const (
+	noSessionMessage = "the user has no such session"
+	noGrantMessage   = "the user has no such grant"
+)
+
 // message is status.message of a successful operation.
 func (o outcome) message() string {
+	if o.note != "" {
+		return o.note
+	}
 	if o.revocation == nil {
 		return ""
 	}
@@ -346,13 +359,24 @@ func (r *Reconciler) executeLogout(ctx context.Context, op operation) (outcome, 
 	default:
 		return r.logoutPair(ctx, op, pair, revocation.ReasonLogout)
 	}
-	if errors.Is(err, revoke.ErrSessionNotFound) {
-		return outcome{}, failed("session not found")
-	}
-	if errors.Is(err, revoke.ErrGrantNotFound) {
-		return outcome{}, failed("grant not found")
-	}
-	if err != nil {
+	switch {
+	case l.Session != "" && errors.Is(err, revoke.ErrSessionNotFound):
+		// The user has nothing to sign out of: the session expired, was signed out of before, or is
+		// someone else's, which stays alive. The message does not claim a sign-out, and tells the
+		// cases apart no more than before.
+		out := revoked(res)
+		out.note = noSessionMessage
+		return out, nil
+	case l.Grant != "" && errors.Is(err, revoke.ErrGrantNotFound):
+		out := revoked(res)
+		out.note = noGrantMessage
+		return out, nil
+	case errors.Is(err, revoke.ErrSessionNotFound):
+		// The other devices are still signed in: there is no session to keep them apart from.
+		return outcome{}, failed("the session to keep was not found")
+	case errors.Is(err, revoke.ErrGrantNotFound):
+		return outcome{}, failed("the grant to keep was not found")
+	case err != nil:
 		return outcome{}, err
 	}
 	return revoked(res), nil
@@ -555,7 +579,7 @@ func (r *Reconciler) findLocalPassword(ctx context.Context, username string) (*p
 }
 
 func (r *Reconciler) lookupLocalPassword(ctx context.Context, username string) (*passwordView, bool, error) {
-	passwords, err := r.listPasswords(ctx)
+	passwords, err := r.listPasswords(ctx, client.MatchingFields{controller.PasswordUsernameField: username})
 	if err != nil {
 		return nil, false, err
 	}
@@ -567,9 +591,9 @@ func (r *Reconciler) lookupLocalPassword(ctx context.Context, username string) (
 	return nil, false, nil
 }
 
-func (r *Reconciler) listPasswords(ctx context.Context) ([]passwordView, error) {
+func (r *Reconciler) listPasswords(ctx context.Context, opts ...client.ListOption) ([]passwordView, error) {
 	list := controller.List(controller.PasswordGVK)
-	if err := r.client.List(ctx, list, client.InNamespace(naming.DexNamespace)); err != nil {
+	if err := r.client.List(ctx, list, append([]client.ListOption{client.InNamespace(naming.DexNamespace)}, opts...)...); err != nil {
 		return nil, fmt.Errorf("list passwords: %w", err)
 	}
 	out := make([]passwordView, 0, len(list.Items))

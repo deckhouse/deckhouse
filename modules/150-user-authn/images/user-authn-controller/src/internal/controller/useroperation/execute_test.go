@@ -362,22 +362,45 @@ func TestReconcile_LogoutNarrowed(t *testing.T) {
 		{
 			name:    "missing grant",
 			logout:  map[string]any{"grant": "rt-missing"},
-			phase:   "Failed",
-			message: "grant not found",
-			kept:    []string{"rt-console", "rt-kubeconfig"},
-		},
-		{
-			name:    "session of another user",
-			logout:  map[string]any{"session": "sid-ldap"},
-			phase:   "Failed",
-			message: "session not found",
+			phase:   "Succeeded",
+			message: "the user has no such grant",
 			kept:    []string{"rt-console", "rt-kubeconfig"},
 		},
 		{
 			name:    "missing session",
+			logout:  map[string]any{"session": "sid-missing"},
+			phase:   "Succeeded",
+			message: "the user has no such session",
+			kept:    []string{"rt-console", "rt-kubeconfig"},
+		},
+		{
+			// Answered as a session that does not exist: the operation tells nothing of other users.
+			name:    "session of another user",
+			logout:  map[string]any{"session": "sid-ldap"},
+			phase:   "Succeeded",
+			message: "the user has no such session",
+			kept:    []string{"rt-console", "rt-kubeconfig"},
+		},
+		{
+			name:    "grant of another user",
+			logout:  map[string]any{"grant": "rt-ldap"},
+			phase:   "Succeeded",
+			message: "the user has no such grant",
+			kept:    []string{"rt-console", "rt-kubeconfig"},
+		},
+		{
+			// The other devices stay signed in: there is no device to keep them apart from.
+			name:    "missing session to keep",
 			logout:  map[string]any{"exceptSession": "sid-missing"},
 			phase:   "Failed",
-			message: "session not found",
+			message: "the session to keep was not found",
+			kept:    []string{"rt-console", "rt-kubeconfig"},
+		},
+		{
+			name:    "missing grant to keep",
+			logout:  map[string]any{"exceptGrant": "rt-missing"},
+			phase:   "Failed",
+			message: "the grant to keep was not found",
 			kept:    []string{"rt-console", "rt-kubeconfig"},
 		},
 		{

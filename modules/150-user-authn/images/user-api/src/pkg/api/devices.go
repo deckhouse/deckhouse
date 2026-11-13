@@ -17,6 +17,7 @@ limitations under the License.
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -41,6 +42,13 @@ const (
 	// over, while the owner's older devices can end the new one. A new device may sign out only of
 	// itself; an administrator is not limited.
 	DefaultMinDeviceAge = 24 * time.Hour
+
+	// noDeviceMessage answers the logout of a device the user does not have. It does not claim a
+	// sign-out: the device may be gone, or it may be someone else's.
+	noDeviceMessage = "the user has no such device"
+	// noSessionMessage is how the controller completes the Logout of a session the user does not have
+	// (noSessionMessage of its useroperation package).
+	noSessionMessage = "the user has no such session"
 )
 
 // deviceIDPattern is the form of the ID of a browser session and of a refresh token of Dex.
@@ -86,7 +94,8 @@ func (h *Handler) SelfDevices(w http.ResponseWriter, r *http.Request) {
 }
 
 // SelfDeviceLogout signs the user out of one device: a browser session of Dex, or a refresh token
-// issued without one. A device that is not the user's is answered as one that does not exist.
+// issued without one. A device the user does not have is signed out already: it expired, was signed
+// out of before, or is someone else's, and the answer does not tell these apart.
 func (h *Handler) SelfDeviceLogout(w http.ResponseWriter, r *http.Request) {
 	claims, ok := h.beginSelfRequest(w, r, deviceLogoutEndpoint)
 	if !ok {
@@ -98,9 +107,13 @@ func (h *Handler) SelfDeviceLogout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id := r.PathValue("id")
-	target, found := findDevice(devices.Items, id)
-	if !deviceIDPattern.MatchString(id) || !found {
+	if !deviceIDPattern.MatchString(id) {
 		h.fail(w, deviceLogoutEndpoint, http.StatusNotFound, "not_found", "No such device")
+		return
+	}
+	target, found := findDevice(devices.Items, id)
+	if !found {
+		h.logoutUnlisted(w, r, claims, devices, id)
 		return
 	}
 	current, known := currentDevice(devices.Items, claims)
@@ -117,7 +130,72 @@ func (h *Handler) SelfDeviceLogout(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	h.runOperation(w, r, deviceLogoutEndpoint, claims, op)
+	h.runOperation(w, r, deviceLogoutEndpoint, claims, op, []string{target.ID})
+}
+
+// logoutUnlisted signs the user out of the device id their list does not have. The device of the
+// request may be missing from it: it signed in moments ago, or the list is cut at the most recently
+// active devices. A list that is cut may miss any other device too, of either kind: a Logout of a
+// browser session and one of a grant are created at once, so that a slow controller cannot leave a
+// grant signed in, and are waited for within one waitTimeout, so that the answer comes as soon as for
+// one operation. Any other ID is not the user's device: it is gone, or someone else's, and the answer
+// is the same for both.
+func (h *Handler) logoutUnlisted(w http.ResponseWriter, r *http.Request, claims *auth.Claims, devices k8s.Devices, id string) {
+	switch {
+	case id == claims.SessionID:
+		h.logoutDevice(w, r, claims, &k8s.Logout{Session: id}, id)
+	case id == claims.GrantID:
+		h.logoutDevice(w, r, claims, &k8s.Logout{Grant: id}, id)
+	case devices.Truncated:
+		current, known := currentDevice(devices.Items, claims)
+		if !h.oldEnough(w, deviceLogoutEndpoint, current, known) {
+			return
+		}
+		h.logoutUnknownKind(w, r, claims, id)
+	default:
+		h.count(deviceLogoutEndpoint, http.StatusOK)
+		h.writeJSON(w, http.StatusOK, OperationResponse{Status: statusDone, Message: noDeviceMessage})
+	}
+}
+
+// logoutUnknownKind signs the user out of the device id of unknown kind: a Logout of a session and one
+// of a grant, waited for within one waitTimeout. The answer is of the one that found the device, of the
+// session when neither did.
+func (h *Handler) logoutUnknownKind(w http.ResponseWriter, r *http.Request, claims *auth.Claims, id string) {
+	sessionOp, ok := h.logoutOperation(w, r, deviceLogoutEndpoint, claims, "self-logout-device-", &k8s.Logout{Session: id})
+	if !ok {
+		return
+	}
+	grantOp := sessionOp
+	grantOp.Logout = &k8s.Logout{Grant: id}
+	sessionName, ok := h.startOperation(w, r, deviceLogoutEndpoint, claims, sessionOp)
+	if !ok {
+		return
+	}
+	grantName, ok := h.startOperation(w, r, deviceLogoutEndpoint, claims, grantOp)
+	if !ok {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), h.waitTimeout)
+	defer cancel()
+	sessionStatus, sessionDone := h.waitForOperation(ctx, sessionName)
+	grantStatus, grantDone := h.waitForOperation(ctx, grantName)
+
+	op, name, status, done := sessionOp, sessionName, sessionStatus, sessionDone
+	if sessionDone && sessionStatus.Phase == k8s.PhaseSucceeded && sessionStatus.Message == noSessionMessage {
+		op, name, status, done = grantOp, grantName, grantStatus, grantDone
+	}
+	h.answerOperation(w, r, deviceLogoutEndpoint, claims, op, name, status, done, []string{id})
+}
+
+// logoutDevice runs the Logout of one device of the user of claims.
+func (h *Handler) logoutDevice(w http.ResponseWriter, r *http.Request, claims *auth.Claims, logout *k8s.Logout, id string) {
+	op, ok := h.logoutOperation(w, r, deviceLogoutEndpoint, claims, "self-logout-device-", logout)
+	if !ok {
+		return
+	}
+	h.runOperation(w, r, deviceLogoutEndpoint, claims, op, []string{id})
 }
 
 // SelfLogoutOthers signs the user out of every device but the one of the request.
@@ -143,7 +221,13 @@ func (h *Handler) SelfLogoutOthers(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	h.runOperation(w, r, logoutOthersEndpoint, claims, op)
+	others := make([]string, 0, len(devices.Items))
+	for _, d := range devices.Items {
+		if d.ID != current.ID {
+			others = append(others, d.ID)
+		}
+	}
+	h.runOperation(w, r, logoutOthersEndpoint, claims, op, others)
 }
 
 // devices reads the devices of the user of claims. It writes the response and returns false when
@@ -161,22 +245,15 @@ func (h *Handler) devices(w http.ResponseWriter, r *http.Request, endpoint strin
 		return k8s.Devices{}, false
 	}
 
-	devices, err := h.k8sClient.Devices(r.Context(), name)
+	// The cache finds the account by the pair of its status, not by its name: the name is a hash of
+	// the pair, not a proof of it.
+	devices, err := h.k8sClient.Devices(r.Context(), claims.UserID, claims.ConnectorID)
 	if err != nil {
 		h.logger.Error("Failed to read the devices of the user", "error", err, "user_account", name)
 		h.fail(w, endpoint, http.StatusInternalServerError, "internal_error", "Failed to read the devices")
 		return k8s.Devices{}, false
 	}
-	// The name is a hash of the pair, not a proof of it: the account read must be of the pair of
-	// the token, or its devices are someone else's.
-	if (devices.UserID != "" || len(devices.Items) > 0) &&
-		(devices.UserID != claims.UserID || devices.ConnectorID != claims.ConnectorID) {
-		h.logger.Error("The user account of the token belongs to another user", "user_account", name,
-			"user_id", claims.UserID, "connector_id", claims.ConnectorID,
-			"account_user_id", devices.UserID, "account_connector_id", devices.ConnectorID)
-		h.fail(w, endpoint, http.StatusInternalServerError, "internal_error", "Failed to read the devices")
-		return k8s.Devices{}, false
-	}
+	devices.Items = h.signedOut.filter(pairOf(claims), devices.Items, h.now())
 	return devices, true
 }
 
@@ -215,10 +292,10 @@ func (h *Handler) oldEnough(w http.ResponseWriter, endpoint string, current k8s.
 		return true
 	}
 	since := current.SignedInAt
-	if current.KnownSince != nil {
+	if !current.KnownSince.IsZero() {
 		since = current.KnownSince
 	}
-	if known && since != nil {
+	if known && !since.IsZero() {
 		wait := since.Add(h.minDeviceAge).Sub(h.now())
 		if wait <= 0 {
 			return true

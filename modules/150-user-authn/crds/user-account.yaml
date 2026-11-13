@@ -301,6 +301,27 @@ spec:
                         description: |
                           Time of the last use of the device, in RFC3339 format, rounded down to the hour.
                           A device that signed in less than an hour ago shows its sign-in time.
+                      endsAt:
+                        type: string
+                        format: date-time
+                        description: |
+                          Time when the session of the device ends unless the device is used again, in RFC3339 format.
+                          The session ends at the earlier of two limits: the lifetime counted from the sign-in and the
+                          time without use counted from the last use.
+
+                          - For a `Browser` device, this is the end of its Dex session (the
+                            [`sessions.absoluteLifetime`](configuration.html#parameters-sessions-absolutelifetime) and
+                            [`sessions.validIfNotUsedFor`](configuration.html#parameters-sessions-validifnotusedfor)
+                            parameters). After it, the browser asks for the password at the next sign-in; the
+                            applications it has signed in to stay signed in.
+                          - For a `Grant` device, this is the end of its refresh token (the
+                            [`refreshTokenAbsoluteLifetime`](configuration.html#parameters-refreshtokenabsolutelifetime) and
+                            [`refreshTokenValidIfNotUsedFor`](configuration.html#parameters-refreshtokenvalidifnotusedfor)
+                            parameters). After it, the device signs in again.
+
+                          While the device is in use, the time moves forward and is updated with a delay of up to
+                          15 minutes, so the session never ends before the time shown. Not set if the session has
+                          no end.
                 sessionsTruncated:
                   type: boolean
                   description: |

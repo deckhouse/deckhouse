@@ -35,8 +35,8 @@ func passwordObject(email, username string) *unstructured.Unstructured {
 }
 
 // client-go may run the transform of an informer again on an object it already trimmed. The second
-// run must keep the name of the UserAccount: computed from the username, it names an account that does
-// not exist, and the devices of the user read as none.
+// run must keep the name of the UserAccount: computed from the username, it would name an account
+// that does not exist.
 func TestTrimPasswordIsIdempotent(t *testing.T) {
 	t.Parallel()
 
@@ -51,14 +51,12 @@ func TestTrimPasswordIsIdempotent(t *testing.T) {
 
 	want := LocalAccountName("local-008@dex-e2e.test", "dex-e2e-local-008")
 	for name, obj := range map[string]any{"first run": once, "second run": twice} {
-		if got := passwordField(obj, accountNameField); got != want {
-			t.Errorf("%s: account name %q, want %q", name, got, want)
+		pw, ok := obj.(*cachedPassword)
+		if !ok {
+			t.Fatalf("%s: cached as %T, want *cachedPassword", name, obj)
 		}
-		if got := passwordField(obj, "email"); got != "" {
-			t.Errorf("%s: the email stays in the cache: %q", name, got)
-		}
-		if got := passwordField(obj, "hash"); got != "" {
-			t.Errorf("%s: the hash stays in the cache", name)
+		if pw.accountName != want || pw.username != "dex-e2e-local-008" || pw.userID != "dex-e2e-local-008" {
+			t.Errorf("%s: %+v, want account name %q", name, pw, want)
 		}
 	}
 }
@@ -77,7 +75,7 @@ func TestTrimPasswordWithoutEmail(t *testing.T) {
 	}
 
 	want := LocalAccountName("", "jdoe")
-	if got := passwordField(twice, accountNameField); got != want {
+	if got := twice.(*cachedPassword).accountName; got != want {
 		t.Errorf("account name %q, want %q", got, want)
 	}
 }

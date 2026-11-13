@@ -58,9 +58,7 @@ type Reconciler struct {
 	client client.Client
 	log    logr.Logger
 	now    func() time.Time
-	// establishedAge is how long a device must have been signed in to act on the others through
-	// user-api: when the list is cut, such devices are kept first.
-	establishedAge time.Duration
+	policy devicePolicy
 	// twoFactor is the second factors of each type of provider; nil when 2FA is off. status.twoFactor of an
 	// account describes what it asks the users of the type of the account for.
 	twoFactor TwoFactorPolicy
@@ -74,14 +72,21 @@ func New(c client.Client, log logr.Logger, now func() time.Time) *Reconciler {
 	if now == nil {
 		now = time.Now
 	}
-	return &Reconciler{client: c, log: log, now: now, establishedAge: DefaultEstablishedDeviceAge}
+	return &Reconciler{client: c, log: log, now: now, policy: devicePolicy{
+		establishedAge: DefaultEstablishedDeviceAge,
+		refreshTokens: RefreshTokenLifetimes{
+			AbsoluteLifetime:  DefaultRefreshTokenAbsoluteLifetime,
+			ValidIfNotUsedFor: DefaultRefreshTokenValidIfNotUsedFor,
+		},
+	}}
 }
 
 // Register wires the UserAccount reconciler onto the manager. establishedAge is the minimum device
-// age of user-api. twoFactor is the second factors of each type of provider, nil when 2FA is off.
-func Register(mgr manager.Manager, establishedAge time.Duration, twoFactor TwoFactorPolicy, maxCredentials int) error {
+// age of user-api, refreshTokens the lifetimes of the refresh tokens of Dex, twoFactor the second factors
+// of each type of provider (nil when 2FA is off).
+func Register(mgr manager.Manager, establishedAge time.Duration, refreshTokens RefreshTokenLifetimes, twoFactor TwoFactorPolicy, maxCredentials int) error {
 	r := New(mgr.GetClient(), mgr.GetLogger().WithName("useraccount"), nil)
-	r.establishedAge = establishedAge
+	r.policy = devicePolicy{establishedAge: establishedAge, refreshTokens: refreshTokens}
 	r.twoFactor = twoFactor
 	r.maxCredentials = maxCredentials
 	if err := r.SetupWithManager(mgr); err != nil {
@@ -131,13 +136,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 	exists := err == nil
 
+	var keptEnds time.Duration
 	switch {
 	case desired != nil && !exists:
 		if err := r.create(ctx, desired); err != nil {
 			return reconcile.Result{}, err
 		}
 	case desired != nil && exists:
-		if err := r.updateIfChanged(ctx, existing, desired); err != nil {
+		if keptEnds, err = r.updateIfChanged(ctx, existing, desired); err != nil {
 			return reconcile.Result{}, err
 		}
 	case desired == nil && exists:
@@ -145,7 +151,38 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	default:
 		return reconcile.Result{}, nil
 	}
-	return reconcile.Result{RequeueAfter: requeueAfterLockedUntil(desired.Status.LockedUntil, r.now())}, nil
+	now := r.now()
+	return reconcile.Result{RequeueAfter: earliestRequeue(
+		requeueAfterLockedUntil(desired.Status.LockedUntil, now),
+		earliestRequeue(requeueAfterNearestEnd(desired.Status.Sessions, now), keptEnds),
+	)}, nil
+}
+
+// requeueAfterNearestEnd is a second after the first device of sessions ends, so that a pass drops it
+// from the list even when Dex writes nothing at that moment; zero when none ends. endsAt is in whole
+// seconds, the end itself up to a second later.
+func requeueAfterNearestEnd(sessions []v1alpha1.UserAccountSession, now time.Time) time.Duration {
+	var nearest time.Duration
+	for _, s := range sessions {
+		if s.EndsAt == nil {
+			continue
+		}
+		end := s.EndsAt.Add(time.Second)
+		nearest = earliestRequeue(nearest, controller.RequeueAfterTime(&end, now))
+	}
+	return nearest
+}
+
+// earliestRequeue is the shorter of two requeue delays, zero meaning none.
+func earliestRequeue(a, b time.Duration) time.Duration {
+	switch {
+	case a == 0:
+		return b
+	case b == 0:
+		return a
+	default:
+		return min(a, b)
+	}
 }
 
 func requeueAfterLockedUntil(until *metav1.Time, now time.Time) time.Duration {
@@ -175,26 +212,36 @@ func (r *Reconciler) create(ctx context.Context, desired *desiredAccount) error 
 		return fmt.Errorf("create useraccount %s: %w", desired.Name, err)
 	}
 
+	before := ua.DeepCopy()
 	ua.Status = *desired.Status.DeepCopy()
-	if err := r.client.Status().Update(ctx, ua); err != nil {
-		return fmt.Errorf("update useraccount %s status: %w", desired.Name, err)
+	if err := r.client.Status().Patch(ctx, ua, client.MergeFrom(before)); err != nil {
+		return fmt.Errorf("patch useraccount %s status: %w", desired.Name, err)
 	}
 	r.log.Info("created useraccount", "name", desired.Name)
 	return nil
 }
 
-func (r *Reconciler) updateIfChanged(ctx context.Context, existing *v1alpha1.UserAccount, desired *desiredAccount) error {
+// updateIfChanged writes what differs from desired: the labels and the owner in one patch of the
+// object, the status in one patch of its status. The patches carry no resourceVersion, so they do not
+// conflict: the controller is the only writer of both, and existing is from the cache, read without a
+// request. A status whose only change is the end of a device moving later within its tolerance is not
+// written (keepStoredEnds); keptEnds is when such a stored end has to be written.
+func (r *Reconciler) updateIfChanged(ctx context.Context, existing *v1alpha1.UserAccount, desired *desiredAccount) (time.Duration, error) {
 	if err := ctx.Err(); err != nil {
-		return err
+		return 0, err
 	}
 
+	probe := desired.Status
+	var keptEnds time.Duration
+	probe.Sessions, keptEnds = keepStoredEnds(existing.Status.Sessions, desired.Status.Sessions, desired.tolerance, r.now())
 	metaChanged := !ourLabelsEqual(existing.Labels, desired.Labels) || !ownerEqual(existing.OwnerReferences, desired.Owner)
-	statusChanged := !statusEqual(existing.Status, desired.Status)
+	statusChanged := !statusEqual(existing.Status, probe)
 	if !metaChanged && !statusChanged {
-		return nil
+		return keptEnds, nil
 	}
 
 	if metaChanged {
+		before := existing.DeepCopy()
 		existing.Labels = applyLabels(existing.Labels, desired.Labels)
 		if desired.Owner != nil {
 			owner := *desired.Owner
@@ -202,18 +249,21 @@ func (r *Reconciler) updateIfChanged(ctx context.Context, existing *v1alpha1.Use
 		} else {
 			existing.OwnerReferences = nil
 		}
-		if err := r.client.Update(ctx, existing); err != nil {
-			return fmt.Errorf("update useraccount %s: %w", existing.Name, err)
+		if err := r.client.Patch(ctx, existing, client.MergeFrom(before)); err != nil {
+			return 0, fmt.Errorf("patch useraccount %s: %w", existing.Name, err)
 		}
+	}
+	if !statusChanged {
+		return keptEnds, nil
 	}
 
-	if statusChanged {
-		existing.Status = *desired.Status.DeepCopy()
-		if err := r.client.Status().Update(ctx, existing); err != nil {
-			return fmt.Errorf("update useraccount %s status: %w", existing.Name, err)
-		}
+	// Another change writes the status as it is now, the real ends included.
+	before := existing.DeepCopy()
+	existing.Status = *desired.Status.DeepCopy()
+	if err := r.client.Status().Patch(ctx, existing, client.MergeFrom(before)); err != nil {
+		return 0, fmt.Errorf("patch useraccount %s status: %w", existing.Name, err)
 	}
-	return nil
+	return 0, nil
 }
 
 func (r *Reconciler) delete(ctx context.Context, existing *v1alpha1.UserAccount) error {
@@ -266,7 +316,7 @@ func (r *Reconciler) desiredLocal(ctx context.Context, name string, now time.Tim
 	if ident != nil {
 		known = ident.KnownDevices
 	}
-	desired.Status.Sessions, desired.Status.SessionsTruncated, err = r.sessionsOf(ctx, pw.UserID, naming.LocalConnectorID, nil, known, now)
+	desired.Status.Sessions, desired.Status.SessionsTruncated, desired.tolerance, err = r.sessionsOf(ctx, pw.UserID, naming.LocalConnectorID, nil, known, now)
 	if err != nil {
 		return nil, err
 	}
@@ -313,7 +363,7 @@ func (r *Reconciler) desiredExternal(ctx context.Context, name string, now time.
 	if identPtr != nil {
 		known = identPtr.KnownDevices
 	}
-	desired.Status.Sessions, desired.Status.SessionsTruncated, err = r.sessionsOf(ctx, src.UserID, src.ConnID, sessPtr, known, now)
+	desired.Status.Sessions, desired.Status.SessionsTruncated, desired.tolerance, err = r.sessionsOf(ctx, src.UserID, src.ConnID, sessPtr, known, now)
 	if err != nil {
 		return nil, err
 	}
@@ -322,16 +372,17 @@ func (r *Reconciler) desiredExternal(ctx context.Context, name string, now time.
 
 // sessionsOf lists the devices of the pair (userID, connID): its browser sessions and the grants its
 // OfflineSessions refers to. sess is the OfflineSessions of the pair when already read; known is when
-// each browser of the pair was first seen, by the hash of its device mark.
-func (r *Reconciler) sessionsOf(ctx context.Context, userID, connID string, sess *sessionView, known map[string]time.Time, now time.Time) ([]v1alpha1.UserAccountSession, bool, error) {
+// each browser of the pair was first seen, by the hash of its device mark. It also tells the tolerance
+// of the end of each device (endsAtTolerances).
+func (r *Reconciler) sessionsOf(ctx context.Context, userID, connID string, sess *sessionView, known map[string]time.Time, now time.Time) ([]v1alpha1.UserAccountSession, bool, func(v1alpha1.UserAccountSession) time.Duration, error) {
 	if userID == "" || connID == "" {
-		return nil, false, nil
+		return nil, false, nil, nil
 	}
 	pair := naming.OfflineTokenName(userID, connID)
 	if sess == nil {
 		found, ok, err := r.getSession(ctx, pair)
 		if err != nil {
-			return nil, false, err
+			return nil, false, nil, err
 		}
 		if ok {
 			sess = &found
@@ -345,15 +396,15 @@ func (r *Reconciler) sessionsOf(ctx context.Context, userID, connID string, sess
 	if len(grants) > 0 {
 		var err error
 		if grants, err = r.withTokens(ctx, pair, grants); err != nil {
-			return nil, false, err
+			return nil, false, nil, err
 		}
 	}
 	browsers, err := r.listBrowsers(ctx, pair, userID, connID)
 	if err != nil {
-		return nil, false, err
+		return nil, false, nil, err
 	}
-	sessions, truncated := projectSessions(browsers, grants, known, r.establishedAge, now)
-	return sessions, truncated, nil
+	sessions, truncated := projectSessions(browsers, grants, known, r.policy, now)
+	return sessions, truncated, endsAtTolerances(browsers, r.policy.refreshTokens), nil
 }
 
 // withTokens keeps the grants whose refresh token exists: a reference left behind by a revocation or
@@ -400,13 +451,12 @@ func (r *Reconciler) passwordForLocalAccount(ctx context.Context, name string) (
 		return pw, true, nil
 	}
 
-	// External account names are <connID>-<hash>. A full Password list here
-	// is O(N) JSON per reconcile and is only useful for local leftovers.
+	// External account names are <connID>-<hash>.
 	if !couldBeLocalAccountName(name) {
 		return passwordView{}, false, nil
 	}
 
-	passwords, err := r.listPasswords(ctx)
+	passwords, err := r.listPasswords(ctx, client.MatchingFields{controller.PasswordAccountField: name})
 	if err != nil {
 		return passwordView{}, false, err
 	}
@@ -544,16 +594,16 @@ func (r *Reconciler) userForPassword(ctx context.Context, pw passwordView) (*use
 	if pw.Email == "" {
 		return nil, nil
 	}
-	users, err := r.listUsers(ctx)
+	users, err := r.listUsers(ctx, client.MatchingFields{controller.UserPasswordNameField: naming.ToFnvLikeDex(strings.ToLower(pw.Email))})
 	if err != nil {
 		return nil, err
 	}
 	return matchUserByEmail(users, pw.Email), nil
 }
 
-func (r *Reconciler) listPasswords(ctx context.Context) ([]passwordView, error) {
+func (r *Reconciler) listPasswords(ctx context.Context, opts ...client.ListOption) ([]passwordView, error) {
 	list := controller.List(controller.PasswordGVK)
-	if err := r.client.List(ctx, list, client.InNamespace(naming.DexNamespace)); err != nil {
+	if err := r.client.List(ctx, list, append([]client.ListOption{client.InNamespace(naming.DexNamespace)}, opts...)...); err != nil {
 		return nil, fmt.Errorf("list passwords: %w", err)
 	}
 	out := make([]passwordView, 0, len(list.Items))
@@ -599,9 +649,9 @@ func (r *Reconciler) listIdentities(ctx context.Context) ([]identityView, error)
 	return out, nil
 }
 
-func (r *Reconciler) listUsers(ctx context.Context) ([]userView, error) {
+func (r *Reconciler) listUsers(ctx context.Context, opts ...client.ListOption) ([]userView, error) {
 	list := controller.List(controller.UserGVK)
-	if err := r.client.List(ctx, list); err != nil {
+	if err := r.client.List(ctx, list, opts...); err != nil {
 		return nil, fmt.Errorf("list users: %w", err)
 	}
 	out := make([]userView, 0, len(list.Items))
@@ -839,7 +889,8 @@ func sessionEqual(a, b v1alpha1.UserAccountSession) bool {
 		slices.Equal(a.Clients, b.Clients) &&
 		metaTimeEqual(a.SignedInAt, b.SignedInAt) &&
 		metaTimeEqual(a.KnownSince, b.KnownSince) &&
-		metaTimeEqual(a.LastActivity, b.LastActivity)
+		metaTimeEqual(a.LastActivity, b.LastActivity) &&
+		metaTimeEqual(a.EndsAt, b.EndsAt)
 }
 
 // requirement is what the second factor asks the users of providerType for, with the limit of keys; nil when it

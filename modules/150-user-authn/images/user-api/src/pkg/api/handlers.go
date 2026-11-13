@@ -90,6 +90,11 @@ type Handler struct {
 	// minDeviceAge is how long the device of a request must have been signed in to act on the other
 	// devices or the password; zero lets any device.
 	minDeviceAge time.Duration
+	// signOutWait is how long a logout waits for the cache to drop the devices it ended, and
+	// cachePollInterval how often it looks.
+	signOutWait       time.Duration
+	cachePollInterval time.Duration
+	signedOut         *signedOutDevices
 }
 
 // OperationResponse reports the UserOperation a request created: "done" once the controller has
@@ -135,6 +140,10 @@ func NewHandler(verifier auth.Verifier, k8sClient k8s.Client, logger *slog.Logge
 		waitTimeout:  operationWaitTimeout,
 		pollInterval: operationPollInterval,
 		minDeviceAge: DefaultMinDeviceAge,
+
+		signOutWait:       signOutWait,
+		cachePollInterval: cachePollInterval,
+		signedOut:         newSignedOutDevices(),
 	}
 	h.ready.Store(true)
 
@@ -152,8 +161,10 @@ func (h *Handler) Healthz(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte("ok"))
 }
 
+// Readyz answers ready once the caches of Passwords and UserAccounts have synced: before, a request
+// would not find the user or would see no devices.
 func (h *Handler) Readyz(w http.ResponseWriter, _ *http.Request) {
-	if h.ready.Load() {
+	if h.ready.Load() && h.k8sClient.Synced() {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 		return
@@ -180,7 +191,7 @@ func (h *Handler) SelfLogout(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	h.runOperation(w, r, logoutEndpoint, claims, op)
+	h.runOperation(w, r, logoutEndpoint, claims, op, nil)
 }
 
 // logoutOperation is a Logout of the user of claims, narrowed down by logout. It writes the response
@@ -253,7 +264,7 @@ func (h *Handler) SelfPasswordChange(w http.ResponseWriter, r *http.Request) {
 		GenerateName: "self-password-change-",
 		Type:         k8s.OperationTypeRequirePasswordChange,
 		User:         username,
-	})
+	}, nil)
 }
 
 // beginSelfRequest authenticates the request, checks its body and takes it from the budget of the
@@ -315,24 +326,52 @@ func (h *Handler) localUsername(w http.ResponseWriter, r *http.Request, endpoint
 // when it failed, 202 when it is still running after the wait. An operation a controller older
 // than its type refused is answered 503 with Retry-After: the request is right, and it succeeds
 // once the new controller leads.
-func (h *Handler) runOperation(w http.ResponseWriter, r *http.Request, endpoint string, claims *auth.Claims, op k8s.UserOperation) {
+// runOperation creates op and answers with its outcome. signedOut are the devices op ends: once it
+// succeeds, the answer waits for the cache to drop them (awaitSignedOut).
+func (h *Handler) runOperation(w http.ResponseWriter, r *http.Request, endpoint string, claims *auth.Claims, op k8s.UserOperation, signedOut []string) {
+	name, status, done, ok := h.createOperation(w, r, endpoint, claims, op)
+	if !ok {
+		return
+	}
+	h.answerOperation(w, r, endpoint, claims, op, name, status, done, signedOut)
+}
+
+// createOperation creates op and waits for the controller to complete it; done is false when the
+// wait ran out. It writes the response and returns false when op cannot be created.
+func (h *Handler) createOperation(w http.ResponseWriter, r *http.Request, endpoint string, claims *auth.Claims, op k8s.UserOperation) (string, k8s.OperationStatus, bool, bool) {
+	name, ok := h.startOperation(w, r, endpoint, claims, op)
+	if !ok {
+		return "", k8s.OperationStatus{}, false, false
+	}
+	status, done := h.waitForOperation(r.Context(), name)
+	return name, status, done, true
+}
+
+// startOperation creates op and returns its name. It writes the response and returns false when op
+// cannot be created.
+func (h *Handler) startOperation(w http.ResponseWriter, r *http.Request, endpoint string, claims *auth.Claims, op k8s.UserOperation) (string, bool) {
 	name, err := h.k8sClient.CreateUserOperation(r.Context(), op)
 	if err != nil {
 		h.logger.Error("Failed to create user operation", "error", err, "type", op.Type,
 			"user_id", claims.UserID, "connector_id", claims.ConnectorID)
 		h.fail(w, endpoint, http.StatusInternalServerError, "internal_error", "Failed to create the user operation")
-		return
+		return "", false
 	}
 
 	h.logger.Info("User operation created", "type", op.Type, "operation_name", name,
 		"user_id", claims.UserID, "connector_id", claims.ConnectorID, "remote_addr", r.RemoteAddr)
+	return name, true
+}
 
-	status, done := h.waitForOperation(r.Context(), name)
+// answerOperation answers with the outcome of the operation op named name (createOperation).
+func (h *Handler) answerOperation(w http.ResponseWriter, r *http.Request, endpoint string, claims *auth.Claims, op k8s.UserOperation,
+	name string, status k8s.OperationStatus, done bool, signedOut []string) {
 	switch {
 	case !done:
 		h.count(endpoint, http.StatusAccepted)
 		h.writeJSON(w, http.StatusAccepted, OperationResponse{Status: statusPending, OperationName: name})
 	case status.Phase == k8s.PhaseSucceeded:
+		h.awaitSignedOut(r.Context(), claims, signedOut)
 		h.count(endpoint, http.StatusOK)
 		h.writeJSON(w, http.StatusOK, OperationResponse{Status: statusDone, OperationName: name, Message: status.Message})
 	case status.Message == unsupportedTypeMessage+op.Type:

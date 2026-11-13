@@ -60,9 +60,12 @@ func (r *Reconciler) getPassword(ctx context.Context, name string) (passwordView
 	return pw, true, nil
 }
 
-func (r *Reconciler) listPasswords(ctx context.Context) ([]passwordView, error) {
+// passwordsOf lists the Password objects with the username given, controller.NoUsername for those
+// without one, from the index of the cache.
+func (r *Reconciler) passwordsOf(ctx context.Context, username string) ([]passwordView, error) {
 	list := controller.List(controller.PasswordGVK)
-	if err := r.client.List(ctx, list, client.InNamespace(naming.DexNamespace)); err != nil {
+	if err := r.client.List(ctx, list, client.InNamespace(naming.DexNamespace),
+		client.MatchingFields{controller.PasswordUsernameField: username}); err != nil {
 		return nil, fmt.Errorf("list passwords: %w", err)
 	}
 	out := make([]passwordView, 0, len(list.Items))
@@ -96,7 +99,7 @@ func (r *Reconciler) reconcilePassword(
 	live := existing
 	isRename := false
 	if !passwordExists {
-		passwords, err := r.listPasswords(ctx)
+		passwords, err := r.passwordsOf(ctx, user.Name)
 		if err != nil {
 			return passwordView{}, err
 		}
@@ -326,15 +329,20 @@ func (r *Reconciler) cleanupPasswords(ctx context.Context, reqName string, userF
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	passwords, err := r.listPasswords(ctx)
+	// The Passwords of the user, and those without a username: the others belong to other users.
+	passwords, err := r.passwordsOf(ctx, reqName)
 	if err != nil {
 		return err
 	}
+	legacy, err := r.passwordsOf(ctx, controller.NoUsername)
+	if err != nil {
+		return err
+	}
+	passwords = append(passwords, legacy...)
 	expectedName := ""
 	if userFound {
 		expectedName = passwordName(user.Email)
 	}
-	var canonicalNames map[string]struct{}
 	for _, pw := range passwords {
 		if !isModuleManagedPassword(pw) {
 			continue
@@ -347,14 +355,11 @@ func (r *Reconciler) cleanupPasswords(ctx context.Context, reqName string, userF
 				continue
 			}
 		} else {
-			if canonicalNames == nil {
-				var listErr error
-				canonicalNames, listErr = r.canonicalPasswordNames(ctx)
-				if listErr != nil {
-					return listErr
-				}
+			canonical, err := r.canonicalPassword(ctx, pw.Name)
+			if err != nil {
+				return err
 			}
-			if _, ok := canonicalNames[pw.Name]; ok {
+			if canonical {
 				continue
 			}
 		}
@@ -365,23 +370,13 @@ func (r *Reconciler) cleanupPasswords(ctx context.Context, reqName string, userF
 	return nil
 }
 
-func (r *Reconciler) canonicalPasswordNames(ctx context.Context) (map[string]struct{}, error) {
+// canonicalPassword tells whether some User has an email the Password named name is named after.
+func (r *Reconciler) canonicalPassword(ctx context.Context, name string) (bool, error) {
 	list := controller.List(controller.UserGVK)
-	if err := r.client.List(ctx, list); err != nil {
-		return nil, fmt.Errorf("list users: %w", err)
+	if err := r.client.List(ctx, list, client.MatchingFields{controller.UserPasswordNameField: name}); err != nil {
+		return false, fmt.Errorf("list users of password %s: %w", name, err)
 	}
-	out := make(map[string]struct{}, len(list.Items))
-	for i := range list.Items {
-		u, err := decodeUser(&list.Items[i])
-		if err != nil {
-			return nil, err
-		}
-		if u.Email == "" {
-			continue
-		}
-		out[passwordName(u.Email)] = struct{}{}
-	}
-	return out, nil
+	return len(list.Items) > 0, nil
 }
 
 func (r *Reconciler) deletePassword(ctx context.Context, pw passwordView) error {

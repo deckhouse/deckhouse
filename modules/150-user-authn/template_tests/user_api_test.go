@@ -106,18 +106,25 @@ var _ = Describe("Module :: user-authn :: helm template :: user-api", func() {
 			Expect(gjson.GetBytes(dex, "devices.maxPerClient").String()).To(Equal(want["maxPerClient"]))
 			Expect(gjson.GetBytes(dex, "devices.maxKnown").String()).To(Equal(want["maxKnown"]))
 			Expect(gjson.GetBytes(dex, "expiry.refreshTokens.validIfNotUsedFor").String()).To(Equal(want["refreshIdle"]))
+			Expect(gjson.GetBytes(dex, "expiry.refreshTokens.absoluteLifetime").String()).To(Equal(want["refreshLifetime"]))
+			// The controller lists the end of a device by the same lifetimes as Dex ends its refresh token.
+			Expect(env("REFRESH_TOKEN_VALID_IF_NOT_USED_FOR")).To(Equal(want["refreshIdle"]))
+			Expect(env("REFRESH_TOKEN_ABSOLUTE_LIFETIME")).To(Equal(want["refreshLifetime"]))
 			Expect(env("USER_OPERATION_RETENTION")).To(Equal(want["operations"]))
 			Expect(env("REVOCATION_RETENTION")).To(Equal(want["revocations"]))
 		},
 		Entry("the defaults", map[string]string{}, map[string]string{
-			"maxPerClient": "10", "maxKnown": "20", "refreshIdle": "2190h", "operations": "24h", "revocations": "",
+			"maxPerClient": "10", "maxKnown": "20", "refreshIdle": "2190h", "refreshLifetime": "4380h",
+			"operations": "24h", "revocations": "",
 		}),
 		Entry("set", map[string]string{
 			"refreshTokenValidIfNotUsedFor": "720h",
+			"refreshTokenAbsoluteLifetime":  "1440h",
 			"devices":                       "{maxPerApplication: 3, rememberedBrowsers: 0}",
 			"retention":                     "{userOperations: 168h, revocations: 24h}",
 		}, map[string]string{
-			"maxPerClient": "3", "maxKnown": "0", "refreshIdle": "720h", "operations": "168h", "revocations": "24h",
+			"maxPerClient": "3", "maxKnown": "0", "refreshIdle": "720h", "refreshLifetime": "1440h",
+			"operations": "168h", "revocations": "24h",
 		}),
 	)
 
@@ -228,13 +235,14 @@ var _ = Describe("Module :: user-authn :: helm template :: user-api", func() {
 			}]`))
 		})
 
-		It("Should let user-api create and read UserOperations, read a named UserAccount, and nothing more", func() {
+		// user-api keeps the UserAccounts in an informer: a request reads the devices from memory.
+		It("Should let user-api create and read UserOperations, watch UserAccounts, and nothing more", func() {
 			Expect(hec.RenderError).ToNot(HaveOccurred())
 
 			clusterRole := hec.KubernetesGlobalResource("ClusterRole", "d8:user-authn:user-api")
 			Expect(clusterRole.Field("rules").String()).To(MatchJSON(`[
 				{"apiGroups": ["deckhouse.io"], "resources": ["useroperations"], "verbs": ["create", "get"]},
-				{"apiGroups": ["deckhouse.io"], "resources": ["useraccounts"], "verbs": ["get"]},
+				{"apiGroups": ["deckhouse.io"], "resources": ["useraccounts"], "verbs": ["list", "watch"]},
 				{"apiGroups": ["dex.coreos.com"], "resources": ["passwords"], "verbs": ["get", "list", "watch"]}
 			]`))
 		})

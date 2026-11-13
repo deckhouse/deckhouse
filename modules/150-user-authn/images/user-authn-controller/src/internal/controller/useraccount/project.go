@@ -36,6 +36,9 @@ type desiredAccount struct {
 	Labels map[string]string
 	Owner  *metav1.OwnerReference
 	Status v1alpha1.UserAccountStatus
+	// tolerance is how much later the end of each device may move before the status is written
+	// again (endsAtToleranceOf); nil allows none.
+	tolerance func(v1alpha1.UserAccountSession) time.Duration
 }
 
 // lockState is a lock in one place and whether an administrator set it.
@@ -232,7 +235,110 @@ const (
 	// DefaultEstablishedDeviceAge is how long a device must have been signed in to act on the other
 	// devices of the user through user-api (its minimum device age), unless configured.
 	DefaultEstablishedDeviceAge = 24 * time.Hour
+
+	// DefaultRefreshTokenAbsoluteLifetime and DefaultRefreshTokenValidIfNotUsedFor are the lifetimes
+	// of the refresh tokens of Dex unless configured: the defaults of the module.
+	DefaultRefreshTokenAbsoluteLifetime  = 4380 * time.Hour
+	DefaultRefreshTokenValidIfNotUsedFor = 2190 * time.Hour
+
+	// endsAtTolerance is how much later the end of a device may move before the status is written
+	// again. A device in use moves its end at every refresh: by 5 to 10 minutes, as DexAuthenticator
+	// and kubectl refresh once in idTokenTTL (10 minutes by default) and Dex records the use of a
+	// browser session at most once in 5 minutes. A tolerance above that step writes the status once
+	// in 15 to 20 minutes instead of at every refresh. The stored end only lags behind the real one,
+	// so the session never ends before the time shown.
+	endsAtTolerance = 15 * time.Minute
 )
+
+// endsAtToleranceOf is the tolerance of a device whose end moves with an idle window of window:
+// endsAtTolerance, but at most a tenth of the window, so that a short window, where the end is near
+// and the lag would weigh, is written at once. A device without an idle window ends at a fixed time
+// and gets none.
+func endsAtToleranceOf(window time.Duration) time.Duration {
+	if window <= 0 {
+		return 0
+	}
+	return min(endsAtTolerance, window/10)
+}
+
+// endsAtTolerances tells the tolerance of each device of browsers and grants: a browser by the idle
+// window of its session of Dex, a grant by that of the refresh tokens.
+func endsAtTolerances(browsers []browserView, refresh RefreshTokenLifetimes) func(v1alpha1.UserAccountSession) time.Duration {
+	windows := make(map[string]time.Duration, len(browsers))
+	for _, b := range browsers {
+		if !b.IdleExpiry.IsZero() && !b.LastActivity.IsZero() {
+			windows[b.ID] = b.IdleExpiry.Sub(b.LastActivity)
+		}
+	}
+	return func(s v1alpha1.UserAccountSession) time.Duration {
+		if s.Kind == v1alpha1.SessionKindBrowser {
+			return endsAtToleranceOf(windows[s.ID])
+		}
+		return endsAtToleranceOf(refresh.ValidIfNotUsedFor)
+	}
+}
+
+// keepStoredEnds is desired with the end of a device as stored when it only moved later by less than
+// its tolerance, so that such a move alone writes nothing. A stored end within the tolerance of now
+// is not kept: the status gets the real end before the stored one passes. requeue is when the first
+// kept end comes within its tolerance of now, for the pass that writes it; zero when none is kept.
+func keepStoredEnds(stored, desired []v1alpha1.UserAccountSession, tolerance func(v1alpha1.UserAccountSession) time.Duration, now time.Time) ([]v1alpha1.UserAccountSession, time.Duration) {
+	if tolerance == nil {
+		return desired, 0
+	}
+	byKey := make(map[string]*metav1.Time, len(stored))
+	for _, s := range stored {
+		byKey[s.Kind+"/"+s.ID] = s.EndsAt
+	}
+	var requeue time.Duration
+	kept := slices.Clone(desired)
+	for i, d := range kept {
+		old := byKey[d.Kind+"/"+d.ID]
+		if old == nil || d.EndsAt == nil {
+			continue
+		}
+		tol := tolerance(d)
+		if moved := d.EndsAt.Sub(old.Time); moved <= 0 || moved >= tol || old.Sub(now) <= tol {
+			continue
+		}
+		kept[i].EndsAt = old
+		due := old.Add(-tol)
+		requeue = earliestRequeue(requeue, controller.RequeueAfterTime(&due, now))
+	}
+	return kept, requeue
+}
+
+// RefreshTokenLifetimes are the lifetimes of the refresh tokens of Dex (expiry.refreshTokens): a
+// zero one does not limit them.
+type RefreshTokenLifetimes struct {
+	// AbsoluteLifetime counts from the sign-in.
+	AbsoluteLifetime time.Duration
+	// ValidIfNotUsedFor counts from the last refresh.
+	ValidIfNotUsedFor time.Duration
+}
+
+// end is when Dex refuses a refresh token created at createdAt and last used at lastUsed, the earlier
+// of the two lifetimes; zero when neither limits it.
+func (l RefreshTokenLifetimes) end(createdAt, lastUsed time.Time) time.Time {
+	var end time.Time
+	if l.AbsoluteLifetime > 0 && !createdAt.IsZero() {
+		end = createdAt.Add(l.AbsoluteLifetime)
+	}
+	if used := laterTime(createdAt, lastUsed); l.ValidIfNotUsedFor > 0 && !used.IsZero() {
+		if idle := used.Add(l.ValidIfNotUsedFor); end.IsZero() || idle.Before(end) {
+			end = idle
+		}
+	}
+	return end
+}
+
+// devicePolicy is what the device list of a pair depends on besides the objects of Dex.
+type devicePolicy struct {
+	// establishedAge is how long a device must have been signed in to act on the others through
+	// user-api: when the list is cut, such devices are kept first.
+	establishedAge time.Duration
+	refreshTokens  RefreshTokenLifetimes
+}
 
 // device is a device of a pair while it is projected: lastActivity is exact, for ordering.
 type device struct {
@@ -245,8 +351,8 @@ type device struct {
 // a session that has ended is a device of its own: the application keeps it until logout or
 // revocation. The most recently active come first, at most v1alpha1.MaxSessions of them. A device
 // whose browser completed a login of the pair before its sign-in (known, by the hash of the device
-// mark) is known since then.
-func projectSessions(browsers []browserView, grants []grantView, known map[string]time.Time, establishedAge time.Duration, now time.Time) ([]v1alpha1.UserAccountSession, bool) {
+// mark) is known since then. A browser ends with its session of Dex, a grant with its refresh token.
+func projectSessions(browsers []browserView, grants []grantView, known map[string]time.Time, policy devicePolicy, now time.Time) ([]v1alpha1.UserAccountSession, bool) {
 	devices := make(map[string]*device, len(browsers)+len(grants))
 	for _, b := range browsers {
 		if !b.Expiry.IsZero() && !b.Expiry.After(now) {
@@ -261,11 +367,17 @@ func projectSessions(browsers []browserView, grants []grantView, known map[strin
 				UserAgent:  truncate(b.UserAgent, maxUserAgent),
 				SignedInAt: metaTimeOrNil(b.CreatedAt),
 				KnownSince: knownSince(known, b.DeviceHash, b.CreatedAt),
+				EndsAt:     metaTimeOrNil(b.Expiry),
 			},
 			lastActivity: b.LastActivity,
 		}
 	}
 	for _, g := range grants {
+		// Dex refuses a refresh token past its lifetime, and deletes it at the next refresh or the
+		// hourly sweep of its garbage collection: it is no device any more.
+		if end := policy.refreshTokens.end(g.CreatedAt, g.LastUsed); !end.IsZero() && !end.After(now) {
+			continue
+		}
 		if d, ok := devices[g.SessionID]; ok && g.SessionID != "" && d.session.Kind == v1alpha1.SessionKindBrowser {
 			if g.ClientID != "" && !slices.Contains(d.session.Clients, g.ClientID) {
 				d.session.Clients = append(d.session.Clients, g.ClientID)
@@ -287,6 +399,7 @@ func projectSessions(browsers []browserView, grants []grantView, known map[strin
 				UserAgent:  truncate(g.UserAgent, maxUserAgent),
 				SignedInAt: metaTimeOrNil(g.CreatedAt),
 				KnownSince: knownSince(known, g.DeviceHash, g.CreatedAt),
+				EndsAt:     metaTimeOrNil(policy.refreshTokens.end(g.CreatedAt, g.LastUsed)),
 			},
 			lastActivity: laterTime(g.CreatedAt, g.LastUsed),
 		}
@@ -294,9 +407,10 @@ func projectSessions(browsers []browserView, grants []grantView, known map[strin
 
 	ordered := slices.Collect(maps.Values(devices))
 	for _, d := range ordered {
-		// Rounded down to the hour, and ordered by the rounded time: the status is rewritten at most once
-		// an hour, not whenever two devices used within the same hour take turns. A device signed in within
-		// the hour keeps its sign-in time: its activity cannot come before it, and the sign-in does not move.
+		// Rounded down to the hour, and ordered by the rounded time: the use of a device changes its
+		// activity in the status once an hour, and two devices used within the same hour do not take
+		// turns in the order. Its end (endsAt) moves at every use. A device signed in within the hour
+		// keeps its sign-in time: its activity cannot come before it, and the sign-in does not move.
 		d.lastActivity = d.lastActivity.Truncate(time.Hour)
 		if signedIn := d.session.SignedInAt; signedIn != nil && d.lastActivity.Before(signedIn.Time) {
 			d.lastActivity = signedIn.Time
@@ -318,7 +432,7 @@ func projectSessions(browsers []browserView, grants []grantView, known map[strin
 			if d.session.KnownSince != nil {
 				since = d.session.KnownSince
 			}
-			return since != nil && now.Sub(since.Time) >= establishedAge
+			return since != nil && now.Sub(since.Time) >= policy.establishedAge
 		}
 		slices.SortStableFunc(ordered, func(a, b *device) int {
 			if ea, eb := established(a), established(b); ea != eb {
@@ -395,11 +509,13 @@ func timeLockActive(until *time.Time, now time.Time) bool {
 	return until != nil && until.After(now)
 }
 
+// metaTimePtr is t as the status keeps it: in whole seconds, the precision of metav1.Time in JSON.
+// Dex writes its times in nanoseconds; a status compared in them never equals the one read back.
 func metaTimePtr(t *time.Time) *metav1.Time {
 	if t == nil {
 		return nil
 	}
-	mt := metav1.NewTime(t.UTC())
+	mt := metav1.NewTime(t.UTC().Truncate(time.Second))
 	return &mt
 }
 

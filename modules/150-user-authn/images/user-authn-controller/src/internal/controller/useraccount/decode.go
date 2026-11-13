@@ -89,6 +89,8 @@ type browserView struct {
 	LastActivity time.Time
 	// Expiry is when the session ends: the earlier of its idle and absolute expiry, zero if unknown.
 	Expiry time.Time
+	// IdleExpiry is when the session ends unless used again, zero if unknown.
+	IdleExpiry time.Time
 }
 
 // identityView is a Dex UserIdentity without its secrets: the cache keeps only the flags of its
@@ -293,7 +295,8 @@ func decodeBrowser(obj *unstructured.Unstructured) (browserView, error) {
 	if err := controller.DecodeInto(obj, &fields); err != nil {
 		return browserView{}, fmt.Errorf("decode authsession: %w", err)
 	}
-	expiry := lenientTime(fields.IdleExpiry)
+	idle := lenientTime(fields.IdleExpiry)
+	expiry := idle
 	if absolute := lenientTime(fields.AbsoluteExpiry); !absolute.IsZero() && (expiry.IsZero() || absolute.Before(expiry)) {
 		expiry = absolute
 	}
@@ -308,6 +311,7 @@ func decodeBrowser(obj *unstructured.Unstructured) (browserView, error) {
 		CreatedAt:    lenientTime(fields.CreatedAt),
 		LastActivity: lenientTime(fields.LastActivity),
 		Expiry:       expiry,
+		IdleExpiry:   idle,
 	}, nil
 }
 

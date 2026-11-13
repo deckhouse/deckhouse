@@ -112,24 +112,24 @@ func (pc *PasswordCache) Stop() {
 
 // Username returns the username of the local user with the given user ID.
 func (pc *PasswordCache) Username(userID string) (string, error) {
-	obj, err := pc.password(userID)
+	pw, err := pc.password(userID)
 	if err != nil {
 		return "", err
 	}
-	return passwordField(obj, "username"), nil
+	return pw.username, nil
 }
 
 // AccountName returns the name of the UserAccount of the local user with the given user ID.
 func (pc *PasswordCache) AccountName(userID string) (string, error) {
-	obj, err := pc.password(userID)
+	pw, err := pc.password(userID)
 	if err != nil {
 		return "", err
 	}
-	return passwordField(obj, accountNameField), nil
+	return pw.accountName, nil
 }
 
 // password returns the Password object of the local user with the given user ID.
-func (pc *PasswordCache) password(userID string) (any, error) {
+func (pc *PasswordCache) password(userID string) (*cachedPassword, error) {
 	if !pc.IsSynced() {
 		return nil, ErrCacheNotSynced
 	}
@@ -149,10 +149,11 @@ func (pc *PasswordCache) password(userID string) (any, error) {
 		return nil, ErrAmbiguousUser
 	}
 
-	if passwordField(objs[0], "username") == "" {
+	pw, ok := objs[0].(*cachedPassword)
+	if !ok || pw.username == "" {
 		return nil, ErrUserNotFound
 	}
-	return objs[0], nil
+	return pw, nil
 }
 
 // IsSynced returns true if the cache has completed initial sync.
@@ -169,9 +170,13 @@ func (pc *PasswordCache) Count() int {
 // the username as the user ID, and the UserOperation controller takes the username for an object
 // without one; the index does the same.
 func passwordUserIDs(obj any) ([]string, error) {
-	userID := passwordField(obj, "userID")
+	pw, ok := obj.(*cachedPassword)
+	if !ok {
+		return nil, nil
+	}
+	userID := pw.userID
 	if userID == "" {
-		userID = passwordField(obj, "username")
+		userID = pw.username
 	}
 	if userID == "" {
 		return nil, nil
@@ -179,54 +184,32 @@ func passwordUserIDs(obj any) ([]string, error) {
 	return []string{userID}, nil
 }
 
-// accountNameField is the field trimPassword keeps the name of the UserAccount of a Password in: the
-// email it is named after stays out of the cache.
-const accountNameField = "accountName"
+// cachedPassword is what PasswordCache keeps of a Password object: its identity, the username, the
+// user ID and the name of the UserAccount of the user. The hash and the email stay out of memory.
+type cachedPassword struct {
+	metav1.ObjectMeta
+	username, userID, accountName string
+}
 
-// trimPassword keeps only the identity of a Password object: its name, username, user ID, and the
-// name of its UserAccount.
-//
-// The transform has to be idempotent: client-go may run it again on an object it already trimmed.
-// The email is gone then, and a name computed from the username would name a UserAccount that does
-// not exist, so the name computed the first time is kept.
+// trimPassword keeps only the identity of a Password object (cachedPassword). The transform has to be
+// idempotent: client-go may run it again on an object it already trimmed, which it keeps as it is.
 func trimPassword(obj any) (any, error) {
 	u, ok := obj.(*unstructured.Unstructured)
 	if !ok {
 		return obj, nil
 	}
-
-	trimmed := &unstructured.Unstructured{Object: map[string]any{}}
-	trimmed.SetAPIVersion(u.GetAPIVersion())
-	trimmed.SetKind(u.GetKind())
-	trimmed.SetNamespace(u.GetNamespace())
-	trimmed.SetName(u.GetName())
-	trimmed.SetUID(u.GetUID())
-	trimmed.SetResourceVersion(u.GetResourceVersion())
-	for _, field := range []string{"username", "userID"} {
-		if value, found, err := unstructured.NestedString(u.Object, field); err == nil && found {
-			trimmed.Object[field] = value
-		}
-	}
 	email, _, _ := unstructured.NestedString(u.Object, "email")
 	username, _, _ := unstructured.NestedString(u.Object, "username")
-	accountName, trimmedBefore, _ := unstructured.NestedString(u.Object, accountNameField)
-	if !trimmedBefore || email != "" {
-		accountName = LocalAccountName(email, username)
-	}
-	trimmed.Object[accountNameField] = accountName
-
-	return trimmed, nil
-}
-
-func passwordField(obj any, field string) string {
-	u, ok := obj.(*unstructured.Unstructured)
-	if !ok {
-		return ""
-	}
-
-	value, found, err := unstructured.NestedString(u.Object, field)
-	if err != nil || !found {
-		return ""
-	}
-	return value
+	userID, _, _ := unstructured.NestedString(u.Object, "userID")
+	return &cachedPassword{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:       u.GetNamespace(),
+			Name:            u.GetName(),
+			UID:             u.GetUID(),
+			ResourceVersion: u.GetResourceVersion(),
+		},
+		username:    username,
+		userID:      userID,
+		accountName: LocalAccountName(email, username),
+	}, nil
 }

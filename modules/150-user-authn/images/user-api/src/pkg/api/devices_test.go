@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -39,12 +40,14 @@ const (
 	newGrant   = "newgrantaaaaaaaaaaaaaaaaaa"
 	// knownBrowser signed in again an hour ago; Dex has known the browser for three days.
 	knownBrowser = "knownbrowseraaaaaaaaaaaaaa"
+	// freshDevice is not in the list.
+	freshDevice = "freshdeviceaaaaaaaaaaaaaaa"
 )
 
 // testDevices are two browsers and two devices without one, signed in two days and an hour ago, and
 // a browser signed in again an hour ago that Dex has known for three days.
 func testDevices() k8s.Devices {
-	at := func(d time.Duration) *time.Time { t := devicesNow.Add(-d); return &t }
+	at := func(d time.Duration) time.Time { return devicesNow.Add(-d) }
 	return k8s.Devices{Items: []k8s.Device{
 		{ID: newBrowser, Kind: k8s.DeviceKindBrowser, Clients: []string{"console"}, SignedInAt: at(time.Hour)},
 		{ID: newGrant, Kind: k8s.DeviceKindGrant, Clients: []string{"kubeconfig-generator"}, SignedInAt: at(time.Hour)},
@@ -110,17 +113,6 @@ func TestHandler_SelfDevices(t *testing.T) {
 			client:     &mockK8sClient{usernames: map[string]string{"jane": "jane"}, devicesErr: errors.New("boom")},
 			wantStatus: http.StatusInternalServerError,
 		},
-		{
-			// The name of the account is a hash of the pair: one of another pair is not listed.
-			name:   "the account belongs to another pair",
-			claims: janeClaims,
-			client: &mockK8sClient{usernames: map[string]string{"jane": "jane"}, devices: func() k8s.Devices {
-				d := testDevices()
-				d.UserID, d.ConnectorID = "john", "local"
-				return d
-			}()},
-			wantStatus: http.StatusInternalServerError,
-		},
 	}
 
 	for _, tt := range tests {
@@ -160,6 +152,39 @@ func TestHandler_SelfDevices(t *testing.T) {
 				t.Error("listing the devices created an operation")
 			}
 		})
+	}
+}
+
+// Every device tells when its session ends, as the controller listed it; a device without an end has
+// no endsAt.
+func TestHandler_SelfDevicesEndsAt(t *testing.T) {
+	ends := devicesNow.Add(20 * time.Hour)
+	devices := testDevices()
+	devices.Items[0].EndsAt = ends
+	h := newDevicesHandler(withDevice(janeClaims, oldBrowser, ""), &mockK8sClient{usernames: map[string]string{"jane": "jane"}, devices: devices})
+	req := httptest.NewRequest(http.MethodGet, devicesEndpoint, nil)
+	req.Header.Set("Authorization", "Bearer validtoken")
+	w := httptest.NewRecorder()
+	h.SelfDevices(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", w.Code, w.Body.String())
+	}
+	var resp struct {
+		Sessions []map[string]any `json:"sessions"`
+	}
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	got := map[string]any{}
+	for _, s := range resp.Sessions {
+		got[s["id"].(string)] = s["endsAt"]
+	}
+	if got[newBrowser] != "2026-10-17T08:00:00Z" {
+		t.Errorf("endsAt of %s = %v, want 2026-10-17T08:00:00Z", newBrowser, got[newBrowser])
+	}
+	if end, ok := got[oldBrowser]; !ok || end != nil {
+		t.Errorf("endsAt of %s = %v, want none", oldBrowser, end)
 	}
 }
 
@@ -293,6 +318,7 @@ func TestHandler_SelfDeviceLogout(t *testing.T) {
 		wantStatus     int
 		wantError      string
 		wantRetryAfter string
+		wantMessage    string
 		wantOperation  *k8s.UserOperation
 	}{
 		{
@@ -329,12 +355,52 @@ func TestHandler_SelfDeviceLogout(t *testing.T) {
 			wantRetryAfter: "82800",
 		},
 		{
-			name:       "a device the user does not have",
-			claims:     withDevice(janeClaims, oldBrowser, ""),
-			client:     jane(),
-			id:         "someoneelsesbrowseraaaaaaa",
-			wantStatus: http.StatusNotFound,
-			wantError:  "not_found",
+			// Expired, signed out of before, or someone else's: the same answer, and nothing to do.
+			name:        "a device the user does not have",
+			claims:      withDevice(janeClaims, oldBrowser, ""),
+			client:      jane(),
+			id:          "someoneelsesbrowseraaaaaaa",
+			wantStatus:  http.StatusOK,
+			wantMessage: "the user has no such device",
+		},
+		{
+			// The device of the request signed in moments ago, or the list is cut before it: the
+			// controller decides, and a device may always sign out of itself.
+			name:   "the browser of the request missing from a cut list",
+			claims: withDevice(janeClaims, freshDevice, ""),
+			client: &mockK8sClient{usernames: map[string]string{"jane": "jane"}, statuses: succeeded(""),
+				devices: func() k8s.Devices { d := testDevices(); d.Truncated = true; return d }()},
+			id:            freshDevice,
+			wantStatus:    http.StatusOK,
+			wantOperation: logout("jane", &k8s.Logout{Session: freshDevice}),
+		},
+		{
+			name:          "the kubeconfig of the request not listed yet",
+			claims:        withDevice(janeClaims, "", freshDevice),
+			client:        jane(),
+			id:            freshDevice,
+			wantStatus:    http.StatusOK,
+			wantOperation: logout("jane", &k8s.Logout{Grant: freshDevice}),
+		},
+		{
+			// A cut list may miss another device too, which only a trusted device may sign out.
+			name:   "a device missing from a cut list from a device of an hour",
+			claims: withDevice(janeClaims, newBrowser, ""),
+			client: &mockK8sClient{usernames: map[string]string{"jane": "jane"}, statuses: succeeded(""),
+				devices: func() k8s.Devices { d := testDevices(); d.Truncated = true; return d }()},
+			id:             freshDevice,
+			wantStatus:     http.StatusForbidden,
+			wantError:      "too_early",
+			wantRetryAfter: "82800",
+		},
+		{
+			// Nothing to sign out of, so a device of an hour may ask too.
+			name:        "a device the user does not have from a device of an hour",
+			claims:      withDevice(janeClaims, newBrowser, ""),
+			client:      jane(),
+			id:          "someoneelsesbrowseraaaaaaa",
+			wantStatus:  http.StatusOK,
+			wantMessage: "the user has no such device",
 		},
 		{
 			name:       "an ID that is no device ID",
@@ -368,7 +434,164 @@ func TestHandler_SelfDeviceLogout(t *testing.T) {
 			h.SelfDeviceLogout(w, req)
 
 			assertDeviceAction(t, w, tt.client, tt.wantStatus, tt.wantError, tt.wantRetryAfter, tt.wantOperation)
+			if tt.wantMessage == "" {
+				return
+			}
+			var resp OperationResponse
+			if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+				t.Fatalf("decode response: %v", err)
+			}
+			if resp.Status != statusDone || resp.Message != tt.wantMessage {
+				t.Errorf("response = %+v, want done with %q", resp, tt.wantMessage)
+			}
 		})
+	}
+}
+
+// A cut list may miss a device of either kind: the logout tries it as a browser session, and as a grant
+// when the user has no such session.
+func TestHandler_SelfDeviceLogoutOfADeviceMissingFromACutList(t *testing.T) {
+	client := &mockK8sClient{
+		usernames: map[string]string{"jane": "jane"},
+		devices:   func() k8s.Devices { d := testDevices(); d.Truncated = true; return d }(),
+		statuses:  []k8s.OperationStatus{{}, {Phase: k8s.PhaseSucceeded, Message: noSessionMessage}, {}, {Phase: k8s.PhaseSucceeded}},
+	}
+	h := newDevicesHandler(withDevice(janeClaims, oldBrowser, ""), client)
+	req := selfPost("/api/v1/self/sessions/" + freshDevice + "/logout")
+	req.SetPathValue("id", freshDevice)
+	w := httptest.NewRecorder()
+	h.SelfDeviceLogout(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", w.Code, w.Body.String())
+	}
+	want := []k8s.UserOperation{
+		{GenerateName: "self-logout-device-", Type: k8s.OperationTypeLogout, User: "jane", Logout: &k8s.Logout{Session: freshDevice}},
+		{GenerateName: "self-logout-device-", Type: k8s.OperationTypeLogout, User: "jane", Logout: &k8s.Logout{Grant: freshDevice}},
+	}
+	if got := client.createdOperations(); !reflect.DeepEqual(got, want) {
+		t.Errorf("created %+v, want %+v", got, want)
+	}
+}
+
+// A slow controller completes neither Logout within the wait: the grant is signed out all the same, as
+// both operations are created at once, and the answer comes within one waitTimeout, not two.
+func TestHandler_SelfDeviceLogoutOfAnUnlistedDeviceWithASlowController(t *testing.T) {
+	client := &mockK8sClient{
+		usernames: map[string]string{"jane": "jane"},
+		devices:   func() k8s.Devices { d := testDevices(); d.Truncated = true; return d }(),
+		statuses:  []k8s.OperationStatus{{}},
+	}
+	h := newDevicesHandler(withDevice(janeClaims, oldBrowser, ""), client)
+	req := selfPost("/api/v1/self/sessions/" + freshDevice + "/logout")
+	req.SetPathValue("id", freshDevice)
+	w := httptest.NewRecorder()
+	start := time.Now()
+	h.SelfDeviceLogout(w, req)
+	elapsed := time.Since(start)
+
+	if w.Code != http.StatusAccepted {
+		t.Fatalf("status = %d, body = %s, want 202", w.Code, w.Body.String())
+	}
+	if got := client.createdOperations(); len(got) != 2 || got[1].Logout == nil || got[1].Logout.Grant != freshDevice {
+		t.Errorf("created %+v, want a Logout of the session and one of the grant", got)
+	}
+	if elapsed >= 2*h.waitTimeout {
+		t.Errorf("the answer took %v, want less than two waits of %v", elapsed, h.waitTimeout)
+	}
+}
+
+// listDevices is the list of the devices jane sees from oldBrowser, by ID.
+func listDevices(t *testing.T, h *Handler) []string {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, devicesEndpoint, nil)
+	req.Header.Set("Authorization", "Bearer validtoken")
+	w := httptest.NewRecorder()
+	h.SelfDevices(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("list status = %d, body = %s", w.Code, w.Body.String())
+	}
+	var resp DevicesResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatal(err)
+	}
+	ids := make([]string, 0, len(resp.Sessions))
+	for _, d := range resp.Sessions {
+		ids = append(ids, d.ID)
+	}
+	return ids
+}
+
+// The controller completes the operation, then writes the UserAccount, and the watch brings it a
+// moment later. A list read right after the logout answered must not show the device signed out.
+func TestHandler_SelfDeviceLogoutIsSeenAtOnce(t *testing.T) {
+	logout := func(t *testing.T, h *Handler) {
+		t.Helper()
+		req := selfPost("/api/v1/self/sessions/" + newBrowser + "/logout")
+		req.SetPathValue("id", newBrowser)
+		w := httptest.NewRecorder()
+		h.SelfDeviceLogout(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("logout status = %d, body = %s", w.Code, w.Body.String())
+		}
+	}
+
+	t.Run("the answer waits for the cache", func(t *testing.T) {
+		// The logout reads the list once; the cache drops the device at the third read.
+		client := &mockK8sClient{usernames: map[string]string{"jane": "jane"}, statuses: succeeded(""), dropAfter: 2, drop: []string{newBrowser}}
+		h := newDevicesHandler(withDevice(janeClaims, oldBrowser, ""), client)
+		h.signOutWait = time.Second
+		logout(t, h)
+		if ids := listDevices(t, h); slices.Contains(ids, newBrowser) {
+			t.Errorf("devices = %v right after the logout, want no %s", ids, newBrowser)
+		}
+		if len(h.signedOut.until) != 0 {
+			t.Errorf("signed out devices kept = %v, want none: the cache has caught up", h.signedOut.until)
+		}
+	})
+
+	t.Run("a cache that has not caught up leaves the device out", func(t *testing.T) {
+		client := &mockK8sClient{usernames: map[string]string{"jane": "jane"}, statuses: succeeded("")}
+		h := newDevicesHandler(withDevice(janeClaims, oldBrowser, ""), client)
+		logout(t, h)
+		if ids := listDevices(t, h); slices.Contains(ids, newBrowser) || len(ids) != 4 {
+			t.Errorf("devices = %v after the logout, want the 4 others", ids)
+		}
+		// The cache catches up: nothing is left to remember.
+		client.mu.Lock()
+		client.dropAfter, client.drop = 1, []string{newBrowser}
+		client.mu.Unlock()
+		listDevices(t, h)
+		if len(h.signedOut.until) != 0 {
+			t.Errorf("signed out devices kept = %v once the cache dropped them", h.signedOut.until)
+		}
+	})
+}
+
+func TestSignedOutDevices(t *testing.T) {
+	items := testDevices().Items
+	s := newSignedOutDevices()
+	s.add("local/jane", []string{newBrowser, oldGrant}, devicesNow.Add(time.Minute), devicesNow)
+
+	got := s.filter("local/jane", items, devicesNow)
+	if len(got) != len(items)-2 || slices.ContainsFunc(got, func(d k8s.Device) bool { return d.ID == newBrowser || d.ID == oldGrant }) {
+		t.Errorf("filtered = %v, want all but %s and %s", got, newBrowser, oldGrant)
+	}
+	if len(items) != 5 {
+		t.Error("filter changed the list it was given")
+	}
+	if got := s.filter("ldap/jane", items, devicesNow); len(got) != len(items) {
+		t.Error("the devices of another pair were left out")
+	}
+	// Past their time, they are listed again and forgotten.
+	if got := s.filter("local/jane", items, devicesNow.Add(time.Minute)); len(got) != len(items) || len(s.until) != 0 {
+		t.Errorf("filtered = %v, kept = %v past the time, want everything listed and nothing kept", got, s.until)
+	}
+	// add forgets what is past its time for every pair.
+	s.add("local/john", []string{oldBrowser}, devicesNow.Add(time.Minute), devicesNow)
+	s.add("local/jane", []string{newGrant}, devicesNow.Add(3*time.Minute), devicesNow.Add(2*time.Minute))
+	if _, ok := s.until["local/john"]; ok {
+		t.Error("a device past its time was kept")
 	}
 }
 

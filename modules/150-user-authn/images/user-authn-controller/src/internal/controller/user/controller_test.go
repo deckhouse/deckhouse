@@ -505,6 +505,57 @@ func TestReconcile_NamelessCanonicalPasswordNotStolen(t *testing.T) {
 	}
 }
 
+// A pass reads the Passwords of its user and those without a username from the index of the cache,
+// never every Password or every User: a pass for each user would read them all U times over.
+func TestReconcile_ReadsOnlyThePasswordsOfTheUser(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
+	managed := map[string]string{heritageLabel: heritageValue, moduleLabel: moduleValue, appLabel: appValue}
+	bobEmail, carolEmail := "bob@example.com", "carol@example.com"
+	objs := []client.Object{
+		userObj(adminUserName, adminEmail, adminPassword, ""),
+		userObj("bob", bobEmail, adminPassword, ""),
+		// Bob's Password without a username is his: it stays.
+		passwordObj(passwordName(bobEmail), map[string]any{"email": bobEmail, "hash": liveHash}, managed, nil),
+		// Carol has no User: her Password without a username goes.
+		passwordObj(passwordName(carolEmail), map[string]any{"email": carolEmail, "hash": liveHash}, managed, nil),
+		passwordObj("someone-else", map[string]any{"email": "else@example.com", "username": "else", "hash": liveHash}, managed, nil),
+	}
+	var fullLists atomic.Int32
+	c := newFakeClientBuilder(t, objs...).WithInterceptorFuncs(interceptor.Funcs{
+		List: func(ctx context.Context, cl client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+			o := (&client.ListOptions{}).ApplyOptions(opts)
+			kind := list.GetObjectKind().GroupVersionKind().Kind
+			if (kind == controller.PasswordGVK.Kind+"List" || kind == controller.UserGVK.Kind+"List") &&
+				(o.FieldSelector == nil || o.FieldSelector.Empty()) {
+				fullLists.Add(1)
+			}
+			return cl.List(ctx, list, opts...)
+		},
+	}).Build()
+	r := New(c, c, logr.Discard(), func() time.Time { return now })
+
+	if _, err := r.Reconcile(t.Context(), userReq(adminUserName)); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	if got := fullLists.Load(); got != 0 {
+		t.Errorf("lists of every Password or User = %d, want 0", got)
+	}
+	if !passwordExists(t, r, passwordName(bobEmail)) {
+		t.Error("the Password of bob without a username was deleted")
+	}
+	if passwordExists(t, r, passwordName(carolEmail)) {
+		t.Error("the Password without a username and without a User was kept")
+	}
+	if !passwordExists(t, r, "someone-else") {
+		t.Error("the Password of another user was deleted")
+	}
+	if !passwordExists(t, r, adminEncodedPW) {
+		t.Error("the Password of the user was not created")
+	}
+}
+
 func TestReconcile_DoesNotWriteUserAccount(t *testing.T) {
 	t.Parallel()
 

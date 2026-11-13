@@ -18,13 +18,11 @@ package k8s
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"time"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -52,7 +50,7 @@ var (
 	ErrUserNotFound    = errors.New("user not found")
 	ErrAmbiguousUser   = errors.New("several local users have this user ID")
 	ErrOperationFailed = errors.New("failed to create user operation")
-	ErrCacheNotSynced  = errors.New("password cache not synced")
+	ErrCacheNotSynced  = errors.New("cache not synced")
 
 	userOperationGVR = schema.GroupVersionResource{
 		Group:    "deckhouse.io",
@@ -96,16 +94,20 @@ type Logout struct {
 // Device is a device signed in to the account of a user: an entry of status.sessions of its
 // UserAccount.
 type Device struct {
-	ID         string     `json:"id"`
-	Kind       string     `json:"kind"`
-	Clients    []string   `json:"clients,omitempty"`
-	IPAddress  string     `json:"ipAddress,omitempty"`
-	UserAgent  string     `json:"userAgent,omitempty"`
-	SignedInAt *time.Time `json:"signedInAt,omitempty"`
+	ID        string   `json:"id"`
+	Kind      string   `json:"kind"`
+	Clients   []string `json:"clients,omitempty"`
+	IPAddress string   `json:"ipAddress,omitempty"`
+	UserAgent string   `json:"userAgent,omitempty"`
+	// The times are values, not pointers, for the memory of the cache: a zero one is unset.
+	SignedInAt time.Time `json:"signedInAt,omitzero"`
 	// KnownSince is when Dex first saw the browser of the device complete a login of the account, set
 	// when earlier than SignedInAt: the device is as old as that.
-	KnownSince   *time.Time `json:"knownSince,omitempty"`
-	LastActivity *time.Time `json:"lastActivity,omitempty"`
+	KnownSince   time.Time `json:"knownSince,omitzero"`
+	LastActivity time.Time `json:"lastActivity,omitzero"`
+	// EndsAt is when the session of the device ends unless it is used again, as the controller lists
+	// it: the end of the browser session of Dex, or of the refresh token. Zero when it has no end.
+	EndsAt time.Time `json:"endsAt,omitzero"`
 }
 
 // Devices are the devices of an account and whether the UserAccount lists only the most recently
@@ -138,11 +140,14 @@ type Client interface {
 	LocalUsername(ctx context.Context, userID string) (string, error)
 	// AccountName returns the name of the UserAccount of the pair (userID, connectorID).
 	AccountName(ctx context.Context, userID, connectorID string) (string, error)
-	// Devices returns the devices of the UserAccount named name; none when there is no such object.
-	Devices(ctx context.Context, name string) (Devices, error)
+	// Devices returns the devices of the UserAccount of the pair (userID, connectorID); none when
+	// there is no such object.
+	Devices(ctx context.Context, userID, connectorID string) (Devices, error)
 	// CreateUserOperation creates op and returns the generated name.
 	CreateUserOperation(ctx context.Context, op UserOperation) (string, error)
 	UserOperationStatus(ctx context.Context, name string) (OperationStatus, error)
+	// Synced tells whether the caches have completed their initial sync.
+	Synced() bool
 	Start(ctx context.Context) error
 	Stop()
 }
@@ -150,6 +155,7 @@ type Client interface {
 type K8sClient struct {
 	dynamicClient dynamic.Interface
 	passwordCache *PasswordCache
+	accountCache  *AccountCache
 	logger        *slog.Logger
 }
 
@@ -172,22 +178,35 @@ func NewClientWithDynamic(dynamicClient dynamic.Interface, logger *slog.Logger) 
 	if err != nil {
 		return nil, err
 	}
+	accountCache, err := NewAccountCache(dynamicClient, logger)
+	if err != nil {
+		return nil, err
+	}
 
 	return &K8sClient{
 		dynamicClient: dynamicClient,
 		passwordCache: passwordCache,
+		accountCache:  accountCache,
 		logger:        logger,
 	}, nil
 }
 
-// Start initializes the password cache informer and waits for sync.
+// Start starts the informers of the Password and UserAccount caches and waits for them to sync.
 func (c *K8sClient) Start(ctx context.Context) error {
-	return c.passwordCache.Start(ctx)
+	if err := c.passwordCache.Start(ctx); err != nil {
+		return err
+	}
+	if err := c.accountCache.Start(ctx); err != nil {
+		c.passwordCache.Stop()
+		return err
+	}
+	return nil
 }
 
-// Stop stops the password cache informer.
+// Stop stops the informers of the caches.
 func (c *K8sClient) Stop() {
 	c.passwordCache.Stop()
+	c.accountCache.Stop()
 }
 
 // LocalUsername looks the user up in the informer-based cache of Password objects.
@@ -204,39 +223,14 @@ func (c *K8sClient) AccountName(_ context.Context, userID, connectorID string) (
 	return ExternalAccountName(connectorID, userID), nil
 }
 
-// Devices reads status.sessions of the UserAccount named name.
-func (c *K8sClient) Devices(ctx context.Context, name string) (Devices, error) {
-	account, err := c.dynamicClient.Resource(userAccountGVR).Get(ctx, name, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
-		return Devices{}, nil
-	}
-	if err != nil {
-		return Devices{}, fmt.Errorf("get user account %s: %w", name, err)
-	}
+// Devices reads status.sessions of the UserAccount of the pair from the cache.
+func (c *K8sClient) Devices(_ context.Context, userID, connectorID string) (Devices, error) {
+	return c.accountCache.Devices(userID, connectorID)
+}
 
-	var status struct {
-		UserID            string   `json:"userID"`
-		ConnectorID       string   `json:"connectorID"`
-		Sessions          []Device `json:"sessions"`
-		SessionsTruncated bool     `json:"sessionsTruncated"`
-	}
-	raw, found, err := unstructured.NestedFieldNoCopy(account.Object, "status")
-	if err != nil || !found {
-		return Devices{}, err
-	}
-	data, err := json.Marshal(raw)
-	if err != nil {
-		return Devices{}, fmt.Errorf("encode the status of user account %s: %w", name, err)
-	}
-	if err := json.Unmarshal(data, &status); err != nil {
-		return Devices{}, fmt.Errorf("decode the status of user account %s: %w", name, err)
-	}
-	return Devices{
-		Items:       status.Sessions,
-		Truncated:   status.SessionsTruncated,
-		UserID:      status.UserID,
-		ConnectorID: status.ConnectorID,
-	}, nil
+// Synced tells whether the Password and UserAccount caches have completed their initial sync.
+func (c *K8sClient) Synced() bool {
+	return c.passwordCache.IsSynced() && c.accountCache.IsSynced()
 }
 
 func (c *K8sClient) CreateUserOperation(ctx context.Context, op UserOperation) (string, error) {

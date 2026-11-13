@@ -127,14 +127,9 @@ func TestPasswordCache_KeepsNoHashes(t *testing.T) {
 	client := startedClient(t, newFakeDynamicClient(password("jane-obj", "jane", "jane")))
 
 	for _, obj := range client.passwordCache.informer.GetStore().List() {
-		u, ok := obj.(*unstructured.Unstructured)
-		if !ok {
-			t.Fatalf("cached object is %T, want *unstructured.Unstructured", obj)
-		}
-		for _, field := range []string{"hash", "email"} {
-			if _, found := u.Object[field]; found {
-				t.Errorf("cached Password %s keeps the %q field", u.GetName(), field)
-			}
+		// cachedPassword has no field for the hash or the email.
+		if _, ok := obj.(*cachedPassword); !ok {
+			t.Fatalf("cached object is %T, want *cachedPassword", obj)
 		}
 	}
 }
@@ -197,40 +192,54 @@ func TestK8sClient_AccountName(t *testing.T) {
 	}
 }
 
-func TestK8sClient_Devices(t *testing.T) {
-	account := &unstructured.Unstructured{Object: map[string]interface{}{
+func userAccount(name, userAgent string) *unstructured.Unstructured {
+	return pairAccount(name, "jane", userAgent)
+}
+
+func pairAccount(name, userID, userAgent string) *unstructured.Unstructured {
+	return &unstructured.Unstructured{Object: map[string]interface{}{
 		"apiVersion": "deckhouse.io/v1alpha1",
 		"kind":       "UserAccount",
-		"metadata":   map[string]interface{}{"name": "local-jane"},
+		"metadata":   map[string]interface{}{"name": name},
 		"status": map[string]interface{}{
 			"email":       "jane@example.com",
-			"userID":      "jane",
+			"groups":      []interface{}{"admins"},
+			"userID":      userID,
 			"connectorID": "local",
 			"sessions": []interface{}{map[string]interface{}{
 				"id":         "fehzwdh5qy4oyqcn7qhkcgzbm",
 				"kind":       "Browser",
 				"clients":    []interface{}{"console"},
 				"ipAddress":  "203.0.113.7",
-				"userAgent":  "Firefox",
+				"userAgent":  userAgent,
 				"signedInAt": "2026-10-16T10:00:00Z",
+				"endsAt":     "2026-10-17T10:00:00Z",
 			}},
 			"sessionsTruncated": true,
 		},
 	}}
-	client, err := NewClientWithDynamic(newFakeDynamicClient(account), testLogger())
-	if err != nil {
-		t.Fatalf("NewClientWithDynamic() error = %v", err)
-	}
+}
 
-	got, err := client.Devices(context.Background(), "local-jane")
+// The devices come from the cache, found by the pair of the account: once it has synced, a request
+// makes no call to the API server.
+func TestK8sClient_Devices(t *testing.T) {
+	dynamicClient := newFakeDynamicClient(userAccount("local-jane", "Firefox"), pairAccount("local-john", "john", "Safari"))
+	client := startedClient(t, dynamicClient)
+	if !client.Synced() {
+		t.Fatal("Synced() = false after Start")
+	}
+	dynamicClient.ClearActions()
+
+	got, err := client.Devices(context.Background(), "jane", "local")
 	if err != nil {
 		t.Fatalf("Devices() error = %v", err)
 	}
 	signedInAt := time.Date(2026, 10, 16, 10, 0, 0, 0, time.UTC)
+	endsAt := time.Date(2026, 10, 17, 10, 0, 0, 0, time.UTC)
 	want := Devices{
 		Items: []Device{{
 			ID: "fehzwdh5qy4oyqcn7qhkcgzbm", Kind: DeviceKindBrowser, Clients: []string{"console"},
-			IPAddress: "203.0.113.7", UserAgent: "Firefox", SignedInAt: &signedInAt,
+			IPAddress: "203.0.113.7", UserAgent: "Firefox", SignedInAt: signedInAt, EndsAt: endsAt,
 		}},
 		Truncated:   true,
 		UserID:      "jane",
@@ -240,9 +249,70 @@ func TestK8sClient_Devices(t *testing.T) {
 		t.Errorf("Devices() = %+v, want %+v", got, want)
 	}
 
-	none, err := client.Devices(context.Background(), "local-nobody")
-	if err != nil || len(none.Items) != 0 {
-		t.Errorf("Devices() of a missing account = %+v, %v; want none", none, err)
+	for _, pair := range [][2]string{{"nobody", "local"}, {"jane", "ldap"}} {
+		none, err := client.Devices(context.Background(), pair[0], pair[1])
+		if err != nil || len(none.Items) != 0 {
+			t.Errorf("Devices(%v) of a missing account = %+v, %v; want none", pair, none, err)
+		}
+	}
+	if actions := dynamicClient.Actions(); len(actions) != 0 {
+		t.Errorf("Devices() called the API server: %v", actions)
+	}
+}
+
+func TestAccountCache_KeepsOnlyTheDevices(t *testing.T) {
+	client := startedClient(t, newFakeDynamicClient(userAccount("local-jane", "Firefox")))
+
+	for _, obj := range client.accountCache.informer.GetStore().List() {
+		account, ok := obj.(*cachedAccount)
+		if !ok {
+			t.Fatalf("cached object is %T, want *cachedAccount", obj)
+		}
+		if again, _ := client.accountCache.trimAccount(account); again != account {
+			t.Error("trimming a trimmed account changed it")
+		}
+	}
+}
+
+func TestAccountCache_FollowsUpdates(t *testing.T) {
+	dynamicClient := newFakeDynamicClient(userAccount("local-jane", "Firefox"))
+	client := startedClient(t, dynamicClient)
+
+	ctx := context.Background()
+	if _, err := dynamicClient.Resource(userAccountGVR).Update(ctx, userAccount("local-jane", "Safari"), metav1.UpdateOptions{}); err != nil {
+		t.Fatalf("update UserAccount: %v", err)
+	}
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		got, err := client.Devices(ctx, "jane", "local")
+		if err == nil && len(got.Items) == 1 && got.Items[0].UserAgent == "Safari" {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("Devices() = %+v, %v after the update, want the Safari device", got, err)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
+func TestK8sClient_Devices_CacheNotSynced(t *testing.T) {
+	client, err := NewClientWithDynamic(newFakeDynamicClient(userAccount("local-jane", "Firefox")), testLogger())
+	if err != nil {
+		t.Fatalf("NewClientWithDynamic() error = %v", err)
+	}
+	if _, err := client.Devices(context.Background(), "jane", "local"); !errors.Is(err, ErrCacheNotSynced) {
+		t.Errorf("Devices() error = %v, want %v", err, ErrCacheNotSynced)
+	}
+	if client.Synced() {
+		t.Error("Synced() = true before Start")
+	}
+}
+
+// Two accounts of one pair would mix the devices of two users: neither is listed.
+func TestK8sClient_DevicesOfAnAmbiguousPair(t *testing.T) {
+	client := startedClient(t, newFakeDynamicClient(userAccount("local-jane", "Firefox"), userAccount("local-jane-2", "Safari")))
+	if _, err := client.Devices(context.Background(), "jane", "local"); !errors.Is(err, ErrAmbiguousUser) {
+		t.Errorf("Devices() error = %v, want %v", err, ErrAmbiguousUser)
 	}
 }
 
@@ -406,5 +476,26 @@ func TestK8sClient_UserOperationStatus(t *testing.T) {
 				t.Errorf("UserOperationStatus(%q) = %+v, want %+v", tt.name, got, tt.want)
 			}
 		})
+	}
+}
+
+// BenchmarkK8sClient_Devices reads the devices of an account from the cache, as every request of
+// user-api does.
+func BenchmarkK8sClient_Devices(b *testing.B) {
+	client, err := NewClientWithDynamic(newFakeDynamicClient(userAccount("local-jane", "Firefox")), testLogger())
+	if err != nil {
+		b.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := client.Start(ctx); err != nil {
+		b.Fatal(err)
+	}
+	b.Cleanup(client.Stop)
+
+	for b.Loop() {
+		if _, err := client.Devices(context.Background(), "jane", "local"); err != nil {
+			b.Fatal(err)
+		}
 	}
 }

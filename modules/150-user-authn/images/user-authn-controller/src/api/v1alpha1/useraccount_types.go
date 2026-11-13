@@ -134,6 +134,10 @@ type UserAccountSession struct {
 	// LastActivity is the last use of the device, rounded down to the hour and never before
 	// SignedInAt.
 	LastActivity *metav1.Time `json:"lastActivity,omitempty"`
+	// EndsAt is when the session of the device ends unless it is used again: for a browser, the end
+	// of its session of Dex; for a grant, when Dex stops accepting its refresh token. Nil when it
+	// has no end.
+	EndsAt *metav1.Time `json:"endsAt,omitempty"`
 }
 
 // +kubebuilder:object:root=true

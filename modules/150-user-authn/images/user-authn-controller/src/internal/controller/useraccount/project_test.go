@@ -306,7 +306,8 @@ func TestProjectSessions(t *testing.T) {
 				IPAddress:    "203.0.113.7",
 				UserAgent:    "Firefox",
 				SignedInAt:   metaTimeOrNil(at(-5 * time.Hour)),
-				LastActivity: hour(11), // grafana, 11:00, rounded down
+				LastActivity: hour(11),                     // grafana, 11:00, rounded down
+				EndsAt:       metaTimeOrNil(at(time.Hour)), // the session, not the grants
 			}},
 		},
 		{
@@ -323,6 +324,8 @@ func TestProjectSessions(t *testing.T) {
 				UserAgent:    "Firefox",
 				SignedInAt:   metaTimeOrNil(at(-5 * time.Hour)),
 				LastActivity: hour(12),
+				// The token of the grant outlives the session: unused for 36h from its last refresh.
+				EndsAt: metaTimeOrNil(at(36*time.Hour - 10*time.Minute)),
 			}},
 		},
 		{
@@ -337,6 +340,7 @@ func TestProjectSessions(t *testing.T) {
 				Clients:      []string{"console"},
 				SignedInAt:   metaTimeOrNil(at(-11 * time.Minute)),
 				LastActivity: metaTimeOrNil(at(-11 * time.Minute)), // 12:19, not 12:00
+				EndsAt:       metaTimeOrNil(at(time.Hour)),
 			}},
 		},
 		{
@@ -352,7 +356,8 @@ func TestProjectSessions(t *testing.T) {
 					Kind:         v1alpha1.SessionKindGrant,
 					Clients:      []string{"kubeconfig-generator"},
 					SignedInAt:   metaTimeOrNil(at(-time.Hour)),
-					LastActivity: metaTimeOrNil(at(-time.Hour)), // 11:30: the hour rounds down to before the sign-in
+					LastActivity: metaTimeOrNil(at(-time.Hour)),     // 11:30: the hour rounds down to before the sign-in
+					EndsAt:       metaTimeOrNil(at(35 * time.Hour)), // never refreshed: idle from the sign-in
 				},
 				{
 					ID:           "sid-1",
@@ -362,6 +367,7 @@ func TestProjectSessions(t *testing.T) {
 					UserAgent:    "Firefox",
 					SignedInAt:   metaTimeOrNil(at(-5 * time.Hour)),
 					LastActivity: hour(9),
+					EndsAt:       metaTimeOrNil(at(time.Hour)),
 				},
 				{
 					ID:           "g-old",
@@ -369,18 +375,66 @@ func TestProjectSessions(t *testing.T) {
 					Clients:      []string{"kubeconfig-generator"},
 					SignedInAt:   metaTimeOrNil(at(-48 * time.Hour)),
 					LastActivity: metaTimeOrNil(time.Date(2026, 10, 15, 12, 0, 0, 0, time.UTC)),
+					EndsAt:       metaTimeOrNil(at(12 * time.Hour)), // idle from the last refresh
 				},
 			},
+		},
+		{
+			name:     "a grant near its absolute lifetime ends with it, a session of unknown expiry has no end",
+			browsers: []browserView{{ID: "sid-3", CreatedAt: at(-time.Hour), LastActivity: at(-time.Hour)}},
+			grants: []grantView{{
+				ID: "g-long", ClientID: "kubeconfig-generator", CreatedAt: at(-70 * time.Hour), LastUsed: at(-time.Minute),
+			}},
+			expected: []v1alpha1.UserAccountSession{
+				{
+					ID:           "g-long",
+					Kind:         v1alpha1.SessionKindGrant,
+					Clients:      []string{"kubeconfig-generator"},
+					SignedInAt:   metaTimeOrNil(at(-70 * time.Hour)),
+					LastActivity: hour(12),
+					EndsAt:       metaTimeOrNil(at(2 * time.Hour)),
+				},
+				{
+					ID:           "sid-3",
+					Kind:         v1alpha1.SessionKindBrowser,
+					SignedInAt:   metaTimeOrNil(at(-time.Hour)),
+					LastActivity: metaTimeOrNil(at(-time.Hour)),
+				},
+			},
+		},
+		{
+			// Dex refuses a token past its lifetime: neither a device of its own nor an application
+			// of the browser it was issued in.
+			name:     "a grant past its lifetime is no device",
+			browsers: []browserView{browser},
+			grants: []grantView{
+				{ID: "g-unused", ClientID: "kubeconfig-generator", CreatedAt: at(-40 * time.Hour), LastUsed: at(-37 * time.Hour)},
+				{ID: "g-grafana", ClientID: "grafana", SessionID: "sid-1", CreatedAt: at(-73 * time.Hour), LastUsed: at(-time.Hour)},
+			},
+			expected: []v1alpha1.UserAccountSession{{
+				ID:           "sid-1",
+				Kind:         v1alpha1.SessionKindBrowser,
+				Clients:      []string{"console"},
+				IPAddress:    "203.0.113.7",
+				UserAgent:    "Firefox",
+				SignedInAt:   metaTimeOrNil(at(-5 * time.Hour)),
+				LastActivity: hour(9),
+				EndsAt:       metaTimeOrNil(at(time.Hour)),
+			}},
 		},
 		{
 			name: "nothing signed in",
 		},
 	}
 
+	policy := devicePolicy{
+		establishedAge: DefaultEstablishedDeviceAge,
+		refreshTokens:  RefreshTokenLifetimes{AbsoluteLifetime: 72 * time.Hour, ValidIfNotUsedFor: 36 * time.Hour},
+	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got, truncated := projectSessions(tt.browsers, tt.grants, nil, DefaultEstablishedDeviceAge, now)
+			got, truncated := projectSessions(tt.browsers, tt.grants, nil, policy, now)
 			if truncated {
 				t.Error("truncated = true, want false")
 			}
@@ -406,7 +460,7 @@ func TestProjectSessionsKeepsTheMostRecent(t *testing.T) {
 		})
 	}
 
-	got, truncated := projectSessions(nil, grants, nil, DefaultEstablishedDeviceAge, now)
+	got, truncated := projectSessions(nil, grants, nil, devicePolicy{establishedAge: DefaultEstablishedDeviceAge}, now)
 	if !truncated {
 		t.Error("truncated = false, want true")
 	}
@@ -427,7 +481,7 @@ func TestProjectSessionsOrderHoldsWithinAnHour(t *testing.T) {
 		got, _ := projectSessions(nil, []grantView{
 			{ID: "g-kube", ClientID: "kubeconfig-generator", LastUsed: kubeUsed},
 			{ID: "g-console", ClientID: "console", LastUsed: consoleUsed},
-		}, nil, DefaultEstablishedDeviceAge, now)
+		}, nil, devicePolicy{establishedAge: DefaultEstablishedDeviceAge}, now)
 		return got
 	}
 	// Two devices taking turns within one hour leave the status as it was.
@@ -454,7 +508,7 @@ func TestProjectSessionsKeepsEstablishedDevices(t *testing.T) {
 		})
 	}
 
-	got, truncated := projectSessions(nil, grants, nil, DefaultEstablishedDeviceAge, now)
+	got, truncated := projectSessions(nil, grants, nil, devicePolicy{establishedAge: DefaultEstablishedDeviceAge}, now)
 	if !truncated || len(got) != v1alpha1.MaxSessions {
 		t.Fatalf("len = %d, truncated = %t; want %d, true", len(got), truncated, v1alpha1.MaxSessions)
 	}
@@ -467,7 +521,7 @@ func TestProjectSessionsKeepsEstablishedDevices(t *testing.T) {
 
 	// With a minimum device age of three days, the owner's device is as new as the others, and the
 	// least recently active goes first.
-	got, _ = projectSessions(nil, grants, nil, 72*time.Hour, now)
+	got, _ = projectSessions(nil, grants, nil, devicePolicy{establishedAge: 72 * time.Hour}, now)
 	if slices.ContainsFunc(got, func(s v1alpha1.UserAccountSession) bool { return s.ID == "g-owner" }) {
 		t.Error("the device signed in two days ago was kept under a minimum age of three days")
 	}
@@ -489,7 +543,7 @@ func TestProjectSessionsKnownSince(t *testing.T) {
 			{ID: "sid-forgotten", DeviceHash: "forgotten", CreatedAt: now.Add(-time.Hour), Expiry: now.Add(time.Hour)},
 		},
 		[]grantView{{ID: "g-known", ClientID: "kubeconfig-generator", DeviceHash: "known", CreatedAt: now.Add(-2 * time.Hour)}},
-		known, DefaultEstablishedDeviceAge, now)
+		known, devicePolicy{establishedAge: DefaultEstablishedDeviceAge}, now)
 	since := map[string]*metav1.Time{}
 	for _, s := range got {
 		since[s.ID] = s.KnownSince
@@ -521,7 +575,7 @@ func TestProjectSessionsKeepsKnownDevices(t *testing.T) {
 			ID: fmt.Sprintf("g-new-%03d", i), ClientID: "console", CreatedAt: now.Add(-time.Hour), LastUsed: now,
 		})
 	}
-	got, _ := projectSessions(nil, grants, map[string]time.Time{"owner": now.Add(-48 * time.Hour)}, DefaultEstablishedDeviceAge, now)
+	got, _ := projectSessions(nil, grants, map[string]time.Time{"owner": now.Add(-48 * time.Hour)}, devicePolicy{establishedAge: DefaultEstablishedDeviceAge}, now)
 	if !slices.ContainsFunc(got, func(s v1alpha1.UserAccountSession) bool { return s.ID == "g-owner" }) {
 		t.Error("the device of a browser known for two days was pushed off the list by new ones")
 	}
@@ -533,7 +587,7 @@ func TestProjectSessionsBoundsWhatADeviceSends(t *testing.T) {
 	now := time.Date(2026, 10, 16, 12, 0, 0, 0, time.UTC)
 	// A two-byte rune crosses the bound: the cut goes before it.
 	agent := strings.Repeat("a", maxUserAgent-1) + "é" + strings.Repeat("b", 100)
-	got, _ := projectSessions(nil, []grantView{{ID: "g", UserAgent: agent, IPAddress: strings.Repeat("1", 100)}}, nil, DefaultEstablishedDeviceAge, now)
+	got, _ := projectSessions(nil, []grantView{{ID: "g", UserAgent: agent, IPAddress: strings.Repeat("1", 100)}}, nil, devicePolicy{establishedAge: DefaultEstablishedDeviceAge}, now)
 	if len(got) != 1 {
 		t.Fatalf("len = %d, want 1", len(got))
 	}
@@ -572,4 +626,90 @@ func TestDecodeGrants(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("grants = %+v, want %+v", got, want)
 	}
+}
+
+func TestEndsAtToleranceOf(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		window, want time.Duration
+	}{
+		{window: 0, want: 0},                            // a fixed end does not move
+		{window: 24 * time.Hour, want: endsAtTolerance}, // a long window: the tolerance
+		{window: DefaultRefreshTokenValidIfNotUsedFor, want: endsAtTolerance},
+		{window: time.Hour, want: 6 * time.Minute}, // a tenth of a short window
+		{window: 20 * time.Minute, want: 2 * time.Minute},
+	} {
+		if got := endsAtToleranceOf(tc.window); got != tc.want {
+			t.Errorf("endsAtToleranceOf(%v) = %v, want %v", tc.window, got, tc.want)
+		}
+	}
+}
+
+// A move of the end later within the tolerance keeps the stored end, which is earlier than the real
+// one and not within the tolerance of now; anything else gives the real end.
+func TestKeepStoredEnds(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 11, 10, 12, 0, 0, 0, time.UTC)
+	stored := now.Add(24 * time.Hour)
+	device := func(id string, ends *time.Time) v1alpha1.UserAccountSession {
+		s := v1alpha1.UserAccountSession{ID: id, Kind: v1alpha1.SessionKindBrowser}
+		if ends != nil {
+			s.EndsAt = metaTimeOrNil(*ends)
+		}
+		return s
+	}
+	at := func(d time.Duration) *time.Time { t := stored.Add(d); return &t }
+	long := func(v1alpha1.UserAccountSession) time.Duration { return endsAtTolerance }
+
+	tests := []struct {
+		name        string
+		stored      *time.Time
+		desired     *time.Time
+		tolerance   func(v1alpha1.UserAccountSession) time.Duration
+		now         time.Time
+		wantKept    bool
+		wantRequeue time.Duration
+	}{
+		{name: "later within the tolerance", stored: &stored, desired: at(10 * time.Minute), tolerance: long, now: now,
+			wantKept: true, wantRequeue: 24*time.Hour - endsAtTolerance},
+		{name: "later by the tolerance", stored: &stored, desired: at(endsAtTolerance), tolerance: long, now: now},
+		{name: "earlier", stored: &stored, desired: at(-time.Minute), tolerance: long, now: now},
+		{name: "unchanged", stored: &stored, desired: &stored, tolerance: long, now: now},
+		{name: "the stored end within the tolerance of now", stored: &stored, desired: at(time.Minute), tolerance: long,
+			now: stored.Add(-endsAtTolerance)},
+		{name: "no tolerance", stored: &stored, desired: at(time.Minute), now: now},
+		{name: "a new end", desired: &stored, tolerance: long, now: now},
+		{name: "the end is gone", stored: &stored, tolerance: long, now: now},
+		{name: "a short window: a tenth of it", stored: &stored, desired: at(3 * time.Minute),
+			tolerance: func(v1alpha1.UserAccountSession) time.Duration { return endsAtToleranceOf(20 * time.Minute) }, now: now},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			desired := []v1alpha1.UserAccountSession{device("sid-1", tt.desired)}
+			got, requeue := keepStoredEnds([]v1alpha1.UserAccountSession{device("sid-1", tt.stored)}, desired, tt.tolerance, tt.now)
+			want := desired[0].EndsAt
+			if tt.wantKept {
+				want = metaTimeOrNil(*tt.stored)
+			}
+			if !metaTimeEqual(got[0].EndsAt, want) {
+				t.Errorf("endsAt = %v, want %v", got[0].EndsAt, want)
+			}
+			if requeue != tt.wantRequeue {
+				t.Errorf("requeue = %v, want %v", requeue, tt.wantRequeue)
+			}
+			if !metaTimeEqual(desired[0].EndsAt, metaTimeOrNil(timeOr(tt.desired))) {
+				t.Error("keepStoredEnds changed the desired list it was given")
+			}
+		})
+	}
+}
+
+func timeOr(t *time.Time) time.Time {
+	if t == nil {
+		return time.Time{}
+	}
+	return *t
 }

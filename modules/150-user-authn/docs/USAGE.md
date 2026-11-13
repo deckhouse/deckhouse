@@ -1084,7 +1084,7 @@ Changing the password is available only for local accounts (the built-in `Local`
 
 A user can also see the devices signed in to their account (the [`status.sessions`](cr.html#useraccount-v1alpha1-status-sessions) field of their UserAccount) and sign out of them one by one:
 
-- Signing out of one device creates a `Logout` operation with [`logout.session`](cr.html#useroperation-v1-spec-logout-session) for a browser or [`logout.grant`](cr.html#useroperation-v1-spec-logout-grant) for another device, such as a kubeconfig file. The other devices keep their sessions.
+- Signing out of one device creates a `Logout` operation with [`logout.session`](cr.html#useroperation-v1-spec-logout-session) for a browser or [`logout.grant`](cr.html#useroperation-v1-spec-logout-grant) for another device, such as a kubeconfig file. The other devices keep their sessions. If the device is already signed out, for example its session has expired, signing out of it succeeds.
 - Signing out of the other devices creates a `Logout` operation with [`logout.exceptSession`](cr.html#useroperation-v1-spec-logout-exceptsession) or [`logout.exceptGrant`](cr.html#useroperation-v1-spec-logout-exceptgrant). It keeps only the device the user acts from.
 
 Signing out on all devices, signing out of the other devices or of another device, and changing the password are available only on a trusted device: one signed in at least [`devices.trustedAfter`](configuration.html#parameters-devices-trustedafter) ago, 24 hours by default. A device signed in more recently can sign the user out only of itself. Someone who has just signed in with a stolen password therefore can neither sign the owner out nor change the password, while the owner sees the new device in the list on a trusted device and signs it out. A user without a trusted device asks an administrator: the operations of an administrator are not limited. With `devices.trustedAfter: 0s`, every device is trusted at once.
@@ -1226,6 +1226,8 @@ spec:
     grant: qx3w2ttiyq5ovzvbuehdcbbse
 ```
 
+If the user has no such session or refresh token, for example the session has expired or the user has signed out of it, the operation ends nothing and completes with the `Succeeded` status and the `the user has no such session` or `the user has no such grant` message. The operation does not check whether the ID belongs to another user: the session of another user gives the same result and stays active. Take the ID from the UserAccount of the user set in `spec.user` or `spec.target`.
+
 #### Operations on external users
 
 For users of external providers of any type (LDAP, Atlassian Crowd, OIDC, SAML, GitHub, GitLab, Bitbucket Cloud), use the [`spec.target`](cr.html#useroperation-v1-spec-target) field instead of `spec.user`. The `Lock`, `Unlock`, `Logout` and `Reset2FA` operation types are supported for external users. Only the users of the LDAP and Atlassian Crowd providers can have a second factor. For a user of a provider of another type, `Reset2FA` only ends the sessions.
@@ -1309,10 +1311,10 @@ To list the accounts, run:
 d8 k get useraccounts
 ```
 
-The [`status.sessions`](cr.html#useraccount-v1alpha1-status-sessions) field lists the devices signed in to the account, the most recently active first: browsers signed in to Dex (the `Browser` kind) and devices holding a refresh token not bound to a live browser session of Dex, such as kubeconfig files (the `Grant` kind). For each device, it shows the applications, the client address and User-Agent of the last sign-in, the time of the sign-in, and the hour of the last activity. The client address is right only when the Ingress controller sees it (for details, see the [Which client address does Dex see?](faq.html#which-client-address-does-dex-see) section). To view the devices of an account, run:
+The [`status.sessions`](cr.html#useraccount-v1alpha1-status-sessions) field lists the devices signed in to the account, the most recently active first: browsers signed in to Dex (the `Browser` kind) and devices holding a refresh token not bound to a live browser session of Dex, such as kubeconfig files (the `Grant` kind). For each device, it shows the applications, the client address and User-Agent of the last sign-in, the time of the sign-in, the hour of the last activity, and when the session of the device ends unless the device is used again ([`endsAt`](cr.html#useraccount-v1alpha1-status-sessions-endsat)). The client address is right only when the Ingress controller sees it (for details, see the [Which client address does Dex see?](faq.html#which-client-address-does-dex-see) section). To view the devices of an account, run:
 
 ```shell
-d8 k get useraccount <NAME> -o jsonpath='{range .status.sessions[*]}{.kind}{"\t"}{.id}{"\t"}{.clients}{"\t"}{.ipAddress}{"\t"}{.lastActivity}{"\n"}{end}'
+d8 k get useraccount <NAME> -o jsonpath='{range .status.sessions[*]}{.kind}{"\t"}{.id}{"\t"}{.clients}{"\t"}{.ipAddress}{"\t"}{.lastActivity}{"\t"}{.endsAt}{"\n"}{end}'
 ```
 
 While the [browser sessions of Dex](#browser-sessions-of-dex) are disabled, every sign-in to an application of a DexAuthenticator is a device of its own.

@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,6 +33,16 @@ const (
 	// OfflineSessions and UserIdentity. A Password object is named after the email, so without the
 	// index finding the Password of a pair is a scan of every Password.
 	PasswordPairField = "dex.password.pair"
+	// PasswordUsernameField indexes Password objects by their username, NoUsername for one without:
+	// the Passwords of a user, and those without a user, are found without a scan of every Password.
+	PasswordUsernameField = "dex.password.username"
+	// PasswordAccountField indexes Password objects by the name of the UserAccount of their local
+	// user: naming.LocalName of the email or, without one, of the username.
+	PasswordAccountField = "dex.password.account"
+	// UserPasswordNameField indexes User objects by the name of the Password of their email
+	// (naming.ToFnvLikeDex of the lowercased email): the User of a Password is found by its email
+	// without a scan of every User.
+	UserPasswordNameField = "deckhouse.user.passwordname"
 	// RefreshTokenPairField indexes RefreshToken objects by the name of the pair they were issued
 	// to, naming.OfflineTokenName(claims.userID, connectorID). Ending the sessions of a pair finds its
 	// grants by it.
@@ -46,6 +57,10 @@ const (
 	OAuth2ClientIDField = "dex.oauth2client.id"
 )
 
+// NoUsername is the PasswordUsernameField of a Password without a username. A username is the name
+// of a User object, which never is "-".
+const NoUsername = "-"
+
 // Index is a cache index the controllers query.
 type Index struct {
 	Object  client.Object
@@ -58,6 +73,9 @@ type Index struct {
 func Indexes() []Index {
 	return []Index{
 		{Object: Object(PasswordGVK), Field: PasswordPairField, Extract: PasswordPair},
+		{Object: Object(PasswordGVK), Field: PasswordUsernameField, Extract: PasswordUsername},
+		{Object: Object(PasswordGVK), Field: PasswordAccountField, Extract: PasswordAccount},
+		{Object: Object(UserGVK), Field: UserPasswordNameField, Extract: UserPasswordName},
 		{Object: Object(RefreshTokenGVK), Field: RefreshTokenPairField, Extract: RefreshTokenPair},
 		{Object: Object(AuthSessionGVK), Field: AuthSessionPairField, Extract: AuthSessionPair},
 		{Object: Object(RevocationGVK), Field: RevocationClientField, Extract: RevocationClients},
@@ -76,6 +94,53 @@ func PasswordPair(obj client.Object) []string {
 		return nil
 	}
 	return []string{naming.OfflineTokenName(userID, naming.LocalConnectorID)}
+}
+
+// PasswordUsername returns the username of a Password object, NoUsername when it has none.
+func PasswordUsername(obj client.Object) []string {
+	u, ok := obj.(*unstructured.Unstructured)
+	if !ok {
+		return nil
+	}
+	username, _, err := unstructured.NestedString(u.Object, "username")
+	if err != nil {
+		return nil
+	}
+	if username == "" {
+		return []string{NoUsername}
+	}
+	return []string{username}
+}
+
+// PasswordAccount returns the name of the UserAccount of a Password object, or nothing when it has
+// neither an email nor a username.
+func PasswordAccount(obj client.Object) []string {
+	u, ok := obj.(*unstructured.Unstructured)
+	if !ok {
+		return nil
+	}
+	email, _, _ := unstructured.NestedString(u.Object, "email")
+	if email == "" {
+		email, _, _ = unstructured.NestedString(u.Object, "username")
+	}
+	if email == "" {
+		return nil
+	}
+	return []string{naming.LocalName(email)}
+}
+
+// UserPasswordName returns the name of the Password of the email of a User object, or nothing
+// without an email.
+func UserPasswordName(obj client.Object) []string {
+	u, ok := obj.(*unstructured.Unstructured)
+	if !ok {
+		return nil
+	}
+	email, _, err := unstructured.NestedString(u.Object, "spec", "email")
+	if err != nil || email == "" {
+		return nil
+	}
+	return []string{naming.ToFnvLikeDex(strings.ToLower(email))}
 }
 
 // RefreshTokenPair returns the pair name of a RefreshToken object, or nothing when it lacks the

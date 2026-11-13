@@ -25,6 +25,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -81,11 +82,14 @@ type mockK8sClient struct {
 	usernameErr error
 	createErr   error
 	// devices are the devices of every account, testDevices when Items is nil; devicesErr fails
-	// reading them. An account belongs to the pair AccountName was last asked for, unless devices
-	// names a pair.
+	// reading them. dropAfter, when set, drops the devices it names once read that many times: the
+	// cache catches up with a logout.
 	devices    k8s.Devices
 	devicesErr error
-	pair       [2]string
+	dropAfter  int
+	drop       []string
+	notSynced  bool
+	deviceRead int
 	// statuses are returned by successive status reads; the last one repeats.
 	statuses []k8s.OperationStatus
 
@@ -106,9 +110,6 @@ func (m *mockK8sClient) LocalUsername(_ context.Context, userID string) (string,
 }
 
 func (m *mockK8sClient) AccountName(ctx context.Context, userID, connectorID string) (string, error) {
-	m.mu.Lock()
-	m.pair = [2]string{userID, connectorID}
-	m.mu.Unlock()
 	if connectorID != "local" {
 		return k8s.ExternalAccountName(connectorID, userID), nil
 	}
@@ -119,18 +120,23 @@ func (m *mockK8sClient) AccountName(ctx context.Context, userID, connectorID str
 	return k8s.LocalAccountName("", username), nil
 }
 
-func (m *mockK8sClient) Devices(_ context.Context, _ string) (k8s.Devices, error) {
+func (m *mockK8sClient) Devices(_ context.Context, userID, connectorID string) (k8s.Devices, error) {
 	devices := m.devices
 	if devices.Items == nil {
 		devices = testDevices()
 	}
-	if devices.UserID == "" {
-		m.mu.Lock()
-		devices.UserID, devices.ConnectorID = m.pair[0], m.pair[1]
-		m.mu.Unlock()
+	devices.Items = slices.Clone(devices.Items)
+	devices.UserID, devices.ConnectorID = userID, connectorID
+	m.mu.Lock()
+	m.deviceRead++
+	if m.dropAfter > 0 && m.deviceRead > m.dropAfter {
+		devices.Items = slices.DeleteFunc(devices.Items, func(d k8s.Device) bool { return slices.Contains(m.drop, d.ID) })
 	}
+	m.mu.Unlock()
 	return devices, m.devicesErr
 }
+
+func (m *mockK8sClient) Synced() bool { return !m.notSynced }
 
 func (m *mockK8sClient) CreateUserOperation(_ context.Context, op k8s.UserOperation) (string, error) {
 	if m.createErr != nil {
@@ -170,6 +176,8 @@ func newTestHandler(verifier auth.Verifier, k8sClient k8s.Client) *Handler {
 	h := NewHandler(verifier, k8sClient, logger)
 	h.waitTimeout = 200 * time.Millisecond
 	h.pollInterval = time.Millisecond
+	h.signOutWait = 20 * time.Millisecond
+	h.cachePollInterval = time.Millisecond
 	h.now = func() time.Time { return devicesNow }
 	return h
 }
@@ -283,16 +291,24 @@ func TestHandler_Healthz(t *testing.T) {
 	}
 }
 
+// user-api is ready once its caches have synced: before, a request would see no devices.
 func TestHandler_Readyz(t *testing.T) {
-	h := newTestHandler(&mockVerifier{}, &mockK8sClient{})
-
-	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
-	w := httptest.NewRecorder()
-
-	h.Readyz(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("Readyz() status = %d, want %d", w.Code, http.StatusOK)
+	for _, tc := range []struct {
+		name   string
+		client *mockK8sClient
+		want   int
+	}{
+		{name: "synced", client: &mockK8sClient{}, want: http.StatusOK},
+		{name: "not synced", client: &mockK8sClient{notSynced: true}, want: http.StatusServiceUnavailable},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			h := newTestHandler(&mockVerifier{}, tc.client)
+			w := httptest.NewRecorder()
+			h.Readyz(w, httptest.NewRequest(http.MethodGet, "/readyz", nil))
+			if w.Code != tc.want {
+				t.Errorf("Readyz() status = %d, want %d", w.Code, tc.want)
+			}
+		})
 	}
 }
 

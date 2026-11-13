@@ -222,6 +222,25 @@ spec:
                         description: |
                           Время последнего использования устройства в формате RFC3339, округлённое вниз до часа.
                           Для устройства, вошедшего меньше часа назад, указывается время входа.
+                      endsAt:
+                        description: |
+                          Время в формате RFC3339, когда сеанс устройства закончится, если устройством больше не пользоваться.
+                          Сеанс заканчивается по первому из двух сроков: сроку жизни от входа и сроку без использования
+                          от последнего использования.
+
+                          - Для устройства вида `Browser` это конец его сессии Dex (параметры
+                            [`sessions.absoluteLifetime`](configuration.html#parameters-sessions-absolutelifetime) и
+                            [`sessions.validIfNotUsedFor`](configuration.html#parameters-sessions-validifnotusedfor)).
+                            После него при следующем входе браузер запрашивает пароль; приложения, в которые
+                            из него уже выполнен вход, продолжают работать.
+                          - Для устройства вида `Grant` это конец его refresh-токена (параметры
+                            [`refreshTokenAbsoluteLifetime`](configuration.html#parameters-refreshtokenabsolutelifetime) и
+                            [`refreshTokenValidIfNotUsedFor`](configuration.html#parameters-refreshtokenvalidifnotusedfor)).
+                            После него устройство выполняет вход заново.
+
+                          Пока устройством пользуются, время сдвигается вперёд и обновляется с задержкой до 15 минут,
+                          поэтому сеанс не заканчивается раньше указанного времени. Не указывается, если у сеанса
+                          нет срока.
                 sessionsTruncated:
                   description: |
                     Признак того, что устройств у учётной записи больше, чем в `sessions`. Устройства с самой давней

@@ -32,6 +32,8 @@ import (
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	"user-authn-controller/internal/controller/useraccount"
 )
 
 func TestNewManagerOptions(t *testing.T) {
@@ -315,6 +317,31 @@ func TestOrphanedIdentityRetention(t *testing.T) {
 		}
 		if err != nil || got != tc.want {
 			t.Errorf("orphanedIdentityRetention(%q) = %v, %v; want %v", tc.value, got, err, tc.want)
+		}
+	}
+}
+
+func TestRefreshTokenLifetimes(t *testing.T) {
+	for _, tc := range []struct {
+		absolute, idle string
+		want           useraccount.RefreshTokenLifetimes
+		wantErr        bool
+	}{
+		{want: useraccount.RefreshTokenLifetimes{AbsoluteLifetime: 4380 * time.Hour, ValidIfNotUsedFor: 2190 * time.Hour}},
+		{absolute: "720h", idle: "24h", want: useraccount.RefreshTokenLifetimes{AbsoluteLifetime: 720 * time.Hour, ValidIfNotUsedFor: 24 * time.Hour}},
+		{absolute: "0s", idle: "1h", want: useraccount.RefreshTokenLifetimes{ValidIfNotUsedFor: time.Hour}},
+		{absolute: "-1h", wantErr: true},
+		{idle: "a day", wantErr: true},
+	} {
+		got, err := refreshTokenLifetimes(tc.absolute, tc.idle)
+		if tc.wantErr {
+			if err == nil {
+				t.Errorf("refreshTokenLifetimes(%q, %q) = %v, want an error", tc.absolute, tc.idle, got)
+			}
+			continue
+		}
+		if err != nil || got != tc.want {
+			t.Errorf("refreshTokenLifetimes(%q, %q) = %v, %v; want %v", tc.absolute, tc.idle, got, err, tc.want)
 		}
 	}
 }

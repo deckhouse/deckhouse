@@ -89,6 +89,11 @@ const (
 	// UserAccount.status.twoFactor.webAuthn shows. Unset when 2FA is off.
 	twoFactorMaxCredentialsEnv = "TWO_FACTOR_WEBAUTHN_MAX_CREDENTIALS"
 
+	// refreshAbsoluteLifetimeEnv and refreshValidIfNotUsedForEnv are expiry.refreshTokens of Dex: the
+	// end of a device signed in without a browser session is listed by them.
+	refreshAbsoluteLifetimeEnv  = "REFRESH_TOKEN_ABSOLUTE_LIFETIME"
+	refreshValidIfNotUsedForEnv = "REFRESH_TOKEN_VALID_IF_NOT_USED_FOR"
+
 	// revocationRetentionEnv keeps the revocations longer than revocation.Retention of the ID token
 	// lifetime; a shorter value is raised to it. operationRetentionEnv is how long a UserOperation is
 	// kept after its creation.
@@ -164,6 +169,10 @@ func setupRuntimeManager() (ctrl.Manager, error) {
 	if err != nil {
 		return nil, err
 	}
+	refreshTokens, err := refreshTokenLifetimes(os.Getenv(refreshAbsoluteLifetimeEnv), os.Getenv(refreshValidIfNotUsedForEnv))
+	if err != nil {
+		return nil, err
+	}
 	operationRetention, err := operationRetention(os.Getenv(operationRetentionEnv))
 	if err != nil {
 		return nil, err
@@ -206,7 +215,7 @@ func setupRuntimeManager() (ctrl.Manager, error) {
 		return nil, err
 	}
 
-	if err = useraccount.Register(runtimeManager, deviceAge, twoFactor, maxCredentials); err != nil {
+	if err = useraccount.Register(runtimeManager, deviceAge, refreshTokens, twoFactor, maxCredentials); err != nil {
 		return nil, fmt.Errorf("register useraccount controller: %w", err)
 	}
 	if err = user.Register(runtimeManager); err != nil {
@@ -345,6 +354,35 @@ func minDeviceAge(value string) (time.Duration, error) {
 		return 0, fmt.Errorf("%s %q is negative", deviceAgeEnv, value)
 	}
 	return age, nil
+}
+
+// refreshTokenLifetimes reads the lifetimes of the refresh tokens of Dex; unset is the default of the
+// module, zero does not limit the tokens, as in Dex.
+func refreshTokenLifetimes(absolute, validIfNotUsedFor string) (useraccount.RefreshTokenLifetimes, error) {
+	lifetimes := useraccount.RefreshTokenLifetimes{
+		AbsoluteLifetime:  useraccount.DefaultRefreshTokenAbsoluteLifetime,
+		ValidIfNotUsedFor: useraccount.DefaultRefreshTokenValidIfNotUsedFor,
+	}
+	for _, v := range []struct {
+		env, value string
+		into       *time.Duration
+	}{
+		{refreshAbsoluteLifetimeEnv, absolute, &lifetimes.AbsoluteLifetime},
+		{refreshValidIfNotUsedForEnv, validIfNotUsedFor, &lifetimes.ValidIfNotUsedFor},
+	} {
+		if v.value == "" {
+			continue
+		}
+		d, err := time.ParseDuration(v.value)
+		if err != nil {
+			return useraccount.RefreshTokenLifetimes{}, fmt.Errorf("parse %s: %w", v.env, err)
+		}
+		if d < 0 {
+			return useraccount.RefreshTokenLifetimes{}, fmt.Errorf("%s %q is negative", v.env, v.value)
+		}
+		*v.into = d
+	}
+	return lifetimes, nil
 }
 
 // setupDexClientManager is the manager of the dexclient command: the DexClient reconciler with
