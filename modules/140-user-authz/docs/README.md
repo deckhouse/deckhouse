@@ -569,7 +569,22 @@ read:
     - infrastructure.cluster.x-k8s.io/zvirtclusters
     - infrastructure.cluster.x-k8s.io/zvirtmachines
     - infrastructure.cluster.x-k8s.io/zvirtmachinetemplates
+    - ipam.metal3.io/ipaddresses
+    - ipam.metal3.io/ipclaims
+    - ipam.metal3.io/ippools
+    - ironic.metal3.io/ironics
     - limitranges
+    - metal3.io/baremetalhosts
+    - metal3.io/bmceventsubscriptions
+    - metal3.io/dataimages
+    - metal3.io/firmwareschemas
+    - metal3.io/hardwaredata
+    - metal3.io/hostclaims
+    - metal3.io/hostdeploypolicies
+    - metal3.io/hostfirmwarecomponents
+    - metal3.io/hostfirmwaresettings
+    - metal3.io/hostupdatepolicies
+    - metal3.io/preprovisioningimages
     - metrics.k8s.io/nodes
     - metrics.k8s.io/pods
     - multitenancy.deckhouse.io/availableclusterresources
