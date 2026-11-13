@@ -135,8 +135,7 @@ refs:
 		}
 
 		for _, gvr := range usageGVRs(mapper, ref.Spec.Rule) {
-			fp, ok := engine.SelectFieldPath(ref.Spec.FieldPaths, gvr.Group, gvr.Version, gvr.Resource)
-			if !ok {
+			if engine.SelectFieldPathIndex(ref.Spec.FieldPaths, gvr.Group, gvr.Version, gvr.Resource) < 0 {
 				continue
 			}
 			gvk, err := mapper.KindFor(gvr)
@@ -172,10 +171,11 @@ refs:
 			}
 			for j := range list.Items {
 				obj := list.Items[j].Object
-				guardOK, err := engine.EvalMatch(factory, fp.Match, obj)
-				if err != nil || !guardOK {
+				idx, err := engine.ApplicableFieldPathIndex(factory, ref.Spec.FieldPaths, gvr.Group, gvr.Version, gvr.Resource, obj)
+				if err != nil || idx < 0 {
 					continue
 				}
+				fp := ref.Spec.FieldPaths[idx]
 				names, err := engine.StringValuesAt(factory, obj, fp.Path)
 				if err != nil {
 					continue

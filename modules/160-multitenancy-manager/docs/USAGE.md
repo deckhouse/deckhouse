@@ -1360,6 +1360,8 @@ spec:
 
 When a PersistentVolumeClaim is created without a value in `spec.storageClassName`, `fast-ssd` is automatically assigned to this field. If a StorageClass that is not in the allowed list is specified, it is replaced with `fast-ssd`, because StorageClass uses the [`Coerce`](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-defaulting) default assignment mode. This also covers a class that the built-in Kubernetes admission controller has filled in. The replacement is reported as an admission warning in the response to the request, so the `d8 k` output shows both the original value and the substituted one. If the project has no default StorageClass, such a PersistentVolumeClaim is rejected.
 
+A PersistentVolumeClaim that restores a volume from a snapshot or clones another volume (`spec.dataSource` or `spec.dataSourceRef` is set) keeps its StorageClass: the class must be served by the CSI driver of the source, so it is not replaced with the project default. If such a StorageClass is not available to the project, the PersistentVolumeClaim is rejected with an explanation; specify a StorageClass that is available to the project.
+
 To check which StorageClasses are available to the project, run the following command:
 
 ```shell
@@ -1780,6 +1782,8 @@ spec:
 ```
 
 For each object, the most specific of the matching `fieldPaths` items is used: an item limited by `resources` takes precedence over items limited only by `apiGroups` or `apiVersions` and over an item without limits, which applies to all other resources from `rule`. `*` in `resources` does not limit the item: it has the same effect as omitting the parameter.
+
+An item whose [`match`](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-match) condition does not hold for the object is skipped, and of equally limited items, an item with `match` takes precedence over an item without it. So several items with the same `path` can handle different objects of one resource, each with its own default assignment mode: the `storageclasses-pvc` reference checks the StorageClass of a PersistentVolumeClaim with `spec.dataSource` or `spec.dataSourceRef` in the `None` mode and of any other PersistentVolumeClaim in the `Coerce` mode. The text of the [`message`](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-message) parameter is appended to the rejection of an object for that item.
 
 For descriptions of GrantableClusterResourceReference parameters, default assignment modes, `match` conditions, and configuration for resources with multiple API versions, refer to the [resource description](cr.html#grantableclusterresourcereference).
 

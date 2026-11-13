@@ -240,10 +240,11 @@ status:
 |-------|---------|
 | `grantableClusterResourceName` | the `GrantableClusterResourceDefinition` this path validates against |
 | `rule.apiGroups/apiVersions/resources` | which usage objects this reference applies to; `*` = any |
-| `fieldPaths[]` | scoped name locations: `{apiGroups?, apiVersions?, resources?, path, match?, defaulting?}` |
+| `fieldPaths[]` | scoped name locations: `{apiGroups?, apiVersions?, resources?, path, match?, defaulting?, message?}` |
 | `fieldPaths[].path` | JSONPath to the granted name (may target an annotation) |
 | `fieldPaths[].match` | `{fieldPath, equals\|in}` guard: the entry applies only when the predicate holds |
 | `fieldPaths[].defaulting` | `None` (validate only), `FillEmpty` (inject project default into an empty field), `Coerce` (also rewrite a disallowed value — for fields a built-in admission pre-fills) |
+| `fieldPaths[].message` | appended to the `/is-granted` denial made by the entry |
 | `status.bound` | true if the named definition exists |
 | `status.conditions[Bound].reason` | `Resolved` or `UnknownResource` |
 | `status.conditions[FieldPathsValid].reason` | `Valid` or `InvalidFieldPaths`; the message carries the webhook's refusal text |
@@ -257,6 +258,14 @@ when it actually narrows the entry: a list containing `*` matches anything and s
 omitted one, so `apiGroups: ["*"]` ties with the unscoped entry and never outranks an explicit scope.
 The same holds for `fieldPaths[].resources`: `resources: ["*"]` is accepted and behaves exactly like
 an omitted field. At least one entry is required.
+
+For an object (`/is-granted`, `/defaults`, the violation scan) the entry is also chosen by `match`:
+entries whose guard is false on the object are dropped, and at equal scope an entry with `match`
+outranks one without it (the scope score is doubled and `match` adds 1). The guards are evaluated from
+the most specific entry down; the first guard that cannot be evaluated skips the reference, as before.
+This lets entries with different `defaulting` share one `path`: `storageclasses-pvc` checks a PVC with
+`spec.dataSource`/`spec.dataSourceRef` by a guarded `None` entry and any other PVC by an unguarded
+`Coerce` entry. The coverage check looks at the scope only: a false guard is a deliberate skip.
 
 **Scopes must fit the rule.** Two rules tie `fieldPaths[]` to `rule`, because a request no entry
 applies to is skipped by `/is-granted`, `/defaults` and the violation scan without any check — a

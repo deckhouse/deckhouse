@@ -222,6 +222,14 @@ status:
 `apiGroups: ["*"]` равен безскоупной записи и никогда не бьёт явный скоуп. То же для
 `fieldPaths[].resources`: `resources: ["*"]` допустим и ведёт себя ровно как незаданное поле. Минимум одна запись.
 
+Для объекта (`/is-granted`, `/defaults`, скан нарушений) запись выбирается ещё и по `match`: записи,
+чей guard на объекте ложен, отбрасываются, а при равном скоупе запись с `match` бьёт запись без него
+(вес скоупа удваивается, `match` добавляет 1). Guard'ы вычисляются от самой специфичной записи вниз;
+первый невычислимый guard пропускает reference целиком, как раньше. Так на одном `path` уживаются
+записи с разным `defaulting`: `storageclasses-pvc` проверяет PVC с `spec.dataSource`/`spec.dataSourceRef`
+записью `None` с `match`, а остальные PVC — записью `Coerce` без `match`. Проверка покрытия смотрит
+только на скоуп: ложный guard — намеренный пропуск.
+
 **Скоупы должны укладываться в rule.** Два правила связывают `fieldPaths[]` с `rule`, потому что
 запрос, к которому не применяется ни одна запись, `/is-granted`, `/defaults` и скан нарушений
 пропускают без проверки — молчаливый fail-open:
@@ -242,8 +250,9 @@ status:
 batch/v1 у Job это `$.spec.template.spec.priorityClassName`, а у CronJob —
 `$.spec.jobTemplate.spec.template.spec.priorityClassName`.
 
-Поля `fieldPaths[]`: `{apiGroups?, apiVersions?, resources?, path, match?, defaulting?}`. `match` =
-`{fieldPath, equals|in}` (guard, применяется только когда предикат истинен). `defaulting`: `None`
+Поля `fieldPaths[]`: `{apiGroups?, apiVersions?, resources?, path, match?, defaulting?, message?}`. `match` =
+`{fieldPath, equals|in}` (guard, применяется только когда предикат истинен). `message` дописывается к
+отказу `/is-granted` по этой записи. `defaulting`: `None`
 (только валидация), `FillEmpty` (дозаполнить пустое поле дефолтом проекта), `Coerce` (плюс переписать
 недопустимое значение — для полей, что предзаполняет встроенный admission).
 

@@ -54,7 +54,8 @@ type UsageRule struct {
 	Resources []string `json:"resources"`
 }
 
-// MatchPredicate guards a field path: it applies only when the predicate holds on the object.
+// MatchPredicate guards a field path: it applies only when the predicate holds on the object. A
+// predicate with neither Equals nor In holds when FieldPath selects a string value.
 type MatchPredicate struct {
 	// FieldPath is the JSONPath to the value tested by the predicate. It must be a valid RFC 9535
 	// JSONPath; the GrantableClusterResourceReference validating webhook rejects one that does not parse.
@@ -72,9 +73,10 @@ type MatchPredicate struct {
 }
 
 // FieldPath is one scoped location of the granted name within the usage object, together with its
-// guard and defaulting behaviour. Among the entries matching the request's resource/group/version the
-// most specific one wins (Resources beats APIGroups beats APIVersions); an entry with empty scope is
-// the fallback, and "*" in a scope dimension counts as unrestricted.
+// guard and defaulting behaviour. Among the entries matching the request's resource/group/version
+// whose Match holds on the object the most specific one wins (Resources beats APIGroups beats
+// APIVersions, and at equal scope an entry with Match beats one without it); an entry with empty
+// scope and no Match is the fallback, and "*" in a scope dimension counts as unrestricted.
 type FieldPath struct {
 	// APIGroups restricts this entry to these groups (empty = any matched group).
 	// +optional
@@ -112,6 +114,11 @@ type FieldPath struct {
 	// +optional
 	// +kubebuilder:default=None
 	Defaulting DefaultingMode `json:"defaulting,omitempty"`
+
+	// Message is appended to the denial of a value at this path that is not available to the project.
+	// +optional
+	// +kubebuilder:validation:MaxLength=512
+	Message string `json:"message,omitempty"`
 }
 
 // GrantableClusterResourceReferenceSpec declares one place a granted cluster resource is referenced

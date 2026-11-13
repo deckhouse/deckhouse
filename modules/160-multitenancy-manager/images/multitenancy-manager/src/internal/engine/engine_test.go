@@ -262,6 +262,62 @@ func TestEvalMatch(t *testing.T) {
 	}
 }
 
+func TestApplicableFieldPathIndex(t *testing.T) {
+	restored := map[string]any{"spec": map[string]any{
+		"storageClassName": "fast",
+		"dataSourceRef":    map[string]any{"kind": "VolumeSnapshot", "name": "snap"},
+	}}
+	plain := map[string]any{"spec": map[string]any{"storageClassName": "fast"}}
+	fromSource := &v1alpha1.MatchPredicate{FieldPath: "$.spec['dataSource','dataSourceRef'].kind"}
+
+	pvc := []v1alpha1.FieldPath{
+		{Path: "$.spec.storageClassName", Defaulting: v1alpha1.DefaultingCoerce},
+		{Path: "$.spec.storageClassName", Match: fromSource, Defaulting: v1alpha1.DefaultingNone},
+	}
+	cases := []struct {
+		name       string
+		fieldPaths []v1alpha1.FieldPath
+		resource   string
+		obj        map[string]any
+		want       int
+	}{
+		{"a guarded entry outranks the unguarded one of the same scope", pvc, "persistentvolumeclaims", restored, 1},
+		{"the unguarded entry is the fallback when the guard does not hold", pvc, "persistentvolumeclaims", plain, 0},
+		{"the list order does not matter", []v1alpha1.FieldPath{pvc[1], pvc[0]}, "persistentvolumeclaims", plain, 1},
+		{"no entry when the only guard does not hold", pvc[1:], "persistentvolumeclaims", plain, -1},
+		{"the scope still ranks above the guard", []v1alpha1.FieldPath{
+			{Path: "$.guarded", Match: fromSource},
+			{Resources: []string{"persistentvolumeclaims"}, Path: "$.byResource"},
+		}, "persistentvolumeclaims", restored, 1},
+		{"a more specific entry whose guard does not hold falls through", []v1alpha1.FieldPath{
+			{Path: "$.unscoped"},
+			{Resources: []string{"persistentvolumeclaims"}, Path: "$.byResource", Match: fromSource},
+		}, "persistentvolumeclaims", plain, 0},
+		{"an entry of another scope never applies", []v1alpha1.FieldPath{
+			{Resources: []string{"persistentvolumeclaims"}, Path: "$.byResource", Match: fromSource},
+		}, "pods", restored, -1},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := ApplicableFieldPathIndex(factory(), tc.fieldPaths, "", "v1", tc.resource, tc.obj)
+			if err != nil || got != tc.want {
+				t.Fatalf("ApplicableFieldPathIndex = %d, %v; want %d", got, err, tc.want)
+			}
+		})
+	}
+
+	t.Run("a guard that cannot be evaluated stops the selection", func(t *testing.T) {
+		broken := []v1alpha1.FieldPath{
+			{Path: "$.unscoped"},
+			{Path: "$.broken", Match: &v1alpha1.MatchPredicate{FieldPath: "$[", Equals: "x"}},
+		}
+		got, err := ApplicableFieldPathIndex(factory(), broken, "", "v1", "pods", plain)
+		if err == nil || got != 1 {
+			t.Fatalf("ApplicableFieldPathIndex = %d, %v; want 1 and an error", got, err)
+		}
+	})
+}
+
 func TestParsePathSegments(t *testing.T) {
 	cases := []struct {
 		path string

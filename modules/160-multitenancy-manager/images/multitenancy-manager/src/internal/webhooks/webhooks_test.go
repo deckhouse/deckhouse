@@ -628,6 +628,84 @@ func TestDefaults_UnavailableDefaultNotCoerced(t *testing.T) {
 	}
 }
 
+func TestPVCFromSourceKeepsItsClass(t *testing.T) {
+	const hint = "A restored or cloned volume keeps its StorageClass."
+	def := &v1alpha1.GrantableClusterResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{Name: "storageclasses"},
+		Spec: v1alpha1.GrantableClusterResourceDefinitionSpec{
+			GrantedResource:     &v1alpha1.GrantedResource{APIGroup: "storage.k8s.io", Kind: "StorageClass"},
+			DefaultAvailability: v1alpha1.AvailabilityNone,
+		},
+	}
+	ref := &v1alpha1.GrantableClusterResourceReference{
+		ObjectMeta: metav1.ObjectMeta{Name: "storageclasses-pvc"},
+		Spec: v1alpha1.GrantableClusterResourceReferenceSpec{
+			GrantableClusterResourceName: "storageclasses",
+			Rule:                         v1alpha1.UsageRule{APIGroups: []string{""}, APIVersions: []string{"v1"}, Resources: []string{"persistentvolumeclaims"}},
+			FieldPaths: []v1alpha1.FieldPath{
+				{Path: "$.spec.storageClassName", Defaulting: v1alpha1.DefaultingCoerce},
+				{
+					Path:       "$.spec.storageClassName",
+					Match:      &v1alpha1.MatchPredicate{FieldPath: "$.spec['dataSource','dataSourceRef'].kind"},
+					Defaulting: v1alpha1.DefaultingNone,
+					Message:    hint,
+				},
+			},
+		},
+	}
+	grant := &grantsv1alpha2.ClusterResourceGrantPolicy{
+		ObjectMeta: metav1.ObjectMeta{Name: "g"},
+		Spec: grantsv1alpha2.ClusterResourceGrantPolicySpec{
+			NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
+			Resources:         []v1alpha1.GrantResource{{ResourceName: "storageclasses", Allowed: []string{"local"}, Default: "local"}},
+		},
+	}
+	repl := &storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "replicated"}, Provisioner: "x"}
+	local := &storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "local"}, Provisioner: "x"}
+	objs := []client.Object{projectNS("proj", map[string]string{"env": "prod"}), def, ref, grant, repl, local}
+	m, v := defaults(t, objs...), isGranted(t, objs...)
+
+	pvc := func(class, source string) []byte {
+		spec := map[string]any{"storageClassName": class}
+		if source != "" {
+			spec[source] = map[string]any{"apiGroup": "snapshot.storage.k8s.io", "kind": "VolumeSnapshot", "name": "snap"}
+		}
+		return raw(t, map[string]any{"apiVersion": "v1", "kind": "PersistentVolumeClaim", "metadata": map[string]any{"name": "p", "namespace": "proj"}, "spec": spec})
+	}
+
+	for _, source := range []string{"dataSource", "dataSourceRef"} {
+		t.Run("an unavailable class of a PVC with "+source+" is not coerced but denied", func(t *testing.T) {
+			obj := pvc("replicated", source)
+			if resp := serve(t, m, "/defaults", review(admissionv1.Create, pvcGVR, pvcGVK, "proj", "p", obj, nil)); len(resp.Patch) != 0 {
+				t.Fatalf("the class of a PVC with a source must not be rewritten, got patch %s", resp.Patch)
+			}
+			resp := serve(t, v, "/is-granted", review(admissionv1.Create, pvcGVR, pvcGVK, "proj", "p", obj, nil))
+			if resp.Allowed {
+				t.Fatal("an unavailable class of a PVC with a source must be denied")
+			}
+			if !strings.Contains(resp.Result.Message, `"replicated"`) || !strings.HasSuffix(resp.Result.Message, " "+hint) {
+				t.Fatalf("the denial must name the class and end with the message of the entry, got %q", resp.Result.Message)
+			}
+		})
+		t.Run("an available class of a PVC with "+source+" is allowed", func(t *testing.T) {
+			if resp := serve(t, v, "/is-granted", review(admissionv1.Create, pvcGVR, pvcGVK, "proj", "p", pvc("local", source), nil)); !resp.Allowed {
+				t.Fatalf("an available class must be allowed: %v", resp.Result)
+			}
+		})
+	}
+
+	t.Run("an unavailable class of a PVC without a source is still coerced", func(t *testing.T) {
+		resp := serve(t, m, "/defaults", review(admissionv1.Create, pvcGVR, pvcGVK, "proj", "p", pvc("replicated", ""), nil))
+		var patches []map[string]any
+		if err := json.Unmarshal(resp.Patch, &patches); err != nil {
+			t.Fatal(err)
+		}
+		if len(patches) != 1 || patches[0]["path"] != "/spec/storageClassName" || patches[0]["value"] != "local" {
+			t.Fatalf("expected coercion to local, got: %v", patches)
+		}
+	})
+}
+
 func TestDecodeReview_RejectsOversizeBody(t *testing.T) {
 	p := NewProtectValidator(logr.Discard(), "system:serviceaccount:d8-multitenancy-manager:coc")
 	// a body larger than the limit must be rejected before it is fully buffered into memory.

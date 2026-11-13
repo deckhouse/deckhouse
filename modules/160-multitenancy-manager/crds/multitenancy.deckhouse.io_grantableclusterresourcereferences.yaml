@@ -77,7 +77,9 @@ spec:
                   description: |-
                     Settings for a field that contains a reference to the cluster-wide resource.
 
-                    If a request matches multiple items, the most specific one applies: `resources` takes precedence over `apiGroups`, and `apiGroups` takes precedence over `apiVersions`. `*` in `resources`, `apiGroups`, or `apiVersions` does not restrict the item and does not make it more specific. If several items are equally specific, the first one in the list applies. An item without restrictions is used in all other cases.
+                    If a request matches multiple items, the most specific one applies: `resources` takes precedence over `apiGroups`, and `apiGroups` takes precedence over `apiVersions`. `*` in `resources`, `apiGroups`, or `apiVersions` does not restrict the item and does not make it more specific. Items whose `match` condition does not hold for the object are skipped. Of equally restricted items, an item with `match` takes precedence over an item without it. If several items are equally specific, the first one in the list applies. An item without restrictions and without `match` is used in all other cases.
+
+                    Several items with the same `path` can therefore handle different objects of one resource. For example, an item with `match` on `$.spec['dataSource','dataSourceRef'].kind` and `defaulting: None` handles the PersistentVolumeClaims that restore or clone a volume, and an item without `match` and with `defaulting: Coerce` handles all other PersistentVolumeClaims.
                   properties:
                     apiGroups:
                       description: |-
@@ -116,7 +118,9 @@ spec:
                       description: |-
                         Condition for applying the field settings.
 
-                        If the condition does not match, availability checks and default value assignment are not performed for this field.
+                        If the condition does not match, the item is skipped: the next most specific item applies, and if there is none, availability checks and default value assignment are not performed for this field.
+
+                        Without `equals` and `in`, the condition matches when `fieldPath` points to a string value.
                       properties:
                         equals:
                           description: Value that the field specified in `fieldPath` must match.
@@ -136,6 +140,13 @@ spec:
                       required:
                       - fieldPath
                       type: object
+                    message:
+                      description: |-
+                        Text appended to the rejection of an object whose field references a cluster-wide resource that is unavailable to the project.
+
+                        Use it to tell the user what to do, for example why the value cannot be replaced with the project default.
+                      maxLength: 512
+                      type: string
                     path:
                       description: |-
                         JSONPath to the string field containing the name of the cluster-wide resource.

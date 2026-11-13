@@ -61,6 +61,14 @@ spec:
   # when it is not available to the project, instead of being rejected.
   - path: $.spec.storageClassName
     defaulting: Coerce
+  - path: $.spec.storageClassName
+    match:
+      fieldPath: $.spec['dataSource','dataSourceRef'].kind
+    defaulting: None
+    message: >-
+      A PersistentVolumeClaim restored from a snapshot or cloned from a volume (spec.dataSource or
+      spec.dataSourceRef) keeps its StorageClass and is not switched to the project default:
+      specify a StorageClass that is available to the project and served by the CSI driver of the source.
 ---
 {{- end }}
 apiVersion: multitenancy.deckhouse.io/v1alpha1

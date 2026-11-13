@@ -1368,6 +1368,8 @@ spec:
 
 При создании PersistentVolumeClaim без значения `spec.storageClassName` в это поле автоматически подставляется `fast-ssd`. Если указан StorageClass, которого нет в списке разрешённых, он заменяется на `fast-ssd`, потому что для StorageClass используется режим подстановки значения по умолчанию [`Coerce`](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-defaulting). Это относится и к классу, который подставил встроенный admission-контроллер Kubernetes. О замене сообщается предупреждением (admission warning) в ответе на запрос, поэтому в выводе `d8 k` видны и исходное значение, и подставленное. Если у проекта нет StorageClass по умолчанию, такой PersistentVolumeClaim отклоняется.
 
+PersistentVolumeClaim, который восстанавливает том из снимка или клонирует другой том (задан `spec.dataSource` или `spec.dataSourceRef`), сохраняет свой StorageClass: класс должен обслуживаться CSI-драйвером источника, поэтому он не заменяется значением по умолчанию для проекта. Если такой StorageClass проекту недоступен, PersistentVolumeClaim отклоняется с пояснением; укажите StorageClass, доступный проекту.
+
 Чтобы проверить, какие StorageClass доступны проекту, выполните следующую команду:
 
 ```shell
@@ -1790,6 +1792,8 @@ spec:
 ```
 
 Для каждого объекта используется самый специфичный из подходящих элементов `fieldPaths`: элемент, ограниченный `resources`, приоритетнее элементов, ограниченных только `apiGroups` или `apiVersions`, и элемента без ограничений, который применяется ко всем остальным ресурсам из `rule`. `*` в `resources` не ограничивает элемент: это то же самое, что не указывать параметр.
+
+Элемент, условие [`match`](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-match) которого для объекта не выполняется, пропускается, а из одинаково ограниченных элементов элемент с `match` приоритетнее элемента без него. Поэтому несколько элементов с одним `path` могут обрабатывать разные объекты одного ресурса, каждый со своим режимом подстановки: reference `storageclasses-pvc` проверяет StorageClass у PersistentVolumeClaim с `spec.dataSource` или `spec.dataSourceRef` в режиме `None`, а у остальных PersistentVolumeClaim — в режиме `Coerce`. Текст параметра [`message`](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-message) добавляется к отказу в создании объекта для этого элемента.
 
 Описание параметров GrantableClusterResourceReference, режимов подстановки значений по умолчанию, условий `match` и настройки ресурсов с несколькими API-версиями приведено [в описании ресурса](cr.html#grantableclusterresourcereference).
 

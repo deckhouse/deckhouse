@@ -21,6 +21,7 @@ limitations under the License.
 package engine
 
 import (
+	"cmp"
 	"fmt"
 	"slices"
 
@@ -70,7 +71,8 @@ func scopeWeight(list []string, weight int) int {
 // matching entries the most specific one wins: Resources outranks APIGroups, which outranks
 // APIVersions, and the weights add up. A dimension listing "*" matches anything and counts as
 // unrestricted, so it adds no weight. Ties go to the earliest entry in the list, so the choice is
-// deterministic. The bool is false when no entry matches.
+// deterministic. The bool is false when no entry matches. Only the scope is looked at; the entry that
+// applies to an object is chosen by ApplicableFieldPathIndex, which also evaluates the match guards.
 //
 // The resource scope is what separates paths that collide within one group and version, e.g. core/v1
 // pods ($.spec.priorityClassName) versus replicationcontrollers
@@ -89,23 +91,62 @@ func SelectFieldPathIndex(fieldPaths []v1alpha1.FieldPath, group, version, resou
 	best, bestWeight := -1, -1
 	for i := range fieldPaths {
 		fp := &fieldPaths[i]
-		if len(fp.Resources) > 0 && !listMatches(fp.Resources, resource) {
+		if !ScopeMatches(fp, group, version, resource) {
 			continue
 		}
-		if len(fp.APIGroups) > 0 && !listMatches(fp.APIGroups, group) {
-			continue
-		}
-		if len(fp.APIVersions) > 0 && !listMatches(fp.APIVersions, version) {
-			continue
-		}
-		weight := scopeWeight(fp.Resources, resourcesWeight) +
-			scopeWeight(fp.APIGroups, apiGroupsWeight) +
-			scopeWeight(fp.APIVersions, apiVersionsWeight)
-		if weight > bestWeight {
+		if weight := fieldPathScopeWeight(fp); weight > bestWeight {
 			best, bestWeight = i, weight
 		}
 	}
 	return best
+}
+
+// ApplicableFieldPathIndex returns the index of the FieldPath entry that applies to the object: the
+// most specific of the entries whose scope matches the resource/group/version and whose match guard
+// holds on the object, -1 when there is none. The scope ranks as in SelectFieldPath; at equal scope an
+// entry with a match guard outranks one without it, and ties go to the earliest entry. So an unscoped,
+// unguarded entry is the fallback for the objects the guarded entries of the same scope do not match.
+//
+// The guards are evaluated from the most specific entry down, and the first guard that cannot be
+// evaluated stops the selection: the error is returned with the index of its entry.
+func ApplicableFieldPathIndex(factory jsonpath.Factory, fieldPaths []v1alpha1.FieldPath, group, version, resource string, obj map[string]any) (int, error) {
+	order := make([]int, 0, len(fieldPaths))
+	for i := range fieldPaths {
+		if ScopeMatches(&fieldPaths[i], group, version, resource) {
+			order = append(order, i)
+		}
+	}
+	weight := func(i int) int {
+		w := 2 * fieldPathScopeWeight(&fieldPaths[i])
+		if fieldPaths[i].Match != nil {
+			w++
+		}
+		return w
+	}
+	slices.SortStableFunc(order, func(a, b int) int { return cmp.Compare(weight(b), weight(a)) })
+	for _, i := range order {
+		ok, err := EvalMatch(factory, fieldPaths[i].Match, obj)
+		if err != nil {
+			return i, err
+		}
+		if ok {
+			return i, nil
+		}
+	}
+	return -1, nil
+}
+
+// ScopeMatches reports whether the scope of a FieldPath entry admits the resource/group/version.
+func ScopeMatches(fp *v1alpha1.FieldPath, group, version, resource string) bool {
+	return (len(fp.Resources) == 0 || listMatches(fp.Resources, resource)) &&
+		(len(fp.APIGroups) == 0 || listMatches(fp.APIGroups, group)) &&
+		(len(fp.APIVersions) == 0 || listMatches(fp.APIVersions, version))
+}
+
+func fieldPathScopeWeight(fp *v1alpha1.FieldPath) int {
+	return scopeWeight(fp.Resources, resourcesWeight) +
+		scopeWeight(fp.APIGroups, apiGroupsWeight) +
+		scopeWeight(fp.APIVersions, apiVersionsWeight)
 }
 
 // StringValuesAt returns the string-typed values selected by the JSONPath expression.

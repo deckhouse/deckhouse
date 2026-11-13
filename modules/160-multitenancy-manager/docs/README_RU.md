@@ -199,7 +199,7 @@ Deckhouse Platform регистрирует следующие cluster-wide-ре
 
 | Имя определения | Cluster-wide-ресурс | Где используется | Режим подстановки значения по умолчанию |
 | --- | --- | --- | --- |
-| `storageclasses` | StorageClass (storage.k8s.io) | PersistentVolumeClaim `.spec.storageClassName` | `Coerce` |
+| `storageclasses` | StorageClass (storage.k8s.io) | PersistentVolumeClaim `.spec.storageClassName` | `Coerce`; `None` для PersistentVolumeClaim с `.spec.dataSource` или `.spec.dataSourceRef` |
 | `loadbalancerclasses` | Значение `loadbalancerclass` | Service `.spec.loadBalancerClass` (для сервисов типа `LoadBalancer`) | `FillEmpty` |
 | `clusterissuers` | ClusterIssuer (cert-manager.io) | Certificate `.spec.issuerRef.name`; Ingress: аннотация `cert-manager.io/cluster-issuer` | `FillEmpty` или `None` |
 | `clusterroles` | ClusterRole (rbac.authorization.k8s.io) | RoleBinding `.roleRef.name` | `None` |

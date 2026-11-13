@@ -109,25 +109,33 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 		return nil, fmt.Errorf("references: %w", err)
 	}
 	// Defaulting is per path: None never fills in (opt-in toggle annotations stay absent). A request
-	// none of whose references defaults anything is answered before the object is even decoded.
+	// none of whose references may default anything is answered before the object is even decoded.
 	type candidate struct {
 		mr resolve.MatchedReference
 		fp v1alpha1.FieldPath
 	}
-	active := make([]candidate, 0, len(refs))
+	defaulting := make([]resolve.MatchedReference, 0, len(refs))
 	for _, mr := range refs {
-		fp, ok := engine.SelectFieldPath(mr.Reference.Spec.FieldPaths, group, version, resourcePlural)
-		if ok && engine.DefaultingActive(fp) {
-			active = append(active, candidate{mr: mr, fp: fp})
+		if mayDefault(mr.Reference.Spec.FieldPaths, group, version, resourcePlural) {
+			defaulting = append(defaulting, mr)
 		}
 	}
-	if len(active) == 0 {
+	if len(defaulting) == 0 {
 		return allowedResponse(req.UID), nil
 	}
 
 	obj := map[string]any{}
 	if err := json.Unmarshal(req.Object.Raw, &obj); err != nil {
 		return nil, fmt.Errorf("decode object: %w", err)
+	}
+	active := make([]candidate, 0, len(defaulting))
+	for _, mr := range defaulting {
+		fieldPaths := mr.Reference.Spec.FieldPaths
+		idx, err := engine.ApplicableFieldPathIndex(m.factory, fieldPaths, group, version, resourcePlural, obj)
+		if err != nil || idx < 0 || !engine.DefaultingActive(fieldPaths[idx]) {
+			continue
+		}
+		active = append(active, candidate{mr: mr, fp: fieldPaths[idx]})
 	}
 
 	// The fields that may be patched are found first; the namespace, its project and the grants are read
@@ -140,10 +148,6 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 	}
 	var targets []target
 	for _, c := range active {
-		guard, err := engine.EvalMatch(m.factory, c.fp.Match, obj)
-		if err != nil || !guard {
-			continue
-		}
 		// A path this parser cannot handle is not defaultable. The GrantableClusterResourceReference
 		// validating webhook refuses such an entry at apply time, but it is not a guarantee: the object
 		// may be older than the webhook, or have been written while the webhook was unavailable
@@ -238,6 +242,17 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 	resp.PatchType = ptr.To(admissionv1.PatchTypeJSONPatch)
 	resp.Warnings = warnings
 	return resp, nil
+}
+
+// mayDefault reports whether an entry of fieldPaths that may apply to the resource/group/version asks
+// for defaulting.
+func mayDefault(fieldPaths []v1alpha1.FieldPath, group, version, resource string) bool {
+	for i := range fieldPaths {
+		if engine.DefaultingActive(fieldPaths[i]) && engine.ScopeMatches(&fieldPaths[i], group, version, resource) {
+			return true
+		}
+	}
+	return false
 }
 
 // fieldState reports whether all parent objects of the field exist (so a JSON Patch "add" is safe,

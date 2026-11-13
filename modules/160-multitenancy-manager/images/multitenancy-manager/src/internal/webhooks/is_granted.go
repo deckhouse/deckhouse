@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	"controller/api/v1alpha1"
 	"controller/internal/engine"
 	"controller/internal/jsonpath"
 	"controller/internal/namespaces"
@@ -143,17 +144,12 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 	if err != nil {
 		return nil, fmt.Errorf("references for request: %w", err)
 	}
-	type selected struct {
-		mr  resolve.MatchedReference
-		idx int
-	}
-	sel := make([]selected, 0, len(refs))
+	sel := make([]resolve.MatchedReference, 0, len(refs))
 	for _, mr := range refs {
-		idx := engine.SelectFieldPathIndex(mr.Reference.Spec.FieldPaths, group, version, resourcePlural)
-		if idx < 0 {
+		if engine.SelectFieldPathIndex(mr.Reference.Spec.FieldPaths, group, version, resourcePlural) < 0 {
 			continue
 		}
-		sel = append(sel, selected{mr: mr, idx: idx})
+		sel = append(sel, mr)
 	}
 	if len(sel) == 0 {
 		return allowedResponse(req.UID), nil
@@ -177,12 +173,11 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 	// the references.
 	type check struct {
 		mr    resolve.MatchedReference
+		fp    v1alpha1.FieldPath
 		added []string
 	}
 	var checks []check
-	for _, s := range sel {
-		mr, idx := s.mr, s.idx
-		fp := mr.Reference.Spec.FieldPaths[idx]
+	for _, mr := range sel {
 		// A path of one reference that cannot be evaluated skips that reference only, deliberately
 		// failing open. The GrantableClusterResourceReference webhook rejects such a path, but it runs
 		// with failurePolicy: Ignore, so a broken reference can still be stored (the webhook was down,
@@ -191,15 +186,17 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 		// because of one bad object; skipping costs only the checks that reference could not make
 		// anyway. The other references are still enforced, and the breakage stays visible in this log
 		// and in the reference's FieldPathsValid=False condition.
-		guardOK, err := engine.EvalMatch(v.factory, fp.Match, obj)
+		fieldPaths := mr.Reference.Spec.FieldPaths
+		idx, err := engine.ApplicableFieldPathIndex(v.factory, fieldPaths, group, version, resourcePlural, obj)
 		if err != nil {
 			log.Error(err, "skipping reference: match.fieldPath cannot be evaluated",
-				"reference", mr.Reference.Name, "fieldPathIndex", idx, "path", fp.Match.FieldPath)
+				"reference", mr.Reference.Name, "fieldPathIndex", idx, "path", fieldPaths[idx].Match.FieldPath)
 			continue
 		}
-		if !guardOK {
+		if idx < 0 {
 			continue
 		}
+		fp := fieldPaths[idx]
 		names, err := engine.StringValuesAt(v.factory, obj, fp.Path)
 		if err != nil {
 			log.Error(err, "skipping reference: path cannot be evaluated",
@@ -230,7 +227,7 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 		if len(added) == 0 {
 			continue
 		}
-		checks = append(checks, check{mr: mr, added: added})
+		checks = append(checks, check{mr: mr, fp: fp, added: added})
 	}
 	if len(checks) == 0 {
 		return allowedResponse(req.UID), nil
@@ -286,6 +283,9 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 					"[multitenancy] %s %q references %q which is not available to project %q. "+
 						"Ask the cluster administrator to grant it.",
 					req.Kind.Kind, req.Name, name, project)
+				if c.fp.Message != "" {
+					msg += " " + c.fp.Message
+				}
 				log.Info("denied: not available", "value", name)
 				return deniedResponse(req.UID, msg), nil
 			}
