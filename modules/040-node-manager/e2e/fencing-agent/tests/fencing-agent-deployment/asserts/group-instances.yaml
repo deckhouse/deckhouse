@@ -1,0 +1,5 @@
+apiVersion: deckhouse.io/v1alpha2
+kind: Instance
+spec:
+  nodeGroupRef:
+    name: ($nodeGroup)

@@ -1,0 +1,9 @@
+# The node of the test group and its boot ID at the baseline. Later steps compare
+# the boot ID with this value: a changed boot ID means the node rebooted.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: e2e-fencing-state
+data:
+  nodeName: ($node.metadata.name)
+  bootID: ($node.status.nodeInfo.bootID)

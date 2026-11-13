@@ -2,7 +2,7 @@
 
 Hooks of the node-manager team: NodeGroup lifecycle, bashible, CAPI and MCM plumbing, certificates of the module's own components.
 
-- `get_crds` reads every NodeGroup and publishes the fields the helm chart still needs (node type, engine, zones, min and max per zone, GPU, fencing, static instances) as one values key. Templates and a few hooks read that key instead of the cluster. The per-group logic (kubernetes version, capacity, labels and taints) already lives in node-controller. The hook is scheduled for removal once its last template readers are gone.
+- `get_crds` reads every NodeGroup and publishes the fields the helm chart still needs (node type, engine, zones, min and max per zone, GPU, static instances) as one values key. Templates and a few hooks read that key instead of the cluster. The per-group logic (kubernetes version, capacity, labels and taints) already lives in node-controller. The hook is scheduled for removal once its last template readers are gone.
 - `deployment_required` decides whether machine-controller-manager (MCM) has to run in this cluster by looking at the engine the NodeGroups use. The chart renders MCM only when a group needs it.
 - `discover_cloud_provider` copies the cloud provider settings from the provider secret into values, so the chart and other hooks know the provider type, its zones and the instance class kind without reading the secret themselves.
 - `discover_apiserver_endpoints` collects the addresses of the kube-apiserver instances. bashible on a new node and the CAPI cluster templates need them before cluster DNS is available.

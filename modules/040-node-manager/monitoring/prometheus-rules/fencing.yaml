@@ -1,0 +1,242 @@
+- name: d8.fencing
+  rules:
+    - alert: D8FencingAgentRestarted
+      # After a crash the watchdog stays armed. The new agent process disarms it at the start only when the
+      # control plane is visible; else the node panics when the watchdog timeout expires. A repeated restart
+      # means that the watchdog of the node is not armed.
+      # A reboot of the node also restarts the container. After a reboot the runtime does not know how the
+      # container stopped and gives the reason Unknown: such a restart is not a crash of the agent.
+      expr: |
+        max by (node) (
+          (
+            increase(kube_pod_container_status_restarts_total{namespace="d8-cloud-instance-manager", pod=~"fencing-agent-.+", container="fencing-agent"}[15m]) > 0
+            unless on (namespace, pod, container)
+            kube_pod_container_status_last_terminated_reason{namespace="d8-cloud-instance-manager", pod=~"fencing-agent-.+", container="fencing-agent", reason="Unknown"} == 1
+          )
+          * on (namespace, pod) group_left (node)
+          kube_pod_info{namespace="d8-cloud-instance-manager", pod=~"fencing-agent-.+"}
+        )
+      labels:
+        tier: cluster
+        severity_level: "7"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        summary: The fencing agent restarted on node {{ $labels.node }}.
+        description: |
+          The container `fencing-agent` restarted on the node `{{ $labels.node }}` in the last 15 minutes.
+
+          After a crash of the agent, the watchdog stays armed. At the start, the new agent process disarms the watchdog if the control plane is available. If the control plane is not available, the watchdog timeout expires and the kernel panics. The node then stays stopped, because `kernel.panic` is `0`. Restart the node manually.
+
+          If the agent crashes again and again, the watchdog of the node is not armed, and fencing does not stop the node if the node fails.
+
+          To read the logs of the agent that crashed:
+
+          ```bash
+          d8 k -n d8-cloud-instance-manager logs -l app=fencing-agent --field-selector spec.nodeName={{ $labels.node }} -c fencing-agent --previous
+          ```
+
+    - alert: D8FencingAgentDown
+      # The alert reads the metrics of the agent, not the readiness of its pod: a pod can be not ready
+      # while the agent works, and the pod can be ready while the agent does not send metrics.
+      # An unmanaged node has no node group, so no agent runs on it: D8NodeIsUnmanaged reports it.
+      expr: |
+        max by (node) (kube_node_status_condition{condition="Ready", status="true"} == 1)
+        unless on (node)
+        max by (node) (d8_unmanaged_nodes_on_cluster)
+        unless on (node)
+        max by (node) (d8_fencing_agent_condition)
+      for: 5m
+      labels:
+        tier: cluster
+        severity_level: "6"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        summary: The fencing agent does not work on node {{ $labels.node }}.
+        description: |
+          The node `{{ $labels.node }}` is Ready, but Prometheus does not get the metrics of its fencing agent for 5 minutes.
+
+          Without the agent, the node does not detect a loss of the control plane, and its neighbors do not see it.
+
+          To check the pod of the agent:
+
+          ```bash
+          d8 k -n d8-cloud-instance-manager get pods -l app=fencing-agent --field-selector spec.nodeName={{ $labels.node }} -o wide
+          d8 k -n d8-cloud-instance-manager describe pods -l app=fencing-agent --field-selector spec.nodeName={{ $labels.node }}
+          ```
+
+    - alert: D8FencingWatchdogTimeoutMismatch
+      expr: |
+        max by (node) (d8_fencing_agent_condition{reason="WatchdogTimeoutMismatch"}) == 1
+      for: 10m
+      labels:
+        tier: cluster
+        severity_level: "6"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        summary: The watchdog timeout on node {{ $labels.node }} differs from the timeout of the fencing profile.
+        description: |
+          The watchdog of the node `{{ $labels.node }}` reports a timeout that is not the timeout of the fencing profile of its node group. The fencing agent does not arm the watchdog, so the node is not protected.
+
+          A watchdog driver can round the timeout or accept only some values. To read the reason:
+
+          ```bash
+          d8 k get node {{ $labels.node }} -o jsonpath='{.status.conditions[?(@.type=="Fencing")]}' | jq
+          ```
+
+    - alert: D8FencingKernelPanicMismatch
+      # 30 minutes is longer than the normal delay of bashible: it must approve the step, and the sysctl timer
+      # runs up to 10 minutes. So a node that just got a mode does not raise the alert, and a broken bashible
+      # or a changed value does.
+      expr: |
+        max by (node) (d8_fencing_agent_condition{reason="KernelPanicMismatch"}) == 1
+      for: 30m
+      labels:
+        tier: cluster
+        severity_level: "6"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        summary: The value of kernel.panic on node {{ $labels.node }} is not the value that fencing needs.
+        description: |
+          The value of `kernel.panic` on the node `{{ $labels.node }}` stays wrong for 30 minutes. The fencing agent does not arm the watchdog, so the node is not protected.
+
+          Fencing needs `kernel.panic` set to `0`. After a fencing panic, the node must stay stopped and must not restart by itself.
+
+          Bashible sets the value. Check that bashible works on the node and that no other tool changes `kernel.panic`:
+
+          ```bash
+          d8 k get node {{ $labels.node }} -o jsonpath='{.status.conditions[?(@.type=="Fencing")]}' | jq
+          sysctl kernel.panic
+          ```
+
+    - alert: D8FencingWatchdogDeviceMissing
+      # A new agent pod does not start without /dev/watchdog. So the reason usually comes from a pod of the
+      # previous revision, which has no watchdog volume. The DaemonSet replaces such pods while bashible loads
+      # softdog node by node. 30 minutes is the same wait as in D8FencingKernelPanicMismatch: a group that just
+      # got a mode does not raise the alert, and a stopped rollout does.
+      expr: |
+        max by (node) (d8_fencing_agent_condition{reason="WatchdogDeviceMissing"}) == 1
+      for: 30m
+      labels:
+        tier: cluster
+        severity_level: "6"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        summary: The fencing agent on node {{ $labels.node }} has no watchdog device.
+        description: |
+          The fencing agent on the node `{{ $labels.node }}` has no watchdog device for 30 minutes. The agent does not arm the watchdog, so the node is not protected.
+
+          A new agent pod does not start without `/dev/watchdog`. Thus, usually this agent runs in a pod of the previous revision without the watchdog device, and the DaemonSet did not replace this pod yet. On the node, `softdog` and `/dev/watchdog` can be present.
+
+          Do these checks:
+
+          1. Check the rollout of the DaemonSet of the node group. Find the agent pods of the group in the states `ContainerCreating` (with the `FailedMount` event) or `Terminating` on other nodes. Such a pod stops the rollout. A pod does not start if the NodeGroupConfiguration step failed on its node. A pod stays `Terminating` if its node is `NotReady`.
+
+             ```bash
+             d8 k -n d8-cloud-instance-manager rollout status ds/fencing-agent-<group>
+             d8 k -n d8-cloud-instance-manager get pods -l app=fencing-agent,node-group-name=<group> -o wide
+             d8 k -n d8-cloud-instance-manager get events --field-selector reason=FailedMount
+             ```
+
+          2. On the node, check that bashible ran the NodeGroupConfiguration `enable-watchdog-for-nodegroup-*` without errors, that `softdog` is loaded and that `/dev/watchdog` is present:
+
+             ```bash
+             d8 k get node {{ $labels.node }} -o jsonpath='{.status.conditions[?(@.type=="Fencing")]}' | jq
+             journalctl -u bashible --since -1h
+             lsmod | grep softdog
+             ls -l /dev/watchdog
+             ```
+
+    - alert: D8FencingNodeIPMismatch
+      expr: |
+        max by (node) (d8_fencing_agent_condition{reason="NodeIPMismatch"}) == 1
+      for: 10m
+      labels:
+        tier: cluster
+        severity_level: "6"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        summary: The fencing agent on node {{ $labels.node }} cannot find the IP address of the node.
+        description: |
+          The fencing agent on the node `{{ $labels.node }}` cannot use the IP address of its Node object. The Node object has no IPv4 address, or the node network interface does not have this address. The agent waits for the address and does not arm the watchdog, so the node is not protected.
+
+          To compare the addresses:
+
+          ```bash
+          d8 k get node {{ $labels.node }} -o jsonpath='{.status.addresses}' | jq
+          ```
+
+    - alert: D8FencingAgentInvalidKey
+      expr: |
+        max by (node) (d8_fencing_agent_condition{reason="InvalidKey"}) == 1
+      for: 10m
+      labels:
+        tier: cluster
+        severity_level: "6"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        summary: The fencing agent on node {{ $labels.node }} cannot read the memberlist key.
+        description: |
+          The fencing agent on the node `{{ $labels.node }}` cannot read the memberlist key from the Secret `fencing-memberlist-key` in the namespace `d8-cloud-instance-manager`, because the key has a wrong format. The agent does not connect to the other agents and does not arm the watchdog, so the node is not protected.
+
+          The `primary` key must have exactly 32 bytes. A frequent error is a key written as a base64 string into `stringData`. To check the length of the key:
+
+          ```bash
+          d8 k -n d8-cloud-instance-manager get secret fencing-memberlist-key -o jsonpath='{.data.primary}' | base64 -d | wc -c
+          ```
+
+          The command must show 32. To write the key correctly, refer to the [module FAQ](https://deckhouse.io/modules/node-manager/faq.html#how-do-i-rotate-the-fencing-network-key).
+
+    - alert: D8FencingKeyRegenerated
+      # The hook of the key exports the time from the annotation of the Secret on every run, so the alert
+      # lives 24 hours after the regeneration and stays when the pod of Deckhouse restarts.
+      expr: |
+        time() - max(d8_fencing_key_regenerated_timestamp_seconds) < 86400
+      labels:
+        tier: cluster
+        severity_level: "9"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        summary: The memberlist key of fencing was generated again.
+        description: |
+          Deckhouse generated a new memberlist key of fencing, because the Secret `fencing-memberlist-key` in the namespace `d8-cloud-instance-manager` was deleted. The agents use the new key. The old key is lost.
+
+          Agents that did not get the new key cannot talk with the other agents. If you keep a copy of the key outside the cluster, replace it.
+
+          The alert goes out 24 hours after the key was generated. It does not rise when Deckhouse creates the key for the first time or when you rotate the key yourself.
+
+    - alert: D8FencingSystemNetworkNotFound
+      # The window of max_over_time keeps the alert when the pod of Deckhouse restarts: the restart
+      # interrupts the series of the hook.
+      expr: |
+        max by (network) (max_over_time(d8_node_manager_system_network_not_found[10m])) > 0
+      for: 5m
+      labels:
+        tier: cluster
+        severity_level: "4"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        summary: The SystemNetwork {{ $labels.network }} of fencing does not exist.
+        description: |
+          The ModuleConfig `node-manager` names the SystemNetwork `{{ $labels.network }}` in `settings.fencing.systemNetworkFallback.systemNetworkName`, but the cluster has no such SystemNetwork. The agents cannot use the second network.
+
+          Deckhouse does not change the setting. Create the SystemNetwork, or set the name of another one, or delete the name to turn the second network off.
+
+          To check the network:
+
+          ```bash
+          d8 k get systemnetwork {{ $labels.network }}
+          d8 k get moduleconfig node-manager -o jsonpath='{.spec.settings.fencing}'
+          ```
+
+          The alert goes out about 10 minutes after the network is back, because it looks at the last 10 minutes.
+
+          While all node groups have the mode `Disabled`, the rules of fencing are not loaded, so the alert does not rise. The agents do not use the second network then. The alert rises when you turn fencing on.

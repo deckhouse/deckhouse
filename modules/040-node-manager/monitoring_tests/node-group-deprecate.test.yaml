@@ -1,0 +1,30 @@
+# Tests of monitoring/prometheus-rules/node-group-deprecate.yaml, the part of fencing.
+rule_files:
+  - node-group-deprecate.yaml
+evaluation_interval: 1m
+
+tests:
+  - name: D8NodeGroupFencingDeprecatedSettings rises for a group and goes out when the group changes the setting
+    interval: 1m
+    input_series:
+      # One group with both settings gives one alert.
+      - series: 'd8_node_group_fencing_deprecated_settings{name="workers", setting="mode"}'
+        values: '1+0x30'
+      - series: 'd8_node_group_fencing_deprecated_settings{name="workers", setting="watchdog.timeout"}'
+        values: '1+0x30'
+      # The user replaces the setting of the group "legacy" at minute 5.
+      - series: 'd8_node_group_fencing_deprecated_settings{name="legacy", setting="mode"}'
+        values: '1x5 _x25'
+    promql_expr_test:
+      - eval_time: 1m
+        expr: ALERTS{alertname="D8NodeGroupFencingDeprecatedSettings", alertstate="firing"}
+        exp_samples:
+          - labels: 'ALERTS{alertname="D8NodeGroupFencingDeprecatedSettings", alertstate="firing", name="legacy", severity_level="9", tier="cluster"}'
+            value: 1
+          - labels: 'ALERTS{alertname="D8NodeGroupFencingDeprecatedSettings", alertstate="firing", name="workers", severity_level="9", tier="cluster"}'
+            value: 1
+      - eval_time: 10m
+        expr: ALERTS{alertname="D8NodeGroupFencingDeprecatedSettings", alertstate="firing"}
+        exp_samples:
+          - labels: 'ALERTS{alertname="D8NodeGroupFencingDeprecatedSettings", alertstate="firing", name="workers", severity_level="9", tier="cluster"}'
+            value: 1

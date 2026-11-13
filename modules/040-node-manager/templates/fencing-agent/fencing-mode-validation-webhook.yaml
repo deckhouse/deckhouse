@@ -1,0 +1,36 @@
+{{- /*
+  Refuses to change the fencing mode of a NodeGroup while a node of the group has a
+  FencingFailedNodeState: the deadlines of an open incident come from the mode at its start. The hook
+  reads the states and their Nodes; see webhooks/validating/fencing_mode.py.
+*/}}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ValidationWebhook
+metadata:
+  name: node-manager-fencing-mode
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | nindent 2 }}
+validationObject:
+  name: fencing-mode.node-manager.deckhouse.io
+  group: main
+  # The API server evaluates the condition, so an update that keeps the value of the mode never waits
+  # for the webhook-handler. The hook compares the modes after the normalization.
+  matchConditions:
+  - name: fencing-mode-changed
+    expression: "object.?spec.?fencing.?mode.orValue('') != oldObject.?spec.?fencing.?mode.orValue('')"
+  rules:
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["v1"]
+    operations:  ["UPDATE"]
+    resources:   ["nodegroups"]
+    scope:       "Cluster"
+  # Fail closed: a mode change that the hook cannot check could start the wrong deadlines.
+  failurePolicy: Fail
+  # One list of the states and one read of a Node per state.
+  timeoutSeconds: 10
+handler:
+  # The code of the hook is webhooks/validating/fencing_mode.py, where its unit tests import it.
+  python: |
+    {{- (required "webhooks/validating/fencing_mode.py is missing" (.Files.Get "webhooks/validating/fencing_mode.py")) | nindent 4 }}
+    {{- if eq .Values.global.deckhouseEdition "CE" }}
+    COMMUNITY_EDITION = True
+    {{- end }}

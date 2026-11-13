@@ -1,0 +1,30 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: assert-daemonset-armed
+spec:
+  try:
+    - description: The agent DaemonSet of the group runs the armed agent with the watchdog device
+      assert:
+        resource:
+          apiVersion: apps/v1
+          kind: DaemonSet
+          metadata:
+            name: (join('', ['fencing-agent-', $nodeGroup]))
+            namespace: ($agentNamespace)
+          spec:
+            template:
+              metadata:
+                labels:
+                  app: fencing-agent
+                  node-manager.deckhouse.io/fencing-agent-version: "2"
+              spec:
+                hostNetwork: true
+                (length(volumes[?name == 'watchdog'])): 1
+  catch:
+    - description: Describe the agent DaemonSet
+      describe:
+        apiVersion: apps/v1
+        kind: DaemonSet
+        name: (join('', ['fencing-agent-', $nodeGroup]))
+        namespace: ($agentNamespace)

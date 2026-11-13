@@ -26,8 +26,8 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-// get_crds builds the nodeManager.internal.nodeGroups blob: name, nodeType, engine, gpu,
-// fencing and the three read cloudInstances fields, with zones defaulted for CloudEphemeral.
+// get_crds builds the nodeManager.internal.nodeGroups blob: name, nodeType, engine, gpu and
+// the three read cloudInstances fields, with zones defaulted for CloudEphemeral.
 // Everything else about a NodeGroup is owned by node-controller and is not tested here.
 var _ = Describe("Modules :: node-manager :: hooks :: get_crds ::", func() {
 	const (
@@ -235,33 +235,6 @@ spec:
 		})
 	})
 
-	Context("Static instances with fencing", func() {
-		const staticNodeGroupWithFencing = `
----
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: worker
-spec:
-  nodeType: Static
-  staticInstances:
-    labelSelector:
-      matchLabels:
-        node-group: worker
-  fencing:
-    mode: Watchdog
-`
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(staticNodeGroupWithFencing))
-			f.RunHook()
-		})
-
-		It("Fencing values must be passed through", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.fencing.mode").Value()).To(Equal("Watchdog"))
-		})
-	})
-
 	Context("NG referencing an unknown instance class kind", func() {
 		BeforeEach(func() {
 			ng := `
@@ -330,7 +303,7 @@ spec:
   kubelet:
     maxPods: 100
   fencing:
-    mode: Watchdog
+    mode: Slow
 ---
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -355,7 +328,7 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 
 			Expect(slices.Collect(maps.Keys(f.ValuesGet("nodeManager.internal.nodeGroups.0").Map()))).To(
-				ConsistOf("name", "nodeType", "engine", "gpu", "cloudInstances", "fencing"))
+				ConsistOf("name", "nodeType", "engine", "gpu", "cloudInstances"))
 			Expect(slices.Collect(maps.Keys(f.ValuesGet("nodeManager.internal.nodeGroups.0.cloudInstances").Map()))).To(
 				ConsistOf("minPerZone", "maxPerZone", "zones"))
 		})

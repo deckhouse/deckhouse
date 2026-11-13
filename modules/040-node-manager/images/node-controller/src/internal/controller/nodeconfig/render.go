@@ -59,7 +59,7 @@ func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv
 	extraExtensions, extraModules := nodeExtensions(in, deckhousev1alpha1.ExtensionKindSystemExtension, node, ng.Name)
 	staticPods := nodeStaticPods(in.NodeStaticPodRequests, in.NodeStaticPodRequestsRejected, ng.Name)
 
-	kernel := renderKernel()
+	kernel := renderKernel(ng)
 	kernel.Modules = extraModules
 	runtime := renderContainerRuntime(ng, in, staticPods)
 
@@ -111,12 +111,13 @@ func withoutMachineFields(spec internalv1alpha1.NodeSpec, ownNTP bool) internalv
 // renderKernel publishes the cluster-decided sysctl keys — the same four dhctl
 // writes into the first master's payload (dhctl/pkg/immutable/nodeconfig.go).
 // Load tuning lives in the OS image (/usr/lib/sysctl.d/50-deckhouse.conf).
-func renderKernel() internalv1alpha1.Kernel {
+func renderKernel(ng *v1.NodeGroup) internalv1alpha1.Kernel {
 	return internalv1alpha1.Kernel{
 		Sysctl: map[string]internalv1alpha1.SysctlValue{
-			// kubelet refuses to start without these (protect-kernel-defaults),
-			// and fencing changes the delay.
-			"kernel.panic":         "10",
+			// kubelet refuses to start without panic_on_oops (protect-kernel-defaults);
+			// its kernel.panic check is patched out, so fencing is free to change
+			// the delay.
+			"kernel.panic":         kernelPanic(ng),
 			"kernel.panic_on_oops": "1",
 			// Pod traffic is routed through the node; mmap count for
 			// Elasticsearch and friends. Both exist on every kernel the image
@@ -125,6 +126,22 @@ func renderKernel() internalv1alpha1.Kernel {
 			"vm.max_map_count":    "262144",
 		},
 	}
+}
+
+// kernelPanic is the reboot delay after a panic. A fenced node has to stay down:
+// the watchdog panics it once the cluster has given it up, and a node that came
+// back on its own would race the controller deleting it. The same rule as
+// candi/bashible/common-steps/all/041_configure_sysctl_tuner.sh.tpl: every
+// fencing mode but Disabled arms the watchdog. Watchdog is deprecated and works as Slow.
+func kernelPanic(ng *v1.NodeGroup) internalv1alpha1.SysctlValue {
+	if ng.Spec.Fencing == nil {
+		return "10"
+	}
+	switch ng.Spec.Fencing.Mode {
+	case v1.FencingModeNormal, v1.FencingModeSlow, v1.FencingModeCritical, v1.FencingModeWatchdog:
+		return "0"
+	}
+	return "10"
 }
 
 // renderNetwork keeps the hostname the node booted with. The Deckhouse Engine init

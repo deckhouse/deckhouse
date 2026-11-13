@@ -22,175 +22,62 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
-	"golang.org/x/sync/errgroup"
+	"github.com/go-logr/logr"
+	"k8s.io/klog/v2"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"fencing-agent/internal/adapters/kubeclient"
-	"fencing-agent/internal/adapters/memberlist"
-	"fencing-agent/internal/adapters/watchdog"
+	"fencing-agent/internal/agent"
 	"fencing-agent/internal/config"
-	"fencing-agent/internal/controllers/grpc"
-	"fencing-agent/internal/controllers/http"
-	"fencing-agent/internal/lib/logger"
-	"fencing-agent/internal/lib/logger/sl"
-	"fencing-agent/internal/usecase"
-)
-
-const (
-	Notify               = "Notify"
-	Watchdog             = "Watchdog"
-	fencingNodeLabel     = "node-manager.deckhouse.io/fencing-enabled"
-	fencingNodeLabelMode = "node-manager.deckhouse.io/fencing-mode"
 )
 
 func main() {
-	var cfg config.Config
-	cfg.MustLoad()
+	logger := log.NewLogger(
+		log.WithOutput(os.Stdout),
+		log.WithHandlerType(log.JSONHandlerType),
+	)
 
-	l := logger.NewLogger(cfg.LogLevel)
-
-	l.Info("Starting fencing-agent")
-
-	err := AppRun(cfg, l)
-	if err != nil {
-		l.Error("failed to run application", sl.Err(err))
+	if err := run(logger); err != nil {
+		logger.Error("fencing-agent failed", "error", err)
 		os.Exit(1)
 	}
 }
 
-func AppRun(cfg config.Config, log *log.Logger) error {
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-	defer cancel()
-
-	// create kubernetes client
-	kubeClient, err := kubeclient.New(cfg.KubeClient, log, cfg.NodeName, cfg.NodeGroup)
+func run(logger *log.Logger) error {
+	env, err := config.LoadEnv()
 	if err != nil {
-		return fmt.Errorf("failed to create KubernetesAPI client: %w", err)
+		return err
 	}
 
-	ip, err := kubeClient.GetCurrentNodeIP(ctx)
+	logger.SetLevel(log.LogLevelFromStr(env.LogLevel))
+	// client-go writes through klog and the controller-runtime client writes through
+	// its own logger. Both write JSON through the agent logger.
+	bridge := logr.FromSlogHandler(logger.Handler())
+	ctrllog.SetLogger(bridge)
+	klog.SetLogger(bridge)
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	defer stop()
+
+	restCfg, err := kubeclient.NewRestConfig()
 	if err != nil {
-		return fmt.Errorf("failed to get current node IP: %w", err)
+		return fmt.Errorf("build kubernetes rest config: %w", err)
 	}
-	log.Info("current node IP", "ip", ip)
 
-	ips, err := kubeClient.GetNodesIP(ctx)
+	deps := agent.Deps{RestConfig: restCfg}
+
+	deps.K8sClient, err = kubeclient.New(restCfg)
 	if err != nil {
-		return fmt.Errorf("failed to get nodes IPs: %w", err)
+		return fmt.Errorf("create kubernetes client: %w", err)
 	}
 
-	totalNodes := len(ips)
-	log.Info("total nodes", "total_nodes", totalNodes)
-
-	quorumDecider := usecase.NewQuorumDecider(totalNodes)
-
-	eventBus := usecase.NewEventsBus()
-
-	eventHandler := usecase.NewNotifier(log, eventBus)
-
-	mblist, err := memberlist.New(cfg.Memberlist, log, ip, cfg.NodeName, totalNodes, eventHandler, quorumDecider)
+	a, err := agent.New(env, deps, logger)
 	if err != nil {
-		return fmt.Errorf("failed to create memberlist: %w", err)
+		return err
 	}
 
-	// always have to start memberlist before all components
-	err = mblist.Start(ctx, ips)
-	if err != nil {
-		return fmt.Errorf("failed to start memberlist: %w", err)
-	}
-	defer mblist.Stop()
-
-	mblist.BroadcastNodesNumber(totalNodes)
-
-	err = setNodeLabels(ctx, kubeClient, cfg.FencingMode)
-	if err != nil {
-		return fmt.Errorf("failed to set node labels: %w", err)
-	}
-	defer removeNodeLabels(kubeClient)
-
-	if cfg.FencingMode == Watchdog {
-		log.Info("Watchdog enabled, starting health monitor")
-
-		if infErr := kubeClient.StartInformer(ctx); infErr != nil {
-			return fmt.Errorf("failed to start informer: %w", infErr)
-		}
-		defer kubeClient.StopInformer()
-
-		softdog := watchdog.New(cfg.Watchdog.Device)
-		fallback := usecase.NewFallback(log, kubeClient)
-		fencingAgent := usecase.NewHealthMonitor(
-			kubeClient,
-			mblist,
-			softdog,
-			quorumDecider,
-			fallback,
-			log,
-		)
-
-		err = fencingAgent.Start(ctx, cfg.Watchdog.Timeout)
-		if err != nil {
-			return fmt.Errorf("failed to start health monitor: %w", err)
-		}
-
-		defer fencingAgent.Stop()
-	} else {
-		log.Info("Notify mode enabled, no fencing will be performed")
-	}
-
-	nodesGetter := usecase.NewGetNodes(mblist)
-	grpcSrv := grpc.NewServer(log, eventBus, nodesGetter)
-
-	grpcSrvRunner, err := grpc.NewRunner(cfg.GRPC, log, grpcSrv)
-	if err != nil {
-		return fmt.Errorf("failed to create grpc server runner: %w", err)
-	}
-
-	g, ctx := errgroup.WithContext(ctx)
-
-	g.Go(grpcSrvRunner.Run)
-
-	healthzSrv := http.New(log, cfg.HealthProbeBindAddress)
-
-	g.Go(healthzSrv.Run)
-
-	g.Go(func() error {
-		<-ctx.Done()
-		healthzSrv.Stop()
-		grpcSrvRunner.Stop()
-		return nil
-	})
-
-	return g.Wait()
-}
-
-func setNodeLabels(ctx context.Context, kubeClient *kubeclient.Client, fencingNodeModeValue string) error {
-	if labelErr := kubeClient.SetNodeLabel(ctx, fencingNodeLabel, ""); labelErr != nil {
-		kubeClient.Logger.Error("unable to set node label, disarming watchdog for safety", sl.Err(labelErr))
-		return labelErr
-	}
-
-	if labelErr := kubeClient.SetNodeLabel(ctx, fencingNodeLabelMode, fencingNodeModeValue); labelErr != nil {
-		kubeClient.Logger.Error("unable to set node label, disarming watchdog for safety", sl.Err(labelErr))
-		if err := kubeClient.RemoveNodeLabel(ctx, fencingNodeLabel); err != nil {
-			kubeClient.Logger.Error("unable to remove node label", sl.Err(err))
-		}
-		return labelErr
-	}
-	return nil
-}
-
-func removeNodeLabels(kubeClient *kubeclient.Client) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if labelErr := kubeClient.RemoveNodeLabel(ctx, fencingNodeLabel); labelErr != nil {
-		kubeClient.Logger.Error("unable to remove node label", sl.Err(labelErr))
-	}
-
-	if labelErr := kubeClient.RemoveNodeLabel(ctx, fencingNodeLabelMode); labelErr != nil {
-		kubeClient.Logger.Error("unable to remove node label", sl.Err(labelErr))
-	}
+	return a.Run(ctx)
 }

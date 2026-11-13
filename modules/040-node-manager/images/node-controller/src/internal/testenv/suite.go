@@ -41,6 +41,9 @@ type Suite struct {
 	APIReader client.Reader
 	Scheme    *runtime.Scheme
 	Ctx       context.Context
+	// Cache is the cache from which the controllers read. Use it to wait until
+	// a controller can see a change.
+	Cache client.Reader
 }
 
 // StartSuite boots envtest with the client-go scheme plus the given builders and
@@ -112,6 +115,7 @@ func startSuite(w io.Writer, addToScheme []func(*runtime.Scheme) error,
 		Config:    cfg,
 		Client:    c,
 		APIReader: mgr.GetAPIReader(),
+		Cache:     mgr.GetCache(),
 		Scheme:    scheme,
 		Ctx:       ctx,
 	}

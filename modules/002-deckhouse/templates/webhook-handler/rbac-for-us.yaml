@@ -42,6 +42,11 @@ rules:
 - apiGroups: ["rbac.authorization.k8s.io"]
   resources: ["clusterroles", "clusterrolebindings"]
   verbs: ["get", "list", "watch"]
+- apiGroups: ["node-manager.deckhouse.io"]
+  # The node-manager fencing-mode webhook lists the states live, only when a NodeGroup changes its
+  # fencing mode, and reads the Node of each state by name (no watch).
+  resources: ["fencingfailednodestates"]
+  verbs: ["list"]
 - apiGroups: ["network.deckhouse.io"]
   resources: ["metalloadbalancerclasses"]
   verbs: ["get","list","watch"]

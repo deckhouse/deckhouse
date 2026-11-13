@@ -54,6 +54,50 @@
   {{- end }}
 {{- end }}
 
+{{- /* The hook normalizes the modes in internal.fencing.nodeGroups: Watchdog is Slow, */}}
+{{- /* and a mode this release does not know is Disabled. */}}
+{{- /* fencing_enabled is not empty when at least one node group has a mode other than Disabled. */}}
+{{- define "fencing_enabled" }}
+  {{- range $ng := values (dig "fencing" "nodeGroups" dict .Values.nodeManager.internal) }}
+    {{- if ne $ng.mode "Disabled" }}
+      not empty string
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+{{- /* fencing_agent_delete_dependencies gives the annotations of a binding of the agent. */}}
+{{- /* They tell nelm to delete the binding only after each DaemonSet of the agent is gone. */}}
+{{- /* When the module is disabled, a stopping armed agent must write AgentStopping to its */}}
+{{- /* Node. If its rights go first, the watchdog stays armed and the node stops. */}}
+{{- /* The annotation ID is the node group name: the key must not be longer than 63 characters. */}}
+{{- /* external=false: nelm ignores a DaemonSet that is not in the release. */}}
+{{- /* Without the DaemonSets there are no annotations. Usage: below metadata, indent 2. */}}
+{{- define "fencing_agent_delete_dependencies" }}
+  {{- if include "fencing_enabled" . }}
+  annotations:
+    {{- range $name := keys .Values.nodeManager.internal.fencing.nodeGroups | sortAlpha }}
+    werf.io/delete-dependency-{{ $name }}: state=absent,kind=DaemonSet,group=apps,version=v1,name=fencing-agent-{{ $name }},namespace=d8-cloud-instance-manager,external=false
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+{{- /* fencing_gossip_profile is the memberlist profile of the cluster. All fencing agents */}}
+{{- /* form one memberlist network and run it with the profile of the fastest mode, because */}}
+{{- /* memberlist detects failures correctly only when every member shares its timings. */}}
+{{- define "fencing_gossip_profile" }}
+  {{- $modes := list }}
+  {{- range $ng := values .Values.nodeManager.internal.fencing.nodeGroups }}
+    {{- $modes = append $modes $ng.mode }}
+  {{- end }}
+  {{- if has "Critical" $modes }}
+    {{- "critical" }}
+  {{- else if has "Normal" $modes }}
+    {{- "normal" }}
+  {{- else }}
+    {{- "slow" }}
+  {{- end }}
+{{- end }}
+
 {{- define "nvidia_gpu_enabled" }}
   {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
     {{- if ($ng).gpu }}

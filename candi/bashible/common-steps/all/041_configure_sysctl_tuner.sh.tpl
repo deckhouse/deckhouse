@@ -111,7 +111,7 @@ sysctl -w kernel.panic_on_oops=1
 
 # Default value for correct kubelet startup
 {{- $fencingTime := 10 }}
-{{- if eq (dig "fencing" "mode" "" .nodeGroup) "Watchdog" }}
+{{- if has (dig "fencing" "mode" "" .nodeGroup) (list "Normal" "Slow" "Critical" "Watchdog") }}
   # For fencing to work correctly, we need to block node restart in case of panic.
   {{- $fencingTime = 0 }}
 {{- end }}
@@ -140,6 +140,9 @@ if command -v auditctl &>/dev/null; then
 fi
 EOF
 chmod +x /opt/deckhouse/bin/sysctl-tuner
+
+# Apply kernel.panic now. The timer applies it only every 10 min, and the fencing agent does not arm until the value is correct.
+sysctl -w kernel.panic={{ $fencingTime }}
 
 # Generate sysctl tuner unit
 bb-sync-file /etc/systemd/system/sysctl-tuner.timer - sysctl-tuner-service-changed << EOF

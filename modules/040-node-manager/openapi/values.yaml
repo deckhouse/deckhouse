@@ -255,6 +255,72 @@ properties:
                   zoneb: mysubnetidb
               tags:
                 aaa: aaa
+      fencing:
+        type: object
+        default: {}
+        description: |
+          Internal values of fencing. Hooks write `nodeGroups` and `migrationFrom10`, one hook for each path. The other values stay at the defaults of this schema and change only with a release. The memberlist key is not a value: its hook keeps the key in a Secret.
+        properties:
+          nodeGroups:
+            type: object
+            default: {}
+            description: |
+              Fencing mode and the Engine flag of every NodeGroup by group name. The mode is normalized: `Watchdog` is `Slow`, and `off`, `Notify` and unknown values are `Disabled`.
+            additionalProperties:
+              type: object
+              required: [mode]
+              properties:
+                mode:
+                  type: string
+                  enum: ["Disabled", "Normal", "Slow", "Critical"]
+                engine:
+                  type: boolean
+                  description: |
+                    The NodeGroup runs on Deckhouse Engine (`spec.systemType: Immutable`).
+            x-examples:
+              - workers:
+                  mode: Slow
+          minFullPollInterval:
+            type: string
+            default: 10s
+            pattern: '^([5-9]|[1-5][0-9]|60)s$'
+            description: |
+              Lower bound of the period of the full poll in the freeze state. A whole number of seconds from 5s to 60s.
+          peerListRefreshInterval:
+            type: string
+            default: 5m
+            pattern: '^(0|[1-9][0-9]*(s|m|h))$'
+            description: |
+              Period of the safety LIST of neighbors. `0` turns the LIST off.
+          commonTimings:
+            type: object
+            default: {}
+            description: |
+              Timings of the fencing agent that are the same for all profiles. The agent reads them from its ConfigMap. The agent rejects values with `2 * roundTimeout + confirmTimeout` less than 600ms and keeps the previous values.
+            properties:
+              roundTimeout:
+                type: string
+                default: 150ms
+                pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
+                description: |
+                  Timeout of one round of the poll of the control plane state.
+              confirmTimeout:
+                type: string
+                default: 600ms
+                pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
+                description: |
+                  Timeout of the confirming round, which repeats the poll once for all silent nodes.
+              fastReadAfter:
+                type: string
+                default: 1.2s
+                pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
+                description: |
+                  Age of the last successful probe. When the age is larger, the agent reads `/upstreams` of kubernetes-api-proxy more often.
+          migrationFrom10:
+            type: boolean
+            default: false
+            description: |
+              The cluster still has traces of fencing 1.0: a Node with the fencing 1.0 label or an agent pod of version 1.
       clusterAutoscalerPriorities:
         type: object
         additionalProperties:
@@ -296,17 +362,6 @@ properties:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object
               additionalProperties: true
-            fencing:
-              # This is a copy from NodeGroup object. We trust that hook will not change it.
-              type: object
-              properties:
-                mode:
-                  type: string
-                watchdog:
-                  type: object
-                  properties:
-                    timeout:
-                      type: integer
         x-examples:
           - - name: worker
               nodeType: CloudEphemeral

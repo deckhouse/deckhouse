@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Node
+metadata:
+  labels:
+    node.deckhouse.io/group: ($nodeGroup)
+status:
+  (conditions[?type == 'Ready'] | [0].status): "True"

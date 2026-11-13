@@ -1,0 +1,15 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: assert-node-cp-source
+spec:
+  try:
+    - description: The node of the test group has the control plane source annotation proxy or self
+      assert:
+        resource:
+          apiVersion: v1
+          kind: Node
+          metadata:
+            labels:
+              node.deckhouse.io/group: ($nodeGroup)
+          (contains(['proxy', 'self'], metadata.annotations."node-manager.deckhouse.io/fencing-cp-source" || '')): true

@@ -191,6 +191,17 @@ func (r ResolvedNodeGroup) ToMap() map[string]interface{} {
 // A plain Unmarshal into interface{} widens them to float64; the two render the same today, but
 // float64 loses precision above 2^53 and the result is hashed into every node's checksum.
 func specPassthrough(spec v1.NodeGroupSpec) map[string]interface{} {
+	// Bashible steps and NodeConfig see only the normalized mode. Watchdog works as Slow,
+	// and the deprecated watchdog.timeout is never passed on. The copy keeps the NodeGroup unchanged.
+	if spec.Fencing != nil {
+		fencing := *spec.Fencing
+		if fencing.Mode == v1.FencingModeWatchdog {
+			fencing.Mode = v1.FencingModeSlow
+		}
+		fencing.Watchdog = nil
+		spec.Fencing = &fencing
+	}
+
 	raw, err := json.Marshal(spec)
 	if err != nil {
 		return map[string]interface{}{}

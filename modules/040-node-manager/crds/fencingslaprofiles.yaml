@@ -1,0 +1,266 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: fencingslaprofiles.node-manager.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: node-manager
+spec:
+  group: node-manager.deckhouse.io
+  scope: Cluster
+  names:
+    plural: fencingslaprofiles
+    singular: fencingslaprofile
+    kind: FencingSLAProfile
+    shortNames:
+      - fsp
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      additionalPrinterColumns:
+        - name: ControlPlaneLostAfter
+          type: string
+          jsonPath: .spec.controlPlaneLostAfter
+        - name: Probe
+          type: string
+          jsonPath: .spec.memberlist.probeInterval
+        - name: Watchdog
+          type: string
+          jsonPath: .spec.watchdog.timeout
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            SLA profile of fencing. A profile holds only timings. Correlation, the brake and the eviction limit are settings of the module, not of a profile.
+
+            The module ships three profiles: `critical`, `normal` and `slow`. Community Edition (CE) has no `critical` profile, because the `Critical` mode is available only in the commercial editions. Only Deckhouse can change the profiles. NodeGroup `spec.fencing.mode` selects the profile of a group. The mode name in lower case is the name of the object, because the name of a Kubernetes object cannot have capital letters.
+
+            All agents of the cluster run one memberlist network. They use the `memberlist` and `rejoin` sections of the profile of the fastest group that is not `Disabled`. An agent of a group that is not `Disabled` takes the other sections from the profile of its own group.
+
+            A profile is a cluster-scoped object. It has no state, so the resource has no `status`.
+          required:
+            - spec
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              description: |
+                Timings of the profile. Every value is a duration or a count. The CEL rules of this object check the inequalities of one profile; the agent checks the others.
+
+                The profile has no probe timings of kubernetes-api-proxy. The proxy uses the same fixed values on all nodes:
+
+                - probe interval: 1.2s at most (1s with a jitter of 20 %);
+                - probe timeout: 0.5s;
+                - no retry of a failed probe.
+
+                The largest age of a probe is 1.7s (1.2s + 0.5s).
+
+                The profile has no timeouts of the poll of the control plane state and no read period of kubernetes-api-proxy. These timings are the same for all profiles: they are internal values of the module.
+              required:
+                - memberlist
+                - rejoin
+                - controlPlaneLostAfter
+                - poll
+                - watchdog
+                - heartbeat
+                - eviction
+              x-kubernetes-validations:
+                - rule: "duration(self.watchdog.timeout).getMilliseconds() % 1000 == 0"
+                  message: "watchdog.timeout must be a whole number of seconds."
+                - rule: "4 * duration(self.watchdog.feedInterval).getMilliseconds() <= duration(self.watchdog.timeout).getMilliseconds()"
+                  message: "watchdog.feedInterval must be at most a quarter of watchdog.timeout."
+                - rule: "duration(self.watchdog.margin).getMilliseconds() >= 300 && 20 * duration(self.watchdog.margin).getMilliseconds() >= duration(self.watchdog.timeout).getMilliseconds()"
+                  message: "watchdog.margin must be at least 300ms and at least 5 % of watchdog.timeout."
+                - rule: "self.memberlist.suspicionMult >= 3"
+                  message: "memberlist.suspicionMult must be at least 3."
+                - rule: "2 * duration(self.memberlist.probeTimeout).getMilliseconds() <= duration(self.memberlist.probeInterval).getMilliseconds()"
+                  message: "memberlist.probeTimeout must be at most half of memberlist.probeInterval."
+                - rule: "duration(self.heartbeat.interval).getMilliseconds() + duration(self.heartbeat.apiTimeout).getMilliseconds() <= duration(self.controlPlaneLostAfter).getMilliseconds()"
+                  message: "heartbeat.interval + heartbeat.apiTimeout must be at most controlPlaneLostAfter."
+                - rule: "3 * duration(self.heartbeat.interval).getMilliseconds() <= duration(self.controlPlaneLostAfter).getMilliseconds()"
+                  message: "heartbeat.interval must be at most a third of controlPlaneLostAfter."
+              properties:
+                controlPlaneLostAfter:
+                  type: string
+                  maxLength: 32
+                  pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
+                  description: |
+                    Maximum age of the last successful control plane probe. The node sees the control plane while the last `Ready` answer of any apiserver upstream is not older than this value.
+                memberlist:
+                  type: object
+                  description: |
+                    Parameters of memberlist and Lifeguard. All agents of the cluster use this section of the fastest profile among the node groups that are not `Disabled`.
+                  required:
+                    - probeInterval
+                    - probeTimeout
+                    - suspicionMult
+                    - suspicionMaxTimeoutMult
+                    - indirectChecks
+                    - awarenessMaxMultiplier
+                    - gossipInterval
+                    - gossipNodes
+                    - retransmitMult
+                    - deadNodeReclaimTime
+                    - gossipToTheDeadTime
+                  properties:
+                      probeInterval:
+                        type: string
+                        maxLength: 32
+                        pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
+                        description: |
+                          Interval between probes of one peer. A shorter interval gives faster detection and more probe traffic. The value must be at least twice `probeTimeout`.
+                      probeTimeout:
+                        type: string
+                        maxLength: 32
+                        pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
+                        description: |
+                          Time to wait for the answer to a probe. The value must be at most half of `probeInterval`.
+                      suspicionMult:
+                        type: integer
+                        format: int32
+                        minimum: 1
+                        description: |
+                          Multiplier of the suspicion window before memberlist marks a peer as dead. The value must be at least 3.
+                      suspicionMaxTimeoutMult:
+                        type: integer
+                        format: int32
+                        minimum: 1
+                        description: |
+                          Upper bound of the suspicion timer when no confirmations arrive.
+                      indirectChecks:
+                        type: integer
+                        format: int32
+                        minimum: 1
+                        description: |
+                          Number of indirect checks when the direct probe of a peer fails.
+                      awarenessMaxMultiplier:
+                        type: integer
+                        format: int32
+                        minimum: 1
+                        description: |
+                          Maximum slowdown of the probe interval of a locally degraded agent (Lifeguard awareness).
+                      gossipInterval:
+                        type: string
+                        maxLength: 32
+                        pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
+                        description: |
+                          Interval between gossip messages.
+                      gossipNodes:
+                        type: integer
+                        format: int32
+                        minimum: 1
+                        description: |
+                          Number of peers that receive gossip in each gossip interval.
+                      retransmitMult:
+                        type: integer
+                        format: int32
+                        minimum: 1
+                        description: |
+                          Retransmit multiplier of gossip broadcasts: `retransmitMult * ceil(log10(nodeCount + 1))`, where `nodeCount` is the number of nodes.
+                      deadNodeReclaimTime:
+                        type: string
+                        maxLength: 32
+                        pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
+                        description: |
+                          Time after which a new node can take the name or the address of a dead node.
+                      gossipToTheDeadTime:
+                        type: string
+                        maxLength: 32
+                        pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
+                        description: |
+                          Time during which a dead node still receives gossip. The node can refute the dead state after it recovers.
+                rejoin:
+                  type: object
+                  description: |
+                    Parameters of the join attempts of the agent. All agents of the cluster use this section of the fastest profile among the node groups that are not `Disabled`.
+                  required:
+                    - interval
+                  properties:
+                      interval:
+                        type: string
+                        maxLength: 32
+                        pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
+                        description: |
+                          Interval between the join attempts of the agent. The agent repeats the attempt at this fixed interval while some nodes are missing from the memberlist network.
+                poll:
+                  type: object
+                  description: |
+                    Parameters of the poll of the control plane state between agents.
+                  required:
+                    - witnessFresherBy
+                  properties:
+                      witnessFresherBy:
+                        type: string
+                        maxLength: 32
+                        pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
+                        description: |
+                          Minimum gap between the own last successful probe and the probe of the answering node. An answer with a smaller gap is not a witness.
+                watchdog:
+                  type: object
+                  description: |
+                    Parameters of the watchdog of the node.
+                  required:
+                    - timeout
+                    - feedInterval
+                    - margin
+                  properties:
+                      timeout:
+                        type: string
+                        maxLength: 32
+                        pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
+                        description: |
+                          Timeout of the watchdog. The node panics when the agent does not feed the watchdog for this time. The value is a whole number of seconds, because the watchdog device takes whole seconds.
+                      feedInterval:
+                        type: string
+                        maxLength: 32
+                        pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
+                        description: |
+                          Interval between two feeds of the watchdog. The value must be at most a quarter of `timeout`.
+                      margin:
+                        type: string
+                        maxLength: 32
+                        pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
+                        description: |
+                          Reserve that is added to `timeout`. The value must be at least 300ms and at least 5 % of `timeout`.
+                heartbeat:
+                  type: object
+                  description: |
+                    Parameters of the heartbeat that a failed node writes through the Kubernetes API.
+                  required:
+                    - interval
+                    - apiTimeout
+                  properties:
+                      interval:
+                        type: string
+                        maxLength: 32
+                        pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
+                        description: |
+                          Interval between the heartbeat writes of a failed node into its own `FencingFailedNodeState`.
+                      apiTimeout:
+                        type: string
+                        maxLength: 32
+                        pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
+                        description: |
+                          Timeout of one request of the agent to the Kubernetes API. The memberlist TCP timeout uses it too.
+                eviction:
+                  type: object
+                  description: |
+                    Parameters of the creation of `FencingFailedNodeState` objects.
+
+                    The profile has no delay before the taint of a silent node, a node without signs of life. The fencing controller calculates it from the other values of the profile: `controlPlaneLostAfter` + 0.2s + `watchdog.timeout` + `watchdog.margin` + 0.9s. The controller counts the delay from the last sign of life of the node.
+                  required:
+                    - writerWaveInterval
+                  properties:
+                      writerWaveInterval:
+                        type: string
+                        maxLength: 32
+                        pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
+                        description: |
+                          Interval between the waves of the agents that create `FencingFailedNodeState` objects.

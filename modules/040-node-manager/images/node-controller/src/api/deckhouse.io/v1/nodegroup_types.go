@@ -137,7 +137,7 @@ type NodeGroupSpec struct {
 	// +optional
 	GPU *GPUSpec `json:"gpu,omitempty"`
 
-	// Fencing specifies fencing-controller settings
+	// Fencing specifies fencing settings
 	// +optional
 	Fencing *FencingSpec `json:"fencing,omitempty"`
 
@@ -455,19 +455,35 @@ type LimitedSwapSpec struct {
 	Size string `json:"size,omitempty"`
 }
 
-// FencingSpec enables the fencing-controller for a node group
-type FencingSpec struct {
-	// Mode specifies the operating mode of the fencing-controller
-	Mode string `json:"mode,omitempty"`
+// FencingMode selects the fencing SLA profile of a node group. Disabled turns
+// fencing off; every other mode names the built-in FencingSLAProfile of the group.
+// Watchdog is deprecated and works as Slow.
+// +kubebuilder:validation:Enum=Disabled;Normal;Slow;Critical;Watchdog
+type FencingMode string
 
-	// Watchdog specifies watchdog settings
+const (
+	FencingModeDisabled FencingMode = "Disabled"
+	FencingModeNormal   FencingMode = "Normal"
+	FencingModeSlow     FencingMode = "Slow"
+	FencingModeCritical FencingMode = "Critical"
+	FencingModeWatchdog FencingMode = "Watchdog"
+)
+
+// FencingSpec configures fencing for a node group
+type FencingSpec struct {
+	// Mode specifies the fencing mode of the node group
+	// +optional
+	Mode FencingMode `json:"mode,omitempty"`
+
+	// Watchdog is deprecated. Deckhouse ignores it; the timeout comes from the profile
 	// +optional
 	Watchdog *FencingWatchdogSpec `json:"watchdog,omitempty"`
 }
 
-// FencingWatchdogSpec defines watchdog settings for fencing
+// FencingWatchdogSpec holds the fencing 1.0 watchdog settings. Deckhouse ignores them
 type FencingWatchdogSpec struct {
-	// Timeout specifies the soft_margin the softdog kernel module is loaded with
+	// Timeout is deprecated and ignored
+	// +kubebuilder:validation:Pattern=`^[0-9]+[smh]{1}$`
 	// +optional
 	Timeout string `json:"timeout,omitempty"`
 }

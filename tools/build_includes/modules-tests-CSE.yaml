@@ -541,6 +541,11 @@
   stageDependencies:
     setup:
         - '**/*'
+- add: /ee/modules/040-node-manager/openapi/doc-ru-config-values.yaml
+  to: /deckhouse/modules/040-node-manager/openapi/doc-ru-config-values.yaml
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/modules/110-istio/templates/alliance
   to: /deckhouse/modules/110-istio/templates/alliance
   excludePaths:
@@ -895,6 +900,11 @@
         - '**/*'
 - add: /ee/cse/modules/040-node-manager/openapi/values.yaml
   to: /deckhouse/modules/040-node-manager/openapi/values.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/openapi/config-values.yaml
+  to: /deckhouse/modules/040-node-manager/openapi/config-values.yaml
   stageDependencies:
     install:
         - '**/*'

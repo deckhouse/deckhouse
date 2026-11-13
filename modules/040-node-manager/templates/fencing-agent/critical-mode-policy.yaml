@@ -1,0 +1,38 @@
+{{- /* The Critical fencing mode is available only in the commercial editions. In CE, the hook */}}
+{{- /* node_group_modes turns Critical into Normal, and the critical profile is not rendered. */}}
+{{- if eq .Values.global.deckhouseEdition "CE" }}
+{{- $policyName := "fencing-critical-mode.deckhouse.io" }}
+---
+# In CE, a user cannot set the Critical fencing mode on a NodeGroup. A NodeGroup
+# can have Critical from a commercial edition before switching the edition to CE.
+# Such a group works as Normal, and the policy lets the user change the group while
+# the mode stays Critical. A NodeGroup without spec.fencing has no mode.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-agent")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups:   ["deckhouse.io"]
+      apiVersions: ["*"]
+      operations:  ["CREATE", "UPDATE"]
+      resources:   ["nodegroups"]
+  validations:
+  - expression: |
+      object.?spec.?fencing.?mode.orValue('') != 'Critical' ||
+      (request.operation == 'UPDATE' && oldObject.?spec.?fencing.?mode.orValue('') == 'Critical')
+    reason: Forbidden
+    message: "The Critical fencing mode is available only in the commercial editions of Deckhouse. Use the Normal or Slow mode."
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-agent")) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny]
+{{- end }}

@@ -39,3 +39,28 @@
         which is deprecated and will be removed in a future DKP release.
 
         To use the supported GPU implementation, enable the [`gpu`](/modules/gpu/) module.
+- name: d8.node-group-fencing-deprecated-settings
+  rules:
+  - alert: D8NodeGroupFencingDeprecatedSettings
+    expr: |
+      max by (name) (d8_node_group_fencing_deprecated_settings) > 0
+    labels:
+      tier: cluster
+      severity_level: "9"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_create_group_if_not_exists__cluster_has_node_groups_deprecation_alerts: "NodeGroupsDeprecationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__cluster_has_node_groups_deprecation_alerts: "NodeGroupsDeprecationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: NodeGroup {{ $labels.name }} uses a deprecated fencing setting.
+      description: |
+        NodeGroup `{{ $labels.name }}` has a deprecated fencing setting in `spec.fencing`:
+
+        - `mode: Watchdog` works as `mode: Slow`. To remove the alert, set `mode: Slow`, or choose another mode.
+        - `watchdog.timeout` has no effect. The timeout comes from the fencing profile of the mode. To remove the alert, delete `watchdog.timeout`.
+
+        To read the settings of the NodeGroup:
+
+        ```bash
+        d8 k get nodegroup {{ $labels.name }} -o jsonpath='{.spec.fencing}'
+        ```

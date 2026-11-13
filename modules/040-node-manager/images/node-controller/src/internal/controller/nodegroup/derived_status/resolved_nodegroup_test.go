@@ -171,7 +171,7 @@ func TestResolvedNodeGroup_FencingPassthrough(t *testing.T) {
 					"matchLabels": map[string]interface{}{"node-group": "worker"},
 				},
 			},
-			"fencing": map[string]interface{}{"mode": "Watchdog"},
+			"fencing": map[string]interface{}{"mode": "Slow"},
 		}),
 	}, Result{
 		Engine:            "None",
@@ -180,13 +180,40 @@ func TestResolvedNodeGroup_FencingPassthrough(t *testing.T) {
 		SerializedLabels:  "node.deckhouse.io/group=worker",
 	})
 
-	assert.Equal(t, map[string]interface{}{"mode": "Watchdog"}, nodeGroupValues["fencing"],
+	assert.Equal(t, map[string]interface{}{"mode": "Slow"}, nodeGroupValues["fencing"],
 		"fencing must survive verbatim (node-controller v1 has no Fencing field)")
 	assert.Equal(t, map[string]interface{}{
 		"labelSelector": map[string]interface{}{
 			"matchLabels": map[string]interface{}{"node-group": "worker"},
 		},
 	}, nodeGroupValues["staticInstances"], "staticInstances passthrough preserved")
+}
+
+func TestResolvedNodeGroup_FencingWatchdogIsSlow(t *testing.T) {
+	spec := specFrom(map[string]interface{}{
+		"nodeType": "Static",
+		"fencing":  map[string]interface{}{"mode": "Watchdog", "watchdog": map[string]interface{}{"timeout": "60s"}},
+	})
+
+	nodeGroupValues := resolvedMap(ResolveInput{Name: "worker", NodeType: v1.NodeTypeStatic, Spec: spec}, Result{})
+
+	assert.Equal(t, map[string]interface{}{"mode": "Slow"}, nodeGroupValues["fencing"])
+	assert.Equal(t, v1.FencingModeWatchdog, spec.Fencing.Mode, "the NodeGroup spec must stay as the user wrote it")
+	assert.NotNil(t, spec.Fencing.Watchdog, "the NodeGroup spec must keep watchdog.timeout")
+}
+
+func TestResolvedNodeGroup_FencingWatchdogTimeoutIsDropped(t *testing.T) {
+	spec := specFrom(map[string]interface{}{
+		"nodeType": "Static",
+		"fencing":  map[string]interface{}{"mode": "Slow", "watchdog": map[string]interface{}{"timeout": "60s"}},
+	})
+
+	nodeGroupValues := resolvedMap(ResolveInput{Name: "worker", NodeType: v1.NodeTypeStatic, Spec: spec}, Result{})
+
+	assert.Equal(t, map[string]interface{}{"mode": "Slow"}, nodeGroupValues["fencing"])
+	if assert.NotNil(t, spec.Fencing.Watchdog, "the NodeGroup spec must keep watchdog.timeout") {
+		assert.Equal(t, "60s", spec.Fencing.Watchdog.Timeout)
+	}
 }
 
 func TestResolvedNodeGroup_SerializedTaints(t *testing.T) {

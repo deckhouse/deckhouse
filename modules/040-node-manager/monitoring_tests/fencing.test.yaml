@@ -1,0 +1,235 @@
+# Tests of monitoring/prometheus-rules/fencing.yaml. A test reads the series ALERTS, because promtool
+# compares the annotations of an alert with the expected ones and the texts are not the subject here.
+rule_files:
+  - fencing.yaml
+evaluation_interval: 1m
+
+tests:
+  - name: D8FencingAgentRestarted rises for 15 minutes after a restart of the agent only
+    interval: 1m
+    input_series:
+      # The agent of w1 crashes at minute 3.
+      - series: 'kube_pod_container_status_restarts_total{namespace="d8-cloud-instance-manager", pod="fencing-agent-worker-aaaaa", container="fencing-agent"}'
+        values: '0 0 0 1+0x40'
+      - series: 'kube_pod_container_status_last_terminated_reason{namespace="d8-cloud-instance-manager", pod="fencing-agent-worker-aaaaa", container="fencing-agent", reason="Error"}'
+        values: '_x3 1+0x40'
+      - series: 'kube_pod_info{namespace="d8-cloud-instance-manager", pod="fencing-agent-worker-aaaaa", node="w1"}'
+        values: '1+0x40'
+      # The agent of w2 never restarts.
+      - series: 'kube_pod_container_status_restarts_total{namespace="d8-cloud-instance-manager", pod="fencing-agent-worker-bbbbb", container="fencing-agent"}'
+        values: '0+0x40'
+      - series: 'kube_pod_info{namespace="d8-cloud-instance-manager", pod="fencing-agent-worker-bbbbb", node="w2"}'
+        values: '1+0x40'
+      # The node w3 reboots at minute 3: the container restarts with the reason Unknown.
+      - series: 'kube_pod_container_status_restarts_total{namespace="d8-cloud-instance-manager", pod="fencing-agent-worker-ddddd", container="fencing-agent"}'
+        values: '0 0 0 1+0x40'
+      - series: 'kube_pod_container_status_last_terminated_reason{namespace="d8-cloud-instance-manager", pod="fencing-agent-worker-ddddd", container="fencing-agent", reason="Unknown"}'
+        values: '_x3 1+0x40'
+      - series: 'kube_pod_info{namespace="d8-cloud-instance-manager", pod="fencing-agent-worker-ddddd", node="w3"}'
+        values: '1+0x40'
+      # Another pod of the namespace restarts: it is not an agent.
+      - series: 'kube_pod_container_status_restarts_total{namespace="d8-cloud-instance-manager", pod="fencing-controller-ccccc", container="fencing-controller"}'
+        values: '0 0 0 1+0x40'
+      - series: 'kube_pod_info{namespace="d8-cloud-instance-manager", pod="fencing-controller-ccccc", node="m1"}'
+        values: '1+0x40'
+    promql_expr_test:
+      - eval_time: 5m
+        expr: ALERTS{alertname="D8FencingAgentRestarted", alertstate="firing"}
+        exp_samples:
+          - labels: 'ALERTS{alertname="D8FencingAgentRestarted", alertstate="firing", node="w1", severity_level="7", tier="cluster"}'
+            value: 1
+      - eval_time: 30m
+        expr: ALERTS{alertname="D8FencingAgentRestarted", alertstate="firing"}
+        exp_samples: []
+
+  - name: D8FencingAgentDown rises for a Ready node without metrics of the agent
+    interval: 1m
+    input_series:
+      - series: 'kube_node_status_condition{node="w1", condition="Ready", status="true"}'
+        values: '1+0x30'
+      # The agent of w2 works.
+      - series: 'kube_node_status_condition{node="w2", condition="Ready", status="true"}'
+        values: '1+0x30'
+      - series: 'd8_fencing_agent_condition{node="w2", reason="Armed"}'
+        values: '1+0x30'
+      # w3 is not Ready: its agent can be silent, and Kubernetes already reports the node.
+      - series: 'kube_node_status_condition{node="w3", condition="Ready", status="true"}'
+        values: '0+0x30'
+      # The agent of w4 is silent for 3 minutes only, less than the delay of the alert.
+      - series: 'kube_node_status_condition{node="w4", condition="Ready", status="true"}'
+        values: '1+0x30'
+      - series: 'd8_fencing_agent_condition{node="w4", reason="Armed"}'
+        values: '_x3 1+0x30'
+      # w5 is an unmanaged node: it has no node group and no agent.
+      - series: 'kube_node_status_condition{node="w5", condition="Ready", status="true"}'
+        values: '1+0x30'
+      - series: 'd8_unmanaged_nodes_on_cluster{node="w5"}'
+        values: '1+0x30'
+    promql_expr_test:
+      - eval_time: 4m
+        expr: ALERTS{alertname="D8FencingAgentDown", alertstate="firing"}
+        exp_samples: []
+      - eval_time: 6m
+        expr: ALERTS{alertname="D8FencingAgentDown", alertstate="firing"}
+        exp_samples:
+          - labels: 'ALERTS{alertname="D8FencingAgentDown", alertstate="firing", node="w1", severity_level="6", tier="cluster"}'
+            value: 1
+
+  - name: D8FencingWatchdogTimeoutMismatch rises after 10 minutes
+    interval: 1m
+    input_series:
+      - series: 'd8_fencing_agent_condition{node="w3", reason="WatchdogTimeoutMismatch"}'
+        values: '1+0x30'
+      # Another reason does not raise the alert.
+      - series: 'd8_fencing_agent_condition{node="w4", reason="Armed"}'
+        values: '1+0x30'
+    promql_expr_test:
+      - eval_time: 9m
+        expr: ALERTS{alertname="D8FencingWatchdogTimeoutMismatch", alertstate="firing"}
+        exp_samples: []
+      - eval_time: 11m
+        expr: ALERTS{alertname="D8FencingWatchdogTimeoutMismatch", alertstate="firing"}
+        exp_samples:
+          - labels: 'ALERTS{alertname="D8FencingWatchdogTimeoutMismatch", alertstate="firing", node="w3", severity_level="6", tier="cluster"}'
+            value: 1
+
+  - name: D8FencingKernelPanicMismatch rises after 30 minutes
+    interval: 1m
+    input_series:
+      - series: 'd8_fencing_agent_condition{node="w2", reason="KernelPanicMismatch"}'
+        values: '1+0x40'
+      # The value gets right after 10 minutes, as it does after a normal start of bashible.
+      - series: 'd8_fencing_agent_condition{node="w5", reason="KernelPanicMismatch"}'
+        values: '1x10 _x30'
+    promql_expr_test:
+      - eval_time: 10m
+        expr: ALERTS{alertname="D8FencingKernelPanicMismatch", alertstate="firing"}
+        exp_samples: []
+      - eval_time: 31m
+        expr: ALERTS{alertname="D8FencingKernelPanicMismatch", alertstate="firing"}
+        exp_samples:
+          - labels: 'ALERTS{alertname="D8FencingKernelPanicMismatch", alertstate="firing", node="w2", severity_level="6", tier="cluster"}'
+            value: 1
+
+  - name: D8FencingWatchdogDeviceMissing rises after 30 minutes
+    interval: 1m
+    input_series:
+      - series: 'd8_fencing_agent_condition{node="w2", reason="WatchdogDeviceMissing"}'
+        values: '1+0x40'
+      # The DaemonSet replaces the pod after 10 minutes, as it does in a normal rollout.
+      - series: 'd8_fencing_agent_condition{node="w5", reason="WatchdogDeviceMissing"}'
+        values: '1x10 _x30'
+      # Another reason does not raise the alert.
+      - series: 'd8_fencing_agent_condition{node="w4", reason="Armed"}'
+        values: '1+0x40'
+    promql_expr_test:
+      - eval_time: 10m
+        expr: ALERTS{alertname="D8FencingWatchdogDeviceMissing", alertstate="firing"}
+        exp_samples: []
+      - eval_time: 31m
+        expr: ALERTS{alertname="D8FencingWatchdogDeviceMissing", alertstate="firing"}
+        exp_samples:
+          - labels: 'ALERTS{alertname="D8FencingWatchdogDeviceMissing", alertstate="firing", node="w2", severity_level="6", tier="cluster"}'
+            value: 1
+
+  - name: D8FencingNodeIPMismatch rises after 10 minutes
+    interval: 1m
+    input_series:
+      - series: 'd8_fencing_agent_condition{node="w3", reason="NodeIPMismatch"}'
+        values: '1+0x30'
+    promql_expr_test:
+      - eval_time: 9m
+        expr: ALERTS{alertname="D8FencingNodeIPMismatch", alertstate="firing"}
+        exp_samples: []
+      - eval_time: 11m
+        expr: ALERTS{alertname="D8FencingNodeIPMismatch", alertstate="firing"}
+        exp_samples:
+          - labels: 'ALERTS{alertname="D8FencingNodeIPMismatch", alertstate="firing", node="w3", severity_level="6", tier="cluster"}'
+            value: 1
+
+  - name: D8FencingAgentInvalidKey rises after 10 minutes
+    interval: 1m
+    input_series:
+      - series: 'd8_fencing_agent_condition{node="w1", reason="InvalidKey"}'
+        values: '1+0x30'
+      # The key of w2 is correct again after 5 minutes.
+      - series: 'd8_fencing_agent_condition{node="w2", reason="InvalidKey"}'
+        values: '1x5'
+    promql_expr_test:
+      - eval_time: 9m
+        expr: ALERTS{alertname="D8FencingAgentInvalidKey", alertstate="firing"}
+        exp_samples: []
+      - eval_time: 11m
+        expr: ALERTS{alertname="D8FencingAgentInvalidKey", alertstate="firing"}
+        exp_samples:
+          - labels: 'ALERTS{alertname="D8FencingAgentInvalidKey", alertstate="firing", node="w1", severity_level="6", tier="cluster"}'
+            value: 1
+
+  - name: D8FencingKeyRegenerated goes out 24 hours after the key was generated
+    interval: 1h
+    input_series:
+      # The hook generated the key at hour 1 and publishes the time on every run.
+      - series: 'd8_fencing_key_regenerated_timestamp_seconds'
+        values: '3600+0x40'
+    promql_expr_test:
+      - eval_time: 2h
+        expr: ALERTS{alertname="D8FencingKeyRegenerated", alertstate="firing"}
+        exp_samples:
+          - labels: 'ALERTS{alertname="D8FencingKeyRegenerated", alertstate="firing", severity_level="9", tier="cluster"}'
+            value: 1
+      - eval_time: 24h
+        expr: ALERTS{alertname="D8FencingKeyRegenerated", alertstate="firing"}
+        exp_samples:
+          - labels: 'ALERTS{alertname="D8FencingKeyRegenerated", alertstate="firing", severity_level="9", tier="cluster"}'
+            value: 1
+      - eval_time: 26h
+        expr: ALERTS{alertname="D8FencingKeyRegenerated", alertstate="firing"}
+        exp_samples: []
+
+  - name: D8FencingKeyRegenerated does not rise without the metric
+    interval: 1h
+    input_series:
+      - series: 'up{job="deckhouse"}'
+        values: '1+0x10'
+    promql_expr_test:
+      - eval_time: 2h
+        expr: ALERTS{alertname="D8FencingKeyRegenerated"}
+        exp_samples: []
+
+  - name: D8FencingSystemNetworkNotFound rises after 5 minutes and goes out 10 minutes after the last series
+    interval: 1m
+    input_series:
+      # The hook publishes the series for 10 minutes, then the network comes back and the series disappears.
+      - series: 'd8_node_manager_system_network_not_found{network="sysnet-a"}'
+        values: '1x9'
+    promql_expr_test:
+      - eval_time: 4m
+        expr: ALERTS{alertname="D8FencingSystemNetworkNotFound", alertstate="firing"}
+        exp_samples: []
+      - eval_time: 6m
+        expr: ALERTS{alertname="D8FencingSystemNetworkNotFound", alertstate="firing"}
+        exp_samples:
+          - labels: 'ALERTS{alertname="D8FencingSystemNetworkNotFound", alertstate="firing", network="sysnet-a", severity_level="4", tier="cluster"}'
+            value: 1
+      # The last value 1 is at minute 9: the window of 10 minutes still holds it.
+      - eval_time: 18m
+        expr: ALERTS{alertname="D8FencingSystemNetworkNotFound", alertstate="firing"}
+        exp_samples:
+          - labels: 'ALERTS{alertname="D8FencingSystemNetworkNotFound", alertstate="firing", network="sysnet-a", severity_level="4", tier="cluster"}'
+            value: 1
+      - eval_time: 20m
+        expr: ALERTS{alertname="D8FencingSystemNetworkNotFound", alertstate="firing"}
+        exp_samples: []
+
+  - name: D8FencingSystemNetworkNotFound survives a gap of the series
+    interval: 1m
+    input_series:
+      # The pod of Deckhouse restarts at minute 8 and the hook publishes the series again at minute 12.
+      - series: 'd8_node_manager_system_network_not_found{network="sysnet-a"}'
+        values: '1x7 _x4 1x20'
+    promql_expr_test:
+      - eval_time: 10m
+        expr: ALERTS{alertname="D8FencingSystemNetworkNotFound", alertstate="firing"}
+        exp_samples:
+          - labels: 'ALERTS{alertname="D8FencingSystemNetworkNotFound", alertstate="firing", network="sysnet-a", severity_level="4", tier="cluster"}'
+            value: 1

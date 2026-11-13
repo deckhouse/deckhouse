@@ -1,0 +1,3 @@
+dirs:
+  - /var/run/fencing-agent
+  - /etc/fencing/memberlist-key

@@ -23,6 +23,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 
 	_ "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/core"
+	_ "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/fencing"
 	_ "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/scheduling"
 )
 
@@ -35,6 +36,8 @@ func TestValuesWritersShareModuleQueue(t *testing.T) {
 	writers := map[string]bool{
 		"discover_standby_ng.go": false,
 		"get_crds.go":            false,
+		"migration_from_1_0.go":  false,
+		"node_group_modes.go":    false,
 		"set_ng_priorities.go":   false,
 	}
 	for _, hook := range sdk.Registry().Hooks() {

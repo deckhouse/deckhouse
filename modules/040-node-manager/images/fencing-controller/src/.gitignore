@@ -1,0 +1,5 @@
+.env
+bin/
+coverage.*
+.vscode/
+.idea/

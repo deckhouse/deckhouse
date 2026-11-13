@@ -5,7 +5,8 @@ Go hooks of the module, grouped by the team that owns the feature a hook serves.
 | Folder | Domain | Owners |
 |---|---|---|
 | `core` | NodeGroup lifecycle, bashible, CAPI and MCM plumbing, certificates of the module's own components | node-manager team, the module default in CODEOWNERS |
-| `scheduling` | cluster-autoscaler, standby nodes, NodeGroup priorities, fencing | owners of `templates/cluster-autoscaler` and `templates/fencing-agent` |
+| `scheduling` | cluster-autoscaler, standby nodes, NodeGroup priorities | owners of `templates/cluster-autoscaler` |
+| `fencing` | fencing: node group modes, agent configuration, memberlist key, migration from fencing 1.0 | owners of `templates/fencing-agent` |
 | `cloud` | cloud providers | owners of `030-cloud-provider-*` |
 | `caps` | CAPS, the Cluster API provider for static nodes | owners of `templates/caps-controller-manager` |
 | `kubernetes` | containerd and kubelet | owners of the containerd and kubelet images |

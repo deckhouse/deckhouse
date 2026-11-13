@@ -1,128 +1,215 @@
-{{- define "fencing_agent_resources" }}
-cpu: 10m
-memory: 50Mi
-{{- end }}
-
 {{ $ctx := . }}
-{{- range $ng := .Values.nodeManager.internal.nodeGroups }}
-  {{ $mode := dig "fencing" "mode" "" $ng }}
-  {{- if or (eq $mode "Watchdog") (eq $mode "Notify") }}
+{{- /* The agent uses the host network. On this port it serves the probes and the metrics on */}}
+{{- /* 127.0.0.1, and kube-rbac-proxy serves only the metrics on the node IP. */}}
+{{ $port := 4250 }}
+{{- /* Once any node group is fenced, the agent runs on every node of the cluster: the */}}
+{{- /* nodes of a Disabled group take part in failure detection with no watchdog armed. */}}
+{{- if include "fencing_enabled" . }}
+{{- range $name, $ng := .Values.nodeManager.internal.fencing.nodeGroups }}
+  {{- $armed := ne $ng.mode "Disabled" }}
       {{- if ($.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: "fencing-agent-{{ $ng.name }}"
+  name: "fencing-agent-{{ $name }}"
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list $ctx (dict "app" "fencing-agent")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
-    kind: Daemonset
-    name: "fencing-agent-{{ $ng.name }}"
+    kind: DaemonSet
+    name: "fencing-agent-{{ $name }}"
   updatePolicy:
     updateMode: "Initial"
   resourcePolicy:
     containerPolicies:
       - containerName: "fencing-agent"
         minAllowed:
-        {{- include "fencing_agent_resources" $ctx | nindent 10 }}
+          cpu: 100m
+          memory: 50Mi
         maxAllowed:
-          cpu: 20m
-          memory: 70Mi
+          cpu: 400m
+          memory: 128Mi
+      {{- include "helm_lib_vpa_kube_rbac_proxy_resources" $ctx | nindent 6 }}
       {{- end }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: "fencing-agent-{{ $ng.name }}"
+  name: "fencing-agent-{{ $name }}"
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list $ctx (dict "app" "fencing-agent")) | nindent 2 }}
+  annotations:
+    # nelm waits until the pods are gone. Only then it deletes the bindings of the agent.
+    werf.io/delete-propagation: Foreground
 spec:
+  # Agents of fencing 1.0 and 2.0 cannot hear each other, so the upgrade from 1.0
+  # replaces all agents at once. Otherwise a group updates in steps of 10 percent.
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: {{ ternary "100%" "10%" $.Values.nodeManager.internal.fencing.migrationFrom10 }}
   selector:
     matchLabels:
       app: fencing-agent
-      node-group-name: {{ $ng.name | quote }}
+      node-group-name: {{ $name | quote }}
   template:
     metadata:
       labels:
         app: fencing-agent
-        node-group-name: {{ $ng.name | quote }}
-        security.deckhouse.io/security-policy-exception: "fencing-agent-{{ $ng.name }}"
+        node-manager.deckhouse.io/fencing-agent-version: "2"
+        node-group-name: {{ $name | quote }}
+        security.deckhouse.io/security-policy-exception: "fencing-agent-{{ $name }}"
+      {{- if $armed }}
       annotations:
         container.apparmor.security.beta.kubernetes.io/fencing-agent: "unconfined"
+      {{- end }}
     spec:
-      {{- include "helm_lib_priority_class" (tuple $ctx "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple $ctx "system-node-critical") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple $ctx "any-node") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       nodeSelector:
-        node.deckhouse.io/group: {{ $ng.name | quote }}
+        node.deckhouse.io/group: {{ $name | quote }}
       automountServiceAccountToken: true
       serviceAccountName: fencing-agent
       containers:
         - name: fencing-agent
           securityContext:
-            privileged: true
             readOnlyRootFilesystem: true
+            {{- if $armed }}
+            privileged: true
             seLinuxOptions:
               level: 's0'
               type: 'spc_t'
             capabilities:
               add:
-                - SYS_ADMIN
+                - NET_RAW
               drop:
                 - ALL
+            {{- else }}
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            {{- end }}
           imagePullPolicy: IfNotPresent
           env:
             - name: LOG_LEVEL
               value: info
-            - name: FENCING_MODE
-              value: {{ (($ng.fencing).mode) | default "Watchdog" }}
             - name: WATCHDOG_DEVICE
               value: /dev/watchdog
-            - name: WATCHDOG_TIMEOUT
-              value: {{ ((($ng.fencing).watchdog).timeout) | default 60 | toString | quote }}
+            - name: API_SOCKET_PATH
+              value: /var/run/fencing-agent/fencing-agent.sock
+            - name: HEALTH_PROBE_BIND_ADDRESS
+              value: "127.0.0.1:{{ $port }}"
             - name: NODE_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-            - name: NODE_GROUP
-              value: {{ $ng.name | quote }}
-
-          ports:
-            - name: memberlist-tcp
-              containerPort: 8500
-              hostPort: 8500
-              protocol: TCP
-            - name: memberlist-udp
-              containerPort: 8500
-              hostPort: 8500
-              protocol: UDP
+            {{- /* The local kubernetes-api-proxy works before the pod network after a node boot. */}}
+            {{- /* A Deckhouse Engine node has no such proxy and uses the ClusterIP. */}}
+            {{- if not $ng.engine }}
+            - name: KUBERNETES_SERVICE_HOST
+              value: "127.0.0.1"
+            - name: KUBERNETES_SERVICE_PORT
+              value: "6445"
+            {{- end }}
           image: {{ include "helm_lib_module_image" (list $ctx "fencingAgent") }}
           livenessProbe:
             httpGet:
+              host: 127.0.0.1
               path: /healthz
-              port:  8081
+              port: {{ $port }}
             initialDelaySeconds:  15
             periodSeconds:  20
             failureThreshold:  3
+          readinessProbe:
+            httpGet:
+              host: 127.0.0.1
+              path: /readyz
+              port: {{ $port }}
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            failureThreshold: 3
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" $ctx | nindent 14 }}
-              {{- include "fencing_agent_resources" $ctx | nindent 14 }}
+              cpu: 200m
+              memory: 50Mi
+            limits:
+              memory: 256Mi
           volumeMounts:
+            {{- if $armed }}
             - name: watchdog
               mountPath: /dev/watchdog
+            {{- end }}
             - name: socket
-              mountPath: /tmp
+              mountPath: /var/run/fencing-agent
+            - name: memberlist-key
+              mountPath: /etc/fencing/memberlist-key
+              readOnly: true
+        - name: kube-rbac-proxy
+          {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 10 }}
+          image: {{ include "helm_lib_module_common_image" (list $ctx "kubeRbacProxy") }}
+          args:
+            - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):{{ $port }}"
+            - "--v=2"
+            - "--logtostderr=true"
+            - "--stale-cache-interval=1h30m"
+            - "--livez-path=/livez"
+          env:
+            - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: KUBE_RBAC_PROXY_CONFIG
+              value: |
+                upstreams:
+                - upstream: http://127.0.0.1:{{ $port }}/metrics
+                  path: /metrics
+                  authorization:
+                    resourceAttributes:
+                      namespace: d8-cloud-instance-manager
+                      apiGroup: apps
+                      apiVersion: v1
+                      resource: daemonsets
+                      subresource: prometheus-metrics
+                      name: fencing-agent
+          ports:
+            - containerPort: {{ $port }}
+              name: https-metrics
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: {{ $port }}
+              scheme: HTTPS
+          readinessProbe:
+            httpGet:
+              path: /livez
+              port: {{ $port }}
+              scheme: HTTPS
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" $ctx | nindent 14 }}
+              {{- include "helm_lib_container_kube_rbac_proxy_resources" $ctx | nindent 14 }}
       terminationGracePeriodSeconds: 10
       volumes:
+        {{- if $armed }}
         - name: watchdog
           hostPath:
             path: /dev/watchdog
             type: CharDevice
+        {{- end }}
         - name: socket
           hostPath:
-            path: /tmp
+            path: /var/run/fencing-agent
+            type: DirectoryOrCreate
+        - name: memberlist-key
+          secret:
+            secretName: fencing-memberlist-key
   {{- end }}
 {{- end }}

@@ -1,0 +1,7 @@
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ($nodeGroup)
+spec:
+  fencing:
+    mode: Critical

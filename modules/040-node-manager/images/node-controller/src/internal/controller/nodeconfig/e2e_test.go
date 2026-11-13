@@ -215,6 +215,50 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
+	// User story: As a cluster operator, I want a Deckhouse Engine node that the
+	// fencing watchdog took down to stay down, as a Mutable node does, so that it
+	// does not come back while the cluster is deleting it and evicting its pods.
+	It("keeps the nodes of a fenced group down after a panic and gives the delay back when fencing is off", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-imm")
+		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName)
+		nodeName := testenv.UniqueName("node")
+		createNode(ctx, nodeName, ngName)
+
+		expectKernelPanic := func(want internalv1alpha1.SysctlValue) {
+			GinkgoHelper()
+			Eventually(func(g Gomega) {
+				sysctl := getNodeConfig(ctx, g, nodeName).Spec.Kernel.Sysctl
+				g.Expect(sysctl).To(HaveKeyWithValue("kernel.panic", want))
+				// kubelet does not start without it, whatever fencing does.
+				g.Expect(sysctl).To(HaveKeyWithValue("kernel.panic_on_oops", internalv1alpha1.SysctlValue("1")))
+			}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+		}
+
+		expectKernelPanic("10")
+
+		By("enabling fencing on the NodeGroup")
+		patchNodeGroup(ctx, ngName, func(ng *deckhousev1.NodeGroup) {
+			ng.Spec.Fencing = &deckhousev1.FencingSpec{Mode: deckhousev1.FencingModeSlow}
+		})
+		expectKernelPanic("0")
+
+		By("switching fencing to Disabled")
+		patchNodeGroup(ctx, ngName, func(ng *deckhousev1.NodeGroup) {
+			ng.Spec.Fencing = &deckhousev1.FencingSpec{Mode: deckhousev1.FencingModeDisabled}
+		})
+		expectKernelPanic("10")
+
+		By("enabling the Critical mode")
+		patchNodeGroup(ctx, ngName, func(ng *deckhousev1.NodeGroup) {
+			ng.Spec.Fencing = &deckhousev1.FencingSpec{Mode: deckhousev1.FencingModeCritical}
+		})
+		expectKernelPanic("0")
+
+		By("removing fencing from the NodeGroup")
+		patchNodeGroup(ctx, ngName, func(ng *deckhousev1.NodeGroup) { ng.Spec.Fencing = nil })
+		expectKernelPanic("10")
+	})
+
 	// User story: As a cluster operator, I want the extension I asked for to reach
 	// my nodes when I write the request and again when I change it, so that a
 	// rebuilt image is one edit away.

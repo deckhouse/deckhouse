@@ -355,6 +355,10 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 	warnings = append(warnings, topologyManagerWarnings(oldKubelet, ng.Spec.Kubelet, req.Operation == "UPDATE")...)
 	warnings = append(warnings, topologyManagerDeprecationWarnings(ng.Name, ng.Spec.Kubelet)...)
 
+	if ng.Spec.Fencing != nil && ng.Spec.Fencing.Mode == v1.FencingModeWatchdog {
+		warnings = append(warnings, ".spec.fencing.mode Watchdog is deprecated and works as Slow, choose Normal, Slow or Critical (Critical is available only in the commercial editions)")
+	}
+
 	if req.Operation == "UPDATE" && oldNG != nil {
 		oldCRIType := getCRIType(oldNG, clusterConfig.DefaultCRI)
 		newCRIType := getCRIType(ng, clusterConfig.DefaultCRI)

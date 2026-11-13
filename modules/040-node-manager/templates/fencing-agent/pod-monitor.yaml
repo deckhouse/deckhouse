@@ -1,0 +1,32 @@
+{{- if include "fencing_enabled" . }}
+{{- if (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1/PodMonitor") }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: fencing-agent
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main" "app" "fencing-agent")) | nindent 2 }}
+spec:
+  jobLabel: app
+  podMetricsEndpoints:
+  - port: https-metrics
+    scheme: https
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
+    tlsConfig:
+      insecureSkipVerify: true
+    relabelings:
+    - regex: endpoint
+      action: labeldrop
+    - targetLabel: tier
+      replacement: cluster
+  selector:
+    matchLabels:
+      app: fencing-agent
+  namespaceSelector:
+    matchNames:
+    - d8-cloud-instance-manager
+{{- end }}
+{{- end }}

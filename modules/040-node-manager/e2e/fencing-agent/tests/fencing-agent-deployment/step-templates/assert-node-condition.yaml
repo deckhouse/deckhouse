@@ -1,0 +1,26 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: assert-node-condition
+spec:
+  try:
+    - description: The node of the test group has the expected condition Fencing
+      assert:
+        resource:
+          apiVersion: v1
+          kind: Node
+          metadata:
+            labels:
+              node.deckhouse.io/group: ($nodeGroup)
+          status:
+            (conditions[?type == 'Fencing'] | [0]):
+              status: ($status)
+              reason: ($reason)
+  catch:
+    - description: Events of the agent namespace
+      events:
+        namespace: ($agentNamespace)
+    - description: Logs of the agents of the test group
+      podLogs:
+        namespace: ($agentNamespace)
+        selector: (join('', ['app=fencing-agent,node-group-name=', $nodeGroup]))

@@ -1,0 +1,6 @@
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ($sourceNodeGroup)
+spec:
+  nodeType: CloudEphemeral

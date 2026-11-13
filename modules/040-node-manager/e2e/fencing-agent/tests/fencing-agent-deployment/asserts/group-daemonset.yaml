@@ -1,0 +1,5 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: (join('', ['fencing-agent-', $nodeGroup]))
+  namespace: ($agentNamespace)

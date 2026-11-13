@@ -47,9 +47,66 @@ positive:
             tags:
               aaa: aaa
 
+    - internal:
+        fencing:
+          nodeGroups:
+            workers:
+              mode: Slow
+              engine: true
+            master:
+              mode: Disabled
+              engine: false
+          minFullPollInterval: 5s
+          peerListRefreshInterval: "0"
+          migrationFrom10: true
+    - internal:
+        fencing:
+          minFullPollInterval: 60s
+    - internal:
+        fencing:
+          commonTimings:
+            roundTimeout: 200ms
+            confirmTimeout: 700ms
+            fastReadAfter: 1.5s
 
 negative:
+  configValues:
+    # The setting of the second network of fencing exists only in EE, FE and CSE.
+    - fencing:
+        systemNetworkFallback:
+          systemNetworkName: sysnet-a
   values:
     - internal:
         <<: *internalDefault
         clusterMasterAddresses: "10.0.0.1:6443"
+    - internal:
+        fencing:
+          minFullPollInterval: 2s
+    - internal:
+        fencing:
+          minFullPollInterval: 90s
+    - internal:
+        fencing:
+          peerListRefreshInterval: often
+    - internal:
+        fencing:
+          commonTimings:
+            roundTimeout: fast
+    - internal:
+        fencing:
+          commonTimings:
+            pollTimeout: 1s
+    - internal:
+        fencing:
+          nodeGroups:
+            workers:
+              mode: Watchdog
+    - internal:
+        fencing:
+          nodeGroups:
+            workers:
+              mode: Slow
+              engine: "yes"
+    - internal:
+        fencing:
+          memberlistKey: ZGgtdGVzdC1zZWNyZXQtMDEyMzQ1Njc4

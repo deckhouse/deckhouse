@@ -1,0 +1,7 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fencing-e2e-probe
+status:
+  (numberReady > `0`): true
+  (numberReady == desiredNumberScheduled): true

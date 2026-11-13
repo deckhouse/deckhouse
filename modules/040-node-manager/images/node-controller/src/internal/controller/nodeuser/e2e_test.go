@@ -37,12 +37,20 @@ const (
 
 // createNode creates a node; withGroupLabel controls the node.deckhouse.io/group label, which is
 // what marks a node as Deckhouse-managed and therefore a legitimate key in status.errors.
+//
+// The function returns when the node is in the cache of the controller. The controller reads
+// nodes from that cache, and a node that is not there yet looks deleted. In a cluster, a node
+// is in the cache long before a NodeUser error can refer to it.
 func createNode(name string, withGroupLabel bool) {
 	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: name}}
 	if withGroupLabel {
 		node.Labels = map[string]string{common.NodeGroupLabel: "worker"}
 	}
 	Expect(k8sClient.Create(suiteCtx, node)).To(Succeed())
+
+	Eventually(func() error {
+		return managerCache.Get(suiteCtx, types.NamespacedName{Name: name}, &corev1.Node{})
+	}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
 }
 
 func deleteNode(name string) {

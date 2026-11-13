@@ -59,6 +59,7 @@ import (
 	"github.com/deckhouse/node-controller/internal/register"
 	_ "github.com/deckhouse/node-controller/internal/register/controllers"
 	"github.com/deckhouse/node-controller/internal/webhook"
+	"github.com/deckhouse/node-controller/internal/webhook/moduleconfig/systemnetwork"
 )
 
 var (
@@ -164,6 +165,7 @@ func main() {
 		setupLog.Error(err, "unable to setup webhooks")
 		os.Exit(1)
 	}
+	systemnetwork.Register(mgr)
 
 	if err = mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
 		crdmigration.RetrySystemTypeMigration(ctx, mgr.GetClient(), setupLog, 10*time.Second)

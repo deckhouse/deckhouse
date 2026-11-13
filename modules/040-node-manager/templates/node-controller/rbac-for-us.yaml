@@ -347,6 +347,14 @@ rules:
   - get
   - list
   - watch
+# SystemNetworks - live GET from the admission webhook that checks the network named in the
+# ModuleConfig node-manager (no watch: the CRD may be absent, and an informer does not start then).
+- apiGroups:
+  - network.deckhouse.io
+  resources:
+  - systemnetworks
+  verbs:
+  - get
 # ModuleConfig "global" - update/patch only, to seed the cluster prefix during the
 # cloud.prefix -> global ModuleConfig migration. Scoped to the global ModuleConfig
 # so node-controller cannot modify any other module's configuration.

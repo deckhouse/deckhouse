@@ -1,0 +1,135 @@
+# Tests of monitoring/prometheus-rules/fencing-controller.yaml. A test reads the series ALERTS, because
+# promtool compares the annotations of an alert with the expected ones and the texts are not the subject here.
+rule_files:
+  - fencing-controller.yaml
+evaluation_interval: 1m
+
+tests:
+  - name: The alerts do not rise without the metrics of the controller
+    interval: 1m
+    input_series:
+      - series: 'kube_node_status_condition{node="w1", condition="Ready", status="true"}'
+        values: '1+0x60'
+    promql_expr_test:
+      - eval_time: 60m
+        expr: ALERTS
+        exp_samples: []
+
+  - name: D8FencingNodeFailed rises at once for an armed node only, one alert for all replicas
+    interval: 1m
+    input_series:
+      # The new leader and the old one show the same incident for some time.
+      - series: 'd8_fencing_failed_node_state_phase{pod="fencing-controller-a", node="w1", phase="Suspected", armed="true"}'
+        values: '_ 1+0x10'
+      - series: 'd8_fencing_failed_node_state_phase{pod="fencing-controller-b", node="w1", phase="Suspected", armed="true"}'
+        values: '_ 1+0x10'
+      # The node w2 is not armed.
+      - series: 'd8_fencing_failed_node_state_phase{pod="fencing-controller-a", node="w2", phase="Suspected", armed="false"}'
+        values: '_ 1+0x10'
+      # The object of w3 is deleted after minute 4.
+      - series: 'd8_fencing_failed_node_state_phase{pod="fencing-controller-a", node="w3", phase="Evicted", armed="true"}'
+        values: '_ 1x3'
+    promql_expr_test:
+      - eval_time: 1m
+        expr: ALERTS{alertname="D8FencingNodeFailed", alertstate="firing"}
+        exp_samples:
+          - labels: 'ALERTS{alertname="D8FencingNodeFailed", alertstate="firing", node="w1", severity_level="4", tier="cluster"}'
+            value: 1
+          - labels: 'ALERTS{alertname="D8FencingNodeFailed", alertstate="firing", node="w3", severity_level="4", tier="cluster"}'
+            value: 1
+      - eval_time: 10m
+        expr: ALERTS{alertname="D8FencingNodeFailed", alertstate="firing"}
+        exp_samples:
+          - labels: 'ALERTS{alertname="D8FencingNodeFailed", alertstate="firing", node="w1", severity_level="4", tier="cluster"}'
+            value: 1
+
+  - name: D8FencingNodeIsolatedFromPeers rises after 1 minute in the phase FallbackAlive
+    interval: 1m
+    input_series:
+      - series: 'd8_fencing_failed_node_state_phase{node="w4", phase="FallbackAlive", armed="true"}'
+        values: '_ 1+0x10'
+      # Another phase does not raise the alert.
+      - series: 'd8_fencing_failed_node_state_phase{node="w5", phase="Suspected", armed="true"}'
+        values: '_ 1+0x10'
+    promql_expr_test:
+      - eval_time: 1m
+        expr: ALERTS{alertname="D8FencingNodeIsolatedFromPeers", alertstate="firing"}
+        exp_samples: []
+      - eval_time: 2m
+        expr: ALERTS{alertname="D8FencingNodeIsolatedFromPeers", alertstate="firing"}
+        exp_samples:
+          - labels: 'ALERTS{alertname="D8FencingNodeIsolatedFromPeers", alertstate="firing", node="w4", severity_level="5", tier="cluster"}'
+            value: 1
+
+  - name: D8FencingNodeAliveAfterAttestation rises at once
+    interval: 1m
+    input_series:
+      - series: 'd8_fencing_alive_after_attestation{node="w2"}'
+        values: '_ 1+0x10'
+    promql_expr_test:
+      - eval_time: 1m
+        expr: ALERTS{alertname="D8FencingNodeAliveAfterAttestation", alertstate="firing"}
+        exp_samples:
+          - labels: 'ALERTS{alertname="D8FencingNodeAliveAfterAttestation", alertstate="firing", node="w2", severity_level="4", tier="cluster"}'
+            value: 1
+
+  - name: D8FencingEvictionNotProgressing rises at once with the reason, one alert for all replicas
+    interval: 1m
+    input_series:
+      - series: 'd8_fencing_eviction_not_progressing{pod="fencing-controller-a", node="w1", reason="VolumesAttached"}'
+        values: '_ 1x3'
+      # The cause changes at minute 5. The evacuation completes at minute 15.
+      - series: 'd8_fencing_eviction_not_progressing{pod="fencing-controller-a", node="w1", reason="TooManyUnhealthyMachines"}'
+        values: '_ _ _ _ _ 1x10'
+      - series: 'd8_fencing_eviction_not_progressing{pod="fencing-controller-b", node="w1", reason="VolumesAttached"}'
+        values: '_ 1x3'
+      # An evacuation in progress does not raise the alert.
+      - series: 'd8_fencing_failed_node_state_phase{node="w2", phase="Evicting", armed="true"}'
+        values: '_ 1+0x10'
+    promql_expr_test:
+      - eval_time: 1m
+        expr: ALERTS{alertname="D8FencingEvictionNotProgressing", alertstate="firing"}
+        exp_samples:
+          - labels: 'ALERTS{alertname="D8FencingEvictionNotProgressing", alertstate="firing", node="w1", reason="VolumesAttached", severity_level="4", tier="cluster"}'
+            value: 1
+      - eval_time: 10m
+        expr: ALERTS{alertname="D8FencingEvictionNotProgressing", alertstate="firing"}
+        exp_samples:
+          - labels: 'ALERTS{alertname="D8FencingEvictionNotProgressing", alertstate="firing", node="w1", reason="TooManyUnhealthyMachines", severity_level="4", tier="cluster"}'
+            value: 1
+      - eval_time: 25m
+        expr: ALERTS{alertname="D8FencingEvictionNotProgressing", alertstate="firing"}
+        exp_samples: []
+
+  - name: D8NodeOutOfServiceTainted rises after 30 minutes of the taint
+    interval: 1m
+    input_series:
+      - series: 'd8_fencing_node_out_of_service_tainted{node="w1"}'
+        values: '_ 1+0x40'
+      # The taint of w2 stays for 20 minutes only.
+      - series: 'd8_fencing_node_out_of_service_tainted{node="w2"}'
+        values: '_ 1x20'
+    promql_expr_test:
+      - eval_time: 30m
+        expr: ALERTS{alertname="D8NodeOutOfServiceTainted", alertstate="firing"}
+        exp_samples: []
+      - eval_time: 31m
+        expr: ALERTS{alertname="D8NodeOutOfServiceTainted", alertstate="firing"}
+        exp_samples:
+          - labels: 'ALERTS{alertname="D8NodeOutOfServiceTainted", alertstate="firing", node="w1", severity_level="6", tier="cluster"}'
+            value: 1
+
+  - name: D8FencingProfileIsUnavailable rises after 5 minutes
+    interval: 1m
+    input_series:
+      - series: 'd8_fencing_configuration_error{node="w1", profile="Normal"}'
+        values: '_ 1+0x20'
+    promql_expr_test:
+      - eval_time: 5m
+        expr: ALERTS{alertname="D8FencingProfileIsUnavailable", alertstate="firing"}
+        exp_samples: []
+      - eval_time: 6m
+        expr: ALERTS{alertname="D8FencingProfileIsUnavailable", alertstate="firing"}
+        exp_samples:
+          - labels: 'ALERTS{alertname="D8FencingProfileIsUnavailable", alertstate="firing", node="w1", profile="Normal", severity_level="5", tier="cluster"}'
+            value: 1

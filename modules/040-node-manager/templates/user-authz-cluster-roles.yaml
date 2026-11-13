@@ -29,6 +29,7 @@ rules:
 #   controller-owned, not meant for direct user interaction
 # Write access:
 # - cluster-autoscaler and fencing-agent configuration resources
+# - fencingfailednodestates (update, patch), to approve an evacuation
 # Node write access:
 # - Kubernetes Node resources (update, patch)
 apiVersion: rbac.authorization.k8s.io/v1
@@ -93,6 +94,15 @@ rules:
   - get
   - list
   - watch
+# An operator approves an evacuation with an annotation on a FencingFailedNodeState.
+# The profiles stay read only: only Deckhouse changes them.
+- apiGroups:
+  - node-manager.deckhouse.io
+  resources:
+  - fencingfailednodestates
+  verbs:
+  - update
+  - patch
 ---
 # Access level: ClusterEditor.
 # Includes User, PrivilegedUser, Editor, and Admin permissions.
@@ -199,6 +209,7 @@ rules: []
 # Access level: User.
 # Read access:
 # - public node-manager resources (instances, nodegroups, nodeoperations, nodeextensionrequests)
+# - fencing resources (fencingfailednodestates, fencingslaprofiles)
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -214,6 +225,15 @@ rules:
   - nodegroups
   - nodeoperations
   - nodeextensionrequests
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - node-manager.deckhouse.io
+  resources:
+  - fencingfailednodestates
+  - fencingslaprofiles
   verbs:
   - get
   - list

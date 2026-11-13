@@ -1,0 +1,44 @@
+{{- /* Built-in FencingSLAProfile: a cluster-scoped object with only timings. The spec is a */}}
+{{- /* named template, so the checksum of the profile (annotation and agent ConfigMap) is the */}}
+{{- /* hash of the very text that the object renders. The Critical mode is available only in the */}}
+{{- /* commercial editions, so CE has no critical profile. */}}
+{{- if ne .Values.global.deckhouseEdition "CE" }}
+---
+apiVersion: node-manager.deckhouse.io/v1alpha1
+kind: FencingSLAProfile
+metadata:
+  name: critical
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-agent" "node-manager.deckhouse.io/builtin-profile" "true")) | nindent 2 }}
+  annotations:
+    node-manager.deckhouse.io/fencing-profile-checksum: {{ include "fencing_profile_checksum" "critical" | quote }}
+{{ include "fencing_profile_spec_critical" . }}
+{{- end }}
+{{- define "fencing_profile_spec_critical" -}}
+spec:
+  controlPlaneLostAfter: 4.15s
+  memberlist:
+    probeInterval: 200ms
+    probeTimeout: 80ms
+    suspicionMult: 3
+    suspicionMaxTimeoutMult: 4
+    indirectChecks: 3
+    awarenessMaxMultiplier: 8
+    gossipInterval: 200ms
+    gossipNodes: 3
+    retransmitMult: 4
+    deadNodeReclaimTime: 1s
+    gossipToTheDeadTime: 30s
+  rejoin:
+    interval: 5s
+  poll:
+    witnessFresherBy: 2.35s
+  watchdog:
+    timeout: 5s
+    feedInterval: 250ms
+    margin: 300ms
+  heartbeat:
+    interval: 1s
+    apiTimeout: 2s
+  eviction:
+    writerWaveInterval: 2s
+{{- end }}

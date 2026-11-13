@@ -45,6 +45,15 @@ rules:
   - create
   - patch
   - delete
+# An operator approves an evacuation with an annotation on a FencingFailedNodeState.
+# The profiles stay read only: only Deckhouse changes them.
+- apiGroups:
+  - node-manager.deckhouse.io
+  resources:
+  - fencingfailednodestates
+  verbs:
+  - update
+  - patch
 - apiGroups:
   - deckhouse.io
   resourceNames:

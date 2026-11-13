@@ -1,0 +1,134 @@
+{{- /* The admission policies of the agent stay while the module is on, also when every node */}}
+{{- /* group is Disabled. The ServiceAccount and the rights of the agent stay too, so these */}}
+{{- /* policies always limit them. */}}
+{{- $policyName := "fencing-agent-own-node-only.deckhouse.io" }}
+---
+# The agent patches Nodes with a cluster-wide grant, because RBAC cannot name the
+# own Node. This policy limits the agent to the Node of its own pod: the token of a
+# pod carries the node name in the claim authentication.kubernetes.io/node-name.
+# A token without the claim writes nothing. On its Node the agent changes only the
+# annotations and the status, and removes the labels of fencing 1.0. The labels and
+# the spec select the pods and the taints of the node, so the agent must not change
+# them. The other users are not limited.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-agent")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups:   [""]
+      apiVersions: ["*"]
+      operations:  ["CREATE", "UPDATE", "DELETE"]
+      resources:   ["nodes", "nodes/status"]
+  matchConditions:
+  - name: fencing-agent-only
+    expression: 'request.userInfo.username == "system:serviceaccount:d8-cloud-instance-manager:fencing-agent"'
+  validations:
+  - expression: |
+      has(request.userInfo.extra) &&
+      'authentication.kubernetes.io/node-name' in request.userInfo.extra &&
+      request.userInfo.extra['authentication.kubernetes.io/node-name'].exists(n, n == request.name)
+    reason: Forbidden
+    message: "The fencing agent may change only the Node of its own pod"
+  # A Node can have no labels, and the object of nodes/status is also a full Node.
+  - expression: |
+      request.operation == 'UPDATE' &&
+      object.spec == oldObject.spec &&
+      (!has(object.metadata.labels) || object.metadata.labels.all(k,
+        has(oldObject.metadata.labels) && k in oldObject.metadata.labels &&
+        oldObject.metadata.labels[k] == object.metadata.labels[k])) &&
+      (!has(oldObject.metadata.labels) || oldObject.metadata.labels.all(k,
+        k in ['node-manager.deckhouse.io/fencing-enabled', 'node-manager.deckhouse.io/fencing-mode'] ||
+        (has(object.metadata.labels) && k in object.metadata.labels)))
+    reason: Forbidden
+    message: "The fencing agent may not change the spec and the labels of a Node, except the removal of the labels of fencing 1.0"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-agent")) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny]
+{{- $statesPolicyName := "fencing-agent-failed-node-states.deckhouse.io" }}
+---
+# Each agent writes FencingFailedNodeStates with a cluster-wide grant. This policy
+# limits the agent to the parts of a state that agents own, by the node name in the
+# claim authentication.kubernetes.io/node-name of the token. A token without the
+# claim writes nothing. Only the failed node changes its heartbeat. A node writes the
+# attestation and the contact only with its own name. The agent does not touch the
+# parts of the controller (the phase, the conditions, the episode and its label) and
+# the approval annotation. The API server drops the status of a new object, so the
+# status rules check only updates. The other users are not limited.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $statesPolicyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-agent")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups:   ["node-manager.deckhouse.io"]
+      apiVersions: ["*"]
+      operations:  ["CREATE", "UPDATE", "DELETE"]
+      resources:   ["fencingfailednodestates", "fencingfailednodestates/status"]
+  matchConditions:
+  - name: fencing-agent-only
+    expression: 'request.userInfo.username == "system:serviceaccount:d8-cloud-instance-manager:fencing-agent"'
+  validations:
+  - expression: |
+      has(request.userInfo.extra) &&
+      'authentication.kubernetes.io/node-name' in request.userInfo.extra
+    reason: Forbidden
+    message: "The fencing agent may change a FencingFailedNodeState only with the node name in its token"
+  - expression: |
+      request.operation != 'UPDATE' ||
+      object.?status.?fallback.?lastHeartbeatAt == oldObject.?status.?fallback.?lastHeartbeatAt ||
+      request.userInfo.extra['authentication.kubernetes.io/node-name'].exists(n, n == request.name)
+    reason: Forbidden
+    message: "Only the agent of the failed node may change its heartbeat"
+  - expression: |
+      request.operation != 'UPDATE' ||
+      object.?status.?attestation == oldObject.?status.?attestation ||
+      request.userInfo.extra['authentication.kubernetes.io/node-name'].exists(n, object.?status.?attestation.?witness == optional.of(n))
+    reason: Forbidden
+    message: "The fencing agent may write the attestation only with its own node as the witness"
+  - expression: |
+      request.operation != 'UPDATE' ||
+      object.?status.?contact == oldObject.?status.?contact ||
+      request.userInfo.extra['authentication.kubernetes.io/node-name'].exists(n, object.?status.?contact.?reportedBy == optional.of(n))
+    reason: Forbidden
+    message: "The fencing agent may write the contact only with its own node as the reporter"
+  - expression: |
+      request.operation != 'UPDATE' ||
+      (object.?status.?phase == oldObject.?status.?phase &&
+       object.?status.?conditions == oldObject.?status.?conditions &&
+       object.?status.?correlation == oldObject.?status.?correlation)
+    reason: Forbidden
+    message: "The fencing agent may not change the phase, the conditions and the episode of a FencingFailedNodeState: the fencing controller writes them"
+  - expression: |
+      request.operation == 'DELETE' ||
+      object.metadata.?labels[?'node-manager.deckhouse.io/fencing-episode'] ==
+        (request.operation == 'UPDATE' ? oldObject.metadata.?labels[?'node-manager.deckhouse.io/fencing-episode'] : optional.none())
+    reason: Forbidden
+    message: "The fencing agent may not add, change or remove the episode label: the fencing controller writes it"
+  - expression: |
+      request.operation == 'DELETE' ||
+      object.metadata.?annotations[?'node-manager.deckhouse.io/fencing-approve-eviction'] ==
+        (request.operation == 'UPDATE' ? oldObject.metadata.?annotations[?'node-manager.deckhouse.io/fencing-approve-eviction'] : optional.none())
+    reason: Forbidden
+    message: "The fencing agent may not add, change or remove the approval of the eviction"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $statesPolicyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-agent")) | nindent 2 }}
+spec:
+  policyName: {{ $statesPolicyName }}
+  validationActions: [Deny]

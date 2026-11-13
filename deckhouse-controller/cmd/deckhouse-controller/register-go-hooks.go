@@ -61,6 +61,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/caps"
 	_ "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/cloud"
 	_ "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/core"
+	_ "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/fencing"
 	_ "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/gpu"
 	_ "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/kubernetes"
 	_ "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/pkg/schema"

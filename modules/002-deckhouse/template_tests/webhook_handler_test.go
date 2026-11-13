@@ -258,6 +258,8 @@ var _ = Describe("Module :: deckhouse :: webhook-handler ::", func() {
 				"apps/statefulsets":      {"get"},
 				"apps/replicasets":       {"get"},
 				"replicationcontrollers": {"get"},
+				// The node-manager webhook of the fencing mode lists them only when a NodeGroup changes its mode.
+				"node-manager.deckhouse.io/fencingfailednodestates": {"list"},
 			}), "the pods and the parents of a scale are read one by one, never watched")
 		})
 

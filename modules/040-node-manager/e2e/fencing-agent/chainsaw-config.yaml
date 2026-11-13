@@ -15,3 +15,8 @@ spec:
     parallel: 1            # cluster-scoped resources must run sequentially
   discovery:
     testFile: chainsaw-test.yaml
+  # A JUnit report with one entry per operation of every step, written to reports/ of the directory chainsaw runs in.
+  report:
+    format: JUNIT-OPERATION
+    path: reports
+    name: chainsaw-report

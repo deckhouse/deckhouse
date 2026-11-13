@@ -1,0 +1,118 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: fencingslaprofiles.node-manager.deckhouse.io
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            SLA-профиль fencing. Профиль содержит только тайминги. Корреляция, тормоз и лимит эвакуации — настройки модуля, а не профиля.
+
+            Модуль поставляет три профиля: `critical`, `normal` и `slow`. В Community Edition (CE) профиля `critical` нет, потому что режим `Critical` доступен только в коммерческих редакциях. Изменить профили может только Deckhouse. Режим `spec.fencing.mode` в NodeGroup выбирает профиль группы. Именем объекта служит название режима в нижнем регистре, потому что имя объекта Kubernetes не может содержать заглавные буквы.
+
+            Все агенты кластера работают в одной сети memberlist. Они используют секции `memberlist` и `rejoin` профиля самой быстрой группы, у которой режим не `Disabled`. Остальные секции агент группы, у которой режим не `Disabled`, берёт из профиля своей группы.
+
+            Профиль — cluster-scoped объект. У него нет состояния, поэтому у ресурса нет `status`.
+          properties:
+            spec:
+              description: |
+                Тайминги профиля. Каждое значение — длительность или число. Правила CEL этого объекта проверяют неравенства одного профиля, остальные неравенства проверяет агент.
+
+                В профиле нет таймингов проб kubernetes-api-proxy. Прокси использует одни и те же фиксированные значения на всех узлах:
+
+                - интервал проб: не больше 1.2s (1s с джиттером 20 %);
+                - таймаут пробы: 0.5s;
+                - неудачная проба не повторяется.
+
+                Наибольшая давность пробы — 1.7s (1.2s + 0.5s).
+
+                В профиле нет таймаутов опроса состояния control plane и периода чтения kubernetes-api-proxy. Эти тайминги одинаковы для всех профилей: это внутренние значения модуля.
+              properties:
+                controlPlaneLostAfter:
+                  description: |
+                    Максимальная давность последней успешной пробы control plane. Узел видит control plane, пока последний ответ `Ready` любого upstream apiserver не старше этого значения.
+                memberlist:
+                  description: |
+                    Параметры memberlist и Lifeguard. Все агенты кластера используют эту секцию самого быстрого профиля среди групп узлов, у которых режим не `Disabled`.
+                  properties:
+                      probeInterval:
+                        description: |
+                          Интервал между пробами одного peer. Меньше интервал — быстрее обнаружение отказа и больше probe-трафика. Значение должно быть не меньше удвоенного `probeTimeout`.
+                      probeTimeout:
+                        description: |
+                          Сколько ждать ответа на пробу. Значение должно быть не больше половины `probeInterval`.
+                      suspicionMult:
+                        description: |
+                          Множитель окна suspicion, после которого peer помечается как dead. Значение должно быть не меньше 3.
+                      suspicionMaxTimeoutMult:
+                        description: |
+                          Верхняя граница таймера suspicion, когда подтверждения не приходят.
+                      indirectChecks:
+                        description: |
+                          Количество непрямых проверок, когда прямая проба peer не удалась.
+                      awarenessMaxMultiplier:
+                        description: |
+                          Максимальное замедление интервала проб у локально деградировавшего агента (Lifeguard awareness).
+                      gossipInterval:
+                        description: |
+                          Интервал между gossip-сообщениями.
+                      gossipNodes:
+                        description: |
+                          Количество peer, которые получают gossip в каждом интервале gossip.
+                      retransmitMult:
+                        description: |
+                          Множитель повторной отправки gossip-рассылок: `retransmitMult * ceil(log10(nodeCount + 1))`, где `nodeCount` — число узлов.
+                      deadNodeReclaimTime:
+                        description: |
+                          Время, после которого новый узел может занять имя или адрес dead-узла.
+                      gossipToTheDeadTime:
+                        description: |
+                          Время, в течение которого dead-узел ещё получает gossip. После восстановления узел может опровергнуть состояние dead.
+                rejoin:
+                  description: |
+                    Параметры попыток join агента. Все агенты кластера используют эту секцию самого быстрого профиля среди групп узлов, у которых режим не `Disabled`.
+                  properties:
+                      interval:
+                        description: |
+                          Интервал между попытками join агента. Пока в сети memberlist не хватает узлов, агент повторяет попытку с этим фиксированным интервалом.
+                poll:
+                  description: |
+                    Параметры опроса состояния control plane между агентами.
+                  properties:
+                      witnessFresherBy:
+                        description: |
+                          Минимальный зазор между собственной последней успешной пробой и пробой ответившего узла. Ответ с меньшим зазором не считается свидетельством.
+                watchdog:
+                  description: |
+                    Параметры watchdog узла.
+                  properties:
+                      timeout:
+                        description: |
+                          Таймаут watchdog. Узел паникует, если агент не кормит watchdog в течение этого времени. Значение — целое число секунд, потому что устройство watchdog принимает целые секунды.
+                      feedInterval:
+                        description: |
+                          Интервал между двумя кормлениями watchdog. Значение должно быть не больше четверти `timeout`.
+                      margin:
+                        description: |
+                          Запас, который добавляется к `timeout`. Значение должно быть не меньше 300ms и не меньше 5 % от `timeout`.
+                heartbeat:
+                  description: |
+                    Параметры heartbeat, который отказавший узел пишет через API Kubernetes.
+                  properties:
+                      interval:
+                        description: |
+                          Интервал между записями heartbeat отказавшего узла в собственный `FencingFailedNodeState`.
+                      apiTimeout:
+                        description: |
+                          Таймаут одного запроса агента к API Kubernetes. Его же использует TCP-таймаут memberlist.
+                eviction:
+                  description: |
+                    Параметры создания объектов `FencingFailedNodeState`.
+
+                    В профиле нет задержки перед taint молчащего узла — узла без признаков жизни. fencing-controller вычисляет её из других значений профиля: `controlPlaneLostAfter` + 0.2s + `watchdog.timeout` + `watchdog.margin` + 0.9s. Контроллер отсчитывает задержку от последнего признака жизни узла.
+                  properties:
+                      writerWaveInterval:
+                        description: |
+                          Интервал между волнами агентов, которые создают объекты `FencingFailedNodeState`.

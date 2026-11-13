@@ -2,8 +2,11 @@ version: "3"
 
 includes:
   fencing-agent-deployment:
-    taskfile: ./tests/fencing-agent-deployment/Taskfile.yml
+    taskfile: ./tests/fencing-agent-deployment/Taskfile.yaml
     dir: ./tests/fencing-agent-deployment
+  fencing-agent-engine:
+    taskfile: ./tests/fencing-agent-engine/Taskfile.yaml
+    dir: ./tests/fencing-agent-engine
 
 tasks:
   run:
@@ -11,7 +14,13 @@ tasks:
     cmds:
       - task: fencing-agent-deployment:run
 
+  run:engine:
+    desc: Run the fencing agent e2e tests for a Deckhouse Engine NodeGroup (FENCING_ENGINE_NODE_GROUP)
+    cmds:
+      - task: fencing-agent-engine:run
+
   dry-run:
     desc: Dry-Run all fencing agent e2e tests
     cmds:
       - task: fencing-agent-deployment:dry-run
+      - task: fencing-agent-engine:dry-run

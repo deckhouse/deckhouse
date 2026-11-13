@@ -1,0 +1,19 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: assert-not-rebooted
+spec:
+  try:
+    - description: The test node has the boot ID of the baseline, so it did not reboot
+      assert:
+        bindings:
+          - name: state
+            value: (x_k8s_get($client, 'v1', 'ConfigMap', $namespace, 'e2e-fencing-state').data)
+        resource:
+          apiVersion: v1
+          kind: Node
+          metadata:
+            name: ($state.nodeName)
+          status:
+            nodeInfo:
+              bootID: ($state.bootID)

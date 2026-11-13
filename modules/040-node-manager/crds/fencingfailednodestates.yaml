@@ -1,0 +1,302 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: fencingfailednodestates.node-manager.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: node-manager
+spec:
+  group: node-manager.deckhouse.io
+  scope: Cluster
+  names:
+    plural: fencingfailednodestates
+    singular: fencingfailednodestate
+    kind: FencingFailedNodeState
+    shortNames:
+      - ffns
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Phase
+          type: string
+          jsonPath: .status.phase
+        - name: Source
+          type: string
+          jsonPath: .spec.source
+        - name: Armed
+          type: boolean
+          jsonPath: .spec.armed
+        - name: Profile
+          type: string
+          jsonPath: .spec.profileRef.name
+        - name: Witness
+          type: string
+          jsonPath: .status.attestation.witness
+        - name: DetectedAt
+          type: date
+          jsonPath: .spec.detectedAt
+        - name: Heartbeat
+          type: date
+          jsonPath: .status.fallback.lastHeartbeatAt
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Fencing incident of one node.
+
+            The name of the object is the name of the failed node. The object has exactly one owner reference to this node. When the Node object is deleted, the Kubernetes garbage collector deletes this object too. The controller does nothing for an object whose owner reference does not have the UID of the node with this name, for example after the node is created again with the same name. A healthy node has no `FencingFailedNodeState`: the object exists only while the node has an active incident.
+
+            A fencing agent creates the object. The agent of any node can create it, also the agent on a node of a group in the `Disabled` mode. The creator writes `spec`. Nobody can change `spec` after that. Each part of `status` has one owner. The fencing controller reads the object and decides if it must evacuate the node.
+
+            The object is deleted in these cases:
+
+            - The failed node comes back with the same boot ID before the phase `Proven`. Then the fencing agents delete the object.
+            - The Node is `Ready` and has a new boot ID. Then the fencing controller removes the `node.kubernetes.io/out-of-service` taint from the Node and deletes the object.
+            - The Node object is deleted. Then the Kubernetes garbage collector deletes the object.
+
+            Do not create the object manually. Do not edit `spec` or `status`.
+          required:
+            - spec
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              description: |
+                Immutable description of the incident. The creator of the object writes it at creation. You cannot change it after that.
+              required:
+                - source
+                - detectedBy
+                - detectedAt
+                - bootID
+                - armed
+              x-kubernetes-validations:
+                - rule: self == oldSelf
+                  message: spec is immutable after creation.
+                - rule: self.armed == has(self.profileRef)
+                  message: profileRef must be set if armed is true, and must not be set if armed is false.
+              properties:
+                source:
+                  type: string
+                  description: |
+                    Source of the incident. It tells who created the object:
+
+                    - `MemberlistDead`: a fencing agent that saw the node as dead in the memberlist network of the cluster.
+                    - `DeclareSuicide`: a fencing agent that received the `DeclareSuicide` message of the node. This agent is the witness.
+                    - `NodeLeaseStale`: the fencing controller, because the Lease of the node is stale. The current version of the controller does not create objects with this source.
+                  enum:
+                    - MemberlistDead
+                    - DeclareSuicide
+                    - NodeLeaseStale
+                detectedBy:
+                  type: string
+                  description: |
+                    Name of the node whose agent created the object. If the fencing controller created the object, the value is `fencing-controller`.
+                detectedAt:
+                  type: string
+                  format: date-time
+                  pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{6}(Z|[+-][0-9]{2}:[0-9]{2})$'
+                  description: |
+                    Time when the creator detected the failure, with microsecond precision.
+
+                    The value is for reference only. The fencing controller counts its deadlines from its own observations.
+                bootID:
+                  type: string
+                  description: |
+                    Boot ID of the failed node at the time of the failure. A fencing agent takes it from the memberlist metadata of the node. For the `NodeLeaseStale` source, the controller takes it from `status.nodeInfo.bootID` of the Node.
+                armed:
+                  type: boolean
+                  description: |
+                    `true` if the watchdog of the failed node was armed at the time of the failure. A fencing agent takes the value from the memberlist metadata of the node.
+                profileRef:
+                  type: object
+                  description: |
+                    SLA profile of the node group of the failed node at the time when the object was created. The group is the value of the `node.deckhouse.io/group` label of the Node. The mode of the group selects the profile. If the group is in the `Disabled` mode, the value is the profile of the memberlist network of the cluster.
+
+                    The field is set only if `armed` is `true`. The fencing controller takes the timings of the failed node only from this profile.
+                  required:
+                    - name
+                  properties:
+                    name:
+                      type: string
+                      description: |
+                        Name of the built-in SLA profile. The value can be only the name of a built-in profile.
+
+                        The name of the related `FencingSLAProfile` object is this value in lower case, because the name of a Kubernetes object cannot have capital letters. To find the profile, the controller changes this value to lower case.
+                      enum:
+                        - Critical
+                        - Normal
+                        - Slow
+            status:
+              type: object
+              description: |
+                Observed state of the incident. Each part of the status has one owner:
+
+                - `attestation`: the fencing agent of the witness node.
+                - `contact`: the fencing agent that received a report of a contact with the failed node. The current version of the agent does not write this section.
+                - `fallback`: the fencing agent of the failed node.
+                - `phase`, `correlation` and `conditions`: the fencing controller. The current version of the controller does not write `correlation`.
+
+                The status is a subresource. The creator of the object cannot set it in the create request.
+              properties:
+                attestation:
+                  type: object
+                  description: |
+                    Attestation of the failure. The witness is a node whose agent received the `DeclareSuicide` message of the failed node. The agent of the witness writes the name of its own node.
+                  required:
+                    - witness
+                    - at
+                  properties:
+                    witness:
+                      type: string
+                      description: |
+                        Name of the witness node.
+                    at:
+                      type: string
+                      format: date-time
+                      pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{6}(Z|[+-][0-9]{2}:[0-9]{2})$'
+                      description: |
+                        Time of the attestation, with microsecond precision.
+                contact:
+                  type: object
+                  description: |
+                    Last contact with the failed node. A fencing agent that received a report of a contact with the node writes this section.
+                  required:
+                    - at
+                    - reportedBy
+                  properties:
+                    at:
+                      type: string
+                      format: date-time
+                      pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{6}(Z|[+-][0-9]{2}:[0-9]{2})$'
+                      description: |
+                        Time of the last contact with the failed node, with microsecond precision.
+                    reportedBy:
+                      type: string
+                      description: |
+                        Name of the node that reported the contact.
+                fallback:
+                  type: object
+                  description: |
+                    Liveness evidence from the failed node. Only the fencing agent of the failed node writes this section, and only through the Kubernetes API. Thus the section exists only if the node reached the API.
+
+                    The fencing controller keeps the `FallbackAlive` phase while the last heartbeat is not older than `2 * heartbeat.interval + heartbeat.apiTimeout` of the profile.
+                  required:
+                    - lastHeartbeatAt
+                  properties:
+                    lastHeartbeatAt:
+                      type: string
+                      format: date-time
+                      pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{6}(Z|[+-][0-9]{2}:[0-9]{2})$'
+                      description: |
+                        Time of the last heartbeat of the node, with microsecond precision.
+
+                        When fresh heartbeats stop, this is the signal that the node cannot reach the API.
+                phase:
+                  type: string
+                  description: |
+                    Phase of the incident:
+
+                    - `Suspected`: a failure of the node is suspected.
+                    - `FallbackAlive`: the node writes heartbeats through the Kubernetes API. For example, an ACL or a firewall blocks the network between the nodes, but the node can reach the API.
+                    - `Proven`: the failure is proven. The controller proves a failure in one of two ways:
+                      - attestation: a witness confirmed the stop of the node, and the time `watchdog.timeout` + `watchdog.margin` of the profile passed after the controller saw the attestation. The node did not send a heartbeat after the attestation;
+                      - silence of the node: the time `controlPlaneLostAfter` + 0.2s + `watchdog.timeout` + `watchdog.margin` + 0.9s of the profile passed after the last sign of life of the node. The last sign of life is the later of two moments: when the controller saw the object first, and when it saw the last heartbeat plus `heartbeat.interval`.
+
+                      While the `Fencing` condition of the Node is not `True`, the controller does not write `Proven`, and the object stays in the phase `Suspected`.
+                    - `Unproven`: the failure is a part of a correlated failure and has no attestation. The current version of the controller does not set this phase.
+                    - `Queued`: the evacuation waits. The `Queued` condition tells the reason. The current version of the controller does not use this phase.
+                    - `Evicting`: the node has the `node.kubernetes.io/out-of-service` taint, and the evacuation is in progress. If the evacuation is not complete after 60 seconds, the `Progressing` condition tells the reason.
+                    - `Evicted`: the evacuation is complete: the controller deleted the pods of the node, and the node has no `VolumeAttachment` objects.
+
+                    The controller writes `Evicted` before it deletes the Node or the Machine of a node that the cloud replaces. The deletion of the Node also deletes this object. If the write of `Evicted` fails, the controller does not delete the Node or the Machine. If the deletion fails, the controller sends it again in the `Evicted` phase.
+
+                    An object with `armed: false` never gets the phase `Proven`. It stays in the phase `Suspected` or `FallbackAlive`, and the node never gets the taint.
+
+                    An empty phase means that the controller did not process the object yet. Read it as `Suspected`.
+
+                    An error is not a phase. The controller reports an error in `conditions` and keeps the phase.
+                  enum:
+                    - Suspected
+                    - FallbackAlive
+                    - Proven
+                    - Unproven
+                    - Queued
+                    - Evicting
+                    - Evicted
+                correlation:
+                  type: object
+                  description: |
+                    Correlation of the incident with the incidents of other nodes. The current version of the controller does not write this section.
+                  properties:
+                    episode:
+                      type: string
+                      description: |
+                        Identifier of the episode of correlated failures that includes this incident.
+                conditions:
+                  type: array
+                  description: |
+                    Conditions of the incident. A condition does not replace the phase, so the controller can report the same problem in any phase.
+
+                    The controller sets `ConfigurationError` with the status `True` and the reason `ProfileUnavailable` while it cannot read the timings that it needs from the SLA profile in `spec.profileRef.name`. The message of the condition tells the cause. In this state, the controller does not evacuate the node. The status `False` with the reason `ProfileResolved` tells that the controller found the profile. An incident with `armed: false` needs no profile and also has this status.
+
+                    The `Queued` condition with the status `True` tells why the evacuation waits in the `Queued` phase. The reasons are `ConcurrencyLimit` and `MassFailure`. The current version of the controller does not use this condition.
+
+                    The controller sets `Progressing` with the status `False` when the evacuation in the `Evicting` phase is not complete after 60 seconds. The controller continues to examine the node. The `reason` tells what stops the evacuation now, and the `message` gives the details:
+
+                    - `VolumesAttached`: the node still has `VolumeAttachment` objects, so the volumes of its pods are not free for other nodes. The message gives their names.
+                    - `PodsRemaining`: the controller could not delete pods of the node, or another error of the API stops the evacuation. The message gives the pods and the errors.
+                    - `TooManyUnhealthyMachines`: the controller does not delete the Node of a cloud CAPI machine, because the MachineHealthCheck does not replace the machine now: more than 50 % of the machines are unhealthy, or the cluster has no MachineHealthCheck that reports its machines. The message gives the numbers.
+
+                    When the evacuation is complete, the phase is `Evicted`, and the controller removes the `Progressing` condition.
+                  x-kubernetes-list-type: map
+                  x-kubernetes-list-map-keys:
+                    - type
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                      - lastTransitionTime
+                      - reason
+                    properties:
+                      type:
+                        type: string
+                        description: |
+                          Condition type.
+                      status:
+                        type: string
+                        description: |
+                          Condition status.
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                      observedGeneration:
+                        type: integer
+                        format: int64
+                        minimum: 0
+                        description: |
+                          Generation of the resource the condition was set from.
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                        description: |
+                          Time the condition last changed its status.
+                      reason:
+                        type: string
+                        description: |
+                          Machine-readable reason for the last transition.
+                      message:
+                        type: string
+                        description: |
+                          Human-readable description of the last transition.

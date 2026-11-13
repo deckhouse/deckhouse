@@ -1407,6 +1407,10 @@ spec:
           type: string
           description: Status message about group handling.
           jsonPath: .status.conditionSummary.statusMessage
+        - name: Fencing
+          type: string
+          description: Fencing mode of the group.
+          jsonPath: .spec.fencing.mode
         - name: Age
           type: date
           jsonPath: .metadata.creationTimestamp
@@ -2434,52 +2438,75 @@ spec:
                 fencing:
                   type: object
                   description: |
-                    Enable the fencing-controller for a node group.
-                  required: [mode]
+                    Fencing settings for the node group.
                   properties:
                     mode:
                       type: string
                       enum:
+                        - "Disabled"
+                        - "Normal"
+                        - "Slow"
+                        - "Critical"
                         - "Watchdog"
+                      x-enum-descriptions:
+                        - "Fencing is off for the node group. A node group without fencing is in this mode too."
+                        - "The normal profile, reaction in about 30 seconds."
+                        - "The slow profile, reaction in about 60 seconds."
+                        - "The critical profile, reaction in about 12 seconds. Available only in the commercial editions."
+                        - "Deprecated. Works as Slow. Use Normal, Slow, or Critical (Critical is available only in the commercial editions)."
+                      default: Disabled
+                      x-doc-default: Disabled
                       description: |
-                        Specifies the operating mode of the fencing-controller.
+                        Fencing mode of the node group. Every mode except `Disabled` selects the built-in FencingSLAProfile with the reaction timings of the group:
 
-                        Supported modes:
+                        - `Disabled`: fencing is off for the node group. A node group without `fencing` is in this mode too.
+                        - `Critical`: the `critical` profile, reaction in about 12 seconds. Available only in the commercial editions. In Community Edition (CE), Deckhouse does not let you set this mode. A group that already has this mode works as `Normal`.
+                        - `Normal`: the `normal` profile, reaction in about 30 seconds.
+                        - `Slow`: the `slow` profile, reaction in about 60 seconds.
+                        - `Watchdog`: deprecated. This mode works as `Slow`. Use `Normal`, `Slow`, or `Critical` (`Critical` is available only in the commercial editions).
 
-                        - `Watchdog`: Uses the watchdog kernel module to automatically reboot nodes that lose connectivity with the cluster. In this mode, the fencing-agent also monitors node availability in the cluster.
+                        When at least one node group has a mode other than `Disabled`, the fencing-agent runs on every node of the cluster. If all node groups are `Disabled`, Deckhouse does not deploy the fencing-agent.
 
-                        When `fencing` is enabled, the NodeGroupConfiguration script loads the `softdog` kernel module with the `soft_margin` parameter set to the value of `spec.fencing.watchdog.timeout` (60 seconds by default) and `soft_panic=1`.
+                        In a cluster with one master, Deckhouse does not let you turn on fencing of an existing node group and shows a warning when you create a node group with fencing, because a failure or a restart of this master stops all nodes with fencing.
 
                         How the fencing-agent works:
 
-                        - The agent opens the `/dev/watchdog` device and sets the `node-manager.deckhouse.io/fencing-enabled` label on the node, as well as the `node-manager.deckhouse.io/fencing-mode` label with the value `Watchdog`.
-                        - The fencing-agent joins a gossip cluster (`memberlist`) with agents from the same node group.
-                        - The agent regularly checks quorum (availability of the majority of nodes in the group):
-                        - If quorum is lost (`quorum=false`), the agent performs an additional check of Kubernetes API availability.
-                        - If quorum is present or the Kubernetes API is reachable, the agent resets the watchdog timer.
-                        - If neither quorum nor access to the Kubernetes API is available, the watchdog is no longer reset, the timer expires, and a kernel panic occurs.
+                        - The agents of all cluster nodes form a single gossip network (`memberlist`). Every agent uses the timings of the fastest mode of the node groups in this network. The memberlist protocol detects failures correctly only when all members have the same timings.
+                        - On the nodes of a group with a mode other than `Disabled`, the agent arms the `/dev/watchdog` device with the watchdog timeout of the profile of the group. While the agent runs, it resets the timer. If the node or the agent hangs, the timer expires and the kernel panics.
+                        - When the node does not see the control plane for longer than `controlPlaneLostAfter` of the profile, the agent stops the reset of the timer at once. When the watchdog timeout expires, the node stops. If the control plane is available again before the timeout expires, the agent resets the timer again, and the node continues to work. Thus, a short pause of the control plane does not stop the nodes.
+                        - After the stop of the reset, the agent asks the agents of the other nodes for a witness, that is, a node that sees the control plane. The witness writes an attestation of the stop. After that, the stop is final.
+                        - On the nodes of a `Disabled` group, the agent only takes part in failure detection. The agent does not arm the watchdog.
                         - The agent respects maintenance annotations `node-manager.deckhouse.io/fencing-disable`, `update.node.deckhouse.io/approved`, and `update.node.deckhouse.io/disruption-approved`, temporarily disabling the watchdog during planned operations.
 
-                        When `fencing` is enabled, automatic node reboot after a kernel panic is disabled at the OS level. This prevents a node from returning in an undefined state before it is properly handled (manually for static nodes, or via the cloud-provider-controller for cloud nodes).
+                        For a mode other than `Disabled`, the NodeGroupConfiguration script loads the `softdog` kernel module with `soft_panic=1`. The fencing-agent applies the watchdog timeout when it arms the device.
 
-                        The fencing-controller takes the node type (`node.deckhouse.io/type`) into account when handling a failed node:
+                        On nodes of a group with `systemType: Immutable` (Deckhouse Engine), the NodeGroupConfiguration script does not run. On these nodes, `softdog` is built into the kernel and starts with `soft_panic=1`. The operating system image sets the permissions on `/dev/watchdog`. The fencing-agent applies the timeout of the profile in the same way as on other nodes. If you installed a node before the Deckhouse Engine release with `softdog` in the kernel, the node does not have `softdog`. The node gets it only after a reinstall or an update of the boot partition.
 
-                        - For cloud nodes (`CloudEphemeral`, `CloudPermanent`), the controller deletes the Node object, after which the cloud-provider-controller recreates the corresponding virtual machine.
-                        - For static nodes (`Static`, `CloudStatic`), the controller only evicts workloads while keeping the Node object in the cluster.
+                        For a mode other than `Disabled`, Deckhouse disables the automatic reboot of the node after a kernel panic at the OS level. This prevents a node from returning in an undefined state: the stopped node stays down until you restore it manually.
 
-                        For details on how fencing handles different node types, see [FAQ](faq.html#how-the-fencing-mechanism-handles-different-node-types).
+                        When the stop of the node is certain, the fencing-controller sets the `node.kubernetes.io/out-of-service` taint on the node. After the taint, the controller sets the `Failed` phase and the `DisruptionTarget` condition on the pods of the node and deletes the pods immediately. This includes the pods that tolerate the taint. The controller does not delete the pods of DaemonSets and the static pods. The controller does not remove the finalizers of the pods: a pod with a finalizer stays in the API until the owner of the finalizer removes it. For such a pod of a StatefulSet, the controller sends a warning event with the names of the finalizers. The evacuation is complete when the node has no `VolumeAttachment` objects. If the evacuation is not complete after 60 seconds, the incident stays in the `Evicting` phase and gets the `Progressing` condition with the status `False` and the reason. The controller continues to examine the node. After the evacuation, Deckhouse acts on the node as follows:
+
+                        - For a node of a `CloudPermanent`, `CloudStatic`, or `Static` group (this includes a `Static` group with `staticInstances`, that is, CAPS), for a master node, and for an etcd arbiter node, Deckhouse only keeps the taint. It never deletes the Node object.
+                        - For a node of a `CloudEphemeral` group with `status.engine: CAPI`, Deckhouse deletes the Node object only when the MachineHealthCheck of the Cluster API cluster reports its machines and 50 percent or fewer of them are unhealthy. Deckhouse counts the stopped machine as unhealthy. MachineHealthCheck then sets the `HealthCheckSucceeded` condition of the Machine to `False` with the `NodeDeleted` reason and replaces the machine. If more than 50 percent of the machines are unhealthy, or the MachineHealthCheck does not report its machines yet, Deckhouse does not delete the Node object yet. The controller continues to examine the machines. When 50 percent or fewer of them are unhealthy, the controller deletes the Node object and completes the evacuation.
+                        - For a node of a `CloudEphemeral` group with `status.engine: MCM`, Deckhouse deletes the `Machine` (`machine.sapcloud.io`). Machine Controller Manager creates a new machine.
+
+                        When the node returns (the Node is `Ready` and it has a new boot ID), the fencing-controller removes the taint automatically. The controller works only while at least one node group has a mode other than `Disabled`. If you turn fencing off in all node groups, the taint stays on the node, and you must remove it manually.
+
+                        The stop is certain in one of two cases: a witness confirmed the stop and `watchdog.timeout` + `watchdog.margin` of the profile passed, or the node is silent for `controlPlaneLostAfter` + 0.2s + `watchdog.timeout` + `watchdog.margin` + 0.9s of the profile after its last sign of life. The controller does not set the taint while the `Fencing` condition of the Node is not `True`.
+
+                        If the fencing-controller does not set the taint, Kubernetes evicts the pods of the node after the time in the `failedNodePodEvictionTimeoutSeconds` parameter of the `control-plane-manager` module (300 seconds by default).
+
+                        For details on how fencing handles a failed node, see [FAQ](faq.html#how-the-fencing-mechanism-handles-different-node-types).
                     watchdog:
                       type: object
+                      description: |
+                        Deprecated. Deckhouse keeps the settings of fencing 1.0 only for compatibility and ignores them.
                       properties:
                         timeout:
                           type: string
                           pattern: "^[0-9]+[smh]{1}$"
-                          default: 60s
                           description: |
-                            Watchdog timeout duration. Should be specified in seconds, minutes or hours.
-                          x-doc-default: 60s
-                      required:
-                        - timeout
+                            Deprecated. Deckhouse ignores this field. The watchdog timeout comes from the profile of the fencing mode.
               oneOf:
                 - properties:
                     nodeType:

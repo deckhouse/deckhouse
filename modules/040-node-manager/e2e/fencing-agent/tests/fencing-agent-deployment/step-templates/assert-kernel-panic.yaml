@@ -1,0 +1,76 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: assert-kernel-panic
+spec:
+  try:
+    - description: Start a pod on the test node that waits for the expected kernel.panic
+      apply:
+        bindings:
+          - name: nodeName
+            value: (x_k8s_get($client, 'v1', 'ConfigMap', $namespace, 'e2e-fencing-state').data.nodeName)
+        resource:
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: (join('-', ['e2e-kernel-panic', $check]))
+          spec:
+            nodeName: ($nodeName)
+            restartPolicy: Never
+            activeDeadlineSeconds: 600
+            terminationGracePeriodSeconds: 1
+            automountServiceAccountToken: false
+            tolerations:
+              - operator: Exists
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 65534
+              runAsGroup: 65534
+              seccompProfile:
+                type: RuntimeDefault
+            containers:
+              - name: check
+                image: ($probeImage)
+                env:
+                  - name: WANT
+                    value: ($want)
+                # kernel.panic is a global value of the node, so an unprivileged pod reads it.
+                # The last value read goes to the termination message.
+                command:
+                  - sh
+                  - -c
+                  - until v=$(cat /proc/sys/kernel/panic); echo "kernel.panic=$v" >/dev/termination-log; [ "$v" = "$WANT" ]; do sleep 2; done
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  readOnlyRootFilesystem: true
+                  capabilities:
+                    drop: ["ALL"]
+                resources:
+                  requests:
+                    cpu: 5m
+                    memory: 8Mi
+                  limits:
+                    memory: 16Mi
+    - description: kernel.panic of the test node has the expected value
+      assert:
+        timeout: 10m
+        resource:
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: (join('-', ['e2e-kernel-panic', $check]))
+          status:
+            phase: Succeeded
+  catch:
+    - description: Describe the check pod, its termination message has the last value read
+      describe:
+        apiVersion: v1
+        kind: Pod
+        name: (join('-', ['e2e-kernel-panic', $check]))
+  finally:
+    - description: Delete the check pod
+      delete:
+        ref:
+          apiVersion: v1
+          kind: Pod
+          name: (join('-', ['e2e-kernel-panic', $check]))

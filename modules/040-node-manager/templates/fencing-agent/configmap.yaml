@@ -1,0 +1,28 @@
+{{- /* Configuration of the fencing agents. The agent reads this ConfigMap with an informer */}}
+{{- /* and applies a change without a restart, so the pods carry no checksum of it. */}}
+{{- $fencing := .Values.nodeManager.internal.fencing }}
+{{- if include "fencing_enabled" . }}
+  {{- $config := dict
+    "clusterUUID" .Values.global.discovery.clusterUUID
+    "nodeGroups" $fencing.nodeGroups
+    "memberlistProfile" (include "fencing_gossip_profile" .)
+    "systemNetworkName" (dig "fencing" "systemNetworkFallback" "systemNetworkName" "" .Values.nodeManager)
+    "minFullPollInterval" $fencing.minFullPollInterval
+    "peerListRefreshInterval" $fencing.peerListRefreshInterval
+    "commonTimings" $fencing.commonTimings
+    "profileChecksums" (dict
+      "critical" (include "fencing_profile_checksum" "critical")
+      "normal" (include "fencing_profile_checksum" "normal")
+      "slow" (include "fencing_profile_checksum" "slow"))
+  }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fencing-agent-config
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-agent")) | nindent 2 }}
+data:
+  config.json: |
+    {{- toJson $config | nindent 4 }}
+{{- end }}

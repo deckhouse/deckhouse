@@ -4,7 +4,7 @@ disruptions:
   approvalMode: Manual
 engine: CAPI
 fencing:
-  mode: Watchdog
+  mode: Slow
 kubelet:
   containerLogMaxFiles: 4
   containerLogMaxSize: 50Mi

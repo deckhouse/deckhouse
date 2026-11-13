@@ -1,0 +1,16 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: set-mode
+spec:
+  try:
+    - description: Set spec.fencing.mode of the test group
+      patch:
+        resource:
+          apiVersion: deckhouse.io/v1
+          kind: NodeGroup
+          metadata:
+            name: ($nodeGroup)
+          spec:
+            fencing:
+              mode: ($mode)

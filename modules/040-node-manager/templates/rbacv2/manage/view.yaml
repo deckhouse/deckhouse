@@ -38,6 +38,15 @@ rules:
   - list
   - watch
 - apiGroups:
+  - node-manager.deckhouse.io
+  resources:
+  - fencingfailednodestates
+  - fencingslaprofiles
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - deckhouse.io
   resourceNames:
   - node-manager

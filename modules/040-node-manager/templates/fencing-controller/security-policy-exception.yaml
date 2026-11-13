@@ -1,0 +1,25 @@
+{{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
+{{- if include "fencing_enabled" . }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: fencing-controller
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-controller")) | nindent 2 }}
+spec:
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          When the master has the local kubernetes-api-proxy, the fencing controller connects to the API server through it on 127.0.0.1.
+          The proxy sends a new connection to a healthy API server when a master is down.
+          Without the proxy (Deckhouse Engine, or control-plane-manager is disabled), the controller uses the ClusterIP of the API server.
+    hostPorts:
+      - port: 4294
+        protocol: TCP
+        metadata:
+          description: HTTPS metrics endpoint exposed through kube-rbac-proxy.
+{{- end }}
+{{- end }}

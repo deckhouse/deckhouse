@@ -528,6 +528,29 @@ var _ = Describe("NodeGroup status controller", func() {
 		})
 	})
 
+	Context("deprecated fencing mode", func() {
+		It("leaves a Watchdog NodeGroup with watchdog.timeout as the user wrote it", func() {
+			name := uniqueNG("fencing-watchdog")
+			ng := staticNodeGroup(name)
+			ng.Spec.Fencing = &v1.FencingSpec{
+				Mode:     v1.FencingModeWatchdog,
+				Watchdog: &v1.FencingWatchdogSpec{Timeout: "60s"},
+			}
+			createNodeGroup(ng)
+
+			// The controller has reconciled once it records the processed spec.
+			Eventually(func(g Gomega) {
+				_, _, processedCheckSum := processedDeckhouse(name)
+				g.Expect(processedCheckSum).NotTo(BeEmpty())
+			}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+			Expect(getNG(name).Spec.Fencing).To(Equal(&v1.FencingSpec{
+				Mode:     v1.FencingModeWatchdog,
+				Watchdog: &v1.FencingWatchdogSpec{Timeout: "60s"},
+			}))
+		})
+	})
+
 	Context("processed status", func() {
 		It("records observed and processed and settles synced=True after reconciliation", func() {
 			name := uniqueNG("processed")

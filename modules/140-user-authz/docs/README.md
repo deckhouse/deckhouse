@@ -613,6 +613,8 @@ read:
     - networking.istio.io/workloadgroups
     - networking.k8s.io/ingresses
     - networking.k8s.io/networkpolicies
+    - node-manager.deckhouse.io/fencingfailednodestates
+    - node-manager.deckhouse.io/fencingslaprofiles
     - nodes
     - persistentvolumeclaims
     - persistentvolumes
@@ -809,6 +811,7 @@ patch,update:
     - infrastructure.cluster.x-k8s.io/zvirtclusters
     - infrastructure.cluster.x-k8s.io/zvirtmachines
     - infrastructure.cluster.x-k8s.io/zvirtmachinetemplates
+    - node-manager.deckhouse.io/fencingfailednodestates
 proxy:
     - nodes
 read:

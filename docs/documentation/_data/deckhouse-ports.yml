@@ -126,6 +126,11 @@ groups:
     description:
       en: "`control-plane-manager` metrics"
       ru: "Метрики компонента `control-plane-manager`"
+  - ports: "4294"
+    protocol: TCP
+    description:
+      en: "`fencing-controller` metrics of the `node-manager` module. The controller uses the host network on the master nodes. On the same port, it serves its health probes on 127.0.0.1"
+      ru: "Метрики компонента `fencing-controller` модуля `node-manager`. Контроллер работает в сетевом пространстве имён master-узла. На этом же порту он отвечает на health-пробы на 127.0.0.1"
   - ports: "5002, 5004, 5051"
     protocol: TCP
     description:
@@ -347,6 +352,11 @@ groups:
     description:
       en: "`csi-yadro-tatlin-unified` CSI node healthcheck"
       ru: "Healthcheck CSI-агентов модуля `csi-yadro-tatlin-unified`"
+  - ports: "4250"
+    protocol: TCP
+    description:
+      en: "`fencing-agent` metrics of the `node-manager` module. The agents use the host network. Thus they occupy this port on every cluster node when fencing is enabled on at least one node group. On the same port, the agent serves its health probes on 127.0.0.1"
+      ru: "Метрики компонентов `fencing-agent` модуля `node-manager`. Агенты работают в сетевом пространстве имён узла, поэтому занимают этот порт на каждом узле кластера, если fencing включён хотя бы на одной группе узлов. На этом же порту агент отвечает на health-пробы на 127.0.0.1"
   - ports: "4251"
     protocol: TCP
     description:
@@ -579,6 +589,11 @@ groups:
         **Обратите внимание,** что в таких кластерах включение модуля `virtualization` на DP до версии 1.70 меняет порт:
         - включение модуля `virtualization` на DP версии 1.63 и ниже изменит его на `8469/UDP` и не изменит при последующих обновлениях DP
         - включение модуля `virtualization` на DP, начиная с версии 1.64, изменит его на `4298/UDP` и не изменит при последующих обновлениях DP
+  - ports: "8500"
+    protocol: TCP/UDP
+    description:
+      en: "Gossip network of the `fencing-agent` components of the `node-manager` module (memberlist protocol). Open between the InternalIP addresses of all cluster nodes once fencing is enabled on at least one node group. If the second network of fencing (SystemNetwork) is set, also open UDP between the addresses of this network"
+      ru: "Gossip-сеть компонентов `fencing-agent` модуля `node-manager` (протокол memberlist). Должен быть открыт между InternalIP-адресами всех узлов кластера, если fencing включён хотя бы на одной группе узлов. Если задана вторая сеть fencing (SystemNetwork), откройте также UDP между адресами этой сети"
 
 - group: VirtualizationStaticPorts
   description:

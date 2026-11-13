@@ -1,0 +1,22 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: assert-agent-config
+spec:
+  try:
+    - description: The agent ConfigMap has the test group with the expected mode
+      assert:
+        resource:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: fencing-agent-config
+            namespace: ($agentNamespace)
+          (lookup(json_parse(data."config.json").nodeGroups, $nodeGroup).mode): ($mode)
+  catch:
+    - description: Show the agent ConfigMap
+      get:
+        apiVersion: v1
+        kind: ConfigMap
+        name: fencing-agent-config
+        namespace: ($agentNamespace)

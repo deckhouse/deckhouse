@@ -1,0 +1,41 @@
+{{- /* Built-in FencingSLAProfile: a cluster-scoped object with only timings. The spec is a */}}
+{{- /* named template, so the checksum of the profile (annotation and agent ConfigMap) is the */}}
+{{- /* hash of the very text that the object renders. */}}
+---
+apiVersion: node-manager.deckhouse.io/v1alpha1
+kind: FencingSLAProfile
+metadata:
+  name: normal
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-agent" "node-manager.deckhouse.io/builtin-profile" "true")) | nindent 2 }}
+  annotations:
+    node-manager.deckhouse.io/fencing-profile-checksum: {{ include "fencing_profile_checksum" "normal" | quote }}
+{{ include "fencing_profile_spec_normal" . }}
+{{- define "fencing_profile_spec_normal" -}}
+spec:
+  controlPlaneLostAfter: 9.1s
+  memberlist:
+    probeInterval: 500ms
+    probeTimeout: 200ms
+    suspicionMult: 4
+    suspicionMaxTimeoutMult: 6
+    indirectChecks: 3
+    awarenessMaxMultiplier: 8
+    gossipInterval: 300ms
+    gossipNodes: 3
+    retransmitMult: 4
+    deadNodeReclaimTime: 1s
+    gossipToTheDeadTime: 30s
+  rejoin:
+    interval: 5s
+  poll:
+    witnessFresherBy: 2.35s
+  watchdog:
+    timeout: 15s
+    feedInterval: 1s
+    margin: 750ms
+  heartbeat:
+    interval: 2s
+    apiTimeout: 5s
+  eviction:
+    writerWaveInterval: 3s
+{{- end }}

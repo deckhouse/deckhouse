@@ -1,3 +1,9 @@
+{{- /* The ServiceAccount and the rights of the agent stay while the module is on, also when */}}
+{{- /* every node group is Disabled. When fencing turns off, Helm deletes the DaemonSets. An armed */}}
+{{- /* agent that stops must write AgentStopping to its Node before it disarms the watchdog. */}}
+{{- /* Without its token and rights the write fails, the watchdog stays armed and the node stops. */}}
+{{- /* Do not rename or recreate the ServiceAccount fencing-agent. The running armed pods keep */}}
+{{- /* its token, and the matchConditions of both admission policies of the agent use its name. */}}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -13,15 +19,54 @@ metadata:
   name: d8:node-manager:fencing-agent
   {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-agent")) | nindent 2 }}
 rules:
+  # The agent watches only its own Node: it selects it by the field metadata.name.
+  # A ClusterRole of a DaemonSet cannot name the Node of each pod, so RBAC cannot
+  # limit list and watch to the own Node.
   - apiGroups:
       - ""
     resources:
       - nodes
     verbs:
-      - get
-      - update
       - list
       - watch
+  # The admission policy fencing-agent-own-node-only.deckhouse.io limits these writes to the own Node.
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+      - nodes/status
+    verbs:
+      - patch
+  # The agent reads its profile with GET at start and at each change of its ConfigMap.
+  - apiGroups:
+      - node-manager.deckhouse.io
+    resources:
+      - fencingslaprofiles
+    resourceNames:
+      - critical
+      - normal
+      - slow
+    verbs:
+      - get
+  # The agent creates and deletes the FencingFailedNodeState of a peer, reads it by name
+  # and watches its own one. The admission policy fencing-agent-failed-node-states.deckhouse.io
+  # limits the writes. A ClusterRole of a DaemonSet cannot name the own object of each pod.
+  - apiGroups:
+      - node-manager.deckhouse.io
+    resources:
+      - fencingfailednodestates
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - delete
+  # The agent writes the heartbeat, the attestation and the contact with a patch of the status.
+  - apiGroups:
+      - node-manager.deckhouse.io
+    resources:
+      - fencingfailednodestates/status
+    verbs:
       - patch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -29,6 +74,7 @@ kind: ClusterRoleBinding
 metadata:
   name: d8:node-manager:fencing-agent
   {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-agent")) | nindent 2 }}
+  {{- include "fencing_agent_delete_dependencies" . }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -37,4 +83,105 @@ subjects:
   - kind: ServiceAccount
     name: fencing-agent
     namespace: d8-cloud-instance-manager
-
+---
+# The kube-rbac-proxy of the agent checks tokens of the metrics clients.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:fencing-agent:rbac-proxy
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-agent")) | nindent 2 }}
+  {{- include "fencing_agent_delete_dependencies" . }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:rbac-proxy
+subjects:
+  - kind: ServiceAccount
+    name: fencing-agent
+    namespace: d8-cloud-instance-manager
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: fencing-agent
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-agent")) | nindent 2 }}
+rules:
+  # The agent watches the agent pods by a label selector to know its peers.
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - list
+      - watch
+  # The agent gets the memberlist key from a mounted volume, so it has no right on Secrets.
+  # It watches its ConfigMap by the field metadata.name.
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    resourceNames:
+      - fencing-agent-config
+    verbs:
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: fencing-agent
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-agent")) | nindent 2 }}
+  {{- include "fencing_agent_delete_dependencies" . }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: fencing-agent
+subjects:
+  - kind: ServiceAccount
+    name: fencing-agent
+    namespace: d8-cloud-instance-manager
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: d8:node-manager:fencing-agent
+  namespace: default
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-agent")) | nindent 2 }}
+rules:
+  # The agent probes the control plane by the apiserver addresses of the kubernetes EndpointSlice.
+  # It watches the EndpointSlice by the field metadata.name.
+  - apiGroups:
+      - discovery.k8s.io
+    resources:
+      - endpointslices
+    resourceNames:
+      - kubernetes
+    verbs:
+      - list
+      - watch
+  # The agent writes the events of its own Node. The events of a Node are in the namespace default.
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: d8:node-manager:fencing-agent
+  namespace: default
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-agent")) | nindent 2 }}
+  {{- include "fencing_agent_delete_dependencies" . }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: d8:node-manager:fencing-agent
+subjects:
+  - kind: ServiceAccount
+    name: fencing-agent
+    namespace: d8-cloud-instance-manager

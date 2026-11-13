@@ -1,0 +1,30 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: assert-daemonset-rolled-out
+spec:
+  try:
+    - description: The agent DaemonSet of the group is rolled out
+      assert:
+        resource:
+          apiVersion: apps/v1
+          kind: DaemonSet
+          metadata:
+            name: (join('', ['fencing-agent-', $nodeGroup]))
+            namespace: ($agentNamespace)
+          (status.observedGeneration == metadata.generation): true
+          status:
+            (desiredNumberScheduled > `0`): true
+            (updatedNumberScheduled == desiredNumberScheduled): true
+            (numberAvailable == desiredNumberScheduled): true
+  catch:
+    - description: Describe the agent DaemonSet
+      describe:
+        apiVersion: apps/v1
+        kind: DaemonSet
+        name: (join('', ['fencing-agent-', $nodeGroup]))
+        namespace: ($agentNamespace)
+    - description: Logs of the agents of the test group
+      podLogs:
+        namespace: ($agentNamespace)
+        selector: (join('', ['app=fencing-agent,node-group-name=', $nodeGroup]))

@@ -1,75 +1,702 @@
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
-  name: fencing-agent
+  name: fencing-agent-deployment
 spec:
   description: |
-    Verifies that the fencing-agent DaemonSet deploys and runs when
-    spec.fencing is enabled on the worker NodeGroup. Reverts the patch
-    on completion (and on failure via the cleanup block).
+    Verifies the fencing 2.0 agents on a NodeGroup that the test creates itself.
+    The group has one cloud node, and its instance class and zone come from the
+    source group FENCING_SOURCE_NODE_GROUP (default "worker"); FENCING_INSTANCE_CLASS
+    replaces the instance class name. The test never patches the source group.
+
+    It switches the group through Normal, Slow, Critical, the deprecated Watchdog
+    and Disabled. Every change and every check is a step of its own. No step stops
+    a node, and the boot ID must stay the same. The test ends only when nothing of
+    the test group is left in the cluster.
+
+    The probe image is FENCING_PROBE_IMAGE (default "busybox:1.36").
   concurrent: false
+  bindings:
+    - name: nodeGroup
+      value: (env('FENCING_TEST_NODE_GROUP') || 'e2e-fencing')
+    - name: sourceNodeGroup
+      value: (env('FENCING_SOURCE_NODE_GROUP') || 'worker')
+    - name: instanceClass
+      value: (env('FENCING_INSTANCE_CLASS') || '')
+    - name: probeImage
+      value: (env('FENCING_PROBE_IMAGE') || 'busybox:1.36')
+    - name: agentNamespace
+      value: d8-cloud-instance-manager
+    # Other groups with fencing keep the agents in the cluster when the test group is Disabled.
+    - name: othersFenced
+      value: (length(x_k8s_list($client, 'deckhouse.io/v1', 'NodeGroup', '').items[?metadata.name != $nodeGroup && spec.fencing.mode != null && spec.fencing.mode != 'Disabled'] || `[]`))
+    # With the module multitenancy-manager every namespace becomes a Project.
+    - name: projects
+      value: (x_k8s_resource_exists($client, 'deckhouse.io/v1alpha3', 'Project'))
   steps:
-    - name: enable-fencing
+    - name: test-namespace-ready
       try:
-        - description: Patch worker NodeGroup with spec.fencing (Watchdog mode)
-          apply:
-            file: manifests/nodegroup-patch.yaml
-      cleanup:
-        - description: Always revert spec.fencing on the worker NodeGroup
-          script:
-            content: |
-              kubectl patch nodegroup worker --type=merge -p '{"spec":{"fencing":null}}'
-
-    - name: wait-for-daemonset
-      try:
-        - description: Wait until DaemonSet is fully rolled out
-          assert:
-            file: asserts/assert-daemonset-ready.yaml
-      catch:
-        - description: Collect events on failure
-          events:
-            namespace: d8-cloud-instance-manager
-        - description: Collect fencing-agent pod logs on failure
-          podLogs:
-            namespace: d8-cloud-instance-manager
-            selector: app=fencing-agent
-
-    - name: assert-pods-running
-      try:
-        - description: Assert at least one fencing-agent pod is Running and Ready
+        - description: With Projects in the cluster, wait until the test namespace is in a Project of its own
           assert:
             resource:
               apiVersion: v1
-              kind: Pod
+              kind: Namespace
               metadata:
-                namespace: d8-cloud-instance-manager
-                labels:
-                  app: fencing-agent
-                  node-group-name: worker
-              status:
-                phase: Running
-                (containerStatuses[?name == 'fencing-agent'] | [0].ready): true
+                name: ($namespace)
+              (!$projects || metadata.labels."projects.deckhouse.io/project" == $namespace): true
+      cleanup:
+        - description: Delete the Project of the test namespace, or the namespace when the cluster has no Projects
+          delete:
+            timeout: 5m
+            ref:
+              apiVersion: ($projects && 'deckhouse.io/v1alpha3' || 'v1')
+              kind: ($projects && 'Project' || 'Namespace')
+              name: ($namespace)
+        - description: Wait until the test namespace is gone
+          wait:
+            apiVersion: v1
+            kind: Namespace
+            name: ($namespace)
+            timeout: 5m
+            for:
+              deletion: {}
 
-    - name: assert-node-labels
+    - name: source-group-is-cloud-ephemeral
       try:
-        - description: Assert worker node has fencing labels set by the agent
+        - description: The source group is CloudEphemeral and can give an instance class
           assert:
-            file: asserts/assert-node-labels.yaml
+            file: asserts/source-group.yaml
 
-    - name: revert-fencing
+    - name: delete-leftover-group
       try:
-        - description: Revert spec.fencing on worker NodeGroup
-          patch:
+        - description: Delete the test group that a previous run left, and wait until it is gone
+          delete:
+            timeout: 20m
+            ref:
+              apiVersion: deckhouse.io/v1
+              kind: NodeGroup
+              name: ($nodeGroup)
+
+    - name: no-leftover-nodes
+      try:
+        - description: No node of the test group is left
+          error:
+            timeout: 15m
+            file: asserts/group-nodes.yaml
+
+    - name: no-leftover-machines
+      try:
+        - description: No Machine of the test group is left
+          error:
+            timeout: 15m
+            file: asserts/group-machines.yaml
+
+    - name: no-leftover-instances
+      try:
+        - description: No Instance of the test group is left
+          error:
+            timeout: 15m
+            file: asserts/group-instances.yaml
+
+    - name: no-leftover-daemonset
+      try:
+        - description: No agent DaemonSet of the test group is left
+          error:
+            timeout: 15m
+            file: asserts/group-daemonset.yaml
+
+    - name: no-leftover-watchdog-ngc
+      try:
+        - description: No watchdog NodeGroupConfiguration of the test group is left
+          error:
+            timeout: 15m
+            file: asserts/group-watchdog-ngc.yaml
+
+    - name: create-group
+      try:
+        - description: Create the test NodeGroup from the instance class of the source group
+          apply:
+            bindings:
+              - name: source
+                value: (x_k8s_get($client, 'deckhouse.io/v1', 'NodeGroup', '', $sourceNodeGroup))
+            file: manifests/nodegroup.yaml
+      cleanup:
+        # Runs when a step fails. On success the last steps have already deleted the group.
+        - description: Delete the test group and wait until it is gone
+          delete:
+            timeout: 20m
+            ref:
+              apiVersion: deckhouse.io/v1
+              kind: NodeGroup
+              name: ($nodeGroup)
+        - description: Wait until no node of the test group is left
+          wait:
+            apiVersion: v1
+            kind: Node
+            selector: (join('', ['node.deckhouse.io/group=', $nodeGroup]))
+            timeout: 15m
+            for:
+              deletion: {}
+        - description: Wait until no Machine of the test group is left
+          wait:
+            apiVersion: cluster.x-k8s.io/v1beta2
+            kind: Machine
+            namespace: ($agentNamespace)
+            selector: (join('', ['node-group=', $nodeGroup]))
+            timeout: 15m
+            for:
+              deletion: {}
+        - description: Wait until the agent DaemonSet of the test group is gone
+          wait:
+            apiVersion: apps/v1
+            kind: DaemonSet
+            namespace: ($agentNamespace)
+            name: (join('', ['fencing-agent-', $nodeGroup]))
+            timeout: 5m
+            for:
+              deletion: {}
+        - description: Wait until the watchdog NodeGroupConfiguration of the test group is gone
+          wait:
+            apiVersion: deckhouse.io/v1alpha1
+            kind: NodeGroupConfiguration
+            name: (join('', ['enable-watchdog-for-nodegroup-', $nodeGroup, '.sh']))
+            timeout: 5m
+            for:
+              deletion: {}
+
+    - name: node-ready
+      try:
+        - description: The cloud node of the test group is Ready
+          assert:
+            timeout: 30m
+            file: asserts/group-node-ready.yaml
+      catch:
+        - description: Events of the instance manager namespace
+          events:
+            namespace: ($agentNamespace)
+        - description: Machines of the test group
+          get:
+            apiVersion: cluster.x-k8s.io/v1beta2
+            kind: Machine
+            namespace: ($agentNamespace)
+            selector: (join('', ['node-group=', $nodeGroup]))
+
+    - name: record-node
+      try:
+        - description: Record the node of the test group and its boot ID
+          apply:
+            bindings:
+              - name: node
+                value: (x_k8s_list($client, 'v1', 'Node', '').items[?metadata.labels."node.deckhouse.io/group" == $nodeGroup] | [0])
+            file: manifests/state.yaml
+        - description: The record has the node name and the boot ID
+          assert:
+            resource:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: e2e-fencing-state
+              (data.nodeName != null && data.nodeName != ''): true
+              (data.bootID != null && data.bootID != ''): true
+
+    - name: baseline-no-fencing
+      try:
+        - description: The test group has no spec.fencing
+          assert:
             resource:
               apiVersion: deckhouse.io/v1
               kind: NodeGroup
               metadata:
-                name: worker
-              spec:
-                fencing: null
+                name: ($nodeGroup)
+              (spec.fencing == null): true
 
-    - name: assert-daemonset-deleted
+    - name: baseline-kernel-panic
+      use:
+        template: step-templates/assert-kernel-panic.yaml
+        with:
+          bindings:
+            - name: check
+              value: baseline
+            - name: want
+              value: "10"
+
+    - name: normal-set-mode
+      use:
+        template: step-templates/set-mode.yaml
+        with:
+          bindings:
+            - name: mode
+              value: Normal
+
+    - name: normal-agent-config
+      use:
+        template: step-templates/assert-agent-config.yaml
+        with:
+          bindings:
+            - name: mode
+              value: Normal
+
+    - name: normal-daemonset-armed
+      use:
+        template: step-templates/assert-daemonset-armed.yaml
+
+    - name: normal-daemonset-rolled-out
+      use:
+        template: step-templates/assert-daemonset-rolled-out.yaml
+
+    - name: normal-memberlist-key
       try:
-        - description: DaemonSet must be deleted after fencing is disabled
+        - description: The memberlist key Secret exists; its content is never read
+          assert:
+            resource:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: e2e-fencing-state
+              (x_k8s_exists($client, 'v1', 'Secret', $agentNamespace, 'fencing-memberlist-key')): true
+
+    - name: normal-socket-ngc
+      try:
+        - description: The NodeGroupConfiguration of the agent socket directory exists
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1alpha1
+              kind: NodeGroupConfiguration
+              metadata:
+                name: fencing-agent-socket-directory.sh
+
+    - name: normal-watchdog-ngc
+      use:
+        template: step-templates/assert-watchdog-ngc.yaml
+
+    - name: normal-node-armed
+      use:
+        template: step-templates/assert-node-condition.yaml
+        with:
+          bindings:
+            - name: status
+              value: "True"
+            - name: reason
+              value: Armed
+
+    - name: normal-node-profile
+      use:
+        template: step-templates/assert-node-profile.yaml
+        with:
+          bindings:
+            - name: profile
+              value: normal
+
+    - name: normal-node-cp-source
+      use:
+        template: step-templates/assert-node-cp-source.yaml
+
+    - name: normal-kernel-panic
+      use:
+        template: step-templates/assert-kernel-panic.yaml
+        with:
+          bindings:
+            - name: check
+              value: normal
+            - name: want
+              value: "0"
+
+    - name: normal-not-rebooted
+      use:
+        template: step-templates/assert-not-rebooted.yaml
+
+    - name: slow-set-mode
+      use:
+        template: step-templates/set-mode.yaml
+        with:
+          bindings:
+            - name: mode
+              value: Slow
+
+    - name: slow-agent-config
+      use:
+        template: step-templates/assert-agent-config.yaml
+        with:
+          bindings:
+            - name: mode
+              value: Slow
+
+    - name: slow-daemonset-armed
+      use:
+        template: step-templates/assert-daemonset-armed.yaml
+
+    - name: slow-daemonset-rolled-out
+      use:
+        template: step-templates/assert-daemonset-rolled-out.yaml
+
+    - name: slow-watchdog-ngc
+      use:
+        template: step-templates/assert-watchdog-ngc.yaml
+
+    - name: slow-node-armed
+      use:
+        template: step-templates/assert-node-condition.yaml
+        with:
+          bindings:
+            - name: status
+              value: "True"
+            - name: reason
+              value: Armed
+
+    - name: slow-node-profile
+      use:
+        template: step-templates/assert-node-profile.yaml
+        with:
+          bindings:
+            - name: profile
+              value: slow
+
+    - name: slow-node-cp-source
+      use:
+        template: step-templates/assert-node-cp-source.yaml
+
+    - name: slow-kernel-panic
+      use:
+        template: step-templates/assert-kernel-panic.yaml
+        with:
+          bindings:
+            - name: check
+              value: slow
+            - name: want
+              value: "0"
+
+    - name: slow-not-rebooted
+      use:
+        template: step-templates/assert-not-rebooted.yaml
+
+    - name: critical-set-mode
+      use:
+        template: step-templates/set-mode.yaml
+        with:
+          bindings:
+            - name: mode
+              value: Critical
+
+    - name: critical-agent-config
+      use:
+        template: step-templates/assert-agent-config.yaml
+        with:
+          bindings:
+            - name: mode
+              value: Critical
+
+    - name: critical-daemonset-armed
+      use:
+        template: step-templates/assert-daemonset-armed.yaml
+
+    - name: critical-daemonset-rolled-out
+      use:
+        template: step-templates/assert-daemonset-rolled-out.yaml
+
+    - name: critical-watchdog-ngc
+      use:
+        template: step-templates/assert-watchdog-ngc.yaml
+
+    - name: critical-node-armed
+      use:
+        template: step-templates/assert-node-condition.yaml
+        with:
+          bindings:
+            - name: status
+              value: "True"
+            - name: reason
+              value: Armed
+
+    - name: critical-node-profile
+      use:
+        template: step-templates/assert-node-profile.yaml
+        with:
+          bindings:
+            - name: profile
+              value: critical
+
+    - name: critical-node-cp-source
+      use:
+        template: step-templates/assert-node-cp-source.yaml
+
+    - name: critical-kernel-panic
+      use:
+        template: step-templates/assert-kernel-panic.yaml
+        with:
+          bindings:
+            - name: check
+              value: critical
+            - name: want
+              value: "0"
+
+    - name: critical-not-rebooted
+      use:
+        template: step-templates/assert-not-rebooted.yaml
+
+    - name: watchdog-set-mode
+      use:
+        template: step-templates/set-mode.yaml
+        with:
+          bindings:
+            - name: mode
+              value: Watchdog
+
+    - name: watchdog-agent-config
+      use:
+        template: step-templates/assert-agent-config.yaml
+        with:
+          bindings:
+            - name: mode
+              value: Slow
+
+    - name: watchdog-daemonset-armed
+      use:
+        template: step-templates/assert-daemonset-armed.yaml
+
+    - name: watchdog-daemonset-rolled-out
+      use:
+        template: step-templates/assert-daemonset-rolled-out.yaml
+
+    - name: watchdog-watchdog-ngc
+      use:
+        template: step-templates/assert-watchdog-ngc.yaml
+
+    - name: watchdog-node-armed
+      use:
+        template: step-templates/assert-node-condition.yaml
+        with:
+          bindings:
+            - name: status
+              value: "True"
+            - name: reason
+              value: Armed
+
+    - name: watchdog-node-profile
+      use:
+        template: step-templates/assert-node-profile.yaml
+        with:
+          bindings:
+            - name: profile
+              value: slow
+
+    - name: watchdog-node-cp-source
+      use:
+        template: step-templates/assert-node-cp-source.yaml
+
+    - name: watchdog-kernel-panic
+      use:
+        template: step-templates/assert-kernel-panic.yaml
+        with:
+          bindings:
+            - name: check
+              value: watchdog
+            - name: want
+              value: "0"
+
+    - name: watchdog-not-rebooted
+      use:
+        template: step-templates/assert-not-rebooted.yaml
+
+    - name: maintenance-annotate
+      try:
+        - description: Put the maintenance annotation on the test node
+          patch:
+            bindings:
+              - name: nodeName
+                value: (x_k8s_get($client, 'v1', 'ConfigMap', $namespace, 'e2e-fencing-state').data.nodeName)
+            resource:
+              apiVersion: v1
+              kind: Node
+              metadata:
+                name: ($nodeName)
+                annotations:
+                  node-manager.deckhouse.io/fencing-disable: ""
+      cleanup:
+        # When the test passes, the node is already deleted at this point.
+        - description: Remove the maintenance annotation from the test node, if the node still exists
+          command:
+            check:
+              ($error == null || contains($stderr, 'NotFound')): true
+            env:
+              - name: NODE
+                value: (x_k8s_get($client, 'v1', 'ConfigMap', $namespace, 'e2e-fencing-state').data.nodeName)
+            entrypoint: kubectl
+            args:
+              - annotate
+              - node
+              - $NODE
+              - node-manager.deckhouse.io/fencing-disable-
+
+    - name: maintenance-node-disarmed
+      use:
+        template: step-templates/assert-node-condition.yaml
+        with:
+          bindings:
+            - name: status
+              value: "False"
+            - name: reason
+              value: Maintenance
+
+    - name: maintenance-remove-annotation
+      try:
+        - description: Remove the maintenance annotation from the test node
+          patch:
+            bindings:
+              - name: nodeName
+                value: (x_k8s_get($client, 'v1', 'ConfigMap', $namespace, 'e2e-fencing-state').data.nodeName)
+            resource:
+              apiVersion: v1
+              kind: Node
+              metadata:
+                name: ($nodeName)
+                annotations:
+                  node-manager.deckhouse.io/fencing-disable: null
+
+    - name: maintenance-node-armed
+      use:
+        template: step-templates/assert-node-condition.yaml
+        with:
+          bindings:
+            - name: status
+              value: "True"
+            - name: reason
+              value: Armed
+
+    - name: maintenance-not-rebooted
+      use:
+        template: step-templates/assert-not-rebooted.yaml
+
+    - name: disabled-set-mode
+      use:
+        template: step-templates/set-mode.yaml
+        with:
+          bindings:
+            - name: mode
+              value: Disabled
+
+    - name: disabled-watchdog-ngc-removed
+      try:
+        - description: The watchdog NodeGroupConfiguration of the group is removed
           error:
-            file: asserts/assert-daemonset-gone.yaml
+            timeout: 5m
+            file: asserts/group-watchdog-ngc.yaml
+
+    - name: disabled-agent-config
+      try:
+        - description: While another group is fenced, the agent ConfigMap has the group as Disabled; with no fenced group the ConfigMap is gone
+          assert:
+            resource:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: e2e-fencing-state
+              ((x_k8s_exists($client, 'v1', 'ConfigMap', $agentNamespace, 'fencing-agent-config') && lookup(json_parse(x_k8s_get($client, 'v1', 'ConfigMap', $agentNamespace, 'fencing-agent-config').data."config.json").nodeGroups, $nodeGroup).mode) || 'no ConfigMap'): ($othersFenced > `0` && 'Disabled' || 'no ConfigMap')
+
+    - name: disabled-group-daemonset
+      try:
+        - description: The agent DaemonSet of the group stays while another group is fenced and is gone when none is
+          assert:
+            resource:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: e2e-fencing-state
+              (x_k8s_exists($client, 'apps/v1', 'DaemonSet', $agentNamespace, join('', ['fencing-agent-', $nodeGroup]))): ($othersFenced > `0`)
+
+    - name: disabled-agent-daemonsets
+      try:
+        - description: Agent DaemonSets stay in the cluster while another group is fenced, and none is left when no group is
+          assert:
+            resource:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: e2e-fencing-state
+              (length(x_k8s_list($client, 'apps/v1', 'DaemonSet', $agentNamespace).items[?metadata.labels.app == 'fencing-agent']) > `0`): ($othersFenced > `0`)
+
+    - name: disabled-node-condition
+      try:
+        - description: The test node has Fencing=False/GroupDisabled while another group is fenced, and no Fencing condition when none is
+          assert:
+            resource:
+              apiVersion: v1
+              kind: Node
+              metadata:
+                labels:
+                  node.deckhouse.io/group: ($nodeGroup)
+              ((status.conditions[?type == 'Fencing'] | [0].join('/', [status, reason])) || 'no condition'): ($othersFenced > `0` && 'False/GroupDisabled' || 'no condition')
+      catch:
+        - description: Events of the agent namespace
+          events:
+            namespace: ($agentNamespace)
+
+    - name: disabled-node-profile
+      try:
+        - description: The test node has the profile annotation disabled while another group is fenced, and no profile annotation when none is
+          assert:
+            resource:
+              apiVersion: v1
+              kind: Node
+              metadata:
+                labels:
+                  node.deckhouse.io/group: ($nodeGroup)
+              (metadata.annotations."node-manager.deckhouse.io/fencing-profile" || 'no annotation'): ($othersFenced > `0` && 'disabled' || 'no annotation')
+
+    - name: disabled-kernel-panic
+      use:
+        template: step-templates/assert-kernel-panic.yaml
+        with:
+          bindings:
+            - name: check
+              value: disabled
+            - name: want
+              value: "10"
+
+    - name: disabled-not-rebooted
+      use:
+        template: step-templates/assert-not-rebooted.yaml
+
+    - name: delete-group
+      try:
+        - description: Delete the test group and wait until it is gone
+          delete:
+            timeout: 20m
+            ref:
+              apiVersion: deckhouse.io/v1
+              kind: NodeGroup
+              name: ($nodeGroup)
+
+    - name: deleted-nodes
+      try:
+        - description: No node of the test group is left
+          error:
+            timeout: 15m
+            file: asserts/group-nodes.yaml
+
+    - name: deleted-machines
+      try:
+        - description: No Machine of the test group is left
+          error:
+            timeout: 15m
+            file: asserts/group-machines.yaml
+
+    - name: deleted-instances
+      try:
+        - description: No Instance of the test group is left
+          error:
+            timeout: 15m
+            file: asserts/group-instances.yaml
+
+    - name: deleted-daemonset
+      try:
+        - description: No agent DaemonSet of the test group is left
+          error:
+            timeout: 15m
+            file: asserts/group-daemonset.yaml
+
+    - name: deleted-watchdog-ngc
+      try:
+        - description: No watchdog NodeGroupConfiguration of the test group is left
+          error:
+            timeout: 15m
+            file: asserts/group-watchdog-ngc.yaml

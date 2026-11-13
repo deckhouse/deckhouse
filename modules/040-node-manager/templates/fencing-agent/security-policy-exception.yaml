@@ -1,15 +1,16 @@
 {{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
-{{- range $ng := .Values.nodeManager.internal.nodeGroups }}
-  {{- $mode := dig "fencing" "mode" "" $ng }}
-  {{- if or (eq $mode "Watchdog") (eq $mode "Notify") }}
+{{- if include "fencing_enabled" . }}
+{{- range $name, $ng := .Values.nodeManager.internal.fencing.nodeGroups }}
+  {{- $armed := ne $ng.mode "Disabled" }}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicyException
 metadata:
-  name: "fencing-agent-{{ $ng.name }}"
+  name: "fencing-agent-{{ $name }}"
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list $ (dict "app" "fencing-agent")) | nindent 2 }}
 spec:
+  {{- if $armed }}
   securityContext:
     appArmorProfile:
       allowedValues:
@@ -33,31 +34,28 @@ spec:
       allowedValue: true
       metadata:
         description: |
-          Required because the container runs in privileged mode with SYS_ADMIN capability    
+          Required because the container runs in privileged mode
     capabilities:
       allowedValues:
         add:
-          - SYS_ADMIN
+          - NET_RAW
         drop:
           - ALL
       metadata:
         description: |
-          SYS_ADMIN needed for host watchdog; all other caps dropped
+          NET_RAW is the only added capability; all other caps dropped
+  {{- end }}
   network:
     hostNetwork:
-      allowedValue: false
+      allowedValue: true
       metadata:
         description: |
-          Allow the fencing agent to reserve node-local memberlist ports
+          The fencing agent talks to the agents of the other nodes on the node IP
     hostPorts:
-      - port: 8500
+      - port: 4250
         protocol: TCP
         metadata:
-          description: Memberlist TCP listener used by the fencing agent
-      - port: 8500
-        protocol: UDP
-        metadata:
-          description: Memberlist UDP listener used by the fencing agent
+          description: HTTPS metrics endpoint exposed through kube-rbac-proxy
   volumes:
     types:
       allowedValues:
@@ -66,11 +64,13 @@ spec:
         description: hostPath volumes needed for watchdog and socket access
     hostPath:
       allowedValues:
+        {{- if $armed }}
         - path: /dev/watchdog
           readOnly: false
           metadata:
             description: Access to the hardware watchdog device for node fencing.
-        - path: /tmp
+        {{- end }}
+        - path: /var/run/fencing-agent
           readOnly: false
           metadata:
             description: Shared host socket directory used by the fencing agent.

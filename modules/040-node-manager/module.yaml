@@ -4,6 +4,12 @@ weight: 40
 subsystems:
   - cluster
 namespace: d8-cloud-instance-manager
+disable:
+  confirmation: true
+  message: "Fencing stops working. Disabling the module waits until all fencing agent pods are gone. While a node with an agent pod is unreachable, it waits until the timeout and tries again. Before you disable the module, disable fencing in all node groups and wait until no fencing-agent pods are left in d8-cloud-instance-manager. If you do not, an agent can fail to report its stop, and the watchdog stops its node."
+  messages:
+    en: "Fencing stops working. Disabling the module waits until all fencing agent pods are gone. While a node with an agent pod is unreachable, it waits until the timeout and tries again. Before you disable the module, disable fencing in all node groups and wait until no fencing-agent pods are left in d8-cloud-instance-manager. If you do not, an agent can fail to report its stop, and the watchdog stops its node."
+    ru: "Fencing перестанет работать. Отключение модуля ждёт, пока не уйдут все поды агента fencing. Пока узел с подом агента недоступен, оно ждёт до таймаута и повторяется. Перед отключением модуля выключите fencing во всех группах узлов и дождитесь, когда в d8-cloud-instance-manager не останется подов fencing-agent. Иначе агент может не успеть сообщить об остановке, и watchdog остановит его узел."
 descriptions:
   en: Manages nodes in the Kubernetes cluster as a related group. Configures and updates cluster nodes, manages cluster scaling in the cloud, and manages local users on nodes.
   ru: Управляет узлами кластера Kubernetes как связанной группой. Настраивает и обновляет узлы кластера, управляет масштабированием кластера в облаке и управляет локальными пользователями на узлах.

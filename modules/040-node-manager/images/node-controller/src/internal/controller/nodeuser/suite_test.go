@@ -38,6 +38,8 @@ var (
 	cfg       *rest.Config
 	k8sClient client.Client
 	scheme    *k8sruntime.Scheme
+	// managerCache is what the controller reads.
+	managerCache client.Reader
 
 	suiteCtx    context.Context
 	suiteCancel context.CancelFunc
@@ -71,6 +73,7 @@ var _ = BeforeSuite(func() {
 	By("starting the manager with the nodeuser-status controller")
 	mgr, err := testenv.NewManager(suiteCtx, cfg, scheme)
 	Expect(err).NotTo(HaveOccurred())
+	managerCache = mgr.GetCache()
 
 	go func() {
 		defer GinkgoRecover()

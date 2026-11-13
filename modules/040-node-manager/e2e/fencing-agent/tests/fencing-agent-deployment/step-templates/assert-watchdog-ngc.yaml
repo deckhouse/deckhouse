@@ -1,0 +1,14 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: assert-watchdog-ngc
+spec:
+  try:
+    - description: The watchdog NodeGroupConfiguration of the group exists and selects only this group
+      assert:
+        resource:
+          apiVersion: deckhouse.io/v1alpha1
+          kind: NodeGroupConfiguration
+          metadata:
+            name: (join('', ['enable-watchdog-for-nodegroup-', $nodeGroup, '.sh']))
+          (join(',', spec.nodeGroups)): ($nodeGroup)

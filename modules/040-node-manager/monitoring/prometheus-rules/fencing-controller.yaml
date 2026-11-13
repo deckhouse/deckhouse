@@ -1,0 +1,198 @@
+# Alerts on the metrics of fencing-controller. Only the leader reconciles, so the expressions use max by
+# to merge the series of all replicas. When the controller is not deployed, the metrics do not exist and
+# the alerts do not rise.
+- name: d8.fencing-controller
+  rules:
+    - alert: D8FencingNodeFailed
+      # A node with armed="false" has no watchdog. Fencing never puts the taint on it, so it has no alert.
+      expr: |
+        max by (node) (d8_fencing_failed_node_state_phase{armed="true"}) > 0
+      labels:
+        tier: cluster
+        severity_level: "4"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        summary: Fencing found a failure of node {{ $labels.node }}.
+        description: |
+          The node `{{ $labels.node }}` has a `FencingFailedNodeState` object. The fencing agents of other nodes found that this node failed. The watchdog of the node is armed.
+
+          The fencing controller puts the taint `node.kubernetes.io/out-of-service` on the node when the node is stopped, for one of these reasons:
+
+          - A witness node confirmed that the node stopped, and the watchdog timeout of the node passed after the confirmation.
+          - The node is silent: it does not send its heartbeat through the API server. A node that loses the control plane stops itself. The controller waits for the time that the node needs to stop: the control plane loss threshold, the watchdog timeout and a margin after the last sign of life.
+
+          After the taint, the pods of the node move to other nodes. The phase of the object shows the progress. For the cases when the controller does not put the taint, refer to the FAQ of the `node-manager` module.
+
+          If the phase is `FallbackAlive`, the node works. Refer to the alert `D8FencingNodeIsolatedFromPeers`.
+
+          To read the state of the incident:
+
+          ```bash
+          d8 k get fencingfailednodestate {{ $labels.node }}
+          d8 k describe fencingfailednodestate {{ $labels.node }}
+          ```
+
+          The alert stops when the object is deleted.
+
+    - alert: D8FencingNodeIsolatedFromPeers
+      expr: |
+        max by (node) (d8_fencing_failed_node_state_phase{phase="FallbackAlive"}) > 0
+      for: 1m
+      labels:
+        tier: cluster
+        severity_level: "5"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        summary: Node {{ $labels.node }} works, but the fencing agents of other nodes cannot connect to it.
+        description: |
+          The fencing agents of other nodes found that the node `{{ $labels.node }}` failed. But the node connects to the control plane and sends its heartbeat. Thus the node works, and the network between this node and the other nodes is broken.
+
+          Usually a firewall rule or an ACL stops the traffic of the fencing agents. The fencing controller does not put the taint `node.kubernetes.io/out-of-service` on a node that sends its heartbeat.
+
+          To read the state of the incident:
+
+          ```bash
+          d8 k get fencingfailednodestate {{ $labels.node }} -o yaml
+          ```
+
+          Make sure that the network lets the fencing agents connect to each other.
+
+    - alert: D8FencingNodeAliveAfterAttestation
+      expr: |
+        max by (node) (d8_fencing_alive_after_attestation) > 0
+      labels:
+        tier: cluster
+        severity_level: "4"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        summary: Node {{ $labels.node }} sends heartbeats after a witness confirmed its stop.
+        description: |
+          A witness node confirmed that the node `{{ $labels.node }}` stopped. After that, the fencing controller saw a heartbeat of the node. Thus the node can still work.
+
+          The fencing controller does not put the taint `node.kubernetes.io/out-of-service` on the node while the node sends heartbeats. When the heartbeats stop, the node gets the taint after the silent delay: `controlPlaneLostAfter` + 0.2s + `watchdog.timeout` + `watchdog.margin` + 0.9s of the profile after the last sign of life of the node.
+
+          Examine the node. To read the state of the incident:
+
+          ```bash
+          d8 k get fencingfailednodestate {{ $labels.node }} -o yaml
+          ```
+
+    - alert: D8FencingEvictionNotProgressing
+      expr: |
+        max by (node, reason) (d8_fencing_eviction_not_progressing) > 0
+      labels:
+        tier: cluster
+        severity_level: "4"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        summary: The evacuation of node {{ $labels.node }} is not complete after 60 seconds.
+        description: |
+          The fencing controller put the taint `node.kubernetes.io/out-of-service` on the node `{{ $labels.node }}`, but the evacuation is not complete after 60 seconds. The `FencingFailedNodeState` object stays in the phase `Evicting` and has the condition `Progressing` with the status `False` and the reason `{{ $labels.reason }}`. The controller examines the node again every 5 seconds. When the cause is gone, the evacuation completes, and the alert stops.
+
+          The reasons:
+
+          - `VolumesAttached`: the node still has `VolumeAttachment` objects. The volumes of its pods are not free for other nodes. Usually the CSI driver or the storage cannot detach the volumes.
+          - `PodsRemaining`: the controller could not delete pods of the node, or another error of the API stops the evacuation. The message gives the pods and the errors.
+          - `TooManyUnhealthyMachines`: the controller does not delete the node of a cloud machine, because the MachineHealthCheck does not replace it. More than 50 percent of the machines are unhealthy, or the cluster has no MachineHealthCheck that reports its machines. The message gives the numbers.
+
+          To read the message of the condition:
+
+          ```bash
+          d8 k get fencingfailednodestate {{ $labels.node }} -o yaml
+          ```
+
+          To find the `VolumeAttachment` objects of the node:
+
+          ```bash
+          d8 k get volumeattachments -o custom-columns=NAME:.metadata.name,NODE:.spec.nodeName,ATTACHER:.spec.attacher,PV:.spec.source.persistentVolumeName,ATTACHED:.status.attached | awk 'NR==1 || $2=="{{ $labels.node }}"'
+          ```
+
+          To read the errors of the detach:
+
+          ```bash
+          d8 k get volumeattachments -o json | jq '.items[] | select(.spec.nodeName=="{{ $labels.node }}") | {name: .metadata.name, detachError: .status.detachError}'
+          ```
+
+    - alert: D8NodeOutOfServiceTainted
+      # The metric shows the taint, no matter who put it.
+      expr: |
+        max by (node) (d8_fencing_node_out_of_service_tainted) > 0
+      for: 30m
+      labels:
+        tier: cluster
+        severity_level: "6"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        summary: Node {{ $labels.node }} has the taint node.kubernetes.io/out-of-service for 30 minutes.
+        description: |
+          The node `{{ $labels.node }}` has the taint `node.kubernetes.io/out-of-service` for 30 minutes. Kubernetes does not run pods on the node.
+
+          The fencing controller or a user puts the taint on a node that stopped. Start the node again or remove it from the cluster.
+
+          To read the taints of the node:
+
+          ```bash
+          d8 k get node {{ $labels.node }} -o jsonpath='{.spec.taints}' | jq
+          ```
+
+          If a user put the taint and the node works, remove the taint:
+
+          ```bash
+          d8 k taint node {{ $labels.node }} node.kubernetes.io/out-of-service-
+          ```
+
+    - alert: D8FencingProfileIsUnavailable
+      expr: |
+        max by (node, profile) (d8_fencing_configuration_error) > 0
+      # The controller tries again with backoff, so a short outage of the API clears itself.
+      for: 5m
+      labels:
+        tier: cluster
+        severity_level: "5"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_fencing_is_blocked: "D8FencingIsBlocked,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_fencing_is_blocked: "D8FencingIsBlocked,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: Fencing of node {{ $labels.node }} is blocked, because the controller cannot use its SLA profile.
+        description: |
+          The node `{{ $labels.node }}` has a fencing incident, but the fencing controller cannot use the SLA profile{{ if $labels.profile }} `{{ $labels.profile }}`{{ end }} of the incident. The controller does not put the taint `node.kubernetes.io/out-of-service` on the node, and the pods of the node do not move to other nodes.
+
+          The controller calculates the times of the incident from the profile:
+
+          - the time from the confirmation of a witness to the taint: `watchdog.timeout` + `watchdog.margin`;
+          - the time from the last sign of life of a silent node to the taint: `controlPlaneLostAfter`, `watchdog.timeout`, `watchdog.margin` and a fixed margin;
+          - the time after the last heartbeat of the node: `heartbeat.interval` and `heartbeat.apiTimeout`.
+
+          The message of the condition `ConfigurationError` of the incident gives the cause, for example the profile that is missing.
+
+          The profile of the incident is the profile of the node group of the node. Only an armed node needs a profile. For a node that is not armed, the controller uses a fixed time of 20 seconds after the last heartbeat and reads no profile.
+
+          The controller tries again with backoff. Thus the alert shows that the profile is not usable for some minutes.
+
+          The module installs the built-in profiles. If a profile is missing, a user usually deleted or changed it.
+          {{- if $labels.profile }} To read the profile:
+
+          ```bash
+          d8 k get fencingslaprofile {{ $labels.profile | toLower }} -o yaml
+          ```
+          {{- else }} The controller did not find the name of the profile. The message of the condition `ConfigurationError` gives the cause.
+          {{- end }}
+
+          To read the cause and the events of the incident:
+
+          ```bash
+          d8 k get fencingfailednodestate {{ $labels.node }} -o jsonpath='{.status.conditions}' | jq
+          d8 k describe fencingfailednodestate {{ $labels.node }}
+          ```
+
+          To read the logs of the controller:
+
+          ```bash
+          d8 k -n d8-cloud-instance-manager logs deploy/fencing-controller -c fencing-controller --all-pods=true
+          ```

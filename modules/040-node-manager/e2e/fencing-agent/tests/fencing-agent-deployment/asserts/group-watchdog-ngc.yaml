@@ -1,0 +1,4 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: (join('', ['enable-watchdog-for-nodegroup-', $nodeGroup, '.sh']))

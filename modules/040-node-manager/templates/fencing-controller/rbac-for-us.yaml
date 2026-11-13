@@ -1,0 +1,207 @@
+{{- if include "fencing_enabled" . }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fencing-controller
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-controller")) | nindent 2 }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:node-manager:fencing-controller
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-controller")) | nindent 2 }}
+rules:
+  # The controller writes the episode label and deletes a state after it removes the taint.
+  # The agents create the states.
+  # TODO: add create when the controller makes a state for a node with a stale Lease.
+  - apiGroups:
+      - node-manager.deckhouse.io
+    resources:
+      - fencingfailednodestates
+    verbs:
+      - get
+      - list
+      - watch
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - node-manager.deckhouse.io
+    resources:
+      - fencingfailednodestates/status
+    verbs:
+      - get
+      - update
+      - patch
+  - apiGroups:
+      - node-manager.deckhouse.io
+    resources:
+      - fencingslaprofiles
+    verbs:
+      - get
+      - list
+      - watch
+  # The controller sets and removes the out-of-service taint, and deletes the Node of a cloud machine.
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+    verbs:
+      - get
+      - list
+      - watch
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - get
+      - list
+      - watch
+      - delete
+  # The controller sets the phase Failed of a pod on a dead node before it deletes the pod.
+  - apiGroups:
+      - ""
+    resources:
+      - pods/status
+    verbs:
+      - patch
+  # The eviction of a dead node is complete when the node has no VolumeAttachments.
+  - apiGroups:
+      - storage.k8s.io
+    resources:
+      - volumeattachments
+    verbs:
+      - list
+  # Instance.spec.machineRef gives the machine of a Node.
+  - apiGroups:
+      - deckhouse.io
+    resources:
+      - instances
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:fencing-controller
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-controller")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:node-manager:fencing-controller
+subjects:
+  - kind: ServiceAccount
+    name: fencing-controller
+    namespace: d8-cloud-instance-manager
+---
+# The kube-rbac-proxy of the controller checks tokens of the metrics clients.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:fencing-controller:rbac-proxy
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-controller")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:rbac-proxy
+subjects:
+  - kind: ServiceAccount
+    name: fencing-controller
+    namespace: d8-cloud-instance-manager
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: fencing-controller
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-controller")) | nindent 2 }}
+rules:
+  - apiGroups:
+      - machine.sapcloud.io
+    resources:
+      - machines
+    verbs:
+      - get
+      - delete
+  # The controller does not delete a machine when too many machines are unhealthy.
+  - apiGroups:
+      - cluster.x-k8s.io
+    resources:
+      - machinehealthchecks
+    verbs:
+      - get
+      - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: fencing-controller
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-controller")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: fencing-controller
+subjects:
+  - kind: ServiceAccount
+    name: fencing-controller
+    namespace: d8-cloud-instance-manager
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: fencing-controller-leader-election
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-controller")) | nindent 2 }}
+rules:
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: fencing-controller-leader-election
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-controller")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: fencing-controller-leader-election
+subjects:
+  - kind: ServiceAccount
+    name: fencing-controller
+    namespace: d8-cloud-instance-manager
+{{- end }}

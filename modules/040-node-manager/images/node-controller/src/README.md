@@ -129,7 +129,7 @@ schema starts in nodelet, and these types follow it.
 
 ### Migrations
 
-Both are transitional and will be removed once every supported cluster has passed through them.
+All of them are transitional and will be removed once every supported cluster has passed through them.
 
 | Controller | Watches | What it does |
 |---|---|---|

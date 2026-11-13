@@ -100,7 +100,7 @@ func nodeGroupCorpus() []corpusFixture {
 						"count":         int64(3),
 						"labelSelector": map[string]interface{}{"matchLabels": map[string]interface{}{"node-group": "static-full"}},
 					},
-					"fencing": map[string]interface{}{"mode": "Watchdog"},
+					"fencing": map[string]interface{}{"mode": "Slow"},
 					"kubelet": kubeletDefaults(),
 					"nodeTemplate": map[string]interface{}{
 						"labels":      map[string]interface{}{"role": "worker"},

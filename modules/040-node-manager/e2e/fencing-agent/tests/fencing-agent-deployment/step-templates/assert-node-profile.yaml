@@ -1,0 +1,16 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: assert-node-profile
+spec:
+  try:
+    - description: The node of the test group has the expected profile annotation
+      assert:
+        resource:
+          apiVersion: v1
+          kind: Node
+          metadata:
+            labels:
+              node.deckhouse.io/group: ($nodeGroup)
+            annotations:
+              node-manager.deckhouse.io/fencing-profile: ($profile)

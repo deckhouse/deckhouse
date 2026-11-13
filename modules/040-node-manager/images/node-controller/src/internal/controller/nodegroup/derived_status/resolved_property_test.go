@@ -176,7 +176,7 @@ func randomSpec(rng *rand.Rand) v1.NodeGroupSpec {
 		spec.StaticInstances = &v1.StaticInstancesSpec{Count: ptrInt32(int32(rng.Intn(10)))}
 	}
 	if rng.Intn(3) != 0 {
-		spec.Fencing = &v1.FencingSpec{Mode: "Watchdog"}
+		spec.Fencing = &v1.FencingSpec{Mode: v1.FencingModeSlow}
 	}
 	if rng.Intn(3) != 0 {
 		spec.Disruptions = &v1.DisruptionsSpec{ApprovalMode: v1.DisruptionApprovalMode(randomString(rng, "mode"))}

@@ -384,6 +384,13 @@ func (ng nodeGroup) CRIType() string {
 	return ""
 }
 
+// FencingEnabled is true when spec.fencing.mode is set and is not Disabled.
+func (ng nodeGroup) FencingEnabled() bool {
+	fencing, _ := ng["fencing"].(map[string]interface{})
+	mode, _ := fencing["mode"].(string)
+	return mode != "" && mode != "Disabled"
+}
+
 // CloudProviderType is resolved by node-controller; empty means the group is outside any cloud.
 func (ng nodeGroup) CloudProviderType() string {
 	if typ, ok := ng["cloudProviderType"].(string); ok {
@@ -430,6 +437,14 @@ func (bc *bashibleContext) AddToChecksum(checksumCollector hash.Hash) error {
 			delete(cloudInstances, "minPerZone")
 			delete(cloudInstances, "zones")
 		}
+	}
+
+	// The bashible steps depend only on whether fencing is on, not on the fencing mode.
+	// Keep only this fact, so that a mode change does not update the nodes.
+	if bcCopy.NodeGroup.FencingEnabled() {
+		bcCopy.NodeGroup["fencing"] = true
+	} else {
+		delete(bcCopy.NodeGroup, "fencing")
 	}
 
 	bcData, err := yaml.Marshal(bcCopy)

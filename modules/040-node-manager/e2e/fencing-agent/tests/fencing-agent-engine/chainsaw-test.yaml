@@ -1,0 +1,154 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: fencing-agent-engine
+spec:
+  description: |
+    Verifies fencing on a Deckhouse Engine (systemType: Immutable)
+    NodeGroup, where no bashible or NodeGroupConfiguration runs: softdog is built
+    into the kernel with soft_panic=1, the agent applies the profile timeout with
+    WDIOC_SETTIMEOUT, and node-controller publishes kernel.panic=0 through
+    NodeConfig. Also checks that maintenance and a rolling restart disarm the
+    watchdog without resetting any node, and that disabling fencing gives the
+    reboot delay back.
+
+    The group is FENCING_ENGINE_NODE_GROUP (default "worker"); the probe image is
+    FENCING_ENGINE_PROBE_IMAGE (default "busybox:1.36").
+  concurrent: false
+  timeouts:
+    exec: 10m
+  bindings:
+    - name: nodeGroup
+      value: (env('FENCING_ENGINE_NODE_GROUP') || 'worker')
+    - name: probeImage
+      value: (env('FENCING_ENGINE_PROBE_IMAGE') || 'busybox:1.36')
+  steps:
+    - name: preflight
+      try:
+        - description: The group must be an Engine group
+          assert:
+            file: asserts/assert-nodegroup-immutable.yaml
+        - description: The group must have Ready nodes and no fencing yet; record boot IDs
+          script:
+            content: sh ./scripts/preflight.sh
+            env:
+              - name: NODE_GROUP
+                value: ($nodeGroup)
+
+    - name: deploy-probe
+      try:
+        - description: Deploy a probe pod on every node of the group
+          apply:
+            file: manifests/probe-daemonset.yaml
+        - assert:
+            file: asserts/assert-probe-ready.yaml
+
+    - name: assert-baseline
+      try:
+        - description: softdog is built in with soft_panic=1, idle, and kernel.panic is 10
+          script:
+            content: sh ./scripts/assert-baseline.sh
+            env:
+              - name: NODE_GROUP
+                value: ($nodeGroup)
+
+    - name: enable-fencing
+      try:
+        - description: Enable fencing on the group (mode Critical)
+          patch:
+            file: manifests/nodegroup-fencing.yaml
+      cleanup:
+        - description: Always remove spec.fencing and the maintenance annotation
+          script:
+            content: |
+              kubectl annotate nodes -l "node.deckhouse.io/group=${NODE_GROUP}" node-manager.deckhouse.io/fencing-disable- || true
+              kubectl patch nodegroup "${NODE_GROUP}" --type=merge -p '{"spec":{"fencing":null}}'
+            env:
+              - name: NODE_GROUP
+                value: ($nodeGroup)
+
+    - name: wait-for-agents
+      try:
+        - description: The agents open the device as uid 64535 and become Ready
+          assert:
+            file: asserts/assert-daemonset-ready.yaml
+        - description: Every node has the condition Fencing Armed and the 2.0 annotations, and no 1.0 label
+          script:
+            content: sh ./scripts/assert-node-state.sh
+            env:
+              - name: NODE_GROUP
+                value: ($nodeGroup)
+      catch:
+        - events:
+            namespace: d8-cloud-instance-manager
+        - podLogs:
+            namespace: d8-cloud-instance-manager
+            selector: app=fencing-agent
+
+    - name: assert-fenced
+      try:
+        - description: kernel.panic=0 is published and applied; softdog is armed with the profile timeout
+          script:
+            content: sh ./scripts/assert-fenced.sh
+            env:
+              - name: NODE_GROUP
+                value: ($nodeGroup)
+      catch:
+        - podLogs:
+            namespace: d8-cloud-instance-manager
+            selector: app=fencing-agent
+        - script:
+            content: kubectl get nodeconfigs.internal.deckhouse.io -o yaml
+
+    - name: assert-maintenance
+      try:
+        - description: Maintenance disarms with Magic Close and the node stays up
+          script:
+            content: sh ./scripts/assert-maintenance.sh
+            env:
+              - name: NODE_GROUP
+                value: ($nodeGroup)
+      catch:
+        - podLogs:
+            namespace: d8-cloud-instance-manager
+            selector: app=fencing-agent
+
+    - name: restart-agents
+      try:
+        - description: Restarting every agent of the group at once resets no node
+          script:
+            content: sh ./scripts/restart-agents.sh
+            env:
+              - name: NODE_GROUP
+                value: ($nodeGroup)
+      catch:
+        - podLogs:
+            namespace: d8-cloud-instance-manager
+            selector: app=fencing-agent
+
+    - name: disable-fencing
+      try:
+        - description: Disable fencing on the group
+          patch:
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: NodeGroup
+              metadata:
+                name: ($nodeGroup)
+              spec:
+                fencing: null
+        - description: The condition Fencing is False/GroupDisabled, or the agents are gone when no other group is fenced
+          script:
+            content: sh ./scripts/assert-group-disabled.sh
+            env:
+              - name: NODE_GROUP
+                value: ($nodeGroup)
+
+    - name: assert-unfenced
+      try:
+        - description: kernel.panic is back to 10, the watchdog is idle, no node was reset
+          script:
+            content: sh ./scripts/assert-unfenced.sh
+            env:
+              - name: NODE_GROUP
+                value: ($nodeGroup)

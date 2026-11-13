@@ -1,0 +1,44 @@
+# Reads node-side facts for the scenario: kernel.panic and /proc/cmdline are
+# global, and sysfs shows the host's watchdog class. No privileges and no
+# hostPath, so the restricted Pod Security Standard admits it: the agent itself
+# proves the /dev/watchdog permissions by opening the device as uid 64535.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fencing-e2e-probe
+spec:
+  selector:
+    matchLabels:
+      app: fencing-e2e-probe
+  template:
+    metadata:
+      labels:
+        app: fencing-e2e-probe
+    spec:
+      nodeSelector:
+        node.deckhouse.io/group: ($nodeGroup)
+      tolerations:
+        - operator: Exists
+      terminationGracePeriodSeconds: 1
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: probe
+          image: ($probeImage)
+          command: ["sleep", "86400"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 5m
+              memory: 8Mi
+            limits:
+              memory: 16Mi

@@ -1,0 +1,14 @@
+# The test NodeGroup with one cloud node. It takes only the instance class and
+# the first zone of the source group ($source), so no label of an external
+# controller reaches it. $instanceClass, when set, replaces the class name.
+# The zone is added only when the source group has zones: an empty zones field
+# is invalid, so the whole cloudInstances object is one expression.
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ($nodeGroup)
+  labels:
+    fencing-e2e.deckhouse.io/test: "true"
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances: '(merge({classReference: {kind: $source.spec.cloudInstances.classReference.kind, name: $instanceClass || $source.spec.cloudInstances.classReference.name}, minPerZone: `1`, maxPerZone: `1`}, $source.spec.cloudInstances.zones && {zones: $source.spec.cloudInstances.zones[:1]} || `{}`))'

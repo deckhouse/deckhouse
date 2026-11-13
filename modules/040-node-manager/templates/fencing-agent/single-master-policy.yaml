@@ -1,0 +1,71 @@
+{{- /* The number of masters, as in helm_lib_deployment_on_master_strategy_and_replicas_for_ha: */}}
+{{- /* without nodes with the control plane label (CSE Managed), the system nodes with the master role count. */}}
+{{- $masters := index .Values.global.discovery "clusterMasterCount" | int }}
+{{- if eq $masters 0 }}
+  {{- $masters = index .Values.global.discovery.d8SpecificNodeCountByRole "master" | int }}
+{{- end }}
+{{- if eq $masters 1 }}
+{{- $policyName := "fencing-single-master.deckhouse.io" }}
+---
+# A node with fencing stops when it loses the control plane. With one master, a
+# failure or a restart of this master stops all nodes with fencing. The policy
+# refuses to turn on fencing of a NodeGroup that has it off. It only warns when a
+# NodeGroup with fencing is created, so the installation of a cluster does not
+# fail. A NodeGroup that has fencing on stays editable. Every mode except Disabled
+# turns fencing on, a value that this release does not know works as Disabled.
+#
+# Until the cluster is bootstrapped, the update only warns too: node-controller
+# creates the NodeGroup master without fencing, and dhctl then applies the
+# resources of the installation as an update. Known limitation: a cluster of one
+# master without other nodes does not get the bootstrapped flag, so there the
+# update only warns.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-agent")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups:   ["deckhouse.io"]
+      apiVersions: ["*"]
+      operations:  ["CREATE", "UPDATE"]
+      resources:   ["nodegroups"]
+  validations:
+  - expression: |
+      !(object.?spec.?fencing.?mode.orValue('') in ['Critical', 'Normal', 'Slow', 'Watchdog']) ||
+      (request.operation == 'UPDATE' && oldObject.?spec.?fencing.?mode.orValue('') in ['Critical', 'Normal', 'Slow', 'Watchdog'])
+    reason: Forbidden
+    message: "The cluster has one master. A node with fencing stops when it loses the control plane, so a failure or a restart of this master stops all nodes with fencing. Add masters to the cluster or set spec.fencing.mode to Disabled."
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: fencing-single-master-update.deckhouse.io
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-agent")) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [{{ if .Values.global.clusterIsBootstrapped }}Deny{{ else }}Warn{{ end }}]
+  matchResources:
+    resourceRules:
+    - apiGroups:   ["deckhouse.io"]
+      apiVersions: ["*"]
+      operations:  ["UPDATE"]
+      resources:   ["nodegroups"]
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: fencing-single-master-create.deckhouse.io
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-agent")) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Warn]
+  matchResources:
+    resourceRules:
+    - apiGroups:   ["deckhouse.io"]
+      apiVersions: ["*"]
+      operations:  ["CREATE"]
+      resources:   ["nodegroups"]
+{{- end }}

@@ -90,7 +90,7 @@ func renderSpecOf(spec internalv1alpha1.NodeSpec) internalv1alpha1.NodeSpec {
 // for the life of the node. The set must match the installer's payload
 // (dhctl/pkg/immutable/nodeconfig.go) so the first managed render changes nothing.
 func TestRenderKernelPublishesEveryKeyANodeMustKeep(t *testing.T) {
-	sysctl := renderKernel().Sysctl
+	sysctl := renderKernel(&v1.NodeGroup{}).Sysctl
 
 	require.Equal(t, map[string]internalv1alpha1.SysctlValue{
 		"kernel.panic":         "10",
@@ -105,7 +105,49 @@ func TestRenderKernelPublishesEveryKeyANodeMustKeep(t *testing.T) {
 		Kernel: internalv1alpha1.Kernel{Sysctl: map[string]internalv1alpha1.SysctlValue{"kernel.panic": "0"}},
 	}
 	require.False(t, specUpToDate(&internalv1alpha1.NodeConfig{Spec: stale},
-		&internalv1alpha1.NodeConfig{Spec: internalv1alpha1.NodeSpec{Kernel: renderKernel()}}, false))
+		&internalv1alpha1.NodeConfig{Spec: internalv1alpha1.NodeSpec{Kernel: renderKernel(&v1.NodeGroup{})}}, false))
+}
+
+// A fenced node has to stay down after the watchdog panics it, as bashible
+// arranges on a Mutable node; Disabled, an unknown mode, or none keeps the
+// reboot delay. Watchdog works as Slow.
+func TestRenderKernelKeepsAFencedNodeDownAfterAPanic(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		fencing *v1.FencingSpec
+		want    internalv1alpha1.SysctlValue
+	}{
+		{name: "no fencing", want: "10"},
+		{name: "critical", fencing: &v1.FencingSpec{Mode: v1.FencingModeCritical}, want: "0"},
+		{name: "normal", fencing: &v1.FencingSpec{Mode: v1.FencingModeNormal}, want: "0"},
+		{name: "slow", fencing: &v1.FencingSpec{Mode: v1.FencingModeSlow}, want: "0"},
+		{name: "disabled", fencing: &v1.FencingSpec{Mode: v1.FencingModeDisabled}, want: "10"},
+		{name: "deprecated watchdog works as slow", fencing: &v1.FencingSpec{Mode: v1.FencingModeWatchdog}, want: "0"},
+		{name: "empty mode", fencing: &v1.FencingSpec{}, want: "10"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ng := &v1.NodeGroup{Spec: v1.NodeGroupSpec{Fencing: tt.fencing}}
+			sysctl := renderKernel(ng).Sysctl
+			require.Equal(t, tt.want, sysctl["kernel.panic"])
+			// Fencing moves the delay only; kubelet still needs panic_on_oops.
+			require.Equal(t, internalv1alpha1.SysctlValue("1"), sysctl["kernel.panic_on_oops"])
+		})
+	}
+}
+
+// The full render carries the fencing delay too: renderSpec is what the
+// reconciler publishes, and it replaces Kernel.Modules after renderKernel.
+func TestRenderSpecCarriesTheFencingPanicDelay(t *testing.T) {
+	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0"}}
+
+	fenced := &v1.NodeGroup{
+		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
+		Spec:       v1.NodeGroupSpec{Fencing: &v1.FencingSpec{Mode: v1.FencingModeSlow}},
+	}
+	require.Equal(t, internalv1alpha1.SysctlValue("0"), renderSpec(fenced, node, clusterInputs{}).Kernel.Sysctl["kernel.panic"])
+
+	plain := &v1.NodeGroup{ObjectMeta: metav1.ObjectMeta{Name: "worker"}}
+	require.Equal(t, internalv1alpha1.SysctlValue("10"), renderSpec(plain, node, clusterInputs{}).Kernel.Sysctl["kernel.panic"])
 }
 
 // kubelet exits when --node-labels carries a label it may not accept, so a node

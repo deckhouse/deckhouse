@@ -113,8 +113,7 @@ var _ = Describe("NodeBootstrap controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		setInfrastructureProvisioned(ctx, machine.Name)
-		rotateBootstrapToken(ctx, ngName)
-		nudgeConfig(ctx, config.Name)
+		waitUntilControllerSeesConsumed(ctx, config.Name, machine.Name)
 
 		var frozen string
 		Eventually(func(g Gomega) {
@@ -158,8 +157,7 @@ var _ = Describe("NodeBootstrap controller", func() {
 
 		By("the node registering, which is what makes the userdata history")
 		setNodeRef(ctx, machine.Name)
-		rotateBootstrapToken(ctx, ngName)
-		nudgeConfig(ctx, config.Name)
+		waitUntilControllerSeesConsumed(ctx, config.Name, machine.Name)
 
 		var frozen string
 		Eventually(func(g Gomega) {
@@ -398,6 +396,43 @@ func setInfrastructureProvisioned(ctx context.Context, machineName string) {
 	Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: nodecommon.MachineNamespace, Name: machineName}, machine)).To(Succeed())
 	machine.Status.Initialization.InfrastructureProvisioned = ptr.To(true)
 	Expect(k8sClient.Status().Update(ctx, machine)).To(Succeed())
+}
+
+// waitUntilControllerSeesConsumed returns when no pass of the controller can
+// render the bootstrap data of the machine again.
+//
+// The controller reads the Machine from its cache. The Machine and the config
+// come through different watches, thus a pass can start on a config event and
+// still see the Machine before its status change. Such a pass renders the data
+// again, and it can write the Secret after the test reads it.
+//
+// Thus, first wait until the cache shows that the data is consumed. Then remove
+// the condition that each pass sets as its last write, and wait until a pass
+// sets it again. That pass started after the cache showed the change. The
+// controller does not run two passes over one config at the same time, thus
+// all earlier passes are complete.
+func waitUntilControllerSeesConsumed(ctx context.Context, configName, machineName string) {
+	GinkgoHelper()
+
+	Eventually(func(g Gomega) {
+		machine := &capiv1beta2.Machine{}
+		g.Expect(managerCache.Get(ctx, types.NamespacedName{Namespace: nodecommon.MachineNamespace, Name: machineName}, machine)).To(Succeed())
+		g.Expect(consumed(machine)).To(BeTrue())
+	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+	Eventually(func(g Gomega) {
+		config := getConfig(ctx, g, configName)
+		patch := client.MergeFrom(config.DeepCopy())
+		config.Status.Conditions = nil
+		g.Expect(k8sClient.Status().Patch(ctx, config, patch)).To(Succeed())
+	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+	Eventually(func(g Gomega) {
+		g.Expect(getConfig(ctx, g, configName).Status.Conditions).To(ContainElement(And(
+			HaveField("Type", conditionDataSecretAvailable),
+			HaveField("Status", metav1.ConditionTrue),
+		)))
+	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 }
 
 func nudgeConfig(ctx context.Context, name string) {

@@ -1717,44 +1717,339 @@ Possible values of the `reason` field:
 - `PodsWithLabelAreRunningOnNode`: The shutdown has been blocked because there are pods with the label `pod.deckhouse.io/inhibit-node-shutdown` still running on the node.
 - `NoRunningPodsWithLabel`: The blocking has been released and the shutdown can continue.
 
+## How do I set up fencing for a node group?
+
+Fencing protects the cluster from nodes that lost the connection to it. A node that cannot reach the cluster stops its own work with a kernel panic. After that, Kubernetes can safely move the workloads to other nodes.
+
+Set the fencing mode in the [`spec.fencing.mode`](cr.html#nodegroup-v1-spec-fencing-mode) parameter of the NodeGroup resource:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: Static
+  fencing:
+    mode: Normal
+```
+
+Each mode selects a built-in FencingSLAProfile. The profile sets the timings of the failure detection and the watchdog timeout:
+
+| Mode       | Profile    | Time to consider the control plane lost (`controlPlaneLostAfter`) | Watchdog timeout | Reaction to a failure |
+| ---------- | ---------- | ----------------------------------------------------------------- | ---------------- | --------------------- |
+| `Disabled` | none       | none                                                              | none             | Fencing is off. This is the default mode. |
+| `Critical` | `critical` | 4.15 s                                                            | 5 s              | About 12 s            |
+| `Normal`   | `normal`   | 9.1 s                                                             | 15 s             | About 30 s            |
+| `Slow`     | `slow`     | 20.2 s                                                            | 30 s             | About 60 s            |
+
+The reaction time is a target. The tolerance is ±20 %. A failed node stops not later than `controlPlaneLostAfter` + 0.2 s + the watchdog timeout after the failure: 9.35 s with `Critical`, 24.3 s with `Normal` and 50.4 s with `Slow`.
+
+A short timeout gives a fast reaction. But a short timeout also gives a higher risk of a false panic when the cluster is slow. Use `Slow` for groups with an unstable network or a heavy load. Use `Critical` only when a fast reaction is more important than the risk of a false panic.
+
+{% alert level="info" %}
+The `Critical` mode is available only in the commercial editions of Deckhouse. In Community Edition (CE), Deckhouse does not let you set the `Critical` mode for a node group. A group that already has this mode, for example after switching the edition to CE, works as `Normal`.
+{% endalert %}
+
+Note the following:
+
+- The `Watchdog` value of the `spec.fencing.mode` parameter is deprecated. It works as `Slow`. Use `Normal`, `Slow`, or `Critical` (`Critical` is available only in the commercial editions).
+- The `spec.fencing.watchdog.timeout` parameter is deprecated. Deckhouse ignores it. The watchdog timeout comes from the profile of the mode.
+- In a cluster with one master node, Deckhouse does not let you turn on fencing. Refer to [Fencing in a cluster with one master node](#fencing-in-a-cluster-with-one-master-node).
+- Deckhouse does not let you change the mode of a node group while a node of the group has a FencingFailedNodeState object. Refer to [Known limitations of the evacuation](#known-limitations-of-the-evacuation).
+- The fencing agent runs on all nodes of the cluster when at least one node group has a mode other than `Disabled`. On the nodes of a `Disabled` group, the agent only takes part in the failure detection. It does not arm the watchdog.
+- Fencing sets the `kernel.panic` kernel parameter to `0` on the nodes of the groups with a mode other than `Disabled`. A node does not restart by itself after a fencing panic.
+- When you set a mode other than `Disabled` for a group, the new agent pod on a node starts only after bashible loads `softdog` and `/dev/watchdog` appears. Until then, the pod stays in the `ContainerCreating` state with the `FailedMount` event, and the agent does not work on the node. If the group already has agent pods, the DaemonSet replaces them by 10 percent of the nodes at a time. On Deckhouse Engine nodes, `softdog` is built into the kernel, and the pod does not wait. If a node waits for more than 5 minutes, the `D8FencingAgentDown` alert rises. When bashible loads `softdog`, the pod starts and the alert stops. No action is necessary. If the pod does not start, check the bashible logs on the node.
+
+## How do I check the fencing state of the nodes?
+
+Run the following command:
+
+```shell
+d8 k get nodes -o custom-columns='NAME:.metadata.name,READY:.status.conditions[?(@.type=="Ready")].status,FENCING:.status.conditions[?(@.type=="Fencing")].reason,PROFILE:.metadata.annotations.node-manager\.deckhouse\.io/fencing-profile'
+```
+
+The `READY` column shows the status of the `Ready` condition of the node. The `FENCING` column shows the reason of the `Fencing` condition, for example, `Armed` or `GroupDisabled`. The `PROFILE` column shows the `node-manager.deckhouse.io/fencing-profile` annotation of the node. The annotation has the FencingSLAProfile of the node group mode (`slow` for the deprecated `Watchdog` mode). This is also true when the watchdog of the node is not armed. If the group has the `Disabled` mode, the annotation is `disabled`. If the fencing agent does not run on the node, the `FENCING` and `PROFILE` columns show `<none>`. For example, this occurs when all node groups have the `Disabled` mode.
+
+When fencing stops a node after the loss of the connection to the API server, the node cannot update its `Fencing` condition. Until the node restarts and the agent starts again, the `FENCING` column can still show `Armed`. To find a stopped node, look at the `READY` column: its value is not `True`.
+
+## What happens when the fencing agent restarts?
+
+- A planned stop of the agent, for example, an update of the DaemonSet, a deletion of the pod or a shutdown of the node, disarms the watchdog. The node does not stop. If the agent has already stopped the reset of the timer after the loss of the control plane, the watchdog stays armed.
+- If the agent crashes or is killed, the watchdog stays armed. The watchdog timeout starts when the agent process stops. At the start, the new agent process checks whether the control plane is available:
+  - If the control plane is available, the agent disarms the watchdog. Then the agent arms the watchdog again, as at a usual start. Until then, the reason of the `Fencing` condition is not `Armed`.
+  - If the control plane is not available, the agent does not disarm the watchdog. If the agent does not arm the watchdog again before the timeout expires, the node stops.
+- If the agent crashes at each start and the control plane is available, the node usually continues to work, but its watchdog is not armed. The `D8FencingAgentRestarted` alert rises, and the reason of the `Fencing` condition is not `Armed`. Read the logs of the agent and remove the cause of the crashes.
+
+## What are the limits of softdog?
+
+Fencing uses the `softdog` kernel module as the watchdog. Deckhouse loads the module with the `soft_panic=1` parameter. If the fencing agent does not reset the timer, the timer expires and the kernel panics.
+
+`softdog` is a timer of the same kernel that it must protect. If the kernel has a hard lockup, the timer does not work and the node does not panic. If the node has a hardware watchdog, use it instead of `softdog`. A hardware watchdog works also when the kernel hangs.
+
+### Deckhouse Engine nodes
+
+On nodes of groups with `systemType: Immutable` (Deckhouse Engine), `softdog` is built into the kernel. The NodeGroupConfiguration script does not run on these nodes.
+
+If you installed a node before the Deckhouse Engine release with the built-in `softdog`, the node does not have the built-in `softdog`. The node gets `softdog` only after you reinstall it or update its boot partition.
+
+## How does fencing work on master nodes?
+
+The fencing agent treats master nodes in the same way as worker nodes. The same modes and conditions apply. There is no special rule for the `master` group.
+
+Note the following:
+
+- After a fencing panic, a master node does not start again by itself. Return the node to the cluster manually. If etcd runs on the node, return the node to the etcd cluster manually.
+- When a master node fails, the taint comes later than on a worker node, usually by 10–20 seconds. kube-apiserver on the other master nodes also sends requests to etcd on the failed master node and waits for an answer for approximately 10 seconds. The requests of the fencing-controller wait too. No action is necessary.
+- The fencing-controller runs on the master nodes. If the master node of the controller fails or is not ready, Kubernetes evicts the controller pod from it at once, and the controller starts on another master node. In this case, the taint of a failed node comes later. The delay is the time in which Kubernetes marks the master node as unreachable ([`nodeMonitorGracePeriodSeconds`](/modules/control-plane-manager/configuration.html#parameters-nodemonitorgraceperiodseconds) of the `control-plane-manager` module, 40 seconds by default), plus the time to start the pod. In a cluster without the high availability mode, the controller has one replica.
+
+### Fencing in a cluster with one master node
+
+A node with fencing stops when it loses the control plane. In a cluster with one master node, a failure or a restart of this master node stops all nodes with fencing. Also, when the master node stops, no component remains to set the taint and to move the workloads. Thus, Deckhouse does not let you turn on fencing in a cluster with one master node:
+
+- Deckhouse refuses a change of a NodeGroup that turns fencing on, that is, a change of `spec.fencing.mode` from `Disabled` to another mode.
+- When you create a NodeGroup with a mode other than `Disabled`, Deckhouse only shows a warning. This does not stop the installation of a cluster with fencing in its resources.
+- A NodeGroup that already has fencing on stays editable. Deckhouse does not turn off fencing that is already on.
+
+Deckhouse counts the master nodes as follows. It counts the nodes with the `node-role.kubernetes.io/control-plane` label. If there are no such nodes, it counts the system nodes with the `node-role.deckhouse.io/master` label.
+
+Until the installation of the cluster is complete, Deckhouse only shows a warning also when you turn fencing on. For this check, the installation is complete when the first node that is not a master node becomes `Ready`. Thus, in a cluster of one master node without other nodes, Deckhouse only shows a warning.
+
+To turn on fencing in the `master` node group, first add master nodes to the cluster. Then set the mode of the group.
+
+## Which network ports does fencing need?
+
+The fencing agents on all nodes connect to each other on port 8500. Open the following access rules before you enable fencing:
+
+- Port 8500 TCP and UDP between the InternalIP addresses of all cluster nodes.
+- Port 8500 UDP between the addresses of the SystemNetwork on all nodes. This rule is necessary only if you use the second network (the `settings.fencing.systemNetworkFallback.systemNetworkName` parameter of the `node-manager` module). TCP is not necessary for this network. Currently the agents do not exchange messages through the second network. Open the rule in advance for the fallback through the SystemNetwork.
+
+## What does the D8FencingSystemNetworkNotFound alert mean?
+
+The alert means that the `settings.fencing.systemNetworkFallback.systemNetworkName` parameter of the `node-manager` module names a SystemNetwork that does not exist in the cluster. The agents cannot use the second network. Deckhouse does not change the parameter.
+
+To fix the problem, do one of the following:
+
+- Create the SystemNetwork.
+- Set the name of an existing network.
+- Delete the name from the parameter.
+
+Note the following:
+
+- Deckhouse checks that the SystemNetwork exists when you set `systemNetworkName` to a new non-empty value. Deckhouse can reject only this change. Deckhouse always accepts the deletion of the value and the changes of the other ModuleConfig fields, also when the check is not available.
+- During `dhctl bootstrap`, the check is not active. Deckhouse accepts the parameter without the check. If the network does not exist, the alert rises after the module starts.
+- The alert stops about 10 minutes after you restore the network.
+- While all node groups have the `Disabled` mode, the alert does not rise. The agents do not use the second network in this case. The alert rises when you enable fencing.
+
+## How does fencing protect the network key?
+
+The fencing agents use a shared key to encrypt the messages between them. The key is in the `fencing-memberlist-key` Secret in the `d8-cloud-instance-manager` namespace. If you delete the Secret, Deckhouse generates a new key and the `D8FencingKeyRegenerated` alert rises.
+
+When an agent gets a new key, it keeps the old key and starts to use the new key after 2 minutes. This delay lets the kubelet on all nodes update the Secret. The agent removes the old key after the same delay.
+
+## How do I rotate the fencing network key?
+
+The `fencing-memberlist-key` Secret in the `d8-cloud-instance-manager` namespace has two keys in the `data` field:
+
+- `primary`: the agents use this key to encrypt the messages. It is necessary.
+- `secondary`: the agents use this key only to decrypt the messages. It is optional.
+
+Each key is exactly 32 random bytes. In the `data` field, the value is these 32 bytes encoded in base64. Do not write a base64 string into the `stringData` field: the agents then get a key of a wrong length.
+
+To rotate the key, do the following steps:
+
+1. Make a new key, write it into `primary` and move the current key to `secondary`. The key stays in a shell variable only, so it does not appear in the output and in the shell history:
+
+   ```shell
+   NEW_KEY=$(head -c 32 /dev/urandom | base64)
+   d8 k -n d8-cloud-instance-manager patch secret fencing-memberlist-key --type=json -p "[{\"op\":\"copy\",\"from\":\"/data/primary\",\"path\":\"/data/secondary\"},{\"op\":\"replace\",\"path\":\"/data/primary\",\"value\":\"${NEW_KEY}\"}]"
+   unset NEW_KEY
+   ```
+
+   The kubelet updates the Secret on the nodes, usually in approximately 1 minute. Each agent keeps the current key, adds the new key and starts to use the new key after 2 minutes. During the rotation, the agents with the old key and the agents with the new key decrypt the messages of each other.
+
+1. Wait at least 10 minutes. Then all agents use the new key. Remove the old key from the Secret:
+
+   ```shell
+   d8 k -n d8-cloud-instance-manager patch secret fencing-memberlist-key --type=json -p '[
+     {"op": "remove", "path": "/data/secondary"}
+   ]'
+   ```
+
+Do not delete the Secret to rotate the key. Deckhouse then makes a new key without the old key, and the `D8FencingKeyRegenerated` alert rises.
+
+If the key has a wrong format, the agents that run continue to use their current keys and ignore the wrong key. The `d8_fencing_agent_config_invalid{parameter="key"}` metric of these agents is `1`. An agent that starts with a wrong `primary` key cannot connect to the other agents and does not arm the watchdog. The `Fencing` condition of its node is `False` with the `InvalidKey` reason, and after 10 minutes the `D8FencingAgentInvalidKey` alert rises. To find these nodes, use the command from [How do I check the fencing state of the nodes?](#how-do-i-check-the-fencing-state-of-the-nodes). To check the length of the `primary` key, run the following command. It must show `32`:
+
+```shell
+d8 k -n d8-cloud-instance-manager get secret fencing-memberlist-key -o jsonpath='{.data.primary}' | base64 -d | wc -c
+```
+
 ## How the fencing mechanism handles different node types?
 
-The fencing mechanism is triggered when a node loses connectivity with the cluster and protects it from "zombie" nodes in an undefined state. To prevent short-time failures from causing cascading actions, the mechanism operates in two stages: first, it marks the node as suspicious (at the `memberlist/Lifeguard` gossip protocol level), and then isolates it — shuts the node down and, if necessary, deletes the associated Node object.
+The fencing mechanism stops a node that lost the connection with the cluster. It protects the cluster from "zombie" nodes in an undefined state.
 
-For more details on how the fencing-agent and fencing-controller work, refer to the description of the [`spec.fencing.mode`](cr.html#nodegroup-v1-spec-fencing-mode) parameter of the NodeGroup resource.
+A node with an armed watchdog works only while it sees the control plane. When the node does not see the control plane for longer than `controlPlaneLostAfter` of the profile, the fencing-agent stops the reset of the watchdog timer (the `softdog` kernel module) at once. When the timeout expires, a kernel panic occurs. This guarantees that no workloads remain running on the node.
 
-The behavior depends on the node type (the `node.deckhouse.io/type` label).
+While the node has a FencingFailedNodeState object, the node sees the control plane only when it can write its heartbeat through the API server. A node that cannot write its heartbeat stops in the same way.
 
-### Cloud nodes (CloudEphemeral, CloudPermanent)
+After the agent stops the reset of the timer, it continues to check the control plane:
 
-When fencing is triggered in `Watchdog` mode:
+- If the control plane is available again before the watchdog timeout expires, the agent resets the timer again, and the node continues to work. Thus, a short pause of the control plane does not stop the nodes.
+- The agent also asks the agents of the other nodes. It looks for a witness, that is, a node that sees the control plane. The agent sends a stop message to the witness, and the witness writes an attestation into the FencingFailedNodeState object of the node. After this message, the stop is final: the agent does not reset the timer again. The stop is also final when the FencingFailedNodeState object of the node is in the `Proven` phase.
 
-1. The fencing-agent stops resetting the watchdog timer (the `softdog` kernel module). When the timeout expires, a kernel panic occurs — this guarantees that no workloads remain running on the node.
-2. The fencing-controller deletes the Node object from the cluster.
-3. The cloud-provider-controller (MCM/CAPI) picks up the Node deletion, removes the corresponding virtual machine, and provisions a new one if needed. As a result, the failed node is recreated automatically.
+A pause of the control plane in the whole cluster affects all nodes with an armed watchdog at the same time. Measurements on a cluster show that all nodes survive a pause of up to the following time:
 
-Theoretically, a scenario is possible where kubelet on a "stuck" VM recovers before the cloud-provider deletes the machine and attempts to re-register the node in the cluster. The probability of this is minimal due to the following protecting mechanisms:
+| Mode       | Pause that the nodes survive |
+| ---------- | ---------------------------- |
+| `Critical` | 7.35 s                       |
+| `Normal`   | 21.6 s                       |
+| `Slow`     | 45.7 s                       |
 
-- A kernel panic leaves the node in a non-operational state. Manual VM restart is required for recovery.
-- Automatic node reboot after a kernel panic is disabled at the OS level for all nodes with `fencing` enabled.
-- There are safety delays between the kernel panic and the moment the cloud-provider processes the machine.
+If the pause is longer, some or all nodes with an armed watchdog can stop.
 
-### Static nodes (Static, CloudStatic)
+For more details on how the fencing-agent works, refer to the description of the [`spec.fencing.mode`](cr.html#nodegroup-v1-spec-fencing-mode) parameter of the NodeGroup resource.
 
-For static nodes, the Node object is **not deleted**, since the underlying machine cannot be automatically recreated. In this case:
+After the node stops, the behavior depends on the type of the node group (the `node.deckhouse.io/type` label) and its engine (`status.engine`):
 
-1. The fencing-agent shuts the node down via a kernel panic to prevent undefined behavior.
-2. The fencing-controller only deletes pods from node.
-3. The Node object remains in the cluster, and the node waits until it is manually restored by an operator.
+1. The node stays down. Deckhouse disables the automatic reboot after a kernel panic at the OS level. This applies to all nodes of the groups with a fencing mode other than `Disabled`. This prevents a node from rejoining the cluster in an undefined state.
+2. When the stop of the node is certain, the fencing-controller sets the `node.kubernetes.io/out-of-service` taint on the Node. The stop is certain when a witness confirmed it and the watchdog timeout of the node passed, or when the node is silent for the time that it needs to stop. For the times and for the cases when the controller does not set the taint, refer to [When the controller sets the taint](#when-the-controller-sets-the-taint).
+   After the taint, the controller sets the `Failed` phase and the `DisruptionTarget` condition on the pods of the node and deletes the pods immediately. This includes the pods that tolerate the taint. The controller does not delete the pods of DaemonSets and the static pods. The controller does not remove the finalizers of the pods: a pod with a finalizer stays in the API until the owner of the finalizer removes it. Pods of a StatefulSet and pods with ReadWriteOnce volumes start on other nodes.
+   The evacuation is complete when the node has no `VolumeAttachment` objects. If the evacuation is not complete after 60 seconds, the incident stays in the `Evicting` phase and gets the `Progressing` condition with the status `False`. The reason of the condition tells what stops the evacuation now: `VolumesAttached`, `PodsRemaining` or `TooManyUnhealthyMachines`. The controller continues to examine the node and completes the evacuation when the cause is gone.
+3. After the evacuation, Deckhouse acts on the node as follows:
+   - For a node of a `CloudPermanent`, `CloudStatic`, or `Static` group (this includes a `Static` group with `staticInstances`, that is, CAPS), for a master node, and for an etcd arbiter node, Deckhouse only keeps the taint. It never deletes the Node object.
+   - For a node of a `CloudEphemeral` group with `status.engine: CAPI`, Deckhouse deletes the Node object only when the MachineHealthCheck of the Cluster API cluster reports its machines and 50 percent or fewer of them are unhealthy. Deckhouse counts the stopped machine as unhealthy. MachineHealthCheck then sets the `HealthCheckSucceeded` condition of the Machine to `False` with the `NodeDeleted` reason and replaces the machine. If more than 50 percent of the machines are unhealthy, or the MachineHealthCheck does not report its machines yet, Deckhouse does not delete the Node object yet. The controller continues to examine the machines. When 50 percent or fewer of them are unhealthy, the controller deletes the Node object and completes the evacuation.
+   - For a node of a `CloudEphemeral` group with `status.engine: MCM`, Deckhouse deletes the `Machine` (`machine.sapcloud.io`). Machine Controller Manager creates a new machine.
+4. A node that Deckhouse does not replace stays down until you start it. When the node returns (the Node is `Ready` and it has a new boot ID), the fencing-controller removes the taint automatically. The controller works only while at least one node group has a mode other than `Disabled`. If you turn fencing off in all node groups, the taint stays on the node. Refer to [What to do with the out-of-service taint before you turn fencing off in all node groups?](#what-to-do-with-the-out-of-service-taint-before-you-turn-fencing-off-in-all-node-groups)
 
-### Disabling automatic reboot after kernel panic
+If the fencing-controller does not set the taint, Kubernetes sets the `node.kubernetes.io/unreachable` taint on the Node and evicts the pods of the node after the time in the [`failedNodePodEvictionTimeoutSeconds`](/modules/control-plane-manager/configuration.html#parameters-failednodepodevictiontimeoutseconds) parameter of the `control-plane-manager` module (300 seconds by default).
 
-In all cases, when `fencing` is enabled, automatic node reboot after a kernel panic is disabled at the OS level (via kernel settings). This prevents a node from rejoining the cluster in an undefined state:
+A node of a group with fencing can return to the cluster in a way that is different from the behavior above. If this occurs, contact the [support](https://deckhouse.io/tech-support/). Your report helps to clarify the sequence of checks and protection mechanisms.
 
-- **For cloud nodes**: Until the cloud-provider deletes or recreates the virtual machine.
-- **For static nodes**: Until the operator restores the node manually.
+### When the controller sets the taint
 
-If you observe a scenario where a node with `fencing` enabled returns to the cluster in a way that differs from the behavior described above, contact the [support](https://deckhouse.io/tech-support/). This will help clarify the sequence of checks and protecting mechanisms.
+The controller sets the `node.kubernetes.io/out-of-service` taint only on a node that is stopped. The controller proves the stop in one of two ways:
+
+- Attestation of a witness. The witness is a node whose agent received the stop message of the failed node. The agent of the witness writes the attestation into the FencingFailedNodeState object of the failed node. After the controller sees the attestation, it waits for `watchdog.timeout` + `watchdog.margin` of the profile. During this time, the watchdog of the failed node expires.
+- Silence of the node. For example, the node is off or lost all networks, and no witness can confirm its stop. The controller waits for `controlPlaneLostAfter` + 0.2 s + `watchdog.timeout` + `watchdog.margin` + 0.9 s of the profile after the last sign of life of the node. The last sign of life is the later of two moments: when the controller saw the FencingFailedNodeState object first, and when it saw the last heartbeat of the node plus `heartbeat.interval`. During this time, the node detects the loss of the control plane and its watchdog expires.
+
+The controller uses the way that gives the proof first:
+
+| Mode       | Profile    | Time after the attestation | Time after the last sign of life |
+| ---------- | ---------- | -------------------------- | -------------------------------- |
+| `Critical` | `critical` | 5.3 s                      | 10.55 s                          |
+| `Normal`   | `normal`   | 15.75 s                    | 25.95 s                          |
+| `Slow`     | `slow`     | 31.5 s                     | 52.8 s                           |
+
+When the incident gets the `Proven` phase, the controller writes an event. The event tells the way of the proof and the time.
+
+The controller takes the profile from the `spec.profileRef.name` field of the FencingFailedNodeState object. The agent that creates the object writes the slower of two profiles: the profile that the failed node applied, and the profile of the node group at the time of the creation of the object. Deckhouse does not let you change the mode of the group while a node of the group has a FencingFailedNodeState object. Refer to [Known limitations of the evacuation](#known-limitations-of-the-evacuation).
+
+The controller does not set the taint in these cases:
+
+- The watchdog of the node was not armed (`spec.armed` is `false`). For example, the node is in a group with the `Disabled` mode.
+- The `Fencing` condition of the Node is not `True`, that is, the agent of the node did not report that the watchdog is armed. The controller does not prove the failure, and the incident stays in the `Suspected` phase. The controller examines the node again every 5 seconds.
+- The node sends heartbeats. The controller counts the time after the last sign of life again from each new heartbeat. A heartbeat after the attestation also cancels the proof by this attestation, and the `D8FencingNodeAliveAfterAttestation` alert rises.
+- The node has one of the maintenance annotations `node-manager.deckhouse.io/fencing-disable`, `update.node.deckhouse.io/approved` or `update.node.deckhouse.io/disruption-approved`, or the agent of the node stops by plan. The controller examines the node again every 5 seconds.
+- The owner reference of the FencingFailedNodeState object does not have the UID of the node with this name, for example after the node is created again with the same name. The controller does nothing for such an object.
+- The controller cannot use the profile. The `D8FencingProfileIsUnavailable` alert rises.
+
+### Phases of a fencing incident
+
+The controller writes the phase of the incident into the `status.phase` field of the FencingFailedNodeState object. The name of the object is the name of the node. To see the incidents, run the following command:
+
+```shell
+d8 k get fencingfailednodestates
+```
+
+The phases:
+
+- `Suspected`: an agent found the failure of the node. The controller waits for the proof of the failure.
+- `FallbackAlive`: the node sends its heartbeat through the API server. The node works, but the agents of other nodes cannot connect to it.
+- `Proven`: the controller proved the failure by the attestation of a witness or by the silence of the node. Refer to [When the controller sets the taint](#when-the-controller-sets-the-taint).
+- `Evicting`: the node has the taint. The controller deletes the pods and waits until the node has no `VolumeAttachment` objects.
+- `Evicted`: the evacuation is complete. The controller writes this phase first. Then it deletes the Node or the `Machine` of a node that the cloud replaces.
+
+For the description of all fields, refer to [FencingFailedNodeState](cr.html#fencingfailednodestate).
+
+### Fencing alerts
+
+The fencing-controller gives these alerts:
+
+- `D8FencingNodeFailed`: a node with an armed watchdog has an incident.
+- `D8FencingNodeIsolatedFromPeers`: the incident is in the `FallbackAlive` phase for 1 minute. The node works, but the network between this node and the other nodes is broken. Usually a firewall rule or an ACL stops the traffic of the agents.
+- `D8FencingNodeAliveAfterAttestation`: the node sent a heartbeat after the attestation. The controller does not set the taint on this node while the node sends heartbeats. Examine the node.
+- `D8FencingEvictionNotProgressing`: the evacuation is not complete after 60 seconds. The `reason` label tells the reason of the `Progressing` condition.
+- `D8NodeOutOfServiceTainted`: a node has the `node.kubernetes.io/out-of-service` taint for 30 minutes. Start the node again or remove it from the cluster.
+- `D8FencingProfileIsUnavailable`: the controller cannot use the profile of the incident and does not set the taint.
+
+The alerts of the controller exist only while the controller works, that is, while at least one node group has a mode other than `Disabled`.
+
+The `D8FencingWatchdogDeviceMissing` alert of the fencing agent rises when the agent has no watchdog device for 30 minutes. The agent does not arm the watchdog, so the controller never sets the taint on this node. Usually the DaemonSet of the node group did not replace the agent pod of the previous revision yet.
+
+### Known limitations of the evacuation
+
+The fencing-controller runs on the master nodes. In a cluster with several master nodes, the controller has several replicas, and only the leader of the replicas works. A new leader counts the times of the incidents again from what it sees. Thus, if the leader changes during an incident, the taint comes later by up to approximately 20 seconds plus the time after the last sign of life from the table in [When the controller sets the taint](#when-the-controller-sets-the-taint). No action is necessary. The leader can change in these cases:
+
+- The master node of the leader fails.
+- kubernetes-api-proxy restarts with a new manifest on the master node of the leader, for example, during an update of Deckhouse. The controller connects to the API server through this proxy.
+
+On the master nodes of Deckhouse Engine (`systemType: Immutable`), and when the `control-plane-manager` module is disabled, the controller connects to the API server through the ClusterIP of the `kubernetes` Service. When a master node fails, the requests of the controller can go to the failed master node for some seconds. Then the taint of the failed node comes later, and the leader can change.
+
+When the master node of the controller fails, the controller starts on another master node only after Kubernetes marks the failed master node as unreachable. Until then, the controller does not set the taint. Refer to [How does fencing work on master nodes?](#how-does-fencing-work-on-master-nodes)
+
+Deckhouse does not let you change the mode of a node group while a node of the group has a FencingFailedNodeState object. The controller calculates the times of an incident from the profile in the object, but the watchdog of the node can already use the times of the new mode. The error message names the nodes that have the objects. Wait until the incidents end, then change the mode. An incident ends when the node comes back after a reboot, or when its Node object is deleted. To find the objects:
+
+```shell
+d8 k get fencingfailednodestates
+```
+
+Change the mode of a node group only when all nodes of the group work correctly.
+
+After switching the edition to CE, a FencingFailedNodeState object with the `critical` profile stays in the cluster, because CE has no such profile. The object gets the `ConfigurationError` condition, the `D8FencingProfileIsUnavailable` alert rises, and the controller does not evacuate the node. When the node comes back, that is, the Node is `Ready` and has a new boot ID, the controller deletes the object. In other cases, make sure that the node works or is off. Then delete the object:
+
+```shell
+d8 k delete fencingfailednodestate <NODE_NAME>
+```
+
+If the node fails again, the agents create a new object with the profile of the current mode. If the node has the `node.kubernetes.io/out-of-service` taint, the taint stays after the deletion. Remove the taint when the node works again:
+
+```shell
+d8 k taint node <NODE_NAME> node.kubernetes.io/out-of-service-
+```
+
+A node with an armed watchdog stops when it does not see the control plane. If the network separates a part of the cluster from the control plane, all nodes with an armed watchdog in this part stop, also when they work correctly.
+
+The controller knows that the watchdog of a node is armed only from the `Fencing` condition of the Node. The agent writes this condition after it arms or disarms the watchdog. Between these two moments, the condition can be incorrect. This gives two known cases:
+
+- The agent armed the watchdog, but the `True` status of the condition did not reach the API server, and at this moment the node failed. For example, this can occur when the node fails during the restart of the agent. The controller does not set the taint on this node until the node comes back.
+- The agent crashed, and the new agent process disarmed the watchdog. Then the node lost the control plane before the agent wrote the `False` status of the condition. The node works and its watchdog is not armed, but the condition stays `True`. The controller does not set the taint on this node: if the node gets a FencingFailedNodeState object, the object has `spec.armed: false`.
+
+A rollback of Deckhouse to a version with fencing 1.0 is not supported. If you do a rollback, unload the `softdog` kernel module on the nodes. If you do not, the module keeps the timeout of fencing 2.0 (5 seconds for the `Critical` profile), the agent of fencing 1.0 resets the timer less frequently, and the node goes into a kernel panic.
+
+## What to do with the out-of-service taint before you turn fencing off in all node groups?
+
+Only the fencing-controller removes the `node.kubernetes.io/out-of-service` taint from a node that came back. When the last node group gets the `Disabled` mode, Deckhouse deletes the controller together with the fencing agents. If a node has the taint at this time, the taint stays on the node. Deckhouse does not remove it, and no fencing alert rises after that. Kubernetes does not run pods on this node.
+
+The same occurs when you disable the `node-manager` module, because Deckhouse deletes the controller together with the module. Deckhouse disables the module only after you confirm it with the `modules.deckhouse.io/allow-disabling=true` annotation on the ModuleConfig. Before you confirm, set the `Disabled` mode in all node groups and wait until no `fencing-agent` pods are left in the `d8-cloud-instance-manager` namespace. If you do not, an agent can fail to report its stop, and the watchdog stops its node. Also do the steps below before you set the `Disabled` mode in the last node group.
+
+Before you set the `Disabled` mode in the last node group, do these steps:
+
+1. Find the nodes with the taint and the fencing incidents:
+
+   ```shell
+   d8 k get nodes -o custom-columns='NAME:.metadata.name,TAINTS:.spec.taints[*].key' | grep -E '^NAME|node.kubernetes.io/out-of-service'
+   d8 k get fencingfailednodestates
+   ```
+
+1. For each node with the taint, make sure that the node works again or that you replaced it. Then remove the taint:
+
+   ```shell
+   d8 k taint node <NODE_NAME> node.kubernetes.io/out-of-service-
+   ```
+
+   If the node is still stopped, you can turn fencing off. But then you must remove the taint manually after you start the node.
+
+If you turn fencing on again, the controller removes the taint by the usual rule. It removes the taint when the Node is `Ready`, has a new boot ID and still has its FencingFailedNodeState object.
 
 ## How do I work with GPU nodes?
 
