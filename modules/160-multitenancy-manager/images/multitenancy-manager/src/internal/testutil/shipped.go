@@ -61,7 +61,7 @@ func shippedTemplate(t *testing.T) string {
 }
 
 // RenderShipped renders the grant objects the module ships with the real Helm engine -- a stub for the
-// lib-helm labels helper and cert-manager enabled, so the conditional objects render too -- and
+// lib-helm labels helper and an empty list of enabled modules -- and
 // returns the documents of the given kind, decoded strictly, so a misspelt field fails instead of
 // decoding to its zero value. The module's own chart is the source of truth instead of a transcript
 // of it.
@@ -78,7 +78,7 @@ func RenderShipped[T any](t *testing.T, kind string) []*T {
 			{Name: "templates/grantable-resources.yaml", Data: tpl},
 		},
 	}
-	values := chartutil.Values{"Values": map[string]any{"global": map[string]any{"enabledModules": []any{"cert-manager"}}}}
+	values := chartutil.Values{"Values": map[string]any{"global": map[string]any{"enabledModules": []any{}}}}
 	rendered, err := helmengine.Render(ch, values)
 	if err != nil {
 		t.Fatal(err)

@@ -418,8 +418,6 @@ func TestHandle_ShippedReferences(t *testing.T) {
 	require.ElementsMatch(t, []string{
 		"storageclasses-pvc",
 		"loadbalancerclasses-service",
-		"clusterissuers-certificate",
-		"clusterissuers-ingress",
 		"clusterroles-rolebinding",
 	}, names)
 

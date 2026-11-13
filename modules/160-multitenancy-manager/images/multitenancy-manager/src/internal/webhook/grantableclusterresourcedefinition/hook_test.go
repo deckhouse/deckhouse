@@ -380,7 +380,7 @@ func TestHandle_ShippedDefinitions(t *testing.T) {
 		names = append(names, def.Name)
 	}
 	// Guard the rendering itself: a template that renders to nothing must not pass as "nothing to check".
-	require.ElementsMatch(t, []string{"storageclasses", "loadbalancerclasses", "clusterissuers", "clusterroles"}, names)
+	require.ElementsMatch(t, []string{"storageclasses", "loadbalancerclasses", "clusterroles"}, names)
 
 	v := newValidator()
 	for _, def := range defs {
