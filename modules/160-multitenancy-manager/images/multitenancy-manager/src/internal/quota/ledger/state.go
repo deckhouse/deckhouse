@@ -46,6 +46,7 @@ import (
 
 	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/namespaces"
 	"controller/internal/quota"
 )
 
@@ -181,7 +182,7 @@ func (s *State) SetNamespace(ns *corev1.Namespace) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	defer s.changedLocked()
-	project := ns.Labels[v1alpha3.ResourceLabelProject]
+	project := projectOf(ns)
 	previous, known := s.namespaces[ns.Name]
 	if known && previous == project {
 		return
@@ -200,6 +201,18 @@ func (s *State) SetNamespace(ns *corev1.Namespace) {
 	}
 	s.recomputeLocked(ns.Name)
 	s.recomputeObjectsInLocked(ns.Name)
+}
+
+// projectOf is the project a namespace belongs to, empty for none: the one of its project label, when
+// the namespace is one of that project as the controller sees it (namespaces.InProject). In an edition
+// where a project has only its main namespace, an additional namespace left from another edition
+// belongs to none, and its objects count for no project.
+func projectOf(ns *corev1.Namespace) string {
+	project := ns.Labels[v1alpha3.ResourceLabelProject]
+	if project == "" || !namespaces.InProject(ns, project) {
+		return ""
+	}
+	return project
 }
 
 // DeleteNamespace forgets a namespace.
@@ -430,7 +443,7 @@ func (s *State) Covers(listed []metav1.Object) bool {
 				return false
 			}
 		case *corev1.Namespace:
-			if project := o.Labels[v1alpha3.ResourceLabelProject]; project != "" && s.namespaces[o.Name] != project {
+			if project := projectOf(o); project != "" && s.namespaces[o.Name] != project {
 				return false
 			}
 		case *v1alpha1.ProjectQuota:

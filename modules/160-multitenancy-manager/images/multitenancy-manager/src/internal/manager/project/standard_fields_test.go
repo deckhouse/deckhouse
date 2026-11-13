@@ -37,6 +37,7 @@ import (
 	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/edition"
 	"controller/internal/quota"
 	rolebinding "controller/internal/rolebinding"
 )
@@ -271,4 +272,25 @@ func requireNoConflict(t *testing.T, m *Manager, project *v1alpha3.Project) {
 	conflict, err := m.reconcileQuota(context.Background(), project)
 	require.NoError(t, err)
 	require.Empty(t, conflict)
+}
+
+// In CE the status lists only the main namespace: any other namespace with the label of the project,
+// even one a ProjectNamespace claims, gets nothing of the project, as the status is what the render and
+// the fan-out of the bindings read.
+func TestCollectNamespaceStatus_SingleNamespaceListsOnlyMain(t *testing.T) {
+	defer edition.SetForTest(edition.CE)()
+	labelled := func(name string) *corev1.Namespace {
+		return &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: name, Labels: map[string]string{v1alpha3.ResourceLabelProject: "proj"}}}
+	}
+	claim := &v1alpha3.ProjectNamespace{
+		ObjectMeta: metav1.ObjectMeta{Name: "extra", Namespace: "proj"},
+		Spec:       v1alpha3.ProjectNamespaceSpec{Name: "extra"},
+	}
+	m, _ := newManager(t, labelled("proj"), labelled("proj-extra"), labelled("billing"), claim)
+
+	statuses, err := m.collectNamespaceStatus(context.Background(), &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "proj"}})
+	require.NoError(t, err)
+	assert.Equal(t, []v1alpha3.NamespaceStatus{
+		{Name: "proj", Kind: v1alpha3.NamespaceKindMain},
+	}, statuses)
 }

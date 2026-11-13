@@ -43,6 +43,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/namespaces"
 	"controller/internal/rolebinding"
 )
 
@@ -145,8 +146,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, fmt.Errorf("list projects: %w", err)
 	}
 
-	// target maps each namespace that must carry the binding to its owning project.
+	// target maps each namespace that must carry the binding to its owning project. A namespace a
+	// project dropped in an edition where a project has only its main namespace is left out of it, even
+	// while the status of the project, which catches up with the labels only at its next reconcile, still
+	// lists it: its RoleBinding is only narrowed (below).
+	dropped, err := namespaces.DroppedOfAnyProject(ctx, r.Client)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 	target := make(map[string]string, len(projects.Items))
+	bound := make(map[string]struct{}, len(projects.Items))
 	boundProjects := 0
 	for i := range projects.Items {
 		project := &projects.Items[i]
@@ -157,8 +166,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			continue
 		}
 		boundProjects++
+		bound[project.Name] = struct{}{}
 		for _, ns := range rolebinding.ProjectNamespaceNames(project) {
-			target[ns] = project.Name
+			if _, ok := dropped[ns]; !ok {
+				target[ns] = project.Name
+			}
 		}
 	}
 
@@ -200,7 +212,23 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 	}
 
-	pruned, pruneErr := r.pruneRoleBindings(ctx, cprb.Name, target)
+	// A namespace a project dropped keeps its RoleBinding, which the fan-out neither creates nor widens
+	// there, but a revocation reaches it: it is narrowed to the subjects the binding still names.
+	for ns := range dropped {
+		if err := rolebinding.NarrowServiceRoleBinding(ctx, r.Client, ns, rolebinding.CPRBServiceName(cprb.Name), cprb.Spec.RoleRef.Name, cprb.Spec.Subjects); err != nil {
+			errs = append(errs, err)
+			failed = append(failed, ns)
+		}
+	}
+
+	// Nor is a RoleBinding pruned in a namespace labelled with a project the binding applies to that the
+	// status does not list yet, as after a switch back to an edition with additional namespaces: the
+	// fan-out updates it in place once the status lists the namespace, rather than making it anew.
+	labelled, err := namespaces.LabelledBy(ctx, r.Client, bound)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	pruned, pruneErr := r.pruneRoleBindings(ctx, cprb.Name, target, labelled)
 	if pruneErr != nil {
 		errs = append(errs, pruneErr)
 	}
@@ -264,10 +292,20 @@ func (r *Reconciler) upsertRoleBinding(ctx context.Context, cprb *v1alpha3.Clust
 	}, nil)
 }
 
-func (r *Reconciler) pruneRoleBindings(ctx context.Context, name string, target map[string]string) (int, error) {
-	keep := make(map[string]struct{}, len(target))
-	for ns := range target {
-		keep[ns] = struct{}{}
+// pruneRoleBindings deletes the service RoleBindings of the binding in namespaces that are neither in
+// target nor labelled with a project the binding applies to (namespaces.LabelledBy): a namespace a
+// project dropped, whose RoleBinding the reconcile only narrows, or one the status does not list yet.
+// A nil target, the cleanup of the binding, deletes every RoleBinding of it.
+func (r *Reconciler) pruneRoleBindings(ctx context.Context, name string, target map[string]string, labelled map[string]struct{}) (int, error) {
+	var keep map[string]struct{}
+	if target != nil {
+		keep = make(map[string]struct{}, len(target)+len(labelled))
+		for ns := range labelled {
+			keep[ns] = struct{}{}
+		}
+		for ns := range target {
+			keep[ns] = struct{}{}
+		}
 	}
 	return rolebinding.PruneServiceRoleBindings(ctx, r.Client, map[string]string{
 		v1alpha3.ResourceLabelOwnedByCPRB: name,
@@ -275,7 +313,7 @@ func (r *Reconciler) pruneRoleBindings(ctx context.Context, name string, target 
 }
 
 func (r *Reconciler) cleanup(ctx context.Context, name string) error {
-	_, err := r.pruneRoleBindings(ctx, name, nil)
+	_, err := r.pruneRoleBindings(ctx, name, nil, nil)
 	return err
 }
 

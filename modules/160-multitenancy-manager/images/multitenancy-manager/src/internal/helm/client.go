@@ -64,6 +64,18 @@ type Client struct {
 	templates map[string][]byte
 	opts      *options
 	logger    logr.Logger
+	// dropped returns the namespaces the project dropped (namespaces.Dropped); nil reads none.
+	dropped DroppedNamespaces
+}
+
+// DroppedNamespaces returns the namespaces that carry the label of the project but are not namespaces
+// of it, as namespaces.Dropped does.
+type DroppedNamespaces func(ctx context.Context, project string) (map[string]struct{}, error)
+
+// SetDroppedNamespaces makes an upgrade leave the objects of the namespaces dropped returns as they
+// are (see frozenManifests).
+func (c *Client) SetDroppedNamespaces(dropped DroppedNamespaces) {
+	c.dropped = dropped
 }
 
 type options struct {
@@ -329,8 +341,14 @@ func (c *Client) release(ctx context.Context, project *v1alpha3.Project, source 
 		}
 	}
 
-	if deployed := deployedRevision(releases); source.beforeUpgrade != nil && deployed != nil {
-		change, err := c.releaseChange(project, deployed, source.chart, source.values, source.manifests, versions)
+	deployed := deployedRevision(releases)
+	frozen, err := c.frozenObjects(ctx, project.Name, deployed)
+	if err != nil {
+		return ReleaseOutcome{}, err
+	}
+
+	if source.beforeUpgrade != nil && deployed != nil {
+		change, err := c.releaseChange(project, deployed, source.chart, source.values, source.manifests, frozen, versions)
 		if err != nil {
 			return ReleaseOutcome{}, fmt.Errorf("read what the upgrade changes: %w", err)
 		}
@@ -344,6 +362,7 @@ func (c *Client) release(ctx context.Context, project *v1alpha3.Project, source 
 
 	post := newPostRenderer(project, versions, c.logger, isFirstInstall)
 	post.manifests = source.manifests
+	post.frozen = frozen
 	post.restoreMainNamespace = source.reapply
 	post.clusterScoped = clusterScoped
 	upgrade := action.NewUpgrade(c.conf)

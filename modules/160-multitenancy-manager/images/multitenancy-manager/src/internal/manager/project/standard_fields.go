@@ -33,6 +33,7 @@ import (
 
 	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/namespaces"
 	"controller/internal/quota"
 	rolebinding "controller/internal/rolebinding"
 )
@@ -213,16 +214,17 @@ func (m *Manager) deleteStandardFields(ctx context.Context, project *v1alpha3.Pr
 	return nil
 }
 
-// collectNamespaceStatus lists the namespaces that belong to the project and classifies the project
-// namespace as Main and the rest as Additional.
+// collectNamespaceStatus lists the namespaces that belong to the project (namespaces.OfProject) and
+// classifies the project namespace as Main and the rest as Additional. The render of the template, the
+// objects of the manifests and the fan-out of the bindings go into the namespaces of this list.
 func (m *Manager) collectNamespaceStatus(ctx context.Context, project *v1alpha3.Project) ([]v1alpha3.NamespaceStatus, error) {
-	list := new(corev1.NamespaceList)
-	if err := m.client.List(ctx, list, client.MatchingLabels{v1alpha3.ResourceLabelProject: project.Name}); err != nil {
-		return nil, fmt.Errorf("list the project namespaces: %w", err)
+	items, err := namespaces.OfProject(ctx, m.client, project.Name)
+	if err != nil {
+		return nil, err
 	}
 
-	statuses := make([]v1alpha3.NamespaceStatus, 0, len(list.Items))
-	for _, ns := range list.Items {
+	statuses := make([]v1alpha3.NamespaceStatus, 0, len(items))
+	for _, ns := range items {
 		kind := v1alpha3.NamespaceKindAdditional
 		if ns.Name == project.Name {
 			kind = v1alpha3.NamespaceKindMain

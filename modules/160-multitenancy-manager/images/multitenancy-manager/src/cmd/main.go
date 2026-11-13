@@ -68,9 +68,11 @@ import (
 	projectquotacontroller "controller/internal/controllers/projectquota"
 	projectrolebindingcontroller "controller/internal/controllers/projectrolebinding"
 	templategrantscontroller "controller/internal/controllers/templategrants"
+	"controller/internal/edition"
 	"controller/internal/grantcache"
 	"controller/internal/helm"
 	"controller/internal/jsonpath"
+	"controller/internal/namespaces"
 	"controller/internal/quota"
 	"controller/internal/quota/evaluator"
 	"controller/internal/quota/ledger"
@@ -155,7 +157,10 @@ func main() {
 	logger := ctrl.Log.WithName(controllerName)
 	setupLogging()
 
-	logger.Info("start multitenancy-manager")
+	// The edition is built into the binary (internal/edition): in Deckhouse Platform Open a project has
+	// only its main namespace.
+	singleNamespace := edition.SingleNamespaceProjects(edition.Current())
+	logger.Info("start multitenancy-manager", "edition", edition.Current(), "singleNamespaceProjects", singleNamespace)
 
 	ctx := ctrl.SetupSignalHandler()
 
@@ -205,6 +210,11 @@ func main() {
 	if err != nil {
 		fatal(logger, err, "initialize helm client")
 	}
+	// In an edition where a project has only its main namespace, an upgrade leaves the objects of the
+	// namespaces a project dropped as they are (namespaces.Dropped).
+	helmClient.SetDroppedNamespaces(func(ctx context.Context, project string) (map[string]struct{}, error) {
+		return namespaces.Dropped(ctx, runtimeManager.GetClient(), project)
+	})
 
 	migration := startup.NewMigration()
 
@@ -349,8 +359,9 @@ func main() {
 
 	// register the project namespace reconciler
 	if err = (&projectnamespacecontroller.Reconciler{
-		Client:   runtimeManager.GetClient(),
-		Recorder: runtimeManager.GetEventRecorderFor(controllerName),
+		Client:          runtimeManager.GetClient(),
+		Recorder:        runtimeManager.GetEventRecorderFor(controllerName),
+		SingleNamespace: singleNamespace,
 	}).SetupWithManager(runtimeManager); err != nil {
 		fatal(logger, err, "set up project namespace reconciler")
 	}
@@ -377,7 +388,7 @@ func main() {
 	// register the project role binding webhooks
 	projectrolebindingwebhook.Register(runtimeManager)
 	clusterprojectrolebindingwebhook.Register(runtimeManager)
-	projectnamespacewebhook.Register(runtimeManager)
+	projectnamespacewebhook.Register(runtimeManager, singleNamespace)
 
 	// start runtime manager
 	if err = runtimeManager.Start(ctx); err != nil {

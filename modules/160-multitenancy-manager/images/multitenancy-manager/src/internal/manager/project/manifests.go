@@ -46,6 +46,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/edition"
 	"controller/internal/helm"
 	"controller/internal/naming"
 	"controller/internal/rolebinding"
@@ -344,8 +345,15 @@ func (m *Manager) reconcileManifests(ctx context.Context, project *v1alpha3.Proj
 }
 
 // manifestsWaitingMessage is the ManifestsApplied message while objects wait for a namespace that a
-// ProjectNamespace of the manifests makes. waiting is what they wait for, one entry per namespace.
+// ProjectNamespace of the manifests makes. waiting is what they wait for, one entry per namespace. In an
+// edition where a project has only its main namespace, the objects wait for nothing and are never
+// applied, and waiting names their namespaces (holdBackForGood).
 func manifestsWaitingMessage(waiting []string) string {
+	if edition.SingleNamespaceProjects(edition.Current()) {
+		return fmt.Sprintf(
+			"The other objects of the manifests of the template are applied, and the objects in the namespaces that ProjectNamespace objects of the manifests name (%s) are not applied. %s",
+			strings.Join(waiting, ", "), edition.OnlyMainNamespace)
+	}
 	return fmt.Sprintf(
 		"The other objects of the manifests of the template are applied, and the objects in the namespaces that ProjectNamespace objects of the manifests make wait for %s.",
 		strings.Join(waiting, " and "))

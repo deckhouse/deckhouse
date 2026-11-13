@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/edition"
 )
 
 // nameWarnings returns the admission warnings for a project name that reads like an additional
@@ -49,10 +50,13 @@ func nameWarnings(name string, existing []v1alpha3.Project) []string {
 
 	warnings := make([]string, 0, len(prefixes)+1)
 	for _, prefix := range prefixes {
+		advice := fmt.Sprintf("To add a namespace to project %q, create a ProjectNamespace in the %q namespace instead.", prefix, prefix)
+		if edition.SingleNamespaceProjects(edition.Current()) {
+			advice = edition.OnlyMainNamespace
+		}
 		warnings = append(warnings, fmt.Sprintf(
-			"Project %q is not an additional namespace of project %q. It is created as a separate project with a namespace of its own. "+
-				"To add a namespace to project %q, create a ProjectNamespace in the %q namespace instead.",
-			name, prefix, prefix, prefix))
+			"Project %q is not an additional namespace of project %q. It is created as a separate project with a namespace of its own. %s",
+			name, prefix, advice))
 	}
 	if len(extending) > 0 {
 		warnings = append(warnings, fmt.Sprintf(

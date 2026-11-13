@@ -68,6 +68,10 @@ type postRenderer struct {
 	// through Helm's template engine while the release lifecycle (install/upgrade/prune/history) is
 	// still driven by Helm.
 	manifests string
+	// frozen holds the documents of the deployed revision that the upgrade carries over as they are,
+	// past the rules of the post-renderer: the objects of the namespaces the project dropped (see
+	// frozenManifests). Each document starts with its separator.
+	frozen string
 }
 
 func newPostRenderer(project *v1alpha3.Project, versions map[string]struct{}, logger logr.Logger, isFirstInstall bool) *postRenderer {
@@ -125,6 +129,7 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, erro
 	}
 
 	buf.WriteString(builder.String())
+	buf.WriteString(r.frozen)
 
 	return buf, nil
 }

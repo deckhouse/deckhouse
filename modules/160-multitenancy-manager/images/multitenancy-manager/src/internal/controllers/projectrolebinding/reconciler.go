@@ -41,6 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/namespaces"
 	"controller/internal/rolebinding"
 )
 
@@ -122,7 +123,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
-	target := rolebinding.ProjectNamespaceNames(project)
+	// A namespace the project dropped in an edition where a project has only its main namespace is not
+	// fanned out into, even while the status of the project, which catches up with the labels only at
+	// its next reconcile, still lists it: its RoleBinding is only narrowed (below).
+	dropped, err := namespaces.Dropped(ctx, r.Client, prb.Namespace)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	target := slices.DeleteFunc(rolebinding.ProjectNamespaceNames(project), func(ns string) bool {
+		_, ok := dropped[ns]
+		return ok
+	})
 	related := fmt.Sprintf("%s/%s", prb.Namespace, prb.Name)
 
 	// A ServiceAccount gets the rights only while its namespace is a namespace of the project, whatever
@@ -161,7 +172,25 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 	}
 
-	pruneErr := r.pruneRoleBindings(ctx, prb.Name, prb.Namespace, target)
+	// A namespace the project dropped keeps its RoleBinding, which the fan-out neither creates nor
+	// widens there, but a revocation reaches it: it is narrowed to the subjects the binding still names,
+	// its left-out ServiceAccounts included, as their namespaces did not stop being named.
+	named := slices.Concat(subjects, leftOut)
+	for ns := range dropped {
+		if err := rolebinding.NarrowServiceRoleBinding(ctx, r.Client, ns, rolebinding.PRBServiceName(prb.Name), prb.Spec.RoleRef.Name, named); err != nil {
+			errs = append(errs, err)
+			failed = append(failed, ns)
+		}
+	}
+
+	// Nor is a RoleBinding pruned in a namespace with the label of the project that the status does not
+	// list yet, as after a switch back to an edition with additional namespaces: the fan-out updates it
+	// in place once the status lists the namespace, rather than making it anew.
+	labelled, err := namespaces.LabelledBy(ctx, r.Client, map[string]struct{}{prb.Namespace: {}})
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	pruneErr := r.pruneRoleBindings(ctx, prb.Name, prb.Namespace, target, labelled)
 	if pruneErr != nil {
 		errs = append(errs, pruneErr)
 	}
@@ -252,13 +281,22 @@ func (r *Reconciler) upsertRoleBinding(ctx context.Context, prb *v1alpha3.Projec
 	return err
 }
 
-// pruneRoleBindings deletes service RoleBindings of this PRB in namespaces that are no longer part
-// of the target set. It is scoped to the project (PRB names are only unique within a project
-// namespace), so it never touches bindings of an identically named PRB in another project.
-func (r *Reconciler) pruneRoleBindings(ctx context.Context, name, project string, target []string) error {
-	keep := make(map[string]struct{}, len(target))
-	for _, ns := range target {
-		keep[ns] = struct{}{}
+// pruneRoleBindings deletes service RoleBindings of this PRB in namespaces that are neither in the
+// target set nor labelled with the project (namespaces.LabelledBy): a namespace the project dropped,
+// whose RoleBinding the reconcile only narrows, or one the status does not list yet. It is scoped to
+// the project (PRB names are only unique within a project namespace), so it never touches bindings of
+// an identically named PRB in another project. A nil target, the cleanup of the binding, deletes every
+// RoleBinding of it.
+func (r *Reconciler) pruneRoleBindings(ctx context.Context, name, project string, target []string, labelled map[string]struct{}) error {
+	var keep map[string]struct{}
+	if target != nil {
+		keep = make(map[string]struct{}, len(target)+len(labelled))
+		for ns := range labelled {
+			keep[ns] = struct{}{}
+		}
+		for _, ns := range target {
+			keep[ns] = struct{}{}
+		}
 	}
 	_, err := rolebinding.PruneServiceRoleBindings(ctx, r.Client, map[string]string{
 		v1alpha3.ResourceLabelOwnedByPRB: name,
@@ -269,7 +307,7 @@ func (r *Reconciler) pruneRoleBindings(ctx context.Context, name, project string
 
 // cleanup removes every service RoleBinding fanned out by the named PRB within its project.
 func (r *Reconciler) cleanup(ctx context.Context, name, project string) error {
-	return r.pruneRoleBindings(ctx, name, project, nil)
+	return r.pruneRoleBindings(ctx, name, project, nil, nil)
 }
 
 // SetupWithManager wires the reconciler and its watches.

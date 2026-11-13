@@ -38,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/edition"
 	"controller/internal/rolebinding"
 )
 
@@ -762,4 +763,179 @@ func TestReconcile_ReachesANamespaceMadeAgain(t *testing.T) {
 		require.NoError(t, err)
 	}
 	require.NoError(t, c.Get(ctx, key, &rbacv1.RoleBinding{}), "the binding reaches the namespace made again")
+}
+
+// After a switch to CE, the RoleBinding of a namespace the project dropped is neither created nor
+// widened, but a revocation reaches it: a subject the binding no longer names leaves it, a subject the
+// binding adds does not join it, and a change of the role deletes it. A switch back to a commercial
+// edition, where the namespace is the project's again, brings it in line with the binding, and the
+// cleanup of the binding deletes it. The test switches the edition of the binary, so it does not run
+// in parallel.
+func TestReconcile_NarrowsTheRoleBindingOfADroppedNamespaceInCE(t *testing.T) {
+	ctx := context.Background()
+	request := ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "proj", Name: "viewers"}}
+	key := client.ObjectKey{Namespace: "proj-db", Name: rolebinding.PRBServiceName("viewers")}
+	user := func(name string) rbacv1.Subject { return rbacv1.Subject{APIGroup: rbacv1.GroupName, Kind: "User", Name: name} }
+	binding := prb("viewers", "proj", "d8:project:viewer")
+	binding.Spec.Subjects = []rbacv1.Subject{user("alice"), user("carol")}
+	r, c := newReconciler(t, binding, project("proj", "proj", "proj-db"), namespace("proj", "proj"), namespace("proj-db", "proj"))
+	reconcile := func() {
+		t.Helper()
+		_, err := r.Reconcile(ctx, request)
+		require.NoError(t, err)
+	}
+	reconcile()
+
+	subjectsIn := func(ns string) []string {
+		t.Helper()
+		rb := &rbacv1.RoleBinding{}
+		err := c.Get(ctx, client.ObjectKey{Namespace: ns, Name: rolebinding.PRBServiceName("viewers")}, rb)
+		if k8serrors.IsNotFound(err) {
+			return nil
+		}
+		require.NoError(t, err)
+		names := make([]string, 0, len(rb.Subjects))
+		for _, s := range rb.Subjects {
+			names = append(names, s.Name)
+		}
+		return names
+	}
+	setProject := func(namespaces ...string) {
+		t.Helper()
+		stored := &v1alpha3.Project{}
+		require.NoError(t, c.Get(ctx, client.ObjectKey{Name: "proj"}, stored))
+		stored.Status.Namespaces = project("proj", namespaces...).Status.Namespaces
+		// The fake client of these tests keeps the status of a Project with the object.
+		require.NoError(t, c.Update(ctx, stored))
+	}
+	setBinding := func(role string, subjects ...rbacv1.Subject) {
+		t.Helper()
+		stored := &v1alpha3.ProjectRoleBinding{}
+		require.NoError(t, c.Get(ctx, request.NamespacedName, stored))
+		stored.Spec.RoleRef.Name = role
+		stored.Spec.Subjects = subjects
+		require.NoError(t, c.Update(ctx, stored))
+	}
+
+	restore := edition.SetForTest(edition.CE)
+	setProject("proj")
+	setBinding("d8:project:viewer", user("alice"), user("bob"))
+	reconcile()
+	assert.Equal(t, []string{"alice", "bob"}, subjectsIn("proj"))
+	assert.Equal(t, []string{"alice"}, subjectsIn("proj-db"), "carol is revoked, and bob does not join the dropped namespace")
+
+	setBinding("d8:project:viewer", user("bob"))
+	reconcile()
+	assert.Nil(t, subjectsIn("proj-db"), "the RoleBinding goes with its last subject")
+	restore()
+
+	setProject("proj", "proj-db")
+	reconcile()
+	assert.Equal(t, []string{"bob"}, subjectsIn("proj-db"), "back in a commercial edition, the namespace follows the binding again")
+
+	restore = edition.SetForTest(edition.CE)
+	setProject("proj")
+	setBinding("d8:project:editor", user("bob"))
+	reconcile()
+	err := c.Get(ctx, key, &rbacv1.RoleBinding{})
+	assert.True(t, k8serrors.IsNotFound(err), "a change of the role deletes the RoleBinding of the dropped namespace, got %v", err)
+	restore()
+
+	setProject("proj", "proj-db")
+	reconcile()
+	defer edition.SetForTest(edition.CE)()
+	setProject("proj")
+	require.NoError(t, r.cleanup(ctx, "viewers", "proj"))
+	err = c.Get(ctx, key, &rbacv1.RoleBinding{})
+	assert.True(t, k8serrors.IsNotFound(err), "the cleanup of the binding deletes it, got %v", err)
+}
+
+// After a switch back to a commercial edition, a namespace with the label of the project comes back
+// before the status of the project lists it again. Its RoleBinding is not pruned meanwhile, and the
+// fan-out updates it in place once the status lists the namespace, so the subjects keep their rights
+// there throughout.
+func TestReconcile_TakesBackTheRoleBindingOfANamespaceBeforeTheStatus(t *testing.T) {
+	ctx := context.Background()
+	request := ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "proj", Name: "viewers"}}
+	key := client.ObjectKey{Namespace: "proj-db", Name: rolebinding.PRBServiceName("viewers")}
+	frozen := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{Name: key.Name, Namespace: key.Namespace, UID: "frozen",
+			Labels: map[string]string{v1alpha3.ResourceLabelOwnedByPRB: "viewers", v1alpha3.ResourceLabelProject: "proj"}},
+		Subjects: []rbacv1.Subject{{APIGroup: rbacv1.GroupName, Kind: "User", Name: "alice"}},
+		RoleRef:  rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: "d8:project:viewer"},
+	}
+	r, c := newReconciler(t, prb("viewers", "proj", "d8:project:viewer"), project("proj", "proj"),
+		namespace("proj", "proj"), namespace("proj-db", "proj"), frozen)
+
+	_, err := r.Reconcile(ctx, request)
+	require.NoError(t, err)
+	rb := &rbacv1.RoleBinding{}
+	require.NoError(t, c.Get(ctx, key, rb), "the RoleBinding of a labelled namespace is not pruned")
+
+	stored := &v1alpha3.Project{}
+	require.NoError(t, c.Get(ctx, client.ObjectKey{Name: "proj"}, stored))
+	stored.Status.Namespaces = project("proj", "proj", "proj-db").Status.Namespaces
+	require.NoError(t, c.Update(ctx, stored))
+	_, err = r.Reconcile(ctx, request)
+	require.NoError(t, err)
+	require.NoError(t, c.Get(ctx, key, rb))
+	assert.Equal(t, frozen.UID, rb.UID, "the RoleBinding is updated, not made anew")
+	assert.Equal(t, "proj/viewers", rb.Annotations[v1alpha3.ResourceAnnotationRelatedWith])
+}
+
+// Right after a switch to CE, the status of the project still lists a namespace the project dropped,
+// until the next reconcile of the project. The fan-out does not write there meanwhile: a subject the
+// binding adds does not join that namespace. The test switches the edition of the binary, so it does
+// not run in parallel.
+func TestReconcile_DoesNotFanOutIntoADroppedNamespaceTheStatusStillLists(t *testing.T) {
+	defer edition.SetForTest(edition.CE)()
+	ctx := context.Background()
+	key := client.ObjectKey{Namespace: "proj-db", Name: rolebinding.PRBServiceName("viewers")}
+	frozen := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{Name: key.Name, Namespace: key.Namespace,
+			Labels: map[string]string{v1alpha3.ResourceLabelOwnedByPRB: "viewers", v1alpha3.ResourceLabelProject: "proj"}},
+		Subjects: []rbacv1.Subject{{APIGroup: rbacv1.GroupName, Kind: "User", Name: "alice"}},
+		RoleRef:  rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: "d8:project:viewer"},
+	}
+	binding := prb("viewers", "proj", "d8:project:viewer")
+	binding.Spec.Subjects = append(binding.Spec.Subjects, rbacv1.Subject{APIGroup: rbacv1.GroupName, Kind: "User", Name: "bob"})
+	r, c := newReconciler(t, binding, project("proj", "proj", "proj-db"), namespace("proj", "proj"), namespace("proj-db", "proj"), frozen)
+
+	_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "proj", Name: "viewers"}})
+	require.NoError(t, err)
+	rb := &rbacv1.RoleBinding{}
+	require.NoError(t, c.Get(ctx, key, rb))
+	require.Len(t, rb.Subjects, 1)
+	assert.Equal(t, "alice", rb.Subjects[0].Name, "bob does not join the dropped namespace")
+}
+
+// A ServiceAccount of a namespace the project dropped is left out of the RoleBindings of the project in
+// CE, but the binding still names it: its RoleBinding in that namespace keeps it, as narrowing removes
+// only what the binding no longer names. The test switches the edition of the binary, so it does not
+// run in parallel.
+func TestReconcile_KeepsALeftOutServiceAccountInADroppedNamespace(t *testing.T) {
+	defer edition.SetForTest(edition.CE)()
+	ctx := context.Background()
+	key := client.ObjectKey{Namespace: "proj-db", Name: rolebinding.PRBServiceName("deployers")}
+	alice := rbacv1.Subject{APIGroup: rbacv1.GroupName, Kind: "User", Name: "alice"}
+	app := serviceAccount("proj-db", "app-sa")
+	frozen := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{Name: key.Name, Namespace: key.Namespace,
+			Labels: map[string]string{v1alpha3.ResourceLabelOwnedByPRB: "deployers", v1alpha3.ResourceLabelProject: "proj"}},
+		Subjects: []rbacv1.Subject{alice, app},
+		RoleRef:  rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: "d8:project:viewer"},
+	}
+	binding := prb("deployers", "proj", "d8:project:viewer")
+	binding.Spec.Subjects = []rbacv1.Subject{alice, app}
+	r, c := newReconciler(t, binding, project("proj", "proj"), namespace("proj", "proj"), namespace("proj-db", "proj"), frozen)
+
+	_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "proj", Name: "deployers"}})
+	require.NoError(t, err)
+	rb := &rbacv1.RoleBinding{}
+	require.NoError(t, c.Get(ctx, key, rb))
+	assert.Equal(t, []rbacv1.Subject{alice, app}, rb.Subjects)
+
+	main := &rbacv1.RoleBinding{}
+	require.NoError(t, c.Get(ctx, client.ObjectKey{Namespace: "proj", Name: key.Name}, main))
+	assert.Equal(t, []rbacv1.Subject{alice}, main.Subjects, "the main namespace leaves the ServiceAccount out")
 }

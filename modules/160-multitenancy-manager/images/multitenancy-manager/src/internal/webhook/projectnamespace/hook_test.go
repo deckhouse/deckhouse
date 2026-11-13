@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/edition"
 	"controller/internal/rolebinding"
 )
 
@@ -81,12 +82,66 @@ func pns(name string) *v1alpha3.ProjectNamespace {
 	}
 }
 
+// deleting marks the ProjectNamespace as being deleted.
+func deleting(p *v1alpha3.ProjectNamespace) *v1alpha3.ProjectNamespace {
+	p.Finalizers = []string{v1alpha3.ProjectNamespaceFinalizer}
+	p.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+	return p
+}
+
 func projectObj(name string, virtual bool) *v1alpha3.Project {
 	p := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: name}}
 	if virtual {
 		p.Labels = map[string]string{v1alpha3.ProjectLabelVirtualProject: "true"}
 	}
 	return p
+}
+
+// In an edition where a project has only its main namespace, a ProjectNamespace is never created, in a
+// place that would be admitted otherwise, while the ones that exist are still updated and deleted.
+func TestHandle_SingleNamespaceEdition(t *testing.T) {
+	ctx := context.Background()
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name:   "team-a-backend",
+		Labels: map[string]string{v1alpha3.ResourceLabelProject: "team-a"},
+	}}
+	singleNamespace := func(objs ...client.Object) *validator {
+		v := newValidator(t, objs...)
+		v.singleNamespace = true
+		return v
+	}
+
+	t.Run("refuses a create that the other editions admit, and names the edition", func(t *testing.T) {
+		resp := singleNamespace(projectObj("team-a", false)).Handle(ctx, createRequest(t, "team-a", pns("backend")))
+		assert.False(t, resp.Allowed)
+		assert.Equal(t, edition.SingleNamespaceMessage, resp.Result.Message)
+	})
+
+	t.Run("refuses the create again for a namespace the project owns already", func(t *testing.T) {
+		resp := singleNamespace(projectObj("team-a", false), ns).Handle(ctx, createRequest(t, "team-a", pns("backend")))
+		assert.False(t, resp.Allowed)
+		assert.Equal(t, edition.SingleNamespaceMessage, resp.Result.Message)
+	})
+
+	// A server-side apply that creates the object keeps a deletionTimestamp written into the manifest,
+	// and the object must still be refused.
+	t.Run("refuses a create that carries a deletionTimestamp", func(t *testing.T) {
+		resp := singleNamespace(projectObj("team-a", false)).Handle(ctx, createRequest(t, "team-a", deleting(pns("backend"))))
+		assert.False(t, resp.Allowed)
+		assert.Equal(t, edition.SingleNamespaceMessage, resp.Result.Message)
+	})
+
+	t.Run("admits an update of a ProjectNamespace that exists", func(t *testing.T) {
+		resp := singleNamespace(projectObj("team-a", false), ns).Handle(ctx, updateRequest(t, "team-a", pns("backend")))
+		assert.True(t, resp.Allowed, resp.Result)
+	})
+
+	t.Run("admits a delete", func(t *testing.T) {
+		req := createRequest(t, "team-a", pns("backend"))
+		req.Operation = admissionv1.Delete
+		resp := singleNamespace(projectObj("team-a", false), ns).Handle(ctx, req)
+		assert.True(t, resp.Allowed)
+	})
 }
 
 func TestHandle_MainNamespaceOnly(t *testing.T) {
@@ -389,6 +444,23 @@ func TestHandle_AllowsFinalizerRemovalDuringProjectTeardown(t *testing.T) {
 	v := newValidator(t)
 	resp := v.Handle(context.Background(), updateRequest(t, "ghost", pns("backend")))
 	assert.True(t, resp.Allowed)
+}
+
+// A ProjectNamespace that is being deleted is updated only to remove its finalizer, and the checks
+// would refuse that update while someone else's namespace has the resulting name.
+func TestHandle_AllowsUpdateOfADeletingProjectNamespace(t *testing.T) {
+	v := newValidator(t)
+	resp := v.Handle(context.Background(), updateRequest(t, "ghost", deleting(pns("backend"))))
+	assert.True(t, resp.Allowed)
+}
+
+// A deletionTimestamp in the object of a create does not skip the checks: a server-side apply that
+// creates the object keeps one written into the manifest.
+func TestHandle_CreateWithDeletionTimestampIsChecked(t *testing.T) {
+	v := newValidator(t)
+	resp := v.Handle(context.Background(), createRequest(t, "ghost", deleting(pns("backend"))))
+	assert.False(t, resp.Allowed)
+	assert.Contains(t, resp.Result.Message, "is not the main namespace of a project")
 }
 
 func TestHandle_CreateInNonMainNamespaceStillDenied(t *testing.T) {

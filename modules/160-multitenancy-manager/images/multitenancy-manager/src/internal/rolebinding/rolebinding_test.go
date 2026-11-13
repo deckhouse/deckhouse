@@ -158,6 +158,73 @@ func TestUpsertServiceRoleBinding_UpdatesSubjectsInPlace(t *testing.T) {
 	assert.Equal(t, "bob", rb.Subjects[0].Name)
 }
 
+// NarrowServiceRoleBinding keeps the subjects the binding still names, compared without the API group
+// the API server fills in, adds none, and deletes the RoleBinding once no subject is left or the role
+// changed. A RoleBinding that is not there is not made.
+func TestNarrowServiceRoleBinding(t *testing.T) {
+	ctx := context.Background()
+	stored := func() *rbacv1.RoleBinding {
+		return &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "d8:prb:viewers", Namespace: "proj-db"},
+			Subjects: []rbacv1.Subject{
+				{APIGroup: rbacv1.GroupName, Kind: "User", Name: "alice"},
+				{APIGroup: rbacv1.GroupName, Kind: "User", Name: "carol"},
+				{Kind: rbacv1.ServiceAccountKind, Name: "deployer", Namespace: "proj-db"},
+			},
+			RoleRef: rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: "d8:project:viewer"},
+		}
+	}
+	key := client.ObjectKey{Namespace: "proj-db", Name: "d8:prb:viewers"}
+	alice := rbacv1.Subject{Kind: "User", Name: "alice"}
+	deployer := rbacv1.Subject{Kind: rbacv1.ServiceAccountKind, Name: "deployer", Namespace: "proj-db"}
+	bob := rbacv1.Subject{Kind: "User", Name: "bob"}
+
+	t.Run("keeps the subjects still named and adds none", func(t *testing.T) {
+		c := newClient(t, stored())
+		require.NoError(t, NarrowServiceRoleBinding(ctx, c, "proj-db", "d8:prb:viewers", "d8:project:viewer", []rbacv1.Subject{alice, deployer, bob}))
+		rb := &rbacv1.RoleBinding{}
+		require.NoError(t, c.Get(ctx, key, rb))
+		assert.Equal(t, []rbacv1.Subject{stored().Subjects[0], stored().Subjects[2]}, rb.Subjects)
+	})
+
+	for _, tt := range []struct {
+		name     string
+		role     string
+		subjects []rbacv1.Subject
+	}{
+		{name: "deletes it with its last subject", role: "d8:project:viewer", subjects: []rbacv1.Subject{bob}},
+		{name: "deletes it when the role changes", role: "d8:project:editor", subjects: []rbacv1.Subject{alice}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			c := newClient(t, stored())
+			require.NoError(t, NarrowServiceRoleBinding(ctx, c, "proj-db", "d8:prb:viewers", tt.role, tt.subjects))
+			assert.True(t, k8serrors.IsNotFound(c.Get(ctx, key, &rbacv1.RoleBinding{})))
+		})
+	}
+
+	// A subject is told apart by its kind and namespace as well as its name: a ServiceAccount of another
+	// namespace or a User named like a Group is not the subject the binding names.
+	t.Run("tells subjects apart by kind, namespace and name", func(t *testing.T) {
+		ciDeployer := rbacv1.Subject{Kind: rbacv1.ServiceAccountKind, Name: "deployer", Namespace: "ci"}
+		otherDeployer := rbacv1.Subject{Kind: rbacv1.ServiceAccountKind, Name: "deployer", Namespace: "other"}
+		devsGroup := rbacv1.Subject{APIGroup: rbacv1.GroupName, Kind: rbacv1.GroupKind, Name: "devs"}
+		devsUser := rbacv1.Subject{APIGroup: rbacv1.GroupName, Kind: rbacv1.UserKind, Name: "devs"}
+		rb := stored()
+		rb.Subjects = []rbacv1.Subject{ciDeployer, otherDeployer, devsGroup, devsUser}
+		c := newClient(t, rb)
+		require.NoError(t, NarrowServiceRoleBinding(ctx, c, "proj-db", "d8:prb:viewers", "d8:project:viewer", []rbacv1.Subject{ciDeployer, devsUser}))
+		narrowed := &rbacv1.RoleBinding{}
+		require.NoError(t, c.Get(ctx, key, narrowed))
+		assert.Equal(t, []rbacv1.Subject{ciDeployer, devsUser}, narrowed.Subjects)
+	})
+
+	t.Run("makes no RoleBinding", func(t *testing.T) {
+		c := newClient(t)
+		require.NoError(t, NarrowServiceRoleBinding(ctx, c, "proj-db", "d8:prb:viewers", "d8:project:viewer", []rbacv1.Subject{alice}))
+		assert.True(t, k8serrors.IsNotFound(c.Get(ctx, key, &rbacv1.RoleBinding{})))
+	})
+}
+
 func TestPruneServiceRoleBindings(t *testing.T) {
 	labels := func(project string) map[string]string {
 		return map[string]string{v1alpha3.ResourceLabelOwnedByPRB: "viewers", v1alpha3.ResourceLabelProject: project}

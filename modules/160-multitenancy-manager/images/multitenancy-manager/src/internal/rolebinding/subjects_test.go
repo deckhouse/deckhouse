@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/edition"
 )
 
 func serviceAccount(namespace, name string) rbacv1.Subject {
@@ -137,6 +138,29 @@ func TestSplitProjectSubjects(t *testing.T) {
 		serviceAccount("proj-leaving", "sa"),
 		serviceAccount("proj-bare", "sa"),
 	}, leftOut)
+}
+
+// In CE only the ServiceAccounts of the main namespace are subjects of the project: the ones of any
+// other namespace with the label of the project, even one a ProjectNamespace claims, are not.
+func TestSplitProjectSubjects_SingleNamespace(t *testing.T) {
+	defer edition.SetForTest(edition.CE)()
+	c := newClient(t,
+		namespaceOf("proj", "proj"),
+		namespaceOf("proj-extra", "proj"),
+		namespaceOf("billing", "proj"),
+		&v1alpha3.ProjectNamespace{
+			ObjectMeta: metav1.ObjectMeta{Name: "extra", Namespace: "proj"},
+			Spec:       v1alpha3.ProjectNamespaceSpec{Name: "extra"},
+		},
+	)
+	kept, leftOut, err := SplitProjectSubjects(context.Background(), c, "proj", []rbacv1.Subject{
+		serviceAccount("proj", "deployer"),
+		serviceAccount("proj-extra", "deployer"),
+		serviceAccount("billing", "deployer"),
+	}, nil)
+	require.NoError(t, err)
+	assert.Equal(t, []rbacv1.Subject{serviceAccount("proj", "deployer")}, kept)
+	assert.Equal(t, []rbacv1.Subject{serviceAccount("proj-extra", "deployer"), serviceAccount("billing", "deployer")}, leftOut)
 }
 
 func TestSplitProjectSubjects_OnlyUsersAndGroups(t *testing.T) {

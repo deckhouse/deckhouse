@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/edition"
 	rolebinding "controller/internal/rolebinding"
 	projectnamespacewebhook "controller/internal/webhook/projectnamespace"
 )
@@ -278,10 +279,15 @@ func noLongerInProject(s rbacv1.Subject, namespace, project string) string {
 // its additional namespaces. An additional namespace carries the project label; one a
 // ProjectNamespace of the project has claimed but the controller has not created yet belongs to the
 // project as well. A name that merely starts with the project name and a dash does not: it can be
-// the main namespace of a separate project.
+// the main namespace of a separate project. In an edition where a project has only its main namespace,
+// no other namespace is one of it, as the controller sees it (namespaces.InProject), and its
+// ServiceAccounts would get no rights from the binding.
 func namespaceOfProject(ctx context.Context, c client.Reader, namespace, project string) (bool, error) {
 	if namespace == project {
 		return true, nil
+	}
+	if edition.SingleNamespaceProjects(edition.Current()) {
+		return false, nil
 	}
 
 	ns := new(corev1.Namespace)

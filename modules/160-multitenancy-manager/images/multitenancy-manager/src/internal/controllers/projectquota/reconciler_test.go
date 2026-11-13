@@ -44,6 +44,7 @@ import (
 
 	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/edition"
 	"controller/internal/quota"
 )
 
@@ -204,6 +205,33 @@ func TestReconcilePutsAResourceQuotaInEveryNamespace(t *testing.T) {
 	assert.Equal(t, types.UID("project-uid"), pq.OwnerReferences[0].UID)
 	assert.Equal(t, rl("requests.cpu", "4", string(quota.ProjectNamespacesKey), "2"), pq.Status.Hard)
 	assert.Equal(t, int32(2), pq.Status.NamespaceCount)
+}
+
+// In CE only the main namespace is a namespace of the project: another namespace with the label of the
+// project gets no ResourceQuota and is not counted. One that a commercial edition had put under the
+// quota is released, as the ledger counts it for no project and its guard would refuse its objects.
+func TestReconcileReleasesAnAdditionalNamespaceInCE(t *testing.T) {
+	defer edition.SetForTest(edition.CE)()
+	left := &corev1.ResourceQuota{ObjectMeta: metav1.ObjectMeta{Namespace: projectName + "-db", Name: v1alpha3.ProjectQuotaName,
+		Labels: map[string]string{v1alpha3.ResourceLabelHeritage: v1alpha3.ResourceHeritageMultitenancy, v1alpha3.ResourceLabelProject: projectName,
+			v1alpha3.ResourceLabelManagedBy: v1alpha3.ManagedByController}}}
+	f := newFixture(t, "true",
+		project(),
+		projectNamespace(projectName, nil),
+		projectNamespace(projectName+"-db", map[string]string{quota.NamespaceLabel: quota.LabelEnforced}),
+		projectNamespace(projectName+"-cache", nil),
+		left,
+		projectQuota(rl("requests.cpu", "4")),
+	)
+	f.reconcile()
+
+	f.resourceQuota(projectName)
+	for _, name := range []string{projectName + "-db", projectName + "-cache"} {
+		err := f.client.Get(context.Background(), client.ObjectKey{Namespace: name, Name: v1alpha3.ProjectQuotaName}, new(corev1.ResourceQuota))
+		assert.True(t, apierrors.IsNotFound(err), "an additional namespace has no quota, got %v", err)
+		assert.NotContains(t, f.namespace(name).Labels, quota.NamespaceLabel)
+	}
+	assert.Equal(t, int32(1), f.quota().Status.NamespaceCount)
 }
 
 func TestReconcileLabelsANamespaceOnceItsQuotaIsCalculated(t *testing.T) {

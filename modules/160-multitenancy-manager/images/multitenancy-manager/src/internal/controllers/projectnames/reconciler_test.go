@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/edition"
 )
 
 func project(name string) *v1alpha3.Project {
@@ -184,6 +185,25 @@ func TestReconciler_ReportsNewPairsOfRecentProjects(t *testing.T) {
 	events := recorder.takeEvents()
 	require.Len(t, events, 1)
 	assert.True(t, strings.HasPrefix(events[0], "Project shop-review-18: Warning NamedLikeAdditionalNamespace Namespace shop-review-18 became"), events[0])
+}
+
+// In CE the event does not advise a ProjectNamespace, which cannot be created there. The test switches
+// the edition of the binary, so it does not run in parallel.
+func TestReconciler_ReportsWithoutProjectNamespaceAdviceInCE(t *testing.T) {
+	defer edition.SetForTest(edition.CE)()
+	namedLikeAdditionalNamespace.Reset()
+	recent := project("shop-review-17")
+	recent.CreationTimestamp = metav1.NewTime(time.Now().Add(-5 * time.Minute))
+	r := newReconciler(t, project("shop"), recent)
+	recorder := &eventRecorder{}
+	r.Recorder = recorder
+
+	_, err := r.Reconcile(context.Background(), ctrl.Request{})
+	require.NoError(t, err)
+	assert.Equal(t, []string{
+		"Project shop-review-17: Warning NamedLikeAdditionalNamespace Namespace shop-review-17 became a separate project. " +
+			"It is not an additional namespace of project shop. " + edition.OnlyMainNamespace,
+	}, recorder.takeEvents())
 }
 
 func TestPairsMayChange(t *testing.T) {

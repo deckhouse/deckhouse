@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/edition"
 	rolebinding "controller/internal/rolebinding"
 )
 
@@ -312,6 +313,42 @@ func TestValidate_ServiceAccountOfTheProject(t *testing.T) {
 	resp := Validate(context.Background(), c, request(admissionv1.Update, ControllerServiceAccount), cluster)
 	assert.True(t, resp.Allowed, resp.Result)
 	assert.Empty(t, resp.Warnings)
+}
+
+// In CE only the main namespace is a namespace of the project: a ServiceAccount of an additional
+// namespace, claimed or labelled, is refused as a new subject, as the controller would give it no
+// rights, and a stored one is warned about. The test switches the edition of the binary, so it does
+// not run in parallel.
+func TestValidate_ServiceAccountOfTheProjectInCE(t *testing.T) {
+	defer edition.SetForTest(edition.CE)()
+	sa := func(namespace string) rbacv1.Subject {
+		return rbacv1.Subject{Kind: rbacv1.ServiceAccountKind, Name: "sa", Namespace: namespace}
+	}
+	c := newClient(t,
+		clusterRole("d8:project:viewer", nil, nil),
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "proj-extra", Labels: map[string]string{v1alpha3.ResourceLabelProject: "proj"}}},
+		&v1alpha3.ProjectNamespace{
+			ObjectMeta: metav1.ObjectMeta{Name: "queue", Namespace: "proj"},
+			Spec:       v1alpha3.ProjectNamespaceSpec{Name: "queue"},
+		},
+	)
+	input := func(subjects, old []rbacv1.Subject) Input {
+		return Input{RoleRefKind: "ClusterRole", RoleRefName: "d8:project:viewer", Namespace: "proj", Subjects: subjects, OldSubjects: old}
+	}
+
+	resp := Validate(context.Background(), c, request(admissionv1.Create, ControllerServiceAccount), input([]rbacv1.Subject{sa("proj")}, nil))
+	assert.True(t, resp.Allowed, resp.Result)
+
+	for _, namespace := range []string{"proj-extra", "proj-queue"} {
+		resp := Validate(context.Background(), c, request(admissionv1.Create, ControllerServiceAccount), input([]rbacv1.Subject{sa(namespace)}, nil))
+		assert.False(t, resp.Allowed, namespace)
+		assert.Contains(t, resp.Result.Message, `must belong to project "proj"`)
+	}
+
+	resp = Validate(context.Background(), c, request(admissionv1.Update, ControllerServiceAccount),
+		input([]rbacv1.Subject{sa("proj-extra")}, []rbacv1.Subject{sa("proj-extra")}))
+	assert.True(t, resp.Allowed, resp.Result)
+	assert.Equal(t, []string{`ServiceAccount proj-extra/sa is no longer in a namespace of project "proj" and gets no rights from this binding`}, resp.Warnings)
 }
 
 // A stored subject is never refused, so a failed read of its namespace costs the warning alone. A new

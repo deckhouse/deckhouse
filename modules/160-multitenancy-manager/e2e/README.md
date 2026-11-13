@@ -57,7 +57,10 @@ The tests assume the following about the cluster:
 - the CNI enforces NetworkPolicy;
 - the `registry.k8s.io/e2e-test-images/agnhost:2.53` image can be pulled;
 - the kubeconfig user can impersonate users and groups,
-  including `system:masters` and `system:sudouser`.
+  including `system:masters` and `system:sudouser`;
+- the cluster runs a commercial edition of Deckhouse Platform:
+  in Deckhouse Platform Open, the creation of a ProjectNamespace is refused,
+  and the cases that create one fail.
 
 ## How to run
 

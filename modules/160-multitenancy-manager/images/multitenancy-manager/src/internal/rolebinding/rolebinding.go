@@ -197,6 +197,56 @@ func UpsertServiceRoleBinding(ctx context.Context, c client.Client, params Upser
 	return true, nil
 }
 
+// NarrowServiceRoleBinding narrows the service RoleBinding of a namespace the project dropped
+// (namespaces.Dropped), which the controller neither creates nor widens: it keeps only the subjects
+// the binding still names, and deletes the RoleBinding once none is left or the binding names another
+// role, as the role of a RoleBinding cannot change. A revocation thus reaches the namespace, while
+// the rights the binding still grants stay there as they were. Subjects are compared by kind,
+// namespace and name, as the API server fills in the API group of a stored subject.
+func NarrowServiceRoleBinding(ctx context.Context, c client.Client, namespace, name, roleRef string, subjects []rbacv1.Subject) error {
+	rb := &rbacv1.RoleBinding{}
+	switch err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, rb); {
+	case k8serrors.IsNotFound(err):
+		return nil
+	case err != nil:
+		return fmt.Errorf("get RoleBinding %s/%s: %w", namespace, name, err)
+	}
+
+	named := make(map[subjectKey]struct{}, len(subjects))
+	for _, s := range subjects {
+		named[keyOf(s)] = struct{}{}
+	}
+	kept := slices.DeleteFunc(CopySubjects(rb.Subjects), func(s rbacv1.Subject) bool {
+		_, ok := named[keyOf(s)]
+		return !ok
+	})
+
+	if rb.RoleRef.Name != roleRef || len(kept) == 0 {
+		if err := c.Delete(ctx, rb, client.Preconditions{UID: &rb.UID}); err != nil && !k8serrors.IsNotFound(err) {
+			return fmt.Errorf("delete RoleBinding %s/%s: %w", namespace, name, err)
+		}
+		return nil
+	}
+	if len(kept) == len(rb.Subjects) {
+		return nil
+	}
+	patch := client.MergeFromWithOptions(rb.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	rb.Subjects = kept
+	if err := c.Patch(ctx, rb, patch); err != nil {
+		return fmt.Errorf("narrow RoleBinding %s/%s: %w", namespace, name, err)
+	}
+	return nil
+}
+
+// subjectKey identifies a subject of a RoleBinding.
+type subjectKey struct {
+	kind, namespace, name string
+}
+
+func keyOf(s rbacv1.Subject) subjectKey {
+	return subjectKey{kind: s.Kind, namespace: s.Namespace, name: s.Name}
+}
+
 // PruneServiceRoleBindings deletes the service RoleBindings matching selector whose namespace is not
 // in keep, and returns how many it deleted. A nil keep deletes every match, which is what cleanup needs.
 func PruneServiceRoleBindings(ctx context.Context, c client.Client, selector map[string]string, keep map[string]struct{}) (int, error) {

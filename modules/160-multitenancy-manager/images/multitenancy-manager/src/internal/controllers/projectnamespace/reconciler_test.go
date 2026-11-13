@@ -37,6 +37,7 @@ import (
 
 	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/edition"
 	"controller/internal/naming"
 	"controller/internal/quota"
 )
@@ -103,6 +104,63 @@ func TestReconcile_CreatesNamespaceAndStatus(t *testing.T) {
 	assert.Contains(t, got.Finalizers, v1alpha3.ProjectNamespaceFinalizer)
 	require.Len(t, got.Status.Conditions, 1)
 	assert.Equal(t, corev1.ConditionTrue, got.Status.Conditions[0].Status)
+}
+
+// In an edition where a project has only its main namespace, a ProjectNamespace that gets past the
+// webhook gets no namespace and no finalizer, and says why, while the reconciler does not retry it.
+func TestReconcile_SingleNamespaceCreatesNoNamespace(t *testing.T) {
+	proj := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "team-a"}}
+	pn := projectNamespace("backend", "team-a", "backend")
+	r, c := newReconciler(t, proj, pn, mainNamespace("team-a", "{}", nil))
+	r.SingleNamespace = true
+
+	for range 2 {
+		result, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "team-a", Name: "backend"}})
+		require.NoError(t, err)
+		assert.Zero(t, result)
+	}
+
+	err := c.Get(context.Background(), client.ObjectKey{Name: "team-a-backend"}, &corev1.Namespace{})
+	assert.True(t, k8serrors.IsNotFound(err), "no namespace may be created, got %v", err)
+
+	got := &v1alpha3.ProjectNamespace{}
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Namespace: "team-a", Name: "backend"}, got))
+	assert.Empty(t, got.Status.Namespace)
+	assert.NotContains(t, got.Finalizers, v1alpha3.ProjectNamespaceFinalizer)
+	require.Len(t, got.Status.Conditions, 1)
+	assert.Equal(t, corev1.ConditionFalse, got.Status.Conditions[0].Status)
+	assert.Equal(t, edition.SingleNamespaceMessage, got.Status.Conditions[0].Message)
+}
+
+// After a switch to an edition with one namespace per project, the reconciler leaves the namespace that
+// a ProjectNamespace made in another edition as it is: the template no longer reaches it, and the
+// ProjectNamespace is not ready. Deleting the ProjectNamespace still deletes the namespace.
+func TestReconcile_SingleNamespaceLeavesExistingNamespace(t *testing.T) {
+	proj := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "team-a"}}
+	pn := projectNamespace("backend", "team-a", "backend")
+	r, c := newReconciler(t, proj, pn, mainNamespace("team-a", `{"team":"a"}`, nil))
+	reconciledNamespace(t, r, c)
+	r.SingleNamespace = true
+
+	setMainTemplateLabels(t, c, `{"team":"b"}`)
+	runReconcile(t, r, "team-a", "backend")
+
+	ns := &corev1.Namespace{}
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "team-a-backend"}, ns))
+	assert.Equal(t, "a", ns.Labels["team"], "the namespace is left as it is")
+	assert.Equal(t, "team-a", ns.Labels[v1alpha3.ResourceLabelProject], "the namespace keeps its labels for a switch back")
+	got := &v1alpha3.ProjectNamespace{}
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Namespace: "team-a", Name: "backend"}, got))
+	require.Len(t, got.Status.Conditions, 1)
+	assert.Equal(t, corev1.ConditionFalse, got.Status.Conditions[0].Status)
+	assert.Equal(t, edition.SingleNamespaceMessage, got.Status.Conditions[0].Message)
+
+	require.NoError(t, c.Delete(context.Background(), got))
+	runReconcile(t, r, "team-a", "backend")
+	err := c.Get(context.Background(), client.ObjectKey{Name: "team-a-backend"}, &corev1.Namespace{})
+	assert.True(t, k8serrors.IsNotFound(err), "the namespace goes with its ProjectNamespace, got %v", err)
+	err = c.Get(context.Background(), client.ObjectKey{Namespace: "team-a", Name: "backend"}, got)
+	assert.True(t, k8serrors.IsNotFound(err), "the ProjectNamespace is released once its finalizer is removed, got %v", err)
 }
 
 func TestReconcile_DeletionRemovesNamespaceAndFinalizer(t *testing.T) {

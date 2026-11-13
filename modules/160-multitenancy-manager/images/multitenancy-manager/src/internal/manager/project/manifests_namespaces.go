@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/edition"
 	"controller/internal/rolebinding"
 )
 
@@ -120,6 +121,10 @@ func (m *Manager) holdBackForNamespaces(
 	planned []string,
 	objects []*unstructured.Unstructured,
 ) ([]*unstructured.Unstructured, []*unstructured.Unstructured, []string, error) {
+	if edition.SingleNamespaceProjects(edition.Current()) {
+		ready, held, namespaces := holdBackForGood(planned, objects)
+		return ready, held, namespaces, nil
+	}
 	failures, err := m.projectNamespaceFailures(ctx, project.Name, planned)
 	if err != nil {
 		return nil, nil, nil, err
@@ -168,6 +173,29 @@ func (m *Manager) holdBackForNamespaces(
 	}
 	slices.Sort(waiting)
 	return ready, held, waiting, nil
+}
+
+// holdBackForGood splits the objects of a render in an edition where a project has only its main
+// namespace: no ProjectNamespace makes a namespace there, so the objects of a namespace one of the
+// render names are never applied. The third list names, sorted and quoted, the namespaces that hold
+// objects back, for manifestsWaitingMessage.
+func holdBackForGood(planned []string, objects []*unstructured.Unstructured) ([]*unstructured.Unstructured, []*unstructured.Unstructured, []string) {
+	ready := make([]*unstructured.Unstructured, 0, len(objects))
+	var held []*unstructured.Unstructured
+	var namespaces []string
+	for _, object := range objects {
+		namespace := object.GetNamespace()
+		if !slices.Contains(planned, namespace) {
+			ready = append(ready, object)
+			continue
+		}
+		held = append(held, object)
+		if quoted := "'" + namespace + "'"; !slices.Contains(namespaces, quoted) {
+			namespaces = append(namespaces, quoted)
+		}
+	}
+	slices.Sort(namespaces)
+	return ready, held, namespaces
 }
 
 // namespaceWait is what the objects of a namespace that a ProjectNamespace makes wait for. A

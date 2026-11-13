@@ -22,6 +22,8 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"sort"
+	"strings"
 
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/release"
@@ -169,6 +171,7 @@ func (c *Client) releaseChange(
 	ch *chart.Chart,
 	values map[string]any,
 	manifests string,
+	frozen string,
 	versions map[string]struct{},
 ) (ReleaseChange, error) {
 	summary, err := newProjectRelease(deployed)
@@ -184,6 +187,7 @@ func (c *Client) releaseChange(
 	}
 	post := newPostRenderer(project.DeepCopy(), versions, c.logger, false)
 	post.manifests = manifests
+	post.frozen = frozen
 	out, err := post.Run(bytes.NewBufferString(rendered))
 	if err != nil {
 		return ReleaseChange{}, fmt.Errorf("post render: %w", err)
@@ -194,6 +198,55 @@ func (c *Client) releaseChange(
 		return ReleaseChange{}, fmt.Errorf("read the post-rendered manifests: %w", err)
 	}
 	return ReleaseChange{Deployed: summary, Targets: targets, Manifest: manifest, Native: manifests != ""}, nil
+}
+
+// frozenObjects is what an upgrade from the deployed revision carries over as it is: its objects in the
+// namespaces the project dropped, in an edition where a project has only its main namespace. The
+// controller stops managing them but does not delete them: the upgrade leaves them as they are, a
+// change of the template does not reach them, and a switch back to an edition with additional
+// namespaces renders them again.
+func (c *Client) frozenObjects(ctx context.Context, project string, deployed *release.Release) (string, error) {
+	if c.dropped == nil || deployed == nil {
+		return "", nil
+	}
+	dropped, err := c.dropped(ctx, project)
+	if err != nil {
+		return "", fmt.Errorf("read the namespaces the project dropped: %w", err)
+	}
+	return frozenManifests(deployed.Manifest, dropped)
+}
+
+// frozenManifests returns the documents of the manifest whose objects are in one of the namespaces, in
+// the order of the manifest, each one after its separator.
+func frozenManifests(manifest string, namespaces map[string]struct{}) (string, error) {
+	if len(namespaces) == 0 {
+		return "", nil
+	}
+	docs := releaseutil.SplitManifests(manifest)
+	keys := make([]string, 0, len(docs))
+	for key := range docs {
+		keys = append(keys, key)
+	}
+	sort.Sort(releaseutil.BySplitManifestsOrder(keys))
+
+	var builder strings.Builder
+	for _, key := range keys {
+		var head struct {
+			Kind     string `json:"kind"`
+			Metadata struct {
+				Namespace string `json:"namespace"`
+			} `json:"metadata"`
+		}
+		if err := yaml.Unmarshal([]byte(docs[key]), &head); err != nil {
+			return "", fmt.Errorf("parse a manifest document: %w", err)
+		}
+		if _, ok := namespaces[head.Metadata.Namespace]; head.Kind == "" || !ok {
+			continue
+		}
+		builder.WriteString("\n---\n")
+		builder.WriteString(docs[key])
+	}
+	return builder.String(), nil
 }
 
 // manifestObjects lists the objects of a manifest, sorted by kind, namespace and name.

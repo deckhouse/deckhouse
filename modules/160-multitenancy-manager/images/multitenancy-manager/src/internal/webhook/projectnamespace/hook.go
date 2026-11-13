@@ -18,7 +18,8 @@ limitations under the License.
 // project's main namespace, the resulting "<project>-<name>" namespace must be RFC1123 and within
 // the 63-character limit, and must not collide with a namespace owned by another project, with a
 // project of that name, with the claim of another ProjectNamespace or with the ServiceAccount
-// subjects that bindings of other projects still have for that name.
+// subjects that bindings of other projects still have for that name. In an edition where a project has
+// only its main namespace, no ProjectNamespace is created at all.
 package projectnamespace
 
 import (
@@ -36,6 +37,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/edition"
 	"controller/internal/rolebinding"
 	"controller/internal/validate"
 )
@@ -43,9 +45,15 @@ import (
 // maxNamespaceNameLength is the Kubernetes limit on a namespace (RFC1123 label) name.
 const maxNamespaceNameLength = 63
 
-// Register installs the ProjectNamespace validating webhook.
-func Register(runtimeManager manager.Manager) {
-	hook := &webhook.Admission{Handler: &validator{client: runtimeManager.GetClient(), reader: runtimeManager.GetAPIReader()}}
+// Register installs the ProjectNamespace validating webhook. singleNamespace refuses the creation of
+// every ProjectNamespace, for an edition where a project has only its main namespace
+// (edition.SingleNamespaceProjects).
+func Register(runtimeManager manager.Manager, singleNamespace bool) {
+	hook := &webhook.Admission{Handler: &validator{
+		client:          runtimeManager.GetClient(),
+		reader:          runtimeManager.GetAPIReader(),
+		singleNamespace: singleNamespace,
+	}}
 	runtimeManager.GetWebhookServer().Register("/validate/v1alpha3/projectnamespaces", hook)
 }
 
@@ -60,6 +68,11 @@ type validator struct {
 	// project. The cache would also start the informers of the bindings inside the request on a replica
 	// that is not the leader.
 	reader client.Reader
+	// singleNamespace refuses every create: the edition gives a project only its main namespace. An
+	// update and a delete still pass, so that a ProjectNamespace made in another edition keeps working
+	// and can be deleted. The ProjectNamespace controller does not create the namespace either, for an
+	// object that gets past the webhook.
+	singleNamespace bool
 }
 
 func (v *validator) Handle(ctx context.Context, req admission.Request) admission.Response {
@@ -75,8 +88,10 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 	// A ProjectNamespace that is being deleted waits only for the controller to remove its finalizer,
 	// which is an update, and it creates no namespace any more. The checks below would refuse that
 	// update while a namespace of someone else has the resulting name, which the controller leaves
-	// alone, and the object would never go away, nor would the main namespace it lives in.
-	if !pns.DeletionTimestamp.IsZero() {
+	// alone, and the object would never go away, nor would the main namespace it lives in. Only an
+	// update is let through: a server-side apply that creates the object keeps a deletionTimestamp
+	// written into the manifest, and such a create must pass every check below.
+	if req.Operation == admissionv1.Update && !pns.DeletionTimestamp.IsZero() {
 		return admission.Allowed("")
 	}
 
@@ -105,6 +120,9 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 	// a ProjectNamespace, and spec.name is immutable (enforced by the CRD), so the resulting-name
 	// length and collision invariants below stay correct on UPDATE without the placement gate.
 	if req.Operation == admissionv1.Create {
+		if v.singleNamespace {
+			return admission.Denied(edition.SingleNamespaceMessage)
+		}
 		if req.Namespace == "default" || req.Namespace == "deckhouse" {
 			return admission.Denied("ProjectNamespace cannot be created in a virtual project namespace")
 		}

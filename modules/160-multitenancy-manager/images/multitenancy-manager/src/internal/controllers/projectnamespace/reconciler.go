@@ -18,7 +18,9 @@ limitations under the License.
 // namespace "<project>-<spec.name>" for the project. The namespace carries the project ownership
 // labels, so the project controller picks it up into Project.status.namespaces (kind Additional) and
 // the PRB/CPRB reconcilers fan their service RoleBindings into it. Namespaced template objects are
-// rendered into every project namespace, so the additional namespace also receives them.
+// rendered into every project namespace, so the additional namespace also receives them. In an edition
+// where a project has only its main namespace, the reconciler creates and changes no namespace: it only
+// deletes the namespace of a ProjectNamespace that is deleted.
 package projectnamespace
 
 import (
@@ -45,6 +47,7 @@ import (
 
 	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/edition"
 	"controller/internal/naming"
 	"controller/internal/quota"
 	"controller/internal/rolebinding"
@@ -56,6 +59,14 @@ type Reconciler struct {
 
 	// Recorder reports a restored template label on the ProjectNamespace. Optional.
 	Recorder record.EventRecorder
+
+	// SingleNamespace keeps the reconciler from creating or changing a namespace, for an edition where
+	// a project has only its main namespace (edition.SingleNamespaceProjects). The webhook refuses to
+	// create a ProjectNamespace there, and this holds for one that gets past it all the same. A
+	// ProjectNamespace made in another edition before a switch gets Ready=False, its namespace is no
+	// longer one of the project (namespaces.OfProject) and is left as it is, and deleting the
+	// ProjectNamespace still deletes it.
+	SingleNamespace bool
 }
 
 // Reconcile keeps the additional namespace of a single ProjectNamespace in sync with its object.
@@ -92,6 +103,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			if err := r.Update(ctx, pns); err != nil && !k8serrors.IsNotFound(err) {
 				return ctrl.Result{}, fmt.Errorf("remove finalizer: %w", err)
 			}
+		}
+		return ctrl.Result{}, nil
+	}
+
+	// The edition is built into the controller, so a retry cannot change the outcome: the object is
+	// reconciled again when it changes or when the controller of another edition starts.
+	if r.SingleNamespace {
+		if v1alpha3.SetCondition(&pns.Status.Conditions, v1alpha3.ProjectNamespaceConditionReady, corev1.ConditionFalse, edition.SingleNamespaceMessage) {
+			if err := r.Status().Update(ctx, pns); err != nil {
+				return ctrl.Result{}, fmt.Errorf("update status: %w", err)
+			}
+			log.Info("the namespace is not managed: the edition gives a project only its main namespace", "namespace", resulting)
 		}
 		return ctrl.Result{}, nil
 	}

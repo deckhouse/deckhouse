@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/edition"
 )
 
 // A project on its way out and a virtual project have no additional namespaces to be confused with,
@@ -35,4 +36,22 @@ func TestNameWarnings_LeavesOutProjectsWithoutNamespaces(t *testing.T) {
 	assert.Empty(t, nameWarnings("foo-bar", []v1alpha3.Project{deleted}))
 	assert.Empty(t, nameWarnings("foo", []v1alpha3.Project{{ObjectMeta: metav1.ObjectMeta{Name: "foo-bar", DeletionTimestamp: &now}}}))
 	assert.Empty(t, nameWarnings("default-x", []v1alpha3.Project{virtual}))
+}
+
+// The warning about a name that reads like an additional namespace advises a ProjectNamespace only in an
+// edition that has them. The tests switch the edition of the binary, so none of them runs in parallel.
+func TestNameWarnings_AdviceByEdition(t *testing.T) {
+	existing := []v1alpha3.Project{{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}}
+	const separate = `Project "foo-bar" is not an additional namespace of project "foo". It is created as a separate project with a namespace of its own. `
+
+	t.Run("a commercial edition advises a ProjectNamespace", func(t *testing.T) {
+		defer edition.SetForTest("EE")()
+		assert.Equal(t, []string{separate + `To add a namespace to project "foo", create a ProjectNamespace in the "foo" namespace instead.`},
+			nameWarnings("foo-bar", existing))
+	})
+
+	t.Run("CE says that a project has only its main namespace", func(t *testing.T) {
+		defer edition.SetForTest(edition.CE)()
+		assert.Equal(t, []string{separate + edition.OnlyMainNamespace}, nameWarnings("foo-bar", existing))
+	})
 }

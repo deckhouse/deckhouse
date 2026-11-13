@@ -41,6 +41,7 @@ import (
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/controllers/templategrants"
 	projectmanager "controller/internal/manager/project"
+	"controller/internal/namespaces"
 	"controller/internal/naming"
 	"controller/internal/validate"
 )
@@ -203,17 +204,23 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 		// Nor while a namespace is still rendered from it. The policies of the template select
 		// namespaces by that label, so a project that switched to a template that has not rendered yet
 		// keeps the rules of this one only while this one exists.
-		namespaces := new(corev1.NamespaceList)
-		if err := v.client.List(ctx, namespaces, client.MatchingLabels{
+		rendered := new(corev1.NamespaceList)
+		if err := v.client.List(ctx, rendered, client.MatchingLabels{
 			v1alpha3.ResourceLabelTemplate: template.Name,
 			v1alpha3.ResourceLabelHeritage: v1alpha3.ResourceHeritageMultitenancy,
 		}); err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 		// A namespace on its way out is rendered from nothing any more: nothing can be created in it.
-		namespaces.Items = slices.DeleteFunc(namespaces.Items, func(ns corev1.Namespace) bool { return ns.DeletionTimestamp != nil })
-		if len(namespaces.Items) > 0 {
-			ns := slices.MinFunc(namespaces.Items, func(a, b corev1.Namespace) int { return strings.Compare(a.Name, b.Name) })
+		// Nor is one that is not a namespace of its project as the controller sees it, as an additional
+		// namespace left from another edition in an edition where a project has only its main namespace:
+		// the controller no longer renders its label.
+		rendered.Items = slices.DeleteFunc(rendered.Items, func(ns corev1.Namespace) bool {
+			owner := ns.Labels[v1alpha3.ResourceLabelProject]
+			return ns.DeletionTimestamp != nil || (owner != "" && !namespaces.InProject(&ns, owner))
+		})
+		if len(rendered.Items) > 0 {
+			ns := slices.MinFunc(rendered.Items, func(a, b corev1.Namespace) int { return strings.Compare(a.Name, b.Name) })
 			project := ns.Labels[v1alpha3.ResourceLabelProject]
 			hint := "wait until the project renders its new template"
 			switch err := v.client.Get(ctx, client.ObjectKey{Name: project}, new(v1alpha3.Project)); {

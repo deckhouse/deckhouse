@@ -194,6 +194,8 @@ d8 k get project my-project -o jsonpath='{range .status.conditions[*]}{.type}={.
 
 ## Дополнительные неймспейсы проекта
 
+В Deckhouse Platform Open (CE) у проекта есть только основной неймспейс.
+
 Если приложению нужно несколько неймспейсов (например, отдельное для кеша или очередей), добавьте их в проект ресурсом [ProjectNamespace](cr.html#projectnamespace). ProjectNamespace создаётся **в основном неймспейсе проекта**; итоговый неймспейс получает имя `<имя проекта>-<spec.name>`:
 
 ```yaml

@@ -36,6 +36,8 @@ spec:
           description: |
             Describes an additional namespace of a project.
 
+            Available in the commercial editions of Deckhouse Platform. In Deckhouse Platform Open, a ProjectNamespace cannot be created, and the controller neither creates nor manages its namespace.
+
             It must be created in the project's main namespace (the namespace whose name equals the project name).
             The controller creates a namespace named `<project>-<spec.name>`, labels it with the project ownership
             labels, and adds it to the parent `Project.status.namespaces` with kind `Additional`. Deleting the

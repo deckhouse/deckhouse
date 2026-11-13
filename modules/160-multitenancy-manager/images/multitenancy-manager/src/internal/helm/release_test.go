@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"strings"
 	"testing"
 	"time"
 
@@ -30,6 +31,7 @@ import (
 	"helm.sh/helm/v3/pkg/chartutil"
 	kubefake "helm.sh/helm/v3/pkg/kube/fake"
 	"helm.sh/helm/v3/pkg/release"
+	"helm.sh/helm/v3/pkg/releaseutil"
 	"helm.sh/helm/v3/pkg/storage"
 	"helm.sh/helm/v3/pkg/storage/driver"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -39,6 +41,7 @@ import (
 	"k8s.io/client-go/rest"
 	clienttesting "k8s.io/client-go/testing"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/yaml"
 
 	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha3"
@@ -307,7 +310,7 @@ func TestClient_ReleaseChange(t *testing.T) {
 	t.Run("a Helm text", func(t *testing.T) {
 		t.Parallel()
 		values := buildValues(project, template, templateParameters(project, template))
-		change, err := c.releaseChange(project, helmTextRelease(helmTextManifest), buildChart(templates, project.Name), values, "", changeVersions)
+		change, err := c.releaseChange(project, helmTextRelease(helmTextManifest), buildChart(templates, project.Name), values, "", "", changeVersions)
 		require.NoError(t, err)
 
 		assert.False(t, change.Native)
@@ -324,7 +327,7 @@ func TestClient_ReleaseChange(t *testing.T) {
 	t.Run("native manifests", func(t *testing.T) {
 		t.Parallel()
 		manifests := "---\napiVersion: v1\nkind: Namespace\nmetadata:\n  name: proj\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: native\n"
-		change, err := c.releaseChange(project, helmTextRelease(helmTextManifest), buildEmptyChart(project.Name), map[string]any{}, manifests, changeVersions)
+		change, err := c.releaseChange(project, helmTextRelease(helmTextManifest), buildEmptyChart(project.Name), map[string]any{}, manifests, "", changeVersions)
 		require.NoError(t, err)
 
 		assert.True(t, change.Native)
@@ -535,4 +538,92 @@ func TestClient_ReleaseReappliesUpToDateRelease(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, current)
 	assert.Equal(t, 2, current.Revision, "the reapply is a new revision")
+}
+
+// In an edition where a project has only its main namespace, an upgrade leaves the objects of a
+// namespace the project dropped as the deployed revision has them: the release keeps them, so Helm does
+// not delete them, and a change of the template does not reach them. A switch back, where the namespace
+// is the project's again, renders them anew.
+func TestClient_ReleaseLeavesTheObjectsOfDroppedNamespaces(t *testing.T) {
+	t.Parallel()
+
+	c := newReleaseClient(t)
+	ctx := context.Background()
+	var dropped map[string]struct{}
+	c.SetDroppedNamespaces(func(context.Context, string) (map[string]struct{}, error) { return dropped, nil })
+	project := &v1alpha3.Project{}
+	project.Name = "proj"
+	project.Spec.ProjectTemplateName = "custom"
+	policy := func(namespace, version string) string {
+		return "---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: policy\n  namespace: " + namespace + "\ndata:\n  version: " + version + "\n"
+	}
+	both := []v1alpha3.NamespaceStatus{{Name: "proj", Kind: v1alpha3.NamespaceKindMain}, {Name: "proj-db", Kind: v1alpha3.NamespaceKindAdditional}}
+	// deployedPolicy is the version of the policy in the namespace, as the deployed revision holds it,
+	// empty when it holds none.
+	deployedPolicy := func(namespace string) string {
+		t.Helper()
+		last, err := c.conf.Releases.Last(ReleaseName(project.Name))
+		require.NoError(t, err)
+		for _, doc := range releaseutil.SplitManifests(last.Manifest) {
+			var object struct {
+				Kind     string `json:"kind"`
+				Metadata struct {
+					Name      string `json:"name"`
+					Namespace string `json:"namespace"`
+				} `json:"metadata"`
+				Data map[string]string `json:"data"`
+			}
+			require.NoError(t, yaml.Unmarshal([]byte(doc), &object))
+			if object.Kind == "ConfigMap" && object.Metadata.Name == "policy" && object.Metadata.Namespace == namespace {
+				return object.Data["version"]
+			}
+		}
+		return ""
+	}
+
+	// A commercial edition: the template renders into both namespaces.
+	project.Status.Namespaces = both
+	_, err := c.UpgradeManifests(ctx, project, policy("proj", "1")+policy("proj-db", "1"), nil, false)
+	require.NoError(t, err)
+	require.Equal(t, "1", deployedPolicy("proj-db"))
+
+	// CE: proj-db is dropped, the template changes and renders into the main namespace alone.
+	project.Status.Namespaces = both[:1]
+	dropped = map[string]struct{}{"proj-db": {}}
+	_, err = c.UpgradeManifests(ctx, project, policy("proj", "2"), nil, false)
+	require.NoError(t, err)
+	assert.Equal(t, "2", deployedPolicy("proj"))
+	assert.Equal(t, "1", deployedPolicy("proj-db"), "the object stays in the release as it was")
+
+	// Back to a commercial edition: proj-db is the project's again and follows the template.
+	project.Status.Namespaces = both
+	dropped = nil
+	_, err = c.UpgradeManifests(ctx, project, policy("proj", "3")+policy("proj-db", "3"), nil, false)
+	require.NoError(t, err)
+	assert.Equal(t, "3", deployedPolicy("proj-db"))
+}
+
+// frozenManifests keeps the documents of the given namespaces, in the order of the manifest, and
+// nothing without namespaces to keep.
+func TestFrozenManifests(t *testing.T) {
+	t.Parallel()
+
+	doc := func(kind, name, namespace string) string {
+		return "---\napiVersion: v1\nkind: " + kind + "\nmetadata:\n  name: " + name + "\n  namespace: " + namespace + "\n"
+	}
+	manifest := doc("ConfigMap", "a", "proj") + doc("ConfigMap", "b", "proj-db") + doc("Secret", "c", "proj-cache") + doc("ConfigMap", "d", "proj-db")
+
+	frozen, err := frozenManifests(manifest, map[string]struct{}{"proj-db": {}})
+	require.NoError(t, err)
+	objects, err := manifestObjects(frozen)
+	require.NoError(t, err)
+	assert.Equal(t, []ReleaseObject{
+		{APIVersion: "v1", Kind: "ConfigMap", Namespace: "proj-db", Name: "b"},
+		{APIVersion: "v1", Kind: "ConfigMap", Namespace: "proj-db", Name: "d"},
+	}, objects)
+	assert.Less(t, strings.Index(frozen, "name: b"), strings.Index(frozen, "name: d"))
+
+	frozen, err = frozenManifests(manifest, nil)
+	require.NoError(t, err)
+	assert.Empty(t, frozen)
 }

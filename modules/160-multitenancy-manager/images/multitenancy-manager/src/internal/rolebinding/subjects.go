@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/namespaces"
 )
 
 const (
@@ -150,8 +151,8 @@ func namesAdministrator(subject rbacv1.Subject, administrators []v1alpha3.Admini
 	})
 }
 
-// namespaceInProject reports whether the namespace exists, is not being deleted and carries the label
-// of the project.
+// namespaceInProject reports whether the namespace exists, is not being deleted and is a namespace of
+// the project (namespaces.InProject).
 func namespaceInProject(ctx context.Context, reader client.Reader, name, project string) (bool, error) {
 	ns := new(corev1.Namespace)
 	if err := reader.Get(ctx, client.ObjectKey{Name: name}, ns); err != nil {
@@ -160,7 +161,7 @@ func namespaceInProject(ctx context.Context, reader client.Reader, name, project
 		}
 		return false, fmt.Errorf("get the %q namespace: %w", name, err)
 	}
-	return ns.DeletionTimestamp.IsZero() && ns.Labels[v1alpha3.ResourceLabelProject] == project, nil
+	return ns.DeletionTimestamp.IsZero() && namespaces.InProject(ns, project), nil
 }
 
 // ServiceAccountGrantConflict returns why a namespace named name cannot become a namespace of the

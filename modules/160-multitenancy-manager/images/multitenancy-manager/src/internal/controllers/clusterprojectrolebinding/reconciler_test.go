@@ -42,6 +42,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/edition"
 	"controller/internal/rolebinding"
 )
 
@@ -526,4 +527,120 @@ func TestProjectNamespaceCreated(t *testing.T) {
 	assert.False(t, p.Update(event.UpdateEvent{ObjectOld: project, ObjectNew: project}))
 	assert.False(t, p.Delete(event.DeleteEvent{Object: project}))
 	assert.False(t, p.Generic(event.GenericEvent{Object: project}))
+}
+
+// In CE the RoleBinding of a namespace a project dropped, an additional namespace left from another
+// edition, is neither created nor widened, but narrowed to the subjects the binding still names, and
+// deleted with a change of the role. The cleanup of the binding deletes it. The test switches the edition of
+// the binary, so it does not run in parallel: the parallel tests of the package start only after it.
+func TestReconcile_NarrowsTheRoleBindingOfADroppedNamespaceInCE(t *testing.T) {
+	name := rolebinding.CPRBServiceName("global-viewer")
+	user := func(name string) rbacv1.Subject { return rbacv1.Subject{APIGroup: rbacv1.GroupName, Kind: "User", Name: name} }
+	labelled := func(namespace string) *corev1.Namespace {
+		return &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace, Labels: map[string]string{v1alpha3.ResourceLabelProject: "alpha"}}}
+	}
+	build := func(role string, subjects ...rbacv1.Subject) (*Reconciler, client.Client) {
+		binding := cprb("global-viewer", role)
+		binding.Spec.Subjects = subjects
+		frozen := serviceRoleBinding("global-viewer", "alpha-db", "d8:project:viewer")
+		frozen.Subjects = []rbacv1.Subject{user("alice"), user("carol")}
+		return newReconciler(t, binding, project("alpha", false, "alpha"), labelled("alpha"), labelled("alpha-db"), frozen)
+	}
+	subjectsIn := func(c client.Client) []string {
+		rb := &rbacv1.RoleBinding{}
+		err := c.Get(context.Background(), client.ObjectKey{Namespace: "alpha-db", Name: name}, rb)
+		if k8serrors.IsNotFound(err) {
+			return nil
+		}
+		require.NoError(t, err)
+		names := make([]string, 0, len(rb.Subjects))
+		for _, s := range rb.Subjects {
+			names = append(names, s.Name)
+		}
+		return names
+	}
+
+	t.Run("CE narrows it", func(t *testing.T) {
+		defer edition.SetForTest(edition.CE)()
+		r, c := build("d8:project:viewer", user("alice"), user("bob"))
+		reconcileCPRB(t, r, "global-viewer")
+		assert.Equal(t, []string{"alice"}, subjectsIn(c), "carol is revoked, and bob does not join the dropped namespace")
+		require.NoError(t, r.cleanup(context.Background(), "global-viewer"))
+		assert.Nil(t, subjectsIn(c), "the cleanup of the binding deletes it")
+	})
+
+	t.Run("CE deletes it once no subject is left", func(t *testing.T) {
+		defer edition.SetForTest(edition.CE)()
+		r, c := build("d8:project:viewer", user("bob"))
+		reconcileCPRB(t, r, "global-viewer")
+		assert.Nil(t, subjectsIn(c), "neither alice nor carol is named, and bob does not join")
+	})
+
+	t.Run("CE deletes it with a change of the role", func(t *testing.T) {
+		defer edition.SetForTest(edition.CE)()
+		r, c := build("d8:project:editor", user("alice"))
+		reconcileCPRB(t, r, "global-viewer")
+		assert.Nil(t, subjectsIn(c))
+	})
+
+}
+
+// labelledAlpha is a namespace with the label of the alpha project.
+func labelledAlpha(namespace string) *corev1.Namespace {
+	return &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace, Labels: map[string]string{v1alpha3.ResourceLabelProject: "alpha"}}}
+}
+
+// frozenAlphaDB is the RoleBinding of the global-viewer binding in alpha-db, with alice.
+func frozenAlphaDB() *rbacv1.RoleBinding {
+	rb := serviceRoleBinding("global-viewer", "alpha-db", "d8:project:viewer")
+	rb.UID = "frozen"
+	rb.Subjects = []rbacv1.Subject{{APIGroup: rbacv1.GroupName, Kind: "User", Name: "alice"}}
+	return rb
+}
+
+// Right after a switch to CE, the status of a project still lists a namespace the project dropped,
+// until the next reconcile of the project. The fan-out does not write there meanwhile: a subject the
+// binding adds does not join that namespace. The test switches the edition of the binary, so it does
+// not run in parallel: the parallel tests of the package start only after it.
+func TestReconcile_DoesNotFanOutIntoADroppedNamespaceTheStatusStillLists(t *testing.T) {
+	defer edition.SetForTest(edition.CE)()
+	binding := cprb("global-viewer", "d8:project:viewer")
+	binding.Spec.Subjects = []rbacv1.Subject{
+		{APIGroup: rbacv1.GroupName, Kind: "User", Name: "alice"},
+		{APIGroup: rbacv1.GroupName, Kind: "User", Name: "bob"},
+	}
+	r, c := newReconciler(t, binding, project("alpha", false, "alpha", "alpha-db"),
+		labelledAlpha("alpha"), labelledAlpha("alpha-db"), frozenAlphaDB())
+
+	reconcileCPRB(t, r, "global-viewer")
+	rb := &rbacv1.RoleBinding{}
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Namespace: "alpha-db", Name: rolebinding.CPRBServiceName("global-viewer")}, rb))
+	require.Len(t, rb.Subjects, 1)
+	assert.Equal(t, "alice", rb.Subjects[0].Name, "bob does not join the dropped namespace")
+}
+
+// After a switch back to a commercial edition, a namespace with the label of the project comes back
+// before the status of the project lists it again. Its RoleBinding is not pruned meanwhile, and the
+// fan-out updates it in place once the status lists the namespace, so the subjects keep their rights
+// there throughout. The test switches the edition of the binary, so it does not run in parallel.
+func TestReconcile_TakesBackTheRoleBindingOfANamespaceBeforeTheStatus(t *testing.T) {
+	defer edition.SetForTest("EE")()
+	ctx := context.Background()
+	key := client.ObjectKey{Namespace: "alpha-db", Name: rolebinding.CPRBServiceName("global-viewer")}
+	r, c := newReconciler(t, cprb("global-viewer", "d8:project:viewer"), project("alpha", false, "alpha"),
+		labelledAlpha("alpha"), labelledAlpha("alpha-db"), frozenAlphaDB())
+
+	reconcileCPRB(t, r, "global-viewer")
+	rb := &rbacv1.RoleBinding{}
+	require.NoError(t, c.Get(ctx, key, rb), "the RoleBinding of a labelled namespace is not pruned")
+
+	stored := &v1alpha3.Project{}
+	require.NoError(t, c.Get(ctx, client.ObjectKey{Name: "alpha"}, stored))
+	stored.Status.Namespaces = project("alpha", false, "alpha", "alpha-db").Status.Namespaces
+	require.NoError(t, c.Update(ctx, stored))
+	reconcileCPRB(t, r, "global-viewer")
+	require.NoError(t, c.Get(ctx, key, rb))
+	assert.Equal(t, types.UID("frozen"), rb.UID, "the RoleBinding is updated, not made anew")
+	require.Len(t, rb.Subjects, 1)
+	assert.Equal(t, "platform", rb.Subjects[0].Name, "and it follows the binding again")
 }

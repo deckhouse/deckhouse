@@ -53,6 +53,7 @@ import (
 
 	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/namespaces"
 	"controller/internal/quota"
 	"controller/internal/quota/evaluator"
 )
@@ -291,10 +292,19 @@ func (r *Reconciler) reconcileNamespaces(ctx context.Context, pq *v1alpha1.Proje
 		return nil, fmt.Errorf("list the namespaces of the project: %w", err)
 	}
 
-	namespaces := make([]quota.Namespace, 0, len(list.Items))
+	found := make([]quota.Namespace, 0, len(list.Items))
 	var errs []error
 	for i := range list.Items {
 		ns := &list.Items[i]
+		// The namespaces of the project as the rest of the controller and the ledger see them: in an
+		// edition where a project has only its main namespace, an additional namespace left from
+		// another edition is not one, and it is released, as it would hold objects back otherwise.
+		if !namespaces.InProject(ns, pq.Name) {
+			if err := r.releaseNamespace(ctx, ns); err != nil {
+				errs = append(errs, err)
+			}
+			continue
+		}
 		if !ns.DeletionTimestamp.IsZero() {
 			// The namespace controller deletes d8-project-quota with the rest of the namespace, but the
 			// objects that wait for a finalizer, such as the claims behind pvc-protection, are still
@@ -305,14 +315,14 @@ func (r *Reconciler) reconcileNamespaces(ctx context.Context, pq *v1alpha1.Proje
 			}
 			continue
 		}
-		found, err := r.reconcileNamespace(ctx, pq, ns, rqHard, plan)
+		one, err := r.reconcileNamespace(ctx, pq, ns, rqHard, plan)
 		if err != nil {
 			errs = append(errs, err)
-			found.Problem = err.Error()
+			one.Problem = err.Error()
 		}
-		namespaces = append(namespaces, found)
+		found = append(found, one)
 	}
-	return namespaces, errors.Join(errs...)
+	return found, errors.Join(errs...)
 }
 
 // unlabelTerminating takes the label off the namespaces of the project that are being deleted, for a
@@ -578,23 +588,31 @@ func (r *Reconciler) release(ctx context.Context, project string) error {
 		return fmt.Errorf("list the namespaces of the project: %w", err)
 	}
 	for i := range list.Items {
-		ns := &list.Items[i]
-		if err := r.removeLabel(ctx, ns); err != nil {
+		if err := r.releaseNamespace(ctx, &list.Items[i]); err != nil {
 			return err
 		}
-		rq := new(corev1.ResourceQuota)
-		switch err := r.Get(ctx, types.NamespacedName{Namespace: ns.Name, Name: v1alpha3.ProjectQuotaName}, rq); {
-		case apierrors.IsNotFound(err):
-			continue
-		case err != nil:
-			return fmt.Errorf("get the ResourceQuota of the %s namespace: %w", ns.Name, err)
-		}
-		if foreign(rq) || rq.Labels[v1alpha3.ResourceLabelManagedBy] != v1alpha3.ManagedByController {
-			continue
-		}
-		if err := r.Delete(ctx, rq, client.Preconditions{UID: &rq.UID}); err != nil && !apierrors.IsNotFound(err) {
-			return fmt.Errorf("delete the ResourceQuota of the %s namespace: %w", ns.Name, err)
-		}
+	}
+	return nil
+}
+
+// releaseNamespace takes the quota off a namespace: the labels first, then the ResourceQuota of the
+// controller (see release).
+func (r *Reconciler) releaseNamespace(ctx context.Context, ns *corev1.Namespace) error {
+	if err := r.removeLabel(ctx, ns); err != nil {
+		return err
+	}
+	rq := new(corev1.ResourceQuota)
+	switch err := r.Get(ctx, types.NamespacedName{Namespace: ns.Name, Name: v1alpha3.ProjectQuotaName}, rq); {
+	case apierrors.IsNotFound(err):
+		return nil
+	case err != nil:
+		return fmt.Errorf("get the ResourceQuota of the %s namespace: %w", ns.Name, err)
+	}
+	if foreign(rq) || rq.Labels[v1alpha3.ResourceLabelManagedBy] != v1alpha3.ManagedByController {
+		return nil
+	}
+	if err := r.Delete(ctx, rq, client.Preconditions{UID: &rq.UID}); err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("delete the ResourceQuota of the %s namespace: %w", ns.Name, err)
 	}
 	return nil
 }

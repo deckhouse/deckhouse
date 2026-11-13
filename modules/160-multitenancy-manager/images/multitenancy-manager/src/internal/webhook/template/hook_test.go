@@ -36,6 +36,7 @@ import (
 	grantsv1alpha2 "controller/api/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/edition"
 )
 
 func newValidator(t *testing.T, objs ...client.Object) *validator {
@@ -702,6 +703,35 @@ func TestHandle_DeleteTemplateLeftoverNamespace(t *testing.T) {
 	}})
 	require.False(t, resp.Allowed)
 	assert.Contains(t, resp.Result.Message, "the project is gone; delete the namespace first")
+}
+
+// In CE an additional namespace left from another edition is not a namespace of its project, and the
+// controller no longer renders its template label: it does not hold the template, which a commercial
+// edition still refuses to delete. The test switches the edition of the binary, so it does not run in
+// parallel.
+func TestHandle_DeleteTemplateAdditionalNamespaceByEdition(t *testing.T) {
+	additional := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "proj-db", Labels: map[string]string{
+		v1alpha3.ResourceLabelTemplate: "tmpl",
+		v1alpha3.ResourceLabelHeritage: v1alpha3.ResourceHeritageMultitenancy,
+		v1alpha3.ResourceLabelProject:  "proj",
+	}}}
+	project := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "proj", Labels: map[string]string{v1alpha3.ResourceLabelTemplate: "tmpl-v2"}}}
+	old, err := json.Marshal(structuredTemplate("tmpl"))
+	require.NoError(t, err)
+	remove := admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{Operation: admissionv1.Delete, OldObject: runtime.RawExtension{Raw: old}}}
+
+	t.Run("a commercial edition keeps the template", func(t *testing.T) {
+		defer edition.SetForTest("EE")()
+		resp := newValidator(t, project, additional).Handle(context.Background(), remove)
+		require.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "the 'proj-db' namespace of the 'proj' project is still rendered from it")
+	})
+
+	t.Run("CE lets it go", func(t *testing.T) {
+		defer edition.SetForTest(edition.CE)()
+		resp := newValidator(t, project, additional).Handle(context.Background(), remove)
+		assert.True(t, resp.Allowed, resp.Result)
+	})
 }
 
 func helmTemplate(name string) *v1alpha2.ProjectTemplate {

@@ -31,6 +31,7 @@ import (
 
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/edition"
 	"controller/internal/rolebinding"
 )
 
@@ -472,6 +473,37 @@ func TestManager_HoldBackNamesProjectNamespaceNotReady(t *testing.T) {
 	_, _, waiting, err := m.holdBackForNamespaces(ctx, project, []string{"proj-backend"}, []*unstructured.Unstructured{object})
 	require.NoError(t, err)
 	assert.Equal(t, []string{"the 'proj-backend' namespace to be created: " + notReady}, waiting)
+}
+
+// In CE no ProjectNamespace makes a namespace, so the objects of a namespace that a ProjectNamespace
+// of the render names are held back for good, even when the namespace is there with the label of the
+// project, and the message says so rather than that they wait for the namespace. The other objects
+// are applied. The test switches the edition of the binary, so it does not run in parallel.
+func TestManager_HoldBackForGoodInCE(t *testing.T) {
+	defer edition.SetForTest(edition.CE)()
+	project := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "proj"}}
+	m, _ := newTransitionManager(t, projectNamespace(), backendNamespace(), fannedOutManifestsBinding("proj-backend"))
+	inBackend, err := runtimeToUnstructured(configMap("proj-backend", "backend-settings"))
+	require.NoError(t, err)
+	inMain, err := runtimeToUnstructured(configMap("proj", "settings"))
+	require.NoError(t, err)
+
+	ready, held, waiting, err := m.holdBackForNamespaces(context.Background(), project, []string{"proj-backend"},
+		[]*unstructured.Unstructured{inBackend, inMain})
+	require.NoError(t, err)
+	assert.Equal(t, []*unstructured.Unstructured{inMain}, ready)
+	assert.Equal(t, []*unstructured.Unstructured{inBackend}, held)
+	assert.Equal(t, []string{"'proj-backend'"}, waiting)
+	assert.Equal(t, "The other objects of the manifests of the template are applied, and the objects in the namespaces "+
+		"that ProjectNamespace objects of the manifests name ('proj-backend') are not applied. "+edition.OnlyMainNamespace, manifestsWaitingMessage(waiting))
+}
+
+// In a commercial edition the objects wait for the namespace the ProjectNamespace makes.
+func TestManifestsWaitingMessage_CommercialEdition(t *testing.T) {
+	defer edition.SetForTest("EE")()
+	assert.Equal(t, "The other objects of the manifests of the template are applied, and the objects in the namespaces that "+
+		"ProjectNamespace objects of the manifests make wait for the 'proj-backend' namespace to be created.",
+		manifestsWaitingMessage([]string{"the 'proj-backend' namespace to be created"}))
 }
 
 func runtimeToUnstructured(object *corev1.ConfigMap) (*unstructured.Unstructured, error) {

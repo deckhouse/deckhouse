@@ -46,6 +46,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/edition"
 )
 
 const (
@@ -161,9 +162,12 @@ func (r *Reconciler) report(ctx context.Context, added []pair, projects []v1alph
 		if !ok {
 			continue
 		}
-		message := fmt.Sprintf("Namespace %s became a separate project. It is not an additional namespace of project %s. "+
-			"To add a namespace to project %s, create a ProjectNamespace in the %s namespace.",
-			p.project, p.prefixProject, p.prefixProject, p.prefixProject)
+		advice := fmt.Sprintf("To add a namespace to project %s, create a ProjectNamespace in the %s namespace.", p.prefixProject, p.prefixProject)
+		if edition.SingleNamespaceProjects(edition.Current()) {
+			advice = edition.OnlyMainNamespace
+		}
+		message := fmt.Sprintf("Namespace %s became a separate project. It is not an additional namespace of project %s. %s",
+			p.project, p.prefixProject, advice)
 		r.Recorder.Event(project, corev1.EventTypeWarning, reasonNamedLikeAdditionalNamespace, message)
 
 		// A project a user creates gets its namespace only when the controller gets to it, and the

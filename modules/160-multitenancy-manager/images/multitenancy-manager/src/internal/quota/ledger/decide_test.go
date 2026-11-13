@@ -33,6 +33,7 @@ import (
 
 	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/edition"
 )
 
 var testNow = time.Date(2026, 10, 29, 12, 0, 0, 0, time.UTC)
@@ -256,6 +257,35 @@ func TestNamespaceMoves(t *testing.T) {
 
 	s.DeleteNamespace("a")
 	assert.True(t, s.Decide(write("c", 30, rl("pods", "1"), rl("pods", "9")), testNow, always).Allowed)
+}
+
+// In CE an additional namespace left from another edition is not one of the project, as the controller
+// sees it: its usage is not in the sum the main namespace is checked against, which is the sum the
+// status of the ProjectQuota shows, and a quorum list with it is covered. In the other editions it
+// counts. The test switches the edition of the binary, so it does not run in parallel.
+func TestAdditionalNamespaceByEdition(t *testing.T) {
+	build := func() *State {
+		s := NewState()
+		s.SetProjectQuota(pq("p", rl("pods", "10")))
+		s.SetNamespace(ns("p", "p"))
+		s.SetNamespace(ns("p-db", "p"))
+		s.SetQuota(rq("p", 10, rl("pods", "6")))
+		s.SetQuota(rq("p-db", 20, rl("pods", "4")))
+		return s
+	}
+	grow := write("p", 10, rl("pods", "6"), rl("pods", "9"))
+
+	t.Run("a commercial edition counts it", func(t *testing.T) {
+		defer edition.SetForTest("EE")()
+		assert.Equal(t, ResultExceeded, build().Decide(grow, testNow, always).Result)
+	})
+
+	t.Run("CE does not", func(t *testing.T) {
+		defer edition.SetForTest(edition.CE)()
+		s := build()
+		assert.True(t, s.Decide(grow, testNow, always).Allowed)
+		assert.True(t, s.Covers([]metav1.Object{ns("p", "p"), ns("p-db", "p"), pq("p", nil)}))
+	})
 }
 
 // The limits of a project change the sum it is checked against.
