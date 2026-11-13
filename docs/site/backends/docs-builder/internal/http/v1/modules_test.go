@@ -27,7 +27,8 @@ import (
 
 func TestModuleAddressLeadsToTarget(t *testing.T) {
 	h := newOnDemandHandler(t)
-	h.onDemand.Store.SetTargets([]ondemand.Target{
+	s := h.onDemand.Store.(*ondemand.Store)
+	s.SetTargets([]ondemand.Target{
 		{Module: "echo", Version: "v1.0.0"},
 		{Module: "branch", Version: "main", Rev: "sha256:aaa"},
 	})
@@ -54,7 +55,7 @@ func TestModuleAddressLeadsToTarget(t *testing.T) {
 	}
 	// On the list with no target known here (a follower knows only the
 	// published targets of the leader): a placeholder reloads itself.
-	if err := h.onDemand.Store.WriteList(context.Background(), []ondemand.Listed{{Module: "later"}, {Module: "bare", NoDocs: true}, {Module: "broken", Failed: true}}, nil); err != nil {
+	if err := s.WriteList(context.Background(), []ondemand.Listed{{Module: "later"}, {Module: "bare", NoDocs: true}, {Module: "broken", Failed: true}}, nil); err != nil {
 		t.Fatal(err)
 	}
 	if rec := get(h, "/en/modules/later/"); rec.Code != http.StatusServiceUnavailable || !strings.Contains(rec.Body.String(), "once its version is published") {
@@ -71,7 +72,7 @@ func TestModuleAddressLeadsToTarget(t *testing.T) {
 		t.Errorf("broken: code %d, want the plain 404", rec.Code)
 	}
 	// A target whose version has no pages: the same card, not the version.
-	h.onDemand.Store.SetTargets([]ondemand.Target{
+	s.SetTargets([]ondemand.Target{
 		{Module: "echo", Version: "v1.0.0"},
 		{Module: "branch", Version: "main", Rev: "sha256:aaa"},
 		{Module: "bare", Version: "v0.1.0"},
@@ -95,7 +96,7 @@ func TestModuleAddressLeadsToTarget(t *testing.T) {
 // address of the module, until the branch moves on.
 func TestModuleAddressOfFailedBranch(t *testing.T) {
 	h := newOnDemandHandler(t)
-	s := h.onDemand.Store
+	s := h.onDemand.Store.(*ondemand.Store)
 	branch := ondemand.Target{Module: "branch", Version: "broken", Rev: "sha256:aaa"}
 	s.SetTargets([]ondemand.Target{branch})
 	if err := s.RenderPinned(context.Background(), branch); err == nil {
@@ -145,7 +146,7 @@ func TestModulesListPlaceholder(t *testing.T) {
 
 func TestModuleMenu(t *testing.T) {
 	h := newOnDemandHandler(t)
-	s := h.onDemand.Store
+	s := h.onDemand.Store.(*ondemand.Store)
 	if err := s.WriteList(context.Background(), []ondemand.Listed{{Module: "echo", Enabled: true}, {Module: "bare"}}, nil); err != nil {
 		t.Fatal(err)
 	}

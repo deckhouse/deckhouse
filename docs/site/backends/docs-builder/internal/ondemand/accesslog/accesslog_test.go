@@ -12,18 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ondemand
+package accesslog
 
 import (
 	"context"
 	"net"
+	"slices"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-func TestParseAccess(t *testing.T) {
+func TestParse(t *testing.T) {
 	tests := []struct {
 		line            string
 		module, version string
@@ -38,19 +40,33 @@ func TestParseAccess(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		module, version, ok := parseAccess(tt.line)
+		module, version, ok := parse(tt.line)
 		if module != tt.module || version != tt.version || ok != tt.ok {
 			t.Errorf("%q: got %q %q %v", tt.line, module, version, ok)
 		}
 	}
 }
 
-func TestListenAccessLogTouchesVersions(t *testing.T) {
-	f := &fakeRender{size: 10}
-	s, c := newTestStore(t, f, 1000)
+// recorder keeps the accesses it is told of.
+type recorder struct {
+	mu       sync.Mutex
+	accesses []string
+}
 
-	renderDone(t, s, "echo", "v1.0.0")
-	c.add(time.Minute)
+func (r *recorder) Touch(module, version string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.accesses = append(r.accesses, module+"/"+version)
+}
+
+func (r *recorder) touched(k string) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return slices.Contains(r.accesses, k)
+}
+
+func TestListenTouchesVersions(t *testing.T) {
+	r := &recorder{}
 
 	// Pick a free UDP port for the listener.
 	probe, err := net.ListenPacket("udp", "127.0.0.1:0")
@@ -62,7 +78,7 @@ func TestListenAccessLogTouchesVersions(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
-	go func() { done <- ListenAccessLog(ctx, addr, s, log.NewNop()) }()
+	go func() { done <- Listen(ctx, addr, r, log.NewNop()) }()
 
 	conn, err := net.Dial("udp", addr)
 	if err != nil {
@@ -70,14 +86,8 @@ func TestListenAccessLogTouchesVersions(t *testing.T) {
 	}
 	defer conn.Close()
 
-	touched := func() bool {
-		s.mu.Lock()
-		defer s.mu.Unlock()
-		return s.versions["echo/v1.0.0"].lastAccess.Equal(c.now())
-	}
-
 	deadline := time.Now().Add(5 * time.Second)
-	for !touched() {
+	for !r.touched("echo/v1.0.0") {
 		if time.Now().After(deadline) {
 			t.Fatal("the access was not recorded")
 		}

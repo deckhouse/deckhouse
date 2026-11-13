@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ondemand
+package leader
 
 import (
 	"context"
@@ -31,18 +31,16 @@ import (
 
 // Two replicas on one Lease: one leads at a time, and the other takes over
 // as soon as the first stops and releases the Lease.
-func TestRunLeaderElection(t *testing.T) {
-	oldLease, oldRenew, oldRetry := leaseDuration, renewDeadline, retryPeriod
-	leaseDuration, renewDeadline, retryPeriod = time.Second, 500*time.Millisecond, 100*time.Millisecond
-	t.Cleanup(func() { leaseDuration, renewDeadline, retryPeriod = oldLease, oldRenew, oldRetry })
+func TestRun(t *testing.T) {
+	lease := timing{duration: time.Second, renewDeadline: 500 * time.Millisecond, retryPeriod: 100 * time.Millisecond}
 
 	client := fake.NewSimpleClientset()
 	var active, overlaps atomic.Int32
 	var mu sync.Mutex
 	var leaders []string
 
-	run := func(ctx context.Context, id string, done chan<- struct{}) {
-		RunLeaderElection(ctx, client, "d8-system", id, func(lctx context.Context) {
+	stand := func(ctx context.Context, id string, done chan<- struct{}) {
+		run(ctx, client, "d8-system", id, lease, func(lctx context.Context) {
 			if active.Add(1) > 1 {
 				overlaps.Add(1)
 			}
@@ -58,7 +56,7 @@ func TestRunLeaderElection(t *testing.T) {
 	ctxA, stopA := context.WithCancel(context.Background())
 	defer stopA()
 	doneA := make(chan struct{})
-	go run(ctxA, "a", doneA)
+	go stand(ctxA, "a", doneA)
 	waitLeaders := func(n int) []string {
 		t.Helper()
 		deadline := time.Now().Add(10 * time.Second)
@@ -80,10 +78,10 @@ func TestRunLeaderElection(t *testing.T) {
 	ctxB, stopB := context.WithCancel(context.Background())
 	defer stopB()
 	doneB := make(chan struct{})
-	go run(ctxB, "b", doneB)
+	go stand(ctxB, "b", doneB)
 
 	// b waits while a holds the Lease.
-	time.Sleep(3 * leaseDuration / 2)
+	time.Sleep(3 * lease.duration / 2)
 	if got := waitLeaders(1); len(got) != 1 {
 		t.Fatalf("leaders %v while a holds the Lease", got)
 	}
@@ -95,7 +93,7 @@ func TestRunLeaderElection(t *testing.T) {
 	if got := waitLeaders(2); got[1] != "b" {
 		t.Fatalf("leaders %v, want b after a", got)
 	}
-	if d := time.Since(start); d > leaseDuration {
+	if d := time.Since(start); d > lease.duration {
 		t.Errorf("b took over after %v: the Lease was not released", d)
 	}
 	stopB()
@@ -109,10 +107,8 @@ func TestRunLeaderElection(t *testing.T) {
 // The Lease is lost in the middle of a term (the API server refuses its
 // renewal): the term ends, and the replica leads again once the Lease can be
 // taken, only after the previous term has finished.
-func TestRunLeaderElectionLosesLease(t *testing.T) {
-	oldLease, oldRenew, oldRetry := leaseDuration, renewDeadline, retryPeriod
-	leaseDuration, renewDeadline, retryPeriod = time.Second, 500*time.Millisecond, 50*time.Millisecond
-	t.Cleanup(func() { leaseDuration, renewDeadline, retryPeriod = oldLease, oldRenew, oldRetry })
+func TestRunLosesLease(t *testing.T) {
+	lease := timing{duration: time.Second, renewDeadline: 500 * time.Millisecond, retryPeriod: 50 * time.Millisecond}
 
 	client := fake.NewSimpleClientset()
 	var refuse atomic.Bool
@@ -132,7 +128,7 @@ func TestRunLeaderElectionLosesLease(t *testing.T) {
 	go func() {
 		defer close(done)
 		term := 0
-		RunLeaderElection(ctx, client, "d8-system", "a", func(lctx context.Context) {
+		run(ctx, client, "d8-system", "a", lease, func(lctx context.Context) {
 			if active.Add(1) > 1 {
 				overlaps.Add(1)
 			}
@@ -142,7 +138,7 @@ func TestRunLeaderElectionLosesLease(t *testing.T) {
 			lost <- struct{}{}
 			// The work of a term takes a while to stop: the Lease is won
 			// back meanwhile.
-			time.Sleep(4 * retryPeriod)
+			time.Sleep(4 * lease.retryPeriod)
 			active.Add(-1)
 			finished.Add(1)
 		}, log.NewNop())

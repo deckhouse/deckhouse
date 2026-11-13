@@ -52,8 +52,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"golang.org/x/sync/singleflight"
 )
 
 var (
@@ -63,18 +61,9 @@ var (
 	ErrNotFound = errors.New("no such object in S3")
 )
 
-const (
-	// requestTimeout bounds one S3 request: a replica of the storage that
-	// went away is noticed only after about 75 seconds (system-s3
-	// documentation).
-	requestTimeout = 30 * time.Second
-	// stsBackoff is how long a failure of STS is answered without asking it
-	// again, so an unavailable STS costs one wait instead of one per request.
-	stsBackoff = 30 * time.Second
-	// keyLifetime is assumed for a key whose expiry STS did not give or gave
-	// in the past (a clock skew); system-s3 issues keys for 30 minutes.
-	keyLifetime = 25 * time.Minute
-)
+// requestTimeout bounds one S3 request: a replica of the storage that went
+// away is noticed only after about 75 seconds (system-s3 documentation).
+const requestTimeout = 30 * time.Second
 
 // Object is an object of the bucket.
 type Object struct {
@@ -93,29 +82,14 @@ type Cache struct {
 	now             func() time.Time
 	onReady         func(ready bool)
 
-	sts singleflight.Group
-
-	mu       sync.Mutex
-	conn     connection
-	client   *http.Client
-	key      key
-	stsErr   error // the last failure of STS, answered until stsRetry
-	stsRetry time.Time
-	// keepKeyUntil: a fresh key was refused, so refusals are not about the
-	// key and do not replace it until then.
-	keepKeyUntil time.Time
+	mu     sync.Mutex
+	conn   connection
+	client *http.Client
+	creds  credentials
 
 	// readyMu orders the changes of ready with their onReady calls.
 	readyMu sync.Mutex
 	ready   *bool
-}
-
-// key is a key pair from STS, honoured until expires, or a static one from
-// the connection.
-type key struct {
-	accessKey, secretKey, sessionToken string
-	obtained, expires                  time.Time
-	static                             bool
 }
 
 // New returns the cache of the bucket; prefix is put before every key and
@@ -267,9 +241,7 @@ func (c *Cache) noKnownKeys() error {
 	return fmt.Errorf("the S3 connection has none of S3_ENDPOINT, S3_BUCKET, S3_REGION, only %s", strings.Join(names, ", "))
 }
 
-// session returns the HTTP client and a key for the connection. A key is
-// reused until a minute before it expires: STS allows few live keys per
-// bucket.
+// session returns the HTTP client and a key for the connection.
 func (c *Cache) session(ctx context.Context) (connection, *http.Client, key, error) {
 	c.mu.Lock()
 	connected := c.client != nil
@@ -281,43 +253,23 @@ func (c *Cache) session(ctx context.Context) (connection, *http.Client, key, err
 		}
 	}
 
-	// Read after connect: a call that raced to connect sees the key or the
-	// failure of STS another call has got meanwhile.
+	// Read after connect: a call that raced to connect uses what the first
+	// one made.
 	c.mu.Lock()
-	conn, client, k, stsErr := c.conn, c.client, c.key, c.stsErr
-	if c.now().After(c.stsRetry) {
-		stsErr = nil
-	}
+	conn, client, creds := c.conn, c.client, c.creds
 	c.mu.Unlock()
 
-	// Static keys of a Secret: a rotated pair restarts the pod.
-	if conn.AccessKey != "" {
-		return conn, client, key{accessKey: conn.AccessKey, secretKey: conn.SecretKey, static: true}, nil
-	}
-	if c.now().Before(k.expires.Add(-time.Minute)) {
-		return conn, client, k, nil
-	}
-	if stsErr != nil {
-		return connection{}, nil, key{}, stsErr
+	k, err := creds.get(ctx)
+	if err != nil {
+		return connection{}, nil, key{}, err
 	}
 
-	// One request asks STS for everyone waiting; each waits no longer than
-	// its own context.
-	ch := c.sts.DoChan("key", func() (any, error) { return c.refreshKey(conn, client) })
-	select {
-	case <-ctx.Done():
-		return connection{}, nil, key{}, ctx.Err()
-	case r := <-ch:
-		if r.Err != nil {
-			return connection{}, nil, key{}, r.Err
-		}
-		return conn, client, r.Val.(key), nil
-	}
+	return conn, client, k, nil
 }
 
-// connect reads the connection and makes its client, which are kept from
-// then on. Until the connection is complete every call reads it again: the
-// ConfigMap or the Secret may appear after the pod starts.
+// connect reads the connection and makes its client and credentials, which
+// are kept from then on. Until the connection is complete every call reads
+// it again: the ConfigMap or the Secret may appear after the pod starts.
 func (c *Cache) connect() error {
 	conn, err := c.readConnection()
 	if err != nil {
@@ -327,12 +279,13 @@ func (c *Cache) connect() error {
 	if err != nil {
 		return err
 	}
+	creds := c.credentials(conn, client)
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	// Calls that raced to connect keep the client made first.
 	if c.client == nil {
-		c.conn, c.client = conn, client
+		c.conn, c.client, c.creds = conn, client, creds
 	} else {
 		client.CloseIdleConnections()
 	}
@@ -340,53 +293,31 @@ func (c *Cache) connect() error {
 	return nil
 }
 
-func (c *Cache) refreshKey(conn connection, client *http.Client) (key, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
-	defer cancel()
-
-	k, err := c.assumeRole(ctx, conn, client)
-
-	c.mu.Lock()
-	if err != nil {
-		c.stsErr, c.stsRetry = err, c.now().Add(stsBackoff)
-	} else if c.conn == conn {
-		c.key = k
+// credentials are the keys of the connection: the static ones of a Secret
+// or, without them, those STS issues for the ServiceAccount token, as
+// system-s3 does.
+func (c *Cache) credentials(conn connection, client *http.Client) credentials {
+	if conn.AccessKey != "" {
+		return staticKeys{key{accessKey: conn.AccessKey, secretKey: conn.SecretKey}}
 	}
-	c.mu.Unlock()
 
-	c.setReady(err == nil)
-
-	return k, err
+	return &stsKeys{
+		endpoint:  strings.TrimSuffix(conn.STSEndpoint, "/") + "/" + c.namespace + "/" + c.name,
+		tokenPath: filepath.Join(c.dir, "token", "token"),
+		client:    client,
+		now:       c.now,
+		ready:     c.setReady,
+	}
 }
 
 // refused forgets a key S3 refused and reports whether the request is worth
-// sending again. system-s3 may revoke a key before it expires (a restarted
-// replica, too many live keys), so a key older than a minute is replaced. A
-// fresh key that is refused means the refusal is not about the key (no
-// access, or a storage that refuses a missing object): the key is kept until
-// it would expire anyway, since asking STS on every refusal only adds live
-// keys. A static key has nothing to replace it with.
+// sending again (credentials).
 func (c *Cache) refused(k key) bool {
-	if k.static {
-		return false
-	}
-
 	c.mu.Lock()
-	defer c.mu.Unlock()
+	creds := c.creds
+	c.mu.Unlock()
 
-	if c.key == k {
-		now := c.now()
-		if now.Sub(k.obtained) < time.Minute {
-			c.keepKeyUntil = now.Add(keyLifetime)
-			return false
-		}
-		if now.Before(c.keepKeyUntil) {
-			return false
-		}
-		c.key = key{}
-	}
-
-	return true
+	return creds.refused(k)
 }
 
 func newHTTPClient(conn connection) (*http.Client, error) {
@@ -416,71 +347,6 @@ func newHTTPClient(conn connection) (*http.Client, error) {
 	transport.TLSClientConfig.RootCAs = roots
 
 	return &http.Client{Transport: transport, Timeout: requestTimeout}, nil
-}
-
-// assumeRole exchanges the ServiceAccount token for a key pair
-// (AssumeRoleWithWebIdentity). The token file is read every time: kubelet
-// rotates it.
-func (c *Cache) assumeRole(ctx context.Context, conn connection, client *http.Client) (key, error) {
-	token, err := os.ReadFile(filepath.Join(c.dir, "token", "token"))
-	if err != nil {
-		return key{}, fmt.Errorf("read the ServiceAccount token: %w", err)
-	}
-
-	form := url.Values{
-		"Action":           {"AssumeRoleWithWebIdentity"},
-		"Version":          {"2011-06-15"},
-		"WebIdentityToken": {strings.TrimSpace(string(token))},
-	}
-	endpoint := strings.TrimSuffix(conn.STSEndpoint, "/") + "/" + c.namespace + "/" + c.name
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(form.Encode()))
-	if err != nil {
-		return key{}, err
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return key{}, fmt.Errorf("STS: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-	if err != nil {
-		return key{}, fmt.Errorf("STS: %w", err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		return key{}, fmt.Errorf("STS: %s: %s", resp.Status, errorCode(body))
-	}
-
-	var out struct {
-		Credentials struct {
-			AccessKeyID     string    `xml:"AccessKeyId"`
-			SecretAccessKey string    `xml:"SecretAccessKey"`
-			SessionToken    string    `xml:"SessionToken"`
-			Expiration      time.Time `xml:"Expiration"`
-		} `xml:"AssumeRoleWithWebIdentityResult>Credentials"`
-	}
-	if err := xml.Unmarshal(body, &out); err != nil {
-		return key{}, fmt.Errorf("STS response: %w", err)
-	}
-	if out.Credentials.AccessKeyID == "" {
-		return key{}, errors.New("STS response has no key")
-	}
-
-	now := c.now()
-	expires := out.Credentials.Expiration
-	if !expires.After(now.Add(2 * time.Minute)) {
-		expires = now.Add(keyLifetime)
-	}
-
-	return key{
-		accessKey:    out.Credentials.AccessKeyID,
-		secretKey:    out.Credentials.SecretAccessKey,
-		sessionToken: out.Credentials.SessionToken,
-		obtained:     now,
-		expires:      expires,
-	}, nil
 }
 
 // do sends a signed request to the bucket; key is the object key ("" for the

@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -34,16 +35,18 @@ func TestResolverChannels(t *testing.T) {
 		Modules: func(context.Context) ([]registry.Module, error) {
 			return []registry.Module{{Name: "echo"}, {Name: "bare"}, {Name: "solid"}}, nil
 		},
-		Channels: func(_ context.Context, module string) (Channels, error) {
-			switch module {
-			case "echo":
-				return Channels{"alpha": "v2.0.0", "stable": "v1.0.0", "rock-solid": "v0.9.0"}, nil
-			case "solid":
-				return Channels{"rock-solid": "v0.9.0"}, nil
-			}
-			return nil, errNoChannel
+		Policy: SitePolicy{
+			Channels: func(_ context.Context, module string) (Channels, error) {
+				switch module {
+				case "echo":
+					return Channels{"alpha": "v2.0.0", "stable": "v1.0.0", "rock-solid": "v0.9.0"}, nil
+				case "solid":
+					return Channels{"rock-solid": "v0.9.0"}, nil
+				}
+				return nil, ErrNoChannel
+			},
+			Latest: func(context.Context, string) (string, error) { return "v3.0.0", nil },
 		},
-		Latest: func(context.Context, string) (string, error) { return "v3.0.0", nil },
 		Logger: log.NewNop(),
 	}
 
@@ -85,14 +88,16 @@ func TestPinnerServesChannels(t *testing.T) {
 	chans := Channels{"alpha": "v2.0.0", "beta": "v2.0.0", "stable": "v1.0.0"}
 	r := Resolver{
 		Modules: func(context.Context) ([]registry.Module, error) { return []registry.Module{{Name: "echo"}}, nil },
-		Channels: func(context.Context, string) (Channels, error) {
-			mu.Lock()
-			defer mu.Unlock()
-			out := Channels{}
-			for k, v := range chans {
-				out[k] = v
-			}
-			return out, nil
+		Policy: SitePolicy{
+			Channels: func(context.Context, string) (Channels, error) {
+				mu.Lock()
+				defer mu.Unlock()
+				out := Channels{}
+				for k, v := range chans {
+					out[k] = v
+				}
+				return out, nil
+			},
 		},
 		Logger: log.NewNop(),
 	}
@@ -149,7 +154,7 @@ func TestPinnerServesChannels(t *testing.T) {
 func TestSiteIndexLeadsToModuleRoot(t *testing.T) {
 	f := &fakeRender{size: 10}
 	s, _ := newTestStore(t, f, 1000)
-	s.cfg.IndexAtModuleRoot = true
+	s.index.atModuleRoot = true
 	renderDone(t, s, "echo", "v1.0.0")
 	s.LinkChannels("echo", Channels{"stable": "v1.0.0"})
 
@@ -170,7 +175,7 @@ func TestSiteIndexLeadsToModuleRoot(t *testing.T) {
 func TestSiteIndexWithoutStable(t *testing.T) {
 	f := &fakeRender{size: 10}
 	s, _ := newTestStore(t, f, 1000)
-	s.cfg.IndexAtModuleRoot = true
+	s.index.atModuleRoot = true
 	renderDone(t, s, "echo", "v2.0.0")
 	s.LinkChannels("echo", Channels{"alpha": "v2.0.0"})
 
@@ -206,14 +211,16 @@ func TestPinnerKeepsChannelUntilNewVersionIsPublished(t *testing.T) {
 	}
 	r := Resolver{
 		Modules: func(context.Context) ([]registry.Module, error) { return []registry.Module{{Name: "echo"}}, nil },
-		Channels: func(context.Context, string) (Channels, error) {
-			mu.Lock()
-			defer mu.Unlock()
-			out := Channels{}
-			for k, v := range chans {
-				out[k] = v
-			}
-			return out, nil
+		Policy: SitePolicy{
+			Channels: func(context.Context, string) (Channels, error) {
+				mu.Lock()
+				defer mu.Unlock()
+				out := Channels{}
+				for k, v := range chans {
+					out[k] = v
+				}
+				return out, nil
+			},
 		},
 		Logger: log.NewNop(),
 	}
@@ -250,21 +257,27 @@ func TestPinnerKeepsChannelUntilNewVersionIsPublished(t *testing.T) {
 // version, a pre-release here, does not become its only channel. Missing on
 // the next pass too, the module is one without channels.
 func TestPinnerKeepsChannelsMissingForAPass(t *testing.T) {
-	r := newTestRegistry(t)
-	r.push("src1/echo/release:stable", release("v1.0.0")...)
-	r.push("src1/echo/release:alpha", release("v2.0.0")...)
+	// The lookup of every pass: the tags, then the tags gone right after a
+	// lookup found them, then gone still (registrydocs.Channels).
+	lookups := []func() (Channels, error){
+		func() (Channels, error) { return Channels{"stable": "v1.0.0", "alpha": "v2.0.0"}, nil },
+		func() (Channels, error) { return nil, ErrChannelsGone },
+		func() (Channels, error) { return nil, ErrNoChannel },
+	}
+	var pass atomic.Int32
 	s, _ := newTestStore(t, &fakeRender{size: 10}, 1000)
 	resolver := Resolver{
-		Modules:  func(context.Context) ([]registry.Module, error) { return []registry.Module{{Name: "echo"}}, nil },
-		Channels: RegistryChannels(r.sources(), registry.NewClients()),
-		Latest:   func(context.Context, string) (string, error) { return "v3.0.0-rc.1", nil },
-		Logger:   log.NewNop(),
+		Modules: func(context.Context) ([]registry.Module, error) { return []registry.Module{{Name: "echo"}}, nil },
+		Policy: SitePolicy{
+			Channels: func(context.Context, string) (Channels, error) { return lookups[pass.Load()]() },
+			Latest:   func(context.Context, string) (string, error) { return "v3.0.0-rc.1", nil },
+		},
+		Logger: log.NewNop(),
 	}
 	p := NewPinner(resolver, s, time.Hour, log.NewNop())
 	p.sync(context.Background())
 
-	r.untag("src1/echo/release:stable")
-	r.untag("src1/echo/release:alpha")
+	pass.Add(1)
 	p.sync(context.Background())
 	for channel, version := range map[string]string{"stable": "v1.0.0", "alpha": "v2.0.0"} {
 		if got, want := channelLink(t, s, "echo", channel), filepath.Join("..", "..", "..", "..", "echo", version, "en"); got != want {
@@ -275,6 +288,7 @@ func TestPinnerKeepsChannelsMissingForAPass(t *testing.T) {
 		t.Fatalf("target %v, %v for the pass without the tags, want v1.0.0", target, ok)
 	}
 
+	pass.Add(1)
 	p.sync(context.Background())
 	if got, want := channelLink(t, s, "echo", "stable"), filepath.Join("..", "..", "..", "..", "echo", "v3.0.0-rc.1", "en"); got != want {
 		t.Fatalf("stable -> %q on the next pass, want %q", got, want)
@@ -301,7 +315,7 @@ func TestSetChannelsRemovesGoneModules(t *testing.T) {
 	if got := channelLink(t, s, "alb", "stable"); got == "" {
 		t.Error("alb/stable lost its link")
 	}
-	if _, ok := s.stable["echo"]; ok {
+	if _, ok := s.channels.stable["echo"]; ok {
 		t.Error("the gone module is still at its root for the search")
 	}
 }

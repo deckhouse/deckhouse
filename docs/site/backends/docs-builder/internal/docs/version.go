@@ -140,8 +140,8 @@ func ValidateModuleTag(module, tag string) error {
 }
 
 // RenderVersion renders one module version, given as an archive of its
-// documentation files (see ondemand.DocsArchive), as a Hugo site of its own
-// in siteDir, and moves the pages of each language to outDir/<lang>/ along
+// documentation files (see registrydocs.DocsArchive), as a Hugo site of its
+// own in siteDir, and moves the pages of each language to outDir/<lang>/ along
 // with the search index of the version (search.json). With withAI it also writes the AI export: Markdown next to
 // every page, llms.txt and corpus.json. initDir holds the site template
 // (/app/hugo-init in the image). siteDir is left for the caller to remove.

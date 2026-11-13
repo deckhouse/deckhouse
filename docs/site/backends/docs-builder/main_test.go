@@ -17,6 +17,8 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sync"
@@ -28,33 +30,29 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+
+	"github.com/flant/docs-builder/internal/ondemand"
+	"github.com/flant/docs-builder/internal/s3cache"
 )
 
 func TestCheckFlags(t *testing.T) {
-	set := func(cache, registries, local, s3, s3Size, s3Prefix string) {
-		onDemandCache, onDemandRegistries, onDemandLocalDir = cache, registries, local
-		onDemandS3, onDemandS3Size, onDemandS3Prefix = s3, s3Size, s3Prefix
-	}
-	t.Cleanup(func() { set("", "", "", "", "", "") })
-
 	for name, tc := range map[string]struct {
-		flags [6]string
-		ok    bool
+		cfg config
+		ok  bool
 	}{
-		"a cluster":                 {[6]string{"/cache"}, true},
-		"a cluster with S3":         {[6]string{"/cache", "", "", "/s3", "5Gi", "docs/"}, true},
-		"the public site":           {[6]string{"/cache", "reg.example/modules", "", "/s3", "5Gi"}, true},
-		"local modules":             {[6]string{"/cache", "", "/modules"}, true},
-		"no cache":                  {[6]string{""}, false},
-		"registries and local":      {[6]string{"/cache", "reg.example/modules", "/modules"}, false},
-		"the S3 size without S3":    {[6]string{"/cache", "", "", "", "5Gi"}, false},
-		"the S3 prefix without S3":  {[6]string{"/cache", "", "", "", "", "docs/"}, false},
-		"local with the S3 prefix":  {[6]string{"/cache", "", "/modules", "", "", "docs/"}, false},
-		"registries with S3 prefix": {[6]string{"/cache", "reg.example/modules", "", "", "", "docs/"}, false},
+		"a cluster":                 {config{cacheDir: "/cache"}, true},
+		"a cluster with S3":         {config{cacheDir: "/cache", s3Dir: "/s3", s3Size: "5Gi", s3Prefix: "docs/"}, true},
+		"the public site":           {config{cacheDir: "/cache", registries: "reg.example/modules", s3Dir: "/s3", s3Size: "5Gi"}, true},
+		"local modules":             {config{cacheDir: "/cache", localDir: "/modules"}, true},
+		"no cache":                  {config{}, false},
+		"registries and local":      {config{cacheDir: "/cache", registries: "reg.example/modules", localDir: "/modules"}, false},
+		"the S3 size without S3":    {config{cacheDir: "/cache", s3Size: "5Gi"}, false},
+		"the S3 prefix without S3":  {config{cacheDir: "/cache", s3Prefix: "docs/"}, false},
+		"local with S3":             {config{cacheDir: "/cache", localDir: "/modules", s3Dir: "/s3", s3Size: "5Gi"}, false},
+		"local with the S3 prefix":  {config{cacheDir: "/cache", localDir: "/modules", s3Prefix: "docs/"}, false},
+		"registries with S3 prefix": {config{cacheDir: "/cache", registries: "reg.example/modules", s3Prefix: "docs/"}, false},
 	} {
-		f := tc.flags
-		set(f[0], f[1], f[2], f[3], f[4], f[5])
-		if err := checkFlags(); (err == nil) != tc.ok {
+		if err := tc.cfg.check(); (err == nil) != tc.ok {
 			t.Errorf("%s: err = %v, want ok = %v", name, err, tc.ok)
 		}
 	}
@@ -116,6 +114,26 @@ func TestNewColdBucket(t *testing.T) {
 func TestColdCacheWithoutBucket(t *testing.T) {
 	if cold := coldCache(nil); cold != nil {
 		t.Fatalf("cold cache %#v without a bucket", cold)
+	}
+}
+
+// The store reads the errors of the bucket in its own terms: a bucket whose
+// connection is not mounted yet is not ready, an object that is not there is
+// not found, any other failure is neither.
+func TestColdBucketErrors(t *testing.T) {
+	bucket, err := s3cache.New(t.TempDir(), onDemandS3Namespace, onDemandS3Bucket, "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := coldCache(bucket).Get(context.Background(), "targets.json", io.Discard); !errors.Is(err, ondemand.ErrColdNotReady) {
+		t.Fatalf("no connection: err = %v, want ErrColdNotReady", err)
+	}
+
+	if err := coldError(fmt.Errorf("get: %w", s3cache.ErrNotFound)); !errors.Is(err, ondemand.ErrColdNotFound) || errors.Is(err, ondemand.ErrColdNotReady) {
+		t.Fatalf("an object that is not there: err = %v, want ErrColdNotFound", err)
+	}
+	if err := coldError(errors.New("S3 is down")); errors.Is(err, ondemand.ErrColdNotFound) || errors.Is(err, ondemand.ErrColdNotReady) {
+		t.Fatalf("a failure: err = %v, want neither", err)
 	}
 }
 

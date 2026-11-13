@@ -158,7 +158,7 @@ func (s *Source) find(name string) (module, error) {
 		}
 	}
 
-	return module{}, fmt.Errorf("module %s: %w", name, registry.ErrNoSource)
+	return module{}, fmt.Errorf("module %s: %w", name, ondemand.ErrNoVersions)
 }
 
 func isModule(path string) bool {
@@ -338,7 +338,7 @@ func writeArchive(w io.Writer, dir string) error {
 
 // Tags lists the versions of the module: the one every local module has.
 // A module that is not under the directory is unpublished
-// (registry.ErrNoSource).
+// (ondemand.ErrNoVersions).
 func (s *Source) Tags(_ context.Context, name string) ([]string, error) {
 	if _, err := s.find(name); err != nil {
 		return nil, err
@@ -363,7 +363,7 @@ func (s *Source) Version(_ context.Context, name string) (string, error) {
 func (s *Source) Render(initDir string) ondemand.RenderFunc {
 	return func(ctx context.Context, name, version, workDir, outDir string, withAI bool, stage func(ondemand.Stage)) error {
 		m, err := s.find(name)
-		if errors.Is(err, registry.ErrNoSource) || err == nil && version != s.version {
+		if ondemand.Unpublished(err) || err == nil && version != s.version {
 			return fmt.Errorf("%w: %s %s is not under %s", ondemand.ErrVersionNotFound, name, version, s.dir)
 		}
 		if err != nil {

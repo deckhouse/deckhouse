@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ondemand
+// Package leader elects, with a Lease, the one of the replicas of
+// docs-builder sharing a cold cache that reads the registry for them all.
+package leader
 
 import (
 	"context"
@@ -27,25 +29,37 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-// LeaderLease is the Lease the replicas of docs-builder sharing a cold cache
+// Lease names the Lease the replicas of docs-builder sharing a cold cache
 // elect the one that reads the registry with.
-const LeaderLease = "docs-builder-ondemand-leader"
+const Lease = "docs-builder-ondemand-leader"
 
-// The timing of the Lease; variables for the tests.
-var (
+// The timing of the Lease.
+const (
 	leaseDuration = 15 * time.Second
 	renewDeadline = 10 * time.Second
 	retryPeriod   = 2 * time.Second
 )
 
-// RunLeaderElection runs lead while this pod holds the Lease in namespace,
-// until ctx is done; identity names the pod in the Lease. lead gets a
-// context that ends when the Lease is lost. The Lease is released when ctx
-// ends, so a rolling update hands it over at once. It returns once the last
-// term has finished.
-func RunLeaderElection(ctx context.Context, client kubernetes.Interface, namespace, identity string, lead func(context.Context), logger *log.Logger) {
+// timing is how long a Lease that is not renewed is held (duration),
+// how long the leader tries to renew it before it stops leading
+// (renewDeadline) and how often a replica tries to take or renew it
+// (retryPeriod).
+type timing struct {
+	duration, renewDeadline, retryPeriod time.Duration
+}
+
+// Run runs lead while this pod holds the Lease in namespace, until ctx is
+// done; identity names the pod in the Lease. lead gets a context that ends
+// when the Lease is lost. The Lease is released when ctx ends, so a rolling
+// update hands it over at once. It returns once the last term has finished.
+func Run(ctx context.Context, client kubernetes.Interface, namespace, identity string, lead func(context.Context), logger *log.Logger) {
+	run(ctx, client, namespace, identity, timing{leaseDuration, renewDeadline, retryPeriod}, lead, logger)
+}
+
+// run is Run with the timing of the Lease, shorter in the tests.
+func run(ctx context.Context, client kubernetes.Interface, namespace, identity string, lease timing, lead func(context.Context), logger *log.Logger) {
 	lock := &resourcelock.LeaseLock{
-		LeaseMeta:  metav1.ObjectMeta{Name: LeaderLease, Namespace: namespace},
+		LeaseMeta:  metav1.ObjectMeta{Name: Lease, Namespace: namespace},
 		Client:     client.CoordinationV1(),
 		LockConfig: resourcelock.ResourceLockConfig{Identity: identity},
 	}
@@ -58,11 +72,11 @@ func RunLeaderElection(ctx context.Context, client kubernetes.Interface, namespa
 		// Run returns when the Lease is lost; the pod stands for it again.
 		leaderelection.RunOrDie(ctx, leaderelection.LeaderElectionConfig{
 			Lock:            lock,
-			LeaseDuration:   leaseDuration,
-			RenewDeadline:   renewDeadline,
-			RetryPeriod:     retryPeriod,
+			LeaseDuration:   lease.duration,
+			RenewDeadline:   lease.renewDeadline,
+			RetryPeriod:     lease.retryPeriod,
 			ReleaseOnCancel: true,
-			Name:            LeaderLease,
+			Name:            Lease,
 			Callbacks: leaderelection.LeaderCallbacks{
 				OnStartedLeading: func(lctx context.Context) {
 					term.Lock()

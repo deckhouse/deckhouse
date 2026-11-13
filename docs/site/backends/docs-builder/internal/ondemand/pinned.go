@@ -19,19 +19,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
 	"maps"
-	"net"
-	"net/http"
 	"slices"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
-	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -52,24 +46,13 @@ type Target struct {
 	Rev string `json:"rev,omitempty"`
 }
 
-// errNoChannel means no source of the module has a release channel tag.
-var errNoChannel = errors.New("module has no release channel tags")
+// TargetChannels are tried in this order for a module that is not enabled:
+// the most stable one first. rock-solid is left out, as on the module pages.
+var TargetChannels = []string{"stable", "early-access", "beta", "alpha"}
 
-// errChannelsGone means no source of the module has a release channel tag,
-// though the last lookup found some: a release repository uploaded anew
-// answers "not found" for a while, and the newest version a module without
-// channels gets may be a pre-release. Like a registry failure, it keeps the
-// last target and channels of the module for the pass; gone on the next
-// lookup too, the tags are errNoChannel.
-var errChannelsGone = errors.New("release channel tags found last time are gone")
-
-// channels are tried in this order for a module that is not enabled: the
-// most stable one first. rock-solid is left out, as on the module pages.
-var channels = []string{"stable", "early-access", "beta", "alpha"}
-
-// siteChannels are the release channels with pages of their own on the
+// SiteChannels are the release channels with pages of their own on the
 // public site, /modules/<module>/<channel>/.
-var siteChannels = []string{"alpha", "beta", "early-access", "stable", "rock-solid"}
+var SiteChannels = []string{"alpha", "beta", "early-access", "stable", "rock-solid"}
 
 // Channels maps the release channels of a module to the versions they point
 // at.
@@ -81,30 +64,30 @@ const resolveParallel = 8
 // resolveTimeout bounds the list of the modules and the lookup of the version
 // of one module, a few requests to the API server and the registry. A
 // registry that took a request and sends nothing more fails the module, which
-// keeps its last target, instead of holding the pass for good. A variable for
-// the tests.
-var resolveTimeout = 2 * time.Minute
+// keeps its last target, instead of holding the pass for good.
+const resolveTimeout = 2 * time.Minute
 
-// Resolver picks the target version of every module with a registry source:
-//   - an enabled module pulled by a ModulePullOverride: the branch it runs;
-//   - an enabled module: the installed version;
-//   - otherwise the version of the most stable release channel, and the
-//     newest version when there are no channel tags (a mirror made with a
-//     version filter has none).
-//
-// With Channels set (the public site) a module that is not enabled also gets
-// the versions of all its release channels, and the target is the version of
-// the most stable one; a module without channel tags gets its newest version
-// as stable.
+// Resolver picks the target version of every module with a registry source
+// by its policy. A module whose lookup fails with ErrNoVersions is
+// unpublished.
 type Resolver struct {
-	Modules        func(ctx context.Context) ([]registry.Module, error)
-	ChannelVersion func(ctx context.Context, module string) (string, error)
-	Channels       func(ctx context.Context, module string) (Channels, error)
-	Latest         func(ctx context.Context, module string) (string, error)
+	Modules func(ctx context.Context) ([]registry.Module, error)
+	Policy  TargetPolicy
 	// Upcoming, when set (a cluster), lists the versions the cluster is about
 	// to update to: they are rendered ahead, without the search.
 	Upcoming func(ctx context.Context) ([]registry.Release, error)
 	Logger   *log.Logger
+	// timeout is resolveTimeout when zero, shorter in the tests.
+	timeout time.Duration
+}
+
+// TargetPolicy picks the target of a module and the versions of its release
+// channels: a cluster (ClusterPolicy) and the public site (SitePolicy) pick
+// them differently.
+type TargetPolicy interface {
+	// Resolve returns the target of the module, nil when nothing it has
+	// published can be rendered, and the versions of its release channels.
+	Resolve(ctx context.Context, m registry.Module) (*Target, Channels, error)
 }
 
 // Resolution is what a pass of the Resolver found.
@@ -130,7 +113,8 @@ type Resolution struct {
 // can not be found this time keeps its target from prev, so a registry
 // hiccup does not drop it from the search.
 func (r Resolver) ResolveChannels(ctx context.Context, prev map[string]Target) (Resolution, error) {
-	lctx, cancel := context.WithTimeout(ctx, resolveTimeout)
+	timeout := cmp.Or(r.timeout, resolveTimeout)
+	lctx, cancel := context.WithTimeout(ctx, timeout)
 	modules, err := r.Modules(lctx)
 	cancel()
 	if err != nil {
@@ -149,9 +133,9 @@ func (r Resolver) ResolveChannels(ctx context.Context, prev map[string]Target) (
 	g.SetLimit(resolveParallel)
 	for i, m := range modules {
 		g.Go(func() error {
-			ctx, cancel := context.WithTimeout(ctx, resolveTimeout)
+			ctx, cancel := context.WithTimeout(ctx, timeout)
 			defer cancel()
-			t, chans, err := r.resolve(ctx, m)
+			t, chans, err := r.Policy.Resolve(ctx, m)
 			if Unpublished(err) {
 				// No source, no release repository: nothing published, as
 				// with no versions. Not a failure: it stays so.
@@ -167,8 +151,6 @@ func (r Resolver) ResolveChannels(ctx context.Context, prev map[string]Target) (
 				}
 			case t == nil:
 				noDocs[i] = true
-			case r.Channels == nil:
-				chans = Channels{"stable": t.Version}
 			}
 			found[i], foundChannels[i] = t, chans
 			return nil
@@ -203,22 +185,23 @@ func (r Resolver) ResolveChannels(ctx context.Context, prev map[string]Target) (
 	return res, nil
 }
 
-func (r Resolver) resolve(ctx context.Context, m registry.Module) (*Target, Channels, error) {
-	if r.Channels != nil && !m.Enabled {
-		return r.resolveChannels(ctx, m.Name)
-	}
-	t, err := r.resolveTarget(ctx, m)
-
-	return t, nil, err
+// SitePolicy picks the target of a module of the public site, where every
+// release channel has pages of its own: the versions of all its channels,
+// and the version of the most stable one for the target. A module without
+// channel tags gets its newest version as stable. No module is enabled
+// there: the site documents what the registries publish.
+type SitePolicy struct {
+	Channels func(ctx context.Context, module string) (Channels, error)
+	Latest   func(ctx context.Context, module string) (string, error)
 }
 
-// resolveChannels picks the versions of the release channels of the module
-// and the target among them.
-func (r Resolver) resolveChannels(ctx context.Context, module string) (*Target, Channels, error) {
-	chans, err := r.Channels(ctx, module)
-	if errors.Is(err, errNoChannel) {
+// Resolve picks the versions of the release channels of the module and the
+// target among them (TargetPolicy).
+func (p SitePolicy) Resolve(ctx context.Context, m registry.Module) (*Target, Channels, error) {
+	chans, err := p.Channels(ctx, m.Name)
+	if errors.Is(err, ErrNoChannel) {
 		var latest string
-		if latest, err = r.Latest(ctx, module); err == nil && latest != "" {
+		if latest, err = p.Latest(ctx, m.Name); err == nil && latest != "" {
 			chans = Channels{"stable": latest}
 		}
 	}
@@ -226,20 +209,47 @@ func (r Resolver) resolveChannels(ctx context.Context, module string) (*Target, 
 		return nil, nil, err
 	}
 
-	for _, channel := range channels {
+	for _, channel := range TargetChannels {
 		if version, ok := chans[channel]; ok {
-			return &Target{Module: module, Version: version}, chans, nil
+			return &Target{Module: m.Name, Version: version}, chans, nil
 		}
 	}
 	if version, ok := chans["rock-solid"]; ok {
-		return &Target{Module: module, Version: version}, chans, nil
+		return &Target{Module: m.Name, Version: version}, chans, nil
 	}
 
 	// Nothing published that docs-builder can render.
 	return nil, nil, nil
 }
 
-func (r Resolver) resolveTarget(ctx context.Context, m registry.Module) (*Target, error) {
+// ClusterPolicy picks the target of a module of a cluster:
+//   - an enabled module pulled by a ModulePullOverride: the branch it runs;
+//   - an enabled module: the installed version;
+//   - otherwise the version of the most stable release channel, and the
+//     newest version when there are no channel tags (a mirror made with a
+//     version filter has none).
+//
+// The module has one release channel, stable, pointing at its target: the
+// address of the module without a version serves the target. The local
+// modules of a developer's machine are picked so too: each is the branch of
+// its files (local.Source).
+type ClusterPolicy struct {
+	ChannelVersion func(ctx context.Context, module string) (string, error)
+	Latest         func(ctx context.Context, module string) (string, error)
+	Logger         *log.Logger
+}
+
+// Resolve picks the target of the module (TargetPolicy).
+func (p ClusterPolicy) Resolve(ctx context.Context, m registry.Module) (*Target, Channels, error) {
+	t, err := p.target(ctx, m)
+	if err != nil || t == nil {
+		return nil, nil, err
+	}
+
+	return t, Channels{"stable": t.Version}, nil
+}
+
+func (p ClusterPolicy) target(ctx context.Context, m registry.Module) (*Target, error) {
 	if m.Enabled && m.Override != nil {
 		if err := docs.ValidateModuleTag(m.Name, m.Override.Tag); err == nil {
 			// A branch always has a revision, so it never counts as a release:
@@ -248,16 +258,16 @@ func (r Resolver) resolveTarget(ctx context.Context, m registry.Module) (*Target
 		}
 		// A tag that can not be a page path (an upper-case branch name, which
 		// Hugo would lower-case): the module is shown as if it were disabled.
-		r.Logger.Warn("pull override tag is not a page path, using a release version", slog.String("module", m.Name), slog.String("tag", m.Override.Tag))
+		p.Logger.Warn("pull override tag is not a page path, using a release version", slog.String("module", m.Name), slog.String("tag", m.Override.Tag))
 	}
 
 	if m.Enabled && docs.ValidateModuleVersion(m.Name, m.Version) == nil {
 		return &Target{Module: m.Name, Version: m.Version}, nil
 	}
 
-	version, err := r.ChannelVersion(ctx, m.Name)
-	if errors.Is(err, errNoChannel) {
-		version, err = r.Latest(ctx, m.Name)
+	version, err := p.ChannelVersion(ctx, m.Name)
+	if errors.Is(err, ErrNoChannel) {
+		version, err = p.Latest(ctx, m.Name)
 	}
 	if err != nil {
 		return nil, err
@@ -270,230 +280,45 @@ func (r Resolver) resolveTarget(ctx context.Context, m registry.Module) (*Target
 	return &Target{Module: m.Name, Version: version}, nil
 }
 
-// RegistryChannelVersion reads the version a release channel tag points to,
-// trying the sources of the module in order and the channels from the most
-// stable one. A channel pointing at something that is not a version, or at a
-// release image without version.json, is skipped; with no usable channel the
-// error is errNoChannel, errChannelsGone right after a lookup that found one.
-// The version comes from version.json of the release image; the last one of
-// every source, module and channel is kept with its image digest, so an
-// unchanged channel costs one HEAD request.
-func RegistryChannelVersion(sources ModuleSources, clients *registry.Clients) func(ctx context.Context, module string) (string, error) {
-	releaseVersion := releaseVersionCache()
-	// The modules whose last lookup found a channel (noChannel).
-	var tagged sync.Map
+// pinnerStore is what a Pinner needs of the Store: the pinned versions, the
+// cold cache, the list of modules, the channel links, the search index, the
+// metrics, and where its state is recorded.
+type pinnerStore interface {
+	Pin(targets, channels []Target)
+	renderPinned(ctx context.Context, t Target, withAI bool) error
+	published(t Target) bool
 
-	return func(ctx context.Context, module string) (string, error) {
-		srcs, err := sources.ForModule(ctx, module)
-		if err != nil {
-			return "", fmt.Errorf("find sources: %w", err)
-		}
+	restoreAll(ctx context.Context, targets []Target, chans map[string]Channels, logger *log.Logger) (int, bool)
 
-		var errs []error
-		for _, src := range srcs {
-			client, err := clients.For(src)
-			if err != nil {
-				errs = append(errs, fmt.Errorf("source %s: %w", src.Name, err))
-				continue
-			}
+	SetTargets(targets []Target)
+	WriteList(ctx context.Context, modules []Listed, targets []Target) error
+	SetChannels(chans map[string]Channels)
 
-			for _, channel := range channels {
-				version, err := releaseVersion(ctx, client, src.Name, module, channel)
-				if isNotFound(err) {
-					continue
-				}
-				if err != nil {
-					// The next source may have it.
-					errs = append(errs, fmt.Errorf("source %s, channel %s: %w", src.Name, channel, err))
-					break
-				}
-				// A development registry may point a channel at a build of a
-				// branch ("mr10", "0.0.1"): not a version, try the next channel.
-				if docs.ValidateModuleVersion(module, version) != nil {
-					continue
-				}
-				tagged.Store(module, true)
-				return version, nil
-			}
-		}
+	WriteIndex(targets []Target) error
 
-		if len(errs) > 0 {
-			return "", errors.Join(errs...)
-		}
+	SetGauge(name string, v float64)
+	initPinSuccessMetric(at time.Time)
 
-		return "", noChannel(&tagged, module)
-	}
+	recordStore
 }
 
-// RegistryChannels reads the versions of all the release channels of the
-// public site from the first source that has any of them. A channel pointing
-// at something that is not a version is left out; with none left the error
-// is errNoChannel, errChannelsGone right after a lookup that found some. A
-// source failing on a channel is passed over for the next one, so the
-// channels never mix two sources.
-func RegistryChannels(sources ModuleSources, clients *registry.Clients) func(ctx context.Context, module string) (Channels, error) {
-	releaseVersion := releaseVersionCache()
-	// The modules whose last lookup found channels (noChannel).
-	var tagged sync.Map
-
-	return func(ctx context.Context, module string) (Channels, error) {
-		srcs, err := sources.ForModule(ctx, module)
-		if err != nil {
-			return nil, fmt.Errorf("find sources: %w", err)
-		}
-
-		var errs []error
-	sources:
-		for _, src := range srcs {
-			client, err := clients.For(src)
-			if err != nil {
-				errs = append(errs, fmt.Errorf("source %s: %w", src.Name, err))
-				continue
-			}
-
-			found := make(Channels)
-			for _, channel := range siteChannels {
-				version, err := releaseVersion(ctx, client, src.Name, module, channel)
-				if isNotFound(err) {
-					continue
-				}
-				if err != nil {
-					errs = append(errs, fmt.Errorf("source %s, channel %s: %w", src.Name, channel, err))
-					continue sources
-				}
-				if docs.ValidateModuleVersion(module, version) == nil {
-					found[channel] = version
-				}
-			}
-			if len(found) > 0 {
-				tagged.Store(module, true)
-				return found, nil
-			}
-		}
-
-		if len(errs) > 0 {
-			return nil, errors.Join(errs...)
-		}
-
-		return nil, noChannel(&tagged, module)
-	}
-}
-
-// noChannel is the error of a lookup that found no release channel of the
-// module: errChannelsGone if the last lookup found one (tagged), errNoChannel
-// otherwise. A lookup that failed is not recorded, so it changes nothing.
-func noChannel(tagged *sync.Map, module string) error {
-	if _, ok := tagged.LoadAndDelete(module); ok {
-		return errChannelsGone
-	}
-
-	return errNoChannel
-}
-
-// releaseVersionCache reads the version a release channel of the module
-// points to, from version.json of its release image, and keeps the last one
-// of every source, module and channel with the image digest. An unchanged
-// channel costs one HEAD request. A moved one is read by its digest, so the
-// tag moving again meanwhile does not give the version of another image. A
-// registry that does not answer HEAD with the digest is read by the tag, as
-// before; a missing channel is an error isNotFound reports.
-func releaseVersionCache() func(ctx context.Context, client *registry.Client, source, module, channel string) (string, error) {
-	type cached struct{ digest, version string }
-	var mu sync.Mutex
-	cache := make(map[string]cached)
-
-	return func(ctx context.Context, client *registry.Client, source, module, channel string) (string, error) {
-		k := source + "/" + module + "/" + channel
-		digest, err := client.ReleaseDigest(ctx, module, channel)
-		if isNotFound(err) {
-			return "", err
-		}
-
-		var img v1.Image
-		switch {
-		case err == nil:
-			mu.Lock()
-			c, ok := cache[k]
-			mu.Unlock()
-			if ok && c.digest == digest {
-				return c.version, nil
-			}
-			img, err = client.ReleaseImageAt(ctx, module, digest)
-			// The channel exists: the image went away after the tag moved
-			// once more. Not wrapped, so it is not taken for a missing
-			// channel; the next pass reads the channel again.
-			if isNotFound(err) {
-				err = fmt.Errorf("image %s of the channel %s is gone: %v", digest, channel, err) //nolint:errorlint // see above
-			}
-		case headUnsupported(ctx, err):
-			img, err = client.ReleaseImage(ctx, module, channel)
-		}
-		if err != nil {
-			return "", err
-		}
-
-		// The digest HEAD gave is kept: for an index it is the digest of the
-		// index, not of the image of the platform img is.
-		if digest == "" {
-			d, err := img.Digest()
-			if err != nil {
-				return "", fmt.Errorf("digest: %w", err)
-			}
-			digest = d.String()
-		}
-
-		version, err := registry.ReleaseVersion(img)
-		// An image without version.json stays so; it is no version.
-		if errors.Is(err, registry.ErrNoVersion) {
-			version, err = "", nil
-		}
-		if err != nil {
-			return "", err
-		}
-
-		mu.Lock()
-		cache[k] = cached{digest: digest, version: version}
-		mu.Unlock()
-
-		return version, nil
-	}
-}
-
-// headUnsupported tells a registry that answered HEAD but not as the API
-// asks (no Docker-Content-Digest, or no HEAD at all): its channels are read
-// by the tag. A registry that did not answer, or a request given up, is
-// asked no more.
-func headUnsupported(ctx context.Context, err error) bool {
-	if ctx.Err() != nil {
-		return false
-	}
-	var terr *transport.Error
-	if errors.As(err, &terr) {
-		return terr.StatusCode == http.StatusMethodNotAllowed || terr.StatusCode == http.StatusNotImplemented
-	}
-	var nerr net.Error
-
-	return !errors.As(err, &nerr)
-}
-
-// LatestVersion returns the newest published version of the module, empty
-// when there is none.
-func LatestVersion(versions *Versions) func(ctx context.Context, module string) (string, error) {
-	return func(ctx context.Context, module string) (string, error) {
-		list, err := versions.List(ctx, module)
-		if err != nil || len(list) == 0 {
-			return "", err
-		}
-
-		return list[0], nil
-	}
+// recordStore is the Store as a stateRecord keeps the state of a Pinner in
+// it: targets.json, what the index was built from, and the archives of the
+// versions it names.
+type recordStore interface {
+	loadIndexed(ctx context.Context) (indexedState, error)
+	saveIndexed(ctx context.Context, state indexedState) error
+	saveIndexedLocal(state indexedState) (string, error)
+	uploadMissing(ctx context.Context, pinned []Target) error
 }
 
 // Pinner keeps the target versions rendered and pinned in the store and the
 // search index and llms.txt built from them.
 type Pinner struct {
-	resolver   Resolver
-	store      *Store
+	resolver Resolver
+	store    pinnerStore
+	// record is where the state is recorded for the next pods.
+	record     stateRecord
 	retryAfter time.Duration
 	logger     *log.Logger
 	now        func() time.Time
@@ -522,8 +347,6 @@ type Pinner struct {
 	Watch *PassWatch
 	// passTimeout is the const, shorter in the tests.
 	passTimeout time.Duration
-	// localOnly keeps targets.json on the volume (NewFallbackPinner).
-	localOnly bool
 	// failed keeps a target that does not exist, has no documentation, fails
 	// the Hugo build or the AI export from being downloaded again on every
 	// sync: the images of a version do not change. Other failures are not
@@ -568,10 +391,11 @@ const passTimeout = time.Hour
 
 // NewPinner renders a target that has no documentation again no sooner than
 // retryAfter, or when the module moves to another target.
-func NewPinner(resolver Resolver, store *Store, retryAfter time.Duration, logger *log.Logger) *Pinner {
+func NewPinner(resolver Resolver, store pinnerStore, retryAfter time.Duration, logger *log.Logger) *Pinner {
 	return &Pinner{
 		resolver:   resolver,
 		store:      store,
+		record:     coldRecord{store},
 		retryAfter: retryAfter,
 		logger:     logger,
 		now:        time.Now,
@@ -591,12 +415,60 @@ func NewPinner(resolver Resolver, store *Store, retryAfter time.Duration, logger
 // NewFallbackPinner is NewPinner for a follower that reads the registry
 // itself while S3 does not answer: it keeps targets.json on the volume, so it
 // never replaces the file of the leader in S3.
-func NewFallbackPinner(resolver Resolver, store *Store, retryAfter time.Duration, logger *log.Logger) *Pinner {
+func NewFallbackPinner(resolver Resolver, store pinnerStore, retryAfter time.Duration, logger *log.Logger) *Pinner {
 	p := NewPinner(resolver, store, retryAfter, logger)
-	p.localOnly = true
+	p.record = volumeRecord{store}
 
 	return p
 }
+
+// stateRecord is where a Pinner records its state for the next pods: what
+// the index was built from (targets.json) and the archives of the versions
+// it names.
+type stateRecord interface {
+	// load returns what was recorded last; an error means it can not be
+	// read, and nothing is recorded until it is.
+	load(ctx context.Context) (indexedState, error)
+	save(ctx context.Context, state indexedState) error
+	// uploadMissing uploads the archives of the pinned versions the cold
+	// cache lacks.
+	uploadMissing(ctx context.Context, pinned []Target) error
+}
+
+// coldRecord records the state on the volume and in S3, for the followers
+// and the next pods: the leader.
+type coldRecord struct{ store recordStore }
+
+func (r coldRecord) load(ctx context.Context) (indexedState, error) {
+	return r.store.loadIndexed(ctx)
+}
+
+func (r coldRecord) save(ctx context.Context, state indexedState) error {
+	return r.store.saveIndexed(ctx, state)
+}
+
+func (r coldRecord) uploadMissing(ctx context.Context, pinned []Target) error {
+	return r.store.uploadMissing(ctx, pinned)
+}
+
+// volumeRecord records the state on the volume only: a follower reading the
+// registry itself. It never records over the file of the leader, so a file
+// it can not read does not hold it back, and it uploads nothing.
+type volumeRecord struct{ store recordStore }
+
+func (r volumeRecord) load(ctx context.Context) (indexedState, error) {
+	state, _ := r.store.loadIndexed(ctx)
+
+	return state, nil
+}
+
+func (r volumeRecord) save(_ context.Context, state indexedState) error {
+	_, err := r.store.saveIndexedLocal(state)
+
+	return err
+}
+
+func (volumeRecord) uploadMissing(context.Context, []Target) error { return nil }
 
 // Run syncs the targets right away and then periodically, or when kicked,
 // until ctx is done.
@@ -767,13 +639,10 @@ func (p *Pinner) sync(ctx context.Context) {
 // the cold cache lacks (Store.uploadMissing). It runs before the pass renders
 // anything: the uploads of the last pass are over by then, and one still
 // running is only uploaded twice. A follower reading the registry itself
-// records nothing in the cold cache.
+// records nothing in the cold cache (volumeRecord).
 func (p *Pinner) uploadMissing(ctx context.Context, linked map[string]Channels) {
-	if p.localOnly {
-		return
-	}
 	pinned := slices.Concat(slices.Collect(maps.Values(p.indexed)), channelTargets(p.indexed, linked))
-	if err := p.store.uploadMissing(ctx, pinned); err != nil && ctx.Err() == nil && !p.store.coldMissing(err) {
+	if err := p.record.uploadMissing(ctx, pinned); err != nil && ctx.Err() == nil && !coldMissing(err) {
 		p.logger.Warn("upload the versions missing from S3", log.Err(err))
 	}
 }
@@ -807,10 +676,8 @@ func (p *Pinner) keepUnpublishedOnce(res Resolution, prev map[string]Target) []T
 // would lose the targets of the followers, so nothing is saved and the next
 // pass reads it again. What a pass found meanwhile is newer and stays.
 func (p *Pinner) readIndexed(ctx context.Context) {
-	state, err := p.store.loadIndexed(ctx)
-	// A follower reading the registry itself never records over the file
-	// of the leader.
-	if err != nil && !p.localOnly {
+	state, err := p.record.load(ctx)
+	if err != nil {
 		p.logger.Error("read indexed targets, nothing is saved until they are read", log.Err(err))
 		return
 	}
@@ -866,14 +733,7 @@ func (p *Pinner) save(ctx context.Context, saved []Target, chans map[string]Chan
 		return
 	}
 	state := indexedState{Targets: saved, Channels: chans, Modules: modules}
-	save := p.store.saveIndexed
-	if p.localOnly {
-		save = func(_ context.Context, state indexedState) error {
-			_, err := p.store.saveIndexedLocal(state)
-			return err
-		}
-	}
-	if err := save(ctx, state); err != nil {
+	if err := p.record.save(ctx, state); err != nil {
 		// Not recorded as saved: the next pass uploads it again, so the
 		// followers get it once S3 is ready.
 		if !errors.Is(err, errNotUploaded) {
@@ -1029,7 +889,7 @@ func (p *Pinner) renderEach(ctx context.Context, targets []Target, withAI bool) 
 			// waits for retryAfter and does not hold the update back.
 			if lasting(err) {
 				p.failed[t] = p.now()
-				if errors.Is(err, docs.ErrNoPages) {
+				if kindOf(err) == noDocs {
 					p.noDocs[t] = true
 				}
 			} else {
@@ -1046,12 +906,6 @@ func (p *Pinner) renderEach(ctx context.Context, targets []Target, withAI bool) 
 	}
 
 	return ok
-}
-
-// lasting reports whether a render failed for a reason that does not change
-// until the template or the image does: trying it again at once fails again.
-func lasting(err error) bool {
-	return errors.Is(err, ErrVersionNotFound) || errors.Is(err, docs.ErrNoPages) || errors.Is(err, docs.ErrBuild) || errors.Is(err, docs.ErrDocsTooLarge) || errors.Is(err, errNoAIExport)
 }
 
 // servedChannels are the channels as they are served after a pass: the new

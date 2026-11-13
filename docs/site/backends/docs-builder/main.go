@@ -17,14 +17,11 @@ package main
 import (
 	"context"
 	"errors"
-	"flag"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -32,44 +29,19 @@ import (
 
 	"golang.org/x/sync/errgroup"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 
 	"github.com/flant/docs-builder/internal/docs"
 	v1 "github.com/flant/docs-builder/internal/http/v1"
-	"github.com/flant/docs-builder/internal/local"
 	"github.com/flant/docs-builder/internal/metrics"
 	"github.com/flant/docs-builder/internal/ondemand"
+	"github.com/flant/docs-builder/internal/ondemand/accesslog"
+	"github.com/flant/docs-builder/internal/ondemand/leader"
 	"github.com/flant/docs-builder/internal/pprof"
-	"github.com/flant/docs-builder/internal/registry"
 	"github.com/flant/docs-builder/internal/s3cache"
-)
-
-// flags
-var (
-	listenAddress     string
-	metricsAddress    string
-	onDemandCache     string
-	onDemandLogAddr   string
-	onDemandS3        string
-	onDemandS3Size    string
-	onDemandCacheSize string
-	onDemandS3Prefix  string
-	// The public site: modules come from these registries instead of the
-	// Module and ModuleSource objects of a cluster.
-	onDemandRegistries    string
-	onDemandRegistryAuths string
-	// onDemandFollowEvery is how often a follower reads the targets the
-	// leader recorded in S3.
-	onDemandFollowEvery time.Duration
-	// A developer's machine: modules come from the module repositories
-	// under this directory, without a cluster or a registry.
-	onDemandLocalDir     string
-	onDemandLocalVersion string
 )
 
 // On-demand rendering of module versions. Measured on 2026-11-02: 70 modules
@@ -92,7 +64,7 @@ const (
 	// A cluster lists rarely: deckhouse-controller scans its ModuleSources
 	// every 30 minutes by default. The public site lists more often: new
 	// versions should show up soon there. A version missing from the list
-	// lists the registry earlier (ondemand.Versions.Has).
+	// lists the registry earlier (versions.Versions.Has).
 	onDemandVersionsTTL     = 30 * time.Minute
 	onDemandSiteVersionsTTL = 5 * time.Minute
 	onDemandEvictEvery      = time.Minute
@@ -121,24 +93,8 @@ const (
 	onDemandLocalWatchEvery = time.Second
 )
 
-func init() {
-	flag.StringVar(&listenAddress, "address", ":8081", "Address to listen on")
-	flag.StringVar(&metricsAddress, "metrics-address", ":9090", "Address to listen on metrics")
-	flag.StringVar(&onDemandCache, "ondemand-cache-dir", "", "Cache volume shared with nginx for module versions rendered on demand (required)")
-	flag.StringVar(&onDemandLogAddr, "ondemand-access-log-address", "127.0.0.1:5514", "UDP address to receive the nginx syslog access log of on-demand pages on")
-	flag.StringVar(&onDemandS3, "ondemand-s3-dir", "", "Directory with the connection of the S3 bucket that keeps rendered module versions (connection/: the ConfigMap of the SystemBucket or the Secret of the user) and the STS token (token/) when the connection has no static keys; empty keeps them in the cache volume only")
-	flag.StringVar(&onDemandCacheSize, "ondemand-cache-size", "", "Size of the cache volume given in --ondemand-cache-dir (its sizeLimit), for example 4Gi; the pinned versions may take it less the room of the versions readers open, and a metric reports that budget")
-	flag.StringVar(&onDemandS3Size, "ondemand-s3-size", "", "Size of the S3 bucket given in --ondemand-s3-dir, or of its part under --ondemand-s3-prefix, for example 5Gi; required with --ondemand-s3-dir")
-	flag.StringVar(&onDemandS3Prefix, "ondemand-s3-prefix", "", "Prefix of every key in the S3 bucket, ending with \"/\"; objects outside of it are never read, written or deleted")
-	flag.StringVar(&onDemandRegistries, "ondemand-registries", "", "Comma-separated module registries (<host>/<path>, whose tags are the modules) of the public site; when set, modules come from them instead of the Module and ModuleSource objects of the cluster, and the first registry that has a module wins")
-	flag.StringVar(&onDemandRegistryAuths, "ondemand-registry-auths", "", "File with the docker config JSON of --ondemand-registries; empty means anonymous access")
-	flag.DurationVar(&onDemandFollowEvery, "ondemand-follow-interval", time.Minute, "How often a replica that does not hold the leader Lease reads the versions the leader recorded in S3")
-	flag.StringVar(&onDemandLocalDir, "ondemand-local-modules-dir", "", "Directory with module repositories (each with module.yaml, docs/, openapi/, crds/), or of directories of them, served as the modules of the public site without a cluster or a registry: a developer's machine. A module is rendered anew once its files change")
-	flag.StringVar(&onDemandLocalVersion, "ondemand-local-version", "v0.0.0-local", "The version every module of --ondemand-local-modules-dir is served as")
-}
-
 func main() {
-	flag.Parse()
+	cfg := parseFlags()
 	tuneGC()
 
 	ctx, stopNotify := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -155,7 +111,7 @@ func main() {
 		logger.Fatal("failed to register metrics", log.Err(err))
 	}
 
-	if err := checkFlags(); err != nil {
+	if err := cfg.check(); err != nil {
 		logger.Fatal("flags", log.Err(err))
 	}
 
@@ -165,7 +121,7 @@ func main() {
 	// first, at most onDemandReadyWait after the start.
 	var ready atomic.Bool
 	markReady := sync.OnceFunc(func() { ready.Store(true) })
-	parts, err := newOnDemand(onDemandCache, onDemandS3, onDemandS3Size, onDemandS3Prefix, onDemandLocalDir, logger.Named("ondemand"), mStorage)
+	parts, err := newOnDemand(cfg, logger.Named("ondemand"), mStorage)
 	if err != nil {
 		logger.Fatal("on-demand rendering", log.Err(err))
 	}
@@ -182,15 +138,15 @@ func main() {
 	}
 	parts.Ready = ready.Load
 	h.EnableOnDemand(parts.OnDemand)
-	store := parts.Store
+	store := parts.store
 
 	srv := &http.Server{
-		Addr:    listenAddress,
+		Addr:    cfg.listenAddress,
 		Handler: h,
 	}
 
 	metricsSrv := &http.Server{
-		Addr:    metricsAddress,
+		Addr:    cfg.metricsAddress,
 		Handler: mStorage.Handler(),
 	}
 
@@ -211,7 +167,7 @@ func main() {
 		return nil
 	})
 	eg.Go(func() error {
-		return ondemand.ListenAccessLog(ctx, onDemandLogAddr, store, logger.Named("ondemand"))
+		return accesslog.Listen(ctx, cfg.accessLogAddress, store, logger.Named("ondemand"))
 	})
 	if parts.evictCold == nil {
 		pinner := parts.newPinner()
@@ -226,7 +182,7 @@ func main() {
 			})
 		}
 	} else {
-		runLeaderAndFollower(ctx, eg, parts, markReady, logger.Named("ondemand"))
+		runLeaderAndFollower(ctx, eg, parts, cfg.followEvery, markReady, logger.Named("ondemand"))
 	}
 
 	logger.Info("application started")
@@ -275,19 +231,6 @@ func main() {
 	logger.Info("application stopped")
 }
 
-// checkFlags refuses the flags that would be ignored without a word.
-func checkFlags() error {
-	switch {
-	case onDemandCache == "":
-		return errors.New("--ondemand-cache-dir is required")
-	case onDemandRegistries != "" && onDemandLocalDir != "":
-		return errors.New("--ondemand-registries does not go with --ondemand-local-modules-dir")
-	case onDemandS3 == "" && (onDemandS3Size != "" || onDemandS3Prefix != ""):
-		return errors.New("--ondemand-s3-size and --ondemand-s3-prefix need --ondemand-s3-dir")
-	}
-	return nil
-}
-
 // waitStopped waits until ctx is done for the goroutines of eg, which end
 // with its context, and returns the error of the group.
 func waitStopped(ctx context.Context, eg *errgroup.Group) error {
@@ -304,6 +247,10 @@ func waitStopped(ctx context.Context, eg *errgroup.Group) error {
 // onDemandParts are what the on-demand rendering runs.
 type onDemandParts struct {
 	v1.OnDemand
+	// store is OnDemand.Store with what the pod runs of it besides the
+	// handlers: the eviction, the access log, the work of the leader and of
+	// a follower.
+	store     *ondemand.Store
 	newPinner func() *ondemand.Pinner
 	// newFallbackPinner reads the registry for a follower S3 does not answer.
 	newFallbackPinner func() *ondemand.Pinner
@@ -315,114 +262,34 @@ type onDemandParts struct {
 	watch func(ctx context.Context, kick func())
 }
 
-func newOnDemand(cacheDir, s3Dir, s3Size, s3Prefix, localDir string, logger *log.Logger, ms *metricsstorage.MetricStorage) (onDemandParts, error) {
-	// Local modules need neither a cluster nor S3, whose leader Lease is
-	// a cluster object.
-	var localModules *local.Source
-	var client dynamic.Interface
-	var kube kubernetes.Interface
-	if localDir != "" {
-		if s3Dir != "" {
-			return onDemandParts{}, errors.New("--ondemand-local-modules-dir does not go with --ondemand-s3-dir")
-		}
-		var err error
-		if localModules, err = local.New(localDir, onDemandLocalVersion, logger); err != nil {
-			return onDemandParts{}, fmt.Errorf("--ondemand-local-modules-dir: %w", err)
-		}
-	} else {
-		config, err := rest.InClusterConfig()
-		if err != nil {
-			return onDemandParts{}, fmt.Errorf("in-cluster config: %w", err)
-		}
-		// A pass of the pinner reads the Module and the ModuleSources of every
-		// module: about 300 requests, which take a minute at the default 5 per
-		// second.
-		config.QPS, config.Burst = 50, 100
-
-		if client, err = dynamic.NewForConfig(config); err != nil {
-			return onDemandParts{}, fmt.Errorf("dynamic client: %w", err)
-		}
-		if kube, err = kubernetes.NewForConfig(config); err != nil {
-			return onDemandParts{}, fmt.Errorf("kubernetes client: %w", err)
-		}
+func newOnDemand(cfg config, logger *log.Logger, ms *metricsstorage.MetricStorage) (onDemandParts, error) {
+	mode, err := newMode(cfg, logger, ms)
+	if err != nil {
+		return onDemandParts{}, err
 	}
 
 	var bucket *s3cache.Cache
 	var quota int64
 	var templateRevision string
-	if s3Dir != "" {
-		var err error
-		if bucket, quota, templateRevision, err = newColdBucket(s3Dir, s3Size, s3Prefix, docs.HugoInitDir, logger, ms); err != nil {
+	if cfg.s3Dir != "" {
+		if bucket, quota, templateRevision, err = newColdBucket(cfg.s3Dir, cfg.s3Size, cfg.s3Prefix, docs.HugoInitDir, logger, ms); err != nil {
 			return onDemandParts{}, err
 		}
 	}
 	revision := func() string { return templateRevision }
 
-	// The public site: modules from a list of registries, a page per release
-	// channel, the search leading to the module root and links without the
-	// language. One switch, so the parts never disagree. The local modules
-	// of a developer's machine make up the public site too.
-	site := onDemandRegistries != "" || localModules != nil
-
-	clients := registry.NewClients()
-	clients.Metrics = ms
-	// The modules and how to render them: a cluster, the registries of the
-	// public site, or the local modules, which need no registry.
-	var sources interface {
-		ondemand.ModuleSources
-		Modules(ctx context.Context) ([]registry.Module, error)
-	}
-	// A ModulePullOverride exists in a cluster only; the public site has none.
-	var isBranch func(context.Context, string, string) (bool, error)
-	var clusterSources *registry.Sources
-	switch {
-	case localModules != nil:
-	case site:
-		var auths []byte
-		if onDemandRegistryAuths != "" {
-			var err error
-			if auths, err = os.ReadFile(onDemandRegistryAuths); err != nil {
-				return onDemandParts{}, fmt.Errorf("--ondemand-registry-auths: %w", err)
-			}
-		}
-		static, err := registry.NewStaticSources(strings.Split(onDemandRegistries, ","), auths, clients, logger)
-		if err != nil {
-			return onDemandParts{}, fmt.Errorf("--ondemand-registries: %w", err)
-		}
-		sources = static
-	default:
-		clusterSources = registry.NewSources(client, logger)
-		sources = clusterSources
-		isBranch = func(ctx context.Context, module, version string) (bool, error) {
-			tag, err := clusterSources.OverrideTag(ctx, module)
-			return tag == version, err
-		}
-	}
-
 	// The renders in progress take a few megabytes on top: not counted.
 	var pinnedBudget int64
-	if onDemandCacheSize != "" {
-		size, err := resource.ParseQuantity(onDemandCacheSize)
+	if cfg.cacheSize != "" {
+		size, err := resource.ParseQuantity(cfg.cacheSize)
 		if err != nil || size.Value() <= onDemandMaxSize {
-			return onDemandParts{}, fmt.Errorf("--ondemand-cache-size %q: a size above %d bytes is expected", onDemandCacheSize, int64(onDemandMaxSize))
+			return onDemandParts{}, fmt.Errorf("--ondemand-cache-size %q: a size above %d bytes is expected", cfg.cacheSize, int64(onDemandMaxSize))
 		}
 		pinnedBudget = size.Value() - onDemandMaxSize
 	}
 
-	versionsTTL := onDemandVersionsTTL
-	if site {
-		versionsTTL = onDemandSiteVersionsTTL
-	}
-	tags := ondemand.RegistryTags(sources, clients, logger)
-	render := ondemand.RegistryRender(sources, clients, docs.HugoInitDir, logger, ms)
-	if localModules != nil {
-		tags, render = localModules.Tags, localModules.Render(docs.HugoInitDir)
-	}
-	versions := ondemand.NewVersions(tags, versionsTTL, onDemandRetryAfter, ms)
-	versions.Logger = logger
-
 	store := ondemand.NewStore(ondemand.Config{
-		Dir:                cacheDir,
+		Dir:                cfg.cacheDir,
 		MaxSize:            onDemandMaxSize,
 		PinnedBudget:       pinnedBudget,
 		MaxIdle:            onDemandMaxIdle,
@@ -432,55 +299,33 @@ func newOnDemand(cacheDir, s3Dir, s3Size, s3Prefix, localDir string, logger *log
 		RenderTimeout:      onDemandRenderTimeout,
 		RetryAfter:         onDemandRetryAfter,
 		NotFoundRetryAfter: onDemandNotFoundRetryAfter,
-		Render:             render,
+		Render:             mode.render,
 		RenderList: func(ctx context.Context, data []byte, workDir string) (map[string][]byte, error) {
 			return docs.RenderModulesList(ctx, docs.HugoInitDir, workDir, data, logger)
 		},
-		Relisted: versions.Forget,
-		Logger:   logger,
-		Metrics:  ms,
-		Cold:     coldCache(bucket),
-		// A bucket that is not set up yet has no archive either: the version
-		// is rendered.
-		ColdNotFound: func(err error) bool {
-			return errors.Is(err, s3cache.ErrNotFound) || errors.Is(err, s3cache.ErrNotReady)
-		},
+		Relisted:          mode.versions.Forget,
+		Logger:            logger,
+		Metrics:           ms,
+		Cold:              coldCache(bucket),
 		Revision:          revision,
-		IndexAtModuleRoot: site,
-		IsBranch:          isBranch,
+		IndexAtModuleRoot: mode.site,
+		IsBranch:          mode.isBranch,
 	})
 
 	if err := store.Load(); err != nil {
 		return onDemandParts{}, fmt.Errorf("load cache: %w", err)
 	}
 
-	resolver := ondemand.Resolver{
-		Latest: ondemand.LatestVersion(versions),
-		Logger: logger,
-	}
-	switch {
-	case localModules != nil:
-		// One version per module, served as its stable channel.
-		resolver.Modules, resolver.ChannelVersion = localModules.Modules, localModules.Version
-	case site:
-		// Every release channel has pages of its own on the public site.
-		resolver.Modules, resolver.ChannelVersion = sources.Modules, ondemand.RegistryChannelVersion(sources, clients)
-		resolver.Channels = ondemand.RegistryChannels(sources, clients)
-	default:
-		resolver.Modules, resolver.ChannelVersion = sources.Modules, ondemand.RegistryChannelVersion(sources, clients)
-		// A cluster renders ahead the versions it is about to update to.
-		resolver.Upcoming = clusterSources.PendingReleases
-	}
 	// A pass of any pinner of the pod stuck past its deadline fails the
 	// liveness probe.
 	passes := ondemand.NewPassWatch()
 	newPinner := func() *ondemand.Pinner {
-		p := ondemand.NewPinner(resolver, store, onDemandPinRetryAfter, logger)
+		p := ondemand.NewPinner(mode.resolver, store, onDemandPinRetryAfter, logger)
 		p.Watch = passes
 		return p
 	}
 	newFallbackPinner := func() *ondemand.Pinner {
-		p := ondemand.NewFallbackPinner(resolver, store, onDemandPinRetryAfter, logger)
+		p := ondemand.NewFallbackPinner(mode.resolver, store, onDemandPinRetryAfter, logger)
 		p.Watch = passes
 		return p
 	}
@@ -494,7 +339,7 @@ func newOnDemand(cacheDir, s3Dir, s3Size, s3Prefix, localDir string, logger *log
 			defer t.Stop()
 			for {
 				err := store.EvictCold(ctx, quota, onDemandS3High, onDemandS3Low)
-				if err != nil && !errors.Is(err, s3cache.ErrNotReady) {
+				if err != nil && !errors.Is(err, ondemand.ErrColdNotReady) {
 					logger.Warn("evict versions from S3", log.Err(err))
 				}
 				select {
@@ -506,18 +351,7 @@ func newOnDemand(cacheDir, s3Dir, s3Size, s3Prefix, localDir string, logger *log
 		}
 	}
 
-	var embedded *ondemand.EmbeddedVersions
-	if site && localModules == nil {
-		// The history of the embedded modules, mounted from a ConfigMap.
-		embedded = ondemand.NewEmbeddedVersions(filepath.Join(docs.HugoInitDir, "data", "embedded_modules_list.json"))
-	}
-
-	var watch func(ctx context.Context, kick func())
-	if localModules != nil {
-		watch = func(ctx context.Context, kick func()) { localModules.Watch(ctx, onDemandLocalWatchEvery, kick) }
-	}
-
-	return onDemandParts{OnDemand: v1.OnDemand{Store: store, Versions: versions, Site: site, Embedded: embedded, Live: passes.Check}, newPinner: newPinner, newFallbackPinner: newFallbackPinner, evictCold: evictCold, kube: kube, watch: watch}, nil
+	return onDemandParts{OnDemand: v1.OnDemand{Store: store, Versions: mode.versions, Site: mode.site, Embedded: mode.embedded, Live: passes.Check}, store: store, newPinner: newPinner, newFallbackPinner: newFallbackPinner, evictCold: evictCold, kube: mode.kube, watch: mode.watch}, nil
 }
 
 // newColdBucket returns the S3 bucket of the rendered versions, its quota in
@@ -559,34 +393,31 @@ func newColdBucket(s3Dir, s3Size, s3Prefix, templateDir string, logger *log.Logg
 // Lease reads the registry, renders the pinned versions and the archives of
 // older templates and evicts from S3; the others follow what it recorded
 // there. A follower that becomes the leader starts from what it followed.
-func runLeaderAndFollower(ctx context.Context, eg *errgroup.Group, parts onDemandParts, markReady func(), logger *log.Logger) {
+func runLeaderAndFollower(ctx context.Context, eg *errgroup.Group, parts onDemandParts, followEvery time.Duration, markReady func(), logger *log.Logger) {
 	identity := os.Getenv("POD_NAME")
 	if identity == "" {
 		identity, _ = os.Hostname()
 	}
 
 	term := leaderTerm{
-		setLeader: func(v float64) { parts.Store.SetGauge(metrics.DocsBuilderOnDemandLeader, v) },
+		setLeader: func(v float64) { parts.store.SetGauge(metrics.DocsBuilderOnDemandLeader, v) },
 		pin: func(ctx context.Context, onRestored func()) {
 			pinner := parts.newPinner()
 			pinner.OnRestored = onRestored
 			pinner.Run(ctx, onDemandPinEvery)
 		},
 		evictCold: parts.evictCold,
-		rerender:  func(ctx context.Context) { parts.Store.Rerender(ctx, onDemandRerenderEvery) },
+		rerender:  func(ctx context.Context) { parts.store.Rerender(ctx, onDemandRerenderEvery) },
 		markReady: markReady,
 	}
 	// Every replica reports it, so the alert on no leader sees the replicas.
 	term.setLeader(0)
 	eg.Go(func() error {
-		ondemand.RunLeaderElection(ctx, parts.kube, os.Getenv("POD_NAMESPACE"), identity, term.run, logger)
+		leader.Run(ctx, parts.kube, os.Getenv("POD_NAMESPACE"), identity, term.run, logger)
 		return nil
 	})
 	eg.Go(func() error {
-		// A bucket that is not set up yet is S3 not answering, unlike for
-		// the store: the follower then reads the registry itself.
-		missing := func(err error) bool { return errors.Is(err, s3cache.ErrNotFound) }
-		ondemand.NewFollower(parts.Store, missing, onDemandPinRetryAfter, logger).Run(ctx, onDemandFollowEvery, term.leading.Load, markReady, func(fctx context.Context) {
+		ondemand.NewFollower(parts.store, onDemandPinRetryAfter, logger).Run(ctx, followEvery, term.leading.Load, markReady, func(fctx context.Context) {
 			parts.newFallbackPinner().Run(fctx, onDemandPinEvery)
 		})
 		return nil
@@ -621,13 +452,4 @@ func (t *leaderTerm) run(ctx context.Context) {
 	g.Go(func() error { t.evictCold(ctx); return nil })
 	g.Go(func() error { t.rerender(ctx); return nil })
 	_ = g.Wait()
-}
-
-// coldCache keeps a nil bucket a nil interface, so the store sees no cold
-// cache at all.
-func coldCache(bucket *s3cache.Cache) ondemand.ColdCache {
-	if bucket == nil {
-		return nil
-	}
-	return bucket
 }

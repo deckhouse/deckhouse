@@ -23,11 +23,11 @@ import (
 	"io"
 	"io/fs"
 	"log/slog"
-	"maps"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
@@ -88,6 +88,32 @@ func listedOf(targets []Target) []Listed {
 	return out
 }
 
+// catalog is the list of modules: its page, the modules on it and the target
+// of every module, which the address of the module leads to.
+type catalog struct {
+	dir    string
+	logger *log.Logger
+	// render builds the page (Config.RenderList), when set; relisted is told
+	// of a module that joins or leaves the list (Config.Relisted).
+	render   RenderListFunc
+	relisted func(module string)
+	// published reports whether the store has the version of the target
+	// published; gauge sets a gauge without labels.
+	published func(t Target) bool
+	gauge     func(name string, v float64)
+
+	mu sync.Mutex
+	// targets is the target of every module (SetTargets); listed are the
+	// modules of the last WriteList.
+	targets map[string]Target
+	listed  map[string]Listed
+
+	// listMu serializes the builds of the list of modules; listState is
+	// the data of the last one.
+	listMu    sync.Mutex
+	listState []byte
+}
+
 // WriteList builds the page of the list of modules from the modules and
 // the published versions of their targets, which bring the title, the
 // description and the stage (docs.Summary). A module whose target is not
@@ -95,28 +121,28 @@ func listedOf(targets []Target) []Listed {
 // rebuilt when the cards are the same as last time. The modules are those a
 // pass listed: a registry or API server that does not answer fails the pass
 // before, so an empty list means no modules.
-func (s *Store) WriteList(ctx context.Context, modules []Listed, targets []Target) error {
+func (cat *catalog) WriteList(ctx context.Context, modules []Listed, targets []Target) error {
 	listed := make(map[string]Listed, len(modules))
 	for _, m := range modules {
 		listed[m.Module] = m
 	}
-	s.mu.Lock()
-	prev := s.listed
-	s.listed = listed
-	s.mu.Unlock()
-	if s.cfg.Relisted != nil {
+	cat.mu.Lock()
+	prev := cat.listed
+	cat.listed = listed
+	cat.mu.Unlock()
+	if cat.relisted != nil {
 		for module := range prev {
 			if _, ok := listed[module]; !ok {
-				s.cfg.Relisted(module)
+				cat.relisted(module)
 			}
 		}
 		for module := range listed {
 			if _, ok := prev[module]; !ok {
-				s.cfg.Relisted(module)
+				cat.relisted(module)
 			}
 		}
 	}
-	if s.cfg.RenderList == nil {
+	if cat.render == nil {
 		return nil
 	}
 
@@ -124,12 +150,12 @@ func (s *Store) WriteList(ctx context.Context, modules []Listed, targets []Targe
 	cards := make([]card, 0, len(modules))
 	for _, m := range modules {
 		c := card{Module: m.Module, Stage: m.Stage, Enabled: m.Enabled, NoDocs: m.NoDocs}
-		if t, ok := byName[m.Module]; ok && s.published(t) {
-			summary, err := docs.ReadSummary(filepath.Join(s.cfg.Dir, t.Module, t.Version))
+		if t, ok := byName[m.Module]; ok && cat.published(t) {
+			summary, err := docs.ReadSummary(filepath.Join(cat.dir, t.Module, t.Version))
 			// A version of an older render format has none until the leader
 			// renders it anew: the card keeps the name.
 			if err != nil && !errors.Is(err, fs.ErrNotExist) {
-				s.cfg.Logger.Warn("read module summary", slog.String("module", t.Module), slog.String("version", t.Version), log.Err(err))
+				cat.logger.Warn("read module summary", slog.String("module", t.Module), slog.String("version", t.Version), log.Err(err))
 			}
 			c.Title, c.Description = summary.Title, summary.Description
 			if summary.Stage != "" {
@@ -149,15 +175,15 @@ func (s *Store) WriteList(ctx context.Context, modules []Listed, targets []Targe
 		return err
 	}
 
-	s.listMu.Lock()
-	defer s.listMu.Unlock()
-	if bytes.Equal(data, s.listState) {
+	cat.listMu.Lock()
+	defer cat.listMu.Unlock()
+	if bytes.Equal(data, cat.listState) {
 		// The served page is the one of these cards.
-		s.SetGauge(metrics.DocsBuilderOnDemandModulesListFailed, 0)
+		cat.gauge(metrics.DocsBuilderOnDemandModulesListFailed, 0)
 		return nil
 	}
 
-	err = s.renderList(ctx, data)
+	err = cat.renderList(ctx, data)
 	if ctx.Err() != nil {
 		return err
 	}
@@ -165,33 +191,33 @@ func (s *Store) WriteList(ctx context.Context, modules []Listed, targets []Targe
 	if err != nil {
 		failed = 1
 	}
-	s.SetGauge(metrics.DocsBuilderOnDemandModulesListFailed, failed)
+	cat.gauge(metrics.DocsBuilderOnDemandModulesListFailed, failed)
 	if err != nil {
 		return err
 	}
-	s.listState = data
+	cat.listState = data
 
 	return nil
 }
 
-func (s *Store) renderList(ctx context.Context, data []byte) error {
-	if err := os.MkdirAll(filepath.Join(s.cfg.Dir, tmpDir), 0755); err != nil {
+func (cat *catalog) renderList(ctx context.Context, data []byte) error {
+	if err := os.MkdirAll(filepath.Join(cat.dir, tmpDir), 0755); err != nil {
 		return fmt.Errorf("mkdir tmp: %w", err)
 	}
-	work, err := os.MkdirTemp(filepath.Join(s.cfg.Dir, tmpDir), "list-*")
+	work, err := os.MkdirTemp(filepath.Join(cat.dir, tmpDir), "list-*")
 	if err != nil {
 		return fmt.Errorf("mkdir list: %w", err)
 	}
 	defer os.RemoveAll(work)
 
-	pages, err := s.cfg.RenderList(ctx, data, work)
+	pages, err := cat.render(ctx, data, work)
 	if err != nil {
 		return fmt.Errorf("render the list of modules: %w", err)
 	}
 
 	var errs []error
 	for lang, page := range pages {
-		path := filepath.Join(s.cfg.Dir, modulesListPage(lang))
+		path := filepath.Join(cat.dir, modulesListPage(lang))
 		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 			errs = append(errs, err)
 			continue
@@ -211,26 +237,19 @@ func (s *Store) renderList(ctx context.Context, data []byte) error {
 
 // SetTargets records the target of every module: the address of a module
 // without a version leads to it while it is not published.
-func (s *Store) SetTargets(targets []Target) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (cat *catalog) SetTargets(targets []Target) {
+	cat.mu.Lock()
+	defer cat.mu.Unlock()
 
-	s.targets = byModule(targets)
-	// A branch that is no target any more, or has moved on, fails no more.
-	for t := range s.failedBranches {
-		if s.targets[t.Module] != t {
-			delete(s.failedBranches, t)
-		}
-	}
-	s.SetGauge(metrics.DocsBuilderOnDemandFailedBranches, float64(len(s.failedBranches)))
+	cat.targets = byModule(targets)
 }
 
 // Target returns the target of the module.
-func (s *Store) Target(module string) (Target, bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (cat *catalog) Target(module string) (Target, bool) {
+	cat.mu.Lock()
+	defer cat.mu.Unlock()
 
-	t, ok := s.targets[module]
+	t, ok := cat.targets[module]
 
 	return t, ok
 }
@@ -247,33 +266,81 @@ type ModuleMenu struct {
 // Pending reports a module on the list with documentation to come whose
 // target this pod does not know yet: a follower knows only the published
 // targets of the leader.
-func (s *Store) Pending(module string) bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (cat *catalog) Pending(module string) bool {
+	cat.mu.Lock()
+	defer cat.mu.Unlock()
 
-	m, listed := s.listed[module]
-	_, known := s.targets[module]
+	m, listed := cat.listed[module]
+	_, known := cat.targets[module]
 
 	return listed && !m.NoDocs && !m.Failed && !known
 }
 
 // NoDocs reports a module on the list whose published versions have no
 // documentation.
-func (s *Store) NoDocs(module string) bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (cat *catalog) NoDocs(module string) bool {
+	cat.mu.Lock()
+	defer cat.mu.Unlock()
 
-	return s.listed[module].NoDocs
+	return cat.listed[module].NoDocs
 }
 
-// Menu returns the version menu of the module; false when the module is not
-// on the list.
-func (s *Store) Menu(module string) (ModuleMenu, bool) {
+// listedModule returns the module as the last WriteList listed it; false
+// when it is not on the list.
+func (cat *catalog) listedModule(module string) (Listed, bool) {
+	cat.mu.Lock()
+	defer cat.mu.Unlock()
+
+	m, ok := cat.listed[module]
+
+	return m, ok
+}
+
+// WriteList builds the page of the list of modules (catalog).
+func (s *Store) WriteList(ctx context.Context, modules []Listed, targets []Target) error {
+	return s.catalog.WriteList(ctx, modules, targets)
+}
+
+// SetTargets records the target of every module (catalog). A development
+// branch that is no target any more, or has moved on, fails no more.
+func (s *Store) SetTargets(targets []Target) {
+	s.catalog.SetTargets(targets)
+
+	byName := byModule(targets)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	m, listed := s.listed[module]
-	chans, linked := s.served[module]
+	for t := range s.failedBranches {
+		if byName[t.Module] != t {
+			delete(s.failedBranches, t)
+		}
+	}
+	s.SetGauge(metrics.DocsBuilderOnDemandFailedBranches, float64(len(s.failedBranches)))
+}
+
+// Target returns the target of the module (catalog).
+func (s *Store) Target(module string) (Target, bool) {
+	return s.catalog.Target(module)
+}
+
+// Pending reports a module on the list whose target this pod does not know
+// yet (catalog).
+func (s *Store) Pending(module string) bool {
+	return s.catalog.Pending(module)
+}
+
+// NoDocs reports a module on the list whose published versions have no
+// documentation (catalog).
+func (s *Store) NoDocs(module string) bool {
+	return s.catalog.NoDocs(module)
+}
+
+// Menu returns the version menu of the module: whether it is enabled, from
+// the list, and the channels as their links point; false when the module is
+// neither on the list nor linked.
+func (s *Store) Menu(module string) (ModuleMenu, bool) {
+	m, listed := s.catalog.listedModule(module)
+	chans, linked := s.channels.servedOf(module)
 	if !listed && !linked {
 		return ModuleMenu{}, false
 	}
@@ -281,5 +348,5 @@ func (s *Store) Menu(module string) (ModuleMenu, bool) {
 		chans = Channels{}
 	}
 
-	return ModuleMenu{Enabled: m.Enabled, Channels: maps.Clone(chans)}, true
+	return ModuleMenu{Enabled: m.Enabled, Channels: chans}, true
 }

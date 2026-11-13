@@ -35,8 +35,10 @@ import (
 func siteResolver() Resolver {
 	return Resolver{
 		Modules: func(context.Context) ([]registry.Module, error) { return []registry.Module{{Name: "echo"}}, nil },
-		Channels: func(context.Context, string) (Channels, error) {
-			return Channels{"alpha": "v2.0.0", "stable": "v1.0.0"}, nil
+		Policy: SitePolicy{
+			Channels: func(context.Context, string) (Channels, error) {
+				return Channels{"alpha": "v2.0.0", "stable": "v1.0.0"}, nil
+			},
 		},
 		Logger: log.NewNop(),
 	}
@@ -56,7 +58,7 @@ func leaderWithFollower(t *testing.T) (*fakeRender, *memCold, *Store, *Follower)
 
 	s := newColdStore(t, f, cold)
 
-	return f, cold, s, NewFollower(s, func(err error) bool { return errors.Is(err, errNoArchive) }, time.Hour, log.NewNop())
+	return f, cold, s, NewFollower(s, time.Hour, log.NewNop())
 }
 
 func TestFollowerTakesVersionsOfLeader(t *testing.T) {
@@ -182,9 +184,8 @@ func TestFollowerReplacesStaleVersions(t *testing.T) {
 	cold.waitFor(t, "echo/v1.0.0/rev1.ai.tar.gz")
 	cold.waitFor(t, "echo/v2.0.0/rev1.tar.gz")
 
-	missing := func(err error) bool { return errors.Is(err, errNoArchive) }
 	follower := coldStoreAt(t, f, cold, "rev2")
-	fl := NewFollower(follower, missing, time.Hour, log.NewNop())
+	fl := NewFollower(follower, time.Hour, log.NewNop())
 	// Served from the older archives, the follower is ready: it does not
 	// wait for the leader to render everything anew.
 	if _, complete := fl.Sync(context.Background()); !complete {
@@ -195,7 +196,7 @@ func TestFollowerReplacesStaleVersions(t *testing.T) {
 	}
 
 	// The leader renders both anew.
-	if _, err := coldStoreAt(t, f, cold, "rev2").rerenderPass(context.Background(), "rev2"); err != nil {
+	if _, err := coldStoreAt(t, f, cold, "rev2").rerender.pass(context.Background(), "rev2"); err != nil {
 		t.Fatal(err)
 	}
 	cold.waitFor(t, "echo/v1.0.0/rev2.ai.tar.gz")
@@ -207,9 +208,10 @@ func TestFollowerReplacesStaleVersions(t *testing.T) {
 		}
 	}
 
-	// A restart keeps knowing what is stale.
-	stale := coldStoreAt(t, f, newMemCold(), "rev2")
-	stale.cfg.Dir = follower.cfg.Dir
+	// A restart keeps knowing what is stale: a store on the same volume.
+	cfg := follower.cfg
+	cfg.Cold = newMemCold()
+	stale := NewStore(cfg)
 	if err := stale.Load(); err != nil {
 		t.Fatal(err)
 	}
@@ -304,7 +306,7 @@ func TestFollowerWaitsForArchiveOfLeader(t *testing.T) {
 
 	s := newColdStore(t, f, cold)
 	s.cfg.Metrics = ms
-	fl := NewFollower(s, func(err error) bool { return errors.Is(err, errNoArchive) }, time.Hour, log.NewNop())
+	fl := NewFollower(s, time.Hour, log.NewNop())
 	if answered, complete := fl.Sync(context.Background()); !answered || complete {
 		t.Fatalf("answered %v, complete %v: want an incomplete sync", answered, complete)
 	}
@@ -359,12 +361,12 @@ func TestReaderGetsStaleVersionRenderedAnew(t *testing.T) {
 	old := coldStoreAt(t, f, cold, "rev1")
 	renderDone(t, old, "echo", "v1.0.0")
 	cold.waitPuts(t, 1)
-	old.background.Wait()
+	waitBackground(old)
 	follower := coldStoreAt(t, f, cold, "rev2")
 	renderDone(t, follower, "echo", "v1.0.0")
 	// S3 does not track reads: the archive goes up again.
 	cold.waitPuts(t, 2)
-	follower.background.Wait()
+	waitBackground(follower)
 
 	s := NewStore(follower.cfg)
 	c := &clock{t: time.Date(2026, 11, 2, 12, 0, 0, 0, time.UTC)}
@@ -380,7 +382,7 @@ func TestReaderGetsStaleVersionRenderedAnew(t *testing.T) {
 	}
 	open := func() {
 		s.Touch("echo", "v1.0.0")
-		s.background.Wait()
+		waitBackground(s)
 	}
 
 	// Not rendered anew yet: it stays.
@@ -389,7 +391,7 @@ func TestReaderGetsStaleVersionRenderedAnew(t *testing.T) {
 		t.Fatal("the stale version is gone before the leader rendered it anew")
 	}
 
-	if _, err := coldStoreAt(t, f, cold, "rev2").rerenderPass(context.Background(), "rev2"); err != nil {
+	if _, err := coldStoreAt(t, f, cold, "rev2").rerender.pass(context.Background(), "rev2"); err != nil {
 		t.Fatal(err)
 	}
 	open()
@@ -416,7 +418,7 @@ func TestPinnerUploadsWhatTheColdCacheLacks(t *testing.T) {
 	// version, the version is kept out of S3.
 	var down atomic.Bool
 	down.Store(true)
-	leader.cfg.IsBranch = func(context.Context, string, string) (bool, error) {
+	leader.cold.branch = func(context.Context, string, string) (bool, error) {
 		if down.Load() {
 			return false, errors.New("apiserver is down")
 		}
@@ -426,7 +428,7 @@ func TestPinnerUploadsWhatTheColdCacheLacks(t *testing.T) {
 	ctx := context.Background()
 	pass := func() {
 		p.sync(ctx)
-		leader.background.Wait()
+		waitBackground(leader)
 	}
 	archives := []string{"echo/v1.0.0/rev1.ai.tar.gz", "echo/v2.0.0/rev1.tar.gz"}
 	inCold := func() bool {
@@ -434,10 +436,10 @@ func TestPinnerUploadsWhatTheColdCacheLacks(t *testing.T) {
 		return slices.Contains(keys, archives[0]) && slices.Contains(keys, archives[1])
 	}
 	s := newColdStore(t, f, cold)
-	fl := NewFollower(s, func(err error) bool { return errors.Is(err, errNoArchive) }, time.Hour, log.NewNop())
+	fl := NewFollower(s, time.Hour, log.NewNop())
 	follow := func() bool {
 		_, complete := fl.Sync(ctx)
-		s.background.Wait()
+		waitBackground(s)
 		return complete
 	}
 
@@ -480,7 +482,7 @@ func TestPinnerUploadsWhatTheColdCacheLacks(t *testing.T) {
 	if err := leader.uploadMissing(ctx, []Target{branch}); err != nil {
 		t.Fatal(err)
 	}
-	leader.background.Wait()
+	waitBackground(leader)
 	for _, k := range cold.keys() {
 		if strings.HasPrefix(k, "console/") {
 			t.Fatalf("the branch went to S3: %s", k)
@@ -498,13 +500,13 @@ func TestPinnerRendersStaleVersionsLostFromColdCache(t *testing.T) {
 	ctx := context.Background()
 	old := coldStoreAt(t, f, cold, "rev1")
 	NewPinner(siteResolver(), old, time.Hour, log.NewNop()).sync(ctx)
-	old.background.Wait()
+	waitBackground(old)
 
 	leader := coldStoreAt(t, f, cold, "rev2")
 	p := NewPinner(siteResolver(), leader, time.Hour, log.NewNop())
 	pass := func() {
 		p.sync(ctx)
-		leader.background.Wait()
+		waitBackground(leader)
 	}
 	stale := func(version string) bool {
 		leader.mu.Lock()
@@ -532,7 +534,7 @@ func TestPinnerRendersStaleVersionsLostFromColdCache(t *testing.T) {
 	}
 
 	follower := coldStoreAt(t, f, cold, "rev2")
-	fl := NewFollower(follower, func(err error) bool { return errors.Is(err, errNoArchive) }, time.Hour, log.NewNop())
+	fl := NewFollower(follower, time.Hour, log.NewNop())
 	if _, complete := fl.Sync(ctx); !complete {
 		t.Fatal("the follower misses versions of the leader")
 	}
@@ -552,13 +554,13 @@ func TestFollowerServesTargetWithoutAIExportAsLeader(t *testing.T) {
 	if err := leader.RenderPinned(ctx, echo); !errors.Is(err, errNoAIExport) {
 		t.Fatalf("err = %v, want errNoAIExport", err)
 	}
-	leader.background.Wait()
+	waitBackground(leader)
 	putIndexed(t, cold, indexedState{Targets: []Target{echo}, Modules: []Listed{{Module: "echo"}}})
 
 	s := newColdStore(t, f, cold)
-	fl := NewFollower(s, func(err error) bool { return errors.Is(err, errNoArchive) }, time.Hour, log.NewNop())
+	fl := NewFollower(s, time.Hour, log.NewNop())
 	_, complete := fl.Sync(ctx)
-	s.background.Wait()
+	waitBackground(s)
 	if !complete || !s.published(echo) {
 		t.Fatal("the follower waits for the AI export the leader has not")
 	}
@@ -567,12 +569,12 @@ func TestFollowerServesTargetWithoutAIExportAsLeader(t *testing.T) {
 	if err := leader.RenderPinned(ctx, echo); err != nil {
 		t.Fatal(err)
 	}
-	leader.background.Wait()
+	waitBackground(leader)
 	if keys := cold.keys(); !slices.Equal(keys, []string{"echo/v1.0.0/rev1.ai.tar.gz", indexedFile}) {
 		t.Fatalf("archives %v, want the one with the export", keys)
 	}
 	fl.Sync(ctx)
-	s.background.Wait()
+	waitBackground(s)
 	if !hasLLMs(t, s, "echo") {
 		t.Fatal("the follower does not take the AI export the leader has now")
 	}
@@ -587,24 +589,24 @@ func TestFollowerTakesAIExportOfReadersVersionBecomingTarget(t *testing.T) {
 	leader := newColdStore(t, f, cold)
 	renderDone(t, leader, "echo", "v1.0.0")
 	cold.waitPuts(t, 1)
-	leader.background.Wait()
+	waitBackground(leader)
 	s := newColdStore(t, f, cold)
 	renderDone(t, s, "echo", "v1.0.0")
 	// S3 does not track reads: the archive goes up again.
 	cold.waitPuts(t, 2)
-	s.background.Wait()
+	waitBackground(s)
 
 	ctx := context.Background()
 	echo := Target{Module: "echo", Version: "v1.0.0"}
 	if err := leader.RenderPinned(ctx, echo); err != nil {
 		t.Fatal(err)
 	}
-	leader.background.Wait()
+	waitBackground(leader)
 	putIndexed(t, cold, indexedState{Targets: []Target{echo}, Modules: []Listed{{Module: "echo"}}})
 
-	fl := NewFollower(s, func(err error) bool { return errors.Is(err, errNoArchive) }, time.Hour, log.NewNop())
+	fl := NewFollower(s, time.Hour, log.NewNop())
 	_, complete := fl.Sync(ctx)
-	s.background.Wait()
+	waitBackground(s)
 	if !complete || !hasLLMs(t, s, "echo") {
 		t.Fatal("the target stays served without the AI export the leader has")
 	}
@@ -666,7 +668,7 @@ func TestFollowerIdleWhileLeading(t *testing.T) {
 func TestFollowerLooksForTheFirstTargetsOften(t *testing.T) {
 	cold := newMemCold()
 	s := newColdStore(t, &fakeRender{size: 10}, cold)
-	fl := NewFollower(s, func(err error) bool { return errors.Is(err, errNoArchive) }, time.Hour, log.NewNop())
+	fl := NewFollower(s, time.Hour, log.NewNop())
 	fl.firstEvery = time.Millisecond
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})

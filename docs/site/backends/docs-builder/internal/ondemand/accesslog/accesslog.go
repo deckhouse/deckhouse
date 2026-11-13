@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ondemand
+// Package accesslog receives the access log of the pages nginx serves from
+// the cache volume.
+package accesslog
 
 import (
 	"context"
@@ -24,12 +26,18 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-// ListenAccessLog receives the access log nginx writes over syslog for the
-// pages it serves from the cache volume, and records each access in the store
-// so that opened versions are evicted last. A line ends with the page path,
+// Recorder records an access to a version, which delays its eviction
+// (ondemand.Store.Touch).
+type Recorder interface {
+	Touch(module, version string)
+}
+
+// Listen receives the access log nginx writes over syslog for the pages it
+// serves from the cache volume, and records each access with recorder so
+// that opened versions are evicted last. A line ends with the page path,
 // /<lang>/modules/<module>/<version>/... Lost datagrams only make a version
 // look less recently opened.
-func ListenAccessLog(ctx context.Context, addr string, store *Store, logger *log.Logger) error {
+func Listen(ctx context.Context, addr string, recorder Recorder, logger *log.Logger) error {
 	conn, err := net.ListenPacket("udp", addr)
 	if err != nil {
 		return fmt.Errorf("listen %s: %w", addr, err)
@@ -51,13 +59,13 @@ func ListenAccessLog(ctx context.Context, addr string, store *Store, logger *log
 			continue
 		}
 
-		if module, version, ok := parseAccess(string(buf[:n])); ok {
-			store.Touch(module, version)
+		if module, version, ok := parse(string(buf[:n])); ok {
+			recorder.Touch(module, version)
 		}
 	}
 }
 
-func parseAccess(line string) (string, string, bool) {
+func parse(line string) (string, string, bool) {
 	fields := strings.Fields(line)
 	if len(fields) == 0 {
 		return "", "", false

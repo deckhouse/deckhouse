@@ -96,7 +96,7 @@ type Config struct {
 	RenderList RenderListFunc
 	// Relisted, when set, is told of a module that joins or leaves the list
 	// of modules, e.g. one Deckhouse runs the embedded copy of now or no
-	// more: its cached versions are no longer right (Versions.Forget).
+	// more: its cached versions are no longer right (versions.Versions.Forget).
 	Relisted func(module string)
 	Logger   *log.Logger
 	Metrics  *metricsstorage.MetricStorage // optional
@@ -105,8 +105,6 @@ type Config struct {
 	// the pod: a miss looks there before rendering, a render is uploaded.
 	// Development branches change with every push and are not kept.
 	Cold ColdCache
-	// ColdNotFound tells a missing archive from a failure of the cold cache.
-	ColdNotFound func(error) bool
 	// IndexAtModuleRoot makes the links of the search index and llms.txt
 	// lead to the module (/modules/<module>/) instead of the version of its
 	// target: the public site serves the target there, as its stable channel.
@@ -185,30 +183,9 @@ type Store struct {
 	// pinnedChannels are the pinned versions of release channels that are no
 	// target of their module, for the metrics.
 	pinnedChannels map[string]bool
-	// indexState names the published targets the index was last written from.
-	indexState string
-	// stable is the version the stable channel of a module links to
-	// (LinkChannels): the site serves it at the root of the module.
-	stable map[string]string
-	// channelModules are the modules with channel links (SetChannels);
-	// channelsMu keeps two SetChannels (the leader and a follower falling
-	// back) from undoing each other.
-	channelModules map[string]bool
-	channelsMu     sync.Mutex
-
-	// targets is the target of every module (SetTargets); served are the
-	// channels SetChannels linked; listed are the modules of the last
-	// WriteList.
-	targets map[string]Target
-	served  map[string]Channels
-	listed  map[string]Listed
 	// failedBranches are the development branches among the targets whose
 	// last render failed for a lasting reason, with how it failed.
 	failedBranches map[Target]Status
-	// listMu serializes the builds of the list of modules; listState is
-	// the data of the last one.
-	listMu    sync.Mutex
-	listState []byte
 	// pinnedOnce is set by the first Pin; started is when the store was made.
 	pinnedOnce bool
 	started    time.Time
@@ -216,32 +193,79 @@ type Store struct {
 	// last update of the pinned versions (initPinSuccessMetric).
 	pinSuccessInit sync.Once
 
-	// background is the work with the cold cache running in the background:
-	// the uploads, and the stale versions readers open looked for rendered
-	// anew. Nothing in the pod waits for it, the tests do.
+	// catalog, channels and index are the list of modules, the links of the
+	// release channels and the search index with targets.json: they are made
+	// of the versions the store publishes.
+	catalog  *catalog
+	channels *channelLinks
+	index    *searchIndex
+	// cold keeps the archives of the versions outside the pod; rerender
+	// renders anew those of older templates in the render slots.
+	cold     *coldArchives
+	rerender *rerenderer
+
+	// background is the stale versions readers open looked for rendered
+	// anew in the cold cache (Touch). Nothing in the pod waits for it, the
+	// tests do.
 	background sync.WaitGroup
-	// putPause is coldPutPause, shorter in the tests.
-	putPause time.Duration
 }
 
 func NewStore(cfg Config) *Store {
-	return &Store{
+	s := &Store{
 		cfg:      cfg,
 		sem:      make(chan struct{}, cfg.MaxRenders),
 		now:      time.Now,
-		putPause: coldPutPause,
 		site:     siteDir,
 		started:  time.Now(),
 		versions: make(map[string]*published),
 		renders:  make(map[string]*render),
 		pinned:   make(map[string]bool),
-		stable:   make(map[string]string),
-		targets:  make(map[string]Target),
-		served:   make(map[string]Channels),
 
-		channelModules: make(map[string]bool),
 		failedBranches: make(map[Target]Status),
 	}
+	s.cold = &coldArchives{
+		ColdCache:  cfg.Cold,
+		revisionOf: cfg.Revision,
+		branch:     cfg.IsBranch,
+		dir:        cfg.Dir,
+		timeout:    cfg.RenderTimeout,
+		logger:     cfg.Logger,
+		metrics:    cfg.Metrics,
+		putPause:   coldPutPause,
+	}
+	s.channels = newChannelLinks(cfg.Dir, cfg.Logger, s.published)
+	s.catalog = &catalog{
+		dir:       cfg.Dir,
+		logger:    cfg.Logger,
+		render:    cfg.RenderList,
+		relisted:  cfg.Relisted,
+		published: s.published,
+		gauge:     s.SetGauge,
+		targets:   make(map[string]Target),
+	}
+	s.index = &searchIndex{
+		dir:          cfg.Dir,
+		logger:       cfg.Logger,
+		atModuleRoot: cfg.IndexAtModuleRoot,
+		publication:  s.publication,
+		stable:       s.channels.stableOf,
+		cold:         s.cold,
+	}
+	s.rerender = &rerenderer{
+		cold:    s.cold,
+		slots:   s.sem,
+		busy:    s.busy,
+		replace: s.replaceStale,
+		render:  cfg.Render,
+		timeout: cfg.RenderTimeout,
+		dir:     cfg.Dir,
+		logger:  cfg.Logger,
+		gauge:   s.SetGauge,
+
+		idlePoll: rerenderIdlePoll,
+	}
+
+	return s
 }
 
 func key(module, version string) string {
@@ -267,7 +291,7 @@ func (s *Store) Load() error {
 	if err := s.loadVersions(); err != nil {
 		return err
 	}
-	s.keepChannelLinks()
+	s.channels.keep(s.site)
 
 	return s.swapSite(newSite, oldSite)
 }
@@ -588,9 +612,9 @@ func (s *Store) renderAndPublish(ctx context.Context, module, version string, wi
 	// from nor written to S3, and is rendered again after a restart.
 	revision := ""
 	if rev == "" {
-		revision = s.coldRevision()
+		revision = s.cold.revision()
 	}
-	if revision != "" && s.isBranch(ctx, module, version) {
+	if revision != "" && s.cold.isBranch(ctx, module, version) {
 		revision = ""
 	}
 	var found, archive string
@@ -598,9 +622,9 @@ func (s *Store) renderAndPublish(ctx context.Context, module, version string, wi
 	if revision != "" {
 		stage(StageDownload)
 		start := time.Now()
-		found, archive, stale = s.fromCold(ctx, revision, module, version, outDir, withAI, mode)
+		found, archive, stale = s.cold.fetch(ctx, revision, module, version, outDir, withAI, mode)
 		if found != "" {
-			observeStage(s.cfg.Metrics, "download", "cold", start)
+			ObserveStage(s.cfg.Metrics, "download", "cold", start)
 		}
 	}
 	defer func() {
@@ -644,7 +668,7 @@ func (s *Store) renderAndPublish(ctx context.Context, module, version string, wi
 
 	var snapshot string
 	if revision != "" && !fromCold {
-		snapshot = s.snapshotForCold(outDir)
+		snapshot = s.cold.snapshot(outDir)
 	}
 	defer func() {
 		if snapshot != "" {
@@ -661,46 +685,26 @@ func (s *Store) renderAndPublish(ctx context.Context, module, version string, wi
 	if err != nil {
 		return 0, err
 	}
-	observeStage(s.cfg.Metrics, "publish", "", publishStart)
+	ObserveStage(s.cfg.Metrics, "publish", "", publishStart)
 
 	switch {
 	case fromCold:
 		s.cfg.Logger.Info("version from S3", slog.String("module", module), slog.String("version", version), slog.Bool("stale", stale))
 		// S3 does not track reads: the archive goes up again, so its age
 		// is when a pod last needed it, which the eviction goes by.
-		s.background.Add(1)
-		go func(archive string) {
-			defer s.background.Done()
-			s.uploadCold(found, "", archive)
-		}(archive)
+		s.cold.uploadAgain(found, archive)
 		archive = ""
 	// An override may have appeared during the render.
-	case snapshot != "" && !s.isBranch(ctx, module, version):
+	case snapshot != "" && !s.cold.isBranch(ctx, module, version):
 		drop := ""
 		if withAI {
 			drop = coldKey(revision, module, version, false)
 		}
-		s.toCold(coldKey(revision, module, version, withAI), drop, snapshot)
+		s.cold.upload(coldKey(revision, module, version, withAI), drop, snapshot)
 		snapshot = ""
 	}
 
 	return size, nil
-}
-
-// isBranch reports whether a version without a revision is a development
-// branch after all; when the cluster does not answer it is taken for one, so
-// S3 is skipped rather than risked.
-func (s *Store) isBranch(ctx context.Context, module, version string) bool {
-	if s.cfg.IsBranch == nil {
-		return false
-	}
-	branch, err := s.cfg.IsBranch(ctx, module, version)
-	if err != nil {
-		s.cfg.Logger.Warn("check for a module pull override, the version is not kept in S3", slog.String("module", module), slog.String("version", version), log.Err(err))
-		return true
-	}
-
-	return branch
 }
 
 // publish renames a rendered version into place and links it for nginx under
@@ -865,10 +869,12 @@ func (s *Store) renderPinned(ctx context.Context, t Target, withAI bool) (err er
 
 // failedStatus is the status of a render that failed with err.
 func failedStatus(err error) Status {
+	k := kindOf(err)
+
 	return Status{
 		Stage:    StageFailed,
 		Error:    reason(err),
-		NotFound: errors.Is(err, ErrVersionNotFound) || errors.Is(err, docs.ErrNoPages),
+		NotFound: k == missing || k == noDocs,
 	}
 }
 
@@ -924,7 +930,7 @@ func (s *Store) restorePinned(ctx context.Context, t Target, withAI bool) (bool,
 	replace := published && (v.stale || withAI && !v.ai)
 	_, rendering := s.renders[k]
 	s.mu.Unlock()
-	if published && !replace || rendering || t.Rev != "" || s.coldRevision() == "" {
+	if published && !replace || rendering || t.Rev != "" || s.cold.revision() == "" {
 		return published, nil
 	}
 
@@ -967,6 +973,20 @@ func (s *Store) published(t Target) bool {
 	_, ok := s.versions[key(t.Module, t.Version)]
 
 	return ok
+}
+
+// publication returns how the version of the target is published; false
+// when it is not.
+func (s *Store) publication(t Target) (published, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	v, ok := s.versions[key(t.Module, t.Version)]
+	if !ok {
+		return published{}, false
+	}
+
+	return *v, true
 }
 
 // hasAIExport reports whether a version on the volume was rendered with the
@@ -1014,148 +1034,6 @@ func (s *Store) link(module, version string) error {
 	}
 
 	return nil
-}
-
-// LinkChannels points the release channels of the module at their published
-// versions for nginx: .site/<lang>/modules/<module>/<channel> is a link like
-// the one of the version, so the pages of a version serve the URLs of the
-// channels as well (their links are relative, see docs.RenderVersion). A
-// channel whose version is not published keeps its link; a channel that is
-// gone loses it. Each link is replaced at once, never missing in between.
-func (s *Store) LinkChannels(module string, chans Channels) {
-	// The module and the versions may come from targets.json in S3 and
-	// become paths here.
-	if err := docs.ValidateModuleName(module); err != nil {
-		s.cfg.Logger.Warn("skip the release channels of a module", log.Err(err))
-		return
-	}
-	valid := make(Channels, len(chans))
-	for channel, version := range chans {
-		if err := docs.ValidateModuleTag(module, version); err != nil {
-			s.cfg.Logger.Warn("skip a release channel", slog.String("channel", channel), log.Err(err))
-			continue
-		}
-		valid[channel] = version
-	}
-	chans = valid
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	delete(s.stable, module)
-	if v, ok := chans["stable"]; ok {
-		if _, published := s.versions[key(module, v)]; published {
-			s.stable[module] = v
-		}
-	}
-
-	// served are the versions the links point at: a channel whose new
-	// version is not published keeps the old one, and the version menu
-	// shows that one.
-	served := make(Channels)
-	for _, lang := range docs.Languages {
-		dir := filepath.Join(s.cfg.Dir, s.site, lang, "modules", module)
-		for _, channel := range siteChannels {
-			link := filepath.Join(dir, channel)
-			version, ok := chans[channel]
-			if !ok {
-				if err := os.Remove(link); err != nil && !errors.Is(err, fs.ErrNotExist) {
-					s.cfg.Logger.Warn("remove channel link", slog.String("path", link), log.Err(err))
-				}
-				continue
-			}
-			_, published := s.versions[key(module, version)]
-			if _, err := os.Stat(filepath.Join(s.cfg.Dir, module, version, lang)); !published || err != nil {
-				if target, err := os.Readlink(link); err == nil && served[channel] == "" {
-					served[channel] = filepath.Base(filepath.Dir(target))
-				}
-				continue
-			}
-
-			if err := s.linkChannel(dir, link, module, version, lang); err != nil {
-				s.cfg.Logger.Warn("link channel", slog.String("path", link), log.Err(err))
-				continue
-			}
-			served[channel] = version
-		}
-	}
-	if len(served) == 0 {
-		delete(s.served, module)
-	} else {
-		s.served[module] = served
-	}
-}
-
-func (s *Store) linkChannel(dir, link, module, version, lang string) error {
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return err
-	}
-	tmp := link + ".new"
-	os.Remove(tmp)
-	if err := os.Symlink(filepath.Join("..", "..", "..", "..", module, version, lang), tmp); err != nil {
-		return err
-	}
-
-	return os.Rename(tmp, link)
-}
-
-// SetChannels links the release channels of every module in chans
-// (LinkChannels) and removes the channel links of the modules no longer in
-// it: a module gone from the registries leaves no channel pointing at a
-// version that is evicted.
-func (s *Store) SetChannels(chans map[string]Channels) {
-	s.channelsMu.Lock()
-	defer s.channelsMu.Unlock()
-
-	s.mu.Lock()
-	prev := s.channelModules
-	s.channelModules = make(map[string]bool, len(chans))
-	for module := range chans {
-		s.channelModules[module] = true
-	}
-	s.mu.Unlock()
-
-	for module, c := range chans {
-		s.LinkChannels(module, c)
-	}
-	for module := range prev {
-		if _, ok := chans[module]; !ok {
-			s.LinkChannels(module, nil)
-		}
-	}
-}
-
-// keepChannelLinks carries the channel links of the served link tree into
-// the one Load builds, for the versions still on the volume: the channel
-// pages stay served until the Pinner links them again.
-func (s *Store) keepChannelLinks() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	for _, lang := range docs.Languages {
-		modulesDir := filepath.Join(s.cfg.Dir, siteDir, lang, "modules")
-		modules, err := os.ReadDir(modulesDir)
-		if err != nil {
-			continue
-		}
-		for _, m := range modules {
-			for _, channel := range siteChannels {
-				target, err := os.Readlink(filepath.Join(modulesDir, m.Name(), channel))
-				if err != nil {
-					continue
-				}
-				version := filepath.Base(filepath.Dir(target))
-				if _, ok := s.versions[key(m.Name(), version)]; !ok || target != filepath.Join("..", "..", "..", "..", m.Name(), version, lang) {
-					continue
-				}
-				dir := filepath.Join(s.cfg.Dir, s.site, lang, "modules", m.Name())
-				s.channelModules[m.Name()] = true
-				if err := s.linkChannel(dir, filepath.Join(dir, channel), m.Name(), version, lang); err != nil {
-					s.cfg.Logger.Warn("keep channel link", slog.String("module", m.Name()), slog.String("channel", channel), log.Err(err))
-				}
-			}
-		}
-	}
 }
 
 // unlink hides a version from nginx before it is removed.

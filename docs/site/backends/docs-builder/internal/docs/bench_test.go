@@ -26,7 +26,7 @@ import (
 )
 
 // BenchmarkRenderVersions renders, one by one, the module versions whose
-// documentation archives (<module>@<version>.tar, as ondemand.DocsArchive
+// documentation archives (<module>@<version>.tar, as registrydocs.DocsArchive
 // writes them) are in $DOCS_BUILDER_BENCH_ARCHIVES.
 func BenchmarkRenderVersions(b *testing.B) {
 	files, _ := filepath.Glob(filepath.Join(os.Getenv("DOCS_BUILDER_BENCH_ARCHIVES"), "*.tar"))

@@ -100,11 +100,24 @@ func (c *clock) add(d time.Duration) {
 	c.t = c.t.Add(d)
 }
 
-func newTestStore(t *testing.T, f *fakeRender, maxSize int64) (*Store, *clock) {
+// waitFor polls cond until it holds, for work done in the background.
+func waitFor(t *testing.T, cond func() bool) {
+	t.Helper()
+
+	deadline := time.Now().Add(5 * time.Second)
+	for !cond() {
+		if time.Now().After(deadline) {
+			t.Fatal("condition not met in 5 s")
+		}
+		time.Sleep(time.Millisecond)
+	}
+}
+
+func newTestStore(t *testing.T, f *fakeRender, maxSize int64, configure ...func(*Config)) (*Store, *clock) {
 	t.Helper()
 
 	c := &clock{t: time.Date(2026, 11, 2, 12, 0, 0, 0, time.UTC)}
-	s := NewStore(Config{
+	cfg := Config{
 		Dir:                t.TempDir(),
 		MaxSize:            maxSize,
 		MaxIdle:            time.Hour,
@@ -115,7 +128,11 @@ func newTestStore(t *testing.T, f *fakeRender, maxSize int64) (*Store, *clock) {
 		NotFoundRetryAfter: time.Hour,
 		Render:             f.render,
 		Logger:             log.NewNop(),
-	})
+	}
+	for _, apply := range configure {
+		apply(&cfg)
+	}
+	s := NewStore(cfg)
 	s.now = c.now
 
 	return s, c
@@ -696,7 +713,7 @@ func TestStoreCountsFailedUploads(t *testing.T) {
 	cold := newMemCold()
 	cold.failPut = true
 	s := newColdStore(t, &fakeRender{size: 10}, cold)
-	s.cfg.Metrics = ms
+	s.cold.metrics = ms
 
 	renderDone(t, s, "echo", "v1.0.0")
 	deadline := time.Now().Add(5 * time.Second)

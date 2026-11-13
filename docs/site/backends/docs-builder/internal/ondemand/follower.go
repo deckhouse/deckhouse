@@ -34,6 +34,26 @@ const FollowFirstEvery = 5 * time.Second
 // targets of the leader before it reads the registry for all of them.
 const FollowFallbackAfter = 10 * time.Minute
 
+// followerStore is what a Follower needs of the Store: the targets.json of
+// the leader and the archives in the cold cache, the pinned versions, the
+// list of modules, the channel links, the search index and the metrics.
+type followerStore interface {
+	coldGetList(ctx context.Context, key string) ([]byte, error)
+	restoreAll(ctx context.Context, targets []Target, chans map[string]Channels, logger *log.Logger) (int, bool)
+
+	renderPinned(ctx context.Context, t Target, withAI bool) error
+	published(t Target) bool
+
+	SetTargets(targets []Target)
+	WriteList(ctx context.Context, modules []Listed, targets []Target) error
+	SetChannels(chans map[string]Channels)
+
+	WriteIndex(targets []Target) error
+	saveIndexedLocal(state indexedState) (string, error)
+
+	SetGauge(name string, v float64)
+}
+
 // Follower keeps a pod that is not the leader in step with it: it takes the
 // targets and the release channels the leader recorded in the cold cache
 // (targets.json), publishes their versions from the archives there, links
@@ -41,12 +61,9 @@ const FollowFallbackAfter = 10 * time.Minute
 // without Hugo, and the list of modules. It reads the registry only for a
 // development branch (ModulePullOverride), which is never in S3.
 type Follower struct {
-	store *Store
-	// missing tells a missing targets.json (the leader has written none yet)
-	// from S3 that does not answer or is not set up yet.
-	missing func(error) bool
-	logger  *log.Logger
-	now     func() time.Time
+	store  followerStore
+	logger *log.Logger
+	now    func() time.Time
 
 	// applied is the targets.json whose versions are all published; a change
 	// of it, or a version missing from it, is applied on the next sync.
@@ -62,8 +79,8 @@ type Follower struct {
 	firstEvery time.Duration
 }
 
-func NewFollower(store *Store, missing func(error) bool, retryAfter time.Duration, logger *log.Logger) *Follower {
-	return &Follower{store: store, missing: missing, retryAfter: retryAfter, logger: logger, now: time.Now, firstEvery: FollowFirstEvery}
+func NewFollower(store followerStore, retryAfter time.Duration, logger *log.Logger) *Follower {
+	return &Follower{store: store, retryAfter: retryAfter, logger: logger, now: time.Now, firstEvery: FollowFirstEvery}
 }
 
 // Sync applies the targets of the leader once. It reports whether the cold
@@ -74,7 +91,10 @@ func NewFollower(store *Store, missing func(error) bool, retryAfter time.Duratio
 func (f *Follower) Sync(ctx context.Context) (bool, bool) {
 	raw, err := f.store.coldGetList(ctx, indexedFile)
 	if err != nil {
-		if f.missing(err) {
+		// The leader has written no targets.json yet. A cold cache that is
+		// not set up yet, unlike for the store, is S3 not answering: the
+		// fallback reads the registry then.
+		if kindOf(err) == missing {
 			return true, true
 		}
 		f.logger.Warn("get the targets of the leader from S3", log.Err(err))

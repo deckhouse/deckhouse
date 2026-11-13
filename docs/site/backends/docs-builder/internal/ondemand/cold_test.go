@@ -39,8 +39,6 @@ import (
 	"github.com/flant/docs-builder/internal/registry"
 )
 
-var errNoArchive = errors.New("no such archive")
-
 // memCold is a cold cache in memory.
 type memCold struct {
 	mu      sync.Mutex
@@ -51,6 +49,8 @@ type memCold struct {
 	failPut  bool
 	// failPuts is how many of the next puts fail.
 	failPuts int
+	// notReady answers every call as a cold cache not set up yet.
+	notReady bool
 	gets     int
 	puts     int
 	// bucketLists counts the listings of the whole bucket.
@@ -67,6 +67,9 @@ func (m *memCold) List(_ context.Context, prefix string) ([]ColdObject, error) {
 	if prefix == "" {
 		m.bucketLists++
 	}
+	if m.notReady {
+		return nil, ErrColdNotReady
+	}
 	var out []ColdObject
 	for k, b := range m.objects {
 		if strings.HasPrefix(k, prefix) {
@@ -81,12 +84,15 @@ func (m *memCold) Get(_ context.Context, key string, w io.Writer) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.gets++
+	if m.notReady {
+		return ErrColdNotReady
+	}
 	if m.failGet {
 		return errors.New("S3 is down")
 	}
 	b, ok := m.objects[key]
 	if !ok {
-		return errNoArchive
+		return ErrColdNotFound
 	}
 	_, err := w.Write(b)
 	return err
@@ -100,6 +106,9 @@ func (m *memCold) Put(_ context.Context, key, path string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.puts++
+	if m.notReady {
+		return ErrColdNotReady
+	}
 	if m.failPut {
 		return errors.New("S3 is down")
 	}
@@ -115,6 +124,9 @@ func (m *memCold) Put(_ context.Context, key, path string) error {
 func (m *memCold) Delete(_ context.Context, key string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.notReady {
+		return ErrColdNotReady
+	}
 	delete(m.objects, key)
 	return nil
 }
@@ -186,13 +198,14 @@ func (m *memCold) waitPuts(t *testing.T, n int) {
 func newColdStore(t *testing.T, f *fakeRender, cold *memCold) *Store {
 	t.Helper()
 
-	s, _ := newTestStore(t, f, 1<<20)
-	s.cfg.Cold = cold
-	s.cfg.ColdNotFound = func(err error) bool { return errors.Is(err, errNoArchive) }
-	s.cfg.Revision = func() string { return "rev1" }
-	s.putPause = time.Millisecond
+	return coldStoreAt(t, f, cold, "rev1")
+}
 
-	return s
+// waitBackground waits for the work the store runs in the background: the
+// stale versions looked for anew, then the uploads, which they start too.
+func waitBackground(s *Store) {
+	s.background.Wait()
+	s.cold.background.Wait()
 }
 
 func TestStoreKeepsVersionsInColdCache(t *testing.T) {
@@ -248,7 +261,7 @@ func TestStoreColdCacheAndPinnedVersions(t *testing.T) {
 	if err := s.RenderPinned(context.Background(), Target{Module: "echo", Version: "main", Rev: "sha256:aaa"}); err != nil {
 		t.Fatal(err)
 	}
-	s.background.Wait()
+	waitBackground(s)
 	for _, k := range cold.keys() {
 		if strings.HasPrefix(k, coldVersionPrefix("echo", "main")) {
 			t.Fatalf("a branch is uploaded: %s", k)
@@ -266,7 +279,7 @@ func TestStoreKeepsBranchOutOfColdCache(t *testing.T) {
 	}
 	newStore := func(isBranch func(context.Context, string, string) (bool, error)) *Store {
 		s := newColdStore(t, f, cold)
-		s.cfg.IsBranch = isBranch
+		s.cold.branch = isBranch
 		return s
 	}
 	// A ModulePullOverride of echo with a tag that looks like a release; a
@@ -323,7 +336,7 @@ func TestStoreKeepsBranchCreatedDuringRenderOutOfColdCache(t *testing.T) {
 	f := &fakeRender{size: 10, release: make(chan struct{})}
 	s := newColdStore(t, f, cold)
 	var override atomic.Bool
-	s.cfg.IsBranch = func(_ context.Context, module, _ string) (bool, error) {
+	s.cold.branch = func(_ context.Context, module, _ string) (bool, error) {
 		return module == "echo" && override.Load(), nil
 	}
 
@@ -382,7 +395,7 @@ func TestStoreUploadsAgainAfterAFailure(t *testing.T) {
 	s := newColdStore(t, &fakeRender{size: 10}, cold)
 
 	renderDone(t, s, "echo", "v1.0.0")
-	s.background.Wait()
+	waitBackground(s)
 	if keys := cold.keys(); !slices.Equal(keys, []string{"echo/v1.0.0/rev1.tar.gz"}) {
 		t.Fatalf("archives %v after two failed uploads, want the version", keys)
 	}
@@ -425,6 +438,29 @@ func TestStoreRendersWhenColdCacheFails(t *testing.T) {
 	// An unavailable S3 is asked once, not for every key of the version.
 	if cold.gets != 1 {
 		t.Fatalf("S3 asked %d times, want 1", cold.gets)
+	}
+}
+
+// A cold cache that is not set up yet has no archive for the store: the
+// version is looked for under every key, rendered and uploaded once, without
+// the retries of a failing upload. A follower takes it for S3 not answering.
+func TestColdCacheNotReady(t *testing.T) {
+	cold := newMemCold()
+	cold.notReady = true
+	f := &fakeRender{size: 10}
+	s := newColdStore(t, f, cold)
+
+	renderDone(t, s, "echo", "v1.0.0")
+	waitBackground(s)
+	if n := f.calls.Load(); n != 1 {
+		t.Fatalf("renders = %d, want 1", n)
+	}
+	if cold.gets != 2 || cold.puts != 1 {
+		t.Fatalf("S3 asked for %d archives and %d uploads, want 2 and 1", cold.gets, cold.puts)
+	}
+
+	if answered, _ := NewFollower(s, time.Hour, log.NewNop()).Sync(context.Background()); answered {
+		t.Fatal("the follower takes a cold cache that is not ready for an answer")
 	}
 }
 
@@ -594,8 +630,11 @@ func TestPinnerRestoresFromColdCacheBeforeResolving(t *testing.T) {
 				{Name: "empty"},
 			}, nil
 		},
-		ChannelVersion: func(context.Context, string) (string, error) { return "v1.0.0", nil },
-		Logger:         log.NewNop(),
+		Policy: ClusterPolicy{
+			ChannelVersion: func(context.Context, string) (string, error) { return "v1.0.0", nil },
+			Logger:         log.NewNop(),
+		},
+		Logger: log.NewNop(),
 	}
 	NewPinner(r, s, time.Hour, log.NewNop()).sync(context.Background())
 
@@ -654,11 +693,14 @@ func TestPinnerRestoresFromColdCacheBeforeResolving(t *testing.T) {
 	// target it was indexed with instead of leaving the search.
 	again := newColdStore(t, f, cold)
 	flaky := r
-	flaky.ChannelVersion = func(_ context.Context, module string) (string, error) {
-		if module == "alb" {
-			return "", errors.New("registry hiccup")
-		}
-		return "v1.0.0", nil
+	flaky.Policy = ClusterPolicy{
+		ChannelVersion: func(_ context.Context, module string) (string, error) {
+			if module == "alb" {
+				return "", errors.New("registry hiccup")
+			}
+			return "v1.0.0", nil
+		},
+		Logger: log.NewNop(),
 	}
 	NewPinner(flaky, again, time.Hour, log.NewNop()).sync(context.Background())
 	readJSON(t, filepath.Join(again.cfg.Dir, indexDir, "en", "search.json"), &search)

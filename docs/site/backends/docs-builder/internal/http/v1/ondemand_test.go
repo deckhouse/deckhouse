@@ -32,7 +32,7 @@ import (
 
 	"github.com/flant/docs-builder/internal/docs"
 	"github.com/flant/docs-builder/internal/ondemand"
-	"github.com/flant/docs-builder/internal/registry"
+	"github.com/flant/docs-builder/internal/ondemand/versions"
 )
 
 // render publishes "v1.*" versions, reports "v2.*" as missing and fails
@@ -89,9 +89,9 @@ func newOnDemandHandlerBlocking(t *testing.T, block chan struct{}) *DocsBuilderH
 			Render:             render(block),
 			Logger:             log.NewNop(),
 		}),
-		Versions: ondemand.NewVersions(func(_ context.Context, module string) ([]string, error) {
+		Versions: versions.New(func(_ context.Context, module string) ([]string, error) {
 			if module == "cert-manager" {
-				return nil, fmt.Errorf("find sources: module %s: %w", module, registry.ErrNoSource)
+				return nil, fmt.Errorf("module %s: %w", module, ondemand.ErrNoVersions)
 			}
 			return []string{"stable", "v1.0.0", "v1.1.0", "v2.0.0", "v3.0.0", "v4.0.0", "v4.1.0", "v4.2.0", "v4.3.0"}, nil
 		}, time.Minute, time.Minute, nil),
@@ -329,14 +329,14 @@ func TestModuleVersionsIncomplete(t *testing.T) {
 	var fail atomic.Bool
 	h := newOnDemandHandler(t)
 	// No TTL: every request lists the registry again.
-	h.onDemand.Versions = ondemand.NewVersions(func(context.Context, string) ([]string, error) {
+	h.onDemand.Versions = versions.New(func(context.Context, string) ([]string, error) {
 		if fail.Load() {
 			return nil, errors.New("registry is down")
 		}
 		return []string{"v1.0.0"}, nil
 	}, 0, time.Minute, nil)
 
-	versions := func() (string, bool) {
+	list := func() (string, bool) {
 		t.Helper()
 		rec := get(h, "/api/v2/modules/echo/versions")
 		var got struct {
@@ -349,7 +349,7 @@ func TestModuleVersionsIncomplete(t *testing.T) {
 		return rec.Body.String(), got.Incomplete && len(got.Versions) == 1
 	}
 
-	if body, incomplete := versions(); incomplete || strings.Contains(body, "incomplete") {
+	if body, incomplete := list(); incomplete || strings.Contains(body, "incomplete") {
 		t.Fatalf("a full list is served as %s; want no incomplete field", body)
 	}
 
@@ -357,7 +357,7 @@ func TestModuleVersionsIncomplete(t *testing.T) {
 	fail.Store(true)
 	deadline := time.Now().Add(5 * time.Second)
 	for {
-		body, incomplete := versions()
+		body, incomplete := list()
 		if incomplete {
 			break
 		}

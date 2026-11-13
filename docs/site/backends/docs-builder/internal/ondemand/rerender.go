@@ -28,7 +28,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
-	"github.com/flant/docs-builder/internal/docs"
 	"github.com/flant/docs-builder/internal/metrics"
 )
 
@@ -42,7 +41,7 @@ const rerenderQuietPasses = 3
 
 // rerenderIdlePoll is how often a pass waiting for the renders of readers and
 // pinned versions to finish looks again.
-var rerenderIdlePoll = time.Second // a variable for the tests
+const rerenderIdlePoll = time.Second
 
 // errCannotRerender marks a version the template revision can not render:
 // its image is gone, Hugo fails on it or, for an archive with the AI export,
@@ -58,7 +57,30 @@ type rerenderFailed struct {
 	Archives []string `json:"archives"`
 }
 
-// Rerender renders anew, one at a time, the archives of the cold cache that
+// rerenderer renders anew, on the leader, the archives of the cold cache
+// that another template revision rendered, in the render slots of the store.
+type rerenderer struct {
+	cold *coldArchives
+	// slots are the render slots of the store; busy reports a render of a
+	// reader or of a pinned version queued or running; replace publishes a
+	// version rendered anew in place of the one the store serves from an
+	// archive of another revision.
+	slots   chan struct{}
+	busy    func() bool
+	replace func(module, version, outDir string, withAI bool)
+	// idlePoll is rerenderIdlePoll, shorter in the tests.
+	idlePoll time.Duration
+	// render renders a version (Config.Render); timeout bounds the render
+	// of an archive with its upload (Config.RenderTimeout).
+	render  RenderFunc
+	timeout time.Duration
+	dir     string
+	logger  *log.Logger
+	// gauge sets a gauge without labels.
+	gauge func(name string, v float64)
+}
+
+// run renders anew, one at a time, the archives of the cold cache that
 // another template revision rendered, while no render of a reader or of a
 // pinned version is running: those go first. Archives of pinned versions go
 // before those of readers, the most recently needed first. A version
@@ -67,16 +89,16 @@ type rerenderFailed struct {
 // archive. It runs on the leader until ctx is done or rerenderQuietPasses
 // passes in a row find nothing to render; every is the pause between passes
 // over the bucket.
-func (s *Store) Rerender(ctx context.Context, every time.Duration) {
+func (r *rerenderer) run(ctx context.Context, every time.Duration) {
 	for quiet := 0; quiet < rerenderQuietPasses; {
-		if revision := s.coldRevision(); revision != "" {
-			found, err := s.rerenderPass(ctx, revision)
+		if revision := r.cold.revision(); revision != "" {
+			found, err := r.pass(ctx, revision)
 			if err == nil && found == 0 {
 				quiet++
 			} else {
 				quiet = 0
-				if err != nil && ctx.Err() == nil && !s.coldMissing(err) {
-					s.cfg.Logger.Warn("render archives of older templates", log.Err(err))
+				if err != nil && ctx.Err() == nil && !coldMissing(err) {
+					r.logger.Warn("render archives of older templates", log.Err(err))
 				}
 			}
 		}
@@ -87,17 +109,17 @@ func (s *Store) Rerender(ctx context.Context, every time.Duration) {
 		case <-time.After(every):
 		}
 	}
-	s.cfg.Logger.Info("no archives of older templates left, rendering them anew stops until the next leader")
+	r.logger.Info("no archives of older templates left, rendering them anew stops until the next leader")
 }
 
-// rerenderPass renders anew the archives of older templates and returns how
-// many it found.
-func (s *Store) rerenderPass(ctx context.Context, revision string) (int, error) {
-	objects, err := s.cfg.Cold.List(ctx, "")
+// pass renders anew the archives of older templates and returns how many it
+// found.
+func (r *rerenderer) pass(ctx context.Context, revision string) (int, error) {
+	objects, err := r.cold.List(ctx, "")
 	if err != nil {
 		return 0, err
 	}
-	failed, err := s.loadRerenderFailed(ctx, revision)
+	failed, err := r.loadFailed(ctx, revision)
 	if err != nil {
 		return 0, err
 	}
@@ -131,15 +153,15 @@ func (s *Store) rerenderPass(ctx context.Context, revision string) (int, error) 
 		return b.LastModified.Compare(a.LastModified)
 	})
 	if len(stale) > 0 {
-		s.cfg.Logger.Info("rendering archives of older templates", slog.Int("archives", len(stale)))
+		r.logger.Info("rendering archives of older templates", slog.Int("archives", len(stale)))
 	}
 	left := len(stale)
-	s.SetGauge(metrics.DocsBuilderOnDemandStaleArchives, float64(left))
+	r.gauge(metrics.DocsBuilderOnDemandStaleArchives, float64(left))
 	settled := func() {
 		left--
-		s.SetGauge(metrics.DocsBuilderOnDemandStaleArchives, float64(left))
+		r.gauge(metrics.DocsBuilderOnDemandStaleArchives, float64(left))
 	}
-	s.SetGauge(metrics.DocsBuilderOnDemandRerenderFailed, float64(len(failed.Archives)))
+	r.gauge(metrics.DocsBuilderOnDemandRerenderFailed, float64(len(failed.Archives)))
 
 	for _, o := range stale {
 		a, _ := parseColdKey(o.Key)
@@ -150,24 +172,24 @@ func (s *Store) rerenderPass(ctx context.Context, revision string) (int, error) 
 		// A ModulePullOverride pulls this tag now: its render would be the
 		// branch, which is not kept in S3, so the old archive goes too. When
 		// the cluster does not answer, the next pass asks again.
-		if s.cfg.IsBranch != nil {
-			branch, err := s.cfg.IsBranch(ctx, a.module, a.version)
+		if r.cold.branch != nil {
+			branch, err := r.cold.branch(ctx, a.module, a.version)
 			if err != nil {
 				return len(stale), fmt.Errorf("check for a module pull override: %w", err)
 			}
 			if branch {
-				if err := s.cfg.Cold.Delete(ctx, o.Key); err != nil {
-					s.cfg.Logger.Warn("delete the archive of a tag a module pull override pulls", slog.String("key", o.Key), log.Err(err))
+				if err := r.cold.Delete(ctx, o.Key); err != nil {
+					r.logger.Warn("delete the archive of a tag a module pull override pulls", slog.String("key", o.Key), log.Err(err))
 				}
 				settled()
 				continue
 			}
 		}
-		if err := s.waitIdle(ctx); err != nil {
+		if err := r.waitIdle(ctx); err != nil {
 			return len(stale), err
 		}
 
-		withAI, err := s.rerender(ctx, revision, a, o.Key)
+		withAI, err := r.renderAnew(ctx, revision, a, o.Key)
 		switch {
 		case err == nil:
 			current[coldVersionPrefix(a.module, a.version)+coldSuffix(withAI)] = true
@@ -175,17 +197,17 @@ func (s *Store) rerenderPass(ctx context.Context, revision string) (int, error) 
 		case ctx.Err() != nil:
 			return len(stale), ctx.Err()
 		case errors.Is(err, errCannotRerender):
-			s.cfg.Logger.Warn("the template can not render the version: its archive of an older template stays",
+			r.logger.Warn("the template can not render the version: its archive of an older template stays",
 				slog.String("module", a.module), slog.String("version", a.version), log.Err(err))
 			failed.Archives = append(failed.Archives, o.Key)
 			settled()
-			s.SetGauge(metrics.DocsBuilderOnDemandRerenderFailed, float64(len(failed.Archives)))
-			if err := s.saveRerenderFailed(ctx, revision, failed); err != nil {
+			r.gauge(metrics.DocsBuilderOnDemandRerenderFailed, float64(len(failed.Archives)))
+			if err := r.saveFailed(ctx, revision, failed); err != nil {
 				return len(stale), err
 			}
 		default:
 			// The registry or S3 failed: the next pass tries again.
-			s.cfg.Logger.Warn("render an archive of an older template", slog.String("key", o.Key), log.Err(err))
+			r.logger.Warn("render an archive of an older template", slog.String("key", o.Key), log.Err(err))
 		}
 	}
 
@@ -199,42 +221,49 @@ func isAIKey(key string) bool {
 
 // waitIdle returns once no render of a reader or of a pinned version is
 // queued or running.
-func (s *Store) waitIdle(ctx context.Context) error {
-	for {
-		s.mu.Lock()
-		busy := false
-		for _, r := range s.renders {
-			busy = busy || r.status.Stage != StageFailed
-		}
-		s.mu.Unlock()
-		if !busy {
-			return nil
-		}
-
+func (r *rerenderer) waitIdle(ctx context.Context) error {
+	for r.busy() {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-time.After(rerenderIdlePoll):
+		case <-time.After(r.idlePoll):
 		}
 	}
+
+	return nil
 }
 
-// rerender renders the version of an archive of another revision in one
+// busy reports whether a render of a reader or of a pinned version is queued
+// or running.
+func (s *Store) busy() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, r := range s.renders {
+		if r.status.Stage != StageFailed {
+			return true
+		}
+	}
+
+	return false
+}
+
+// renderAnew renders the version of an archive of another revision in one
 // render slot, uploads it under this revision and removes the old archive.
 // The version this pod serves from the old archive is replaced. It returns
 // whether the new archive has the AI export.
-func (s *Store) rerender(ctx context.Context, revision string, a coldArchive, oldKey string) (bool, error) {
+func (r *rerenderer) renderAnew(ctx context.Context, revision string, a coldArchive, oldKey string) (bool, error) {
 	select {
-	case s.sem <- struct{}{}:
+	case r.slots <- struct{}{}:
 	case <-ctx.Done():
 		return false, ctx.Err()
 	}
-	defer func() { <-s.sem }()
+	defer func() { <-r.slots }()
 
-	ctx, cancel := context.WithTimeout(ctx, s.cfg.RenderTimeout)
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 
-	tmp := filepath.Join(s.cfg.Dir, tmpDir)
+	tmp := filepath.Join(r.dir, tmpDir)
 	if err := os.MkdirAll(tmp, 0700); err != nil {
 		return false, fmt.Errorf("mkdir tmp: %w", err)
 	}
@@ -245,10 +274,10 @@ func (s *Store) rerender(ctx context.Context, revision string, a coldArchive, ol
 	defer os.RemoveAll(workDir)
 
 	outDir := filepath.Join(workDir, "out")
-	if err := s.cfg.Render(ctx, a.module, a.version, workDir, outDir, a.withAI, func(Stage) {}); err != nil {
+	if err := r.render(ctx, a.module, a.version, workDir, outDir, a.withAI, func(Stage) {}); err != nil {
 		// Only what the new template can not do: a failure of the registry,
 		// of S3 or of the pod is tried again on the next pass.
-		if ctx.Err() == nil && (errors.Is(err, ErrVersionNotFound) || errors.Is(err, docs.ErrNoPages) || errors.Is(err, docs.ErrBuild) || errors.Is(err, docs.ErrDocsTooLarge)) {
+		if ctx.Err() == nil && lasting(err) {
 			return false, fmt.Errorf("%w: %w", errCannotRerender, err)
 		}
 		return false, err
@@ -260,7 +289,7 @@ func (s *Store) rerender(ctx context.Context, revision string, a coldArchive, ol
 		return false, fmt.Errorf("%w: %w", errCannotRerender, errNoAIExport)
 	}
 
-	archive := s.packForCold(outDir)
+	archive := r.cold.pack(outDir)
 	if archive == "" {
 		return false, errors.New("pack the rendered version")
 	}
@@ -268,19 +297,19 @@ func (s *Store) rerender(ctx context.Context, revision string, a coldArchive, ol
 
 	// An override may have appeared while it waited and rendered; the next
 	// pass removes the old archive then.
-	if s.isBranch(ctx, a.module, a.version) {
+	if r.cold.isBranch(ctx, a.module, a.version) {
 		return false, errors.New("a module pull override pulls the tag now")
 	}
 
-	s.replaceStale(a.module, a.version, outDir, withAI)
+	r.replace(a.module, a.version, outDir, withAI)
 
-	if err := s.cfg.Cold.Put(ctx, coldKey(revision, a.module, a.version, withAI), archive); err != nil {
+	if err := r.cold.Put(ctx, coldKey(revision, a.module, a.version, withAI), archive); err != nil {
 		return false, fmt.Errorf("put to S3: %w", err)
 	}
-	if err := s.cfg.Cold.Delete(ctx, oldKey); err != nil {
-		s.cfg.Logger.Warn("delete an archive of an older template", slog.String("key", oldKey), log.Err(err))
+	if err := r.cold.Delete(ctx, oldKey); err != nil {
+		r.logger.Warn("delete an archive of an older template", slog.String("key", oldKey), log.Err(err))
 	}
-	s.cfg.Logger.Info("rendered an archive of an older template anew", slog.String("module", a.module), slog.String("version", a.version))
+	r.logger.Info("rendered an archive of an older template anew", slog.String("module", a.module), slog.String("version", a.version))
 
 	return withAI, nil
 }
@@ -312,38 +341,44 @@ func (s *Store) replaceStale(module, version, outDir string, withAI bool) {
 	}
 }
 
-// loadRerenderFailed reads the archives the revision could not render. S3
-// not answering is an error: the list is still there. A list that does not
+// loadFailed reads the archives the revision could not render. S3 not
+// answering is an error: the list is still there. A list that does not
 // parse is reported and taken for an empty one: the pass writes it anew, at
 // the price of rendering its archives once more. Keeping it would stop the
 // passes of the revision until someone deletes the object by hand.
-func (s *Store) loadRerenderFailed(ctx context.Context, revision string) (rerenderFailed, error) {
+func (r *rerenderer) loadFailed(ctx context.Context, revision string) (rerenderFailed, error) {
 	var failed rerenderFailed
-	raw, err := s.coldGetList(ctx, rerenderFailedKey(revision))
+	raw, err := r.cold.getList(ctx, rerenderFailedKey(revision))
 	if err != nil {
-		if s.coldMissing(err) {
+		if coldMissing(err) {
 			return failed, nil
 		}
 		return failed, fmt.Errorf("get the failed renders from S3: %w", err)
 	}
 	if err := json.Unmarshal(raw, &failed); err != nil {
-		s.cfg.Logger.Error("the list of failed renders in S3 can not be read, it is made anew", slog.String("revision", revision), log.Err(err))
+		r.logger.Error("the list of failed renders in S3 can not be read, it is made anew", slog.String("revision", revision), log.Err(err))
 		return rerenderFailed{}, nil
 	}
 
 	return failed, nil
 }
 
-func (s *Store) saveRerenderFailed(ctx context.Context, revision string, failed rerenderFailed) error {
-	path, err := writeTemp(filepath.Join(s.cfg.Dir, tmpDir, "rerender.json"), func(w io.Writer) error { return json.NewEncoder(w).Encode(failed) })
+func (r *rerenderer) saveFailed(ctx context.Context, revision string, failed rerenderFailed) error {
+	path, err := writeTemp(filepath.Join(r.dir, tmpDir, "rerender.json"), func(w io.Writer) error { return json.NewEncoder(w).Encode(failed) })
 	if err != nil {
 		return err
 	}
 	defer os.Remove(path)
 
-	if err := s.cfg.Cold.Put(ctx, rerenderFailedKey(revision), path); err != nil {
+	if err := r.cold.Put(ctx, rerenderFailedKey(revision), path); err != nil {
 		return fmt.Errorf("put the failed renders to S3: %w", err)
 	}
 
 	return nil
+}
+
+// Rerender renders anew the archives of the cold cache that another template
+// revision rendered (rerenderer).
+func (s *Store) Rerender(ctx context.Context, every time.Duration) {
+	s.rerender.run(ctx, every)
 }

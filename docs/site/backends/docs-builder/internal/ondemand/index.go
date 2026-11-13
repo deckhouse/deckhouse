@@ -28,6 +28,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
@@ -58,6 +59,36 @@ type indexedState struct {
 	Modules []Listed `json:"modules"`
 }
 
+// searchIndex is the search index, llms.txt and the corpus of all modules,
+// built from the published versions of their targets, and targets.json, what
+// they were built from.
+type searchIndex struct {
+	dir    string
+	logger *log.Logger
+	// atModuleRoot makes the links of the index lead to the module instead of
+	// the version of its target (Config.IndexAtModuleRoot).
+	atModuleRoot bool
+	// publication tells how the store has the version of the target
+	// published; stable is the version the stable channel of a module links
+	// to.
+	publication func(t Target) (published, bool)
+	stable      func(module string) string
+	// cold keeps targets.json for the other pods and the next ones.
+	cold indexCold
+
+	mu sync.Mutex
+	// state names the published targets the index was last written from.
+	state string
+}
+
+// indexCold is the cold cache as the index keeps targets.json there; no
+// revision means no cold cache.
+type indexCold interface {
+	revision() string
+	getList(ctx context.Context, key string) ([]byte, error)
+	Put(ctx context.Context, key, path string) error
+}
+
 // WriteIndex merges the search indexes and the AI exports of the targets
 // that are published into the files of indexDir. Each file is replaced
 // atomically, so nginx serves either the old or the new one. No Hugo is
@@ -66,25 +97,25 @@ type indexedState struct {
 // Nothing is written when no target is published (a registry outage at
 // start): an empty index would hide the previous one. Nothing is written either when the published targets
 // are the same as last time, so the files keep their Last-Modified.
-func (s *Store) WriteIndex(targets []Target) error {
-	s.mu.Lock()
+func (ix *searchIndex) WriteIndex(targets []Target) error {
 	dirs := make([]string, 0, len(targets))
 	var state strings.Builder
 	var toRoot []string
 	for _, t := range targets {
-		if v, ok := s.versions[key(t.Module, t.Version)]; ok {
-			dirs = append(dirs, filepath.Join(s.cfg.Dir, t.Module, t.Version))
+		if v, ok := ix.publication(t); ok {
+			dirs = append(dirs, filepath.Join(ix.dir, t.Module, t.Version))
 			// Only the version of the stable channel is at the root of the
 			// module; a module with no stable channel is found at its version.
-			atRoot := s.cfg.IndexAtModuleRoot && s.stable[t.Module] == t.Version
+			atRoot := ix.atModuleRoot && ix.stable(t.Module) == t.Version
 			if atRoot {
 				toRoot = append(toRoot, "/modules/"+t.Module+"/"+strings.ToLower(t.Version)+"/", "/modules/"+t.Module+"/")
 			}
 			fmt.Fprintf(&state, "%s/%s@%s:%t:%t;", t.Module, t.Version, v.rev, v.ai, atRoot)
 		}
 	}
-	unchanged := state.String() == s.indexState
-	s.mu.Unlock()
+	ix.mu.Lock()
+	unchanged := state.String() == ix.state
+	ix.mu.Unlock()
 
 	if len(dirs) == 0 || unchanged {
 		return nil
@@ -97,7 +128,7 @@ func (s *Store) WriteIndex(targets []Target) error {
 			parts = append(parts, filepath.Join(dir, lang))
 		}
 
-		out := filepath.Join(s.cfg.Dir, indexDir, lang)
+		out := filepath.Join(ix.dir, indexDir, lang)
 		if err := os.MkdirAll(out, 0755); err != nil {
 			return fmt.Errorf("mkdir index: %w", err)
 		}
@@ -130,24 +161,24 @@ func (s *Store) WriteIndex(targets []Target) error {
 		return errors.Join(errs...)
 	}
 
-	s.mu.Lock()
-	s.indexState = state.String()
-	s.mu.Unlock()
+	ix.mu.Lock()
+	ix.state = state.String()
+	ix.mu.Unlock()
 
 	return nil
 }
 
 // saveIndexed records the targets the index was built from, on the volume
 // and in the cold cache.
-func (s *Store) saveIndexed(ctx context.Context, state indexedState) error {
-	path, err := s.saveIndexedLocal(state)
+func (ix *searchIndex) saveIndexed(ctx context.Context, state indexedState) error {
+	path, err := ix.saveIndexedLocal(state)
 	if err != nil {
 		return err
 	}
 
-	if s.coldRevision() != "" {
-		if err := s.cfg.Cold.Put(ctx, indexedFile, path); err != nil {
-			if s.coldMissing(err) {
+	if ix.cold.revision() != "" {
+		if err := ix.cold.Put(ctx, indexedFile, path); err != nil {
+			if coldMissing(err) {
 				return errNotUploaded
 			}
 			return fmt.Errorf("put to S3: %w", err)
@@ -163,8 +194,8 @@ var errNotUploaded = errors.New("the targets are not in S3 yet")
 
 // saveIndexedLocal records the targets on the volume only, as a follower
 // does: a pod that becomes the leader starts from them.
-func (s *Store) saveIndexedLocal(state indexedState) (string, error) {
-	dir := filepath.Join(s.cfg.Dir, indexDir)
+func (ix *searchIndex) saveIndexedLocal(state indexedState) (string, error) {
+	dir := filepath.Join(ix.dir, indexDir)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return "", fmt.Errorf("mkdir index: %w", err)
 	}
@@ -183,33 +214,54 @@ func (s *Store) saveIndexedLocal(state indexedState) (string, error) {
 // cache counts as none: reading it again gives the same, and the followers
 // can not read it either. The error means the cold cache did not answer:
 // the caller must not record anything over the file until it is read.
-func (s *Store) loadIndexed(ctx context.Context) (indexedState, error) {
-	raw, err := os.ReadFile(filepath.Join(s.cfg.Dir, indexDir, indexedFile))
+func (ix *searchIndex) loadIndexed(ctx context.Context) (indexedState, error) {
+	raw, err := os.ReadFile(filepath.Join(ix.dir, indexDir, indexedFile))
 	if err == nil {
-		state, err := parseIndexed(raw, s.cfg.Logger)
+		state, err := parseIndexed(raw, ix.logger)
 		if err == nil {
 			return state, nil
 		}
-		s.cfg.Logger.Error("read indexed targets from the volume", log.Err(err))
+		ix.logger.Error("read indexed targets from the volume", log.Err(err))
 	}
-	if s.coldRevision() == "" {
+	if ix.cold.revision() == "" {
 		return indexedState{}, nil
 	}
 
-	raw, err = s.coldGetList(ctx, indexedFile)
-	if s.coldMissing(err) {
+	raw, err = ix.cold.getList(ctx, indexedFile)
+	if coldMissing(err) {
 		return indexedState{}, nil
 	}
 	if err != nil {
 		return indexedState{}, fmt.Errorf("get indexed targets from S3: %w", err)
 	}
-	state, err := parseIndexed(raw, s.cfg.Logger)
+	state, err := parseIndexed(raw, ix.logger)
 	if err != nil {
-		s.cfg.Logger.Error("read indexed targets from S3", log.Err(err))
+		ix.logger.Error("read indexed targets from S3", log.Err(err))
 		return indexedState{}, nil
 	}
 
 	return state, nil
+}
+
+// WriteIndex merges the search indexes and the AI exports of the published
+// targets into the files of indexDir (searchIndex).
+func (s *Store) WriteIndex(targets []Target) error {
+	return s.index.WriteIndex(targets)
+}
+
+// saveIndexed records the targets the index was built from (searchIndex).
+func (s *Store) saveIndexed(ctx context.Context, state indexedState) error {
+	return s.index.saveIndexed(ctx, state)
+}
+
+// saveIndexedLocal records the targets on the volume only (searchIndex).
+func (s *Store) saveIndexedLocal(state indexedState) (string, error) {
+	return s.index.saveIndexedLocal(state)
+}
+
+// loadIndexed returns what saveIndexed recorded (searchIndex).
+func (s *Store) loadIndexed(ctx context.Context) (indexedState, error) {
+	return s.index.loadIndexed(ctx)
 }
 
 // mergeSearch concatenates the documents and the parameters of the search

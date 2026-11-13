@@ -34,6 +34,7 @@ func TestPassWatchReportsAStuckPass(t *testing.T) {
 		Modules: func(context.Context) ([]registry.Module, error) {
 			return []registry.Module{{Name: "echo", Enabled: true, Version: "v1.0.0"}}, nil
 		},
+		Policy: ClusterPolicy{Logger: log.NewNop()},
 		Logger: log.NewNop(),
 	}
 	w := NewPassWatch()

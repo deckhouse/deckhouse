@@ -81,7 +81,7 @@ func TestWriteList(t *testing.T) {
 	s, _ := newTestStore(t, f, 1<<20)
 	s.cfg.Render = summaryRender(f)
 	l := &listRender{}
-	s.cfg.RenderList = l.render
+	s.catalog.render = l.render
 	ctx := context.Background()
 
 	if err := s.renderPinned(ctx, Target{Module: "echo", Version: "v1.0.0"}, false); err != nil {
@@ -150,7 +150,7 @@ func TestPinnerListsEveryModule(t *testing.T) {
 	f := &fakeRender{size: 10}
 	s, _ := newTestStore(t, f, 1<<20)
 	l := &listRender{}
-	s.cfg.RenderList = l.render
+	s.catalog.render = l.render
 	var firstList []card
 	var firstState indexedState
 	render := summaryRender(f)
@@ -174,13 +174,16 @@ func TestPinnerListsEveryModule(t *testing.T) {
 				{Name: "none"},
 			}, nil
 		},
-		ChannelVersion: func(_ context.Context, module string) (string, error) {
-			if module == "none" {
-				return "", errNoChannel
-			}
-			return "v2.0.0", nil
+		Policy: ClusterPolicy{
+			ChannelVersion: func(_ context.Context, module string) (string, error) {
+				if module == "none" {
+					return "", ErrNoChannel
+				}
+				return "v2.0.0", nil
+			},
+			Latest: func(context.Context, string) (string, error) { return "", nil },
+			Logger: log.NewNop(),
 		},
-		Latest: func(context.Context, string) (string, error) { return "", nil },
 		Logger: log.NewNop(),
 	}
 	NewPinner(r, s, time.Hour, log.NewNop()).sync(context.Background())
@@ -232,7 +235,7 @@ func TestPinnerListsEveryModule(t *testing.T) {
 func TestFollowerListsModulesOfLeader(t *testing.T) {
 	_, cold, s, fl := leaderWithFollower(t)
 	l := &listRender{}
-	s.cfg.RenderList = l.render
+	s.catalog.render = l.render
 
 	// The leader recorded no list (its RenderList is not set, as in a
 	// docs-builder before the list): the modules come from the targets.
@@ -291,9 +294,12 @@ func TestLocalOnlyPinnerKeepsTargetsOutOfS3(t *testing.T) {
 
 func TestResolverKeepsModuleWhoseVersionFails(t *testing.T) {
 	r := Resolver{
-		Modules:        func(context.Context) ([]registry.Module, error) { return []registry.Module{{Name: "echo"}}, nil },
-		ChannelVersion: func(context.Context, string) (string, error) { return "", errors.New("registry is down") },
-		Logger:         log.NewNop(),
+		Modules: func(context.Context) ([]registry.Module, error) { return []registry.Module{{Name: "echo"}}, nil },
+		Policy: ClusterPolicy{
+			ChannelVersion: func(context.Context, string) (string, error) { return "", errors.New("registry is down") },
+			Logger:         log.NewNop(),
+		},
+		Logger: log.NewNop(),
 	}
 
 	res, err := r.ResolveChannels(context.Background(), map[string]Target{"echo": {Module: "echo", Version: "v1.0.0"}})
@@ -314,18 +320,25 @@ func TestResolverKeepsModuleWhoseVersionFails(t *testing.T) {
 // on the public site.
 func TestResolverModuleWithoutReleaseRepository(t *testing.T) {
 	notFound := &transport.Error{StatusCode: http.StatusNotFound}
-	versions := NewVersions(func(context.Context, string) ([]string, error) {
-		return nil, fmt.Errorf("%w: source main: %w", ErrNoVersions, notFound)
-	}, time.Minute, time.Minute, nil)
+	// The newest version of the module, as versions.Versions.Latest gives it.
+	latest := func(context.Context, string) (string, error) {
+		return "", fmt.Errorf("%w: source main: %w", ErrNoVersions, notFound)
+	}
 	for _, site := range []bool{false, true} {
 		r := Resolver{
-			Modules:        func(context.Context) ([]registry.Module, error) { return []registry.Module{{Name: "echo"}}, nil },
-			ChannelVersion: func(context.Context, string) (string, error) { return "", errNoChannel },
-			Latest:         LatestVersion(versions),
-			Logger:         log.NewNop(),
+			Modules: func(context.Context) ([]registry.Module, error) { return []registry.Module{{Name: "echo"}}, nil },
+			Policy: ClusterPolicy{
+				ChannelVersion: func(context.Context, string) (string, error) { return "", ErrNoChannel },
+				Latest:         latest,
+				Logger:         log.NewNop(),
+			},
+			Logger: log.NewNop(),
 		}
 		if site {
-			r.Channels = func(context.Context, string) (Channels, error) { return nil, errNoChannel }
+			r.Policy = SitePolicy{
+				Channels: func(context.Context, string) (Channels, error) { return nil, ErrNoChannel },
+				Latest:   latest,
+			}
 		}
 
 		res, err := r.ResolveChannels(context.Background(), map[string]Target{"echo": {Module: "echo", Version: "v1.0.0"}})
@@ -355,11 +368,14 @@ func TestPinnerDropsUnpublishedModuleOnTheSecondPass(t *testing.T) {
 		Modules: func(context.Context) ([]registry.Module, error) {
 			return []registry.Module{{Name: "bare"}, {Name: "echo"}}, nil
 		},
-		ChannelVersion: func(_ context.Context, module string) (string, error) {
-			if module == "bare" || gone.Load() {
-				return "", notFound
-			}
-			return "v1.0.0", nil
+		Policy: ClusterPolicy{
+			ChannelVersion: func(_ context.Context, module string) (string, error) {
+				if module == "bare" || gone.Load() {
+					return "", notFound
+				}
+				return "v1.0.0", nil
+			},
+			Logger: log.NewNop(),
 		},
 		Logger: log.NewNop(),
 	}
@@ -409,7 +425,7 @@ func TestFallbackPinnerListsFromTheVolume(t *testing.T) {
 	cold := newMemCold()
 	s := newColdStore(t, &fakeRender{size: 10}, cold)
 	l := &listRender{}
-	s.cfg.RenderList = l.render
+	s.catalog.render = l.render
 	NewFallbackPinner(siteResolver(), s, time.Hour, log.NewNop()).sync(context.Background())
 
 	// A restart of the pod while S3 does not answer starts from these.
@@ -437,8 +453,10 @@ func TestChannelKeepsPublishedVersionOverPasses(t *testing.T) {
 	stable.Store("v1.0.0")
 	r := Resolver{
 		Modules: func(context.Context) ([]registry.Module, error) { return []registry.Module{{Name: "echo"}}, nil },
-		Channels: func(context.Context, string) (Channels, error) {
-			return Channels{"stable": stable.Load().(string)}, nil
+		Policy: SitePolicy{
+			Channels: func(context.Context, string) (Channels, error) {
+				return Channels{"stable": stable.Load().(string)}, nil
+			},
 		},
 		Logger: log.NewNop(),
 	}
@@ -464,7 +482,7 @@ func TestFollowerServesTheBranchOfAPullOverride(t *testing.T) {
 	cold := newMemCold()
 	f := &fakeRender{size: 10}
 	s := newColdStore(t, f, cold)
-	fl := NewFollower(s, func(err error) bool { return errors.Is(err, errNoArchive) }, time.Hour, log.NewNop())
+	fl := NewFollower(s, time.Hour, log.NewNop())
 	ctx := context.Background()
 
 	// The module ran v1.0.0 before: its version is here, linked as stable.
@@ -502,7 +520,7 @@ func TestFollowerServesTheBranchOfAPullOverride(t *testing.T) {
 		t.Fatalf("menu = %+v, want the branch", menu)
 	}
 	// An upload runs in the background.
-	s.background.Wait()
+	waitBackground(s)
 	for _, k := range cold.keys() {
 		if strings.HasPrefix(k, "console/main/") {
 			t.Fatalf("the branch went to S3: %s", k)
@@ -517,7 +535,7 @@ func TestFollowerRetriesALastingBranchFailureLater(t *testing.T) {
 	cold := newMemCold()
 	f := &fakeRender{size: 10, failErr: fmt.Errorf("hugo: %w", docs.ErrBuild)}
 	s := newColdStore(t, f, cold)
-	fl := NewFollower(s, func(err error) bool { return errors.Is(err, errNoArchive) }, time.Hour, log.NewNop())
+	fl := NewFollower(s, time.Hour, log.NewNop())
 	c := &clock{t: time.Unix(1_800_000_000, 0)}
 	fl.now = c.now
 	ctx := context.Background()
@@ -551,7 +569,7 @@ func TestPinnerShowsProgressOfThePass(t *testing.T) {
 	f := &fakeRender{size: 10}
 	s, _ := newTestStore(t, f, 1<<20)
 	l := &listRender{}
-	s.cfg.RenderList = l.render
+	s.catalog.render = l.render
 	render := summaryRender(f)
 	var seen []card
 	var seenState indexedState
@@ -566,9 +584,12 @@ func TestPinnerShowsProgressOfThePass(t *testing.T) {
 		Modules: func(context.Context) ([]registry.Module, error) {
 			return []registry.Module{{Name: "alpha", Version: "v1.0.0"}, {Name: "zeta", Version: "v1.0.0"}}, nil
 		},
-		ChannelVersion: func(context.Context, string) (string, error) { return "v1.0.0", nil },
-		Latest:         func(context.Context, string) (string, error) { return "", nil },
-		Logger:         log.NewNop(),
+		Policy: ClusterPolicy{
+			ChannelVersion: func(context.Context, string) (string, error) { return "v1.0.0", nil },
+			Latest:         func(context.Context, string) (string, error) { return "", nil },
+			Logger:         log.NewNop(),
+		},
+		Logger: log.NewNop(),
 	}
 	p := NewPinner(r, s, time.Hour, log.NewNop())
 	p.progressEvery = 0
@@ -591,7 +612,7 @@ func TestPinnerShowsProgressOfThePass(t *testing.T) {
 // the registry answers.
 func TestPinnerListsSavedModulesBeforeTheRegistry(t *testing.T) {
 	s, _ := newTestStore(t, &fakeRender{size: 10}, 1000)
-	s.cfg.RenderList = (&listRender{}).render
+	s.catalog.render = (&listRender{}).render
 	if _, err := s.saveIndexedLocal(indexedState{
 		Targets: []Target{{Module: "echo", Version: "v1.0.0"}},
 		Modules: []Listed{{Module: "echo", Enabled: true}, {Module: "later"}},
@@ -608,6 +629,7 @@ func TestPinnerListsSavedModulesBeforeTheRegistry(t *testing.T) {
 			}
 			return nil, errors.New("registry is down")
 		},
+		Policy: ClusterPolicy{Logger: log.NewNop()},
 		Logger: log.NewNop(),
 	}
 	done := make(chan struct{})
@@ -632,7 +654,7 @@ func TestWriteListReportsFailure(t *testing.T) {
 	s, _ := newTestStore(t, &fakeRender{size: 10}, 1000)
 	s.cfg.Metrics = ms
 	l := &listRender{}
-	s.cfg.RenderList = l.render
+	s.catalog.render = l.render
 	gauge := func() string {
 		rec := httptest.NewRecorder()
 		ms.Handler().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/metrics", nil))

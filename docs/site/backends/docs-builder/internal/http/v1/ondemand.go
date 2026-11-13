@@ -15,6 +15,7 @@
 package v1
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -34,10 +35,33 @@ import (
 // queue of renders is full.
 const busyRetryIn = 60
 
+// Store is what the handlers need of the rendered versions (ondemand.Store):
+// their status, the start of a render, the pages that are published, and the
+// targets and the version menus of the modules.
+type Store interface {
+	Status(module, version string) ondemand.Status
+	Start(module, version string) (ondemand.Status, error)
+	HasPage(module, version, lang, page string) bool
+
+	Target(module string) (ondemand.Target, bool)
+	Pending(module string) bool
+	NoDocs(module string) bool
+	BranchFailure(t ondemand.Target) (ondemand.Status, bool)
+	Menu(module string) (ondemand.ModuleMenu, bool)
+}
+
+// Versions is what the handlers need of the versions of a module published
+// in the registry (versions.Versions).
+type Versions interface {
+	List(ctx context.Context, module string) ([]string, error)
+	Has(ctx context.Context, module, version string) (bool, error)
+	Incomplete(module string) bool
+}
+
 // OnDemand renders module versions on request.
 type OnDemand struct {
-	Store    *ondemand.Store
-	Versions *ondemand.Versions
+	Store    Store
+	Versions Versions
 	// Site writes the links of the public site: no language in the path.
 	Site bool
 	// Ready, when set, holds /readyz back until the versions the pod serves

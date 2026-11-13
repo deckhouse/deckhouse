@@ -24,6 +24,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"slices"
 	"strings"
 	"sync/atomic"
@@ -202,7 +203,7 @@ func TestAuthenticator(t *testing.T) {
 }
 
 func TestTransportWithCAInvalid(t *testing.T) {
-	if _, err := transportWithCA("not a certificate"); err == nil {
+	if _, err := transportWithCA("not a certificate", responseHeaderTimeout); err == nil {
 		t.Fatal("want an error")
 	}
 }
@@ -357,8 +358,8 @@ func TestClientFallback(t *testing.T) {
 				return
 			}
 			var terr *transport.Error
-			if !errors.As(err, &terr) || terr.StatusCode != http.StatusNotFound {
-				t.Fatalf("digest of v1.1.0 %q, %v; want the 404 of the store", got, err)
+			if !errors.As(err, &terr) || terr.StatusCode != http.StatusNotFound || !errors.Is(err, ErrNotFound) {
+				t.Fatalf("digest of v1.1.0 %q, %v; want the 404 of the store, ErrNotFound", got, err)
 			}
 			if n := upstream.requests.Load(); n != 0 {
 				t.Fatalf("%d requests to the upstream, want none while the store answers", n)
@@ -377,8 +378,8 @@ func TestClientFallbackErrors(t *testing.T) {
 
 	_, err := client.ListTags(context.Background(), "echo")
 	var terr *transport.Error
-	if !errors.As(err, &terr) || terr.StatusCode != http.StatusNotFound || !strings.Contains(err.Error(), "403") {
-		t.Fatalf("err = %v; want the 404 of the upstream, telling the 403 of the store", err)
+	if !errors.As(err, &terr) || terr.StatusCode != http.StatusNotFound || !errors.Is(err, ErrNotFound) || !strings.Contains(err.Error(), "403") {
+		t.Fatalf("err = %v; want the 404 of the upstream, ErrNotFound, telling the 403 of the store", err)
 	}
 
 	upstream.requests.Store(0)
@@ -387,6 +388,29 @@ func TestClientFallbackErrors(t *testing.T) {
 	_, err = client.ListTags(ctx, "echo")
 	if err == nil || strings.Contains(err.Error(), upstream.host) || upstream.requests.Load() != 0 {
 		t.Fatalf("err = %v, %d requests to the upstream; want the error of the store alone", err, upstream.requests.Load())
+	}
+}
+
+func TestHeadUnsupported(t *testing.T) {
+	canceled, cancel := context.WithCancel(context.Background())
+	cancel()
+	for _, tt := range []struct {
+		name string
+		ctx  context.Context
+		err  error
+		want bool
+	}{
+		{"no digest in the answer", context.Background(), errors.New("HEAD x: response did not include Docker-Content-Digest header"), true},
+		{"HEAD not allowed", context.Background(), &transport.Error{StatusCode: http.StatusMethodNotAllowed}, true},
+		{"registry error", context.Background(), &transport.Error{StatusCode: http.StatusInternalServerError}, false},
+		{"registry unreachable", context.Background(), &url.Error{Op: "Head", URL: "https://r.example", Err: errors.New("connection refused")}, false},
+		{"deadline of the request", context.Background(), context.DeadlineExceeded, false},
+		{"request given up", canceled, errors.New("HEAD x: response did not include Docker-Content-Digest header"), false},
+		{"an answer", context.Background(), nil, false},
+	} {
+		if got := headUnsupported(tt.ctx, tt.err); got != tt.want {
+			t.Errorf("%s: %v, want %v", tt.name, got, tt.want)
+		}
 	}
 }
 
@@ -503,14 +527,10 @@ func TestClientCountsRequestsAndKeepsTheConnection(t *testing.T) {
 	}
 }
 
-// A registry that took a request and does not answer fails it after
-// responseHeaderTimeout instead of holding the caller; the next request gets
-// a new connection.
+// A registry that took a request and does not answer fails it after the
+// header timeout (responseHeaderTimeout) instead of holding the caller; the
+// next request gets a new connection.
 func TestClientGivesUpOnASilentRegistry(t *testing.T) {
-	old := responseHeaderTimeout
-	responseHeaderTimeout = 100 * time.Millisecond
-	t.Cleanup(func() { responseHeaderTimeout = old })
-
 	reg := ggcrregistry.New()
 	var silent atomic.Bool
 	gone := make(chan struct{})
@@ -529,7 +549,7 @@ func TestClientGivesUpOnASilentRegistry(t *testing.T) {
 
 	host := strings.TrimPrefix(srv.URL, "http://")
 	want := pushModule(t, host, []name.Option{name.Insecure}, nil, "echo", "v1.2.3", "stable")
-	client, err := NewClient(Source{Name: "src", Repo: host + "/modules", Scheme: "HTTP"})
+	client, err := newClient(Source{Name: "src", Repo: host + "/modules", Scheme: "HTTP"}, nil, 100*time.Millisecond)
 	if err != nil {
 		t.Fatal(err)
 	}

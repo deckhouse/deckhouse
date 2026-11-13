@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ondemand
+// Package versions lists the published versions of a module from its release
+// tags, cached for the pages that show them and the pinner.
+package versions
 
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"slices"
 	"sync"
@@ -25,19 +26,14 @@ import (
 
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/singleflight"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 
 	"github.com/flant/docs-builder/internal/docs"
 	"github.com/flant/docs-builder/internal/metrics"
-	"github.com/flant/docs-builder/internal/registry"
+	"github.com/flant/docs-builder/internal/ondemand"
 )
-
-// TagLister returns the release tags of a module; with an error wrapping
-// errPartialList, the tags of the sources that answered.
-type TagLister func(ctx context.Context, module string) ([]string, error)
 
 // listTimeout bounds one listing of the release tags of a module.
 const listTimeout = time.Minute
@@ -47,7 +43,7 @@ const listTimeout = time.Minute
 // ponytail: a stand-in that reads release tags from the registry, until the
 // cluster has its own list of module versions.
 type Versions struct {
-	list      TagLister
+	list      ondemand.TagLister
 	ttl       time.Duration
 	failedTTL time.Duration
 	now       func() time.Time
@@ -91,23 +87,10 @@ const (
 	hasWait   = 10 * time.Second
 )
 
-// errPartialList means some sources of the module did not answer: the tags
-// come from the others.
-var errPartialList = errors.New("some sources of the module did not answer")
-
-// ErrNoVersions means no source of the module has a release repository.
-var ErrNoVersions = errors.New("module has no release repository")
-
-// Unpublished tells an error of a listing that means the module has no
-// versions to render: no source in the cluster, or no release repository.
-func Unpublished(err error) bool {
-	return errors.Is(err, registry.ErrNoSource) || apierrors.IsNotFound(err) || errors.Is(err, ErrNoVersions)
-}
-
-// NewVersions caches a listing for ttl and a failed one for failedTTL, so a
-// module whose registry can not be listed does not send every page view to
-// the registry.
-func NewVersions(list TagLister, ttl, failedTTL time.Duration, ms *metricsstorage.MetricStorage) *Versions {
+// New caches a listing for ttl and a failed one for failedTTL, so a module
+// whose registry can not be listed does not send every page view to the
+// registry.
+func New(list ondemand.TagLister, ttl, failedTTL time.Duration, ms *metricsstorage.MetricStorage) *Versions {
 	return &Versions{list: list, ttl: ttl, failedTTL: failedTTL, now: time.Now, ms: ms, hasWait: hasWait, cache: make(map[string]cachedVersions)}
 }
 
@@ -128,6 +111,17 @@ func (v *Versions) List(ctx context.Context, module string) ([]string, error) {
 	}
 
 	return v.wait(ctx, ch)
+}
+
+// Latest returns the newest published version of the module, empty when
+// there is none.
+func (v *Versions) Latest(ctx context.Context, module string) (string, error) {
+	list, err := v.List(ctx, module)
+	if err != nil || len(list) == 0 {
+		return "", err
+	}
+
+	return list[0], nil
 }
 
 // Incomplete reports whether the cached list of the module may miss
@@ -242,12 +236,12 @@ func (v *Versions) load(ctx context.Context, module string) ([]string, error) {
 	prev, ok := v.cached(module)
 	// Some sources answered: their versions are kept as a failed list, read
 	// again after failedTTL.
-	partial := errors.Is(err, errPartialList)
+	partial := errors.Is(err, ondemand.ErrPartialList)
 	if err != nil && !partial {
 		// A failed listing keeps the last list; the registry is asked again
 		// after failedTTL. A module gone from the cluster or the registry
 		// loses it.
-		if ok && prev.err == nil && !Unpublished(err) {
+		if ok && prev.err == nil && !ondemand.Unpublished(err) {
 			v.warn(module, err)
 			v.store(module, gen, cachedVersions{versions: prev.versions, until: v.now().Add(v.failedTTL), listed: v.now(), relist: prev.relist, failed: true})
 			return prev.versions, nil
@@ -335,49 +329,4 @@ func releaseVersions(module string, tags []string) []string {
 	slices.SortFunc(versions, func(a, b string) int { return semver.Compare(b, a) })
 
 	return slices.Compact(versions)
-}
-
-// RegistryTags lists release tags in every source of the module. A source
-// that can not be listed is skipped: some sources publish modules without a
-// release repository.
-func RegistryTags(sources ModuleSources, clients *registry.Clients, logger *log.Logger) TagLister {
-	return func(ctx context.Context, module string) ([]string, error) {
-		srcs, err := sources.ForModule(ctx, module)
-		if err != nil {
-			return nil, fmt.Errorf("find sources: %w", err)
-		}
-
-		var tags []string
-		var errs []error
-		for _, src := range srcs {
-			client, err := clients.For(src)
-			if err != nil {
-				errs = append(errs, fmt.Errorf("source %s: %w", src.Name, err))
-				continue
-			}
-
-			t, err := client.ListTags(ctx, module)
-			if err != nil {
-				logger.Warn("list release tags", slog.String("module", module), slog.String("module_source", src.Name), log.Err(err))
-				errs = append(errs, fmt.Errorf("source %s: %w", src.Name, err))
-				continue
-			}
-
-			tags = append(tags, t...)
-		}
-
-		failed := slices.ContainsFunc(errs, func(err error) bool { return !isNotFound(err) })
-		switch {
-		case len(errs) == len(srcs) && !failed:
-			return nil, fmt.Errorf("%w: %w", ErrNoVersions, errors.Join(errs...))
-		case len(errs) == len(srcs):
-			return nil, errors.Join(errs...)
-		case failed:
-			// A source without a release repository is skipped; one that did
-			// not answer may hold versions the others do not.
-			return tags, fmt.Errorf("%w: %w", errPartialList, errors.Join(errs...))
-		}
-
-		return tags, nil
-	}
 }

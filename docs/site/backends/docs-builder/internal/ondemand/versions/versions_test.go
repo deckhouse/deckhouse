@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ondemand
+package versions
 
 import (
 	"context"
@@ -24,15 +24,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
-
-	"github.com/flant/docs-builder/internal/registry"
+	"github.com/flant/docs-builder/internal/ondemand"
 )
 
 func TestVersionsList(t *testing.T) {
 	var calls atomic.Int32
 	tags := []string{"stable", "alpha", "v1.2.0", "v1.10.0", "vgpu-v100-demo", "v1.10.0", "v1.11.0-rc.1", "v1.9", "latest", "v1.2.0+build"}
-	v := NewVersions(func(context.Context, string) ([]string, error) {
+	v := New(func(context.Context, string) ([]string, error) {
 		if calls.Add(1) > 1 {
 			return []string{"v1.12.0"}, nil
 		}
@@ -72,9 +70,33 @@ func TestVersionsList(t *testing.T) {
 	}
 }
 
+// Latest is the newest version of the list, none for a module without
+// versions; a failed listing is the error.
+func TestVersionsLatest(t *testing.T) {
+	tags := map[string][]string{"echo": {"v1.2.0", "stable", "v1.10.0"}, "bare": {"stable"}}
+	v := New(func(_ context.Context, module string) ([]string, error) {
+		list, ok := tags[module]
+		if !ok {
+			return nil, fmt.Errorf("module %s: %w", module, ondemand.ErrNoVersions)
+		}
+		return list, nil
+	}, time.Minute, time.Minute, nil)
+
+	if got, err := v.Latest(context.Background(), "echo"); got != "v1.10.0" || err != nil {
+		t.Fatalf("latest of echo = %q, %v; want v1.10.0", got, err)
+	}
+	if got, err := v.Latest(context.Background(), "bare"); got != "" || err != nil {
+		t.Fatalf("latest of a module without versions = %q, %v; want none", got, err)
+	}
+	// The pinner marks a module without a release repository by the error.
+	if got, err := v.Latest(context.Background(), "gone"); got != "" || !ondemand.Unpublished(err) {
+		t.Fatalf("latest of a module without a release repository = %q, %v; want an unpublished error", got, err)
+	}
+}
+
 func TestVersionsListKeepsTheListOnError(t *testing.T) {
 	var calls atomic.Int32
-	v := NewVersions(func(context.Context, string) ([]string, error) {
+	v := New(func(context.Context, string) ([]string, error) {
 		if calls.Add(1) > 1 {
 			return nil, errors.New("registry is down")
 		}
@@ -102,6 +124,23 @@ func TestVersionsListKeepsTheListOnError(t *testing.T) {
 	}
 }
 
+type clock struct {
+	mu sync.Mutex
+	t  time.Time
+}
+
+func (c *clock) now() time.Time {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.t
+}
+
+func (c *clock) add(d time.Duration) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.t = c.t.Add(d)
+}
+
 // waitFor polls cond until it holds, for a background listing.
 func waitFor(t *testing.T, cond func() bool) {
 	t.Helper()
@@ -117,7 +156,7 @@ func waitFor(t *testing.T, cond func() bool) {
 
 func TestVersionsListError(t *testing.T) {
 	calls := 0
-	v := NewVersions(func(context.Context, string) ([]string, error) {
+	v := New(func(context.Context, string) ([]string, error) {
 		calls++
 		return nil, errors.New("registry is down")
 	}, 5*time.Minute, time.Minute, nil)
@@ -146,7 +185,7 @@ func TestVersionsListError(t *testing.T) {
 func TestVersionsListIgnoresCanceledRequest(t *testing.T) {
 	release := make(chan struct{})
 	calls := atomic.Int32{}
-	v := NewVersions(func(ctx context.Context, _ string) ([]string, error) {
+	v := New(func(ctx context.Context, _ string) ([]string, error) {
 		calls.Add(1)
 		select {
 		case <-release:
@@ -182,7 +221,7 @@ func TestVersionsListIgnoresCanceledRequest(t *testing.T) {
 func TestVersionsListSharesConcurrentMisses(t *testing.T) {
 	release := make(chan struct{})
 	calls := atomic.Int32{}
-	v := NewVersions(func(context.Context, string) ([]string, error) {
+	v := New(func(context.Context, string) ([]string, error) {
 		calls.Add(1)
 		<-release
 		return []string{"v1.0.0"}, nil
@@ -211,7 +250,7 @@ func TestVersionsListSharesConcurrentMisses(t *testing.T) {
 }
 
 func TestVersionsListDropsExpiredEntries(t *testing.T) {
-	v := NewVersions(func(_ context.Context, module string) ([]string, error) {
+	v := New(func(_ context.Context, module string) ([]string, error) {
 		return nil, errors.New("no module " + module)
 	}, 5*time.Minute, time.Minute, nil)
 	c := &clock{t: time.Date(2026, 11, 2, 12, 0, 0, 0, time.UTC)}
@@ -230,7 +269,7 @@ func TestVersionsListDropsExpiredEntries(t *testing.T) {
 
 func TestVersionsHasListsAgainForANewVersion(t *testing.T) {
 	var calls atomic.Int32
-	v := NewVersions(func(context.Context, string) ([]string, error) {
+	v := New(func(context.Context, string) ([]string, error) {
 		if calls.Add(1) > 1 {
 			return []string{"v1.0.0", "v1.1.0"}, nil
 		}
@@ -269,7 +308,7 @@ func TestVersionsHasListsAgainForANewVersion(t *testing.T) {
 
 func TestVersionsListRetriesAfterTheFailureTTL(t *testing.T) {
 	var calls atomic.Int32
-	v := NewVersions(func(context.Context, string) ([]string, error) {
+	v := New(func(context.Context, string) ([]string, error) {
 		switch calls.Add(1) {
 		case 1:
 			return []string{"v1.0.0"}, nil
@@ -301,9 +340,9 @@ func TestVersionsListRetriesAfterTheFailureTTL(t *testing.T) {
 
 func TestVersionsListDropsAModuleGoneFromTheCluster(t *testing.T) {
 	var calls atomic.Int32
-	v := NewVersions(func(context.Context, string) ([]string, error) {
+	v := New(func(context.Context, string) ([]string, error) {
 		if calls.Add(1) > 1 {
-			return nil, fmt.Errorf("module echo: %w", registry.ErrNoSource)
+			return nil, fmt.Errorf("module echo: %w", ondemand.ErrNoVersions)
 		}
 		return []string{"v1.0.0"}, nil
 	}, 5*time.Minute, time.Minute, nil)
@@ -315,13 +354,13 @@ func TestVersionsListDropsAModuleGoneFromTheCluster(t *testing.T) {
 	v.List(context.Background(), "echo") //nolint:errcheck // starts the listing that finds no source
 	waitFor(t, func() bool {
 		_, err := v.List(context.Background(), "echo")
-		return Unpublished(err)
+		return ondemand.Unpublished(err)
 	})
 }
 
 func TestVersionsHasWaitsLongerForEveryRelistingWithNothingNew(t *testing.T) {
 	var calls atomic.Int32
-	v := NewVersions(func(context.Context, string) ([]string, error) {
+	v := New(func(context.Context, string) ([]string, error) {
 		calls.Add(1)
 		return []string{"v1.0.0"}, nil
 	}, 30*time.Minute, time.Minute, nil)
@@ -345,7 +384,7 @@ func TestVersionsHasGivesUpWithTheReader(t *testing.T) {
 	release := make(chan struct{})
 	defer close(release)
 	var calls atomic.Int32
-	v := NewVersions(func(context.Context, string) ([]string, error) {
+	v := New(func(context.Context, string) ([]string, error) {
 		if calls.Add(1) > 1 {
 			<-release
 		}
@@ -363,18 +402,10 @@ func TestVersionsHasGivesUpWithTheReader(t *testing.T) {
 	}
 }
 
-func TestRegistryTagsWithoutReleaseRepository(t *testing.T) {
-	r := newTestRegistry(t)
-	_, err := RegistryTags(r.sources(), registry.NewClients(), log.NewNop())(context.Background(), "echo")
-	if !errors.Is(err, ErrNoVersions) || !Unpublished(err) {
-		t.Fatalf("err = %v; want ErrNoVersions", err)
-	}
-}
-
 func TestVersionsHasAfterTheWait(t *testing.T) {
 	release := make(chan struct{})
 	var calls atomic.Int32
-	v := NewVersions(func(context.Context, string) ([]string, error) {
+	v := New(func(context.Context, string) ([]string, error) {
 		if calls.Add(1) > 1 {
 			<-release
 			return []string{"v1.1.0", "v1.0.0"}, nil
@@ -399,7 +430,7 @@ func TestVersionsRelistAfterAChangedOrFailedList(t *testing.T) {
 	var calls atomic.Int32
 	var fail atomic.Bool
 	lists := [][]string{{"v1.0.0"}, {"v1.0.0"}, {"v1.0.0"}, {"v1.1.0", "v1.0.0"}}
-	v := NewVersions(func(context.Context, string) ([]string, error) {
+	v := New(func(context.Context, string) ([]string, error) {
 		if fail.Load() {
 			calls.Add(1)
 			return nil, errors.New("registry is down")
@@ -438,7 +469,7 @@ func TestVersionsRelistAfterAChangedOrFailedList(t *testing.T) {
 
 func TestVersionsHasDoesNotKnowWithAStaleList(t *testing.T) {
 	var fail atomic.Bool
-	v := NewVersions(func(context.Context, string) ([]string, error) {
+	v := New(func(context.Context, string) ([]string, error) {
 		if fail.Load() {
 			return nil, errors.New("registry is down")
 		}
@@ -462,7 +493,7 @@ func TestVersionsHasDoesNotKnowWithAStaleList(t *testing.T) {
 
 	// A version missing from the kept list may be published: the render
 	// finds out, the reader does not get "not found".
-	if ok, err := v.Has(context.Background(), "echo", "v1.1.0"); ok || !errors.Is(err, errStaleList) || Unpublished(err) {
+	if ok, err := v.Has(context.Background(), "echo", "v1.1.0"); ok || !errors.Is(err, errStaleList) || ondemand.Unpublished(err) {
 		t.Fatalf("has = %v, %v; want errStaleList", ok, err)
 	}
 	if ok, err := v.Has(context.Background(), "echo", "v1.0.0"); !ok || err != nil {
@@ -470,19 +501,12 @@ func TestVersionsHasDoesNotKnowWithAStaleList(t *testing.T) {
 	}
 }
 
-func TestRegistryTagsOfASourceThatDidNotAnswer(t *testing.T) {
-	r := newTestRegistry(t)
-	r.push("src1/echo/release:v1.0.0", release("v1.0.0")...)
-	r.failing.Store(&[]string{"/v2/src2/"})
-
-	tags, err := RegistryTags(r.sources(), registry.NewClients(), log.NewNop())(context.Background(), "echo")
-	if !errors.Is(err, errPartialList) || !slices.Equal(tags, []string{"v1.0.0"}) {
-		t.Fatalf("tags %v, err %v; want the tags of src1 and errPartialList", tags, err)
-	}
-
-	// The versions of the source that answered are kept, read again after
-	// failedTTL.
-	v := NewVersions(RegistryTags(r.sources(), registry.NewClients(), log.NewNop()), 30*time.Minute, time.Minute, nil)
+// The versions of the sources that answered are kept, read again after
+// failedTTL.
+func TestVersionsListKeepsAPartialList(t *testing.T) {
+	v := New(func(context.Context, string) ([]string, error) {
+		return []string{"v1.0.0"}, fmt.Errorf("%w: source src2: refused", ondemand.ErrPartialList)
+	}, 30*time.Minute, time.Minute, nil)
 	c := &clock{t: time.Date(2026, 11, 2, 12, 0, 0, 0, time.UTC)}
 	v.now = c.now
 	got, err := v.List(context.Background(), "echo")
@@ -497,22 +521,9 @@ func TestRegistryTagsOfASourceThatDidNotAnswer(t *testing.T) {
 	}
 }
 
-// The tags of the store are the list, complete, although the upstream behind
-// it refuses docs-builder: the upstream is read only where the store fails.
-func TestRegistryTagsOfTheStore(t *testing.T) {
-	r := newTestRegistry(t)
-	r.push("store/echo/release:v1.0.0", release("v1.0.0")...)
-	r.failing.Store(&[]string{"/v2/upstream/"})
-
-	tags, err := RegistryTags(r.storeThenUpstream(), registry.NewClients(), log.NewNop())(context.Background(), "echo")
-	if err != nil || !slices.Equal(tags, []string{"v1.0.0"}) {
-		t.Fatalf("tags %v, %v; want v1.0.0 of the store, complete", tags, err)
-	}
-}
-
 func TestVersionsForget(t *testing.T) {
 	var calls atomic.Int32
-	v := NewVersions(func(context.Context, string) ([]string, error) {
+	v := New(func(context.Context, string) ([]string, error) {
 		calls.Add(1)
 		return []string{"v1.0.0"}, nil
 	}, time.Hour, time.Minute, nil)
@@ -536,7 +547,7 @@ func TestVersionsForget(t *testing.T) {
 func TestVersionsForgetDuringAListing(t *testing.T) {
 	release := make(chan struct{})
 	var calls atomic.Int32
-	v := NewVersions(func(context.Context, string) ([]string, error) {
+	v := New(func(context.Context, string) ([]string, error) {
 		if calls.Add(1) == 1 {
 			<-release
 			return []string{"v1.0.0"}, nil

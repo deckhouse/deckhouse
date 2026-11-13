@@ -33,8 +33,11 @@ import (
 func coldStoreAt(t *testing.T, f *fakeRender, cold *memCold, revision string) *Store {
 	t.Helper()
 
-	s := newColdStore(t, f, cold)
-	s.cfg.Revision = func() string { return revision }
+	s, _ := newTestStore(t, f, 1<<20, func(cfg *Config) {
+		cfg.Cold = cold
+		cfg.Revision = func() string { return revision }
+	})
+	s.cold.putPause = time.Millisecond
 
 	return s
 }
@@ -60,7 +63,7 @@ func TestStoreServesArchiveOfOlderTemplate(t *testing.T) {
 
 	// The leader renders it anew in the background and replaces both the
 	// archive and the published version.
-	if _, err := s.rerenderPass(context.Background(), "rev2"); err != nil {
+	if _, err := s.rerender.pass(context.Background(), "rev2"); err != nil {
 		t.Fatal(err)
 	}
 	if n := f.calls.Load(); n != 2 {
@@ -77,7 +80,7 @@ func TestStoreServesArchiveOfOlderTemplate(t *testing.T) {
 	}
 
 	// Nothing is left to render.
-	if _, err := s.rerenderPass(context.Background(), "rev2"); err != nil || f.calls.Load() != 2 {
+	if _, err := s.rerender.pass(context.Background(), "rev2"); err != nil || f.calls.Load() != 2 {
 		t.Fatalf("renders = %d, err %v: want no more", f.calls.Load(), err)
 	}
 }
@@ -89,9 +92,9 @@ func TestRerenderKeepsArchiveTheTemplateCannotRender(t *testing.T) {
 	cold.waitFor(t, "echo/v1.0.0/rev1.tar.gz")
 
 	s := coldStoreAt(t, f, cold, "rev2")
-	render := s.cfg.Render
+	render := s.rerender.render
 	var renderErr error
-	s.cfg.Render = func(ctx context.Context, module, version, workDir, outDir string, withAI bool, stage func(Stage)) error {
+	s.rerender.render = func(ctx context.Context, module, version, workDir, outDir string, withAI bool, stage func(Stage)) error {
 		if renderErr != nil {
 			f.calls.Add(1)
 			return renderErr
@@ -101,9 +104,9 @@ func TestRerenderKeepsArchiveTheTemplateCannotRender(t *testing.T) {
 
 	// A failure of the registry or of the pod is tried again on the next
 	// pass, the archive is not listed as failed.
-	for _, transient := range []error{fmt.Errorf("%w: registry is down", errFetch), errors.New("no space left on device")} {
+	for _, transient := range []error{fmt.Errorf("%w: registry is down", ErrFetch), errors.New("no space left on device")} {
 		renderErr = transient
-		if _, err := s.rerenderPass(context.Background(), "rev2"); err != nil {
+		if _, err := s.rerender.pass(context.Background(), "rev2"); err != nil {
 			t.Fatal(err)
 		}
 		if _, ok := cold.objects[rerenderFailedKey("rev2")]; ok {
@@ -113,7 +116,7 @@ func TestRerenderKeepsArchiveTheTemplateCannotRender(t *testing.T) {
 
 	// Hugo failing on it is what the template can not do.
 	renderErr = fmt.Errorf("%w: template error", docs.ErrBuild)
-	if _, err := s.rerenderPass(context.Background(), "rev2"); err != nil {
+	if _, err := s.rerender.pass(context.Background(), "rev2"); err != nil {
 		t.Fatal(err)
 	}
 	if !slices.Contains(cold.keys(), "echo/v1.0.0/rev1.tar.gz") {
@@ -127,7 +130,7 @@ func TestRerenderKeepsArchiveTheTemplateCannotRender(t *testing.T) {
 	// Another leader does not try it again with this template.
 	f.fail.Store(true)
 	calls := f.calls.Load()
-	if _, err := coldStoreAt(t, f, cold, "rev2").rerenderPass(context.Background(), "rev2"); err != nil || f.calls.Load() != calls {
+	if _, err := coldStoreAt(t, f, cold, "rev2").rerender.pass(context.Background(), "rev2"); err != nil || f.calls.Load() != calls {
 		t.Fatalf("renders %d -> %d, err %v: the failed version is rendered again", calls, f.calls.Load(), err)
 	}
 }
@@ -142,18 +145,18 @@ func TestRerenderKeepsAIExportOfArchive(t *testing.T) {
 	if err := old.RenderPinned(context.Background(), Target{Module: "echo", Version: "v1.0.0"}); err != nil {
 		t.Fatal(err)
 	}
-	old.background.Wait()
+	waitBackground(old)
 
 	f.noAI.Store(true)
 	s := coldStoreAt(t, f, cold, "rev2")
-	if _, err := s.rerenderPass(context.Background(), "rev2"); err != nil {
+	if _, err := s.rerender.pass(context.Background(), "rev2"); err != nil {
 		t.Fatal(err)
 	}
 	if keys := cold.keys(); !slices.Equal(keys, []string{"echo/v1.0.0/rev1.ai.tar.gz", rerenderFailedKey("rev2")}) {
 		t.Fatalf("archives %v, want the one with the export, listed as failed", keys)
 	}
 	calls := f.calls.Load()
-	if _, err := s.rerenderPass(context.Background(), "rev2"); err != nil || f.calls.Load() != calls {
+	if _, err := s.rerender.pass(context.Background(), "rev2"); err != nil || f.calls.Load() != calls {
 		t.Fatalf("renders %d -> %d, err %v: the failed version is rendered again", calls, f.calls.Load(), err)
 	}
 }
@@ -170,8 +173,8 @@ func TestRerenderSkipsBranch(t *testing.T) {
 	// The cluster does not answer: nothing is rendered, the next pass asks
 	// again.
 	s := coldStoreAt(t, f, cold, "rev2")
-	s.cfg.IsBranch = func(context.Context, string, string) (bool, error) { return false, errors.New("apiserver is down") }
-	if _, err := s.rerenderPass(context.Background(), "rev2"); err == nil {
+	s.cold.branch = func(context.Context, string, string) (bool, error) { return false, errors.New("apiserver is down") }
+	if _, err := s.rerender.pass(context.Background(), "rev2"); err == nil {
 		t.Fatal("the pass goes on while the cluster does not answer")
 	}
 	if n := f.calls.Load(); n != 2 {
@@ -180,8 +183,8 @@ func TestRerenderSkipsBranch(t *testing.T) {
 
 	// A ModulePullOverride pulls the tag of echo now: its archive goes, and
 	// the pass goes on to alb.
-	s.cfg.IsBranch = func(_ context.Context, module, _ string) (bool, error) { return module == "echo", nil }
-	if _, err := s.rerenderPass(context.Background(), "rev2"); err != nil {
+	s.cold.branch = func(_ context.Context, module, _ string) (bool, error) { return module == "echo", nil }
+	if _, err := s.rerender.pass(context.Background(), "rev2"); err != nil {
 		t.Fatal(err)
 	}
 	if n := f.calls.Load(); n != 3 {
@@ -198,20 +201,18 @@ func TestRerenderWaitsForReaders(t *testing.T) {
 	renderDone(t, coldStoreAt(t, f, cold, "rev1"), "echo", "v1.0.0")
 	cold.waitFor(t, "echo/v1.0.0/rev1.tar.gz")
 
-	oldPoll := rerenderIdlePoll
-	rerenderIdlePoll = 10 * time.Millisecond
-	t.Cleanup(func() { rerenderIdlePoll = oldPoll })
 	f.release = make(chan struct{})
 	s := coldStoreAt(t, f, cold, "rev2")
+	s.rerender.idlePoll = 10 * time.Millisecond
 	if _, err := s.Start("echo", "v2.0.0"); err != nil {
 		t.Fatal(err)
 	}
 
 	done := make(chan error, 1)
-	go func() { _, err := s.rerenderPass(context.Background(), "rev2"); done <- err }()
+	go func() { _, err := s.rerender.pass(context.Background(), "rev2"); done <- err }()
 
 	// Many polls of waitIdle pass while the reader's render runs.
-	time.Sleep(20 * rerenderIdlePoll)
+	time.Sleep(20 * s.rerender.idlePoll)
 	if n := f.calls.Load(); n != 2 {
 		t.Fatalf("renders = %d, want 2: the background render waits for the reader", n)
 	}
@@ -242,18 +243,18 @@ func TestFromColdPicksNewestOlderArchive(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(s.cfg.Dir, tmpDir), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	key, archive, stale := s.fromCold(context.Background(), "rev3", "echo", "v1.0.0", filepath.Join(t.TempDir(), "out"), false, coldOrRender)
+	key, archive, stale := s.cold.fetch(context.Background(), "rev3", "echo", "v1.0.0", filepath.Join(t.TempDir(), "out"), false, coldOrRender)
 	if key != "echo/v1.0.0/rev2.tar.gz" || !stale || archive == "" {
 		t.Fatalf("key %q, stale %v: want the newest archive of another template", key, stale)
 	}
 
 	// No archive with the AI export: nothing for a pinned version.
-	if key, _, _ := s.fromCold(context.Background(), "rev3", "echo", "v1.0.0", filepath.Join(t.TempDir(), "out"), true, coldOrRender); key != "" {
+	if key, _, _ := s.cold.fetch(context.Background(), "rev3", "echo", "v1.0.0", filepath.Join(t.TempDir(), "out"), true, coldOrRender); key != "" {
 		t.Fatalf("key %q for a version wanted with the AI export", key)
 	}
 
 	// coldFresh takes only an archive of this template.
-	if key, _, _ := s.fromCold(context.Background(), "rev3", "echo", "v1.0.0", filepath.Join(t.TempDir(), "out"), false, coldFresh); key != "" {
+	if key, _, _ := s.cold.fetch(context.Background(), "rev3", "echo", "v1.0.0", filepath.Join(t.TempDir(), "out"), false, coldFresh); key != "" {
 		t.Fatalf("key %q with coldFresh", key)
 	}
 }
@@ -305,7 +306,7 @@ func TestRerenderReplacesFailedListItCannotRead(t *testing.T) {
 
 	s := coldStoreAt(t, f, cold, "rev2")
 	calls := f.calls.Load()
-	if _, err := s.rerenderPass(context.Background(), "rev2"); err != nil {
+	if _, err := s.rerender.pass(context.Background(), "rev2"); err != nil {
 		t.Fatalf("the pass stops on a list of failed renders it can not read: %v", err)
 	}
 	if n := f.calls.Load(); n != calls+1 {

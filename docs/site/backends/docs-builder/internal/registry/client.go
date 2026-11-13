@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"io"
 	"maps"
+	"net"
 	"net/http"
 	"net/url"
 	"path"
@@ -56,12 +57,13 @@ type Client struct {
 }
 
 func NewClient(src Source) (*Client, error) {
-	return newClient(src, nil)
+	return newClient(src, nil, responseHeaderTimeout)
 }
 
 // newClient makes the client of the source; with ms its requests to the
-// registry are counted.
-func newClient(src Source, ms *metricsstorage.MetricStorage) (*Client, error) {
+// registry are counted. A registry that does not start answering a request
+// within headerTimeout fails it (responseHeaderTimeout).
+func newClient(src Source, ms *metricsstorage.MetricStorage, headerTimeout time.Duration) (*Client, error) {
 	var nameOpts []name.Option
 	if strings.EqualFold(src.Scheme, "http") {
 		nameOpts = append(nameOpts, name.Insecure)
@@ -74,7 +76,7 @@ func newClient(src Source, ms *metricsstorage.MetricStorage) (*Client, error) {
 		return nil, fmt.Errorf("auth: %w", err)
 	}
 
-	transport, err := transportWithCA(src.CA)
+	transport, err := transportWithCA(src.CA, headerTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("ca: %w", err)
 	}
@@ -100,7 +102,7 @@ func newClient(src Source, ms *metricsstorage.MetricStorage) (*Client, error) {
 		return client, nil
 	}
 
-	client.fallback, err = newClient(*src.Fallback, ms)
+	client.fallback, err = newClient(*src.Fallback, ms, headerTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("fallback %s: %w", src.Fallback.Name, err)
 	}
@@ -111,7 +113,7 @@ func newClient(src Source, ms *metricsstorage.MetricStorage) (*Client, error) {
 // ListTags returns the tags of the module release repository: the published
 // versions and the release channels.
 func (c *Client) ListTags(ctx context.Context, module string) ([]string, error) {
-	return withFallback(ctx, c, func(r *Client) ([]string, error) {
+	return ask(ctx, c, func(r *Client) ([]string, error) {
 		return r.list(ctx, r.repo+"/"+module+"/release")
 	})
 }
@@ -119,7 +121,7 @@ func (c *Client) ListTags(ctx context.Context, module string) ([]string, error) 
 // ListModules returns the tags of the repository itself: in a module
 // registry they are the names of the modules.
 func (c *Client) ListModules(ctx context.Context) ([]string, error) {
-	return withFallback(ctx, c, func(r *Client) ([]string, error) {
+	return ask(ctx, c, func(r *Client) ([]string, error) {
 		return r.list(ctx, r.repo)
 	})
 }
@@ -140,7 +142,7 @@ func (c *Client) list(ctx context.Context, repository string) ([]string, error) 
 
 // Image returns the full module image of the given version.
 func (c *Client) Image(ctx context.Context, module, tag string) (v1.Image, error) {
-	return withFallback(ctx, c, func(r *Client) (v1.Image, error) {
+	return ask(ctx, c, func(r *Client) (v1.Image, error) {
 		return r.image(ctx, r.repo+"/"+module+":"+tag)
 	})
 }
@@ -149,15 +151,17 @@ func (c *Client) Image(ctx context.Context, module, tag string) (v1.Image, error
 // metadata and, in recent module builds, its documentation, without the
 // templates and charts of the full image.
 func (c *Client) ReleaseImage(ctx context.Context, module, tag string) (v1.Image, error) {
-	return withFallback(ctx, c, func(r *Client) (v1.Image, error) {
+	return ask(ctx, c, func(r *Client) (v1.Image, error) {
 		return r.image(ctx, r.repo+"/"+module+"/release:"+tag)
 	})
 }
 
 // ReleaseDigest returns the digest of the release image a tag points to, e.g.
 // a release channel, with one HEAD request: the manifest is not downloaded.
+// A registry that does not answer HEAD as the API asks fails with
+// ErrHeadUnsupported.
 func (c *Client) ReleaseDigest(ctx context.Context, module, tag string) (string, error) {
-	return withFallback(ctx, c, func(r *Client) (string, error) {
+	digest, err := ask(ctx, c, func(r *Client) (string, error) {
 		ref, err := name.ParseReference(r.repo+"/"+module+"/release:"+tag, r.nameOpts...)
 		if err != nil {
 			return "", fmt.Errorf("parse reference: %w", err)
@@ -170,14 +174,28 @@ func (c *Client) ReleaseDigest(ctx context.Context, module, tag string) (string,
 
 		return desc.Digest.String(), nil
 	})
+	if !errors.Is(err, ErrNotFound) && headUnsupported(ctx, err) {
+		return "", fmt.Errorf("%w: %w", ErrHeadUnsupported, err)
+	}
+
+	return digest, err
 }
 
 // ReleaseImageAt returns the release image with the digest: the one a tag
 // pointed to when ReleaseDigest was asked, even if the tag has moved since.
 func (c *Client) ReleaseImageAt(ctx context.Context, module, digest string) (v1.Image, error) {
-	return withFallback(ctx, c, func(r *Client) (v1.Image, error) {
+	return ask(ctx, c, func(r *Client) (v1.Image, error) {
 		return r.image(ctx, r.repo+"/"+module+"/release@"+digest)
 	})
+}
+
+// ask reads from the registry of c, or from its fallback (withFallback), and
+// marks an answer that the repository, the tag or the image is not there
+// with ErrNotFound.
+func ask[T any](ctx context.Context, c *Client, read func(*Client) (T, error)) (T, error) {
+	v, err := withFallback(ctx, c, read)
+
+	return v, notFound(err)
 }
 
 // withFallback reads from the registry of c and, where it fails, from the
@@ -218,6 +236,63 @@ func failed(ctx context.Context, err error) bool {
 	return errors.As(err, &uerr)
 }
 
+// ErrNotFound means the registry answered that the repository, the tag, the
+// image or a layer of it is not there, as opposed to a registry that could
+// not be asked.
+var ErrNotFound = errors.New("not found in the registry")
+
+// ErrHeadUnsupported means the registry answered HEAD, but not as the API
+// asks: no Docker-Content-Digest, or no HEAD at all. The image is read by
+// the tag instead.
+var ErrHeadUnsupported = errors.New("the registry does not answer HEAD with the digest")
+
+// notFound marks err with ErrNotFound when it is the answer that something is
+// not there (isNotFound).
+func notFound(err error) error {
+	if !isNotFound(err) {
+		return err
+	}
+
+	return fmt.Errorf("%w: %w", ErrNotFound, err)
+}
+
+// isNotFound tells a repository, a tag or an image that is not there apart
+// from a registry that could not be asked.
+func isNotFound(err error) bool {
+	var terr *transport.Error
+	if !errors.As(err, &terr) {
+		return false
+	}
+
+	if terr.StatusCode == http.StatusNotFound {
+		return true
+	}
+
+	for _, d := range terr.Errors {
+		if d.Code == transport.ManifestUnknownErrorCode || d.Code == transport.NameUnknownErrorCode {
+			return true
+		}
+	}
+
+	return false
+}
+
+// headUnsupported tells a registry that answered HEAD but not as the API
+// asks (no Docker-Content-Digest, or no HEAD at all) from one that did not
+// answer, or a request given up: only the first is read by the tag.
+func headUnsupported(ctx context.Context, err error) bool {
+	if err == nil || ctx.Err() != nil {
+		return false
+	}
+	var terr *transport.Error
+	if errors.As(err, &terr) {
+		return terr.StatusCode == http.StatusMethodNotAllowed || terr.StatusCode == http.StatusNotImplemented
+	}
+	var nerr net.Error
+
+	return !errors.As(err, &nerr)
+}
+
 // ErrNoVersion means a release image carries no version.json, or one
 // without a version.
 var ErrNoVersion = errors.New("release image has no version")
@@ -225,8 +300,15 @@ var ErrNoVersion = errors.New("release image has no version")
 // ReleaseVersion reads the module version from version.json of a release
 // image, e.g. the one a release channel tag points to. The file sits in a
 // small layer of its own, so the layers are read smallest first and the
-// documentation layer is usually never downloaded.
+// documentation layer is usually never downloaded. A layer the registry
+// does not have is ErrNotFound.
 func ReleaseVersion(img v1.Image) (string, error) {
+	version, err := releaseVersion(img)
+
+	return version, notFound(err)
+}
+
+func releaseVersion(img v1.Image) (string, error) {
 	layers, err := img.Layers()
 	if err != nil {
 		return "", fmt.Errorf("layers: %w", err)
@@ -391,14 +473,14 @@ func registryHost(ref string) (string, error) {
 // word, fails the request instead of holding the caller for good; the
 // connection is closed, so the next request opens a new one. The body is not
 // bounded: a layer takes as long as the link needs, the callers bound it with
-// their context. A variable for the tests.
-var responseHeaderTimeout = time.Minute
+// their context.
+const responseHeaderTimeout = time.Minute
 
 // transportWithCA trusts the given PEM CA in addition to the system ones and
-// gives up on a registry that does not answer (responseHeaderTimeout).
-func transportWithCA(ca string) (http.RoundTripper, error) {
+// gives up on a registry that does not start answering within headerTimeout.
+func transportWithCA(ca string, headerTimeout time.Duration) (http.RoundTripper, error) {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.ResponseHeaderTimeout = responseHeaderTimeout
+	transport.ResponseHeaderTimeout = headerTimeout
 	if ca == "" {
 		return transport, nil
 	}
@@ -446,7 +528,7 @@ func (c *Clients) For(src Source) (*Client, error) {
 		return cached.client, nil
 	}
 
-	client, err := newClient(src, c.Metrics)
+	client, err := newClient(src, c.Metrics, responseHeaderTimeout)
 	if err != nil {
 		return nil, err
 	}

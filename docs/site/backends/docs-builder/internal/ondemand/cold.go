@@ -29,11 +29,13 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gohugoio/hugo/common/hugo"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 
 	"github.com/flant/docs-builder/internal/docs"
 	"github.com/flant/docs-builder/internal/metrics"
@@ -44,6 +46,12 @@ import (
 // survive a restart and are shared by replicas: an S3 bucket, be it the
 // system storage of the cluster, a bucket of the user or the one of the
 // public site.
+//
+// An object that is not there is an error wrapping ErrColdNotFound; a cold
+// cache that is not set up yet answers every call with one wrapping
+// ErrColdNotReady. The store takes either for an archive missing and renders
+// the version; a follower takes only the first for an answer, and reads the
+// registry itself while the cold cache is not ready.
 type ColdCache interface {
 	// Get writes the archive to w.
 	Get(ctx context.Context, key string, w io.Writer) error
@@ -95,13 +103,54 @@ func (l *limitedWriter) Write(p []byte) (int, error) {
 	return l.w.Write(p)
 }
 
-// coldRevision is the revision of the archives in the cold cache, "" without
+// coldArchives is the cold cache with the archives of rendered release
+// versions in it: their keys under the template revision, packing them,
+// uploading them in the background with retries, unpacking them back and
+// evicting them. A development branch is never kept there.
+type coldArchives struct {
+	ColdCache
+
+	// revisionOf is Config.Revision, branch is Config.IsBranch.
+	revisionOf func() string
+	branch     func(ctx context.Context, module, version string) (bool, error)
+	// dir is the cache volume: the archives are packed and unpacked in its
+	// tmp directory.
+	dir string
+	// timeout bounds an upload in the background (Config.RenderTimeout).
+	timeout time.Duration
+	logger  *log.Logger
+	metrics *metricsstorage.MetricStorage // optional
+
+	// background is the uploads running in the background. Nothing in the
+	// pod waits for them, the tests do.
+	background sync.WaitGroup
+	// putPause is coldPutPause, shorter in the tests.
+	putPause time.Duration
+}
+
+// revision is the revision of the archives in the cold cache, "" without
 // one.
-func (s *Store) coldRevision() string {
-	if s.cfg.Cold == nil || s.cfg.Revision == nil {
+func (c *coldArchives) revision() string {
+	if c.ColdCache == nil || c.revisionOf == nil {
 		return ""
 	}
-	return s.cfg.Revision()
+	return c.revisionOf()
+}
+
+// isBranch reports whether a version without a revision is a development
+// branch after all; when the cluster does not answer it is taken for one, so
+// S3 is skipped rather than risked.
+func (c *coldArchives) isBranch(ctx context.Context, module, version string) bool {
+	if c.branch == nil {
+		return false
+	}
+	branch, err := c.branch(ctx, module, version)
+	if err != nil {
+		c.logger.Warn("check for a module pull override, the version is not kept in S3", slog.String("module", module), slog.String("version", version), log.Err(err))
+		return true
+	}
+
+	return branch
 }
 
 // coldKey is the archive of a version rendered by this template revision;
@@ -172,7 +221,7 @@ func parseColdKey(key string) (coldArchive, bool) {
 	return a, true
 }
 
-// fromCold fills outDir from the cold cache and returns the key and then the
+// fetch fills outDir from the cold cache and returns the key and then the
 // archive it came from; the key is "" when there is none. A version rendered
 // without the AI export may come from the archive of a pinned one, which has
 // more. Without an archive of this revision the newest archive of another
@@ -182,21 +231,21 @@ func parseColdKey(key string) (coldArchive, bool) {
 //
 // With mode coldFresh only an archive of this revision will do: a version
 // served from an older one is replaced by it once the leader rendered it.
-func (s *Store) fromCold(ctx context.Context, revision, module, version, outDir string, withAI bool, mode coldMode) (string, string, bool) {
+func (c *coldArchives) fetch(ctx context.Context, revision, module, version, outDir string, withAI bool, mode coldMode) (string, string, bool) {
 	keys := []string{coldKey(revision, module, version, true)}
 	if !withAI {
 		keys = []string{coldKey(revision, module, version, false), keys[0]}
 	}
 
-	key, archive, missing := s.fromColdKeys(ctx, keys, outDir)
+	key, archive, missing := c.fetchFirst(ctx, keys, outDir)
 	if key != "" || !missing || mode == coldFresh {
 		return key, archive, false
 	}
 
-	objects, err := s.cfg.Cold.List(ctx, coldVersionPrefix(module, version))
+	objects, err := c.List(ctx, coldVersionPrefix(module, version))
 	if err != nil {
-		if !s.coldMissing(err) {
-			s.cfg.Logger.Warn("list versions in S3", slog.String("module", module), slog.String("version", version), log.Err(err))
+		if !coldMissing(err) {
+			c.logger.Warn("list versions in S3", slog.String("module", module), slog.String("version", version), log.Err(err))
 		}
 		return "", "", false
 	}
@@ -208,32 +257,32 @@ func (s *Store) fromCold(ctx context.Context, revision, module, version, outDir 
 		}
 	}
 
-	key, archive, _ = s.fromColdKeys(ctx, keys, outDir)
+	key, archive, _ = c.fetchFirst(ctx, keys, outDir)
 
 	return key, archive, key != ""
 }
 
-// fromColdKeys fills outDir from the first of the keys that has a usable
+// fetchFirst fills outDir from the first of the keys that has a usable
 // archive and returns the key and the archive. The bool reports that none
 // was there (missing), as opposed to a failure of the cold cache, which is
 // not worth asking again.
-func (s *Store) fromColdKeys(ctx context.Context, keys []string, outDir string) (string, string, bool) {
+func (c *coldArchives) fetchFirst(ctx context.Context, keys []string, outDir string) (string, string, bool) {
 	for _, key := range keys {
-		f, err := os.CreateTemp(filepath.Join(s.cfg.Dir, tmpDir), "cold-*.tar.gz")
+		f, err := os.CreateTemp(filepath.Join(c.dir, tmpDir), "cold-*.tar.gz")
 		if err != nil {
-			s.cfg.Logger.Warn("get version from S3", slog.String("key", key), log.Err(err))
+			c.logger.Warn("get version from S3", slog.String("key", key), log.Err(err))
 			return "", "", false
 		}
-		err = s.cfg.Cold.Get(ctx, key, &limitedWriter{w: f, n: maxColdArchive})
+		err = c.Get(ctx, key, &limitedWriter{w: f, n: maxColdArchive})
 		f.Close()
 		if err != nil {
 			os.Remove(f.Name())
 			// Only a missing archive is worth looking for under another
 			// key: an unavailable S3 would make the reader wait twice.
-			if s.coldMissing(err) {
+			if coldMissing(err) {
 				continue
 			}
-			s.cfg.Logger.Warn("get version from S3", slog.String("key", key), log.Err(err))
+			c.logger.Warn("get version from S3", slog.String("key", key), log.Err(err))
 			return "", "", false
 		}
 
@@ -242,7 +291,7 @@ func (s *Store) fromColdKeys(ctx context.Context, keys []string, outDir string) 
 			err = errColdNoPages
 		}
 		if err != nil {
-			s.cfg.Logger.Warn("unpack version from S3", slog.String("key", key), log.Err(err))
+			c.logger.Warn("unpack version from S3", slog.String("key", key), log.Err(err))
 			os.Remove(f.Name())
 			os.RemoveAll(outDir)
 			// A broken archive would reach every reader of the version: it
@@ -252,8 +301,8 @@ func (s *Store) fromColdKeys(ctx context.Context, keys []string, outDir string) 
 			if !errors.Is(err, errBadArchive) && !errors.Is(err, errColdTooLarge) && !errors.Is(err, errColdNoPages) {
 				return "", "", false
 			}
-			if err := s.cfg.Cold.Delete(ctx, key); err != nil {
-				s.cfg.Logger.Warn("delete broken version from S3", slog.String("key", key), log.Err(err))
+			if err := c.Delete(ctx, key); err != nil {
+				c.logger.Warn("delete broken version from S3", slog.String("key", key), log.Err(err))
 			}
 			continue
 		}
@@ -278,19 +327,19 @@ func hasPages(dir string) bool {
 	return false
 }
 
-// snapshotForCold hard-links the files of a rendered version into a private
+// snapshot hard-links the files of a rendered version into a private
 // directory before it is published, so the reader does not wait for the
 // packing. A render published over the version meanwhile cannot mix into the
 // archive: published files are replaced, never written in place. It returns
 // "" when the snapshot failed.
-func (s *Store) snapshotForCold(outDir string) string {
-	dir, err := os.MkdirTemp(filepath.Join(s.cfg.Dir, tmpDir), "upload-")
+func (c *coldArchives) snapshot(outDir string) string {
+	dir, err := os.MkdirTemp(filepath.Join(c.dir, tmpDir), "upload-")
 	if err == nil {
 		err = linkTree(outDir, dir)
 	}
 	if err != nil {
 		os.RemoveAll(dir)
-		s.cfg.Logger.Warn("snapshot version for S3", log.Err(err))
+		c.logger.Warn("snapshot version for S3", log.Err(err))
 		return ""
 	}
 
@@ -318,30 +367,40 @@ func linkTree(src, dst string) error {
 	})
 }
 
-// toCold packs a snapshot of a published version and uploads it in the
+// upload packs a snapshot of a published version and uploads it in the
 // background, then removes both: the reader does not wait for it. A failed
 // upload costs a reader's version a render after the next restart; a pinned
 // one the leader uploads again on its next pass (uploadMissing), since the
 // followers take it from the cold cache only.
-func (s *Store) toCold(key, drop, snapshot string) {
-	s.background.Add(1)
+func (c *coldArchives) upload(key, drop, snapshot string) {
+	c.background.Add(1)
 	go func() {
-		defer s.background.Done()
+		defer c.background.Done()
 		defer os.RemoveAll(snapshot)
 
-		archive := s.packForCold(snapshot)
+		archive := c.pack(snapshot)
 		if archive != "" {
-			s.uploadCold(key, drop, archive)
+			c.uploadArchive(key, drop, archive)
 		}
 	}()
 }
 
-// packForCold packs a version directory into the tmp directory. It returns ""
-// when packing failed.
-func (s *Store) packForCold(dir string) string {
-	f, err := os.CreateTemp(filepath.Join(s.cfg.Dir, tmpDir), "upload-*.tar.gz")
+// uploadAgain uploads the archive under key once more in the background and
+// removes it.
+func (c *coldArchives) uploadAgain(key, archive string) {
+	c.background.Add(1)
+	go func() {
+		defer c.background.Done()
+		c.uploadArchive(key, "", archive)
+	}()
+}
+
+// pack packs a version directory into the tmp directory. It returns "" when
+// packing failed.
+func (c *coldArchives) pack(dir string) string {
+	f, err := os.CreateTemp(filepath.Join(c.dir, tmpDir), "upload-*.tar.gz")
 	if err != nil {
-		s.cfg.Logger.Warn("pack version for S3", log.Err(err))
+		c.logger.Warn("pack version for S3", log.Err(err))
 		return ""
 	}
 
@@ -351,33 +410,33 @@ func (s *Store) packForCold(dir string) string {
 	}
 	if err != nil {
 		os.Remove(f.Name())
-		s.cfg.Logger.Warn("pack version for S3", log.Err(err))
+		c.logger.Warn("pack version for S3", log.Err(err))
 		return ""
 	}
 
 	return f.Name()
 }
 
-// uploadCold uploads the archive under key and removes it. drop is the key of
-// an archive the new one covers: the archive of a pinned version holds the
-// archive of a reader's version as well, so that one goes.
-func (s *Store) uploadCold(key, drop, archive string) {
+// uploadArchive uploads the archive under key and removes it. drop is the
+// key of an archive the new one covers: the archive of a pinned version
+// holds the archive of a reader's version as well, so that one goes.
+func (c *coldArchives) uploadArchive(key, drop, archive string) {
 	defer os.Remove(archive)
 
-	ctx, cancel := context.WithTimeout(context.Background(), s.cfg.RenderTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 
-	err := s.putCold(ctx, key, archive)
-	if err != nil && !s.coldMissing(err) && s.cfg.Metrics != nil {
-		s.cfg.Metrics.CounterAdd(metrics.DocsBuilderOnDemandS3UploadFailures, 1, nil)
+	err := c.putRetrying(ctx, key, archive)
+	if err != nil && !coldMissing(err) && c.metrics != nil {
+		c.metrics.CounterAdd(metrics.DocsBuilderOnDemandS3UploadFailures, 1, nil)
 	}
 	if err == nil && drop != "" {
 		key = drop
-		err = s.cfg.Cold.Delete(ctx, key)
+		err = c.Delete(ctx, key)
 	}
 	// Before the bucket is ready every upload fails the same way.
-	if err != nil && !s.coldMissing(err) {
-		s.cfg.Logger.Warn("put version to S3", slog.String("key", key), log.Err(err))
+	if err != nil && !coldMissing(err) {
+		c.logger.Warn("put version to S3", slog.String("key", key), log.Err(err))
 	}
 }
 
@@ -389,18 +448,19 @@ const (
 	coldPutPause    = 2 * time.Second
 )
 
-// putCold puts the archive under key, again while it fails, coldPutAttempts
-// times at most. A bucket that is not ready is not asked again.
-func (s *Store) putCold(ctx context.Context, key, archive string) error {
+// putRetrying puts the archive under key, again while it fails,
+// coldPutAttempts times at most. A bucket that is not ready is not asked
+// again.
+func (c *coldArchives) putRetrying(ctx context.Context, key, archive string) error {
 	for attempt := 1; ; attempt++ {
-		err := s.cfg.Cold.Put(ctx, key, archive)
-		if err == nil || s.coldMissing(err) || attempt == coldPutAttempts {
+		err := c.Put(ctx, key, archive)
+		if err == nil || coldMissing(err) || attempt == coldPutAttempts {
 			return err
 		}
 		select {
 		case <-ctx.Done():
 			return err
-		case <-time.After(time.Duration(attempt) * s.putPause):
+		case <-time.After(time.Duration(attempt) * c.putPause):
 		}
 	}
 }
@@ -416,11 +476,11 @@ func (s *Store) putCold(ctx context.Context, key, archive string) error {
 // cold cache has none of an older revision of it, the version is marked lost
 // and the pass renders it anew (renderPinned).
 func (s *Store) uploadMissing(ctx context.Context, pinned []Target) error {
-	revision := s.coldRevision()
+	revision := s.cold.revision()
 	if revision == "" {
 		return nil
 	}
-	objects, err := s.cfg.Cold.List(ctx, "")
+	objects, err := s.cold.List(ctx, "")
 	if err != nil {
 		return err
 	}
@@ -453,11 +513,11 @@ func (s *Store) uploadMissing(ctx context.Context, pinned []Target) error {
 		}
 		k := coldKey(revision, t.Module, t.Version, withAI)
 		// The archive with the AI export holds the one without.
-		if !served || inCold[k] || inCold[coldKey(revision, t.Module, t.Version, true)] || s.isBranch(ctx, t.Module, t.Version) {
+		if !served || inCold[k] || inCold[coldKey(revision, t.Module, t.Version, true)] || s.cold.isBranch(ctx, t.Module, t.Version) {
 			continue
 		}
 
-		snapshot := s.snapshotForCold(filepath.Join(s.cfg.Dir, t.Module, t.Version))
+		snapshot := s.cold.snapshot(filepath.Join(s.cfg.Dir, t.Module, t.Version))
 		if snapshot == "" {
 			continue
 		}
@@ -466,7 +526,7 @@ func (s *Store) uploadMissing(ctx context.Context, pinned []Target) error {
 			drop = coldKey(revision, t.Module, t.Version, false)
 		}
 		s.cfg.Logger.Info("upload a version missing from S3", slog.String("module", t.Module), slog.String("version", t.Version))
-		s.toCold(k, drop, snapshot)
+		s.cold.upload(k, drop, snapshot)
 	}
 
 	return nil
@@ -638,7 +698,7 @@ func TemplateRevision(paths ...string) (string, error) {
 // the bucket is the cold cache as it is.
 type ColdObject = s3cache.Object
 
-// EvictCold keeps the archives of the cold cache below high of its quota:
+// evict keeps the archives of the cold cache below high of its quota:
 // above it, archives replaced by one of this template revision go first, then
 // those of readers' versions, then those of pinned versions, the oldest first
 // in each, until it is down to low. Pinned are the versions with the AI
@@ -646,20 +706,20 @@ type ColdObject = s3cache.Object
 // release channels: the followers take them from the cold cache only, while
 // the pods serving them do not download them again, so their archives grow
 // old in use. An archive of another revision that nothing replaces yet is
-// still served (fromCold) and goes with its kind. S3 does not track reads; a
+// still served (fetch) and goes with its kind. S3 does not track reads; a
 // version restored from the cold cache is uploaded again, so the age is when
 // a pod last needed it. Other objects (the list of indexed targets, the list
 // of failed renders) are a few kilobytes and stay.
-func (s *Store) EvictCold(ctx context.Context, quota int64, high, low float64) error {
-	objects, err := s.cfg.Cold.List(ctx, "")
+func (c *coldArchives) evict(ctx context.Context, quota int64, high, low float64) error {
+	objects, err := c.List(ctx, "")
 	if err != nil {
 		return err
 	}
-	pinned, err := s.coldPinned(ctx)
+	pinned, err := c.pinned(ctx)
 	if err != nil {
 		return err
 	}
-	revision := s.coldRevision()
+	revision := c.revision()
 
 	type evictable struct {
 		ColdObject
@@ -674,7 +734,7 @@ func (s *Store) EvictCold(ctx context.Context, quota int64, high, low float64) e
 			// Shaped as an archive, yet not of a module version: it is
 			// neither served nor evicted.
 			if strings.Count(o.Key, "/") == 2 && strings.HasSuffix(o.Key, coldArchiveSuffix) {
-				s.cfg.Logger.Warn("skip an object of S3 that is not the archive of a module version", slog.String("key", o.Key))
+				c.logger.Warn("skip an object of S3 that is not the archive of a module version", slog.String("key", o.Key))
 			}
 			continue
 		}
@@ -696,7 +756,7 @@ func (s *Store) EvictCold(ctx context.Context, quota int64, high, low float64) e
 		a, _ := parseColdKey(e.Key)
 		prefix := coldVersionPrefix(a.module, a.version)
 		// The archive of a pinned version covers the one of a reader's
-		// version, as in rerenderPass.
+		// version, as in a pass of the rerenderer.
 		if a.revision != revision && (current[prefix+coldAISuffix] || !a.withAI && current[prefix+coldArchiveSuffix]) {
 			archives[i].class = 0
 		}
@@ -713,14 +773,20 @@ func (s *Store) EvictCold(ctx context.Context, quota int64, high, low float64) e
 		if float64(total) <= low*float64(quota) {
 			break
 		}
-		if err := s.cfg.Cold.Delete(ctx, e.Key); err != nil {
+		if err := c.Delete(ctx, e.Key); err != nil {
 			return err
 		}
 		total -= e.Size
 		removed++
 	}
 
-	s.cfg.Logger.Info("evicted versions from S3", slog.Int("archives", removed), slog.Int64("bytes_left", total))
+	c.logger.Info("evicted versions from S3", slog.Int("archives", removed), slog.Int64("bytes_left", total))
 
 	return nil
+}
+
+// EvictCold keeps the archives of the cold cache below high of its quota
+// (coldArchives).
+func (s *Store) EvictCold(ctx context.Context, quota int64, high, low float64) error {
+	return s.cold.evict(ctx, quota, high, low)
 }

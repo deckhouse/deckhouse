@@ -31,16 +31,10 @@ import (
 // renders): a few kilobytes in practice.
 const maxColdList = 1 << 20
 
-// coldMissing reports whether err means the object is not in the cold cache,
-// or the cache is not set up yet.
-func (s *Store) coldMissing(err error) bool {
-	return s.cfg.ColdNotFound != nil && s.cfg.ColdNotFound(err)
-}
-
-// coldGetList reads a list kept in the cold cache.
-func (s *Store) coldGetList(ctx context.Context, key string) ([]byte, error) {
+// getList reads a list kept in the cold cache.
+func (c *coldArchives) getList(ctx context.Context, key string) ([]byte, error) {
 	var buf bytes.Buffer
-	if err := s.cfg.Cold.Get(ctx, key, &limitedWriter{w: &buf, n: maxColdList}); err != nil {
+	if err := c.Get(ctx, key, &limitedWriter{w: &buf, n: maxColdList}); err != nil {
 		return nil, err
 	}
 
@@ -85,7 +79,7 @@ func parseIndexed(raw []byte, logger *log.Logger) (indexedState, error) {
 		}
 		for channel, version := range chans {
 			err := docs.ValidateModuleTag(module, version)
-			if err == nil && !slices.Contains(siteChannels, channel) {
+			if err == nil && !slices.Contains(SiteChannels, channel) {
 				err = fmt.Errorf("unknown release channel %q of %s", channel, module)
 			}
 			if invalid("channel", err) {
@@ -97,11 +91,11 @@ func parseIndexed(raw []byte, logger *log.Logger) (indexedState, error) {
 	return state, nil
 }
 
-// coldPinned returns the versions targets.json names, the targets and the
+// pinned returns the versions targets.json names, the targets and the
 // versions of their release channels, by key.
-func (s *Store) coldPinned(ctx context.Context) (map[string]bool, error) {
-	raw, err := s.coldGetList(ctx, indexedFile)
-	if s.coldMissing(err) {
+func (c *coldArchives) pinned(ctx context.Context) (map[string]bool, error) {
+	raw, err := c.getList(ctx, indexedFile)
+	if coldMissing(err) {
 		return nil, nil
 	}
 	if err != nil {
@@ -109,7 +103,7 @@ func (s *Store) coldPinned(ctx context.Context) (map[string]bool, error) {
 	}
 	// The followers can not read a broken file either: they wait for no
 	// archive.
-	state, err := parseIndexed(raw, s.cfg.Logger)
+	state, err := parseIndexed(raw, c.logger)
 	if err != nil {
 		return nil, nil
 	}
@@ -169,4 +163,9 @@ func (s *Store) restoreAll(ctx context.Context, targets []Target, chans map[stri
 	s.SetChannels(chans)
 
 	return missing, fresh
+}
+
+// coldGetList reads a list kept in the cold cache (coldArchives).
+func (s *Store) coldGetList(ctx context.Context, key string) ([]byte, error) {
+	return s.cold.getList(ctx, key)
 }

@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -61,16 +60,19 @@ func TestResolverPicksTheVersionOfEveryModule(t *testing.T) {
 
 	r := Resolver{
 		Modules: func(context.Context) ([]registry.Module, error) { return modules, nil },
-		ChannelVersion: func(_ context.Context, module string) (string, error) {
-			switch {
-			case module == "flaky" || module == "gone":
-				return "", errors.New("registry is down")
-			case channel[module] != "":
-				return channel[module], nil
-			}
-			return "", errNoChannel
+		Policy: ClusterPolicy{
+			ChannelVersion: func(_ context.Context, module string) (string, error) {
+				switch {
+				case module == "flaky" || module == "gone":
+					return "", errors.New("registry is down")
+				case channel[module] != "":
+					return channel[module], nil
+				}
+				return "", ErrNoChannel
+			},
+			Latest: func(_ context.Context, module string) (string, error) { return latest[module], nil },
+			Logger: log.NewNop(),
 		},
-		Latest: func(_ context.Context, module string) (string, error) { return latest[module], nil },
 		Logger: log.NewNop(),
 	}
 
@@ -191,9 +193,12 @@ func TestPinnerRetries(t *testing.T) {
 			}
 
 			r := Resolver{
-				Modules:        func(context.Context) ([]registry.Module, error) { return []registry.Module{{Name: "echo"}}, nil },
-				ChannelVersion: func(context.Context, string) (string, error) { return "v1.0.0", nil },
-				Logger:         log.NewNop(),
+				Modules: func(context.Context) ([]registry.Module, error) { return []registry.Module{{Name: "echo"}}, nil },
+				Policy: ClusterPolicy{
+					ChannelVersion: func(context.Context, string) (string, error) { return "v1.0.0", nil },
+					Logger:         log.NewNop(),
+				},
+				Logger: log.NewNop(),
 			}
 			p := NewPinner(r, s, time.Hour, log.NewNop())
 			c := &clock{t: time.Date(2026, 11, 2, 12, 0, 0, 0, time.UTC)}
@@ -236,6 +241,7 @@ func TestPinnerWarmsUpTheVersionsToUpdateTo(t *testing.T) {
 		Modules: func(context.Context) ([]registry.Module, error) {
 			return []registry.Module{{Name: "echo", Enabled: true, Version: "v1.0.0"}}, nil
 		},
+		Policy: ClusterPolicy{Logger: log.NewNop()},
 		Upcoming: func(context.Context) ([]registry.Release, error) {
 			return []registry.Release{
 				{Module: "echo", Version: "v1.1.0"},
@@ -296,6 +302,7 @@ func TestPinnerWarmUpRetries(t *testing.T) {
 		Modules: func(context.Context) ([]registry.Module, error) {
 			return []registry.Module{{Name: "echo", Enabled: true, Version: "v1.0.0"}}, nil
 		},
+		Policy: ClusterPolicy{Logger: log.NewNop()},
 		Upcoming: func(context.Context) ([]registry.Release, error) {
 			if listFails.Load() {
 				return nil, errors.New("API server is down")
@@ -346,18 +353,6 @@ func TestPinnerWarmUpRetries(t *testing.T) {
 	}
 }
 
-func TestRegistryChannelsImageGoneAfterHead(t *testing.T) {
-	r := newTestRegistry(t)
-	r.push("src1/echo/release:stable", release("v1.0.0")...)
-	r.goneByDigest.Store(true)
-
-	// The channel is not dropped silently: the source fails.
-	got, err := RegistryChannels(r.sources(), registry.NewClients())(context.Background(), "echo")
-	if err == nil || errors.Is(err, errNoChannel) || got != nil {
-		t.Fatalf("channels %v, err %v; want a registry error", got, err)
-	}
-}
-
 func TestPinnerChannelWithoutDocsWaitsForRetryAfter(t *testing.T) {
 	f := &fakeRender{size: 10}
 	s, _ := newTestStore(t, f, 1000)
@@ -372,8 +367,10 @@ func TestPinnerChannelWithoutDocsWaitsForRetryAfter(t *testing.T) {
 
 	r := Resolver{
 		Modules: func(context.Context) ([]registry.Module, error) { return []registry.Module{{Name: "echo"}}, nil },
-		Channels: func(context.Context, string) (Channels, error) {
-			return Channels{"stable": "v1.0.0", "beta": "v1.1.0"}, nil
+		Policy: SitePolicy{
+			Channels: func(context.Context, string) (Channels, error) {
+				return Channels{"stable": "v1.0.0", "beta": "v1.1.0"}, nil
+			},
 		},
 		Logger: log.NewNop(),
 	}
@@ -473,251 +470,38 @@ func readJSON(t *testing.T, path string, v any) {
 	}
 }
 
-// release is the content of a release image of the version.
-func release(version string) []entry {
-	return []entry{{name: "version.json", body: `{"version": "` + version + `"}`}}
-}
-
-func TestRegistryChannelVersion(t *testing.T) {
-
-	tests := []struct {
-		name    string
-		images  map[string][]entry
-		want    string
-		wantErr error
-	}{
-		{
-			name:   "stable first",
-			images: map[string][]entry{"src1/echo/release:stable": release("v1.2.0"), "src1/echo/release:alpha": release("v1.3.0")},
-			want:   "v1.2.0",
-		},
-		{
-			name:   "a channel pointing at a branch build is skipped",
-			images: map[string][]entry{"src1/echo/release:stable": release("mr10"), "src1/echo/release:beta": release("v1.1.0")},
-			want:   "v1.1.0",
-		},
-		{
-			name:   "channels of the next source",
-			images: map[string][]entry{"src2/echo/release:early-access": release("v2.0.0")},
-			want:   "v2.0.0",
-		},
-		{
-			name:   "a release image without version.json is skipped",
-			images: map[string][]entry{"src1/echo/release:stable": {{name: "module.yaml", body: "name: echo"}}, "src1/echo/release:beta": release("v1.1.0")},
-			want:   "v1.1.0",
-		},
-		{
-			name:    "no channel tags",
-			images:  map[string][]entry{"src1/echo/release:v1.0.0": release("v1.0.0")},
-			wantErr: errNoChannel,
-		},
-		{
-			name:    "only branch builds in the channels",
-			images:  map[string][]entry{"src1/echo/release:stable": release("0.0.1")},
-			wantErr: errNoChannel,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			r := newTestRegistry(t)
-			for path, files := range tt.images {
-				r.push(path, files...)
-			}
-
-			got, err := RegistryChannelVersion(r.sources(), registry.NewClients())(context.Background(), "echo")
-			if !errors.Is(err, tt.wantErr) || got != tt.want {
-				t.Fatalf("version %q, err %v; want %q, %v", got, err, tt.want, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestRegistryChannelVersionAsksHeadWhileTheChannelStays(t *testing.T) {
-	r := newTestRegistry(t)
-	r.push("src1/echo/release:stable", release("v1.0.0")...)
-	r.takeRequests()
-	channelVersion := RegistryChannelVersion(r.sources(), registry.NewClients())
-
-	pass := func(want string) []string {
-		t.Helper()
-		got, err := channelVersion(context.Background(), "echo")
-		if err != nil || got != want {
-			t.Fatalf("version %q, %v; want %q", got, err, want)
-		}
-		return r.takeRequests()
-	}
-
-	pass("v1.0.0")
-	// The token, the /v2/ check and the manifest are kept: one HEAD.
-	if got := pass("v1.0.0"); !reflect.DeepEqual(got, []string{"HEAD /v2/src1/echo/release/manifests/stable"}) {
-		t.Fatalf("an unchanged channel made requests %q; want one HEAD", got)
-	}
-
-	r.push("src1/echo/release:stable", release("v1.1.0")...)
-	r.takeRequests()
-	moved := pass("v1.1.0")
-	if !slices.ContainsFunc(moved, func(req string) bool { return strings.HasPrefix(req, "GET /v2/src1/echo/release/manifests/sha256:") }) {
-		t.Fatalf("a moved channel made requests %q; want its image read by the digest", moved)
-	}
-
-	// A registry that answers HEAD without the digest is read by the tag.
-	r.push("src1/echo/release:stable", release("v1.2.0")...)
-	r.takeRequests()
-	r.noHeadDigest.Store(true)
-	if got := pass("v1.2.0"); !slices.Contains(got, "GET /v2/src1/echo/release/manifests/stable") {
-		t.Fatalf("without the digest on HEAD the requests were %q; want the manifest by the tag", got)
-	}
-}
-
-func TestRegistryChannelVersionOfAnIndexAsksHeadOnly(t *testing.T) {
-	r := newTestRegistry(t)
-	r.pushIndex("src1/echo/release:stable", release("v1.0.0")...)
-	channelVersion := RegistryChannelVersion(r.sources(), registry.NewClients())
-
-	for range 2 {
-		r.takeRequests()
-		got, err := channelVersion(context.Background(), "echo")
-		if err != nil || got != "v1.0.0" {
-			t.Fatalf("version %q, %v; want v1.0.0", got, err)
-		}
-	}
-	// HEAD gives the digest of the index, the image read is of the platform:
-	// the index digest is what is compared on the next pass.
-	if got := r.takeRequests(); !reflect.DeepEqual(got, []string{"HEAD /v2/src1/echo/release/manifests/stable"}) {
-		t.Fatalf("the second pass made requests %q; want one HEAD", got)
-	}
-}
-
-func TestRegistryChannelVersionImageGoneAfterHead(t *testing.T) {
-	r := newTestRegistry(t)
-	r.push("src1/echo/release:stable", release("v1.0.0")...)
-	r.push("src1/echo/release:beta", release("v1.1.0")...)
-	// The channel exists, its image does not: an error the module keeps its
-	// version on, not a missing channel that moves it to the next one.
-	r.goneByDigest.Store(true)
-	got, err := RegistryChannelVersion(r.sources(), registry.NewClients())(context.Background(), "echo")
-	if err == nil || errors.Is(err, errNoChannel) || got != "" {
-		t.Fatalf("version %q, err %v; want a registry error", got, err)
-	}
-}
-
-// Channel tags missing right after a lookup found them, as while the release
-// repository is uploaded anew, are no module without channels yet: that
-// lookup fails, the next one finds none. A failed lookup in between changes
-// nothing.
-func TestRegistryChannelsGoneAreNotNoneAtOnce(t *testing.T) {
-	tests := []struct {
-		name   string
-		lookup func(r *testRegistry) func() error
-	}{
-		{
-			name: "the version of a channel",
-			lookup: func(r *testRegistry) func() error {
-				return errOf(RegistryChannelVersion(r.sources(), registry.NewClients()))
-			},
-		},
-		{
-			name: "the channels of the site",
-			lookup: func(r *testRegistry) func() error {
-				return errOf(RegistryChannels(r.sources(), registry.NewClients()))
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			r := newTestRegistry(t)
-			r.push("src1/echo/release:stable", release("v1.0.0")...)
-			lookup := tt.lookup(r)
-			if err := lookup(); err != nil {
-				t.Fatal(err)
-			}
-
-			r.failing.Store(&[]string{"/v2/src1/"})
-			if err := lookup(); err == nil || errors.Is(err, errNoChannel) || errors.Is(err, errChannelsGone) {
-				t.Fatalf("err %v; want a registry error", err)
-			}
-			r.failing.Store(nil)
-
-			r.untag("src1/echo/release:stable")
-			if err := lookup(); !errors.Is(err, errChannelsGone) {
-				t.Fatalf("err %v right after the channel was found, want %v", err, errChannelsGone)
-			}
-			if err := lookup(); !errors.Is(err, errNoChannel) {
-				t.Fatalf("err %v on the next lookup, want %v", err, errNoChannel)
-			}
-		})
-	}
-}
-
-// errOf is the lookup of the module echo with its error only.
-func errOf[T any](lookup func(ctx context.Context, module string) (T, error)) func() error {
-	return func() error {
-		_, err := lookup(context.Background(), "echo")
-		return err
-	}
-}
-
-// A registry that took a request and sends nothing more, no answer to the
-// HEAD of a channel or a blob stopping halfway, costs the module its lookup,
-// not the pass: the module keeps its last target.
+// A lookup waiting for a registry that took a request and sends nothing more
+// costs the module its lookup, not the pass: the module keeps its last
+// target. The lookups of the registry end with their context
+// (registrydocs).
 func TestResolveChannelsGivesUpOnASilentRegistry(t *testing.T) {
-	old := resolveTimeout
-	resolveTimeout = 200 * time.Millisecond
-	t.Cleanup(func() { resolveTimeout = old })
-
-	tests := []struct {
-		name   string
-		silent func(w http.ResponseWriter, req *http.Request) bool
-	}{
-		{
-			name: "no answer to the HEAD of a channel",
-			silent: func(_ http.ResponseWriter, req *http.Request) bool {
-				return req.Method == http.MethodHead && strings.Contains(req.URL.Path, "/release/manifests/")
+	resolver := Resolver{
+		Modules: func(context.Context) ([]registry.Module, error) { return []registry.Module{{Name: "echo"}}, nil },
+		Policy: ClusterPolicy{
+			ChannelVersion: func(ctx context.Context, _ string) (string, error) {
+				<-ctx.Done()
+				return "", ctx.Err()
 			},
+			Latest: func(context.Context, string) (string, error) { return "", nil },
+			Logger: log.NewNop(),
 		},
-		{
-			name: "a blob stops halfway",
-			silent: func(w http.ResponseWriter, req *http.Request) bool {
-				if req.Method != http.MethodGet || !strings.Contains(req.URL.Path, "/blobs/") {
-					return false
-				}
-				w.WriteHeader(http.StatusOK)
-				_, _ = w.Write([]byte{0x1f, 0x8b})
-				w.(http.Flusher).Flush()
-				return true
-			},
-		},
+		Logger:  log.NewNop(),
+		timeout: 200 * time.Millisecond,
 	}
+	last := Target{Module: "echo", Version: "v1.1.0"}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			r := newTestRegistry(t)
-			r.push("src1/echo/release:stable", release("v1.2.0")...)
-			r.silent.Store(&tt.silent)
-			resolver := Resolver{
-				Modules:        func(context.Context) ([]registry.Module, error) { return []registry.Module{{Name: "echo"}}, nil },
-				ChannelVersion: RegistryChannelVersion(r.sources(), registry.NewClients()),
-				Latest:         func(context.Context, string) (string, error) { return "", nil },
-				Logger:         log.NewNop(),
-			}
-			last := Target{Module: "echo", Version: "v1.1.0"}
-
-			done := make(chan Resolution, 1)
-			go func() {
-				res, _ := resolver.ResolveChannels(context.Background(), map[string]Target{"echo": last})
-				done <- res
-			}()
-			select {
-			case res := <-done:
-				if res.Unresolved != 1 || !reflect.DeepEqual(res.Targets, []Target{last}) {
-					t.Fatalf("unresolved %d, targets %v; want the module failed with its last target", res.Unresolved, res.Targets)
-				}
-			case <-time.After(10 * time.Second):
-				t.Fatal("ResolveChannels still waits for the registry")
-			}
-		})
+	done := make(chan Resolution, 1)
+	go func() {
+		res, _ := resolver.ResolveChannels(context.Background(), map[string]Target{"echo": last})
+		done <- res
+	}()
+	select {
+	case res := <-done:
+		if res.Unresolved != 1 || !reflect.DeepEqual(res.Targets, []Target{last}) {
+			t.Fatalf("unresolved %d, targets %v; want the module failed with its last target", res.Unresolved, res.Targets)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("ResolveChannels still waits for the registry")
 	}
 }
 
@@ -734,6 +518,7 @@ func TestPinnerPassEndsByItsDeadline(t *testing.T) {
 		Modules: func(context.Context) ([]registry.Module, error) {
 			return []registry.Module{{Name: "echo", Enabled: true, Version: "v1.0.0"}}, nil
 		},
+		Policy: ClusterPolicy{Logger: log.NewNop()},
 		Logger: log.NewNop(),
 	}
 	p := NewPinner(r, s, time.Hour, log.NewNop())
@@ -767,11 +552,14 @@ func TestPinnerReportsLastUpdateFromTheStart(t *testing.T) {
 	down.Store(true)
 	r := Resolver{
 		Modules: func(context.Context) ([]registry.Module, error) { return []registry.Module{{Name: "echo"}}, nil },
-		ChannelVersion: func(context.Context, string) (string, error) {
-			if down.Load() {
-				return "", errors.New("registry is down")
-			}
-			return "v1.0.0", nil
+		Policy: ClusterPolicy{
+			ChannelVersion: func(context.Context, string) (string, error) {
+				if down.Load() {
+					return "", errors.New("registry is down")
+				}
+				return "v1.0.0", nil
+			},
+			Logger: log.NewNop(),
 		},
 		Logger: log.NewNop(),
 	}
@@ -828,9 +616,12 @@ func TestPinnerPassWithNothingToPublishIsAnUpdate(t *testing.T) {
 				return docs.ErrNoPages
 			}
 			r := Resolver{
-				Modules:        func(context.Context) ([]registry.Module, error) { return tt.modules, nil },
-				ChannelVersion: func(context.Context, string) (string, error) { return "v1.0.0", nil },
-				Logger:         log.NewNop(),
+				Modules: func(context.Context) ([]registry.Module, error) { return tt.modules, nil },
+				Policy: ClusterPolicy{
+					ChannelVersion: func(context.Context, string) (string, error) { return "v1.0.0", nil },
+					Logger:         log.NewNop(),
+				},
+				Logger: log.NewNop(),
 			}
 			p := NewPinner(r, s, time.Hour, log.NewNop())
 			p.now = c.now
@@ -857,13 +648,15 @@ func TestPinnerPassUnpublishingEveryModuleIsNoUpdate(t *testing.T) {
 	var gone atomic.Bool
 	notFound := fmt.Errorf("%w: source main: %w", ErrNoVersions, &transport.Error{StatusCode: http.StatusNotFound})
 	r := siteResolver()
-	r.Channels = func(context.Context, string) (Channels, error) {
-		if gone.Load() {
-			return nil, errNoChannel
-		}
-		return Channels{"stable": "v1.0.0"}, nil
+	r.Policy = SitePolicy{
+		Channels: func(context.Context, string) (Channels, error) {
+			if gone.Load() {
+				return nil, ErrNoChannel
+			}
+			return Channels{"stable": "v1.0.0"}, nil
+		},
+		Latest: func(context.Context, string) (string, error) { return "", notFound },
 	}
-	r.Latest = func(context.Context, string) (string, error) { return "", notFound }
 	p := NewPinner(r, s, time.Hour, log.NewNop())
 	p.now = c.now
 
@@ -907,9 +700,12 @@ func TestPinnerPassPublishingNothingIsNoUpdate(t *testing.T) {
 				return tt.err
 			}
 			r := Resolver{
-				Modules:        func(context.Context) ([]registry.Module, error) { return []registry.Module{{Name: "echo"}}, nil },
-				ChannelVersion: func(context.Context, string) (string, error) { return "v1.0.0", nil },
-				Logger:         log.NewNop(),
+				Modules: func(context.Context) ([]registry.Module, error) { return []registry.Module{{Name: "echo"}}, nil },
+				Policy: ClusterPolicy{
+					ChannelVersion: func(context.Context, string) (string, error) { return "v1.0.0", nil },
+					Logger:         log.NewNop(),
+				},
+				Logger: log.NewNop(),
 			}
 			p := NewPinner(r, s, time.Hour, log.NewNop())
 			p.now = c.now
@@ -1114,9 +910,12 @@ func TestPinnerKeepsPreviousTargetUntilTheNewOneIsPublished(t *testing.T) {
 	var version atomic.Value
 	version.Store("v1.0.0")
 	r := Resolver{
-		Modules:        func(context.Context) ([]registry.Module, error) { return []registry.Module{{Name: "echo"}}, nil },
-		ChannelVersion: func(context.Context, string) (string, error) { return version.Load().(string), nil },
-		Logger:         log.NewNop(),
+		Modules: func(context.Context) ([]registry.Module, error) { return []registry.Module{{Name: "echo"}}, nil },
+		Policy: ClusterPolicy{
+			ChannelVersion: func(context.Context, string) (string, error) { return version.Load().(string), nil },
+			Logger:         log.NewNop(),
+		},
+		Logger: log.NewNop(),
 	}
 	p := NewPinner(r, s, time.Hour, log.NewNop())
 	p.now = c.now
@@ -1177,11 +976,14 @@ func TestPinnerKeepsPreviousTargetAcrossRestart(t *testing.T) {
 		Modules: func(context.Context) ([]registry.Module, error) {
 			return []registry.Module{{Name: "alb"}, {Name: "echo"}}, nil
 		},
-		ChannelVersion: func(_ context.Context, module string) (string, error) {
-			if module == "alb" {
-				return "v0.17.1", nil
-			}
-			return version.Load().(string), nil
+		Policy: ClusterPolicy{
+			ChannelVersion: func(_ context.Context, module string) (string, error) {
+				if module == "alb" {
+					return "v0.17.1", nil
+				}
+				return version.Load().(string), nil
+			},
+			Logger: log.NewNop(),
 		},
 		Logger: log.NewNop(),
 	}
@@ -1244,66 +1046,6 @@ func TestHasAIExportNeedsEveryLanguage(t *testing.T) {
 	}
 }
 
-func TestRegistryChannels(t *testing.T) {
-	release := func(version string) []entry {
-		return []entry{{name: "version.json", body: `{"version": "` + version + `"}`}}
-	}
-
-	tests := []struct {
-		name    string
-		images  map[string][]entry
-		want    Channels
-		wantErr error
-	}{
-		{
-			name: "every channel of the site",
-			images: map[string][]entry{
-				"src1/echo/release:alpha": release("v1.3.0"), "src1/echo/release:beta": release("v1.3.0"),
-				"src1/echo/release:early-access": release("v1.2.0"), "src1/echo/release:stable": release("v1.2.0"),
-				"src1/echo/release:rock-solid": release("v1.1.0"),
-			},
-			want: Channels{"alpha": "v1.3.0", "beta": "v1.3.0", "early-access": "v1.2.0", "stable": "v1.2.0", "rock-solid": "v1.1.0"},
-		},
-		{
-			name:   "a channel pointing at a branch build is left out",
-			images: map[string][]entry{"src1/echo/release:alpha": release("mr10"), "src1/echo/release:stable": release("v1.2.0")},
-			want:   Channels{"stable": "v1.2.0"},
-		},
-		{
-			name: "the channels never mix two sources",
-			images: map[string][]entry{
-				"src1/echo/release:alpha": release("v9.0.0"),
-				"src2/echo/release:alpha": release("v1.3.0"), "src2/echo/release:stable": release("v1.2.0"),
-			},
-			want: Channels{"alpha": "v9.0.0"},
-		},
-		{
-			name:   "the next source when the first has none",
-			images: map[string][]entry{"src2/echo/release:stable": release("v2.0.0")},
-			want:   Channels{"stable": "v2.0.0"},
-		},
-		{
-			name:    "no channel tags",
-			images:  map[string][]entry{"src1/echo/release:v1.0.0": release("v1.0.0")},
-			wantErr: errNoChannel,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			r := newTestRegistry(t)
-			for path, files := range tt.images {
-				r.push(path, files...)
-			}
-
-			got, err := RegistryChannels(r.sources(), registry.NewClients())(context.Background(), "echo")
-			if !errors.Is(err, tt.wantErr) || !reflect.DeepEqual(got, tt.want) {
-				t.Fatalf("channels %v, err %v; want %v, %v", got, err, tt.want, tt.wantErr)
-			}
-		})
-	}
-}
-
 // A module Hugo can not build waits for retryAfter like one without pages
 // instead of being rendered on every pass.
 func TestPinnerBuildFailureDoesNotHoldTheUpdate(t *testing.T) {
@@ -1321,8 +1063,11 @@ func TestPinnerBuildFailureDoesNotHoldTheUpdate(t *testing.T) {
 		Modules: func(context.Context) ([]registry.Module, error) {
 			return []registry.Module{{Name: "echo"}, {Name: "broken"}}, nil
 		},
-		ChannelVersion: func(context.Context, string) (string, error) { return "v1.0.0", nil },
-		Logger:         log.NewNop(),
+		Policy: ClusterPolicy{
+			ChannelVersion: func(context.Context, string) (string, error) { return "v1.0.0", nil },
+			Logger:         log.NewNop(),
+		},
+		Logger: log.NewNop(),
 	}
 	p := NewPinner(r, s, time.Hour, log.NewNop())
 	p.now = c.now
@@ -1335,28 +1080,6 @@ func TestPinnerBuildFailureDoesNotHoldTheUpdate(t *testing.T) {
 	}
 	if _, ok := p.failed[Target{Module: "broken", Version: "v1.0.0"}]; !ok {
 		t.Error("the module Hugo can not build is not kept as failed")
-	}
-}
-
-func TestHeadUnsupported(t *testing.T) {
-	canceled, cancel := context.WithCancel(context.Background())
-	cancel()
-	for _, tt := range []struct {
-		name string
-		ctx  context.Context
-		err  error
-		want bool
-	}{
-		{"no digest in the answer", context.Background(), errors.New("HEAD x: response did not include Docker-Content-Digest header"), true},
-		{"HEAD not allowed", context.Background(), &transport.Error{StatusCode: http.StatusMethodNotAllowed}, true},
-		{"registry error", context.Background(), &transport.Error{StatusCode: http.StatusInternalServerError}, false},
-		{"registry unreachable", context.Background(), &url.Error{Op: "Head", URL: "https://r.example", Err: errors.New("connection refused")}, false},
-		{"deadline of the request", context.Background(), context.DeadlineExceeded, false},
-		{"request given up", canceled, errors.New("HEAD x: response did not include Docker-Content-Digest header"), false},
-	} {
-		if got := headUnsupported(tt.ctx, tt.err); got != tt.want {
-			t.Errorf("%s: %v, want %v", tt.name, got, tt.want)
-		}
 	}
 }
 
@@ -1423,11 +1146,14 @@ func TestPinnerKeepsIndexedTargetReadLate(t *testing.T) {
 		Modules: func(context.Context) ([]registry.Module, error) {
 			return []registry.Module{{Name: "alb"}, {Name: "echo"}}, nil
 		},
-		ChannelVersion: func(_ context.Context, module string) (string, error) {
-			if module == "alb" {
-				return "", errors.New("registry is down")
-			}
-			return "v1.0.0", nil
+		Policy: ClusterPolicy{
+			ChannelVersion: func(_ context.Context, module string) (string, error) {
+				if module == "alb" {
+					return "", errors.New("registry is down")
+				}
+				return "v1.0.0", nil
+			},
+			Logger: log.NewNop(),
 		},
 		Logger: log.NewNop(),
 	}
@@ -1469,7 +1195,10 @@ func TestPinnerFollowsAModuleBetweenEmbeddedAndASource(t *testing.T) {
 			}
 			return nil, nil
 		},
-		ChannelVersion: func(context.Context, string) (string, error) { return "v1.0.0", nil },
+		Policy: ClusterPolicy{
+			ChannelVersion: func(context.Context, string) (string, error) { return "v1.0.0", nil },
+			Logger:         log.NewNop(),
+		},
 		// A release the cluster downloaded ahead from the source.
 		Upcoming: func(context.Context) ([]registry.Release, error) {
 			return []registry.Release{{Module: "echo", Version: "v2.0.0"}}, nil
@@ -1477,7 +1206,7 @@ func TestPinnerFollowsAModuleBetweenEmbeddedAndASource(t *testing.T) {
 		Logger: log.NewNop(),
 	}
 	var relisted []string
-	s.cfg.Relisted = func(module string) { relisted = append(relisted, module) }
+	s.catalog.relisted = func(module string) { relisted = append(relisted, module) }
 	p := NewPinner(r, s, time.Hour, log.NewNop())
 	p.now = c.now
 	stable := filepath.Join(s.cfg.Dir, s.site, "en", "modules", "echo", "stable")
@@ -1527,8 +1256,11 @@ func TestPinnerKickRendersAChangedRevision(t *testing.T) {
 			passes.Add(1)
 			return []registry.Module{{Name: "echo", Enabled: true, Override: &registry.Override{Tag: "v0.0.0-local", Digest: rev.Load().(string)}}}, nil
 		},
-		ChannelVersion: func(context.Context, string) (string, error) { return "v0.0.0-local", nil },
-		Logger:         log.NewNop(),
+		Policy: ClusterPolicy{
+			ChannelVersion: func(context.Context, string) (string, error) { return "v0.0.0-local", nil },
+			Logger:         log.NewNop(),
+		},
+		Logger: log.NewNop(),
 	}
 	p := NewPinner(r, s, time.Hour, log.NewNop())
 
