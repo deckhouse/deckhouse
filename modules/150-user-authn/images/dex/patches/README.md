@@ -96,6 +96,35 @@ are not in upstream.
 
 **Depends on:** nothing.
 
+### 120-signing-keys-cache.patch
+
+**Zone:** storage reads. The local signer reads the signing keys through a
+cache in memory (`server/signer/keys_cache.go`).
+
+Every token Dex issues asks the signer for the keys twice, for the algorithm
+and for the signature. In v2.46 the signer, opened over the storage in
+`cmd/dex/serve.go`, reads them from the storage every time, bypassing the key
+cache of the server: four reads of the `signingkeies` object from the
+Kubernetes API for every login and every refresh (two tokens each), measured
+at 4.0 of 17.8 requests per refresh. The v2.44-based Dex read them through
+the cache of the server.
+
+- The keys are served from memory until their `NextRotation`; keys past it
+  are read every time until rotated, a failed read is not kept.
+- The rotation of the signer refreshes the cache every time it looks at the
+  keys, every 30 seconds, so keys replaced other than by rotation (the object
+  deleted and created by another replica) are served within that time.
+- `TestTokenRequestsReadNoSigningKeys`: no read of the keys for a password
+  login and for refreshes (4 each without the cache).
+
+**Consumer in Deckhouse:** every token request; the API server and its APF
+level of Dex (`templates/dex/flowcontrol.yaml`).
+
+**Upstream status:** Deckhouse only; upstream v2.46.0 reads the keys from the
+storage for each token.
+
+**Depends on:** nothing.
+
 ### 150-transitional-offline-sessions.patch
 
 **Zone:** transitional. Removed in Deckhouse 1.79 together with the controller

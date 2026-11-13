@@ -1,0 +1,359 @@
+diff --git a/server/signer/keys_cache.go b/server/signer/keys_cache.go
+new file mode 100644
+index 00000000..bac7c6ec
+--- /dev/null
++++ b/server/signer/keys_cache.go
+@@ -0,0 +1,65 @@
++package signer
++
++import (
++	"context"
++	"sync/atomic"
++	"time"
++
++	"github.com/dexidp/dex/storage"
++)
++
++// keyCache serves the signing keys of the local signer from memory until their
++// NextRotation (Deckhouse). Every token issued asks for them twice, for the
++// algorithm and for the signature, and without the cache each ask was a read
++// of the storage: four reads of the signing keys object from the Kubernetes
++// API for each refresh and each login. The server cached them the same way
++// before the signer took signing over from it (Dex v2.45).
++//
++// The keys of a storage change only by rotation, at NextRotation, which ends
++// the cache. The rotator of the signer refreshes the cache every time it looks
++// at the keys, every 30 seconds, so keys replaced otherwise (the object deleted
++// and created anew by another replica) are served within that time.
++type keyCache struct {
++	storage storage.Storage
++	now     func() time.Time
++
++	keys atomic.Pointer[storage.Keys]
++}
++
++func newKeyCache(s storage.Storage, now func() time.Time) *keyCache {
++	if now == nil {
++		now = time.Now
++	}
++	return &keyCache{storage: s, now: now}
++}
++
++// get returns the keys, from memory while they are before their NextRotation.
++func (c *keyCache) get(ctx context.Context) (storage.Keys, error) {
++	if keys := c.keys.Load(); keys != nil && c.now().Before(keys.NextRotation) {
++		return *keys, nil
++	}
++	keys, err := c.storage.GetKeys(ctx)
++	if err != nil {
++		return keys, err
++	}
++	c.keep(keys)
++	return keys, nil
++}
++
++// refresh reads the keys from the storage and keeps them. A failed read keeps
++// what the cache has: it still ends at NextRotation.
++func (c *keyCache) refresh(ctx context.Context) {
++	keys, err := c.storage.GetKeys(ctx)
++	if err != nil {
++		return
++	}
++	c.keep(keys)
++}
++
++func (c *keyCache) keep(keys storage.Keys) {
++	if !c.now().Before(keys.NextRotation) {
++		c.keys.Store(nil)
++		return
++	}
++	c.keys.Store(&keys)
++}
+diff --git a/server/signer/keys_cache_test.go b/server/signer/keys_cache_test.go
+new file mode 100644
+index 00000000..5aa764c9
+--- /dev/null
++++ b/server/signer/keys_cache_test.go
+@@ -0,0 +1,121 @@
++package signer
++
++import (
++	"context"
++	"log/slog"
++	"sync"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/storage"
++	"github.com/dexidp/dex/storage/memory"
++)
++
++// keyReads counts the reads of the signing keys.
++type keyReads struct {
++	storage.Storage
++
++	mu    sync.Mutex
++	reads int
++}
++
++func (s *keyReads) GetKeys(ctx context.Context) (storage.Keys, error) {
++	s.mu.Lock()
++	s.reads++
++	s.mu.Unlock()
++	return s.Storage.GetKeys(ctx)
++}
++
++func (s *keyReads) count() int {
++	s.mu.Lock()
++	defer s.mu.Unlock()
++	return s.reads
++}
++
++// The local signer reads the signing keys once until their NextRotation,
++// however many tokens it signs, and again after it.
++func TestLocalSignerReadsKeysOnceUntilRotation(t *testing.T) {
++	logger := slog.New(slog.DiscardHandler)
++	now := time.Date(2026, 11, 13, 12, 0, 0, 0, time.UTC)
++	clock := func() time.Time { return now }
++	s := &keyReads{Storage: memory.New(logger)}
++
++	sig, err := (&LocalConfig{KeysRotationPeriod: "6h"}).Open(t.Context(), s, time.Hour, clock, logger)
++	require.NoError(t, err)
++	local := sig.(*localSigner)
++	require.NoError(t, local.rotator.rotate())
++
++	before := s.count()
++	for range 10 {
++		_, err := sig.Algorithm(t.Context())
++		require.NoError(t, err)
++		_, err = sig.Sign(t.Context(), []byte(`{"sub":"jane"}`))
++		require.NoError(t, err)
++		_, err = sig.ValidationKeys(t.Context())
++		require.NoError(t, err)
++	}
++	require.Equal(t, 1, s.count()-before, "one read for 30 asks")
++
++	keys, err := s.Storage.GetKeys(t.Context())
++	require.NoError(t, err)
++	now = keys.NextRotation
++	before = s.count()
++	_, err = sig.Sign(t.Context(), []byte(`{"sub":"jane"}`))
++	require.NoError(t, err)
++	_, err = sig.Sign(t.Context(), []byte(`{"sub":"jane"}`))
++	require.NoError(t, err)
++	require.Equal(t, 2, s.count()-before, "keys past their rotation are read every time until rotated")
++
++	require.NoError(t, local.rotator.rotate())
++	before = s.count()
++	for range 3 {
++		_, err = sig.Sign(t.Context(), []byte(`{"sub":"jane"}`))
++		require.NoError(t, err)
++	}
++	require.Equal(t, 1, s.count()-before, "the rotated keys are cached again")
++}
++
++// Keys replaced in the storage other than by rotation are served once the
++// rotator looks at them (refresh), not only at NextRotation.
++func TestLocalSignerKeyCacheRefresh(t *testing.T) {
++	logger := slog.New(slog.DiscardHandler)
++	now := time.Date(2026, 11, 13, 12, 0, 0, 0, time.UTC)
++	clock := func() time.Time { return now }
++	s := &keyReads{Storage: memory.New(logger)}
++
++	sig, err := (&LocalConfig{KeysRotationPeriod: "6h"}).Open(t.Context(), s, time.Hour, clock, logger)
++	require.NoError(t, err)
++	local := sig.(*localSigner)
++	require.NoError(t, local.rotator.rotate())
++	first, err := sig.ValidationKeys(t.Context())
++	require.NoError(t, err)
++
++	// Another replica replaced the keys: the object was deleted and created anew.
++	other := &keyRotator{s.Storage, local.rotator.strategy, func() time.Time { return now.Add(7 * time.Hour) }, logger}
++	require.NoError(t, other.rotate())
++
++	cached, err := sig.ValidationKeys(t.Context())
++	require.NoError(t, err)
++	require.Equal(t, first, cached, "served from the cache until refreshed")
++
++	local.keys.refresh(t.Context())
++	refreshed, err := sig.ValidationKeys(t.Context())
++	require.NoError(t, err)
++	require.NotEqual(t, first[0].KeyID, refreshed[0].KeyID, "the refresh serves the keys of the storage")
++}
++
++// A failed read is not cached: the next ask reads again.
++func TestLocalSignerKeyCacheMissing(t *testing.T) {
++	logger := slog.New(slog.DiscardHandler)
++	s := &keyReads{Storage: memory.New(logger)}
++	sig, err := (&LocalConfig{KeysRotationPeriod: "6h"}).Open(t.Context(), s, time.Hour, time.Now, logger)
++	require.NoError(t, err)
++
++	_, err = sig.Sign(t.Context(), []byte(`{}`))
++	require.Error(t, err)
++	_, err = sig.Sign(t.Context(), []byte(`{}`))
++	require.Error(t, err)
++	require.Equal(t, 2, s.count())
++}
+diff --git a/server/signer/local.go b/server/signer/local.go
+index 30fd37d3..e6ef5379 100644
+--- a/server/signer/local.go
++++ b/server/signer/local.go
+@@ -52,6 +52,7 @@ func (c *LocalConfig) Open(_ context.Context, s storage.Storage, idTokenValidFor
+ 	r := &keyRotator{s, strategy, now, logger}
+ 	return &localSigner{
+ 		storage: s,
++		keys:    newKeyCache(s, now),
+ 		rotator: r,
+ 		logger:  logger,
+ 	}, nil
+@@ -61,6 +62,9 @@ func (c *LocalConfig) Open(_ context.Context, s storage.Storage, idTokenValidFor
+ // It manages key rotation and storage using the existing keyRotator logic.
+ type localSigner struct {
+ 	storage storage.Storage
++	// keys serves the signing keys to Sign, ValidationKeys and Algorithm
++	// (Deckhouse).
++	keys    *keyCache
+ 	rotator *keyRotator
+ 	logger  *slog.Logger
+ }
+@@ -74,6 +78,7 @@ func (l *localSigner) Start(ctx context.Context) {
+ 	if err := l.rotator.rotate(); err != nil {
+ 		l.logRotateError(err)
+ 	}
++	l.keys.refresh(ctx)
+ 
+ 	go func() {
+ 		for {
+@@ -84,6 +89,7 @@ func (l *localSigner) Start(ctx context.Context) {
+ 				if err := l.rotator.rotate(); err != nil {
+ 					l.logRotateError(err)
+ 				}
++				l.keys.refresh(ctx)
+ 			}
+ 		}
+ 	}()
+@@ -98,7 +104,7 @@ func (l *localSigner) logRotateError(err error) {
+ }
+ 
+ func (l *localSigner) Sign(ctx context.Context, payload []byte) (string, error) {
+-	keys, err := l.storage.GetKeys(ctx)
++	keys, err := l.keys.get(ctx)
+ 	if err != nil {
+ 		return "", fmt.Errorf("failed to get keys: %v", err)
+ 	}
+@@ -116,7 +122,7 @@ func (l *localSigner) Sign(ctx context.Context, payload []byte) (string, error)
+ }
+ 
+ func (l *localSigner) ValidationKeys(ctx context.Context) ([]*jose.JSONWebKey, error) {
+-	keys, err := l.storage.GetKeys(ctx)
++	keys, err := l.keys.get(ctx)
+ 	if err != nil {
+ 		return nil, fmt.Errorf("failed to get keys: %v", err)
+ 	}
+@@ -134,7 +140,7 @@ func (l *localSigner) ValidationKeys(ctx context.Context) ([]*jose.JSONWebKey, e
+ }
+ 
+ func (l *localSigner) Algorithm(ctx context.Context) (jose.SignatureAlgorithm, error) {
+-	keys, err := l.storage.GetKeys(ctx)
++	keys, err := l.keys.get(ctx)
+ 	if err != nil && !errors.Is(err, storage.ErrNotFound) {
+ 		return "", fmt.Errorf("failed to get keys: %v", err)
+ 	}
+diff --git a/server/signing_keys_cache_test.go b/server/signing_keys_cache_test.go
+new file mode 100644
+index 00000000..0795240a
+--- /dev/null
++++ b/server/signing_keys_cache_test.go
+@@ -0,0 +1,90 @@
++package server
++
++import (
++	"bytes"
++	"context"
++	"encoding/json"
++	"log/slog"
++	"net/http"
++	"net/http/httptest"
++	"net/url"
++	"sync"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/server/signer"
++	"github.com/dexidp/dex/server/tokens"
++	"github.com/dexidp/dex/storage"
++)
++
++// signingKeyReads counts the reads of the signing keys.
++type signingKeyReads struct {
++	storage.Storage
++
++	mu    sync.Mutex
++	reads int
++}
++
++func (s *signingKeyReads) GetKeys(ctx context.Context) (storage.Keys, error) {
++	s.mu.Lock()
++	s.reads++
++	s.mu.Unlock()
++	return s.Storage.GetKeys(ctx)
++}
++
++func (s *signingKeyReads) count() int {
++	s.mu.Lock()
++	defer s.mu.Unlock()
++	return s.reads
++}
++
++// A login and a refresh issue an ID token and an access token each, and the
++// local signer asks for the signing keys twice per token. With the keys cached
++// until their rotation (Deckhouse) neither reads them from the storage: the
++// Kubernetes storage made it four reads of the API server per token request.
++func TestTokenRequestsReadNoSigningKeys(t *testing.T) {
++	var keys *signingKeyReads
++	httpServer, s := newTestServer(t, func(c *Config) {
++		c.PasswordConnector = "test"
++		c.Now = time.Now
++		// Refreshes inside the reuse interval do not ask the connector, which the
++		// memory storage serves without a transaction inside another: the test
++		// counts what signing reads, which every refresh does.
++		c.RefreshTokenPolicy = tokens.NewRefreshStrategy(false, 0, 0, time.Hour, time.Now)
++		keys = &signingKeyReads{Storage: c.Storage}
++		sig, err := (&signer.LocalConfig{KeysRotationPeriod: "6h"}).Open(t.Context(), keys, time.Hour, time.Now, slog.New(slog.DiscardHandler))
++		require.NoError(t, err)
++		sig.Start(t.Context())
++		c.Signer = sig
++	})
++	defer httpServer.Close()
++	mockConnectorDataTestStorage(t, s.storage)
++
++	post := func(form url.Values) map[string]any {
++		t.Helper()
++		req := httptest.NewRequest(http.MethodPost, s.issuerURL.String()+"/token", bytes.NewBufferString(form.Encode()))
++		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++		req.SetBasicAuth("test", "barfoo")
++		rr := httptest.NewRecorder()
++		s.ServeHTTP(rr, req)
++		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++		var resp map[string]any
++		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
++		return resp
++	}
++
++	before := keys.count()
++	login := post(url.Values{"grant_type": {"password"}, "scope": {"openid email offline_access"}, "username": {"test"}, "password": {"test"}})
++	require.Zero(t, keys.count()-before, "a login reads no signing keys")
++
++	refreshToken, _ := login["refresh_token"].(string)
++	require.NotEmpty(t, refreshToken)
++	before = keys.count()
++	for range 3 {
++		resp := post(url.Values{"grant_type": {"refresh_token"}, "refresh_token": {refreshToken}})
++		refreshToken, _ = resp["refresh_token"].(string)
++	}
++	require.Zero(t, keys.count()-before, "a refresh reads no signing keys")
++}
