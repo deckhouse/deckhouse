@@ -31,6 +31,16 @@ rules:
   - registry
   verbs:
   - get
+# RegistryConfig authentication fields are marked as sensitive data and are needed to build
+# the resolved NodeConfig registry settings.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - registryconfigs/sensitive
+  resourceNames:
+  - registry
+  verbs:
+  - get
 # The other registries the nodes route, rendered into every NodeConfig's spec.registry.upstreams
 # while no registry agent owns the nodes' registry.d: the RegistryUpstream objects, arbitrated and
 # told their verdict here then (under the agent the registry module's controller does both), and
@@ -40,6 +50,16 @@ rules:
   resources:
   - registryupstreams
   - modulesources
+  verbs:
+  - get
+  - list
+  - watch
+# RegistryUpstream authentication fields are marked as sensitive data and are copied into the
+# resolved NodeConfig registry settings.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - registryupstreams/sensitive
   verbs:
   - get
   - list

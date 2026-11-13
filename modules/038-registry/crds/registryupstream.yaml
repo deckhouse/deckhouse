@@ -126,16 +126,22 @@ spec:
                             The username for basic authentication.
                         password:
                           type: string
+                          x-kubernetes-sensitive-data: true
                           maxLength: 4096
                           description: |
                             The password for basic authentication.
+
+                            If the caller is not allowed to read the `registryupstreams/sensitive` subresource, the API returns `<omitted>` instead of the value.
                         auth:
                           type: string
+                          x-kubernetes-sensitive-data: true
                           maxLength: 4096
                           description: |
                             Pre-encoded `base64("username:password")`.
 
                             Takes precedence over `username` and `password` when set. When both forms are set, they must name the same credentials.
+
+                            If the caller is not allowed to read the `registryupstreams/sensitive` subresource, the API returns `<omitted>` instead of the value.
                     mirrors:
                       type: array
                       maxItems: 8
@@ -186,14 +192,20 @@ spec:
                                   The username for basic authentication.
                               password:
                                 type: string
+                                x-kubernetes-sensitive-data: true
                                 maxLength: 4096
                                 description: |
                                   The password for basic authentication.
+
+                                  If the caller is not allowed to read the `registryupstreams/sensitive` subresource, the API returns `<omitted>` instead of the value.
                               auth:
                                 type: string
+                                x-kubernetes-sensitive-data: true
                                 maxLength: 4096
                                 description: |
                                   Pre-encoded `base64("username:password")`.
+
+                                  If the caller is not allowed to read the `registryupstreams/sensitive` subresource, the API returns `<omitted>` instead of the value.
             status:
               type: object
               properties:

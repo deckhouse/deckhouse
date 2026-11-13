@@ -28,6 +28,11 @@ rules:
   - apiGroups: ["deckhouse.io"]
     resources: ["registryconfigs", "registryupstreams"]
     verbs: ["get", "list", "watch"]
+  # Authentication fields in both resources are marked as sensitive data and are required to
+  # configure the registry storage and node pull routes.
+  - apiGroups: ["deckhouse.io"]
+    resources: ["registryconfigs/sensitive", "registryupstreams/sensitive"]
+    verbs: ["get", "list", "watch"]
   - apiGroups: ["deckhouse.io"]
     resources: ["registryconfigs/status", "registryupstreams/status"]
     verbs: ["get", "update", "patch"]

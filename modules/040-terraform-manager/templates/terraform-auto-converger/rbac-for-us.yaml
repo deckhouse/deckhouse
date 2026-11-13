@@ -95,6 +95,12 @@ rules:
   resources: ["registryconfigs"]
   resourceNames: ["registry"]
   verbs: ["get"]
+# RegistryConfig authentication fields are marked as sensitive data and in-cluster dhctl needs
+# them together with the rest of the resolved registry configuration.
+- apiGroups: ["deckhouse.io"]
+  resources: ["registryconfigs/sensitive"]
+  resourceNames: ["registry"]
+  verbs: ["get"]
 # In-cluster dhctl parses the provider ModuleConfig (mc-flow, get-by-name),
 # lists provider InstanceClasses for CloudProviderVars, and reads the ModuleConfigs that carry
 # cluster settings (dhctl/pkg/config/cluster_settings.go).

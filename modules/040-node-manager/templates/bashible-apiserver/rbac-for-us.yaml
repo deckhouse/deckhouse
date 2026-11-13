@@ -100,11 +100,20 @@ rules:
 - apiGroups: ["deckhouse.io"]
   resources: ["nodeusers", "modulesources"]
   verbs: ["get", "list", "watch"]
+# spec.passwordHash is sensitive data used to render the users' /etc/shadow entries.
+- apiGroups: ["deckhouse.io"]
+  resources: ["nodeusers/sensitive"]
+  verbs: ["get", "list", "watch"]
 # With the registry module disabled, the RegistryUpstream objects node-controller accepted
 # are rendered inline into config.toml for containerd v1, which then has no config_path and
 # does not read the registry.d nodelet routes them in (pkg/template/registry/upstreams.go).
 - apiGroups: ["deckhouse.io"]
   resources: ["registryupstreams"]
+  verbs: ["get", "list", "watch"]
+# RegistryUpstream authentication fields are marked as sensitive data and are rendered together
+# with the rest of the upstream configuration.
+- apiGroups: ["deckhouse.io"]
+  resources: ["registryupstreams/sensitive"]
   verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1

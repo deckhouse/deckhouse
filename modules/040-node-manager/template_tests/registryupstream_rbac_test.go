@@ -45,7 +45,9 @@ var _ = Describe("Module :: node-manager :: helm template :: RegistryUpstream ri
 
 		controller := f.KubernetesGlobalResource("ClusterRole", "d8:node-manager:node-controller")
 		Expect(controller.Exists()).To(BeTrue())
+		Expect(roleVerbs(controller, "deckhouse.io", "registryconfigs/sensitive")).To(ConsistOf("get"))
 		Expect(roleVerbs(controller, "deckhouse.io", "registryupstreams")).To(ConsistOf("get", "list", "watch"))
+		Expect(roleVerbs(controller, "deckhouse.io", "registryupstreams/sensitive")).To(ConsistOf("get", "list", "watch"))
 		Expect(roleVerbs(controller, "deckhouse.io", "registryupstreams/status")).To(ConsistOf("patch"))
 		Expect(roleVerbs(controller, "deckhouse.io", "modulesources")).To(ContainElements("get", "list", "watch"))
 	})
@@ -56,6 +58,8 @@ var _ = Describe("Module :: node-manager :: helm template :: RegistryUpstream ri
 		agent := f.KubernetesGlobalResource("ClusterRole", "d8:node-manager:node-agent")
 		Expect(agent.Exists()).To(BeTrue())
 		Expect(roleVerbs(agent, "deckhouse.io", "registryupstreams")).To(BeEmpty())
+		Expect(roleVerbs(agent, "deckhouse.io", "registryupstreams/sensitive")).To(BeEmpty())
+		Expect(roleVerbs(agent, "deckhouse.io", "registryconfigs/sensitive")).To(BeEmpty())
 	})
 
 	It("lets bashible-apiserver only read registry upstreams", func() {
@@ -63,6 +67,8 @@ var _ = Describe("Module :: node-manager :: helm template :: RegistryUpstream ri
 
 		reader := f.KubernetesGlobalResource("ClusterRole", "d8:node-manager:bashible-apiserver:nodeusers")
 		Expect(reader.Exists()).To(BeTrue())
+		Expect(roleVerbs(reader, "deckhouse.io", "nodeusers/sensitive")).To(ConsistOf("get", "list", "watch"))
 		Expect(roleVerbs(reader, "deckhouse.io", "registryupstreams")).To(ConsistOf("get", "list", "watch"))
+		Expect(roleVerbs(reader, "deckhouse.io", "registryupstreams/sensitive")).To(ConsistOf("get", "list", "watch"))
 	})
 })

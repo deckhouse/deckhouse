@@ -87,15 +87,17 @@ var _ = Describe("Module :: registry :: helm template :: rbacv2", func() {
 				Expect(granted["moduleconfigs"]).To(ConsistOf("get", "list", "watch", "create", "update", "patch"))
 				// Rendered by the module and written by the controller.
 				Expect(granted["registryconfigs"]).To(ConsistOf(readVerbs))
+				Expect(granted["registryconfigs/sensitive"]).To(ConsistOf(readVerbs))
 				Expect(granted["registrystorages"]).To(ConsistOf(readVerbs))
 				Expect(granted["registryupstreams"]).To(ConsistOf(
 					"get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"))
+				Expect(granted["registryupstreams/sensitive"]).To(ConsistOf(readVerbs))
 				// Operations on the cache are created by hand, canceled with a label and deleted; their
 				// status is the controller's and the replicas'.
 				Expect(granted["registryoperations"]).To(ConsistOf(
 					"get", "list", "watch", "create", "patch", "update", "delete"))
 				Expect(granted["registryimages"]).To(ConsistOf("get", "list"))
-				Expect(granted).To(HaveLen(6), "no status subresource and nothing outside the module")
+				Expect(granted).To(HaveLen(8), "no status subresource and nothing outside the module")
 
 				edit.Field("rules").ForEach(func(_, rule gjson.Result) bool {
 					for _, resource := range rule.Get("resources").Array() {

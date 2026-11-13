@@ -69,10 +69,13 @@ spec:
                   - ['ssh-rsa AAABBB', 'cert-authority,principals="name" ssh-rsa BBBCCC']
                 passwordHash:
                   type: string
+                  x-kubernetes-sensitive-data: true
                   description: |
                     Hashed user password.
 
                     The format corresponds to the password hashes in `/etc/shadow`. You can get it using the following command: `openssl passwd -6`.
+
+                    If the caller is not allowed to read the `nodeusers/sensitive` subresource, the API returns `<omitted>` instead of the value.
                   x-doc-examples: ['$2a$10$F9ey7zW.sVliT224RFxpWeMsgzO.D9YRG54a8T36/K2MCiT41nzmC']
                 isSudoer:
                   type: boolean
@@ -173,10 +176,13 @@ spec:
                   - ['ssh-rsa AAABBB', 'cert-authority,principals="name" ssh-rsa BBBCCC']
                 passwordHash:
                   type: string
+                  x-kubernetes-sensitive-data: true
                   description: |
                     Hashed user password.
 
                     The format corresponds to the password hashes in `/etc/shadow`. You can get it using the following command: `openssl passwd -6`.
+
+                    If the caller is not allowed to read the `nodeusers/sensitive` subresource, the API returns `<omitted>` instead of the value.
                   x-doc-examples: ['$2a$10$F9ey7zW.sVliT224RFxpWeMsgzO.D9YRG54a8T36/K2MCiT41nzmC']
                 isSudoer:
                   type: boolean

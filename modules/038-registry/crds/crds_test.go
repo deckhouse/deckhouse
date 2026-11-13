@@ -58,25 +58,24 @@ var expectedCRDs = map[string]struct {
 	"registryoperation.yaml": {name: "registryoperations.deckhouse.io", kind: "RegistryOperation"},
 }
 
-// stripDocMarkers removes the `x-doc-*` keys the Deckhouse documentation tooling
-// reads out of the manifest files. They are not fields of JSONSchemaProps, so the
-// API server prunes them on decode; stripping them here reproduces that while
-// leaving strict decoding in place for everything else, so a real typo such as
-// `descriptionn` still fails the test instead of being silently dropped.
-func stripDocMarkers(node any) any {
+// stripDeckhouseMarkers removes the schema extensions that are understood by
+// Deckhouse but are not fields of the upstream JSONSchemaProps Go type used by
+// this test. Strict decoding remains in place for everything else, so a real
+// typo such as `descriptionn` still fails instead of being silently dropped.
+func stripDeckhouseMarkers(node any) any {
 	switch v := node.(type) {
 	case map[string]any:
 		for key, value := range v {
-			if strings.HasPrefix(key, "x-doc-") {
+			if strings.HasPrefix(key, "x-doc-") || key == "x-kubernetes-sensitive-data" {
 				delete(v, key)
 				continue
 			}
-			v[key] = stripDocMarkers(value)
+			v[key] = stripDeckhouseMarkers(value)
 		}
 		return v
 	case []any:
 		for i := range v {
-			v[i] = stripDocMarkers(v[i])
+			v[i] = stripDeckhouseMarkers(v[i])
 		}
 		return v
 	default:
@@ -93,12 +92,87 @@ func loadCRD(t *testing.T, file string) *apiextensionsv1.CustomResourceDefinitio
 	var tree map[string]any
 	require.NoError(t, yaml.Unmarshal(data, &tree), "%s is not valid YAML", file)
 
-	stripped, err := json.Marshal(stripDocMarkers(tree))
+	stripped, err := json.Marshal(stripDeckhouseMarkers(tree))
 	require.NoError(t, err)
 
 	crd := &apiextensionsv1.CustomResourceDefinition{}
 	require.NoError(t, yaml.UnmarshalStrict(stripped, crd), "%s is not a valid CustomResourceDefinition", file)
 	return crd
+}
+
+func rawSpecProperties(t *testing.T, file string) map[string]any {
+	t.Helper()
+
+	data, err := os.ReadFile(file)
+	require.NoError(t, err)
+
+	var tree map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &tree), "%s is not valid YAML", file)
+
+	spec, ok := tree["spec"].(map[string]any)
+	require.True(t, ok, "%s has no spec", file)
+	versions, ok := spec["versions"].([]any)
+	require.True(t, ok, "%s has no spec.versions", file)
+	require.Len(t, versions, 1, "%s must have exactly one version", file)
+	version, ok := versions[0].(map[string]any)
+	require.True(t, ok)
+	properties, ok := version["schema"].(map[string]any)["openAPIV3Schema"].(map[string]any)["properties"].(map[string]any)["spec"].(map[string]any)["properties"].(map[string]any)
+	require.True(t, ok, "cannot reach spec.properties in %s", file)
+	return properties
+}
+
+func schemaProperty(t *testing.T, root map[string]any, path ...string) map[string]any {
+	t.Helper()
+
+	var current any = root
+	for _, segment := range path {
+		object, ok := current.(map[string]any)
+		require.True(t, ok, "schema path %s reaches a non-object before %s", strings.Join(path, "."), segment)
+		current, ok = object[segment]
+		require.True(t, ok, "schema path %s is missing %s", strings.Join(path, "."), segment)
+	}
+	property, ok := current.(map[string]any)
+	require.True(t, ok, "schema path %s is not an object", strings.Join(path, "."))
+	return property
+}
+
+func TestRegistryAuthenticationFieldsAreSensitive(t *testing.T) {
+	tests := []struct {
+		file      string
+		authRoots [][]string
+	}{
+		{
+			file: "registryconfig.yaml",
+			authRoots: [][]string{
+				{"primary", "properties", "upstream", "properties", "auth", "properties"},
+				{"primary", "properties", "upstream", "properties", "mirrors", "items", "properties", "auth", "properties"},
+			},
+		},
+		{
+			file: "registryupstream.yaml",
+			authRoots: [][]string{
+				{"upstream", "properties", "auth", "properties"},
+				{"upstream", "properties", "mirrors", "items", "properties", "auth", "properties"},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.file, func(t *testing.T) {
+			properties := rawSpecProperties(t, test.file)
+			for _, root := range test.authRoots {
+				for _, field := range []string{"password", "auth"} {
+					path := append(append([]string{}, root...), field)
+					assert.Equal(t, true, schemaProperty(t, properties, path...)["x-kubernetes-sensitive-data"],
+						"spec.%s must be masked without access to the sensitive subresource", strings.Join(path, "."))
+				}
+
+				usernamePath := append(append([]string{}, root...), "username")
+				assert.NotContains(t, schemaProperty(t, properties, usernamePath...), "x-kubernetes-sensitive-data",
+					"spec.%s must stay visible", strings.Join(usernamePath, "."))
+			}
+		})
+	}
 }
 
 // structuralOf converts a served version's schema into the structural form the

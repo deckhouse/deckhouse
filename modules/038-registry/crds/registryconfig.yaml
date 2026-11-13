@@ -134,14 +134,20 @@ spec:
                                 The username for basic authentication.
                             password:
                               type: string
+                              x-kubernetes-sensitive-data: true
                               description: |
                                 The password for basic authentication.
+
+                                If the caller is not allowed to read the `registryconfigs/sensitive` subresource, the API returns `<omitted>` instead of the value.
                             auth:
                               type: string
+                              x-kubernetes-sensitive-data: true
                               description: |
                                 Pre-encoded `base64("username:password")`.
 
                                 Takes precedence over `username` and `password` when set.
+
+                                If the caller is not allowed to read the `registryconfigs/sensitive` subresource, the API returns `<omitted>` instead of the value.
                         mirrors:
                           type: array
                           description: |
@@ -188,12 +194,18 @@ spec:
                                       The username for basic authentication.
                                   password:
                                     type: string
+                                    x-kubernetes-sensitive-data: true
                                     description: |
                                       The password for basic authentication.
+
+                                      If the caller is not allowed to read the `registryconfigs/sensitive` subresource, the API returns `<omitted>` instead of the value.
                                   auth:
                                     type: string
+                                    x-kubernetes-sensitive-data: true
                                     description: |
                                       Pre-encoded `base64("username:password")`.
+
+                                      If the caller is not allowed to read the `registryconfigs/sensitive` subresource, the API returns `<omitted>` instead of the value.
                 storage:
                   type: object
                   description: |

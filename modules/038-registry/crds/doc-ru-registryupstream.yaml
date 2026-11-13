@@ -53,11 +53,15 @@ spec:
                         password:
                           description: |
                             Пароль для базовой аутентификации.
+
+                            Если у вызывающей стороны нет прав на подресурс `registryupstreams/sensitive`, API возвращает `<omitted>` вместо значения.
                         auth:
                           description: |
                             Заранее закодированное значение `base64("username:password")`.
 
                             Имеет приоритет над `username` и `password`, если задано. Если заданы обе формы, они должны задавать одни и те же ключи доступа.
+
+                            Если у вызывающей стороны нет прав на подресурс `registryupstreams/sensitive`, API возвращает `<omitted>` вместо значения.
                     mirrors:
                       description: |
                         Дополнительные адреса, отдающие **тот же** контент, что и хранилище образов контейнеров, — для отказоустойчивости.
@@ -89,9 +93,13 @@ spec:
                               password:
                                 description: |
                                   Пароль для базовой аутентификации.
+
+                                  Если у вызывающей стороны нет прав на подресурс `registryupstreams/sensitive`, API возвращает `<omitted>` вместо значения.
                               auth:
                                 description: |
                                   Заранее закодированное значение `base64("username:password")`.
+
+                                  Если у вызывающей стороны нет прав на подресурс `registryupstreams/sensitive`, API возвращает `<omitted>` вместо значения.
             status:
               properties:
                 observedGeneration:

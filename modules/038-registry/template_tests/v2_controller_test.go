@@ -399,6 +399,9 @@ var _ = Describe("Module :: registry :: helm template :: v2 controller", func() 
 
 			controllerRole := f.KubernetesGlobalResource("ClusterRole", "d8:registry:controller")
 			Expect(controllerRole.Exists()).To(BeTrue())
+			controllerVerbs := grantedVerbs(controllerRole)
+			Expect(controllerVerbs["registryconfigs/sensitive"]).To(ConsistOf("get", "list", "watch"))
+			Expect(controllerVerbs["registryupstreams/sensitive"]).To(ConsistOf("get", "list", "watch"))
 			// The controller may only write the status of the objects other writers
 			// own, never their spec.
 			Expect(controllerRole.Field("rules").String()).To(ContainSubstring("registryconfigs/status"))

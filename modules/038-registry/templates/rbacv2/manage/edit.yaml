@@ -81,3 +81,14 @@ rules:
   verbs:
   - get
   - list
+# Authentication fields in RegistryConfig and RegistryUpstream are marked as sensitive data.
+# The manager role already reads both parent resources and needs the same read access to their values.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - registryconfigs/sensitive
+  - registryupstreams/sensitive
+  verbs:
+  - get
+  - list
+  - watch

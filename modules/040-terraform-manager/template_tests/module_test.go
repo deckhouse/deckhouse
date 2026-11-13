@@ -65,9 +65,9 @@ var _ = Describe("Module :: terraform-manager :: helm template :: in-cluster dhc
 		f.HelmRender()
 	})
 
-	// A denied read of one of these ModuleConfigs fails the parse, so the converger and the exporter
+	// A denied read of one of these resources fails the parse, so the converger and the exporter
 	// would stop on every tick.
-	It("lets the converger and the exporter read every cluster settings ModuleConfig", func() {
+	It("lets the converger and the exporter read cluster settings and registry credentials", func() {
 		Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 		for _, name := range []string{"d8:terraform-manager:terraform-auto-converger", "d8:terraform-manager:terraform-state-exporter"} {
@@ -77,12 +77,17 @@ var _ = Describe("Module :: terraform-manager :: helm template :: in-cluster dhc
 			var rules []rbacv1.PolicyRule
 			Expect(json.Unmarshal([]byte(role.Field("rules").String()), &rules)).To(Succeed())
 			var readable []string
+			var sensitiveRegistryConfigs []string
 			for _, rule := range rules {
 				if slices.Contains(rule.Resources, "moduleconfigs") && slices.Contains(rule.Verbs, "get") {
 					readable = append(readable, rule.ResourceNames...)
 				}
+				if slices.Contains(rule.Resources, "registryconfigs/sensitive") && slices.Contains(rule.Verbs, "get") {
+					sensitiveRegistryConfigs = append(sensitiveRegistryConfigs, rule.ResourceNames...)
+				}
 			}
 			Expect(readable).To(ContainElements(config.ClusterSettingsModuleConfigs()), name)
+			Expect(sensitiveRegistryConfigs).To(ConsistOf("registry"), name)
 		}
 	})
 })

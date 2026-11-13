@@ -58,11 +58,15 @@ spec:
                             password:
                               description: |
                                 Пароль для базовой аутентификации.
+
+                                Если у вызывающей стороны нет прав на подресурс `registryconfigs/sensitive`, API возвращает `<omitted>` вместо значения.
                             auth:
                               description: |
                                 Заранее закодированное значение `base64("username:password")`.
 
                                 Имеет приоритет над `username` и `password`, если задано.
+
+                                Если у вызывающей стороны нет прав на подресурс `registryconfigs/sensitive`, API возвращает `<omitted>` вместо значения.
                         mirrors:
                           description: |
                             Дополнительные адреса, отдающие **тот же** контент, что и основное хранилище образов контейнеров, — для отказоустойчивости и балансировки.
@@ -94,9 +98,13 @@ spec:
                                   password:
                                     description: |
                                       Пароль для базовой аутентификации.
+
+                                      Если у вызывающей стороны нет прав на подресурс `registryconfigs/sensitive`, API возвращает `<omitted>` вместо значения.
                                   auth:
                                     description: |
                                       Заранее закодированное значение `base64("username:password")`.
+
+                                      Если у вызывающей стороны нет прав на подресурс `registryconfigs/sensitive`, API возвращает `<omitted>` вместо значения.
                 storage:
                   description: |
                     Настройки внутрикластерного кеша хранилища образов контейнеров.
