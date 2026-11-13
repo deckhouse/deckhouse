@@ -141,12 +141,6 @@ func (svc *Service) getLocalPath(moduleName, version, fileName string) (string, 
 		return checked(filepath.Join(svc.baseDir, modulesDir, moduleName, version, fileName))
 	}
 
-	if fileName == "candi/openapi" ||
-		fileName == "candi/openapi/cluster_configuration.yaml" ||
-		fileName == "candi/openapi/doc-ru-cluster_configuration.yaml" {
-		return checked(filepath.Join(svc.baseDir, modulesDir, moduleName, channel, fileName))
-	}
-
 	if isAllowedCRDPath(fileName) ||
 		fileName == "openapi" ||
 		fileName == "openapi/conversions" ||
