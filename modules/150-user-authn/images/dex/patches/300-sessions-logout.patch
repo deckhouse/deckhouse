@@ -1064,7 +1064,7 @@ index c2680d6d..fdcb40b9 100644
  		&deviceCode{storage: h.Storage, now: h.Now, logger: h.Logger},
  	)
 diff --git a/server/grants/refresh.go b/server/grants/refresh.go
-index 0ce2196e..24cb913e 100644
+index 67dadc55..684a0090 100644
 --- a/server/grants/refresh.go
 +++ b/server/grants/refresh.go
 @@ -100,14 +100,13 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
@@ -2950,10 +2950,10 @@ index b848c8bc..45d56734 100644
  
  func (t *Templates) WebAuthnVerify(r *http.Request, w http.ResponseWriter, mode, authenticatorID string) error {
 diff --git a/storage/kubernetes/storage.go b/storage/kubernetes/storage.go
-index 22d171d2..262f6d4d 100644
+index f226d3bf..5649c728 100644
 --- a/storage/kubernetes/storage.go
 +++ b/storage/kubernetes/storage.go
-@@ -932,6 +932,29 @@ func (cli *client) CreateRevocation(ctx context.Context, r storage.Revocation) e
+@@ -933,6 +933,29 @@ func (cli *client) CreateRevocation(ctx context.Context, r storage.Revocation) e
  	return cli.post(resourceRevocation, revocation)
  }
  

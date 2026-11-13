@@ -694,9 +694,19 @@ connector only when the claims stored for the pair are older than
     left; after the lease time by the clock (the storage reads between the
     looks do not stretch it) it gets 503. A refresh inside the reuse
     interval mints nothing, and a pair with no credential to spend (a local
-    user) has nothing to guard: neither takes the lease. The connector is
+    user) has nothing to guard: neither takes the lease. A connector that keeps
+    no credential at all (the password store of local users,
+    `connectors.KeepsNoCredential`) does not even try: its refresh reads the
+    offline session and the token no more than the update needs
+    (`rotateUnleased`), three reads less. The connector is
     always asked for offline access, so it returns the successor whatever
     the client asked for.
+  - The Kubernetes storage takes no lock of the refresh token around its
+    update (upstream annotates the object, `storage/kubernetes/lock.go`, now
+    removed): the connector is called before the update, under the lease, and
+    the update only decides on what it read, guarded by the `resourceVersion`
+    of the put. The lock cost four requests of every refresh, two of them
+    writes; an update is a get and a put now.
   - A request that lost the race for the shared credential to a dex without
     the lease (during an update) waits for the winner's successor up to the
     5 s of a connector call by the clock, looking again with the same backoff
@@ -1191,7 +1201,10 @@ disabled at the provider keeps refreshing tokens up to `maxAge`.
 - a login moves `claimsRefreshedAt` like the last login of the password grant:
   when older than a minute;
 - a refresh without a stored identity reads the connector, as without
-  sessions, instead of failing with 500.
+  sessions, instead of failing with 500;
+- a refresh reads the identity once, for the lock and the generation of the
+  pair (`useridentity.StateOf`) and for the stored claims, where it read it
+  twice.
 
 **Consumer in Deckhouse:** `templates/dex/config.yaml` renders the top-level
 `identityRefresh` always, from the setting `sessions.identityRefresh`

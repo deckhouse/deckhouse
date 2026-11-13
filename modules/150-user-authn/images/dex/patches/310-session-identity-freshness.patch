@@ -448,7 +448,7 @@ index a6e2b551..72a909f2 100644
  	})
  	if oerr := identityError(ctx, g.logger, err, tokenRequestLocked,
 diff --git a/server/grants/refresh.go b/server/grants/refresh.go
-index 24cb913e..f81ff087 100644
+index 684a0090..03d16861 100644
 --- a/server/grants/refresh.go
 +++ b/server/grants/refresh.go
 @@ -10,9 +10,11 @@ import (
@@ -472,7 +472,20 @@ index 24cb913e..f81ff087 100644
  	now             func() time.Time
  	logger          *slog.Logger
  }
-@@ -111,18 +115,25 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+@@ -91,7 +95,11 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+ 	// A locked account gets no new tokens: the refresh is refused with
+ 	// invalid_grant (see refreshRefusal). The refresh token is kept, so a client
+ 	// that still holds it goes on once the lock ends.
+-	generation, err := useridentity.State(ctx, g.storage, refreshToken.Claims.UserID, refreshToken.ConnectorID, g.now())
++	//
++	// The identity is read once (Deckhouse): for the lock and the generation
++	// here, for the stored claims below.
++	ui, uiErr := g.storage.GetUserIdentity(ctx, refreshToken.Claims.UserID, refreshToken.ConnectorID)
++	generation, err := useridentity.StateOf(ui, uiErr, g.now())
+ 	if oerr := identityError(ctx, g.logger, err, refreshLocked,
+ 		refreshToken.ConnectorID, client.ID, signinlog.ClaimsUser(refreshToken.Claims)); oerr != nil {
+ 		return nil, refreshRefusal(oerr)
+@@ -111,18 +119,24 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
  		}
  	}
  
@@ -486,15 +499,14 @@ index 24cb913e..f81ff087 100644
 -			g.logger.ErrorContext(ctx, "failed to get user identity", "err", err)
 -			return nil, &oauth2.Error{Type: oauth2.InvalidRequest, Status: http.StatusInternalServerError}
 -		}
-+	ui, err := g.storage.GetUserIdentity(ctx, refreshToken.Claims.UserID, refreshToken.ConnectorID)
 +	switch {
-+	case err == nil:
++	case uiErr == nil:
  		userIdent = &ui
-+	case errors.Is(err, storage.ErrNotFound):
++	case errors.Is(uiErr, storage.ErrNotFound):
 +		// No identity to serve stored claims from (Deckhouse): the refresh reads
 +		// the connector.
 +	default:
-+		g.logger.ErrorContext(ctx, "failed to get user identity", "err", err)
++		// Refused above with the failure to read it (identityError).
 +		return nil, &oauth2.Error{Type: oauth2.InvalidRequest, Status: http.StatusInternalServerError}
  	}
  
@@ -505,7 +517,7 @@ index 24cb913e..f81ff087 100644
  		authTime = userIdent.LastLogin
  	}
  
-@@ -131,21 +142,18 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+@@ -131,21 +145,18 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
  		ident       connector.Identity
  	)
  	if userIdent != nil {
@@ -534,10 +546,12 @@ index 24cb913e..f81ff087 100644
  
  	auth := tokens.Authorization{
  		Client:      client,
-@@ -188,6 +196,135 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
- 	return ts.Response(g.now()), nil
- }
+@@ -186,8 +197,137 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
  
+ 	ts := tokens.TokenSet{AccessToken: accessToken, IDToken: idToken, RefreshToken: rawNewToken, Expiry: expiry}
+ 	return ts.Response(g.now()), nil
++}
++
 +// rotateStored rotates the refresh token of a pair whose identity dex stores.
 +// Upstream serves the stored claims with sessions on and never asks the
 +// connector; here (Deckhouse) they are served, with sessions on or off, while
@@ -611,8 +625,8 @@ index 24cb913e..f81ff087 100644
 +	default:
 +		return "", ident, g.rotateError(ctx, err, refreshToken)
 +	}
-+}
-+
+ }
+ 
 +// identityGone reports whether the connector answered that the user is gone or no
 +// longer let in, as opposed to refusing the credential it was offered.
 +func identityGone(err error) bool {
@@ -837,7 +851,7 @@ index 938ad81b..2ef6df5e 100644
  				}
  			})
 diff --git a/server/server_grant_refresh_upstream_state_test.go b/server/server_grant_refresh_upstream_state_test.go
-index 8ba73a90..6fd4d1ab 100644
+index f87d243c..1cd9bd0a 100644
 --- a/server/server_grant_refresh_upstream_state_test.go
 +++ b/server/server_grant_refresh_upstream_state_test.go
 @@ -21,6 +21,7 @@ import (
@@ -868,10 +882,11 @@ index 8ba73a90..6fd4d1ab 100644
  		})
  		t.Cleanup(httpServer.Close)
  		if i == 0 {
-@@ -513,7 +516,28 @@ func TestUpstreamCredentialStates(t *testing.T) {
+@@ -512,8 +515,29 @@ func TestUpstreamCredentialStates(t *testing.T) {
+ 				w.login("webapp", 0)
  				w.clk.advance(3 * time.Minute)
  				w.requireRefresh("webapp", 0, http.StatusOK)
- 				w.login("kubeconfig-generator", 0)
++				w.login("kubeconfig-generator", 0)
 +				w.requireRefresh("kubeconfig-generator", 0, http.StatusOK)
 +			},
 +		},
@@ -880,7 +895,7 @@ index 8ba73a90..6fd4d1ab 100644
 +			maxAge: 10 * time.Minute,
 +			run: func(t *testing.T, w *upstreamWorld) {
 +				w.login("webapp", 0)
-+				w.login("kubeconfig-generator", 0)
+ 				w.login("kubeconfig-generator", 0)
 +				// A login without the groups scope stores claims of unknown age:
 +				// the first refresh reads them, for every client.
 +				w.clk.advance(3 * time.Minute)
@@ -897,11 +912,10 @@ index 8ba73a90..6fd4d1ab 100644
  			},
  		},
  		{
-@@ -780,7 +804,71 @@ func requireNotFatalForDexAuthenticator(t *testing.T, rr *httptest.ResponseRecor
- 	t.Helper()
+@@ -781,6 +805,70 @@ func requireNotFatalForDexAuthenticator(t *testing.T, rr *httptest.ResponseRecor
  	for _, fatal := range []string{"invalid_grant", "invalid_client", "access_denied"} {
  		require.NotContains(t, rr.Body.String(), fatal)
-+	}
+ 	}
 +}
 +
 +// A request that waited for the lease while another refreshed the identity is
@@ -957,7 +971,7 @@ index 8ba73a90..6fd4d1ab 100644
 +	select {
 +	case <-waiting:
 +	case <-waiterDone:
- 	}
++	}
 +	close(release)
 +	wg.Wait()
 +
@@ -969,7 +983,31 @@ index 8ba73a90..6fd4d1ab 100644
  }
  
  // The provider has spent the shared credential, and its answer, with the write
-@@ -1028,4 +1116,80 @@ func TestUpstreamRotationRefusedOwnCopyIsNotOfferedAgain(t *testing.T) {
+@@ -941,6 +1029,15 @@ type leaseWriteStorage struct {
+ 	// not (a get at least on the Kubernetes storage), refreshReads the reads of
+ 	// refresh tokens.
+ 	attempts, refreshReads int
++	// identityReads counts the reads of user identities.
++	identityReads int
++}
++
++func (s *leaseWriteStorage) GetUserIdentity(ctx context.Context, userID, connectorID string) (storage.UserIdentity, error) {
++	s.mu.Lock()
++	s.identityReads++
++	s.mu.Unlock()
++	return s.Storage.GetUserIdentity(ctx, userID, connectorID)
+ }
+ 
+ func (s *leaseWriteStorage) GetRefresh(ctx context.Context, id string) (storage.RefreshToken, error) {
+@@ -1009,6 +1106,7 @@ func TestUpstreamRefreshLocalUserTakesNoLease(t *testing.T) {
+ 	require.Equal(t, 1, writes.updates, "one write: the last-used time of the grant")
+ 	require.Equal(t, 1, writes.attempts, "no attempt at the lease: the offline session is read for nothing else")
+ 	require.Equal(t, 1, writes.refreshReads, "the token is read once, by the lookup")
++	require.Equal(t, 1, writes.identityReads, "the identity is read once, for the lock and the stored claims")
+ }
+ 
+ // The own copy of the shared credential an old refresh token holds is offered
+@@ -1045,4 +1143,80 @@ func TestUpstreamRotationRefusedOwnCopyIsNotOfferedAgain(t *testing.T) {
  	rr = refreshTokenRequest(t, t.Context(), s, clientID, requestToken(refreshID))
  	requireOAuth2Error(t, rr, http.StatusBadRequest, "invalid_grant")
  	require.Equal(t, 1, upstream.reused, "never again")
@@ -1006,12 +1044,12 @@ index 8ba73a90..6fd4d1ab 100644
 +func (s *writeOrderStorage) UpdateRefreshToken(ctx context.Context, id string, updater func(storage.RefreshToken) (storage.RefreshToken, error)) error {
 +	s.record("refresh token")
 +	return s.Storage.UpdateRefreshToken(ctx, id, updater)
-+}
+ }
 +
 +func (s *writeOrderStorage) UpdateUserIdentity(ctx context.Context, userID, connID string, updater func(storage.UserIdentity) (storage.UserIdentity, error)) error {
 +	s.record("user identity")
 +	return s.Storage.UpdateUserIdentity(ctx, userID, connID, updater)
- }
++}
 +
 +// Once the provider has spent the credential, the first write publishes its
 +// successor: until it lands, the credential other requests would read is
@@ -1444,7 +1482,7 @@ index 65412ff5..c63a415c 100644
  
  // Enabled reports whether sessions are configured.
 diff --git a/server/useridentity/useridentity.go b/server/useridentity/useridentity.go
-index 1c71a378..ca19a5d3 100644
+index 1c71a378..8c9d7a54 100644
 --- a/server/useridentity/useridentity.go
 +++ b/server/useridentity/useridentity.go
 @@ -82,11 +82,40 @@ type Login struct {
@@ -1555,6 +1593,20 @@ index 1c71a378..ca19a5d3 100644
  // isWriteFailure reports whether err is a failure to write an identity, as
  // opposed to the identity missing, the pair blocked or nothing to write.
  func isWriteFailure(err error) bool {
+@@ -260,6 +319,13 @@ func CheckBlockedIdentity(ui storage.UserIdentity, now time.Time) error {
+ // A pair without an identity is at generation 0 and not blocked.
+ func State(ctx context.Context, s storage.Storage, userID, connectorID string, now time.Time) (uint64, error) {
+ 	ui, err := s.GetUserIdentity(ctx, userID, connectorID)
++	return StateOf(ui, err, now)
++}
++
++// StateOf is State of an identity already read: ui and err are what
++// GetUserIdentity returned (Deckhouse), so a request that needs the identity
++// anyway reads it once.
++func StateOf(ui storage.UserIdentity, err error, now time.Time) (uint64, error) {
+ 	switch {
+ 	case errors.Is(err, storage.ErrNotFound):
+ 		return 0, nil
 diff --git a/server/useridentity/useridentity_test.go b/server/useridentity/useridentity_test.go
 index 0b55a03c..e5bd8c9a 100644
 --- a/server/useridentity/useridentity_test.go

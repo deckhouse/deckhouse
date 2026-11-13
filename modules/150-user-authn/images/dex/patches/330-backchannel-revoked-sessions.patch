@@ -380,7 +380,7 @@ index 71bd12c3..48387fc5 100644
  }
  
 diff --git a/storage/kubernetes/storage.go b/storage/kubernetes/storage.go
-index 577f0013..ae23f769 100644
+index 1ce25a82..4aeeea64 100644
 --- a/storage/kubernetes/storage.go
 +++ b/storage/kubernetes/storage.go
 @@ -8,6 +8,7 @@ import (
@@ -399,7 +399,7 @@ index 577f0013..ae23f769 100644
  )
  
  const (
-@@ -980,8 +982,63 @@ func (cli *client) RevocationExists(ctx context.Context, typ storage.RevocationT
+@@ -981,8 +983,63 @@ func (cli *client) RevocationExists(ctx context.Context, typ storage.RevocationT
  		return false, fmt.Errorf("get revocation %s: %w", name, err)
  	}
  	return true, nil
@@ -464,7 +464,7 @@ index 577f0013..ae23f769 100644
  	if httpErr, ok := err.(httpError); ok {
  		if httpErr.StatusCode() == http.StatusConflict {
 diff --git a/storage/kubernetes/storage_test.go b/storage/kubernetes/storage_test.go
-index 08c07d14..edec5462 100644
+index b6de0631..12ad9c57 100644
 --- a/storage/kubernetes/storage_test.go
 +++ b/storage/kubernetes/storage_test.go
 @@ -3,14 +3,18 @@ package kubernetes
@@ -486,10 +486,11 @@ index 08c07d14..edec5462 100644
  	"testing"
  	"time"
  
-@@ -405,3 +409,148 @@ func TestRefreshTokenLock(t *testing.T) {
- 		require.Equal(t, "update-result-2", token.Token)
- 	})
- }
+@@ -315,4 +319,149 @@ func TestRetryOnConflictTries(t *testing.T) {
+ 	err := retryOnConflict(t.Context(), conflicting(len(conflictRetrySteps)+1, &calls))
+ 	require.ErrorContains(t, err, "maximum timeout reached while retrying a conflicted request")
+ 	require.Equal(t, len(conflictRetrySteps)+1, calls, "no try after the last pause")
++}
 +
 +// TestClaimRevocation: of the session revocations, the replicas of dex list those
 +// not claimed yet, and of two replicas claiming one at once, one wins (Deckhouse).
@@ -549,7 +550,7 @@ index 08c07d14..edec5462 100644
 +	ok, err = cli.ClaimRevocation(ctx, "session-gone")
 +	require.NoError(t, err)
 +	require.False(t, ok, "gone")
-+}
+ }
 +
 +// revocationAPI serves Revocation objects as the API server does for
 +// TestClaimRevocation: it selects by the labels of PendingSessionRevocations and

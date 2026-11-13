@@ -1669,7 +1669,7 @@ index a028d549..020d73d7 100644
  
  	c.mu.Lock()
 diff --git a/server/connectors/password.go b/server/connectors/password.go
-index 8b5fb8ca..d6595ace 100644
+index 8b5fb8ca..77deaa21 100644
 --- a/server/connectors/password.go
 +++ b/server/connectors/password.go
 @@ -2,7 +2,6 @@ package connectors
@@ -1680,17 +1680,26 @@ index 8b5fb8ca..d6595ace 100644
  	"fmt"
  
  	"golang.org/x/crypto/bcrypt"
-@@ -26,6 +25,9 @@ type passwordDB struct {
+@@ -26,6 +25,18 @@ type passwordDB struct {
  	s storage.Storage
  }
  
++// KeepsNoCredential reports whether c refreshes without a credential of its own
++// in the connector data: the password store of local users reads the user from
++// the storage of Dex itself (Deckhouse). Its refresh spends nothing single-use,
++// so it needs no lease of the offline session.
++func KeepsNoCredential(c connector.Connector) bool {
++	_, ok := c.(passwordDB)
++	return ok
++}
++
 +// errUserNotFound refuses the refresh of a user deleted from the password store.
 +var errUserNotFound = fmt.Errorf("user not found: %w", connector.ErrIdentityGone)
 +
  func resolvePasswordName(p storage.Password) string {
  	if p.Name != "" {
  		return p.Name
-@@ -71,14 +73,17 @@ func (db passwordDB) Refresh(ctx context.Context, s connector.Scopes, identity c
+@@ -71,14 +82,17 @@ func (db passwordDB) Refresh(ctx context.Context, s connector.Scopes, identity c
  	p, err := db.s.GetPassword(ctx, identity.Email)
  	if err != nil {
  		if err == storage.ErrNotFound {
@@ -1820,7 +1829,7 @@ index aef60db4..7e439800 100644
  	}
  	if !connectors.GrantTypeAllowed(conn.GrantTypes, grantType) {
 diff --git a/server/grants/refresh.go b/server/grants/refresh.go
-index c8404742..fc4d495b 100644
+index c8404742..603a8e1b 100644
 --- a/server/grants/refresh.go
 +++ b/server/grants/refresh.go
 @@ -123,25 +123,25 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
@@ -1866,7 +1875,7 @@ index c8404742..fc4d495b 100644
  	}
  
  	auth := tokens.Authorization{
-@@ -281,42 +281,71 @@ func (g *refresh) refreshScopes(req *Request, refreshToken *storage.RefreshToken
+@@ -281,42 +281,73 @@ func (g *refresh) refreshScopes(req *Request, refreshToken *storage.RefreshToken
  	return req.Scopes, nil
  }
  
@@ -1888,14 +1897,6 @@ index c8404742..fc4d495b 100644
 +	if !ok {
 +		return tokens.Upstream{}
  	}
--
--	session, err := g.storage.GetOfflineSessions(ctx, refreshToken.Claims.UserID, refreshToken.ConnectorID)
--	if err != nil {
--		if err != storage.ErrNotFound {
--			g.logger.ErrorContext(ctx, "failed to get offline session", "err", err)
--			return nil, err
--		}
--		return nil, nil
 +	parsedScopes := tokens.ParseScopes(scopes)
 +	// The credential the refresh spends is shared by every client of the user,
 +	// whatever scopes this refresh narrowed its token to: the connector is asked
@@ -1913,6 +1914,15 @@ index c8404742..fc4d495b 100644
 +		},
 +		IsLoginIdentity: connectors.KeepsLoginIdentity(conn.Connector),
 +		NeedsCredential: needsCredential,
+ 
+-	session, err := g.storage.GetOfflineSessions(ctx, refreshToken.Claims.UserID, refreshToken.ConnectorID)
+-	if err != nil {
+-		if err != storage.ErrNotFound {
+-			g.logger.ErrorContext(ctx, "failed to get offline session", "err", err)
+-			return nil, err
+-		}
+-		return nil, nil
++		KeepsNoCredential: connectors.KeepsNoCredential(conn.Connector),
  	}
 -	return session.ConnectorData, nil
  }
@@ -2381,10 +2391,10 @@ index 00000000..f489d40b
 +}
 diff --git a/server/server_grant_refresh_upstream_state_test.go b/server/server_grant_refresh_upstream_state_test.go
 new file mode 100644
-index 00000000..8ba73a90
+index 00000000..f87d243c
 --- /dev/null
 +++ b/server/server_grant_refresh_upstream_state_test.go
-@@ -0,0 +1,1031 @@
+@@ -0,0 +1,1048 @@
 +package server
 +
 +import (
@@ -3324,9 +3334,23 @@ index 00000000..8ba73a90
 +	mu       sync.Mutex
 +	updates  int
 +	isLeased bool
++	// attempts counts the updates of offline sessions asked for, written or
++	// not (a get at least on the Kubernetes storage), refreshReads the reads of
++	// refresh tokens.
++	attempts, refreshReads int
++}
++
++func (s *leaseWriteStorage) GetRefresh(ctx context.Context, id string) (storage.RefreshToken, error) {
++	s.mu.Lock()
++	s.refreshReads++
++	s.mu.Unlock()
++	return s.Storage.GetRefresh(ctx, id)
 +}
 +
 +func (s *leaseWriteStorage) UpdateOfflineSessions(ctx context.Context, userID, connID string, updater func(storage.OfflineSessions) (storage.OfflineSessions, error)) error {
++	s.mu.Lock()
++	s.attempts++
++	s.mu.Unlock()
 +	return s.Storage.UpdateOfflineSessions(ctx, userID, connID, func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
 +		updated, err := updater(old)
 +		if err == nil {
@@ -3345,7 +3369,8 @@ index 00000000..8ba73a90
 +// password, from the storage of the server itself, runs outside the
 +// transaction that rotates the refresh token, so the memory storage does not
 +// deadlock (sessions off and no identity refresh maxAge: the connector is
-+// called).
++// called). With nothing to lease it reads the offline session and the token no
++// more than the update needs (Deckhouse).
 +func TestUpstreamRefreshLocalUserTakesNoLease(t *testing.T) {
 +	const clientID, refreshID = "kubeconfig-generator", "cli-refresh-id"
 +	clk := &testClock{now: time.Now()}
@@ -3379,6 +3404,8 @@ index 00000000..8ba73a90
 +	defer writes.mu.Unlock()
 +	require.False(t, writes.isLeased, "nothing to spend, no lease")
 +	require.Equal(t, 1, writes.updates, "one write: the last-used time of the grant")
++	require.Equal(t, 1, writes.attempts, "no attempt at the lease: the offline session is read for nothing else")
++	require.Equal(t, 1, writes.refreshReads, "the token is read once, by the lookup")
 +}
 +
 +// The own copy of the shared credential an old refresh token holds is offered
@@ -3418,10 +3445,10 @@ index 00000000..8ba73a90
 +}
 diff --git a/server/server_grant_refresh_upstream_test.go b/server/server_grant_refresh_upstream_test.go
 new file mode 100644
-index 00000000..2c26f664
+index 00000000..b9c0e7a6
 --- /dev/null
 +++ b/server/server_grant_refresh_upstream_test.go
-@@ -0,0 +1,1779 @@
+@@ -0,0 +1,1774 @@
 +package server
 +
 +import (
@@ -4311,11 +4338,6 @@ index 00000000..2c26f664
 +	assert.True(t, upstream.lastHasDeadline, "the detached call is still bounded")
 +	requireSessionCredentialValid(t, s, upstream)
 +}
-+
-+// kubernetesRefreshTokenLock is how long the kubernetes storage holds the lock
-+// of a refresh token before another request may break it (lockTimeout in
-+// storage/kubernetes/lock.go).
-+const kubernetesRefreshTokenLock = 10 * time.Second
 +
 +// The connector call ends early enough within the lease of the shared credential
 +// to leave room for the writes that publish its successor: a request that takes
@@ -6283,10 +6305,10 @@ index 67a9693b..bff272e7 100644
  	// A second create for the same client replaces the old token.
 diff --git a/server/tokens/refresh_upstream.go b/server/tokens/refresh_upstream.go
 new file mode 100644
-index 00000000..da98493b
+index 00000000..2d7b1c87
 --- /dev/null
 +++ b/server/tokens/refresh_upstream.go
-@@ -0,0 +1,903 @@
+@@ -0,0 +1,956 @@
 +package tokens
 +
 +// refresh_upstream.go refreshes the identity of a refresh token through the
@@ -6394,6 +6416,10 @@ index 00000000..da98493b
 +	// connector.RefreshCredentialReporter): without one it is not asked
 +	// (Deckhouse).
 +	NeedsCredential bool
++	// KeepsNoCredential is set when the connector refreshes without any
++	// credential in the connector data (the password store of local users):
++	// its refresh spends nothing single-use and takes no lease (Deckhouse).
++	KeepsNoCredential bool
 +}
 +
 +// errNoUpstreamCredential refuses the refresh of a pair that holds no
@@ -6723,6 +6749,11 @@ index 00000000..da98493b
 +		// Nothing single-use is spent: no lease.
 +		return rt.rotateReplayed(ctx, storageToken, requestToken, strategy, upstream)
 +	}
++	if upstream.KeepsNoCredential && len(storageToken.ConnectorData) == 0 {
++		// Nothing single-use either, and nothing to look for in the offline
++		// session: no attempt at the lease, no second read of the token.
++		return rt.rotateUnleased(ctx, storageToken, requestToken, strategy, upstream)
++	}
 +
 +	// A refresh within the reuse interval reads no identity: it needs no lease,
 +	// and does not wait for one.
@@ -6887,6 +6918,50 @@ index 00000000..da98493b
 +		rawToken, ident, err := rt.rotate(rctx, storageToken, requestToken, strategy, refresher)
 +		return rawToken, ident, refresher, err
 +	}
++}
++
++// rotateUnleased rotates the token of a pair whose connector keeps no
++// credential (Upstream.KeepsNoCredential). As under the lease, the connector is
++// asked before the storage transaction, once, and only when the token is due a
++// new identity, and what it read is stored for the identity freshness (Read).
++// The pair has no credential to lease, so the offline session is not read for
++// one and the token is not read again: the requests of the refresh are the
++// lookup of the token, its update and the update of the offline session.
++func (rt *RefreshStore) rotateUnleased(ctx context.Context, storageToken *storage.RefreshToken, requestToken *internal.RefreshToken, strategy *RefreshStrategy, upstream Upstream) (string, connector.Identity, error) {
++	stored := IdentityFromClaims(storageToken.Claims)
++	refresher := &upstreamRefresher{
++		refresh:     upstream.Refresh,
++		logger:      rt.logger,
++		connectorID: storageToken.ConnectorID,
++		clientID:    storageToken.ClientID,
++		user:        signinlog.User{ID: storageToken.Claims.UserID},
++		mustPrepare: true,
++	}
++	prepare := func() (connector.Identity, error) {
++		ident, err := refresher.prepare(ctx, stored)
++		if err == nil && upstream.Read != nil {
++			rctx, cancel := detached(ctx, publishTimeout)
++			upstream.Read(rctx, ident)
++			cancel()
++		}
++		return ident, err
++	}
++
++	if mints(*storageToken, requestToken, strategy) {
++		if ident, err := prepare(); err != nil {
++			return "", ident, err
++		}
++	}
++	rawToken, ident, err := rt.rotate(ctx, storageToken, requestToken, strategy, refresher)
++	if !errors.Is(err, errNotPrepared) {
++		return rawToken, ident, err
++	}
++	// The token became due a new identity after it was read (the end of the
++	// reuse interval): the connector is asked now, and the update runs again.
++	if ident, err := prepare(); err != nil {
++		return "", ident, err
++	}
++	return rt.rotate(ctx, storageToken, requestToken, strategy, refresher)
 +}
 +
 +// maxLeasedPasses bounds the passes of rotateLeased that start over.
@@ -7559,6 +7634,159 @@ index 6c86a42d..127b9c70 100644
  		// The actual name can be found in auth request or auth code objects and equals to the state value
  		return "", fmt.Errorf(
  			"invalid kubernetes resource name: must match the pattern %s and be no longer than %d characters",
+diff --git a/storage/kubernetes/lock.go b/storage/kubernetes/lock.go
+deleted file mode 100644
+index 092f6d0e..00000000
+--- a/storage/kubernetes/lock.go
++++ /dev/null
+@@ -1,147 +0,0 @@
+-package kubernetes
+-
+-import (
+-	"fmt"
+-	"time"
+-)
+-
+-const (
+-	lockAnnotation = "dexidp.com/resource-lock"
+-	lockTimeFormat = time.RFC3339
+-)
+-
+-var (
+-	lockTimeout     = 10 * time.Second
+-	lockCheckPeriod = 100 * time.Millisecond
+-)
+-
+-// refreshTokenLock is an implementation of annotation-based optimistic locking.
+-//
+-// Refresh token contains data to refresh identity in external authentication system.
+-// There is a requirement that refresh should be called only once because of several reasons:
+-//   - Some of OIDC providers could use the refresh token rotation feature which requires calling refresh only once.
+-//   - Providers can limit the rate of requests to the token endpoint, which will lead to the error
+-//     in case of many concurrent requests.
+-//
+-// The lock uses a Kubernetes annotation on the refresh token resource as a mutex.
+-// Only one goroutine can hold the lock at a time; others poll until the annotation
+-// is removed (unlocked) or expires (broken). The Kubernetes resourceVersion on put
+-// acts as compare-and-swap: if two goroutines race to set the annotation, only one
+-// succeeds and the other gets a 409 Conflict.
+-type refreshTokenLock struct {
+-	cli *client
+-	// waitingState tracks whether this lock instance has lost a compare-and-swap race
+-	// and is now polling for the lock to be released. Used by Unlock to skip the
+-	// annotation removal — only the goroutine that successfully wrote the annotation
+-	// should remove it.
+-	waitingState bool
+-}
+-
+-func newRefreshTokenLock(cli *client) *refreshTokenLock {
+-	return &refreshTokenLock{cli: cli}
+-}
+-
+-// Lock polls until the lock annotation can be set on the refresh token resource.
+-// Returns nil when the lock is acquired, or an error on timeout (200 attempts × 100ms).
+-func (l *refreshTokenLock) Lock(id string) error {
+-	for i := 0; i <= 200; i++ {
+-		ok, err := l.setLockAnnotation(id)
+-		if err != nil {
+-			return err
+-		}
+-		if !ok {
+-			return nil
+-		}
+-		time.Sleep(lockCheckPeriod)
+-	}
+-	return fmt.Errorf("timeout waiting for refresh token %s lock", id)
+-}
+-
+-// Unlock removes the lock annotation from the refresh token resource.
+-// Only the holder of the lock (waitingState == false) performs the removal.
+-func (l *refreshTokenLock) Unlock(id string) {
+-	if l.waitingState {
+-		// This goroutine never successfully wrote the annotation, so there's
+-		// nothing to remove. Another goroutine holds (or held) the lock.
+-		return
+-	}
+-
+-	r, err := l.cli.getRefreshToken(id)
+-	if err != nil {
+-		l.cli.logger.Debug("failed to get resource to release lock for refresh token", "token_id", id, "err", err)
+-		return
+-	}
+-
+-	r.Annotations = nil
+-	err = l.cli.put(resourceRefreshToken, r.ObjectMeta.Name, r)
+-	if err != nil {
+-		l.cli.logger.Debug("failed to release lock for refresh token", "token_id", id, "err", err)
+-	}
+-}
+-
+-// setLockAnnotation attempts to acquire the lock by writing an annotation with
+-// an expiration timestamp. Returns (true, nil) when the caller should keep waiting,
+-// (false, nil) when the lock is acquired, or (false, err) on a non-retriable error.
+-//
+-// The locking protocol relies on Kubernetes optimistic concurrency: every put
+-// includes the resource's current resourceVersion, so concurrent writes to the
+-// same object result in a 409 Conflict for all but one writer.
+-func (l *refreshTokenLock) setLockAnnotation(id string) (bool, error) {
+-	r, err := l.cli.getRefreshToken(id)
+-	if err != nil {
+-		return false, err
+-	}
+-
+-	currentTime := time.Now()
+-	lockData := map[string]string{
+-		lockAnnotation: currentTime.Add(lockTimeout).Format(lockTimeFormat),
+-	}
+-
+-	val, ok := r.Annotations[lockAnnotation]
+-	if !ok {
+-		// No annotation means the lock is free. Every goroutine — whether it's
+-		// a first-time caller or was previously waiting — must compete by writing
+-		// the annotation. The put uses the current resourceVersion, so only one
+-		// writer succeeds; the rest get a 409 Conflict and go back to polling.
+-		r.Annotations = lockData
+-		err := l.cli.put(resourceRefreshToken, r.ObjectMeta.Name, r)
+-		if err == nil {
+-			l.waitingState = false
+-			return false, nil
+-		}
+-
+-		if isKubernetesAPIConflictError(err) {
+-			l.waitingState = true
+-			return true, nil
+-		}
+-		return false, err
+-	}
+-
+-	until, err := time.Parse(lockTimeFormat, val)
+-	if err != nil {
+-		return false, fmt.Errorf("lock annotation value is malformed: %v", err)
+-	}
+-
+-	if !currentTime.After(until) {
+-		// Lock is held by another goroutine and has not expired yet — keep polling.
+-		l.waitingState = true
+-		return true, nil
+-	}
+-
+-	// Lock has expired (holder crashed or is too slow). Attempt to break it by
+-	// overwriting the annotation with a new expiration. Again, only one writer
+-	// can win the compare-and-swap race.
+-	r.Annotations = lockData
+-
+-	err = l.cli.put(resourceRefreshToken, r.ObjectMeta.Name, r)
+-	if err == nil {
+-		return false, nil
+-	}
+-
+-	l.cli.logger.Debug("break lock annotation", "error", err)
+-	if isKubernetesAPIConflictError(err) {
+-		l.waitingState = true
+-		return true, nil
+-	}
+-	return false, err
+-}
 diff --git a/storage/kubernetes/refresh_name_test.go b/storage/kubernetes/refresh_name_test.go
 new file mode 100644
 index 00000000..e0ba0506
@@ -7599,8 +7827,210 @@ index 00000000..e0ba0506
 +	require.False(t, validResourceName("a_b"))
 +	require.False(t, validResourceName(""))
 +}
+diff --git a/storage/kubernetes/refresh_update_test.go b/storage/kubernetes/refresh_update_test.go
+new file mode 100644
+index 00000000..4dba24e4
+--- /dev/null
++++ b/storage/kubernetes/refresh_update_test.go
+@@ -0,0 +1,196 @@
++package kubernetes
++
++import (
++	"encoding/json"
++	"log/slog"
++	"net/http"
++	"net/http/httptest"
++	"strconv"
++	"sync"
++	"sync/atomic"
++	"testing"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/storage"
++)
++
++// refreshTokenAPI is an API server that keeps one RefreshToken object as the
++// real one does: a put must carry the resourceVersion of the object it replaces
++// or none (an unconditional update), anything else is a 409 conflict, and every
++// write moves the version on. It counts the requests by method and the
++// conflicts it answered.
++type refreshTokenAPI struct {
++	mu        sync.Mutex
++	object    RefreshToken
++	version   int
++	requests  map[string]int
++	conflicts int
++
++	// heldGets, when set, holds the first gets until that many arrived: the
++	// requests read the same version before any of them writes.
++	heldGets int
++	arrived  int
++	release  chan struct{}
++}
++
++func newRefreshTokenAPI(token storage.RefreshToken) *refreshTokenAPI {
++	f := &refreshTokenAPI{requests: map[string]int{}, release: make(chan struct{})}
++	f.object = (&client{namespace: "dex", apiVersion: "dex.coreos.com/v1"}).fromStorageRefreshToken(token)
++	f.version = 1
++	f.object.ResourceVersion = "1"
++	return f
++}
++
++func (f *refreshTokenAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
++	f.mu.Lock()
++	f.requests[r.Method]++
++	switch r.Method {
++	case http.MethodGet:
++		if f.arrived < f.heldGets {
++			f.arrived++
++			if f.arrived == f.heldGets {
++				close(f.release)
++			}
++			obj := f.object
++			f.mu.Unlock()
++			<-f.release
++			writeObject(w, obj)
++			return
++		}
++		obj := f.object
++		f.mu.Unlock()
++		writeObject(w, obj)
++	case http.MethodPut:
++		defer f.mu.Unlock()
++		var obj RefreshToken
++		if err := json.NewDecoder(r.Body).Decode(&obj); err != nil {
++			w.WriteHeader(http.StatusBadRequest)
++			return
++		}
++		if obj.ResourceVersion != "" && obj.ResourceVersion != f.object.ResourceVersion {
++			f.conflicts++
++			w.WriteHeader(http.StatusConflict)
++			_, _ = w.Write([]byte(`{"kind":"Status","reason":"Conflict","code":409}`))
++			return
++		}
++		f.version++
++		obj.ResourceVersion = strconv.Itoa(f.version)
++		f.object = obj
++		writeObject(w, obj)
++	default:
++		f.mu.Unlock()
++		w.WriteHeader(http.StatusMethodNotAllowed)
++	}
++}
++
++func writeObject(w http.ResponseWriter, obj RefreshToken) {
++	w.Header().Set("Content-Type", "application/json")
++	_ = json.NewEncoder(w).Encode(obj)
++}
++
++func newRefreshTokenClient(t *testing.T, api http.Handler) *client {
++	t.Helper()
++	server := httptest.NewServer(api)
++	t.Cleanup(server.Close)
++	return &client{
++		client: server.Client(), baseURL: server.URL, namespace: "dex", apiVersion: "dex.coreos.com/v1",
++		logger: slog.New(slog.DiscardHandler),
++	}
++}
++
++// An update of a refresh token is a get and a put: no lock is taken and
++// released around it (Deckhouse), which cost four more requests, two of them
++// writes. A put refused as a conflict reads the token again and runs the
++// updater on it.
++func TestUpdateRefreshTokenRequests(t *testing.T) {
++	api := newRefreshTokenAPI(storage.RefreshToken{ID: "token-id", Token: "a"})
++	cli := newRefreshTokenClient(t, api)
++
++	runs := 0
++	err := cli.UpdateRefreshToken(t.Context(), "token-id", func(old storage.RefreshToken) (storage.RefreshToken, error) {
++		runs++
++		old.Token = "b"
++		return old, nil
++	})
++	require.NoError(t, err)
++	require.Equal(t, map[string]int{http.MethodGet: 1, http.MethodPut: 1}, api.requests)
++	require.Equal(t, 1, runs)
++
++	api.mu.Lock()
++	api.requests = map[string]int{}
++	api.mu.Unlock()
++	first := true
++	err = cli.UpdateRefreshToken(t.Context(), "token-id", func(old storage.RefreshToken) (storage.RefreshToken, error) {
++		runs++
++		if first {
++			// Another writer moves the version on between the get and the put:
++			// the put of this run carries the version read, now stale.
++			first = false
++			api.mu.Lock()
++			api.version++
++			api.object.ResourceVersion = strconv.Itoa(api.version)
++			api.mu.Unlock()
++		}
++		require.Equal(t, "b", old.Token, "the updater runs on the token as stored")
++		old.Token = "c"
++		return old, nil
++	})
++	require.NoError(t, err)
++	require.Equal(t, map[string]int{http.MethodGet: 2, http.MethodPut: 2}, api.requests, "a conflict costs one more get and put")
++	require.Equal(t, 1, api.conflicts)
++	require.Equal(t, 3, runs)
++
++	got, err := cli.GetRefresh(t.Context(), "token-id")
++	require.NoError(t, err)
++	require.Equal(t, "c", got.Token)
++}
++
++// Two refreshes of one token at once (two replicas, no lock): both read the
++// same version and rotate it, the API server takes the first put and refuses
++// the second as a conflict, and the second reads the token again and finds it
++// rotated, which the rotation of the server answers from its reuse branch.
++// Without the resourceVersion in the put both rotations would be written and
++// the second would silently replace the first.
++func TestUpdateRefreshTokenConcurrentRotation(t *testing.T) {
++	api := newRefreshTokenAPI(storage.RefreshToken{ID: "token-id", Token: "a"})
++	api.heldGets = 2
++	cli := newRefreshTokenClient(t, api)
++
++	var rotations, reuses atomic.Int32
++	rotate := func(next string) func(storage.RefreshToken) (storage.RefreshToken, error) {
++		return func(old storage.RefreshToken) (storage.RefreshToken, error) {
++			if old.Token != "a" {
++				// Rotated by the other request meanwhile: the reuse branch
++				// returns the token as it is.
++				reuses.Add(1)
++				return old, nil
++			}
++			rotations.Add(1)
++			old.ObsoleteToken, old.Token = old.Token, next
++			return old, nil
++		}
++	}
++
++	var wg sync.WaitGroup
++	errs := make([]error, 2)
++	for i, next := range []string{"b", "c"} {
++		wg.Add(1)
++		go func() {
++			defer wg.Done()
++			errs[i] = cli.UpdateRefreshToken(t.Context(), "token-id", rotate(next))
++		}()
++	}
++	wg.Wait()
++	require.NoError(t, errs[0])
++	require.NoError(t, errs[1])
++
++	require.Equal(t, int32(2), rotations.Load(), "both read the token before either wrote it")
++	require.Equal(t, 1, api.conflicts, "the second put is refused")
++	require.Equal(t, int32(1), reuses.Load(), "and the second request finds the token rotated")
++
++	got, err := cli.GetRefresh(t.Context(), "token-id")
++	require.NoError(t, err)
++	require.Equal(t, "a", got.ObsoleteToken, "one rotation is written")
++	require.Contains(t, []string{"b", "c"}, got.Token)
++}
 diff --git a/storage/kubernetes/storage.go b/storage/kubernetes/storage.go
-index 5942565c..22d171d2 100644
+index 5942565c..f226d3bf 100644
 --- a/storage/kubernetes/storage.go
 +++ b/storage/kubernetes/storage.go
 @@ -365,6 +365,14 @@ func (cli *client) GetRefresh(ctx context.Context, id string) (storage.RefreshTo
@@ -7618,6 +8048,126 @@ index 5942565c..22d171d2 100644
  	err = cli.get(resourceRefreshToken, id, &r)
  	return
  }
+@@ -474,14 +482,15 @@ func (cli *client) DeleteConnector(ctx context.Context, id string) error {
+ 	return cli.delete(resourceConnector, id)
+ }
+ 
++// UpdateRefreshToken takes no lock of the token (Deckhouse). Upstream locks it
++// with an annotation because its updater called the connector, which may spend
++// a single-use credential once only. Here the connector is called before the
++// update, under the lease of the offline session (server/tokens), and the
++// updater only decides on what it read; the resourceVersion of the put refuses
++// a write over another one, and retryOnConflict runs the updater again on the
++// token as it is now. The lock cost four requests of every refresh, two of
++// them writes: a get and a put to take it and to release it.
+ func (cli *client) UpdateRefreshToken(ctx context.Context, id string, updater func(old storage.RefreshToken) (storage.RefreshToken, error)) error {
+-	lock := newRefreshTokenLock(cli)
+-
+-	if err := lock.Lock(id); err != nil {
+-		return err
+-	}
+-	defer lock.Unlock(id)
+-
+ 	return retryOnConflict(ctx, func() error {
+ 		r, err := cli.getRefreshToken(id)
+ 		if err != nil {
+diff --git a/storage/kubernetes/storage_test.go b/storage/kubernetes/storage_test.go
+index 08c07d14..b6de0631 100644
+--- a/storage/kubernetes/storage_test.go
++++ b/storage/kubernetes/storage_test.go
+@@ -316,92 +316,3 @@ func TestRetryOnConflictTries(t *testing.T) {
+ 	require.ErrorContains(t, err, "maximum timeout reached while retrying a conflicted request")
+ 	require.Equal(t, len(conflictRetrySteps)+1, calls, "no try after the last pause")
+ }
+-
+-func TestRefreshTokenLock(t *testing.T) {
+-	ctx := context.Background()
+-	if os.Getenv(kubeconfigPathVariableName) == "" {
+-		t.Skipf("variable %q not set, skipping kubernetes storage tests\n", kubeconfigPathVariableName)
+-	}
+-
+-	kubeconfigPath, err := expandDir(os.Getenv(kubeconfigPathVariableName))
+-	require.NoError(t, err)
+-
+-	config := Config{
+-		KubeConfigFile: kubeconfigPath,
+-	}
+-
+-	logger := slog.New(slog.DiscardHandler)
+-
+-	kubeClient, err := config.open(logger, true)
+-	require.NoError(t, err)
+-
+-	lockCheckPeriod = time.Nanosecond
+-
+-	// Creating a storage with an existing refresh token and offline session for the user.
+-	id := storage.NewID()
+-	r := storage.RefreshToken{
+-		ID:          id,
+-		Token:       "bar",
+-		Nonce:       "foo",
+-		ClientID:    "client_id",
+-		ConnectorID: "client_secret",
+-		Scopes:      []string{"openid", "email", "profile"},
+-		CreatedAt:   time.Now().UTC().Round(time.Millisecond),
+-		LastUsed:    time.Now().UTC().Round(time.Millisecond),
+-		Claims: storage.Claims{
+-			UserID:        "1",
+-			Username:      "jane",
+-			Email:         "jane.doe@example.com",
+-			EmailVerified: true,
+-			Groups:        []string{"a", "b"},
+-		},
+-		ConnectorData: []byte(`{"some":"data"}`),
+-	}
+-
+-	err = kubeClient.CreateRefresh(ctx, r)
+-	require.NoError(t, err)
+-
+-	t.Run("Timeout lock error", func(t *testing.T) {
+-		err = kubeClient.UpdateRefreshToken(ctx, r.ID, func(r storage.RefreshToken) (storage.RefreshToken, error) {
+-			r.Token = "update-result-1"
+-			err := kubeClient.UpdateRefreshToken(ctx, r.ID, func(r storage.RefreshToken) (storage.RefreshToken, error) {
+-				r.Token = "timeout-err"
+-				return r, nil
+-			})
+-			require.Equal(t, fmt.Errorf("timeout waiting for refresh token %s lock", r.ID), err)
+-			return r, nil
+-		})
+-		require.NoError(t, err)
+-
+-		token, err := kubeClient.GetRefresh(context.TODO(), r.ID)
+-		require.NoError(t, err)
+-		require.Equal(t, "update-result-1", token.Token)
+-	})
+-
+-	t.Run("Break the lock", func(t *testing.T) {
+-		var lockBroken bool
+-		lockTimeout = -time.Hour
+-
+-		err = kubeClient.UpdateRefreshToken(ctx, r.ID, func(r storage.RefreshToken) (storage.RefreshToken, error) {
+-			r.Token = "update-result-2"
+-			if lockBroken {
+-				return r, nil
+-			}
+-
+-			err := kubeClient.UpdateRefreshToken(ctx, r.ID, func(r storage.RefreshToken) (storage.RefreshToken, error) {
+-				r.Token = "should-break-the-lock-and-finish-updating"
+-				return r, nil
+-			})
+-			require.NoError(t, err)
+-
+-			lockBroken = true
+-			return r, nil
+-		})
+-		require.NoError(t, err)
+-
+-		token, err := kubeClient.GetRefresh(context.TODO(), r.ID)
+-		require.NoError(t, err)
+-		// Because concurrent update breaks the lock, the final result will be the value of the first update
+-		require.Equal(t, "update-result-2", token.Token)
+-	})
+-}
 diff --git a/storage/kubernetes/types.go b/storage/kubernetes/types.go
 index 1ff83e78..fdaad189 100644
 --- a/storage/kubernetes/types.go

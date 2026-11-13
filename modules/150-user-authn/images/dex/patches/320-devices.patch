@@ -471,7 +471,7 @@ index 72a909f2..c17ad0de 100644
  
  	// The allow-lists of the client and the connector decide whether the user
 diff --git a/server/grants/refresh.go b/server/grants/refresh.go
-index f81ff087..8b4c73bf 100644
+index 03d16861..51bde508 100644
 --- a/server/grants/refresh.go
 +++ b/server/grants/refresh.go
 @@ -65,6 +65,13 @@ func (g *refresh) ConnectorID(ctx context.Context, req *Request, client storage.
@@ -488,7 +488,7 @@ index f81ff087..8b4c73bf 100644
  		return "", refreshLookupError(err)
  	}
  
-@@ -164,6 +171,7 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+@@ -167,6 +174,7 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
  		AuthTime:    authTime,
  		SessionID:   sessionID,
  		Generation:  refreshToken.Generation,
@@ -496,7 +496,7 @@ index f81ff087..8b4c73bf 100644
  	}
  
  	// The connector may have returned another email or other groups: the
-@@ -301,7 +309,7 @@ func (g *refresh) endPair(ctx context.Context, userID, connectorID string) {
+@@ -304,7 +312,7 @@ func (g *refresh) endPair(ctx context.Context, userID, connectorID string) {
  	if err != nil && !errors.Is(err, storage.ErrNotFound) {
  		g.logger.ErrorContext(ctx, "failed to get offline sessions", "err", err)
  	}
@@ -505,7 +505,7 @@ index f81ff087..8b4c73bf 100644
  		refresh, err := g.storage.GetRefresh(ctx, ref.ID)
  		if err != nil {
  			continue
-@@ -390,7 +398,7 @@ func (g *refresh) sessionID(ctx context.Context, refreshToken *storage.RefreshTo
+@@ -393,7 +401,7 @@ func (g *refresh) sessionID(ctx context.Context, refreshToken *storage.RefreshTo
  		return "", &oauth2.Error{Type: oauth2.InvalidRequest, Status: http.StatusInternalServerError}
  	}
  
@@ -2281,7 +2281,7 @@ index 622b51ab..b0256d69 100644
  	ctx := context.Background()
  	rt, store := newTestStore(t)
 diff --git a/server/useridentity/useridentity.go b/server/useridentity/useridentity.go
-index ca19a5d3..67423e53 100644
+index 8c9d7a54..ad8171d3 100644
 --- a/server/useridentity/useridentity.go
 +++ b/server/useridentity/useridentity.go
 @@ -18,6 +18,7 @@ import (
@@ -2346,10 +2346,11 @@ index ca19a5d3..67423e53 100644
  		return old, nil
  	})
  	if err == nil || errors.Is(err, errUnchanged) || errors.Is(err, storage.ErrNotFound) {
-@@ -338,3 +358,55 @@ func isBlocked(err error) bool {
+@@ -344,4 +364,56 @@ func blocked(ui storage.UserIdentity, now time.Time) bool {
+ func isBlocked(err error) bool {
  	var blockedErr *BlockedError
  	return errors.As(err, &blockedErr)
- }
++}
 +
 +// DefaultMaxKnownDevices bounds the known devices of a pair unless configured
 +// (Deckhouse): past it, the browser seen longest ago is forgotten.
@@ -2364,7 +2365,7 @@ index ca19a5d3..67423e53 100644
 +// remembered before. It is a setting of the process: call it before serving.
 +func SetMaxKnownDevices(n int) {
 +	configuredKnownDevices.Store(int64(max(n, 0)) + 1)
-+}
+ }
 +
 +// maxKnownDevices is the bound in force.
 +func maxKnownDevices() int {
@@ -2732,7 +2733,7 @@ index 00000000..070abe54
 +	require.Equal(t, []string{"fresh"}, slices.Sorted(maps.Keys(sessions.Grants)))
 +}
 diff --git a/storage/kubernetes/storage.go b/storage/kubernetes/storage.go
-index 262f6d4d..577f0013 100644
+index 5649c728..1ce25a82 100644
 --- a/storage/kubernetes/storage.go
 +++ b/storage/kubernetes/storage.go
 @@ -7,6 +7,8 @@ import (

@@ -2266,7 +2266,7 @@ index 2e0572ca..6c4afd2e 100644
  	}
  	auth.Claims = issued
 diff --git a/server/grants/refresh.go b/server/grants/refresh.go
-index fc4d495b..18827fcb 100644
+index 603a8e1b..a0d971cc 100644
 --- a/server/grants/refresh.go
 +++ b/server/grants/refresh.go
 @@ -14,6 +14,7 @@ import (
@@ -2307,7 +2307,7 @@ index fc4d495b..18827fcb 100644
  
  	var notAllowed *allowlist.NotAllowedError
  	if errors.As(err, &notAllowed) {
-@@ -325,9 +325,7 @@ func (g *refresh) rotateError(ctx context.Context, err error, refreshToken *stor
+@@ -327,9 +327,7 @@ func (g *refresh) rotateError(ctx context.Context, err error, refreshToken *stor
  	var upstreamErr *tokens.UpstreamError
  	switch {
  	case errors.As(err, &upstreamErr) && upstreamErr.Refused:
@@ -2318,7 +2318,7 @@ index fc4d495b..18827fcb 100644
  		return &oauth2.Error{
  			Type:        oauth2.InvalidGrant,
  			Description: "The identity provider refused to refresh the identity.",
-@@ -343,11 +341,23 @@ func (g *refresh) rotateError(ctx context.Context, err error, refreshToken *stor
+@@ -345,11 +343,23 @@ func (g *refresh) rotateError(ctx context.Context, err error, refreshToken *stor
  	case errors.As(err, &upstreamErr):
  		// Logged where the connector failed.
  	default:
@@ -3297,7 +3297,7 @@ index 00000000..79847a96
 +	}
 +}
 diff --git a/server/tokens/refresh_upstream.go b/server/tokens/refresh_upstream.go
-index da98493b..dc7fb89b 100644
+index 2d7b1c87..361b097d 100644
 --- a/server/tokens/refresh_upstream.go
 +++ b/server/tokens/refresh_upstream.go
 @@ -29,6 +29,7 @@ import (
@@ -3308,7 +3308,7 @@ index da98493b..dc7fb89b 100644
  	"github.com/dexidp/dex/storage"
  )
  
-@@ -209,6 +210,9 @@ type upstreamRefresher struct {
+@@ -213,6 +214,9 @@ type upstreamRefresher struct {
  	credentials []credentialRef
  	logger      *slog.Logger
  	connectorID string
@@ -3318,7 +3318,7 @@ index da98493b..dc7fb89b 100644
  
  	// leased is the lease the credential is spent under, nil for none.
  	leased *upstreamLease
-@@ -288,8 +292,15 @@ func (u *upstreamRefresher) prepare(ctx context.Context, base connector.Identity
+@@ -292,8 +296,15 @@ func (u *upstreamRefresher) prepare(ctx context.Context, base connector.Identity
  
  		unavailable := connector.Unavailable(err) || clientRefused(err)
  
@@ -3336,7 +3336,7 @@ index da98493b..dc7fb89b 100644
  		// A provider that did not answer, or refused dex itself, said nothing
  		// about the credential.
  		u.isRefused = credentialRefused(err) && !unavailable
-@@ -547,6 +558,8 @@ func (rt *RefreshStore) rotateLeased(ctx context.Context, lease *upstreamLease,
+@@ -556,6 +567,8 @@ func (rt *RefreshStore) rotateLeased(ctx context.Context, lease *upstreamLease,
  			credentials: credentials,
  			logger:      rt.logger,
  			connectorID: storageToken.ConnectorID,
@@ -3345,7 +3345,7 @@ index da98493b..dc7fb89b 100644
  			leased:      lease,
  			mustPrepare: true,
  		}
-@@ -654,6 +667,8 @@ func (rt *RefreshStore) rotateReplayed(ctx context.Context, storageToken *storag
+@@ -707,6 +720,8 @@ func (rt *RefreshStore) rotateReplayed(ctx context.Context, storageToken *storag
  		credentials: upstreamCredentials(*storageToken, session, upstream.IsLoginIdentity),
  		logger:      rt.logger,
  		connectorID: storageToken.ConnectorID,
@@ -3354,7 +3354,7 @@ index da98493b..dc7fb89b 100644
  	}
  	return rt.rotate(ctx, storageToken, requestToken, strategy, refresher)
  }
-@@ -823,7 +838,7 @@ func (rt *RefreshStore) retireDeadSharedCredential(ctx context.Context, token *s
+@@ -876,7 +891,7 @@ func (rt *RefreshStore) retireDeadSharedCredential(ctx context.Context, token *s
  		rt.logger.ErrorContext(ctx, "failed to retire refused upstream credential", "err", err)
  	default:
  		rt.logger.WarnContext(ctx, "upstream provider refused the credential shared by the clients of the user, dropped it so that the next login restores it",
