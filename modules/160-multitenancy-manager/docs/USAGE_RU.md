@@ -1372,6 +1372,10 @@ spec:
 d8 k get available storageclasses -n <PROJECT_NAME> -o yaml
 ```
 
+{% alert level="info" %}
+При включённом [модуле `storage-foundation`](/modules/storage-foundation/) версии 1.0.3 или новее определение `storageclasses` и GrantableClusterResourceReference `storageclasses-pvc` регистрирует он, и они могут отличаться от описанных здесь, см. документацию этого модуля.
+{% endalert %}
+
 #### Ограничение ClusterIssuer для проекта
 
 Чтобы разрешить проектам использовать только ClusterIssuer с именами `letsencrypt-prod` и `vault-issuer`, а `letsencrypt-prod` использовать по умолчанию, создайте следующий [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy):

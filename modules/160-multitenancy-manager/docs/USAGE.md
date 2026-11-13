@@ -1364,6 +1364,10 @@ To check which StorageClasses are available to the project, run the following co
 d8 k get available storageclasses -n <PROJECT_NAME> -o yaml
 ```
 
+{% alert level="info" %}
+While the [`storage-foundation`](/modules/storage-foundation/) module of version 1.0.3 or later is enabled, the `storageclasses` definition and the `storageclasses-pvc` GrantableClusterResourceReference are registered by that module and can differ from the ones described here, see the documentation of that module.
+{% endalert %}
+
 #### Restricting ClusterIssuer for a project
 
 To allow projects to use only the `letsencrypt-prod` and `vault-issuer` ClusterIssuers and use `letsencrypt-prod` by default, create the following [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy):

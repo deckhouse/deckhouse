@@ -40,6 +40,13 @@ properties:
           ca:
             type: string
             x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+      storageFoundationShipsStorageClassGrant:
+        type: boolean
+        default: false
+        description: |
+          Whether the storage-foundation module is enabled at a version that registers the StorageClass
+          grant (v1.0.3 and later), set by hooks/storage_foundation_storageclass_grant.go. While it is
+          false, the module renders its own copy of the grant.
       grantWebhookRules:
         type: array
         default: []

@@ -9,12 +9,15 @@
   A module registers the cluster resources it introduces itself: ClusterIssuer is registered by
   the cert-manager module (modules/101-cert-manager/templates/cluster-resource-grants.yaml).
 */}}
+{{- if not .Values.multitenancyManager.internal.storageFoundationShipsStorageClassGrant }}
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: GrantableClusterResourceDefinition
 metadata:
   name: storageclasses
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  annotations:
+    helm.sh/resource-policy: keep
 spec:
   grantedResource:
     apiGroup: storage.k8s.io
@@ -42,6 +45,8 @@ kind: GrantableClusterResourceReference
 metadata:
   name: storageclasses-pvc
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  annotations:
+    helm.sh/resource-policy: keep
 spec:
   grantableClusterResourceName: storageclasses
   rule:
@@ -57,6 +62,7 @@ spec:
   - path: $.spec.storageClassName
     defaulting: Coerce
 ---
+{{- end }}
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: GrantableClusterResourceDefinition
 metadata:

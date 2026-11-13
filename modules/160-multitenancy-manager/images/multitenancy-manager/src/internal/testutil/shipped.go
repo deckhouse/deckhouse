@@ -78,7 +78,10 @@ func RenderShipped[T any](t *testing.T, kind string) []*T {
 			{Name: "templates/grantable-resources.yaml", Data: tpl},
 		},
 	}
-	values := chartutil.Values{"Values": map[string]any{"global": map[string]any{"enabledModules": []any{}}}}
+	values := chartutil.Values{"Values": map[string]any{
+		"global":              map[string]any{"enabledModules": []any{}},
+		"multitenancyManager": map[string]any{"internal": map[string]any{"storageFoundationShipsStorageClassGrant": false}},
+	}}
 	rendered, err := helmengine.Render(ch, values)
 	if err != nil {
 		t.Fatal(err)

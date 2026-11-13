@@ -209,6 +209,8 @@ Deckhouse Platform регистрирует следующие cluster-wide-ре
 
 Определение `clusterissuers` поставляется [модулем `cert-manager`](/modules/cert-manager/), поэтому оно регистрируется только при включённом модуле `cert-manager`.
 
+Определение `storageclasses` и GrantableClusterResourceReference `storageclasses-pvc` регистрирует этот модуль, если не включён [модуль `storage-foundation`](/modules/storage-foundation/) версии 1.0.3 или новее. Если такая версия `storage-foundation` включена, их регистрирует он под теми же именами и может расширять. При включении, выключении и обновлении `storage-foundation` до такой версии объекты переходят от одного модуля к другому, поэтому ClusterResourceGrantPolicy продолжают ограничивать StorageClass.
+
 ### Ресурсы механизма управления доступом
 
 | Ресурс | Область | Кто создаёт | Ручное создание | Назначение |

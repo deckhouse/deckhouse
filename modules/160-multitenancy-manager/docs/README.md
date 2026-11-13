@@ -202,6 +202,8 @@ The `clusterroles` registration excludes every ClusterRole without the `rbac.dec
 
 The `clusterissuers` definition is shipped by the [`cert-manager`](/modules/cert-manager/) module, so it is registered only when that module is enabled.
 
+The `storageclasses` definition and the `storageclasses-pvc` GrantableClusterResourceReference are registered by this module unless the [`storage-foundation`](/modules/storage-foundation/) module of version 1.0.3 or later is enabled. While such a version of `storage-foundation` is enabled, that module registers them under the same names and can extend them. When `storage-foundation` is enabled, disabled or updated to such a version, the objects pass from one module to the other, so ClusterResourceGrantPolicy objects keep restricting StorageClass.
+
 ### Access management resources
 
 | Resource | Scope | Created by | Manual creation | Purpose |
