@@ -1,0 +1,27 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    heritage: deckhouse
+    module: istio
+    rbac.deckhouse.io/aggregate-to-namespace-as: superadmin
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "namespace-capability.istio.superadmin"
+    rbac.deckhouse.io/scope: namespace
+  name: d8:namespace-capability:istio:superadmin
+  annotations:
+    en.meta.deckhouse.io/title: "Module istio: superadmin"
+    ru.meta.deckhouse.io/title: "Модуль istio: суперадминистрирование"
+    en.meta.deckhouse.io/description: "Manage istio EnvoyFilter resources in a namespace. An EnvoyFilter can bypass the mesh-wide policies of the platform."
+    ru.meta.deckhouse.io/description: "Управление ресурсами EnvoyFilter модуля istio в пространстве имён. EnvoyFilter позволяет обойти общие политики mesh, заданные платформой."
+rules:
+- apiGroups:
+  - networking.istio.io
+  resources:
+  - envoyfilters
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update

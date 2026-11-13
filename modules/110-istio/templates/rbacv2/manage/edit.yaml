@@ -30,6 +30,20 @@ rules:
   - delete
   - deletecollection
 - apiGroups:
+  - sailoperator.io
+  resources:
+  - istiocnis
+  - ztunnels
+  - istiorevisions
+  - istiorevisiontags
+  - istios
+  verbs:
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+- apiGroups:
   - deckhouse.io
   resourceNames:
   - istio

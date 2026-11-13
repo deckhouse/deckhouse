@@ -28,6 +28,18 @@ rules:
   - list
   - watch
 - apiGroups:
+  - sailoperator.io
+  resources:
+  - istiocnis
+  - ztunnels
+  - istiorevisions
+  - istiorevisiontags
+  - istios
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - deckhouse.io
   resourceNames:
   - istio

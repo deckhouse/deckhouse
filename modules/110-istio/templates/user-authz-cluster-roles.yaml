@@ -17,6 +17,7 @@ rules:
   - sidecars
   - workloadentries
   - workloadgroups
+  - envoyfilters
   verbs:
   - get
   - list
@@ -151,14 +152,6 @@ rules:
   - list
   - watch
 - apiGroups: 
-  - install.istio.io
-  resources: 
-  - istiooperators
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups: 
   - sailoperator.io
   resources: 
   - istiocnis
@@ -185,16 +178,6 @@ rules:
   - istiofederations
   - istiomulticlusters
   - ingressistiocontrollers
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - patch
-  - update
-- apiGroups: 
-  - install.istio.io
-  resources: 
-  - istiooperators
   verbs:
   - create
   - delete

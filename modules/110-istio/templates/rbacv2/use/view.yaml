@@ -1,0 +1,66 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    heritage: deckhouse
+    module: istio
+    rbac.deckhouse.io/aggregate-to-namespace-as: viewer
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "namespace-capability.istio.view"
+    rbac.deckhouse.io/scope: namespace
+  name: d8:namespace-capability:istio:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module istio: view"
+    ru.meta.deckhouse.io/title: "Модуль istio: просмотр"
+    en.meta.deckhouse.io/description: "Read-only access to istio resources in a namespace."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к ресурсам модуля istio в пространстве имён."
+rules:
+- apiGroups:
+  - networking.istio.io
+  resources:
+  - destinationrules
+  - virtualservices
+  - serviceentries
+  - gateways
+  - sidecars
+  - workloadentries
+  - workloadgroups
+  - envoyfilters
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - security.istio.io
+  resources:
+  - peerauthentications
+  - authorizationpolicies
+  - requestauthentications
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - telemetry.istio.io
+  resources:
+  - telemetries
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - extensions.istio.io
+  resources:
+  - wasmplugins
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - network.deckhouse.io
+  resources:
+  - waypointinstances
+  verbs:
+  - get
+  - list
+  - watch

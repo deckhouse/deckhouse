@@ -603,6 +603,7 @@ read:
     - network.deckhouse.io/servicewithhealthchecks
     - network.deckhouse.io/waypointinstances
     - networking.istio.io/destinationrules
+    - networking.istio.io/envoyfilters
     - networking.istio.io/gateways
     - networking.istio.io/serviceentries
     - networking.istio.io/sidecars
@@ -746,7 +747,6 @@ read:
     - deckhouse.io/ingressistiocontrollers
     - deckhouse.io/istiofederations
     - deckhouse.io/istiomulticlusters
-    - install.istio.io/istiooperators
     - multitenancy.deckhouse.io/grantableclusterresourcedefinitions
     - multitenancy.deckhouse.io/grantableclusterresourcereferences
     - rbac.authorization.k8s.io/clusterrolebindings
@@ -888,7 +888,6 @@ write:
     - deckhouse.io/zvirtinstanceclasses
     - expansion.gatekeeper.sh/expansiontemplate
     - externaldata.gatekeeper.sh/providers
-    - install.istio.io/istiooperators
     - limitranges
     - mutations.gatekeeper.sh/assign
     - mutations.gatekeeper.sh/assignimage
