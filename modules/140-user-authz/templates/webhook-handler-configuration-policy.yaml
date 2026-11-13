@@ -2,6 +2,10 @@
 {{- $policyName := "webhook-handler-configuration.user-authz.deckhouse.io" }}
 {{- /* shell-operator names each configuration <VALIDATING_WEBHOOK_CONFIGURATION_NAME>-<configurationId>, "hooks" by default. */}}
 {{- $configurationPrefix := "d8-deckhouse-validating-webhook-handler-" }}
+{{- /* A collection delete (DeleteCollection) carries no name in the request: the API server admits each
+  configuration it deletes on its own, with the configuration in oldObject. The name is therefore taken
+  from the object, which for any other request equals request.name. */}}
+{{- $configurationName := `request.operation == "DELETE" ? oldObject.metadata.name : object.metadata.name` }}
 ---
 # webhook-handler of the deckhouse module registers the validating webhooks of the modules, identity-assign
 # among them, in ValidatingWebhookConfigurations it names d8-deckhouse-validating-webhook-handler-<id>.
@@ -26,17 +30,20 @@ spec:
         resources:   ["validatingwebhookconfigurations"]
   matchConditions:
     - name: 'webhook-handler-configurations'
-      expression: 'request.name.startsWith({{ $configurationPrefix | quote }})'
+      expression: '({{ $configurationName }}).startsWith({{ $configurationPrefix | quote }})'
     - name: 'exclude-groups'
       expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system"].exists(e, (e in request.userInfo.groups)))'
     - name: 'exclude-users'
       expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl", "observability"].exists(e, (e == request.userInfo.username)))'
+  variables:
+    - name: configurationName
+      expression: '{{ $configurationName }}'
   validations:
     # Authority is a dedicated permission on a subresource that no controller serves: the superadmins
     # hold it, and so does every role that grants every verb on everything.
-    - expression: 'authorizer.group("admissionregistration.k8s.io").resource("validatingwebhookconfigurations").subresource("deckhouse-webhook-handler").name(request.name).check("update").allowed()'
+    - expression: 'authorizer.group("admissionregistration.k8s.io").resource("validatingwebhookconfigurations").subresource("deckhouse-webhook-handler").name(variables.configurationName).check("update").allowed()'
       reason: Forbidden
-      messageExpression: '"the ValidatingWebhookConfiguration " + request.name + " holds the webhooks of the Deckhouse modules and may be created, changed or deleted only by webhook-handler or a superadmin"'
+      messageExpression: '"the ValidatingWebhookConfiguration " + variables.configurationName + " holds the webhooks of the Deckhouse modules and may be created, changed or deleted only by webhook-handler or a superadmin"'
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding

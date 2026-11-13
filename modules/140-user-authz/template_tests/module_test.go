@@ -1364,13 +1364,21 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(rule.Get("resources").String()).To(MatchJSON(`["validatingwebhookconfigurations"]`))
 
 			// shell-operator names the configurations <name>-<configurationId>, "-hooks" by default.
+			// A collection delete has no request.name, so the name comes from the object: an expression
+			// reading request.name fails there, and failurePolicy Fail turns that into a denial of
+			// every DeleteCollection of ValidatingWebhookConfigurations.
+			const configurationName = `request.operation == "DELETE" ? oldObject.metadata.name : object.metadata.name`
+			Expect(policy.Field("spec.matchConditions.0.expression").String()).To(Equal(
+				`(` + configurationName + `).startsWith("d8-deckhouse-validating-webhook-handler-")`))
 			conditions := policy.Field("spec.matchConditions").String()
-			Expect(conditions).To(ContainSubstring(`request.name.startsWith(\"d8-deckhouse-validating-webhook-handler-\")`))
 			Expect(conditions).To(ContainSubstring(`system:serviceaccounts:d8-system`))
 			Expect(conditions).To(ContainSubstring(`dhctl`))
+			Expect(policy.Field("spec.variables.0.name").String()).To(Equal("configurationName"))
+			Expect(policy.Field("spec.variables.0.expression").String()).To(Equal(configurationName))
 			Expect(policy.Field("spec.validations.0.expression").String()).To(Equal(
 				`authorizer.group("admissionregistration.k8s.io").resource("validatingwebhookconfigurations")` +
-					`.subresource("deckhouse-webhook-handler").name(request.name).check("update").allowed()`))
+					`.subresource("deckhouse-webhook-handler").name(variables.configurationName).check("update").allowed()`))
+			Expect(policy.Field("spec.validations.0.messageExpression").String()).NotTo(ContainSubstring("request.name"))
 
 			binding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", policyName)
 			Expect(binding.Field("spec.policyName").String()).To(Equal(policyName))
