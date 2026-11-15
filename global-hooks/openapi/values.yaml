@@ -68,6 +68,24 @@ properties:
     type: object
     default: {}
     properties:
+      reservedHostPortRanges:
+        type: array
+        description: |
+          Host port ranges reserved for NodePort Services, discovered from kube-apiserver arguments and Cilium configuration.
+          Ranges are sorted, with overlapping and adjacent ranges merged.
+          Bounds are inclusive. Without a visible kube-apiserver Pod, its default range 30000-32767 is assumed.
+        items:
+          type: object
+          required: [min, max]
+          properties:
+            min:
+              type: integer
+              minimum: 1
+              maximum: 65535
+            max:
+              type: integer
+              minimum: 1
+              maximum: 65535
       clusterControlPlaneIsHighlyAvailable:
         type: boolean
         default: false
