@@ -1,5 +1,10 @@
 x-config-version: 2
 type: object
+x-deckhouse-validations:
+  - expression: "!has(self.hostPort) || (has(self.inlet) && self.inlet == 'HostPort')"
+    message: "hostPort can only be set when inlet is HostPort"
+  - expression: "!has(self.externalIP) || (has(self.inlet) && self.inlet == 'ExternalIP')"
+    message: "externalIP can only be set when inlet is ExternalIP"
 properties:
   inlet:
     type: string
