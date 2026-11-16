@@ -1,6 +1,6 @@
-{{- /* ClusterMesh comes with the editions that have the peering module, EE and FE: elsewhere the setting changes nothing. */ -}}
+{{- /* NetworkPeering comes with the editions that have the peering module, EE and FE: elsewhere the setting changes nothing. */ -}}
 {{- define "cni_cilium_clustermesh_enabled" -}}
-{{- if and (dig "clusterMesh" "enabled" false .Values.cniCilium) (has (dig "deckhouseEdition" "" .Values.global) (list "EE" "FE")) -}}
+{{- if and (dig "networkPeering" "enabled" false .Values.cniCilium) (has (dig "deckhouseEdition" "" .Values.global) (list "EE" "FE")) -}}
 true
 {{- end -}}
 {{- end -}}

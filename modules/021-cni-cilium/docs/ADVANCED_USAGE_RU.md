@@ -6,7 +6,7 @@ description: "Объединение сетей подов кластеров, �
 ## Пиринг кластеров
 
 {% alert level="warning" %}
-Экспериментальная функция, доступна только в редакции Ultimate/EE. Ресурсы ClusterMesh и ClusterNetworkPeer — версии `v1alpha1`.
+Экспериментальная функция, доступна только в редакции Ultimate/EE. Ресурсы NetworkPeering и ClusterNetworkPeer — версии `v1alpha1`.
 {% endalert %}
 
 Модуль объединяет сети подов кластеров, связанных пирингом модуля [`peering`](/modules/peering/): под обращается к поду другого кластера по IP-адресу, сервис может использовать бэкенды других кластеров (подробнее — [в разделе «Пиринг кластеров»](usage.html#пиринг-кластеров) использования). Через пиринг кластеры только обмениваются настройками объединения; трафик идёт напрямую между узлами.
@@ -40,7 +40,7 @@ description: "Объединение сетей подов кластеров, �
 | Откуда | Куда | Порт |
 |---|---|---|
 | Каждый узел | Каждый узел соседа | UDP, порт VXLAN |
-| Control-plane-узлы | Control-plane-узлы соседа | TCP, `clusterMesh.hostPort.port` соседа (по умолчанию 4294) |
+| Control-plane-узлы | Control-plane-узлы соседа | TCP, `networkPeering.hostPort.port` соседа (по умолчанию 4294) |
 
 ### Включение
 
@@ -48,48 +48,38 @@ description: "Объединение сетей подов кластеров, �
 
 1. Свяжите кластеры пирингом по [руководству модуля `peering`](/modules/peering/admin_guide.html) до фазы `Active`. Возможности пока не открывайте.
 
-1. Включите ClusterMesh в ModuleConfig `cni-cilium` (`d8 k edit mc cni-cilium`). В кластере B — `clusterID: 2`:
+1. Включите NetworkPeering в ModuleConfig `cni-cilium` (`d8 k edit mc cni-cilium`). В кластере B — `clusterID: 2`:
 
    ```yaml
    spec:
      settings:
        tunnelMode: VXLAN
-       clusterMesh:
+       networkPeering:
          enabled: true
          clusterID: 1
    ```
 
    Агенты Cilium перезапустятся. Затем перезапустите все поды кластера: они получат идентичности с ID кластера. Делайте это в окно обслуживания. Если Cilium работает без туннеля, переключите его на VXLAN отдельным окном обслуживания заранее.
 
-   Дождитесь `READY: True` в `d8 k get clustermesh cluster` и `ACCEPTED: True` в `d8 k get peeringcapability network`.
+   Дождитесь `READY: True` в `d8 k get networkpeering cluster` и `ACCEPTED: True` в `d8 k get peeringcapability network`.
 
-1. Добавьте `network` в `spec.capabilities` объекта `ClusterPeer`, сохранив остальные возможности (`d8 k edit clusterpeer cluster-b`). Возможность работает, когда её перечислили обе стороны: проверьте `EFFECTIVE` в `d8 k get clusterpeer cluster-b`.
-
-1. Создайте ClusterNetworkPeer с именем `ClusterPeer`. В кластере B — `cluster-a`:
-
-   ```yaml
-   apiVersion: network.deckhouse.io/v1alpha1
-   kind: ClusterNetworkPeer
-   metadata:
-     name: cluster-b
-   spec: {}
-   ```
+1. Добавьте `network` в `spec.capabilities` объекта `ClusterPeer`, сохранив остальные возможности (`d8 k edit clusterpeer cluster-b`). Модуль создаст ClusterNetworkPeer с именем `ClusterPeer`, в нём видно состояние объединения с соседом. Возможность работает, когда её перечислили обе стороны: проверьте `EFFECTIVE` в `d8 k get clusterpeer cluster-b`.
 
 1. Дождитесь `PHASE: Configured` и `READY: True` в `d8 k get clusternetworkpeers`. Обычно это минута-две.
 
-Если ModuleConfig отклонён, исправьте настройку из сообщения: задайте `clusterMesh.clusterID`, явный `tunnelMode: VXLAN` или выключите шифрование.
+Если ModuleConfig отклонён, исправьте настройку из сообщения: задайте `networkPeering.clusterID`, явный `tunnelMode: VXLAN` или выключите шифрование.
 
 ### Несколько соседей
 
-С каждым соседом кластер объединяется отдельно: `ClusterPeer` с возможностью `network` и ClusterNetworkPeer с обеих сторон.
+С каждым соседом кластер объединяется отдельно: `ClusterPeer` перечисляет возможность `network` с обеих сторон. Модуль держит ClusterNetworkPeer для каждого `ClusterPeer` с `network` и удаляет его, когда убирают возможность или сам `ClusterPeer`.
 
-ID и подсеть подов соседа заняты, пока в кластере есть его ClusterNetworkPeer, даже если объединение сейчас не работает. Новый сосед с занятым ID или подсетью получает ошибку (`ClusterIDConflict`, `PodCIDROverlap`), уже объединённый сосед продолжает работать. Чтобы устранить конфликт, смените ID нового соседа или удалите ClusterNetworkPeer старого.
+ID и подсеть подов соседа заняты, пока в кластере есть его ClusterNetworkPeer, даже если объединение сейчас не работает. Новый сосед с занятым ID или подсетью получает ошибку (`ClusterIDConflict`, `PodCIDROverlap`), уже объединённый сосед продолжает работать. Чтобы устранить конфликт, смените ID нового соседа или уберите `network` из `ClusterPeer` старого.
 
 ### Статус ClusterNetworkPeer
 
 Фазы:
 
-- `Pending` — сосед не дал согласия или не открыл `network`;
+- `Pending` — объединение ждёт соседа или пиринг, причина — в условиях;
 - `Negotiating` — обмен сертификатами;
 - `Configured` — объединение настроено;
 - `Error` — проверка не пройдена, причина — в условиях.
@@ -103,39 +93,35 @@ d8 k get clusternetworkpeer cluster-b \
 
 | Причина | Что сделать |
 |---|---|
-| `PeerNotActive` | Назовите ClusterNetworkPeer так же, как `ClusterPeer`, и проверьте пиринг |
-| `CapabilityNotRequested` | Добавьте `network` в `spec.capabilities` объекта `ClusterPeer` |
-| `CapabilityNotEffective` | Добавьте `network` на стороне соседа |
-| `AwaitingPeer` | Создайте у соседа ClusterNetworkPeer с именем из сообщения |
-| `PeerUnreachable`, `ClusterPeerUnreadable`, `PeerAccessNotReady` | Проверьте пиринг. С `... not found` — дождитесь, пока у соседа развернётся ClusterMesh |
+| `PeerNotActive` | Проверьте пиринг |
+| `CapabilityNotOffered` | На стороне соседа добавьте `network` в `ClusterPeer` и включите NetworkPeering |
+| `CapabilityNotAccepted` | Этот кластер не предлагает соседу `network`: проверьте условия `Accepted` и `GrantsApplied` в `d8 k get peeringcapability network -o yaml` |
+| `CapabilityNotEffective` | Обе стороны предлагают `network`, пиринг ещё не применил её. Если не проходит — проверьте `d8 k get clusterpeer cluster-b` |
+| `AwaitingPeer` | Сосед ещё не создал свой ClusterNetworkPeer с именем из сообщения. Если не проходит — смотрите у соседа `d8 k -n d8-cni-cilium logs deploy/clustermesh-controller` |
+| `PeerUnreachable`, `ClusterPeerUnreadable`, `PeerAccessNotReady` | Проверьте пиринг. С `... not found` — дождитесь, пока у соседа развернётся NetworkPeering |
 | `TunnelModeNotVXLAN`, `VXLANPortMismatch` | Переведите соседа на VXLAN с тем же портом. Кластеры с разными портами объединить нельзя |
-| `ClusterIDConflict` | Смените ID соседа или удалите ClusterNetworkPeer соседа из сообщения |
+| `ClusterIDConflict` | Смените ID соседа или уберите `network` из `ClusterPeer` соседа из сообщения |
 | `ClusterNameConflict` | Удалите лишний пиринг с тем же кластером. Склонированный вместе с UUID кластер объединить нельзя |
 | `PodCIDROverlap` | Подсети подов (podCIDR) кластеров пересекаются. Такие кластеры объединить нельзя |
-| `RemoteNotReady` | Сосед ещё не опубликовал своё состояние. Если не проходит — проверьте у соседа `d8 k get clustermesh cluster` и реплики `clustermesh-apiserver` |
+| `RemoteNotReady` | Сосед ещё не опубликовал своё состояние. Если не проходит — проверьте у соседа `d8 k get networkpeering cluster` и реплики `clustermesh-apiserver` |
 | `AwaitingPeerSignature` | Подождите следующей проверки. Если не проходит — смотрите ClusterNetworkPeer соседа |
-| `PeerCSRInvalid` | Пересоздайте ClusterNetworkPeer на стороне соседа |
+| `PeerCSRInvalid` | На стороне соседа уберите `network` из `ClusterPeer`, дождитесь удаления его ClusterNetworkPeer и добавьте `network` снова |
 | `LastKnownConfiguration` | Пиринг недоступен, объединение работает на последней конфигурации. Восстановите пиринг |
 
 ### Изменение настроек
 
-- Чтобы сменить `clusterMesh.clusterID`, проверьте, что новый ID свободен среди кластера и его соседей. Меняйте его в окно обслуживания и затем перезапустите все поды кластера.
-- Чтобы сменить `clusterMesh.hostPort.port`, сначала откройте новый порт в межсетевых экранах соседей.
+- Чтобы сменить `networkPeering.clusterID`, проверьте, что новый ID свободен среди кластера и его соседей. Меняйте его в окно обслуживания и затем перезапустите все поды кластера.
+- Чтобы сменить `networkPeering.hostPort.port`, сначала откройте новый порт в межсетевых экранах соседей.
 
 ### Отключение соседа
 
-Чтобы отключить соседа, удалите его ClusterNetworkPeer на любой стороне:
+Чтобы отключить соседа, уберите `network` из `spec.capabilities` его `ClusterPeer` на любой стороне (`d8 k edit clusterpeer cluster-b`). Модуль удалит ClusterNetworkPeer.
 
-```shell
-d8 k delete clusternetworkpeer cluster-b
-```
+Объединение разрывается с обеих сторон, соединения между кластерами обрываются. Чтобы восстановить объединение, добавьте `network` снова.
 
-Объединение разрывается с обеих сторон, соединения между кластерами обрываются. Чтобы восстановить объединение, создайте ClusterNetworkPeer заново.
+Чтобы занять ID или подсеть выведенного кластера другим кластером, уберите `network` из `ClusterPeer` выведенного кластера у всех его соседей или удалите этот `ClusterPeer`.
 
-Чтобы занять ID или подсеть выведенного кластера другим кластером, удалите ClusterNetworkPeer выведенного кластера у всех его соседей.
+### Отключение NetworkPeering
 
-### Отключение ClusterMesh
-
-1. Удалите все ClusterNetworkPeer.
-1. Задайте `clusterMesh.enabled: false` в ModuleConfig `cni-cilium` в окно обслуживания и затем перезапустите все поды кластера.
-1. Уберите `network` из `spec.capabilities` объектов `ClusterPeer`.
+1. Уберите `network` из `spec.capabilities` объектов `ClusterPeer`. Дождитесь, пока `d8 k get clusternetworkpeers` не покажет ни одного: модуль удаляет их в течение минуты.
+1. Задайте `networkPeering.enabled: false` в ModuleConfig `cni-cilium` в окно обслуживания и затем перезапустите все поды кластера.

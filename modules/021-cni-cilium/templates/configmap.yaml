@@ -21,7 +21,7 @@ data:
   identity-allocation-mode: crd
   {{- if include "cni_cilium_clustermesh_enabled" . }}
   cluster-name: {{ include "clustermesh_cluster_name" . | quote }}
-  cluster-id: {{ .Values.cniCilium.clusterMesh.clusterID | quote }}
+  cluster-id: {{ .Values.cniCilium.networkPeering.clusterID | quote }}
   # one file per peer, rendered by clustermesh-controller into the cilium-clustermesh secret
   clustermesh-config: /var/lib/cilium/clustermesh/
   # The operator creates EndpointSlices of the peers' backends for global services that import them, so that

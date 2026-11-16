@@ -1,7 +1,7 @@
 positive:
   configValues:
   - tunnelMode: VXLAN
-    clusterMesh:
+    networkPeering:
       enabled: true
       clusterID: 11
       hostPort:
@@ -64,9 +64,9 @@ positive:
 
 negative:
   configValues:
-  - clusterMesh:
+  - networkPeering:
       clusterID: 256
-  - clusterMesh:
+  - networkPeering:
       inlet: LoadBalancer
   values:
   - internal:

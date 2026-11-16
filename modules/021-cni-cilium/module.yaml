@@ -4,6 +4,7 @@ critical: true
 weight: 21
 subsystems:
   - network
+  - cluster
 namespace: d8-cni-cilium
 descriptions:
   en: Provides networking in a Kubernetes cluster using the Cilium CNI with eBPF-based networking and security.

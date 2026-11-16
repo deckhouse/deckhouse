@@ -33,7 +33,7 @@ rules:
   resources:
   - egressgateways
   - egressgatewaypolicies
-  - clustermeshes
+  - networkpeerings
   - clusternetworkpeers
   verbs:
   - get
