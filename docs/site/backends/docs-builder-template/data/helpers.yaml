@@ -96,8 +96,8 @@ extensions:
       ru: Продвинутая защита инфраструктуры
   secrets_management:
     title:
-      en: Secrets Management
-      ru: Управление секретами
+      en: KMS and Secrets Store
+      ru: Управление ключами и хранение секретов
   advanced_networking:
     title:
       en: Advanced Networking
