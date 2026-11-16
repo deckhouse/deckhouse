@@ -646,7 +646,7 @@ func TestPVCFromSourceKeepsItsClass(t *testing.T) {
 				{Path: "$.spec.storageClassName", Defaulting: v1alpha1.DefaultingCoerce},
 				{
 					Path:       "$.spec.storageClassName",
-					Match:      &v1alpha1.MatchPredicate{FieldPath: "$.spec['dataSource','dataSourceRef'].kind"},
+					Match:      &v1alpha1.MatchPredicate{FieldPath: "$.spec['dataSource','dataSourceRef'].kind", In: []string{"PersistentVolumeClaim", "VolumeSnapshot"}},
 					Defaulting: v1alpha1.DefaultingNone,
 					Message:    hint,
 				},
@@ -665,12 +665,15 @@ func TestPVCFromSourceKeepsItsClass(t *testing.T) {
 	objs := []client.Object{projectNS("proj", map[string]string{"env": "prod"}), def, ref, grant, repl, local}
 	m, v := defaults(t, objs...), isGranted(t, objs...)
 
-	pvc := func(class, source string) []byte {
+	withSource := func(class, source string, ref map[string]any) []byte {
 		spec := map[string]any{"storageClassName": class}
 		if source != "" {
-			spec[source] = map[string]any{"apiGroup": "snapshot.storage.k8s.io", "kind": "VolumeSnapshot", "name": "snap"}
+			spec[source] = ref
 		}
 		return raw(t, map[string]any{"apiVersion": "v1", "kind": "PersistentVolumeClaim", "metadata": map[string]any{"name": "p", "namespace": "proj"}, "spec": spec})
+	}
+	pvc := func(class, source string) []byte {
+		return withSource(class, source, map[string]any{"apiGroup": "snapshot.storage.k8s.io", "kind": "VolumeSnapshot", "name": "snap"})
 	}
 
 	for _, source := range []string{"dataSource", "dataSourceRef"} {
@@ -694,8 +697,16 @@ func TestPVCFromSourceKeepsItsClass(t *testing.T) {
 		})
 	}
 
-	t.Run("an unavailable class of a PVC without a source is still coerced", func(t *testing.T) {
-		resp := serve(t, m, "/defaults", review(admissionv1.Create, pvcGVR, pvcGVK, "proj", "p", pvc("replicated", ""), nil))
+	t.Run("an unavailable class of a PVC with a cloned PersistentVolumeClaim is not coerced", func(t *testing.T) {
+		obj := withSource("replicated", "dataSource", map[string]any{"kind": "PersistentVolumeClaim", "name": "src"})
+		if resp := serve(t, m, "/defaults", review(admissionv1.Create, pvcGVR, pvcGVK, "proj", "p", obj, nil)); len(resp.Patch) != 0 {
+			t.Fatalf("the class of a cloned PVC must not be rewritten, got patch %s", resp.Patch)
+		}
+	})
+
+	coerced := func(t *testing.T, obj []byte) {
+		t.Helper()
+		resp := serve(t, m, "/defaults", review(admissionv1.Create, pvcGVR, pvcGVK, "proj", "p", obj, nil))
 		var patches []map[string]any
 		if err := json.Unmarshal(resp.Patch, &patches); err != nil {
 			t.Fatal(err)
@@ -703,6 +714,14 @@ func TestPVCFromSourceKeepsItsClass(t *testing.T) {
 		if len(patches) != 1 || patches[0]["path"] != "/spec/storageClassName" || patches[0]["value"] != "local" {
 			t.Fatalf("expected coercion to local, got: %v", patches)
 		}
+	}
+
+	t.Run("an unavailable class of a PVC without a source is still coerced", func(t *testing.T) {
+		coerced(t, pvc("replicated", ""))
+	})
+
+	t.Run("an unavailable class of a PVC populated by another kind of source is still coerced", func(t *testing.T) {
+		coerced(t, withSource("replicated", "dataSourceRef", map[string]any{"apiGroup": "virtualization.deckhouse.io", "kind": "DataImport", "name": "imp"}))
 	})
 }
 

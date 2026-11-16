@@ -64,6 +64,9 @@ spec:
   - path: $.spec.storageClassName
     match:
       fieldPath: $.spec['dataSource','dataSourceRef'].kind
+      in:
+      - PersistentVolumeClaim
+      - VolumeSnapshot
     defaulting: None
     message: >-
       A PersistentVolumeClaim restored from a snapshot or cloned from a volume (spec.dataSource or
