@@ -235,15 +235,25 @@ func (md *ModuleDocs) providerModulePinned(moduleName string) bool {
 
 // A bare ModuleConfig means external only for a module absent from this image: the admission
 // webhook rejects a spec.source outside the Module's availableSources, and an embedded module has
-// none. See dhctl/CLOUD_PROVIDER_MODULE_MIGRATION.md.
+// none. An explicitly disabled ModuleConfig is no opt-in at all, whatever spec.source or a
+// ModulePullOverride says: the module is off, so nothing may reach for the registry.
 func (md *ModuleDocs) providerIsExternal(provider string, globalOptions *options.GlobalOptions) bool {
 	moduleName := CloudProviderModuleName(provider)
+
+	mc := md.ProviderConfigs[moduleName]
+	if mc != nil && mc.Spec.Enabled != nil && !*mc.Spec.Enabled {
+		return false
+	}
 
 	if md.providerModulePinned(moduleName) {
 		return true
 	}
 
-	return md.ProviderConfigs[moduleName] != nil && !moduleShippedInImage(moduleName, globalOptions)
+	if mc == nil {
+		return false
+	}
+
+	return !moduleShippedInImage(moduleName, globalOptions)
 }
 
 // An empty dockerCfg is anonymous access, not an error - the CRD says so explicitly.
@@ -357,7 +367,7 @@ func resolveModuleProviderBundle(ctx context.Context, provider string, lookup pr
 
 	svc := moduleCatalog(conf, catalogRepo).Module(moduleName)
 
-	moduleTag, err := md.moduleTag(ctx, svc, moduleName, moduleRepo, provider, sourceName)
+	moduleTag, err := md.moduleTag(ctx, svc, moduleName, moduleRepo)
 	if err != nil {
 		return providerBundleRef{}, err
 	}
@@ -460,7 +470,7 @@ func recordBundleDigest(dir, digest string) error {
 // Which image of the module to read. The controller pulls exactly <repo>/<module>:<imageTag> for
 // an override: no release image, no version.json, no "v" prefix. Without one the release channel
 // names a release image, and its version.json names the module image.
-func (md *ModuleDocs) moduleTag(ctx context.Context, svc *module.Service, moduleName, moduleRepo, provider, sourceName string) (string, error) {
+func (md *ModuleDocs) moduleTag(ctx context.Context, svc *module.Service, moduleName, moduleRepo string) (string, error) {
 	if tag := md.ImageTags[moduleName]; tag != "" {
 		return tag, nil
 	}
@@ -469,7 +479,7 @@ func (md *ModuleDocs) moduleTag(ctx context.Context, svc *module.Service, module
 
 	rel, err := svc.Releases().Fetch(ctx, channel)
 	if err != nil {
-		return "", fmt.Errorf("resolve %s/release:%s: %w%s", moduleRepo, channel, err, repoHint(err, provider, sourceName))
+		return "", fmt.Errorf("resolve %s/release:%s: %w%s", moduleRepo, channel, err, releaseHint(err, moduleName, channel))
 	}
 
 	version, err := rel.Version()
@@ -480,17 +490,20 @@ func (md *ModuleDocs) moduleTag(ctx context.Context, svc *module.Service, module
 	return moduleImageTag(version), nil
 }
 
-// Nothing in an installer distinguishes "this edition does not carry the provider" from "the
-// provider is published outside this repository", so a 404 gets both readings; a named source or a
-// denial gets none. ErrRepositoryNotFound wraps ErrImageNotFound, so one errors.Is covers both.
-func repoHint(err error, provider, sourceName string) string {
-	if sourceName != "" || !errors.Is(err, registry.ErrImageNotFound) {
+// A 404 on the release image does not say whether the channel, the module or the whole registry is
+// the wrong one, whatever source the ModuleConfig names, so the hint lists every way out. A denial
+// gets none: a token-auth registry denies anything outside the identity's scope whether or not the
+// target exists. ErrRepositoryNotFound wraps ErrImageNotFound, so one errors.Is covers both.
+func releaseHint(err error, moduleName, channel string) string {
+	if !errors.Is(err, registry.ErrImageNotFound) {
 		return ""
 	}
 
-	return fmt.Sprintf("\nThis installer ships no %q module, so the cloud provider %q was looked up in the default module repository. "+
-		"Either this Deckhouse edition does not include that provider, or the ModuleSource publishing it is missing from the configuration.",
-		CloudProviderModuleName(provider), provider)
+	return fmt.Sprintf("\nThe registry holds no release image of module %q for release channel %q. Ways out:\n"+
+		"  - switch to a release channel the module is published in: set spec.settings.releaseChannel in ModuleConfig \"deckhouse\";\n"+
+		"  - take the module from a registry that publishes it: add a ModuleSource for that registry and set its name in spec.source of ModuleConfig %q;\n"+
+		"  - pin the module image: add ModulePullOverride %q with spec.imageTag set to a tag of the module image.",
+		moduleName, channel, moduleName, moduleName)
 }
 
 // A named but missing source is an error: falling back to the main registry would fetch a

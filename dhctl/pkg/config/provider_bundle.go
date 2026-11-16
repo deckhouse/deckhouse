@@ -81,7 +81,13 @@ var (
 
 		digest, err := digests.GetImage(digests.ProviderImagesSection(provider), digests.TerraformManagerImage)
 		if err != nil {
-			return providerBundleRef{}, fmt.Errorf("get terraform-manager image digest for provider %s: %w", provider, err)
+			err = fmt.Errorf("get terraform-manager image digest for provider %s: %w", provider, err)
+			// Neither the module nor its bundle ships with this installer, so the module chain is the
+			// only way to the bundle, and only an enabled ModuleConfig sends dhctl down it.
+			if moduleName := CloudProviderModuleName(provider); !moduleShippedInImage(moduleName, globalOptions) {
+				return providerBundleRef{}, fmt.Errorf("%w%s", err, externalProviderHint(provider, moduleName))
+			}
+			return providerBundleRef{}, err
 		}
 		return providerBundleRef{Digest: digest}, nil
 	}
@@ -89,6 +95,12 @@ var (
 	// Replaces the registry pull in tests.
 	downloadProviderBundle = image.DownloadAndUnpackImage
 )
+
+// externalProviderHint tells the operator how to install a provider this installer does not ship.
+func externalProviderHint(provider, moduleName string) string {
+	return fmt.Sprintf("\nCloud provider %q does not ship with this installer and is installed as an external module: "+
+		"add ModuleConfig %q with spec.enabled: true.", provider, moduleName)
+}
 
 // IsInternalCloudProviderBundle reports whether the provider needs no external bundle download. This is
 // true when its schemas ship in the image's candi and for an empty provider (a static cluster).
@@ -289,7 +301,7 @@ func unpackProviderBundle(ctx context.Context, provider string, ref providerBund
 		Download: func(ctx context.Context, imageRef, destDir string, registryConfig image.RegistryConfig, showProgress bool) error {
 			if err := downloadProviderBundle(ctx, imageRef, destDir, registryConfig, showProgress); err != nil {
 				// Runs before every preflight check, so this message is all the operator gets.
-				return fmt.Errorf("%w\n%s", err, failedBundlePullHint(err, source, imageRef, ref.Digest,
+				return fmt.Errorf("%w%s", err, failedBundlePullHint(err, source, imageRef, ref.Digest,
 					providerdir.DigestDir(globalOptions.DownloadDir, provider, ref.Digest)))
 			}
 			return nil
@@ -317,7 +329,7 @@ func unpackProviderBundle(ctx context.Context, provider string, ref providerBund
 // came from. dir is where dhctl looks for the bundle before it pulls, so a bundle unpacked there by
 // hand is used as it lies.
 func failedBundlePullHint(err error, source bundleRegistrySource, imageRef, digest, dir string) string {
-	const carries = "It carries the provider schemas and the validator, so the configuration cannot be checked without it. "
+	const carries = "\nIt carries the provider schemas and the validator, so the configuration cannot be checked without it. "
 
 	switch source {
 	case bundleRegistryFromClusterStore:

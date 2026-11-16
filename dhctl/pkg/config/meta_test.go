@@ -1054,7 +1054,7 @@ func TestApplyModuleConfigSettings_SkipsModuleConfigWithoutEnabled(t *testing.T)
 	require.Nil(t, m.CloudProviderVars)
 }
 
-func TestApplyModuleConfigSettings_ForwardsEmptySettingsModuleConfig(t *testing.T) {
+func TestApplyModuleConfigSettings_ForwardsModuleConfigWithoutSettings(t *testing.T) {
 	mc := &ModuleConfig{Spec: ModuleConfigSpec{Enabled: boolPtr(true)}}
 	mc.SetName("cloud-provider-dvp")
 
@@ -1069,7 +1069,7 @@ func TestApplyModuleConfigSettings_ForwardsEmptySettingsModuleConfig(t *testing.
 	spec, ok := m.CloudProviderVars.Settings["spec"].(map[string]interface{})
 	require.True(t, ok, "expected spec object in CloudProviderVars.Settings")
 	require.Equal(t, true, spec["enabled"])
-	require.Equal(t, map[string]interface{}{}, spec["settings"], "expected spec.settings to be an explicit empty object so external validators decode a non-nil pointer")
+	require.NotContains(t, spec, "settings")
 }
 
 func TestApplyModuleConfigSettings_NonEmptyOverlayWinsOverEmpty(t *testing.T) {
@@ -1147,7 +1147,7 @@ func TestApplyModuleConfigSettings_UnrelatedModuleNameIsIgnored(t *testing.T) {
 	require.Nil(t, m.CloudProviderVars)
 }
 
-func TestApplyModuleConfigSettings_ForwardsEmptySettingsExternalProviderModuleConfig(t *testing.T) {
+func TestApplyModuleConfigSettings_ForwardsExternalProviderModuleConfigWithoutSettings(t *testing.T) {
 	mc := &ModuleConfig{Spec: ModuleConfigSpec{Enabled: boolPtr(true)}}
 	mc.SetName("cloud-provider-dvp")
 
@@ -1162,7 +1162,7 @@ func TestApplyModuleConfigSettings_ForwardsEmptySettingsExternalProviderModuleCo
 	spec, ok := m.CloudProviderVars.Settings["spec"].(map[string]interface{})
 	require.True(t, ok, "expected spec object in CloudProviderVars.Settings")
 	require.Equal(t, true, spec["enabled"])
-	require.Equal(t, map[string]interface{}{}, spec["settings"], "expected spec.settings to be an explicit empty object so external validators decode a non-nil pointer")
+	require.NotContains(t, spec, "settings")
 }
 
 func TestApplyModuleConfigSettingsForwardsLegacyDVPSourceOnlyMarker(t *testing.T) {
@@ -1191,7 +1191,7 @@ func TestApplyModuleConfigSettingsForwardsLegacyDVPSourceOnlyMarker(t *testing.T
 	require.True(t, ok)
 	require.Equal(t, true, spec["enabled"])
 	require.Equal(t, "deckhouse", spec["source"])
-	require.Equal(t, map[string]interface{}{}, spec["settings"])
+	require.NotContains(t, spec, "settings")
 }
 
 // mcFlowResources mirrors a DVP bootstrap config: the CloudPermanent node
@@ -1365,7 +1365,7 @@ func TestPrepareLegacyDVPKeepsProviderClusterConfigFlowWithMarker(t *testing.T) 
 	spec := m.CloudProviderVars.Settings["spec"].(map[string]interface{})
 	require.Equal(t, true, spec["enabled"])
 	require.Equal(t, "deckhouse", spec["source"])
-	require.Equal(t, map[string]interface{}{}, spec["settings"])
+	require.NotContains(t, spec, "settings")
 }
 
 // An explicitly empty nodeGroups list in the provider cluster configuration is

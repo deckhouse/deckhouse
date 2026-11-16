@@ -153,11 +153,10 @@ func TestResolveModuleProviderBundleNotAModule(t *testing.T) {
 // module until the build stops producing it, and that leftover must not win over the operator's
 // ModuleConfig. The <Provider>ClusterConfiguration alongside it is the legacy infrastructure
 // document, not a vote on where the module comes from.
-// A CE installer handed the published OpenStack getting-started config.yml reaches this path:
-// CE ships neither openstack candi nor the module, so the bare ModuleConfig sends dhctl at a
-// repository CE never publishes. The registry's 404 is the only thing that can tell that apart
-// from a provider genuinely published outside the repo, so the error has to offer both readings.
-func TestResolveModuleProviderBundleGuessedRepoExplainsItself(t *testing.T) {
+// A missing release image says nothing about whether the channel, the module or the registry is the
+// wrong one, and a named source is no exception: the error keeps the registry's answer and lists
+// every way out.
+func TestResolveModuleProviderBundleMissingReleaseExplainsItself(t *testing.T) {
 	stubModuleCatalog(t, newModuleStand("registry.example.io/modules"))
 
 	bareModuleConfig := `
@@ -170,23 +169,33 @@ spec:
   version: 1
 `
 
+	requireReleaseHint := func(t *testing.T, err error) {
+		t.Helper()
+
+		require.ErrorIs(t, err, registry.ErrImageNotFound)
+		require.ErrorContains(t, err, "/cloud-provider-openstack/release:stable: ")
+		require.ErrorContains(t, err, "\nThe registry holds no release image of module \"cloud-provider-openstack\"")
+	}
+
 	t.Run("no source named", func(t *testing.T) {
 		_, err := resolveModuleProviderBundle(context.Background(), "openstack",
 			configModuleDocs([]string{ensureRegistryMCDoc, bareModuleConfig}), testModuleOptions(t))
-		require.ErrorIs(t, err, registry.ErrImageNotFound)
-		require.ErrorContains(t, err, "this Deckhouse edition does not include that provider")
-		require.ErrorContains(t, err, "ModuleSource publishing it is missing")
+		requireReleaseHint(t, err)
 	})
 
-	// The operator wrote the address that failed, so repeating the guess back at them is noise.
+	t.Run("default source named", func(t *testing.T) {
+		_, err := resolveModuleProviderBundle(context.Background(), "openstack",
+			configModuleDocs([]string{ensureRegistryMCDoc, bareModuleConfig + "  source: deckhouse\n"}), testModuleOptions(t))
+		requireReleaseHint(t, err)
+	})
+
 	t.Run("source named", func(t *testing.T) {
 		_, err := resolveModuleProviderBundle(context.Background(), "openstack", configModuleDocs([]string{
 			ensureRegistryMCDoc,
 			testModuleSourceDoc(t, "registry.example.io/modules"),
 			bareModuleConfig + "  source: dev\n",
 		}), testModuleOptions(t))
-		require.ErrorIs(t, err, registry.ErrImageNotFound)
-		require.NotContains(t, err.Error(), "does not include that provider")
+		requireReleaseHint(t, err)
 	})
 }
 
@@ -282,6 +291,50 @@ spec:
 			require.Equal(t, tc.external, md.providerIsExternal("dvp", missing))
 		})
 	}
+}
+
+// A bare ModuleConfig opts a module this image does not ship into the module chain only while it
+// enables the module. An explicit pin is an opt-in only while the ModuleConfig is not disabled.
+func TestProviderIsExternalDisabledModuleConfig(t *testing.T) {
+	notShipped := testModuleOptions(t)
+
+	for _, tc := range []struct {
+		name     string
+		enabled  string
+		external bool
+	}{
+		{"enabled", "  enabled: true\n", true},
+		{"enabled omitted", "", true},
+		{"disabled", "  enabled: false\n", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			md, err := ParseModuleDocs([]string{`
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-dvp
+spec:
+  version: 1
+` + tc.enabled})
+			require.NoError(t, err)
+			require.Equal(t, tc.external, md.providerIsExternal("dvp", notShipped))
+		})
+	}
+
+	md, err := ParseModuleDocs([]string{strings.Replace(testProviderMCWithSourceDoc, "enabled: true", "enabled: false", 1)})
+	require.NoError(t, err)
+	require.False(t, md.providerIsExternal("dvp", notShipped), "spec.enabled: false outranks spec.source")
+
+	md, err = ParseModuleDocs([]string{strings.Replace(testProviderMCWithSourceDoc, "enabled: true", "enabled: false", 1), `
+apiVersion: deckhouse.io/v1alpha2
+kind: ModulePullOverride
+metadata:
+  name: cloud-provider-dvp
+spec:
+  imageTag: mr1
+`})
+	require.NoError(t, err)
+	require.False(t, md.providerIsExternal("dvp", notShipped), "spec.enabled: false outranks ModulePullOverride")
 }
 
 // A document that does not decode is left for parseDocument, which names the kind and prints
@@ -467,28 +520,29 @@ func TestModuleCatalogRequestHasItsOwnDeadline(t *testing.T) {
 }
 
 // A token-auth registry denies anything outside the identity's scope whether or not the target
-// exists, so guessing "this edition ships no such module" on a denial sends the operator down a
-// dead end.
-func TestRepoHintClassifiesRegistryFailure(t *testing.T) {
+// exists, so pointing at another channel or registry on a denial sends the operator down a dead end.
+func TestReleaseHintClassifiesRegistryFailure(t *testing.T) {
 	for _, tc := range []struct {
-		name       string
-		err        error
-		sourceName string
-		wantHint   bool
+		name     string
+		err      error
+		wantHint bool
 	}{
 		{name: "repository missing", err: fmt.Errorf("wrapped: %w", registry.ErrRepositoryNotFound), wantHint: true},
 		{name: "tag missing", err: fmt.Errorf("wrapped: %w", registry.ErrImageNotFound), wantHint: true},
 		{name: "access denied", err: fmt.Errorf("wrapped: %w", registry.ErrAccessDenied), wantHint: false},
-		{name: "named source never guesses", err: registry.ErrImageNotFound, sourceName: "my-source", wantHint: false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			hint := repoHint(tc.err, "openstack", tc.sourceName)
-			if tc.wantHint {
-				require.Contains(t, hint, "cloud-provider-openstack")
+			hint := releaseHint(tc.err, "cloud-provider-openstack", "stable")
+			if !tc.wantHint {
+				require.Empty(t, hint)
 
 				return
 			}
-			require.Empty(t, hint)
+
+			require.Contains(t, hint, `release channel "stable"`)
+			require.Contains(t, hint, `spec.settings.releaseChannel in ModuleConfig "deckhouse"`)
+			require.Contains(t, hint, `spec.source of ModuleConfig "cloud-provider-openstack"`)
+			require.Contains(t, hint, `ModulePullOverride "cloud-provider-openstack" with spec.imageTag`)
 		})
 	}
 }

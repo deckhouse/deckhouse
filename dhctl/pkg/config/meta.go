@@ -440,13 +440,6 @@ func (m *MetaConfig) applyCloudProviderModuleSettings() error {
 	if err != nil {
 		return err
 	}
-	// External validators decode settings into a pointer (S is *<provider>settings.ModuleConfigSettings);
-	// an explicit empty object keeps it non-nil instead of an absent key decoding to a nil pointer.
-	if spec, ok := mcMap["spec"].(map[string]interface{}); ok {
-		if _, hasSettings := spec["settings"]; !hasSettings {
-			spec["settings"] = map[string]interface{}{}
-		}
-	}
 	if m.CloudProviderVars == nil {
 		m.CloudProviderVars = &CloudProviderVars{}
 	}

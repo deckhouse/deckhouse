@@ -493,6 +493,51 @@ spec:
 	require.Equal(t, moduleRepo+"@"+testBundleDigest, ref.Image)
 }
 
+// A provider this installer ships neither as a module nor as a bundle is reachable through its module
+// only, so a configuration without an enabled ModuleConfig for it is told to add one instead of
+// failing on the embedded digests.
+func TestEnsureProviderBundleNotShippedProviderAsksForTheModuleConfig(t *testing.T) {
+	stubEmbeddedDigests(t, `{"common": {"candi": "sha256:candi"}}`)
+	stubModuleCatalog(t, newModuleStand("r.example.com/test/modules").failing(fmt.Errorf("the registry must not be touched at all")))
+
+	for _, tc := range []struct {
+		name string
+		docs []string
+	}{
+		{"no ModuleConfig", nil},
+		{"disabled ModuleConfig", []string{`
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-dvp
+spec:
+  enabled: false
+  version: 1
+`}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			docs := append([]string{ensureRegistryMCDoc, ensureClusterConfigDoc("DVP")}, tc.docs...)
+
+			_, err := ensureProviderBundleFromConfig(context.Background(), docs, ensureTestGlobalOptions(t))
+			require.ErrorContains(t, err, "get terraform-manager image digest for provider dvp: Image digests section 'cloudProviderDvp' not found or empty\n")
+			require.ErrorContains(t, err, `add ModuleConfig "cloud-provider-dvp" with spec.enabled: true`)
+		})
+	}
+}
+
+// A provider whose module this installer still ships keeps the plain digests error: no ModuleConfig
+// would send dhctl anywhere else.
+func TestEnsureProviderBundleShippedModuleWithoutDigestsKeepsTheDigestsError(t *testing.T) {
+	stubEmbeddedDigests(t, `{"common": {"candi": "sha256:candi"}}`)
+
+	globalOptions := ensureTestGlobalOptions(t)
+	require.NoError(t, os.MkdirAll(filepath.Join(globalOptions.ModulesDir, "030-"+CloudProviderModuleName("dvp")), 0o755))
+
+	_, err := ensureProviderBundleFromConfig(context.Background(), []string{ensureClusterConfigDoc("DVP")}, globalOptions)
+	require.ErrorContains(t, err, "get terraform-manager image digest for provider dvp")
+	require.NotContains(t, err.Error(), "add ModuleConfig")
+}
+
 // The download dir is shared with every other cluster driven from this machine, so a bundle found
 // there may belong to another cluster and must not stand in for the one this cluster runs.
 func TestEnsureProviderBundleFromClusterReturnsTheLookupError(t *testing.T) {
@@ -837,7 +882,7 @@ func TestParseConfigFromDataEnsureProviderAllowsDVPSourceWithSuppliedBundleDir(t
 	require.True(t, ok)
 	require.Equal(t, true, spec["enabled"])
 	require.Equal(t, "deckhouse", spec["source"])
-	require.Equal(t, map[string]interface{}{}, spec["settings"])
+	require.NotContains(t, spec, "settings")
 }
 
 func TestParseConfigFromDataEnsureProviderKeepsDVPSourceEnabledAcrossOverlays(t *testing.T) {
