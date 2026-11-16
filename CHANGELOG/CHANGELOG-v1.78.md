@@ -1,111 +1,5 @@
 # Changelog v1.78
 
-## [MALFORMED]
-
-
- - #100 unknown section "registrypackages"
- - #1004 unknown section "registrypackages"
- - #1023 unknown section "registrypackages"
- - #1078 unknown section ""
- - #1079 unknown section ""
- - #1080 unknown section ""
- - #1115 unknown section ""
- - #1116 unknown section ""
- - #1132 unknown section "registrypackages"
- - #1199 unknown section ""
- - #1203 unknown section ""
- - #1206 unknown section ""
- - #1207 unknown section "global"
- - #1214 unknown section "registrypackages"
- - #1221 unknown section "cloud-provider"
- - #1230 unknown section ""
- - #1254 unknown section "registrypackages"
- - #1263 unknown section "registrypackages"
- - #1296 unknown section "cloud-provider-dvp"
- - #1339 unknown section ""
- - #1350 unknown section ""
- - #1354 unknown section "registrypackages"
- - #1418 unknown section "werf"
- - #1493 unknown section ""
- - #177 unknown section ""
- - #185 unknown section "registrypackages"
- - #20660 unknown section "cloud-provider-dvp"
- - #21244 unknown section "<kebab-case of a module name> | <1st level dir in the repo>"
- - #21694 unknown section "cloud-provider-dvp"
- - #21837 unknown section "<kebab-case of a module name> | <1st level dir in the repo>"
- - #21914 unknown section "registrypackages"
- - #21918 unknown section "cloud-provider-dvp"
- - #21924 unknown section "registrypackages"
- - #21990 unknown section "registrypackages"
- - #22070 unknown section "registrypackages"
- - #22122 unknown section "registrypackages"
- - #22191 unknown section "registrypackages"
- - #22241 unknown section "cloud-provider-dvp"
- - #22274 unknown section "cloud-provider-dvp"
- - #22294 unknown section "registrypackages"
- - #22351 unknown section ""
- - #22434 unknown section "cloud-provider-dvp"
- - #22443 unknown section ""
- - #22454 unknown section "registrypackages"
- - #22559 unknown section "cloud-provider-dvp"
- - #22582 unknown section "cloud-provider-dvp"
- - #22618 unknown section "cloud-provider-dvp"
- - #22652 unknown section "registrypackages"
- - #22657 unknown section "registrypackages"
- - #22672 unknown section "registrypackages"
- - #22686 unknown section "service-with-healthchecks"
- - #22728 unknown section "registrypackages"
- - #22740 unknown section "service-with-healthchecks"
- - #22744 unknown section "cloud-provider-dvp"
- - #22748 unknown section "cloud-provider-dvp"
- - #22772 unknown section "cloud-provider-dvp"
- - #22830 unknown section "cloud-provider-dvp"
- - #22846 unknown section "cloud-provider-dvp"
- - #22916 unknown section "service-with-healthchecks"
- - #22973 unknown section "service-with-healthchecks"
- - #23029 unknown section "registrypackages"
- - #23042 unknown section "registrypackages"
- - #23062 unknown section "registrypackages"
- - #23084 unknown section "registrypackages"
- - #23118 unknown section "service-with-healthchecks"
- - #23125 unknown section "drain"
- - #23198 unknown section "service-with-healthchecks"
- - #23214 unknown section "cloud-provider-dvp"
- - #23241 unknown section "cloud-provider-dvp"
- - #23340 unknown section "cloud-provider-dvp"
- - #270 unknown section "registrypackages"
- - #283 unknown section "service-with-healthchecks"
- - #299 unknown section "cloud-provider-dvp"
- - #304 unknown section ""
- - #305 unknown section "cloud-provider-dvp"
- - #383 unknown section ""
- - #393 unknown section ""
- - #406 unknown section "cloud-provider-dvp"
- - #421 unknown section "modules"
- - #422 unknown section "cloud-provider-dvp"
- - #432 unknown section ""
- - #537 unknown section ""
- - #547 unknown section ""
- - #551 unknown section ""
- - #631 unknown section ""
- - #644 unknown section ""
- - #648 unknown section ""
- - #649 unknown section "registrypackages"
- - #701 unknown section ""
- - #721 unknown section "registrypackages"
- - #726 unknown section ""
- - #739 unknown section "registrypackages"
- - #78 unknown section "cloud-provider-dvp"
- - #82 unknown section "cloud-provider-dvp"
- - #827 unknown section ""
- - #845 unknown section "cloud-provider-dvp"
- - #847 unknown section ""
- - #875 unknown section ""
- - #885 unknown section "registrypackages"
- - #916 unknown section ""
- - #917 unknown section ""
- - #980 unknown section ""
-
 ## Know before update
 
 
@@ -188,11 +82,16 @@
     basic auth. Such users will lose those privileges on update and must be granted
     access through a normal group bound by RBAC instead. Check the basic-auth-proxy logs
     after updating for `dropping group` messages.
+ - After the update is approved for a NodeGroup, bashible installs `nodelet.service` on every node it manages; new nodes get it while bootstrapping. A NodeStaticPodRequest with an empty `nodeGroupSelector` now also selects NodeGroups managed by bashible. NodeExtensionRequest replaces `spec.sysext` with `spec.extension`, which requires `kind` (`Package` or `SystemExtension`); requests created before the update must be recreated. The `Ready` reason `InvalidSysext` is renamed `InvalidExtension`. A new node does not join while node-controller is unavailable -  its bootstrap waits for the NodeConfigTemplate that node-controller serves.
  - After the update, every project on the built-in templates `default`, `secure` and `secure-with-dedicated-nodes` switches from their former Helm texts to structured fields. Its administrators move without a gap from AuthorizationRule objects with the `Admin` access level (`user-authz:admin` plus `user-authz:admin:custom`) to the `d8:project:admin` role of the `d8-administrators` ProjectRoleBinding, and its `all-pods` quota is replaced by `d8-project-quota`. The two roles do not grant the same permissions. In particular, custom ClusterRoles with the `user-authz.deckhouse.io/access-level` annotation no longer add to the access of these administrators; create a custom role and bind it with a ProjectRoleBinding instead.
     
     - While the old objects are kept, the Project has the `HandoverPending` condition. If they are still there after 30 minutes, the `MultitenancyManagerProjectHandoverStuck` alert fires.
     - On a later switch of a user template, every other object of the Helm text that the structured fields do not render (rules and bindings of other subjects, other quotas, network policies, workloads) is left in place instead of being deleted. It keeps working, is no longer managed by the project, carries the `projects.deckhouse.io/kept-from-helm-template` label, under which only a requester who may make the same change across the cluster may change or delete it, and is listed in `status.keptObjects`, and the `MultitenancyManagerProjectKeepsHelmTemplateObjects` alert fires until it is deleted, unlabelled or rendered by the template again.
     - Administrators and quotas that stay in `.spec.parameters` because they could not be moved to `.spec.administrators` and `.spec.quota` are not handed over, and a switch leaves their objects in place.
+ - After the update, the controller adds the annotations and labels of every ServiceWithHealthchecks to the Service created for it.
+    If a ServiceWithHealthchecks of the `LoadBalancer` type carries annotations that configure the load balancer
+    (`network.deckhouse.io/load-balancer-ips`, `network.deckhouse.io/load-balancer-shared-ip-key` and similar),
+    the load balancer controller applies them and may assign a different address to the service, which causes a short interruption of the connections.
  - An Application that declares `spec.resourceRequests` is now installed from a chart
     rendered with the requested replicas and container resources applied, instead of
     from the package chart directly. Applications without `resourceRequests`, and all
@@ -281,6 +180,7 @@
     namespace/project-scoped role or a capability, a custom role may not aggregate system capabilities
     into a tenant scope, and objects marked `deckhouse.io/system-resource` inside user namespaces are
     editable only by superadmin.
+ - Changes affect the generated NetworkPolicy resources for DVP clusters with `networkPolicy: Isolated`. The first `dhctl converge` after the update may update the generated NetworkPolicy rules.
  - Changing allowedGroups or allowedEmails deletes refresh tokens that no longer match. Those users must sign in again.
  - Cilium agent and operator pods will be restarted.
  - Cilium agent pods are restarted to apply the fixes.
@@ -349,6 +249,7 @@
     the webhooks before it starts serving.
     Plan the update for a time when you can hold back changes to RBAC objects, users, groups and
     `ClusterAuthorizationRule` objects.
+ - Endpoints for pods in a terminal phase (Failed/Succeeded) are no longer published. In DVP clusters this prevents traffic from being routed to a VirtualMachine IP that has been reused by another pod. Pods being deleted are now published with the serving and terminating conditions, which enables the graceful shutdown flow for consumers. Pod readiness is derived from the PodReady condition, and stale probe results are reset when a pod becomes not ready, is recreated, or changes its IP.
  - Exec and attach requests in user namespaces reach Gatekeeper again, as in Deckhouse 1.73 and 1.74.
     Every constraint that matches them is evaluated again, including a constraint without `match.kinds`
     or with `kinds: ["*"]` whose policy does not check `input.review.operation`.
@@ -364,6 +265,7 @@
     Open port 8500 TCP and UDP between all cluster nodes.
  - Flannel pods will be restarted.
  - Holders of `d8:system:manager`, `d8:subsystem:iam:manager` and the deprecated `d8:manage:all:manager` and `d8:manage:security:manager` can no longer write a ClusterAuthorizationRule with `Admin`, `ClusterAdmin` or `SuperAdmin` or one that opens the system namespaces (`allowAccessToSystemNamespaces`, `namespaceSelector.matchAny`, a `labelSelector` that does not name its namespaces by `kubernetes.io/metadata.name`, a rule for a request another such rule already lets in, the requester's own included, or any rule while multitenancy mode is disabled, so in CE no ClusterAuthorizationRule at all), cannot create Users, add Group members, run UserOperations or connect DexProviders for the identities of such rules, cannot add a member already let into the system namespaces to a Group with such a rule, need the range for the roles of the groups above a Group they write, cannot turn multitenancy mode off, cannot assign `admin` and `superadmin` roles of the granular model, and cannot write admission webhooks and policies. Existing rules stay; a ClusterAdmin or a SuperAdmin does these.
+ - If `applications.update` is not set in the global settings, applications use the `update.notification` settings of the `deckhouse` module, so their updates are announced to the same webhook with `subject - Application` and wait for `minimalNotificationTime`. A webhook that does not answer such a request with 2xx blocks application updates. To update applications without notifications, set `applications.update` without `notification`.
  - If the configured NTP servers are unreachable, a master boot can wait up to 30 seconds by default. On bashible nodes this limit can be raised to 60 seconds. Kubelet starts after the timeout and NodeTimeNotSynchronizedAtBoot fires after the failure metric is collected. For isolated clusters, configure reachable ntpServers or set earlyTimeSync.enabled to false.
  - If your `multitenancy-manager` ModuleConfig sets `allowNamespacesWithoutProjects`, remove the parameter. It has no effect, and in the next minor release a ModuleConfig that still carries it will fail validation and stop applying.
  - In a cluster that still has the `antiopa` or `loghouse` namespace, a ClusterAuthorizationRule without `allowAccessToSystemNamespaces` now gives its subjects access to these namespaces when it has neither `limitNamespaces` nor `namespaceSelector`, or when a `limitNamespaces` pattern matches them (for example `.*`). Check with `kubectl get ns antiopa loghouse`. These namespaces are left from components that preceded Deckhouse; delete them if nothing uses them. To keep such a namespace closed, list the namespaces of the rule in `limitNamespaces` with patterns that do not match it. Do not use `namespaceSelector` for this: a selector replaces `limitNamespaces` and `allowAccessToSystemNamespaces` and opens every namespace it matches, system namespaces included.
@@ -516,6 +418,7 @@
     pipeline tolerated clusters without DRS, CAPV does not. The same requirement
     already applied to master and CloudPermanent nodes (provisioned via Terraform).
  - Subjects holding only the user-authn view role or the legacy ClusterAdmin user-authn role can no longer list `passwords.dex.coreos.com` or `offlinesessionses.dex.coreos.com`. Use `User` objects for user inventory instead.
+ - TLS connections from nodes to hosts whose certificates chain to `emSign ECC Root CA - G3` or Comodo `AAA Certificate Services` (eMudhra / emSign issued) will fail. Reissue such certificates from another CA before the update.
  - The Cilium agent pods, cilium-operator, and egress-gateway-agent will restart after the update.
  - The CoreDNS pods of kube-dns and the node-local-dns DaemonSet pods will restart after the update.
  - The Deckhouse web interface must use the new user-api endpoints for the password change and the sign-out on all devices.
@@ -559,6 +462,7 @@
     multiples of 10m. VPA objects with `updateMode: Auto`/`Recreate` may evict and recreate pods to apply
     the updated requests.
  - The cilium-hubble components (hubble-ui, hubble-relay) will restart after the update.
+ - The cloud-provider-dvp module is now delivered as an external module. A Deckhouse update is allowed only when the module is available from a module source. During the update, the DVP cloud provider components (CCM, CSI, CAPI provider) are redeployed from the external module.
  - The cni-cilium components (cilium agent, operator) will restart after the update.
  - The control-plane components (kube-apiserver, kube-controller-manager, kube-scheduler), kubelet, and kube-proxy will restart after the update.
  - The controller recreates the main namespace of a Project once it is deleted directly past the
@@ -588,6 +492,7 @@
     `d8 k delete mutatingwebhookconfiguration cluster-objects-grants-defaulting`
     `d8 k delete validatingwebhookconfiguration cluster-objects-grants-validator`
     Nothing has to be done on clusters where the module is enabled.
+ - The holders of `d8\:system\:manager`, `d8\:subsystem\:<subsystem>\:manager` and of the deprecated `d8\:manage\:*\:manager` roles lose, in the namespaces of their modules, the operations of the `user` level they had in the previous release - reading secrets, `kubectl exec`, `attach` and `port-forward`, deleting and scaling pods. They keep the full management of ModuleConfig objects and of the cluster-wide resources of the modules, and the read access to the module namespaces. Grant a `superadmin` role of the subsystem to the people who must work inside the module namespaces.
  - The in-cluster registry storage (`registry` module, `Managed` mode with `storage.cache`) listens on the node address of master nodes on 4281/TCP instead of 5001/TCP and on 4283/TCP instead of 5003/TCP. Both are in the 4200–4299 range that the documented host firewall rules already open. If inter-node traffic is filtered by explicit rules, allow 4281/TCP from all nodes to master nodes and between master nodes, and 4283/TCP from the nodes running the Ingress controller to master nodes. The registry agent stays on 127.0.0.1:5001 on every node, and image references (`registry.d8-system.svc:5001`) do not change. An installation from a bundle uses 4281/TCP on the first master for its bootstrap registry, and the bootstrap preflight now checks that ports 4281 and 4283 are free.
  - The kube-proxy DaemonSet pods will restart after the update.
  - The kube-router component will restart after the update.
@@ -762,7 +667,11 @@
     that a policy can forbid deleting a resource. While Gatekeeper is
     unavailable, deleting such a resource is blocked along with creating it.
  - **[admission-policy-engine]** Added the `gpuResourceRestriction` policy to `OperationPolicy`, which denies Pods requesting GPU resources in namespaces without the configured label. [#22757](https://github.com/deckhouse/deckhouse/pull/22757)
+ - **[admission-policy-engine]** For a transition period, a pod-creating controller that violates a policy with `enforcementAction - Deny` gets a warning instead of a denial by default; the Pods it creates are still denied. `podSecurityStandards.controllerValidationEnforcement - Policy` or `spec.controllerValidation.mode - Enforce` denies the controller as well.
+    A Deployment, StatefulSet, DaemonSet, Job, CronJob or ReplicationController that violates a denying policy or Pod Security Standard is accepted with a warning, and the violation surfaces when its Pods are denied, in the events of the ReplicaSet or the controller. The constraints that check controllers are named `d8-controllers-<NAME>`, and the `d8-controllers-` prefix is reserved for policy names. The new `ControllerPolicyViolation` alert reports such controllers for each policy and namespace; `OperationPolicyViolation` and `SecurityPolicyViolation` no longer count violations in controllers.
  - **[admission-policy-engine]** Mutations limited by `spec.applyTo[].operations` no longer send other operations to Gatekeeper.
+ - **[admission-policy-engine]** Pod Security Standards policy violations now include structured details, and D8HostNetwork reports hostNetwork and all disallowed host ports in one message.
+    The D8HostNetwork violation message now lists every disallowed host port, also when hostNetwork is violated, and the D8AllowedUsers message shows `runAsNonRoot - false` instead of `not set` when it is set explicitly; anything matching on the message text may need an update.
  - **[admission-policy-engine]** Publish the rules of the Pod Security Standards as the SecurityPolicy objects `d8-pod-security-baseline` and `d8-pod-security-restricted`.
  - **[admission-policy-engine]** Report the availability of the module components with alerts.
  - **[admission-policy-engine]** The alerts on policy violations fire for each policy and namespace, and an alert on a namespaced object is shown in its namespace.
@@ -781,6 +690,7 @@
     The minimum supported version of Kubernetes is now 1.33. All control plane components will restart.
  - **[candi]** Base images updated to v3 [#22986](https://github.com/deckhouse/deckhouse/pull/22986)
  - **[candi]** Deprecate `ClusterConfiguration.cloud.prefix` and cap its length at 45 characters. [#21533](https://github.com/deckhouse/deckhouse/pull/21533)
+ - **[candi]** The `Auto` resource reservation scales kubelet CPU reservation with node core count instead of fixed `70m`.
  - **[candi]** bashible installs nodelet on every node it manages, puts it back where it is missing, and waits for the platform's registry packages instead of installing them; static node cleanup removes the agent.
     A new node's bootstrap installs nodelet and waits for its NodeGroup's NodeConfigTemplate, served by node-controller, before it requests the bashible bundle.
  - **[cert-manager]** Add first-class Yandex Cloud DNS ACME DNS-01 support via ModuleConfig settings. [#22971](https://github.com/deckhouse/deckhouse/pull/22971)
@@ -893,10 +803,12 @@
     kube-apiserver image is rebuilt; control-plane components restart during the update.
  - **[control-plane-manager]** A control plane component is updated on a node only after its new images are pulled there, so it no longer stays down while kubelet pulls them.
  - **[control-plane-manager]** A scheduler extender can receive the pods kube-scheduler placed since its previous prioritize call (`sendPlacements` in KubeSchedulerWebhookConfiguration).
+ - **[control-plane-manager]** Added the timeout parameter to KubeSchedulerWebhookConfiguration for extender timeouts with millisecond precision (for example, 500ms), and deprecated `timeoutSeconds`.
  - **[control-plane-manager]** Cluster network parameters podSubnetCIDR, serviceSubnetCIDR, podSubnetNodeCIDRPrefix are migrated to mc control-plane-manager spec.settings.network; these parameters in `cluster-configuration` are deprecated. [#22688](https://github.com/deckhouse/deckhouse/pull/22688)
  - **[control-plane-manager]** Control-plane components requests are autotuned daily from 7-day average usage instead of a fixed split of a combined budget; setting `resourcesRequests.cpu` or `.memory` in ModuleConfig disables autotune for that measurement. [#21543](https://github.com/deckhouse/deckhouse/pull/21543)
     restart of control-plane static pods (`kube-apiserver`, `etcd`, `kube-controller-manager`, `kube-scheduler`).
  - **[control-plane-manager]** ControlPlaneOperation status shows the diffs of files changed by the operation, except files that may contain sensitive data.
+ - **[control-plane-manager]** Scheduler extenders receive `dryRun - true` in the filter and prioritize requests of a kube-scheduler simulation.
  - **[control-plane-manager]** The basic audit policy logs Pod status updates from kubelet with the request body, so container terminations and their reasons get into the audit log.
  - **[control-plane-manager]** The cluster Kubernetes version moves from `ClusterConfiguration.kubernetesVersion` to `settings.kubernetesVersion` in ModuleConfig `control-plane-manager`. [#21828](https://github.com/deckhouse/deckhouse/pull/21828)
  - **[control-plane-manager]** `ControlPlaneNode` component conditions are now pod-based; new `<Component>InSync` and `<Component>PodReady` conditions, `kubectl get cpn` columns show `<Component>Ready`.
@@ -913,6 +825,7 @@
  - **[deckhouse-controller]** An application package version can set `versionCompatibilityRules.upgrade.from` in `package.yaml`, a SemVer constraint on the versions an Application may be upgraded to it from; the constraint takes priority over the `step` limits, and an invalid one forbids upgrading to the version.
  - **[deckhouse-controller]** Application package settings schemas support the x-deckhouse-ui-text-area and x-deckhouse-ui-secure-field UI marks.
  - **[deckhouse-controller]** When an Application is deleted, Deckhouse also deletes the objects of the kinds listed in the package's `orphanResources` value that the application left in its namespace.
+ - **[deckhouse]** Added a check that makes the DVP cloud-controller-manager handle only default Kubernetes LoadBalancer services without spec.loadBalancerClass. [#22772](https://github.com/deckhouse/deckhouse/pull/22772)
  - **[deckhouse]** Added repositoryName to usedBy for AP/MP. [#22749](https://github.com/deckhouse/deckhouse/pull/22749)
  - **[deckhouse]** Added the `D8DeckhouseModuleImageDownloadInterrupted` alert that fires when the download of a module image is interrupted.
  - **[deckhouse]** Added the experimental `enableModuleV2` setting, which turns on the Module v2 controller and installs the Module v2 CRD. [#23273](https://github.com/deckhouse/deckhouse/pull/23273)
@@ -920,6 +833,8 @@
  - **[deckhouse]** Application `status.urls` now includes endpoints of HTTPRoutes annotated with `packages.deckhouse.io/application-endpoint-description`.
  - **[deckhouse]** Application packages can be granted to projects with ClusterResourceGrantPolicy; a project sees the packages available to it, and an Application of any other package is rejected.
     With the `multitenancy-manager` module enabled, its webhooks check Application objects in project namespaces. While the module controller is unavailable, Application objects in project namespaces cannot be created or changed.
+ - **[deckhouse]** Application updates in the `Auto` and `AutoPatch` modes are announced to the update notification webhook and are applied no earlier than `minimalNotificationTime` after the notification.
+    If `applications.update` is not set in the global settings, applications use the `update.notification` settings of the `deckhouse` module, so their updates are announced to the same webhook with `subject - Application` and wait for `minimalNotificationTime`. A webhook that does not answer such a request with 2xx blocks application updates. To update applications without notifications, set `applications.update` without `notification`.
  - **[deckhouse]** Application.spec.resourceRequests is now honoured by default.
     An Application that declares `spec.resourceRequests` is now installed from a chart
     rendered with the requested replicas and container resources applied, instead of
@@ -927,6 +842,17 @@
     modules, are unaffected. Updating restarts the deckhouse Deployment.
  - **[deckhouse]** Applications (and modules with EnableModuleV2) run on a new package engine that keeps the running version during updates, applies update windows to applications and does not reinstall packages on restart.
  - **[deckhouse]** Applications in the `Auto` and `AutoPatch` update modes are updated automatically along a chain of compatible versions; the plan and the next version are shown in `status.update`.
+ - **[deckhouse]** Attach GPUs to nodes through the new `virtualMachine.gpus` field of DVPClusterConfiguration and DVPInstanceClass.
+    DVP cannot attach or detach a GPU on a running VM, so changing `virtualMachine.gpus` on an
+    existing InstanceClass disrupts its nodes — differently depending on the NodeGroup type.
+    Nodes of a `CloudEphemeral` group are recreated. Master and `CloudPermanent` nodes are updated in
+    place during converge: the VM is restarted, without extra confirmation, because
+    `restartApprovalMode: Automatic` is set for it — run the converge one node at a time, keeping the
+    control plane quorum in mind.
+    Writing an empty `gpus: []` counts as a change too, even though the resulting VM manifest is the
+    same, so templates that collapse to an empty list will roll the machines — omit the field instead.
+    A VM with an attached GPU is not live migratable, and using the field requires the `GPU` feature
+    gate enabled in the `virtualization` module of the cluster hosting the VMs.
  - **[deckhouse]** Auto-restart kubelet on resources added by hotplug
  - **[deckhouse]** Deleting an application whose package requires disable confirmation now needs the `packages.deckhouse.io/allow-disabling` annotation; with Module v2 modules use the same annotation, which is removed once the module is disabled.
     With Module v2 enabled, disabling a module that requires confirmation needs `packages.deckhouse.io/allow-disabling` instead of `modules.deckhouse.io/allow-disabling`.
@@ -938,6 +864,7 @@
  - **[deckhouse]** Module v2 gets its own Grafana dashboard and last-run, phase and hook lane metrics.
     With enableModuleV2 the hook run metrics are labelled by package instead of module, and the task queue, compaction and helm operation metrics are no longer exported.
  - **[deckhouse]** Packages can declare upgrade and downgrade compatibility limits; the Application webhook rejects incompatible version changes, with defaults allowing patch changes and upgrades to the next minor version.
+ - **[deckhouse]** Support `coreFraction: Auto` for node virtual machines, letting the Vertical VirtualMachine Autoscaler manage their CPU share. [#22744](https://github.com/deckhouse/deckhouse/pull/22744)
  - **[deckhouse]** Support application settings conversions.
  - **[deckhouse]** The `d8a5e-` object name prefix is reserved for the ansible module. [#22411](https://github.com/deckhouse/deckhouse/pull/22411)
  - **[deckhouse]** The `d8vt-` object name prefix is reserved for the virtualization-transfer module.
@@ -947,6 +874,7 @@
  - **[descheduler]** LowNodeUtilization evicts a pod only if kube-scheduler would place it on an underutilized node.
     On clusters where control-plane-manager runs kube-scheduler, LowNodeUtilization skips pods whose target node is not underutilized, and pauses evictions while kube-scheduler does not answer.
  - **[descheduler]** The LowNodeUtilization strategy of a Descheduler can count thresholds from the average node utilization (`useDeviationThresholds`) and limit evictions per node (`evictionLimits.node`).
+ - **[descheduler]** The LowNodeUtilization strategy of a Descheduler can use the 15-minute average node CPU utilization from Prometheus (`metricsSource - Prometheus`).
  - **[dhctl]** Added a preflight check that prevents static cluster bootstrap when pod or service CIDRs overlap with the target host network. [#21815](https://github.com/deckhouse/deckhouse/pull/21815)
  - **[dhctl]** Added support for Yandex Cloud as an external cloud provider — its candi, OpenTofu plugin and validator are downloaded at runtime from the module bundle. [#21653](https://github.com/deckhouse/deckhouse/pull/21653)
     Cloud provider configuration for DKP clusters deployed in Yandex Cloud needs to be migrated from YandexClusterConfiguration to ModuleConfig settings. For migration instructions, refer to "Cluster and Infrastructure" in the DKP FAQ.
@@ -1020,6 +948,7 @@
     - A leftover wrap whose namespace is already gone or Terminating is deleted instead of Helm-recreating the namespace.
  - **[multitenancy-manager]** GrantableClusterResourceDefinition gets the `reserved` field for resources that are unavailable to projects by default and are granted only by an explicit `allowed` or `allowedSelector` in ClusterResourceGrantPolicy.
  - **[multitenancy-manager]** GrantableClusterResourceReference picks the `fieldPaths` item by its `match` condition too, and `fieldPaths[].message` adds a text to the rejection.
+ - **[multitenancy-manager]** Grants scale to thousands of granted objects - granted objects are read from a cache, catalogs follow their changes, admission checks only the referenced names.
  - **[multitenancy-manager]** In Enforce, creating an object that takes the usage of a whole project over its ProjectQuota is denied.
     A new fail-closed webhook, quota-ledger.multitenancy-manager.deckhouse.io, checks the status writes of d8-project-quota. While no replica of multitenancy-manager answers, counted creates in the namespaces of projects with a quota fail with 503; deletions and other namespaces are not affected. multitenancy-manager runs two replicas where control-plane-manager is enabled.
  - **[multitenancy-manager]** In the CE edition, a project has only its main namespace, and the creation of a ProjectNamespace is refused.
@@ -1078,6 +1007,8 @@
  - **[node-manager]** NodeStaticPodRequest delivers a static pod to the nodes of selected Deckhouse Engine NodeGroups. The pause image comes with the containerd extension and is never pulled. [#23158](https://github.com/deckhouse/deckhouse/pull/23158)
     Every Engine node's NodeConfig is re-rendered once, and containerd restarts once on every Engine node.
  - **[node-manager]** NodeUser uid uniqueness, StaticInstance address uniqueness and InstanceClass deletion protection are now validated by the node-controller admission webhook instead of shell hooks. [#21654](https://github.com/deckhouse/deckhouse/pull/21654)
+ - **[node-manager]** Nodes managed by bashible run nodelet; NodeStaticPodRequest static pods, NodeExtensionRequest packages and the platform's registry packages reach them through the agent.
+    After the update is approved for a NodeGroup, bashible installs `nodelet.service` on every node it manages; new nodes get it while bootstrapping. A NodeStaticPodRequest with an empty `nodeGroupSelector` now also selects NodeGroups managed by bashible. NodeExtensionRequest replaces `spec.sysext` with `spec.extension`, which requires `kind` (`Package` or `SystemExtension`); requests created before the update must be recreated. The `Ready` reason `InvalidSysext` is renamed `InvalidExtension`. A new node does not join while node-controller is unavailable -  its bootstrap waits for the NodeConfigTemplate that node-controller serves.
  - **[node-manager]** Prevent deletion of CAPI Cluster resources in the d8-cloud-instance-manager namespace. [#22551](https://github.com/deckhouse/deckhouse/pull/22551)
  - **[node-manager]** Qemu guest agent/sysext [#23339](https://github.com/deckhouse/deckhouse/pull/23339)
  - **[node-manager]** `kubernetes-api-proxy` starts its probe rounds on a fixed schedule (every second, as before), probes every 500ms for up to 30s while no kube-apiserver is ready, and shows the probe state in `/upstreams`.
@@ -1095,6 +1026,8 @@
  - **[node-manager]** migrate get_crds hook into node-controller and move machine objects along. [#21372](https://github.com/deckhouse/deckhouse/pull/21372)
  - **[node-manager]** node-controller arbitrates `RegistryUpstream` objects without the registry agent and routes them through `NodeConfig`; nodelet applies them on both node types, bashible inline on containerd v1.
     nodelet is updated to v0.1.21 and restarts on every node that runs it; workloads are not affected.
+ - **[registry]** Added the `D8RegistryControllerDown` and `D8RegistryStorageLeaderAbsent` alerts, which fire when the registry controller cannot be scraped and when the in-cluster registry cache has no leader.
+    The description of `D8RegistryNodeRunningFromDisk` now states what triggers it - a node cut off from the API server is not reported by this alert and shows as `NotReady` instead.
  - **[registry]** Bound the cache store by `storage.size` and a node disk reserve, with alerts; fix fill, replication and push routing to the leader; describe a cluster pulling through the agent as the in-cluster registry only; stabilize multi-master bootstrap.
  - **[registry]** Garbage collection of the registry cache now also runs once the cache holds a new image set and when the store refuses writes, and can be started by hand with a RegistryOperation object. Each storage replica exports an estimate of what a collection would free.
     The `registry-controller` and `registry-storage` pods restart once.
@@ -1123,6 +1056,7 @@
  - **[registry]** Removed the v1 registry implementation (used up to and including DP 1.77); the Proxy and Local modes of the deckhouse ModuleConfig can be neither installed nor updated to 1.78.
     An update to 1.78 from DP 1.77.1 or later is blocked while the cluster runs Proxy or Local of the v1 registry implementation, or Direct without the registry ModuleConfig.
     Migrate the cluster to the registry module on 1.77 before updating (see the registry module FAQ), and update to 1.78 only from DP 1.77.1 or later.
+ - **[registry]** The RBACv2 roles of the cluster subsystem grant access to the registry module - the viewer reads RegistryNode, the manager manages the module configuration and RegistryUpstream objects.
  - **[registry]** The images of the in-cluster cache are listed by the RegistryImage resource; the cache checks its blobs in the background and repairs broken ones on its own.
     The registry cache replicas are recreated one at a time, and registry-controller restarts.
  - **[registry]** The managed registry (cache, proxy, air-gap) now works on Deckhouse Engine (Immutable) nodes.
@@ -1493,6 +1427,7 @@
     kube-apiserver image is rebuilt; control-plane components restart during the update.
  - **[common]** Static pods (control plane, `kubernetes-api-proxy`) are no longer killed by kubelet on a Kubernetes minor version change.
     During the update to this release, kubelet is reinstalled on all nodes and all static pods (`etcd`, `kube-apiserver`, `kube-controller-manager`, `kube-scheduler`, `kubernetes-api-proxy`) are restarted once without a graceful shutdown; on master nodes this causes an etcd leader election.
+ - **[common]** Update lib-helm to 1.72.31 - CSI sidecars take verbosity from the module logLevel, SecurityPolicyException objects get standard labels.
  - **[common]** fix cve [#21817](https://github.com/deckhouse/deckhouse/pull/21817)
  - **[common]** kube-apiserver returns a single short validation error for an invalid `fieldManager` instead of an error for every invalid character.
  - **[common]** kubelet no longer fails to start on an unusable CPU or memory manager checkpoint, and the new `D8KubeletCheckpointStateUnpinnedContainers` alert reports containers whose NUMA zone may no longer match. [#22869](https://github.com/deckhouse/deckhouse/pull/22869)
@@ -1521,7 +1456,10 @@
  - **[control-plane-manager]** Only Deckhouse components may set `resource-quota-overrides.deckhouse.io/*` labels in Pod and PVC templates of workload controllers, so these labels no longer let users bypass ResourceQuota.
  - **[control-plane-manager]** Preserve etcd learners while new control-plane nodes are joining.
  - **[control-plane-manager]** Prevent unsupported feature gates from blocking staged Kubernetes upgrades.
+ - **[control-plane-manager]** The `ControlPlaneNode` status no longer rolls certificate expiration dates back to an older observation.
  - **[control-plane-manager]** The `D8ControlPlaneComponentsResourcesInsufficientCapacity` alert now resolves once control-plane components no longer need a raise.
+ - **[control-plane-manager]** The `control-plane-manager` no longer caches every `kube-system` pod, which cuts its memory usage in large clusters.
+ - **[control-plane-manager]** The `update-observer` no longer starts a separate polling loop for each `NodeGroup`.
  - **[control-plane-manager]** The basic audit policy no longer writes kube-apiserver health probes (`/readyz`, `/livez`, `/healthz`) to the audit log. Requests to these paths that fail authentication are still logged.
     With `basicAuditPolicyEnabled` (the default), authenticated and anonymous requests to `/readyz`, `/livez`, `/healthz` and their subpaths are not audited, even when a custom policy in the `audit-policy` Secret logs all requests. To audit these requests, disable `basicAuditPolicyEnabled` and define the full policy in the Secret. The kube-apiserver pods restart to apply the new policy.
  - **[control-plane-manager]** The basic audit policy records an exec into a pod (`pods/exec`) in all namespaces again, as it did before Deckhouse 1.77.
@@ -1542,6 +1480,7 @@
  - **[deckhouse-controller]** Do not commit the package repository registry checksum when no application could be annotated, which left them all on stale registry settings. [#23112](https://github.com/deckhouse/deckhouse/pull/23112)
  - **[deckhouse-controller]** Fixed Deckhouse startup hanging or crash-looping when a module image download is interrupted or a partially built erofs image is left on the node.
  - **[deckhouse-controller]** Fixed a bug when PackageRepository always used a HTTPS scheme. [#22481](https://github.com/deckhouse/deckhouse/pull/22481)
+ - **[deckhouse-controller]** Fixed image pulls of a module served by a ModulePullOverride - the module no longer switches to the registry of another source's release and keeps its registry after a Deckhouse restart while the override is not ready.
  - **[deckhouse-controller]** Honor a channel-level release suspend for clusters that reach the suspended version through a step-by-step update. [#22656](https://github.com/deckhouse/deckhouse/pull/22656)
     A Deckhouse release suspended on its release channel is no longer applied by clusters that are behind and reach it through a step-by-step update. The suspend flag lives only in the release-channel image; previously it was dropped when the target release was built from its per-version image, so lagging clusters updated to a suspended release anyway.
  - **[deckhouse-controller]** Ignore auxiliary files when loading settings conversions and support versioned .yaml and .yml files.
@@ -1552,23 +1491,40 @@
  - **[deckhouse-controller]** Stop the module source registry fan-out from replaying and flooding the main queue with duplicate moduleRun tasks. [#23112](https://github.com/deckhouse/deckhouse/pull/23112)
  - **[deckhouse-controller]** The `change-registry` helper works again when run in the deckhouse pod as documented, and when the `registry` module is in the `Unmanaged` mode; in the `Managed` mode it refuses and explains how to change the registry in the `registry` ModuleConfig.
  - **[deckhouse-controller]** nelm now takes over fields left by the old Helm 3 engine, so stale fields get removed on module upgrade. [#21796](https://github.com/deckhouse/deckhouse/pull/21796)
+ - **[deckhouse]** A DVP cluster migrated to the new provider configuration format keeps its `networkPolicy - None` instead of silently switching to `Isolated`.
  - **[deckhouse]** A module whose deployed ModuleRelease is deleted is now shown as not installed instead of keeping the Ready status and the version of the removed release.
  - **[deckhouse]** Add verbosity to veritysetup format and delete damaged hash. [#22127](https://github.com/deckhouse/deckhouse/pull/22127)
+ - **[deckhouse]** Added a mechanism to attach additional labels to DVP VM pods and configure ingress access to selected VM ports. [#20660](https://github.com/deckhouse/deckhouse/pull/20660)
+    Changes affect the generated NetworkPolicy resources for DVP clusters with `networkPolicy: Isolated`. The first `dhctl converge` after the update may update the generated NetworkPolicy rules.
  - **[deckhouse]** Allow editing and deleting the resources of an application under maintenance. [#23107](https://github.com/deckhouse/deckhouse/pull/23107)
  - **[deckhouse]** An unset `settings.update.mode` now defaults to `AutoPatch` instead of silently running as `Auto`. [#21903](https://github.com/deckhouse/deckhouse/pull/21903)
+ - **[deckhouse]** Annotations and labels of a ServiceWithHealthchecks are now copied to the Service created for it. [#22740](https://github.com/deckhouse/deckhouse/pull/22740)
+    After the update, the controller adds the annotations and labels of every ServiceWithHealthchecks to the Service created for it.
+    If a ServiceWithHealthchecks of the `LoadBalancer` type carries annotations that configure the load balancer
+    (`network.deckhouse.io/load-balancer-ips`, `network.deckhouse.io/load-balancer-shared-ip-key` and similar),
+    the load balancer controller applies them and may assign a different address to the service, which causes a short interruption of the connections.
  - **[deckhouse]** Bump containerd to v2.2.10 and dependencies to fix CVEs
  - **[deckhouse]** Configure the d8-system and d8-monitoring namespaces with the privileged Pod Security enforcement level. [#22795](https://github.com/deckhouse/deckhouse/pull/22795)
     The d8-system and d8-monitoring namespaces will use the privileged Kubernetes Pod Security enforcement level. Access to create workloads in these namespaces must remain restricted.
  - **[deckhouse]** Default reservedPublicHosts.mode to List; Template no longer covers publicDomainTemplate values where %s is only a prefix of the first label. [#22532](https://github.com/deckhouse/deckhouse/pull/22532)
     Clusters that never set mode now reserve only the platform service hostnames. Set mode Template for the wider reservation. A publicDomainTemplate like %s-cluster.example.com stays on List even if Template is asked for. kube-%s.example.com stays Template when Template is set.
+ - **[deckhouse]** Drain no longer treats pod lookup errors as confirmation that pods were deleted. [#23125](https://github.com/deckhouse/deckhouse/pull/23125)
  - **[deckhouse]** Exec, attach, port-forward and debug into Pods labeled `heritage: deckhouse`, and scaling Deployments, StatefulSets, ReplicaSets and ReplicationControllers with that label, are now denied for everyone but system users.
     Users who run `kubectl exec`, `attach`, `cp`, `port-forward` or `debug` against Pods labeled `heritage: deckhouse`, or `kubectl scale` against Deployments, StatefulSets, ReplicaSets or ReplicationControllers labeled `heritage: deckhouse`, are now denied in every namespace, cluster administrators and superadmins included; only system users and the `system:masters` group (`super-admin.conf`) are exempt. Objects under maintenance can still be scaled. While webhook-handler is unavailable, these operations are denied for every target to everyone but the exempt users. Use `system:sudouser` where such access is needed.
+ - **[deckhouse]** Fix CVEs [#22274](https://github.com/deckhouse/deckhouse/pull/22274)
  - **[deckhouse]** Fix ModuleConfig admission rejecting a module with a disabled conditional dependency [#22640](https://github.com/deckhouse/deckhouse/pull/22640)
  - **[deckhouse]** Fix RBAC permissions for deckhouse user. [#22238](https://github.com/deckhouse/deckhouse/pull/22238)
  - **[deckhouse]** Fix a minor Deckhouse release being auto-applied as a patch when no Deployed release object is present. [#21909](https://github.com/deckhouse/deckhouse/pull/21909)
  - **[deckhouse]** Fix an empty package status after a successful install [#22504](https://github.com/deckhouse/deckhouse/pull/22504)
  - **[deckhouse]** Fix random startup failures with 'waitid - no child processes' when restoring erofs modules.
+ - **[deckhouse]** Fixed a load balancer losing all its endpoints for good after a target pod was replaced. [#22973](https://github.com/deckhouse/deckhouse/pull/22973)
+    The `service-with-healthchecks` controller and agent are restarted.
+    A `ServiceWithHealthchecks` that was left in `NotAllEndpointsAreReady` with no EndpointSlice
+    recovers automatically once the updated agent starts, no manual action is needed.
  - **[deckhouse]** Fixed deletion of load balancers backed by ServiceWithHealthchecks, which failed because the child Service is protected by the `heritage - deckhouse` label in the parent cluster.
+ - **[deckhouse]** Fixed metrics endpoints being reachable without going through kube-rbac-proxy authorization. [#23118](https://github.com/deckhouse/deckhouse/pull/23118)
+ - **[deckhouse]** Fixed the `D8CloudProviderDVPMigrationPending` alert that kept firing after the migration resources were applied. [#23241](https://github.com/deckhouse/deckhouse/pull/23241)
+ - **[deckhouse]** Fixes cluster bootstrap getting stuck when `capdvp-controller-manager` and the validation webhook cannot reach the API server and DNS before the CNI is ready. [#23340](https://github.com/deckhouse/deckhouse/pull/23340)
  - **[deckhouse]** Gate the package status summary on the workload health report [#22714](https://github.com/deckhouse/deckhouse/pull/22714)
  - **[deckhouse]** Module and Application status conditions now re-sync periodically, so a stale Scaled condition is repaired automatically instead of persisting until the workload changes. [#23165](https://github.com/deckhouse/deckhouse/pull/23165)
  - **[deckhouse]** Objects labeled `heritage: deckhouse` can no longer be modified by attaching changes to the pod template restart annotation or to a ModuleSource scan interval change. [#22257](https://github.com/deckhouse/deckhouse/pull/22257)
@@ -1576,13 +1532,28 @@
  - **[deckhouse]** Restore ClusterAdmin read access to ModuleSettingsDefinition so the console can show module settings again.
  - **[deckhouse]** Restore kubectl plugin lookup in d8 k and d8 kubectl
  - **[deckhouse]** Show the Terminating phase while package repositories are being deleted
+ - **[deckhouse]** Skip UDP ports when generating TCP health-check probes for DVP
+ - **[deckhouse]** Stop infinite check/converge loop caused by the DVP controller annotation on the cloud-init Secret.
+ - **[deckhouse]** Stopped publishing terminated pods in EndpointSlices and started publishing pods being deleted as terminating endpoints. [#22686](https://github.com/deckhouse/deckhouse/pull/22686)
+    Endpoints for pods in a terminal phase (Failed/Succeeded) are no longer published. In DVP clusters this prevents traffic from being routed to a VirtualMachine IP that has been reused by another pod. Pods being deleted are now published with the serving and terminating conditions, which enables the graceful shutdown flow for consumers. Pod readiness is derived from the PodReady condition, and stale probe results are reset when a pod becomes not ready, is recreated, or changes its IP.
+ - **[deckhouse]** The CSI driver reports a volume as detached from a node only after the disk is released by the node virtual machine, so with virtualization that keeps the VM listed on the disk until it is released, the volume is not attached to two nodes at once.
+ - **[deckhouse]** The CSI driver reports the volume limit of a node, so the scheduler does not place more volumes on a node than its virtual machine can attach.
  - **[deckhouse]** The `Managed` condition of applications and modules becomes `False` with the `NoResourceReconciliation` reason once maintenance mode is applied. [#23377](https://github.com/deckhouse/deckhouse/pull/23377)
+ - **[deckhouse]** The `deckhouse-registry` secret always carries the `ca` and `path` keys, so values left from bootstrap no longer outlive the registry configuration; a registry without a path is accepted.
+ - **[deckhouse]** The `storage.parameters.excludedStorageClasses` parameter now actually excludes the matching StorageClasses from creation in the cluster. [#22846](https://github.com/deckhouse/deckhouse/pull/22846)
  - **[deckhouse]** The reserved public hosts policies no longer make every aggregated apiserver in the cluster watch all ConfigMaps, which left permission-browser-apiserver permanently unready and stopped namespace deletion cluster-wide. [#22444](https://github.com/deckhouse/deckhouse/pull/22444)
  - **[deckhouse]** Update d8 CLI and operator dependencies to address known vulnerabilities
  - **[deckhouse]** Update runtime libraries and VEX exceptions for known vulnerabilities
  - **[deckhouse]** bump addon-operator to run the module startup phase unconditionally [#22400](https://github.com/deckhouse/deckhouse/pull/22400)
+ - **[deckhouse]** fix GetCapacity not implemented error spam in logs [#22748](https://github.com/deckhouse/deckhouse/pull/22748)
+ - **[deckhouse]** skip foreign nodes in cloud controller manager [#21694](https://github.com/deckhouse/deckhouse/pull/21694)
+ - **[dhctl]** A new installation with `registry.mode` `Proxy` or `Local` in the `deckhouse` ModuleConfig is refused at configuration parsing, with a hint to use the `registry` module.
+    The v1 registry implementation (`Proxy` and `Local` modes in the `deckhouse` ModuleConfig, used up to and including DP 1.77) can no longer be installed. Use the `registry` module instead - `mode - Managed` with `primary.upstream` (and `storage.cache - true` for an in-cluster cache), or, for an air-gapped installation, `mode - Managed` with `storage.cache` and `storage.source` and the bundle passed with `--img-bundle-path`. A cluster running `Proxy` or `Local` cannot be updated to this release either - migrate it on the current release first, as described in the `registry` module FAQ.
  - **[dhctl]** Allow scaling the master node group down to one replica. [#22479](https://github.com/deckhouse/deckhouse/pull/22479)
  - **[dhctl]** An enabled cloud provider ModuleConfig without settings is no longer ignored during external provider validation.
+ - **[dhctl]** An installation from a bundle keeps the bootstrap registry until the first master can run the registry cache, and is refused before any infrastructure is created when the master NodeGroup has `systemType - Immutable`.
+ - **[dhctl]** An installation with no registry settings now installs Deckhouse CE through the `registry` module and warns about it, instead of a configuration that left the nodes unable to pull images.
+    A cluster installed with no registry settings (no registry parameters in InitConfiguration, no `registry` section in the `deckhouse` ModuleConfig and no `registry` ModuleConfig) gets a `registry` ModuleConfig with `mode - Managed` and `primary.upstream` on `registry.deckhouse.io/deckhouse/ce`, and the registry agent on every node. dhctl prints a warning about this during bootstrap. To install another edition or from another registry, set `primary.upstream` (with credentials, if the registry needs them) in the `registry` ModuleConfig.
  - **[dhctl]** Apply CloudPermanent NodeGroups and their instance classes before building the nodes. [#22164](https://github.com/deckhouse/deckhouse/pull/22164)
     In the ModuleConfig flow (no ProviderClusterConfiguration, e.g. DVP) these objects reached the cluster only in the last phase of bootstrap, so until then the CloudPermanent NodeGroups described no replicas. A bootstrap interrupted before that phase left them that way, and the next converge read every replica count as zero and deleted the nodes of those groups, the control plane included.
  - **[dhctl]** Avoid waiting for bootstrap Secret updates during regular master scale-up and refresh cloud configuration before destructive master VM replacement.
@@ -1592,6 +1563,7 @@
  - **[dhctl]** Configure the d8-system namespace with the privileged Pod Security enforcement level during Deckhouse bootstrap. [#22795](https://github.com/deckhouse/deckhouse/pull/22795)
  - **[dhctl]** Destroy and abort of a static cluster fail instead of reporting success when a master was not cleaned up because of an ssh error or a cleanup timeout.
  - **[dhctl]** Detect conflicts with the reserved deckhouse UID/GID during preflight.
+ - **[dhctl]** Do not duplicate the registry settings in `ModuleConfig/deckhouse` when the registry module configures the registry; in an air-gapped cluster, read the provider bundle from the in-cluster store.
  - **[dhctl]** Fix CAPI machine drain timeout override during Deckhouse deletion
  - **[dhctl]** Fix bootstrap process to avoid race between RPP starting and cloud-permanent nodes bootstrapping.
  - **[dhctl]** Fix cri preflight checks in dhctl.
@@ -1846,6 +1818,7 @@
  - **[node-manager]** Fix NodeCapacity calculation. [#22675](https://github.com/deckhouse/deckhouse/pull/22675)
  - **[node-manager]** Fix create_rbac_and_certificate_for_kubernetes_api_proxy hook behavior. [#21622](https://github.com/deckhouse/deckhouse/pull/21622)
  - **[node-manager]** Fix d8-shutdown-inhibitor failing to start on nodes where another package overrides the logind inhibit delay. [#22513](https://github.com/deckhouse/deckhouse/pull/22513)
+ - **[node-manager]** Fixed Deckhouse Engine nodes failing to mount their data disks and rolling back their configuration in a loop - the Engine image v0.1.14 ships the `libtinfo` library that `lsblk` needs.
  - **[node-manager]** Fixed cluster-autoscaler not scaling CAPI node groups up from zero for pods requesting ephemeral storage, and putting the whole scale-up of a multi-zone node group into a single zone.
  - **[node-manager]** Fixed cluster-autoscaler stopping autoscaling of all node groups and restarting every two hours when an MCM node group has `minPerZone` equal to `maxPerZone`.
  - **[node-manager]** Fixed cluster-autoscaler using node group names without the cluster prefix after a Deckhouse restart, which stopped autoscaling and triggered the `D8ClusterAutoscalerTooManyErrors` alert.
@@ -1911,9 +1884,12 @@
  - **[registry]** A RegistryOperation no longer stays active for 24 hours when a storage replica is gone mid-operation. A replica that stops holding the collection lease while it collects, or whose node is not Ready for ten minutes while it waits, fails with the reason `ReplicaLost`.
  - **[registry]** Add SecurityPolicyException for registry v2
     Registry storage will restart once ofter update
+ - **[registry]** Copy the next platform update and pending module updates to every cache replica before they are deployed, so an air-gapped cluster can apply them; an update pushed onto the leader reaches the other replicas.
+ - **[registry]** Cut the in-cluster cache's CPU load - followers replicate only when the controller asks, a full replica stays idle while the image set is unchanged, and the copy of pending updates is rate-limited. After the update each cache replica verifies its store once.
  - **[registry]** Fix the order in which the Unmanaged params are stored for the fallback to the Legacy mode. [#22924](https://github.com/deckhouse/deckhouse/pull/22924)
  - **[registry]** Garbage collection of the registry cache now actually frees disk space. Its deletions were refused, its sweep failed on repositories filled through the cache, and blobs left by a failed sweep were never removed. It no longer removes the platform manifests of multi-arch images.
  - **[registry]** In `Managed` mode, the credentials of a `RegistryUpstream` whose `match` has a port are stored under a valid Secret key.
+ - **[registry]** Keep the store's `registry` Service in place, so the in-cluster registry address keeps resolving.
  - **[registry]** Registry credentials in RegistryConfig and RegistryUpstream are now hidden from unauthorized API readers.
  - **[registry]** Require brackets around IPv6 upstream registry URL hosts and accept bracketed addresses with or without a port.
  - **[registry]** The cluster goes air-gap only after no platform workload, including the registry storage itself, still pulls from the upstream registry.
@@ -1942,6 +1918,26 @@
  - **[registry]** registry-controller and registry-storage no longer tolerate keys from `customTolerationKeys`, so a key that repeats a built-in one no longer blocks pod updates.
     registry-controller and registry-storage do not run on a master tainted with a key from `global.modules.placement.customTolerationKeys`. Remove such taints from the master NodeGroup before the update.
  - **[registry]** registry-controller leaves an unreachable master after about 100 seconds, registry-storage stays on it, and neither is evicted from a single master.
+ - **[registrypackages]** A node finds registry-packages-proxy again when the proxy moves, so a joining master no longer stalls while the proxy rolls out.
+ - **[registrypackages]** Bump `containerd` v2 to 2.2.7 and patch `crictl` 1.36.0 Go dependencies to fix known CVEs. [#22122](https://github.com/deckhouse/deckhouse/pull/22122)
+    Nodes with `ContainerdV2` will restarts the `containerd` service .
+ - **[registrypackages]** Bump kubernetes-cni to 1.9.1 and update vulnerable Go dependencies to fix CVEs. [#21924](https://github.com/deckhouse/deckhouse/pull/21924)
+ - **[registrypackages]** Bumped `containerd` to 1.7.36 / 2.2.9 and OpenTelemetry to 1.45.0 in `containerd` and `crictl` to fix CVEs.
+ - **[registrypackages]** Bumped containerd to 1.7.35/2.2.8; bumped grpc, x/crypto, and websocket in containerd, crictl, and Kubernetes 1.32–1.36 gomod patches. [#23042](https://github.com/deckhouse/deckhouse/pull/23042)
+ - **[registrypackages]** CSE containerd trusts the image signature CAs of its build instead of a fixed CA.
+    containerd on CSE nodes will be restarted.
+ - **[registrypackages]** Close CVEs in `cfssl`, `docker-registry`, `d8-bcheck` and `rpp-get` by bumping vulnerable Go dependencies, and build `yq` from `pm` at 4.53.6. [#22672](https://github.com/deckhouse/deckhouse/pull/22672)
+ - **[registrypackages]** Fix AppArmor denying signals between processes of one container on Ubuntu kernels 7.0.0-41 and later.
+    containerd restarts on all nodes. On nodes where the old AppArmor profile is already loaded, the fix applies after a node reboot.
+ - **[registrypackages]** Fix dm-verity devices that could never be closed for containerd 2.2.7 (CSE only). [#22728](https://github.com/deckhouse/deckhouse/pull/22728)
+ - **[registrypackages]** Fixed CVE-2026-78661 and CVE-2026-97045 in the kubernetes-cni package.
+ - **[registrypackages]** Fixed known vulnerabilities in the kubernetes-cni package.
+ - **[registrypackages]** Fsync the EROFS layer blob in `containerd` before committing snapshot metadata, so an unclean shutdown can no longer leave an unmountable image layer. [#23084](https://github.com/deckhouse/deckhouse/pull/23084)
+ - **[registrypackages]** Node packages no longer corrupt shared libraries when installed in parallel, so new nodes do not randomly get legacy iptables.
+ - **[registrypackages]** Nodes stop trusting `emSign ECC Root CA - G3` and Comodo `AAA Certificate Services`, the roots behind the compromised eMudhra intermediate CAs.
+    TLS connections from nodes to hosts whose certificates chain to `emSign ECC Root CA - G3` or Comodo `AAA Certificate Services` (eMudhra / emSign issued) will fail. Reissue such certificates from another CA before the update.
+ - **[registrypackages]** Ship a real ebsnvme-id file in the amazon-ec2-utils package (it is a symlink upstream since 2.3.0).
+ - **[registrypackages]** Support rebuilding legacy image layers and preserve verity data in CSE.
  - **[terraform-manager]** Fix RBAC. [#21751](https://github.com/deckhouse/deckhouse/pull/21751)
  - **[terraform-manager]** Fixed the `to-tofu-migrator` init container of `terraform-auto-converger` failing to resolve the provider bundle digest, which kept auto-converge from starting.
  - **[user-authn]** A DexAuthenticator refreshes a session once at a time under load instead of refreshing the same token again for every request of the session.
@@ -2045,6 +2041,8 @@
  - **[user-authn]** Fixed CVEs in `golang.org/x/net` and `go-jose` of dex-authenticator.
  - **[user-authn]** Fixed CVEs in the module images. [#23290](https://github.com/deckhouse/deckhouse/pull/23290)
  - **[user-authn]** Fixed vulnerabilities in Dex (golang.org/x/net v0.60.0): CVE-2026-78659, CVE-2026-78660, CVE-2026-78663, CVE-2026-78669, CVE-2026-97032.
+ - **[user-authn]** In Deckhouse CSE, a DexProvider with `enableBasicAuth` is rejected, since the edition does not ship the basic authentication proxy; the CSE copy of the CRD also gets the LDAP TLS checks of the module.
+    In Deckhouse CSE, a DexProvider that already has `enableBasicAuth - true` keeps it after the update, and any change to its `oidc` or `ldap` section is rejected until `enableBasicAuth` is set to `false`. The same holds for an LDAP provider that combines `insecureNoSSL` with `startTLS`, `insecureSkipVerify` or `rootCAData`. Set `enableBasicAuth - false` and resolve the LDAP TLS settings on such providers.
  - **[user-authn]** In the authorization code flow, Dex accepts only the S256 PKCE method.
     Dex rejects an authorization request with a code_challenge and the plain method, or with no method. A DexClient application that sends one has to switch to S256. Applications that send no PKCE and DexAuthenticator are not affected. The device flow is not affected.
  - **[user-authn]** Issue a dedicated OAuth2 client secret per DexAuthenticator instead of reusing the shared cluster client secret. [#22216](https://github.com/deckhouse/deckhouse/pull/22216)
@@ -2205,6 +2203,10 @@
     They may create, change and delete objects labeled `deckhouse.io/system-resource: "true"` and run `exec`, `attach` and `port-forward` in such pods. permission-browser reports them as superadmin in `SubjectAccessReport`.
  - **[user-authz]** Speed up permission-browser BulkSAR for users with namespace filters [#22731](https://github.com/deckhouse/deckhouse/pull/22731)
  - **[user-authz]** Subjects that hold a project role through ProjectRoleBinding or ClusterProjectRoleBinding receive the read-only dictionaries (d8:dict) like namespace-role holders; the exec webhook binding excludes the aggregation controller and the multitenancy-manager controller at the API server. [#23022](https://github.com/deckhouse/deckhouse/pull/23022)
+ - **[user-authz]** System and subsystem managers are projected into the namespaces of their modules as `viewer`; the `admin` level there gave the identity of the ServiceAccounts of the platform.
+    The holders of `d8\:system\:manager`, `d8\:subsystem\:<subsystem>\:manager` and of the deprecated `d8\:manage\:*\:manager` roles lose, in the namespaces of their modules, the operations of the `user` level they had in the previous release - reading secrets, `kubectl exec`, `attach` and `port-forward`, deleting and scaling pods. They keep the full management of ModuleConfig objects and of the cluster-wide resources of the modules, and the read access to the module namespaces. Grant a `superadmin` role of the subsystem to the people who must work inside the module namespaces.
+ - **[user-authz]** The DexProvider check measures an OIDC or a Crowd provider with `enableBasicAuth` as one without identity limits, because its basic auth bypasses Dex.
+    Creating an OIDC or a Crowd DexProvider with `enableBasicAuth - true`, or turning it on, requires the right to assign every role already granted to users and groups (in practice SuperAdmin); for Crowd the groups count only up to `crowd.groups`.
  - **[user-authz]** The `D8UserAuthzLegacyRBACv2CustomRoleFound` alert reports every custom role that still selects capabilities by the old `rbac.deckhouse.io/kind` label or by the aggregation label of a lineage no built-in role collects, whatever its name, no longer counts frozen roles and capabilities, and describes how to restore the access of such a role.
  - **[user-authz]** The authorization webhook answers the requests in flight when it restarts instead of denying them.
  - **[user-authz]** The deprecated d8:use:role:* aliases can no longer be the target of a new ProjectRoleBinding or ClusterProjectRoleBinding; existing RoleBindings to them keep working. [#23022](https://github.com/deckhouse/deckhouse/pull/23022)
@@ -2249,6 +2251,8 @@
  - **[candi]** base images updated to v3.1.11
  - **[candi]** base images updated to v3.1.15
  - **[candi]** base images updated to v4.0.14
+ - **[candi]** base_images - fix base/distroless final image [#22351](https://github.com/deckhouse/deckhouse/pull/22351)
+    low
  - **[candi]** bump cosign to 3.1.3/2.6.5 [#22713](https://github.com/deckhouse/deckhouse/pull/22713)
  - **[candi]** inherit common-base and builder/src from container-base, ship erofs with pm
  - **[candi]** minget removed from alt_base_images [#22676](https://github.com/deckhouse/deckhouse/pull/22676)
@@ -2280,16 +2284,24 @@
  - **[deckhouse-tools]** module Ingress resources migrated from unsafe NGINX snippet annotations
  - **[deckhouse]** Added deckhouse-modules PackageRepository configuration. [#22190](https://github.com/deckhouse/deckhouse/pull/22190)
  - **[deckhouse]** Allow ClusterAdmin manage ModuleSettingsDefinitions with RBAC. [#21741](https://github.com/deckhouse/deckhouse/pull/21741)
+ - **[deckhouse]** EndpointSlices reconciliation improvements. [#22916](https://github.com/deckhouse/deckhouse/pull/22916)
  - **[deckhouse]** Global openAPI was updated to support disabling creating Ingress/Gateway API resources. [#22280](https://github.com/deckhouse/deckhouse/pull/22280)
     OpenAPI version for global values is updated to 3.
+ - **[deckhouse]** Redesign validation lib and refactor DVP validation webhook and validator [#21918](https://github.com/deckhouse/deckhouse/pull/21918)
  - **[deckhouse]** Removed the `app` short name from the `Application` resource. [#22107](https://github.com/deckhouse/deckhouse/pull/22107)
  - **[deckhouse]** Report deletion in the Application and Module status. [#22759](https://github.com/deckhouse/deckhouse/pull/22759)
+ - **[deckhouse]** The StorageClass hook is moved to the shared storage class helpers without behaviour changes.
+ - **[deckhouse]** The embedded cloud-provider-dvp module is removed; the module is now delivered as an external module.
+    The cloud-provider-dvp module is now delivered as an external module. A Deckhouse update is allowed only when the module is available from a module source. During the update, the DVP cloud provider components (CCM, CSI, CAPI provider) are redeployed from the external module.
  - **[deckhouse]** The module has been moved to a dedicated repository.
     On DKP 1.78 the module will be installed from an external repository.
  - **[deckhouse]** Update Go dependencies. [#22501](https://github.com/deckhouse/deckhouse/pull/22501)
  - **[deckhouse]** Update nelm version to v1.30.3. [#22990](https://github.com/deckhouse/deckhouse/pull/22990)
  - **[deckhouse]** `registry.mode: Proxy` and `Local` in the `deckhouse` ModuleConfig are deprecated and can no longer be set on any cluster. The `D8DeckhouseRegistryModeUnsupported` alert reports a `deckhouse` ModuleConfig that still stores `registry.mode: Proxy` or `Local`. The secret `d8-system/registry-config` is no longer created.
  - **[deckhouse]** add tests for the application controller [#22211](https://github.com/deckhouse/deckhouse/pull/22211)
+ - **[deckhouse]** cloud-providers migrated to base-images
+ - **[deckhouse]** descheduler updated to v0.37.0
+ - **[deckhouse]** migrated the DVP CSI driver system dependencies to the Container Factory package manager. [#22559](https://github.com/deckhouse/deckhouse/pull/22559)
  - **[descheduler]** Added the logLevel setting to control how detailed the descheduler logs are.
     The descheduler Pod restarts once on upgrade. By default, logs are now much shorter (`Warning` level).
  - **[docs]** Added ability to to specify localized title and description in OpenAPI example to render them in the documentation. [#21636](https://github.com/deckhouse/deckhouse/pull/21636)
