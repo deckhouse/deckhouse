@@ -21,7 +21,7 @@ rules:
   resources:
   - egressgateways
   - egressgatewaypolicies
-  - clustermeshes
+  - networkpeerings
   - clusternetworkpeers
   verbs:
   - get
@@ -77,8 +77,6 @@ rules:
   resources:
   - egressgateways
   - egressgatewaypolicies
-  # Consent to a ClusterMesh with a peer. ClusterMesh itself is written by clustermesh-controller only.
-  - clusternetworkpeers
   verbs:
   - create
   - delete

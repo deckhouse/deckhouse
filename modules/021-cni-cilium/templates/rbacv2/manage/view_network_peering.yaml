@@ -1,0 +1,23 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "rbac.deckhouse.io/capability" "system-capability.cni-cilium.view_network_peering" "rbac.deckhouse.io/aggregate-to-cluster-as" "viewer" "rbac.deckhouse.io/kind" "capability" "rbac.deckhouse.io/scope" "system")) | nindent 2 }}
+  name: d8:system-capability:cni-cilium:view_network_peering
+  annotations:
+    en.meta.deckhouse.io/title: "Module cni-cilium: view NetworkPeering"
+    ru.meta.deckhouse.io/title: "Модуль cni-cilium: просмотр NetworkPeering"
+    en.meta.deckhouse.io/description: "Read-only access to the state of NetworkPeering with peered clusters (NetworkPeering, ClusterNetworkPeer)."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к состоянию NetworkPeering с соседями пиринга (NetworkPeering, ClusterNetworkPeer)."
+rules:
+# The mesh with a neighbour is switched on by the network capability of its ClusterPeer, which the cluster
+# subsystem manages: whoever switches it on sees its state. The objects are written by clustermesh-controller only.
+# No rbac.deckhouse.io/namespace label: it would give the cluster subsystem a namespace role in d8-cni-cilium.
+- apiGroups:
+  - network.deckhouse.io
+  resources:
+  - networkpeerings
+  - clusternetworkpeers
+  verbs:
+  - get
+  - list
+  - watch

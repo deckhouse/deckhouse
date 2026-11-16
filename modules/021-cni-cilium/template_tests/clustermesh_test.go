@@ -62,7 +62,7 @@ resourcesManagement:
     mode: Auto
     cpu: {min: "50m", max: "2"}
     memory: {min: "256Mi", max: "2Gi"}
-clusterMesh:
+networkPeering:
   enabled: true
   clusterID: 11
 internal:
@@ -88,10 +88,10 @@ internal:
       ips: [10.0.0.1, 10.0.0.2]
 `
 
-var _ = Describe("Module :: cniCilium :: ClusterMesh render ::", func() {
+var _ = Describe("Module :: cniCilium :: NetworkPeering render ::", func() {
 	f := SetupHelmConfig(``)
 
-	Context("ClusterMesh enabled, peering installed", func() {
+	Context("NetworkPeering enabled, peering installed", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", clusterMeshGlobalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
@@ -171,6 +171,11 @@ var _ = Describe("Module :: cniCilium :: ClusterMesh render ::", func() {
 			Expect(f.KubernetesResource("Role", "d8-cni-cilium", "clustermesh:controller").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("RoleBinding", "d8-cni-cilium", "clustermesh:controller").Field("roleRef.name").String()).To(Equal("clustermesh:controller"))
 			Expect(f.KubernetesResource("RoleBinding", "d8-cni-cilium", "clustermesh:controller").Field("subjects.0.name").String()).To(Equal("clustermesh-controller"))
+			// The controller creates and deletes ClusterNetworkPeer after the ClusterPeers that list network.
+			controllerRole := f.KubernetesGlobalResource("ClusterRole", "d8:cni-cilium:clustermesh:controller")
+			Expect(controllerRole.Field(`rules.#(resources.0=="clusternetworkpeers").verbs`).String()).To(And(ContainSubstring(`"create"`), ContainSubstring(`"delete"`)))
+			// NetworkPeering/cluster is deleted by the hook, not by the controller.
+			Expect(controllerRole.Field(`rules.#(resources.0=="networkpeerings").verbs`).String()).NotTo(ContainSubstring(`"delete"`))
 		})
 	})
 
@@ -179,7 +184,7 @@ var _ = Describe("Module :: cniCilium :: ClusterMesh render ::", func() {
 			f.ValuesSetFromYaml("global", clusterMeshGlobalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cniCilium", clusterMeshCniCiliumValues)
-			f.ValuesSet("cniCilium.clusterMesh.enabled", false)
+			f.ValuesSet("cniCilium.networkPeering.enabled", false)
 			f.HelmRender()
 		})
 
@@ -202,29 +207,39 @@ var _ = Describe("Module :: cniCilium :: ClusterMesh render ::", func() {
 			return verbs
 		}
 		read := []string{"get", "list", "watch"}
-		write := []string{"create", "delete", "deletecollection", "patch", "update"}
 
 		// The roles ship with the module whether the mesh is on or not, in every edition: without the CRDs of
 		// the EE editions they grant nothing.
-		It("let users read the mesh and cluster editors consent to peers", func() {
+		It("let users read the mesh, and nobody but the controller write it", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			for _, resource := range []string{"clustermeshes", "clusternetworkpeers"} {
+			for _, resource := range []string{"networkpeerings", "clusternetworkpeers"} {
 				Expect(rulesOn("d8:user-authz:cni-cilium:user", resource)).To(ConsistOf(read), resource)
 				Expect(rulesOn("d8:system-capability:cni-cilium:view", resource)).To(ConsistOf(read), resource)
 				Expect(rulesOn("d8:namespace-capability:cni-cilium:view", resource)).To(BeEmpty(), "cluster-scoped "+resource)
 			}
-			Expect(rulesOn("d8:user-authz:cni-cilium:cluster-editor", "clusternetworkpeers")).To(ConsistOf(write))
-			Expect(rulesOn("d8:system-capability:cni-cilium:edit", "clusternetworkpeers")).To(ConsistOf(write))
-			// ClusterMesh is written by clustermesh-controller only.
+			// The mesh is switched on in ClusterPeer, which the cluster subsystem manages: its users see the
+			// state of the mesh too, and nothing else of the module.
+			clusterView := f.KubernetesGlobalResource("ClusterRole", "d8:system-capability:cni-cilium:view_network_peering")
+			Expect(clusterView.Field(`metadata.labels.rbac\.deckhouse\.io/aggregate-to-cluster-as`).String()).To(Equal("viewer"))
+			Expect(clusterView.Field(`metadata.labels.rbac\.deckhouse\.io/kind`).String()).To(Equal("capability"))
+			// A namespace label would give the cluster subsystem a role in d8-cni-cilium, its secrets included.
+			Expect(clusterView.Field(`metadata.labels.rbac\.deckhouse\.io/namespace`).Exists()).To(BeFalse())
+			Expect(clusterView.Field("rules").Array()).To(HaveLen(1))
+			for _, resource := range []string{"networkpeerings", "clusternetworkpeers"} {
+				Expect(rulesOn("d8:system-capability:cni-cilium:view_network_peering", resource)).To(ConsistOf(read), resource)
+			}
+			// clustermesh-controller writes both: ClusterNetworkPeer follows the network capability of ClusterPeer.
 			for _, role := range []string{"d8:user-authz:cni-cilium:cluster-editor", "d8:user-authz:cni-cilium:cluster-admin", "d8:system-capability:cni-cilium:edit"} {
-				Expect(rulesOn(role, "clustermeshes")).To(BeEmpty(), role)
+				for _, resource := range []string{"networkpeerings", "clusternetworkpeers"} {
+					Expect(rulesOn(role, resource)).To(BeEmpty(), role+" on "+resource)
+				}
 			}
 		})
 	})
 
-	// CSE gets the EE overlay, but not the peering module ClusterMesh needs.
+	// CSE gets the EE overlay, but not the peering module NetworkPeering needs.
 	for _, edition := range []string{"SE-plus", "CSE"} {
-		Context("ClusterMesh enabled in "+edition, func() {
+		Context("NetworkPeering enabled in "+edition, func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", clusterMeshGlobalValues)
 				f.ValuesSet("global.modulesImages", GetModulesImages())
@@ -245,7 +260,7 @@ var _ = Describe("Module :: cniCilium :: ClusterMesh render ::", func() {
 		})
 	}
 
-	Context("ClusterMesh enabled, no peering", func() {
+	Context("NetworkPeering enabled, no peering", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", clusterMeshGlobalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
@@ -260,7 +275,7 @@ var _ = Describe("Module :: cniCilium :: ClusterMesh render ::", func() {
 		})
 	})
 
-	Context("ClusterMesh enabled without VXLAN", func() {
+	Context("NetworkPeering enabled without VXLAN", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", clusterMeshGlobalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
@@ -275,12 +290,12 @@ var _ = Describe("Module :: cniCilium :: ClusterMesh render ::", func() {
 		})
 	})
 
-	Context("ClusterMesh disabled", func() {
+	Context("NetworkPeering disabled", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", clusterMeshGlobalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cniCilium", clusterMeshCniCiliumValues)
-			f.ValuesSet("cniCilium.clusterMesh.enabled", false)
+			f.ValuesSet("cniCilium.networkPeering.enabled", false)
 			f.HelmRender(WithAPIVersions("peering.deckhouse.io/v1alpha1/PeeringCapability"))
 		})
 		It("renders nothing of the mesh and keeps cluster-name default", func() {

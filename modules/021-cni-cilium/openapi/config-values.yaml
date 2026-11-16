@@ -1,11 +1,11 @@
 type: object
 x-deckhouse-validations:
-  - expression: "!has(self.clusterMesh) || !self.clusterMesh.enabled || has(self.clusterMesh.clusterID)"
-    message: "clusterMesh.clusterID is required when clusterMesh.enabled is true"
-  - expression: "!has(self.clusterMesh) || !self.clusterMesh.enabled || (has(self.tunnelMode) && self.tunnelMode == 'VXLAN')"
-    message: "clusterMesh requires tunnelMode: VXLAN, set explicitly in this ModuleConfig"
-  - expression: "!has(self.clusterMesh) || !self.clusterMesh.enabled || !has(self.encryption) || !has(self.encryption.mode) || self.encryption.mode == 'Disabled'"
-    message: "clusterMesh requires encryption.mode: Disabled"
+  - expression: "!has(self.networkPeering) || !self.networkPeering.enabled || has(self.networkPeering.clusterID)"
+    message: "networkPeering.clusterID is required when networkPeering.enabled is true"
+  - expression: "!has(self.networkPeering) || !self.networkPeering.enabled || (has(self.tunnelMode) && self.tunnelMode == 'VXLAN')"
+    message: "networkPeering requires tunnelMode: VXLAN, set explicitly in this ModuleConfig"
+  - expression: "!has(self.networkPeering) || !self.networkPeering.enabled || !has(self.encryption) || !has(self.encryption.mode) || self.encryption.mode == 'Disabled'"
+    message: "networkPeering requires encryption.mode: Disabled"
 properties:
   sctpEnabled:
     type: boolean
@@ -391,7 +391,7 @@ properties:
           The filter needs the `nf_tables` kernel module in the nft mode and the `ip_tables`, `iptable_raw`, `xt_tcpudp` and `xt_u32` kernel modules in the legacy mode.
 
           By default, kernel modules are not loaded: if a module of the mode selected by iptables-wrapper is not loaded, the filter uses the other mode when its modules are loaded, and the node is reported as unprotected otherwise. Set to `true` to load the modules of the selected mode.
-  clusterMesh:
+  networkPeering:
     type: object
     default: {}
     x-experimental: true
@@ -400,19 +400,19 @@ properties:
     description: |
       **Experimental**.
 
-      Cilium ClusterMesh: direct pod-to-pod connectivity with the clusters this cluster is peered with by the `peering` module.
+      NetworkPeering: direct pod-to-pod connectivity with the clusters this cluster is peered with by the `peering` module, built on Cilium ClusterMesh.
 
-      Peers are connected by `ClusterNetworkPeer` objects, one per `ClusterPeer`, created on both sides. Requires `tunnelMode: VXLAN` and `encryption.mode: Disabled` on every cluster of the mesh, the same VXLAN port, and non-overlapping pod subnets.
+      A peer is connected when its `ClusterPeer` lists the `network` capability on both sides; the module shows the state of the mesh with it in a `ClusterNetworkPeer` object. Requires `tunnelMode: VXLAN` and `encryption.mode: Disabled` on every cluster of the mesh, the same VXLAN port, and non-overlapping pod subnets.
 
       The cluster name in the mesh is the cluster UUID without dashes (32 characters).
 
-      > The cluster name and ID become part of every Cilium identity. Enabling ClusterMesh on a running cluster reallocates identities: plan pod restarts.
+      > The cluster name and ID become part of every Cilium identity. Enabling NetworkPeering on a running cluster reallocates identities: plan pod restarts.
     properties:
       enabled:
         type: boolean
         default: false
         description: |
-          Enable ClusterMesh.
+          Enable NetworkPeering.
       clusterID:
         type: integer
         minimum: 1
