@@ -25,12 +25,17 @@ import (
 	"testing"
 
 	"go.uber.org/zap/zapcore"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	"controller/apis/deckhouse.io/v1alpha3"
 )
 
 // The startup wait lists pods and ReplicaSets through the uncached API reader of the manager, which
@@ -45,6 +50,66 @@ func TestNewScheme_KnowsWhatTheStartupWaitReads(t *testing.T) {
 		if _, err := apiutil.GVKForObject(list, scheme); err != nil {
 			t.Errorf("the scheme cannot read %T: %v", list, err)
 		}
+	}
+}
+
+// The cache of the controller keeps no managedFields: nothing reads them from it (the Helm takeover
+// reads objects as unstructured, which bypasses the cache). The types with a transform of their own
+// keep it, and every other type gets the default.
+func TestNewManagerOptions_StripsManagedFieldsByDefault(t *testing.T) {
+	scheme, err := newScheme()
+	if err != nil {
+		t.Fatalf("build the scheme: %v", err)
+	}
+	opts := newManagerOptions(scheme, nil)
+
+	if opts.Cache.DefaultTransform == nil {
+		t.Fatal("Cache.DefaultTransform is nil, want a transform that drops managedFields")
+	}
+	// ByObject is keyed by pointers, so the entry is found by its type.
+	serviceTransform := false
+	for obj, byObject := range opts.Cache.ByObject {
+		if _, ok := obj.(*corev1.Service); ok {
+			serviceTransform = byObject.Transform != nil
+		}
+	}
+	if !serviceTransform {
+		t.Error("the transform of Service is gone")
+	}
+
+	fields := []metav1.ManagedFieldsEntry{{Manager: "kubectl", Operation: metav1.ManagedFieldsOperationUpdate}}
+	objects := []client.Object{
+		&rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "admins", Namespace: "p", ManagedFields: fields},
+			RoleRef:    rbacv1.RoleRef{Kind: "ClusterRole", Name: "admin"},
+		},
+		&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "admin", ManagedFields: fields}},
+		&corev1.ResourceQuota{ObjectMeta: metav1.ObjectMeta{Name: "q", Namespace: "p", ManagedFields: fields}},
+		&admissionregistrationv1.ValidatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "w", ManagedFields: fields}},
+		// The grant webhooks keep every namespace and project on each replica.
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "p", ManagedFields: fields}},
+		&v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "p", ManagedFields: fields}},
+	}
+	for _, obj := range objects {
+		got, err := opts.Cache.DefaultTransform(obj)
+		if err != nil {
+			t.Fatalf("transform %T: %v", obj, err)
+		}
+		stored, ok := got.(client.Object)
+		if !ok {
+			t.Fatalf("transform %T returned %T, want a client.Object", obj, got)
+		}
+		// nil, not an empty list: an object written back with an empty list would reset its
+		// managed fields on the API server.
+		if stored.GetManagedFields() != nil {
+			t.Errorf("%T keeps managedFields %v, want nil", obj, stored.GetManagedFields())
+		}
+		if stored.GetName() != obj.GetName() {
+			t.Errorf("%T lost its name: %q", obj, stored.GetName())
+		}
+	}
+	if rb := objects[0].(*rbacv1.RoleBinding); rb.RoleRef.Name != "admin" {
+		t.Errorf("RoleBinding roleRef = %+v, want it kept", rb.RoleRef)
 	}
 }
 

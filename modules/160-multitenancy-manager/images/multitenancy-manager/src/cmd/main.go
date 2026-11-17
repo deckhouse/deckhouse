@@ -501,44 +501,7 @@ func setupRuntimeManager(logger logr.Logger, watchError toolscache.WatchErrorHan
 		return nil, err
 	}
 
-	opts := manager.Options{
-		LeaderElection:                true,
-		LeaderElectionID:              controllerName,
-		LeaderElectionNamespace:       helmNamespace,
-		LeaderElectionReleaseOnCancel: true,
-		LeaseDuration:                 ptr.To(leaseDuration),
-		RenewDeadline:                 ptr.To(renewDeadline),
-		RetryPeriod:                   ptr.To(retryPeriod),
-		Scheme:                        scheme,
-		GracefulShutdownTimeout:       ptr.To(10 * time.Second),
-		HealthProbeBindAddress:        healthProbeAddress,
-		WebhookServer:                 webhook.NewServer(webhook.Options{CertDir: "/certs"}),
-		// the ProjectQuota controller watches the ConfigMaps of the ledger and its certificate; nothing
-		// reads another ConfigMap or Secret through the cache
-		Cache: cache.Options{DefaultWatchErrorHandler: watchError, ByObject: map[client.Object]cache.ByObject{
-			&corev1.ConfigMap{}: {Namespaces: map[string]cache.Config{quota.ConfigNamespace: {}}},
-			&corev1.Secret{}: {Namespaces: map[string]cache.Config{quota.ConfigNamespace: {}},
-				Field: fields.OneTermEqualSelector("metadata.name", quota.LedgerCertsSecretName)},
-			// the ProjectQuota controller sums the load balancers; the Services keep only what it counts by
-			&corev1.Service{}: {Transform: evaluator.TrimService},
-			// Every replica keeps the namespaces and the projects for the grant webhooks; nothing reads
-			// their managedFields from the cache (the Helm takeover reads them as unstructured, uncached).
-			&corev1.Namespace{}: {Transform: cache.TransformStripManagedFields()},
-			&v1alpha3.Project{}: {Transform: cache.TransformStripManagedFields()},
-		}},
-		// The grant-violation series (d8_cluster_objects_grant_violated), the project-name pairs
-		// (d8_multitenancy_project_named_like_additional_namespace), the handovers that have not
-		// finished (d8_multitenancy_project_handover_pending) and the objects left from Helm text
-		// releases (d8_multitenancy_project_kept_objects) are served from here; the PodMonitor of the
-		// module scrapes this port.
-		Metrics: metrics.Options{
-			// Loopback only: the series name projects and the objects inside them, so the endpoint is
-			// published through the kube-rbac-proxy sidecar, which authorizes every scrape.
-			BindAddress: "127.0.0.1:9191",
-		},
-	}
-
-	runtimeManager, err := ctrl.NewManager(ctrl.GetConfigOrDie(), opts)
+	runtimeManager, err := ctrl.NewManager(ctrl.GetConfigOrDie(), newManagerOptions(scheme, watchError))
 	if err != nil {
 		logger.Error(err, "unable to create runtime manager")
 		return nil, err
@@ -555,6 +518,50 @@ func setupRuntimeManager(logger logr.Logger, watchError toolscache.WatchErrorHan
 		return nil, err
 	}
 	return runtimeManager, nil
+}
+
+// newManagerOptions are the options of the controller's manager. Its cache keeps no managedFields
+// of any type: nothing reads them from the cache, and the Helm takeover, which does read them, reads
+// objects as unstructured, which the client takes from the API server. A type with a transform of
+// its own drops them there.
+func newManagerOptions(scheme *runtime.Scheme, watchError toolscache.WatchErrorHandlerWithContext) manager.Options {
+	return manager.Options{
+		LeaderElection:                true,
+		LeaderElectionID:              controllerName,
+		LeaderElectionNamespace:       helmNamespace,
+		LeaderElectionReleaseOnCancel: true,
+		LeaseDuration:                 ptr.To(leaseDuration),
+		RenewDeadline:                 ptr.To(renewDeadline),
+		RetryPeriod:                   ptr.To(retryPeriod),
+		Scheme:                        scheme,
+		GracefulShutdownTimeout:       ptr.To(10 * time.Second),
+		HealthProbeBindAddress:        healthProbeAddress,
+		WebhookServer:                 webhook.NewServer(webhook.Options{CertDir: "/certs"}),
+		Cache: cache.Options{
+			DefaultWatchErrorHandler: watchError,
+			// Applies to every type without a transform of its own in ByObject.
+			DefaultTransform: cache.TransformStripManagedFields(),
+			// the ProjectQuota controller watches the ConfigMaps of the ledger and its certificate; nothing
+			// reads another ConfigMap or Secret through the cache
+			ByObject: map[client.Object]cache.ByObject{
+				&corev1.ConfigMap{}: {Namespaces: map[string]cache.Config{quota.ConfigNamespace: {}}},
+				&corev1.Secret{}: {Namespaces: map[string]cache.Config{quota.ConfigNamespace: {}},
+					Field: fields.OneTermEqualSelector("metadata.name", quota.LedgerCertsSecretName)},
+				// the ProjectQuota controller sums the load balancers; the Services keep only what it counts by
+				&corev1.Service{}: {Transform: evaluator.TrimService},
+			},
+		},
+		// The grant-violation series (d8_cluster_objects_grant_violated), the project-name pairs
+		// (d8_multitenancy_project_named_like_additional_namespace), the handovers that have not
+		// finished (d8_multitenancy_project_handover_pending) and the objects left from Helm text
+		// releases (d8_multitenancy_project_kept_objects) are served from here; the PodMonitor of the
+		// module scrapes this port.
+		Metrics: metrics.Options{
+			// Loopback only: the series name projects and the objects inside them, so the endpoint is
+			// published through the kube-rbac-proxy sidecar, which authorizes every scrape.
+			BindAddress: "127.0.0.1:9191",
+		},
+	}
 }
 
 // logLevel parses a zap level name, falling back to info. Only the named zap levels are accepted, so
