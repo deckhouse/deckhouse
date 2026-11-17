@@ -8,6 +8,7 @@ require (
 	github.com/deckhouse/rootca v0.0.0-20250721220328-2b84d72a5db3
 	github.com/google/go-containerregistry v0.20.7
 	github.com/pkg/errors v0.9.1
+	github.com/sigstore/sigstore v1.10.4
 	github.com/stretchr/testify v1.11.1
 )
 
@@ -42,7 +43,6 @@ require (
 	github.com/samber/lo v1.51.0 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.9.1 // indirect
 	github.com/sigstore/protobuf-specs v0.5.0 // indirect
-	github.com/sigstore/sigstore v1.10.4 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/vbatts/tar-split v0.12.2 // indirect
 	golang.org/x/crypto v0.57.0 // indirect

@@ -60,7 +60,9 @@ func rppGetServer(t *testing.T, getter registry.ClientConfigGetter, client regis
 func rppGet(t *testing.T, srv *httptest.Server, urlPath string) (*http.Response, []byte) {
 	t.Helper()
 
-	resp, err := http.Get(srv.URL + urlPath)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL+urlPath, nil)
+	require.NoError(t, err)
+	resp, err := srv.Client().Do(req)
 	require.NoError(t, err)
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)

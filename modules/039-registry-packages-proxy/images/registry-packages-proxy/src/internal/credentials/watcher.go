@@ -75,6 +75,17 @@ func (w *Watcher) Get(repository string) (*registry.ClientConfig, error) {
 		return nil, fmt.Errorf("registry client config for repository '%s' not found", repository)
 	}
 
+	if clientConfig.SkipSignatureCheck {
+		if defaultConfig := w.registryClientConfigs[registry.DefaultRepository]; defaultConfig != nil {
+			host, _, _ := strings.Cut(defaultConfig.Repository, "/")
+			if repository == defaultConfig.Repository || repository == host {
+				local := *clientConfig
+				local.SkipSignatureCheck = false
+				clientConfig = &local
+			}
+		}
+	}
+
 	return clientConfig, nil
 }
 
@@ -108,7 +119,7 @@ func (w *Watcher) watchSecret(ctx context.Context) {
 
 	secretWatcher, err := toolsWatch.NewRetryWatcherWithContext(ctx, "1", &cache.ListWatch{WatchFuncWithContext: watchFunc})
 	if err != nil {
-		w.logger.Error("Watch secrets: %v", err)
+		w.logger.Error("Watch secrets", log.Err(err))
 		return
 	}
 	defer secretWatcher.Stop()
@@ -126,7 +137,7 @@ func (w *Watcher) watchSecret(ctx context.Context) {
 
 			err = w.processSecretEvent(event)
 			if err != nil {
-				w.logger.Error("Process secret event: %v", err)
+				w.logger.Error("Process secret event", log.Err(err))
 			}
 		}
 	}
@@ -194,7 +205,7 @@ func (w *Watcher) watchModuleSources(ctx context.Context) {
 
 	moduleSourcesWatcher, err := toolsWatch.NewRetryWatcherWithContext(ctx, "1", &cache.ListWatch{WatchFuncWithContext: watchFunc})
 	if err != nil {
-		w.logger.Error("Watch module sources: %v", err)
+		w.logger.Error("Watch module sources", log.Err(err))
 		return
 	}
 	defer moduleSourcesWatcher.Stop()
@@ -212,7 +223,7 @@ func (w *Watcher) watchModuleSources(ctx context.Context) {
 
 			err = w.processModuleSourceEvent(event)
 			if err != nil {
-				w.logger.Error("Process module source event: %v", err)
+				w.logger.Error("Process module source event", log.Err(err))
 			}
 		}
 	}
@@ -245,10 +256,11 @@ func (w *Watcher) processModuleSourceEvent(moduleSourceEvent watch.Event) error 
 		}
 
 		clientConfig := &registry.ClientConfig{
-			Repository: moduleSource.Spec.Registry.Repo,
-			Scheme:     moduleSource.Spec.Registry.Scheme,
-			CA:         moduleSource.Spec.Registry.CA,
-			Auth:       auth,
+			Repository:         moduleSource.Spec.Registry.Repo,
+			Scheme:             moduleSource.Spec.Registry.Scheme,
+			CA:                 moduleSource.Spec.Registry.CA,
+			Auth:               auth,
+			SkipSignatureCheck: true,
 		}
 
 		w.Lock()

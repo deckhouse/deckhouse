@@ -31,6 +31,10 @@ const (
 
 var ErrPackageNotFound = errors.New("package not found")
 
+// ErrSignatureVerification is returned by DefaultClient.GetPackage when ClientConfig.SignCheck is set and the
+// image manifest is unsigned or its signature does not chain to a trusted root.
+var ErrSignatureVerification = errors.New("image signature verification failed")
+
 type Client interface {
 	GetPackage(ctx context.Context, log log.Logger, config *ClientConfig, digest string, path string) (int64, string, io.ReadCloser, error)
 	// ResolveTag returns the manifest digest of an image identified by repository path and tag.
