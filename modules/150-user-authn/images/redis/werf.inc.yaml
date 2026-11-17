@@ -6,6 +6,7 @@ import:
   add: /out
   to: /
   before: install
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/usr/bin/redis-server"]

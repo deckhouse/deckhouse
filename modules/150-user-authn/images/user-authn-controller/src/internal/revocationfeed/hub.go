@@ -73,10 +73,19 @@ func parseCursor(s string) (cursor, bool) {
 	return cursor{epoch: epoch, seq: n}, true
 }
 
-// stream is one subscriber connection.
+// item is what a stream is handed: a record, or the id of a client that has appeared among the
+// clients of the instance of the stream.
+type item struct {
+	rec       record
+	announced string
+}
+
+// stream is one subscriber connection: of a client, or of an instance, which gets the records of
+// all its clients. The stream of an instance is counted under instanceID as its client.
 type stream struct {
-	client feedClient
-	events chan record
+	client   feedClient
+	instance string
+	events   chan item
 	// done is closed when the stream must end: it fell behind, or it was unsubscribed.
 	done      chan struct{}
 	closeOnce sync.Once
@@ -100,6 +109,10 @@ type hub struct {
 	queueSize int
 	streams   map[*stream]struct{}
 	perClient map[string]int
+	// instanceQueueSize is the queue of the stream of an instance, which gets the records of
+	// hundreds of clients; instanceOf is the instance of a client, empty for a client that has none.
+	instanceQueueSize int
+	instanceOf        func(clientID string) string
 
 	maxStreams          int
 	maxStreamsPerClient int
@@ -115,6 +128,8 @@ func newHub(l Limits) (*hub, error) {
 		ring:                make([]record, 0, l.Ring),
 		ringSize:            l.Ring,
 		queueSize:           l.Queue,
+		instanceQueueSize:   l.InstanceQueue,
+		instanceOf:          func(string) string { return "" },
 		streams:             map[*stream]struct{}{},
 		perClient:           map[string]int{},
 		maxStreams:          l.Streams,
@@ -135,13 +150,37 @@ func (h *hub) publish(rec record) {
 	}
 	h.ring = append(h.ring, rec)
 	for st := range h.streams {
-		if !slices.Contains(rec.clients, st.client.id) {
+		if !h.wants(st, rec) {
 			continue
 		}
-		select {
-		case st.events <- rec:
-		default:
-			h.dropLocked(st)
+		h.queueLocked(st, item{rec: rec})
+	}
+}
+
+// wants reports whether rec names the client of st, or a client of the instance of st.
+func (h *hub) wants(st *stream, rec record) bool {
+	if st.instance == "" {
+		return slices.Contains(rec.clients, st.client.id)
+	}
+	return slices.ContainsFunc(rec.clients, func(id string) bool { return h.instanceOf(id) == st.instance })
+}
+
+func (h *hub) queueLocked(st *stream, it item) {
+	select {
+	case st.events <- it:
+	default:
+		h.dropLocked(st)
+	}
+}
+
+// announce tells the streams of instance that the client clientID has appeared among its clients:
+// they send what is revoked for it.
+func (h *hub) announce(instance, clientID string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	for st := range h.streams {
+		if st.instance == instance {
+			h.queueLocked(st, item{announced: clientID})
 		}
 	}
 }
@@ -156,10 +195,12 @@ type subscription struct {
 	position cursor
 }
 
-// subscribe registers a stream of c. The stream receives every record published from now on; what
-// came before is either the backlog after since, when since is in this epoch and the ring still
-// holds everything after it, or a snapshot the caller builds at position.
-func (h *hub) subscribe(c feedClient, since *cursor, now time.Time) (subscription, error) {
+// subscribe registers a stream of c, or of an instance when instance is not empty. The stream
+// receives every record published from now on; what came before is either the backlog after since,
+// when since is in this epoch and the ring still holds everything after it, or a snapshot the
+// caller builds at position. The stream of an instance always starts with a snapshot: the clients
+// of the instance may have changed while it was away.
+func (h *hub) subscribe(c feedClient, instance string, since *cursor, now time.Time) (subscription, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if len(h.streams) >= h.maxStreams {
@@ -168,12 +209,16 @@ func (h *hub) subscribe(c feedClient, since *cursor, now time.Time) (subscriptio
 	if h.perClient[c.id] >= h.maxStreamsPerClient {
 		return subscription{}, errTooManyClientStreams
 	}
-	st := &stream{client: c, events: make(chan record, h.queueSize), done: make(chan struct{})}
+	queueSize := h.queueSize
+	if instance != "" {
+		queueSize = h.instanceQueueSize
+	}
+	st := &stream{client: c, instance: instance, events: make(chan item, queueSize), done: make(chan struct{})}
 	st.lastWrite.Store(now.UnixNano())
 	h.streams[st] = struct{}{}
 	h.perClient[c.id]++
 
-	if since != nil && since.epoch == h.epoch && since.seq <= h.seq && since.seq+uint64(len(h.ring)) >= h.seq {
+	if instance == "" && since != nil && since.epoch == h.epoch && since.seq <= h.seq && since.seq+uint64(len(h.ring)) >= h.seq {
 		var backlog []record
 		for _, rec := range h.ring {
 			if rec.seq > since.seq && slices.Contains(rec.clients, c.id) {

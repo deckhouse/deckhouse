@@ -1,0 +1,45 @@
+{{- if include "shared_dex_authenticator_enabled" . }}
+  {{- $context := . }}
+  {{- range $instance := include "shared_dex_authenticator_instances" . | fromYamlArray }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $instance }}
+  namespace: d8-{{ $context.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "shared-dex-authenticator" "instance" $instance)) | nindent 2 }}
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $instance }}
+  namespace: d8-{{ $context.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "shared-dex-authenticator" "instance" $instance)) | nindent 2 }}
+spec:
+  ports:
+  - name: https
+    port: 443
+    targetPort: dex-https
+  selector:
+    {{- include "shared_dex_authenticator_pod_labels" $instance | nindent 4 }}
+---
+# The addresses of every pod of the instance, the ones that are not ready included: a pod finds the Redis of its
+# neighbours through it and fills its own Redis from one of them before it is ready.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $instance }}-redis
+  namespace: d8-{{ $context.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "shared-dex-authenticator" "instance" $instance)) | nindent 2 }}
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  ports:
+  - name: redis
+    port: 6379
+    targetPort: redis
+  selector:
+    {{- include "shared_dex_authenticator_pod_labels" $instance | nindent 4 }}
+  {{- end }}
+{{- end }}

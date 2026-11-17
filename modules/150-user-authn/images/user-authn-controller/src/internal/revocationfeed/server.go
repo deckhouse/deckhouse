@@ -25,8 +25,10 @@ limitations under the License.
 package revocationfeed
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -85,8 +87,11 @@ type Limits struct {
 	// StreamsPerClient and Streams bound the open streams of one client and of the replica.
 	StreamsPerClient int
 	Streams          int
-	// Queue is how many events a stream may fall behind before it is closed.
-	Queue int
+	// Queue is how many events a stream may fall behind before it is closed, and InstanceQueue the
+	// same for the stream of a shared dex-authenticator instance, which carries the events of all
+	// its clients.
+	Queue         int
+	InstanceQueue int
 	// Ring is how many of the last events a reconnecting client can resume from.
 	Ring int
 	// SnapshotPart is how many entries one snapshot event holds.
@@ -107,12 +112,13 @@ func DefaultLimits() Limits {
 		// A queue is allocated with its stream: 64 records are 8 KiB, so 1000 streams keep the queues of a
 		// replica under 8 MiB of the 256 MiB of the controller. A stream that falls behind is closed and
 		// resumes from the ring.
-		Streams:      1000,
-		Queue:        64,
-		Ring:         4096,
-		SnapshotPart: 512,
-		Heartbeat:    10 * time.Second,
-		WriteTimeout: 10 * time.Second,
+		Streams:       1000,
+		Queue:         64,
+		InstanceQueue: 1024,
+		Ring:          4096,
+		SnapshotPart:  512,
+		Heartbeat:     10 * time.Second,
+		WriteTimeout:  10 * time.Second,
 	}
 }
 
@@ -124,6 +130,9 @@ type Config struct {
 	// Retention is how long revocations are kept (revocation.Retention).
 	Retention time.Duration
 	Limits    Limits
+	// TokenReview checks the ServiceAccount token of a shared dex-authenticator instance. Without
+	// it the feed serves the clients only.
+	TokenReview TokenReviewer
 }
 
 // Server is the revocation feed. It is a manager runnable that runs on every replica.
@@ -153,12 +162,14 @@ func New(reader client.Reader, cfg Config, log logr.Logger, now func() time.Time
 	if err != nil {
 		return nil, err
 	}
+	clients := newClientSet(h.announce)
+	h.instanceOf = clients.instanceOf
 	return &Server{
 		reader:    reader,
 		hub:       h,
 		cfg:       cfg,
 		metrics:   newMetrics(),
-		clients:   &clientSet{ids: map[string]string{}},
+		clients:   clients,
 		failures:  newAddressLimiter(cfg.Limits.FailuresPerSecond, cfg.Limits.FailureBurst),
 		log:       log,
 		now:       now,
@@ -260,7 +271,7 @@ func (s *Server) serveRevocations(w http.ResponseWriter, r *http.Request) {
 		s.refuse(w, http.StatusTooManyRequests, retryAfterFailures)
 		return
 	}
-	c, ok, err := authenticate(r.Context(), s.reader, r)
+	c, instance, ok, err := s.authenticate(r)
 	if err != nil {
 		s.log.Error(err, "Failed to authenticate a client of the revocation feed")
 		http.Error(w, "temporarily unavailable", http.StatusServiceUnavailable)
@@ -290,7 +301,7 @@ func (s *Server) serveRevocations(w http.ResponseWriter, r *http.Request) {
 	if cur, ok := parseCursor(raw); ok {
 		since = &cur
 	}
-	sub, err := s.hub.subscribe(c, since, now)
+	sub, err := s.hub.subscribe(c, instance, since, now)
 	if err != nil {
 		s.refuse(w, http.StatusTooManyRequests, retryAfterStreams)
 		return
@@ -343,11 +354,17 @@ func (s *Server) stream(ctx context.Context, w http.ResponseWriter, sub subscrip
 			return
 		case <-st.done:
 			return
-		case rec := <-st.events:
-			if err := s.writeRecord(out, st, rec); err != nil {
+		case it := <-st.events:
+			if it.announced != "" {
+				if err := s.writeAnnounced(ctx, out, st, it.announced, last); err != nil {
+					return
+				}
+				continue
+			}
+			if err := s.writeRecord(out, st, it.rec); err != nil {
 				return
 			}
-			last = rec.seq
+			last = it.rec.seq
 		case <-heartbeat.C:
 			data, err := heartbeatEvent(s.now())
 			if err != nil {
@@ -360,33 +377,112 @@ func (s *Server) stream(ctx context.Context, w http.ResponseWriter, sub subscrip
 	}
 }
 
+// writeRecord writes rec to the stream of a client, or, to the stream of an instance, once for
+// every client of the instance that rec names, each with the salt of that client.
 func (s *Server) writeRecord(out *eventWriter, st *stream, rec record) error {
-	data, err := revocationEvent(rec, st.client.salt)
+	position := cursor{epoch: s.hub.epoch, seq: rec.seq}
+	if st.instance == "" {
+		return s.writeRevocation(out, position, rec, st.client.salt)
+	}
+	for _, id := range rec.clients {
+		c, ok := s.clients.ofInstance(st.instance, id)
+		if !ok {
+			continue
+		}
+		if err := s.writeRevocation(out, position, rec, c.salt); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Server) writeRevocation(out *eventWriter, position cursor, rec record, salt []byte) error {
+	data, err := revocationEvent(rec, salt)
 	if err != nil {
 		return err
 	}
-	if err := out.event(eventRevocation, cursor{epoch: s.hub.epoch, seq: rec.seq}, data); err != nil {
+	if err := out.event(eventRevocation, position, data); err != nil {
 		return err
 	}
 	s.metrics.observeDelivery(rec.created, s.now())
 	return nil
 }
 
-func (s *Server) writeSnapshot(ctx context.Context, out *eventWriter, st *stream, position cursor) error {
+// writeAnnounced writes what is revoked for a client that has appeared among the clients of the
+// instance of st, as revocation events: the subscriber merges them into what it has.
+func (s *Server) writeAnnounced(ctx context.Context, out *eventWriter, st *stream, clientID string, last uint64) error {
+	c, ok := s.clients.ofInstance(st.instance, clientID)
+	if !ok {
+		return nil
+	}
+	revs, err := s.revocationsOf(ctx, clientID)
+	if err != nil {
+		s.log.Error(err, "Failed to send the revocations of a new client of an instance", "clientID", clientID)
+		return err
+	}
+	position := s.hub.idleCursor(st, last)
+	for _, rev := range revs {
+		rec, ok := recordOf(rev, s.cfg.Retention)
+		if !ok || rec.exp < s.now().Unix() {
+			continue
+		}
+		if err := s.writeRevocation(out, position, rec, c.salt); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// revocationsOf lists the revocations that name a client.
+func (s *Server) revocationsOf(ctx context.Context, clientID string) ([]revocation.Revocation, error) {
 	list := controller.List(controller.RevocationGVK)
-	if err := s.reader.List(ctx, list, client.InNamespace(naming.DexNamespace), client.MatchingFields{controller.RevocationClientField: st.client.id}); err != nil {
-		return fmt.Errorf("list revocations: %w", err)
+	if err := s.reader.List(ctx, list, client.InNamespace(naming.DexNamespace), client.MatchingFields{controller.RevocationClientField: clientID}); err != nil {
+		return nil, fmt.Errorf("list revocations: %w", err)
 	}
 	revs := make([]revocation.Revocation, 0, len(list.Items))
 	for i := range list.Items {
 		rev, err := revocation.FromObject(&list.Items[i])
 		if err != nil {
-			s.log.Error(err, "Leaving a revocation out of the snapshot", "revocation", list.Items[i].GetName())
+			s.log.Error(err, "Leaving a revocation out", "revocation", list.Items[i].GetName())
 			continue
 		}
 		revs = append(revs, rev)
 	}
-	parts, err := snapshotParts(revs, st.client.salt, s.cfg.Retention, s.now(), s.cfg.Limits.SnapshotPart)
+	return revs, nil
+}
+
+// authenticate tells who asks for the feed: a client with its secret, or a shared dex-authenticator
+// instance with the token of its ServiceAccount. For an instance the client is a name the limits
+// count its streams under.
+func (s *Server) authenticate(r *http.Request) (feedClient, string, bool, error) {
+	token, isInstance := bearerToken(r)
+	if !isInstance {
+		c, ok, err := authenticate(r.Context(), s.reader, r)
+		return c, "", ok, err
+	}
+	instance, ok, err := authenticateInstance(r.Context(), s.cfg.TokenReview, token)
+	if err != nil || !ok {
+		return feedClient{}, "", false, err
+	}
+	return feedClient{id: instanceID(instance)}, instance, true, nil
+}
+
+// writeSnapshot writes the snapshot of the client of st, or one snapshot of all the clients of the
+// instance of st.
+func (s *Server) writeSnapshot(ctx context.Context, out *eventWriter, st *stream, position cursor) error {
+	clients := []feedClient{st.client}
+	if st.instance != "" {
+		clients = s.clients.byInstance(st.instance)
+	}
+	groups := make([]salted, 0, len(clients))
+	for _, c := range clients {
+		revs, err := s.revocationsOf(ctx, c.id)
+		if err != nil {
+			return err
+		}
+		groups = append(groups, salted{salt: c.salt, revs: revs})
+	}
+	parts, err := snapshotPartsOf(groups, s.cfg.Retention, s.now(), s.cfg.Limits.SnapshotPart)
 	if err != nil {
 		return err
 	}
@@ -528,11 +624,21 @@ func (a *addressLimiter) fail(address string, now time.Time) {
 	l.AllowN(now, 1)
 }
 
-// clientSet is the set of DexAuthenticator clients the cache knows, for the subscribers gauge.
+// clientSet is the set of DexAuthenticator clients the cache knows: for the subscribers gauge, and
+// for the streams of the shared dex-authenticator instances, which carry the events of every
+// client of their instance.
 type clientSet struct {
 	mu sync.Mutex
-	// ids maps an object name to its client id.
-	ids map[string]string
+	// ids maps an object name to its client id, and byID a client id to the client: the salt of
+	// its keys and its instance.
+	ids  map[string]string
+	byID map[string]feedClient
+	// announce is told of a client that has appeared in an instance or has got another secret.
+	announce func(instance, clientID string)
+}
+
+func newClientSet(announce func(instance, clientID string)) *clientSet {
+	return &clientSet{ids: map[string]string{}, byID: map[string]feedClient{}, announce: announce}
 }
 
 func (c *clientSet) handler() toolscache.ResourceEventHandler {
@@ -549,14 +655,33 @@ func (c *clientSet) set(obj any) {
 		return
 	}
 	ids := controller.OAuth2ClientID(u)
-	_, isAuthenticator := u.GetLabels()[DexAuthenticatorLabel]
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	labels := u.GetLabels()
+	_, isAuthenticator := labels[DexAuthenticatorLabel]
 	if len(ids) == 0 || !isAuthenticator {
-		delete(c.ids, u.GetName())
+		c.forget(u.GetName())
 		return
 	}
-	c.ids[u.GetName()] = ids[0]
+
+	salt, err := hex.DecodeString(stringField(u, saltField))
+	if err != nil {
+		salt = nil
+	}
+	current := feedClient{id: ids[0], salt: salt, instance: instanceOfNamespace(labels[DexAuthenticatorNamespaceLabel])}
+
+	c.mu.Lock()
+	if previousID, isKnown := c.ids[u.GetName()]; isKnown && previousID != current.id {
+		delete(c.byID, previousID)
+	}
+	previous, isKnown := c.byID[current.id]
+	c.ids[u.GetName()] = current.id
+	c.byID[current.id] = current
+	c.mu.Unlock()
+
+	// The keys of a client with another secret are other keys: the instance gets them anew.
+	isSame := isKnown && previous.instance == current.instance && bytes.Equal(previous.salt, current.salt)
+	if !isSame && len(salt) > 0 && c.announce != nil {
+		c.announce(current.instance, current.id)
+	}
 }
 
 func (c *clientSet) remove(obj any) {
@@ -567,20 +692,60 @@ func (c *clientSet) remove(obj any) {
 	if !ok {
 		return
 	}
+	c.forget(u.GetName())
+}
+
+// forget drops the client of the object with name.
+func (c *clientSet) forget(name string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	delete(c.ids, u.GetName())
+	if id, ok := c.ids[name]; ok {
+		delete(c.byID, id)
+		delete(c.ids, name)
+	}
 }
 
 func (c *clientSet) list() []string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	ids := make([]string, 0, len(c.ids))
-	for _, id := range c.ids {
+	ids := make([]string, 0, len(c.byID))
+	for id := range c.byID {
 		ids = append(ids, id)
 	}
 	slices.Sort(ids)
-	return slices.Compact(ids)
+	return ids
+}
+
+// instanceOf is the instance of the client with id, empty for a client the set does not know.
+func (c *clientSet) instanceOf(id string) string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.byID[id].instance
+}
+
+// ofInstance returns the client with id when it belongs to instance and its salt is known.
+func (c *clientSet) ofInstance(instance, id string) (feedClient, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	known, ok := c.byID[id]
+	if !ok || known.instance != instance || len(known.salt) == 0 {
+		return feedClient{}, false
+	}
+	return known, true
+}
+
+// byInstance returns the clients of instance whose salt is known, by id.
+func (c *clientSet) byInstance(instance string) []feedClient {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	clients := make([]feedClient, 0, len(c.byID))
+	for _, known := range c.byID {
+		if known.instance == instance && len(known.salt) > 0 {
+			clients = append(clients, known)
+		}
+	}
+	slices.SortFunc(clients, func(a, b feedClient) int { return strings.Compare(a.id, b.id) })
+	return clients
 }
 
 // debugWriter sends the messages of the HTTP server (TLS handshake errors of probes and scanners) to

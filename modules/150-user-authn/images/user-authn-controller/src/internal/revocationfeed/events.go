@@ -124,14 +124,36 @@ func heartbeatEvent(now time.Time) ([]byte, error) {
 	return json.Marshal(heartbeatData{V: version, T: now.Unix()})
 }
 
-// snapshotParts builds the snapshot of revs for a client with salt: one entry per key, a pair with
-// the highest generation of its revocations, every entry with the latest expiry. Expired revocations
-// are left out. Each part holds at most partSize entries; there is always at least one part.
+// salted are the revocations of one client and the salt of its keys.
+type salted struct {
+	salt []byte
+	revs []revocation.Revocation
+}
+
+// snapshotParts builds the snapshot of revs for a client with salt.
 func snapshotParts(revs []revocation.Revocation, salt []byte, retention time.Duration, now time.Time, partSize int) ([][]byte, error) {
+	return snapshotPartsOf([]salted{{salt: salt, revs: revs}}, retention, now, partSize)
+}
+
+// snapshotPartsOf builds one snapshot of the revocations of several clients, each keyed with the
+// salt of its client: one entry per key, a pair with the highest generation of its revocations,
+// every entry with the latest expiry. The keys of two clients never meet, so the subscriber needs
+// no client in an entry: it looks a key up with the salt of the client it checks a session of.
+// Expired revocations are left out. Each part holds at most partSize entries; there is always at
+// least one part.
+func snapshotPartsOf(clients []salted, retention time.Duration, now time.Time, partSize int) ([][]byte, error) {
 	pairs := map[string]snapshotEntry{}
 	sessions := map[string]snapshotEntry{}
 	grants := map[string]snapshotEntry{}
-	for _, rev := range revs {
+	for _, c := range clients {
+		collectSnapshot(c, retention, now, pairs, sessions, grants)
+	}
+
+	return encodeSnapshot(pairs, sessions, grants, retention, partSize)
+}
+
+func collectSnapshot(c salted, retention time.Duration, now time.Time, pairs, sessions, grants map[string]snapshotEntry) {
+	for _, rev := range c.revs {
 		kind, value, ok := keyOf(rev)
 		if !ok {
 			continue
@@ -140,7 +162,7 @@ func snapshotParts(revs []revocation.Revocation, salt []byte, retention time.Dur
 		if exp < now.Unix() {
 			continue
 		}
-		key := Key(salt, kind, value)
+		key := Key(c.salt, kind, value)
 		var set map[string]snapshotEntry
 		switch rev.Type {
 		case revocation.TypePair:
@@ -158,7 +180,9 @@ func snapshotParts(revs []revocation.Revocation, salt []byte, retention time.Dur
 		}
 		set[key] = entry
 	}
+}
 
+func encodeSnapshot(pairs, sessions, grants map[string]snapshotEntry, retention time.Duration, partSize int) ([][]byte, error) {
 	type keyed struct {
 		typ   string
 		entry snapshotEntry

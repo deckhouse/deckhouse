@@ -1,0 +1,320 @@
+{{- if include "shared_dex_authenticator_enabled" . }}
+  {{- $context := . }}
+  {{- $revocationFeedCA := dig "revocationFeedTLS" "ca" "" $context.Values.userAuthn.internal | default "" }}
+  {{- $isHTTPS := eq (include "helm_lib_module_uri_scheme" $context) "https" }}
+  {{- range $instance := include "shared_dex_authenticator_instances" . | fromYamlArray }}
+    {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ $instance }}
+  namespace: d8-{{ $context.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "shared-dex-authenticator" "instance" $instance)) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: {{ $instance }}
+  updatePolicy:
+    updateMode: "InPlaceOrRecreate"
+  resourcePolicy:
+    containerPolicies:
+    # One process serves the applications of many DexAuthenticator objects: about a core per 1000 requests per
+    # second straight to the proxy and up to four through the URL of an application, where every request opens a
+    # TLS connection; about 100 KiB of memory per client.
+    - containerName: "dex-authenticator"
+      minAllowed:
+        {{- include "shared_dex_authenticator_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 4000m
+        memory: 1Gi
+    - containerName: "redis"
+      minAllowed:
+        {{- include "shared_dex_authenticator_redis_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 1000m
+        memory: 1Gi
+    {{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ $instance }}
+  namespace: d8-{{ $context.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "shared-dex-authenticator" "instance" $instance)) | nindent 2 }}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      {{- include "shared_dex_authenticator_pod_labels" $instance | nindent 6 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $instance }}
+  namespace: d8-{{ $context.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "shared-dex-authenticator" "instance" $instance)) | nindent 2 }}
+spec:
+  {{- /* Two replicas with or without the high availability of the cluster: the instance is in the path of every */}}
+  {{- /* request of its applications, and a pod that starts copies the sessions from the other one. */}}
+  replicas: 2
+  revisionHistoryLimit: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      {{- /* One pod at a time, and the new one first: it fills its Redis from the pod it replaces. */}}
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      {{- include "shared_dex_authenticator_pod_labels" $instance | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "shared_dex_authenticator_pod_labels" $instance | nindent 8 }}
+      annotations:
+        {{- /* oauth2-proxy reads the CA of dex once, at startup, and Redis its configuration. */}}
+        checksum/dex-ca: {{ $context.Values.userAuthn.internal.dexTLS.ca | default "" | sha256sum }}
+        checksum/revocation-feed-ca: {{ $revocationFeedCA | sha256sum }}
+        checksum/redis: {{ index (dig "sharedDexAuthenticator" "redisPasswords" dict $context.Values.userAuthn.internal) $instance | default "" | sha256sum }}
+    spec:
+      {{- include "helm_lib_node_selector" (tuple $context "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple $context "system") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple $context "cluster-low") | nindent 6 }}
+      {{- /* Preferred, not required: two replicas must fit a cluster of one node. */}}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  {{- include "shared_dex_authenticator_pod_labels" $instance | nindent 18 }}
+              topologyKey: kubernetes.io/hostname
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" $context | nindent 6 }}
+      serviceAccountName: {{ $instance }}
+      automountServiceAccountToken: false
+      imagePullSecrets:
+      - name: deckhouse-registry
+      volumes:
+      - name: tls
+        emptyDir: {}
+      - name: dex-ca
+        secret:
+          secretName: {{ $instance }}-ca
+          items:
+          - key: dex-ca.crt
+            path: ca.crt
+      - name: revocation-feed-ca
+        secret:
+          secretName: {{ $instance }}-ca
+          items:
+          - key: revocation-feed-ca.crt
+            path: ca.crt
+      - name: redis
+        secret:
+          secretName: {{ $instance }}-redis
+          items:
+          - key: redis.conf
+            path: redis.conf
+      {{- /* The table of clients, which user-authn-controller writes. Optional: the pods start, and are ready, */}}
+      {{- /* before the first table. The whole Secret is mounted, not a subPath, which the kubelet never updates. */}}
+      - name: client-table
+        secret:
+          secretName: {{ $instance }}-clients
+          optional: true
+      {{- /* A token for the revocation feed only: the API server would refuse it, and the feed refuses any other. */}}
+      - name: revocation-feed-token
+        projected:
+          sources:
+          - serviceAccountToken:
+              audience: revocation-feed.d8-user-authn
+              expirationSeconds: 3600
+              path: token
+      initContainers:
+      - args:
+        - "{{ $instance }}.d8-{{ $context.Chart.Name }}"
+        - "{{ $instance }}.d8-{{ $context.Chart.Name }}.svc"
+        image: {{ include "helm_lib_module_image" (list $context "selfSignedGenerator") }}
+        name: self-signed-generator
+        volumeMounts:
+        - name: tls
+          mountPath: "/certs"
+        resources:
+          requests:
+            memory: 10Mi
+            cpu: 10m
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
+          limits:
+            memory: 25Mi
+            cpu: 10m
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted" $context | nindent 8 }}
+      containers:
+      - name: dex-authenticator
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted" $context | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list $context "dexAuthenticator") }}
+        args:
+        - --provider=oidc
+        {{- /* The clients, one per DexAuthenticator object, with their client IDs, secrets and hosts. */}}
+        - --client-table=/opt/dex-authenticator/client-table/clients.json
+    {{- if not $isHTTPS }}
+        - --cookie-secure=false
+    {{- end }}
+        - --redirect-url=/dex-authenticator/callback
+        - --oidc-issuer-url=https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/
+        # No request to dex while a client is built: the table is loaded whether dex answers or not.
+        - --skip-oidc-discovery
+        - --redeem-url=https://dex.d8-user-authn/token
+        - --login-url=https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/auth
+        - --oidc-jwks-url=https://dex.d8-user-authn/keys
+        - --provider-ca-file=/opt/dex-authenticator/dex-ca/ca.crt
+        - --code-challenge-method=S256
+        - --revocation-url=https://dex.d8-user-authn/token/revoke
+    {{- if and (dig "sessions" "enabled" false $context.Values.userAuthn) $isHTTPS }}
+        # With the sessions of dex on, sign-out sends the browser to dex by the client ID of the application.
+        # The table then names only the clients dex knows the address to return to of.
+        - --provider-logout-url=https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/logout
+    {{- end }}
+    {{- /* The proxy refuses to start with an empty CA file, so without the CA it runs without the feed. */}}
+    {{- if $revocationFeedCA }}
+        # One subscription of the pod to the revocation feed of user-authn-controller, for all its clients, with
+        # the token of the ServiceAccount of the instance: revoked sessions are refused within seconds.
+        - --revocation-feed-url=https://revocation-feed.d8-user-authn/revocations
+        - --revocation-feed-ca-file=/opt/dex-authenticator/revocation-feed-ca/ca.crt
+        - --revocation-feed-token-file=/opt/dex-authenticator/revocation-feed-token/token
+    {{- end }}
+        - --set-xauthrequest
+        - --scope=groups email openid profile offline_access
+        - --proxy-prefix=/dex-authenticator
+        - --email-domain=*
+        - --upstream=file:///dev/null
+        - --https-address=0.0.0.0:8443
+        - --tls-cert-file=/opt/dex-authenticator/tls/tls.crt
+        - --tls-key-file=/opt/dex-authenticator/tls/tls.key
+        - --metrics-address=0.0.0.0:9090
+        - --skip-provider-button
+        - --custom-templates-dir=/usr/share/dex-authenticator/templates
+    {{- if (dig "customLogo" "enabled" false $context.Values.userAuthn.internal) }}
+        - --custom-sign-in-logo=-
+    {{- else }}
+        - --custom-sign-in-logo=/usr/share/dex-authenticator/deckhouse-logo-title.svg
+    {{- end }}
+        - --silence-ping-logging
+        - --logging-format=json
+        - --cookie-csrf-per-request=true
+        - --cookie-csrf-per-request-limit=10
+        - --cookie-csrf-expire=10m
+    {{- if (dig "sessions" "enabled" false $context.Values.userAuthn) }}
+        - --restart-login-without-csrf-cookie
+    {{- end }}
+        # The sessions live in the Redis of every pod of the instance, without a master: a pod that is deleted
+        # takes no session with it, and a pod that starts copies them from a neighbour before it is ready.
+        - --session-store-type=redis-peers
+        - --redis-connection-url=redis://127.0.0.1:6379/
+        - --redis-peers-dns-name={{ $instance }}-redis.d8-{{ $context.Chart.Name }}
+        - --redis-peers-self-address=$(POD_IP)
+        # The application behind the instance sees the cookie, and has no business with the refresh token in it.
+        - --cookie-encrypt-refresh-token
+        # A session is refreshed once the ID token dex issued for it has expired, so the application never gets
+        # an expired one. How long a session lives is set per client, in the table.
+        - --cookie-refresh={{ $context.Values.userAuthn.idTokenTTL | default "10m" }}
+        - --insecure-oidc-allow-unverified-email=true
+        - --approval-prompt=basic
+        - --reverse-proxy
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: OAUTH2_PROXY_REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ $instance }}-redis
+              key: password
+        volumeMounts:
+        - name: tls
+          mountPath: "/opt/dex-authenticator/tls"
+          readOnly: true
+        - name: dex-ca
+          mountPath: "/opt/dex-authenticator/dex-ca"
+          readOnly: true
+        - name: revocation-feed-ca
+          mountPath: "/opt/dex-authenticator/revocation-feed-ca"
+          readOnly: true
+        - name: client-table
+          mountPath: "/opt/dex-authenticator/client-table"
+          readOnly: true
+        - name: revocation-feed-token
+          mountPath: "/opt/dex-authenticator/revocation-feed-token"
+          readOnly: true
+        # Readiness checks the proxy and its session store, not dex and not the table: a pod is ready with an
+        # empty table, and is not ready until its Redis is filled from a neighbour or the time for that is out.
+        readinessProbe:
+          httpGet:
+            port: 8443
+            scheme: HTTPS
+            path: /ready
+          periodSeconds: 2
+          failureThreshold: 2
+        # Keep serving while the endpoint removal reaches kube-proxy and the ingress controllers.
+        lifecycle:
+          preStop:
+            sleep:
+              seconds: 5
+        livenessProbe:
+          httpGet:
+            port: 8443
+            scheme: HTTPS
+            path: /ping
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+            {{- include "shared_dex_authenticator_resources" . | nindent 12 }}
+        ports:
+        - name: dex-https
+          containerPort: 8443
+          protocol: TCP
+        - name: metrics
+          containerPort: 9090
+          protocol: TCP
+      - name: redis
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted" $context | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list $context "redis") }}
+        # Everything, the password included, is in the file: the arguments are in the process list of the node.
+        args:
+        - /etc/redis/redis.conf
+        volumeMounts:
+        - name: redis
+          mountPath: /etc/redis
+          readOnly: true
+        # The store has to outlive the proxy, which keeps serving for 5 seconds after SIGTERM, and the neighbour
+        # that copies it.
+        lifecycle:
+          preStop:
+            sleep:
+              seconds: 7
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
+            {{- include "shared_dex_authenticator_redis_resources" . | nindent 12 }}
+        ports:
+        - name: redis
+          containerPort: 6379
+          protocol: TCP
+---
+# The CA certificates the proxy checks dex and the revocation feed with.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $instance }}-ca
+  namespace: d8-{{ $context.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "shared-dex-authenticator" "instance" $instance)) | nindent 2 }}
+type: Opaque
+data:
+  dex-ca.crt: {{ $context.Values.userAuthn.internal.dexTLS.ca | default "" | b64enc | quote }}
+  revocation-feed-ca.crt: {{ $revocationFeedCA | b64enc | quote }}
+  {{- end }}
+{{- end }}

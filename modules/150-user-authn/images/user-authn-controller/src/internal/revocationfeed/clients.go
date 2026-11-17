@@ -149,10 +149,12 @@ func reduceClient(u *unstructured.Unstructured) *unstructured.Unstructured {
 	return out
 }
 
-// feedClient is an authenticated DexAuthenticator client.
+// feedClient is a DexAuthenticator client: its id, the salt of its keys, and the shared
+// dex-authenticator instance that serves it.
 type feedClient struct {
-	id   string
-	salt []byte
+	id       string
+	salt     []byte
+	instance string
 }
 
 // dummyHash stands in for the secret of an unknown client, so that it takes as long to refuse as a

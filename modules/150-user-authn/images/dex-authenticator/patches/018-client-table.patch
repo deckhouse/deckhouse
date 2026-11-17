@@ -1,9 +1,9 @@
 diff --git a/deckhouse_client_table.go b/deckhouse_client_table.go
 new file mode 100644
-index 00000000..034cc8db
+index 00000000..95725fc4
 --- /dev/null
 +++ b/deckhouse_client_table.go
-@@ -0,0 +1,744 @@
+@@ -0,0 +1,763 @@
 +package main
 +
 +import (
@@ -26,6 +26,7 @@ index 00000000..034cc8db
 +
 +	"github.com/justinas/alice"
 +	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/deckhouse/revocation"
 +	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 +	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 +	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/middleware"
@@ -306,10 +307,12 @@ index 00000000..034cc8db
 +	pollInterval time.Duration
 +	// needsProviderLogout: the process signs out through the provider (--provider-logout-url).
 +	needsProviderLogout bool
-+	build               func(clientSpec) (http.Handler, error)
-+	dispatcher          *dispatcher
-+	metrics             *clientTableMetrics
-+	server              proxyhttp.Server
++	// revocationFeed is the subscription of the process to the revocation feed, nil without it.
++	revocationFeed *revocation.Feed
++	build          func(clientSpec) (http.Handler, error)
++	dispatcher     *dispatcher
++	metrics        *clientTableMetrics
++	server         proxyhttp.Server
 +
 +	// The state of the table file. Only one goroutine reloads: main before the servers start,
 +	// the watcher after that.
@@ -368,6 +371,17 @@ index 00000000..034cc8db
 +		return fmt.Errorf("error initialising session store: %w", err)
 +	}
 +	builder.shared = &sharedResources{sessionStore: sessionStore, refreshWindows: middleware.NewRefreshWindows()}
++	if opts.RevocationFeedURL != "" && !opts.RevocationFeedDisable {
++		builder.shared.revocationFeed, err = revocation.New(revocation.Options{
++			URL:       opts.RevocationFeedURL,
++			CAFile:    opts.RevocationFeedCAFile,
++			TokenFile: opts.RevocationFeedTokenFile,
++		})
++		if err != nil {
++			return fmt.Errorf("could not build the revocation feed: %w", err)
++		}
++		logger.Printf("Refusing the sessions revoked by the revocation feed %s", opts.RevocationFeedURL)
++	}
 +	if len(opts.Providers) > 0 {
 +		builder.scope = opts.Providers[0].Scope
 +	}
@@ -378,6 +392,7 @@ index 00000000..034cc8db
 +	}
 +
 +	p := newClientTableProxy(opts.ClientTable, opts.ProxyPrefix, builder.build, metrics)
++	p.revocationFeed = builder.shared.revocationFeed
 +	p.needsProviderLogout = opts.ProviderLogoutURL != ""
 +
 +	// The process answers the health checks itself: they name no client. It is ready with an
@@ -415,8 +430,9 @@ index 00000000..034cc8db
 +// clients.
 +func checkClientTableOptions(opts *options.Options) error {
 +	switch {
-+	case opts.RevocationFeedURL != "" && !opts.RevocationFeedDisable:
-+		return errors.New("the revocation feed is one subscription per client and is not supported with --client-table: add --revocation-feed-disable")
++	case opts.RevocationFeedURL != "" && !opts.RevocationFeedDisable && opts.RevocationFeedTokenFile == "":
++		// So that a process never runs without the feed unnoticed.
++		return errors.New("with --client-table the revocation feed is one subscription of the process: set --revocation-feed-token-file, or --revocation-feed-disable to run without the feed")
 +	case opts.AuthenticatedEmailsFile != "" || opts.HtpasswdFile != "":
 +		return errors.New("--authenticated-emails-file and --htpasswd-file are not supported with --client-table")
 +	case len(opts.Providers) == 0 || !ptr.Deref(opts.Providers[0].OIDCConfig.SkipDiscovery, false):
@@ -439,6 +455,9 @@ index 00000000..034cc8db
 +	defer stop()
 +
 +	go p.watch(ctx)
++	if p.revocationFeed != nil {
++		go p.revocationFeed.Run(ctx)
++	}
 +
 +	return p.server.Start(ctx)
 +}
@@ -750,10 +769,10 @@ index 00000000..034cc8db
 +}
 diff --git a/deckhouse_client_table_test.go b/deckhouse_client_table_test.go
 new file mode 100644
-index 00000000..2028a052
+index 00000000..46ffe69d
 --- /dev/null
 +++ b/deckhouse_client_table_test.go
-@@ -0,0 +1,1459 @@
+@@ -0,0 +1,1489 @@
 +package main
 +
 +import (
@@ -776,6 +795,7 @@ index 00000000..2028a052
 +
 +	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 +	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/deckhouse/revocation"
 +	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 +	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/memory"
 +	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
@@ -1047,7 +1067,11 @@ index 00000000..2028a052
 +		}},
 +		{name: "feed left on", modify: func(o *options.Options) {
 +			o.RevocationFeedURL = "https://revocation-feed.d8-user-authn/revocations"
-+		}, expectErr: "--revocation-feed-disable"},
++		}, expectErr: "--revocation-feed-token-file"},
++		{name: "feed of the process", modify: func(o *options.Options) {
++			o.RevocationFeedURL = "https://revocation-feed.d8-user-authn/revocations"
++			o.RevocationFeedTokenFile = "/var/run/secrets/revocation-feed/token"
++		}},
 +		{name: "emails file", modify: func(o *options.Options) { o.AuthenticatedEmailsFile = "/emails" }, expectErr: "not supported"},
 +		{name: "htpasswd file", modify: func(o *options.Options) { o.HtpasswdFile = "/htpasswd" }, expectErr: "not supported"},
 +	}
@@ -2213,6 +2237,31 @@ index 00000000..2028a052
 +		})
 +	}
 +}
++
++// TestClientTable_revocationFeed checks that the clients of a table read one feed of the process,
++// each with the salt of its own secret, and subscribe to nothing themselves.
++func TestClientTable_revocationFeed(t *testing.T) {
++	builder := newTestClientBuilder(t)
++	feed, err := revocation.New(revocation.Options{URL: "https://revocation-feed.d8-user-authn/revocations", TokenFile: "/token"})
++	require.NoError(t, err)
++	builder.shared.revocationFeed = feed
++
++	for _, name := range []string{"first", "second"} {
++		handler, err := builder.build(testSpec(name, name+".example.com"))
++		require.NoError(t, err)
++		proxy, ok := handler.(*OAuthProxy)
++		require.True(t, ok)
++		assert.Nil(t, proxy.revocationFeed, "a client starts no subscription of its own")
++	}
++
++	// A process without the feed gives its clients none.
++	builder.shared.revocationFeed = nil
++	handler, err := builder.build(testSpec("third", "third.example.com"))
++	require.NoError(t, err)
++	proxy, ok := handler.(*OAuthProxy)
++	require.True(t, ok)
++	assert.Nil(t, proxy.revocationFeed)
++}
 diff --git a/deckhouse_dispatcher.go b/deckhouse_dispatcher.go
 new file mode 100644
 index 00000000..04ffdb6a
@@ -2865,7 +2914,7 @@ index ba970679..54513c53 100644
  		logger.Fatalf("%s", err)
  	}
 diff --git a/oauthproxy.go b/oauthproxy.go
-index f783a1ed..61d60d60 100644
+index f783a1ed..243b3c7a 100644
 --- a/oauthproxy.go
 +++ b/oauthproxy.go
 @@ -14,6 +14,7 @@ import (
@@ -2884,7 +2933,7 @@ index f783a1ed..61d60d60 100644
  	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/upstream"
  	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
  	"golang.org/x/oauth2"
-@@ -136,9 +138,52 @@ type OAuthProxy struct {
+@@ -136,9 +138,55 @@ type OAuthProxy struct {
  
  // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
  func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthProxy, error) {
@@ -2918,6 +2967,9 @@ index f783a1ed..61d60d60 100644
 +	// refreshWindows bounds for the whole process how many sessions whose refresh the provider
 +	// does not answer are remembered (patch 002).
 +	refreshWindows *middleware.RefreshWindows
++	// revocationFeed is the one subscription of the process to the revocation feed, which carries
++	// the revocations of every client; nil without the feed. The table runs it.
++	revocationFeed *revocation.Feed
 +}
 +
 +// newOAuthProxy builds an OAuthProxy without its servers. With shared set, the proxy is the client
@@ -2939,7 +2991,7 @@ index f783a1ed..61d60d60 100644
  	}
  
  	var basicAuthValidator basic.Validator
-@@ -156,24 +201,40 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
+@@ -156,24 +204,40 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
  		return nil, fmt.Errorf("error initialising provider: %v", err)
  	}
  
@@ -2996,7 +3048,7 @@ index f783a1ed..61d60d60 100644
  	}
  
  	if opts.SkipJwtBearerTokens {
-@@ -191,13 +252,16 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
+@@ -191,13 +255,16 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
  		redirectURL.Path = fmt.Sprintf("%s/callback", opts.ProxyPrefix)
  	}
  
@@ -3019,7 +3071,7 @@ index f783a1ed..61d60d60 100644
  
  	trustedIPs, err := ip.ParseNetSet(opts.TrustedIPs)
  	if err != nil {
-@@ -219,7 +283,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
+@@ -219,19 +286,41 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
  		return nil, err
  	}
  
@@ -3028,7 +3080,32 @@ index f783a1ed..61d60d60 100644
  	if err != nil {
  		return nil, fmt.Errorf("could not build pre-auth chain: %v", err)
  	}
-@@ -231,7 +295,11 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
+-	revocationFeed, err := buildRevocationFeed(opts, provider)
+-	if err != nil {
+-		return nil, err
++	// A client of a table reads the feed of the process with its own secret and has no
++	// subscription of its own.
++	var (
++		revocationFeed  *revocation.Feed
++		revocationGuard middleware.RevocationGuard
++	)
++	switch {
++	case shared == nil:
++		revocationFeed, err = buildRevocationFeed(opts, provider)
++		if err != nil {
++			return nil, err
++		}
++		if revocationFeed != nil {
++			revocationGuard = revocationFeed
++		}
++	case shared.revocationFeed != nil:
++		clientSecret, err := provider.Data().GetClientSecret()
++		if err != nil {
++			return nil, fmt.Errorf("could not read the client secret for the revocation feed: %v", err)
++		}
++		revocationGuard = shared.revocationFeed.ForClient(clientSecret)
+ 	}
+ 	providerLogoutURL, err := parseProviderLogoutURL(opts.ProviderLogoutURL)
  	if err != nil {
  		return nil, err
  	}
@@ -3037,11 +3114,11 @@ index f783a1ed..61d60d60 100644
 +	if shared != nil {
 +		refreshWindows = shared.refreshWindows
 +	}
-+	sessionChain := buildSessionChain(opts, provider, sessionStore, basicAuthValidator, revocationFeed, refreshWindows)
++	sessionChain := buildSessionChain(opts, provider, sessionStore, basicAuthValidator, revocationGuard, refreshWindows)
  	headersChain, err := buildHeadersChain(opts)
  	if err != nil {
  		return nil, fmt.Errorf("could not build headers chain: %v", err)
-@@ -283,10 +351,6 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
+@@ -283,10 +372,6 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
  	}
  	p.buildServeMux(opts.ProxyPrefix)
  
@@ -3052,7 +3129,7 @@ index f783a1ed..61d60d60 100644
  	return p, nil
  }
  
-@@ -315,8 +379,19 @@ func (p *OAuthProxy) Start() error {
+@@ -315,8 +400,19 @@ func (p *OAuthProxy) Start() error {
  }
  
  func (p *OAuthProxy) setupServer(opts *options.Options) error {
@@ -3073,7 +3150,7 @@ index f783a1ed..61d60d60 100644
  		BindAddress:       opts.Server.BindAddress,
  		SecureBindAddress: opts.Server.SecureBindAddress,
  		TLS:               opts.Server.TLS,
-@@ -329,7 +404,7 @@ func (p *OAuthProxy) setupServer(opts *options.Options) error {
+@@ -329,7 +425,7 @@ func (p *OAuthProxy) setupServer(opts *options.Options) error {
  
  	appServer, err := proxyhttp.NewServer(serverOpts)
  	if err != nil {
@@ -3082,7 +3159,7 @@ index f783a1ed..61d60d60 100644
  	}
  
  	metricsServer, err := proxyhttp.NewServer(proxyhttp.Opts{
-@@ -339,11 +414,10 @@ func (p *OAuthProxy) setupServer(opts *options.Options) error {
+@@ -339,11 +435,10 @@ func (p *OAuthProxy) setupServer(opts *options.Options) error {
  		TLS:               opts.MetricsServer.TLS,
  	})
  	if err != nil {
@@ -3096,7 +3173,7 @@ index f783a1ed..61d60d60 100644
  }
  
  func (p *OAuthProxy) buildServeMux(proxyPrefix string) {
-@@ -389,12 +463,15 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
+@@ -389,12 +484,15 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
  // buildPreAuthChain constructs a chain that should process every request before
  // the OAuth2 Proxy authentication logic kicks in.
  // For example forcing HTTPS or health checks.
@@ -3113,7 +3190,7 @@ index f783a1ed..61d60d60 100644
  
  	if opts.ForceHTTPS {
  		_, httpsPort, err := net.SplitHostPort(opts.Server.SecureBindAddress)
-@@ -433,17 +510,30 @@ func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionSt
+@@ -433,17 +531,30 @@ func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionSt
  	return chain, nil
  }
  
@@ -3140,13 +3217,24 @@ index f783a1ed..61d60d60 100644
 +	provider providers.Provider,
 +	sessionStore sessionsapi.SessionStore,
 +	validator basic.Validator,
-+	revocationFeed *revocation.Feed,
++	revocationGuard middleware.RevocationGuard,
 +	refreshWindows *middleware.RefreshWindows,
 +) alice.Chain {
  	chain := alice.New()
  
  	if opts.SkipJwtBearerTokens {
-@@ -475,6 +565,7 @@ func buildSessionChain(opts *options.Options, provider providers.Provider, sessi
+@@ -464,17 +575,13 @@ func buildSessionChain(opts *options.Options, provider providers.Provider, sessi
+ 		chain = chain.Append(middleware.NewBasicAuthSessionLoader(validator, opts.HtpasswdUserGroups, opts.LegacyPreferEmailToUser))
+ 	}
+ 
+-	var revocationGuard middleware.RevocationGuard
+-	if revocationFeed != nil {
+-		revocationGuard = revocationFeed
+-	}
+-
+ 	chain = chain.Append(middleware.NewStoredSessionLoader(&middleware.StoredSessionLoaderOptions{
+ 		SessionStore:    sessionStore,
+ 		RefreshPeriod:   opts.Cookie.Refresh,
  		RefreshSession:  provider.RefreshSession,
  		ValidateSession: provider.ValidateSession,
  		Revocation:      revocationGuard,
@@ -3154,7 +3242,7 @@ index f783a1ed..61d60d60 100644
  	}))
  
  	return chain
-@@ -483,7 +574,7 @@ func buildSessionChain(opts *options.Options, provider providers.Provider, sessi
+@@ -483,7 +590,7 @@ func buildSessionChain(opts *options.Options, provider providers.Provider, sessi
  // buildRevocationFeed returns the subscription to the revocation feed of the user-authn module of
  // Deckhouse, or nil without --revocation-feed-url. Start runs it.
  func buildRevocationFeed(opts *options.Options, provider providers.Provider) (*revocation.Feed, error) {
@@ -3163,7 +3251,7 @@ index f783a1ed..61d60d60 100644
  		return nil, nil
  	}
  
-@@ -1794,3 +1885,18 @@ func LoggingCSRFCookiesInOAuthCallback(req *http.Request, cookieName string) {
+@@ -1794,3 +1901,18 @@ func LoggingCSRFCookiesInOAuthCallback(req *http.Request, cookieName string) {
  
  	logger.PrintAuthf("", req, logger.AuthFailure, "Cookies were found in OAuth callback, but none was a CSRF cookie.")
  }
@@ -3200,15 +3288,19 @@ index 827c65bd..26005a9b 100644
  	// Otherwise a random UUID is set.
  	RequestID string
 diff --git a/pkg/apis/options/options.go b/pkg/apis/options/options.go
-index d879ce10..f437f8ff 100644
+index d879ce10..ef5ae8d3 100644
 --- a/pkg/apis/options/options.go
 +++ b/pkg/apis/options/options.go
-@@ -74,6 +74,13 @@ type Options struct {
+@@ -74,6 +74,17 @@ type Options struct {
  	RevocationFeedURL    string `flag:"revocation-feed-url" cfg:"revocation_feed_url"`
  	RevocationFeedCAFile string `flag:"revocation-feed-ca-file" cfg:"revocation_feed_ca_file"`
  
 +	// Never subscribe to the revocation feed, whatever RevocationFeedURL says (Deckhouse patch 018).
 +	RevocationFeedDisable bool `flag:"revocation-feed-disable" cfg:"revocation_feed_disable"`
++
++	// The file with the ServiceAccount token a process that serves a table of clients subscribes to
++	// the revocation feed with, once for all its clients (Deckhouse patch 018).
++	RevocationFeedTokenFile string `flag:"revocation-feed-token-file" cfg:"revocation_feed_token_file"`
 +
 +	// The file with the table of clients this process serves, each chosen by the host of the
 +	// request (Deckhouse patch 018). Empty: one client, set by the options of the process.
@@ -3217,11 +3309,12 @@ index d879ce10..f437f8ff 100644
  	// The token revocation endpoint (RFC 7009) of the provider, called on sign-out.
  	RevocationURL string `flag:"revocation-url" cfg:"revocation_url"`
  
-@@ -186,6 +193,8 @@ func NewFlagSet() *pflag.FlagSet {
+@@ -186,6 +197,9 @@ func NewFlagSet() *pflag.FlagSet {
  	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
  	flagSet.String("revocation-feed-url", "", "https URL of the revocation feed of the user-authn module of Deckhouse: sessions it revokes are refused. Disabled when empty")
  	flagSet.String("revocation-feed-ca-file", "", "path to the CA certificate the revocation feed is checked against instead of the system roots")
-+	flagSet.Bool("revocation-feed-disable", false, "never subscribe to the revocation feed, even with --revocation-feed-url. Required with --client-table: a feed per client is not supported")
++	flagSet.Bool("revocation-feed-disable", false, "never subscribe to the revocation feed, even with --revocation-feed-url")
++	flagSet.String("revocation-feed-token-file", "", "path to the ServiceAccount token a process with --client-table subscribes to the revocation feed with, once for all its clients; the file is read again for every connection")
 +	flagSet.String("client-table", "", "path to a JSON file with the table of clients this process serves, each with its own client ID, secrets and hosts; the client of a request is chosen by its host, and the file is read again when it changes. Empty: one client, set by the flags of the process")
  	flagSet.String("revocation-url", "", "token revocation endpoint (RFC 7009) of the provider: sign-out revokes the refresh token of the session there. Disabled when empty")
  	flagSet.Bool("restart-login-without-csrf-cookie", false, "start the sign-in again, once, for a callback whose CSRF cookie has expired or is gone, instead of the page of an expired sign-in. For a provider whose browser session signs the user in again without a password")

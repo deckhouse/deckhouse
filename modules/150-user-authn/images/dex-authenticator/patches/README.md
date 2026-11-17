@@ -225,6 +225,14 @@ The security events of `templates/security-events.yaml` are built from these lin
   so dex and the apiserver then get up to 5 refreshes a second times the number of DexAuthenticator pods in the
   cluster, each a few apiserver calls; a revocation reaches the sessions over the limit only once the feed is back. Readiness does not depend on the feed. Without
   `--revocation-feed-url` nothing changes.
+- **Feed of a process with a table of clients:** with a token file instead of a client (`Options.TokenFile`,
+  `--revocation-feed-token-file` of patch 018) the process subscribes once, with the token of its ServiceAccount as
+  a bearer token, read again for every connection since the kubelet replaces it. The feed then sends the
+  revocations of every client of the process in one stream, each key made with the salt of its client. The keys of
+  two clients never meet, so the process keeps them in one state, and a client reads it with the salt of its own
+  secret (`Feed.ForClient`): it finds its keys and none of another client. The freshness of the feed and the limit
+  of forced refreshes are those of the process. Without a token in the file the process makes no request and tries
+  again.
 - **Upstream:** not proposed.
 - **Depends on:** 002 (the stub session, checked by its grant).
 
@@ -531,9 +539,11 @@ The security events of `templates/security-events.yaml` are built from these lin
     writes about itself at start are left to the process without the table, and the warning about
     `--trusted-proxy-ip` is written once per process. No line carries a secret.
   - **Health checks:** the process answers `--ping-path` and `--ready-path` itself, for any host.
-  - **Revocation feed:** the subscription of patch 010 is one per client, and the feed allows 1000 of them. With
-    `--client-table` the proxy refuses to start with `--revocation-feed-url` unless `--revocation-feed-disable` is
-    set, so a process never runs without the feed unnoticed. Revoked sessions then last until their next refresh.
+  - **Revocation feed:** a subscription per client would be hundreds of streams, and the feed allows 1000. With
+    `--client-table` the process subscribes once, with `--revocation-feed-token-file` (patch 010), and every client
+    reads that one feed with its own secret. The proxy refuses to start with `--revocation-feed-url` and neither
+    the token file nor `--revocation-feed-disable`, so a process never runs without the feed unnoticed; without the
+    feed revoked sessions last until their next refresh.
   - **Not supported with the table:** `--authenticated-emails-file`, `--htpasswd-file`, the `cookie` session store.
   - **Metrics:** `oauth2_proxy_dispatch_request_duration_seconds` by `outcome` (`hit`, `unknown`), whose count is
     the number of requests; `oauth2_proxy_client_table_clients`, `oauth2_proxy_client_table_hosts`,

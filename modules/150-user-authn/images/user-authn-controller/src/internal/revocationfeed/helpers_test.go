@@ -141,9 +141,14 @@ func newTestFeed(t *testing.T, limits Limits, objs ...client.Object) *testFeed {
 			s.clients.set(u)
 		}
 	}
+	return &testFeed{server: s, reader: reader, http: newHTTPServer(t, s)}
+}
+
+func newHTTPServer(t *testing.T, s *Server) *httptest.Server {
+	t.Helper()
 	srv := httptest.NewServer(s.Handler())
 	t.Cleanup(srv.Close)
-	return &testFeed{server: s, reader: reader, http: srv}
+	return srv
 }
 
 // add creates a Revocation and hands it to the feed, as the informer does.

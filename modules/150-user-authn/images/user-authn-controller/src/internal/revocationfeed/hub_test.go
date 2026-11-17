@@ -70,11 +70,11 @@ func TestHub_FiltersByClient(t *testing.T) {
 	t.Parallel()
 
 	h := newTestHub(t, nil)
-	console, err := h.subscribe(feedClient{id: "console"}, nil, time.Now())
+	console, err := h.subscribe(feedClient{id: "console"}, "", nil, time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
-	grafana, err := h.subscribe(feedClient{id: "grafana"}, nil, time.Now())
+	grafana, err := h.subscribe(feedClient{id: "grafana"}, "", nil, time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +87,7 @@ func TestHub_FiltersByClient(t *testing.T) {
 	if n := len(grafana.stream.events); n != 1 {
 		t.Errorf("grafana got %d events, want 1", n)
 	}
-	if rec := <-grafana.stream.events; rec.seq != 2 {
+	if rec := (<-grafana.stream.events).rec; rec.seq != 2 {
 		t.Errorf("grafana got seq %d, want 2", rec.seq)
 	}
 }
@@ -116,7 +116,7 @@ func TestHub_Resume(t *testing.T) {
 		{name: "the latest", since: &cursor{epoch: h.epoch, seq: 5}, resumed: true},
 	}
 	for _, tt := range tests {
-		sub, err := h.subscribe(feedClient{id: "console"}, tt.since, time.Now())
+		sub, err := h.subscribe(feedClient{id: "console"}, "", tt.since, time.Now())
 		if err != nil {
 			t.Fatalf("%s: %v", tt.name, err)
 		}
@@ -143,11 +143,11 @@ func TestHub_SlowConsumer(t *testing.T) {
 	t.Parallel()
 
 	h := newTestHub(t, func(l *Limits) { l.Queue = 2 })
-	slow, err := h.subscribe(feedClient{id: "console"}, nil, time.Now())
+	slow, err := h.subscribe(feedClient{id: "console"}, "", nil, time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
-	fast, err := h.subscribe(feedClient{id: "console"}, nil, time.Now())
+	fast, err := h.subscribe(feedClient{id: "console"}, "", nil, time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,23 +181,23 @@ func TestHub_Limits(t *testing.T) {
 	})
 	var subs []subscription
 	for range 2 {
-		sub, err := h.subscribe(feedClient{id: "console"}, nil, time.Now())
+		sub, err := h.subscribe(feedClient{id: "console"}, "", nil, time.Now())
 		if err != nil {
 			t.Fatal(err)
 		}
 		subs = append(subs, sub)
 	}
-	if _, err := h.subscribe(feedClient{id: "console"}, nil, time.Now()); !errors.Is(err, errTooManyClientStreams) {
+	if _, err := h.subscribe(feedClient{id: "console"}, "", nil, time.Now()); !errors.Is(err, errTooManyClientStreams) {
 		t.Errorf("third console stream: err = %v", err)
 	}
-	if _, err := h.subscribe(feedClient{id: "grafana"}, nil, time.Now()); err != nil {
+	if _, err := h.subscribe(feedClient{id: "grafana"}, "", nil, time.Now()); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := h.subscribe(feedClient{id: "argocd"}, nil, time.Now()); !errors.Is(err, errTooManyStreams) {
+	if _, err := h.subscribe(feedClient{id: "argocd"}, "", nil, time.Now()); !errors.Is(err, errTooManyStreams) {
 		t.Errorf("fourth stream: err = %v", err)
 	}
 	h.unsubscribe(subs[0].stream)
-	if _, err := h.subscribe(feedClient{id: "console"}, nil, time.Now()); err != nil {
+	if _, err := h.subscribe(feedClient{id: "console"}, "", nil, time.Now()); err != nil {
 		t.Errorf("after a stream ended: %v", err)
 	}
 }
@@ -206,7 +206,7 @@ func TestHub_IdleCursor(t *testing.T) {
 	t.Parallel()
 
 	h := newTestHub(t, nil)
-	sub, err := h.subscribe(feedClient{id: "console"}, nil, time.Now())
+	sub, err := h.subscribe(feedClient{id: "console"}, "", nil, time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -236,7 +236,7 @@ func TestHub_Concurrent(t *testing.T) {
 	for range 4 {
 		wg.Go(func() {
 			for range 50 {
-				sub, err := h.subscribe(feedClient{id: "console"}, &cursor{epoch: h.epoch, seq: 1}, time.Now())
+				sub, err := h.subscribe(feedClient{id: "console"}, "", &cursor{epoch: h.epoch, seq: 1}, time.Now())
 				if err != nil {
 					continue
 				}

@@ -2,3 +2,5 @@ dirs:
 - /opt/dex-authenticator/tls
 - /opt/dex-authenticator/dex-ca
 - /opt/dex-authenticator/revocation-feed-ca
+- /opt/dex-authenticator/client-table
+- /opt/dex-authenticator/revocation-feed-token

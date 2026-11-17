@@ -221,6 +221,24 @@ properties:
         type: object
         default: {}
         additionalProperties: true
+      sharedDexAuthenticator:
+        type: object
+        default: {}
+        description: |
+          The two shared dex-authenticator instances of the module. The module does not render them until
+          DexAuthenticator objects are switched to them: nothing in a cluster sets `enabled`.
+        properties:
+          enabled:
+            type: boolean
+            default: false
+          redisPasswords:
+            type: object
+            default: {}
+            additionalProperties:
+              type: string
+            x-examples:
+            - dex-authenticator-system: plainstring
+              dex-authenticator: plainstring
       dexAuthenticatorRedisURL:
         type: string
         default: "redis://127.0.0.1/"

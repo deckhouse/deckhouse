@@ -469,6 +469,153 @@ index 00000000..75d6cf8e
 +		})
 +	}
 +}
+diff --git a/pkg/deckhouse/revocation/deckhouse_instance_test.go b/pkg/deckhouse/revocation/deckhouse_instance_test.go
+new file mode 100644
+index 00000000..8a6850b8
+--- /dev/null
++++ b/pkg/deckhouse/revocation/deckhouse_instance_test.go
+@@ -0,0 +1,141 @@
++package revocation
++
++import (
++	"context"
++	"fmt"
++	"net/http"
++	"os"
++	"path/filepath"
++	"testing"
++	"time"
++
++	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++const otherClientSecret = "the-secret-of-another-client"
++
++// instanceSubscriber returns the feed of a process that serves a table of clients: it subscribes
++// with the token of tokenFile and has no client of its own.
++func (f *fakeFeed) instanceSubscriber(t *testing.T, tokenFile string) *Feed {
++	t.Helper()
++
++	feed, err := New(Options{
++		URL:       f.server.URL + "/revocations",
++		CAFile:    f.caFile,
++		TokenFile: tokenFile,
++	})
++	require.NoError(t, err)
++	return feed
++}
++
++func TestNewInstanceFeed(t *testing.T) {
++	t.Parallel()
++
++	_, err := New(Options{URL: "https://feed.example.com/revocations", TokenFile: "/token", ClientID: "app", ClientSecret: "secret"})
++	require.ErrorContains(t, err, "either the token file or the client")
++
++	feed, err := New(Options{URL: "https://feed.example.com/revocations", TokenFile: "/token"})
++	require.NoError(t, err)
++	assert.Empty(t, feed.salt, "a feed of an instance has no client of its own")
++}
++
++// The feed of an instance presents the token of its file, read again for every connection: the
++// kubelet replaces a projected token well before it expires.
++func TestInstanceFeedPresentsTheTokenOfItsFile(t *testing.T) {
++	captureLogs(t)
++	tokenFile := filepath.Join(t.TempDir(), "token")
++	require.NoError(t, os.WriteFile(tokenFile, []byte("first-token\n"), 0o600))
++	server := newFakeFeed(t, func(w http.ResponseWriter, _ *http.Request, _ int) {
++		startStream(w)
++	})
++	feed := server.instanceSubscriber(t, tokenFile)
++
++	feed.subscribe(context.Background())
++	require.NoError(t, os.WriteFile(tokenFile, []byte("second-token"), 0o600))
++	feed.subscribe(context.Background())
++
++	assert.Equal(t, "Bearer first-token", server.header(0).Get("Authorization"))
++	assert.Equal(t, "Bearer second-token", server.header(1).Get("Authorization"))
++}
++
++// Without a token to present, the feed makes no request and tries again later.
++func TestInstanceFeedWithoutAToken(t *testing.T) {
++	output, errOutput := captureLogs(t)
++	server := newFakeFeed(t, func(w http.ResponseWriter, _ *http.Request, _ int) {
++		startStream(w)
++	})
++
++	for name, content := range map[string]*string{"missing file": nil, "empty file": new(string)} {
++		tokenFile := filepath.Join(t.TempDir(), "token")
++		if content != nil {
++			require.NoError(t, os.WriteFile(tokenFile, []byte(*content), 0o600))
++		}
++		feed := server.instanceSubscriber(t, tokenFile)
++
++		wait := feed.subscribe(context.Background())
++
++		assert.GreaterOrEqual(t, wait, time.Duration(0), name)
++		assert.Zero(t, server.connections(), name)
++	}
++	logs := output.String() + errOutput.String()
++	assert.Contains(t, logs, "token of the service account")
++	assert.NotContains(t, logs, "Bearer")
++}
++
++// One stream carries the keys of every client of the instance, each made with the salt of its
++// client. A client finds its own keys with the salt of its secret and never those of another.
++func TestClientFeedFindsOnlyTheKeysOfItsClient(t *testing.T) {
++	captureLogs(t)
++	exp := time.Now().Add(time.Hour).Unix()
++	otherKey := func(t keyType, value string) string { return key(salt(otherClientSecret), t, value) }
++	tokenFile := filepath.Join(t.TempDir(), "token")
++	require.NoError(t, os.WriteFile(tokenFile, []byte("token"), 0o600))
++	server := newFakeFeed(t, func(w http.ResponseWriter, _ *http.Request, _ int) {
++		startStream(w)
++		// The pair of jane is revoked for the first client, her browser session for the other.
++		writeEvent(w, "snapshot", "e.7", fmt.Sprintf(`{"v":1,"part":0,"last":true,"retention":4200,"pairs":[{"k":%q,"g":3,"exp":%d}],"sessions":[{"k":%q,"exp":%d}],"grants":[]}`,
++			testKey(keyPair, testSubjectJane), exp, otherKey(keySession, "ended-session"), exp))
++		writeEvent(w, "revocation", "e.8", fmt.Sprintf(`{"v":1,"type":"grant","k":%q,"exp":%d,"at":%d}`,
++			otherKey(keyGrant, "revoked-grant"), exp, time.Now().Unix()))
++	})
++	feed := server.instanceSubscriber(t, tokenFile)
++
++	feed.subscribe(context.Background())
++
++	first, other := feed.ForClient(vectorSecret), feed.ForClient(otherClientSecret)
++	assert.Equal(t, ReasonPair, first.Revoked(testSession(2, "ended-session", "revoked-grant")),
++		"the first client sees its pair and not the session and the grant of the other")
++	assert.Empty(t, first.Revoked(testSession(3, "ended-session", "revoked-grant")))
++	assert.Equal(t, ReasonSession, other.Revoked(testSession(2, "ended-session", "grant")))
++	assert.Equal(t, ReasonGrant, other.Revoked(testSession(2, "session", "revoked-grant")))
++	assert.Empty(t, other.Revoked(testSession(2, "session", "grant")), "the pair of the first client is not revoked for the other")
++
++	// The feed itself has no client: it revokes nothing.
++	assert.Empty(t, feed.Revoked(testSession(2, "ended-session", "revoked-grant")))
++}
++
++// The clients of a process share the freshness of its feed and one limit of forced refreshes.
++func TestClientFeedSharesTheStateOfTheProcess(t *testing.T) {
++	captureLogs(t)
++	feed, err := New(Options{URL: "https://feed.example.com/revocations", TokenFile: "/token"})
++	require.NoError(t, err)
++	first, other := feed.ForClient(vectorSecret), feed.ForClient(otherClientSecret)
++
++	created := time.Now().Add(-time.Hour)
++	session := &sessionsapi.SessionState{CreatedAt: &created, RefreshToken: "refresh-token"}
++	assert.True(t, first.NeedsForcedRefresh(session), "the feed has no snapshot yet")
++	assert.True(t, other.NeedsForcedRefresh(session))
++
++	allowed := 0
++	for range 2 * forcedRefreshBurst {
++		if first.AllowForcedRefresh() {
++			allowed++
++		}
++		if other.AllowForcedRefresh() {
++			allowed++
++		}
++	}
++	assert.Equal(t, forcedRefreshBurst, allowed, "one limit for all the clients of the process")
++}
 diff --git a/pkg/deckhouse/revocation/events.go b/pkg/deckhouse/revocation/events.go
 new file mode 100644
 index 00000000..5cf4b1b6
@@ -795,10 +942,10 @@ index 00000000..875ee73f
 +}
 diff --git a/pkg/deckhouse/revocation/feed.go b/pkg/deckhouse/revocation/feed.go
 new file mode 100644
-index 00000000..1feb24e2
+index 00000000..e0fdb095
 --- /dev/null
 +++ b/pkg/deckhouse/revocation/feed.go
-@@ -0,0 +1,391 @@
+@@ -0,0 +1,469 @@
 +// Package revocation subscribes the proxy to the revocation feed of the user-authn module of Deckhouse
 +// and refuses the sessions the feed revokes (Deckhouse patch 010).
 +//
@@ -809,6 +956,7 @@ index 00000000..1feb24e2
 +package revocation
 +
 +import (
++	"bytes"
 +	"context"
 +	"crypto/tls"
 +	"encoding/base64"
@@ -820,6 +968,7 @@ index 00000000..1feb24e2
 +	"net"
 +	"net/http"
 +	"net/url"
++	"os"
 +	"strconv"
 +	"time"
 +
@@ -864,6 +1013,10 @@ index 00000000..1feb24e2
 +	// client with them, and the secret salts the keys of the feed.
 +	ClientID     string
 +	ClientSecret string
++	// TokenFile is the file with the ServiceAccount token of a process that serves a table of
++	// clients (Deckhouse patch 018). The feed authenticates the process with it instead of a client,
++	// and sends the revocations of every client of the process; ForClient reads them for one.
++	TokenFile string
 +}
 +
 +// Feed is the subscription of the process to the revocation feed and the state it received. Run keeps
@@ -871,11 +1024,14 @@ index 00000000..1feb24e2
 +type Feed struct {
 +	url           string
 +	authorization string
-+	client        *http.Client
-+	salt          []byte
-+	state         *state
-+	limiter       *limiter
-+	now           func() time.Time
++	// tokenFile replaces authorization for a process that serves a table of clients: the token is
++	// read for every connection, as the kubelet replaces it.
++	tokenFile string
++	client    *http.Client
++	salt      []byte
++	state     *state
++	limiter   *limiter
++	now       func() time.Time
 +
 +	// The fields below belong to the goroutine of Run.
 +	cursor       string
@@ -891,6 +1047,9 @@ index 00000000..1feb24e2
 +	feedURL, err := url.Parse(opts.URL)
 +	if err != nil {
 +		return nil, fmt.Errorf("parsing the revocation feed url: %w", err)
++	}
++	if opts.TokenFile != "" && (opts.ClientID != "" || opts.ClientSecret != "") {
++		return nil, errors.New("the revocation feed takes either the token file or the client, not both")
 +	}
 +	if feedURL.Scheme != "https" || feedURL.Host == "" {
 +		return nil, fmt.Errorf("the revocation feed url %q is not an absolute https url", opts.URL)
@@ -916,15 +1075,67 @@ index 00000000..1feb24e2
 +		ResponseHeaderTimeout: 10 * time.Second,
 +	}
 +
-+	return &Feed{
-+		url:           feedURL.String(),
-+		authorization: basicAuthorization(opts.ClientID, opts.ClientSecret),
-+		client:        &http.Client{Transport: transport},
-+		salt:          salt(opts.ClientSecret),
-+		state:         newState(),
-+		limiter:       newLimiter(forcedRefreshRate, forcedRefreshBurst),
-+		now:           time.Now,
-+	}, nil
++	feed := &Feed{
++		url:       feedURL.String(),
++		client:    &http.Client{Transport: transport},
++		tokenFile: opts.TokenFile,
++		state:     newState(),
++		limiter:   newLimiter(forcedRefreshRate, forcedRefreshBurst),
++		now:       time.Now,
++	}
++	if opts.TokenFile == "" {
++		feed.authorization = basicAuthorization(opts.ClientID, opts.ClientSecret)
++		feed.salt = salt(opts.ClientSecret)
++	}
++
++	return feed, nil
++}
++
++// ClientFeed is the feed of a process that serves a table of clients as one of the clients reads
++// it (Deckhouse patch 018). The stream of the process carries the keys of every client, each made
++// with the salt of its client, so a client finds its own with the salt of its secret and no key
++// of another. The freshness of the feed and the limit of forced refreshes are those of the process.
++type ClientFeed struct {
++	feed *Feed
++	salt []byte
++}
++
++// ForClient returns the feed as the client with clientSecret reads it.
++func (f *Feed) ForClient(clientSecret string) *ClientFeed {
++	return &ClientFeed{feed: f, salt: salt(clientSecret)}
++}
++
++// Revoked returns the reason the feed revoked the tokens of a session of the client for, or an
++// empty Reason.
++func (c *ClientFeed) Revoked(session *sessionsapi.SessionState) Reason {
++	return c.feed.revoked(c.salt, session)
++}
++
++// NeedsForcedRefresh reports whether a session has to be refreshed through the provider because the
++// feed of the process is not fresh.
++func (c *ClientFeed) NeedsForcedRefresh(session *sessionsapi.SessionState) bool {
++	return c.feed.NeedsForcedRefresh(session)
++}
++
++// AllowForcedRefresh takes a forced refresh from the limit of the process.
++func (c *ClientFeed) AllowForcedRefresh() bool {
++	return c.feed.AllowForcedRefresh()
++}
++
++// authorize returns the Authorization header of a connection.
++func (f *Feed) authorize() (string, error) {
++	if f.tokenFile == "" {
++		return f.authorization, nil
++	}
++	token, err := os.ReadFile(f.tokenFile)
++	if err != nil {
++		return "", fmt.Errorf("reading the token of the service account: %w", err)
++	}
++	if len(bytes.TrimSpace(token)) == 0 {
++		return "", errors.New("the token file of the service account is empty")
++	}
++
++	return "Bearer " + string(bytes.TrimSpace(token)), nil
 +}
 +
 +// Status returns the status of the state of the feed.
@@ -936,12 +1147,21 @@ index 00000000..1feb24e2
 +// last state received counts whatever the status. A session without an ID token, such as the stub of a
 +// session restored from the cookie, is checked by its grant only.
 +func (f *Feed) Revoked(session *sessionsapi.SessionState) Reason {
++	return f.revoked(f.salt, session)
++}
++
++// revoked looks the keys of a session up with the salt of its client. Without a salt the feed has
++// no client, and nothing is revoked for it.
++func (f *Feed) revoked(salt []byte, session *sessionsapi.SessionState) Reason {
++	if len(salt) == 0 {
++		return ""
++	}
 +	c, ok := idTokenClaims(session.IDToken)
 +	grant := ""
 +	if session.RefreshToken != "" {
 +		grant = refreshID(session.RefreshToken)
 +	}
-+	return f.state.revoked(f.salt, c, ok, grant)
++	return f.state.revoked(salt, c, ok, grant)
 +}
 +
 +// NeedsForcedRefresh reports whether a session has to be refreshed through the provider because the
@@ -980,9 +1200,14 @@ index 00000000..1feb24e2
 +		f.logErrorf("building the request: %v", err)
 +		return f.backoff()
 +	}
++	authorization, err := f.authorize()
++	if err != nil {
++		f.logErrorf("%v", err)
++		return f.backoff()
++	}
 +	req.Header.Set("Accept", "text/event-stream")
 +	req.Header.Set("Cache-Control", "no-cache")
-+	req.Header.Set("Authorization", f.authorization)
++	req.Header.Set("Authorization", authorization)
 +	req.Header.Set("User-Agent", "oauth2-proxy/"+version.VERSION)
 +	if f.cursor != "" {
 +		req.Header.Set("Last-Event-ID", f.cursor)
@@ -2955,10 +3180,10 @@ index 00000000..375f80a4
 +	}
 +}
 diff --git a/pkg/middleware/stored_session.go b/pkg/middleware/stored_session.go
-index 0e645910..981f954e 100644
+index b4da5555..0b639450 100644
 --- a/pkg/middleware/stored_session.go
 +++ b/pkg/middleware/stored_session.go
-@@ -86,6 +86,10 @@ type StoredSessionLoaderOptions struct {
+@@ -89,6 +89,10 @@ type StoredSessionLoaderOptions struct {
  	// If the sesssion is older than `RefreshPeriod` but the provider doesn't
  	// refresh it, we must re-validate using this validation.
  	ValidateSession func(context.Context, *sessionsapi.SessionState) bool
@@ -2969,7 +3194,7 @@ index 0e645910..981f954e 100644
  }
  
  // NewStoredSessionLoader creates a new storedSessionLoader which loads
-@@ -102,6 +106,7 @@ func newStoredSessionLoader(opts *StoredSessionLoaderOptions) *storedSessionLoad
+@@ -105,6 +109,7 @@ func newStoredSessionLoader(opts *StoredSessionLoaderOptions) *storedSessionLoad
  		refreshPeriod:    opts.RefreshPeriod,
  		sessionRefresher: opts.RefreshSession,
  		sessionValidator: opts.ValidateSession,
@@ -2977,7 +3202,7 @@ index 0e645910..981f954e 100644
  		unavailable:      newUnavailableSince(),
  		refreshTimeout:   sessionRefreshTimeout,
  	}
-@@ -114,6 +119,7 @@ type storedSessionLoader struct {
+@@ -117,6 +122,7 @@ type storedSessionLoader struct {
  	refreshPeriod    time.Duration
  	sessionRefresher func(context.Context, *sessionsapi.SessionState) (bool, error)
  	sessionValidator func(context.Context, *sessionsapi.SessionState) bool
@@ -2985,7 +3210,7 @@ index 0e645910..981f954e 100644
  	// unavailable bounds how long a session whose refresh the provider does not answer is kept
  	// (Deckhouse patch 002).
  	unavailable *unavailableSince
-@@ -145,7 +151,9 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
+@@ -151,7 +157,9 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
  		case err != nil && !errors.Is(err, http.ErrNoCookie):
  			// In the case when there was an error loading the session,
  			// we should clear the session
@@ -2996,7 +3221,7 @@ index 0e645910..981f954e 100644
  			err = s.store.Clear(rw, req)
  			if err != nil {
  				logger.Errorf("Error removing session: %v", err)
-@@ -167,11 +175,22 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
+@@ -173,11 +181,22 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
  		return nil, err
  	}
  
@@ -3019,7 +3244,7 @@ index 0e645910..981f954e 100644
  	return session, nil
  }
  
-@@ -179,7 +198,10 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
+@@ -185,7 +204,10 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
  // is older than the refresh period.
  // Success or fail, we will then validate the session.
  func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) error {
@@ -3031,7 +3256,7 @@ index 0e645910..981f954e 100644
  		// Refresh is disabled or the session is not old enough, do nothing
  		return nil
  	}
-@@ -233,7 +255,7 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
+@@ -245,7 +267,7 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
  	// Loading from the session store creates a new lock in the session.
  	session.Lock = lock
  

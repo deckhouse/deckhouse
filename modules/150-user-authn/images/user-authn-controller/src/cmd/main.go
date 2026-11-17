@@ -254,6 +254,8 @@ func setupRuntimeManager() (ctrl.Manager, error) {
 			TLSDir:    os.Getenv(revocationFeedTLSDirEnv),
 			Retention: retention,
 			Limits:    revocationfeed.DefaultLimits(),
+			// The shared dex-authenticator instances subscribe with the token of their ServiceAccount.
+			TokenReview: revocationfeed.NewTokenReviewer(runtimeManager.GetClient()),
 		}
 		if err = revocationfeed.Register(context.Background(), runtimeManager, feed); err != nil {
 			return nil, fmt.Errorf("register revocation feed: %w", err)
