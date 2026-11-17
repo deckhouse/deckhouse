@@ -26,6 +26,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/disk"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/core"
@@ -46,13 +47,7 @@ import (
 //
 //	Build → Start → DiskCleanup → Boot → (Resume, without EnableModuleV2) → Apply*/Remove*/... → Stop
 
-const (
-	defaultNamespace = "default"
-
-	// applicationMaintenanceMetric is 1 while an application is in maintenance; the
-	// ApplicationIsInMaintenanceMode alert fires on it.
-	applicationMaintenanceMetric = "deckhouse_application_maintenance"
-)
+const defaultNamespace = "default"
 
 // Application is an Application resource as the controller hands it to the engine.
 type Application struct {
@@ -473,16 +468,16 @@ func (e *Engine) publishMaintenance() {
 func (e *Engine) setMaintenanceMetric(name string, state nelm.MaintenanceState) {
 	if state != nelm.NoResourceReconciliation {
 		// Expire only this feature's gauge in the group, not every collector's.
-		e.metrics.Grouped().ExpireGroupMetricByName(name, applicationMaintenanceMetric)
+		e.metrics.Grouped().ExpireGroupMetricByName(name, metrics.ApplicationMaintenance)
 		return
 	}
 
 	// name is "<namespace>.<instance>"; a namespace never contains a dot.
 	namespace, instance, _ := strings.Cut(name, ".")
-	e.metrics.Grouped().GaugeSet(name, applicationMaintenanceMetric, 1, map[string]string{
-		"namespace": namespace,
-		"name":      instance,
-		"state":     string(state),
+	e.metrics.Grouped().GaugeSet(name, metrics.ApplicationMaintenance, 1, map[string]string{
+		metrics.LabelApplicationNamespace: namespace,
+		metrics.LabelName:                 instance,
+		metrics.LabelState:                string(state),
 	})
 }
 

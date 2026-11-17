@@ -108,7 +108,7 @@ const (
 	// LabelLane is the label key for the hook lane of a package.
 	LabelLane = "lane"
 
-	// LabelState is the label key for the state of a hook lane.
+	// LabelState is the label key for the state.
 	LabelState = "state"
 
 	// LabelQueue is the label key for the task queue name.
@@ -131,8 +131,10 @@ const (
 
 	// ============================================================================
 	// Application Label Keys
-	// Used in the ApplicationAutoscalerMissing and ApplicationAutoscalerPinned metrics.
 	// ============================================================================
+
+	// LabelApplicationNamespace is the namespace of an Application resource.
+	LabelApplicationNamespace = "application_namespace"
 
 	// LabelWorkload is the label key for the name of an application workload.
 	LabelWorkload = "workload"

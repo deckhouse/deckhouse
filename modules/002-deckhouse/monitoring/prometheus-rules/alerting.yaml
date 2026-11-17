@@ -248,34 +248,36 @@
         ```
 
   - alert: ApplicationIsInMaintenanceMode
-    expr: sum(deckhouse_application_maintenance{state="NoResourceReconciliation"}) by (namespace, name) > 0
+    expr: sum(deckhouse_application_maintenance{state="NoResourceReconciliation"}) by (application_namespace, name) > 0
     labels:
+      namespace: "{{ $labels.application_namespace }}"
       severity_level: "6"
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
       summary: |
-        Application `{{ $labels.name }}` in namespace `{{ $labels.namespace }}` is running in maintenance mode.
+        Application `{{ $labels.name }}` in namespace `{{ $labels.application_namespace }}` is running in maintenance mode.
       description: |
-        Application `{{ $labels.name }}` in namespace `{{ $labels.namespace }}` is running in maintenance mode. In this mode, its state is not reconciled, which prevents configuration or hook changes from being applied automatically.
+        Application `{{ $labels.name }}` in namespace `{{ $labels.application_namespace }}` is running in maintenance mode. In this mode, its state is not reconciled, which prevents configuration or hook changes from being applied automatically.
 
         To switch the application back to normal mode, edit the corresponding Application resource with the following command:
 
         ```bash
-        d8 k patch application {{ $labels.name }} -n {{ $labels.namespace }} --type=json -p='[{"op": "remove", "path": "/spec/maintenance"}]'
+        d8 k patch application {{ $labels.name }} -n {{ $labels.application_namespace }} --type=json -p='[{"op": "remove", "path": "/spec/maintenance"}]'
         ```
 
   - alert: ApplicationHorizontalPodAutoscalerMissing
-    expr: max by (namespace, name, kind, workload) (deckhouse_application_autoscaler_missing{autoscaler="HorizontalPodAutoscaler"}) > 0
+    expr: max by (application_namespace, name, kind, workload) (deckhouse_application_autoscaler_missing{autoscaler="HorizontalPodAutoscaler"}) > 0
     labels:
+      namespace: "{{ $labels.application_namespace }}"
       severity_level: "5"
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
       summary: |
-        Application `{{ $labels.name }}` in namespace `{{ $labels.namespace }}` has no HorizontalPodAutoscaler for {{ $labels.kind }} `{{ $labels.workload }}`.
+        Application `{{ $labels.name }}` in namespace `{{ $labels.application_namespace }}` has no HorizontalPodAutoscaler for {{ $labels.kind }} `{{ $labels.workload }}`.
       description: |
-        The `spec.resourceRequests` parameter of Application `{{ $labels.name }}` in namespace `{{ $labels.namespace }}` sets a replicas range (`minReplicas` and `maxReplicas`) for {{ $labels.kind }} `{{ $labels.workload }}`, but the application deploys no HorizontalPodAutoscaler for this workload. Deckhouse Platform runs the workload with `minReplicas` replicas instead.
+        The `spec.resourceRequests` parameter of Application `{{ $labels.name }}` in namespace `{{ $labels.application_namespace }}` sets a replicas range (`minReplicas` and `maxReplicas`) for {{ $labels.kind }} `{{ $labels.workload }}`, but the application deploys no HorizontalPodAutoscaler for this workload. Deckhouse Platform runs the workload with `minReplicas` replicas instead.
 
         To fix the issue, do one of the following:
 
@@ -285,20 +287,21 @@
         To view the resource settings of the application, run the following command:
 
         ```bash
-        d8 k get application {{ $labels.name }} -n {{ $labels.namespace }} -o jsonpath='{.spec.resourceRequests}'
+        d8 k get application {{ $labels.name }} -n {{ $labels.application_namespace }} -o jsonpath='{.spec.resourceRequests}'
         ```
 
   - alert: ApplicationVerticalPodAutoscalerMissing
-    expr: max by (namespace, name, kind, workload, container) (deckhouse_application_autoscaler_missing{autoscaler="VerticalPodAutoscaler"}) > 0
+    expr: max by (application_namespace, name, kind, workload, container) (deckhouse_application_autoscaler_missing{autoscaler="VerticalPodAutoscaler"}) > 0
     labels:
+      namespace: "{{ $labels.application_namespace }}"
       severity_level: "5"
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
       summary: |
-        VerticalPodAutoscaler does not manage at least one resource range of container `{{ $labels.container }}` of {{ $labels.kind }} `{{ $labels.workload }}` of Application `{{ $labels.name }}` in namespace `{{ $labels.namespace }}`.
+        VerticalPodAutoscaler does not manage at least one resource range of container `{{ $labels.container }}` of {{ $labels.kind }} `{{ $labels.workload }}` of Application `{{ $labels.name }}` in namespace `{{ $labels.application_namespace }}`.
       description: |
-        The `spec.resourceRequests` parameter of Application `{{ $labels.name }}` in namespace `{{ $labels.namespace }}` sets a resource range (`min` and `max`) for container `{{ $labels.container }}` of {{ $labels.kind }} `{{ $labels.workload }}`, but at least one resource in the range is not managed by a VerticalPodAutoscaler of the application. Deckhouse Platform applies the range for each such resource as fixed values instead: the container gets `min` as the request and `max` as the limit.
+        The `spec.resourceRequests` parameter of Application `{{ $labels.name }}` in namespace `{{ $labels.application_namespace }}` sets a resource range (`min` and `max`) for container `{{ $labels.container }}` of {{ $labels.kind }} `{{ $labels.workload }}`, but at least one resource in the range is not managed by a VerticalPodAutoscaler of the application. Deckhouse Platform applies the range for each such resource as fixed values instead: the container gets `min` as the request and `max` as the limit.
 
         To fix the issue, do one of the following:
 
@@ -309,47 +312,49 @@
         To view the resource settings of the application, run the following command:
 
         ```bash
-        d8 k get application {{ $labels.name }} -n {{ $labels.namespace }} -o jsonpath='{.spec.resourceRequests}'
+        d8 k get application {{ $labels.name }} -n {{ $labels.application_namespace }} -o jsonpath='{.spec.resourceRequests}'
         ```
 
   - alert: ApplicationHorizontalPodAutoscalerPinned
-    expr: max by (namespace, name, kind, workload) (deckhouse_application_autoscaler_pinned{autoscaler="HorizontalPodAutoscaler"}) > 0
+    expr: max by (application_namespace, name, kind, workload) (deckhouse_application_autoscaler_pinned{autoscaler="HorizontalPodAutoscaler"}) > 0
     labels:
+      namespace: "{{ $labels.application_namespace }}"
       severity_level: "5"
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
       summary: |
-        HorizontalPodAutoscaler of {{ $labels.kind }} `{{ $labels.workload }}` of Application `{{ $labels.name }}` in namespace `{{ $labels.namespace }}` doesn't scale the workload.
+        HorizontalPodAutoscaler of {{ $labels.kind }} `{{ $labels.workload }}` of Application `{{ $labels.name }}` in namespace `{{ $labels.application_namespace }}` doesn't scale the workload.
       description: |
-        The `spec.resourceRequests` parameter of Application `{{ $labels.name }}` in namespace `{{ $labels.namespace }}` sets a fixed number of replicas (`replicas`) for {{ $labels.kind }} `{{ $labels.workload }}`, which a HorizontalPodAutoscaler of the application scales. Deckhouse Platform sets both bounds of the HorizontalPodAutoscaler to this number, so it doesn't scale the workload.
+        The `spec.resourceRequests` parameter of Application `{{ $labels.name }}` in namespace `{{ $labels.application_namespace }}` sets a fixed number of replicas (`replicas`) for {{ $labels.kind }} `{{ $labels.workload }}`, which a HorizontalPodAutoscaler of the application scales. Deckhouse Platform sets both bounds of the HorizontalPodAutoscaler to this number, so it doesn't scale the workload.
 
         To let HorizontalPodAutoscaler scale the workload, replace `replicas` with a range: set `minReplicas` and `maxReplicas`.
 
         To view the resource settings of the application, run the following command:
 
         ```bash
-        d8 k get application {{ $labels.name }} -n {{ $labels.namespace }} -o jsonpath='{.spec.resourceRequests}'
+        d8 k get application {{ $labels.name }} -n {{ $labels.application_namespace }} -o jsonpath='{.spec.resourceRequests}'
         ```
 
   - alert: ApplicationVerticalPodAutoscalerPinned
-    expr: max by (namespace, name, kind, workload, container) (deckhouse_application_autoscaler_pinned{autoscaler="VerticalPodAutoscaler"}) > 0
+    expr: max by (application_namespace, name, kind, workload, container) (deckhouse_application_autoscaler_pinned{autoscaler="VerticalPodAutoscaler"}) > 0
     labels:
+      namespace: "{{ $labels.application_namespace }}"
       severity_level: "5"
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
       summary: |
-        Fixed resource settings limit VerticalPodAutoscaler for container `{{ $labels.container }}` of {{ $labels.kind }} `{{ $labels.workload }}` of Application `{{ $labels.name }}` in namespace `{{ $labels.namespace }}`.
+        Fixed resource settings limit VerticalPodAutoscaler for container `{{ $labels.container }}` of {{ $labels.kind }} `{{ $labels.workload }}` of Application `{{ $labels.name }}` in namespace `{{ $labels.application_namespace }}`.
       description: |
-        The `spec.resourceRequests` parameter of Application `{{ $labels.name }}` in namespace `{{ $labels.namespace }}` sets fixed `cpu` or `memory` requests or limits for container `{{ $labels.container }}` of {{ $labels.kind }} `{{ $labels.workload }}`. If a request is set for a resource managed by VerticalPodAutoscaler, Deckhouse Platform sets both VPA bounds to that request. If a limit is set, Deckhouse Platform sets `controlledValues: RequestsOnly`: VPA can change requests that are not fixed by the Application, but does not change limits.
+        The `spec.resourceRequests` parameter of Application `{{ $labels.name }}` in namespace `{{ $labels.application_namespace }}` sets fixed `cpu` or `memory` requests or limits for container `{{ $labels.container }}` of {{ $labels.kind }} `{{ $labels.workload }}`. If a request is set for a resource managed by VerticalPodAutoscaler, Deckhouse Platform sets both VPA bounds to that request. If a limit is set, Deckhouse Platform sets `controlledValues: RequestsOnly`: VPA can change requests that are not fixed by the Application, but does not change limits.
 
         To let VerticalPodAutoscaler manage the requests within a range, replace the fixed `cpu` and `memory` requests and limits with `min` and `max`.
 
         To view the resource settings of the application, run the following command:
 
         ```bash
-        d8 k get application {{ $labels.name }} -n {{ $labels.namespace }} -o jsonpath='{.spec.resourceRequests}'
+        d8 k get application {{ $labels.name }} -n {{ $labels.application_namespace }} -o jsonpath='{.spec.resourceRequests}'
         ```
 
   - alert: DeckhouseReleaseNotificationNotSent
