@@ -96,6 +96,9 @@ const (
 	// ============================================================================
 	// Application Metrics
 	// ============================================================================
+	// ApplicationMaintenance is 1 while an application is in maintenance.
+	ApplicationMaintenance = "deckhouse_application_maintenance"
+
 	// ApplicationAutoscalerMissing is 1 for each range of an application's resource
 	// requests that no autoscaler applies, so it falls back to fixed values; the
 	// ApplicationHorizontalPodAutoscalerMissing and ApplicationVerticalPodAutoscalerMissing
@@ -457,9 +460,18 @@ func registerModuleControllerMetrics(metricStorage metricsstorage.Storage) error
 // registerApplicationMetrics registers the metrics the package engine publishes about
 // applications.
 func registerApplicationMetrics(metricStorage metricsstorage.Storage) error {
-	autoscalerLabels := []string{LabelNamespace, LabelName, LabelKind, LabelWorkload, LabelContainer, LabelResource, LabelAutoscaler}
-
 	_, err := metricStorage.RegisterGauge(
+		ApplicationMaintenance,
+		[]string{LabelApplicationNamespace, LabelName, LabelState},
+		options.WithHelp("Gauge indicating an application in maintenance mode (1.0 = in maintenance)"),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to register %s: %w", ApplicationMaintenance, err)
+	}
+
+	autoscalerLabels := []string{LabelApplicationNamespace, LabelName, LabelKind, LabelWorkload, LabelContainer, LabelResource, LabelAutoscaler}
+
+	_, err = metricStorage.RegisterGauge(
 		ApplicationAutoscalerMissing,
 		autoscalerLabels,
 		options.WithHelp("Gauge indicating a resource range of an application that no autoscaler applies, so it falls back to fixed values (1.0 = falls back)"),

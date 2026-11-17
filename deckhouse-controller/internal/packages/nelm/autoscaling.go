@@ -106,13 +106,13 @@ func (s *Service) publishAutoscaling(namespace string, pkg Package, report autos
 
 		for _, target := range gauge.targets {
 			s.metrics.Grouped().GaugeSet(pkg.GetName(), gauge.metric, 1, map[string]string{
-				metrics.LabelNamespace:  namespace,
-				metrics.LabelName:       app.GetInstance(),
-				metrics.LabelKind:       target.Kind,
-				metrics.LabelWorkload:   target.Name,
-				metrics.LabelContainer:  target.Container,
-				metrics.LabelResource:   target.Resource,
-				metrics.LabelAutoscaler: target.Autoscaler(),
+				metrics.LabelApplicationNamespace: namespace,
+				metrics.LabelName:                 app.GetInstance(),
+				metrics.LabelKind:                 target.Kind,
+				metrics.LabelWorkload:             target.Name,
+				metrics.LabelContainer:            target.Container,
+				metrics.LabelResource:             target.Resource,
+				metrics.LabelAutoscaler:           target.Autoscaler(),
 			})
 		}
 	}

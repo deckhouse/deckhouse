@@ -1,0 +1,58 @@
+rule_files:
+  - alerting.yaml
+evaluation_interval: 1m
+
+tests:
+  - name: Application alerts distinguish namespaces and clear when their metrics are zero or removed
+    interval: 1m
+    input_series:
+      - series: 'deckhouse_application_maintenance{namespace="d8-system", application_namespace="shop-a", name="shop", state="NoResourceReconciliation"}'
+        values: '1 0 stale'
+      - series: 'deckhouse_application_maintenance{namespace="d8-system", application_namespace="shop-b", name="shop", state="NoResourceReconciliation"}'
+        values: '1 stale'
+      - series: 'deckhouse_application_autoscaler_missing{namespace="d8-system", application_namespace="shop-a", name="shop", kind="Deployment", workload="d8a-shop-web", autoscaler="HorizontalPodAutoscaler"}'
+        values: '1 0 stale'
+      - series: 'deckhouse_application_autoscaler_missing{namespace="d8-system", application_namespace="shop-b", name="shop", kind="Deployment", workload="d8a-shop-web", autoscaler="HorizontalPodAutoscaler"}'
+        values: '1 stale'
+      - series: 'deckhouse_application_autoscaler_missing{namespace="d8-system", application_namespace="shop-a", name="shop", kind="Deployment", workload="d8a-shop-web", container="app", autoscaler="VerticalPodAutoscaler"}'
+        values: '1 0 stale'
+      - series: 'deckhouse_application_autoscaler_missing{namespace="d8-system", application_namespace="shop-b", name="shop", kind="Deployment", workload="d8a-shop-web", container="app", autoscaler="VerticalPodAutoscaler"}'
+        values: '1 stale'
+      - series: 'deckhouse_application_autoscaler_pinned{namespace="d8-system", application_namespace="shop-a", name="shop", kind="Deployment", workload="d8a-shop-web", autoscaler="HorizontalPodAutoscaler"}'
+        values: '1 0 stale'
+      - series: 'deckhouse_application_autoscaler_pinned{namespace="d8-system", application_namespace="shop-b", name="shop", kind="Deployment", workload="d8a-shop-web", autoscaler="HorizontalPodAutoscaler"}'
+        values: '1 stale'
+      - series: 'deckhouse_application_autoscaler_pinned{namespace="d8-system", application_namespace="shop-a", name="shop", kind="Deployment", workload="d8a-shop-web", container="app", autoscaler="VerticalPodAutoscaler"}'
+        values: '1 0 stale'
+      - series: 'deckhouse_application_autoscaler_pinned{namespace="d8-system", application_namespace="shop-b", name="shop", kind="Deployment", workload="d8a-shop-web", container="app", autoscaler="VerticalPodAutoscaler"}'
+        values: '1 stale'
+    promql_expr_test:
+      - eval_time: 0m
+        expr: ALERTS{alertname=~"Application.*", alertstate="firing"}
+        exp_samples:
+          - labels: 'ALERTS{alertname="ApplicationIsInMaintenanceMode", alertstate="firing", namespace="shop-a", application_namespace="shop-a", name="shop", severity_level="6"}'
+            value: 1
+          - labels: 'ALERTS{alertname="ApplicationIsInMaintenanceMode", alertstate="firing", namespace="shop-b", application_namespace="shop-b", name="shop", severity_level="6"}'
+            value: 1
+          - labels: 'ALERTS{alertname="ApplicationHorizontalPodAutoscalerMissing", alertstate="firing", namespace="shop-a", application_namespace="shop-a", name="shop", kind="Deployment", workload="d8a-shop-web", severity_level="5"}'
+            value: 1
+          - labels: 'ALERTS{alertname="ApplicationHorizontalPodAutoscalerMissing", alertstate="firing", namespace="shop-b", application_namespace="shop-b", name="shop", kind="Deployment", workload="d8a-shop-web", severity_level="5"}'
+            value: 1
+          - labels: 'ALERTS{alertname="ApplicationVerticalPodAutoscalerMissing", alertstate="firing", namespace="shop-a", application_namespace="shop-a", name="shop", kind="Deployment", workload="d8a-shop-web", container="app", severity_level="5"}'
+            value: 1
+          - labels: 'ALERTS{alertname="ApplicationVerticalPodAutoscalerMissing", alertstate="firing", namespace="shop-b", application_namespace="shop-b", name="shop", kind="Deployment", workload="d8a-shop-web", container="app", severity_level="5"}'
+            value: 1
+          - labels: 'ALERTS{alertname="ApplicationHorizontalPodAutoscalerPinned", alertstate="firing", namespace="shop-a", application_namespace="shop-a", name="shop", kind="Deployment", workload="d8a-shop-web", severity_level="5"}'
+            value: 1
+          - labels: 'ALERTS{alertname="ApplicationHorizontalPodAutoscalerPinned", alertstate="firing", namespace="shop-b", application_namespace="shop-b", name="shop", kind="Deployment", workload="d8a-shop-web", severity_level="5"}'
+            value: 1
+          - labels: 'ALERTS{alertname="ApplicationVerticalPodAutoscalerPinned", alertstate="firing", namespace="shop-a", application_namespace="shop-a", name="shop", kind="Deployment", workload="d8a-shop-web", container="app", severity_level="5"}'
+            value: 1
+          - labels: 'ALERTS{alertname="ApplicationVerticalPodAutoscalerPinned", alertstate="firing", namespace="shop-b", application_namespace="shop-b", name="shop", kind="Deployment", workload="d8a-shop-web", container="app", severity_level="5"}'
+            value: 1
+      - eval_time: 1m
+        expr: ALERTS{alertname=~"Application.*", alertstate="firing"}
+        exp_samples: []
+      - eval_time: 10m
+        expr: ALERTS{alertname=~"Application.*", alertstate="firing"}
+        exp_samples: []

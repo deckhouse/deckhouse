@@ -120,10 +120,11 @@ func TestMeetAutoscalersWithoutRequests(t *testing.T) {
 	require.Empty(t, patches)
 }
 
-// fakeApplication is the application d8-shop.shop.
-type fakeApplication struct{}
+type fakeApplication struct {
+	namespace string
+}
 
-func (fakeApplication) GetName() string                  { return "d8-shop.shop" }
+func (app fakeApplication) GetName() string              { return app.namespace + ".shop" }
 func (fakeApplication) GetPath() string                  { return "" }
 func (fakeApplication) GetRuntimeValues() string         { return "" }
 func (fakeApplication) GetValues() addonutils.Values     { return nil }
@@ -160,16 +161,16 @@ func gauges(t *testing.T, storage *metricsstorage.MetricStorage, metric string) 
 	return series
 }
 
-// shopLabels are the labels of a target of web in the application d8-shop.shop.
-func shopLabels(container, resourceName, autoscaler string) map[string]string {
+// shopLabels are the labels of a target of web in the application shop.
+func shopLabels(namespace, container, resourceName, autoscaler string) map[string]string {
 	return map[string]string{
-		"namespace":  "d8-shop",
-		"name":       "shop",
-		"kind":       "Deployment",
-		"workload":   "web",
-		"container":  container,
-		"resource":   resourceName,
-		"autoscaler": autoscaler,
+		"application_namespace": namespace,
+		"name":                  "shop",
+		"kind":                  "Deployment",
+		"workload":              "web",
+		"container":             container,
+		"resource":              resourceName,
+		"autoscaler":            autoscaler,
 	}
 }
 
@@ -181,25 +182,67 @@ func TestPublishAutoscaling(t *testing.T) {
 	require.NoError(t, metrics.RegisterDeckhouseControllerMetrics(storage))
 
 	service := &Service{metrics: storage}
+	app := fakeApplication{namespace: "d8-shop"}
 
-	service.publishAutoscaling("d8-shop", fakeApplication{}, autoscaling{fallbacks: webTargets, pins: webTargets[1:]})
+	service.publishAutoscaling("d8-shop", app, autoscaling{fallbacks: webTargets, pins: webTargets[1:]})
 
 	require.ElementsMatch(t, []map[string]string{
-		shopLabels("", "replicas", "HorizontalPodAutoscaler"),
-		shopLabels("app", "cpu", "VerticalPodAutoscaler"),
+		shopLabels("d8-shop", "", "replicas", "HorizontalPodAutoscaler"),
+		shopLabels("d8-shop", "app", "cpu", "VerticalPodAutoscaler"),
 	}, gauges(t, storage, metrics.ApplicationAutoscalerMissing))
 	require.Equal(t, []map[string]string{
-		shopLabels("app", "cpu", "VerticalPodAutoscaler"),
+		shopLabels("d8-shop", "app", "cpu", "VerticalPodAutoscaler"),
 	}, gauges(t, storage, metrics.ApplicationAutoscalerPinned))
 
-	service.publishAutoscaling("d8-shop", fakeApplication{}, autoscaling{fallbacks: webTargets[:1]})
+	service.publishAutoscaling("d8-shop", app, autoscaling{fallbacks: webTargets[:1]})
 	require.Len(t, gauges(t, storage, metrics.ApplicationAutoscalerMissing), 1)
 	require.Empty(t, gauges(t, storage, metrics.ApplicationAutoscalerPinned))
 
-	service.publishAutoscaling("d8-shop", fakeApplication{}, autoscaling{fallbacks: webTargets[:1], pins: webTargets})
+	service.publishAutoscaling("d8-shop", app, autoscaling{fallbacks: webTargets[:1], pins: webTargets})
 	require.Len(t, gauges(t, storage, metrics.ApplicationAutoscalerPinned), 2)
 
 	service.expireAutoscaling("d8-shop.shop")
+	require.Empty(t, gauges(t, storage, metrics.ApplicationAutoscalerMissing))
+	require.Empty(t, gauges(t, storage, metrics.ApplicationAutoscalerPinned))
+}
+
+func TestPublishAutoscalingPreservesOtherNamespaces(t *testing.T) {
+	storage := metricsstorage.NewMetricStorage(metricsstorage.WithNewRegistry())
+	require.NoError(t, metrics.RegisterDeckhouseControllerMetrics(storage))
+	service := &Service{metrics: storage}
+	first := fakeApplication{namespace: "shop-a"}
+	second := fakeApplication{namespace: "shop-b"}
+	report := autoscaling{fallbacks: webTargets, pins: webTargets}
+
+	service.publishAutoscaling(first.namespace, first, report)
+	service.publishAutoscaling(second.namespace, second, report)
+	for _, metric := range []string{metrics.ApplicationAutoscalerMissing, metrics.ApplicationAutoscalerPinned} {
+		require.ElementsMatch(t, []map[string]string{
+			shopLabels(first.namespace, "", "replicas", "HorizontalPodAutoscaler"),
+			shopLabels(first.namespace, "app", "cpu", "VerticalPodAutoscaler"),
+			shopLabels(second.namespace, "", "replicas", "HorizontalPodAutoscaler"),
+			shopLabels(second.namespace, "app", "cpu", "VerticalPodAutoscaler"),
+		}, gauges(t, storage, metric), metric)
+	}
+
+	service.publishAutoscaling(first.namespace, first, autoscaling{fallbacks: webTargets[:1], pins: webTargets[:1]})
+	for _, metric := range []string{metrics.ApplicationAutoscalerMissing, metrics.ApplicationAutoscalerPinned} {
+		require.ElementsMatch(t, []map[string]string{
+			shopLabels(first.namespace, "", "replicas", "HorizontalPodAutoscaler"),
+			shopLabels(second.namespace, "", "replicas", "HorizontalPodAutoscaler"),
+			shopLabels(second.namespace, "app", "cpu", "VerticalPodAutoscaler"),
+		}, gauges(t, storage, metric), metric)
+	}
+
+	service.expireAutoscaling(first.GetName())
+	for _, metric := range []string{metrics.ApplicationAutoscalerMissing, metrics.ApplicationAutoscalerPinned} {
+		require.ElementsMatch(t, []map[string]string{
+			shopLabels(second.namespace, "", "replicas", "HorizontalPodAutoscaler"),
+			shopLabels(second.namespace, "app", "cpu", "VerticalPodAutoscaler"),
+		}, gauges(t, storage, metric), metric)
+	}
+
+	service.expireAutoscaling(second.GetName())
 	require.Empty(t, gauges(t, storage, metrics.ApplicationAutoscalerMissing))
 	require.Empty(t, gauges(t, storage, metrics.ApplicationAutoscalerPinned))
 }
