@@ -1,0 +1,4099 @@
+diff --git a/deckhouse_client_table.go b/deckhouse_client_table.go
+new file mode 100644
+index 00000000..034cc8db
+--- /dev/null
++++ b/deckhouse_client_table.go
+@@ -0,0 +1,744 @@
++package main
++
++import (
++	"bytes"
++	"context"
++	"crypto/sha256"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"io"
++	"net/http"
++	"os"
++	"os/signal"
++	"slices"
++	"strconv"
++	"strings"
++	"sync/atomic"
++	"syscall"
++	"time"
++
++	"github.com/justinas/alice"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/middleware"
++	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/proxyhttp"
++	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/watcher"
++	"github.com/prometheus/client_golang/prometheus"
++	"github.com/spf13/pflag"
++)
++
++const (
++	fingerprintSize = sha256.Size
++
++	// clientTablePollInterval is how often the table file is read besides the file events: it
++	// finds a file that did not exist at the start and covers an event that was missed.
++	clientTablePollInterval = 10 * time.Second
++)
++
++// kubernetesScopes are the scopes that put the audience of the Kubernetes API into the ID token of
++// a client the provider trusts for it.
++const kubernetesScopes = "federated:id audience:server:client_id:kubernetes"
++
++// clientTableFile is the file --client-table names (Deckhouse patch 018): a JSON object with the
++// list of the clients of the process.
++type clientTableFile struct {
++	// Generation is the number the writer of the table gives each version of it, a larger one
++	// every time. The process reports the generation it serves, so the writer knows when a
++	// version has been loaded.
++	Generation int64        `json:"generation"`
++	Clients    []clientSpec `json:"clients"`
++}
++
++// clientSpec is one client of the table: a DexAuthenticator object. A client is built from the
++// flags of the process followed by the flags these fields stand for. The fields are all a client
++// may set: every other setting is that of the process.
++type clientSpec struct {
++	// Name and Namespace are those of the DexAuthenticator object. Together they tell the clients
++	// apart in the logs, in the session store and between two versions of the table: a client
++	// whose record did not change is not built again. Unique in the table.
++	Name      string `json:"name"`
++	Namespace string `json:"namespace"`
++	// Hosts are the hosts of the applications of the client: DNS names without a port. A request
++	// is given to the client by them, and a redirect is allowed to them. Unique in the table.
++	Hosts []string `json:"hosts"`
++	// ClientID and ClientSecret are the client at the provider: --client-id, --client-secret.
++	ClientID     string `json:"clientID"`
++	ClientSecret string `json:"clientSecret"`
++	// CookieSecret signs the cookies of the client: --cookie-secret.
++	CookieSecret string `json:"cookieSecret"`
++	// CookieExpire is --cookie-expire, a duration such as "168h".
++	CookieExpire string `json:"cookieExpire,omitempty"`
++	// AllowAccessToKubernetes adds kubernetesScopes to the scope of the process.
++	AllowAccessToKubernetes bool `json:"allowAccessToKubernetes,omitempty"`
++	// SendAuthorizationHeader is --set-authorization-header.
++	SendAuthorizationHeader bool `json:"sendAuthorizationHeader,omitempty"`
++	// ProviderLogout tells that the provider knows the hosts of the client as the addresses to
++	// return to after a sign-out. A process that signs out through the provider
++	// (--provider-logout-url) serves no client without it: the provider would answer the
++	// sign-out of such a client with an error page and keep its own session.
++	ProviderLogout bool `json:"providerLogout,omitempty"`
++}
++
++// key names the client in the table, in the logs and in the session store.
++func (c *clientSpec) key() string {
++	return c.Namespace + "/" + c.Name
++}
++
++// normalize checks the record and brings its hosts to the form the dispatcher looks them up in.
++func (c *clientSpec) normalize() error {
++	if c.Name == "" || c.Namespace == "" {
++		return errors.New("name and namespace are required")
++	}
++	if strings.Contains(c.Name, "/") || strings.Contains(c.Namespace, "/") {
++		return errors.New("name and namespace must not contain a slash")
++	}
++	if c.ClientID == "" || c.ClientSecret == "" || c.CookieSecret == "" {
++		return errors.New("clientID, clientSecret and cookieSecret are required")
++	}
++	if len(c.Hosts) == 0 {
++		return errors.New("at least one host is required")
++	}
++	if c.CookieExpire != "" {
++		if _, err := time.ParseDuration(c.CookieExpire); err != nil {
++			return fmt.Errorf("cookieExpire is not a duration: %w", err)
++		}
++	}
++
++	for i, raw := range c.Hosts {
++		host, port, ok := requestutil.ServerName(raw)
++		if !ok || port != "" || len(host) != len(raw) {
++			return fmt.Errorf("host %q is not a DNS name without a port", raw)
++		}
++		c.Hosts[i] = host
++	}
++
++	return nil
++}
++
++// args returns the flags of the client that follow the flags of the process; scope is the scope
++// of the process.
++func (c *clientSpec) args(scope string) []string {
++	args := []string{
++		"--client-id=" + c.ClientID,
++		"--client-secret=" + c.ClientSecret,
++		"--cookie-secret=" + c.CookieSecret,
++		"--set-authorization-header=" + strconv.FormatBool(c.SendAuthorizationHeader),
++	}
++	if c.CookieExpire != "" {
++		args = append(args, "--cookie-expire="+c.CookieExpire)
++	}
++	if c.AllowAccessToKubernetes {
++		args = append(args, "--scope="+strings.TrimSpace(scope+" "+kubernetesScopes))
++	}
++	for _, host := range c.Hosts {
++		args = append(args, "--whitelist-domain="+host)
++	}
++
++	return args
++}
++
++// fingerprint changes when anything in the record changes.
++func (c *clientSpec) fingerprint() ([fingerprintSize]byte, error) {
++	encoded, err := json.Marshal(c)
++	if err != nil {
++		return [fingerprintSize]byte{}, fmt.Errorf("could not encode the client: %w", err)
++	}
++
++	return sha256.Sum256(encoded), nil
++}
++
++// parsedTable is a table file as it was read: the records that passed the checks, in the order of
++// the file, and the records that did not, by the key of their client, with the reason.
++type parsedTable struct {
++	generation int64
++	clients    []clientSpec
++	refused    map[string]string
++}
++
++// parseClientTable reads the table and checks what the isolation of the clients relies on: every
++// client has a name, hosts and a cookie secret of its own. The clients share the session store, so
++// two clients with one cookie secret would take the sessions of each other.
++//
++// A record that fails a check is refused alone: the other clients are served by the new table,
++// and that client by the record it had (see apply). Of two records that claim one name, one host
++// or one cookie secret, the first in the file keeps it. Only a file that is not a table at all,
++// an unknown field included, is refused as a whole.
++func parseClientTable(data []byte, needsProviderLogout bool) (*parsedTable, error) {
++	var file clientTableFile
++	decoder := json.NewDecoder(bytes.NewReader(data))
++	decoder.DisallowUnknownFields()
++	if err := decoder.Decode(&file); err != nil {
++		return nil, fmt.Errorf("could not decode the client table: %w", err)
++	}
++	// A file cut in the middle of a write, or one that is not a table, must not empty the table.
++	if _, err := decoder.Token(); !errors.Is(err, io.EOF) {
++		return nil, errors.New("could not decode the client table: the file has more than one JSON value")
++	}
++	if file.Clients == nil {
++		return nil, errors.New("could not decode the client table: the list of clients is missing")
++	}
++
++	table := &parsedTable{
++		generation: file.Generation,
++		clients:    make([]clientSpec, 0, len(file.Clients)),
++		refused:    map[string]string{},
++	}
++	keys := make(map[string]struct{}, len(file.Clients))
++	hosts := make(map[string]string, len(file.Clients))
++	cookieSecrets := make(map[[fingerprintSize]byte]string, len(file.Clients))
++
++	for i := range file.Clients {
++		spec := &file.Clients[i]
++		key := spec.key()
++		// The first record of a client is its record, refused or not: a second one is dropped.
++		if _, ok := keys[key]; ok {
++			logger.Errorf("Record %d of the client table is dropped: the client %q has a record already", i, key)
++			continue
++		}
++		keys[key] = struct{}{}
++
++		if reason := checkClientSpec(spec, needsProviderLogout, hosts, cookieSecrets); reason != "" {
++			table.refused[key] = reason
++			logger.Errorf("Record %d of the client table, client %q, is refused: %s", i, key, reason)
++			continue
++		}
++
++		for _, host := range spec.Hosts {
++			hosts[host] = key
++		}
++		cookieSecrets[cookieSecretHash(spec.CookieSecret)] = key
++		table.clients = append(table.clients, *spec)
++	}
++
++	return table, nil
++}
++
++// checkClientSpec returns why the record cannot be served next to the records accepted before it,
++// whose hosts and cookie secrets are given, or an empty string.
++func checkClientSpec(spec *clientSpec, needsProviderLogout bool, hosts map[string]string, cookieSecrets map[[fingerprintSize]byte]string) string {
++	if err := spec.normalize(); err != nil {
++		return err.Error()
++	}
++	if needsProviderLogout && !spec.ProviderLogout {
++		return "the process signs out through the provider, and the provider has no address to return to for this client"
++	}
++	seen := make(map[string]struct{}, len(spec.Hosts))
++	for _, host := range spec.Hosts {
++		if owner, ok := hosts[host]; ok {
++			return fmt.Sprintf("the host %q belongs to the client %q", host, owner)
++		}
++		if _, ok := seen[host]; ok {
++			return fmt.Sprintf("the host %q is named twice", host)
++		}
++		seen[host] = struct{}{}
++	}
++	if owner, ok := cookieSecrets[cookieSecretHash(spec.CookieSecret)]; ok {
++		return fmt.Sprintf("its cookie secret is the cookie secret of the client %q", owner)
++	}
++
++	return ""
++}
++
++// cookieSecretHash is the hash of a cookie secret as the proxy reads it: a secret and its base64
++// form are one key.
++func cookieSecretHash(secret string) [fingerprintSize]byte {
++	return sha256.Sum256(encryption.SecretBytes(secret))
++}
++
++// clientBuilder builds the OAuthProxy of a client the way main builds the only one: the flags of
++// the process and of the client go through the same option loading and validation.
++type clientBuilder struct {
++	config      string
++	alphaConfig string
++	flagSet     *pflag.FlagSet
++	args        []string
++	// scope is the scope of the process, which a client may add to.
++	scope  string
++	shared *sharedResources
++}
++
++func (b *clientBuilder) build(spec clientSpec) (http.Handler, error) {
++	args := append(slices.Clone(b.args), spec.args(b.scope)...)
++
++	// The flag set of the options exits the process on a flag it cannot parse. A client of the
++	// table must not be able to do that, so its flags are parsed here first.
++	probe := options.NewLegacyFlagSet()
++	probe.Init("client", pflag.ContinueOnError)
++	probe.SetOutput(io.Discard)
++	probe.AddFlagSet(b.flagSet)
++	if err := probe.Parse(args); err != nil {
++		return nil, fmt.Errorf("could not parse the flags: %w", err)
++	}
++
++	opts, err := loadConfiguration(b.config, b.alphaConfig, b.flagSet, args)
++	if err != nil {
++		return nil, err
++	}
++	if err := validation.ValidateClient(opts); err != nil {
++		return nil, err
++	}
++
++	proxy, err := newOAuthProxy(opts, NewValidator(opts.EmailDomains, opts.AuthenticatedEmailsFile), b.shared, spec.key())
++	if err != nil {
++		return nil, err
++	}
++
++	return proxy, nil
++}
++
++// clientTableProxy is a process that serves a table of clients (Deckhouse patch 018): the
++// dispatcher on the application server, and the table file read again when it changes.
++type clientTableProxy struct {
++	path         string
++	pollInterval time.Duration
++	// needsProviderLogout: the process signs out through the provider (--provider-logout-url).
++	needsProviderLogout bool
++	build               func(clientSpec) (http.Handler, error)
++	dispatcher          *dispatcher
++	metrics             *clientTableMetrics
++	server              proxyhttp.Server
++
++	// The state of the table file. Only one goroutine reloads: main before the servers start,
++	// the watcher after that.
++	hasSeen bool
++	seen    [sha256.Size]byte
++	lastErr string
++
++	// status is what the process reports of the table it serves.
++	status atomic.Pointer[clientTableStatus]
++}
++
++// clientTableStatus is the answer of clientTableStatusPath: the generation of the table the
++// process serves and the clients of that table whose record was refused or could not be built,
++// which are served by the record they had before, if they had one.
++type clientTableStatus struct {
++	Generation int64    `json:"generation"`
++	Clients    int      `json:"clients"`
++	Failed     []string `json:"failed"`
++}
++
++// clientTableStatusPath is where the process reports the table it serves. It is not under the
++// proxy prefix, so the routes of the applications do not lead to it: the names of the clients are
++// not for the users of the applications.
++const clientTableStatusPath = "/client-table"
++
++// serveStatus answers clientTableStatusPath and passes every other request on.
++func (p *clientTableProxy) serveStatus(next http.Handler) http.Handler {
++	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
++		if req.Method != http.MethodGet || req.URL.EscapedPath() != clientTableStatusPath {
++			next.ServeHTTP(rw, req)
++			return
++		}
++
++		rw.Header().Set("Content-Type", "application/json")
++		if err := json.NewEncoder(rw).Encode(p.status.Load()); err != nil {
++			logger.Errorf("Could not write the status of the client table: %v", err)
++		}
++	})
++}
++
++// runClientTable serves the table of clients opts.ClientTable names until the process is told to
++// stop. opts are the options of the process: they name no client.
++func runClientTable(opts *options.Options, builder *clientBuilder) error {
++	if err := checkClientTableOptions(opts); err != nil {
++		return err
++	}
++	if err := validation.ValidateProcess(opts); err != nil {
++		return err
++	}
++
++	// Every client verifies its ID tokens with the keys of the same provider.
++	internaloidc.ShareRemoteKeySets()
++
++	sessionStore, err := sessions.NewPersistenceStore(&opts.Session)
++	if err != nil {
++		return fmt.Errorf("error initialising session store: %w", err)
++	}
++	builder.shared = &sharedResources{sessionStore: sessionStore, refreshWindows: middleware.NewRefreshWindows()}
++	if len(opts.Providers) > 0 {
++		builder.scope = opts.Providers[0].Scope
++	}
++
++	metrics, err := newClientTableMetrics(prometheus.DefaultRegisterer)
++	if err != nil {
++		return err
++	}
++
++	p := newClientTableProxy(opts.ClientTable, opts.ProxyPrefix, builder.build, metrics)
++	p.needsProviderLogout = opts.ProviderLogoutURL != ""
++
++	// The process answers the health checks itself: they name no client. It is ready with an
++	// empty table too, so that it does not wait for the first client to appear.
++	handler := alice.New(
++		middleware.NewHealthCheck([]string{opts.PingPath}, []string{opts.PingUserAgent}),
++		middleware.NewReadynessCheck(opts.ReadyPath, sessionStore),
++		p.serveStatus,
++	).Then(p.dispatcher)
++
++	p.server, err = newServerGroup(opts, handler)
++	if err != nil {
++		return fmt.Errorf("error setting up server: %w", err)
++	}
++
++	p.reload()
++
++	return p.start()
++}
++
++func newClientTableProxy(path, proxyPrefix string, build func(clientSpec) (http.Handler, error), metrics *clientTableMetrics) *clientTableProxy {
++	p := &clientTableProxy{
++		path:         path,
++		pollInterval: clientTablePollInterval,
++		build:        build,
++		dispatcher:   newDispatcher(proxyPrefix, metrics),
++		metrics:      metrics,
++	}
++	p.status.Store(&clientTableStatus{Failed: []string{}})
++
++	return p
++}
++
++// checkClientTableOptions refuses the options of the process that do not work with a table of
++// clients.
++func checkClientTableOptions(opts *options.Options) error {
++	switch {
++	case opts.RevocationFeedURL != "" && !opts.RevocationFeedDisable:
++		return errors.New("the revocation feed is one subscription per client and is not supported with --client-table: add --revocation-feed-disable")
++	case opts.AuthenticatedEmailsFile != "" || opts.HtpasswdFile != "":
++		return errors.New("--authenticated-emails-file and --htpasswd-file are not supported with --client-table")
++	case len(opts.Providers) == 0 || !ptr.Deref(opts.Providers[0].OIDCConfig.SkipDiscovery, false):
++		// A client is built while the table is loaded: a provider that is asked for its
++		// configuration and does not answer would hold the load, and every later one.
++		return errors.New("--client-table needs --skip-oidc-discovery")
++	case opts.Cookie.Refresh <= 0:
++		// Without a refresh period the stub of a session restored from its cookie is trusted as
++		// it is (patch 002). With it the stub is refreshed through the provider, which refuses
++		// the refresh token of another client: that is what keeps a cookie of one client from
++		// opening a session of another whose cookie secret it has got by a mistake of the table.
++		return errors.New("--client-table needs --cookie-refresh above zero")
++	}
++
++	return nil
++}
++
++func (p *clientTableProxy) start() error {
++	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
++	defer stop()
++
++	go p.watch(ctx)
++
++	return p.server.Start(ctx)
++}
++
++// watch reloads the table when its file changes, until ctx is done.
++func (p *clientTableProxy) watch(ctx context.Context) {
++	changed := make(chan struct{}, 1)
++	notify := func() {
++		select {
++		case changed <- struct{}{}:
++		default:
++		}
++	}
++
++	done := make(chan bool)
++	defer close(done)
++
++	ticker := time.NewTicker(p.pollInterval)
++	defer ticker.Stop()
++
++	isWatching := false
++	for {
++		// The file may appear after the process has started: the watch is set once it is there.
++		if !isWatching && fileExists(p.path) {
++			if err := watcher.WatchFileForUpdates(p.path, done, notify); err != nil {
++				logger.Errorf("Could not watch the client table, it is read every %s: %v", p.pollInterval, err)
++			}
++			// A watch that failed is not tried again: every try leaves a goroutine behind.
++			isWatching = true
++		}
++
++		select {
++		case <-ctx.Done():
++			return
++		case <-changed:
++		case <-ticker.C:
++		}
++
++		p.reload()
++	}
++}
++
++func fileExists(path string) bool {
++	_, err := os.Stat(path)
++	return err == nil
++}
++
++// reload reads the table file and, when its content is new, applies it. A file that cannot be
++// read or parsed leaves the table as it is; before the first table it leaves the table empty.
++func (p *clientTableProxy) reload() {
++	start := time.Now()
++
++	data, err := os.ReadFile(p.path)
++	if err != nil {
++		// Every failed read is a point of the metric, so a file that stays missing shows as a
++		// rate of errors; the log has it once.
++		p.metrics.reloads.WithLabelValues(reloadError).Observe(time.Since(start).Seconds())
++		p.reportError(fmt.Sprintf("could not read the client table: %v", err))
++		return
++	}
++
++	sum := sha256.Sum256(data)
++	if p.hasSeen && sum == p.seen {
++		return
++	}
++	p.hasSeen, p.seen = true, sum
++
++	table, err := parseClientTable(data, p.needsProviderLogout)
++	if err != nil {
++		p.metrics.reloads.WithLabelValues(reloadError).Observe(time.Since(start).Seconds())
++		p.reportError(err.Error())
++		return
++	}
++	p.lastErr = ""
++
++	changes := p.apply(table)
++
++	result := reloadOK
++	if changes.failed > 0 {
++		result = reloadPartial
++	}
++	p.metrics.reloads.WithLabelValues(result).Observe(time.Since(start).Seconds())
++	p.metrics.lastReload.SetToCurrentTime()
++	p.metrics.generation.Set(float64(table.generation))
++
++	logger.Printf("Client table of generation %d loaded in %s: %d clients, %d hosts; built %d, kept %d, failed %d, removed %d",
++		table.generation, time.Since(start).Round(time.Millisecond), changes.clients, changes.hosts,
++		changes.built, changes.reused, changes.failed, changes.removed)
++}
++
++// reportError logs a failure to load the table once, not on every poll.
++func (p *clientTableProxy) reportError(msg string) {
++	if msg == p.lastErr {
++		return
++	}
++	p.lastErr = msg
++	logger.Errorf("Client table %s is not loaded, the table in use stays: %s", p.path, msg)
++}
++
++// tableChanges is what a reload did.
++type tableChanges struct {
++	clients, hosts                 int
++	built, reused, failed, removed int
++}
++
++// apply builds the clients of table and swaps them in. A client whose record is the same as in
++// the current table keeps its OAuthProxy, and with it everything the proxy remembers. A client
++// whose record was refused or cannot be built is served as before: by its previous OAuthProxy, on
++// the hosts it had that no client of the new table has taken. A new client that fails is left out.
++func (p *clientTableProxy) apply(table *parsedTable) tableChanges {
++	current := p.dispatcher.table.Load()
++	next := newClientTable()
++	var changes tableChanges
++	failed := []string{}
++
++	cookieSecrets := map[[fingerprintSize]byte]struct{}{}
++	add := func(client *tableClient) {
++		next.byName[client.name] = client
++		cookieSecrets[client.cookieSecret] = struct{}{}
++		for _, host := range client.hosts {
++			next.byHost[host] = client
++		}
++	}
++
++	// The clients that are built get their hosts first: a client served as before keeps only
++	// the hosts they leave.
++	kept := []*tableClient{}
++	for _, spec := range table.clients {
++		client, change := p.client(spec, current.byName[spec.key()])
++		switch change {
++		case changeBuilt:
++			changes.built++
++			add(client)
++		case changeReused:
++			changes.reused++
++			add(client)
++		default:
++			changes.failed++
++			failed = append(failed, spec.key())
++			if client != nil {
++				kept = append(kept, client)
++			}
++		}
++		p.metrics.changes.WithLabelValues(change).Inc()
++	}
++	for key := range table.refused {
++		changes.failed++
++		failed = append(failed, key)
++		p.metrics.changes.WithLabelValues(changeFailed).Inc()
++		if previous := current.byName[key]; previous != nil {
++			kept = append(kept, previous)
++		}
++	}
++	for _, previous := range kept {
++		// The cookie secret of the record a client had may be the one a client of the new table
++		// has now: served together, they would take the cookies of each other.
++		if _, isTaken := cookieSecrets[previous.cookieSecret]; isTaken {
++			logger.Errorf("Client %q of the client table is not served by its previous record: a client of the new table has its cookie secret", previous.name)
++			continue
++		}
++		// The hosts of its record, not only those it is served on now: a host that a client of
++		// an earlier table took and has given up since comes back.
++		hosts := make([]string, 0, len(previous.record))
++		for _, host := range previous.record {
++			if _, isTaken := next.byHost[host]; !isTaken {
++				hosts = append(hosts, host)
++			}
++		}
++		add(previous.on(hosts))
++	}
++
++	for name := range current.byName {
++		if _, ok := next.byName[name]; !ok {
++			changes.removed++
++			p.metrics.changes.WithLabelValues(changeRemoved).Inc()
++		}
++	}
++
++	p.dispatcher.table.Store(next)
++
++	// A client kept without a host stays in the table for its hosts to come back, and is not
++	// counted as served.
++	for _, client := range next.byName {
++		if len(client.hosts) > 0 {
++			changes.clients++
++		}
++	}
++	changes.hosts = len(next.byHost)
++	p.metrics.clients.Set(float64(changes.clients))
++	p.metrics.hosts.Set(float64(changes.hosts))
++	slices.Sort(failed)
++	p.status.Store(&clientTableStatus{Generation: table.generation, Clients: changes.clients, Failed: failed})
++
++	return changes
++}
++
++// client returns the client of spec for the next table and what was done to get it. previous is
++// the client of that name in the current table, if there is one. A client that cannot be built is
++// returned as it was, or nil when it is new.
++func (p *clientTableProxy) client(spec clientSpec, previous *tableClient) (*tableClient, string) {
++	fingerprint, err := spec.fingerprint()
++	if err == nil && previous != nil && previous.fingerprint == fingerprint {
++		// The record is the one the client was built from: it is served on all its hosts again,
++		// also after a table that had left it only some of them.
++		return previous.on(previous.record), changeReused
++	}
++
++	var handler http.Handler
++	if err == nil {
++		handler, err = p.build(spec)
++	}
++	if err != nil {
++		logger.Errorf("Client %q of the client table is not built: %v", spec.key(), err)
++		return previous, changeFailed
++	}
++
++	logger.Printf("Client %q of the client table is built: client ID %s, hosts %s",
++		spec.key(), spec.ClientID, strings.Join(spec.Hosts, ","))
++
++	return &tableClient{
++		name:         spec.key(),
++		fingerprint:  fingerprint,
++		cookieSecret: cookieSecretHash(spec.CookieSecret),
++		record:       spec.Hosts,
++		hosts:        spec.Hosts,
++		handler:      handler,
++	}, changeBuilt
++}
++
++const (
++	reloadOK      = "ok"
++	reloadPartial = "partial"
++	reloadError   = "error"
++
++	changeBuilt   = "built"
++	changeReused  = "reused"
++	changeFailed  = "failed"
++	changeRemoved = "removed"
++
++	outcomeHit     = "hit"
++	outcomeUnknown = "unknown"
++)
++
++// clientTableMetrics are the metrics of the dispatcher and of the table. No label carries a host,
++// a client or anything of a user.
++type clientTableMetrics struct {
++	hit        prometheus.Observer
++	unknown    prometheus.Observer
++	clients    prometheus.Gauge
++	hosts      prometheus.Gauge
++	reloads    *prometheus.HistogramVec
++	changes    *prometheus.CounterVec
++	lastReload prometheus.Gauge
++	generation prometheus.Gauge
++}
++
++func newClientTableMetrics(registerer prometheus.Registerer) (*clientTableMetrics, error) {
++	requests := prometheus.NewHistogramVec(
++		prometheus.HistogramOpts{
++			Name:    "oauth2_proxy_dispatch_request_duration_seconds",
++			Help:    "Time to serve a request by the outcome of choosing its client: hit (a client of the table served it) or unknown (no client has the host, answered 403 on the auth path and 404 elsewhere). The count of the histogram is the number of requests.",
++			Buckets: []float64{0.00025, 0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10},
++		},
++		[]string{"outcome"},
++	)
++	m := &clientTableMetrics{
++		hit:     requests.WithLabelValues(outcomeHit),
++		unknown: requests.WithLabelValues(outcomeUnknown),
++		clients: prometheus.NewGauge(prometheus.GaugeOpts{
++			Name: "oauth2_proxy_client_table_clients",
++			Help: "Number of clients in the client table.",
++		}),
++		hosts: prometheus.NewGauge(prometheus.GaugeOpts{
++			Name: "oauth2_proxy_client_table_hosts",
++			Help: "Number of hosts in the client table.",
++		}),
++		reloads: prometheus.NewHistogramVec(
++			prometheus.HistogramOpts{
++				Name:    "oauth2_proxy_client_table_reload_duration_seconds",
++				Help:    "Time to load a new client table by result: ok, partial (the record of some clients was refused or could not be built) or error (the file was refused).",
++				Buckets: []float64{0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30},
++			},
++			[]string{"result"},
++		),
++		changes: prometheus.NewCounterVec(
++			prometheus.CounterOpts{
++				Name: "oauth2_proxy_client_table_client_changes_total",
++				Help: "Clients by what a load of the client table did to them: built, reused (not changed, kept as is), failed (not built) or removed.",
++			},
++			[]string{"change"},
++		),
++		lastReload: prometheus.NewGauge(prometheus.GaugeOpts{
++			Name: "oauth2_proxy_client_table_last_reload_timestamp_seconds",
++			Help: "Unix time of the last load of a new client table.",
++		}),
++		generation: prometheus.NewGauge(prometheus.GaugeOpts{
++			Name: "oauth2_proxy_client_table_generation",
++			Help: "Generation of the client table in use, as its writer numbered it.",
++		}),
++	}
++
++	for _, collector := range []prometheus.Collector{requests, m.clients, m.hosts, m.reloads, m.changes, m.lastReload, m.generation} {
++		if err := registerer.Register(collector); err != nil {
++			return nil, fmt.Errorf("could not register the metrics of the client table: %w", err)
++		}
++	}
++
++	return m, nil
++}
+diff --git a/deckhouse_client_table_test.go b/deckhouse_client_table_test.go
+new file mode 100644
+index 00000000..2028a052
+--- /dev/null
++++ b/deckhouse_client_table_test.go
+@@ -0,0 +1,1459 @@
++package main
++
++import (
++	"bytes"
++	"context"
++	"encoding/base64"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"net/http"
++	"net/http/httptest"
++	"os"
++	"path/filepath"
++	"strconv"
++	"strings"
++	"sync"
++	"sync/atomic"
++	"testing"
++	"time"
++
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/memory"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
++	"github.com/prometheus/client_golang/prometheus"
++	"github.com/prometheus/client_golang/prometheus/testutil"
++	dto "github.com/prometheus/client_model/go"
++	"github.com/spf13/pflag"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++const (
++	testClientSecret  = "dh-test-secret-0123456789abcdef"
++	testCookieSecretA = "dh-test-secret-0123456789abcdef0"
++	testCookieSecretB = "dh-test-secret-0123456789abcdef1"
++	testCookieSecretC = "dh-test-secret-0123456789abcdef2"
++)
++
++// testBase64Secret is the base64 of the 32 bytes of testCookieSecretA without its padding.
++var testBase64Secret = base64.RawURLEncoding.EncodeToString([]byte(testCookieSecretA))
++
++// testProcessScope is the scope of the process under test.
++const testProcessScope = "groups email openid profile offline_access"
++
++// testNamespace is the namespace of every client of testSpec: the key of the client "app" is
++// "ns/app".
++const testNamespace = "ns"
++
++// testSpec returns a client with a cookie secret of its own, derived from its name.
++func testSpec(name string, hosts ...string) clientSpec {
++	// 32 bytes: the prefix of the test secrets and the name, padded with a letter no name ends with.
++	suffix := strings.ReplaceAll(name, "-", "")
++	cookieSecret := "dh-test-secret-" + suffix + strings.Repeat("x", 17-len(suffix))
++
++	return clientSpec{
++		Name:         name,
++		Namespace:    testNamespace,
++		Hosts:        hosts,
++		ClientID:     "dex-authenticator-" + name,
++		ClientSecret: testClientSecret,
++		CookieSecret: cookieSecret,
++	}
++}
++
++func encodeTable(t *testing.T, specs ...clientSpec) []byte {
++	t.Helper()
++
++	data, err := json.Marshal(clientTableFile{Clients: specs})
++	require.NoError(t, err)
++
++	return data
++}
++
++func TestParseClientTable(t *testing.T) {
++	t.Parallel()
++
++	record := func(replacements ...string) string {
++		valid := `{"name":"app","namespace":"ns","hosts":["app.example.com"],"clientID":"id","clientSecret":"` + testClientSecret + `","cookieSecret":"` + testCookieSecretA + `"}`
++		return strings.NewReplacer(replacements...).Replace(valid)
++	}
++	other := record(`"name":"app"`, `"name":"other"`, "app.example.com", "other.example.com", testCookieSecretA, testCookieSecretB)
++
++	tests := []struct {
++		name  string
++		table string
++		// expectedErr refuses the whole file; expectedRefused are the clients whose record is
++		// refused alone, with a part of the reason.
++		expectedErr     string
++		expectedClients []string
++		expectedRefused map[string]string
++	}{
++		{name: "one client", table: `{"generation":7,"clients":[` + record() + `]}`, expectedClients: []string{"ns/app"}},
++		{name: "no clients", table: `{"clients":[]}`},
++		{name: "empty object", table: `{}`, expectedErr: "the list of clients is missing"},
++		{
++			name: "every field",
++			table: `{"generation":1,"clients":[{"name":"app","namespace":"ns","hosts":["app.example.com","app2.example.com"],"clientID":"id",
++				"clientSecret":"` + testClientSecret + `","cookieSecret":"` + testCookieSecretA + `","cookieExpire":"24h",
++				"allowAccessToKubernetes":true,"sendAuthorizationHeader":true,"providerLogout":true}]}`,
++			expectedClients: []string{"ns/app"},
++		},
++		{name: "empty file", table: ``, expectedErr: "could not decode"},
++		{name: "not json", table: `clients: []`, expectedErr: "could not decode"},
++		{name: "unknown field", table: `{"clients":[{"name":"app","host":"app.example.com"}]}`, expectedErr: "unknown field"},
++		{name: "flags of the process are no field of a client", table: `{"clients":[` + record(`"name":"app"`, `"name":"app","extraArgs":["--cookie-refresh=1m"]`) + `]}`, expectedErr: "unknown field"},
++
++		{name: "no name", table: `{"clients":[` + record(`"name":"app",`, ``) + `,` + other + `]}`, expectedClients: []string{"ns/other"}, expectedRefused: map[string]string{"ns/": "name and namespace are required"}},
++		{name: "no namespace", table: `{"clients":[` + record(`"namespace":"ns",`, ``) + `]}`, expectedRefused: map[string]string{"/app": "name and namespace are required"}},
++		{name: "slash in the name", table: `{"clients":[` + record(`"name":"app"`, `"name":"a/pp"`) + `]}`, expectedRefused: map[string]string{"ns/a/pp": "must not contain a slash"}},
++		{name: "no client id", table: `{"clients":[` + record(`"clientID":"id",`, ``) + `]}`, expectedRefused: map[string]string{"ns/app": "are required"}},
++		{name: "no client secret", table: `{"clients":[` + record(`"clientSecret":"`+testClientSecret+`",`, ``) + `]}`, expectedRefused: map[string]string{"ns/app": "are required"}},
++		{name: "no cookie secret", table: `{"clients":[` + record(`,"cookieSecret":"`+testCookieSecretA+`"`, ``) + `]}`, expectedRefused: map[string]string{"ns/app": "are required"}},
++		{name: "no hosts", table: `{"clients":[` + record(`["app.example.com"]`, `[]`) + `]}`, expectedRefused: map[string]string{"ns/app": "at least one host"}},
++		{name: "host with a port", table: `{"clients":[` + record("app.example.com", "app.example.com:443") + `]}`, expectedRefused: map[string]string{"ns/app": "not a DNS name"}},
++		{name: "host with a scheme", table: `{"clients":[` + record("app.example.com", "https://app.example.com") + `]}`, expectedRefused: map[string]string{"ns/app": "not a DNS name"}},
++		{name: "host with a trailing dot", table: `{"clients":[` + record("app.example.com", "app.example.com.") + `]}`, expectedRefused: map[string]string{"ns/app": "not a DNS name"}},
++		{name: "wildcard host", table: `{"clients":[` + record("app.example.com", "*.example.com") + `]}`, expectedRefused: map[string]string{"ns/app": "not a DNS name"}},
++		{name: "empty host", table: `{"clients":[` + record("app.example.com", "") + `]}`, expectedRefused: map[string]string{"ns/app": "not a DNS name"}},
++		{name: "bad cookie expire", table: `{"clients":[` + record(`"clientID"`, `"cookieExpire":"week","clientID"`) + `]}`, expectedRefused: map[string]string{"ns/app": "cookieExpire is not a duration"}},
++
++		// Of two records that claim the same thing the first keeps it, and the other clients
++		// of the table are not touched.
++		{
++			name:            "host used twice",
++			table:           `{"clients":[` + record() + `,` + record(`"name":"app"`, `"name":"second"`, testCookieSecretA, testCookieSecretC) + `,` + other + `]}`,
++			expectedClients: []string{"ns/app", "ns/other"},
++			expectedRefused: map[string]string{"ns/second": `the host "app.example.com" belongs to the client "ns/app"`},
++		},
++		{
++			name:            "host used twice in another case",
++			table:           `{"clients":[` + record() + `,` + record(`"name":"app"`, `"name":"second"`, "app.example.com", "APP.example.com", testCookieSecretA, testCookieSecretC) + `]}`,
++			expectedClients: []string{"ns/app"},
++			expectedRefused: map[string]string{"ns/second": `belongs to the client "ns/app"`},
++		},
++		{
++			name:            "cookie secret used twice",
++			table:           `{"clients":[` + record() + `,` + record(`"name":"app"`, `"name":"second"`, "app.example.com", "second.example.com") + `]}`,
++			expectedClients: []string{"ns/app"},
++			expectedRefused: map[string]string{"ns/second": `is the cookie secret of the client "ns/app"`},
++		},
++		{
++			name:            "host named twice by one client",
++			table:           `{"clients":[` + record(`["app.example.com"]`, `["app.example.com","APP.example.com"]`) + `]}`,
++			expectedRefused: map[string]string{"ns/app": `the host "app.example.com" is named twice`},
++		},
++		{
++			// The second record of a client is dropped, and the client is served by the first.
++			name:            "client with two records",
++			table:           `{"clients":[` + record() + `,` + record("app.example.com", "second.example.com", testCookieSecretA, testCookieSecretC) + `]}`,
++			expectedClients: []string{"ns/app"},
++		},
++		{
++			// The first record of a client is its record even when it is refused: a second one
++			// does not bring the client in next to the record it is kept on.
++			name:            "client whose first record is refused and second is valid",
++			table:           `{"clients":[` + record(`"clientID":"id",`, ``) + `,` + record() + `]}`,
++			expectedRefused: map[string]string{"ns/app": "are required"},
++		},
++		{
++			// The proxy reads a cookie secret that is base64 of 16, 24 or 32 bytes as those bytes:
++			// the secret and its padded form are one key.
++			name:            "cookie secret used twice in another form",
++			table:           `{"clients":[` + record(testCookieSecretA, testBase64Secret) + `,` + record(`"name":"app"`, `"name":"second"`, "app.example.com", "second.example.com", testCookieSecretA, testBase64Secret+"=") + `]}`,
++			expectedClients: []string{"ns/app"},
++			expectedRefused: map[string]string{"ns/second": `is the cookie secret of the client "ns/app"`},
++		},
++		{name: "two json values", table: `{"clients":[` + record() + `]}{`, expectedErr: "more than one JSON value"},
++		{name: "null", table: `null`, expectedErr: "the list of clients is missing"},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			t.Parallel()
++
++			table, err := parseClientTable([]byte(tt.table), false)
++			if tt.expectedErr != "" {
++				require.ErrorContains(t, err, tt.expectedErr)
++				assert.Nil(t, table)
++				assert.NotContains(t, err.Error(), "dh-test-secret", "an error must not carry a secret")
++				return
++			}
++			require.NoError(t, err)
++
++			keys := []string{}
++			for i := range table.clients {
++				keys = append(keys, table.clients[i].key())
++			}
++			assert.ElementsMatch(t, tt.expectedClients, keys)
++			require.Len(t, table.refused, len(tt.expectedRefused))
++			for key, reason := range tt.expectedRefused {
++				assert.Contains(t, table.refused[key], reason)
++				assert.NotContains(t, table.refused[key], "dh-test-secret", "a reason must not carry a secret")
++			}
++		})
++	}
++
++	t.Run("the generation is read", func(t *testing.T) {
++		t.Parallel()
++
++		table, err := parseClientTable([]byte(`{"generation":7,"clients":[`+record()+`]}`), false)
++		require.NoError(t, err)
++		assert.EqualValues(t, 7, table.generation)
++	})
++
++	t.Run("hosts are brought to lower case", func(t *testing.T) {
++		t.Parallel()
++
++		table, err := parseClientTable(encodeTable(t, testSpec("app", "App.Example.COM")), false)
++		require.NoError(t, err)
++		require.Len(t, table.clients, 1)
++		assert.Equal(t, []string{"app.example.com"}, table.clients[0].Hosts)
++	})
++
++	t.Run("a process that signs out through the provider refuses a client without a return address", func(t *testing.T) {
++		t.Parallel()
++
++		withLogout := testSpec("with", "with.example.com")
++		withLogout.ProviderLogout = true
++		data := encodeTable(t, testSpec("without", "without.example.com"), withLogout)
++
++		table, err := parseClientTable(data, true)
++		require.NoError(t, err)
++		require.Len(t, table.clients, 1)
++		assert.Equal(t, "ns/with", table.clients[0].key())
++		assert.Contains(t, table.refused["ns/without"], "no address to return to")
++
++		table, err = parseClientTable(data, false)
++		require.NoError(t, err)
++		assert.Len(t, table.clients, 2, "a process without the sign-out through the provider serves both")
++	})
++}
++
++func TestClientSpec_args(t *testing.T) {
++	t.Parallel()
++
++	const scope = "groups email openid profile offline_access"
++
++	tests := []struct {
++		name     string
++		spec     clientSpec
++		expected []string
++	}{
++		{
++			name: "required fields only",
++			spec: clientSpec{Name: "app", Namespace: "ns", Hosts: []string{"app.example.com"}, ClientID: "id", ClientSecret: "secret", CookieSecret: "cookie"},
++			expected: []string{
++				"--client-id=id", "--client-secret=secret", "--cookie-secret=cookie", "--set-authorization-header=false",
++				"--whitelist-domain=app.example.com",
++			},
++		},
++		{
++			name: "every field",
++			spec: clientSpec{
++				Name: "app", Namespace: "ns", Hosts: []string{"app.example.com", "app2.example.com"}, ClientID: "id", ClientSecret: "secret", CookieSecret: "cookie",
++				CookieExpire: "24h", AllowAccessToKubernetes: true, SendAuthorizationHeader: true, ProviderLogout: true,
++			},
++			expected: []string{
++				"--client-id=id", "--client-secret=secret", "--cookie-secret=cookie", "--set-authorization-header=true",
++				"--cookie-expire=24h", "--scope=" + scope + " federated:id audience:server:client_id:kubernetes",
++				"--whitelist-domain=app.example.com", "--whitelist-domain=app2.example.com",
++			},
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			t.Parallel()
++
++			assert.Equal(t, tt.expected, tt.spec.args(scope))
++		})
++	}
++}
++
++func TestCheckClientTableOptions(t *testing.T) {
++	t.Parallel()
++
++	tests := []struct {
++		name      string
++		modify    func(*options.Options)
++		expectErr string
++	}{
++		{name: "no feed", modify: func(*options.Options) {}},
++		{name: "no refresh period", modify: func(o *options.Options) { o.Cookie.Refresh = 0 }, expectErr: "--cookie-refresh above zero"},
++		{name: "provider discovery", modify: func(o *options.Options) { o.Providers[0].OIDCConfig.SkipDiscovery = ptr.To(false) }, expectErr: "--skip-oidc-discovery"},
++		{name: "feed turned off", modify: func(o *options.Options) {
++			o.RevocationFeedURL = "https://revocation-feed.d8-user-authn/revocations"
++			o.RevocationFeedDisable = true
++		}},
++		{name: "feed left on", modify: func(o *options.Options) {
++			o.RevocationFeedURL = "https://revocation-feed.d8-user-authn/revocations"
++		}, expectErr: "--revocation-feed-disable"},
++		{name: "emails file", modify: func(o *options.Options) { o.AuthenticatedEmailsFile = "/emails" }, expectErr: "not supported"},
++		{name: "htpasswd file", modify: func(o *options.Options) { o.HtpasswdFile = "/htpasswd" }, expectErr: "not supported"},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			t.Parallel()
++
++			opts := options.NewOptions()
++			opts.Cookie.Refresh = 10 * time.Minute
++			opts.Providers[0].OIDCConfig.SkipDiscovery = ptr.To(true)
++			tt.modify(opts)
++
++			err := checkClientTableOptions(opts)
++			if tt.expectErr != "" {
++				require.ErrorContains(t, err, tt.expectErr)
++				return
++			}
++			require.NoError(t, err)
++		})
++	}
++}
++
++// stubBuilder builds the handlers of a table under test and counts the builds.
++type stubBuilder struct {
++	mu     sync.Mutex
++	builds map[string]int
++	fail   map[string]bool
++}
++
++func newStubBuilder() *stubBuilder {
++	return &stubBuilder{builds: map[string]int{}, fail: map[string]bool{}}
++}
++
++// build returns a handler that answers with the name of the client and the number of its build.
++func (b *stubBuilder) build(spec clientSpec) (http.Handler, error) {
++	b.mu.Lock()
++	defer b.mu.Unlock()
++
++	if b.fail[spec.Name] {
++		return nil, errors.New("the client cannot be built")
++	}
++	b.builds[spec.Name]++
++	body := fmt.Sprintf("%s#%d", spec.Name, b.builds[spec.Name])
++
++	return http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
++		_, _ = rw.Write([]byte(body))
++	}), nil
++}
++
++func (b *stubBuilder) count(name string) int {
++	b.mu.Lock()
++	defer b.mu.Unlock()
++
++	return b.builds[name]
++}
++
++func (b *stubBuilder) setFail(name string, fail bool) {
++	b.mu.Lock()
++	defer b.mu.Unlock()
++
++	b.fail[name] = fail
++}
++
++func newTestTableProxy(t *testing.T, build func(clientSpec) (http.Handler, error)) *clientTableProxy {
++	t.Helper()
++
++	path := filepath.Join(t.TempDir(), "clients.json")
++
++	return newClientTableProxy(path, "/dex-authenticator", build, newTestMetrics(t))
++}
++
++func writeTable(t *testing.T, p *clientTableProxy, specs ...clientSpec) {
++	t.Helper()
++
++	// A rename puts the whole file in place at once, as the kubelet does with a Secret.
++	tmp := p.path + ".tmp"
++	require.NoError(t, os.WriteFile(tmp, encodeTable(t, specs...), 0o600))
++	require.NoError(t, os.Rename(tmp, p.path))
++}
++
++// get asks the dispatcher for a browser path on host and returns the status and the body.
++func get(t *testing.T, d *dispatcher, host string) (int, string) {
++	t.Helper()
++
++	req := httptest.NewRequest(http.MethodGet, "http://"+host+"/dex-authenticator/sign_in", nil)
++	rw := httptest.NewRecorder()
++	d.ServeHTTP(rw, req)
++
++	return rw.Code, rw.Body.String()
++}
++
++// reloadCount returns how many reloads of the table ended with result.
++func reloadCount(t *testing.T, p *clientTableProxy, result string) uint64 {
++	t.Helper()
++
++	histogram, ok := p.metrics.reloads.WithLabelValues(result).(prometheus.Histogram)
++	require.True(t, ok)
++	var metric dto.Metric
++	require.NoError(t, histogram.Write(&metric))
++
++	return metric.GetHistogram().GetSampleCount()
++}
++
++func TestClientTableProxy_reload(t *testing.T) {
++	t.Parallel()
++
++	t.Run("a missing file leaves the table empty and a file that appears is loaded", func(t *testing.T) {
++		t.Parallel()
++		builder := newStubBuilder()
++		p := newTestTableProxy(t, builder.build)
++
++		p.reload()
++		code, _ := get(t, p.dispatcher, "a.example.com")
++		assert.Equal(t, http.StatusNotFound, code)
++		assert.Equal(t, uint64(1), reloadCount(t, p, reloadError), "a file that is missing is a failed reload")
++
++		p.reload()
++		assert.Equal(t, uint64(2), reloadCount(t, p, reloadError), "and stays one on every read")
++
++		writeTable(t, p, testSpec("a", "a.example.com"))
++		p.reload()
++		code, body := get(t, p.dispatcher, "a.example.com")
++		assert.Equal(t, http.StatusOK, code)
++		assert.Equal(t, "a#1", body)
++		assert.Equal(t, uint64(1), reloadCount(t, p, reloadOK))
++		assert.Equal(t, uint64(2), reloadCount(t, p, reloadError))
++	})
++
++	t.Run("the first load builds every client", func(t *testing.T) {
++		t.Parallel()
++		builder := newStubBuilder()
++		p := newTestTableProxy(t, builder.build)
++
++		writeTable(t, p, testSpec("a", "a.example.com", "a2.example.com"), testSpec("b", "b.example.com"))
++		p.reload()
++
++		for host, expect := range map[string]string{"a.example.com": "a#1", "a2.example.com": "a#1", "b.example.com": "b#1"} {
++			code, body := get(t, p.dispatcher, host)
++			assert.Equal(t, http.StatusOK, code, host)
++			assert.Equal(t, expect, body, host)
++		}
++		assert.InDelta(t, 2, testutil.ToFloat64(p.metrics.clients), 0)
++		assert.InDelta(t, 3, testutil.ToFloat64(p.metrics.hosts), 0)
++		assert.InDelta(t, 2, testutil.ToFloat64(p.metrics.changes.WithLabelValues(changeBuilt)), 0)
++	})
++
++	t.Run("a file that did not change is not applied again", func(t *testing.T) {
++		t.Parallel()
++		builder := newStubBuilder()
++		p := newTestTableProxy(t, builder.build)
++
++		writeTable(t, p, testSpec("a", "a.example.com"))
++		p.reload()
++		before := p.dispatcher.table.Load()
++		p.reload()
++		writeTable(t, p, testSpec("a", "a.example.com"))
++		p.reload()
++
++		assert.Same(t, before, p.dispatcher.table.Load())
++		assert.Equal(t, 1, builder.count("a"))
++	})
++
++	t.Run("only the client that changed is built again", func(t *testing.T) {
++		t.Parallel()
++		builder := newStubBuilder()
++		p := newTestTableProxy(t, builder.build)
++
++		specs := make([]clientSpec, 0, 50)
++		for i := range 50 {
++			specs = append(specs, testSpec(fmt.Sprintf("app-%d", i), fmt.Sprintf("app-%d.example.com", i)))
++		}
++		writeTable(t, p, specs...)
++		p.reload()
++		before := p.dispatcher.table.Load()
++
++		specs[7].CookieExpire = "1h"
++		writeTable(t, p, specs...)
++		p.reload()
++		after := p.dispatcher.table.Load()
++
++		for i := range 50 {
++			name := fmt.Sprintf("app-%d", i)
++			if i == 7 {
++				assert.Equal(t, 2, builder.count(name))
++				assert.NotSame(t, before.byName[testNamespace+"/"+name], after.byName[testNamespace+"/"+name])
++				continue
++			}
++			assert.Equal(t, 1, builder.count(name), name)
++			assert.Same(t, before.byName[testNamespace+"/"+name], after.byName[testNamespace+"/"+name], name)
++		}
++		assert.InDelta(t, 51, testutil.ToFloat64(p.metrics.changes.WithLabelValues(changeBuilt)), 0)
++		assert.InDelta(t, 49, testutil.ToFloat64(p.metrics.changes.WithLabelValues(changeReused)), 0)
++	})
++
++	t.Run("a removed client is not served and an added one is", func(t *testing.T) {
++		t.Parallel()
++		builder := newStubBuilder()
++		p := newTestTableProxy(t, builder.build)
++
++		writeTable(t, p, testSpec("a", "a.example.com"), testSpec("b", "b.example.com"))
++		p.reload()
++		writeTable(t, p, testSpec("b", "b.example.com"), testSpec("c", "c.example.com"))
++		p.reload()
++
++		code, _ := get(t, p.dispatcher, "a.example.com")
++		assert.Equal(t, http.StatusNotFound, code)
++		_, body := get(t, p.dispatcher, "b.example.com")
++		assert.Equal(t, "b#1", body)
++		_, body = get(t, p.dispatcher, "c.example.com")
++		assert.Equal(t, "c#1", body)
++		assert.InDelta(t, 1, testutil.ToFloat64(p.metrics.changes.WithLabelValues(changeRemoved)), 0)
++	})
++
++	t.Run("a host that moves to another client is served by it", func(t *testing.T) {
++		t.Parallel()
++		builder := newStubBuilder()
++		p := newTestTableProxy(t, builder.build)
++
++		writeTable(t, p, testSpec("a", "a.example.com", "shared.example.com"), testSpec("b", "b.example.com"))
++		p.reload()
++		writeTable(t, p, testSpec("a", "a.example.com"), testSpec("b", "b.example.com", "shared.example.com"))
++		p.reload()
++
++		_, body := get(t, p.dispatcher, "shared.example.com")
++		assert.Equal(t, "b#2", body)
++		_, body = get(t, p.dispatcher, "a.example.com")
++		assert.Equal(t, "a#2", body)
++	})
++
++	t.Run("a table that cannot be parsed leaves the table in use", func(t *testing.T) {
++		t.Parallel()
++		builder := newStubBuilder()
++		p := newTestTableProxy(t, builder.build)
++
++		writeTable(t, p, testSpec("a", "a.example.com"))
++		p.reload()
++		before := p.dispatcher.table.Load()
++
++		require.NoError(t, os.WriteFile(p.path, []byte(`{"clients":[{"name":`), 0o600))
++		p.reload()
++		assert.Same(t, before, p.dispatcher.table.Load())
++
++		assert.Equal(t, 1, builder.count("a"))
++		assert.EqualValues(t, 1, reloadCount(t, p, reloadError))
++	})
++
++	t.Run("a record that is refused leaves the other clients to the new table", func(t *testing.T) {
++		t.Parallel()
++		builder := newStubBuilder()
++		p := newTestTableProxy(t, builder.build)
++
++		writeTable(t, p, testSpec("a", "a.example.com"), testSpec("b", "b.example.com"))
++		p.reload()
++
++		// The new record of b claims a host of a, which comes first: a and the new client c are
++		// served by the new table, and b by the record it had.
++		writeTable(t, p, testSpec("a", "a.example.com", "new.example.com"), testSpec("b", "b.example.com", "a.example.com"), testSpec("c", "c.example.com"))
++		p.reload()
++
++		for host, expected := range map[string]string{"a.example.com": "a#2", "new.example.com": "a#2", "b.example.com": "b#1", "c.example.com": "c#1"} {
++			_, body := get(t, p.dispatcher, host)
++			assert.Equal(t, expected, body, host)
++		}
++		assert.Equal(t, 1, builder.count("b"), "the refused record is not built")
++		assert.EqualValues(t, 1, reloadCount(t, p, reloadPartial))
++		assert.Equal(t, []string{"ns/b"}, p.status.Load().Failed)
++
++		// A new client whose record is refused is not served at all.
++		writeTable(t, p, testSpec("a", "a.example.com"), testSpec("d", "a.example.com"))
++		p.reload()
++		code, _ := get(t, p.dispatcher, "b.example.com")
++		assert.Equal(t, http.StatusNotFound, code, "a client that left the table is removed")
++		assert.Equal(t, []string{"ns/d"}, p.status.Load().Failed)
++		assert.Zero(t, builder.count("d"))
++	})
++
++	t.Run("a client kept on the record it had gets its hosts back once they are free", func(t *testing.T) {
++		t.Parallel()
++		builder := newStubBuilder()
++		p := newTestTableProxy(t, builder.build)
++		served := func(host string) string {
++			code, body := get(t, p.dispatcher, host)
++			if code != http.StatusOK {
++				return strconv.Itoa(code)
++			}
++			return body
++		}
++
++		first := testSpec("p", "h1.example.com", "h2.example.com")
++		writeTable(t, p, first)
++		p.reload()
++
++		// The record of p is refused, and a new client takes one of its hosts.
++		broken := first
++		broken.ClientID = ""
++		writeTable(t, p, broken, testSpec("n", "h2.example.com"))
++		p.reload()
++		assert.Equal(t, "p#1", served("h1.example.com"))
++		assert.Equal(t, "n#1", served("h2.example.com"))
++		assert.Equal(t, []string{"ns/p"}, p.status.Load().Failed)
++
++		// The new client leaves, and the record of p is still refused: the host comes back.
++		writeTable(t, p, broken)
++		p.reload()
++		assert.Equal(t, "p#1", served("h2.example.com"))
++
++		// The new client takes both hosts: p is kept without a host and is not counted.
++		writeTable(t, p, broken, testSpec("n", "h1.example.com", "h2.example.com"))
++		p.reload()
++		assert.Equal(t, "n#2", served("h1.example.com"))
++		assert.Equal(t, 1, p.status.Load().Clients)
++		assert.InDelta(t, 1, testutil.ToFloat64(p.metrics.clients), 0)
++
++		// The record p was built from comes back: it is served on all its hosts, without a build.
++		writeTable(t, p, first)
++		p.reload()
++		assert.Equal(t, "p#1", served("h1.example.com"))
++		assert.Equal(t, "p#1", served("h2.example.com"))
++		assert.Equal(t, 1, builder.count("p"))
++		assert.Empty(t, p.status.Load().Failed)
++	})
++
++	t.Run("a client whose first record is refused is not served by its second one too", func(t *testing.T) {
++		t.Parallel()
++		builder := newStubBuilder()
++		p := newTestTableProxy(t, builder.build)
++
++		writeTable(t, p, testSpec("p", "h1.example.com"))
++		p.reload()
++
++		broken := testSpec("p", "h1.example.com")
++		broken.ClientID = ""
++		second := testSpec("p", "h2.example.com")
++		second.CookieSecret = testCookieSecretC
++		writeTable(t, p, broken, second)
++		p.reload()
++
++		_, body := get(t, p.dispatcher, "h1.example.com")
++		assert.Equal(t, "p#1", body, "the client is served by the record it had")
++		code, _ := get(t, p.dispatcher, "h2.example.com")
++		assert.Equal(t, http.StatusNotFound, code, "its second record is dropped")
++		assert.Len(t, p.dispatcher.table.Load().byName, 1)
++		assert.Equal(t, 1, builder.count("p"))
++	})
++
++	t.Run("the process reports the generation it serves", func(t *testing.T) {
++		t.Parallel()
++		builder := newStubBuilder()
++		p := newTestTableProxy(t, builder.build)
++		status := func() clientTableStatus {
++			rw := httptest.NewRecorder()
++			p.serveStatus(p.dispatcher).ServeHTTP(rw, httptest.NewRequest(http.MethodGet, "http://10.0.0.1:8443"+clientTableStatusPath, nil))
++			require.Equal(t, http.StatusOK, rw.Code)
++			var got clientTableStatus
++			require.NoError(t, json.Unmarshal(rw.Body.Bytes(), &got))
++			return got
++		}
++
++		assert.Equal(t, clientTableStatus{Failed: []string{}}, status(), "no table yet")
++
++		builder.setFail("b", true)
++		data, err := json.Marshal(clientTableFile{Generation: 42, Clients: []clientSpec{testSpec("a", "a.example.com"), testSpec("b", "b.example.com")}})
++		require.NoError(t, err)
++		require.NoError(t, os.WriteFile(p.path, data, 0o600))
++		p.reload()
++
++		assert.Equal(t, clientTableStatus{Generation: 42, Clients: 1, Failed: []string{"ns/b"}}, status())
++		assert.InDelta(t, 42, testutil.ToFloat64(p.metrics.generation), 0)
++
++		// A file that is no table leaves the generation in use.
++		require.NoError(t, os.WriteFile(p.path, []byte(`{"generation":43,"clients":[{"name":`), 0o600))
++		p.reload()
++		assert.EqualValues(t, 42, status().Generation)
++
++		// The status is not under the prefix of the proxy and answers GET of its exact path only:
++		// everything else goes to the dispatcher.
++		for _, other := range []struct{ method, target string }{
++			{http.MethodGet, "http://a.example.com/dex-authenticator/client-table"},
++			{http.MethodGet, "http://a.example.com/client%2Dtable"},
++			{http.MethodGet, "http://a.example.com/client-table/"},
++			{http.MethodPost, "http://a.example.com/client-table"},
++		} {
++			rw := httptest.NewRecorder()
++			p.serveStatus(p.dispatcher).ServeHTTP(rw, httptest.NewRequest(other.method, other.target, nil))
++			assert.NotContains(t, rw.Body.String(), "generation", other.method+" "+other.target)
++		}
++	})
++
++	t.Run("a client that cannot be built keeps its previous handler on the hosts it still has", func(t *testing.T) {
++		t.Parallel()
++		builder := newStubBuilder()
++		p := newTestTableProxy(t, builder.build)
++
++		writeTable(t, p, testSpec("a", "a.example.com", "old.example.com"), testSpec("b", "b.example.com"))
++		p.reload()
++
++		builder.setFail("a", true)
++		builder.setFail("c", true)
++		changed := testSpec("a", "a.example.com", "new.example.com")
++		changed.CookieExpire = "1h"
++		// The host the client gave up goes to another client at once.
++		writeTable(t, p, changed, testSpec("b", "b.example.com", "old.example.com"), testSpec("c", "c.example.com"))
++		p.reload()
++
++		_, body := get(t, p.dispatcher, "a.example.com")
++		assert.Equal(t, "a#1", body, "the previous handler stays on the host the client keeps")
++		code, _ := get(t, p.dispatcher, "new.example.com")
++		assert.Equal(t, http.StatusNotFound, code, "the previous handler does not get the new host")
++		_, body = get(t, p.dispatcher, "old.example.com")
++		assert.Equal(t, "b#2", body)
++		code, _ = get(t, p.dispatcher, "c.example.com")
++		assert.Equal(t, http.StatusNotFound, code, "a new client that cannot be built is left out")
++		assert.InDelta(t, 2, testutil.ToFloat64(p.metrics.changes.WithLabelValues(changeFailed)), 0)
++
++		// Once the client can be built, the next version of the table brings it in whole.
++		builder.setFail("a", false)
++		changed.CookieExpire = "2h"
++		writeTable(t, p, changed, testSpec("b", "b.example.com", "old.example.com"))
++		p.reload()
++
++		_, body = get(t, p.dispatcher, "new.example.com")
++		assert.Equal(t, "a#2", body)
++	})
++}
++
++// TestClientTableProxy_reloadInFlight checks that a request that has reached the handler of a
++// client finishes there while the table is replaced under it.
++func TestClientTableProxy_reloadInFlight(t *testing.T) {
++	t.Parallel()
++
++	var builds atomic.Int32
++	entered := make(chan struct{})
++	release := make(chan struct{})
++
++	p := newTestTableProxy(t, func(clientSpec) (http.Handler, error) {
++		build := builds.Add(1)
++
++		return http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
++			if build == 1 {
++				close(entered)
++				<-release
++			}
++			_, _ = fmt.Fprintf(rw, "build %d", build)
++		}), nil
++	})
++
++	spec := testSpec("a", "a.example.com")
++	writeTable(t, p, spec)
++	p.reload()
++
++	slow := make(chan string, 1)
++	go func() {
++		_, body := get(t, p.dispatcher, "a.example.com")
++		slow <- body
++	}()
++	<-entered
++
++	spec.CookieExpire = "1h"
++	writeTable(t, p, spec)
++	p.reload()
++
++	_, body := get(t, p.dispatcher, "a.example.com")
++	assert.Equal(t, "build 2", body, "a request after the reload gets the new client")
++
++	close(release)
++	assert.Equal(t, "build 1", <-slow, "the request in flight finishes on the client it started with")
++}
++
++// TestClientTableProxy_reloadConcurrent serves requests while the table changes; the race detector
++// checks the swap.
++func TestClientTableProxy_reloadConcurrent(t *testing.T) {
++	t.Parallel()
++
++	builder := newStubBuilder()
++	p := newTestTableProxy(t, builder.build)
++
++	specs := []clientSpec{testSpec("a", "a.example.com"), testSpec("b", "b.example.com"), testSpec("c", "c.example.com")}
++	writeTable(t, p, specs...)
++	p.reload()
++
++	stop := make(chan struct{})
++	var wg sync.WaitGroup
++	for range 8 {
++		wg.Go(func() {
++			for {
++				select {
++				case <-stop:
++					return
++				default:
++				}
++				for _, host := range []string{"a.example.com", "b.example.com"} {
++					req := httptest.NewRequest(http.MethodGet, "http://"+host+"/", nil)
++					rw := httptest.NewRecorder()
++					p.dispatcher.ServeHTTP(rw, req)
++					if rw.Code != http.StatusOK || !strings.HasPrefix(rw.Body.String(), host[:1]+"#") {
++						t.Errorf("%s answered %d %q", host, rw.Code, rw.Body.String())
++						return
++					}
++				}
++			}
++		})
++	}
++
++	for i := range 200 {
++		specs[i%2].CookieExpire = fmt.Sprintf("%dh", i+1)
++		if i%3 == 0 {
++			writeTable(t, p, specs[:2]...)
++		} else {
++			writeTable(t, p, specs...)
++		}
++		p.reload()
++	}
++	close(stop)
++	wg.Wait()
++
++	assert.Equal(t, 101, builder.count("a"))
++	assert.Equal(t, 101, builder.count("b"))
++}
++
++// TestClientTableProxy_watch checks that the table follows its file without a call from outside.
++// The poll is off in these tests, so only the file events can bring the new table in.
++func TestClientTableProxy_watch(t *testing.T) {
++	t.Parallel()
++
++	waitFor := func(t *testing.T, p *clientTableProxy, host, expect string) {
++		t.Helper()
++
++		require.Eventually(t, func() bool {
++			_, body := get(t, p.dispatcher, host)
++			return body == expect
++		}, 10*time.Second, 20*time.Millisecond, "%s must be served as %s", host, expect)
++	}
++
++	t.Run("a file replaced by a rename", func(t *testing.T) {
++		t.Parallel()
++		builder := newStubBuilder()
++		p := newTestTableProxy(t, builder.build)
++		p.pollInterval = time.Hour
++
++		writeTable(t, p, testSpec("a", "a.example.com"))
++		p.reload()
++
++		ctx, cancel := context.WithCancel(context.Background())
++		done := make(chan struct{})
++		go func() {
++			defer close(done)
++			p.watch(ctx)
++		}()
++		t.Cleanup(func() {
++			cancel()
++			<-done
++		})
++
++		// The watch is set at the start of the loop; a change made before that is not seen
++		// until the poll, which is off here.
++		time.Sleep(200 * time.Millisecond)
++		writeTable(t, p, testSpec("a", "a.example.com"), testSpec("b", "b.example.com"))
++
++		waitFor(t, p, "b.example.com", "b#1")
++		_, body := get(t, p.dispatcher, "a.example.com")
++		assert.Equal(t, "a#1", body)
++	})
++
++	t.Run("a secret volume updated by the kubelet", func(t *testing.T) {
++		t.Parallel()
++		builder := newStubBuilder()
++
++		// The layout of a Secret volume: the file is a symlink into ..data, and ..data is a
++		// symlink to the directory of the current version, replaced by a rename.
++		dir := t.TempDir()
++		writeVersion := func(version string, specs ...clientSpec) {
++			versionDir := filepath.Join(dir, version)
++			require.NoError(t, os.Mkdir(versionDir, 0o700))
++			require.NoError(t, os.WriteFile(filepath.Join(versionDir, "clients.json"), encodeTable(t, specs...), 0o600))
++			require.NoError(t, os.Symlink(version, filepath.Join(dir, "..data_tmp")))
++			require.NoError(t, os.Rename(filepath.Join(dir, "..data_tmp"), filepath.Join(dir, "..data")))
++		}
++		writeVersion("..v1", testSpec("a", "a.example.com"))
++		require.NoError(t, os.Symlink(filepath.Join("..data", "clients.json"), filepath.Join(dir, "clients.json")))
++
++		p := newClientTableProxy(filepath.Join(dir, "clients.json"), "/dex-authenticator", builder.build, newTestMetrics(t))
++		p.pollInterval = time.Hour
++		p.reload()
++		_, body := get(t, p.dispatcher, "a.example.com")
++		require.Equal(t, "a#1", body)
++
++		ctx, cancel := context.WithCancel(context.Background())
++		done := make(chan struct{})
++		go func() {
++			defer close(done)
++			p.watch(ctx)
++		}()
++		t.Cleanup(func() {
++			cancel()
++			<-done
++		})
++
++		time.Sleep(200 * time.Millisecond)
++		writeVersion("..v2", testSpec("a", "a.example.com"), testSpec("b", "b.example.com"))
++		require.NoError(t, os.RemoveAll(filepath.Join(dir, "..v1")))
++
++		waitFor(t, p, "b.example.com", "b#1")
++	})
++
++	t.Run("a file that appears after the start is found by the poll", func(t *testing.T) {
++		t.Parallel()
++		builder := newStubBuilder()
++		p := newTestTableProxy(t, builder.build)
++		p.pollInterval = 50 * time.Millisecond
++		p.reload()
++
++		ctx, cancel := context.WithCancel(context.Background())
++		done := make(chan struct{})
++		go func() {
++			defer close(done)
++			p.watch(ctx)
++		}()
++		t.Cleanup(func() {
++			cancel()
++			<-done
++		})
++
++		writeTable(t, p, testSpec("a", "a.example.com"))
++
++		waitFor(t, p, "a.example.com", "a#1")
++	})
++}
++
++// testProcessArgs are the flags of a process that serves a table of clients, close to those of
++// the Deckhouse dex-authenticator.
++func testProcessArgs() []string {
++	return []string{
++		"--provider=oidc",
++		"--oidc-issuer-url=https://dex.example.com/",
++		"--skip-oidc-discovery",
++		"--login-url=https://dex.example.com/auth",
++		"--redeem-url=https://dex.d8-user-authn/token",
++		"--oidc-jwks-url=https://dex.d8-user-authn/keys",
++		"--redirect-url=/dex-authenticator/callback",
++		"--proxy-prefix=/dex-authenticator",
++		"--email-domain=*",
++		"--upstream=file:///dev/null",
++		"--set-xauthrequest",
++		"--scope=" + testProcessScope,
++		"--skip-provider-button",
++		"--reverse-proxy",
++		"--session-store-type=redis-peers",
++		"--redis-connection-url=redis://127.0.0.1:1/",
++		"--client-table=/not-used-by-the-builder",
++		"--revocation-feed-url=https://revocation-feed.d8-user-authn/revocations",
++		"--revocation-feed-disable",
++	}
++}
++
++// newRefusingProvider returns the URL of a token endpoint that refuses every refresh the way dex
++// refuses a refresh token of another client, and the number of requests it got.
++func newRefusingProvider(t *testing.T) (string, *atomic.Int32) {
++	t.Helper()
++
++	var requests atomic.Int32
++	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
++		requests.Add(1)
++		rw.Header().Set("Content-Type", "application/json")
++		rw.WriteHeader(http.StatusBadRequest)
++		_, _ = rw.Write([]byte(`{"error":"invalid_grant","error_description":"Refresh token is invalid or has already been claimed by another client."}`))
++	}))
++	t.Cleanup(server.Close)
++
++	return server.URL, &requests
++}
++
++func newTestClientBuilder(t *testing.T) *clientBuilder {
++	t.Helper()
++
++	store, err := memory.NewStore(options.MemoryStoreOptions{MaxBytes: 1 << 20})
++	require.NoError(t, err)
++
++	// The flag set main passes on: the flags that are not options.
++	flagSet := pflag.NewFlagSet("oauth2-proxy", pflag.ContinueOnError)
++	flagSet.ParseErrorsAllowlist.UnknownFlags = true
++	flagSet.String("config", "", "")
++	flagSet.String("alpha-config", "", "")
++	flagSet.Bool("convert-config-to-alpha", false, "")
++	flagSet.Bool("version", false, "")
++	flagSet.Bool("config-test", false, "")
++
++	return &clientBuilder{
++		flagSet: flagSet,
++		args:    testProcessArgs(),
++		scope:   testProcessScope,
++		shared:  &sharedResources{sessionStore: store},
++	}
++}
++
++func TestClientBuilder_build(t *testing.T) {
++	// Not parallel: the builder parses flags into a flag set, as the only reloading goroutine does.
++	builder := newTestClientBuilder(t)
++
++	buildProxy := func(t *testing.T, spec clientSpec) *OAuthProxy {
++		t.Helper()
++
++		handler, err := builder.build(spec)
++		require.NoError(t, err)
++		proxy, ok := handler.(*OAuthProxy)
++		require.True(t, ok)
++
++		return proxy
++	}
++
++	t.Run("a client takes its settings from its record and the rest from the process", func(t *testing.T) {
++		spec := testSpec("app", "app.example.com", "app2.example.com")
++		spec.CookieExpire = "24h"
++		spec.AllowAccessToKubernetes = true
++		spec.SendAuthorizationHeader = true
++
++		proxy := buildProxy(t, spec)
++
++		assert.Equal(t, "dex-authenticator-app", proxy.provider.Data().ClientID)
++		assert.Equal(t, testClientSecret, proxy.provider.Data().ClientSecret)
++		assert.Equal(t, testProcessScope+" federated:id audience:server:client_id:kubernetes", proxy.provider.Data().Scope)
++		assert.Equal(t, "_oauth2_proxy", proxy.CookieOptions.Name)
++		assert.Equal(t, spec.CookieSecret, proxy.CookieOptions.Secret)
++		assert.Equal(t, 24*time.Hour, proxy.CookieOptions.Expire)
++		assert.Equal(t, []string{"app.example.com", "app2.example.com"}, proxy.whitelistDomains)
++		assert.Equal(t, "/dex-authenticator", proxy.ProxyPrefix)
++		assert.Equal(t, "https://dex.example.com/auth", proxy.provider.Data().LoginURL.String())
++		assert.Nil(t, proxy.revocationFeed, "a client of a table has no revocation feed of its own")
++		assert.Nil(t, proxy.server, "a client of a table has no servers of its own")
++	})
++
++	t.Run("a client without optional fields keeps the defaults of the process", func(t *testing.T) {
++		proxy := buildProxy(t, testSpec("app", "app.example.com"))
++
++		assert.Equal(t, "_oauth2_proxy", proxy.CookieOptions.Name)
++		assert.Equal(t, 168*time.Hour, proxy.CookieOptions.Expire)
++		assert.Equal(t, []string{"app.example.com"}, proxy.whitelistDomains)
++		assert.Equal(t, testProcessScope, proxy.provider.Data().Scope)
++	})
++
++	t.Run("clients share the session store and the pages", func(t *testing.T) {
++		first := buildProxy(t, testSpec("first", "first.example.com"))
++		second := buildProxy(t, testSpec("second", "second.example.com"))
++
++		assert.Same(t, first.pageWriter, second.pageWriter)
++		assert.Same(t, first.upstreamProxy, second.upstreamProxy)
++		assert.NotSame(t, first.sessionStore, second.sessionStore, "each client has its own cookie options")
++		assert.NotNil(t, builder.shared.pageWriter)
++	})
++
++	t.Run("a record that cannot make a client is an error, not the end of the process", func(t *testing.T) {
++		tests := []struct {
++			name      string
++			modify    func(*clientSpec)
++			expectErr string
++		}{
++			{name: "cookie expire that is not a duration", modify: func(s *clientSpec) { s.CookieExpire = "soon" }, expectErr: "could not parse the flags"},
++			{name: "cookie secret of a wrong length", modify: func(s *clientSpec) { s.CookieSecret = "dh-test-secret-012" }, expectErr: "cookie_secret"},
++		}
++
++		for _, tt := range tests {
++			t.Run(tt.name, func(t *testing.T) {
++				spec := testSpec("app", "app.example.com")
++				tt.modify(&spec)
++
++				handler, err := builder.build(spec)
++
++				require.ErrorContains(t, err, tt.expectErr)
++				assert.Nil(t, handler)
++			})
++		}
++	})
++}
++
++// TestClientTable_isolation runs real clients behind the dispatcher and checks that the session
++// of one client is not a session for another, whatever the request forges.
++func TestClientTable_isolation(t *testing.T) {
++	builder := newTestClientBuilder(t)
++	p := newTestTableProxy(t, builder.build)
++
++	specA := testSpec("a", "a.example.com")
++	specA.CookieSecret = testCookieSecretA
++	specB := testSpec("b", "b.example.com")
++	specB.CookieSecret = testCookieSecretB
++	writeTable(t, p, specA, specB)
++	p.reload()
++
++	// signIn saves a session at the client of host and returns its cookies.
++	signIn := func(t *testing.T, host, user string) []*http.Cookie {
++		t.Helper()
++
++		proxy, ok := p.dispatcher.table.Load().byHost[host].handler.(*OAuthProxy)
++		require.True(t, ok)
++
++		created := time.Now()
++		req := httptest.NewRequest(http.MethodGet, "https://"+host+"/", nil)
++		rw := httptest.NewRecorder()
++		require.NoError(t, proxy.sessionStore.Save(rw, req, &sessions.SessionState{
++			User:         user,
++			Email:        user + "@example.com",
++			AccessToken:  "access-token",
++			RefreshToken: "refresh-token-of-" + user,
++			CreatedAt:    &created,
++		}))
++
++		return rw.Result().Cookies()
++	}
++
++	cookiesA := signIn(t, "a.example.com", "alice")
++	cookiesB := signIn(t, "b.example.com", "bob")
++	require.NotEmpty(t, cookiesA)
++	require.Equal(t, cookiesA[0].Name, cookiesB[0].Name, "the clients use the same cookie name, as the authenticators do")
++
++	// serviceHost is the Host of the auth subrequest of ingress-nginx.
++	const serviceHost = "app-dex-authenticator.d8-app.svc.cluster.local"
++
++	type request struct {
++		path          string
++		host          string
++		originalURL   string
++		forwardedHost string
++		cookies       []*http.Cookie
++	}
++	do := func(t *testing.T, r request) *httptest.ResponseRecorder {
++		t.Helper()
++
++		req := httptest.NewRequest(http.MethodGet, "http://placeholder.test"+r.path, nil)
++		req.Host = r.host
++		if r.originalURL != "" {
++			req.Header.Set("X-Original-URL", r.originalURL)
++		}
++		if r.forwardedHost != "" {
++			req.Header.Set("X-Forwarded-Host", r.forwardedHost)
++		}
++		for _, cookie := range r.cookies {
++			req.AddCookie(cookie)
++		}
++		rw := httptest.NewRecorder()
++		p.dispatcher.ServeHTTP(rw, req)
++
++		return rw
++	}
++
++	const authPath = "/dex-authenticator/auth"
++
++	accepted := []struct {
++		name       string
++		request    request
++		expectUser string
++	}{
++		{
++			name:       "session of a on the auth subrequest of a",
++			request:    request{path: authPath, host: serviceHost, originalURL: "https://a.example.com/page", cookies: cookiesA},
++			expectUser: "alice@example.com",
++		},
++		{
++			name:       "session of b on the auth subrequest of b",
++			request:    request{path: authPath, host: serviceHost, originalURL: "https://b.example.com/page", cookies: cookiesB},
++			expectUser: "bob@example.com",
++		},
++		{
++			name:       "session of a on the userinfo of a",
++			request:    request{path: "/dex-authenticator/userinfo", host: "a.example.com", cookies: cookiesA},
++			expectUser: "alice@example.com",
++		},
++	}
++	for _, tt := range accepted {
++		t.Run(tt.name, func(t *testing.T) {
++			rw := do(t, tt.request)
++
++			require.Equal(t, http.StatusOK, rw.Code)
++			if tt.request.path == authPath {
++				assert.Equal(t, tt.expectUser, rw.Header().Get("X-Auth-Request-Email"))
++			} else {
++				assert.Contains(t, rw.Body.String(), tt.expectUser)
++			}
++		})
++	}
++
++	refused := []struct {
++		name       string
++		request    request
++		expectCode int
++	}{
++		{
++			name:       "session of a on the auth subrequest of b",
++			request:    request{path: authPath, host: serviceHost, originalURL: "https://b.example.com/page", cookies: cookiesA},
++			expectCode: http.StatusUnauthorized,
++		},
++		{
++			name:       "session of a on the auth subrequest of b with a forged host",
++			request:    request{path: authPath, host: "a.example.com", originalURL: "https://b.example.com/page", cookies: cookiesA},
++			expectCode: http.StatusUnauthorized,
++		},
++		{
++			name:       "session of a on the auth subrequest of b with a forged x-forwarded-host",
++			request:    request{path: authPath, host: serviceHost, originalURL: "https://b.example.com/page", forwardedHost: "a.example.com", cookies: cookiesA},
++			expectCode: http.StatusUnauthorized,
++		},
++		{
++			name:       "session of a on the userinfo of b with a forged x-original-url",
++			request:    request{path: "/dex-authenticator/userinfo", host: "b.example.com", originalURL: "https://a.example.com/", cookies: cookiesA},
++			expectCode: http.StatusUnauthorized,
++		},
++		{
++			name:       "session of a on the userinfo of b with a forged x-forwarded-host",
++			request:    request{path: "/dex-authenticator/userinfo", host: "b.example.com", forwardedHost: "a.example.com", cookies: cookiesA},
++			expectCode: http.StatusUnauthorized,
++		},
++		{
++			// nginx would serve b.example.com for this Host; a URL parser would answer a.example.com.
++			name:       "session of a with an x-original-url that hides the host of a behind userinfo",
++			request:    request{path: authPath, host: serviceHost, originalURL: "https://b.example.com:443@a.example.com/", cookies: cookiesA},
++			expectCode: http.StatusForbidden,
++		},
++		{
++			// Without X-Original-URL the check is chosen by its Host header, never by X-Forwarded-Host.
++			name:       "session of a on an auth check with the host of b and a forged x-forwarded-host",
++			request:    request{path: authPath, host: "b.example.com", forwardedHost: "a.example.com", cookies: cookiesA},
++			expectCode: http.StatusUnauthorized,
++		},
++		{
++			name:       "session of a on a host no client has",
++			request:    request{path: authPath, host: serviceHost, originalURL: "https://c.example.com/", cookies: cookiesA},
++			expectCode: http.StatusForbidden,
++		},
++		{
++			name:       "no session on the auth subrequest of a",
++			request:    request{path: authPath, host: serviceHost, originalURL: "https://a.example.com/page"},
++			expectCode: http.StatusUnauthorized,
++		},
++	}
++	for _, tt := range refused {
++		t.Run(tt.name, func(t *testing.T) {
++			rw := do(t, tt.request)
++
++			assert.Equal(t, tt.expectCode, rw.Code)
++			assert.Empty(t, rw.Header().Get("X-Auth-Request-Email"))
++			assert.Empty(t, rw.Header().Get("X-Auth-Request-User"))
++			assert.Empty(t, rw.Header().Get("Authorization"))
++			assert.NotContains(t, rw.Body.String(), "alice")
++			for _, cookie := range rw.Result().Cookies() {
++				assert.Empty(t, cookie.Value, "a refused request must not be given a session cookie")
++			}
++		})
++	}
++
++	t.Run("the sessions survive the refused requests", func(t *testing.T) {
++		rw := do(t, request{path: authPath, host: serviceHost, originalURL: "https://a.example.com/page", cookies: cookiesA})
++		require.Equal(t, http.StatusOK, rw.Code)
++		assert.Equal(t, "alice@example.com", rw.Header().Get("X-Auth-Request-Email"))
++
++		rw = do(t, request{path: authPath, host: serviceHost, originalURL: "https://b.example.com/page", cookies: cookiesB})
++		require.Equal(t, http.StatusOK, rw.Code)
++		assert.Equal(t, "bob@example.com", rw.Header().Get("X-Auth-Request-Email"))
++	})
++
++	t.Run("a client that changes its cookie secret refuses the sessions it gave before", func(t *testing.T) {
++		specA.CookieSecret = testCookieSecretC
++		writeTable(t, p, specA, specB)
++		p.reload()
++
++		rw := do(t, request{path: authPath, host: serviceHost, originalURL: "https://a.example.com/page", cookies: cookiesA})
++		assert.Equal(t, http.StatusUnauthorized, rw.Code)
++
++		rw = do(t, request{path: authPath, host: serviceHost, originalURL: "https://b.example.com/page", cookies: cookiesB})
++		assert.Equal(t, http.StatusOK, rw.Code, "the other client is not touched")
++	})
++
++	t.Run("two clients are never served with one cookie secret", func(t *testing.T) {
++		// With one cookie secret the cookie of b would pass the signature check of a. The record
++		// of a comes first and takes the secret; the record of b is refused, and the record b had
++		// is not served either, as its secret is now that of a.
++		specA.CookieSecret = testCookieSecretB
++		writeTable(t, p, specA, specB)
++		p.reload()
++
++		assert.Equal(t, []string{"ns/b"}, p.status.Load().Failed)
++		rw := do(t, request{path: authPath, host: serviceHost, originalURL: "https://b.example.com/page", cookies: cookiesB})
++		assert.Equal(t, http.StatusForbidden, rw.Code, "b is not served")
++		// What the cookie of b gets from a, which has its secret now, is the matter of
++		// TestClientTable_storeScope.
++	})
++}
++
++// TestClientTable_storeScope checks the second boundary between the clients, under the cookie
++// secret: each client keeps its sessions under its own name in the store they share. Two clients
++// that got one cookie name and one cookie secret by mistake still do not take the sessions of
++// each other. The table refuses such clients, so they are built here past it.
++func TestClientTable_storeScope(t *testing.T) {
++	redeemURL, refreshes := newRefusingProvider(t)
++
++	builder := newTestClientBuilder(t)
++	// With a refresh period the stub of a session the store does not have is refreshed through
++	// the provider instead of being trusted (patch 002), as in every DexAuthenticator.
++	builder.args = append(builder.args, "--redeem-url="+redeemURL, "--cookie-refresh=10m")
++
++	specA := testSpec("a", "a.example.com")
++	specB := testSpec("b", "b.example.com")
++	specA.CookieSecret, specB.CookieSecret = testCookieSecretA, testCookieSecretA
++
++	handlerA, err := builder.build(specA)
++	require.NoError(t, err)
++	handlerB, err := builder.build(specB)
++	require.NoError(t, err)
++	proxyA, ok := handlerA.(*OAuthProxy)
++	require.True(t, ok)
++
++	created := time.Now()
++	saveReq := httptest.NewRequest(http.MethodGet, "https://a.example.com/", nil)
++	saveRW := httptest.NewRecorder()
++	require.NoError(t, proxyA.sessionStore.Save(saveRW, saveReq, &sessions.SessionState{
++		User:         "alice",
++		Email:        "alice@example.com",
++		AccessToken:  "access-token",
++		RefreshToken: "refresh-token-of-alice",
++		CreatedAt:    &created,
++	}))
++	cookies := saveRW.Result().Cookies()
++	require.NotEmpty(t, cookies)
++
++	auth := func(handler http.Handler, host string) *httptest.ResponseRecorder {
++		req := httptest.NewRequest(http.MethodGet, "http://"+host+"/dex-authenticator/auth", nil)
++		for _, cookie := range cookies {
++			req.AddCookie(cookie)
++		}
++		rw := httptest.NewRecorder()
++		handler.ServeHTTP(rw, req)
++
++		return rw
++	}
++
++	t.Run("the client that saved the session finds it", func(t *testing.T) {
++		rw := auth(handlerA, "a.example.com")
++
++		require.Equal(t, http.StatusOK, rw.Code)
++		assert.Equal(t, "alice@example.com", rw.Header().Get("X-Auth-Request-Email"))
++		assert.Zero(t, refreshes.Load(), "a session found in the store is not refreshed")
++	})
++
++	t.Run("another client with the same cookie secret does not find it", func(t *testing.T) {
++		rw := auth(handlerB, "b.example.com")
++
++		// The cookie passes the signature check of b, but b has no record under its name: it gets
++		// the stub of patch 002, tries the refresh token at the provider, and the provider refuses
++		// a token of another client.
++		assert.Equal(t, http.StatusUnauthorized, rw.Code)
++		assert.Empty(t, rw.Header().Get("X-Auth-Request-Email"))
++		assert.Empty(t, rw.Header().Get("X-Auth-Request-User"))
++		assert.NotContains(t, rw.Body.String(), "alice")
++		assert.Positive(t, refreshes.Load(), "b must ask the provider instead of trusting the store")
++	})
++
++	t.Run("the session of the first client is still there", func(t *testing.T) {
++		rw := auth(handlerA, "a.example.com")
++
++		require.Equal(t, http.StatusOK, rw.Code)
++		assert.Equal(t, "alice@example.com", rw.Header().Get("X-Auth-Request-Email"))
++	})
++
++	t.Run("the refused client left nothing in the store", func(t *testing.T) {
++		store, ok := builder.shared.sessionStore.(*memory.Store)
++		require.True(t, ok)
++		registry := prometheus.NewRegistry()
++		require.NoError(t, store.Register(registry))
++
++		// One record: the session of a. The refused refresh of b saved nothing.
++		families, err := registry.Gather()
++		require.NoError(t, err)
++		entries := -1.0
++		for _, family := range families {
++			if family.GetName() == "oauth2_proxy_session_store_memory_entries" {
++				entries = family.GetMetric()[0].GetGauge().GetValue()
++			}
++		}
++		assert.InDelta(t, 1, entries, 0)
++	})
++}
++
++// TestClientTable_startLog checks that a table of clients is logged in one line per client and one
++// line per load, not in the lines every OAuthProxy writes about itself.
++func TestClientTable_startLog(t *testing.T) {
++	// Not parallel: the test takes the output of the logger of the process.
++	var output bytes.Buffer
++	logger.SetOutput(&output)
++	logger.SetErrOutput(&output)
++	t.Cleanup(func() {
++		logger.SetOutput(os.Stdout)
++		logger.SetErrOutput(os.Stderr)
++	})
++
++	builder := newTestClientBuilder(t)
++	p := newTestTableProxy(t, builder.build)
++	writeTable(t, p, testSpec("a", "a.example.com", "a2.example.com"), testSpec("b", "b.example.com"), testSpec("c", "c.example.com"))
++	p.reload()
++
++	lines := strings.Split(strings.TrimSpace(output.String()), "\n")
++	count := func(part string) int {
++		n := 0
++		for _, line := range lines {
++			if strings.Contains(line, part) {
++				n++
++			}
++		}
++		return n
++	}
++
++	assert.Equal(t, 3, count("of the client table is built"), "one line per client")
++	assert.Equal(t, 1, count(`Client "ns/a" of the client table is built: client ID dex-authenticator-a, hosts a.example.com,a2.example.com`))
++	assert.Equal(t, 1, count("Client table of generation 0 loaded"))
++	assert.Zero(t, count("OAuthProxy configured"))
++	assert.Zero(t, count("Cookie settings"))
++	assert.LessOrEqual(t, count("mapping path"), 1, "the upstreams are built once for the table")
++	assert.LessOrEqual(t, count("--trusted-proxy-ip"), 1, "the warning of the process is logged once")
++	assert.LessOrEqual(t, len(lines), 6, "three clients, the load, the upstreams and the warning")
++	assert.NotContains(t, output.String(), "dh-test-secret", "the log must not carry a secret")
++}
++
++// TestClientTable_logNamesTheClient checks that the log lines of a request served by a client of
++// a table name the DexAuthenticator object of that client, and that the lines of a process with
++// one client have no such fields.
++func TestClientTable_logNamesTheClient(t *testing.T) {
++	builder := newTestClientBuilder(t)
++	handler, err := builder.build(testSpec("app", "app.example.com"))
++	require.NoError(t, err)
++
++	single, err := NewOAuthProxy(func() *options.Options {
++		opts := baseTestOptions()
++		require.NoError(t, validation.Validate(opts))
++		return opts
++	}(), func(string) bool { return true })
++	require.NoError(t, err)
++
++	tests := []struct {
++		name              string
++		handler           http.Handler
++		path              string
++		expectedName      any
++		expectedNamespace any
++	}{
++		{name: "client of a table", handler: handler, path: "/dex-authenticator/auth", expectedName: "app", expectedNamespace: testNamespace},
++		{name: "the only client of a process", handler: single, path: "/oauth2/auth"},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			output, _ := captureJSONLogs(t)
++
++			req := httptest.NewRequest(http.MethodGet, "http://app.example.com"+tt.path, nil)
++			tt.handler.ServeHTTP(httptest.NewRecorder(), req)
++
++			lines := []map[string]any{}
++			for _, line := range jsonLogLines(t, output.String()) {
++				if line["level"] == "request" || line["level"] == "auth" {
++					lines = append(lines, line)
++				}
++			}
++			require.NotEmpty(t, lines)
++			for _, line := range lines {
++				assert.Equal(t, tt.expectedName, line["authenticator"])
++				assert.Equal(t, tt.expectedNamespace, line["authenticator_namespace"])
++			}
++		})
++	}
++}
+diff --git a/deckhouse_dispatcher.go b/deckhouse_dispatcher.go
+new file mode 100644
+index 00000000..04ffdb6a
+--- /dev/null
++++ b/deckhouse_dispatcher.go
+@@ -0,0 +1,141 @@
++package main
++
++import (
++	"net/http"
++	"slices"
++	"strings"
++	"sync/atomic"
++	"time"
++
++	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
++)
++
++// tableClient is one client of the table: an OAuthProxy with its own provider client, cookie
++// secret and settings, reachable by its hosts.
++type tableClient struct {
++	name        string
++	fingerprint [fingerprintSize]byte
++	// cookieSecret is the hash of the cookie secret of the client, as the proxy reads it.
++	cookieSecret [fingerprintSize]byte
++	// record are the hosts of the record the handler was built from, and hosts are those of them
++	// the client is served on: a client kept on the record it had gives up the hosts the clients
++	// of a newer table have taken, and gets them back once they are free.
++	record  []string
++	hosts   []string
++	handler http.Handler
++}
++
++// on returns the client served on hosts: the client itself when it is served on them already,
++// and a copy otherwise, as a client in a table is never changed.
++func (c *tableClient) on(hosts []string) *tableClient {
++	if slices.Equal(c.hosts, hosts) {
++		return c
++	}
++	served := *c
++	served.hosts = hosts
++
++	return &served
++}
++
++// clientTable is an immutable snapshot of the clients a process serves. A reload builds a new
++// snapshot and swaps it in; a request that has taken its client from the old one finishes there.
++type clientTable struct {
++	byHost map[string]*tableClient
++	byName map[string]*tableClient
++}
++
++func newClientTable() *clientTable {
++	return &clientTable{
++		byHost: map[string]*tableClient{},
++		byName: map[string]*tableClient{},
++	}
++}
++
++// dispatcher is the handler of a process that serves a table of clients (Deckhouse patch 018). It
++// chooses the client of each request by the host of the request and hands the request to the
++// OAuthProxy of that client. A host no client has is answered 403 on the auth path, which
++// ingress-nginx passes to the browser as it is while it turns a 404 of the auth subrequest into
++// its own 500, and 404 on any other path.
++//
++// The key of the choice is the security boundary between the clients: a request that reaches the
++// handler of another client is checked with the cookie secret of that client, so its answer to
++// "is this user signed in" would be given for the wrong application. The key therefore comes from
++// one place per kind of request and is parsed strictly (patch 016):
++//   - the auth subrequest of ingress-nginx (the exact path <proxy prefix>/auth with X-Original-URL
++//     and without X-Forwarded-Proto) carries the Host of the Service of the authenticator, so its
++//     key is the authority of X-Original-URL, which nginx builds from the Host header it has
++//     chosen the server by. A header that names no plain host is no key;
++//   - every other request comes through the route of the application, or is the check of an
++//     ingress controller that sends the Host of the application, so its key is the Host header.
++//
++// X-Forwarded-Host is never read: ingress-nginx passes the one the browser sent on in the auth
++// subrequest. It is overwritten with the host the client was chosen by before the handler of the
++// client runs, so that the client sees no other host in the request. The host is written the way
++// the table names it, in lower case and without a trailing dot, with the port only when it is not
++// the default one of the scheme: the client builds its redirect URI from it, and the provider
++// compares that with the registered one as a string.
++type dispatcher struct {
++	table    atomic.Pointer[clientTable]
++	authPath string
++	metrics  *clientTableMetrics
++}
++
++func newDispatcher(proxyPrefix string, metrics *clientTableMetrics) *dispatcher {
++	d := &dispatcher{
++		authPath: proxyPrefix + authOnlyPath,
++		metrics:  metrics,
++	}
++	d.table.Store(newClientTable())
++
++	return d
++}
++
++func (d *dispatcher) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
++	start := time.Now()
++
++	client, forwardedHost := d.route(req)
++	if client == nil {
++		status := http.StatusNotFound
++		if req.URL.EscapedPath() == d.authPath {
++			status = http.StatusForbidden
++		}
++		http.Error(rw, "no application is served on this host", status)
++		d.metrics.unknown.Observe(time.Since(start).Seconds())
++		return
++	}
++
++	req.Header.Set(requestutil.XForwardedHost, forwardedHost)
++	client.handler.ServeHTTP(rw, req)
++	d.metrics.hit.Observe(time.Since(start).Seconds())
++}
++
++// route returns the client of the request and the host it was chosen by, as the client is to see
++// it in X-Forwarded-Host, or nil when the request names no client of the table.
++func (d *dispatcher) route(req *http.Request) (*tableClient, string) {
++	// The scheme only tells whether the port is the default one. On the route of an application
++	// the ingress controller sets X-Forwarded-Proto.
++	scheme := strings.ToLower(req.Header.Get(requestutil.XForwardedProto))
++	authority := req.Host
++	// The router of a client matches the auth path the same way: exactly, by the escaped path.
++	isSubrequest := req.URL.EscapedPath() == d.authPath && scheme == "" &&
++		len(req.Header.Values(requestutil.OriginalURLHeader)) > 0
++	if isSubrequest {
++		var ok bool
++		scheme, authority, ok = requestutil.OriginalAuthority(req.Header)
++		if !ok {
++			return nil, ""
++		}
++	}
++
++	host, port, ok := requestutil.ServerName(authority)
++	if !ok {
++		return nil, ""
++	}
++
++	client := d.table.Load().byHost[host]
++	if client == nil {
++		return nil, ""
++	}
++
++	return client, requestutil.ForwardedHost(scheme, host, port)
++}
+diff --git a/deckhouse_dispatcher_test.go b/deckhouse_dispatcher_test.go
+new file mode 100644
+index 00000000..41a586ac
+--- /dev/null
++++ b/deckhouse_dispatcher_test.go
+@@ -0,0 +1,477 @@
++package main
++
++import (
++	"net/http"
++	"net/http/httptest"
++	"strings"
++	"sync"
++	"testing"
++
++	"github.com/prometheus/client_golang/prometheus"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++// reachedRequest is what the handler of a client saw of a request.
++type reachedRequest struct {
++	client         string
++	host           string
++	forwardedHosts []string
++}
++
++// requestRecorder collects the requests that reached the handlers of the clients.
++type requestRecorder struct {
++	mu      sync.Mutex
++	reached []reachedRequest
++}
++
++// handler returns the handler of the client name: it records the request and answers 200 with
++// the name of the client.
++func (r *requestRecorder) handler(name string) http.Handler {
++	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
++		r.mu.Lock()
++		r.reached = append(r.reached, reachedRequest{
++			client:         name,
++			host:           req.Host,
++			forwardedHosts: req.Header.Values("X-Forwarded-Host"),
++		})
++		r.mu.Unlock()
++
++		rw.Header().Set("X-Test-Client", name)
++		rw.WriteHeader(http.StatusOK)
++	})
++}
++
++func (r *requestRecorder) requests() []reachedRequest {
++	r.mu.Lock()
++	defer r.mu.Unlock()
++
++	return append([]reachedRequest{}, r.reached...)
++}
++
++func newTestMetrics(t *testing.T) *clientTableMetrics {
++	t.Helper()
++
++	metrics, err := newClientTableMetrics(prometheus.NewRegistry())
++	require.NoError(t, err)
++
++	return metrics
++}
++
++// newTestDispatcher returns a dispatcher with the clients a (a.example.com, a2.example.com),
++// b (b.example.com) and w (w.example.com), whose handlers record what reaches them.
++func newTestDispatcher(t *testing.T) (*dispatcher, *requestRecorder) {
++	t.Helper()
++
++	recorder := &requestRecorder{}
++	table := newClientTable()
++	for name, hosts := range map[string][]string{
++		"a": {"a.example.com", "a2.example.com"},
++		"b": {"b.example.com"},
++		"w": {"w.example.com"},
++	} {
++		client := &tableClient{name: name, hosts: hosts, handler: recorder.handler(name)}
++		table.byName[name] = client
++		for _, host := range hosts {
++			table.byHost[host] = client
++		}
++	}
++
++	d := newDispatcher("/dex-authenticator", newTestMetrics(t))
++	d.table.Store(table)
++
++	return d, recorder
++}
++
++// TestDispatcher_ServeHTTP checks the security boundary between the clients of a table: a request
++// reaches the handler of the client its real host names and no other, whatever Host,
++// X-Forwarded-Host and X-Original-URL the sender forges.
++func TestDispatcher_ServeHTTP(t *testing.T) {
++	t.Parallel()
++
++	// serviceHost is the Host of the auth subrequest of ingress-nginx: the Service in auth-url.
++	const serviceHost = "app-dex-authenticator.d8-app.svc.cluster.local"
++
++	tests := []struct {
++		name string
++		path string
++		host string
++		// originalURL and forwardedHost are the values of the headers; nil leaves the header out.
++		originalURL   []string
++		forwardedHost []string
++		// forwardedProto is the X-Forwarded-Proto the ingress controller sets on a browser path.
++		forwardedProto string
++
++		// expectClient is the only client whose handler may run; empty expects 404 and no handler.
++		expectClient        string
++		expectForwardedHost string
++	}{
++		// Browser paths: the route of the application sets Host.
++		{name: "host header chooses the client of a sign-in", path: "/dex-authenticator/sign_in", host: "a.example.com", expectClient: "a", expectForwardedHost: "a.example.com"},
++		{name: "host header chooses the client of a start", path: "/dex-authenticator/start", host: "b.example.com", expectClient: "b", expectForwardedHost: "b.example.com"},
++		{name: "host header chooses the client of a callback", path: "/dex-authenticator/callback", host: "b.example.com", expectClient: "b", expectForwardedHost: "b.example.com"},
++		{name: "host header chooses the client of a sign-out", path: "/dex-authenticator/sign_out", host: "a.example.com", expectClient: "a", expectForwardedHost: "a.example.com"},
++		{name: "host header chooses the client of a static file", path: "/dex-authenticator/static/main.css", host: "w.example.com", expectClient: "w", expectForwardedHost: "w.example.com"},
++		{name: "host header chooses the client of a path outside the prefix", path: "/", host: "a.example.com", expectClient: "a", expectForwardedHost: "a.example.com"},
++		{name: "second host of a client", path: "/dex-authenticator/sign_in", host: "a2.example.com", expectClient: "a", expectForwardedHost: "a2.example.com"},
++		{name: "host with a port keeps the port for the client", path: "/dex-authenticator/sign_in", host: "a.example.com:8443", expectClient: "a", expectForwardedHost: "a.example.com:8443"},
++		{name: "host with the https port and no scheme keeps the port", path: "/dex-authenticator/sign_in", host: "a.example.com:443", expectClient: "a", expectForwardedHost: "a.example.com:443"},
++		{name: "host with the https port over https loses the port", path: "/dex-authenticator/sign_in", host: "a.example.com:443", forwardedProto: "https", expectClient: "a", expectForwardedHost: "a.example.com"},
++		{name: "host with the http port over http loses the port", path: "/dex-authenticator/sign_in", host: "a.example.com:80", forwardedProto: "http", expectClient: "a", expectForwardedHost: "a.example.com"},
++		{name: "host with the http port over https keeps the port", path: "/dex-authenticator/sign_in", host: "a.example.com:80", forwardedProto: "https", expectClient: "a", expectForwardedHost: "a.example.com:80"},
++		{name: "host with another port over https keeps the port", path: "/dex-authenticator/sign_in", host: "A.example.com.:8443", forwardedProto: "HTTPS", expectClient: "a", expectForwardedHost: "a.example.com:8443"},
++		{name: "forged scheme does not choose the client", path: "/dex-authenticator/sign_in", host: "b.example.com:443", forwardedProto: "https://a.example.com", expectClient: "b", expectForwardedHost: "b.example.com:443"},
++		{name: "unknown host in mixed case with a trailing dot and a port", path: "/dex-authenticator/callback", host: "App.Example.com.:8443"},
++		{name: "known host in mixed case with a trailing dot and a port", path: "/dex-authenticator/callback", host: "B.Example.Com.:8443", expectClient: "b", expectForwardedHost: "b.example.com:8443"},
++		{name: "host in upper case", path: "/dex-authenticator/sign_in", host: "A.Example.COM", expectClient: "a", expectForwardedHost: "a.example.com"},
++		{name: "host with a trailing dot", path: "/dex-authenticator/sign_in", host: "a.example.com.", expectClient: "a", expectForwardedHost: "a.example.com"},
++		{name: "unknown host", path: "/dex-authenticator/sign_in", host: "c.example.com"},
++		{name: "empty host", path: "/dex-authenticator/sign_in", host: ""},
++		{name: "host that only ends with a known host", path: "/dex-authenticator/sign_in", host: "evil.a.example.com"},
++		{name: "host that only starts with a known host", path: "/dex-authenticator/sign_in", host: "a.example.com.evil.test"},
++		{name: "host with userinfo of a known host", path: "/dex-authenticator/sign_in", host: "a.example.com@b.example.com"},
++		{name: "host with a port and userinfo", path: "/dex-authenticator/sign_in", host: "b.example.com:443@a.example.com"},
++		{name: "host with two ports", path: "/dex-authenticator/sign_in", host: "a.example.com:443:80"},
++		{name: "host with an empty port", path: "/dex-authenticator/sign_in", host: "a.example.com:"},
++		{name: "host with a port that is not a number", path: "/dex-authenticator/sign_in", host: "a.example.com:https"},
++		{name: "host with a query", path: "/dex-authenticator/sign_in", host: "a.example.com?b.example.com"},
++		{name: "host with a space", path: "/dex-authenticator/sign_in", host: "a.example.com b.example.com"},
++		{name: "host with two trailing dots", path: "/dex-authenticator/sign_in", host: "a.example.com.."},
++		{name: "host with an empty label", path: "/dex-authenticator/sign_in", host: "a..example.com"},
++		{name: "host that is an address in brackets", path: "/dex-authenticator/sign_in", host: "[::1]:8443"},
++		{
++			name: "forged x-forwarded-host does not choose the client and is overwritten",
++			path: "/dex-authenticator/sign_in", host: "b.example.com", forwardedHost: []string{"a.example.com"},
++			expectClient: "b", expectForwardedHost: "b.example.com",
++		},
++		{
++			name: "several forged x-forwarded-host values are overwritten by one",
++			path: "/dex-authenticator/callback", host: "b.example.com", forwardedHost: []string{"a.example.com", "w.example.com"},
++			expectClient: "b", expectForwardedHost: "b.example.com",
++		},
++		{
++			name: "forged x-forwarded-host does not rescue an unknown host",
++			path: "/dex-authenticator/sign_in", host: "c.example.com", forwardedHost: []string{"a.example.com"},
++		},
++		{
++			name: "forged x-original-url does not choose the client of a browser path",
++			path: "/dex-authenticator/userinfo", host: "b.example.com", originalURL: []string{"https://a.example.com/"},
++			expectClient: "b", expectForwardedHost: "b.example.com",
++		},
++		{
++			name: "forged x-original-url does not rescue an unknown host on a browser path",
++			path: "/dex-authenticator/sign_in", host: "c.example.com", originalURL: []string{"https://a.example.com/"},
++		},
++
++		// The auth subrequest: nginx sets Host to the Service and X-Original-URL to the request.
++		{
++			name: "x-original-url chooses the client of an auth subrequest",
++			path: "/dex-authenticator/auth", host: serviceHost, originalURL: []string{"https://a.example.com/some/page?x=1"},
++			expectClient: "a", expectForwardedHost: "a.example.com",
++		},
++		{
++			name: "x-original-url over http with the http port",
++			path: "/dex-authenticator/auth", host: serviceHost, originalURL: []string{"http://b.example.com:80/"},
++			expectClient: "b", expectForwardedHost: "b.example.com",
++		},
++		{
++			name: "x-original-url over https with the http port",
++			path: "/dex-authenticator/auth", host: serviceHost, originalURL: []string{"https://b.example.com:80/"},
++			expectClient: "b", expectForwardedHost: "b.example.com:80",
++		},
++		{
++			// ingress-nginx removes X-Forwarded-Proto from its subrequest: with it the request
++			// came another way, and its X-Original-URL is what the sender wrote.
++			name: "auth path with x-forwarded-proto is chosen by the host header, not by x-original-url",
++			path: "/dex-authenticator/auth", host: serviceHost, originalURL: []string{"https://b.example.com:80/"}, forwardedProto: "http",
++		},
++		{
++			name: "x-original-url over http",
++			path: "/dex-authenticator/auth", host: serviceHost, originalURL: []string{"http://b.example.com/"},
++			expectClient: "b", expectForwardedHost: "b.example.com",
++		},
++		{
++			name: "x-original-url with a port keeps the port for the client",
++			path: "/dex-authenticator/auth", host: serviceHost, originalURL: []string{"https://a.example.com:8443/page"},
++			expectClient: "a", expectForwardedHost: "a.example.com:8443",
++		},
++		{
++			name: "x-original-url with the https port",
++			path: "/dex-authenticator/auth", host: serviceHost, originalURL: []string{"https://a.example.com:443/page"},
++			expectClient: "a", expectForwardedHost: "a.example.com",
++		},
++		{
++			// nginx copies the Host of the browser into X-Original-URL as it came.
++			name: "x-original-url in mixed case with a trailing dot and a port",
++			path: "/dex-authenticator/auth", host: serviceHost, originalURL: []string{"https://A2.Example.com.:8443/page"},
++			expectClient: "a", expectForwardedHost: "a2.example.com:8443",
++		},
++		{
++			name: "x-original-url in upper case",
++			path: "/dex-authenticator/auth", host: serviceHost, originalURL: []string{"https://B.EXAMPLE.COM/"},
++			expectClient: "b", expectForwardedHost: "b.example.com",
++		},
++		{
++			name: "x-original-url without a path",
++			path: "/dex-authenticator/auth", host: serviceHost, originalURL: []string{"https://b.example.com"},
++			expectClient: "b", expectForwardedHost: "b.example.com",
++		},
++		{
++			name: "auth subrequest with a query",
++			path: "/dex-authenticator/auth?allowed_groups=admins", host: serviceHost, originalURL: []string{"https://b.example.com/"},
++			expectClient: "b", expectForwardedHost: "b.example.com",
++		},
++		{
++			name: "forged host header does not choose the client of an auth subrequest",
++			path: "/dex-authenticator/auth", host: "a.example.com", originalURL: []string{"https://b.example.com/"},
++			expectClient: "b", expectForwardedHost: "b.example.com",
++		},
++		{
++			name: "forged x-forwarded-host does not choose the client of an auth subrequest and is overwritten",
++			path: "/dex-authenticator/auth", host: serviceHost, originalURL: []string{"https://b.example.com/"}, forwardedHost: []string{"a.example.com"},
++			expectClient: "b", expectForwardedHost: "b.example.com",
++		},
++		// An auth check that is not the subrequest of ingress-nginx is chosen by its Host header:
++		// the check of an ingress controller that sends the Host of the application, or a request
++		// that came through the route of an application.
++		{
++			name: "auth check without x-original-url is chosen by the host header",
++			path: "/dex-authenticator/auth", host: "a.example.com",
++			expectClient: "a", expectForwardedHost: "a.example.com",
++		},
++		{
++			name: "auth check without x-original-url has no client with the host of the service, even with a known x-forwarded-host",
++			path: "/dex-authenticator/auth", host: serviceHost, forwardedHost: []string{"a.example.com"},
++		},
++		{
++			name: "auth path on the route of an application ignores a forged x-original-url",
++			path: "/dex-authenticator/auth", host: "b.example.com", forwardedProto: "https", originalURL: []string{"https://a.example.com/"},
++			expectClient: "b", expectForwardedHost: "b.example.com",
++		},
++		{
++			name: "auth path on the route of an unknown host is not rescued by a forged x-original-url",
++			path: "/dex-authenticator/auth", host: "c.example.com", forwardedProto: "https", originalURL: []string{"https://a.example.com/"},
++		},
++		{
++			name: "auth subrequest with an unknown x-original-url has no client, even with a known host",
++			path: "/dex-authenticator/auth", host: "a.example.com", originalURL: []string{"https://c.example.com/"},
++		},
++		{
++			name: "two x-original-url headers",
++			path: "/dex-authenticator/auth", host: serviceHost, originalURL: []string{"https://a.example.com/", "https://b.example.com/"},
++		},
++		{
++			name: "two equal x-original-url headers",
++			path: "/dex-authenticator/auth", host: serviceHost, originalURL: []string{"https://a.example.com/", "https://a.example.com/"},
++		},
++		{
++			// nginx serves b.example.com for this Host, a URL parser answers a.example.com.
++			name: "x-original-url with a port and userinfo",
++			path: "/dex-authenticator/auth", host: serviceHost, originalURL: []string{"https://b.example.com:443@a.example.com/"},
++		},
++		{
++			name: "x-original-url with userinfo",
++			path: "/dex-authenticator/auth", host: serviceHost, originalURL: []string{"https://b.example.com@a.example.com/"},
++		},
++		{
++			name: "x-original-url with a query before the path",
++			path: "/dex-authenticator/auth", host: serviceHost, originalURL: []string{"https://a.example.com?.b.example.com/"},
++		},
++		{
++			name: "x-original-url with a fragment before the path",
++			path: "/dex-authenticator/auth", host: serviceHost, originalURL: []string{"https://a.example.com#.b.example.com/"},
++		},
++		{
++			name: "x-original-url with a backslash",
++			path: "/dex-authenticator/auth", host: serviceHost, originalURL: []string{`https://a.example.com\@b.example.com/`},
++		},
++		{
++			name: "x-original-url with an encoded slash",
++			path: "/dex-authenticator/auth", host: serviceHost, originalURL: []string{"https://a.example.com%2f.b.example.com/"},
++		},
++		{
++			name: "x-original-url with two ports",
++			path: "/dex-authenticator/auth", host: serviceHost, originalURL: []string{"https://a.example.com:443:80/"},
++		},
++		{
++			name: "x-original-url without a scheme",
++			path: "/dex-authenticator/auth", host: serviceHost, originalURL: []string{"a.example.com/"},
++		},
++		{
++			name: "x-original-url with another scheme",
++			path: "/dex-authenticator/auth", host: serviceHost, originalURL: []string{"ftp://a.example.com/"},
++		},
++		{
++			name: "x-original-url with a scheme in upper case",
++			path: "/dex-authenticator/auth", host: serviceHost, originalURL: []string{"HTTPS://a.example.com/"},
++		},
++		{
++			name: "x-original-url with a leading space",
++			path: "/dex-authenticator/auth", host: serviceHost, originalURL: []string{" https://a.example.com/"},
++		},
++		{
++			name: "x-original-url with a list of urls",
++			path: "/dex-authenticator/auth", host: serviceHost, originalURL: []string{"https://a.example.com, https://b.example.com/"},
++		},
++		{
++			name: "x-original-url with an empty host",
++			path: "/dex-authenticator/auth", host: serviceHost, originalURL: []string{"https:///a.example.com/"},
++		},
++		{
++			name: "empty x-original-url",
++			path: "/dex-authenticator/auth", host: "a.example.com", originalURL: []string{""},
++		},
++
++		// Paths that look like the auth path but are not it for the router of a client either:
++		// they are browser paths, so X-Original-URL does not choose their client.
++		{
++			name: "auth path with a trailing slash is a browser path",
++			path: "/dex-authenticator/auth/", host: "b.example.com", originalURL: []string{"https://a.example.com/"},
++			expectClient: "b", expectForwardedHost: "b.example.com",
++		},
++		{
++			name: "auth path with a double slash is a browser path",
++			path: "/dex-authenticator//auth", host: "b.example.com", originalURL: []string{"https://a.example.com/"},
++			expectClient: "b", expectForwardedHost: "b.example.com",
++		},
++		{
++			name: "auth path with an encoded letter is a browser path",
++			path: "/dex-authenticator/%61uth", host: "b.example.com", originalURL: []string{"https://a.example.com/"},
++			expectClient: "b", expectForwardedHost: "b.example.com",
++		},
++		{
++			name: "auth path in upper case is a browser path",
++			path: "/DEX-AUTHENTICATOR/AUTH", host: "b.example.com", originalURL: []string{"https://a.example.com/"},
++			expectClient: "b", expectForwardedHost: "b.example.com",
++		},
++		{
++			name: "auth path under another prefix is a browser path",
++			path: "/oauth2/auth", host: "b.example.com", originalURL: []string{"https://a.example.com/"},
++			expectClient: "b", expectForwardedHost: "b.example.com",
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			t.Parallel()
++
++			d, recorder := newTestDispatcher(t)
++
++			req := httptest.NewRequest(http.MethodGet, "http://placeholder.test"+tt.path, nil)
++			req.Host = tt.host
++			for _, value := range tt.originalURL {
++				req.Header.Add("X-Original-URL", value)
++			}
++			for _, value := range tt.forwardedHost {
++				req.Header.Add("X-Forwarded-Host", value)
++			}
++			if tt.forwardedProto != "" {
++				req.Header.Set("X-Forwarded-Proto", tt.forwardedProto)
++			}
++			rw := httptest.NewRecorder()
++
++			d.ServeHTTP(rw, req)
++
++			reached := recorder.requests()
++			if tt.expectClient == "" {
++				// ingress-nginx passes 403 of the auth subrequest on and turns 404 into its own 500.
++				expectedStatus := http.StatusNotFound
++				if tt.path == "/dex-authenticator/auth" || strings.HasPrefix(tt.path, "/dex-authenticator/auth?") {
++					expectedStatus = http.StatusForbidden
++				}
++				assert.Equal(t, expectedStatus, rw.Code)
++				assert.Empty(t, reached, "no handler of a client may run")
++				assert.Empty(t, rw.Header().Values("Set-Cookie"))
++				assert.NotContains(t, rw.Body.String(), "example.com", "the answer must not repeat the request")
++				return
++			}
++
++			require.Len(t, reached, 1, "exactly one handler of a client must run")
++			assert.Equal(t, tt.expectClient, reached[0].client)
++			assert.Equal(t, tt.expectClient, rw.Header().Get("X-Test-Client"))
++			assert.Equal(t, http.StatusOK, rw.Code)
++			assert.Equal(t, []string{tt.expectForwardedHost}, reached[0].forwardedHosts,
++				"the client must see only the host it was chosen by")
++			assert.Equal(t, tt.host, reached[0].host)
++		})
++	}
++}
++
++func TestDispatcher_EmptyTable(t *testing.T) {
++	t.Parallel()
++
++	d := newDispatcher("/dex-authenticator", newTestMetrics(t))
++
++	for path, expected := range map[string]int{
++		"/":                          http.StatusNotFound,
++		"/dex-authenticator/sign_in": http.StatusNotFound,
++		"/dex-authenticator/auth":    http.StatusForbidden,
++	} {
++		req := httptest.NewRequest(http.MethodGet, "http://a.example.com"+path, nil)
++		req.Header.Set("X-Original-URL", "https://a.example.com/")
++		rw := httptest.NewRecorder()
++
++		d.ServeHTTP(rw, req)
++
++		assert.Equal(t, expected, rw.Code, path)
++	}
++}
++
++// FuzzDispatcherRoute checks on arbitrary Host, X-Original-URL and X-Forwarded-Host that a client
++// is chosen only by a plain host name that is exactly one of its hosts.
++func FuzzDispatcherRoute(f *testing.F) {
++	f.Add("/dex-authenticator/auth", "svc.local", "https://a.example.com/", "b.example.com")
++	f.Add("/dex-authenticator/auth", "a.example.com", "https://b.example.com:443@a.example.com/", "")
++	f.Add("/dex-authenticator/sign_in", "a.example.com:443@b.example.com", "https://a.example.com/", "a.example.com")
++	f.Add("/dex-authenticator/auth/", "B.example.com.", "", "")
++
++	recorder := &requestRecorder{}
++	table := newClientTable()
++	for name, host := range map[string]string{"a": "a.example.com", "b": "b.example.com"} {
++		client := &tableClient{name: name, hosts: []string{host}, handler: recorder.handler(name)}
++		table.byName[name] = client
++		table.byHost[host] = client
++	}
++	metrics, err := newClientTableMetrics(prometheus.NewRegistry())
++	if err != nil {
++		f.Fatal(err)
++	}
++	d := newDispatcher("/dex-authenticator", metrics)
++	d.table.Store(table)
++
++	f.Fuzz(func(t *testing.T, path, host, originalURL, forwardedHost string) {
++		req := httptest.NewRequest(http.MethodGet, "http://placeholder.test/", nil)
++		req.URL.Path = path
++		req.URL.RawPath = ""
++		req.Host = host
++		req.Header.Set("X-Original-URL", originalURL)
++		req.Header.Set("X-Forwarded-Host", forwardedHost)
++
++		client, forwardedHost := d.route(req)
++		if client == nil {
++			return
++		}
++
++		// The key header of this path, cut to its authority the plainest way.
++		source := host
++		if req.URL.EscapedPath() == "/dex-authenticator/auth" {
++			source = strings.TrimPrefix(strings.TrimPrefix(originalURL, "https://"), "http://")
++			source, _, _ = strings.Cut(source, "/")
++		}
++
++		// The authority that chose the client is a host of that client, with at most a port and
++		// a trailing dot around it.
++		name, port, _ := strings.Cut(strings.ToLower(source), ":")
++		if strings.TrimSuffix(name, ".") != client.hosts[0] {
++			t.Fatalf("authority %q chose the client of %q", source, client.hosts[0])
++		}
++		if strings.Trim(port, "0123456789") != "" {
++			t.Fatalf("authority %q has a port that is not a number", source)
++		}
++
++		// The client is given its own host, with that port or without a port.
++		if forwardedHost != client.hosts[0] && forwardedHost != client.hosts[0]+":"+port {
++			t.Fatalf("the client of %q is given the host %q", client.hosts[0], forwardedHost)
++		}
++	})
++}
+diff --git a/main.go b/main.go
+index ba970679..54513c53 100644
+--- a/main.go
++++ b/main.go
+@@ -63,6 +63,16 @@ func main() {
+ 		return
+ 	}
+ 
++	// With a table of clients the flags of the process name no client: each client of the table
++	// is built from them and its own flags (Deckhouse patch 018).
++	if opts.ClientTable != "" {
++		builder := &clientBuilder{config: *config, alphaConfig: *alphaConfig, flagSet: configFlagSet, args: os.Args[1:]}
++		if err := runClientTable(opts, builder); err != nil {
++			logger.Fatalf("ERROR: Failed to serve the client table: %v", err)
++		}
++		return
++	}
++
+ 	if err = validation.Validate(opts); err != nil {
+ 		logger.Fatalf("%s", err)
+ 	}
+diff --git a/oauthproxy.go b/oauthproxy.go
+index f783a1ed..61d60d60 100644
+--- a/oauthproxy.go
++++ b/oauthproxy.go
+@@ -14,6 +14,7 @@ import (
+ 	"os/signal"
+ 	"regexp"
+ 	"strings"
++	"sync"
+ 	"syscall"
+ 	"time"
+ 
+@@ -39,6 +40,7 @@ import (
+ 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
+ 	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
+ 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/persistence"
+ 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/upstream"
+ 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
+ 	"golang.org/x/oauth2"
+@@ -136,9 +138,52 @@ type OAuthProxy struct {
+ 
+ // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
+ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthProxy, error) {
+-	sessionStore, err := sessions.NewSessionStore(&opts.Session, &opts.Cookie)
++	p, err := newOAuthProxy(opts, validator, nil, "")
+ 	if err != nil {
+-		return nil, fmt.Errorf("error initialising session store: %v", err)
++		return nil, err
++	}
++
++	if err := p.setupServer(opts); err != nil {
++		return nil, fmt.Errorf("error setting up server: %v", err)
++	}
++
++	return p, nil
++}
++
++// sharedResources is what the clients of a table of clients have in common (Deckhouse patch 018):
++// the store of the sessions, with its connection to Redis when it has one, and the pages. Only
++// one goroutine at a time builds clients with it.
++type sharedResources struct {
++	// sessionStore keeps the sessions of every client; each client reads it under its own
++	// name, through a persistence.Manager with its own cookie options.
++	sessionStore persistence.Store
++	// pageWriter is built with the first client and reused by the others: the pages do not
++	// depend on the client.
++	pageWriter pagewriter.Writer
++	// upstreamProxy is built with the first client and reused by the others: the upstreams
++	// are those of the process.
++	upstreamProxy http.Handler
++	// refreshWindows bounds for the whole process how many sessions whose refresh the provider
++	// does not answer are remembered (patch 002).
++	refreshWindows *middleware.RefreshWindows
++}
++
++// newOAuthProxy builds an OAuthProxy without its servers. With shared set, the proxy is the client
++// clientName of a table of clients: it keeps its sessions under that name in the session store of
++// the table and takes the pages from it. Otherwise it is the only client of the process, with a
++// session store of its own.
++func newOAuthProxy(opts *options.Options, validator func(string) bool, shared *sharedResources, clientName string) (*OAuthProxy, error) {
++	var (
++		sessionStore sessionsapi.SessionStore
++		err          error
++	)
++	if shared != nil {
++		sessionStore = persistence.NewManager(persistence.NewScopedStore(shared.sessionStore, clientName), &opts.Cookie)
++	} else {
++		sessionStore, err = sessions.NewSessionStore(&opts.Session, &opts.Cookie)
++		if err != nil {
++			return nil, fmt.Errorf("error initialising session store: %v", err)
++		}
+ 	}
+ 
+ 	var basicAuthValidator basic.Validator
+@@ -156,24 +201,40 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
+ 		return nil, fmt.Errorf("error initialising provider: %v", err)
+ 	}
+ 
+-	pageWriter, err := pagewriter.NewWriter(pagewriter.Opts{
+-		TemplatesPath:    opts.Templates.Path,
+-		CustomLogo:       opts.Templates.CustomLogo,
+-		ProxyPrefix:      opts.ProxyPrefix,
+-		Footer:           opts.Templates.Footer,
+-		Version:          version.VERSION,
+-		Debug:            opts.Templates.Debug,
+-		ProviderName:     buildProviderName(provider, opts.Providers[0].Name),
+-		SignInMessage:    buildSignInMessage(opts),
+-		DisplayLoginForm: basicAuthValidator != nil && opts.Templates.DisplayLoginForm,
+-	})
+-	if err != nil {
+-		return nil, fmt.Errorf("error initialising page writer: %v", err)
++	var pageWriter pagewriter.Writer
++	if shared != nil && shared.pageWriter != nil {
++		pageWriter = shared.pageWriter
++	} else {
++		pageWriter, err = pagewriter.NewWriter(pagewriter.Opts{
++			TemplatesPath:    opts.Templates.Path,
++			CustomLogo:       opts.Templates.CustomLogo,
++			ProxyPrefix:      opts.ProxyPrefix,
++			Footer:           opts.Templates.Footer,
++			Version:          version.VERSION,
++			Debug:            opts.Templates.Debug,
++			ProviderName:     buildProviderName(provider, opts.Providers[0].Name),
++			SignInMessage:    buildSignInMessage(opts),
++			DisplayLoginForm: basicAuthValidator != nil && opts.Templates.DisplayLoginForm,
++		})
++		if err != nil {
++			return nil, fmt.Errorf("error initialising page writer: %v", err)
++		}
++		if shared != nil {
++			shared.pageWriter = pageWriter
++		}
+ 	}
+ 
+-	upstreamProxy, err := upstream.NewProxy(opts.UpstreamServers, opts.GetSignatureData(), pageWriter)
+-	if err != nil {
+-		return nil, fmt.Errorf("error initialising upstream proxy: %v", err)
++	var upstreamProxy http.Handler
++	if shared != nil && shared.upstreamProxy != nil {
++		upstreamProxy = shared.upstreamProxy
++	} else {
++		upstreamProxy, err = upstream.NewProxy(opts.UpstreamServers, opts.GetSignatureData(), pageWriter)
++		if err != nil {
++			return nil, fmt.Errorf("error initialising upstream proxy: %v", err)
++		}
++		if shared != nil {
++			shared.upstreamProxy = upstreamProxy
++		}
+ 	}
+ 
+ 	if opts.SkipJwtBearerTokens {
+@@ -191,13 +252,16 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
+ 		redirectURL.Path = fmt.Sprintf("%s/callback", opts.ProxyPrefix)
+ 	}
+ 
+-	logger.Printf("OAuthProxy configured for %s Client ID: %s", provider.Data().ProviderName, opts.Providers[0].ClientID)
+-	refresh := "disabled"
+-	if opts.Cookie.Refresh != time.Duration(0) {
+-		refresh = fmt.Sprintf("after %s", opts.Cookie.Refresh)
+-	}
++	// A client of a table of clients is logged by the table, in one line.
++	if shared == nil {
++		logger.Printf("OAuthProxy configured for %s Client ID: %s", provider.Data().ProviderName, opts.Providers[0].ClientID)
++		refresh := "disabled"
++		if opts.Cookie.Refresh != time.Duration(0) {
++			refresh = fmt.Sprintf("after %s", opts.Cookie.Refresh)
++		}
+ 
+-	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.Name, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
++		logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.Name, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
++	}
+ 
+ 	trustedIPs, err := ip.ParseNetSet(opts.TrustedIPs)
+ 	if err != nil {
+@@ -219,7 +283,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
+ 		return nil, err
+ 	}
+ 
+-	preAuthChain, err := buildPreAuthChain(opts, sessionStore, trustedProxies)
++	preAuthChain, err := buildPreAuthChain(opts, sessionStore, trustedProxies, clientName)
+ 	if err != nil {
+ 		return nil, fmt.Errorf("could not build pre-auth chain: %v", err)
+ 	}
+@@ -231,7 +295,11 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
+ 	if err != nil {
+ 		return nil, err
+ 	}
+-	sessionChain := buildSessionChain(opts, provider, sessionStore, basicAuthValidator, revocationFeed)
++	var refreshWindows *middleware.RefreshWindows
++	if shared != nil {
++		refreshWindows = shared.refreshWindows
++	}
++	sessionChain := buildSessionChain(opts, provider, sessionStore, basicAuthValidator, revocationFeed, refreshWindows)
+ 	headersChain, err := buildHeadersChain(opts)
+ 	if err != nil {
+ 		return nil, fmt.Errorf("could not build headers chain: %v", err)
+@@ -283,10 +351,6 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
+ 	}
+ 	p.buildServeMux(opts.ProxyPrefix)
+ 
+-	if err := p.setupServer(opts); err != nil {
+-		return nil, fmt.Errorf("error setting up server: %v", err)
+-	}
+-
+ 	return p, nil
+ }
+ 
+@@ -315,8 +379,19 @@ func (p *OAuthProxy) Start() error {
+ }
+ 
+ func (p *OAuthProxy) setupServer(opts *options.Options) error {
++	server, err := newServerGroup(opts, p)
++	if err != nil {
++		return err
++	}
++
++	p.server = server
++	return nil
++}
++
++// newServerGroup builds the application server with handler and the metrics server.
++func newServerGroup(opts *options.Options, handler http.Handler) (proxyhttp.Server, error) {
+ 	serverOpts := proxyhttp.Opts{
+-		Handler:           p,
++		Handler:           handler,
+ 		BindAddress:       opts.Server.BindAddress,
+ 		SecureBindAddress: opts.Server.SecureBindAddress,
+ 		TLS:               opts.Server.TLS,
+@@ -329,7 +404,7 @@ func (p *OAuthProxy) setupServer(opts *options.Options) error {
+ 
+ 	appServer, err := proxyhttp.NewServer(serverOpts)
+ 	if err != nil {
+-		return fmt.Errorf("could not build app server: %v", err)
++		return nil, fmt.Errorf("could not build app server: %v", err)
+ 	}
+ 
+ 	metricsServer, err := proxyhttp.NewServer(proxyhttp.Opts{
+@@ -339,11 +414,10 @@ func (p *OAuthProxy) setupServer(opts *options.Options) error {
+ 		TLS:               opts.MetricsServer.TLS,
+ 	})
+ 	if err != nil {
+-		return fmt.Errorf("could not build metrics server: %v", err)
++		return nil, fmt.Errorf("could not build metrics server: %v", err)
+ 	}
+ 
+-	p.server = proxyhttp.NewServerGroup(appServer, metricsServer)
+-	return nil
++	return proxyhttp.NewServerGroup(appServer, metricsServer), nil
+ }
+ 
+ func (p *OAuthProxy) buildServeMux(proxyPrefix string) {
+@@ -389,12 +463,15 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
+ // buildPreAuthChain constructs a chain that should process every request before
+ // the OAuth2 Proxy authentication logic kicks in.
+ // For example forcing HTTPS or health checks.
+-func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionStore, trustedProxies *ip.NetSet) (alice.Chain, error) {
++func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionStore, trustedProxies *ip.NetSet, clientName string) (alice.Chain, error) {
+ 	chain := alice.New(
+ 		middleware.NewScope(opts.ReverseProxy, opts.Logging.RequestIDHeader, trustedProxies),
+ 		// The host of an auth subrequest is named before anything reads or logs it (Deckhouse patch 016).
+ 		middleware.NewAuthRequestHost(opts.ProxyPrefix+authOnlyPath),
+ 	)
++	if clientName != "" {
++		chain = chain.Append(nameAuthenticator(clientName))
++	}
+ 
+ 	if opts.ForceHTTPS {
+ 		_, httpsPort, err := net.SplitHostPort(opts.Server.SecureBindAddress)
+@@ -433,17 +510,30 @@ func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionSt
+ 	return chain, nil
+ }
+ 
++// warnTrustedProxies logs the warning of buildTrustedProxyNetSet once.
++var warnTrustedProxies sync.Once
++
+ func buildTrustedProxyNetSet(opts *options.Options) (*ip.NetSet, error) {
+ 	trustedProxyIPs := opts.TrustedProxyIPs
+ 	if opts.ReverseProxy && len(trustedProxyIPs) == 0 {
+-		logger.Print("WARNING: --reverse-proxy is enabled but no --trusted-proxy-ip CIDRs were configured. All connecting IPs are trusted to supply X-Forwarded-* headers by default (0.0.0.0/0, ::/0). This preserves backwards compatibility but is a potential security risk; configure --trusted-proxy-ip to match your reverse proxy addresses.")
++		// Once per process: every client of a table of clients comes here (Deckhouse patch 018).
++		warnTrustedProxies.Do(func() {
++			logger.Print("WARNING: --reverse-proxy is enabled but no --trusted-proxy-ip CIDRs were configured. All connecting IPs are trusted to supply X-Forwarded-* headers by default (0.0.0.0/0, ::/0). This preserves backwards compatibility but is a potential security risk; configure --trusted-proxy-ip to match your reverse proxy addresses.")
++		})
+ 		trustedProxyIPs = defaultTrustedProxyIPs
+ 	}
+ 
+ 	return ip.ParseNetSet(trustedProxyIPs)
+ }
+ 
+-func buildSessionChain(opts *options.Options, provider providers.Provider, sessionStore sessionsapi.SessionStore, validator basic.Validator, revocationFeed *revocation.Feed) alice.Chain {
++func buildSessionChain(
++	opts *options.Options,
++	provider providers.Provider,
++	sessionStore sessionsapi.SessionStore,
++	validator basic.Validator,
++	revocationFeed *revocation.Feed,
++	refreshWindows *middleware.RefreshWindows,
++) alice.Chain {
+ 	chain := alice.New()
+ 
+ 	if opts.SkipJwtBearerTokens {
+@@ -475,6 +565,7 @@ func buildSessionChain(opts *options.Options, provider providers.Provider, sessi
+ 		RefreshSession:  provider.RefreshSession,
+ 		ValidateSession: provider.ValidateSession,
+ 		Revocation:      revocationGuard,
++		RefreshWindows:  refreshWindows,
+ 	}))
+ 
+ 	return chain
+@@ -483,7 +574,7 @@ func buildSessionChain(opts *options.Options, provider providers.Provider, sessi
+ // buildRevocationFeed returns the subscription to the revocation feed of the user-authn module of
+ // Deckhouse, or nil without --revocation-feed-url. Start runs it.
+ func buildRevocationFeed(opts *options.Options, provider providers.Provider) (*revocation.Feed, error) {
+-	if opts.RevocationFeedURL == "" {
++	if opts.RevocationFeedURL == "" || opts.RevocationFeedDisable {
+ 		return nil, nil
+ 	}
+ 
+@@ -1794,3 +1885,18 @@ func LoggingCSRFCookiesInOAuthCallback(req *http.Request, cookieName string) {
+ 
+ 	logger.PrintAuthf("", req, logger.AuthFailure, "Cookies were found in OAuth callback, but none was a CSRF cookie.")
+ }
++
++// nameAuthenticator returns a middleware that writes the DexAuthenticator object of a client of a
++// table of clients, "<namespace>/<name>", into the scope of its requests (Deckhouse patch 018):
++// the log lines of the request carry it.
++func nameAuthenticator(clientName string) alice.Constructor {
++	namespace, name, _ := strings.Cut(clientName, "/")
++
++	return func(next http.Handler) http.Handler {
++		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
++			scope := middlewareapi.GetRequestScope(req)
++			scope.Authenticator, scope.AuthenticatorNamespace = name, namespace
++			next.ServeHTTP(rw, req)
++		})
++	}
++}
+diff --git a/pkg/apis/middleware/scope.go b/pkg/apis/middleware/scope.go
+index 827c65bd..26005a9b 100644
+--- a/pkg/apis/middleware/scope.go
++++ b/pkg/apis/middleware/scope.go
+@@ -28,6 +28,12 @@ type RequestScope struct {
+ 	// forwarded headers when ReverseProxy mode is enabled.
+ 	TrustedProxies *ip.NetSet
+ 
++	// Authenticator and AuthenticatorNamespace name the DexAuthenticator object of the client that
++	// serves the request in a process with a table of clients (Deckhouse patch 018); empty in a
++	// process with one client. The log lines of the request carry them.
++	Authenticator          string
++	AuthenticatorNamespace string
++
+ 	// RequestID is set to the request's `X-Request-Id` header if set.
+ 	// Otherwise a random UUID is set.
+ 	RequestID string
+diff --git a/pkg/apis/options/options.go b/pkg/apis/options/options.go
+index d879ce10..f437f8ff 100644
+--- a/pkg/apis/options/options.go
++++ b/pkg/apis/options/options.go
+@@ -74,6 +74,13 @@ type Options struct {
+ 	RevocationFeedURL    string `flag:"revocation-feed-url" cfg:"revocation_feed_url"`
+ 	RevocationFeedCAFile string `flag:"revocation-feed-ca-file" cfg:"revocation_feed_ca_file"`
+ 
++	// Never subscribe to the revocation feed, whatever RevocationFeedURL says (Deckhouse patch 018).
++	RevocationFeedDisable bool `flag:"revocation-feed-disable" cfg:"revocation_feed_disable"`
++
++	// The file with the table of clients this process serves, each chosen by the host of the
++	// request (Deckhouse patch 018). Empty: one client, set by the options of the process.
++	ClientTable string `flag:"client-table" cfg:"client_table"`
++
+ 	// The token revocation endpoint (RFC 7009) of the provider, called on sign-out.
+ 	RevocationURL string `flag:"revocation-url" cfg:"revocation_url"`
+ 
+@@ -186,6 +193,8 @@ func NewFlagSet() *pflag.FlagSet {
+ 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
+ 	flagSet.String("revocation-feed-url", "", "https URL of the revocation feed of the user-authn module of Deckhouse: sessions it revokes are refused. Disabled when empty")
+ 	flagSet.String("revocation-feed-ca-file", "", "path to the CA certificate the revocation feed is checked against instead of the system roots")
++	flagSet.Bool("revocation-feed-disable", false, "never subscribe to the revocation feed, even with --revocation-feed-url. Required with --client-table: a feed per client is not supported")
++	flagSet.String("client-table", "", "path to a JSON file with the table of clients this process serves, each with its own client ID, secrets and hosts; the client of a request is chosen by its host, and the file is read again when it changes. Empty: one client, set by the flags of the process")
+ 	flagSet.String("revocation-url", "", "token revocation endpoint (RFC 7009) of the provider: sign-out revokes the refresh token of the session there. Disabled when empty")
+ 	flagSet.Bool("restart-login-without-csrf-cookie", false, "start the sign-in again, once, for a callback whose CSRF cookie has expired or is gone, instead of the page of an expired sign-in. For a provider whose browser session signs the user in again without a password")
+ 	flagSet.String("provider-logout-url", "", "https URL of the RP-initiated logout endpoint of the provider: sign-out sends the browser there by client_id, to return to the root of the host. Disabled when empty")
+diff --git a/pkg/logger/logger.go b/pkg/logger/logger.go
+index 7d606942..c21924b0 100644
+--- a/pkg/logger/logger.go
++++ b/pkg/logger/logger.go
+@@ -103,34 +103,40 @@ type stdJSONLog struct {
+ }
+ 
+ type authJSONLog struct {
+-	Time      string `json:"time"`
+-	Level     string `json:"level"`
+-	Client    string `json:"client"`
+-	Host      string `json:"host"`
+-	Protocol  string `json:"protocol"`
+-	RequestID string `json:"request_id"`
+-	Method    string `json:"method"`
+-	UserAgent string `json:"user_agent"`
+-	Username  string `json:"user"`
+-	Status    string `json:"status"`
+-	Message   string `json:"msg"`
++	Time   string `json:"time"`
++	Level  string `json:"level"`
++	Client string `json:"client"`
++	Host   string `json:"host"`
++	// The DexAuthenticator object of the client of a table of clients (Deckhouse patch 018). The
++	// fields stand before the ones a request sets, so the status and the message stay last.
++	Authenticator          string `json:"authenticator,omitempty"`
++	AuthenticatorNamespace string `json:"authenticator_namespace,omitempty"`
++	Protocol               string `json:"protocol"`
++	RequestID              string `json:"request_id"`
++	Method                 string `json:"method"`
++	UserAgent              string `json:"user_agent"`
++	Username               string `json:"user"`
++	Status                 string `json:"status"`
++	Message                string `json:"msg"`
+ }
+ 
+ type reqJSONLog struct {
+-	Time            string  `json:"time"`
+-	Level           string  `json:"level"`
+-	Client          string  `json:"client"`
+-	Host            string  `json:"host"`
+-	Protocol        string  `json:"protocol"`
+-	RequestID       string  `json:"request_id"`
+-	RequestDuration float64 `json:"request_duration"`
+-	Method          string  `json:"method"`
+-	RequestURI      string  `json:"uri"`
+-	ResponseSize    int     `json:"response_size"`
+-	StatusCode      int     `json:"status"`
+-	Upstream        string  `json:"upstream"`
+-	UserAgent       string  `json:"user_agent"`
+-	Username        string  `json:"user"`
++	Time                   string  `json:"time"`
++	Level                  string  `json:"level"`
++	Client                 string  `json:"client"`
++	Host                   string  `json:"host"`
++	Authenticator          string  `json:"authenticator,omitempty"`
++	AuthenticatorNamespace string  `json:"authenticator_namespace,omitempty"`
++	Protocol               string  `json:"protocol"`
++	RequestID              string  `json:"request_id"`
++	RequestDuration        float64 `json:"request_duration"`
++	Method                 string  `json:"method"`
++	RequestURI             string  `json:"uri"`
++	ResponseSize           int     `json:"response_size"`
++	StatusCode             int     `json:"status"`
++	Upstream               string  `json:"upstream"`
++	UserAgent              string  `json:"user_agent"`
++	Username               string  `json:"user"`
+ }
+ 
+ // Returns the apparent "real client IP" as a string.
+@@ -284,17 +290,20 @@ func (l *Logger) PrintAuthf(username string, req *http.Request, status AuthStatu
+ 
+ 	if l.jsonFormat {
+ 		l.writeJSON(l.writer, authJSONLog{
+-			Time:      l.FormatTimestamp(now),
+-			Level:     "auth",
+-			Client:    client,
+-			Host:      requestutil.GetRequestHost(req),
+-			Protocol:  req.Proto,
+-			RequestID: scope.RequestID,
+-			Method:    req.Method,
+-			UserAgent: req.UserAgent(),
+-			Username:  username,
+-			Status:    string(status),
+-			Message:   message,
++			Time:     l.FormatTimestamp(now),
++			Level:    "auth",
++			Client:   client,
++			Host:     requestutil.GetRequestHost(req),
++			Protocol: req.Proto,
++
++			Authenticator:          scope.Authenticator,
++			AuthenticatorNamespace: scope.AuthenticatorNamespace,
++			RequestID:              scope.RequestID,
++			Method:                 req.Method,
++			UserAgent:              req.UserAgent(),
++			Username:               username,
++			Status:                 string(status),
++			Message:                message,
+ 		})
+ 		return
+ 	}
+@@ -358,20 +367,23 @@ func (l *Logger) PrintReq(username, upstream string, req *http.Request, url url.
+ 
+ 	if l.jsonFormat {
+ 		l.writeJSON(l.writer, reqJSONLog{
+-			Time:            l.FormatTimestamp(ts),
+-			Level:           "request",
+-			Client:          client,
+-			Host:            requestutil.GetRequestHost(req),
+-			Protocol:        req.Proto,
+-			RequestID:       scope.RequestID,
+-			RequestDuration: duration,
+-			Method:          req.Method,
+-			RequestURI:      url.RequestURI(),
+-			ResponseSize:    size,
+-			StatusCode:      status,
+-			Upstream:        upstream,
+-			UserAgent:       req.UserAgent(),
+-			Username:        username,
++			Time:     l.FormatTimestamp(ts),
++			Level:    "request",
++			Client:   client,
++			Host:     requestutil.GetRequestHost(req),
++			Protocol: req.Proto,
++
++			Authenticator:          scope.Authenticator,
++			AuthenticatorNamespace: scope.AuthenticatorNamespace,
++			RequestID:              scope.RequestID,
++			RequestDuration:        duration,
++			Method:                 req.Method,
++			RequestURI:             url.RequestURI(),
++			ResponseSize:           size,
++			StatusCode:             status,
++			Upstream:               upstream,
++			UserAgent:              req.UserAgent(),
++			Username:               username,
+ 		})
+ 		return
+ 	}
+diff --git a/pkg/middleware/deckhouse_refresh_unavailable.go b/pkg/middleware/deckhouse_refresh_unavailable.go
+index d49197ee..29c6f506 100644
+--- a/pkg/middleware/deckhouse_refresh_unavailable.go
++++ b/pkg/middleware/deckhouse_refresh_unavailable.go
+@@ -102,3 +102,14 @@ func (u *unavailableSince) forget(refreshToken string) {
+ 	defer u.mu.Unlock()
+ 	delete(u.since, key)
+ }
++
++// RefreshWindows is the memory of the refreshes the provider did not answer, unavailableSince, for
++// the clients of a table of clients to share (Deckhouse patch 018). A session is known there by
++// the hash of its refresh token, which no two clients have in common, and the bound of the memory
++// is then one for the process, not one per client.
++type RefreshWindows = unavailableSince
++
++// NewRefreshWindows returns an empty RefreshWindows.
++func NewRefreshWindows() *RefreshWindows {
++	return newUnavailableSince()
++}
+diff --git a/pkg/middleware/deckhouse_refresh_unavailable_test.go b/pkg/middleware/deckhouse_refresh_unavailable_test.go
+index d7dba17d..04224809 100644
+--- a/pkg/middleware/deckhouse_refresh_unavailable_test.go
++++ b/pkg/middleware/deckhouse_refresh_unavailable_test.go
+@@ -687,3 +687,20 @@ func TestRefreshUnavailableValidatesOnlyAnIDToken(t *testing.T) {
+ 		})
+ 	}
+ }
++
++// The loaders of the clients of a table of clients share one memory of the refreshes the provider
++// did not answer, so its bound is that of the process; a loader without it has its own.
++func TestStoredSessionLoaderSharesRefreshWindows(t *testing.T) {
++	windows := NewRefreshWindows()
++	newLoader := func(shared *RefreshWindows) *storedSessionLoader {
++		return newStoredSessionLoader(&StoredSessionLoaderOptions{RefreshPeriod: time.Minute, RefreshWindows: shared})
++	}
++
++	first, second := newLoader(windows), newLoader(windows)
++	assert.Same(t, windows, first.unavailable)
++	assert.Same(t, first.unavailable, second.unavailable)
++
++	alone := newLoader(nil)
++	require.NotNil(t, alone.unavailable)
++	assert.NotSame(t, windows, alone.unavailable)
++}
+diff --git a/pkg/middleware/stored_session.go b/pkg/middleware/stored_session.go
+index 2b183103..142f23e6 100644
+--- a/pkg/middleware/stored_session.go
++++ b/pkg/middleware/stored_session.go
+@@ -92,6 +92,10 @@ type StoredSessionLoaderOptions struct {
+ 	// Revocation refuses the sessions the revocation feed of Deckhouse revoked.
+ 	// Optional: nil disables the check.
+ 	Revocation RevocationGuard
++
++	// RefreshWindows is shared by the loaders of the clients of a table of clients (Deckhouse
++	// patch 018). Optional: nil gives the loader windows of its own.
++	RefreshWindows *RefreshWindows
+ }
+ 
+ // NewStoredSessionLoader creates a new storedSessionLoader which loads
+@@ -103,13 +107,18 @@ func NewStoredSessionLoader(opts *StoredSessionLoaderOptions) alice.Constructor
+ }
+ 
+ func newStoredSessionLoader(opts *StoredSessionLoaderOptions) *storedSessionLoader {
++	unavailable := opts.RefreshWindows
++	if unavailable == nil {
++		unavailable = newUnavailableSince()
++	}
++
+ 	return &storedSessionLoader{
+ 		store:            opts.SessionStore,
+ 		refreshPeriod:    opts.RefreshPeriod,
+ 		sessionRefresher: opts.RefreshSession,
+ 		sessionValidator: opts.ValidateSession,
+ 		revocation:       opts.Revocation,
+-		unavailable:      newUnavailableSince(),
++		unavailable:      unavailable,
+ 		refreshTimeout:   sessionRefreshTimeout,
+ 	}
+ }
+diff --git a/pkg/providers/oidc/deckhouse_shared_key_sets_test.go b/pkg/providers/oidc/deckhouse_shared_key_sets_test.go
+new file mode 100644
+index 00000000..1ba2fc59
+--- /dev/null
++++ b/pkg/providers/oidc/deckhouse_shared_key_sets_test.go
+@@ -0,0 +1,37 @@
++package oidc
++
++import (
++	"context"
++	"testing"
++
++	"github.com/stretchr/testify/assert"
++)
++
++func TestRemoteKeySet(t *testing.T) {
++	// Not parallel: the test turns the sharing of the process on and off.
++	ctx := context.Background()
++
++	t.Run("without sharing every call gets a key set of its own", func(t *testing.T) {
++		first := remoteKeySet(ctx, "https://dex.example.com/keys")
++		second := remoteKeySet(ctx, "https://dex.example.com/keys")
++
++		assert.NotSame(t, first, second)
++	})
++
++	t.Run("with sharing a url has one key set", func(t *testing.T) {
++		ShareRemoteKeySets()
++		t.Cleanup(func() {
++			sharedKeySets.mu.Lock()
++			defer sharedKeySets.mu.Unlock()
++			sharedKeySets.enabled = false
++			sharedKeySets.byURL = nil
++		})
++
++		first := remoteKeySet(ctx, "https://dex.example.com/keys")
++		second := remoteKeySet(ctx, "https://dex.example.com/keys")
++		other := remoteKeySet(ctx, "https://other.example.com/keys")
++
++		assert.Same(t, first, second)
++		assert.NotSame(t, first, other)
++	})
++}
+diff --git a/pkg/providers/oidc/provider_verifier.go b/pkg/providers/oidc/provider_verifier.go
+index 96bca96e..7a132c27 100644
+--- a/pkg/providers/oidc/provider_verifier.go
++++ b/pkg/providers/oidc/provider_verifier.go
+@@ -8,6 +8,7 @@ import (
+ 	"errors"
+ 	"fmt"
+ 	"os"
++	"sync"
+ 
+ 	"github.com/coreos/go-oidc/v3/oidc"
+ 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
+@@ -126,6 +127,47 @@ func NewProviderVerifier(ctx context.Context, opts ProviderVerifierOptions) (Pro
+ 
+ type verifierBuilder func(*oidc.Config) *oidc.IDTokenVerifier
+ 
++// sharedKeySets holds one remote key set per JWKS URL for the whole process once
++// ShareRemoteKeySets is called (Deckhouse patch 018).
++var sharedKeySets struct {
++	mu      sync.Mutex
++	enabled bool
++	byURL   map[string]oidc.KeySet
++}
++
++// ShareRemoteKeySets makes the verifiers built from now on share one remote key set per JWKS URL.
++// A process that serves a table of clients of one provider then fetches and caches the keys of
++// the provider once, not once per client (Deckhouse patch 018).
++func ShareRemoteKeySets() {
++	sharedKeySets.mu.Lock()
++	defer sharedKeySets.mu.Unlock()
++
++	sharedKeySets.enabled = true
++	if sharedKeySets.byURL == nil {
++		sharedKeySets.byURL = map[string]oidc.KeySet{}
++	}
++}
++
++// remoteKeySet returns the remote key set of jwksURL: the shared one after ShareRemoteKeySets, a
++// new one otherwise.
++func remoteKeySet(ctx context.Context, jwksURL string) oidc.KeySet {
++	sharedKeySets.mu.Lock()
++	defer sharedKeySets.mu.Unlock()
++
++	if !sharedKeySets.enabled {
++		return oidc.NewRemoteKeySet(ctx, jwksURL)
++	}
++
++	keySet, ok := sharedKeySets.byURL[jwksURL]
++	if !ok {
++		// The key set outlives the caller, so it must not carry the cancellation of ctx.
++		keySet = oidc.NewRemoteKeySet(context.WithoutCancel(ctx), jwksURL)
++		sharedKeySets.byURL[jwksURL] = keySet
++	}
++
++	return keySet
++}
++
+ func getVerifierBuilder(ctx context.Context, opts ProviderVerifierOptions) (verifierBuilder, DiscoveryProvider, error) {
+ 	ctx = oidc.ClientContext(ctx, requests.DefaultHTTPClient)
+ 
+@@ -134,7 +176,7 @@ func getVerifierBuilder(ctx context.Context, opts ProviderVerifierOptions) (veri
+ 		var err error
+ 
+ 		if opts.JWKsURL != "" {
+-			keySet = oidc.NewRemoteKeySet(ctx, opts.JWKsURL)
++			keySet = remoteKeySet(ctx, opts.JWKsURL)
+ 		} else {
+ 			keySet, err = newKeySetFromStatic(opts.PublicKeyFiles)
+ 			if err != nil {
+@@ -161,7 +203,7 @@ func getVerifierBuilder(ctx context.Context, opts ProviderVerifierOptions) (veri
+ 
+ 	return newVerifierBuilder(
+ 		opts.IssuerURL,
+-		oidc.NewRemoteKeySet(ctx, provider.Endpoints().JWKsURL),
++		remoteKeySet(ctx, provider.Endpoints().JWKsURL),
+ 		supportedSigningAlgs,
+ 	), provider, nil
+ }
+diff --git a/pkg/sessions/persistence/scoped_store.go b/pkg/sessions/persistence/scoped_store.go
+new file mode 100644
+index 00000000..81a02b48
+--- /dev/null
++++ b/pkg/sessions/persistence/scoped_store.go
+@@ -0,0 +1,52 @@
++package persistence
++
++import (
++	"context"
++	"strconv"
++	"time"
++
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
++)
++
++// scopedStore is a Store that keeps its records and locks under the name of a scope in another
++// Store (Deckhouse patch 018).
++type scopedStore struct {
++	store  Store
++	prefix string
++}
++
++var _ Store = (*scopedStore)(nil)
++
++// NewScopedStore returns a view of store whose keys all carry scope. The clients of a table of
++// clients share one store, each through a view under its own name: a ticket of one client then
++// never finds a record or a lock of another, even when the two have the same cookie name and, by
++// mistake, the same cookie secret. Without it only the cookie secret would keep them apart.
++//
++// The scope is written with its length, so no two scopes make keys that meet, whatever characters
++// they have: "2:ab:" + key and "1:a:" + "b:" + key differ in their first byte.
++func NewScopedStore(store Store, scope string) Store {
++	return &scopedStore{
++		store:  store,
++		prefix: strconv.Itoa(len(scope)) + ":" + scope + ":",
++	}
++}
++
++func (s *scopedStore) Save(ctx context.Context, key string, value []byte, ttl time.Duration) error {
++	return s.store.Save(ctx, s.prefix+key, value, ttl)
++}
++
++func (s *scopedStore) Load(ctx context.Context, key string) ([]byte, error) {
++	return s.store.Load(ctx, s.prefix+key)
++}
++
++func (s *scopedStore) Clear(ctx context.Context, key string) error {
++	return s.store.Clear(ctx, s.prefix+key)
++}
++
++func (s *scopedStore) Lock(key string) sessions.Lock {
++	return s.store.Lock(s.prefix + key)
++}
++
++func (s *scopedStore) VerifyConnection(ctx context.Context) error {
++	return s.store.VerifyConnection(ctx)
++}
+diff --git a/pkg/sessions/persistence/scoped_store_test.go b/pkg/sessions/persistence/scoped_store_test.go
+new file mode 100644
+index 00000000..57af4f06
+--- /dev/null
++++ b/pkg/sessions/persistence/scoped_store_test.go
+@@ -0,0 +1,115 @@
++package persistence_test
++
++import (
++	"context"
++	"testing"
++	"time"
++
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/memory"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/persistence"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++// newSharedStore returns a store for several scopes, with real locks.
++func newSharedStore(t *testing.T) persistence.Store {
++	t.Helper()
++
++	store, err := memory.NewStore(options.MemoryStoreOptions{MaxBytes: 1 << 20})
++	require.NoError(t, err)
++
++	return store
++}
++
++func TestScopedStore(t *testing.T) {
++	t.Parallel()
++
++	ctx := context.Background()
++
++	t.Run("a scope finds what it saved", func(t *testing.T) {
++		t.Parallel()
++		scope := persistence.NewScopedStore(newSharedStore(t), "ns/app")
++
++		require.NoError(t, scope.Save(ctx, "ticket", []byte("session"), time.Hour))
++
++		got, err := scope.Load(ctx, "ticket")
++		require.NoError(t, err)
++		assert.Equal(t, []byte("session"), got)
++	})
++
++	t.Run("a scope does not find, replace or clear the record of another scope", func(t *testing.T) {
++		t.Parallel()
++		store := newSharedStore(t)
++		first, second := persistence.NewScopedStore(store, "ns/first"), persistence.NewScopedStore(store, "ns/second")
++
++		require.NoError(t, first.Save(ctx, "ticket", []byte("session of the first"), time.Hour))
++
++		_, err := second.Load(ctx, "ticket")
++		require.Error(t, err)
++
++		require.NoError(t, second.Save(ctx, "ticket", []byte("session of the second"), time.Hour))
++		require.NoError(t, second.Clear(ctx, "ticket"))
++
++		got, err := first.Load(ctx, "ticket")
++		require.NoError(t, err)
++		assert.Equal(t, []byte("session of the first"), got)
++	})
++
++	t.Run("a scope does not see the records saved without a scope", func(t *testing.T) {
++		t.Parallel()
++		store := newSharedStore(t)
++
++		require.NoError(t, store.Save(ctx, "ticket", []byte("session"), time.Hour))
++
++		_, err := persistence.NewScopedStore(store, "ns/app").Load(ctx, "ticket")
++		require.Error(t, err)
++	})
++
++	t.Run("no two scopes make the same key", func(t *testing.T) {
++		t.Parallel()
++
++		// Without the length of the scope each pair below would meet in one key.
++		pairs := []struct {
++			name                 string
++			firstScope, firstKey string
++			otherScope, otherKey string
++		}{
++			{name: "a colon moves from the key to the scope", firstScope: "a", firstKey: "b:ticket", otherScope: "a:b", otherKey: "ticket"},
++			{name: "the scope is a prefix of another", firstScope: "app", firstKey: "1:ticket", otherScope: "app:1", otherKey: "ticket"},
++			{name: "the scope looks like a length", firstScope: "1:a", firstKey: "ticket", otherScope: "a", otherKey: "ticket"},
++			{name: "the empty scope", firstScope: "", firstKey: "1:a:ticket", otherScope: "a", otherKey: "ticket"},
++		}
++
++		for _, tt := range pairs {
++			t.Run(tt.name, func(t *testing.T) {
++				t.Parallel()
++				store := newSharedStore(t)
++
++				require.NoError(t, persistence.NewScopedStore(store, tt.firstScope).Save(ctx, tt.firstKey, []byte("session"), time.Hour))
++
++				_, err := persistence.NewScopedStore(store, tt.otherScope).Load(ctx, tt.otherKey)
++				require.Error(t, err)
++			})
++		}
++	})
++
++	t.Run("the lock of a ticket belongs to its scope", func(t *testing.T) {
++		t.Parallel()
++		store := newSharedStore(t)
++		first, second := persistence.NewScopedStore(store, "ns/first"), persistence.NewScopedStore(store, "ns/second")
++
++		require.NoError(t, first.Lock("ticket").Obtain(ctx, time.Minute))
++
++		// The same ticket of another scope is free, and of the same scope is taken.
++		require.NoError(t, second.Lock("ticket").Obtain(ctx, time.Minute))
++		require.ErrorIs(t, first.Lock("ticket").Obtain(ctx, time.Minute), sessions.ErrLockNotObtained)
++	})
++
++	t.Run("the connection of the store is verified", func(t *testing.T) {
++		t.Parallel()
++
++		require.NoError(t, persistence.NewScopedStore(newSharedStore(t), "ns/app").VerifyConnection(ctx))
++	})
++}
+diff --git a/pkg/sessions/redis/redis_store.go b/pkg/sessions/redis/redis_store.go
+index 79f8f7d1..6a6a7121 100644
+--- a/pkg/sessions/redis/redis_store.go
++++ b/pkg/sessions/redis/redis_store.go
+@@ -24,15 +24,24 @@ type SessionStore struct {
+ // NewRedisSessionStore initialises a new instance of the SessionStore and wraps
+ // it in a persistence.Manager
+ func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessions.SessionStore, error) {
++	rs, err := NewStore(opts)
++	if err != nil {
++		return nil, err
++	}
++	return persistence.NewManager(rs, cookieOpts), nil
++}
++
++// NewStore initialises a new instance of the SessionStore without a persistence.Manager, for a
++// process whose clients share one Redis client (Deckhouse patch 018).
++func NewStore(opts *options.SessionOptions) (*SessionStore, error) {
+ 	client, err := NewRedisClient(opts.Redis)
+ 	if err != nil {
+ 		return nil, fmt.Errorf("error constructing redis client: %v", err)
+ 	}
+ 
+-	rs := &SessionStore{
++	return &SessionStore{
+ 		Client: client,
+-	}
+-	return persistence.NewManager(rs, cookieOpts), nil
++	}, nil
+ }
+ 
+ // Save takes a sessions.SessionState and stores the information from it
+diff --git a/pkg/sessions/session_store.go b/pkg/sessions/session_store.go
+index a394f33b..36f881b2 100644
+--- a/pkg/sessions/session_store.go
++++ b/pkg/sessions/session_store.go
+@@ -19,6 +19,24 @@ func NewSessionStore(opts *options.SessionOptions, cookieOpts *options.Cookie) (
+ 		return cookie.NewCookieSessionStore(opts, cookieOpts)
+ 	case options.RedisSessionStoreType:
+ 		return redis.NewRedisSessionStore(opts, cookieOpts)
++	case options.RedisPeersSessionStoreType:
++		store, err := NewPersistenceStore(opts)
++		if err != nil {
++			return nil, err
++		}
++		return persistence.NewManager(store, cookieOpts), nil
++	default:
++		return nil, fmt.Errorf("unknown session store type '%s'", opts.Type)
++	}
++}
++
++// NewPersistenceStore creates the store of a persistent session store type without the cookie
++// options of a client. The clients of a table of clients share it, each through a
++// persistence.Manager with its own cookie options (Deckhouse patch 018).
++func NewPersistenceStore(opts *options.SessionOptions) (persistence.Store, error) {
++	switch opts.Type {
++	case options.RedisSessionStoreType:
++		return redis.NewStore(opts)
+ 	case options.RedisPeersSessionStoreType:
+ 		store, err := redispeers.NewStore(opts)
+ 		if err != nil {
+@@ -27,8 +45,8 @@ func NewSessionStore(opts *options.SessionOptions, cookieOpts *options.Cookie) (
+ 		if err := store.Register(prometheus.DefaultRegisterer); err != nil {
+ 			return nil, err
+ 		}
+-		return persistence.NewManager(store, cookieOpts), nil
++		return store, nil
+ 	default:
+-		return nil, fmt.Errorf("unknown session store type '%s'", opts.Type)
++		return nil, fmt.Errorf("session store type '%s' cannot be shared by the clients of a table", opts.Type)
+ 	}
+ }
+diff --git a/pkg/validation/deckhouse_scope_test.go b/pkg/validation/deckhouse_scope_test.go
+new file mode 100644
+index 00000000..be9ce106
+--- /dev/null
++++ b/pkg/validation/deckhouse_scope_test.go
+@@ -0,0 +1,112 @@
++package validation
++
++import (
++	"net/http"
++	"testing"
++	"time"
++
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++// clientScopeOptions returns the options of a client of a table of clients: valid, with a Redis
++// nobody listens on and a provider CA file that does not exist.
++func clientScopeOptions() *options.Options {
++	o := options.NewOptions()
++	o.Cookie.Secret = "dh-test-secret-0123456789abcdef0"
++	o.EmailDomains = []string{"*"}
++	o.Providers[0].ID = "dex"
++	o.Providers[0].ClientID = "dex-authenticator-app"
++	o.Providers[0].ClientSecret = "dh-test-secret-0123456789abcdef"
++	o.Providers[0].CAFiles = []string{"/does/not/exist/ca.crt"}
++	o.Session.Type = options.RedisSessionStoreType
++	o.Session.Redis.ConnectionURL = "redis://127.0.0.1:1"
++
++	return o
++}
++
++// TestValidateClient checks that the validation of a client of a table of clients leaves the
++// state of the process alone: it runs while the process serves the other clients.
++func TestValidateClient(t *testing.T) {
++	// Not parallel: the test watches the transport of the process.
++	transport, ok := requests.DefaultTransport.(*http.Transport)
++	require.True(t, ok)
++	tlsBefore := transport.TLSClientConfig
++
++	t.Run("a valid client passes without Redis and without the provider CA", func(t *testing.T) {
++		start := time.Now()
++
++		require.NoError(t, ValidateClient(clientScopeOptions()))
++
++		assert.Less(t, time.Since(start), redisConnectionTestInterval, "the connection to Redis must not be tried")
++		assert.Same(t, tlsBefore, transport.TLSClientConfig, "the transport of the process must not change")
++	})
++
++	t.Run("the options of the client are checked", func(t *testing.T) {
++		tests := []struct {
++			name      string
++			modify    func(*options.Options)
++			expectErr string
++		}{
++			{name: "no client id", modify: func(o *options.Options) { o.Providers[0].ClientID = "" }, expectErr: "client-id"},
++			{name: "no client secret", modify: func(o *options.Options) { o.Providers[0].ClientSecret = "" }, expectErr: "client-secret"},
++			{name: "no cookie secret", modify: func(o *options.Options) { o.Cookie.Secret = "" }, expectErr: "cookie-secret"},
++			{name: "cookie secret of a wrong length", modify: func(o *options.Options) { o.Cookie.Secret = "dh-test-secret-012" }, expectErr: "cookie_secret"},
++			{name: "no email validation", modify: func(o *options.Options) { o.EmailDomains = nil }, expectErr: "email validation"},
++			{name: "bad redirect url", modify: func(o *options.Options) { o.RawRedirectURL = "://" }, expectErr: "redirect-url"},
++		}
++
++		for _, tt := range tests {
++			t.Run(tt.name, func(t *testing.T) {
++				o := clientScopeOptions()
++				tt.modify(o)
++
++				require.ErrorContains(t, ValidateClient(o), tt.expectErr)
++				assert.Same(t, tlsBefore, transport.TLSClientConfig)
++			})
++		}
++	})
++
++	t.Run("the redirect url and the client address parser are set, as the proxy needs them", func(t *testing.T) {
++		o := clientScopeOptions()
++		o.RawRedirectURL = "/dex-authenticator/callback"
++		o.ReverseProxy = true
++
++		require.NoError(t, ValidateClient(o))
++
++		require.NotNil(t, o.GetRedirectURL())
++		assert.Equal(t, "/dex-authenticator/callback", o.GetRedirectURL().Path)
++		assert.NotNil(t, o.GetRealClientIPParser())
++	})
++}
++
++// TestValidateProcess checks that the options of a process that serves a table of clients are
++// valid without a client, and that what belongs to the process is still checked.
++func TestValidateProcess(t *testing.T) {
++	// Not parallel: ValidateProcess sets the logger of the process.
++	t.Run("options without a client pass", func(t *testing.T) {
++		o := options.NewOptions()
++		o.Session.Type = options.RedisPeersSessionStoreType
++		o.Session.Redis.ConnectionURL = "redis://127.0.0.1:1/"
++		o.Session.Redis.Password = "dh-test-secret-0123456789abcdef"
++
++		require.NoError(t, ValidateProcess(o))
++	})
++
++	t.Run("the provider CA is checked", func(t *testing.T) {
++		o := options.NewOptions()
++		o.Providers[0].CAFiles = []string{"/does/not/exist/ca.crt"}
++
++		require.ErrorContains(t, ValidateProcess(o), "unable to load provider CA file")
++	})
++
++	t.Run("the client address header is checked", func(t *testing.T) {
++		o := options.NewOptions()
++		o.ReverseProxy = true
++		o.RealClientIPHeader = "X-No-Such-Header"
++
++		require.ErrorContains(t, ValidateProcess(o), "real_client_ip_header")
++	})
++}
+diff --git a/pkg/validation/options.go b/pkg/validation/options.go
+index cab48709..ff2c5f22 100644
+--- a/pkg/validation/options.go
++++ b/pkg/validation/options.go
+@@ -22,16 +22,96 @@ import (
+ // Validate checks that required options are set and validates those that they
+ // are of the correct format
+ func Validate(o *options.Options) error {
+-	msgs := validateCookie(o.Cookie)
+-	msgs = append(msgs, validateSessionCookieMinimal(o)...)
+-	msgs = append(msgs, validateRedisSessionStore(o)...)
+-	msgs = append(msgs, prefixValues("injectRequestHeaders: ", validateHeaders(o.InjectRequestHeaders)...)...)
+-	msgs = append(msgs, prefixValues("injectResponseHeaders: ", validateHeaders(o.InjectResponseHeaders)...)...)
+-	msgs = append(msgs, validateProviders(o)...)
+-	msgs = append(msgs, validateAPIRoutes(o)...)
+-	msgs = configureLogger(o.Logging, msgs)
+-	msgs = parseSignatureKey(o, msgs)
++	return validate(o, scope{process: true, client: true})
++}
++
++// ValidateProcess applies the options that set the state of the process and checks them: the
++// logger, the TLS settings of the requests to the provider, the connection to Redis, the source of
++// the client address in the logs. A process that serves a table of clients (Deckhouse patch 018)
++// calls it once, with the options of its command line, which name no client.
++func ValidateProcess(o *options.Options) error {
++	return validate(o, scope{process: true})
++}
++
++// ValidateClient checks the options of one client of a table of clients (Deckhouse patch 018). It
++// does not change the state of the process, so it is safe while the process serves requests, and
++// it makes no request unless --extra-jwt-issuers are set.
++func ValidateClient(o *options.Options) error {
++	return validate(o, scope{client: true})
++}
++
++// scope tells validate which options to check: those of the process, of a client, or both.
++type scope struct {
++	process bool
++	client  bool
++}
++
++func validate(o *options.Options, in scope) error {
++	msgs := []string{}
++	if in.client {
++		msgs = append(msgs, validateCookie(o.Cookie)...)
++		msgs = append(msgs, validateSessionCookieMinimal(o)...)
++	}
++	if in.process {
++		msgs = append(msgs, validateRedisSessionStore(o)...)
++	}
++	if in.client {
++		msgs = append(msgs, prefixValues("injectRequestHeaders: ", validateHeaders(o.InjectRequestHeaders)...)...)
++		msgs = append(msgs, prefixValues("injectResponseHeaders: ", validateHeaders(o.InjectResponseHeaders)...)...)
++		msgs = append(msgs, validateProviders(o)...)
++		msgs = append(msgs, validateAPIRoutes(o)...)
++	}
++	if in.process {
++		msgs = configureLogger(o.Logging, msgs)
++	}
++	if in.client {
++		msgs = parseSignatureKey(o, msgs)
++	}
++	if in.process {
++		msgs = configureProviderTransport(o, msgs)
++	}
++	if in.client {
++		msgs = validateClientOptions(o, msgs)
++	}
++
++	if o.ReverseProxy {
++		parser, err := ip.GetRealClientIPParser(o.RealClientIPHeader)
++		if err != nil {
++			msgs = append(msgs, fmt.Sprintf("real_client_ip_header (%s) not accepted parameter value: %v", o.RealClientIPHeader, err))
++		}
++		o.SetRealClientIPParser(parser)
++
++		if in.process {
++			// Allow the logger to get client IPs
++			logger.SetGetClientFunc(func(r *http.Request) string {
++				parser := o.GetRealClientIPParser()
++				var trustedProxies *ip.NetSet
++				scope := middlewareapi.GetRequestScope(r)
++				if scope != nil && scope.CanTrustForwardedHeaders(r) {
++					trustedProxies = scope.TrustedProxies
++				} else {
++					parser = nil
++				}
++				return ip.GetClientString(parser, r, trustedProxies, false)
++			})
++		}
++	}
++
++	if in.client {
++		// Do this after ReverseProxy validation for TrustedIP coordinated checks
++		msgs = append(msgs, validateAllowlists(o)...)
++	}
+ 
++	if len(msgs) != 0 {
++		return fmt.Errorf("invalid configuration:\n  %s",
++			strings.Join(msgs, "\n  "))
++	}
++	return nil
++}
++
++// configureProviderTransport sets the TLS settings of the requests to the provider. They belong
++// to the process: every provider uses the same transport.
++func configureProviderTransport(o *options.Options, msgs []string) []string {
+ 	if o.SSLInsecureSkipVerify {
+ 		transport := requests.DefaultTransport.(*http.Transport)
+ 		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402 -- InsecureSkipVerify is a configurable option we allow
+@@ -48,6 +128,12 @@ func Validate(o *options.Options) error {
+ 		}
+ 	}
+ 
++	return msgs
++}
++
++// validateClientOptions checks the options that neither the process nor the reverse proxy
++// settings own.
++func validateClientOptions(o *options.Options, msgs []string) []string {
+ 	if o.AuthenticatedEmailsFile == "" && len(o.EmailDomains) == 0 && o.HtpasswdFile == "" {
+ 		msgs = append(msgs, "missing setting for email validation: email-domain or authenticated-emails-file required."+
+ 			"\n      use email-domain=* to authorize all email addresses")
+@@ -79,37 +165,7 @@ func Validate(o *options.Options) error {
+ 		logger.Print("WARNING: no explicit redirect URL: redirects will default to insecure HTTP")
+ 	}
+ 
+-	msgs = append(msgs, validateUpstreams(o.UpstreamServers)...)
+-
+-	if o.ReverseProxy {
+-		parser, err := ip.GetRealClientIPParser(o.RealClientIPHeader)
+-		if err != nil {
+-			msgs = append(msgs, fmt.Sprintf("real_client_ip_header (%s) not accepted parameter value: %v", o.RealClientIPHeader, err))
+-		}
+-		o.SetRealClientIPParser(parser)
+-
+-		// Allow the logger to get client IPs
+-		logger.SetGetClientFunc(func(r *http.Request) string {
+-			parser := o.GetRealClientIPParser()
+-			var trustedProxies *ip.NetSet
+-			scope := middlewareapi.GetRequestScope(r)
+-			if scope != nil && scope.CanTrustForwardedHeaders(r) {
+-				trustedProxies = scope.TrustedProxies
+-			} else {
+-				parser = nil
+-			}
+-			return ip.GetClientString(parser, r, trustedProxies, false)
+-		})
+-	}
+-
+-	// Do this after ReverseProxy validation for TrustedIP coordinated checks
+-	msgs = append(msgs, validateAllowlists(o)...)
+-
+-	if len(msgs) != 0 {
+-		return fmt.Errorf("invalid configuration:\n  %s",
+-			strings.Join(msgs, "\n  "))
+-	}
+-	return nil
++	return append(msgs, validateUpstreams(o.UpstreamServers)...)
+ }
+ 
+ func parseSignatureKey(o *options.Options, msgs []string) []string {

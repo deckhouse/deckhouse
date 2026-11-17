@@ -133,3 +133,8 @@ done
 [[ "${line}" != *"${forged_host}"* ]] \
   || die "the authenticator logged the forged X-Forwarded-Host: ${line:0:400}"
 log "The authenticator logged host ${app_host} for a request with X-Forwarded-Host ${forged_host}"
+
+# The Redis next to the authenticator is of the version line the image pins.
+redis_version="$(kubectl -n "${NS}" exec deploy/e2e-authn-app-dex-authenticator -c redis -- /usr/bin/redis-server --version)"
+[[ "${redis_version}" == *" v=7.4."* ]] || die "the redis of the authenticator must be of the 7.4 line, got '${redis_version}'"
+log "Redis of the authenticator: ${redis_version%% sha=*}"

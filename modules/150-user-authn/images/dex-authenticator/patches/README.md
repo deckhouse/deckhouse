@@ -380,6 +380,177 @@ The security events of `templates/security-events.yaml` are built from these lin
   where the Ingress of the application is written, not in the proxy.
 - **Upstream:** not proposed.
 
+### 017-session-store-redis-peers.patch
+
+- **Zone:** a new session store, `pkg/sessions/redispeers`, chosen with `--session-store-type=redis-peers`, and the
+  memory of the process it falls back to, `pkg/sessions/memory`. The stores `cookie` and `redis` are not changed.
+- **Consumer in Deckhouse:** none yet: the shared DexAuthenticator, whose replicas each have a Redis without a disk
+  in the pod. Nothing in the module sets the store type.
+- **What it does:** every replica of the proxy has a Redis of its own, and none of them is a master for long. A
+  replica writes each session to its own Redis and then to the Redis of its neighbours, and reads it from its own
+  Redis, then from a neighbour, then from the memory of the process; a session none of them has is restored from
+  its cookie (patch 002). The store sits behind the same `persistence.Manager` and ticket cookie as `redis`.
+  - **Neighbours:** `--redis-peers-dns-name` resolves to the address of every replica, as a headless Service with
+    `publishNotReadyAddresses` does; `--redis-peers-self-address` is the address of the replica itself. The own
+    Redis, its password and the port of every Redis are those of `--redis-connection-url` and `--redis-password`.
+    The list is looked up every second.
+  - **Password:** every Redis of the replicas has one password, set both as `requirepass` and as `masterauth`, and
+    the proxy refuses to start in this mode without it in `--redis-password` or `--redis-connection-url`.
+    `requirepass`: the Redis listens on the address of the pod for its neighbours, and without a password whoever
+    reaches the port reads every session, removes them (`FLUSHALL`) or makes the Redis a replica of a Redis of its
+    own (`REPLICAOF`, `CONFIG SET`). `masterauth`: a Redis that is filled signs in to its neighbour with it; without
+    it the link of `REPLICAOF` never comes up, every filling fails after `--redis-peers-seed-timeout`, and the Redis
+    stays out of use, a replica without its mark.
+  - **Filling an empty Redis:** a Redis without its mark has restarted. The mark is the key
+    `deckhouse.redis-peers.seeded` holding the run ID of the Redis, so the key a copy brings from a neighbour is
+    not the mark of the copy. The proxy makes the Redis a copy of a neighbour that has its mark and is not a
+    replica: `REPLICAOF`, wait for the full copy (a Redis that answers `LOADING` is still copying),
+    `CONFIG SET replica-read-only no`, wait the time of one request, wait until it has applied all the neighbour
+    had sent by then, drop the copied refresh locks, set the mark, `REPLICAOF NO ONE`. The mark is set before the
+    Redis is detached: in the other order a step that fails after the detaching leaves a master with a full copy
+    that looks empty. A Redis that carries its mark and is still a replica is not in use and is filled again. A
+    copy that fails leaves the Redis without the mark and out of use, and is tried again, from another neighbour
+    if this one no longer answers. The Redis starts empty only when every neighbour answers and none has anything
+    to give; a neighbour that is being filled itself or does not answer, and a lookup of the neighbours that
+    fails, are waited for. The replica is not ready (`/ready`) until this is over or
+    `--redis-peers-seed-timeout` (default `15s`) has passed. Redis needs `--repl-diskless-sync-delay 0` and
+    `--repl-diskless-load swapdb`; the Redis image of the module pins the 7.4 line this was measured on.
+  - **Without Redis:** a Redis that fails three requests in a row (each bounded by `--redis-peers-timeout`, default
+    `200ms`) is left and probed every second; `/ready` does not depend on Redis. A session no Redis took is kept
+    in the memory of the process. A removal the own Redis did not take is kept there too and hides the session at
+    once. Both are given to the own Redis when it takes writes again: on its return before it is read, and by
+    every probe. A session a neighbour took is not kept in the memory: the own Redis is left with its older copy,
+    which costs one refresh. A move waits for the requests only while they write to the own Redis, not while they
+    write to the neighbours.
+  - **Memory:** `--session-store-memory-max-bytes` (default 64 MiB) bounds it: past the limit the records not used
+    for the longest time are dropped, the expired ones first; a record counts as its key, its value and 256 bytes
+    of overhead. `--session-store-memory-ttl` (default `0`, off) caps the life of a record, which is otherwise
+    `--cookie-expire`. A record the memory has dropped costs one refresh through dex, never a sign-in. The memory
+    is not a store type of its own.
+  - **Refresh lock:** lives in the Redis with the lowest address among those that answer and carry their mark, the
+    own one included, so every replica takes it in the same place; in the memory of the process when no Redis
+    answers.
+- **Metrics:** `oauth2_proxy_session_store_redis_peers_`: `loads_total` by `step` (`own`, `peer`, `memory`,
+  `cookie`), `saves_total` by `target` (`own`, `peer`, `memory`), `peer_writes_total` by `operation` and `result`
+  (`ok`, `readonly`, `timeout`, `error`), `moved_total`, `seed_duration_seconds` by `outcome` (`copied`, `empty`,
+  `kept`, `timeout`, `error`), `mode` and `mode_switches_total` (`redis`, `peer`, `memory`), `lock_home` by
+  `address`, `locks_total` by `home` and `result`, `peers` by `state`. Of the memory:
+  `oauth2_proxy_session_store_memory_entries`, `_bytes`, `_evictions_total` by `reason` (`size`, `expired`),
+  `_loads_total` by `result` (`hit`, `miss`). No metric carries a client, a host or a user.
+- **Limits:** no TLS between the Redis of the replicas; a write a neighbour has missed is not sent again: a save
+  costs one refresh there; a removal leaves the session there, and the session can come back on every replica, the
+  one of the sign-out included, until its next refresh (after a sign-out only a copy of the cookie gets that far,
+  and the sign-out has revoked its refresh token, patch 011); a session a replica keeps in its memory comes back on
+  that replica the same way; a session found at a
+  neighbour is not written to the own Redis; a session no Redis took is written to the own Redis on its return even
+  if a neighbour has removed it meanwhile; the lock of a replica that was killed is not taken over (it expires); a
+  removal kept in the memory can be dropped by its size limit; a replica whose neighbours do not answer waits for
+  them for the whole `--redis-peers-seed-timeout` and then starts empty with its mark.
+- **Tests:** `pkg/sessions/redispeers` on fake Redis and miniredis; `integration_test.go` (build tag
+  `integration`) runs the filling on two real Redis with sessions that do not compress, addresses in
+  `REDIS_PEERS_TEST_ADDRS`. `pkg/sessions/memory`: the TTL, the eviction by bytes, concurrent use under the race
+  detector, the lock, the metrics, and the suite every session store of oauth2-proxy passes.
+  `pkg/middleware/deckhouse_memory_store_refresh_test.go`: the lock tests of patch 002 over the memory and its
+  lock. `pkg/validation/deckhouse_sessions_test.go`: the store is refused without a Redis password and is not
+  tested for a connection, the flags of the module included.
+- **Upstream:** not proposed.
+
+### 018-client-table.patch
+
+- **Zone:** `main.go` and the construction of `OAuthProxy` (`NewOAuthProxy` is split into building the proxy and
+  starting its servers); two new files, `deckhouse_client_table.go` and `deckhouse_dispatcher.go`; the scopes of
+  `validation.Validate`; the remote key sets of `pkg/providers/oidc`; two fields of the JSON log lines of patch 007.
+- **Consumer in Deckhouse:** none yet: the shared DexAuthenticator, one process for the applications of many
+  DexAuthenticator objects, each a dex client of its own. Without `--client-table` the proxy works as before.
+- **What it does:** `--client-table=<file>` names a JSON file with the clients of the process. Each client is an
+  `OAuthProxy` built from the flags of the process followed by the flags of its record, through the same option
+  loading and validation as the only client of a process without the table. A dispatcher on the application server
+  gives each request to the client its host names.
+  - **Table:** `{"generation": N, "clients": [...]}`. A client is a DexAuthenticator object: `name`, `namespace`,
+    `hosts`, `clientID`, `clientSecret`, `cookieSecret` (required) and `cookieExpire`, `allowAccessToKubernetes`
+    (adds the scopes of the `kubernetes` audience to the scope of the process), `sendAuthorizationHeader`,
+    `providerLogout`. These are all a client may set: there is no field for arbitrary flags, and every other
+    setting is that of the process. Hosts are DNS names without a port; a redirect is allowed to the hosts of the
+    client.
+  - **A record that is refused:** a record that fails a check, or claims a host or a cookie secret an earlier
+    record of the file has, is refused alone. The other clients are served by the new table, and that client by the
+    record it had: by its previous `OAuthProxy`, on the hosts of that record that no client of the new table has
+    taken, and only while no client of the new table has its previous cookie secret. A host it gave up comes back
+    to it once it is free. A new client whose record is refused is not served. The first record of a client is its
+    record, refused or not: a second one is dropped. Two clients are never served with one host or one cookie
+    secret; cookie secrets are compared as the proxy reads them, so a secret and its base64 form are one. Only a
+    file that is not a table is refused as a whole and leaves the table in use: an unknown field, more than one
+    JSON value, or no list of clients.
+  - **Sign-out through dex:** a process with `--provider-logout-url` refuses a record without `providerLogout`:
+    dex answers the sign-out of a client that has no address to return to with an error page and keeps its session.
+  - **Generation:** the writer of the table numbers its versions. The process answers `GET /client-table`, by the
+    exact path, on the application server and outside the proxy prefix, so that no route of an application leads
+    there, with
+    `{"generation": N, "clients": M, "failed": ["<namespace>/<name>", ...]}`: the generation it serves and the
+    clients whose record was refused or could not be built. The writer learns from it when every replica has
+    loaded a version.
+  - **Sessions of the clients:** the clients share the session store, and each keeps its records and refresh locks
+    there under its own name (`persistence.NewScopedStore`, the key is `<length of the name>:<name>:<ticket>`). A
+    cookie of one client is not a session of another by two checks: the cookie secret signs it, and behind the
+    signature the other client finds no record under its name and asks dex, which refuses a refresh token of
+    another client (`TestClientTable_storeScope`). The second check needs the refresh, so the process refuses to
+    start without `--cookie-refresh` above zero: without it the stub of patch 002 is trusted as it is. It also
+    needs `--skip-oidc-discovery`: a client is built while the table is loaded, and a provider that is asked for
+    its configuration and does not answer would hold the load.
+  - **Key of a request:** for the auth subrequest of ingress-nginx, the exact path `<proxy prefix>/auth` with
+    `X-Original-URL` and without `X-Forwarded-Proto`, the host of `X-Original-URL` (patch 016); a header that names
+    no plain host is no key. For every other request the `Host` header: a browser path that came through the route
+    of an application, or the auth check of an ingress controller that sends the `Host` of the application.
+    `X-Forwarded-Host` is never read and is overwritten with the host the client was chosen by before the handler
+    of the client runs. The host is written as the table has it, in lower case and without a trailing dot, with the
+    port only when it is not the default one of the scheme: the client builds its `redirect_uri` from it, and dex
+    compares that with the registered one as a string.
+  - **What the key relies on:** ingress-nginx overwrites `X-Original-URL` on its subrequest. The auth check of
+    another ingress controller is told from it only by the headers: it must carry `X-Forwarded-Proto` or no
+    `X-Original-URL`, or a client of that controller could name the host of another application there. The `Host`
+    of a subrequest of ingress-nginx is the Service of the authenticator, so the writer of the table must not give
+    that name to a client as a host.
+  - **A host no client has** is answered 403 on the auth path and 404 on any other. ingress-nginx passes a 403 of
+    the auth subrequest to the browser and turns a 404 into its own 500.
+  - **Reload:** the file is read again on a file event (the symlink swap of a Secret volume included) and every 10
+    seconds. A client whose record did not change keeps its `OAuthProxy`; the others are built, and the new table
+    replaces the old one at once. A request already given to a client finishes there. A client that cannot be built
+    is served as a refused one is. Without the file the table is empty and the process is ready.
+  - **Shared by the clients:** the session store, the pages, the upstreams, the remote key set of dex
+    (`ShareRemoteKeySets`), the logger, the TLS settings of the requests to dex, and the memory of the refreshes
+    dex did not answer (patch 002), whose bound is then one for the process. With `--skip-oidc-discovery`, as in
+    Deckhouse, building a client makes no request. Of its own a client has the provider client, the cookie
+    settings, the redirect allowlist and the response headers.
+  - **Validation:** `validation.Validate` sets the state of the process (the logger, the transport, the Redis
+    connection test of patch 004). `ValidateProcess` does that once for the flags of the process, which name no
+    client, and `ValidateClient` checks a client without touching the process or the network.
+  - **Log:** the JSON lines of a request served by a client of the table carry `authenticator` and
+    `authenticator_namespace`, the DexAuthenticator object of the client, right after `host`; the lines of a process
+    without the table do not have them. A load of the table writes one line per client it builds (its name, client
+    ID and hosts), one per record it refuses and one with the totals and the generation. The lines an `OAuthProxy`
+    writes about itself at start are left to the process without the table, and the warning about
+    `--trusted-proxy-ip` is written once per process. No line carries a secret.
+  - **Health checks:** the process answers `--ping-path` and `--ready-path` itself, for any host.
+  - **Revocation feed:** the subscription of patch 010 is one per client, and the feed allows 1000 of them. With
+    `--client-table` the proxy refuses to start with `--revocation-feed-url` unless `--revocation-feed-disable` is
+    set, so a process never runs without the feed unnoticed. Revoked sessions then last until their next refresh.
+  - **Not supported with the table:** `--authenticated-emails-file`, `--htpasswd-file`, the `cookie` session store.
+  - **Metrics:** `oauth2_proxy_dispatch_request_duration_seconds` by `outcome` (`hit`, `unknown`), whose count is
+    the number of requests; `oauth2_proxy_client_table_clients`, `oauth2_proxy_client_table_hosts`,
+    `oauth2_proxy_client_table_generation`; `oauth2_proxy_client_table_reload_duration_seconds` by `result` (`ok`,
+    `partial`, `error`; every read of a file that is missing or unreadable is an `error`, so it shows as a rate);
+    `oauth2_proxy_client_table_client_changes_total` by `change` (`built`, `reused`, `failed`, `removed`);
+    `oauth2_proxy_client_table_last_reload_timestamp_seconds`. No label carries a host, a client or a user.
+- **Tests:** `deckhouse_dispatcher_test.go`: a forged `Host`, `X-Forwarded-Host` or `X-Original-URL` reaches the
+  handler of no other client (`TestDispatcher_ServeHTTP`, the fuzz target `FuzzDispatcherRoute`).
+  `deckhouse_client_table_test.go`: the table format, the refused records, the reload, the generation, a request in
+  flight during a reload, the file events, and `TestClientTable_isolation` and `TestClientTable_storeScope`, where
+  the session of one real client is refused by another. `pkg/sessions/persistence/scoped_store_test.go`: the scopes.
+- **Upstream:** not proposed.
+- **Order:** after 016 and 017: it chooses the client with the host parsing of 016 and shares the store of 017. It
+  moves the body of `NewOAuthProxy` into `newOAuthProxy`, so a patch below it that changes `NewOAuthProxy` moves its
+  hunks.
+
 ### 998-fix-cve.patch
 
 - **Zone:** `go.mod` and `go.sum`.

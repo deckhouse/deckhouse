@@ -20,5 +20,9 @@ from: {{ index $.Images "builder/distroless" }}
 final: false
 shell:
   beforeInstall:
-  - pm install redis -d /out
+  # The version line is pinned: the redis-peers session store of dex-authenticator (patch 017 of
+  # its image) relies on how Redis 7.4 copies a neighbour (REPLICAOF, LOADING, replica-read-only).
+  # Another line is taken on purpose, with the integration tests of that patch run against it.
+  # The dex-authenticator-app e2e case checks the version of the running Redis.
+  - pm install redis@7.4 -d /out
   - rm -f /out/usr/bin/redis-cli
