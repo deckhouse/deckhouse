@@ -68,13 +68,13 @@ spec:
 
             Images keep being served throughout.
 
-            Three types:
+            There are three operation types:
 
             - `GarbageCollection` removes from the cache what the releases the cluster has moved past left there.
-            - `Verify` reads blobs of the store and compares each with its digest: every blob, or those of the images named in `spec.verify.digests`. What does not match is recorded in `RegistryStorage.status.replicas[].corruptedBlobs`. Besides, every replica checks its whole store in the background about once an hour, so a `Verify` is for when an answer is wanted now.
-            - `Repair` checks the images named in `spec.repair.digests` and replaces their broken or missing blobs with whole copies, taken from another replica of the cache or, while the cluster has an upstream, from the upstream. A blob is downloaded beside the store, checked against its digest and only then put in place, so no image is removed and nothing is lost if no whole copy is found. The module creates a `Repair` itself for the broken blobs a replica finds, with the cause `CorruptionDetected`.
+            - `Verify` reads blobs of the store and compares each with its digest: every blob, or those of the images named in `spec.verify.digests`. What does not match is recorded in `RegistryStorage.status.replicas[].corruptedBlobs`. Besides, every replica checks its whole store in the background about once an hour, so a `Verify` is for starting a check manually.
+            - `Repair` checks the images named in `spec.repair.digests` and replaces their broken or missing blobs with whole copies from another replica of the cache or, when the cluster has one, from the upstream. A blob is downloaded beside the store, checked against its digest and only then put in place, so no image is removed and nothing is lost if no whole copy is found. The module creates a `Repair` itself for the broken blobs a replica finds, with the cause `CorruptionDetected`.
 
-            `Verify` and `Repair` read at most 32 MiB/s from the disk of a master, so a store of 15 GB takes a replica about eight minutes. Neither waits for a fill or a `d8 mirror push` to finish.
+            `Verify` and `Repair` read from the disk at no more than 32 MiB/s, so a store of 15 GB takes a replica about eight minutes to check. Neither waits for a fill or a `d8 mirror push` to finish.
 
             The module creates garbage collections itself:
 
@@ -82,15 +82,17 @@ spec:
             - once the cache holds a new image set — after a Deckhouse Platform update, or after a module is enabled or updated;
             - when the store refuses writes and so can never take in a new set — once per deployed Deckhouse Platform release.
 
-            With `storage.garbageCollection.enabled: false` the module creates none of them. An operation created by hand runs either way.
+            With `storage.garbageCollection.enabled: false` the module creates no operations. An operation created by hand runs either way.
 
             A garbage collection starts on a replica only when its store is not being written to: while the cache is being filled or an image set is being pushed with `d8 mirror push`, the replica waits. A store that refuses writes — over its budget, or down to the space kept free on its filesystem — is not waited for: a fill cannot go on until something frees room. A replica that has not picked the operation up, or is still held back by its store, an hour after the operation was accepted fails with the reason `DeadlineExceeded`. Once its turn comes, a replica looks at its store again: if a fill or a push has started meanwhile, it gives the turn back and waits for the store to go quiet.
 
             Only one operation runs at a time. An operation created while an older one is not finished fails with the reason `AnotherOperationActive`.
 
-            A replica that is gone fails with the reason `ReplicaLost`: one that was collecting, when it has not held the Lease `registry-storage-gc` in the `d8-system` namespace for five minutes; one that was waiting, when its node has not been `Ready` for ten minutes.
+            A replica that is gone fails with the reason `ReplicaLost`:
+            - a replica collecting garbage, when it has not held the Lease `registry-storage-gc` in the `d8-system` namespace for five minutes;
+            - a replica waiting, when its node has not been `Ready` for ten minutes.
 
-            To cancel an operation, set the label `registry.deckhouse.io/cancel: "true"` on it. A replica that has not started does not start, and a replica that is running stops. What it has already removed stays removed. Deleting the object cancels an operation too, but does not stop a replica that has already started.
+            To cancel an operation, set the label `registry.deckhouse.io/cancel: "true"` on it. A replica that has not started does not start, and a replica that is running stops. What it has already removed stays removed. Deleting the RegistryOperation object cancels an operation too, but does not stop a replica whose operation has already started.
 
             A finished operation is deleted a day after it finished.
           x-doc-examples:
@@ -175,7 +177,7 @@ spec:
                 verify:
                   type: object
                   description: |
-                    What a `Verify` checks. Absent means every blob of every replica.
+                    The `Verify` check. Absent means every blob of every replica.
                   x-kubernetes-validations:
                     - rule: self == oldSelf
                       message: the spec of an operation is immutable; create another operation instead
@@ -186,7 +188,7 @@ spec:
                       description: |
                         Images, by the digest of their manifest, or single blobs, by their digest. An image is checked together with every blob it consists of. Empty means every blob of the store.
 
-                        The digests of the images are listed by `kubectl get registryimages`.
+                        The image digests are listed by `d8 k get registryimages`.
                       items:
                         type: string
                         pattern: '^sha256:[a-f0-9]{64}$'
@@ -194,14 +196,14 @@ spec:
                       type: array
                       maxItems: 16
                       description: |
-                        The replicas to run on, by node. Empty means every replica. An operation that names a node without a replica of the cache fails with the reason `UnknownNode`.
+                        The nodes where the operation runs. Empty means every node. An operation that names a node without a replica of the cache fails with the reason `UnknownNode`.
                       items:
                         type: string
                         maxLength: 253
                 repair:
                   type: object
                   description: |
-                    What a `Repair` repairs. Required for a `Repair`.
+                    The `Repair` operation.
                   required:
                     - digests
                   x-kubernetes-validations:
@@ -215,7 +217,7 @@ spec:
                       description: |
                         Images, by the digest of their manifest, or single blobs, by their digest. An image is repaired together with every blob it consists of.
 
-                        The digests of the images are listed by `kubectl get registryimages`; the broken blobs, by `RegistryStorage.status.replicas[].corruptedBlobs`.
+                        The image digests are listed by `d8 k get registryimages`; the broken blobs, by `RegistryStorage.status.replicas[].corruptedBlobs`.
                       items:
                         type: string
                         pattern: '^sha256:[a-f0-9]{64}$'
@@ -223,7 +225,7 @@ spec:
                       type: array
                       maxItems: 16
                       description: |
-                        The replicas to run on, by node. Empty means every replica. An operation that names a node without a replica of the cache fails with the reason `UnknownNode`.
+                        The replicas where the operation runs, specified by node name. Empty means every replica. An operation that names a node without a replica of the cache fails with the reason `UnknownNode`.
                       items:
                         type: string
                         maxLength: 253
@@ -412,16 +414,16 @@ spec:
                       verify:
                         type: object
                         description: |
-                          What a `Verify` found on the replica.
+                          `Verify` results on the replica.
                         properties:
                           checkedBlobs:
                             type: integer
                             format: int32
-                            description: How many blobs were read and compared with their digests.
+                            description: The number of blobs read and compared with their digests.
                           checkedBytes:
                             type: integer
                             format: int64
-                            description: How many bytes were read.
+                            description: Volume of data read in bytes.
                           corruptedBlobs:
                             type: array
                             description: The blobs whose content does not match their digest, sorted, at most 50.
@@ -430,7 +432,7 @@ spec:
                           corruptedCount:
                             type: integer
                             format: int32
-                            description: How many blobs were found broken, those past the limit of the list included.
+                            description: The number of broken blobs found, including those beyond the list limit.
                           missingDigests:
                             type: array
                             description: The digests asked about that the replica holds neither as an image nor as a blob.
@@ -439,7 +441,7 @@ spec:
                       repair:
                         type: object
                         description: |
-                          What a `Repair` did on the replica.
+                          `Repair` results on the replica.
                         properties:
                           digests:
                             type: array
@@ -461,7 +463,7 @@ spec:
                                     - NotHeld
                                     - Failed
                                   description: |
-                                    What was done.
+                                    Results:
 
                                     - `Intact` — every blob matches its digest; nothing was changed.
                                     - `Repaired` — broken or missing blobs were replaced with whole copies.
