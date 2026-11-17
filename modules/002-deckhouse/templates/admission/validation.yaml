@@ -46,7 +46,7 @@ webhooks:
           - "deckhouse.io"
         apiVersions:
           {{- /* Module v2 keeps the user-facing spec (settings, enabled) in v1beta1 only */}}
-          {{- if .Values.deckhouse.enableModuleV2 }}
+          {{- if .Values.global.moduleV2Enabled }}
           - "v1beta1"
           {{- else }}
           - "v1alpha1"
@@ -73,7 +73,7 @@ webhooks:
         name: deckhouse
         namespace: d8-system
         port: 4223
-        {{- if .Values.deckhouse.enableModuleV2 }}
+        {{- if .Values.global.moduleV2Enabled }}
         path: /validate/v1beta1/modules
         {{- else }}
         path: /validate/v1alpha1/modules
@@ -93,7 +93,7 @@ webhooks:
     admissionReviewVersions:
       - v1
     matchPolicy: Equivalent
-    {{- if .Values.deckhouse.enableModuleV2 }}
+    {{- if .Values.global.moduleV2Enabled }}
     {{- /* A migrated ModuleConfig mirrors its Module: the webhook only keeps users off it. Deckhouse is excluded before any call, since it writes ModuleConfigs at startup, before its pod is behind the service */}}
     matchConditions:
       - name: exclude-deckhouse

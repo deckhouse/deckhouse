@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# With Module v2 (deckhouse.enableModuleV2) v1beta1 is the storage version and carries no
+# With Module v2 (global.moduleV2Enabled) v1beta1 is the storage version and carries no
 # properties; v1alpha1 is filled from the v1beta1 spec, status and annotations so that its readers
 # (kubectl, hooks reading .properties) keep working. v1alpha1 to v1beta1 is trivial: pkgsync
 # rewrites every Module in v1beta1, and v1alpha1 has nothing v1beta1 can take.

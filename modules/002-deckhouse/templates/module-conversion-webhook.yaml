@@ -1,5 +1,5 @@
 {{- /* Module v2 stores Modules in v1beta1, which carries no properties; the webhook fills v1alpha1 from it */}}
-{{- if .Values.deckhouse.enableModuleV2 }}
+{{- if .Values.global.moduleV2Enabled }}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ConversionWebhook

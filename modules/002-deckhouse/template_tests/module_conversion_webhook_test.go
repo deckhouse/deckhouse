@@ -40,7 +40,7 @@ var _ = Describe("Module :: deckhouse :: Module conversion webhook ::", func() {
 		f.ValuesSetFromYaml("global", globalValues)
 		f.ValuesSet("global.modulesImages", GetModulesImages())
 		f.ValuesSetFromYaml("deckhouse", moduleValuesForMasterNode)
-		f.ValuesSet("deckhouse.enableModuleV2", enableModuleV2)
+		f.ValuesSet("global.moduleV2Enabled", enableModuleV2)
 		f.HelmRender()
 		Expect(f.RenderError).ShouldNot(HaveOccurred())
 	}

@@ -111,6 +111,13 @@ control-plane-manager:
         - if .apiserver.loadBalancer.sourceRanges != null then .apiserver.publishAPI.loadBalancer.sourceRanges = .apiserver.loadBalancer.sourceRanges | del(.apiserver.loadBalancer.sourceRanges) end
         - if .apiserver.loadBalancer.annotations != null then .apiserver.publishAPI.loadBalancer.annotations = .apiserver.loadBalancer.annotations | del(.apiserver.loadBalancer.annotations) end
         - del(.apiserver.loadBalancer)
+deckhouse:
+    - version: 2
+      description:
+        en: The `enableModuleV2` parameter is removed. Module v2 is enabled with the [`moduleV2Enabled`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modulev2enabled) global parameter.
+        ru: Параметр `enableModuleV2` удалён. Module v2 включается глобальным параметром [`moduleV2Enabled`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modulev2enabled).
+      conversions:
+        - del(.enableModuleV2)
 descheduler:
     - version: 2
       description:

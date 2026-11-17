@@ -39,7 +39,7 @@ var _ = Describe("Module :: deckhouse :: default package repository ::", func() 
 	})
 
 	render := func(enableModuleV2 bool) {
-		f.ValuesSet("deckhouse.enableModuleV2", enableModuleV2)
+		f.ValuesSet("global.moduleV2Enabled", enableModuleV2)
 		f.HelmRender()
 		Expect(f.RenderError).ShouldNot(HaveOccurred())
 	}

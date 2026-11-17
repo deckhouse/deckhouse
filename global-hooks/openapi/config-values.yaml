@@ -41,6 +41,14 @@ properties:
 
       If not defined, the value is determined automatically as `true` for clusters with more than one master node. Otherwise, it is determined as`false`.
     x-examples: [ true, false ]
+  moduleV2Enabled:
+    type: boolean
+    default: false
+    x-examples: [false]
+    description: |
+      Enables the experimental Module v2 controller and installs the Module v2 CRD instead of the legacy Module CRD.
+
+      The feature is experimental and not supported under the Deckhouse SLA. Use it with caution.
   prefix:
     type: string
     pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'

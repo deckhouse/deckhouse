@@ -207,7 +207,7 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSet("global.clusterIsBootstrapped", true)
 			f.ValuesSetFromYaml("deckhouse", moduleValuesForMasterNode)
-			f.ValuesSet("deckhouse.enableModuleV2", enableModuleV2)
+			f.ValuesSet("global.moduleV2Enabled", enableModuleV2)
 			f.HelmRender()
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 		}
@@ -255,7 +255,7 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSet("global.clusterIsBootstrapped", true)
 			f.ValuesSetFromYaml("deckhouse", moduleValuesForMasterNode)
-			f.ValuesSet("deckhouse.enableModuleV2", enableModuleV2)
+			f.ValuesSet("global.moduleV2Enabled", enableModuleV2)
 			f.HelmRender()
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 		}

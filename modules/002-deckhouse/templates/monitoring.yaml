@@ -1,7 +1,7 @@
 {{- /* The Module v2 runtime has no task queues: its dashboard takes the place of the main one. */ -}}
 {{- if (.Values.global.enabledModules | has "prometheus") }}
   {{- include "helm_lib_grafana_dashboard_definitions_recursion" (list . "monitoring/grafana-dashboards" "monitoring/grafana-dashboards/kubernetes-cluster") }}
-  {{- if .Values.deckhouse.enableModuleV2 }}
+  {{- if .Values.global.moduleV2Enabled }}
     {{- include "helm_lib_grafana_dashboard_definitions_recursion" (list . "monitoring/grafana-dashboards-v2") }}
   {{- else }}
     {{- include "helm_lib_grafana_dashboard_definitions_recursion" (list . "monitoring/grafana-dashboards" "monitoring/grafana-dashboards/main") }}

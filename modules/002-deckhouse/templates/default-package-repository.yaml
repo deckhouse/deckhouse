@@ -1,4 +1,4 @@
-{{- if .Values.deckhouse.enableModuleV2 }}
+{{- if .Values.global.moduleV2Enabled }}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository

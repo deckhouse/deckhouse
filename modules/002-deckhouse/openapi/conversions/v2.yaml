@@ -1,0 +1,6 @@
+version: 2
+conversions:
+  - del(.enableModuleV2)
+description:
+  ru: "Параметр `enableModuleV2` удалён. Module v2 включается глобальным параметром [`moduleV2Enabled`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modulev2enabled)."
+  en: "The `enableModuleV2` parameter is removed. Module v2 is enabled with the [`moduleV2Enabled`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modulev2enabled) global parameter."
