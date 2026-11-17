@@ -974,6 +974,12 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 
 	metricLabels := releaseUpdater.NewReleaseMetricLabels(release)
 	defer func() {
+		// The embedded copy still serves the module and a release is already staged for it,
+		// a newer release only replaces the staged one, so waiting for its approval must not alert.
+		if task.DeployedReleaseInfo != nil && r.installer.IsEmbeddedPresent(release.GetModuleName()) {
+			metricLabels.SetFalse(metrics.LabelManualApprovalRequired)
+		}
+
 		metricLabels[metrics.LabelMajorReleaseDepth] = strconv.Itoa(task.QueueDepth.GetMajorReleaseDepth())
 		if task.IsMajor {
 			metricLabels[metrics.LabelMajorReleaseName] = release.GetName()
@@ -991,7 +997,9 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 
 	reasons := checker.MetRequirements(ctx, release)
 	if len(reasons) > 0 {
-		metricLabels.SetTrue(metrics.LabelRequirementsNotMet)
+		if r.alertOnUnmetRequirements(ctx, release.GetModuleName()) {
+			metricLabels.SetTrue(metrics.LabelRequirementsNotMet)
+		}
 		msgs := make([]string, 0, len(reasons))
 		for _, reason := range reasons {
 			msgs = append(msgs, reason.Message)
@@ -1982,6 +1990,33 @@ func (r *reconciler) isModuleReady(ctx context.Context, moduleName string) bool 
 	}
 
 	return module.Status.Phase == v1alpha1.ModulePhaseReady
+}
+
+// alertOnUnmetRequirements reports whether a release of the module blocked by its requirements must alert. While the
+// embedded copy serves the module, the release only matters to a Deckhouse release that lists the module in its
+// migratedModules requirement: that update waits for a Deployed release of the module. A failed read alerts.
+func (r *reconciler) alertOnUnmetRequirements(ctx context.Context, moduleName string) bool {
+	if !r.installer.IsEmbeddedPresent(moduleName) {
+		return true
+	}
+
+	releases := new(v1alpha1.DeckhouseReleaseList)
+	if err := r.client.List(ctx, releases); err != nil {
+		r.log.Warn("list deckhouse releases", slog.String("module", moduleName), log.Err(err))
+
+		return true
+	}
+
+	for i := range releases.Items {
+		migrated := releases.Items[i].GetRequirements()[releaseUpdater.MigratedModulesRequirementFieldName]
+		for _, module := range strings.Split(migrated, ",") {
+			if strings.TrimSpace(module) == moduleName {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 // overriddenFromAnotherSource reports whether a deployed override uses another source.
