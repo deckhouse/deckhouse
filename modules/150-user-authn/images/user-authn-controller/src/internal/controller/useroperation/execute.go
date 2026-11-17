@@ -607,9 +607,11 @@ func (r *Reconciler) listPasswords(ctx context.Context, opts ...client.ListOptio
 	return out, nil
 }
 
+// listSessions decodes every OfflineSessions of the cache. They are read without a copy: decodeSession
+// only reads the object.
 func (r *Reconciler) listSessions(ctx context.Context) ([]sessionView, error) {
 	list := controller.List(controller.OfflineSessionsGVK)
-	if err := r.client.List(ctx, list, client.InNamespace(naming.DexNamespace)); err != nil {
+	if err := r.client.List(ctx, list, client.InNamespace(naming.DexNamespace), client.UnsafeDisableDeepCopy); err != nil {
 		return nil, fmt.Errorf("list offlinesessions: %w", err)
 	}
 	out := make([]sessionView, 0, len(list.Items))
@@ -623,9 +625,11 @@ func (r *Reconciler) listSessions(ctx context.Context) ([]sessionView, error) {
 	return out, nil
 }
 
+// listIdentities decodes every UserIdentity of the cache. They are read without a copy: decodeIdentity
+// only reads the object.
 func (r *Reconciler) listIdentities(ctx context.Context) ([]identityView, error) {
 	list := controller.List(controller.UserIdentityGVK)
-	if err := r.client.List(ctx, list, client.InNamespace(naming.DexNamespace)); err != nil {
+	if err := r.client.List(ctx, list, client.InNamespace(naming.DexNamespace), client.UnsafeDisableDeepCopy); err != nil {
 		return nil, fmt.Errorf("list useridentities: %w", err)
 	}
 	out := make([]identityView, 0, len(list.Items))

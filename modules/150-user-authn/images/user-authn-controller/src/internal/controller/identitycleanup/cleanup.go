@@ -137,8 +137,10 @@ func (c *Cleanup) Run(ctx context.Context) (int, error) {
 		return 0, err
 	}
 
+	// Read without a copy: the identities are the cache's own objects and are only read here; marks
+	// re-read them, and a deletion goes through an object of its own.
 	identities := controller.List(controller.UserIdentityGVK)
-	if err := c.client.List(ctx, identities, client.InNamespace(naming.DexNamespace)); err != nil {
+	if err := c.client.List(ctx, identities, client.InNamespace(naming.DexNamespace), client.UnsafeDisableDeepCopy); err != nil {
 		return 0, fmt.Errorf("list useridentities: %w", err)
 	}
 
@@ -274,7 +276,10 @@ func (c *Cleanup) delete(ctx context.Context, obj *unstructured.Unstructured, id
 	}
 
 	uid, resourceVersion := obj.GetUID(), obj.GetResourceVersion()
-	err := c.client.Delete(ctx, obj, client.Preconditions{UID: &uid, ResourceVersion: &resourceVersion})
+	target := controller.Object(controller.UserIdentityGVK)
+	target.SetNamespace(obj.GetNamespace())
+	target.SetName(obj.GetName())
+	err := c.client.Delete(ctx, target, client.Preconditions{UID: &uid, ResourceVersion: &resourceVersion})
 	switch {
 	case apierrors.IsNotFound(err), apierrors.IsConflict(err):
 		return false, nil

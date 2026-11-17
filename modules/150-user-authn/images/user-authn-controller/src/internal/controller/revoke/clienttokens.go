@@ -58,8 +58,10 @@ type tokenOwner struct {
 // pairs. It touches neither the generations of the pairs nor the browser sessions. Every step can be repeated: a
 // token or a reference that is gone is not an error. logFields describe what matched, for the log.
 func (r *Revoker) deleteTokens(ctx context.Context, match func(tokenOwner) bool, logFields ...any) (int, error) {
+	// Every token of the cluster, read without a copy: the items are the cache's own objects and are
+	// only read here, the deletions go by name.
 	list := controller.List(controller.RefreshTokenGVK)
-	if err := r.client.List(ctx, list, client.InNamespace(naming.DexNamespace)); err != nil {
+	if err := r.client.List(ctx, list, client.InNamespace(naming.DexNamespace), client.UnsafeDisableDeepCopy); err != nil {
 		return 0, fmt.Errorf("list refresh tokens: %w", err)
 	}
 

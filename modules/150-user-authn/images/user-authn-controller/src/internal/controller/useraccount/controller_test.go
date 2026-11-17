@@ -391,7 +391,7 @@ func withIndexes(b *fake.ClientBuilder) *fake.ClientBuilder {
 	return b
 }
 
-func newTestReconciler(t *testing.T, now time.Time, objs ...client.Object) *Reconciler {
+func newTestReconciler(t testing.TB, now time.Time, objs ...client.Object) *Reconciler {
 	t.Helper()
 	scheme := newTestScheme(t)
 	c := withIndexes(fake.NewClientBuilder()).
@@ -403,7 +403,7 @@ func newTestReconciler(t *testing.T, now time.Time, objs ...client.Object) *Reco
 	return New(c, logr.Discard(), func() time.Time { return now })
 }
 
-func newTestScheme(t *testing.T) *runtime.Scheme {
+func newTestScheme(t testing.TB) *runtime.Scheme {
 	t.Helper()
 	scheme := runtime.NewScheme()
 	if err := v1alpha1.AddToScheme(scheme); err != nil {

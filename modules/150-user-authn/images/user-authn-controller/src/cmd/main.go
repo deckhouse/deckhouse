@@ -504,6 +504,10 @@ func managerOptions(scheme *runtime.Scheme, leaderElectionID string, byObject ma
 		},
 		Cache: cache.Options{
 			ByObject: byObject,
+			// Every kind without a transform of its own in byObject is stored without managedFields:
+			// nothing reads them from the cache. A transform of its own replaces this one, so the Dex
+			// kinds drop them in theirs.
+			DefaultTransform: cache.TransformStripManagedFields(),
 		},
 		Client: client.Options{
 			Cache: &client.CacheOptions{

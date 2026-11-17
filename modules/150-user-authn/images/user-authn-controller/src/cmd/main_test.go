@@ -29,10 +29,15 @@ import (
 
 	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"user-authn-controller/internal/controller/dexauthenticator"
 	"user-authn-controller/internal/controller/useraccount"
@@ -96,6 +101,38 @@ func TestNewManagerOptions(t *testing.T) {
 			t.Errorf("cache of %s = %+v, want a transform and one namespace", kind, byObject)
 		}
 	}
+	assertDropsManagedFields(t, opts)
+}
+
+// assertDropsManagedFields checks the default transform of the cache: every kind without a transform
+// of its own (User, Group, DexClient, UserAccount, the Service, Ingress and Pod of the
+// DexAuthenticator reconcilers) is stored without managedFields, as nil and not as an empty list, so
+// that an object written back from the cache keeps them on the API server.
+func assertDropsManagedFields(t *testing.T, opts manager.Options) {
+	t.Helper()
+
+	if opts.Cache.DefaultTransform == nil {
+		t.Fatal("Cache.DefaultTransform is nil, want a transform that drops managedFields")
+	}
+	fields := []metav1.ManagedFieldsEntry{{Manager: "user-authn-controller", Operation: metav1.ManagedFieldsOperationUpdate}}
+	user := &unstructured.Unstructured{}
+	user.SetGroupVersionKind(schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1", Kind: "User"})
+	user.SetName("jane")
+	user.SetManagedFields(fields)
+	pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "p", ManagedFields: fields}}
+	for _, obj := range []client.Object{user, pod} {
+		got, err := opts.Cache.DefaultTransform(obj)
+		if err != nil {
+			t.Fatalf("transform %T: %v", obj, err)
+		}
+		stored, ok := got.(client.Object)
+		if !ok {
+			t.Fatalf("transform %T returned %T", obj, got)
+		}
+		if stored.GetManagedFields() != nil || stored.GetName() == "" {
+			t.Errorf("%T stored as %+v, want its name and no managedFields", obj, stored)
+		}
+	}
 }
 
 // The DexClient reconciler is the only writer of Secrets, so it runs under its own ServiceAccount:
@@ -138,6 +175,7 @@ func TestManagerOptionsSplitTheSecretWriter(t *testing.T) {
 	if !slices.Equal(kinds, []string{"OAuth2Client", "Secret"}) {
 		t.Errorf("dexclient caches %v, want only OAuth2Client and Secret", kinds)
 	}
+	assertDropsManagedFields(t, dex)
 }
 
 // With the shared dex-authenticator instances the dexclient command also caches what the

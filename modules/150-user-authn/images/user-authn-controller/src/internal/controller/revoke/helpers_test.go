@@ -64,13 +64,15 @@ func (c *calls) list() []string {
 
 // newTestClient returns a fake client with the indexes of the controller. A JSON Patch that does not
 // apply fails with 422 Invalid, as the API server answers; the fake client returns the error of
-// the patch library instead. Every write is recorded as "<verb> <Kind> <name>".
+// the patch library instead. Every write is recorded as "<verb> <Kind> <name>". RefreshTokens are
+// stored as the cache of the controller keeps them, reduced to the fields it reads: the revoker only
+// reads and deletes them, so every test of it also checks that nothing it reads is missing.
 func newTestClient(t *testing.T, rec *calls, funcs interceptor.Funcs, objs ...client.Object) client.WithWatch {
 	t.Helper()
 	builder := fake.NewClientBuilder().
 		WithScheme(runtime.NewScheme()).
 		WithRESTMapper(newTestMapper()).
-		WithObjects(objs...)
+		WithObjects(asCached(t, objs)...)
 	for _, index := range controller.Indexes() {
 		builder = builder.WithIndex(index.Object, index.Field, index.Extract)
 	}
@@ -131,6 +133,29 @@ func newTestClient(t *testing.T, rec *calls, funcs interceptor.Funcs, objs ...cl
 		},
 	}
 	return interceptor.NewClient(base, recorded)
+}
+
+// asCached returns objs with each RefreshToken reduced by controller.ReduceRefreshToken.
+func asCached(t *testing.T, objs []client.Object) []client.Object {
+	t.Helper()
+	out := make([]client.Object, 0, len(objs))
+	for _, obj := range objs {
+		u, ok := obj.(*unstructured.Unstructured)
+		if !ok || u.GroupVersionKind() != controller.RefreshTokenGVK {
+			out = append(out, obj)
+			continue
+		}
+		reduced, err := controller.ReduceRefreshToken(u)
+		if err != nil {
+			t.Fatalf("reduce refresh token %s: %v", u.GetName(), err)
+		}
+		cached, ok := reduced.(*unstructured.Unstructured)
+		if !ok {
+			t.Fatalf("reduce refresh token %s: got %T", u.GetName(), reduced)
+		}
+		out = append(out, cached)
+	}
+	return out
 }
 
 func newTestRevoker(c client.Client) *Revoker {

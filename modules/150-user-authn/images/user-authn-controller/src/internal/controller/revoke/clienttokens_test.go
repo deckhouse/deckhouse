@@ -17,8 +17,13 @@ limitations under the License.
 package revoke
 
 import (
+	"context"
+	"reflect"
+	"sync"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -97,6 +102,63 @@ func TestDeleteClientTokensOutside_AnEmptyListAllowsEveryConnector(t *testing.T)
 	}
 	if !exists(t, c, controller.RefreshTokenGVK, "rt-bob-console") {
 		t.Error("a token was deleted for an empty list")
+	}
+}
+
+// deleteTokens lists every RefreshToken of the cache without a copy, so the objects it reads are the
+// cache's own and must come out unchanged. The interceptor hands out the same maps on every list, as
+// the cache does with UnsafeDisableDeepCopy, and checks that the list asks for no copy.
+func TestDeleteClientTokensOutside_LeavesTheCachedTokensUnchanged(t *testing.T) {
+	t.Parallel()
+
+	var mu sync.Mutex
+	shared := map[string]map[string]any{}
+	before := map[string]map[string]any{}
+	noCopy := false
+	list := func(ctx context.Context, c client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+		if err := c.List(ctx, list, opts...); err != nil {
+			return err
+		}
+		items, ok := list.(*unstructured.UnstructuredList)
+		if !ok {
+			return nil
+		}
+		mu.Lock()
+		defer mu.Unlock()
+		for i := range items.Items {
+			item := &items.Items[i]
+			if item.GetKind() != controller.RefreshTokenGVK.Kind {
+				continue
+			}
+			listOpts := client.ListOptions{}
+			listOpts.ApplyOptions(opts)
+			noCopy = listOpts.UnsafeDisableDeepCopy != nil && *listOpts.UnsafeDisableDeepCopy
+			if cached, seen := shared[item.GetName()]; seen {
+				item.Object = cached
+				continue
+			}
+			shared[item.GetName()] = item.Object
+			before[item.GetName()] = runtime.DeepCopyJSON(item.Object)
+		}
+		return nil
+	}
+	c := interceptor.NewClient(newTestClient(t, &calls{}, interceptor.Funcs{}, officeObjects()...), interceptor.Funcs{List: list})
+
+	if _, err := newTestRevoker(c).DeleteClientTokensOutside(t.Context(), "console", []string{"local", "ldap"}); err != nil {
+		t.Fatalf("DeleteClientTokensOutside: %v", err)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if !noCopy {
+		t.Error("the refresh tokens are listed with a copy of each, want UnsafeDisableDeepCopy")
+	}
+	if len(shared) == 0 {
+		t.Fatal("no refresh token was listed")
+	}
+	for name, obj := range shared {
+		if !reflect.DeepEqual(obj, before[name]) {
+			t.Errorf("cached token %s changed:\n got %v\nwant %v", name, obj, before[name])
+		}
 	}
 }
 

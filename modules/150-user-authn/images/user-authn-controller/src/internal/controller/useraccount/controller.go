@@ -28,6 +28,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -617,38 +618,6 @@ func (r *Reconciler) listPasswords(ctx context.Context, opts ...client.ListOptio
 	return out, nil
 }
 
-func (r *Reconciler) listSessions(ctx context.Context) ([]sessionView, error) {
-	list := controller.List(controller.OfflineSessionsGVK)
-	if err := r.client.List(ctx, list, client.InNamespace(naming.DexNamespace)); err != nil {
-		return nil, fmt.Errorf("list offlinesessions: %w", err)
-	}
-	out := make([]sessionView, 0, len(list.Items))
-	for i := range list.Items {
-		sess, err := decodeSession(&list.Items[i])
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, sess)
-	}
-	return out, nil
-}
-
-func (r *Reconciler) listIdentities(ctx context.Context) ([]identityView, error) {
-	list := controller.List(controller.UserIdentityGVK)
-	if err := r.client.List(ctx, list, client.InNamespace(naming.DexNamespace)); err != nil {
-		return nil, fmt.Errorf("list useridentities: %w", err)
-	}
-	out := make([]identityView, 0, len(list.Items))
-	for i := range list.Items {
-		ident, err := decodeIdentity(&list.Items[i])
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, ident)
-	}
-	return out, nil
-}
-
 func (r *Reconciler) listUsers(ctx context.Context, opts ...client.ListOption) ([]userView, error) {
 	list := controller.List(controller.UserGVK)
 	if err := r.client.List(ctx, list, opts...); err != nil {
@@ -774,35 +743,42 @@ func (r *Reconciler) mapDexProvider(ctx context.Context, obj client.Object) []re
 		return nil
 	}
 
+	// The map runs on every event of every DexProvider, twice for an update, over every pair of the
+	// cluster. It reads the cached objects in place, without a copy, and only the names it needs.
 	reqs := make([]reconcile.Request, 0)
 	uaList := &v1alpha1.UserAccountList{}
-	if err := r.client.List(ctx, uaList, client.MatchingLabels{v1alpha1.LabelConnectorID: connID}); err == nil {
+	if err := r.client.List(ctx, uaList, client.MatchingLabels{v1alpha1.LabelConnectorID: connID}, client.UnsafeDisableDeepCopy); err == nil {
 		for i := range uaList.Items {
 			reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Name: uaList.Items[i].Name}})
 		}
 	}
 
-	sessions, err := r.listSessions(ctx)
+	reqs, err := r.appendPairsOf(ctx, reqs, controller.OfflineSessionsGVK, "connID", connID)
 	if err != nil {
 		return uniqueRequests(reqs)
 	}
-	for _, sess := range sessions {
-		if sess.ConnID != connID {
-			continue
-		}
-		reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Name: naming.ExternalName(sess.ConnID, sess.UserID)}})
-	}
-	identities, err := r.listIdentities(ctx)
-	if err != nil {
-		return uniqueRequests(reqs)
-	}
-	for _, ident := range identities {
-		if ident.ConnectorID != connID {
-			continue
-		}
-		reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Name: naming.ExternalName(ident.ConnectorID, ident.UserID)}})
-	}
+	reqs, _ = r.appendPairsOf(ctx, reqs, controller.UserIdentityGVK, "connectorID", connID)
 	return uniqueRequests(reqs)
+}
+
+// appendPairsOf appends the accounts of the pairs of the connector connID that Dex keeps in the
+// objects of gvk, which name the connector in connField and the user in userID. It reads only these
+// two fields: decoding every OfflineSessions and UserIdentity of the cluster on each event of a
+// DexProvider allocated about as much memory as their whole cache.
+func (r *Reconciler) appendPairsOf(ctx context.Context, reqs []reconcile.Request, gvk schema.GroupVersionKind, connField, connID string) ([]reconcile.Request, error) {
+	list := controller.List(gvk)
+	if err := r.client.List(ctx, list, client.InNamespace(naming.DexNamespace), client.UnsafeDisableDeepCopy); err != nil {
+		return reqs, fmt.Errorf("list %s: %w", gvk.Kind, err)
+	}
+	for i := range list.Items {
+		obj := list.Items[i].Object
+		if conn, _ := obj[connField].(string); conn != connID {
+			continue
+		}
+		userID, _ := obj["userID"].(string)
+		reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Name: naming.ExternalName(connID, userID)}})
+	}
+	return reqs, nil
 }
 
 func uniqueRequests(reqs []reconcile.Request) []reconcile.Request {

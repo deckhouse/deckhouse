@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"maps"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -478,4 +479,231 @@ func TestStripDexSecretsPassthroughAndMalformedRefresh(t *testing.T) {
 			t.Fatal("empty reduced refresh kept")
 		}
 	})
+}
+
+// managedFields are half of a Dex object in the cache and nothing reads them from it. They go as nil,
+// not as an empty list: an object written back with an empty list resets its managed fields on the API
+// server, one written back without them keeps them.
+func TestStripDexSecretsDropsManagedFields(t *testing.T) {
+	t.Parallel()
+
+	original := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "dex.coreos.com/v1",
+		"kind":       "Password",
+		"metadata": map[string]any{
+			"name":          "pw",
+			"namespace":     naming.DexNamespace,
+			"labels":        map[string]any{"a": "b"},
+			"managedFields": []any{map[string]any{"manager": "dex", "operation": "Update"}},
+		},
+		"email": "jane@example.com",
+		"hash":  "secret-hash",
+	}}
+	for name, input := range map[string]any{
+		"pointer": original,
+		"value":   *original.DeepCopy(),
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := StripDexSecrets(input)
+			if err != nil {
+				t.Fatalf("StripDexSecrets: %v", err)
+			}
+			var stripped unstructured.Unstructured
+			switch typed := got.(type) {
+			case *unstructured.Unstructured:
+				stripped = *typed
+			case unstructured.Unstructured:
+				stripped = typed
+			default:
+				t.Fatalf("result type %T", got)
+			}
+			metadata, ok := stripped.Object["metadata"].(map[string]any)
+			if !ok {
+				t.Fatalf("metadata = %T", stripped.Object["metadata"])
+			}
+			if _, exists := metadata["managedFields"]; exists {
+				t.Errorf("metadata still has managedFields: %v", metadata["managedFields"])
+			}
+			if stripped.GetName() != "pw" || stripped.GetLabels()["a"] != "b" || stripped.Object["email"] != "jane@example.com" {
+				t.Errorf("stripped object lost a field it keeps: %v", stripped.Object)
+			}
+		})
+	}
+	if len(original.GetManagedFields()) != 1 {
+		t.Errorf("original managedFields mutated: %v", original.GetManagedFields())
+	}
+}
+
+// fullRefreshToken is a RefreshToken as Dex writes it.
+func fullRefreshToken() *unstructured.Unstructured {
+	return &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "dex.coreos.com/v1",
+		"kind":       "RefreshToken",
+		"metadata": map[string]any{
+			"name":              "rt-1",
+			"namespace":         naming.DexNamespace,
+			"uid":               "uid-1",
+			"resourceVersion":   "42",
+			"creationTimestamp": "2026-11-16T10:00:00Z",
+			"labels":            map[string]any{"l": "v"},
+			"managedFields":     []any{map[string]any{"manager": "Go-http-client", "operation": "Update"}},
+		},
+		"id":            "rt-1",
+		"clientID":      "console",
+		"connectorID":   "ldap",
+		"scopes":        []any{"openid", "groups", "offline_access"},
+		"nonce":         "secret-nonce",
+		"token":         "secret-token",
+		"obsoleteToken": "secret-obsolete",
+		"connectorData": "secret-connector-data",
+		"claims": map[string]any{
+			"userID":        "u-1",
+			"username":      "jane",
+			"email":         "jane@example.com",
+			"emailVerified": true,
+			"groups":        []any{"admins"},
+		},
+		"CreatedAt":  "2026-11-16T10:00:00Z",
+		"LastUsed":   "2026-11-16T11:00:00Z",
+		"generation": int64(3),
+		"ipAddress":  "192.0.2.10",
+		"userAgent":  "Mozilla/5.0",
+		"deviceHash": "d-1",
+	}}
+}
+
+// The cache of RefreshToken keeps only what the controller reads from it: the pair index
+// (claims.userID, connectorID), the client and connector of a token, its issue and last use, the
+// generation and the metadata. A field missing here reads as empty everywhere, so the list is pinned.
+func TestReduceRefreshToken(t *testing.T) {
+	t.Parallel()
+
+	original := fullRefreshToken()
+	before := original.DeepCopy()
+
+	got, err := ReduceRefreshToken(original)
+	if err != nil {
+		t.Fatalf("ReduceRefreshToken: %v", err)
+	}
+	reduced, ok := got.(*unstructured.Unstructured)
+	if !ok {
+		t.Fatalf("result type %T", got)
+	}
+	if !reflect.DeepEqual(original, before) {
+		t.Errorf("input mutated:\n got %v\nwant %v", original.Object, before.Object)
+	}
+
+	keys := slices.Sorted(maps.Keys(reduced.Object))
+	want := []string{"CreatedAt", "LastUsed", "apiVersion", "claims", "clientID", "connectorID", "generation", "kind", "metadata"}
+	if !slices.Equal(keys, want) {
+		t.Errorf("kept fields = %v, want %v", keys, want)
+	}
+	if reduced.GetManagedFields() != nil {
+		t.Errorf("managedFields = %v, want none", reduced.GetManagedFields())
+	}
+	wantMeta := before.DeepCopy()
+	wantMeta.SetManagedFields(nil)
+	if !reflect.DeepEqual(reduced.Object["metadata"], wantMeta.Object["metadata"]) {
+		t.Errorf("metadata = %v, want %v", reduced.Object["metadata"], wantMeta.Object["metadata"])
+	}
+	if !reflect.DeepEqual(reduced.Object["claims"], before.Object["claims"]) {
+		t.Errorf("claims = %v, want %v", reduced.Object["claims"], before.Object["claims"])
+	}
+	if pair, wantPair := RefreshTokenPair(reduced), RefreshTokenPair(before); !slices.Equal(pair, wantPair) || len(pair) != 1 {
+		t.Errorf("pair index = %v, want %v", pair, wantPair)
+	}
+	raw, err := json.Marshal(reduced.Object)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if strings.Contains(string(raw), "secret-") {
+		t.Errorf("reduced token holds a credential: %s", raw)
+	}
+
+	// The cached object shares nothing with the input: changing the input leaves it as it was.
+	claims, ok := original.Object["claims"].(map[string]any)
+	if !ok {
+		t.Fatal("original claims missing")
+	}
+	claims["userID"] = "changed"
+	if pair := RefreshTokenPair(reduced); len(pair) != 1 || pair[0] != RefreshTokenPair(before)[0] {
+		t.Errorf("reduced token follows a change of the input: %v", pair)
+	}
+}
+
+func TestReduceRefreshTokenOtherShapes(t *testing.T) {
+	t.Parallel()
+
+	t.Run("value", func(t *testing.T) {
+		t.Parallel()
+		got, err := ReduceRefreshToken(*fullRefreshToken())
+		if err != nil {
+			t.Fatalf("ReduceRefreshToken: %v", err)
+		}
+		reduced, ok := got.(unstructured.Unstructured)
+		if !ok {
+			t.Fatalf("result type %T", got)
+		}
+		if _, exists := reduced.Object["token"]; exists {
+			t.Error("token kept")
+		}
+	})
+	t.Run("deleted final state unknown", func(t *testing.T) {
+		t.Parallel()
+		got, err := ReduceRefreshToken(toolscache.DeletedFinalStateUnknown{Key: "k", Obj: fullRefreshToken()})
+		if err != nil {
+			t.Fatalf("ReduceRefreshToken: %v", err)
+		}
+		dfsu, ok := got.(toolscache.DeletedFinalStateUnknown)
+		if !ok {
+			t.Fatalf("result type %T", got)
+		}
+		inner, ok := dfsu.Obj.(*unstructured.Unstructured)
+		if !ok {
+			t.Fatalf("inner type %T", dfsu.Obj)
+		}
+		if _, exists := inner.Object["token"]; exists {
+			t.Error("token kept in the tombstone")
+		}
+	})
+	t.Run("not unstructured", func(t *testing.T) {
+		t.Parallel()
+		got, err := ReduceRefreshToken("plain")
+		if err != nil || got != "plain" {
+			t.Errorf("ReduceRefreshToken(plain) = %v, %v", got, err)
+		}
+	})
+	t.Run("nil pointer", func(t *testing.T) {
+		t.Parallel()
+		var nilToken *unstructured.Unstructured
+		got, err := ReduceRefreshToken(nilToken)
+		if err != nil || got != any(nilToken) {
+			t.Errorf("ReduceRefreshToken(nil) = %v, %v", got, err)
+		}
+	})
+}
+
+func TestInformerCacheByObjectReducesRefreshTokens(t *testing.T) {
+	t.Parallel()
+
+	for obj, cfg := range InformerCacheByObject() {
+		if obj.GetObjectKind().GroupVersionKind() != RefreshTokenGVK {
+			continue
+		}
+		got, err := cfg.Transform(fullRefreshToken())
+		if err != nil {
+			t.Fatalf("transform: %v", err)
+		}
+		reduced, ok := got.(*unstructured.Unstructured)
+		if !ok {
+			t.Fatalf("result type %T", got)
+		}
+		if _, exists := reduced.Object["scopes"]; exists {
+			t.Error("the RefreshToken cache keeps the whole token")
+		}
+		return
+	}
+	t.Fatal("no cache config for RefreshToken")
 }

@@ -192,8 +192,10 @@ func (m *DexAuthenticatorTokens) legacyIDs(ctx context.Context) (map[string]stru
 
 // deleteTokens deletes the RefreshToken objects issued to the ids.
 func (m *DexAuthenticatorTokens) deleteTokens(ctx context.Context, ids map[string]struct{}) (int, error) {
+	// Every token of the cluster, read without a copy: the items are the cache's own objects, so they
+	// are only read, and a token is deleted through an object of its own.
 	list := controller.List(controller.RefreshTokenGVK)
-	if err := m.client.List(ctx, list, client.InNamespace(naming.DexNamespace)); err != nil {
+	if err := m.client.List(ctx, list, client.InNamespace(naming.DexNamespace), client.UnsafeDisableDeepCopy); err != nil {
 		return 0, fmt.Errorf("list refresh tokens: %w", err)
 	}
 	deleted := 0
@@ -203,7 +205,10 @@ func (m *DexAuthenticatorTokens) deleteTokens(ctx context.Context, ids map[strin
 		if _, legacy := ids[clientID]; !legacy {
 			continue
 		}
-		if err := m.client.Delete(ctx, item); err != nil {
+		token := controller.Object(controller.RefreshTokenGVK)
+		token.SetNamespace(item.GetNamespace())
+		token.SetName(item.GetName())
+		if err := m.client.Delete(ctx, token); err != nil {
 			if apierrors.IsNotFound(err) {
 				continue
 			}
@@ -218,8 +223,9 @@ func (m *DexAuthenticatorTokens) deleteTokens(ctx context.Context, ids map[strin
 // client in refresh, and the entries of grants that name the client. Each removal tests that the
 // entry still names the same refresh token, so a sign-in in between keeps what it wrote.
 func (m *DexAuthenticatorTokens) removeRefs(ctx context.Context, ids map[string]struct{}) (int, error) {
+	// Read without a copy: NestedMap copies what it returns, and the patches go by name.
 	list := controller.List(controller.OfflineSessionsGVK)
-	if err := m.client.List(ctx, list, client.InNamespace(naming.DexNamespace)); err != nil {
+	if err := m.client.List(ctx, list, client.InNamespace(naming.DexNamespace), client.UnsafeDisableDeepCopy); err != nil {
 		return 0, fmt.Errorf("list offlinesessions: %w", err)
 	}
 	removed := 0

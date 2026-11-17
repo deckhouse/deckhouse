@@ -20,6 +20,7 @@ import (
 	"slices"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -74,10 +75,26 @@ func SecretFields() []string {
 	return slices.Clone(secretFields)
 }
 
+// refreshTokenFields are the top-level keys of a RefreshToken the cache keeps besides apiVersion,
+// kind and the metadata: everything the controller reads from a cached token. The pair index reads
+// claims.userID and connectorID; the revocations read clientID, connectorID, claims.userID,
+// CreatedAt and generation; the migration of the DexAuthenticator tokens reads clientID; the
+// UserIdentity migration reads connectorID, claims and LastUsed. A field read from a cached token
+// that is missing here reads as empty.
+var refreshTokenFields = []string{
+	"clientID",
+	"connectorID",
+	"claims",
+	"CreatedAt",
+	"LastUsed",
+	"generation",
+}
+
 // InformerCacheByObject scopes Password, OfflineSessions, RefreshToken, UserIdentity, and
-// AuthSession informers to d8-user-authn and strips Dex secrets before the objects are stored.
-// Code that needs a secret field (the UserIdentity migration reads the TOTP secret) reads through
-// the API reader instead. Revocation objects hold no secrets; they lose only their managed fields.
+// AuthSession informers to d8-user-authn and strips Dex secrets and managed fields before the
+// objects are stored; a RefreshToken keeps only refreshTokenFields. Code that needs a secret field
+// (the UserIdentity migration reads the TOTP secret) reads through the API reader instead.
+// Revocation objects hold no secrets; they lose only their managed fields.
 func InformerCacheByObject() map[client.Object]cache.ByObject {
 	return map[client.Object]cache.ByObject{
 		Object(PasswordGVK): {
@@ -96,7 +113,7 @@ func InformerCacheByObject() map[client.Object]cache.ByObject {
 			Namespaces: map[string]cache.Config{
 				naming.DexNamespace: {},
 			},
-			Transform: StripDexSecrets,
+			Transform: ReduceRefreshToken,
 		},
 		Object(UserIdentityGVK): {
 			Namespaces: map[string]cache.Config{
@@ -119,8 +136,11 @@ func InformerCacheByObject() map[client.Object]cache.ByObject {
 	}
 }
 
-// StripDexSecrets clones an unstructured object and deletes Dex secret fields.
-// The input object is never mutated.
+// StripDexSecrets clones an unstructured object and deletes Dex secret fields and the managed
+// fields, which are about a third of a Dex object and which nothing reads from the cache. The
+// managed fields go as nil, not as an empty list: an object written back with an empty list would
+// reset them on the API server, one written back without them keeps them. The input object is
+// never mutated.
 func StripDexSecrets(obj any) (any, error) {
 	switch typed := obj.(type) {
 	case *unstructured.Unstructured:
@@ -128,10 +148,12 @@ func StripDexSecrets(obj any) (any, error) {
 			return obj, nil
 		}
 		cloned := typed.DeepCopy()
+		cloned.SetManagedFields(nil)
 		stripSecretKeys(cloned.Object)
 		return cloned, nil
 	case unstructured.Unstructured:
 		cloned := typed.DeepCopy()
+		cloned.SetManagedFields(nil)
 		stripSecretKeys(cloned.Object)
 		return *cloned, nil
 	case toolscache.DeletedFinalStateUnknown:
@@ -144,6 +166,43 @@ func StripDexSecrets(obj any) (any, error) {
 	default:
 		return obj, nil
 	}
+}
+
+// ReduceRefreshToken builds the cached form of a RefreshToken: apiVersion, kind, the metadata
+// without managed fields and refreshTokenFields. The token values, the connector data, the nonce,
+// the scopes and the device of the token are dropped. Every kept value is copied, so the input object
+// is never mutated and the result shares nothing with it.
+func ReduceRefreshToken(obj any) (any, error) {
+	switch typed := obj.(type) {
+	case *unstructured.Unstructured:
+		if typed == nil {
+			return obj, nil
+		}
+		return reduceRefreshToken(typed), nil
+	case unstructured.Unstructured:
+		return *reduceRefreshToken(&typed), nil
+	case toolscache.DeletedFinalStateUnknown:
+		inner, err := ReduceRefreshToken(typed.Obj)
+		if err != nil {
+			return nil, err
+		}
+		typed.Obj = inner
+		return typed, nil
+	default:
+		return obj, nil
+	}
+}
+
+func reduceRefreshToken(u *unstructured.Unstructured) *unstructured.Unstructured {
+	out := make(map[string]any, len(refreshTokenFields)+3)
+	for _, key := range append([]string{"apiVersion", "kind", "metadata"}, refreshTokenFields...) {
+		if value, ok := u.Object[key]; ok {
+			out[key] = runtime.DeepCopyJSONValue(value)
+		}
+	}
+	reduced := &unstructured.Unstructured{Object: out}
+	reduced.SetManagedFields(nil)
+	return reduced
 }
 
 func stripSecretKeys(m map[string]any) {
