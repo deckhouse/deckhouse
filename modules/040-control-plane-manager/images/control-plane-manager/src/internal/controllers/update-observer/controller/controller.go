@@ -89,18 +89,6 @@ func RegisterController(mgr manager.Manager) error {
 			builder.WithPredicates(getConfigMapSpecPredicate()),
 		).
 		Watches(
-			&corev1.Node{},
-			&handler.Funcs{
-				CreateFunc: func(ctx context.Context, e event.CreateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
-				},
-				UpdateFunc: func(ctx context.Context, e event.UpdateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
-				},
-				DeleteFunc: func(ctx context.Context, e event.DeleteEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
-				},
-				GenericFunc: func(ctx context.Context, e event.GenericEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
-				},
-			}).
-		Watches(
 			&v1.NodeGroup{},
 			handler.EnqueueRequestsFromMapFunc(configMapRequest),
 			builder.WithPredicates(getNodeGroupPredicate()),
