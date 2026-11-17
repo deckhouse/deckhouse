@@ -1,0 +1,23 @@
+version: "3"
+
+vars:
+  REPORTS: '{{.E2E_REPORTS_DIR | default "./reports"}}'
+
+tasks:
+  run:
+    desc: Run the vertical-pod-autoscaler e2e tests (all of them, or one with TEST=<case>) and write a JUnit report
+    cmds:
+      - mkdir -p {{.REPORTS}}
+      - >-
+        chainsaw test --test-dir tests{{if .TEST}}/{{.TEST}}{{end}} --config chainsaw-config.yaml
+        --report-format JUNIT-TEST --report-path {{.REPORTS}} --report-name vertical-pod-autoscaler
+        {{.CLI_ARGS}}
+
+  lint:
+    desc: Lint the Chainsaw configuration and every test of the suite
+    cmds:
+      - chainsaw lint configuration -f chainsaw-config.yaml
+      - for f in tests/*/chainsaw-test.yaml; do echo "$f"; chainsaw lint test -f "$f" || exit 1; done
+      # chainsaw lint does not check StepTemplates, but loading the tests validates every template they use.
+      # The regular expression matches no test, so nothing runs and no cluster is needed.
+      - chainsaw test --test-dir tests --config chainsaw-config.yaml --no-cluster --include-test-regex 'chainsaw/^$'

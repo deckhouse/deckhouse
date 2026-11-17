@@ -1,0 +1,76 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: vpa-default-update-mode
+spec:
+  description: Checks that on Kubernetes 1.33 and newer the updater and the admission controller default to the InPlaceOrRecreate update mode, that a VerticalPodAutoscaler without an updatePolicy is stored with that mode, and that explicitly set Recreate and Auto modes are kept unchanged.
+  namespace: e2e-vpa-default-update-mode
+  steps:
+    - name: prepare-namespace
+      description: Prepare the test namespace and remove it at the end
+      use:
+        template: ../common/steps/test-namespace.yaml
+    - name: check-vpa-components
+      description: The cluster runs Kubernetes 1.33 or newer, where the default update mode is InPlaceOrRecreate, the vertical-pod-autoscaler module is enabled and its components are available
+      use:
+        template: ../common/steps/vpa-components-ready.yaml
+    - name: check-updater-default-mode
+      description: The updater runs with the default update mode InPlaceOrRecreate
+      try:
+        - description: Assert the updater container has VPA_DEFAULT_UPDATE_MODE set to InPlaceOrRecreate
+          assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: vpa-updater
+                namespace: kube-system
+              (spec.template.spec.containers[?name == 'updater'] | [0].env[?name == 'VPA_DEFAULT_UPDATE_MODE'] | [0].value): InPlaceOrRecreate
+    - name: check-admission-controller-default-mode
+      description: The admission controller runs with the default update mode InPlaceOrRecreate
+      try:
+        - description: Assert the admission-controller container has VPA_DEFAULT_UPDATE_MODE set to InPlaceOrRecreate
+          assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: vpa-admission-controller
+                namespace: kube-system
+              (spec.template.spec.containers[?name == 'admission-controller'] | [0].env[?name == 'VPA_DEFAULT_UPDATE_MODE'] | [0].value): InPlaceOrRecreate
+    - name: create-vpa-without-update-policy
+      description: A VerticalPodAutoscaler without an updatePolicy gets the default update mode
+      try:
+        - description: Create the VerticalPodAutoscaler without an updatePolicy
+          create:
+            file: files/vpa-without-update-policy.yaml
+        - description: Assert the stored updateMode is InPlaceOrRecreate
+          assert:
+            resource:
+              apiVersion: autoscaling.k8s.io/v1
+              kind: VerticalPodAutoscaler
+              metadata:
+                name: without-update-policy
+              spec:
+                updatePolicy:
+                  updateMode: InPlaceOrRecreate
+    - name: create-vpa-explicit-recreate
+      description: An explicit Recreate update mode is kept
+      use:
+        template: ../common/steps/create-vpa.yaml
+        with:
+          bindings:
+            - name: workload
+              value: explicit-recreate
+            - name: updateMode
+              value: Recreate
+    - name: create-vpa-explicit-auto
+      description: An explicit Auto update mode is kept
+      use:
+        template: ../common/steps/create-vpa.yaml
+        with:
+          bindings:
+            - name: workload
+              value: explicit-auto
+            - name: updateMode
+              value: Auto

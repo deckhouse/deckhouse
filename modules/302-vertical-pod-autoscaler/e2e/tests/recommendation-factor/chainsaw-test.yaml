@@ -1,0 +1,184 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: vpa-recommendation-factor
+spec:
+  description: Checks the per-resource recommendationFactor of a VerticalPodAutoscaler container policy. The admission webhook accepts a valid factor and rejects a zero, too large, too precise or unsupported one, and the recommender applies a CPU factor to the target of a CPU-bound workload while leaving memory untouched.
+  namespace: e2e-vpa-recommendation-factor
+  steps:
+    - name: prepare-namespace
+      description: Prepare the test namespace and remove it at the end
+      use:
+        template: ../common/steps/test-namespace.yaml
+    - name: check-vpa-components
+      description: The cluster runs Kubernetes 1.33 or newer, where the default update mode is InPlaceOrRecreate, the vertical-pod-autoscaler module is enabled and its components are available
+      use:
+        template: ../common/steps/vpa-components-ready.yaml
+    - name: create-vpa-with-valid-factor
+      description: A valid recommendationFactor is stored and proves that the admission webhook serves the requests
+      try:
+        - description: Create the VerticalPodAutoscaler with a valid recommendationFactor
+          create:
+            file: files/vpa-factor.yaml
+            bindings:
+              - name: vpa
+                value: valid-factor
+              - name: factor
+                value:
+                  cpu: "1.5"
+                  memory: "0.87"
+        - description: Assert the factor is stored and the webhook defaulted the update mode to InPlaceOrRecreate
+          assert:
+            resource:
+              apiVersion: autoscaling.k8s.io/v1
+              kind: VerticalPodAutoscaler
+              metadata:
+                name: valid-factor
+              spec:
+                resourcePolicy:
+                  containerPolicies:
+                    - containerName: app
+                      recommendationFactor:
+                        cpu: '1.5'
+                        memory: '0.87'
+                updatePolicy:
+                  updateMode: InPlaceOrRecreate
+    - name: reject-zero-factor
+      description: A zero recommendationFactor is denied by the admission webhook
+      try:
+        - description: Create the VerticalPodAutoscaler and expect the admission webhook to deny it
+          create:
+            file: files/vpa-factor.yaml
+            bindings:
+              - name: vpa
+                value: factor-zero
+              - name: factor
+                value:
+                  cpu: "0"
+              - name: message
+                value: 'recommendationFactor[cpu]: Invalid value: "0": must be greater than 0'
+            expect:
+              - check:
+                  ($error != null && contains($error, $message)): true
+    - name: reject-too-large-factor
+      description: A recommendationFactor above 10 is denied by the admission webhook
+      try:
+        - description: Create the VerticalPodAutoscaler and expect the admission webhook to deny it
+          create:
+            file: files/vpa-factor.yaml
+            bindings:
+              - name: vpa
+                value: factor-too-large
+              - name: factor
+                value:
+                  memory: "11"
+              - name: message
+                value: 'recommendationFactor[memory]: Invalid value: "11": must be less than or equal to 10'
+            expect:
+              - check:
+                  ($error != null && contains($error, $message)): true
+    - name: reject-too-precise-factor
+      description: A recommendationFactor with more than two decimal places is denied by the admission webhook
+      try:
+        - description: Create the VerticalPodAutoscaler and expect the admission webhook to deny it
+          create:
+            file: files/vpa-factor.yaml
+            bindings:
+              - name: vpa
+                value: factor-too-precise
+              - name: factor
+                value:
+                  memory: "1.234"
+              - name: message
+                value: 'recommendationFactor[memory]: Invalid value: "1.234": must have at most two decimal places'
+            expect:
+              - check:
+                  ($error != null && contains($error, $message)): true
+    - name: reject-unknown-resource
+      description: A recommendationFactor for a resource other than cpu and memory is denied by the admission webhook
+      try:
+        - description: Create the VerticalPodAutoscaler and expect the admission webhook to deny it
+          create:
+            file: files/vpa-factor.yaml
+            bindings:
+              - name: vpa
+                value: factor-unknown-resource
+              - name: factor
+                value:
+                  ephemeral-storage: "1.2"
+              - name: message
+                value: 'Unsupported value: "ephemeral-storage": supported values: "cpu", "memory"'
+            expect:
+              - check:
+                  ($error != null && contains($error, $message)): true
+    - name: create-burner-deployment
+      description: Create the CPU-bound Deployment burner and wait until its replica is available
+      try:
+        - description: Apply the Deployment burner
+          apply:
+            file: files/burner-deployment.yaml
+        - description: Assert one replica is available
+          assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: burner
+              status:
+                availableReplicas: 1
+    - name: create-burner-vpa
+      description: Create the VerticalPodAutoscaler burner in the Off update mode with a CPU factor of 2
+      try:
+        - description: Create the VerticalPodAutoscaler with recommendationFactor cpu 2
+          create:
+            file: files/vpa-burner.yaml
+        - description: Assert the stored recommendationFactor is cpu 2
+          assert:
+            resource:
+              apiVersion: autoscaling.k8s.io/v1
+              kind: VerticalPodAutoscaler
+              metadata:
+                name: burner
+              spec:
+                resourcePolicy:
+                  containerPolicies:
+                    - containerName: burner
+                      recommendationFactor:
+                        cpu: '2'
+    - name: wait-burner-recommendation
+      description: The VerticalPodAutoscaler burner gets a recommendation whose uncapped CPU target is above the recommender minimum, so the factor is not hidden by it
+      try:
+        - description: Assert the uncapped CPU target of the container burner is at least twice the 25m minimum
+          assert:
+            timeout: 8m
+            resource:
+              apiVersion: autoscaling.k8s.io/v1
+              kind: VerticalPodAutoscaler
+              metadata:
+                name: burner
+              status:
+                (length((recommendation.containerRecommendations || `[]`)[?containerName == 'burner' && uncappedTarget.cpu != null && divide(uncappedTarget.cpu, '25m') >= `2`])): 1
+    - name: check-cpu-factor-applied
+      description: The CPU target is at least 1.5 times the uncapped CPU target
+      try:
+        - description: Assert the CPU target divided by the uncapped CPU target is at least 1.5
+          assert:
+            resource:
+              apiVersion: autoscaling.k8s.io/v1
+              kind: VerticalPodAutoscaler
+              metadata:
+                name: burner
+              status:
+                (length((recommendation.containerRecommendations || `[]`)[?containerName == 'burner' && target.cpu != null && uncappedTarget.cpu != null && divide(target.cpu, uncappedTarget.cpu) >= `1.5`])): 1
+    - name: check-memory-factor-absent
+      description: The memory target equals the uncapped memory target, because no memory factor is set
+      try:
+        - description: Assert the memory target divided by the uncapped memory target is 1
+          assert:
+            resource:
+              apiVersion: autoscaling.k8s.io/v1
+              kind: VerticalPodAutoscaler
+              metadata:
+                name: burner
+              status:
+                (length((recommendation.containerRecommendations || `[]`)[?containerName == 'burner' && target.memory != null && uncappedTarget.memory != null && divide(target.memory, uncappedTarget.memory) == `1`])): 1

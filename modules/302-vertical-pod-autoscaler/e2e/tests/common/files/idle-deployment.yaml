@@ -1,0 +1,39 @@
+# Idle workload shared by the workload tests. It is applied with the bindings:
+#   workload - the Deployment name, also used as the pod label app (subject or control);
+#   replicas - the number of replicas.
+# Apply it with the step template tests/common/steps/idle-deployment-available.yaml.
+# The requests (10m CPU, 16Mi memory) are below the VPA minimum recommendation (25m CPU, 50Mi memory), so the
+# lower bound of the recommendation is always above the requests and the updater acts on the pods immediately.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ($workload)
+spec:
+  replicas: ($replicas)
+  selector:
+    matchLabels:
+      app: ($workload)
+  template:
+    metadata:
+      labels:
+        app: ($workload)
+    spec:
+      tolerations:
+        - operator: Exists
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          image: registry.k8s.io/e2e-test-images/agnhost:2.53
+          args: ["pause"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]

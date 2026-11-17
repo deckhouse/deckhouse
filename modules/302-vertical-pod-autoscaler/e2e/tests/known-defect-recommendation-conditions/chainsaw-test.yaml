@@ -1,0 +1,58 @@
+# Known module defect: the recommender never publishes VerticalPodAutoscaler status.conditions,
+# so RecommendationProvided is never set.
+# Cause: modules/302-vertical-pod-autoscaler/images/vertical-pod-autoscaler/patches/004-daemonset-scope-node-label.patch:864 adds
+# `status := vpa.AsStatus()` in processVPAUpdate (pkg/recommender/routines/recommender.go) before
+# vpa.UpdateRecommendation(...) and vpa.UpdateConditions(hasMatchingPods); UpdateVpaStatusIfNeeded sends
+# that stale snapshot. Every cycle clusterState.AddOrUpdateVpa (pkg/recommender/model/cluster.go) rebuilds
+# the conditions from the empty status.conditions of the API object, so they are never published.
+# Re-enable together with the fix.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: vpa-known-defect-recommendation-conditions
+spec:
+  skip: true
+  description: Checks that the recommender publishes the RecommendationProvided condition in the status of a VerticalPodAutoscaler once it has a recommendation for an idle Deployment; the test is skipped because of a known module defect.
+  namespace: e2e-vpa-known-defect-recommendation-conditions
+  steps:
+    - name: prepare-namespace
+      description: Prepare the test namespace and remove it at the end
+      use:
+        template: ../common/steps/test-namespace.yaml
+    - name: check-vpa-components
+      description: The cluster runs Kubernetes 1.33 or newer, the vertical-pod-autoscaler module is enabled and its components are available
+      use:
+        template: ../common/steps/vpa-components-ready.yaml
+    - name: create-subject-deployment
+      description: Create the idle Deployment subject with one replica and wait until it is available
+      use:
+        template: ../common/steps/idle-deployment-available.yaml
+        with:
+          bindings:
+            - name: replicas
+              value: 1
+    - name: create-subject-vpa
+      description: Create the VerticalPodAutoscaler subject in the Off update mode
+      use:
+        template: ../common/steps/create-vpa.yaml
+        with:
+          bindings:
+            - name: updateMode
+              value: "Off"
+    - name: wait-subject-recommendation
+      description: The VerticalPodAutoscaler subject gets a recommendation above the requests of the workload, which proves that the recommender works
+      use:
+        template: ../common/steps/wait-recommendation.yaml
+    - name: check-recommendation-provided
+      description: The VerticalPodAutoscaler subject publishes the RecommendationProvided condition with the status True
+      try:
+        - description: Assert the condition RecommendationProvided is True
+          assert:
+            timeout: 3m
+            resource:
+              apiVersion: autoscaling.k8s.io/v1
+              kind: VerticalPodAutoscaler
+              metadata:
+                name: subject
+              status:
+                (conditions[?type == 'RecommendationProvided'] | [0].status): 'True'

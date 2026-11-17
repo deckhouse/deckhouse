@@ -1,0 +1,18 @@
+# Creates the VerticalPodAutoscaler tests/common/files/vpa.yaml and checks that the stored object keeps its update mode.
+# Bindings: workload - the name of the VerticalPodAutoscaler and of its target Deployment (default subject);
+# updateMode - the update mode, required.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: create-vpa
+spec:
+  bindings:
+    - name: workload
+      value: subject
+  try:
+    - description: Create the VerticalPodAutoscaler with the given update mode
+      create:
+        file: ../common/files/vpa.yaml
+    - description: Assert the stored VerticalPodAutoscaler has the given update mode
+      assert:
+        file: ../common/files/vpa.yaml

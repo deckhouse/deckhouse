@@ -1,0 +1,123 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: vpa-module-ready
+spec:
+  description: Checks that the vertical-pod-autoscaler module is installed and healthy before any workload test relies on it, that is the CRDs are established, the three components are rolled out and the admission webhook is wired to a ready endpoint.
+  namespace: e2e-vpa-module-ready
+  steps:
+    - name: prepare-namespace
+      description: Prepare the test namespace and remove it at the end
+      use:
+        template: ../common/steps/test-namespace.yaml
+    - name: check-module-enabled
+      description: The vertical-pod-autoscaler module is enabled by the module manager
+      try:
+        - description: Assert the Module has the condition EnabledByModuleManager with status True
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1alpha1
+              kind: Module
+              metadata:
+                name: vertical-pod-autoscaler
+              status:
+                (conditions[?type == 'EnabledByModuleManager'] | [0].status): 'True'
+    - name: check-vpa-crd
+      description: The VerticalPodAutoscaler CRD is established and serves and stores v1
+      try:
+        - description: Assert the CRD is Established and v1 is served and stored
+          assert:
+            resource:
+              apiVersion: apiextensions.k8s.io/v1
+              kind: CustomResourceDefinition
+              metadata:
+                name: verticalpodautoscalers.autoscaling.k8s.io
+              status:
+                (conditions[?type == 'Established'] | [0].status): 'True'
+              spec:
+                (versions[?name == 'v1'] | [0]):
+                  served: true
+                  storage: true
+    - name: check-vpa-checkpoint-crd
+      description: The VerticalPodAutoscalerCheckpoint CRD is established
+      try:
+        - description: Assert the CRD is Established
+          assert:
+            resource:
+              apiVersion: apiextensions.k8s.io/v1
+              kind: CustomResourceDefinition
+              metadata:
+                name: verticalpodautoscalercheckpoints.autoscaling.k8s.io
+              status:
+                (conditions[?type == 'Established'] | [0].status): 'True'
+    - name: check-admission-controller-rollout
+      description: The admission controller Deployment is fully rolled out
+      try:
+        - description: Assert the Deployment is observed, updated and available on all replicas, with no old pod left
+          assert:
+            file: files/deployment-rolled-out.yaml
+            bindings:
+              - name: deployment
+                value: vpa-admission-controller
+    - name: check-recommender-rollout
+      description: The recommender Deployment is fully rolled out
+      try:
+        - description: Assert the Deployment is observed, updated and available on all replicas, with no old pod left
+          assert:
+            file: files/deployment-rolled-out.yaml
+            bindings:
+              - name: deployment
+                value: vpa-recommender
+    - name: check-updater-rollout
+      description: The updater Deployment is fully rolled out
+      try:
+        - description: Assert the Deployment is observed, updated and available on all replicas, with no old pod left
+          assert:
+            file: files/deployment-rolled-out.yaml
+            bindings:
+              - name: deployment
+                value: vpa-updater
+    - name: check-webhook-service
+      description: The webhook Service exposes port 443
+      try:
+        - description: Assert the Service has port 443
+          assert:
+            resource:
+              apiVersion: v1
+              kind: Service
+              metadata:
+                name: vpa-webhook
+                namespace: kube-system
+              spec:
+                (length(ports[?to_number(port) == `443`]) > `0`): true
+    - name: check-webhook-endpoints
+      description: The webhook Service has at least one ready endpoint
+      try:
+        - description: Assert an EndpointSlice of the webhook Service has a ready endpoint
+          assert:
+            resource:
+              apiVersion: discovery.k8s.io/v1
+              kind: EndpointSlice
+              metadata:
+                namespace: kube-system
+                labels:
+                  kubernetes.io/service-name: vpa-webhook
+              (length((endpoints || `[]`)[?conditions.ready]) > `0`): true
+    - name: check-webhook-configuration
+      description: The mutating webhook configuration points to the webhook Service and covers Pod creation and VPA updates
+      try:
+        - description: Assert the vpa.k8s.io webhook targets the Service, has a CA bundle and the expected rules
+          assert:
+            resource:
+              apiVersion: admissionregistration.k8s.io/v1
+              kind: MutatingWebhookConfiguration
+              metadata:
+                name: vpa-webhook-config
+              (webhooks[?name == 'vpa.k8s.io'] | [0]):
+                clientConfig:
+                  service:
+                    name: vpa-webhook
+                    namespace: kube-system
+                  (caBundle != null): true
+                (length(rules[?contains(resources, 'pods') && contains(operations, 'CREATE')]) > `0`): true
+                (length(rules[?contains(resources, 'verticalpodautoscalers') && contains(operations, 'CREATE') && contains(operations, 'UPDATE')]) > `0`): true

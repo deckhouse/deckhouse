@@ -1,0 +1,25 @@
+# Applies the idle Deployment tests/common/files/idle-deployment.yaml and waits until all its replicas are available.
+# Bindings: workload - the Deployment name (default subject); replicas - the number of replicas (default 2).
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: idle-deployment-available
+spec:
+  bindings:
+    - name: workload
+      value: subject
+    - name: replicas
+      value: 2
+  try:
+    - description: Apply the idle Deployment
+      apply:
+        file: ../common/files/idle-deployment.yaml
+    - description: Assert all replicas of the Deployment are available
+      assert:
+        resource:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: ($workload)
+          status:
+            availableReplicas: ($replicas)

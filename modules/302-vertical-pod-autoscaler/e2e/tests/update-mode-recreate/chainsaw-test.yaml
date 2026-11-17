@@ -1,0 +1,82 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: vpa-update-mode-recreate
+spec:
+  description: Checks that a VerticalPodAutoscaler in the Recreate update mode evicts the pods of an idle Deployment whose requests are below the recommendation, records the eviction events, and that the pods are recreated by the ReplicaSet controller with new requests set by the admission controller, without an in-place update.
+  namespace: e2e-vpa-update-mode-recreate
+  steps:
+    - name: prepare-namespace
+      description: Prepare the test namespace and remove it at the end
+      use:
+        template: ../common/steps/test-namespace.yaml
+    - name: check-vpa-components
+      description: The cluster runs Kubernetes 1.33 or newer, the vertical-pod-autoscaler module is enabled and its components are available
+      use:
+        template: ../common/steps/vpa-components-ready.yaml
+    - name: create-subject-deployment
+      description: Create the idle Deployment subject with two replicas and wait until they are available
+      use:
+        template: ../common/steps/idle-deployment-available.yaml
+    - name: create-subject-vpa
+      description: Create the VerticalPodAutoscaler subject in the Recreate update mode
+      use:
+        template: ../common/steps/create-vpa.yaml
+        with:
+          bindings:
+            - name: updateMode
+              value: Recreate
+    - name: wait-subject-recommendation
+      description: The VerticalPodAutoscaler subject gets a recommendation above the requests of the workload
+      use:
+        template: ../common/steps/wait-recommendation.yaml
+    - name: wait-eviction-event
+      description: The updater evicts a pod of the Deployment subject
+      try:
+        - description: Assert an EvictedByVPA event is recorded for a pod of the Deployment subject
+          assert:
+            timeout: 8m
+            resource:
+              apiVersion: v1
+              kind: Event
+              reason: EvictedByVPA
+              involvedObject:
+                kind: Pod
+                (starts_with(name, 'subject-')): true
+    - name: check-vpa-evicted-pod-event
+      description: The updater records the eviction on the VerticalPodAutoscaler
+      try:
+        - description: Assert an EvictedPod event is recorded for the VerticalPodAutoscaler subject
+          assert:
+            resource:
+              apiVersion: v1
+              kind: Event
+              reason: EvictedPod
+              involvedObject:
+                kind: VerticalPodAutoscaler
+                name: subject
+    - name: wait-subject-pods-recreated
+      description: The pods of the Deployment subject are recreated with the recommended requests and without an in-place update
+      try:
+        - description: Assert both pods are running, carry the vpaUpdates annotation, have new CPU requests and no vpaInPlaceUpdated annotation
+          assert:
+            timeout: 8m
+            resource:
+              (x_k8s_list($client, 'v1', 'Pod', $namespace).items[?metadata.labels.app == 'subject' && metadata.deletionTimestamp == null]):
+                (length(@)): 2
+                (length([?status.phase == 'Running'])): 2
+                (length([?metadata.annotations.vpaUpdates != null])): 2
+                (length([?spec.containers[0].resources.requests.cpu != '10m'])): 2
+                (length([?metadata.annotations.vpaInPlaceUpdated != null])): 0
+    - name: wait-subject-available-again
+      description: Both replicas of the Deployment subject are available again
+      try:
+        - description: Assert two replicas are available
+          assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: subject
+              status:
+                availableReplicas: 2

@@ -1,0 +1,21 @@
+# Waits until the VerticalPodAutoscaler has a complete recommendation for the container app of an idle workload.
+# Binding: workload - the name of the VerticalPodAutoscaler (default subject).
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: wait-recommendation
+spec:
+  bindings:
+    - name: workload
+      value: subject
+  try:
+    - description: Assert the recommendation of the container app is complete and its lowerBound is above the requests of the idle workload, otherwise the updater does not touch the pods
+      assert:
+        timeout: 8m
+        resource:
+          apiVersion: autoscaling.k8s.io/v1
+          kind: VerticalPodAutoscaler
+          metadata:
+            name: ($workload)
+          status:
+            (length((recommendation.containerRecommendations || `[]`)[?containerName == 'app' && target != null && upperBound != null && uncappedTarget != null && lowerBound.cpu != null && divide(lowerBound.cpu, '10m') > `1`])): 1

@@ -1,0 +1,73 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: vpa-update-mode-in-place
+spec:
+  description: Checks that a VerticalPodAutoscaler in the InPlaceOrRecreate update mode resizes the pods of an idle Deployment in place when their requests are below the recommendation, without restarting the containers or evicting the pods, and that the kubelet applies the new requests and the updater records the resize events.
+  namespace: e2e-vpa-update-mode-in-place
+  steps:
+    - name: prepare-namespace
+      description: Prepare the test namespace and remove it at the end
+      use:
+        template: ../common/steps/test-namespace.yaml
+    - name: check-vpa-components
+      description: The cluster runs Kubernetes 1.33 or newer, where in-place pod resize is available, the vertical-pod-autoscaler module is enabled and its components are available
+      use:
+        template: ../common/steps/vpa-components-ready.yaml
+    - name: create-subject-deployment
+      description: Create the idle Deployment subject with two replicas and wait until they are available
+      use:
+        template: ../common/steps/idle-deployment-available.yaml
+    - name: create-subject-vpa
+      description: Create the VerticalPodAutoscaler subject in the InPlaceOrRecreate update mode
+      use:
+        template: ../common/steps/create-vpa.yaml
+        with:
+          bindings:
+            - name: updateMode
+              value: InPlaceOrRecreate
+    - name: wait-subject-recommendation
+      description: The VerticalPodAutoscaler subject gets a recommendation above the requests of the workload
+      use:
+        template: ../common/steps/wait-recommendation.yaml
+    - name: wait-in-place-resize
+      description: The updater resizes both pods of the Deployment subject in place
+      try:
+        - description: Assert both pods carry the vpaInPlaceUpdated annotation, have new CPU requests and were not restarted
+          assert:
+            timeout: 8m
+            resource:
+              (x_k8s_list($client, 'v1', 'Pod', $namespace).items[?metadata.labels.app == 'subject' && metadata.deletionTimestamp == null]):
+                (length(@)): 2
+                (length([?metadata.annotations.vpaInPlaceUpdated == 'true'])): 2
+                (length([?spec.containers[0].resources.requests.cpu != '10m'])): 2
+                (length([?status.containerStatuses[0].restartCount < `1`])): 2
+    - name: check-resize-applied
+      description: The kubelet applied the new requests to both pods
+      try:
+        - description: Assert the resources reported in the container statuses equal the requests of the pod specs
+          assert:
+            resource:
+              (x_k8s_list($client, 'v1', 'Pod', $namespace).items[?metadata.labels.app == 'subject' && metadata.deletionTimestamp == null]):
+                (length([?status.containerStatuses[0].resources.requests.cpu == spec.containers[0].resources.requests.cpu && status.containerStatuses[0].resources.requests.memory == spec.containers[0].resources.requests.memory])): 2
+    - name: check-resize-event
+      description: The updater records the in-place resize of a pod of the Deployment subject
+      try:
+        - description: Assert an InPlaceResizedByVPA event is recorded for a pod of the Deployment subject
+          assert:
+            resource:
+              apiVersion: v1
+              kind: Event
+              reason: InPlaceResizedByVPA
+              involvedObject:
+                kind: Pod
+                (starts_with(name, 'subject-')): true
+    - name: check-no-eviction
+      description: The updater did not evict any pod of the Deployment subject
+      try:
+        - description: Assert no EvictedByVPA event is recorded
+          error:
+            resource:
+              apiVersion: v1
+              kind: Event
+              reason: EvictedByVPA

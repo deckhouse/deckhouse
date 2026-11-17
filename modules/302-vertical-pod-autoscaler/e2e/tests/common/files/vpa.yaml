@@ -1,0 +1,14 @@
+# VerticalPodAutoscaler of the Deployment of the same name. It is applied with the bindings:
+#   workload - the name of the VerticalPodAutoscaler and of its target Deployment;
+#   updateMode - the update mode (quote "Off", otherwise YAML reads it as a boolean).
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: ($workload)
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ($workload)
+  updatePolicy:
+    updateMode: ($updateMode)

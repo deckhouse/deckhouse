@@ -1,0 +1,87 @@
+# Shared first step of every test: checks the namespace Chainsaw created for the test and removes it at the end.
+# On clusters with multitenancy-manager, a Project adopts the namespace shortly after creation and forbids deleting
+# the namespace directly, so cleanup deletes the Project (which deletes the namespace). Cleanup runs in the order
+# of the operations, so the wait for the namespace deletion comes after the owner is deleted.
+# The adoption happens after a grace period of 15 seconds, which is about the time short cases end. The first delete can
+# therefore choose the Namespace just before the Project appears, and the Project would then recreate the namespace.
+# So the delete is repeated after the first wait: the owner is evaluated again and now finds the Project, if there is
+# one. Deleting an object that is already gone is a no-op.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: test-namespace
+spec:
+  try:
+    - description: Assert the test namespace is Active
+      assert:
+        resource:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: ($namespace)
+          status:
+            phase: Active
+    - description: Assert the default ServiceAccount of the test namespace exists
+      assert:
+        resource:
+          apiVersion: v1
+          kind: ServiceAccount
+          metadata:
+            name: default
+    - description: Assert no Deployment is left in the test namespace by an interrupted run
+      error:
+        resource:
+          apiVersion: apps/v1
+          kind: Deployment
+    - description: Assert no VerticalPodAutoscaler is left in the test namespace by an interrupted run
+      error:
+        resource:
+          apiVersion: autoscaling.k8s.io/v1
+          kind: VerticalPodAutoscaler
+  cleanup:
+    - description: Delete the Project that owns the test namespace, or the namespace itself when no Project owns it (Project API v1alpha3, then v1alpha2)
+      delete:
+        bindings:
+          - name: owner
+            value: >-
+              ((x_k8s_resource_exists($client, 'deckhouse.io/v1alpha3', 'Project')
+              && x_k8s_exists($client, 'deckhouse.io/v1alpha3', 'Project', '', $namespace))
+              && {apiVersion: 'deckhouse.io/v1alpha3', kind: 'Project'}
+              || ((x_k8s_resource_exists($client, 'deckhouse.io/v1alpha2', 'Project')
+              && x_k8s_exists($client, 'deckhouse.io/v1alpha2', 'Project', '', $namespace))
+              && {apiVersion: 'deckhouse.io/v1alpha2', kind: 'Project'}
+              || {apiVersion: 'v1', kind: 'Namespace'}))
+        ref:
+          apiVersion: ($owner.apiVersion)
+          kind: ($owner.kind)
+          name: ($namespace)
+    - description: Wait until the test namespace is deleted
+      wait:
+        apiVersion: v1
+        kind: Namespace
+        name: ($namespace)
+        for:
+          deletion: {}
+    - description: Delete the owner again, in case a Project adopted the namespace after the first delete chose the namespace
+      delete:
+        bindings:
+          - name: owner
+            value: >-
+              ((x_k8s_resource_exists($client, 'deckhouse.io/v1alpha3', 'Project')
+              && x_k8s_exists($client, 'deckhouse.io/v1alpha3', 'Project', '', $namespace))
+              && {apiVersion: 'deckhouse.io/v1alpha3', kind: 'Project'}
+              || ((x_k8s_resource_exists($client, 'deckhouse.io/v1alpha2', 'Project')
+              && x_k8s_exists($client, 'deckhouse.io/v1alpha2', 'Project', '', $namespace))
+              && {apiVersion: 'deckhouse.io/v1alpha2', kind: 'Project'}
+              || {apiVersion: 'v1', kind: 'Namespace'}))
+        ref:
+          apiVersion: ($owner.apiVersion)
+          kind: ($owner.kind)
+          name: ($namespace)
+    - description: Wait again until the test namespace is deleted, which now cannot be undone by a late Project
+      wait:
+        apiVersion: v1
+        kind: Namespace
+        name: ($namespace)
+        for:
+          deletion: {}

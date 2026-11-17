@@ -1,0 +1,100 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: vpa-update-mode-off
+spec:
+  description: Checks that a VerticalPodAutoscaler in the Off update mode publishes a recommendation for an idle Deployment but leaves its pods untouched, with no evictions and no in-place resizes, while a control Deployment with a Recreate VerticalPodAutoscaler in the same namespace has its pods evicted and recreated. The control VerticalPodAutoscaler is created only after the subject has a recommendation, so every control eviction happened in an updater cycle that already saw the subject's recommendation, which shows that the updater was working and still left the subject alone.
+  namespace: e2e-vpa-update-mode-off
+  steps:
+    - name: prepare-namespace
+      description: Prepare the test namespace and remove it at the end
+      use:
+        template: ../common/steps/test-namespace.yaml
+    - name: check-vpa-components
+      description: The cluster runs Kubernetes 1.33 or newer, the vertical-pod-autoscaler module is enabled and its components are available
+      use:
+        template: ../common/steps/vpa-components-ready.yaml
+    - name: create-subject-deployment
+      description: Create the idle Deployment subject with two replicas and wait until they are available
+      use:
+        template: ../common/steps/idle-deployment-available.yaml
+    - name: create-control-deployment
+      description: Create the idle Deployment control with two replicas and wait until they are available
+      use:
+        template: ../common/steps/idle-deployment-available.yaml
+        with:
+          bindings:
+            - name: workload
+              value: control
+    - name: create-subject-vpa
+      description: Create the VerticalPodAutoscaler subject in the Off update mode
+      use:
+        template: ../common/steps/create-vpa.yaml
+        with:
+          bindings:
+            - name: updateMode
+              value: "Off"
+    - name: wait-subject-recommendation
+      description: The VerticalPodAutoscaler subject gets a recommendation above the requests of the workload
+      use:
+        template: ../common/steps/wait-recommendation.yaml
+    - name: create-control-vpa
+      description: Create the control VerticalPodAutoscaler in the Recreate update mode, only now that the subject has a recommendation
+      use:
+        template: ../common/steps/create-vpa.yaml
+        with:
+          bindings:
+            - name: workload
+              value: control
+            - name: updateMode
+              value: Recreate
+    - name: wait-control-pods-recreated
+      description: The updater evicts the pods of the Deployment control, the ReplicaSet controller recreates them and the admission controller sets their requests and the vpaUpdates annotation
+      try:
+        - description: Assert both control pods are running and carry the vpaUpdates annotation
+          assert:
+            timeout: 8m
+            resource:
+              (x_k8s_list($client, 'v1', 'Pod', $namespace).items[?metadata.labels.app == 'control' && metadata.deletionTimestamp == null]):
+                (length(@)): 2
+                (length([?status.phase == 'Running'])): 2
+                (length([?metadata.annotations.vpaUpdates != null])): 2
+    - name: check-subject-pods-unchanged
+      description: The pods of the Deployment subject are the original ones, created before the VerticalPodAutoscaler subject, keep their requests, have no VPA annotations and are not restarted
+      try:
+        - description: Assert both subject pods were created before the VerticalPodAutoscaler subject, so no pod was evicted and recreated, keep the original requests, have no vpaUpdates and vpaInPlaceUpdated annotations and no restarts
+          assert:
+            bindings:
+              - name: vpaCreated
+                value: (x_k8s_get($client, 'autoscaling.k8s.io/v1', 'VerticalPodAutoscaler', $namespace, 'subject').metadata.creationTimestamp)
+            resource:
+              (x_k8s_list($client, 'v1', 'Pod', $namespace).items[?metadata.labels.app == 'subject' && metadata.deletionTimestamp == null]):
+                (length(@)): 2
+                (length([?spec.containers[0].resources.requests.cpu == '10m' && spec.containers[0].resources.requests.memory == '16Mi'])): 2
+                (length([?metadata.annotations.vpaUpdates == null && metadata.annotations.vpaInPlaceUpdated == null])): 2
+                (length([?status.containerStatuses[0].restartCount < `1`])): 2
+                (length([?time_before(metadata.creationTimestamp, $vpaCreated)])): 2
+    - name: check-no-eviction-for-subject
+      description: The updater has not evicted any pod of the Deployment subject
+      try:
+        - description: Assert no EvictedByVPA event is recorded for a pod of the Deployment subject
+          error:
+            resource:
+              apiVersion: v1
+              kind: Event
+              reason: EvictedByVPA
+              involvedObject:
+                kind: Pod
+                (starts_with(name, 'subject-')): true
+    - name: check-no-resize-for-subject
+      description: The updater has not resized any pod of the Deployment subject in place
+      try:
+        - description: Assert no InPlaceResizedByVPA event is recorded for a pod of the Deployment subject
+          error:
+            resource:
+              apiVersion: v1
+              kind: Event
+              reason: InPlaceResizedByVPA
+              involvedObject:
+                kind: Pod
+                (starts_with(name, 'subject-')): true

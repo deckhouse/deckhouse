@@ -1,0 +1,49 @@
+apiVersion: chainsaw.kyverno.io/v1alpha2
+kind: Configuration
+metadata:
+  name: vertical-pod-autoscaler-e2e
+spec:
+  timeouts:
+    apply: 1m
+    assert: 5m
+    error: 30s
+    delete: 5m
+    cleanup: 5m
+    exec: 5m
+  execution:
+    # One slot per case, the skipped one included, so that re-enabling it does not make a case wait for a free slot.
+    parallel: 8
+  discovery:
+    testFile: chainsaw-test.yaml
+  error:
+    # Runs in the namespace of the failed test, in addition to the catch handlers of the test and its steps.
+    catch:
+      - description: Show the pods of the test namespace
+        get:
+          apiVersion: v1
+          kind: Pod
+      - description: Show the events of the test namespace
+        events: {}
+      - description: Show the VerticalPodAutoscalers of the test namespace
+        get:
+          apiVersion: autoscaling.k8s.io/v1
+          kind: VerticalPodAutoscaler
+          format: yaml
+      - description: Show the recommender logs
+        podLogs:
+          namespace: kube-system
+          selector: app=vpa-recommender
+          container: recommender
+          tail: 200
+      - description: Show the updater logs
+        podLogs:
+          namespace: kube-system
+          selector: app=vpa-updater
+          container: updater
+          tail: 200
+      - description: Show the admission controller logs
+        podLogs:
+          namespace: kube-system
+          selector: app=vpa-admission-controller
+          container: admission-controller
+          tail: 200

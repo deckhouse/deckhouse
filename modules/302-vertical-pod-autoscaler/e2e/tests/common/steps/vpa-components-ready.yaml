@@ -1,0 +1,69 @@
+# Shared second step of every workload test: checks that the cluster runs Kubernetes 1.33 or newer, which the suite
+# requires (in-place resize, the InPlaceOrRecreate default), that the vertical-pod-autoscaler module is enabled, that its
+# three components are available, and that the metrics API the recommender reads is available.
+# The module phase and IsReady are deliberately not checked.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: vpa-components-ready
+spec:
+  try:
+    - description: Assert the server version is at least 1.33.0
+      assert:
+        resource:
+          (semver_compare(trim_prefix(x_k8s_server_version($config).gitVersion, 'v'), '>=1.33.0')): true
+    - description: Assert the vertical-pod-autoscaler module is enabled by the module manager
+      assert:
+        resource:
+          apiVersion: deckhouse.io/v1alpha1
+          kind: Module
+          metadata:
+            name: vertical-pod-autoscaler
+          status:
+            (conditions[?type == 'EnabledByModuleManager'] | [0].status): 'True'
+    - description: Assert the metrics API is available, because the recommender reads the usage through it
+      assert:
+        resource:
+          apiVersion: apiregistration.k8s.io/v1
+          kind: APIService
+          metadata:
+            name: v1beta1.metrics.k8s.io
+          status:
+            (conditions[?type == 'Available'] | [0].status): 'True'
+    - description: Assert the recommender Deployment has an available replica
+      assert:
+        resource:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: vpa-recommender
+            namespace: kube-system
+          status:
+            (availableReplicas >= `1`): true
+    - description: Assert the updater Deployment has an available replica
+      assert:
+        resource:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: vpa-updater
+            namespace: kube-system
+          status:
+            (availableReplicas >= `1`): true
+    - description: Assert the admission controller Deployment has an available replica
+      assert:
+        resource:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: vpa-admission-controller
+            namespace: kube-system
+          status:
+            (availableReplicas >= `1`): true
+    - description: Assert the mutating webhook configuration exists
+      assert:
+        resource:
+          apiVersion: admissionregistration.k8s.io/v1
+          kind: MutatingWebhookConfiguration
+          metadata:
+            name: vpa-webhook-config

@@ -1,0 +1,11 @@
+# A Deployment of the module in kube-system that is observed, updated and available on all replicas, with no old pod left.
+# Binding: deployment - the Deployment name.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ($deployment)
+  namespace: kube-system
+(status.observedGeneration == metadata.generation): true
+(status.updatedReplicas == spec.replicas): true
+(status.availableReplicas == spec.replicas): true
+(status.replicas == spec.replicas): true
