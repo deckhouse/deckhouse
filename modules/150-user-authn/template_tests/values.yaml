@@ -6,7 +6,6 @@ userAuthn:
         mode: SelfSigned
     selfSignedCA: {}
     dexUsersCRDs: []
-    dexAuthenticatorCRDs: []
     providers: []
   publishAPI:
     enabled: false

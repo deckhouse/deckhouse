@@ -29,6 +29,9 @@ import (
 	"k8s.io/utils/ptr"
 )
 
+// httpRouteAPIVersion is the API version a cluster with the Gateway API serves HTTPRoutes at.
+const httpRouteAPIVersion = "gateway.networking.k8s.io/v1/HTTPRoute"
+
 // user_authn_gateway_api_enabled reports the configured flag only, while helm_lib_module_gateway_enabled
 // additionally demands a resolvable default Gateway. Authenticator routes need the former: they name
 // their ListenerSet in parentRefs and never fall back to the module gateway.

@@ -475,5 +475,58 @@ class TestAllowedProviders(unittest.TestCase):
         self.assertNotIn("warnings", run(ctx))
 
 
+class TestPodFields(unittest.TestCase):
+    def request(self, spec, labels=None, deletion=False):
+        obj = authenticator("v1", "ns", "a", {"domain": "a.example.com", "ingressClassName": "nginx"})
+        obj["spec"].update(spec)
+        if labels is not None:
+            obj["metadata"]["labels"] = labels
+        if deletion:
+            obj["metadata"]["deletionTimestamp"] = "2026-01-01T00:00:00Z"
+        ctx = review(obj)
+        ctx["snapshots"]["dexproviders"] = []
+        return run(ctx)
+
+    def test_pod_fields_are_allowed_with_a_warning(self):
+        response = self.request({"highAvailability": False, "nodeSelector": {"role": "system"},
+                                 "resources": {"requests": {"cpu": "10m"}}})
+        self.assertTrue(response["allowed"])
+        self.assertEqual(len(response["warnings"]), 1)
+        warning = response["warnings"][0]
+        for field in ("spec.highAvailability", "spec.nodeSelector", "spec.resources"):
+            self.assertIn(field, warning)
+        self.assertIn("have no effect", warning)
+        for field in ("spec.tolerations", "spec.podMetadata"):
+            self.assertNotIn(field, warning)
+
+    def test_one_field_is_named_in_the_singular(self):
+        warning = self.request({"tolerations": [{"operator": "Exists"}]})["warnings"][0]
+        self.assertIn("spec.tolerations has no effect", warning)
+
+    def test_no_pod_field_means_no_warning(self):
+        self.assertNotIn("warnings", self.request({}))
+        self.assertNotIn("warnings", self.request({"sendAuthorizationHeader": True, "keepUsersLoggedInFor": "24h"}))
+        # Empty values set nothing.
+        self.assertNotIn("warnings", self.request({"nodeSelector": {}, "tolerations": [], "podMetadata": None}))
+
+    def test_an_object_of_a_module_is_not_warned_about(self):
+        self.assertNotIn("warnings", self.request({"highAvailability": True}, labels={"heritage": "deckhouse"}))
+        self.assertIn("warnings", self.request({"highAvailability": True}, labels={"heritage": "someone"}))
+
+    def test_a_deleted_authenticator_is_not_warned_about(self):
+        self.assertNotIn("warnings", self.request({"highAvailability": True}, deletion=True))
+
+    def test_both_warnings_come_in_one(self):
+        obj = authenticator("v1", "ns", "a", {"domain": "a.example.com", "ingressClassName": "nginx"})
+        obj["spec"].update({"allowedProviders": ["gone"], "podMetadata": {"labels": {"team": "a"}}})
+        ctx = review(obj)
+        ctx["snapshots"]["dexproviders"] = []
+        response = run(ctx)
+        self.assertTrue(response["allowed"])
+        self.assertEqual(len(response["warnings"]), 1)
+        self.assertIn("'gone'", response["warnings"][0])
+        self.assertIn("spec.podMetadata has no effect", response["warnings"][0])
+
+
 if __name__ == "__main__":
     unittest.main()

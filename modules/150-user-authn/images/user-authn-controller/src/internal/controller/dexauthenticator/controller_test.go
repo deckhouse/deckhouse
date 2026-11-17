@@ -46,8 +46,24 @@ import (
 
 	"user-authn-controller/internal/adoption"
 	"user-authn-controller/internal/controller"
+	"user-authn-controller/internal/migration"
 	"user-authn-controller/internal/naming"
 )
+
+// The kinds and the labels of what the module chart rendered for the dex-authenticator of an
+// object, and the name of the registry Secret of its namespace.
+var (
+	legacyKinds = []schema.GroupVersionKind{
+		{Group: "apps", Version: "v1", Kind: "Deployment"},
+		{Group: "policy", Version: "v1", Kind: "PodDisruptionBudget"},
+		{Group: "autoscaling.k8s.io", Version: "v1", Kind: "VerticalPodAutoscaler"},
+		{Group: "networking.k8s.io", Version: "v1", Kind: "NetworkPolicy"},
+	}
+	secretGVK    = schema.GroupVersionKind{Version: "v1", Kind: "Secret"}
+	legacyLabels = client.MatchingLabels{"app": "dex-authenticator", "heritage": "deckhouse", "module": "user-authn"}
+)
+
+const legacyRegistrySecret = "registry-dex-authenticator"
 
 // fakeInstances is the table the pods of the instances serve, as the test sets it.
 type fakeInstances struct {
@@ -89,6 +105,12 @@ func newFakeClient(t *testing.T, objs ...client.Object) client.WithWatch {
 	mapper.Add(ReferenceGrantGVK, meta.RESTScopeNamespace)
 	for _, kind := range []string{"Secret", "Service", "ConfigMap", "Pod"} {
 		mapper.Add(corev1.SchemeGroupVersion.WithKind(kind), meta.RESTScopeNamespace)
+	}
+	for _, gvk := range legacyKinds {
+		// The cluster of the tests has no VerticalPodAutoscaler kind, as a cluster without the module.
+		if gvk.Kind != "VerticalPodAutoscaler" {
+			mapper.Add(gvk, meta.RESTScopeNamespace)
+		}
 	}
 	mapper.Add(networkingv1.SchemeGroupVersion.WithKind("Ingress"), meta.RESTScopeNamespace)
 
@@ -134,9 +156,10 @@ func newTestEnvOver(t *testing.T, c client.Client, gatewayAPI bool) *testEnv {
 		now:       testNow,
 	}
 	state := NewState()
-	env.tables = NewTableReconciler(c, c, logr.Discard(), state, env.announced, nil, gatewayAPI)
+	legacy := migration.NewDexAuthenticatorLegacy(c, c, logr.Discard())
+	env.tables = NewTableReconciler(c, c, logr.Discard(), state, env.announced, nil, legacy, gatewayAPI)
 	env.tables.now = func() time.Time { return env.now }
-	env.objects = New(c, c, env.recorder, logr.Discard(), state, env.instances, gatewayAPI)
+	env.objects = New(c, c, env.recorder, logr.Discard(), state, env.instances, legacy, gatewayAPI)
 	return env
 }
 
@@ -365,7 +388,7 @@ func TestTableReconciler_DoesNothingWithoutTheSettings(t *testing.T) {
 
 	c := newFakeClient(t, authenticatorObject("shop", "app", 0, "app.example.com"))
 	state := NewState()
-	tables := NewTableReconciler(c, c, logr.Discard(), state, make(chan event.GenericEvent, 1), nil, false)
+	tables := NewTableReconciler(c, c, logr.Discard(), state, make(chan event.GenericEvent, 1), nil, migration.NewDexAuthenticatorLegacy(c, c, logr.Discard()), false)
 	if _, err := tables.Reconcile(t.Context(), tablesRequest); err != nil {
 		t.Fatalf("Reconcile: %v", err)
 	}
@@ -374,7 +397,7 @@ func TestTableReconciler_DoesNothingWithoutTheSettings(t *testing.T) {
 		t.Errorf("%d Secrets written without the settings, error %v", len(secrets.Items), err)
 	}
 
-	objects := New(c, c, nil, logr.Discard(), state, &fakeInstances{}, false)
+	objects := New(c, c, nil, logr.Discard(), state, &fakeInstances{}, migration.NewDexAuthenticatorLegacy(c, c, logr.Discard()), false)
 	if result, err := objects.Reconcile(t.Context(), reconcile.Request{NamespacedName: shopApp}); err != nil || result != (reconcile.Result{}) {
 		t.Errorf("Reconcile of the object: %+v, %v", result, err)
 	}
@@ -399,7 +422,7 @@ func TestTableReconciler_ObjectMissingFromTheCache(t *testing.T) {
 			return c.List(ctx, list, opts...)
 		},
 	})
-	tables := NewTableReconciler(cache, env.client, logr.Discard(), NewState(), make(chan event.GenericEvent, 8), nil, false)
+	tables := NewTableReconciler(cache, env.client, logr.Discard(), NewState(), make(chan event.GenericEvent, 8), nil, migration.NewDexAuthenticatorLegacy(cache, env.client, logr.Discard()), false)
 	tables.now = func() time.Time { return testNow.Add(time.Hour) }
 
 	result, err := tables.Reconcile(t.Context(), tablesRequest)
@@ -589,13 +612,21 @@ func TestReconcile_RecreatedObject(t *testing.T) {
 		t.Fatal("the new object took the secrets of the deleted one")
 	}
 
+	// The client keeps the secret the pods of the instance still know until they load the new record.
 	env.mustReconcile(shopApp)
 	dexClient, _ := env.dexClient("app", "shop")
-	if secret, _, _ := unstructured.NestedString(dexClient.Object, "secret"); secret != record.ClientSecret {
-		t.Error("the Dex client does not carry the new secret")
+	if secret := clientSecret(dexClient); secret != old.ClientSecret {
+		t.Error("the Dex client got the new secret before the instance loaded the record")
 	}
 	if got := env.condition(shopApp); got.Reason != ReasonWaitingForInstance {
 		t.Errorf("condition = %+v, want the object to wait for the new record to be loaded", got)
+	}
+
+	env.load()
+	env.mustReconcile(shopApp)
+	dexClient, _ = env.dexClient("app", "shop")
+	if secret := clientSecret(dexClient); secret != record.ClientSecret {
+		t.Error("the Dex client does not carry the new secret")
 	}
 }
 
@@ -1513,7 +1544,7 @@ func TestReconcile_InstanceThatDoesNotAnswer(t *testing.T) {
 	}
 
 	// The controller starts again and remembers nothing: the object is still not called unserved.
-	restarted := New(env.client, env.client, env.recorder, logr.Discard(), env.objects.state, env.instances, false)
+	restarted := New(env.client, env.client, env.recorder, logr.Discard(), env.objects.state, env.instances, env.objects.legacy, false)
 	result, err := restarted.Reconcile(t.Context(), reconcile.Request{NamespacedName: shopApp})
 	if err != nil || result.RequeueAfter != loadRecheck {
 		t.Errorf("after a restart: %+v, %v; want a later look", result, err)
@@ -1600,6 +1631,423 @@ func TestReconcile_RouteOfADomainThatMovesUp(t *testing.T) {
 	}
 	if got := env.condition(shopApp); got.Status != metav1.ConditionTrue {
 		t.Errorf("condition = %+v", got)
+	}
+}
+
+// legacyObjects are the objects the module chart rendered for the dex-authenticator of an object
+// before the shared instances, as the handover hook leaves them: kept by the release, with the
+// Dex client, the Service and the routes handed to the controller by its label.
+func legacyObjects(namespace, name, clientSecretValue, cookieSecretValue string) []client.Object {
+	chartLabels := func(extra map[string]string) map[string]string {
+		out := map[string]string{"app": "dex-authenticator", "heritage": "deckhouse", "module": "user-authn", LabelFor: name}
+		for key, value := range extra {
+			out[key] = value
+		}
+		return out
+	}
+	release := map[string]string{
+		"meta.helm.sh/release-name": "user-authn", "meta.helm.sh/release-namespace": "d8-system", "helm.sh/resource-policy": "keep",
+	}
+	handedOver := map[string]string{adoption.ManagedByLabel: adoption.ManagedByValue}
+	base := name + "-dex-authenticator"
+
+	object := func(gvk schema.GroupVersionKind, objectName string, labels map[string]string) *unstructured.Unstructured {
+		obj := &unstructured.Unstructured{}
+		obj.SetGroupVersionKind(gvk)
+		obj.SetNamespace(namespace)
+		obj.SetName(objectName)
+		obj.SetLabels(labels)
+		obj.SetAnnotations(release)
+		return obj
+	}
+
+	dexClient := controller.Object(controller.OAuth2ClientGVK)
+	dexClient.SetNamespace(naming.DexNamespace)
+	dexClient.SetName(naming.ToFnvLikeDex(naming.DexAuthenticatorClientID(name, namespace)))
+	dexClient.SetLabels(map[string]string{
+		"app": "dex", "heritage": "deckhouse", "module": "user-authn", LabelFor: name, LabelNamespace: namespace,
+		adoption.ManagedByLabel: adoption.ManagedByValue,
+	})
+	dexClient.SetAnnotations(release)
+	dexClient.Object["id"] = naming.DexAuthenticatorClientID(name, namespace)
+	dexClient.Object["secret"] = clientSecretValue
+
+	registry := object(secretGVK, legacyRegistrySecret, map[string]string{"app": "dex-authenticator", "heritage": "deckhouse", "module": "user-authn"})
+
+	return []client.Object{
+		dexClient,
+		&corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{Name: base, Namespace: namespace, Labels: chartLabels(handedOver), Annotations: release},
+			Spec: corev1.ServiceSpec{
+				Type: corev1.ServiceTypeClusterIP, ClusterIP: "10.222.0.7", ClusterIPs: []string{"10.222.0.7"},
+				Selector: map[string]string{"app": "dex-authenticator", "name": name},
+				Ports:    []corev1.ServicePort{{Name: "https", Port: 443}},
+			},
+		},
+		&networkingv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{Name: base, Namespace: namespace, Labels: chartLabels(handedOver), Annotations: release},
+		},
+		object(schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"}, base, chartLabels(nil)),
+		object(schema.GroupVersionKind{Group: "policy", Version: "v1", Kind: "PodDisruptionBudget"}, base, chartLabels(nil)),
+		object(schema.GroupVersionKind{Group: "networking.k8s.io", Version: "v1", Kind: "NetworkPolicy"}, base, chartLabels(nil)),
+		&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "dex-authenticator-" + name, Namespace: namespace, Annotations: release,
+				Labels: chartLabels(map[string]string{"name": "credentials"}),
+			},
+			Data: map[string][]byte{"client-secret": []byte(clientSecretValue), "cookie-secret": []byte(cookieSecretValue)},
+		},
+		registry,
+	}
+}
+
+// formerDexClient is the Dex client the chart rendered for an object while the ID of the client
+// was <name>-<namespace>-dex-authenticator, as the module hook leaves it: kept from the release
+// and handed to the controller. It carries no name of its DexAuthenticator.
+func formerDexClient(namespace, name, secret string) *unstructured.Unstructured {
+	id := migration.LegacyDexAuthenticatorClientID(name, namespace)
+	dexClient := controller.Object(controller.OAuth2ClientGVK)
+	dexClient.SetNamespace(naming.DexNamespace)
+	dexClient.SetName(naming.ToFnvLikeDex(id))
+	dexClient.SetLabels(map[string]string{
+		"app": "dex", "heritage": "deckhouse", "module": "user-authn", adoption.ManagedByLabel: adoption.ManagedByValue,
+	})
+	dexClient.SetAnnotations(map[string]string{
+		"meta.helm.sh/release-name": "user-authn", "meta.helm.sh/release-namespace": "d8-system", "helm.sh/resource-policy": "keep",
+	})
+	dexClient.Object["id"] = id
+	dexClient.Object["secret"] = secret
+	return dexClient
+}
+
+// formerClientExists reports whether the Dex client under the former ID of the object is there.
+func (e *testEnv) formerClientExists(namespace, name string) bool {
+	e.t.Helper()
+
+	return e.exists(controller.Object(controller.OAuth2ClientGVK), naming.DexNamespace,
+		naming.ToFnvLikeDex(migration.LegacyDexAuthenticatorClientID(name, namespace)))
+}
+
+// legacyLeft lists what is left in the namespace of the dex-authenticator of an object.
+func (e *testEnv) legacyLeft(namespace string) []string {
+	e.t.Helper()
+
+	var left []string
+	for _, gvk := range append(slices.Clone(legacyKinds), secretGVK) {
+		list := &unstructured.UnstructuredList{}
+		list.SetGroupVersionKind(gvk.GroupVersion().WithKind(gvk.Kind + "List"))
+		err := e.client.List(e.t.Context(), list, client.InNamespace(namespace), legacyLabels)
+		if meta.IsNoMatchError(err) {
+			continue
+		}
+		if err != nil {
+			e.t.Fatalf("list %s: %v", gvk.Kind, err)
+		}
+		for _, item := range list.Items {
+			left = append(left, gvk.Kind+"/"+item.GetName())
+		}
+	}
+	slices.Sort(left)
+	return left
+}
+
+// TestMove_PlatformObjectKeepsItsSecrets: an object of a d8-* namespace moves to the instance
+// with the secrets of the dex-authenticator it had, so its users stay signed in; the pods of that
+// dex-authenticator go once the Service points at the instance, and its Secret with them.
+func TestMove_PlatformObjectKeepsItsSecrets(t *testing.T) {
+	t.Parallel()
+
+	const clientSecretValue, cookieSecretValue = "dh-test-secret-0123456789abcdef0", "dh-test-secret-012345678"
+	console := keyOf("d8-console", "console")
+	objs := append(legacyObjects("d8-console", "console", clientSecretValue, cookieSecretValue),
+		authenticatorObject("d8-console", "console", 0, "console.example.com"))
+	env := newTestEnv(t, testSettings, false, objs...)
+
+	env.buildTables()
+	record, found := env.table(naming.SystemAuthenticatorInstance).record(console)
+	if !found || record.ClientSecret != clientSecretValue || record.CookieSecret != cookieSecretValue {
+		t.Fatalf("the record does not carry the secrets of the dex-authenticator of the object: found %v", found)
+	}
+
+	// The instance has not loaded the record: the pods of the object keep serving it.
+	env.mustReconcile(console)
+	service := &corev1.Service{}
+	env.exists(service, "d8-console", "console-dex-authenticator")
+	if service.Spec.Type != corev1.ServiceTypeClusterIP || service.Spec.Selector["name"] != "console" {
+		t.Errorf("the Service was switched before the instance loaded the record: %+v", service.Spec)
+	}
+	if left := env.legacyLeft("d8-console"); len(left) != 5 {
+		t.Errorf("objects of the dex-authenticator left while it serves: %v, want all five", left)
+	}
+
+	env.load()
+	env.mustReconcile(console)
+	env.exists(service, "d8-console", "console-dex-authenticator")
+	if service.Spec.Type != corev1.ServiceTypeExternalName || service.Spec.ExternalName != "dex-authenticator-system.d8-user-authn.svc.cluster.local" {
+		t.Errorf("Service: type %s, externalName %s", service.Spec.Type, service.Spec.ExternalName)
+	}
+	if service.Spec.ClusterIP != "" || len(service.Spec.ClusterIPs) != 0 || len(service.Spec.Selector) != 0 {
+		t.Errorf("the Service keeps what it had as a ClusterIP Service: %+v", service.Spec)
+	}
+	for _, obj := range []client.Object{service, &networkingv1.Ingress{}} {
+		env.exists(obj, "d8-console", "console-dex-authenticator")
+		if _, kept := obj.GetAnnotations()["helm.sh/resource-policy"]; kept || obj.GetAnnotations()["meta.helm.sh/release-name"] != "" {
+			t.Errorf("%T still carries the annotations of the release: %v", obj, obj.GetAnnotations())
+		}
+	}
+	dexClient, _ := env.dexClient("console", "d8-console")
+	if clientSecret(dexClient) != clientSecretValue || dexClient.GetAnnotations()["meta.helm.sh/release-name"] != "" {
+		t.Errorf("the Dex client: secret changed or release annotations left: %v", dexClient.GetAnnotations())
+	}
+	if left := env.legacyLeft("d8-console"); len(left) != 0 {
+		t.Errorf("objects of the dex-authenticator left after the move: %v", left)
+	}
+	if got := env.condition(console); got.Status != metav1.ConditionTrue {
+		t.Errorf("condition = %+v", got)
+	}
+
+	// A second pass asks for nothing more and changes nothing.
+	before := service.ResourceVersion
+	env.mustReconcile(console)
+	env.exists(service, "d8-console", "console-dex-authenticator")
+	if service.ResourceVersion != before {
+		t.Error("a second pass wrote the Service")
+	}
+}
+
+// TestMove_UserObjectGetsNewSecrets: an object of a user gets new secrets, and its Dex client
+// gets the new one together with the switch of the Service, not before.
+func TestMove_UserObjectGetsNewSecrets(t *testing.T) {
+	t.Parallel()
+
+	const clientSecretValue, cookieSecretValue = "dh-test-secret-0123456789abcdef0", "dh-test-secret-012345678"
+	objs := append(legacyObjects("shop", "app", clientSecretValue, cookieSecretValue),
+		authenticatorObject("shop", "app", 0, "app.example.com"),
+		authenticatorObject("shop", "other", 1, "other.example.com"))
+	objs = append(objs, legacyObjects("shop", "other", clientSecretValue, cookieSecretValue)[:7]...)
+	env := newTestEnv(t, testSettings, false, objs...)
+
+	env.buildTables()
+	record, _ := env.table(naming.UserAuthenticatorInstance).record(shopApp)
+	if record.ClientSecret == clientSecretValue || record.CookieSecret == cookieSecretValue || record.ClientSecret == "" {
+		t.Fatal("the record of an object of a user carries the secrets that lay in its namespace")
+	}
+
+	env.mustReconcile(shopApp)
+	dexClient, _ := env.dexClient("app", "shop")
+	if clientSecret(dexClient) != clientSecretValue {
+		t.Error("the Dex client got the new secret while the pods of the object still serve it")
+	}
+
+	env.load()
+	env.mustReconcile(shopApp)
+	dexClient, _ = env.dexClient("app", "shop")
+	if clientSecret(dexClient) != record.ClientSecret {
+		t.Error("the Dex client does not carry the new secret after the switch")
+	}
+	service := &corev1.Service{}
+	env.exists(service, "shop", shopService)
+	if service.Spec.Type != corev1.ServiceTypeExternalName {
+		t.Errorf("Service type %s", service.Spec.Type)
+	}
+
+	// The other object of the namespace has not moved yet: its dex-authenticator and the registry
+	// Secret of the namespace stay.
+	left := env.legacyLeft("shop")
+	want := []string{"Deployment/other-dex-authenticator", "NetworkPolicy/other-dex-authenticator", "PodDisruptionBudget/other-dex-authenticator", "Secret/dex-authenticator-other", "Secret/registry-dex-authenticator"}
+	if !slices.Equal(left, want) {
+		t.Errorf("left in the namespace: %v, want %v", left, want)
+	}
+
+	env.mustReconcile(keyOf("shop", "other"))
+	if left := env.legacyLeft("shop"); len(left) != 0 {
+		t.Errorf("left after both objects moved: %v", left)
+	}
+}
+
+// TestMove_ObjectTheInstanceCannotServe keeps its own dex-authenticator, with its Service and routes.
+func TestMove_ObjectTheInstanceCannotServe(t *testing.T) {
+	t.Parallel()
+
+	objs := append(legacyObjects("shop", "app", "dh-test-secret-0123456789abcdef0", "dh-test-secret-012345678"),
+		authenticatorObject("shop", "app", 0, "dex-authenticator.d8-user-authn"))
+	env := newTestEnv(t, testSettings, false, objs...)
+	env.buildTables()
+	env.load()
+	env.mustReconcile(shopApp)
+
+	if got := env.condition(shopApp); got.Status != metav1.ConditionFalse || got.Reason != ReasonInvalidRecord {
+		t.Errorf("condition = %+v", got)
+	}
+	service := &corev1.Service{}
+	if !env.exists(service, "shop", shopService) || service.Spec.Type != corev1.ServiceTypeClusterIP {
+		t.Error("the Service of the dex-authenticator of the object was removed or switched")
+	}
+	if left := env.legacyLeft("shop"); len(left) != 5 {
+		t.Errorf("left: %v, want the whole dex-authenticator of the object", left)
+	}
+	if _, found := env.dexClient("app", "shop"); !found {
+		t.Error("the Dex client of the object was removed")
+	}
+}
+
+// TestMove_ObjectDeletedBeforeItMoved: what the chart rendered for an object that is gone goes too.
+func TestMove_ObjectDeletedBeforeItMoved(t *testing.T) {
+	t.Parallel()
+
+	env := newTestEnv(t, testSettings, false, legacyObjects("shop", "app", "dh-test-secret-0123456789abcdef0", "dh-test-secret-012345678")...)
+	env.buildTables()
+	env.mustReconcile(shopApp)
+
+	if left := env.legacyLeft("shop"); len(left) != 0 {
+		t.Errorf("left: %v", left)
+	}
+	if env.exists(&corev1.Service{}, "shop", shopService) || env.exists(&networkingv1.Ingress{}, "shop", shopService) {
+		t.Error("the Service or the route of the deleted object is left")
+	}
+	if _, found := env.dexClient("app", "shop"); found {
+		t.Error("the Dex client of the deleted object is left")
+	}
+}
+
+// TestLegacy_LeavesTheObjectsOfOthers: an object under a name of the dex-authenticator of an
+// object that the chart did not render is neither read as its Secret nor deleted.
+func TestLegacy_LeavesTheObjectsOfOthers(t *testing.T) {
+	t.Parallel()
+
+	foreign := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "dex-authenticator-console", Namespace: "d8-console", Labels: map[string]string{"app": "dex-authenticator", LabelFor: "console"}},
+		Data:       map[string][]byte{"client-secret": []byte("dh-test-secret-0123456789abcdef0"), "cookie-secret": []byte("dh-test-secret-012345678")},
+	}
+	c := newFakeClient(t, foreign)
+	legacy := migration.NewDexAuthenticatorLegacy(c, c, logr.Discard())
+
+	a := testAuthenticator("d8-console", "console", 0, "console.example.com")
+	if _, ok, err := legacy.Secrets(t.Context(), a.Key()); err != nil || ok {
+		t.Errorf("the Secret of somebody else was read as the one of the object: %v, %v", ok, err)
+	}
+	if err := legacy.Remove(t.Context(), a.Key()); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Get(t.Context(), client.ObjectKeyFromObject(foreign), &corev1.Secret{}); err != nil {
+		t.Errorf("the Secret of somebody else: %v", err)
+	}
+
+	// A Secret of the chart with a cookie secret the proxy would refuse is not taken either.
+	short := legacyObjects("d8-console", "short", "dh-test-secret-0123456789abcdef0", "too-short")[6]
+	c = newFakeClient(t, short)
+	if _, ok, err := migration.NewDexAuthenticatorLegacy(c, c, logr.Discard()).Secrets(t.Context(), keyOf("d8-console", "short")); err != nil || ok {
+		t.Errorf("a cookie secret of a wrong length was taken: %v, %v", ok, err)
+	}
+	// Nor is the Secret of an object of a user, whatever it holds.
+	user := legacyObjects("shop", "app", "dh-test-secret-0123456789abcdef0", "dh-test-secret-012345678")[6]
+	c = newFakeClient(t, user)
+	if _, ok, err := migration.NewDexAuthenticatorLegacy(c, c, logr.Discard()).Secrets(t.Context(), shopApp); err != nil || ok {
+		t.Errorf("the secrets of an object of a user were taken: %v, %v", ok, err)
+	}
+}
+
+// TestMove_NothingChangesWhileTheServiceCannotBeTaken: the secret of the Dex client and the
+// Service change together, so a Service the controller may not change keeps the client as it is,
+// and the pods of the object keep signing users in.
+func TestMove_NothingChangesWhileTheServiceCannotBeTaken(t *testing.T) {
+	t.Parallel()
+
+	const clientSecretValue = "dh-test-secret-0123456789abcdef0"
+	objs := legacyObjects("shop", "app", clientSecretValue, "dh-test-secret-012345678")
+	for _, obj := range objs {
+		// The hook did not hand the Service to the controller.
+		if service, ok := obj.(*corev1.Service); ok {
+			delete(service.Labels, adoption.ManagedByLabel)
+		}
+	}
+	env := newTestEnv(t, testSettings, false, append(objs, authenticatorObject("shop", "app", 0, "app.example.com"))...)
+	env.buildTables()
+	env.load()
+
+	if result := env.mustReconcile(shopApp); result.RequeueAfter != refusedRecheck {
+		t.Errorf("requeue after %v, want %v", result.RequeueAfter, refusedRecheck)
+	}
+	dexClient, _ := env.dexClient("app", "shop")
+	if clientSecret(dexClient) != clientSecretValue {
+		t.Error("the Dex client got the new secret though the Service still leads to the pods of the object")
+	}
+	service := &corev1.Service{}
+	env.exists(service, "shop", shopService)
+	if service.Spec.Type != corev1.ServiceTypeClusterIP {
+		t.Errorf("Service type %s", service.Spec.Type)
+	}
+	if left := env.legacyLeft("shop"); len(left) != 5 {
+		t.Errorf("left: %v, want the whole dex-authenticator of the object", left)
+	}
+	if got := env.condition(shopApp); got.Status != metav1.ConditionFalse || got.Reason != ReasonForeignObject {
+		t.Errorf("condition = %+v", got)
+	}
+}
+
+// TestMove_ServiceRefusedKeepsTheSecretOfThePods: an object that still has a dex-authenticator of
+// its own, whose Dex client has another secret than its record, moves when the instance has loaded
+// the record. An admission policy that refuses its Service as an ExternalName leaves the object on
+// its own pods: the Dex client keeps the secret those pods sign users in with, and the Service
+// still leads to them. Once the policy lets the Service in, the client gets the new secret.
+func TestMove_ServiceRefusedKeepsTheSecretOfThePods(t *testing.T) {
+	t.Parallel()
+
+	const clientSecretValue = "dh-test-secret-0123456789abcdef0"
+	denied := true
+	objs := append(legacyObjects("shop", "app", clientSecretValue, "dh-test-secret-012345678"),
+		settingsConfigMap(t, testSettings), authenticatorObject("shop", "app", 0, "app.example.com"))
+	base := newFakeClient(t, objs...)
+	refuse := func(obj client.Object) error {
+		if service, isService := obj.(*corev1.Service); isService && denied && service.Spec.Type == corev1.ServiceTypeExternalName {
+			return apierrors.NewForbidden(schema.GroupResource{Resource: "services"}, obj.GetName(),
+				errors.New(`admission webhook "admission-policy-engine.deckhouse.io" denied the request: the Service type ExternalName is not allowed`))
+		}
+		return nil
+	}
+	c := interceptor.NewClient(base, interceptor.Funcs{
+		Create: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+			if err := refuse(obj); err != nil {
+				return err
+			}
+			return c.Create(ctx, obj, opts...)
+		},
+		Update: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
+			if err := refuse(obj); err != nil {
+				return err
+			}
+			return c.Update(ctx, obj, opts...)
+		},
+	})
+	env := newTestEnvOver(t, c, false)
+	env.buildTables()
+	env.load()
+
+	if _, err := env.reconcile(shopApp); err == nil {
+		t.Error("the reconcile of an object whose Service is refused returned no error")
+	}
+	if got := env.condition(shopApp); got.Status != metav1.ConditionFalse || got.Reason != ReasonObjectsNotWritten {
+		t.Errorf("condition = %+v, want the reason %s", got, ReasonObjectsNotWritten)
+	}
+	dexClient, _ := env.dexClient("app", "shop")
+	if clientSecret(dexClient) != clientSecretValue {
+		t.Error("the Dex client got the new secret though the Service still leads to the pods of the object")
+	}
+	service := &corev1.Service{}
+	env.exists(service, "shop", shopService)
+	if service.Spec.Type != corev1.ServiceTypeClusterIP {
+		t.Errorf("Service type %s, want the one that leads to the pods of the object", service.Spec.Type)
+	}
+
+	denied = false
+	env.mustReconcile(shopApp)
+	record, _ := env.table(naming.UserAuthenticatorInstance).record(shopApp)
+	dexClient, _ = env.dexClient("app", "shop")
+	if clientSecret(dexClient) != record.ClientSecret {
+		t.Error("the Dex client does not carry the new secret after the switch")
+	}
+	if got := env.condition(shopApp); got.Status != metav1.ConditionTrue {
+		t.Errorf("condition after the policy let the Service in = %+v", got)
 	}
 }
 
@@ -1818,5 +2266,464 @@ func TestTableReconciler_LostTableKeepsTheRoutedHost(t *testing.T) {
 	env.mustReconcile(shopApp)
 	if !env.exists(&networkingv1.Ingress{}, "shop", shopService) {
 		t.Error("the routes of the served object are gone")
+	}
+}
+
+// TestLegacySweep: at the start the reconciler of the objects is given every object that still
+// has a dex-authenticator of its own, and a registry Secret no such object is left for goes.
+func TestLegacySweep(t *testing.T) {
+	t.Parallel()
+
+	objs := legacyObjects("shop", "app", "dh-test-secret-0123456789abcdef0", "dh-test-secret-012345678")
+	// What an interrupted removal left in another namespace: the registry Secret alone.
+	orphan := legacyObjects("done", "gone", "dh-test-secret-0123456789abcdef0", "dh-test-secret-012345678")[7]
+	c := newFakeClient(t, append(objs, orphan)...)
+	announced := make(chan event.GenericEvent, 8)
+	sweep := legacySweep{legacy: migration.NewDexAuthenticatorLegacy(c, c, logr.Discard()), announce: announced, log: logr.Discard()}
+	if !sweep.NeedLeaderElection() {
+		t.Error("the sweep must run on the leader only")
+	}
+	if err := sweep.Start(t.Context()); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	close(announced)
+	var keys []types.NamespacedName
+	for e := range announced {
+		keys = append(keys, client.ObjectKeyFromObject(e.Object))
+	}
+	if !slices.Equal(keys, []types.NamespacedName{shopApp}) {
+		t.Errorf("announced %v, want the object that still has a dex-authenticator of its own", keys)
+	}
+	if err := c.Get(t.Context(), client.ObjectKeyFromObject(orphan), &corev1.Secret{}); !apierrors.IsNotFound(err) {
+		t.Errorf("the registry Secret of a namespace without such objects: %v, want it removed", err)
+	}
+	if err := c.Get(t.Context(), types.NamespacedName{Namespace: "shop", Name: legacyRegistrySecret}, &corev1.Secret{}); err != nil {
+		t.Errorf("the registry Secret of a namespace with such an object: %v", err)
+	}
+}
+
+// TestReconcile_OneDomainThroughTwoIngressClasses: one object may publish one domain through two
+// Ingress classes, as two applications; two objects cannot share a domain.
+func TestReconcile_OneDomainThroughTwoIngressClasses(t *testing.T) {
+	t.Parallel()
+
+	obj := authenticatorObject("shop", "app", 0, "app.example.com")
+	spec, _ := obj.Object["spec"].(map[string]any)
+	spec["additionalApplications"] = []any{map[string]any{"domain": "app.example.com", "ingressClassName": "internal"}}
+	env := newTestEnv(t, testSettings, false, obj)
+	env.serve(shopApp)
+
+	if hosts := env.table(naming.UserAuthenticatorInstance).file.Clients[0].Hosts; !slices.Equal(hosts, []string{"app.example.com"}) {
+		t.Errorf("hosts of the record = %v", hosts)
+	}
+	classes := map[string]string{}
+	list := &networkingv1.IngressList{}
+	if err := env.client.List(t.Context(), list, client.InNamespace("shop")); err != nil {
+		t.Fatal(err)
+	}
+	for _, ingress := range list.Items {
+		classes[ingress.Name] = *ingress.Spec.IngressClassName
+	}
+	want := map[string]string{shopService: "nginx", routeName("app", 1, "app.example.com").name: "internal"}
+	if !maps.Equal(classes, want) {
+		t.Errorf("Ingress classes = %v, want %v", classes, want)
+	}
+}
+
+// TestMove_FormerDexClient: an object rendered while its Dex client had the ID
+// <name>-<namespace>-dex-authenticator has pods that sign users in with that client. The client
+// stays until the Service of the object points at the instance, and goes with the pods then: the
+// client under the ID of today is made at once, and nothing leads to it before the switch.
+func TestMove_FormerDexClient(t *testing.T) {
+	t.Parallel()
+
+	const formerSecret = "dh-test-secret-0123456789abcdef0"
+	// What the release that rendered the former ID left: no client under the ID of today.
+	objs := append(legacyObjects("shop", "app", formerSecret, "dh-test-secret-012345678")[1:],
+		formerDexClient("shop", "app", formerSecret),
+		authenticatorObject("shop", "app", 0, "app.example.com"))
+	env := newTestEnv(t, testSettings, false, objs...)
+
+	env.buildTables()
+	env.mustReconcile(shopApp)
+	if got := env.condition(shopApp); got.Reason != ReasonWaitingForInstance {
+		t.Fatalf("condition = %+v", got)
+	}
+	if !env.formerClientExists("shop", "app") {
+		t.Fatal("the former Dex client is gone while the pods of the object still sign users in with it")
+	}
+	service := &corev1.Service{}
+	if !env.exists(service, "shop", shopService) || service.Spec.Type != corev1.ServiceTypeClusterIP {
+		t.Error("the Service left the pods of the object before the instance loaded its record")
+	}
+	if _, found := env.dexClient("app", "shop"); !found {
+		t.Error("the Dex client under the ID of today is not made before the switch")
+	}
+	if left := env.legacyLeft("shop"); len(left) != 5 {
+		t.Errorf("left before the switch: %v, want the whole dex-authenticator of the object", left)
+	}
+
+	env.load()
+	env.mustReconcile(shopApp)
+	if got := env.condition(shopApp); got.Status != metav1.ConditionTrue {
+		t.Fatalf("condition = %+v", got)
+	}
+	env.exists(service, "shop", shopService)
+	if service.Spec.Type != corev1.ServiceTypeExternalName {
+		t.Errorf("Service type %s", service.Spec.Type)
+	}
+	if env.formerClientExists("shop", "app") {
+		t.Error("the former Dex client is left after the switch")
+	}
+	if left := env.legacyLeft("shop"); len(left) != 0 {
+		t.Errorf("left after the switch: %v", left)
+	}
+	if _, found := env.dexClient("app", "shop"); !found {
+		t.Error("the Dex client under the ID of today was removed")
+	}
+}
+
+// TestMove_FormerDexClientOfAnObjectWithoutARecord: an object the instance does not serve keeps
+// its own dex-authenticator, and with it the Dex client its pods sign users in with.
+func TestMove_FormerDexClientOfAnObjectWithoutARecord(t *testing.T) {
+	t.Parallel()
+
+	const formerSecret = "dh-test-secret-0123456789abcdef0"
+	former := func(name string) []client.Object {
+		return append(legacyObjects("shop", name, formerSecret, "dh-test-secret-012345678")[1:], formerDexClient("shop", name, formerSecret))
+	}
+
+	tests := []struct {
+		name string
+		// env returns the cluster with the object shop/app, which gets no record.
+		env        func(t *testing.T) *testEnv
+		wantReason string
+	}{
+		{
+			name: "a domain another object is served on",
+			env: func(t *testing.T) *testEnv {
+				objs := append(former("app"),
+					authenticatorObject("shop", "first", 0, "app.example.com"),
+					authenticatorObject("shop", "app", 1, "app.example.com"))
+				return newTestEnv(t, testSettings, false, objs...)
+			},
+			wantReason: ReasonHostConflict,
+		},
+		{
+			name: "a domain the instance cannot serve",
+			env: func(t *testing.T) *testEnv {
+				return newTestEnv(t, testSettings, false, append(former("app"), authenticatorObject("shop", "app", 0, "dex-authenticator.d8-user-authn"))...)
+			},
+			wantReason: ReasonInvalidRecord,
+		},
+		{
+			name: "a table without room",
+			env: func(t *testing.T) *testEnv {
+				env := newTestEnv(t, testSettings, false, append(former("app"), authenticatorObject("shop", "app", 0, "app.example.com"))...)
+				env.tables.limit = emptyTableSize
+				return env
+			},
+			wantReason: ReasonTableFull,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			env := tt.env(t)
+			env.buildTables()
+			env.load()
+			env.mustReconcile(shopApp)
+
+			if got := env.condition(shopApp); got.Status != metav1.ConditionFalse || got.Reason != tt.wantReason {
+				t.Fatalf("condition = %+v, want the reason %s", got, tt.wantReason)
+			}
+			if !env.formerClientExists("shop", "app") {
+				t.Error("the former Dex client of an object that keeps its own dex-authenticator is gone")
+			}
+			service := &corev1.Service{}
+			if !env.exists(service, "shop", shopService) || service.Spec.Type != corev1.ServiceTypeClusterIP {
+				t.Error("the Service of the dex-authenticator of the object was removed or switched")
+			}
+			if left := env.legacyLeft("shop"); len(left) != 5 {
+				t.Errorf("left: %v, want the whole dex-authenticator of the object", left)
+			}
+		})
+	}
+}
+
+// TestMove_FormerDexClientOfADeletedObject: an object deleted before it moved leaves no Dex
+// client behind, under either ID.
+func TestMove_FormerDexClientOfADeletedObject(t *testing.T) {
+	t.Parallel()
+
+	const formerSecret = "dh-test-secret-0123456789abcdef0"
+	objs := append(legacyObjects("shop", "app", formerSecret, "dh-test-secret-012345678")[1:], formerDexClient("shop", "app", formerSecret))
+	env := newTestEnv(t, testSettings, false, objs...)
+	env.buildTables()
+	env.mustReconcile(shopApp)
+
+	if env.formerClientExists("shop", "app") {
+		t.Error("the former Dex client of the deleted object is left")
+	}
+	if left := env.legacyLeft("shop"); len(left) != 0 {
+		t.Errorf("left: %v", left)
+	}
+}
+
+// TestMove_LeavesADexClientThatOnlyHasTheFormerID: the former ID of an object may belong to a
+// client of another kind, and a client nobody handed to the controller is not its to delete.
+func TestMove_LeavesADexClientThatOnlyHasTheFormerID(t *testing.T) {
+	t.Parallel()
+
+	const formerSecret = "dh-test-secret-0123456789abcdef0"
+	tests := []struct {
+		name   string
+		change func(dexClient *unstructured.Unstructured)
+	}{
+		{
+			// The DexAuthenticator kubeconfig in foo and the kubeconfig of the cluster
+			// foo-dex-authenticator give one ID.
+			name: "the client of a kubeconfig",
+			change: func(dexClient *unstructured.Unstructured) {
+				labels := dexClient.GetLabels()
+				labels["app"] = "kubernetes-dex-clients"
+				dexClient.SetLabels(labels)
+			},
+		},
+		{
+			name: "a client that was not handed to the controller",
+			change: func(dexClient *unstructured.Unstructured) {
+				labels := dexClient.GetLabels()
+				delete(labels, adoption.ManagedByLabel)
+				dexClient.SetLabels(labels)
+			},
+		},
+		{
+			name: "a client with another ID under the name",
+			change: func(dexClient *unstructured.Unstructured) {
+				dexClient.Object["id"] = "something-else"
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			other := formerDexClient("shop", "app", formerSecret)
+			tt.change(other)
+			objs := append(legacyObjects("shop", "app", formerSecret, "dh-test-secret-012345678")[1:], other,
+				authenticatorObject("shop", "app", 0, "app.example.com"))
+			env := newTestEnv(t, testSettings, false, objs...)
+			env.serve(shopApp)
+
+			if !env.formerClientExists("shop", "app") {
+				t.Error("a Dex client that is not the former client of the object was deleted")
+			}
+			if left := env.legacyLeft("shop"); len(left) != 0 {
+				t.Errorf("left after the switch: %v", left)
+			}
+		})
+	}
+}
+
+// TestMove_FormerDexClientWithoutTheRest: the Dex client of the former ID is found by itself, not
+// through what is left in the namespace of the object. When the Deployment and the rest are gone
+// already, the client the module hook kept still goes: otherwise it would stay for ever.
+func TestMove_FormerDexClientWithoutTheRest(t *testing.T) {
+	t.Parallel()
+
+	const formerSecret = "dh-test-secret-0123456789abcdef0"
+
+	t.Run("an object the instance serves", func(t *testing.T) {
+		t.Parallel()
+
+		env := newTestEnv(t, testSettings, false, authenticatorObject("shop", "app", 0, "app.example.com"), formerDexClient("shop", "app", formerSecret))
+		env.serve(shopApp)
+		if env.formerClientExists("shop", "app") {
+			t.Error("the former Dex client of an object that has nothing else left is not removed")
+		}
+		if _, found := env.dexClient("app", "shop"); !found {
+			t.Error("the Dex client under the ID of today was removed")
+		}
+	})
+
+	t.Run("an object the instance does not serve and that has no dex-authenticator of its own", func(t *testing.T) {
+		t.Parallel()
+
+		env := newTestEnv(t, testSettings, false,
+			authenticatorObject("shop", "first", 0, "app.example.com"),
+			authenticatorObject("shop", "app", 1, "app.example.com"),
+			formerDexClient("shop", "app", formerSecret))
+		env.buildTables()
+		env.load()
+		env.mustReconcile(shopApp)
+		if got := env.condition(shopApp); got.Reason != ReasonHostConflict {
+			t.Fatalf("condition = %+v", got)
+		}
+		if env.formerClientExists("shop", "app") {
+			t.Error("the former Dex client stays though no pod signs users in with it")
+		}
+	})
+
+	t.Run("the start of the controller", func(t *testing.T) {
+		t.Parallel()
+
+		// A client under the labels of a former client whose ID has another form: not ours to delete.
+		other := formerDexClient("shop", "other", formerSecret)
+		other.Object["id"] = "something-else"
+		c := newFakeClient(t,
+			authenticatorObject("shop", "app", 0, "app.example.com"), formerDexClient("shop", "app", formerSecret),
+			// The object of this one was deleted while the controller was down.
+			formerDexClient("gone", "app", formerSecret),
+			other,
+		)
+		announced := make(chan event.GenericEvent, 8)
+		sweep := legacySweep{legacy: migration.NewDexAuthenticatorLegacy(c, c, logr.Discard()), announce: announced, log: logr.Discard()}
+		if err := sweep.Start(t.Context()); err != nil {
+			t.Fatalf("Start: %v", err)
+		}
+		close(announced)
+		var keys []types.NamespacedName
+		for e := range announced {
+			keys = append(keys, client.ObjectKeyFromObject(e.Object))
+		}
+		if !slices.Equal(keys, []types.NamespacedName{shopApp}) {
+			t.Errorf("announced %v, want the object that has the former Dex client left", keys)
+		}
+
+		exists := func(namespace, name string) bool {
+			key := migration.FormerDexAuthenticatorClientKey(name, namespace)
+			err := c.Get(t.Context(), key, controller.Object(controller.OAuth2ClientGVK))
+			if err != nil && !apierrors.IsNotFound(err) {
+				t.Fatal(err)
+			}
+			return err == nil
+		}
+		if !exists("shop", "app") {
+			t.Error("the former Dex client of a living object was removed at the start: its reconcile removes it")
+		}
+		if exists("gone", "app") {
+			t.Error("the former Dex client of a deleted object is left")
+		}
+		if !exists("shop", "other") {
+			t.Error("a Dex client with another form of ID was removed")
+		}
+	})
+}
+
+// TestReconcile_ServiceRefusedByAdmission: an admission policy of the cluster that does not let
+// the Service of the object become an ExternalName refuses the write on every try. The object
+// gets a condition that tells so, and is told apart from an object whose instance is slow.
+func TestReconcile_ServiceRefusedByAdmission(t *testing.T) {
+	t.Parallel()
+
+	denied := true
+	base := newFakeClient(t, settingsConfigMap(t, testSettings), authenticatorObject("shop", "app", 0, "app.example.com"))
+	refuse := func(obj client.Object) error {
+		if _, isService := obj.(*corev1.Service); isService && denied {
+			return apierrors.NewForbidden(schema.GroupResource{Resource: "services"}, obj.GetName(),
+				errors.New(`admission webhook "admission-policy-engine.deckhouse.io" denied the request: the Service type ExternalName is not allowed`))
+		}
+		return nil
+	}
+	c := interceptor.NewClient(base, interceptor.Funcs{
+		Create: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+			if err := refuse(obj); err != nil {
+				return err
+			}
+			return c.Create(ctx, obj, opts...)
+		},
+		Update: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
+			if err := refuse(obj); err != nil {
+				return err
+			}
+			return c.Update(ctx, obj, opts...)
+		},
+	})
+	env := newTestEnvOver(t, c, false)
+	env.buildTables()
+	env.load()
+
+	if _, err := env.reconcile(shopApp); err == nil {
+		t.Error("the reconcile of an object whose Service is refused returned no error: it would not be tried again")
+	}
+	got := env.condition(shopApp)
+	if got.Status != metav1.ConditionFalse || got.Reason != ReasonObjectsNotWritten || !strings.Contains(got.Message, "denied the request") {
+		t.Errorf("condition = %+v, want the reason %s with the answer of the API server", got, ReasonObjectsNotWritten)
+	}
+	if env.exists(&networkingv1.Ingress{}, "shop", shopService) {
+		t.Error("the object has a route without its Service")
+	}
+
+	// The policy lets the Service in: the object is served.
+	denied = false
+	env.mustReconcile(shopApp)
+	if got := env.condition(shopApp); got.Status != metav1.ConditionTrue {
+		t.Errorf("condition = %+v", got)
+	}
+}
+
+// TestMove_FormerIDOfTwoObjects: a former ID does not name one object for sure, a in b-c and a-b
+// in c both had a-b-c-dex-authenticator. The client belongs to the object that still has a
+// dex-authenticator of its own: serving the other one must not remove it, and the client goes when
+// its own object moves.
+func TestMove_FormerIDOfTwoObjects(t *testing.T) {
+	t.Parallel()
+
+	const formerSecret = "dh-test-secret-0123456789abcdef0"
+	other := types.NamespacedName{Namespace: "b-c", Name: "a"}
+	owner := types.NamespacedName{Namespace: "c", Name: "a-b"}
+	objs := append(legacyObjects("c", "a-b", formerSecret, "dh-test-secret-012345678")[1:],
+		authenticatorObject("b-c", "a", 0, "a.example.com"),
+		authenticatorObject("c", "a-b", 1, "b.example.com"),
+		formerDexClient("c", "a-b", formerSecret))
+	env := newTestEnv(t, testSettings, false, objs...)
+
+	env.serve(other)
+	if !env.formerClientExists("c", "a-b") {
+		t.Fatal("serving b-c/a removed the former Dex client the pods of c/a-b sign users in with")
+	}
+	if left := env.legacyLeft("c"); len(left) != 5 {
+		t.Errorf("left in c: %v, want the whole dex-authenticator of c/a-b", left)
+	}
+
+	env.mustReconcile(owner)
+	if got := env.condition(owner); got.Status != metav1.ConditionTrue {
+		t.Fatalf("condition of c/a-b = %+v", got)
+	}
+	if env.formerClientExists("c", "a-b") {
+		t.Error("the former Dex client is left after its own object moved")
+	}
+}
+
+// TestReconcile_RouteRefusedByTheIngressWebhook: the admission webhook of ingress-nginx refuses a
+// route with 400 for a snippet or an annotation the controller does not allow, an invalid path or
+// a configuration that fails nginx -t. The object gets the reason ObjectsNotWritten as for a
+// refusal of an admission policy.
+func TestReconcile_RouteRefusedByTheIngressWebhook(t *testing.T) {
+	t.Parallel()
+
+	base := newFakeClient(t, settingsConfigMap(t, testSettings), authenticatorObject("shop", "app", 0, "app.example.com"))
+	c := interceptor.NewClient(base, interceptor.Funcs{
+		Create: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+			if _, isIngress := obj.(*networkingv1.Ingress); isIngress {
+				return apierrors.NewBadRequest(`admission webhook "validate.nginx.ingress.kubernetes.io" denied the request: nginx.ingress.kubernetes.io/configuration-snippet annotation cannot be used. Snippet directives are disabled by the Ingress administrator`)
+			}
+			return c.Create(ctx, obj, opts...)
+		},
+	})
+	env := newTestEnvOver(t, c, false)
+	env.buildTables()
+	env.load()
+
+	if _, err := env.reconcile(shopApp); err == nil {
+		t.Error("the reconcile of an object whose route is refused returned no error: it would not be tried again")
+	}
+	if got := env.condition(shopApp); got.Reason != ReasonObjectsNotWritten || !strings.Contains(got.Message, "Snippet directives are disabled") {
+		t.Errorf("condition = %+v, want the reason %s with the answer of the webhook", got, ReasonObjectsNotWritten)
 	}
 }

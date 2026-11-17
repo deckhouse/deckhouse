@@ -254,9 +254,40 @@ def unknown_providers_warning(binding_context: dict) -> Optional[str]:
             + "; nobody can sign in through them until the provider is created")
 
 
+# The fields that described the pods of the dex-authenticator of an object, while every object had one.
+POD_FIELDS = ("highAvailability", "resources", "nodeSelector", "tolerations", "podMetadata")
+
+
+def pod_fields_warning(binding_context: dict) -> Optional[str]:
+    """Returns a warning that names the fields of the object that describe pods, or None.
+
+    The dex-authenticator of the module serves every object, and no object has pods of its own, so the fields have
+    no effect. They are a warning and not a refusal: manifests that set them keep applying. An object of a Deckhouse
+    module is not warned about: its author is the module, and the warning would repeat on every release.
+    """
+    obj = binding_context["review"]["request"]["object"]
+    if _get(obj, "metadata", "deletionTimestamp"):
+        return None
+    if (_get(obj, "metadata", "labels") or {}).get("heritage") == "deckhouse":
+        return None
+    used = []
+    for field in POD_FIELDS:
+        value = _get(obj, "spec", field)
+        # An empty map or list sets nothing; `highAvailability: false` does.
+        if value is None or value == {} or value == []:
+            continue
+        used.append(f"spec.{field}")
+    if not used:
+        return None
+    return (", ".join(used) + (" has" if len(used) == 1 else " have")
+            + " no effect: the dex-authenticator of the module serves the object, which has no pods of its own")
+
+
 def validate(ctx: DotMap) -> tuple[Optional[str], bool]:
     binding_context = ctx.toDict()
     message = check(binding_context)
     if message is not None:
         return message, False
-    return unknown_providers_warning(binding_context), True
+    warnings = [warning for warning in (unknown_providers_warning(binding_context), pod_fields_warning(binding_context))
+                if warning]
+    return "; ".join(warnings) or None, True

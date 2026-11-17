@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"user-authn-controller/internal/controller"
+	"user-authn-controller/internal/migration"
 	"user-authn-controller/internal/naming"
 )
 
@@ -61,6 +62,9 @@ const (
 	ReasonTableFull          = "TableFull"
 	ReasonWaitingForInstance = "WaitingForInstance"
 	ReasonForeignObject      = "ForeignObject"
+	// ReasonObjectsNotWritten: the API server refuses the Service or a route of the object, by
+	// an admission policy or by a right the controller lacks.
+	ReasonObjectsNotWritten = "ObjectsNotWritten"
 )
 
 // TableSecretName is the Secret with the table of the clients of an instance, in the namespace of
@@ -206,6 +210,10 @@ type buildInput struct {
 	// heritage label, which no user may set, so they tell who is served on a host when the table
 	// cannot: after its Secret was lost or could not be read.
 	routed map[types.NamespacedName][]string
+	// imported are the secrets of the objects of the d8-* namespaces that the dex-authenticator
+	// of the object, which the module chart used to render, kept in the namespace of the object.
+	// An object that has no record yet takes them, so that its users stay signed in.
+	imported map[types.NamespacedName]migration.DexAuthenticatorSecrets
 	// generations are the generations the reconciler remembers for the records it wrote.
 	generations map[types.NamespacedName]int64
 	// floor is the highest generation the reconciler has read or given since its start: a new
@@ -570,7 +578,9 @@ func buildTablesOnce(in buildInput) (buildResult, []fullRecord, error) {
 		}
 
 		if len(c.record.applications()) > 0 {
-			if !c.hasPrevious {
+			if imported, ok := in.imported[key]; ok && !c.hasPrevious {
+				c.record.ClientSecret, c.record.CookieSecret = imported.Client, imported.Cookie
+			} else if !c.hasPrevious {
 				var err error
 				if c.record.ClientSecret, c.record.CookieSecret, err = in.newSecrets(); err != nil {
 					return buildResult{}, nil, err

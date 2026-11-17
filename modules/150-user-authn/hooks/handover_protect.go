@@ -18,9 +18,10 @@ package hooks
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
-	"sync/atomic"
+	"sync"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -34,31 +35,80 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 1},
 }, dependency.WithExternalDependencies(protectHandoverObjects))
 
-// handedOver is set once a run finds no object the release owns: the controller has adopted them
-// all, and the chart this deckhouse runs renders none, so the later runs have nothing to protect
-// and make no requests. A deckhouse of another version is another process and checks again.
+// handedOver remembers the kinds a run found no object of that the release owns: the controller
+// has adopted them all, and the chart this deckhouse runs renders none, so the later runs have
+// nothing of the kind to protect and make no request for it. A deckhouse of another version is
+// another process and checks again.
 //
-// TODO(1.79): remove the handover hooks and package handover. The objects move to the controller
-// on the update to 1.78, and a cluster on 1.79 cannot go back to a chart that renders them.
-var handedOver atomic.Bool
+// The kinds are remembered one by one. An object that stays on its own dex-authenticator keeps the
+// objects of that dex-authenticator in the release for as long as it does, which may be for good;
+// were the hook to stop only when nothing at all is left, every run of the module would go on
+// listing the metadata of every Secret of the cluster for the DexClients, whose objects were
+// adopted long ago.
+//
+// TODO: remove the handover hooks and package handover once no supported update path starts from a
+// chart that renders any of the kinds: the objects of DexClients and the Dex passwords moved to the
+// controller first, the dex-authenticator of every DexAuthenticator with the shared instances.
+var handedOver handedOverKinds
+
+// handedOverKinds are the names of the kinds that have nothing left to protect.
+type handedOverKinds struct {
+	mu    sync.Mutex
+	names map[string]struct{}
+}
+
+// pending returns the kinds of kinds that may still have an object to protect.
+func (h *handedOverKinds) pending(kinds []handover.Kind) []handover.Kind {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	out := make([]handover.Kind, 0, len(kinds))
+	for _, kind := range kinds {
+		if _, done := h.names[kind.Name]; !done {
+			out = append(out, kind)
+		}
+	}
+	return out
+}
+
+func (h *handedOverKinds) done(name string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	if h.names == nil {
+		h.names = map[string]struct{}{}
+	}
+	h.names[name] = struct{}{}
+}
 
 func protectHandoverObjects(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
-	if handedOver.Load() {
+	kinds := handedOver.pending(handoverKinds)
+	if len(kinds) == 0 {
 		return nil
 	}
 	c, err := newHandoverClient(dc)
 	if err != nil {
 		return fmt.Errorf("build client: %w", err)
 	}
-	res, err := handover.Protect(ctx, c, handoverKinds)
-	if res.Stamped > 0 {
-		input.Logger.Info("stamped keep policy on objects handed over to user-authn-controller", slog.Int("count", res.Stamped))
+
+	var stamped int
+	var errs []error
+	for _, kind := range kinds {
+		res, err := handover.Protect(ctx, c, []handover.Kind{kind})
+		stamped += res.Stamped
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		if res.Owned == 0 {
+			handedOver.done(kind.Name)
+		}
 	}
-	if err != nil {
+	if stamped > 0 {
+		input.Logger.Info("stamped keep policy on objects handed over to user-authn-controller", slog.Int("count", stamped))
+	}
+	if err := errors.Join(errs...); err != nil {
 		return fmt.Errorf("protect objects handed over to user-authn-controller: %w", err)
-	}
-	if res.Owned == 0 {
-		handedOver.Store(true)
 	}
 	return nil
 }

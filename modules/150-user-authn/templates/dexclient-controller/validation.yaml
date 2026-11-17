@@ -10,7 +10,7 @@
        open a way into the cluster or out of it from any namespace. A ReferenceGrant it writes in d8-user-authn lets
        only HTTPRoute objects refer only to the Services of the instances: a grant to another Service of the module
        namespace, such as that of dex, would hand it to the routes of a namespace. */}}
-{{- if and (include "shared_dex_authenticator_enabled" .) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
+{{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
 {{- $policyName := "dexclient-controller.user-authn.deckhouse.io" }}
 {{- $managed := `has(%[1]s.metadata.labels) && "app.kubernetes.io/managed-by" in %[1]s.metadata.labels && %[1]s.metadata.labels["app.kubernetes.io/managed-by"] == "user-authn-controller"` }}
 {{- $instanceServices := list }}
@@ -83,5 +83,56 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "dexclient-controller")) | nindent 2 }}
 spec:
   policyName: {{ $policyName }}
+  validationActions: [Deny]
+{{- /* dexclient-controller deletes what is left of the dex-authenticator the chart rendered for every
+       DexAuthenticator: a Deployment with its PodDisruptionBudget, VerticalPodAutoscaler and NetworkPolicy. The
+       right is cluster-wide, since they live in the namespaces of the DexAuthenticator objects; the policy keeps it
+       to the objects with the labels of that chart. Nobody but Deckhouse can put the heritage label on an object. */}}
+{{- $legacyPolicyName := "dexclient-controller-legacy.user-authn.deckhouse.io" }}
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $legacyPolicyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dexclient-controller")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups: ["apps"]
+      apiVersions: ["*"]
+      operations: ["CREATE", "UPDATE", "DELETE"]
+      resources: ["deployments"]
+    - apiGroups: ["policy"]
+      apiVersions: ["*"]
+      operations: ["CREATE", "UPDATE", "DELETE"]
+      resources: ["poddisruptionbudgets"]
+    - apiGroups: ["autoscaling.k8s.io"]
+      apiVersions: ["*"]
+      operations: ["CREATE", "UPDATE", "DELETE"]
+      resources: ["verticalpodautoscalers"]
+    - apiGroups: ["networking.k8s.io"]
+      apiVersions: ["*"]
+      operations: ["CREATE", "UPDATE", "DELETE"]
+      resources: ["networkpolicies"]
+  matchConditions:
+  - name: dexclient-controller
+    expression: 'request.userInfo.username == "system:serviceaccount:d8-{{ .Chart.Name }}:dexclient-controller"'
+  validations:
+  - expression: >-
+      request.operation == "DELETE" && has(oldObject.metadata.labels)
+      && "app" in oldObject.metadata.labels && oldObject.metadata.labels["app"] == "dex-authenticator"
+      && "heritage" in oldObject.metadata.labels && oldObject.metadata.labels["heritage"] == "deckhouse"
+      && "module" in oldObject.metadata.labels && oldObject.metadata.labels["module"] == "user-authn"
+    reason: Forbidden
+    messageExpression: "'dexclient-controller only deletes the objects of the dex-authenticator the module rendered for a DexAuthenticator'"
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $legacyPolicyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dexclient-controller")) | nindent 2 }}
+spec:
+  policyName: {{ $legacyPolicyName }}
   validationActions: [Deny]
 {{- end }}

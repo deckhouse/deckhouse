@@ -22,6 +22,8 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+
+	"user-authn-controller/internal/naming"
 )
 
 const (
@@ -41,7 +43,9 @@ const (
 
 var (
 	subscribersDesc = prometheus.NewDesc(subscribersMetricName,
-		"Streams of the revocation feed a DexAuthenticator client has open on this replica; 0 for a known client without streams.",
+		"Streams of the revocation feed open on this replica, by subscriber: instance:<name> for a shared dex-authenticator "+
+			"instance, which gets the revocations of all its clients, 0 when it has none; the client id for a dex-authenticator "+
+			"that subscribes by itself.",
 		[]string{"client_id"}, nil)
 	lagDesc = prometheus.NewDesc(lagMetricName,
 		"The longest time a stream of this replica has not written to its client, in seconds; a heartbeat is written every 10 seconds.",
@@ -90,9 +94,11 @@ func (c collector) Describe(ch chan<- *prometheus.Desc) {
 // Collect implements prometheus.Collector.
 func (c collector) Collect(ch chan<- prometheus.Metric) {
 	perClient, lag := c.server.hub.stats(c.server.now())
-	for _, id := range c.server.clients.list() {
-		if _, ok := perClient[id]; !ok {
-			perClient[id] = 0
+	// The clients of DexAuthenticator objects get their revocations through the stream of their
+	// instance, so it is the instances that must have one: an instance without a stream is a zero.
+	for _, instance := range naming.AuthenticatorInstances() {
+		if _, ok := perClient[instanceID(instance)]; !ok {
+			perClient[instanceID(instance)] = 0
 		}
 	}
 	for id, n := range perClient {

@@ -55,8 +55,9 @@ func LegacyDexAuthenticatorClientID(name, namespace string) string {
 // refuses the tokens, but its GC deletes a refresh token only after it has gone unused for
 // refreshTokenValidIfNotUsedFor, and UserAccount lists them as grants until then.
 //
-// It touches an id only when no OAuth2Client has that id any more: until Helm prunes the old
-// client the id still belongs to it, and an id that some other client happens to have is never
+// It touches an id only when no OAuth2Client has that id any more: until the old client is deleted
+// (DexAuthenticatorLegacy does it once the Service of the object points at an instance) the id
+// still belongs to it, and an id that some other client happens to have is never
 // touched. It runs on the leader at start and checks again every retry interval until no legacy id
 // has an OAuth2Client; an id that another client keeps for good (DexAuthenticator kubeconfig in foo
 // and the kubeconfig cluster foo-dex-authenticator share kubeconfig-foo-dex-authenticator) keeps it

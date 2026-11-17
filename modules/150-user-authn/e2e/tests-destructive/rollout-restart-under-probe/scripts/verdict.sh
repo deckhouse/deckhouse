@@ -14,15 +14,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Summarizes the probe log and fails when a request did not get HTTP 200.
+# Summarizes the probe log and fails when a request did not get its expected code: HTTP 200 from
+# Dex and user-api, HTTP 401 from the shared dex-authenticator (the auth check of a served host
+# without a session; 403 would mean the instance lost the DexAuthenticator while it restarted).
 #
-# In HA mode every failed request fails the case.
+# In HA mode every failed request fails the case. The shared dex-authenticator always runs two
+# replicas behind a PodDisruptionBudget, so for it every failed request fails the case in both modes.
 #
-# In single-replica mode one more disruption is possible that the rollout restarts do not cause:
+# In single-replica mode one more disruption is possible for Dex and user-api that the rollout restarts do not cause:
 # the VerticalPodAutoscaler of a component (updateMode InPlaceOrRecreate) may evict its only pod
 # to apply new resources, and the component is unavailable until the replacement is ready.
-# Run 4 showed exactly that (events EvictedByVPA of user-api and the authenticator 5 seconds
-# before the failures). In this mode a failed request is attributed to such an eviction when an
+# Run 4 showed exactly that (events EvictedByVPA of user-api and the per-object authenticator, which
+# no longer exists, 5 seconds before the failures). In this mode a failed request is attributed to such an eviction when an
 # EvictedByVPA event of a pod of the same component happened between 60 seconds before and
 # 5 seconds after it; these requests are reported but do not fail the case. Every other failed
 # request still fails it.
@@ -45,19 +48,23 @@ evictions() {
     | while read -r ts; do [[ -n "${ts}" && "${ts}" != "null" ]] && date -d "${ts}" +%s; done || true
 }
 
-declare -A prefix=([dex]="d8-user-authn dex-" [authenticator]="${NS} e2e-authn-ha-dex-authenticator-" [user-api]="d8-user-authn user-api-")
+# The pods of the shared dex-authenticator are not listed: it keeps two replicas in both modes, so
+# an eviction of one of them is no excuse for a failed request.
+declare -A prefix=([dex]="d8-user-authn dex-" [user-api]="d8-user-authn user-api-")
+# The HTTP code every request of a target must get.
+declare -A expected=([dex]=200 [authenticator]=401 [user-api]=200)
 
 failed=0
 for target in dex authenticator user-api; do
   total="$(awk -v t="${target}" '$2 == t' "${log_file}" | wc -l)"
   bad_file="${dir}/${target}.bad"
-  awk -v t="${target}" '$2 == t && $3 != "200" {print $1, $3}' "${log_file}" > "${bad_file}"
-  echo "${target}: ${total} requests, $(wc -l < "${bad_file}") not HTTP 200"
+  awk -v t="${target}" -v want="${expected[${target}]}" '$2 == t && $3 != want {print $1, $3}' "${log_file}" > "${bad_file}"
+  echo "${target}: ${total} requests, $(wc -l < "${bad_file}") not HTTP ${expected[${target}]}"
   (( total > 100 )) || { echo "  too few requests, the probe did not run through the restarts"; failed=1; }
   [[ -s "${bad_file}" ]] || continue
 
   evicted=""
-  if [[ "${mode}" == "single" ]]; then
+  if [[ "${mode}" == "single" && -n "${prefix[${target}]:-}" ]]; then
     # shellcheck disable=SC2086
     evicted="$(evictions ${prefix[${target}]} | tr '\n' ' ')"
     [[ -n "${evicted}" ]] && echo "  EvictedByVPA events of ${target} pods at: ${evicted}"

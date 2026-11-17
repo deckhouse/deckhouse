@@ -4,27 +4,32 @@ metadata:
   name: user-authn-rollout-restart-under-probe
 spec:
   description: >-
-    A rollout restart of Dex, of a DexAuthenticator, of user-api and of user-authn-controller loses
-    no request: a probe calls the Dex discovery document, the authenticator /ping and the user-api
-    /healthz every 200 ms through their Services and must get HTTP 200 every time. With two nodes
-    for the module the case enables highAvailability (two replicas, maxUnavailable 1); with one node
-    it checks the rolling update of a single replica (maxSurge 1) and logs that choice. A
-    UserOperation created while no controller replica runs is processed once the controller starts
-    again. The original settings are restored and the components are healthy afterwards.
+    A rollout restart of Dex, of the shared dex-authenticator that serves a DexAuthenticator, of
+    user-api and of user-authn-controller loses no request: a probe calls the Dex discovery document,
+    the auth check of the shared dex-authenticator for the host of the DexAuthenticator and the
+    user-api /healthz every 200 ms through the ClusterIPs of their Services. Dex and user-api must
+    answer HTTP 200 every time, the authenticator HTTP 401 (a served host without a session; 403
+    means the instance lost the DexAuthenticator, 000 a refused or timed-out connection). With two
+    nodes for the module the case enables highAvailability (two replicas, maxUnavailable 1) of Dex,
+    user-api and the controller; with one node it checks the rolling update of a single replica
+    (maxSurge 1) of them and logs that choice. The shared dex-authenticator always runs two replicas
+    (maxSurge 1, maxUnavailable 0), so it is restarted the same way in both modes. The shared
+    dex-authenticator serves every DexAuthenticator of the cluster outside the d8- namespaces, so
+    its restart touches all of them for the duration of the case. A UserOperation created while no
+    controller replica runs is processed once the controller starts again. The original settings
+    are restored and the components are healthy afterwards.
   concurrent: false
 
   catch:
-    - description: Show the pods of the module and of the authenticator on failure
+    - description: Show the pods of the module and of the shared dex-authenticator on failure
       script:
         # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
         shell: bash
         shellArgs: ["-c"]
-        env:
-          - name: NS
-            value: ($namespace)
         content: |
           kubectl -n d8-user-authn get pods -o wide
-          kubectl -n "${NS}" get pods -l app=dex-authenticator -o wide
+          kubectl -n d8-user-authn get pods -l app=shared-dex-authenticator,instance=dex-authenticator -o wide
+          kubectl -n d8-user-authn get deployment dex-authenticator -o wide
     - description: Show the events of the module namespace on failure
       events:
         namespace: d8-user-authn
@@ -103,19 +108,14 @@ spec:
               set -euo pipefail
               source ../../tests/common/scripts/lib.sh
               create_user rollout-restart-under-probe e2e-authn-ha-user e2e-authn-ha-user@example.com
-        - description: Create DexAuthenticator e2e-authn-ha, with highAvailability in HA mode
+        - description: Create DexAuthenticator e2e-authn-ha
           script:
             shell: bash
             shellArgs: ["-c"]
             env:
               - name: NS
                 value: ($namespace)
-            content: |
-              set -euo pipefail
-              source ../../tests/common/scripts/lib.sh
-              ha=false
-              [[ "$(cat "$(state_dir rollout-restart-under-probe)/mode")" == "ha" ]] && ha=true
-              sed "s/highAvailability: true/highAvailability: ${ha}/" manifests/dex-authenticator.yaml | kubectl -n "${NS}" apply -f -
+            content: kubectl -n "${NS}" apply -f manifests/dex-authenticator.yaml
         - description: Wait for the ready user-api replicas of the mode
           script:
             # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
@@ -123,16 +123,27 @@ spec:
             shellArgs: ["-c"]
             timeout: 11m
             content: bash scripts/wait-ha.sh d8-user-authn user-api
-        - description: Wait for the ready authenticator replicas of the mode
+        - description: Wait for the two ready replicas of the shared dex-authenticator (two in both modes)
           script:
             # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
             shell: bash
             shellArgs: ["-c"]
             timeout: 11m
-            env:
-              - name: NS
-                value: ($namespace)
-            content: bash scripts/wait-ha.sh "${NS}" e2e-authn-ha-dex-authenticator
+            content: bash scripts/wait-ha.sh d8-user-authn dex-authenticator 2
+        - description: Assert the shared dex-authenticator serves the DexAuthenticator
+          assert:
+            # The pods of the instance load the record of the object with the next sync of their
+            # volume, which takes up to a few minutes. Before that the Service of the object does
+            # not exist, and the probe would have nothing to resolve.
+            timeout: 5m
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: DexAuthenticator
+              metadata:
+                name: e2e-authn-ha
+              status:
+                (conditions[?type == 'Served']):
+                  - status: "True"
       cleanup:
         - description: Delete the DexAuthenticator, the User and the UserOperations of the test
           script:
@@ -149,7 +160,9 @@ spec:
               bash ../../tests/common/scripts/delete-dex-authenticator.sh "${NS}" e2e-authn-ha
 
     - name: restart-under-probe
-      description: Restart every component while the probe runs, then check that no request failed
+      description: >-
+        Restart every component (the shared dex-authenticator among them) while the probe runs,
+        then check that no request failed
       try:
         - description: Start the probe in the background
           script:
@@ -189,19 +202,16 @@ spec:
               set -e
               kubectl -n d8-user-authn rollout restart deployment/dex
               kubectl -n d8-user-authn rollout status deployment/dex --timeout=9m
-        - description: Restart the authenticator and wait for the rollout
+        - description: Restart the shared dex-authenticator (it serves every application outside the d8- namespaces) and wait for the rollout
           script:
             # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
             shell: bash
             shellArgs: ["-c"]
             timeout: 10m
-            env:
-              - name: NS
-                value: ($namespace)
             content: |
               set -e
-              kubectl -n "${NS}" rollout restart deployment/e2e-authn-ha-dex-authenticator
-              kubectl -n "${NS}" rollout status deployment/e2e-authn-ha-dex-authenticator --timeout=9m
+              kubectl -n d8-user-authn rollout restart deployment/dex-authenticator
+              kubectl -n d8-user-authn rollout status deployment/dex-authenticator --timeout=9m
         - description: Restart user-api and wait for the rollout
           script:
             # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
@@ -294,16 +304,14 @@ spec:
           sleep:
             duration: 15s
         - description: >-
-            Stop the probe and assert that every request got HTTP 200 (in single-replica mode a failure
-            right after a VPA eviction of the only pod is reported, not counted)
+            Stop the probe and assert that every request got its expected code, 200 from Dex and user-api,
+            401 from the authenticator (in single-replica mode a failure of Dex or user-api right after
+            a VPA eviction of the only pod is reported, not counted)
           script:
             # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
             shell: bash
             shellArgs: ["-c"]
             timeout: 2m
-            env:
-              - name: NS
-                value: ($namespace)
             content: bash scripts/verdict.sh
       finally:
         - description: Stop the probe in any case

@@ -32,10 +32,6 @@ import (
 )
 
 const (
-	// sharedDexAuthenticatorEnabledPath tells that the module renders its two shared
-	// dex-authenticator instances. Nothing sets it in a cluster until DexAuthenticator objects are
-	// switched to the instances: only the tests of the templates do.
-	sharedDexAuthenticatorEnabledPath = "userAuthn.internal.sharedDexAuthenticator.enabled"
 	// sharedDexAuthenticatorRedisPasswordsPath holds the password of the Redis of each instance, by
 	// the name of the instance. The Redis of the replicas of an instance talk to each other with it.
 	sharedDexAuthenticatorRedisPasswordsPath = "userAuthn.internal.sharedDexAuthenticator.redisPasswords"
@@ -92,14 +88,10 @@ func redisPasswordSecretName(instance string) string {
 	return instance + "-redis"
 }
 
-// sharedDexAuthenticator keeps the Redis password of each instance across restarts while the
-// module renders the instances: it reads the password back from the Secret the module renders and
-// generates a new one only when there is none.
+// sharedDexAuthenticator keeps the Redis password of each shared dex-authenticator instance across
+// restarts: it reads the password back from the Secret the module renders and generates a new
+// one only when there is none.
 func sharedDexAuthenticator(_ context.Context, input *go_hook.HookInput) error {
-	if !input.Values.Get(sharedDexAuthenticatorEnabledPath).Bool() {
-		return nil
-	}
-
 	stored := map[string]string{}
 	for secret, err := range sdkobjectpatch.SnapshotIter[redisPasswordSecret](input.Snapshots.Get("redis_passwords")) {
 		if err != nil {

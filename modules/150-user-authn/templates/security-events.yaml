@@ -1,25 +1,31 @@
 {{- /*
-  Security events of every dex-authenticator in the cluster, rendered only
-  when the security-events-manager module serves its API.
+  Security events of the DexAuthenticator objects, rendered only when the
+  security-events-manager module serves its API.
 
-  One ClusterSecurityEventShipper reads the pods of all DexAuthenticator
-  objects, the ones Deckhouse modules create included. It is limited to the
-  namespaces that hold a DexAuthenticator: the `app: dex-authenticator` label
-  alone would let anyone who can create a pod print forged auth lines from
-  any namespace. A label check cannot close this, since the pod template of a
-  user Deployment is not validated against reserved labels. The remaining risk
-  is the owner of a namespace with a real DexAuthenticator, who can still
-  forge events from that namespace; `object.namespace` always names it.
+  One ClusterSecurityEventShipper reads the pods of the two shared
+  dex-authenticator instances in the namespace of the module, which serve
+  every DexAuthenticator object, the ones Deckhouse modules create included.
+  Nobody but the module runs pods there, so the owner of a namespace with a
+  DexAuthenticator cannot print an auth line of his own any more, and the
+  name and the namespace of the object in a line come from the table of
+  clients of the instance, not from the request.
 
-  `namespaceSelector.matchNames` takes at most 256 names, so the namespaces
-  are split into items of the same shipper, 256 per item. Separate shippers
-  would share the source name, and the gateway would then stamp the events of
-  all of them with the resource name of the first one.
+  The address of the client in a line is still what the request says: the
+  instances run behind ingress controllers and take the address from
+  X-Real-IP, and every pod of the cluster reaches their port. A pod that asks
+  an instance directly, with the host of an object and an address of its
+  choice in the header, gets an event of that object with that address, as
+  it did when every object had a dex-authenticator of its own. `actor.sourceIP`
+  of an event is therefore a hint, not a proof.
+
   The events come from the auth log lines of oauth2-proxy, written as JSON
-  with `--logging-format=json` (patch 007):
+  with `--logging-format=json` (patch 007). The instance adds the
+  DexAuthenticator the request belongs to (patch 018); `object.name` and
+  `object.namespace` of an event are taken from there:
 
     {"time":"...","level":"auth","client":"<IP>","host":"<HOST>","protocol":"...",
      "request_id":"...","method":"...","user_agent":"...","user":"<EMAIL>",
+     "authenticator":"<NAME>","authenticator_namespace":"<NAMESPACE>",
      "status":"AuthSuccess|AuthFailure|AuthError","msg":"<MESSAGE>"}
 
   Field order is fixed by the struct of patch 007, and encoding/json escapes
@@ -256,11 +262,6 @@ spec:
       required: false
     - name: metadata
       required: false
-{{- $namespaces := list }}
-{{- range .Values.userAuthn.internal.dexAuthenticatorCRDs }}
-  {{- $namespaces = append $namespaces .namespace }}
-{{- end }}
-{{- if $namespaces }}
 ---
 apiVersion: security.deckhouse.io/v1alpha1
 kind: ClusterSecurityEventShipper
@@ -268,16 +269,15 @@ metadata:
   name: dex-authenticator
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 spec:
-  {{- range $chunk := $namespaces | uniq | sortAlpha | chunk 256 }}
   - source: dex-authenticator
     input:
       type: KubernetesPods
       kubernetesPods:
         namespaceSelector:
-          matchNames: {{ $chunk | toJson }}
+          matchNames: ["d8-{{ .Chart.Name }}"]
         labelSelector:
           matchLabels:
-            app: dex-authenticator
+            app: shared-dex-authenticator
     parser:
       - name: dex-authenticator
         parser:
@@ -292,9 +292,9 @@ spec:
         - key: actor.sourceIP
           value: client
         - key: object.name
-          value: '@root.pod_labels.name'
+          value: authenticator
         - key: object.namespace
-          value: '@root.namespace'
+          value: authenticator_namespace
         - key: metadata.extra.authInfo.host
           value: host
         - key: metadata.extra.authInfo.method
@@ -435,6 +435,4 @@ spec:
           - target: object.type
             source: Static
             value: DexAuthenticator
-  {{- end }}
-{{- end }}
 {{- end }}

@@ -624,9 +624,8 @@ func (a *addressLimiter) fail(address string, now time.Time) {
 	l.AllowN(now, 1)
 }
 
-// clientSet is the set of DexAuthenticator clients the cache knows: for the subscribers gauge, and
-// for the streams of the shared dex-authenticator instances, which carry the events of every
-// client of their instance.
+// clientSet is the set of DexAuthenticator clients the cache knows, for the streams of the shared
+// dex-authenticator instances, which carry the events of every client of their instance.
 type clientSet struct {
 	mu sync.Mutex
 	// ids maps an object name to its client id, and byID a client id to the client: the salt of
@@ -703,17 +702,6 @@ func (c *clientSet) forget(name string) {
 		delete(c.byID, id)
 		delete(c.ids, name)
 	}
-}
-
-func (c *clientSet) list() []string {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	ids := make([]string, 0, len(c.byID))
-	for id := range c.byID {
-		ids = append(ids, id)
-	}
-	slices.Sort(ids)
-	return ids
 }
 
 // instanceOf is the instance of the client with id, empty for a client the set does not know.

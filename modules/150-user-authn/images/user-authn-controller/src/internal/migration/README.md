@@ -50,8 +50,9 @@ see [`internal/adoption`](../adoption/README.md).
   token only after it has gone unused for `refreshTokenValidIfNotUsedFor`, and UserAccount lists the
   tokens as grants of the old client until then.
 - **How it applies:** on the leader at start, the migration computes the legacy id of every
-  DexAuthenticator and takes an id only when no OAuth2Client has it any more: until Helm prunes the old
-  client the id still belongs to it, and an id another client happens to have is never touched (the
+  DexAuthenticator and takes an id only when no OAuth2Client has it any more: until the old client is
+  deleted the id still belongs to it (the controller deletes it once the Service of the object points
+  at an instance, see the dex-authenticator of every DexAuthenticator below), and an id another client happens to have is never touched (the
   DexAuthenticator `kubeconfig` in `foo` and the kubeconfig cluster `foo-dex-authenticator` share
   `kubeconfig-foo-dex-authenticator`). While an id still has an OAuth2Client, it checks again every 30
   seconds, reading the cache only (the DexAuthenticators by metadata, the OAuth2Clients by the index of
@@ -94,3 +95,55 @@ see [`internal/adoption`](../adoption/README.md).
   off; the update carries the resourceVersion read, and a provider changed meanwhile is read again at the
   next pass, 30 seconds later. Once the marker exists, the migration does nothing.
 - **Introduced in:** the merge request that added `spec.tokenExchange` to DexProvider.
+
+## The dex-authenticator of every DexAuthenticator
+
+- **Code:** `DexAuthenticatorLegacy` in this package; the reconcilers of
+  `internal/controller/dexauthenticator` call it. The objects the controller keeps are taken over by
+  `internal/adoption`, as those of DexClients were.
+- **From:** what the module chart rendered for every DexAuthenticator before the shared
+  dex-authenticator instances. In the namespace of the object: a Deployment with its
+  PodDisruptionBudget, VerticalPodAutoscaler and NetworkPolicy, the Secret `dex-authenticator-<name>`
+  with the secret of its Dex client and of its cookies, a copy of the registry Secret
+  (`registry-dex-authenticator`), the Service `<name>-dex-authenticator` and the Ingress and HTTPRoute
+  objects that lead `/dex-authenticator` to it. In `d8-user-authn`: its OAuth2Client.
+- **To:** a record in the table of clients of an instance (`dex-authenticator-system` for the objects
+  of the `d8-*` namespaces, `dex-authenticator` for the rest). The OAuth2Client, the Service and the
+  routes stay, under the same names, as objects of the controller; the Service becomes an
+  ExternalName for the Service of the instance. The Deployment with the objects around it, the Secret
+  and the registry Secret are deleted.
+- **Secrets:** an object of a `d8-*` namespace keeps the two secrets of its Secret, so its users stay
+  signed in: the proxy of the instance restores a session from the refresh token in the cookie. An
+  object of a user gets new ones, and its users sign in once more: its Secret lay in a namespace whose
+  users could read it.
+- **Why:** a Deployment, a Redis and two secrets per DexAuthenticator in the namespaces of
+  applications, and a release of the whole module on every change of a DexAuthenticator.
+- **How it applies:** the module hooks keep the release that stops rendering these objects from
+  pruning them and put the label of the controller on the ones it takes over
+  (`hooks/handover_dex_authenticator.go` of the module). The table reconciler gives every object a
+  record; the reconciler of the objects waits until every pod of the instance serves the record, then
+  in one pass writes the secret of the record into the OAuth2Client, points the Service at the
+  instance, takes the routes over and deletes what is left. Until that pass the pods of the object
+  serve it as before. An object the instance cannot serve (its record does not fit the table, or
+  its domain is a name of the Service of an instance) keeps its own dex-authenticator.
+- **The Dex client under the former ID:** an object rendered while the ID of its Dex client was
+  `<name>-<namespace>-dex-authenticator` has pods that sign users in with that client, while the
+  client the controller makes has the ID `dex-authenticator-<name>@<namespace>`. The module hook
+  keeps the former client from the release too and hands it to the controller, so users sign in
+  through the pods of the object until the switch; the controller deletes the client in the pass
+  that deletes the pods, before them. An object that keeps its own dex-authenticator keeps the
+  client. The client carries no name of its DexAuthenticator and is found by its name and its ID; it
+  is deleted only with the labels the chart gave it (`app: dex`) and the label of the controller,
+  since a client of another kind may have the same ID (see the refresh tokens above). Its refresh
+  tokens are cleaned by `DexAuthenticatorTokens` once the ID is free. While the client is there, the
+  former ID of an object with access to the Kubernetes API is a trusted peer of the `kubernetes`
+  client (`internal/controller/kubernetesclient`): the pods of the object ask for a token
+  kube-apiserver accepts under that ID.
+- **Running again:** the controller lists what is left of these objects once, when it is first asked
+  after its start; an object that has nothing left costs no request. Every step looks at what is
+  there: a restart between the switch of the Service and the deletion deletes the rest on the next
+  pass, and what is left of an object deleted meanwhile is deleted too. Only objects with the
+  labels of the chart (`app: dex-authenticator`, `heritage: deckhouse`, `module: user-authn`) are
+  read or deleted, and an admission policy holds the controller to that.
+- **Introduced in:** the merge request that switched DexAuthenticator objects to the shared
+  dex-authenticator instances.

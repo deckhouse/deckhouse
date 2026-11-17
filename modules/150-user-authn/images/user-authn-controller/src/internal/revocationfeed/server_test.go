@@ -27,6 +27,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"io"
+	"maps"
 	"math/big"
 	"net"
 	"net/http"
@@ -407,8 +408,8 @@ func TestServer_FailedWriteClosesTheStream(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("the stream did not close after a failed write")
 	}
-	if got := subscribersOf(t, registry); got["console"] != 0 {
-		t.Errorf("subscribers = %v, want console at 0", got)
+	if got, has := subscribersOf(t, registry)["console"]; has {
+		t.Errorf("subscribers of console = %v, want no series for a client without streams", got)
 	}
 }
 
@@ -476,9 +477,11 @@ func TestServer_Metrics(t *testing.T) {
 			lag = &v
 		}
 	}
-	// grafana is a known DexAuthenticator client without streams; kubernetes is not one.
-	if len(subscribers) != 2 || subscribers["console"] != 1 || subscribers["grafana"] != 0 {
-		t.Errorf("subscribers = %v", subscribers)
+	// A client that subscribes by itself is counted; the others get their revocations through their
+	// instance, and an instance without a stream is a zero.
+	want := map[string]float64{"console": 1, "instance:dex-authenticator-system": 0, "instance:dex-authenticator": 0}
+	if !maps.Equal(subscribers, want) {
+		t.Errorf("subscribers = %v, want %v", subscribers, want)
 	}
 	if lag == nil || *lag < 0 || *lag > 10 {
 		t.Errorf("lag = %v", lag)

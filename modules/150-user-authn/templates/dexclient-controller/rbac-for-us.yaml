@@ -64,7 +64,6 @@ rules:
   verbs:
   - create
   - patch
-{{- if include "shared_dex_authenticator_enabled" . }}
 # The reconcilers that serve DexAuthenticator objects by the shared dex-authenticator instances read the objects
 # and write the Served condition into their status.
 - apiGroups:
@@ -131,7 +130,42 @@ rules:
   - delete
     {{- end }}
   {{- end }}
-{{- end }}
+# What is left of the dex-authenticator the chart rendered for every DexAuthenticator before the shared instances:
+# the controller deletes it once the Service of the DexAuthenticator points at an instance. The
+# ValidatingAdmissionPolicy dexclient-controller-legacy.user-authn.deckhouse.io lets it delete only the objects
+# with the labels of that chart.
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+  - delete
+- apiGroups:
+  - policy
+  resources:
+  - poddisruptionbudgets
+  verbs:
+  - get
+  - list
+  - delete
+- apiGroups:
+  - autoscaling.k8s.io
+  resources:
+  - verticalpodautoscalers
+  verbs:
+  - get
+  - list
+  - delete
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - networkpolicies
+  verbs:
+  - get
+  - list
+  - delete
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -179,7 +213,6 @@ rules:
   - update
   - patch
   - delete
-{{- if include "shared_dex_authenticator_enabled" . }}
 # The settings the objects of a DexAuthenticator are built from, and the pods of the shared dex-authenticator
 # instances: the controller asks each which table of clients it serves.
 - apiGroups:
@@ -191,7 +224,7 @@ rules:
   - get
   - list
   - watch
-  {{- if include "shared_dex_authenticator_reference_grants" . }}
+{{- if include "shared_dex_authenticator_reference_grants" . }}
 # The ReferenceGrants from the HTTPRoute objects of the namespaces with a served DexAuthenticator to the Services of
 # the instances. alb follows the ExternalName Service of a DexAuthenticator in the auth-url of an HTTPRoute only to a
 # Service of the cluster named by its full DNS name and only with a ReferenceGrant from the namespace of the route to
@@ -207,7 +240,6 @@ rules:
   - create
   - update
   - delete
-  {{- end }}
 {{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1

@@ -9,12 +9,11 @@
 - dex-authenticator
 {{- end -}}
 
-{{- /* "true" while the instances are rendered. Until DexAuthenticator objects are switched to them, nothing in a
-       cluster sets the value: only the tests of the templates do. */ -}}
-{{- define "shared_dex_authenticator_enabled" -}}
-  {{- if dig "sharedDexAuthenticator" "enabled" false .Values.userAuthn.internal -}}
-true
-  {{- end -}}
+{{- /* The id of the dex client of a DexAuthenticator: "@" joins name and namespace, which can both */ -}}
+{{- /* contain a dash but not "@". user-authn-controller makes the id the same way. */ -}}
+{{- /* Usage: include "dex_authenticator_client_id" (dict "name" $name "namespace" $namespace) */ -}}
+{{- define "dex_authenticator_client_id" -}}
+{{ printf "dex-authenticator-%s@%s" .name .namespace }}
 {{- end -}}
 
 {{- /* The labels of the pods of an instance and of what selects them. Usage: include "..." $instance */ -}}

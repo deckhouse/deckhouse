@@ -19,7 +19,9 @@ limitations under the License.
 // The client is the audience kube-apiserver accepts tokens for, and its trustedPeers list the
 // clients allowed to obtain such tokens: every DexAuthenticator and DexClient annotated with
 // allow-access-to-kubernetes, and the static peers of the module configuration (publishAPI,
-// kubeconfigGenerator), which the chart passes in the kubernetes-oauth2client ConfigMap. The
+// kubeconfigGenerator), which the chart passes in the kubernetes-oauth2client ConfigMap. A
+// DexAuthenticator whose own dex-authenticator still signs users in with the Dex client of the
+// former ID is a peer under that ID too, for as long as that client is there. The
 // secret is the one the chart keeps in the kubernetes-dex-client-app-secret Secret; it is read
 // from the API, and the ConfigMap carries its checksum to trigger a reconcile when it changes.
 //
@@ -53,6 +55,7 @@ import (
 	"user-authn-controller/internal/adoption"
 	"user-authn-controller/internal/controller"
 	"user-authn-controller/internal/controller/dexclient"
+	"user-authn-controller/internal/migration"
 	"user-authn-controller/internal/naming"
 )
 
@@ -114,7 +117,8 @@ func InformerCacheByObject() map[client.Object]cache.ByObject {
 }
 
 // SetupWithManager reconciles the one client on a change of any input. DexAuthenticators are
-// watched by metadata only: the annotation is all that is read from them.
+// watched by metadata only: the annotation is all that is read from them. The Dex clients of the
+// former IDs of DexAuthenticators are watched too: such a client is a peer until it is deleted.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 	enqueue := handler.EnqueueRequestsFromMapFunc(func(context.Context, client.Object) []reconcile.Request {
 		return []reconcile.Request{request}
@@ -130,7 +134,7 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("kubernetesclient").
 		Watches(&corev1.ConfigMap{}, enqueue, named(ConfigMapName)).
-		Watches(controller.Object(controller.OAuth2ClientGVK), enqueue, named(OAuth2ClientName)).
+		Watches(controller.Object(controller.OAuth2ClientGVK), enqueue, builder.WithPredicates(predicate.NewPredicateFuncs(isInput))).
 		Watches(controller.Object(controller.DexClientGVK), enqueue).
 		Watches(authenticators, enqueue, builder.OnlyMetadata).
 		Complete(r)
@@ -190,10 +194,28 @@ func (r *Reconciler) peers(ctx context.Context, static []string) ([]string, erro
 	if err := r.client.List(ctx, authenticators); err != nil {
 		return nil, fmt.Errorf("list DexAuthenticators: %w", err)
 	}
+	// The former ID does not name one object for sure: the object a in the namespace b-c and the
+	// object a-b in the namespace c both had a-b-c-dex-authenticator. Such an ID is a peer of none
+	// of them: it would let one object have tokens of the API through the client of the other.
+	formerIDs := make(map[string]int, len(authenticators.Items))
+	for _, a := range authenticators.Items {
+		formerIDs[migration.LegacyDexAuthenticatorClientID(a.Name, a.Namespace)]++
+	}
 	var fromAuthenticators []string
 	for _, a := range authenticators.Items {
-		if allowed(&a, controller.DexAuthenticatorAllowAccessToKubernetesAnnotation) {
-			fromAuthenticators = append(fromAuthenticators, naming.DexAuthenticatorClientID(a.Name, a.Namespace))
+		if !allowed(&a, controller.DexAuthenticatorAllowAccessToKubernetesAnnotation) {
+			continue
+		}
+		fromAuthenticators = append(fromAuthenticators, naming.DexAuthenticatorClientID(a.Name, a.Namespace))
+		if formerIDs[migration.LegacyDexAuthenticatorClientID(a.Name, a.Namespace)] > 1 {
+			continue
+		}
+		former, err := r.hasFormerClient(ctx, a.Name, a.Namespace)
+		if err != nil {
+			return nil, err
+		}
+		if former {
+			fromAuthenticators = append(fromAuthenticators, migration.LegacyDexAuthenticatorClientID(a.Name, a.Namespace))
 		}
 	}
 
@@ -217,6 +239,34 @@ func (r *Reconciler) peers(ctx context.Context, static []string) ([]string, erro
 		}
 	}
 	return out, nil
+}
+
+// hasFormerClient reports whether the DexAuthenticator name in namespace still has the Dex client
+// of its former ID: the pods of its own dex-authenticator sign users in with it until the Service
+// of the object points at a shared instance, and ask for a token kube-apiserver accepts under
+// that ID. The client is deleted then, and the ID stops being a peer. A client of another kind
+// that happens to have such an ID is no client of the object. The client is read from the cache
+// of the Dex clients: from the API the controller may get the kubernetes client only.
+func (r *Reconciler) hasFormerClient(ctx context.Context, name, namespace string) (bool, error) {
+	key := migration.FormerDexAuthenticatorClientKey(name, namespace)
+	obj := controller.Object(controller.OAuth2ClientGVK)
+	err := r.client.Get(ctx, key, obj)
+	if apierrors.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("get OAuth2Client %s: %w", key, err)
+	}
+	return obj.GetDeletionTimestamp() == nil && migration.IsFormerDexAuthenticatorClient(obj, name, namespace), nil
+}
+
+// isInput reports whether a change of the Dex client obj may change the kubernetes client: it is
+// that client, or the client of the former ID of a DexAuthenticator.
+func isInput(obj client.Object) bool {
+	if obj.GetNamespace() != naming.DexNamespace {
+		return false
+	}
+	return obj.GetName() == OAuth2ClientName || migration.HasFormerDexAuthenticatorClientLabels(obj)
 }
 
 func allowed(obj client.Object, annotation string) bool {

@@ -19,9 +19,12 @@ package dexauthenticator
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -40,6 +43,7 @@ import (
 
 	"user-authn-controller/internal/adoption"
 	"user-authn-controller/internal/controller"
+	"user-authn-controller/internal/migration"
 	"user-authn-controller/internal/naming"
 )
 
@@ -76,17 +80,60 @@ func Register(mgr manager.Manager, opts Options) error {
 	events := make(chan event.GenericEvent, announcements)
 	log := mgr.GetLogger().WithName("dexauthenticator")
 
-	tables := NewTableReconciler(mgr.GetClient(), mgr.GetAPIReader(), log.WithName("table"), state, events, metrics, opts.GatewayAPI)
+	legacy := migration.NewDexAuthenticatorLegacy(mgr.GetClient(), mgr.GetAPIReader(), log.WithName("legacy"))
+	tables := NewTableReconciler(mgr.GetClient(), mgr.GetAPIReader(), log.WithName("table"), state, events, metrics, legacy, opts.GatewayAPI)
 	tables.referenceGrants = opts.ReferenceGrants
 	if err := tables.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("setup dexauthenticator table controller: %w", err)
 	}
 
-	objects := New(mgr.GetClient(), mgr.GetAPIReader(), mgr.GetEventRecorder(recorderName), log, state, NewPodStatus(mgr.GetClient()), opts.GatewayAPI)
+	objects := New(mgr.GetClient(), mgr.GetAPIReader(), mgr.GetEventRecorder(recorderName), log, state, NewPodStatus(mgr.GetClient()), legacy, opts.GatewayAPI)
 	if err := objects.SetupWithManager(mgr, events); err != nil {
 		return fmt.Errorf("setup dexauthenticator controller: %w", err)
 	}
+	if err := mgr.Add(legacySweep{legacy: legacy, announce: events, log: log.WithName("legacy")}); err != nil {
+		return fmt.Errorf("add the sweep of the per-object dex-authenticators: %w", err)
+	}
 	return nil
+}
+
+// legacySweepRetry is how long the sweep waits before it lists again after a failure.
+const legacySweepRetry = 30 * time.Second
+
+// legacySweep gives the reconciler of the objects, once at the start of the leader, every
+// DexAuthenticator that still has a dex-authenticator of its own: the one of an object deleted
+// while the controller was down is removed by that reconcile, and no event would bring it.
+type legacySweep struct {
+	legacy   *migration.DexAuthenticatorLegacy
+	announce chan<- event.GenericEvent
+	log      logr.Logger
+}
+
+// NeedLeaderElection makes the sweep run on the leader only.
+func (legacySweep) NeedLeaderElection() bool { return true }
+
+// Start lists what is left and announces it, trying again until the list succeeds or ctx ends.
+func (s legacySweep) Start(ctx context.Context) error {
+	for {
+		keys, err := s.legacy.Pending(ctx)
+		if err == nil {
+			for _, key := range keys {
+				obj := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{Namespace: key.Namespace, Name: key.Name}}
+				select {
+				case s.announce <- event.GenericEvent{Object: obj}:
+				case <-ctx.Done():
+					return nil
+				}
+			}
+			return nil
+		}
+		s.log.Error(err, "list what is left of the per-object dex-authenticators, trying again", "after", legacySweepRetry)
+		select {
+		case <-time.After(legacySweepRetry):
+		case <-ctx.Done():
+			return nil
+		}
+	}
 }
 
 // InformerCacheByObject scopes the informers of the reconcilers. The Service, Ingress and

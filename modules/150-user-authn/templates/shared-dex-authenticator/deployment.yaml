@@ -1,8 +1,7 @@
-{{- if include "shared_dex_authenticator_enabled" . }}
-  {{- $context := . }}
+{{- $context := . }}
   {{- $revocationFeedCA := dig "revocationFeedTLS" "ca" "" $context.Values.userAuthn.internal | default "" }}
   {{- $isHTTPS := eq (include "helm_lib_module_uri_scheme" $context) "https" }}
-  {{- range $instance := include "shared_dex_authenticator_instances" . | fromYamlArray }}
+{{- range $instance := include "shared_dex_authenticator_instances" . | fromYamlArray }}
     {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -316,5 +315,4 @@ type: Opaque
 data:
   dex-ca.crt: {{ $context.Values.userAuthn.internal.dexTLS.ca | default "" | b64enc | quote }}
   revocation-feed-ca.crt: {{ $revocationFeedCA | b64enc | quote }}
-  {{- end }}
 {{- end }}

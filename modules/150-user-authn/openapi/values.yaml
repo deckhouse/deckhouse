@@ -158,79 +158,12 @@ properties:
             default: ""
           certificate_updated:
             type: boolean
-      dexAuthenticatorCRDs:
-        type: array
-        default: []
-        x-examples:
-        - - credentials:
-              appDexSecret: plainstring
-              cookieSecret: plainstring
-            name: dex-authenticator
-            encodedName: dex-authenticator
-            namespace: dex-authenticator-namespace
-            spec:
-              applicationDomain: dex-authenticator.example.com
-              applicationIngressCertificateSecretName: dex-authenticator-tls
-              applicationIngressClassName: nginx
-              sendAuthorizationHeader: true
-            allowAccessToKubernetes: false
-          - credentials:
-              appDexSecret: plainstring
-              cookieSecret: plainstring
-            name: test
-            encodedName: test
-            namespace: test-namespace
-            spec:
-              signOutURL: "/logout"
-              applicationDomain: test.example.com
-              applicationIngressCertificateSecretName: test-tls
-              applicationIngressClassName: not-nginx
-              highAvailability: true
-              nodeSelector:
-                testnode: ""
-              tolerations:
-                - key: foo
-                  operator: Equal
-                  value: bar
-            allowAccessToKubernetes: true
-        items:
-          type: object
-          properties:
-            uuid:
-              type: string
-            name:
-              type: string
-            namespace:
-              type: string
-            spec:
-              # authenticator spec is copied from custom resources as is and validated by its spec
-              type: object
-              additionalProperties: true
-            allowAccessToKubernetes:
-              type: boolean
-            encodedName:
-              type: string
-            credentials:
-              type: object
-              properties:
-                cookieSecret:
-                  type: string
-                appDexSecret:
-                  type: string
-      dexAuthenticatorNames:
-        type: object
-        default: {}
-        additionalProperties: true
       sharedDexAuthenticator:
         type: object
         default: {}
         description: |
-          The two shared dex-authenticator instances of the module. The module does not render them until
-          DexAuthenticator objects are switched to them: nothing in a cluster sets `enabled`.
+          The two shared dex-authenticator instances of the module, which serve the DexAuthenticator objects.
         properties:
-          enabled:
-            type: boolean
-            default: false
           redisPasswords:
             type: object
             default: {}
@@ -239,17 +172,6 @@ properties:
             x-examples:
             - dex-authenticator-system: plainstring
               dex-authenticator: plainstring
-      dexAuthenticatorRedisURL:
-        type: string
-        default: "redis://127.0.0.1/"
-        pattern: '^redis://[A-Za-z0-9.-]+(:[0-9]{1,5})?(/[0-9]*)?$'
-        description: |
-          Address of the Redis session store of DexAuthenticators: `redis://<host>[:<port>]/[<db>]`.
-
-          A local address (`127.0.0.1` or `localhost`) runs Redis as a sidecar in every DexAuthenticator pod.
-
-          The address goes into the arguments of the DexAuthenticator Deployment, which users of its namespace can read,
-          so it holds no credentials. TLS (`rediss://`) and a password are not supported yet.
       dexUsersCRDs:
         type: array
         default: []

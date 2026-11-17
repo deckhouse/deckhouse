@@ -32,7 +32,7 @@ var _ = Describe("Module :: user-authn :: helm template :: shared dex authentica
 
 	instances := []string{"dex-authenticator-system", "dex-authenticator"}
 
-	setValues := func(isEnabled bool) {
+	setValues := func() {
 		hec.ValuesSet("global.discovery.kubernetesVersion", "1.33.1")
 		hec.ValuesSet("global.modules.publicDomainTemplate", "%s.example.com")
 		hec.ValuesSet("global.modules.https.mode", "CertManager")
@@ -47,7 +47,6 @@ var _ = Describe("Module :: user-authn :: helm template :: shared dex authentica
 		hec.ValuesSet("userAuthn.internal.dexTLS.key", "plainstring")
 		hec.ValuesSet("userAuthn.internal.dexTLS.ca", "plainstring")
 
-		hec.ValuesSet("userAuthn.internal.sharedDexAuthenticator.enabled", isEnabled)
 		hec.ValuesSetFromYaml("userAuthn.internal.sharedDexAuthenticator.redisPasswords", `
 dex-authenticator-system: dh-test-secret-0123456789abcdef0
 dex-authenticator: dh-test-secret-0123456789abcdef1
@@ -71,33 +70,14 @@ dex-authenticator: dh-test-secret-0123456789abcdef1
 		return args
 	}
 
-	Context("without the internal value", func() {
-		BeforeEach(func() {
-			setValues(false)
-			hec.HelmRender()
-		})
-
-		It("renders no object of the instances", func() {
-			Expect(hec.RenderError).ShouldNot(HaveOccurred())
-
-			for _, instance := range instances {
-				for _, kind := range []string{"Deployment", "Service", "PodDisruptionBudget", "NetworkPolicy", "ServiceAccount", "VerticalPodAutoscaler"} {
-					Expect(hec.KubernetesResource(kind, namespace, instance).Exists()).To(BeFalse(), kind+" "+instance)
-				}
-				Expect(hec.KubernetesResource("Secret", namespace, instance+"-redis").Exists()).To(BeFalse())
-				Expect(hec.KubernetesResource("Service", namespace, instance+"-redis").Exists()).To(BeFalse())
-			}
-		})
-	})
-
-	Context("with the internal value and without the password of the Redis of an instance", func() {
+	Context("without the password of the Redis of an instance", func() {
 		for name, passwords := range map[string]string{
 			"one password is missing": `{"dex-authenticator-system": "dh-test-secret-0123456789abcdef0"}`,
 			"one password is empty":   `{"dex-authenticator-system": "dh-test-secret-0123456789abcdef0", "dex-authenticator": ""}`,
 		} {
 			Context(name, func() {
 				BeforeEach(func() {
-					setValues(true)
+					setValues()
 					hec.ValuesSetFromYaml("userAuthn.internal.sharedDexAuthenticator.redisPasswords", passwords)
 					hec.HelmRender()
 				})
@@ -110,9 +90,9 @@ dex-authenticator: dh-test-secret-0123456789abcdef1
 		}
 	})
 
-	Context("with the internal value before the hooks have filled the passwords", func() {
+	Context("before the hooks have filled the passwords", func() {
 		BeforeEach(func() {
-			setValues(true)
+			setValues()
 			hec.ValuesDelete("userAuthn.internal.sharedDexAuthenticator.redisPasswords")
 			hec.HelmRender()
 		})
@@ -126,9 +106,9 @@ dex-authenticator: dh-test-secret-0123456789abcdef1
 		})
 	})
 
-	Context("with the internal value", func() {
+	Context("with the Redis passwords of the instances", func() {
 		BeforeEach(func() {
-			setValues(true)
+			setValues()
 		})
 
 		for _, highAvailability := range []bool{false, true} {
@@ -244,7 +224,7 @@ dex-authenticator: dh-test-secret-0123456789abcdef1
 				}
 				seen := map[string]struct{}{}
 				for variant, set := range variants {
-					setValues(true)
+					setValues()
 					set()
 					hec.HelmRender()
 					Expect(hec.RenderError).ShouldNot(HaveOccurred(), variant)
@@ -301,6 +281,24 @@ dex-authenticator: dh-test-secret-0123456789abcdef1
 					for _, arg := range containerArgs(instance, "dex-authenticator") {
 						Expect(arg).NotTo(HavePrefix("--revocation-feed"))
 					}
+				}
+			})
+
+			It("signs out through dex only while the sessions of dex are on", func() {
+				for _, instance := range instances {
+					args := strings.Join(containerArgs(instance, "dex-authenticator"), " ")
+					Expect(args).NotTo(ContainSubstring("--provider-logout-url"), instance)
+					Expect(args).NotTo(ContainSubstring("--restart-login-without-csrf-cookie"), instance)
+				}
+
+				hec.ValuesSet("userAuthn.sessions.enabled", true)
+				hec.HelmRender()
+				Expect(hec.RenderError).ShouldNot(HaveOccurred())
+				for _, instance := range instances {
+					args := containerArgs(instance, "dex-authenticator")
+					// The table of the instance names only the clients dex knows the address to return to of.
+					Expect(args).To(ContainElement("--provider-logout-url=https://dex.example.com/logout"), instance)
+					Expect(args).To(ContainElement("--restart-login-without-csrf-cookie"), instance)
 				}
 			})
 

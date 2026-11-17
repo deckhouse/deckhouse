@@ -60,6 +60,7 @@ import (
 
 	"user-authn-controller/internal/adoption"
 	"user-authn-controller/internal/controller"
+	"user-authn-controller/internal/migration"
 	"user-authn-controller/internal/naming"
 )
 
@@ -85,6 +86,8 @@ type Reconciler struct {
 
 	state     *State
 	instances InstanceStatus
+	// legacy removes the dex-authenticator the module chart used to render for an object.
+	legacy *migration.DexAuthenticatorLegacy
 
 	// loaded are the records the pods of the instances are known to serve: the generation of the
 	// record of each object that passed the check. Such a record is not asked about again, so a pod
@@ -103,7 +106,7 @@ type loadedRecord struct {
 }
 
 // New constructs a Reconciler that acts on the decisions of the table reconciler in state.
-func New(c client.Client, reader client.Reader, recorder events.EventRecorder, log logr.Logger, state *State, instances InstanceStatus, gatewayAPI bool) *Reconciler {
+func New(c client.Client, reader client.Reader, recorder events.EventRecorder, log logr.Logger, state *State, instances InstanceStatus, legacy *migration.DexAuthenticatorLegacy, gatewayAPI bool) *Reconciler {
 	return &Reconciler{
 		client:     c,
 		reader:     reader,
@@ -111,6 +114,7 @@ func New(c client.Client, reader client.Reader, recorder events.EventRecorder, l
 		recorder:   recorder,
 		state:      state,
 		instances:  instances,
+		legacy:     legacy,
 		gatewayAPI: gatewayAPI,
 		loaded:     map[types.NamespacedName]loadedRecord{},
 	}
@@ -182,8 +186,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, r.setServed(ctx, obj, metav1.ConditionFalse, ReasonInvalidRecord, entry.Message)
 	}
 	if entry.Record == nil {
-		if err := r.cleanup(ctx, req.NamespacedName); err != nil {
+		// An object that still has a dex-authenticator of its own keeps it, with its Service and its
+		// routes: its pods serve it, and the instance cannot.
+		own, err := r.legacy.Has(ctx, req.NamespacedName)
+		if err != nil {
 			return reconcile.Result{}, err
+		}
+		if !own {
+			if err := r.removeObjects(ctx, req.NamespacedName); err != nil {
+				return reconcile.Result{}, err
+			}
+			// No pod of its own signs users in with the Dex client of its former ID any more.
+			if err := r.legacy.Remove(ctx, req.NamespacedName); err != nil {
+				return reconcile.Result{}, err
+			}
 		}
 		return reconcile.Result{}, r.setServed(ctx, obj, metav1.ConditionFalse, entry.Reason, entry.Message)
 	}
@@ -200,9 +216,22 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 // apply makes the objects of a DexAuthenticator that has a record.
 func (r *Reconciler) apply(ctx context.Context, obj *unstructured.Unstructured, a Authenticator, entry Entry, settings Settings) (reconcile.Result, error) {
-	// The Dex client first: nothing leads to it until the routes are made.
-	if err := r.applyClient(ctx, a, *entry.Record, settings); err != nil {
-		return r.refused(ctx, obj, ReasonClientNotCreated, err)
+	// The Dex client first: nothing leads to it until the routes are made. A client that exists
+	// with another secret waits: it is the client of the dex-authenticator the object had of its
+	// own, whose pods sign users in with that secret until the Service points at the instance.
+	dexClient, err := r.getClient(ctx, entry.Record.ClientID)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	deferred := dexClient != nil && clientSecret(dexClient) != entry.Record.ClientSecret
+	if !deferred {
+		if err := r.applyClient(ctx, a, *entry.Record, settings, dexClient); err != nil {
+			return r.refused(ctx, obj, ReasonClientNotCreated, err)
+		}
+	} else if reason, err := r.canSwitch(ctx, a, dexClient); err != nil {
+		// Nothing is changed while the client or the Service cannot be taken: a new secret in the
+		// client with the Service still at the pods of the object would stop their sign-ins.
+		return r.refused(ctx, obj, reason, err)
 	}
 
 	// The routes of the hosts the object no longer names go at once, whatever the instance has
@@ -222,8 +251,18 @@ func (r *Reconciler) apply(ctx context.Context, obj *unstructured.Unstructured, 
 		return result, err
 	}
 
+	// The Service and the secret of the client go together: from here on the instance serves the
+	// object, and the pods of its own dex-authenticator get no request. The Service goes first: a
+	// Service the cluster refuses, as a policy that forbids ExternalName does, leaves the object
+	// with its own dex-authenticator and the secret those pods sign users in with. A client the
+	// controller cannot write is retried, and it is in the namespace of the module.
 	if err := r.applyService(ctx, a, settings); err != nil {
 		return r.refused(ctx, obj, "", err)
+	}
+	if deferred {
+		if err := r.applyClient(ctx, a, *entry.Record, settings, dexClient); err != nil {
+			return r.refused(ctx, obj, ReasonClientNotCreated, err)
+		}
 	}
 	// The routes that are replaced go right before the ones that replace them: an ingress
 	// controller refuses two routes of one host and path.
@@ -232,6 +271,9 @@ func (r *Reconciler) apply(ctx context.Context, obj *unstructured.Unstructured, 
 	}
 	if err := r.writeRoutes(ctx, a, routes); err != nil {
 		return r.refused(ctx, obj, "", err)
+	}
+	if err := r.legacy.Remove(ctx, a.Key()); err != nil {
+		return reconcile.Result{}, err
 	}
 
 	if entry.Reason != "" {
@@ -279,12 +321,22 @@ func (r *Reconciler) waitForInstance(ctx context.Context, obj *unstructured.Unst
 
 // refused records why an object of the DexAuthenticator could not be written. A name taken by
 // somebody else's object is checked again later; any other error is retried.
+//
+// A write the API server refuses is a state of the object too: an admission policy of the
+// cluster that does not let the Service become an ExternalName, for one, refuses it on every
+// try. Without a condition the object would keep the one it had, "the instance has not loaded
+// the record", for ever, and nothing would tell why it is not served.
 func (r *Reconciler) refused(ctx context.Context, obj *unstructured.Unstructured, reason string, err error) (reconcile.Result, error) {
 	foreign := errors.Is(err, adoption.ErrForeign)
 	switch {
 	case reason != "":
 	case foreign:
 		reason = ReasonForeignObject
+	case apierrors.IsForbidden(err) || apierrors.IsInvalid(err) || apierrors.IsBadRequest(err):
+		// IsBadRequest: the admission webhook of ingress-nginx refuses a route with 400 for a snippet
+		// or an annotation the controller does not allow, an invalid path or a configuration that
+		// fails `nginx -t`.
+		reason = ReasonObjectsNotWritten
 	default:
 		// Not a state of the object: the write is retried, and the condition stays what it was.
 		return reconcile.Result{}, err
@@ -328,11 +380,33 @@ func (r *Reconciler) getClient(ctx context.Context, id string) (*unstructured.Un
 	return obj, nil
 }
 
-func (r *Reconciler) applyClient(ctx context.Context, a Authenticator, record Record, settings Settings) error {
-	current, err := r.getClient(ctx, record.ClientID)
-	if err != nil {
-		return err
+// canSwitch reports whether the Dex client and the Service of an object that has a
+// dex-authenticator of its own are the controller's to change: the two are changed together. With
+// an error it returns the reason of the condition, empty for the one the error itself gives.
+func (r *Reconciler) canSwitch(ctx context.Context, a Authenticator, dexClient *unstructured.Unstructured) (string, error) {
+	if !managedClient(a.ClientID())(dexClient) {
+		return ReasonClientNotCreated, reconcile.TerminalError(fmt.Errorf("OAuth2Client %s: %w", dexClient.GetName(), adoption.ErrForeign))
 	}
+	service := &corev1.Service{}
+	key := types.NamespacedName{Namespace: a.Namespace, Name: serviceName(a.Name).name}
+	switch err := r.reader.Get(ctx, key, service); {
+	case apierrors.IsNotFound(err):
+		return "", nil
+	case err != nil:
+		return "", fmt.Errorf("get Service %s: %w", key, err)
+	case !managed(a.Name)(service):
+		return "", reconcile.TerminalError(fmt.Errorf("Service %s: %w", key, adoption.ErrForeign))
+	}
+	return "", nil
+}
+
+// clientSecret is the secret of a Dex client.
+func clientSecret(dexClient *unstructured.Unstructured) string {
+	secret, _, _ := unstructured.NestedString(dexClient.Object, "secret")
+	return secret
+}
+
+func (r *Reconciler) applyClient(ctx context.Context, a Authenticator, record Record, settings Settings, current *unstructured.Unstructured) error {
 	peers := ssoPeers(a, r.state.Platform(), settings)
 	want := desiredClient(a, record, settings, peers)
 	content := clientContent(a, record, settings, peers)
@@ -342,7 +416,7 @@ func (r *Reconciler) applyClient(ctx context.Context, a Authenticator, record Re
 	if current != nil {
 		currentObj = current
 	}
-	_, err = r.writer.Ensure(ctx, currentObj, want, managedClient(record.ClientID), func(obj client.Object) {
+	_, err := r.writer.Ensure(ctx, currentObj, want, managedClient(record.ClientID), func(obj client.Object) {
 		u, _ := controller.AsUnstructured(obj)
 		meta.Apply(u)
 		for _, key := range clientFields {
@@ -373,7 +447,15 @@ func (r *Reconciler) applyService(ctx context.Context, a Authenticator, settings
 	_, err := r.writer.Ensure(ctx, currentObj, want, managed(a.Name), func(obj client.Object) {
 		svc, _ := obj.(*corev1.Service)
 		meta.Apply(svc)
-		// Only what the controller sets: the API server fills the rest of the spec in.
+		// Only what the controller sets: the API server fills the rest of the spec in. A Service
+		// that selected the pods of the dex-authenticator of the object gives its addresses up.
+		if svc.Spec.Type != corev1.ServiceTypeExternalName {
+			svc.Spec.ClusterIP = ""
+			svc.Spec.ClusterIPs = nil
+			svc.Spec.IPFamilies = nil
+			svc.Spec.IPFamilyPolicy = nil
+			svc.Spec.InternalTrafficPolicy = nil
+		}
 		svc.Spec.Type = want.Spec.Type
 		svc.Spec.ExternalName = want.Spec.ExternalName
 		svc.Spec.Ports = want.Spec.Ports
@@ -584,10 +666,19 @@ func listRoutes(ctx context.Context, c client.Reader, key types.NamespacedName, 
 	return ingresses.Items, routes.Items, nil
 }
 
-// cleanup removes the objects of a DexAuthenticator that is gone or has no record: the routes
-// first, then the Service, then the Dex client. The record in the table goes after the routes,
-// which the table reconciler sees to.
+// cleanup removes everything of a DexAuthenticator that is gone: its objects and what is left of
+// the dex-authenticator the module chart used to render for it.
 func (r *Reconciler) cleanup(ctx context.Context, key types.NamespacedName) error {
+	if err := r.removeObjects(ctx, key); err != nil {
+		return err
+	}
+	return r.legacy.Remove(ctx, key)
+}
+
+// removeObjects removes the objects of a DexAuthenticator that is gone or has no record: the
+// routes first, then the Service, then the Dex client. The record in the table goes after the
+// routes, which the table reconciler sees to.
+func (r *Reconciler) removeObjects(ctx context.Context, key types.NamespacedName) error {
 	const reason = "the DexAuthenticator is not served"
 	var errs []error
 

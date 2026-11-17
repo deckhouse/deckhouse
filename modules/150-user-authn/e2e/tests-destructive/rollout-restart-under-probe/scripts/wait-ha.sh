@@ -15,14 +15,19 @@
 # limitations under the License.
 
 # Waits until a Deployment has the replicas of the mode check-nodes.sh chose: two in HA mode,
-# one in single mode. Fails with an explicit message when they do not become ready.
-# Usage: wait-ha.sh <NAMESPACE> <DEPLOYMENT>
+# one in single mode. A component that keeps its replicas in both modes (the shared
+# dex-authenticator always runs two) passes the count as <REPLICAS>. Fails with an explicit
+# message when they do not become ready.
+# Usage: wait-ha.sh <NAMESPACE> <DEPLOYMENT> [<REPLICAS>]
 set -Eeuo pipefail
 source ../../tests/common/scripts/lib.sh
 
 ns="$1" deployment="$2"
-want=1
-[[ "$(cat "$(state_dir rollout-restart-under-probe)/mode")" == "ha" ]] && want=2
+want="${3:-}"
+if [[ -z "${want}" ]]; then
+  want=1
+  [[ "$(cat "$(state_dir rollout-restart-under-probe)/mode")" == "ha" ]] && want=2
+fi
 deadline=$(( $(date +%s) + 600 ))
 while :; do
   ready="$(kubectl -n "${ns}" get deployment "${deployment}" -o jsonpath='{.status.readyReplicas}' 2>/dev/null || true)"

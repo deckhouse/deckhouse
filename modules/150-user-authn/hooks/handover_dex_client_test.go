@@ -144,9 +144,15 @@ func TestHandoverProtectsChartObjects(t *testing.T) {
 func TestHandoverProtectWithoutCRDs(t *testing.T) {
 	c := newHandoverFakeClient()
 	// The API server answers a list of a resource it does not serve with NotFound.
-	c.PrependReactor("list", "passwords", func(k8stesting.Action) (bool, runtime.Object, error) {
-		return true, nil, apierrors.NewNotFound(passwordGVR.GroupResource(), "")
-	})
+	for _, resource := range []schema.GroupVersionResource{
+		passwordGVR,
+		{Group: "gateway.networking.k8s.io", Version: "v1", Resource: "httproutes"},
+		{Group: "autoscaling.k8s.io", Version: "v1", Resource: "verticalpodautoscalers"},
+	} {
+		c.PrependReactor("list", resource.Resource, func(k8stesting.Action) (bool, runtime.Object, error) {
+			return true, nil, apierrors.NewNotFound(resource.GroupResource(), "")
+		})
+	}
 	if _, err := handover.Protect(context.Background(), c, handoverKinds); err != nil {
 		t.Fatalf("Protect: %v", err)
 	}

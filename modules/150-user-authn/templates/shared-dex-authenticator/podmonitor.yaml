@@ -1,4 +1,4 @@
-{{- if and (include "shared_dex_authenticator_enabled" .) (.Values.global.enabledModules | has "operator-prometheus") }}
+{{- if (.Values.global.enabledModules | has "operator-prometheus") }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor

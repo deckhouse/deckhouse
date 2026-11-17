@@ -26,7 +26,7 @@ name="${2:?name is required}"
 kubectl -n "${ns}" delete dexauthenticators.deckhouse.io "${name}" --ignore-not-found --wait=true --timeout=2m
 deadline=$(( $(date +%s) + 300 ))
 while (( $(date +%s) < deadline )); do
-  left="$(kubectl -n "${ns}" get deployment,service,ingress -l "deckhouse.io/dex-authenticator-for=${name}" -o name 2>/dev/null || true)"
+  left="$(kubectl -n "${ns}" get service,ingress -l "deckhouse.io/dex-authenticator-for=${name}" -o name 2>/dev/null || true)"
   if [[ -z "${left}" ]]; then
     echo "Objects of DexAuthenticator ${ns}/${name} are gone"
     exit 0

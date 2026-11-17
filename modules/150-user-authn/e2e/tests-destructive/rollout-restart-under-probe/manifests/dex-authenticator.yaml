@@ -1,4 +1,5 @@
-# Its Ingress uses a class that no controller serves; the probe calls the Service directly.
+# Its Ingress uses a class that no controller serves; the probe calls the shared dex-authenticator
+# directly and names this applicationDomain in X-Original-URL.
 apiVersion: deckhouse.io/v1
 kind: DexAuthenticator
 metadata:
@@ -6,4 +7,3 @@ metadata:
 spec:
   applicationDomain: e2e-authn-ha.example.com
   applicationIngressClassName: e2e-authn-unused
-  highAvailability: true

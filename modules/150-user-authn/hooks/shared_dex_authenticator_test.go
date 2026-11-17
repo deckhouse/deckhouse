@@ -25,62 +25,30 @@ import (
 
 var _ = Describe("User Authn hooks :: shared dex authenticator ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthn":{"internal": {"sharedDexAuthenticator": {}}}}`, "")
-	enabled := HookExecutionConfigInit(`{"userAuthn":{"internal": {"sharedDexAuthenticator": {"enabled": true}}}}`, "")
 
 	const (
-		enabledPath   = "userAuthn.internal.sharedDexAuthenticator.enabled"
 		passwordsPath = "userAuthn.internal.sharedDexAuthenticator.redisPasswords"
 	)
 
-	Context("While the module does not render the instances", func() {
+	Context("While no instance has its Secret yet", func() {
 		BeforeEach(func() {
-			// Nothing in a cluster turns the instances on: neither an object nor a stored password.
-			f.BindingContexts.Set(f.KubeStateSet(`
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: shared-dex-authenticator-preview
-  namespace: d8-user-authn
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: dex-authenticator-system-redis
-  namespace: d8-user-authn
-data:
-  password: QUJD # ABC
-`))
+			f.BindingContexts.Set(f.KubeStateSet(""))
 			f.RunHook()
 		})
 
-		It("Should leave the instances off and generate no password", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet(enabledPath).Bool()).To(BeFalse())
-			Expect(f.ValuesGet(passwordsPath).Exists()).To(BeFalse())
-		})
-	})
-
-	Context("While the module renders the instances", func() {
-		BeforeEach(func() {
-			enabled.BindingContexts.Set(enabled.KubeStateSet(""))
-			enabled.RunHook()
-		})
-
 		It("Should generate a Redis password for each instance", func() {
-			Expect(enabled).To(ExecuteSuccessfully())
-			Expect(enabled.ValuesGet(enabledPath).Bool()).To(BeTrue())
-			system := enabled.ValuesGet(passwordsPath + ".dex-authenticator-system").String()
-			user := enabled.ValuesGet(passwordsPath + ".dex-authenticator").String()
+			Expect(f).To(ExecuteSuccessfully())
+			system := f.ValuesGet(passwordsPath + ".dex-authenticator-system").String()
+			user := f.ValuesGet(passwordsPath + ".dex-authenticator").String()
 			Expect(system).To(HaveLen(32))
 			Expect(user).To(HaveLen(32))
 			Expect(system).NotTo(Equal(user))
 		})
 	})
 
-	Context("While the module renders the instances and one of them has its Secret", func() {
+	Context("While one of the instances has its Secret", func() {
 		BeforeEach(func() {
-			enabled.BindingContexts.Set(enabled.KubeStateSet(`
+			f.BindingContexts.Set(f.KubeStateSet(`
 ---
 apiVersion: v1
 kind: Secret
@@ -97,13 +65,13 @@ metadata:
   namespace: d8-user-authn
 data: {}
 `))
-			enabled.RunHook()
+			f.RunHook()
 		})
 
 		It("Should keep the stored password and generate the missing one", func() {
-			Expect(enabled).To(ExecuteSuccessfully())
-			Expect(enabled.ValuesGet(passwordsPath + ".dex-authenticator-system").String()).To(Equal("ABC"))
-			Expect(enabled.ValuesGet(passwordsPath + ".dex-authenticator").String()).To(HaveLen(32))
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(passwordsPath + ".dex-authenticator-system").String()).To(Equal("ABC"))
+			Expect(f.ValuesGet(passwordsPath + ".dex-authenticator").String()).To(HaveLen(32))
 		})
 	})
 })

@@ -17,7 +17,6 @@ limitations under the License.
 package template_tests
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 
@@ -35,42 +34,6 @@ func authLogLine(user, status, msg string) string {
 		`"protocol":"HTTP/1.1","request_id":"4c2f7a","method":"GET",` +
 		`"user_agent":"Mozilla/5.0 \"status\":\"AuthSuccess\",\"msg\":\"Authenticated via OAuth2: x",` +
 		`"user":"` + user + `","status":"` + status + `","msg":"` + msg + `"}`
-}
-
-// setDexAuthenticators sets the internal values of one DexAuthenticator per namespace,
-// with the names the hooks would have computed for them.
-func setDexAuthenticators(hec *Config, namespaces ...string) {
-	crds := make([]map[string]any, 0, len(namespaces))
-	names := map[string]any{}
-	for i, ns := range namespaces {
-		name := fmt.Sprintf("app%d", i)
-		crds = append(crds, map[string]any{
-			"name":        name,
-			"encodedName": name,
-			"namespace":   ns,
-			"credentials": map[string]any{"appDexSecret": "dexSecret", "cookieSecret": "cookieSecret"},
-			"spec": map[string]any{
-				"applications": []map[string]any{{
-					"domain":            name + ".example.com",
-					"ingressClassName":  "test",
-					"ingressSecretName": "test",
-				}},
-			},
-		})
-		names[name+"@"+ns] = map[string]any{
-			"name":            name + "-dex-authenticator",
-			"truncated":       false,
-			"hash":            "",
-			"secretName":      "dex-authenticator-" + name,
-			"secretTruncated": false,
-			"secretHash":      "",
-			"ingressNames": map[string]any{
-				"0": map[string]any{"name": name + "-dex-authenticator", "truncated": false, "hash": ""},
-			},
-		}
-	}
-	hec.ValuesSet("userAuthn.internal.dexAuthenticatorCRDs", crds)
-	hec.ValuesSet("userAuthn.internal.dexAuthenticatorNames", names)
 }
 
 var _ = Describe("Module :: user-authn :: helm template :: security events", func() {
@@ -103,57 +66,31 @@ var _ = Describe("Module :: user-authn :: helm template :: security events", fun
 		})
 	})
 
-	Context("With the security-events-manager API and no DexAuthenticator", func() {
-		BeforeEach(func() {
-			hec.ValuesSetFromYaml("global.discovery.apiVersions", `["security.deckhouse.io/v1alpha1/SecurityEventDefinition"]`)
-			hec.HelmRender()
-		})
-
-		// Without names the namespace selector would match every namespace.
-		It("Should render the definitions but not the shipper", func() {
-			Expect(hec.RenderError).ToNot(HaveOccurred())
-			Expect(hec.KubernetesGlobalResource("SecurityEventDefinition", "dex-authenticator-login-succeeded").Exists()).To(BeTrue())
-			Expect(hec.KubernetesGlobalResource("ClusterSecurityEventShipper", "dex-authenticator").Exists()).To(BeFalse())
-		})
-	})
-
-	Context("With DexAuthenticators in more namespaces than one shipper item takes", func() {
-		BeforeEach(func() {
-			hec.ValuesSetFromYaml("global.discovery.apiVersions", `["security.deckhouse.io/v1alpha1/SecurityEventDefinition"]`)
-			namespaces := make([]string, 0, 300)
-			for i := 0; i < 300; i++ {
-				namespaces = append(namespaces, fmt.Sprintf("ns-%03d", i))
-			}
-			setDexAuthenticators(hec, namespaces...)
-			hec.HelmRender()
-		})
-
-		It("Should split the namespaces into items of one shipper with the same rules", func() {
-			Expect(hec.RenderError).ToNot(HaveOccurred())
-
-			items := hec.KubernetesGlobalResource("ClusterSecurityEventShipper", "dex-authenticator").Field("spec").Array()
-			Expect(items).To(HaveLen(2))
-			Expect(items[0].Get("input.kubernetesPods.namespaceSelector.matchNames").Array()).To(HaveLen(256))
-			Expect(items[1].Get("input.kubernetesPods.namespaceSelector.matchNames").Array()).To(HaveLen(44))
-			Expect(items[1].Get("source").String()).To(Equal(items[0].Get("source").String()))
-			Expect(items[1].Get("produces").Raw).To(Equal(items[0].Get("produces").Raw))
-			Expect(items[1].Get("producesDefaults").Raw).To(Equal(items[0].Get("producesDefaults").Raw))
-		})
-	})
-
 	Context("With the security-events-manager API", func() {
 		BeforeEach(func() {
 			hec.ValuesSetFromYaml("global.discovery.apiVersions", `["security.deckhouse.io/v1alpha1/SecurityEventDefinition"]`)
-			setDexAuthenticators(hec, "app-b", "app-a", "app-b")
 			hec.HelmRender()
 		})
 
-		It("Should read the pods of the DexAuthenticator namespaces only", func() {
+		It("Should read the pods of the shared instances in the module namespace", func() {
 			Expect(hec.RenderError).ToNot(HaveOccurred())
 
 			items := hec.KubernetesGlobalResource("ClusterSecurityEventShipper", "dex-authenticator").Field("spec").Array()
 			Expect(items).To(HaveLen(1))
-			Expect(items[0].Get("input.kubernetesPods.namespaceSelector.matchNames").Raw).To(MatchJSON(`["app-a","app-b"]`))
+			Expect(items[0].Get("input.kubernetesPods.namespaceSelector.matchNames").Raw).To(MatchJSON(`["d8-user-authn"]`))
+			Expect(items[0].Get("input.kubernetesPods.labelSelector.matchLabels.app").String()).To(Equal("shared-dex-authenticator"))
+		})
+
+		It("Should take the object from the authenticator fields of the log line", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+
+			transform := hec.KubernetesGlobalResource("ClusterSecurityEventShipper", "dex-authenticator").Field("spec.0.producesDefaults.transform").Array()
+			values := map[string]string{}
+			for _, t := range transform {
+				values[t.Get("key").String()] = t.Get("value").String()
+			}
+			Expect(values).To(HaveKeyWithValue("object.name", "authenticator"))
+			Expect(values).To(HaveKeyWithValue("object.namespace", "authenticator_namespace"))
 		})
 
 		It("Should define every event the shipper produces", func() {
@@ -161,7 +98,6 @@ var _ = Describe("Module :: user-authn :: helm template :: security events", fun
 
 			shipper := hec.KubernetesGlobalResource("ClusterSecurityEventShipper", "dex-authenticator")
 			Expect(shipper.Exists()).To(BeTrue())
-			Expect(shipper.Field("spec.0.input.kubernetesPods.labelSelector.matchLabels.app").String()).To(Equal("dex-authenticator"))
 
 			produces := shipper.Field("spec.0.produces").Array()
 			Expect(produces).ToNot(BeEmpty())

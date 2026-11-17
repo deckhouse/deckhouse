@@ -18,9 +18,15 @@
 # writes one line per request to <state dir>/probe.log: "<unix time> <target> <HTTP code>".
 # HTTP code 000 means a connection error or a timeout (2 seconds). The probe also stops after
 # 30 minutes, or when the state directory is removed, so it never outlives the suite.
-#   dex            GET /.well-known/openid-configuration of the dex Service;
-#   authenticator  GET /ping of the Service of DexAuthenticator e2e-authn-ha;
-#   user-api       GET /healthz of the user-api Service.
+#   dex            GET /.well-known/openid-configuration of the dex Service (expects 200);
+#   authenticator  GET /dex-authenticator/auth of Service d8-user-authn/dex-authenticator, the way
+#                  an ingress-nginx auth subrequest sends it: no X-Forwarded-Proto and
+#                  X-Original-URL with the applicationDomain of DexAuthenticator e2e-authn-ha, by
+#                  which the shared instance picks the object. Without a session cookie a served
+#                  host gets 401; 403 means the instance does not know the host (expects 401).
+#                  /ping would not do: the instance answers it itself, naming no DexAuthenticator;
+#   user-api       GET /healthz of the user-api Service (expects 200).
+# The expected codes live in verdict.sh.
 # Chainsaw deletes the temporary kubeconfig of the script that starts the probe when that script
 # ends, so the probe copies it first, resolves the addresses with the copy and deletes the copy:
 # the loop itself does not call the API.
@@ -45,9 +51,13 @@ svc_ip() {
   [[ "${ip}" == *:* ]] && ip="[${ip}]"
   printf '%s' "${ip}"
 }
-auth_ip="$(svc_ip "${NS}" "$(kubectl -n "${NS}" get service -l deckhouse.io/dex-authenticator-for=e2e-authn-ha -o jsonpath='{.items[0].metadata.name}')")"
+# The Service of the DexAuthenticator in the test namespace is an ExternalName without a ClusterIP,
+# so the probe goes to the Service of the shared instance, which every DexAuthenticator behind it uses.
+auth_ip="$(svc_ip d8-user-authn dex-authenticator)"
+app_host="$(kubectl -n "${NS}" get dexauthenticators.deckhouse.io e2e-authn-ha -o jsonpath='{.spec.applicationDomain}')"
 api_ip="$(svc_ip d8-user-authn user-api)"
-[[ -n "${auth_ip}" && -n "${api_ip}" ]] || die "the Service addresses are empty: authenticator '${auth_ip}', user-api '${api_ip}'"
+[[ -n "${auth_ip}" && -n "${api_ip}" && -n "${app_host}" ]] \
+  || die "the Service addresses or the host are empty: authenticator '${auth_ip}', user-api '${api_ip}', host '${app_host}'"
 rm -f "${kubeconfig}"
 : > "${log_file}"
 
@@ -62,7 +72,7 @@ probe() {
 deadline=$(( $(date +%s) + 1800 ))
 while [[ ! -e "${stop_file}" && -d "${dir}" ]] && (( $(date +%s) < deadline )); do
   probe dex --resolve "${DEX_RESOLVE}" "${DEX_ISSUER}/.well-known/openid-configuration" &
-  probe authenticator "https://${auth_ip}/ping" &
+  probe authenticator -H "X-Original-URL: https://${app_host}/" "https://${auth_ip}/dex-authenticator/auth" &
   probe user-api "https://${api_ip}/healthz" &
   sleep 0.2
 done

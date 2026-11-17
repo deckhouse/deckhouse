@@ -51,34 +51,6 @@ var _ = Describe("Module :: user-authn :: helm template :: kubernetes oauth2clie
 
 	Context("Without peers from the module configuration", func() {
 		BeforeEach(func() {
-			hec.ValuesSetFromYaml("userAuthn.internal.dexAuthenticatorCRDs", `
-- name: test
-  encodedName: justForTest
-  allowAccessToKubernetes: true
-  namespace: d8-test
-  credentials:
-    appDexSecret: dexSecret
-    cookieSecret: cookieSecret
-  spec:
-    applications:
-    - domain: authenticator.example.com
-      ingressClassName: nginx
-      ingressSecretName: test
-`)
-			hec.ValuesSetFromYaml("userAuthn.internal.dexAuthenticatorNames", `
-"test@d8-test":
-  name: "test-dex-authenticator"
-  truncated: false
-  hash: ""
-  secretName: "dex-authenticator-test"
-  secretTruncated: false
-  secretHash: ""
-  ingressNames:
-    "0":
-      name: "test-dex-authenticator"
-      truncated: false
-      hash: ""
-`)
 			hec.HelmRender()
 		})
 		// user-authn-controller keeps the client and takes the DexAuthenticator peers from the
@@ -95,57 +67,6 @@ var _ = Describe("Module :: user-authn :: helm template :: kubernetes oauth2clie
 
 	Context("Full scenario: dex-authenticator + publishAPI + kubeconfigGenerator", func() {
 		BeforeEach(func() {
-			hec.ValuesSetFromYaml("userAuthn.internal.dexAuthenticatorCRDs", `
-- name: with-access
-  encodedName: encWithAccess
-  allowAccessToKubernetes: true
-  namespace: d8-with-access
-  credentials:
-    appDexSecret: s1
-    cookieSecret: c1
-  spec:
-    applications:
-    - domain: with-access.example.com
-      ingressClassName: nginx
-      ingressSecretName: cert-1
-- name: no-access
-  encodedName: encNoAccess
-  namespace: d8-no-access
-  credentials:
-    appDexSecret: s2
-    cookieSecret: c2
-  spec:
-    applications:
-    - domain: no-access.example.com
-      ingressClassName: nginx
-      ingressSecretName: cert-2
-`)
-			hec.ValuesSetFromYaml("userAuthn.internal.dexAuthenticatorNames", `
-"with-access@d8-with-access":
-  name: "with-access-dex-authenticator"
-  truncated: false
-  hash: ""
-  secretName: "dex-authenticator-with-access"
-  secretTruncated: false
-  secretHash: ""
-  ingressNames:
-    "0":
-      name: "with-access-dex-authenticator"
-      truncated: false
-      hash: ""
-"no-access@d8-no-access":
-  name: "no-access-dex-authenticator"
-  truncated: false
-  hash: ""
-  secretName: "dex-authenticator-no-access"
-  secretTruncated: false
-  secretHash: ""
-  ingressNames:
-    "0":
-      name: "no-access-dex-authenticator"
-      truncated: false
-      hash: ""
-`)
 			hec.ValuesSet("userAuthn.internal.publishAPI.enabled", true)
 			hec.ValuesSet("userAuthn.internal.publishAPI.addKubeconfigGeneratorEntry", true)
 			hec.ValuesSet("userAuthn.internal.publishAPI.publishedAPIKubeconfigGeneratorMasterCA", "publish-api-ca")

@@ -38,6 +38,7 @@ import (
 
 	"user-authn-controller/internal/adoption"
 	"user-authn-controller/internal/controller"
+	"user-authn-controller/internal/migration"
 	"user-authn-controller/internal/naming"
 )
 
@@ -296,4 +297,161 @@ func getClient(t *testing.T, c client.Client) *unstructured.Unstructured {
 func trustedPeers(obj *unstructured.Unstructured) []string {
 	peers, _, _ := unstructured.NestedStringSlice(obj.Object, "trustedPeers")
 	return peers
+}
+
+// formerClient is the Dex client the chart rendered for the DexAuthenticator name in namespace
+// while the ID of the client was <name>-<namespace>-dex-authenticator, as the module hook leaves
+// it for the controller.
+func formerClient(name, namespace string) *unstructured.Unstructured {
+	key := migration.FormerDexAuthenticatorClientKey(name, namespace)
+	u := controller.Object(controller.OAuth2ClientGVK)
+	u.SetName(key.Name)
+	u.SetNamespace(key.Namespace)
+	u.SetLabels(map[string]string{
+		"app": "dex", "heritage": "deckhouse", "module": "user-authn", adoption.ManagedByLabel: adoption.ManagedByValue,
+	})
+	u.Object["id"] = migration.LegacyDexAuthenticatorClientID(name, namespace)
+	return u
+}
+
+// TestReconcile_FormerIDIsAPeerWhileItsClientLives: the pods of the own dex-authenticator of an
+// object sign users in with the Dex client of its former ID until the Service of the object points
+// at a shared instance, and ask for a token kube-apiserver accepts under that ID. The ID is a
+// peer for as long as that client is there, and only for an object that has the access.
+func TestReconcile_FormerIDIsAPeerWhileItsClientLives(t *testing.T) {
+	t.Parallel()
+
+	// The DexAuthenticator kubeconfig in foo and the kubeconfig of the cluster
+	// foo-dex-authenticator give one ID: the client is the one of the kubeconfig.
+	kubeconfig := formerClient("kubeconfig", "foo")
+	kubeconfig.SetLabels(map[string]string{"app": "kubernetes-dex-clients", "heritage": "deckhouse", "module": "user-authn"})
+	// Nobody handed this one to the controller.
+	manual := formerClient("manual", "apps")
+	manual.SetLabels(map[string]string{"app": "dex", "heritage": "deckhouse", "module": "user-authn"})
+	// Another client lies under the name.
+	other := formerClient("other", "apps")
+	other.Object["id"] = "something-else"
+
+	r, c := newTestReconciler(t,
+		configMap(`["kubeconfig-generator"]`),
+		secret(testSecret),
+		dexAuthenticator("console", "d8-console", "true"), formerClient("console", "d8-console"),
+		// An object the instance does not serve keeps its own dex-authenticator and the client.
+		dexAuthenticator("unserved", "apps", "true"), formerClient("unserved", "apps"),
+		// No access: the former ID is no peer, like the ID of today.
+		dexAuthenticator("plain", "apps", ""), formerClient("plain", "apps"),
+		// Moved already, or created after the IDs changed: no former client.
+		dexAuthenticator("moved", "apps", "true"),
+		dexAuthenticator("kubeconfig", "foo", "true"), kubeconfig,
+		dexAuthenticator("manual", "apps", "true"), manual,
+		dexAuthenticator("other", "apps", "true"), other,
+	)
+
+	reconcileOK(t, r)
+	want := []string{
+		"console-d8-console-dex-authenticator",
+		"dex-authenticator-console@d8-console",
+		"dex-authenticator-kubeconfig@foo",
+		"dex-authenticator-manual@apps",
+		"dex-authenticator-moved@apps",
+		"dex-authenticator-other@apps",
+		"dex-authenticator-unserved@apps",
+		"unserved-apps-dex-authenticator",
+		"kubeconfig-generator",
+	}
+	got := getClient(t, c)
+	if peers := trustedPeers(got); !slices.Equal(peers, want) {
+		t.Fatalf("trustedPeers = %v, want %v", peers, want)
+	}
+
+	// Nothing changed: the client is not written again.
+	before := got.GetResourceVersion()
+	reconcileOK(t, r)
+	if after := getClient(t, c).GetResourceVersion(); after != before {
+		t.Errorf("the second reconcile rewrote the client: resourceVersion %s -> %s", before, after)
+	}
+
+	// The Service of console points at an instance: the controller deletes the former client with
+	// the pods, and the ID stops being a peer. The object that is not served keeps its own.
+	if err := c.Delete(t.Context(), formerClient("console", "d8-console")); err != nil {
+		t.Fatal(err)
+	}
+	reconcileOK(t, r)
+	want = slices.DeleteFunc(want, func(peer string) bool { return peer == "console-d8-console-dex-authenticator" })
+	if peers := trustedPeers(getClient(t, c)); !slices.Equal(peers, want) {
+		t.Errorf("after the switch: trustedPeers = %v, want %v", peers, want)
+	}
+
+	// The access is taken away: both IDs of the object go.
+	unserved := dexAuthenticator("unserved", "apps", "")
+	if err := c.Get(t.Context(), client.ObjectKeyFromObject(unserved), unserved); err != nil {
+		t.Fatal(err)
+	}
+	unserved.SetAnnotations(map[string]string{controller.DexAuthenticatorAllowAccessToKubernetesAnnotation: "false"})
+	if err := c.Update(t.Context(), unserved); err != nil {
+		t.Fatal(err)
+	}
+	reconcileOK(t, r)
+	want = slices.DeleteFunc(want, func(peer string) bool {
+		return peer == "unserved-apps-dex-authenticator" || peer == "dex-authenticator-unserved@apps"
+	})
+	if peers := trustedPeers(getClient(t, c)); !slices.Equal(peers, want) {
+		t.Errorf("without the access: trustedPeers = %v, want %v", peers, want)
+	}
+}
+
+// TestIsInput: a change of the kubernetes client or of the Dex client of a former ID brings a
+// reconcile, a change of any other Dex client does not.
+func TestIsInput(t *testing.T) {
+	t.Parallel()
+
+	current := controller.Object(controller.OAuth2ClientGVK)
+	current.SetNamespace(naming.DexNamespace)
+	current.SetName(naming.ToFnvLikeDex("dex-authenticator-console@d8-console"))
+	current.SetLabels(map[string]string{
+		"app": "dex", "heritage": "deckhouse", "module": "user-authn", adoption.ManagedByLabel: adoption.ManagedByValue,
+		"deckhouse.io/dex-authenticator-for": "console",
+	})
+	elsewhere := formerClient("console", "d8-console")
+	elsewhere.SetNamespace("default")
+
+	tests := []struct {
+		name string
+		obj  client.Object
+		want bool
+	}{
+		{name: "the kubernetes client", obj: oauth2Client(nil), want: true},
+		{name: "the client of a former ID", obj: formerClient("console", "d8-console"), want: true},
+		{name: "the client of a DexAuthenticator under the ID of today", obj: current},
+		{name: "a client with the labels of a former ID in another namespace", obj: elsewhere},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := isInput(tt.obj); got != tt.want {
+				t.Errorf("isInput = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestReconcile_FormerIDOfTwoObjectsIsNoPeer: a in b-c and a-b in c had one former ID. That ID is a
+// peer of neither: whichever of the two had the client, trusting it for the other would let one
+// object have tokens of the API through the client of another.
+func TestReconcile_FormerIDOfTwoObjectsIsNoPeer(t *testing.T) {
+	t.Parallel()
+
+	r, c := newTestReconciler(t,
+		configMap(`[]`),
+		secret(testSecret),
+		dexAuthenticator("a", "b-c", "true"),
+		dexAuthenticator("a-b", "c", ""),
+		formerClient("a-b", "c"),
+	)
+	reconcileOK(t, r)
+	want := []string{"dex-authenticator-a@b-c"}
+	if peers := trustedPeers(getClient(t, c)); !slices.Equal(peers, want) {
+		t.Errorf("trustedPeers = %v, want %v", peers, want)
+	}
 }

@@ -26,9 +26,10 @@ spec:
           kubectl -n "${NS}" describe ingress e2e-authn-app
     - description: Show events in the test namespace on failure
       events: {}
-    - description: Show the authenticator logs on failure
+    - description: Show the logs of the shared dex-authenticator on failure
       podLogs:
-        selector: app=dex-authenticator
+        namespace: d8-user-authn
+        selector: app=shared-dex-authenticator
         container: dex-authenticator
         tail: 100
     - description: Show Dex logs on failure
@@ -105,19 +106,51 @@ spec:
               - name: NS
                 value: ($namespace)
             content: bash scripts/setup.sh
-        - description: Assert the module rendered the authenticator Deployment and it is available
+        - description: Assert the shared dex-authenticator serves the DexAuthenticator
           assert:
+            # The record of the object reaches the pods of the instance with the next sync of their
+            # volume, which takes up to a few minutes.
             timeout: 5m
             resource:
-              apiVersion: apps/v1
-              kind: Deployment
+              apiVersion: deckhouse.io/v1
+              kind: DexAuthenticator
+              metadata:
+                name: e2e-authn-app
+              status:
+                (conditions[?type == 'Served']):
+                  - status: "True"
+        - description: Assert the Service of the DexAuthenticator points at the shared dex-authenticator
+          assert:
+            timeout: 1m
+            resource:
+              apiVersion: v1
+              kind: Service
               metadata:
                 name: e2e-authn-app-dex-authenticator
                 labels:
                   deckhouse.io/dex-authenticator-for: e2e-authn-app
-              status:
-                (availableReplicas >= `1`): true
-        - description: Assert the module rendered the /dex-authenticator Ingress
+              spec:
+                type: ExternalName
+        - description: Assert the namespace of the DexAuthenticator holds neither its pods nor its secrets
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            env:
+              - name: NS
+                value: ($namespace)
+            content: |
+              set -Eeuo pipefail
+              left="$(kubectl -n "${NS}" get deployments,pods,secrets -l app=dex-authenticator -o name)"
+              if [[ -n "${left}" ]]; then
+                >&2 echo "the namespace of the DexAuthenticator holds objects of a dex-authenticator: ${left}"
+                exit 1
+              fi
+              if kubectl -n "${NS}" get secret dex-authenticator-e2e-authn-app -o name 2>/dev/null; then
+                >&2 echo "the namespace of the DexAuthenticator holds a Secret with its secrets"
+                exit 1
+              fi
+        - description: Assert the module made the /dex-authenticator Ingress
           assert:
             timeout: 2m
             resource:

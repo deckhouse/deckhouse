@@ -122,7 +122,7 @@ out="$(app_curl -A "${marker}" -H "X-Forwarded-Host: ${forged_host}" "https://${
 [[ "${out%% *}" == "200" ]] || die "a request with a forged X-Forwarded-Host must get HTTP 200, got '${out}'"
 deadline=$(( $(date +%s) + 60 ))
 while :; do
-  line="$(kubectl -n "${NS}" logs -l app=dex-authenticator -c dex-authenticator --tail=-1 --since=15m \
+  line="$(kubectl -n d8-user-authn logs -l app=shared-dex-authenticator,instance=dex-authenticator -c dex-authenticator --tail=-1 --since=15m \
     | grep -F "${marker}" | head -n 1 || true)"
   [[ -n "${line}" ]] && break
   (( $(date +%s) < deadline )) || die "the authenticator did not log the request with User-Agent ${marker}"
@@ -134,7 +134,7 @@ done
   || die "the authenticator logged the forged X-Forwarded-Host: ${line:0:400}"
 log "The authenticator logged host ${app_host} for a request with X-Forwarded-Host ${forged_host}"
 
-# The Redis next to the authenticator is of the version line the image pins.
-redis_version="$(kubectl -n "${NS}" exec deploy/e2e-authn-app-dex-authenticator -c redis -- /usr/bin/redis-server --version)"
+# The Redis next to the shared dex-authenticator that serves the namespace is of the version line the image pins.
+redis_version="$(kubectl -n d8-user-authn exec deploy/dex-authenticator -c redis -- /usr/bin/redis-server --version)"
 [[ "${redis_version}" == *" v=7.4."* ]] || die "the redis of the authenticator must be of the 7.4 line, got '${redis_version}'"
 log "Redis of the authenticator: ${redis_version%% sha=*}"

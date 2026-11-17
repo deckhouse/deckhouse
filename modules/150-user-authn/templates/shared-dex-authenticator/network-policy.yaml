@@ -1,9 +1,8 @@
 {{- /* The pods of an instance take requests from whoever routes them (an ingress controller in hostNetwork has
        no pod address to name), and reach dex, the revocation feed and DNS. The Redis of a pod is reachable only
        from the pods of its own instance: the sessions there go without TLS. */}}
-{{- if include "shared_dex_authenticator_enabled" . }}
-  {{- $context := . }}
-  {{- range $instance := include "shared_dex_authenticator_instances" . | fromYamlArray }}
+{{- $context := . }}
+{{- range $instance := include "shared_dex_authenticator_instances" . | fromYamlArray }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -75,5 +74,4 @@ spec:
       port: 5353
     - protocol: TCP
       port: 5353
-  {{- end }}
 {{- end }}

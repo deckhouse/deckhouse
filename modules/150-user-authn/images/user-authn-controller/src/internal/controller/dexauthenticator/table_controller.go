@@ -36,6 +36,7 @@ import (
 
 	"user-authn-controller/internal/adoption"
 	"user-authn-controller/internal/controller"
+	"user-authn-controller/internal/migration"
 	"user-authn-controller/internal/naming"
 )
 
@@ -61,6 +62,8 @@ type TableReconciler struct {
 	state   *State
 	notify  chan<- event.GenericEvent
 	metrics *Metrics
+	// legacy reads the secrets of the objects that had a dex-authenticator of their own.
+	legacy *migration.DexAuthenticatorLegacy
 	// gatewayAPI tells that HTTPRoute objects are watched.
 	gatewayAPI bool
 	// referenceGrants tells that the cluster has ReferenceGrant objects: the reconciler keeps the
@@ -83,7 +86,7 @@ type TableReconciler struct {
 
 // NewTableReconciler constructs a TableReconciler. Decisions go to state, and the objects they
 // change to notify.
-func NewTableReconciler(c client.Client, reader client.Reader, log logr.Logger, state *State, notify chan<- event.GenericEvent, metrics *Metrics, gatewayAPI bool) *TableReconciler {
+func NewTableReconciler(c client.Client, reader client.Reader, log logr.Logger, state *State, notify chan<- event.GenericEvent, metrics *Metrics, legacy *migration.DexAuthenticatorLegacy, gatewayAPI bool) *TableReconciler {
 	return &TableReconciler{
 		client:      c,
 		reader:      reader,
@@ -91,6 +94,7 @@ func NewTableReconciler(c client.Client, reader client.Reader, log logr.Logger, 
 		state:       state,
 		notify:      notify,
 		metrics:     metrics,
+		legacy:      legacy,
 		gatewayAPI:  gatewayAPI,
 		now:         time.Now,
 		limit:       TableLimit,
@@ -204,6 +208,9 @@ func (r *TableReconciler) Reconcile(ctx context.Context, _ reconcile.Request) (r
 		r.highest = max(r.highest, previous.file.Generation)
 	}
 	in.floor = r.highest
+	if in.imported, err = r.importSecrets(ctx, in); err != nil {
+		return reconcile.Result{}, err
+	}
 
 	built, err := buildTables(in)
 	if err != nil {
@@ -244,6 +251,26 @@ func (r *TableReconciler) Reconcile(ctx context.Context, _ reconcile.Request) (r
 		}
 	}
 	return result, nil
+}
+
+// importSecrets reads the secrets of the objects that have no record yet from the Secret of the
+// dex-authenticator the module chart used to render for them, where there is one.
+func (r *TableReconciler) importSecrets(ctx context.Context, in buildInput) (map[types.NamespacedName]migration.DexAuthenticatorSecrets, error) {
+	imported := map[types.NamespacedName]migration.DexAuthenticatorSecrets{}
+	for _, a := range in.authenticators {
+		previous := in.previous[a.Instance()]
+		if _, found := previous.record(a.Key()); found && previous.owners[a.Key().String()] == a.UID {
+			continue
+		}
+		secrets, ok, err := r.legacy.Secrets(ctx, a.Key())
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			imported[a.Key()] = secrets
+		}
+	}
+	return imported, nil
 }
 
 // readTable reads the table Secret of an instance; nil and an empty table when there is none. A

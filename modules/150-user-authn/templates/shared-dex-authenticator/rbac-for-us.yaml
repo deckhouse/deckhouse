@@ -1,0 +1,13 @@
+{{- /* The ServiceAccount of an instance has no rights in the cluster: its token, issued for the revocation feed
+       only, tells user-authn-controller which instance subscribes. */}}
+{{- $context := . }}
+{{- range $instance := include "shared_dex_authenticator_instances" . | fromYamlArray }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $instance }}
+  namespace: d8-{{ $context.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "shared-dex-authenticator" "instance" $instance)) | nindent 2 }}
+automountServiceAccountToken: false
+{{- end }}

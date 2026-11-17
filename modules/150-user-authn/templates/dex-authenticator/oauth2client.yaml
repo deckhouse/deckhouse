@@ -1,5 +1,0 @@
-{{- $context := . }}
-{{- range $crd := $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
----
-{{ include "dex_authenticator_oauth2client" (list $context $crd) }}
-{{- end }}

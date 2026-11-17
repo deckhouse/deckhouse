@@ -30,12 +30,12 @@ import (
 // A kind moved to the controller is added here. The hook acting on the list lives in
 // handover_protect.go: addon-operator names a hook after its file, so a second hook registered
 // in one file replaces the first.
-var handoverKinds = []handover.Kind{
+var handoverKinds = append([]handover.Kind{
 	dexClientSecrets,
 	dexClientOAuth2Clients,
 	kubernetesOAuth2Client,
 	dexPasswords,
-}
+}, dexAuthenticatorKinds...)
 
 const (
 	handoverQueue = "/modules/user-authn/handover"

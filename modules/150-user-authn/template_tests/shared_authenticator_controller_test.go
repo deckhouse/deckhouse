@@ -90,7 +90,7 @@ var _ = Describe("Module :: user-authn :: helm template :: DexAuthenticator reco
 
 	const namespace = "d8-user-authn"
 
-	setValues := func(isEnabled bool) {
+	setValues := func() {
 		hec.ValuesSet("global.discovery.kubernetesVersion", "1.33.1")
 		hec.ValuesSet("global.discovery.clusterDomain", "cluster.local")
 		hec.ValuesSet("global.modules.publicDomainTemplate", "%s.example.com")
@@ -106,7 +106,6 @@ var _ = Describe("Module :: user-authn :: helm template :: DexAuthenticator reco
 		hec.ValuesSet("userAuthn.internal.dexTLS.key", "plainstring")
 		hec.ValuesSet("userAuthn.internal.dexTLS.ca", "plainstring")
 
-		hec.ValuesSet("userAuthn.internal.sharedDexAuthenticator.enabled", isEnabled)
 		hec.ValuesSetFromYaml("userAuthn.internal.sharedDexAuthenticator.redisPasswords", `
 dex-authenticator-system: dh-test-secret-0123456789abcdef0
 dex-authenticator: dh-test-secret-0123456789abcdef1
@@ -149,33 +148,9 @@ dex-authenticator: dh-test-secret-0123456789abcdef1
 		return gjson.Parse(raw)
 	}
 
-	Context("while the module does not render the shared instances", func() {
-		BeforeEach(func() {
-			setValues(false)
-			hec.HelmRender(WithAPIVersions(append(policyAPIVersions, httpRouteAPIVersion)...))
-		})
-
-		It("leaves dexclient-controller as it was", func() {
-			Expect(hec.RenderError).ShouldNot(HaveOccurred())
-
-			Expect(controllerEnv()).NotTo(HaveKey("SHARED_DEX_AUTHENTICATOR"))
-			Expect(controllerEnv()).NotTo(HaveKey("GATEWAY_API"))
-			Expect(controllerEnv()).NotTo(HaveKey("REFERENCE_GRANTS"))
-			Expect(hec.KubernetesResource("ConfigMap", namespace, "shared-dex-authenticator").Exists()).To(BeFalse())
-			Expect(hec.KubernetesGlobalResource("ValidatingAdmissionPolicy", dexClientControllerPolicyName).Exists()).To(BeFalse())
-			Expect(hec.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", dexClientControllerPolicyName).Exists()).To(BeFalse())
-
-			for _, resource := range []string{"dexauthenticators", "dexauthenticators/status", "services", "ingresses", "httproutes", "pods", "configmaps"} {
-				cluster, namespaced := grants(resource)
-				Expect(cluster).To(BeEmpty(), resource)
-				Expect(namespaced).To(BeEmpty(), resource)
-			}
-		})
-	})
-
 	Context("while the module renders the shared instances", func() {
 		BeforeEach(func() {
-			setValues(true)
+			setValues()
 			hec.HelmRender(WithAPIVersions(policyAPIVersions...))
 		})
 
@@ -220,7 +195,7 @@ dex-authenticator: dh-test-secret-0123456789abcdef1
 				Expect(cluster).To(BeEmpty(), resource)
 				Expect(namespaced).To(ConsistOf("get", "list", "watch"), resource)
 			}
-			for _, resource := range []string{"pods/exec", "pods/ephemeralcontainers", "deployments", "endpointslices"} {
+			for _, resource := range []string{"pods/exec", "pods/ephemeralcontainers", "pods/log", "endpointslices"} {
 				cluster, namespaced := grants(resource)
 				Expect(cluster).To(BeEmpty(), resource)
 				Expect(namespaced).To(BeEmpty(), resource)
@@ -365,7 +340,7 @@ dex-authenticator: dh-test-secret-0123456789abcdef1
 
 	Context("while the module renders the shared instances in a cluster with the Gateway API and other settings", func() {
 		BeforeEach(func() {
-			setValues(true)
+			setValues()
 			hec.ValuesSet("global.modules.https.mode", "OnlyInURI")
 			hec.ValuesSet("global.discovery.ingressNginxAnnotationsVersion", "1.5.0")
 			hec.ValuesSet("userAuthn.idTokenTTL", "2h30m")
@@ -397,7 +372,7 @@ dex-authenticator: dh-test-secret-0123456789abcdef1
 
 	Context("while the module renders the shared instances in a cluster with ReferenceGrant objects", func() {
 		BeforeEach(func() {
-			setValues(true)
+			setValues()
 			hec.HelmRender(WithAPIVersions(append(policyAPIVersions, httpRouteAPIVersion, referenceGrantAPIVersion)...))
 		})
 
@@ -466,7 +441,7 @@ dex-authenticator: dh-test-secret-0123456789abcdef1
 
 	Context("while the module renders the shared instances in a cluster that serves ReferenceGrant as v1beta1 only", func() {
 		BeforeEach(func() {
-			setValues(true)
+			setValues()
 			hec.HelmRender(WithAPIVersions(append(policyAPIVersions, httpRouteAPIVersion, referenceGrantV1beta1APIVersion)...))
 		})
 
@@ -488,7 +463,7 @@ dex-authenticator: dh-test-secret-0123456789abcdef1
 
 	Context("while the module renders the shared instances in a cluster without the admission policy kinds", func() {
 		BeforeEach(func() {
-			setValues(true)
+			setValues()
 			hec.HelmRender(WithAPIVersions(httpRouteAPIVersion))
 		})
 
@@ -506,7 +481,7 @@ dex-authenticator: dh-test-secret-0123456789abcdef1
 
 	Context("while the module renders the shared instances with the Gateway API and Ingress turned off in the settings", func() {
 		BeforeEach(func() {
-			setValues(true)
+			setValues()
 			hec.ValuesSet("global.modules.gatewayAPI.enabled", false)
 			hec.ValuesSet("global.modules.ingress.enabled", false)
 			hec.HelmRender(WithAPIVersions(append(policyAPIVersions, httpRouteAPIVersion)...))

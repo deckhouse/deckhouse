@@ -1,7 +1,6 @@
 {{- /* The settings of the module and of the cluster that the objects of every DexAuthenticator depend on. The
        reconcilers of dexclient-controller build the table of clients, the Dex clients, the Services and the routes
        from them, and build them again when the settings change. */}}
-{{- if include "shared_dex_authenticator_enabled" . }}
   {{- $settings := dict
         "clusterDomain" .Values.global.discovery.clusterDomain
         "httpsMode" (include "helm_lib_module_https_mode" .)
@@ -20,4 +19,3 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "shared-dex-authenticator")) | nindent 2 }}
 data:
   settings.json: {{ $settings | toJson | quote }}
-{{- end }}

@@ -84,11 +84,12 @@ const (
 
 	listPageSize = 500
 
-	// stampWorkers is how many stamps are in flight at once. A stamp is a merge patch of the
-	// metadata, 16 ms on the API server of a test cluster for a Secret. One at a time, the 1800
-	// objects of 600 DexClients would take about 30 seconds of round trips alone; with ten in
-	// flight even a stamp of 200 ms reaches the request rate of the client of the hook (50 a
-	// second), which then sets the time.
+	// stampWorkers is how many stamps are in flight at once. A stamp is a patch of the metadata,
+	// which took the API server of a test cluster from 16 ms (a Service, a Secret) to 205 ms (a
+	// Deployment) and 98 ms for an Ingress. One at a time, the 5400 objects of 600
+	// DexAuthenticators would take about 7 minutes; with ten in flight even the slowest kind
+	// reaches the request rate of the client of the hook (50 a second), which then sets the time:
+	// under 2 minutes.
 	stampWorkers = 10
 )
 
@@ -101,6 +102,7 @@ type Ref struct {
 // Object is an object as a list of its metadata returned it: what Protect decides by.
 type Object struct {
 	Ref
+	Labels      map[string]string
 	Annotations map[string]string
 }
 
@@ -109,6 +111,11 @@ type Kind struct {
 	// Name is how the kind appears in errors.
 	Name     string
 	Resource schema.GroupVersionResource
+
+	// Labels are stamped on the objects together with the keep policy. The controller that takes
+	// the objects of the kind over may be allowed to change only the objects that carry its label
+	// already, and the hook is the one that hands them to it.
+	Labels map[string]string
 
 	// Rendered returns the objects the chart may have rendered, as List returns them. Only those
 	// the release really owns are touched, so returning more is harmless; returning fewer loses
@@ -125,26 +132,29 @@ type Result struct {
 	Stamped int
 }
 
-// stamp is one object to protect.
+// stamp is one object to protect, with the patch of its kind.
 type stamp struct {
-	kind Kind
-	ref  Ref
+	kind  Kind
+	ref   Ref
+	patch []byte
 }
 
 // Protect stamps the keep policy on every object of kinds still owned by the release. It fails if
 // an object could not be protected: the release would prune it.
 func Protect(ctx context.Context, c metadata.Interface, kinds []Kind) (Result, error) {
-	patch, err := json.Marshal(map[string]any{
-		"metadata": map[string]any{"annotations": map[string]any{ResourcePolicyAnnotation: ResourcePolicyKeep}},
-	})
-	if err != nil {
-		return Result{}, fmt.Errorf("marshal patch: %w", err)
-	}
-
 	var res Result
 	var errs []error
 	var stamps []stamp
 	for _, kind := range kinds {
+		stamped := map[string]any{"annotations": map[string]any{ResourcePolicyAnnotation: ResourcePolicyKeep}}
+		if len(kind.Labels) > 0 {
+			stamped["labels"] = kind.Labels
+		}
+		patch, err := json.Marshal(map[string]any{"metadata": stamped})
+		if err != nil {
+			return res, fmt.Errorf("marshal patch: %w", err)
+		}
+
 		objects, err := kind.Rendered(ctx, c)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("list rendered %s: %w", kind.Name, err))
@@ -155,20 +165,20 @@ func Protect(ctx context.Context, c metadata.Interface, kinds []Kind) (Result, e
 				continue
 			}
 			res.Owned++
-			if needsKeep(obj) {
-				stamps = append(stamps, stamp{kind: kind, ref: obj.Ref})
+			if needsKeep(obj) || needsLabels(obj, kind.Labels) {
+				stamps = append(stamps, stamp{kind: kind, ref: obj.Ref, patch: patch})
 			}
 		}
 	}
 
-	stamped, stampErrs := applyStamps(ctx, c, stamps, patch)
+	stamped, stampErrs := applyStamps(ctx, c, stamps)
 	res.Stamped = stamped
 	return res, errors.Join(append(errs, stampErrs...)...)
 }
 
 // applyStamps patches the objects, stampWorkers at a time, and returns how many it protected and
 // what went wrong with the others, in the order of stamps.
-func applyStamps(ctx context.Context, c metadata.Interface, stamps []stamp, patch []byte) (int, []error) {
+func applyStamps(ctx context.Context, c metadata.Interface, stamps []stamp) (int, []error) {
 	results := make([]error, len(stamps))
 	stamped := make([]bool, len(stamps))
 	next := make(chan int)
@@ -177,7 +187,7 @@ func applyStamps(ctx context.Context, c metadata.Interface, stamps []stamp, patc
 	for range min(stampWorkers, len(stamps)) {
 		workers.Go(func() {
 			for i := range next {
-				stamped[i], results[i] = applyStamp(ctx, c, stamps[i], patch)
+				stamped[i], results[i] = applyStamp(ctx, c, stamps[i])
 			}
 		})
 	}
@@ -202,16 +212,20 @@ func applyStamps(ctx context.Context, c metadata.Interface, stamps []stamp, patc
 
 // applyStamp patches one object and reports whether it is protected now. An object that is gone
 // needs no protection.
-func applyStamp(ctx context.Context, c metadata.Interface, s stamp, patch []byte) (bool, error) {
-	patched, err := resource(c, s.kind.Resource, s.ref.Namespace).Patch(ctx, s.ref.Name, types.MergePatchType, patch, metav1.PatchOptions{})
+func applyStamp(ctx context.Context, c metadata.Interface, s stamp) (bool, error) {
+	patched, err := resource(c, s.kind.Resource, s.ref.Namespace).Patch(ctx, s.ref.Name, types.MergePatchType, s.patch, metav1.PatchOptions{})
 	if apierrors.IsNotFound(err) {
 		return false, nil
 	}
 	if err != nil {
 		return false, fmt.Errorf("patch %s %s: %w", s.kind.Name, s.ref, err)
 	}
-	if needsKeep(objectOf(patched)) {
+	obj := objectOf(patched)
+	if needsKeep(obj) {
 		return false, fmt.Errorf("keep policy is not set on %s %s: refusing to proceed to avoid prune", s.kind.Name, s.ref)
+	}
+	if needsLabels(obj, s.kind.Labels) {
+		return false, fmt.Errorf("labels are not set on %s %s: the controller could not take it over", s.kind.Name, s.ref)
 	}
 	return true, nil
 }
@@ -219,12 +233,13 @@ func applyStamp(ctx context.Context, c metadata.Interface, s stamp, patch []byte
 func objectOf(obj *metav1.PartialObjectMetadata) Object {
 	return Object{
 		Ref:         Ref{Namespace: obj.GetNamespace(), Name: obj.GetName()},
+		Labels:      obj.GetLabels(),
 		Annotations: obj.GetAnnotations(),
 	}
 }
 
 // OwnedByRelease reports whether obj carries the ownership annotation of the release of the
-// module.
+// module. As a filter of List it leaves out the objects Protect would only skip.
 func OwnedByRelease(obj Object) bool {
 	return obj.Annotations[ReleaseNameAnnotation] == ReleaseName
 }
@@ -232,6 +247,16 @@ func OwnedByRelease(obj Object) bool {
 // needsKeep reports whether obj belongs to the release and is not protected yet.
 func needsKeep(obj Object) bool {
 	return OwnedByRelease(obj) && obj.Annotations[ResourcePolicyAnnotation] != ResourcePolicyKeep
+}
+
+// needsLabels reports whether obj lacks one of the labels of its kind.
+func needsLabels(obj Object, labels map[string]string) bool {
+	for key, value := range labels {
+		if obj.Labels[key] != value {
+			return true
+		}
+	}
+	return false
 }
 
 // List pages through the metadata of the objects of gvr in namespace (all namespaces when empty)
