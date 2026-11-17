@@ -812,6 +812,8 @@
  - **[control-plane-manager]** The basic audit policy logs Pod status updates from kubelet with the request body, so container terminations and their reasons get into the audit log.
  - **[control-plane-manager]** The cluster Kubernetes version moves from `ClusterConfiguration.kubernetesVersion` to `settings.kubernetesVersion` in ModuleConfig `control-plane-manager`. [#21828](https://github.com/deckhouse/deckhouse/pull/21828)
  - **[control-plane-manager]** `ControlPlaneNode` component conditions are now pod-based; new `<Component>InSync` and `<Component>PodReady` conditions, `kubectl get cpn` columns show `<Component>Ready`.
+ - **[control-plane-manager]** kube-apiserver reads zstd-compressed values from etcd; it still writes uncompressed values.
+    kube-apiserver restarts on all master nodes.
  - **[control-plane-manager]** kube-scheduler exposes metrics of scheduler extender requests and the list of configured extenders, named after their KubeSchedulerWebhookConfiguration.
  - **[control-plane-manager]** kube-scheduler exposes which score plugin or extender decided each node choice, metrics of the simulate endpoint, and an opt-in decision log published as `/scheduler/decisions`.
  - **[control-plane-manager]** kube-scheduler pauses calls to an ignorable scheduler extender for 30 seconds after 10 failed requests in a row.
@@ -1057,6 +1059,7 @@
     An update to 1.78 from DP 1.77.1 or later is blocked while the cluster runs Proxy or Local of the v1 registry implementation, or Direct without the registry ModuleConfig.
     Migrate the cluster to the registry module on 1.77 before updating (see the registry module FAQ), and update to 1.78 only from DP 1.77.1 or later.
  - **[registry]** The RBACv2 roles of the cluster subsystem grant access to the registry module - the viewer reads RegistryNode, the manager manages the module configuration and RegistryUpstream objects.
+ - **[registry]** The `User` and `ClusterAdmin` access levels of the basic role model get access to the registry module resources, matching its RBACv2 capabilities.
  - **[registry]** The images of the in-cluster cache are listed by the RegistryImage resource; the cache checks its blobs in the background and repairs broken ones on its own.
     The registry cache replicas are recreated one at a time, and registry-controller restarts.
  - **[registry]** The managed registry (cache, proxy, air-gap) now works on Deckhouse Engine (Immutable) nodes.
@@ -1503,6 +1506,8 @@
     If a ServiceWithHealthchecks of the `LoadBalancer` type carries annotations that configure the load balancer
     (`network.deckhouse.io/load-balancer-ips`, `network.deckhouse.io/load-balancer-shared-ip-key` and similar),
     the load balancer controller applies them and may assign a different address to the service, which causes a short interruption of the connections.
+ - **[deckhouse]** Application autoscaling and maintenance alerts identify the correct namespace and keep same-named applications separate.
+    Custom queries for application autoscaling and maintenance metrics must use application_namespace instead of namespace or exported_namespace to identify the application namespace.
  - **[deckhouse]** Bump containerd to v2.2.10 and dependencies to fix CVEs
  - **[deckhouse]** Configure the d8-system and d8-monitoring namespaces with the privileged Pod Security enforcement level. [#22795](https://github.com/deckhouse/deckhouse/pull/22795)
     The d8-system and d8-monitoring namespaces will use the privileged Kubernetes Pod Security enforcement level. Access to create workloads in these namespaces must remain restricted.
@@ -2131,6 +2136,7 @@
     A session whose refresh Dex cannot complete now ends: at once when the identity provider refuses the refresh (for example, an OIDC provider that issued no refresh token), and one `idTokenTTL` after the first failure when the provider or Dex does not answer. Until then requests get 503, as before.
  - **[user-authn]** Users of an LDAP DexProvider for Active Directory with `idAttr: objectGUID` (or `mS-DS-ConsistencyGuid`) can sign in; their Dex user ID becomes the GUID string.
     A user whose GUID happened to be valid UTF-8 and who could sign in before gets a new `sub` (an application that tells users apart by `sub` sees a new user) and enrolls TOTP again; for every other such user sign-in did not work before.
+ - **[user-authn]** With Dex sessions enabled, signing in to another domain of a DexAuthenticator no longer signs the user out of the first one.
  - **[user-authn]** With `rateLimit` enabled, Dex counts the client address only from the platform Ingress controller and Gateway, and refresh-token requests no longer count as failed attempts.
     A pod that calls the Dex Service directly is counted by its own address and can no longer forge the address in the rate limit and in the sign-in log, unless it can read the HTTPRoute object of the module in `d8-user-authn` or create an Ingress with configuration snippets on the ingress-nginx controller. The Dex Ingresses make ingress-nginx present its client certificate to Dex; Dex asks every client for a certificate and requires none.
  - **[user-authn]** With `rateLimit` enabled, failed Basic Authentication attempts through an LDAP provider are counted per client instead of in one bucket for basic-auth-proxy.

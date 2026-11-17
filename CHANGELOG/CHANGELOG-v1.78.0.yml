@@ -1055,6 +1055,7 @@ cni-cilium:
         Cilium agent pods will be restarted. With DSR, the DSR IPv4 option is stripped before the packet
         reaches the pod.
     - summary: Experimental Network Peering feature.
+    - summary: NetworkPeering refactoring.
   fixes:
     - summary: Bump cel-go and gopacket dependencies to fix known CVEs.
       pull_request: https://github.com/deckhouse/deckhouse/pull/21861
@@ -1316,6 +1317,8 @@ control-plane-manager:
     - summary: >-
         kube-scheduler exposes which score plugin or extender decided each node choice, metrics of the
         simulate endpoint, and an opt-in decision log published as `/scheduler/decisions`.
+    - summary: kube-apiserver reads zstd-compressed values from etcd; it still writes uncompressed values.
+      impact: kube-apiserver restarts on all master nodes.
   fixes:
     - summary: Fix kubectl exec through Kubernetes API published with Gateway API.
       pull_request: https://github.com/deckhouse/deckhouse/pull/21680
@@ -1890,6 +1893,12 @@ deckhouse:
     - summary: >-
         A module whose deployed ModuleRelease is deleted is now shown as not installed instead of keeping
         the Ready status and the version of the removed release.
+    - summary: >-
+        Application autoscaling and maintenance alerts identify the correct namespace and keep same-named
+        applications separate.
+      impact: >-
+        Custom queries for application autoscaling and maintenance metrics must use application_namespace
+        instead of namespace or exported_namespace to identify the application namespace.
 deckhouse-controller:
   features:
     - summary: Added a minor version filter for partial scanning of package versions.
@@ -4172,6 +4181,9 @@ registry:
         The images of the in-cluster cache are listed by the RegistryImage resource; the cache checks
         its blobs in the background and repairs broken ones on its own.
       impact: The registry cache replicas are recreated one at a time, and registry-controller restarts.
+    - summary: >-
+        The `User` and `ClusterAdmin` access levels of the basic role model get access to the registry
+        module resources, matching its RBACv2 capabilities.
   fixes:
     - summary: Fix DKP bootstrap retry by keeping the `registry-init` secret.
       pull_request: https://github.com/deckhouse/deckhouse/pull/21244
@@ -5305,6 +5317,9 @@ user-authn:
         local user, so a wave of refreshes is answered faster.
       impact: Dex pods restart.
     - summary: Missing reference grant object was added.
+    - summary: >-
+        With Dex sessions enabled, signing in to another domain of a DexAuthenticator no longer signs
+        the user out of the first one.
 user-authz:
   features:
     - summary: >-
