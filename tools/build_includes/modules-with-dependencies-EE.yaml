@@ -98,15 +98,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /modules/031-local-path-provisioner/hooks
-  to: /deckhouse/modules/031-local-path-provisioner/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-    - '**/AGENTS.md'
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /modules/035-cni-flannel/hooks
   to: /deckhouse/modules/035-cni-flannel/hooks
   excludePaths:

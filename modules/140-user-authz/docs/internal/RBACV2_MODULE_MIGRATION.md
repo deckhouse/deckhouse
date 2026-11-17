@@ -500,9 +500,8 @@ The old role names survive one release as aggregating aliases. A binding to `d8:
 `d8:manage:deckhouse:*`, `d8:manage:infrastructure:*` and `d8:manage:kubernetes:*` select only the
 capabilities of the modules that were in those subsystems, while `d8:subsystem:cluster:*` covers the
 whole `cluster` subsystem. `d8:manage:security:*` also keeps the rights for user-authn and user-authz,
-which moved to `iam`. `d8:manage:networking:*` and `d8:manage:storage:*` select the lineage of
-`network` and `storage` without keepalived and local-path-provisioner, which joined these subsystems
-from `infrastructure`. The aliases of `deckhouse`, `infrastructure`, `kubernetes` and `networking` and
+which moved to `iam`. `d8:manage:networking:*` selects the lineage of `network` without keepalived,
+which joined this subsystem from `infrastructure`, and `d8:manage:storage:*` the whole `storage` lineage. The aliases of `deckhouse`, `infrastructure`, `kubernetes` and `networking` and
 `d8:manage:all:*` also select the old lineage of their subsystem, which a module released on its own
 may still carry. The aliases a module keeps for its own roles are narrow as well ([item 7](#what-the-script-cannot-decide)).
 

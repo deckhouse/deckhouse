@@ -332,7 +332,6 @@ users:
   - system:serviceaccount:d8-istio:multicluster-metrics-exporter
   - system:serviceaccount:d8-istio:waypoint-controller
   - system:serviceaccount:d8-istio:ztunnel
-  - system:serviceaccount:d8-local-path-provisioner:local-path-provisioner
   - system:serviceaccount:d8-metallb:controller
   - system:serviceaccount:d8-metallb:l2lb-controller
   - system:serviceaccount:d8-metallb:l2lb-speaker
@@ -871,7 +870,6 @@ rules:
       - system:serviceaccount:d8-istio:multicluster-metrics-exporter
       - system:serviceaccount:d8-istio:waypoint-controller
       - system:serviceaccount:d8-istio:ztunnel
-      - system:serviceaccount:d8-local-path-provisioner:local-path-provisioner
       - system:serviceaccount:d8-metallb:controller
       - system:serviceaccount:d8-metallb:l2lb-controller
       - system:serviceaccount:d8-metallb:l2lb-speaker

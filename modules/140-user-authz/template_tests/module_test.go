@@ -314,7 +314,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 				retiredSelector("deckhouse", "manager"),
 			))
 			infrastructure := selectors("d8:manage:infrastructure:manager")
-			Expect(infrastructure).To(HaveLen(42))
+			Expect(infrastructure).To(HaveLen(40))
 			Expect(infrastructure).To(ContainElements(
 				retiredSelector("infrastructure", "viewer"),
 				retiredSelector("infrastructure", "manager"),
@@ -323,7 +323,6 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 				moduleSelector("cloud-provider-zvirt", "cluster", "manager"),
 				moduleSelector("istio", "network", "manager"),
 				moduleSelector("keepalived", "network", "manager"),
-				moduleSelector("local-path-provisioner", "storage", "manager"),
 				moduleSelector("csi-vsphere", "cluster", "manager"),
 				capabilitySelector("subsystem-capability.cluster.view_resources"),
 				capabilitySelector("subsystem-capability.cluster.manage_resources"),
@@ -366,8 +365,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 
 			// networking was renamed to network, and its alias selects the old lineage as well; the
 			// other subsystems kept their names
-			// keepalived joined network from infrastructure, and local-path-provisioner joined storage,
-			// so the aliases of the old roles leave them out
+			// keepalived joined network from infrastructure, so the alias of the old role leaves it out
 			Expect(selectors("d8:manage:networking:manager")).To(ConsistOf(
 				narrowSelector("network", "viewer", "keepalived"),
 				narrowSelector("network", "manager", "keepalived"),
@@ -376,14 +374,9 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			))
 			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:manage:networking:manager").
 				Field(`metadata.annotations.rbac\.deckhouse\.io/deprecated-replaced-by`).String()).To(Equal("d8:subsystem:network:manager"))
-			Expect(selectors("d8:manage:storage:viewer")).To(ConsistOf(narrowSelector("storage", "viewer", "local-path-provisioner")))
-			Expect(selectors("d8:manage:storage:manager")).To(ConsistOf(
-				narrowSelector("storage", "viewer", "local-path-provisioner"),
-				narrowSelector("storage", "manager", "local-path-provisioner"),
-			))
+			Expect(selectors("d8:manage:storage:viewer")).To(ConsistOf(lineageSelector("storage", "viewer")))
+			Expect(selectors("d8:manage:storage:manager")).To(ConsistOf(lineageSelector("storage", "manager")))
 			Expect(selectors("d8:manage:observability:manager")).To(ConsistOf(lineageSelector("observability", "manager")))
-			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:manage:storage:viewer").
-				Field(`metadata.annotations.en\.meta\.deckhouse\.io/description`).String()).To(ContainSubstring("also grants rights for local-path-provisioner"))
 			// all also keeps the subsystem roles of the modules with a subsystem of their own, which
 			// carry the manage kind and aggregate-to-all-as, as the previous all role selected them
 			Expect(selectors("d8:manage:all:manager")).To(ConsistOf(
@@ -505,7 +498,6 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(selects("d8:manage:networking:manager", newCapability("keepalived", "network", "viewer"))).To(BeFalse())
 			Expect(selects("d8:manage:networking:manager", newCapability("cni-cilium", "network", "manager"))).To(BeTrue())
 			Expect(selects("d8:manage:networking:manager", newCapability("cni-cilium", "network", "viewer"))).To(BeTrue())
-			Expect(selects("d8:manage:storage:viewer", newCapability("local-path-provisioner", "storage", "viewer"))).To(BeFalse())
 			Expect(selects("d8:manage:storage:viewer", map[string]string{
 				"rbac.deckhouse.io/kind":                    "custom-capability",
 				"rbac.deckhouse.io/aggregate-to-storage-as": "viewer",
@@ -619,20 +611,20 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(projects("d8:manage:networking:viewer", oldCapability("ingress-nginx", "networking", "manager"))).To(BeFalse())
 			Expect(projects("d8:manage:networking:manager", oldCapability("ingress-nginx", "networking", "manager"))).To(BeTrue())
 
-			// infrastructure keeps the modules that moved to cluster, network and storage, and the
+			// infrastructure keeps the modules that moved to cluster and network, and the
 			// old lineage; a capability of the current scheme that kept the old lineage was not in
 			// the previous projection either.
 			for _, object := range []map[string]string{
 				newCapability("node-manager", "cluster", "viewer"),
 				newCapability("istio", "network", "viewer"),
 				newCapability("keepalived", "network", "viewer"),
-				newCapability("local-path-provisioner", "storage", "viewer"),
 				oldCapability("loki", "infrastructure", "viewer"),
 			} {
 				Expect(projects("d8:manage:infrastructure:viewer", object)).To(BeTrue(), object["module"])
 			}
 			for _, object := range []map[string]string{
 				newCapability("control-plane-manager", "cluster", "viewer"),
+				newCapability("local-path-provisioner", "storage", "viewer"),
 				newCapability("csi-nfs", "storage", "viewer"),
 				newCapability("snapshot-controller", "infrastructure", "viewer"),
 				oldCapability("ingress-nginx", "networking", "viewer"),
@@ -672,7 +664,6 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 				newCapability("node-manager", "cluster", "viewer"),
 				newCapability("cni-cilium", "network", "viewer"),
 				newCapability("keepalived", "network", "viewer"),
-				newCapability("local-path-provisioner", "storage", "viewer"),
 				newCapability("user-authn", "iam", "viewer"),
 				newCapability("multitenancy-manager", "iam", "viewer"),
 				newCapability("cert-manager", "security", "viewer"),
@@ -687,6 +678,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			for _, object := range []map[string]string{
 				newCapability("node-manager", "cluster", "manager"),
 				newCapability("csi-nfs", "storage", "viewer"),
+				newCapability("local-path-provisioner", "storage", "viewer"),
 				newCapability("virtualization", "cluster", "viewer"),
 				oldCapability("ingress-nginx", "networking", "manager"),
 			} {

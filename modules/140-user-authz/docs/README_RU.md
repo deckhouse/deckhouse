@@ -376,7 +376,7 @@ RoleBinding на `d8:use:role:<уровень>` тоже даёт эти пра�
 | `d8:manage:networking:<уровень>` | `d8:subsystem:network:<уровень>`, которая даёт и права на `keepalived` |
 | `d8:manage:security:<уровень>` | `d8:subsystem:security:<уровень>` вместе с `d8:subsystem:iam:<уровень>`, которая даёт права на `user-authz` и `user-authn`, а также другие права |
 | `d8:manage:observability:<уровень>` | `d8:subsystem:observability:<уровень>` |
-| `d8:manage:storage:<уровень>` | `d8:subsystem:storage:<уровень>`, которая даёт и права на `local-path-provisioner` |
+| `d8:manage:storage:<уровень>` | `d8:subsystem:storage:<уровень>` |
 | `d8:use:role:<уровень>` | `d8:namespace:<уровень>` |
 | `d8:use:role:<уровень>:kubernetes` | `d8:namespace:<уровень>` (полная namespace-роль, не kubernetes-only) |
 
@@ -387,7 +387,7 @@ RoleBinding на `d8:use:role:<уровень>` тоже даёт эти пра�
 Поэтому псевдонимы ролей `deckhouse`, `infrastructure` и `kubernetes` не агрегируют всю подсистему `cluster`. Они выбирают capabilities модулей платформы, которые были в старой подсистеме, где бы эти модули ни находились теперь. `d8:subsystem:cluster:<уровень>` даёт больше прав, поэтому, пересоздавая такую привязку, проверьте, какие роли подсистем нужны её субъектам.
 Псевдоним `d8:manage:security:<уровень>` сохраняет и права на `user-authz` и `user-authn`, которые теперь даёт `d8:subsystem:iam:<уровень>`. Эта роль даёт также права на `multitenancy-manager` и на уровне `manager` право назначать роли, которого `d8:subsystem:security:<уровень>` не даёт.
 Поэтому привязку к `d8:manage:security:<уровень>` заменяют две привязки с теми же субъектами, к `d8:subsystem:iam:<уровень>` и к `d8:subsystem:security:<уровень>`. Аннотация `rbac.deckhouse.io/deprecated-replaced-by` псевдонима называет только вторую.
-Псевдонимы `networking` и `storage` не включают `keepalived` и `local-path-provisioner`, которые перешли в `network` и `storage` из `infrastructure`, поэтому новые роли дают больше прав, чем эти псевдонимы.
+Псевдоним `networking` не включает `keepalived`, который перешёл в `network` из `infrastructure`, поэтому новая роль даёт больше прав, чем этот псевдоним.
 
 Аннотация `rbac.deckhouse.io/deprecated-replaced-by` псевдонима называет основную замену, а описание псевдонима называет роли других подсистем, в которые перешли его модули. Эти роли охватывают подсистемы целиком. Чтобы выдать права только на некоторые модули, создайте собственную роль, которая выбирает их системные capabilities по лейблу `rbac.deckhouse.io/capability`, например `system-capability.multitenancy-manager.view` (см. [Как расширить роль или создать новую?](faq.html#как-расширить-роль-или-создать-новую)).
 
@@ -525,7 +525,6 @@ read:
     - deckhouse.io/hubblemonitoringconfigs
     - deckhouse.io/instances
     - deckhouse.io/keepalivedinstances
-    - deckhouse.io/localpathprovisioners
     - deckhouse.io/nodeextensionrequests
     - deckhouse.io/nodegroups
     - deckhouse.io/nodeoperations
@@ -883,7 +882,6 @@ write:
     - deckhouse.io/ingressistiocontrollers
     - deckhouse.io/istiofederations
     - deckhouse.io/istiomulticlusters
-    - deckhouse.io/localpathprovisioners
     - deckhouse.io/openstackinstanceclasses
     - deckhouse.io/operationpolicies
     - deckhouse.io/projectnamespaces

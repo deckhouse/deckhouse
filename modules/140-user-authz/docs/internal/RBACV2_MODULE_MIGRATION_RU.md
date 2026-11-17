@@ -585,8 +585,8 @@ d8 k get clusterrole d8:subsystem:network:manager -o json | jq '[.rules[] | sele
 `d8:manage:deckhouse:*`, `d8:manage:infrastructure:*` и `d8:manage:kubernetes:*` выбирают только
 capabilities модулей, которые были в этих подсистемах, а `d8:subsystem:cluster:*` охватывает всю
 подсистему `cluster`. `d8:manage:security:*` по-прежнему даёт права на user-authn и user-authz, которые
-переехали в `iam`. `d8:manage:networking:*` и `d8:manage:storage:*` выбирают линию `network` и `storage`
-без keepalived и local-path-provisioner, которые пришли в эти подсистемы из `infrastructure`. Алиасы
+переехали в `iam`. `d8:manage:networking:*` выбирает линию `network` без keepalived, который пришёл
+в эту подсистему из `infrastructure`, а `d8:manage:storage:*` — всю линию `storage`. Алиасы
 `deckhouse`, `infrastructure`, `kubernetes` и `networking` и `d8:manage:all:*` выбирают ещё и старую линию
 своей подсистемы, которую может по-прежнему нести модуль с собственным циклом выпуска. Алиасы, которые
 модуль оставляет для своих ролей, тоже узкие ([пункт 7](#что-стоит-проверить-руками)).

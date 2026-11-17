@@ -47,18 +47,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/031-local-path-provisioner
-  to: /deckhouse/modules/031-local-path-provisioner
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-    - '**/AGENTS.md'
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/038-registry
   to: /deckhouse/modules/038-registry
   excludePaths:

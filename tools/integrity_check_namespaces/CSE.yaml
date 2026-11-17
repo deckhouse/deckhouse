@@ -13,6 +13,7 @@ additionalNamespaces:
   - d8-csi-scsi-generic
   - d8-csi-yadro-tatlin-unified
   - d8-ingress-nginx
+  - d8-local-path-provisioner
   - d8-log-shipper
   - d8-monitoring
   - d8-neuvector

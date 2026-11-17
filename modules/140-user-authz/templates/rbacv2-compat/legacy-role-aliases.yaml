@@ -96,7 +96,7 @@
   of the old role leaves them out, so a binding to the old name does not widen on upgrade. It then
   selects the capabilities of the lineage at its level and below, because the viewer role of the
   subsystem aggregates the capabilities of these modules too. */ -}}
-{{- $joined := dict "network" (list "keepalived") "storage" (list "local-path-provisioner") -}}
+{{- $joined := dict "network" (list "keepalived") -}}
 {{- range $pair := list (list "networking" "network") (list "observability" "observability") (list "security" "security") (list "storage" "storage") -}}
   {{- $subsystem := index $pair 0 -}}
   {{- $target := index $pair 1 -}}
@@ -167,7 +167,6 @@
     "descheduler" "cluster"
     "istio" "network"
     "keepalived" "network"
-    "local-path-provisioner" "storage"
     "node-manager" "cluster"
     "terraform-manager" "cluster"
     "vertical-pod-autoscaler" "cluster")

@@ -1016,56 +1016,6 @@ modules:
     namespace: kube-system
     subsystems:
     - network
-  local-path-provisioner:
-    capabilities:
-      manage:
-      - name: d8:manage:permission:module:local-path-provisioner:view
-        rules:
-        - apiGroups:
-          - deckhouse.io
-          resources:
-          - localpathprovisioners
-          verbs:
-          - get
-          - list
-          - watch
-        - apiGroups:
-          - deckhouse.io
-          resourceNames:
-          - local-path-provisioner
-          resources:
-          - moduleconfigs
-          verbs:
-          - get
-          - list
-          - watch
-      - name: d8:manage:permission:module:local-path-provisioner:edit
-        rules:
-        - apiGroups:
-          - deckhouse.io
-          resources:
-          - localpathprovisioners
-          verbs:
-          - create
-          - update
-          - patch
-          - delete
-          - deletecollection
-        - apiGroups:
-          - deckhouse.io
-          resourceNames:
-          - local-path-provisioner
-          resources:
-          - moduleconfigs
-          verbs:
-          - create
-          - update
-          - patch
-          - delete
-      use: null
-    namespace: d8-local-path-provisioner
-    subsystems:
-    - storage
   log-shipper:
     capabilities:
       manage:
@@ -2395,8 +2345,7 @@ subsystems:
     - sds-replicated-volume
     - snapshot-controller
     - storage-volume-data-manager
-    namespaces:
-    - d8-local-path-provisioner
+    namespaces: []
   observability:
     modules:
     - extended-monitoring

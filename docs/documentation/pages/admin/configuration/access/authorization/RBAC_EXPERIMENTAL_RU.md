@@ -622,7 +622,7 @@ d8 k annotate clusterrole d8:namespace:admin custom.meta.deckhouse.io/title='А�
 | `d8:manage:networking:<уровень>` | `d8:subsystem:network:<уровень>`, которая даёт и права на `keepalived` |
 | `d8:manage:security:<уровень>` | `d8:subsystem:security:<уровень>` вместе с `d8:subsystem:iam:<уровень>`, которая даёт права на `user-authz` и `user-authn`, а также другие права |
 | `d8:manage:observability:<уровень>` | `d8:subsystem:observability:<уровень>` |
-| `d8:manage:storage:<уровень>` | `d8:subsystem:storage:<уровень>`, которая даёт и права на `local-path-provisioner` |
+| `d8:manage:storage:<уровень>` | `d8:subsystem:storage:<уровень>` |
 | `d8:use:role:<уровень>` | `d8:namespace:<уровень>` |
 | `d8:use:role:<уровень>:kubernetes` | `d8:namespace:<уровень>` (полная namespace-роль, не kubernetes-only) |
 
@@ -634,7 +634,7 @@ d8 k annotate clusterrole d8:namespace:admin custom.meta.deckhouse.io/title='А�
 
 Псевдоним `d8:manage:security:<уровень>` сохраняет и права на `user-authz` и `user-authn`, которые теперь даёт `d8:subsystem:iam:<уровень>`. Эта роль даёт также права на `multitenancy-manager` и на уровне `manager` право назначать роли, которого `d8:subsystem:security:<уровень>` не даёт. Поэтому привязку к `d8:manage:security:<уровень>` заменяют две привязки с теми же субъектами, к `d8:subsystem:iam:<уровень>` и к `d8:subsystem:security:<уровень>`. Аннотация `rbac.deckhouse.io/deprecated-replaced-by` псевдонима называет только вторую.
 
-Псевдонимы `networking` и `storage` не включают `keepalived` и `local-path-provisioner`, которые перешли в `network` и `storage` из `infrastructure`, поэтому новые роли дают больше прав, чем эти псевдонимы.
+Псевдоним `networking` не включает `keepalived`, который перешёл в `network` из `infrastructure`, поэтому новая роль даёт больше прав, чем этот псевдоним.
 
 Аннотация `rbac.deckhouse.io/deprecated-replaced-by` псевдонима называет основную замену, а описание псевдонима называет роли других подсистем, в которые перешли его модули. Эти роли охватывают подсистемы целиком. Чтобы выдать права только на некоторые модули, создайте собственную роль, которая выбирает их системные capabilities по лейблу `rbac.deckhouse.io/capability`, например `system-capability.multitenancy-manager.view` (см. [«Создание новой роли подсистемы»](#создание-новой-роли-подсистемы)).
 

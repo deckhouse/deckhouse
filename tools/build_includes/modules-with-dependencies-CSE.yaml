@@ -53,15 +53,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /modules/031-local-path-provisioner/hooks
-  to: /deckhouse/modules/031-local-path-provisioner/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-    - '**/AGENTS.md'
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /modules/038-registry/hooks
   to: /deckhouse/modules/038-registry/hooks
   excludePaths:

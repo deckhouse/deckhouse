@@ -614,7 +614,7 @@ Name mapping:
 | `d8:manage:networking:<level>` | `d8:subsystem:network:<level>`, which also grants the rights for `keepalived` |
 | `d8:manage:security:<level>` | `d8:subsystem:security:<level>` together with `d8:subsystem:iam:<level>`, which grants the rights for `user-authz` and `user-authn` and more |
 | `d8:manage:observability:<level>` | `d8:subsystem:observability:<level>` |
-| `d8:manage:storage:<level>` | `d8:subsystem:storage:<level>`, which also grants the rights for `local-path-provisioner` |
+| `d8:manage:storage:<level>` | `d8:subsystem:storage:<level>` |
 | `d8:use:role:<level>` | `d8:namespace:<level>` |
 | `d8:use:role:<level>:kubernetes` | `d8:namespace:<level>` (full namespace role, not kubernetes-only) |
 
@@ -626,7 +626,7 @@ The aliases of the `deckhouse`, `infrastructure`, and `kubernetes` roles therefo
 
 The alias of `d8:manage:security:<level>` also keeps the rights for `user-authz` and `user-authn`, which now come with `d8:subsystem:iam:<level>`. That role also grants the rights for `multitenancy-manager` and, at the `manager` level, the right to assign roles, which `d8:subsystem:security:<level>` does not grant. So a binding to `d8:manage:security:<level>` is replaced by two bindings with the same subjects, to `d8:subsystem:iam:<level>` and to `d8:subsystem:security:<level>`. The `rbac.deckhouse.io/deprecated-replaced-by` annotation of the alias names only the second one.
 
-The aliases of `networking` and `storage` leave out `keepalived` and `local-path-provisioner`, which moved to `network` and `storage` from `infrastructure`, so the new roles grant more than these aliases.
+The alias of `networking` leaves out `keepalived`, which moved to `network` from `infrastructure`, so the new role grants more than this alias.
 
 The `rbac.deckhouse.io/deprecated-replaced-by` annotation of an alias names its main replacement, and the description of the alias names the roles of the other subsystems its modules moved to. These roles cover whole subsystems. To grant the rights for some modules only, create a custom role that selects their system capabilities by the `rbac.deckhouse.io/capability` label, for example `system-capability.multitenancy-manager.view` (see [Creating a new subsystem role](#creating-a-new-subsystem-role)).
 

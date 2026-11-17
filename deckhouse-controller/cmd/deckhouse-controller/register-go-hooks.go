@@ -42,7 +42,6 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/030-cloud-provider-gcp/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/requirements"
-	_ "github.com/deckhouse/deckhouse/modules/031-local-path-provisioner/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/035-cni-flannel/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/035-cni-flannel/requirements"
 	_ "github.com/deckhouse/deckhouse/modules/035-cni-simple-bridge/hooks"

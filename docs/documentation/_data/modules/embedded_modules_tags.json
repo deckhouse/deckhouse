@@ -136,10 +136,6 @@
     "core",
     "ssdlc"
   ],
-  "local-path-provisioner": [
-    "storage",
-    "ssdlc"
-  ],
   "metallb": [
     "network",
     "balancing",

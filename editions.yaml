@@ -83,7 +83,6 @@ editions:
   - documentation
   - istio
   - kube-dns
-  - local-path-provisioner
   - log-shipper
   - metallb
   - monitoring-custom

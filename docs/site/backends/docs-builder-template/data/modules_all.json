@@ -688,6 +688,24 @@
       "ssdlc"
     ]
   },
+  "local-path-provisioner": {
+    "editions": [
+      "ce",
+      "core",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/modules/local-path-provisioner/",
+    "tags": [
+      "storage",
+      "ssdlc"
+    ]
+  },
   "log-shipper": {
     "editions": [
       "ce",

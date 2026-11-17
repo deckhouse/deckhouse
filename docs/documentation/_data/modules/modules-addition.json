@@ -501,6 +501,20 @@
     "external": "true",
     "path": "/modules/dashboard/"
   },
+  "local-path-provisioner": {
+    "editions": [
+      "ce",
+      "core",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/modules/local-path-provisioner/"
+  },
   "log-shipper": {
     "editions": [
       "ce",

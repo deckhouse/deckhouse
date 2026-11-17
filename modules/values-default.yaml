@@ -12,7 +12,6 @@ deschedulerEnabled: true
 extendedMonitoringEnabled: true
 kubeDnsEnabled: true
 kubeProxyEnabled: true
-localPathProvisionerEnabled: true
 monitoringCustomEnabled: true
 monitoringDeckhouseEnabled: true
 monitoringKubernetesControlPlaneEnabled: true

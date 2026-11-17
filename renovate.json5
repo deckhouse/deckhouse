@@ -71,12 +71,6 @@
       "groupSlug": "030-infra-provider-baremetal"
     },
     {
-      "description": "Group 031-local-path-provisioner dependency updates",
-      "matchFileNames": ["**/modules/031-local-path-provisioner/**"],
-      "groupName": "031-local-path-provisioner dependencies",
-      "groupSlug": "031-local-path-provisioner"
-    },
-    {
       "description": "Group 035-cni-flannel dependency updates",
       "matchFileNames": ["**/modules/035-cni-flannel/**"],
       "groupName": "035-cni-flannel dependencies",
