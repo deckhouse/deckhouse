@@ -1366,7 +1366,9 @@ spec:
         - standard
 ```
 
-При создании PersistentVolumeClaim без значения `spec.storageClassName` в это поле автоматически подставляется `fast-ssd`. Если указан StorageClass, которого нет в списке разрешённых, он заменяется на `fast-ssd`, потому что для StorageClass используется режим подстановки значения по умолчанию [`Coerce`](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-defaulting). Это относится и к классу, который подставил встроенный admission-контроллер Kubernetes. О замене сообщается предупреждением (admission warning) в ответе на запрос, поэтому в выводе `d8 k` видны и исходное значение, и подставленное. Если у проекта нет StorageClass по умолчанию, такой PersistentVolumeClaim отклоняется.
+При создании PersistentVolumeClaim без значения `spec.storageClassName` в это поле автоматически подставляется `fast-ssd`. Так происходит, даже если встроенный admission-контроллер Kubernetes уже подставил StorageClass кластера по умолчанию, например `standard`: для StorageClass используется подстановка значения по умолчанию [в режиме `Coerce`](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-defaulting), который заменяет значение, заданное не автором объекта. Если указан StorageClass, которого нет в списке разрешённых, он тоже заменяется на `fast-ssd`. О такой замене сообщается предупреждением (admission warning) в ответе на запрос, поэтому в выводе `d8 k` видны и исходное значение, и подставленное. PersistentVolumeClaim с `storageClassName: ""`, который запрашивает том без класса, сохраняет пустое значение. Если у проекта нет StorageClass по умолчанию, PersistentVolumeClaim со StorageClass не из списка разрешённых отклоняется.
+
+PersistentVolumeClaim, созданный без класса, когда StorageClass по умолчанию нет ни у проекта, ни у кластера, остаётся без класса. Когда в кластере появляется StorageClass по умолчанию, Kubernetes (kube-controller-manager) назначает его такому PersistentVolumeClaim, и вебхуки грантов это изменение не проверяют, поэтому PersistentVolumeClaim может получить класс, недоступный проекту. Чтобы этого избежать, задайте `default` в политике.
 
 PersistentVolumeClaim, который восстанавливает том из снимка или клонирует другой том (`spec.dataSource` или `spec.dataSourceRef` с `kind: VolumeSnapshot` или `kind: PersistentVolumeClaim`), сохраняет свой StorageClass: класс должен обслуживаться CSI-драйвером источника, поэтому он не заменяется значением по умолчанию для проекта. Если такой StorageClass проекту недоступен, PersistentVolumeClaim отклоняется с пояснением; укажите StorageClass, доступный проекту.
 
@@ -1734,10 +1736,16 @@ AvailableClusterResource существует, пока существует с�
 
 - в политике не задан `default`, а в регистрации нет `defaultFrom`;
 - ресурс задаётся списком значений, а не объектами кластера, и `defaultFrom` к нему не применяется;
-- `defaultFrom` задан, но аннотация со значением `true` есть не ровно у одного объекта;
+- `defaultFrom` задан, но ни у одного объекта его аннотация не равна `true`. Это показывает условие `DefaultFromResolved` GrantableClusterResourceDefinition с причиной `NoDefault`;
 - значение по умолчанию задано, но проекту недоступно, например StorageClass кластера по умолчанию не входит в выданные проекту имена или значение по умолчанию — [зарезервированный](#выдача-зарезервированного-ресурса) ресурс, который ни одна политика не разрешает проекту.
 
 Тогда поле остаётся пустым, и объект создаётся или отклоняется по обычным правилам.
+
+Cluster-wide-ресурс по умолчанию, который находит `defaultFrom`, выбирается так же, как Kubernetes выбирает StorageClass по умолчанию. Объект считается используемым по умолчанию, если одна из аннотаций `defaultFrom` равна ровно `true`, поэтому `false` и `True` не учитываются. Для StorageClass учитываются и `storageclass.kubernetes.io/is-default-class`, и устаревшая `storageclass.beta.kubernetes.io/is-default-class`. Если отмечено несколько объектов, используется созданный последним. Условие `DefaultFromResolved` GrantableClusterResourceDefinition перечисляет отмеченные объекты и называет используемый:
+
+```shell
+d8 k get grantableclusterresourcedefinition storageclasses -o jsonpath='{.status.conditions[?(@.type=="DefaultFromResolved")].message}'
+```
 
 ### Для разработчиков модулей
 

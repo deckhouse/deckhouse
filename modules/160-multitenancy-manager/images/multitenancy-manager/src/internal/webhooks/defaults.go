@@ -143,8 +143,9 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 	// itself costs no read beyond the references.
 	type target struct {
 		candidate
-		segs  []string
-		value string
+		segs     []string
+		value    string
+		authored bool
 	}
 	var targets []target
 	for _, c := range active {
@@ -156,7 +157,7 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 		if !ok {
 			continue
 		}
-		parentOK, value := fieldState(obj, segs)
+		parentOK, value, present := fieldState(obj, segs)
 		if !parentOK {
 			// A parent object is missing, so a JSON Patch "add" would be unsafe.
 			continue
@@ -165,7 +166,10 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 		if value != "" && c.fp.Defaulting != v1alpha1.DefaultingCoerce {
 			continue
 		}
-		targets = append(targets, target{candidate: c, segs: segs, value: value})
+		if present && value == "" && c.fp.Defaulting == v1alpha1.DefaultingCoerce {
+			continue
+		}
+		targets = append(targets, target{candidate: c, segs: segs, value: value, authored: value == "" || setByAuthor(obj, segs)})
 	}
 	if len(targets) == 0 {
 		return allowedResponse(req.UID), nil
@@ -188,7 +192,7 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 	var patches []jsonPatchOperation
 	var warnings []string
 	for _, t := range targets {
-		mr, fp, segs, value := t.mr, t.fp, t.segs, t.value
+		mr, fp, segs, value, authored := t.mr, t.fp, t.segs, t.value, t.authored
 		def := mr.Definition
 		if _, skip := unresolvable[def.Name]; skip {
 			continue
@@ -215,12 +219,13 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 		}
 
 		// FillEmpty injects only into an empty field. Coerce also rewrites a non-empty value that is not
-		// available to the project (for fields a built-in admission controller pre-fills).
+		// available to the project, and a value the author did not set (for fields a built-in admission
+		// controller pre-fills), and keeps an explicitly empty one.
 		shouldDefault := value == "" ||
-			(fp.Defaulting == v1alpha1.DefaultingCoerce && !resolved.IsAvailable(value))
+			(fp.Defaulting == v1alpha1.DefaultingCoerce && (!authored && value != defName || !resolved.IsAvailable(value)))
 		if shouldDefault {
 			patches = append(patches, jsonPatchOperation{Op: "add", Path: jsonPointer(segs), Value: defName})
-			if value != "" {
+			if authored && value != "" {
 				// The author asked for something and got something else; say so on the response the
 				// author reads (kubectl prints admission warnings), the way USAGE describes Coerce.
 				warnings = append(warnings, fmt.Sprintf(
@@ -256,19 +261,41 @@ func mayDefault(fieldPaths []v1alpha1.FieldPath, group, version, resource string
 }
 
 // fieldState reports whether all parent objects of the field exist (so a JSON Patch "add" is safe,
-// first return) and the field's current string value (second return; empty if the field is absent,
-// nil, or not a string).
-func fieldState(obj map[string]any, segs []string) (bool, string) {
+// first return), the field's current string value (second return; empty if the field is absent,
+// nil, or not a string) and whether the field holds a string, an empty one included (third return).
+func fieldState(obj map[string]any, segs []string) (bool, string, bool) {
 	cur := obj
 	for i := 0; i < len(segs)-1; i++ {
 		m, ok := cur[segs[i]].(map[string]any)
 		if !ok {
-			return false, ""
+			return false, "", false
 		}
 		cur = m
 	}
-	v, _ := cur[segs[len(segs)-1]].(string)
-	return true, v
+	v, present := cur[segs[len(segs)-1]].(string)
+	return true, v, present
+}
+
+func setByAuthor(obj map[string]any, segs []string) bool {
+	metadata, _ := obj["metadata"].(map[string]any)
+	entries, _ := metadata["managedFields"].([]any)
+	if len(entries) == 0 {
+		return true
+	}
+	for _, entry := range entries {
+		e, _ := entry.(map[string]any)
+		cur, _ := e["fieldsV1"].(map[string]any)
+		for _, seg := range segs {
+			cur, _ = cur["f:"+seg].(map[string]any)
+			if cur == nil {
+				break
+			}
+		}
+		if cur != nil {
+			return true
+		}
+	}
+	return false
 }
 
 // jsonPointer builds an RFC6901 JSON Pointer from path segments.

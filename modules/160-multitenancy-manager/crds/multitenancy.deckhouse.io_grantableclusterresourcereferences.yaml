@@ -106,7 +106,7 @@ spec:
 
                         - `None`: No value is assigned; only the availability of the specified cluster-wide resource is checked.
                         - `FillEmpty`: The default value is assigned when an object is created if the field is empty.
-                        - `Coerce`: The default value is assigned when an object is created if the field is empty or the specified cluster-wide resource is unavailable to the project.
+                        - `Coerce`: The default value is assigned when an object is created if the field is not set, if the author of the object did not set it (for example, the built-in Kubernetes admission controller filled in the default StorageClass of the cluster), or if the specified cluster-wide resource is unavailable to the project. Whether the author set the field is taken from `metadata.managedFields` of the request; an object without them counts as set by its author. A field explicitly set to an empty string is kept.
 
                         `FillEmpty` and `Coerce` require `path` to point to a single field, so only a simple member path is accepted, for example `$.spec.storageClassName` or `$.metadata.annotations['cert-manager.io/cluster-issuer']`. A path with a wildcard, an array index or a filter is rejected with these modes and can only be used with `None`.
                       enum:

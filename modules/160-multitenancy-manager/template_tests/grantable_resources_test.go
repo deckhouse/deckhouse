@@ -61,6 +61,12 @@ var _ = Describe("Module :: multitenancy-manager :: helm template :: grantable r
 			}
 		})
 
+		It("finds the cluster default StorageClass by both annotations Kubernetes reads", func() {
+			defaultFrom := f.KubernetesGlobalResource("GrantableClusterResourceDefinition", "storageclasses").Field("spec.defaultFrom")
+			Expect(defaultFrom.Get("annotationKey").String()).To(Equal("storageclass.kubernetes.io/is-default-class"))
+			Expect(defaultFrom.Get("additionalAnnotationKeys").String()).To(MatchJSON(`["storageclass.beta.kubernetes.io/is-default-class"]`))
+		})
+
 		It("leaves ClusterIssuer to the cert-manager module, even while it is enabled", func() {
 			Expect(f.KubernetesGlobalResource("GrantableClusterResourceDefinition", "clusterissuers").Exists()).To(BeFalse())
 			Expect(f.KubernetesGlobalResource("GrantableClusterResourceReference", "clusterissuers-certificate").Exists()).To(BeFalse())

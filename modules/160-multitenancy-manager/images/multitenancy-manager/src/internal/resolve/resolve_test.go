@@ -267,7 +267,7 @@ func TestResolveRefusesANamespacedGrantedResource(t *testing.T) {
 	if _, err := Resolve(context.Background(), cl, testMapper(), reg, nil); err == nil || !strings.Contains(err.Error(), "namespaced") {
 		t.Fatalf("a namespaced grantedResource must not resolve, err=%v", err)
 	}
-	if _, err := defaultFromAnnotation(context.Background(), cl, testMapper(), reg); err == nil || !strings.Contains(err.Error(), "namespaced") {
+	if _, err := FindClusterDefault(context.Background(), cl, testMapper(), reg); err == nil || !strings.Contains(err.Error(), "namespaced") {
 		t.Fatalf("defaultFrom must not read a namespaced grantedResource, err=%v", err)
 	}
 	reg.Spec.GrantedResource = &v1alpha1.GrantedResource{APIGroup: "storage.k8s.io", Kind: "StorageClass"}

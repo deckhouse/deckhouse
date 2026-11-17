@@ -780,3 +780,98 @@ func TestProtect(t *testing.T) {
 		t.Fatal("system controller must bypass AvailableClusterResource protection")
 	}
 }
+
+func storageClassDefaultsMutator(t *testing.T) *DefaultsMutator {
+	t.Helper()
+	def := &v1alpha1.GrantableClusterResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{Name: "storageclasses"},
+		Spec: v1alpha1.GrantableClusterResourceDefinitionSpec{
+			GrantedResource:     &v1alpha1.GrantedResource{APIGroup: "storage.k8s.io", Kind: "StorageClass"},
+			DefaultAvailability: v1alpha1.AvailabilityNone,
+			DefaultFrom:         &v1alpha1.DefaultFrom{AnnotationKey: "storageclass.kubernetes.io/is-default-class"},
+		},
+	}
+	ref := &v1alpha1.GrantableClusterResourceReference{
+		ObjectMeta: metav1.ObjectMeta{Name: "storageclasses-pvc"},
+		Spec: v1alpha1.GrantableClusterResourceReferenceSpec{
+			GrantableClusterResourceName: "storageclasses",
+			Rule:                         v1alpha1.UsageRule{APIGroups: []string{""}, APIVersions: []string{"v1"}, Resources: []string{"persistentvolumeclaims"}},
+			FieldPaths:                   []v1alpha1.FieldPath{{Path: "$.spec.storageClassName", Defaulting: v1alpha1.DefaultingCoerce}},
+		},
+	}
+	grant := &grantsv1alpha2.ClusterResourceGrantPolicy{
+		ObjectMeta: metav1.ObjectMeta{Name: "g"},
+		Spec: grantsv1alpha2.ClusterResourceGrantPolicySpec{
+			NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
+			Resources:         []v1alpha1.GrantResource{{ResourceName: "storageclasses", Allowed: []string{"replicated", "local"}, Default: "local"}},
+		},
+	}
+	repl := &storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "replicated", Annotations: map[string]string{"storageclass.kubernetes.io/is-default-class": "true"}}, Provisioner: "x"}
+	local := &storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "local"}, Provisioner: "x"}
+	return defaults(t, projectNS("proj", map[string]string{"env": "prod"}), def, ref, grant, repl, local)
+}
+
+func claimWithManagedSpec(t *testing.T, spec map[string]any, managedSpec map[string]any) []byte {
+	t.Helper()
+	metadata := map[string]any{"name": "p", "namespace": "proj"}
+	if managedSpec != nil {
+		metadata["managedFields"] = []any{map[string]any{
+			"manager":    "kubectl-create",
+			"operation":  "Update",
+			"apiVersion": "v1",
+			"fieldsType": "FieldsV1",
+			"fieldsV1":   map[string]any{"f:spec": managedSpec},
+		}}
+	}
+	return raw(t, map[string]any{"apiVersion": "v1", "kind": "PersistentVolumeClaim", "metadata": metadata, "spec": spec})
+}
+
+func TestDefaults_CoerceReplacesTheClassTheAuthorDidNotSet(t *testing.T) {
+	m := storageClassDefaultsMutator(t)
+
+	filledIn := claimWithManagedSpec(t,
+		map[string]any{"accessModes": []any{"ReadWriteOnce"}, "storageClassName": "replicated"},
+		map[string]any{"f:accessModes": map[string]any{}})
+	resp := serve(t, m, "/defaults", review(admissionv1.Create, pvcGVR, pvcGVK, "proj", "p", filledIn, nil))
+	var patches []map[string]any
+	if err := json.Unmarshal(resp.Patch, &patches); err != nil {
+		t.Fatalf("expected a patch, got %s: %v", resp.Patch, err)
+	}
+	if len(patches) != 1 || patches[0]["path"] != "/spec/storageClassName" || patches[0]["value"] != "local" {
+		t.Fatalf("the cluster default the author did not set must give way to the project default, got %v", patches)
+	}
+	if len(resp.Warnings) != 0 {
+		t.Fatalf("the author named no class, so nothing is reported, got %v", resp.Warnings)
+	}
+
+	named := claimWithManagedSpec(t,
+		map[string]any{"accessModes": []any{"ReadWriteOnce"}, "storageClassName": "replicated"},
+		map[string]any{"f:accessModes": map[string]any{}, "f:storageClassName": map[string]any{}})
+	if resp := serve(t, m, "/defaults", review(admissionv1.Create, pvcGVR, pvcGVK, "proj", "p", named, nil)); len(resp.Patch) != 0 {
+		t.Fatalf("an available class the author named must be kept, got patch %s", resp.Patch)
+	}
+
+	unknown := claimWithManagedSpec(t, map[string]any{"storageClassName": "replicated"}, nil)
+	if resp := serve(t, m, "/defaults", review(admissionv1.Create, pvcGVR, pvcGVK, "proj", "p", unknown, nil)); len(resp.Patch) != 0 {
+		t.Fatalf("without managedFields the value counts as the author's, got patch %s", resp.Patch)
+	}
+}
+
+func TestDefaults_CoerceKeepsAnExplicitlyEmptyClass(t *testing.T) {
+	m := storageClassDefaultsMutator(t)
+
+	empty := claimWithManagedSpec(t, map[string]any{"storageClassName": ""}, map[string]any{"f:storageClassName": map[string]any{}})
+	if resp := serve(t, m, "/defaults", review(admissionv1.Create, pvcGVR, pvcGVK, "proj", "p", empty, nil)); len(resp.Patch) != 0 {
+		t.Fatalf(`storageClassName: "" asks for no class and must be kept, got patch %s`, resp.Patch)
+	}
+
+	absent := claimWithManagedSpec(t, map[string]any{"accessModes": []any{"ReadWriteOnce"}}, map[string]any{"f:accessModes": map[string]any{}})
+	resp := serve(t, m, "/defaults", review(admissionv1.Create, pvcGVR, pvcGVK, "proj", "p", absent, nil))
+	var patches []map[string]any
+	if err := json.Unmarshal(resp.Patch, &patches); err != nil {
+		t.Fatalf("expected a patch, got %s: %v", resp.Patch, err)
+	}
+	if len(patches) != 1 || patches[0]["value"] != "local" {
+		t.Fatalf("a claim without the field must get the project default, got %v", patches)
+	}
+}

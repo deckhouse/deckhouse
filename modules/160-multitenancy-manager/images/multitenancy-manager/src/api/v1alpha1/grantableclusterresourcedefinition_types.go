@@ -77,6 +77,12 @@ type DefaultFrom struct {
 	// AnnotationKey is the annotation on a granted object that marks it as the cluster-wide default.
 	// +optional
 	AnnotationKey string `json:"annotationKey,omitempty"`
+
+	// AdditionalAnnotationKeys are more annotations that mark the cluster-wide default the same way.
+	// +optional
+	// +listType=set
+	// +kubebuilder:validation:MaxItems=4
+	AdditionalAnnotationKeys []string `json:"additionalAnnotationKeys,omitempty"`
 }
 
 // CatalogField declares one field of a granted object that the controller copies into the
@@ -173,8 +179,9 @@ type GrantableClusterResourceDefinitionStatus struct {
 	ReferenceCount int `json:"referenceCount,omitempty"`
 
 	// Conditions represent the current state of the resource: GrantedResourceValid
-	// (ClusterScoped/ValueBacked/Namespaced/KindNotServed/MappingFailed) and CatalogFieldsValid
-	// (Valid/InvalidCatalogFields).
+	// (ClusterScoped/ValueBacked/Namespaced/KindNotServed/MappingFailed), CatalogFieldsValid
+	// (Valid/InvalidCatalogFields) and, with defaultFrom set, DefaultFromResolved
+	// (Found/SeveralDefaults/NoDefault/ListFailed).
 	// +listType=map
 	// +listMapKey=type
 	// +optional

@@ -28,6 +28,8 @@ spec:
   # omit spec.storageClassName before our webhook runs; defaultFrom marks that cluster default.
   defaultFrom:
     annotationKey: storageclass.kubernetes.io/is-default-class
+    additionalAnnotationKeys:
+    - storageclass.beta.kubernetes.io/is-default-class
   # Shown to tenants in the catalog. parameters is left out on purpose: it is driver-specific, can be
   # large and may name secrets (csi.storage.k8s.io/*-secret-name).
   catalogFields:
@@ -57,8 +59,8 @@ spec:
     resources:
     - persistentvolumeclaims
   fieldPaths:
-  # Coerce: the cluster default the built-in admission pre-fills is rewritten to the project default
-  # when it is not available to the project, instead of being rejected.
+  # Coerce: the cluster default the built-in admission pre-fills, and a class the project may not use,
+  # are rewritten to the project default instead of being kept or rejected.
   - path: $.spec.storageClassName
     defaulting: Coerce
   - path: $.spec.storageClassName

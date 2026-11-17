@@ -31,9 +31,10 @@ const (
 	DefaultingNone DefaultingMode = "None"
 	// DefaultingFillEmpty injects the per-project default into an empty field on CREATE.
 	DefaultingFillEmpty DefaultingMode = "FillEmpty"
-	// DefaultingCoerce is FillEmpty plus rewriting a non-empty value that is not available to the
-	// project to the default (for fields a built-in admission controller pre-fills, e.g. PVC
-	// storageClassName via DefaultStorageClass).
+	// DefaultingCoerce is FillEmpty plus rewriting to the default a non-empty value that is not
+	// available to the project or that the author did not set per the request's managedFields (for
+	// fields a built-in admission controller pre-fills, e.g. PVC storageClassName via
+	// DefaultStorageClass); an explicitly empty value is kept.
 	DefaultingCoerce DefaultingMode = "Coerce"
 )
 

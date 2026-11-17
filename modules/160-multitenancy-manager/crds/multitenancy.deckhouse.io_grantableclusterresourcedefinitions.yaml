@@ -135,10 +135,17 @@ spec:
                 type: string
               defaultFrom:
                 description: |-
-                  Settings for determining the cluster-wide resource used by default.
+                  Settings for selecting an object of a cluster-wide resource to use as the default.
 
-                  The resource is identified by the specified annotation carrying the value `true` (compared case-insensitively; `false` marks a resource that is not the default, as the Kubernetes convention for `storageclass.kubernetes.io/is-default-class` does) and is used as the default value if one is not specified using ClusterResourceGrantPolicy. When more than one resource carries `true`, there is no default.
+                  An object is marked as the default when one of the specified annotations is set to exactly `true`. The selected object's name is used as the default value if one is not set using ClusterResourceGrantPolicy. Other values, such as `false` or `True`, do not mark the object. If several objects are marked, the most recently created one is selected; if they have the same creation time, the first by name is selected. This is how Kubernetes picks the default StorageClass. The `DefaultFromResolved` condition in the status shows the selection result.
                 properties:
+                  additionalAnnotationKeys:
+                    description: Keys of additional annotations that, like `annotationKey`, mark an object of the cluster-wide resource as the default, for example, the older `storageclass.beta.kubernetes.io/is-default-class`.
+                    items:
+                      type: string
+                    maxItems: 4
+                    type: array
+                    x-kubernetes-list-type: set
                   annotationKey:
                     description: Key of the annotation that marks the cluster-wide resource used by default; only the value `true` counts.
                     type: string
@@ -292,6 +299,7 @@ spec:
 
                   - `GrantedResourceValid`: whether `spec.grantedResource` can be processed. `True` with the reason `ClusterScoped` for a cluster-scoped resource or `ValueBacked` for a definition without `grantedResource`. `False` with the reason `Namespaced` for a namespaced resource: the definition is not processed, no project gets its AvailableClusterResource, and the grant webhooks skip the references to it: their values are not checked. `Unknown` with the reason `KindNotServed` while the resource is not served (for example, its CRD is not installed yet), or `MappingFailed` if its scope could not be determined.
                   - `CatalogFieldsValid`: whether `spec.catalogFields` pass the checks applied when the object is created or updated: the paths are valid singular queries that do not read `metadata.managedFields` or the `kubectl.kubernetes.io/last-applied-configuration` annotation, and the definition has `grantedResource` (reasons `Valid`, `InvalidCatalogFields`; the message lists all problems). A definition without `catalogFields` has the condition `True`. `False` means the object was stored bypassing these checks; the invalid entries are not shown in AvailableClusterResource.
+                  - `DefaultFromResolved`: result of selecting an object of the specified cluster-wide resource with `spec.defaultFrom`. `True` with reason `Found` means that one object is marked. The message names this object. `True` with reason `SeveralDefaults` means that several objects are marked. The message lists the marked objects and names the selected object. `False` with reason `NoDefault` means that no object has any of the specified annotations set to `true`. A project then gets a default only from a ClusterResourceGrantPolicy. `Unknown` with reason `ListFailed` means that the objects could not be read. When an object is selected, a project uses its name as the default. This happens when no ClusterResourceGrantPolicy sets a default for this cluster-wide resource and the object is available to the project. Annotation changes appear here within a few minutes. A definition without `defaultFrom` has no condition.
                 items:
                   description: Information about one aspect of the current resource state.
                   properties:

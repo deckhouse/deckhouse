@@ -101,6 +101,73 @@ spec:
               ($error == null): true
               ($stdout): e2e-mtm-sc-allowed
               (contains($stderr, $expected)): true
+        - description: Assert a PVC with an explicitly empty class keeps it
+          script:
+            content: >-
+              kubectl create --dry-run=server -f manifests/pvc-empty-class.yaml
+              --as e2e-mtm-grant-admin@example.com -o jsonpath='{.spec.storageClassName}'
+            check:
+              ($error == null): true
+              ($stdout): ''
+        - description: Assert a PVC without a class gets the project default even when the project may use the cluster default
+          script:
+            timeout: 5m
+            content: |
+              set -euo pipefail
+              cluster_default="$(kubectl get storageclasses -o json | jq -r '[.items[] | select(.metadata.annotations["storageclass.kubernetes.io/is-default-class"] == "true" or .metadata.annotations["storageclass.beta.kubernetes.io/is-default-class"] == "true")] | sort_by(.metadata.creationTimestamp, .metadata.name) | if length == 0 then "" else (map(.metadata.creationTimestamp) | max) as $newest | map(select(.metadata.creationTimestamp == $newest)) | first.metadata.name end')"
+              if [ -z "${cluster_default}" ]; then
+                echo "the cluster has no default StorageClass, nothing to check"
+                exit 0
+              fi
+              kubectl patch clusterresourcegrantpolicy e2e-mtm-grant --type json \
+                -p "[{\"op\":\"add\",\"path\":\"/spec/resources/0/allowed/-\",\"value\":\"${cluster_default}\"}]"
+              available=false
+              for attempt in $(seq 1 60); do
+                if kubectl get availableclusterresource storageclasses -n e2e-mtm-grant -o json \
+                  | jq -e --arg sc "${cluster_default}" '.status.available | map(.name) | index($sc) != null' >/dev/null; then
+                  available=true
+                  break
+                fi
+                sleep 5
+              done
+              if [ "${available}" != true ]; then
+                echo "the cluster default ${cluster_default} never became available to project e2e-mtm-grant"
+                exit 1
+              fi
+              warnings="$(mktemp)"
+              class="$(kubectl create --dry-run=server -f manifests/pvc-no-class.yaml \
+                --as e2e-mtm-grant-admin@example.com -o jsonpath='{.spec.storageClassName}' 2>"${warnings}")"
+              if [ "${class}" != "e2e-mtm-sc-allowed" ]; then
+                echo "the claim got ${class}, the cluster default is ${cluster_default}, the project default is e2e-mtm-sc-allowed"
+                exit 1
+              fi
+              if grep -q '\[multitenancy\]' "${warnings}"; then
+                echo "the claim named no class, so no replacement must be reported:"
+                cat "${warnings}"
+                exit 1
+              fi
+        - description: Assert the StorageClass registration reports the cluster default it finds
+          script:
+            timeout: 2m
+            content: |
+              set -euo pipefail
+              marked="$(kubectl get storageclasses -o json | jq '[.items[] | select(.metadata.annotations["storageclass.kubernetes.io/is-default-class"] == "true" or .metadata.annotations["storageclass.beta.kubernetes.io/is-default-class"] == "true")] | length')"
+              case "${marked}" in
+                0) expected=NoDefault ;;
+                1) expected=Found ;;
+                *) expected=SeveralDefaults ;;
+              esac
+              reason=""
+              for attempt in $(seq 1 20); do
+                reason="$(kubectl get grantableclusterresourcedefinition storageclasses \
+                  -o jsonpath='{.status.conditions[?(@.type=="DefaultFromResolved")].reason}')"
+                if [ "${reason}" = "${expected}" ]; then
+                  exit 0
+                fi
+                sleep 5
+              done
+              echo "DefaultFromResolved reason is ${reason}, want ${expected}: ${marked} StorageClasses are marked as the default"
+              exit 1
         - description: Assert a LoadBalancer Service with a class that is not granted is refused
           script:
             bindings:

@@ -1358,7 +1358,9 @@ spec:
         - standard
 ```
 
-When a PersistentVolumeClaim is created without a value in `spec.storageClassName`, `fast-ssd` is automatically assigned to this field. If a StorageClass that is not in the allowed list is specified, it is replaced with `fast-ssd`, because StorageClass uses the [`Coerce`](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-defaulting) default assignment mode. This also covers a class that the built-in Kubernetes admission controller has filled in. The replacement is reported as an admission warning in the response to the request, so the `d8 k` output shows both the original value and the substituted one. If the project has no default StorageClass, such a PersistentVolumeClaim is rejected.
+When a PersistentVolumeClaim is created without a value in `spec.storageClassName`, `fast-ssd` is automatically assigned to this field. This holds even if the built-in Kubernetes admission controller has already filled in the default StorageClass of the cluster, for example `standard`: StorageClass uses the [`Coerce` default assignment mode](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-defaulting), which replaces a value the author of the object did not set. If a StorageClass that is not in the allowed list is specified, it is replaced with `fast-ssd` as well. This replacement is reported as an admission warning in the response to the request, so the `d8 k` output shows both the original value and the substituted one. A PersistentVolumeClaim with `storageClassName: ""`, which asks for a volume without a class, keeps the empty value. If the project has no default StorageClass, a PersistentVolumeClaim with a StorageClass that is not in the allowed list is rejected.
+
+A PersistentVolumeClaim created without a class while neither the project nor the cluster has a default StorageClass stays without a class. Once the cluster gets a default StorageClass, Kubernetes (kube-controller-manager) assigns it to such a claim, and the grant webhooks do not check this change, so the claim can get a class the project may not use. Set `default` in the grant policy to avoid it.
 
 A PersistentVolumeClaim that restores a volume from a snapshot or clones another volume (`spec.dataSource` or `spec.dataSourceRef` with `kind: VolumeSnapshot` or `kind: PersistentVolumeClaim`) keeps its StorageClass: the class must be served by the CSI driver of the source, so it is not replaced with the project default. If such a StorageClass is not available to the project, the PersistentVolumeClaim is rejected with an explanation; specify a StorageClass that is available to the project.
 
@@ -1724,10 +1726,16 @@ AvailableClusterResource reports the project default in `status.default` and mar
 
 - the grant policy sets no `default`, and the registration has no `defaultFrom`;
 - the resource is granted as a list of values rather than as objects of the cluster, and `defaultFrom` does not apply to it;
-- `defaultFrom` is set, but not exactly one object has the annotation set to `true`;
+- `defaultFrom` is set, but no object has its annotation set to `true`. The `DefaultFromResolved` condition of the GrantableClusterResourceDefinition shows this with the reason `NoDefault`;
 - a default is set, but the project may not use it, for example the default StorageClass of the cluster is not among the names granted to the project, or the default is a [reserved](#granting-a-reserved-resource) resource that no policy allows for the project.
 
 Then the field stays empty, and the object is created or rejected by the usual rules.
+
+The cluster-wide default that `defaultFrom` finds is chosen the way Kubernetes chooses the default StorageClass. An object is the default if one of the annotations of `defaultFrom` is set to exactly `true`, so `false` and `True` do not count. For StorageClass, both `storageclass.kubernetes.io/is-default-class` and the older `storageclass.beta.kubernetes.io/is-default-class` count. If several objects are marked, the most recently created one is used. The `DefaultFromResolved` condition of the GrantableClusterResourceDefinition lists the marked objects and names the one used:
+
+```shell
+d8 k get grantableclusterresourcedefinition storageclasses -o jsonpath='{.status.conditions[?(@.type=="DefaultFromResolved")].message}'
+```
 
 ### For module developers
 

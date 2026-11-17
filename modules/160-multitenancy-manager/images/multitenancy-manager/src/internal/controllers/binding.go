@@ -179,12 +179,18 @@ func (r *DefinitionReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	granted, result := r.grantedResourceCondition(def)
+	defaultFrom := r.defaultFromCondition(ctx, def)
 
 	def.Status.References = bindings
 	def.Status.ReferenceCount = len(bindings)
 	def.Status.ObservedGeneration = def.Generation
 	apimeta.SetStatusCondition(&def.Status.Conditions, granted)
 	apimeta.SetStatusCondition(&def.Status.Conditions, valid)
+	if defaultFrom != nil {
+		apimeta.SetStatusCondition(&def.Status.Conditions, *defaultFrom)
+	} else {
+		apimeta.RemoveStatusCondition(&def.Status.Conditions, DefaultFromResolvedCondition)
+	}
 	if err := r.Status().Update(ctx, def); err != nil {
 		return ctrl.Result{}, fmt.Errorf("update definition status: %w", err)
 	}
@@ -224,6 +230,47 @@ func (r *DefinitionReconciler) grantedResourceCondition(def *v1alpha1.GrantableC
 		cond.Message = fmt.Sprintf("grantedResource %s is cluster-scoped.", gk)
 	}
 	return cond, ctrl.Result{RequeueAfter: ResyncInterval}
+}
+
+const DefaultFromResolvedCondition = "DefaultFromResolved"
+
+func (r *DefinitionReconciler) defaultFromCondition(ctx context.Context, def *v1alpha1.GrantableClusterResourceDefinition) *metav1.Condition {
+	keys := resolve.DefaultFromKeys(def.Spec.DefaultFrom)
+	if len(keys) == 0 || def.IsValueBacked() {
+		return nil
+	}
+	cond := &metav1.Condition{Type: DefaultFromResolvedCondition, ObservedGeneration: def.Generation}
+	kind := def.Spec.GrantedResource.Kind
+	found, err := resolve.FindClusterDefault(ctx, r.Client, r.Mapper, def)
+	switch {
+	case err != nil:
+		cond.Status = metav1.ConditionUnknown
+		cond.Reason = "ListFailed"
+		cond.Message = fmt.Sprintf("The %s objects cannot be read to find the cluster-wide default: %v", kind, err)
+	case len(found.Marked) == 0:
+		cond.Status = metav1.ConditionFalse
+		cond.Reason = "NoDefault"
+		cond.Message = fmt.Sprintf("No %s has %s set to \"true\". A project gets a default only from a ClusterResourceGrantPolicy.",
+			kind, annotationList(keys))
+	case len(found.Marked) == 1:
+		cond.Status = metav1.ConditionTrue
+		cond.Reason = "Found"
+		cond.Message = fmt.Sprintf("%s %q is the cluster-wide default. A project uses it when no ClusterResourceGrantPolicy sets a default for the project and the project may use it.",
+			kind, found.Name)
+	default:
+		cond.Status = metav1.ConditionTrue
+		cond.Reason = "SeveralDefaults"
+		cond.Message = fmt.Sprintf("%d %s objects are marked as the cluster-wide default: %s. The newest, %q, is used, as Kubernetes does for StorageClass. A project uses it when no ClusterResourceGrantPolicy sets a default for the project and the project may use it.",
+			len(found.Marked), kind, strings.Join(found.Marked, ", "), found.Name)
+	}
+	return cond
+}
+
+func annotationList(keys []string) string {
+	if len(keys) == 1 {
+		return "the annotation " + keys[0]
+	}
+	return "any of the annotations " + strings.Join(keys, ", ")
 }
 
 // SetupWithManager wires the definition reconciler; a reference change re-evaluates the definition it names.

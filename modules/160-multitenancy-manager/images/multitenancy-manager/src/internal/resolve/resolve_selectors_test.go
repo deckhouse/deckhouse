@@ -18,7 +18,9 @@ package resolve
 
 import (
 	"context"
+	"slices"
 	"testing"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
@@ -225,10 +227,60 @@ func TestDefaultFrom_OnlyTrueCounts(t *testing.T) {
 	if got := resolvedDefault(t, annotatedClass("a", "true"), annotatedClass("b", "false")); got != "a" {
 		t.Fatalf(`one "true" beside a "false" must pick the true one, got %q`, got)
 	}
-	if got := resolvedDefault(t, annotatedClass("a", "True"), annotatedClass("b", "")); got != "a" {
-		t.Fatalf(`the value is compared case-insensitively, got %q`, got)
+	if got := resolvedDefault(t, annotatedClass("a", "True"), annotatedClass("b", "")); got != "" {
+		t.Fatalf(`only the exact value "true" counts, got %q`, got)
 	}
-	if got := resolvedDefault(t, annotatedClass("a", "true"), annotatedClass("b", "true")); got != "" {
-		t.Fatalf(`two defaults mean no default, got %q`, got)
+}
+
+func TestDefaultFrom_NewestOfSeveralDefaults(t *testing.T) {
+	older := annotatedClass("a-older", "true")
+	older.CreationTimestamp = metav1.NewTime(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
+	newer := annotatedClass("z-newer", "true")
+	newer.CreationTimestamp = metav1.NewTime(time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC))
+	if got := resolvedDefault(t, older, newer, annotatedClass("other", "")); got != "z-newer" {
+		t.Fatalf("of two defaults the newest must be used, got %q", got)
+	}
+
+	sameA := annotatedClass("b", "true")
+	sameA.CreationTimestamp = older.CreationTimestamp
+	sameB := annotatedClass("a", "true")
+	sameB.CreationTimestamp = older.CreationTimestamp
+	if got := resolvedDefault(t, sameA, sameB); got != "a" {
+		t.Fatalf("of two defaults created at the same time the first by name must be used, got %q", got)
+	}
+
+	cl := newClient(t, older, newer)
+	found, err := FindClusterDefault(context.Background(), cl, testMapper(), defaultFromReg())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if found.Name != "z-newer" || !slices.Equal(found.Marked, []string{"z-newer", "a-older"}) {
+		t.Fatalf("unexpected cluster default %+v", found)
+	}
+}
+
+func TestDefaultFrom_AdditionalAnnotationKeys(t *testing.T) {
+	const beta = "storageclass.beta.kubernetes.io/is-default-class"
+	legacy := &storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "legacy", Annotations: map[string]string{beta: "true"}}, Provisioner: "x"}
+
+	if got := resolvedDefault(t, legacy); got != "" {
+		t.Fatalf("an annotation defaultFrom does not list must not mark the default, got %q", got)
+	}
+
+	reg := defaultFromReg()
+	reg.Spec.DefaultFrom.AdditionalAnnotationKeys = []string{beta}
+	resolved, err := Resolve(context.Background(), newClient(t, legacy, annotatedClass("other", "")), testMapper(), reg, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := resolved.Default(); got != "legacy" {
+		t.Fatalf("an additional annotation key must mark the default, got %q", got)
+	}
+
+	if got := DefaultFromKeys(&v1alpha1.DefaultFrom{AnnotationKey: "k", AdditionalAnnotationKeys: []string{"", "k", beta, beta}}); !slices.Equal(got, []string{"k", beta}) {
+		t.Fatalf("keys must drop empty and repeated entries, got %v", got)
+	}
+	if got := DefaultFromKeys(nil); got != nil {
+		t.Fatalf("no defaultFrom means no keys, got %v", got)
 	}
 }

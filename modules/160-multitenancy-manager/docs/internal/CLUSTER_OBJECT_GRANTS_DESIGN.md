@@ -503,8 +503,13 @@ simple-member-path check reads the segments off the same RFC 9535 parse tree the
 escapes decode identically on both sides, and it also refuses an empty member name (`$['']`).
 
 The default *value* comes from the policy's `default`, falling back to the definition's `defaultFrom`;
-`defaultFrom` accepts an object only when the annotation value is `true` (case-insensitive), so a class
-marked `is-default-class: "false"` is not a default.
+`defaultFrom` picks the object as Kubernetes picks the default StorageClass: an object counts when
+`annotationKey` or one of `additionalAnnotationKeys` is exactly `true` (so `is-default-class: "false"`
+is not a default), and of several the newest is used, ties broken by name. The definition reconciler
+reports the result in the `DefaultFromResolved` condition. Under `Coerce`, a value the author did not
+set (no `managedFields` entry of the request owns the field) is treated as empty, so the project
+default replaces the cluster default the `DefaultStorageClass` admission plugin fills in before the
+webhook; an explicitly empty string is kept.
 
 ## Webhooks
 

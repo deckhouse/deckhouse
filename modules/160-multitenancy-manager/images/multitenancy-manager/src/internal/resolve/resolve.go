@@ -725,10 +725,10 @@ func (r *Resolved) addLive(m *liveMatcher, obj *unstructured.Unstructured) {
 // default first (ResolveNames), so its availability is decided on the object as in Resolve.
 func (r *Resolved) settleDefault(ctx context.Context, cl client.Reader, mapper meta.RESTMapper, fetch func(string) error) error {
 	// Effective default falls back to the registration's defaultFrom annotation.
-	if r.def == "" && !r.Reg.IsValueBacked() && r.Reg.Spec.DefaultFrom != nil && r.Reg.Spec.DefaultFrom.AnnotationKey != "" {
-		def, err := defaultFromAnnotation(ctx, cl, mapper, r.Reg)
+	if r.def == "" && !r.Reg.IsValueBacked() && len(DefaultFromKeys(r.Reg.Spec.DefaultFrom)) > 0 {
+		found, err := FindClusterDefault(ctx, cl, mapper, r.Reg)
 		if err == nil {
-			r.def = def
+			r.def = found.Name
 		}
 	}
 	if r.def != "" && fetch != nil {
@@ -835,30 +835,60 @@ func GrantedResourceProblem(mapper meta.RESTMapper, reg *v1alpha1.GrantableClust
 	return "", err
 }
 
-// defaultFromAnnotation finds the single granted object annotated as the cluster-wide default.
-func defaultFromAnnotation(ctx context.Context, cl client.Reader, mapper meta.RESTMapper, reg *v1alpha1.GrantableClusterResourceDefinition) (string, error) {
+type ClusterDefault struct {
+	Name   string
+	Marked []string
+}
+
+func DefaultFromKeys(df *v1alpha1.DefaultFrom) []string {
+	if df == nil {
+		return nil
+	}
+	keys := make([]string, 0, 1+len(df.AdditionalAnnotationKeys))
+	for _, key := range append([]string{df.AnnotationKey}, df.AdditionalAnnotationKeys...) {
+		if key != "" && !slices.Contains(keys, key) {
+			keys = append(keys, key)
+		}
+	}
+	return keys
+}
+
+func FindClusterDefault(ctx context.Context, cl client.Reader, mapper meta.RESTMapper, reg *v1alpha1.GrantableClusterResourceDefinition) (ClusterDefault, error) {
+	keys := DefaultFromKeys(reg.Spec.DefaultFrom)
+	if len(keys) == 0 || reg.IsValueBacked() {
+		return ClusterDefault{}, nil
+	}
 	gvk, err := grantedGVK(mapper, reg)
 	if err != nil {
-		return "", err
+		return ClusterDefault{}, err
 	}
 	list := &unstructured.UnstructuredList{}
 	list.SetGroupVersionKind(schema.GroupVersionKind{Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind + "List"})
 	if err := cl.List(ctx, list, client.UnsafeDisableDeepCopy); err != nil {
-		return "", err
+		return ClusterDefault{}, err
 	}
-	// The annotation has to say "true": the Kubernetes convention marks a class that is NOT the
-	// default with the same key set to "false" (storageclass.kubernetes.io/is-default-class), and the
-	// presence of the key alone would have made that class the default.
-	var found []string
+	var marked []*unstructured.Unstructured
 	for i := range list.Items {
-		if value, ok := list.Items[i].GetAnnotations()[reg.Spec.DefaultFrom.AnnotationKey]; ok && strings.EqualFold(value, "true") {
-			found = append(found, list.Items[i].GetName())
+		annotations := list.Items[i].GetAnnotations()
+		if slices.ContainsFunc(keys, func(key string) bool { return annotations[key] == "true" }) {
+			marked = append(marked, &list.Items[i])
 		}
 	}
-	if len(found) == 1 {
-		return found[0], nil
+	if len(marked) == 0 {
+		return ClusterDefault{}, nil
 	}
-	return "", fmt.Errorf("no single default annotated object (found %d)", len(found))
+	slices.SortFunc(marked, func(a, b *unstructured.Unstructured) int {
+		ta, tb := a.GetCreationTimestamp(), b.GetCreationTimestamp()
+		if !ta.Equal(&tb) {
+			return tb.Compare(ta.Time)
+		}
+		return strings.Compare(a.GetName(), b.GetName())
+	})
+	found := ClusterDefault{Name: marked[0].GetName(), Marked: make([]string, 0, len(marked))}
+	for _, obj := range marked {
+		found.Marked = append(found.Marked, obj.GetName())
+	}
+	return found, nil
 }
 
 // ProjectNamespaces returns the names of namespaces belonging to the project, including the control

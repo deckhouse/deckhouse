@@ -63,8 +63,8 @@ type AvailableClusterResourceStatus struct {
 	//
 	// Empty when the project has no usable default. That is a normal state, not a failure: the grant
 	// policy sets no default and the registration has no defaultFrom; or the resource is value-backed,
-	// which defaultFrom does not apply to; or defaultFrom is set but the objects carrying its
-	// annotation are not exactly one; or a default is set that this project may not use, and it is
+	// which defaultFrom does not apply to; or defaultFrom is set but no object carries its
+	// annotation set to "true"; or a default is set that this project may not use, and it is
 	// dropped so defaulting never fills in a value validation would reject.
 	// +optional
 	Default string `json:"default,omitempty"`
