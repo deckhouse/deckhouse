@@ -2341,8 +2341,9 @@ subsystems:
   delivery:
     modules:
     - delivery-kit
-    - operator-argo
-    namespaces: []
+    - operator-helm
+    namespaces:
+    - d8-operator-helm
   network:
     modules:
     - cilium-hubble
