@@ -63,6 +63,15 @@ spec:
   # are rewritten to the project default instead of being kept or rejected.
   - path: $.spec.storageClassName
     defaulting: Coerce
+  - path: $.metadata.annotations['volume.beta.kubernetes.io/storage-class']
+    match:
+      fieldPath: $.metadata.annotations['volume.beta.kubernetes.io/storage-class']
+    defaulting: None
+    message: >-
+      Kubernetes takes the StorageClass of a PersistentVolumeClaim from the
+      volume.beta.kubernetes.io/storage-class annotation before spec.storageClassName:
+      name a StorageClass that is available to the project in the annotation, or remove the annotation
+      and set spec.storageClassName.
   - path: $.spec.storageClassName
     match:
       fieldPath: $.spec['dataSource','dataSourceRef'].kind

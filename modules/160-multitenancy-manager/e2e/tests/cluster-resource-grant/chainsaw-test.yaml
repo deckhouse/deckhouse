@@ -168,6 +168,25 @@ spec:
               done
               echo "DefaultFromResolved reason is ${reason}, want ${expected}: ${marked} StorageClasses are marked as the default"
               exit 1
+        - description: Assert a PVC with a class that is not granted in the volume.beta.kubernetes.io/storage-class annotation is refused
+          script:
+            bindings:
+              - name: expected
+                value: '[multitenancy] PersistentVolumeClaim "e2e-mtm-pvc-beta" references "e2e-mtm-sc-denied" which is not available to project "e2e-mtm-grant"'
+            content: >-
+              kubectl create --dry-run=server -f manifests/pvc-beta-annotation-denied.yaml
+              --as e2e-mtm-grant-admin@example.com
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+        - description: Assert a PVC with a granted class in the volume.beta.kubernetes.io/storage-class annotation is accepted
+          script:
+            content: >-
+              kubectl create --dry-run=server -f manifests/pvc-beta-annotation-allowed.yaml
+              --as e2e-mtm-grant-admin@example.com -o jsonpath='{.metadata.annotations.volume\.beta\.kubernetes\.io/storage-class}'
+            check:
+              ($error == null): true
+              ($stdout): e2e-mtm-sc-allowed
         - description: Assert a LoadBalancer Service with a class that is not granted is refused
           script:
             bindings:

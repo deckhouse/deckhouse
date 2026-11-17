@@ -83,6 +83,14 @@ var _ = Describe("Module :: multitenancy-manager :: helm template :: grantable r
 			Expect(f.KubernetesGlobalResource("GrantableClusterResourceDefinition", "storageclasses").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("GrantableClusterResourceReference", "storageclasses-pvc").Exists()).To(BeTrue())
 		})
+
+		It("checks the class of the beta annotation before the data source entry of storageclasses-pvc", func() {
+			ref := f.KubernetesGlobalResource("GrantableClusterResourceReference", "storageclasses-pvc")
+			Expect(ref.Field("spec.fieldPaths.1.path").String()).To(Equal("$.metadata.annotations['volume.beta.kubernetes.io/storage-class']"))
+			Expect(ref.Field("spec.fieldPaths.1.match.fieldPath").String()).To(Equal("$.metadata.annotations['volume.beta.kubernetes.io/storage-class']"))
+			Expect(ref.Field("spec.fieldPaths.1.defaulting").String()).To(Equal("None"))
+			Expect(ref.Field("spec.fieldPaths.2.match.fieldPath").String()).To(Equal("$.spec['dataSource','dataSourceRef'].kind"))
+		})
 	})
 
 	Context("while storage-foundation registers the StorageClass grant", func() {

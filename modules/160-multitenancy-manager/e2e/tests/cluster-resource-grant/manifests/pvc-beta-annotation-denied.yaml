@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: e2e-mtm-pvc-beta
+  namespace: e2e-mtm-grant
+  annotations:
+    volume.beta.kubernetes.io/storage-class: e2e-mtm-sc-denied
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi

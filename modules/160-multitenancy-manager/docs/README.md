@@ -194,7 +194,7 @@ Deckhouse Platform registers the following cluster-wide resources:
 
 | Definition name | Cluster-wide resource | Where it is used | Default assignment mode |
 | --- | --- | --- | --- |
-| `storageclasses` | StorageClass (storage.k8s.io) | PersistentVolumeClaim `.spec.storageClassName` | `Coerce`; `None` for a PersistentVolumeClaim whose `.spec.dataSource` or `.spec.dataSourceRef` is a VolumeSnapshot or a PersistentVolumeClaim |
+| `storageclasses` | StorageClass (storage.k8s.io) | PersistentVolumeClaim `.spec.storageClassName` and the `volume.beta.kubernetes.io/storage-class` annotation | `Coerce` for PersistentVolumeClaims in general. `None` for PersistentVolumeClaims whose `.spec.dataSource` or `.spec.dataSourceRef` references a VolumeSnapshot or a PersistentVolumeClaim, and for PersistentVolumeClaims with the beta annotation |
 | `loadbalancerclasses` | `loadbalancerclass` value | Service `.spec.loadBalancerClass` (for services of the `LoadBalancer` type) | `FillEmpty` |
 | `clusterissuers` | ClusterIssuer (cert-manager.io) | Certificate `.spec.issuerRef.name`; Ingress: `cert-manager.io/cluster-issuer` annotation | `FillEmpty` or `None` |
 | `clusterroles` | ClusterRole (rbac.authorization.k8s.io) | RoleBinding `.roleRef.name` | `None` |

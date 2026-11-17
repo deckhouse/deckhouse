@@ -1372,6 +1372,8 @@ PersistentVolumeClaim, созданный без класса, когда Storag
 
 PersistentVolumeClaim, который восстанавливает том из снимка или клонирует другой том (`spec.dataSource` или `spec.dataSourceRef` с `kind: VolumeSnapshot` или `kind: PersistentVolumeClaim`), сохраняет свой StorageClass: класс должен обслуживаться CSI-драйвером источника, поэтому он не заменяется значением по умолчанию для проекта. Если такой StorageClass проекту недоступен, PersistentVolumeClaim отклоняется с пояснением; укажите StorageClass, доступный проекту.
 
+PersistentVolumeClaim с аннотацией `volume.beta.kubernetes.io/storage-class` проверяется по классу из аннотации, а не по `spec.storageClassName`: Kubernetes берёт класс из аннотации в первую очередь. Если этот класс проекту недоступен, PersistentVolumeClaim отклоняется, а класс не заменяется значением по умолчанию для проекта; укажите в аннотации StorageClass, доступный проекту, или уберите аннотацию и задайте `spec.storageClassName`.
+
 Чтобы проверить, какие StorageClass доступны проекту, выполните следующую команду:
 
 ```shell
@@ -1801,7 +1803,7 @@ spec:
 
 Для каждого объекта используется самый специфичный из подходящих элементов `fieldPaths`: элемент, ограниченный `resources`, приоритетнее элементов, ограниченных только `apiGroups` или `apiVersions`, и элемента без ограничений, который применяется ко всем остальным ресурсам из `rule`. `*` в `resources` не ограничивает элемент: это то же самое, что не указывать параметр.
 
-Элемент, условие [`match`](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-match) которого для объекта не выполняется, пропускается, а из одинаково ограниченных элементов элемент с `match` приоритетнее элемента без него. Поэтому несколько элементов с одним `path` могут обрабатывать разные объекты одного ресурса, каждый со своим режимом подстановки: reference `storageclasses-pvc` проверяет StorageClass у PersistentVolumeClaim, у которого `spec.dataSource` или `spec.dataSourceRef` — VolumeSnapshot или PersistentVolumeClaim, в режиме `None`, а у остальных PersistentVolumeClaim — в режиме `Coerce`. Текст параметра [`message`](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-message) добавляется к отказу в создании объекта для этого элемента.
+Элемент, [условие `match`](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-match) которого для объекта не выполняется, пропускается, а из одинаково ограниченных элементов элемент с `match` приоритетнее элемента без него. Поэтому несколько элементов с одним `path` могут обрабатывать разные объекты одного ресурса, каждый со своим режимом подстановки: reference `storageclasses-pvc` проверяет StorageClass у PersistentVolumeClaim, у которого `spec.dataSource` или `spec.dataSourceRef` — VolumeSnapshot или PersistentVolumeClaim либо у которого есть аннотация `volume.beta.kubernetes.io/storage-class`, в режиме `None`, а у остальных PersistentVolumeClaim — в режиме `Coerce`. Текст [параметра `message`](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-message) добавляется к отказу в создании объекта для этого элемента.
 
 Описание параметров GrantableClusterResourceReference, режимов подстановки значений по умолчанию, условий `match` и настройки ресурсов с несколькими API-версиями приведено [в описании ресурса](cr.html#grantableclusterresourcereference).
 
