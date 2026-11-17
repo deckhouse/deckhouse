@@ -1,0 +1,107 @@
+# The basic role model follows the RBACv2 capabilities in rbacv2/manage: edit.yaml goes to
+# ClusterAdmin, view.yaml to User without RegistryNode. A role of a level also reaches every level
+# above it, so ClusterAdmin gets the User rules too.
+---
+# Access level: User.
+# Read access:
+# - registryoperations, the operations on the in-cluster cache
+# - registryimages, the images of the in-cluster cache
+# ModuleConfig/registry, RegistryConfig, RegistryUpstream and RegistryStorage all carry credentials
+# inline: the license key or the upstream password, and the bearer token of the storage. User reads
+# no Secrets, so none of them is here. A RegistryNode holds no credentials, but it lays out the
+# registry of the cluster: the upstream and mirror addresses, the CA bundles and every route. User is
+# granted to application developers across the cluster, so it stays with ClusterAdmin, unlike the
+# RBACv2 viewer of the cluster subsystem.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    user-authz.deckhouse.io/access-level: User
+  name: d8:user-authz:registry:user
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - registryoperations
+  verbs:
+  - get
+  - list
+  - watch
+# A virtual resource: no watch is served.
+- apiGroups:
+  - registry.deckhouse.io
+  resources:
+  - registryimages
+  verbs:
+  - get
+  - list
+---
+# Access level: ClusterAdmin.
+# Includes the User permissions.
+# Full access:
+# - registryupstreams, the additional registries
+# Read access, with the credentials:
+# - registryconfigs, registrystorages
+# Read access:
+# - registrynodes, the registry settings compiled for each node
+# Write access:
+# - registryoperations (create, update, patch, delete), to run operations on the cache
+# The ModuleConfig is not here: ClusterAdmin writes every ModuleConfig through the deckhouse module.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    user-authz.deckhouse.io/access-level: ClusterAdmin
+  name: d8:user-authz:registry:cluster-admin
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+# The module renders RegistryConfig from the ModuleConfig, and the controller writes RegistryStorage.
+# Editing RegistryConfig directly skips the ModuleConfig validation and is rolled back by the next
+# render, so it stays with SuperAdmin. RegistryNode is compiled by the controller.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - registryconfigs
+  - registrynodes
+  - registrystorages
+  verbs:
+  - get
+  - list
+  - watch
+# An upstream intercepts the pulls of its host on every node, so creating one is the power to
+# substitute images.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - registryupstreams
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+# Operations on the cache: create one, cancel it with the label, delete it. The spec is immutable.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - registryoperations
+  verbs:
+  - create
+  - update
+  - patch
+  - delete
+# The authentication fields of RegistryConfig and RegistryUpstream are sensitive data: without
+# this subresource the API returns them as <omitted>.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - registryconfigs/sensitive
+  - registryupstreams/sensitive
+  verbs:
+  - get
+  - list
+  - watch
