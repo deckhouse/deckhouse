@@ -294,6 +294,111 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 	})
 
+	// The embedded copy still serves the module and the previous release is already
+	// staged, so the next release waits for approval without the approval alerts.
+	suite.Run("embedded module staged release awaits approval without alert", func() {
+		storage := metricstorage.NewMetricStorage(metricstorage.WithNewRegistry())
+		require.NoError(suite.T(), metrics.RegisterDeckhouseControllerMetrics(storage))
+		suite.setupReleaseController(
+			suite.fetchTestFileData("embedded-module-staged-release-manual.yaml"),
+			withInstaller(&installermock.Installer{
+				IsEmbeddedPresentFunc: func(string) bool { return true },
+			}),
+			withMetricsUpdater(releaseUpdater.NewMetricsUpdater(storage, releaseUpdater.ModuleReleaseBlockedMetricName)),
+		)
+
+		repeatTest(func() {
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("parca-v1.26.3"))
+			require.NoError(suite.T(), err)
+		})
+
+		labels := suite.releaseMetricLabels(storage, "parca-v1.26.3")
+		require.NotNil(suite.T(), labels)
+		assert.Equal(suite.T(), "false", labels[metrics.LabelManualApprovalRequired])
+		assert.Equal(suite.T(), "nil", labels[metrics.LabelReleaseQueueDepth])
+	})
+
+	// The embedded copy is gone, so the module runs the deployed release and the
+	// next release waiting for approval keeps the approval alerts.
+	suite.Run("module without embedded copy alerts on release awaiting approval", func() {
+		storage := metricstorage.NewMetricStorage(metricstorage.WithNewRegistry())
+		require.NoError(suite.T(), metrics.RegisterDeckhouseControllerMetrics(storage))
+		suite.setupReleaseController(
+			suite.fetchTestFileData("embedded-module-staged-release-manual.yaml"),
+			withInstaller(&installermock.Installer{
+				IsEmbeddedPresentFunc: func(string) bool { return false },
+			}),
+			withMetricsUpdater(releaseUpdater.NewMetricsUpdater(storage, releaseUpdater.ModuleReleaseBlockedMetricName)),
+		)
+
+		repeatTest(func() {
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("parca-v1.26.3"))
+			require.NoError(suite.T(), err)
+		})
+
+		labels := suite.releaseMetricLabels(storage, "parca-v1.26.3")
+		require.NotNil(suite.T(), labels)
+		assert.Equal(suite.T(), "true", labels[metrics.LabelManualApprovalRequired])
+		assert.Equal(suite.T(), "1", labels[metrics.LabelReleaseQueueDepth])
+	})
+
+	// Nothing is staged for the embedded module yet, so its first release waiting
+	// for approval keeps the approval alerts.
+	suite.Run("embedded module first release alerts on awaiting approval", func() {
+		storage := metricstorage.NewMetricStorage(metricstorage.WithNewRegistry())
+		require.NoError(suite.T(), metrics.RegisterDeckhouseControllerMetrics(storage))
+		suite.setupReleaseController(
+			suite.fetchTestFileData("embedded-module-first-release-manual.yaml"),
+			withInstaller(&installermock.Installer{
+				IsEmbeddedPresentFunc: func(string) bool { return true },
+			}),
+			withMetricsUpdater(releaseUpdater.NewMetricsUpdater(storage, releaseUpdater.ModuleReleaseBlockedMetricName)),
+		)
+
+		repeatTest(func() {
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("parca-v1.26.3"))
+			require.NoError(suite.T(), err)
+		})
+
+		labels := suite.releaseMetricLabels(storage, "parca-v1.26.3")
+		require.NotNil(suite.T(), labels)
+		assert.Equal(suite.T(), "true", labels[metrics.LabelManualApprovalRequired])
+	})
+
+	// While the embedded copy serves the module, a release blocked by its requirements alerts
+	// only when a Deckhouse release moves the module out in migratedModules.
+	for _, tc := range []struct {
+		name     string
+		file     string
+		embedded bool
+		want     string
+	}{
+		{"embedded module release blocked by requirements does not alert", "embedded-module-requirements-not-met.yaml", true, "false"},
+		{"migrated embedded module release blocked by requirements alerts", "embedded-migrated-module-requirements-not-met.yaml", true, "true"},
+		{"module release blocked by requirements alerts without embedded copy", "embedded-module-requirements-not-met.yaml", false, "true"},
+	} {
+		suite.Run(tc.name, func() {
+			storage := metricstorage.NewMetricStorage(metricstorage.WithNewRegistry())
+			require.NoError(suite.T(), metrics.RegisterDeckhouseControllerMetrics(storage))
+			suite.setupReleaseController(
+				suite.fetchTestFileData(tc.file),
+				withInstaller(&installermock.Installer{
+					IsEmbeddedPresentFunc: func(string) bool { return tc.embedded },
+				}),
+				withMetricsUpdater(releaseUpdater.NewMetricsUpdater(storage, releaseUpdater.ModuleReleaseBlockedMetricName)),
+			)
+
+			repeatTest(func() {
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("local-path-provisioner-v0.1.0"))
+				require.NoError(suite.T(), err)
+			})
+
+			labels := suite.releaseMetricLabels(storage, "local-path-provisioner-v0.1.0")
+			require.NotNil(suite.T(), labels)
+			assert.Equal(suite.T(), tc.want, labels[metrics.LabelRequirementsNotMet])
+		})
+	}
+
 	suite.Run("deckhouse suitable version", func() {
 		suite.setupReleaseController(suite.fetchTestFileData("dVersion-suitable.yaml"))
 
@@ -982,6 +1087,12 @@ func withInstaller(inst Installer) reconcilerOption {
 	}
 }
 
+func withMetricsUpdater(mu MetricsUpdater) reconcilerOption {
+	return func(r *reconciler) {
+		r.metricsUpdater = mu
+	}
+}
+
 func (suite *ReleaseControllerTestSuite) setupReleaseController(yamlDoc string, options ...reconcilerOption) {
 	manifests := releaseutil.SplitManifests(yamlDoc)
 
@@ -1140,6 +1251,12 @@ func (suite *ReleaseControllerTestSuite) assembleInitObject(strObj string) clien
 		err = yaml.Unmarshal(raw, documentation)
 		require.NoError(suite.T(), err)
 		obj = documentation
+
+	case "DeckhouseRelease":
+		release := new(v1alpha1.DeckhouseRelease)
+		err = yaml.Unmarshal(raw, release)
+		require.NoError(suite.T(), err)
+		obj = release
 
 	case "Secret":
 		secret := new(corev1.Secret)
@@ -2110,6 +2227,31 @@ func (suite *ReleaseControllerTestSuite) TestResetConfigurationErrorMetric() {
 		value = suite.getMetricValue(metricFamilies, metrics.ModuleConfigurationError, release)
 		assert.Equal(suite.T(), -1.0, value, "%s metric should still not be found after second reset", metrics.ModuleConfigurationError)
 	})
+}
+
+// releaseMetricLabels returns the labels of the release metric series gathered for the release
+func (suite *ReleaseControllerTestSuite) releaseMetricLabels(storage *metricstorage.MetricStorage, releaseName string) map[string]string {
+	families, err := storage.Gather()
+	require.NoError(suite.T(), err)
+
+	for _, family := range families {
+		if family.GetName() != releaseUpdater.ModuleReleaseBlockedMetricName {
+			continue
+		}
+
+		for _, metric := range family.GetMetric() {
+			labels := make(map[string]string)
+			for _, labelPair := range metric.GetLabel() {
+				labels[labelPair.GetName()] = labelPair.GetValue()
+			}
+
+			if labels[metrics.LabelName] == releaseName {
+				return labels
+			}
+		}
+	}
+
+	return nil
 }
 
 // Helper function to get metric value from gathered metrics
