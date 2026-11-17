@@ -22,6 +22,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -110,6 +111,25 @@ func scanViolations(
 		defByName[definitions[i].Name] = &definitions[i]
 	}
 
+	// coveredByDef holds, per definition, the resources its references govern. An object whose
+	// controller owner is one of them is skipped below: see ownedByCovered.
+	coveredByDef := map[string]map[schema.GroupResource]struct{}{}
+	for i := range refList.Items {
+		ref := &refList.Items[i]
+		covered := coveredByDef[ref.Spec.GrantableClusterResourceName]
+		if covered == nil {
+			covered = map[schema.GroupResource]struct{}{}
+			coveredByDef[ref.Spec.GrantableClusterResourceName] = covered
+		}
+		for _, group := range ref.Spec.Rule.APIGroups {
+			for _, resource := range ref.Spec.Rule.Resources {
+				if group != "*" && resource != "*" {
+					covered[schema.GroupResource{Group: group, Resource: resource}] = struct{}{}
+				}
+			}
+		}
+	}
+
 	resolvedByDef := map[string]*resolve.Resolved{}
 	// unresolvable holds the definitions skipped for a configuration error (see
 	// resolve.IsConfigurationError): the catalog reconciler logs them, and the scan goes on with the
@@ -170,6 +190,9 @@ refs:
 				resource = gvr.Resource + "." + gvr.Group
 			}
 			for j := range list.Items {
+				if ownedByCovered(mapper, &list.Items[j], coveredByDef[def.Name]) {
+					continue
+				}
 				obj := list.Items[j].Object
 				idx, err := engine.ApplicableFieldPathIndex(factory, ref.Spec.FieldPaths, gvr.Group, gvr.Version, gvr.Resource, obj)
 				if err != nil || idx < 0 {
@@ -193,6 +216,33 @@ refs:
 		}
 	}
 	return out, nil
+}
+
+// ownedByCovered reports whether the controller owner of obj is of a resource that the references of
+// the same definition govern, for example a Pod of a ReplicaSet or a ReplicaSet of a Deployment when
+// a definition covers both. Such an object is a copy of its owner's template: the owner is reported
+// already, and reporting every Pod and ReplicaSet as well would multiply one violation by the
+// replicas. An owner of a kind the definition does not cover is no reason to skip: a PVC that a
+// StatefulSet owns is not a copy of anything storageclasses checks. The trade-off: a ReplicaSet
+// left over from an earlier Deployment template is not reported once the Deployment is fixed.
+func ownedByCovered(mapper meta.RESTMapper, obj *unstructured.Unstructured, covered map[schema.GroupResource]struct{}) bool {
+	if len(covered) == 0 {
+		return false
+	}
+	owner := metav1.GetControllerOfNoCopy(obj)
+	if owner == nil {
+		return false
+	}
+	gv, err := schema.ParseGroupVersion(owner.APIVersion)
+	if err != nil {
+		return false
+	}
+	mapping, err := mapper.RESTMapping(schema.GroupKind{Group: gv.Group, Kind: owner.Kind}, gv.Version)
+	if err != nil {
+		return false
+	}
+	_, ok := covered[mapping.Resource.GroupResource()]
+	return ok
 }
 
 // grantsNaming returns the names of the applicable policies that hold an entry for the definition.

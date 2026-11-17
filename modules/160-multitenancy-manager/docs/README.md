@@ -186,6 +186,8 @@ When such objects are detected, the [`ClusterResourceGrantPolicyViolation`](/pro
 
 The `d8_cluster_objects_grant_violated` metric is used for monitoring. It is exported by the module controller, which recounts the violations of a project namespace on every reconcile and at least every two minutes, using the same availability rules as the admission webhook.
 
+To avoid duplication, the same violation is not counted again for child objects. For example, if a Deployment uses an unavailable RuntimeClass, the violation is recorded only for the Deployment, not for its ReplicaSets or Pods.
+
 ### Resources registered by Deckhouse Platform
 
 Deckhouse Platform registers the following cluster-wide resources:
@@ -196,6 +198,7 @@ Deckhouse Platform registers the following cluster-wide resources:
 | `loadbalancerclasses` | `loadbalancerclass` value | Service `.spec.loadBalancerClass` (for services of the `LoadBalancer` type) | `FillEmpty` |
 | `clusterissuers` | ClusterIssuer (cert-manager.io) | Certificate `.spec.issuerRef.name`; Ingress: `cert-manager.io/cluster-issuer` annotation | `FillEmpty` or `None` |
 | `clusterroles` | ClusterRole (rbac.authorization.k8s.io) | RoleBinding `.roleRef.name` | `None` |
+| `runtimeclasses` | RuntimeClass (node.k8s.io) | Pod `.spec.runtimeClassName`; the pod template of ReplicationController, PodTemplate, Deployment, StatefulSet, DaemonSet, ReplicaSet, Job and CronJob | `None` |
 | `applicationpackages` | ApplicationPackage (deckhouse.io) | Application `.spec.packageName` | `None` |
 | `priorityclasses` | PriorityClass (scheduling.k8s.io) | Pod `.spec.priorityClassName`; pod template of ReplicationController, Deployment, StatefulSet, DaemonSet, ReplicaSet, Job and CronJob; PodTemplate `.template.spec.priorityClassName` | `None` for Pod and PodTemplate, `FillEmpty` for the pod templates of workloads |
 
@@ -242,6 +245,10 @@ The priority classes of a namespace can also be limited with [`priorityClassName
 The `clusterissuers` definition is shipped by the [`cert-manager`](/modules/cert-manager/) module, so it is registered only when that module is enabled.
 
 The `storageclasses` definition and the `storageclasses-pvc` GrantableClusterResourceReference are registered by this module unless the [`storage-foundation`](/modules/storage-foundation/) module of version 1.0.3 or later is enabled. While such a version of `storage-foundation` is enabled, that module registers them under the same names and can extend them. When `storage-foundation` is enabled, disabled or updated to such a version, the objects pass from one module to the other, so ClusterResourceGrantPolicy objects keep restricting StorageClass.
+
+The `runtimeclasses` registration checks the pod templates of the workloads because the pods they create are written by the Kubernetes controllers, which the check does not cover. No RuntimeClass gets a value assigned by default: Kubernetes has no default RuntimeClass, and assigning one would change where the pods are scheduled and how much of the quota they use. Deckhouse Platform doesn't create its own RuntimeClasses, so no class is excluded from the check. Classes created by the administrator or shipped by external modules (for example, the `gpu` module) are available to every project until a ClusterResourceGrantPolicy narrows them. A request without `runtimeClassName`, or with an unchanged value, is checked without reading the API server.
+
+With this registration, creating and changing pods in project namespaces depends on the availability of the module: the check rejects the request (`failurePolicy: Fail`) while the module controller is unavailable. Pods created by Kubernetes controllers, by Deckhouse Platform and by `kube-system` are not checked. Pods created by other operators are checked as pods, so a rejection is returned to the operator, not to the user who created its resource. For example, if KubeVirt has `defaultRuntimeClass` set and the project may not use that RuntimeClass, `virt-controller` cannot create the `virt-launcher` Pod, and the virtual machine does not start.
 
 ### Access management resources
 

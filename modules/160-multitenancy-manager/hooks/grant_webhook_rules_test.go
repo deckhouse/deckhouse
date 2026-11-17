@@ -17,8 +17,15 @@ limitations under the License.
 package hooks
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"helm.sh/helm/v3/pkg/chart"
+	"helm.sh/helm/v3/pkg/chartutil"
+	helmengine "helm.sh/helm/v3/pkg/engine"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -175,6 +182,34 @@ spec:
 		})
 	})
 
+	Context("the registrations the module ships", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(renderShippedGrants()))
+			f.RunHook()
+		})
+
+		// The rules are the cross product of rule.apiGroups and rule.resources, so a shipped reference
+		// that mixed API groups would register pairs that do not exist, such as apps/pods. The exact
+		// list catches that, and a path the module forgot to intercept as well.
+		It("intercepts exactly the resources the shipped references name", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(grantWebhookRulesValuesPath).String()).To(MatchJSON(`[
+				{"apiGroup": "", "resource": "persistentvolumeclaims"},
+				{"apiGroup": "", "resource": "pods"},
+				{"apiGroup": "", "resource": "podtemplates"},
+				{"apiGroup": "", "resource": "replicationcontrollers"},
+				{"apiGroup": "", "resource": "services"},
+				{"apiGroup": "apps", "resource": "daemonsets"},
+				{"apiGroup": "apps", "resource": "deployments"},
+				{"apiGroup": "apps", "resource": "replicasets"},
+				{"apiGroup": "apps", "resource": "statefulsets"},
+				{"apiGroup": "batch", "resource": "cronjobs"},
+				{"apiGroup": "batch", "resource": "jobs"},
+				{"apiGroup": "rbac.authorization.k8s.io", "resource": "rolebindings"}
+			]`))
+		})
+	})
+
 	Context("the target definition switches to External", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
@@ -195,3 +230,41 @@ spec:
 		})
 	})
 })
+
+// renderShippedGrants renders the module's templates/cluster-objects-controller/grantable-*.yaml with
+// the real Helm engine (a stub for the lib-helm labels helper, storage-foundation not shipping the
+// StorageClass grant so this module renders it) and returns the objects as one multi-document YAML.
+func renderShippedGrants() string {
+	paths, err := filepath.Glob(filepath.Join("..", "templates", "cluster-objects-controller", "grantable-*.yaml"))
+	Expect(err).ToNot(HaveOccurred())
+	Expect(paths).ToNot(BeEmpty())
+	templates := []*chart.File{
+		{Name: "templates/_helm_lib_stub.tpl", Data: []byte(`{{- define "helm_lib_module_labels" }}labels: {module: multitenancy-manager}{{- end }}`)},
+	}
+	for _, path := range paths {
+		tpl, err := os.ReadFile(path)
+		Expect(err).ToNot(HaveOccurred())
+		templates = append(templates, &chart.File{Name: "templates/" + filepath.Base(path), Data: tpl})
+	}
+	ch := &chart.Chart{
+		Metadata:  &chart.Metadata{Name: "multitenancy-manager", Version: "0.0.0", APIVersion: chart.APIVersionV2},
+		Templates: templates,
+	}
+	values := chartutil.Values{"Values": map[string]any{
+		"global":              map[string]any{"enabledModules": []any{}},
+		"multitenancyManager": map[string]any{"internal": map[string]any{"storageFoundationShipsStorageClassGrant": false}},
+	}}
+	rendered, err := helmengine.Render(ch, values)
+	Expect(err).ToNot(HaveOccurred())
+	var docs []string
+	for _, path := range paths {
+		out, ok := rendered["multitenancy-manager/templates/"+filepath.Base(path)]
+		Expect(ok).To(BeTrue(), path)
+		for _, doc := range strings.Split(out, "\n---") {
+			if strings.Contains(doc, "kind:") {
+				docs = append(docs, strings.TrimSpace(doc))
+			}
+		}
+	}
+	return strings.Join(docs, "\n---\n")
+}

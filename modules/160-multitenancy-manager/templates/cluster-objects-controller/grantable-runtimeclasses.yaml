@@ -1,0 +1,127 @@
+{{- /*
+  RuntimeClass (node.k8s.io) registration. A pod selects its container runtime handler by name in
+  spec.runtimeClassName, so a project user who may create pods or workloads can pick any RuntimeClass
+  of the cluster (a sandboxed runtime, a GPU runtime, one pinned to dedicated nodes). Deckhouse itself
+  ships no RuntimeClass objects (containerd runtimes such as nvidia are configured as handlers only),
+  so nothing is excluded here, as agreed with the Kubernetes team. A RuntimeClass is created by the
+  cluster administrator or shipped by an external module (the gpu module ships one for its DRA
+  runtime); either way it is available to every project until the administrator narrows availability
+  with a ClusterResourceGrantPolicy.
+
+  Pod checks cost little: spec.runtimeClassName of a Pod is immutable, so on UPDATE the old value is
+  grandfathered and only CREATE can add a name, and a request without a name or with an unchanged one
+  is answered without reading the API server or the cache. The pod templates of workloads are mutable
+  and are checked on UPDATE too: otherwise a workload created with an allowed class could switch to any
+  class by changing its template.
+
+  Defaulting is None on every path. Kubernetes has no cluster-default RuntimeClass (no annotation like
+  storageclass.kubernetes.io/is-default-class), so there is nothing for defaultFrom to mark, and
+  silently switching the runtime of a workload changes where it is scheduled (scheduling.nodeSelector)
+  and how much quota it uses (overhead), which an allow-list must not do behind the user's back.
+
+  The references are split by API group: the webhook rules are derived as the cross product of
+  rule.apiGroups and rule.resources, so one reference across groups would register pairs that do not
+  exist (apps/pods, batch/deployments).
+*/}}
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceDefinition
+metadata:
+  name: runtimeclasses
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  grantedResource:
+    apiGroup: node.k8s.io
+    kind: RuntimeClass
+  enforcement: Managed
+  defaultAvailability: All
+  # Shown to tenants in the catalog: the handler says which runtime the class selects, overhead counts
+  # toward the project quota on top of the container requests, and nodeSelector says where such pods
+  # can land. scheduling.tolerations is left out: it is not needed to choose a class and can be long.
+  catalogFields:
+  - name: handler
+    path: $.handler
+  - name: overhead
+    path: $.overhead.podFixed
+  - name: nodeSelector
+    path: $.scheduling.nodeSelector
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: runtimeclasses-core
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  grantableClusterResourceName: runtimeclasses
+  rule:
+    apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    resources:
+    - pods
+    - replicationcontrollers
+    - podtemplates
+  fieldPaths:
+  # A pod a user creates directly (d8 k run, a bare manifest, an operator outside the system
+  # namespaces). Pods created by the built-in controllers are not seen here: kube-controller-manager
+  # writes them as system:serviceaccounts:kube-system, which the grant webhooks skip, so the pod
+  # template of every built-in workload is checked instead (here and in the apps and batch references).
+  - resources: ["pods"]
+    path: $.spec.runtimeClassName
+    defaulting: None
+  # Its pods are created by kube-controller-manager, so the template is the only place to check.
+  - resources: ["replicationcontrollers"]
+    path: $.spec.template.spec.runtimeClassName
+    defaulting: None
+  # No built-in controller instantiates a PodTemplate, but it carries the name all the same.
+  - resources: ["podtemplates"]
+    path: $.template.spec.runtimeClassName
+    defaulting: None
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: runtimeclasses-apps
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  grantableClusterResourceName: runtimeclasses
+  rule:
+    apiGroups:
+    - apps
+    apiVersions:
+    - v1
+    resources:
+    - deployments
+    - statefulsets
+    - daemonsets
+    - replicasets
+  fieldPaths:
+  # All four keep the pod template at the same path.
+  - path: $.spec.template.spec.runtimeClassName
+    defaulting: None
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: runtimeclasses-batch
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  grantableClusterResourceName: runtimeclasses
+  rule:
+    apiGroups:
+    - batch
+    apiVersions:
+    - v1
+    resources:
+    - jobs
+    - cronjobs
+  fieldPaths:
+  # A Job and a CronJob keep the pod template at different paths, so each entry is scoped to its
+  # resource.
+  - resources: ["jobs"]
+    path: $.spec.template.spec.runtimeClassName
+    defaulting: None
+  - resources: ["cronjobs"]
+    path: $.spec.jobTemplate.spec.template.spec.runtimeClassName
+    defaulting: None

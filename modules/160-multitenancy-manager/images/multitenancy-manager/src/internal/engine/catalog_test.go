@@ -28,8 +28,10 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+	nodev1 "k8s.io/api/node/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
@@ -217,6 +219,37 @@ func TestShippedStorageClassCatalogFields(t *testing.T) {
 		"volumeBindingMode":    `"WaitForFirstConsumer"`,
 		"allowVolumeExpansion": `true`,
 	})
+}
+
+// TestShippedRuntimeClassCatalogFields projects the shipped runtimeclasses catalogFields onto a typical
+// RuntimeClass. scheduling.tolerations is not shown: it is not needed to choose a class.
+func TestShippedRuntimeClassCatalogFields(t *testing.T) {
+	def := shippedDefinition(t, "runtimeclasses")
+	rc := &nodev1.RuntimeClass{
+		TypeMeta:   metav1.TypeMeta{APIVersion: "node.k8s.io/v1", Kind: "RuntimeClass"},
+		ObjectMeta: metav1.ObjectMeta{Name: "gvisor"},
+		Handler:    "runsc",
+		Overhead: &nodev1.Overhead{PodFixed: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("250m"),
+			corev1.ResourceMemory: resource.MustParse("120Mi"),
+		}},
+		Scheduling: &nodev1.Scheduling{
+			NodeSelector: map[string]string{"node.deckhouse.io/group": "sandbox"},
+			Tolerations:  []corev1.Toleration{{Key: "dedicated", Operator: corev1.TolerationOpEqual, Value: "sandbox", Effect: corev1.TaintEffectNoSchedule}},
+		},
+	}
+	obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(rc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertProjected(t, projected(def.Spec.CatalogFields, obj), map[string]string{
+		"handler":      `"runsc"`,
+		"overhead":     `{"cpu":"250m","memory":"120Mi"}`,
+		"nodeSelector": `{"node.deckhouse.io/group":"sandbox"}`,
+	})
+	// A class with the handler only shows the handler alone.
+	bare := map[string]any{"apiVersion": "node.k8s.io/v1", "kind": "RuntimeClass", "metadata": map[string]any{"name": "runc"}, "handler": "runc"}
+	assertProjected(t, projected(def.Spec.CatalogFields, bare), map[string]string{"handler": `"runc"`})
 }
 
 // crdsDir holds the module's CRDs, relative to this package.

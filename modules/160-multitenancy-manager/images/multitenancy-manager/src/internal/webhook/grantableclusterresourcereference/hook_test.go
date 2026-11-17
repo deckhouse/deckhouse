@@ -422,6 +422,9 @@ func TestHandle_ShippedReferences(t *testing.T) {
 		"priorityclasses-pod",
 		"priorityclasses-apps",
 		"priorityclasses-batch",
+		"runtimeclasses-core",
+		"runtimeclasses-apps",
+		"runtimeclasses-batch",
 	}, names)
 
 	v := newValidator()

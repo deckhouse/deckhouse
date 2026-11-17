@@ -193,6 +193,8 @@ flowchart LR
 
 Для мониторинга используется метрика `d8_cluster_objects_grant_violated`. Её отдаёт контроллер модуля: он пересчитывает нарушения при каждой обработке неймспейса проекта и не реже чем раз в две минуты по тем же правилам доступности, что и вебхук `/is-granted`.
 
+Чтобы избежать дублирования, одно и то же нарушение не учитывается повторно для дочерних объектов. Например, если Deployment использует недоступный RuntimeClass, нарушение учитывается только для Deployment, но не для его ReplicaSet и подов.
+
 ### Ресурсы, регистрируемые Deckhouse Platform
 
 Deckhouse Platform регистрирует следующие cluster-wide-ресурсы:
@@ -203,6 +205,7 @@ Deckhouse Platform регистрирует следующие cluster-wide-ре
 | `loadbalancerclasses` | Значение `loadbalancerclass` | Service `.spec.loadBalancerClass` (для сервисов типа `LoadBalancer`) | `FillEmpty` |
 | `clusterissuers` | ClusterIssuer (cert-manager.io) | Certificate `.spec.issuerRef.name`; Ingress: аннотация `cert-manager.io/cluster-issuer` | `FillEmpty` или `None` |
 | `clusterroles` | ClusterRole (rbac.authorization.k8s.io) | RoleBinding `.roleRef.name` | `None` |
+| `runtimeclasses` | RuntimeClass (node.k8s.io) | Pod `.spec.runtimeClassName`; шаблон пода в ReplicationController, PodTemplate, Deployment, StatefulSet, DaemonSet, ReplicaSet, Job и CronJob | `None` |
 | `applicationpackages` | ApplicationPackage (deckhouse.io) | Application `.spec.packageName` | `None` |
 | `priorityclasses` | PriorityClass (scheduling.k8s.io) | Pod `.spec.priorityClassName`; шаблон пода в ReplicationController, Deployment, StatefulSet, DaemonSet, ReplicaSet, Job и CronJob; PodTemplate `.template.spec.priorityClassName` | `None` для Pod и PodTemplate, `FillEmpty` для шаблонов пода в рабочих нагрузках |
 
@@ -249,6 +252,10 @@ spec:
 Определение `clusterissuers` поставляется [модулем `cert-manager`](/modules/cert-manager/), поэтому оно регистрируется только при включённом модуле `cert-manager`.
 
 Определение `storageclasses` и GrantableClusterResourceReference `storageclasses-pvc` регистрирует этот модуль, если не включён [модуль `storage-foundation`](/modules/storage-foundation/) версии 1.0.3 или новее. Если такая версия `storage-foundation` включена, их регистрирует он под теми же именами и может расширять. При включении, выключении и обновлении `storage-foundation` до такой версии объекты переходят от одного модуля к другому, поэтому ClusterResourceGrantPolicy продолжают ограничивать StorageClass.
+
+Регистрация `runtimeclasses` проверяет шаблоны подов в контроллерах нагрузки, потому что создаваемые ими поды записывают контроллеры Kubernetes, на которые проверка не распространяется. Значение по умолчанию для RuntimeClass не подставляется: в Kubernetes нет RuntimeClass по умолчанию, а подстановка изменила бы, на каких узлах запускаются поды и какую часть квоты они занимают. Deckhouse Platform не создаёт собственные ресурсы RuntimeClass, поэтому ни один класс не исключается из проверки. Классы, созданные администратором или поставляемые внешними модулями (например, модулем `gpu`), доступны всем проектам, пока их не ограничит политика ClusterResourceGrantPolicy. Запрос без `runtimeClassName` или с неизменённым значением проверяется без обращений к API-серверу.
+
+С этой регистрацией создание и изменение подов в неймспейсах проектов зависит от доступности модуля: пока контроллер модуля недоступен, проверка отклоняет запрос (`failurePolicy: Fail`). Поды, которые создают контроллеры Kubernetes, Deckhouse Platform и `kube-system`, не проверяются. Поды, которые создают другие операторы, проверяются на уровне Pod, поэтому отказ получает оператор, а не пользователь, создавший его ресурс. Например, если в KubeVirt задан `defaultRuntimeClass` и проекту этот RuntimeClass недоступен, `virt-controller` не сможет создать под `virt-launcher`, и виртуальная машина не запустится.
 
 ### Ресурсы механизма управления доступом
 

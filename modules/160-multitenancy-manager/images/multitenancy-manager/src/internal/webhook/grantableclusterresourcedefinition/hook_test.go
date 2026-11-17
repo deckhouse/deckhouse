@@ -52,6 +52,7 @@ func testMapper() meta.RESTMapper {
 		{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRole"},
 		{Group: "cert-manager.io", Version: "v1", Kind: "ClusterIssuer"},
 		{Group: "scheduling.k8s.io", Version: "v1", Kind: "PriorityClass"},
+		{Group: "node.k8s.io", Version: "v1", Kind: "RuntimeClass"},
 	}
 	secret := schema.GroupVersionKind{Version: "v1", Kind: "Secret"}
 	var versions []schema.GroupVersion
@@ -381,7 +382,7 @@ func TestHandle_ShippedDefinitions(t *testing.T) {
 		names = append(names, def.Name)
 	}
 	// Guard the rendering itself: a template that renders to nothing must not pass as "nothing to check".
-	require.ElementsMatch(t, []string{"storageclasses", "loadbalancerclasses", "clusterroles", "priorityclasses"}, names)
+	require.ElementsMatch(t, []string{"storageclasses", "loadbalancerclasses", "clusterroles", "priorityclasses", "runtimeclasses"}, names)
 
 	v := newValidator()
 	for _, def := range defs {
