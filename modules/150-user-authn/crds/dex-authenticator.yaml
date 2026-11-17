@@ -27,18 +27,15 @@ spec:
           required:
             - spec
           description: |-
-            After the `DexAuthenticator` object appears in the namespace, the following objects will be created:
-            * Deployment containing OAuth2-Proxy and Redis containers;
-            * Service, pointing to OAuth2-Proxy;
-            * Ingress resource, configured to receive requests on `https://<applicationDomain>/dex-authenticator` and send it to a service side;
-            * HTTPRoute resource (optional), configured to receive requests on `https://<applicationDomain>/dex-authenticator` and send it to a service side;
-            * Secrets, needed to access Dex.
+            Authentication through Dex for web applications in the namespace of the object.
 
-            **Warning.** DexAuthenticator only works with HTTPS. The application Ingress must have TLS configured.
+            A DexAuthenticator has no pods of its own. In the namespace of the object, the module creates the Service `<NAME>-dex-authenticator`, which the `auth-url` annotation of the application points at, and publishes the `https://<DOMAIN>/dex-authenticator` path through an Ingress or an HTTPRoute.
 
-            **Warning.** After restarting a pod with an OAuth2-Proxy, the current Access Token and ID Token will be queried (using the refresh token) and stored in a Redis memory.
+            The `Served` condition in `status.conditions` shows whether the module serves the object.
 
-            The name of a DexAuthenticator must be a DNS-1035 label of at most 63 characters: it starts with a lowercase letter and contains only lowercase letters, digits and hyphens. The name is a part of the name of its Service and a label value of the objects it creates.
+            > **Warning.** DexAuthenticator works only with HTTPS. The application Ingress must have TLS configured.
+
+            The name of a DexAuthenticator must be at most 63 characters long, start with a lowercase Latin letter and contain only lowercase Latin letters, digits and hyphens (RFC 1035).
           x-doc-examples:
             - apiVersion: deckhouse.io/v1
               kind: DexAuthenticator
@@ -82,8 +79,6 @@ spec:
               properties:
                 name:
                   type: string
-                  # The name is a part of the name of the Service of the authenticator and a label value of its
-                  # objects. The rules sit on the field, so an object created before them can still be updated.
                   maxLength: 63
                   x-kubernetes-validations:
                     - rule: "self.matches('^[a-z]([-a-z0-9]*[a-z0-9])?$')"
@@ -91,20 +86,22 @@ spec:
             status:
               type: object
               description: |-
-                The state of the object. The module writes it.
+                State of the object, written by the module.
               properties:
                 conditions:
                   type: array
                   description: |-
                     Conditions of the object.
 
-                    The `Served` condition shows whether the dex-authenticator of the module serves the object on every domain it names. When it does not, `reason` tells why:
-                    * `WaitingForInstance` — the dex-authenticator has not loaded the settings of the object yet. This takes up to a few minutes after the object is created or changed;
-                    * `HostConflict` — a domain of the object belongs to another DexAuthenticator: the one that is served on it already, or the oldest of those that name it. The object is served on its other domains;
-                    * `InvalidRecord` — the object cannot be served as it is: `message` names the field;
-                    * `ClientNotCreated` — the Dex client of the object could not be written;
-                    * `ForeignObject` — a Service, an Ingress or an HTTPRoute with the name the module gives its own already exists in the namespace and was not created by the module;
-                    * `TableFull` — the dex-authenticator serves as many objects as it can.
+                    The `Served` condition shows whether the dex-authenticator of the module serves the object on every domain set in the object. A new or changed object is served within a few minutes. If the status of the condition is `False`, `reason` is one of the following:
+
+                    * `WaitingForInstance`: The object is not served yet.
+                    * `HostConflict`: A domain of the object belongs to another DexAuthenticator. Change the domain, or the Ingress class if the domain is to be shared. The object is served on its other domains.
+                    * `InvalidRecord`: The object cannot be served as it is. `message` gives the reason.
+                    * `ClientNotCreated`: The module cannot register the application in Dex. `message` gives the reason.
+                    * `ForeignObject`: The namespace has a Service, Ingress or HTTPRoute with a name the module needs. Rename or delete it.
+                    * `ObjectsNotWritten`: The API server refused to create the Service or a route of the object, for example, because of an admission policy. `message` gives the answer of the API server.
+                    * `TableFull`: The limit of served DexAuthenticator objects is reached in the cluster or in the namespace. `message` gives the details.
                   x-kubernetes-list-type: map
                   x-kubernetes-list-map-keys:
                     - type
@@ -120,7 +117,7 @@ spec:
                       status:
                         type: string
                         enum: ["True", "False", "Unknown"]
-                        description: Status of the condition, `True`, `False` or `Unknown`.
+                        description: Status of the condition.
                       reason:
                         type: string
                         description: Reason for the status, such as `HostConflict`.
@@ -156,15 +153,9 @@ spec:
                   description: |-
                     Request to application will be sent with `Authorization: Bearer` header when the option is switched to true.
 
-                    When enabled, the header carries a signed Dex ID token (`id_token`) containing the user's email, name, and group membership. This is the only way to pass the user's groups to the application via DexAuthenticator: a separate `X-Auth-Request-Groups` header with groups is not sent.
+                    When enabled, the header carries a signed Dex ID token (`id_token`) containing the user's email, name, and group membership.
 
-                    > **Warning.** Enable it only if the application can process this header.
-                    >
-                    > When setting `sendAuthorizationHeader: true`, list all necessary headers in the application's Ingress resource (if the application is published through an Ingress) or in the HTTPRoute resource (if the application is published through an ALBInstance or ClusterALBInstance of the [`alb`](/modules/alb/) module).
-                    >
-                    > Also, if the application is published through an Ingress resource, when setting `sendAuthorizationHeader: true`, increase the header buffer size, since a JWT with many groups may not fit into the default buffer.
-                    >
-                    > For details on specifying the headers and increasing the buffer, see [How to pass the user's login and groups to an application](faq.html#how-to-pass-the-users-login-and-groups-to-an-application).
+                    > **Warning.** Enable it only if the application can process this header, and set up the route of the application as described in [How to pass the user's login and groups to an application](faq.html#how-to-pass-the-users-login-and-groups-to-an-application).
                 applicationIngressCertificateSecretName:
                   type: string
                   description: |-
@@ -186,9 +177,7 @@ spec:
                   description: |-
                     A set of parameters to use in HTTPRoute object.
                     
-                    > **Warning.** Only applicable in clusters with Gateway API support.
-                    
-                    > **Warning.** Define the same ListenerSet object which is used to publish the application domain. 
+                    > **Warning.** Only applicable in clusters with Gateway API support. Define the same ListenerSet object which is used to publish the application domain.
                   properties:
                     applicationHTTPRouteListenerSetName:
                       type: string
@@ -231,9 +220,7 @@ spec:
 
                     Set as a string of whole hours, minutes, and seconds, in this order: `30m`, `20s`, `2h30m10s`, `24h`.
 
-                    Specified value can't be shorter or equal to the [`idTokenTTL`](configuration.html#parameters-idtokenttl) value set in the module settings. If you set a value that is shorter or equal to `idTokenTTL`, the effective logout time will be `idTokenTTL + 1s`.
-
-                    To force logout sooner than the default `idTokenTTL`, decrease the [`idTokenTTL`](configuration.html#parameters-idtokenttl) parameter value in the module settings as well.
+                    The value must be greater than [`idTokenTTL`](configuration.html#parameters-idtokenttl), otherwise the session lasts `idTokenTTL + 1s`. To sign users out sooner, decrease `idTokenTTL`.
                   x-doc-examples: ['24h']
                   x-doc-default: '168h'
                 allowedEmails:
@@ -241,8 +228,7 @@ spec:
                   description: |-
                     A list of emails of users are allowed to connect to the client.
 
-                    Checked on login and on every refresh-token request. Updating the list
-                    denies further refresh for sessions whose email is no longer listed.
+                    Changing the list ends the sessions of the users who no longer match it at their next token refresh, within `idTokenTTL`.
 
                     **By default**, all users can connect.
 
@@ -257,8 +243,7 @@ spec:
                   description: |-
                     A list of groups whose members are allowed to connect to the client.
 
-                    Checked on login and on every refresh-token request. Updating the list
-                    denies further refresh for sessions whose stored groups no longer intersect it.
+                    Changing the list ends the sessions of the users who no longer match it at their next token refresh, within `idTokenTTL`.
 
                     **By default**, all groups can connect.
 
@@ -277,7 +262,7 @@ spec:
 
                     Use `local` for the users of the built-in password database ([User](cr.html#user)).
 
-                    Checked on the sign-in page, on login, and on every refresh-token and token-exchange request. A provider outside the list is not offered on the sign-in page. If the list holds one provider, users go straight to it. Removing a provider from the list stops the refresh tokens that were issued through it.
+                    A provider outside the list is not offered on the sign-in page. If the list holds one provider, users go straight to it. Changing the list ends the sessions of the users who no longer match it at their next token refresh, within `idTokenTTL`.
 
                     A name that matches no DexProvider is accepted with a warning. Nobody can sign in through it until the provider appears.
 
@@ -298,18 +283,15 @@ spec:
                 podMetadata:
                   type: object
                   description: |-
-                    Additional labels and annotations for `dex-authenticator` pods.
+                    Ignored. Kept for compatibility.
+                  x-doc-deprecated: true
                   properties:
                     labels:
                       type: object
-                      description: |-
-                        Additional labels for `dex-authenticator` pods.
                       additionalProperties:
                         type: string
                     annotations:
                       type: object
-                      description: |-
-                        Additional annotations for `dex-authenticator` pods.
                       additionalProperties:
                         type: string
                 nodeSelector:
@@ -317,68 +299,42 @@ spec:
                     type: string
                   x-kubernetes-preserve-unknown-fields: true
                   description: |-
-                    If specified, the `dex-authenticator` pods nodeSelector.
-
-                    **Format**: the standard `nodeSelector` list. Instance pods inherit this field as is.
+                    Ignored. Kept for compatibility.
+                  x-doc-deprecated: true
                   type: object
                 tolerations:
                   description: |-
-                    If specified the `dex-authenticator` pods tolerations.
-
-                    **Format**: the standard [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) list. Instance pods inherit this field as is.
+                    Ignored. Kept for compatibility.
+                  x-doc-deprecated: true
                   items:
                     properties:
                       effect:
-                        description: |
-                          Defines the taint’s effect this toleration is associated with (it matches any effect if empty).
                         type: string
                         enum: ["NoSchedule", "PreferNoSchedule", "NoExecute"]
                       key:
-                        description: |-
-                          Defines the taint’s key this toleration is associated with (it matches any key if empty).
-
-                          If the key is omitted (empty), then `operator` must be set to `Exists` (which means it matches any `value` and `key`).
                         type: string
                       operator:
-                        description: |-
-                          Defines how the key and its value are linked — whether the key must be `Equal` to the value or can have any value.
-
-                          Setting it to `Exists` is equivalent to the value having any value so that the pod with the specified toleration can match the corresponding taint.
                         type: string
                         enum: ["Exists", "Equal"]
                         x-doc-default: Equal
                       tolerationSeconds:
-                        description: |-
-                          Specifies the period (in seconds) that the scheduler waits before evicting a Pod from a node if the toleration no longer matches the taint (**only** applicable to the `NoExecute` effect, otherwise ignored).
-
-                          If the parameter **is not set**, the Pod will not be evicted from the node if the toleration no longer matches the taint. If the parameter **is set to zero** (or negative), the Pod will be evicted immediately if the toleration no longer matches the taint.
-
-                          **The default is**: not set.
                         format: int64
                         type: integer
                       value:
-                        description: |-
-                          The value that the toleration must match.
-
-                          Must be empty if the `operator` parameter is set to `Exists`.
                         type: string
                     type: object
                   type: array
                 highAvailability:
                   type: boolean
                   description: |-
-                    Enables high availability mode for `dex-authenticator`.
-
-                    When this mode is enabled, multiple pod replicas will be deployed to ensure fault tolerance.
+                    Ignored. Kept for compatibility.
+                  x-doc-deprecated: true
                   x-doc-default: 'false'
                 resources:
                   type: object
                   description: |-
-                    Container resources (CPU/memory) — requests/limits.
-
-                    If this field is set, the specified values are applied and VPA is disabled for this instance. If the field is not set, behavior remains the same: when the VPA module is enabled, resources are managed by VPA, when it is disabled, default values are used.
-
-                    Resources can be specified either directly for the `dex-authenticator` container (for backward compatibility) or in nested objects — separately for each container.
+                    Ignored. Kept for compatibility.
+                  x-doc-deprecated: true
                   properties:
                     limits:
                       type: object
@@ -388,7 +344,6 @@ spec:
                         - type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
-                      description: 'Upper limit of resources for the `dex-authenticator` container (CPU/memory). This field is kept for backward compatibility.' 
                     requests:
                       type: object
                       additionalProperties:
@@ -397,11 +352,8 @@ spec:
                         - type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
-                      description: 'Guaranteed minimum resources for the `dex-authenticator` container (CPU/memory). This field is kept for backward compatibility.'
                     redis:
                       type: object
-                      description: |-
-                        Resources of the `redis` container (CPU/memory) — requests/limits.
                       properties:
                         limits:
                           type: object
@@ -411,7 +363,6 @@ spec:
                             - type: string
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
-                          description: 'Upper limit of resources for the `redis` container (CPU/memory)'
                         requests:
                           type: object
                           additionalProperties:
@@ -420,7 +371,6 @@ spec:
                             - type: string
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
-                          description: 'Guaranteed minimum resources for the `redis` container (CPU/memory).'
                 additionalApplications:
                   type: array
                   description: |
@@ -458,9 +408,7 @@ spec:
                         description: |-
                           A set of parameters to use in HTTPRoute object.
 
-                          > **Warning.** Only applicable in clusters with Gateway API support.
-
-                          > **Warning.** Define the same ListenerSet object which is used to publish the application domain.
+                          > **Warning.** Only applicable in clusters with Gateway API support. Define the same ListenerSet object which is used to publish the application domain.
                         properties:
                           httpRouteListenerSetName:
                             type: string
@@ -520,14 +468,22 @@ spec:
           type: object
           required:
             - spec
+          description: |-
+            Authentication through Dex for web applications in the namespace of the object.
+
+            A DexAuthenticator has no pods of its own. In the namespace of the object, the module creates the Service `<NAME>-dex-authenticator`, which the `auth-url` annotation of the application points at, and publishes the `https://<DOMAIN>/dex-authenticator` path through an Ingress or an HTTPRoute.
+
+            The `Served` condition in `status.conditions` shows whether the module serves the object.
+
+            > **Warning.** DexAuthenticator works only with HTTPS. The application Ingress must have TLS configured.
+
+            The name of a DexAuthenticator must be at most 63 characters long, start with a lowercase Latin letter and contain only lowercase Latin letters, digits and hyphens (RFC 1035).
           properties:
             metadata:
               type: object
               properties:
                 name:
                   type: string
-                  # The name is a part of the name of the Service of the authenticator and a label value of its
-                  # objects. The rules sit on the field, so an object created before them can still be updated.
                   maxLength: 63
                   x-kubernetes-validations:
                     - rule: "self.matches('^[a-z]([-a-z0-9]*[a-z0-9])?$')"
@@ -535,20 +491,22 @@ spec:
             status:
               type: object
               description: |-
-                The state of the object. The module writes it.
+                State of the object, written by the module.
               properties:
                 conditions:
                   type: array
                   description: |-
                     Conditions of the object.
 
-                    The `Served` condition shows whether the dex-authenticator of the module serves the object on every domain it names. When it does not, `reason` tells why:
-                    * `WaitingForInstance` — the dex-authenticator has not loaded the settings of the object yet. This takes up to a few minutes after the object is created or changed;
-                    * `HostConflict` — a domain of the object belongs to another DexAuthenticator: the one that is served on it already, or the oldest of those that name it. The object is served on its other domains;
-                    * `InvalidRecord` — the object cannot be served as it is: `message` names the field;
-                    * `ClientNotCreated` — the Dex client of the object could not be written;
-                    * `ForeignObject` — a Service, an Ingress or an HTTPRoute with the name the module gives its own already exists in the namespace and was not created by the module;
-                    * `TableFull` — the dex-authenticator serves as many objects as it can.
+                    The `Served` condition shows whether the dex-authenticator of the module serves the object on every domain set in the object. A new or changed object is served within a few minutes. If the status of the condition is `False`, `reason` is one of the following:
+
+                    * `WaitingForInstance`: The object is not served yet.
+                    * `HostConflict`: A domain of the object belongs to another DexAuthenticator. Change the domain, or the Ingress class if the domain is to be shared. The object is served on its other domains.
+                    * `InvalidRecord`: The object cannot be served as it is. `message` gives the reason.
+                    * `ClientNotCreated`: The module cannot register the application in Dex. `message` gives the reason.
+                    * `ForeignObject`: The namespace has a Service, Ingress or HTTPRoute with a name the module needs. Rename or delete it.
+                    * `ObjectsNotWritten`: The API server refused to create the Service or a route of the object, for example, because of an admission policy. `message` gives the answer of the API server.
+                    * `TableFull`: The limit of served DexAuthenticator objects is reached in the cluster or in the namespace. `message` gives the details.
                   x-kubernetes-list-type: map
                   x-kubernetes-list-map-keys:
                     - type
@@ -564,7 +522,7 @@ spec:
                       status:
                         type: string
                         enum: ["True", "False", "Unknown"]
-                        description: Status of the condition, `True`, `False` or `Unknown`.
+                        description: Status of the condition.
                       reason:
                         type: string
                         description: Reason for the status, such as `HostConflict`.
@@ -632,9 +590,7 @@ spec:
                         description: |-
                           A set of parameters to use in HTTPRoute object.
 
-                          > **Warning.** Only applicable in clusters with Gateway API support.
-
-                          > **Warning.** Define the same ListenerSet object which is used to publish the application domain.
+                          > **Warning.** Only applicable in clusters with Gateway API support. Define the same ListenerSet object which is used to publish the application domain.
                         properties:
                           httpRouteListenerSetName:
                             type: string
@@ -672,15 +628,9 @@ spec:
                   description: |-
                     Request to application will be sent with `Authorization: Bearer` header when the option is switched to true.
 
-                    When enabled, the header carries a signed Dex ID token (`id_token`) containing the user's email, name, and group membership. This is the only way to pass the user's groups to the application via DexAuthenticator: a separate `X-Auth-Request-Groups` header with groups is not sent.
+                    When enabled, the header carries a signed Dex ID token (`id_token`) containing the user's email, name, and group membership.
 
-                    > **Warning.** Enable it only if the application can process this header.
-                    >
-                    > When setting `sendAuthorizationHeader: true`, list all necessary headers in the application's Ingress resource (if the application is published through an Ingress) or in the HTTPRoute resource (if the application is published through an ALBInstance or ClusterALBInstance of the [`alb`](/modules/alb/) module).
-                    >
-                    > Also, if the application is published through an Ingress resource, when setting `sendAuthorizationHeader: true`, increase the header buffer size, since a JWT with many groups may not fit into the default buffer.
-                    >
-                    > For details on specifying the headers and increasing the buffer, see [How to pass the user's login and groups to an application](faq.html#how-to-pass-the-users-login-and-groups-to-an-application).
+                    > **Warning.** Enable it only if the application can process this header, and set up the route of the application as described in [How to pass the user's login and groups to an application](faq.html#how-to-pass-the-users-login-and-groups-to-an-application).
                 keepUsersLoggedInFor:
                   type: string
                   pattern: '^([0-9]{1,5}h)?([0-9]{1,7}m)?([0-9]{1,9}s)?$'
@@ -689,17 +639,14 @@ spec:
 
                     Set as a string of whole hours, minutes, and seconds, in this order: `30m`, `20s`, `2h30m10s`, `24h`.
 
-                    Specified value can't be shorter or equal to the [`idTokenTTL`](configuration.html#parameters-idtokenttl) value set in the module settings. If you set a value that is shorter or equal to `idTokenTTL`, the effective logout time will be `idTokenTTL + 1s`.
-
-                    To force logout sooner than the default `idTokenTTL`, decrease the [`idTokenTTL`](configuration.html#parameters-idtokenttl) parameter value in the module settings as well.
+                    The value must be greater than [`idTokenTTL`](configuration.html#parameters-idtokenttl), otherwise the session lasts `idTokenTTL + 1s`. To sign users out sooner, decrease `idTokenTTL`.
                   x-doc-default: '168h'
                 allowedEmails:
                   type: array
                   description: |-
                     A list of emails of users are allowed to connect to the client.
 
-                    Checked on login and on every refresh-token request. Updating the list
-                    denies further refresh for sessions whose email is no longer listed.
+                    Changing the list ends the sessions of the users who no longer match it at their next token refresh, within `idTokenTTL`.
 
                     **By default**, all users can connect.
 
@@ -714,8 +661,7 @@ spec:
                   description: |-
                     A list of groups whose members are allowed to connect to the client.
 
-                    Checked on login and on every refresh-token request. Updating the list
-                    denies further refresh for sessions whose stored groups no longer intersect it.
+                    Changing the list ends the sessions of the users who no longer match it at their next token refresh, within `idTokenTTL`.
 
                     **By default**, all groups can connect.
 
@@ -734,7 +680,7 @@ spec:
 
                     Use `local` for the users of the built-in password database ([User](cr.html#user)).
 
-                    Checked on the sign-in page, on login, and on every refresh-token and token-exchange request. A provider outside the list is not offered on the sign-in page. If the list holds one provider, users go straight to it. Removing a provider from the list stops the refresh tokens that were issued through it.
+                    A provider outside the list is not offered on the sign-in page. If the list holds one provider, users go straight to it. Changing the list ends the sessions of the users who no longer match it at their next token refresh, within `idTokenTTL`.
 
                     A name that matches no DexProvider is accepted with a warning. Nobody can sign in through it until the provider appears.
 
@@ -747,18 +693,15 @@ spec:
                 podMetadata:
                   type: object
                   description: |-
-                    Additional labels and annotations for `dex-authenticator` pods.
+                    Ignored. Kept for compatibility.
+                  x-doc-deprecated: true
                   properties:
                     labels:
                       type: object
-                      description: |-
-                        Additional labels for `dex-authenticator` pods.
                       additionalProperties:
                         type: string
                     annotations:
                       type: object
-                      description: |-
-                        Additional annotations for `dex-authenticator` pods.
                       additionalProperties:
                         type: string
                 nodeSelector:
@@ -766,68 +709,42 @@ spec:
                     type: string
                   x-kubernetes-preserve-unknown-fields: true
                   description: |-
-                    If specified, the `dex-authenticator` pods nodeSelector.
-
-                    **Format**: the standard `nodeSelector` list. Instance pods inherit this field as is.
+                    Ignored. Kept for compatibility.
+                  x-doc-deprecated: true
                   type: object
                 tolerations:
                   description: |-
-                    If specified the `dex-authenticator` pods tolerations.
-
-                    **Format**: the standard [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) list. Instance pods inherit this field as is.
+                    Ignored. Kept for compatibility.
+                  x-doc-deprecated: true
                   items:
                     properties:
                       effect:
-                        description: |
-                          Defines the taint’s effect this toleration is associated with (it matches any effect if empty).
                         type: string
                         enum: ["NoSchedule", "PreferNoSchedule", "NoExecute"]
                       key:
-                        description: |-
-                          Defines the taint’s key this toleration is associated with (it matches any key if empty).
-
-                          If the key is omitted (empty), then `operator` must be set to `Exists` (which means it matches any `value` and `key`).
                         type: string
                       operator:
-                        description: |-
-                          Defines how the key and its value are linked — whether the key must be `Equal` to the value or can have any value.
-
-                          Setting it to `Exists` is equivalent to the value having any value so that the pod with the specified toleration can match the corresponding taint.
                         type: string
                         enum: ["Exists", "Equal"]
                         x-doc-default: Equal
                       tolerationSeconds:
-                        description: |
-                          Specifies the period (in seconds) that the scheduler waits before evicting a Pod from a node if the toleration no longer matches the taint (**only** applicable to the `NoExecute` effect, otherwise ignored).
-
-                          If the parameter **is not set**, the Pod will not be evicted from the node if the toleration no longer matches the taint. If the parameter **is set to zero** (or negative), the Pod will be evicted immediately if the toleration no longer matches the taint.
-
-                          **The default is**: not set.
                         format: int64
                         type: integer
                       value:
-                        description: |-
-                          The value that the toleration must match.
-
-                          Must be empty if the `operator` parameter is set to `Exists`.
                         type: string
                     type: object
                   type: array
                 highAvailability:
                   type: boolean
                   description: |-
-                    Enables high availability mode for `dex-authenticator`.
-
-                    When this mode is enabled, multiple pod replicas will be deployed to ensure fault tolerance.
+                    Ignored. Kept for compatibility.
+                  x-doc-deprecated: true
                   x-doc-default: 'false'
                 resources:
                   type: object
                   description: |-
-                    Container resources (CPU/memory) — requests/limits.
-
-                    If this field is set, the specified values are applied and VPA is disabled for this instance. If the field is not set, behavior remains the same: when the VPA module is enabled, resources are managed by VPA, when it is disabled, default values are used.
-
-                    Resources can be specified either directly for the `dex-authenticator` container (for backward compatibility) or in nested objects — separately for each container.
+                    Ignored. Kept for compatibility.
+                  x-doc-deprecated: true
                   properties:
                     limits:
                       type: object
@@ -837,7 +754,6 @@ spec:
                         - type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
-                      description: 'Upper limit of resources for the `dex-authenticator` container (CPU/memory). This field is kept for backward compatibility.'
                     requests:
                       type: object
                       additionalProperties:
@@ -846,11 +762,8 @@ spec:
                         - type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
-                      description: 'Guaranteed minimum resources for the `dex-authenticator` container (CPU/memory). This field is kept for backward compatibility.'
                     redis:
                       type: object
-                      description: |-
-                        Resources of the `redis` container (CPU/memory) — requests/limits.
                       properties:
                         limits:
                           type: object
@@ -860,7 +773,6 @@ spec:
                             - type: string
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
-                          description: 'Upper limit of resources for the `redis` container (CPU/memory).'
                         requests:
                           type: object
                           additionalProperties:
@@ -869,7 +781,6 @@ spec:
                             - type: string
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
-                          description: 'Guaranteed minimum resources for the `redis` container (CPU/memory).'
       subresources: *subresources
       additionalPrinterColumns:
         - jsonPath: .spec.applications[*].domain

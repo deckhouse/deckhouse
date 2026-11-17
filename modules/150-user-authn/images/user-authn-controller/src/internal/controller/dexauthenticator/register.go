@@ -87,7 +87,7 @@ func Register(mgr manager.Manager, opts Options) error {
 		return fmt.Errorf("setup dexauthenticator table controller: %w", err)
 	}
 
-	objects := New(mgr.GetClient(), mgr.GetAPIReader(), mgr.GetEventRecorder(recorderName), log, state, NewPodStatus(mgr.GetClient()), legacy, opts.GatewayAPI)
+	objects := New(mgr.GetClient(), mgr.GetAPIReader(), mgr.GetEventRecorder(recorderName), log, state, NewPodStatus(mgr.GetClient()), metrics, legacy, opts.GatewayAPI)
 	if err := objects.SetupWithManager(mgr, events); err != nil {
 		return fmt.Errorf("setup dexauthenticator controller: %w", err)
 	}

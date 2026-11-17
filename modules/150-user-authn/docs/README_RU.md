@@ -21,7 +21,7 @@ description: "Единая система аутентификации Deckhouse
 Модуль состоит из следующих компонентов:
 
 - [`dex`](https://github.com/dexidp/dex) — федеративный OpenID Connect провайдер, поддерживающий работу со статическими пользователями и с возможностью подключения к различным внешним провайдерам аутентификации, например, SAML, GitLab, GitHub.
-- `dex-authenticator` (на основе [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy)) выполняет аутентификацию запросов к приложению, опубликованному через Ingress или через Gateway API модуля `alb`.
+- `dex-authenticator` (на основе [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy)) выполняет аутентификацию запросов к приложению, опубликованному через Ingress или через Gateway API модуля `alb`. Он работает в неймспейсе `d8-user-authn`.
 
 Управление статическими пользователями осуществляется с помощью ресурсов [User](cr.html#user) и [Group](cr.html#group):
 
@@ -60,6 +60,8 @@ OIDC-аутентификацию в `kube-apiserver` автоматически
 
 Чтобы добавить аутентификацию в любое веб-приложение в кластере, создайте [DexAuthenticator](cr.html#dexauthenticator) в неймспейсе приложения и добавьте аннотации аутентификации в его Ingress или HTTPRoute. DexAuthenticator позволяет ограничить группы и email пользователей, которым разрешён вход, и сети, из которых разрешена аутентификация.
 
+Условие `Served` в статусе объекта показывает, обслуживает ли его модуль (подробнее — [в разделе «Проверка, что DexAuthenticator обслуживается»](faq.html#проверка-что-dexauthenticator-обслуживается)).
+
 Если приложение само поддерживает OIDC, вместо этого создайте [DexClient](cr.html#dexclient) в его неймспейсе. Модуль регистрирует OAuth2-клиент в Dex и создаёт в том же неймспейсе Secret `dex-client-<NAME>` с секретом клиента. DexClient позволяет ограничить группы и email пользователей, которым разрешён вход, и указать клиентов, токенам которых доверяет приложение (`trustedPeers`).
 
 ### Генерация kubeconfig
@@ -88,4 +90,4 @@ OIDC-аутентификацию в `kube-apiserver` автоматически
 
 ## Отказоустойчивый режим
 
-В отказоустойчивом режиме ([`highAvailability`](configuration.html#parameters-highavailability)) Dex и другие компоненты модуля запускаются в нескольких репликах, поэтому вход продолжает работать при отказе одного пода. DexAuthenticator использует ту же настройку, если в нём не задан собственный параметр [`spec.highAvailability`](cr.html#dexauthenticator-v1-spec-highavailability).
+В отказоустойчивом режиме ([`highAvailability`](configuration.html#parameters-highavailability)) Dex и другие компоненты модуля запускаются в нескольких репликах, поэтому вход продолжает работать при отказе одного пода. dex-authenticator всегда работает в двух репликах.

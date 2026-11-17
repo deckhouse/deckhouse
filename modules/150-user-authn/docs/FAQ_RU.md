@@ -8,7 +8,7 @@ title: "Модуль user-authn: FAQ"
 
 1. Создайте [DexAuthenticator](cr.html#dexauthenticator).
 
-   При создании [DexAuthenticator](cr.html#dexauthenticator) в кластере создаётся экземпляр [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy), подключённый к Dex. В указанном неймспейсе создаются Deployment, Service и Secret, а также Ingress, если задан `applicationIngressClassName`, и HTTPRoute, если задан `gatewayAPI`.
+   В неймспейсе DexAuthenticator модуль создаёт Service `<NAME>-dex-authenticator`, Ingress, если задан `applicationIngressClassName`, и HTTPRoute, если задан `gatewayAPI`. Как проверить, что объект обслуживается, описано [в разделе «Проверка, что DexAuthenticator обслуживается»](#проверка-что-dexauthenticator-обслуживается).
 
    Пример ресурса [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator):
 
@@ -16,10 +16,9 @@ title: "Модуль user-authn: FAQ"
    apiVersion: deckhouse.io/v1
    kind: DexAuthenticator
    metadata:
-     # Префикс имени подов Dex authenticator.
-     # Например, если префикс имени `app-name`, то поды Dex authenticator будут вида `app-name-dex-authenticator-7f698684c8-c5cjg`.
+     # Имя DexAuthenticator. Имя его Service — `app-name-dex-authenticator`.
      name: app-name
-     # Неймспейс, в котором будет развернут Dex authenticator.
+     # Неймспейс приложения.
      namespace: app-ns
    spec:
      # Домен вашего приложения. Запросы на него будут перенаправляться для прохождения аутентификации в Dex.
@@ -41,15 +40,6 @@ title: "Модуль user-authn: FAQ"
      whitelistSourceRanges:
      - 1.1.1.1/32
      - 192.168.0.0/24
-   ```
-
-   Чтобы добавить лейблы и аннотации подам `dex-authenticator`, например отключить внедрение sidecar Istio, используйте [`spec.podMetadata`](cr.html#dexauthenticator-v1-spec-podmetadata):
-
-   ```yaml
-   spec:
-     podMetadata:
-       annotations:
-         sidecar.istio.io/inject: "false"
    ```
 
 1. Подключите приложение к Dex.
@@ -151,6 +141,43 @@ Ingress приложения должен иметь настроенный TLS.
   ```yaml
   nginx.ingress.kubernetes.io/satisfy: "any"
   ```
+
+### Проверка, что DexAuthenticator обслуживается
+
+Модуль начинает обслуживать новый или изменённый DexAuthenticator в течение нескольких минут. До этого запросы к приложению получают ошибку.
+
+Чтобы узнать, обслуживает ли модуль DexAuthenticator на всех его доменах, посмотрите столбец `Served` в выводе команды:
+
+```shell
+d8 k -n <NAMESPACE> get dexauthenticators
+```
+
+Если в столбце указано `False`, причина указана в полях `reason` и `message` условия `Served`. Причины перечислены в описании поля [`status.conditions`](cr.html#dexauthenticator-v1-status-conditions). Чтобы вывести условие, выполните команду:
+
+```shell
+d8 k -n <NAMESPACE> get dexauthenticator <NAME> -o jsonpath='{.status.conditions[?(@.type=="Served")]}'
+```
+
+Здесь `<NAMESPACE>` — неймспейс DexAuthenticator, `<NAME>` — его имя.
+
+В одном неймспейсе может быть около 600 DexAuthenticator. Ограничьте их число квотой ResourceQuota:
+
+```yaml
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: dexauthenticators
+  namespace: <NAMESPACE>
+spec:
+  hard:
+    count/dexauthenticators.deckhouse.io: "20"
+```
+
+Если DexAuthenticator не обслуживается, через 10 минут срабатывает алерт `D8DexAuthenticatorNotServed`.
+
+### Обновление с версии, где у каждого DexAuthenticator свой dex-authenticator
+
+После обновления пользователи всех DexAuthenticator входят ещё раз. DexAuthenticator, который модуль обслужить не может, остаётся на прежнем dex-authenticator, и изменения `allowedGroups` и `allowedEmails` к нему не применяются. Причину показывает поле `reason` условия `Served`.
 
 ## Как передать приложению логин и группы пользователя?
 
@@ -261,13 +288,17 @@ DexAuthenticator устанавливает cookie с атрибутом `Secure
 
 1. Dex в большинстве случаев перенаправляет пользователя на страницу входа провайдера и ожидает, что пользователь будет перенаправлен на его `/callback` URL. Однако такие провайдеры, как LDAP или Atlassian Crowd, не поддерживают этот вариант. Вместо этого пользователь должен ввести логин и пароль в форму входа в Dex, и Dex сам проверит учётные данные, выполнив запрос к API провайдера.
 
-1. DexAuthenticator начинает вход с Proof Key for Code Exchange (PKCE) по методу `S256` и получает токены и ключи подписи у Service `dex` в неймспейсе `d8-user-authn`. Сертификат Dex он проверяет по центру сертификации (CA) внутреннего сертификата Dex. Этот CA `user-authn` добавляет в Secret каждого DexAuthenticator.
+1. DexAuthenticator начинает вход с Proof Key for Code Exchange (PKCE) по методу `S256` и получает токены и ключи подписи у Service `dex` в неймспейсе `d8-user-authn`. Сертификат Dex он проверяет по центру сертификации (CA) внутреннего сертификата Dex.
 
 1. DexAuthenticator устанавливает cookie с полным токеном обновления (вместо выдачи тикета, как для ID-токена), потому что Redis не сохраняет данные на диск.
    Если по тикету в Redis не найден ID-токен, пользователь сможет запросить новый ID-токен, предоставив токен обновления из cookie.
 
 1. DexAuthenticator выставляет HTTP-заголовок `Authorization`, равный значению ID-токена из Redis. Это необязательно для сервисов вроде [`upmeter`](/modules/upmeter/), так как права доступа к `upmeter` менее детальные.
    Для [Kubernetes Dashboard](/modules/dashboard/) это критичная функциональность: Dashboard передаёт ID-токен дальше для доступа к API Kubernetes.
+
+### Ошибка 500 при недоступном Dex
+
+Пока Dex не отвечает, DexAuthenticator не может обновить сессию, у которой истёк срок действия ID-токена. Он сохраняет сессию на один период [`idTokenTTL`](configuration.html#parameters-idtokenttl) и отвечает на запросы этой сессии кодом `503`. Если приложение опубликовано через Ingress, пользователь видит страницу ошибки Ingress-контроллера с кодом `500`. Когда Dex снова начнёт отвечать, перезагрузите страницу: сессия продолжит работать. Если Dex не отвечает дольше этого периода, сессия завершается, и пользователь входит заново.
 
 ### Обработка истёкшей сессии в одностраничном приложении
 
@@ -290,7 +321,7 @@ if (response.status === 401) {
 
 DexAuthenticator завершает сессии пользователя в течение нескольких секунд после операции `Lock`, `ResetPassword`, `Reset2FA` или `Logout` и после удаления пользователя. Запрос с завершённой сессией получает тот же ответ, что и запрос без сессии.
 
-DexAuthenticator получает отзывы от сервиса `revocation-feed` в неймспейсе `d8-user-authn`. Если NetworkPolicy ограничивает исходящий трафик в неймспейсе DexAuthenticator, разрешите трафик к подам с лейблом `app: user-authn-controller` в неймспейсе `d8-user-authn` на порт `8443`. Без отзывов DexAuthenticator проверяет в Dex каждую сессию старше 30 секунд, а через 15 минут срабатывает алерт `D8UserAuthnRevocationFeedNotConsumed`.
+Если DexAuthenticator не получает отзывы, через 15 минут срабатывает алерт `D8UserAuthnRevocationFeedNotConsumed`.
 
 Когда пользователь выходит из приложения, DexAuthenticator отзывает refresh-токен сессии в Dex. Копия cookie сессии тоже перестаёт работать.
 

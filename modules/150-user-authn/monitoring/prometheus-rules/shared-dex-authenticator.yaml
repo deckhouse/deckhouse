@@ -155,3 +155,70 @@
         ```bash
         d8 k get dexauthenticators -A -o json | jq -r '.items[] | select(any(.status.conditions[]?; .type == "Served" and .reason == "TableFull")) | "\(.metadata.namespace)/\(.metadata.name)"'
         ```
+  # A full table is reported once per instance by D8SharedDexAuthenticatorClientTableFull, which
+  # tells how to find the objects that did not fit: an alert for each of them would say the same.
+  - alert: D8DexAuthenticatorNotServed
+    expr: |
+      max by (dex_authenticator_namespace, dex_authenticator_name, instance_name, reason) (
+        d8_user_authn_dex_authenticator_not_served{namespace="d8-user-authn", job="dexclient-controller", reason!~"WaitingForInstance|TableFull"}
+      ) > 0
+    for: 10m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: user-authn
+      d8_component: shared-dex-authenticator
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      plk_create_group_if_not_exists__d8_shared_dex_authenticator_malfunctioning: "D8SharedDexAuthenticatorMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_shared_dex_authenticator_malfunctioning: "D8SharedDexAuthenticatorMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The DexAuthenticator `{{ $labels.dex_authenticator_namespace }}/{{ $labels.dex_authenticator_name }}` is not served, the reason is `{{ $labels.reason }}`.
+      description: |-
+        The DexAuthenticator `{{ $labels.dex_authenticator_name }}` in the namespace `{{ $labels.dex_authenticator_namespace }}` is not served, the reason is `{{ $labels.reason }}`. Users cannot sign in through it. An object that was served before works without its latest changes. An object that had a dex-authenticator of its own before the module update keeps it, and changes of `allowedGroups` and `allowedEmails` do not apply to it.
+
+        Read the message of the condition:
+
+        ```bash
+        d8 k -n {{ $labels.dex_authenticator_namespace }} get dexauthenticator {{ $labels.dex_authenticator_name }} -o jsonpath='{.status.conditions[?(@.type=="Served")].message}'
+        ```
+
+        What to do by the reason:
+
+        - `HostConflict`: The domain belongs to another DexAuthenticator. Change the domain, or the Ingress class if the domain is to be shared.
+        - `InvalidRecord`: The object cannot be served as it is. Fix it as the message says.
+        - `ClientNotCreated`: The module cannot register the application in Dex. The message gives the reason.
+        - `ForeignObject`: The namespace has a Service, an Ingress or an HTTPRoute with a name the module needs. Rename or delete it.
+        - `ObjectsNotWritten`: The API server refused the Service or a route of the object, for example by an admission policy. The message gives its answer.
+        - `NamespaceShareFull`: The condition has the reason `TableFull`: the namespace has as many DexAuthenticator objects as one namespace may have. Delete the ones that are no longer needed.
+  # An object waits for its instance for a minute or two after it is created or changed, so this
+  # reason has an alert of its own with a longer wait. It keeps silent while the alert on the
+  # table of the instance fires: that one names the cause.
+  - alert: D8DexAuthenticatorWaitingForInstance
+    expr: |
+      max by (dex_authenticator_namespace, dex_authenticator_name, instance_name) (
+        d8_user_authn_dex_authenticator_not_served{namespace="d8-user-authn", job="dexclient-controller", reason="WaitingForInstance"}
+      ) > 0
+      unless on (instance_name)
+      ALERTS{alertname="D8SharedDexAuthenticatorClientTableNotLoaded", alertstate="firing"}
+    for: 30m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: user-authn
+      d8_component: shared-dex-authenticator
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      plk_create_group_if_not_exists__d8_shared_dex_authenticator_malfunctioning: "D8SharedDexAuthenticatorMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_shared_dex_authenticator_malfunctioning: "D8SharedDexAuthenticatorMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The DexAuthenticator `{{ $labels.dex_authenticator_namespace }}/{{ $labels.dex_authenticator_name }}` has been waiting for the shared dex-authenticator `{{ $labels.instance_name }}` for more than 30 minutes.
+      description: |-
+        For more than 30 minutes, the shared dex-authenticator instance `{{ $labels.instance_name }}` has not loaded the settings of the DexAuthenticator `{{ $labels.dex_authenticator_name }}` in the namespace `{{ $labels.dex_authenticator_namespace }}`. It normally takes a few minutes. Until then a new object is not served, and an object served before works without its latest changes.
+
+        Check the pods of the instance and their log:
+
+        ```bash
+        d8 k -n d8-user-authn get pods -l app=shared-dex-authenticator,instance={{ $labels.instance_name }}
+        d8 k -n d8-user-authn logs -l app=shared-dex-authenticator,instance={{ $labels.instance_name }} -c dex-authenticator --prefix --tail=-1
+        ```

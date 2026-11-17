@@ -21,7 +21,7 @@ The module provides the following features:
 The module consists of the following components:
 
 - [dex](https://github.com/dexidp/dex) — is a federated OpenID Connect provider that acts as an identity service for static users and can be linked to one or more ID providers (e.g., SAML providers, GitHub, and GitLab);
-- `dex-authenticator` (based on [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy)) authenticates requests to an application published through an Ingress or, with the `alb` module, through Gateway API.
+- `dex-authenticator` (based on [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy)) authenticates requests to an application published through an Ingress or, with the `alb` module, through Gateway API. It runs in the `d8-user-authn` namespace.
 
 Management of static users is performed using the [User](cr.html#user) and [Group](cr.html#group) resources:
 
@@ -60,6 +60,8 @@ When the module is enabled, the web interfaces of DP modules authenticate users 
 
 To add authentication to any web application in the cluster, create a [DexAuthenticator](cr.html#dexauthenticator) in the namespace of the application and add the authentication annotations to its Ingress or HTTPRoute. DexAuthenticator can limit the groups and emails that are allowed to sign in and the networks from which users can authenticate.
 
+The `Served` condition in the status of the object shows whether the module serves it (see [Checking that a DexAuthenticator is served](faq.html#checking-that-a-dexauthenticator-is-served)).
+
 If the application supports OIDC itself, create a [DexClient](cr.html#dexclient) in its namespace instead. The module registers an OAuth2 client in Dex and creates the `dex-client-<NAME>` Secret with the client secret in the same namespace. DexClient can limit the groups and emails that are allowed to sign in and list the clients whose tokens the application trusts (`trustedPeers`).
 
 ### Generating kubeconfig files
@@ -88,4 +90,4 @@ The module ships Dex with additional capabilities:
 
 ## High availability mode
 
-In high availability mode ([`highAvailability`](configuration.html#parameters-highavailability)), Dex and the other module components run in several replicas, so sign-in keeps working if one pod fails. DexAuthenticator follows the same setting unless its own [`spec.highAvailability`](cr.html#dexauthenticator-v1-spec-highavailability) is set.
+In high availability mode ([`highAvailability`](configuration.html#parameters-highavailability)), Dex and the other module components run in several replicas, so sign-in keeps working if one pod fails. dex-authenticator always runs in two replicas.

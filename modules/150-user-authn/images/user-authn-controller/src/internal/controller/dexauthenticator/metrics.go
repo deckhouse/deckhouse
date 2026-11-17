@@ -20,6 +20,9 @@ import (
 	"strconv"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"k8s.io/apimachinery/pkg/types"
+
+	"user-authn-controller/internal/naming"
 )
 
 const (
@@ -31,18 +34,28 @@ const (
 	tableBytesMetric = "d8_user_authn_shared_dex_authenticator_table_bytes"
 	tableLimitMetric = "d8_user_authn_shared_dex_authenticator_table_limit_bytes"
 	notServedMetric  = "d8_user_authn_shared_dex_authenticator_objects_not_served"
+	// objectNotServedMetric has a series per object whose Served condition is not True, and none
+	// for an object that is served. The alerts D8DexAuthenticatorNotServed and
+	// D8DexAuthenticatorWaitingForInstance name the object by it:
+	//
+	//	max by (dex_authenticator_namespace, dex_authenticator_name, instance_name, reason) (d8_user_authn_dex_authenticator_not_served) > 0
+	objectNotServedMetric = "d8_user_authn_dex_authenticator_not_served"
+
+	objectNamespaceLabel = "dex_authenticator_namespace"
+	objectNameLabel      = "dex_authenticator_name"
 
 	originModule = "module"
 	originUser   = "user"
 )
 
-// Metrics are the metrics of the table reconciler.
+// Metrics are the metrics of the table reconciler and of the reconciler of the objects.
 type Metrics struct {
-	objects      *prometheus.GaugeVec
-	applications *prometheus.GaugeVec
-	tableBytes   *prometheus.GaugeVec
-	tableLimit   prometheus.Gauge
-	notServed    *prometheus.GaugeVec
+	objects         *prometheus.GaugeVec
+	applications    *prometheus.GaugeVec
+	tableBytes      *prometheus.GaugeVec
+	tableLimit      prometheus.Gauge
+	notServed       *prometheus.GaugeVec
+	objectNotServed *prometheus.GaugeVec
 }
 
 // NewMetrics registers the metrics in registry.
@@ -71,8 +84,14 @@ func NewMetrics(registry prometheus.Registerer) (*Metrics, error) {
 				"their domains, by the reason of the Served condition; TableFull that comes from the share of the namespace " +
 				"of the object is " + reasonNamespaceShareFull + ". Set by the leader only.",
 		}, []string{"instance_name", "reason"}),
+		objectNotServed: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: objectNotServedMetric,
+			Help: "DexAuthenticator objects whose Served condition is not True, by the reason of the condition: 1 for " +
+				"such an object, no series for an object that is served; TableFull that comes from the share of the namespace " +
+				"of the object is " + reasonNamespaceShareFull + ". Set by the leader only.",
+		}, []string{objectNamespaceLabel, objectNameLabel, "instance_name", "reason"}),
 	}
-	for _, collector := range []prometheus.Collector{m.objects, m.applications, m.tableBytes, m.tableLimit, m.notServed} {
+	for _, collector := range []prometheus.Collector{m.objects, m.applications, m.tableBytes, m.tableLimit, m.notServed, m.objectNotServed} {
 		if err := registry.Register(collector); err != nil {
 			return nil, err
 		}
@@ -142,4 +161,22 @@ func metricReason(entry Entry) string {
 		return reasonNamespaceShareFull
 	}
 	return entry.Reason
+}
+
+// notServedBecause records that the object key is not served for reason: the object has one
+// series, with the reason it has now.
+func (m *Metrics) notServedBecause(key types.NamespacedName, reason string) {
+	if m == nil {
+		return
+	}
+	m.served(key)
+	m.objectNotServed.WithLabelValues(key.Namespace, key.Name, naming.AuthenticatorInstance(key.Namespace), reason).Set(1)
+}
+
+// served records that the object key is served or is gone: it has no series.
+func (m *Metrics) served(key types.NamespacedName) {
+	if m == nil {
+		return
+	}
+	m.objectNotServed.DeletePartialMatch(prometheus.Labels{objectNamespaceLabel: key.Namespace, objectNameLabel: key.Name})
 }

@@ -24,6 +24,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"user-authn-controller/internal/controller"
 )
@@ -59,7 +61,9 @@ func (r *Reconciler) setServed(ctx context.Context, obj *unstructured.Unstructur
 		Message:            message,
 		ObservedGeneration: obj.GetGeneration(),
 	})
+	key := client.ObjectKeyFromObject(obj)
 	if !changed {
+		r.observeServed(key, status, reason)
 		return nil
 	}
 
@@ -70,10 +74,28 @@ func (r *Reconciler) setServed(ctx context.Context, obj *unstructured.Unstructur
 	if err := r.client.Status().Update(ctx, updated); err != nil {
 		return fmt.Errorf("update the status of DexAuthenticator %s/%s: %w", obj.GetNamespace(), obj.GetName(), err)
 	}
+	r.observeServed(key, status, reason)
 
 	// Waiting for the instance is how every object starts; it is not worth an Event.
 	if r.recorder != nil && status != metav1.ConditionTrue && reason != wasReason && reason != ReasonWaitingForInstance {
 		r.recorder.Eventf(obj, nil, corev1.EventTypeWarning, reason, actionReconcile, "%s", message)
 	}
 	return nil
+}
+
+// observeServed keeps the metric of the objects that are not served in step with the condition
+// the object has: a condition that is already there is observed too, so that the series come
+// back after a start of the controller.
+func (r *Reconciler) observeServed(key types.NamespacedName, status metav1.ConditionStatus, reason string) {
+	if status == metav1.ConditionTrue {
+		r.metrics.served(key)
+		return
+	}
+	// The reason TableFull of an object that did not fit into the share of its namespace has a
+	// name of its own in the metric: the table has room, and the alert on a full table is not
+	// about it.
+	if entry, known, _ := r.state.Entry(key); known && entry.Reason == reason {
+		reason = metricReason(entry)
+	}
+	r.metrics.notServedBecause(key, reason)
 }

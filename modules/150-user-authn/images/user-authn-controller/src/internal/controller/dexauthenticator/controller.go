@@ -86,6 +86,8 @@ type Reconciler struct {
 
 	state     *State
 	instances InstanceStatus
+	// metrics has a series for every object that is not served; nil in the tests that do not look.
+	metrics *Metrics
 	// legacy removes the dex-authenticator the module chart used to render for an object.
 	legacy *migration.DexAuthenticatorLegacy
 
@@ -106,8 +108,9 @@ type loadedRecord struct {
 }
 
 // New constructs a Reconciler that acts on the decisions of the table reconciler in state.
-func New(c client.Client, reader client.Reader, recorder events.EventRecorder, log logr.Logger, state *State, instances InstanceStatus, legacy *migration.DexAuthenticatorLegacy, gatewayAPI bool) *Reconciler {
+func New(c client.Client, reader client.Reader, recorder events.EventRecorder, log logr.Logger, state *State, instances InstanceStatus, metrics *Metrics, legacy *migration.DexAuthenticatorLegacy, gatewayAPI bool) *Reconciler {
 	return &Reconciler{
+		metrics:    metrics,
 		client:     c,
 		reader:     reader,
 		writer:     adoption.Writer{Client: c, Reader: reader, Log: log},
@@ -669,6 +672,7 @@ func listRoutes(ctx context.Context, c client.Reader, key types.NamespacedName, 
 // cleanup removes everything of a DexAuthenticator that is gone: its objects and what is left of
 // the dex-authenticator the module chart used to render for it.
 func (r *Reconciler) cleanup(ctx context.Context, key types.NamespacedName) error {
+	r.metrics.served(key)
 	if err := r.removeObjects(ctx, key); err != nil {
 		return err
 	}

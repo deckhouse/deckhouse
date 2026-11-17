@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -84,6 +85,7 @@ type testEnv struct {
 	objects   *Reconciler
 	instances *fakeInstances
 	recorder  *events.FakeRecorder
+	registry  *prometheus.Registry
 	announced chan event.GenericEvent
 	now       time.Time
 }
@@ -159,7 +161,12 @@ func newTestEnvOver(t *testing.T, c client.Client, gatewayAPI bool) *testEnv {
 	legacy := migration.NewDexAuthenticatorLegacy(c, c, logr.Discard())
 	env.tables = NewTableReconciler(c, c, logr.Discard(), state, env.announced, nil, legacy, gatewayAPI)
 	env.tables.now = func() time.Time { return env.now }
-	env.objects = New(c, c, env.recorder, logr.Discard(), state, env.instances, legacy, gatewayAPI)
+	env.registry = prometheus.NewRegistry()
+	metrics, err := NewMetrics(env.registry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	env.objects = New(c, c, env.recorder, logr.Discard(), state, env.instances, metrics, legacy, gatewayAPI)
 	return env
 }
 
@@ -230,6 +237,41 @@ func (e *testEnv) serve(key types.NamespacedName) {
 	if got := e.condition(key); got.Status != metav1.ConditionTrue {
 		e.t.Fatalf("%s is not served: %+v", key, got)
 	}
+}
+
+// notServed lists the series of the metric of the objects that are not served, as
+// "namespace/name instance reason".
+func (e *testEnv) notServed() []string {
+	e.t.Helper()
+
+	return notServedSeries(e.t, e.registry)
+}
+
+func notServedSeries(t *testing.T, registry *prometheus.Registry) []string {
+	t.Helper()
+
+	families, err := registry.Gather()
+	if err != nil {
+		t.Fatal(err)
+	}
+	series := []string{}
+	for _, family := range families {
+		if family.GetName() != objectNotServedMetric {
+			continue
+		}
+		for _, metric := range family.GetMetric() {
+			labels := map[string]string{}
+			for _, label := range metric.GetLabel() {
+				labels[label.GetName()] = label.GetValue()
+			}
+			if value := metric.GetGauge().GetValue(); value != 1 {
+				t.Errorf("the series %v has the value %v, want 1", labels, value)
+			}
+			series = append(series, labels[objectNamespaceLabel]+"/"+labels[objectNameLabel]+" "+labels["instance_name"]+" "+labels["reason"])
+		}
+	}
+	slices.Sort(series)
+	return series
 }
 
 func (e *testEnv) table(instance string) table {
@@ -397,7 +439,7 @@ func TestTableReconciler_DoesNothingWithoutTheSettings(t *testing.T) {
 		t.Errorf("%d Secrets written without the settings, error %v", len(secrets.Items), err)
 	}
 
-	objects := New(c, c, nil, logr.Discard(), state, &fakeInstances{}, migration.NewDexAuthenticatorLegacy(c, c, logr.Discard()), false)
+	objects := New(c, c, nil, logr.Discard(), state, &fakeInstances{}, nil, migration.NewDexAuthenticatorLegacy(c, c, logr.Discard()), false)
 	if result, err := objects.Reconcile(t.Context(), reconcile.Request{NamespacedName: shopApp}); err != nil || result != (reconcile.Result{}) {
 		t.Errorf("Reconcile of the object: %+v, %v", result, err)
 	}
@@ -1544,7 +1586,7 @@ func TestReconcile_InstanceThatDoesNotAnswer(t *testing.T) {
 	}
 
 	// The controller starts again and remembers nothing: the object is still not called unserved.
-	restarted := New(env.client, env.client, env.recorder, logr.Discard(), env.objects.state, env.instances, env.objects.legacy, false)
+	restarted := New(env.client, env.client, env.recorder, logr.Discard(), env.objects.state, env.instances, env.objects.metrics, env.objects.legacy, false)
 	result, err := restarted.Reconcile(t.Context(), reconcile.Request{NamespacedName: shopApp})
 	if err != nil || result.RequeueAfter != loadRecheck {
 		t.Errorf("after a restart: %+v, %v; want a later look", result, err)
@@ -2655,6 +2697,9 @@ func TestReconcile_ServiceRefusedByAdmission(t *testing.T) {
 	if got.Status != metav1.ConditionFalse || got.Reason != ReasonObjectsNotWritten || !strings.Contains(got.Message, "denied the request") {
 		t.Errorf("condition = %+v, want the reason %s with the answer of the API server", got, ReasonObjectsNotWritten)
 	}
+	if series := env.notServed(); !slices.Equal(series, []string{"shop/app dex-authenticator " + ReasonObjectsNotWritten}) {
+		t.Errorf("the series of the objects that are not served = %q", series)
+	}
 	if env.exists(&networkingv1.Ingress{}, "shop", shopService) {
 		t.Error("the object has a route without its Service")
 	}
@@ -2664,6 +2709,9 @@ func TestReconcile_ServiceRefusedByAdmission(t *testing.T) {
 	env.mustReconcile(shopApp)
 	if got := env.condition(shopApp); got.Status != metav1.ConditionTrue {
 		t.Errorf("condition = %+v", got)
+	}
+	if series := env.notServed(); len(series) != 0 {
+		t.Errorf("the series of the objects that are not served = %q", series)
 	}
 }
 
@@ -2725,5 +2773,98 @@ func TestReconcile_RouteRefusedByTheIngressWebhook(t *testing.T) {
 	}
 	if got := env.condition(shopApp); got.Reason != ReasonObjectsNotWritten || !strings.Contains(got.Message, "Snippet directives are disabled") {
 		t.Errorf("condition = %+v, want the reason %s with the answer of the webhook", got, ReasonObjectsNotWritten)
+	}
+}
+
+// TestReconcile_NotServedMetric checks the metric the alert on an object that is not served is
+// built on: an object has a series while its Served condition is not True, with the reason it has
+// now, and none once it is served or gone.
+func TestReconcile_NotServedMetric(t *testing.T) {
+	t.Parallel()
+
+	second := types.NamespacedName{Namespace: "shop", Name: "second"}
+	env := newTestEnv(t, testSettings, false,
+		authenticatorObject("shop", "app", 0, "app.example.com"),
+		authenticatorObject("shop", "second", 1, "app.example.com"),
+		authenticatorObject("d8-monitoring", "grafana", 2, "grafana.example.com"))
+	grafana := types.NamespacedName{Namespace: "d8-monitoring", Name: "grafana"}
+	expect := func(step string, want ...string) {
+		t.Helper()
+		if got := env.notServed(); !slices.Equal(got, want) {
+			t.Errorf("%s: the series are %q, want %q", step, got, want)
+		}
+	}
+
+	env.buildTables()
+	expect("before a reconcile")
+
+	for _, key := range []types.NamespacedName{shopApp, second, grafana} {
+		env.mustReconcile(key)
+	}
+	expect("the instances have loaded nothing",
+		"d8-monitoring/grafana dex-authenticator-system WaitingForInstance",
+		"shop/app dex-authenticator WaitingForInstance",
+		"shop/second dex-authenticator HostConflict")
+
+	// Served: the series goes, it is not set to zero.
+	env.load()
+	env.mustReconcile(shopApp)
+	env.mustReconcile(grafana)
+	expect("the instances have loaded the records", "shop/second dex-authenticator HostConflict")
+
+	// A controller that has just started gets the series from the condition the object has.
+	registry := prometheus.NewRegistry()
+	metrics, err := NewMetrics(registry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	restarted := New(env.client, env.client, env.recorder, logr.Discard(), env.objects.state, env.instances, metrics, env.objects.legacy, false)
+	for _, key := range []types.NamespacedName{shopApp, second} {
+		if _, err := restarted.Reconcile(t.Context(), reconcile.Request{NamespacedName: key}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got, want := notServedSeries(t, registry), []string{"shop/second dex-authenticator HostConflict"}; !slices.Equal(got, want) {
+		t.Errorf("after a restart: the series are %q, want %q", got, want)
+	}
+
+	// The reason changes: the object still has one series.
+	obj := controller.Object(controller.DexAuthenticatorGVK)
+	env.exists(obj, "shop", "app")
+	if err := env.client.Delete(t.Context(), obj); err != nil {
+		t.Fatal(err)
+	}
+	env.mustReconcile(shopApp)
+	env.buildTables()
+	env.mustReconcile(second)
+	expect("the domain is free and the record is not loaded yet", "shop/second dex-authenticator WaitingForInstance")
+
+	// An object that is deleted while it is not served takes its series with it.
+	env.exists(obj, "shop", "second")
+	if err := env.client.Delete(t.Context(), obj); err != nil {
+		t.Fatal(err)
+	}
+	env.mustReconcile(second)
+	expect("the object is gone")
+}
+
+// TestReconcile_NotServedMetricOfTheNamespaceShare: an object refused for the share of its
+// namespace has the reason TableFull in its condition and its own reason in the metric.
+func TestReconcile_NotServedMetricOfTheNamespaceShare(t *testing.T) {
+	t.Parallel()
+
+	env := newTestEnv(t, testSettings, false,
+		authenticatorObject("shop", "app", 0, "app.example.com"),
+		authenticatorObject("shop", "second", 1, "second.example.com"))
+	env.tables.share = 1
+	env.buildTables()
+	env.mustReconcile(shopApp)
+
+	got := env.condition(shopApp)
+	if got.Status != metav1.ConditionFalse || got.Reason != ReasonTableFull || !strings.Contains(got.Message, "one namespace may have") {
+		t.Errorf("condition = %+v", got)
+	}
+	if series := env.notServed(); !slices.Contains(series, "shop/app dex-authenticator "+reasonNamespaceShareFull) {
+		t.Errorf("the series of the objects that are not served = %q", series)
 	}
 }

@@ -1881,6 +1881,50 @@ alerts:
         Prometheus is unable to scrape Dex metrics.
       severity: "6"
       markupFormat: markdown
+    - name: D8DexAuthenticatorNotServed
+      sourceFile: modules/150-user-authn/monitoring/prometheus-rules/shared-dex-authenticator.yaml
+      moduleUrl: 150-user-authn
+      module: user-authn
+      edition: ce
+      description: |-
+        The DexAuthenticator `{{ $labels.dex_authenticator_name }}` in the namespace `{{ $labels.dex_authenticator_namespace }}` is not served, the reason is `{{ $labels.reason }}`. Users cannot sign in through it. An object that was served before works without its latest changes. An object that had a dex-authenticator of its own before the module update keeps it, and changes of `allowedGroups` and `allowedEmails` do not apply to it.
+
+        Read the message of the condition:
+
+        ```bash
+        d8 k -n {{ $labels.dex_authenticator_namespace }} get dexauthenticator {{ $labels.dex_authenticator_name }} -o jsonpath='{.status.conditions[?(@.type=="Served")].message}'
+        ```
+
+        What to do by the reason:
+
+        - `HostConflict`: The domain belongs to another DexAuthenticator. Change the domain, or the Ingress class if the domain is to be shared.
+        - `InvalidRecord`: The object cannot be served as it is. Fix it as the message says.
+        - `ClientNotCreated`: The module cannot register the application in Dex. The message gives the reason.
+        - `ForeignObject`: The namespace has a Service, an Ingress or an HTTPRoute with a name the module needs. Rename or delete it.
+        - `ObjectsNotWritten`: The API server refused the Service or a route of the object, for example by an admission policy. The message gives its answer.
+        - `NamespaceShareFull`: The condition has the reason `TableFull`: the namespace has as many DexAuthenticator objects as one namespace may have. Delete the ones that are no longer needed.
+      summary: |
+        The DexAuthenticator {{ $labels.dex_authenticator_namespace }}/{{ $labels.dex_authenticator_name }} is not served, the reason is {{ $labels.reason }}.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8DexAuthenticatorWaitingForInstance
+      sourceFile: modules/150-user-authn/monitoring/prometheus-rules/shared-dex-authenticator.yaml
+      moduleUrl: 150-user-authn
+      module: user-authn
+      edition: ce
+      description: |-
+        For more than 30 minutes, the shared dex-authenticator instance `{{ $labels.instance_name }}` has not loaded the settings of the DexAuthenticator `{{ $labels.dex_authenticator_name }}` in the namespace `{{ $labels.dex_authenticator_namespace }}`. It normally takes a few minutes. Until then a new object is not served, and an object served before works without its latest changes.
+
+        Check the pods of the instance and their log:
+
+        ```bash
+        d8 k -n d8-user-authn get pods -l app=shared-dex-authenticator,instance={{ $labels.instance_name }}
+        d8 k -n d8-user-authn logs -l app=shared-dex-authenticator,instance={{ $labels.instance_name }} -c dex-authenticator --prefix --tail=-1
+        ```
+      summary: |
+        The DexAuthenticator {{ $labels.dex_authenticator_namespace }}/{{ $labels.dex_authenticator_name }} has been waiting for the shared dex-authenticator {{ $labels.instance_name }} for more than 30 minutes.
+      severity: "6"
+      markupFormat: markdown
     - name: D8DexAuthRequestsQuotaExhausted
       sourceFile: modules/150-user-authn/monitoring/prometheus-rules/dex.yaml
       moduleUrl: 150-user-authn

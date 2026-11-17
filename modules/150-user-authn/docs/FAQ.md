@@ -8,7 +8,7 @@ To enable Dex authentication for your application, follow these steps:
 
 1. Create a [DexAuthenticator](cr.html#dexauthenticator).
 
-   When you create a [DexAuthenticator](cr.html#dexauthenticator) in a cluster, an instance of [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy) is created and connected to Dex. A Deployment, a Service and a Secret are created in the specified namespace, plus an Ingress if `applicationIngressClassName` is set and an HTTPRoute if `gatewayAPI` is set.
+   In the namespace of the DexAuthenticator, the module creates the `<NAME>-dex-authenticator` Service, an Ingress if `applicationIngressClassName` is set and an HTTPRoute if `gatewayAPI` is set. To check that the object is served, see [Checking that a DexAuthenticator is served](#checking-that-a-dexauthenticator-is-served).
 
    Example of the DexAuthenticator custom resource:
 
@@ -16,10 +16,9 @@ To enable Dex authentication for your application, follow these steps:
    apiVersion: deckhouse.io/v1
    kind: DexAuthenticator
    metadata:
-     # Dex authenticator pod name prefix.
-     # For example, if the name prefix is `app-name`, then Dex authenticator pods will look like `app-name-dex-authenticator-7f698684c8-c5cjg`.
+     # Name of the DexAuthenticator. The name of its Service is `app-name-dex-authenticator`.
      name: app-name
-     # Namespace to deploy Dex authenticator to.
+     # Namespace of the application.
      namespace: app-ns
    spec:
      # Your application's domain. Requests to it will be redirected for Dex authentication.
@@ -42,15 +41,6 @@ To enable Dex authentication for your application, follow these steps:
      whitelistSourceRanges:
      - 1.1.1.1/32
      - 192.168.0.0/24
-   ```
-
-   To add labels and annotations to the `dex-authenticator` pods, for example to disable Istio sidecar injection, use [`spec.podMetadata`](cr.html#dexauthenticator-v1-spec-podmetadata):
-
-   ```yaml
-   spec:
-     podMetadata:
-       annotations:
-         sidecar.istio.io/inject: "false"
    ```
 
 1. Connect your application to Dex.
@@ -151,6 +141,43 @@ To allow authentication only from specific networks, list them in [`whitelistSou
   ```yaml
   nginx.ingress.kubernetes.io/satisfy: "any"
   ```
+
+### Checking that a DexAuthenticator is served
+
+The module starts serving a new or changed DexAuthenticator within a few minutes. Until then, requests to the application get an error.
+
+To see whether the module serves the DexAuthenticator on every domain it names, look at the `Served` column of the command output:
+
+```shell
+d8 k -n <NAMESPACE> get dexauthenticators
+```
+
+If the column shows `False`, the `reason` and `message` fields of the `Served` condition say why. The reasons are listed in the description of the [`status.conditions`](cr.html#dexauthenticator-v1-status-conditions) field. To print the condition, run:
+
+```shell
+d8 k -n <NAMESPACE> get dexauthenticator <NAME> -o jsonpath='{.status.conditions[?(@.type=="Served")]}'
+```
+
+Here `<NAMESPACE>` is the namespace of the DexAuthenticator and `<NAME>` is its name.
+
+One namespace may have about 600 DexAuthenticator objects. Limit their number with a ResourceQuota:
+
+```yaml
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: dexauthenticators
+  namespace: <NAMESPACE>
+spec:
+  hard:
+    count/dexauthenticators.deckhouse.io: "20"
+```
+
+A DexAuthenticator that stays not served raises the `D8DexAuthenticatorNotServed` alert after 10 minutes.
+
+### Updating from a version with a dex-authenticator for every DexAuthenticator
+
+After the update, the users of every DexAuthenticator sign in once more. A DexAuthenticator the module cannot serve keeps its previous dex-authenticator, and changes of `allowedGroups` and `allowedEmails` do not apply to it. The `reason` field of the `Served` condition tells the cause.
 
 ## How to pass the user's login and groups to an application?
 
@@ -261,13 +288,17 @@ DexAuthenticator sets its cookies with the `Secure` attribute, so they are sent 
 
 1. Dex redirects the user to the provider's login page in most cases and waits for the user to be redirected back to the `/callback` URL. However, some providers like LDAP or Atlassian Crowd do not support this flow. The user must enter credentials in the Dex login form instead, and Dex will validate them by making a request to the provider's API.
 
-1. DexAuthenticator starts the sign-in with Proof Key for Code Exchange (PKCE) using the `S256` method and gets the tokens and the signing keys from the `dex` Service in the `d8-user-authn` namespace. It checks the certificate of Dex against the certificate authority (CA) of the internal Dex certificate. `user-authn` adds this CA to the Secret of every DexAuthenticator.
+1. DexAuthenticator starts the sign-in with Proof Key for Code Exchange (PKCE) using the `S256` method and gets the tokens and the signing keys from the `dex` Service in the `d8-user-authn` namespace. It checks the certificate of Dex against the certificate authority (CA) of the internal Dex certificate.
 
 1. DexAuthenticator sets the cookie with the full refresh token (instead of issuing a ticket as for the ID token) because Redis does not persist data.
    If no ID token is found in Redis by the ticket, the user can request a new ID token by providing the refresh token from the cookie.
 
 1. DexAuthenticator sets the `Authorization` HTTP header to the ID token value from Redis. This is not required for services like [`upmeter`](/modules/upmeter/), as `upmeter` permissions are less granular.
    For the [Kubernetes Dashboard](/modules/dashboard/), it is critical: the Dashboard passes the ID token on to access the Kubernetes API.
+
+### Error 500 while Dex is unavailable
+
+While Dex does not answer, DexAuthenticator cannot refresh a session whose ID token has expired. It keeps the session for one [`idTokenTTL`](configuration.html#parameters-idtokenttl) period and answers the requests of the session with the `503` status code. If the application is published through an Ingress, the user sees the error page of the Ingress controller with the `500` status code. Reload the page after Dex starts answering: the session keeps working. If Dex does not answer for longer than the period, the session ends, and the user signs in again.
 
 ### Handling an expired session in a single-page application
 
@@ -290,7 +321,7 @@ The system stores the temporary login state (a one-time authentication request) 
 
 DexAuthenticator ends the sessions of a user within seconds after a `Lock`, `ResetPassword`, `Reset2FA` or `Logout` operation and after the user is deleted. A request with an ended session gets the same answer as a request without a session.
 
-DexAuthenticator receives the revocations from the `revocation-feed` Service in the `d8-user-authn` namespace. If a NetworkPolicy restricts egress traffic in the namespace of a DexAuthenticator, allow traffic to the pods with the `app: user-authn-controller` label in the `d8-user-authn` namespace on port `8443`. Without the revocations, DexAuthenticator checks every session older than 30 seconds with Dex, and the `D8UserAuthnRevocationFeedNotConsumed` alert fires after 15 minutes.
+If DexAuthenticator does not receive the revocations, the `D8UserAuthnRevocationFeedNotConsumed` alert fires after 15 minutes.
 
 When a user signs out of an application, DexAuthenticator revokes the refresh token of the session in Dex. A copy of the session cookie stops working too.
 
