@@ -57,6 +57,10 @@ const (
 
 	// imageHashTimeout bounds veritysetup format because it can hang.
 	imageHashTimeout = time.Minute
+
+	// mapperOpenTimeout bounds one veritysetup open. An open killed between the table load and
+	// the resume leaves the device without a live table, so it gets the time a loaded node needs
+	mapperOpenTimeout = time.Minute
 )
 
 var (
@@ -74,7 +78,16 @@ func CreateMapper(ctx context.Context, name, imagePath, hash string) error {
 
 	span.SetAttributes(attribute.String("imagePath", imagePath))
 
-	return waitUntilMapperCreated(ctx, name, imagePath, hash)
+	if err := waitUntilMapperCreated(ctx, name, imagePath, hash); err != nil {
+		// an interrupted open leaves the device without a live table, which fails the next close
+		if _, rmErr := removeIncompleteMapper(name); rmErr != nil {
+			return errors.Join(err, rmErr)
+		}
+
+		return err
+	}
+
+	return nil
 }
 
 // waitUntilMapperCreated waits until /dev/mapper/<name> appears.
@@ -82,10 +95,11 @@ func CreateMapper(ctx context.Context, name, imagePath, hash string) error {
 func waitUntilMapperCreated(ctx context.Context, name, imagePath, hash string) error {
 	// magic numbers
 	interval := 200 * time.Millisecond
+	// timeout bounds the retries, not a running open
 	timeout := 3 * time.Second
 	var lastErr error
 
-	err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
+	err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(context.Context) (bool, error) {
 		hashPath := fmt.Sprintf("%s.verity", imagePath)
 
 		args := []string{
@@ -96,9 +110,21 @@ func waitUntilMapperCreated(ctx context.Context, name, imagePath, hash string) e
 			hash,
 		}
 
+		// the open gets its own deadline: the deadline of the poll would kill it in the middle
+		openCtx, cancel := context.WithTimeout(ctx, mapperOpenTimeout)
+		defer cancel()
+
+		started := time.Now()
+
 		// veritysetup open <imagePath> <name> <hashPath> <hash>
-		cmd := exec.CommandContext(ctx, verityCommand, args...)
+		cmd := exec.CommandContext(openCtx, verityCommand, args...)
 		if out, err := combinedOutput(cmd); err != nil {
+			// CommandContext kills the child with SIGKILL, which is reported as 'signal: killed'
+			if openCtx.Err() != nil {
+				lastErr = fmt.Errorf("veritysetup open interrupted after %s: %w (last output: %s)", time.Since(started).Truncate(time.Millisecond), openCtx.Err(), string(out))
+				return false, lastErr
+			}
+
 			lastErr = fmt.Errorf("veritysetup open: %w (last output: %s)", err, string(out))
 			return false, nil
 		}
@@ -136,7 +162,14 @@ func CloseMapper(ctx context.Context, name string) error {
 			return nil
 		}
 
-		return fmt.Errorf("veritysetup close: %w (output: %s)", err, string(output))
+		// veritysetup doesn't take a device without a live table for a verity one and fails with
+		// exit status 4, such a device is left by an interrupted open
+		removed, rmErr := removeIncompleteMapper(name)
+		if removed {
+			return nil
+		}
+
+		return errors.Join(fmt.Errorf("veritysetup close: %w (output: %s)", err, string(output)), rmErr)
 	}
 
 	return nil
