@@ -822,10 +822,10 @@ index 151c8ad1..a48f1dfc 100644
 +}
 diff --git a/storage/kubernetes/types_test.go b/storage/kubernetes/types_test.go
 new file mode 100644
-index 00000000..df6f8b0d
+index 00000000..153dcf5c
 --- /dev/null
 +++ b/storage/kubernetes/types_test.go
-@@ -0,0 +1,699 @@
+@@ -0,0 +1,730 @@
 +package kubernetes
 +
 +import (
@@ -934,6 +934,37 @@ index 00000000..df6f8b0d
 +	got, err := toStorageUserIdentity(decoded)
 +	require.NoError(t, err)
 +	require.Equal(t, known, got.KnownDevices)
++}
++
++// TestOfflineSessionsGrantFieldsRoundTrip: the references of an offline session
++// keep the device and the redirect URI of their sign-in (Deckhouse), and a
++// reference written before the redirect URI existed reads with none.
++func TestOfflineSessionsGrantFieldsRoundTrip(t *testing.T) {
++	cli := newTypesTestClient()
++	ref := &storage.RefreshTokenRef{
++		ID:          "rt",
++		ClientID:    "client",
++		SessionID:   "sid",
++		DeviceHash:  "hash-1",
++		RedirectURI: "https://a.example.com/dex-authenticator/callback",
++	}
++	raw, err := json.Marshal(cli.fromStorageOfflineSessions(storage.OfflineSessions{
++		UserID:  "jane",
++		ConnID:  "local",
++		Refresh: map[string]*storage.RefreshTokenRef{"client": ref},
++		Grants:  map[string]*storage.RefreshTokenRef{"rt": ref},
++	}))
++	require.NoError(t, err)
++	require.Contains(t, string(raw), `"RedirectURI":"https://a.example.com/dex-authenticator/callback"`)
++	var decoded OfflineSessions
++	require.NoError(t, json.Unmarshal(raw, &decoded))
++	got := toStorageOfflineSessions(decoded)
++	require.Equal(t, ref, got.Grants["rt"])
++	require.Equal(t, ref, got.Refresh["client"])
++
++	var old OfflineSessions
++	require.NoError(t, json.Unmarshal([]byte(`{"userID":"jane","connID":"local","grants":{"rt":{"ID":"rt","ClientID":"client","SessionID":"sid"}}}`), &old))
++	require.Empty(t, toStorageOfflineSessions(old).Grants["rt"].RedirectURI)
 +}
 +
 +func TestUserIdentityFailedAttemptsRoundTrip(t *testing.T) {
@@ -1684,7 +1715,7 @@ index acd0be1b..e4b00c3d 100644
 +	storage.Storage
 +}
 diff --git a/storage/storage.go b/storage/storage.go
-index 84976c5d..262f47b0 100644
+index 84976c5d..ab4d98ea 100644
 --- a/storage/storage.go
 +++ b/storage/storage.go
 @@ -218,6 +218,13 @@ type Client struct {
@@ -1772,7 +1803,7 @@ index 84976c5d..262f47b0 100644
  }
  
  // RefreshTokenRef is a reference object that contains metadata about refresh tokens.
-@@ -437,6 +494,15 @@ type RefreshTokenRef struct {
+@@ -437,6 +494,21 @@ type RefreshTokenRef struct {
  	// lifetime: the token outlives the session, but a token that was never part of
  	// one must not start claiming a session on refresh.
  	SessionID string
@@ -1785,10 +1816,16 @@ index 84976c5d..262f47b0 100644
 +	// DeviceHash is the SHA-256 hash of the device mark of the browser that signed
 +	// in (Deckhouse; see server/devicemark), empty for a client without one.
 +	DeviceHash string
++
++	// RedirectURI is the redirect URI of the login that issued the token
++	// (Deckhouse): the application of a client that serves several, such as a
++	// DexAuthenticator with several domains. Empty for a token without one and
++	// for a reference written before it existed.
++	RedirectURI string
  }
  
  // MFASecret stores the enrollment state and secret for an MFA authenticator.
-@@ -481,6 +547,48 @@ type UserIdentity struct {
+@@ -481,6 +553,48 @@ type UserIdentity struct {
  	CreatedAt           time.Time
  	LastLogin           time.Time
  	BlockedUntil        time.Time
@@ -1837,7 +1874,7 @@ index 84976c5d..262f47b0 100644
  }
  
  // ClientAuthState represents authentication state for a specific client within an auth session.
-@@ -536,6 +644,10 @@ type AuthSession struct {
+@@ -536,6 +650,10 @@ type AuthSession struct {
  	IPAddress string
  	UserAgent string
  
@@ -1848,7 +1885,7 @@ index 84976c5d..262f47b0 100644
  	// AbsoluteExpiry is CreatedAt + AbsoluteLifetime, set once at creation.
  	AbsoluteExpiry time.Time
  	// IdleExpiry is LastActivity + ValidIfNotUsedFor, updated on every activity.
-@@ -545,6 +657,20 @@ type AuthSession struct {
+@@ -545,6 +663,20 @@ type AuthSession struct {
  	// upstream provider. The callback handler reads it back to complete the flow.
  	// Nil when no logout is in progress.
  	LogoutState *LogoutState
@@ -1869,7 +1906,7 @@ index 84976c5d..262f47b0 100644
  }
  
  // OfflineSessions objects are sessions pertaining to users with refresh tokens.
-@@ -556,9 +682,17 @@ type OfflineSessions struct {
+@@ -556,9 +688,17 @@ type OfflineSessions struct {
  	ConnID string
  
  	// Refresh is a hash table of refresh token reference objects
@@ -1888,7 +1925,7 @@ index 84976c5d..262f47b0 100644
  	// Authentication data provided by an upstream source.
  	ConnectorData []byte
  }
-@@ -577,6 +711,22 @@ type Password struct {
+@@ -577,6 +717,22 @@ type Password struct {
  	// Bcrypt encoded hash of the password. This package enforces a min cost value of 10
  	Hash []byte `json:"hash"`
  
@@ -1911,7 +1948,7 @@ index 84976c5d..262f47b0 100644
  	// Bcrypt encoded hash of the password set in environment variable of this name.
  	HashFromEnv string `json:"hashFromEnv"`
  
-@@ -601,6 +751,79 @@ type Password struct {
+@@ -601,6 +757,79 @@ type Password struct {
  	Groups []string `json:"groups"`
  }
  
@@ -1991,7 +2028,7 @@ index 84976c5d..262f47b0 100644
  // Connector is an object that contains the metadata about connectors used to login to Dex.
  type Connector struct {
  	// ID that will uniquely identify the connector object.
-@@ -623,6 +846,15 @@ type Connector struct {
+@@ -623,6 +852,15 @@ type Connector struct {
  	// GrantTypes is a list of grant types that this connector is allowed to be used with.
  	// If empty, all grant types are allowed.
  	GrantTypes []string `json:"grantTypes,omitempty"`

@@ -626,11 +626,11 @@ properties:
         default: 10
         x-examples: [10, 3]
         description: |
-          How many devices of a user one application keeps signed in: refresh tokens of one user in one application
-          (DexAuthenticator, DexClient, kubeconfig).
+          The maximum number of devices on which a user can be simultaneously logged in to a single application (DexAuthenticator, DexClient, kubeconfig).
 
-          A sign-in past it signs the device used longest ago out of this application, a device that is not trusted
-          yet (see `trustedAfter`) first. Every new kubeconfig file is a device of its own.
+          A device is a browser with a Dex session together with all application domains it has logged in to, or a refresh token without a browser session, e.g. a kubeconfig file.
+
+          If a user logs in from a new device and the limit specified in the parameter has been reached, the device that has been unused the longest is logged out of the application. Non-trusted devices are logged out first (for details, see the description of the `trustedAfter` parameter).
       rememberedBrowsers:
         type: integer
         minimum: 0

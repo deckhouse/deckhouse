@@ -1319,7 +1319,7 @@ d8 k get useraccount <NAME> -o jsonpath='{range .status.sessions[*]}{.kind}{"\t"
 
 While the [browser sessions of Dex](#browser-sessions-of-dex) are disabled, every sign-in to an application of a DexAuthenticator is a device of its own.
 
-Dex keeps at most [`devices.maxPerApplication`](configuration.html#parameters-devices-maxperapplication) (10 by default) refresh tokens of a user for one application. A sign-in past the limit signs the device of the least recently used one out of that application; a trusted device (the [`devices.trustedAfter`](configuration.html#parameters-devices-trustedafter) parameter) goes only once no untrusted one is left. A refresh token is replaced, not added, in two cases: an application of a DexAuthenticator signs in again in a browser with a session of Dex, and Basic Authentication to the Kubernetes API signs in again. Every other sign-in is a new device: for example, every new kubeconfig file is one, and the previous ones keep working.
+The maximum number of devices on which a user can remain logged in to a single application at the same time is set by the [`devices.maxPerApplication`](configuration.html#parameters-devices-maxperapplication) parameter (default: 10). A browser counts as one device for all domains of the application, while each kubeconfig file counts as a separate device. If a user logs in from a new device and the limit in `devices.maxPerApplication` has already been reached, the session is terminated on the device that has been unused the longest. Trusted devices (a device becomes trusted after the time specified in the [`devices.trustedAfter`](configuration.html#parameters-devices-trustedafter) parameter has elapsed) are disconnected last.
 
 #### Automatic lockout
 

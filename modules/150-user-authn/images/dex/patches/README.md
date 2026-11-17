@@ -40,8 +40,11 @@ fields.
   of the pair by token ID (`refresh` keeps naming the last one of each client);
   `ipAddress`, `userAgent` and `deviceHash` (the hash of the device mark) of
   the sign-in on `AuthRequest`, `AuthCode`, `RefreshToken`, the refresh token
-  references and `AuthSession`; `UserIdentity.knownDevices`, the browsers that
-  completed a login of the pair (`hash`, `firstSeen`, `lastSeen`);
+  references and `AuthSession`; `RedirectURI` of the refresh token references,
+  the application of a client with several redirect URIs (a DexAuthenticator
+  with several domains) the grant was issued to; `UserIdentity.knownDevices`,
+  the browsers that completed a login of the pair (`hash`, `firstSeen`,
+  `lastSeen`);
 - `Client`: `allowedEmails`, `allowedGroups`; `Connector`: `allowedEmails`,
   `allowedEmailDomains`, `allowedGroups` (allow-lists of 200), with the JSON
   names the user-authn templates already render;
@@ -1225,19 +1228,25 @@ second laptop or a second kubeconfig signs the first one out.
 
 - **grants by login**: the password grant (basic-auth-proxy repeats it) keeps
   one grant per client and replaces it; a client bound to the browser session
-  keeps one grant per session, so signing in again in the same browser replaces
-  it; any other login (another browser, kubeconfig, device flow, a client
-  without sessions) adds a grant. The grants a login replaces are read in the
+  keeps one grant per session and redirect URI, so signing in again to an
+  application in the same browser replaces its grant, while the other
+  applications of the client (the domains of a DexAuthenticator) keep theirs; a
+  grant written before the redirect URI was kept is replaced by no login and
+  stays until its session ends or it is evicted; any other login (another
+  browser, kubeconfig, device flow, a client without sessions) adds a grant.
+  The grants a login replaces are read in the
   same write of `OfflineSessions` that adds its own, and their refresh tokens
   are deleted after it: logins of one browser at once (restored tabs) keep one
-  grant of the session, and a failed write leaves no reference to a deleted
+  grant of the session for each application, and a failed write leaves no reference to a deleted
   token. The first logins of a user at once, which all find no
   `OfflineSessions`, add their grants to the one the first of them created
-  instead of failing. A client keeps at most `devices.maxPerClient`
-  grants of a pair (10 by default): the one used longest ago is evicted and
+  instead of failing. A client keeps the grants of at most
+  `devices.maxPerClient` devices of a pair (10 by default); a device is a
+  browser session with every grant the client holds in it, or a grant without
+  a session. The device used longest ago is evicted with all its grants, each
   recorded as a `grant` revocation with the reason `Evicted` (290), so its
-  DexAuthenticator sessions end within seconds. A grant younger than
-  `devices.trustedAfter` (24h by default) goes first; `0s` prefers none. The
+  DexAuthenticator sessions end within seconds. A device signed in less than
+  `devices.trustedAfter` ago (24h by default) goes first; `0s` prefers none. The
   new `devices` section of the config takes these and `maxKnown`; the module
   renders them from its `devices` settings.
   The browser session the evicted grant was issued under drops the client from
