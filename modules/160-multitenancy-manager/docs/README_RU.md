@@ -121,7 +121,7 @@ Certificate — ClusterIssuer, RoleBinding — ClusterRole. Модуль поз�
 * В каждом неймспейсе каждого проекта контроллер поддерживает [AvailableClusterResource](./cr.html#availableclusterresource) для каждого GrantableClusterResourceDefinition. Он содержит список cluster-wide-ресурсов, доступных проекту по применимым политикам, и предназначен только для чтения.
 * При создании или изменении объекта вебхуки проверяют, разрешено ли ему использовать указанный cluster-wide-ресурс. При создании объекта также может автоматически подставляться ресурс, заданный для проекта по умолчанию.
 
-Пока контроллер модуля недоступен, вебхуки отклоняют запросы. До его восстановления объекты зарегистрированных типов (например, PersistentVolumeClaim, Service или RoleBinding) в неймспейсах проектов могут создавать и изменять только компоненты платформы и участники группы `system:masters`. Чтобы контроллер оставался доступным, включите [`highAvailability`](configuration.html#parameters-highavailability).
+Пока контроллер модуля недоступен, вебхуки отклоняют запросы. До его восстановления объекты зарегистрированных типов (например, Pod, Deployment, StatefulSet, Job, PersistentVolumeClaim, Service или RoleBinding) в неймспейсах проектов могут создавать и изменять только участники групп `system:masters` и `system:nodes` и сервисные аккаунты неймспейсов `d8-system`, `kube-system` и `d8-user-authz`. Это касается и изменений от контроллеров, например патчей лейблов, аннотаций или финализаторов подов и нагрузок, в том числе от контроллеров модулей Deckhouse Platform из других неймспейсов. Запрос проходит через два вебхука, и API-сервер ожидает ответа от каждого из них не более 10 секунд. Чтобы контроллер оставался доступным, включите [`highAvailability`](configuration.html#parameters-highavailability).
 
 <script src="/assets/js/mermaid.min.js"></script>
 <script>mermaid.initialize({ startOnLoad: true });</script>
@@ -204,8 +204,47 @@ Deckhouse Platform регистрирует следующие cluster-wide-ре
 | `clusterissuers` | ClusterIssuer (cert-manager.io) | Certificate `.spec.issuerRef.name`; Ingress: аннотация `cert-manager.io/cluster-issuer` | `FillEmpty` или `None` |
 | `clusterroles` | ClusterRole (rbac.authorization.k8s.io) | RoleBinding `.roleRef.name` | `None` |
 | `applicationpackages` | ApplicationPackage (deckhouse.io) | Application `.spec.packageName` | `None` |
+| `priorityclasses` | PriorityClass (scheduling.k8s.io) | Pod `.spec.priorityClassName`; шаблон пода в ReplicationController, Deployment, StatefulSet, DaemonSet, ReplicaSet, Job и CronJob; PodTemplate `.template.spec.priorityClassName` | `None` для Pod и PodTemplate, `FillEmpty` для шаблонов пода в рабочих нагрузках |
 
 Регистрация `clusterroles` исключает все ClusterRole без лейбла `rbac.deckhouse.io/delegatable: "true"`. По умолчанию RoleBinding в проекте может ссылаться на роли `d8:namespace:*` и `d8:project:*`, устаревшие псевдонимы `d8:use:role:*` и роли `user-authz:user`, `user-authz:privileged-user`, `user-authz:editor` и `user-authz:admin` упрощённой модели.
+
+Регистрация `priorityclasses` делит классы приоритета Deckhouse Platform на три группы:
+
+| Классы | Доступность проектам |
+|---|---|
+| `system-node-critical`, `system-cluster-critical`, `cluster-medium`, `cluster-low`, `standby` | Исключены и зарезервированы за платформой. Их нельзя открыть никакой политикой ClusterResourceGrantPolicy. В неймспейсах проектов создавать объекты с ними могут только участники групп `system:masters` и `system:nodes` и сервисные аккаунты неймспейсов `d8-system`, `kube-system` и `d8-user-authz` |
+| `production-high`, `deployment-machinery` | Зарезервированы и по умолчанию недоступны. Класс `production-high` выше по приоритету, чем компоненты платформы с классом `cluster-medium`, а `deployment-machinery` предназначен для компонентов сборки и развёртывания приложений, например в выделенных CI/CD-проектах |
+| `production-medium`, `production-low`, `staging`, `develop` и классы, добавленные администратором | Доступны по умолчанию |
+
+Чтобы выдать зарезервированный класс доверенным проектам, не ограничивая остальные классы, укажите его в `allowed` и задайте `availabilityDefault: All` (подробнее — [в подразделе «Выдача зарезервированного ресурса»](usage.html#выдача-зарезервированного-ресурса)):
+
+```yaml
+apiVersion: multitenancy.deckhouse.io/v1alpha2
+kind: ClusterResourceGrantPolicy
+metadata:
+  name: priorityclasses-production-high
+spec:
+  projectSelector:
+    matchLabels:
+      tier: critical
+  resources:
+    - resourceName: priorityclasses
+      allowed:
+        - production-high
+      availabilityDefault: All
+```
+
+Объекты, которые уже используют зарезервированный класс, продолжают работать и обновляться, пока класс в них не меняется. Создание нового объекта с таким классом в проекте, которому класс не выдан, отклоняется.
+
+Классы с приоритетом не ниже `cluster-medium` по умолчанию недоступны проектам, поскольку их использование может позволить приложениям вытеснять критически важные компоненты платформы (`production-high`). Также по умолчанию недоступны классы, предназначенные для инфраструктурных компонентов, а не пользовательских приложений (исключённые классы и `deployment-machinery`). Некоторые классы, доступные по умолчанию, имеют более высокий приоритет, чем `cluster-low`. По этой причине проект с классом `production-medium`, `production-low` или `staging` может вытеснить компоненты платформы с классом `cluster-low` (например, Dex, `descheduler`, контроллер `cert-manager`, оператор Istio и Kiali, CronJob резервного копирования etcd) и поды других проектов. Если это неприемлемо, ограничьте набор доступных проектам классов с помощью политики, например `allowed: [develop]`.
+
+Каждый неймспейс, не относящийся к существующему проекту, включается в проект, поэтому ограничения на использование классов приоритета распространяются и на инфраструктурные компоненты, которые администратор устанавливает в собственном неймспейсе. Объекты, которые создаёт там администратор кластера, вошедший через Dex, инструменты GitOps или сторонние операторы (например, агенты CSI или CNI с `system-node-critical`), отклоняются, и никакая политика их не разрешает.
+
+Классы, которые добавляет администратор или сторонний чарт, доступны по умолчанию независимо от приоритета. Чтобы закрыть класс с высоким приоритетом для всех проектов, укажите его в `denied` политики, выбирающей все проекты.
+
+Значение `default` политики для `priorityclasses` применяется только к шаблонам подов (Deployment, StatefulSet, Job и других), в которых класс не указан. Если пользователь или контроллер модуля создаёт под без `.spec.priorityClassName` (например, под для проверки владения доменом, создаваемый модулем `cert-manager`), Kubernetes ещё до проверки назначает ему класс приоритета по умолчанию. В Deckhouse Platform это `develop`. Если этот класс недоступен проекту, такой под отклоняется, поэтому, ограничивая классы приоритета, оставьте класс кластера по умолчанию доступным. Если контроллер при каждой синхронизации переписывает шаблон пода целиком (например, с помощью Server-Side Apply в инструментах GitOps), при следующей синхронизации он удаляет класс приоритета, подставленный через `default`. В результате соответствующие рабочие нагрузки однократно перезапускаются и получают класс приоритета по умолчанию, заданный в кластере.
+
+Классы приоритета в неймспейсе также можно ограничить параметром [`priorityClassNames`](/modules/admission-policy-engine/cr.html#operationpolicy-v1alpha1-spec-policies-priorityclassnames) OperationPolicy модуля `admission-policy-engine`.
 
 Определение `clusterissuers` поставляется [модулем `cert-manager`](/modules/cert-manager/), поэтому оно регистрируется только при включённом модуле `cert-manager`.
 

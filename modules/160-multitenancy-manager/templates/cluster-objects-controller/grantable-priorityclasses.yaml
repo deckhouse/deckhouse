@@ -1,0 +1,184 @@
+{{- /*
+  Grant registration of the built-in PriorityClass (scheduling.k8s.io). A tenant that can create a pod
+  or a workload in its namespace can name any PriorityClass in it. The registration sorts the classes
+  into three groups, agreed with the Scheduling team by two rules. By value: a class not below
+  cluster-medium (7000) lets a project outrank the top tier of the platform, so it is out of the
+  default. By purpose: a class that belongs to the platform rather than to applications is out of the
+  default as well. The platform classes are excluded for every project; production-high (by value) and
+  deployment-machinery (by purpose) are reserved, closed until a ClusterResourceGrantPolicy names them
+  in allowed; the rest fall under neither rule, are open by default and can be narrowed per project.
+
+  Accepted risk: production-medium, production-low and staging are above cluster-low (2000), so a
+  project with them can preempt the platform components that run with cluster-low (for example dex,
+  the descheduler, the cert-manager controller, the istio operator and kiali, the etcd-backup CronJob)
+  and the pods of other projects. Classes an administrator or a third-party chart adds are open
+  whatever their value; an administrator closes them with denied in a policy for all projects. Closing every class above cluster-low would leave
+  only develop by default; an administrator who needs that narrows the classes with a policy.
+
+  Kept apart from grantable-resources.yaml so every built-in registration can be
+  reviewed with its own reasoning.
+
+  Where the name is enforced. kube-controller-manager runs with --use-service-account-credentials, so
+  the pods that the workload controllers create come from system:serviceaccounts:kube-system, a group
+  the grant webhooks skip (grant-webhooks.yaml). The pod check therefore only sees pods that a tenant
+  or a controller outside the skipped groups creates (for example, the cert-manager ACME solver); for
+  workloads the check is on the pod template. Every
+  built-in kind whose controller creates pods from a template is registered for that reason,
+  replicationcontrollers included: an unregistered one would be a way around the restriction.
+  PodTemplate is registered as well, validation only: no built-in controller creates pods from it, but
+  its name is a reference by name all the same (NFR R2). The ResourceQuota scopeSelector is not
+  registered: it is admin-owned and selects pods instead of assigning a class.
+*/}}
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceDefinition
+metadata:
+  name: priorityclasses
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  # Flow style on purpose: the gitleaks generic-api-key rule reports the block form of this line.
+  grantedResource: {apiGroup: scheduling.k8s.io, kind: PriorityClass}
+  enforcement: Managed
+  defaultAvailability: All
+  # No defaultFrom: the cluster default is the PriorityClass with globalDefault: true, a spec field,
+  # and defaultFrom only reads an annotation. The built-in Priority admission plugin puts that class
+  # into every pod without priorityClassName anyway (see the pod reference below).
+  #
+  # Matched by name in both lists below: all the Deckhouse classes carry the same module labels, so
+  # labels cannot tell them apart. A new class in modules/002-deckhouse/templates/priority-class must be
+  # put in one of the lists or in the open list of the resolve test, which fails otherwise.
+  #
+  # Excluded: the classes are reserved for the platform. No ClusterResourceGrantPolicy can open them,
+  # only writers the grant webhooks skip can use them in a namespace of a project: system:masters,
+  # system:nodes and the service accounts of d8-system, kube-system and d8-user-authz (grant-webhooks.yaml).
+  # Every other writer is checked, a cluster administrator who signs in through Dex, GitOps tools and
+  # third-party operators included; there is no other way around it. Every namespace outside a project
+  # is adopted into one, so infrastructure that an administrator installs into its own namespace and
+  # that uses these classes (system-node-critical is common for CSI and CNI agents) is rejected too.
+  # - system-node-critical, system-cluster-critical: the Kubernetes classes for components the node or
+  #   the cluster cannot work without; they also protect a pod from eviction by the kubelet.
+  # - cluster-medium, cluster-low: Deckhouse classes for cluster components. The deckhouse module docs
+  #   list them, with the two above, as classes applications cannot use.
+  # - standby: Deckhouse class for reserving nodes, not intended for applications.
+  excluded:
+  - names:
+    - system-node-critical
+    - system-cluster-critical
+    - cluster-medium
+    - cluster-low
+    - standby
+  # Reserved: unavailable to a project until a ClusterResourceGrantPolicy names the class in allowed
+  # (allowed plus availabilityDefault: All grants it without narrowing the open classes).
+  # availabilityDefault: All alone does not open them.
+  # - production-high (9000), by value: above cluster-medium (7000), so a pod with it outranks and can
+  #   preempt platform components; only projects trusted with that get it.
+  # - deployment-machinery (5000), by purpose: not by value (it is below production-medium, 6000), but
+  #   it is meant for the components that build and deploy applications, granted to dedicated CI/CD
+  #   projects rather than to every project.
+  # The other application classes (production-medium, production-low, staging and develop, the cluster
+  # default that a pod without a class gets and so must stay open) and any class an administrator adds
+  # are available by default.
+  reserved:
+  - names:
+    - production-high
+    - deployment-machinery
+  # Shown to tenants in the catalog to choose a class by: its priority, whether it preempts, whether it
+  # is the cluster default, and what it is meant for.
+  catalogFields:
+  - name: value
+    path: $.value
+  - name: preemptionPolicy
+    path: $.preemptionPolicy
+  - name: globalDefault
+    path: $.globalDefault
+  - name: description
+    path: $.description
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: priorityclasses-pod
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  grantableClusterResourceName: priorityclasses
+  rule:
+    apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    resources:
+    - pods
+    - replicationcontrollers
+    - podtemplates
+  fieldPaths:
+  # None for pods: the built-in Priority admission plugin runs before the webhooks. It puts the
+  # globalDefault class into an empty priorityClassName and sets spec.priority and
+  # spec.preemptionPolicy from the class. /defaults rewrites only the name, so a pod would keep the
+  # priority of another class, and if the plugin ran again it would refuse the pod ("the integer value
+  # of priority must not be provided in pod spec"). The injected default is checked like any other
+  # value, so a policy that makes the globalDefault class unavailable refuses the pods that tenants
+  # create without priorityClassName.
+  - resources:
+    - pods
+    path: $.spec.priorityClassName
+    defaulting: None
+  # FillEmpty for templates: the plugin does not touch them, so the project default written into the
+  # template gives correctly computed pods. A value that is not available is refused, not rewritten.
+  - resources:
+    - replicationcontrollers
+    path: $.spec.template.spec.priorityClassName
+    defaulting: FillEmpty
+  # None for PodTemplate: nothing built-in turns it into pods, so a value is only checked.
+  - resources:
+    - podtemplates
+    path: $.template.spec.priorityClassName
+    defaulting: None
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: priorityclasses-apps
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  grantableClusterResourceName: priorityclasses
+  rule:
+    apiGroups:
+    - apps
+    apiVersions:
+    - v1
+    resources:
+    - deployments
+    - statefulsets
+    - daemonsets
+    - replicasets
+  fieldPaths:
+  # Pod templates, FillEmpty as for replicationcontrollers.
+  - path: $.spec.template.spec.priorityClassName
+    defaulting: FillEmpty
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: priorityclasses-batch
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  grantableClusterResourceName: priorityclasses
+  rule:
+    apiGroups:
+    - batch
+    apiVersions:
+    - v1
+    resources:
+    - jobs
+    - cronjobs
+  fieldPaths:
+  # Pod templates, FillEmpty as for replicationcontrollers. The two kinds keep the template at
+  # different depths, so each path is scoped to its resource.
+  - resources:
+    - jobs
+    path: $.spec.template.spec.priorityClassName
+    defaulting: FillEmpty
+  - resources:
+    - cronjobs
+    path: $.spec.jobTemplate.spec.template.spec.priorityClassName
+    defaulting: FillEmpty

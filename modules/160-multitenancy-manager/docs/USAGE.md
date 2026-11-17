@@ -1758,27 +1758,27 @@ spec:
 
 In this example, `storageclasses` is the name of an existing GrantableClusterResourceDefinition, while `Coerce` allows the default StorageClass available to the project to be assigned when a PostgresDatabase is created if the value is missing or unavailable to the project.
 
-If the resources listed in `rule` store the reference at different paths, limit `fieldPaths` items to specific resources using the `resources` parameter. For example, a Job and a CronJob store the PriorityClass name at different paths. In this case, when PriorityClass is registered as `priorityclasses`, use the following example:
+If the resources listed in `rule` store the reference at different paths, limit `fieldPaths` items to specific resources using the `resources` parameter. For example, a module introduces the MyBatch and MyBatchSchedule resources that store the name of a PriorityClass (registered by Deckhouse Platform as `priorityclasses`) at different paths. In this case, use the following example:
 
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: GrantableClusterResourceReference
 metadata:
-  name: jobs-priorityclasses
+  name: mybatches-priorityclasses
   labels:
     heritage: deckhouse
     module: my-module
 spec:
   grantableClusterResourceName: priorityclasses
   rule:
-    apiGroups: ["batch"]
-    apiVersions: ["v1"]
-    resources: ["jobs", "cronjobs"]
+    apiGroups: ["batch.example.com"]
+    apiVersions: ["*"]
+    resources: ["mybatches", "mybatchschedules"]
   fieldPaths:
-    - resources: ["jobs"]
-      path: $.spec.template.spec.priorityClassName
-    - resources: ["cronjobs"]
-      path: $.spec.jobTemplate.spec.template.spec.priorityClassName
+    - resources: ["mybatches"]
+      path: $.spec.workerPriorityClassName
+    - resources: ["mybatchschedules"]
+      path: $.spec.batchTemplate.spec.workerPriorityClassName
 ```
 
 For each object, the most specific of the matching `fieldPaths` items is used: an item limited by `resources` takes precedence over items limited only by `apiGroups` or `apiVersions` and over an item without limits, which applies to all other resources from `rule`. `*` in `resources` does not limit the item: it has the same effect as omitting the parameter.

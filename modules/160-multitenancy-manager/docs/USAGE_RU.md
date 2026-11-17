@@ -1768,27 +1768,27 @@ spec:
 
 В этом примере `storageclasses` — имя существующего GrantableClusterResourceDefinition, а `Coerce` позволяет при создании PostgresDatabase подставить доступный проекту StorageClass по умолчанию, если значение отсутствует или недоступно проекту.
 
-Если ресурсы из `rule` хранят ссылку по разным путям, ограничьте элементы `fieldPaths` конкретными ресурсами с помощью параметра `resources`. Например, Job и CronJob хранят имя PriorityClass по разным путям. В этом случае, когда PriorityClass зарегистрирован как `priorityclasses`, воспользуйтесь следующим примером:
+Если ресурсы из `rule` хранят ссылку по разным путям, ограничьте элементы `fieldPaths` конкретными ресурсами с помощью параметра `resources`. Например, модуль вводит ресурсы MyBatch и MyBatchSchedule, которые хранят имя PriorityClass (Deckhouse Platform регистрирует его как `priorityclasses`) по разным путям. В этом случае воспользуйтесь следующим примером:
 
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: GrantableClusterResourceReference
 metadata:
-  name: jobs-priorityclasses
+  name: mybatches-priorityclasses
   labels:
     heritage: deckhouse
     module: my-module
 spec:
   grantableClusterResourceName: priorityclasses
   rule:
-    apiGroups: ["batch"]
-    apiVersions: ["v1"]
-    resources: ["jobs", "cronjobs"]
+    apiGroups: ["batch.example.com"]
+    apiVersions: ["*"]
+    resources: ["mybatches", "mybatchschedules"]
   fieldPaths:
-    - resources: ["jobs"]
-      path: $.spec.template.spec.priorityClassName
-    - resources: ["cronjobs"]
-      path: $.spec.jobTemplate.spec.template.spec.priorityClassName
+    - resources: ["mybatches"]
+      path: $.spec.workerPriorityClassName
+    - resources: ["mybatchschedules"]
+      path: $.spec.batchTemplate.spec.workerPriorityClassName
 ```
 
 Для каждого объекта используется самый специфичный из подходящих элементов `fieldPaths`: элемент, ограниченный `resources`, приоритетнее элементов, ограниченных только `apiGroups` или `apiVersions`, и элемента без ограничений, который применяется ко всем остальным ресурсам из `rule`. `*` в `resources` не ограничивает элемент: это то же самое, что не указывать параметр.

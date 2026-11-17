@@ -115,7 +115,7 @@ The following resources are used to manage access to cluster-wide resources:
 * In every namespace of every project, the controller keeps an [AvailableClusterResource](./cr.html#availableclusterresource) for each GrantableClusterResourceDefinition. It lists the cluster-wide resources available to the project under the policies that apply and is read-only.
 * When an object is created or modified, webhooks check whether it is allowed to use the specified cluster-wide resource. When an object is created, the resource configured as the project default can also be inserted automatically.
 
-The webhooks reject requests while the module controller is unavailable. Until it is back, objects of the registered kinds (for example, PersistentVolumeClaim, Service or RoleBinding) cannot be created or changed in project namespaces, except by the platform components and members of the `system:masters` group. To keep the controller available, enable [`highAvailability`](configuration.html#parameters-highavailability).
+The webhooks reject requests while the module controller is unavailable. Until it is back, objects of the registered kinds (for example, Pod, Deployment, StatefulSet, Job, PersistentVolumeClaim, Service or RoleBinding) cannot be created or changed in project namespaces, except by members of the `system:masters` and `system:nodes` groups and by the service accounts of the `d8-system`, `kube-system` and `d8-user-authz` namespaces. This also applies to updates that controllers make, such as label, annotation or finalizer patches of pods and workloads, including controllers of Deckhouse Platform modules running in other namespaces. A request goes through two webhooks, and the API server awaits a reply from each of them for up to 10 seconds. To keep the controller available, enable [`highAvailability`](configuration.html#parameters-highavailability).
 
 <script src="/assets/js/mermaid.min.js"></script>
 <script>mermaid.initialize({ startOnLoad: true });</script>
@@ -197,8 +197,47 @@ Deckhouse Platform registers the following cluster-wide resources:
 | `clusterissuers` | ClusterIssuer (cert-manager.io) | Certificate `.spec.issuerRef.name`; Ingress: `cert-manager.io/cluster-issuer` annotation | `FillEmpty` or `None` |
 | `clusterroles` | ClusterRole (rbac.authorization.k8s.io) | RoleBinding `.roleRef.name` | `None` |
 | `applicationpackages` | ApplicationPackage (deckhouse.io) | Application `.spec.packageName` | `None` |
+| `priorityclasses` | PriorityClass (scheduling.k8s.io) | Pod `.spec.priorityClassName`; pod template of ReplicationController, Deployment, StatefulSet, DaemonSet, ReplicaSet, Job and CronJob; PodTemplate `.template.spec.priorityClassName` | `None` for Pod and PodTemplate, `FillEmpty` for the pod templates of workloads |
 
 The `clusterroles` registration excludes every ClusterRole without the `rbac.deckhouse.io/delegatable: "true"` label. By default, a RoleBinding in a project can reference the `d8:namespace:*` and `d8:project:*` roles, the deprecated `d8:use:role:*` aliases, and the `user-authz:user`, `user-authz:privileged-user`, `user-authz:editor` and `user-authz:admin` roles of the basic model.
+
+The `priorityclasses` registration sorts the priority classes of Deckhouse Platform into three groups:
+
+| Classes | Availability to projects |
+|---|---|
+| `system-node-critical`, `system-cluster-critical`, `cluster-medium`, `cluster-low`, `standby` | Excluded and reserved for the platform. No ClusterResourceGrantPolicy can open them. In project namespaces, only members of the `system:masters` and `system:nodes` groups and the service accounts of the `d8-system`, `kube-system` and `d8-user-authz` namespaces can create objects that use them |
+| `production-high`, `deployment-machinery` | Reserved and unavailable by default. The `production-high` class has a higher priority than the `cluster-medium` platform components, and `deployment-machinery` is meant for the components that build and deploy applications, such as dedicated CI/CD projects |
+| `production-medium`, `production-low`, `staging`, `develop` and the classes added by the administrator | Available by default |
+
+To grant a reserved class to trusted projects without restricting the other classes, list it in `allowed` and set `availabilityDefault: All` (for details, refer to ["Granting a reserved resource"](usage.html#granting-a-reserved-resource)):
+
+```yaml
+apiVersion: multitenancy.deckhouse.io/v1alpha2
+kind: ClusterResourceGrantPolicy
+metadata:
+  name: priorityclasses-production-high
+spec:
+  projectSelector:
+    matchLabels:
+      tier: critical
+  resources:
+    - resourceName: priorityclasses
+      allowed:
+        - production-high
+      availabilityDefault: All
+```
+
+Objects that already use a reserved class keep working and can be updated as long as they keep the class. Creating a new object with the class in a project that is not granted it is rejected.
+
+Classes of priority no lower than `cluster-medium` are by default unavailable to projects, since using them may allow applications to outrank the critical platform components (`production-high`). Also, the classes intended for infrastructure components rather than custom applications are unavailable by default as well (the excluded classes and `deployment-machinery`). Some classes that are available by default have a higher priority than `cluster-low`. Therefore a project with the `production-medium`, `production-low` or `staging` class can preempt the platform components that run with `cluster-low` (for example, Dex, `descheduler`, the `cert-manager` controller, the Istio operator and Kiali, and the etcd backup CronJob) and the pods of other projects. If this is not acceptable, restrict the classes available to projects with a policy, for example, `allowed: [develop]`.
+
+Every namespace outside an existing project is adopted into a project, so the excluded classes apply to infrastructure components that an administrator installs into a namespace of their own as well. Objects created there by a cluster administrator signed in through Dex, by GitOps tools or by third-party operators (for example, CSI or CNI agents with `system-node-critical`) are rejected, and no policy allows them.
+
+Classes that the administrator or a third-party chart adds are available by default whatever their priority. To close a class with a high priority for all projects, list it in `denied` of a policy that selects all projects.
+
+The `default` value of a policy for `priorityclasses` applies only to pod templates (Deployment, StatefulSet, Job and so on) that do not specify a class. If a user or a module controller creates a pod without `.spec.priorityClassName` (for example, the pod for domain ownership verification of `cert-manager`), gets the cluster default class from Kubernetes before the check. In Deckhouse Platform it is `develop`. If this class is unavailable for the project, such a pod is rejected, so when restricting priority classes, keep the cluster default class available. If a controller rewrites the whole pod template on every reconciliation (for example, via Server-Side Apply in GitOps tools), it removes the class inserted by `default` on its next reconciliation. As a result, the corresponding workloads restart once and end up with the cluster default class.
+
+The priority classes of a namespace can also be limited with [`priorityClassNames`](/modules/admission-policy-engine/cr.html#operationpolicy-v1alpha1-spec-policies-priorityclassnames) of an OperationPolicy of the `admission-policy-engine` module.
 
 The `clusterissuers` definition is shipped by the [`cert-manager`](/modules/cert-manager/) module, so it is registered only when that module is enabled.
 

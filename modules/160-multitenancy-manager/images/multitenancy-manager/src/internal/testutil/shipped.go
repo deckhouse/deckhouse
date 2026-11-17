@@ -54,10 +54,19 @@ func ModuleFile(t *testing.T, name string) string {
 	}
 }
 
-// shippedTemplate is the module's templates/cluster-objects-controller/grantable-resources.yaml.
-func shippedTemplate(t *testing.T) string {
+// shippedTemplates are the module's templates/cluster-objects-controller/grantable-*.yaml, in lexical
+// order: grantable-resources.yaml and one file per resource registered apart from it.
+func shippedTemplates(t *testing.T) []string {
 	t.Helper()
-	return ModuleFile(t, "templates/cluster-objects-controller/grantable-resources.yaml")
+	dir := filepath.Dir(ModuleFile(t, "templates/cluster-objects-controller/grantable-resources.yaml"))
+	paths, err := filepath.Glob(filepath.Join(dir, "grantable-*.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(paths) == 0 {
+		t.Fatalf("no grantable-*.yaml templates in %s", dir)
+	}
+	return paths
 }
 
 // RenderShipped renders the grant objects the module ships with the real Helm engine -- a stub for the
@@ -67,16 +76,25 @@ func shippedTemplate(t *testing.T) string {
 // of it.
 func RenderShipped[T any](t *testing.T, kind string) []*T {
 	t.Helper()
-	tpl, err := os.ReadFile(shippedTemplate(t))
-	if err != nil {
-		t.Fatal(err)
+	paths := shippedTemplates(t)
+	templates := make([]*chart.File, 0, len(paths)+1)
+	templates = append(templates, &chart.File{
+		Name: "templates/_helm_lib_stub.tpl",
+		Data: []byte(`{{- define "helm_lib_module_labels" }}labels: {module: multitenancy-manager}{{- end }}`),
+	})
+	names := make([]string, 0, len(paths))
+	for _, path := range paths {
+		tpl, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		name := "templates/" + filepath.Base(path)
+		templates = append(templates, &chart.File{Name: name, Data: tpl})
+		names = append(names, name)
 	}
 	ch := &chart.Chart{
-		Metadata: &chart.Metadata{Name: "multitenancy-manager", Version: "0.0.0", APIVersion: chart.APIVersionV2},
-		Templates: []*chart.File{
-			{Name: "templates/_helm_lib_stub.tpl", Data: []byte(`{{- define "helm_lib_module_labels" }}labels: {module: multitenancy-manager}{{- end }}`)},
-			{Name: "templates/grantable-resources.yaml", Data: tpl},
-		},
+		Metadata:  &chart.Metadata{Name: "multitenancy-manager", Version: "0.0.0", APIVersion: chart.APIVersionV2},
+		Templates: templates,
 	}
 	values := chartutil.Values{"Values": map[string]any{
 		"global":              map[string]any{"enabledModules": []any{}},
@@ -86,12 +104,16 @@ func RenderShipped[T any](t *testing.T, kind string) []*T {
 	if err != nil {
 		t.Fatal(err)
 	}
-	out, ok := rendered["multitenancy-manager/templates/grantable-resources.yaml"]
-	if !ok {
-		t.Fatalf("rendered files: %v", rendered)
+	docs := make([]string, 0, len(names))
+	for _, name := range names {
+		out, ok := rendered["multitenancy-manager/"+name]
+		if !ok {
+			t.Fatalf("%s is not rendered, rendered files: %v", name, rendered)
+		}
+		docs = append(docs, strings.Split(out, "\n---")...)
 	}
 	var objs []*T
-	for _, doc := range strings.Split(out, "\n---") {
+	for _, doc := range docs {
 		var meta metav1.TypeMeta
 		if err := yaml.Unmarshal([]byte(doc), &meta); err != nil {
 			t.Fatalf("document %s: %v", doc, err)

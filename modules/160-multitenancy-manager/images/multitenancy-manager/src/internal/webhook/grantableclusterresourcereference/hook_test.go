@@ -419,6 +419,9 @@ func TestHandle_ShippedReferences(t *testing.T) {
 		"storageclasses-pvc",
 		"loadbalancerclasses-service",
 		"clusterroles-rolebinding",
+		"priorityclasses-pod",
+		"priorityclasses-apps",
+		"priorityclasses-batch",
 	}, names)
 
 	v := newValidator()
