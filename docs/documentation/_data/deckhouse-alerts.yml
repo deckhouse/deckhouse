@@ -6263,6 +6263,22 @@ alerts:
         Obsolete antiopa_secret_copier=yes label detected.
       severity: "9"
       markupFormat: markdown
+    - name: D8SecretCopierSecretNotCopied
+      sourceFile: modules/600-secret-copier/monitoring/prometheus-rules/rejected-secrets.yaml
+      moduleUrl: 600-secret-copier
+      module: secret-copier
+      edition: ce
+      description: |-
+        The [`secret-copier` module](https://github.com/deckhouse/deckhouse/tree/main/modules/600-secret-copier/) skipped the Secret `{{ $labels.secret }}` with the reason `{{ $labels.reason }}`.
+
+        The meaning of the `namespace` label, which is `{{ $labels.namespace }}` here, depends on the reason:
+
+        - `InvalidNamespaceSelector`: `namespace` is the namespace of the source Secret, `default`. The `secret-copier.deckhouse.io/target-namespace-selector` annotation of the source Secret is not a valid label selector, so the Secret is not copied to any namespace and its copies made before are deleted. Fix the annotation value. The exact parsing error is in the Deckhouse logs.
+        - `ForeignSecretExists`: `namespace` is the target namespace. It already has a Secret `{{ $labels.secret }}` that was not created by `secret-copier`. Delete or rename it, and the copy will be created.
+      summary: |
+        Secret {{ $labels.secret }} was skipped by secret-copier, reason {{ $labels.reason }}.
+      severity: "6"
+      markupFormat: markdown
     - name: D8TerraformStateExporterClusterStateChanged
       sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-manager/terraform-state-exporter.tpl
       moduleUrl: 040-terraform-manager

@@ -34,8 +34,15 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
+
+func mustMarshal(v any) []byte {
+	out, err := yaml.Marshal(v)
+	Expect(err).ToNot(HaveOccurred())
+	return out
+}
 
 var _ = Describe("Modules :: secret-copier :: hooks :: handler ::", func() {
 	var (
@@ -97,6 +104,7 @@ metadata:
   labels:
     secret-copier.deckhouse.io/enabled: ""
     certmanager.k8s.io/certificate-name: certname
+    module: node-manager
 data:
   supersecret: czFkYXRh
 `
@@ -223,37 +231,37 @@ data:
 	)
 
 	BeforeEach(func() {
-		_ = yaml.Unmarshal([]byte(stateNSYAML1), &ns1)
-		_ = yaml.Unmarshal([]byte(stateNSYAML2), &ns2)
-		_ = yaml.Unmarshal([]byte(stateNSYAML3), &ns3)
-		_ = yaml.Unmarshal([]byte(stateNSYAML4), &ns4)
-		_ = yaml.Unmarshal([]byte(stateNSYAML5), &ns5)
-		_ = yaml.Unmarshal([]byte(stateSecretNeutralYAML), &secretNeutral)
-		_ = yaml.Unmarshal([]byte(stateSecretOriginalYAML1), &secretOriginal1)
-		_ = yaml.Unmarshal([]byte(stateSecretOriginalYAML2), &secretOriginal2)
-		_ = yaml.Unmarshal([]byte(stateSecretOriginalYAML3), &secretOriginal3)
-		_ = yaml.Unmarshal([]byte(stateSecretOriginalYAML4), &secretOriginal4)
-		_ = yaml.Unmarshal([]byte(stateSecretOriginalYAML5), &secretOriginal5)
-		_ = yaml.Unmarshal([]byte(stateSecretExtraYAML1), &secretExtra1)
-		_ = yaml.Unmarshal([]byte(stateSecretExtraYAML2), &secretExtra2)
-		_ = yaml.Unmarshal([]byte(stateSecretForeignYAML), &secretForeign)
-		_ = yaml.Unmarshal([]byte(stateSecretOutDatedYAML), &secretOutDated)
+		Expect(yaml.Unmarshal([]byte(stateNSYAML1), &ns1)).To(Succeed())
+		Expect(yaml.Unmarshal([]byte(stateNSYAML2), &ns2)).To(Succeed())
+		Expect(yaml.Unmarshal([]byte(stateNSYAML3), &ns3)).To(Succeed())
+		Expect(yaml.Unmarshal([]byte(stateNSYAML4), &ns4)).To(Succeed())
+		Expect(yaml.Unmarshal([]byte(stateNSYAML5), &ns5)).To(Succeed())
+		Expect(yaml.Unmarshal([]byte(stateSecretNeutralYAML), &secretNeutral)).To(Succeed())
+		Expect(yaml.Unmarshal([]byte(stateSecretOriginalYAML1), &secretOriginal1)).To(Succeed())
+		Expect(yaml.Unmarshal([]byte(stateSecretOriginalYAML2), &secretOriginal2)).To(Succeed())
+		Expect(yaml.Unmarshal([]byte(stateSecretOriginalYAML3), &secretOriginal3)).To(Succeed())
+		Expect(yaml.Unmarshal([]byte(stateSecretOriginalYAML4), &secretOriginal4)).To(Succeed())
+		Expect(yaml.Unmarshal([]byte(stateSecretOriginalYAML5), &secretOriginal5)).To(Succeed())
+		Expect(yaml.Unmarshal([]byte(stateSecretExtraYAML1), &secretExtra1)).To(Succeed())
+		Expect(yaml.Unmarshal([]byte(stateSecretExtraYAML2), &secretExtra2)).To(Succeed())
+		Expect(yaml.Unmarshal([]byte(stateSecretForeignYAML), &secretForeign)).To(Succeed())
+		Expect(yaml.Unmarshal([]byte(stateSecretOutDatedYAML), &secretOutDated)).To(Succeed())
 
-		nsYAML1, _ := yaml.Marshal(&ns1)
-		nsYAML2, _ := yaml.Marshal(&ns2)
-		nsYAML3, _ := yaml.Marshal(&ns3)
-		nsYAML4, _ := yaml.Marshal(&ns4)
-		nsYAML5, _ := yaml.Marshal(&ns5)
-		secretOriginalYAML1, _ := yaml.Marshal(&secretOriginal1)
-		secretOriginalYAML2, _ := yaml.Marshal(&secretOriginal2)
-		secretOriginalYAML3, _ := yaml.Marshal(&secretOriginal3)
-		secretOriginalYAML4, _ := yaml.Marshal(&secretOriginal4)
-		secretOriginalYAML5, _ := yaml.Marshal(&secretOriginal5)
-		secretNeutralYAML, _ := yaml.Marshal(&secretNeutral)
-		secretExtraYAML1, _ := yaml.Marshal(&secretExtra1)
-		secretExtraYAML2, _ := yaml.Marshal(&secretExtra2)
-		secretForeignYAML, _ := yaml.Marshal(&secretForeign)
-		secretOutDatedYAML, _ := yaml.Marshal(&secretOutDated)
+		nsYAML1 := mustMarshal(ns1)
+		nsYAML2 := mustMarshal(ns2)
+		nsYAML3 := mustMarshal(ns3)
+		nsYAML4 := mustMarshal(ns4)
+		nsYAML5 := mustMarshal(ns5)
+		secretOriginalYAML1 := mustMarshal(secretOriginal1)
+		secretOriginalYAML2 := mustMarshal(secretOriginal2)
+		secretOriginalYAML3 := mustMarshal(secretOriginal3)
+		secretOriginalYAML4 := mustMarshal(secretOriginal4)
+		secretOriginalYAML5 := mustMarshal(secretOriginal5)
+		secretNeutralYAML := mustMarshal(secretNeutral)
+		secretExtraYAML1 := mustMarshal(secretExtra1)
+		secretExtraYAML2 := mustMarshal(secretExtra2)
+		secretForeignYAML := mustMarshal(secretForeign)
+		secretOutDatedYAML := mustMarshal(secretOutDated)
 
 		clusterState = strings.Join([]string{
 			string(nsYAML1),
@@ -293,19 +301,14 @@ data:
 
 			f.BindingContexts.Set(f.KubeStateSet(clusterState))
 
-			_, _ = f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), ns1, metav1.CreateOptions{})
-			_, _ = f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), ns2, metav1.CreateOptions{})
-			_, _ = f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), ns3, metav1.CreateOptions{})
-			_, _ = f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), ns4, metav1.CreateOptions{})
-			_, _ = f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), ns5, metav1.CreateOptions{})
-			_, _ = f.KubeClient().CoreV1().Secrets(secretNeutral.Namespace).Create(context.TODO(), secretNeutral, metav1.CreateOptions{})
-			_, _ = f.KubeClient().CoreV1().Secrets(secretOriginal1.Namespace).Create(context.TODO(), secretOriginal1, metav1.CreateOptions{})
-			_, _ = f.KubeClient().CoreV1().Secrets(secretOriginal2.Namespace).Create(context.TODO(), secretOriginal2, metav1.CreateOptions{})
-			_, _ = f.KubeClient().CoreV1().Secrets(secretOriginal3.Namespace).Create(context.TODO(), secretOriginal3, metav1.CreateOptions{})
-			_, _ = f.KubeClient().CoreV1().Secrets(secretExtra1.Namespace).Create(context.TODO(), secretExtra1, metav1.CreateOptions{})
-			_, _ = f.KubeClient().CoreV1().Secrets(secretExtra2.Namespace).Create(context.TODO(), secretExtra2, metav1.CreateOptions{})
-			_, _ = f.KubeClient().CoreV1().Secrets(secretForeign.Namespace).Create(context.TODO(), secretForeign, metav1.CreateOptions{})
-			_, _ = f.KubeClient().CoreV1().Secrets(secretOutDated.Namespace).Create(context.TODO(), secretOutDated, metav1.CreateOptions{})
+			for _, ns := range []*corev1.Namespace{ns1, ns2, ns3, ns4, ns5} {
+				_, err := f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), ns, metav1.CreateOptions{})
+				Expect(err).ToNot(HaveOccurred())
+			}
+			for _, s := range []*corev1.Secret{secretNeutral, secretOriginal1, secretOriginal2, secretOriginal3, secretExtra1, secretExtra2, secretForeign, secretOutDated} {
+				_, err := f.KubeClient().CoreV1().Secrets(s.Namespace).Create(context.TODO(), s, metav1.CreateOptions{})
+				Expect(err).ToNot(HaveOccurred())
+			}
 
 			f.RunHook()
 		})
@@ -370,6 +373,41 @@ data:
 			Expect(s.Labels).To(BeEmpty())
 			Expect(s.Annotations).To(BeEmpty())
 			Expect(writesTo(f, "ns1", "s1")).To(BeEmpty())
+		})
+
+		It("Copies must be labeled with heritage: deckhouse", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			s, err := f.KubeClient().CoreV1().Secrets("ns2").Get(context.TODO(), "s1", metav1.GetOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(s.Labels).To(HaveKeyWithValue("heritage", "deckhouse"))
+			Expect(s.Labels).To(HaveKey("secret-copier.deckhouse.io/enabled"))
+			Expect(s.Labels).ToNot(HaveKey("module"))
+		})
+
+		It("Secrets that are not copied must be reported by metric", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			ops := f.MetricsCollector.CollectedMetrics()
+			Expect(ops).To(HaveLen(3))
+			Expect(ops[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Action: operation.ActionExpireMetrics,
+				Group:  rejectedSecretsMetric,
+			}))
+			Expect(ops).To(ContainElement(operation.MetricOperation{
+				Action: operation.ActionGaugeSet,
+				Name:   rejectedSecretsMetric,
+				Group:  rejectedSecretsMetric,
+				Value:  ptr.To(1.0),
+				Labels: map[string]string{"namespace": "default", "secret": "s5", "reason": rejectReasonInvalidSelector},
+			}))
+			Expect(ops).To(ContainElement(operation.MetricOperation{
+				Action: operation.ActionGaugeSet,
+				Name:   rejectedSecretsMetric,
+				Group:  rejectedSecretsMetric,
+				Value:  ptr.To(1.0),
+				Labels: map[string]string{"namespace": "ns1", "secret": "s1", "reason": rejectReasonForeignSecret},
+			}))
 		})
 
 		It("Custom Secret #4 must be copied only in namespace having app=custom label", func() {

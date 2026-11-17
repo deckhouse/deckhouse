@@ -49,5 +49,5 @@ spec:
           values:
             - default
   policyName: {{ $policyName }}
-  validationActions: [Deny, Audit]
+  validationActions: [Deny]
 {{- end }}

@@ -20,10 +20,12 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"maps"
 	"reflect"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -35,11 +37,17 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
 	secretCopierEnableKey            = "secret-copier.deckhouse.io/enabled"
 	secretCopierNamespaceSelectorKey = "secret-copier.deckhouse.io/target-namespace-selector"
+
+	rejectedSecretsMetric = "d8_secret_copier_rejected_secret"
+
+	rejectReasonInvalidSelector = "InvalidNamespaceSelector"
+	rejectReasonForeignSecret   = "ForeignSecretExists"
 )
 
 // protectedSecrets are never created, updated or deleted by the hook, whatever
@@ -178,6 +186,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(copierHandler))
 
 func copierHandler(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+	input.MetricsCollector.Expire(rejectedSecretsMetric)
+
 	secrets, err := sdkobjectpatch.UnmarshalToStruct[Secret](input.Snapshots, "secrets")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal secrets snapshot: %w", err)
@@ -201,6 +211,10 @@ func copierHandler(_ context.Context, input *go_hook.HookInput, dc dependency.Co
 		return fmt.Errorf("can't init Kubernetes client: %w", err)
 	}
 
+	return syncSecrets(input, k8, secrets, namespaces)
+}
+
+func syncSecrets(input *go_hook.HookInput, k8 k8s.Client, secrets []Secret, namespaces []Namespace) error {
 	secretsExists := make(map[string]Secret)
 	secretsDesired := make(map[string]Secret)
 
@@ -215,7 +229,16 @@ func copierHandler(_ context.Context, input *go_hook.HookInput, dc dependency.Co
 			continue
 		}
 
-		namespaceLabelSelector := namespaceSelector(secret)
+		namespaceLabelSelector, err := namespaceSelector(secret)
+		if err != nil {
+			// Not copied anywhere, the copies made before are deleted as no longer desired.
+			input.Logger.Error("Secret is not copied: invalid annotation value",
+				slog.String("secret", SecretPath(secret)),
+				slog.String("annotation", secretCopierNamespaceSelectorKey),
+				log.Err(err))
+			reportRejected(input, secret, rejectReasonInvalidSelector)
+			continue
+		}
 
 		// Secrets in namespace `default` should be propagated to all other namespaces matching the selector.
 		for _, namespace := range namespaces {
@@ -229,7 +252,7 @@ func copierHandler(_ context.Context, input *go_hook.HookInput, dc dependency.Co
 			secretDesired := Secret{
 				Name:      secret.Name,
 				Namespace: namespace.Name,
-				Labels:    secret.Labels,
+				Labels:    copyLabels(secret.Labels),
 				Type:      secret.Type,
 				Data:      secret.Data,
 			}
@@ -255,7 +278,7 @@ func copierHandler(_ context.Context, input *go_hook.HookInput, dc dependency.Co
 		}
 		if !reflect.DeepEqual(secretDesired, secretExist) {
 			// Secret changed - update it.
-			if err := createOrUpdateSecret(k8, input.Logger, secretDesired); err != nil {
+			if err := createOrUpdateSecret(k8, input, secretDesired); err != nil {
 				return err
 			}
 		}
@@ -265,7 +288,7 @@ func copierHandler(_ context.Context, input *go_hook.HookInput, dc dependency.Co
 			continue
 		}
 		// Secret not exists, create it.
-		if err := createOrUpdateSecret(k8, input.Logger, secretDesired); err != nil {
+		if err := createOrUpdateSecret(k8, input, secretDesired); err != nil {
 			return err
 		}
 	}
@@ -273,8 +296,31 @@ func copierHandler(_ context.Context, input *go_hook.HookInput, dc dependency.Co
 	return nil
 }
 
+// copyLabels returns the labels of a copy: the labels of its source plus
+// `heritage: deckhouse`, so that the platform protects the copy from users.
+// The `heritage` and `module` labels of the source are dropped: together they
+// tell Deckhouse components their own objects, and the author of a Secret in
+// `default` must not be able to plant such an object in every namespace.
+func copyLabels(src map[string]string) map[string]string {
+	l := maps.Clone(src)
+	if l == nil {
+		l = make(map[string]string, 1)
+	}
+	delete(l, "module")
+	l["heritage"] = "deckhouse"
+	return l
+}
+
+func reportRejected(input *go_hook.HookInput, secret Secret, reason string) {
+	input.MetricsCollector.Set(rejectedSecretsMetric, 1, map[string]string{
+		"namespace": secret.Namespace,
+		"secret":    secret.Name,
+		"reason":    reason,
+	}, metrics.WithGroup(rejectedSecretsMetric))
+}
+
 // todo(31337Ghost) consider switching to separate create/update functions after a bug is fixed in shell-operator that causes missing Secrets in snapshots
-func createOrUpdateSecret(k8 k8s.Client, logger go_hook.Logger, secret Secret) error {
+func createOrUpdateSecret(k8 k8s.Client, input *go_hook.HookInput, secret Secret) error {
 	existing, err := k8.CoreV1().Secrets(secret.Namespace).Get(context.TODO(), secret.Name, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
 		return createSecret(k8, secret)
@@ -282,7 +328,10 @@ func createOrUpdateSecret(k8 k8s.Client, logger go_hook.Logger, secret Secret) e
 		return err
 	}
 	if !isCopy(existing) {
-		logSkippedSecret(logger, secret)
+		input.Logger.Error("Secret is not copied: a Secret of the same name not created by secret-copier exists",
+			slog.String("secret", SecretPath(secret)),
+			slog.String("label", secretCopierEnableKey))
+		reportRejected(input, secret, rejectReasonForeignSecret)
 		return nil
 	}
 
@@ -377,12 +426,10 @@ func updateSecret(k8 k8s.Client, existing *v1.Secret, secret Secret) error {
 		// deleting and create Secret if its validation fails
 		// usually means that we are trying to change an immutable field
 		if errors.IsInvalid(err) {
-			err := deleteCopy(k8, existing)
-			if err != nil {
+			if err = deleteCopy(k8, existing); err != nil {
 				return formatSecretOperationError(secret, err, "delete on recreate")
 			}
-			err = createSecret(k8, secret)
-			if err != nil {
+			if err = createSecret(k8, secret); err != nil {
 				return formatSecretOperationError(secret, err, "create after delete on recreate")
 			}
 			return nil
@@ -397,13 +444,14 @@ func formatSecretOperationError(secret Secret, err error, op string) error {
 	return fmt.Errorf("can't %s secret object `%s/%s`: %v", op, secret.Namespace, secret.Name, err)
 }
 
-func namespaceSelector(secret Secret) labels.Selector {
+func namespaceSelector(secret Secret) (labels.Selector, error) {
 	v, found := secret.Annotations[secretCopierNamespaceSelectorKey]
 	if !found {
-		return labels.Everything()
+		return labels.Everything(), nil
 	}
-	if s, err := labels.Parse(v); err == nil {
-		return s
+	s, err := labels.Parse(v)
+	if err != nil {
+		return nil, fmt.Errorf("parse label selector %q: %w", v, err)
 	}
-	return labels.Nothing()
+	return s, nil
 }
