@@ -475,6 +475,8 @@ To view the permissions created by source modules, use the [command](#get_rules)
 {{site.data.i18n.common.role[page.lang] | capitalize }} `User`:
 
 ```text
+get,list:
+    - registry.deckhouse.io/registryimages
 read:
     - acme.cert-manager.io/challenges
     - acme.cert-manager.io/orders
@@ -526,6 +528,7 @@ read:
     - deckhouse.io/projectnamespaces
     - deckhouse.io/projectrolebindings
     - deckhouse.io/projecttemplates
+    - deckhouse.io/registryoperations
     - deckhouse.io/securitypolicies
     - deckhouse.io/securitypolicyexceptions
     - deckhouse.io/vcdaffinityrules
@@ -792,6 +795,8 @@ create:
     - authorization.deckhouse.io/subjectaccessreports
     - deckhouse.io/dexauthenticators/allow-access-to-kubernetes
     - deckhouse.io/dexclients/allow-access-to-kubernetes
+create,delete,patch,update:
+    - deckhouse.io/registryoperations
 get,list,patch,update,watch:
     - control-plane.deckhouse.io/controlplanenodes
 patch,update:
@@ -817,6 +822,11 @@ read:
     - deckhouse.io/effectivelicenses
     - deckhouse.io/modulesettingsdefinitions
     - deckhouse.io/nodestaticpodrequests
+    - deckhouse.io/registryconfigs
+    - deckhouse.io/registryconfigs/sensitive
+    - deckhouse.io/registrynodes
+    - deckhouse.io/registrystorages
+    - deckhouse.io/registryupstreams/sensitive
     - nfd.k8s-sigs.io/nodefeaturegroups
     - nfd.k8s-sigs.io/nodefeaturerules
     - nfd.k8s-sigs.io/nodefeatures
@@ -837,6 +847,7 @@ read-write:
     - deckhouse.io/packagerepositories
     - deckhouse.io/packagerepositoryoperations
     - deckhouse.io/projectquotas
+    - deckhouse.io/registryupstreams
     - deckhouse.io/sshcredentials
     - deckhouse.io/tokenexchangeproviders
     - deckhouse.io/useraccounts
