@@ -184,6 +184,24 @@ func TestHandle_PathsCompile(t *testing.T) {
 		assert.True(t, resp.Allowed)
 	})
 
+	withMissing := func(missingPath string) grantsv1alpha1.FieldPath {
+		fp := fieldPath("$.spec.volumeClaimTemplates[*].spec.storageClassName", grantsv1alpha1.DefaultingNone)
+		fp.MissingPath = missingPath
+		return fp
+	}
+
+	t.Run("denied: a missingPath that does not compile", func(t *testing.T) {
+		resp := v.Handle(ctx, request(t, admissionv1.Create, reference("broken", withMissing("$.spec.volumeClaimTemplates[?!@.spec.storage-class]"))))
+		assert.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "'spec.fieldPaths[0].missingPath'")
+		assert.Contains(t, resp.Result.Message, "not a valid RFC 9535 JSONPath")
+	})
+
+	t.Run("allowed: a valid missingPath", func(t *testing.T) {
+		resp := v.Handle(ctx, request(t, admissionv1.Create, reference("ok", withMissing("$.spec.volumeClaimTemplates[?!@.spec.storageClassName]"))))
+		assert.True(t, resp.Allowed, resp.Result.Message)
+	})
+
 	t.Run("denied: an uncompilable path is reported once, not also as undefaultable", func(t *testing.T) {
 		resp := v.Handle(ctx, request(t, admissionv1.Create,
 			reference("broken", fieldPath("$.spec.foo-bar", grantsv1alpha1.DefaultingFillEmpty))))
@@ -425,6 +443,14 @@ func TestHandle_ShippedReferences(t *testing.T) {
 		"runtimeclasses-core",
 		"runtimeclasses-apps",
 		"runtimeclasses-batch",
+		"storageclasses-statefulset-claims",
+		"storageclasses-statefulset-claims-annotation",
+		"storageclasses-pod-ephemeral",
+		"storageclasses-pod-ephemeral-annotation",
+		"storageclasses-apps-ephemeral",
+		"storageclasses-apps-ephemeral-annotation",
+		"storageclasses-batch-ephemeral",
+		"storageclasses-batch-ephemeral-annotation",
 	}, names)
 
 	v := newValidator()

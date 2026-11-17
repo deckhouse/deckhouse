@@ -274,3 +274,55 @@ func TestViolations_UnresolvableDefinitionIsSkipped(t *testing.T) {
 		})
 	}
 }
+
+// countingReader counts the List calls per kind of list.
+type countingReader struct {
+	client.Reader
+	lists map[string]int
+}
+
+func (r *countingReader) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+	r.lists[list.GetObjectKind().GroupVersionKind().Kind]++
+	return r.Reader.List(ctx, list, opts...)
+}
+
+// TestViolations_ListsEachResourceOncePerPass: the references of one resource, such as the class field
+// and the beta annotation of a PersistentVolumeClaim, share one list of the namespace per pass, and
+// each still reports its own violations.
+func TestViolations_ListsEachResourceOncePerPass(t *testing.T) {
+	grantViolations.Reset()
+	r, cl := violationsFixture(t)
+	annotation := &v1alpha1.GrantableClusterResourceReference{
+		ObjectMeta: metav1.ObjectMeta{Name: "storageclasses-pvc-annotation"},
+		Spec: v1alpha1.GrantableClusterResourceReferenceSpec{
+			GrantableClusterResourceName: "storageclasses",
+			Rule:                         v1alpha1.UsageRule{APIGroups: []string{""}, APIVersions: []string{"v1"}, Resources: []string{"persistentvolumeclaims"}},
+			FieldPaths:                   []v1alpha1.FieldPath{{Path: "$.metadata.annotations['volume.beta.kubernetes.io/storage-class']"}},
+		},
+	}
+	annotated := pvc("team-a", "annotated-other", "slow")
+	annotated.Annotations = map[string]string{"volume.beta.kubernetes.io/storage-class": "other"}
+	for _, obj := range []client.Object{annotation, annotated} {
+		if err := cl.Create(context.Background(), obj); err != nil {
+			t.Fatal(err)
+		}
+	}
+	usage := &countingReader{Reader: cl, lists: map[string]int{}}
+	r.Usage = usage
+
+	reconcileNamespace(t, r, "team-a")
+	if got := usage.lists["PersistentVolumeClaimList"]; got != 1 {
+		t.Fatalf("PersistentVolumeClaims listed %d times in one pass, want 1", got)
+	}
+	if got := violationSeries("team-a", "uses-other"); got != 1 {
+		t.Fatalf("the class field must still be reported, got %v", got)
+	}
+	if got := violationSeries("team-a", "annotated-other"); got != 1 {
+		t.Fatalf("the annotation must still be reported, got %v", got)
+	}
+
+	reconcileNamespace(t, r, "team-a")
+	if got := usage.lists["PersistentVolumeClaimList"]; got != 2 {
+		t.Fatalf("a new pass must list again, got %d lists after two passes", got)
+	}
+}

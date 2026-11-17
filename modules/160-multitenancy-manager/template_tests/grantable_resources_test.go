@@ -23,6 +23,17 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
 
+var storageClassTemplateReferences = []string{
+	"storageclasses-statefulset-claims",
+	"storageclasses-statefulset-claims-annotation",
+	"storageclasses-pod-ephemeral",
+	"storageclasses-pod-ephemeral-annotation",
+	"storageclasses-apps-ephemeral",
+	"storageclasses-apps-ephemeral-annotation",
+	"storageclasses-batch-ephemeral",
+	"storageclasses-batch-ephemeral-annotation",
+}
+
 var _ = Describe("Module :: multitenancy-manager :: helm template :: grantable resources ::", func() {
 	f := SetupHelmConfig(``)
 
@@ -59,6 +70,9 @@ var _ = Describe("Module :: multitenancy-manager :: helm template :: grantable r
 			} {
 				Expect(f.KubernetesGlobalResource(obj.kind, obj.name).Field(`metadata.annotations.helm\.sh/resource-policy`).String()).To(Equal("keep"), obj.name)
 			}
+			for _, name := range storageClassTemplateReferences {
+				Expect(f.KubernetesGlobalResource("GrantableClusterResourceReference", name).Field(`metadata.annotations.helm\.sh/resource-policy`).String()).To(Equal("keep"), name)
+			}
 		})
 
 		It("finds the cluster default StorageClass by both annotations Kubernetes reads", func() {
@@ -82,6 +96,9 @@ var _ = Describe("Module :: multitenancy-manager :: helm template :: grantable r
 		It("registers the StorageClass objects itself", func() {
 			Expect(f.KubernetesGlobalResource("GrantableClusterResourceDefinition", "storageclasses").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("GrantableClusterResourceReference", "storageclasses-pvc").Exists()).To(BeTrue())
+			for _, name := range storageClassTemplateReferences {
+				Expect(f.KubernetesGlobalResource("GrantableClusterResourceReference", name).Exists()).To(BeTrue(), name)
+			}
 		})
 
 		It("checks the class of the beta annotation before the data source entry of storageclasses-pvc", func() {
@@ -101,6 +118,9 @@ var _ = Describe("Module :: multitenancy-manager :: helm template :: grantable r
 		It("leaves StorageClass to the storage-foundation module", func() {
 			Expect(f.KubernetesGlobalResource("GrantableClusterResourceDefinition", "storageclasses").Exists()).To(BeFalse())
 			Expect(f.KubernetesGlobalResource("GrantableClusterResourceReference", "storageclasses-pvc").Exists()).To(BeFalse())
+			for _, name := range storageClassTemplateReferences {
+				Expect(f.KubernetesGlobalResource("GrantableClusterResourceReference", name).Exists()).To(BeFalse(), name)
+			}
 		})
 
 		It("still registers the other cluster resources of Kubernetes", func() {

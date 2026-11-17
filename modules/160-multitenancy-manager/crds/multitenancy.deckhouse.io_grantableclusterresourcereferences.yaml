@@ -142,10 +142,21 @@ spec:
                       type: object
                     message:
                       description: |-
-                        Text appended to the rejection of an object whose field references a cluster-wide resource that is unavailable to the project.
+                        Text appended to the rejection of an object whose field references a cluster-wide resource that is unavailable to the project, and to the rejection of an object that leaves the reference out in a place `missingPath` selects.
 
                         Use it to tell the user what to do, for example why the value cannot be replaced with the project default.
                       maxLength: 512
+                      type: string
+                    missingPath:
+                      description: |-
+                        JSONPath to the places of the object where a reference to the cluster-wide resource is expected but not given.
+
+                        Use it for a list of templates whose elements can leave the field from `path` unset, for example `$.spec.volumeClaimTemplates[?!@.spec.storageClassName]` selects the StatefulSet volume claim templates without `storageClassName`. Such an element gets the cluster-wide default, for example the default StorageClass of the cluster, which `path` does not see.
+
+                        If the GrantableClusterResourceDefinition has `defaultFrom`, the cluster-wide default it finds is checked as if the object referenced it: an object in which the path selects anything is rejected if that default is unavailable to the project, and admitted if there is no default. Without `defaultFrom`, such an object is rejected if a ClusterResourceGrantPolicy with an entry for the cluster-wide resource applies to the namespace, and admitted otherwise. On update, only the places the old object did not have are taken into account.
+
+                        Must be a valid RFC 9535 JSONPath of at most 256 characters; an object with a path that does not parse is rejected.
+                      maxLength: 256
                       type: string
                     path:
                       description: |-

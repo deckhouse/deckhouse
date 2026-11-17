@@ -166,3 +166,265 @@ spec:
       fieldPath: $.roleRef.kind
       equals: ClusterRole
     defaulting: None
+{{- if not .Values.multitenancyManager.internal.storageFoundationShipsStorageClassGrant }}
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: storageclasses-statefulset-claims
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  grantableClusterResourceName: storageclasses
+  rule:
+    apiGroups:
+    - apps
+    apiVersions:
+    - v1
+    resources:
+    - statefulsets
+  fieldPaths:
+  - path: "$.spec.volumeClaimTemplates[?!@.metadata.annotations['volume.beta.kubernetes.io/storage-class']].spec.storageClassName"
+    missingPath: "$.spec.volumeClaimTemplates[?!@.spec.storageClassName && !@.metadata.annotations['volume.beta.kubernetes.io/storage-class']]"
+    defaulting: None
+    message: >-
+      A volume claim template must name a StorageClass that is available to the project, in
+      spec.storageClassName or in the volume.beta.kubernetes.io/storage-class annotation, which Kubernetes
+      reads first: a template without a class gets the cluster default. An empty storageClassName binds a
+      pre-provisioned PersistentVolume and is allowed.
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: storageclasses-statefulset-claims-annotation
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  grantableClusterResourceName: storageclasses
+  rule:
+    apiGroups:
+    - apps
+    apiVersions:
+    - v1
+    resources:
+    - statefulsets
+  fieldPaths:
+  - path: "$.spec.volumeClaimTemplates[*].metadata.annotations['volume.beta.kubernetes.io/storage-class']"
+    defaulting: None
+    message: >-
+      Kubernetes takes the StorageClass of a volume claim template from the
+      volume.beta.kubernetes.io/storage-class annotation before spec.storageClassName: name a StorageClass
+      that is available to the project in the annotation, or remove the annotation and set
+      spec.storageClassName.
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: storageclasses-pod-ephemeral
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  grantableClusterResourceName: storageclasses
+  rule:
+    apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    resources:
+    - pods
+    - replicationcontrollers
+  fieldPaths:
+  - resources:
+    - pods
+    path: "$.spec.volumes[?!@.ephemeral.volumeClaimTemplate.metadata.annotations['volume.beta.kubernetes.io/storage-class']].ephemeral.volumeClaimTemplate.spec.storageClassName"
+    missingPath: "$.spec.volumes[?@.ephemeral && !@.ephemeral.volumeClaimTemplate.spec.storageClassName && !@.ephemeral.volumeClaimTemplate.metadata.annotations['volume.beta.kubernetes.io/storage-class']]"
+    defaulting: None
+    message: >-
+      A volume claim template must name a StorageClass that is available to the project, in
+      spec.storageClassName or in the volume.beta.kubernetes.io/storage-class annotation, which Kubernetes
+      reads first: a template without a class gets the cluster default. An empty storageClassName binds a
+      pre-provisioned PersistentVolume and is allowed.
+  - resources:
+    - replicationcontrollers
+    path: "$.spec.template.spec.volumes[?!@.ephemeral.volumeClaimTemplate.metadata.annotations['volume.beta.kubernetes.io/storage-class']].ephemeral.volumeClaimTemplate.spec.storageClassName"
+    missingPath: "$.spec.template.spec.volumes[?@.ephemeral && !@.ephemeral.volumeClaimTemplate.spec.storageClassName && !@.ephemeral.volumeClaimTemplate.metadata.annotations['volume.beta.kubernetes.io/storage-class']]"
+    defaulting: None
+    message: >-
+      A volume claim template must name a StorageClass that is available to the project, in
+      spec.storageClassName or in the volume.beta.kubernetes.io/storage-class annotation, which Kubernetes
+      reads first: a template without a class gets the cluster default. An empty storageClassName binds a
+      pre-provisioned PersistentVolume and is allowed.
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: storageclasses-pod-ephemeral-annotation
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  grantableClusterResourceName: storageclasses
+  rule:
+    apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    resources:
+    - pods
+    - replicationcontrollers
+  fieldPaths:
+  - resources:
+    - pods
+    path: "$.spec.volumes[*].ephemeral.volumeClaimTemplate.metadata.annotations['volume.beta.kubernetes.io/storage-class']"
+    defaulting: None
+    message: >-
+      Kubernetes takes the StorageClass of a volume claim template from the
+      volume.beta.kubernetes.io/storage-class annotation before spec.storageClassName: name a StorageClass
+      that is available to the project in the annotation, or remove the annotation and set
+      spec.storageClassName.
+  - resources:
+    - replicationcontrollers
+    path: "$.spec.template.spec.volumes[*].ephemeral.volumeClaimTemplate.metadata.annotations['volume.beta.kubernetes.io/storage-class']"
+    defaulting: None
+    message: >-
+      Kubernetes takes the StorageClass of a volume claim template from the
+      volume.beta.kubernetes.io/storage-class annotation before spec.storageClassName: name a StorageClass
+      that is available to the project in the annotation, or remove the annotation and set
+      spec.storageClassName.
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: storageclasses-apps-ephemeral
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  grantableClusterResourceName: storageclasses
+  rule:
+    apiGroups:
+    - apps
+    apiVersions:
+    - v1
+    resources:
+    - deployments
+    - replicasets
+    - daemonsets
+    - statefulsets
+  fieldPaths:
+  - path: "$.spec.template.spec.volumes[?!@.ephemeral.volumeClaimTemplate.metadata.annotations['volume.beta.kubernetes.io/storage-class']].ephemeral.volumeClaimTemplate.spec.storageClassName"
+    missingPath: "$.spec.template.spec.volumes[?@.ephemeral && !@.ephemeral.volumeClaimTemplate.spec.storageClassName && !@.ephemeral.volumeClaimTemplate.metadata.annotations['volume.beta.kubernetes.io/storage-class']]"
+    defaulting: None
+    message: >-
+      A volume claim template must name a StorageClass that is available to the project, in
+      spec.storageClassName or in the volume.beta.kubernetes.io/storage-class annotation, which Kubernetes
+      reads first: a template without a class gets the cluster default. An empty storageClassName binds a
+      pre-provisioned PersistentVolume and is allowed.
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: storageclasses-apps-ephemeral-annotation
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  grantableClusterResourceName: storageclasses
+  rule:
+    apiGroups:
+    - apps
+    apiVersions:
+    - v1
+    resources:
+    - deployments
+    - replicasets
+    - daemonsets
+    - statefulsets
+  fieldPaths:
+  - path: "$.spec.template.spec.volumes[*].ephemeral.volumeClaimTemplate.metadata.annotations['volume.beta.kubernetes.io/storage-class']"
+    defaulting: None
+    message: >-
+      Kubernetes takes the StorageClass of a volume claim template from the
+      volume.beta.kubernetes.io/storage-class annotation before spec.storageClassName: name a StorageClass
+      that is available to the project in the annotation, or remove the annotation and set
+      spec.storageClassName.
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: storageclasses-batch-ephemeral
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  grantableClusterResourceName: storageclasses
+  rule:
+    apiGroups:
+    - batch
+    apiVersions:
+    - v1
+    resources:
+    - jobs
+    - cronjobs
+  fieldPaths:
+  - resources:
+    - jobs
+    path: "$.spec.template.spec.volumes[?!@.ephemeral.volumeClaimTemplate.metadata.annotations['volume.beta.kubernetes.io/storage-class']].ephemeral.volumeClaimTemplate.spec.storageClassName"
+    missingPath: "$.spec.template.spec.volumes[?@.ephemeral && !@.ephemeral.volumeClaimTemplate.spec.storageClassName && !@.ephemeral.volumeClaimTemplate.metadata.annotations['volume.beta.kubernetes.io/storage-class']]"
+    defaulting: None
+    message: >-
+      A volume claim template must name a StorageClass that is available to the project, in
+      spec.storageClassName or in the volume.beta.kubernetes.io/storage-class annotation, which Kubernetes
+      reads first: a template without a class gets the cluster default. An empty storageClassName binds a
+      pre-provisioned PersistentVolume and is allowed.
+  - resources:
+    - cronjobs
+    path: "$.spec.jobTemplate.spec.template.spec.volumes[?!@.ephemeral.volumeClaimTemplate.metadata.annotations['volume.beta.kubernetes.io/storage-class']].ephemeral.volumeClaimTemplate.spec.storageClassName"
+    missingPath: "$.spec.jobTemplate.spec.template.spec.volumes[?@.ephemeral && !@.ephemeral.volumeClaimTemplate.spec.storageClassName && !@.ephemeral.volumeClaimTemplate.metadata.annotations['volume.beta.kubernetes.io/storage-class']]"
+    defaulting: None
+    message: >-
+      A volume claim template must name a StorageClass that is available to the project, in
+      spec.storageClassName or in the volume.beta.kubernetes.io/storage-class annotation, which Kubernetes
+      reads first: a template without a class gets the cluster default. An empty storageClassName binds a
+      pre-provisioned PersistentVolume and is allowed.
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: storageclasses-batch-ephemeral-annotation
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  grantableClusterResourceName: storageclasses
+  rule:
+    apiGroups:
+    - batch
+    apiVersions:
+    - v1
+    resources:
+    - jobs
+    - cronjobs
+  fieldPaths:
+  - resources:
+    - jobs
+    path: "$.spec.template.spec.volumes[*].ephemeral.volumeClaimTemplate.metadata.annotations['volume.beta.kubernetes.io/storage-class']"
+    defaulting: None
+    message: >-
+      Kubernetes takes the StorageClass of a volume claim template from the
+      volume.beta.kubernetes.io/storage-class annotation before spec.storageClassName: name a StorageClass
+      that is available to the project in the annotation, or remove the annotation and set
+      spec.storageClassName.
+  - resources:
+    - cronjobs
+    path: "$.spec.jobTemplate.spec.template.spec.volumes[*].ephemeral.volumeClaimTemplate.metadata.annotations['volume.beta.kubernetes.io/storage-class']"
+    defaulting: None
+    message: >-
+      Kubernetes takes the StorageClass of a volume claim template from the
+      volume.beta.kubernetes.io/storage-class annotation before spec.storageClassName: name a StorageClass
+      that is available to the project in the annotation, or remove the annotation and set
+      spec.storageClassName.
+{{- end }}

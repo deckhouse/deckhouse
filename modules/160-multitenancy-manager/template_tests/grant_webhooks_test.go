@@ -19,6 +19,7 @@ package template_tests
 import (
 	"fmt"
 
+	"github.com/google/cel-go/cel"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -49,6 +50,41 @@ func grantWebhookJSON(name, path, rules string) string {
   "timeoutSeconds": 10,
   "rules": %s
 }`, name, path, rules)
+}
+
+// volumeClaimTemplatesCondition is the match condition that skips the objects without volume claim
+// templates of the resources only the volume claim template references name.
+const volumeClaimTemplatesCondition = "skip-objects-without-volume-claim-templates"
+
+// matchesObject evaluates a rendered match condition the way the API server does for a request on the
+// resource; an evaluation error fails the test, because under failurePolicy: Fail the API server would
+// refuse the request.
+func matchesObject(expression, group, resource string, object map[string]interface{}) bool {
+	env, err := cel.NewEnv(cel.Variable("object", cel.DynType), cel.Variable("request", cel.DynType))
+	Expect(err).ShouldNot(HaveOccurred())
+	ast, issues := env.Compile(expression)
+	Expect(issues.Err()).ShouldNot(HaveOccurred(), "expression should compile: %s", expression)
+	program, err := env.Program(ast)
+	Expect(err).ShouldNot(HaveOccurred())
+	out, _, err := program.Eval(map[string]interface{}{
+		"object":  object,
+		"request": map[string]interface{}{"resource": map[string]interface{}{"group": group, "version": "v1", "resource": resource}},
+	})
+	Expect(err).ShouldNot(HaveOccurred(), "expression should evaluate for %s/%s: %s", group, resource, expression)
+	return out.Value() == true
+}
+
+func withVolumes(volumes ...interface{}) map[string]interface{} {
+	return map[string]interface{}{"containers": []interface{}{map[string]interface{}{"name": "c"}}, "volumes": volumes}
+}
+
+var (
+	emptyDirVolume  = map[string]interface{}{"name": "scratch", "emptyDir": map[string]interface{}{}}
+	ephemeralVolume = map[string]interface{}{"name": "data", "ephemeral": map[string]interface{}{"volumeClaimTemplate": map[string]interface{}{"spec": map[string]interface{}{}}}}
+)
+
+func inPodTemplate(pod map[string]interface{}) map[string]interface{} {
+	return map[string]interface{}{"spec": map[string]interface{}{"template": map[string]interface{}{"spec": pod}}}
 }
 
 var _ = Describe("Module :: multitenancy-manager :: helm template :: grant webhooks ::", func() {
@@ -113,6 +149,69 @@ var _ = Describe("Module :: multitenancy-manager :: helm template :: grant webho
 					Equal("state=ready,kind=Deployment,name=multitenancy-manager,namespace=d8-multitenancy-manager"), wh.name)
 				Expect(obj.Field(`metadata.annotations.werf\.io/deploy-dependency-service`).String()).To(
 					Equal("state=present,kind=Service,name=multitenancy-manager,namespace=d8-multitenancy-manager"), wh.name)
+			}
+		})
+	})
+
+	Context("with resources only the volume claim template references name", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("multitenancyManager.internal.grantWebhookRules", `[
+  {"apiGroup": "", "resource": "persistentvolumeclaims"},
+  {"apiGroup": "", "resource": "pods", "volumeClaimTemplatesOnly": true},
+  {"apiGroup": "apps", "resource": "deployments", "volumeClaimTemplatesOnly": true},
+  {"apiGroup": "apps", "resource": "statefulsets", "volumeClaimTemplatesOnly": true},
+  {"apiGroup": "batch", "resource": "cronjobs", "volumeClaimTemplatesOnly": true}
+]`)
+			f.HelmRender()
+		})
+
+		condition := func(kind, name string) string {
+			conditions := f.KubernetesGlobalResource(kind, name).Field("webhooks.0.matchConditions").Array()
+			Expect(conditions).To(HaveLen(7), name)
+			Expect(conditions[6].Get("name").String()).To(Equal(volumeClaimTemplatesCondition), name)
+			return conditions[6].Get("expression").String()
+		}
+
+		It("still intercepts every resource and adds the condition to both webhooks", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			for _, wh := range []struct{ kind, name string }{
+				{kind: "MutatingWebhookConfiguration", name: defaultingName},
+				{kind: "ValidatingWebhookConfiguration", name: validatorName},
+			} {
+				Expect(f.KubernetesGlobalResource(wh.kind, wh.name).Field("webhooks.0.rules.#.resources.0").String()).To(
+					MatchJSON(`["persistentvolumeclaims", "pods", "deployments", "statefulsets", "cronjobs"]`), wh.name)
+				Expect(condition(wh.kind, wh.name)).To(Equal(condition("MutatingWebhookConfiguration", defaultingName)), wh.name)
+			}
+		})
+
+		It("sends an object of such a resource only when it has a volume claim template", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			expression := condition("ValidatingWebhookConfiguration", validatorName)
+			cases := []struct {
+				title, group, resource string
+				object                 map[string]interface{}
+				matches                bool
+			}{
+				{"a pod without volumes", "", "pods", map[string]interface{}{"spec": map[string]interface{}{"containers": []interface{}{}}}, false},
+				{"a pod with an emptyDir", "", "pods", map[string]interface{}{"spec": withVolumes(emptyDirVolume)}, false},
+				{"a pod with an ephemeral volume", "", "pods", map[string]interface{}{"spec": withVolumes(emptyDirVolume, ephemeralVolume)}, true},
+				{"a Deployment without volumes", "apps", "deployments", inPodTemplate(map[string]interface{}{"containers": []interface{}{}}), false},
+				{"a Deployment with an emptyDir", "apps", "deployments", inPodTemplate(withVolumes(emptyDirVolume)), false},
+				{"a Deployment with an ephemeral volume", "apps", "deployments", inPodTemplate(withVolumes(ephemeralVolume)), true},
+				{"a StatefulSet without volume claim templates", "apps", "statefulsets", inPodTemplate(withVolumes(emptyDirVolume)), false},
+				{"a StatefulSet with a volume claim template", "apps", "statefulsets", func() map[string]interface{} {
+					sts := inPodTemplate(withVolumes(emptyDirVolume))
+					sts["spec"].(map[string]interface{})["volumeClaimTemplates"] = []interface{}{map[string]interface{}{"metadata": map[string]interface{}{"name": "data"}}}
+					return sts
+				}(), true},
+				{"a StatefulSet with an ephemeral volume", "apps", "statefulsets", inPodTemplate(withVolumes(ephemeralVolume)), true},
+				{"a CronJob without volumes", "batch", "cronjobs", map[string]interface{}{"spec": map[string]interface{}{"jobTemplate": inPodTemplate(map[string]interface{}{"containers": []interface{}{}})}}, false},
+				{"a CronJob with an ephemeral volume", "batch", "cronjobs", map[string]interface{}{"spec": map[string]interface{}{"jobTemplate": inPodTemplate(withVolumes(ephemeralVolume))}}, true},
+				{"a PersistentVolumeClaim", "", "persistentvolumeclaims", map[string]interface{}{"spec": map[string]interface{}{}}, true},
+				{"a Job, which the condition does not list", "batch", "jobs", inPodTemplate(map[string]interface{}{"containers": []interface{}{}}), true},
+			}
+			for _, c := range cases {
+				Expect(matchesObject(expression, c.group, c.resource, c.object)).To(Equal(c.matches), c.title)
 			}
 		})
 	})

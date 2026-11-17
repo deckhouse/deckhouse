@@ -63,4 +63,10 @@ properties:
               type: string
             resource:
               type: string
+            volumeClaimTemplatesOnly:
+              type: boolean
+              description: |
+                Whether only the references for volume claim templates of the storageclasses definition
+                name the resource, so the webhooks skip its objects without volume claim templates and
+                ephemeral volumes.
 

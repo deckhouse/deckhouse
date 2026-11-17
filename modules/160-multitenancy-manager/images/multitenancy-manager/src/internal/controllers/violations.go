@@ -135,6 +135,7 @@ func scanViolations(
 	// resolve.IsConfigurationError): the catalog reconciler logs them, and the scan goes on with the
 	// other definitions so the metric of the namespace does not freeze because of one of them.
 	unresolvable := map[string]struct{}{}
+	listed := map[schema.GroupVersionResource][]unstructured.Unstructured{}
 	var out []violation
 refs:
 	for i := range refList.Items {
@@ -163,12 +164,17 @@ refs:
 				// The CRD behind the rule is not installed: nothing to scan, like the hook.
 				continue
 			}
-			list := &unstructured.UnstructuredList{}
-			list.SetGroupVersionKind(schema.GroupVersionKind{Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind + "List"})
-			if err := usage.List(ctx, list, client.InNamespace(namespace)); err != nil {
-				return nil, fmt.Errorf("list %s in %s: %w", gvr.Resource, namespace, err)
+			items, ok := listed[gvr]
+			if !ok {
+				list := &unstructured.UnstructuredList{}
+				list.SetGroupVersionKind(schema.GroupVersionKind{Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind + "List"})
+				if err := usage.List(ctx, list, client.InNamespace(namespace)); err != nil {
+					return nil, fmt.Errorf("list %s in %s: %w", gvr.Resource, namespace, err)
+				}
+				items = list.Items
+				listed[gvr] = items
 			}
-			if len(list.Items) == 0 {
+			if len(items) == 0 {
 				continue
 			}
 
@@ -189,11 +195,11 @@ refs:
 			if gvr.Group != "" {
 				resource = gvr.Resource + "." + gvr.Group
 			}
-			for j := range list.Items {
-				if ownedByCovered(mapper, &list.Items[j], coveredByDef[def.Name]) {
+			for j := range items {
+				if ownedByCovered(mapper, &items[j], coveredByDef[def.Name]) {
 					continue
 				}
-				obj := list.Items[j].Object
+				obj := items[j].Object
 				idx, err := engine.ApplicableFieldPathIndex(factory, ref.Spec.FieldPaths, gvr.Group, gvr.Version, gvr.Resource, obj)
 				if err != nil || idx < 0 {
 					continue
@@ -208,7 +214,7 @@ refs:
 						continue
 					}
 					for _, grant := range grantNames {
-						out = append(out, violation{grant: grant, resource: resource, object: list.Items[j].GetName(), field: fp.Path})
+						out = append(out, violation{grant: grant, resource: resource, object: items[j].GetName(), field: fp.Path})
 					}
 					break
 				}

@@ -103,6 +103,20 @@ type FieldPath struct {
 	// +kubebuilder:validation:MaxLength=256
 	Path string `json:"path"`
 
+	// MissingPath is the JSONPath to the places of the object where a name is expected but not given,
+	// e.g. the elements of a list of templates that leave the field Path reads unset:
+	// $.spec.volumeClaimTemplates[?!@.spec.storageClassName]. Such a place gets the cluster default of
+	// the GrantableClusterResourceDefinition. With defaultFrom, the default it finds is decided as a name
+	// the object adds: an object in which the path selects anything is denied when that default is not
+	// available to the project, and allowed when there is no default. Without defaultFrom, such an
+	// object is denied in a namespace to which a ClusterResourceGrantPolicy with an entry for the
+	// definition applies. On UPDATE the nodes the old object already had are not counted. It must be a
+	// valid RFC 9535 JSONPath; the GrantableClusterResourceReference validating webhook rejects one that
+	// does not parse.
+	// +optional
+	// +kubebuilder:validation:MaxLength=256
+	MissingPath string `json:"missingPath,omitempty"`
+
 	// Match guards this entry; it applies only when the predicate holds on the object.
 	// +optional
 	Match *MatchPredicate `json:"match,omitempty"`
@@ -116,7 +130,8 @@ type FieldPath struct {
 	// +kubebuilder:default=None
 	Defaulting DefaultingMode `json:"defaulting,omitempty"`
 
-	// Message is appended to the denial of a value at this path that is not available to the project.
+	// Message is appended to the denial of a value at this path that is not available to the project,
+	// and to the denial of an object for the places MissingPath selects.
 	// +optional
 	// +kubebuilder:validation:MaxLength=512
 	Message string `json:"message,omitempty"`

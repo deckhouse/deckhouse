@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: e2e-mtm-sts
+  namespace: e2e-mtm-grant
+spec:
+  serviceName: e2e-mtm-sts
+  selector:
+    matchLabels:
+      app: e2e-mtm-sts
+  template:
+    metadata:
+      labels:
+        app: e2e-mtm-sts
+    spec:
+      containers:
+        - name: main
+          image: registry.k8s.io/pause:3.10
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi

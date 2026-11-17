@@ -1366,6 +1366,10 @@ A PersistentVolumeClaim that restores a volume from a snapshot or clones another
 
 A PersistentVolumeClaim with the `volume.beta.kubernetes.io/storage-class` annotation is checked by the class in the annotation, not by `spec.storageClassName`: Kubernetes takes the class from the annotation first. If that class is not available to the project, the PersistentVolumeClaim is rejected and the class is not replaced with the project default; name a StorageClass that is available to the project in the annotation, or remove the annotation and set `spec.storageClassName`.
 
+A PersistentVolumeClaim created from a template is checked in the template: kube-controller-manager creates such claims on behalf of a system account whose requests are not checked. So the StorageClass is checked in the volume claim templates of StatefulSets (`spec.volumeClaimTemplates`) and in the ephemeral volumes (`ephemeral.volumeClaimTemplate`) of pods, Deployments, ReplicaSets, DaemonSets, StatefulSets, Jobs, CronJobs and ReplicationControllers. The grant webhooks receive every object of these kinds in a project namespace for the PriorityClass and RuntimeClass checks, so while multitenancy-manager does not answer, creating or changing such an object fails whether or not it has such a template.
+
+Like Kubernetes, the check takes the class from the `volume.beta.kubernetes.io/storage-class` annotation of a template if it is set, and from `spec.storageClassName` otherwise. A class in a template is not replaced with the project default: a StorageClass that is not available to the project is rejected. The volume of a template without a StorageClass gets the default StorageClass of the cluster, not the project default, so such a template is rejected if the default StorageClass of the cluster is not available to the project, and the rejection names that class. If the cluster has no default StorageClass, such a template is admitted, and its claim gets the default StorageClass once the cluster has one, without a check. An empty value (`storageClassName: ""`) binds a pre-provisioned PersistentVolume and is allowed. Objects that already had such templates can still be updated while the templates do not change.
+
 To check which StorageClasses are available to the project, run the following command:
 
 ```shell
@@ -1373,7 +1377,7 @@ d8 k get available storageclasses -n <PROJECT_NAME> -o yaml
 ```
 
 {% alert level="info" %}
-While the [`storage-foundation`](/modules/storage-foundation/) module of version 1.0.3 or later is enabled, the `storageclasses` definition and the `storageclasses-pvc` GrantableClusterResourceReference are registered by that module and can differ from the ones described here, see the documentation of that module.
+While the [`storage-foundation`](/modules/storage-foundation/) module of version 1.0.3 or later is enabled, the `storageclasses` definition and its GrantableClusterResourceReference objects are registered by that module and can differ from the ones described here, see the documentation of that module.
 {% endalert %}
 
 #### Restricting ClusterIssuer for a project
@@ -1794,6 +1798,10 @@ spec:
 For each object, the most specific of the matching `fieldPaths` items is used: an item limited by `resources` takes precedence over items limited only by `apiGroups` or `apiVersions` and over an item without limits, which applies to all other resources from `rule`. `*` in `resources` does not limit the item: it has the same effect as omitting the parameter.
 
 An item whose [`match` condition](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-match) does not hold for the object is skipped, and of equally limited items, an item with `match` takes precedence over an item without it. So several items with the same `path` can handle different objects of one resource, each with its own default assignment mode: the `storageclasses-pvc` reference checks the StorageClass of a PersistentVolumeClaim whose `spec.dataSource` or `spec.dataSourceRef` is a VolumeSnapshot or a PersistentVolumeClaim or that has the `volume.beta.kubernetes.io/storage-class` annotation in the `None` mode and of any other PersistentVolumeClaim in the `Coerce` mode. The text of the [`message` parameter](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-message) is appended to the rejection of an object for that item.
+
+If the reference is stored in the elements of a list of templates, an element can leave the field out, for example a volume claim template of a StatefulSet without `storageClassName`. Such an element gets the cluster-wide default, for example the default StorageClass of the cluster, which `path` does not see. To check it, set the [`missingPath`](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-missingpath) parameter of the item to a JSONPath that selects the elements without the reference, for example `$.spec.volumeClaimTemplates[?!@.spec.storageClassName]`.
+
+If the GrantableClusterResourceDefinition has [`defaultFrom`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultfrom), an object in which `missingPath` selects anything is rejected only if the cluster-wide default that `defaultFrom` finds is not available to the project, and is admitted if there is no such default. Without `defaultFrom`, such an object is rejected in a project to which a ClusterResourceGrantPolicy with an entry for the cluster-wide resource applies, and admitted in other projects. Default assignment cannot fill in an element of a list, so use `missingPath` with `defaulting: None`.
 
 For descriptions of GrantableClusterResourceReference parameters, default assignment modes, `match` conditions, and configuration for resources with multiple API versions, refer to the [resource description](cr.html#grantableclusterresourcereference).
 

@@ -1374,6 +1374,10 @@ PersistentVolumeClaim, который восстанавливает том из
 
 PersistentVolumeClaim с аннотацией `volume.beta.kubernetes.io/storage-class` проверяется по классу из аннотации, а не по `spec.storageClassName`: Kubernetes берёт класс из аннотации в первую очередь. Если этот класс проекту недоступен, PersistentVolumeClaim отклоняется, а класс не заменяется значением по умолчанию для проекта; укажите в аннотации StorageClass, доступный проекту, или уберите аннотацию и задайте `spec.storageClassName`.
 
+PersistentVolumeClaim, который создаётся из шаблона, проверяется в шаблоне: такие PersistentVolumeClaim создаёт kube-controller-manager от имени системной учётной записи, запросы которой не проверяются. Поэтому StorageClass проверяется в шаблонах томов StatefulSet (`spec.volumeClaimTemplates`) и в эфемерных томах (`ephemeral.volumeClaimTemplate`) подов, Deployment, ReplicaSet, DaemonSet, StatefulSet, Job, CronJob и ReplicationController. Вебхуки грантов получают все объекты этих видов в неймспейсе проекта для проверок PriorityClass и RuntimeClass, поэтому, пока multitenancy-manager не отвечает, создать или изменить такой объект нельзя независимо от того, есть ли в нём такой шаблон.
+
+Как и Kubernetes, проверка берёт класс из аннотации `volume.beta.kubernetes.io/storage-class` шаблона, если она задана, иначе — из `spec.storageClassName`. Класс в шаблоне не заменяется значением по умолчанию для проекта: StorageClass, недоступный проекту, отклоняется. Том шаблона без StorageClass получает StorageClass по умолчанию в кластере, а не значение по умолчанию для проекта, поэтому такой шаблон отклоняется, если StorageClass по умолчанию в кластере недоступен проекту, и в отказе этот класс назван. Если StorageClass по умолчанию в кластере нет, такой шаблон допускается, а его PersistentVolumeClaim получит StorageClass по умолчанию без проверки, когда он появится в кластере. Пустое значение (`storageClassName: ""`) привязывает заранее созданный PersistentVolume и допускается. Объекты, в которых такие шаблоны уже были, можно обновлять, пока шаблоны не меняются.
+
 Чтобы проверить, какие StorageClass доступны проекту, выполните следующую команду:
 
 ```shell
@@ -1381,7 +1385,7 @@ d8 k get available storageclasses -n <PROJECT_NAME> -o yaml
 ```
 
 {% alert level="info" %}
-При включённом [модуле `storage-foundation`](/modules/storage-foundation/) версии 1.0.3 или новее определение `storageclasses` и GrantableClusterResourceReference `storageclasses-pvc` регистрирует он, и они могут отличаться от описанных здесь, см. документацию этого модуля.
+При включённом [модуле `storage-foundation`](/modules/storage-foundation/) версии 1.0.3 или новее определение `storageclasses` и его GrantableClusterResourceReference регистрирует он, и они могут отличаться от описанных здесь, см. документацию этого модуля.
 {% endalert %}
 
 #### Ограничение ClusterIssuer для проекта
@@ -1804,6 +1808,10 @@ spec:
 Для каждого объекта используется самый специфичный из подходящих элементов `fieldPaths`: элемент, ограниченный `resources`, приоритетнее элементов, ограниченных только `apiGroups` или `apiVersions`, и элемента без ограничений, который применяется ко всем остальным ресурсам из `rule`. `*` в `resources` не ограничивает элемент: это то же самое, что не указывать параметр.
 
 Элемент, [условие `match`](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-match) которого для объекта не выполняется, пропускается, а из одинаково ограниченных элементов элемент с `match` приоритетнее элемента без него. Поэтому несколько элементов с одним `path` могут обрабатывать разные объекты одного ресурса, каждый со своим режимом подстановки: reference `storageclasses-pvc` проверяет StorageClass у PersistentVolumeClaim, у которого `spec.dataSource` или `spec.dataSourceRef` — VolumeSnapshot или PersistentVolumeClaim либо у которого есть аннотация `volume.beta.kubernetes.io/storage-class`, в режиме `None`, а у остальных PersistentVolumeClaim — в режиме `Coerce`. Текст [параметра `message`](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-message) добавляется к отказу в создании объекта для этого элемента.
+
+Если ссылка хранится в элементах списка шаблонов, элемент может не заполнять поле, например шаблон тома StatefulSet без `storageClassName`. Такой элемент получает cluster-wide-ресурс по умолчанию, например StorageClass по умолчанию в кластере, которого `path` не видит. Чтобы проверять такие элементы, задайте в элементе `fieldPaths` параметр [`missingPath`](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-missingpath) — JSONPath, который выбирает элементы без ссылки, например `$.spec.volumeClaimTemplates[?!@.spec.storageClassName]`.
+
+Если в GrantableClusterResourceDefinition задан [`defaultFrom`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultfrom), объект, в котором `missingPath` что-либо выбирает, отклоняется, только если ресурс по умолчанию, который находит `defaultFrom`, недоступен проекту, а если такого ресурса нет, допускается. Без `defaultFrom` такой объект отклоняется в проекте, к которому применяется ClusterResourceGrantPolicy с записью для этого cluster-wide-ресурса, и допускается в остальных проектах. Подстановка значения по умолчанию не может заполнить элемент списка, поэтому используйте `missingPath` с `defaulting: None`.
 
 Описание параметров GrantableClusterResourceReference, режимов подстановки значений по умолчанию, условий `match` и настройки ресурсов с несколькими API-версиями приведено [в описании ресурса](cr.html#grantableclusterresourcereference).
 

@@ -396,3 +396,51 @@ func TestDefaultingActive(t *testing.T) {
 		}
 	}
 }
+
+func TestAddedMissing(t *testing.T) {
+	const path = "$.spec.volumeClaimTemplates[?!@.spec.storageClassName]"
+	sts := func(templates ...map[string]any) map[string]any {
+		list := make([]any, 0, len(templates))
+		for _, tpl := range templates {
+			list = append(list, tpl)
+		}
+		return map[string]any{"spec": map[string]any{"volumeClaimTemplates": list}}
+	}
+	claim := func(name string, spec map[string]any) map[string]any {
+		return map[string]any{"metadata": map[string]any{"name": name}, "spec": spec}
+	}
+	data, cache := claim("data", map[string]any{}), claim("cache", map[string]any{})
+	named := claim("named", map[string]any{"storageClassName": "local"})
+	static := claim("static", map[string]any{"storageClassName": ""})
+
+	cases := []struct {
+		name     string
+		obj, old map[string]any
+		want     int
+	}{
+		{"create: every element without the field counts", sts(data, named, cache), nil, 2},
+		{"create: an empty value is a value", sts(static, named), nil, 0},
+		{"create: no list", map[string]any{"spec": map[string]any{}}, nil, 0},
+		{"update: an unchanged element is not new", sts(data, named), sts(data, named), 0},
+		{"update: an element that moved is not new", sts(named, data), sts(data, named), 0},
+		{"update: an added element is new", sts(data, cache), sts(data), 1},
+		{"update: a changed element is new", sts(claim("data", map[string]any{"resources": "2Gi"})), sts(data), 1},
+		{"update: one old element stands for one new element", sts(data, data), sts(data), 1},
+		{"update: an element that got a class is gone", sts(named), sts(data), 0},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got, err := AddedMissing(factory(), c.obj, c.old, path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != c.want {
+				t.Fatalf("AddedMissing = %d, want %d", got, c.want)
+			}
+		})
+	}
+
+	if _, err := AddedMissing(factory(), sts(data), nil, "$.spec.foo-bar"); err == nil {
+		t.Fatal("a path that does not parse must return an error")
+	}
+}

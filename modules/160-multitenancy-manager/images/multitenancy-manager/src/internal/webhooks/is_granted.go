@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
 
 	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -167,14 +168,15 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 		}
 	}
 
-	// The values each reference adds are collected first; the namespace, its project and the grants are
-	// read only when some reference adds a value, so a request that references nothing new (the field
-	// is empty, or an UPDATE keeps the old values) costs no read of the API server or the cache beyond
-	// the references.
+	// The values each reference adds, and the places its missingPath newly selects, are collected
+	// first; the namespace, its project and the grants are read only when some reference adds either,
+	// so a request that references nothing new (the field is empty, or an UPDATE keeps the old values)
+	// costs no read of the API server or the cache beyond the references.
 	type check struct {
-		mr    resolve.MatchedReference
-		fp    v1alpha1.FieldPath
-		added []string
+		mr      resolve.MatchedReference
+		fp      v1alpha1.FieldPath
+		added   []string
+		missing int
 	}
 	var checks []check
 	for _, mr := range sel {
@@ -203,13 +205,20 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 				"reference", mr.Reference.Name, "fieldPathIndex", idx, "path", fp.Path)
 			continue
 		}
-		if len(names) == 0 {
-			continue
+
+		// A missingPath that cannot be evaluated skips that check only, by the same rule as the path.
+		missing := 0
+		if fp.MissingPath != "" {
+			if missing, err = engine.AddedMissing(v.factory, obj, oldObj, fp.MissingPath); err != nil {
+				log.Error(err, "skipping missingPath: it cannot be evaluated",
+					"reference", mr.Reference.Name, "fieldPathIndex", idx, "missingPath", fp.MissingPath)
+				missing = 0
+			}
 		}
 
 		// Grandfather values already present in the old object on UPDATE.
 		old := map[string]struct{}{}
-		if oldObj != nil {
+		if oldObj != nil && len(names) > 0 {
 			if oldVals, err := engine.StringValuesAt(v.factory, oldObj, fp.Path); err == nil {
 				for _, n := range oldVals {
 					old[n] = struct{}{}
@@ -224,10 +233,10 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 				added = append(added, name)
 			}
 		}
-		if len(added) == 0 {
+		if len(added) == 0 && missing == 0 {
 			continue
 		}
-		checks = append(checks, check{mr: mr, fp: fp, added: added})
+		checks = append(checks, check{mr: mr, fp: fp, added: added, missing: missing})
 	}
 	if len(checks) == 0 {
 		return allowedResponse(req.UID), nil
@@ -259,7 +268,43 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 		if _, skip := unresolvable[def.Name]; skip {
 			continue
 		}
-		resolved, err := resolve.DecideNames(ctx, v.cl, v.mapper, def, resolve.EntriesFor(grants, def.Name), added)
+		entries := resolve.EntriesFor(grants, def.Name)
+		var clusterDefault string
+		if c.missing > 0 {
+			if def.IsValueBacked() || len(resolve.DefaultFromKeys(def.Spec.DefaultFrom)) == 0 {
+				if len(entries) > 0 {
+					msg := fmt.Sprintf(
+						"[multitenancy] %s %q leaves the %s unset where one is expected, but a ClusterResourceGrantPolicy "+
+							"configures %s for project %q: name one that is available to the project.",
+						req.Kind.Kind, req.Name, grantedNoun(def), def.Name, project)
+					if c.fp.Message != "" {
+						msg += " " + c.fp.Message
+					}
+					log.Info("denied: name missing", "reference", mr.Reference.Name, "places", c.missing)
+					return deniedResponse(req.UID, msg), nil
+				}
+			} else {
+				found, err := resolve.FindClusterDefault(ctx, v.cl, v.mapper, def)
+				if resolve.IsConfigurationError(err) {
+					log.Error(err, "skipping reference: definition cannot be resolved",
+						"definition", def.Name, "reference", mr.Reference.Name)
+					unresolvable[def.Name] = struct{}{}
+					continue
+				}
+				if err != nil {
+					return nil, fmt.Errorf("find the cluster default of %s: %w", def.Name, err)
+				}
+				clusterDefault = found.Name
+			}
+		}
+		names := added
+		if clusterDefault != "" {
+			names = append(slices.Clone(added), clusterDefault)
+		}
+		if len(names) == 0 {
+			continue
+		}
+		resolved, err := resolve.DecideNames(ctx, v.cl, v.mapper, def, entries, names)
 		if resolve.IsConfigurationError(err) {
 			// A definition that cannot be resolved for a configuration reason (a namespaced
 			// grantedResource, or a kind the apiserver does not serve) makes its references inert,
@@ -290,7 +335,29 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 				return deniedResponse(req.UID, msg), nil
 			}
 		}
+		if clusterDefault != "" && !resolved.Decide(clusterDefault) {
+			noun := grantedNoun(def)
+			msg := fmt.Sprintf(
+				"[multitenancy] %s %q leaves the %s unset where one is expected, so it gets the cluster default %s %q, "+
+					"which is not available to project %q: name a %s that is available to the project.",
+				req.Kind.Kind, req.Name, noun, noun, clusterDefault, project, noun)
+			if c.fp.Message != "" {
+				msg += " " + c.fp.Message
+			}
+			log.Info("denied: the cluster default is not available", "reference", mr.Reference.Name,
+				"places", c.missing, "value", clusterDefault)
+			return deniedResponse(req.UID, msg), nil
+		}
 	}
 
 	return allowedResponse(req.UID), nil
+}
+
+// grantedNoun names what a definition grants in a denial: the kind of an object-backed definition,
+// the definition's name for a value-backed one.
+func grantedNoun(def *v1alpha1.GrantableClusterResourceDefinition) string {
+	if def.IsValueBacked() {
+		return def.Name
+	}
+	return def.Spec.GrantedResource.Kind
 }

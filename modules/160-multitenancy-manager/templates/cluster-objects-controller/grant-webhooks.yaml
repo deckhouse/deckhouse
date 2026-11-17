@@ -32,8 +32,23 @@
   usernames, no system:masters). In-cluster, matchConditions already skip system:masters before any
   handler runs.
 */ -}}
+{{- define "multitenancy_manager_grant_webhook_volume_claim_templates" -}}
+has(object.spec) && (
+{{- "" }}has(object.spec.volumeClaimTemplates) ||
+{{- " " }}has(object.spec.volumes) && object.spec.volumes.exists(v, has(v.ephemeral)) ||
+{{- " " }}has(object.spec.template) && has(object.spec.template.spec) && has(object.spec.template.spec.volumes) && object.spec.template.spec.volumes.exists(v, has(v.ephemeral)) ||
+{{- " " }}has(object.spec.jobTemplate) && has(object.spec.jobTemplate.spec) && has(object.spec.jobTemplate.spec.template) && has(object.spec.jobTemplate.spec.template.spec) && has(object.spec.jobTemplate.spec.template.spec.volumes) && object.spec.jobTemplate.spec.template.spec.volumes.exists(v, has(v.ephemeral))
+{{- "" }})
+{{- end }}
+
 {{- define "multitenancy_manager_grant_webhook" }}
 {{- $internal := .context.Values.multitenancyManager.internal -}}
+{{- $templatesOnly := list -}}
+{{- range $internal.grantWebhookRules -}}
+  {{- if .volumeClaimTemplatesOnly -}}
+    {{- $templatesOnly = append $templatesOnly (printf "%s/%s" .apiGroup .resource) -}}
+  {{- end -}}
+{{- end -}}
 clientConfig:
   caBundle: {{ $internal.admissionWebhookCert.ca | b64enc }}
   service:
@@ -59,6 +74,10 @@ matchConditions:
     expression: '!request.userInfo.groups.exists(g, g == "system:serviceaccounts:d8-system" || g == "system:serviceaccounts:kube-system" || g == "system:serviceaccounts:d8-user-authz")'
   - name: exclude-cluster-admins-and-nodes
     expression: '!request.userInfo.groups.exists(g, g == "system:masters" || g == "system:nodes")'
+  {{- with $templatesOnly }}
+  - name: skip-objects-without-volume-claim-templates
+    expression: {{ printf "!(request.resource.group + \"/\" + request.resource.resource in %s) || %s" (toJson .) (include "multitenancy_manager_grant_webhook_volume_claim_templates" $) | toJson }}
+  {{- end }}
 sideEffects: None
 admissionReviewVersions: ["v1"]
 failurePolicy: Fail

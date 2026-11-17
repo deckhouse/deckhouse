@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: e2e-mtm-deploy
+  namespace: e2e-mtm-grant
+spec:
+  selector:
+    matchLabels:
+      app: e2e-mtm-deploy
+  template:
+    metadata:
+      labels:
+        app: e2e-mtm-deploy
+    spec:
+      containers:
+        - name: main
+          image: registry.k8s.io/pause:3.10
+          volumeMounts:
+            - name: scratch
+              mountPath: /scratch
+      volumes:
+        - name: scratch
+          ephemeral:
+            volumeClaimTemplate:
+              spec:
+                accessModes: ["ReadWriteOnce"]
+                resources:
+                  requests:
+                    storage: 1Gi

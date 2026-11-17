@@ -201,7 +201,7 @@ Deckhouse Platform регистрирует следующие cluster-wide-ре
 
 | Имя определения | Cluster-wide-ресурс | Где используется | Режим подстановки значения по умолчанию |
 | --- | --- | --- | --- |
-| `storageclasses` | StorageClass (storage.k8s.io) | PersistentVolumeClaim `.spec.storageClassName` и аннотация `volume.beta.kubernetes.io/storage-class` | `Coerce` для PersistentVolumeClaim в общем случае. `None` для PersistentVolumeClaim с `.spec.dataSource` или `.spec.dataSourceRef` вида VolumeSnapshot или PersistentVolumeClaim и для PersistentVolumeClaim с beta-аннотацией |
+| `storageclasses` | StorageClass (storage.k8s.io) | PersistentVolumeClaim `.spec.storageClassName` и аннотация `volume.beta.kubernetes.io/storage-class`. Шаблоны PersistentVolumeClaim в StatefulSet и эфемерных томах подов и контроллеров рабочих нагрузок | `Coerce` для PersistentVolumeClaim в общем случае. `None` для PersistentVolumeClaim с `.spec.dataSource` или `.spec.dataSourceRef` вида VolumeSnapshot или PersistentVolumeClaim, для PersistentVolumeClaim с beta-аннотацией и для шаблонов |
 | `loadbalancerclasses` | Значение `loadbalancerclass` | Service `.spec.loadBalancerClass` (для сервисов типа `LoadBalancer`) | `FillEmpty` |
 | `clusterissuers` | ClusterIssuer (cert-manager.io) | Certificate `.spec.issuerRef.name`; Ingress: аннотация `cert-manager.io/cluster-issuer` | `FillEmpty` или `None` |
 | `clusterroles` | ClusterRole (rbac.authorization.k8s.io) | RoleBinding `.roleRef.name` | `None` |
@@ -251,7 +251,7 @@ spec:
 
 Определение `clusterissuers` поставляется [модулем `cert-manager`](/modules/cert-manager/), поэтому оно регистрируется только при включённом модуле `cert-manager`.
 
-Определение `storageclasses` и GrantableClusterResourceReference `storageclasses-pvc` регистрирует этот модуль, если не включён [модуль `storage-foundation`](/modules/storage-foundation/) версии 1.0.3 или новее. Если такая версия `storage-foundation` включена, их регистрирует он под теми же именами и может расширять. При включении, выключении и обновлении `storage-foundation` до такой версии объекты переходят от одного модуля к другому, поэтому ClusterResourceGrantPolicy продолжают ограничивать StorageClass.
+Определение `storageclasses` и его GrantableClusterResourceReference (`storageclasses-pvc` и reference для шаблонов) регистрирует этот модуль, если не включён [модуль `storage-foundation`](/modules/storage-foundation/) версии 1.0.3 или новее. Если такая версия `storage-foundation` включена, их регистрирует он под теми же именами и может расширять. При включении, выключении и обновлении `storage-foundation` до такой версии объекты переходят от одного модуля к другому, поэтому ClusterResourceGrantPolicy продолжают ограничивать StorageClass.
 
 Регистрация `runtimeclasses` проверяет шаблоны подов в контроллерах нагрузки, потому что создаваемые ими поды записывают контроллеры Kubernetes, на которые проверка не распространяется. Значение по умолчанию для RuntimeClass не подставляется: в Kubernetes нет RuntimeClass по умолчанию, а подстановка изменила бы, на каких узлах запускаются поды и какую часть квоты они занимают. Deckhouse Platform не создаёт собственные ресурсы RuntimeClass, поэтому ни один класс не исключается из проверки. Классы, созданные администратором или поставляемые внешними модулями (например, модулем `gpu`), доступны всем проектам, пока их не ограничит политика ClusterResourceGrantPolicy. Запрос без `runtimeClassName` или с неизменённым значением проверяется без обращений к API-серверу.
 

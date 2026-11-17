@@ -32,8 +32,30 @@ const grantWebhookRulesValuesPath = "multitenancyManager.internal.grantWebhookRu
 // templates/cluster-objects-controller/grant-webhooks.yaml turns each into a CREATE/UPDATE rule
 // on every version of the namespaced resource.
 type grantWebhookRule struct {
-	APIGroup string `json:"apiGroup"`
-	Resource string `json:"resource"`
+	APIGroup                 string `json:"apiGroup"`
+	Resource                 string `json:"resource"`
+	VolumeClaimTemplatesOnly bool   `json:"volumeClaimTemplatesOnly,omitempty"`
+}
+
+type grantWebhookResource struct {
+	group    string
+	resource string
+}
+
+var volumeClaimTemplateReferences = map[string]struct{}{
+	"storageclasses-statefulset-claims":            {},
+	"storageclasses-statefulset-claims-annotation": {},
+	"storageclasses-pod-ephemeral":                 {},
+	"storageclasses-pod-ephemeral-annotation":      {},
+	"storageclasses-apps-ephemeral":                {},
+	"storageclasses-apps-ephemeral-annotation":     {},
+	"storageclasses-batch-ephemeral":               {},
+	"storageclasses-batch-ephemeral-annotation":    {},
+}
+
+func isVolumeClaimTemplateReference(ref *unstructured.Unstructured, definition string) bool {
+	_, ok := volumeClaimTemplateReferences[ref.GetName()]
+	return ok && definition == "storageclasses"
 }
 
 // The rules are values, not objects: Helm renders both webhook configurations, so they are part
@@ -91,8 +113,7 @@ func grantableWebhookRules(input *go_hook.HookInput) []grantWebhookRule {
 		enforcement[def.GetName()] = e
 	}
 
-	rules := make([]grantWebhookRule, 0)
-	seen := make(map[grantWebhookRule]struct{})
+	templatesOnly := make(map[grantWebhookResource]bool)
 
 	for _, snap := range input.Snapshots.Get("references") {
 		ref := &unstructured.Unstructured{}
@@ -117,16 +138,17 @@ func grantableWebhookRules(input *go_hook.HookInput) []grantWebhookRule {
 				continue
 			}
 			for _, res := range toStringSlice(rule["resources"]) {
-				r := grantWebhookRule{APIGroup: g, Resource: res}
-				if _, dup := seen[r]; dup {
-					continue
-				}
-				seen[r] = struct{}{}
-				rules = append(rules, r)
+				key := grantWebhookResource{group: g, resource: res}
+				only, seen := templatesOnly[key]
+				templatesOnly[key] = (!seen || only) && isVolumeClaimTemplateReference(ref, defName)
 			}
 		}
 	}
 
+	rules := make([]grantWebhookRule, 0, len(templatesOnly))
+	for key, only := range templatesOnly {
+		rules = append(rules, grantWebhookRule{APIGroup: key.group, Resource: key.resource, VolumeClaimTemplatesOnly: only})
+	}
 	slices.SortFunc(rules, func(a, b grantWebhookRule) int {
 		return cmp.Or(cmp.Compare(a.APIGroup, b.APIGroup), cmp.Compare(a.Resource, b.Resource))
 	})

@@ -210,6 +210,193 @@ spec:
 		})
 	})
 
+	const templateReferences = `
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: storageclasses-statefulset-claims
+spec:
+  grantableClusterResourceName: storageclasses
+  rule:
+    apiGroups: ["apps"]
+    apiVersions: ["v1"]
+    resources: ["statefulsets"]
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: storageclasses-pod-ephemeral
+spec:
+  grantableClusterResourceName: storageclasses
+  rule:
+    apiGroups: [""]
+    apiVersions: ["v1"]
+    resources: ["pods", "replicationcontrollers"]
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: storageclasses-apps-ephemeral
+spec:
+  grantableClusterResourceName: storageclasses
+  rule:
+    apiGroups: ["apps"]
+    apiVersions: ["v1"]
+    resources: ["deployments", "statefulsets"]
+`
+
+	Context("references for volume claim templates", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(managedDefinitions + rolebindingReference + templateReferences))
+			f.RunHook()
+		})
+
+		It("marks the resources only they name", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(grantWebhookRulesValuesPath).String()).To(MatchJSON(`[
+				{"apiGroup": "", "resource": "pods", "volumeClaimTemplatesOnly": true},
+				{"apiGroup": "", "resource": "replicationcontrollers", "volumeClaimTemplatesOnly": true},
+				{"apiGroup": "apps", "resource": "deployments", "volumeClaimTemplatesOnly": true},
+				{"apiGroup": "apps", "resource": "statefulsets", "volumeClaimTemplatesOnly": true},
+				{"apiGroup": "rbac.authorization.k8s.io", "resource": "rolebindings"}
+			]`))
+		})
+
+		Context("and another reference names one of the resources", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(managedDefinitions + rolebindingReference + templateReferences + `
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: clusterroles-pods
+spec:
+  grantableClusterResourceName: clusterroles
+  rule:
+    apiGroups: [""]
+    apiVersions: ["v1"]
+    resources: ["pods"]
+`))
+				f.RunHook()
+			})
+
+			It("intercepts every object of that resource", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.ValuesGet(grantWebhookRulesValuesPath).String()).To(MatchJSON(`[
+					{"apiGroup": "", "resource": "pods"},
+					{"apiGroup": "", "resource": "replicationcontrollers", "volumeClaimTemplatesOnly": true},
+					{"apiGroup": "apps", "resource": "deployments", "volumeClaimTemplatesOnly": true},
+					{"apiGroup": "apps", "resource": "statefulsets", "volumeClaimTemplatesOnly": true},
+					{"apiGroup": "rbac.authorization.k8s.io", "resource": "rolebindings"}
+				]`))
+			})
+		})
+
+		const priorityClassReferences = `
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: priorityclasses-pod
+spec:
+  grantableClusterResourceName: priorityclasses
+  rule:
+    apiGroups: [""]
+    apiVersions: ["v1"]
+    resources: ["pods", "replicationcontrollers", "podtemplates"]
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: priorityclasses-apps
+spec:
+  grantableClusterResourceName: priorityclasses
+  rule:
+    apiGroups: ["apps"]
+    apiVersions: ["v1"]
+    resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
+`
+
+		priorityClassDefinition := func(enforcement string) string {
+			return `
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceDefinition
+metadata:
+  name: priorityclasses
+spec:
+  enforcement: ` + enforcement + `
+  defaultAvailability: All
+`
+		}
+
+		Context("and the PriorityClass references name the pods and workloads", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(managedDefinitions + priorityClassDefinition("Managed") + rolebindingReference + templateReferences + priorityClassReferences))
+				f.RunHook()
+			})
+
+			It("intercepts every object of the resources they name", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.ValuesGet(grantWebhookRulesValuesPath).String()).To(MatchJSON(`[
+					{"apiGroup": "", "resource": "pods"},
+					{"apiGroup": "", "resource": "podtemplates"},
+					{"apiGroup": "", "resource": "replicationcontrollers"},
+					{"apiGroup": "apps", "resource": "daemonsets"},
+					{"apiGroup": "apps", "resource": "deployments"},
+					{"apiGroup": "apps", "resource": "replicasets"},
+					{"apiGroup": "apps", "resource": "statefulsets"},
+					{"apiGroup": "rbac.authorization.k8s.io", "resource": "rolebindings"}
+				]`))
+			})
+		})
+
+		Context("and the PriorityClass references point at an External definition", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(managedDefinitions + priorityClassDefinition("External") + rolebindingReference + templateReferences + priorityClassReferences))
+				f.RunHook()
+			})
+
+			It("marks the resources only the volume claim template references name", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.ValuesGet(grantWebhookRulesValuesPath).String()).To(MatchJSON(`[
+					{"apiGroup": "", "resource": "pods", "volumeClaimTemplatesOnly": true},
+					{"apiGroup": "", "resource": "replicationcontrollers", "volumeClaimTemplatesOnly": true},
+					{"apiGroup": "apps", "resource": "deployments", "volumeClaimTemplatesOnly": true},
+					{"apiGroup": "apps", "resource": "statefulsets", "volumeClaimTemplatesOnly": true},
+					{"apiGroup": "rbac.authorization.k8s.io", "resource": "rolebindings"}
+				]`))
+			})
+		})
+	})
+
+	Context("a reference with the name of a volume claim template reference for another definition", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(managedDefinitions + `
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: storageclasses-pod-ephemeral
+spec:
+  grantableClusterResourceName: clusterroles
+  rule:
+    apiGroups: [""]
+    apiVersions: ["v1"]
+    resources: ["pods"]
+`))
+			f.RunHook()
+		})
+
+		It("intercepts every object of its resources", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(grantWebhookRulesValuesPath).String()).To(MatchJSON(`[
+				{"apiGroup": "", "resource": "pods"}
+			]`))
+		})
+	})
+
 	Context("the target definition switches to External", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`

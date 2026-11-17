@@ -8,8 +8,12 @@ spec:
     use: the AvailableClusterResource catalog of the project lists only the granted names with the
     catalog fields, a PersistentVolumeClaim with a class that is not granted is coerced to the
     project default with a warning, a Service with a class that is not granted is refused, and a
-    Service without a class gets the project default. Removing a GrantableClusterResourceDefinition
-    removes its AvailableClusterResource from the project.
+    Service without a class gets the project default. A volume claim template of a StatefulSet and an
+    ephemeral volume of a Deployment are refused with a class that is not granted, admitted with a
+    granted class and with an empty one, and without a class are refused while the cluster default
+    StorageClass is not available to the project and admitted while it is or while the cluster has
+    none. Removing a GrantableClusterResourceDefinition removes its AvailableClusterResource from the
+    project.
   concurrent: false
   catch:
     - description: Show the policy, the catalog and the registrations on failure
@@ -45,6 +49,24 @@ spec:
                 name: storageclasses-pvc
               status:
                 bound: true
+        - description: Assert the module registers StorageClasses in volume claim templates
+          assert:
+            resource:
+              apiVersion: multitenancy.deckhouse.io/v1alpha1
+              kind: GrantableClusterResourceReference
+              metadata:
+                name: storageclasses-statefulset-claims
+              status:
+                bound: true
+        - description: Assert the module registers StorageClasses in ephemeral volumes of workloads
+          assert:
+            resource:
+              apiVersion: multitenancy.deckhouse.io/v1alpha1
+              kind: GrantableClusterResourceReference
+              metadata:
+                name: storageclasses-apps-ephemeral
+              status:
+                bound: true
 
     - name: grant
       description: Create the StorageClasses, the project and the policy that grants one class of each kind
@@ -71,19 +93,21 @@ spec:
           assert:
             timeout: 4m
             file: asserts/catalog.yaml
-        - description: Wait until RBAC lets the project administrator create PVCs and Services, so the results below come from the grant webhooks
+        - description: Wait until RBAC lets the project administrator create PVCs, Services, StatefulSets and Deployments, so the results below come from the grant webhooks
           script:
             timeout: 3m
             content: |
               for attempt in $(seq 1 30); do
                 pvc="$(kubectl auth can-i create persistentvolumeclaims -n e2e-mtm-grant --as e2e-mtm-grant-admin@example.com 2>/dev/null || true)"
                 svc="$(kubectl auth can-i create services -n e2e-mtm-grant --as e2e-mtm-grant-admin@example.com 2>/dev/null || true)"
-                if [ "${pvc}" = "yes" ] && [ "${svc}" = "yes" ]; then
+                sts="$(kubectl auth can-i create statefulsets.apps -n e2e-mtm-grant --as e2e-mtm-grant-admin@example.com 2>/dev/null || true)"
+                deploy="$(kubectl auth can-i create deployments.apps -n e2e-mtm-grant --as e2e-mtm-grant-admin@example.com 2>/dev/null || true)"
+                if [ "${pvc}" = "yes" ] && [ "${svc}" = "yes" ] && [ "${sts}" = "yes" ] && [ "${deploy}" = "yes" ]; then
                   exit 0
                 fi
                 sleep 5
               done
-              echo "the project administrator may not create PVCs (${pvc}) or Services (${svc})"
+              echo "the project administrator may not create PVCs (${pvc}), Services (${svc}), StatefulSets (${sts}) or Deployments (${deploy})"
               exit 1
 
     - name: enforce
@@ -206,6 +230,111 @@ spec:
             check:
               ($error == null): true
               ($stdout): e2e-mtm-lb-allowed
+
+    - name: enforce-templates
+      description: >-
+        The grant webhooks check the class in the volume claim templates that kube-controller-manager
+        turns into PersistentVolumeClaims, and the cluster default StorageClass a template without a
+        class gets
+      try:
+        - description: Assert a StatefulSet with a class that is not granted in a volume claim template is refused
+          script:
+            bindings:
+              - name: expected
+                value: '[multitenancy] StatefulSet "e2e-mtm-sts" references "e2e-mtm-sc-denied" which is not available to project "e2e-mtm-grant".'
+            content: >-
+              kubectl create --dry-run=server -f manifests/statefulset-denied-class.yaml
+              --as e2e-mtm-grant-admin@example.com
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+        - description: Assert a StatefulSet with a granted class in a volume claim template is admitted
+          script:
+            content: >-
+              kubectl create --dry-run=server -f manifests/statefulset-allowed-class.yaml
+              --as e2e-mtm-grant-admin@example.com
+            check:
+              ($error == null): true
+        - description: Assert a StatefulSet with an empty class in a volume claim template is admitted
+          script:
+            content: >-
+              kubectl create --dry-run=server -f manifests/statefulset-empty-class.yaml
+              --as e2e-mtm-grant-admin@example.com
+            check:
+              ($error == null): true
+        - description: Assert a Deployment with a class that is not granted in an ephemeral volume is refused
+          script:
+            bindings:
+              - name: expected
+                value: '[multitenancy] Deployment "e2e-mtm-deploy" references "e2e-mtm-sc-denied" which is not available to project "e2e-mtm-grant".'
+            content: >-
+              kubectl create --dry-run=server -f manifests/deployment-ephemeral-denied-class.yaml
+              --as e2e-mtm-grant-admin@example.com
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+        - description: Assert a Deployment with a granted class in an ephemeral volume is admitted
+          script:
+            content: >-
+              kubectl create --dry-run=server -f manifests/deployment-ephemeral-allowed-class.yaml
+              --as e2e-mtm-grant-admin@example.com
+            check:
+              ($error == null): true
+        - description: >-
+            Assert a StatefulSet and a Deployment without a class in a volume claim template are refused
+            while the cluster default StorageClass is not available to the project, and admitted on a
+            cluster without a default StorageClass
+          script:
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 5m
+            content: |
+              set -euo pipefail
+              cluster_default="$(kubectl get storageclasses -o json | jq -r '[.items[] | select(.metadata.annotations["storageclass.kubernetes.io/is-default-class"] == "true" or .metadata.annotations["storageclass.beta.kubernetes.io/is-default-class"] == "true")] | sort_by(.metadata.creationTimestamp, .metadata.name) | if length == 0 then "" else (map(.metadata.creationTimestamp) | max) as $newest | map(select(.metadata.creationTimestamp == $newest)) | first.metadata.name end')"
+              if [ -z "${cluster_default}" ]; then
+                echo "the cluster has no default StorageClass, so a template without a class keeps no class and is admitted"
+                for manifest in statefulset deployment-ephemeral; do
+                  kubectl create --dry-run=server -f "manifests/${manifest}-no-class.yaml" --as e2e-mtm-grant-admin@example.com
+                done
+                exit 0
+              fi
+              kubectl patch clusterresourcegrantpolicy e2e-mtm-grant --type json \
+                -p '[{"op":"replace","path":"/spec/resources/0/allowed","value":["e2e-mtm-sc-allowed"]}]'
+              for object in statefulset:StatefulSet:e2e-mtm-sts deployment-ephemeral:Deployment:e2e-mtm-deploy; do
+                IFS=: read -r manifest kind name <<<"${object}"
+                bash ../common/scripts/eventually-denied.sh 120 \
+                  "[multitenancy] ${kind} \"${name}\" leaves the StorageClass unset where one is expected, so it gets the cluster default StorageClass \"${cluster_default}\", which is not available to project \"e2e-mtm-grant\"" \
+                  kubectl create --dry-run=server -f "manifests/${manifest}-no-class.yaml" --as e2e-mtm-grant-admin@example.com
+              done
+        - description: >-
+            Assert a StatefulSet and a Deployment without a class in a volume claim template are admitted
+            while the cluster default StorageClass is available to the project (skipped on a cluster
+            without one)
+          script:
+            timeout: 5m
+            content: |
+              set -euo pipefail
+              cluster_default="$(kubectl get storageclasses -o json | jq -r '[.items[] | select(.metadata.annotations["storageclass.kubernetes.io/is-default-class"] == "true" or .metadata.annotations["storageclass.beta.kubernetes.io/is-default-class"] == "true")] | sort_by(.metadata.creationTimestamp, .metadata.name) | if length == 0 then "" else (map(.metadata.creationTimestamp) | max) as $newest | map(select(.metadata.creationTimestamp == $newest)) | first.metadata.name end')"
+              if [ -z "${cluster_default}" ]; then
+                echo "the cluster has no default StorageClass, nothing to check"
+                exit 0
+              fi
+              kubectl patch clusterresourcegrantpolicy e2e-mtm-grant --type json \
+                -p "[{\"op\":\"add\",\"path\":\"/spec/resources/0/allowed/-\",\"value\":\"${cluster_default}\"}]"
+              for manifest in statefulset deployment-ephemeral; do
+                admitted=false
+                for attempt in $(seq 1 24); do
+                  if kubectl create --dry-run=server -f "manifests/${manifest}-no-class.yaml" --as e2e-mtm-grant-admin@example.com; then
+                    admitted=true
+                    break
+                  fi
+                  sleep 5
+                done
+                if [ "${admitted}" != true ]; then
+                  echo "manifests/${manifest}-no-class.yaml was not admitted although the cluster default ${cluster_default} is available to project e2e-mtm-grant"
+                  exit 1
+                fi
+              done
 
     - name: definition-removal
       description: Removing a GrantableClusterResourceDefinition removes its AvailableClusterResource from the project

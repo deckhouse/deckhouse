@@ -23,6 +23,7 @@ package engine
 import (
 	"cmp"
 	"fmt"
+	"reflect"
 	"slices"
 
 	"github.com/theory/jsonpath/spec"
@@ -163,6 +164,37 @@ func StringValuesAt(factory jsonpath.Factory, obj map[string]any, path string) (
 		}
 	}
 	return out, nil
+}
+
+// AddedMissing returns how many of the nodes the MissingPath expression selects in obj are new: not
+// equal to a node it selects in oldObj, each old node standing for one new node at most. oldObj is nil
+// on CREATE, so every selected node counts. Nodes are compared by content, not by location, so an
+// element that only moved within its list is not new.
+func AddedMissing(factory jsonpath.Factory, obj, oldObj map[string]any, path string) (int, error) {
+	parsed, err := factory.Path(path)
+	if err != nil {
+		return 0, fmt.Errorf("parse jsonpath %q: %w", path, err)
+	}
+	nodes := parsed.Select(obj)
+	if len(nodes) == 0 || oldObj == nil {
+		return len(nodes), nil
+	}
+	old := parsed.Select(oldObj)
+	used := make([]bool, len(old))
+	added := 0
+	for _, n := range nodes {
+		found := false
+		for i, o := range old {
+			if !used[i] && reflect.DeepEqual(o, n) {
+				used[i], found = true, true
+				break
+			}
+		}
+		if !found {
+			added++
+		}
+	}
+	return added, nil
 }
 
 // EvalMatch reports whether a field path's match guard holds for the object. A nil predicate always
