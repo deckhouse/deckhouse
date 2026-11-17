@@ -1,0 +1,465 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-console@d8-console
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: ""
+    nginx.ingress.kubernetes.io/proxy-buffer-size: 32k
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: console
+    heritage: deckhouse
+    module: user-authn
+  name: console-dex-authenticator
+  namespace: d8-console
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: console.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: console-dex-authenticator
+            port:
+              number: 443
+        path: /dex-authenticator
+        pathType: ImplementationSpecific
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-grafana@d8-monitoring
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: ""
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: grafana
+    heritage: deckhouse
+    module: user-authn
+  name: grafana-dex-authenticator
+  namespace: d8-monitoring
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: grafana.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: grafana-dex-authenticator
+            port:
+              number: 443
+        path: /dex-authenticator
+        pathType: ImplementationSpecific
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-grafana@d8-monitoring
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: ""
+    nginx.ingress.kubernetes.io/rewrite-target: /dex-authenticator/sign_out
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: grafana
+    heritage: deckhouse
+    module: user-authn
+  name: grafana-dex-authenticator-sign-out
+  namespace: d8-monitoring
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: grafana.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: grafana-dex-authenticator
+            port:
+              number: 443
+        path: /logout
+        pathType: ImplementationSpecific
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-grafana@d8-monitoring
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: ""
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: grafana
+    heritage: deckhouse
+    module: user-authn
+  name: grafana-9f5254a5-dex-authenticator
+  namespace: d8-monitoring
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: prometheus.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: grafana-dex-authenticator
+            port:
+              number: 443
+        path: /dex-authenticator
+        pathType: ImplementationSpecific
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-documentation@d8-system
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: ""
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: documentation
+    heritage: deckhouse
+    module: user-authn
+  name: documentation-dex-authenticator
+  namespace: d8-system
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: documentation.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: documentation-dex-authenticator
+            port:
+              number: 443
+        path: /dex-authenticator
+        pathType: ImplementationSpecific
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-routes@gateway-apps
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: ""
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: routes
+    heritage: deckhouse
+    module: user-authn
+  name: routes-d2e9af36-dex-authenticator
+  namespace: gateway-apps
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: both.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: routes-dex-authenticator
+            port:
+              number: 443
+        path: /dex-authenticator
+        pathType: ImplementationSpecific
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-an-application-with-a-name-as-long-as-a-name-can-be-sixty-three@long-names
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: ""
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: an-application-with-a-name-as-long-as-a-name-can-be-sixty-three
+    deckhouse.io/name-hash: 8d596
+    deckhouse.io/name-truncated: "true"
+    heritage: deckhouse
+    module: user-authn
+  name: an-application-with-a-name-as-long-as-a-name-can-be-sixty-8d596
+  namespace: long-names
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: long.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: an-application-with-a-name-as-long-as-a-name-can-be-sixty-8d596
+            port:
+              number: 443
+        path: /dex-authenticator
+        pathType: ImplementationSpecific
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-an-application-with-a-name-as-long-as-a-name-can-be-sixty-three@long-names
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: ""
+    nginx.ingress.kubernetes.io/rewrite-target: /dex-authenticator/sign_out
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: an-application-with-a-name-as-long-as-a-name-can-be-sixty-three
+    deckhouse.io/name-hash: fb4c6
+    deckhouse.io/name-truncated: "true"
+    heritage: deckhouse
+    module: user-authn
+  name: an-application-with-a-name-as-long-as-a-name-can-be-sixty-fb4c6
+  namespace: long-names
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: long.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: an-application-with-a-name-as-long-as-a-name-can-be-sixty-8d596
+            port:
+              number: 443
+        path: /logout
+        pathType: ImplementationSpecific
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-an-application-with-a-name-as-long-as-a-name-can-be-sixty-three@long-names
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: ""
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: an-application-with-a-name-as-long-as-a-name-can-be-sixty-three
+    deckhouse.io/name-hash: f5233
+    deckhouse.io/name-truncated: "true"
+    heritage: deckhouse
+    module: user-authn
+  name: an-application-with-a-name-as-long-as-a-name-can-be-sixty-f5233
+  namespace: long-names
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: second.long.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: an-application-with-a-name-as-long-as-a-name-can-be-sixty-8d596
+            port:
+              number: 443
+        path: /dex-authenticator
+        pathType: ImplementationSpecific
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-an-application-with-a-name-as-long-as-a-name-can-be-sixty-three@long-names
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: ""
+    nginx.ingress.kubernetes.io/rewrite-target: /dex-authenticator/sign_out
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: an-application-with-a-name-as-long-as-a-name-can-be-sixty-three
+    deckhouse.io/name-hash: "74106"
+    deckhouse.io/name-truncated: "true"
+    heritage: deckhouse
+    module: user-authn
+  name: an-application-with-a-name-as-long-as-a-name-can-be-sixty-74106
+  namespace: long-names
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: second.long.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: an-application-with-a-name-as-long-as-a-name-can-be-sixty-8d596
+            port:
+              number: 443
+        path: /logout
+        pathType: ImplementationSpecific
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-app@shop
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: ""
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: app
+    heritage: deckhouse
+    module: user-authn
+  name: app-dex-authenticator
+  namespace: shop
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: app.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: app-dex-authenticator
+            port:
+              number: 443
+        path: /dex-authenticator
+        pathType: ImplementationSpecific
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-portal@shop
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: ""
+    nginx.ingress.kubernetes.io/proxy-buffer-size: 32k
+    nginx.ingress.kubernetes.io/whitelist-source-range: 10.0.0.0/8,192.168.42.0/24
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: portal
+    heritage: deckhouse
+    module: user-authn
+  name: portal-dex-authenticator
+  namespace: shop
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: portal.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: portal-dex-authenticator
+            port:
+              number: 443
+        path: /dex-authenticator
+        pathType: ImplementationSpecific
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-portal@shop
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: ""
+    nginx.ingress.kubernetes.io/rewrite-target: /dex-authenticator/sign_out
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: portal
+    heritage: deckhouse
+    module: user-authn
+  name: portal-dex-authenticator-sign-out
+  namespace: shop
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: portal.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: portal-dex-authenticator
+            port:
+              number: 443
+        path: /logout
+        pathType: ImplementationSpecific
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-portal@shop
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: ""
+    nginx.ingress.kubernetes.io/proxy-buffer-size: 32k
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: portal
+    heritage: deckhouse
+    module: user-authn
+  name: portal-6a73d322-dex-authenticator
+  namespace: shop
+spec:
+  ingressClassName: internal
+  rules:
+  - host: admin.portal.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: portal-dex-authenticator
+            port:
+              number: 443
+        path: /dex-authenticator
+        pathType: ImplementationSpecific
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-portal@shop
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: ""
+    nginx.ingress.kubernetes.io/rewrite-target: /dex-authenticator/sign_out
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: portal
+    heritage: deckhouse
+    module: user-authn
+  name: portal-6a73d322-dex-authenticator-sign-out
+  namespace: shop
+spec:
+  ingressClassName: internal
+  rules:
+  - host: admin.portal.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: portal-dex-authenticator
+            port:
+              number: 443
+        path: /admin/sign-out
+        pathType: ImplementationSpecific
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-portal@shop
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: ""
+    nginx.ingress.kubernetes.io/proxy-buffer-size: 32k
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: portal
+    heritage: deckhouse
+    module: user-authn
+  name: portal-ccabaca5-dex-authenticator
+  namespace: shop
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: api.portal.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: portal-dex-authenticator
+            port:
+              number: 443
+        path: /dex-authenticator
+        pathType: ImplementationSpecific

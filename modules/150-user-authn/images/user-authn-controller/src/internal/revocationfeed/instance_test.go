@@ -134,23 +134,6 @@ func pairKey(secret, userID string) string {
 	return Key(Salt([]byte(secret)), keyPair, revocation.Subject(userID, "local"))
 }
 
-func TestInstanceOfNamespace(t *testing.T) {
-	t.Parallel()
-
-	for namespace, expected := range map[string]string{
-		"d8-console":    InstanceSystem,
-		"d8-user-authn": InstanceSystem,
-		"shop":          InstanceUser,
-		"d8":            InstanceUser,
-		"default":       InstanceUser,
-		"":              InstanceUser,
-	} {
-		if got := instanceOfNamespace(namespace); got != expected {
-			t.Errorf("instanceOfNamespace(%q) = %q, want %q", namespace, got, expected)
-		}
-	}
-}
-
 // Only the token of the ServiceAccount of an instance opens the stream of that instance; every
 // other token gets the answer a wrong client secret gets.
 func TestServer_InstanceAuthentication(t *testing.T) {

@@ -258,3 +258,35 @@ func TestDexAuthenticatorKeepUsersLoggedInFor(t *testing.T) {
 		}
 	}
 }
+
+// TestDexAuthenticatorStatus: every version has the status subresource, which the controller
+// writes the Served condition through, and takes the condition the controller writes.
+func TestDexAuthenticatorStatus(t *testing.T) {
+	data, err := os.ReadFile("dex-authenticator.yaml")
+	require.NoError(t, err)
+	var crd apiextensionsv1.CustomResourceDefinition
+	require.NoError(t, yaml.Unmarshal(data, &crd))
+	for _, version := range crd.Spec.Versions {
+		require.NotNil(t, version.Subresources, version.Name)
+		require.NotNil(t, version.Subresources.Status, version.Name)
+	}
+
+	condition := func(status string) map[string]any {
+		return map[string]any{
+			"type": "Served", "status": status, "reason": "HostConflict",
+			"message":            "The domains app.example.com belong to another DexAuthenticator; the object is not served.",
+			"lastTransitionTime": "2026-11-11T12:00:00Z", "observedGeneration": int64(3),
+		}
+	}
+	for version, schema := range authenticatorSchemas(t) {
+		object := namedAuthenticator(version, "test", "app.example.com")
+		object["status"] = map[string]any{"conditions": []any{condition("False")}}
+		validateAuthenticator(t, schema, object, true)
+
+		object["status"] = map[string]any{"conditions": []any{condition("Maybe")}}
+		validateAuthenticator(t, schema, object, false)
+
+		object["status"] = map[string]any{"conditions": []any{map[string]any{"status": "True"}}}
+		validateAuthenticator(t, schema, object, false)
+	}
+}

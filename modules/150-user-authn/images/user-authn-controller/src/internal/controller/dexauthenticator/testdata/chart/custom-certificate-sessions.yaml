@@ -1,0 +1,682 @@
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-console@d8-console
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: add_header Strict-Transport-Security
+      "max-age=31536000; includeSubDomains" always;
+    nginx.ingress.kubernetes.io/proxy-buffer-size: 32k
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: console
+    heritage: deckhouse
+    module: user-authn
+  name: console-dex-authenticator
+  namespace: d8-console
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: console.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: console-dex-authenticator
+            port:
+              number: 443
+        path: /dex-authenticator
+        pathType: ImplementationSpecific
+  tls:
+  - hosts:
+    - console.example.com
+    secretName: ingress-tls
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-grafana@d8-monitoring
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: add_header Strict-Transport-Security
+      "max-age=31536000; includeSubDomains" always;
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: grafana
+    heritage: deckhouse
+    module: user-authn
+  name: grafana-dex-authenticator
+  namespace: d8-monitoring
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: grafana.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: grafana-dex-authenticator
+            port:
+              number: 443
+        path: /dex-authenticator
+        pathType: ImplementationSpecific
+  tls:
+  - hosts:
+    - grafana.example.com
+    secretName: ingress-tls
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-grafana@d8-monitoring
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: add_header Strict-Transport-Security
+      "max-age=31536000; includeSubDomains" always;
+    nginx.ingress.kubernetes.io/rewrite-target: /dex-authenticator/sign_out
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: grafana
+    heritage: deckhouse
+    module: user-authn
+  name: grafana-dex-authenticator-sign-out
+  namespace: d8-monitoring
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: grafana.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: grafana-dex-authenticator
+            port:
+              number: 443
+        path: /logout
+        pathType: ImplementationSpecific
+  tls:
+  - hosts:
+    - grafana.example.com
+    secretName: ingress-tls
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-grafana@d8-monitoring
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: add_header Strict-Transport-Security
+      "max-age=31536000; includeSubDomains" always;
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: grafana
+    heritage: deckhouse
+    module: user-authn
+  name: grafana-9f5254a5-dex-authenticator
+  namespace: d8-monitoring
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: prometheus.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: grafana-dex-authenticator
+            port:
+              number: 443
+        path: /dex-authenticator
+        pathType: ImplementationSpecific
+  tls:
+  - hosts:
+    - prometheus.example.com
+    secretName: ingress-tls
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-documentation@d8-system
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: add_header Strict-Transport-Security
+      "max-age=31536000; includeSubDomains" always;
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: documentation
+    heritage: deckhouse
+    module: user-authn
+  name: documentation-dex-authenticator
+  namespace: d8-system
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: documentation.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: documentation-dex-authenticator
+            port:
+              number: 443
+        path: /dex-authenticator
+        pathType: ImplementationSpecific
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-routes@gateway-apps
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: add_header Strict-Transport-Security
+      "max-age=31536000; includeSubDomains" always;
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: routes
+    heritage: deckhouse
+    module: user-authn
+  name: routes-d2e9af36-dex-authenticator
+  namespace: gateway-apps
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: both.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: routes-dex-authenticator
+            port:
+              number: 443
+        path: /dex-authenticator
+        pathType: ImplementationSpecific
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-an-application-with-a-name-as-long-as-a-name-can-be-sixty-three@long-names
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: add_header Strict-Transport-Security
+      "max-age=31536000; includeSubDomains" always;
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: an-application-with-a-name-as-long-as-a-name-can-be-sixty-three
+    deckhouse.io/name-hash: 8d596
+    deckhouse.io/name-truncated: "true"
+    heritage: deckhouse
+    module: user-authn
+  name: an-application-with-a-name-as-long-as-a-name-can-be-sixty-8d596
+  namespace: long-names
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: long.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: an-application-with-a-name-as-long-as-a-name-can-be-sixty-8d596
+            port:
+              number: 443
+        path: /dex-authenticator
+        pathType: ImplementationSpecific
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-an-application-with-a-name-as-long-as-a-name-can-be-sixty-three@long-names
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: add_header Strict-Transport-Security
+      "max-age=31536000; includeSubDomains" always;
+    nginx.ingress.kubernetes.io/rewrite-target: /dex-authenticator/sign_out
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: an-application-with-a-name-as-long-as-a-name-can-be-sixty-three
+    deckhouse.io/name-hash: fb4c6
+    deckhouse.io/name-truncated: "true"
+    heritage: deckhouse
+    module: user-authn
+  name: an-application-with-a-name-as-long-as-a-name-can-be-sixty-fb4c6
+  namespace: long-names
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: long.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: an-application-with-a-name-as-long-as-a-name-can-be-sixty-8d596
+            port:
+              number: 443
+        path: /logout
+        pathType: ImplementationSpecific
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-an-application-with-a-name-as-long-as-a-name-can-be-sixty-three@long-names
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: add_header Strict-Transport-Security
+      "max-age=31536000; includeSubDomains" always;
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: an-application-with-a-name-as-long-as-a-name-can-be-sixty-three
+    deckhouse.io/name-hash: f5233
+    deckhouse.io/name-truncated: "true"
+    heritage: deckhouse
+    module: user-authn
+  name: an-application-with-a-name-as-long-as-a-name-can-be-sixty-f5233
+  namespace: long-names
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: second.long.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: an-application-with-a-name-as-long-as-a-name-can-be-sixty-8d596
+            port:
+              number: 443
+        path: /dex-authenticator
+        pathType: ImplementationSpecific
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-an-application-with-a-name-as-long-as-a-name-can-be-sixty-three@long-names
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: add_header Strict-Transport-Security
+      "max-age=31536000; includeSubDomains" always;
+    nginx.ingress.kubernetes.io/rewrite-target: /dex-authenticator/sign_out
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: an-application-with-a-name-as-long-as-a-name-can-be-sixty-three
+    deckhouse.io/name-hash: "74106"
+    deckhouse.io/name-truncated: "true"
+    heritage: deckhouse
+    module: user-authn
+  name: an-application-with-a-name-as-long-as-a-name-can-be-sixty-74106
+  namespace: long-names
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: second.long.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: an-application-with-a-name-as-long-as-a-name-can-be-sixty-8d596
+            port:
+              number: 443
+        path: /logout
+        pathType: ImplementationSpecific
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-app@shop
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: add_header Strict-Transport-Security
+      "max-age=31536000; includeSubDomains" always;
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: app
+    heritage: deckhouse
+    module: user-authn
+  name: app-dex-authenticator
+  namespace: shop
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: app.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: app-dex-authenticator
+            port:
+              number: 443
+        path: /dex-authenticator
+        pathType: ImplementationSpecific
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-portal@shop
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: add_header Strict-Transport-Security
+      "max-age=31536000; includeSubDomains" always;
+    nginx.ingress.kubernetes.io/proxy-buffer-size: 32k
+    nginx.ingress.kubernetes.io/whitelist-source-range: 10.0.0.0/8,192.168.42.0/24
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: portal
+    heritage: deckhouse
+    module: user-authn
+  name: portal-dex-authenticator
+  namespace: shop
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: portal.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: portal-dex-authenticator
+            port:
+              number: 443
+        path: /dex-authenticator
+        pathType: ImplementationSpecific
+  tls:
+  - hosts:
+    - portal.example.com
+    secretName: portal-tls
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-portal@shop
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: add_header Strict-Transport-Security
+      "max-age=31536000; includeSubDomains" always;
+    nginx.ingress.kubernetes.io/rewrite-target: /dex-authenticator/sign_out
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: portal
+    heritage: deckhouse
+    module: user-authn
+  name: portal-dex-authenticator-sign-out
+  namespace: shop
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: portal.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: portal-dex-authenticator
+            port:
+              number: 443
+        path: /logout
+        pathType: ImplementationSpecific
+  tls:
+  - hosts:
+    - portal.example.com
+    secretName: portal-tls
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-portal@shop
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: add_header Strict-Transport-Security
+      "max-age=31536000; includeSubDomains" always;
+    nginx.ingress.kubernetes.io/proxy-buffer-size: 32k
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: portal
+    heritage: deckhouse
+    module: user-authn
+  name: portal-6a73d322-dex-authenticator
+  namespace: shop
+spec:
+  ingressClassName: internal
+  rules:
+  - host: admin.portal.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: portal-dex-authenticator
+            port:
+              number: 443
+        path: /dex-authenticator
+        pathType: ImplementationSpecific
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-portal@shop
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: add_header Strict-Transport-Security
+      "max-age=31536000; includeSubDomains" always;
+    nginx.ingress.kubernetes.io/rewrite-target: /dex-authenticator/sign_out
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: portal
+    heritage: deckhouse
+    module: user-authn
+  name: portal-6a73d322-dex-authenticator-sign-out
+  namespace: shop
+spec:
+  ingressClassName: internal
+  rules:
+  - host: admin.portal.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: portal-dex-authenticator
+            port:
+              number: 443
+        path: /admin/sign-out
+        pathType: ImplementationSpecific
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    dexauthenticator.deckhouse.io/client-id: dex-authenticator-portal@shop
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: add_header Strict-Transport-Security
+      "max-age=31536000; includeSubDomains" always;
+    nginx.ingress.kubernetes.io/proxy-buffer-size: 32k
+  labels:
+    app: dex-authenticator
+    deckhouse.io/dex-authenticator-for: portal
+    heritage: deckhouse
+    module: user-authn
+  name: portal-ccabaca5-dex-authenticator
+  namespace: shop
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: api.portal.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: portal-dex-authenticator
+            port:
+              number: 443
+        path: /dex-authenticator
+        pathType: ImplementationSpecific
+  tls:
+  - hosts:
+    - api.portal.example.com
+    secretName: api-tls
+---
+apiVersion: dex.coreos.com/v1
+id: dex-authenticator-console@d8-console
+kind: OAuth2Client
+metadata:
+  labels:
+    app: dex
+    deckhouse.io/dex-authenticator-for: console
+    deckhouse.io/dex-authenticator-namespace: d8-console
+    heritage: deckhouse
+    module: user-authn
+  name: mrsxqllbov2gqzlooruwgylun5zc2y3pnzzw63dfibsdqlldn5xhg33mmxf7fhheqqrcgji
+  namespace: d8-user-authn
+name: dex-authenticator-console@d8-console
+postLogoutRedirectURIs:
+- https://console.example.com/
+redirectURIs:
+- https://console.example.com/dex-authenticator/callback
+refreshTokenLifetime: session
+secret: dh-test-secret-0000000000000001
+ssoSharedWith:
+- dex-authenticator-grafana@d8-monitoring
+- dex-authenticator-documentation@d8-system
+---
+allowedGroups:
+- admins
+apiVersion: dex.coreos.com/v1
+id: dex-authenticator-grafana@d8-monitoring
+kind: OAuth2Client
+metadata:
+  labels:
+    app: dex
+    deckhouse.io/dex-authenticator-for: grafana
+    deckhouse.io/dex-authenticator-namespace: d8-monitoring
+    heritage: deckhouse
+    module: user-authn
+  name: mrsxqllbov2gqzlooruwgylun5zc2z3smftgc3tbibsdqllnn5xgs5dpojuw4z6l6koojbbcemsq
+  namespace: d8-user-authn
+name: dex-authenticator-grafana@d8-monitoring
+postLogoutRedirectURIs:
+- https://grafana.example.com/
+- https://prometheus.example.com/
+redirectURIs:
+- https://grafana.example.com/dex-authenticator/callback
+- https://prometheus.example.com/dex-authenticator/callback
+refreshTokenLifetime: session
+secret: dh-test-secret-0000000000000002
+ssoSharedWith:
+- dex-authenticator-console@d8-console
+- dex-authenticator-documentation@d8-system
+---
+apiVersion: dex.coreos.com/v1
+id: dex-authenticator-documentation@d8-system
+kind: OAuth2Client
+metadata:
+  labels:
+    app: dex
+    deckhouse.io/dex-authenticator-for: documentation
+    deckhouse.io/dex-authenticator-namespace: d8-system
+    heritage: deckhouse
+    module: user-authn
+  name: mrsxqllbov2gqzlooruwgylun5zc2zdpmn2w2zloorqxi2lpnzagiobnon4xg5dfnxf7fhheqqrcgji
+  namespace: d8-user-authn
+name: dex-authenticator-documentation@d8-system
+postLogoutRedirectURIs:
+- https://documentation.example.com/
+redirectURIs:
+- https://documentation.example.com/dex-authenticator/callback
+refreshTokenLifetime: session
+secret: dh-test-secret-0000000000000003
+ssoSharedWith:
+- dex-authenticator-console@d8-console
+- dex-authenticator-grafana@d8-monitoring
+---
+apiVersion: dex.coreos.com/v1
+id: dex-authenticator-routes@gateway-apps
+kind: OAuth2Client
+metadata:
+  labels:
+    app: dex
+    deckhouse.io/dex-authenticator-for: routes
+    deckhouse.io/dex-authenticator-namespace: gateway-apps
+    heritage: deckhouse
+    module: user-authn
+  name: mrsxqllbov2gqzlooruwgylun5zc24tpov2gk42am5qxizlxmf4s2ylqobz4x4u44scceizf
+  namespace: d8-user-authn
+name: dex-authenticator-routes@gateway-apps
+postLogoutRedirectURIs:
+- https://routes.example.com/
+- https://both.example.com/
+- https://bare.example.com/
+redirectURIs:
+- https://routes.example.com/dex-authenticator/callback
+- https://both.example.com/dex-authenticator/callback
+- https://bare.example.com/dex-authenticator/callback
+refreshTokenLifetime: session
+secret: dh-test-secret-0000000000000004
+---
+apiVersion: dex.coreos.com/v1
+id: dex-authenticator-an-application-with-a-name-as-long-as-a-name-can-be-sixty-three@long-names
+kind: OAuth2Client
+metadata:
+  labels:
+    app: dex
+    deckhouse.io/dex-authenticator-for: an-application-with-a-name-as-long-as-a-name-can-be-sixty-three
+    deckhouse.io/dex-authenticator-namespace: long-names
+    heritage: deckhouse
+    module: user-authn
+  name: mrsxqllbov2gqzlooruwgylun5zc2ylofvqxa4dmnfrwc5djn5xc253joruc2yjnnzqw2zjnmfzs23dpnzts2yltfvqs23tbnvss2y3bnywwezjnonuxq5dzfv2gq4tfmvagy33om4ww4ylnmvz4x4u44scceizf
+  namespace: d8-user-authn
+name: dex-authenticator-an-application-with-a-name-as-long-as-a-name-can-be-sixty-three@long-names
+postLogoutRedirectURIs:
+- https://long.example.com/
+- https://second.long.example.com/
+redirectURIs:
+- https://long.example.com/dex-authenticator/callback
+- https://second.long.example.com/dex-authenticator/callback
+refreshTokenLifetime: session
+secret: dh-test-secret-0000000000000005
+---
+apiVersion: dex.coreos.com/v1
+id: dex-authenticator-app@shop
+kind: OAuth2Client
+metadata:
+  labels:
+    app: dex
+    deckhouse.io/dex-authenticator-for: app
+    deckhouse.io/dex-authenticator-namespace: shop
+    heritage: deckhouse
+    module: user-authn
+  name: mrsxqllbov2gqzlooruwgylun5zc2ylqobahg2dpodf7fhheqqrcgji
+  namespace: d8-user-authn
+name: dex-authenticator-app@shop
+postLogoutRedirectURIs:
+- https://app.example.com/
+redirectURIs:
+- https://app.example.com/dex-authenticator/callback
+refreshTokenLifetime: session
+secret: dh-test-secret-0000000000000006
+---
+allowedConnectors:
+- local
+- corp-ldap
+allowedEmails:
+- john.doe@example.com
+allowedGroups:
+- admins
+- group with spaces
+apiVersion: dex.coreos.com/v1
+id: dex-authenticator-portal@shop
+kind: OAuth2Client
+metadata:
+  labels:
+    app: dex
+    deckhouse.io/dex-authenticator-for: portal
+    deckhouse.io/dex-authenticator-namespace: shop
+    heritage: deckhouse
+    module: user-authn
+  name: mrsxqllbov2gqzlooruwgylun5zc24dpoj2gc3caonug64gl6koojbbcemsq
+  namespace: d8-user-authn
+name: dex-authenticator-portal@shop
+postLogoutRedirectURIs:
+- https://portal.example.com/
+- https://admin.portal.example.com/
+- https://api.portal.example.com/
+redirectURIs:
+- https://portal.example.com/dex-authenticator/callback
+- https://admin.portal.example.com/dex-authenticator/callback
+- https://api.portal.example.com/dex-authenticator/callback
+refreshTokenLifetime: session
+secret: dh-test-secret-0000000000000007

@@ -88,26 +88,6 @@ func TestReconcile_CreatesClientWithAllPeers(t *testing.T) {
 	}
 }
 
-// Name and namespace both may contain a dash: the id must tell "billing" in "prod-team" from
-// "billing-prod" in "team", or the second one shares the access of the first.
-// The template and the hook of the module build the id too: the template tests pin the same value
-// (consoleClientID in template_tests/dex_authenticator_client_id_test.go).
-func TestDexAuthenticatorClientIDOfTheConsole(t *testing.T) {
-	t.Parallel()
-
-	if got := DexAuthenticatorClientID("console", "d8-console"); got != "dex-authenticator-console@d8-console" {
-		t.Errorf("client id of the console = %q, want the one the module renders", got)
-	}
-}
-
-func TestDexAuthenticatorClientIDIsUnique(t *testing.T) {
-	t.Parallel()
-
-	if a, b := DexAuthenticatorClientID("billing", "prod-team"), DexAuthenticatorClientID("billing-prod", "team"); a == b {
-		t.Errorf("distinct authenticators share the client id %q", a)
-	}
-}
-
 // A DexClient granted access is a peer on its own: the chart rendered the client only for
 // DexAuthenticators and the module configuration.
 func TestReconcile_DexClientAloneCreatesClient(t *testing.T) {

@@ -642,13 +642,13 @@ func TestJoinRetryable(t *testing.T) {
 	conflict := errors.New("conflict")
 	isTerminal := func(err error) bool { return errors.Is(err, reconcile.TerminalError(nil)) }
 
-	if err := joinRetryable([]error{nil, nil}); err != nil {
+	if err := controller.JoinRetryable([]error{nil, nil}); err != nil {
 		t.Errorf("no errors = %v", err)
 	}
-	if err := joinRetryable([]error{foreign, nil}); !isTerminal(err) {
+	if err := controller.JoinRetryable([]error{foreign, nil}); !isTerminal(err) {
 		t.Errorf("only a terminal error = %v, want terminal", err)
 	}
-	err := joinRetryable([]error{foreign, conflict})
+	err := controller.JoinRetryable([]error{foreign, conflict})
 	if err == nil || isTerminal(err) || !errors.Is(err, conflict) {
 		t.Errorf("terminal and retryable = %v, want a retryable error", err)
 	}

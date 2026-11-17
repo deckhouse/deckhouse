@@ -17,10 +17,8 @@ limitations under the License.
 package dexclient
 
 import (
-	"crypto/rand"
 	"fmt"
 	"maps"
-	"math/big"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -50,9 +48,8 @@ const (
 	// client reconciler reads it from the DexClient.
 	AllowAccessToKubernetesAnnotation = controller.DexClientAllowAccessToKubernetesAnnotation
 
-	// clientSecretLength and clientSecretAlphabet match the secrets the module hook generated.
-	clientSecretLength   = 20
-	clientSecretAlphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	// clientSecretLength matches the secrets the module hook generated.
+	clientSecretLength = 20
 )
 
 // Spec is the part of the DexClient spec the controller renders.
@@ -145,16 +142,7 @@ func ParseClientID(id string) (types.NamespacedName, bool) {
 
 // GenerateSecret returns a new random client secret.
 func GenerateSecret() (string, error) {
-	limit := big.NewInt(int64(len(clientSecretAlphabet)))
-	out := make([]byte, clientSecretLength)
-	for i := range out {
-		n, err := rand.Int(rand.Reader, limit)
-		if err != nil {
-			return "", fmt.Errorf("generate client secret: %w", err)
-		}
-		out[i] = clientSecretAlphabet[n.Int64()]
-	}
-	return string(out), nil
+	return controller.RandomSecret(clientSecretLength)
 }
 
 // moduleLabels are the labels every object of the controller carries.

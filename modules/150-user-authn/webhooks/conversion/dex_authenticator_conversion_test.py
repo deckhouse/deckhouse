@@ -200,6 +200,20 @@ class TestRoundTrips(unittest.TestCase):
         self.assertEqual(convert("v1alpha1_to_v1", obj), dict(obj, apiVersion=V1))
         self.assertEqual(convert("v1_to_v1alpha1", dict(obj, apiVersion=V1)), obj)
 
+    def test_status_is_carried(self):
+        # The controller writes the Served condition into the status of the stored version; every
+        # other version must show it as it is.
+        status = {"conditions": [{"type": "Served", "status": "False", "reason": "HostConflict",
+                                  "message": "taken", "lastTransitionTime": "2026-11-11T12:00:00Z",
+                                  "observedGeneration": 3}]}
+        v1 = authenticator(V1, {"applicationDomain": "app.example.com", "applicationIngressClassName": "nginx"})
+        v1["status"] = copy.deepcopy(status)
+        v2 = convert("v1_to_v2alpha1", v1)
+        self.assertEqual(v2["status"], status)
+        self.assertEqual(convert("v2alpha1_to_v1", v2)["status"], status)
+        self.assertEqual(convert("v1_to_v1alpha1", v1)["status"], status)
+        self.assertEqual(convert("v1alpha1_to_v1", convert("v1_to_v1alpha1", v1))["status"], status)
+
 
 class TestRequests(unittest.TestCase):
     def test_mixed_versions(self):

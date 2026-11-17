@@ -38,8 +38,8 @@ const (
 	// InstanceSystem and InstanceUser are the two shared dex-authenticator instances, by the name of
 	// their ServiceAccount: the first serves the DexAuthenticator objects of the d8-* namespaces, the
 	// second all the others.
-	InstanceSystem = "dex-authenticator-system"
-	InstanceUser   = "dex-authenticator"
+	InstanceSystem = naming.SystemAuthenticatorInstance
+	InstanceUser   = naming.UserAuthenticatorInstance
 
 	// TokenAudience is the audience of the ServiceAccount token an instance presents to the feed: a
 	// token of the instance issued for anything else is refused.
@@ -48,9 +48,8 @@ const (
 	// tokenReviewTimeout bounds the review of a token: the subscriber waits for the answer.
 	tokenReviewTimeout = 5 * time.Second
 
-	systemNamespacePrefix = "d8-"
-	bearerPrefix          = "Bearer "
-	serviceAccountPrefix  = "system:serviceaccount:" + naming.DexNamespace + ":"
+	bearerPrefix         = "Bearer "
+	serviceAccountPrefix = "system:serviceaccount:" + naming.DexNamespace + ":"
 )
 
 // TokenReviewer checks a ServiceAccount token issued for TokenAudience with the API server and
@@ -75,14 +74,6 @@ func NewTokenReviewer(c client.Client) TokenReviewer {
 		}
 		return review.Status.User.Username, true, nil
 	}
-}
-
-// instanceOfNamespace is the instance that serves the DexAuthenticator objects of a namespace.
-func instanceOfNamespace(namespace string) string {
-	if strings.HasPrefix(namespace, systemNamespacePrefix) {
-		return InstanceSystem
-	}
-	return InstanceUser
 }
 
 // bearerToken returns the bearer token of r, if it carries one.

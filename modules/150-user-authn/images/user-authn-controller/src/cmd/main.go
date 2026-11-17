@@ -41,6 +41,7 @@ import (
 	"user-authn-controller/api/v1alpha1"
 	"user-authn-controller/internal/controller"
 	"user-authn-controller/internal/controller/allowedconnectors"
+	"user-authn-controller/internal/controller/dexauthenticator"
 	"user-authn-controller/internal/controller/dexclient"
 	"user-authn-controller/internal/controller/groupprefix"
 	"user-authn-controller/internal/controller/identitycleanup"
@@ -68,6 +69,15 @@ const (
 	// metrics. dexClientControllerName is its lease.
 	dexClientCommand        = "dexclient"
 	dexClientControllerName = "user-authn-dexclient-controller"
+
+	// sharedDexAuthenticatorEnv turns on, in the dexclient command, the reconcilers that serve
+	// DexAuthenticator objects by the shared dex-authenticator instances of the module: the chart
+	// sets it when it renders the instances. gatewayAPIEnv tells them that the cluster has HTTPRoute
+	// objects and the module publishes through them, referenceGrantsEnv that it has ReferenceGrant
+	// objects.
+	sharedDexAuthenticatorEnv = "SHARED_DEX_AUTHENTICATOR"
+	gatewayAPIEnv             = "GATEWAY_API"
+	referenceGrantsEnv        = "REFERENCE_GRANTS"
 
 	// logLevelEnv selects the zap level (debug, info, warn, error); the default is info, as in
 	// user-authz-controller.
@@ -398,7 +408,8 @@ func setupDexClientManager() (ctrl.Manager, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get kubeconfig: %w", err)
 	}
-	opts, err := newDexClientManagerOptions(scheme)
+	authenticators := sharedDexAuthenticatorOptions()
+	opts, err := newDexClientManagerOptions(scheme, authenticators)
 	if err != nil {
 		return nil, err
 	}
@@ -412,7 +423,24 @@ func setupDexClientManager() (ctrl.Manager, error) {
 	if err = dexclient.Register(runtimeManager); err != nil {
 		return nil, fmt.Errorf("register dexclient controller: %w", err)
 	}
+	if authenticators != nil {
+		if err = dexauthenticator.Register(runtimeManager, *authenticators); err != nil {
+			return nil, fmt.Errorf("register dexauthenticator controllers: %w", err)
+		}
+	}
 	return runtimeManager, nil
+}
+
+// sharedDexAuthenticatorOptions tells whether the dexclient command serves DexAuthenticator objects
+// by the shared instances, and how; nil when it does not. The chart sets the variables to "true".
+func sharedDexAuthenticatorOptions() *dexauthenticator.Options {
+	if os.Getenv(sharedDexAuthenticatorEnv) != "true" {
+		return nil
+	}
+	return &dexauthenticator.Options{
+		GatewayAPI:      os.Getenv(gatewayAPIEnv) == "true",
+		ReferenceGrants: os.Getenv(referenceGrantsEnv) == "true",
+	}
 }
 
 func newManagerOptions(scheme *runtime.Scheme) (manager.Options, error) {
@@ -433,16 +461,21 @@ func newManagerOptions(scheme *runtime.Scheme) (manager.Options, error) {
 }
 
 // newDexClientManagerOptions caches what the DexClient reconciler watches: the labelled Secrets by
-// metadata and the OAuth2Clients of d8-user-authn without their secrets.
-func newDexClientManagerOptions(scheme *runtime.Scheme) (manager.Options, error) {
+// metadata and the OAuth2Clients of d8-user-authn without their secrets. With authenticators, also
+// what the DexAuthenticator reconcilers watch.
+func newDexClientManagerOptions(scheme *runtime.Scheme, authenticators *dexauthenticator.Options) (manager.Options, error) {
 	clients, clientCache, err := revocationfeed.ClientCache()
 	if err != nil {
 		return manager.Options{}, err
 	}
-	byObject, err := controller.MergeCacheByObject(
+	parts := []map[client.Object]cache.ByObject{
 		dexclient.InformerCacheByObject(),
-		map[client.Object]cache.ByObject{clients: clientCache},
-	)
+		{clients: clientCache},
+	}
+	if authenticators != nil {
+		parts = append(parts, dexauthenticator.InformerCacheByObject(*authenticators))
+	}
+	byObject, err := controller.MergeCacheByObject(parts...)
 	if err != nil {
 		return manager.Options{}, fmt.Errorf("merge informer cache settings: %w", err)
 	}

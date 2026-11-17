@@ -88,6 +88,53 @@ spec:
                   x-kubernetes-validations:
                     - rule: "self.matches('^[a-z]([-a-z0-9]*[a-z0-9])?$')"
                       message: 'The DexAuthenticator name must start with a letter and contain only lowercase letters, digits and hyphens, because it is a part of the Service name.'
+            status:
+              type: object
+              description: |-
+                The state of the object. The module writes it.
+              properties:
+                conditions:
+                  type: array
+                  description: |-
+                    Conditions of the object.
+
+                    The `Served` condition shows whether the dex-authenticator of the module serves the object on every domain it names. When it does not, `reason` tells why:
+                    * `WaitingForInstance` — the dex-authenticator has not loaded the settings of the object yet. This takes up to a few minutes after the object is created or changed;
+                    * `HostConflict` — a domain of the object belongs to another DexAuthenticator: the one that is served on it already, or the oldest of those that name it. The object is served on its other domains;
+                    * `InvalidRecord` — the object cannot be served as it is: `message` names the field;
+                    * `ClientNotCreated` — the Dex client of the object could not be written;
+                    * `ForeignObject` — a Service, an Ingress or an HTTPRoute with the name the module gives its own already exists in the namespace and was not created by the module;
+                    * `TableFull` — the dex-authenticator serves as many objects as it can.
+                  x-kubernetes-list-type: map
+                  x-kubernetes-list-map-keys:
+                    - type
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                    properties:
+                      type:
+                        type: string
+                        description: Type of the condition, such as `Served`.
+                      status:
+                        type: string
+                        enum: ["True", "False", "Unknown"]
+                        description: Status of the condition, `True`, `False` or `Unknown`.
+                      reason:
+                        type: string
+                        description: Reason for the status, such as `HostConflict`.
+                      message:
+                        type: string
+                        description: Details of the status.
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                        description: Time the status last changed.
+                      observedGeneration:
+                        type: integer
+                        format: int64
+                        description: Generation of the object that the condition was set for.
             spec:
               type: object
               required:
@@ -456,9 +503,14 @@ spec:
                         items:
                           type: string
                           pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
+      subresources: &subresources
+        status: {}
       additionalPrinterColumns: &additionalPrinterColumns
         - jsonPath: .spec.applicationDomain
           name: Domain
+          type: string
+        - jsonPath: .status.conditions[?(@.type=="Served")].status
+          name: Served
           type: string
     - name: v2alpha1
       served: true
@@ -480,6 +532,53 @@ spec:
                   x-kubernetes-validations:
                     - rule: "self.matches('^[a-z]([-a-z0-9]*[a-z0-9])?$')"
                       message: 'The DexAuthenticator name must start with a letter and contain only lowercase letters, digits and hyphens, because it is a part of the Service name.'
+            status:
+              type: object
+              description: |-
+                The state of the object. The module writes it.
+              properties:
+                conditions:
+                  type: array
+                  description: |-
+                    Conditions of the object.
+
+                    The `Served` condition shows whether the dex-authenticator of the module serves the object on every domain it names. When it does not, `reason` tells why:
+                    * `WaitingForInstance` — the dex-authenticator has not loaded the settings of the object yet. This takes up to a few minutes after the object is created or changed;
+                    * `HostConflict` — a domain of the object belongs to another DexAuthenticator: the one that is served on it already, or the oldest of those that name it. The object is served on its other domains;
+                    * `InvalidRecord` — the object cannot be served as it is: `message` names the field;
+                    * `ClientNotCreated` — the Dex client of the object could not be written;
+                    * `ForeignObject` — a Service, an Ingress or an HTTPRoute with the name the module gives its own already exists in the namespace and was not created by the module;
+                    * `TableFull` — the dex-authenticator serves as many objects as it can.
+                  x-kubernetes-list-type: map
+                  x-kubernetes-list-map-keys:
+                    - type
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                    properties:
+                      type:
+                        type: string
+                        description: Type of the condition, such as `Served`.
+                      status:
+                        type: string
+                        enum: ["True", "False", "Unknown"]
+                        description: Status of the condition, `True`, `False` or `Unknown`.
+                      reason:
+                        type: string
+                        description: Reason for the status, such as `HostConflict`.
+                      message:
+                        type: string
+                        description: Details of the status.
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                        description: Time the status last changed.
+                      observedGeneration:
+                        type: integer
+                        format: int64
+                        description: Generation of the object that the condition was set for.
             spec:
               type: object
               required:
@@ -771,12 +870,17 @@ spec:
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
                           description: 'Guaranteed minimum resources for the `redis` container (CPU/memory).'
+      subresources: *subresources
       additionalPrinterColumns:
         - jsonPath: .spec.applications[*].domain
           name: Domains
+          type: string
+        - jsonPath: .status.conditions[?(@.type=="Served")].status
+          name: Served
           type: string
     - name: v1
       served: true
       storage: true
       schema: *schema
+      subresources: *subresources
       additionalPrinterColumns: *additionalPrinterColumns

@@ -242,7 +242,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 // readyAt reports whether the provider is ready at its current generation.
 func readyAt(obj *unstructured.Unstructured) bool {
-	cond := meta.FindStatusCondition(readConditions(obj), conditionReady)
+	cond := meta.FindStatusCondition(controller.ReadConditions(obj), conditionReady)
 	return cond != nil && cond.Status == metav1.ConditionTrue && cond.ObservedGeneration == obj.GetGeneration()
 }
 
@@ -422,7 +422,7 @@ func (r *Reconciler) revokeAndDelete(ctx context.Context, id string) error {
 
 // setStatus writes the connector ID and the Ready condition when they changed.
 func (r *Reconciler) setStatus(ctx context.Context, obj *unstructured.Unstructured, id string, status metav1.ConditionStatus, reason, message string) error {
-	conditions := readConditions(obj)
+	conditions := controller.ReadConditions(obj)
 	changed := meta.SetStatusCondition(&conditions, metav1.Condition{
 		Type:               conditionReady,
 		Status:             status,
@@ -436,58 +436,13 @@ func (r *Reconciler) setStatus(ctx context.Context, obj *unstructured.Unstructur
 		return nil
 	}
 
-	items := make([]any, 0, len(conditions))
-	for _, c := range conditions {
-		item := map[string]any{
-			"type":               c.Type,
-			"status":             string(c.Status),
-			"reason":             c.Reason,
-			"lastTransitionTime": c.LastTransitionTime.UTC().Format(time.RFC3339),
-			"observedGeneration": c.ObservedGeneration,
-		}
-		if c.Message != "" {
-			item["message"] = c.Message
-		}
-		items = append(items, item)
-	}
 	obj.Object["status"] = map[string]any{
 		"connectorID":        id,
 		"observedGeneration": obj.GetGeneration(),
-		"conditions":         items,
+		"conditions":         controller.ConditionItems(conditions),
 	}
 	if err := r.client.Status().Update(ctx, obj); err != nil {
 		return fmt.Errorf("update status of %s: %w", obj.GetName(), err)
 	}
 	return nil
-}
-
-func readConditions(obj *unstructured.Unstructured) []metav1.Condition {
-	raw, _, _ := unstructured.NestedSlice(obj.Object, "status", "conditions")
-	conditions := make([]metav1.Condition, 0, len(raw))
-	for _, item := range raw {
-		m, ok := item.(map[string]any)
-		if !ok {
-			continue
-		}
-		c := metav1.Condition{}
-		c.Type, _ = m["type"].(string)
-		status, _ := m["status"].(string)
-		c.Status = metav1.ConditionStatus(status)
-		c.Reason, _ = m["reason"].(string)
-		c.Message, _ = m["message"].(string)
-		// A typed client decodes the integer as int64, a JSON one as float64.
-		switch g := m["observedGeneration"].(type) {
-		case int64:
-			c.ObservedGeneration = g
-		case float64:
-			c.ObservedGeneration = int64(g)
-		}
-		if t, ok := m["lastTransitionTime"].(string); ok {
-			if parsed, err := time.Parse(time.RFC3339, t); err == nil {
-				c.LastTransitionTime = metav1.NewTime(parsed)
-			}
-		}
-		conditions = append(conditions, c)
-	}
-	return conditions
 }

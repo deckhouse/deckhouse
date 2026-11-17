@@ -6279,6 +6279,40 @@ alerts:
         Secret {{ $labels.secret }} was skipped by secret-copier, reason {{ $labels.reason }}.
       severity: "6"
       markupFormat: markdown
+    - name: D8SharedDexAuthenticatorClientTableAlmostFull
+      sourceFile: modules/150-user-authn/monitoring/prometheus-rules/shared-dex-authenticator.yaml
+      moduleUrl: 150-user-authn
+      module: user-authn
+      edition: ce
+      description: |-
+        The table of clients of the shared dex-authenticator instance `{{ $labels.instance_name }}` is {{ $value | humanizePercentage }} full. New DexAuthenticator objects are not served once it is full.
+
+        Delete the DexAuthenticator objects that are no longer needed:
+
+        ```bash
+        d8 k get dexauthenticators -A
+        ```
+      summary: |
+        The table of clients of the shared dex-authenticator {{ $labels.instance_name }} is {{ $value | humanizePercentage }} full.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8SharedDexAuthenticatorClientTableFull
+      sourceFile: modules/150-user-authn/monitoring/prometheus-rules/shared-dex-authenticator.yaml
+      moduleUrl: 150-user-authn
+      module: user-authn
+      edition: ce
+      description: |-
+        The table of clients of the shared dex-authenticator instance `{{ $labels.instance_name }}` is full. {{ $value }} DexAuthenticator objects are not served, or are served without their latest changes.
+
+        Delete the DexAuthenticator objects that are no longer needed. The objects that did not fit:
+
+        ```bash
+        d8 k get dexauthenticators -A -o json | jq -r '.items[] | select(any(.status.conditions[]?; .type == "Served" and .reason == "TableFull")) | "\(.metadata.namespace)/\(.metadata.name)"'
+        ```
+      summary: |
+        The table of clients of the shared dex-authenticator {{ $labels.instance_name }} is full, {{ $value }} DexAuthenticator objects did not fit into it.
+      severity: "4"
+      markupFormat: markdown
     - name: D8SharedDexAuthenticatorClientTableNotLoaded
       sourceFile: modules/150-user-authn/monitoring/prometheus-rules/shared-dex-authenticator.yaml
       moduleUrl: 150-user-authn
@@ -6297,24 +6331,39 @@ alerts:
         The pod {{ $labels.pod }} of the shared dex-authenticator {{ $labels.instance_name }} cannot load its table of clients.
       severity: "6"
       markupFormat: markdown
+    - name: D8SharedDexAuthenticatorSessionStoreNotSeeded
+      sourceFile: modules/150-user-authn/monitoring/prometheus-rules/shared-dex-authenticator.yaml
+      moduleUrl: 150-user-authn
+      module: user-authn
+      edition: ce
+      description: |-
+        The pod `{{ $labels.pod }}` of the shared dex-authenticator instance `{{ $labels.instance_name }}` has not copied the sessions of the other pod since it started. Users stay signed in. If the other pod restarts before the sessions are refreshed, which takes up to `idTokenTTL`, every session is refreshed with an additional request to Dex.
+
+        The alert is resolved an hour after the pod starts. Check the log of the pod:
+
+        ```bash
+        d8 k -n d8-user-authn logs {{ $labels.pod }} -c dex-authenticator
+        ```
+      summary: |
+        The pod {{ $labels.pod }} of the shared dex-authenticator {{ $labels.instance_name }} started without the sessions of the other pod.
+      severity: "9"
+      markupFormat: markdown
     - name: D8SharedDexAuthenticatorWithoutOwnRedis
       sourceFile: modules/150-user-authn/monitoring/prometheus-rules/shared-dex-authenticator.yaml
       moduleUrl: 150-user-authn
       module: user-authn
       edition: ce
       description: |-
-        For more than 10 minutes, the pod `{{ $labels.pod }}` of the shared dex-authenticator instance `{{ $labels.instance_name }}` has not used the Redis of its pod: the Redis does not answer, or it was not filled from a neighbour when the pod started.
+        For more than 10 minutes, the pod `{{ $labels.pod }}` of the shared dex-authenticator instance `{{ $labels.instance_name }}` has not used the Redis in its pod. Users stay signed in, but their sessions are refreshed with additional requests to Dex.
 
-        In the mode `peer` the pod reads the sessions from the Redis of the other pod. In the mode `memory` no Redis answers, and the pod keeps the sessions in its memory. Users stay signed in, but a session the pod does not find is restored from its cookie with one more request to Dex, and with both pods in the mode `memory` every session is refreshed once per pod.
-
-        Check the state of the Redis container and the reason in the log of the proxy:
+        Check the containers of the pod and its log:
 
         ```bash
-        d8 k -n d8-user-authn get pod {{ $labels.pod }} -o jsonpath='{range .status.containerStatuses[*]}{.name}{" ready="}{.ready}{" restarts="}{.restartCount}{"\n"}{end}'
-        d8 k -n d8-user-authn logs {{ $labels.pod }} -c dex-authenticator | grep redis-peers
+        d8 k -n d8-user-authn get pod {{ $labels.pod }}
+        d8 k -n d8-user-authn logs {{ $labels.pod }} -c dex-authenticator
         ```
       summary: |
-        The pod {{ $labels.pod }} of the shared dex-authenticator {{ $labels.instance_name }} keeps the sessions without its own Redis (mode {{ $labels.mode }}).
+        The pod {{ $labels.pod }} of the shared dex-authenticator {{ $labels.instance_name }} does not use its own Redis.
       severity: "6"
       markupFormat: markdown
     - name: D8TerraformStateExporterClusterStateChanged

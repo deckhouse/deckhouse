@@ -1,15 +1,17 @@
 diff --git a/deckhouse_client_table.go b/deckhouse_client_table.go
 new file mode 100644
-index 00000000..95725fc4
+index 00000000..d9dd9fc2
 --- /dev/null
 +++ b/deckhouse_client_table.go
-@@ -0,0 +1,763 @@
+@@ -0,0 +1,1042 @@
 +package main
 +
 +import (
 +	"bytes"
 +	"context"
++	"crypto/hmac"
 +	"crypto/sha256"
++	"encoding/hex"
 +	"encoding/json"
 +	"errors"
 +	"fmt"
@@ -75,6 +77,16 @@ index 00000000..95725fc4
 +	// Hosts are the hosts of the applications of the client: DNS names without a port. A request
 +	// is given to the client by them, and a redirect is allowed to them. Unique in the table.
 +	Hosts []string `json:"hosts"`
++	// Services are the names of the Service of the object, as an ingress controller writes them
++	// into the Host header of a request it sends through that Service: DNS names without a port.
++	// A request with such a Host is given to the client when it is for a host of the client.
++	// Unique in the table.
++	Services []string `json:"services,omitempty"`
++	// SharedHosts are the hosts of the applications of the client that it is not chosen by:
++	// another client is, in this table or in the table of another process. A request for them is
++	// given to the client only when its Host is one of Services, and a redirect is allowed to
++	// them. Two clients may name one shared host.
++	SharedHosts []string `json:"sharedHosts,omitempty"`
 +	// ClientID and ClientSecret are the client at the provider: --client-id, --client-secret.
 +	ClientID     string `json:"clientID"`
 +	ClientSecret string `json:"clientSecret"`
@@ -109,8 +121,11 @@ index 00000000..95725fc4
 +	if c.ClientID == "" || c.ClientSecret == "" || c.CookieSecret == "" {
 +		return errors.New("clientID, clientSecret and cookieSecret are required")
 +	}
-+	if len(c.Hosts) == 0 {
++	if len(c.Hosts)+len(c.SharedHosts) == 0 {
 +		return errors.New("at least one host is required")
++	}
++	if len(c.SharedHosts) > 0 && len(c.Services) == 0 {
++		return errors.New("a shared host needs a name of the Service: the client is chosen for it by that name only")
 +	}
 +	if c.CookieExpire != "" {
 +		if _, err := time.ParseDuration(c.CookieExpire); err != nil {
@@ -118,15 +133,25 @@ index 00000000..95725fc4
 +		}
 +	}
 +
-+	for i, raw := range c.Hosts {
-+		host, port, ok := requestutil.ServerName(raw)
-+		if !ok || port != "" || len(host) != len(raw) {
-+			return fmt.Errorf("host %q is not a DNS name without a port", raw)
++	for _, list := range []struct {
++		kind  string
++		names []string
++	}{{"host", c.Hosts}, {"shared host", c.SharedHosts}, {"name of the Service", c.Services}} {
++		for i, raw := range list.names {
++			name, port, ok := requestutil.ServerName(raw)
++			if !ok || port != "" || len(name) != len(raw) {
++				return fmt.Errorf("%s %q is not a DNS name without a port", list.kind, raw)
++			}
++			list.names[i] = name
 +		}
-+		c.Hosts[i] = host
 +	}
 +
 +	return nil
++}
++
++// applications returns the hosts of the applications of the client, the shared ones included.
++func (c *clientSpec) applications() []string {
++	return slices.Concat(c.Hosts, c.SharedHosts)
 +}
 +
 +// args returns the flags of the client that follow the flags of the process; scope is the scope
@@ -144,7 +169,7 @@ index 00000000..95725fc4
 +	if c.AllowAccessToKubernetes {
 +		args = append(args, "--scope="+strings.TrimSpace(scope+" "+kubernetesScopes))
 +	}
-+	for _, host := range c.Hosts {
++	for _, host := range c.applications() {
 +		args = append(args, "--whitelist-domain="+host)
 +	}
 +
@@ -167,17 +192,23 @@ index 00000000..95725fc4
 +	generation int64
 +	clients    []clientSpec
 +	refused    map[string]string
++	// refusedIDs are the status identifiers of the refused records (statusID), by the same key.
++	refusedIDs map[string]string
 +}
 +
 +// parseClientTable reads the table and checks what the isolation of the clients relies on: every
-+// client has a name, hosts and a cookie secret of its own. The clients share the session store, so
-+// two clients with one cookie secret would take the sessions of each other.
++// client has a name, hosts, names of its Service and a cookie secret of its own. The clients share
++// the session store, so two clients with one cookie secret would take the sessions of each other.
++// Only a shared host may be named by two clients: none of them is chosen by it.
 +//
 +// A record that fails a check is refused alone: the other clients are served by the new table,
-+// and that client by the record it had (see apply). Of two records that claim one name, one host
-+// or one cookie secret, the first in the file keeps it. Only a file that is not a table at all,
-+// an unknown field included, is refused as a whole.
-+func parseClientTable(data []byte, needsProviderLogout bool) (*parsedTable, error) {
++// and that client by the record it had (see apply). A host or a name of a Service that a client
++// of the table in use (served) is chosen by stays with that client while its record claims it:
++// another record that claims it is refused. A host or a Service that two records claim and no
++// client is chosen by goes to none of them: both are refused. Of two records of one client, or
++// two records with one cookie secret, the first in the file keeps it. Only a file that is not a
++// table at all, an unknown field included, is refused as a whole.
++func parseClientTable(data []byte, needsProviderLogout bool, served servedNames) (*parsedTable, error) {
 +	var file clientTableFile
 +	decoder := json.NewDecoder(bytes.NewReader(data))
 +	decoder.DisallowUnknownFields()
@@ -196,10 +227,16 @@ index 00000000..95725fc4
 +		generation: file.Generation,
 +		clients:    make([]clientSpec, 0, len(file.Clients)),
 +		refused:    map[string]string{},
++		refusedIDs: map[string]string{},
 +	}
 +	keys := make(map[string]struct{}, len(file.Clients))
-+	hosts := make(map[string]string, len(file.Clients))
++	taken := takenNames{
++		hosts:    make(map[string]string, len(file.Clients)),
++		services: make(map[string]string, len(file.Clients)),
++		objects:  make(map[string]string, len(file.Clients)),
++	}
 +	cookieSecrets := make(map[[fingerprintSize]byte]string, len(file.Clients))
++	claims := claimedNamesOf(file.Clients)
 +
 +	for i := range file.Clients {
 +		spec := &file.Clients[i]
@@ -211,14 +248,21 @@ index 00000000..95725fc4
 +		}
 +		keys[key] = struct{}{}
 +
-+		if reason := checkClientSpec(spec, needsProviderLogout, hosts, cookieSecrets); reason != "" {
++		if reason := checkClientSpec(spec, needsProviderLogout, taken, cookieSecrets, served.contested(spec, claims)); reason != "" {
 +			table.refused[key] = reason
++			table.refusedIDs[key] = statusID(spec)
 +			logger.Errorf("Record %d of the client table, client %q, is refused: %s", i, key, reason)
 +			continue
 +		}
 +
 +		for _, host := range spec.Hosts {
-+			hosts[host] = key
++			taken.hosts[host] = key
++		}
++		for _, service := range spec.Services {
++			taken.services[service] = key
++			if object, ok := serviceObject(service); ok {
++				taken.objects[object] = key
++			}
 +		}
 +		cookieSecrets[cookieSecretHash(spec.CookieSecret)] = key
 +		table.clients = append(table.clients, *spec)
@@ -227,24 +271,207 @@ index 00000000..95725fc4
 +	return table, nil
 +}
 +
++// takenNames are the names the records accepted so far are chosen by, with the key of their
++// client: the hosts, the names of the Services and their <service>.<namespace> (serviceObject).
++type takenNames struct {
++	hosts, services, objects map[string]string
++}
++
++// servedNames are the names the clients of the table in use are chosen by, with the key of their
++// client. A name a client is chosen by now stays with that client for as long as its record
++// claims it, and a name two records claim and no client is chosen by goes to none of them. With
++// the order of the file, a record put before the record of a client would take its host or its
++// Service, and with it the requests of its application: they would be checked with the cookie
++// secret, the users and the groups of another client. And a process that starts has no table in
++// use: by the order of the file it could give a name to another client than the process next to
++// it that runs. The writer of the table gives a name to one client, and the process does not
++// rely on it.
++type servedNames struct {
++	hosts, services, objects map[string]string
++}
++
++// namesServedBy returns the names the clients of table are chosen by.
++func namesServedBy(table *clientTable) servedNames {
++	served := servedNames{
++		hosts:    make(map[string]string, len(table.byHost)),
++		services: make(map[string]string, len(table.byService)),
++		objects:  make(map[string]string, len(table.byObject)),
++	}
++	for host, client := range table.byHost {
++		served.hosts[host] = client.name
++	}
++	for service, client := range table.byService {
++		served.services[service] = client.name
++	}
++	for object, client := range table.byObject {
++		served.objects[object] = client.name
++	}
++
++	return served
++}
++
++// claimedNames are the names the records of a file are chosen by: the hosts and the names of the
++// Services, in the form the dispatcher looks them up in. The first record of a client is its
++// record. A record that is refused for something else claims its names all the same: its client
++// is then served by the record it had, by these very names.
++type claimedNames struct {
++	// byClient are the names of the record of a client, by its key.
++	byClient map[string]map[string]struct{}
++	// hosts, services and objects are the keys of the clients whose records claim a host, a name
++	// of a Service and a Service by any of its names (<service>.<namespace>, serviceObject).
++	hosts, services, objects map[string][]string
++}
++
++// claimedNamesOf returns the names the records of specs claim.
++func claimedNamesOf(specs []clientSpec) claimedNames {
++	claims := claimedNames{
++		byClient: make(map[string]map[string]struct{}, len(specs)),
++		hosts:    make(map[string][]string, len(specs)),
++		services: make(map[string][]string, len(specs)),
++		objects:  make(map[string][]string, len(specs)),
++	}
++	for i := range specs {
++		key := specs[i].key()
++		if _, ok := claims.byClient[key]; ok {
++			continue
++		}
++		names := map[string]struct{}{}
++		claims.byClient[key] = names
++		claim := func(raw string, by map[string][]string) (string, bool) {
++			name, port, ok := requestutil.ServerName(raw)
++			if !ok || port != "" {
++				return "", false
++			}
++			if _, seen := names[name]; !seen && !slices.Contains(by[name], key) {
++				by[name] = append(by[name], key)
++			}
++			names[name] = struct{}{}
++
++			return name, true
++		}
++		for _, host := range specs[i].Hosts {
++			claim(host, claims.hosts)
++		}
++		for _, service := range specs[i].Services {
++			name, ok := claim(service, claims.services)
++			if !ok {
++				continue
++			}
++			if object, isService := serviceObject(name); isService && !slices.Contains(claims.objects[object], key) {
++				claims.objects[object] = append(claims.objects[object], key)
++			}
++		}
++	}
++
++	return claims
++}
++
++// other returns a key of keys that is not key, or an empty string.
++func other(keys []string, key string) string {
++	for _, k := range keys {
++		if k != key {
++			return k
++		}
++	}
++
++	return ""
++}
++
++// contested returns why spec does not get a name another record of the file claims too, or an
++// empty string: the name stays with the client that is chosen by it now and still claims it, or
++// no client is chosen by it and it goes to none of the records that claim it. claims are the
++// names the records of the file claim (claimedNamesOf). spec must be normalized, so the call is
++// made with a copy when it is not yet.
++func (s servedNames) contested(spec *clientSpec, claims claimedNames) string {
++	checked := *spec
++	checked.Hosts = slices.Clone(spec.Hosts)
++	checked.SharedHosts = slices.Clone(spec.SharedHosts)
++	checked.Services = slices.Clone(spec.Services)
++	if err := checked.normalize(); err != nil {
++		return ""
++	}
++	key := checked.key()
++
++	kept := func(name, owner string) string {
++		return fmt.Sprintf("%q belongs to the client %q, which is served by it and still claims it", name, owner)
++	}
++	for _, host := range checked.Hosts {
++		owner := s.hosts[host]
++		if owner == key {
++			continue
++		}
++		if _, claimed := claims.byClient[owner][host]; owner != "" && claimed {
++			return kept(host, owner)
++		}
++		if rival := other(claims.hosts[host], key); rival != "" {
++			return fmt.Sprintf("the host %q is claimed by the client %q too, and no client is served by it", host, rival)
++		}
++	}
++	for _, service := range checked.Services {
++		owner := s.services[service]
++		object, isService := serviceObject(service)
++		if isService && owner == "" {
++			// Another DNS name of the Service a client is chosen by is that Service too.
++			owner = s.objects[object]
++		}
++		if owner == key {
++			continue
++		}
++		rivals := claims.services[service]
++		if isService {
++			rivals = claims.objects[object]
++		}
++		if owner != "" && slices.Contains(rivals, owner) {
++			return kept(service, owner)
++		}
++		if rival := other(rivals, key); rival != "" {
++			return fmt.Sprintf("the Service %q is claimed by the client %q too, and no client is served by it", service, rival)
++		}
++	}
++
++	return ""
++}
++
 +// checkClientSpec returns why the record cannot be served next to the records accepted before it,
-+// whose hosts and cookie secrets are given, or an empty string.
-+func checkClientSpec(spec *clientSpec, needsProviderLogout bool, hosts map[string]string, cookieSecrets map[[fingerprintSize]byte]string) string {
++// whose names and cookie secrets are given, or an empty string. contested is why the record does
++// not get a name another record claims too (servedNames.contested), or an empty string.
++func checkClientSpec(spec *clientSpec, needsProviderLogout bool, taken takenNames, cookieSecrets map[[fingerprintSize]byte]string, contested string) string {
 +	if err := spec.normalize(); err != nil {
 +		return err.Error()
 +	}
 +	if needsProviderLogout && !spec.ProviderLogout {
 +		return "the process signs out through the provider, and the provider has no address to return to for this client"
 +	}
-+	seen := make(map[string]struct{}, len(spec.Hosts))
++	if contested != "" {
++		return contested
++	}
++	seen := make(map[string]struct{}, len(spec.Hosts)+len(spec.SharedHosts))
 +	for _, host := range spec.Hosts {
-+		if owner, ok := hosts[host]; ok {
++		if owner, ok := taken.hosts[host]; ok {
 +			return fmt.Sprintf("the host %q belongs to the client %q", host, owner)
 +		}
++	}
++	for _, host := range spec.applications() {
 +		if _, ok := seen[host]; ok {
 +			return fmt.Sprintf("the host %q is named twice", host)
 +		}
 +		seen[host] = struct{}{}
++	}
++	seen = make(map[string]struct{}, len(spec.Services))
++	for _, service := range spec.Services {
++		if owner, ok := taken.services[service]; ok {
++			return fmt.Sprintf("the name of the Service %q belongs to the client %q", service, owner)
++		}
++		// Two names of one Service under two domains are one Service: of one client only.
++		if object, ok := serviceObject(service); ok {
++			if owner, isTaken := taken.objects[object]; isTaken {
++				return fmt.Sprintf("the name of the Service %q names the Service of the client %q", service, owner)
++			}
++		}
++		if _, ok := seen[service]; ok {
++			return fmt.Sprintf("the name of the Service %q is named twice", service)
++		}
++		seen[service] = struct{}{}
 +	}
 +	if owner, ok := cookieSecrets[cookieSecretHash(spec.CookieSecret)]; ok {
 +		return fmt.Sprintf("its cookie secret is the cookie secret of the client %q", owner)
@@ -318,15 +545,21 @@ index 00000000..95725fc4
 +	// the watcher after that.
 +	hasSeen bool
 +	seen    [sha256.Size]byte
-+	lastErr string
++	// seenRefused is why the content of seen was refused as a whole; empty when it is a table.
++	seenRefused string
++	lastErr     string
 +
 +	// status is what the process reports of the table it serves.
 +	status atomic.Pointer[clientTableStatus]
 +}
 +
 +// clientTableStatus is the answer of clientTableStatusPath: the generation of the table the
-+// process serves and the clients of that table whose record was refused or could not be built,
-+// which are served by the record they had before, if they had one.
++// process serves, the number of its clients, and the clients of that table whose record was
++// refused or could not be built, which are served by the record they had before, if they had one.
++//
++// The answer names no client. Every pod of the cluster reaches the port of the process, and the
++// names of the clients are the namespaces and the objects of other tenants, so a failed client is
++// given by an identifier only the writer of its record can compute (statusID).
 +type clientTableStatus struct {
 +	Generation int64    `json:"generation"`
 +	Clients    int      `json:"clients"`
@@ -334,9 +567,22 @@ index 00000000..95725fc4
 +}
 +
 +// clientTableStatusPath is where the process reports the table it serves. It is not under the
-+// proxy prefix, so the routes of the applications do not lead to it: the names of the clients are
-+// not for the users of the applications.
++// proxy prefix, so the routes of the applications do not lead to it.
 +const clientTableStatusPath = "/client-table"
++
++// statusIDSize is the length of a status identifier in bytes, before it is written in hex.
++const statusIDSize = 16
++
++// statusID is the identifier of the client of a record in the status of the table: the HMAC of
++// the key of the client under the cookie secret of the record, as the record has it. Whoever
++// wrote the record computes the same; anybody else learns neither the name of the client nor,
++// without the secret, whether a name he guesses is there.
++func statusID(spec *clientSpec) string {
++	mac := hmac.New(sha256.New, []byte(spec.CookieSecret))
++	mac.Write([]byte(spec.key()))
++
++	return hex.EncodeToString(mac.Sum(nil)[:statusIDSize])
++}
 +
 +// serveStatus answers clientTableStatusPath and passes every other request on.
 +func (p *clientTableProxy) serveStatus(next http.Handler) http.Handler {
@@ -521,12 +767,21 @@ index 00000000..95725fc4
 +
 +	sum := sha256.Sum256(data)
 +	if p.hasSeen && sum == p.seen {
++		if p.seenRefused != "" {
++			// A file that stays refused is a point of the metric on every read, as a file that
++			// stays missing is: a single point would be gone before an alert could fire on it.
++			// The log has the reason again when something else was reported since.
++			p.metrics.reloads.WithLabelValues(reloadError).Observe(time.Since(start).Seconds())
++			p.reportError(p.seenRefused)
++		}
 +		return
 +	}
 +	p.hasSeen, p.seen = true, sum
 +
-+	table, err := parseClientTable(data, p.needsProviderLogout)
++	table, err := parseClientTable(data, p.needsProviderLogout, namesServedBy(p.dispatcher.table.Load()))
++	p.seenRefused = ""
 +	if err != nil {
++		p.seenRefused = err.Error()
 +		p.metrics.reloads.WithLabelValues(reloadError).Observe(time.Since(start).Seconds())
 +		p.reportError(err.Error())
 +		return
@@ -566,7 +821,8 @@ index 00000000..95725fc4
 +// apply builds the clients of table and swaps them in. A client whose record is the same as in
 +// the current table keeps its OAuthProxy, and with it everything the proxy remembers. A client
 +// whose record was refused or cannot be built is served as before: by its previous OAuthProxy, on
-+// the hosts it had that no client of the new table has taken. A new client that fails is left out.
++// the hosts and by the names of its Service it had that no client of the new table has taken. A
++// new client that fails is left out.
 +func (p *clientTableProxy) apply(table *parsedTable) tableChanges {
 +	current := p.dispatcher.table.Load()
 +	next := newClientTable()
@@ -579,6 +835,12 @@ index 00000000..95725fc4
 +		cookieSecrets[client.cookieSecret] = struct{}{}
 +		for _, host := range client.hosts {
 +			next.byHost[host] = client
++		}
++		for _, service := range client.services {
++			next.byService[service] = client
++			if object, ok := serviceObject(service); ok {
++				next.byObject[object] = client
++			}
 +		}
 +	}
 +
@@ -596,7 +858,7 @@ index 00000000..95725fc4
 +			add(client)
 +		default:
 +			changes.failed++
-+			failed = append(failed, spec.key())
++			failed = append(failed, statusID(&spec))
 +			if client != nil {
 +				kept = append(kept, client)
 +			}
@@ -605,12 +867,15 @@ index 00000000..95725fc4
 +	}
 +	for key := range table.refused {
 +		changes.failed++
-+		failed = append(failed, key)
++		failed = append(failed, table.refusedIDs[key])
 +		p.metrics.changes.WithLabelValues(changeFailed).Inc()
 +		if previous := current.byName[key]; previous != nil {
 +			kept = append(kept, previous)
 +		}
 +	}
++	// In the order of their names: which of two clients kept on their previous records gets a
++	// name both had must not change from one load to the next.
++	slices.SortFunc(kept, func(a, b *tableClient) int { return strings.Compare(a.name, b.name) })
 +	for _, previous := range kept {
 +		// The cookie secret of the record a client had may be the one a client of the new table
 +		// has now: served together, they would take the cookies of each other.
@@ -618,7 +883,7 @@ index 00000000..95725fc4
 +			logger.Errorf("Client %q of the client table is not served by its previous record: a client of the new table has its cookie secret", previous.name)
 +			continue
 +		}
-+		// The hosts of its record, not only those it is served on now: a host that a client of
++		// The names of its record, not only those it is served on now: a name that a client of
 +		// an earlier table took and has given up since comes back.
 +		hosts := make([]string, 0, len(previous.record))
 +		for _, host := range previous.record {
@@ -626,7 +891,18 @@ index 00000000..95725fc4
 +				hosts = append(hosts, host)
 +			}
 +		}
-+		add(previous.on(hosts))
++		services := make([]string, 0, len(previous.recordServices))
++		for _, service := range previous.recordServices {
++			_, isTaken := next.byService[service]
++			if object, ok := serviceObject(service); ok && !isTaken {
++				// Another DNS name of the same Service is that Service too.
++				_, isTaken = next.byObject[object]
++			}
++			if !isTaken {
++				services = append(services, service)
++			}
++		}
++		add(previous.on(hosts, services))
 +	}
 +
 +	for name := range current.byName {
@@ -638,10 +914,10 @@ index 00000000..95725fc4
 +
 +	p.dispatcher.table.Store(next)
 +
-+	// A client kept without a host stays in the table for its hosts to come back, and is not
-+	// counted as served.
++	// A client kept without a name to choose it by stays in the table for its names to come
++	// back, and is not counted as served.
 +	for _, client := range next.byName {
-+		if len(client.hosts) > 0 {
++		if len(client.hosts)+len(client.services) > 0 {
 +			changes.clients++
 +		}
 +	}
@@ -660,9 +936,9 @@ index 00000000..95725fc4
 +func (p *clientTableProxy) client(spec clientSpec, previous *tableClient) (*tableClient, string) {
 +	fingerprint, err := spec.fingerprint()
 +	if err == nil && previous != nil && previous.fingerprint == fingerprint {
-+		// The record is the one the client was built from: it is served on all its hosts again,
-+		// also after a table that had left it only some of them.
-+		return previous.on(previous.record), changeReused
++		// The record is the one the client was built from: it is served on all its hosts and by
++		// all the names of its Service again, also after a table that had left it only some.
++		return previous.on(previous.record, previous.recordServices), changeReused
 +	}
 +
 +	var handler http.Handler
@@ -674,16 +950,19 @@ index 00000000..95725fc4
 +		return previous, changeFailed
 +	}
 +
-+	logger.Printf("Client %q of the client table is built: client ID %s, hosts %s",
-+		spec.key(), spec.ClientID, strings.Join(spec.Hosts, ","))
++	logger.Printf("Client %q of the client table is built: client ID %s, hosts %s, shared hosts %s",
++		spec.key(), spec.ClientID, strings.Join(spec.Hosts, ","), strings.Join(spec.SharedHosts, ","))
 +
 +	return &tableClient{
-+		name:         spec.key(),
-+		fingerprint:  fingerprint,
-+		cookieSecret: cookieSecretHash(spec.CookieSecret),
-+		record:       spec.Hosts,
-+		hosts:        spec.Hosts,
-+		handler:      handler,
++		name:           spec.key(),
++		fingerprint:    fingerprint,
++		cookieSecret:   cookieSecretHash(spec.CookieSecret),
++		record:         spec.Hosts,
++		hosts:          spec.Hosts,
++		recordServices: spec.Services,
++		services:       spec.Services,
++		applications:   spec.applications(),
++		handler:        handler,
 +	}, changeBuilt
 +}
 +
@@ -718,7 +997,7 @@ index 00000000..95725fc4
 +	requests := prometheus.NewHistogramVec(
 +		prometheus.HistogramOpts{
 +			Name:    "oauth2_proxy_dispatch_request_duration_seconds",
-+			Help:    "Time to serve a request by the outcome of choosing its client: hit (a client of the table served it) or unknown (no client has the host, answered 403 on the auth path and 404 elsewhere). The count of the histogram is the number of requests.",
++			Help:    "Time to serve a request by the outcome of choosing its client: hit (a client of the table served it) or unknown (the request names no client, answered 403 on the auth path and 404 elsewhere). The count of the histogram is the number of requests.",
 +			Buckets: []float64{0.00025, 0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10},
 +		},
 +		[]string{"outcome"},
@@ -732,7 +1011,7 @@ index 00000000..95725fc4
 +		}),
 +		hosts: prometheus.NewGauge(prometheus.GaugeOpts{
 +			Name: "oauth2_proxy_client_table_hosts",
-+			Help: "Number of hosts in the client table.",
++			Help: "Number of hosts the clients of the client table are chosen by.",
 +		}),
 +		reloads: prometheus.NewHistogramVec(
 +			prometheus.HistogramOpts{
@@ -769,10 +1048,10 @@ index 00000000..95725fc4
 +}
 diff --git a/deckhouse_client_table_test.go b/deckhouse_client_table_test.go
 new file mode 100644
-index 00000000..46ffe69d
+index 00000000..7af1d4e2
 --- /dev/null
 +++ b/deckhouse_client_table_test.go
-@@ -0,0 +1,1489 @@
+@@ -0,0 +1,2285 @@
 +package main
 +
 +import (
@@ -784,8 +1063,10 @@ index 00000000..46ffe69d
 +	"fmt"
 +	"net/http"
 +	"net/http/httptest"
++	"net/url"
 +	"os"
 +	"path/filepath"
++	"slices"
 +	"strconv"
 +	"strings"
 +	"sync"
@@ -839,6 +1120,18 @@ index 00000000..46ffe69d
 +		ClientSecret: testClientSecret,
 +		CookieSecret: cookieSecret,
 +	}
++}
++
++// statusIDs returns the identifiers the status of the table gives the clients of specs, sorted
++// as the status sorts them.
++func statusIDs(specs ...clientSpec) []string {
++	ids := make([]string, 0, len(specs))
++	for i := range specs {
++		ids = append(ids, statusID(&specs[i]))
++	}
++	slices.Sort(ids)
++
++	return ids
 +}
 +
 +func encodeTable(t *testing.T, specs ...clientSpec) []byte {
@@ -897,19 +1190,22 @@ index 00000000..46ffe69d
 +		{name: "empty host", table: `{"clients":[` + record("app.example.com", "") + `]}`, expectedRefused: map[string]string{"ns/app": "not a DNS name"}},
 +		{name: "bad cookie expire", table: `{"clients":[` + record(`"clientID"`, `"cookieExpire":"week","clientID"`) + `]}`, expectedRefused: map[string]string{"ns/app": "cookieExpire is not a duration"}},
 +
-+		// Of two records that claim the same thing the first keeps it, and the other clients
-+		// of the table are not touched.
++		// A host or a Service that two records claim and no client is served by goes to none of
++		// them, whatever the order of the file, and the other clients of the table are not
++		// touched. Of two records with one cookie secret the first keeps it.
 +		{
 +			name:            "host used twice",
 +			table:           `{"clients":[` + record() + `,` + record(`"name":"app"`, `"name":"second"`, testCookieSecretA, testCookieSecretC) + `,` + other + `]}`,
-+			expectedClients: []string{"ns/app", "ns/other"},
-+			expectedRefused: map[string]string{"ns/second": `the host "app.example.com" belongs to the client "ns/app"`},
++			expectedClients: []string{"ns/other"},
++			expectedRefused: map[string]string{
++				"ns/app":    `the host "app.example.com" is claimed by the client "ns/second" too, and no client is served by it`,
++				"ns/second": `the host "app.example.com" is claimed by the client "ns/app" too, and no client is served by it`,
++			},
 +		},
 +		{
 +			name:            "host used twice in another case",
 +			table:           `{"clients":[` + record() + `,` + record(`"name":"app"`, `"name":"second"`, "app.example.com", "APP.example.com", testCookieSecretA, testCookieSecretC) + `]}`,
-+			expectedClients: []string{"ns/app"},
-+			expectedRefused: map[string]string{"ns/second": `belongs to the client "ns/app"`},
++			expectedRefused: map[string]string{"ns/app": `is claimed by the client "ns/second"`, "ns/second": `is claimed by the client "ns/app"`},
 +		},
 +		{
 +			name:            "cookie secret used twice",
@@ -943,6 +1239,80 @@ index 00000000..46ffe69d
 +			expectedClients: []string{"ns/app"},
 +			expectedRefused: map[string]string{"ns/second": `is the cookie secret of the client "ns/app"`},
 +		},
++		// The names of the Service and the shared hosts.
++		{
++			name:            "names of the service and shared hosts",
++			table:           `{"clients":[` + record(`"clientID"`, `"services":["app-dex-authenticator.ns.svc.cluster.local"],"sharedHosts":["shared.example.com"],"clientID"`) + `]}`,
++			expectedClients: []string{"ns/app"},
++		},
++		{
++			name:            "shared hosts only",
++			table:           `{"clients":[` + record(`["app.example.com"]`, `[]`, `"clientID"`, `"services":["app-dex-authenticator.ns.svc.cluster.local"],"sharedHosts":["shared.example.com"],"clientID"`) + `]}`,
++			expectedClients: []string{"ns/app"},
++		},
++		{
++			name:            "shared host without a name of the service",
++			table:           `{"clients":[` + record(`"clientID"`, `"sharedHosts":["shared.example.com"],"clientID"`) + `,` + other + `]}`,
++			expectedClients: []string{"ns/other"},
++			expectedRefused: map[string]string{"ns/app": "a shared host needs a name of the Service"},
++		},
++		{
++			name: "shared host named by two clients",
++			table: `{"clients":[` + record(`"clientID"`, `"services":["app.ns.svc"],"sharedHosts":["shared.example.com"],"clientID"`) + `,` +
++				record(`"name":"app"`, `"name":"second"`, "app.example.com", "second.example.com", testCookieSecretA, testCookieSecretC, `"clientID"`, `"services":["second.ns.svc"],"sharedHosts":["shared.example.com"],"clientID"`) + `]}`,
++			expectedClients: []string{"ns/app", "ns/second"},
++		},
++		{
++			name: "shared host that is the host of another client",
++			table: `{"clients":[` + record() + `,` +
++				record(`"name":"app"`, `"name":"second"`, "app.example.com", "second.example.com", testCookieSecretA, testCookieSecretC, `"clientID"`, `"services":["second.ns.svc"],"sharedHosts":["app.example.com"],"clientID"`) + `]}`,
++			expectedClients: []string{"ns/app", "ns/second"},
++		},
++		{
++			name:            "shared host that is a host of the client itself",
++			table:           `{"clients":[` + record(`"clientID"`, `"services":["app.ns.svc"],"sharedHosts":["APP.example.com"],"clientID"`) + `]}`,
++			expectedRefused: map[string]string{"ns/app": `the host "app.example.com" is named twice`},
++		},
++		{
++			name:            "shared host with a port",
++			table:           `{"clients":[` + record(`"clientID"`, `"services":["app.ns.svc"],"sharedHosts":["shared.example.com:443"],"clientID"`) + `]}`,
++			expectedRefused: map[string]string{"ns/app": `shared host "shared.example.com:443" is not a DNS name`},
++		},
++		{
++			name:            "name of the service with a port",
++			table:           `{"clients":[` + record(`"clientID"`, `"services":["app.ns.svc:443"],"clientID"`) + `]}`,
++			expectedRefused: map[string]string{"ns/app": `name of the Service "app.ns.svc:443" is not a DNS name`},
++		},
++		{
++			name: "name of the service used twice",
++			table: `{"clients":[` + record(`"clientID"`, `"services":["app.ns.svc"],"clientID"`) + `,` +
++				record(`"name":"app"`, `"name":"second"`, "app.example.com", "second.example.com", testCookieSecretA, testCookieSecretC, `"clientID"`, `"services":["APP.ns.svc"],"clientID"`) + `,` + other + `]}`,
++			expectedClients: []string{"ns/other"},
++			expectedRefused: map[string]string{
++				"ns/app":    `the Service "app.ns.svc" is claimed by the client "ns/second" too`,
++				"ns/second": `the Service "app.ns.svc" is claimed by the client "ns/app" too`,
++			},
++		},
++		{
++			name:            "name of the service named twice by one client",
++			table:           `{"clients":[` + record(`"clientID"`, `"services":["app.ns.svc","app.ns.svc"],"clientID"`) + `]}`,
++			expectedRefused: map[string]string{"ns/app": `the name of the Service "app.ns.svc" is named twice`},
++		},
++		{
++			name: "one service under two domains by two clients",
++			table: `{"clients":[` + record(`"clientID"`, `"services":["app.ns.svc.cluster.local"],"clientID"`) + `,` +
++				record(`"name":"app"`, `"name":"second"`, "app.example.com", "second.example.com", testCookieSecretA, testCookieSecretC, `"clientID"`, `"services":["app.ns.svc.alias.local"],"clientID"`) + `,` + other + `]}`,
++			expectedClients: []string{"ns/other"},
++			expectedRefused: map[string]string{
++				"ns/app":    `the Service "app.ns.svc.cluster.local" is claimed by the client "ns/second" too`,
++				"ns/second": `the Service "app.ns.svc.alias.local" is claimed by the client "ns/app" too`,
++			},
++		},
++		{
++			name:            "one service under two domains by one client",
++			table:           `{"clients":[` + record(`"clientID"`, `"services":["app.ns.svc.cluster.local","app.ns.svc.alias.local","app.ns"],"clientID"`) + `]}`,
++			expectedClients: []string{"ns/app"},
++		},
 +		{name: "two json values", table: `{"clients":[` + record() + `]}{`, expectedErr: "more than one JSON value"},
 +		{name: "null", table: `null`, expectedErr: "the list of clients is missing"},
 +	}
@@ -951,7 +1321,7 @@ index 00000000..46ffe69d
 +		t.Run(tt.name, func(t *testing.T) {
 +			t.Parallel()
 +
-+			table, err := parseClientTable([]byte(tt.table), false)
++			table, err := parseClientTable([]byte(tt.table), false, servedNames{})
 +			if tt.expectedErr != "" {
 +				require.ErrorContains(t, err, tt.expectedErr)
 +				assert.Nil(t, table)
@@ -976,7 +1346,7 @@ index 00000000..46ffe69d
 +	t.Run("the generation is read", func(t *testing.T) {
 +		t.Parallel()
 +
-+		table, err := parseClientTable([]byte(`{"generation":7,"clients":[`+record()+`]}`), false)
++		table, err := parseClientTable([]byte(`{"generation":7,"clients":[`+record()+`]}`), false, servedNames{})
 +		require.NoError(t, err)
 +		assert.EqualValues(t, 7, table.generation)
 +	})
@@ -984,10 +1354,23 @@ index 00000000..46ffe69d
 +	t.Run("hosts are brought to lower case", func(t *testing.T) {
 +		t.Parallel()
 +
-+		table, err := parseClientTable(encodeTable(t, testSpec("app", "App.Example.COM")), false)
++		table, err := parseClientTable(encodeTable(t, testSpec("app", "App.Example.COM")), false, servedNames{})
 +		require.NoError(t, err)
 +		require.Len(t, table.clients, 1)
 +		assert.Equal(t, []string{"app.example.com"}, table.clients[0].Hosts)
++	})
++
++	t.Run("names of the service and shared hosts are brought to lower case", func(t *testing.T) {
++		t.Parallel()
++
++		spec := testSpec("app", "app.example.com")
++		spec.Services = []string{"App-Dex-Authenticator.NS.svc.Cluster.Local"}
++		spec.SharedHosts = []string{"Shared.Example.COM"}
++		table, err := parseClientTable(encodeTable(t, spec), false, servedNames{})
++		require.NoError(t, err)
++		require.Len(t, table.clients, 1)
++		assert.Equal(t, []string{"app-dex-authenticator.ns.svc.cluster.local"}, table.clients[0].Services)
++		assert.Equal(t, []string{"shared.example.com"}, table.clients[0].SharedHosts)
 +	})
 +
 +	t.Run("a process that signs out through the provider refuses a client without a return address", func(t *testing.T) {
@@ -997,13 +1380,13 @@ index 00000000..46ffe69d
 +		withLogout.ProviderLogout = true
 +		data := encodeTable(t, testSpec("without", "without.example.com"), withLogout)
 +
-+		table, err := parseClientTable(data, true)
++		table, err := parseClientTable(data, true, servedNames{})
 +		require.NoError(t, err)
 +		require.Len(t, table.clients, 1)
 +		assert.Equal(t, "ns/with", table.clients[0].key())
 +		assert.Contains(t, table.refused["ns/without"], "no address to return to")
 +
-+		table, err = parseClientTable(data, false)
++		table, err = parseClientTable(data, false, servedNames{})
 +		require.NoError(t, err)
 +		assert.Len(t, table.clients, 2, "a process without the sign-out through the provider serves both")
 +	})
@@ -1037,6 +1420,18 @@ index 00000000..46ffe69d
 +				"--client-id=id", "--client-secret=secret", "--cookie-secret=cookie", "--set-authorization-header=true",
 +				"--cookie-expire=24h", "--scope=" + scope + " federated:id audience:server:client_id:kubernetes",
 +				"--whitelist-domain=app.example.com", "--whitelist-domain=app2.example.com",
++			},
++		},
++		{
++			// A redirect is allowed to a shared host; the names of the Service are no flag.
++			name: "shared hosts",
++			spec: clientSpec{
++				Name: "app", Namespace: "ns", Hosts: []string{"app.example.com"}, SharedHosts: []string{"shared.example.com"},
++				Services: []string{"app-dex-authenticator.ns.svc.cluster.local"}, ClientID: "id", ClientSecret: "secret", CookieSecret: "cookie",
++			},
++			expected: []string{
++				"--client-id=id", "--client-secret=secret", "--cookie-secret=cookie", "--set-authorization-header=false",
++				"--whitelist-domain=app.example.com", "--whitelist-domain=shared.example.com",
 +			},
 +		},
 +	}
@@ -1158,6 +1553,31 @@ index 00000000..46ffe69d
 +	t.Helper()
 +
 +	req := httptest.NewRequest(http.MethodGet, "http://"+host+"/dex-authenticator/sign_in", nil)
++	rw := httptest.NewRecorder()
++	d.ServeHTTP(rw, req)
++
++	return rw.Code, rw.Body.String()
++}
++
++// testServiceSpec returns a client with the name of its Service, as the controller writes it.
++func testServiceSpec(name string, hosts ...string) clientSpec {
++	spec := testSpec(name, hosts...)
++	spec.Services = []string{testServiceName(name)}
++
++	return spec
++}
++
++func testServiceName(name string) string {
++	return name + "-dex-authenticator." + testNamespace + ".svc.cluster.local"
++}
++
++// getThrough asks the dispatcher for the auth subrequest ingress-nginx sends through the Service
++// service for a request to host, and returns the status and the body.
++func getThrough(t *testing.T, d *dispatcher, service, host string) (int, string) {
++	t.Helper()
++
++	req := httptest.NewRequest(http.MethodGet, "http://"+service+"/dex-authenticator/auth", nil)
++	req.Header.Set("X-Original-URL", "https://"+host+"/")
 +	rw := httptest.NewRecorder()
 +	d.ServeHTTP(rw, req)
 +
@@ -1317,6 +1737,29 @@ index 00000000..46ffe69d
 +
 +		assert.Equal(t, 1, builder.count("a"))
 +		assert.EqualValues(t, 1, reloadCount(t, p, reloadError))
++
++		// The file stays as it is: every read of it is an error, so that an alert sees a rate.
++		p.reload()
++		p.reload()
++		assert.EqualValues(t, 3, reloadCount(t, p, reloadError))
++		assert.Same(t, before, p.dispatcher.table.Load())
++
++		// The file is gone for a moment and comes back as it was: the log names the refusal
++		// again, not the read that failed in between.
++		require.NoError(t, os.Remove(p.path))
++		p.reload()
++		assert.Contains(t, p.lastErr, "could not read")
++		require.NoError(t, os.WriteFile(p.path, []byte(`{"clients":[{"name":`), 0o600))
++		p.reload()
++		assert.Contains(t, p.lastErr, "could not decode")
++		assert.EqualValues(t, 5, reloadCount(t, p, reloadError))
++
++		// A table again: the reads of a file that did not change are no errors.
++		writeTable(t, p, testSpec("a", "a.example.com"))
++		p.reload()
++		p.reload()
++		assert.EqualValues(t, 5, reloadCount(t, p, reloadError))
++		assert.Empty(t, p.lastErr)
 +	})
 +
 +	t.Run("a record that is refused leaves the other clients to the new table", func(t *testing.T) {
@@ -1338,14 +1781,14 @@ index 00000000..46ffe69d
 +		}
 +		assert.Equal(t, 1, builder.count("b"), "the refused record is not built")
 +		assert.EqualValues(t, 1, reloadCount(t, p, reloadPartial))
-+		assert.Equal(t, []string{"ns/b"}, p.status.Load().Failed)
++		assert.Equal(t, statusIDs(testSpec("b")), p.status.Load().Failed)
 +
 +		// A new client whose record is refused is not served at all.
 +		writeTable(t, p, testSpec("a", "a.example.com"), testSpec("d", "a.example.com"))
 +		p.reload()
 +		code, _ := get(t, p.dispatcher, "b.example.com")
 +		assert.Equal(t, http.StatusNotFound, code, "a client that left the table is removed")
-+		assert.Equal(t, []string{"ns/d"}, p.status.Load().Failed)
++		assert.Equal(t, statusIDs(testSpec("d")), p.status.Load().Failed)
 +		assert.Zero(t, builder.count("d"))
 +	})
 +
@@ -1365,22 +1808,36 @@ index 00000000..46ffe69d
 +		writeTable(t, p, first)
 +		p.reload()
 +
-+		// The record of p is refused, and a new client takes one of its hosts.
++		// The record of p is refused and still names both hosts: a new client that claims one of
++		// them does not get it.
 +		broken := first
 +		broken.ClientID = ""
 +		writeTable(t, p, broken, testSpec("n", "h2.example.com"))
 +		p.reload()
 +		assert.Equal(t, "p#1", served("h1.example.com"))
++		assert.Equal(t, "p#1", served("h2.example.com"))
++		assert.Equal(t, statusIDs(first, testSpec("n")), p.status.Load().Failed)
++		assert.Zero(t, builder.count("n"))
++
++		// The record of p is refused and no longer names one of its hosts: a new client takes it.
++		gaveOne := broken
++		gaveOne.Hosts = []string{"h1.example.com"}
++		writeTable(t, p, gaveOne, testSpec("n", "h2.example.com"))
++		p.reload()
++		assert.Equal(t, "p#1", served("h1.example.com"))
 +		assert.Equal(t, "n#1", served("h2.example.com"))
-+		assert.Equal(t, []string{"ns/p"}, p.status.Load().Failed)
++		assert.Equal(t, statusIDs(first), p.status.Load().Failed)
 +
 +		// The new client leaves, and the record of p is still refused: the host comes back.
 +		writeTable(t, p, broken)
 +		p.reload()
 +		assert.Equal(t, "p#1", served("h2.example.com"))
 +
-+		// The new client takes both hosts: p is kept without a host and is not counted.
-+		writeTable(t, p, broken, testSpec("n", "h1.example.com", "h2.example.com"))
++		// The record of p names no host any more, and the new client takes both: p is kept
++		// without a host and is not counted.
++		gaveAll := broken
++		gaveAll.Hosts = nil
++		writeTable(t, p, gaveAll, testSpec("n", "h1.example.com", "h2.example.com"))
 +		p.reload()
 +		assert.Equal(t, "n#2", served("h1.example.com"))
 +		assert.Equal(t, 1, p.status.Load().Clients)
@@ -1393,6 +1850,362 @@ index 00000000..46ffe69d
 +		assert.Equal(t, "p#1", served("h2.example.com"))
 +		assert.Equal(t, 1, builder.count("p"))
 +		assert.Empty(t, p.status.Load().Failed)
++	})
++
++	t.Run("a host and a service stay with the client that is served by them", func(t *testing.T) {
++		t.Parallel()
++		builder := newStubBuilder()
++		p := newTestTableProxy(t, builder.build)
++
++		owner := testServiceSpec("m", "m.example.com", "m2.example.com")
++		writeTable(t, p, owner)
++		p.reload()
++
++		// A record that comes before the record of m in the file claims a host of m: with the
++		// order of the file alone it would take the host, and the requests of the application of
++		// m would be checked by another client.
++		tests := []struct {
++			name  string
++			thief clientSpec
++		}{
++			{name: "a host", thief: testServiceSpec("a", "m.example.com")},
++			{name: "the other host", thief: testServiceSpec("a", "a.example.com", "m2.example.com")},
++			{name: "the name of the service", thief: func() clientSpec {
++				spec := testSpec("a", "a.example.com")
++				spec.Services = []string{testServiceName("m")}
++				return spec
++			}()},
++			{name: "another name of the service", thief: func() clientSpec {
++				spec := testSpec("a", "a.example.com")
++				spec.Services = []string{"m-dex-authenticator." + testNamespace + ".svc.alias.local"}
++				return spec
++			}()},
++		}
++		for _, tt := range tests {
++			writeTable(t, p, tt.thief, owner)
++			p.reload()
++
++			assert.Equal(t, statusIDs(tt.thief), p.status.Load().Failed, tt.name)
++			assert.Zero(t, builder.count("a"), tt.name)
++			for _, host := range []string{"m.example.com", "m2.example.com"} {
++				_, body := get(t, p.dispatcher, host)
++				assert.Equal(t, "m#1", body, tt.name+": "+host)
++				_, body = getThrough(t, p.dispatcher, testServiceName("m"), host)
++				assert.Equal(t, "m#1", body, tt.name+": through the service, "+host)
++			}
++		}
++
++		// The record of m gives the host up: the other client takes it.
++		writeTable(t, p, testServiceSpec("a", "m2.example.com"), testServiceSpec("m", "m.example.com"))
++		p.reload()
++		assert.Empty(t, p.status.Load().Failed)
++		_, body := get(t, p.dispatcher, "m2.example.com")
++		assert.Equal(t, "a#1", body)
++		_, body = get(t, p.dispatcher, "m.example.com")
++		assert.Equal(t, "m#2", body)
++
++		// m leaves the table: its host and its Service are free.
++		taker := testSpec("a", "m.example.com", "m2.example.com")
++		taker.Services = []string{testServiceName("m")}
++		writeTable(t, p, taker)
++		p.reload()
++		assert.Empty(t, p.status.Load().Failed)
++		_, body = getThrough(t, p.dispatcher, testServiceName("m"), "m.example.com")
++		assert.Equal(t, "a#2", body)
++	})
++
++	t.Run("a process that starts gives a contested host to no client", func(t *testing.T) {
++		t.Parallel()
++		served := func(p *clientTableProxy, host string) string {
++			code, body := get(t, p.dispatcher, host)
++			if code != http.StatusOK {
++				return strconv.Itoa(code)
++			}
++			return body
++		}
++
++		owner := testServiceSpec("m", "m.example.com")
++		thief := testServiceSpec("a", "a.example.com", "m.example.com")
++		thiefOfService := testSpec("b", "b.example.com")
++		thiefOfService.Services = []string{"m-dex-authenticator." + testNamespace + ".svc.alias.local"}
++		running := newTestTableProxy(t, newStubBuilder().build)
++		writeTable(t, running, owner)
++		running.reload()
++
++		// The process that runs keeps the host and the Service with m. One that starts has no
++		// table in use: in either order of the file it gives them to none of the records, and
++		// never to another client than the one that runs.
++		for _, specs := range [][]clientSpec{{thief, thiefOfService, owner}, {owner, thief, thiefOfService}} {
++			writeTable(t, running, specs...)
++			running.reload()
++			assert.Equal(t, "m#1", served(running, "m.example.com"))
++			assert.Equal(t, statusIDs(thief, thiefOfService), running.status.Load().Failed)
++
++			starting := newTestTableProxy(t, newStubBuilder().build)
++			writeTable(t, starting, specs...)
++			starting.reload()
++			assert.Equal(t, "404", served(starting, "m.example.com"))
++			_, body := getThrough(t, starting.dispatcher, testServiceName("m"), "m.example.com")
++			assert.NotEqual(t, "a#1", body)
++			assert.NotEqual(t, "b#1", body)
++			assert.Equal(t, statusIDs(owner, thief, thiefOfService), starting.status.Load().Failed)
++		}
++	})
++
++	t.Run("the status of the table names no client", func(t *testing.T) {
++		t.Parallel()
++		builder := newStubBuilder()
++		p := newTestTableProxy(t, builder.build)
++
++		refused := testSpec("secret-app", "a.example.com")
++		refused.Namespace = "secret-namespace"
++		writeTable(t, p, testSpec("a", "a.example.com"), refused)
++		p.reload()
++
++		rw := httptest.NewRecorder()
++		p.serveStatus(p.dispatcher).ServeHTTP(rw, httptest.NewRequest(http.MethodGet, "http://10.0.0.1:8443"+clientTableStatusPath, nil))
++		require.Equal(t, http.StatusOK, rw.Code)
++		body := rw.Body.String()
++		for _, name := range []string{"secret-app", "secret-namespace", "a.example.com", refused.CookieSecret} {
++			assert.NotContains(t, body, name)
++		}
++
++		// The writer of the record finds its client by the identifier, and nobody else does: with
++		// another cookie secret the identifier is another. The host no client is served by goes
++		// to none of the two records.
++		assert.Equal(t, statusIDs(testSpec("a"), refused), p.status.Load().Failed)
++		guess := refused
++		guess.CookieSecret = testCookieSecretB
++		assert.NotEqual(t, statusID(&guess), statusID(&refused))
++
++		// The value the writer of the table computes for the same record: the two sides compute
++		// it apart.
++		vector := clientSpec{Name: "app", Namespace: "shop", CookieSecret: "dh-test-secret-0123456789abcdef0"}
++		assert.Equal(t, "87a638d98469a6b98877b2d5dd0b19ae", statusID(&vector))
++	})
++
++	t.Run("two clients with applications on one host are each served through their service", func(t *testing.T) {
++		t.Parallel()
++		builder := newStubBuilder()
++		p := newTestTableProxy(t, builder.build)
++
++		owner := testServiceSpec("a", "shared.example.com")
++		sharer := testServiceSpec("b")
++		sharer.SharedHosts = []string{"shared.example.com"}
++		writeTable(t, p, owner, sharer)
++		p.reload()
++
++		assert.Empty(t, p.status.Load().Failed)
++		assert.Equal(t, 2, p.status.Load().Clients, "a client with shared hosts only is served")
++		assert.InDelta(t, 1, testutil.ToFloat64(p.metrics.hosts), 0, "a shared host is no host a client is chosen by")
++
++		_, body := get(t, p.dispatcher, "shared.example.com")
++		assert.Equal(t, "a#1", body, "without the name of a Service the host chooses its client")
++		_, body = getThrough(t, p.dispatcher, testServiceName("a"), "shared.example.com")
++		assert.Equal(t, "a#1", body)
++		_, body = getThrough(t, p.dispatcher, testServiceName("b"), "shared.example.com")
++		assert.Equal(t, "b#1", body)
++
++		// The other client leaves: the host is no longer shared, and the client is chosen by it.
++		// A request that still comes through the Service of the client that left is not its
++		// request: the Ingress of the application of that client still sends it there.
++		writeTable(t, p, testServiceSpec("b", "shared.example.com"))
++		p.reload()
++		_, body = get(t, p.dispatcher, "shared.example.com")
++		assert.Equal(t, "b#2", body)
++		code, _ := getThrough(t, p.dispatcher, testServiceName("a"), "shared.example.com")
++		assert.Equal(t, http.StatusForbidden, code, "the client chosen by the host does not answer for the Service of a client that left")
++
++		// Nor does it while the host is shared, for a Service the table has never had.
++		writeTable(t, p, owner, sharer)
++		p.reload()
++		code, _ = getThrough(t, p.dispatcher, testServiceName("ghost"), "shared.example.com")
++		assert.Equal(t, http.StatusForbidden, code)
++		code, _ = getThrough(t, p.dispatcher, testServiceName("ghost"), "a.example.com")
++		assert.Equal(t, http.StatusForbidden, code, "and a host nobody has gets none")
++	})
++
++	t.Run("a record without the names of a service is served by its hosts as before", func(t *testing.T) {
++		t.Parallel()
++		builder := newStubBuilder()
++		p := newTestTableProxy(t, builder.build)
++
++		// The table as its writer made it before the records had the names of a Service.
++		table := `{"generation":3,"clients":[{"name":"old","namespace":"ns","hosts":["old.example.com"],"clientID":"dex-authenticator-old",
++			"clientSecret":"` + testClientSecret + `","cookieSecret":"` + testCookieSecretA + `","cookieExpire":"168h","providerLogout":true}]}`
++		require.NoError(t, os.WriteFile(p.path, []byte(table), 0o600))
++		p.reload()
++
++		assert.Empty(t, p.status.Load().Failed)
++		assert.EqualValues(t, 3, p.status.Load().Generation)
++		code, body := get(t, p.dispatcher, "old.example.com")
++		assert.Equal(t, http.StatusOK, code)
++		assert.Equal(t, "old#1", body)
++		code, body = getThrough(t, p.dispatcher, testServiceName("old"), "old.example.com")
++		assert.Equal(t, http.StatusOK, code, "the auth subrequest is chosen by X-Original-URL")
++		assert.Equal(t, "old#1", body)
++
++		// The same client with the name of its Service in a newer table: the record changed, so
++		// the client is built again, and it is chosen both ways.
++		writeTable(t, p, func() clientSpec {
++			spec := testServiceSpec("old", "old.example.com")
++			spec.CookieSecret = testCookieSecretA
++			return spec
++		}())
++		p.reload()
++		_, body = get(t, p.dispatcher, "old.example.com")
++		assert.Equal(t, "old#2", body)
++		_, body = getThrough(t, p.dispatcher, testServiceName("old"), "old.example.com")
++		assert.Equal(t, "old#2", body)
++	})
++
++	t.Run("a client kept on the record it had keeps the names of its service nobody has taken", func(t *testing.T) {
++		t.Parallel()
++		builder := newStubBuilder()
++		p := newTestTableProxy(t, builder.build)
++
++		first := testServiceSpec("p", "p.example.com")
++		first.SharedHosts = []string{"shared.example.com"}
++		writeTable(t, p, first, testServiceSpec("a", "shared.example.com"))
++		p.reload()
++
++		// The record of p is refused: it is served as before, through its Service too.
++		broken := first
++		broken.ClientID = ""
++		writeTable(t, p, broken, testServiceSpec("a", "shared.example.com"))
++		p.reload()
++		assert.Equal(t, statusIDs(first), p.status.Load().Failed)
++		_, body := getThrough(t, p.dispatcher, testServiceName("p"), "shared.example.com")
++		assert.Equal(t, "p#1", body)
++		_, body = getThrough(t, p.dispatcher, testServiceName("p"), "p.example.com")
++		assert.Equal(t, "p#1", body)
++
++		// A new client claims the name of the Service of p, which the record of p still names:
++		// the Service stays with p.
++		thief := testSpec("n", "n.example.com")
++		thief.Services = []string{testServiceName("p")}
++		writeTable(t, p, broken, thief)
++		p.reload()
++		_, body = getThrough(t, p.dispatcher, testServiceName("p"), "p.example.com")
++		assert.Equal(t, "p#1", body, "the Service of a client that is served by it is not taken")
++		assert.Zero(t, builder.count("n"))
++
++		// The record of p no longer names its Service: p gives it up and gets it back.
++		gaveService := broken
++		gaveService.Services = nil
++		writeTable(t, p, gaveService, thief)
++		p.reload()
++		code, _ := getThrough(t, p.dispatcher, testServiceName("p"), "p.example.com")
++		assert.Equal(t, http.StatusForbidden, code, "the Service names the new client, which has no such host")
++		_, body = get(t, p.dispatcher, "p.example.com")
++		assert.Equal(t, "p#1", body, "p is still chosen by its host")
++
++		writeTable(t, p, broken)
++		p.reload()
++		_, body = getThrough(t, p.dispatcher, testServiceName("p"), "shared.example.com")
++		assert.Equal(t, "p#1", body)
++		assert.Equal(t, 1, builder.count("p"))
++
++		// The record of p no longer names the host p is chosen by, and a new client takes it. p
++		// still answers for it through its Service, so the host has two clients: a Service the
++		// table does not have gets no answer for it.
++		gaveHost := broken
++		gaveHost.Hosts = nil
++		writeTable(t, p, gaveHost, testServiceSpec("n", "p.example.com"))
++		p.reload()
++		_, body = get(t, p.dispatcher, "p.example.com")
++		assert.Equal(t, "n#2", body)
++		_, body = getThrough(t, p.dispatcher, testServiceName("p"), "p.example.com")
++		assert.Equal(t, "p#1", body)
++		code, _ = getThrough(t, p.dispatcher, testServiceName("ghost"), "p.example.com")
++		assert.Equal(t, http.StatusForbidden, code)
++	})
++
++	t.Run("a client kept on the record it had gives up a service another client names by another name", func(t *testing.T) {
++		t.Parallel()
++		builder := newStubBuilder()
++		p := newTestTableProxy(t, builder.build)
++
++		const short = "k-dex-authenticator." + testNamespace + ".svc"
++		first := testSpec("k", "k.example.com")
++		first.Services = []string{short}
++		writeTable(t, p, first)
++		p.reload()
++
++		// The record of k is refused and still names its Service: a new client that names the
++		// same Service under a domain does not get it.
++		broken := first
++		broken.ClientID = ""
++		taker := testSpec("n", "n.example.com")
++		taker.Services = []string{short + ".cluster.local"}
++		writeTable(t, p, broken, taker)
++		p.reload()
++		require.Equal(t, statusIDs(first, taker), p.status.Load().Failed)
++		_, body := getThrough(t, p.dispatcher, short+".cluster.local", "k.example.com")
++		assert.Equal(t, "k#1", body, "another name of the Service of a client that is served by it is not taken")
++
++		// The record of k no longer names its Service, and the new client takes it.
++		gaveService := broken
++		gaveService.Services = nil
++		writeTable(t, p, gaveService, taker)
++		p.reload()
++		require.Equal(t, statusIDs(first), p.status.Load().Failed)
++
++		for _, name := range []string{short + ".cluster.local", short, "k-dex-authenticator." + testNamespace, short + ".alias.local"} {
++			code, body := getThrough(t, p.dispatcher, name, "n.example.com")
++			assert.Equal(t, http.StatusOK, code, name)
++			assert.Equal(t, "n#1", body, name)
++		}
++		_, body = get(t, p.dispatcher, "k.example.com")
++		assert.Equal(t, "k#1", body, "k is still chosen by its host")
++
++		// The new client leaves: the Service comes back to k.
++		writeTable(t, p, broken)
++		p.reload()
++		_, body = getThrough(t, p.dispatcher, short, "k.example.com")
++		assert.Equal(t, "k#1", body)
++	})
++
++	t.Run("clients kept on the records they had get a host both had in the order of their names", func(t *testing.T) {
++		t.Parallel()
++		builder := newStubBuilder()
++		p := newTestTableProxy(t, builder.build)
++
++		// The host passes from a to b while the record of a is refused and does not name it: the
++		// records both clients are kept on have it.
++		first, second := testSpec("a", "h.example.com"), testSpec("b", "h.example.com")
++		brokenA, brokenB := first, second
++		brokenA.ClientID, brokenB.ClientID = "", ""
++		gaveA := brokenA
++		gaveA.Hosts = nil
++		writeTable(t, p, first)
++		p.reload()
++		writeTable(t, p, gaveA, second)
++		p.reload()
++		_, body := get(t, p.dispatcher, "h.example.com")
++		require.Equal(t, "b#1", body)
++
++		// Both records are refused, in either order of the file, and one of them cannot be built
++		// rather than refused: the host goes to the first by name every time.
++		for i, specs := range [][]clientSpec{{brokenA, brokenB}, {brokenB, brokenA}, {brokenA, brokenB, testSpec("c", "c.example.com")}} {
++			for range 10 {
++				writeTable(t, p, append(specs, testSpec("x", fmt.Sprintf("x%d.example.com", i)))...)
++				p.hasSeen = false
++				p.reload()
++				_, body := get(t, p.dispatcher, "h.example.com")
++				require.Equal(t, "a#1", body)
++			}
++		}
++		builder.setFail("b", true)
++		changedB := second
++		changedB.CookieExpire = "1h"
++		for range 10 {
++			writeTable(t, p, changedB, brokenA)
++			p.hasSeen = false
++			p.reload()
++			_, body := get(t, p.dispatcher, "h.example.com")
++			require.Equal(t, "a#1", body, "a client that cannot be built is kept in the same order")
++		}
 +	})
 +
 +	t.Run("a client whose first record is refused is not served by its second one too", func(t *testing.T) {
@@ -1439,7 +2252,7 @@ index 00000000..46ffe69d
 +		require.NoError(t, os.WriteFile(p.path, data, 0o600))
 +		p.reload()
 +
-+		assert.Equal(t, clientTableStatus{Generation: 42, Clients: 1, Failed: []string{"ns/b"}}, status())
++		assert.Equal(t, clientTableStatus{Generation: 42, Clients: 1, Failed: statusIDs(testSpec("b"))}, status())
 +		assert.InDelta(t, 42, testutil.ToFloat64(p.metrics.generation), 0)
 +
 +		// A file that is no table leaves the generation in use.
@@ -2049,11 +2862,273 @@ index 00000000..46ffe69d
 +		writeTable(t, p, specA, specB)
 +		p.reload()
 +
-+		assert.Equal(t, []string{"ns/b"}, p.status.Load().Failed)
++		assert.Equal(t, statusIDs(specB), p.status.Load().Failed)
 +		rw := do(t, request{path: authPath, host: serviceHost, originalURL: "https://b.example.com/page", cookies: cookiesB})
 +		assert.Equal(t, http.StatusForbidden, rw.Code, "b is not served")
 +		// What the cookie of b gets from a, which has its secret now, is the matter of
 +		// TestClientTable_storeScope.
++	})
++}
++
++// TestClientTable_sharedHost runs two real clients with applications on one host behind the
++// dispatcher, as two DexAuthenticator objects publish one domain through two Ingress classes. Each
++// client answers the requests that came through its own Service, and the session of one is no
++// session for the other, whatever Service, host and headers the request names.
++func TestClientTable_sharedHost(t *testing.T) {
++	builder := newTestClientBuilder(t)
++	p := newTestTableProxy(t, builder.build)
++
++	const sharedHost = "shared.example.com"
++
++	// a is chosen by the shared host; b shares it and has a host of its own.
++	specA := testServiceSpec("a", sharedHost, "a.example.com")
++	specA.CookieSecret = testCookieSecretA
++	specB := testServiceSpec("b", "b.example.com")
++	specB.SharedHosts = []string{sharedHost}
++	specB.CookieSecret = testCookieSecretB
++	writeTable(t, p, specA, specB)
++	p.reload()
++	require.Empty(t, p.status.Load().Failed)
++
++	serviceA, serviceB := testServiceName("a"), testServiceName("b")
++
++	// signIn saves a session at the client name for the shared host and returns its cookies.
++	signIn := func(t *testing.T, name, user string) []*http.Cookie {
++		t.Helper()
++
++		proxy, ok := p.dispatcher.table.Load().byName[testNamespace+"/"+name].handler.(*OAuthProxy)
++		require.True(t, ok)
++
++		created := time.Now()
++		req := httptest.NewRequest(http.MethodGet, "https://"+sharedHost+"/", nil)
++		rw := httptest.NewRecorder()
++		require.NoError(t, proxy.sessionStore.Save(rw, req, &sessions.SessionState{
++			User:         user,
++			Email:        user + "@example.com",
++			AccessToken:  "access-token",
++			RefreshToken: "refresh-token-of-" + user,
++			CreatedAt:    &created,
++		}))
++
++		return rw.Result().Cookies()
++	}
++
++	cookiesA := signIn(t, "a", "alice")
++	cookiesB := signIn(t, "b", "bob")
++	require.Equal(t, cookiesA[0].Name, cookiesB[0].Name, "the clients use the same cookie name on the same host")
++
++	type request struct {
++		path           string
++		host           string
++		originalURL    string
++		forwardedHost  string
++		forwardedProto string
++		cookies        []*http.Cookie
++	}
++	do := func(t *testing.T, r request) *httptest.ResponseRecorder {
++		t.Helper()
++
++		req := httptest.NewRequest(http.MethodGet, "http://placeholder.test"+r.path, nil)
++		req.Host = r.host
++		if r.originalURL != "" {
++			req.Header.Set("X-Original-URL", r.originalURL)
++		}
++		if r.forwardedHost != "" {
++			req.Header.Set("X-Forwarded-Host", r.forwardedHost)
++		}
++		if r.forwardedProto != "" {
++			req.Header.Set("X-Forwarded-Proto", r.forwardedProto)
++		}
++		for _, cookie := range r.cookies {
++			req.AddCookie(cookie)
++		}
++		rw := httptest.NewRecorder()
++		p.dispatcher.ServeHTTP(rw, req)
++
++		return rw
++	}
++
++	const (
++		authPath     = "/dex-authenticator/auth"
++		userinfoPath = "/dex-authenticator/userinfo"
++		sharedURL    = "https://" + sharedHost + "/page"
++	)
++
++	accepted := []struct {
++		name       string
++		request    request
++		expectUser string
++	}{
++		{
++			name:       "session of a on the auth subrequest through the service of a",
++			request:    request{path: authPath, host: serviceA, originalURL: sharedURL, cookies: cookiesA},
++			expectUser: "alice@example.com",
++		},
++		{
++			name:       "session of b on the auth subrequest through the service of b",
++			request:    request{path: authPath, host: serviceB, originalURL: sharedURL, cookies: cookiesB},
++			expectUser: "bob@example.com",
++		},
++		{
++			name:       "session of b on the route of b, which names its service in host",
++			request:    request{path: userinfoPath, host: serviceB, forwardedHost: sharedHost, forwardedProto: "https", cookies: cookiesB},
++			expectUser: "bob@example.com",
++		},
++		{
++			name:       "session of a on the route of a, which names its service in host",
++			request:    request{path: userinfoPath, host: serviceA, forwardedHost: sharedHost, forwardedProto: "https", cookies: cookiesA},
++			expectUser: "alice@example.com",
++		},
++		{
++			name:       "session of b on the auth subrequest through the service of b under another cluster domain",
++			request:    request{path: authPath, host: "b-dex-authenticator." + testNamespace + ".svc.alias.local", originalURL: sharedURL, cookies: cookiesB},
++			expectUser: "bob@example.com",
++		},
++		{
++			name:       "session of b on the auth subrequest through the service of b without a domain",
++			request:    request{path: authPath, host: "b-dex-authenticator." + testNamespace + ".svc", originalURL: sharedURL, cookies: cookiesB},
++			expectUser: "bob@example.com",
++		},
++		{
++			name:       "session of a on a route that names no service",
++			request:    request{path: userinfoPath, host: sharedHost, forwardedProto: "https", cookies: cookiesA},
++			expectUser: "alice@example.com",
++		},
++	}
++	for _, tt := range accepted {
++		t.Run(tt.name, func(t *testing.T) {
++			rw := do(t, tt.request)
++
++			require.Equal(t, http.StatusOK, rw.Code)
++			if tt.request.path == authPath {
++				assert.Equal(t, tt.expectUser, rw.Header().Get("X-Auth-Request-Email"))
++			} else {
++				assert.Contains(t, rw.Body.String(), tt.expectUser)
++			}
++		})
++	}
++
++	refused := []struct {
++		name       string
++		request    request
++		expectCode int
++	}{
++		// A route of one object that sends its requests through the Service of the other: the
++		// other client answers, and it does not know the session.
++		{
++			name:       "session of b through the service of a on the shared host",
++			request:    request{path: authPath, host: serviceA, originalURL: sharedURL, cookies: cookiesB},
++			expectCode: http.StatusUnauthorized,
++		},
++		{
++			name:       "session of a through the service of b on the shared host",
++			request:    request{path: authPath, host: serviceB, originalURL: sharedURL, cookies: cookiesA},
++			expectCode: http.StatusUnauthorized,
++		},
++		{
++			name:       "session of b through the service of a on the host of b",
++			request:    request{path: authPath, host: serviceA, originalURL: "https://b.example.com/", cookies: cookiesB},
++			expectCode: http.StatusForbidden,
++		},
++		// The object that named the host of another object gets none of its requests.
++		{
++			name:       "session of b on a route of the shared host that names no service",
++			request:    request{path: userinfoPath, host: sharedHost, forwardedProto: "https", cookies: cookiesB},
++			expectCode: http.StatusUnauthorized,
++		},
++		{
++			name:       "session of b on the route of a",
++			request:    request{path: userinfoPath, host: serviceA, forwardedHost: sharedHost, forwardedProto: "https", cookies: cookiesB},
++			expectCode: http.StatusUnauthorized,
++		},
++		// auth-url of b written wrong: the Service is none of the table. The session of a, which
++		// is chosen by the host, must not pass the check of the application of b.
++		{
++			// Another DNS name of the Service of b: the client of b answers, not the client
++			// that is chosen by the host.
++			name:       "session of a on the shared host through the service of b under another cluster domain",
++			request:    request{path: authPath, host: "b-dex-authenticator." + testNamespace + ".svc.other.local", originalURL: sharedURL, cookies: cookiesA},
++			expectCode: http.StatusUnauthorized,
++		},
++		{
++			name:       "session of a on the shared host through the service of b without a domain",
++			request:    request{path: authPath, host: "b-dex-authenticator." + testNamespace, originalURL: sharedURL, cookies: cookiesA},
++			expectCode: http.StatusUnauthorized,
++		},
++		{
++			name:       "session of a on the shared host through the service of b in another namespace",
++			request:    request{path: authPath, host: "b-dex-authenticator.other.svc.cluster.local", originalURL: sharedURL, cookies: cookiesA},
++			expectCode: http.StatusForbidden,
++		},
++		// A request past the ingress controller.
++		{
++			name:       "no session past the ingress with the service of b and the shared host",
++			request:    request{path: authPath, host: serviceB, originalURL: sharedURL},
++			expectCode: http.StatusUnauthorized,
++		},
++		{
++			name:       "session of a past the ingress with the service of b and the host of a",
++			request:    request{path: authPath, host: serviceB, originalURL: "https://a.example.com/", cookies: cookiesA},
++			expectCode: http.StatusForbidden,
++		},
++		{
++			name:       "session of a past the ingress with the service of b and no host",
++			request:    request{path: authPath, host: serviceB, cookies: cookiesA},
++			expectCode: http.StatusForbidden,
++		},
++		// X-Forwarded-Host the browser wrote.
++		{
++			name:       "session of a on the route of b with a forged x-forwarded-host of a",
++			request:    request{path: userinfoPath, host: serviceB, forwardedHost: "a.example.com", forwardedProto: "https", cookies: cookiesA},
++			expectCode: http.StatusNotFound,
++		},
++		{
++			name:       "session of a on the route of b with a forged x-forwarded-host of b",
++			request:    request{path: userinfoPath, host: serviceB, forwardedHost: "b.example.com", forwardedProto: "https", cookies: cookiesA},
++			expectCode: http.StatusUnauthorized,
++		},
++		{
++			name:       "session of a on the auth subrequest of b with a forged x-forwarded-host",
++			request:    request{path: authPath, host: serviceB, originalURL: sharedURL, forwardedHost: "a.example.com", cookies: cookiesA},
++			expectCode: http.StatusUnauthorized,
++		},
++	}
++	for _, tt := range refused {
++		t.Run(tt.name, func(t *testing.T) {
++			rw := do(t, tt.request)
++
++			assert.Equal(t, tt.expectCode, rw.Code)
++			assert.Empty(t, rw.Header().Get("X-Auth-Request-Email"))
++			assert.Empty(t, rw.Header().Get("X-Auth-Request-User"))
++			assert.Empty(t, rw.Header().Get("Authorization"))
++			assert.NotContains(t, rw.Body.String(), "alice")
++			assert.NotContains(t, rw.Body.String(), "bob")
++			for _, cookie := range rw.Result().Cookies() {
++				assert.Empty(t, cookie.Value, "a refused request must not be given a session cookie")
++			}
++		})
++	}
++
++	t.Run("the sessions survive the refused requests", func(t *testing.T) {
++		rw := do(t, request{path: authPath, host: serviceA, originalURL: sharedURL, cookies: cookiesA})
++		require.Equal(t, http.StatusOK, rw.Code)
++		assert.Equal(t, "alice@example.com", rw.Header().Get("X-Auth-Request-Email"))
++
++		rw = do(t, request{path: authPath, host: serviceB, originalURL: sharedURL, cookies: cookiesB})
++		require.Equal(t, http.StatusOK, rw.Code)
++		assert.Equal(t, "bob@example.com", rw.Header().Get("X-Auth-Request-Email"))
++	})
++
++	t.Run("the sign-in of each client returns to the shared host with its own client", func(t *testing.T) {
++		for service, clientID := range map[string]string{serviceA: specA.ClientID, serviceB: specB.ClientID} {
++			rw := do(t, request{path: "/dex-authenticator/start", host: service, forwardedHost: sharedHost, forwardedProto: "https"})
++			require.Equal(t, http.StatusFound, rw.Code, service)
++
++			location, err := url.Parse(rw.Header().Get("Location"))
++			require.NoError(t, err)
++			assert.Equal(t, clientID, location.Query().Get("client_id"), service)
++			assert.Equal(t, "https://"+sharedHost+"/dex-authenticator/callback", location.Query().Get("redirect_uri"), service)
++		}
 +	})
 +}
 +
@@ -2264,10 +3339,10 @@ index 00000000..46ffe69d
 +}
 diff --git a/deckhouse_dispatcher.go b/deckhouse_dispatcher.go
 new file mode 100644
-index 00000000..04ffdb6a
+index 00000000..330d58e9
 --- /dev/null
 +++ b/deckhouse_dispatcher.go
-@@ -0,0 +1,141 @@
+@@ -0,0 +1,260 @@
 +package main
 +
 +import (
@@ -2290,19 +3365,26 @@ index 00000000..04ffdb6a
 +	// record are the hosts of the record the handler was built from, and hosts are those of them
 +	// the client is served on: a client kept on the record it had gives up the hosts the clients
 +	// of a newer table have taken, and gets them back once they are free.
-+	record  []string
-+	hosts   []string
-+	handler http.Handler
++	record []string
++	hosts  []string
++	// recordServices are the names of the Service of the client in that record, and services are
++	// those of them the client is chosen by, under the same rule.
++	recordServices []string
++	services       []string
++	// applications are the hosts of the applications of the record, the shared ones included: a
++	// request that names a Service of the client is served when it is for one of them.
++	applications []string
++	handler      http.Handler
 +}
 +
-+// on returns the client served on hosts: the client itself when it is served on them already,
-+// and a copy otherwise, as a client in a table is never changed.
-+func (c *tableClient) on(hosts []string) *tableClient {
-+	if slices.Equal(c.hosts, hosts) {
++// on returns the client served on hosts and chosen by services: the client itself when it is
++// served so already, and a copy otherwise, as a client in a table is never changed.
++func (c *tableClient) on(hosts, services []string) *tableClient {
++	if slices.Equal(c.hosts, hosts) && slices.Equal(c.services, services) {
 +		return c
 +	}
 +	served := *c
-+	served.hosts = hosts
++	served.hosts, served.services = hosts, services
 +
 +	return &served
 +}
@@ -2310,36 +3392,113 @@ index 00000000..04ffdb6a
 +// clientTable is an immutable snapshot of the clients a process serves. A reload builds a new
 +// snapshot and swaps it in; a request that has taken its client from the old one finishes there.
 +type clientTable struct {
-+	byHost map[string]*tableClient
-+	byName map[string]*tableClient
++	byHost    map[string]*tableClient
++	byService map[string]*tableClient
++	// byObject has the clients by the first two labels of the names of their Services,
++	// <service>.<namespace>: see serviceObject.
++	byObject map[string]*tableClient
++	byName   map[string]*tableClient
 +}
 +
 +func newClientTable() *clientTable {
 +	return &clientTable{
-+		byHost: map[string]*tableClient{},
-+		byName: map[string]*tableClient{},
++		byHost:    map[string]*tableClient{},
++		byService: map[string]*tableClient{},
++		byObject:  map[string]*tableClient{},
++		byName:    map[string]*tableClient{},
 +	}
 +}
 +
++// serviceObject returns <service>.<namespace> of a DNS name of a Service of the cluster: the name
++// itself, or the name followed by "svc" and any domain. A Service has one such pair and several
++// DNS names: without a domain, under the domain of the cluster and under its aliases. Whichever of
++// them auth-url has, the Host of the auth subrequest names the same Service.
++func serviceObject(name string) (string, bool) {
++	labels := strings.SplitN(name, ".", 4)
++	if len(labels) < 2 || labels[0] == "" || labels[1] == "" || (len(labels) > 2 && labels[2] != "svc") {
++		return "", false
++	}
++
++	return labels[0] + "." + labels[1], true
++}
++
++// authenticatorServiceSuffix ends the name of the Service of a DexAuthenticator object.
++const authenticatorServiceSuffix = "-dex-authenticator"
++
++// isAuthenticatorService reports whether name has the form of a DNS name of the Service of a
++// DexAuthenticator object: <object>-dex-authenticator.<namespace>, alone or followed by "svc" and
++// any domain, after any labels. The form is this narrow on purpose: the host of an application,
++// the Service of the process itself (dex-authenticator, dex-authenticator-system) and whatever an
++// ingress controller other than ingress-nginx writes into the Host of its check do not have it.
++// The Service of an object whose name was cut to fit 63 characters has no such suffix and does
++// not have it either.
++func isAuthenticatorService(name string) bool {
++	labels := strings.Split(strings.TrimSuffix(name, "."), ".")
++	for i := 0; i+1 < len(labels); i++ {
++		if !strings.HasSuffix(labels[i], authenticatorServiceSuffix) {
++			continue
++		}
++		// <namespace> is the last label, or "svc" follows it.
++		if i+2 == len(labels) || labels[i+2] == "svc" {
++			return true
++		}
++	}
++
++	return false
++}
++
 +// dispatcher is the handler of a process that serves a table of clients (Deckhouse patch 018). It
-+// chooses the client of each request by the host of the request and hands the request to the
-+// OAuthProxy of that client. A host no client has is answered 403 on the auth path, which
-+// ingress-nginx passes to the browser as it is while it turns a 404 of the auth subrequest into
-+// its own 500, and 404 on any other path.
++// chooses the client of each request and hands the request to the OAuthProxy of that client. A
++// request that names no client is answered 403 on the auth path, which ingress-nginx passes to the
++// browser as it is while it turns a 404 of the auth subrequest into its own 500, and 404 on any
++// other path.
 +//
 +// The key of the choice is the security boundary between the clients: a request that reaches the
 +// handler of another client is checked with the cookie secret of that client, so its answer to
-+// "is this user signed in" would be given for the wrong application. The key therefore comes from
-+// one place per kind of request and is parsed strictly (patch 016):
-+//   - the auth subrequest of ingress-nginx (the exact path <proxy prefix>/auth with X-Original-URL
-+//     and without X-Forwarded-Proto) carries the Host of the Service of the authenticator, so its
-+//     key is the authority of X-Original-URL, which nginx builds from the Host header it has
-+//     chosen the server by. A header that names no plain host is no key;
-+//   - every other request comes through the route of the application, or is the check of an
-+//     ingress controller that sends the Host of the application, so its key is the Host header.
++// "is this user signed in" would be given for the wrong application. A client is chosen in one of
++// two ways.
 +//
-+// X-Forwarded-Host is never read: ingress-nginx passes the one the browser sent on in the auth
-+// subrequest. It is overwritten with the host the client was chosen by before the handler of the
++// By the Service of the client. A request whose Host header is a name of the Service of a client
++// came through that Service: the auth subrequest of ingress-nginx carries the host of auth-url,
++// and a route of the application carries the name when the ingress controller is told to send it
++// (the upstream-vhost annotation). auth-url is written by the author of the application: with the
++// name of the Service under the domain of the cluster or under an alias of it, which is what
++// ingress-nginx resolves, while a sender inside the cluster may use a shorter name. So an auth
++// subrequest names the Service by its <service>.<namespace> (serviceObject) whatever follows
++// them; a route names it by the exact name of the table. The request belongs to that client and
++// to no other, whatever
++// host it is for, so two clients may have applications on one host. The host of the application
++// only has to be one of the client: a request for another host has no client. Who may send a
++// request through the Service of a client is decided where the routes are written, as it was
++// when every client had pods of its own behind its Service.
++//
++// By the host of the application, when the Host header names no Service of a client. The host
++// belongs to one client of the table.
++//
++// The second way must not answer for an object the table does not have. An auth subrequest that
++// came through the Service of a DexAuthenticator belongs to that object, and when the table has
++// no such Service (the object is gone and the ingress controller still resolves the name, or
++// auth-url names another namespace or is misspelt), the client that is chosen by the host would
++// answer in its place, with its own users and groups: the application of one object would open
++// to the users of another. So an auth subrequest whose Host has the form of the name of the
++// Service of a DexAuthenticator (isAuthenticatorService) and is none of the table has no client,
++// whatever host it is for. A Host of any other form still chooses by the host of the application,
++// and so does any Host for a client whose record names no Service: nothing tells which Service
++// its requests come through.
++//
++// The host of the application comes from one place per kind of request and is parsed strictly
++// (patch 016):
++//   - the auth subrequest of ingress-nginx (the exact path <proxy prefix>/auth with X-Original-URL
++//     and without X-Forwarded-Proto): the authority of X-Original-URL, which nginx builds from the
++//     Host header it has chosen the server by. A header that names no plain host is no key.
++//     X-Forwarded-Host is not read here: ingress-nginx passes the one the browser sent on;
++//   - any other request with the name of a Service in Host: the only X-Forwarded-Host, which the
++//     ingress controller sets to the host of the application when it replaces Host. A sender who
++//     writes it himself gets the client of the Service, and only on a host of that client;
++//   - every other request comes through the route of the application, or is the check of an
++//     ingress controller that sends the Host of the application: the Host header.
++//
++// X-Forwarded-Host is overwritten with the host of the application before the handler of the
 +// client runs, so that the client sees no other host in the request. The host is written the way
 +// the table names it, in lower case and without a trailing dot, with the port only when it is not
 +// the default one of the scheme: the client builds its redirect URI from it, and the provider
@@ -2379,9 +3538,19 @@ index 00000000..04ffdb6a
 +	d.metrics.hit.Observe(time.Since(start).Seconds())
 +}
 +
-+// route returns the client of the request and the host it was chosen by, as the client is to see
-+// it in X-Forwarded-Host, or nil when the request names no client of the table.
++// route returns the client of the request and the host of the application the request is for, as
++// the client is to see it in X-Forwarded-Host, or nil when the request names no client of the
++// table.
 +func (d *dispatcher) route(req *http.Request) (*tableClient, string) {
++	table := d.table.Load()
++
++	// The client whose Service the request came through, if its Host names one.
++	var named *tableClient
++	serviceName, _, isName := requestutil.ServerName(req.Host)
++	if isName {
++		named = table.byService[serviceName]
++	}
++
 +	// The scheme only tells whether the port is the default one. On the route of an application
 +	// the ingress controller sets X-Forwarded-Proto.
 +	scheme := strings.ToLower(req.Header.Get(requestutil.XForwardedProto))
@@ -2389,12 +3558,22 @@ index 00000000..04ffdb6a
 +	// The router of a client matches the auth path the same way: exactly, by the escaped path.
 +	isSubrequest := req.URL.EscapedPath() == d.authPath && scheme == "" &&
 +		len(req.Header.Values(requestutil.OriginalURLHeader)) > 0
-+	if isSubrequest {
++	switch {
++	case isSubrequest:
 +		var ok bool
 +		scheme, authority, ok = requestutil.OriginalAuthority(req.Header)
 +		if !ok {
 +			return nil, ""
 +		}
++		if object, isService := serviceObject(serviceName); named == nil && isName && isService {
++			named = table.byObject[object]
++		}
++	case named != nil:
++		forwarded := req.Header.Values(requestutil.XForwardedHost)
++		if len(forwarded) != 1 {
++			return nil, ""
++		}
++		authority = forwarded[0]
 +	}
 +
 +	host, port, ok := requestutil.ServerName(authority)
@@ -2402,7 +3581,22 @@ index 00000000..04ffdb6a
 +		return nil, ""
 +	}
 +
-+	client := d.table.Load().byHost[host]
++	client := named
++	switch {
++	case client == nil:
++		client = table.byHost[host]
++		if client != nil && isSubrequest && len(client.recordServices) > 0 {
++			// The Service of an object the table does not have: the client that is chosen by
++			// the host does not answer for it. The form is looked for in the header as it came:
++			// a name that cannot be parsed is no name of the table either.
++			if name, _, _ := strings.Cut(strings.ToLower(req.Host), ":"); isAuthenticatorService(name) {
++				return nil, ""
++			}
++		}
++	case !slices.Contains(client.applications, host):
++		// The Service of one client and the host of another: the request has no client.
++		return nil, ""
++	}
 +	if client == nil {
 +		return nil, ""
 +	}
@@ -2411,19 +3605,21 @@ index 00000000..04ffdb6a
 +}
 diff --git a/deckhouse_dispatcher_test.go b/deckhouse_dispatcher_test.go
 new file mode 100644
-index 00000000..41a586ac
+index 00000000..b25e0895
 --- /dev/null
 +++ b/deckhouse_dispatcher_test.go
-@@ -0,0 +1,477 @@
+@@ -0,0 +1,1099 @@
 +package main
 +
 +import (
 +	"net/http"
 +	"net/http/httptest"
++	"slices"
 +	"strings"
 +	"sync"
 +	"testing"
 +
++	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
 +	"github.com/prometheus/client_golang/prometheus"
 +	"github.com/stretchr/testify/assert"
 +	"github.com/stretchr/testify/require"
@@ -2814,6 +4010,541 @@ index 00000000..41a586ac
 +	}
 +}
 +
++// The names of the Services of the clients of newServiceTestDispatcher, as ingress-nginx writes
++// them into Host: the host of auth-url, and the value of the upstream-vhost annotation.
++const (
++	serviceOfA = "a-dex-authenticator.ns-a.svc.cluster.local"
++	serviceOfB = "b-dex-authenticator.ns-b.svc.cluster.local"
++)
++
++// newServiceTestDispatcher returns a dispatcher with two clients that have applications on one
++// host, shared.example.com, and a client of a record without the names of a Service:
++//   - a is chosen by a.example.com and shared.example.com, and by serviceOfA;
++//   - b is chosen by b.example.com and by serviceOfB, and shares shared.example.com;
++//   - w is chosen by w.example.com only.
++func newServiceTestDispatcher(t *testing.T) (*dispatcher, *requestRecorder) {
++	t.Helper()
++
++	recorder := &requestRecorder{}
++	table := newClientTable()
++	for _, client := range []*tableClient{
++		{name: "a", hosts: []string{"a.example.com", "shared.example.com"}, recordServices: []string{serviceOfA}, services: []string{serviceOfA}, applications: []string{"a.example.com", "shared.example.com"}},
++		{name: "b", hosts: []string{"b.example.com"}, recordServices: []string{serviceOfB}, services: []string{serviceOfB}, applications: []string{"b.example.com", "shared.example.com"}},
++		{name: "w", hosts: []string{"w.example.com"}, applications: []string{"w.example.com"}},
++	} {
++		client.handler = recorder.handler(client.name)
++		table.byName[client.name] = client
++		for _, host := range client.hosts {
++			table.byHost[host] = client
++		}
++		for _, service := range client.services {
++			table.byService[service] = client
++			object, _ := serviceObject(service)
++			table.byObject[object] = client
++		}
++	}
++
++	d := newDispatcher("/dex-authenticator", newTestMetrics(t))
++	d.table.Store(table)
++
++	return d, recorder
++}
++
++// TestDispatcher_ServeHTTP_goneObject checks what is left of an object the table no longer has.
++// Two objects published one host; one of them is gone with its Service, while the Ingress of its
++// application still sends the auth subrequest to that Service and the ingress controller still
++// resolves the name. The client of the object that stays is chosen by the host now, and it must
++// not answer for the gone one: a user it has signed in would get into the application of the
++// gone object past the users and groups that object allowed.
++func TestDispatcher_ServeHTTP_goneObject(t *testing.T) {
++	t.Parallel()
++
++	const authPath = "/dex-authenticator/auth"
++
++	tests := []struct {
++		name        string
++		host        string
++		originalURL string
++
++		// expectClient is the client whose handler runs; empty expects 403 and no handler.
++		expectClient string
++	}{
++		{
++			name: "service of the gone object for the host the object that stays is chosen by",
++			host: serviceOfB, originalURL: "https://shared.example.com/page",
++		},
++		{
++			name: "service of the gone object under another cluster domain",
++			host: "b-dex-authenticator.ns-b.svc.other.local", originalURL: "https://shared.example.com/page",
++		},
++		{
++			name: "service of the gone object for a host no client has",
++			host: serviceOfB, originalURL: "https://b.example.com/page",
++		},
++		{
++			name: "service of the object that stays",
++			host: serviceOfA, originalURL: "https://shared.example.com/page",
++			expectClient: "a",
++		},
++		{
++			name: "host of the application in host",
++			host: "shared.example.com", originalURL: "https://shared.example.com/page",
++			expectClient: "a",
++		},
++		{
++			name: "service that is not of an authenticator",
++			host: "auth.gateway.svc.cluster.local", originalURL: "https://shared.example.com/page",
++			expectClient: "a",
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			t.Parallel()
++
++			recorder := &requestRecorder{}
++			table := newClientTable()
++			a := &tableClient{
++				name: "a", hosts: []string{"a.example.com", "shared.example.com"},
++				recordServices: []string{serviceOfA}, services: []string{serviceOfA},
++				applications: []string{"a.example.com", "shared.example.com"},
++				handler:      recorder.handler("a"),
++			}
++			table.byName[a.name] = a
++			for _, host := range a.hosts {
++				table.byHost[host] = a
++			}
++			table.byService[serviceOfA] = a
++			object, _ := serviceObject(serviceOfA)
++			table.byObject[object] = a
++			d := newDispatcher("/dex-authenticator", newTestMetrics(t))
++			d.table.Store(table)
++
++			req := httptest.NewRequest(http.MethodGet, "http://placeholder.test"+authPath, nil)
++			req.Host = tt.host
++			req.Header.Set("X-Original-URL", tt.originalURL)
++			// The session the object that stays has given the user.
++			req.AddCookie(&http.Cookie{Name: "_oauth2_proxy", Value: "session-of-a"})
++			rec := httptest.NewRecorder()
++			d.ServeHTTP(rec, req)
++
++			reached := recorder.requests()
++			if tt.expectClient == "" {
++				assert.Equal(t, http.StatusForbidden, rec.Code)
++				assert.Empty(t, reached, "no client may see the request")
++				return
++			}
++			assert.Equal(t, http.StatusOK, rec.Code)
++			require.Len(t, reached, 1)
++			assert.Equal(t, tt.expectClient, reached[0].client)
++		})
++	}
++}
++
++// TestDispatcher_ServeHTTP_byService checks the choice of a client by the name of its Service in
++// the Host header: two clients serve applications on one host, each the requests that came
++// through its own Service, and the name of a Service never opens a host the client does not have.
++func TestDispatcher_ServeHTTP_byService(t *testing.T) {
++	t.Parallel()
++
++	const (
++		authPath   = "/dex-authenticator/auth"
++		signInPath = "/dex-authenticator/sign_in"
++	)
++
++	tests := []struct {
++		name string
++		path string
++		host string
++		// originalURL and forwardedHost are the values of the headers; nil leaves the header out.
++		originalURL    []string
++		forwardedHost  []string
++		forwardedProto string
++
++		// expectClient is the only client whose handler may run; empty expects no handler: 403 on
++		// the auth path and 404 elsewhere.
++		expectClient        string
++		expectForwardedHost string
++	}{
++		// One host, two clients: each serves what came through its Service.
++		{
++			name: "auth subrequest through the service of the client that shares the host",
++			path: authPath, host: serviceOfB, originalURL: []string{"https://shared.example.com/page"},
++			expectClient: "b", expectForwardedHost: "shared.example.com",
++		},
++		{
++			name: "auth subrequest through the service of the client that is chosen by the host",
++			path: authPath, host: serviceOfA, originalURL: []string{"https://shared.example.com/page"},
++			expectClient: "a", expectForwardedHost: "shared.example.com",
++		},
++		{
++			name: "route with the name of the service in host is chosen by the service",
++			path: signInPath, host: serviceOfB, forwardedHost: []string{"shared.example.com"}, forwardedProto: "https",
++			expectClient: "b", expectForwardedHost: "shared.example.com",
++		},
++		{
++			name: "callback on the route with the name of the service in host",
++			path: "/dex-authenticator/callback?code=x", host: serviceOfB, forwardedHost: []string{"shared.example.com"}, forwardedProto: "https",
++			expectClient: "b", expectForwardedHost: "shared.example.com",
++		},
++		{
++			name: "route with the name of the service of the other client in host",
++			path: signInPath, host: serviceOfA, forwardedHost: []string{"shared.example.com"}, forwardedProto: "https",
++			expectClient: "a", expectForwardedHost: "shared.example.com",
++		},
++		{
++			name: "route without the name of a service is chosen by the host",
++			path: signInPath, host: "shared.example.com", forwardedProto: "https",
++			expectClient: "a", expectForwardedHost: "shared.example.com",
++		},
++
++		// A Host that has the form of the name of the Service of a DexAuthenticator but is none
++		// of the table: the object is gone, or auth-url is written wrong. The client that is
++		// chosen by the host must not answer for it, on a host two clients have or on any other.
++		{
++			name: "host that is not shared through the service of an object the table does not have",
++			path: authPath, host: "other-dex-authenticator.ns.svc.cluster.local", originalURL: []string{"https://a.example.com/"},
++		},
++		{
++			name: "host that is not shared through the service of an object the table does not have, in upper case with a port",
++			path: authPath, host: "Other-Dex-Authenticator.NS.svc.cluster.local:443", originalURL: []string{"https://a.example.com/"},
++		},
++		// Another DNS name of the Service of a client names the same Service in an auth
++		// subrequest: auth-url may have any of them.
++		{
++			name: "shared host through the service under another cluster domain",
++			path: authPath, host: "b-dex-authenticator.ns-b.svc.other.local", originalURL: []string{"https://shared.example.com/"},
++			expectClient: "b", expectForwardedHost: "shared.example.com",
++		},
++		{
++			name: "shared host through the service without a cluster domain",
++			path: authPath, host: "b-dex-authenticator.ns-b.svc", originalURL: []string{"https://shared.example.com/"},
++			expectClient: "b", expectForwardedHost: "shared.example.com",
++		},
++		{
++			name: "shared host through the service without svc and a domain",
++			path: authPath, host: "B-Dex-Authenticator.NS-B:443", originalURL: []string{"https://shared.example.com/"},
++			expectClient: "b", expectForwardedHost: "shared.example.com",
++		},
++		{
++			name: "shared host through the service of the client that is chosen by it, under another cluster domain",
++			path: authPath, host: "a-dex-authenticator.ns-a.svc.other.local", originalURL: []string{"https://shared.example.com/"},
++			expectClient: "a", expectForwardedHost: "shared.example.com",
++		},
++		{
++			name: "another name of the service of one client and the host of another",
++			path: authPath, host: "a-dex-authenticator.ns-a.svc.other.local", originalURL: []string{"https://b.example.com/"},
++		},
++		{
++			name: "another name of the service does not choose the client of a route",
++			path: signInPath, host: "b-dex-authenticator.ns-b.svc.other.local", forwardedHost: []string{"shared.example.com"}, forwardedProto: "https",
++		},
++		{
++			name: "service and namespace followed by a label that is not svc",
++			path: authPath, host: "b-dex-authenticator.ns-b.example.com", originalURL: []string{"https://shared.example.com/"},
++			expectClient: "a", expectForwardedHost: "shared.example.com",
++		},
++		{
++			name: "shared host through the service with an extra label",
++			path: authPath, host: "extra.b-dex-authenticator.ns-b.svc.cluster.local", originalURL: []string{"https://shared.example.com/"},
++		},
++		{
++			// What follows svc is a domain, whatever it is.
++			name: "shared host through the service with an extra label at the end",
++			path: authPath, host: "b-dex-authenticator.ns-b.svc.cluster.local.extra", originalURL: []string{"https://shared.example.com/"},
++			expectClient: "b", expectForwardedHost: "shared.example.com",
++		},
++		{
++			name: "shared host through the service of another namespace",
++			path: authPath, host: "b-dex-authenticator.ns-other.svc.cluster.local", originalURL: []string{"https://shared.example.com/"},
++		},
++		{
++			name: "shared host through the service of an object that does not exist, without svc and a domain",
++			path: authPath, host: "ghost-dex-authenticator.ns-b", originalURL: []string{"https://shared.example.com/"},
++		},
++		{
++			name: "shared host through the service of another namespace, without svc and a domain, with a port and a trailing dot",
++			path: authPath, host: "B-Dex-Authenticator.ns-other.:443", originalURL: []string{"https://shared.example.com/"},
++		},
++		{
++			name: "host that is not shared through the service of an object that does not exist, without svc and a domain",
++			path: authPath, host: "ghost-dex-authenticator.ns-b", originalURL: []string{"https://b.example.com/"},
++		},
++		{
++			name: "shared host through the service of an object that does not exist",
++			path: authPath, host: "ghost-dex-authenticator.ns-b.svc.cluster.local", originalURL: []string{"https://shared.example.com/"},
++		},
++		{
++			name: "shared host through the service in upper case with a port, of an object that does not exist",
++			path: authPath, host: "Ghost-Dex-Authenticator.NS-B.SVC.cluster.local:443", originalURL: []string{"https://shared.example.com/"},
++		},
++		{
++			// The trailing dot is the same name: the client of the Service answers.
++			name: "shared host through the service with a trailing dot",
++			path: authPath, host: serviceOfB + ".", originalURL: []string{"https://shared.example.com/"},
++			expectClient: "b", expectForwardedHost: "shared.example.com",
++		},
++		{
++			name: "shared host through the service with two trailing dots",
++			path: authPath, host: serviceOfB + "..", originalURL: []string{"https://shared.example.com/"},
++		},
++		// What does not have the form of such a name still chooses by the host, shared or not.
++		{
++			name: "host that is not shared with the host of the application in host",
++			path: authPath, host: "a.example.com", originalURL: []string{"https://a.example.com/"},
++			expectClient: "a", expectForwardedHost: "a.example.com",
++		},
++		{
++			name: "host that is not shared through a service that is not of an authenticator",
++			path: authPath, host: "auth.gateway.svc.cluster.local", originalURL: []string{"https://a.example.com/"},
++			expectClient: "a", expectForwardedHost: "a.example.com",
++		},
++		{
++			name: "host that is not shared through the service of the process",
++			path: authPath, host: "dex-authenticator.d8-user-authn.svc.cluster.local", originalURL: []string{"https://b.example.com/"},
++			expectClient: "b", expectForwardedHost: "b.example.com",
++		},
++		{
++			// Only an auth subrequest tells which object it is for by the name of a Service.
++			name: "route with the form of the service of an object the table does not have in host has no client",
++			path: signInPath, host: "other-dex-authenticator.ns.svc.cluster.local", forwardedHost: []string{"a.example.com"}, forwardedProto: "https",
++		},
++		{
++			name: "shared host with the host of the application in host",
++			path: authPath, host: "shared.example.com", originalURL: []string{"https://shared.example.com/"},
++			expectClient: "a", expectForwardedHost: "shared.example.com",
++		},
++		{
++			name: "shared host on a route with the host of the application in host",
++			path: signInPath, host: "shared.example.com", forwardedProto: "https",
++			expectClient: "a", expectForwardedHost: "shared.example.com",
++		},
++		{
++			name: "shared host through the service of the process",
++			path: authPath, host: "dex-authenticator.d8-user-authn.svc.cluster.local", originalURL: []string{"https://shared.example.com/"},
++			expectClient: "a", expectForwardedHost: "shared.example.com",
++		},
++		{
++			name: "shared host through the service of the process for the system namespaces",
++			path: authPath, host: "dex-authenticator-system.d8-user-authn.svc.cluster.local", originalURL: []string{"https://shared.example.com/"},
++			expectClient: "a", expectForwardedHost: "shared.example.com",
++		},
++		{
++			name: "shared host through a service that is not of an authenticator",
++			path: authPath, host: "auth.gateway.svc.cluster.local", originalURL: []string{"https://shared.example.com/"},
++			expectClient: "a", expectForwardedHost: "shared.example.com",
++		},
++		{
++			name: "shared host through a name that ends like the service of an authenticator and is no service",
++			path: authPath, host: "b-dex-authenticator.example.com", originalURL: []string{"https://shared.example.com/"},
++			expectClient: "a", expectForwardedHost: "shared.example.com",
++		},
++		{
++			name: "host that is not shared through the service with another cluster domain",
++			path: authPath, host: "b-dex-authenticator.ns-b.svc.other.local", originalURL: []string{"https://b.example.com/"},
++			expectClient: "b", expectForwardedHost: "b.example.com",
++		},
++		{
++			name: "auth check with the host of the application is chosen by the host",
++			path: authPath, host: "shared.example.com",
++			expectClient: "a", expectForwardedHost: "shared.example.com",
++		},
++		{
++			name: "own host through the own service",
++			path: authPath, host: serviceOfB, originalURL: []string{"https://b.example.com/"},
++			expectClient: "b", expectForwardedHost: "b.example.com",
++		},
++		{
++			name: "name of the service in upper case with a trailing dot and a port",
++			path: authPath, host: "B-Dex-Authenticator.NS-B.svc.cluster.local.:443", originalURL: []string{"https://Shared.Example.com.:8443/"},
++			expectClient: "b", expectForwardedHost: "shared.example.com:8443",
++		},
++		{
++			name: "route with a port in x-forwarded-host keeps the port for the client",
++			path: signInPath, host: serviceOfB, forwardedHost: []string{"shared.example.com:8443"}, forwardedProto: "https",
++			expectClient: "b", expectForwardedHost: "shared.example.com:8443",
++		},
++		{
++			name: "route with the https port in x-forwarded-host over https loses the port",
++			path: signInPath, host: serviceOfB, forwardedHost: []string{"shared.example.com:443"}, forwardedProto: "https",
++			expectClient: "b", expectForwardedHost: "shared.example.com",
++		},
++
++		// The service of another client with a host of one's own: a route of one object that
++		// sends its requests through the Service of another object.
++		{
++			name: "auth subrequest through the service of another client for a host of one's own",
++			path: authPath, host: serviceOfA, originalURL: []string{"https://b.example.com/"},
++		},
++		{
++			name: "route through the service of another client for a host of one's own",
++			path: signInPath, host: serviceOfA, forwardedHost: []string{"b.example.com"}, forwardedProto: "https",
++		},
++		{
++			name: "auth subrequest through the service of a client for the host of a record without a service",
++			path: authPath, host: serviceOfB, originalURL: []string{"https://w.example.com/"},
++		},
++
++		// An object that names the host of another object is chosen for it by its own Service
++		// only: the requests of the other object never reach it.
++		{
++			name: "object on the host of another is not chosen by the host",
++			path: "/dex-authenticator/userinfo", host: "shared.example.com", forwardedProto: "https",
++			expectClient: "a", expectForwardedHost: "shared.example.com",
++		},
++		{
++			name: "object on the host of another is not chosen through the service of the other",
++			path: "/dex-authenticator/userinfo", host: serviceOfA, forwardedHost: []string{"shared.example.com"}, forwardedProto: "https",
++			expectClient: "a", expectForwardedHost: "shared.example.com",
++		},
++
++		// A request that came past the ingress controller: its sender writes every header.
++		{
++			name: "request past the ingress with the service and a host of its client",
++			path: authPath, host: serviceOfB, originalURL: []string{"https://shared.example.com/"},
++			expectClient: "b", expectForwardedHost: "shared.example.com",
++		},
++		{
++			name: "request past the ingress with the service of one client and the host of another",
++			path: authPath, host: serviceOfB, originalURL: []string{"https://a.example.com/"},
++		},
++		{
++			name: "request past the ingress with the service and no host of an application",
++			path: signInPath, host: serviceOfB,
++		},
++		{
++			name: "auth check past the ingress with the service and no host of an application",
++			path: authPath, host: serviceOfB,
++		},
++		{
++			name: "request past the ingress with the service and a host no client has",
++			path: authPath, host: serviceOfB, originalURL: []string{"https://c.example.com/"},
++		},
++
++		// X-Forwarded-Host that the browser wrote: an ingress controller that trusts the
++		// forwarded headers passes it on.
++		{
++			name: "forged x-forwarded-host with the host of another client",
++			path: signInPath, host: serviceOfB, forwardedHost: []string{"a.example.com"}, forwardedProto: "https",
++		},
++		{
++			name: "forged x-forwarded-host with a host no client has",
++			path: signInPath, host: serviceOfB, forwardedHost: []string{"c.example.com"}, forwardedProto: "https",
++		},
++		{
++			name: "forged x-forwarded-host with another host of the same client stays with the client",
++			path: signInPath, host: serviceOfB, forwardedHost: []string{"b.example.com"}, forwardedProto: "https",
++			expectClient: "b", expectForwardedHost: "b.example.com",
++		},
++		{
++			name: "two x-forwarded-host headers",
++			path: signInPath, host: serviceOfB, forwardedHost: []string{"shared.example.com", "a.example.com"}, forwardedProto: "https",
++		},
++		{
++			name: "two equal x-forwarded-host headers",
++			path: signInPath, host: serviceOfB, forwardedHost: []string{"shared.example.com", "shared.example.com"}, forwardedProto: "https",
++		},
++		{
++			name: "x-forwarded-host with a list of hosts",
++			path: signInPath, host: serviceOfB, forwardedHost: []string{"shared.example.com, a.example.com"}, forwardedProto: "https",
++		},
++		{
++			name: "x-forwarded-host with userinfo",
++			path: signInPath, host: serviceOfB, forwardedHost: []string{"shared.example.com@a.example.com"}, forwardedProto: "https",
++		},
++		{
++			name: "x-forwarded-host with the name of the service",
++			path: signInPath, host: serviceOfB, forwardedHost: []string{serviceOfB}, forwardedProto: "https",
++		},
++		{
++			name: "empty x-forwarded-host",
++			path: signInPath, host: serviceOfB, forwardedHost: []string{""}, forwardedProto: "https",
++		},
++		{
++			name: "forged x-forwarded-host does not choose the host of an auth subrequest and is overwritten",
++			path: authPath, host: serviceOfB, originalURL: []string{"https://b.example.com/"}, forwardedHost: []string{"shared.example.com"},
++			expectClient: "b", expectForwardedHost: "b.example.com",
++		},
++		{
++			name: "forged x-original-url does not choose the host of a route",
++			path: signInPath, host: serviceOfB, originalURL: []string{"https://a.example.com/"}, forwardedHost: []string{"shared.example.com"}, forwardedProto: "https",
++			expectClient: "b", expectForwardedHost: "shared.example.com",
++		},
++		{
++			name: "auth path on a route with the name of the service ignores a forged x-original-url",
++			path: authPath, host: serviceOfB, originalURL: []string{"https://a.example.com/"}, forwardedHost: []string{"shared.example.com"}, forwardedProto: "https",
++			expectClient: "b", expectForwardedHost: "shared.example.com",
++		},
++		{
++			name: "name of the service in x-forwarded-host does not choose the client",
++			path: signInPath, host: "a.example.com", forwardedHost: []string{serviceOfB}, forwardedProto: "https",
++			expectClient: "a", expectForwardedHost: "a.example.com",
++		},
++		{
++			name: "name of the service in x-original-url does not choose the client",
++			path: authPath, host: "a.example.com", originalURL: []string{"https://" + serviceOfB + "/"},
++		},
++
++		// A record without the names of a Service is chosen by its hosts, as before.
++		{
++			name: "record without a service is chosen by the host header",
++			path: signInPath, host: "w.example.com", forwardedProto: "https",
++			expectClient: "w", expectForwardedHost: "w.example.com",
++		},
++		{
++			name: "record without a service is chosen by x-original-url of an auth subrequest",
++			path: authPath, host: "w-dex-authenticator.ns-w.svc.cluster.local", originalURL: []string{"https://w.example.com/"},
++			expectClient: "w", expectForwardedHost: "w.example.com",
++		},
++		{
++			name: "record without a service is not chosen by x-forwarded-host",
++			path: signInPath, host: "w-dex-authenticator.ns-w.svc.cluster.local", forwardedHost: []string{"w.example.com"}, forwardedProto: "https",
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			t.Parallel()
++
++			d, recorder := newServiceTestDispatcher(t)
++
++			req := httptest.NewRequest(http.MethodGet, "http://placeholder.test"+tt.path, nil)
++			req.Host = tt.host
++			for _, value := range tt.originalURL {
++				req.Header.Add("X-Original-URL", value)
++			}
++			for _, value := range tt.forwardedHost {
++				req.Header.Add("X-Forwarded-Host", value)
++			}
++			if tt.forwardedProto != "" {
++				req.Header.Set("X-Forwarded-Proto", tt.forwardedProto)
++			}
++			rw := httptest.NewRecorder()
++
++			d.ServeHTTP(rw, req)
++
++			reached := recorder.requests()
++			if tt.expectClient == "" {
++				expectedStatus := http.StatusNotFound
++				if tt.path == authPath {
++					expectedStatus = http.StatusForbidden
++				}
++				assert.Equal(t, expectedStatus, rw.Code)
++				assert.Empty(t, reached, "no handler of a client may run")
++				assert.Empty(t, rw.Header().Values("Set-Cookie"))
++				assert.NotContains(t, rw.Body.String(), "example.com", "the answer must not repeat the request")
++				return
++			}
++
++			require.Len(t, reached, 1, "exactly one handler of a client must run")
++			assert.Equal(t, tt.expectClient, reached[0].client)
++			assert.Equal(t, http.StatusOK, rw.Code)
++			assert.Equal(t, []string{tt.expectForwardedHost}, reached[0].forwardedHosts,
++				"the client must see only the host of the application")
++		})
++	}
++}
++
 +func TestDispatcher_EmptyTable(t *testing.T) {
 +	t.Parallel()
 +
@@ -2889,6 +4620,91 @@ index 00000000..41a586ac
 +		// The client is given its own host, with that port or without a port.
 +		if forwardedHost != client.hosts[0] && forwardedHost != client.hosts[0]+":"+port {
 +			t.Fatalf("the client of %q is given the host %q", client.hosts[0], forwardedHost)
++		}
++	})
++}
++
++// FuzzDispatcherRouteByService checks on arbitrary Host, X-Original-URL, X-Forwarded-Host and
++// X-Forwarded-Proto that a request with the name of a Service in Host gets the client of that
++// Service or none, and only for a host of that client.
++func FuzzDispatcherRouteByService(f *testing.F) {
++	f.Add("/dex-authenticator/auth", serviceOfB, "https://shared.example.com/", "", "")
++	f.Add("/dex-authenticator/auth", serviceOfB, "https://a.example.com/", "a.example.com", "")
++	f.Add("/dex-authenticator/sign_in", serviceOfA, "", "shared.example.com", "https")
++	f.Add("/dex-authenticator/sign_in", serviceOfB+":443", "https://a.example.com/", "b.example.com@a.example.com", "https")
++	f.Add("/dex-authenticator/auth/", "shared.example.com", "", serviceOfB, "")
++	f.Add("/dex-authenticator/auth", "b-dex-authenticator.ns-b.svc.other.local", "https://shared.example.com/", "", "")
++	f.Add("/dex-authenticator/auth", "ghost-dex-authenticator.ns-b.svc.other.local", "https://shared.example.com/", "", "")
++	f.Add("/dex-authenticator/auth", "a-dex-authenticator.ns-a", "https://b.example.com/", "", "")
++	f.Add("/dex-authenticator/auth", "ghost-dex-authenticator.ns-b.svc.cluster.local", "https://b.example.com/", "", "")
++
++	recorder := &requestRecorder{}
++	table := newClientTable()
++	for _, client := range []*tableClient{
++		{name: "a", hosts: []string{"a.example.com", "shared.example.com"}, recordServices: []string{serviceOfA}, services: []string{serviceOfA}, applications: []string{"a.example.com", "shared.example.com"}},
++		{name: "b", hosts: []string{"b.example.com"}, recordServices: []string{serviceOfB}, services: []string{serviceOfB}, applications: []string{"b.example.com", "shared.example.com"}},
++	} {
++		client.handler = recorder.handler(client.name)
++		table.byName[client.name] = client
++		for _, host := range client.hosts {
++			table.byHost[host] = client
++		}
++		table.byService[client.services[0]] = client
++		object, _ := serviceObject(client.services[0])
++		table.byObject[object] = client
++	}
++	metrics, err := newClientTableMetrics(prometheus.NewRegistry())
++	if err != nil {
++		f.Fatal(err)
++	}
++	d := newDispatcher("/dex-authenticator", metrics)
++	d.table.Store(table)
++
++	f.Fuzz(func(t *testing.T, path, host, originalURL, forwardedHost, forwardedProto string) {
++		req := httptest.NewRequest(http.MethodGet, "http://placeholder.test/", nil)
++		req.URL.Path = path
++		req.URL.RawPath = ""
++		req.Host = host
++		req.Header.Set("X-Original-URL", originalURL)
++		req.Header.Set("X-Forwarded-Host", forwardedHost)
++		req.Header.Set("X-Forwarded-Proto", forwardedProto)
++
++		client, given := d.route(req)
++		if client == nil {
++			return
++		}
++
++		// The client is given one of its hosts, with a port or without one.
++		name, port, _ := strings.Cut(given, ":")
++		if !slices.Contains(client.applications, name) {
++			t.Fatalf("the client %q is given the host %q", client.name, given)
++		}
++		if strings.Trim(port, "0123456789") != "" {
++			t.Fatalf("the client %q is given the port %q", client.name, port)
++		}
++
++		// The name of a Service in Host, with at most a port and a trailing dot around it, chooses
++		// the client of that Service and no other; so does, in an auth subrequest, any other DNS
++		// name of that Service.
++		service, _, _ := strings.Cut(strings.ToLower(host), ":")
++		service = strings.TrimSuffix(service, ".")
++		isSubrequest := req.URL.EscapedPath() == "/dex-authenticator/auth" && forwardedProto == ""
++		named := table.byService[service]
++		if clean, _, isName := requestutil.ServerName(host); named == nil && isSubrequest && isName {
++			if object, ok := serviceObject(clean); ok {
++				named = table.byObject[object]
++			}
++		}
++		if named != nil && named != client {
++			t.Fatalf("the host %q of the service of %q chose the client %q", host, named.name, client.name)
++		}
++		// Without it the client is the one chosen by the host it is given.
++		if named == nil && table.byHost[name] != client {
++			t.Fatalf("the host %q chose the client %q, which is not chosen by %q", host, client.name, name)
++		}
++		// And a Service the table does not have gets no auth subrequest answered, for any host.
++		if named == nil && isSubrequest && isAuthenticatorService(service) {
++			t.Fatalf("the host %q, a Service the table does not have, chose the client %q", host, client.name)
 +		}
 +	})
 +}

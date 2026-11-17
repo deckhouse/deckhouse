@@ -1,0 +1,87 @@
+{{- /* dexclient-controller may write Services, Ingresses and HTTPRoutes in every namespace: the Service of a
+       DexAuthenticator and the routes to it live next to the DexAuthenticator. The policy keeps that right away from
+       the objects of others, so that a compromise of the pod cannot change or delete the Service or the route of an
+       application: it creates an object only with the label, changes one only if the label is there before and
+       after the change, so the label cannot be taken off to get an object out of the policy or put on to get one
+       into it, and deletes only an object with the label. Creating a new labelled object stays possible in any
+       namespace: that is how a DexAuthenticator is served. A Service it writes is the only one a DexAuthenticator
+       needs: of the type ExternalName, leading to the Service of a shared dex-authenticator instance, without
+       external IPs. A labelled LoadBalancer or NodePort Service, or an ExternalName to an address of its choice, would
+       open a way into the cluster or out of it from any namespace. A ReferenceGrant it writes in d8-user-authn lets
+       only HTTPRoute objects refer only to the Services of the instances: a grant to another Service of the module
+       namespace, such as that of dex, would hand it to the routes of a namespace. */}}
+{{- if and (include "shared_dex_authenticator_enabled" .) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
+{{- $policyName := "dexclient-controller.user-authn.deckhouse.io" }}
+{{- $managed := `has(%[1]s.metadata.labels) && "app.kubernetes.io/managed-by" in %[1]s.metadata.labels && %[1]s.metadata.labels["app.kubernetes.io/managed-by"] == "user-authn-controller"` }}
+{{- $instanceServices := list }}
+{{- $instances := include "shared_dex_authenticator_instances" . | fromYamlArray }}
+{{- range $instance := $instances }}
+  {{- $instanceServices = append $instanceServices (printf "%s.d8-%s.svc.%s" $instance $.Chart.Name $.Values.global.discovery.clusterDomain) }}
+{{- end }}
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dexclient-controller")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups: [""]
+      apiVersions: ["*"]
+      operations: ["CREATE", "UPDATE", "DELETE"]
+      resources: ["services"]
+    - apiGroups: ["networking.k8s.io"]
+      apiVersions: ["*"]
+      operations: ["CREATE", "UPDATE", "DELETE"]
+      resources: ["ingresses"]
+    - apiGroups: ["gateway.networking.k8s.io"]
+      apiVersions: ["*"]
+      operations: ["CREATE", "UPDATE", "DELETE"]
+      resources: ["httproutes"]
+  {{- if include "shared_dex_authenticator_reference_grants" . }}
+    - apiGroups: ["gateway.networking.k8s.io"]
+      apiVersions: ["*"]
+      operations: ["CREATE", "UPDATE", "DELETE"]
+      resources: ["referencegrants"]
+  {{- end }}
+  matchConditions:
+  - name: dexclient-controller
+    expression: 'request.userInfo.username == "system:serviceaccount:d8-{{ .Chart.Name }}:dexclient-controller"'
+  validations:
+  - expression: 'request.operation == "DELETE" || ({{ printf $managed "object" }})'
+    reason: Forbidden
+    messageExpression: "'dexclient-controller creates and changes only the objects labelled app.kubernetes.io/managed-by: user-authn-controller'"
+  - expression: 'request.operation == "CREATE" || ({{ printf $managed "oldObject" }})'
+    reason: Forbidden
+    messageExpression: "'dexclient-controller changes and deletes only the objects labelled app.kubernetes.io/managed-by: user-authn-controller'"
+  - expression: >-
+      request.operation == "DELETE" || request.resource.resource != "services" || (
+      has(object.spec.type) && object.spec.type == "ExternalName"
+      && has(object.spec.externalName) && object.spec.externalName in {{ $instanceServices | toJson }}
+      && (!has(object.spec.externalIPs) || size(object.spec.externalIPs) == 0)
+      )
+    reason: Forbidden
+    messageExpression: "'dexclient-controller writes only ExternalName Services that lead to a shared dex-authenticator instance, without external IPs'"
+  {{- if include "shared_dex_authenticator_reference_grants" . }}
+  # The grants alb needs to follow the ExternalName Service of a DexAuthenticator in the auth-url of an HTTPRoute to
+  # d8-user-authn: without one the auth check of every application behind alb fails. Only such grants are let in.
+  - expression: >-
+      request.operation == "DELETE" || request.resource.resource != "referencegrants" || (
+      has(object.spec.from) && object.spec.from.all(f, f.group == "gateway.networking.k8s.io" && f.kind == "HTTPRoute")
+      && has(object.spec.to) && object.spec.to.all(t, t.group == "" && t.kind == "Service" && has(t.name) && t.name in {{ $instances | toJson }})
+      )
+    reason: Forbidden
+    messageExpression: "'dexclient-controller writes only ReferenceGrants from HTTPRoute objects to the Services of the shared dex-authenticator instances'"
+  {{- end }}
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dexclient-controller")) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny]
+{{- end }}

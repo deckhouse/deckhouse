@@ -666,7 +666,7 @@ func (c *clientSet) set(obj any) {
 	if err != nil {
 		salt = nil
 	}
-	current := feedClient{id: ids[0], salt: salt, instance: instanceOfNamespace(labels[DexAuthenticatorNamespaceLabel])}
+	current := feedClient{id: ids[0], salt: salt, instance: naming.AuthenticatorInstance(labels[DexAuthenticatorNamespaceLabel])}
 
 	c.mu.Lock()
 	if previousID, isKnown := c.ids[u.GetName()]; isKnown && previousID != current.id {

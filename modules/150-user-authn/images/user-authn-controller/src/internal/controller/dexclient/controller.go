@@ -264,29 +264,7 @@ func (r *Reconciler) apply(ctx context.Context, c Client) error {
 	for i, id := range ids {
 		errs = append(errs, r.applyOAuth2Client(ctx, c, id, clients[i], value))
 	}
-	return joinRetryable(errs)
-}
-
-// joinRetryable joins errs so that one terminal error does not stop the retry of another:
-// errors.Join of a terminal error is terminal as a whole.
-func joinRetryable(errs []error) error {
-	var retry, terminal []error
-	for _, err := range errs {
-		switch {
-		case err == nil:
-		case errors.Is(err, reconcile.TerminalError(nil)):
-			terminal = append(terminal, err)
-		default:
-			retry = append(retry, err)
-		}
-	}
-	if len(retry) == 0 {
-		return errors.Join(terminal...)
-	}
-	for _, err := range terminal {
-		retry = append(retry, errors.New(err.Error()))
-	}
-	return errors.Join(retry...)
+	return controller.JoinRetryable(errs)
 }
 
 // pickSecret is the value of the Secret, or of the first OAuth2Client that has one, or empty.

@@ -17,6 +17,35 @@ spec:
 
             Имя DexAuthenticator должно быть DNS-меткой по RFC 1035 длиной не более 63 символов: начинаться со строчной латинской буквы и содержать только строчные латинские буквы, цифры и дефисы. Имя входит в имя Service и в значения лейблов создаваемых объектов.
           properties:
+            status:
+              description: |-
+                Состояние объекта. Его записывает модуль.
+              properties:
+                conditions:
+                  description: |-
+                    Условия объекта.
+
+                    Условие `Served` показывает, обслуживает ли dex-authenticator модуля объект на всех его доменах. Если нет, `reason` называет причину:
+                    * `WaitingForInstance` — dex-authenticator ещё не загрузил настройки объекта. После создания или изменения объекта это занимает до нескольких минут;
+                    * `HostConflict` — домен объекта принадлежит другому DexAuthenticator: тому, который на нём уже обслуживается, или самому старому из тех, кто его называет. На остальных доменах объект обслуживается;
+                    * `InvalidRecord` — объект нельзя обслужить в таком виде: `message` называет поле;
+                    * `ClientNotCreated` — не удалось записать клиент Dex объекта;
+                    * `ForeignObject` — в неймспейсе уже есть Service, Ingress или HTTPRoute с именем, которое модуль даёт своим объектам, и создал его не модуль;
+                    * `TableFull` — dex-authenticator обслуживает столько объектов, сколько может.
+                  items:
+                    properties:
+                      type:
+                        description: Тип условия, например `Served`.
+                      status:
+                        description: Статус условия, `True`, `False` или `Unknown`.
+                      reason:
+                        description: Причина статуса, например `HostConflict`.
+                      message:
+                        description: Подробности статуса.
+                      lastTransitionTime:
+                        description: Время последнего изменения статуса.
+                      observedGeneration:
+                        description: Поколение объекта, для которого установлено условие.
             spec:
               properties:
                 applicationDomain:
@@ -252,6 +281,35 @@ spec:
       schema:
         openAPIV3Schema:
           properties:
+            status:
+              description: |-
+                Состояние объекта. Его записывает модуль.
+              properties:
+                conditions:
+                  description: |-
+                    Условия объекта.
+
+                    Условие `Served` показывает, обслуживает ли dex-authenticator модуля объект на всех его доменах. Если нет, `reason` называет причину:
+                    * `WaitingForInstance` — dex-authenticator ещё не загрузил настройки объекта. После создания или изменения объекта это занимает до нескольких минут;
+                    * `HostConflict` — домен объекта принадлежит другому DexAuthenticator: тому, который на нём уже обслуживается, или самому старому из тех, кто его называет. На остальных доменах объект обслуживается;
+                    * `InvalidRecord` — объект нельзя обслужить в таком виде: `message` называет поле;
+                    * `ClientNotCreated` — не удалось записать клиент Dex объекта;
+                    * `ForeignObject` — в неймспейсе уже есть Service, Ingress или HTTPRoute с именем, которое модуль даёт своим объектам, и создал его не модуль;
+                    * `TableFull` — dex-authenticator обслуживает столько объектов, сколько может.
+                  items:
+                    properties:
+                      type:
+                        description: Тип условия, например `Served`.
+                      status:
+                        description: Статус условия, `True`, `False` или `Unknown`.
+                      reason:
+                        description: Причина статуса, например `HostConflict`.
+                      message:
+                        description: Подробности статуса.
+                      lastTransitionTime:
+                        description: Время последнего изменения статуса.
+                      observedGeneration:
+                        description: Поколение объекта, для которого установлено условие.
             spec:
               properties:
                 sendAuthorizationHeader:

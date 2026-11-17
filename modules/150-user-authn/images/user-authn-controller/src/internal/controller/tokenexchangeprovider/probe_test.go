@@ -93,7 +93,7 @@ func TestDiscoveryProbe(t *testing.T) {
 			if err := c.Get(t.Context(), testRequest.NamespacedName, obj); err != nil {
 				t.Fatal(err)
 			}
-			cond := meta.FindStatusCondition(readConditions(obj), conditionReady)
+			cond := meta.FindStatusCondition(controller.ReadConditions(obj), conditionReady)
 			if cond == nil || cond.Status != tt.ready {
 				t.Fatalf("Ready = %+v", cond)
 			}

@@ -77,7 +77,7 @@ func TestPrefixConflict(t *testing.T) {
 	if err := c.Get(t.Context(), types.NamespacedName{Name: "newer"}, got); err != nil {
 		t.Fatal(err)
 	}
-	if cond := meta.FindStatusCondition(readConditions(got), conditionReady); cond == nil || cond.Reason != ReasonPrefixConflict {
+	if cond := meta.FindStatusCondition(controller.ReadConditions(got), conditionReady); cond == nil || cond.Reason != ReasonPrefixConflict {
 		t.Errorf("Ready of the later provider = %+v", cond)
 	}
 
@@ -149,7 +149,7 @@ func TestConflictResolvedGetsANewConnectorID(t *testing.T) {
 	if _, ok := getConnector(t, c, id); !ok {
 		t.Errorf("no connector %s", id)
 	}
-	if cond := meta.FindStatusCondition(readConditions(got), conditionReady); cond == nil || cond.Status != metav1.ConditionTrue {
+	if cond := meta.FindStatusCondition(controller.ReadConditions(got), conditionReady); cond == nil || cond.Status != metav1.ConditionTrue {
 		t.Errorf("Ready = %+v", cond)
 	}
 
@@ -222,7 +222,7 @@ func TestInvalidSpecStillGivesWay(t *testing.T) {
 	if err := c.Get(t.Context(), types.NamespacedName{Name: "newer"}, got); err != nil {
 		t.Fatal(err)
 	}
-	if cond := meta.FindStatusCondition(readConditions(got), conditionReady); cond == nil || cond.Reason != ReasonPrefixConflict {
+	if cond := meta.FindStatusCondition(controller.ReadConditions(got), conditionReady); cond == nil || cond.Reason != ReasonPrefixConflict {
 		t.Errorf("Ready = %+v", cond)
 	}
 }

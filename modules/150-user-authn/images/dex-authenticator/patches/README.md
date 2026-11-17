@@ -473,20 +473,52 @@ The security events of `templates/security-events.yaml` are built from these lin
 - **What it does:** `--client-table=<file>` names a JSON file with the clients of the process. Each client is an
   `OAuthProxy` built from the flags of the process followed by the flags of its record, through the same option
   loading and validation as the only client of a process without the table. A dispatcher on the application server
-  gives each request to the client its host names.
+  gives each request to the client the name of a Service in its `Host` header names, and otherwise to the client
+  its host names.
   - **Table:** `{"generation": N, "clients": [...]}`. A client is a DexAuthenticator object: `name`, `namespace`,
     `hosts`, `clientID`, `clientSecret`, `cookieSecret` (required) and `cookieExpire`, `allowAccessToKubernetes`
     (adds the scopes of the `kubernetes` audience to the scope of the process), `sendAuthorizationHeader`,
-    `providerLogout`. These are all a client may set: there is no field for arbitrary flags, and every other
-    setting is that of the process. Hosts are DNS names without a port; a redirect is allowed to the hosts of the
-    client.
-  - **A record that is refused:** a record that fails a check, or claims a host or a cookie secret an earlier
-    record of the file has, is refused alone. The other clients are served by the new table, and that client by the
-    record it had: by its previous `OAuthProxy`, on the hosts of that record that no client of the new table has
-    taken, and only while no client of the new table has its previous cookie secret. A host it gave up comes back
-    to it once it is free. A new client whose record is refused is not served. The first record of a client is its
-    record, refused or not: a second one is dropped. Two clients are never served with one host or one cookie
-    secret; cookie secrets are compared as the proxy reads them, so a secret and its base64 form are one. Only a
+    `providerLogout`, `services`, `sharedHosts`. These are all a client may set: there is no field for arbitrary
+    flags, and every other setting is that of the process. Hosts are DNS names without a port; a redirect is
+    allowed to the hosts of the client, the shared ones included.
+  - **Two clients on one host:** `services` are the names of the Service of the object, as an ingress controller
+    writes them into `Host`: the host of `auth-url` in the auth subrequest of ingress-nginx, and the value of the
+    `upstream-vhost` annotation on a route. A request with such a `Host` came through that Service and is given to
+    its client whatever host of the client it is for; a request for a host the client does not have has no client.
+    `hosts` are the hosts a client is chosen by when `Host` names no Service, one client per host. `sharedHosts`
+    are the hosts of a client that another client is chosen by: the client serves them through its Service only,
+    so they need `services`, and two clients may name one. This is how two DexAuthenticator objects publish one
+    domain through two Ingress classes. Who may send a request through the Service of a client is decided where
+    the routes are written, as it was when every client had pods of its own. A record without `services` is chosen
+    by its hosts only. `auth-url` is written by the author of the application with the name of the Service under
+    the domain of the cluster or under an alias of it: ingress-nginx resolves no shorter name, a sender inside the
+    cluster may use one. So an auth subrequest names the Service of a client by `<service>.<namespace>`, alone or
+    followed by `svc` and any domain; a route names it by the exact name of the table, the one the controller puts
+    into `upstream-vhost`. Two records whose names give one `<service>.<namespace>` claim one Service: the first
+    keeps it. The choice by the host must not answer for an object the table does not have: the object is gone
+    while the Ingress of its application still sends the auth subrequest to its Service and the ingress controller
+    still resolves the name, or `auth-url` names another namespace or is misspelt. The client that is chosen by
+    the host would open the application of that object to its own users. So an auth subrequest whose `Host` has
+    the form `<object>-dex-authenticator.<namespace>`, alone or followed by `svc` and any domain, and names no
+    Service of the table has no client, whatever host it is for. A `Host` of any other form is chosen by the host
+    as before, and so is any `Host` for a client whose record has no `services`. The Service of an object whose
+    name was cut to fit the length of a name does not have the form, so the rule does not cover it.
+  - **A record that is refused:** a record that fails a check, or has the cookie secret of an earlier record of
+    the file, is refused alone. So is a record that claims a host or a name of the Service that a client of the
+    table in use is chosen by and its record in the file still names: the name stays with the client that is served
+    by it, whatever the order of the file. A host or a Service that two records claim and no client is chosen by
+    goes to none of them: both records are refused. With the order of the file, a record put before the record of
+    a client would take its host, and the requests of its application would be checked with the cookie secret, the
+    users and the groups of another client; and a process that starts has no table in use, so by the order it
+    could give the name to another client than the process next to it that runs. The writer of the table gives a
+    name to one client, and the process does not rely on it. The other clients are served by the new table, and
+    that client by the record it had: by its previous `OAuthProxy`, on the hosts and by the names of the Service of
+    that record that no client of the new table has taken (a Service is taken also when a client of the new table
+    names it by another of its DNS names), and only while no client of the new table has its
+    previous cookie secret. A name it gave up comes back to it once it is free. A new client whose record is
+    refused is not served. The first record of a client is its record, refused or not: a second one is dropped. Two
+    clients are never chosen by one host or one name of a Service, and never served with one cookie secret; cookie
+    secrets are compared as the proxy reads them, so a secret and its base64 form are one. Only a
     file that is not a table is refused as a whole and leaves the table in use: an unknown field, more than one
     JSON value, or no list of clients.
   - **Sign-out through dex:** a process with `--provider-logout-url` refuses a record without `providerLogout`:
@@ -494,9 +526,12 @@ The security events of `templates/security-events.yaml` are built from these lin
   - **Generation:** the writer of the table numbers its versions. The process answers `GET /client-table`, by the
     exact path, on the application server and outside the proxy prefix, so that no route of an application leads
     there, with
-    `{"generation": N, "clients": M, "failed": ["<namespace>/<name>", ...]}`: the generation it serves and the
-    clients whose record was refused or could not be built. The writer learns from it when every replica has
-    loaded a version.
+    `{"generation": N, "clients": M, "failed": ["<identifier>", ...]}`: the generation it serves, the number of
+    its clients, and the clients whose record was refused or could not be built. The answer names no client: every
+    pod of the cluster reaches the port, and the names are the namespaces and the objects of other tenants. A
+    failed client is given by the first 16 bytes, in hex, of the HMAC-SHA256 of `<namespace>/<name>` under the
+    cookie secret of its record, which only the writer of the record can compute. The writer learns from the
+    answer when every replica has loaded a version and which of its records were refused.
   - **Sessions of the clients:** the clients share the session store, and each keeps its records and refresh locks
     there under its own name (`persistence.NewScopedStore`, the key is `<length of the name>:<name>:<ticket>`). A
     cookie of one client is not a session of another by two checks: the cookie secret signs it, and behind the
@@ -505,21 +540,27 @@ The security events of `templates/security-events.yaml` are built from these lin
     start without `--cookie-refresh` above zero: without it the stub of patch 002 is trusted as it is. It also
     needs `--skip-oidc-discovery`: a client is built while the table is loaded, and a provider that is asked for
     its configuration and does not answer would hold the load.
-  - **Key of a request:** for the auth subrequest of ingress-nginx, the exact path `<proxy prefix>/auth` with
+  - **Key of a request:** the name of a Service in `Host` chooses its client, and the host of the application
+    then only has to be one of that client; without it the host of the application chooses the client. The host of
+    the application: for the auth subrequest of ingress-nginx, the exact path `<proxy prefix>/auth` with
     `X-Original-URL` and without `X-Forwarded-Proto`, the host of `X-Original-URL` (patch 016); a header that names
-    no plain host is no key. For every other request the `Host` header: a browser path that came through the route
-    of an application, or the auth check of an ingress controller that sends the `Host` of the application.
-    `X-Forwarded-Host` is never read and is overwritten with the host the client was chosen by before the handler
-    of the client runs. The host is written as the table has it, in lower case and without a trailing dot, with the
-    port only when it is not the default one of the scheme: the client builds its `redirect_uri` from it, and dex
-    compares that with the registered one as a string.
+    no plain host is no key. For any other request with the name of a Service in `Host`, the only
+    `X-Forwarded-Host`, which ingress-nginx sets to the host of the application when `upstream-vhost` replaces
+    `Host`; a browser that writes it through an ingress controller that trusts forwarded headers gets the client
+    of the Service, and only on a host of that client. For every other request the `Host` header: a browser path
+    that came through the route of an application, or the auth check of an ingress controller that sends the
+    `Host` of the application. `X-Forwarded-Host` is read in no other case and is overwritten with the host of the
+    application before the handler of the client runs. The host is written as the table has it, in lower case and
+    without a trailing dot, with the port only when it is not the default one of the scheme: the client builds its
+    `redirect_uri` from it, and dex compares that with the registered one as a string.
   - **What the key relies on:** ingress-nginx overwrites `X-Original-URL` on its subrequest. The auth check of
     another ingress controller is told from it only by the headers: it must carry `X-Forwarded-Proto` or no
     `X-Original-URL`, or a client of that controller could name the host of another application there. The `Host`
     of a subrequest of ingress-nginx is the Service of the authenticator, so the writer of the table must not give
     that name to a client as a host.
-  - **A host no client has** is answered 403 on the auth path and 404 on any other. ingress-nginx passes a 403 of
-    the auth subrequest to the browser and turns a 404 into its own 500.
+  - **A request that names no client**, by a host no client has or by the Service of one client and the host of
+    another, is answered 403 on the auth path and 404 on any other. ingress-nginx passes a 403 of the auth
+    subrequest to the browser and turns a 404 into its own 500.
   - **Reload:** the file is read again on a file event (the symlink swap of a Secret volume included) and every 10
     seconds. A client whose record did not change keeps its `OAuthProxy`; the others are built, and the new table
     replaces the old one at once. A request already given to a client finishes there. A client that cannot be built
@@ -548,14 +589,17 @@ The security events of `templates/security-events.yaml` are built from these lin
   - **Metrics:** `oauth2_proxy_dispatch_request_duration_seconds` by `outcome` (`hit`, `unknown`), whose count is
     the number of requests; `oauth2_proxy_client_table_clients`, `oauth2_proxy_client_table_hosts`,
     `oauth2_proxy_client_table_generation`; `oauth2_proxy_client_table_reload_duration_seconds` by `result` (`ok`,
-    `partial`, `error`; every read of a file that is missing or unreadable is an `error`, so it shows as a rate);
+    `partial`, `error`; every read of a file that is missing, unreadable or refused as a whole is an `error`, so it shows as
+    a rate while the file stays so);
     `oauth2_proxy_client_table_client_changes_total` by `change` (`built`, `reused`, `failed`, `removed`);
     `oauth2_proxy_client_table_last_reload_timestamp_seconds`. No label carries a host, a client or a user.
 - **Tests:** `deckhouse_dispatcher_test.go`: a forged `Host`, `X-Forwarded-Host` or `X-Original-URL` reaches the
-  handler of no other client (`TestDispatcher_ServeHTTP`, the fuzz target `FuzzDispatcherRoute`).
-  `deckhouse_client_table_test.go`: the table format, the refused records, the reload, the generation, a request in
-  flight during a reload, the file events, and `TestClientTable_isolation` and `TestClientTable_storeScope`, where
-  the session of one real client is refused by another. `pkg/sessions/persistence/scoped_store_test.go`: the scopes.
+  handler of no other client (`TestDispatcher_ServeHTTP`, the fuzz target `FuzzDispatcherRoute`), and the name of
+  a Service opens no host its client does not have (`TestDispatcher_ServeHTTP_byService`, the fuzz target
+  `FuzzDispatcherRouteByService`). `deckhouse_client_table_test.go`: the table format, the refused records, the
+  reload, the generation, a request in flight during a reload, the file events, and `TestClientTable_isolation`,
+  `TestClientTable_sharedHost` and `TestClientTable_storeScope`, where the session of one real client is refused
+  by another. `pkg/sessions/persistence/scoped_store_test.go`: the scopes.
 - **Upstream:** not proposed.
 - **Order:** after 016 and 017: it chooses the client with the host parsing of 016 and shares the store of 017. It
   moves the body of `NewOAuthProxy` into `newOAuthProxy`, so a patch below it that changes `NewOAuthProxy` moves its

@@ -50,15 +50,108 @@
       plk_markup_format: markdown
       plk_create_group_if_not_exists__d8_shared_dex_authenticator_malfunctioning: "D8SharedDexAuthenticatorMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_shared_dex_authenticator_malfunctioning: "D8SharedDexAuthenticatorMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      summary: The pod `{{ $labels.pod }}` of the shared dex-authenticator `{{ $labels.instance_name }}` keeps the sessions without its own Redis (mode `{{ $labels.mode }}`).
+      summary: The pod `{{ $labels.pod }}` of the shared dex-authenticator `{{ $labels.instance_name }}` does not use its own Redis.
       description: |-
-        For more than 10 minutes, the pod `{{ $labels.pod }}` of the shared dex-authenticator instance `{{ $labels.instance_name }}` has not used the Redis of its pod: the Redis does not answer, or it was not filled from a neighbour when the pod started.
+        For more than 10 minutes, the pod `{{ $labels.pod }}` of the shared dex-authenticator instance `{{ $labels.instance_name }}` has not used the Redis in its pod. Users stay signed in, but their sessions are refreshed with additional requests to Dex.
 
-        In the mode `peer` the pod reads the sessions from the Redis of the other pod. In the mode `memory` no Redis answers, and the pod keeps the sessions in its memory. Users stay signed in, but a session the pod does not find is restored from its cookie with one more request to Dex, and with both pods in the mode `memory` every session is refreshed once per pod.
-
-        Check the state of the Redis container and the reason in the log of the proxy:
+        Check the containers of the pod and its log:
 
         ```bash
-        d8 k -n d8-user-authn get pod {{ $labels.pod }} -o jsonpath='{range .status.containerStatuses[*]}{.name}{" ready="}{.ready}{" restarts="}{.restartCount}{"\n"}{end}'
-        d8 k -n d8-user-authn logs {{ $labels.pod }} -c dex-authenticator | grep redis-peers
+        d8 k -n d8-user-authn get pod {{ $labels.pod }}
+        d8 k -n d8-user-authn logs {{ $labels.pod }} -c dex-authenticator
+        ```
+  - alert: D8SharedDexAuthenticatorSessionStoreNotSeeded
+    expr: |
+      max by (namespace, pod, instance_name) (
+        oauth2_proxy_session_store_redis_peers_seed_duration_seconds_count{
+          namespace="d8-user-authn",
+          job="shared-dex-authenticator",
+          outcome=~"timeout|error"
+        }
+      ) > 0
+      unless on (namespace, pod)
+      max by (namespace, pod) (
+        oauth2_proxy_session_store_redis_peers_seed_duration_seconds_count{
+          namespace="d8-user-authn",
+          job="shared-dex-authenticator",
+          outcome="copied"
+        }
+      ) > 0
+      and on (namespace, pod)
+      (
+        time() - max by (namespace, pod) (
+          process_start_time_seconds{namespace="d8-user-authn", job="shared-dex-authenticator"}
+        )
+      ) < 3600
+    labels:
+      severity_level: "9"
+      tier: cluster
+      d8_module: user-authn
+      d8_component: shared-dex-authenticator
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      plk_create_group_if_not_exists__d8_shared_dex_authenticator_malfunctioning: "D8SharedDexAuthenticatorMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_shared_dex_authenticator_malfunctioning: "D8SharedDexAuthenticatorMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The pod `{{ $labels.pod }}` of the shared dex-authenticator `{{ $labels.instance_name }}` started without the sessions of the other pod.
+      description: |-
+        The pod `{{ $labels.pod }}` of the shared dex-authenticator instance `{{ $labels.instance_name }}` has not copied the sessions of the other pod since it started. Users stay signed in. If the other pod restarts before the sessions are refreshed, which takes up to `idTokenTTL`, every session is refreshed with an additional request to Dex.
+
+        The alert is resolved an hour after the pod starts. Check the log of the pod:
+
+        ```bash
+        d8 k -n d8-user-authn logs {{ $labels.pod }} -c dex-authenticator
+        ```
+  - alert: D8SharedDexAuthenticatorClientTableAlmostFull
+    expr: |
+      max by (instance_name) (
+        d8_user_authn_shared_dex_authenticator_table_bytes{namespace="d8-user-authn", job="dexclient-controller"}
+      )
+      / on () group_left ()
+      max(d8_user_authn_shared_dex_authenticator_table_limit_bytes{namespace="d8-user-authn", job="dexclient-controller"})
+      > 0.8
+    for: 10m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: user-authn
+      d8_component: shared-dex-authenticator
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      plk_create_group_if_not_exists__d8_shared_dex_authenticator_malfunctioning: "D8SharedDexAuthenticatorMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_shared_dex_authenticator_malfunctioning: "D8SharedDexAuthenticatorMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The table of clients of the shared dex-authenticator `{{ $labels.instance_name }}` is {{ $value | humanizePercentage }} full.
+      description: |-
+        The table of clients of the shared dex-authenticator instance `{{ $labels.instance_name }}` is {{ $value | humanizePercentage }} full. New DexAuthenticator objects are not served once it is full.
+
+        Delete the DexAuthenticator objects that are no longer needed:
+
+        ```bash
+        d8 k get dexauthenticators -A
+        ```
+  - alert: D8SharedDexAuthenticatorClientTableFull
+    expr: |
+      max by (instance_name) (
+        d8_user_authn_shared_dex_authenticator_objects_not_served{namespace="d8-user-authn", job="dexclient-controller", reason="TableFull"}
+      ) > 0
+    for: 5m
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: user-authn
+      d8_component: shared-dex-authenticator
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      plk_create_group_if_not_exists__d8_shared_dex_authenticator_malfunctioning: "D8SharedDexAuthenticatorMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_shared_dex_authenticator_malfunctioning: "D8SharedDexAuthenticatorMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The table of clients of the shared dex-authenticator `{{ $labels.instance_name }}` is full, {{ $value }} DexAuthenticator objects did not fit into it.
+      description: |-
+        The table of clients of the shared dex-authenticator instance `{{ $labels.instance_name }}` is full. {{ $value }} DexAuthenticator objects are not served, or are served without their latest changes.
+
+        Delete the DexAuthenticator objects that are no longer needed. The objects that did not fit:
+
+        ```bash
+        d8 k get dexauthenticators -A -o json | jq -r '.items[] | select(any(.status.conditions[]?; .type == "Served" and .reason == "TableFull")) | "\(.metadata.namespace)/\(.metadata.name)"'
         ```

@@ -1,0 +1,23 @@
+{{- /* The settings of the module and of the cluster that the objects of every DexAuthenticator depend on. The
+       reconcilers of dexclient-controller build the table of clients, the Dex clients, the Services and the routes
+       from them, and build them again when the settings change. */}}
+{{- if include "shared_dex_authenticator_enabled" . }}
+  {{- $settings := dict
+        "clusterDomain" .Values.global.discovery.clusterDomain
+        "httpsMode" (include "helm_lib_module_https_mode" .)
+        "ingressEnabled" (eq (include "helm_lib_module_ingress_enabled" .) "true")
+        "ingressNginxHSTSAnnotation" (not (empty (include "helm_lib_module_ingress_nginx_annotations_version_ge" (list . "1.3.0"))))
+        "gatewayAPI" (not (empty (include "shared_dex_authenticator_gateway_api" .)))
+        "dexSessions" (dig "sessions" "enabled" false .Values.userAuthn)
+        "platformSSO" (eq (dig "sessions" "sso" "Platform" .Values.userAuthn) "Platform")
+        "idTokenTTL" (.Values.userAuthn.idTokenTTL | default "10m") }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shared-dex-authenticator
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "shared-dex-authenticator")) | nindent 2 }}
+data:
+  settings.json: {{ $settings | toJson | quote }}
+{{- end }}

@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"maps"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -33,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	"user-authn-controller/internal/controller/dexauthenticator"
 	"user-authn-controller/internal/controller/useraccount"
 )
 
@@ -110,7 +112,7 @@ func TestManagerOptionsSplitTheSecretWriter(t *testing.T) {
 		}
 	}
 
-	dex, err := newDexClientManagerOptions(runtime.NewScheme())
+	dex, err := newDexClientManagerOptions(runtime.NewScheme(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,6 +137,59 @@ func TestManagerOptionsSplitTheSecretWriter(t *testing.T) {
 	slices.Sort(kinds)
 	if !slices.Equal(kinds, []string{"OAuth2Client", "Secret"}) {
 		t.Errorf("dexclient caches %v, want only OAuth2Client and Secret", kinds)
+	}
+}
+
+// With the shared dex-authenticator instances the dexclient command also caches what the
+// DexAuthenticator reconcilers watch, and of each kind only what they need: the Services, Ingresses
+// and HTTPRoutes the controller wrote, the pods of the instances, the ConfigMap of the settings.
+func TestManagerOptionsOfTheDexAuthenticatorReconcilers(t *testing.T) {
+	scopes := func(gatewayAPI bool) map[string]cache.ByObject {
+		opts, err := newDexClientManagerOptions(runtime.NewScheme(), &dexauthenticator.Options{GatewayAPI: gatewayAPI})
+		if err != nil {
+			t.Fatal(err)
+		}
+		out := map[string]cache.ByObject{}
+		for obj, byObject := range opts.Cache.ByObject {
+			kind := obj.GetObjectKind().GroupVersionKind().Kind
+			if kind == "" {
+				kind = reflect.TypeOf(obj).Elem().Name()
+			}
+			out[kind] = byObject
+		}
+		return out
+	}
+
+	without := scopes(false)
+	if _, cached := without["HTTPRoute"]; cached {
+		t.Error("HTTPRoutes are cached without the Gateway API: the informer of a kind the cluster does not have never syncs")
+	}
+	with := scopes(true)
+	for _, kind := range []string{"Service", "Ingress", "HTTPRoute", "Secret"} {
+		selector := with[kind].Namespaces[cache.AllNamespaces].LabelSelector
+		if selector == nil || selector.String() != "app.kubernetes.io/managed-by=user-authn-controller" {
+			t.Errorf("%s cache selector = %v, want the objects of the controller only", kind, selector)
+		}
+	}
+	if pods := with["Pod"].Namespaces["d8-user-authn"]; len(with["Pod"].Namespaces) != 1 || pods.LabelSelector == nil || pods.LabelSelector.String() != "app=shared-dex-authenticator" {
+		t.Errorf("Pod cache = %+v, want the pods of the instances in d8-user-authn", with["Pod"])
+	}
+	if settings := with["ConfigMap"].Namespaces["d8-user-authn"]; len(with["ConfigMap"].Namespaces) != 1 || settings.FieldSelector == nil || settings.FieldSelector.String() != "metadata.name=shared-dex-authenticator" {
+		t.Errorf("ConfigMap cache = %+v, want the ConfigMap of the settings", with["ConfigMap"])
+	}
+}
+
+func TestSharedDexAuthenticatorOptions(t *testing.T) {
+	if got := sharedDexAuthenticatorOptions(); got != nil {
+		t.Errorf("without the variable: %+v, want the reconcilers off", got)
+	}
+	t.Setenv(sharedDexAuthenticatorEnv, "true")
+	if got := sharedDexAuthenticatorOptions(); got == nil || got.GatewayAPI {
+		t.Errorf("with the variable: %+v, want the reconcilers on without the Gateway API", got)
+	}
+	t.Setenv(gatewayAPIEnv, "true")
+	if got := sharedDexAuthenticatorOptions(); got == nil || !got.GatewayAPI {
+		t.Errorf("with both variables: %+v, want the Gateway API on", got)
 	}
 }
 

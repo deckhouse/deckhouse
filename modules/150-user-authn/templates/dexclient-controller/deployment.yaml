@@ -66,6 +66,23 @@ spec:
         imagePullPolicy: 'IfNotPresent'
         args:
         - dexclient
+  {{- if include "shared_dex_authenticator_enabled" . }}
+        env:
+        # The reconcilers that serve DexAuthenticator objects by the shared dex-authenticator instances.
+        - name: SHARED_DEX_AUTHENTICATOR
+          value: "true"
+    {{- if include "shared_dex_authenticator_http_routes" . }}
+        # The cluster has HTTPRoute objects: the reconcilers watch the ones they made.
+        - name: GATEWAY_API
+          value: "true"
+    {{- end }}
+    {{- if include "shared_dex_authenticator_reference_grants" . }}
+        # The cluster has ReferenceGrant objects: the reconcilers grant the HTTPRoute objects of the namespaces with a
+        # served DexAuthenticator the Service of its instance.
+        - name: REFERENCE_GRANTS
+          value: "true"
+    {{- end }}
+  {{- end }}
         ports:
         - containerPort: 9090
           name: healthz

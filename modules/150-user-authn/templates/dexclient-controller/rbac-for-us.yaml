@@ -33,10 +33,12 @@ rules:
 # The credentials Secret of a DexClient lives in the namespace of the DexClient, and RBAC cannot
 # narrow a grant by label (the label-scoped informer only saves memory), so this grant covers every
 # Secret in the cluster: a compromise of this pod reads and writes all of them, which is as much as
-# cluster-admin. That is why the DexClient reconciler runs alone under this ServiceAccount: the pod
-# listens only for health and metrics, and parses no input from other pods. The revocation feed,
-# which serves DexAuthenticators in user namespaces, runs in user-authn-controller, which cannot
-# write Secrets.
+# cluster-admin. That is why only the reconcilers that keep secrets run under this
+# ServiceAccount, the one of DexClient objects and those of DexAuthenticator objects: the pod
+# listens only for health and metrics. The one input it reads from other pods is what the pods of
+# the shared dex-authenticator instances tell about the table they serve: a JSON of a bounded size
+# with a number and a list of names. The revocation feed, which serves DexAuthenticators in user
+# namespaces, runs in user-authn-controller, which cannot write Secrets.
 - apiGroups:
   - ""
   resources:
@@ -62,6 +64,74 @@ rules:
   verbs:
   - create
   - patch
+{{- if include "shared_dex_authenticator_enabled" . }}
+# The reconcilers that serve DexAuthenticator objects by the shared dex-authenticator instances read the objects
+# and write the Served condition into their status.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - dexauthenticators
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - dexauthenticators/status
+  verbs:
+  - update
+# The Service of a DexAuthenticator and the routes to it live in the namespace of the DexAuthenticator, so the grant
+# is cluster-wide. The ValidatingAdmissionPolicy dexclient-controller.user-authn.deckhouse.io keeps this
+# ServiceAccount away from the objects it did not make: it changes and deletes only the ones labelled as its own.
+# It can still create a new Service or route anywhere, which is what serving a DexAuthenticator takes. There is no
+# write to pods: the controller asks the pods of the instances which table they serve and waits for them.
+#
+# The right to write comes only together with the policy: in a cluster without the admission policy kinds nothing
+# would hold it, so there the controller reads the objects and serves no DexAuthenticator.
+  {{- $policed := and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+  {{- if $policed }}
+  - create
+  - update
+  - delete
+  {{- end }}
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+  {{- if $policed }}
+  - create
+  - update
+  - delete
+  {{- end }}
+  {{- if include "shared_dex_authenticator_http_routes" . }}
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - httproutes
+  verbs:
+  - get
+  - list
+  - watch
+    {{- if $policed }}
+  - create
+  - update
+  - delete
+    {{- end }}
+  {{- end }}
+{{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -109,6 +179,36 @@ rules:
   - update
   - patch
   - delete
+{{- if include "shared_dex_authenticator_enabled" . }}
+# The settings the objects of a DexAuthenticator are built from, and the pods of the shared dex-authenticator
+# instances: the controller asks each which table of clients it serves.
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+  {{- if include "shared_dex_authenticator_reference_grants" . }}
+# The ReferenceGrants from the HTTPRoute objects of the namespaces with a served DexAuthenticator to the Services of
+# the instances. alb follows the ExternalName Service of a DexAuthenticator in the auth-url of an HTTPRoute only to a
+# Service of the cluster named by its full DNS name and only with a ReferenceGrant from the namespace of the route to
+# d8-user-authn: without the grant the auth check of every application behind alb fails. The
+# ValidatingAdmissionPolicy dexclient-controller.user-authn.deckhouse.io lets the controller write only its own
+# grants, and only from HTTPRoute objects to those Services.
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - referencegrants
+  verbs:
+  - list
+  - create
+  - update
+  - delete
+  {{- end }}
+{{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

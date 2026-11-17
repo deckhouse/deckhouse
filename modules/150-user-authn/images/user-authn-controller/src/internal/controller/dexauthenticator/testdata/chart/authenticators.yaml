@@ -1,0 +1,151 @@
+apiVersion: deckhouse.io/v1
+kind: DexAuthenticator
+metadata:
+  name: app
+  namespace: shop
+  uid: 00000000-0000-4000-8000-000000000001
+  creationTimestamp: '2026-01-01T00:00:01Z'
+spec:
+  applicationDomain: app.example.com
+  applicationIngressClassName: nginx
+  applicationIngressCertificateSecretName: null
+  signOutURL: null
+  whitelistSourceRanges: null
+---
+apiVersion: deckhouse.io/v1
+kind: DexAuthenticator
+metadata:
+  name: portal
+  namespace: shop
+  uid: 00000000-0000-4000-8000-000000000002
+  creationTimestamp: '2026-01-01T00:00:02Z'
+spec:
+  sendAuthorizationHeader: true
+  keepUsersLoggedInFor: 24h
+  allowedEmails:
+  - john.doe@example.com
+  allowedGroups:
+  - admins
+  - group with spaces
+  allowedProviders:
+  - local
+  - corp-ldap
+  applicationDomain: portal.example.com
+  applicationIngressClassName: nginx
+  applicationIngressCertificateSecretName: portal-tls
+  signOutURL: /logout
+  whitelistSourceRanges:
+  - 10.0.0.0/8
+  - 192.168.42.0/24
+  additionalApplications:
+  - domain: admin.portal.example.com
+    ingressClassName: internal
+    signOutURL: /admin/sign-out
+  - domain: api.portal.example.com
+    ingressClassName: nginx
+    ingressSecretName: api-tls
+---
+apiVersion: deckhouse.io/v1
+kind: DexAuthenticator
+metadata:
+  name: routes
+  namespace: gateway-apps
+  uid: 00000000-0000-4000-8000-000000000003
+  creationTimestamp: '2026-01-01T00:00:03Z'
+spec:
+  applicationDomain: routes.example.com
+  applicationIngressCertificateSecretName: null
+  gatewayAPI:
+    applicationHTTPRouteListenerSetName: public
+  signOutURL: /sign-out
+  whitelistSourceRanges:
+  - 10.0.0.0/8
+  additionalApplications:
+  - domain: both.example.com
+    ingressClassName: nginx
+    gatewayAPI:
+      httpRouteListenerSetName: shared
+      httpRouteListenerSetNamespace: d8-alb
+      httpRouteListenerSetSectionName: https
+  - domain: bare.example.com
+---
+apiVersion: deckhouse.io/v1
+kind: DexAuthenticator
+metadata:
+  name: console
+  namespace: d8-console
+  uid: 00000000-0000-4000-8000-000000000004
+  creationTimestamp: '2026-01-01T00:00:04Z'
+  labels:
+    heritage: deckhouse
+    module: console
+  annotations:
+    dexauthenticator.deckhouse.io/allow-access-to-kubernetes: 'true'
+spec:
+  sendAuthorizationHeader: true
+  highAvailability: true
+  applicationDomain: console.example.com
+  applicationIngressClassName: nginx
+  applicationIngressCertificateSecretName: ingress-tls
+  signOutURL: null
+  whitelistSourceRanges: null
+---
+apiVersion: deckhouse.io/v1
+kind: DexAuthenticator
+metadata:
+  name: grafana
+  namespace: d8-monitoring
+  uid: 00000000-0000-4000-8000-000000000005
+  creationTimestamp: '2026-01-01T00:00:05Z'
+  labels:
+    heritage: deckhouse
+    module: prometheus
+spec:
+  allowedGroups:
+  - admins
+  applicationDomain: grafana.example.com
+  applicationIngressClassName: nginx
+  applicationIngressCertificateSecretName: ingress-tls
+  signOutURL: /logout
+  whitelistSourceRanges: null
+  additionalApplications:
+  - domain: prometheus.example.com
+    ingressClassName: nginx
+    ingressSecretName: ingress-tls
+---
+apiVersion: deckhouse.io/v1
+kind: DexAuthenticator
+metadata:
+  name: documentation
+  namespace: d8-system
+  uid: 00000000-0000-4000-8000-000000000006
+  creationTimestamp: '2026-01-01T00:00:06Z'
+  labels:
+    heritage: deckhouse
+    module: documentation
+spec:
+  applicationDomain: documentation.example.com
+  applicationIngressClassName: nginx
+  applicationIngressCertificateSecretName: null
+  signOutURL: null
+  whitelistSourceRanges: null
+---
+apiVersion: deckhouse.io/v1
+kind: DexAuthenticator
+metadata:
+  name: an-application-with-a-name-as-long-as-a-name-can-be-sixty-three
+  namespace: long-names
+  uid: 00000000-0000-4000-8000-000000000007
+  creationTimestamp: '2026-01-01T00:00:07Z'
+spec:
+  applicationDomain: long.example.com
+  applicationIngressClassName: nginx
+  applicationIngressCertificateSecretName: null
+  signOutURL: /logout
+  whitelistSourceRanges: null
+  additionalApplications:
+  - domain: second.long.example.com
+    ingressClassName: nginx
+    signOutURL: /logout
+    gatewayAPI:
+      httpRouteListenerSetName: public

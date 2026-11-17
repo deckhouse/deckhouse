@@ -192,7 +192,7 @@ func TestReconcileCreatesTheConnector(t *testing.T) {
 	if id, _, _ := unstructured.NestedString(obj.Object, "status", "connectorID"); id != testID {
 		t.Errorf("status.connectorID = %q", id)
 	}
-	if cond := meta.FindStatusCondition(readConditions(obj), conditionReady); cond == nil || cond.Status != metav1.ConditionTrue {
+	if cond := meta.FindStatusCondition(controller.ReadConditions(obj), conditionReady); cond == nil || cond.Status != metav1.ConditionTrue {
 		t.Errorf("Ready = %+v", cond)
 	}
 
@@ -217,7 +217,7 @@ func TestReconcileCreatesTheConnector(t *testing.T) {
 	if obj.GetResourceVersion() != providerVersion {
 		t.Error("an unchanged provider rewrote its status")
 	}
-	if cond := meta.FindStatusCondition(readConditions(obj), conditionReady); cond == nil || cond.ObservedGeneration != 1 {
+	if cond := meta.FindStatusCondition(controller.ReadConditions(obj), conditionReady); cond == nil || cond.ObservedGeneration != 1 {
 		t.Errorf("Ready = %+v", cond)
 	}
 }
@@ -266,7 +266,7 @@ func TestReconcileRefusesAPrivateKey(t *testing.T) {
 	if err := c.Get(t.Context(), testRequest.NamespacedName, obj); err != nil {
 		t.Fatal(err)
 	}
-	if cond := meta.FindStatusCondition(readConditions(obj), conditionReady); cond == nil || cond.Reason != ReasonInvalidSpec {
+	if cond := meta.FindStatusCondition(controller.ReadConditions(obj), conditionReady); cond == nil || cond.Reason != ReasonInvalidSpec {
 		t.Errorf("Ready = %+v", cond)
 	}
 }
@@ -489,7 +489,7 @@ func TestReconcileReportsAWriteFailure(t *testing.T) {
 	if err := c.Get(t.Context(), testRequest.NamespacedName, obj); err != nil {
 		t.Fatal(err)
 	}
-	cond := meta.FindStatusCondition(readConditions(obj), conditionReady)
+	cond := meta.FindStatusCondition(controller.ReadConditions(obj), conditionReady)
 	if cond == nil || cond.Status != metav1.ConditionFalse || cond.Reason != ReasonApplyError || !strings.Contains(cond.Message, "refused") {
 		t.Errorf("Ready = %+v", cond)
 	}
