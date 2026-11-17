@@ -407,7 +407,7 @@ spec:
                         description: |
                           The blobs of this replica's store whose content does not match their digest, sorted, at most 100. Usually empty.
 
-                          Found by the background check, which reads the whole store about once an hour, by a `RegistryOperation` of type `Verify`, or by a `Repair` that could not finish. An image that references such a blob is not counted as held: while an image of the set does, the replica is not `full`, and a leader hands the lease to a replica that holds the set whole.
+                          They are found during the background check, which reads the whole store once an hour, and by a RegistryOperation of type `Verify` or `Repair` that could not finish the repair. An image that references such a blob is not counted as held: while an image of the set does, the replica is not `full`, and a leader hands the lease to a replica that holds the set whole.
 
                           The module creates a `RegistryOperation` of type `Repair` for these blobs as soon as no other operation runs, and again four hours after a repair that did not fix them.
                         items:
@@ -415,7 +415,7 @@ spec:
                       images:
                         type: object
                         description: |
-                          How many images this replica holds, by state. The images themselves are listed by `kubectl get registryimages`.
+                          The number of images held by this replica, by state. The images themselves are listed by `d8 k get registryimages`.
                         properties:
                           present:
                             type: integer
