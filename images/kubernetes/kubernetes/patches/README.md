@@ -9,6 +9,8 @@ Bumps Go dependencies in the root `go.mod`/`go.sum` (and the `go` directive in `
 
 Current bumps on all versions: `golang.org/x/net` v0.62.0 (with `golang.org/x/crypto` v0.58.0 and `golang.org/x/text` v0.43.0), `google.golang.org/grpc` v1.83.2, `go.opentelemetry.io/otel`, `otel/sdk`, `otel/exporters/otlp/otlptrace` and `otlptracegrpc` v1.45.0 (with `go.opentelemetry.io/proto/otlp` v1.11.0). On 1.33-1.35 this moves `otlptracegrpc` from v1.33.0/v1.34.0 to v1.45.0 and drops the no longer used `github.com/cenkalti/backoff/v4`.
 
+`github.com/klauspost/compress` is pinned to v1.20.2 for the apiserver's etcd decoder to fix CVE-2026-116591.
+
 The patch is carried on 1.33 through 1.37 and must apply first (`000`), before patches that touch `go.work.sum` or source code. Regenerate it with `go get` on the upstream tag with the whole patch set applied. Remove the bumps once the upstream patch release ships the same or newer versions.
 
 ### old_certs.patch
@@ -446,3 +448,11 @@ Two outputs are off by default and read once at start from the environment of ku
 On the scheduling path a decision costs one pass over the scores of the feasible nodes and three metric updates, without allocations: 3-3.6 µs at 5000 nodes, about 0.1% of scoring the same nodes with trivial plugins (`BenchmarkDeckhouseDecision`, `BenchmarkDeckhousePrioritizeNodes`).
 
 The patch is carried on 1.33 (`029`), 1.34 (`030`), 1.35 (`029`), 1.36 (`028`) and 1.37 (`027`).
+
+### apiserver-storage-compression-read.patch
+
+kube-apiserver can read zstd-compressed etcd values and writes values without compression. Ship the reader on every kube-apiserver before enabling writes in a later release. Downgrading from the writer release to the reader release preserves access to compressed objects.
+
+- The storage format is `k8s:cmp:zstd:v1:` followed by the zstd frame, with a 64 MiB decoded size limit. Values without the prefix pass through.
+- Decompression runs after decryption or signature verification. Undecodable values can still be deleted with `AllowUnsafeMalformedObjectDeletion`.
+- A compressed value is reported as stale, so a no-op update rewrites it without compression.
