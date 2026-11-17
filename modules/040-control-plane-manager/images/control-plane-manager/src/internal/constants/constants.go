@@ -60,11 +60,7 @@ const (
 	ManifestsPath                       = KubernetesConfigPath + "/manifests"
 	DeckhousePath                       = KubernetesConfigPath + "/deckhouse"
 	KubernetesPkiPath                   = KubernetesConfigPath + "/pki"
-	PatchesPath                         = DeckhousePath + "/patches"
-	ControlPlaneManifestsPath           = DeckhousePath + "/control-plane"
 	ExtraFilesPath                      = DeckhousePath + "/extra-files"
-	ConfigPath                          = "/config" // Mounted secret for d8-control-plane-manager-config
-	PkiPath                             = "/pki"    // Mounted secret for d8-pki
 
 	// Built-in k8s label on static pods with the component name
 	StaticPodComponentLabelKey = "component"
@@ -72,9 +68,6 @@ const (
 	ControlPlaneManagerComponentLabelValue = "control-plane-manager"
 
 	// Env vars for path overrides for debug/dev
-	ManifestDirEnvVar   = "MANIFEST_DIR"
-	ExtraFilesDirEnvVar = "EXTRA_FILES_DIR"
-	PkiDirEnvVar        = "PKI_DIR"
 	KubeconfigDirEnvVar = "KUBECONFIG_DIR"
 
 	// Secret keys for PKI config in d8-control-plane-manager-config
