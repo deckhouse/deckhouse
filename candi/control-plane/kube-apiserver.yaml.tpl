@@ -217,6 +217,16 @@ spec:
 */}}
     - --shutdown-delay-duration=15s
     - --shutdown-send-retry-after=true
+{{- /*
+  # HTTP/2 connections are long-lived, so after a rolling
+  # restart almost every client stays on the kube-apiserver that came up first.
+  # With this chance kube-apiserver answers a request with a graceful GOAWAY:
+  # in-flight requests and watches finish, the client opens new requests in a
+  # new connection through kubernetes-api-proxy or the kubernetes Service and
+  # lands on any kube-apiserver. 0.001 is the upstream recommended value; on a
+  # single master there is nowhere to move, upstream advises against it.
+*/}}
+    - --goaway-chance=0.001
 {{- end }}
     - --tls-cipher-suites=TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
     - --authentication-config=/etc/kubernetes/deckhouse/extra-files/authentication-config.yaml

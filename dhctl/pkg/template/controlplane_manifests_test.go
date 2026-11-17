@@ -1482,6 +1482,7 @@ func testGracefulShutdown(t *testing.T) {
 
 			require.Equal(t, tt.expectDrain, strings.Contains(manifest, "--shutdown-delay-duration=15s"))
 			require.Equal(t, tt.expectDrain, strings.Contains(manifest, "--shutdown-send-retry-after=true"))
+			require.Equal(t, tt.expectDrain, strings.Contains(manifest, "--goaway-chance=0.001"))
 			if tt.expectGrace == "" {
 				require.NotContains(t, manifest, "terminationGracePeriodSeconds")
 			} else {

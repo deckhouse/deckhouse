@@ -788,6 +788,11 @@ resources:
 					Expect(pod.Spec.TerminationGracePeriodSeconds).NotTo(BeNil())
 					Expect(*pod.Spec.TerminationGracePeriodSeconds).To(BeEquivalentTo(80))
 				})
+
+				It("moves HTTP/2 clients between kube-apiservers with GOAWAY", func() {
+					pod := renderedAPIServerPod()
+					Expect(pod.Spec.Containers[0].Command).To(ContainElement("--goaway-chance=0.001"))
+				})
 			})
 
 			Context("single master", func() {
@@ -802,6 +807,13 @@ resources:
 						Expect(arg).NotTo(HavePrefix("--shutdown-"))
 					}
 					Expect(pod.Spec.TerminationGracePeriodSeconds).To(BeNil())
+				})
+
+				It("does not send GOAWAY", func() {
+					pod := renderedAPIServerPod()
+					for _, arg := range pod.Spec.Containers[0].Command {
+						Expect(arg).NotTo(HavePrefix("--goaway-chance"))
+					}
 				})
 			})
 		})
