@@ -1,0 +1,65 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: 38557e472e4e2bd8695fc58a255ec3dd
+  finalizers:
+  - modules.deckhouse.io/release-exists
+  name: deckhouse
+  resourceVersion: "999"
+spec:
+  registry:
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/deckhouse/ce/modules
+    scheme: HTTPS
+status:
+  syncTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  finalizers:
+  - modules.deckhouse.io/metrics-registered
+  labels:
+    module: local-path-provisioner
+    modules.deckhouse.io/update-policy: deckhouse-auto
+    source: deckhouse
+  name: local-path-provisioner-v0.1.0
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ModuleSource
+    name: deckhouse
+    uid: 71d2300f-700b-452a-896a-6a3805f9cef7
+  resourceVersion: "1001"
+spec:
+  moduleName: local-path-provisioner
+  requirements:
+    deckhouse: '>= 1.78'
+  version: 0.1.0
+  weight: 900
+status:
+  approved: false
+  message: 'check module release requirements: validate release: requirements are
+    not satisfied: current deckhouse version is not suitable: 1.0.0 is less than 1.78'
+  phase: Pending
+  pullDuration: 0s
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: local-path-provisioner
+  resourceVersion: "1000"
+properties:
+  source: Embedded
+status:
+  conditions:
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: 'ModuleRelease could not be applied, not met requirements: see details
+      in the module release v0.1.0'
+    reason: ReleaseRequirementsCheck
+    status: "False"
+    type: LastReleaseDeployed
