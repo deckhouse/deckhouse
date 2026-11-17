@@ -1,0 +1,644 @@
+diff --git a/deckhouse_auth_request_host_test.go b/deckhouse_auth_request_host_test.go
+new file mode 100644
+index 00000000..ae211649
+--- /dev/null
++++ b/deckhouse_auth_request_host_test.go
+@@ -0,0 +1,81 @@
++package main
++
++import (
++	"net/http"
++	"net/http/httptest"
++	"testing"
++
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++// TestAuthSubrequestLogsTheOriginalHost checks the log of the proxy behind ingress-nginx (patch
++// 016): the host of the auth subrequest is the one nginx names in X-Original-URL, and the
++// X-Forwarded-Host the browser sent with the request never gets into a log line.
++func TestAuthSubrequestLogsTheOriginalHost(t *testing.T) {
++	opts := baseTestOptions()
++	opts.ReverseProxy = true
++	require.NoError(t, validation.Validate(opts))
++	proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
++	require.NoError(t, err)
++
++	tests := []struct {
++		name         string
++		path         string
++		headers      map[string]string
++		expectedHost string
++	}{
++		{
++			name: "auth subrequest with a forged X-Forwarded-Host",
++			path: opts.ProxyPrefix + "/auth",
++			headers: map[string]string{
++				"X-Original-URL":   "https://app.example.com/page",
++				"X-Forwarded-Host": "forged.example.com",
++			},
++			expectedHost: "app.example.com",
++		},
++		{
++			name: "auth subrequest without a plain host in X-Original-URL",
++			path: opts.ProxyPrefix + "/auth",
++			headers: map[string]string{
++				"X-Original-URL":   "https://app.example.com:443@forged.example.com/",
++				"X-Forwarded-Host": "forged.example.com",
++			},
++			expectedHost: "authenticator.d8-app.svc",
++		},
++		{
++			name: "sign-in page on the route of the application",
++			path: opts.ProxyPrefix + "/sign_in",
++			headers: map[string]string{
++				"X-Forwarded-Proto": "https",
++				"X-Forwarded-Host":  "app.example.com",
++				"X-Original-URL":    "https://forged.example.com/",
++			},
++			expectedHost: "app.example.com",
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			output, _ := captureJSONLogs(t)
++
++			req := httptest.NewRequest(http.MethodGet, "http://authenticator.d8-app.svc"+tt.path, nil)
++			for name, value := range tt.headers {
++				req.Header.Set(name, value)
++			}
++			proxy.ServeHTTP(httptest.NewRecorder(), req)
++
++			hosts := []any{}
++			for _, line := range jsonLogLines(t, output.String()) {
++				if host, ok := line["host"]; ok {
++					hosts = append(hosts, host)
++				}
++			}
++			require.NotEmpty(t, hosts, "the request is logged")
++			for _, host := range hosts {
++				assert.Equal(t, tt.expectedHost, host)
++			}
++		})
++	}
++}
+diff --git a/oauthproxy.go b/oauthproxy.go
+index 5f50b717..5efafade 100644
+--- a/oauthproxy.go
++++ b/oauthproxy.go
+@@ -390,7 +390,11 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
+ // the OAuth2 Proxy authentication logic kicks in.
+ // For example forcing HTTPS or health checks.
+ func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionStore, trustedProxies *ip.NetSet) (alice.Chain, error) {
+-	chain := alice.New(middleware.NewScope(opts.ReverseProxy, opts.Logging.RequestIDHeader, trustedProxies))
++	chain := alice.New(
++		middleware.NewScope(opts.ReverseProxy, opts.Logging.RequestIDHeader, trustedProxies),
++		// The host of an auth subrequest is named before anything reads or logs it (Deckhouse patch 016).
++		middleware.NewAuthRequestHost(opts.ProxyPrefix+authOnlyPath),
++	)
+ 
+ 	if opts.ForceHTTPS {
+ 		_, httpsPort, err := net.SplitHostPort(opts.Server.SecureBindAddress)
+diff --git a/pkg/middleware/deckhouse_auth_request_host.go b/pkg/middleware/deckhouse_auth_request_host.go
+new file mode 100644
+index 00000000..aad321f4
+--- /dev/null
++++ b/pkg/middleware/deckhouse_auth_request_host.go
+@@ -0,0 +1,53 @@
++package middleware
++
++import (
++	"net/http"
++
++	"github.com/justinas/alice"
++	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
++)
++
++// NewAuthRequestHost returns a middleware that names the host of an auth subrequest of
++// ingress-nginx (Deckhouse patch 016). The proxy reads the host of a request from
++// X-Forwarded-Host, and on the auth subrequest ingress-nginx passes on the one the browser sent:
++// the host in the request log, in the auth log and in the security events built from it was
++// whatever the client wrote there.
++//
++// The middleware rewrites X-Forwarded-Host on the exact path authPath, which the router matches
++// the same way. ingress-nginx sets X-Original-URL on the subrequest itself and removes
++// X-Forwarded-Proto from it, while on the route of an application it sets X-Forwarded-Proto and
++// X-Forwarded-Host itself and passes X-Original-URL of the browser on. So a request with
++// X-Original-URL and without X-Forwarded-Proto is the subrequest: it gets the host of its
++// X-Original-URL, or none when the header does not name a plain host. Any other request is left
++// as it came: the route of an application, or the check of another ingress controller.
++func NewAuthRequestHost(authPath string) alice.Constructor {
++	return func(next http.Handler) http.Handler {
++		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
++			if req.URL.EscapedPath() == authPath && isNginxAuthSubrequest(req.Header) {
++				setOriginalHost(req.Header)
++			}
++			next.ServeHTTP(rw, req)
++		})
++	}
++}
++
++func isNginxAuthSubrequest(header http.Header) bool {
++	return len(header.Values(requestutil.OriginalURLHeader)) > 0 && header.Get(requestutil.XForwardedProto) == ""
++}
++
++// setOriginalHost replaces X-Forwarded-Host with the host of X-Original-URL. Without such a host
++// the header is removed, and the host of the request is its Host header: the Service of the proxy.
++func setOriginalHost(header http.Header) {
++	scheme, authority, ok := requestutil.OriginalAuthority(header)
++	if !ok {
++		header.Del(requestutil.XForwardedHost)
++		return
++	}
++	name, port, ok := requestutil.ServerName(authority)
++	if !ok {
++		header.Del(requestutil.XForwardedHost)
++		return
++	}
++
++	header.Set(requestutil.XForwardedHost, requestutil.ForwardedHost(scheme, name, port))
++}
+diff --git a/pkg/middleware/deckhouse_auth_request_host_test.go b/pkg/middleware/deckhouse_auth_request_host_test.go
+new file mode 100644
+index 00000000..1ff45cde
+--- /dev/null
++++ b/pkg/middleware/deckhouse_auth_request_host_test.go
+@@ -0,0 +1,164 @@
++package middleware
++
++import (
++	"net/http"
++	"net/http/httptest"
++	"testing"
++
++	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
++	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++// TestAuthRequestHost checks what host the proxy takes a request for after the middleware: the
++// one ingress-nginx names in X-Original-URL on its auth subrequest, never the X-Forwarded-Host the
++// browser sent there.
++func TestAuthRequestHost(t *testing.T) {
++	t.Parallel()
++
++	const (
++		authPath    = "/dex-authenticator/auth"
++		serviceHost = "app-dex-authenticator.d8-app.svc.cluster.local"
++	)
++
++	trustedProxies, err := ip.ParseNetSet([]string{"0.0.0.0/0", "::/0"})
++	require.NoError(t, err)
++
++	tests := []struct {
++		name     string
++		path     string
++		headers  map[string][]string
++		expected string
++	}{
++		{
++			name:     "auth subrequest of ingress-nginx",
++			path:     authPath,
++			headers:  map[string][]string{"X-Original-URL": {"https://app.example.com/page?x=1"}},
++			expected: "app.example.com",
++		},
++		{
++			name: "forged X-Forwarded-Host on the auth subrequest",
++			path: authPath,
++			headers: map[string][]string{
++				"X-Original-URL":   {"https://app.example.com/"},
++				"X-Forwarded-Host": {"forged.example.com"},
++			},
++			expected: "app.example.com",
++		},
++		{
++			name: "two forged X-Forwarded-Host headers",
++			path: authPath,
++			headers: map[string][]string{
++				"X-Original-URL":   {"https://app.example.com/"},
++				"X-Forwarded-Host": {"forged.example.com", "other.example.com"},
++			},
++			expected: "app.example.com",
++		},
++		{
++			name:     "upper case, a trailing dot and the default port",
++			path:     authPath,
++			headers:  map[string][]string{"X-Original-URL": {"https://APP.Example.com.:443/"}},
++			expected: "app.example.com",
++		},
++		{
++			name:     "another port is kept",
++			path:     authPath,
++			headers:  map[string][]string{"X-Original-URL": {"https://app.example.com:8443/"}},
++			expected: "app.example.com:8443",
++		},
++		{
++			name: "userinfo in X-Original-URL names no host",
++			path: authPath,
++			headers: map[string][]string{
++				"X-Original-URL":   {"https://app.example.com:443@forged.example.com/"},
++				"X-Forwarded-Host": {"forged.example.com"},
++			},
++			expected: serviceHost,
++		},
++		{
++			name: "two X-Original-URL headers name no host",
++			path: authPath,
++			headers: map[string][]string{
++				"X-Original-URL":   {"https://app.example.com/", "https://forged.example.com/"},
++				"X-Forwarded-Host": {"forged.example.com"},
++			},
++			expected: serviceHost,
++		},
++		{
++			name: "empty X-Original-URL names no host",
++			path: authPath,
++			headers: map[string][]string{
++				"X-Original-URL":   {""},
++				"X-Forwarded-Host": {"forged.example.com"},
++			},
++			expected: serviceHost,
++		},
++		{
++			// ingress-nginx always sets X-Original-URL on its subrequest: a check without the
++			// header comes from another controller and is left as it came.
++			name:     "check of another controller",
++			path:     authPath,
++			headers:  map[string][]string{"X-Forwarded-Host": {"app.example.com"}},
++			expected: "app.example.com",
++		},
++		{
++			// On the route of the application the ingress controller sets X-Forwarded-Proto and
++			// X-Forwarded-Host itself, and X-Original-URL is what the browser sent.
++			name: "auth path on the route of the application",
++			path: authPath,
++			headers: map[string][]string{
++				"X-Forwarded-Proto": {"https"},
++				"X-Forwarded-Host":  {"app.example.com"},
++				"X-Original-URL":    {"https://forged.example.com/"},
++			},
++			expected: "app.example.com",
++		},
++		{
++			name: "another path",
++			path: "/dex-authenticator/sign_in",
++			headers: map[string][]string{
++				"X-Forwarded-Host": {"app.example.com"},
++				"X-Original-URL":   {"https://forged.example.com/"},
++			},
++			expected: "app.example.com",
++		},
++		{
++			name: "auth path with a suffix is another path",
++			path: authPath + "/",
++			headers: map[string][]string{
++				"X-Forwarded-Host": {"app.example.com"},
++				"X-Original-URL":   {"https://forged.example.com/"},
++			},
++			expected: "app.example.com",
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			t.Parallel()
++
++			req := httptest.NewRequest(http.MethodGet, "http://"+serviceHost+tt.path, nil)
++			for name, values := range tt.headers {
++				for _, value := range values {
++					req.Header.Add(name, value)
++				}
++			}
++			req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{
++				ReverseProxy:   true,
++				TrustedProxies: trustedProxies,
++			})
++
++			var got string
++			next := http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
++				got = requestutil.GetRequestHost(r)
++			})
++			NewAuthRequestHost(authPath)(next).ServeHTTP(httptest.NewRecorder(), req)
++
++			assert.Equal(t, tt.expected, got)
++			// The logger reads the host from the request the middleware got, after the handler.
++			assert.Equal(t, tt.expected, requestutil.GetRequestHost(req))
++		})
++	}
++}
+diff --git a/pkg/requests/util/deckhouse_host.go b/pkg/requests/util/deckhouse_host.go
+new file mode 100644
+index 00000000..95b7493e
+--- /dev/null
++++ b/pkg/requests/util/deckhouse_host.go
+@@ -0,0 +1,133 @@
++package util
++
++import (
++	"net/http"
++	"strings"
++)
++
++// OriginalURLHeader is the header ingress-nginx sets on its auth subrequest to the URL of the
++// request being authorized (Deckhouse patch 016). nginx builds it as
++// $scheme://$http_host$request_uri and overwrites whatever the browser sent under this name.
++const OriginalURLHeader = "X-Original-Url"
++
++const (
++	schemeHTTP  = "http"
++	schemeHTTPS = "https"
++
++	maxServerNameLength = 253
++	maxLabelLength      = 63
++	maxPortLength       = 5
++)
++
++// defaultPorts are the ports a URL of the scheme does not need to name.
++var defaultPorts = map[string]string{
++	schemeHTTP:  "80",
++	schemeHTTPS: "443",
++}
++
++// OriginalAuthority returns the scheme and the authority of the X-Original-URL header; the
++// authority is what stands between the scheme and the first slash, unparsed. The header must be
++// there exactly once.
++//
++// The authority is the Host header as the browser sent it. It is not parsed as a URL on purpose:
++// nginx chooses the server by the part of Host before the first colon, while a URL parser takes
++// what follows an "@" as the host and drops what follows a "?" or a "#". With Host
++// "b.example.com:443@w.example.com" nginx serves b.example.com and a URL parser answers
++// w.example.com. ServerName refuses every authority that is not a plain host with a port.
++func OriginalAuthority(header http.Header) (scheme, authority string, ok bool) {
++	values := header.Values(OriginalURLHeader)
++	if len(values) != 1 {
++		return "", "", false
++	}
++
++	scheme = schemeHTTPS
++	rest, ok := strings.CutPrefix(values[0], schemeHTTPS+"://")
++	if !ok {
++		scheme = schemeHTTP
++		rest, ok = strings.CutPrefix(values[0], schemeHTTP+"://")
++	}
++	if !ok {
++		return "", "", false
++	}
++
++	authority, _, _ = strings.Cut(rest, "/")
++
++	return scheme, authority, true
++}
++
++// ServerName returns the name nginx names the server of a request by, and the port of the
++// authority: the name is the host of the authority in lower case, without the port and without
++// one trailing dot. Only a DNS name of letters, digits, hyphens and dots with an optional numeric
++// port has a name; anything else, an IP address in brackets included, has none.
++func ServerName(authority string) (name, port string, ok bool) {
++	name = authority
++	if i := strings.LastIndexByte(authority, ':'); i >= 0 {
++		port = authority[i+1:]
++		if !isPort(port) {
++			return "", "", false
++		}
++		name = authority[:i]
++	}
++
++	name = strings.TrimSuffix(name, ".")
++	if !isHostname(name) {
++		return "", "", false
++	}
++
++	return strings.ToLower(name), port, true
++}
++
++// ForwardedHost returns the host of a request as X-Forwarded-Host is to carry it: the server
++// name, with the port only when it is not the default one of the scheme. The proxy builds its
++// redirect URI from this host, and the provider compares that with the registered one as a string.
++func ForwardedHost(scheme, name, port string) string {
++	if port == "" || port == defaultPorts[scheme] {
++		return name
++	}
++
++	return name + ":" + port
++}
++
++func isPort(s string) bool {
++	if s == "" || len(s) > maxPortLength {
++		return false
++	}
++	for i := range len(s) {
++		if s[i] < '0' || s[i] > '9' {
++			return false
++		}
++	}
++
++	return true
++}
++
++// isHostname reports whether s is a DNS name: labels of letters, digits and hyphens joined by
++// dots, none of them empty.
++func isHostname(s string) bool {
++	if s == "" || len(s) > maxServerNameLength {
++		return false
++	}
++
++	labelLength := 0
++	for i := range len(s) {
++		c := s[i]
++		isLetter := (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
++		isDigit := c >= '0' && c <= '9'
++		switch {
++		case isLetter || isDigit || c == '-':
++			labelLength++
++			if labelLength > maxLabelLength {
++				return false
++			}
++		case c == '.':
++			if labelLength == 0 {
++				return false
++			}
++			labelLength = 0
++		default:
++			return false
++		}
++	}
++
++	return labelLength > 0
++}
+diff --git a/pkg/requests/util/deckhouse_host_test.go b/pkg/requests/util/deckhouse_host_test.go
+new file mode 100644
+index 00000000..4d3694ce
+--- /dev/null
++++ b/pkg/requests/util/deckhouse_host_test.go
+@@ -0,0 +1,166 @@
++package util
++
++import (
++	"net/http"
++	"strings"
++	"testing"
++
++	"github.com/stretchr/testify/assert"
++)
++
++func TestOriginalAuthority(t *testing.T) {
++	t.Parallel()
++
++	tests := []struct {
++		name           string
++		values         []string
++		expected       string
++		expectedScheme string
++		expectedOK     bool
++	}{
++		{name: "https url", values: []string{"https://app.example.com/path?query"}, expected: "app.example.com", expectedScheme: "https", expectedOK: true},
++		{name: "http url", values: []string{"http://app.example.com/"}, expected: "app.example.com", expectedScheme: "http", expectedOK: true},
++		{name: "url with a port", values: []string{"https://app.example.com:8443/"}, expected: "app.example.com:8443", expectedScheme: "https", expectedOK: true},
++		{name: "url without a path", values: []string{"https://app.example.com"}, expected: "app.example.com", expectedScheme: "https", expectedOK: true},
++		// The authority is returned unparsed: ServerName refuses these.
++		{name: "url with userinfo is not parsed", values: []string{"https://b.example.com:443@a.example.com/"}, expected: "b.example.com:443@a.example.com", expectedScheme: "https", expectedOK: true},
++		{name: "url with a query before the path is not parsed", values: []string{"https://a.example.com?b/"}, expected: "a.example.com?b", expectedScheme: "https", expectedOK: true},
++
++		{name: "no header", values: nil},
++		{name: "two headers", values: []string{"https://a.example.com/", "https://b.example.com/"}},
++		{name: "empty header", values: []string{""}},
++		{name: "no scheme", values: []string{"app.example.com/"}},
++		{name: "scheme in upper case", values: []string{"HTTPS://app.example.com/"}},
++		{name: "another scheme", values: []string{"ws://app.example.com/"}},
++		{name: "leading space", values: []string{" https://app.example.com/"}},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			t.Parallel()
++
++			header := http.Header{}
++			for _, value := range tt.values {
++				header.Add("X-Original-URL", value)
++			}
++
++			scheme, got, ok := OriginalAuthority(header)
++
++			assert.Equal(t, tt.expectedOK, ok)
++			assert.Equal(t, tt.expected, got)
++			assert.Equal(t, tt.expectedScheme, scheme)
++		})
++	}
++}
++
++func TestServerName(t *testing.T) {
++	t.Parallel()
++
++	tests := []struct {
++		name         string
++		authority    string
++		expected     string
++		expectedPort string
++		expectedOK   bool
++	}{
++		{name: "plain host", authority: "app.example.com", expected: "app.example.com", expectedOK: true},
++		{name: "single label", authority: "localhost", expected: "localhost", expectedOK: true},
++		{name: "host with a port", authority: "app.example.com:8443", expected: "app.example.com", expectedPort: "8443", expectedOK: true},
++		{name: "host with the longest port", authority: "app.example.com:65535", expected: "app.example.com", expectedPort: "65535", expectedOK: true},
++		{name: "upper case", authority: "APP.Example.Com", expected: "app.example.com", expectedOK: true},
++		{name: "trailing dot", authority: "app.example.com.", expected: "app.example.com", expectedOK: true},
++		{name: "trailing dot and a port", authority: "app.example.com.:443", expected: "app.example.com", expectedPort: "443", expectedOK: true},
++		{name: "digits and hyphens", authority: "app-1.k8s.example.com", expected: "app-1.k8s.example.com", expectedOK: true},
++		{name: "label of 63 characters", authority: strings.Repeat("a", 63) + ".example.com", expected: strings.Repeat("a", 63) + ".example.com", expectedOK: true},
++
++		{name: "empty", authority: ""},
++		{name: "only a port", authority: ":443"},
++		{name: "only a dot", authority: "."},
++		{name: "empty port", authority: "app.example.com:"},
++		{name: "port of six digits", authority: "app.example.com:655350"},
++		{name: "port with a letter", authority: "app.example.com:44a"},
++		{name: "two ports", authority: "app.example.com:443:80"},
++		{name: "leading dot", authority: ".app.example.com"},
++		{name: "two trailing dots", authority: "app.example.com.."},
++		{name: "empty label", authority: "app..example.com"},
++		{name: "label of 64 characters", authority: strings.Repeat("a", 64) + ".example.com"},
++		{name: "name of 254 characters", authority: strings.Repeat("a.", 126) + "ab"},
++		{name: "userinfo", authority: "user@app.example.com"},
++		{name: "userinfo with a password", authority: "app.example.com:443@evil.example.com"},
++		{name: "query", authority: "app.example.com?x"},
++		{name: "fragment", authority: "app.example.com#x"},
++		{name: "slash", authority: "app.example.com/x"},
++		{name: "backslash", authority: `app.example.com\x`},
++		{name: "percent", authority: "app.example.com%2e"},
++		{name: "underscore", authority: "app_1.example.com"},
++		{name: "space", authority: "app.example.com "},
++		{name: "tab", authority: "app.example.com\t"},
++		{name: "null byte", authority: "app.example.com\x00.evil.test"},
++		{name: "line feed", authority: "app.example.com\nevil.test"},
++		{name: "wildcard", authority: "*.example.com"},
++		{name: "address in brackets", authority: "[::1]"},
++		{name: "address in brackets with a port", authority: "[::1]:443"},
++		{name: "non-ascii letter", authority: string(rune(0x430)) + "pp.example.com"},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			t.Parallel()
++
++			got, port, ok := ServerName(tt.authority)
++
++			assert.Equal(t, tt.expectedOK, ok)
++			assert.Equal(t, tt.expected, got)
++			assert.Equal(t, tt.expectedPort, port)
++		})
++	}
++}
++
++func TestForwardedHost(t *testing.T) {
++	t.Parallel()
++
++	tests := []struct {
++		name     string
++		scheme   string
++		port     string
++		expected string
++	}{
++		{name: "no port", scheme: "https", expected: "app.example.com"},
++		{name: "default port of https", scheme: "https", port: "443", expected: "app.example.com"},
++		{name: "default port of http", scheme: "http", port: "80", expected: "app.example.com"},
++		{name: "another port", scheme: "https", port: "8443", expected: "app.example.com:8443"},
++		{name: "port of the other scheme", scheme: "https", port: "80", expected: "app.example.com:80"},
++		{name: "unknown scheme keeps the port", port: "443", expected: "app.example.com:443"},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			t.Parallel()
++
++			assert.Equal(t, tt.expected, ForwardedHost(tt.scheme, "app.example.com", tt.port))
++		})
++	}
++}
++
++// FuzzServerName checks that a name ServerName accepts is a plain host name: nothing in it lets a
++// URL parser or nginx read another host.
++func FuzzServerName(f *testing.F) {
++	for _, seed := range []string{"app.example.com", "app.example.com:443", "b.example.com:443@a.example.com", "[::1]:443", "a..b", "A.b."} {
++		f.Add(seed)
++	}
++
++	f.Fuzz(func(t *testing.T, authority string) {
++		name, port, ok := ServerName(authority)
++		if !ok {
++			assert.Empty(t, name)
++			assert.Empty(t, port)
++			return
++		}
++
++		assert.Equal(t, strings.ToLower(name), name)
++		assert.NotContains(t, name, "..")
++		assert.Empty(t, strings.Trim(name, "abcdefghijklmnopqrstuvwxyz0123456789-."))
++		assert.Empty(t, strings.Trim(port, "0123456789"))
++		assert.True(t, strings.HasPrefix(strings.ToLower(authority), name))
++	})
++}

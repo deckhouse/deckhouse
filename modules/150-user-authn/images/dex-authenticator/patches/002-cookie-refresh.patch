@@ -644,6 +644,1134 @@ index b778bd54..827c65bd 100644
  	// Upstream tracks which upstream was used for this request
  	Upstream string
  }
+diff --git a/pkg/apis/options/cookie.go b/pkg/apis/options/cookie.go
+index 3dee9505..ce595ee0 100644
+--- a/pkg/apis/options/cookie.go
++++ b/pkg/apis/options/cookie.go
+@@ -25,6 +25,9 @@ type Cookie struct {
+ 	CSRFPerRequestLimit int           `flag:"cookie-csrf-per-request-limit" cfg:"cookie_csrf_per_request_limit"`
+ 	CSRFExpire          time.Duration `flag:"cookie-csrf-expire" cfg:"cookie_csrf_expire"`
+ 	CSRFSameSite        string        `flag:"cookie-csrf-samesite" cfg:"cookie_csrf_samesite"`
++	// EncryptRefreshToken makes the ticket cookie of a persistent session store carry the refresh
++	// token encrypted (Deckhouse patch 002).
++	EncryptRefreshToken bool `flag:"cookie-encrypt-refresh-token" cfg:"cookie_encrypt_refresh_token"`
+ }
+ 
+ func cookieFlagSet() *pflag.FlagSet {
+@@ -44,6 +47,7 @@ func cookieFlagSet() *pflag.FlagSet {
+ 	flagSet.Int("cookie-csrf-per-request-limit", 0, "Sets a limit on the number of CSRF requests cookies that oauth2-proxy will create. The oldest cookies will be removed. Useful if users end up with 431 Request headers too large status codes.")
+ 	flagSet.Duration("cookie-csrf-expire", time.Duration(15)*time.Minute, "expire timeframe for CSRF cookie")
+ 	flagSet.String("cookie-csrf-samesite", "", "set SameSite CSRF cookie attribute (ie: \"lax\", \"strict\", \"none\", or \"\"). When using the default setting, the CSRF cookie samesite value is taken from the session cookie configuration.")
++	flagSet.Bool("cookie-encrypt-refresh-token", false, "encrypt the refresh token the ticket cookie of a persistent session store carries; a cookie written without the flag is still read")
+ 	return flagSet
+ }
+ 
+diff --git a/pkg/apis/sessions/session_state.go b/pkg/apis/sessions/session_state.go
+index 6c55e2c8..623fd3fd 100644
+--- a/pkg/apis/sessions/session_state.go
++++ b/pkg/apis/sessions/session_state.go
+@@ -21,6 +21,12 @@ type SessionState struct {
+ 	AccessToken  string `msgpack:"at,omitempty"`
+ 	IDToken      string `msgpack:"it,omitempty"`
+ 	RefreshToken string `msgpack:"rt,omitempty"`
++	// ReplacedRefreshTokenHash is the SHA-256 of the refresh token the last refresh of the session
++	// replaced (Deckhouse patch 002). A cookie that still carries that token is behind the session.
++	ReplacedRefreshTokenHash []byte `msgpack:"rrt,omitempty"`
++	// ReplacedRefreshTokenAt is when the provider answered the refresh that replaced that token
++	// (Deckhouse patch 002). The record counts only for a short time after it.
++	ReplacedRefreshTokenAt *time.Time `msgpack:"rrta,omitempty"`
+ 
+ 	Nonce []byte `msgpack:"n,omitempty"`
+ 
+@@ -36,6 +42,14 @@ type SessionState struct {
+ 	Clock     func() time.Time `msgpack:"-"` // override for time.Now, for testing
+ 	Lock      Lock             `msgpack:"-"`
+ 	Refreshed bool             `msgpack:"-"` // indicates whether the session was refreshed
++	// StaleCookie tells that the cookie of the request carries the refresh token this session has
++	// already replaced, so the cookie is to be written again (Deckhouse patch 002).
++	StaleCookie bool `msgpack:"-"`
++	// StoredRefreshToken is the refresh token the store holds for the session when the cookie of
++	// the request carries another one and the session goes on with the token of the cookie
++	// (Deckhouse patch 002). The grant of the stored token may still be valid, a copy of the cookie
++	// may carry it, and a sign-out revokes it as well. It is never saved.
++	StoredRefreshToken string `msgpack:"-"`
+ }
+ 
+ func (s *SessionState) now() time.Time {
+diff --git a/pkg/middleware/deckhouse_late_refresh.go b/pkg/middleware/deckhouse_late_refresh.go
+new file mode 100644
+index 00000000..092343c5
+--- /dev/null
++++ b/pkg/middleware/deckhouse_late_refresh.go
+@@ -0,0 +1,229 @@
++package middleware
++
++import (
++	"context"
++	"crypto/sha256"
++	"errors"
++	"fmt"
++	"maps"
++	"net/http"
++	"slices"
++	"time"
++
++	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
++)
++
++// sessionRefreshAnswerTimeout is how long the answer of the provider to a refresh is waited for,
++// from its start (Deckhouse patch 002). A request waits for sessionRefreshTimeout and is then
++// answered as for a provider that does not answer; the refresh goes on apart from it, since a
++// provider that is slow, not down, completes it and rotates the refresh token. The answer is then
++// saved in the store instead of being lost with the request. The refresh holds the lock of the
++// session all that time, so no other request of the session presents the token being replaced.
++const sessionRefreshAnswerTimeout = time.Minute
++
++// errRefreshPending is the outcome of a refresh for the request that started it and was answered
++// before the provider was: the refresh goes on and owns the lock of the session.
++var errRefreshPending = fmt.Errorf("the provider has not answered yet: %w", context.DeadlineExceeded)
++
++// refreshAnswer is what the provider answered a refresh with: the session it refreshed, a copy of
++// the one of the request, and the outcome.
++type refreshAnswer struct {
++	session     *sessionsapi.SessionState
++	isRefreshed bool
++	err         error
++}
++
++// askProvider refreshes a copy of the session at the provider, apart from the request, and
++// returns the channel of its answer. The request takes the answer from the channel while it
++// waits. A request that stops waiting sends its clone to handover instead: the answer is then
++// saved in the store with that clone, and the lock of the session is released.
++func (s *storedSessionLoader) askProvider(req *http.Request, session *sessionsapi.SessionState) (<-chan refreshAnswer, chan<- *http.Request) {
++	answers := make(chan refreshAnswer)
++	handover := make(chan *http.Request, 1)
++	// The provider works on a copy: the request goes on with its session once it stops waiting.
++	refreshed := *session
++	refreshed.Groups = slices.Clone(session.Groups)
++	refreshed.AdditionalClaims = maps.Clone(session.AdditionalClaims)
++	replaced := session.RefreshToken
++	// The stub of a session restored from the cookie has no ID token: the store has no data for it.
++	wasStored := session.IDToken != ""
++	ctx, cancel := context.WithTimeout(context.WithoutCancel(req.Context()), s.refreshAnswerTimeout())
++
++	go func() {
++		defer cancel()
++		// Nothing recovers a panic of this goroutine but itself: the store is called here too.
++		defer func() {
++			if r := recover(); r != nil {
++				logger.Errorf("panic while refreshing a session apart from its request: %v", r)
++			}
++		}()
++
++		answer := refreshAnswer{session: &refreshed}
++		answer.isRefreshed, answer.err = s.refreshAtProvider(ctx, &refreshed)
++		if errors.Is(answer.err, providers.ErrNotImplemented) {
++			// HACK:
++			// Providers that don't implement `RefreshSession` use the default
++			// implementation which returns `ErrNotImplemented`.
++			// Pretend it refreshed to reset the refresh timer so that `ValidateSession`
++			// isn't triggered every subsequent request and is only called once during
++			// this request.
++			answer.isRefreshed, answer.err = true, nil
++		}
++		if answer.err == nil && answer.isRefreshed {
++			markRefreshed(&refreshed, replaced)
++		}
++
++		select {
++		case answers <- answer:
++		case lateReq := <-handover:
++			s.saveLateRefresh(lateReq, answer, replaced, wasStored)
++		}
++	}()
++
++	return answers, handover
++}
++
++func (s *storedSessionLoader) refreshAnswerTimeout() time.Duration {
++	if s.answerTimeout == 0 {
++		return sessionRefreshAnswerTimeout
++	}
++
++	return s.answerTimeout
++}
++
++// refreshAtProvider calls the provider. It runs in a goroutine of its own, where a panic of the
++// provider code would end the process instead of the request, so a panic is an error here.
++func (s *storedSessionLoader) refreshAtProvider(ctx context.Context, session *sessionsapi.SessionState) (isRefreshed bool, err error) {
++	defer func() {
++		if r := recover(); r != nil {
++			isRefreshed, err = false, fmt.Errorf("panic while refreshing the session: %v", r)
++		}
++	}()
++
++	return s.sessionRefresher(ctx, session)
++}
++
++// markRefreshed resets the refresh timer of a session the provider refreshed (in case underlying
++// provider implementations forget) and records the refresh token the refresh replaced, with the time
++// of the answer: the store honours the record only for a short time after it.
++func markRefreshed(session *sessionsapi.SessionState, replaced string) {
++	session.CreatedAtNow()
++	if replaced == "" || session.RefreshToken == replaced {
++		return
++	}
++	hash := sha256.Sum256([]byte(replaced))
++	answeredAt := *session.CreatedAt
++	session.ReplacedRefreshTokenHash = hash[:]
++	session.ReplacedRefreshTokenAt = &answeredAt
++}
++
++// handOverRefresh leaves a refresh the provider has not answered within the deadline of the
++// request to go on: the lock of the session is extended to the time the answer is waited for, and
++// the goroutine of the refresh gets a clone of the request to save the answer with.
++func (s *storedSessionLoader) handOverRefresh(req *http.Request, session *sessionsapi.SessionState, handover chan<- *http.Request) {
++	ctx := context.WithoutCancel(req.Context())
++	if err := session.RefreshLock(ctx, s.refreshAnswerTimeout()); err != nil {
++		// The lock then expires before the refresh may end, and another request of the session
++		// may start a refresh of its own.
++		logger.Errorf("unable to extend the lock of a session whose refresh goes on: %v", err)
++	}
++	handover <- req.Clone(ctx)
++}
++
++// saveLateRefresh saves in the store the session the provider refreshed after the request was
++// answered, and releases the lock of the session. The browser still has the cookie with the
++// replaced refresh token: the saved session names that token, so the next request with the cookie
++// gets the saved tokens and a new cookie. A refresh that failed is left to the next request, which
++// has a browser to answer.
++//
++// A session that was in the store when the refresh started and is not there now was ended
++// meanwhile, by a sign-out for one: its answer is dropped, or the cookie the browser was told to
++// forget would open the session again. Nothing is revoked here: the store cannot tell a sign-out
++// from data it lost or cannot read, and a lost session restores from its cookie, whose refresh
++// token the provider still accepts. The sign-out revokes the token of the cookie itself (patch
++// 011).
++func (s *storedSessionLoader) saveLateRefresh(req *http.Request, answer refreshAnswer, replaced string, wasStored bool) {
++	ctx, cancel := context.WithTimeout(req.Context(), sessionRefreshLockMargin)
++	defer cancel()
++	defer func() {
++		// The release has its own deadline: a store that used up the one above still gives the
++		// lock back, or the session would wait for the lock to expire.
++		releaseCtx, cancelRelease := context.WithTimeout(context.WithoutCancel(ctx), sessionRefreshLockMargin)
++		defer cancelRelease()
++		if err := answer.session.ReleaseLock(releaseCtx); err != nil {
++			logger.Errorf("unable to release lock: %v", err)
++		}
++	}()
++
++	if answer.err != nil {
++		logger.Errorf("Unable to refresh session after its request was answered: %v", answer.err)
++		return
++	}
++	if !answer.isRefreshed {
++		return
++	}
++
++	s.unavailable.forget(replaced)
++	req = req.WithContext(ctx)
++	if wasStored && s.isEnded(req) {
++		logger.Printf("Dropped a refresh of a session that was ended while the provider answered - User: %s", answer.session.User)
++		return
++	}
++	if err := s.store.Save(discardResponse{}, req, answer.session); err != nil {
++		logger.Errorf("error saving a session refreshed after its request was answered: %v", err)
++		return
++	}
++	logger.Printf("Saved a session refreshed after its request was answered - User: %s", answer.session.User)
++}
++
++// isEnded reports whether the store no longer has the session of the request: it loads the stub
++// of the cookie instead, which has no ID token.
++func (s *storedSessionLoader) isEnded(req *http.Request) bool {
++	current, err := s.store.Load(req)
++	return err != nil || current == nil || current.IDToken == ""
++}
++
++// discardResponse is the response of a request that has been answered: saving a session writes
++// its cookie there, and that cookie has no one to go to.
++type discardResponse struct{}
++
++func (discardResponse) Header() http.Header         { return http.Header{} }
++func (discardResponse) Write(b []byte) (int, error) { return len(b), nil }
++func (discardResponse) WriteHeader(int)             {}
++
++// renewStaleCookie writes the cookie of a session again when the request came with a cookie that
++// is behind it: the store keeps the session of a refresh whose answer did not reach the browser.
++//
++// Writing the cookie saves the session, so it is done under the lock of the session and with the
++// session loaded under it: a refresh of another request may have replaced the tokens since this
++// request loaded them, and saving the older ones would put a replaced refresh token back. A
++// failure costs nothing: the session is served, and the next request tries again.
++func (s *storedSessionLoader) renewStaleCookie(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) {
++	if !session.StaleCookie {
++		return
++	}
++	session.StaleCookie = false
++
++	ctx := context.WithoutCancel(req.Context())
++	if err := session.ObtainLock(ctx, sessionRefreshLockMargin); err != nil {
++		// A refresh holds the lock: its answer writes the cookie.
++		return
++	}
++	defer func() {
++		if err := session.ReleaseLock(ctx); err != nil {
++			logger.Errorf("unable to release lock: %v", err)
++		}
++	}()
++
++	fresh, err := s.store.Load(req)
++	if err != nil || fresh == nil || !fresh.StaleCookie {
++		return
++	}
++	fresh.Lock, fresh.StaleCookie = session.Lock, false
++	*session = *fresh
++	if err := s.store.Save(rw, req, session); err != nil {
++		logger.Errorf("error saving a session to write its cookie again: %v", err)
++	}
++}
+diff --git a/pkg/middleware/deckhouse_late_refresh_test.go b/pkg/middleware/deckhouse_late_refresh_test.go
+new file mode 100644
+index 00000000..876d31ec
+--- /dev/null
++++ b/pkg/middleware/deckhouse_late_refresh_test.go
+@@ -0,0 +1,833 @@
++package middleware
++
++import (
++	"context"
++	"crypto/sha256"
++	"errors"
++	"fmt"
++	"maps"
++	"net/http"
++	"net/http/httptest"
++	"slices"
++	"strings"
++	"sync"
++	"sync/atomic"
++	"testing"
++	"testing/synctest"
++	"time"
++
++	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
++	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/persistence"
++	sessiontests "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/tests"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++func hashOf(refreshToken string) []byte {
++	sum := sha256.Sum256([]byte(refreshToken))
++	return sum[:]
++}
++
++// expiredLoader returns the loader of a session that cannot be served without a refresh: the
++// provider no longer validates its ID token.
++func (s *lockedSessionStore) expiredLoader() *storedSessionLoader {
++	loader := s.loader()
++	loader.sessionValidator = func(context.Context, *sessionsapi.SessionState) bool { return false }
++	return loader
++}
++
++// stored returns the session the store holds now.
++func (s *lockedSessionStore) stored() sessionsapi.SessionState {
++	s.mu.Lock()
++	defer s.mu.Unlock()
++	return s.session
++}
++
++// A refresh dex answers in time records the token it replaced, so that a cookie that still
++// carries it is known to be behind the session.
++func TestRefreshRecordsTheReplacedToken(t *testing.T) {
++	synctest.Test(t, func(t *testing.T) {
++		store := newLockedSessionStore(time.Second)
++
++		scope := serveSession(t.Context(), store.loader())
++
++		require.NotNil(t, scope.Session)
++		assert.Equal(t, "rotated-refresh-token-1", scope.Session.RefreshToken)
++		assert.Equal(t, hashOf("refresh-token"), scope.Session.ReplacedRefreshTokenHash)
++		assert.Equal(t, hashOf("refresh-token"), store.stored().ReplacedRefreshTokenHash)
++		require.NotNil(t, store.stored().ReplacedRefreshTokenAt)
++		assert.Equal(t, time.Now(), *store.stored().ReplacedRefreshTokenAt, "with the time of the answer")
++		assert.True(t, store.lock.isFree())
++	})
++}
++
++// A provider that keeps the refresh token replaces nothing: the cookie is never behind.
++func TestRefreshWithoutRotationRecordsNoReplacedToken(t *testing.T) {
++	synctest.Test(t, func(t *testing.T) {
++		store := newLockedSessionStore(time.Second)
++		loader := store.loader()
++		loader.sessionRefresher = func(context.Context, *sessionsapi.SessionState) (bool, error) { return true, nil }
++
++		scope := serveSession(t.Context(), loader)
++
++		require.NotNil(t, scope.Session)
++		assert.Equal(t, "refresh-token", scope.Session.RefreshToken)
++		assert.Empty(t, scope.Session.ReplacedRefreshTokenHash)
++		assert.Nil(t, scope.Session.ReplacedRefreshTokenAt)
++	})
++}
++
++// A refresh dex completes after the deadline of the request is not lost: the request is answered
++// as for a dex that does not answer, the refresh goes on under the lock of the session, and its
++// answer is saved in the store with the token it replaced. Until then the other requests of the
++// session wait for the lock and start no refresh of their own.
++func TestLateRefreshIsSaved(t *testing.T) {
++	synctest.Test(t, func(t *testing.T) {
++		// dex answers 25 seconds after the request, past the 10 seconds a request waits for.
++		store := newLockedSessionStore(25 * time.Second)
++		loader := store.expiredLoader()
++		started := time.Now()
++
++		scope := serveSession(t.Context(), loader)
++
++		assert.Equal(t, sessionRefreshTimeout, time.Since(started), "the request waits for its own deadline only")
++		assert.True(t, scope.SessionUnavailable, "the request is answered as for a dex that does not answer")
++		assert.False(t, store.cleared)
++		assert.Equal(t, "refresh-token", store.stored().RefreshToken)
++		assert.False(t, store.lock.isFree(), "the refresh still holds the lock of the session")
++		assert.Empty(t, store.writers)
++
++		// A second request of the session, 15 seconds after the first one: the lock a request takes
++		// would have expired by now.
++		time.Sleep(5 * time.Second)
++		scope = serveSession(t.Context(), loader)
++		assert.True(t, scope.SessionUnavailable, "a request that cannot get the lock is answered the same way")
++		assert.EqualValues(t, 1, store.refreshes.Load(), "and starts no second refresh")
++
++		time.Sleep(10 * time.Second)
++		synctest.Wait()
++		assert.True(t, store.lock.isFree(), "the lock is released once the answer is saved")
++		saved := store.stored()
++		assert.Equal(t, "rotated-refresh-token-1", saved.RefreshToken)
++		assert.Equal(t, hashOf("refresh-token"), saved.ReplacedRefreshTokenHash)
++		assert.Equal(t, 5*time.Second, saved.Age(), "the session is as old as its tokens")
++		require.NotNil(t, saved.ReplacedRefreshTokenAt)
++		assert.Equal(t, *saved.CreatedAt, *saved.ReplacedRefreshTokenAt, "the record has the time of the answer")
++		require.Len(t, store.writers, 1)
++		assert.NotNil(t, store.writers[0])
++		_, isRecorder := store.writers[0].(*httptest.ResponseRecorder)
++		assert.False(t, isRecorder, "the response of the answered request is not written to")
++		assert.Empty(t, loader.unavailable.since, "a refresh dex answered ends the window of the session")
++
++		scope = serveSession(t.Context(), loader)
++		require.NotNil(t, scope.Session)
++		assert.False(t, scope.SessionUnavailable)
++		assert.Equal(t, "rotated-refresh-token-1", scope.Session.RefreshToken)
++		assert.EqualValues(t, 1, store.refreshes.Load(), "the saved session needs no refresh")
++	})
++}
++
++// A refresh dex refuses after the deadline of the request changes nothing: the next request of the
++// session asks dex again and ends the session with the browser there to get the answer.
++func TestLateRefreshFailureIsLeftToTheNextRequest(t *testing.T) {
++	synctest.Test(t, func(t *testing.T) {
++		store := newLockedSessionStore(25 * time.Second)
++		store.refreshErr = retrieveError(http.StatusBadRequest, "invalid_grant")
++		loader := store.expiredLoader()
++
++		scope := serveSession(t.Context(), loader)
++		assert.True(t, scope.SessionUnavailable)
++
++		time.Sleep(15 * time.Second)
++		synctest.Wait()
++		assert.True(t, store.lock.isFree())
++		assert.False(t, store.cleared, "nothing ends the session behind the back of the browser")
++		assert.Equal(t, "refresh-token", store.stored().RefreshToken)
++		assert.Empty(t, store.writers)
++
++		store.refreshDelay = time.Second
++		scope = serveSession(t.Context(), loader)
++		assert.Nil(t, scope.Session)
++		assert.True(t, store.cleared, "the next request gets the refusal and ends the session")
++		assert.EqualValues(t, 2, store.refreshes.Load())
++	})
++}
++
++// A session that was ended while dex answered its refresh is not opened again by the late answer:
++// a sign-out clears the session in the store and the cookie of the browser, and a copy of that
++// cookie must not restore the session.
++func TestLateRefreshOfAnEndedSessionIsDropped(t *testing.T) {
++	synctest.Test(t, func(t *testing.T) {
++		store := newLockedSessionStore(25 * time.Second)
++		loader := store.expiredLoader()
++
++		scope := serveSession(t.Context(), loader)
++		assert.True(t, scope.SessionUnavailable)
++
++		// The sign-out: the store has no data for the ticket any more, and loads its stub.
++		store.mu.Lock()
++		store.session = sessionsapi.SessionState{CreatedAt: store.session.CreatedAt, RefreshToken: "refresh-token"}
++		store.mu.Unlock()
++
++		time.Sleep(15 * time.Second)
++		synctest.Wait()
++		assert.True(t, store.lock.isFree())
++		assert.Empty(t, store.writers, "the answer of dex is dropped")
++		assert.Equal(t, "refresh-token", store.stored().RefreshToken)
++	})
++}
++
++// The stub of a session restored from the cookie has nothing in the store to begin with: its late
++// refresh is saved.
++func TestLateRefreshOfAStubIsSaved(t *testing.T) {
++	synctest.Test(t, func(t *testing.T) {
++		store := newLockedSessionStore(25 * time.Second)
++		store.session.IDToken = ""
++		loader := store.loader()
++
++		scope := serveSession(t.Context(), loader)
++		assert.True(t, scope.SessionUnavailable)
++
++		time.Sleep(15 * time.Second)
++		synctest.Wait()
++		assert.True(t, store.lock.isFree())
++		require.Len(t, store.writers, 1)
++		assert.Equal(t, "rotated-refresh-token-1", store.stored().RefreshToken)
++	})
++}
++
++// A dex that never answers is given up after the answer timeout: the lock of the session is
++// released, and the session is as it was.
++func TestLateRefreshGivesUp(t *testing.T) {
++	synctest.Test(t, func(t *testing.T) {
++		store := newLockedSessionStore(time.Hour)
++		loader := store.expiredLoader()
++		started := time.Now()
++
++		scope := serveSession(t.Context(), loader)
++		assert.True(t, scope.SessionUnavailable)
++
++		synctest.Wait()
++		assert.False(t, store.lock.isFree())
++		assert.GreaterOrEqual(t, store.lock.expiration, sessionRefreshAnswerTimeout-sessionRefreshTimeout,
++			"the lock lives for as long as the answer is waited for")
++
++		time.Sleep(sessionRefreshAnswerTimeout - time.Since(started))
++		synctest.Wait()
++		assert.True(t, store.lock.isFree(), "the lock is released at the answer timeout")
++		assert.Equal(t, "refresh-token", store.stored().RefreshToken)
++		assert.Empty(t, store.writers)
++		assert.Len(t, loader.unavailable.since, 1, "the window of the session goes on")
++	})
++}
++
++// A store that takes all the time the late save has still gets the lock of the session back.
++func TestLateRefreshReleasesTheLockOfASlowStore(t *testing.T) {
++	synctest.Test(t, func(t *testing.T) {
++		store := newLockedSessionStore(25 * time.Second)
++		loader := store.expiredLoader()
++		fake, ok := loader.store.(*fakeSessionStore)
++		require.True(t, ok)
++		fake.SaveFunc = func(_ http.ResponseWriter, req *http.Request, _ *sessionsapi.SessionState) error {
++			<-req.Context().Done()
++			return req.Context().Err()
++		}
++
++		scope := serveSession(t.Context(), loader)
++		assert.True(t, scope.SessionUnavailable)
++
++		time.Sleep(15*time.Second + sessionRefreshLockMargin)
++		synctest.Wait()
++		assert.True(t, store.lock.isFree(), "the lock is released though the save ran out of time")
++		assert.Zero(t, store.lock.notHeld)
++	})
++}
++
++// A panic of the provider code ends the refresh with an error: the refresh runs in a goroutine of
++// its own, where a panic would end the process.
++func TestRefreshPanicIsAnError(t *testing.T) {
++	synctest.Test(t, func(t *testing.T) {
++		store := newLockedSessionStore(time.Second)
++		loader := store.loader()
++		loader.sessionRefresher = func(context.Context, *sessionsapi.SessionState) (bool, error) {
++			panic("provider code failed")
++		}
++
++		scope := serveSession(t.Context(), loader)
++
++		assert.True(t, store.lock.isFree())
++		assert.Empty(t, store.writers, "nothing is saved")
++		require.NotNil(t, scope.Session, "the session the provider still validates is kept")
++		assert.Equal(t, "refresh-token", scope.Session.RefreshToken)
++	})
++}
++
++// A session whose cookie is behind it gets the cookie written again with the answer of the
++// request, and a session with the cookie it has is not saved.
++func TestStaleCookieIsWrittenAgain(t *testing.T) {
++	tests := []struct {
++		name string
++		// isStale is what the store says of the cookie when the request loads the session, and
++		// isFreshAfterLock makes it say otherwise once the request has the lock.
++		isStale          bool
++		isFreshAfterLock bool
++		lock             sessionsapi.Lock
++		saveErr          error
++		expectedSaves    int
++	}{
++		{name: "cookie behind the session", isStale: true, expectedSaves: 1},
++		{name: "cookie of the session", expectedSaves: 0},
++		{name: "store that cannot save", isStale: true, saveErr: errors.New("redis: connection refused"), expectedSaves: 1},
++		// A refresh of another request holds the lock: its answer writes the cookie.
++		{name: "session being refreshed", isStale: true, lock: &testLock{obtainError: sessionsapi.ErrLockNotObtained}, expectedSaves: 0},
++		// The session was refreshed between the load of the request and the lock: saving the
++		// tokens the request loaded would put the replaced refresh token back.
++		{name: "session refreshed meanwhile", isStale: true, isFreshAfterLock: true, expectedSaves: 0},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			createdAt := time.Now()
++			var writers []http.ResponseWriter
++			lock := tt.lock
++			if lock == nil {
++				lock = &testLock{}
++			}
++			loads := 0
++			loader := newStoredSessionLoader(&StoredSessionLoaderOptions{
++				SessionStore: &fakeSessionStore{
++					LoadFunc: func(*http.Request) (*sessionsapi.SessionState, error) {
++						loads++
++						return &sessionsapi.SessionState{
++							CreatedAt:    &createdAt,
++							RefreshToken: "rotated-refresh-token",
++							StaleCookie:  tt.isStale && (loads == 1 || !tt.isFreshAfterLock),
++							Lock:         lock,
++						}, nil
++					},
++					SaveFunc: func(rw http.ResponseWriter, _ *http.Request, _ *sessionsapi.SessionState) error {
++						writers = append(writers, rw)
++						return tt.saveErr
++					},
++				},
++				RefreshPeriod: time.Minute,
++				RefreshSession: func(context.Context, *sessionsapi.SessionState) (bool, error) {
++					t.Error("a fresh session is not refreshed")
++					return false, nil
++				},
++				ValidateSession: func(context.Context, *sessionsapi.SessionState) bool { return true },
++			})
++
++			scope := &middlewareapi.RequestScope{}
++			req := middlewareapi.AddRequestScope(httptest.NewRequest(http.MethodGet, "/", nil), scope)
++			rw := httptest.NewRecorder()
++			loader.loadSession(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})).ServeHTTP(rw, req)
++
++			require.NotNil(t, scope.Session, "the session is served whatever the save does")
++			require.Len(t, writers, tt.expectedSaves)
++			if tt.expectedSaves > 0 {
++				assert.Same(t, rw, writers[0], "the cookie goes into the answer of the request")
++			}
++			if held, ok := lock.(*testLock); ok {
++				assert.False(t, held.locked, "the lock is released")
++			}
++		})
++	}
++}
++
++// The whole way of a refresh dex completes late, through the ticket cookie and the persistent
++// store: the browser keeps the cookie with the replaced refresh token, and its next request gets
++// the tokens dex issued and a cookie with the new refresh token, without a second refresh.
++func TestLateRefreshReachesTheBrowser(t *testing.T) {
++	for _, encrypts := range []bool{false, true} {
++		synctest.Test(t, func(t *testing.T) {
++			cookieOpts := &options.Cookie{
++				Name:                "_oauth2_proxy",
++				Secret:              strings.Repeat("s", 32),
++				Expire:              24 * time.Hour,
++				EncryptRefreshToken: encrypts,
++			}
++			manager := persistence.NewManager(sessiontests.NewMockStore(), cookieOpts)
++
++			var refreshes atomic.Int32
++			loader := newStoredSessionLoader(&StoredSessionLoaderOptions{
++				SessionStore:  manager,
++				RefreshPeriod: time.Minute,
++				RefreshSession: func(ctx context.Context, ss *sessionsapi.SessionState) (bool, error) {
++					refreshes.Add(1)
++					select {
++					case <-ctx.Done():
++						return false, ctx.Err()
++					case <-time.After(25 * time.Second):
++					}
++					ss.RefreshToken, ss.IDToken = "rotated-refresh-token", "new-id-token"
++					return true, nil
++				},
++				// The ID token of the session has expired: the session needs the refresh.
++				ValidateSession: func(_ context.Context, ss *sessionsapi.SessionState) bool {
++					return ss.IDToken == "new-id-token"
++				},
++			})
++
++			// serve answers a request with the cookies and returns its scope and the cookies set.
++			serve := func(cookies []*http.Cookie) (*middlewareapi.RequestScope, []*http.Cookie) {
++				scope := &middlewareapi.RequestScope{}
++				req := middlewareapi.AddRequestScope(httptest.NewRequest(http.MethodGet, "http://example.com/", nil), scope)
++				for _, c := range cookies {
++					req.AddCookie(c)
++				}
++				rw := httptest.NewRecorder()
++				loader.loadSession(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})).ServeHTTP(rw, req)
++				return scope, rw.Result().Cookies()
++			}
++
++			createdAt := time.Now().Add(-time.Hour)
++			signIn := httptest.NewRecorder()
++			require.NoError(t, manager.Save(signIn, httptest.NewRequest(http.MethodGet, "http://example.com/", nil), &sessionsapi.SessionState{
++				CreatedAt:    &createdAt,
++				Email:        "john.doe@example.com",
++				RefreshToken: "refresh-token",
++				IDToken:      "expired-id-token",
++			}))
++			oldCookies := signIn.Result().Cookies()
++			require.Len(t, oldCookies, 1)
++
++			scope, set := serve(oldCookies)
++			assert.True(t, scope.SessionUnavailable, "dex has not answered within the deadline of the request")
++			assert.Empty(t, set, "the cookie of the browser is neither replaced nor cleared")
++
++			time.Sleep(20 * time.Second)
++			synctest.Wait()
++
++			scope, set = serve(oldCookies)
++			require.NotNil(t, scope.Session)
++			assert.False(t, scope.SessionUnavailable)
++			assert.Equal(t, "rotated-refresh-token", scope.Session.RefreshToken, "the token dex issued wins over the replaced one of the cookie")
++			assert.Equal(t, "new-id-token", scope.Session.IDToken)
++			assert.Equal(t, "john.doe@example.com", scope.Session.Email)
++			require.Len(t, set, 1, "the browser gets a cookie with the new refresh token")
++
++			scope, set = serve(set)
++			require.NotNil(t, scope.Session)
++			assert.Equal(t, "rotated-refresh-token", scope.Session.RefreshToken)
++			assert.Empty(t, set, "the new cookie is not behind the session")
++			assert.EqualValues(t, 1, refreshes.Load(), "dex was asked once")
++		})
++	}
++}
++
++// strictProvider is a provider that refuses a replaced refresh token: every refresh token it issued
++// is valid for exactly one refresh.
++type strictProvider struct {
++	delay time.Duration
++	// failure fails every refresh without an answer about the refresh token.
++	failure error
++
++	mu        sync.Mutex
++	valid     map[string]bool
++	issued    int
++	refusals  int
++	presented []string
++	revoked   []string
++}
++
++func newStrictProvider(refreshToken string) *strictProvider {
++	return &strictProvider{valid: map[string]bool{refreshToken: true}}
++}
++
++func (p *strictProvider) refresh(ctx context.Context, ss *sessionsapi.SessionState) (bool, error) {
++	select {
++	case <-ctx.Done():
++		return false, fmt.Errorf("failed to get token: %w", ctx.Err())
++	case <-time.After(p.delay):
++	}
++
++	p.mu.Lock()
++	defer p.mu.Unlock()
++	p.presented = append(p.presented, ss.RefreshToken)
++	if p.failure != nil {
++		return false, fmt.Errorf("failed to get token: %w", p.failure)
++	}
++	if !p.valid[ss.RefreshToken] {
++		p.refusals++
++		return false, fmt.Errorf("failed to get token: %w", retrieveError(http.StatusBadRequest, "invalid_grant"))
++	}
++	delete(p.valid, ss.RefreshToken)
++	p.issued++
++	ss.RefreshToken = fmt.Sprintf("rotated-refresh-token-%d", p.issued)
++	ss.IDToken = fmt.Sprintf("id-token-%d", p.issued)
++	p.valid[ss.RefreshToken] = true
++
++	return true, nil
++}
++
++// revoke revokes a refresh token, and with it the grant: the grant has no other valid token.
++func (p *strictProvider) revoke(_ context.Context, refreshToken string) {
++	p.mu.Lock()
++	defer p.mu.Unlock()
++	p.revoked = append(p.revoked, refreshToken)
++	delete(p.valid, refreshToken)
++}
++
++// validTokens returns the refresh tokens the provider would refresh now.
++func (p *strictProvider) validTokens() []string {
++	p.mu.Lock()
++	defer p.mu.Unlock()
++	return slices.Sorted(maps.Keys(p.valid))
++}
++
++func (p *strictProvider) revokedTokens() []string {
++	p.mu.Lock()
++	defer p.mu.Unlock()
++	return slices.Clone(p.revoked)
++}
++
++func (p *strictProvider) refused() int {
++	p.mu.Lock()
++	defer p.mu.Unlock()
++	return p.refusals
++}
++
++// cookieBrowser is a browser with the ticket cookie of one session, behind the stored session
++// loader of a persistent store.
++type cookieBrowser struct {
++	loader  *storedSessionLoader
++	cookies []*http.Cookie
++}
++
++// serve sends one request of the browser and keeps the cookie its answer sets or clears.
++func (b *cookieBrowser) serve(t *testing.T) *middlewareapi.RequestScope {
++	t.Helper()
++
++	scope := &middlewareapi.RequestScope{}
++	req := middlewareapi.AddRequestScope(httptest.NewRequest(http.MethodGet, "http://example.com/", nil), scope)
++	for _, c := range b.cookies {
++		req.AddCookie(c)
++	}
++	rw := httptest.NewRecorder()
++	b.loader.loadSession(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})).ServeHTTP(rw, req)
++	for _, c := range rw.Result().Cookies() {
++		if c.MaxAge < 0 || c.Value == "" {
++			b.cookies = nil
++			continue
++		}
++		b.cookies = []*http.Cookie{c}
++	}
++
++	return scope
++}
++
++// lockingStore is a persistent store of one session whose lock blocks as the lock of Redis does: the
++// lock of the mock store is always obtained.
++type lockingStore struct {
++	mu    sync.Mutex
++	store persistence.Store
++	lock  *expiringLock
++}
++
++func (s *lockingStore) Save(ctx context.Context, key string, value []byte, exp time.Duration) error {
++	s.mu.Lock()
++	defer s.mu.Unlock()
++	return s.store.Save(ctx, key, value, exp)
++}
++
++func (s *lockingStore) Load(ctx context.Context, key string) ([]byte, error) {
++	s.mu.Lock()
++	defer s.mu.Unlock()
++	return s.store.Load(ctx, key)
++}
++
++func (s *lockingStore) Clear(ctx context.Context, key string) error {
++	s.mu.Lock()
++	defer s.mu.Unlock()
++	return s.store.Clear(ctx, key)
++}
++
++func (s *lockingStore) Lock(string) sessionsapi.Lock {
++	return &expiringLockHandle{lock: s.lock}
++}
++
++func (s *lockingStore) VerifyConnection(ctx context.Context) error {
++	return s.store.VerifyConnection(ctx)
++}
++
++// signInWithStrictProvider signs a user in through the persistent store and returns the loader of
++// the store and the cookie of the sign-in.
++func signInWithStrictProvider(t *testing.T, provider *strictProvider, refreshPeriod time.Duration) (*storedSessionLoader, []*http.Cookie) {
++	t.Helper()
++
++	cookieOpts := &options.Cookie{Name: "_oauth2_proxy", Secret: strings.Repeat("s", 32), Expire: 24 * time.Hour}
++	manager := persistence.NewManager(&lockingStore{store: sessiontests.NewMockStore(), lock: &expiringLock{}}, cookieOpts)
++	loader := newStoredSessionLoader(&StoredSessionLoaderOptions{
++		SessionStore:    manager,
++		RefreshPeriod:   refreshPeriod,
++		RefreshSession:  provider.refresh,
++		ValidateSession: func(_ context.Context, ss *sessionsapi.SessionState) bool { return ss.IDToken != "" },
++	})
++
++	createdAt := time.Now()
++	signIn := httptest.NewRecorder()
++	require.NoError(t, manager.Save(signIn, httptest.NewRequest(http.MethodGet, "http://example.com/", nil), &sessionsapi.SessionState{
++		CreatedAt:    &createdAt,
++		Email:        "john.doe@example.com",
++		RefreshToken: "refresh-token",
++		IDToken:      "id-token",
++	}))
++	cookies := signIn.Result().Cookies()
++	require.Len(t, cookies, 1)
++
++	return loader, cookies
++}
++
++// Two copies of one cookie used in turn, once per refresh period each, with a provider that refuses
++// a replaced refresh token. Each copy is one refresh behind the session when it comes. The record
++// of the replaced token must not hand the tokens of the session to such a copy long after the
++// refresh: the copies would take the tokens from each other after every refresh and stay signed in
++// until the cookie expires. The first refresh of the copy that is behind is refused instead, and
++// the copy is signed out, as without the record.
++func TestCopiesOfACookieDoNotKeepEachOtherAlive(t *testing.T) {
++	synctest.Test(t, func(t *testing.T) {
++		const refreshPeriod = 10 * time.Minute
++		provider := newStrictProvider("refresh-token")
++		loader, cookies := signInWithStrictProvider(t, provider, refreshPeriod)
++		owner := &cookieBrowser{loader: loader, cookies: cookies}
++		copied := &cookieBrowser{loader: loader, cookies: cookies}
++
++		signedIn := map[*cookieBrowser]int{}
++		for turn := range 10 {
++			time.Sleep(refreshPeriod + time.Second)
++			browser := owner
++			if turn%2 == 1 {
++				browser = copied
++			}
++			if scope := browser.serve(t); scope.Session != nil {
++				signedIn[browser]++
++			}
++		}
++
++		assert.Equal(t, 5, signedIn[owner], "the owner of the cookie stays signed in")
++		assert.Zero(t, signedIn[copied], "the copy is signed out at its first refresh")
++		assert.Empty(t, copied.cookies, "and its cookie is cleared")
++		assert.Equal(t, 1, provider.refused(), "the provider refused the replaced token once")
++	})
++}
++
++// The cases the record of the replaced token is for, with a provider that refuses a replaced
++// refresh token: a request of the browser that carries the cookie the refresh replaced and comes
++// shortly after the refresh gets the tokens of the session and a new cookie, and the session goes
++// on through its next refresh. A cookie that comes back later than replacedRefreshTokenLifetime is
++// not given the tokens: its next refresh is refused.
++func TestReplacedTokenIsHonouredShortlyAfterTheRefresh(t *testing.T) {
++	const refreshPeriod = 10 * time.Minute
++
++	tests := []struct {
++		name string
++		// refreshDelay is how long the provider takes to answer a refresh.
++		refreshDelay time.Duration
++		// comesBackAfter is when, after the answer of the provider, the browser comes back with
++		// the cookie the refresh replaced.
++		comesBackAfter time.Duration
++		isSignedOut    bool
++	}{
++		{
++			name:           "request sent before the answer of an in-time refresh",
++			refreshDelay:   time.Second,
++			comesBackAfter: time.Second,
++		},
++		{
++			name:           "browser back shortly after a late refresh",
++			refreshDelay:   25 * time.Second,
++			comesBackAfter: 5 * time.Second,
++		},
++		{
++			name:           "browser back at the end of the lifetime of the record",
++			refreshDelay:   25 * time.Second,
++			comesBackAfter: 2*time.Minute - time.Second,
++		},
++		{
++			name:           "browser back after the lifetime of the record",
++			refreshDelay:   25 * time.Second,
++			comesBackAfter: 2*time.Minute + time.Second,
++			isSignedOut:    true,
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			synctest.Test(t, func(t *testing.T) {
++				provider := newStrictProvider("refresh-token")
++				provider.delay = tt.refreshDelay
++				loader, cookies := signInWithStrictProvider(t, provider, refreshPeriod)
++				refreshing := &cookieBrowser{loader: loader, cookies: cookies}
++				behind := &cookieBrowser{loader: loader, cookies: cookies}
++
++				time.Sleep(refreshPeriod + time.Second)
++				started := time.Now()
++				refreshing.serve(t)
++				// Wait for the answer of the provider, whether the request waited for it or not.
++				time.Sleep(tt.refreshDelay - time.Since(started))
++				synctest.Wait()
++				time.Sleep(tt.comesBackAfter)
++
++				scope := behind.serve(t)
++				require.NotNil(t, scope.Session, "the session is served to the cookie that is behind it")
++				if !tt.isSignedOut {
++					assert.Equal(t, "rotated-refresh-token-1", scope.Session.RefreshToken, "the cookie gets the token of the refresh")
++					require.Len(t, behind.cookies, 1)
++					assert.NotEqual(t, cookies[0].Value, behind.cookies[0].Value, "and a new cookie")
++				}
++
++				// The next refresh of the session, through the cookie the browser has now.
++				provider.delay = time.Second
++				time.Sleep(refreshPeriod + time.Second)
++				scope = behind.serve(t)
++				if tt.isSignedOut {
++					assert.Nil(t, scope.Session, "the replaced token is refused and the session ends")
++					assert.Empty(t, behind.cookies)
++					assert.Equal(t, 1, provider.refused())
++					return
++				}
++				require.NotNil(t, scope.Session, "the session goes on")
++				assert.Equal(t, "rotated-refresh-token-2", scope.Session.RefreshToken)
++				assert.Zero(t, provider.refused())
++			})
++		})
++	}
++}
++
++// A sign-out while the provider answers a late refresh of the session waits for the lock the
++// refresh holds and gets no session from the loader: it revokes the refresh token of the cookie,
++// which patch 011 loads from the store without the lock, and clears the session in the store and the
++// cookie of the browser. The refresh then finds the session ended and drops its answer; it revokes
++// nothing itself. A copy of the cookie made before the sign-out restores no session once the
++// provider answers again. A late refresh of a session that was not ended is saved.
++func TestLateRefreshOfASignedOutSessionIsDropped(t *testing.T) {
++	const refreshPeriod = 10 * time.Minute
++
++	tests := []struct {
++		name         string
++		refreshDelay time.Duration
++		failure      error
++		isSignedOut  bool
++	}{
++		{
++			name:         "refresh the provider answers after the sign-out",
++			refreshDelay: 25 * time.Second,
++			isSignedOut:  true,
++		},
++		{
++			name:         "refresh that fails without a rotation",
++			refreshDelay: 25 * time.Second,
++			failure:      retrieveError(http.StatusServiceUnavailable, ""),
++			isSignedOut:  true,
++		},
++		{
++			name:         "refresh the provider does not answer",
++			refreshDelay: time.Hour,
++			isSignedOut:  true,
++		},
++		{
++			name:         "session that is not signed out",
++			refreshDelay: 25 * time.Second,
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			synctest.Test(t, func(t *testing.T) {
++				provider := newStrictProvider("refresh-token")
++				provider.delay = tt.refreshDelay
++				provider.failure = tt.failure
++				loader, cookies := signInWithStrictProvider(t, provider, refreshPeriod)
++				// The ID token of the sign-in has expired: the session cannot be served without
++				// the refresh.
++				loader.sessionValidator = func(_ context.Context, ss *sessionsapi.SessionState) bool { return ss.IDToken != "id-token" }
++				browser := &cookieBrowser{loader: loader, cookies: cookies}
++				copied := &cookieBrowser{loader: loader, cookies: cookies}
++
++				time.Sleep(refreshPeriod + time.Second)
++				started := time.Now()
++				require.True(t, browser.serve(t).SessionUnavailable, "the provider has not answered within the deadline")
++
++				if tt.isSignedOut {
++					// The sign-out, as SignOut does it with patch 011: the loader waits for the
++					// lock and gives no session, the sign-out loads the session from the store
++					// without the lock and revokes the refresh token of the cookie, and the
++					// session is cleared in the store with the cookie of the browser.
++					scope := &middlewareapi.RequestScope{}
++					req := middlewareapi.AddRequestScope(httptest.NewRequest(http.MethodGet, "http://example.com/oauth2/sign_out", nil), scope)
++					for _, c := range browser.cookies {
++						req.AddCookie(c)
++					}
++					loader.loadSession(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})).ServeHTTP(httptest.NewRecorder(), req)
++					require.True(t, scope.SessionUnavailable, "the sign-out cannot load the session")
++					require.Nil(t, scope.Session)
++					stored, err := loader.store.Load(req)
++					require.NoError(t, err)
++					provider.revoke(t.Context(), stored.RefreshToken)
++					require.NoError(t, loader.store.Clear(httptest.NewRecorder(), req))
++				}
++
++				time.Sleep(sessionRefreshAnswerTimeout - time.Since(started))
++				synctest.Wait()
++
++				if !tt.isSignedOut {
++					assert.Empty(t, provider.revokedTokens())
++					scope := browser.serve(t)
++					require.NotNil(t, scope.Session, "the session goes on")
++					assert.Equal(t, "rotated-refresh-token-1", scope.Session.RefreshToken)
++					return
++				}
++
++				assert.Equal(t, []string{"refresh-token"}, provider.revokedTokens(), "the late refresh revokes nothing")
++				assert.Empty(t, provider.validTokens(), "the grant ends at the provider")
++
++				// A copy of the cookie made before the sign-out does not restore the session once
++				// the provider answers again.
++				provider.failure, provider.delay = nil, time.Second
++				scope := copied.serve(t)
++				assert.Nil(t, scope.Session, "the copy of the cookie restores no session")
++				assert.Empty(t, copied.cookies)
++			})
++		})
++	}
++}
++
++// A store that loses the session while the provider answers its late refresh, as a Redis that
++// restarts does, has not ended it: the late refresh that fails revokes nothing, and the cookie the
++// browser kept restores the session through its stub once the provider answers again.
++func TestLateRefreshOfALostSessionKeepsTheGrant(t *testing.T) {
++	synctest.Test(t, func(t *testing.T) {
++		const refreshPeriod = 10 * time.Minute
++
++		provider := newStrictProvider("refresh-token")
++		provider.delay = 25 * time.Second
++		provider.failure = retrieveError(http.StatusServiceUnavailable, "")
++		loader, cookies := signInWithStrictProvider(t, provider, refreshPeriod)
++		loader.sessionValidator = func(_ context.Context, ss *sessionsapi.SessionState) bool { return ss.IDToken != "id-token" }
++		browser := &cookieBrowser{loader: loader, cookies: cookies}
++
++		time.Sleep(refreshPeriod + time.Second)
++		started := time.Now()
++		require.True(t, browser.serve(t).SessionUnavailable, "the provider has not answered within the deadline")
++
++		// The store loses the data of the session; the browser keeps its cookie.
++		req := httptest.NewRequest(http.MethodGet, "http://example.com/", nil)
++		for _, c := range browser.cookies {
++			req.AddCookie(c)
++		}
++		require.NoError(t, loader.store.Clear(httptest.NewRecorder(), req))
++
++		time.Sleep(sessionRefreshAnswerTimeout - time.Since(started))
++		synctest.Wait()
++		assert.Empty(t, provider.revokedTokens(), "nothing is revoked")
++		assert.Equal(t, []string{"refresh-token"}, provider.validTokens())
++
++		provider.failure, provider.delay = nil, time.Second
++		scope := browser.serve(t)
++		require.NotNil(t, scope.Session, "the cookie restores the session")
++		assert.Equal(t, "rotated-refresh-token-1", scope.Session.RefreshToken)
++	})
++}
 diff --git a/pkg/middleware/deckhouse_refresh_unavailable.go b/pkg/middleware/deckhouse_refresh_unavailable.go
 new file mode 100644
 index 00000000..d49197ee
@@ -756,10 +1884,10 @@ index 00000000..d49197ee
 +}
 diff --git a/pkg/middleware/deckhouse_refresh_unavailable_test.go b/pkg/middleware/deckhouse_refresh_unavailable_test.go
 new file mode 100644
-index 00000000..26a39857
+index 00000000..d7dba17d
 --- /dev/null
 +++ b/pkg/middleware/deckhouse_refresh_unavailable_test.go
-@@ -0,0 +1,671 @@
+@@ -0,0 +1,689 @@
 +package middleware
 +
 +import (
@@ -1133,6 +2261,7 @@ index 00000000..26a39857
 +		)
 +		loader := newLoader(newDex(t, 5*time.Second), &saved, &cleared)
 +		loader.refreshTimeout = refreshTimeout
++		loader.answerTimeout = 2 * refreshTimeout
 +
 +		started := time.Now()
 +		scope := serve(t.Context(), loader)
@@ -1196,7 +2325,16 @@ index 00000000..26a39857
 +	return l.holder != nil && time.Now().Before(l.expires), nil
 +}
 +
-+func (h *expiringLockHandle) Refresh(context.Context, time.Duration) error { return nil }
++func (h *expiringLockHandle) Refresh(_ context.Context, expiration time.Duration) error {
++	l := h.lock
++	l.mu.Lock()
++	defer l.mu.Unlock()
++	if l.holder != h || !time.Now().Before(l.expires) {
++		return sessionsapi.ErrNotLocked
++	}
++	l.expires, l.expiration = time.Now().Add(expiration), expiration
++	return nil
++}
 +
 +func (h *expiringLockHandle) Release(ctx context.Context) error {
 +	if err := ctx.Err(); err != nil {
@@ -1230,7 +2368,11 @@ index 00000000..26a39857
 +	cleared bool
 +
 +	refreshDelay time.Duration
-+	refreshes    atomic.Int32
++	// refreshErr is what dex answers every refresh with, once refreshDelay has passed.
++	refreshErr error
++	refreshes  atomic.Int32
++	// writers are the response writers the session was saved with.
++	writers []http.ResponseWriter
 +}
 +
 +func newLockedSessionStore(refreshDelay time.Duration) *lockedSessionStore {
@@ -1252,11 +2394,12 @@ index 00000000..26a39857
 +				loaded.Lock = &expiringLockHandle{lock: s.lock}
 +				return &loaded, nil
 +			},
-+			SaveFunc: func(_ http.ResponseWriter, _ *http.Request, ss *sessionsapi.SessionState) error {
++			SaveFunc: func(rw http.ResponseWriter, _ *http.Request, ss *sessionsapi.SessionState) error {
 +				s.mu.Lock()
 +				defer s.mu.Unlock()
 +				s.session = *ss
 +				s.session.Lock = nil
++				s.writers = append(s.writers, rw)
 +				return nil
 +			},
 +			ClearFunc: func(http.ResponseWriter, *http.Request) error {
@@ -1273,6 +2416,9 @@ index 00000000..26a39857
 +			case <-ctx.Done():
 +				return false, fmt.Errorf("failed to get token: %w", ctx.Err())
 +			case <-time.After(s.refreshDelay):
++			}
++			if s.refreshErr != nil {
++				return false, fmt.Errorf("failed to get token: %w", s.refreshErr)
 +			}
 +			ss.RefreshToken = fmt.Sprintf("rotated-refresh-token-%d", n)
 +			return true, nil
@@ -1432,10 +2578,18 @@ index 00000000..26a39857
 +	}
 +}
 diff --git a/pkg/middleware/stored_session.go b/pkg/middleware/stored_session.go
-index 53238f19..51172433 100644
+index 53238f19..c94de36c 100644
 --- a/pkg/middleware/stored_session.go
 +++ b/pkg/middleware/stored_session.go
-@@ -21,15 +21,27 @@ const (
+@@ -12,7 +12,6 @@ import (
+ 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
+ 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+ 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+-	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
+ )
+ 
+ const (
+@@ -21,15 +20,27 @@ const (
  	// TODO: This should probably be configurable by the end user.
  	sessionRefreshObtainTimeout = 5 * time.Second
  
@@ -1468,7 +2622,7 @@ index 53238f19..51172433 100644
  )
  
  // isFatalRefreshError checks if a refresh error indicates a revoked or
-@@ -49,6 +61,7 @@ func isFatalRefreshError(err error) bool {
+@@ -49,6 +60,7 @@ func isFatalRefreshError(err error) bool {
  	fatalErrors := []string{
  		"invalid_grant",  // refresh token revoked, expired, or session terminated
  		"invalid_client", // client credentials no longer valid
@@ -1476,7 +2630,7 @@ index 53238f19..51172433 100644
  	}
  
  	for _, fe := range fatalErrors {
-@@ -83,13 +96,18 @@ type StoredSessionLoaderOptions struct {
+@@ -83,13 +95,18 @@ type StoredSessionLoaderOptions struct {
  // If no session is found, the request will be passed to the nex handler.
  // If a session was loader by a previous handler, it will not be replaced.
  func NewStoredSessionLoader(opts *StoredSessionLoaderOptions) alice.Constructor {
@@ -1497,7 +2651,7 @@ index 53238f19..51172433 100644
  }
  
  // storedSessionLoader is responsible for loading sessions from cookie
-@@ -99,6 +117,14 @@ type storedSessionLoader struct {
+@@ -99,6 +116,17 @@ type storedSessionLoader struct {
  	refreshPeriod    time.Duration
  	sessionRefresher func(context.Context, *sessionsapi.SessionState) (bool, error)
  	sessionValidator func(context.Context, *sessionsapi.SessionState) bool
@@ -1506,13 +2660,16 @@ index 53238f19..51172433 100644
 +	unavailable *unavailableSince
 +	// refreshTimeout bounds the refresh and the validation that follows it (Deckhouse patch 002).
 +	refreshTimeout time.Duration
++	// answerTimeout bounds the refresh at the provider, which goes on after the request stopped
++	// waiting for it at refreshTimeout; zero is sessionRefreshAnswerTimeout (Deckhouse patch 002).
++	answerTimeout time.Duration
 +	// obtainTimeout bounds the wait of a request for the lock of its session, held by the refresh
 +	// of another request of the session; zero is sessionRefreshObtainTimeout (Deckhouse patch 002).
 +	obtainTimeout time.Duration
  }
  
  // loadSession attempts to load a session as identified by the request cookies.
-@@ -116,7 +142,13 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
+@@ -116,7 +144,13 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
  		}
  
  		session, err := s.getValidatedSession(rw, req)
@@ -1527,7 +2684,18 @@ index 53238f19..51172433 100644
  			// In the case when there was an error loading the session,
  			// we should clear the session
  			logger.Errorf("Error loading cookied session: %v, removing session", err)
-@@ -143,7 +175,7 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
+@@ -126,6 +160,10 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
+ 			}
+ 		}
+ 
++		if err == nil && session != nil {
++			s.renewStaleCookie(rw, req, session)
++		}
++
+ 		// Add the session to the scope if it was found
+ 		scope.Session = session
+ 		next.ServeHTTP(rw, req)
+@@ -143,7 +181,7 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
  
  	err = s.refreshSessionIfNeeded(rw, req, session)
  	if err != nil {
@@ -1536,7 +2704,7 @@ index 53238f19..51172433 100644
  	}
  
  	return session, nil
-@@ -159,17 +191,21 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
+@@ -159,17 +197,21 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
  	}
  
  	var lockObtained bool
@@ -1562,8 +2730,17 @@ index 53238f19..51172433 100644
  			} else if errors.Is(err, sessionsapi.ErrLockNotObtained) {
  				time.Sleep(sessionRefreshRetryPeriod)
  				continue
-@@ -185,7 +221,9 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
- 		if session == nil {
+@@ -180,12 +222,16 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
+ 	}
+ 
+ 	// The rest of this function is carried out under lock, but we must release it
+-	// wherever we exit from this function.
++	// wherever we exit from this function. A refresh the provider has not answered yet goes on
++	// after it and releases the lock itself (Deckhouse patch 002).
++	var refreshErr error
+ 	defer func() {
+-		if session == nil {
++		if session == nil || errors.Is(refreshErr, errRefreshPending) {
  			return
  		}
 -		if err := session.ReleaseLock(req.Context()); err != nil {
@@ -1573,7 +2750,7 @@ index 53238f19..51172433 100644
  			logger.Errorf("unable to release lock: %v", err)
  		}
  	}()
-@@ -215,12 +253,23 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
+@@ -215,12 +261,23 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
  
  	// We are holding the lock and the session needs a refresh
  	logger.Printf("Refreshing session - User: %s; SessionAge: %s", session.User, session.Age())
@@ -1586,7 +2763,7 @@ index 53238f19..51172433 100644
 +	// cancel it: its outcome still counts in the window, and a rotated refresh token is still saved.
 +	refreshCtx, cancelRefresh := context.WithTimeout(context.WithoutCancel(req.Context()), s.refreshTimeout)
 +	defer cancelRefresh()
-+	refreshErr := s.refreshSession(rw, req.WithContext(refreshCtx), session)
++	refreshErr = s.refreshSession(rw, req.WithContext(refreshCtx), session)
 +	if !isProviderUnavailable(refreshErr) {
 +		s.unavailable.forget(refreshToken)
 +	}
@@ -1600,7 +2777,7 @@ index 53238f19..51172433 100644
  			logger.Printf("Fatal refresh error detected (session revoked or invalid), clearing session for user: %s", session.User)
  
  			// Clear the session from storage (Redis) and remove the cookie
-@@ -229,7 +278,7 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
+@@ -229,7 +286,7 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
  			}
  
  			// Return error immediately to force re-authentication
@@ -1609,7 +2786,7 @@ index 53238f19..51172433 100644
  		}
  
  		// For non-fatal errors (network issues, timeouts), keep the session
-@@ -237,7 +286,29 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
+@@ -237,7 +294,29 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
  	}
  
  	// Validate all sessions after any Redeem/Refresh operation (fail or success)
@@ -1640,20 +2817,82 @@ index 53238f19..51172433 100644
  }
  
  // needsRefresh determines whether we should attempt to refresh a session or not.
-@@ -250,7 +321,7 @@ func needsRefresh(refreshPeriod time.Duration, session *sessionsapi.SessionState
+@@ -247,34 +326,37 @@ func needsRefresh(refreshPeriod time.Duration, session *sessionsapi.SessionState
+ 
+ // refreshSession attempts to refresh the session with the provider
+ // and will save the session if it was updated.
++//
++// The provider is asked apart from the request, which waits for the answer until its deadline
++// (Deckhouse patch 002): a refresh the provider completes after it is saved in the store by
++// saveLateRefresh, and the request gets errRefreshPending.
  func (s *storedSessionLoader) refreshSession(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) error {
- 	refreshed, err := s.sessionRefresher(req.Context(), session)
- 	if err != nil && !errors.Is(err, providers.ErrNotImplemented) {
+-	refreshed, err := s.sessionRefresher(req.Context(), session)
+-	if err != nil && !errors.Is(err, providers.ErrNotImplemented) {
 -		return fmt.Errorf("error refreshing tokens: %v", err)
-+		return fmt.Errorf("error refreshing tokens: %w", err)
++	answers, handover := s.askProvider(req, session)
++
++	var answer refreshAnswer
++	select {
++	case answer = <-answers:
++	case <-req.Context().Done():
++		s.handOverRefresh(req, session, handover)
++		return fmt.Errorf("error refreshing tokens: %w", errRefreshPending)
+ 	}
+-
+-	// HACK:
+-	// Providers that don't implement `RefreshSession` use the default
+-	// implementation which returns `ErrNotImplemented`.
+-	// Pretend it refreshed to reset the refresh timer so that `ValidateSession`
+-	// isn't triggered every subsequent request and is only called once during
+-	// this request.
+-	if errors.Is(err, providers.ErrNotImplemented) {
+-		refreshed = true
++	if answer.err != nil {
++		return fmt.Errorf("error refreshing tokens: %w", answer.err)
  	}
  
- 	// HACK:
+ 	// Session not refreshed, nothing to persist.
+-	if !refreshed {
++	if !answer.isRefreshed {
+ 		logger.Printf("Session not refreshed - User: %s; no refresh token available or provider returned false", session.User)
+ 		return nil
+ 	}
+ 
+-	// If we refreshed, update the `CreatedAt` time to reset the refresh timer
+-	// (In case underlying provider implementations forget)
+-	session.CreatedAtNow()
++	// The refreshed copy has the lock and the request-only fields of the session it was made from.
++	*session = *answer.session
++	// The save below writes the cookie.
++	session.StaleCookie = false
+ 
+ 	// Because the session was refreshed, make sure to save it
+-	err = s.store.Save(rw, req, session)
++	err := s.store.Save(rw, req, session)
+ 	if err != nil {
+ 		logger.PrintAuthf(session.Email, req, logger.AuthError, "error saving session: %v", err)
+ 		return fmt.Errorf("error saving session: %v", err)
 diff --git a/pkg/middleware/stored_session_test.go b/pkg/middleware/stored_session_test.go
-index c913a4ef..32b4cef5 100644
+index c913a4ef..950200c0 100644
 --- a/pkg/middleware/stored_session_test.go
 +++ b/pkg/middleware/stored_session_test.go
-@@ -480,8 +480,10 @@ var _ = Describe("Stored Session Suite", func() {
+@@ -292,9 +292,12 @@ var _ = Describe("Stored Session Suite", func() {
+ 				existingSession: nil,
+ 				expectedSession: &sessionsapi.SessionState{
+ 					RefreshToken: "Refreshed",
+-					CreatedAt:    &now,
+-					ExpiresOn:    &createdFuture,
+-					Lock:         &sessionsapi.NoOpLock{},
++					// The refresh replaced the token "Refresh" (Deckhouse patch 002).
++					ReplacedRefreshTokenHash: hashOf(refresh),
++					ReplacedRefreshTokenAt:   &now,
++					CreatedAt:                &now,
++					ExpiresOn:                &createdFuture,
++					Lock:                     &sessionsapi.NoOpLock{},
+ 				},
+ 				store:           defaultSessionStore,
+ 				refreshPeriod:   1 * time.Minute,
+@@ -480,8 +483,10 @@ var _ = Describe("Stored Session Suite", func() {
  				}
  
  				s := &storedSessionLoader{
@@ -1666,7 +2905,7 @@ index c913a4ef..32b4cef5 100644
  					sessionRefresher: func(_ context.Context, ss *sessionsapi.SessionState) (bool, error) {
  						refreshed = true
  						switch ss.RefreshToken {
-@@ -590,7 +592,7 @@ var _ = Describe("Stored Session Suite", func() {
+@@ -590,7 +595,7 @@ var _ = Describe("Stored Session Suite", func() {
  						obtainError: sessionsapi.ErrLockNotObtained,
  					},
  				},
@@ -1675,7 +2914,7 @@ index c913a4ef..32b4cef5 100644
  				expectRefreshed:      false,
  				expectValidated:      false,
  				expectedLockObtained: true,
-@@ -711,7 +713,7 @@ var _ = Describe("Stored Session Suite", func() {
+@@ -711,7 +716,7 @@ var _ = Describe("Stored Session Suite", func() {
  					CreatedAt:    &now,
  					ExpiresOn:    &now,
  				},
@@ -1684,8 +2923,449 @@ index c913a4ef..32b4cef5 100644
  				expectSaved: false,
  			}),
  			Entry("when the saving the session returns an error", refreshSessionWithProviderTableInput{
+diff --git a/pkg/sessions/persistence/deckhouse_refresh_token.go b/pkg/sessions/persistence/deckhouse_refresh_token.go
+new file mode 100644
+index 00000000..08a62968
+--- /dev/null
++++ b/pkg/sessions/persistence/deckhouse_refresh_token.go
+@@ -0,0 +1,91 @@
++package persistence
++
++import (
++	"bytes"
++	"crypto/hkdf"
++	"crypto/sha256"
++	"fmt"
++	"time"
++
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
++)
++
++const (
++	// refreshTokenKeyInfo separates the key of the refresh token from every other use of the
++	// cookie secret, the signature of the cookie first of all.
++	refreshTokenKeyInfo = "deckhouse dex-authenticator: refresh token in the ticket cookie"
++	refreshTokenKeySize = 32
++)
++
++// refreshTokenCipher returns the cipher of the refresh token in the ticket cookie (Deckhouse
++// patch 002): AES-256-GCM with a key derived from the cookie secret. The cookie reaches the
++// application behind the proxy with every request, and the application has no business with the
++// refresh token of its user. A proxy with another cookie secret cannot read the token.
++func refreshTokenCipher(cookieOpts *options.Cookie) (encryption.Cipher, error) {
++	secret, err := cookieOpts.GetSecret()
++	if err != nil {
++		return nil, fmt.Errorf("error getting cookie secret: %w", err)
++	}
++	key, err := hkdf.Key(sha256.New, encryption.SecretBytes(secret), nil, refreshTokenKeyInfo, refreshTokenKeySize)
++	if err != nil {
++		return nil, fmt.Errorf("failed to derive the key of the refresh token: %w", err)
++	}
++	gcm, err := encryption.NewGCMCipher(key)
++	if err != nil {
++		return nil, fmt.Errorf("failed to make the cipher of the refresh token: %w", err)
++	}
++
++	return encryption.NewBase64Cipher(gcm), nil
++}
++
++func encryptRefreshToken(refreshToken string, cookieOpts *options.Cookie) (string, error) {
++	c, err := refreshTokenCipher(cookieOpts)
++	if err != nil {
++		return "", err
++	}
++	encrypted, err := c.Encrypt([]byte(refreshToken))
++	if err != nil {
++		return "", fmt.Errorf("failed to encrypt the refresh token: %w", err)
++	}
++
++	return string(encrypted), nil
++}
++
++func decryptRefreshToken(encrypted string, cookieOpts *options.Cookie) (string, error) {
++	c, err := refreshTokenCipher(cookieOpts)
++	if err != nil {
++		return "", err
++	}
++	refreshToken, err := c.Decrypt([]byte(encrypted))
++	if err != nil {
++		return "", fmt.Errorf("failed to decrypt the refresh token: %w", err)
++	}
++
++	return string(refreshToken), nil
++}
++
++// replacedRefreshTokenLifetime is how long after the answer of a refresh a cookie with the token it
++// replaced still gets the tokens of the stored session (Deckhouse patch 002). The record is for the
++// requests the browser sent before the cookie of the refresh reached it, and for the first request
++// after a late refresh, whose answer is waited for up to a minute from the start of the refresh. Twice
++// that covers both. Past it the cookie keeps its own token, and a provider that refuses a replaced
++// refresh token ends the session at its next refresh: otherwise two copies of one cookie would take
++// the tokens from each other after every refresh and live until the cookie expires.
++const replacedRefreshTokenLifetime = 2 * time.Minute
++
++// replacesRefreshToken reports whether the refresh of a stored session replaced refreshToken with
++// the token the session holds now, less than replacedRefreshTokenLifetime ago.
++func replacesRefreshToken(state *sessions.SessionState, refreshToken string) bool {
++	if state.RefreshToken == "" || state.RefreshToken == refreshToken {
++		return false
++	}
++	// A record without its time was written before the time was kept, and is no newer than that.
++	if state.ReplacedRefreshTokenAt == nil || time.Since(*state.ReplacedRefreshTokenAt) > replacedRefreshTokenLifetime {
++		return false
++	}
++	hash := sha256.Sum256([]byte(refreshToken))
++
++	return bytes.Equal(state.ReplacedRefreshTokenHash, hash[:])
++}
+diff --git a/pkg/sessions/persistence/deckhouse_refresh_token_test.go b/pkg/sessions/persistence/deckhouse_refresh_token_test.go
+new file mode 100644
+index 00000000..0016df28
+--- /dev/null
++++ b/pkg/sessions/persistence/deckhouse_refresh_token_test.go
+@@ -0,0 +1,338 @@
++package persistence
++
++import (
++	"crypto/sha256"
++	"encoding/base64"
++	"encoding/json"
++	"net/http"
++	"net/http/httptest"
++	"strings"
++	"testing"
++	"time"
++
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
++	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
++	sessiontests "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/tests"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++const testRefreshToken = "refresh-token-of-the-session"
++
++func testCookieOptions(encrypts bool) *options.Cookie {
++	return &options.Cookie{
++		Name:                "_oauth2_proxy",
++		Secret:              strings.Repeat("s", 32),
++		Expire:              time.Hour,
++		EncryptRefreshToken: encrypts,
++	}
++}
++
++// saveSession saves a session through the manager and returns the request of a browser that got
++// the cookie of the answer.
++func saveSession(t *testing.T, manager *Manager, req *http.Request, session *sessionsapi.SessionState) *http.Request {
++	t.Helper()
++
++	rw := httptest.NewRecorder()
++	require.NoError(t, manager.Save(rw, req, session))
++	cookies := rw.Result().Cookies()
++	require.Len(t, cookies, 1)
++
++	next := httptest.NewRequest(http.MethodGet, "http://example.com/", nil)
++	next.AddCookie(cookies[0])
++
++	return next
++}
++
++// cookieContent returns the signed value of the ticket cookie of a request, as a browser, or an
++// application behind the proxy, reads it.
++func cookieContent(t *testing.T, req *http.Request, cookieOpts *options.Cookie) string {
++	t.Helper()
++
++	cookie, err := req.Cookie(cookieOpts.Name)
++	require.NoError(t, err)
++	value, _, ok := encryption.Validate(cookie, cookieOpts.Secret, cookieOpts.Expire)
++	require.True(t, ok)
++
++	return string(value)
++}
++
++func newSession() *sessionsapi.SessionState {
++	createdAt := time.Now()
++	return &sessionsapi.SessionState{
++		CreatedAt:    &createdAt,
++		Email:        "john.doe@example.com",
++		RefreshToken: testRefreshToken,
++	}
++}
++
++// TestCookieRefreshTokenEncryption checks the refresh token in the ticket cookie: with
++// --cookie-encrypt-refresh-token the cookie does not show it, without the flag the cookie is
++// written as before, and a proxy reads both forms whatever its flag is.
++func TestCookieRefreshTokenEncryption(t *testing.T) {
++	t.Parallel()
++
++	tests := []struct {
++		name           string
++		writerEncrypts bool
++		readerEncrypts bool
++	}{
++		{name: "plain cookie read by a proxy without the flag"},
++		{name: "plain cookie read by a proxy with the flag", readerEncrypts: true},
++		{name: "encrypted cookie read by a proxy with the flag", writerEncrypts: true, readerEncrypts: true},
++		{name: "encrypted cookie read by a proxy without the flag", writerEncrypts: true},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			t.Parallel()
++
++			store := sessiontests.NewMockStore()
++			writerOpts := testCookieOptions(tt.writerEncrypts)
++			writer := NewManager(store, writerOpts)
++			req := saveSession(t, writer, httptest.NewRequest(http.MethodGet, "http://example.com/", nil), newSession())
++
++			content := cookieContent(t, req, writerOpts)
++			encoded := base64.StdEncoding.EncodeToString([]byte(testRefreshToken))
++			if tt.writerEncrypts {
++				assert.NotContains(t, content, testRefreshToken, "the cookie does not show the refresh token")
++				assert.NotContains(t, content, encoded)
++			} else {
++				value := map[string]string{}
++				require.NoError(t, json.Unmarshal([]byte(content), &value))
++				assert.Equal(t, testRefreshToken, value["RefreshToken"], "the cookie is written as before")
++				assert.Len(t, value, 2)
++			}
++
++			reader := NewManager(store, testCookieOptions(tt.readerEncrypts))
++			loaded, err := reader.Load(req)
++			require.NoError(t, err)
++			assert.Equal(t, testRefreshToken, loaded.RefreshToken)
++			assert.Equal(t, "john.doe@example.com", loaded.Email)
++
++			// Without the session in the store the token of the cookie restores it.
++			require.NoError(t, reader.Clear(httptest.NewRecorder(), req))
++			stub, err := reader.Load(req)
++			require.NoError(t, err)
++			assert.Equal(t, testRefreshToken, stub.RefreshToken)
++			assert.Equal(t, stubSessionUser, stub.User)
++		})
++	}
++}
++
++// TestCookieRefreshTokenCiphertext checks the encrypted refresh token itself: two cookies of one
++// token differ, and a ciphertext that was changed, cut or made for another cookie secret is an
++// error, not a session without a refresh token.
++func TestCookieRefreshTokenCiphertext(t *testing.T) {
++	t.Parallel()
++
++	cookieOpts := testCookieOptions(true)
++	first, err := encryptRefreshToken(testRefreshToken, cookieOpts)
++	require.NoError(t, err)
++	second, err := encryptRefreshToken(testRefreshToken, cookieOpts)
++	require.NoError(t, err)
++	assert.NotEqual(t, first, second, "every cookie has a nonce of its own")
++
++	got, err := decryptRefreshToken(first, cookieOpts)
++	require.NoError(t, err)
++	assert.Equal(t, testRefreshToken, got)
++
++	otherSecret := testCookieOptions(true)
++	otherSecret.Secret = strings.Repeat("o", 32)
++
++	raw, err := base64.StdEncoding.DecodeString(first)
++	require.NoError(t, err)
++	changed := append([]byte{}, raw...)
++	changed[len(changed)-1] ^= 1
++
++	tests := []struct {
++		name       string
++		ciphertext string
++		cookieOpts *options.Cookie
++	}{
++		{name: "another cookie secret", ciphertext: first, cookieOpts: otherSecret},
++		{name: "changed ciphertext", ciphertext: base64.StdEncoding.EncodeToString(changed), cookieOpts: cookieOpts},
++		{name: "cut ciphertext", ciphertext: base64.StdEncoding.EncodeToString(raw[:8]), cookieOpts: cookieOpts},
++		{name: "not base64", ciphertext: "not base64!", cookieOpts: cookieOpts},
++		{name: "plain token in the encrypted field", ciphertext: base64.StdEncoding.EncodeToString([]byte(testRefreshToken)), cookieOpts: cookieOpts},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			t.Parallel()
++
++			got, err := decryptRefreshToken(tt.ciphertext, tt.cookieOpts)
++			require.Error(t, err)
++			assert.Empty(t, got)
++			assert.NotContains(t, err.Error(), testRefreshToken)
++		})
++	}
++}
++
++// TestDecodeTicketRefusesABrokenRefreshToken checks that a cookie whose encrypted refresh token
++// cannot be read is refused as a whole: the request is not served by the session of the ticket
++// with no refresh token.
++func TestDecodeTicketRefusesABrokenRefreshToken(t *testing.T) {
++	t.Parallel()
++
++	cookieOpts := testCookieOptions(true)
++	tckt, err := newTicket(cookieOpts)
++	require.NoError(t, err)
++
++	broken := base64.StdEncoding.EncodeToString([]byte("not a ciphertext"))
++	data, err := json.Marshal(cookieRefreshToken{Ticket: tckt.encodeTicket(), EncryptedRefreshToken: broken})
++	require.NoError(t, err)
++
++	decoded, refreshToken, err := decodeTicket(string(data), cookieOpts)
++	require.Error(t, err)
++	assert.Nil(t, decoded)
++	assert.Empty(t, refreshToken)
++}
++
++// TestLoadKeepsTheTokenThatReplacedTheCookieToken checks which refresh token a loaded session
++// gets. The cookie carries the latest one unless the session in the store says its refresh
++// replaced exactly the token of the cookie: then the answer with the new cookie did not reach the
++// browser, the token of the store is the valid one, and the cookie is to be written again. That
++// holds for replacedRefreshTokenLifetime after the refresh only.
++func TestLoadKeepsTheTokenThatReplacedTheCookieToken(t *testing.T) {
++	t.Parallel()
++
++	const rotatedToken = "rotated-refresh-token"
++	hashOf := func(token string) []byte {
++		sum := sha256.Sum256([]byte(token))
++		return sum[:]
++	}
++
++	tests := []struct {
++		name        string
++		storedToken string
++		replaced    []byte
++		// replacedAgo is how long ago the refresh replaced the token; nil is a record without
++		// its time.
++		replacedAgo   *time.Duration
++		expected      string
++		expectedStale bool
++		// expectedStored is the stored token the session carries apart when it goes on with the
++		// token of the cookie.
++		expectedStored string
++	}{
++		{
++			name:           "session of another replica that knows no replaced token",
++			storedToken:    "older-refresh-token",
++			expected:       testRefreshToken,
++			expectedStored: "older-refresh-token",
++		},
++		{
++			name:           "session whose refresh replaced another token",
++			storedToken:    "older-refresh-token",
++			replaced:       hashOf("oldest-refresh-token"),
++			replacedAgo:    new(time.Duration(0)),
++			expected:       testRefreshToken,
++			expectedStored: "older-refresh-token",
++		},
++		{
++			name:          "session whose refresh replaced the token of the cookie",
++			storedToken:   rotatedToken,
++			replaced:      hashOf(testRefreshToken),
++			replacedAgo:   new(time.Duration(0)),
++			expected:      rotatedToken,
++			expectedStale: true,
++		},
++		{
++			name:          "session whose refresh replaced the token of the cookie at the end of the lifetime",
++			storedToken:   rotatedToken,
++			replaced:      hashOf(testRefreshToken),
++			replacedAgo:   new(replacedRefreshTokenLifetime - time.Second),
++			expected:      rotatedToken,
++			expectedStale: true,
++		},
++		{
++			// Two copies of one cookie would otherwise take the tokens from each other after
++			// every refresh.
++			name:           "session whose refresh replaced the token of the cookie long ago",
++			storedToken:    rotatedToken,
++			replaced:       hashOf(testRefreshToken),
++			replacedAgo:    new(replacedRefreshTokenLifetime + time.Second),
++			expected:       testRefreshToken,
++			expectedStored: rotatedToken,
++		},
++		{
++			name:           "record without its time",
++			storedToken:    rotatedToken,
++			replaced:       hashOf(testRefreshToken),
++			expected:       testRefreshToken,
++			expectedStored: rotatedToken,
++		},
++		{
++			name:        "session with the token of the cookie",
++			storedToken: testRefreshToken,
++			replaced:    hashOf("older-refresh-token"),
++			replacedAgo: new(time.Duration(0)),
++			expected:    testRefreshToken,
++		},
++		{
++			// A provider that does not rotate the refresh token replaces nothing.
++			name:        "token that replaced itself",
++			storedToken: testRefreshToken,
++			replaced:    hashOf(testRefreshToken),
++			replacedAgo: new(time.Duration(0)),
++			expected:    testRefreshToken,
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			t.Parallel()
++
++			for _, encrypts := range []bool{false, true} {
++				manager := NewManager(sessiontests.NewMockStore(), testCookieOptions(encrypts))
++				req := saveSession(t, manager, httptest.NewRequest(http.MethodGet, "http://example.com/", nil), newSession())
++
++				// The store gets another session under the ticket of the cookie, as a refresh
++				// whose answer the browser did not get leaves it.
++				stored := newSession()
++				stored.RefreshToken = tt.storedToken
++				stored.ReplacedRefreshTokenHash = tt.replaced
++				if tt.replacedAgo != nil {
++					stored.ReplacedRefreshTokenAt = new(time.Now().Add(-*tt.replacedAgo))
++				}
++				require.NoError(t, manager.Save(httptest.NewRecorder(), req, stored))
++
++				loaded, err := manager.Load(req)
++				require.NoError(t, err)
++				assert.Equal(t, tt.expected, loaded.RefreshToken)
++				assert.Equal(t, tt.expectedStale, loaded.StaleCookie)
++				assert.Equal(t, tt.expectedStored, loaded.StoredRefreshToken)
++				if !tt.expectedStale {
++					continue
++				}
++
++				// Saving the session writes the cookie again, and the new cookie is not stale.
++				next := saveSession(t, manager, req, loaded)
++				again, err := manager.Load(next)
++				require.NoError(t, err)
++				assert.Equal(t, tt.expected, again.RefreshToken)
++				assert.False(t, again.StaleCookie)
++			}
++		})
++	}
++}
++
++// TestStoredRefreshTokenIsNotSaved checks that the stored token a loaded session carries apart is
++// never encoded: neither the store nor a cookie gets it.
++func TestStoredRefreshTokenIsNotSaved(t *testing.T) {
++	t.Parallel()
++
++	cipher, err := encryption.NewGCMCipher([]byte(strings.Repeat("k", 32)))
++	require.NoError(t, err)
++	session := newSession()
++	session.StoredRefreshToken = "rotated-refresh-token"
++
++	encoded, err := session.EncodeSessionState(cipher, false)
++	require.NoError(t, err)
++	decoded, err := sessionsapi.DecodeSessionState(encoded, cipher, false)
++	require.NoError(t, err)
++	assert.Empty(t, decoded.StoredRefreshToken)
++	assert.Equal(t, testRefreshToken, decoded.RefreshToken)
++}
 diff --git a/pkg/sessions/persistence/manager.go b/pkg/sessions/persistence/manager.go
-index 9652f015..dba570c0 100644
+index 9652f015..9fbaf071 100644
 --- a/pkg/sessions/persistence/manager.go
 +++ b/pkg/sessions/persistence/manager.go
 @@ -2,6 +2,7 @@ package persistence
@@ -1717,7 +3397,7 @@ index 9652f015..dba570c0 100644
  	if err != nil {
  		tckt, err = newTicket(m.Options)
  		if err != nil {
-@@ -55,23 +61,62 @@ func (m *Manager) Save(rw http.ResponseWriter, req *http.Request, s *sessions.Se
+@@ -55,23 +61,76 @@ func (m *Manager) Save(rw http.ResponseWriter, req *http.Request, s *sessions.Se
  // Load reads sessions.SessionState information from a session store. It will
  // use the session ticket from the http.Request's cookie.
  func (m *Manager) Load(req *http.Request) (*sessions.SessionState, error) {
@@ -1737,7 +3417,21 @@ index 9652f015..dba570c0 100644
 +	switch {
 +	case err == nil:
 +		// The cookie carries the latest refresh token: a refresh writes it into the cookie of
-+		// its response, and another replica may have rotated the token stored here.
++		// its response, and another replica may have rotated the token stored here. The one
++		// exception is a cookie with the very token the refresh of this session replaced, shortly
++		// after the refresh: its answer did not reach the browser yet, or the provider answered
++		// after the request was answered. Then the stored token is the valid one, and the cookie
++		// is written again.
++		if replacesRefreshToken(state, refreshToken) {
++			state.StaleCookie = true
++			return state, nil
++		}
++		// The stored token is dropped from the session, not from the provider: a cookie that
++		// came back too late after a refresh has the token that refresh replaced, and the grant
++		// goes on with the stored one.
++		if state.RefreshToken != refreshToken {
++			state.StoredRefreshToken = state.RefreshToken
++		}
 +		state.RefreshToken = refreshToken
 +		return state, nil
 +	case refreshToken == "" || !errors.Is(err, errLoadSessionState):
@@ -1846,7 +3540,7 @@ index 3e67daa3..ee34073c 100644
 +	})
  })
 diff --git a/pkg/sessions/persistence/ticket.go b/pkg/sessions/persistence/ticket.go
-index c955143a..552d0663 100644
+index c955143a..e2368225 100644
 --- a/pkg/sessions/persistence/ticket.go
 +++ b/pkg/sessions/persistence/ticket.go
 @@ -5,6 +5,7 @@ import (
@@ -1857,7 +3551,7 @@ index c955143a..552d0663 100644
  	"errors"
  	"fmt"
  	"io"
-@@ -43,6 +44,16 @@ type ticket struct {
+@@ -43,6 +44,18 @@ type ticket struct {
  	options *options.Cookie
  }
  
@@ -1865,16 +3559,18 @@ index c955143a..552d0663 100644
 +var errLoadSessionState = errors.New("failed to load the session state with the ticket")
 +
 +// cookieRefreshToken is the value of the ticket cookie: the encoded ticket and the refresh token
-+// of the session, so that the session survives the loss of its data in the store.
++// of the session, so that the session survives the loss of its data in the store. The token is
++// either plain or, with --cookie-encrypt-refresh-token, encrypted; a cookie carries one of the two.
 +type cookieRefreshToken struct {
-+	Ticket       string `json:"Ticket"`
-+	RefreshToken string `json:"RefreshToken"`
++	Ticket                string `json:"Ticket"`
++	RefreshToken          string `json:"RefreshToken,omitempty"`
++	EncryptedRefreshToken string `json:"EncryptedRefreshToken,omitempty"`
 +}
 +
  // newTicket creates a new ticket. The ID & secret will be randomly created
  // with 16 byte sizes. The ID will be prefixed & hex encoded.
  func newTicket(cookieOpts *options.Cookie) (*ticket, error) {
-@@ -116,43 +127,49 @@ func decodeTicketSecret(ticketParts []string) ([]byte, error) {
+@@ -116,43 +129,59 @@ func decodeTicketSecret(ticketParts []string) ([]byte, error) {
  }
  
  // decodeTicket decodes an encoded ticket string
@@ -1885,6 +3581,16 @@ index c955143a..552d0663 100644
 +
 +	if err := json.Unmarshal([]byte(encTicket), &value); err != nil {
 +		return nil, "", fmt.Errorf("failed to unmarshal cookie: %w", err)
++	}
++
++	// A proxy reads both forms whatever its own flag is: the flag only chooses what it writes.
++	refreshToken := value.RefreshToken
++	if value.EncryptedRefreshToken != "" {
++		var err error
++		refreshToken, err = decryptRefreshToken(value.EncryptedRefreshToken, cookieOpts)
++		if err != nil {
++			return nil, "", fmt.Errorf("failed to decode ticket: %w", err)
++		}
 +	}
 +
 +	ticketParts := strings.Split(value.Ticket, ".")
@@ -1907,7 +3613,7 @@ index c955143a..552d0663 100644
  		secret:  secret,
  		options: cookieOpts,
 -	}, nil
-+	}, value.RefreshToken, nil
++	}, refreshToken, nil
  }
  
  // decodeTicketFromRequest retrieves a potential ticket cookie from a request
@@ -1934,7 +3640,7 @@ index c955143a..552d0663 100644
  	}
  
  	// Valid cookie, decode the ticket
-@@ -180,7 +197,7 @@ func (t *ticket) saveSession(s *sessions.SessionState, saver saveFunc) error {
+@@ -180,7 +209,7 @@ func (t *ticket) saveSession(s *sessions.SessionState, saver saveFunc) error {
  func (t *ticket) loadSession(loader loadFunc, initLock initLockFunc) (*sessions.SessionState, error) {
  	ciphertext, err := loader(t.id)
  	if err != nil {
@@ -1943,13 +3649,20 @@ index c955143a..552d0663 100644
  	}
  	c, err := t.makeCipher()
  	if err != nil {
-@@ -204,9 +221,20 @@ func (t *ticket) clearSession(clearer clearFunc) error {
+@@ -204,9 +233,27 @@ func (t *ticket) clearSession(clearer clearFunc) error {
  
  // setCookie sets the encoded ticket as a cookie
  func (t *ticket) setCookie(rw http.ResponseWriter, req *http.Request, s *sessions.SessionState) error {
 +	value := cookieRefreshToken{
 +		Ticket:       t.encodeTicket(),
 +		RefreshToken: s.RefreshToken,
++	}
++	if t.options.EncryptRefreshToken && s.RefreshToken != "" {
++		encrypted, err := encryptRefreshToken(s.RefreshToken, t.options)
++		if err != nil {
++			return err
++		}
++		value.RefreshToken, value.EncryptedRefreshToken = "", encrypted
 +	}
 +
 +	// The cookie carries the refresh token on purpose; makeCookie signs the value.

@@ -7,7 +7,8 @@ spec:
     An application behind ingress-nginx is protected by a DexAuthenticator. An anonymous request
     is redirected to sign in, the user signs in to Dex with a password, and the session cookie set
     by the authenticator lets requests reach the application, which receives the user email in the
-    X-Auth-Request-Email header. The case needs an IngressNginxController and fails with an
+    X-Auth-Request-Email header. The authenticator logs the host of the application for a request
+    that carries a forged X-Forwarded-Host. The case needs an IngressNginxController and fails with an
     explicit message when the cluster has none.
   concurrent: false
 
@@ -152,4 +153,7 @@ spec:
             shell: bash
             shellArgs: ["-c"]
             timeout: 8m
+            env:
+              - name: NS
+                value: ($namespace)
             content: bash scripts/flow.sh

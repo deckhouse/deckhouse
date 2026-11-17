@@ -11,9 +11,10 @@ into the image. To run them, apply the patches to a clone of the tag and run `go
 
 ### 002-cookie-refresh.patch
 
-- **Zone:** the session ticket cookie and the persistent session store (`pkg/sessions/persistence`); the stored
-  session loader when a refresh cannot be made now (`pkg/middleware`) and the answers of the handlers to it; the
-  ticket of a new sign-in (`OAuthCallback`, `SignIn`).
+- **Zone:** the session ticket cookie and the persistent session store (`pkg/sessions/persistence`), the refresh token
+  in the cookie included (`--cookie-encrypt-refresh-token`); the stored session loader when a refresh cannot be made
+  now or is answered late (`pkg/middleware`) and the answers of the handlers to it; the ticket of a new sign-in
+  (`OAuthCallback`, `SignIn`).
 - **Consumer in Deckhouse:** every DexAuthenticator. Redis is a sidecar of the pod without a disk, so a restart of the
   pod or a request to another replica finds no session data.
 - **What it does:** the session cookie carries the session ticket and the refresh token as JSON. When the store has
@@ -52,10 +53,44 @@ into the image. To run them, apply the patches to a clone of the tag and run `go
     upstream, and is released even when the client has hung up. With 2 seconds the lock expired in the middle of a
     refresh through a loaded dex, the next request of the session took it and refreshed the same token again, and the
     first holder logged `unable to release lock`. A request that waits for the lock gets the session the holder
-    refreshed, or the 503 above once its own 5 seconds run out; it never refreshes the session a second time. A
-    refresh dex completes after the deadline is lost: the next one presents the old token, which dex takes within its
-    reuse interval. After a refresh dex did not answer, the stub, which has no ID token, is not verified, so its
-    failure no longer logs `malformed jwt`.
+    refreshed, or the 503 above once its own 5 seconds run out; it never refreshes the session a second time. After
+    a refresh dex did not answer, the stub, which has no ID token, is not verified, so its failure no longer logs
+    `malformed jwt`.
+  - A refresh dex completes after the deadline is not lost. The deadline ends the wait of the request, not the
+    refresh: the request is answered 503 as above, and the refresh goes on for up to 60 seconds from its start,
+    holding the lock of the session, so the other requests of the session wait for the lock and present no token
+    that is being replaced. A slow dex, as opposed to one that is down, completes the refresh and rotates the refresh
+    token, and the answer used to be dropped with the request: the browser kept a cookie with a token dex had
+    replaced, and the user had to sign in again. Now the answer is saved in the store together with the SHA-256 of
+    the token it replaced. A refresh that fails after the deadline changes nothing and is left to the next request,
+    which has a browser to answer. A session that was in the store when the refresh started and is gone when dex
+    answers was ended meanwhile, by a sign-out for one, and the answer is dropped. The refresh revokes nothing: the
+    store cannot tell a sign-out from data it lost or cannot read, and a session the store lost is restored from
+    its cookie, whose refresh token dex still accepts. The sign-out revokes the token of the cookie itself (patch
+    011), also when the lock of the refresh kept the session from it.
+  - Which refresh token a loaded session gets: the one of the cookie, since another replica may have rotated the
+    token stored here, unless the stored session says its refresh replaced exactly the token of the cookie. Then the
+    cookie is behind the session: the answer with the new cookie did not reach the browser, or dex answered after the
+    deadline. The stored token is used, and the answer of the request writes the cookie again, under the lock of
+    the session and with the session loaded under it, so that the write does not put back the tokens a refresh of
+    another request has just replaced. Every refresh records the token it replaced and the time of the answer, so
+    a browser that dropped the answer of a refresh is not signed out either. The record is made only when dex has
+    issued another token, and it counts for 2 minutes after the answer of the refresh: the requests the browser
+    sent before the new cookie reached it, and its first request after a late refresh, whose answer comes at most
+    a minute after the start of the refresh. A cookie that comes back later keeps its own token, and the next
+    refresh of the session presents that token to dex. The session keeps the token of the store apart, in memory
+    only, so that a sign-out revokes it as well (patch 011): the grant goes on with that token, and a copy of the
+    cookie that made the refresh carries it. A record written before the time was kept does not count.
+  - Limits of the above. The record lives in the store that made the refresh, and the Redis of a pod is its own: a
+    request that reaches another replica of the same DexAuthenticator finds no record and presents the token of the
+    cookie. One replaced token is remembered, so a cookie that missed two refreshes in a row is not recognised. The
+    stub of a session restored from the cookie has nothing in the store to compare with, so a sign-out during its
+    late refresh is not noticed, and the answer is saved under a ticket the browser no longer has. A sign-out that
+    clears the session after the late refresh has checked the store and before it has saved the answer is not
+    noticed either: the check and the save are two calls to Redis, and the clear of the sign-out takes no lock. The
+    sign-out has revoked the grant in both cases, so the saved tokens are refused at their next refresh. A store
+    that loses a session while dex rotates its token late drops the answer as after a sign-out: the cookie keeps the
+    token the refresh replaced, and the next refresh of the session presents it to dex.
   - Behind ingress-nginx a 503 of the auth subrequest is neither 401 nor 403, so ingress-nginx does not redirect to
     the sign-in page: it answers its own 500 page and does not pass `Retry-After` on. The user reloads the page once
     dex is back and is still signed in, or, past the period above, is sent to sign in.
@@ -65,13 +100,28 @@ into the image. To run them, apply the patches to a clone of the tag and run `go
 - **New sign-in:** the session of a new sign-in is saved under a new ticket, not under the ticket of the cookie the
   browser still has. Another replica that keeps the previous session under the old ticket in its Redis would
   otherwise serve the previous identity, `sid` and generation until its next refresh, up to `--cookie-refresh`.
+- **Refresh token in the cookie:** with `--cookie-encrypt-refresh-token` the cookie carries the refresh token
+  encrypted: AES-256-GCM with a key derived from the cookie secret by HKDF-SHA256, so the key differs from the one
+  that signs the cookie. The value has the `EncryptedRefreshToken` field instead of `RefreshToken`. A proxy reads both forms whatever its flag is, and the flag only chooses the form
+  it writes: a cookie written before the flag was set keeps working and is replaced by the next refresh of its
+  session. A proxy with another cookie secret, or one built without this change, cannot read the encrypted token and
+  refuses the cookie. An encrypted token that cannot be decrypted is an error, not a session without a refresh
+  token. The module does not set the flag yet.
 - **Ticket format:** oauth2-proxy 7.6.0 and later write the ticket as `v2.<id>.<secret>`. They read the older
   `<id>.<secret>` too, but the older proxies cannot read the new format, so an upgrade from 7.5.1 logs out the users
   that reach an old replica with a cookie of a new one, once.
 - **Security:** sign-out does not invalidate a previously issued cookie. A copy of the cookie restores the session
   while the refresh token in it is valid in dex and the cookie has not expired (`--cookie-expire`, set from
-  `keepUsersLoggedInFor`). The cookie is signed, not encrypted. Patch 011 revokes the refresh token in dex on
-  sign-out, and patch 010 refuses the stub of a revoked grant before it reaches dex.
+  `keepUsersLoggedInFor`). The one exception is the record of the replaced token above: for 2 minutes after the
+  answer of a refresh, a copy that carries the token this refresh replaced gets the tokens of the stored session
+  and a new cookie, though its own token has been replaced. A copy that comes later keeps its replaced token and
+  presents it at the next refresh, where a provider that refuses a replaced refresh token ends the session of that
+  copy, as before the record. Two copies of one cookie thus keep each other signed in only while one of them comes
+  within 2 minutes after every refresh the other makes, as the requests of one browser do. The cookie is signed; its
+  refresh token is plain unless `--cookie-encrypt-refresh-token` is set, and the ticket secret in it is always plain.
+  Patch 011 revokes the refresh token in dex on sign-out, the token of the store as well when the cookie carries
+  another one, and the token of the cookie also when a late refresh holds the lock of the session; patch 010
+  refuses the stub of a revoked grant before it reaches dex.
 - **Upstream:** <https://github.com/oauth2-proxy/oauth2-proxy/pull/313>, closed without merge. Needed until the
   sessions move to a shared store.
 
@@ -188,8 +238,15 @@ The security events of `templates/security-events.yaml` are built from these lin
   (`--provider-ca-file`). Dex revokes the grant and the revocation feed tells the other replicas, so a copy of the
   cookie no longer restores the session. Any failure is a warning; the session is cleared anyway. The address
   comes from the flag only, the sign-out redirect does not change it. Without `--revocation-url` nothing changes.
+  When the cookie carries another refresh token than the session in the store, as a cookie that came back long
+  after a refresh it missed does (patch 002), the token of the store is revoked too, in a request of its own: the
+  grant goes on with it, and a copy of the cookie may carry it. Equal tokens are revoked once.
+  A sign-out the stored session loader gives no session, as while a late refresh of patch 002 holds the lock of
+  the session, loads the session from the store without the lock: the session of the store, or the stub of the
+  cookie when the store has none, carries the token of the cookie, and that token is revoked. The late refresh
+  revokes nothing.
 - **Upstream:** not proposed.
-- **Depends on:** 009 (the sign-out of a session without an ID token).
+- **Depends on:** 002 (the late refresh), 009 (the sign-out of a session without an ID token).
 
 ### 012-sign-out-through-the-provider.patch
 
@@ -288,6 +345,40 @@ The security events of `templates/security-events.yaml` are built from these lin
   read.
 - **Upstream:** not proposed.
 - **Order:** after 014; it adds one line to `errorPageTo`, the error page of 014.
+
+### 016-auth-request-host.patch
+
+- **Zone:** the host of an auth subrequest (`pkg/middleware`, the first step of the request chain) and the parsing
+  of `X-Original-URL` (`pkg/requests/util`).
+- **Consumer in Deckhouse:** every DexAuthenticator behind ingress-nginx; the log collection and the security events
+  of `templates/security-events.yaml`, which take the host of an event from the log.
+- **Why:** the proxy runs with `--reverse-proxy` and takes the host of a request from `X-Forwarded-Host`. On the auth
+  subrequest ingress-nginx sets `Host` to the Service of the authenticator and `X-Original-URL` to the request being
+  authorized, and passes `X-Forwarded-Host` on as the browser sent it. A client could thus write any host into the
+  request log, the auth log and the security events of its requests. Access was not affected: the session and the
+  signature of the cookie do not depend on the host.
+- **What it does:** on the exact path `<proxy prefix>/auth` a request with `X-Original-URL` and without
+  `X-Forwarded-Proto` gets `X-Forwarded-Host` rewritten to the host of its `X-Original-URL`. That pair of headers
+  is the subrequest of ingress-nginx: it builds `X-Original-URL` from the `Host` header of the request, by which
+  it chooses the server (see the limits for the one case where it does not), overwriting whatever the browser sent
+  under this name, and removes `X-Forwarded-Proto` from the subrequest; on the
+  route of an application it sets `X-Forwarded-Proto` and `X-Forwarded-Host` itself. So a request with
+  `X-Forwarded-Proto` came through a route and is left as it is, with the `X-Original-URL` of the browser ignored.
+- **Parsing:** the header must be there once and start with `http://` or `https://`; the host is what stands before
+  the first slash, a DNS name of letters, digits, hyphens and dots with an optional numeric port, written in lower
+  case, without a trailing dot and without the default port of the scheme. It is not parsed as a URL on purpose: for
+  `b.example.com:443@w.example.com` nginx serves `b.example.com`, and a URL parser answers `w.example.com`. Anything
+  else, an address in brackets included, names no host: `X-Forwarded-Host` is then removed, and the host of the
+  request is its `Host` header, the Service of the authenticator.
+- **Limits:** a request that reaches the Service of the authenticator from inside the cluster, not through the
+  ingress controller, names its headers itself, as before. The check of another ingress controller, which carries no
+  `X-Original-URL`, is left as it came. A request with an absolute URI in its request line
+  (`GET https://app.example.com/x HTTP/1.1` with `Host: other.example.com`) still names its host itself: nginx
+  chooses the server by the host of the request line, and ingress-nginx builds `X-Original-URL` from `$http_host`,
+  the `Host` header as it came. The logs and the security events of such a request carry the host of the header,
+  not the one nginx served; access is not affected. Closing it takes `$host` in the auth subrequest, which is set
+  where the Ingress of the application is written, not in the proxy.
+- **Upstream:** not proposed.
 
 ### 998-fix-cve.patch
 

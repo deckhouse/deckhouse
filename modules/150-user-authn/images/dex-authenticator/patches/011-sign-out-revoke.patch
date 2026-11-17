@@ -1,24 +1,28 @@
 diff --git a/deckhouse_sign_out_revoke_test.go b/deckhouse_sign_out_revoke_test.go
 new file mode 100644
-index 00000000..a178b1ad
+index 00000000..58b652ff
 --- /dev/null
 +++ b/deckhouse_sign_out_revoke_test.go
-@@ -0,0 +1,288 @@
+@@ -0,0 +1,456 @@
 +package main
 +
 +import (
 +	"bytes"
++	"crypto/sha256"
 +	"encoding/base64"
 +	"encoding/pem"
++	"maps"
 +	"net/http"
 +	"net/http/httptest"
 +	"net/url"
 +	"os"
 +	"path/filepath"
++	"slices"
 +	"sync"
 +	"testing"
 +	"time"
 +
++	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 +	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 +	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 +	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
@@ -292,8 +296,172 @@ index 00000000..a178b1ad
 +		assert.Contains(t, output.String(), "certificate signed by unknown authority")
 +	})
 +}
++
++// TestSignOutWithoutTheSessionOfTheLoader checks a sign-out the stored session loader gave no
++// session, as when a late refresh of the session holds its lock (patch 002): the sign-out loads the
++// session from the store and revokes the refresh token of the cookie, so the grant ends whatever
++// the late refresh does with its answer. A store that has lost the session gives the stub of the
++// cookie, which carries the same token.
++func TestSignOutWithoutTheSessionOfTheLoader(t *testing.T) {
++	for _, isLost := range []bool{false, true} {
++		name := "session in the store"
++		if isLost {
++			name = "session the store has lost"
++		}
++		t.Run(name, func(t *testing.T) {
++			dex := newFakeDex(t)
++			replica := newDeckhouseReplica(t, dex, time.Hour)
++			replica.provider.Data().ClientID = clientID
++			replica.provider.Data().ClientSecret = clientSecret
++			provider := &strictRevocation{valid: map[string]bool{"refresh-token-1": true}}
++			server := httptest.NewServer(http.HandlerFunc(provider.handler))
++			t.Cleanup(server.Close)
++			replica.revocationURL = server.URL + "/token/revoke"
++
++			// The sign-in issues refresh-token-1, which the cookie carries.
++			cookie := signInThroughDex(t, replica)
++			req := httptest.NewRequest(http.MethodGet, "/oauth2/sign_out", nil)
++			req.AddCookie(cookie)
++			if isLost {
++				require.NoError(t, replica.sessionStore.Clear(httptest.NewRecorder(), req))
++				req = httptest.NewRequest(http.MethodGet, "/oauth2/sign_out", nil)
++				req.AddCookie(cookie)
++			}
++			req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{SessionUnavailable: true})
++
++			replica.revokeRefreshToken(req)
++
++			valid, revoked := provider.state()
++			assert.Equal(t, []string{"refresh-token-1"}, revoked)
++			assert.Empty(t, valid, "the grant ends at the provider")
++		})
++	}
++}
++
++// TestSignOutWithoutACookieRevokesNothing checks that a sign-out without a session and without a
++// cookie to load one from makes no revocation.
++func TestSignOutWithoutACookieRevokesNothing(t *testing.T) {
++	endpoint := &revokeEndpoint{}
++	server := httptest.NewServer(endpoint.handler(answerOK))
++	t.Cleanup(server.Close)
++
++	dex := newFakeDex(t)
++	replica := newDeckhouseReplica(t, dex, time.Hour)
++	replica.revocationURL = server.URL + "/token/revoke"
++	req := middlewareapi.AddRequestScope(httptest.NewRequest(http.MethodGet, "/oauth2/sign_out", nil), &middlewareapi.RequestScope{})
++
++	replica.revokeRefreshToken(req)
++
++	assert.Zero(t, endpoint.calls())
++}
++
++// strictRevocation is the refresh tokens of a provider that refuses a replaced refresh token: each
++// grant has one valid token, and revoking it ends the grant. Its handler is the token revocation
++// endpoint.
++type strictRevocation struct {
++	mu      sync.Mutex
++	valid   map[string]bool
++	revoked []string
++}
++
++func (s *strictRevocation) handler(w http.ResponseWriter, r *http.Request) {
++	if err := r.ParseForm(); err != nil {
++		http.Error(w, err.Error(), http.StatusBadRequest)
++		return
++	}
++	s.mu.Lock()
++	token := r.PostForm.Get("token")
++	s.revoked = append(s.revoked, token)
++	delete(s.valid, token)
++	s.mu.Unlock()
++	answerOK(w, r)
++}
++
++func (s *strictRevocation) state() (valid, revoked []string) {
++	s.mu.Lock()
++	defer s.mu.Unlock()
++	return slices.Sorted(maps.Keys(s.valid)), slices.Clone(s.revoked)
++}
++
++// TestSignOutRevokesTheStoredToken checks the sign-out of a browser whose cookie is one refresh
++// behind the session in the store (patch 002): it missed the answer of that refresh, or a copy of
++// the cookie made the refresh and holds the new token. Past the lifetime of the record of the
++// replaced token the session goes on with the token of the cookie, which the refresh replaced, and
++// the sign-out revokes the stored token as well, so the grant that goes on with it ends. Within the
++// lifetime the session has the stored token, and the sign-out revokes it once.
++func TestSignOutRevokesTheStoredToken(t *testing.T) {
++	tests := []struct {
++		name            string
++		refreshedAgo    time.Duration
++		storedToken     string
++		expectedRevoked []string
++	}{
++		{
++			name:            "cookie behind the store, past the lifetime of the record",
++			refreshedAgo:    3 * time.Minute,
++			storedToken:     "refresh-token-2",
++			expectedRevoked: []string{"refresh-token-1", "refresh-token-2"},
++		},
++		{
++			name:            "cookie behind the store, within the lifetime of the record",
++			refreshedAgo:    time.Minute,
++			storedToken:     "refresh-token-2",
++			expectedRevoked: []string{"refresh-token-2"},
++		},
++		{
++			name:            "cookie with the token of the store",
++			refreshedAgo:    3 * time.Minute,
++			storedToken:     "refresh-token-1",
++			expectedRevoked: []string{"refresh-token-1"},
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			dex := newFakeDex(t)
++			// No refresh during the test: the tokens are what the test puts into the store.
++			replica := newDeckhouseReplica(t, dex, time.Hour)
++			replica.provider.Data().ClientID = clientID
++			replica.provider.Data().ClientSecret = clientSecret
++			provider := &strictRevocation{valid: map[string]bool{tt.storedToken: true}}
++			server := httptest.NewServer(http.HandlerFunc(provider.handler))
++			t.Cleanup(server.Close)
++			replica.revocationURL = server.URL + "/token/revoke"
++
++			// The sign-in issues refresh-token-1, which the browser keeps.
++			cookie := signInThroughDex(t, replica)
++
++			// A refresh made through the same ticket leaves the store with the session of
++			// storedToken, a refresh that replaced refresh-token-1 refreshedAgo, and writes the
++			// cookie of a copy.
++			req := httptest.NewRequest(http.MethodGet, "/", nil)
++			req.AddCookie(cookie)
++			stored, err := replica.sessionStore.Load(req)
++			require.NoError(t, err)
++			refreshedAt := time.Now().Add(-tt.refreshedAgo)
++			replaced := sha256.Sum256([]byte("refresh-token-1"))
++			stored.CreatedAt = &refreshedAt
++			stored.RefreshToken = tt.storedToken
++			stored.ReplacedRefreshTokenHash = replaced[:]
++			stored.ReplacedRefreshTokenAt = &refreshedAt
++			require.NoError(t, replica.sessionStore.Save(httptest.NewRecorder(), req, stored))
++
++			rw := serveWithCookie(replica, "/oauth2/sign_out", cookie)
++
++			// Within the lifetime the loader writes the cookie of the stored session again
++			// before the sign-out clears it; the browser keeps the last one.
++			assert.Equal(t, http.StatusFound, rw.Code)
++			set := rw.Result().Cookies()
++			require.NotEmpty(t, set)
++			assert.Empty(t, set[len(set)-1].Value, "the session cookie is cleared")
++			valid, revoked := provider.state()
++			assert.Equal(t, tt.expectedRevoked, revoked)
++			assert.Empty(t, valid, "the grant ends at the provider")
++		})
++	}
++}
 diff --git a/oauthproxy.go b/oauthproxy.go
-index f402d13b..d085c931 100644
+index f402d13b..6eab97af 100644
 --- a/oauthproxy.go
 +++ b/oauthproxy.go
 @@ -36,6 +36,7 @@ import (
@@ -329,44 +497,72 @@ index f402d13b..d085c931 100644
  	err = p.ClearSessionCookie(rw, req)
  	if err != nil {
  		logger.Errorf("Error clearing session cookie: %v", err)
-@@ -914,6 +919,63 @@ func (p *OAuthProxy) replaceIDTokenPlaceholder(rw http.ResponseWriter, req *http
+@@ -914,6 +919,91 @@ func (p *OAuthProxy) replaceIDTokenPlaceholder(rw http.ResponseWriter, req *http
  	return fallback
  }
  
 +// revocationTimeout bounds the call to the token revocation endpoint on sign-out.
 +const revocationTimeout = 3 * time.Second
 +
-+// revokeRefreshToken revokes the refresh token of the session at the token revocation endpoint of the
-+// provider (RFC 7009, --revocation-url) before the session is cleared: a copy of the session cookie
-+// carries the refresh token and would restore the session with it. A failure is logged as a warning and
-+// the sign-out goes on, the session is cleared anyway.
++// revokeRefreshToken revokes the refresh token of the session, and the one in the store when the cookie
++// carries another, at the token revocation endpoint of the provider (RFC 7009, --revocation-url) before
++// the session is cleared: a copy of the session cookie carries the refresh token and would restore the
++// session with it. A failure is logged as a warning and the sign-out goes on, the session is cleared
++// anyway.
++//
++// A sign-out the stored session loader gave no session, as when a late refresh of the session holds
++// its lock (patch 002), loads it from the store without the lock: the session of the store, or the
++// stub of the cookie, carries the refresh token of the cookie. The late refresh revokes nothing, so
++// the sign-out ends the grant here, whatever that refresh does with its answer.
 +func (p *OAuthProxy) revokeRefreshToken(req *http.Request) {
 +	if p.revocationURL == "" {
 +		return
 +	}
 +	scope := middlewareapi.GetRequestScope(req)
-+	if scope == nil || scope.Session == nil || scope.Session.RefreshToken == "" {
++	if scope == nil {
 +		return
 +	}
++	session := scope.Session
++	if session == nil {
++		loaded, err := p.sessionStore.Load(req)
++		if err != nil || loaded == nil {
++			return
++		}
++		session = loaded
++	}
 +
-+	providerData := p.provider.Data()
++	// The revocation outlives a browser that goes away after the sign-out request.
++	ctx := context.WithoutCancel(req.Context())
++	if session.RefreshToken != "" {
++		revokeToken(ctx, p.revocationURL, p.provider.Data(), session.RefreshToken)
++	}
++	// A cookie that came back long after a refresh it missed keeps the token that refresh replaced,
++	// and the grant goes on with the token in the store (patch 002), which a copy of the cookie may
++	// carry: the sign-out ends that grant too.
++	if session.StoredRefreshToken != "" && session.StoredRefreshToken != session.RefreshToken {
++		revokeToken(ctx, p.revocationURL, p.provider.Data(), session.StoredRefreshToken)
++	}
++}
++
++// revokeToken revokes a refresh token at the token revocation endpoint of the provider. A failure is
++// logged as a warning.
++func revokeToken(ctx context.Context, revocationURL string, providerData *providers.ProviderData, refreshToken string) {
 +	clientSecret, err := providerData.GetClientSecret()
 +	if err != nil {
 +		logger.Printf("WARNING: Could not revoke the refresh token of the session: %v", err)
 +		return
 +	}
 +
-+	// The revocation outlives a browser that goes away after the sign-out request.
-+	ctx, cancel := context.WithTimeout(context.WithoutCancel(req.Context()), revocationTimeout)
++	ctx, cancel := context.WithTimeout(ctx, revocationTimeout)
 +	defer cancel()
 +
 +	// The client credentials are URL-encoded as for the token endpoint (RFC 6749, section 2.3.1).
 +	credentials := url.QueryEscape(providerData.ClientID) + ":" + url.QueryEscape(clientSecret)
 +	form := url.Values{
-+		"token":           {scope.Session.RefreshToken},
++		"token":           {refreshToken},
 +		"token_type_hint": {"refresh_token"},
 +	}
-+	result := requests.New(p.revocationURL).
++	result := requests.New(revocationURL).
 +		WithContext(ctx).
 +		WithMethod(http.MethodPost).
 +		WithBody(strings.NewReader(form.Encode())).
