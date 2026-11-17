@@ -17,7 +17,7 @@ require (
 	github.com/go-openapi/spec v0.22.9
 	github.com/gojuno/minimock/v3 v3.4.7
 	github.com/google/go-cmp v0.7.0
-	github.com/google/go-containerregistry v0.21.4 // v0.21.4-v0.21.6 issues: realm handling fixed in v0.21.6 (https://github.com/google/go-containerregistry/pull/2243), but pull hang introduced in this version and still not fixed (https://github.com/google/go-containerregistry/issues/2341).
+	github.com/google/go-containerregistry v0.21.4 // replaced with v0.21.3, see the replace below
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/iancoleman/strcase v0.3.0
@@ -115,6 +115,7 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/controlplane v0.0.0-00010101000000-000000000000 // indirect
 	github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol v0.0.0-00010101000000-000000000000 // indirect
 	github.com/deckhouse/lib-gossh v0.3.0 // indirect
+	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fluxcd/cli-utils v0.37.2-flux.1 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.2 // indirect
@@ -383,6 +384,12 @@ replace github.com/docker/cli => github.com/docker/cli v28.3.3+incompatible
 replace github.com/deckhouse/deckhouse/go_lib/controlplane => ./go_lib/controlplane
 
 replace github.com/deckhouse/deckhouse/pkg/deckhouse-registry => ./pkg/deckhouse-registry
+
+// v0.21.4+ rejects a bearer realm on a private or link-local IP
+// (https://github.com/google/go-containerregistry/pull/2243), v0.21.6+ accepts
+// it only on the registry's own host:port, which breaks registries on private
+// IPs. Dependencies require v0.21.4, so only a replace holds the version.
+replace github.com/google/go-containerregistry => github.com/google/go-containerregistry v0.21.3
 
 // Image sources under this tree are built inside third-party source trees
 // (see werf.inc.yaml) and are hidden from build/lint by build tags. go mod
