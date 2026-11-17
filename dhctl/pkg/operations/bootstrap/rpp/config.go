@@ -16,6 +16,7 @@ package rpp
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
@@ -38,7 +39,11 @@ func NewClientConfigGetter(config registry_config.Data) *ClientConfigGetter {
 	}
 }
 
-func (r *ClientConfigGetter) Get(_ string) (*registry.ClientConfig, error) {
+func (r *ClientConfigGetter) Get(repository string) (*registry.ClientConfig, error) {
+	if repository != registry.DefaultRepository {
+		return nil, fmt.Errorf("registry config for repository %q is not available during bootstrap", repository)
+	}
+
 	return &r.ClientConfig, nil
 }
 

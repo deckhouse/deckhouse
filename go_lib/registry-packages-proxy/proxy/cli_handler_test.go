@@ -253,8 +253,9 @@ func (f *fakeCLIRegistryClient) GetRawManifest(_ context.Context, _ pkgLog.Logge
 }
 
 type fakeCLIGetter struct {
-	cfg *registry.ClientConfig
-	err error
+	cfg     *registry.ClientConfig
+	err     error
+	configs map[string]*registry.ClientConfig
 
 	// packagesCfgs maps PackageRepository name -> resolved packages config.
 	// Tests that don't care about the /v1/packages/* path can leave this nil
@@ -264,9 +265,18 @@ type fakeCLIGetter struct {
 	defaultPkgFound bool // when true, missing keys still resolve to default
 }
 
-func (g *fakeCLIGetter) Get(_ string) (*registry.ClientConfig, error) {
+func (g *fakeCLIGetter) Get(repository string) (*registry.ClientConfig, error) {
 	if g.err != nil {
 		return nil, g.err
+	}
+
+	if g.configs != nil {
+		cfg, ok := g.configs[repository]
+		if !ok {
+			return nil, errors.New("repository not found")
+		}
+
+		return cfg, nil
 	}
 	if g.cfg != nil {
 		return g.cfg, nil

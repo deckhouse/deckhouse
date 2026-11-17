@@ -21,6 +21,10 @@ type ClientConfig struct {
 	Auth       string
 	SignCheck  bool
 
+	// SkipSignatureCheck permits unsigned ModuleSource packages when global verification is enabled.
+	// Getters must leave it false for the Deckhouse registry and its aliases.
+	SkipSignatureCheck bool
+
 	// FlattenLayers selects which OCI image bytes are returned by
 	// Client.GetPackage:
 	//
