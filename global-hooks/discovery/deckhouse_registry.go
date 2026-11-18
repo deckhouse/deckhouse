@@ -262,6 +262,20 @@ func discoveryDeckhouseRegistry(ctx context.Context, input *go_hook.HookInput, d
 		return setRegistryValues(input, inClusterRegistry(), published)
 	}
 
+	// The in-cluster address in the secret with nothing published is a cluster still pulling through
+	// the previous implementation of the registry module: 1.77 writes that address too, and the nodes
+	// reach it through a containerd drop-in that carries the upstream's account. Nothing on a node has
+	// an account for the upstream itself, so taking it from the resource here re-renders every static
+	// pod — etcd first — onto a host the kubelet cannot pull from, and the control plane does not come
+	// back. The secret stays the source until the module publishes the address; the drain points it at
+	// the upstream itself when the module leaves the pull path.
+	if fromSecret && registrySecretRaw.Address == registry_const.Host {
+		input.Logger.Info("the cluster still pulls through the in-cluster address of the previous implementation, "+
+			"so the registry is taken from the secret",
+			slog.String("address", registrySecretRaw.Address+registrySecretRaw.Path))
+		return setRegistryValues(input, registrySecretRaw, registrySecretRaw.Address+registrySecretRaw.Path)
+	}
+
 	resolvedFromResource, err := resolvedUpstream(ctx, dc)
 	if err != nil {
 		return err

@@ -93,6 +93,21 @@ data:
   path: L2RlY2tob3VzZQ==            # /deckhouse
 `
 
+		stateLegacyInClusterSecret = `
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: deckhouse-registry
+  namespace: d8-system
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: eHl6Cg==
+  scheme: aHR0cHM=                                  # https
+  address: cmVnaXN0cnkuZDgtc3lzdGVtLnN2Yzo1MDAx     # registry.d8-system.svc:5001
+  path: L3N5c3RlbS9kZWNraG91c2U=                    # /system/deckhouse
+`
+
 		statePublishedImageAddress = `
 ---
 apiVersion: v1
@@ -225,7 +240,7 @@ spec:
 	// whose registry has moved it names where the registry used to be, with that registry's account.
 	Context("The registry module has a resolved configuration and the secret is stale", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateDeckhouseRegistrySecret + stateRegistryConfigResource))
+			f.BindingContexts.Set(f.KubeStateSet(stateDeckhouseRegistrySecret + "\n---\n" + stateRegistryConfigResource))
 			f.RunHook()
 		})
 
@@ -240,6 +255,26 @@ spec:
 			raw, err := base64.StdEncoding.DecodeString(f.ValuesGet("global.modulesImages.registry.dockercfg").String())
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(string(raw)).To(ContainSubstring("dev-registry.deckhouse.io"))
+		})
+	})
+
+	// An upgrade from 1.77 with the registry module in Direct: the secret names the in-cluster address,
+	// the module already renders its resolved configuration, and the node agents have not applied
+	// their layout yet. The nodes reach only the in-cluster address, so the static control-plane pods
+	// must keep naming it; the upstream from the resource is a host they have no account for.
+	Context("The secret names the in-cluster address and nothing has been published", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateLegacyInClusterSecret + "\n---\n" + stateRegistryConfigResource))
+			f.RunHook()
+		})
+
+		It("keeps the in-cluster address from the secret, not the upstream from the resource", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.modulesImages.registry.base").String()).
+				To(Equal("registry.d8-system.svc:5001/system/deckhouse"))
+			Expect(f.ValuesGet("global.modulesImages.registry.address").String()).To(Equal("registry.d8-system.svc:5001"))
+			Expect(f.ValuesGet("global.modulesImages.registry.path").String()).To(Equal("/system/deckhouse"))
+			Expect(f.ValuesGet("global.modulesImages.registry.dockercfg").String()).To(Equal("eHl6Cg=="))
 		})
 	})
 
