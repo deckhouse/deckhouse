@@ -30,7 +30,7 @@ import (
 )
 
 // DefaultBlockOnAlertsSeverity is the default of update.blockOnAlerts.severity in the deckhouse
-// settings, in global.applications.update and in the Application spec alike.
+// settings.
 const DefaultBlockOnAlertsSeverity = 4
 
 // DeckhouseSettings is an openapi spec for deckhouse settings, it's not a part of DeckhouseReleaseSpec but rather

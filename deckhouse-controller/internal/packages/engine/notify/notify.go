@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package notify sends the update notifications of packages to the webhook of the notification
-// settings (applications.update.notification); the package Reconciler decides when.
+// settings (update.notification of the deckhouse module); the package Reconciler decides when.
 package notify
 
 import (

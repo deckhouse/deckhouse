@@ -22,7 +22,6 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/core"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 )
 
@@ -53,10 +52,9 @@ type statusSink struct {
 	seen        map[string]struct{}
 	maintenance map[string]struct{}
 
-	settingsWake chan struct{} // settingsWake: deckhouse or global may have new settings.
-	// deckhouseSettings and globalSettings hold the latest settings; never closed.
+	settingsWake chan struct{} // settingsWake: deckhouse may have new settings.
+	// deckhouseSettings holds the latest settings; never closed.
 	deckhouseSettings chan addonutils.Values
-	globalSettings    chan addonutils.Values
 
 	// maintenanceWake: maintenance has names to check.
 	maintenanceWake chan struct{}
@@ -77,7 +75,6 @@ func newStatusSink() *statusSink {
 		maintenanceWake:   make(chan struct{}, 1),
 		settingsWake:      make(chan struct{}, 1),
 		deckhouseSettings: make(chan addonutils.Values, 1),
-		globalSettings:    make(chan addonutils.Values, 1),
 	}
 }
 
@@ -97,7 +94,7 @@ func (s *statusSink) add(name string) {
 	switch {
 	case app:
 		wake(s.maintenanceWake)
-	case name == deckhouseModule || name == schedule.GlobalNode:
+	case name == deckhouseModule:
 		wake(s.settingsWake)
 	}
 }
@@ -165,15 +162,14 @@ func (s *statusSink) shutdown() {
 	s.modules.ShutDown()
 }
 
-// publishSettings publishes the accepted effective settings of deckhouse and Global
-// (CurrentReport.AcceptedValues) on the settings channels when their checksum changed since the
+// publishSettings publishes the accepted effective settings of deckhouse
+// (CurrentReport.AcceptedValues) on the settings channel when their checksum changed since the
 // last publish (published, by name). Accepted, not the checkpoint of a successful run: the
 // deckhouse settings container blocks its readers (every Application reconcile, the ModuleConfig
 // webhook) until the first value, and a failing first run would block them all.
 func (s *statusSink) publishSettings(engine *core.Engine, published map[string]string) {
 	targets := map[string]chan addonutils.Values{
-		deckhouseModule:     s.deckhouseSettings,
-		schedule.GlobalNode: s.globalSettings,
+		deckhouseModule: s.deckhouseSettings,
 	}
 
 	for name, ch := range targets {

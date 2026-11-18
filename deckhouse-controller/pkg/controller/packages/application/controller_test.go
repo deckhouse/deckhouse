@@ -50,7 +50,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/observed"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
@@ -112,12 +111,11 @@ func (suite *ControllerTestSuite) setupControllerWithSettings(filename string, s
 	suite.ctr = reconcilerWithSettings(suite.T(), suite.Client(), suite.manager, settings)
 }
 
-// updateSettings are the deckhouse and the global ModuleConfig settings, as JSON, that the
-// update settings of an application fall back to. Empty ones leave the deckhouse defaults and
-// no global applications settings.
+// updateSettings are the deckhouse ModuleConfig settings, as JSON, that the update settings of an
+// application take the notification and the blocking on alerts from. Empty ones leave the
+// deckhouse defaults.
 type updateSettings struct {
 	deckhouse string
-	global    string
 }
 
 // harness is the controller as RegisterController leaves it behind in the manager: the
@@ -148,8 +146,8 @@ func reconcilerWithSettings(t *testing.T, cl client.Client, manager *packageMana
 }
 
 // registerController runs the package's only exported entry point against a manager stub
-// and picks up the runnables it registered. The settings containers are filled the way the
-// deckhouse and the global ModuleConfigs fill them in a running controller.
+// and picks up the runnables it registered. The settings container is filled the way the
+// deckhouse ModuleConfig fills it in a running controller.
 func registerController(t *testing.T, cl client.Client, manager *packageManagerStub, modules modulesInited, settings updateSettings) *harness {
 	t.Helper()
 
@@ -158,16 +156,9 @@ func registerController(t *testing.T, cl client.Client, manager *packageManagerS
 		require.NoError(t, json.Unmarshal([]byte(settings.deckhouse), deckhouse))
 	}
 
-	applications := helpers.NewApplicationsSettingsContainer()
-	if settings.global != "" {
-		global := make(addonutils.Values)
-		require.NoError(t, json.Unmarshal([]byte(settings.global), &global))
-		require.NoError(t, applications.Set(global))
-	}
-
 	mgr := &managerStub{scheme: testScheme(t), client: cl}
 	require.NoError(t, application.RegisterController(new(sync.WaitGroup), mgr, manager, modules,
-		helpers.NewDeckhouseSettingsContainer(deckhouse, nil), applications, log.NewNop()))
+		helpers.NewDeckhouseSettingsContainer(deckhouse, nil), log.NewNop()))
 
 	h := new(harness)
 
@@ -251,29 +242,24 @@ func (suite *ControllerTestSuite) TestReconcile() {
 				CA:           "test-ca",
 				Scheme:       "https",
 			},
-			// No ModuleConfig sets anything, so these are the deckhouse defaults.
+			// Without spec.update the mode is Manual, and the blocking on alerts is the deckhouse
+			// default, since no ModuleConfig sets it.
 			UpdateSettings: releaseupdater.Settings{
-				Mode:          v1alpha2.UpdateModeAutoPatch,
+				Mode:          v1alpha2.UpdateModeManual,
 				BlockOnAlerts: releaseupdater.BlockOnAlerts{Severity: 4},
 			},
 			Requirements: schedule.Constraints{Order: schedule.FunctionalOrder},
 		}, suite.manager.updated[0])
 	})
 
-	suite.Run("update settings are taken from the global applications settings", func() {
+	suite.Run("update settings take the mode and the windows only from spec.update", func() {
 		suite.setupControllerWithSettings("update-settings.yaml", updateSettings{
 			deckhouse: `{"update": {
-				"mode": "Manual",
+				"mode": "Auto",
 				"windows": [{"from": "1:00", "to": "2:00"}],
-				"notification": {"webhook": "https://deckhouse.example.com/webhook"},
+				"notification": {"webhook": "https://deckhouse.example.com/webhook", "tlsSkipVerify": true, "minimalNotificationTime": "6h", "releaseType": "All"},
 				"blockOnAlerts": {"enabled": true, "severity": 1}
 			}}`,
-			global: `{"applications": {"update": {
-				"mode": "Auto",
-				"windows": [{"from": "8:00", "to": "15:00", "days": ["Tue", "Sat"]}],
-				"notification": {"webhook": "https://applications.example.com/webhook", "minimalNotificationTime": "6h", "releaseType": "All"},
-				"blockOnAlerts": {"enabled": true}
-			}}}`,
 		})
 
 		for _, name := range []string{"inherit-app", "own-app"} {
@@ -284,66 +270,28 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.Len(suite.T(), suite.manager.updated, 2)
 
 		notification := releaseupdater.NotificationConfig{
-			WebhookURL:              "https://applications.example.com/webhook",
+			WebhookURL:              "https://deckhouse.example.com/webhook",
+			SkipTLSVerify:           true,
 			MinimalNotificationTime: libapi.Duration{Duration: 6 * time.Hour},
 			ReleaseType:             releaseupdater.ReleaseTypeAll,
 		}
 
-		assert.Equal(suite.T(), releaseupdater.Settings{
-			Mode:               v1alpha2.UpdateModeAuto,
-			Windows:            update.Windows{{From: "8:00", To: "15:00", Days: []string{"Tue", "Sat"}}},
-			NotificationConfig: notification,
-			BlockOnAlerts:      releaseupdater.BlockOnAlerts{Enabled: true, Severity: 4},
-		}, suite.manager.updated[0].UpdateSettings,
-			"an application without its own settings must take the global applications settings as a whole")
+		blockOnAlerts := releaseupdater.BlockOnAlerts{Enabled: true, Severity: 1}
 
 		assert.Equal(suite.T(), releaseupdater.Settings{
 			Mode:               v1alpha2.UpdateModeManual,
+			NotificationConfig: notification,
+			BlockOnAlerts:      blockOnAlerts,
+		}, suite.manager.updated[0].UpdateSettings,
+			"an application without spec.update must be Manual without windows and take only the notification and the blocking on alerts from the deckhouse settings")
+
+		assert.Equal(suite.T(), releaseupdater.Settings{
+			Mode:               v1alpha2.UpdateModeAutoPatch,
 			Windows:            update.Windows{{From: "20:00", To: "23:30", Days: []string{"Sun"}}},
 			NotificationConfig: notification,
-			BlockOnAlerts:      releaseupdater.BlockOnAlerts{Enabled: true, Severity: 0},
+			BlockOnAlerts:      blockOnAlerts,
 		}, suite.manager.updated[1].UpdateSettings,
-			"an application with its own settings must take only the notification settings from the global applications settings")
-	})
-
-	suite.Run("update settings fall back to the deckhouse settings", func() {
-		suite.setupControllerWithSettings("update-settings.yaml", updateSettings{
-			deckhouse: `{"releaseChannel": "Stable", "update": {
-				"mode": "Manual",
-				"windows": [{"from": "1:00", "to": "2:00"}],
-				"notification": {"webhook": "https://deckhouse.example.com/webhook", "tlsSkipVerify": true},
-				"blockOnAlerts": {"enabled": true}
-			}}`,
-			global: `{"applications": {"ingressClass": "nginx"}}`,
-		})
-
-		for _, name := range []string{"inherit-app", "own-app"} {
-			_, err := suite.ctr.Reconcile(ctx, suite.Request(name, appNamespace))
-			require.NoError(suite.T(), err)
-		}
-
-		require.Len(suite.T(), suite.manager.updated, 2)
-
-		notification := releaseupdater.NotificationConfig{
-			WebhookURL:    "https://deckhouse.example.com/webhook",
-			SkipTLSVerify: true,
-		}
-
-		assert.Equal(suite.T(), releaseupdater.Settings{
-			Mode:               v1alpha2.UpdateModeManual,
-			Windows:            update.Windows{{From: "1:00", To: "2:00"}},
-			NotificationConfig: notification,
-			BlockOnAlerts:      releaseupdater.BlockOnAlerts{Enabled: true, Severity: 4},
-		}, suite.manager.updated[0].UpdateSettings,
-			"without the global applications settings an application must take the deckhouse settings as a whole")
-
-		assert.Equal(suite.T(), releaseupdater.Settings{
-			Mode:               v1alpha2.UpdateModeManual,
-			Windows:            update.Windows{{From: "20:00", To: "23:30", Days: []string{"Sun"}}},
-			NotificationConfig: notification,
-			BlockOnAlerts:      releaseupdater.BlockOnAlerts{Enabled: true, Severity: 0},
-		}, suite.manager.updated[1].UpdateSettings,
-			"without the global applications settings an application with its own settings must take the deckhouse notification settings")
+			"an application with spec.update must take the mode and the windows from it and the rest from the deckhouse settings")
 	})
 
 	suite.Run("maintenance mode reaches the runtime", func() {

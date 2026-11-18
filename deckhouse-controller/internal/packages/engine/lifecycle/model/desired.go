@@ -69,7 +69,7 @@ type Policy struct {
 	Notification *Notification
 }
 
-// Notification is the update notification policy (applications.update.notification).
+// Notification is the update notification policy (update.notification of the deckhouse module).
 type Notification struct {
 	// MinimalTime is the least time between the notification and the activation.
 	MinimalTime time.Duration

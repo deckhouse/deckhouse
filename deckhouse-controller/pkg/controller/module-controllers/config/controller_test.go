@@ -270,7 +270,7 @@ func newMockHandler() *confighandler.Handler {
 	deckhouseConfigCh := make(chan addonutils.Values, 10)
 	configEventCh := make(chan config.Event, 10)
 
-	handler := confighandler.New(nil, conversionsStore, deckhouseConfigCh, nil)
+	handler := confighandler.New(nil, conversionsStore, deckhouseConfigCh)
 	handler.StartInformer(context.Background(), configEventCh)
 
 	return handler

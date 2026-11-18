@@ -66,7 +66,7 @@ type Application struct {
 	// ResourceRequests are spec.resourceRequests.
 	ResourceRequests []resourcesize.Request
 	// UpdateSettings are the update settings the application follows, already merged by the
-	// controller (spec.update, global.applications.update, the deckhouse ModuleConfig).
+	// controller (spec.update, the deckhouse ModuleConfig).
 	UpdateSettings releaseupdater.Settings
 	// ApplyNow skips the update windows (model.Policy.Force): the Application controller sets it
 	// while the apply-now annotation names spec.packageVersion. It never skips the requirements,
@@ -395,11 +395,6 @@ func (e *Engine) GetModuleStatusQueue() workqueue.TypedRateLimitingInterface[str
 // (statusSink.publishSettings). Only with EnableModuleV2.
 func (e *Engine) GetDeckhouseSettingsCh() <-chan addonutils.Values {
 	return e.sink.deckhouseSettings
-}
-
-// GetGlobalSettingsCh carries the latest effective global settings.
-func (e *Engine) GetGlobalSettingsCh() <-chan addonutils.Values {
-	return e.sink.globalSettings
 }
 
 // Ready is core.Engine.Ready.

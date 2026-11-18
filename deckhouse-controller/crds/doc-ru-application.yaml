@@ -195,13 +195,11 @@ spec:
                     Настройки более старой версии конвертируются в последнюю версию, которую предоставляет пакет. Если параметр не указан, используется версия 1.
                 update:
                   description: |
-                    Настройки обновления приложения: режим обновления, окна обновлений и блокировка обновлений при наличии алертов.
+                    Настройки обновления приложения: режим обновления и окна обновлений.
 
-                    Если параметр не указан, приложение использует глобальные настройки [`applications.update`](global.html#parameters-applications-update). Если не заданы и они, используются настройки обновления Deckhouse Platform, заданные в параметре [`update`](/modules/deckhouse/configuration.html#parameters-update) модуля `deckhouse`.
+                    Если параметр не указан, используется [режим обновления](#application-v1alpha1-spec-update-mode) `Manual`.
 
-                    Оповещения об обновлении для отдельного приложения не настраиваются. Если настроен `applications.update`, используются глобальные настройки
-                    [`applications.update.notification`](global.html#parameters-applications-update-notification).
-                    В противном случае применяются настройки оповещений Deckhouse Platform.
+                    Оповещения об обновлении для приложения не настраиваются: используются параметры [`update.notification`](/modules/deckhouse/configuration.html#parameters-update-notification) модуля `deckhouse`.
                   properties:
                     mode:
                       description: |
@@ -242,18 +240,6 @@ spec:
                               Дни недели, в которые применяется окно обновлений.
 
                               Если параметр не указан, окно обновлений действует ежедневно.
-                    blockOnAlerts:
-                      description: |
-                        Настройки блокировки обновления приложения при наличии алертов в кластере.
-                      properties:
-                        enabled:
-                          description: |
-                            Указывает, блокировать ли обновления приложения при наличии в кластере алертов с уровнем критичности, равным значению параметра [`severity`](#application-v1alpha1-spec-update-blockonalerts-severity) или выше.
-                        severity:
-                          description: |
-                            Уровень критичности алертов, которые блокируют обновления.
-
-                            Указывается в виде значения от `0` до `9`, где `0` — наивысший уровень критичности, а `9` — наименьший.
             status:
               description: |
                 Текущее состояние приложения.
@@ -335,7 +321,7 @@ spec:
                       description: |
                         Оповещение, отправленное о предстоящем обновлении: объявленная версия и время отправки.
 
-                        Оповещение отправляется на вебхук из глобальных параметров [`applications.update.notification`](global.html#parameters-applications-update-notification) или, если `applications.update` не задан, из параметров [`update.notification`](/modules/deckhouse/configuration.html#parameters-update-notification) модуля `deckhouse`. Обновление устанавливается не раньше чем через `minimalNotificationTime` после оповещения. Очищается после установки новой версии или отмены обновления.
+                        Оповещение отправляется на вебхук из параметров [`update.notification`](/modules/deckhouse/configuration.html#parameters-update-notification) модуля `deckhouse`. Обновление устанавливается не раньше чем через `minimalNotificationTime` после оповещения. Очищается после установки новой версии или отмены обновления.
                       properties:
                         version:
                           description: |

@@ -69,19 +69,17 @@ func RegisterController(
 	manager packageManager,
 	moduleManager moduleManager,
 	deckhouseSettings deckhouseSettings,
-	applicationsSettings applicationsSettings,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
-		init:                 synced,
-		client:               runtime.GetClient(),
-		manager:              manager,
-		moduleManager:        moduleManager,
-		deckhouseSettings:    deckhouseSettings,
-		applicationsSettings: applicationsSettings,
-		status:               status.NewService(runtime.GetClient(), manager, logger),
-		updater:              appupdate.NewUpdater(runtime.GetClient()),
-		logger:               logger.Named(controllerName),
+		init:              synced,
+		client:            runtime.GetClient(),
+		manager:           manager,
+		moduleManager:     moduleManager,
+		deckhouseSettings: deckhouseSettings,
+		status:            status.NewService(runtime.GetClient(), manager, logger),
+		updater:           appupdate.NewUpdater(runtime.GetClient()),
+		logger:            logger.Named(controllerName),
 	}
 
 	if !app.ModuleV2Enabled() {
@@ -103,9 +101,9 @@ func RegisterController(
 		// The automatic update steps on the installed version, UpdateInstalled and Ready, which bump no generation.
 		For(&v1alpha1.Application{}, builder.WithPredicates(
 			predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}, updateInputChanged()))).
-		// The update settings of an application fall back to global.applications.update and
-		// then to the deckhouse ones, so a change of either is merged into every application again.
-		WatchesRawSource(r.requeueOnSettingsChange(applicationsSettings.SubscribeUpdate(), deckhouseSettings.SubscribeUpdate())).
+		// The update settings of an application take the notification and the blocking on alerts
+		// from the deckhouse ones, so a change of those is merged into every application again.
+		WatchesRawSource(r.requeueOnSettingsChange(deckhouseSettings.SubscribeUpdate())).
 		// A new version of the package, or a change of its rules, moves the update plan; a global event filter
 		// would drop these, since status and labels bump no generation.
 		Watches(&v1alpha1.ApplicationPackageVersion{}, handler.EnqueueRequestsFromMapFunc(r.requestsForVersion),
@@ -116,15 +114,14 @@ func RegisterController(
 
 // reconciler reconciles Application objects.
 type reconciler struct {
-	init                 *sync.WaitGroup
-	client               client.Client
-	manager              packageManager
-	status               *status.Service
-	updater              *appupdate.Updater
-	moduleManager        moduleManager
-	deckhouseSettings    deckhouseSettings
-	applicationsSettings applicationsSettings
-	logger               *log.Logger
+	init              *sync.WaitGroup
+	client            client.Client
+	manager           packageManager
+	status            *status.Service
+	updater           *appupdate.Updater
+	moduleManager     moduleManager
+	deckhouseSettings deckhouseSettings
+	logger            *log.Logger
 }
 
 // moduleManager reports whether addon-operator has finished initialising modules.
@@ -293,9 +290,8 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		return err
 	}
 
-	// The update windows hold the switch to a new version, also of a version the user set:
-	// spec.update, else the global settings, decide when it happens, unless the apply-now
-	// annotation names the version the engine runs.
+	// In an automatic mode the windows of spec.update hold the switch to a new version, also of a
+	// version the user set, unless the apply-now annotation names the version the engine runs.
 	r.manager.ApplyApplication(engine.Application{
 		Namespace:        app.Namespace,
 		Name:             app.Name,

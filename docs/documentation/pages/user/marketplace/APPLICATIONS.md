@@ -1,9 +1,9 @@
 ---
 title: Installing and managing applications
 permalink: en/user/marketplace/applications.html
-description: "Install, update, and delete applications in Deckhouse Platform Marketplace. Browse available package versions, create Application, check status conditions, manage multiple instances, and configure workload resources and autoscaling."
+description: "Install, update, and delete applications in Deckhouse Platform Marketplace. Browse available package versions, create Application, check status conditions, manage multiple instances, configure workload resources and autoscaling, automatic updates, and version compatibility rules."
 lang: en
-search: Application, install application, application conditions, installing application, updating application, deleting application, resourceRequests, workload resources, autoscaling, minReplicas, maxReplicas, HorizontalPodAutoscaler, VerticalPodAutoscaler
+search: Application, install application, application conditions, installing application, updating application, deleting application, resourceRequests, workload resources, autoscaling, minReplicas, maxReplicas, HorizontalPodAutoscaler, VerticalPodAutoscaler, automatic updates, update windows, spec.update, versionCompatibilityRules, upgrade.from, version compatibility rules
 ---
 
 This section describes how to browse available [package](../../glossary.html#marketplace-package) versions, as well as how to install, update, and delete applications.
@@ -307,7 +307,11 @@ If the package doesn't allow changing the number of replicas of a workload, Deck
 
 ## Updating an application
 
-Applications are updated manually. To update an application, change [`spec.packageVersion`](../../reference/api/cr.html#application-v1alpha1-spec-packageversion) to the target version and apply the change:
+You can change the application version manually or configure automatic updates. In both cases, transitions between versions are limited by the [version compatibility rules](#version-compatibility-rules) of the package.
+
+### Manual update
+
+To update an application, change [`spec.packageVersion`](../../reference/api/cr.html#application-v1alpha1-spec-packageversion) to the target version and apply the change:
 
 ```bash
 d8 k patch applications -n <NAMESPACE> <APPLICATION_NAME> --type=merge -p '{"spec":{"packageVersion":"v7.3.0"}}'
@@ -317,9 +321,118 @@ While the update is in progress, the `UpdateInstalled` condition is `False` with
 
 If the specified version doesn't exist in the repository, the change is rejected, and the current version keeps running. If Deckhouse Platform (DP) fails to download the new version, `UpdateInstalled` becomes `False` with the `DownloadFailed` reason, and the current version keeps running.
 
+If the version compatibility rules don't allow moving from the current version to the specified one in a single step, the change is also rejected, with the `incompatible version` error. In this case, update the application step by step, through intermediate versions.
+
+### Automatic updates
+
+Update settings are set only in the application itself, in the [`spec.update`](../../reference/api/cr.html#application-v1alpha1-spec-update) parameter. There are no common update settings for all applications in the cluster.
+
+The [update mode](../../reference/api/cr.html#application-v1alpha1-spec-update-mode) is set in the `spec.update.mode` parameter:
+
+- `Manual`: Automatic updates are disabled, and the version changes only manually. This mode is used if `spec.update` isn't set.
+- `AutoPatch`: Deckhouse Platform automatically installs new patch versions within the current minor version. The application is moved to a new minor or major version manually.
+- `Auto`: Deckhouse Platform automatically updates the application to every new version that the version compatibility rules allow.
+
+Example of a manifest in which Redis is automatically updated to new patch versions on Tuesdays and Saturdays from 8:00 to 15:00 UTC:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: Application
+metadata:
+  name: redis-cache
+  namespace: my-app
+spec:
+  packageName: redis
+  packageVersion: "v7.2.0"
+  packageRepositoryName: my-registry
+  update:
+    mode: AutoPatch
+    windows:
+      - from: "8:00"
+        to: "15:00"
+        days:
+          - Tue
+          - Sat
+```
+
+Automatic updates work as follows:
+
+- In every update mode, Deckhouse Platform builds the update path to the newest package version in the cluster that the version compatibility rules allow reaching, and publishes it in [`status.update.plan`](../../reference/api/cr.html#application-v1alpha1-status-update-plan). In the `Auto` and `AutoPatch` modes, the version that the automatic update installs next is published in [`status.update.automaticVersion`](../../reference/api/cr.html#application-v1alpha1-status-update-automaticversion).
+- The update goes step by step: the next version is chosen only after the previous one is installed and the application is ready (the `Ready` condition).
+- Automatic updates don't change `spec.packageVersion`. In the `Auto` and `AutoPatch` modes, the application runs the newer of `spec.packageVersion` and `status.update.automaticVersion`.
+
+The [update windows](../../reference/api/cr.html#application-v1alpha1-spec-update-windows) set in `spec.update.windows` apply in the `Auto` and `AutoPatch` modes: a new version, including one set in `spec.packageVersion` manually, is installed only during an update window. While the application waits for a window, the `UpdateInstalled` condition is `False` with the `WaitingWindow` reason. If no windows are set, updates are installed at any time. In the `Manual` mode, update windows don't apply. The first installation of an application doesn't wait for a window.
+
+Update notifications can't be configured for an application: the [`update.notification`](/modules/deckhouse/configuration.html#parameters-update-notification) settings of the `deckhouse` module are used. If they set a webhook, in the `Auto` and `AutoPatch` modes Deckhouse Platform sends it a notification about the pending application update (`subject: Application`) and installs the update no earlier than `minimalNotificationTime` after the notification. A patch version update is announced only with `releaseType: All`. If the notification can't be sent, Deckhouse Platform retries, and the update waits. Until the notification is sent and `minimalNotificationTime` has passed, the `UpdateInstalled` condition is `False` with the `WaitingNotification` reason. The sent notification is shown in [`status.update.notified`](../../reference/api/cr.html#application-v1alpha1-status-update-notified).
+
+### Rolling back to an earlier version
+
+To roll back an application, specify an earlier version in `spec.packageVersion`. By default, the version compatibility rules allow rolling back only to patch versions within the current minor version. In the `Auto` and `AutoPatch` modes, the application runs the newer of `spec.packageVersion` and `status.update.automaticVersion`, so switch the application to the `Manual` mode before rolling it back.
+
 {% alert level="warning" %}
-You can specify an older version to perform a downgrade, but DP doesn't apply any migration logic on rollback. If necessary, verify that the settings are compatible with the target version before applying the change.
+Deckhouse Platform doesn't apply any migration logic on rollback. If necessary, verify that the settings are compatible with the target version before applying the change.
 {% endalert %}
+
+### Version compatibility rules
+
+Each package version can set version compatibility rules, `versionCompatibilityRules`, in its `package.yaml` file. They define which versions an application can be updated or rolled back to in a single step. The rules apply both to manual changes of `spec.packageVersion` and to automatic updates.
+
+The limits are set separately for updates (`upgrade.step`) and rollbacks (`downgrade.step`):
+
+- `patches`: How many patch versions the application can move within a minor version.
+- `minor`: How many minor versions the application can move within a major version.
+- `major`: How many major versions the application can move.
+
+The `-1` value removes the limit, `0` forbids the transition, and a positive number sets the largest allowed difference between version numbers. Only the limit of the highest changed part of the version is checked: `major` when the major version changes, and `minor` when the minor version changes. The rules of the version being left apply, except for the `upgrade.from` constraint described below. The difference is counted by version numbers, not by the number of published versions: with `minor: 1`, the application can't move from `v1.2.3` to `v1.4.0` directly, even if there are no `v1.3.*` versions.
+
+If a limit isn't set, its default value is used:
+
+| Limit | `upgrade.step` | `downgrade.step` |
+|---|---|---|
+| `patches` | `-1`: Any patch version within the minor version | `-1`: Any patch version within the minor version |
+| `minor` | `1`: The next minor version | `0`: Rolling back the minor version is forbidden |
+| `major` | `0`: Moving to another major version is forbidden | `0`: Rolling back the major version is forbidden |
+
+The effective rules of a version, with unset limits replaced by their default values, are published in [`status.packageMetadata.versionCompatibilityRules`](../../reference/api/cr.html#applicationpackageversion-v1alpha1-status-packagemetadata-versioncompatibilityrules) of the ApplicationPackageVersion object:
+
+```bash
+d8 k get apv my-registry-redis-v7.2.0 -o jsonpath='{.status.packageMetadata.versionCompatibilityRules}'
+```
+
+Example of the rules in `package.yaml`:
+
+```yaml
+versionCompatibilityRules:
+  upgrade:
+    step:
+      # Update up to three minor versions ahead in a single step.
+      minor: 3
+      # Update to the next major version.
+      major: 1
+  downgrade:
+    step:
+      # Roll back up to five patch versions within a minor version.
+      patches: 5
+      # Roll back to the previous minor version.
+      minor: 1
+```
+
+The other limits in the example (`upgrade.step.patches` and `downgrade.step.major`) take their default values.
+
+#### upgrade.from constraint
+
+The `step` limits are set in the version being left and don't change after it's published. Therefore, earlier versions can't allow moving to a version released later, such as a new major version. A new version can specify which versions it can be updated from: its `package.yaml` sets the `upgrade.from` constraint in the SemVer format:
+
+```yaml
+# package.yaml of version v2.0.0.
+versionCompatibilityRules:
+  upgrade:
+    from: ">= 1.5.0"
+```
+
+If `upgrade.from` is set, it takes priority over the `upgrade.step` limits of the version being updated from: the application can be updated to this version only from versions that satisfy the constraint. The constraint allows transitions that the limits forbid and forbids transitions that they allow. In the example, the application is updated to `v2.0.0` from any version starting from `v1.5.0`, although moving to another major version is forbidden by default. From versions below `v1.5.0`, the application is updated through intermediate versions.
+
+An invalid constraint forbids updating to this version. `upgrade.from` doesn't affect rollbacks: a rollback follows the `downgrade.step` limits of the version being rolled back from.
 
 ## Deleting an application
 
@@ -335,7 +448,7 @@ When an Application is deleted, DP deletes the Kubernetes objects of the applica
 
 ### Can an application be updated automatically?
 
-No. In the current implementation, updates require a manual change to [`spec.packageVersion`](../../reference/api/cr.html#application-v1alpha1-spec-packageversion). Automatic application updates via [release channels](../../glossary.html#release-channel) are planned for future versions.
+Yes. Set the `Auto` or `AutoPatch` mode in the [`spec.update.mode`](../../reference/api/cr.html#application-v1alpha1-spec-update-mode) parameter. For details, see [Automatic updates](#automatic-updates).
 
 ### Can an Application depend on another Application?
 

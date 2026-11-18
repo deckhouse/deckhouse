@@ -382,33 +382,12 @@ spec:
                 type: number
               update:
                 description: |-
-                  Application update settings: update mode, update windows, and blocking updates when alerts are present.
+                  Application update settings: update mode and update windows.
 
-                  If this parameter is not specified, the global [`applications.update`](global.html#parameters-applications-update) settings are used. If the global settings are also not specified, the Deckhouse Platform update settings are applied, as defined by the [`update`](/modules/deckhouse/configuration.html#parameters-update) parameter of the `deckhouse` module.
+                  If this parameter is not specified, the `Manual` [update mode](#application-v1alpha1-spec-update-mode) is used.
 
-                  Update notifications cannot be configured separately for an application. If `applications.update` is configured, the global [`applications.update.notification`](global.html#parameters-applications-update-notification) settings are used. Otherwise, the Deckhouse Platform notification settings apply.
+                  Update notifications cannot be configured for an application: the [`update.notification`](/modules/deckhouse/configuration.html#parameters-update-notification) settings of the `deckhouse` module are used.
                 properties:
-                  blockOnAlerts:
-                    description: Settings for blocking application updates while there
-                      are alerts in the cluster.
-                    properties:
-                      enabled:
-                        description: Indicates whether to block application updates
-                          when the cluster has alerts with a severity level equal
-                          to or higher than the value specified in the [`severity`](#application-v1alpha1-spec-update-blockonalerts-severity)
-                          parameter.
-                        type: boolean
-                      severity:
-                        default: 4
-                        description: |-
-                          Alert severity level at which updates are blocked.
-
-                          Set as a value from `0` to `9`, where `0` is the highest severity and `9` is the lowest.
-                        format: int32
-                        maximum: 9
-                        minimum: 0
-                        type: integer
-                    type: object
                   mode:
                     description: |-
                       Update mode of the application on its [release channel](#application-v1alpha1-spec-releasechannel).
@@ -489,9 +468,6 @@ spec:
                     days:
                     - Tue
                     - Sat
-                  blockOnAlerts:
-                    enabled: true
-                    severity: 2
             required:
             - packageName
             - packageVersion
@@ -615,7 +591,7 @@ spec:
                     description: |-
                       Notification sent about the pending update: the version it announced and when it was sent.
 
-                      It is sent to the webhook of the global [`applications.update.notification`](global.html#parameters-applications-update-notification) settings, or of the [`update.notification`](/modules/deckhouse/configuration.html#parameters-update-notification) settings of the `deckhouse` module if `applications.update` is not configured. The update is installed no earlier than `minimalNotificationTime` after the notification. Cleared once a new version is installed or the update is cancelled.
+                      It is sent to the webhook of the [`update.notification`](/modules/deckhouse/configuration.html#parameters-update-notification) settings of the `deckhouse` module. The update is installed no earlier than `minimalNotificationTime` after the notification. Cleared once a new version is installed or the update is cancelled.
                     properties:
                       time:
                         description: Time the notification was sent.
