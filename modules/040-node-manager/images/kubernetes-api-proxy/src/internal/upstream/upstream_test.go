@@ -18,9 +18,58 @@ package upstream
 
 import (
 	"context"
+	"encoding/pem"
+	"net"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
+
+	"k8s.io/client-go/rest"
 )
+
+func TestHealthCheck_ClosesConnection(t *testing.T) {
+	stateCh := make(chan http.ConnState, 8)
+
+	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/readyz" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		_, _ = w.Write([]byte("ok"))
+	}))
+	ts.Config.ConnState = func(_ net.Conn, s http.ConnState) {
+		if s == http.StateIdle || s == http.StateClosed {
+			stateCh <- s
+		}
+	}
+
+	ts.StartTLS()
+	defer ts.Close()
+
+	caPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: ts.Certificate().Raw,
+	})
+
+	u := NewUpstream(ts.Listener.Addr().String())
+	u.UseKubernetesConfigGetter(func() (*rest.Config, error) {
+		return &rest.Config{
+			TLSClientConfig: rest.TLSClientConfig{
+				CAData: caPEM,
+			},
+		}, nil
+	})
+
+	if _, err := u.HealthCheck(t.Context()); err != nil {
+		t.Fatalf("HealthCheck() error = %v", err)
+	}
+
+	if got := <-stateCh; got != http.StateClosed {
+		t.Fatalf("post-probe connection state = %v, want %v", got, http.StateClosed)
+	}
+}
 
 func TestCalcTier(t *testing.T) {
 	tests := []struct {

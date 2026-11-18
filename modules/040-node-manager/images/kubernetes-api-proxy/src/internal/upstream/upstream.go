@@ -89,7 +89,8 @@ func (u *Upstream) healthCheck(ctx context.Context) error {
 
 	client := &http.Client{
 		Transport: &http.Transport{
-			TLSClientConfig: tlsConfig,
+			TLSClientConfig:   tlsConfig,
+			DisableKeepAlives: true,
 		},
 	}
 
