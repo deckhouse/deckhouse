@@ -175,6 +175,10 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			return ctrl.Result{}, fmt.Errorf("failed to create StaticInstance patch helper: %w", err)
 		}
 
+		// Must run after NewHelper: the sanitized conditions have to reach the patch as a
+		// removal, otherwise one legacy entry keeps rejecting every status write.
+		staticInstance.SanitizeLegacyConditions()
+
 		defer func() {
 			if err := patchStaticInstance(ctx, staticInstancePatchHelper, staticInstance); err != nil {
 				resErr = errors.Join(resErr, fmt.Errorf("failed to patch StaticInstance: %w", err))
@@ -294,6 +298,10 @@ func (r *StaticMachineReconciler) reconcileNormal(
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to create StaticInstance patch helper: %w", err)
 	}
+
+	// Must run after NewHelper: the sanitized conditions have to reach the patch as a removal,
+	// otherwise one legacy entry keeps rejecting every status write.
+	newStaticInstance.SanitizeLegacyConditions()
 
 	defer func() {
 		if err := patchStaticInstance(ctx, staticInstancePatchHelper, newStaticInstance); err != nil {

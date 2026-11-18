@@ -17,6 +17,8 @@ limitations under the License.
 package client
 
 import (
+	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -28,6 +30,80 @@ import (
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
 )
+
+// Exit code 2 from the bootstrap wrapper means bashible took over and the node reboots, so
+// it is a success for both ssh clients. Everything else, including exit code 1 from a stale
+// bootstrap-token, must stay an error.
+func TestBootstrapExitedWithStatus2(t *testing.T) {
+	tests := []struct {
+		name   string
+		err    error
+		output string
+		want   bool
+	}{
+		{
+			name: "gossh reports the status in the error",
+			err:  errors.New("Process exited with status 2"),
+			want: true,
+		},
+		{
+			name: "gossh error wrapped by the caller",
+			err:  fmt.Errorf("wrapped: %w", errors.New("Process exited with status 2")),
+			want: true,
+		},
+		{
+			name:   "clissh reports the status in stderr",
+			err:    errors.New("failed to run ssh command: exit status 2"),
+			output: "debug1: Sending command\ndebug1: Exit status 2\n",
+			want:   true,
+		},
+		{
+			name:   "clissh status found in combined stdout and stderr",
+			err:    errors.New("failed to run ssh command: exit status 2"),
+			output: "bashible progress\ndebug1: Exit status 2",
+			want:   true,
+		},
+		{
+			name:   "exit code 1 of a stale bootstrap-token",
+			err:    errors.New("Process exited with status 1"),
+			output: "The node already have bootstrap-token and under bashible",
+			want:   false,
+		},
+		{
+			name:   "clissh exit status 1",
+			err:    errors.New("failed to run ssh command: exit status 1"),
+			output: "debug1: Exit status 1",
+			want:   false,
+		},
+		{
+			name: "gossh exit status 22 is not status 2",
+			err:  errors.New("Process exited with status 22"),
+			want: false,
+		},
+		{
+			name: "gossh exit status 255 is a connection failure, not status 2",
+			err:  errors.New("Process exited with status 255"),
+			want: false,
+		},
+		{
+			name:   "clissh exit status 255 is not status 2",
+			err:    errors.New("failed to run ssh command: exit status 255"),
+			output: "debug1: Exit status 255",
+			want:   false,
+		},
+		{
+			name: "dropped connection without output",
+			err:  errors.New("wait: remote command exited without exit status or exit signal"),
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, hasExitedWithStatus2(tt.err, tt.output))
+		})
+	}
+}
 
 func pendingStaticInstance() *deckhousev1.StaticInstance {
 	return &deckhousev1.StaticInstance{

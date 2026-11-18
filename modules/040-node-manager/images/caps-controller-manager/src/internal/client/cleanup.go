@@ -17,8 +17,12 @@ limitations under the License.
 package client
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"net"
+	"strconv"
+	"time"
 
 	"github.com/pkg/errors"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
@@ -31,6 +35,24 @@ import (
 	"caps-controller-manager/internal/ssh/clissh"
 	"caps-controller-manager/internal/ssh/gossh"
 )
+
+// The cleanup script returns as soon as it has scheduled the reboot, while the host keeps
+// answering for a few more seconds. Handing the instance to another StaticMachine at that
+// moment is what starts the bootstrap loop this wait exists to prevent.
+const (
+	// cleanupNodeDownTimeout bounds the wait for the host to stop answering after the
+	// cleanup script has scheduled its reboot. The cleanup timeout in the StaticMachine
+	// controller still bounds the whole Cleaning phase; this wait only adds the time the
+	// host needs to actually go down.
+	cleanupNodeDownTimeout = 3 * time.Minute
+	// cleanupNodeDownPollInterval is how often the host is probed while it goes down.
+	cleanupNodeDownPollInterval = 2 * time.Second
+	// cleanupNodeDownDialTimeout bounds a single TCP probe.
+	cleanupNodeDownDialTimeout = 2 * time.Second
+)
+
+// dialTimeout is a seam for tests that simulate a host going away.
+var dialTimeout = net.DialTimeout
 
 // Cleanup runs the cleanup script on StaticInstance.
 func (c *Client) Cleanup(ctx context.Context,
@@ -88,6 +110,44 @@ func canSkipCleanupForPendingPhase(staticInstance *deckhousev1.StaticInstance, s
 	return staticInstance.Status.MachineRef.UID == staticMachine.UID
 }
 
+// waitForNodeDown waits until the host stops accepting TCP connections on the ssh port.
+//
+// The cleanup script returns as soon as it has scheduled `shutdown -r -t 5`, while the host
+// keeps answering for a few more seconds. Returning the StaticInstance to the pool at that
+// moment lets the next StaticMachine pass the TCP and ssh checks against a host that is about
+// to reboot: the wrapper writes bootstrap-token, the reboot kills the ssh session, and every
+// following attempt fails with exit code 1 because the token is still there.
+func waitForNodeDown(ctx context.Context, address string) error {
+	return waitForNodeDownWith(ctx, address, cleanupNodeDownTimeout, cleanupNodeDownPollInterval)
+}
+
+func waitForNodeDownWith(ctx context.Context, address string, timeout, interval time.Duration) error {
+	logger := ctrl.LoggerFrom(ctx).WithValues("address", address)
+	deadline := time.Now().Add(timeout)
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for attempt := 1; ; attempt++ {
+		conn, err := dialTimeout("tcp", address, cleanupNodeDownDialTimeout)
+		if err != nil {
+			logger.Info("Host stopped answering, cleanup is complete", "attempt", attempt)
+			return nil
+		}
+		_ = conn.Close()
+
+		if time.Now().After(deadline) {
+			return fmt.Errorf("host %s is still reachable after %s", address, timeout)
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+		}
+	}
+}
+
 func (c *Client) cleanup(ctx context.Context,
 	staticInstance *deckhousev1.StaticInstance,
 	staticMachine *infrav1.StaticMachine,
@@ -121,11 +181,23 @@ func (c *Client) cleanup(ctx context.Context,
 			tLogger.Error(err, "failed to create ssh client")
 			return fmt.Errorf("failed to create ssh client: %w", err)
 		}
-		err = sshCl.ExecSSHCommand(tCtx, "if [ ! -f /var/lib/bashible/cleanup_static_node.sh ]; then rm -rf /var/lib/bashible; (sleep 5 && shutdown -r now) & else bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing; fi", nil, nil)
+
+		var stdout, stderr bytes.Buffer
+		err = sshCl.ExecSSHCommand(tCtx, "if [ ! -f /var/lib/bashible/cleanup_static_node.sh ]; then rm -rf /var/lib/bashible; (sleep 5 && shutdown -r now) & else bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing; fi", &stdout, &stderr)
 		if err != nil {
-			tLogger.Error(err, "failed to exec ssh command")
-			return fmt.Errorf("failed to exec ssh command: %w", err)
+			output := tailOutput(combinedOutput(stdout.String(), stderr.String()))
+			tLogger.Error(err, "failed to exec ssh command", "output", output)
+			return fmt.Errorf("failed to exec ssh command: %w", &remoteCommandError{err: err, output: output})
 		}
+
+		address := net.JoinHostPort(dataStr.address, strconv.Itoa(dataStr.credentials.SSHPort))
+		tLogger.Info("Waiting for the host to stop answering after cleanup",
+			"address", address, "timeout", cleanupNodeDownTimeout.String())
+		if err := waitForNodeDown(tCtx, address); err != nil {
+			tLogger.Error(err, "host did not stop answering after cleanup")
+			return fmt.Errorf("failed to wait for the host to stop answering: %w", err)
+		}
+
 		return nil
 	}
 
@@ -141,6 +213,11 @@ func (c *Client) cleanup(ctx context.Context,
 	logger.Info("Running cleanup task")
 	err, finished := c.taskManager.Spawn(c.taskManagerCtx, string(staticMachine.UID), "cleanup", taskData, taskFunc)
 	if err != nil {
+		var cmdErr *remoteCommandError
+		if errors.As(err, &cmdErr) {
+			c.recorder.SendWarningEvent(staticInstance, staticMachine.Labels["node-group"], "CleanupScriptFailed", cmdErr.EventMessage())
+		}
+
 		return err
 	}
 
@@ -149,8 +226,8 @@ func (c *Client) cleanup(ctx context.Context,
 		return nil
 	}
 
-	logger.Info("Cleanup script executed successfully")
-	c.recorder.SendNormalEvent(staticInstance, staticMachine.Labels["node-group"], "CleanupScriptSucceeded", "Cleanup script executed successfully")
+	logger.Info("Cleanup completed, the host is not reachable")
+	c.recorder.SendNormalEvent(staticInstance, staticMachine.Labels["node-group"], "CleanupScriptSucceeded", "Cleanup completed, the host is not reachable")
 	staticInstance.ToPending()
 
 	return nil
