@@ -21,6 +21,7 @@ import (
 	"reflect"
 
 	libcon "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg"
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh"
 	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/local"
 	klient "github.com/flant/kube-client/client"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -59,6 +60,11 @@ type KubernetesClient struct {
 	// does not expose it, and rebuilding one from settings that the caller does not have was the
 	// alternative.
 	SSHClient libcon.SSHClient
+
+	// SSHConnect yields the SSH connection on demand, for a client that has none open yet and should
+	// not open one unless something needs it: the API may be reached with a kubeconfig, and a configured
+	// SSH host may be slow or unreachable. See NodeSSHClient.
+	SSHConnect func(ctx context.Context) (libcon.SSHClient, error)
 }
 
 type KubernetesInitParams struct {
@@ -93,6 +99,47 @@ func (k *KubernetesClient) WithSSHClient(client libcon.SSHClient) *KubernetesCli
 		k.SSHClient = client
 	}
 	return k
+}
+
+// WithSSHConnect sets SSHConnect. A nil connect leaves the client without one.
+func (k *KubernetesClient) WithSSHConnect(connect func(ctx context.Context) (libcon.SSHClient, error)) *KubernetesClient {
+	k.SSHConnect = connect
+	return k
+}
+
+// CanReachNodes reports whether NodeSSHClient has any way to yield a connection, without opening one.
+func (k *KubernetesClient) CanReachNodes() bool {
+	if k == nil {
+		return false
+	}
+	return k.SSHClient != nil || k.SSHConnect != nil || nodeSSHClient(k.NodeInterface) != nil
+}
+
+// NodeSSHClient is the SSH connection to a node: the one the client carries, or the one its node
+// interface is built on, or else the one SSHConnect yields, opened only now. Returns nil without an
+// error when the client has no way to a node.
+func (k *KubernetesClient) NodeSSHClient(ctx context.Context) (libcon.SSHClient, error) {
+	if k == nil {
+		return nil, nil
+	}
+	if k.SSHClient != nil {
+		return k.SSHClient, nil
+	}
+	if sshCl := nodeSSHClient(k.NodeInterface); sshCl != nil {
+		return sshCl, nil
+	}
+	if k.SSHConnect == nil {
+		return nil, nil
+	}
+	return k.SSHConnect(ctx)
+}
+
+func nodeSSHClient(nodeInterface libcon.Interface) libcon.SSHClient {
+	wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper)
+	if !ok || wrapper == nil {
+		return nil
+	}
+	return wrapper.Client()
 }
 
 // Init initializes kubernetes client

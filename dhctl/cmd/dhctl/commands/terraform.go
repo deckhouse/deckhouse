@@ -59,7 +59,7 @@ func DefineInfrastructureConvergeExporterCommand(cmd *cobra.Command, opts *optio
 		if err != nil {
 			return err
 		}
-		kubeCl := &client.KubernetesClient{KubeClient: kube}
+		kubeCl := (&client.KubernetesClient{KubeClient: kube}).WithSSHConnect(sshProviderInitializer.SSHConnect())
 
 		exporter := operations.NewConvergeExporter(operations.ExporterParams{
 			Address:       opts.Converge.ListenAddress,
@@ -109,7 +109,7 @@ func DefineInfrastructureCheckCommand(cmd *cobra.Command, opts *options.Options)
 		if err != nil {
 			return err
 		}
-		kubeCl := &client.KubernetesClient{KubeClient: kube}
+		kubeCl := (&client.KubernetesClient{KubeClient: kube}).WithSSHConnect(sshProviderInitializer.SSHConnect())
 
 		metaConfig, err := config.ParseConfigInCluster(
 			ctx,

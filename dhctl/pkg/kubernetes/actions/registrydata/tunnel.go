@@ -24,7 +24,7 @@ import (
 	"sync"
 
 	libcon "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg"
-	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh"
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/clissh"
 	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -63,7 +63,8 @@ import (
 // registry — the lazy provider-plugin download, several steps later — would otherwise find its
 // connection reset on a port that had gone. dhctl is short-lived, so it lives until the process exits.
 //
-// Returns ok=false where there is no SSH connection to work with (in-cluster callers, tests).
+// Returns ok=false where there is no SSH connection to work with (in-cluster callers, tests). The
+// connection is asked for only once the store is known to be there.
 func mirrorThroughNode(
 	ctx context.Context,
 	kubeCl *client.KubernetesClient,
@@ -73,14 +74,7 @@ func mirrorThroughNode(
 		return nil, "", false, nil
 	}
 
-	sshCl := kubeCl.SSHClient
-	if sshCl == nil {
-		// Some callers carry the connection as a node interface instead.
-		if wrapper, ok := kubeCl.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
-			sshCl = wrapper.Client()
-		}
-	}
-	if sshCl == nil {
+	if !kubeCl.CanReachNodes() {
 		return nil, "", false, nil
 	}
 
@@ -96,6 +90,16 @@ func mirrorThroughNode(
 	store, held, err := readStoreAccess(ctx, kubeCl)
 	if err != nil || !held {
 		return nil, "", false, err
+	}
+
+	// Opened only now, when the store is what the caller needs: a command that reaches the API with a
+	// kubeconfig must not wait on an SSH host it was given for anything else.
+	sshCl, err := kubeCl.NodeSSHClient(ctx)
+	if err != nil {
+		return nil, "", false, fmt.Errorf("connect over SSH to reach the cluster store: %w", err)
+	}
+	if sshCl == nil {
+		return nil, "", false, nil
 	}
 
 	localPort, err := tunnelTo(ctx, sshCl, store.address, store.port)
@@ -176,9 +180,7 @@ func tunnelTo(ctx context.Context, sshCl libcon.SSHClient, storeAddress string, 
 		return 0, err
 	}
 
-	// "remote_bind:remote_port:local_bind:local_port": dhctl listens locally and dials the far end over
-	// the SSH connection.
-	address := fmt.Sprintf("%s:%d:127.0.0.1:%d", storeAddress, storePort, localPort)
+	address := forwardSpec(isLegacySSH(sshCl), storeAddress, storePort, localPort)
 
 	if err := sshCl.Tunnel(address).Up(context.WithoutCancel(ctx)); err != nil {
 		return 0, fmt.Errorf("open a tunnel to the cluster store at %s: %w", address, err)
@@ -186,6 +188,22 @@ func tunnelTo(ctx context.Context, sshCl libcon.SSHClient, storeAddress string, 
 
 	tunnels.ports[key] = localPort
 	return localPort, nil
+}
+
+// isLegacySSH reports whether the client is the OpenSSH binary rather than Go SSH (--ssh-legacy-mode).
+func isLegacySSH(sshCl libcon.SSHClient) bool {
+	_, legacy := sshCl.(*clissh.Client)
+	return legacy
+}
+
+// forwardSpec is the argument of Tunnel for a local forward to the store. The two backends read it in
+// opposite orders: Go SSH takes "remote_host:remote_port:local_bind:local_port", while OpenSSH gets it
+// as `-L local_bind:local_port:remote_host:remote_port` unchanged.
+func forwardSpec(legacy bool, storeAddress string, storePort, localPort int) string {
+	if legacy {
+		return fmt.Sprintf("127.0.0.1:%d:%s:%d", localPort, storeAddress, storePort)
+	}
+	return fmt.Sprintf("%s:%d:127.0.0.1:%d", storeAddress, storePort, localPort)
 }
 
 // storeSecret is what the store publishes for anything that needs to read from it: where it answers,
