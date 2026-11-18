@@ -20,7 +20,24 @@ import (
 	"github.com/stretchr/testify/require"
 
 	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
+	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
 )
+
+func TestClientConfigGetterRejectsOtherRepositories(t *testing.T) {
+	getter := NewClientConfigGetter(registry_config.Data{ImagesRepo: "registry.test/deckhouse"})
+
+	cfg, err := getter.Get(registry.DefaultRepository)
+	require.NoError(t, err)
+	require.Equal(t, getter.Repository, cfg.Repository)
+
+	for _, repository := range []string{"", getter.Repository, "registry.test", "module-source"} {
+		t.Run(repository, func(t *testing.T) {
+			cfg, err := getter.Get(repository)
+			require.Error(t, err)
+			require.Nil(t, cfg)
+		})
+	}
+}
 
 func TestNewRegistryClientConfigGetter(t *testing.T) {
 	t.Run("Path with leading slash", func(t *testing.T) {

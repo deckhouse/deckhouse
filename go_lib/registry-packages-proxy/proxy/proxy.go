@@ -221,71 +221,7 @@ func (p *Proxy) Serve(cfg *Config) {
 		p.config = Config{}
 	}
 
-	http.HandleFunc("/package", func(w http.ResponseWriter, r *http.Request) {
-		requestIP := getRequestIP(r)
-
-		if r.Method != http.MethodHead && r.Method != http.MethodGet {
-			p.logger.Errorf("method %s from client %s is not allowed", r.Method, requestIP)
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		digest := r.URL.Query().Get("digest")
-		repository := r.URL.Query().Get("repository")
-		additionalPath := r.URL.Query().Get("path")
-
-		if repository == "" {
-			repository = registry.DefaultRepository
-		}
-
-		logEntry := fmt.Sprintf("Received request with digest %q for repo %s from client %s", digest, repository, requestIP)
-
-		if additionalPath != "" {
-			logEntry = fmt.Sprintf("%s and additional path = %s", logEntry, additionalPath)
-		}
-
-		p.logger.Infof("%s", logEntry)
-
-		if digest == "" {
-			p.logger.Errorf("request from client %s: query %q is missing required parameter \"digest\"", requestIP, r.URL.RawQuery)
-			http.Error(w, "missing required query parameter \"digest\"", http.StatusBadRequest)
-			return
-		}
-
-		size, packageReader, err := p.getPackage(r.Context(), digest, repository, additionalPath)
-		if packageReader != nil {
-			defer packageReader.Close()
-		}
-		if err != nil {
-			p.logger.Errorf("get package %q for client %s: %v", digest, requestIP, err)
-			if errors.Is(err, registry.ErrPackageNotFound) {
-				http.Error(w, err.Error(), http.StatusNotFound)
-				return
-			}
-
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/x-gzip")
-		w.Header().Set("Content-Disposition", "attachment; filename="+digest+".tar.gz")
-		w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
-
-		// Cache for 1 year
-		w.Header().Set("Cache-Control", `public, max-age=31536000`)
-		w.Header().Set("ETag", "\""+digest+"\"")
-
-		if r.Method == http.MethodHead {
-			return
-		}
-		_, err = io.Copy(w, packageReader)
-		if err != nil {
-			p.logger.Errorf("send package: %v", err)
-			return
-		}
-
-		p.logger.Infof("Package for digest %q sent successfully", digest)
-	})
+	http.HandleFunc("/package", p.servePackage)
 
 	p.ServeCLI()
 	p.ServePackages()
@@ -295,6 +231,83 @@ func (p *Proxy) Serve(cfg *Config) {
 	if err := p.server.Serve(p.listener); err != nil && err != http.ErrServerClosed {
 		p.logger.Error(err.Error())
 	}
+}
+
+func (p *Proxy) servePackage(w http.ResponseWriter, r *http.Request) {
+	requestIP := getRequestIP(r)
+
+	if r.Method != http.MethodHead && r.Method != http.MethodGet {
+		p.logger.Errorf("method %s from client %s is not allowed", r.Method, requestIP)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	digest := r.URL.Query().Get("digest")
+	repository := r.URL.Query().Get("repository")
+	additionalPath := r.URL.Query().Get("path")
+
+	if repository == "" {
+		repository = registry.DefaultRepository
+	}
+
+	logEntry := fmt.Sprintf("Received request with digest %q for repo %s from client %s", digest, repository, requestIP)
+
+	if additionalPath != "" {
+		logEntry = fmt.Sprintf("%s and additional path = %s", logEntry, additionalPath)
+	}
+
+	p.logger.Infof("%s", logEntry)
+
+	if digest == "" {
+		p.logger.Errorf("request from client %s: query %q is missing required parameter \"digest\"", requestIP, r.URL.RawQuery)
+		http.Error(w, "missing required query parameter \"digest\"", http.StatusBadRequest)
+
+		return
+	}
+
+	size, packageReader, err := p.getPackage(r.Context(), digest, repository, additionalPath)
+	if packageReader != nil {
+		defer func() { _ = packageReader.Close() }()
+	}
+
+	if err != nil {
+		p.logger.Errorf("get package %q for client %s: %v", digest, requestIP, err)
+
+		if errors.Is(err, registry.ErrPackageNotFound) {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
+		if errors.Is(err, registry.ErrSignatureVerification) {
+			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+			return
+		}
+
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/x-gzip")
+	w.Header().Set("Content-Disposition", "attachment; filename="+digest+".tar.gz")
+	w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
+
+	// Cache for 1 year
+	w.Header().Set("Cache-Control", `public, max-age=31536000`)
+	w.Header().Set("ETag", "\""+digest+"\"")
+
+	if r.Method == http.MethodHead {
+		return
+	}
+
+	_, err = io.Copy(w, packageReader)
+	if err != nil {
+		p.logger.Errorf("send package: %v", err)
+		return
+	}
+
+	p.logger.Infof("Package for digest %q sent successfully", digest)
 }
 
 // CLIHandler returns an http.HandlerFunc that serves the /v1/images/* CLI download routes
@@ -361,7 +374,18 @@ func (s *RPPClientBinaryServer) Stop() {
 }
 
 func (p *Proxy) getPackage(ctx context.Context, digest string, repository string, path string) (int64, io.ReadCloser, error) {
-	return GetPackageCached(ctx, p.logger, p.getter, p.registryClient, p.cache, digest, repository, path, p.config.SignCheck, nil)
+	cfg, err := p.getter.Get(repository)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	if cfg == nil {
+		return 0, nil, errEmptyRegistryConfig
+	}
+
+	signCheck := p.config.SignCheck && (repository == registry.DefaultRepository || !cfg.SkipSignatureCheck)
+
+	return GetPackageCached(ctx, p.logger, p.getter, p.registryClient, p.cache, digest, repository, path, signCheck, cfg)
 }
 
 // GetPackageCached fetches an image package by manifest digest, first consulting the optional
@@ -389,7 +413,13 @@ func GetPackageCached(
 		return size, reader, err
 	}
 
-	size, cacheReader, err := pkgCache.Get(digest)
+	cacheKey := digest
+	if signCheck {
+		// Unchecked metadata and ModuleSource downloads must never populate a verified entry.
+		cacheKey = "verified:" + digest
+	}
+
+	size, cacheReader, err := pkgCache.Get(cacheKey)
 	if err == nil {
 		return size, cacheReader, nil
 	}
@@ -416,7 +446,7 @@ func GetPackageCached(
 		defer registryReader.Close()
 		defer pipeWriter.Close()
 
-		err := pkgCache.Set(digest, layerDigest, teeReader)
+		err := pkgCache.Set(cacheKey, layerDigest, teeReader)
 		if err != nil {
 			logger.Errorf("cache set for digest %q: %v", digest, err)
 		}
@@ -589,6 +619,9 @@ func (h *rppBinaryHandler) writeError(w http.ResponseWriter, r *http.Request, er
 	case errors.Is(err, registry.ErrPackageNotFound):
 		h.logger.Warnf("rpp-get package %q requested by client %s was not found", digest, client)
 		http.Error(w, err.Error(), http.StatusNotFound)
+	case errors.Is(err, registry.ErrSignatureVerification):
+		h.logger.Errorf("refuse %s package %q requested by client %s: %v", h.binaryName, digest, client, err)
+		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 	default:
 		h.logger.Errorf("fetch %s package %q requested by client %s: %v", h.binaryName, digest, client, err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -656,7 +689,7 @@ func (h *cliHandler) serveHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // cliBaseConfig resolves the default registry config and returns a private
-// copy with SignCheck stamped in. Repository still names the cluster
+// copy. Repository still names the cluster
 // repository: requestCLIArtifacts rewrites it to each candidate CLI artifacts
 // root in turn. Callers must NOT mutate the value returned directly by the
 // getter: the watcher rewrites those entries under a write lock while readers
@@ -673,7 +706,6 @@ func (h *cliHandler) cliBaseConfig(w http.ResponseWriter, logger log.Logger) (*r
 		return nil, false
 	}
 	local := *cfg
-	local.SignCheck = h.proxy.config.SignCheck
 	return &local, true
 }
 
@@ -811,7 +843,7 @@ func (h *cliHandler) handlePullImage(w http.ResponseWriter, r *http.Request, ima
 		manifestDigest,
 		registry.DefaultRepository,
 		imagePath,
-		h.proxy.config.SignCheck,
+		false,
 		cfg,
 	)
 	if reader != nil {
@@ -1010,7 +1042,7 @@ func (p *Proxy) PackagesHandler() http.HandlerFunc {
 		// Icon extraction needs to read docs/icon.svg regardless of which
 		// layer it was added in, so the registry client must flatten all
 		// layers for /v1/packages/* routes.
-		cfg := packagesCfg.ToClientConfig(p.config.SignCheck, true)
+		cfg := packagesCfg.ToClientConfig(false, true)
 
 		clientIP := getRequestIP(r)
 		p.logger.Infof("Packages request from client %s", clientIP)
@@ -1145,7 +1177,7 @@ func (p *Proxy) fetchIcon(w http.ResponseWriter, r *http.Request, cfg *registry.
 		manifestDigest,
 		cfg.Repository,
 		imagePath,
-		p.config.SignCheck,
+		false,
 		cfg,
 	)
 	if reader != nil {

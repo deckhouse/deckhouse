@@ -38,7 +38,10 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/log"
 )
 
-type DefaultClient struct{}
+// DefaultClient verifies signatures against the Flant root CA when ClientConfig.SignCheck is enabled.
+type DefaultClient struct {
+	signatureRoots []string
+}
 
 func (c *DefaultClient) GetPackage(ctx context.Context, log log.Logger, config *ClientConfig, digest string, path string) (int64, string, io.ReadCloser, error) {
 	repo := config.Repository
@@ -73,8 +76,9 @@ func (c *DefaultClient) GetPackage(ctx context.Context, log log.Logger, config *
 	// Verify image signature
 	if config.SignCheck {
 		log.Infof("verify image signature: %s %s", path, digest)
-		if err := ddk.VerifyImageManifestSignature(ctx, []string{rootca.RootCABase64}, manifest); err != nil {
-			log.Error("verify image signature failed: %w", err)
+
+		if err := ddk.VerifyImageManifestSignature(ctx, c.trustedRoots(), manifest); err != nil {
+			return 0, "", nil, fmt.Errorf("%w: %s@%s: %w", ErrSignatureVerification, repo, digest, err)
 		}
 	}
 
@@ -99,6 +103,14 @@ func (c *DefaultClient) GetPackage(ctx context.Context, log log.Logger, config *
 	}
 
 	return size, hash.Hex, reader, nil
+}
+
+func (c *DefaultClient) trustedRoots() []string {
+	if len(c.signatureRoots) > 0 {
+		return c.signatureRoots
+	}
+
+	return []string{rootca.RootCABase64}
 }
 
 // selectImageLayer returns the bytes-bearing layer requested by the caller:
