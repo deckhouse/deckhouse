@@ -30,40 +30,42 @@ import (
 )
 
 const (
-	// AWS-specific taint key added by AWS Node Termination Handler
-	awsSpotTaintKey = "aws-node-termination-handler/spot-itn"
+	awsSpotITNTaintKey                 = "aws-node-termination-handler/spot-itn"
+	awsRebalanceRecommendationTaintKey = "aws-node-termination-handler/rebalance-recommendation"
 
-	// Deckhouse standard labels and annotations
 	terminationLabelKey   = "node.deckhouse.io/termination-in-progress"
 	drainingAnnotationKey = "update.node.deckhouse.io/draining"
 
-	// AWS-specific values
 	awsTerminationSource = "aws-node-termination-handler"
 )
+
+var awsTerminationTaintKeys = map[string]struct{}{
+	awsSpotITNTaintKey:                 {},
+	awsRebalanceRecommendationTaintKey: {},
+}
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/cloud-provider-aws/termination-metadata",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:                         "nodes_with_spot_taint",
+			Name:                         "nodes_with_termination_taint",
 			WaitForSynchronization:       ptr.To(true),
 			ExecuteHookOnSynchronization: ptr.To(true),
 			ExecuteHookOnEvents:          ptr.To(true),
 			ApiVersion:                   "v1",
 			Kind:                         "Node",
-			FilterFunc:                   awsSpotTaintFilter,
+			FilterFunc:                   awsTerminationTaintFilter,
 		},
 	},
 }, addTerminationMetadata)
 
-type nodeWithSpotTaint struct {
-	Name                  string
-	HasSpotTaint          bool
-	HasTerminationLabel   bool
-	HasDrainingAnnotation bool
+type nodeWithTerminationTaint struct {
+	Name                string
+	HasTerminationTaint bool
+	HasTerminationLabel bool
 }
 
-func awsSpotTaintFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func awsTerminationTaintFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var node corev1.Node
 
 	err := sdk.FromUnstructured(obj, &node)
@@ -71,34 +73,22 @@ func awsSpotTaintFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 		return nil, err
 	}
 
-	result := nodeWithSpotTaint{
-		Name:                  node.Name,
-		HasSpotTaint:          false,
-		HasTerminationLabel:   false,
-		HasDrainingAnnotation: false,
+	result := nodeWithTerminationTaint{
+		Name: node.Name,
 	}
 
-	// Check if node has AWS spot termination taint
 	for _, taint := range node.Spec.Taints {
-		if taint.Key == awsSpotTaintKey {
-			result.HasSpotTaint = true
+		if _, ok := awsTerminationTaintKeys[taint.Key]; ok {
+			result.HasTerminationTaint = true
 			break
 		}
 	}
 
-	// Check if node already has termination label
 	if val, ok := node.Labels[terminationLabelKey]; ok && val == "true" {
 		result.HasTerminationLabel = true
 	}
 
-	// Check if node already has draining annotation
-	if _, ok := node.Annotations[drainingAnnotationKey]; ok {
-		result.HasDrainingAnnotation = true
-	}
-
-	// Only return nodes that have spot taint
-	// We'll check label and annotation presence in the handler
-	if result.HasSpotTaint {
+	if result.HasTerminationTaint {
 		return result, nil
 	}
 
@@ -106,40 +96,33 @@ func awsSpotTaintFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 }
 
 func addTerminationMetadata(_ context.Context, input *go_hook.HookInput) error {
-	nodesSnapshot := input.Snapshots.Get("nodes_with_spot_taint")
+	nodesSnapshot := input.Snapshots.Get("nodes_with_termination_taint")
 
-	for node, err := range sdkobjectpatch.SnapshotIter[nodeWithSpotTaint](nodesSnapshot) {
+	for node, err := range sdkobjectpatch.SnapshotIter[nodeWithTerminationTaint](nodesSnapshot) {
 		if err != nil {
-			return fmt.Errorf("failed to iterate over 'nodes_with_spot_taint' snapshots: %w", err)
+			return fmt.Errorf("failed to iterate over 'nodes_with_termination_taint' snapshots: %w", err)
+		}
+
+		if node.HasTerminationLabel {
+			continue
 		}
 
 		input.Logger.Info(
-			"Adding termination metadata for AWS spot-tainted node",
+			"Adding termination metadata for AWS termination-tainted node",
 			"node", node.Name,
 		)
 
-		metadata := make(map[string]interface{})
-
-		// Add label if not present
-		if !node.HasTerminationLabel {
-			metadata["labels"] = map[string]interface{}{
-				terminationLabelKey: "true",
-			}
+		patch := map[string]interface{}{
+			"metadata": map[string]interface{}{
+				"labels": map[string]interface{}{
+					terminationLabelKey: "true",
+				},
+				"annotations": map[string]interface{}{
+					drainingAnnotationKey: awsTerminationSource,
+				},
+			},
 		}
-
-		// Add annotation if not present
-		if !node.HasDrainingAnnotation {
-			metadata["annotations"] = map[string]interface{}{
-				drainingAnnotationKey: awsTerminationSource,
-			}
-		}
-
-		if len(metadata) > 0 {
-			patch := map[string]interface{}{
-				"metadata": metadata,
-			}
-			input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", node.Name)
-		}
+		input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", node.Name)
 	}
 
 	return nil

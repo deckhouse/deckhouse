@@ -54,8 +54,10 @@ The module consists of the following components:
 1. **Node-termination-handler**: [AWS Node Termination Handler](https://github.com/aws/aws-node-termination-handler). It is responsible for gracefully handling the termination of EC2 instances in the Kubernetes control plane.
 
    Node-termination-handler processes the following AWS events:
+
    * [EC2 maintenance events](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/monitoring-instances-status-check_sched.html)
    * [EC2 Spot interruptions](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-interruptions.html)
+   * [EC2 Instance Rebalance Recommendation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/rebalance-recommendations.html)
    * [ASG Scale-In](https://docs.aws.amazon.com/autoscaling/ec2/userguide/AutoScalingGroupLifecycle.html#as-lifecycle-scale-in)
    * [ASG AZ Rebalance](https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-capacity-rebalancing.html)
    * [EC2 Instance Termination](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/terminating-instances.html)
@@ -65,7 +67,10 @@ The module consists of the following components:
    * **node-termination-handler**.
 
    After receiving an event when it is necessary to drain and then to delete a node, for example, in case of a regular interruption of a spot instance, node-termination-handler sets the `aws-node-termination-handler/spot-itn` taint for the corresponding node.
-   A node drain itself, and then node removal are performed by the [`node-manager`](/modules/node-manager/) module using the [module hooks](../../module-development/structure/#hooks) mechanics.
+
+   When an EC2 Instance Rebalance Recommendation arrives, the `node-termination-handler` component applies the `aws-node-termination-handler/rebalance-recommendation` taint with `effect: NoSchedule` to the CloudEphemeral node. This taint prevents the scheduler from placing new workloads on the node unless they have a matching toleration.
+
+   When either taint is detected, a node drain itself, and then node removal are performed by the [`node-manager`](/modules/node-manager/) module using the [module hooks](../../module-development/structure/#hooks) mechanics.
 
 ## Module interactions
 

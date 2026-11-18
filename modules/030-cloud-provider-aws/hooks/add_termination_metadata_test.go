@@ -25,7 +25,7 @@ import (
 
 var _ = Describe("cloud-provider-aws :: add_termination_metadata ::", func() {
 	const (
-		nodeWithSpotTaint = `
+		nodeWithSpotITNTaint = `
 ---
 apiVersion: v1
 kind: Node
@@ -37,7 +37,19 @@ spec:
     value: "1234567890"
     effect: NoSchedule
 `
-		nodeWithSpotTaintAndMetadata = `
+		nodeWithRebalanceRecommendationTaint = `
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node-rr
+spec:
+  taints:
+  - key: aws-node-termination-handler/rebalance-recommendation
+    value: "1234567890"
+    effect: NoSchedule
+`
+		nodeWithSpotITNTaintAndMetadata = `
 ---
 apiVersion: v1
 kind: Node
@@ -53,6 +65,38 @@ spec:
     value: "1234567890"
     effect: NoSchedule
 `
+		nodeWithRebalanceRecommendationTaintAndMetadata = `
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node-rr-done
+  labels:
+    node.deckhouse.io/termination-in-progress: "true"
+  annotations:
+    update.node.deckhouse.io/draining: "aws-node-termination-handler"
+spec:
+  taints:
+  - key: aws-node-termination-handler/rebalance-recommendation
+    value: "1234567890"
+    effect: NoSchedule
+`
+		nodeWithRebalanceRecommendationTaintAfterDrain = `
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node-rr-drained
+  labels:
+    node.deckhouse.io/termination-in-progress: "true"
+  annotations:
+    update.node.deckhouse.io/drained: "aws-node-termination-handler"
+spec:
+  taints:
+  - key: aws-node-termination-handler/rebalance-recommendation
+    value: "1234567890"
+    effect: NoSchedule
+`
 		normalNode = `
 ---
 apiVersion: v1
@@ -64,9 +108,9 @@ metadata:
 
 	f := HookExecutionConfigInit(`{}`, `{}`)
 
-	Context("Node with spot taint but no metadata", func() {
+	Context("Node with spot-itn taint but no metadata", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(nodeWithSpotTaint))
+			f.BindingContexts.Set(f.KubeStateSet(nodeWithSpotITNTaint))
 			f.RunHook()
 		})
 
@@ -76,19 +120,55 @@ metadata:
 		})
 	})
 
-	Context("Node with spot taint AND metadata (already processed)", func() {
+	Context("Node with rebalance-recommendation taint but no metadata", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(nodeWithSpotTaintAndMetadata))
+			f.BindingContexts.Set(f.KubeStateSet(nodeWithRebalanceRecommendationTaint))
+			f.RunHook()
+		})
+
+		It("Should add termination label and draining annotation", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.PatchCollector.Operations()).To(HaveLen(1))
+		})
+	})
+
+	Context("Node with spot-itn taint AND metadata (already processed)", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(nodeWithSpotITNTaintAndMetadata))
 			f.RunHook()
 		})
 
 		It("Should NOT add metadata again (idempotent)", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.PatchCollector.Operations()).To(HaveLen(0)) // No patches
+			Expect(f.PatchCollector.Operations()).To(HaveLen(0))
 		})
 	})
 
-	Context("Normal node without spot taint", func() {
+	Context("Node with rebalance-recommendation taint AND metadata (already processed)", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(nodeWithRebalanceRecommendationTaintAndMetadata))
+			f.RunHook()
+		})
+
+		It("Should NOT add metadata again (idempotent)", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.PatchCollector.Operations()).To(HaveLen(0))
+		})
+	})
+
+	Context("Node with termination taint AFTER drain (label present, draining annotation gone)", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(nodeWithRebalanceRecommendationTaintAfterDrain))
+			f.RunHook()
+		})
+
+		It("Should NOT re-add draining annotation and avoid a drain loop", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.PatchCollector.Operations()).To(HaveLen(0))
+		})
+	})
+
+	Context("Normal node without any AWS termination taint", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(normalNode))
 			f.RunHook()
@@ -102,13 +182,19 @@ metadata:
 
 	Context("Multiple nodes with different states", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(nodeWithSpotTaint + nodeWithSpotTaintAndMetadata + normalNode))
+			f.BindingContexts.Set(f.KubeStateSet(
+				nodeWithSpotITNTaint +
+					nodeWithRebalanceRecommendationTaint +
+					nodeWithSpotITNTaintAndMetadata +
+					nodeWithRebalanceRecommendationTaintAndMetadata +
+					normalNode,
+			))
 			f.RunHook()
 		})
 
 		It("Should only process nodes that need metadata", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.PatchCollector.Operations()).To(HaveLen(1)) // Only node-1
+			Expect(f.PatchCollector.Operations()).To(HaveLen(2))
 		})
 	})
 })

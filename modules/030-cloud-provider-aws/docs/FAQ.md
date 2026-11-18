@@ -171,7 +171,15 @@ spec:
       - eu-central-1a
 ```
 
-Once AWS sends a notice about an upcoming instance [interruption](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-interruptions.html), Deckhouse Platform applies the `aws-node-termination-handler/spot-itn` taint to the node, drains it, and deletes it. The group then orders a new node until the node count reaches the [`minPerZone`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-minperzone) parameter value.
+### Handling AWS notifications
+
+When an [EC2 Instance Rebalance Recommendation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/rebalance-recommendations.html) signals an elevated risk of Spot Instance interruption, the `node-termination-handler` component automatically applies the `aws-node-termination-handler/rebalance-recommendation` taint with `effect: NoSchedule` to the CloudEphemeral node. This taint prevents the scheduler from placing new workloads on the node unless they have a matching toleration.
+
+The `aws-node-termination-handler/spot-itn` taint indicates a notice of an upcoming [Spot Instance interruption](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-interruptions.html).
+
+If either taint is present, the [`node-manager`](/modules/node-manager/) module cordons and drains the node, then deletes it. If the node count in a zone falls below the [`minPerZone`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-minperzone) parameter value, the group provisions new nodes.
+
+The recommendation allows node decommissioning to start before an interruption notice arrives. AWS may send both notifications at the same time.
 
 ### Limitations of preemptible nodes in AWS
 

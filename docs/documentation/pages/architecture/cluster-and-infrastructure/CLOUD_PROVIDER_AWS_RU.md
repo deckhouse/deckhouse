@@ -58,6 +58,7 @@ description: Архитектура модуля cloud-provider-aws в Deckhouse
 
    * [EC2 maintenance events](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/monitoring-instances-status-check_sched.html);
    * [EC2 Spot interruptions](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-interruptions.html);
+   * [EC2 Instance Rebalance Recommendation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/rebalance-recommendations.html);
    * [ASG Scale-In](https://docs.aws.amazon.com/autoscaling/ec2/userguide/AutoScalingGroupLifecycle.html#as-lifecycle-scale-in);
    * [ASG AZ Rebalance](https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-capacity-rebalancing.html);
    * [EC2 Instance Termination](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/terminating-instances.html).
@@ -67,7 +68,10 @@ description: Архитектура модуля cloud-provider-aws в Deckhouse
    * **node-termination-handler**.
 
    При получении события, требующего вывода узла из эксплуатации (drain), например при плановом прерывании работы spot-инстанса, node-termination-handler устанавливает на соответствующий узел taint `aws-node-termination-handler/spot-itn`.
-   Модуль [`node-manager`](/modules/node-manager/) обнаруживает этот taint и с помощью [хуков модуля](../../module-development/structure/#hooks) выполняет drain, а затем удаляет узел.
+
+   При получении EC2 Instance Rebalance Recommendation компонент `node-termination-handler` устанавливает на CloudEphemeral-узел taint `aws-node-termination-handler/rebalance-recommendation` с параметром `effect: NoSchedule`. Такой taint запрещает планировщику размещать на узле новую нагрузку без соответствующего toleration.
+
+   Модуль [`node-manager`](/modules/node-manager/) обнаруживает любой из этих taints и с помощью [хуков модуля](../../module-development/structure/#hooks) выполняет drain, а затем удаляет узел.
 
 ## Взаимодействия модуля
 

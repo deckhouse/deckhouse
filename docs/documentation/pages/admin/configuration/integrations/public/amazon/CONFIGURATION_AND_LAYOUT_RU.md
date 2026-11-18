@@ -293,7 +293,15 @@ IPv4 CIDR у обоих VPC должен различаться.
 
 Прерываемые виртуальные машины в AWS называются spot-инстансами. Чтобы [группа узлов](../../../../glossary.html#node-group) заказывала их, установите параметр [`spot`](/modules/cloud-provider-aws/cr.html#awsinstanceclass-v1-spec-spot) ресурса AWSInstanceClass в `true`.
 
-Порядок создания таких узлов и особенности их работы описаны в разделе [«Как создать прерываемые узлы в AWS?»](/modules/cloud-provider-aws/faq.html#как-создать-прерываемые-узлы-в-aws).
+При получении [рекомендации о повышенном риске прерывания spot-инстанса](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/rebalance-recommendations.html) (EC2 Instance Rebalance Recommendation) компонент `node-termination-handler` автоматически устанавливает на CloudEphemeral-узел taint `aws-node-termination-handler/rebalance-recommendation` с параметром `effect: NoSchedule`. Такой taint запрещает планировщику размещать на узле новую нагрузку без соответствующего toleration.
+
+Taint `aws-node-termination-handler/spot-itn` обозначает уведомление о предстоящем [прерывании spot-инстанса](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-interruptions.html).
+
+При наличии любого из этих taints модуль [`node-manager`](/modules/node-manager/) выполняет cordon и drain узла, затем удаляет его. Если количество узлов в зоне становится меньше значения параметра [`minPerZone`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-minperzone), группа заказывает новые узлы.
+
+Рекомендация позволяет начать вывод узла из эксплуатации до получения уведомления о прерывании. AWS может отправить оба уведомления одновременно.
+
+Порядок создания таких узлов и ограничения их использования описаны в разделе [«Как создать прерываемые узлы в AWS?»](/modules/cloud-provider-aws/faq.html#как-создать-прерываемые-узлы-в-aws).
 
 ## Замена образа ОС
 

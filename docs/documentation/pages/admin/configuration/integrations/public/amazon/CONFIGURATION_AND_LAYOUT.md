@@ -305,7 +305,15 @@ Compatibility with other parameters:
 
 Preemptible virtual machines in AWS are called Spot Instances. To make a [node group](../../../../glossary.html#node-group) order them, set the [`spot`](/modules/cloud-provider-aws/cr.html#awsinstanceclass-v1-spec-spot) parameter of the AWSInstanceClass resource to `true`.
 
-How to create such nodes and how they behave is described in ["How to create preemptible nodes in AWS?"](/modules/cloud-provider-aws/faq.html#how-to-create-preemptible-nodes-in-aws).
+When an [EC2 Instance Rebalance Recommendation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/rebalance-recommendations.html) signals an elevated risk of Spot Instance interruption, the `node-termination-handler` component automatically applies the `aws-node-termination-handler/rebalance-recommendation` taint with `effect: NoSchedule` to the CloudEphemeral node. This taint prevents the scheduler from placing new workloads on the node unless they have a matching toleration.
+
+The `aws-node-termination-handler/spot-itn` taint indicates a notice of an upcoming [Spot Instance interruption](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-interruptions.html).
+
+If either taint is present, the [`node-manager`](/modules/node-manager/) module cordons and drains the node, then deletes it. If the node count in a zone falls below the [`minPerZone`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-minperzone) parameter value, the group provisions new nodes.
+
+The recommendation allows node decommissioning to start before an interruption notice arrives. AWS may send both notifications at the same time.
+
+How to create such nodes and the limitations of their use are described in ["How to create preemptible nodes in AWS?"](/modules/cloud-provider-aws/faq.html#how-to-create-preemptible-nodes-in-aws).
 
 ## Replacing the OS image
 
