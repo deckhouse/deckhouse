@@ -97,58 +97,59 @@ spec:
                               type: boolean
                             nodeFilter: &node-filter
                               description: Filters Nodes to which the strategy applies.
-                              labelSelector:
-                                properties:
-                                  matchExpressions:
-                                    type: array
-                                    description: List of label expressions that a node should have to qualify for the filter condition.
-                                    items:
-                                      properties:
-                                        key:
-                                          type: string
-                                          description: A label name.
-                                        operator:
-                                          type: string
-                                          description: A comparison operator.
-                                          enum:
-                                            - In
-                                            - NotIn
-                                            - Exists
-                                            - DoesNotExist
-                                        values:
-                                          type: array
-                                          description: A label value.
-                                          items:
+                              properties:
+                                labelSelector:
+                                  properties:
+                                    matchExpressions:
+                                      type: array
+                                      description: List of label expressions that a node should have to qualify for the filter condition.
+                                      items:
+                                        properties:
+                                          key:
                                             type: string
-                                            pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
-                                            minLength: 1
-                                            maxLength: 63
-                                      oneOf:
-                                        - properties:
-                                            operator:
-                                              enum: [ Exists, DoesNotExist ]
-                                          required: [ key, operator ]
-                                          not:
-                                            required: [ values ]
-                                        - properties:
-                                            operator:
-                                              enum: [ In, NotIn ]
-                                          required: [ key, operator, values ]
-                                      type: object
-                                    x-doc-examples:
-                                      - - key: tier
-                                          operator: In
+                                            description: A label name.
+                                          operator:
+                                            type: string
+                                            description: A comparison operator.
+                                            enum:
+                                              - In
+                                              - NotIn
+                                              - Exists
+                                              - DoesNotExist
                                           values:
-                                            - production
-                                            - staging
-                                        - key: tier
-                                          operator: NotIn
-                                          values: [ production ]
-                                  matchLabels:
-                                    additionalProperties:
-                                      type: string
-                                    type: object
-                                type: object
+                                            type: array
+                                            description: A label value.
+                                            items:
+                                              type: string
+                                              pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                                              minLength: 1
+                                              maxLength: 63
+                                        oneOf:
+                                          - properties:
+                                              operator:
+                                                enum: [ Exists, DoesNotExist ]
+                                            required: [ key, operator ]
+                                            not:
+                                              required: [ values ]
+                                          - properties:
+                                              operator:
+                                                enum: [ In, NotIn ]
+                                            required: [ key, operator, values ]
+                                        type: object
+                                      x-doc-examples:
+                                        - - key: tier
+                                            operator: In
+                                            values:
+                                              - production
+                                              - staging
+                                          - key: tier
+                                            operator: NotIn
+                                            values: [ production ]
+                                    matchLabels:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                  type: object
                               type: object
                             priorityFilter: &priority-filter
                               description: Only Pods with priority lower than this will be descheduled.

@@ -62,21 +62,22 @@ spec:
                             enabled:
                             nodeFilter: &node-filter
                               description: Фильтрует узлы, к которым применяется стратегия.
-                              labelSelector:
-                                properties:
-                                  matchExpressions:
-                                    description: Список выражений лейблов, которые должен содержать узел, чтобы соответствовать условию фильтра.
-                                    items:
-                                    properties:
-                                      key:
-                                        description: Имя лейбла.
-                                      operator:
-                                        description: Оператор сравнения.
-                                      values:
-                                        description: Значение лейбла.
-                                        items:
-                                  matchLabels:
-                                    additionalProperties:
+                              properties:
+                                labelSelector:
+                                  properties:
+                                    matchExpressions:
+                                      description: Список выражений лейблов, которые должен содержать узел, чтобы соответствовать условию фильтра.
+                                      items:
+                                      properties:
+                                        key:
+                                          description: Имя лейбла.
+                                        operator:
+                                          description: Оператор сравнения.
+                                        values:
+                                          description: Значение лейбла.
+                                          items:
+                                    matchLabels:
+                                      additionalProperties:
                             priorityFilter: &priority-filter
                               description: |-
                                 Только поды с приоритетом ниже этого значения будут вытеснены.
