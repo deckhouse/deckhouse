@@ -2415,3 +2415,167 @@ func (suite *ReleaseControllerTestSuite) TestDeleteDeployedRelease() {
 		suite.True(module.IsCondition(v1alpha1.ModuleConditionIsReady, corev1.ConditionTrue))
 	})
 }
+
+// A scrape can read the metric storage at any moment of a reconcile. Each API call of the
+// reconciler stands for such a moment: once the series of a pending release is published,
+// it must be there at every one of them, or Prometheus marks it stale and the alerts over it
+// resolve and fire again.
+func (suite *ReleaseControllerTestSuite) TestReleaseMetricIsKeptDuringReconcile() {
+	var (
+		storage   *metricstorage.MetricStorage
+		published bool
+		missing   []string
+	)
+
+	check := func(call string) {
+		if published && !hasReleaseMetric(suite.T(), storage, suite.testMRName) {
+			missing = append(missing, call)
+		}
+	}
+
+	observe := func(r *reconciler) {
+		r.init = new(sync.WaitGroup)
+		storage = metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop()))
+		r.metricsUpdater = releaseUpdater.NewMetricsUpdater(storage, releaseUpdater.ModuleReleaseBlockedMetricName)
+		r.client = interceptor.NewClient(suite.Suite.Client().Client.(client.WithWatch), interceptor.Funcs{
+			Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+				check("get")
+				return c.Get(ctx, key, obj, opts...)
+			},
+			List: func(ctx context.Context, c client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+				check("list")
+				return c.List(ctx, list, opts...)
+			},
+			Update: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
+				check("update")
+				return c.Update(ctx, obj, opts...)
+			},
+			Patch: func(ctx context.Context, c client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+				check("patch")
+				return c.Patch(ctx, obj, patch, opts...)
+			},
+			SubResourceUpdate: func(ctx context.Context, c client.Client, subResource string, obj client.Object, opts ...client.SubResourceUpdateOption) error {
+				check("status update")
+				return c.SubResource(subResource).Update(ctx, obj, opts...)
+			},
+			SubResourcePatch: func(ctx context.Context, c client.Client, subResource string, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
+				check("status patch")
+				return c.SubResource(subResource).Patch(ctx, obj, patch, opts...)
+			},
+		})
+	}
+
+	reconcile := func() {
+		_, err := suite.ctr.Reconcile(suite.Context(), ctrl.Request{NamespacedName: client.ObjectKey{Name: suite.testMRName}})
+		require.NoError(suite.T(), err)
+	}
+
+	suite.Run("pending release awaiting manual approval", func() {
+		published, missing = false, nil
+		suite.setupReleaseController(suite.fetchTestFileData("manual-mode-release-not-approved.yaml"), observe)
+		// the reconciles below differ from the golden scenario
+		suite.testDataFileName = ""
+
+		for range repeatCount {
+			reconcile()
+			if hasReleaseMetric(suite.T(), storage, suite.testMRName) {
+				published = true
+			}
+		}
+
+		require.True(suite.T(), published, "the release metric is never published")
+		require.Equal(suite.T(), v1alpha1.ModuleReleasePhasePending, suite.getModuleRelease(suite.testMRName).Status.Phase)
+		assert.Empty(suite.T(), missing, "the release metric is missing during these API calls of a reconcile")
+	})
+
+	suite.Run("deployed release has no series", func() {
+		published, missing = false, nil
+		suite.setupReleaseController(suite.fetchTestFileData("manual-mode-release-approved.yaml"), observe)
+		suite.testDataFileName = ""
+
+		for range repeatCount {
+			reconcile()
+		}
+
+		require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, suite.getModuleRelease(suite.testMRName).Status.Phase)
+		assert.False(suite.T(), hasReleaseMetric(suite.T(), storage, suite.testMRName), "a deployed release keeps the metric")
+	})
+
+	suite.Run("deleted release has no series", func() {
+		published, missing = false, nil
+		suite.setupReleaseController(suite.fetchTestFileData("manual-mode-release-not-approved.yaml"), observe)
+		suite.testDataFileName = ""
+
+		for range repeatCount {
+			reconcile()
+		}
+		require.True(suite.T(), hasReleaseMetric(suite.T(), storage, suite.testMRName), "the release metric is never published")
+
+		published = false
+		require.NoError(suite.T(), suite.client.Delete(suite.Context(), suite.getModuleRelease(suite.testMRName)))
+		reconcile()
+
+		assert.False(suite.T(), hasReleaseMetric(suite.T(), storage, suite.testMRName), "a deleted release keeps the metric")
+	})
+
+	suite.Run("release awaiting the module has no series", func() {
+		published, missing = false, nil
+		suite.setupReleaseController(suite.fetchTestFileData("manual-mode-minor-release-not-approved.yaml"), observe)
+		suite.testDataFileName = ""
+		// the fixture has the deployed release too
+		suite.testMRName = "echo-v0.5.0"
+
+		for range repeatCount {
+			reconcile()
+		}
+		require.True(suite.T(), hasReleaseMetric(suite.T(), storage, suite.testMRName), "the release metric is never published")
+
+		module := new(v1alpha1.Module)
+		require.NoError(suite.T(), suite.client.Get(suite.Context(), client.ObjectKey{Name: "echo"}, module))
+		module.Status.Phase = v1alpha1.ModulePhaseError
+		require.NoError(suite.T(), suite.client.Status().Update(suite.Context(), module))
+		reconcile()
+
+		require.Equal(suite.T(), "awaiting for module v0.4.69 to be ready", suite.getModuleRelease(suite.testMRName).Status.Message)
+		assert.False(suite.T(), hasReleaseMetric(suite.T(), storage, suite.testMRName), "a release awaiting the module keeps the metric")
+	})
+
+	suite.Run("release without its update policy has no series", func() {
+		published, missing = false, nil
+		suite.setupReleaseController(suite.fetchTestFileData("manual-mode-release-not-approved.yaml"), observe)
+		suite.testDataFileName = ""
+
+		for range repeatCount {
+			reconcile()
+		}
+		require.True(suite.T(), hasReleaseMetric(suite.T(), storage, suite.testMRName), "the release metric is never published")
+
+		require.NoError(suite.T(), suite.client.Delete(suite.Context(), &v1alpha2.ModuleUpdatePolicy{ObjectMeta: metav1.ObjectMeta{Name: "echo"}}))
+		reconcile()
+
+		require.Equal(suite.T(), "Update policy echo not found", suite.getModuleRelease(suite.testMRName).Status.Message)
+		assert.False(suite.T(), hasReleaseMetric(suite.T(), storage, suite.testMRName), "a release without its update policy keeps the metric")
+	})
+}
+
+func hasReleaseMetric(t *testing.T, storage *metricstorage.MetricStorage, release string) bool {
+	t.Helper()
+
+	families, err := storage.Gather()
+	require.NoError(t, err)
+
+	for _, family := range families {
+		if family.GetName() != releaseUpdater.ModuleReleaseBlockedMetricName {
+			continue
+		}
+		for _, metric := range family.GetMetric() {
+			for _, label := range metric.GetLabel() {
+				if label.GetName() == metrics.LabelName && label.GetValue() == release {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
+}

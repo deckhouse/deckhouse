@@ -17,6 +17,9 @@ limitations under the License.
 package releaseupdater
 
 import (
+	"maps"
+	"sync"
+
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
@@ -29,21 +32,46 @@ func NewMetricsUpdater(metricStorage metricsstorage.Storage, metricName string) 
 	return &MetricsUpdater{
 		metricStorage: metricStorage,
 		metricName:    metricName,
+		published:     make(map[string]MetricLabels),
 	}
 }
 
+// MetricsUpdater keeps one series of the release metric per release.
 type MetricsUpdater struct {
 	metricStorage metricsstorage.Storage
 	metricName    string
+
+	mu sync.Mutex
+	// published holds the label set of the series published for each release.
+	published map[string]MetricLabels
 }
 
+// UpdateReleaseMetric publishes the series of the release with the given labels.
+//
+// The series is purged only when its label set changes. The storage does not purge and set
+// in one step, so a scrape between the two sees no series for the release: Prometheus marks
+// the series stale, and the alerts over the metric resolve and fire again.
 func (mu *MetricsUpdater) UpdateReleaseMetric(name string, metricLabels MetricLabels) {
-	mu.PurgeReleaseMetric(name)
+	mu.mu.Lock()
+	defer mu.mu.Unlock()
+
+	if published, ok := mu.published[name]; !ok || !maps.Equal(published, metricLabels) {
+		mu.metricStorage.Grouped().ExpireGroupMetricByName(name, mu.metricName)
+	}
+
 	mu.metricStorage.Grouped().GaugeSet(name, mu.metricName, 1, metricLabels)
+	mu.published[name] = maps.Clone(metricLabels)
 }
 
+// PurgeReleaseMetric removes the series of the release.
+// Call it only when the release must not have the series: it is deleted, it is not pending anymore,
+// or it is pending but is not processed, for example while it awaits the previous release.
 func (mu *MetricsUpdater) PurgeReleaseMetric(name string) {
+	mu.mu.Lock()
+	defer mu.mu.Unlock()
+
 	mu.metricStorage.Grouped().ExpireGroupMetricByName(name, mu.metricName)
+	delete(mu.published, name)
 }
 
 type MetricLabels map[string]string

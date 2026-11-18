@@ -271,7 +271,11 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	r.resetConfigurationErrorMetric(release)
-	r.metricsUpdater.PurgeReleaseMetric(release.GetName())
+
+	// The release metric is not purged here: the release keeps its series until the reconcile
+	// sets a new one, so a scrape during the reconcile never misses it.
+	// It is purged only where the release must not have it: deleted, not pending, or not processed.
+	// A reconcile that stops on a transient error keeps the series as it is.
 
 	// handle delete event
 	if !release.DeletionTimestamp.IsZero() {
@@ -330,6 +334,9 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 
 	case v1alpha1.ModuleReleasePhaseSuperseded, v1alpha1.ModuleReleasePhaseSuspended, v1alpha1.ModuleReleasePhaseSkipped:
+		// only pending releases have the metric
+		r.metricsUpdater.PurgeReleaseMetric(release.GetName())
+
 		if len(release.Labels) == 0 || (release.Labels[v1alpha1.ModuleReleaseLabelStatus] != strings.ToLower(release.GetPhase())) {
 			if len(release.Labels) == 0 {
 				release.Labels = make(map[string]string)
@@ -344,6 +351,9 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 		return ctrl.Result{}, nil
 
 	case v1alpha1.ModuleReleasePhaseDeployed:
+		// only pending releases have the metric
+		r.metricsUpdater.PurgeReleaseMetric(release.GetName())
+
 		res, err := r.handleDeployedRelease(ctx, release)
 		if err != nil {
 			r.log.With(
@@ -366,6 +376,7 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 	}
 	if exists {
 		r.log.Info("module is overridden, skip release processing", slog.String("module", release.GetModuleName()))
+		r.metricsUpdater.PurgeReleaseMetric(release.GetName())
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
@@ -799,6 +810,9 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 				metrics.LabelModule:        release.GetModuleName(),
 			})
 
+			// the release is not processed without its update policy, so it must not have the metric
+			r.metricsUpdater.PurgeReleaseMetric(release.GetName())
+
 			if err := r.updateReleaseStatusMessage(ctx, release, fmt.Sprintf("Update policy %s not found", policyName)); err != nil {
 				logger.Error("failed to update release status", log.Err(err))
 
@@ -812,6 +826,9 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 
 		// TODO(ipaqsa): remove it
 		if policy.Spec.Update.Mode == v1alpha2.ModuleUpdatePolicyModeIgnore {
+			// the release is not processed, so it must not have the metric
+			r.metricsUpdater.PurgeReleaseMetric(release.GetName())
+
 			if err := r.updateReleaseStatusMessage(ctx, release, disabledByIgnorePolicy); err != nil {
 				logger.Error("failed to update release status", slog.String("release", release.GetName()), log.Err(err))
 
@@ -896,6 +913,9 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 	case releaseUpdater.Await:
 		logger.Debug("await pending release")
 
+		// the release is not processed until the previous one is deployed, so it must not have the metric
+		r.metricsUpdater.PurgeReleaseMetric(release.GetName())
+
 		err = r.updateReleaseStatus(ctx, release, &v1alpha1.ModuleReleaseStatus{
 			Phase:   v1alpha1.ModuleReleasePhasePending,
 			Message: task.Message,
@@ -909,6 +929,9 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 
 	if !task.IsSingle && !task.IsPatch && !r.isModuleReady(ctx, release.GetModuleName()) {
 		logger.Debug("module is not ready, waiting")
+
+		// the release is not processed until the module is ready, so it must not have the metric
+		r.metricsUpdater.PurgeReleaseMetric(release.GetName())
 
 		drs := &v1alpha1.ModuleReleaseStatus{
 			Phase: v1alpha1.ModuleReleasePhasePending,
@@ -1821,6 +1844,8 @@ func (r *reconciler) updateModuleLastReleaseDeployedStatus(ctx context.Context, 
 
 // deleteRelease deletes the module from filesystem
 func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.ModuleRelease) (ctrl.Result, error) {
+	r.metricsUpdater.PurgeReleaseMetric(release.GetName())
+
 	if release.GetPhase() != v1alpha1.ModuleReleasePhaseTerminating {
 		release.Status.Phase = v1alpha1.ModuleReleasePhaseTerminating
 		if err := r.client.Status().Update(ctx, release); err != nil {
@@ -1832,7 +1857,7 @@ func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.Module
 		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 
-	// The metric is already reset in the handleRelease function, so we can release the finalizer
+	// The metric is purged above, so we can release the finalizer
 	if controllerutil.ContainsFinalizer(release, v1alpha1.ModuleReleaseFinalizerMetricsRegistered) {
 		controllerutil.RemoveFinalizer(release, v1alpha1.ModuleReleaseFinalizerMetricsRegistered)
 		if err := r.client.Update(ctx, release); err != nil {

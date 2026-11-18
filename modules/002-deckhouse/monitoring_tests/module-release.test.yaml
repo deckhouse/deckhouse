@@ -1,0 +1,148 @@
+# The alerts over d8_module_release_info outlive a scrape that misses the series.
+# A scrape without the series makes Prometheus mark it stale: an alert over the instant
+# value resolves for one evaluation and fires again.
+rule_files:
+  - alerting.yaml
+evaluation_interval: 30s
+
+tests:
+  - name: ModuleReleaseIsOutdated keeps firing through a scrape without the series and resolves when the series is gone
+    interval: 30s
+    input_series:
+      # The scrape at 1m30s misses the series of echo-v1.1.0.
+      - series: 'd8_module_release_info{name="echo-v1.1.0", module="echo", manualApproval="true", releaseQueueDepth="1"}'
+        values: '1 1 1 stale 1 1 1 1 1 1 1 1 1'
+      # The scrape at 1m30s misses the series of nginx-v1.3.0, and the release is approved at 3m.
+      - series: 'd8_module_release_info{name="nginx-v1.3.0", module="nginx", manualApproval="true", releaseQueueDepth="2"}'
+        values: '1 1 1 stale 1 1 stale'
+      # The series of parca-v1.5.0 misses the scrape at 1m30s.
+      - series: 'd8_module_release_info{name="parca-v1.5.0", module="parca", manualApproval="true", releaseQueueDepth="3"}'
+        values: '1 1 1 stale 1 1 1 1 1 1 1 1 1'
+      - series: 'deckhouse_mm_module_info{module="echo", enabled="true"}'
+        values: '1x12'
+      - series: 'deckhouse_mm_module_info{module="nginx", enabled="true"}'
+        values: '1x12'
+      - series: 'deckhouse_mm_module_info{module="parca", enabled="true"}'
+        values: '1x12'
+    promql_expr_test:
+      - eval_time: 1m
+        expr: ALERTS{alertname="ModuleReleaseIsOutdated", alertstate="firing"}
+        exp_samples: &outdated
+          - labels: 'ALERTS{alertname="ModuleReleaseIsOutdated", alertstate="firing", name="echo-v1.1.0", module="echo", severity_level="9", d8_module="deckhouse", d8_component="module-releases", tier="cluster"}'
+            value: 1
+          - labels: 'ALERTS{alertname="ModuleReleaseIsOutdated", alertstate="firing", name="nginx-v1.3.0", module="nginx", severity_level="7", d8_module="deckhouse", d8_component="module-releases", tier="cluster"}'
+            value: 1
+          - labels: 'ALERTS{alertname="ModuleReleaseIsOutdated", alertstate="firing", name="parca-v1.5.0", module="parca", severity_level="5", d8_module="deckhouse", d8_component="module-releases", tier="cluster"}'
+            value: 1
+      # The scrape without the series.
+      - eval_time: 1m30s
+        expr: ALERTS{alertname="ModuleReleaseIsOutdated", alertstate="firing"}
+        exp_samples: *outdated
+      - eval_time: 2m
+        expr: ALERTS{alertname="ModuleReleaseIsOutdated", alertstate="firing"}
+        exp_samples: *outdated
+      # The alert of the approved release resolves within the window of the expression.
+      - eval_time: 5m
+        expr: ALERTS{alertname="ModuleReleaseIsOutdated", alertstate="firing"}
+        exp_samples:
+          - labels: 'ALERTS{alertname="ModuleReleaseIsOutdated", alertstate="firing", name="echo-v1.1.0", module="echo", severity_level="9", d8_module="deckhouse", d8_component="module-releases", tier="cluster"}'
+            value: 1
+          - labels: 'ALERTS{alertname="ModuleReleaseIsOutdated", alertstate="firing", name="parca-v1.5.0", module="parca", severity_level="5", d8_module="deckhouse", d8_component="module-releases", tier="cluster"}'
+            value: 1
+      # The alert is not firing again: it keeps the time it became active.
+      - eval_time: 2m
+        expr: ALERTS_FOR_STATE{alertname="ModuleReleaseIsOutdated", name="echo-v1.1.0"}
+        exp_samples:
+          - labels: 'ALERTS_FOR_STATE{alertname="ModuleReleaseIsOutdated", name="echo-v1.1.0", module="echo", severity_level="9", d8_module="deckhouse", d8_component="module-releases", tier="cluster"}'
+            value: 0
+
+  - name: The other alerts over d8_module_release_info keep firing through a scrape without the series
+    interval: 30s
+    input_series:
+      - series: 'd8_module_release_info{name="echo-v1.1.0", module="echo", manualApproval="true", releaseQueueDepth="1", requirementsNotMet="false", majorReleaseDepth="0", majorReleaseName="nil", fromToName="nil"}'
+        values: '1 1 1 stale 1 1 1'
+      - series: 'd8_module_release_info{name="nginx-v2.0.0", module="nginx", manualApproval="false", releaseQueueDepth="nil", requirementsNotMet="true", majorReleaseDepth="1", majorReleaseName="nginx-v2.0.0", fromToName="nil"}'
+        values: '1 1 1 stale 1 1 1'
+      - series: 'deckhouse_mm_module_info{module="echo", enabled="true"}'
+        values: '1x6'
+      - series: 'deckhouse_mm_module_info{module="nginx", enabled="true"}'
+        values: '1x6'
+    promql_expr_test:
+      - eval_time: 1m30s
+        expr: count by (alertname, name) (ALERTS{alertname=~"ModuleReleaseIsWaitingManualApproval|ModuleReleaseIsBlockedByRequirements|D8ModuleOutdatedByMajorVersion", alertstate="firing"})
+        exp_samples:
+          - labels: '{alertname="ModuleReleaseIsWaitingManualApproval", name="echo-v1.1.0"}'
+            value: 1
+          - labels: '{alertname="ModuleReleaseIsBlockedByRequirements", name="nginx-v2.0.0"}'
+            value: 1
+          - labels: '{alertname="D8ModuleOutdatedByMajorVersion", name="nginx-v2.0.0"}'
+            value: 1
+
+  # A failed scrape marks every series of the target stale, deckhouse_mm_module_info too.
+  # A new Deckhouse pod publishes the series with new target labels, so within the window of the
+  # expressions a module has the series of both pods.
+  - name: The alerts over d8_module_release_info keep firing through a failed scrape and a new Deckhouse pod
+    interval: 30s
+    input_series:
+      # The scrape of deckhouse-a fails at 1m30s, deckhouse-b is scraped from 2m.
+      - series: 'd8_module_release_info{pod="deckhouse-a", name="echo-v1.1.0", module="echo", manualApproval="true", releaseQueueDepth="1", requirementsNotMet="false", majorReleaseDepth="0", majorReleaseName="nil"}'
+        values: '1 1 1 stale'
+      - series: 'd8_module_release_info{pod="deckhouse-b", name="echo-v1.1.0", module="echo", manualApproval="true", releaseQueueDepth="1", requirementsNotMet="false", majorReleaseDepth="0", majorReleaseName="nil"}'
+        values: '_ _ _ _ 1 1 1 1 1'
+      - series: 'd8_module_release_info{pod="deckhouse-a", name="nginx-v1.3.0", module="nginx", manualApproval="true", releaseQueueDepth="2", requirementsNotMet="false", majorReleaseDepth="0", majorReleaseName="nil"}'
+        values: '1 1 1 stale'
+      - series: 'd8_module_release_info{pod="deckhouse-b", name="nginx-v1.3.0", module="nginx", manualApproval="true", releaseQueueDepth="2", requirementsNotMet="false", majorReleaseDepth="0", majorReleaseName="nil"}'
+        values: '_ _ _ _ 1 1 1 1 1'
+      - series: 'd8_module_release_info{pod="deckhouse-a", name="parca-v1.5.0", module="parca", manualApproval="true", releaseQueueDepth="3", requirementsNotMet="false", majorReleaseDepth="0", majorReleaseName="nil"}'
+        values: '1 1 1 stale'
+      - series: 'd8_module_release_info{pod="deckhouse-b", name="parca-v1.5.0", module="parca", manualApproval="true", releaseQueueDepth="3", requirementsNotMet="false", majorReleaseDepth="0", majorReleaseName="nil"}'
+        values: '_ _ _ _ 1 1 1 1 1'
+      - series: 'd8_module_release_info{pod="deckhouse-a", name="upmeter-v2.0.0", module="upmeter", manualApproval="false", releaseQueueDepth="nil", requirementsNotMet="true", majorReleaseDepth="1", majorReleaseName="upmeter-v2.0.0"}'
+        values: '1 1 1 stale'
+      - series: 'd8_module_release_info{pod="deckhouse-b", name="upmeter-v2.0.0", module="upmeter", manualApproval="false", releaseQueueDepth="nil", requirementsNotMet="true", majorReleaseDepth="1", majorReleaseName="upmeter-v2.0.0"}'
+        values: '_ _ _ _ 1 1 1 1 1'
+      - series: 'deckhouse_mm_module_info{pod="deckhouse-a", module="echo", enabled="true", critical="false"}'
+        values: '1 1 1 stale'
+      - series: 'deckhouse_mm_module_info{pod="deckhouse-b", module="echo", enabled="true", critical="false"}'
+        values: '_ _ _ _ 1 1 1 1 1'
+      - series: 'deckhouse_mm_module_info{pod="deckhouse-a", module="nginx", enabled="true", critical="false"}'
+        values: '1 1 1 stale'
+      - series: 'deckhouse_mm_module_info{pod="deckhouse-b", module="nginx", enabled="true", critical="false"}'
+        values: '_ _ _ _ 1 1 1 1 1'
+      - series: 'deckhouse_mm_module_info{pod="deckhouse-a", module="parca", enabled="true", critical="false"}'
+        values: '1 1 1 stale'
+      - series: 'deckhouse_mm_module_info{pod="deckhouse-b", module="parca", enabled="true", critical="false"}'
+        values: '_ _ _ _ 1 1 1 1 1'
+      - series: 'deckhouse_mm_module_info{pod="deckhouse-a", module="upmeter", enabled="true", critical="false"}'
+        values: '1 1 1 stale'
+      - series: 'deckhouse_mm_module_info{pod="deckhouse-b", module="upmeter", enabled="true", critical="false"}'
+        values: '_ _ _ _ 1 1 1 1 1'
+    promql_expr_test:
+      # The failed scrape.
+      - eval_time: 1m30s
+        expr: count by (alertname, name) (ALERTS{alertname=~"ModuleReleaseIsWaitingManualApproval|ModuleReleaseIsOutdated|ModuleReleaseIsBlockedByRequirements|D8ModuleOutdatedByMajorVersion", alertstate="firing"})
+        exp_samples: &firing
+          - labels: '{alertname="ModuleReleaseIsWaitingManualApproval", name="echo-v1.1.0"}'
+            value: 1
+          - labels: '{alertname="ModuleReleaseIsWaitingManualApproval", name="nginx-v1.3.0"}'
+            value: 1
+          - labels: '{alertname="ModuleReleaseIsWaitingManualApproval", name="parca-v1.5.0"}'
+            value: 1
+          - labels: '{alertname="ModuleReleaseIsOutdated", name="echo-v1.1.0"}'
+            value: 1
+          - labels: '{alertname="ModuleReleaseIsOutdated", name="nginx-v1.3.0"}'
+            value: 1
+          - labels: '{alertname="ModuleReleaseIsOutdated", name="parca-v1.5.0"}'
+            value: 1
+          - labels: '{alertname="ModuleReleaseIsBlockedByRequirements", name="upmeter-v2.0.0"}'
+            value: 1
+          - labels: '{alertname="D8ModuleOutdatedByMajorVersion", name="upmeter-v2.0.0"}'
+            value: 1
+      # Both pods have series within the window.
+      - eval_time: 2m30s
+        expr: count by (alertname, name) (ALERTS{alertname=~"ModuleReleaseIsWaitingManualApproval|ModuleReleaseIsOutdated|ModuleReleaseIsBlockedByRequirements|D8ModuleOutdatedByMajorVersion", alertstate="firing"})
+        exp_samples: *firing
+      # No alert is firing again: each keeps the time it became active.
+      - eval_time: 2m30s
+        expr: ALERTS_FOR_STATE{alertname=~"ModuleReleaseIsWaitingManualApproval|ModuleReleaseIsOutdated|ModuleReleaseIsBlockedByRequirements|D8ModuleOutdatedByMajorVersion"} > 0
+        exp_samples: []

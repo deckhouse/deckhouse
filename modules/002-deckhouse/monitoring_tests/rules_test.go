@@ -30,6 +30,15 @@ import (
 
 const alertingRules = "../monitoring/prometheus-rules/alerting.yaml"
 
+// scrapeIntervals renders the placeholders of the rules as helm_lib_prometheus_rules_recursion does
+// with the default scrape interval of 30s, the interval of the test files.
+var scrapeIntervals = strings.NewReplacer(
+	"__SCRAPE_INTERVAL__", "30s",
+	"__SCRAPE_INTERVAL_X_2__", "60s",
+	"__SCRAPE_INTERVAL_X_3__", "90s",
+	"__SCRAPE_INTERVAL_X_4__", "120s",
+)
+
 func TestPromtoolRules(t *testing.T) {
 	promtool, err := exec.LookPath("promtool")
 	if err != nil {
@@ -48,18 +57,23 @@ func TestPromtoolRules(t *testing.T) {
 	}
 	dir := t.TempDir()
 	// Module rules contain groups without the top-level key added by the chart.
-	if err := os.WriteFile(filepath.Join(dir, "alerting.yaml"), append([]byte("groups:\n"), body...), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "alerting.yaml"), []byte("groups:\n"+scrapeIntervals.Replace(string(body))), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	const testFile = "application-namespace.test.yaml"
-	body, err = os.ReadFile(testFile)
-	if err != nil {
-		t.Fatal(err)
+	testFiles, err := filepath.Glob("*.test.yaml")
+	if err != nil || len(testFiles) == 0 {
+		t.Fatalf("no test files: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, testFile), body, 0o600); err != nil {
-		t.Fatal(err)
+	for _, testFile := range testFiles {
+		body, err = os.ReadFile(testFile)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, testFile), body, 0o600); err != nil {
+			t.Fatal(err)
+		}
 	}
-	command := exec.Command(promtool, "test", "rules", testFile)
+	command := exec.Command(promtool, append([]string{"test", "rules"}, testFiles...)...)
 	command.Dir = dir
 	if out, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("promtool: %v\n%s", err, out)

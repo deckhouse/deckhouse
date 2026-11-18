@@ -139,7 +139,7 @@
         ```
 
   - alert: ModuleReleaseIsWaitingManualApproval
-    expr: sum by (name, module) (d8_module_release_info{manualApproval="true"} * on(module) group_left sum by (module) (deckhouse_mm_module_info{enabled="true"}))
+    expr: sum by (name, module) (max_over_time(d8_module_release_info{manualApproval="true"}[__SCRAPE_INTERVAL_X_4__]) * on(module) group_left sum by (module) (max_over_time(deckhouse_mm_module_info{enabled="true"}[__SCRAPE_INTERVAL_X_4__])))
     labels:
       severity_level: "6"
     annotations:
@@ -158,7 +158,7 @@
         ```
 
   - alert: ModuleReleaseIsOutdated
-    expr: sum by (name, module) (d8_module_release_info{manualApproval="true", releaseQueueDepth="1"} * on(module) group_left deckhouse_mm_module_info{enabled="true"})
+    expr: sum by (name, module) (max_over_time(d8_module_release_info{manualApproval="true", releaseQueueDepth="1"}[__SCRAPE_INTERVAL_X_4__]) * on(module) group_left sum by (module) (max_over_time(deckhouse_mm_module_info{enabled="true"}[__SCRAPE_INTERVAL_X_4__])))
     labels:
       severity_level: "9"
       d8_module: deckhouse
@@ -181,7 +181,7 @@
         ```
 
   - alert: ModuleReleaseIsOutdated
-    expr: sum by (name, module) (d8_module_release_info{manualApproval="true", releaseQueueDepth="2"} * on(module) group_left deckhouse_mm_module_info{enabled="true"})
+    expr: sum by (name, module) (max_over_time(d8_module_release_info{manualApproval="true", releaseQueueDepth="2"}[__SCRAPE_INTERVAL_X_4__]) * on(module) group_left sum by (module) (max_over_time(deckhouse_mm_module_info{enabled="true"}[__SCRAPE_INTERVAL_X_4__])))
     labels:
       severity_level: "7"
       d8_module: deckhouse
@@ -204,9 +204,9 @@
         ```
 
   - alert: ModuleReleaseIsOutdated
-    expr: sum by (name, module) (d8_module_release_info{manualApproval="true"} * on(module) group_left deckhouse_mm_module_info{enabled="true"})
-      and on(name, module) sum by (name, module) (d8_module_release_info{releaseQueueDepth!="nil"})
-      and on(name, module) sum by (name, module) (d8_module_release_info{releaseQueueDepth!="1", releaseQueueDepth!="2"})
+    expr: sum by (name, module) (max_over_time(d8_module_release_info{manualApproval="true"}[__SCRAPE_INTERVAL_X_4__]) * on(module) group_left sum by (module) (max_over_time(deckhouse_mm_module_info{enabled="true"}[__SCRAPE_INTERVAL_X_4__])))
+      and on(name, module) sum by (name, module) (max_over_time(d8_module_release_info{releaseQueueDepth!="nil"}[__SCRAPE_INTERVAL_X_4__]))
+      and on(name, module) sum by (name, module) (max_over_time(d8_module_release_info{releaseQueueDepth!="1", releaseQueueDepth!="2"}[__SCRAPE_INTERVAL_X_4__]))
     labels:
       severity_level: "5"
       d8_module: deckhouse
@@ -379,7 +379,7 @@
         ```
 
   - alert: ModuleReleaseIsBlockedByRequirements
-    expr: sum by (name, module) (d8_module_release_info{requirementsNotMet="true"} * on(module) group_left sum by (module) (deckhouse_mm_module_info{enabled="true"}))
+    expr: sum by (name, module) (max_over_time(d8_module_release_info{requirementsNotMet="true"}[__SCRAPE_INTERVAL_X_4__]) * on(module) group_left sum by (module) (max_over_time(deckhouse_mm_module_info{enabled="true"}[__SCRAPE_INTERVAL_X_4__])))
     labels:
       severity_level: "6"
     annotations:
@@ -549,7 +549,7 @@
         Deckhouse memory usage is too high.
 
   - alert: D8ModuleOutdatedByMajorVersion
-    expr: sum by (name, module, majorReleaseName, fromToName) (d8_module_release_info{majorReleaseDepth!~"(nil|0)", majorReleaseName!="nil"} * on(module) group_left deckhouse_mm_module_info{enabled="true"})
+    expr: sum by (name, module, majorReleaseName, fromToName) (max_over_time(d8_module_release_info{majorReleaseDepth!~"(nil|0)", majorReleaseName!="nil"}[__SCRAPE_INTERVAL_X_4__]) * on(module) group_left sum by (module) (max_over_time(deckhouse_mm_module_info{enabled="true"}[__SCRAPE_INTERVAL_X_4__])))
     labels:
       severity_level: "9"
       d8_module: deckhouse
