@@ -286,6 +286,7 @@ var _ = Describe("Module :: cloud-provider-azure :: helm template ::", func() {
 			// user story #2
 			Expect(ccmVPA.Exists()).To(BeTrue())
 			Expect(ccmDeploy.Exists()).To(BeTrue())
+			Expect(ccmDeploy.Field("spec.template.spec.containers.0.args").String()).To(ContainSubstring("--controllers=*,-node-ipam"))
 			Expect(ccmSA.Exists()).To(BeTrue())
 			Expect(ccmCR.Exists()).To(BeTrue())
 			Expect(ccmCRB.Exists()).To(BeTrue())
