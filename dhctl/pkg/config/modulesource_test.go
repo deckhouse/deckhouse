@@ -1472,6 +1472,80 @@ func TestModuleDocsFromClusterSubstitutesUpstreamRegistry(t *testing.T) {
 	require.Equal(t, registry_const.HostWithPath+"/modules", md.Sources[0].Spec.Registry.Repo)
 }
 
+// TestAnAirGappedSourceIsReadFromTheStoreThroughTheNode: outside the cluster, on a cluster that names
+// no upstream, the in-cluster address of the built-in source does not resolve, and the store reached
+// through the SSH connection is the only place left that holds the module.
+func TestAnAirGappedSourceIsReadFromTheStoreThroughTheNode(t *testing.T) {
+	newCluster := func(t *testing.T) *client.KubernetesClient {
+		kubeCl := client.NewFakeKubernetesClientWithListGVR(map[schema.GroupVersionResource]string{
+			ModuleGVR:       "ModuleList",
+			ModuleSourceGVR: "ModuleSourceList",
+		})
+		for _, o := range []testClusterObject{
+			testModuleObject("dev", "1.2.3"),
+			testModuleSourceObject(t, registry_const.HostWithPath+"/modules"),
+		} {
+			_, err := kubeCl.Dynamic().Resource(o.gvr).Create(t.Context(), &unstructured.Unstructured{Object: o.obj}, metav1.CreateOptions{})
+			require.NoError(t, err)
+		}
+		return kubeCl
+	}
+	stubStore := func(t *testing.T, ok bool, err error) *[]string {
+		asked := &[]string{}
+		previous := storeThroughNode
+		t.Cleanup(func() { storeThroughNode = previous })
+		storeThroughNode = func(_ context.Context, _ *client.KubernetesClient, repository string) (*image.RegistryConfig, bool, error) {
+			*asked = append(*asked, repository)
+			if !ok || err != nil {
+				return nil, false, err
+			}
+			rest := strings.TrimPrefix(repository, registry_const.Host)
+			conf, err := image.NewRegistryConfig("HTTPS", "127.0.0.1:40000"+rest, "registry-ro", "dh-test-secret-0123456789abcdef",
+				"-----BEGIN CERTIFICATE-----\nfake-registry-storage-ca\n-----END CERTIFICATE-----\n")
+			return conf, err == nil, err
+		}
+		return asked
+	}
+
+	t.Run("through the tunnel, with the store's account", func(t *testing.T) {
+		asked := stubStore(t, true, nil)
+
+		md, err := moduleDocsFromCluster(t.Context(), newCluster(t), "dvp", false)
+		require.NoError(t, err)
+		require.Equal(t, []string{registry_const.HostWithPath + "/modules"}, *asked)
+		require.Equal(t, "127.0.0.1:40000/system/deckhouse/modules", md.Sources[0].Spec.Registry.Repo)
+
+		conf, err := md.Sources[0].RegistryConfig()
+		require.NoError(t, err)
+		require.Equal(t, "127.0.0.1:40000/system/deckhouse/modules", conf.GetRegistry())
+		require.Equal(t, "registry-ro", conf.GetUsername())
+		require.Contains(t, conf.GetCA(), "fake-registry-storage-ca")
+	})
+
+	t.Run("no tunnel to open: the source stays as the cluster names it", func(t *testing.T) {
+		stubStore(t, false, nil)
+
+		md, err := moduleDocsFromCluster(t.Context(), newCluster(t), "dvp", false)
+		require.NoError(t, err)
+		require.Equal(t, registry_const.HostWithPath+"/modules", md.Sources[0].Spec.Registry.Repo)
+	})
+
+	t.Run("a tunnel that fails to open is reported", func(t *testing.T) {
+		stubStore(t, false, fmt.Errorf("ssh: connection lost"))
+
+		_, err := moduleDocsFromCluster(t.Context(), newCluster(t), "dvp", false)
+		require.ErrorContains(t, err, "ssh: connection lost")
+	})
+
+	t.Run("in the cluster the tunnel is not asked for", func(t *testing.T) {
+		asked := stubStore(t, true, nil)
+
+		_, err := moduleDocsFromCluster(t.Context(), newCluster(t), "dvp", true)
+		require.NoError(t, err)
+		require.Empty(t, *asked)
+	})
+}
+
 // TestTheUpstreamServesWhatTheClusterNamesInCluster: the image set moves under the upstream's prefix,
 // and what sits beside it — the Flant module source — stays beside it, at the upstream's host.
 func TestTheUpstreamServesWhatTheClusterNamesInCluster(t *testing.T) {

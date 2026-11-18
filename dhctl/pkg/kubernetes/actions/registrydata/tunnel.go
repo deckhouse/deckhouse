@@ -132,6 +132,25 @@ func mirrorThroughNode(
 	return rewritten, base64.StdEncoding.EncodeToString(dockerCfg), true, nil
 }
 
+// StoreThroughNode is the repository the cluster names by its in-cluster address, reached from outside
+// the cluster at the store through the SSH connection to a master, with the store's authority and
+// account. The path stays as the cluster names it: the store serves the same paths.
+//
+// It is what an out-of-cluster caller has left on an air-gapped cluster, which names no upstream: a
+// ModuleSource there points at the in-cluster address, as everything else does.
+//
+// Reports ok=false, as mirrorThroughNode does, for a repository at any other address, without an SSH
+// connection, or on a cluster that keeps no store.
+func StoreThroughNode(ctx context.Context, kubeCl *client.KubernetesClient, repository string) (*image.RegistryConfig, bool, error) {
+	conf, err := image.NewRegistryConfig(schemeHTTPS, repository, "", "", "")
+	if err != nil {
+		return nil, false, err
+	}
+
+	through, _, ok, err := mirrorThroughNode(ctx, kubeCl, conf)
+	return through, ok, err
+}
+
 // tunnels remembers the forward opened to each store address and port, so that every consumer of the
 // same resolved registry reaches it at the same local port.
 var tunnels = struct {

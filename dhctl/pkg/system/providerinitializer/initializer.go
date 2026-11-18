@@ -119,6 +119,36 @@ func (i *SSHProviderInitializer) GetSSHProvider(ctx context.Context) (libcon.SSH
 	return provider.NewDefaultSSHProvider(i.baseProviderSettings, i.config), ErrHostsFromCacheNotFound
 }
 
+// SSHClient is the connection to a master this command was given hosts for, to carry along on the
+// Kubernetes client: a cluster with its own registry names an address that resolves only inside it,
+// and a second channel on this connection is how that registry is reached from outside (see
+// registrydata.mirrorThroughNode).
+//
+// Nil when the command has no SSH hosts or the connection cannot be had. Hosts are not looked up in the
+// state cache here, so a command that reaches Kubernetes with a kubeconfig opens no SSH connection on
+// its behalf. The caller then behaves as it did without one.
+func (i *SSHProviderInitializer) SSHClient(ctx context.Context) libcon.SSHClient {
+	if i == nil {
+		return nil
+	}
+
+	i.mut.Lock()
+	sshProvider := i.provider
+	i.mut.Unlock()
+
+	if govalue.Nil(sshProvider) {
+		return nil
+	}
+
+	sshClient, err := sshProvider.Client(ctx)
+	if err != nil {
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("no ssh connection to reach the cluster store through: %v", err))
+		return nil
+	}
+
+	return sshClient
+}
+
 func (i *SSHProviderInitializer) Cleanup(ctx context.Context) error {
 	if govalue.Nil(i.provider) {
 		return nil

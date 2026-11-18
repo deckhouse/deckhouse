@@ -153,7 +153,13 @@ func (c *Context) SSHless() bool {
 
 func (c *Context) KubeClientCtx(ctx context.Context) (*client.KubernetesClient, error) {
 	kubeClient, err := c.kubeProvider.Client(c.ctx)
-	return &client.KubernetesClient{KubeClient: kubeClient}, err
+	if err != nil {
+		return &client.KubernetesClient{KubeClient: kubeClient}, err
+	}
+
+	// The SSH connection lets the client reach what only a node reaches, such as the
+	// cluster's own registry store of an air-gapped cluster.
+	return (&client.KubernetesClient{KubeClient: kubeClient}).WithSSHClient(c.SSHProviderInitializer.SSHClient(c.ctx)), nil
 }
 
 func (c *Context) ClientSwitcher() MultiMasterClientSwitcher {
