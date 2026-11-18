@@ -100,9 +100,18 @@ fi
 #          "fstype": null
 #       }
 */}}
+if [[ "$DATA_DEVICE" == *"*"* ]]; then
+  for candidate in $DATA_DEVICE; do
+    if [ -b "$candidate" ]; then
+      DATA_DEVICE="$candidate"
+      break
+    fi
+  done
+fi
+
 if ! [ -b "$DATA_DEVICE" ]; then
   >&2 echo "Block device $DATA_DEVICE was not found, trying to autodetect an unused disk"
-  DATA_DEVICE=$(lsblk -o path,type,mountpoint,fstype --tree --json | jq -r '.blockdevices[] | select (.path | contains("zram") | not ) | select ( .type == "disk" and .mountpoint == null and .children == null) | .path')
+  DATA_DEVICE=$(lsblk -o path,type,mountpoint,fstype --tree --json | jq -r '.blockdevices[] | select (.path | contains("zram") | not ) | select ( .type == "disk" and .mountpoint == null and .children == null and .fstype == null) | .path')
 fi
 
 if [ $(wc -l <<< $DATA_DEVICE) -ne 1 ]; then
