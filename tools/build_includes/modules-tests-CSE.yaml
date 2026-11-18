@@ -512,11 +512,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/modules/040-node-manager/templates/podmonitor.yaml
-  to: /deckhouse/modules/040-node-manager/templates/podmonitor.yaml
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/modules/040-node-manager/monitoring/grafana-dashboards
   to: /deckhouse/modules/040-node-manager/monitoring/grafana-dashboards
   excludePaths:
@@ -804,16 +799,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/cse/modules/040-node-manager/hooks/gpu/gpu_enabled.go
-  to: /deckhouse/modules/040-node-manager/hooks/gpu/gpu_enabled.go
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/cse/modules/040-node-manager/hooks/gpu/mig_custom_config_name.go
-  to: /deckhouse/modules/040-node-manager/hooks/gpu/mig_custom_config_name.go
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/cse/modules/040-node-manager/templates/integrity-containerd-configurator
   to: /deckhouse/modules/040-node-manager/templates/integrity-containerd-configurator
   excludePaths:
@@ -840,18 +825,6 @@
         - '**/*'
 - add: /ee/cse/modules/040-node-manager/templates/machine-controller-manager
   to: /deckhouse/modules/040-node-manager/templates/machine-controller-manager
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-    - '**/AGENTS.md'
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/cse/modules/040-node-manager/templates/nvidia-gpu
-  to: /deckhouse/modules/040-node-manager/templates/nvidia-gpu
   excludePaths:
     - docs
     - README.md

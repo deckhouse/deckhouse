@@ -740,7 +740,7 @@ alerts:
 
         Existing instances are not reconfigured by the setting alone:
 
-        1. Master, static and bastion instances are updated by a converge run. Start the DKP installer and run `dhctl converge`.
+        1. Master, static and bastion instances are updated by a converge run. Start the Deckhouse Platform installer and run `dhctl converge`.
         2. Ephemeral instances are re-created when their nodes are rolled, which happens on its own. Check that the nodes of every `CloudEphemeral` NodeGroup are being replaced: `d8 k get nodegroups`.
 
         The instance state is re-read once per discovery period of the cloud data discoverer (one hour by default),
@@ -4461,7 +4461,7 @@ alerts:
         The exact reason is listed in the `node.deckhouse.io/containerd-v2-err` annotation on the node.
 
         If the reason is `erofs` and the node runs Ubuntu in AWS, the module is shipped in a separate
-        `linux-modules-extra` package. DKP installs it automatically, but for some kernels, mostly
+        `linux-modules-extra` package. Deckhouse Platform installs it automatically, but for some kernels, mostly
         outdated ones, the package is no longer published in the APT repository. In that case, the installation
         is skipped and a warning is written to the node logs. The problem has been confirmed for the
         `5.15.0-1028-aws`, `6.8.0-1024-aws`, and `6.8.0-1029-aws` kernels. Switch the node group to a newer AMI
@@ -5645,7 +5645,7 @@ alerts:
         This cluster still pulls images the way the v1 implementation of the
         `registry` module arranged it, and the handover to the current implementation
         has not happened. This alert does not resolve on its own while the reason
-        stays, and the following DP releases stay blocked by the
+        stays, and the following Deckhouse Platform releases stay blocked by the
         `registryImplementation` requirement.
 
         Reason: `{{ $labels.reason }}`
@@ -5671,10 +5671,10 @@ alerts:
           state or node configuration **cannot be read**. This state is not supported.
           A cluster gets here only through an update that bypassed the
           `registryImplementation` release requirement: a forced release, an edited
-          image, or a jump from a release older than DP 1.77.1. DP 1.78 has no code that
+          image, or a jump from a release older than Deckhouse Platform 1.77.1. Deckhouse Platform 1.78 has no code that
           can manage or migrate this state.
 
-          DP 1.78 does not deploy the v1 implementation, and the update removed the
+          Deckhouse Platform 1.78 does not deploy the v1 implementation, and the update removed the
           components that managed its node services on the masters. Depending on the
           timing of the update, those services were stopped, or keep running with
           nothing to manage them or renew their certificates. The nodes keep the
@@ -8708,6 +8708,26 @@ alerts:
         NAT instance {{ $labels.name }} is in a deprecated availability zone.
       severity: "9"
       markupFormat: markdown
+    - name: NodeGroupGPUModuleDisabled
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-group-gpu.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        NodeGroup `{{ $labels.name }}` has [`spec.gpu`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu) configured, but the [`gpu`](/modules/gpu/) module is disabled.
+
+        Built-in GPU support has been removed from the `node-manager` module.
+        GPU nodes in this NodeGroup are not prepared and do not publish GPU resources,
+        so Pods requesting `nvidia.com/gpu` are not scheduled on them.
+
+        To resolve this issue, do one of the following:
+
+        - Enable the [`gpu`](/modules/gpu/) module (available in the Core and Ultimate/EE editions).
+        - If the NodeGroup does not need GPU, remove the `spec.gpu` section from it.
+      summary: |
+        NodeGroup {{ $labels.name }} has spec.gpu, but the gpu module is disabled.
+      severity: "6"
+      markupFormat: markdown
     - name: NodeGroupHasStaticInternalNetworkCIDRsField
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-group-deprecate.yaml
       moduleUrl: 040-node-manager
@@ -8949,21 +8969,6 @@ alerts:
       summary: |
         NodeGroup {{ $labels.node_group }} has unavailable instances.
       severity: "8"
-      markupFormat: markdown
-    - name: NodeGroupUsesDeprecatedInCoreGPU
-      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-group-deprecate.yaml
-      moduleUrl: 040-node-manager
-      module: node-manager
-      edition: ce
-      description: |
-        NodeGroup `{{ $labels.name }}` has [`spec.gpu`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu) configured while the `gpu` module is disabled.
-        As a result, GPU nodes in the NodeGroup use the built-in GPU support,
-        which is deprecated and will be removed in a future DKP release.
-
-        To use the supported GPU implementation, enable the [`gpu`](/modules/gpu/) module.
-      summary: |
-        NodeGroup {{ $labels.name }} uses the deprecated built-in GPU support.
-      severity: "9"
       markupFormat: markdown
     - name: NodeRequiresDisruptionApprovalForUpdate
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-update.yaml

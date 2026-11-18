@@ -10,7 +10,7 @@ Go hooks of the module, grouped by the team that owns the feature a hook serves.
 | `cloud` | cloud providers | owners of `030-cloud-provider-*` |
 | `caps` | CAPS, the Cluster API provider for static nodes | owners of `templates/caps-controller-manager` |
 | `kubernetes` | containerd and kubelet | owners of the containerd and kubelet images |
-| `gpu` | NVIDIA GPU support | owners of `templates/nvidia-gpu` |
+| `gpu` | NodeGroups that request GPU while the `gpu` module is disabled | GPU team (owners of the `gpu` module) |
 | `upmeter` | bridge to the upmeter module | owners of the observability modules |
 
 `internal/` holds shared types and helpers (CAPI and MCM API types, NodeGroup versions, kubeconfig generation), `pkg/schema` the values schema helpers.

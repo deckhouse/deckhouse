@@ -17,7 +17,7 @@
         This cluster still pulls images the way the v1 implementation of the
         `registry` module arranged it, and the handover to the current implementation
         has not happened. This alert does not resolve on its own while the reason
-        stays, and the following DP releases stay blocked by the
+        stays, and the following Deckhouse Platform releases stay blocked by the
         `registryImplementation` requirement.
 
         Reason: `{{ $labels.reason }}`
@@ -43,10 +43,10 @@
           state or node configuration **cannot be read**. This state is not supported.
           A cluster gets here only through an update that bypassed the
           `registryImplementation` release requirement: a forced release, an edited
-          image, or a jump from a release older than DP 1.77.1. DP 1.78 has no code that
+          image, or a jump from a release older than Deckhouse Platform 1.77.1. Deckhouse Platform 1.78 has no code that
           can manage or migrate this state.
 
-          DP 1.78 does not deploy the v1 implementation, and the update removed the
+          Deckhouse Platform 1.78 does not deploy the v1 implementation, and the update removed the
           components that managed its node services on the masters. Depending on the
           timing of the update, those services were stopped, or keep running with
           nothing to manage them or renew their certificates. The nodes keep the

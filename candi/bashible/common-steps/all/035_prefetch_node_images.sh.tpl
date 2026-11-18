@@ -27,7 +27,7 @@
 # are in the image store. Phase 2 (background) is everything else in start-priority order
 # (xargs -P workers take lines top-to-bottom): deckhouse-controller (tag-based
 # `.deckhouseImageRef`, ~200 MiB), deckhouse/*, cniCilium/*, coredns, nodeManager (minus
-# nvidia*/nodeFeatureDiscovery/stale clusterAutoscaler), current cloudProvider/*, common
+# stale clusterAutoscaler), current cloudProvider/*, common
 # runtime bits, kubeProxy, csi-sidecars, common misc, then chrony/*, registryPackagesProxy/*,
 # and kubeDns/*.
 #
@@ -123,7 +123,7 @@ deckhouse/controller {{ . }}
 common/coredns {{ $base }}@{{ . }}
 {{- end }}
 {{- range $name, $digest := (index $.images "nodeManager" | default dict) }}
-{{- if and (not (hasPrefix "nvidia" $name)) (ne $name "nodeFeatureDiscovery") (or (not (hasPrefix "clusterAutoscaler" $name)) (eq $name $caCurrent)) }}
+{{- if or (not (hasPrefix "clusterAutoscaler" $name)) (eq $name $caCurrent) }}
 nodeManager/{{ $name }} {{ $base }}@{{ $digest }}
 {{- end }}
 {{- end }}

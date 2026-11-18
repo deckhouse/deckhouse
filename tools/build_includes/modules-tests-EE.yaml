@@ -738,23 +738,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/modules/040-node-manager/templates/nvidia-gpu
-  to: /deckhouse/modules/040-node-manager/templates/nvidia-gpu
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-    - '**/AGENTS.md'
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/modules/040-node-manager/templates/podmonitor.yaml
-  to: /deckhouse/modules/040-node-manager/templates/podmonitor.yaml
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/modules/040-node-manager/monitoring/grafana-dashboards
   to: /deckhouse/modules/040-node-manager/monitoring/grafana-dashboards
   excludePaths:

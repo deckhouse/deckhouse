@@ -24,9 +24,9 @@ d8 system edit cluster-configuration
 
 - Узлы соответствуют требованиям, описанным [в общих параметрах кластера](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
 - Версия ядра Linux не входит в диапазоны 6.12.0–6.12.28 или 6.14.0–6.14.6 (эти версии подвержены уязвимости CVE-2025-37999 в EROFS).
-- На сервере нет кастомных конфигураций в `/etc/containerd/conf.d` ([пример кастомной конфигурации](/modules/node-manager/faq.html#как-использовать-containerd-с-поддержкой-nvidia-gpu)).
+- На сервере нет кастомных конфигураций в `/etc/containerd/conf.d` ([пример кастомной конфигурации](/modules/node-manager/faq.html#как-развернуть-кастомный-конфигурационный-файл-containerd)).
 
-При несоответствии одному из требований, описанных [в общих параметрах кластера](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri), Deckhouse Virtualization Platform добавляет на узел лейбл `node.deckhouse.io/containerd-v2-unsupported`. Если на узле есть кастомные конфигурации в директориях `/etc/containerd/conf.d/` (если на узлах кластера используется CRI containerd v1) или `/etc/containerd/conf2.d/` (если на узлах кластера используется CRI containerd v2), на него добавляется лейбл `node.deckhouse.io/containerd-config=custom`.
+При несоответствии одному из требований, описанных [в общих параметрах кластера](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri), виртуализация Deckhouse Platform добавляет на узел лейбл `node.deckhouse.io/containerd-v2-unsupported`. Если на узле есть кастомные конфигурации в директориях `/etc/containerd/conf.d/` (если на узлах кластера используется CRI containerd v1) или `/etc/containerd/conf2.d/` (если на узлах кластера используется CRI containerd v2), на него добавляется лейбл `node.deckhouse.io/containerd-config=custom`.
 
 При наличии одного из этих лейблов смена параметра [`spec.cri.type`](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) для группы узлов будет недоступна. Узлы, которые не подходят под условия миграции можно посмотреть с помощью команд:
 

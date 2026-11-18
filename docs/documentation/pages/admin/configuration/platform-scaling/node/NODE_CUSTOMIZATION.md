@@ -9,8 +9,7 @@ To automate actions on group nodes, use the [NodeGroupConfiguration](/modules/no
 - Installing and configuring additional OS packages.  
 
   Examples:  
-  - [Installing the kubectl plugin](node-management.html#installing-the-cert-manager-plugin-for-kubectl-on-master-nodes)  
-  - [Configuring containerd with Nvidia GPU support](#how-to-use-containerd-with-nvidia-gpu-support)
+  - [Installing the kubectl plugin](node-management.html#installing-the-cert-manager-plugin-for-kubectl-on-master-nodes)
 
 - Updating the OS kernel to a specific version.
 
@@ -134,11 +133,11 @@ post-install() {
 
 ## Monitoring script execution
 
-Applying NodeGroupConfiguration triggers an update of the **`bashible` configuration of the [node group](../../../../glossary.html#node-group)** in the specified groups. DP automatically detects the change in this configuration and then sets the `UPTODATE` field (in the output of the `d8 k get nodegroup` command) to `0`. The `UPTODATE` field shows how many nodes have already been brought to the **target `bashible` configuration of the node group**; a value of `0` means that no node has been brought to the target `bashible` configuration yet (i.e., the update has not been applied to any node).
+Applying NodeGroupConfiguration triggers an update of the **`bashible` configuration of the [node group](../../../../glossary.html#node-group)** in the specified groups. Deckhouse Platform automatically detects the change in this configuration and then sets the `UPTODATE` field (in the output of the `d8 k get nodegroup` command) to `0`. The `UPTODATE` field shows how many nodes have already been brought to the **target `bashible` configuration of the node group**; a value of `0` means that no node has been brought to the target `bashible` configuration yet (i.e., the update has not been applied to any node).
 
-DP controls the start of updates on nodes via the `update.node.deckhouse.io/approved` annotation on the `Node` object. By default, the update runs simultaneously on one node from each group. Update parallelism is defined by the [`maxConcurrent`](/modules/node-manager/cr.html#nodegroup-v1-spec-update-maxconcurrent) parameter in the node group configuration. When DP selects a node to update (taking the queue and `maxConcurrent` into account), it sets the `update.node.deckhouse.io/approved` annotation, after which the `bashible` service on that node begins applying the **target `bashible` configuration of the node group**.
+Deckhouse Platform controls the start of updates on nodes via the `update.node.deckhouse.io/approved` annotation on the `Node` object. By default, the update runs simultaneously on one node from each group. Update parallelism is defined by the [`maxConcurrent`](/modules/node-manager/cr.html#nodegroup-v1-spec-update-maxconcurrent) parameter in the node group configuration. When Deckhouse Platform selects a node to update (taking the queue and `maxConcurrent` into account), it sets the `update.node.deckhouse.io/approved` annotation, after which the `bashible` service on that node begins applying the **target `bashible` configuration of the node group**.
 
-You can view the node annotations set by DP to start the update using the following command:
+You can view the node annotations set by Deckhouse Platform to start the update using the following command:
 
 ```bash
 d8 k get nodes -o json | jq '.items[] | select(.metadata.annotations."update.node.deckhouse.io/approved"=="") | .metadata.name' -r
@@ -176,7 +175,7 @@ rm /var/lib/bashible/configuration_checksum
 
 When writing scripts, it's important to consider the following features of their usage in Deckhouse:
 
-1. Scripts in DP are executed every 4 hours or based on external triggers. Therefore, it's important to write scripts in a way that they first check whether changes are necessary, to avoid repeated or unnecessary actions on each execution.
+1. Scripts in Deckhouse Platform are executed every 4 hours or based on external triggers. Therefore, it's important to write scripts in a way that they first check whether changes are necessary, to avoid repeated or unnecessary actions on each execution.
 1. There are [predefined scripts](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/common-steps/all) that perform various actions, including service installation and configuration. It's important to consider this when assigning priority to custom scripts. For example, if a custom script restarts a service, it must run after the script that installs that service. Otherwise, the custom script won't be able to run during the initial provisioning of the node (since the service won’t be installed yet).
 
 Useful specifics of certain scripts:
@@ -190,282 +189,9 @@ Useful specifics of certain scripts:
 
 ## How to use containerd with Nvidia GPU support
 
-You need to create a separate [NodeGroup](/modules/node-manager/cr.html#nodegroup) for GPU nodes:
+On GPU nodes, containerd is configured by the [`gpu`](/modules/gpu/) module: it adds the `nvidia` runtime and the required system settings to the nodes of the node groups with the [`spec.gpu`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu) section. Do not configure the `nvidia` runtime with your own NodeGroupConfiguration resources: such a configuration conflicts with the one of the `gpu` module.
 
-```yaml
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: gpu
-spec:
-  chaos:
-    mode: Disabled
-  disruptions:
-    approvalMode: Automatic
-  nodeType: CloudStatic
-```
-
-Next, create a [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource for the `gpu` NodeGroup to configure `containerd`:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: containerd-additional-config.sh
-spec:
-  bundles:
-  - '*'
-  content: |
-    # Copyright 2023 Flant JSC
-    #
-    # Licensed under the Apache License, Version 2.0 (the "License");
-    # you may not use this file except in compliance with the License.
-    # You may obtain a copy of the License at
-    #
-    #     http://www.apache.org/licenses/LICENSE-2.0
-    #
-    # Unless required by applicable law or agreed to in writing, software
-    # distributed under the License is distributed on an "AS IS" BASIS,
-    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    # See the License for the specific language governing permissions and
-    # limitations under the License.
-
-    mkdir -p /etc/containerd/conf.d
-    bb-sync-file /etc/containerd/conf.d/nvidia_gpu.toml - << "EOF"
-    [plugins]
-      [plugins."io.containerd.grpc.v1.cri"]
-        [plugins."io.containerd.grpc.v1.cri".containerd]
-          default_runtime_name = "nvidia"
-          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
-            [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
-              [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia]
-                privileged_without_host_devices = false
-                runtime_engine = ""
-                runtime_root = ""
-                runtime_type = "io.containerd.runc.v2"
-                [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia.options]
-                  BinaryName = "/usr/bin/nvidia-container-runtime"
-                  SystemdCgroup = false
-    EOF
-  nodeGroups:
-  - gpu
-  weight: 31
-```
-
-Add a [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource to install Nvidia drivers for the `gpu` NodeGroup.
-
-### Ubuntu
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: install-cuda.sh
-spec:
-  bundles:
-  - ubuntu-lts
-  content: |
-    # Copyright 2023 Flant JSC
-    #
-    # Licensed under the Apache License, Version 2.0 (the "License");
-    # you may not use this file except in compliance with the License.
-    # You may obtain a copy of the License at
-    #
-    #     http://www.apache.org/licenses/LICENSE-2.0
-    #
-    # Unless required by applicable law or agreed to in writing, software
-    # distributed under the License is distributed on an "AS IS" BASIS,
-    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    # See the License for the specific language governing permissions and
-    # limitations under the License.
-
-    if [ ! -f "/etc/apt/sources.list.d/nvidia-container-toolkit.list" ]; then
-      distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
-      curl -s -L https://nvidia.github.io/libnvidia-container/gpgkey | sudo apt-key add -
-      curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-    fi
-    bb-apt-install nvidia-container-toolkit nvidia-driver-535-server
-    nvidia-ctk config --set nvidia-container-runtime.log-level=error --in-place
-  nodeGroups:
-  - gpu
-  weight: 30
-```
-
-### CentOS
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: install-cuda.sh
-spec:
-  bundles:
-  - centos
-  content: |
-    # Copyright 2023 Flant JSC
-    #
-    # Licensed under the Apache License, Version 2.0 (the "License");
-    # you may not use this file except in compliance with the License.
-    # You may obtain a copy of the License at
-    #
-    #     http://www.apache.org/licenses/LICENSE-2.0
-    #
-    # Unless required by applicable law or agreed to in writing, software
-    # distributed under the License is distributed on an "AS IS" BASIS,
-    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    # See the License for the specific language governing permissions and
-    # limitations under the License.
-
-    if [ ! -f "/etc/yum.repos.d/nvidia-container-toolkit.repo" ]; then
-      distribution=$(. /etc/os-release;echo $ID$VERSION_ID) \
-      curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
-    fi
-    bb-dnf-install nvidia-container-toolkit nvidia-driver
-    nvidia-ctk config --set nvidia-container-runtime.log-level=error --in-place
-  nodeGroups:
-  - gpu
-  weight: 30
-```
-
-After the configurations are applied, bootstrap and reboot the nodes to apply the settings and install the drivers.
-
-### MIG in a single-node cluster
-
-{% alert level="info" %}
-General information about preparing GPU nodes, installing drivers, and verifying GPU operation is provided in the [How do I work with GPU nodes](/modules/node-manager/faq.html#how-do-i-work-with-gpu-nodes) section.
-{% endalert %}
-
-In a [single-node cluster](../../../../glossary.html#single-node-cluster) that uses the `MIG` strategy, the MIG configuration must be reapplied manually after each node reboot.
-
-This limitation applies to the current MIG implementation, which uses the `nvidia-mig-manager` component.
-
-After each node reboot, perform the following steps:
-
-1. Add the service annotation to the node:
-
-   ```bash
-   d8 k annotate node <node_name> update.node.deckhouse.io/drained=""
-   ```
-
-1. Restart the `nvidia-mig-manager` component:
-
-   ```bash
-   d8 k -n d8-nvidia-gpu delete pod -l component=nvidia-mig-manager
-   ```
-
-1. Wait until the MIG configuration is reapplied by checking the `nvidia-mig-manager` logs:
-
-   ```bash
-   d8 k -n d8-nvidia-gpu logs -f -l component=nvidia-mig-manager
-   ```
-
-   Successful configuration application is confirmed by a log entry similar to:
-
-   ```console
-   Successfully updated to MIG config: <partedConfig>
-   ```
-
-   where `<partedConfig>` is the value of the [`partedConfig`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu-mig-partedconfig) parameter in the NodeGroup resource (for example, `all-1g.10gb`).
-
-1. After the MIG configuration has been successfully applied, return the node to the schedulable state:
-
-   ```bash
-   d8 k uncordon <node_name>
-   ```
-
-### Verifying successful installation
-
-Create the following Job in your cluster:
-
-```yaml
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: nvidia-cuda-test
-  namespace: default
-spec:
-  completions: 1
-  template:
-    spec:
-      restartPolicy: Never
-      nodeSelector:
-        node.deckhouse.io/group: gpu
-      containers:
-        - name: nvidia-cuda-test
-          image: nvidia/cuda:11.6.2-base-ubuntu20.04
-          imagePullPolicy: "IfNotPresent"
-          command:
-            - nvidia-smi
-```
-
-Check the logs with the following command:
-
-```shell
-d8 k logs job/nvidia-cuda-test
-```
-
-Example output:
-
-```console
-Tue Jan 24 11:36:18 2023
-+-----------------------------------------------------------------------------+
-| NVIDIA-SMI 525.60.13    Driver Version: 525.60.13    CUDA Version: 12.0     |
-|-------------------------------+----------------------+----------------------+
-| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
-| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
-|                               |                      |               MIG M. |
-|===============================+======================+======================|
-|   0  Tesla T4            Off  | 00000000:8B:00.0 Off |                    0 |
-| N/A   45C    P0    25W /  70W |      0MiB / 15360MiB |      0%      Default |
-|                               |                      |                  N/A |
-+-------------------------------+----------------------+----------------------+
-
-+-----------------------------------------------------------------------------+
-| Processes:                                                                  |
-|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
-|        ID   ID                                                   Usage      |
-|=============================================================================|
-|  No running processes found                                                 |
-+-----------------------------------------------------------------------------+
-```
-
-Create the following Job in your cluster:
-
-```yaml
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: gpu-operator-test
-  namespace: default
-spec:
-  completions: 1
-  template:
-    spec:
-      restartPolicy: Never
-      nodeSelector:
-        node.deckhouse.io/group: gpu
-      containers:
-        - name: gpu-operator-test
-          image: nvidia/samples:vectoradd-cuda10.2
-          imagePullPolicy: "IfNotPresent"
-```
-
-Check the logs with the following command:
-
-```shell
-d8 k logs job/gpu-operator-test
-```
-
-Example output:
-
-```console
-[Vector addition of 50000 elements]
-Copy input data from the host memory to the CUDA device
-CUDA kernel launch with 196 blocks of 256 threads
-Copy output data from the CUDA device to the host memory
-Test PASSED
-Done
-```
+How to install the NVIDIA driver and NVIDIA Container Toolkit on the nodes and how to verify a GPU node is described in the [`gpu` module FAQ](/modules/gpu/faq.html).
 
 ## How to deploy a custom containerd configuration file
 
@@ -1099,5 +825,5 @@ spec:
 When adding a node to the cluster, the labels specified in the files will be automatically affixed to the node.
 
 {% alert level="warning" %}
-Note that it is not possible to add labels used in DP in this way. This method will only work with custom labels that do not overlap with those reserved for Deckhouse.
+Note that it is not possible to add labels used in Deckhouse Platform in this way. This method will only work with custom labels that do not overlap with those reserved for Deckhouse.
 {% endalert %}

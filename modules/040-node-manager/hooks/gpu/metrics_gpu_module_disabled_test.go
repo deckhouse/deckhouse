@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	gpuInCoreNGsYaml = `
+	gpuNGsYaml = `
 ---
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -45,7 +45,7 @@ metadata:
 spec:
   nodeType: Static
 `
-	gpuInCoreNGWithoutGPUYaml = `
+	gpuNGWithoutGPUYaml = `
 ---
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -54,7 +54,7 @@ metadata:
 spec:
   nodeType: Static
 `
-	gpuInCoreMigNGYaml = `
+	gpuMigNGYaml = `
 ---
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -69,22 +69,22 @@ spec:
 `
 )
 
-var _ = Describe("Modules :: nodeManager :: hooks :: metrics_gpu_in_core_deprecated ::", func() {
+var _ = Describe("Modules :: nodeManager :: hooks :: metrics_gpu_module_disabled ::", func() {
 	f := HookExecutionConfigInit(`{}`, `{}`)
 	var nodeGroupResource = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}
 	f.RegisterCRD(nodeGroupResource.Group, nodeGroupResource.Version, "NodeGroup", false)
 
 	expireOnly := func() operation.MetricOperation {
 		return operation.MetricOperation{
-			Group:  "d8_node_group_gpu_in_core_deprecated",
+			Group:  "d8_node_group_gpu_module_disabled",
 			Action: operation.ActionExpireMetrics,
 		}
 	}
 
-	deprecatedMetric := func(name string) operation.MetricOperation {
+	moduleDisabledMetric := func(name string) operation.MetricOperation {
 		return operation.MetricOperation{
-			Name:   "d8_node_group_gpu_in_core_deprecated",
-			Group:  "d8_node_group_gpu_in_core_deprecated",
+			Name:   "d8_node_group_gpu_module_disabled",
+			Group:  "d8_node_group_gpu_module_disabled",
 			Action: operation.ActionGaugeSet,
 			Value:  ptr.To(1.0),
 			Labels: map[string]string{"name": name},
@@ -123,7 +123,7 @@ var _ = Describe("Modules :: nodeManager :: hooks :: metrics_gpu_in_core_depreca
 	Context("NodeGroup with spec.gpu and the gpu module is disabled", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global.enabledModules", []byte(`["vertical-pod-autoscaler", "prometheus"]`))
-			f.BindingContexts.Set(f.KubeStateSet(gpuInCoreNGsYaml))
+			f.BindingContexts.Set(f.KubeStateSet(gpuNGsYaml))
 			f.RunGoHook()
 		})
 
@@ -133,14 +133,14 @@ var _ = Describe("Modules :: nodeManager :: hooks :: metrics_gpu_in_core_depreca
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(2))
 			Expect(m[0]).To(BeEquivalentTo(expireOnly()))
-			Expect(m[1]).To(BeEquivalentTo(deprecatedMetric("worker-gpu")))
+			Expect(m[1]).To(BeEquivalentTo(moduleDisabledMetric("worker-gpu")))
 		})
 	})
 
 	Context("MIG NodeGroup without spec.gpu.sharing and the gpu module is disabled", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global.enabledModules", []byte(`[]`))
-			f.BindingContexts.Set(f.KubeStateSet(gpuInCoreMigNGYaml))
+			f.BindingContexts.Set(f.KubeStateSet(gpuMigNGYaml))
 			f.RunGoHook()
 		})
 
@@ -150,14 +150,14 @@ var _ = Describe("Modules :: nodeManager :: hooks :: metrics_gpu_in_core_depreca
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(2))
 			Expect(m[0]).To(BeEquivalentTo(expireOnly()))
-			Expect(m[1]).To(BeEquivalentTo(deprecatedMetric("worker-gpu-mig")))
+			Expect(m[1]).To(BeEquivalentTo(moduleDisabledMetric("worker-gpu-mig")))
 		})
 	})
 
 	Context("NodeGroup with spec.gpu and the gpu module is enabled", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global.enabledModules", []byte(`["gpu"]`))
-			f.BindingContexts.Set(f.KubeStateSet(gpuInCoreNGsYaml))
+			f.BindingContexts.Set(f.KubeStateSet(gpuNGsYaml))
 			f.RunGoHook()
 		})
 
@@ -173,7 +173,7 @@ var _ = Describe("Modules :: nodeManager :: hooks :: metrics_gpu_in_core_depreca
 	Context("NodeGroup with spec.gpu and the gpu module is enabled among other modules", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global.enabledModules", []byte(`["vertical-pod-autoscaler", "gpu", "prometheus"]`))
-			f.BindingContexts.Set(f.KubeStateSet(gpuInCoreNGsYaml))
+			f.BindingContexts.Set(f.KubeStateSet(gpuNGsYaml))
 			f.RunGoHook()
 		})
 
@@ -189,7 +189,7 @@ var _ = Describe("Modules :: nodeManager :: hooks :: metrics_gpu_in_core_depreca
 	Context("NodeGroups without spec.gpu and the gpu module is disabled", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global.enabledModules", []byte(`["prometheus"]`))
-			f.BindingContexts.Set(f.KubeStateSet(gpuInCoreNGWithoutGPUYaml))
+			f.BindingContexts.Set(f.KubeStateSet(gpuNGWithoutGPUYaml))
 			f.RunGoHook()
 		})
 
@@ -205,7 +205,7 @@ var _ = Describe("Modules :: nodeManager :: hooks :: metrics_gpu_in_core_depreca
 	Context("The gpu module is enabled between two hook runs", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global.enabledModules", []byte(`["prometheus"]`))
-			f.BindingContexts.Set(f.KubeStateSet(gpuInCoreNGsYaml))
+			f.BindingContexts.Set(f.KubeStateSet(gpuNGsYaml))
 			f.RunGoHook()
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(2))
@@ -229,7 +229,7 @@ var _ = Describe("Modules :: nodeManager :: hooks :: metrics_gpu_in_core_depreca
 	Context("The gpu module is disabled between two hook runs", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global.enabledModules", []byte(`["prometheus", "gpu"]`))
-			f.BindingContexts.Set(f.KubeStateSet(gpuInCoreNGsYaml))
+			f.BindingContexts.Set(f.KubeStateSet(gpuNGsYaml))
 			f.RunGoHook()
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(1))
@@ -245,19 +245,19 @@ var _ = Describe("Modules :: nodeManager :: hooks :: metrics_gpu_in_core_depreca
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(2))
 			Expect(m[0]).To(BeEquivalentTo(expireOnly()))
-			Expect(m[1]).To(BeEquivalentTo(deprecatedMetric("worker-gpu")))
+			Expect(m[1]).To(BeEquivalentTo(moduleDisabledMetric("worker-gpu")))
 		})
 	})
 
 	Context("GPU NodeGroup is deleted", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global.enabledModules", []byte(`["prometheus"]`))
-			f.BindingContexts.Set(f.KubeStateSet(gpuInCoreNGsYaml))
+			f.BindingContexts.Set(f.KubeStateSet(gpuNGsYaml))
 			f.RunGoHook()
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(2))
 
-			f.BindingContexts.Set(f.KubeStateSet(gpuInCoreNGWithoutGPUYaml))
+			f.BindingContexts.Set(f.KubeStateSet(gpuNGWithoutGPUYaml))
 			f.RunGoHook()
 		})
 

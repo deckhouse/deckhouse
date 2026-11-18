@@ -969,11 +969,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/modules/040-node-manager/templates/podmonitor.yaml
-  to: /deckhouse/modules/040-node-manager/templates/podmonitor.yaml
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/modules/040-node-manager/monitoring/grafana-dashboards
   to: /deckhouse/modules/040-node-manager/monitoring/grafana-dashboards
   excludePaths:
@@ -1401,31 +1396,6 @@
         - '**/*'
 - add: /ee/cse/modules/040-node-manager/templates/machine-controller-manager
   to: /deckhouse/modules/040-node-manager/templates/machine-controller-manager
-  excludePaths:
-    - docs
-    - README.md
-    - '*-threat-model.md'
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hooks/**/testdata
-    - webhooks/**/*_test*.py
-    - webhooks/**/*_test.go
-    - webhooks/**/testdata
-    - apis
-    - requirements
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-    - e2e
-    - '**/AGENTS.md'
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/cse/modules/040-node-manager/templates/nvidia-gpu
-  to: /deckhouse/modules/040-node-manager/templates/nvidia-gpu
   excludePaths:
     - docs
     - README.md

@@ -24,10 +24,10 @@ d8 system edit cluster-configuration
 
 - Узлы соответствуют требованиям, описанным [в общих параметрах кластера](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
 - Версия ядра узла не входит в диапазон 6.12.0–6.12.28 или 6.14.0–6.14.6 (эти версии подвержены уязвимости CVE-2025-37999 в EROFS).
-- На сервере нет кастомных конфигураций в `/etc/containerd/conf.d` ([пример кастомной конфигурации](/modules/node-manager/faq.html#как-использовать-containerd-с-поддержкой-nvidia-gpu)).
+- На сервере нет кастомных конфигураций в `/etc/containerd/conf.d` ([пример кастомной конфигурации](/modules/node-manager/faq.html#как-развернуть-кастомный-конфигурационный-файл-containerd)).
 
 {% alert level="warning" %}
-На узлах с Ubuntu в AWS модуль ядра `erofs`, необходимый для containerd v2, поставляется отдельным пакетом `linux-modules-extra`. DP устанавливает его автоматически, но для части ядер, преимущественно устаревших, этот пакет больше не публикуется в APT-репозитории. В этом случае установка пропускается, в логах узла появляется предупреждение, узел получает лейбл `node.deckhouse.io/containerd-v2-unsupported`, и по нему срабатывает [алерт `D8NodeContainerdV2NotSupported`](../../../../reference/alerts.html#node-manager-d8nodecontainerdv2notsupported).
+На узлах с Ubuntu в AWS модуль ядра `erofs`, необходимый для containerd v2, поставляется отдельным пакетом `linux-modules-extra`. Deckhouse Platform устанавливает его автоматически, но для части ядер, преимущественно устаревших, этот пакет больше не публикуется в APT-репозитории. В этом случае установка пропускается, в логах узла появляется предупреждение, узел получает лейбл `node.deckhouse.io/containerd-v2-unsupported`, и по нему срабатывает [алерт `D8NodeContainerdV2NotSupported`](../../../../reference/alerts.html#node-manager-d8nodecontainerdv2notsupported).
 
 Проблема подтверждена на ядрах `5.15.0-1028-aws`, `6.8.0-1024-aws` и `6.8.0-1029-aws`. Чтобы мигрировать такие узлы, переключите [группу узлов](../../../../glossary.html#node-group) на более свежий AMI или ядро, в котором есть `erofs`.
 

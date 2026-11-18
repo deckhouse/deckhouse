@@ -21,10 +21,19 @@ set_containerd_config_label() {
   local label_dir_path="/var/lib/node_labels/"
   local full_conf_path="/etc/containerd/${conf_dir}"
   local label_value="default"
+  local conf_file
 
-  if ls "${full_conf_path}/"*.toml >/dev/null 2>&1; then
+  for conf_file in "${full_conf_path}/"*.toml; do
+    [ -e "$conf_file" ] || continue
+    case "$(basename "$conf_file")" in
+      # Drop-ins of the gpu module (d8-gpu-module-runtime.toml, d8-gpu-dra-runtime.toml)
+      # are not a user configuration: the module rewrites them on every run for the
+      # containerd version of the node, so they must not block a CRI change.
+      d8-gpu-*.toml) continue ;;
+    esac
     label_value="custom"
-  fi
+    break
+  done
 
   mkdir -p /var/lib/node_labels/
   echo "node.deckhouse.io/${label_name}=${label_value}" > $label_dir_path/$label_file_name

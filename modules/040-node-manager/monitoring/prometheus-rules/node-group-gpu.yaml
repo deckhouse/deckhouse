@@ -1,0 +1,24 @@
+- name: d8.node-group-gpu
+  rules:
+  - alert: NodeGroupGPUModuleDisabled
+    expr: |
+      max by (name) (d8_node_group_gpu_module_disabled) > 0
+    for: 15m
+    labels:
+      tier: cluster
+      severity_level: "6"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      summary: NodeGroup {{ $labels.name }} has `spec.gpu`, but the `gpu` module is disabled.
+      description: |
+        NodeGroup `{{ $labels.name }}` has [`spec.gpu`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu) configured, but the [`gpu`](/modules/gpu/) module is disabled.
+
+        Built-in GPU support has been removed from the `node-manager` module.
+        GPU nodes in this NodeGroup are not prepared and do not publish GPU resources,
+        so Pods requesting `nvidia.com/gpu` are not scheduled on them.
+
+        To resolve this issue, do one of the following:
+
+        - Enable the [`gpu`](/modules/gpu/) module (available in the Core and Ultimate/EE editions).
+        - If the NodeGroup does not need GPU, remove the `spec.gpu` section from it.

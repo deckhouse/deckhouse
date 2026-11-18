@@ -315,10 +315,6 @@ func writeSections(settings writeSettings) {
 			return
 		}
 
-		// remove /ee/modules/040-node-manager/templates/nvidia-gpu in CSE
-		if strings.Contains(file, "/ee/modules/040-node-manager/templates/nvidia-gpu") && settings.Edition == "CSE" {
-			return
-		}
 		// istio config-analyzer is not shipped in CSE (FE inherits EE overlays)
 		if settings.Edition == "CSE" &&
 			(strings.Contains(file, "/ee/modules/110-istio/templates/config-analyzer") ||

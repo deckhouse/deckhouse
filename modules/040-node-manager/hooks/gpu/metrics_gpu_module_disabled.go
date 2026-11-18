@@ -14,8 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// This hook exports a metric for every NodeGroup that relies on the deprecated
-// built-in (in-core) GPU support: `spec.gpu` is set while the `gpu` module is disabled.
+// This hook exports a metric for every NodeGroup that has `spec.gpu` set while the `gpu`
+// module is disabled. The `gpu` module is the only component that serves `spec.gpu`, so
+// GPU nodes of such a NodeGroup are not prepared and publish no GPU resources.
 
 package gpu
 
@@ -35,10 +36,10 @@ import (
 )
 
 const (
-	gpuInCoreDeprecatedMetricName  = "d8_node_group_gpu_in_core_deprecated"
-	gpuInCoreDeprecatedMetricGroup = "d8_node_group_gpu_in_core_deprecated"
-	gpuInCoreDeprecatedSnapshot    = "gpu_nodegroups"
-	gpuModuleName                  = "gpu"
+	gpuModuleDisabledMetricName  = "d8_node_group_gpu_module_disabled"
+	gpuModuleDisabledMetricGroup = "d8_node_group_gpu_module_disabled"
+	gpuModuleDisabledSnapshot    = "gpu_nodegroups"
+	gpuModuleName                = "gpu"
 )
 
 // Both triggers are required, they cover different inputs of the metric:
@@ -54,14 +55,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnAfterHelm: &go_hook.OrderedConfig{Order: 20},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:                         gpuInCoreDeprecatedSnapshot,
+			Name:                         gpuModuleDisabledSnapshot,
 			ExecuteHookOnSynchronization: ptr.To(true),
 			ApiVersion:                   "deckhouse.io/v1",
 			Kind:                         "NodeGroup",
 			FilterFunc:                   filterNodeGroupGPUUsage,
 		},
 	},
-}, handleGPUInCoreDeprecatedMetrics)
+}, handleGPUModuleDisabledMetrics)
 
 type nodeGroupGPUUsage struct {
 	Name   string `json:"name"`
@@ -80,8 +81,6 @@ func filterNodeGroupGPUUsage(obj *unstructured.Unstructured) (go_hook.FilterResu
 	}, nil
 }
 
-// isGPUModuleEnabled repeats the check used by the GPU labeling hook (see gpu_enabled.go),
-// so that the metric and the labeling never disagree on whether the module is enabled.
 func isGPUModuleEnabled(input *go_hook.HookInput) bool {
 	if !input.Values.Exists("global.enabledModules") {
 		return false
@@ -96,19 +95,19 @@ func isGPUModuleEnabled(input *go_hook.HookInput) bool {
 	return false
 }
 
-func handleGPUInCoreDeprecatedMetrics(_ context.Context, input *go_hook.HookInput) error {
+func handleGPUModuleDisabledMetrics(_ context.Context, input *go_hook.HookInput) error {
 	// Expire on every run, so that metrics of deleted NodeGroups (or of NodeGroups
 	// that no longer declare `spec.gpu`) do not stick around.
-	input.MetricsCollector.Expire(gpuInCoreDeprecatedMetricGroup)
+	input.MetricsCollector.Expire(gpuModuleDisabledMetricGroup)
 
-	// The gpu module owns the GPU stack, in-core support stays idle - nothing to report.
+	// The gpu module serves `spec.gpu` - nothing to report.
 	if isGPUModuleEnabled(input) {
 		return nil
 	}
 
-	for ng, err := range sdkobjectpatch.SnapshotIter[nodeGroupGPUUsage](input.Snapshots.Get(gpuInCoreDeprecatedSnapshot)) {
+	for ng, err := range sdkobjectpatch.SnapshotIter[nodeGroupGPUUsage](input.Snapshots.Get(gpuModuleDisabledSnapshot)) {
 		if err != nil {
-			return fmt.Errorf("failed to iterate over '%s' snapshots: %w", gpuInCoreDeprecatedSnapshot, err)
+			return fmt.Errorf("failed to iterate over '%s' snapshots: %w", gpuModuleDisabledSnapshot, err)
 		}
 
 		if !ng.HasGPU {
@@ -116,10 +115,10 @@ func handleGPUInCoreDeprecatedMetrics(_ context.Context, input *go_hook.HookInpu
 		}
 
 		input.MetricsCollector.Set(
-			gpuInCoreDeprecatedMetricName,
+			gpuModuleDisabledMetricName,
 			1,
 			map[string]string{"name": ng.Name},
-			metrics.WithGroup(gpuInCoreDeprecatedMetricGroup),
+			metrics.WithGroup(gpuModuleDisabledMetricGroup),
 		)
 	}
 

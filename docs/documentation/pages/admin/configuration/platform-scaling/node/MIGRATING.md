@@ -23,10 +23,10 @@ Migration to containerd v2 is possible under the following conditions:
 
 - Nodes meet the requirements described in the [cluster-wide parameters](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
 - The node kernel version is not in the range 6.12.0–6.12.28 or 6.14.0–6.14.6 (these versions are affected by CVE-2025-37999 in EROFS).
-- There are no custom configurations on the server in `/etc/containerd/conf.d` ([example of a custom configuration](/modules/node-manager/faq.html#how-to-use-containerd-with-nvidia-gpu-support)).
+- There are no custom configurations on the server in `/etc/containerd/conf.d` ([example of a custom configuration](/modules/node-manager/faq.html#how-to-deploy-custom-containerd-configuration)).
 
 {% alert level="warning" %}
-On Ubuntu nodes in AWS, the `erofs` kernel module required by containerd v2 is shipped in a separate `linux-modules-extra` package. DP installs it automatically, but for some kernels, mostly outdated ones, the package is no longer published in the APT repository. In that case, the installation is skipped, a warning is written to the node logs, the node gets the `node.deckhouse.io/containerd-v2-unsupported` label, and the [`D8NodeContainerdV2NotSupported`](../../../../reference/alerts.html#node-manager-d8nodecontainerdv2notsupported) alert fires.
+On Ubuntu nodes in AWS, the `erofs` kernel module required by containerd v2 is shipped in a separate `linux-modules-extra` package. Deckhouse Platform installs it automatically, but for some kernels, mostly outdated ones, the package is no longer published in the APT repository. In that case, the installation is skipped, a warning is written to the node logs, the node gets the `node.deckhouse.io/containerd-v2-unsupported` label, and the [`D8NodeContainerdV2NotSupported`](../../../../reference/alerts.html#node-manager-d8nodecontainerdv2notsupported) alert fires.
 
 The problem has been confirmed for the `5.15.0-1028-aws`, `6.8.0-1024-aws`, and `6.8.0-1029-aws` kernels. To migrate such nodes, switch the node group to a newer AMI or kernel that provides `erofs`.
 

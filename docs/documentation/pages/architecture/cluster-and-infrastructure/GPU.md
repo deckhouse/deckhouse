@@ -5,7 +5,7 @@ search: gpu, llm
 description: Architecture of the gpu module in Deckhouse Platform.
 ---
 
-The [`gpu`](/modules/gpu/) module manages Graphics Processing Units (GPU) in Deckhouse Platform (DP).
+The [`gpu`](/modules/gpu/) module manages Graphics Processing Units (GPU) in Deckhouse Platform.
 
 The module operates in two mutually exclusive modes.
 The mode is defined by the [`dra.enabled`](/modules/gpu/configuration.html#parameters-dra) parameter:
@@ -38,7 +38,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`gpu`](/modules/gpu/) module in DRA mode and its interactions with other DP components are shown in the following diagram:
+The Level 2 C4 architecture of the [`gpu`](/modules/gpu/) module in DRA mode and its interactions with other Deckhouse Platform components are shown in the following diagram:
 
 ![Architecture of the gpu module in DRA mode](../../../images/architecture/cluster-and-infrastructure/c4-l2-gpu-dra.svg)
 
@@ -129,7 +129,7 @@ The module interacts with the following resources:
 
 ### Module architecture
 
-The Level 2 C4 architecture of the [`gpu`](/modules/gpu/) module in Device Plugin mode and its interactions with other DP components are shown in the following diagram:
+The Level 2 C4 architecture of the [`gpu`](/modules/gpu/) module in Device Plugin mode and its interactions with other Deckhouse Platform components are shown in the following diagram:
 
 ![Architecture of the gpu module in Device Plugin mode](../../../images/architecture/cluster-and-infrastructure/c4-l2-gpu-device-plugin.svg)
 
@@ -145,7 +145,7 @@ The module consists of the following components:
 
 1. **gpu-feature-discovery-&lt;NG&gt;** (DaemonSet): A component that queries the GPU driver via the NVIDIA Management Library (NVML) and writes information about GPU hardware capabilities to the `/etc/kubernetes/node-feature-discovery/features.d/gfd` file. Node-feature-discovery-worker publishes this information as NodeFeature resources, from which node-feature-discovery-master updates the corresponding `nvidia.com/*` labels for cluster nodes.
 
-   The component is created by the [Deckhouse controller](../../../glossary.html#deckhouse-controller) of the [`deckhouse`](/modules/deckhouse/) module for every NodeGroup (NG) whose configuration specifies the [`.spec.gpu`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu) parameter.
+   The module creates the component for every NodeGroup (NG) whose configuration specifies the [`.spec.gpu`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu) parameter.
 
    It consists of the following containers:
 

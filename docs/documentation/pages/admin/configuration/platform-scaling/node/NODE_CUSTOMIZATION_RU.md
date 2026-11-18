@@ -9,8 +9,7 @@ lang: ru
 - Установка и настройки дополнительных пакетов ОС.  
 
   Примеры:  
-  - [установка kubectl-плагина](node-management.html#установка-плагина-cert-manager-для-kubectl-на-master-узлах);
-  - [настройка containerd с поддержкой Nvidia GPU](#как-использовать-containerd-с-поддержкой-nvidia-gpu).
+  - [установка kubectl-плагина](node-management.html#установка-плагина-cert-manager-для-kubectl-на-master-узлах).
 
 - Обновление ядра ОС на конкретную версию.
 
@@ -133,11 +132,11 @@ post-install() {
 
 ## Мониторинг выполнения скриптов
 
-Применение NodeGroupConfiguration запускает обновление **конфигурации `bashible` [группы узлов](../../../../glossary.html#node-group)** в указанных группах. DP автоматически обнаруживает изменение этой конфигурации, затем выставляет поле `UPTODATE` (в выводе команды `d8 k get nodegroup`) в `0`. Поле `UPTODATE` показывает, сколько узлов уже приведены к **целевой конфигурации `bashible` группы узлов**; значение `0` означает, что пока ни один узел не приведён к целевой конфигурации `bashible` (т.е. обновление ещё не применено ни на одном узле).
+Применение NodeGroupConfiguration запускает обновление **конфигурации `bashible` [группы узлов](../../../../glossary.html#node-group)** в указанных группах. Deckhouse Platform автоматически обнаруживает изменение этой конфигурации, затем выставляет поле `UPTODATE` (в выводе команды `d8 k get nodegroup`) в `0`. Поле `UPTODATE` показывает, сколько узлов уже приведены к **целевой конфигурации `bashible` группы узлов**; значение `0` означает, что пока ни один узел не приведён к целевой конфигурации `bashible` (т.е. обновление ещё не применено ни на одном узле).
 
-DP управляет запуском обновления на узлах через аннотацию `update.node.deckhouse.io/approved` на объекте `Node`. По умолчанию обновление выполняется одновременно на одном узле из каждой группы. Параллельность обновления задаётся параметром [`maxConcurrent`](/modules/node-manager/cr.html#nodegroup-v1-spec-update-maxconcurrent) в конфигурации группы узлов. Когда DP выбирает узел для обновления (с учётом очереди и `maxConcurrent`), на него проставляется аннотация `update.node.deckhouse.io/approved`, после чего сервис `bashible` на этом узле начинает применять **целевую конфигурацию `bashible` группы узлов**.
+Deckhouse Platform управляет запуском обновления на узлах через аннотацию `update.node.deckhouse.io/approved` на объекте `Node`. По умолчанию обновление выполняется одновременно на одном узле из каждой группы. Параллельность обновления задаётся параметром [`maxConcurrent`](/modules/node-manager/cr.html#nodegroup-v1-spec-update-maxconcurrent) в конфигурации группы узлов. Когда Deckhouse Platform выбирает узел для обновления (с учётом очереди и `maxConcurrent`), на него проставляется аннотация `update.node.deckhouse.io/approved`, после чего сервис `bashible` на этом узле начинает применять **целевую конфигурацию `bashible` группы узлов**.
 
-Проставленные DP аннотации узлов на запуск обновления можно посмотреть с помощью команды:
+Проставленные Deckhouse Platform аннотации узлов на запуск обновления можно посмотреть с помощью команды:
 
 ```bash
 d8 k get nodes -o json | jq '.items[] | select(.metadata.annotations."update.node.deckhouse.io/approved"=="") | .metadata.name' -r
@@ -173,9 +172,9 @@ rm /var/lib/bashible/configuration_checksum
 
 ## Особенности написания скриптов
 
-При написании скриптов важно учитывать следующие особенности их использования в DP:
+При написании скриптов важно учитывать следующие особенности их использования в Deckhouse Platform:
 
-1. Скрипты в DP выполняются раз в 4 часа или на основании внешних триггеров. Поэтому важно писать скрипты таким образом, чтобы они производили [предварительную проверку](../../../../glossary.html#preflight-checks) необходимости внесения изменений, чтобы избежать повторяющихся/ненужных действий при каждом запуске.
+1. Скрипты в Deckhouse Platform выполняются раз в 4 часа или на основании внешних триггеров. Поэтому важно писать скрипты таким образом, чтобы они производили [предварительную проверку](../../../../glossary.html#preflight-checks) необходимости внесения изменений, чтобы избежать повторяющихся/ненужных действий при каждом запуске.
 1. Существуют [предзаготовленные скрипты](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/common-steps/all), выполняющие различные действия, в том числе установку и настройку сервисов. Важно учитывать это при выборе приоритета пользовательских скриптов. Например, если пользовательский скрипт выполняет перезапуск сервиса, он должен запускаться после скрипта, отвечающего за установку этого сервиса. В противном случае пользовательский скрипт не сможет выполниться при первичном развёртывании узла (так как сервис ещё не будет установлен).
 
 Полезные особенности некоторых скриптов:
@@ -189,282 +188,9 @@ rm /var/lib/bashible/configuration_checksum
 
 ## Как использовать containerd с поддержкой Nvidia GPU
 
-Создайте отдельную [NodeGroup](/modules/node-manager/cr.html#nodegroup) для GPU-узлов:
+На GPU-узлах containerd настраивает модуль [`gpu`](/modules/gpu/): он добавляет runtime `nvidia` и нужные системные настройки на узлы групп с секцией [`spec.gpu`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu). Не настраивайте runtime `nvidia` своими ресурсами NodeGroupConfiguration: такая настройка конфликтует с настройкой модуля `gpu`.
 
-```yaml
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: gpu
-spec:
-  chaos:
-    mode: Disabled
-  disruptions:
-    approvalMode: Automatic
-  nodeType: CloudStatic
-```
-
-Далее создайте [ресурс NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) для NodeGroup `gpu` для конфигурации `containerd`:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: containerd-additional-config.sh
-spec:
-  bundles:
-  - '*'
-  content: |
-    # Copyright 2023 Flant JSC
-    #
-    # Licensed under the Apache License, Version 2.0 (the "License");
-    # you may not use this file except in compliance with the License.
-    # You may obtain a copy of the License at
-    #
-    #     http://www.apache.org/licenses/LICENSE-2.0
-    #
-    # Unless required by applicable law or agreed to in writing, software
-    # distributed under the License is distributed on an "AS IS" BASIS,
-    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    # See the License for the specific language governing permissions and
-    # limitations under the License.
-
-    mkdir -p /etc/containerd/conf.d
-    bb-sync-file /etc/containerd/conf.d/nvidia_gpu.toml - << "EOF"
-    [plugins]
-      [plugins."io.containerd.grpc.v1.cri"]
-        [plugins."io.containerd.grpc.v1.cri".containerd]
-          default_runtime_name = "nvidia"
-          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
-            [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
-              [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia]
-                privileged_without_host_devices = false
-                runtime_engine = ""
-                runtime_root = ""
-                runtime_type = "io.containerd.runc.v2"
-                [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia.options]
-                  BinaryName = "/usr/bin/nvidia-container-runtime"
-                  SystemdCgroup = false
-    EOF
-  nodeGroups:
-  - gpu
-  weight: 31
-```
-
-Добавьте [ресурс NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) для установки драйверов Nvidia для NodeGroup `gpu`.
-
-### Ubuntu
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: install-cuda.sh
-spec:
-  bundles:
-  - ubuntu-lts
-  content: |
-    # Copyright 2023 Flant JSC
-    #
-    # Licensed under the Apache License, Version 2.0 (the "License");
-    # you may not use this file except in compliance with the License.
-    # You may obtain a copy of the License at
-    #
-    #     http://www.apache.org/licenses/LICENSE-2.0
-    #
-    # Unless required by applicable law or agreed to in writing, software
-    # distributed under the License is distributed on an "AS IS" BASIS,
-    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    # See the License for the specific language governing permissions and
-    # limitations under the License.
-
-    if [ ! -f "/etc/apt/sources.list.d/nvidia-container-toolkit.list" ]; then
-      distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
-      curl -s -L https://nvidia.github.io/libnvidia-container/gpgkey | sudo apt-key add -
-      curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-    fi
-    bb-apt-install nvidia-container-toolkit nvidia-driver-535-server
-    nvidia-ctk config --set nvidia-container-runtime.log-level=error --in-place
-  nodeGroups:
-  - gpu
-  weight: 30
-```
-
-### CentOS
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: install-cuda.sh
-spec:
-  bundles:
-  - centos
-  content: |
-    # Copyright 2023 Flant JSC
-    #
-    # Licensed under the Apache License, Version 2.0 (the "License");
-    # you may not use this file except in compliance with the License.
-    # You may obtain a copy of the License at
-    #
-    #     http://www.apache.org/licenses/LICENSE-2.0
-    #
-    # Unless required by applicable law or agreed to in writing, software
-    # distributed under the License is distributed on an "AS IS" BASIS,
-    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    # See the License for the specific language governing permissions and
-    # limitations under the License.
-
-    if [ ! -f "/etc/yum.repos.d/nvidia-container-toolkit.repo" ]; then
-      distribution=$(. /etc/os-release;echo $ID$VERSION_ID) \
-      curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
-    fi
-    bb-dnf-install nvidia-container-toolkit nvidia-driver
-    nvidia-ctk config --set nvidia-container-runtime.log-level=error --in-place
-  nodeGroups:
-  - gpu
-  weight: 30
-```
-
-После того как конфигурации будут применены, проведите бутстрап и перезагрузите узлы, чтобы применить настройки и установить драйвера.
-
-### Особенности использования MIG в кластере из одного узла
-
-{% alert level="info" %}
-Общая информация о подготовке GPU-узлов, установке драйверов и проверке работы GPU приведена в разделе [«Как работать с GPU-узлами»](/modules/node-manager/faq.html#как-работать-с-gpu-узлами).
-{% endalert %}
-
-В [одноузловом кластере](../../../../glossary.html#single-node-cluster) при использовании стратегии `MIG` после перезагрузки узла требуется вручную повторно применить MIG-конфигурацию.
-
-Это ограничение относится к текущей реализации MIG, в которой используется компонент `nvidia-mig-manager`.
-
-После каждой перезагрузки узла выполните следующие шаги:
-
-1. Пометьте узел служебной аннотацией:
-
-   ```bash
-   d8 k annotate node <node_name> update.node.deckhouse.io/drained=""
-   ```
-
-1. Перезапустите компонент `nvidia-mig-manager`:
-
-   ```bash
-   d8 k -n d8-nvidia-gpu delete pod -l component=nvidia-mig-manager
-   ```
-
-1. Дождитесь повторного применения MIG-конфигурации по логам `nvidia-mig-manager`:
-
-   ```bash
-   d8 k -n d8-nvidia-gpu logs -f -l component=nvidia-mig-manager
-   ```
-
-   Успешное применение конфигурации подтверждается записью вида:
-
-   ```console
-   Successfully updated to MIG config: <partedConfig>
-   ```
-
-   где `<partedConfig>` — значение параметра [`partedConfig`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu-mig-partedconfig) в NodeGroup (например, `all-1g.10gb`).
-
-1. После успешного применения MIG-конфигурации верните узел в рабочее состояние:
-
-   ```bash
-   d8 k uncordon <node_name>
-   ```
-
-### Проверка успешности установки
-
-Создайте в кластере Job:
-
-```yaml
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: nvidia-cuda-test
-  namespace: default
-spec:
-  completions: 1
-  template:
-    spec:
-      restartPolicy: Never
-      nodeSelector:
-        node.deckhouse.io/group: gpu
-      containers:
-        - name: nvidia-cuda-test
-          image: nvidia/cuda:11.6.2-base-ubuntu20.04
-          imagePullPolicy: "IfNotPresent"
-          command:
-            - nvidia-smi
-```
-
-Проверьте логи командой:
-
-```shell
-d8 k logs job/nvidia-cuda-test
-```
-
-Пример вывода:
-
-```console
-Tue Jan 24 11:36:18 2023
-+-----------------------------------------------------------------------------+
-| NVIDIA-SMI 525.60.13    Driver Version: 525.60.13    CUDA Version: 12.0     |
-|-------------------------------+----------------------+----------------------+
-| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
-| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
-|                               |                      |               MIG M. |
-|===============================+======================+======================|
-|   0  Tesla T4            Off  | 00000000:8B:00.0 Off |                    0 |
-| N/A   45C    P0    25W /  70W |      0MiB / 15360MiB |      0%      Default |
-|                               |                      |                  N/A |
-+-------------------------------+----------------------+----------------------+
-
-+-----------------------------------------------------------------------------+
-| Processes:                                                                  |
-|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
-|        ID   ID                                                   Usage      |
-|=============================================================================|
-|  No running processes found                                                 |
-+-----------------------------------------------------------------------------+
-```
-
-Создайте в кластере Job:
-
-```yaml
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: gpu-operator-test
-  namespace: default
-spec:
-  completions: 1
-  template:
-    spec:
-      restartPolicy: Never
-      nodeSelector:
-        node.deckhouse.io/group: gpu
-      containers:
-        - name: gpu-operator-test
-          image: nvidia/samples:vectoradd-cuda10.2
-          imagePullPolicy: "IfNotPresent"
-```
-
-Проверьте логи командой:
-
-```shell
-d8 k logs job/gpu-operator-test
-```
-
-Пример вывода:
-
-```console
-[Vector addition of 50000 elements]
-Copy input data from the host memory to the CUDA device
-CUDA kernel launch with 196 blocks of 256 threads
-Copy output data from the CUDA device to the host memory
-Test PASSED
-Done
-```
+Как установить драйвер NVIDIA и NVIDIA Container Toolkit на узлы и как проверить GPU-узел, описано в [FAQ модуля `gpu`](/modules/gpu/faq.html).
 
 ## Как развернуть кастомный конфигурационный файл containerd
 
@@ -606,7 +332,7 @@ cat /etc/containerd/config.toml | grep '/etc/containerd/registry.d'
 {% endalert %}
 
 {% alert level="info" %}
-Используется в containerd v1, если DP не управляется с помощью модуля [registry](/modules/registry/).
+Используется в containerd v1, если Deckhouse Platform не управляется с помощью модуля [registry](/modules/registry/).
 {% endalert %}
 
 Конфигурация описывается в основном конфигурационном файле containerd `/etc/containerd/config.toml`.
@@ -1097,5 +823,5 @@ spec:
 При добавлении узла в кластер указанные в файлах лейблы будут автоматически проставлены на узел.
 
 {% alert level="warning" %}
-Обратите внимание, что добавить таким образом лейблы, использующиеся в DP, невозможно. Работать такой метод будет только с кастомными лейблами, не пересекающимися с зарезервированными для Deckhouse.
+Обратите внимание, что добавить таким образом лейблы, использующиеся в Deckhouse Platform, невозможно. Работать такой метод будет только с кастомными лейблами, не пересекающимися с зарезервированными для Deckhouse.
 {% endalert %}

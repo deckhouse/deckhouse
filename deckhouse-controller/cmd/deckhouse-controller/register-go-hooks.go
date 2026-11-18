@@ -5,7 +5,6 @@ import (
 	_ "github.com/flant/addon-operator/sdk"
 
 	_ "github.com/deckhouse/deckhouse/ee/cse/modules/040-node-manager/hooks"
-	_ "github.com/deckhouse/deckhouse/ee/cse/modules/040-node-manager/hooks/gpu"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/500-basic-auth/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/500-okmeter/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/021-cni-cilium/hooks/clustermesh"

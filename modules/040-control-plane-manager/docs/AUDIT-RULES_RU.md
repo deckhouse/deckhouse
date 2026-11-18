@@ -70,7 +70,7 @@ rules:                       # Набор правил для аудита
 
 ## Встроенные правила аудита
 
-В Deckhouse Platform (DP) по умолчанию разворачивается базовая политика аудита, которая может быть дополнена пользовательскими правилами.
+В Deckhouse Platform по умолчанию разворачивается базовая политика аудита, которая может быть дополнена пользовательскими правилами.
 
 В этой политике реализованы следующие правила:
 
@@ -261,15 +261,8 @@ users:
   - system:serviceaccount:d8-cloud-instance-manager:integrity-controller
   - system:serviceaccount:d8-cloud-instance-manager:machine-controller-manager
   - system:serviceaccount:d8-cloud-instance-manager:node-controller
-  - system:serviceaccount:d8-cloud-instance-manager:node-feature-discovery-gc
-  - system:serviceaccount:d8-cloud-instance-manager:node-feature-discovery-master
-  - system:serviceaccount:d8-cloud-instance-manager:node-feature-discovery-worker
   - system:serviceaccount:d8-cloud-instance-manager:node-group
   - system:serviceaccount:d8-cloud-instance-manager:node-group-exporter
-  - system:serviceaccount:d8-cloud-instance-manager:nvidia-dcgm-exporter
-  - system:serviceaccount:d8-cloud-instance-manager:nvidia-device-plugin
-  - system:serviceaccount:d8-cloud-instance-manager:nvidia-gpu-feature-discovery
-  - system:serviceaccount:d8-cloud-instance-manager:nvidia-mig-manager
   - system:serviceaccount:d8-cloud-instance-manager:registry-packages-proxy
   - system:serviceaccount:d8-cloud-provider-aws:cloud-controller-manager
   - system:serviceaccount:d8-cloud-provider-aws:cloud-data-discoverer
@@ -799,15 +792,8 @@ rules:
       - system:serviceaccount:d8-cloud-instance-manager:integrity-controller
       - system:serviceaccount:d8-cloud-instance-manager:machine-controller-manager
       - system:serviceaccount:d8-cloud-instance-manager:node-controller
-      - system:serviceaccount:d8-cloud-instance-manager:node-feature-discovery-gc
-      - system:serviceaccount:d8-cloud-instance-manager:node-feature-discovery-master
-      - system:serviceaccount:d8-cloud-instance-manager:node-feature-discovery-worker
       - system:serviceaccount:d8-cloud-instance-manager:node-group
       - system:serviceaccount:d8-cloud-instance-manager:node-group-exporter
-      - system:serviceaccount:d8-cloud-instance-manager:nvidia-dcgm-exporter
-      - system:serviceaccount:d8-cloud-instance-manager:nvidia-device-plugin
-      - system:serviceaccount:d8-cloud-instance-manager:nvidia-gpu-feature-discovery
-      - system:serviceaccount:d8-cloud-instance-manager:nvidia-mig-manager
       - system:serviceaccount:d8-cloud-instance-manager:registry-packages-proxy
       - system:serviceaccount:d8-cloud-provider-aws:cloud-controller-manager
       - system:serviceaccount:d8-cloud-provider-aws:cloud-data-discoverer

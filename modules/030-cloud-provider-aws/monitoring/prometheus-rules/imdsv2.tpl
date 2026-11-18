@@ -19,7 +19,7 @@
 
           Existing instances are not reconfigured by the setting alone:
 
-          1. Master, static and bastion instances are updated by a converge run. Start the DKP installer and run `dhctl converge`.
+          1. Master, static and bastion instances are updated by a converge run. Start the Deckhouse Platform installer and run `dhctl converge`.
           2. Ephemeral instances are re-created when their nodes are rolled, which happens on its own. Check that the nodes of every `CloudEphemeral` NodeGroup are being replaced: `d8 k get nodegroups`.
 
           The instance state is re-read once per discovery period of the cloud data discoverer (one hour by default),

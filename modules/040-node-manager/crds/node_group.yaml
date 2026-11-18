@@ -1568,6 +1568,8 @@ spec:
                   type: object
                   description: |
                     GPU parameters.
+
+                    The section is used by the [`gpu`](/modules/gpu/) module: it selects the node groups that the module serves in Device Plugin mode. If the `gpu` module is disabled, the section has no effect.
                   properties:
                     sharing:
                       type: string
@@ -1861,11 +1863,11 @@ spec:
                       x-kubernetes-map-type: atomic
                     count:
                       description: |
-                          Target number of StaticInstance resources (matching the `labelSelector`) that DP bootstraps and adds into the cluster.
+                          Target number of StaticInstance resources (matching the `labelSelector`) that Deckhouse Platform bootstraps and adds into the cluster.
 
-                          In a NodeGroup with Static or CloudStatic nodes, this parameter sets the expected number of nodes. DP uses this value for state control and automation purposes.
+                          In a NodeGroup with Static or CloudStatic nodes, this parameter sets the expected number of nodes. Deckhouse Platform uses this value for state control and automation purposes.
 
-                          > **Warning.** Set this parameter explicitly. The default value is `0`, which means DP won't bootstrap any StaticInstance resource or add any node to the group unless this value is modified. To add static nodes, specify the required number here (greater than `0`).
+                          > **Warning.** Set this parameter explicitly. The default value is `0`, which means Deckhouse Platform won't bootstrap any StaticInstance resource or add any node to the group unless this value is modified. To add static nodes, specify the required number here (greater than `0`).
                       type: integer
                       minimum: 0
                       default: 0

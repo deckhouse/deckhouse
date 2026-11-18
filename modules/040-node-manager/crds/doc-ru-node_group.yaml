@@ -198,7 +198,7 @@ spec:
 
                             > **Внимание.** Данная настройка игнорируется (узлам будет выдано разрешение без предварительного выполнения drain подов с узлов):
                               - для nodeGroup `master` с единственным узлом;
-                              - для [выделенного под запуск DP](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html#запуск-dp-на-произвольном-узле) узла, если этот узел в группе узлов единственно рабочий (Ready).
+                              - для [выделенного под запуск Deckhouse Platform](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html#запуск-dp-на-произвольном-узле) узла, если этот узел в группе узлов единственно рабочий (Ready).
                         windows:
                           description: |
                             Список окон disruption-обновлений узлов.
@@ -547,7 +547,7 @@ spec:
 
                             > **Внимание**. Данная настройка игнорируется (узлам будет выдано разрешение без предварительного выполнения drain подов с узлов):
                               - для nodeGroup `master` с единственным узлом;
-                              - для [выделенного под запуск DP](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html#запуск-dp-на-произвольном-узле) узла, если этот узел в группе узлов единственно рабочий (Ready).
+                              - для [выделенного под запуск Deckhouse Platform](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html#запуск-dp-на-произвольном-узле) узла, если этот узел в группе узлов единственно рабочий (Ready).
                         windows:
                           description: |
                             Список окон disruption-обновлений узлов.
@@ -733,6 +733,8 @@ spec:
                 gpu:
                   description: |
                     Параметры GPU.
+
+                    Секцию использует модуль [`gpu`](/modules/gpu/): по ней он выбирает группы узлов, которые обслуживает в режиме Device Plugin. Если модуль `gpu` выключен, секция ни на что не влияет.
                   properties:
                     sharing:
                       description: |
@@ -901,11 +903,11 @@ spec:
                             Фильтр на основе совпадения/несовпадения лейблов.
                     count:
                       description: |
-                        Желаемое количество ресурсов StaticInstance (подпадающих под `labelSelector`), которые DP автоматически настроит и добавит в кластер.
+                        Желаемое количество ресурсов StaticInstance (подпадающих под `labelSelector`), которые Deckhouse Platform автоматически настроит и добавит в кластер.
 
-                        В NodeGroup со Static- и CloudStatic-узлами этот параметр задаёт ожидаемое количество узлов. DP использует это значение для контроля состояния и автоматизации.
+                        В NodeGroup со Static- и CloudStatic-узлами этот параметр задаёт ожидаемое количество узлов. Deckhouse Platform использует это значение для контроля состояния и автоматизации.
 
-                        > **Внимание.** Этот параметр необходимо задавать явно. Значение по умолчанию — `0`, поэтому без изменения этого значения DP не настроит ни один ресурс StaticInstance и не добавит в группу ни одного узла. Чтобы добавить статические узлы, укажите здесь нужное количество (больше `0`).
+                        > **Внимание.** Этот параметр необходимо задавать явно. Значение по умолчанию — `0`, поэтому без изменения этого значения Deckhouse Platform не настроит ни один ресурс StaticInstance и не добавит в группу ни одного узла. Чтобы добавить статические узлы, укажите здесь нужное количество (больше `0`).
                 cloudInstances:
                   description: |
                     Параметры облачных виртуальных машин группы узлов.
@@ -1048,7 +1050,7 @@ spec:
 
                             **Внимание.** Данная настройка игнорируется (узлам будет выдано разрешение без предварительного выполнения drain подов с узлов):
                             - для nodeGroup `master` с единственным узлом;
-                            - для [выделенного под запуск DP](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html#запуск-dp-на-произвольном-узле) узла, если этот узел в группе узлов единственно рабочий (Ready).
+                            - для [выделенного под запуск Deckhouse Platform](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html#запуск-dp-на-произвольном-узле) узла, если этот узел в группе узлов единственно рабочий (Ready).
                         windows:
                           description: |
                             Список окон disruption-обновлений узлов.

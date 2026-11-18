@@ -50,45 +50,6 @@ bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
     {{ $sandbox_image = "deckhouse.local/images:pause" }}
   {{- end }}
 
-  {{- if and .nodeGroup.gpu (ne .deckhouse.edition "CSE") }}
-# The containerd default runtime is resolved at run time, not at template time. The
-# NVIDIA Container Toolkit is an external prerequisite of a GPU node and may simply be
-# absent: pointing default_runtime_name at a runtime whose BinaryName does not exist
-# breaks EVERY container on the node (CNI, storage, all DaemonSets), not only the GPU
-# workloads. The deprecated in-core GPU path must not be able to take the whole node
-# down, so the default runtime falls back to runc while the toolkit is missing.
-containerd_default_runtime="nvidia"
-if ! command -v /usr/bin/nvidia-container-runtime >/dev/null 2>&1; then
-  containerd_default_runtime="runc"
-  bb-log-error "/usr/bin/nvidia-container-runtime is not installed, keeping 'runc' as the containerd default runtime. GPU workloads will NOT work on this node until NVIDIA Container Toolkit is installed; general purpose containers keep working."
-fi
-
-# net.core.bpf_jit_harden must be relaxed to 1 on a GPU node, otherwise
-# nvidia-container-cli fails and GPU pods end up in CreateContainerError.
-# https://github.com/NVIDIA/nvidia-container-toolkit/issues/117#issuecomment-1758781872
-#
-# The value is persisted in our own drop-in instead of editing distro files in place:
-# they may be absent, and the value may be set in a different file. The "zz" prefix
-# only orders our file last WITHIN /etc/sysctl.d - it says nothing about the other
-# sysctl sources, see the /etc/sysctl.conf fixup below.
-bb-sync-file /etc/sysctl.d/99-zz-nvidia-bpf-jit-harden.conf - <<< "net.core.bpf_jit_harden = 1"
-
-# procps applies /etc/sysctl.conf AFTER all the drop-in directories, so a value set
-# there overrides the drop-in above on every `sysctl --system`. RED OS ships
-# `net.core.bpf_jit_harden = 2` exactly in /etc/sysctl.conf, hence this in-place
-# fixup. It only rewrites an explicit `= 2` assignment (idempotent, and a no-op when
-# the file or the setting is absent) and must never fail the step.
-if [ -f /etc/sysctl.conf ] && grep -qE '^[[:space:]]*net\.core\.bpf_jit_harden[[:space:]]*=[[:space:]]*2[[:space:]]*$' /etc/sysctl.conf; then
-  sed -i -E 's/^([[:space:]]*net\.core\.bpf_jit_harden[[:space:]]*=[[:space:]]*)2[[:space:]]*$/\11/' /etc/sysctl.conf \
-    || bb-log-warning "Failed to relax net.core.bpf_jit_harden in /etc/sysctl.conf. GPU containers may fail to start after 'sysctl --system'."
-fi
-  {{- else }}
-# Not a GPU NodeGroup, or the edition is CSE. The assignment is not optional: both
-# deckhouse.toml heredocs below interpolate this variable, and an unset one would render
-# an empty default_runtime_name and break every container on the node.
-containerd_default_runtime="runc"
-  {{- end }}
-
 systemd_cgroup=true
 # Overriding cgroup type from external config file
 if [ -f /var/lib/bashible/cgroup_config ] && [ "$(cat /var/lib/bashible/cgroup_config)" == "cgroupfs" ]; then
@@ -172,20 +133,9 @@ oom_score = 0
     drain_exec_sync_io_timeout = '0s'
     ignore_deprecation_warnings = []
     [plugins.'io.containerd.cri.v1.runtime'.containerd]
-      default_runtime_name = "${containerd_default_runtime}"
+      default_runtime_name = "runc"
       ignore_blockio_not_enabled_errors = false
       ignore_rdt_not_enabled_errors = false
-  {{- if and .nodeGroup.gpu (ne .deckhouse.edition "CSE") }}
-      [plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes]
-        [plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.nvidia]
-          privileged_without_host_devices = false
-          runtime_engine = ""
-          runtime_root = ""
-          runtime_type = "io.containerd.runc.v2"
-          [plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.nvidia.options]
-            BinaryName = "/usr/bin/nvidia-container-runtime"
-            SystemdCgroup = ${systemd_cgroup}
-  {{ end }}
         [plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.runc]
           runtime_type = 'io.containerd.runc.v2'
           runtime_path = ''
@@ -363,7 +313,7 @@ oom_score = 0
     cdi_spec_dirs = ['/etc/cdi', '/var/run/cdi']
     [plugins."io.containerd.grpc.v1.cri".containerd]
       snapshotter = "overlayfs"
-      default_runtime_name = "${containerd_default_runtime}"
+      default_runtime_name = "runc"
       no_pivot = false
       disable_snapshot_annotations = true
       discard_unpacked_layers = true
@@ -388,16 +338,6 @@ oom_score = 0
           base_runtime_spec = ""
           [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
             SystemdCgroup = ${systemd_cgroup}
-  {{- if and .nodeGroup.gpu (ne .deckhouse.edition "CSE") }}
-        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia]
-          privileged_without_host_devices = false
-          runtime_engine = ""
-          runtime_root = ""
-          runtime_type = "io.containerd.runc.v2"
-          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia.options]
-            BinaryName = "/usr/bin/nvidia-container-runtime"
-            SystemdCgroup = ${systemd_cgroup}
-  {{- end }}
     [plugins."io.containerd.grpc.v1.cri".cni]
       bin_dir = "/opt/cni/bin"
       conf_dir = "/etc/cni/net.d"

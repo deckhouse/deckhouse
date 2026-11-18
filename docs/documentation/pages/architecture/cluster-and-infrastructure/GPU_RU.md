@@ -6,7 +6,7 @@ search: gpu, llm
 description: Архитектура модуля gpu в Deckhouse Platform.
 ---
 
-[Модуль `gpu`](/modules/gpu/) обеспечивает управление графическими процессорами (Graphics Processing Units, GPU) в Deckhouse Platform (DP).
+[Модуль `gpu`](/modules/gpu/) обеспечивает управление графическими процессорами (Graphics Processing Units, GPU) в Deckhouse Platform.
 
 Модуль работает в двух взаимоисключающих режимах, которые переключаются [параметром `dra.enabled`](/modules/gpu/configuration.html#parameters-dra):
 
@@ -38,7 +38,7 @@ description: Архитектура модуля gpu в Deckhouse Platform.
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`gpu`](/modules/gpu/) в режиме DRA на уровне 2 модели C4 и его взаимодействия с другими компонентами DP изображены на следующей диаграмме:
+Архитектура модуля [`gpu`](/modules/gpu/) в режиме DRA на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform изображены на следующей диаграмме:
 
 ![Архитектура модуля gpu в режиме DRA](../../../images/architecture/cluster-and-infrastructure/c4-l2-gpu-dra.ru.svg)
 
@@ -129,7 +129,7 @@ description: Архитектура модуля gpu в Deckhouse Platform.
 
 ### Архитектура модуля
 
-Архитектура модуля [`gpu`](/modules/gpu/) в режиме Device Plugin на уровне 2 модели C4 и его взаимодействия с другими компонентами DP изображены на следующей диаграмме:
+Архитектура модуля [`gpu`](/modules/gpu/) в режиме Device Plugin на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform изображены на следующей диаграмме:
 
 ![Архитектура модуля gpu в режиме Device Plugin](../../../images/architecture/cluster-and-infrastructure/c4-l2-gpu-device-plugin.ru.svg)
 
@@ -145,7 +145,7 @@ description: Архитектура модуля gpu в Deckhouse Platform.
 
 1. **gpu-feature-discovery-&lt;NG&gt;** (DaemonSet) — компонент опрашивает GPU-драйвер через NVIDIA Management Library (NVML) и записывает информацию об аппаратных возможностях GPU в файл `/etc/kubernetes/node-feature-discovery/features.d/gfd`. Node-feature-discovery-worker публикует информацию в виде ресурсов NodeFeature, из которых node-feature-discovery-master обновляет соответствующие лейблы `nvidia.com/*` для узлов кластера.
 
-   Компонент создаётся Deckhouse-контроллером модуля [`deckhouse`](/modules/deckhouse/) для каждой NodeGroup (NG), в конфигурации которой указан параметр [`.spec.gpu`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu).
+   Модуль создаёт компонент для каждой NodeGroup (NG), в конфигурации которой указан параметр [`.spec.gpu`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu).
 
    Состоит из следующих контейнеров:
 
