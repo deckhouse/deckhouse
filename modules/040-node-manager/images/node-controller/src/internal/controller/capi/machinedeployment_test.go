@@ -100,8 +100,11 @@ func TestIntOrDefault(t *testing.T) {
 	if got := intOrDefault(nil, 1); got != 1 {
 		t.Fatalf("nil pointer: got %d, want default 1", got)
 	}
-	if got := intOrDefault(ptr(int32(0)), 1); got != 0 {
-		t.Fatalf("explicit zero must override default: got %d, want 0", got)
+	if got := intOrDefault(new(int32), 1); got != 1 {
+		t.Fatalf("zero pointer: got %d, want default 1", got)
+	}
+	if got := intOrDefault(new(int32), 0); got != 0 {
+		t.Fatalf("zero pointer: got %d, want default 0", got)
 	}
 	if got := intOrDefault(ptr(int32(5)), 1); got != 5 {
 		t.Fatalf("got %d, want 5", got)

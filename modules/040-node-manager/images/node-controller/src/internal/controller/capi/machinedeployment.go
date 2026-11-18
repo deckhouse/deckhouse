@@ -809,8 +809,10 @@ func sha256Hash(input string) string {
 	return fmt.Sprintf("%x", h)[:8]
 }
 
+// Zero means unset, matching
+// modules/040-node-manager/templates/node-group/_machine_deployment.tpl.
 func intOrDefault(ptr *int32, def int) int {
-	if ptr != nil {
+	if ptr != nil && *ptr != 0 {
 		return int(*ptr)
 	}
 	return def
