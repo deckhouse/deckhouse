@@ -216,8 +216,11 @@ func useUpstreamRegistry(ctx context.Context, kubeCl *client.KubernetesClient, s
 		return fmt.Errorf("get upstream registry for ModuleSource %q: %w", src.GetName(), err)
 	}
 	if !found {
-		// Local mode publishes nothing upstream; failing on the pull names the host better.
-		return nil
+		if inCluster {
+			// Local mode publishes nothing upstream; failing on the pull names the host better.
+			return nil
+		}
+		return useStoreThroughNode(ctx, kubeCl, src)
 	}
 
 	if strings.HasPrefix(upstream.GetRegistry(), registry_const.StorageHost) {
@@ -240,6 +243,30 @@ func useUpstreamRegistry(ctx context.Context, kubeCl *client.KubernetesClient, s
 		return fmt.Errorf("upstream registry config for ModuleSource %q: %w", src.GetName(), err)
 	}
 	src.Spec.Registry.Repo = repo
+	src.conf = conf
+	return nil
+}
+
+// storeThroughNode is replaced in tests, which have no SSH connection to open a tunnel over.
+var storeThroughNode = registrydata.StoreThroughNode
+
+// useStoreThroughNode points the source at the cluster's own store, through the SSH connection to a
+// master, for an out-of-cluster caller on a cluster that names no upstream. The in-cluster address does
+// not resolve here, and the store is the only place left that holds the module: a provider module
+// installed from the built-in source on an air-gapped cluster made `dhctl config edit
+// provider-cluster-configuration` fail with `lookup registry.d8-system.svc: no such host`.
+//
+// A source the store does not stand behind, or no SSH connection, leaves the source as it is.
+func useStoreThroughNode(ctx context.Context, kubeCl *client.KubernetesClient, src *ModuleSource) error {
+	conf, ok, err := storeThroughNode(ctx, kubeCl, src.Spec.Registry.Repo)
+	if err != nil {
+		return fmt.Errorf("reach the cluster store for ModuleSource %q: %w", src.GetName(), err)
+	}
+	if !ok {
+		return nil
+	}
+
+	src.Spec.Registry.Repo = conf.GetRegistry()
 	src.conf = conf
 	return nil
 }

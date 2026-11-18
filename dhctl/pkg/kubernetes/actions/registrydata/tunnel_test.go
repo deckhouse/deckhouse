@@ -74,3 +74,17 @@ func TestTheTunnelGoesWhereTheReplicaReportedServing(t *testing.T) {
 		require.Equal(t, registry_const.StoragePort, servingPort(t.Context(), kubeCl, "10.0.0.30"))
 	})
 }
+
+// TestTheStoreIsReachedOnlyForTheInClusterAddress: any other address is one somebody chose because it
+// is reachable, and without an SSH connection there is nothing to open a tunnel over.
+func TestTheStoreIsReachedOnlyForTheInClusterAddress(t *testing.T) {
+	kubeCl := client.NewFakeKubernetesClient()
+
+	_, ok, err := StoreThroughNode(t.Context(), kubeCl, "registry.example.io/deckhouse/ee/modules")
+	require.NoError(t, err)
+	require.False(t, ok)
+
+	_, ok, err = StoreThroughNode(t.Context(), kubeCl, registry_const.HostWithPath+"/modules")
+	require.NoError(t, err)
+	require.False(t, ok, "a fake client carries no SSH connection")
+}

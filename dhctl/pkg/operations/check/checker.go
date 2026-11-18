@@ -379,7 +379,9 @@ func (c *Checker) GetKubeClient(ctx context.Context) (*client.KubernetesClient, 
 	if err != nil {
 		return nil, err
 	}
-	return &client.KubernetesClient{KubeClient: kubeCl}, nil
+	// The SSH connection lets the client reach what only a node reaches, such as the
+	// cluster's own registry store of an air-gapped cluster.
+	return (&client.KubernetesClient{KubeClient: kubeCl}).WithSSHClient(c.SSHProviderInitializer.SSHClient(ctx)), nil
 }
 
 func (c *Checker) switchPhase(ctx context.Context, s phases.OperationPhase) func() {

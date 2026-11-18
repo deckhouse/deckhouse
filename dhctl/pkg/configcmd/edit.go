@@ -94,7 +94,11 @@ func defineEditCommand(cmd *cobra.Command, opts *options.Options, withSSH bool) 
 			return err
 		}
 
-		return editSecret(ctx, &client.KubernetesClient{KubeClient: kubeIface}, opts, name, target.secret, target.dataKey)
+		// The SSH connection goes along: on a cluster that names no upstream registry, the provider
+		// bundle is read from the cluster's own store through it.
+		kubeCl := (&client.KubernetesClient{KubeClient: kubeIface}).WithSSHClient(sshProviderInitializer.SSHClient(ctx))
+
+		return editSecret(ctx, kubeCl, opts, name, target.secret, target.dataKey)
 	}
 }
 
