@@ -93,6 +93,45 @@ func TestTrackNodeGroupMetrics(t *testing.T) {
 	}
 }
 
+func TestTrackNodeGroupMetricsMCMEngine(t *testing.T) {
+	withCAPI := Registration{Type: "yandex", MachineClassKind: "YandexMachineClass", CAPIClusterKind: "YandexCluster"}
+	mcmOnly := Registration{Type: "aws", MachineClassKind: "AWSMachineClass"}
+
+	for _, tc := range []struct {
+		name     string
+		engine   string
+		provider Registration
+		want     int
+	}{
+		{name: "MCM on a provider with CAPI", engine: "MCM", provider: withCAPI, want: 1},
+		{name: "CAPI on a provider with CAPI", engine: "CAPI", provider: withCAPI},
+		{name: "None on a provider with CAPI", engine: "None", provider: withCAPI},
+		{name: "unset engine on a provider with CAPI", provider: withCAPI},
+		// MCM is the only engine of such a provider, there is nothing to migrate to.
+		{name: "MCM on a provider without CAPI", engine: "MCM", provider: mcmOnly},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ng := &v1.NodeGroup{Spec: v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral}}
+			ng.Name = "worker"
+			ng.Status.Engine = tc.engine
+
+			TrackNodeGroupMetrics(ng, tc.provider)
+			assert.Equal(t, tc.want, nodeGroupSeries(mcmEngine, ng.Name))
+		})
+	}
+
+	t.Run("series does not outlive the engine", func(t *testing.T) {
+		ng := &v1.NodeGroup{Spec: v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral}}
+		ng.Name = "worker"
+		ng.Status.Engine = "MCM"
+		TrackNodeGroupMetrics(ng, withCAPI)
+
+		ng.Status.Engine = "CAPI"
+		TrackNodeGroupMetrics(ng, withCAPI)
+		assert.Equal(t, 0, nodeGroupSeries(mcmEngine, ng.Name))
+	})
+}
+
 // The cluster runs one cloud, so the node type alone decides which provider a group runs in:
 // everything but Static belongs to the one the cluster configuration names, whatever InstanceClass
 // kind the group references. spec.providerType picks nothing — it declares that answer, and a

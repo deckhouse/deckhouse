@@ -43,3 +43,33 @@
         ```bash
         d8 k get nodegroup {{ $labels.name }} -o jsonpath='{.spec.fencing}'
         ```
+- name: d8.node-group-mcm-engine
+  rules:
+    - alert: NodeGroupUsesDeprecatedMCMEngine
+      expr: |
+        max by (name) (d8_node_group_mcm_engine_deprecated) > 0
+      for: 15m
+      labels:
+        tier: cluster
+        severity_level: "9"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__cluster_has_node_groups_deprecation_alerts: "NodeGroupsDeprecationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__cluster_has_node_groups_deprecation_alerts: "NodeGroupsDeprecationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: NodeGroup {{ $labels.name }} is managed by the deprecated Machine Controller Manager (MCM).
+        description: |
+          The nodes of NodeGroup `{{ $labels.name }}` are managed by Machine Controller Manager (MCM): `status.engine` is `MCM`.
+          MCM is being replaced by Cluster API (CAPI) for the cloud provider of this cluster.
+
+          To resolve this issue, move the group to CAPI by recreating it completely:
+
+          1. Create a new NodeGroup with the same settings under a different name.
+          1. Wait until the nodes of the new group are `Ready` and drain the nodes of NodeGroup `{{ $labels.name }}`.
+          1. Delete NodeGroup `{{ $labels.name }}`.
+
+          Check the engine of the groups:
+
+          ```bash
+          d8 k get nodegroups -o custom-columns=NAME:.metadata.name,ENGINE:.status.engine
+          ```

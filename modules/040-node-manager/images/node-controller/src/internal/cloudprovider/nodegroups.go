@@ -44,17 +44,31 @@ var providerTypeInvalid = prometheus.NewGaugeVec(
 	[]string{"name", "node_type", "provider_type"},
 )
 
+var mcmEngine = prometheus.NewGaugeVec(
+	prometheus.GaugeOpts{
+		Name: "d8_node_group_mcm_engine_deprecated",
+		Help: "Set to 1 when the nodes of a NodeGroup are still managed by Machine Controller Manager (status.engine is MCM) although the provider offers CAPI, so the group has to be recreated on CAPI",
+	},
+	[]string{"name", "node_type"},
+)
+
 func init() {
 	ctrlmetrics.Registry.MustRegister(providerTypeUnset)
 	ctrlmetrics.Registry.MustRegister(providerTypeInvalid)
+	ctrlmetrics.Registry.MustRegister(mcmEngine)
 }
 
 // TrackNodeGroupMetrics publishes what is wrong with a NodeGroup's spec.providerType. The
 // two states are exclusive: a field that names the wrong provider is reported as invalid, and only
-// a field that names nothing at all is reported as unset.
+// a field that names nothing at all is reported as unset. It also flags a NodeGroup whose
+// status.engine is still MCM while its provider already offers CAPI.
 func TrackNodeGroupMetrics(ng *v1.NodeGroup, provider Registration) {
 	ClearNodeGroupMetrics(ng.Name)
 	nodeType := string(ng.Spec.NodeType)
+
+	if ng.Status.Engine == "MCM" && provider.HasCAPI() {
+		mcmEngine.WithLabelValues(ng.Name, nodeType).Set(1)
+	}
 
 	if ValidateNodeGroupPType(ng, provider) != nil {
 		providerTypeInvalid.WithLabelValues(ng.Name, nodeType, ng.Spec.ProviderType).Set(1)
@@ -71,6 +85,7 @@ func ClearNodeGroupMetrics(name string) {
 	labels := prometheus.Labels{"name": name}
 	providerTypeUnset.DeletePartialMatch(labels)
 	providerTypeInvalid.DeletePartialMatch(labels)
+	mcmEngine.DeletePartialMatch(labels)
 }
 
 // ValidateNodeGroupPType reports why a NodeGroup's spec.providerType contradicts the provider its

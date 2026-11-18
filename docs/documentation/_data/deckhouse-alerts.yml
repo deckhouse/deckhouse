@@ -8970,6 +8970,30 @@ alerts:
         NodeGroup {{ $labels.node_group }} has unavailable instances.
       severity: "8"
       markupFormat: markdown
+    - name: NodeGroupUsesDeprecatedMCMEngine
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-group-deprecate.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        The nodes of NodeGroup `{{ $labels.name }}` are managed by Machine Controller Manager (MCM): `status.engine` is `MCM`.
+        MCM is being replaced by Cluster API (CAPI) for the cloud provider of this cluster.
+
+        To resolve this issue, move the group to CAPI by recreating it completely:
+
+        1. Create a new NodeGroup with the same settings under a different name.
+        1. Wait until the nodes of the new group are `Ready` and drain the nodes of NodeGroup `{{ $labels.name }}`.
+        1. Delete NodeGroup `{{ $labels.name }}`.
+
+        Check the engine of the groups:
+
+        ```bash
+        d8 k get nodegroups -o custom-columns=NAME:.metadata.name,ENGINE:.status.engine
+        ```
+      summary: |
+        NodeGroup {{ $labels.name }} is managed by the deprecated Machine Controller Manager (MCM).
+      severity: "9"
+      markupFormat: markdown
     - name: NodeRequiresDisruptionApprovalForUpdate
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-update.yaml
       moduleUrl: 040-node-manager
