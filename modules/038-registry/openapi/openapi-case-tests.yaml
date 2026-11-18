@@ -142,6 +142,29 @@ negative:
             - scheme: HTTPS
       storage:
         cache: false
+    # A scheme in the host: it belongs in `scheme`.
+    - mode: Managed
+      primary:
+        upstream:
+          host: https://registry.deckhouse.io
+      storage:
+        cache: false
+    # A path in the host: it belongs in `path`.
+    - mode: Managed
+      primary:
+        upstream:
+          host: registry.deckhouse.io/deckhouse/ee
+      storage:
+        cache: false
+    # A mirror host with a scheme.
+    - mode: Managed
+      primary:
+        upstream:
+          host: registry.deckhouse.io
+          mirrors:
+            - host: https://registry-mirror.example.com
+      storage:
+        cache: false
     # An unknown scheme.
     - mode: Managed
       primary:

@@ -77,8 +77,12 @@ properties:
           host:
             type: string
             minLength: 1
+            maxLength: 255
+            pattern: '^[a-zA-Z0-9]([-a-zA-Z0-9]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([-a-zA-Z0-9]*[a-zA-Z0-9])?)*(:[0-9]{1,5})?$'
             description: |
               The registry host, optionally with a port.
+
+              Without a protocol and repository prefix, they are specified in `scheme` and `path`, respectively.
             x-examples:
               - registry.deckhouse.io
               - my-private-registry.com:5000
@@ -108,6 +112,7 @@ properties:
             properties:
               license:
                 type: string
+                x-kubernetes-sensitive-data: true
                 description: |
                   The Deckhouse license key.
 
@@ -120,6 +125,7 @@ properties:
                   The username for basic authentication.
               password:
                 type: string
+                x-kubernetes-sensitive-data: true
                 description: |
                   The password for basic authentication.
           mirrors:
@@ -144,8 +150,12 @@ properties:
                 host:
                   type: string
                   minLength: 1
+                  maxLength: 255
+                  pattern: '^[a-zA-Z0-9]([-a-zA-Z0-9]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([-a-zA-Z0-9]*[a-zA-Z0-9])?)*(:[0-9]{1,5})?$'
                   description: |
                     The mirror host, optionally with a port.
+
+                    Without a protocol and repository prefix, they are specified in `scheme` and `path`, respectively.
                 path:
                   type: string
                   description: |
