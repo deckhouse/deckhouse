@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha2
 
 import (
+	"regexp"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -132,6 +134,67 @@ func (r *StaticInstance) GetConditions() []metav1.Condition {
 // SetConditions sets the StaticInstance status conditions
 func (r *StaticInstance) SetConditions(conditions []metav1.Condition) {
 	r.Status.Conditions = conditions
+}
+
+// Constraints that the StaticInstance CRD enforces on status.conditions, copied from
+// metav1.Condition. They are checked here because the API server rejects the whole atomic
+// list when a single entry violates them.
+const (
+	maxConditionReasonLength  = 1024
+	maxConditionMessageLength = 32768
+)
+
+var conditionReasonPattern = regexp.MustCompile(`^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$`)
+
+// SanitizeLegacyConditions drops conditions that the StaticInstance CRD rejects and fills in
+// the fields that legacy controllers omitted.
+//
+// Before v1.76 the CRD neither required reason and message nor constrained reason, so
+// StaticInstances created earlier can carry conditions with an empty or free-form reason
+// (the controllers used error strings there). Conditions are an atomic list: the API server
+// validates every entry, and a single legacy condition rejects the whole status patch,
+// discarding every condition written in the same call.
+//
+// The method is idempotent: once the object is patched, the legacy entries are gone and the
+// remaining conditions are not modified.
+func (r *StaticInstance) SanitizeLegacyConditions() {
+	if len(r.Status.Conditions) == 0 {
+		return
+	}
+
+	cleaned := make([]metav1.Condition, 0, len(r.Status.Conditions))
+	changed := false
+
+	for _, condition := range r.Status.Conditions {
+		if !isValidConditionReason(condition.Reason) {
+			changed = true
+
+			continue
+		}
+
+		// Legacy controllers passed an empty message to conditions.Mark*, and with omitempty
+		// the field was left out of the stored JSON. The CRD requires it now, so fill it in
+		// instead of dropping an otherwise valid condition.
+		if condition.Message == "" {
+			condition.Message = condition.Reason
+			changed = true
+		}
+
+		if len(condition.Message) > maxConditionMessageLength {
+			condition.Message = strings.ToValidUTF8(condition.Message[:maxConditionMessageLength], "")
+			changed = true
+		}
+
+		cleaned = append(cleaned, condition)
+	}
+
+	if changed {
+		r.Status.Conditions = cleaned
+	}
+}
+
+func isValidConditionReason(reason string) bool {
+	return len(reason) <= maxConditionReasonLength && conditionReasonPattern.MatchString(reason)
 }
 
 // SetPhase gets the current phase of the static instance.

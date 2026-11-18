@@ -126,6 +126,11 @@ func (r *StaticInstanceReconciler) reconcileNormal(ctx context.Context, staticIn
 		return ctrl.Result{}, fmt.Errorf("failed to create staticInstance patch helper: %w", err)
 	}
 
+	// Must run after NewHelper: it mutates the same object, and the helper has to remember the
+	// original conditions to include their removal in the patch. Legacy entries are invalid
+	// for the current CRD and would otherwise reject every status patch as a whole.
+	staticInstance.SanitizeLegacyConditions()
+
 	defer func() {
 		if err := patchStaticInstance(ctx, staticInstancePatchHelper, staticInstance); err != nil {
 			resErr = errors.Join(resErr, fmt.Errorf("failed to patch staticInstance: %w", err))
