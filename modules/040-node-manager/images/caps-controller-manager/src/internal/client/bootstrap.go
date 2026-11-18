@@ -18,10 +18,12 @@ package client
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/base64"
 	"fmt"
 	"net"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -53,6 +55,28 @@ const (
 	// (a fraction of a second) as its dial timeout and fail on any real network.
 	TCPCheckDialTimeout = 5 * time.Second
 )
+
+var (
+	// The Node lookup right after the bootstrap script is expected to miss or find an
+	// unready Node: kubelet registers and becomes Ready asynchronously. These are transient
+	// states to requeue on, not failures of the bootstrap.
+	errNodeNotFound  = errors.New("node not found")
+	errNodeNotReady  = errors.New("node is not ready")
+	errMultipleNodes = errors.New("found more than one node")
+
+	// exitStatus2Pattern matches exit code 2 as a whole number: a plain substring check would also
+	// accept 22 or 255, and 255 is what ssh returns when the connection itself failed.
+	exitStatus2Pattern = regexp.MustCompile(`(?:Process exited with status|debug1: Exit status) 2\b`)
+)
+
+// hasExitedWithStatus2 reports whether the bootstrap command finished with exit code 2,
+// which is how the bootstrap wrapper signals that bashible took over and the node reboots.
+//
+// gossh reports it in the error ("Process exited with status 2"); clissh runs `ssh -qv`, which
+// prints "debug1: Exit status 2" to stderr and returns a generic exit error.
+func hasExitedWithStatus2(err error, output string) bool {
+	return exitStatus2Pattern.MatchString(err.Error()) || exitStatus2Pattern.MatchString(output)
+}
 
 // Bootstrap runs the bootstrap script on StaticInstance.
 func (c *Client) Bootstrap(ctx context.Context, staticInstance *deckhousev1.StaticInstance,
@@ -132,27 +156,24 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context,
 			sshCl, tErr = gossh.CreateSSHClient(t.host, t.credentials)
 		}
 		if tErr != nil {
-			tLogger.Error(err, "failed to create ssh client")
+			tLogger.Error(tErr, "failed to create ssh client")
 			return fmt.Errorf("failed to create ssh client: %w", tErr)
 		}
 		tLogger.Info("bootstrapping node")
-		tRes, tErr := sshCl.ExecSSHCommandToString(tCtx,
+		var stdout, stderr bytes.Buffer
+		tErr = sshCl.ExecSSHCommand(tCtx,
 			fmt.Sprintf("mkdir -p /var/lib/bashible && echo '%s' > /var/lib/bashible/node-spec-provider-id && echo '%s' > /var/lib/bashible/machine-name && echo '%s' | base64 -d | bash",
-				t.providerID, t.machineName, base64.StdEncoding.EncodeToString(t.bootstrapScript)))
+				t.providerID, t.machineName, base64.StdEncoding.EncodeToString(t.bootstrapScript)),
+			&stdout, &stderr)
 		if tErr != nil {
-			if strings.Contains(tErr.Error(), "Process exited with status 2") {
+			tRes := combinedOutput(stdout.String(), stderr.String())
+			if hasExitedWithStatus2(tErr, tRes) {
 				return nil
 			}
-			scanner := bufio.NewScanner(strings.NewReader(tRes))
-			for scanner.Scan() {
-				str := scanner.Text()
-				if strings.Contains(str, "debug1: Exit status 2") {
-					return nil
-				}
-			}
 			// If Node reboots, the ssh connection will close, and we will get an error.
-			tLogger.Error(tErr, "failed to exec ssh command")
-			return fmt.Errorf("failed to exec ssh command: %w", tErr)
+			output := tailOutput(tRes)
+			tLogger.Error(tErr, "failed to exec ssh command", "output", output)
+			return fmt.Errorf("failed to exec ssh command: %w", &remoteCommandError{err: tErr, output: output})
 		}
 		return nil
 	}
@@ -161,14 +182,28 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context,
 	logger.Info("Running bootstrap task")
 	err, finished := c.taskManager.Spawn(c.taskManagerCtx, string(staticMachine.UID), "bootstrap", taskData, taskFunc)
 	if err != nil {
+		var cmdErr *remoteCommandError
+		if errors.As(err, &cmdErr) {
+			c.recorder.SendWarningEvent(staticInstance, staticMachine.Labels["node-group"], "BootstrapScriptFailed", cmdErr.EventMessage())
+		}
+
 		return ctrl.Result{}, fmt.Errorf("failed to bootstrap StaticInstance: %w", err)
 	}
 
 	if finished {
-		logger.Info("Bootstrap script executed successfully")
-		c.recorder.SendNormalEvent(staticInstance, staticMachine.Labels["node-group"], "BootstrapScriptSucceeded", "Bootstrap script executed successfully")
+		logger.Info("Bootstrap script finished")
+		c.recorder.SendNormalEvent(staticInstance, staticMachine.Labels["node-group"], "BootstrapScriptFinished", "Bootstrap script finished")
 		if staticInstance.GetPhase() == deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping {
 			if err = c.setStaticInstancePhaseToRunning(ctx, staticInstance, staticMachine); err != nil {
+				// The script may finish before kubelet has registered the Node or before the
+				// Node becomes Ready, so a missing or unready Node only means "try later".
+				// The bootstrap timeout in StaticMachine remains the bound for a real failure.
+				if errors.Is(err, errNodeNotFound) || errors.Is(err, errNodeNotReady) {
+					logger.Info("Bootstrap script finished, the Node is not ready yet, requeueing",
+						"reason", err.Error(), "requeueAfter", RequeueForStaticInstanceBootstrapping)
+					return ctrl.Result{RequeueAfter: RequeueForStaticInstanceBootstrapping}, nil
+				}
+
 				return ctrl.Result{}, err
 			}
 		}
@@ -470,11 +505,11 @@ func (c *Client) getNodeByProviderID(ctx context.Context, staticMachine *infrav1
 	}
 
 	if len(nodes.Items) == 0 {
-		return nil, errors.Errorf("Node with provider id '%s' not found", staticMachine.Spec.ProviderID)
+		return nil, fmt.Errorf("%w: provider id '%s'", errNodeNotFound, staticMachine.Spec.ProviderID)
 	}
 
 	if len(nodes.Items) > 1 {
-		return nil, errors.Errorf("found more than one Node with provider id '%s'", staticMachine.Spec.ProviderID)
+		return nil, fmt.Errorf("%w: provider id '%s'", errMultipleNodes, staticMachine.Spec.ProviderID)
 	}
 
 	node := &nodes.Items[0]
@@ -485,7 +520,7 @@ func (c *Client) getNodeByProviderID(ctx context.Context, staticMachine *infrav1
 		}
 	}
 
-	return nil, errors.Errorf("Node '%s' is not ready", node.Name)
+	return nil, fmt.Errorf("%w: '%s'", errNodeNotReady, node.Name)
 }
 
 // getBootstrapScript returns the bootstrap data from the secret in the Machine's bootstrap.dataSecretName.
