@@ -58,7 +58,7 @@ git:
 {{- include "engine sysext sign secrets" . }}
 shell:
   beforeInstall:
-  - pm install erofs-utils coreutils cryptsetup systemd@260.4
+  - pm install erofs-utils coreutils cryptsetup systemd
   # The agent and the one command it needs that the root does not carry, plus
   # ldd for the closure check below. These are build-time only: what ships is
   # picked file by file in install.
