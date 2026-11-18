@@ -358,7 +358,7 @@ func (e *Engine) runSink() {
 		liveTicks = ticker.C
 	}
 
-	published := make(map[string]string, 2)
+	published := make(map[string]string, 1)
 
 	lanes := time.NewTicker(lanesPeriod)
 	defer lanes.Stop()

@@ -92,8 +92,7 @@ type Controller struct {
 
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer
 
-	deckhouseSettings    *helpers.DeckhouseSettingsContainer
-	applicationsSettings *helpers.ApplicationsSettingsContainer
+	deckhouseSettings *helpers.DeckhouseSettingsContainer
 
 	dc dependency.Container
 
@@ -154,7 +153,6 @@ func Build(ctx context.Context, client *klient.Client, ms metricsstorage.Storage
 	}
 
 	deckhouseSettings := helpers.NewDeckhouseSettingsContainer(nil, ms)
-	applicationsSettings := helpers.NewApplicationsSettingsContainer()
 	synced := new(sync.WaitGroup)
 	dc := dependency.NewDependencyContainer()
 
@@ -190,7 +188,7 @@ func Build(ctx context.Context, client *klient.Client, ms metricsstorage.Storage
 		return nil, fmt.Errorf("register module config controller: %w", err)
 	}
 
-	err = application.RegisterController(synced, runtime, pkgengine, nil, deckhouseSettings, applicationsSettings, logger)
+	err = application.RegisterController(synced, runtime, pkgengine, nil, deckhouseSettings, logger)
 	if err != nil {
 		return nil, fmt.Errorf("register application controller: %w", err)
 	}
@@ -236,8 +234,7 @@ func Build(ctx context.Context, client *klient.Client, ms metricsstorage.Storage
 
 		embeddedPolicy: embeddedPolicy,
 
-		deckhouseSettings:    deckhouseSettings,
-		applicationsSettings: applicationsSettings,
+		deckhouseSettings: deckhouseSettings,
 
 		dc: dc,
 
@@ -425,8 +422,7 @@ func (c *Controller) PackageEngine() *engine.Engine {
 	return c.engine
 }
 
-// runSyncSettingsLoop updates the embedded policy, the Deckhouse settings and the global
-// applications settings until ctx is canceled.
+// runSyncSettingsLoop updates the embedded policy and the Deckhouse settings until ctx is canceled.
 func (c *Controller) runSyncSettingsLoop(ctx context.Context) {
 	for {
 		select {
@@ -438,22 +434,7 @@ func (c *Controller) runSyncSettingsLoop(ctx context.Context) {
 			}
 
 			c.syncDeckhouseSettings(config)
-		case config, ok := <-c.engine.GetGlobalSettingsCh():
-			if !ok {
-				return
-			}
-
-			c.syncGlobalSettings(config)
 		}
-	}
-}
-
-// syncGlobalSettings applies one global module configuration update.
-func (c *Controller) syncGlobalSettings(config addonutils.Values) {
-	c.logger.Debug("update global applications settings")
-
-	if err := c.applicationsSettings.Set(config); err != nil {
-		c.logger.Error("failed to parse the global applications settings", log.Err(err))
 	}
 }
 

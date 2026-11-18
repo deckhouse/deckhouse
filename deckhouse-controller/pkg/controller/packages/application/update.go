@@ -29,7 +29,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/status"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -42,41 +41,25 @@ type deckhouseSettings interface {
 	SubscribeUpdate() <-chan struct{}
 }
 
-// applicationsSettings hands out global.applications.update, parsed outside the controller once per
-// change of the global ModuleConfig.
-type applicationsSettings interface {
-	GetUpdateSettings() (releaseupdater.Settings, bool)
-	SubscribeUpdate() <-chan struct{}
-}
-
-// updateSettings resolves the update settings the application follows:
-//
-//  1. its own spec.update, with the notification settings taken from the global level, since an
-//     application cannot set them, the way a ModuleRelease takes them from the deckhouse settings;
-//  2. without spec.update, the global level as a whole.
-//
-// The global level is global.applications.update when it is set, and the deckhouse update
-// settings otherwise.
+// updateSettings resolves the update settings the application follows. The mode and the windows
+// are its own spec.update alone, Manual without it. The notification and the blocking on alerts
+// are the deckhouse update settings, since an application cannot set them. Blocks until the
+// deckhouse settings first arrive.
 func (r *reconciler) updateSettings(app *v1alpha1.Application) releaseupdater.Settings {
-	return mergeUpdateSettings(app.Spec.Update, r.globalUpdateSettings())
-}
-
-// globalUpdateSettings returns global.applications.update when it is set, and the deckhouse update
-// settings otherwise. The latter blocks until the deckhouse settings first arrive.
-func (r *reconciler) globalUpdateSettings() releaseupdater.Settings {
-	if settings, ok := r.applicationsSettings.GetUpdateSettings(); ok {
-		return settings
-	}
-
 	deckhouse := r.deckhouseSettings.GetUpdateSettings()
 
 	// The disruption approval is a Deckhouse release matter, so it is not passed on.
-	return releaseupdater.Settings{
-		Mode:               deckhouse.Mode,
-		Windows:            deckhouse.Windows,
+	settings := releaseupdater.Settings{
+		Mode:               app.UpdateMode(),
 		NotificationConfig: deckhouse.NotificationConfig,
 		BlockOnAlerts:      deckhouse.BlockOnAlerts,
 	}
+
+	if app.Spec.Update != nil {
+		settings.Windows = toUpdateWindows(app.Spec.Update.Windows)
+	}
+
+	return settings
 }
 
 // applyNow reports whether the application asks to skip the update windows for the version the engine runs
@@ -168,29 +151,6 @@ func (r *reconciler) requestsForVersion(ctx context.Context, obj client.Object) 
 	return requests
 }
 
-// mergeUpdateSettings applies the update policy of an application over the global update
-// settings. The policy has no notification settings, so those always come from the global ones.
-func mergeUpdateSettings(policy *v1alpha1.ApplicationUpdate, global releaseupdater.Settings) releaseupdater.Settings {
-	if policy == nil {
-		return global
-	}
-
-	blockOnAlerts := releaseupdater.BlockOnAlerts{Severity: helpers.DefaultBlockOnAlertsSeverity}
-	if policy.BlockOnAlerts != nil {
-		blockOnAlerts.Enabled = policy.BlockOnAlerts.Enabled
-		if policy.BlockOnAlerts.Severity != nil {
-			blockOnAlerts.Severity = int(*policy.BlockOnAlerts.Severity)
-		}
-	}
-
-	return releaseupdater.Settings{
-		Mode:               v1alpha1.ParseApplicationUpdateMode(policy.Mode),
-		Windows:            toUpdateWindows(policy.Windows),
-		NotificationConfig: global.NotificationConfig,
-		BlockOnAlerts:      blockOnAlerts,
-	}
-}
-
 // toUpdateWindows copies the windows rather than aliasing them, because the result outlives this
 // reconcile in the runtime.
 func toUpdateWindows(windows []v1alpha1.ApplicationUpdateWindow) update.Windows {
@@ -210,26 +170,24 @@ func toUpdateWindows(windows []v1alpha1.ApplicationUpdateWindow) update.Windows 
 	return out
 }
 
-// requeueOnSettingsChange requeues every application whenever one of the global levels it falls
-// back to changes, so the change is merged into the update settings each of them hands to the
-// runtime. The subscriptions are taken before the controller starts, so a change that lands in
-// between is still pending on its channel.
-func (r *reconciler) requeueOnSettingsChange(changes ...<-chan struct{}) source.Func {
+// requeueOnSettingsChange requeues every application whenever the deckhouse update settings change,
+// so the change is merged into the update settings each of them hands to the runtime. The
+// subscription is taken before the controller starts, so a change that lands in between is still
+// pending on its channel.
+func (r *reconciler) requeueOnSettingsChange(changed <-chan struct{}) source.Func {
 	return func(ctx context.Context, queue workqueue.TypedRateLimitingInterface[reconcile.Request]) error {
-		for _, changed := range changes {
-			go func() {
-				for {
-					select {
-					case <-ctx.Done():
-						return
-					case <-changed:
-						for _, request := range r.applicationRequests(ctx) {
-							queue.Add(request)
-						}
+		go func() {
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-changed:
+					for _, request := range r.applicationRequests(ctx) {
+						queue.Add(request)
 					}
 				}
-			}()
-		}
+			}
+		}()
 
 		return nil
 	}

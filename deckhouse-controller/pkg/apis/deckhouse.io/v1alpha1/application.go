@@ -104,13 +104,13 @@ type ApplicationSpec struct {
 	// +crd-enricher:deckhouse:documentation:examples=v1.0.0
 	PackageVersion string `json:"packageVersion"`
 
-	// Application update settings: update mode, update windows, and blocking updates when alerts are present.
+	// Application update settings: update mode and update windows.
 	//
-	// If this parameter is not specified, the global [`applications.update`](global.html#parameters-applications-update) settings are used. If the global settings are also not specified, the Deckhouse Platform update settings are applied, as defined by the [`update`](/modules/deckhouse/configuration.html#parameters-update) parameter of the `deckhouse` module.
+	// If this parameter is not specified, the `Manual` [update mode](#application-v1alpha1-spec-update-mode) is used.
 	//
-	// Update notifications cannot be configured separately for an application. If `applications.update` is configured, the global [`applications.update.notification`](global.html#parameters-applications-update-notification) settings are used. Otherwise, the Deckhouse Platform notification settings apply.
+	// Update notifications cannot be configured for an application: the [`update.notification`](/modules/deckhouse/configuration.html#parameters-update-notification) settings of the `deckhouse` module are used.
 	// +optional
-	// +crd-enricher:deckhouse:documentation:examples={mode: Auto, windows: [{from: "8:00", to: "15:00", days: [Tue, Sat]}], blockOnAlerts: {enabled: true, severity: 2}}
+	// +crd-enricher:deckhouse:documentation:examples={mode: Auto, windows: [{from: "8:00", to: "15:00", days: [Tue, Sat]}]}
 	Update *ApplicationUpdate `json:"update,omitempty"`
 
 	// Version of the settings schema the settings are written for. Distinct from packageVersion, which selects the application package.
@@ -154,8 +154,8 @@ type ApplicationSpec struct {
 	ResourceRequests []ApplicationResourceRequest `json:"resourceRequests,omitempty"`
 }
 
-// ApplicationUpdate is the update policy of a single application. It mirrors the global
-// applications.update settings, except for the notification ones.
+// ApplicationUpdate is the update policy of a single application: the mode and the windows. The
+// notification and the blocking on alerts are the update settings of the deckhouse module.
 type ApplicationUpdate struct {
 	// Update mode of the application on its [release channel](#application-v1alpha1-spec-releasechannel).
 	//
@@ -180,10 +180,6 @@ type ApplicationUpdate struct {
 	// List of application update windows.
 	// +optional
 	Windows []ApplicationUpdateWindow `json:"windows,omitempty"`
-
-	// Settings for blocking application updates while there are alerts in the cluster.
-	// +optional
-	BlockOnAlerts *ApplicationUpdateBlockOnAlerts `json:"blockOnAlerts,omitempty"`
 }
 
 // Time interval during the day when application updates are allowed.
@@ -208,22 +204,6 @@ type ApplicationUpdateWindow struct {
 	// +kubebuilder:validation:items:Enum=Mon;Tue;Wed;Thu;Fri;Sat;Sun
 	// +optional
 	Days []string `json:"days,omitempty"`
-}
-
-// ApplicationUpdateBlockOnAlerts holds the settings for blocking the application update on alerts.
-type ApplicationUpdateBlockOnAlerts struct {
-	// Indicates whether to block application updates when the cluster has alerts with a severity level equal to or higher than the value specified in the [`severity`](#application-v1alpha1-spec-update-blockonalerts-severity) parameter.
-	// +optional
-	Enabled bool `json:"enabled,omitempty"`
-
-	// Alert severity level at which updates are blocked.
-	//
-	// Set as a value from `0` to `9`, where `0` is the highest severity and `9` is the lowest.
-	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=9
-	// +kubebuilder:default=4
-	// +optional
-	Severity *int32 `json:"severity,omitempty"`
 }
 
 // Resource settings, replica count, and disk sizes for a single application workload.
@@ -427,7 +407,7 @@ type ApplicationStatusUpdate struct {
 
 	// Notification sent about the pending update: the version it announced and when it was sent.
 	//
-	// It is sent to the webhook of the global [`applications.update.notification`](global.html#parameters-applications-update-notification) settings, or of the [`update.notification`](/modules/deckhouse/configuration.html#parameters-update-notification) settings of the `deckhouse` module if `applications.update` is not configured. The update is installed no earlier than `minimalNotificationTime` after the notification. Cleared once a new version is installed or the update is cancelled.
+	// It is sent to the webhook of the [`update.notification`](/modules/deckhouse/configuration.html#parameters-update-notification) settings of the `deckhouse` module. The update is installed no earlier than `minimalNotificationTime` after the notification. Cleared once a new version is installed or the update is cancelled.
 	// +optional
 	Notified *ApplicationStatusUpdateNotified `json:"notified,omitempty"`
 }

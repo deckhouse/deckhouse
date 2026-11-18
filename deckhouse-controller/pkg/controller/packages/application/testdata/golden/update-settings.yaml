@@ -54,10 +54,7 @@ spec:
   packageRepositoryName: deckhouse
   packageVersion: v1.0.1
   update:
-    blockOnAlerts:
-      enabled: true
-      severity: 0
-    mode: Manual
+    mode: AutoPatch
     windows:
     - days:
       - Sun

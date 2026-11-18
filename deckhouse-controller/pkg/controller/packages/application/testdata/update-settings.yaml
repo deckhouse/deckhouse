@@ -18,15 +18,12 @@ spec:
   packageRepositoryName: deckhouse
   packageVersion: v1.0.1
   update:
-    mode: Manual
+    mode: AutoPatch
     windows:
       - from: "20:00"
         to: "23:30"
         days:
           - Sun
-    blockOnAlerts:
-      enabled: true
-      severity: 0
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackage

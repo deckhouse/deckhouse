@@ -126,7 +126,7 @@ var summaryTable = map[phase]map[string]advice{
 		model.ReasonWaitingNotification: {
 			stateUpdating,
 			"Update is waiting for the update notification; previous version is still serving",
-			"No action is required: the update starts once the notification is sent and its minimal notification time has passed. If the notification fails, check the webhook in the global applications.update.notification settings, or in the update.notification settings of the deckhouse module when applications.update is not set.",
+			"No action is required: the update starts once the notification is sent and its minimal notification time has passed. If the notification fails, check the webhook in the update.notification settings of the deckhouse module.",
 		},
 		reasonRequirementsUnmet: {
 			stateUpdating,
