@@ -64,15 +64,18 @@ type passwordView struct {
 }
 
 type userView struct {
-	Name      string
-	UID       types.UID
-	Email     string
-	Password  string
-	TTL       string
-	ExpireAt  string
-	Groups    []string
-	Lock      userLock
-	HasStatus bool
+	Name     string
+	UID      types.UID
+	Email    string
+	Password string
+	// RequirePasswordChangeOnFirstLogin makes the Password created from Password require a change
+	// at the first sign-in. It acts only when the Password is created.
+	RequirePasswordChangeOnFirstLogin bool
+	TTL                               string
+	ExpireAt                          string
+	Groups                            []string
+	Lock                              userLock
+	HasStatus                         bool
 }
 
 type userLock struct {
@@ -112,9 +115,10 @@ type userFields struct {
 }
 
 type userSpecFields struct {
-	Email    string `json:"email,omitempty"`
-	Password string `json:"password,omitempty"`
-	TTL      string `json:"ttl,omitempty"`
+	Email                             string `json:"email,omitempty"`
+	Password                          string `json:"password,omitempty"`
+	RequirePasswordChangeOnFirstLogin bool   `json:"requirePasswordChangeOnFirstLogin,omitempty"`
+	TTL                               string `json:"ttl,omitempty"`
 }
 
 type userStatusFields struct {
@@ -186,14 +190,15 @@ func decodeUser(obj *unstructured.Unstructured) (userView, error) {
 		return userView{}, fmt.Errorf("user %s status: %w", obj.GetName(), err)
 	}
 	return userView{
-		Name:      fields.Name,
-		UID:       obj.GetUID(),
-		Email:     fields.Spec.Email,
-		Password:  fields.Spec.Password,
-		TTL:       fields.Spec.TTL,
-		ExpireAt:  fields.Status.ExpireAt,
-		Groups:    fields.Status.Groups,
-		HasStatus: hasStatus,
+		Name:                              fields.Name,
+		UID:                               obj.GetUID(),
+		Email:                             fields.Spec.Email,
+		Password:                          fields.Spec.Password,
+		RequirePasswordChangeOnFirstLogin: fields.Spec.RequirePasswordChangeOnFirstLogin,
+		TTL:                               fields.Spec.TTL,
+		ExpireAt:                          fields.Status.ExpireAt,
+		Groups:                            fields.Status.Groups,
+		HasStatus:                         hasStatus,
 		Lock: userLock{
 			State:   fields.Status.Lock.State,
 			Reason:  fields.Status.Lock.Reason,

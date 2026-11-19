@@ -45,6 +45,8 @@ type outcome struct {
 	revocation *revoke.Result
 	// note replaces the message of the counts: a logout that found nothing to end says so.
 	note string
+	// detail follows the message: a reset that does not require a password change says so.
+	detail string
 }
 
 func revoked(res revoke.Result) outcome {
@@ -61,6 +63,18 @@ const (
 
 // message is status.message of a successful operation.
 func (o outcome) message() string {
+	base := o.baseMessage()
+	switch {
+	case o.detail == "":
+		return base
+	case base == "":
+		return o.detail
+	default:
+		return base + "; " + o.detail
+	}
+}
+
+func (o outcome) baseMessage() string {
 	if o.note != "" {
 		return o.note
 	}
@@ -88,7 +102,7 @@ func (r *Reconciler) execute(ctx context.Context, op operation, now time.Time) (
 
 	switch op.Spec.Type {
 	case typeResetPassword:
-		return r.executeResetPassword(ctx, op)
+		return r.executeResetPassword(ctx, op, now)
 	case typeReset2FA:
 		return r.executeReset2FA(ctx, op, now)
 	case typeLock:
@@ -177,7 +191,10 @@ func (r *Reconciler) executeUnlock(ctx context.Context, op operation, now time.T
 	return r.unlockIdentity(ctx, localPair(*userPassword), now)
 }
 
-func (r *Reconciler) executeResetPassword(ctx context.Context, op operation) (outcome, error) {
+// noPasswordChangeMessage ends status.message of a ResetPassword with requirePasswordChange false.
+const noPasswordChangeMessage = "password change at the next sign-in is not required"
+
+func (r *Reconciler) executeResetPassword(ctx context.Context, op operation, now time.Time) (outcome, error) {
 	if op.Spec.ResetPassword == nil {
 		return outcome{}, failed("resetPassword spec is nil")
 	}
@@ -197,12 +214,20 @@ func (r *Reconciler) executeResetPassword(ctx context.Context, op operation) (ou
 
 	r.log.Info("Resetting local user password", append(operationLogKV(op), "user", userPassword.Username)...)
 
+	requireChange := op.Spec.ResetPassword.requiresPasswordChange()
 	encoded := base64.StdEncoding.EncodeToString([]byte(rawHash))
-	if err := r.resetPasswordHash(ctx, userPassword.Namespace, userPassword.Name, encoded); err != nil {
+	if err := r.resetPasswordHash(ctx, userPassword.Namespace, userPassword.Name, encoded, requireChange, now); err != nil {
 		return outcome{}, err
 	}
 
-	return r.logoutPair(ctx, op, localPair(*userPassword), revocation.ReasonResetPassword)
+	result, err := r.logoutPair(ctx, op, localPair(*userPassword), revocation.ReasonResetPassword)
+	if err != nil {
+		return outcome{}, err
+	}
+	if !requireChange {
+		result.detail = noPasswordChangeMessage
+	}
+	return result, nil
 }
 
 // executeRequirePasswordChange makes the local user set a new password at the next sign-in, and

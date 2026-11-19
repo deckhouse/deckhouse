@@ -859,3 +859,133 @@ func assertNoUserAccount(t *testing.T, r *Reconciler, email string) {
 func v1alpha1LocalName(email string) string {
 	return "local-" + passwordName(email)
 }
+
+// userObjWithFirstLoginChange is userObj with spec.requirePasswordChangeOnFirstLogin set to value,
+// or unset when it is nil.
+func userObjWithFirstLoginChange(value *bool) *unstructured.Unstructured {
+	obj := userObj(adminUserName, adminEmail, adminPassword, "")
+	if value != nil {
+		obj.Object["spec"].(map[string]any)["requirePasswordChangeOnFirstLogin"] = *value
+	}
+	return obj
+}
+
+// The Password created from spec.password requires a change at the first sign-in only when the User
+// asks for it. Without the field the Password is created as before: without the flag. A User
+// created again or restored from a backup has no Password and gets it the same way.
+func TestReconcile_CreatePasswordRequiresChangeOnFirstLogin(t *testing.T) {
+	t.Parallel()
+
+	yes, no := true, false
+	for _, tc := range []struct {
+		name     string
+		value    *bool
+		restored bool
+		expected bool
+	}{
+		{name: "unset"},
+		{name: "false", value: &no},
+		{name: "true", value: &yes, expected: true},
+		{name: "true, restored with a status and no Password", value: &yes, restored: true, expected: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			now := time.Date(2026, 11, 18, 12, 0, 0, 0, time.UTC)
+			user := userObjWithFirstLoginChange(tc.value)
+			if tc.restored {
+				user.Object["status"] = map[string]any{"groups": []any{}}
+			}
+			r := newTestReconciler(t, now, namespaceObj(), user)
+			if _, err := r.Reconcile(t.Context(), userReq(adminUserName)); err != nil {
+				t.Fatalf("Reconcile: %v", err)
+			}
+
+			pw := getPassword(t, r, adminEncodedPW)
+			if got := strField(pw, "hash"); got != adminEncodedB64 {
+				t.Errorf("hash = %q, want the hash of spec.password", got)
+			}
+			flag, found, _ := unstructured.NestedBool(pw.Object, "requireResetHashOnNextSuccLogin")
+			if flag != tc.expected || found != tc.expected {
+				t.Errorf("requireResetHashOnNextSuccLogin = %v (present %v), want %v", flag, found, tc.expected)
+			}
+			if got := strField(pw, "hashUpdatedAt"); got != now.Format(time.RFC3339) {
+				t.Errorf("hashUpdatedAt = %q", got)
+			}
+		})
+	}
+}
+
+// The field acts only when the Password is created: on a Password that exists, the hash and the flag
+// stay as Dex left them, whatever the User says.
+func TestReconcile_RequirePasswordChangeOnFirstLoginLeavesAnExistingPassword(t *testing.T) {
+	t.Parallel()
+
+	yes, no := true, false
+	for _, tc := range []struct {
+		name  string
+		value *bool
+		flag  bool
+	}{
+		{name: "true on a Password without the flag", value: &yes},
+		{name: "false on a Password with the flag", value: &no, flag: true},
+		{name: "unset on a Password with the flag", flag: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			now := time.Date(2026, 11, 18, 12, 0, 0, 0, time.UTC)
+			existing := passwordObj(adminEncodedPW, map[string]any{
+				"email":                           adminEmail,
+				"username":                        adminUserName,
+				"userID":                          adminUserName,
+				"hash":                            liveHash,
+				"hashUpdatedAt":                   "2024-01-02T03:04:05Z",
+				"requireResetHashOnNextSuccLogin": tc.flag,
+			}, map[string]string{heritageLabel: heritageValue, moduleLabel: moduleValue, appLabel: appValue}, nil)
+			r := newTestReconciler(t, now, namespaceObj(), userObjWithFirstLoginChange(tc.value), existing)
+			if _, err := r.Reconcile(t.Context(), userReq(adminUserName)); err != nil {
+				t.Fatalf("Reconcile: %v", err)
+			}
+
+			pw := getPassword(t, r, adminEncodedPW)
+			if got := strField(pw, "hash"); got != liveHash {
+				t.Errorf("hash = %q, want the hash Dex keeps", got)
+			}
+			if got := strField(pw, "hashUpdatedAt"); got != "2024-01-02T03:04:05Z" {
+				t.Errorf("hashUpdatedAt = %q", got)
+			}
+			if flag, _, _ := unstructured.NestedBool(pw.Object, "requireResetHashOnNextSuccLogin"); flag != tc.flag {
+				t.Errorf("requireResetHashOnNextSuccLogin = %v, want %v", flag, tc.flag)
+			}
+		})
+	}
+}
+
+// A new email moves the Password with everything Dex keeps in it: it is not a new credential, and the
+// field does not act on it.
+func TestReconcile_EmailRenameIgnoresRequirePasswordChangeOnFirstLogin(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 11, 18, 12, 0, 0, 0, time.UTC)
+	oldPW := passwordObj("oldemailencodedname", map[string]any{
+		"email":         "old@example.com",
+		"username":      adminUserName,
+		"userID":        adminUserName,
+		"hash":          liveHash,
+		"hashUpdatedAt": "2024-01-02T03:04:05Z",
+	}, map[string]string{heritageLabel: heritageValue, moduleLabel: moduleValue, appLabel: appValue}, nil)
+	yes := true
+	r := newTestReconciler(t, now, namespaceObj(), userObjWithFirstLoginChange(&yes), oldPW)
+	if _, err := r.Reconcile(t.Context(), userReq(adminUserName)); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+
+	pw := getPassword(t, r, adminEncodedPW)
+	if got := strField(pw, "hash"); got != liveHash {
+		t.Errorf("hash = %q, want the moved hash", got)
+	}
+	if flag, _, _ := unstructured.NestedBool(pw.Object, "requireResetHashOnNextSuccLogin"); flag {
+		t.Error("requireResetHashOnNextSuccLogin = true, want the flag of the moved Password")
+	}
+}

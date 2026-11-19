@@ -23,6 +23,8 @@ import (
 	"github.com/stretchr/testify/require"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
+	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema/defaulting"
 	"sigs.k8s.io/yaml"
 )
 
@@ -80,6 +82,80 @@ func TestUserOperationTarget(t *testing.T) {
 					"spec":       tc.spec,
 				}
 				validateAuthenticator(t, schema, object, tc.valid)
+			})
+		}
+	}
+}
+
+// resetPassword.requirePasswordChange defaults to true: an operation that does not set it makes the
+// user change the password, as every reset did before the field.
+func TestUserOperationResetPasswordRequirePasswordChange(t *testing.T) {
+	const rawBcryptHash = "$2y$10$dMXeFQPduGXaS2X1OpgYvOGK/5.Gl6nluOfRHg5iPt8nJXzK8iy.G"
+	schema := userOperationSchemas(t)["v1"]
+	structural, err := structuralschema.NewStructural(schema)
+	require.NoError(t, err)
+
+	for _, tc := range []struct {
+		name     string
+		reset    map[string]any
+		expected any
+		valid    bool
+	}{
+		{name: "unset defaults to true", reset: map[string]any{"newPasswordHash": rawBcryptHash}, expected: true, valid: true},
+		{name: "false kept", reset: map[string]any{"newPasswordHash": rawBcryptHash, "requirePasswordChange": false}, expected: false, valid: true},
+		{name: "true kept", reset: map[string]any{"newPasswordHash": rawBcryptHash, "requirePasswordChange": true}, expected: true, valid: true},
+		{name: "not a boolean", reset: map[string]any{"newPasswordHash": rawBcryptHash, "requirePasswordChange": "no"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			object := map[string]any{
+				"apiVersion": "deckhouse.io/v1",
+				"kind":       "UserOperation",
+				"metadata":   map[string]any{"name": "op"},
+				"spec":       map[string]any{"type": "ResetPassword", "user": "jane", "resetPassword": tc.reset},
+			}
+			defaulting.Default(object, structural)
+			validateAuthenticator(t, schema, object, tc.valid)
+			if tc.valid {
+				require.Equal(t, tc.expected, object["spec"].(map[string]any)["resetPassword"].(map[string]any)["requirePasswordChange"])
+			}
+		})
+	}
+}
+
+// newPasswordHash is a raw bcrypt hash. A Base64-encoded hash or a hash whose $2y$10$ prefix the
+// shell has replaced (a heredoc without quotes around EOF) is refused when the operation is applied,
+// in every version, with the cause in the message.
+func TestUserOperationNewPasswordHashIsRawBcrypt(t *testing.T) {
+	const message = "newPasswordHash must be a raw bcrypt hash starting with $2"
+	for version, schema := range userOperationSchemas(t) {
+		for _, tc := range []struct {
+			name  string
+			hash  string
+			valid bool
+		}{
+			{name: "raw bcrypt", hash: "$2y$10$dMXeFQPduGXaS2X1OpgYvOGK/5.Gl6nluOfRHg5iPt8nJXzK8iy.G", valid: true},
+			{name: "Base64 of bcrypt", hash: "JDJ5JDEwJGRNWGVGUVBkdUdYYVMyWDFPcGdZdk9HSy81LkdsNm5sdU9mUkhnNWlQdDhuSlh6SzhpeS5H"},
+			{name: "plain password", hash: "dh-test-secret-0123456789abcdef"},
+			{name: "empty", hash: ""},
+		} {
+			t.Run(version+"/"+tc.name, func(t *testing.T) {
+				object := map[string]any{
+					"apiVersion": "deckhouse.io/" + version,
+					"kind":       "UserOperation",
+					"metadata":   map[string]any{"name": "op"},
+					"spec": map[string]any{
+						"type":          "ResetPassword",
+						"user":          "jane",
+						"resetPassword": map[string]any{"newPasswordHash": tc.hash},
+					},
+				}
+				errors := validateAuthenticator(t, schema, object, tc.valid)
+				if tc.valid {
+					return
+				}
+				require.Len(t, errors, 1)
+				require.Contains(t, errors[0].Error(), message)
+				require.Contains(t, errors[0].Error(), "<<'EOF'")
 			})
 		}
 	}

@@ -199,32 +199,18 @@ spec:
               "${E2E_STATE_DIR:-/tmp/e2e-authn-state}/useroperation-reset-password/changed.password"
 
     - name: invalid-operations-fail
-      description: Invalid ResetPassword operations end in phase Failed with the reason
+      description: >-
+        A ResetPassword with a hash that is not raw bcrypt is refused when it is applied; one for a user
+        that does not exist ends in phase Failed with the reason
       try:
-        - description: Create a ResetPassword operation with a hash that is not bcrypt
-          create:
-            resource:
-              apiVersion: deckhouse.io/v1
-              kind: UserOperation
-              metadata:
-                name: e2e-authn-reset-bad-hash
-              spec:
-                user: e2e-authn-reset-user
-                type: ResetPassword
-                initiatorType: admin
-                resetPassword:
-                  newPasswordHash: not-a-bcrypt-hash
-        - description: Assert the operation failed because the hash is not bcrypt
-          assert:
-            timeout: 2m
-            resource:
-              apiVersion: deckhouse.io/v1
-              kind: UserOperation
-              metadata:
-                name: e2e-authn-reset-bad-hash
-              status:
-                phase: Failed
-                message: resetPassword.newPasswordHash must be a raw bcrypt hash starting with $2
+        - description: Refuse a ResetPassword operation with a hash that is not raw bcrypt
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            content: |
+              bash ../../tests/common/scripts/expect-denied.sh manifests/denied/reset-bad-hash.yaml \
+                'newPasswordHash must be a raw bcrypt hash starting with $2'
         - description: Create a ResetPassword operation for a user that does not exist
           script:
             # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
