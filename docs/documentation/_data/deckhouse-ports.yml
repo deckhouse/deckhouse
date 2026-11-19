@@ -641,6 +641,9 @@ groups:
     description:
       en: Direct access to the apiserver
       ru: Прямой доступ к API-серверу
+    optional_description:
+      en: This port may be needed for direct access to `kube-apiserver` bypassing Ingress / Gateway API when publishing through a [load balancer](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authentication/k8s-api-lb.html) is not configured or unavailable due to infrastructure constraints
+      ru: Этот порт может понадобиться для прямого доступа к `kube-apiserver` в обход Ingress / Gateway API, если [публикация через балансировщик](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authentication/k8s-api-lb.html) не настроена или недоступна из-за особенностей инфраструктуры
 
 - group: ExternalToFrontends
   description:
@@ -657,26 +660,41 @@ groups:
     description:
       en: OpenVPN
       ru: OpenVPN
+    optional_description:
+      en: Required only when the `openvpn` module is enabled
+      ru: Требуется только при включённом модуле `openvpn`
   - ports: "5416"
     protocol: TCP
     description:
       en: OpenVPN
       ru: OpenVPN
+    optional_description:
+      en: Required only when the `openvpn` module is enabled
+      ru: Требуется только при включённом модуле `openvpn`
   - ports: "10256"
     protocol: TCP
     description:
       en: Healthcheck port for external balancers
       ru: Healthcheck-порт для внешних балансировщиков
+    optional_description:
+      en: This is the Cilium healthz port checked by external load balancers, primarily cloud load balancers for `LoadBalancer` services. The port is not needed with `HostPort` / `HostPortWithProxyProtocol` inlets without an external load balancer
+      ru: Это healthz-порт Cilium, который проверяют внешние балансировщики, прежде всего облачные балансировщики для сервисов типа `LoadBalancer`. При инлетах `HostPort` / `HostPortWithProxyProtocol` без внешнего балансировщика порт не нужен
   - ports: "30000-32767"
     protocol: TCP
     description:
       en: NodePort range
       ru: Диапазон портов NodePort
+    optional_description:
+      en: Needed when `LoadBalancer` services are used. A cloud load balancer delivers traffic to nodes through a NodePort. The range is not needed with `HostPort` inlets
+      ru: Нужен, если используются сервисы типа `LoadBalancer`. Облачный балансировщик доставляет трафик на узлы через NodePort. При инлетах `HostPort` диапазон не нужен
 
 - group: NodesToExternal
   description:
     en: External traffic for all nodes
     ru: Внешний трафик для всех узлов
+  note:
+    en: All ports in this section are used for outbound traffic from nodes.
+    ru: Все порты этого раздела используются для исходящего трафика от узлов.
   destinations:
   - ports: "53"
     protocol: UDP
@@ -698,6 +716,9 @@ groups:
     description:
       en: BGP peering with the infrastructure router for network traffic balancing (metallb module)
       ru: BGP-стык с роутером инфраструктуры для балансировки сетевого трафика (модуль metallb)
+    optional_description:
+      en: Required only for the `metallb` module in BGP mode, from nodes running `speaker`. It is not required in L2 mode
+      ru: Требуется только для модуля `metallb` в режиме BGP для узлов, на которых работает `speaker`. В режиме L2 порт не требуется
   - ports: "443"
     protocol: TCP
     description:
