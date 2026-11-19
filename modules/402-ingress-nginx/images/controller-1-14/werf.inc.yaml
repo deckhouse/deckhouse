@@ -1,6 +1,6 @@
 {{ $controllerVersion := include "get_oss_version_by_id" (list "ingress-nginx-1-14" $ ) }}
 {{ $controllerBranch := printf "controller-v%s" $controllerVersion }}
-{{ $nginxVersion := "1.30.5" }}
+{{ $nginxVersion := "1.30.7" }}
 {{ $modsecurityDepsVersion := "1.0.4" }}
 {{ $nginxDepsBranch := (printf "controller-v%s-nginx-v%s-modsecurity-v%s" $controllerVersion $nginxVersion $modsecurityDepsVersion) }}
 {{ $nlohmannJsonBranch := printf "v%s" (include "get_oss_version_by_id" (list "nlohmannjson" $ )) }}
@@ -54,6 +54,8 @@ git:
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
+- id: DECKHOUSE_PRIVATE_REPO
+  value: {{ .DECKHOUSE_PRIVATE_REPO }}
 shell:
   install:
   - mkdir -p /src && cd /src
@@ -65,7 +67,7 @@ shell:
   - echo "export TAG=$(git describe --tags --always)" >> .env_pass
   #
   - mkdir -p /src/nginx-deps
-  - git clone -b {{ $nginxDepsBranch }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/ingress-nginx-deps.git /src/nginx-deps
+  - git clone -b {{ $nginxDepsBranch }} git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/network/deps/ingress-nginx-deps.git /src/nginx-deps
     # Dependency for opentelemetry-cpp (source: opentelemetry-cpp/cmake/nlohmann-json.cmakee)
   - mkdir -p /src/nginx-deps/opentelemetry-cpp/third_party/nlohmann-json
   - git clone -b {{ $nlohmannJsonBranch }} $(cat /run/secrets/SOURCE_REPO)/nlohmann/json.git /src/nginx-deps/opentelemetry-cpp/third_party/nlohmann-json
