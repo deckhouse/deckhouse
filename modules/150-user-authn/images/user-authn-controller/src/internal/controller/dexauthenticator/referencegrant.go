@@ -93,8 +93,8 @@ func referenceGrantSpec(namespace string, instances []string) map[string]any {
 
 // syncReferenceGrants keeps a ReferenceGrant in d8-user-authn for every namespace with a served
 // DexAuthenticator, and removes the grants of the namespaces that have none any more. Only the
-// grants with the labels of the controller are touched. They are read past the cache: the
-// controller may read them in d8-user-authn only.
+// grants with the labels of the controller are touched. The informer triggers reconciliation,
+// which lists the current grants directly from the API in d8-user-authn.
 func (r *TableReconciler) syncReferenceGrants(ctx context.Context, entries map[types.NamespacedName]Entry) error {
 	want := grantedInstances(entries)
 

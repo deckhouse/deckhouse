@@ -237,6 +237,7 @@ rules:
   - referencegrants
   verbs:
   - list
+  - watch
   - create
   - update
   - delete

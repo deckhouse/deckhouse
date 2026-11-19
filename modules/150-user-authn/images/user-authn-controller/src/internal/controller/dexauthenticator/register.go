@@ -19,6 +19,7 @@ package dexauthenticator
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -68,7 +69,7 @@ type Options struct {
 // configmaps and pods get, list, watch in d8-user-authn; secrets get, create, update there (the
 // table of an instance); oauth2clients get, list, watch, create, update, delete in d8-user-authn;
 // services and ingresses, and httproutes with the Gateway API, get, list, watch, create, update,
-// delete cluster-wide; referencegrants list, create, update, delete in d8-user-authn with
+// delete cluster-wide; referencegrants list, watch, create, update, delete in d8-user-authn with
 // ReferenceGrants; events create, patch.
 func Register(mgr manager.Manager, opts Options) error {
 	metrics, err := NewMetrics(ctrlmetrics.Registry)
@@ -162,6 +163,16 @@ func InformerCacheByObject(opts Options) map[client.Object]cache.ByObject {
 	if opts.GatewayAPI {
 		byObject[controller.Object(HTTPRouteGVK)] = managedEverywhere
 	}
+	if opts.ReferenceGrants {
+		byObject[controller.Object(ReferenceGrantGVK)] = cache.ByObject{
+			Namespaces: map[string]cache.Config{naming.DexNamespace: {
+				LabelSelector: labels.SelectorFromSet(labels.Set{
+					labelApp:                referenceGrantApp,
+					adoption.ManagedByLabel: adoption.ManagedByValue,
+				}),
+			}},
+		}
+	}
 	return byObject
 }
 
@@ -196,7 +207,7 @@ func isTableSecret(obj client.Object) bool {
 
 // SetupWithManager builds the tables again on a change of any DexAuthenticator, of the settings
 // and of a table Secret, and when a route of the controller is deleted: the record of a deleted
-// object waits for its routes to go.
+// object waits for its routes to go. It also rebuilds on managed ReferenceGrant deletion or spec changes.
 func (r *TableReconciler) SetupWithManager(mgr manager.Manager) error {
 	enqueue := handler.EnqueueRequestsFromMapFunc(func(context.Context, client.Object) []reconcile.Request {
 		return []reconcile.Request{tablesRequest}
@@ -216,6 +227,18 @@ func (r *TableReconciler) SetupWithManager(mgr manager.Manager) error {
 		Watches(&networkingv1.Ingress{}, enqueue, deletedRoute)
 	if r.gatewayAPI {
 		b = b.Watches(controller.Object(HTTPRouteGVK), enqueue, deletedRoute)
+	}
+	if r.referenceGrants {
+		b = b.Watches(controller.Object(ReferenceGrantGVK), enqueue, builder.WithPredicates(predicate.Funcs{
+			CreateFunc: func(event.CreateEvent) bool { return false },
+			UpdateFunc: func(e event.UpdateEvent) bool {
+				oldGrant, oldOK := controller.AsUnstructured(e.ObjectOld)
+				newGrant, newOK := controller.AsUnstructured(e.ObjectNew)
+				return oldOK && newOK && !reflect.DeepEqual(oldGrant.Object["spec"], newGrant.Object["spec"])
+			},
+			GenericFunc: func(event.GenericEvent) bool { return false },
+			DeleteFunc:  func(event.DeleteEvent) bool { return true },
+		}))
 	}
 	return b.Complete(r)
 }

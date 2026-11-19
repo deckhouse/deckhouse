@@ -382,7 +382,7 @@ dex-authenticator: dh-test-secret-0123456789abcdef1
 			Expect(controllerEnv()).To(HaveKeyWithValue("REFERENCE_GRANTS", "true"))
 			cluster, namespaced := grants("referencegrants")
 			Expect(cluster).To(BeEmpty(), "the grants live in the module namespace only")
-			Expect(namespaced).To(ConsistOf("list", "create", "update", "delete"))
+			Expect(namespaced).To(ConsistOf("list", "watch", "create", "update", "delete"))
 
 			rendered := hec.KubernetesGlobalResource("ValidatingAdmissionPolicy", dexClientControllerPolicyName)
 			Expect(rendered.Exists()).To(BeTrue())
