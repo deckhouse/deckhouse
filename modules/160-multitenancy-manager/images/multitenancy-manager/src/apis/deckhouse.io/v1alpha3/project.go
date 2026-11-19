@@ -67,6 +67,15 @@ const (
 	// entries of the Project's ownerReferences and leaves the others as they are.
 	ProjectAnnotationNamespaceOwners = "projects.deckhouse.io/namespace-owners"
 
+	// ProjectAnnotationCreatedBy and ProjectAnnotationLastModifiedBy hold the username of the user who
+	// created the project and of the one who last changed its spec, labels or annotations. The project
+	// mutating webhook sets them and the project webhook refuses another value, so a user can neither
+	// set nor remove them. The platform components that the webhooks skip, the controller among them,
+	// do not set them, so a project the platform created, a virtual or an adopted one, has none, and
+	// neither has a project created before the webhook.
+	ProjectAnnotationCreatedBy      = "projects.deckhouse.io/created-by"
+	ProjectAnnotationLastModifiedBy = "projects.deckhouse.io/last-modified-by"
+
 	ProjectFinalizer = "projects.deckhouse.io/project-exists"
 
 	ProjectLabelVirtualProject = "projects.deckhouse.io/virtual-project"

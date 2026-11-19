@@ -177,6 +177,18 @@ d8 k get project my-project -o jsonpath='{range .status.conditions[*]}{.type}={.
 
 При удалении исходного объекта (привязки, поля квоты и т. д.) соответствующие служебные объекты удаляются автоматически.
 
+### Создатель проекта и автор последнего изменения
+
+Аннотация `projects.deckhouse.io/created-by` проекта содержит имя пользователя, который его создал. Аннотация `projects.deckhouse.io/last-modified-by` содержит имя пользователя, который последним изменил его спецификацию, лейблы или аннотации.
+
+При недоступности вебхука аннотации авторства могут отсутствовать или содержать устаревшие значения.
+
+Чтобы посмотреть обе, выполните:
+
+```shell
+d8 k get project my-project -o jsonpath='{.metadata.annotations.projects\.deckhouse\.io/created-by}{"\n"}{.metadata.annotations.projects\.deckhouse\.io/last-modified-by}{"\n"}'
+```
+
 ## Виртуальные проекты
 
 Помимо созданных пользователями проектов, в списке `d8 k get projects` всегда присутствуют два **виртуальных** проекта (лейбл `projects.deckhouse.io/virtual-project: "true"`):

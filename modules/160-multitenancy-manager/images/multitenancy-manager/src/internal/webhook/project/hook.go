@@ -48,7 +48,6 @@ import (
 	"controller/internal/rolebinding"
 	"controller/internal/validate"
 	projectnamespacewebhook "controller/internal/webhook/projectnamespace"
-	rolebindingwebhook "controller/internal/webhook/rolebinding"
 )
 
 // namespaceOwnersChange returns a denial message when an update sets the projects.deckhouse.io/namespace-owners
@@ -159,8 +158,7 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 	// project (Update). Cluster administrators are not privileged here: system:masters goes through
 	// this handler like any user (the webhook's matchConditions skip only platform components and
 	// system:sudouser, see templates/admission/validation.yaml).
-	privileged := req.UserInfo.Username == rolebindingwebhook.ControllerServiceAccount ||
-		req.UserInfo.Username == rolebindingwebhook.DeckhouseServiceAccount
+	privileged := isPrivileged(req.UserInfo.Username)
 
 	// The platform's virtual projects -- default and deckhouse, on the "virtual" template -- have no
 	// namespace of their own and are created by the controller alone. Both their names and their
@@ -195,6 +193,18 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 		}
 		warnings = append(warnings, fmt.Sprintf("the %s=true label is reserved for the platform's virtual projects and has no effect on the %q project; remove it",
 			v1alpha3.ProjectLabelVirtualProject, project.Name))
+	}
+
+	// Check the author annotations against the request and the stored project, allowing the loss
+	// of authorship that a skipped mutating call can leave (see authorsRefusal).
+	if !privileged && (req.Operation == admissionv1.Create || req.Operation == admissionv1.Update) {
+		reason, err := authorsRefusal(req)
+		if err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		if reason != "" {
+			return admission.Denied(reason)
+		}
 	}
 
 	var old *v1alpha3.Project

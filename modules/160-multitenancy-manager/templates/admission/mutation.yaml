@@ -1,0 +1,63 @@
+{{- /*
+  The project mutating webhook records who created a project and who changed its spec, labels or
+  annotations last, in the projects.deckhouse.io/created-by and projects.deckhouse.io/last-modified-by
+  annotations. A successful call restores removed author annotations and overwrites forged values.
+
+  It skips the same system writers as the project webhook in validation.yaml but one: system:sudouser
+  goes through it, so a change made by impersonating that user is recorded. failurePolicy: Ignore keeps
+  such a change possible while the backend is down: the change is then not recorded. A user write that
+  passes this webhook on a failure still meets the project webhook, which is backed by the same pod, has
+  failurePolicy: Fail and checks the author annotations. Validation allows an absent created-by,
+  which SSA may remove when mutation fails, even without a content change. AdmissionRequest carries
+  no indication of that failure, so this absence is accepted regardless of its cause. A supplied
+  created-by must match the expected creator. A content update may still carry the previously stored
+  last-modified-by value or omit that annotation.
+
+  The rule matches the projects resource only, not projects/status: the controller alone writes the
+  status. A write through deckhouse.io/v1alpha2 comes here converted to v1alpha3 (matchPolicy:
+  Equivalent).
+*/ -}}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: d8-multitenancy-manager-webhook
+  annotations:
+    werf.io/deploy-dependency-deployment: state=ready,kind=Deployment,name=multitenancy-manager,namespace=d8-multitenancy-manager
+    werf.io/deploy-dependency-service: state=present,kind=Service,name=multitenancy-manager,namespace=d8-multitenancy-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-webhook")) | nindent 2 }}
+webhooks:
+  - name: project-authors.multitenancy-webhook.deckhouse.io
+    rules:
+      - apiGroups:
+          - deckhouse.io
+        apiVersions:
+          - v1alpha3
+        resources:
+          - projects
+        operations:
+          - CREATE
+          - UPDATE
+        scope: Cluster
+    admissionReviewVersions:
+      - v1
+    matchPolicy: Equivalent
+    matchConditions:
+      - name: exclude-system-writers
+        expression: >-
+          request.userInfo.username != "system:apiserver"
+          && request.userInfo.username != "system:serviceaccount:d8-system:deckhouse"
+          && request.userInfo.username != "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"
+          && request.userInfo.username != "system:serviceaccount:d8-user-authz:controller"
+          && !request.userInfo.groups.exists(g, g == "system:serviceaccounts:d8-system" || g == "system:serviceaccounts:kube-system" || g == "system:serviceaccounts:d8-user-authz" || g == "system:nodes")
+    sideEffects: None
+    failurePolicy: Ignore
+    reinvocationPolicy: IfNeeded
+    timeoutSeconds: 10
+    clientConfig:
+      caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | default "" | b64enc }}
+      service:
+        name: multitenancy-manager
+        namespace: d8-multitenancy-manager
+        port: 9443
+        path: /mutate/v1alpha3/projects/authors

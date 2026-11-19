@@ -177,6 +177,18 @@ The controller creates service objects in the project namespaces. They are manag
 
 When the source object (a binding, the quota field, etc.) is removed, the corresponding service objects are removed automatically.
 
+### Project creator and author of the last change
+
+The `projects.deckhouse.io/created-by` annotation of a project holds the name of the user who created it. The `projects.deckhouse.io/last-modified-by` annotation holds the name of the user who last changed its spec, labels or annotations.
+
+If the webhook is unavailable, the author annotations may be missing or contain outdated values.
+
+To see both, run:
+
+```shell
+d8 k get project my-project -o jsonpath='{.metadata.annotations.projects\.deckhouse\.io/created-by}{"\n"}{.metadata.annotations.projects\.deckhouse\.io/last-modified-by}{"\n"}'
+```
+
 ## Virtual projects
 
 Besides the user-created projects, the `d8 k get projects` list always contains two **virtual** projects (labeled `projects.deckhouse.io/virtual-project: "true"`):
