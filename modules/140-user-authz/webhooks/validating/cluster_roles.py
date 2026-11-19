@@ -280,12 +280,24 @@ def validation_error(ctx: DotMap) -> Optional[str]:
     selectors = (obj.get("aggregationRule") or {}).get("clusterRoleSelectors") or []
     system_lineages = _system_lineages(ctx)
     commander_role = _is_commander_role(request, name)
+    # Bootstrap administrators can create Commander roles before the agent starts.
+    # Only the name check grants this exception.
+    commander_bootstrap_create = (
+        request.operation == "CREATE"
+        and name.startswith(COMMANDER_PREFIX)
+        and "system:masters" in (_as_dict(request.userInfo).get("groups") or [])
+    )
 
     # The d8: name prefix is reserved; users may only create objects under d8:custom:, and the
     # Commander agent its roles under d8:commander: (COMMANDER_PREFIX). The same holds for an UPDATE:
     # a d8:commander: role somebody else changes, with kubectl or a GitOps tool, is refused as a
     # built-in one would be. The roles already in the cluster keep working; only writes are refused.
-    if name.startswith("d8:") and not name.startswith("d8:custom:") and not commander_role:
+    if (
+        name.startswith("d8:")
+        and not name.startswith("d8:custom:")
+        and not commander_role
+        and not commander_bootstrap_create
+    ):
         # Exception: allow an UPDATE of a built-in role that changes ONLY its
         # custom.meta.deckhouse.io/* annotations (display title/description) — no privilege change.
         if request.operation == "UPDATE" and _only_custom_meta_annotation_change(
