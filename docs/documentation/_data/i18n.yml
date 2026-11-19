@@ -119,6 +119,9 @@ common:
   not_required_value_sentence:
     en: Not required value.
     ru: Необязательный параметр.
+  optional_port:
+    en: Optional
+    ru: Необязательный
   conversions:
     en: Conversions
     ru: Конверсии
