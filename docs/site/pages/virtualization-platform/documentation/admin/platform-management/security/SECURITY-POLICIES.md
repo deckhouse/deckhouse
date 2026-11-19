@@ -557,7 +557,7 @@ To enable container image signature verification in a DP cluster:
                -----BEGIN PUBLIC KEY-----
                ...
                -----END PUBLIC KEY-----
-           reference: registry.private.ru/labs/application/*
+           reference: registry.private.io/labs/application/*
    ```
 
    The label name specified in `match.namespaceSelector.labelSelector.matchLabels` can be any name. The label in the policy selector must match the label on the corresponding namespace.
@@ -580,7 +580,7 @@ To enable container image signature verification in a DP cluster:
              example-operation-policy/enabled: "true"
      policies:
        allowedRepos:
-       - registry.private.io
+       - registry.private.io/labs/application/
    ```
 
    The label name specified in `match.namespaceSelector.labelSelector.matchLabels` can be any name. The label in the policy selector must match the label on the corresponding namespace.
