@@ -1990,6 +1990,37 @@ alerts:
         Dex AuthRequest objects quota usage is higher than 80% in namespace &quot;d8-user-authn&quot;.
       severity: "4"
       markupFormat: markdown
+    - name: D8DexConnectorNotInitialized
+      sourceFile: modules/150-user-authn/monitoring/prometheus-rules/dex.yaml
+      moduleUrl: 150-user-authn
+      module: user-authn
+      edition: ce
+      description: |-
+        At least one Dex pod failed to initialize connector `{{ $labels.connector_id }}` of type `{{ $labels.connector_type }}` during the last opening attempt for its current configuration. Sign-ins and token refreshes through this connector may fail on that pod.
+
+        Check the Dex pods and their logs.
+
+        ```bash
+        d8 k -n d8-user-authn get pods -l app=dex
+        d8 k -n d8-user-authn logs -l app=dex -c dex --prefix
+        ```
+
+        Check the provider address, credentials, TLS certificates, and network connectivity configured in the corresponding DexProvider. Dex retries initialization when the connector is used. A sign-in retries only on the pod handling the request. Other pods can retain a failed result until the connector is used there or they restart.
+
+        After correcting the configuration or restoring the provider, restart Dex to retry initialization on every pod:
+
+        ```bash
+        d8 k -n d8-user-authn rollout restart deployment/dex
+        d8 k -n d8-user-authn rollout status deployment/dex
+        ```
+
+        A rolling restart can interrupt in-flight sign-ins and token refreshes on the restarting pods.
+
+        The alert stops when no pod reports a failed opening attempt for the current configuration, or the connector is removed. An updated configuration has unknown initialization status until its next opening attempt; it does not report a failure in the meantime.
+      summary: |
+        Dex connector &quot;{{ $labels.connector_id }}&quot; is not initialized.
+      severity: "6"
+      markupFormat: markdown
     - name: D8DexProviderLDAPTLSConflict
       sourceFile: modules/150-user-authn/monitoring/prometheus-rules/dex-deprecation.yaml
       moduleUrl: 150-user-authn

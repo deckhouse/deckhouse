@@ -1,0 +1,83 @@
+diff --git a/server/connectors/connectors.go b/server/connectors/connectors.go
+index 020d73d..1ae90bb 100644
+--- a/server/connectors/connectors.go
++++ b/server/connectors/connectors.go
+@@ -25,6 +25,9 @@ type Connector struct {
+ // does not exist, which a client takes for a refusal.
+ var ErrStorageUnavailable = errors.New("connector storage unavailable")
+ 
++// ErrConnectorUnavailable reports that a stored connector failed to open.
++var ErrConnectorUnavailable = errors.New("connector unavailable")
++
+ // ResolveFunc builds the underlying connector implementation for a stored
+ // connector. The server injects it so that connector construction (the local
+ // password DB and the connector-config registry) stays in the server package.
+@@ -119,7 +122,11 @@ func (c *Cache) Get(ctx context.Context, id string) (Connector, error) {
+ 
+ 	if !ok || storageConnector.ResourceVersion != conn.ResourceVersion {
+ 		// Not cached, or updated in storage since we last opened it.
+-		return c.Open(storageConnector)
++		opened, err := c.Open(storageConnector)
++		if err != nil {
++			return Connector{}, fmt.Errorf("%w: %w", ErrConnectorUnavailable, err)
++		}
++		return opened, nil
+ 	}
+ 
+ 	return conn, nil
+diff --git a/server/grants/grants.go b/server/grants/grants.go
+index 6ca6779..1439bd0 100644
+--- a/server/grants/grants.go
++++ b/server/grants/grants.go
+@@ -368,6 +368,9 @@ func (h *Handler) resolveConnector(ctx context.Context, connID string, client st
+ 	conn, err := h.Connectors.Get(ctx, connID)
+ 	if err != nil {
+ 		h.Logger.ErrorContext(ctx, "failed to get connector", "connector_id", connID, "err", err)
++		if errors.Is(err, connectors.ErrConnectorUnavailable) {
++			return connectors.Connector{}, &oauth2.Error{Type: oauth2.TemporarilyUnavailable, Status: http.StatusServiceUnavailable}
++		}
+ 		if errors.Is(err, connectors.ErrStorageUnavailable) {
+ 			return connectors.Connector{}, &oauth2.Error{Type: oauth2.ServerError, Status: http.StatusInternalServerError}
+ 		}
+diff --git a/server/server_grant_refresh_test.go b/server/server_grant_refresh_test.go
+index fc859c3..b1c5699 100644
+--- a/server/server_grant_refresh_test.go
++++ b/server/server_grant_refresh_test.go
+@@ -87,6 +87,37 @@ func mockRefreshTokenTestStorage(t *testing.T, s storage.Storage, useObsolete bo
+ 	require.NoError(t, err)
+ }
+ 
++func TestRefreshWithUnopenedConnector(t *testing.T) {
++	httpServer, s := newTestServer(t, nil)
++	defer httpServer.Close()
++	mockRefreshTokenTestStorage(t, s.storage, false)
++	ctx := t.Context()
++	tokenData, err := internal.Marshal(&internal.RefreshToken{RefreshId: "test", Token: "bar"})
++	require.NoError(t, err)
++
++	refresh := func() *httptest.ResponseRecorder {
++		form := url.Values{"grant_type": {"refresh_token"}, "refresh_token": {tokenData}}
++		req := httptest.NewRequest(http.MethodPost, "/token", strings.NewReader(form.Encode()))
++		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++		req.SetBasicAuth("test", "barfoo")
++		rr := httptest.NewRecorder()
++		s.ServeHTTP(rr, req)
++		return rr
++	}
++
++	require.NoError(t, s.storage.UpdateConnector(ctx, "test", func(c storage.Connector) (storage.Connector, error) {
++		c.Type = "unknown"
++		return c, nil
++	}))
++	s.connectors.Close("test")
++	requireOAuth2Error(t, refresh(), http.StatusServiceUnavailable, "temporarily_unavailable")
++	_, err = s.storage.GetRefresh(ctx, "test")
++	require.NoError(t, err)
++
++	require.NoError(t, s.storage.DeleteConnector(ctx, "test"))
++	requireOAuth2Error(t, refresh(), http.StatusBadRequest, "invalid_request")
++}
++
+ func TestRefreshTokenExpirationScenarios(t *testing.T) {
+ 	t0 := time.Now()
+ 	tests := []struct {

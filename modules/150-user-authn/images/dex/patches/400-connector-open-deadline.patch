@@ -90,7 +90,7 @@ index 00000000..1ef180ab
 +	require.ErrorContains(t, err, `invalid discoveryTimeout "soon"`)
 +}
 diff --git a/connector/oidc/oidc.go b/connector/oidc/oidc.go
-index 6776b7c3..6175dadc 100644
+index d2d4bf3e..71a4de5d 100644
 --- a/connector/oidc/oidc.go
 +++ b/connector/oidc/oidc.go
 @@ -51,6 +51,12 @@ type Config struct {
@@ -161,17 +161,21 @@ index 6776b7c3..6175dadc 100644
  	if !c.ProviderDiscoveryOverrides.Empty() {
 diff --git a/server/connector_open_test.go b/server/connector_open_test.go
 new file mode 100644
-index 00000000..213e82e5
+index 00000000..f96f34b9
 --- /dev/null
 +++ b/server/connector_open_test.go
-@@ -0,0 +1,94 @@
+@@ -0,0 +1,184 @@
 +package server
 +
 +import (
 +	"bytes"
 +	"context"
++	"io"
 +	"log/slog"
 +	"net"
++	"net/http"
++	"net/http/httptest"
++	"net/url"
 +	"strings"
 +	"sync"
 +	"testing"
@@ -259,11 +263,97 @@ index 00000000..213e82e5
 +	require.Contains(t, out, `msg="server: Failed to open connector" id=silent`)
 +	require.True(t, strings.Contains(out, "did not answer within 200ms"), out)
 +}
++
++// TestServerStartsWithoutOpenConnectors: the only connector is an OIDC provider
++// that is down at startup. With DEX_CONTINUE_ON_CONNECTOR_FAILURE Dex starts
++// instead of exiting, serves the discovery document and the signing keys, shows
++// the error of the connector on the login page, and opens the connector on the
++// first login after the provider comes up.
++func TestServerStartsWithoutOpenConnectors(t *testing.T) {
++	// An address nothing listens on yet: the provider is down.
++	ln, err := net.Listen("tcp", "127.0.0.1:0")
++	require.NoError(t, err)
++	addr := ln.Addr().String()
++	require.NoError(t, ln.Close())
++	issuer := "http://" + addr
++
++	conn := storage.Connector{
++		ID:     "upstream",
++		Type:   "oidc",
++		Name:   "Upstream",
++		Config: []byte(`{"issuer": "` + issuer + `", "clientID": "dex", "clientSecret": "dh-test-secret-0123456789abcdef", "redirectURI": "http://localhost/callback", "discoveryTimeout": "2s"}`),
++	}
++	var store storage.Storage
++	httpServer, server := newTestServerWith(t, []storage.Connector{conn}, func(c *Config) {
++		c.ContinueOnConnectorFailure = true
++		store = c.Storage
++	})
++	t.Cleanup(httpServer.Close)
++
++	_, ok := server.connectors.Cached("upstream")
++	require.False(t, ok, "the connector of the provider that is down must not be open")
++
++	for _, path := range []string{"/.well-known/openid-configuration", "/keys"} {
++		resp, err := http.Get(httpServer.URL + path)
++		require.NoError(t, err, path)
++		resp.Body.Close()
++		require.Equal(t, http.StatusOK, resp.StatusCode, path)
++	}
++
++	ctx := t.Context()
++	require.NoError(t, store.CreateClient(ctx, storage.Client{
++		ID:           "app",
++		Secret:       "dh-test-secret-0123456789abcdef",
++		RedirectURIs: []string{"https://app.example.com/callback"},
++	}))
++	login := httpServer.URL + "/auth/upstream?" + url.Values{
++		"client_id":     {"app"},
++		"redirect_uri":  {"https://app.example.com/callback"},
++		"response_type": {"code"},
++		"scope":         {"openid"},
++		"state":         {"state"},
++	}.Encode()
++	resp, err := http.Get(login)
++	require.NoError(t, err)
++	body, err := io.ReadAll(resp.Body)
++	resp.Body.Close()
++	require.NoError(t, err)
++	require.Equal(t, http.StatusBadRequest, resp.StatusCode, string(body))
++	require.Contains(t, string(body), "Connector failed to initialize")
++
++	// The provider comes up: the next use opens the connector.
++	provider := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		w.Header().Set("Content-Type", "application/json")
++		_, _ = io.WriteString(w, `{
++  "issuer": "`+issuer+`",
++  "authorization_endpoint": "`+issuer+`/auth",
++  "token_endpoint": "`+issuer+`/token",
++  "jwks_uri": "`+issuer+`/keys",
++  "userinfo_endpoint": "`+issuer+`/userinfo",
++  "id_token_signing_alg_values_supported": ["RS256"]
++}`)
++	}))
++	providerListener, err := net.Listen("tcp", addr)
++	require.NoError(t, err)
++	provider.Listener = providerListener
++	provider.Start()
++	t.Cleanup(provider.Close)
++
++	_, err = server.connectors.Get(ctx, "upstream")
++	require.NoError(t, err)
++	_, ok = server.connectors.Cached("upstream")
++	require.True(t, ok, "the connector must open once the provider answers")
++
++	resp, err = http.Get(login)
++	require.NoError(t, err)
++	resp.Body.Close()
++	require.NotEqual(t, http.StatusBadRequest, resp.StatusCode, "the login must go on to the provider")
++}
 diff --git a/server/server.go b/server/server.go
-index b09d2b75..bacccb38 100644
+index e81da1ef..04afece6 100644
 --- a/server/server.go
 +++ b/server/server.go
-@@ -204,6 +204,9 @@ func (s *Server) openConnectors(ctx context.Context, c Config) error {
+@@ -205,6 +205,9 @@ func (s *Server) openConnectors(ctx context.Context, c Config) error {
  
  	var failedCount int
  	for _, conn := range storageConnectors {
@@ -273,3 +363,37 @@ index b09d2b75..bacccb38 100644
  		if _, err := s.connectors.Open(conn); err != nil {
  			failedCount++
  			if c.ContinueOnConnectorFailure {
+@@ -215,8 +218,14 @@ func (s *Server) openConnectors(ctx context.Context, c Config) error {
+ 		}
+ 	}
+ 
+-	if c.ContinueOnConnectorFailure && failedCount == len(storageConnectors) {
+-		return fmt.Errorf("server: failed to open all connectors (%d/%d)", failedCount, len(storageConnectors))
++	// Deckhouse: with the flag, Dex starts even when no connector opened. The
++	// connectors cache opens a connector again when a login uses it, and the
++	// discovery document and the signing keys do not depend on the connectors.
++	// Upstream exits here, so a single provider that is down at startup sent Dex
++	// into a crash loop.
++	if c.ContinueOnConnectorFailure && failedCount > 0 && failedCount == len(storageConnectors) {
++		s.logger.Error("server: no connector opened, each is opened again when a login uses it",
++			"failed", failedCount, "total", len(storageConnectors))
+ 	}
+ 
+ 	return nil
+diff --git a/server/server_test.go b/server/server_test.go
+index c6ccd948..56475563 100644
+--- a/server/server_test.go
++++ b/server/server_test.go
+@@ -1834,9 +1834,10 @@ func TestConnectorFailureHandling(t *testing.T) {
+ 					Name: "Bad 2",
+ 				},
+ 			},
++			// Deckhouse: the server starts and opens a connector when a login uses it.
+ 			continueOnConnectorFailure: true,
+-			wantErr:                    true,
+-			wantErrContains:            "failed to open all connectors (2/2)",
++			wantErr:                    false,
++			expectConnectors:           []string{},
+ 		},
+ 		{
+ 			name: "all connectors fail with flag disabled",

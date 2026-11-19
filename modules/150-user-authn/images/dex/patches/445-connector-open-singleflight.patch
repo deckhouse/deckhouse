@@ -1,0 +1,242 @@
+diff --git a/server/connectors/connectors.go b/server/connectors/connectors.go
+index 1ae90bb..8a5b865 100644
+--- a/server/connectors/connectors.go
++++ b/server/connectors/connectors.go
+@@ -6,6 +6,8 @@ import (
+ 	"fmt"
+ 	"sync"
+ 
++	"golang.org/x/sync/singleflight"
++
+ 	"github.com/dexidp/dex/connector"
+ 	"github.com/dexidp/dex/storage"
+ )
+@@ -41,6 +43,7 @@ type Cache struct {
+ 	conns   map[string]Connector
+ 	storage storage.Storage
+ 	resolve ResolveFunc
++	opening singleflight.Group
+ }
+ 
+ // NewCache returns an empty cache backed by the given storage and resolver.
+@@ -121,12 +124,28 @@ func (c *Cache) Get(ctx context.Context, id string) (Connector, error) {
+ 	c.mu.Unlock()
+ 
+ 	if !ok || storageConnector.ResourceVersion != conn.ResourceVersion {
+-		// Not cached, or updated in storage since we last opened it.
+-		opened, err := c.Open(storageConnector)
+-		if err != nil {
+-			return Connector{}, fmt.Errorf("%w: %w", ErrConnectorUnavailable, err)
++		// Share one open attempt for this stored version. Discovery runs outside
++		// the cache mutex, so other connectors remain available while it waits.
++		key := id + "\x00" + storageConnector.ResourceVersion
++		result := c.opening.DoChan(key, func() (any, error) {
++			if cached, ok := c.Cached(id); ok && cached.ResourceVersion == storageConnector.ResourceVersion {
++				return cached, nil
++			}
++			opened, err := c.Open(storageConnector)
++			if err != nil {
++				return Connector{}, fmt.Errorf("%w: %w", ErrConnectorUnavailable, err)
++			}
++			return opened, nil
++		})
++		select {
++		case <-ctx.Done():
++			return Connector{}, ctx.Err()
++		case res := <-result:
++			if res.Err != nil {
++				return Connector{}, res.Err
++			}
++			return res.Val.(Connector), nil
+ 		}
+-		return opened, nil
+ 	}
+ 
+ 	return conn, nil
+diff --git a/server/connectors/connectors_test.go b/server/connectors/connectors_test.go
+index c035684..a625ce7 100644
+--- a/server/connectors/connectors_test.go
++++ b/server/connectors/connectors_test.go
+@@ -4,7 +4,9 @@ import (
+ 	"context"
+ 	"errors"
+ 	"log/slog"
++	"sync/atomic"
+ 	"testing"
++	"testing/synctest"
+ 
+ 	"github.com/stretchr/testify/require"
+ 
+@@ -82,6 +84,172 @@ func TestGetNotFound(t *testing.T) {
+ 	require.Equal(t, 0, *calls)
+ }
+ 
++func TestGetDeduplicatesOpen(t *testing.T) {
++	for _, tt := range []struct {
++		name          string
++		cachedVersion string
++		fails         bool
++	}{
++		{name: "missing"},
++		{name: "changed", cachedVersion: "1"},
++		{name: "missing unavailable", fails: true},
++		{name: "changed unavailable", cachedVersion: "1", fails: true},
++	} {
++		t.Run(tt.name, func(t *testing.T) {
++			synctest.Test(t, func(t *testing.T) {
++				ctx := t.Context()
++				store := memory.New(slog.New(slog.DiscardHandler))
++				require.NoError(t, store.CreateConnector(ctx, storage.Connector{ID: "c1", ResourceVersion: "2"}))
++				release := make(chan struct{})
++				var calls atomic.Int32
++				var openErr error
++				if tt.fails {
++					openErr = errors.New("issuer unavailable")
++				}
++				cache := NewCache(store, func(c storage.Connector) (connector.Connector, error) {
++					calls.Add(1)
++					<-release
++					return stubConn{version: c.ResourceVersion}, openErr
++				})
++				if tt.cachedVersion != "" {
++					cache.Set("c1", Connector{ResourceVersion: tt.cachedVersion})
++				}
++
++				type result struct {
++					conn Connector
++					err  error
++				}
++				const requests = 16
++				results := make(chan result, requests)
++				for range requests {
++					go func() {
++						conn, err := cache.Get(ctx, "c1")
++						results <- result{conn: conn, err: err}
++					}()
++				}
++				synctest.Wait()
++				concurrentCalls := calls.Load()
++				close(release)
++				for range requests {
++					got := <-results
++					if tt.fails {
++						require.ErrorIs(t, got.err, ErrConnectorUnavailable)
++						continue
++					}
++					require.NoError(t, got.err)
++					require.Equal(t, "2", got.conn.ResourceVersion)
++				}
++				require.EqualValues(t, 1, concurrentCalls, "concurrent requests must share one open attempt")
++
++				// A failed attempt is retried by the next request; a successful one is cached.
++				openErr = nil
++				got, err := cache.Get(ctx, "c1")
++				require.NoError(t, err)
++				require.Equal(t, "2", got.ResourceVersion)
++				wantCalls := int32(1)
++				if tt.fails {
++					wantCalls = 2
++				}
++				require.Equal(t, wantCalls, calls.Load())
++			})
++		})
++	}
++}
++
++func TestGetOpeningDoesNotBlockOtherConnectors(t *testing.T) {
++	synctest.Test(t, func(t *testing.T) {
++		ctx := t.Context()
++		store := memory.New(slog.New(slog.DiscardHandler))
++		for _, id := range []string{"slow", "fast"} {
++			require.NoError(t, store.CreateConnector(ctx, storage.Connector{ID: id, ResourceVersion: "1"}))
++		}
++		release := make(chan struct{})
++		cache := NewCache(store, func(c storage.Connector) (connector.Connector, error) {
++			if c.ID == "slow" {
++				<-release
++			}
++			return stubConn{version: c.ResourceVersion}, nil
++		})
++		done := make(chan error, 1)
++		go func() {
++			_, err := cache.Get(ctx, "slow")
++			done <- err
++		}()
++		synctest.Wait()
++		_, err := cache.Get(ctx, "fast")
++		close(release)
++		require.NoError(t, err)
++		require.NoError(t, <-done)
++	})
++}
++
++func TestGetChangedVersionWhileOpening(t *testing.T) {
++	synctest.Test(t, func(t *testing.T) {
++		ctx := t.Context()
++		store := memory.New(slog.New(slog.DiscardHandler))
++		require.NoError(t, store.CreateConnector(ctx, storage.Connector{ID: "c1", ResourceVersion: "1"}))
++		release := make(chan struct{})
++		cache := NewCache(store, func(c storage.Connector) (connector.Connector, error) {
++			if c.ResourceVersion == "1" {
++				<-release
++				return nil, errors.New("issuer unavailable")
++			}
++			return stubConn{version: c.ResourceVersion}, nil
++		})
++		done := make(chan error, 1)
++		go func() {
++			_, err := cache.Get(ctx, "c1")
++			done <- err
++		}()
++		synctest.Wait()
++		require.NoError(t, store.UpdateConnector(ctx, "c1", func(c storage.Connector) (storage.Connector, error) {
++			c.ResourceVersion = "2"
++			return c, nil
++		}))
++		got, err := cache.Get(ctx, "c1")
++		close(release)
++		require.NoError(t, err)
++		require.Equal(t, "2", got.ResourceVersion)
++		require.ErrorIs(t, <-done, ErrConnectorUnavailable)
++	})
++}
++
++func TestGetCanceledWaiterDoesNotCancelOpen(t *testing.T) {
++	synctest.Test(t, func(t *testing.T) {
++		ctx := t.Context()
++		store := memory.New(slog.New(slog.DiscardHandler))
++		require.NoError(t, store.CreateConnector(ctx, storage.Connector{ID: "c1", ResourceVersion: "1"}))
++		release := make(chan struct{})
++		var calls atomic.Int32
++		cache := NewCache(store, func(c storage.Connector) (connector.Connector, error) {
++			calls.Add(1)
++			<-release
++			return stubConn{version: c.ResourceVersion}, nil
++		})
++		requestCtx, cancel := context.WithCancel(ctx)
++		canceled := make(chan error, 1)
++		go func() {
++			_, err := cache.Get(requestCtx, "c1")
++			canceled <- err
++		}()
++		synctest.Wait()
++		done := make(chan error, 1)
++		go func() {
++			_, err := cache.Get(ctx, "c1")
++			done <- err
++		}()
++		synctest.Wait()
++		cancel()
++		require.ErrorIs(t, <-canceled, context.Canceled)
++		close(release)
++		require.NoError(t, <-done)
++		require.EqualValues(t, 1, calls.Load())
++		_, err := cache.Get(ctx, "c1")
++		require.NoError(t, err)
++		require.EqualValues(t, 1, calls.Load())
++	})
++}
++
+ func TestOpenResolveErrorNotCached(t *testing.T) {
+ 	store := memory.New(slog.New(slog.DiscardHandler))
+ 	cache := NewCache(store, func(storage.Connector) (connector.Connector, error) {

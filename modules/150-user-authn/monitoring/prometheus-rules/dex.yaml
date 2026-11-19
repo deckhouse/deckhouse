@@ -22,6 +22,43 @@
         d8 k -n d8-user-authn logs deploy/dex
         ```
 
+  - alert: D8DexConnectorNotInitialized
+    expr: min by (connector_id, connector_type) (dex_connector_open{job="dex", namespace="d8-user-authn"}) == 0
+    for: 5m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: user-authn
+      d8_component: dex
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_dex_connectors: "D8DexConnectorsNotInitialized,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_dex_connectors: "D8DexConnectorsNotInitialized,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Dex connector "{{ $labels.connector_id }}" is not initialized.
+      description: |-
+        At least one Dex pod failed to initialize connector `{{ $labels.connector_id }}` of type `{{ $labels.connector_type }}` during the last opening attempt for its current configuration. Sign-ins and token refreshes through this connector may fail on that pod.
+
+        Check the Dex pods and their logs.
+
+        ```bash
+        d8 k -n d8-user-authn get pods -l app=dex
+        d8 k -n d8-user-authn logs -l app=dex -c dex --prefix
+        ```
+
+        Check the provider address, credentials, TLS certificates, and network connectivity configured in the corresponding DexProvider. Dex retries initialization when the connector is used. A sign-in retries only on the pod handling the request. Other pods can retain a failed result until the connector is used there or they restart.
+
+        After correcting the configuration or restoring the provider, restart Dex to retry initialization on every pod:
+
+        ```bash
+        d8 k -n d8-user-authn rollout restart deployment/dex
+        d8 k -n d8-user-authn rollout status deployment/dex
+        ```
+
+        A rolling restart can interrupt in-flight sign-ins and token refreshes on the restarting pods.
+
+        The alert stops when no pod reports a failed opening attempt for the current configuration, or the connector is removed. An updated configuration has unknown initialization status until its next opening attempt; it does not report a failure in the meantime.
+
 - name: d8.dex.authrequests-quota
   rules:
   - alert: D8DexAuthRequestsQuotaHigh
