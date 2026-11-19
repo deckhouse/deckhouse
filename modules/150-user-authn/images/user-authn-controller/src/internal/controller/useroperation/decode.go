@@ -122,6 +122,15 @@ const (
 
 type resetPassword struct {
 	NewPasswordHash string `json:"newPasswordHash"`
+	// RequirePasswordChange is nil when the operation does not set it: the API server defaults it
+	// to true, and an operation read without the default keeps the forced change as well.
+	RequirePasswordChange *bool `json:"requirePasswordChange,omitempty"`
+}
+
+// requiresPasswordChange tells whether the user has to change the reset password at the next
+// sign-in.
+func (p resetPassword) requiresPasswordChange() bool {
+	return p.RequirePasswordChange == nil || *p.RequirePasswordChange
 }
 
 type lockSpec struct {

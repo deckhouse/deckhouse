@@ -979,6 +979,8 @@ spec:
 
 {% endraw %}
 
+To make the user change the password at the first sign-in, set [`requirePasswordChangeOnFirstLogin: true`](cr.html#user-v1-spec-requirepasswordchangeonfirstlogin). The field can be set only when the User is created.
+
 [Authorization rules](/modules/user-authz/cr.html#authorizationrule) grant permissions to users based on the email address from the issued token. Therefore, a User resource cannot be created if its `spec.email` value matches a `User` subject in an existing [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) or [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) resource. This prevents permissions from being unintentionally granted to a new user.
 
 If the match is intentional, for example, if the authorization rule was created in advance, use a different email address or add the `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"` annotation to the User resource. The annotation acknowledges the name collision only. Assigning the grant still requires covering permissions or a can-assign range that includes the target roles.
@@ -1025,7 +1027,7 @@ Use the `d8 iam user` commands for administrative actions on local users. They c
 
 You can delete or recreate a local user, or run a UserOperation (`ResetPassword`, `RequirePasswordChange`, `Reset2FA`, `Lock`, `Unlock`, `Logout`) against them, only if you can assign every role already granted to the user's email or groups (covering permissions or an explicit can-assign range). `initiatorType: self` does not bypass this check. The same rule applies to DexProvider objects. For details, see [Limiting the identities of a provider](#limiting-the-identities-of-a-provider).
 
-After an administrator resets the password with `ResetPassword`, the user signs in with that password once. Dex then asks the user to set a new password that complies with the password policy.
+After an administrator resets the password with `ResetPassword`, the user signs in with that password once. Dex then asks the user to set a new password that complies with the password policy. To keep the new password, set `resetPassword.requirePasswordChange: false` in the UserOperation.
 
 Interactive password reset example:
 
@@ -1112,7 +1114,9 @@ A compromised password alone signs in to an account without 2FA. Enable 2FA with
 
 #### Creating UserOperation manually
 
-When the `d8 iam user` CLI is unavailable (e.g. in CI/CD, GitOps, or automation pipelines), you can create a [UserOperation](cr.html#useroperation) resource directly. Use `apiVersion: deckhouse.io/v1` and set `initiatorType: admin`.
+When the `d8 iam user` CLI is unavailable (for example, in CI/CD or automation scripts), create a [UserOperation](cr.html#useroperation) resource directly. Use `apiVersion: deckhouse.io/v1` and set `initiatorType: admin`.
+
+Do not keep a UserOperation in a GitOps repository. The module deletes the operation after [`retention.userOperations`](configuration.html#parameters-retention-useroperations), and an operation created again runs again.
 
 Example — reset a local user's password (the `newPasswordHash` contains a bcrypt hash without Base64 encoding; the module encodes it automatically):
 

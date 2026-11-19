@@ -147,7 +147,7 @@ func (r *Reconciler) reconcilePassword(
 		if err := r.seedGeneration(ctx, user, email, groups, now); err != nil {
 			return passwordView{}, err
 		}
-		if err := r.createPassword(ctx, encodedName, user.Name, email, user.Password, groups, now); err != nil {
+		if err := r.createPassword(ctx, encodedName, user, email, groups, now); err != nil {
 			return passwordView{}, err
 		}
 	}
@@ -233,8 +233,10 @@ func (r *Reconciler) patchPassword(ctx context.Context, name, namespace string, 
 	return nil
 }
 
-func (r *Reconciler) createPassword(ctx context.Context, encodedName, username, email, rawPassword string, groups []string, now time.Time) error {
-	obj := newPasswordObject(encodedName, username, email, rawPassword, groups, now)
+// createPassword creates the Password of user from User.spec.password: the only place where the
+// password of the User reaches Dex, and so where requirePasswordChangeOnFirstLogin acts.
+func (r *Reconciler) createPassword(ctx context.Context, encodedName string, user userView, email string, groups []string, now time.Time) error {
+	obj := newPasswordObject(encodedName, user, email, groups, now)
 	if err := r.client.Create(ctx, obj); err != nil {
 		if apierrors.IsAlreadyExists(err) {
 			return nil
@@ -259,7 +261,7 @@ func (r *Reconciler) createPasswordFromExisting(ctx context.Context, encodedName
 	return nil
 }
 
-func newPasswordObject(encodedName, username, email, rawPassword string, groups []string, now time.Time) *unstructured.Unstructured {
+func newPasswordObject(encodedName string, user userView, email string, groups []string, now time.Time) *unstructured.Unstructured {
 	obj := map[string]any{
 		"apiVersion": controller.PasswordGVK.GroupVersion().String(),
 		"kind":       controller.PasswordGVK.Kind,
@@ -272,10 +274,13 @@ func newPasswordObject(encodedName, username, email, rawPassword string, groups 
 			},
 		},
 		"email":         email,
-		"username":      username,
-		"userID":        username,
-		"hash":          encodePasswordHash(rawPassword),
+		"username":      user.Name,
+		"userID":        user.Name,
+		"hash":          encodePasswordHash(user.Password),
 		"hashUpdatedAt": now.UTC().Format(time.RFC3339),
+	}
+	if user.RequirePasswordChangeOnFirstLogin {
+		obj["requireResetHashOnNextSuccLogin"] = true
 	}
 	if len(groups) > 0 {
 		obj["groups"] = toUnstructuredSlice(groups)

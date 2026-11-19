@@ -114,3 +114,80 @@ func TestUserEmailLengthRatchets(t *testing.T) {
 		})
 	}
 }
+
+// requirePasswordChangeOnFirstLogin acts only when the Password is created, so it is set with the
+// User and never touched again: adding, changing and removing it are refused alike, in every
+// served version. The rule sits on spec, as a rule on the field would not see the field come or go.
+func TestUserRequirePasswordChangeOnFirstLoginIsImmutable(t *testing.T) {
+	const field = "requirePasswordChangeOnFirstLogin"
+	const message = "requirePasswordChangeOnFirstLogin is immutable"
+	tests := []struct {
+		name  string
+		old   any // nil: the field is absent
+		new   any
+		valid bool
+	}{
+		{name: "absent stays absent", valid: true},
+		{name: "true stays true", old: true, new: true, valid: true},
+		{name: "false stays false", old: false, new: false, valid: true},
+		{name: "true added", new: true},
+		{name: "false added", new: false},
+		{name: "true changed to false", old: true, new: false},
+		{name: "false changed to true", old: false, new: true},
+		{name: "true removed", old: true},
+		{name: "false removed", old: false},
+	}
+	for version, schema := range userSchemas(t) {
+		for _, tc := range tests {
+			t.Run(version+"/"+tc.name, func(t *testing.T) {
+				old := userObject(version, "jane@example.com")
+				updated := userObject(version, "jane@example.com")
+				// Another change, so that the update reaches the rule whatever happens to the field.
+				updated["spec"].(map[string]any)["ttl"] = "24h"
+				if tc.old != nil {
+					old["spec"].(map[string]any)[field] = tc.old
+				}
+				if tc.new != nil {
+					updated["spec"].(map[string]any)[field] = tc.new
+				}
+				errors := validateAuthenticatorUpdate(t, schema, updated, old)
+				if tc.valid {
+					require.Empty(t, errors)
+					return
+				}
+				require.Len(t, errors, 1)
+				require.Contains(t, errors[0].Error(), message)
+			})
+		}
+	}
+}
+
+// A User is created with the field set either way, or without it.
+func TestUserRequirePasswordChangeOnFirstLoginOnCreate(t *testing.T) {
+	for version, schema := range userSchemas(t) {
+		for _, value := range []any{nil, true, false} {
+			object := userObject(version, "jane@example.com")
+			if value != nil {
+				object["spec"].(map[string]any)["requirePasswordChangeOnFirstLogin"] = value
+			}
+			validateAuthenticator(t, schema, object, true)
+		}
+		object := userObject(version, "jane@example.com")
+		object["spec"].(map[string]any)["requirePasswordChangeOnFirstLogin"] = "yes"
+		validateAuthenticator(t, schema, object, false)
+	}
+}
+
+// The password stays immutable next to the new rule.
+func TestUserPasswordIsImmutable(t *testing.T) {
+	for version, schema := range userSchemas(t) {
+		t.Run(version, func(t *testing.T) {
+			old := userObject(version, "jane@example.com")
+			updated := userObject(version, "jane@example.com")
+			updated["spec"].(map[string]any)["password"] = "$2y$10$dMXeFQPduGXaS2X1OpgYvOGK/5.Gl6nluOfRHg5iPt8nJXzK8iy.G"
+			errors := validateAuthenticatorUpdate(t, schema, updated, old)
+			require.Len(t, errors, 1)
+			require.Contains(t, errors[0].Error(), "password is immutable")
+		})
+	}
+}

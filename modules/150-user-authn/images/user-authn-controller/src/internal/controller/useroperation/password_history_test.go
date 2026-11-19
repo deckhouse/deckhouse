@@ -21,6 +21,7 @@ import (
 	"encoding/base64"
 	"net/http"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -200,5 +201,127 @@ func TestResetPassword_RetriesOnAConcurrentChange(t *testing.T) {
 	history, _ := previousHashes(got)
 	if want := []any{"p1", "old", "changed"}; !reflect.DeepEqual(history, want) {
 		t.Errorf("previousHashes = %v, want %v", history, want)
+	}
+}
+
+// resetPasswordOperationWith is the ResetPassword of admin with spec.resetPassword.requirePasswordChange
+// set to requireChange, or unset when it is nil.
+func resetPasswordOperationWith(requireChange *bool) *unstructured.Unstructured {
+	reset := map[string]any{"newPasswordHash": rawBcryptHash}
+	if requireChange != nil {
+		reset["requirePasswordChange"] = *requireChange
+	}
+	return userOperationObj("user-operation-01", resetTime, map[string]any{
+		"type":          "ResetPassword",
+		"initiatorType": "Admin",
+		"user":          "admin",
+		"resetPassword": reset,
+	})
+}
+
+// requirePasswordChange decides the flag of the reset, whatever flag the Password had: false clears
+// the one a previous reset left, also when the operation runs again after its patch. Every reset
+// dates the hash, so that the rotation of the policy counts from the reset. The history follows the
+// policy as before.
+func TestResetPassword_RequirePasswordChange(t *testing.T) {
+	t.Parallel()
+
+	const oldDate = "2024-01-02T03:04:05Z"
+	yes, no := true, false
+	for _, tc := range []struct {
+		name          string
+		requireChange *bool
+		password      map[string]any
+		historyLimit  uint64
+		expectedFlag  bool
+		expectedHist  []any
+		noteInMessage bool
+	}{
+		{
+			name:         "unset requires the change",
+			password:     map[string]any{"hash": "old", "hashUpdatedAt": oldDate},
+			expectedFlag: true,
+		},
+		{
+			name:          "true requires the change",
+			requireChange: &yes,
+			password:      map[string]any{"hash": "old", "hashUpdatedAt": oldDate},
+			expectedFlag:  true,
+		},
+		{
+			name:          "false does not require it",
+			requireChange: &no,
+			password:      map[string]any{"hash": "old", "hashUpdatedAt": oldDate},
+			noteInMessage: true,
+		},
+		{
+			name:          "false clears the flag of a previous reset",
+			requireChange: &no,
+			password:      map[string]any{"hash": "old", "hashUpdatedAt": oldDate, "requireResetHashOnNextSuccLogin": true},
+			noteInMessage: true,
+		},
+		{
+			name:          "false with a policy keeps the history",
+			requireChange: &no,
+			password:      map[string]any{"hash": "old", "hashUpdatedAt": oldDate, "previousHashes": []any{"p1"}},
+			historyLimit:  5,
+			expectedHist:  []any{"p1", "old"},
+			noteInMessage: true,
+		},
+		{
+			name:          "false without a history leaves it as is",
+			requireChange: &no,
+			password:      map[string]any{"hash": "old", "hashUpdatedAt": oldDate, "previousHashes": []any{"p1"}},
+			expectedHist:  []any{"p1"},
+			noteInMessage: true,
+		},
+		{
+			name:          "false run again after its patch clears the flag",
+			requireChange: &no,
+			password:      map[string]any{"hash": encodedBcryptHash, "hashUpdatedAt": oldDate, "previousHashes": []any{"p1"}, "requireResetHashOnNextSuccLogin": true},
+			historyLimit:  5,
+			expectedHist:  []any{"p1"},
+			noteInMessage: true,
+		},
+		{
+			name:         "unset run again after its patch keeps the flag",
+			password:     map[string]any{"hash": encodedBcryptHash, "hashUpdatedAt": oldDate, "previousHashes": []any{"p1"}},
+			historyLimit: 5,
+			expectedHist: []any{"p1"},
+			expectedFlag: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			r := newTestReconciler(t, resetTime, passwordObj("admin", tc.password), resetPasswordOperationWith(tc.requireChange))
+			r.passwordHistoryLimit = tc.historyLimit
+			if _, err := r.Reconcile(t.Context(), opRequest("user-operation-01")); err != nil {
+				t.Fatalf("Reconcile: %v", err)
+			}
+			assertPhase(t, r, "user-operation-01", "Succeeded", resetTime)
+
+			got := getUnstructured(t, r, controller.PasswordGVK, naming.DexNamespace, passwordObjectName)
+			if hash, _, _ := unstructured.NestedString(got.Object, "hash"); hash != encodedBcryptHash {
+				t.Errorf("hash = %q, want the reset hash", hash)
+			}
+			flag, found, _ := unstructured.NestedBool(got.Object, "requireResetHashOnNextSuccLogin")
+			if !found || flag != tc.expectedFlag {
+				t.Errorf("requireResetHashOnNextSuccLogin = %v (present %v), want %v", flag, found, tc.expectedFlag)
+			}
+			if updatedAt, _, _ := unstructured.NestedString(got.Object, "hashUpdatedAt"); updatedAt != resetTime.Format(time.RFC3339) {
+				t.Errorf("hashUpdatedAt = %q, want the time of the reset %q", updatedAt, resetTime.Format(time.RFC3339))
+			}
+			history, _ := previousHashes(got)
+			if !reflect.DeepEqual(history, tc.expectedHist) {
+				t.Errorf("previousHashes = %v, want %v", history, tc.expectedHist)
+			}
+
+			op := getUnstructured(t, r, controller.UserOperationGVK, "", "user-operation-01")
+			message, _, _ := unstructured.NestedString(op.Object, "status", "message")
+			if strings.Contains(message, noPasswordChangeMessage) != tc.noteInMessage {
+				t.Errorf("status.message = %q, want the note %q: %v", message, noPasswordChangeMessage, tc.noteInMessage)
+			}
+		})
 	}
 }

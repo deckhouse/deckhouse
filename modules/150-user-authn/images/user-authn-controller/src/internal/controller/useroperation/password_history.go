@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -38,7 +39,12 @@ type jsonPatchOp struct {
 }
 
 // resetPasswordHash gives the Password name the hash (base64 of a bcrypt hash, as Dex stores it)
-// and makes the user change it at the next sign-in.
+// at now, and makes the user change it at the next sign-in when requireChange is set. Without it,
+// the flag a previous reset left is cleared.
+//
+// hashUpdatedAt becomes now, as Dex sets it when the user changes the password (Policy.Changed of
+// patch 220): the rotation of the policy counts from it, and a reset that does not require a change
+// would otherwise send the user with an old date to the password change page at once.
 //
 // When the password policy keeps a history, the replaced hash joins previousHashes, trimmed to the
 // last passwordHistoryLimit, as Dex does when the user changes the password (Policy.Changed of
@@ -49,7 +55,7 @@ type jsonPatchOp struct {
 // lands between the read and the write fails the patch (422 from the API server), and the
 // read-build-write runs again on the new values instead of dropping the hash written meanwhile.
 // The Password is read past the cache, which may not have the change yet.
-func (r *Reconciler) resetPasswordHash(ctx context.Context, namespace, name, hash string) error {
+func (r *Reconciler) resetPasswordHash(ctx context.Context, namespace, name, hash string, requireChange bool, now time.Time) error {
 	return retry.OnError(retry.DefaultRetry, isPatchRace, func() error {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -58,7 +64,7 @@ func (r *Reconciler) resetPasswordHash(ctx context.Context, namespace, name, has
 		if err := r.apiReader.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, obj); err != nil {
 			return fmt.Errorf("get password %s: %w", name, err)
 		}
-		ops, err := resetHashPatch(obj, hash, r.passwordHistoryLimit)
+		ops, err := resetHashPatch(obj, hash, r.passwordHistoryLimit, requireChange, now)
 		if err != nil {
 			return err
 		}
@@ -81,7 +87,8 @@ func isPatchRace(err error) bool {
 
 // resetHashPatch builds the JSON Patch of resetPasswordHash from the Password as it was read.
 // historyLimit 0 leaves previousHashes as it is, as Dex does without a history.
-func resetHashPatch(obj *unstructured.Unstructured, hash string, historyLimit uint64) ([]jsonPatchOp, error) {
+func resetHashPatch(obj *unstructured.Unstructured, hash string, historyLimit uint64, requireChange bool, now time.Time) ([]jsonPatchOp, error) {
+	updatedAt := now.UTC().Format(time.RFC3339)
 	current, hasHash, err := unstructured.NestedString(obj.Object, "hash")
 	if err != nil {
 		return nil, fmt.Errorf("password %s hash: %w", obj.GetName(), err)
@@ -89,7 +96,10 @@ func resetHashPatch(obj *unstructured.Unstructured, hash string, historyLimit ui
 	if hasHash && current == hash {
 		// The operation ran again after its patch (a requeue): the hash is its own, and the hash it
 		// replaced is in the history already.
-		return []jsonPatchOp{{Op: "add", Path: "/requireResetHashOnNextSuccLogin", Value: true}}, nil
+		return []jsonPatchOp{
+			{Op: "add", Path: "/hashUpdatedAt", Value: updatedAt},
+			{Op: "add", Path: "/requireResetHashOnNextSuccLogin", Value: requireChange},
+		}, nil
 	}
 	previous, hasHistory, err := unstructured.NestedFieldCopy(obj.Object, "previousHashes")
 	if err != nil {
@@ -123,6 +133,7 @@ func resetHashPatch(obj *unstructured.Unstructured, hash string, historyLimit ui
 	}
 	return append(ops,
 		jsonPatchOp{Op: "add", Path: "/hash", Value: hash},
-		jsonPatchOp{Op: "add", Path: "/requireResetHashOnNextSuccLogin", Value: true},
+		jsonPatchOp{Op: "add", Path: "/hashUpdatedAt", Value: updatedAt},
+		jsonPatchOp{Op: "add", Path: "/requireResetHashOnNextSuccLogin", Value: requireChange},
 	), nil
 }

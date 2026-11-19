@@ -31,6 +31,15 @@ spec:
           properties:
             spec:
               type: object
+              x-kubernetes-validations:
+                # The field acts when the controller creates the Password from spec.password. The rule
+                # sits on spec, not on the field: a rule on the field runs only when the old and the
+                # new object both have it, and adding or removing the field would pass.
+                - rule: >-
+                    has(self.requirePasswordChangeOnFirstLogin) == has(oldSelf.requirePasswordChangeOnFirstLogin)
+                    && (!has(self.requirePasswordChangeOnFirstLogin)
+                    || self.requirePasswordChangeOnFirstLogin == oldSelf.requirePasswordChangeOnFirstLogin)
+                  message: requirePasswordChangeOnFirstLogin is immutable; it can be set only when the User is created
               required:
                 - email
                 - password
@@ -60,7 +69,7 @@ spec:
 
                     Use the following command to encode the password hash in Base64: `echo -n '<PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo`. You can also create the user with `d8 iam user create`, which computes the hash locally.
 
-                    > **Caution.** If a password policy with complexity checking higher than `None` is used, the user will have to change a password set this way upon their first successful login.
+                    > **Caution.** If the password does not meet the complexity rules of the password policy, the user has to change it at the first sign-in. To make the user change the password at the first sign-in in any case, set [`requirePasswordChangeOnFirstLogin`](#user-v1-spec-requirepasswordchangeonfirstlogin).
 
                     > **Caution.** This field is immutable after the User is created. Changing the password via `kubectl edit` does not update Dex credentials and will be rejected. To reset the password, use the [UserOperation](#useroperation) resource (or `d8 iam user`).
                   x-doc-examples: ['JDJ5JDEwJGRNWGVGUVBkdUdYYVMyWDFPcGdZdk9HSy81LkdsNm5sdU9mUkhnNWlQdDhuSlh6SzhpeS5H']
@@ -90,6 +99,14 @@ spec:
 
                     You can only set the TTL once. The `expireAt` date will not be updated if you change it again.
                   x-doc-examples: ['24h']
+                requirePasswordChangeOnFirstLogin:
+                  type: boolean
+                  description: |
+                    Require the user to change the password at the first sign-in.
+
+                    Applies when the module creates the Dex credentials of the user from `password`: when the User is created, created again, or restored from a backup.
+
+                    Can be set only when the User is created. Adding, changing, or removing the field later is rejected.
             status:
               type: object
               properties:
@@ -168,6 +185,15 @@ spec:
           properties:
             spec:
               type: object
+              x-kubernetes-validations:
+                # The field acts when the controller creates the Password from spec.password. The rule
+                # sits on spec, not on the field: a rule on the field runs only when the old and the
+                # new object both have it, and adding or removing the field would pass.
+                - rule: >-
+                    has(self.requirePasswordChangeOnFirstLogin) == has(oldSelf.requirePasswordChangeOnFirstLogin)
+                    && (!has(self.requirePasswordChangeOnFirstLogin)
+                    || self.requirePasswordChangeOnFirstLogin == oldSelf.requirePasswordChangeOnFirstLogin)
+                  message: requirePasswordChangeOnFirstLogin is immutable; it can be set only when the User is created
               required:
                 - email
                 - password
@@ -196,6 +222,8 @@ spec:
                     User password hash in plaintext or Base64 encoded.
 
                     Use the following command to encode the password hash in Base64: `echo -n '<PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo`. You can also create the user with `d8 iam user create`, which computes the hash locally.
+
+                    > **Caution.** If the password does not meet the complexity rules of the password policy, the user has to change it at the first sign-in. To make the user change the password at the first sign-in in any case, set [`requirePasswordChangeOnFirstLogin`](#user-v1-spec-requirepasswordchangeonfirstlogin).
 
                     > **Caution.** This field is immutable after the User is created. Changing the password via `kubectl edit` does not update Dex credentials and will be rejected. To reset the password, use the [UserOperation](#useroperation) resource (or `d8 iam user`).
                   x-doc-examples: ['JDJ5JDEwJGRNWGVGUVBkdUdYYVMyWDFPcGdZdk9HSy81LkdsNm5sdU9mUkhnNWlQdDhuSlh6SzhpeS5H']
@@ -226,6 +254,14 @@ spec:
 
                     You can only set the TTL once. The `expireAt` date will not be updated if you change it again.
                   x-doc-examples: ['24h']
+                requirePasswordChangeOnFirstLogin:
+                  type: boolean
+                  description: |
+                    Require the user to change the password at the first sign-in.
+
+                    Applies when the module creates the Dex credentials of the user from `password`: when the User is created, created again, or restored from a backup.
+
+                    Can be set only when the User is created. Adding, changing, or removing the field later is rejected.
             status:
               type: object
               properties:

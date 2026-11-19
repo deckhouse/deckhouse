@@ -978,6 +978,8 @@ spec:
 
 {% endraw %}
 
+Чтобы пользователь сменил пароль при первом входе, укажите [`requirePasswordChangeOnFirstLogin: true`](cr.html#user-v1-spec-requirepasswordchangeonfirstlogin). Поле задаётся только при создании User.
+
 [Правила авторизации](/modules/user-authz/cr.html#authorizationrule) предоставляют права пользователю на основе email из выданного токена. По этой причине нельзя создать ресурс User, у которого значение `spec.email` совпадает с субъектом типа `User` в существующем ресурсе [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) или [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule). Это предотвращает незаметное предоставление прав новому пользователю.
 
 Если совпадение необходимо, например, если правило авторизации было создано заранее, укажите другой email или установите для пользователя аннотацию `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"`. Аннотация только подтверждает совпадение имени. Назначить грант по-прежнему можно, только если запрашивающий покрывает роли или они входят в его диапазон can-assign.
@@ -1024,7 +1026,7 @@ d8 iam user delete anton --keep-memberships
 
 Удалить или пересоздать локального пользователя либо выполнить над ним UserOperation (`ResetPassword`, `RequirePasswordChange`, `Reset2FA`, `Lock`, `Unlock`, `Logout`) можно, только если вы можете назначить все роли, уже выданные email или группам пользователя (покрывающие права или явный диапазон can-assign). `initiatorType: self` эту проверку не обходит. То же правило действует для объектов DexProvider. Подробнее — [в разделе «Ограничение идентичностей провайдера»](#ограничение-идентичностей-провайдера).
 
-После сброса пароля администратором операцией `ResetPassword` пользователь один раз входит с этим паролем. Затем Dex просит пользователя задать новый пароль, соответствующий парольной политике.
+После сброса пароля администратором операцией `ResetPassword` пользователь один раз входит с этим паролем. Затем Dex просит пользователя задать новый пароль, соответствующий парольной политике. Чтобы новый пароль продолжал действовать, укажите в UserOperation `resetPassword.requirePasswordChange: false`.
 
 Пример интерактивного сброса пароля:
 
@@ -1111,7 +1113,9 @@ d8 iam user unlock admin
 
 #### Ручное создание UserOperation
 
-Когда CLI `d8 iam user` недоступен (например, в CI/CD, GitOps или скриптах автоматизации), ресурс [UserOperation](cr.html#useroperation) можно создать напрямую. Используйте `apiVersion: deckhouse.io/v1` и укажите `initiatorType: admin`.
+Когда CLI `d8 iam user` недоступен (например, в CI/CD или скриптах автоматизации), создайте ресурс [UserOperation](cr.html#useroperation) напрямую. Используйте `apiVersion: deckhouse.io/v1` и укажите `initiatorType: admin`.
+
+Не храните UserOperation в GitOps-репозитории. Модуль удаляет операцию через [`retention.userOperations`](configuration.html#parameters-retention-useroperations), а созданная заново операция выполняется снова.
 
 Пример — сброс пароля локального пользователя (в `newPasswordHash` указывается bcrypt-хеш без кодирования в Base64; модуль кодирует его автоматически):
 

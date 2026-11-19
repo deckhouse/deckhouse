@@ -69,6 +69,11 @@ spec:
                     newPasswordHash:
                       type: string
                       description: "Bcrypt hash of the new password."
+                      x-kubernetes-validations:
+                        # The controller refuses the same value when it runs the operation; the rule refuses it
+                        # when the operation is applied, with the usual cause in the message.
+                        - rule: "self.startsWith('$2')"
+                          message: "newPasswordHash must be a raw bcrypt hash starting with $2 (for example, $2y$10$...). A heredoc without quotes around EOF replaces $2y and $10 with shell variables: use <<'EOF'."
                 lock:
                   type: object
                   description: "Parameters for locking the user."
@@ -259,6 +264,18 @@ spec:
                       type: string
                       description: |
                         Bcrypt hash of the new password, without Base64 encoding.
+                      x-kubernetes-validations:
+                        # The controller refuses the same value when it runs the operation; the rule refuses it
+                        # when the operation is applied, with the usual cause in the message.
+                        - rule: "self.startsWith('$2')"
+                          message: "newPasswordHash must be a raw bcrypt hash starting with $2 (for example, $2y$10$...). A heredoc without quotes around EOF replaces $2y and $10 with shell variables: use <<'EOF'."
+                    requirePasswordChange:
+                      type: boolean
+                      default: true
+                      description: |
+                        Require the user to change the password at the next sign-in.
+
+                        With `false`, the new password stays valid until the user changes it or until the rotation interval of the password policy ends. A password that does not meet the complexity rules still has to change at the next sign-in.
                 lock:
                   type: object
                   description: "Parameters for locking the user."
