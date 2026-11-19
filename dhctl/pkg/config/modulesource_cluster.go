@@ -247,14 +247,11 @@ func useUpstreamRegistry(ctx context.Context, kubeCl *client.KubernetesClient, s
 	return nil
 }
 
-// storeThroughNode is replaced in tests, which have no SSH connection to open a tunnel over.
 var storeThroughNode = registrydata.StoreThroughNode
 
 // useStoreThroughNode points the source at the cluster's own store, through the SSH connection to a
-// master, for an out-of-cluster caller on a cluster that names no upstream. The in-cluster address does
-// not resolve here, and the store is the only place left that holds the module: a provider module
-// installed from the built-in source on an air-gapped cluster made `dhctl config edit
-// provider-cluster-configuration` fail with `lookup registry.d8-system.svc: no such host`.
+// master, for an out-of-cluster caller on a cluster that names no upstream: the in-cluster address does
+// not resolve outside, and the store is the only place left that holds the module.
 //
 // A source the store does not stand behind, or no SSH connection, leaves the source as it is.
 func useStoreThroughNode(ctx context.Context, kubeCl *client.KubernetesClient, src *ModuleSource) error {

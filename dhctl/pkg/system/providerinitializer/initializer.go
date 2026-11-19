@@ -119,15 +119,12 @@ func (i *SSHProviderInitializer) GetSSHProvider(ctx context.Context) (libcon.SSH
 	return provider.NewDefaultSSHProvider(i.baseProviderSettings, i.config), ErrHostsFromCacheNotFound
 }
 
-// SSHClient is the connection to a master this command was given hosts for, to carry along on the
-// Kubernetes client: a cluster with its own registry names an address that resolves only inside it,
-// and a second channel on this connection is how that registry is reached from outside (see
-// registrydata.mirrorThroughNode).
+// SSHConnect yields the connection to a master this command was given hosts for, to carry along on the
+// Kubernetes client (client.KubernetesClient.SSHConnect). Nothing connects until the returned function
+// is called, and it reuses the connection when one is open already.
 //
-// Nil when the command has no SSH hosts or the connection cannot be had. Hosts are not looked up in the
-// state cache here, so a command that reaches Kubernetes with a kubeconfig opens no SSH connection on
-// its behalf. The caller then behaves as it did without one.
-func (i *SSHProviderInitializer) SSHClient(ctx context.Context) libcon.SSHClient {
+// Nil when the command has no SSH hosts: hosts are not looked up in the state cache here.
+func (i *SSHProviderInitializer) SSHConnect() func(ctx context.Context) (libcon.SSHClient, error) {
 	if i == nil {
 		return nil
 	}
@@ -140,13 +137,17 @@ func (i *SSHProviderInitializer) SSHClient(ctx context.Context) libcon.SSHClient
 		return nil
 	}
 
-	sshClient, err := sshProvider.Client(ctx)
-	if err != nil {
-		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("no ssh connection to reach the cluster store through: %v", err))
-		return nil
-	}
+	return func(ctx context.Context) (libcon.SSHClient, error) {
+		i.mut.Lock()
+		current := i.provider
+		i.mut.Unlock()
 
-	return sshClient
+		if govalue.Nil(current) {
+			return nil, errors.New("the SSH connection is gone")
+		}
+
+		return current.Client(ctx)
+	}
 }
 
 func (i *SSHProviderInitializer) Cleanup(ctx context.Context) error {

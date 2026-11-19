@@ -28,32 +28,45 @@ type fakeSSHProvider struct {
 
 	client libcon.SSHClient
 	err    error
+	calls  *int
 }
 
-func (p fakeSSHProvider) Client(context.Context) (libcon.SSHClient, error) { return p.client, p.err }
+func (p fakeSSHProvider) Client(context.Context) (libcon.SSHClient, error) {
+	*p.calls++
+	return p.client, p.err
+}
 
 type fakeSSHClient struct{ libcon.SSHClient }
 
-// TestTheSSHClientIsTheOneTheCommandWasGiven: the connection carried to the Kubernetes client is the
-// one the command already has, and a command without one gets none rather than an error.
-func TestTheSSHClientIsTheOneTheCommandWasGiven(t *testing.T) {
-	t.Run("the provider's client", func(t *testing.T) {
+// TestTheSSHConnectionIsOpenedOnlyWhenAskedFor: a command that reaches Kubernetes with a kubeconfig
+// and also names an SSH host must not wait on that host unless something needs a node.
+func TestTheSSHConnectionIsOpenedOnlyWhenAskedFor(t *testing.T) {
+	t.Run("the provider's client, asked for on the call", func(t *testing.T) {
 		sshClient := &fakeSSHClient{}
-		i := &SSHProviderInitializer{provider: fakeSSHProvider{client: sshClient}}
+		calls := new(int)
+		i := &SSHProviderInitializer{provider: fakeSSHProvider{client: sshClient, calls: calls}}
 
-		require.Same(t, sshClient, i.SSHClient(t.Context()))
+		connect := i.SSHConnect()
+		require.NotNil(t, connect)
+		require.Zero(t, *calls)
+
+		got, err := connect(t.Context())
+		require.NoError(t, err)
+		require.Same(t, sshClient, got)
+		require.Equal(t, 1, *calls)
 	})
 
-	t.Run("a connection that cannot be had is none", func(t *testing.T) {
-		i := &SSHProviderInitializer{provider: fakeSSHProvider{err: errors.New("ssh: handshake failed")}}
+	t.Run("a connection that cannot be had is an error", func(t *testing.T) {
+		i := &SSHProviderInitializer{provider: fakeSSHProvider{err: errors.New("ssh: handshake failed"), calls: new(int)}}
 
-		require.Nil(t, i.SSHClient(t.Context()))
+		_, err := i.SSHConnect()(t.Context())
+		require.ErrorContains(t, err, "ssh: handshake failed")
 	})
 
 	t.Run("no SSH hosts, or no SSH at all", func(t *testing.T) {
-		require.Nil(t, NewSSHProviderInitializer(nil, nil).SSHClient(t.Context()))
+		require.Nil(t, NewSSHProviderInitializer(nil, nil).SSHConnect())
 
 		var none *SSHProviderInitializer
-		require.Nil(t, none.SSHClient(t.Context()))
+		require.Nil(t, none.SSHConnect())
 	})
 }

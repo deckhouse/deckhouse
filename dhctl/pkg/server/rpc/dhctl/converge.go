@@ -337,6 +337,7 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 	}
 
 	checkParams.KubeProvider = kubeProvider
+	checkParams.SSHProviderInitializer = sshProviderInitializer
 
 	convergeParams.KubeProvider = kubeProvider
 	convergeParams.SSHProviderInitializer = sshProviderInitializer

@@ -1423,6 +1423,8 @@ func TestModuleDocsFromClusterSubstitutesUpstreamRegistry(t *testing.T) {
 // through the SSH connection is the only place left that holds the module.
 func TestAnAirGappedSourceIsReadFromTheStoreThroughTheNode(t *testing.T) {
 	newCluster := func(t *testing.T) *client.KubernetesClient {
+		t.Helper()
+
 		kubeCl := client.NewFakeKubernetesClientWithListGVR(map[schema.GroupVersionResource]string{
 			ModuleGVR:       "ModuleList",
 			ModuleSourceGVR: "ModuleSourceList",
@@ -1514,6 +1516,8 @@ func TestTheUpstreamServesWhatTheClusterNamesInCluster(t *testing.T) {
 // registry module names, or — air-gapped — from the store with the store's own authority and account.
 func TestAProviderFromASourceIsReadInTheClusterTheWayTheModuleSays(t *testing.T) {
 	newCluster := func(t *testing.T) *client.KubernetesClient {
+		t.Helper()
+
 		kubeCl := client.NewFakeKubernetesClientWithListGVR(map[schema.GroupVersionResource]string{
 			ModuleGVR:       "ModuleList",
 			ModuleSourceGVR: "ModuleSourceList",
