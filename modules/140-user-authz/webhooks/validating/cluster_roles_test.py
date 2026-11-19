@@ -152,6 +152,28 @@ class TestClusterRolesValidation(unittest.TestCase):
                 )
                 tests.assert_validation_deny(self, out, RESERVED_PREFIX_MSG)
 
+    def test_commander_bootstrap_exception_only_applies_to_create_and_name(self):
+        for name, operation, labels, denied in [
+            ("d8:commander:workspace:reader", "CREATE", None, False),
+            ("d8:commander:reader", "UPDATE", None, True),
+            ("d8:other:reader", "CREATE", None, True),
+            (
+                "d8:commander:reader",
+                "CREATE",
+                {"rbac.deckhouse.io/scope": "system", "rbac.deckhouse.io/use-role": "admin"},
+                True,
+            ),
+        ]:
+            with self.subTest(name=name, operation=operation, labels=labels):
+                ctx = binding_context(name, labels=labels, rules=SOME_RULES, username="dhctl")
+                ctx.review.request.operation = operation
+                ctx.review.request.userInfo.groups = ["system:masters"]
+                error = cluster_roles.validation_error(ctx)
+                if denied:
+                    self.assertIsNotNone(error)
+                else:
+                    self.assertIsNone(error)
+
     def test_commander_agent_gets_no_other_d8_name(self):
         for name in ["d8:project:admin", "d8:commander-agent", "d8:whatever"]:
             with self.subTest(name=name):
