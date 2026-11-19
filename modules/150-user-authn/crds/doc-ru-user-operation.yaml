@@ -41,6 +41,8 @@ spec:
                       description: |
                         Новый пароль в виде bcrypt-хеша.  
                         Хеш должен быть получен заранее и передан в поле CR.
+
+                        Если у вызывающей стороны нет прав на подресурс `useroperations/sensitive`, API возвращает `<omitted>` вместо значения.
                 lock:
                   description: |
                     Параметры операции по блокировке пользователя.
@@ -156,6 +158,8 @@ spec:
                     newPasswordHash:
                       description: |
                         Bcrypt-хеш нового пароля без кодирования в Base64.
+
+                        Если у вызывающей стороны нет прав на подресурс `useroperations/sensitive`, API возвращает `<omitted>` вместо значения.
                     requirePasswordChange:
                       description: |
                         Требовать от пользователя сменить пароль при следующем входе.

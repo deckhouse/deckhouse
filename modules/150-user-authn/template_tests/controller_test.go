@@ -185,6 +185,20 @@ var _ = Describe("Module :: user-authn :: helm template :: controller", func() {
 		Expect(admin.Field(`rules.#(apiGroups.0=="dex.coreos.com").resources`).String()).To(ContainSubstring(`"revocations"`))
 	})
 
+	It("Should let the controller read the sensitive fields it uses", func() {
+		Expect(hec.RenderError).ShouldNot(HaveOccurred())
+
+		// Without the sensitive subresource the API returns <omitted> instead of the password hash of a User,
+		// the new password hash of a UserOperation and the secret of a DexProvider. The controller reads them
+		// through its cache, so it needs get, list and watch.
+		clusterRole := hec.KubernetesGlobalResource("ClusterRole", "d8:user-authn:controller")
+		rule := clusterRole.Field(`rules.#(resources.#(%"*/sensitive"))`)
+		Expect(rule.Get("apiGroups").String()).To(MatchJSON(`["deckhouse.io"]`))
+		Expect(rule.Get("resources").String()).To(MatchJSON(`["users/sensitive","dexproviders/sensitive","useroperations/sensitive"]`))
+		Expect(rule.Get("verbs").String()).To(MatchJSON(`["get","list","watch"]`))
+		Expect(clusterRole.Field(`rules.#(resources.#(%"*/sensitive"))#`).Array()).To(HaveLen(1))
+	})
+
 	It("Should give the readiness probe time for both readyz checks", func() {
 		Expect(hec.RenderError).ShouldNot(HaveOccurred())
 

@@ -161,7 +161,8 @@ func (r *Reconciler) getProvider(ctx context.Context, name string) (DexProviderF
 		return DexProviderForCheck{}, false, nil
 	}
 	obj := controller.Object(controller.DexProviderGVK)
-	err := r.client.Get(ctx, types.NamespacedName{Name: name}, obj)
+	// The secrets of the provider are sensitive data, the check signs in with them.
+	err := controller.GetUnmasked(ctx, r.client, r.apiReader, types.NamespacedName{Name: name}, obj)
 	if apierrors.IsNotFound(err) {
 		return DexProviderForCheck{}, false, nil
 	}

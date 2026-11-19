@@ -30,6 +30,19 @@ rules:
   - patch
   - delete
   - deletecollection
+# The secret fields of these resources are x-kubernetes-sensitive-data: without this subresource the API
+# returns <omitted> instead of the secrets of a DexProvider, the password hash of a User and the new
+# password hash of a UserOperation.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - dexproviders/sensitive
+  - users/sensitive
+  - useroperations/sensitive
+  verbs:
+  - get
+  - list
+  - watch
 # UserAccounts are created by the controller; this role is get/list/watch.
 - apiGroups:
   - deckhouse.io
@@ -51,6 +64,7 @@ rules:
   - deckhouse.io
   resources:
   - dexproviderchecks
+  - useroperations
   verbs:
   - get
   - list

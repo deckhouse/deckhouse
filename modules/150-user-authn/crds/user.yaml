@@ -63,6 +63,7 @@ spec:
                   x-doc-examples: ['user@domain.com']
                 password:
                   type: string
+                  x-kubernetes-sensitive-data: true
                   minLength: 1
                   description: |
                     User password hash in plaintext or Base64 encoded.
@@ -72,6 +73,8 @@ spec:
                     > **Caution.** If the password does not meet the complexity rules of the password policy, the user has to change it at the first sign-in. To make the user change the password at the first sign-in in any case, set [`requirePasswordChangeOnFirstLogin`](#user-v1-spec-requirepasswordchangeonfirstlogin).
 
                     > **Caution.** This field is immutable after the User is created. Changing the password via `kubectl edit` does not update Dex credentials and will be rejected. To reset the password, use the [UserOperation](#useroperation) resource (or `d8 iam user`).
+
+                    If the caller is not allowed to read the `users/sensitive` subresource, the API returns `<omitted>` instead of the value.
                   x-doc-examples: ['JDJ5JDEwJGRNWGVGUVBkdUdYYVMyWDFPcGdZdk9HSy81LkdsNm5sdU9mUkhnNWlQdDhuSlh6SzhpeS5H']
                   x-kubernetes-validations:
                     - rule: self == oldSelf
@@ -217,6 +220,7 @@ spec:
                   x-doc-examples: ['user@domain.com']
                 password:
                   type: string
+                  x-kubernetes-sensitive-data: true
                   minLength: 1
                   description: |
                     User password hash in plaintext or Base64 encoded.
@@ -226,6 +230,8 @@ spec:
                     > **Caution.** If the password does not meet the complexity rules of the password policy, the user has to change it at the first sign-in. To make the user change the password at the first sign-in in any case, set [`requirePasswordChangeOnFirstLogin`](#user-v1-spec-requirepasswordchangeonfirstlogin).
 
                     > **Caution.** This field is immutable after the User is created. Changing the password via `kubectl edit` does not update Dex credentials and will be rejected. To reset the password, use the [UserOperation](#useroperation) resource (or `d8 iam user`).
+
+                    If the caller is not allowed to read the `users/sensitive` subresource, the API returns `<omitted>` instead of the value.
                   x-doc-examples: ['JDJ5JDEwJGRNWGVGUVBkdUdYYVMyWDFPcGdZdk9HSy81LkdsNm5sdU9mUkhnNWlQdDhuSlh6SzhpeS5H']
                   x-kubernetes-validations:
                     - rule: self == oldSelf

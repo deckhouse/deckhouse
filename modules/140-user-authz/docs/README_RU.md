@@ -164,6 +164,15 @@ Namespace-роль определяет права на доступ к namespac
 - `manager` — дополнительно к уровню `viewer` позволяет управлять конфигурацией модулей (ресурсы ModuleConfig) и cluster-wide-ресурсами модулей; в неймспейсах модулей даёт тот же доступ на чтение, что и `viewer`;
 - `superadmin` — дополнительно к уровню `manager` позволяет всё в неймспейсах модулей: управлять стандартными ресурсами Kubernetes и namespaced-ресурсами модулей, читать секреты, подключаться к подам, выпускать токены ServiceAccount и управлять системными ресурсами модулей подсистемы.
 
+Роль `d8:subsystem:iam:manager` даёт следующие права на UserOperation.
+
+| Ресурс или подресурс | Действия |
+|----------------------|----------|
+| `useroperations` | `create`, `get`, `list`, `watch` |
+| `useroperations/sensitive` | `get`, `list`, `watch` |
+
+Права на `useroperations/sensitive` позволяют читать `spec.resetPassword.newPasswordHash`, пока поле присутствует в UserOperation.
+
 ### Доступ системных и подсистемных ролей в неймспейсы модулей
 
 Обладатель системной или подсистемной роли автоматически получает RoleBinding на namespace-роль в каждом системном неймспейсе, где работают модули подсистемы роли (роль `d8:system:*` охватывает все системные неймспейсы): уровни `viewer` и `manager` получают `d8:namespace:viewer`, уровень `superadmin` — `d8:namespace:superadmin`. Платформа сама создаёт и удаляет эти RoleBinding (на них лейбл `rbac.deckhouse.io/automated: "true"`), по одному на каждый ClusterRoleBinding роли.
@@ -826,6 +835,7 @@ proxy:
     - nodes
 read:
     - control-plane.deckhouse.io/controlplaneoperations
+    - deckhouse.io/dexproviders/sensitive
     - deckhouse.io/effectivelicenses
     - deckhouse.io/modulesettingsdefinitions
     - deckhouse.io/nodestaticpodrequests
@@ -835,6 +845,8 @@ read:
     - deckhouse.io/registrynodes
     - deckhouse.io/registrystorages
     - deckhouse.io/registryupstreams/sensitive
+    - deckhouse.io/useroperations/sensitive
+    - deckhouse.io/users/sensitive
     - nfd.k8s-sigs.io/nodefeaturegroups
     - nfd.k8s-sigs.io/nodefeaturerules
     - nfd.k8s-sigs.io/nodefeatures

@@ -172,7 +172,11 @@ spec:
                       description: 'Organization application ID from GitHub.'
                     clientSecret:
                       type: string
-                      description: 'Organization application secret key from GitHub.'
+                      x-kubernetes-sensitive-data: true
+                      description: |
+                        Organization application secret key from GitHub.
+
+                        If the caller is not allowed to read the `dexproviders/sensitive` subresource, the API returns `<omitted>` instead of the value.
                     teamNameField:
                       type: string
                       enum: ['name', 'slug', 'both']
@@ -225,7 +229,11 @@ spec:
                       description: 'Application ID from GitLab.'
                     clientSecret:
                       type: string
-                      description: 'Application secret key from GitLab.'
+                      x-kubernetes-sensitive-data: true
+                      description: |
+                        Application secret key from GitLab.
+
+                        If the caller is not allowed to read the `dexproviders/sensitive` subresource, the API returns `<omitted>` instead of the value.
                     baseURL:
                       type: string
                       x-doc-examples: ['https://gitlab.example.com']
@@ -271,7 +279,11 @@ spec:
                       description: 'Team application ID from BitbucketCloud (Key).'
                     clientSecret:
                       type: string
-                      description: 'Team application secret key from BitbucketCloud.'
+                      x-kubernetes-sensitive-data: true
+                      description: |
+                        Team application secret key from BitbucketCloud.
+
+                        If the caller is not allowed to read the `dexproviders/sensitive` subresource, the API returns `<omitted>` instead of the value.
                     teams:
                       type: array
                       description: |
@@ -303,7 +315,11 @@ spec:
                       description: 'Application ID from Atlassian Crowd (Application Name).'
                     clientSecret:
                       type: string
-                      description: 'Application secret key from Atlassian Crowd (Password).'
+                      x-kubernetes-sensitive-data: true
+                      description: |
+                        Application secret key from Atlassian Crowd (Password).
+
+                        If the caller is not allowed to read the `dexproviders/sensitive` subresource, the API returns `<omitted>` instead of the value.
                     baseURL:
                       type: string
                       x-doc-examples: ['https://crowd.example.com/crowd']
@@ -346,7 +362,11 @@ spec:
                       description: 'OIDC issuer application ID.'
                     clientSecret:
                       type: string
-                      description: 'OIDC issuer application secret key.'
+                      x-kubernetes-sensitive-data: true
+                      description: |
+                        OIDC issuer application secret key.
+
+                        If the caller is not allowed to read the `dexproviders/sensitive` subresource, the API returns `<omitted>` instead of the value.
                     issuer:
                       type: string
                       x-doc-examples: ['https://accounts.google.com']
@@ -550,9 +570,12 @@ spec:
                         server provides access for anonymous auth.
                     bindPW:
                       type: string
+                      x-kubernetes-sensitive-data: true
                       x-doc-examples: ['password']
                       description: |
                         Password of the service account set in `bindDN`.
+
+                        If the caller is not allowed to read the `dexproviders/sensitive` subresource, the API returns `<omitted>` instead of the value.
                     userSearch:
                       type: object
                       required: ['baseDN', 'idAttr', 'emailAttr']
@@ -1010,7 +1033,11 @@ spec:
                       description: 'Organization application ID from GitHub.'
                     clientSecret:
                       type: string
-                      description: 'Organization application secret key from GitHub.'
+                      x-kubernetes-sensitive-data: true
+                      description: |
+                        Organization application secret key from GitHub.
+
+                        If the caller is not allowed to read the `dexproviders/sensitive` subresource, the API returns `<omitted>` instead of the value.
                     teamNameField:
                       type: string
                       enum: ['Name', 'Slug', 'Both']

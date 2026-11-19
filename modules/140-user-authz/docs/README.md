@@ -159,6 +159,15 @@ The module provides three access levels for system and subsystem roles:
 - `manager` — in addition to the level `viewer` it allows managing the configuration of modules (ModuleConfig resources) and the cluster-wide resources of modules; in the module namespaces it grants the same read access as `viewer`;
 - `superadmin` — in addition to the level `manager` it allows everything in the module namespaces: managing standard Kubernetes resources and the namespaced resources of modules, reading secrets, connecting to pods, issuing ServiceAccount tokens and managing the system resources of the subsystem modules.
 
+The `d8:subsystem:iam:manager` role grants the following permissions for UserOperation objects.
+
+| Resource or subresource | Verbs |
+|-------------------------|-------|
+| `useroperations` | `create`, `get`, `list`, `watch` |
+| `useroperations/sensitive` | `get`, `list`, `watch` |
+
+The `useroperations/sensitive` permission allows reading `spec.resetPassword.newPasswordHash` while the field is present in a UserOperation.
+
 ### Access of system and subsystem roles to the namespaces of the modules
 
 The holder of a system or subsystem role automatically gets a RoleBinding to a namespace role in every system namespace in which the modules of the role's subsystem run (a `d8:system:*` role covers all system namespaces): the `viewer` and `manager` levels get `d8:namespace:viewer`, the `superadmin` level gets `d8:namespace:superadmin`. The platform creates and removes these RoleBindings itself (they carry the label `rbac.deckhouse.io/automated: "true"`), one per ClusterRoleBinding of the role.
@@ -819,6 +828,7 @@ proxy:
     - nodes
 read:
     - control-plane.deckhouse.io/controlplaneoperations
+    - deckhouse.io/dexproviders/sensitive
     - deckhouse.io/effectivelicenses
     - deckhouse.io/modulesettingsdefinitions
     - deckhouse.io/nodestaticpodrequests
@@ -828,6 +838,8 @@ read:
     - deckhouse.io/registrynodes
     - deckhouse.io/registrystorages
     - deckhouse.io/registryupstreams/sensitive
+    - deckhouse.io/useroperations/sensitive
+    - deckhouse.io/users/sensitive
     - nfd.k8s-sigs.io/nodefeaturegroups
     - nfd.k8s-sigs.io/nodefeaturerules
     - nfd.k8s-sigs.io/nodefeatures

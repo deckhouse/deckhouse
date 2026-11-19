@@ -207,7 +207,8 @@ func (r *Reconciler) emailTooLong(user userView, email string) {
 
 func (r *Reconciler) getUser(ctx context.Context, name string) (userView, bool, error) {
 	obj := controller.Object(controller.UserGVK)
-	err := r.client.Get(ctx, types.NamespacedName{Name: name}, obj)
+	// spec.password is sensitive data: the Dex password is built from it.
+	err := controller.GetUnmasked(ctx, r.client, r.apiReader, types.NamespacedName{Name: name}, obj)
 	if apierrors.IsNotFound(err) {
 		return userView{}, false, nil
 	}

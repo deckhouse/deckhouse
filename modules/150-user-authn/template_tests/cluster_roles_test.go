@@ -45,6 +45,25 @@ var _ = Describe("Module :: user-authn :: helm template :: cluster roles", func(
 	})
 
 	Context("By default", func() {
+		It("Should let the IAM manager create and read UserOperations", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+
+			manager := hec.KubernetesGlobalResource("ClusterRole", "d8:system-capability:user-authn:edit")
+			Expect(manager.Field("metadata.labels.rbac\\.deckhouse\\.io/aggregate-to-iam-as").String()).To(Equal("manager"))
+			verbs := []string{}
+			for _, rule := range manager.Field(`rules.#(resources.#(=="useroperations"))#`).Array() {
+				Expect(rule.Get("apiGroups").String()).To(MatchJSON(`["deckhouse.io"]`))
+				Expect(rule.Get("resourceNames").Exists()).To(BeFalse())
+				for _, verb := range rule.Get("verbs").Array() {
+					verbs = append(verbs, verb.String())
+				}
+			}
+			Expect(verbs).To(ConsistOf("create", "get", "list", "watch"))
+
+			viewer := hec.KubernetesGlobalResource("ClusterRole", "d8:system-capability:user-authn:view")
+			Expect(viewer.Field("rules.#.resources").String()).ToNot(ContainSubstring("useroperations"))
+		})
+
 		// A collection read of the Dex storage CRDs returns whole objects, `hash` and
 		// `previousHashes` included, so no verb on them is safe to hand to a subject that is
 		// not expected to read credentials. Only the dex and user-api service accounts may.
@@ -59,6 +78,36 @@ var _ = Describe("Module :: user-authn :: helm template :: cluster roles", func(
 				clusterRole := hec.KubernetesGlobalResource("ClusterRole", name)
 				Expect(clusterRole.Exists()).To(BeTrue(), name)
 				Expect(clusterRole.Field("rules.#.apiGroups").String()).ToNot(ContainSubstring("dex.coreos.com"), name)
+			}
+		})
+
+		// The password hash of a User, the new password hash of a UserOperation and the secrets of a
+		// DexProvider are x-kubernetes-sensitive-data: without the sensitive subresource the API returns
+		// <omitted> instead of them. The IAM manager and the cluster admin read them, the other roles do not.
+		It("Should grant the sensitive fields of user-authn resources only to the manager and the cluster admin", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+
+			for _, name := range []string{
+				"d8:system-capability:user-authn:edit",
+				"d8:user-authz:user-authn:cluster-admin",
+			} {
+				clusterRole := hec.KubernetesGlobalResource("ClusterRole", name)
+				Expect(clusterRole.Exists()).To(BeTrue(), name)
+				rules := clusterRole.Field(`rules.#(resources.#(%"*/sensitive"))#`).Array()
+				Expect(rules).To(HaveLen(1), name)
+				Expect(rules[0].Get("apiGroups").String()).To(MatchJSON(`["deckhouse.io"]`), name)
+				Expect(rules[0].Get("resources").String()).To(MatchJSON(`["dexproviders/sensitive","users/sensitive","useroperations/sensitive"]`), name)
+				Expect(rules[0].Get("verbs").String()).To(MatchJSON(`["get","list","watch"]`), name)
+			}
+
+			for _, name := range []string{
+				"d8:system-capability:user-authn:view",
+				"d8:user-authz:user-authn:editor",
+				"d8:user-authz:user-authn:user",
+			} {
+				clusterRole := hec.KubernetesGlobalResource("ClusterRole", name)
+				Expect(clusterRole.Exists()).To(BeTrue(), name)
+				Expect(clusterRole.Field("rules.#.resources").String()).ToNot(ContainSubstring("/sensitive"), name)
 			}
 		})
 	})

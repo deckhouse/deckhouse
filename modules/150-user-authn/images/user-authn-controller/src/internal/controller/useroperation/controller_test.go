@@ -19,6 +19,7 @@ package useroperation
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -287,6 +288,36 @@ func TestReconcile_ResetPassword(t *testing.T) {
 	joined := strings.Join(rec.msgs, " ")
 	if strings.Contains(joined, rawBcryptHash) || strings.Contains(joined, encodedBcryptHash) {
 		t.Errorf("logs leaked password hash: %q", joined)
+	}
+}
+
+// A new password hash that reads as <omitted> (no useroperations/sensitive) is retried, it does
+// not fail the operation and does not touch the password.
+func TestReconcile_ResetPasswordWithMaskedHashIsRetried(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
+	pw := passwordObj("admin", map[string]any{"hash": "old-hash"})
+	op := userOperationObj("user-operation-01", now, map[string]any{
+		"type":          "ResetPassword",
+		"initiatorType": "Admin",
+		"user":          "admin",
+		"resetPassword": map[string]any{"newPasswordHash": controller.MaskedValue},
+	})
+	r := newTestReconciler(t, now, pw, op)
+
+	_, err := r.Reconcile(t.Context(), opRequest("user-operation-01"))
+	if !errors.Is(err, controller.ErrSensitiveMasked) {
+		t.Fatalf("Reconcile: err = %v, want ErrSensitiveMasked", err)
+	}
+
+	uo := getUnstructured(t, r, controller.UserOperationGVK, "", "user-operation-01")
+	if phase, _, _ := unstructured.NestedString(uo.Object, "status", "phase"); phase != "" {
+		t.Errorf("phase = %q, want none until the hash can be read", phase)
+	}
+	got := getUnstructured(t, r, controller.PasswordGVK, naming.DexNamespace, passwordObjectName)
+	if hash, _, _ := unstructured.NestedString(got.Object, "hash"); hash != "old-hash" {
+		t.Errorf("password hash = %q, want it untouched", hash)
 	}
 }
 

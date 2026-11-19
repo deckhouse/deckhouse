@@ -125,7 +125,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	obj := controller.Object(controller.UserOperationGVK)
-	err := r.client.Get(ctx, req.NamespacedName, obj)
+	// spec.resetPassword.newPasswordHash is sensitive data. A masked one fails the reconcile and is
+	// retried, it does not fail the operation.
+	err := controller.GetUnmasked(ctx, r.client, r.apiReader, req.NamespacedName, obj)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return reconcile.Result{}, nil

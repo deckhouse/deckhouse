@@ -68,7 +68,11 @@ spec:
                   properties:
                     newPasswordHash:
                       type: string
-                      description: "Bcrypt hash of the new password."
+                      x-kubernetes-sensitive-data: true
+                      description: |
+                        Bcrypt hash of the new password.
+
+                        If the caller is not allowed to read the `useroperations/sensitive` subresource, the API returns `<omitted>` instead of the value.
                       x-kubernetes-validations:
                         # The controller refuses the same value when it runs the operation; the rule refuses it
                         # when the operation is applied, with the usual cause in the message.
@@ -262,8 +266,11 @@ spec:
                   properties:
                     newPasswordHash:
                       type: string
+                      x-kubernetes-sensitive-data: true
                       description: |
                         Bcrypt hash of the new password, without Base64 encoding.
+
+                        If the caller is not allowed to read the `useroperations/sensitive` subresource, the API returns `<omitted>` instead of the value.
                       x-kubernetes-validations:
                         # The controller refuses the same value when it runs the operation; the rule refuses it
                         # when the operation is applied, with the usual cause in the message.

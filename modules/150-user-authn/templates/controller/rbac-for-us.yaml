@@ -49,6 +49,20 @@ rules:
   - list
   - watch
   - delete
+# The secret fields of these resources are x-kubernetes-sensitive-data: without this subresource the API
+# returns <omitted> instead of them. The controller builds the Dex password from User spec.password,
+# runs a ResetPassword UserOperation with spec.resetPassword.newPasswordHash, and a DexProviderCheck
+# signs in with the clientSecret or bindPW of the DexProvider it checks.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - users/sensitive
+  - dexproviders/sensitive
+  - useroperations/sensitive
+  verbs:
+  - get
+  - list
+  - watch
 - apiGroups:
   - deckhouse.io
   resources:

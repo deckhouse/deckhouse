@@ -111,6 +111,8 @@ spec:
                     clientSecret:
                       description: |
                         Secret организации на GitHub.
+
+                        Если у вызывающей стороны нет прав на подресурс `dexproviders/sensitive`, API возвращает `<omitted>` вместо значения.
                     teamNameField:
                       description: |
                         Формат команд, которые будут получены из GitHub.
@@ -147,6 +149,8 @@ spec:
                     clientSecret:
                       description: |
                         Secret приложения, созданного в GitLab (Secret).
+
+                        Если у вызывающей стороны нет прав на подресурс `dexproviders/sensitive`, API возвращает `<omitted>` вместо значения.
                     baseURL:
                       description: |
                         Адрес GitLab.
@@ -173,6 +177,8 @@ spec:
                     clientSecret:
                       description: |
                         Secret приложения, созданного в Bitbucket Cloud (Secret).
+
+                        Если у вызывающей стороны нет прав на подресурс `dexproviders/sensitive`, API возвращает `<omitted>` вместо значения.
                     teams:
                       description: |
                         Список-фильтр команд, допустимых для приема из Bitbucket Cloud.
@@ -198,6 +204,8 @@ spec:
                     clientSecret:
                       description: |
                         Пароль приложения, созданного в Crowd (Password).
+
+                        Если у вызывающей стороны нет прав на подресурс `dexproviders/sensitive`, API возвращает `<omitted>` вместо значения.
                     baseURL:
                       description: |
                         Адрес Crowd.
@@ -232,6 +240,8 @@ spec:
                     clientSecret:
                       description: |
                         Пароль приложения, созданного в OIDC-провайдере.
+
+                        Если у вызывающей стороны нет прав на подресурс `dexproviders/sensitive`, API возвращает `<omitted>` вместо значения.
                     issuer:
                       description: |
                         Адрес OIDC-провайдера.
@@ -351,6 +361,8 @@ spec:
                     bindPW:
                       description: |
                         Пароль сервисной учётной записи, заданной в `bindDN`.
+
+                        Если у вызывающей стороны нет прав на подресурс `dexproviders/sensitive`, API возвращает `<omitted>` вместо значения.
                     userSearch:
                       description: |
                         Настройки фильтров пользователей, которые помогают сначала отфильтровать директории, в которых будет производиться поиск пользователей,
@@ -628,6 +640,8 @@ spec:
                     clientSecret:
                       description: |
                         Secret организации на GitHub.
+
+                        Если у вызывающей стороны нет прав на подресурс `dexproviders/sensitive`, API возвращает `<omitted>` вместо значения.
                     teamNameField:
                       description: |
                         Формат команд, которые будут получены из GitHub.
