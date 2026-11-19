@@ -1563,6 +1563,84 @@ You can connect an `extender` using [KubeSchedulerWebhookConfiguration](cr.html#
 When using the `failurePolicy: Fail` option, in case of an error in the webhook's operation, the scheduler will stop working and new pods will not be able to start.
 {% endalert %}
 
+kube-scheduler pauses an extender with `failurePolicy: Ignore` if 10 `filter` or `prioritize` requests in a row fail: a time-out, a connection error or an invalid response.
+For 30 seconds it sends no `filter` and `prioritize` requests to this extender, then it sends one probe request.
+If the probe succeeds, the requests resume; if it fails, the pause starts again.
+A response with an error in its body is not a failure: the extender has answered.
+During the pause, Pods are scheduled without the filter and the scores of this extender.
+`bind` and `preempt` requests are always sent, and extenders with `failurePolicy: Fail` are never paused.
+
+An extender that scores nodes by their load can receive the Pods that kube-scheduler has just placed.
+To enable it, set [`sendPlacements: true`](cr.html#kubeschedulerwebhookconfiguration-v1alpha1-webhooks-sendplacements) in KubeSchedulerWebhookConfiguration.
+kube-scheduler then adds these Pods to the next `prioritize` request, and the extender takes them into account when it scores a burst of Pods.
+
+### How to check which node a Pod would be scheduled to
+
+kube-scheduler can simulate the scheduling of a Pod.
+It evaluates the Pod with the same plugins and extenders as in a real scheduling cycle, but does not place the Pod and does not change the cluster.
+The answer lists every node: whether the Pod fits it, which filter or extender rejected the node and why, and the score that each plugin and extender gave the node.
+
+The simulation is available at `POST /scheduler/simulate` of the Service `control-plane-proxy` in the `kube-system` namespace (port `8080`, HTTPS).
+Access is granted by the ClusterRole `d8:control-plane-manager:scheduler-simulate`.
+Deckhouse Platform does not bind this ClusterRole to users: bind it to the users or ServiceAccounts that call the simulation.
+
+The request body contains the following fields:
+
+* `namespace` and `name`: Namespace and name of an existing Pod to simulate. Instead of them, you can pass the full Pod manifest in the `pod` field.
+* `excludeNodes`: Names of the nodes to skip, for example, the node that the Pod is about to leave. Optional.
+* `removePods`: Pods to treat as already deleted, as objects with the `namespace`, `name` and optional `uid` fields. Optional.
+
+The request accepts the following query parameters:
+
+* `weights=true`: Show the weight behind every score.
+* `filters=all`: List every filter that a node fails. Without the parameter, the answer contains the first filter only. A simulation with this parameter takes longer; use it for debugging.
+
+To simulate the scheduling of a Pod, run the following commands from a Pod in the cluster:
+
+```shell
+d8 k create token <SERVICE_ACCOUNT> -n <SERVICE_ACCOUNT_NAMESPACE> > token
+curl -sk \
+  -X POST \
+  -H "Authorization: Bearer $(cat token)" \
+  -H "Content-Type: application/json" \
+  -d '{"namespace": "<POD_NAMESPACE>", "name": "<POD_NAME>"}' \
+  "https://control-plane-proxy.kube-system.svc:8080/scheduler/simulate?weights=true"
+```
+
+In the commands:
+
+* `<SERVICE_ACCOUNT>` and `<SERVICE_ACCOUNT_NAMESPACE>`: ServiceAccount that is bound to the ClusterRole `d8:control-plane-manager:scheduler-simulate`, and its namespace.
+* `<POD_NAMESPACE>` and `<POD_NAME>`: Pod to simulate.
+* `-k`: Skips the verification of the `control-plane-proxy` certificate.
+
+The response contains the `bestNodes` list with the nodes that the Pod would get now.
+The `nodes` list contains the verdict for each node (`Feasible`, `Rejected` or `NotEvaluated`), the rejection reasons, and the scores of plugins (`plugin/<name>`) and extenders (`extender/<name>`).
+The `leader` field shows whether the answer came from the kube-scheduler leader: another replica may not yet know about the Pods that the leader has just placed.
+
+{% alert level="warning" %}
+While a simulation runs, real scheduling on the same kube-scheduler replica waits for it, extender calls included (up to 30 seconds).
+A replica runs one simulation at a time and answers `429` to a concurrent request. Do not call the simulation in a loop without a pause.
+{% endalert %}
+
+Extenders receive the `filter` and `prioritize` requests of a simulation with the `"dryRun": true` field.
+On such a request, an extender must compute its answer without side effects, such as reservations.
+An extender that rejects unknown JSON fields fails the requests of a simulation; its requests of real scheduling are not affected.
+
+The [`descheduler`](/modules/descheduler/) module uses the simulation in the `LowNodeUtilization` strategy: it evicts a Pod only if kube-scheduler would place it on an underutilized node.
+
+### How to monitor the scheduler
+
+The "Scheduling" dashboard in the "Kubernetes Cluster" folder of Grafana shows how kube-scheduler works:
+scheduling attempts and their results, the plugin or extender that decided the node of a Pod, the number of feasible nodes,
+requests to extenders (duration, errors, paused extenders) and requests to the simulation.
+
+kube-scheduler exports the following metrics:
+
+* `scheduler_decision_deciding_plugin_total{profile, plugin}`: What decided the node of a Pod. `plugin` is `plugin/<name>` (a score plugin), `extender/<name>` (an extender), `scheduler/single-node` (only one node fit), `scheduler/tie` (the best nodes have equal scores), `scheduler/nominated-node` or `scheduler/node-hint`.
+* `scheduler_extender_request_duration_seconds{extender, verb, result}`: Requests to extenders and their results: `success`, `extender_error`, `timeout`, `error`, `status`, `decode`, `skipped`. `extender` is the name of the KubeSchedulerWebhookConfiguration, with `/<n>` if it has several webhooks.
+* `scheduler_extender_circuit_open{extender}`: `1` if the extender is paused now.
+* `scheduler_simulate_requests_total{code}` and `scheduler_simulate_duration_seconds`: Requests to the simulation and the time that real scheduling waited for them.
+
 ## How does kubelet certificate rotation work?
 
 In Deckhouse Platform, kubelet certificate rotation is automatic.

@@ -1572,6 +1572,84 @@ Node 1, Node 5, Node 2, Node 6, Node 3, Node 4
 При использовании опции `failurePolicy: Fail`, в случае ошибки в работе вебхука планировщик Kubernetes прекратит свою работу, и новые поды не смогут быть запущены.
 {% endalert %}
 
+kube-scheduler приостанавливает `extender` с `failurePolicy: Ignore`, если 10 запросов `filter` или `prioritize` подряд не выполнены: истёк тайм-аут, не удалось подключиться или пришёл некорректный ответ.
+На 30 секунд kube-scheduler прекращает отправлять этому `extender` запросы `filter` и `prioritize`, затем отправляет один пробный запрос.
+Если пробный запрос выполнен успешно, запросы возобновляются; если нет, пауза начинается снова.
+Ответ с ошибкой в теле сбоем не считается: `extender` ответил.
+Во время паузы поды размещаются без фильтра и оценок этого `extender`.
+Запросы `bind` и `preempt` отправляются всегда, а `extender` с `failurePolicy: Fail` не приостанавливается.
+
+`extender`, который оценивает узлы по их загрузке, может получать поды, которые kube-scheduler только что разместил.
+Чтобы включить это, задайте в KubeSchedulerWebhookConfiguration параметр [`sendPlacements: true`](cr.html#kubeschedulerwebhookconfiguration-v1alpha1-webhooks-sendplacements).
+kube-scheduler добавляет эти поды в следующий запрос `prioritize`, и `extender` учитывает их, когда оценивает узлы для серии подов.
+
+### Как проверить, на какой узел будет размещён под
+
+kube-scheduler умеет симулировать размещение пода.
+Он оценивает под теми же плагинами и `extender`, что и при настоящем планировании, но не размещает под и не меняет состояние кластера.
+В ответе перечислены все узлы: подходит ли узел поду, какой фильтр или `extender` его отклонил и почему, какие оценки узлу дал каждый плагин и `extender`.
+
+Симуляция доступна по адресу `POST /scheduler/simulate` в Service `control-plane-proxy` в неймспейсе `kube-system` (порт `8080`, HTTPS).
+Доступ даёт ClusterRole `d8:control-plane-manager:scheduler-simulate`.
+Deckhouse Platform не привязывает этот ClusterRole к пользователям: привяжите его к пользователям или ServiceAccount, которые вызывают симуляцию.
+
+Тело запроса содержит следующие поля:
+
+* `namespace` и `name` — неймспейс и имя существующего пода, размещение которого нужно проверить. Вместо них можно передать полный манифест пода в поле `pod`.
+* `excludeNodes` — имена узлов, которые нужно пропустить, например узел, с которого под собираются перенести. Необязательное поле.
+* `removePods` — поды, которые нужно считать уже удалёнными, в виде объектов с полями `namespace`, `name` и необязательным `uid`. Необязательное поле.
+
+Запрос принимает следующие параметры:
+
+* `weights=true` — показать вес каждой оценки.
+* `filters=all` — перечислить все фильтры, которые не прошёл узел. Без параметра в ответе только первый фильтр. С этим параметром симуляция идёт дольше; используйте его для отладки.
+
+Чтобы проверить размещение пода, выполните следующие команды из пода в кластере:
+
+```shell
+d8 k create token <SERVICE_ACCOUNT> -n <SERVICE_ACCOUNT_NAMESPACE> > token
+curl -sk \
+  -X POST \
+  -H "Authorization: Bearer $(cat token)" \
+  -H "Content-Type: application/json" \
+  -d '{"namespace": "<POD_NAMESPACE>", "name": "<POD_NAME>"}' \
+  "https://control-plane-proxy.kube-system.svc:8080/scheduler/simulate?weights=true"
+```
+
+В командах:
+
+* `<SERVICE_ACCOUNT>` и `<SERVICE_ACCOUNT_NAMESPACE>` — ServiceAccount, к которому привязан ClusterRole `d8:control-plane-manager:scheduler-simulate`, и его неймспейс;
+* `<POD_NAMESPACE>` и `<POD_NAME>` — под, размещение которого нужно проверить;
+* `-k` — отключает проверку сертификата `control-plane-proxy`.
+
+В ответе есть список `bestNodes` с узлами, на которые под был бы размещён сейчас.
+Список `nodes` содержит вердикт по каждому узлу (`Feasible`, `Rejected` или `NotEvaluated`), причины отказа и оценки плагинов (`plugin/<имя>`) и `extender` (`extender/<имя>`).
+Поле `leader` показывает, ответил ли лидер kube-scheduler: другая реплика может ещё не знать о подах, которые лидер только что разместил.
+
+{% alert level="warning" %}
+Пока идёт симуляция, настоящее планирование на этой реплике kube-scheduler ждёт её завершения, включая вызовы `extender` (до 30 секунд).
+Реплика выполняет одну симуляцию за раз и на параллельный запрос отвечает `429`. Не вызывайте симуляцию в цикле без паузы.
+{% endalert %}
+
+`extender` получают запросы `filter` и `prioritize` симуляции с полем `"dryRun": true`.
+На такой запрос `extender` должен вычислить ответ без побочных эффектов, например без резервирования.
+`extender`, который отклоняет неизвестные поля JSON, завершает запросы симуляции ошибкой; на запросы настоящего планирования это не влияет.
+
+Модуль [`descheduler`](/modules/descheduler/) использует симуляцию в стратегии `LowNodeUtilization`: он вытесняет под, только если kube-scheduler разместил бы его на недогруженном узле.
+
+### Как следить за работой планировщика
+
+Дашборд «Scheduling» в папке «Kubernetes Cluster» в Grafana показывает работу kube-scheduler:
+попытки планирования и их результаты, плагин или `extender`, который выбрал узел для пода, число подходящих узлов,
+запросы к `extender` (длительность, ошибки, приостановленные `extender`) и запросы к симуляции.
+
+kube-scheduler экспортирует следующие метрики:
+
+* `scheduler_decision_deciding_plugin_total{profile, plugin}` — что определило выбор узла для пода. `plugin` принимает значения `plugin/<имя>` (плагин оценки), `extender/<имя>` (`extender`), `scheduler/single-node` (подошёл только один узел), `scheduler/tie` (у лучших узлов одинаковые оценки), `scheduler/nominated-node` или `scheduler/node-hint`.
+* `scheduler_extender_request_duration_seconds{extender, verb, result}` — запросы к `extender` и их результат: `success`, `extender_error`, `timeout`, `error`, `status`, `decode`, `skipped`. `extender` — имя KubeSchedulerWebhookConfiguration, с суффиксом `/<n>`, если в ней несколько вебхуков.
+* `scheduler_extender_circuit_open{extender}` — `1`, если `extender` сейчас приостановлен.
+* `scheduler_simulate_requests_total{code}` и `scheduler_simulate_duration_seconds` — запросы к симуляции и время, которое настоящее планирование ждало их завершения.
+
 ## Как происходит ротация сертификатов kubelet?
 
 В Deckhouse Platform ротация сертификатов kubelet происходит автоматически.
