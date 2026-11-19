@@ -64,7 +64,7 @@ func (s *NodeStatus) Condition(conditionType string) *NodeCondition {
 // handed. Authorised by the token in that very document, so only the installer
 // that wrote it can read the machine's progress.
 func FetchNodeStatus(ctx context.Context, address, token string) (*NodeStatus, error) {
-	response, err := do(ctx, http.MethodGet, "http://"+address+nodeStatusPath, token, nil)
+	response, err := doMaintenance(ctx, http.MethodGet, address, nodeStatusPath, token, nil)
 	if err != nil {
 		return nil, fmt.Errorf("read the bootstrap status of %s: %w", address, err)
 	}
