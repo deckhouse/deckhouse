@@ -1,4 +1,5 @@
-{{- $baseFeatureGates := list "RotateKubeletServerCertificate=true" "CRDSensitiveData=true" -}}
+{{- /* CBORServingAndStorage is alpha in 1.33-1.37; it relies on the CBOR fixes backported in images/kubernetes/kubernetes/patches */ -}}
+{{- $baseFeatureGates := list "RotateKubeletServerCertificate=true" "CRDSensitiveData=true" "CBORServingAndStorage=true" -}}
 {{- if semverCompare ">=1.33 <1.36" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "TopologyAwareHints=true" -}}
 {{- end }}

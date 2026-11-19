@@ -196,12 +196,14 @@ func testFeatureGates(t *testing.T) {
 					}
 				}
 
-				if name == "kube-apiserver.yaml" {
-					if !strings.Contains(featureGates, "CRDSensitiveData=true") {
-						t.Errorf("Expected CRDSensitiveData=true in kube-apiserver, got: %s", featureGates)
+				for _, gate := range []string{"CRDSensitiveData=true", "CBORServingAndStorage=true"} {
+					if name == "kube-apiserver.yaml" {
+						if !strings.Contains(featureGates, gate) {
+							t.Errorf("Expected %s in kube-apiserver, got: %s", gate, featureGates)
+						}
+					} else if strings.Contains(featureGates, gate) {
+						t.Errorf("%s must be kube-apiserver-only, found in %s: %s", gate, name, featureGates)
 					}
-				} else if strings.Contains(featureGates, "CRDSensitiveData=true") {
-					t.Errorf("CRDSensitiveData must be kube-apiserver-only, found in %s: %s", name, featureGates)
 				}
 
 				if tt.k8sVersion >= "1.30" {

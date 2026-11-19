@@ -180,7 +180,7 @@ spec:
           - --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname
           - --bind-address=$MY_IP
           - --etcd-servers=https://127.0.0.1:2379
-          - --feature-gates=RotateKubeletServerCertificate=true,CRDSensitiveData=true,TopologyAwareHints=true,DRADeviceBindingConditions=true,DRAConsumableCapacity=true,DRAExtendedResource=true,DRADeviceTaints=true,DRAPartitionableDevices=true
+          - --feature-gates=RotateKubeletServerCertificate=true,CRDSensitiveData=true,CBORServingAndStorage=true,TopologyAwareHints=true,DRADeviceBindingConditions=true,DRAConsumableCapacity=true,DRAExtendedResource=true,DRADeviceTaints=true,DRAPartitionableDevices=true
           - --runtime-config=admissionregistration.k8s.io/v1beta1=true,admissionregistration.k8s.io/v1alpha1=true,resource.k8s.io/v1beta1=true,resource.k8s.io/v1alpha3=true
           - --profiling=false
           - --request-timeout=60s

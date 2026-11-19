@@ -11,6 +11,8 @@ Current bumps on all versions: `golang.org/x/net` v0.62.0 (with `golang.org/x/cr
 
 `github.com/klauspost/compress` is pinned to v1.20.2 for the apiserver's etcd decoder to fix CVE-2026-116591.
 
+The patch also bumps `github.com/fxamacker/cbor/v2` to v2.9.4, from v2.7.0 on 1.33, v2.9.0 on 1.34-1.36 and v2.9.1 on 1.37. Upstream moved from v2.7.0 to v2.9.0 in 1.34 by changing only `go.mod` and `vendor`. The kube-apiserver CBOR decoder gets the parser hardening of v2.9.1, the fix for a decoder desync when a time tag wraps a map or an array (v2.9.3) and the fix for a panic on map keys that are not comparable (v2.9.4). The decoder is reachable only with the `CBORServingAndStorage` feature gate. Upstream ships v2.9.1 in 1.37 and v2.9.4 only in master (https://github.com/kubernetes/kubernetes/pull/142419).
+
 The patch is carried on 1.33 through 1.37 and must apply first (`000`), before patches that touch `go.work.sum` or source code. Regenerate it with `go get` on the upstream tag with the whole patch set applied. Remove the bumps once the upstream patch release ships the same or newer versions.
 
 ### old_certs.patch
@@ -456,3 +458,25 @@ kube-apiserver can read zstd-compressed etcd values and writes values without co
 - The storage format is `k8s:cmp:zstd:v1:` followed by the zstd frame, with a 64 MiB decoded size limit. Values without the prefix pass through.
 - Decompression runs after decryption or signature verification. Undecodable values can still be deleted with `AllowUnsafeMalformedObjectDeletion`.
 - A compressed value is reported as stale, so a no-op update rewrites it without compression.
+
+### cbor-decode-limits.patch (1.33-1.35)
+
+Raises the limits of the CBOR decoder (`staging/src/k8s.io/apimachinery/pkg/runtime/serializer/cbor/internal/modes/decode.go`) to the values of upstream 1.36: nesting depth from 64 to 10000, array elements from 1024 to the library maximum, map pairs from 1024 to 2097152. The request body limit of kube-apiserver still bounds the input.
+
+With the `CBORServingAndStorage` feature gate kube-apiserver stores custom resources in etcd as CBOR and decodes them with the same limits. Without the patch a custom resource with more than 1024 items in an array or keys in a map is written, but cannot be read back: `cbor: exceeded max number of elements 1024 for CBOR array`. Get, list, watch and delete of the whole resource type fail, and only removing the key from etcd brings it back. This was reproduced on 1.35.9.
+
+The patch is a verbatim copy of the upstream commit. It is carried on 1.33 (`031`), 1.34 (`032`) and 1.35 (`031`); upstream 1.36 and later already have these limits.
+
+> Upstream PR https://github.com/kubernetes/kubernetes/pull/135340
+
+### cbor-streaming-list-encoding.patch (1.33-1.36)
+
+Makes the CBOR serializer encode lists item by item and write them to the response as it goes (`staging/src/k8s.io/apimachinery/pkg/runtime/serializer/cbor/collections.go`), as the JSON and protobuf serializers have done since 1.33. Without the patch kube-apiserver encodes a whole CBOR LIST response into one buffer before writing it, so with the `CBORServingAndStorage` feature gate a client that asks for CBOR makes a large LIST cost more memory than the same LIST in JSON.
+
+Unstructured lists and typed lists of the standard shape (`TypeMeta`, `ListMeta`, `Items`) are streamed. A list that has its own CBOR or JSON marshaler, another shape or a `cbor` struct tag falls back to the regular encoder. The output decodes to the same object as before; with the nondeterministic mode the order of map keys can differ, as it already does.
+
+The patch is a copy of the upstream PR, including its tests: run `go test -mod=readonly k8s.io/apimachinery/pkg/runtime/serializer/cbor/...` on the patched tree, the image build does not run them. It is carried on 1.33 (`032`), 1.34 (`033`), 1.35 (`032`) and 1.36 (`030`); upstream 1.37 already has it.
+
+On 1.34-1.36 the patch is verbatim. On 1.33 it is adapted, because 1.33 has no JSON transcoding (KEP-4222, upstream 1.34): the serializer keeps the 1.33 check that rejects types with a JSON or text marshaler and no CBOR marshaler before writing anything, and streaming starts after that check. The tests drop the cases for lists of types with a JSON marshaler, which 1.33 rejects with or without the patch, and do not decode into `UnstructuredList`, which needs transcoding; unstructured output is still compared as a map.
+
+> Upstream PR https://github.com/kubernetes/kubernetes/pull/138808
