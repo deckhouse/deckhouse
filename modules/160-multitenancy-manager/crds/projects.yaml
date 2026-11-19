@@ -328,9 +328,9 @@ spec:
                   description: |
                     Resource quota of the whole project.
 
-                    The controller turns it into the ProjectQuota object of the project, which puts the `d8-project-quota` ResourceQuota into every namespace of the project and sums the usage over them. Clearing the field deletes the corresponding ProjectQuota.
+                    The controller puts the `d8-project-quota` ResourceQuota into every namespace of the project, sums the usage over them and shows the limits and the usage in the read-only ProjectQuotaStatus object of the project. Clearing the field deletes that ProjectQuotaStatus.
 
-                    A ProjectQuota created directly is not touched by the field. While a ProjectQuota with the name of the project exists, the field cannot be set. Changing the field needs the right to write the ProjectQuota of the project, and its keys follow the rules of a ProjectQuota.
+                    Changing the field needs the `update` verb on `projects/quota` in the `deckhouse.io` group for the project, which the `manage_quotas` capability of the `multitenancy-manager` module grants.
 
                     Keys and values follow the `ResourceQuota.spec.hard` format, for example `requests.cpu: "100"`.
                     Memory and storage quantities must include an explicit unit suffix (for example `requests.memory: 2Gi`);

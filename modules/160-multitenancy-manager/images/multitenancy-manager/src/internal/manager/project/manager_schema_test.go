@@ -168,13 +168,13 @@ func TestHandleReconcilesWhatTheConversionLeavesInTheParameters(t *testing.T) {
 				assert.Equal(t, tt.administrators, names)
 			}
 
-			quota := new(v1alpha1.ProjectQuota)
+			quota := new(v1alpha1.ProjectQuotaStatus)
 			err = c.Get(ctx, client.ObjectKey{Name: "team"}, quota)
 			if tt.quota == nil {
 				assert.True(t, apierrors.IsNotFound(err), "no project quota: %v", err)
 			} else {
 				require.NoError(t, err)
-				assert.Equal(t, tt.quota, quota.Spec.Hard, "the ProjectQuota takes the quota of the project")
+				assert.Equal(t, tt.quota, quota.Spec.Hard, "the ProjectQuotaStatus takes the quota of the project")
 			}
 
 			want, err := json.Marshal(tt.spec.Parameters)

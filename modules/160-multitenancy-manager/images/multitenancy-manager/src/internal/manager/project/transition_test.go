@@ -684,16 +684,16 @@ func TestManager_PrepareUpgradeHandsOverASwitch(t *testing.T) {
 
 	binding := &v1alpha3.ProjectRoleBinding{ObjectMeta: metav1.ObjectMeta{Namespace: "proj", Name: v1alpha3.ProjectAdministratorsBinding}}
 	assert.True(t, exists(t, c, binding), "the standard fields exist before the upgrade")
-	assert.True(t, exists(t, c, &v1alpha1.ProjectQuota{ObjectMeta: metav1.ObjectMeta{Name: "proj"}}), "the ProjectQuota the quota of the namespace comes from")
+	assert.True(t, exists(t, c, &v1alpha1.ProjectQuotaStatus{ObjectMeta: metav1.ObjectMeta{Name: "proj"}}), "the ProjectQuotaStatus the quota of the namespace comes from")
 }
 
-// countedProjectQuota plays the ProjectQuota controller and the resource quota controller of
-// kube-controller-manager: it puts d8-project-quota with the limits of the ProjectQuota of the project
+// countedProjectQuota plays the ProjectQuotaStatus controller and the resource quota controller of
+// kube-controller-manager: it puts d8-project-quota with the limits of the ProjectQuotaStatus of the project
 // into the main namespace, calculated.
 func countedProjectQuota(t *testing.T, c client.Client, project string) {
 	t.Helper()
 	ctx := context.Background()
-	pq := new(v1alpha1.ProjectQuota)
+	pq := new(v1alpha1.ProjectQuotaStatus)
 	require.NoError(t, c.Get(ctx, client.ObjectKey{Name: project}, pq))
 	rq := &corev1.ResourceQuota{ObjectMeta: metav1.ObjectMeta{Namespace: project, Name: v1alpha3.ProjectQuotaName}}
 	if err := c.Get(ctx, client.ObjectKeyFromObject(rq), rq); apierrors.IsNotFound(err) {

@@ -72,6 +72,7 @@ import (
 	"controller/internal/grantcache"
 	"controller/internal/helm"
 	"controller/internal/jsonpath"
+	quotamigration "controller/internal/migration"
 	"controller/internal/namespaces"
 	"controller/internal/quota"
 	"controller/internal/quota/evaluator"
@@ -84,7 +85,6 @@ import (
 	grantableclusterresourcereferencewebhook "controller/internal/webhook/grantableclusterresourcereference"
 	projectwebhook "controller/internal/webhook/project"
 	projectnamespacewebhook "controller/internal/webhook/projectnamespace"
-	projectquotawebhook "controller/internal/webhook/projectquota"
 	projectrolebindingwebhook "controller/internal/webhook/projectrolebinding"
 	templatewebhook "controller/internal/webhook/template"
 	grantwebhooks "controller/internal/webhooks"
@@ -366,16 +366,20 @@ func main() {
 		fatal(logger, err, "set up project namespace reconciler")
 	}
 
-	// register the project quota reconciler and the webhook that checks the keys of a quota
+	// register the project quota reconciler
 	if err = (&projectquotacontroller.Reconciler{
 		Client:    runtimeManager.GetClient(),
 		Config:    quotaConfig,
 		Discovery: reconcileQuotaKeys,
+		APIReader: runtimeManager.GetAPIReader(),
 		Recorder:  runtimeManager.GetEventRecorderFor(controllerName),
 	}).SetupWithManager(runtimeManager); err != nil {
 		fatal(logger, err, "set up project quota reconciler")
 	}
-	projectquotawebhook.Register(runtimeManager, quotaKeys)
+
+	if err = quotamigration.Register(runtimeManager); err != nil {
+		fatal(logger, err, "register the legacy project quota migration")
+	}
 
 	// register the reconciler that reports projects named like additional namespaces of other projects
 	if err = (&projectnamescontroller.Reconciler{
@@ -541,13 +545,13 @@ func newManagerOptions(scheme *runtime.Scheme, watchError toolscache.WatchErrorH
 			DefaultWatchErrorHandler: watchError,
 			// Applies to every type without a transform of its own in ByObject.
 			DefaultTransform: cache.TransformStripManagedFields(),
-			// the ProjectQuota controller watches the ConfigMaps of the ledger and its certificate; nothing
+			// the ProjectQuotaStatus controller watches the ConfigMaps of the ledger and its certificate; nothing
 			// reads another ConfigMap or Secret through the cache
 			ByObject: map[client.Object]cache.ByObject{
 				&corev1.ConfigMap{}: {Namespaces: map[string]cache.Config{quota.ConfigNamespace: {}}},
 				&corev1.Secret{}: {Namespaces: map[string]cache.Config{quota.ConfigNamespace: {}},
 					Field: fields.OneTermEqualSelector("metadata.name", quota.LedgerCertsSecretName)},
-				// the ProjectQuota controller sums the load balancers; the Services keep only what it counts by
+				// the ProjectQuotaStatus controller sums the load balancers; the Services keep only what it counts by
 				&corev1.Service{}: {Transform: evaluator.TrimService},
 			},
 		},

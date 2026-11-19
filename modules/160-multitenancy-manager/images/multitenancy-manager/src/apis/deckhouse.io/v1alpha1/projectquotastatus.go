@@ -23,16 +23,16 @@ import (
 )
 
 const (
-	ProjectQuotaKind     = "ProjectQuota"
-	ProjectQuotaResource = "projectquotas"
+	ProjectQuotaStatusKind     = "ProjectQuotaStatus"
+	ProjectQuotaStatusResource = "projectquotastatuses"
 
-	// ProjectQuotaFinalizer holds a ProjectQuota until the controller takes the quota label off the
+	// ProjectQuotaFinalizer holds a ProjectQuotaStatus until the controller takes the quota label off the
 	// namespaces of the project: the ResourceQuota objects it owns are deleted after the quota is gone,
 	// and the guard policy refuses every create in a labelled namespace that has no quota.
 	ProjectQuotaFinalizer = "projects.deckhouse.io/project-quota"
 )
 
-// Condition types of a ProjectQuota.
+// Condition types of a ProjectQuotaStatus.
 const (
 	// ProjectQuotaConditionEnforced is True when every namespace of the project has a calculated
 	// d8-project-quota ResourceQuota and the quota is applied there; its reason says why it is not.
@@ -48,7 +48,6 @@ const (
 	ProjectQuotaReasonControlPlaneNotManaged = "ControlPlaneNotManaged"
 	ProjectQuotaReasonKeyRollout             = "KeyRollout"
 	ProjectQuotaReasonKeyNotServed           = "KeyNotServed"
-	ProjectQuotaReasonProjectNotFound        = "ProjectNotFound"
 	ProjectQuotaReasonSuspended              = "Suspended"
 	ProjectQuotaReasonWebhookMissing         = "WebhookMissing"
 	ProjectQuotaReasonWebhookMisconfigured   = "WebhookMisconfigured"
@@ -66,26 +65,26 @@ const (
 // its d8-project-quota ResourceQuota.
 const ProjectQuotaTopNamespaces = 50
 
-var _ runtime.Object = &ProjectQuota{}
+var _ runtime.Object = &ProjectQuotaStatus{}
 
-// ProjectQuota is one limit on the sum of resource usage over all namespaces of a project. Its name is
+// ProjectQuotaStatus is one limit on the sum of resource usage over all namespaces of a project. Its name is
 // the name of the project.
-type ProjectQuota struct {
+type ProjectQuotaStatus struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ProjectQuotaSpec   `json:"spec,omitempty"`
-	Status ProjectQuotaStatus `json:"status,omitempty"`
+	Spec   ProjectQuotaStatusSpec   `json:"spec,omitempty"`
+	Status ProjectQuotaStatusStatus `json:"status,omitempty"`
 }
 
-// ProjectQuotaSpec is the quota of a project.
-type ProjectQuotaSpec struct {
+// ProjectQuotaStatusSpec is the quota of a project.
+type ProjectQuotaStatusSpec struct {
 	// Hard is the limit of the project, in the format of ResourceQuota.spec.hard.
 	Hard corev1.ResourceList `json:"hard,omitempty"`
 }
 
-// ProjectQuotaStatus is the usage of a project against its quota.
-type ProjectQuotaStatus struct {
+// ProjectQuotaStatusStatus is the usage of a project against its quota.
+type ProjectQuotaStatusStatus struct {
 	// Hard is the limit the controller applies: spec.hard with the aliases expanded.
 	Hard corev1.ResourceList `json:"hard,omitempty"`
 	// Used is the usage summed over all namespaces of the project.
@@ -106,20 +105,20 @@ type ProjectQuotaNamespaceUsage struct {
 	Used corev1.ResourceList `json:"used,omitempty"`
 }
 
-func (q *ProjectQuota) DeepCopyObject() runtime.Object {
+func (q *ProjectQuotaStatus) DeepCopyObject() runtime.Object {
 	return q.DeepCopy()
 }
 
-func (q *ProjectQuota) DeepCopy() *ProjectQuota {
+func (q *ProjectQuotaStatus) DeepCopy() *ProjectQuotaStatus {
 	if q == nil {
 		return nil
 	}
-	out := new(ProjectQuota)
+	out := new(ProjectQuotaStatus)
 	q.DeepCopyInto(out)
 	return out
 }
 
-func (q *ProjectQuota) DeepCopyInto(out *ProjectQuota) {
+func (q *ProjectQuotaStatus) DeepCopyInto(out *ProjectQuotaStatus) {
 	*out = *q
 	out.TypeMeta = q.TypeMeta
 	q.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
@@ -127,14 +126,14 @@ func (q *ProjectQuota) DeepCopyInto(out *ProjectQuota) {
 	q.Status.DeepCopyInto(&out.Status)
 }
 
-func (s *ProjectQuotaSpec) DeepCopyInto(out *ProjectQuotaSpec) {
+func (s *ProjectQuotaStatusSpec) DeepCopyInto(out *ProjectQuotaStatusSpec) {
 	*out = *s
 	if s.Hard != nil {
 		out.Hard = s.Hard.DeepCopy()
 	}
 }
 
-func (s *ProjectQuotaStatus) DeepCopyInto(out *ProjectQuotaStatus) {
+func (s *ProjectQuotaStatusStatus) DeepCopyInto(out *ProjectQuotaStatusStatus) {
 	*out = *s
 	if s.Hard != nil {
 		out.Hard = s.Hard.DeepCopy()
@@ -156,26 +155,26 @@ func (s *ProjectQuotaStatus) DeepCopyInto(out *ProjectQuotaStatus) {
 	}
 }
 
-// ProjectQuotaList is a list of ProjectQuota objects.
-type ProjectQuotaList struct {
+// ProjectQuotaStatusList is a list of ProjectQuotaStatus objects.
+type ProjectQuotaStatusList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ProjectQuota `json:"items"`
+	Items           []ProjectQuotaStatus `json:"items"`
 }
 
-func (l *ProjectQuotaList) DeepCopyObject() runtime.Object {
+func (l *ProjectQuotaStatusList) DeepCopyObject() runtime.Object {
 	return l.DeepCopy()
 }
 
-func (l *ProjectQuotaList) DeepCopy() *ProjectQuotaList {
+func (l *ProjectQuotaStatusList) DeepCopy() *ProjectQuotaStatusList {
 	if l == nil {
 		return nil
 	}
-	out := new(ProjectQuotaList)
+	out := new(ProjectQuotaStatusList)
 	*out = *l
 	l.ListMeta.DeepCopyInto(&out.ListMeta)
 	if l.Items != nil {
-		out.Items = make([]ProjectQuota, len(l.Items))
+		out.Items = make([]ProjectQuotaStatus, len(l.Items))
 		for i := range l.Items {
 			l.Items[i].DeepCopyInto(&out.Items[i])
 		}

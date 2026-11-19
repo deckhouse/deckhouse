@@ -479,11 +479,11 @@ func (r *runner) watch(ctx context.Context) error {
 			UpdateFunc: func(_, _ any) { r.setSuspended(true) },
 			DeleteFunc: func(any) { r.setSuspended(false) },
 		},
-		&v1alpha1.ProjectQuota{}: {
+		&v1alpha1.ProjectQuotaStatus{}: {
 			AddFunc:    func(obj any) { r.onProjectQuota(obj) },
 			UpdateFunc: func(_, obj any) { r.onProjectQuota(obj) },
 			DeleteFunc: func(obj any) {
-				if pq, ok := unwrap(obj).(*v1alpha1.ProjectQuota); ok {
+				if pq, ok := unwrap(obj).(*v1alpha1.ProjectQuotaStatus); ok {
 					r.state.DeleteProjectQuota(pq.Name)
 					r.deleted.record(pq)
 				}
@@ -781,7 +781,7 @@ func (r *runner) onNamespace(obj any) {
 }
 
 func (r *runner) onProjectQuota(obj any) {
-	if pq, ok := obj.(*v1alpha1.ProjectQuota); ok {
+	if pq, ok := obj.(*v1alpha1.ProjectQuotaStatus); ok {
 		r.state.SetProjectQuota(pq)
 	}
 }
@@ -1322,7 +1322,7 @@ func (r *runner) quorumLists(ctx context.Context) ([]quorumList, error) {
 	}{
 		{&corev1.ResourceQuotaList{}, &corev1.ResourceQuotaList{}, []client.ListOption{client.MatchingFields{"metadata.name": v1alpha3.ProjectQuotaName}}},
 		{&corev1.NamespaceList{}, &corev1.NamespaceList{}, []client.ListOption{client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(*inProject)}}},
-		{&v1alpha1.ProjectQuotaList{}, &v1alpha1.ProjectQuotaList{}, nil},
+		{&v1alpha1.ProjectQuotaStatusList{}, &v1alpha1.ProjectQuotaStatusList{}, nil},
 	}
 	if r.opts.countsLoadBalancers() {
 		kinds = append(kinds, struct {

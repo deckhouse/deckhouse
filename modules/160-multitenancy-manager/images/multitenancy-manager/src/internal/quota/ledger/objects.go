@@ -180,7 +180,7 @@ func (s *State) DecideObject(in ObjectInput, now time.Time, claim func() bool) D
 	}
 	p, ok := s.projects[projectName]
 	if !ok {
-		return unavailable(ResultNoProjectQuota, "the project has no ProjectQuota", true)
+		return unavailable(ResultNoProjectQuota, "the project has no ProjectQuotaStatus", true)
 	}
 	hard := p.familyHard[in.Family]
 	if len(hard) == 0 {

@@ -130,7 +130,7 @@ func (s *State) Decide(in Input, now time.Time, claim func() bool) Decision {
 	}
 	p, ok := s.projects[projectName]
 	if !ok {
-		return unavailable(ResultNoProjectQuota, "the project has no ProjectQuota", true)
+		return unavailable(ResultNoProjectQuota, "the project has no ProjectQuotaStatus", true)
 	}
 	switch {
 	case in.OldRV < q.rv:

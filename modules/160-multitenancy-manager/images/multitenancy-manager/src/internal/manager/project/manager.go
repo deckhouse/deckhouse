@@ -253,8 +253,7 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 
 	// reconcile standard fields (administrators, quota) regardless of the template
 	m.logger.V(1).Info("reconcile the project standard fields", "project", project.Name)
-	conflict, err := m.reconcileStandardFields(ctx, project)
-	if err != nil {
+	if err := m.reconcileStandardFields(ctx, project); err != nil {
 		m.logger.Error(err, "failed to reconcile the project standard fields", "project", project.Name)
 		project.SetState(v1alpha3.ProjectStateError)
 		project.SetConditionFalse(v1alpha3.ProjectConditionStandardFieldsApplied, err.Error())
@@ -263,12 +262,7 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 		}
 		return ctrl.Result{}, err
 	}
-	if conflict != "" {
-		// the rest of the project, its manifests and its status, is still reconciled
-		project.SetConditionFalse(v1alpha3.ProjectConditionStandardFieldsApplied, conflict)
-	} else {
-		project.SetConditionTrue(v1alpha3.ProjectConditionStandardFieldsApplied)
-	}
+	project.SetConditionTrue(v1alpha3.ProjectConditionStandardFieldsApplied)
 
 	// the objects of spec.manifests of the template, applied as the user of the project
 	manifests, manifestsErr := m.reconcileManifests(ctx, project)

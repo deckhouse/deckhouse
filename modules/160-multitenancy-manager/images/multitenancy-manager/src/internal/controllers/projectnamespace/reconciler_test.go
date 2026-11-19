@@ -439,16 +439,16 @@ func TestReconcile_RevertsAHandRemovalOfATemplateLabel(t *testing.T) {
 	}
 }
 
-// A namespace of a project with a ProjectQuota carries the pending quota label from the request that
+// A namespace of a project with a ProjectQuotaStatus carries the pending quota label from the request that
 // creates it, so the guard policy holds it until its quota is calculated; an existing namespace is left
-// to the ProjectQuota controller.
+// to the ProjectQuotaStatus controller.
 func TestReconcile_LabelsANewNamespaceOfAProjectWithAQuota(t *testing.T) {
 	tests := []struct {
 		name     string
 		objects  []client.Object
 		expected string
 	}{
-		{name: "a project with a quota", objects: []client.Object{&v1alpha1.ProjectQuota{ObjectMeta: metav1.ObjectMeta{Name: "team-a"}}}, expected: quota.LabelPending},
+		{name: "a project with a quota", objects: []client.Object{&v1alpha1.ProjectQuotaStatus{ObjectMeta: metav1.ObjectMeta{Name: "team-a"}}}, expected: quota.LabelPending},
 		{name: "a project without a quota"},
 	}
 	for _, tt := range tests {

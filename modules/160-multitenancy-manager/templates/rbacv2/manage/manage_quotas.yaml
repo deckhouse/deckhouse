@@ -14,20 +14,17 @@ metadata:
   annotations:
     en.meta.deckhouse.io/title: "Module multitenancy-manager: manage project quotas"
     ru.meta.deckhouse.io/title: "Модуль multitenancy-manager: управление квотами проектов"
-    en.meta.deckhouse.io/description: "Create, change and delete the quotas of projects (ProjectQuota), and set spec.quota of a Project."
-    ru.meta.deckhouse.io/description: "Создание, изменение и удаление квот проектов (ProjectQuota), задание spec.quota у Project."
+    en.meta.deckhouse.io/description: "Set the quotas of projects: spec.quota of a Project."
+    ru.meta.deckhouse.io/description: "Задание квот проектов: поле spec.quota у Project."
 rules:
 # A quota is set apart from the right to create and change projects, so that whoever creates projects
-# for themselves does not choose their own quota. The Project webhook asks for this right when a write
-# changes spec.quota, which the controller turns into the ProjectQuota of the project. The status of a
-# ProjectQuota is the controller's alone and is not granted here.
+# for themselves does not choose their own quota. The Project webhook asks for the update verb on the
+# quota subresource of the project, projects/quota, when a write changes spec.quota. The API server serves
+# no such subresource: the right is only asked about. The ProjectQuotaStatus the controller makes from
+# spec.quota is the controller's alone and is not granted here.
 - apiGroups:
   - deckhouse.io
   resources:
-  - projectquotas
+  - projects/quota
   verbs:
-  - create
   - update
-  - patch
-  - delete
-  - deletecollection

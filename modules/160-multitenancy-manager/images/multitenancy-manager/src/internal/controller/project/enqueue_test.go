@@ -193,7 +193,7 @@ func TestOwnLabelsDrifted(t *testing.T) {
 }
 
 // Only the quota of the main namespace wakes the project: the ones of the additional namespaces move
-// with every object created there, and the project mirrors their sum from the ProjectQuota.
+// with every object created there, and the project mirrors their sum from the ProjectQuotaStatus.
 func TestMainNamespaceQuotaHandler(t *testing.T) {
 	label := map[string]string{v1alpha3.ResourceLabelProject: "team"}
 	main := &corev1.ResourceQuota{ObjectMeta: metav1.ObjectMeta{Namespace: "team", Name: v1alpha3.ProjectQuotaName, Labels: label}}

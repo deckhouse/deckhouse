@@ -58,8 +58,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&ProjectTemplate{},
 		&ProjectTemplateList{},
-		&ProjectQuota{},
-		&ProjectQuotaList{},
+		&ProjectQuotaStatus{},
+		&ProjectQuotaStatusList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

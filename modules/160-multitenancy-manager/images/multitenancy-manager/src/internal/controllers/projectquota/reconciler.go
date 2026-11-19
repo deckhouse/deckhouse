@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package projectquota reconciles ProjectQuota objects. For every namespace of the project it keeps a
+// Package projectquota reconciles ProjectQuotaStatus objects. For every namespace of the project it keeps a
 // d8-project-quota ResourceQuota with the limits of the project, so that the usage of each namespace
 // is counted the standard way and no namespace alone goes over the limit of the whole project. It
 // labels the namespaces for the admission policies of the quota, adds the usage of the namespaces up
@@ -73,7 +73,7 @@ const (
 var (
 	quotaState = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "d8_multitenancy_project_quota_state",
-		Help: "A ProjectQuota in a bad state: exceeded (the usage is above the quota because the quota was lowered or found it there), overshoot (the usage grew past the quota) or not_enforced (the quota does not apply in every namespace of the project yet). Only the states that hold are exported.",
+		Help: "A ProjectQuotaStatus in a bad state: exceeded (the usage is above the quota because the quota was lowered or found it there), overshoot (the usage grew past the quota) or not_enforced (the quota does not apply in every namespace of the project yet). Only the states that hold are exported.",
 	}, []string{"project", "state"})
 	enforcementMode = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "d8_multitenancy_project_quota_enforcement",
@@ -83,7 +83,7 @@ var (
 	// rather than a zero.
 	quotaCount = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "d8_multitenancy_project_quotas",
-		Help: "The number of ProjectQuota objects. Exported by the replica of the controller that leads.",
+		Help: "The number of ProjectQuotaStatus objects. Exported by the replica of the controller that leads.",
 	}, nil)
 	overshoots = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "d8_multitenancy_quota_ledger_overshoot_total",
@@ -95,13 +95,16 @@ func init() {
 	metrics.Registry.MustRegister(quotaState, enforcementMode, quotaCount, overshoots)
 }
 
-// Reconciler keeps the ResourceQuota objects, the namespace labels and the status of a ProjectQuota.
+// Reconciler keeps the ResourceQuota objects, the namespace labels and the status of a ProjectQuotaStatus.
 type Reconciler struct {
 	client.Client
 	// Config reads the enforcement of the module.
 	Config *quota.ConfigReader
 	// Discovery finds the count/ keys whose resources are not served yet. Optional.
 	Discovery quota.Discovery
+	// APIReader confirms past the cache that a project is gone before its ProjectQuotaStatus is deleted.
+	// Optional: without it the cache is trusted.
+	APIReader client.Reader
 	// Recorder reports a replaced ResourceQuota. Optional.
 	Recorder record.EventRecorder
 	// Now is time.Now unless a test sets it.
@@ -121,9 +124,9 @@ func (r *Reconciler) now() time.Time {
 	return time.Now()
 }
 
-// Reconcile brings one ProjectQuota and the namespaces of its project in line.
+// Reconcile brings one ProjectQuotaStatus and the namespaces of its project in line.
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	log := ctrllog.FromContext(ctx).WithValues("projectquota", req.Name)
+	log := ctrllog.FromContext(ctx).WithValues("projectquotastatus", req.Name)
 
 	cfg, err := r.Config.Read(ctx)
 	if err != nil {
@@ -131,10 +134,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 	r.publishEnforcement(cfg)
 
-	pq := new(v1alpha1.ProjectQuota)
+	pq := new(v1alpha1.ProjectQuotaStatus)
 	if err := r.Get(ctx, client.ObjectKey{Name: req.Name}, pq); err != nil {
 		if !apierrors.IsNotFound(err) {
-			return reconcile.Result{}, fmt.Errorf("get the ProjectQuota: %w", err)
+			return reconcile.Result{}, fmt.Errorf("get the ProjectQuotaStatus: %w", err)
 		}
 		r.forget(req.Name)
 		return reconcile.Result{}, r.release(ctx, req.Name)
@@ -152,17 +155,29 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	r.remember(pq)
 
 	project := new(v1alpha3.Project)
-	projectFound := true
+	found := true
 	if err := r.Get(ctx, client.ObjectKey{Name: pq.Name}, project); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return reconcile.Result{}, fmt.Errorf("get the project: %w", err)
 		}
-		projectFound = false
-	}
-	if projectFound && project.DeletionTimestamp.IsZero() {
-		if err := r.ensureOwner(ctx, pq, project); err != nil {
+		if found, err = r.projectExists(ctx, pq.Name, project); err != nil {
 			return reconcile.Result{}, err
 		}
+	}
+	if !found || !project.DeletionTimestamp.IsZero() {
+		// The controller is the writer of the object: it deletes the quota of a project that is gone or
+		// going rather than wait for the garbage collector. A foreground or orphan deletion of the project
+		// waits for the collector to delete the object or to drop its owner reference, which the guard of
+		// the object refuses where it does not know the collector. The release that follows takes the quota
+		// off the namespaces of the project.
+		log.Info("delete the quota status of a project that is gone or going")
+		if err := r.Delete(ctx, pq, client.Preconditions{UID: &pq.UID}); err != nil && !apierrors.IsNotFound(err) {
+			return reconcile.Result{}, fmt.Errorf("delete the ProjectQuotaStatus of a project that is gone or going: %w", err)
+		}
+		return reconcile.Result{}, nil
+	}
+	if err := r.ensureOwner(ctx, pq, project); err != nil {
+		return reconcile.Result{}, err
 	}
 
 	hard := quota.Canonical(pq.Spec.Hard)
@@ -198,17 +213,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	// returned, so the status does not claim a quota that is not there
 	var namespaces []quota.Namespace
 	var namespacesErr error
-	if projectFound {
-		namespaces, namespacesErr = r.reconcileNamespaces(ctx, pq, rqHard, families{vm: vm, lb: lb, balancers: balancers})
-		if namespaces == nil && namespacesErr != nil {
-			return reconcile.Result{}, namespacesErr
-		}
-	} else if err := r.unlabelTerminating(ctx, pq.Name); err != nil {
-		// the namespaces of a project deleted without them, or not owned by it, are going on their own
-		return reconcile.Result{}, err
+	namespaces, namespacesErr = r.reconcileNamespaces(ctx, pq, rqHard, families{vm: vm, lb: lb, balancers: balancers})
+	if namespaces == nil && namespacesErr != nil {
+		return reconcile.Result{}, namespacesErr
 	}
 
-	desired := r.desiredStatus(pq, cfg, hard, namespaces, projectFound, notServed, notCounted)
+	desired := r.desiredStatus(pq, cfg, hard, namespaces, notServed, notCounted)
 	r.publishState(pq.Name, desired.Conditions)
 
 	now := r.now()
@@ -235,35 +245,50 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	return reconcile.Result{RequeueAfter: after}, nil
 }
 
+// projectExists reads the project past the cache, so that the quota of a project the cache has not
+// seen yet is not deleted. Without an APIReader the cache, which did not find it, is trusted.
+func (r *Reconciler) projectExists(ctx context.Context, name string, project *v1alpha3.Project) (bool, error) {
+	if r.APIReader == nil {
+		return false, nil
+	}
+	if err := r.APIReader.Get(ctx, client.ObjectKey{Name: name}, project); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("get the project: %w", err)
+	}
+	return true, nil
+}
+
 // ensureFinalizer makes the quota wait for release: the labels that bind the guard policy to the
 // ResourceQuota objects come off first, and then release deletes the ResourceQuota objects.
-func (r *Reconciler) ensureFinalizer(ctx context.Context, pq *v1alpha1.ProjectQuota) error {
+func (r *Reconciler) ensureFinalizer(ctx context.Context, pq *v1alpha1.ProjectQuotaStatus) error {
 	if controllerutil.ContainsFinalizer(pq, v1alpha1.ProjectQuotaFinalizer) {
 		return nil
 	}
 	patch := client.MergeFromWithOptions(pq.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	controllerutil.AddFinalizer(pq, v1alpha1.ProjectQuotaFinalizer)
 	if err := r.Patch(ctx, pq, patch); err != nil {
-		return fmt.Errorf("add the finalizer to the ProjectQuota: %w", err)
+		return fmt.Errorf("add the finalizer to the ProjectQuotaStatus: %w", err)
 	}
 	return nil
 }
 
 // removeFinalizer lets a released quota go.
-func (r *Reconciler) removeFinalizer(ctx context.Context, pq *v1alpha1.ProjectQuota) error {
+func (r *Reconciler) removeFinalizer(ctx context.Context, pq *v1alpha1.ProjectQuotaStatus) error {
 	if !controllerutil.ContainsFinalizer(pq, v1alpha1.ProjectQuotaFinalizer) {
 		return nil
 	}
 	patch := client.MergeFromWithOptions(pq.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	controllerutil.RemoveFinalizer(pq, v1alpha1.ProjectQuotaFinalizer)
 	if err := r.Patch(ctx, pq, patch); err != nil && !apierrors.IsNotFound(err) {
-		return fmt.Errorf("remove the finalizer from the ProjectQuota: %w", err)
+		return fmt.Errorf("remove the finalizer from the ProjectQuotaStatus: %w", err)
 	}
 	return nil
 }
 
 // ensureOwner makes the project the owner of the quota, so that the quota goes with the project.
-func (r *Reconciler) ensureOwner(ctx context.Context, pq *v1alpha1.ProjectQuota, project *v1alpha3.Project) error {
+func (r *Reconciler) ensureOwner(ctx context.Context, pq *v1alpha1.ProjectQuotaStatus, project *v1alpha3.Project) error {
 	for _, ref := range pq.OwnerReferences {
 		if ref.UID == project.UID {
 			return nil
@@ -277,7 +302,7 @@ func (r *Reconciler) ensureOwner(ctx context.Context, pq *v1alpha1.ProjectQuota,
 		UID:        project.UID,
 	})
 	if err := r.Patch(ctx, pq, patch); err != nil {
-		return fmt.Errorf("make the project the owner of the ProjectQuota: %w", err)
+		return fmt.Errorf("make the project the owner of the ProjectQuotaStatus: %w", err)
 	}
 	return nil
 }
@@ -286,7 +311,7 @@ func (r *Reconciler) ensureOwner(ctx context.Context, pq *v1alpha1.ProjectQuota,
 // returns what it found in each. A namespace that is going is not counted: it loses the label. A
 // namespace that fails is returned with its error, the others are still reconciled, and the errors
 // are joined.
-func (r *Reconciler) reconcileNamespaces(ctx context.Context, pq *v1alpha1.ProjectQuota, rqHard corev1.ResourceList, plan families) ([]quota.Namespace, error) {
+func (r *Reconciler) reconcileNamespaces(ctx context.Context, pq *v1alpha1.ProjectQuotaStatus, rqHard corev1.ResourceList, plan families) ([]quota.Namespace, error) {
 	list := new(corev1.NamespaceList)
 	if err := r.List(ctx, list, client.MatchingLabels{v1alpha3.ResourceLabelProject: pq.Name}); err != nil {
 		return nil, fmt.Errorf("list the namespaces of the project: %w", err)
@@ -325,25 +350,6 @@ func (r *Reconciler) reconcileNamespaces(ctx context.Context, pq *v1alpha1.Proje
 	return found, errors.Join(errs...)
 }
 
-// unlabelTerminating takes the label off the namespaces of the project that are being deleted, for a
-// quota whose project is not there: the guard policies would refuse the updates of the objects that
-// wait for a finalizer there once the namespace controller has deleted d8-project-quota.
-func (r *Reconciler) unlabelTerminating(ctx context.Context, project string) error {
-	list := new(corev1.NamespaceList)
-	if err := r.List(ctx, list, client.MatchingLabels{v1alpha3.ResourceLabelProject: project}); err != nil {
-		return fmt.Errorf("list the namespaces of the project: %w", err)
-	}
-	var errs []error
-	for i := range list.Items {
-		if ns := &list.Items[i]; !ns.DeletionTimestamp.IsZero() {
-			if err := r.removeLabel(ctx, ns); err != nil {
-				errs = append(errs, err)
-			}
-		}
-	}
-	return errors.Join(errs...)
-}
-
 // familyPlan is what the quota of a project asks of its namespaces for a family of objects: the label
 // that calls the webhook of the family, and the count of its objects in the status.
 type familyPlan struct {
@@ -360,7 +366,7 @@ type families struct {
 
 // reconcileNamespace keeps the ResourceQuota and the labels of one namespace and finds its usage: the
 // one of the ResourceQuota and the one of the objects of the families.
-func (r *Reconciler) reconcileNamespace(ctx context.Context, pq *v1alpha1.ProjectQuota, ns *corev1.Namespace, rqHard corev1.ResourceList,
+func (r *Reconciler) reconcileNamespace(ctx context.Context, pq *v1alpha1.ProjectQuotaStatus, ns *corev1.Namespace, rqHard corev1.ResourceList,
 	plan families,
 ) (quota.Namespace, error) {
 	found := quota.Namespace{Name: ns.Name}
@@ -463,7 +469,7 @@ func (r *Reconciler) virtualMachineUsage(ctx context.Context, namespace string) 
 // ensureResourceQuota creates or updates d8-project-quota in the namespace. A ResourceQuota of that
 // name that the controller did not make, or one with scopes, which cannot be removed from a quota, is
 // deleted and made anew: it would count only part of the objects.
-func (r *Reconciler) ensureResourceQuota(ctx context.Context, pq *v1alpha1.ProjectQuota, ns *corev1.Namespace, hard corev1.ResourceList) (*corev1.ResourceQuota, error) {
+func (r *Reconciler) ensureResourceQuota(ctx context.Context, pq *v1alpha1.ProjectQuotaStatus, ns *corev1.Namespace, hard corev1.ResourceList) (*corev1.ResourceQuota, error) {
 	namespace := ns.Name
 	rq := &corev1.ResourceQuota{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: v1alpha3.ProjectQuotaName}}
 	switch err := r.Get(ctx, client.ObjectKeyFromObject(rq), rq); {
@@ -497,12 +503,12 @@ func (r *Reconciler) ensureResourceQuota(ctx context.Context, pq *v1alpha1.Proje
 			v1alpha3.ResourceLabelManagedBy: v1alpha3.ManagedByController,
 		})
 		rq.Spec.Hard = hard.DeepCopy()
-		// The ProjectQuota does not own the quota: the garbage collector would delete it, also in a
+		// The ProjectQuotaStatus does not own the quota: the garbage collector would delete it, also in a
 		// foreground deletion, while the namespace still carries the label that binds the guard to it.
 		// release() takes the label off and then deletes the quota, held by the finalizer of the
-		// ProjectQuota; an owner reference an earlier release of the module set goes.
+		// ProjectQuotaStatus; an owner reference an earlier release of the module set goes.
 		rq.OwnerReferences = slices.DeleteFunc(rq.OwnerReferences, func(ref metav1.OwnerReference) bool {
-			return ref.Kind == v1alpha1.ProjectQuotaKind && ref.APIVersion == v1alpha1.SchemeGroupVersion.String()
+			return ref.Kind == v1alpha1.ProjectQuotaStatusKind && ref.APIVersion == v1alpha1.SchemeGroupVersion.String()
 		})
 		return nil
 	})
@@ -578,9 +584,9 @@ func (r *Reconciler) setLabel(ctx context.Context, ns *corev1.Namespace, label s
 	return nil
 }
 
-// release takes the quota off the namespaces of a project whose ProjectQuota is going or gone. The
+// release takes the quota off the namespaces of a project whose ProjectQuotaStatus is going or gone. The
 // label goes first: the guard policy refuses every object in a labelled namespace without a quota. The
-// ResourceQuota objects of the controller are deleted here, after the label; the ProjectQuota does not
+// ResourceQuota objects of the controller are deleted here, after the label; the ProjectQuotaStatus does not
 // own them, so no garbage collection, foreground deletion included, removes them first.
 func (r *Reconciler) release(ctx context.Context, project string) error {
 	list := new(corev1.NamespaceList)
@@ -618,11 +624,11 @@ func (r *Reconciler) releaseNamespace(ctx context.Context, ns *corev1.Namespace)
 }
 
 // desiredStatus is the status the quota should have.
-func (r *Reconciler) desiredStatus(pq *v1alpha1.ProjectQuota, cfg quota.Config, hard corev1.ResourceList, namespaces []quota.Namespace, projectFound bool,
+func (r *Reconciler) desiredStatus(pq *v1alpha1.ProjectQuotaStatus, cfg quota.Config, hard corev1.ResourceList, namespaces []quota.Namespace,
 	notServed, notCounted []string,
-) *v1alpha1.ProjectQuotaStatus {
+) *v1alpha1.ProjectQuotaStatusStatus {
 	used := quota.Sum(hard, namespaces)
-	status := &v1alpha1.ProjectQuotaStatus{
+	status := &v1alpha1.ProjectQuotaStatusStatus{
 		Hard:               hard,
 		Used:               used,
 		NamespaceCount:     int32(len(namespaces)), //nolint:gosec // a project has far fewer namespaces than an int32 holds
@@ -632,16 +638,15 @@ func (r *Reconciler) desiredStatus(pq *v1alpha1.ProjectQuota, cfg quota.Config, 
 	}
 
 	enforced := quota.EnforcedCondition(quota.EnforcedInput{
-		Config:       cfg,
-		ProjectFound: projectFound,
-		NotServed:    notServed,
-		NotCounted:   notCounted,
-		Namespaces:   namespaces,
+		Config:     cfg,
+		NotServed:  notServed,
+		NotCounted: notCounted,
+		Namespaces: namespaces,
 	})
 	conditions := []metav1.Condition{enforced}
 	// the sum is complete only once every namespace has its quota calculated; until then the usage of
 	// some namespace is missing from it, and Exceeded keeps what it said
-	if projectFound && quota.AllCalculated(namespaces) {
+	if quota.AllCalculated(namespaces) {
 		previous := quota.FindCondition(pq.Status.Conditions, v1alpha1.ProjectQuotaConditionExceeded)
 		now := r.now()
 		cause, causeLabel := overshootCause(cfg, enforced, quota.FindCondition(pq.Status.Conditions, v1alpha1.ProjectQuotaConditionEnforced),
@@ -709,11 +714,11 @@ func overshootCause(cfg quota.Config, enforced metav1.Condition, previousEnforce
 	return "a quota status write saved late, or a recount of kube-controller-manager", "late_write_or_recalc"
 }
 
-func (r *Reconciler) writeStatus(ctx context.Context, pq *v1alpha1.ProjectQuota, status *v1alpha1.ProjectQuotaStatus) error {
+func (r *Reconciler) writeStatus(ctx context.Context, pq *v1alpha1.ProjectQuotaStatus, status *v1alpha1.ProjectQuotaStatusStatus) error {
 	patch := client.MergeFrom(pq.DeepCopy())
 	pq.Status = *status
 	if err := r.Status().Patch(ctx, pq, patch); err != nil {
-		return fmt.Errorf("write the status of the ProjectQuota: %w", err)
+		return fmt.Errorf("write the status of the ProjectQuotaStatus: %w", err)
 	}
 	return nil
 }
@@ -735,7 +740,7 @@ func (r *Reconciler) publishState(name string, conditions []metav1.Condition) {
 	}
 	if c := quota.FindCondition(conditions, v1alpha1.ProjectQuotaConditionEnforced); c != nil && c.Status == metav1.ConditionFalse {
 		switch c.Reason {
-		case v1alpha1.ProjectQuotaReasonKeyRollout, v1alpha1.ProjectQuotaReasonKeyNotServed, v1alpha1.ProjectQuotaReasonProjectNotFound,
+		case v1alpha1.ProjectQuotaReasonKeyRollout, v1alpha1.ProjectQuotaReasonKeyNotServed,
 			v1alpha1.ProjectQuotaReasonWebhookMissing, v1alpha1.ProjectQuotaReasonWebhookMisconfigured, v1alpha1.ProjectQuotaReasonWebhookNotCalled:
 			states[stateNotEnforced] = true
 		}
@@ -749,7 +754,7 @@ func (r *Reconciler) publishState(name string, conditions []metav1.Condition) {
 	}
 }
 
-func (r *Reconciler) remember(pq *v1alpha1.ProjectQuota) {
+func (r *Reconciler) remember(pq *v1alpha1.ProjectQuotaStatus) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.known == nil {
@@ -771,10 +776,16 @@ func (r *Reconciler) forget(name string) {
 	quotaState.DeletePartialMatch(prometheus.Labels{"project": name})
 }
 
-// deletionStarted passes the update of an object that is being deleted: the release of a ProjectQuota
+// deletionStarted passes the update of an object that is being deleted: the release of a ProjectQuotaStatus
 // must not wait for a change of its generation, which a deletion may not bump.
 var deletionStarted = predicate.Funcs{
 	UpdateFunc: func(e event.UpdateEvent) bool { return !e.ObjectNew.GetDeletionTimestamp().IsZero() },
+}
+
+// projectDeletionStarted wakes the quota reconciler when the project starts being deleted.
+// Ordinary spec, metadata and status updates do not change the quota's ownership.
+func projectDeletionStarted(e event.UpdateEvent) bool {
+	return e.ObjectOld.GetDeletionTimestamp().IsZero() && !e.ObjectNew.GetDeletionTimestamp().IsZero()
 }
 
 // SetupWithManager wires the reconciler and its watches.
@@ -797,7 +808,7 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 	// next recheck
 	everyQuota := handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, _ client.Object) []reconcile.Request {
 		r.Config.Invalidate()
-		list := new(v1alpha1.ProjectQuotaList)
+		list := new(v1alpha1.ProjectQuotaStatusList)
 		if err := r.List(ctx, list); err != nil {
 			ctrllog.FromContext(ctx).Error(err, "list the project quotas")
 			return nil
@@ -814,16 +825,12 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 
 	return ctrl.ControllerManagedBy(mgr).
 		Named("project-quota").
-		For(&v1alpha1.ProjectQuota{}, ctrl.WithPredicates(predicate.Or[client.Object](predicate.GenerationChangedPredicate{}, deletionStarted))).
+		For(&v1alpha1.ProjectQuotaStatus{}, ctrl.WithPredicates(predicate.Or[client.Object](predicate.GenerationChangedPredicate{}, deletionStarted))).
 		Watches(&corev1.ResourceQuota{}, byProjectLabel, ctrl.WithPredicates(isProjectQuotaRQ)).
 		Watches(&corev1.Namespace{}, byProjectLabel).
 		Watches(&corev1.ConfigMap{}, everyQuota, ctrl.WithPredicates(isConfig)).
 		Watches(&corev1.Secret{}, everyQuota, ctrl.WithPredicates(isConfig)).
 		Watches(&admissionregistrationv1.ValidatingWebhookConfiguration{}, everyQuota, ctrl.WithPredicates(isConfig)).
-		Watches(&v1alpha3.Project{}, byName, ctrl.WithPredicates(predicate.Funcs{
-			// the owner of the quota is set once the project is there, and the namespaces are released
-			// once it goes; nothing in between concerns the quota
-			UpdateFunc: func(event.UpdateEvent) bool { return false },
-		})).
+		Watches(&v1alpha3.Project{}, byName, ctrl.WithPredicates(predicate.Funcs{UpdateFunc: projectDeletionStarted})).
 		Complete(r)
 }

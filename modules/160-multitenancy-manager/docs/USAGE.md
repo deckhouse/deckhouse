@@ -150,14 +150,14 @@ d8 k get project my-project -o jsonpath='{range .status.conditions[*]}{.type}={.
 | `ManifestsApplied` | The objects of the template's [`manifests`](#describing-other-objects-in-manifests) are not applied. The `message` says what they wait for, why none of them is applied, which existing objects they leave alone, or which objects the API server refused, with the code of each refusal (for example, `403 Forbidden`). |
 | `HelmOwnership` | The namespace of the project belongs to another Helm release. The `message` names the release (see [Creating a project automatically for a namespace](#creating-a-project-automatically-for-a-namespace)). |
 | `NamespaceDeleted` | The project is being deleted, and its namespace is still terminating. The `message` says since when and what remains in it. |
-| `QuotaWithinLimits` | The usage of the project is above its [ProjectQuota](#project-quota); the `message` names the limits. A project without a quota does not have the condition. |
+| `QuotaWithinLimits` | The usage of the project is above its [quota](#project-quota); the `message` names the limits. A project without a quota does not have the condition. |
 
 The `HandoverPending` condition is read the other way round. It is `True` while AuthorizationRule and ResourceQuota objects kept from a Helm text wait for the standard fields that replace them, and it is removed once they are deleted (see [Switching a project from a Helm text](#switching-a-project-from-a-helm-text)).
 
 Other useful status fields:
 
 - `.status.namespaces`: All namespaces of the project with their kind (`Main` or `Additional`).
-- `.status.usage`: The usage of the project summed over all of its namespaces, taken from its [ProjectQuota](#project-quota).
+- `.status.usage`: The usage of the project summed over all of its namespaces, taken from its [ProjectQuotaStatus](#project-quota).
 - `.status.resources`: State of the individual objects created from the template.
 - `.status.keptObjects`: Objects of a Helm text and of the release of the structured fields that the release [left in place](#switching-a-project-from-a-helm-text) instead of deleting them, until [`manifests`](#moving-an-object-of-the-release-to-manifests) take them over.
 - `.status.manifestObjects`: Objects applied from [`manifests`](#describing-other-objects-in-manifests) of the template.
@@ -168,8 +168,8 @@ The controller creates service objects in the project namespaces. They are manag
 
 | Object | Where | Comes from |
 |--------|-------|------------|
-| `ProjectQuota/<PROJECT_NAME>` | Cluster-scoped | The [`.spec.quota`](cr.html#project-v1alpha3-spec-quota) field of the project. A ProjectQuota created directly is not touched by the field: it is neither overwritten nor deleted, and a quota in the field next to it is refused (see [Project quota](#project-quota)). |
-| `ResourceQuota/d8-project-quota` | Every namespace of the project | The [ProjectQuota](#project-quota) of the project. |
+| `ProjectQuotaStatus/<PROJECT_NAME>` | Cluster-scoped | The [`.spec.quota`](cr.html#project-v1alpha3-spec-quota) field of the project (see [Project quota](#project-quota)). |
+| `ResourceQuota/d8-project-quota` | Every namespace of the project | The [`.spec.quota`](cr.html#project-v1alpha3-spec-quota) field of the project. |
 | `ProjectRoleBinding/d8-administrators` | The main namespace | The [`.spec.administrators`](cr.html#project-v1alpha3-spec-administrators) field of the project. |
 | `ProjectRoleBinding/d8-manifests` | The main namespace | The [`manifests`](#describing-other-objects-in-manifests) field of the project template. It grants the `d8:project:admin` role to the user that applies these objects. |
 | `RoleBinding/d8:prb:<name>` | Every namespace of the project | The fan-out of the [ProjectRoleBinding](cr.html#projectrolebinding) named `<name>`. |
@@ -232,7 +232,7 @@ The following automatically applies in **all** namespaces of the project (the ma
 - **Access**: the [ProjectRoleBinding](cr.html#projectrolebinding) and [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding) bindings, including the automatic access of the project administrators. When a new namespace is added, all existing bindings fan out into it without any user action.
 - **Namespaced template objects**: the network policy (`networkPolicy.mode: Isolated`) and the log collection setup (`logShipping`) are created in every namespace of the project. The network isolation allows traffic between the namespaces of one project. A Helm `resourcesTemplate` creates its objects in the main namespace unless an object names another namespace of the project. So does [`manifests`](#describing-other-objects-in-manifests), whose objects are not applied while one of them names a namespace outside the project.
 - **Cluster-scoped template policies** (`OperationPolicy`, the `SecurityPolicy` from `allowedUIDs`/`allowedGIDs`): they select namespaces by the `projects.deckhouse.io/project` label, that is, they cover the whole project.
-- **The project quota**: the `d8-project-quota` ResourceQuota with the limits of the [ProjectQuota](#project-quota) of the project is created in every namespace of the project.
+- **The project quota**: the `d8-project-quota` ResourceQuota with the limits of the [project quota](#project-quota) is created in every namespace of the project.
 - **Inherited labels**: the pod security profile (`security.deckhouse.io/pod-policy`), extended monitoring (`extended-monitoring.deckhouse.io/enabled`), vulnerability scanning (`security-scanning.deckhouse.io/enabled`), the template label (`projects.deckhouse.io/project-template`) and the labels the template sets through `namespaceMetadata.labels` are synced from the main namespace to the additional ones. For a template with `resourcesTemplate`, these are the labels its Helm text puts on the main namespace.
   The sync is complete: if a feature is turned off or a label is removed in the template, the label is removed from the additional namespaces as well. The labels of the template are listed in the `projects.deckhouse.io/template-labels` annotation of each project namespace; they are changed through the Project or its ProjectTemplate, and a direct edit of one on an additional namespace is reverted. Thanks to the template label, the [cluster resource availability rules](#managing-access-to-cluster-wide-resources) also apply in all namespaces of the project.
 
@@ -370,8 +370,8 @@ Project administrators and the resource quota are set in fields of the [Project]
 
 - `.spec.administrators` — a list of subjects (`kind: User` or `kind: Group` and `name`) that receive administrative access to the project. The controller manages this access as an auto-generated [ProjectRoleBinding](cr.html#projectrolebinding) in the project namespace. A name cannot contain control characters or line breaks and cannot start with `system:multitenancy-manager:`, the prefix of the users that the controller [acts as](#describing-other-objects-in-manifests). An update that keeps such a name as it was is accepted with a warning.
 - `.spec.quota` — a map of [ResourceQuota](https://kubernetes.io/docs/concepts/policy/resource-quotas/) hard limits (for example, `requests.cpu`, `limits.memory`) for the whole project.
-  The controller turns it into the [ProjectQuota](#project-quota) of the project and reports the usage summed over the namespaces of the project in `.status.usage`; clearing the field deletes that ProjectQuota.
-  Changing the field needs the right to write the ProjectQuota of the project, and its keys follow the [rules of a ProjectQuota](#keys-of-a-project-quota).
+  The controller turns it into the [ProjectQuotaStatus](#project-quota) of the project and reports the usage summed over the namespaces of the project in `.status.usage`; clearing the field deletes that ProjectQuotaStatus.
+  Changing the field needs [the right to set the quota of the project](#who-manages-the-quotas), and its keys follow the [rules of the project quota](#keys-of-a-project-quota).
   For `memory` and `storage`, a unit suffix is required (for example `2Gi`).
   Numbers without a unit mean bytes, and all of them except 0 are rejected. An update that leaves such a value as it was is accepted with a warning, so a project whose quota came from bare numbers in `parameters.resourceQuota` stays editable and can still be applied unchanged. A create through `deckhouse.io/v1alpha2` with such numbers in `parameters.resourceQuota` is accepted with a warning as well, so such a manifest can create the project again, for example from a backup.
 
@@ -398,21 +398,22 @@ A Helm `resourcesTemplate` that renders a ResourceQuota or an AuthorizationRule 
 
 ## Project quota
 
-A [ProjectQuota](cr.html#projectquota) is one limit on the sum of resource usage over all namespaces of a project, the [additional namespaces](#additional-project-namespaces) included. Its name is the name of the project. [`.spec.quota`](cr.html#project-v1alpha3-spec-quota) of a Project becomes the ProjectQuota of the project; a ProjectQuota can also be created directly:
+The project quota is one limit on the sum of resource usage over all namespaces of a project, the [additional namespaces](#additional-project-namespaces) included. It is set in the [`.spec.quota`](cr.html#project-v1alpha3-spec-quota) field of the project:
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ProjectQuota
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
 metadata:
   name: my-project
 spec:
-  hard:
+  projectTemplateName: default
+  quota:
     requests.cpu: "20"
     requests.memory: 40Gi
     projectNamespaces: "3"
 ```
 
-A ProjectQuota created directly is never taken over by `.spec.quota`: the field does not overwrite or delete it. Setting `.spec.quota` of a project whose ProjectQuota was created directly is refused, and a project that already has both reports `StandardFieldsApplied` as `False`. Delete the ProjectQuota to let the field make its own ProjectQuota object, or clear the field.
+From the field the controller makes the [ProjectQuotaStatus](cr.html#projectquotastatus) object named after the project and keeps it up to date. The object shows the limits and the usage of the project and is read-only: only the controller creates, changes and deletes it. Clearing the field deletes it.
 
 How the quota applies:
 
@@ -422,8 +423,8 @@ How the quota applies:
   That takes seconds after a namespace is created.
   In a namespace labelled `projects.deckhouse.io/quota: enforced`, the `d8-multitenancy-manager-quota-guard` admission policy refuses the objects the quota counts while `d8-project-quota` has no limits calculated at all or has scopes.
   A limit added to a quota that is calculated already does not hold anything back: it applies once kube-controller-manager has calculated it, and `Enforced` is `False` with the `KeyRollout` reason until then.
-- A ProjectQuota is deleted in two steps: its `projects.deckhouse.io/project-quota` finalizer holds it until the controller has taken the label off the namespaces, and only then the `d8-project-quota` ResourceQuota objects go with it. A namespace that is being deleted loses the label at once, so that the objects waiting for a finalizer there, such as the volume claims protected from deletion, can be updated. If the module is disabled before the finalizer is removed, remove it by hand.
-- The status of the ProjectQuota shows the usage summed over the namespaces (`status.used`), the number of namespaces and the 50 namespaces closest to a limit. The usage of every namespace is in its `d8-project-quota` ResourceQuota:
+- A ProjectQuotaStatus is deleted in two steps: its `projects.deckhouse.io/project-quota` finalizer holds it until the controller has taken the label off the namespaces, and only then the `d8-project-quota` ResourceQuota objects go with it. A namespace that is being deleted loses the label at once, so that the objects waiting for a finalizer there, such as the volume claims protected from deletion, can be updated. If the module is disabled before the finalizer is removed, remove it by hand.
+- The status of the ProjectQuotaStatus shows the usage summed over the namespaces (`status.used`), the number of namespaces and the 50 namespaces closest to a limit. The usage of every namespace is in its `d8-project-quota` ResourceQuota:
 
   ```shell
   d8 k get resourcequota -A -l projects.deckhouse.io/project=my-project
@@ -441,7 +442,7 @@ How the quota applies:
 
 ### Keys of a project quota
 
-A ProjectQuota and `.spec.quota` accept the following keys:
+`.spec.quota` accepts the following keys:
 
 - `cpu`, `memory`, `ephemeral-storage`, `pods`, `requests.*` and `limits.*` of CPU, memory and ephemeral storage, `requests.storage`, `requests.hugepages-<SIZE>`, the requests of extended resources (for example, `requests.nvidia.com/gpu`);
 - `services`, `services.loadbalancers`, `services.nodeports`, `persistentvolumeclaims`, `configmaps`, `secrets`, `replicationcontrollers`;
@@ -509,7 +510,7 @@ Every Service of type LoadBalancer counts its own addresses, also when it shares
 ### Clusters where Deckhouse Platform does not manage the control plane
 
 The sum over the namespaces of a project is enforced only where Deckhouse Platform manages the control plane of the cluster (the `control-plane-manager` module is enabled).
-Elsewhere the `d8-multitenancy-manager-quota-pending` and `d8-multitenancy-manager-quota-guard` admission policies are not rendered, every ProjectQuota reports `Enforced=False` with the `ControlPlaneNotManaged` reason, and the [`D8ProjectQuotaNotSupported`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#multitenancy-manager-d8projectquotanotsupported) alert says so.
+Elsewhere the `d8-multitenancy-manager-quota-pending` and `d8-multitenancy-manager-quota-guard` admission policies are not rendered, every ProjectQuotaStatus reports `Enforced=False` with the `ControlPlaneNotManaged` reason, and the [`D8ProjectQuotaNotSupported`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#multitenancy-manager-d8projectquotanotsupported) alert says so.
 Each namespace still keeps its `d8-project-quota` ResourceQuota, so no namespace alone uses more than the quota of the whole project.
 
 ### Dividing a project quota between namespaces
@@ -531,7 +532,7 @@ spec:
 
 ### Who manages the quotas
 
-ProjectQuota objects are created, changed and deleted with the `d8:system-capability:multitenancy-manager:manage_quotas` capability, which the IAM `manager` role and the roles above it include. The same right is needed to change `.spec.quota` of a Project: the Project webhook checks it, so whoever may create and change projects does not choose their quota. The status of a ProjectQuota and the usage in the status of `d8-project-quota` are written by the controller and by Kubernetes only, the latter where Deckhouse Platform manages the control plane.
+Changing `.spec.quota` of a Project needs the `update` verb on `projects/quota` in the `deckhouse.io` group for that project, which the `d8:system-capability:multitenancy-manager:manage_quotas` capability grants; the IAM `manager` role and the roles above it include the capability. The Project webhook checks the right, so whoever may create and change projects does not choose their quota. A ProjectQuotaStatus is written by the controller only; everyone else, cluster administrators included, can only read it. The usage in the status of `d8-project-quota` is written by Kubernetes; it is protected from other writers where Deckhouse Platform manages the control plane.
 
 ### When the project quota refuses
 
@@ -539,11 +540,11 @@ What the response says:
 
 | Response | What it means |
 |---|---|
-| `403 ... exceeded quota: d8-project-quota, project <PROJECT_NAME>: requested: ..., used: ..., limited: ... (<N> namespaces)` | The sum of project `<PROJECT_NAME>` would go over the limits of its ProjectQuota. Raise `spec.hard` or delete what the project does not need; `status.topNamespaces` shows where the usage is. |
+| `403 ... exceeded quota: d8-project-quota, project <PROJECT_NAME>: requested: ..., used: ..., limited: ... (<N> namespaces)` | The sum of project `<PROJECT_NAME>` would go over the limits of its quota. Raise the limits in `.spec.quota` of the project or delete what the project does not need; `status.topNamespaces` of its ProjectQuotaStatus shows where the usage is. |
 | `403 ... exceeded quota: d8-project-quota, requested: ...` (no `project`) | The usage of this namespace alone, with the object, would go over a limit of the project, which every `d8-project-quota` ResourceQuota contains. The quota plugin of the API server refuses it before the sum of the project is checked. |
 | `503 ... project quota ledger unavailable (<CAUSE>), retry` | The ledger does not answer for a moment, for example while its leader changes. Retry; if it lasts longer than a minute, see the `D8ProjectQuotaLedgerDown` alert. |
 | `500 ... failed calling webhook "quota-ledger.multitenancy-manager.deckhouse.io": ...`, or the same with `quota-vm.multitenancy-manager.deckhouse.io` or `quota-lb.multitenancy-manager.deckhouse.io` | The API server does not reach the ledger: no replica runs, the network, or the certificate. While the Service points at a frozen leader, the quota plugin of the API server retries the call, so each such create waits up to about 8 seconds until the address of the leader is taken out of the Service: in about 3.5 seconds by the other replica, in up to about 15 seconds by Deckhouse when no replica answers. |
-| `403 ... ValidatingAdmissionPolicy 'd8-multitenancy-manager-quota-pending' ...` | The `d8-project-quota` of a new namespace is not calculated yet. Retry in a few seconds; if it lasts, see the `Enforced` condition of the ProjectQuota and check the controller and kube-controller-manager. |
+| `403 ... ValidatingAdmissionPolicy 'd8-multitenancy-manager-quota-pending' ...` | The `d8-project-quota` of a new namespace is not calculated yet. Retry in a few seconds; if it lasts, see the `Enforced` condition of the ProjectQuotaStatus of the project and check the controller and kube-controller-manager. |
 | `403 ... ValidatingAdmissionPolicy 'd8-multitenancy-manager-quota-guard' ...` | The `d8-project-quota` of the namespace is missing, has scopes or is not calculated at all yet. Retry in a few seconds; otherwise check the controller and kube-controller-manager. |
 | `500 ... resource quota evaluation timed out` | The quota admission of the API server is overloaded; see the `D8ResourceQuotaAdmissionDegraded` alert. |
 
@@ -551,7 +552,7 @@ A new additional namespace refuses the objects of users for the few seconds unti
 
 If the ledger keeps the objects of projects from being created and the cause cannot be removed quickly, take these steps in order until the creates work again:
 
-1. If the creates fail with `503 ... project quota ledger unavailable`, a replica answers, and suspending the ledger helps. Within a second every running replica lets the writes through uncounted, and every ProjectQuota reports `Enforced=False` with the `Suspended` reason. Deleting the ConfigMap resumes the check; the `D8ProjectQuotaSuspended` alert reminds of it after 15 minutes.
+1. If the creates fail with `503 ... project quota ledger unavailable`, a replica answers, and suspending the ledger helps. Within a second every running replica lets the writes through uncounted, and every ProjectQuotaStatus reports `Enforced=False` with the `Suspended` reason. Deleting the ConfigMap resumes the check; the `D8ProjectQuotaSuspended` alert reminds of it after 15 minutes.
 
    ```shell
    d8 k -n d8-multitenancy-manager create configmap quota-ledger-suspend --from-literal=reason="<REASON>"
@@ -560,7 +561,7 @@ If the ledger keeps the objects of projects from being created and the cause can
 
    Replace `<REASON>` with why the check is suspended.
 
-1. If the creates fail with `500 ... failed calling webhook "quota-ledger.multitenancy-manager.deckhouse.io"`, the API servers do not reach a replica that answers, as while the `D8ProjectQuotaLedgerDown` alert fires, and the suspension does not help: delete the webhook of the ledger as `system:sudouser`. The check stops within a second, and every ProjectQuota reports `Enforced=False` with the `WebhookMissing` reason. Deckhouse Platform finds the webhook of the module missing and puts it back by itself within about 4 minutes, so this buys time to fix the cause rather than switching the check off.
+1. If the creates fail with `500 ... failed calling webhook "quota-ledger.multitenancy-manager.deckhouse.io"`, the API servers do not reach a replica that answers, as while the `D8ProjectQuotaLedgerDown` alert fires, and the suspension does not help: delete the webhook of the ledger as `system:sudouser`. The check stops within a second, and every ProjectQuotaStatus reports `Enforced=False` with the `WebhookMissing` reason. Deckhouse Platform finds the webhook of the module missing and puts it back by itself within about 4 minutes, so this buys time to fix the cause rather than switching the check off.
 
    ```shell
    d8 k --as=system:sudouser delete validatingwebhookconfiguration d8-multitenancy-manager-quota-ledger

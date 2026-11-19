@@ -147,7 +147,7 @@ d8 k get project my-project -o jsonpath='{range .status.conditions[*]}{.type}={.
 | `ResourcesUpgraded` | Не удалось создать или обновить ресурсы проекта из шаблона (детали — в `message`). |
 | `StandardFieldsApplied` | Не удалось применить [стандартные поля](#стандартные-поля-проекта) (квоту или администраторов). |
 | `TemplateRolesAllowed` | Шаблон создаёт привязку к роли, [запрещённой для выдачи в проектах](#предоставление-доступа-внутри-проекта), — проект переводится в `Error`, в `message` указана роль.|
-| `QuotaWithinLimits` | Потребление проекта выше его [ProjectQuota](#квота-проекта); в `message` названы лимиты. У проекта без квоты этого условия нет. |
+| `QuotaWithinLimits` | Потребление проекта выше его [квоты](#квота-проекта); в `message` названы лимиты. У проекта без квоты этого условия нет. |
 | `ManifestsApplied` | Объекты из [`manifests`](#описание-других-объектов-в-manifests) шаблона не применены. В `message` указано, чего они ждут, почему не применён ни один из них, какие уже существующие объекты они не трогают или какие объекты отклонил API-сервер, с кодом каждого отказа (например, `403 Forbidden`). |
 | `HelmOwnership` | Неймспейс проекта принадлежит другому Helm-релизу. В `message` указан этот релиз (подробнее — [в разделе «Автоматическое создание проекта для неймспейса»](#автоматическое-создание-проекта-для-неймспейса)). |
 | `NamespaceDeleted` | Проект удаляется, а его неймспейс ещё не удалён. В `message` указано, с какого момента идёт удаление и что осталось в неймспейсе. |
@@ -157,7 +157,7 @@ d8 k get project my-project -o jsonpath='{range .status.conditions[*]}{.type}={.
 Прочие полезные поля статуса:
 
 - `.status.namespaces` — все неймспейсы проекта с указанием их типа (`Main`/`Additional`);
-- `.status.usage` — потребление проекта, просуммированное по всем его неймспейсам, из его [ProjectQuota](#квота-проекта);
+- `.status.usage` — потребление проекта, просуммированное по всем его неймспейсам, из его [ProjectQuotaStatus](#квота-проекта);
 - `.status.resources` — состояние отдельных ресурсов, созданных из шаблона;
 - `.status.keptObjects` — объекты Helm-текста и релиза структурированных полей, которые релиз [оставил на месте](#переход-проекта-с-helm-текста) вместо удаления, пока их не заберут [`manifests`](#перенос-объекта-релиза-в-manifests);
 - `.status.manifestObjects` — объекты, применённые из [`manifests`](#описание-других-объектов-в-manifests) шаблона.
@@ -168,8 +168,8 @@ d8 k get project my-project -o jsonpath='{range .status.conditions[*]}{.type}={.
 
 | Объект | Где | Откуда берётся |
 |--------|-----|----------------|
-| `ProjectQuota/<PROJECT_NAME>` | Кластерный объект | Поле [`.spec.quota`](cr.html#project-v1alpha3-spec-quota) проекта. Созданный явно ProjectQuota поле не трогает: он не перезаписывается и не удаляется, а квота в поле рядом с ним отклоняется (подробнее — [в разделе «Квота проекта»](#квота-проекта)). |
-| `ResourceQuota/d8-project-quota` | Каждый неймспейс проекта | [ProjectQuota](#квота-проекта) проекта. |
+| `ProjectQuotaStatus/<PROJECT_NAME>` | Кластерный объект | Поле [`.spec.quota`](cr.html#project-v1alpha3-spec-quota) проекта (подробнее — [в разделе «Квота проекта»](#квота-проекта)). |
+| `ResourceQuota/d8-project-quota` | Каждый неймспейс проекта | Поле [`.spec.quota`](cr.html#project-v1alpha3-spec-quota) проекта. |
 | `ProjectRoleBinding/d8-administrators` | Основной неймспейс | Поле [`.spec.administrators`](cr.html#project-v1alpha3-spec-administrators) проекта. |
 | `ProjectRoleBinding/d8-manifests` | Основной неймспейс | Поле [`manifests`](#описание-других-объектов-в-manifests) шаблона проекта. Выдаёт роль `d8:project:admin` пользователю, от имени которого применяются эти объекты. |
 | `RoleBinding/d8:prb:<имя>` | Каждый неймспейс проекта | Разворачивание [ProjectRoleBinding](cr.html#projectrolebinding) с именем `<имя>`. |
@@ -232,7 +232,7 @@ d8 k get project my-project -o jsonpath='{.status.namespaces}'
 - **Доступ**: привязки [ProjectRoleBinding](cr.html#projectrolebinding) и [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding), включая автоматический доступ администраторов проекта. При добавлении нового неймспейса все существующие привязки разворачиваются в него без каких-либо действий со стороны пользователя.
 - **Namespaced-объекты шаблона**: сетевая политика (`networkPolicy.mode: Isolated`) и настройка сбора логов (`logShipping`) создаются в каждом неймспейсе проекта. Сетевая изоляция при этом разрешает трафик между неймспейсами одного проекта. Helm-шаблон `resourcesTemplate` создаёт свои объекты в основном неймспейсе, если в объекте не указан другой неймспейс проекта. Так же поступает [`manifests`](#описание-других-объектов-в-manifests), объекты которого не применяются, пока один из них указывает неймспейс вне проекта.
 - **Кластерные политики шаблона** (`OperationPolicy`, `SecurityPolicy` из `allowedUIDs`/`allowedGIDs`): выбирают неймспейсы по лейблу `projects.deckhouse.io/project`, то есть покрывают весь проект.
-- **Квота проекта**: ResourceQuota `d8-project-quota` с лимитами [ProjectQuota](#квота-проекта) проекта создаётся в каждом неймспейсе проекта.
+- **Квота проекта**: ResourceQuota `d8-project-quota` с лимитами [квоты проекта](#квота-проекта) создаётся в каждом неймспейсе проекта.
 - **Наследуемые лейблы**: профиль безопасности подов (`security.deckhouse.io/pod-policy`), расширенный мониторинг (`extended-monitoring.deckhouse.io/enabled`), сканирование уязвимостей (`security-scanning.deckhouse.io/enabled`), лейбл шаблона (`projects.deckhouse.io/project-template`) и лейблы, которые шаблон задаёт через `namespaceMetadata.labels`, синхронизируются с основного неймспейса на дополнительные. Для шаблона с `resourcesTemplate` это лейблы, которые его Helm-текст ставит на основной неймспейс.
   Синхронизация полная: если функцию выключили или лейбл убрали в шаблоне, лейбл снимется и с дополнительных неймспейсов. Лейблы шаблона перечислены в аннотации `projects.deckhouse.io/template-labels` каждого неймспейса проекта; их меняют через Project или его ProjectTemplate, а прямая правка такого лейбла на дополнительном неймспейсе откатывается. Благодаря лейблу шаблона [правила доступности cluster-wide-ресурсов](#управление-доступом-к-cluster-wide-ресурсам) тоже действуют во всех неймспейсах проекта.
 
@@ -370,8 +370,8 @@ d8 k get namespaces -l '!projects.deckhouse.io/project,heritage!=deckhouse' -o n
 
 - `.spec.administrators` — список субъектов (`kind: User` или `kind: Group` и `name`), получающих административный доступ к проекту. Контроллер реализует этот доступ через автоматически создаваемый [ProjectRoleBinding](cr.html#projectrolebinding) в неймспейсе проекта. Имя не может содержать управляющие символы и переводы строк и не может начинаться с `system:multitenancy-manager:`, префикса пользователей, от имени которых [действует контроллер](#описание-других-объектов-в-manifests). Обновление, которое оставляет такое имя прежним, принимается с предупреждением.
 - `.spec.quota` — набор жёстких лимитов [ResourceQuota](https://kubernetes.io/docs/concepts/policy/resource-quotas/) (например, `requests.cpu`, `limits.memory`) на весь проект.
-  Контроллер превращает его в [ProjectQuota](#квота-проекта) проекта и сообщает в `.status.usage` потребление, просуммированное по неймспейсам проекта; очистка поля удаляет соответствующий ProjectQuota.
-  Для изменения поля нужно право на запись ProjectQuota проекта, а его ключи подчиняются [правилам ProjectQuota](#ключи-квоты-проекта).
+  Контроллер превращает его в [ProjectQuotaStatus](#квота-проекта) проекта и сообщает в `.status.usage` потребление, просуммированное по неймспейсам проекта; очистка поля удаляет соответствующий ProjectQuotaStatus.
+  Для изменения поля нужно [право задавать квоту проекта](#кто-управляет-квотами), а его ключи подчиняются [правилам квоты проекта](#ключи-квоты-проекта).
   Для `memory` и `storage` должна быть указана единица измерения (например `2Gi`).
   Числа без единицы измерения означают байты, и все они, кроме 0, отклоняются.
   Обновление, которое оставляет такое значение прежним, принимается с предупреждением (admission warning), поэтому проект, квота которого пришла из чисел без единиц в `parameters.resourceQuota`, можно редактировать и по-прежнему применять без изменений.
@@ -400,21 +400,22 @@ Helm-шаблон в `resourcesTemplate`, который создаёт Resource
 
 ## Квота проекта
 
-[ProjectQuota](cr.html#projectquota) — единый лимит на сумму потребления ресурсов по всем неймспейсам проекта, включая [дополнительные](#дополнительные-неймспейсы-проекта). Имя объекта — имя проекта. Поле [`.spec.quota`](cr.html#project-v1alpha3-spec-quota) проекта превращается в ProjectQuota проекта; ProjectQuota можно создать и напрямую:
+Квота проекта — единый лимит на сумму потребления ресурсов по всем неймспейсам проекта, включая [дополнительные](#дополнительные-неймспейсы-проекта). Она задаётся в поле [`.spec.quota`](cr.html#project-v1alpha3-spec-quota) проекта:
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ProjectQuota
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
 metadata:
   name: my-project
 spec:
-  hard:
+  projectTemplateName: default
+  quota:
     requests.cpu: "20"
     requests.memory: 40Gi
     projectNamespaces: "3"
 ```
 
-Созданный явно ProjectQuota `.spec.quota` не перехватывает: поле не перезаписывает и не удаляет этот ProjectQuota. Задать `.spec.quota` у проекта, ProjectQuota которого создан напрямую, нельзя, а проект, у которого уже есть и то и другое, показывает `StandardFieldsApplied` равным `False`. Удалите ProjectQuota, чтобы поле создало свой объект ProjectQuota, или очистите поле.
+По полю контроллер создаёт объект [ProjectQuotaStatus](cr.html#projectquotastatus) с именем проекта и поддерживает его в актуальном состоянии. Объект показывает лимиты и потребление проекта и доступен только для чтения: создаёт, меняет и удаляет его только контроллер. Очистка поля удаляет объект.
 
 Как применяется квота:
 
@@ -424,8 +425,8 @@ spec:
   После создания неймспейса это занимает секунды.
   В неймспейсе с лейблом `projects.deckhouse.io/quota: enforced` политика допуска `d8-multitenancy-manager-quota-guard` отклоняет объекты, которые считает квота, пока в `d8-project-quota` нет ни одного рассчитанного лимита или пока у него есть `scopes`.
   Лимит, добавленный в уже рассчитанную квоту, ничего не задерживает: он начинает действовать, когда kube-controller-manager его рассчитал, а до тех пор `Enforced` равно `False` с причиной `KeyRollout`.
-- ProjectQuota удаляется в два шага: финализатор `projects.deckhouse.io/project-quota` держит объект, пока контроллер не снимет лейбл с неймспейсов, и только потом вместе с ним удаляются объекты ResourceQuota `d8-project-quota`. С неймспейса, который удаляется, лейбл снимается сразу, чтобы объекты, ожидающие финализатор, например заявки на тома под защитой от удаления, можно было обновлять. Если модуль отключён раньше, чем финализатор снят, снимите его вручную.
-- В статусе ProjectQuota видны сумма потребления по неймспейсам (`status.used`), число неймспейсов и 50 неймспейсов, ближе всего подошедших к лимиту. Потребление каждого неймспейса — в его ResourceQuota `d8-project-quota`:
+- ProjectQuotaStatus удаляется в два шага: финализатор `projects.deckhouse.io/project-quota` держит объект, пока контроллер не снимет лейбл с неймспейсов, и только потом вместе с ним удаляются объекты ResourceQuota `d8-project-quota`. С неймспейса, который удаляется, лейбл снимается сразу, чтобы объекты, ожидающие финализатор, например заявки на тома под защитой от удаления, можно было обновлять. Если модуль отключён раньше, чем финализатор снят, снимите его вручную.
+- В статусе ProjectQuotaStatus видны сумма потребления по неймспейсам (`status.used`), число неймспейсов и 50 неймспейсов, ближе всего подошедших к лимиту. Потребление каждого неймспейса — в его ResourceQuota `d8-project-quota`:
 
   ```shell
   d8 k get resourcequota -A -l projects.deckhouse.io/project=my-project
@@ -443,7 +444,7 @@ spec:
 
 ### Ключи квоты проекта
 
-ProjectQuota и `.spec.quota` принимают такие ключи:
+Поле `.spec.quota` принимает такие ключи:
 
 - `cpu`, `memory`, `ephemeral-storage`, `pods`, `requests.*` и `limits.*` для CPU, памяти и эфемерного хранилища, `requests.storage`, `requests.hugepages-<SIZE>`, запросы расширенных ресурсов (например, `requests.nvidia.com/gpu`);
 - `services`, `services.loadbalancers`, `services.nodeports`, `persistentvolumeclaims`, `configmaps`, `secrets`, `replicationcontrollers`;
@@ -511,7 +512,7 @@ ProjectQuota и `.spec.quota` принимают такие ключи:
 ### Кластеры, в которых Deckhouse Platform не управляет control plane
 
 Сумма по неймспейсам проекта ограничивается только там, где control plane кластера ведёт Deckhouse Platform (включён модуль `control-plane-manager`).
-В остальных кластерах политики допуска `d8-multitenancy-manager-quota-pending` и `d8-multitenancy-manager-quota-guard` не создаются, каждый ProjectQuota сообщает `Enforced=False` с причиной `ControlPlaneNotManaged`, а об этом говорит алерт [`D8ProjectQuotaNotSupported`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#multitenancy-manager-d8projectquotanotsupported).
+В остальных кластерах политики допуска `d8-multitenancy-manager-quota-pending` и `d8-multitenancy-manager-quota-guard` не создаются, каждый ProjectQuotaStatus сообщает `Enforced=False` с причиной `ControlPlaneNotManaged`, а об этом говорит алерт [`D8ProjectQuotaNotSupported`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#multitenancy-manager-d8projectquotanotsupported).
 У каждого неймспейса при этом остаётся свой ResourceQuota `d8-project-quota`, поэтому ни один неймспейс в одиночку не использует больше квоты всего проекта.
 
 ### Как поделить квоту проекта между неймспейсами
@@ -533,7 +534,7 @@ spec:
 
 ### Кто управляет квотами
 
-Объекты ProjectQuota создают, меняют и удаляют с capability `d8:system-capability:multitenancy-manager:manage_quotas`, которую включают роль IAM `manager` и роли выше. То же право нужно, чтобы изменить `.spec.quota` проекта: его проверяет вебхук Project, поэтому тот, кто может создавать и менять проекты, не выбирает себе квоту сам. Статус ProjectQuota и потребление в статусе `d8-project-quota` пишут только контроллер и Kubernetes; потребление защищено там, где control plane ведёт Deckhouse Platform.
+Чтобы изменить `.spec.quota` проекта, нужно право `update` на `projects/quota` в группе `deckhouse.io` для этого проекта. Его выдаёт capability `d8:system-capability:multitenancy-manager:manage_quotas`, которую включают роль IAM `manager` и роли выше. Право проверяет вебхук Project, поэтому тот, кто может создавать и менять проекты, не выбирает себе квоту сам. ProjectQuotaStatus пишет только контроллер; все остальные, в том числе администраторы кластера, могут его только читать. Потребление в статусе `d8-project-quota` пишет Kubernetes; от других писателей оно защищено там, где control plane ведёт Deckhouse Platform.
 
 ### Когда квота проекта отказывает
 
@@ -541,11 +542,11 @@ spec:
 
 | Ответ | Что это значит |
 |---|---|
-| `403 ... exceeded quota: d8-project-quota, project <PROJECT_NAME>: requested: ..., used: ..., limited: ... (<N> namespaces)` | Сумма проекта `<PROJECT_NAME>` вышла бы за квоты в ProjectQuota. Поднимите `spec.hard` или удалите лишнее; `status.topNamespaces` показывает, где потребление. |
+| `403 ... exceeded quota: d8-project-quota, project <PROJECT_NAME>: requested: ..., used: ..., limited: ... (<N> namespaces)` | Сумма проекта `<PROJECT_NAME>` вышла бы за квоту проекта. Поднимите лимиты в `.spec.quota` проекта или удалите лишнее; `status.topNamespaces` его ProjectQuotaStatus показывает, где потребление. |
 | `403 ... exceeded quota: d8-project-quota, requested: ...` (без `project`) | Потребление одного этого неймспейса вместе с объектом вышло бы за лимит проекта, который содержит каждый ResourceQuota `d8-project-quota`. Плагин квот API-сервера отклоняет объект до проверки суммы проекта. |
 | `503 ... project quota ledger unavailable (<CAUSE>), retry` | Счётчик ненадолго не отвечает, например при смене лидера. Повторите запрос; если это длится дольше минуты, воспользуйтесь описанием алерта `D8ProjectQuotaLedgerDown`. |
 | `500 ... failed calling webhook "quota-ledger.multitenancy-manager.deckhouse.io": ...` или с `quota-vm.multitenancy-manager.deckhouse.io`, `quota-lb.multitenancy-manager.deckhouse.io` | API-сервер не достучался до счётчика: не запущена ни одна реплика, сеть или сертификат. Пока Service указывает на замороженного лидера, плагин квот API-сервера повторяет вызов, поэтому каждое такое создание ждёт примерно до 8 секунд, пока адрес лидера не уберут из Service: примерно за 3,5 секунды это делает вторая реплика, примерно до 15 секунд — Deckhouse, если не отвечает ни одна реплика. |
-| `403 ... ValidatingAdmissionPolicy 'd8-multitenancy-manager-quota-pending' ...` | ResourceQuota `d8-project-quota` нового неймспейса ещё не рассчитан. Повторите через несколько секунд; если это затянулось, посмотрите условие `Enforced` в ProjectQuota и проверьте контроллер и kube-controller-manager. |
+| `403 ... ValidatingAdmissionPolicy 'd8-multitenancy-manager-quota-pending' ...` | ResourceQuota `d8-project-quota` нового неймспейса ещё не рассчитан. Повторите через несколько секунд; если это затянулось, посмотрите условие `Enforced` в ProjectQuotaStatus проекта и проверьте контроллер и kube-controller-manager. |
 | `403 ... ValidatingAdmissionPolicy 'd8-multitenancy-manager-quota-guard' ...` | ResourceQuota `d8-project-quota` неймспейса отсутствует, имеет `scopes` или ещё совсем не рассчитан. Повторите через несколько секунд; иначе проверьте контроллер и kube-controller-manager. |
 | `500 ... resource quota evaluation timed out` | Перегружена проверка квот в API-сервере, подробнее — в описании алерта `D8ResourceQuotaAdmissionDegraded`. |
 
@@ -553,7 +554,7 @@ spec:
 
 Если счётчик не даёт создавать объекты проектов и причину быстро не устранить, выполняйте шаги по порядку, пока создание объектов не заработает:
 
-1. Если создание объектов завершается ошибкой `503 ... project quota ledger unavailable`, реплика отвечает, и приостановка счётчика помогает. В течение секунды каждая запущенная реплика начинает пропускать записи без подсчёта, а каждый ProjectQuota показывает `Enforced=False` с причиной `Suspended`. Удаление ConfigMap возобновляет проверку; через 15 минут о ней напомнит алерт `D8ProjectQuotaSuspended`.
+1. Если создание объектов завершается ошибкой `503 ... project quota ledger unavailable`, реплика отвечает, и приостановка счётчика помогает. В течение секунды каждая запущенная реплика начинает пропускать записи без подсчёта, а каждый ProjectQuotaStatus показывает `Enforced=False` с причиной `Suspended`. Удаление ConfigMap возобновляет проверку; через 15 минут о ней напомнит алерт `D8ProjectQuotaSuspended`.
 
    ```shell
    d8 k -n d8-multitenancy-manager create configmap quota-ledger-suspend --from-literal=reason="<REASON>"
@@ -562,7 +563,7 @@ spec:
 
    Вместо `<REASON>` укажите, почему проверка приостановлена.
 
-1. Если создание объектов завершается ошибкой `500 ... failed calling webhook "quota-ledger.multitenancy-manager.deckhouse.io"`, API-серверы не достают до отвечающей реплики, как при сработавшем алерте `D8ProjectQuotaLedgerDown`, и приостановка не помогает: удалите вебхук счётчика от имени `system:sudouser`. Проверка прекращается в течение секунды, и каждый ProjectQuota показывает `Enforced=False` с причиной `WebhookMissing`. Deckhouse Platform сам обнаружит, что вебхука модуля нет, и вернёт его примерно за 4 минуты, поэтому это лишь даёт время устранить причину, а не выключает проверку.
+1. Если создание объектов завершается ошибкой `500 ... failed calling webhook "quota-ledger.multitenancy-manager.deckhouse.io"`, API-серверы не достают до отвечающей реплики, как при сработавшем алерте `D8ProjectQuotaLedgerDown`, и приостановка не помогает: удалите вебхук счётчика от имени `system:sudouser`. Проверка прекращается в течение секунды, и каждый ProjectQuotaStatus показывает `Enforced=False` с причиной `WebhookMissing`. Deckhouse Platform сам обнаружит, что вебхука модуля нет, и вернёт его примерно за 4 минуты, поэтому это лишь даёт время устранить причину, а не выключает проверку.
 
    ```shell
    d8 k --as=system:sudouser delete validatingwebhookconfiguration d8-multitenancy-manager-quota-ledger

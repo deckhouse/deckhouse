@@ -887,9 +887,9 @@ status: {}
 	assert.Equal(t, "web", objects[1].GetLabels()["app"], "the labels of the author stay")
 }
 
-// A ProjectQuota created directly next to spec.quota keeps spec.quota from being applied, which the
-// project reports; its manifests and its status are still reconciled.
-func TestHandle_GoesOnPastADirectProjectQuota(t *testing.T) {
+// A ProjectQuotaStatus left next to spec.quota is taken over by spec.quota: the project reports the
+// standard fields applied, and its manifests are reconciled.
+func TestHandle_TakesAStaleProjectQuotaStatusOver(t *testing.T) {
 	ctx := context.Background()
 	objects := manifestsCluster(manifestsText)
 	for _, object := range objects {
@@ -897,9 +897,9 @@ func TestHandle_GoesOnPastADirectProjectQuota(t *testing.T) {
 			project.Spec.Quota = corev1.ResourceList{corev1.ResourcePods: resource.MustParse("50")}
 		}
 	}
-	direct := &v1alpha1.ProjectQuota{ObjectMeta: metav1.ObjectMeta{Name: "proj"},
-		Spec: v1alpha1.ProjectQuotaSpec{Hard: corev1.ResourceList{corev1.ResourcePods: resource.MustParse("5")}}}
-	m, c, _ := newManifestsManager(t, append(objects, direct)...)
+	stale := &v1alpha1.ProjectQuotaStatus{ObjectMeta: metav1.ObjectMeta{Name: "proj"},
+		Spec: v1alpha1.ProjectQuotaStatusSpec{Hard: corev1.ResourceList{corev1.ResourcePods: resource.MustParse("5")}}}
+	m, c, _ := newManifestsManager(t, append(objects, stale)...)
 
 	_, err := m.Handle(ctx, storedProject(t, c))
 	require.NoError(t, err)
@@ -914,6 +914,8 @@ func TestHandle_GoesOnPastADirectProjectQuota(t *testing.T) {
 		}
 	}
 	require.NotNil(t, applied)
-	assert.Equal(t, corev1.ConditionFalse, applied.Status)
-	assert.Contains(t, applied.Message, "created directly")
+	assert.Equal(t, corev1.ConditionTrue, applied.Status)
+	pq := &v1alpha1.ProjectQuotaStatus{}
+	require.NoError(t, c.Get(ctx, client.ObjectKey{Name: "proj"}, pq))
+	assert.Equal(t, resource.MustParse("50"), pq.Spec.Hard[corev1.ResourcePods])
 }

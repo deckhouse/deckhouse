@@ -56,7 +56,7 @@ const (
 	// none to delete does not have it.
 	ProjectConditionManifestsApplied = "ManifestsApplied"
 	// ProjectConditionQuotaWithinLimits is True while the usage of the project is within its
-	// ProjectQuota and False while it is above it; a project without a quota does not have it. It is
+	// ProjectQuotaStatus and False while it is above it; a project without a quota does not have it. It is
 	// not phrased as Exceeded=False, because a False condition reads as an error to some consumers.
 	ProjectConditionQuotaWithinLimits = "QuotaWithinLimits"
 
@@ -143,6 +143,9 @@ const (
 const (
 	ProjectKind     = "Project"
 	ProjectResource = "projects"
+	// ProjectQuotaSubresource is the subresource whose update right lets a user set spec.quota of a
+	// project. The API server does not serve it; the Project webhook only asks about the right.
+	ProjectQuotaSubresource = "quota"
 )
 
 var _ runtime.Object = &Project{}

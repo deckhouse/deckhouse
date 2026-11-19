@@ -518,7 +518,7 @@ func newValidator(t *testing.T, objs ...client.Object) *validator {
 	// the chart the controller ships, so a test renders what the webhook renders in the cluster
 	helmClient, err := helm.NewRenderOnly("../../../helmlib", logr.Discard())
 	require.NoError(t, err)
-	// the requester may write the ProjectQuota of every project unless a test says otherwise
+	// the requester may write the ProjectQuotaStatus of every project unless a test says otherwise
 	reviewer := &quotaReviewer{allowed: true}
 	return &validator{client: newClientBuilder(t, objs...).WithInterceptorFuncs(interceptor.Funcs{Create: reviewer.create}).Build(), helmClient: helmClient}
 }

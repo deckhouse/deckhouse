@@ -103,9 +103,9 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, logger lo
 			builder.WithPredicates(namespaceWatchPredicate{})).
 		// the handover of a Helm text release waits for d8-project-quota of the main namespace; the
 		// ones of the other namespaces move with every object created there and wake only the
-		// ProjectQuota, whose status the project mirrors
+		// ProjectQuotaStatus, whose status the project mirrors
 		Watches(&corev1.ResourceQuota{}, mainNamespaceQuotaHandler()).
-		Watches(&v1alpha1.ProjectQuota{}, handler.EnqueueRequestsFromMapFunc(func(_ context.Context, object client.Object) []reconcile.Request {
+		Watches(&v1alpha1.ProjectQuotaStatus{}, handler.EnqueueRequestsFromMapFunc(func(_ context.Context, object client.Object) []reconcile.Request {
 			return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: object.GetName()}}}
 		})).
 		// a handover of a Helm text release waits for the administrators binding to be Ready, and the
