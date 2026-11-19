@@ -70,7 +70,7 @@ git:
 {{- include "engine sysext sign secrets" . }}
 shell:
   beforeInstall:
-  - pm install erofs-utils coreutils cryptsetup systemd@260.4
+  - pm install erofs-utils coreutils cryptsetup systemd
   - mkdir -p /out
   install:
   - mkdir -p /sysext/usr/lib/extension-release.d /sysext/usr/lib/systemd/system
