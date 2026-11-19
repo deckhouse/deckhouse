@@ -1,0 +1,125 @@
+candi:
+  fixes:
+    - summary: Bump base images to v3.1.28.
+cloud-provider-vcd:
+  fixes:
+    - summary: Reduce node initialization delays and restore automatic cleanup of orphaned Nodes in VCD
+        clusters.
+cni-cilium:
+  features:
+    - summary: >-
+        Added a CVE-2026-98432 mitigation that filters IPv4 TCP SYN packets with IP options in the host
+        and pod network namespaces (`ipv4OptionsGuard`; `Enforce` for new clusters, `Audit` for existing
+        ones).
+      impact: >-
+        Cilium agent pods will be restarted. With DSR, the DSR IPv4 option is stripped before the packet
+        reaches the pod.
+  fixes:
+    - summary: >-
+        The ipv4-options-guard sidecar no longer writes to the host `/etc`, so Cilium agents start on
+        Deckhouse Engine nodes.
+      impact: Cilium agent pods will be restarted.
+cni-flannel:
+  features:
+    - summary: >-
+        Added a CVE-2026-98432 mitigation that filters IPv4 TCP SYN packets with IP options in the host
+        and pod network namespaces (`ipv4OptionsGuard`; `Enforce` for new clusters, `Audit` for existing
+        ones).
+      impact: Flannel pods will be restarted. The guard metrics use host port 4294.
+  fixes:
+    - summary: >-
+        The ipv4-options-guard sidecar no longer writes to the host `/etc`, so Flannel pods start on Deckhouse
+        Engine nodes.
+      impact: Flannel pods will be restarted.
+cni-simple-bridge:
+  features:
+    - summary: >-
+        Added a CVE-2026-98432 mitigation that filters IPv4 TCP SYN packets with IP options in the host
+        and pod network namespaces (`ipv4OptionsGuard`; `Enforce` for new clusters, `Audit` for existing
+        ones).
+      impact: simple-bridge pods will be restarted. The guard metrics use host port 4294.
+  fixes:
+    - summary: >-
+        The ipv4-options-guard sidecar no longer writes to the host `/etc`, so simple-bridge pods start
+        on Deckhouse Engine nodes.
+      impact: simple-bridge pods will be restarted.
+common:
+  fixes:
+    - summary: Updated the shared static nginx binary to 1.30.7 to address security vulnerabilities.
+      impact: >-
+        Pods using the updated nginx images roll out in the affected modules, including the ingress failover
+        proxy where enabled.
+deckhouse:
+  fixes:
+    - summary: Show the Terminating phase while package repositories are being deleted
+    - summary: >-
+        ModuleSource scans skip modules whose release channel has not changed, using a manifest HEAD request
+        instead of pulling the release image.
+deckhouse-controller:
+  fixes:
+    - summary: Module sources now scan the registry every 30 minutes by default, reducing registry load
+    - summary: >-
+        Prevent module hooks from running with unavailable snapshots while waiting for Deckhouse to restart
+        after a module update
+    - summary: >-
+        A pending module release no longer loses its Kubernetes, Deckhouse and module requirements, so
+        an update that the cluster does not satisfy stays pending instead of disabling the module.
+    - summary: >-
+        Pre-download modules enabled by the bundle when their ModuleConfig omits enabled, preventing upgrades
+        from getting stuck.
+    - summary: >-
+        Releases of a still-embedded module no longer raise manual approval alerts once the module has
+        a deployed release.
+dhctl:
+  fixes:
+    - summary: >-
+        Added the ability to retry a timed-out node drain during converge, and raised drain attempts from
+        5 to 10.
+docs:
+  fixes:
+    - summary: Added registry module port 5001 to Deckhouse ports documentation
+    - summary: Update terminology in the documentation and SEO improvements.
+go_lib:
+  fixes:
+    - summary: Package proxy streams the full package body when the cache skips writing it.
+ingress-nginx:
+  fixes:
+    - summary: Nginx was updated to 1.30.7.
+      impact: All ingress-nginx controllers' pods will be restarted.
+istio:
+  fixes:
+    - summary: Fixed CVEs in istio images (x/net, x/crypto, klauspost/compress, x/text).
+      impact: >-
+        The Istio pods will be restarted. Application sidecars will be updated only after the application
+        pods are recreated.
+    - summary: >-
+        Fixed ambient mode on nodes with legacy iptables, where `istio-cni-node` crashed on Istio 1.25
+        and used nftables instead of legacy iptables on Istio 1.27 and later.
+      impact: >-
+        In ambient mode with Istio 1.27 or later, on nodes with legacy iptables, `istio-cni-node` switches
+        from nftables to legacy iptables. Pods that were added to the mesh before the update keep their
+        nftables rules. Restart these pods after the update. Otherwise, removing such a pod from the mesh
+        without a restart leaves its old redirect rules in place, and the pod loses network connectivity.
+loki:
+  fixes:
+    - summary: fix kind version grafanaDatasource. Disable module loki bloсk queue without module prometheus
+      impact: loki
+node-manager:
+  fixes:
+    - summary: >-
+        kube-rbac-proxy in capi-controller-manager no longer listens on all addresses of a node that has
+        no addresses yet, so it does not take the controller's port.
+registry-packages-proxy:
+  fixes:
+    - summary: >-
+        Fixed registry-packages-proxy hanging after a cache error and serving corrupted packages, which
+        blocked node updates.
+registrypackages:
+  fixes:
+    - summary: >-
+        Nodes stop trusting `emSign ECC Root CA - G3` and Comodo `AAA Certificate Services`, the roots
+        behind the compromised eMudhra intermediate CAs.
+      impact: >-
+        TLS connections from nodes to hosts whose certificates chain to `emSign ECC Root CA - G3` or Comodo
+        `AAA Certificate Services` (eMudhra / emSign issued) will fail. Reissue such certificates from
+        another CA before the update.
