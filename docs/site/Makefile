@@ -15,6 +15,18 @@ endif
 
 ##@ Main
 
+# The header stage installs packages from the private npm registry on fox, and
+# its token is the werf secret CI_JOB_TOKEN. A pipeline has one; by hand it
+# comes from FOX_NPM_TOKEN, the registry's read-only deploy token (README.md,
+# Site header).
+up dev external-module: export CI_JOB_TOKEN ?= $(FOX_NPM_TOKEN)
+
+# Without a token the header comes from the snapshot kept in the repository
+# (_tools/islandkit/snapshot), which may be older than the pinned version.
+ifeq ($(strip $(CI_JOB_TOKEN)$(FOX_NPM_TOKEN)),)
+up dev external-module: export DOCS_ISLANDKIT_SNAPSHOT ?= 1
+endif
+
 up: werf-bin ## Start documentation containers in a werf watch mode (rebuilding on a commit)
 		##~ Options: [USE_LOCALHOST_REPO=1]
 		@if [ "$(USE_LOCALHOST_REPO)" = "1" ]; then \
@@ -68,6 +80,11 @@ ai-export: ## Generate the AI export (per-page .md, external-llms.txt, external-
 			$(HUGO_IMAGE) \
 			--noBuildLock --source /src --destination /src/public --environment production
 		cd backends/docs-builder && go run ./cmd/aiexport --public "$(abspath $(AI_EXPORT_SRC))/public"
+
+islandkit-snapshot: ## Update the islandKit snapshot: the islands of a build without a registry token
+		##~ Needs node and FOX_NPM_TOKEN, or npm set up for the private registry (README.md, Site header).
+		##~ Commit the result: _tools/islandkit/snapshot.
+		node _tools/islandkit/snapshot.mjs
 
 ##@ Helpers
 
@@ -161,4 +178,4 @@ help: ## Show this help message
 	/^.?.?##~/              { printf "  %-20s %s\n", "", substr($$1, 6) }' $(MAKEFILE_LIST)
 
 .PHONY: help up dev regenerate-menu ai-export regenerate-corpus-schema
-.PHONY: werf-bin clean down regenerate-metadata registry registry-down free-port-80 external-module
+.PHONY: werf-bin clean down regenerate-metadata registry registry-down free-port-80 external-module islandkit-snapshot

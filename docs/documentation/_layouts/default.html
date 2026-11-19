@@ -39,51 +39,6 @@
     {{ content }}
   </div>
      <!--#include virtual="{%- if site.mode == 'module' %}/{{ page.lang }}{%- endif %}/includes/footer.html" -->
-{%- if page.sidebar == 'embedded-modules' or site.mode == 'module' %}
-<script type="text/javascript">
-  // Fix second level topnav menu
-  {%- if site.mode == 'module' %}
-  const moduleType = $('meta[name="page:module:type"]').attr('content');
-  let pageByModuleType = false;
-  if (moduleType) {
-    const selector = '{% if site.mode == "module" %}.header__content.container{% else %}.header.header__product-menu{% endif %} ul.nav li';
-    $(selector).each(function () {
-      const elementModuleType = $(this).attr('data-module-type');
-      if (elementModuleType && elementModuleType === moduleType) {
-        $(this).addClass('active');
-        pageByModuleType = true;
-      } else {
-        $(this).removeClass('active');
-      }
-    });
-  }
-  if (!pageByModuleType) {
-    $('.header.header__product-menu ul.nav li, .header__content.container ul.nav li').each(function (index) {
-      if (index === 0) {
-        $(this).addClass('active');
-      } else {
-        $(this).removeClass('active');
-      }
-    });
-  }
-  {%- else %}
-  let subUrls = ['/modules/'];
-  subUrls.forEach(function (element) {
-    if (window.location.pathname.toLowerCase().includes(element)) {
-      $('{% if site.mode == "module" %}.header__content.container{% else %}.header.header__product-menu{% endif %} ul.nav li').each(function () {
-        const href = $(this).find('a').attr('href')?.toLowerCase() || '';
-        const isActive = href.includes(element);
-        $(this).toggleClass('active', isActive);
-      });
-    }
-  });
-  // The Russian bar has no Modules item: modules are part of the documentation.
-  if (window.location.pathname.toLowerCase().includes('/modules/') && !$('.header.header__product-menu li.active').length) {
-    $('.header.header__product-menu [data-nav-doc]').addClass('active');
-  }
-  {%- endif %}
-</script>
-{%- endif %}
 
 {%- if page.name == 'CR.md' or page.name == 'CR_RU.md' or page.name == 'CONFIGURATION.md' or page.name == 'CONFIGURATION_RU.md' or page.name == 'CLUSTER_CONFIGURATION.md' or page.name == 'CLUSTER_CONFIGURATION_RU.md' or page.name == 'DECKHOUSE_CONFIGURE_GLOBAL.md' or page.name == 'DECKHOUSE_CONFIGURE_GLOBAL_RU.md' %}
 {% include openapi-tippy.html %}

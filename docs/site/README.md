@@ -208,6 +208,7 @@ The project uses [werf](https://werf.io) to build and deploy documentation.
 Things to note:
 
 - The `_tools` directory contains scripts used for building the documentation.
+  `_tools/islandkit` renders the site header at build time, see [Site header](#site-header).
 - The `_assets` directory stores assets (styles and scripts), which are used by Jekyll Asset Pipeline plugin.
   Assets are compiled and minified into the `/assets` directory (absolute path) and include a digest in their path.
   If you don't need a digest in the path, use the `/css` or `/js` directory instead.
@@ -482,6 +483,100 @@ Below are some data structures used in the Jekyll projects.
     }
   }
   ```
+
+## Site header
+
+The header of every documentation page is the `site-header` component of the islandKit library (Vue, the `@web/islandkit` package), and its look comes from the `@web/deckhouse-islands` package, shared with the WordPress site. Both are published to the private npm registry on fox (the `web/npm-components` project). It is a content island: its markup must be in the server response, so it is not assembled by a script after load. Instead, the same Vue component that runs in the browser renders the fragments at build time through Vue's server renderer.
+
+The header is rendered once per product and language and published as a static include. nginx inserts it with SSI into the Jekyll pages, the Hugo pages of the modules library and the documentation served inside a cluster.
+
+### Build
+
+The `islandkit-artifact` stage (`werf-islandkit.inc.yaml`, included from `werf-web-frontend.inc.yaml`) installs `@web/islandkit`, `@web/deckhouse-islands`, `vue` and `@vue/server-renderer` with exactly pinned versions, runs `_tools/islandkit/render-header.mjs` and passes four things to the site build:
+
+| Path | Content |
+| --- | --- |
+| `_includes/_generated/header-<product>-<lang>.html` | the rendered fragments, one per product and language |
+| `_data/islandkit_header.json` | the index of the fragments: the product codes and the asset version that `head-site.html` links |
+| `assets/islandkit/<version>/` | the self-contained JS and CSS bundle of the library |
+| `_sass/deckhouse-islands/` | the Sass of the header styles package, used by `_sass/components/_islandkit-package.scss` |
+
+These paths are not committed: they are in `.gitignore`, and `werf-web-frontend.inc.yaml` excludes them from `git.add` so that locally rendered copies cannot override what the stage built. The only generated files in the repository are the [islandKit snapshot](#build-without-a-token).
+
+The stage reads the menu from the same source as Jekyll: in production environments from `site-external-artifacts` (the API data), otherwise from `_data/topnav.json` and `_data/topnav-l2-products.json` in the repository.
+
+To update the header, change `islandkit` in `_tools/islandkit/versions.json` (the two packages share one version) and rebuild. `vue` is pinned separately there and has to stay within the `peerDependencies` of the library. Update the [islandKit snapshot](#build-without-a-token) in the same change: a pipeline build of the site fails while the snapshot is of another version.
+
+#### Access to the registry
+
+The registry is private. In a pipeline the stage uses the job's `CI_JOB_TOKEN`: the `deckhouse/deckhouse` project is on the job-token allowlist of the registry's project. The token is a werf secret, so it never reaches an image layer (`.werf/defines/npm-private-registry.tmpl`).
+
+A local build (`make docs`, `make docs-dev`, `make up`, `make dev`) with the current header needs the registry's shared read-only token: a deploy token of the `npm-components` project with the `read_package_registry` scope (ask its maintainers for the value; no access to the project itself is needed):
+
+```shell
+export FOX_NPM_TOKEN=<token>
+```
+
+The Makefiles pass it to werf as `CI_JOB_TOKEN`. The stage is cached, so the token is needed when the stage is rebuilt: on the first build, after the versions change, or when its inputs (the header data, `_config.yml`, `_data/i18n.yaml`) change.
+
+#### Build without a token
+
+To edit pages, the token is not needed. When neither `FOX_NPM_TOKEN` nor `CI_JOB_TOKEN` is set, the Makefiles set `DOCS_ISLANDKIT_SNAPSHOT=1`, and the islandKit stage takes its output (for now, the header) from the snapshot in `_tools/islandkit/snapshot` instead of the registry. The build log says so, names the version of the snapshot and warns when it is not the pinned one. A pipeline build of the site checks that the snapshot is of the pinned version, so in the main branch it is. It can still be older than the menu and the header data in the repository, and a branch that changes the pin may build locally before its snapshot is updated, so do not use this mode to work on the header itself.
+
+The snapshot holds only what the site publishes anyway, and no source of the private packages:
+
+| Path | Content |
+| --- | --- |
+| `site/_generated/`, `site/islandkit_header.json` | the fragments of the site and their index |
+| `module/<EDITION>/`, `module/islandkit_header.json` | the fragments of the documentation module, one directory per edition from `editions.yaml`, and their index |
+| `assets/<version>/` | the JS and CSS bundle of the library |
+| `styles/` | the compiled CSS of `_sass/components/_islandkit-package.scss`, and empty mixins that stand in for the Sass of the styles package |
+
+A build of the `documentation` module from the root of the repository takes the snapshot the same way, by the edition of the build:
+
+```shell
+DOCS_ISLANDKIT_SNAPSHOT=1 make build FOCUS=documentation/web
+```
+
+To update the snapshot, run the following command and commit the result. It needs node and `FOX_NPM_TOKEN`. Without the token npm has to find the `@web` packages through `~/.npmrc`, as in [Rendering locally](#rendering-locally).
+
+```shell
+cd docs/site
+FOX_NPM_TOKEN=<token> make islandkit-snapshot
+```
+
+Pipelines never set `DOCS_ISLANDKIT_SNAPSHOT`: every published build renders the islands from the registry.
+
+### Templates and data
+
+- `_includes/header.html` and `_includes/header_ru.html` are the entry points of the layouts. They pick the fragment by `page.product_code`; a product without a fragment gets the Deckhouse Platform header.
+- `_data/header-products.json` holds the "Products" mega menu, `_data/header-solutions.json` holds the "Solutions" cards of the Russian header, which sit in the Deckhouse Platform product row after "Extensions" (the feed's `/solutions/` entry gets them as children, or the entry is inserted when the feed lacks it).
+- `_data/i18n.yaml` holds the interface strings of the header and of the mobile table of contents.
+- `_sass/components/_islandkit-package.scss` is the only file that includes the mixins of the styles package: the islandKit snapshot compiles it ahead of time. Styles of the documentation itself go to `_sass/components/_islandkit-header.scss`.
+- The header has the design of the WordPress site in both languages. Its `--ik-*` variables come from the `@web/deckhouse-islands` package: `_sass/components/_islandkit-package.scss` includes its mixins with the scopes of this site (English — `.header` without `.header--ik-ru`, Russian — `.header--ik-ru`), and `_sass/components/_islandkit-header.scss` keeps only what belongs to the documentation: the frame of the Russian header and the section tree in the collapsed second row. A change of the look is made in the package and arrives with a new version. The Russian header is the same island with other data and variable values, not other markup.
+- `images/header/` holds the wordmark, the product icons and the lockups of the second row.
+- `assets/js/islandkit-doc-tree.js` fills the section tree in the second row of the Russian header.
+- The header has no language link in either language: the English one is in the footer, where `assets/js/language-switch.js` puts the address of the current page into it.
+
+The island highlights the current section by the page address, so the layouts contain no script for it.
+
+### Documentation inside a cluster
+
+The documentation module (`modules/810-documentation`, `site.mode: module`) is another site with the same island: its menu is `modules/810-documentation/images/web/documentation/_data/topnav.yml`, the links carry the language prefix, some items exist only in some editions, and there are no products, buttons or second row.
+
+The same `werf-islandkit.inc.yaml`, included from `modules/810-documentation/images/web/werf.inc.yaml`, builds the `documentation/web/islandkit-artifact` image for the edition of the build. It renders `_includes/_generated/header-module-<lang>.html`, which `werf-documentation-static.inc.yaml` and `werf-modules-static.inc.yaml` import, and `header.html` and `header_ru.html` include it when `site.mode == "module"`.
+
+### Rendering locally
+
+Usually a rebuild is enough. To look at the fragments without a build:
+
+```shell
+cd docs/site
+npm install --no-save @web/islandkit@<version> @web/deckhouse-islands@<version> vue@3 @vue/server-renderer@3
+node _tools/islandkit/render-header.mjs
+```
+
+npm finds the `@web` packages through `~/.npmrc` (the registry address and `FOX_NPM_TOKEN`, see the README of the `npm-components` repository). `--islandkit <path to packages/islandkit of an npm-components checkout>` renders an unreleased build of the library, with the styles from `packages/deckhouse-islands` next to it; the asset directory then gets the `-dev` suffix so that it does not take the address of a published version. `--mode module --menu <topnav.yml> --edition <EDITION>` renders the header of the documentation module. See `_tools/islandkit/README.md` for details.
 
 ## Link rewriting in HTML output
 

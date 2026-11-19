@@ -17,6 +17,9 @@ config:
       - VAULT_KEY
       - WERF_SIGN_KEY
       - WERF_OLCEDAR_VAULT_AUTH_ROLE
+      # The docs header from the committed snapshot, a build without a token
+      # for the private npm registry (docs/site/README.md, Site header).
+      - DOCS_ISLANDKIT_SNAPSHOT
     allowUncommittedFiles: ["tools/build_includes/*"]
   secrets:
     allowEnvVariables:

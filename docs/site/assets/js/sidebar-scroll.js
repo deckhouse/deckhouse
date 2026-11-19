@@ -19,10 +19,13 @@ $(window).on('load', function() {
     if(lastPathname.lastIndexOf('v1') !== 1) {
       lastPathname = lastPathname.replace(/v1/g, '.');
     }
-    const activeLink = document.querySelector(`ul.sidebar li.sidebar__item.active a[href$="${lastPathname}"]`);
+    // The left column only: the Russian header carries a copy of this sidebar
+    // (assets/js/islandkit-doc-tree.js), and it comes first in the document. It
+    // is hidden on wide screens, so a match there has no offsetParent.
+    const activeLink = document.querySelector(`.layout-sidebar__sidebar ul.sidebar li.sidebar__item.active a[href$="${lastPathname}"]`);
 
-    const sidebars = document.querySelectorAll('.sidebar__wrapper-inner');
-    const sidebarLeft = document.querySelector('.sidebar');
+    const sidebars = document.querySelectorAll('.layout-sidebar__sidebar .sidebar__wrapper-inner');
+    const sidebarLeft = document.querySelector('.layout-sidebar__sidebar .sidebar');
     
     function getTopActiveLink(element, sidebar) {
       let top = 0;

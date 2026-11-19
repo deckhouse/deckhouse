@@ -1,10 +1,14 @@
 giterminismConfigVersion: 1
 config:
   goTemplateRendering:
-    allowEnvVariables: [ /BASE_.+/, /CI_.+/, "WERF_ENV" , /DOC_API_.+/ ]
+    allowEnvVariables: [ /BASE_.+/, /CI_.+/, "WERF_ENV" , /DOC_API_.+/, "DOCS_ISLANDKIT_SNAPSHOT" ]
   stapel:
     git:
       allowBranch: true
   secrets:
+    # The token for the private npm registry of the header stage
+    # (.werf/defines/npm-private-registry.tmpl).
+    allowEnvVariables:
+    - CI_JOB_TOKEN
     allowValueIds:
     - GOPROXY

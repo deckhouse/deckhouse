@@ -145,6 +145,12 @@ common:
   contact_us_button:
     en: Contact us
     ru: Свяжитесь с нами
+  contents:
+    en: Contents
+    ru: Содержание
+  close:
+    en: Close
+    ru: Закрыть
   features:
     en: "Features"
     ru: "Возможности"

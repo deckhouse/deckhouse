@@ -335,7 +335,9 @@ document.addEventListener('DOMContentLoaded', function () {
   if (!images.length) return;
 
   images.forEach(function (img) {
-    if (img.closest('.oss__item-logo, .button_card')) return;
+    // Islands (the site header and its menus) are interface, not content: their
+    // icons carry no width/height attributes, so the size check below misses them.
+    if (img.closest('.oss__item-logo, .button_card, [data-ik-island]')) return;
     if (img.classList.contains('zoom-image-disable')) return;
 
     const w = img.getAttribute('width') || img.offsetWidth;

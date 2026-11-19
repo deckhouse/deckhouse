@@ -1,0 +1,234 @@
+{{- /*
+  The stage that prints the header.
+
+  The site header is an islandKit content island: its markup has to be in the
+  server response rather than assembled by a script after load. The library
+  ships a PHP server renderer, but this site is Ruby, so the markup is printed
+  by the same Vue component that runs in the browser, through Vue's server
+  renderer. No third description of the structure appears, and parity holds by
+  construction.
+
+  The stage installs the pinned packages - the library and the header's styles,
+  both from the private package registry on fox - renders the fragments
+  (product x language) and copies the self-contained bundle and the styles'
+  Sass from the same place. Four things travel into the site build:
+  `_includes/_generated`, `_data/islandkit_header.json`,
+  `assets/islandkit/<version>` and `_sass/deckhouse-islands`.
+
+  The registry is private: the token is the pipeline's CI_JOB_TOKEN, passed as
+  a werf secret (.werf/defines/npm-private-registry.tmpl); a build by hand
+  takes it from FOX_NPM_TOKEN through the Makefile.
+
+  A build without a token takes the header from the snapshot kept in
+  _tools/islandkit/snapshot instead - see $fromSnapshot below.
+
+  The stage is on: this file is included from `werf-web-frontend.inc.yaml`, the
+  imports are declared in `web-frontend-artifact`, and nothing generated is
+  kept in the tree apart from that snapshot. A release of the header is one
+  line in _tools/islandkit/versions.json: the library and its styles share one
+  version. The asset address carries the number, so the
+  immutable cache refreshes itself.
+
+  The same file serves the documentation built inside a cluster (the
+  documentation module, ModuleName "documentation", included from
+  modules/810-documentation/images/web/werf.inc.yaml). There the site is
+  another one - its own menu, one edition per build - so the stage renders the
+  module header instead, and both static images of that build import its
+  output. One file keeps one pin for both builds.
+*/ -}}
+
+{{- /*
+  Versions are pinned exactly, all of them. A range such as `vue@3` would mean
+  two runs of one commit put different code at the same address,
+  `/assets/islandkit/<version>/` - and that address is declared immutable and
+  cached. `@vue/server-renderer` is named explicitly although it arrives as a
+  dependency of vue: it has to move together with vue, not by chance.
+*/ -}}
+{{- /*
+  @web/islandkit and @web/deckhouse-islands: one release, one number. The pins
+  live in a file of their own because the snapshot script (_tools/islandkit/
+  snapshot.mjs) installs the same packages outside of werf.
+*/ -}}
+{{- $pins := .Files.Get (printf "%sdocs/site/_tools/islandkit/versions.json" .ModulePath) | fromJson }}
+{{- $islandkitVersion := $pins.islandkit }}
+{{- $vueVersion := $pins.vue }}
+{{- $jsYamlVersion := $pins.jsYaml }}
+
+{{- /*
+  A build without a registry token: the header comes from the snapshot kept in
+  _tools/islandkit/snapshot instead of a fresh render. It is for editing pages
+  by hand, where a header that lags behind does not matter; the docs Makefiles
+  turn it on when there is no token. The switch is a template variable and not
+  a check of the secret inside the stage: the secret is out of the stage digest,
+  so a stage built from the snapshot would be served from the cache to a build
+  that has a token.
+*/ -}}
+{{- $fromSnapshot := eq (env "DOCS_ISLANDKIT_SNAPSHOT" "") "1" }}
+
+{{- if eq .ModuleName "documentation" }}
+image: {{ .ModuleName }}/{{ .ImageName }}/islandkit-artifact
+from: {{ index $.Images "builder/node-alpine" }}
+final: false
+{{- if $fromSnapshot }}
+git:
+- add: /docs/site/_tools/islandkit
+  to: /site/_tools/islandkit
+  stageDependencies:
+    setup: ['**/*']
+shell:
+  setup:
+  - sh /site/_tools/islandkit/use-snapshot.sh module {{ .Edition }}
+{{- else }}
+mount:
+{{- include "npm private registry mount" . }}
+secrets:
+{{- include "npm private registry secret" . }}
+git:
+- add: /docs/site/_tools/islandkit
+  to: /site/_tools/islandkit
+  # The snapshot is for a build without a token; an update of it must not
+  # rebuild this stage.
+  excludePaths:
+  - snapshot
+  stageDependencies:
+    setup: ['**/*']
+# The module's own menu, the one the legacy template read in this mode.
+- add: /modules/810-documentation/images/web/documentation/_data
+  to: /site/module-menu
+  includePaths:
+  - topnav.yml
+  stageDependencies:
+    setup: ['**/*']
+shell:
+  setup:
+  # The registry token first: the packages proxy below writes into the same npm
+  # user config.
+  {{- include "npm private registry auth" . | nindent 2 }}
+  # Inside the Deckhouse build npm goes through the packages proxy when there is
+  # one, as in the other modules that install npm packages (ovpn-admin,
+  # deckhouse-tools). The define lives in .werf/defines/packages-proxies.tmpl.
+  # Packages under @web still go to fox: a scope's registry wins over the
+  # default one.
+  {{- include "node packages proxy" . | nindent 2 }}
+  - cd /site
+  - npm init -y --silent
+  # js-yaml only here: the module keeps its menu as YAML.
+  - >-
+    npm install --no-audit --no-fund --ignore-scripts
+    @web/islandkit@{{ $islandkitVersion }}
+    @web/deckhouse-islands@{{ $islandkitVersion }}
+    vue@{{ $vueVersion }}
+    @vue/server-renderer@{{ $vueVersion }}
+    js-yaml@{{ $jsYamlVersion }}
+  - test "$(node -p "require('@web/islandkit/package.json').version")" = "{{ $islandkitVersion }}"
+  - test "$(node -p "require('@web/deckhouse-islands/package.json').version")" = "{{ $islandkitVersion }}"
+  - node _tools/islandkit/render-header.mjs --mode module --menu module-menu/topnav.yml --edition {{ .Edition }}
+  - mkdir -p /data
+  - cp -R /site/_includes/_generated /data/_generated
+  - cp /site/_data/islandkit_header.json /data/islandkit_header.json
+  - cp -R /site/assets/islandkit /data/islandkit-assets
+  - cp -R /site/_sass/deckhouse-islands /data/deckhouse-islands
+{{- end }}
+{{- else }}
+{{- /*
+  The snapshot follows the pin. A pipeline build of the site checks that the
+  committed snapshot is of the pinned version, so a release of the header
+  cannot leave the build without a token on an older header unnoticed: change
+  versions.json and run `make islandkit-snapshot` in one change. Local builds are
+  not held to it - trying a version out needs no new snapshot. The check stays
+  out of the documentation module: there it would stop the whole Deckhouse
+  build, and the site pipeline of the same change catches it anyway.
+*/ -}}
+{{- if and (not $fromSnapshot) (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
+{{-   $snapshot := .Files.Get (printf "%sdocs/site/_tools/islandkit/snapshot/site/islandkit_header.json" .ModulePath) | fromJson | default dict }}
+{{-   if ne (toString $snapshot.version) (toString $islandkitVersion) }}
+{{-     fail (printf "The islandKit snapshot in docs/site/_tools/islandkit/snapshot is %v, the pinned version is %v: run `make islandkit-snapshot` in docs/site and commit the result together with the version change (docs/site/README.md, Build without a token)." $snapshot.version $islandkitVersion) }}
+{{-   end }}
+{{- end }}
+image: islandkit-artifact
+from: {{ index $.Images "builder/node-alpine" }}
+final: false
+{{- if $fromSnapshot }}
+git:
+- add: /docs/site/_tools/islandkit
+  to: /site/_tools/islandkit
+  stageDependencies:
+    setup: ['**/*']
+shell:
+  setup:
+  - sh /site/_tools/islandkit/use-snapshot.sh site
+{{- else }}
+mount:
+{{- include "npm private registry mount" . }}
+secrets:
+{{- include "npm private registry secret" . }}
+git:
+- add: /docs/site
+  to: /site
+  includePaths:
+  - _tools/islandkit
+  - _data/header-products.json
+  - _data/header-solutions.json
+  - _data/i18n.yaml
+{{- if or (eq $.Env "development") (eq $.Env "module") (eq $.Env "local") }}
+  # The menu from the repository - and only where the import below is absent.
+  # There must be exactly one source: werf forbids git.add and import writing
+  # to the same file, and fails on config parsing before the build starts. The
+  # condition here is strictly the inverse of the import's; change them only as
+  # a pair.
+  #
+  # These lines cannot be dropped altogether: the script reads both files
+  # unconditionally, and where there is no import they must come from the
+  # repository, or it fails with ENOENT before the first page.
+  - _data/topnav.json
+  - _data/topnav-l2-products.json
+{{- end }}
+  - _config.yml
+  - pages/includes
+  # The snapshot is for a build without a token; an update of it must not
+  # rebuild this stage.
+  excludePaths:
+  - _tools/islandkit/snapshot
+  stageDependencies:
+    setup: ['**/*']
+{{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
+import:
+# A fresh menu from the same place as for Jekyll: otherwise the header would
+# freeze on the copy kept in the repository while the rest of the site updates
+# from the API.
+- from: site-external-artifacts
+  add: /data/topnav.json
+  to: /site/_data/topnav.json
+  before: setup
+- from: site-external-artifacts
+  add: /data/topnav-l2-products.json
+  to: /site/_data/topnav-l2-products.json
+  before: setup
+{{- end }}
+shell:
+  setup:
+  {{- include "npm private registry auth" . | nindent 2 }}
+  - cd /site
+  # `--ignore-scripts`: the install must not run lifecycle scripts of other
+  # people's packages in a build image that has network access. None of the
+  # four needs them - this is plain JavaScript and Sass with no native builds.
+  - npm init -y --silent
+  - >-
+    npm install --no-audit --no-fund --ignore-scripts
+    @web/islandkit@{{ $islandkitVersion }}
+    @web/deckhouse-islands@{{ $islandkitVersion }}
+    vue@{{ $vueVersion }}
+    @vue/server-renderer@{{ $vueVersion }}
+  # Check that what was actually installed is what was pinned: `npm install`
+  # without a lock file is the one place where the build could quietly drift
+  # from the address it publishes under.
+  - test "$(node -p "require('@web/islandkit/package.json').version")" = "{{ $islandkitVersion }}"
+  - test "$(node -p "require('@web/deckhouse-islands/package.json').version")" = "{{ $islandkitVersion }}"
+  - node _tools/islandkit/render-header.mjs
+  - mkdir -p /data
+  - cp -R /site/_includes/_generated /data/_generated
+  - cp /site/_data/islandkit_header.json /data/islandkit_header.json
+  - cp -R /site/assets/islandkit /data/islandkit-assets
+  - cp -R /site/_sass/deckhouse-islands /data/deckhouse-islands
+{{- end }}
+{{- end }}

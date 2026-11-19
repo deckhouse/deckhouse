@@ -12,7 +12,7 @@
 // ".docs ul > li::before" in docs.css, a separate file loaded after site.css, which is
 // why the resets below are written out rather than left to source order.
 //
-// Font weight note: same shift as _header-ru.scss. deckhouse.ru maps font-weight 400 to
+// Font weight note: the same shift as the Russian header. deckhouse.ru maps font-weight 400 to
 // onest-*-300-normal.woff2 and 500 to onest-*-400-normal.woff2, while our fonts.css maps
 // every weight to its own file, so the Onest weights here are one step below the numbers
 // the design writes. Heading Now is not shifted - there the reference declares its face

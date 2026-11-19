@@ -1,0 +1,20 @@
+// The part of the islands' styling that comes from the @web/deckhouse-islands
+// package: its mixins, linked to the documentation sections. The header:
+// - English — .header without .header--ik-ru;
+// - Russian — .header--ik-ru (header_ru.html).
+//
+// Keep this file to the package alone. A build from the islandKit snapshot
+// (_tools/islandkit/snapshot.mjs) compiles exactly this file ahead of time and
+// replaces the package with the result, so anything else placed here would be
+// frozen in the snapshot too. Styles of the documentation itself belong in
+// the island's own file, such as _islandkit-header.scss.
+
+@use "deckhouse-islands" as islands;
+
+$en: '.header:where(:not(.header--ik-ru))';
+$ru: '.header--ik-ru';
+
+@include islands.header-en($scope: $en);
+@include islands.header-page-type($en);
+@include islands.header-ru($scope: $ru);
+@include islands.header-page-type($ru);

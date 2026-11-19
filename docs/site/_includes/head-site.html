@@ -36,6 +36,8 @@
 <link href='/assets/css/submenu.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
 <link href='/assets/css/module-versions.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
 <link href='/assets/css/cards.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+<!-- islandkit: version is in the URL, so without ?v=—the URL cannot be changed -->
+<link href='/assets/islandkit/{{ site.data.islandkit_header.assetVersion }}/standalone.css' rel='stylesheet' type='text/css' crossorigin="anonymous" />
 <link href='/assets/css/site.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
 <link href='/assets/css/docs.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
 <link href='/assets/css/search-v3.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
@@ -141,8 +143,16 @@ the first time the user clicks the download button — see loadPdfLibraries().
 <script type="text/javascript" src="/assets/js/glightbox.min.js?v={{ assetHash }}"></script>
 <script type="text/javascript" src="/assets/js/zoom-image.js?v={{ assetHash }}"></script>
 
+<script type="text/javascript" src="/assets/js/docs-toc-mobile.js?v={{ assetHash }}"></script>
 <script type="text/javascript" src="/assets/js/language-switch.js?v={{ assetHash }}"></script>
-<script type="text/javascript" src="/assets/js/adaptive/header-mobile.js?v={{ assetHash }}"></script>
+
+{%- comment -%} Interface strings of scripts that must not carry Russian text themselves. {%- endcomment -%}
+<script type="application/json" id="docs-ui-text">{"contents":{{ site.data.i18n.common['contents'][page.lang] | jsonify }},"close":{{ site.data.i18n.common['close'][page.lang] | jsonify }}}</script>
+<script type="application/json" id="ik-context">{"host":"docs","locale":"{{ page.lang }}"}</script>
+<script type="module" src="/assets/islandkit/{{ site.data.islandkit_header.assetVersion }}/standalone.js"></script>
+{%- if page.lang == "ru" %}
+<script type="text/javascript" src="/assets/js/islandkit-doc-tree.js?v={{ assetHash }}"></script>
+{%- endif %}
 
 <script type="text/javascript" src="/assets/js/channel-list.js?v={{ assetHash }}"></script>
 

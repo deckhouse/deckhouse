@@ -1,0 +1,82 @@
+// Island header styling.
+//
+// Starting October 27, 2026, the header will use a single design for both sites—the WordPress design—for
+// both the English and Russian versions. Its styles are defined in the @web/deckhouse-islands package,
+// shared with the WordPress theme: the header stage (docs/site/werf-islandkit.inc.yaml)
+// places its Sass files in _sass/deckhouse-islands, and _islandkit-package.scss
+// links them to the documentation sections.
+// The page font size, which the Island theme inherits from the `body`, is explicitly set here.
+// Styling changes are made in the package by releasing and pulling a pin.
+//
+// The only elements remaining here are those specific to the documentation itself: the border of the Russian
+// header and the section page tree in the collapsed card of the second row.
+
+@use "components/common/_variables.scss";
+@use "components/common/_breakpoints.scss";
+@use "components/_islandkit-package.scss";
+
+// The shadow from the previous English header (.header_float in _header.scss) has been disabled
+// in the Russian design—just like in the previous Russian header.
+.header--ik-ru.header_float {
+  box-shadow: none;
+}
+
+// The section page tree in the collapsed card of the second row. It is placed in
+// the location under the current item in assets/js/islandkit-doc-tree.js—a clone
+// .layout-sidebar__sidebar .sidebar, just as the previous header did. The values
+// were transferred from the previous Russian header (.header__sidebar-nav): without them, the
+// documentation pages would have no section navigation.
+.header--ik-ru [data-ik-slot='row2-current'] .header__sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding-right: 0;
+  overflow: visible;
+  font-size: 13px;
+  font-weight: 300;
+  line-height: 20px;
+  color: variables.$ntrl-800;
+
+  li {
+    width: 100%;
+  }
+
+  a:before {
+    top: 9px;
+    right: 0;
+    width: 7px;
+    height: 5px;
+  }
+
+  .sidebar__submenu-item_parent > a:before {
+    top: 16px;
+  }
+
+  .sidebar__container,
+  .sidebar__wrapper-inner {
+    padding: 0;
+  }
+}
+
+// Item with an embedded tree in a collapsed card: a chevron on the right, as shown in
+// the preview (where it is drawn by the expand button), and the tree indented from the title.
+.header--ik-ru {
+  --ik-header-row2-slot-padding: 16px 0 0 0;
+}
+
+@include breakpoints.max-w(xl) {
+  .header--ik-ru .ik-header__row2-item:has(> [data-ik-slot='row2-current'] > *) {
+    position: relative;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 16px;
+      right: 4px;
+      width: 8px;
+      height: 5px;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 5' fill='none'%3E%3Cpath d='M.75 4.25 4 1l3.25 3.25' stroke='%23000' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat center / contain;
+      pointer-events: none;
+    }
+  }
+}

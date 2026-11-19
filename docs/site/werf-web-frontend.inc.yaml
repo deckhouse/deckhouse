@@ -35,6 +35,8 @@ shell:
     jq '.copyright | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty copyright array!") else . end ' /tmp/menus.json > /data/copyright.json
 {{- end }}
 ---
+{{ tpl (.Files.Get (printf "%sdocs/site/werf-islandkit.inc.yaml" .ModulePath)) . }}
+---
 image: web-frontend-artifact
 from: {{ .ModuleName }}/{{ .ImageName }}/base-jekyll
 final: false
@@ -96,6 +98,16 @@ git:
   - backends
   - Makefile
   - images/src
+  # Printed by islandkit-artifact and brought in by the import below. These
+  # paths must not come from git: in dev mode werf would add locally rendered
+  # copies, they would override what the stage built, and the page would be
+  # assembled from old fragments with a fresh bundle.
+  - _includes/_generated
+  - assets/islandkit
+  - _data/islandkit_header.json
+  - _sass/deckhouse-islands
+  # The islandKit snapshot is read by islandkit-artifact alone.
+  - _tools/islandkit/snapshot
   stageDependencies:
     install: ['Gemfile','Gemfile.lock']
     setup: '**/*'
@@ -113,8 +125,28 @@ git:
   to: /rawdata/global
   stageDependencies:
     setup: ['**/*']
-{{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
 import:
+  # Header: fragments, their index, the bundle and the styles' Sass are printed
+  # by islandkit-artifact. No environment condition - the header is needed in
+  # every build, not only in production profiles like the external menu data
+  # below.
+  - from: islandkit-artifact
+    add: /data/_generated
+    to: /srv/jekyll-data/site/_includes/_generated
+    before: setup
+  - from: islandkit-artifact
+    add: /data/islandkit_header.json
+    to: /srv/jekyll-data/site/_data/islandkit_header.json
+    before: setup
+  - from: islandkit-artifact
+    add: /data/islandkit-assets
+    to: /srv/jekyll-data/site/assets/islandkit
+    before: setup
+  - from: islandkit-artifact
+    add: /data/deckhouse-islands
+    to: /srv/jekyll-data/site/_sass/deckhouse-islands
+    before: setup
+{{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
   - from: site-external-artifacts
     add: /data/topnav.json
     to: /srv/jekyll-data/site/_data/topnav.json

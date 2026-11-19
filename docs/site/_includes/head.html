@@ -8,7 +8,6 @@
 {%- assign max_ind = page_url_parts.size | minus: 1 -%}
 {%- assign title_parts = "" | split: "" -%}
 {%- assign is_directory = page.url | endswith: "/" %}
-
 {%- if max_ind == 1 and include.mode=='documentation' %}{%- assign max_ind = 2 -%}{% endif %}
 
 {%- for i in (2..max_ind) %}

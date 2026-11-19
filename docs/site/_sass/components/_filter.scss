@@ -99,7 +99,25 @@
             &.show {
                 display: flex;
                 transform: translateX(0);
+
+                .filter__close {
+                    display: block;
+                }
             }
+        }
+
+        // A dedicated close button instead of the header's hamburger button: that one belongs
+        // to the island and no longer responds to the `show` class that applied the filter.
+        .filter__close {
+            display: none;
+            align-self: flex-end;
+            margin-bottom: 12px;
+            padding: 8px 14px;
+            border: 0;
+            background: #004df2;
+            color: #fff;
+            font: 400 14px/21px Onest, sans-serif;
+            cursor: pointer;
         }
 
         &--apply {
@@ -156,7 +174,7 @@
                 &.closing-title {
                     &::before {
                         @include breakpoints.max-w(xl) {
-                           top: -12px; 
+                           top: -12px;
                         }
                     }
                 }
@@ -172,7 +190,7 @@
                         }
                     }
                 }
-                
+
             }
         }
 

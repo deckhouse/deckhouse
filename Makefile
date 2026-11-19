@@ -309,6 +309,18 @@ cve-base-images-check-default-user: bin/jq ## Check CVE in our base images.
 MODULE_PATH ?=
 DOC_VERSION ?=
 
+# The header stage of the docs installs packages from the private npm registry
+# on fox, and its token is the werf secret CI_JOB_TOKEN. A pipeline has one; by
+# hand it comes from FOX_NPM_TOKEN (docs/site/README.md, Site header).
+docs docs-dev docs-external-module: export CI_JOB_TOKEN ?= $(FOX_NPM_TOKEN)
+
+# Without a token the header comes from the snapshot kept in the repository
+# (docs/site/_tools/islandkit/snapshot), which may be older than the pinned
+# version.
+ifeq ($(strip $(CI_JOB_TOKEN)$(FOX_NPM_TOKEN)),)
+docs docs-dev docs-external-module: export DOCS_ISLANDKIT_SNAPSHOT ?= 1
+endif
+
 .PHONY: docs
 docs: bin/werf ## Run containers with the documentation.
 	@echo "Building documentation containers..."

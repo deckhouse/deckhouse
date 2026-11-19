@@ -1,15 +1,19 @@
+// Points the footer's language link at the same page in the other language.
+//
+// The footer is also served over SSI on pages it knows nothing about, so the
+// link carries a fallback address, and the page it is on is only known here.
+// Paths with a language prefix (the in-cluster build) swap the prefix; the
+// public site swaps the host.
 document.addEventListener('DOMContentLoaded', function () {
   // Pages without a twin in the other language (CSE documentation, see
-  // docs/documentation/_layouts/default.html) get the switch from the shared
-  // header/footer through SSI anyway; drop it instead of linking to a 404.
+  // docs/documentation/_layouts/default.html) get the footer through SSI
+  // anyway; drop its language link instead of pointing it at a 404.
   if (document.querySelector('meta[name="page:lang-switch"][content="disabled"]')) {
-    $('a.lang-switcher').remove();
+    document.querySelectorAll('a.lang-switcher').forEach(function (link) {
+      link.remove();
+    });
     return;
   }
-
-  // Russian pages have no #language-switch, only the footer link - the
-  // a.lang-switcher rewrite at the bottom must still run for them.
-  const mobileLanguageSwitch = document.querySelector('#language-switch');
 
   const isRuPath = (pathname) => /^\/ru(\/|$)/.test(pathname);
   const isEnPath = (pathname) => /^\/en(\/|$)/.test(pathname);
@@ -50,37 +54,10 @@ document.addEventListener('DOMContentLoaded', function () {
     return url.toString();
   }
 
-  if (mobileLanguageSwitch) {
-    function mobileSyncCheckedState() {
-      const { pathname, hostname } = new URL(window.location.href);
-      const isRuHost =
-        hostname === 'deckhouse.ru' ||
-        hostname === 'ru.localhost' ||
-        hostname.includes('deckhouse-ru');
-
-      mobileLanguageSwitch.checked = isRuPath(pathname) || isRuHost;
-    }
-
-    let mobileIsNavigating = false;
-    mobileLanguageSwitch.removeAttribute('onclick');
-    mobileLanguageSwitch.addEventListener('change', function () {
-      if (window.innerWidth >= 1024 || mobileIsNavigating) return;
-
-      const targetUrl = buildTargetUrl();
-      if (!targetUrl || targetUrl === window.location.href) return;
-
-      mobileIsNavigating = true;
-      window.location.assign(targetUrl);
-    });
-
-    mobileSyncCheckedState();
-  }
-
   const targetUrl = buildTargetUrl();
-  if (targetUrl && targetUrl !== window.location.href) {
-    $('a.lang-switcher').each(function () {
-        $(this).attr('href', targetUrl);
-    });
-  }
+  if (!targetUrl || targetUrl === window.location.href) return;
 
+  document.querySelectorAll('a.lang-switcher').forEach(function (link) {
+    link.setAttribute('href', targetUrl);
+  });
 });

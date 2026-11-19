@@ -2,6 +2,29 @@
 image: {{ .ModuleName }}/{{ .ImageName }}/static
 from: {{ .ModuleName }}/{{ .ImageName }}/base-jekyll
 final: false
+{{ if eq .ModuleName "documentation" }}
+import:
+# The header fragments of this edition, rendered by the island stage in
+# docs/site/werf-islandkit.inc.yaml, and the header's styles. They land in
+# site/, which the setup below copies over documentation/ together with the
+# rest of the shared includes.
+- from: {{ .ModuleName }}/{{ .ImageName }}/islandkit-artifact
+  add: /data/_generated
+  to: /srv/jekyll-data/site/_includes/_generated
+  before: setup
+- from: {{ .ModuleName }}/{{ .ImageName }}/islandkit-artifact
+  add: /data/islandkit_header.json
+  to: /srv/jekyll-data/site/_data/islandkit_header.json
+  before: setup
+- from: {{ .ModuleName }}/{{ .ImageName }}/islandkit-artifact
+  add: /data/islandkit-assets
+  to: /srv/jekyll-data/site/assets/islandkit
+  before: setup
+- from: {{ .ModuleName }}/{{ .ImageName }}/islandkit-artifact
+  add: /data/deckhouse-islands
+  to: /srv/jekyll-data/site/_sass/deckhouse-islands
+  before: setup
+{{ end }}
 shell:
   setup:
   - |
@@ -119,11 +142,7 @@ git:
 {{ if eq .ModuleName "documentation" }}
     - site/_includes/head-site.html
     - site/_includes/header.html
-    - site/_includes/header-menu-fill-items.html
-    - site/_includes/header-mobile.liquid
     - site/_includes/header_ru.html
-    - site/_includes/header-l2-menu_ru.liquid
-    - site/_includes/header-mobile_ru.liquid
     - site/_includes/footer_ru.html
     - site/_includes/gdpr.html
     - site/_includes/error404-media_ru.html
@@ -158,6 +177,8 @@ git:
     - '**/docker-compose.yml'
     - '**/Makefile'
     - '**/.werf'
+    # Imported from the island stage above, never from git.
+    - site/_sass/deckhouse-islands
     - '**/.helm'
     - documentation/pages/internal
     - documentation/config

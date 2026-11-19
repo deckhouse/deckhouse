@@ -63,3 +63,5 @@ fi`) }}
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-documentation-static.inc.yaml" .ModulePath)) . }}
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-modules-static.inc.yaml" .ModulePath)) . }}
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-jekyll-base.inc.yaml" .ModulePath)) . }}
+---
+{{ tpl (.Files.Get (printf "%sdocs/site/werf-islandkit.inc.yaml" .ModulePath)) . }}

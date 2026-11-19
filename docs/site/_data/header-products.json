@@ -1,0 +1,117 @@
+{
+  "ru": [
+    {
+      "title": "Deckhouse Platform",
+      "url": "/products/deckhouse-platform/",
+      "description": "Единое управление любыми нагрузками поверх любой инфраструктуры",
+      "icon": "/images/header/products/deckhouse-platform.svg"
+    },
+    {
+      "title": "Stronghold",
+      "url": "/products/stronghold/",
+      "description": "Безопасное управление жизненным циклом секретов",
+      "icon": "/images/header/products/stronghold.svg"
+    },
+    {
+      "title": "Observability Platform",
+      "url": "/products/observability-platform/",
+      "description": "Единая наблюдаемость инфраструктуры и&nbsp;приложений",
+      "icon": "/images/header/products/observability-platform.svg"
+    },
+    {
+      "title": "Code",
+      "url": "/products/code/",
+      "description": "Управление разработкой и&nbsp;жизненным циклом ПО",
+      "icon": "/images/header/products/code.svg"
+    },
+    {
+      "title": "Deckhouse Development Portal",
+      "url": "/products/development-portal/",
+      "description": "Управление процессами всех команд разработки в&nbsp;одном окне",
+      "icon": "/images/header/products/development-portal.svg"
+    }
+  ],
+  "en": [
+    {
+      "title": "Deckhouse Platform",
+      "url": "/products/kubernetes-platform/",
+      "description": "Creating identical Kubernetes clusters and&nbsp;managing them",
+      "icon": {
+        "sprite": "/images/sprite.svg?v2",
+        "symbol": "kubernetes-platform-icon"
+      }
+    },
+    {
+      "title": "Virtualization Platform",
+      "url": "/products/virtualization-platform/",
+      "description": "Managing virtual machines",
+      "icon": {
+        "sprite": "/images/sprite.svg?v2",
+        "symbol": "virtualization-platform-icon"
+      }
+    },
+    {
+      "title": "Observability Platform",
+      "url": "/products/observability-platform/",
+      "description": "Infrastructure-wide centralized observability",
+      "icon": {
+        "sprite": "/images/sprite.svg?v2",
+        "symbol": "observability-platform-icon"
+      }
+    },
+    {
+      "title": "Stronghold",
+      "url": "/products/stronghold/",
+      "description": "Securely managing lifecycle of&nbsp;secrets",
+      "icon": {
+        "sprite": "/images/sprite.svg?v2",
+        "symbol": "stronghold-icon"
+      }
+    },
+    {
+      "title": "Delivery Kit",
+      "url": "/products/delivery-kit/",
+      "description": "Building and&nbsp;delivering containerized software",
+      "icon": {
+        "sprite": "/images/sprite.svg?v2",
+        "symbol": "delivery-icon"
+      }
+    },
+    {
+      "title": "Commander",
+      "url": "/products/commander/",
+      "description": "Cluster control center",
+      "icon": {
+        "sprite": "/images/sprite.svg?v2",
+        "symbol": "commander-icon"
+      }
+    },
+    {
+      "title": "Prom++",
+      "url": "/products/prompp/",
+      "description": "Open Source monitoring system",
+      "icon": {
+        "sprite": "/images/sprite.svg?v2",
+        "symbol": "prompp-icon"
+      }
+    },
+    {
+      "title": "Code",
+      "url": "/products/code/",
+      "description": "Continuous development and software lifecycle management",
+      "icon": {
+        "sprite": "/images/sprite.svg?v2",
+        "symbol": "code-icon"
+      }
+    },
+    {
+      "title": "Development Portal",
+      "url": "/products/development-platform/",
+      "description": "Centralized development workflow management",
+      "icon": {
+        "sprite": "/images/sprite.svg?v2",
+        "symbol": "development-platform-icon"
+      }
+    }
+  ]
+}

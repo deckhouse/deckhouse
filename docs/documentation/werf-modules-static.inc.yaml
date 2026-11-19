@@ -2,6 +2,20 @@
 image: {{ .ModuleName }}/modules-embedded/static-artifact
 from: {{ .ModuleName }}/{{ .ImageName }}/base-jekyll
 final: false
+{{ if eq .ModuleName "documentation" }}
+import:
+# The header fragments of this edition, rendered by the island stage in
+# docs/site/werf-islandkit.inc.yaml. They land in site/, which the setup below
+# copies over documentation/ together with the rest of the shared includes.
+- from: {{ .ModuleName }}/{{ .ImageName }}/islandkit-artifact
+  add: /data/_generated
+  to: /srv/jekyll-data/site/_includes/_generated
+  before: setup
+- from: {{ .ModuleName }}/{{ .ImageName }}/islandkit-artifact
+  add: /data/islandkit_header.json
+  to: /srv/jekyll-data/site/_data/islandkit_header.json
+  before: setup
+{{ end }}
 shell:
   setup:
   - |
@@ -174,11 +188,7 @@ git:
 {{ if eq .ModuleName "documentation" }}
     - site/_includes/head-site.html
     - site/_includes/header.html
-    - site/_includes/header-menu-fill-items.html
-    - site/_includes/header-mobile.liquid
     - site/_includes/header_ru.html
-    - site/_includes/header-l2-menu_ru.liquid
-    - site/_includes/header-mobile_ru.liquid
 {{ end }}
     - documentation
   excludePaths:

@@ -1,0 +1,38 @@
+{{- /* The npm packages under @web (the header island and its styles) come from
+       the private package registry on fox. The arrangement is that of the private
+       Go modules in golang.tmpl: the token is the pipeline's CI_JOB_TOKEN as a werf
+       secret, out of the stage digest and out of the layers, and the .npmrc that
+       carries it lives on a tmp_dir mount. This project has to be on the job-token
+       allowlist of the registry's project. A build by hand gets the token from
+       FOX_NPM_TOKEN through the docs Makefiles. Shared with docs/site, which
+       links this file into its own .werf/defines. */}}
+
+{{- define "npm private registry mount" }}
+- from: tmp_dir
+  to: /run/npm-private-auth
+{{- end }}
+
+{{- define "npm private registry secret" }}
+- id: CI_JOB_TOKEN
+  env: CI_JOB_TOKEN
+{{- end }}
+
+{{- /* Before any npm command: later `npm config set` calls (the packages proxy)
+       write into the same user config, so it has to be in place first. The
+       token covers all of /api/v4/, not just the registry address: npm reads
+       the metadata from the instance endpoint, but GitLab serves the tarball
+       from the project's one (/api/v4/projects/<id>/packages/npm/). */}}
+{{- define "npm private registry auth" }}
+- |
+  NPM_REGISTRY_TOKEN="$(cat /run/secrets/CI_JOB_TOKEN 2>/dev/null)"
+  if [ -z "${NPM_REGISTRY_TOKEN}" ]; then
+    echo "No token for the private npm registry on fox: export FOX_NPM_TOKEN (the read-only deploy token of npm-components), see docs/site/README.md, Site header." >&2
+    exit 1
+  fi
+  ( umask 077; printf '%s\n%s\n' \
+    "@web:registry=https://fox.flant.com/api/v4/packages/npm/" \
+    "//fox.flant.com/api/v4/:_authToken=${NPM_REGISTRY_TOKEN}" \
+    > /run/npm-private-auth/npmrc )
+  unset NPM_REGISTRY_TOKEN
+  export NPM_CONFIG_USERCONFIG=/run/npm-private-auth/npmrc
+{{- end }}

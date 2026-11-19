@@ -61,6 +61,11 @@ document.addEventListener("DOMContentLoaded", function () {
       openButtons.forEach(button => {
         button.addEventListener('click', this.openModal.bind(this));
       })
+
+      // A button inside the island is not printed by this template and cannot
+      // carry a foreign attribute: the island reports a press with a bubbling
+      // event. The sweep above collects buttons once at load and would miss it.
+      document.addEventListener(`ik:${this.modalAttr}`, this.openModal.bind(this));
     }
 
     submitForm(e) {
@@ -298,25 +303,37 @@ document.addEventListener("DOMContentLoaded", function () {
       e.preventDefault();
       this.wrapper.style.display = 'flex';
       document.body.classList.add('modal-opened');
-      document.addEventListener('keydown', this.closeModalOnEscape.bind(this));
+
+      // One listener for the whole lifetime, not a new one per opening.
+      // .bind() returns a new function each time, so there was nothing to
+      // remove the previous one with and they piled up. The modal used to open
+      // only from a link in the header; now the island's event opens it too, so
+      // they would pile up faster.
+      if (!this.escapeHandler) {
+        this.escapeHandler = this.closeModalOnEscape.bind(this);
+      }
+      document.addEventListener('keydown', this.escapeHandler);
     }
 
     closeModal(e) {
       e.preventDefault();
+      this.hideModal();
+    }
+
+    closeModalOnEscape(e) {
+      if (e.key === 'Escape') {
+        this.hideModal();
+      }
+    }
+
+    hideModal() {
       this.wrapper.style.display = 'none';
       this.intro.style.display = 'block';
       this.success.style.display = 'none';
       this.error.style.display = 'none';
       document.body.classList.remove('modal-opened');
-    }
-
-    closeModalOnEscape(e) {
-      if (e.key === 'Escape') {
-        this.wrapper.style.display = 'none';
-        this.intro.style.display = 'block';
-        this.success.style.display = 'none';
-        this.error.style.display = 'none';
-        document.body.classList.remove('modal-opened');
+      if (this.escapeHandler) {
+        document.removeEventListener('keydown', this.escapeHandler);
       }
     }
 

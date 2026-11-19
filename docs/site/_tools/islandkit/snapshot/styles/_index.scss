@@ -1,0 +1,10 @@
+// Written by _tools/islandkit/snapshot.mjs, do not edit.
+// Stands in for the Sass of @web/deckhouse-islands in a build from the
+// snapshot: the package part of the header styles is already compiled, and
+// the mixins that produce it in a normal build are empty here.
+@use "sass:meta";
+@use "compiled";
+
+@mixin header-en($args...) { $_: meta.keywords($args); }
+@mixin header-page-type($args...) { $_: meta.keywords($args); }
+@mixin header-ru($args...) { $_: meta.keywords($args); }

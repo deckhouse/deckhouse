@@ -691,20 +691,61 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (openMobile) {
     const filter = document.querySelector('.filter__block');
-    const hamburgerCollapse = document.querySelector('.hamburger--collapse');
     const body = document.body;
+
+    // The header's hamburger used to close this panel: the filter added a
+    // 'show' class to it and it turned into a cross. The island prints the
+    // header now and its button belongs to it under another name - and borrowing
+    // someone else's control was what tied two independent blocks to one class.
+    // So the filter creates its own button here and leaves its markup alone.
+    // Interface strings come from the page: head-site.html prints them as JSON
+    // in the page language. The English text is the fallback.
+    const uiText = function (key, fallback) {
+      const node = document.getElementById('docs-ui-text');
+      if (!node) return fallback;
+      try {
+        const value = JSON.parse(node.textContent)[key];
+        return typeof value === 'string' && value ? value : fallback;
+      } catch (e) {
+        return fallback;
+      }
+    };
+
+    let closeButton = null;
+    if (filter) {
+      closeButton = document.createElement('button');
+      closeButton.type = 'button';
+      closeButton.className = 'filter__close';
+      closeButton.textContent = uiText('close', 'Close');
+      closeButton.addEventListener('click', function () { closeFilterMobilePanel(); });
+      filter.insertBefore(closeButton, filter.firstChild);
+    }
 
     function closeFilterMobilePanel() {
       if (filter) filter.classList.remove('show');
-      if (hamburgerCollapse) hamburgerCollapse.classList.remove('show');
       if (body) body.classList.remove('filter-opened');
+      if (openMobile) {
+        // The panel's opener is a <div> without tabindex: legacy, and we leave
+        // its markup alone. But focus() on such an element silently does nothing,
+        // so after closing the focus fell into <body> and the next Tab started
+        // from the top of the page. tabindex="-1" makes the element focusable
+        // programmatically without adding it to the Tab order.
+        openMobile.setAttribute('tabindex', '-1');
+        openMobile.focus();
+      }
     }
 
     openMobile.addEventListener('click', () => {
       if (!filter) return;
       filter.classList.add('show');
-      if (hamburgerCollapse) hamburgerCollapse.classList.add('show');
       if (body) body.classList.add('filter-opened');
+      if (closeButton) closeButton.focus();
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && filter && filter.classList.contains('show')) {
+        closeFilterMobilePanel();
+      }
     });
 
     if (applyButtonBlock) {
