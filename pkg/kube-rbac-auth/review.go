@@ -33,9 +33,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	authnclientv1 "k8s.io/client-go/kubernetes/typed/authentication/v1"
 	authzclientv1 "k8s.io/client-go/kubernetes/typed/authorization/v1"
+
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+
+	"github.com/deckhouse/deckhouse/pkg/kube-rbac-auth/internal/metrics"
 )
 
-// User is the identity confirmed by a TokenReview.
+// User is the identity confirmed by a TokenReview or taken from a trusted client certificate.
 type User struct {
 	Name   string
 	UID    string
@@ -106,18 +110,27 @@ func permanent(err error) bool {
 	return code >= 400 && code < 500 && code != http.StatusRequestTimeout && code != http.StatusTooManyRequests
 }
 
+// reviewResult is the result label of a request to the API server that ended with err.
+func reviewResult(err error) string {
+	if err != nil {
+		return metrics.ReviewResultError
+	}
+	return metrics.ReviewResultSuccess
+}
+
 // tokenResult wraps the user so that an invalid token is cached as a nil user.
 type tokenResult struct {
 	user *User
 }
 
 type authenticator struct {
-	client  authnclientv1.TokenReviewsGetter
-	cache   *decisionCache
-	okTTL   time.Duration
-	failTTL time.Duration
-	backoff wait.Backoff
-	log     *slog.Logger
+	client        authnclientv1.TokenReviewsGetter
+	cache         *decisionCache
+	okTTL         time.Duration
+	failTTL       time.Duration
+	backoff       wait.Backoff
+	log           Logger
+	metricStorage metricsstorage.Storage
 }
 
 // authenticate returns nil and no error when the token is not valid.
@@ -136,11 +149,13 @@ func (a *authenticator) authenticate(ctx context.Context, token string) (*User, 
 		result, err = a.client.TokenReviews().Create(ctx, &authenticationv1.TokenReview{
 			Spec: authenticationv1.TokenReviewSpec{Token: token},
 		}, metav1.CreateOptions{})
+		a.metricStorage.CounterAdd(metrics.ReviewRequestsTotal, 1, map[string]string{metrics.LabelReview: metrics.TokenReview, metrics.LabelResult: reviewResult(err)})
 		return err
 	})
 	if err != nil {
 		if found {
 			a.log.Warn("TokenReview failed, using a cached result", slog.String("error", err.Error()))
+			a.metricStorage.CounterAdd(metrics.StaleResultsTotal, 1, map[string]string{metrics.LabelReview: metrics.TokenReview})
 			return cached.(tokenResult).user, nil
 		}
 		return nil, err
@@ -157,12 +172,13 @@ func (a *authenticator) authenticate(ctx context.Context, token string) (*User, 
 }
 
 type authorizer struct {
-	client   authzclientv1.SubjectAccessReviewsGetter
-	cache    *decisionCache
-	allowTTL time.Duration
-	denyTTL  time.Duration
-	backoff  wait.Backoff
-	log      *slog.Logger
+	client        authzclientv1.SubjectAccessReviewsGetter
+	cache         *decisionCache
+	allowTTL      time.Duration
+	denyTTL       time.Duration
+	backoff       wait.Backoff
+	log           Logger
+	metricStorage metricsstorage.Storage
 }
 
 // authorize returns whether user may perform verb on attrs and the reason given by the API server.
@@ -199,11 +215,13 @@ func (a *authorizer) authorize(ctx context.Context, user *User, verb string, att
 	err := retry(ctx, a.backoff, func(ctx context.Context) error {
 		var err error
 		result, err = a.client.SubjectAccessReviews().Create(ctx, &authorizationv1.SubjectAccessReview{Spec: spec}, metav1.CreateOptions{})
+		a.metricStorage.CounterAdd(metrics.ReviewRequestsTotal, 1, map[string]string{metrics.LabelReview: metrics.SubjectAccessReview, metrics.LabelResult: reviewResult(err)})
 		return err
 	})
 	if err != nil {
 		if found {
 			a.log.Warn("SubjectAccessReview failed, using a cached decision", slog.String("error", err.Error()))
+			a.metricStorage.CounterAdd(metrics.StaleResultsTotal, 1, map[string]string{metrics.LabelReview: metrics.SubjectAccessReview})
 			d := cached.(authorizationv1.SubjectAccessReviewStatus)
 			return d.Allowed, d.Reason, nil
 		}

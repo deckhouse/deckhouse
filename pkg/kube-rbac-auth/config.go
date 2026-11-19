@@ -18,10 +18,14 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"path"
+	"reflect"
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/wait"
+
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const (
@@ -36,7 +40,7 @@ const (
 	// DefaultReviewTimeout bounds the checks of one request with their retries, like the 5 second client
 	// timeout of kube-rbac-proxy in Deckhouse, and leaves time to serve a cached decision within a 10 second scrape.
 	DefaultReviewTimeout = 5 * time.Second
-	// DefaultCacheSize limits the number of cached tokens and decisions each.
+	// DefaultCacheSize limits the number of cached tokens, certificate checks and decisions each.
 	DefaultCacheSize = 4096
 )
 
@@ -67,6 +71,30 @@ type Rule struct {
 	ResourceAttributes ResourceAttributes `json:"resourceAttributes"`
 }
 
+// Logger is the part of *slog.Logger that the middleware and ListenAndServeTLS use: Handler serves the error log
+// of the HTTP server. *log.Logger of github.com/deckhouse/deckhouse/pkg/log has it too, and its Error adds
+// the stack trace.
+type Logger interface {
+	Debug(msg string, args ...any)
+	Info(msg string, args ...any)
+	Warn(msg string, args ...any)
+	Error(msg string, args ...any)
+	Handler() slog.Handler
+}
+
+// loggerOrDefault returns slog.Default() for a nil logger and for a nil pointer of any type in the interface,
+// such as a nil *slog.Logger.
+func loggerOrDefault(l Logger) Logger {
+	if l == nil {
+		return slog.Default()
+	}
+	// IsNil panics on a logger that is not a pointer, such as a struct value.
+	if v := reflect.ValueOf(l); v.Kind() == reflect.Pointer && v.IsNil() {
+		return slog.Default()
+	}
+	return l
+}
+
 // Config configures the Middleware. Only Rules is required.
 type Config struct {
 	Rules []Rule `json:"rules"`
@@ -74,6 +102,13 @@ type Config struct {
 	// ExcludePaths are served without authentication, for example probes.
 	// Each entry is a path.Match pattern matched against the whole request path.
 	ExcludePaths []string `json:"excludePaths,omitempty"`
+
+	// ClientCAFile is a PEM bundle of the CAs that sign client certificates, reread when it changes.
+	// A request with a certificate from one of them is authenticated as the certificate's common name
+	// and organizations, without a TokenReview. Empty means authentication by token only.
+	// ListenAndServeTLS asks clients for a certificate. An application with its own server
+	// sets ClientAuth: tls.RequestClientCert in its tls.Config.
+	ClientCAFile string `json:"-"`
 
 	// Cache lifetimes. Zero selects the default. A negative StaleCacheTTL disables the stale cache.
 	TokenCacheTTL time.Duration `json:"-"`
@@ -89,8 +124,12 @@ type Config struct {
 	// ReviewTimeout bounds the checks of one request, both reviews with their retries. Zero selects the default.
 	ReviewTimeout time.Duration `json:"-"`
 
-	// Logger defaults to slog.Default().
-	Logger *slog.Logger `json:"-"`
+	// Logger defaults to slog.Default(), also when it holds a nil pointer.
+	Logger Logger `json:"-"`
+
+	// MetricStorage receives the metrics of the middleware: New registers them in it, and the application
+	// serves them with its own metrics. Nil turns the metrics off: they go to a storage that nothing serves.
+	MetricStorage metricsstorage.Storage `json:"-"`
 }
 
 func (c *Config) validate() error {
@@ -98,6 +137,8 @@ func (c *Config) validate() error {
 		return errors.New("at least one rule is required")
 	}
 	seen := make(map[string]struct{}, len(c.Rules))
+	// mux gets the paths the way the handler registers them: it panics on a path it does not accept.
+	mux := http.NewServeMux()
 	for i, r := range c.Rules {
 		if r.Path == "" || r.Path[0] != '/' {
 			return fmt.Errorf("rules[%d]: path %q must start with /", i, r.Path)
@@ -106,6 +147,21 @@ func (c *Config) validate() error {
 			return fmt.Errorf("rules[%d]: duplicate path %q", i, r.Path)
 		}
 		seen[r.Path] = struct{}{}
+		if register(mux, r.Path) != nil {
+			if err := register(http.NewServeMux(), r.Path); err != nil {
+				return fmt.Errorf("rules[%d]: path %q is not an http.ServeMux pattern: %w", i, r.Path, err)
+			}
+			// Two paths can match the same request with neither being more specific,
+			// for example "/a/{x}" and "/a/{y}".
+			for j, earlier := range c.Rules[:i] {
+				pair := http.NewServeMux()
+				if register(pair, earlier.Path) == nil && register(pair, r.Path) != nil {
+					return fmt.Errorf("rules[%d]: path %q conflicts with path %q of rules[%d]: http.ServeMux cannot choose between them",
+						i, r.Path, earlier.Path, j)
+				}
+			}
+			return fmt.Errorf("rules[%d]: path %q conflicts with the paths of the rules before it", i, r.Path)
+		}
 		if r.ResourceAttributes.Resource == "" {
 			return fmt.Errorf("rules[%d]: resourceAttributes.resource is required", i)
 		}
@@ -115,6 +171,17 @@ func (c *Config) validate() error {
 			return fmt.Errorf("excludePaths[%d]: %w", i, err)
 		}
 	}
+	return nil
+}
+
+// register adds the path to the mux and reports why the mux does not accept it, instead of panicking.
+func register(mux *http.ServeMux, path string) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%v", r)
+		}
+	}()
+	mux.Handle(path, http.NotFoundHandler())
 	return nil
 }
 
@@ -145,8 +212,9 @@ func (c *Config) withDefaults() Config {
 		b := DefaultRetryBackoff
 		out.RetryBackoff = &b
 	}
-	if out.Logger == nil {
-		out.Logger = slog.Default()
+	out.Logger = loggerOrDefault(out.Logger)
+	if out.MetricStorage == nil {
+		out.MetricStorage = metricsstorage.NewMetricStorage(metricsstorage.WithNewRegistry())
 	}
 	return out
 }

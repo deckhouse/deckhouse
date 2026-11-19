@@ -15,9 +15,11 @@
 package kuberbacauth
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"io"
 	"log/slog"
 	"net"
@@ -25,31 +27,50 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	certutil "k8s.io/client-go/util/cert"
 )
 
-func TestServeTLSWithSelfSignedCertificate(t *testing.T) {
-	cert, err := selfSignedCertificate()
-	if err != nil {
-		t.Fatal(err)
-	}
+// startTLSServer serves cfg.Handler on a local port until the test ends or stop is called.
+// stop returns the result of the graceful shutdown.
+func startTLSServer(t *testing.T, cfg ServerConfig, tlsConfig *tls.Config) (string, func() error) {
+	t.Helper()
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
-	h := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = io.WriteString(w, "ok") })
 	go func() {
-		done <- serveTLS(ctx, ln, h, &tls.Config{MinVersion: tls.VersionTLS12, Certificates: []tls.Certificate{cert}},
-			time.Second, slog.New(slog.NewTextHandler(io.Discard, nil)))
+		done <- serveTLS(ctx, ln, cfg, tlsConfig, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	}()
+	stop := sync.OnceValue(func() error {
+		cancel()
+		select {
+		case err := <-done:
+			return err
+		case <-time.After(5 * time.Second):
+			return errors.New("server did not stop")
+		}
+	})
+	t.Cleanup(func() { _ = stop() })
+	return ln.Addr().String(), stop
+}
+
+func TestServeTLSWithSelfSignedCertificate(t *testing.T) {
+	cert, err := selfSignedCertificate()
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = io.WriteString(w, "ok") })
+	addr, stop := startTLSServer(t, ServerConfig{Handler: h, ShutdownTimeout: time.Second},
+		&tls.Config{MinVersion: tls.VersionTLS12, Certificates: []tls.Certificate{cert}})
 
 	client := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}} //nolint:gosec // the certificate is self-signed
-	resp, err := client.Get("https://" + ln.Addr().String() + "/")
+	resp, err := client.Get("https://" + addr + "/")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,14 +80,39 @@ func TestServeTLSWithSelfSignedCertificate(t *testing.T) {
 		t.Fatalf("body = %q", body)
 	}
 
-	cancel()
-	select {
-	case err := <-done:
-		if err != nil {
-			t.Fatalf("serveTLS returned %v after shutdown", err)
-		}
-	case <-time.After(5 * time.Second):
-		t.Fatal("server did not stop")
+	if err := stop(); err != nil {
+		t.Fatalf("serveTLS returned %v after shutdown", err)
+	}
+}
+
+func TestServerClosesIdleConnection(t *testing.T) {
+	cert, err := selfSignedCertificate()
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = io.WriteString(w, "ok") })
+	addr, _ := startTLSServer(t, ServerConfig{Handler: h, IdleTimeout: 50 * time.Millisecond, ShutdownTimeout: time.Second},
+		&tls.Config{MinVersion: tls.VersionTLS12, Certificates: []tls.Certificate{cert}})
+
+	conn, err := tls.Dial("tcp", addr, &tls.Config{InsecureSkipVerify: true}) //nolint:gosec // the certificate is self-signed
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	if _, err := io.WriteString(conn, "GET / HTTP/1.1\r\nHost: example\r\n\r\n"); err != nil {
+		t.Fatal(err)
+	}
+
+	// The server answers and then closes the connection itself: the read ends before the deadline.
+	if err := conn.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	answer, err := io.ReadAll(conn)
+	if err != nil {
+		t.Fatalf("the idle connection was not closed: %v", err)
+	}
+	if !strings.HasSuffix(string(answer), "ok") {
+		t.Fatalf("answer = %q", answer)
 	}
 }
 
@@ -83,18 +129,14 @@ func TestListenAndServeTLSValidatesConfig(t *testing.T) {
 	}
 }
 
-func writeKeyPair(t *testing.T, dir, host string, mtime time.Time) {
+func writeKeyPair(t *testing.T, dir, host string) {
 	t.Helper()
 	certPEM, keyPEM, err := certutil.GenerateSelfSignedCertKey(host, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	for name, data := range map[string][]byte{"tls.crt": certPEM, "tls.key": keyPEM} {
-		p := filepath.Join(dir, name)
-		if err := os.WriteFile(p, data, 0o600); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.Chtimes(p, mtime, mtime); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, name), data, 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -109,38 +151,41 @@ func commonName(t *testing.T, c *tls.Certificate) string {
 	return leaf.Subject.CommonName
 }
 
-func TestCertLoaderRereadsChangedFiles(t *testing.T) {
+func TestServingCertificateIsReread(t *testing.T) {
 	dir := t.TempDir()
-	start := time.Now().Add(-time.Hour)
-	writeKeyPair(t, dir, "first", start)
-	l := &certLoader{certFile: filepath.Join(dir, "tls.crt"), keyFile: filepath.Join(dir, "tls.key")}
-
-	c, err := l.GetCertificate(nil)
+	keyFile := filepath.Join(dir, "tls.key")
+	var logs bytes.Buffer
+	clock := &fakeClock{now: testNow}
+	writeKeyPair(t, dir, "first")
+	pair, err := newServingCertificate(filepath.Join(dir, "tls.crt"), keyFile, clock, slog.New(slog.NewTextHandler(&logs, nil)))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(commonName(t, c), "first") {
-		t.Fatalf("common name = %q", commonName(t, c))
+	served := func() string {
+		t.Helper()
+		cert, _ := pair.get()
+		return commonName(t, cert)
 	}
 
-	writeKeyPair(t, dir, "second", start.Add(time.Minute))
-	c, err = l.GetCertificate(nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.HasPrefix(commonName(t, c), "second") {
-		t.Fatalf("after rotation common name = %q", commonName(t, c))
+	if !strings.HasPrefix(served(), "first") {
+		t.Fatalf("common name = %q", served())
 	}
 
-	// A broken pair in the middle of a rotation keeps the previous certificate in use.
-	if err := os.WriteFile(l.keyFile, []byte("broken"), 0o600); err != nil {
+	writeKeyPair(t, dir, "second")
+	clock.step(reloadInterval)
+	if !strings.HasPrefix(served(), "second") {
+		t.Fatalf("after rotation common name = %q", served())
+	}
+
+	// A broken pair in the middle of a rotation keeps the previous certificate in use and is reported.
+	if err := os.WriteFile(keyFile, []byte("broken"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Chtimes(l.keyFile, start.Add(2*time.Minute), start.Add(2*time.Minute)); err != nil {
-		t.Fatal(err)
+	clock.step(reloadInterval)
+	if !strings.HasPrefix(served(), "second") {
+		t.Fatalf("broken pair: common name = %q", served())
 	}
-	c, err = l.GetCertificate(nil)
-	if err != nil || !strings.HasPrefix(commonName(t, c), "second") {
-		t.Fatalf("broken pair: cert %v, err %v", c, err)
+	if n := strings.Count(logs.String(), "cannot reload the serving certificate"); n != 1 {
+		t.Fatalf("warnings = %d, want 1; log %q", n, logs.String())
 	}
 }

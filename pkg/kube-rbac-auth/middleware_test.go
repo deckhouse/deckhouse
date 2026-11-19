@@ -35,6 +35,9 @@ import (
 
 const validToken = "dh-test-secret-0123456789abcdef"
 
+// testNow is the time of the fake clock in newEnv. Test certificates are valid around it.
+var testNow = time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+
 var metricsAttrs = ResourceAttributes{
 	Namespace:   "d8-example",
 	APIGroup:    "apps",
@@ -126,20 +129,23 @@ func (f *fakeAPI) client() *fake.Clientset {
 type env struct {
 	api     *fakeAPI
 	clock   *fakeClock
+	auth    *Middleware
 	handler http.Handler
 }
 
 func newEnv(t *testing.T, cfg Config) *env {
 	t.Helper()
 	api := &fakeAPI{allowed: true, tokenOK: true}
-	clock := &fakeClock{now: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)}
+	clock := &fakeClock{now: testNow}
 	if cfg.Rules == nil {
 		cfg.Rules = []Rule{{Path: "/metrics", ResourceAttributes: metricsAttrs}}
 	}
 	if cfg.RetryBackoff == nil {
 		cfg.RetryBackoff = &wait.Backoff{Duration: time.Millisecond, Factor: 1, Steps: 3}
 	}
-	cfg.Logger = slog.New(slog.NewTextHandler(io.Discard, nil))
+	if cfg.Logger == nil {
+		cfg.Logger = slog.New(slog.NewTextHandler(io.Discard, nil))
+	}
 	m, err := newWithClock(api.client(), cfg, clock)
 	if err != nil {
 		t.Fatalf("New: %v", err)
@@ -147,12 +153,16 @@ func newEnv(t *testing.T, cfg Config) *env {
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = io.WriteString(w, "ok "+r.URL.Path)
 	})
-	return &env{api: api, clock: clock, handler: m.Handler(next)}
+	return &env{api: api, clock: clock, auth: m, handler: m.Handler(next)}
 }
 
 func (e *env) do(t *testing.T, method, path, auth string) *httptest.ResponseRecorder {
 	t.Helper()
-	req := httptest.NewRequest(method, path, nil)
+	return e.serve(httptest.NewRequest(method, path, nil), auth)
+}
+
+// serve sends req with auth in the Authorization header, unless auth is empty.
+func (e *env) serve(req *http.Request, auth string) *httptest.ResponseRecorder {
 	if auth != "" {
 		req.Header.Set("Authorization", auth)
 	}
@@ -310,13 +320,32 @@ func TestVerbs(t *testing.T) {
 	}
 }
 
+// Every path the config accepts must be accepted by the mux of the handler: the mux panics otherwise.
+func TestAcceptedRulePathsDoNotPanic(t *testing.T) {
+	e := newEnv(t, Config{Rules: []Rule{
+		{Path: "/metrics", ResourceAttributes: metricsAttrs},
+		{Path: "/metrics/", ResourceAttributes: metricsAttrs},
+		{Path: "/a/{name}", ResourceAttributes: metricsAttrs},
+		{Path: "/a/{name}/status", ResourceAttributes: metricsAttrs},
+		{Path: "/b/{rest...}", ResourceAttributes: metricsAttrs},
+	}})
+	for _, p := range []string{"/metrics", "/metrics/sub", "/a/one", "/a/one/status", "/b/any/depth"} {
+		expectCode(t, e.do(t, http.MethodGet, p, "Bearer "+validToken), http.StatusOK)
+	}
+	expectCode(t, e.do(t, http.MethodGet, "/a/one/other", "Bearer "+validToken), http.StatusNotFound)
+}
+
 func TestInvalidConfig(t *testing.T) {
 	for name, cfg := range map[string]Config{
-		"no rules":       {},
-		"relative path":  {Rules: []Rule{{Path: "metrics", ResourceAttributes: metricsAttrs}}},
-		"duplicate path": {Rules: []Rule{{Path: "/m", ResourceAttributes: metricsAttrs}, {Path: "/m", ResourceAttributes: metricsAttrs}}},
-		"no resource":    {Rules: []Rule{{Path: "/m"}}},
-		"bad exclude":    {Rules: []Rule{{Path: "/m", ResourceAttributes: metricsAttrs}}, ExcludePaths: []string{"["}},
+		"no rules":          {},
+		"relative path":     {Rules: []Rule{{Path: "metrics", ResourceAttributes: metricsAttrs}}},
+		"duplicate path":    {Rules: []Rule{{Path: "/m", ResourceAttributes: metricsAttrs}, {Path: "/m", ResourceAttributes: metricsAttrs}}},
+		"no resource":       {Rules: []Rule{{Path: "/m"}}},
+		"unclosed wildcard": {Rules: []Rule{{Path: "/a/{", ResourceAttributes: metricsAttrs}}},
+		"space in path":     {Rules: []Rule{{Path: "/metrics x", ResourceAttributes: metricsAttrs}}},
+		"same requests":     {Rules: []Rule{{Path: "/a/{x}", ResourceAttributes: metricsAttrs}, {Path: "/a/{y}", ResourceAttributes: metricsAttrs}}},
+		"overlapping paths": {Rules: []Rule{{Path: "/a/{x}/b", ResourceAttributes: metricsAttrs}, {Path: "/a/c/{y}", ResourceAttributes: metricsAttrs}}},
+		"bad exclude":       {Rules: []Rule{{Path: "/m", ResourceAttributes: metricsAttrs}}, ExcludePaths: []string{"["}},
 	} {
 		if _, err := New(fake.NewClientset(), cfg); err == nil || !strings.Contains(err.Error(), "invalid config") {
 			t.Fatalf("%s: err = %v, want invalid config", name, err)
@@ -324,5 +353,22 @@ func TestInvalidConfig(t *testing.T) {
 	}
 	if _, err := New(nil, Config{Rules: []Rule{{Path: "/m", ResourceAttributes: metricsAttrs}}}); err == nil {
 		t.Fatal("nil client: want an error")
+	}
+}
+
+// A nil pointer in Logger, of *slog.Logger or of any other type, selects slog.Default() as nil does.
+func TestLoggerOrDefault(t *testing.T) {
+	type wrapped struct{ *slog.Logger }
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	for name, tc := range map[string]struct{ in, want Logger }{
+		"nil":                         {nil, slog.Default()},
+		"nil *slog.Logger":            {(*slog.Logger)(nil), slog.Default()},
+		"nil pointer of another type": {(*wrapped)(nil), slog.Default()},
+		"logger":                      {logger, logger},
+		"struct value":                {wrapped{logger}, wrapped{logger}},
+	} {
+		if got := loggerOrDefault(tc.in); got != tc.want {
+			t.Fatalf("%s: got %v, want %v", name, got, tc.want)
+		}
 	}
 }
