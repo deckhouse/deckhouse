@@ -27,6 +27,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 )
@@ -80,7 +81,7 @@ func newBaseHTTPClient() *http.Client {
 	return &http.Client{Transport: transport}
 }
 
-func (c *httpClient) Get(ctx context.Context, digest string) (*http.Response, error) {
+func (c *httpClient) Get(ctx context.Context, digest string, giveUp func() bool) (*http.Response, error) {
 	if err := validateDigest(digest); err != nil {
 		return nil, err
 	}
@@ -90,10 +91,23 @@ func (c *httpClient) Get(ctx context.Context, digest string) (*http.Response, er
 		return nil, errNoEndpoints
 	}
 
-	endpoint := c.endpoints[rand.IntN(len(c.endpoints))]
+	failures := make([]error, 0, len(c.endpoints))
+	for _, i := range rand.Perm(len(c.endpoints)) {
+		packageURL := buildPackageURL(c.endpoints[i], digest, c.repository, c.path)
 
-	packageURL := buildPackageURL(endpoint, digest, c.repository, c.path)
-	return c.doGet(ctx, packageURL, c.token)
+		response, err := c.doGet(ctx, packageURL, c.token)
+		if err == nil {
+			return response, nil
+		}
+
+		failures = append(failures, err)
+
+		if giveUp() {
+			break
+		}
+	}
+
+	return nil, errors.Join(failures...)
 }
 
 func (c *httpClient) doGet(ctx context.Context, packageURL, token string) (*http.Response, error) {
@@ -133,12 +147,39 @@ func validateDigest(digest string) error {
 }
 
 func shouldRetryFetch(err error) bool {
+	return slices.ContainsFunc(endpointFailures(err), isTransientFetchFailure)
+}
+
+func endpointFailures(err error) []error {
+	var failures interface{ Unwrap() []error }
+	if errors.As(err, &failures) {
+		return failures.Unwrap()
+	}
+
+	return []error{err}
+}
+
+func everyEndpointRefused(err error) bool {
+	return !slices.ContainsFunc(endpointFailures(err), func(failure error) bool {
+		return !isNotFoundOrForbidden(failure)
+	})
+}
+
+func isNotFoundOrForbidden(err error) bool {
+	var statusErr *httpStatusError
+	if !errors.As(err, &statusErr) {
+		return false
+	}
+
+	return statusErr.statusCode == http.StatusNotFound || statusErr.statusCode == http.StatusForbidden
+}
+
+func isTransientFetchFailure(err error) bool {
 	if err == nil {
 		return false
 	}
 
 	if errors.Is(err, context.Canceled) ||
-		errors.Is(err, context.DeadlineExceeded) ||
 		errors.Is(err, errInvalidDigest) ||
 		errors.Is(err, errNoEndpoints) ||
 		errors.Is(err, errNoToken) {

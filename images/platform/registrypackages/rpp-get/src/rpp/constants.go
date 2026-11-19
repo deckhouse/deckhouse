@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	connectTimeout        = 10 * time.Second
+	connectTimeout        = 5 * time.Second
 	responseHeaderTimeout = 60 * time.Second
 
 	defaultInstallWorkers = 8
@@ -34,6 +34,12 @@ const (
 	defaultFetchWorkers = 16
 
 	packageInstallAttempts = 10
+	refusalAttempts        = 4
+
+	// RetryWindow is how long a run that reaches no proxy keeps trying. No request starts once
+	// nothing has succeeded for outageBudget, so the one in flight ends within the window.
+	RetryWindow  = 10 * time.Minute
+	outageBudget = RetryWindow - (2*connectTimeout + responseHeaderTimeout)
 
 	scriptExecTimeout     = 10 * time.Minute
 	archiveExtractTimeout = 5 * time.Minute

@@ -197,9 +197,9 @@ func TestAGivenTokenThatIsRefusedIsNotRetried(t *testing.T) {
 	}
 }
 
-// TestAForbiddenFetchIsNotRetried: 403 is a token the proxy reviewed and refused, not one it could not
-// review, so asking again — for up to half an hour on every node — would change nothing.
-func TestAForbiddenFetchIsNotRetried(t *testing.T) {
+// TestAForbiddenFetchIsAskedForAFewTimes: 403 is a token the proxy reviewed and refused, not one it could
+// not review, so it gets the few attempts of any refusal and not the whole series.
+func TestAForbiddenFetchIsAskedForAFewTimes(t *testing.T) {
 	var count atomic.Int32
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		count.Add(1)
@@ -217,8 +217,9 @@ func TestAForbiddenFetchIsNotRetried(t *testing.T) {
 	if err := client.fetchArchive(context.Background(), ref); err == nil {
 		t.Fatal("fetchArchive() error = nil, want the 403")
 	}
-	if got := count.Load(); got != 1 {
-		t.Fatalf("requests = %d, want 1", got)
+
+	if got := count.Load(); got != refusalAttempts {
+		t.Fatalf("requests = %d, want %d", got, refusalAttempts)
 	}
 }
 
@@ -291,5 +292,25 @@ func TestDecidingOnARetryDoesNotWaitForARediscovery(t *testing.T) {
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("shouldRetryFetch() waited for the rediscovery in flight")
+	}
+}
+
+func TestA401FromAnyEndpointIsRetriedWhileTheClusterCanBeAsked(t *testing.T) {
+	client := newTestClient(t, []string{goneEndpoint(t)})
+	client.SetRediscover(func(context.Context) ([]string, string, error) {
+		return nil, "", nil
+	})
+
+	err := errors.Join(
+		&httpStatusError{statusCode: http.StatusForbidden},
+		&httpStatusError{statusCode: http.StatusUnauthorized},
+	)
+
+	if !client.shouldRetryFetch(err, false) {
+		t.Fatal("shouldRetryFetch() = false, want a 401 from one of the endpoints retried")
+	}
+
+	if client.shouldRetryFetch(err, true) {
+		t.Fatal("shouldRetryFetch() = true after the cluster gave back the same endpoints and token")
 	}
 }
