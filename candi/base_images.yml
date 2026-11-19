@@ -1,19 +1,19 @@
-# version=v0.5.85
+# version=v0.5.88
 # REGISTRY_PATH is a special key which is concatenated with other base images
 REGISTRY_PATH: registry.deckhouse.io/base_images
-base/distroless: "sha256:9b74f52a191b90ceeba64b8c11dfd1ae054a82dbd360d4df6530637f60707bf7" # from: builder/scratch
-base/nginx-release-1.28.0: "sha256:305a6086dbeba19f9a7d3bb65636680112bb3538dde961edc52c6af8ee8891cd" # from: tools/nginx-release-1.28.0
-base/nginx: "sha256:305a6086dbeba19f9a7d3bb65636680112bb3538dde961edc52c6af8ee8891cd" # from: tools/nginx-release-1.28.0
+base/distroless: "sha256:9044b258da83767b1ecd0e5cadd40cd4663d60cdd55e6e19bb0c0f1d37a7a1c1" # from: builder/scratch
+base/nginx-release-1.30.7: "sha256:8dd3181a1b9df333da9ca94ba6fb484cfff15cccae97b6633e99bc45f6ee63de" # from: tools/nginx-release-1.30.7
+base/nginx: "sha256:8dd3181a1b9df333da9ca94ba6fb484cfff15cccae97b6633e99bc45f6ee63de" # from: tools/nginx-release-1.30.7
 base/python-3.12: "sha256:d790a071d070882c334648021636226b8b53ff4f10241dbee793e70bdc7885eb" # from: builder/scratch
 base/python-3.14: "sha256:935b371a9ed940b0117c35c4b8e628e7b6174d660513a5d13b6820600adadc97" # from: builder/scratch
 base/python: "sha256:935b371a9ed940b0117c35c4b8e628e7b6174d660513a5d13b6820600adadc97" # from: builder/scratch
 base/redis-7.4.5: "sha256:8a9ed1dfaa235e34887388b8d28ec62c243bbf01eb83f5f84370fc98bcdc1911" # from: builder/scratch
 base/redis-7.4.7: "sha256:27a2b389e378c466012e9a75008e80fa9de125f092dbd7e48d8a962ed377834b" # from: builder/scratch
 base/redis: "sha256:27a2b389e378c466012e9a75008e80fa9de125f092dbd7e48d8a962ed377834b" # from: builder/scratch
-base/ruby-bundler: "sha256:ca49d8791f944c5452316c02d90abd574a896c1af6fc5a8f7f69210bd25c7593" # from: builder/alpine
-base/ruby-bundler-v3_4_9: "sha256:ca49d8791f944c5452316c02d90abd574a896c1af6fc5a8f7f69210bd25c7593" # from: builder/alpine
-base/ruby: "sha256:11b07f962e4b136de4a18d1bacce5c4281143bd07f7395b789f945e81183d7ed" # from: base/distroless
-base/ruby-v3_4_9: "sha256:11b07f962e4b136de4a18d1bacce5c4281143bd07f7395b789f945e81183d7ed" # from: base/distroless
+base/ruby-bundler: "sha256:3640e2b1e45e2ebc931b5b3f9d1b163beb21bac75cbcdb38ae6c81147bb17406" # from: builder/alpine
+base/ruby-bundler-v3_4_11: "sha256:3640e2b1e45e2ebc931b5b3f9d1b163beb21bac75cbcdb38ae6c81147bb17406" # from: builder/alpine
+base/ruby: "sha256:ab7e12dfb4e5c7ae11ee2c4218d6dc3fe1ee3ec19707bc354c8299581edb1ea2" # from: base/distroless
+base/ruby-v3_4_11: "sha256:ab7e12dfb4e5c7ae11ee2c4218d6dc3fe1ee3ec19707bc354c8299581edb1ea2" # from: base/distroless
 base/scratch: "sha256:cfac1c6b53f9365ee59ffe94c90211253f2a85ece372a6a9dfad61f4e0ab0bea" # from: builder/scratch
 base/shell-operator: "sha256:560e0c22c81c9866864e9913bd3d79f98d91162fd9e7d29c7b3e4c4ee81c8aaf" # from: builder/scratch
 base/shell-operator-v1.16.4: "sha256:560e0c22c81c9866864e9913bd3d79f98d91162fd9e7d29c7b3e4c4ee81c8aaf" # from: builder/scratch
@@ -293,10 +293,10 @@ tools/multipath-tools-0.13.0: "sha256:860adeacd5181a7a4b50297b67fa001f3542325fad
 tools/multipath-tools: "sha256:860adeacd5181a7a4b50297b67fa001f3542325fad791f47b1bba6b40e0a3aa7" # from: builder/scratch
 tools/nfs-utils-nfs-utils-2-8-2: "sha256:f4c0a02bd721e906059d5e2aecaee664537d65bf1f545d3c9e12f4057e456cd1" # from: builder/scratch
 tools/nfs-utils: "sha256:f4c0a02bd721e906059d5e2aecaee664537d65bf1f545d3c9e12f4057e456cd1" # from: builder/scratch
-tools/nginx-njs-release-1.28.0: "sha256:d60179dc0b1ec40c7a90589756dae29c99831bc6a8a890a0684f47b9ea475ffe" # from: builder/scratch
-tools/nginx-njs: "sha256:d60179dc0b1ec40c7a90589756dae29c99831bc6a8a890a0684f47b9ea475ffe" # from: builder/scratch
-tools/nginx-release-1.28.0: "sha256:601e5a92b84e08b958a65b901c02b2321d5c31b220466e802af6cc2e347a6afb" # from: builder/scratch
-tools/nginx: "sha256:601e5a92b84e08b958a65b901c02b2321d5c31b220466e802af6cc2e347a6afb" # from: builder/scratch
+tools/nginx-njs-release-1.30.7: "sha256:0ba2dbe2fb1369afaae39c2fd9b2b9409b0408a834fd00eba453ef3580feadb6" # from: builder/scratch
+tools/nginx-njs: "sha256:0ba2dbe2fb1369afaae39c2fd9b2b9409b0408a834fd00eba453ef3580feadb6" # from: builder/scratch
+tools/nginx-release-1.30.7: "sha256:0960b16cc7f9489b8c725c673c17c6832f4f003bc5434e08072ca904aeb3e515" # from: builder/scratch
+tools/nginx: "sha256:0960b16cc7f9489b8c725c673c17c6832f4f003bc5434e08072ca904aeb3e515" # from: builder/scratch
 tools/nvme-cli: "sha256:5a0a627687e4dd997a66897f9df3482adea9f117ca23c41b5520f724fad2b125" # from: builder/scratch
 tools/nvme-cli-v2.16: "sha256:5a0a627687e4dd997a66897f9df3482adea9f117ca23c41b5520f724fad2b125" # from: builder/scratch
 tools/open-iscsi-2.0.878: "sha256:63f48311e4db6f887c0efe99bc092e8908d571b8d7a8981a3b6e428cc6b49df4" # from: builder/scratch
