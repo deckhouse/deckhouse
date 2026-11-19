@@ -1208,6 +1208,86 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		})
 	})
 
+	Context("OpenStack CAPI optional networks", func() {
+		networks := []struct {
+			name    string
+			present bool
+			value   interface{}
+			want    string
+		}{
+			{name: "omitted"},
+			{name: "null", present: true},
+			{name: "empty", present: true, value: []string{}},
+			{name: "configured", present: true, value: []string{"123", "other-network"}, want: "123"},
+		}
+		floatingIPs := []struct {
+			name    string
+			present bool
+			value   bool
+		}{
+			{name: "default", value: true},
+			{name: "enabled", present: true, value: true},
+			{name: "disabled", present: true},
+		}
+		for _, internal := range networks {
+			for _, external := range networks {
+				for _, floatingIP := range floatingIPs {
+					internal, external, floatingIP := internal, external, floatingIP
+					It(fmt.Sprintf("renders internal=%s external=%s floatingIP=%s", internal.name, external.name, floatingIP.name), func() {
+						f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerOpenstack)
+						f.ValuesSet("nodeManager.internal.nodeGroups", []interface{}{})
+						f.ValuesSet("nodeManager.internal.capiControllerManagerEnabled", true)
+						f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterKind", "OpenStackCluster")
+						f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterAPIVersion", "infrastructure.cluster.x-k8s.io/v1beta1")
+						f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterName", "openstack")
+						provider := map[string]interface{}{
+							"podNetworkMode": "VXLAN",
+							"connection": map[string]interface{}{
+								"authURL": "https://openstack.example.com/v3", "domainName": "Default",
+								"tenantName": "test", "username": "test", "password": "dh-test-secret-0123456789abcdef", "region": "test",
+							},
+						}
+						if internal.present {
+							provider["internalNetworkNames"] = internal.value
+						}
+						if external.present {
+							provider["externalNetworkNames"] = external.value
+						}
+						if floatingIP.present {
+							provider["apiServerFloatingIP"] = floatingIP.value
+						}
+						f.ValuesSet("nodeManager.internal.cloudProvider.openstack", provider)
+						setBashibleAPIServerTLSValues(f)
+						f.HelmRender()
+						Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+						cluster := f.KubernetesResource("OpenStackCluster", "d8-cloud-instance-manager", "openstack")
+						Expect(cluster.Exists()).To(BeTrue())
+						for field, want := range map[string]string{"network": internal.want, "externalNetwork": external.want} {
+							if want == "" {
+								Expect(cluster.Field("spec." + field).Exists()).To(BeFalse())
+							} else {
+								Expect(cluster.Field("spec." + field).String()).To(MatchYAML(fmt.Sprintf("filter:\n  name: %q", want)))
+							}
+						}
+						if external.want == "" && !floatingIP.value {
+							Expect(cluster.Field("spec.disableExternalNetwork").Bool()).To(BeTrue())
+						} else {
+							Expect(cluster.Field("spec.disableExternalNetwork").Exists()).To(BeFalse())
+						}
+						if floatingIP.value {
+							Expect(cluster.Field("spec.disableAPIServerFloatingIP").Exists()).To(BeFalse())
+						} else {
+							Expect(cluster.Field("spec.disableAPIServerFloatingIP").Bool()).To(BeTrue())
+							Expect(cluster.Field("spec.controlPlaneEndpoint.host").String()).To(Equal("10.0.0.1"))
+							Expect(cluster.Field("spec.controlPlaneEndpoint.port").Int()).To(Equal(int64(6443)))
+						}
+					})
+				}
+			}
+		}
+	})
+
 	Context("Openstack", func() {
 		Describe("Openstack faulty config", func() {
 			BeforeEach(func() {
