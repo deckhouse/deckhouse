@@ -1,5 +1,6 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/distroless" }}
+vex: {{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/known_vulnerabilities.vex
 git:
 - add: /{{ $.ModulePath }}modules/800-{{ $.ModuleName }}/images/{{ $.ImageName }}/nginx.conf
   to: /usr/conf/nginx.conf
@@ -112,8 +113,6 @@ shell:
   - npm install
   - npm run build
   - chown 64535:64535 /app
----
-{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}
 {{- include "pm_binaries_artifact" (dict
       "Images" $.Images
       "name" (printf "%s/%s-nginx-artifact" $.ModuleName $.ImageName)

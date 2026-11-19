@@ -5,6 +5,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: scratch
+vex: images/platform/{{ $.ModuleName }}/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 - from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
@@ -40,6 +41,4 @@ import:
 shell:
   setup:
   - /kubectl version --client=true
----
-{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $image_version)) }}
 {{- end }}

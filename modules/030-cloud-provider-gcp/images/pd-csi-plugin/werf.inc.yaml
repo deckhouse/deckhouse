@@ -21,6 +21,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ index $.Images "base/distroless" }}
+vex: {{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 - from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /src/bin/gce-pd-csi-driver
@@ -84,8 +85,6 @@ shell:
   - cd /src
   - mkdir -p bin
   - CGO_ENABLED=0 go build -ldflags "-extldflags=static -X main.version={{ $version }}" -o bin/gce-pd-csi-driver ./cmd/gce-pd-csi-driver/
----
-{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $image_version )) }}
 {{- end }}
 {{- end }}
 {{- include "pm_binaries_artifact" (dict

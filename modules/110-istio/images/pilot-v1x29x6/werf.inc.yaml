@@ -6,6 +6,7 @@
 # Based on https://github.com/istio/istio/blob/1.29.6/pilot/docker/Dockerfile.pilot
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: common/distroless
+vex: {{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 - from: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/istio/out/pilot-discovery
@@ -66,6 +67,4 @@ shell:
   - strip /src/istio/out/pilot-discovery
   - chmod 0700 /src/istio/out/pilot-discovery
   - chown 64535:64535 /src/istio/out/pilot-discovery
----
-{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
 {{- end }}

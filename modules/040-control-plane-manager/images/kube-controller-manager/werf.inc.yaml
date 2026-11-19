@@ -10,6 +10,7 @@ that we include for now to support in-tree Ceph Volume Provisioner
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 from: {{ index $.Images "base/distroless" }}
+vex: {{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 - from: common/pause
   add: /pause
@@ -23,6 +24,4 @@ import:
 imageSpec:
   config:
     entrypoint: ["/usr/bin/kube-controller-manager"]
----
-{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName ($version | replace "." "-"))) }}
 {{- end }}

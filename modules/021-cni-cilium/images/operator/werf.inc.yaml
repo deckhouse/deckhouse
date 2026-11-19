@@ -36,6 +36,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: common/distroless
+vex: {{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 - from: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /out/linux/amd64/usr/bin/cilium-operator
@@ -45,5 +46,3 @@ import:
 imageSpec:
   config:
     entrypoint: ["/usr/bin/cilium-operator"]
----
-{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

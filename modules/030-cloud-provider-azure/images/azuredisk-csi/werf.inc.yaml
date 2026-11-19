@@ -21,6 +21,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ index $.Images "base/distroless" }}
+vex: {{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 - from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /src/_output/amd64/azurediskplugin
@@ -79,8 +80,6 @@ shell:
   setup:
   - cd /src
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -tags azurediskv2 -o _output/amd64/azurediskplugin ./pkg/azurediskplugin
----
-{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $image_version )) }}
 {{- end }}
 {{- end }}
 {{- include "pm_binaries_artifact" (dict

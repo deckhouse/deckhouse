@@ -100,8 +100,6 @@ imageSpec:
     clearCmd: true
     clearEntrypoint: true
     removeEnv: ["/.*/"]
----
-{{- include "vex mitigation" (list $ (printf "%s/%s-sysext" $.ModuleName $.ImageName)) }}
 {{- end }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-package-artifact
@@ -136,5 +134,3 @@ imageSpec:
     clearCmd: true
     clearEntrypoint: true
     removeEnv: ["/.*/"]
----
-{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

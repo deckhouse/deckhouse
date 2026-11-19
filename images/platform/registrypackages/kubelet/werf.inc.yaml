@@ -5,6 +5,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: scratch
+vex: images/platform/{{ $.ModuleName }}/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 - from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
@@ -41,8 +42,6 @@ import:
 shell:
   setup:
   - /kubelet --version
----
-{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $image_version)) }}
 {{- end }}
 
 
@@ -57,6 +56,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-{{ $image_version }}
 from: scratch
+vex: images/platform/{{ $.ModuleName }}/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 - from: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact-{{ $image_version }}
   add: /out
@@ -107,7 +107,5 @@ shell:
   - tr -d ' \n' < roothash.txt > /out/kubelet.roothash
   - veritysetup verify /out/kubelet.raw /out/kubelet.verity "$(cat /out/kubelet.roothash)"
 {{- include "engine sysext sign" "kubelet" }}
----
-{{- include "vex mitigation" (list $ (printf "%s/%s-sysext-%s" $.ModuleName $.ImageName $image_version)) }}
 {{- end }}
 {{- end }}

@@ -3,6 +3,7 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/distroless" }}
+vex: {{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 {{- /*
   The tools this image runs on used to come one by one from candi/base_images.yml —
@@ -166,8 +167,6 @@ shell:
   install:
   - pip3 install -f file:///wheels --no-index --upgrade pip
   - pip3 install -f file:///wheels --no-index -r /requirements.txt
----
-{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-webhook-operator-artifact
 from: {{ index $.Images "builder/golang" }}

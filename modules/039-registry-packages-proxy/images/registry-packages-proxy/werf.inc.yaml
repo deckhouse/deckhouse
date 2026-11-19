@@ -1,11 +1,12 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/distroless" }}
+vex: {{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 - from: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /registry-packages-proxy
-  before: setup 
-{{- include "image mount points" . }}  
+  before: setup
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/registry-packages-proxy"]
@@ -55,5 +56,3 @@ shell:
   - chmod 0755 /registry-packages-proxy
 mount:
 {{ include "mount points for golang builds" . }}
----
-{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

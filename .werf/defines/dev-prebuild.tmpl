@@ -73,6 +73,7 @@ imageSpec:
 {{- define "dev_image" }}
 image: dev
 from: dev-prebuild
+vex: deckhouse-controller/known_vulnerabilities.vex
 import:
 - from: images-digests
   add: /images_digests.json

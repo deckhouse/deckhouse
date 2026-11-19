@@ -2,6 +2,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "base/distroless" }}
+vex: {{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
   - from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /node-termination-handler
@@ -54,5 +55,3 @@ shell:
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /node-termination-handler ./cmd/node-termination-handler.go
   - chown 64535:64535 /node-termination-handler
   - chmod 0755 /node-termination-handler
----
-{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

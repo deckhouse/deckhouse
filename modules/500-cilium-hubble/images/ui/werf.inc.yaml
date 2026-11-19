@@ -78,6 +78,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-backend
 from: common/distroless
+vex: {{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 - from: {{ $.ModuleName }}/{{ $.ImageName }}-backend-build-artifact
   add: /src/hubble-ui/backend/backend
@@ -87,5 +88,3 @@ import:
 imageSpec:
   config:
     entrypoint: ["/usr/local/bin/hubble-ui-backend"]
----
-{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName "ui-backend" )) }}

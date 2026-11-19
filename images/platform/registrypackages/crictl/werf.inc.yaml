@@ -43,6 +43,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: scratch
+vex: images/platform/{{ $.ModuleName }}/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 - from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
@@ -87,6 +88,4 @@ shell:
   - mv /src/scripts/* /
   - chmod +x /crictl /install /uninstall
   - rm -rf vendor
----
-{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $image_version)) }}
 {{- end }}

@@ -1,6 +1,7 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/distroless" }}
+vex: {{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 - from: {{ $.ModuleName }}/{{ $.ImageName }}-oauth2-proxy-artifact
   add: /src/oauth2-proxy
@@ -161,5 +162,3 @@ imageSpec:
       FUZZ_WORKDIR: /src
       FUZZ_PACKAGES: ". ./pkg/middleware ./pkg/sessions/persistence ./pkg/deckhouse/revocation"
       CGO_ENABLED: "0"
----
-{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

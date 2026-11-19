@@ -13,6 +13,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 from: {{ index $.Images "base/distroless" }}
+vex: images/storage/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 - from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /livenessprobe
@@ -72,7 +73,5 @@ shell:
   - cp bin/livenessprobe /livenessprobe
   - chown 64535:64535 /livenessprobe
   - chmod 0755 /livenessprobe
----
-{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName ($version | replace "." "-"))) }}
   {{- end }}
 {{- end }}

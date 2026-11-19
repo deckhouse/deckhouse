@@ -2,6 +2,7 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/distroless" }}
+vex: {{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 - from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /gatekeeper
@@ -33,16 +34,16 @@ git:
   - gatekeeper/*.yaml
   stageDependencies:
     install:
-    - '**/*'    
+    - '**/*'
 shell:
   install:
   - cd /src
   - git apply /patches/*.patch --verbose --allow-empty
   - rm -rf website
   # check if module crds/gatekeeper are the same as gatekeeper crds
-  - | 
+  - |
     echo "Checking if module crds/gatekeeper are the same as gatekeeper crds"
-    diff -qr "/src/charts/gatekeeper/crds" "/module_crds/gatekeeper" 
+    diff -qr "/src/charts/gatekeeper/crds" "/module_crds/gatekeeper"
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ index $.Images "builder/golang" }}
@@ -66,5 +67,3 @@ shell:
     {{- include "image-build.build" (set $ "BuildCommand" `go build -mod vendor -ldflags="-s -w" -o /gatekeeper .`) | indent 6 }}
   - chown 64535:64535 /gatekeeper
   - chmod 0700 /gatekeeper
----
-{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

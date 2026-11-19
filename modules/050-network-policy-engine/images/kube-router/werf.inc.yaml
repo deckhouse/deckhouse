@@ -41,6 +41,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/distroless" }}
+vex: {{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 - from: {{ $.ModuleName }}/{{ $.ImageName }}-pm-artifact
   add: /relocate-pm
@@ -57,7 +58,6 @@ shell:
 imageSpec:
   config:
     entrypoint: ["/opt/bin/kube-router"]
-{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
 {{- include "pm_binaries_artifact" (dict
       "Images" $.Images
       "name" (printf "%s/%s-pm-artifact" $.ModuleName $.ImageName)

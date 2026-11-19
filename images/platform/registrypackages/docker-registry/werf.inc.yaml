@@ -36,6 +36,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-{{ $image_version }}
 from: scratch
+vex: images/platform/{{ $.ModuleName }}/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 - from: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
   add: /

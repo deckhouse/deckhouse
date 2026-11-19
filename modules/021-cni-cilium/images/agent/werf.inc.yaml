@@ -562,6 +562,7 @@ shell:
 ---
 image: {{ .ModuleName }}/agent-distroless
 from: {{ index $.Images "base/distroless" }}
+vex: {{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 - from: {{ .ModuleName }}/agent-binaries-artifact
   add: /relocate
@@ -581,5 +582,3 @@ imageSpec:
       PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     workingDir: "/home/cilium"
     cmd: ["/usr/bin/cilium-dbg"]
----
-{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName "agent-distroless" )) }}

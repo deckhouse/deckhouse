@@ -5,6 +5,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 from: {{ index $.Images "base/distroless" }}
+vex: {{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 - from: common/pause
   add: /pause
@@ -18,6 +19,4 @@ import:
 imageSpec:
   config:
     entrypoint: ["/usr/bin/kube-apiserver"]
----
-{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName ($version | replace "." "-"))) }}
 {{- end }}

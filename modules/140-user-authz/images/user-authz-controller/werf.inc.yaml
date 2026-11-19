@@ -58,5 +58,3 @@ shell:
       {{- include "image-build.build" $buildContext | indent 6 }}
     - chown 64535:64535 user-authz-controller
     - chmod 0700 user-authz-controller
----
-{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

@@ -1,6 +1,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "base/distroless" }}
+vex: {{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 - from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /control-plane-manager
@@ -10,8 +11,6 @@ import:
 imageSpec:
   config:
     entrypoint: ["/control-plane-manager"]
----
-{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ index $.Images "builder/golang" }}

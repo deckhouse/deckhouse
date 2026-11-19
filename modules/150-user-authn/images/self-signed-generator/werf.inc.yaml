@@ -1,6 +1,7 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/distroless" }}
+vex: {{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 - from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /src/self-signed-generator
@@ -44,5 +45,3 @@ shell:
     # Executable by any user: the proxy-cert-generate-job Job runs it as root with all capabilities dropped,
     # and without DAC_OVERRIDE root cannot execute a 0700 file owned by another user.
     - chmod 0755 self-signed-generator
----
-{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

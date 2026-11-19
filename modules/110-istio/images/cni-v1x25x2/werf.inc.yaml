@@ -5,6 +5,7 @@
 # Based on https://github.com/istio/istio/blob/1.25.2/cni/deployments/kubernetes/Dockerfile.install-cni
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: common/distroless
+vex: {{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 - from: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/istio/out/istio-cni
@@ -101,5 +102,3 @@ shell:
         done
       done
     done
----
-{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

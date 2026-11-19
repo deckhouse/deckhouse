@@ -12,6 +12,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ index $.Images "base/distroless" }}
+vex: {{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 - from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /src/aws-cloud-controller-manager
@@ -68,7 +69,5 @@ shell:
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-w -s -X k8s.io/component-base/version.gitVersion={{ $version }} -X main.gitVersion={{ $version }}" -o=aws-cloud-controller-manager cmd/aws-cloud-controller-manager/main.go
   - chown 64535:64535 /src/aws-cloud-controller-manager
   - chmod 0755 /src/aws-cloud-controller-manager
----
-{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $image_version )) }}
 {{- end }}
 {{- end }}

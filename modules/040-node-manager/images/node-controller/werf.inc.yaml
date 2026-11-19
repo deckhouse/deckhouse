@@ -1,6 +1,7 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/distroless" }}
+vex: {{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/known_vulnerabilities.vex
 imageSpec:
   config:
     entrypoint: ["/node-controller"]
@@ -91,5 +92,3 @@ git:
   to: /crds
   includePaths:
   - "*.yaml"
----
-{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

@@ -60,6 +60,7 @@ shell:
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}"
 from: {{ index $.Images "base/distroless" }}
+vex: {{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 - from: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
   add: /src/scripts
@@ -122,5 +123,3 @@ imageSpec:
       FUZZ_WORKDIR: /src/distribution
       FUZZ_PACKAGES: ". ./registry ./registry/handlers ./registry/proxy"
       CGO_ENABLED: "0"
----
-{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

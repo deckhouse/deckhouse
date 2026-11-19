@@ -20,6 +20,7 @@
 #      and https://github.com/istio/istio/blob/1.29.6/pilot/docker/Dockerfile.proxyv2
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/distroless" }}
+vex: {{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 - from: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio/tools/packaging/common/envoy_bootstrap.json
@@ -61,7 +62,7 @@ import:
 {{- include "image mount points" . }}
 imageSpec:
   config:
-    env: 
+    env:
       ISTIO_META_ISTIO_PROXY_SHA: "istio-proxy:8f4f69324c5c9271faad34c13e2e20a558669121"
       ISTIO_META_ISTIO_VERSION: {{ $istioVersion }}
     workingDir: "/"
@@ -369,6 +370,4 @@ shell:
         done
       done
     done
----
-{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
 {{- end }}

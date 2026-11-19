@@ -1,6 +1,7 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/distroless" }}
+vex: {{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 - from: {{ .ModuleName }}/vertical-pod-autoscaler-artifact
   add: /recommender
@@ -9,5 +10,3 @@ import:
 imageSpec:
   config:
     entrypoint: ["/recommender"]
----
-{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

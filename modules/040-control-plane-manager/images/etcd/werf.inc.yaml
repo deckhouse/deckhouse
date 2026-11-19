@@ -24,6 +24,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/distroless" }}
+vex: {{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 - from: common/pause
   add: /pause
@@ -77,4 +78,3 @@ shell:
       {{- include "image-build.build" $etcdctlBuildContext | indent 6 }}
     - cd ..
     - cd etcdutl && go build -ldflags="-s -w" -o /etcdutl . && cd ..
-{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

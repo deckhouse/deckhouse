@@ -109,6 +109,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: scratch
+vex: images/platform/{{ $.ModuleName }}/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 - from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /out
@@ -250,7 +251,6 @@ shell:
   - strip /pidumount
   - chmod 0700 /pidumount
   {{- end }}
-{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $image_version)) }}
 {{- end }}
 
 {{- if ne $.Env "CSE" }}
@@ -322,6 +322,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-{{ $image_version }}
 from: scratch
+vex: images/platform/{{ $.ModuleName }}/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 - from: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact-{{ $image_version }}
   add: /out
@@ -337,5 +338,4 @@ imageSpec:
     clearCmd: true
     clearEntrypoint: true
     removeEnv: ["/.*/"]
-{{- include "vex mitigation" (list $ (printf "%s/%s-sysext-%s" $.ModuleName $.ImageName $image_version)) }}
 {{- end }}

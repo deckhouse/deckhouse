@@ -2,6 +2,7 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: scratch
+vex: {{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/known_vulnerabilities.vex
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi
   to: /candi
@@ -59,5 +60,3 @@ shell:
   - strip /terraform-provider-gcp
   - chmod -R 755 /terraform-provider-gcp
   - chown 64535:64535 /terraform-provider-gcp
----
-{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

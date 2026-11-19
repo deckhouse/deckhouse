@@ -1,6 +1,7 @@
 {{- $version := include "get_oss_version_by_id" (list "cert-manager" $ )  -}} # see in oss.yaml
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "base/distroless" }}
+vex: {{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 - from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /controller-linux-amd64
@@ -20,7 +21,7 @@ git:
     install:
     - '**/*'
 - add: /{{ $.ModulePath }}modules/101-{{ $.ModuleName }}/crds
-  to: /module_crds    
+  to: /module_crds
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -113,7 +114,3 @@ shell:
   - cp _bin/server/controller-linux-amd64 _bin/server/acmesolver-linux-amd64 _bin/server/webhook-linux-amd64 _bin/server/cainjector-linux-amd64 /
   - chown 64535:64535 /controller-linux-amd64 /acmesolver-linux-amd64 /webhook-linux-amd64 /cainjector-linux-amd64
   - chmod 700 /controller-linux-amd64 /acmesolver-linux-amd64 /webhook-linux-amd64 /cainjector-linux-amd64
-
-
----
-{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

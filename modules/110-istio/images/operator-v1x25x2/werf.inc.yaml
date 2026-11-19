@@ -5,6 +5,7 @@
 # Based on https://github.com/istio/istio/blob/1.25.2/operator/docker/Dockerfile.operator
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: common/distroless
+vex: {{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/known_vulnerabilities.vex
 import:
 - from: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/operator/out/operator
@@ -77,5 +78,3 @@ shell:
   - cd /src/operator && git apply --verbose /patches/002-istio-operato-cni_status_restrict.patch
   - cd /src/operator && git apply --verbose /patches/003-istio-init-readonly-rootfs.patch
   - cd /src/operator && git apply --verbose /patches/004-istio-operator-unlock-pending-helm-release.patch
----
-{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
