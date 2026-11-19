@@ -1,0 +1,61 @@
+candi:
+  fixes:
+    - summary: Bump base images to v3.1.28.
+ci:
+  fixes:
+    - summary: Add Fomichev to codeowners for candi/base_images.yml
+cloud-provider-azure:
+  fixes:
+    - summary: >-
+        Disable the node-ipam controller in the cloud-controller-manager to prevent duplicate pod CIDRs
+        and conflicting routes.
+cloud-provider-openstack:
+  fixes:
+    - summary: Fix OpenStackCluster rendering when network lists are missing or empty
+cloud-provider-vcd:
+  fixes:
+    - summary: preserve VM not-found errors to allow orphaned Node cleanup
+    - summary: optimize VM cache refresh and avoid blocking cache reads
+cloud-provider-yandex:
+  fixes:
+    - summary: quote label values in generated MachineClass manifests
+common:
+  fixes:
+    - summary: Update nginx in common/nginx-static to 1.30.7 to fix CVEs.
+      impact: >-
+        Pods using common/nginx-static (registry-proxy, basic-auth, deckhouse-tools, documentation) will
+        be restarted.
+deckhouse-controller:
+  fixes:
+    - summary: >-
+        Deckhouse no longer crash-loops on a module dm-verity device left incomplete by an interrupted
+        `veritysetup open`; such a device is now removed automatically.
+    - summary: >-
+        Releases of a still-embedded module no longer raise manual approval alerts once the module has
+        a deployed release.
+docs:
+  fixes:
+    - summary: Add note for using Ubuntu 26.04.
+node-manager:
+  fixes:
+    - summary: >-
+        The links in the FAQ on cleaning up a static node now lead to the section of the sds-replicated-volume
+        FAQ on evicting DRBD resources from a node.
+    - summary: >-
+        Disable HTTP keep-alives in kubernetes-api-proxy `/readyz` probes so connections close immediately
+        after each check.
+      impact: Static pods and DaemonSet pods of `kubernetes-api-proxy` will restart.
+    - summary: Restore the default maxSurge behavior for NodeGroups with maxSurgePerZone set to 0.
+    - summary: >-
+        Fix `StaticInstance` getting stuck in a bootstrap loop after cleanup, and status patches failing
+        on legacy conditions.
+    - summary: Nodes trust the registry CA from a ModuleSource that has `dockerCfg` set again.
+      impact: >-
+        bashible-apiserver no longer skips such ModuleSources, so their CA is added to the node configuration.
+        Bashible will be rerun on all nodes.
+registry-packages-proxy:
+  fixes:
+    - summary: >-
+        Reject CSE node packages with untrusted manifest signatures, including requests through registry
+        aliases and cached downloads.
+      impact: The registry-packages-proxy pods will be restarted.

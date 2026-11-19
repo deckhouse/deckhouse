@@ -281,7 +281,6 @@
  - **[cloud-provider-dvp]** Added oss.yaml files for cloud provider modules. [#18989](https://github.com/deckhouse/deckhouse/pull/18989)
  - **[cloud-provider-dvp]** Cleaned up LoadBalancer and ServiceWithHealthchecks resources during DVP cluster deletion. [#20078](https://github.com/deckhouse/deckhouse/pull/20078)
  - **[cloud-provider-dvp]** Enabled the security policy check and added SecurityPolicyException for DVP CSI and CCM. [#18873](https://github.com/deckhouse/deckhouse/pull/18873)
- - **[cloud-provider-dvp]** Makes CCM create NPs on every lb creation while using networkPolicy - Restricted
  - **[cloud-provider-dvp]** Migrated cloud-provider RBAC v1 `user-authz` ClusterRoles to a shared `helm-lib` template. [#19964](https://github.com/deckhouse/deckhouse/pull/19964)
  - **[cloud-provider-dvp]** Migrated module configuration from ProviderClusterConfiguration to ModuleConfig. [#20236](https://github.com/deckhouse/deckhouse/pull/20236)
     Cloud provider configuration for DKP clusters deployed in DVP needs to be migrated from ProviderClusterConfiguration to ModuleConfig settings. For migration instructions, refer to "Cluster and Infrastructure" in the DKP FAQ.
@@ -378,6 +377,7 @@
  - **[deckhouse]** Export module versions to DOP via mm_module_enabled. [#19290](https://github.com/deckhouse/deckhouse/pull/19290)
  - **[deckhouse]** Made the `settings.bundle` parameter immutable after the cluster is deployed. [#20557](https://github.com/deckhouse/deckhouse/pull/20557)
  - **[deckhouse]** Make packages nelm operation timeout configurable [#21621](https://github.com/deckhouse/deckhouse/pull/21621)
+ - **[deckhouse]** Makes CCM create NPs on every lb creation while using networkPolicy - Restricted
  - **[deckhouse]** Packages cleanup orphan nelm releases. [#19773](https://github.com/deckhouse/deckhouse/pull/19773)
  - **[deckhouse]** Reserved the d8a- prefix for Deckhouse application objects. [#21431](https://github.com/deckhouse/deckhouse/pull/21431)
  - **[deckhouse]** Rework D8DeckhouseQueueIsHung alert with queue head info and severity based on module criticality. [#20476](https://github.com/deckhouse/deckhouse/pull/20476)
@@ -564,9 +564,9 @@
  - **[cloud-provider-aws]** fix GetCapacity not implemented error spam in logs [#22903](https://github.com/deckhouse/deckhouse/pull/22903)
  - **[cloud-provider-azure]** Bumped Go module dependencies to fix known CVEs in azuredisk-csi, cloud-data-discoverer. [#20780](https://github.com/deckhouse/deckhouse/pull/20780)
  - **[cloud-provider-azure]** Bumped helm_lib with liveness probe parameters for the CSI controller. [#19694](https://github.com/deckhouse/deckhouse/pull/19694)
+ - **[cloud-provider-azure]** Disable the node-ipam controller in the cloud-controller-manager to prevent duplicate pod CIDRs and conflicting routes.
  - **[cloud-provider-azure]** Fix multimaster bootstrap by falling back to the `d8-masters-kubernetes-data-device-path` Secret when the master data device LUN is not provided via cloud-init. [#23090](https://github.com/deckhouse/deckhouse/pull/23090)
  - **[cloud-provider-azure]** fix GetCapacity not implemented error spam in logs [#22903](https://github.com/deckhouse/deckhouse/pull/22903)
- - **[cloud-provider-dvp]** A DVP cluster migrated to the new provider configuration format keeps its `networkPolicy - None` instead of silently switching to `Isolated`.
  - **[cloud-provider-dvp]** Add skip storage class annotation handling to skip discovery of some storage classes from parent clusters, e.g., local disks. [#19696](https://github.com/deckhouse/deckhouse/pull/19696)
  - **[cloud-provider-dvp]** Added mount points for the validation-webhook image so serving certificates persist correctly. [#21526](https://github.com/deckhouse/deckhouse/pull/21526)
  - **[cloud-provider-dvp]** Added the d8_cloud_provider_dvp_migration_pending metric for the D8CloudProviderDVPMigrationPending alert. [#21409](https://github.com/deckhouse/deckhouse/pull/21409)
@@ -579,7 +579,6 @@
  - **[cloud-provider-dvp]** Fixed CVEs in the cloud-provider-dvp module. [#20796](https://github.com/deckhouse/deckhouse/pull/20796)
  - **[cloud-provider-dvp]** Fixed LoadBalancer stuck in pending by retrying on conflict when updating ServiceWithHealthchecks and propagating IP to the child cluster service status. [#19590](https://github.com/deckhouse/deckhouse/pull/19590)
  - **[cloud-provider-dvp]** Fixed ModuleConfig access for users with the d8:manage:infrastructure:viewer and d8:manage:infrastructure:manager roles. [#21487](https://github.com/deckhouse/deckhouse/pull/21487)
- - **[cloud-provider-dvp]** Fixed deletion of load balancers backed by ServiceWithHealthchecks, which failed because the child Service is protected by the `heritage - deckhouse` label in the parent cluster.
  - **[cloud-provider-dvp]** Fixed duplicate volume mounts in the DVP CSI driver on kubelet retries. [#20714](https://github.com/deckhouse/deckhouse/pull/20714)
  - **[cloud-provider-dvp]** Fixed the `D8CloudProviderDVPMigrationPending` alert that kept firing after the migration resources were applied. [#23248](https://github.com/deckhouse/deckhouse/pull/23248)
  - **[cloud-provider-dvp]** Fixes DVP CSI staging so volumes with filesystems detected by Kubernetes SafeFormatAndMount are preserved and unformatted volumes are formatted without using lsblk.
@@ -609,6 +608,7 @@
  - **[cloud-provider-openstack]** Bumped Go module dependencies to fix known CVEs in terraform-manager, cloud-controller-manager, cinder-csi-plugin, cloud-data-discoverer; documented GO-2026-5932, CVE-2026-41579 vulnerabilities via VEX. [#20780](https://github.com/deckhouse/deckhouse/pull/20780)
  - **[cloud-provider-openstack]** Bumped helm_lib with liveness probe parameters for the CSI controller. [#19694](https://github.com/deckhouse/deckhouse/pull/19694)
  - **[cloud-provider-openstack]** CAPI now mirrors MCM — `configDrive` honors `externalNetworkDHCP`, and additional networks always produce ports
+ - **[cloud-provider-openstack]** Fix OpenStackCluster rendering when network lists are missing or empty
  - **[cloud-provider-openstack]** Fixed a permanent cinder-csi-plugin failure after re-authentication in long-running pods. [#20394](https://github.com/deckhouse/deckhouse/pull/20394)
  - **[cloud-provider-openstack]** Fixes cluster bootstrap getting stuck when `capo-controller-manager` cannot reach the API server and DNS before the CNI is ready. [#23357](https://github.com/deckhouse/deckhouse/pull/23357)
  - **[cloud-provider-openstack]** Fixes creation of nodes with `rootDiskSize` when the node availability zone does not exist in Cinder.
@@ -625,6 +625,8 @@
  - **[cloud-provider-vcd]** Fixes cluster bootstrap getting stuck when `capcd-controller-manager` cannot reach the API server and DNS before the CNI is ready. [#23357](https://github.com/deckhouse/deckhouse/pull/23357)
  - **[cloud-provider-vcd]** Fixes infra-controller-manager pods scheduling on the same node in HA mode. [#20752](https://github.com/deckhouse/deckhouse/pull/20752)
  - **[cloud-provider-vcd]** Fixes the module getting stuck in Error on upgrade from 1.76 because of the immutable selector of the `capcd-controller-manager` Deployment.
+ - **[cloud-provider-vcd]** optimize VM cache refresh and avoid blocking cache reads
+ - **[cloud-provider-vcd]** preserve VM not-found errors to allow orphaned Node cleanup
  - **[cloud-provider-vsphere]** Bumped Go module dependencies to fix known CVEs in terraform-manager, cloud-data-discoverer. [#20780](https://github.com/deckhouse/deckhouse/pull/20780)
  - **[cloud-provider-vsphere]** Bumped helm_lib with liveness probe parameters for the CSI controller. [#19694](https://github.com/deckhouse/deckhouse/pull/19694)
  - **[cloud-provider-vsphere]** Fixed master node creation when the datastore is set as a path with parent folders.
@@ -643,6 +645,7 @@
     Machines are not recreated on update. Machines created before the update keep the standard network type and no labels until the NodeGroup is rolled out (change a rolling InstanceClass field or set the `manual-rollout-id` annotation on the NodeGroup). Machines stuck in provisioning because of `additionalSubnets` become ready without recreation.
  - **[cloud-provider-yandex]** fix "Address in use" failures when replacing nodes and when removing external IP addresses [#23256](https://github.com/deckhouse/deckhouse/pull/23256)
     dhctl converge no longer deadlocks on master replacement or externalIPAddresses removal in Yandex Cloud; the terraform-manager provider release is patched to detach one-to-one NAT before deleting a reserved address.
+ - **[cloud-provider-yandex]** quote label values in generated MachineClass manifests
  - **[cloud-provider-zvirt]** Bumped Go module dependencies to fix known CVEs in cloud-controller-manager, capz, cloud-data-discoverer. [#20780](https://github.com/deckhouse/deckhouse/pull/20780)
  - **[cloud-provider-zvirt]** Bumped helm_lib with liveness probe parameters for the CSI controller. [#19694](https://github.com/deckhouse/deckhouse/pull/19694)
  - **[cloud-provider-zvirt]** Prevent capz-controller-manager from crashlooping without diagnostics when zVirt tags cannot be created. [#22459](https://github.com/deckhouse/deckhouse/pull/22459)
@@ -733,6 +736,8 @@
     kube-apiserver image is rebuilt; control-plane components restart during the update.
  - **[common]** Switched smoke-mini checks to full service FQDN to reduce unnecessary requests and added request/session timeouts to prevent hanging probe calls. [#19310](https://github.com/deckhouse/deckhouse/pull/19310)
     upmeter probes
+ - **[common]** Update nginx in common/nginx-static to 1.30.7 to fix CVEs.
+    Pods using common/nginx-static (registry-proxy, basic-auth, deckhouse-tools, documentation) will be restarted.
  - **[common]** Updated NGINX to 1.30.1 in the `ingress-nginx` module. [#19846](https://github.com/deckhouse/deckhouse/pull/19846)
     All Ingress NGINX Controller pods will be restarted.
  - **[common]** Updated NGINX to 1.30.2 in `ingress-nginx`. [#20173](https://github.com/deckhouse/deckhouse/pull/20173)
@@ -797,9 +802,11 @@
  - **[deckhouse-controller]** Module sources now scan the registry every 30 minutes by default, reducing registry load
  - **[deckhouse-controller]** ModuleDocumentation will not be created for embedded modules. [#21682](https://github.com/deckhouse/deckhouse/pull/21682)
  - **[deckhouse-controller]** Prevent module hooks from running with unavailable snapshots while waiting for Deckhouse to restart after a module update
+ - **[deckhouse-controller]** Releases of a still-embedded module no longer raise manual approval alerts once the module has a deployed release.
  - **[deckhouse-controller]** Stop the module source registry fan-out from replaying and flooding the main queue with duplicate moduleRun tasks. [#23126](https://github.com/deckhouse/deckhouse/pull/23126)
  - **[deckhouse-controller]** add werf dependency to webhook [#20968](https://github.com/deckhouse/deckhouse/pull/20968)
  - **[deckhouse-controller]** nelm now takes over fields left by the old Helm 3 engine, so stale fields get removed on module upgrade. [#21834](https://github.com/deckhouse/deckhouse/pull/21834)
+ - **[deckhouse]** A DVP cluster migrated to the new provider configuration format keeps its `networkPolicy - None` instead of silently switching to `Isolated`.
  - **[deckhouse]** Add verbosity to veritysetup format and delete damaged hash. [#22128](https://github.com/deckhouse/deckhouse/pull/22128)
  - **[deckhouse]** Added admission policy that denies non-system users from setting or changing the `heritage` label. [#19668](https://github.com/deckhouse/deckhouse/pull/19668)
     Non-system users can no longer add or modify the `heritage` label; this prevents accidental creation of user-managed resources that become protected by Deckhouse heritage restrictions.
@@ -819,6 +826,7 @@
  - **[deckhouse]** Fix random startup failures with 'waitid - no child processes' when restoring erofs modules.
  - **[deckhouse]** Fixed ModulePullOverride for bundle-enabled modules. [#20763](https://github.com/deckhouse/deckhouse/pull/20763)
  - **[deckhouse]** Fixed Scaled stuck in Unknown on controller startup. [#20169](https://github.com/deckhouse/deckhouse/pull/20169)
+ - **[deckhouse]** Fixed deletion of load balancers backed by ServiceWithHealthchecks, which failed because the child Service is protected by the `heritage - deckhouse` label in the parent cluster.
  - **[deckhouse]** Fixed image extraction to respect opaque whiteouts. [#20502](https://github.com/deckhouse/deckhouse/pull/20502)
  - **[deckhouse]** Forbid Application instance names longer than 24 characters [#22542](https://github.com/deckhouse/deckhouse/pull/22542)
  - **[deckhouse]** Made module installation atomic and re-download incomplete versions. [#21462](https://github.com/deckhouse/deckhouse/pull/21462)
@@ -1013,11 +1021,14 @@
  - **[node-manager]** CAPI crd served version fix [#19665](https://github.com/deckhouse/deckhouse/pull/19665)
  - **[node-manager]** Creating or re-applying an already-existing StaticInstance no longer fails address validation. [#21108](https://github.com/deckhouse/deckhouse/pull/21108)
  - **[node-manager]** Deployed `node-group-exporter` only after the cluster is bootstrapped. [#21008](https://github.com/deckhouse/deckhouse/pull/21008)
+ - **[node-manager]** Disable HTTP keep-alives in kubernetes-api-proxy `/readyz` probes so connections close immediately after each check.
+    Static pods and DaemonSet pods of `kubernetes-api-proxy` will restart.
  - **[node-manager]** Enabled hostNetwork for node-controller during bootstrap. [#19974](https://github.com/deckhouse/deckhouse/pull/19974)
  - **[node-manager]** Filled empty Instance.spec.nodeRef when the linked Machine reports a node name. [#20432](https://github.com/deckhouse/deckhouse/pull/20432)
     <what to expect for users, possibly MULTI-LINE>, required if impact_level is high ↓
  - **[node-manager]** Fix CVEs in fencing-agent and cluster-autoscaler images (CVE-2026-56852, GHSA-hrxh-6v49-42gf, CVE-2026-46600). [#22374](https://github.com/deckhouse/deckhouse/pull/22374)
  - **[node-manager]** Fix NodeCapacity calculation. [#22719](https://github.com/deckhouse/deckhouse/pull/22719)
+ - **[node-manager]** Fix `StaticInstance` getting stuck in a bootstrap loop after cleanup, and status patches failing on legacy conditions.
  - **[node-manager]** Fix create_rbac_and_certificate_for_kubernetes_api_proxy hook behavior. [#22419](https://github.com/deckhouse/deckhouse/pull/22419)
  - **[node-manager]** Fix d8-shutdown-inhibitor failing to start on nodes where another package overrides the logind inhibit delay. [#22530](https://github.com/deckhouse/deckhouse/pull/22530)
  - **[node-manager]** Fix fencing-agent crash when starting on a node in maintenance mode. [#20527](https://github.com/deckhouse/deckhouse/pull/20527)
@@ -1062,11 +1073,14 @@
  - **[node-manager]** Master controllers leave an unreachable master after about 100 seconds and are not evicted from a single master.
  - **[node-manager]** Master controllers no longer tolerate keys from `customTolerationKeys`, so a key that repeats a built-in one no longer blocks pod updates.
     node-controller, capi-controller-manager, machine-controller-manager and bashible-apiserver do not run on a master tainted with a key from `global.modules.placement.customTolerationKeys`. Remove such taints from the master NodeGroup before the update.
+ - **[node-manager]** Nodes trust the registry CA from a ModuleSource that has `dockerCfg` set again.
+    bashible-apiserver no longer skips such ModuleSources, so their CA is added to the node configuration. Bashible will be rerun on all nodes.
  - **[node-manager]** Prevented a kube-api-proxy outage when upstreams.json contains null or empty data. [#20026](https://github.com/deckhouse/deckhouse/pull/20026)
  - **[node-manager]** Reduced MachineDeployment creationTimeout to 5m for AWS spot instances. [#19073](https://github.com/deckhouse/deckhouse/pull/19073)
     <what to expect for users, possibly MULTI-LINE>, required if impact_level is high ↓
  - **[node-manager]** Removed the conflicting `ms` short name from the CAPI MachineSet CRD. [#21189](https://github.com/deckhouse/deckhouse/pull/21189)
  - **[node-manager]** Require a non-empty cluster UUID when rendering the node bootstrap script, preventing static nodes from stalling ~20m on a registry-packages-proxy 404. [#21132](https://github.com/deckhouse/deckhouse/pull/21132)
+ - **[node-manager]** Restore the default maxSurge behavior for NodeGroups with maxSurgePerZone set to 0.
  - **[node-manager]** Stop caps-controller-manager from rewriting StaticInstance objects in a hot loop when a connectivity check fails, which caused a sustained load on etcd. [#23207](https://github.com/deckhouse/deckhouse/pull/23207)
     A StaticInstance whose connectivity check fails now keeps its reservation for the whole bootstrap window instead of returning to the pool on every failed attempt, and the bootstrap (20 min) and cleanup (10 min) timeouts, which previously never fired, are now reachable.
     If nothing ever ran on the host, the bootstrap timeout returns the instance to the pool after 20 minutes as before.
@@ -1082,6 +1096,8 @@
  - **[registry-packages-proxy]** Added a fast path for already installed packages and improved logging in rpp-get. [#20015](https://github.com/deckhouse/deckhouse/pull/20015)
  - **[registry-packages-proxy]** Fixed registry-packages-proxy hanging after a cache error and serving corrupted packages, which blocked node updates.
  - **[registry-packages-proxy]** Grant registry-packages-proxy RBAC to read unmasked registry credentials (modulesources/sensitive, packagerepositories/sensitive), restoring authentication to private registries. [#21513](https://github.com/deckhouse/deckhouse/pull/21513)
+ - **[registry-packages-proxy]** Reject CSE node packages with untrusted manifest signatures, including requests through registry aliases and cached downloads.
+    The registry-packages-proxy pods will be restarted.
  - **[registry-packages-proxy]** The bootstrap port serves the manifest and the layer of the rpp-get image, so a node can verify the binary it installs.
  - **[registry-packages-proxy]** The proxy serves `deckhouse-cli` and `deckhouse-cli/plugins/<name>` images from the registry root above the cluster's edition repository. [#22391](https://github.com/deckhouse/deckhouse/pull/22391)
  - **[registry-packages-proxy]** deckhouse-cli and plugin downloads now work in registries filled by `d8 mirror push`; the proxy probes the cluster repo first, then the edition-trimmed root, and remembers the working one. [#22661](https://github.com/deckhouse/deckhouse/pull/22661)
@@ -1450,6 +1466,7 @@
  - **[openvpn]** Fixed securityContext and added a SecurityPolicyException. [#21538](https://github.com/deckhouse/deckhouse/pull/21538)
  - **[registry-packages-proxy]** Add VEX statements for x/crypto/ssh findings.
  - **[registrypackages]** Added containerd, kubelet, and kubernetes-cni sysext packages to registrypackages. [#20765](https://github.com/deckhouse/deckhouse/pull/20765)
+ - **[registrypackages]** Update delivery-kit-sdk to v1.4.2 and remove C build dependencies from d8-bcheck.
  - **[registrypackages]** Updated containerd to 1.7.34 and 2.2.6, runc to 1.3.6, and related containerd and crictl dependencies. [#21347](https://github.com/deckhouse/deckhouse/pull/21347)
  - **[terraform-manager]** Add VEX statements for the opentofu binary in base-opentofu.
  - **[terraform-manager]** Upgraded OpenTofu to 1.12.0. [#20001](https://github.com/deckhouse/deckhouse/pull/20001)
