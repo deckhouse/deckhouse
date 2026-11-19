@@ -342,20 +342,26 @@ func hasChangedFiles(results []fileWriteResult) bool {
 }
 
 // certObserveStep collects certificate expiration dates from disk and writes them to CPO status.
-type certObserveStep struct{}
+type certObserveStep struct {
+	pkiDir string
+}
 
 func (c *certObserveStep) Execute(_ context.Context, env *StepEnv, logger *log.Logger) (StepResult, error) {
+	pkiDir := c.pkiDir
+	if pkiDir == "" {
+		pkiDir = constants.KubernetesPkiPath
+	}
 	kubeconfigDir := env.Node.KubeconfigDir
 	component := env.State.Raw().Spec.Component
 
-	observedState, ok, err := observeCertExpirationsForStaticPod(component, kubeconfigDir, logger)
+	observedState, ok, err := observeCertExpirationsForStaticPod(component, pkiDir, kubeconfigDir, logger)
 	if !ok {
 		logger.Warn("CertObserve skipped: not a static pod component")
 		return StepResult{Outcome: OutcomeCompleted}, nil
 	}
 
 	if constants.SignatureEnabled() && component == controlplanev1alpha1.OperationComponentKubeAPIServer {
-		signatureExpiry, sigErr := observeSignatureExpiration(constants.KubernetesPkiPath)
+		signatureExpiry, sigErr := observeSignatureExpiration(pkiDir)
 		if sigErr != nil {
 			err = errors.Join(err, fmt.Errorf("signature key: %w", sigErr))
 		} else {

@@ -19,6 +19,7 @@ package controlplaneoperation
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -28,22 +29,22 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
-	"control-plane-manager/internal/constants"
 )
 
 // observeCertExpirationsForStaticPod reads leaf cert and kubeconfig client cert expirations for one static pod component.
-func observeCertExpirationsForStaticPod(component controlplanev1alpha1.OperationComponent, kubeconfigDir string, logger *log.Logger) (controlplanev1alpha1.ObservedComponentState, bool, error) {
+func observeCertExpirationsForStaticPod(component controlplanev1alpha1.OperationComponent, pkiDir, kubeconfigDir string, logger *log.Logger) (controlplanev1alpha1.ObservedComponentState, bool, error) {
 	if !component.IsStaticPodComponent() {
 		return controlplanev1alpha1.ObservedComponentState{}, false, nil
 	}
 	deps := componentDeps(component)
 
+	syntheticExpiration := metav1.NewTime(time.Unix(0, 0).UTC())
 	certExpiry := make(map[string]metav1.Time)
 	var readErrs []error
 
 	if leafNames := deps.leafCertFiles(); len(leafNames) > 0 {
 		report, err := pki.ListCertificateExpirations(
-			pki.WithCertificatesDir(constants.KubernetesPkiPath),
+			pki.WithCertificatesDir(pkiDir),
 			pki.WithLeafCertificates(leafNames...),
 		)
 		if err != nil {
@@ -52,6 +53,11 @@ func observeCertExpirationsForStaticPod(component controlplanev1alpha1.Operation
 		}
 		for _, e := range report.Entries {
 			if e.Err != nil {
+				if _, ok := errors.AsType[*pki.MissingError](e.Err); ok {
+					certExpiry[e.Name+".crt"] = syntheticExpiration
+					logger.Warn("certificate missing, treating as expired", "name", e.Name, "path", e.Path, "error", e.Err, "synthetic_expiration", syntheticExpiration.UTC().Format(time.RFC3339))
+					continue
+				}
 				logger.Warn("cannot read cert expiration", "name", e.Name, "path", e.Path, "error", e.Err)
 				readErrs = append(readErrs, fmt.Errorf("cert %q: %w", e.Name, e.Err))
 				continue
@@ -67,6 +73,11 @@ func observeCertExpirationsForStaticPod(component controlplanev1alpha1.Operation
 		)
 		for _, e := range report.Entries {
 			if e.Err != nil {
+				if _, ok := errors.AsType[*kubeconfig.MissingError](e.Err); ok {
+					certExpiry[string(e.File)] = syntheticExpiration
+					logger.Warn("kubeconfig certificate missing, treating as expired", "file", e.File, "path", e.Path, "error", e.Err, "synthetic_expiration", syntheticExpiration.UTC().Format(time.RFC3339))
+					continue
+				}
 				logger.Warn("cannot read kubeconfig cert expiration", "file", e.File, "path", e.Path, "error", e.Err)
 				readErrs = append(readErrs, fmt.Errorf("kubeconfig %q: %w", e.File, e.Err))
 				continue
