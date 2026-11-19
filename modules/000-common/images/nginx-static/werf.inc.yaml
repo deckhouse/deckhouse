@@ -1,4 +1,4 @@
-{{- $NginxVersion := "1.27.3" }}
+{{- $NginxVersion := "1.30.7" }}
 {{- $OpenSSLVersion := "3.3.2" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
