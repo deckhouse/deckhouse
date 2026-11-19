@@ -344,7 +344,7 @@ func (r *Reconciler) ensureNamespace(ctx context.Context, pns *v1alpha3.ProjectN
 		ns.Labels[v1alpha3.ResourceLabelHeritage] = v1alpha3.ResourceHeritageMultitenancy
 		ns.Labels[v1alpha3.ResourceLabelProject] = project
 		ns.Labels[v1alpha3.ResourceLabelProjectNamespace] = pns.Name
-		// Only a create sets the quota label: on an existing namespace the ProjectQuota controller
+		// Only a create sets the quota label: on an existing namespace the ProjectQuotaStatus controller
 		// owns it.
 		if quotaLabel != "" && ns.ResourceVersion == "" {
 			ns.Labels[quota.NamespaceLabel] = quotaLabel
@@ -374,23 +374,23 @@ func (r *Reconciler) readiness(ctx context.Context, name string) (corev1.Conditi
 	}
 	if ns.Labels[quota.NamespaceLabel] == quota.LabelPending {
 		return corev1.ConditionFalse, "The quota of the project does not apply in the namespace yet: its d8-project-quota ResourceQuota is not calculated, " +
-			"and objects are refused until it is. The Enforced condition of the ProjectQuota of the project says why.", nil
+			"and objects are refused until it is. The Enforced condition of the ProjectQuotaStatus of the project says why.", nil
 	}
 	return corev1.ConditionTrue, "", nil
 }
 
 // birthQuotaLabel is the quota label a new namespace of the project gets in the request that creates
-// it, empty when the project has no ProjectQuota. Labelled pending from the start, the namespace is
+// it, empty when the project has no ProjectQuotaStatus. Labelled pending from the start, the namespace is
 // held by the guard policy of the quota until its d8-project-quota ResourceQuota is there and
-// calculated, so no object the quota counts slips in before it; the ProjectQuota controller then
+// calculated, so no object the quota counts slips in before it; the ProjectQuotaStatus controller then
 // labels it enforced.
 func (r *Reconciler) birthQuotaLabel(ctx context.Context, project string) (string, error) {
-	pq := new(v1alpha1.ProjectQuota)
+	pq := new(v1alpha1.ProjectQuotaStatus)
 	switch err := r.Get(ctx, types.NamespacedName{Name: project}, pq); {
 	case k8serrors.IsNotFound(err):
 		return "", nil
 	case err != nil:
-		return "", fmt.Errorf("get the ProjectQuota of project %q: %w", project, err)
+		return "", fmt.Errorf("get the ProjectQuotaStatus of project %q: %w", project, err)
 	}
 	return quota.LabelPending, nil
 }

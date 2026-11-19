@@ -283,8 +283,7 @@ func (m *Manager) prepareUpgrade(ctx context.Context, project *v1alpha3.Project,
 	if !handover {
 		return nil
 	}
-	// a directly created ProjectQuota is the quota of the project already, so it does not hold the handover
-	if _, err := m.reconcileStandardFields(ctx, project); err != nil {
+	if err := m.reconcileStandardFields(ctx, project); err != nil {
 		return fmt.Errorf("apply the standard fields before the handover: %w", err)
 	}
 	return nil

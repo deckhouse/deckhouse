@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package quota holds what the ProjectQuota controller and webhooks share: which keys a project quota
+// Package quota holds what the ProjectQuotaStatus controller and webhooks share: which keys a project quota
 // accepts, how the module enforcement and the mode of a quota map to the label of a namespace, and how
-// the usage of the namespaces adds up to the status of a ProjectQuota.
+// the usage of the namespaces adds up to the status of a ProjectQuotaStatus.
 package quota
 
 import (
@@ -232,7 +232,7 @@ func keyRefusal(key corev1.ResourceName, discovery Discovery) (string, Served, e
 		isDeviceClassKey(name):
 		return "", ServedUnknown, nil
 	}
-	return "a ResourceQuota does not count this key; see the list of accepted keys in the documentation of ProjectQuota", ServedUnknown, nil
+	return "a ResourceQuota does not count this key; see the list of accepted keys in the documentation of the project quota", ServedUnknown, nil
 }
 
 func countKeyRefusal(resource string, discovery Discovery) (string, Served, error) {

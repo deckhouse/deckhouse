@@ -57,8 +57,8 @@ func ns(name, project string) *corev1.Namespace {
 	return &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: name, Labels: map[string]string{v1alpha3.ResourceLabelProject: project}}}
 }
 
-func pq(name string, hard corev1.ResourceList) *v1alpha1.ProjectQuota {
-	return &v1alpha1.ProjectQuota{ObjectMeta: metav1.ObjectMeta{Name: name}, Spec: v1alpha1.ProjectQuotaSpec{Hard: hard}}
+func pq(name string, hard corev1.ResourceList) *v1alpha1.ProjectQuotaStatus {
+	return &v1alpha1.ProjectQuotaStatus{ObjectMeta: metav1.ObjectMeta{Name: name}, Spec: v1alpha1.ProjectQuotaStatusSpec{Hard: hard}}
 }
 
 // state is a project p with the limits and two namespaces, a and b, with the usage.
@@ -261,7 +261,7 @@ func TestNamespaceMoves(t *testing.T) {
 
 // In CE an additional namespace left from another edition is not one of the project, as the controller
 // sees it: its usage is not in the sum the main namespace is checked against, which is the sum the
-// status of the ProjectQuota shows, and a quorum list with it is covered. In the other editions it
+// status of the ProjectQuotaStatus shows, and a quorum list with it is covered. In the other editions it
 // counts. The test switches the edition of the binary, so it does not run in parallel.
 func TestAdditionalNamespaceByEdition(t *testing.T) {
 	build := func() *State {
@@ -353,7 +353,7 @@ func TestCovers(t *testing.T) {
 	assert.True(t, s.Covers([]metav1.Object{rq("a", 10, nil), ns("a", "p"), pq("p", nil)}))
 	assert.False(t, s.Covers([]metav1.Object{rq("a", 11, nil)}), "a newer quota is not in the state yet")
 	assert.False(t, s.Covers([]metav1.Object{ns("c", "p")}), "an unknown namespace")
-	assert.False(t, s.Covers([]metav1.Object{pq("q", nil)}), "an unknown ProjectQuota")
+	assert.False(t, s.Covers([]metav1.Object{pq("q", nil)}), "an unknown ProjectQuotaStatus")
 }
 
 // A namespace refused over the quota of its project is woken once the project frees some of it, at

@@ -5168,26 +5168,26 @@ alerts:
       module: multitenancy-manager
       edition: ce
       description: |-
-        The usage of project `{{ $labels.project }}`, summed over all of its namespaces, is above the limits of its ProjectQuota: the limits were set below the usage, by a change of the quota or when it was created (the `HardLowered` reason of the `Exceeded` condition).
+        The usage of project `{{ $labels.project }}`, summed over all of its namespaces, is above the limits of its quota: the limits were set below the usage, by a change of the quota or when it was created (the `HardLowered` reason of the `Exceeded` condition).
 
         Nothing running is evicted. Creating more of the resources whose limits are exceeded is denied until the usage is back within the limits.
 
         1. See which limits are exceeded and by how much:
 
            ```bash
-           d8 k get projectquota {{ $labels.project }} -o jsonpath='{range .status.conditions[*]}{.type}={.status} {.reason}: {.message}{"\n"}{end}'
+           d8 k get projectquotastatus {{ $labels.project }} -o jsonpath='{range .status.conditions[*]}{.type}={.status} {.reason}: {.message}{"\n"}{end}'
            ```
 
         1. See which namespaces use the most (the usage of every namespace is in its `d8-project-quota` ResourceQuota):
 
            ```bash
-           d8 k get projectquota {{ $labels.project }} -o jsonpath='{range .status.topNamespaces[*]}{.name}: {.used}{"\n"}{end}'
+           d8 k get projectquotastatus {{ $labels.project }} -o jsonpath='{range .status.topNamespaces[*]}{.name}: {.used}{"\n"}{end}'
            d8 k get resourcequota -A -l projects.deckhouse.io/project={{ $labels.project }}
            ```
 
-        1. Raise the limits in `spec.hard` of the ProjectQuota (or in `spec.quota` of the Project, if the quota comes from there), or delete what the project does not need.
+        1. Raise the limits in `spec.quota` of the Project, or delete what the project does not need.
       summary: |
-        Project {{ $labels.project }} has a ProjectQuota set below its usage.
+        Project {{ $labels.project }} has a quota set below its usage.
       severity: "7"
       markupFormat: markdown
     - name: D8ProjectQuotaLeaderFlapping
@@ -5216,7 +5216,7 @@ alerts:
       module: multitenancy-manager
       edition: ce
       description: |-
-        No replica of the `quota-ledger` container of the `multitenancy-manager` module holds its lease with synced informers. Creating the objects a ProjectQuota counts in the namespaces of projects with a quota fails with `project quota ledger unavailable`, or with `failed calling webhook "quota-ledger.multitenancy-manager.deckhouse.io"`. Deletions, running objects and other namespaces are not affected.
+        No replica of the `quota-ledger` container of the `multitenancy-manager` module holds its lease with synced informers. Creating the objects a project quota counts in the namespaces of projects with a quota fails with `project quota ledger unavailable`, or with `failed calling webhook "quota-ledger.multitenancy-manager.deckhouse.io"`. Deletions, running objects and other namespaces are not affected.
 
         1. Check the pods, the lease and the route:
 
@@ -5272,11 +5272,10 @@ alerts:
       module: multitenancy-manager
       edition: ce
       description: |-
-        The `Enforced` condition of the ProjectQuota of project `{{ $labels.project }}` has been `False` for 15 minutes for one of these reasons:
+        The `Enforced` condition of the ProjectQuotaStatus of project `{{ $labels.project }}` has been `False` for 15 minutes for one of these reasons:
 
         - `KeyRollout`: the `d8-project-quota` ResourceQuota of some namespace of the project is missing or not calculated with every limit of the quota. The resource quota controller of kube-controller-manager calculates a new quota within seconds, so a quota that stays uncalculated points at kube-controller-manager or at the multitenancy-manager controller; the message of the condition names the namespaces and the error of the controller, if any. Until it is calculated, the objects of users are refused in a namespace labelled `projects.deckhouse.io/quota: pending`. In a namespace labelled `projects.deckhouse.io/quota: enforced`, the objects the quota counts are refused only while its `d8-project-quota` has no calculated limit at all or has scopes; a limit added to a calculated quota holds nothing back.
         - `KeyNotServed`: some keys of the quota count nothing, because a `count/` key names a resource of an API group that the API server does not serve, or because the module that serves the resources of a key, such as `virtualization`, is disabled. Enable that module, or remove the key.
-        - `ProjectNotFound`: there is no project named after the ProjectQuota.
         - `WebhookMissing`: the `d8-multitenancy-manager-quota-ledger` webhook is missing or its `caBundle` is not the CA of the `quota-ledger-certs` Secret, so the sum is not checked. Deckhouse puts it back on the next run of the module; see the `D8ProjectQuotaWebhookMisconfigured` alert.
         - `WebhookMisconfigured`: the `d8-multitenancy-manager-quota-ledger` webhook is changed (its rules, `namespaceSelector`, `objectSelector`, `matchConditions`, `failurePolicy` or service) so that writes of `d8-project-quota` do not reach the ledger. The message of the condition names the field. Deckhouse puts the webhook back on the next run of the module; see the `D8ProjectQuotaWebhookMisconfigured` alert.
         - `WebhookNotCalled`: the canary of the ledger found API servers that admit objects without calling the `d8-multitenancy-manager-quota-ledger` webhook, so the sum is not checked for what they admit. The message of the condition names them; check the rules, `namespaceSelector` and `matchConditions` of the webhook.
@@ -5284,11 +5283,11 @@ alerts:
         Check the condition and the quotas of the namespaces:
 
         ```bash
-        d8 k get projectquota {{ $labels.project }} -o jsonpath='{range .status.conditions[*]}{.type}={.status} {.reason}: {.message}{"\n"}{end}'
+        d8 k get projectquotastatus {{ $labels.project }} -o jsonpath='{range .status.conditions[*]}{.type}={.status} {.reason}: {.message}{"\n"}{end}'
         d8 k get resourcequota -A -l projects.deckhouse.io/project={{ $labels.project }} -o custom-columns=NAMESPACE:.metadata.namespace,HARD:.spec.hard,CALCULATED:.status.hard
         ```
       summary: |
-        The ProjectQuota of project {{ $labels.project }} does not apply in every namespace of the project.
+        The quota of project {{ $labels.project }} does not apply in every namespace of the project.
       severity: "6"
       markupFormat: markdown
     - name: D8ProjectQuotaNotSupported
@@ -5297,7 +5296,7 @@ alerts:
       module: multitenancy-manager
       edition: ce
       description: |-
-        The cluster has ProjectQuota objects, but the `control-plane-manager` module is disabled: Deckhouse Platform does not manage the control plane of the cluster. The sum over the namespaces of a project is enforced only where it does. Every ProjectQuota reports `Enforced=False` with the `ControlPlaneNotManaged` reason; the usage is counted and shown, and every namespace is limited by its `d8-project-quota` ResourceQuota, so no namespace alone uses more than the quota of the whole project.
+        The cluster has projects with a quota, but the `control-plane-manager` module is disabled: Deckhouse Platform does not manage the control plane of the cluster. The sum over the namespaces of a project is enforced only where it does. Every ProjectQuotaStatus reports `Enforced=False` with the `ControlPlaneNotManaged` reason; the usage is counted and shown, and every namespace is limited by its `d8-project-quota` ResourceQuota, so no namespace alone uses more than the quota of the whole project.
 
         This is expected on a cluster whose control plane is managed outside Deckhouse Platform, for example by a cloud provider. Silence the alert if that is the case.
       summary: |
@@ -5309,9 +5308,9 @@ alerts:
       moduleUrl: 160-multitenancy-manager
       module: multitenancy-manager
       edition: ce
-      description: The usage of project `{{ $labels.project }}` grew past its quota. The ledger allows that only for a status write of a quota saved long after it was approved (a change of the ledger leader at that moment, a stalled etcd, another slow webhook) or when kube-controller-manager recounts a quota, and then by at most a tenth of a limit. The `Exceeded` condition of the ProjectQuota names the keys, the difference and the probable cause. Nothing running is evicted; creating more of these resources is denied until the usage is back within the quota.
+      description: The usage of project `{{ $labels.project }}` grew past its quota. The ledger allows that only for a status write of a quota saved long after it was approved (a change of the ledger leader at that moment, a stalled etcd, another slow webhook) or when kube-controller-manager recounts a quota, and then by at most a tenth of a limit. The `Exceeded` condition of the ProjectQuotaStatus names the keys, the difference and the probable cause. Nothing running is evicted; creating more of these resources is denied until the usage is back within the quota.
       summary: |
-        Usage of project {{ $labels.project }} has grown past its ProjectQuota.
+        Usage of project {{ $labels.project }} has grown past its quota.
       severity: "5"
       markupFormat: markdown
     - name: D8ProjectQuotaSuspended
@@ -5345,7 +5344,7 @@ alerts:
       module: multitenancy-manager
       edition: ce
       description: |-
-        The `d8-multitenancy-manager-quota-ledger` ValidatingWebhookConfiguration is missing, does not carry the CA of the `quota-ledger-certs` Secret, is changed so that writes of `d8-project-quota` do not reach the ledger (its rules, `namespaceSelector`, `objectSelector`, `matchConditions`, `failurePolicy` or service), or the API servers let the canary writes through without calling it. The sum of the project quotas is not checked; the `Enforced` condition of every ProjectQuota names the reason (`WebhookMissing`, `WebhookMisconfigured` or `WebhookNotCalled`) and the field or the API servers. Deckhouse puts the webhook back within about 4 minutes; if it does not, contact Deckhouse technical support. Compare the CA:
+        The `d8-multitenancy-manager-quota-ledger` ValidatingWebhookConfiguration is missing, does not carry the CA of the `quota-ledger-certs` Secret, is changed so that writes of `d8-project-quota` do not reach the ledger (its rules, `namespaceSelector`, `objectSelector`, `matchConditions`, `failurePolicy` or service), or the API servers let the canary writes through without calling it. The sum of the project quotas is not checked; the `Enforced` condition of every ProjectQuotaStatus names the reason (`WebhookMissing`, `WebhookMisconfigured` or `WebhookNotCalled`) and the field or the API servers. Deckhouse puts the webhook back within about 4 minutes; if it does not, contact Deckhouse technical support. Compare the CA:
 
         ```bash
         d8 k get validatingwebhookconfiguration d8-multitenancy-manager-quota-ledger -o jsonpath='{.webhooks[0].clientConfig.caBundle}' | base64 -d | openssl x509 -noout -subject

@@ -33,12 +33,12 @@ import (
 	"controller/internal/quota"
 )
 
-// checkQuota checks a change of spec.quota. The quota becomes the ProjectQuota of the project, so its
-// keys follow the rules of a ProjectQuota, and the requester needs the right to write that
-// ProjectQuota: whoever may change a project may not give it a quota of their own choosing. A write
-// that leaves spec.quota as it was is not checked, and neither are the controller and Deckhouse. A quota
-// is refused while a ProjectQuota created directly bears the name of the project: spec.quota does not
-// take such an object over, so it would not apply.
+// checkQuota checks a change of spec.quota. spec.quota is the one place the quota of a project is set:
+// the controller turns it into the ProjectQuotaStatus of the project, which nobody else writes. Its keys
+// follow the rules of the project quota, and the requester needs the right to set the quota of the
+// project: whoever may change a project may not give it a quota of their own choosing. A write that
+// leaves spec.quota as it was is not checked, and neither are the controller and Deckhouse. A limit set
+// below what the project uses already is allowed with a warning.
 func (v *validator) checkQuota(ctx context.Context, user authenticationv1.UserInfo, project, stored *v1alpha3.Project, privileged bool) (string, []string, error) {
 	var before corev1.ResourceList
 	if stored != nil {
@@ -59,49 +59,41 @@ func (v *validator) checkQuota(ctx context.Context, user authenticationv1.UserIn
 		return "", check.Warnings, nil
 	}
 
-	verb := "update"
-	switch {
-	case len(before) == 0:
-		verb = "create"
-	case len(project.Spec.Quota) == 0:
-		verb = "delete"
-	}
-	allowed, err := v.mayWriteProjectQuota(ctx, user, verb, project.Name)
+	allowed, err := v.maySetQuota(ctx, user, project.Name)
 	if err != nil {
 		return "", nil, err
 	}
 	if !allowed {
-		return fmt.Sprintf("Changing spec.quota of the '%s' project needs the right to %s the '%s' ProjectQuota (projectquotas.deckhouse.io), "+
-			"which the manage_quotas capability of multitenancy-manager grants", project.Name, verb, project.Name), nil, nil
+		return fmt.Sprintf("Changing spec.quota of the '%s' project needs the right to update projects/quota of deckhouse.io for it, "+
+			"which the manage_quotas capability of multitenancy-manager grants", project.Name), nil, nil
 	}
 	if len(project.Spec.Quota) == 0 {
 		return "", check.Warnings, nil
 	}
-	direct, err := v.hasDirectProjectQuota(ctx, project.Name)
+	used, err := v.projectUsage(ctx, project.Name)
 	if err != nil {
 		return "", nil, err
 	}
-	if direct {
-		return fmt.Sprintf("The '%s' ProjectQuota was created directly, so spec.quota would not apply to it: "+
-			"delete that ProjectQuota to let spec.quota make it, or leave spec.quota empty", project.Name), nil, nil
-	}
-	return "", check.Warnings, nil
+	return "", append(check.Warnings, quota.BelowUsage(project.Spec.Quota, before, used)...), nil
 }
 
-// hasDirectProjectQuota reports a ProjectQuota of the name that the controller did not make from spec.quota.
-func (v *validator) hasDirectProjectQuota(ctx context.Context, name string) (bool, error) {
-	pq := new(v1alpha1.ProjectQuota)
+// projectUsage reads the usage of the project from its ProjectQuotaStatus: nil when the project has no
+// quota yet.
+func (v *validator) projectUsage(ctx context.Context, name string) (corev1.ResourceList, error) {
+	pq := new(v1alpha1.ProjectQuotaStatus)
 	if err := v.apiReader().Get(ctx, client.ObjectKey{Name: name}, pq); err != nil {
 		if apierrors.IsNotFound(err) {
-			return false, nil
+			return nil, nil
 		}
-		return false, fmt.Errorf("get the '%s' ProjectQuota: %w", name, err)
+		return nil, fmt.Errorf("get the '%s' ProjectQuotaStatus: %w", name, err)
 	}
-	return pq.Labels[v1alpha3.ResourceLabelManagedBy] != v1alpha3.ManagedByController, nil
+	return pq.Status.Used, nil
 }
 
-// mayWriteProjectQuota asks the API server whether the user may make the change to the ProjectQuota.
-func (v *validator) mayWriteProjectQuota(ctx context.Context, user authenticationv1.UserInfo, verb, name string) (bool, error) {
+// maySetQuota asks the API server whether the user may set the quota of the project: the update verb
+// on its quota subresource, projects/quota. The subresource is not served; the right is only asked about,
+// so that it is granted apart from the right to change the project.
+func (v *validator) maySetQuota(ctx context.Context, user authenticationv1.UserInfo, name string) (bool, error) {
 	extra := make(map[string]authorizationv1.ExtraValue, len(user.Extra))
 	for key, values := range user.Extra {
 		extra[key] = authorizationv1.ExtraValue(values)
@@ -113,15 +105,16 @@ func (v *validator) mayWriteProjectQuota(ctx context.Context, user authenticatio
 			Groups: user.Groups,
 			Extra:  extra,
 			ResourceAttributes: &authorizationv1.ResourceAttributes{
-				Group:    v1alpha1.SchemeGroupVersion.Group,
-				Resource: v1alpha1.ProjectQuotaResource,
-				Verb:     verb,
-				Name:     name,
+				Group:       v1alpha3.SchemeGroupVersion.Group,
+				Resource:    v1alpha3.ProjectResource,
+				Subresource: v1alpha3.ProjectQuotaSubresource,
+				Verb:        "update",
+				Name:        name,
 			},
 		},
 	}
 	if err := v.client.Create(ctx, review); err != nil {
-		return false, fmt.Errorf("review the right to %s the '%s' ProjectQuota: %w", verb, name, err)
+		return false, fmt.Errorf("review the right to set the quota of the '%s' project: %w", name, err)
 	}
 	return review.Status.Allowed, nil
 }

@@ -20,7 +20,7 @@ limitations under the License.
 // The quota plugin of the API server writes the status of every ResourceQuota of a namespace before
 // it admits an object there, and an object is admitted only when that write succeeds. The webhook
 // lets a write of d8-project-quota through only when the usage of the whole project, with the write,
-// stays within the ProjectQuota. The ledger holds, for every namespace of a quota project, the usage
+// stays within the ProjectQuotaStatus. The ledger holds, for every namespace of a quota project, the usage
 // the informer last saw and the writes it approved that the informer has not shown yet (pending); the
 // usage of a namespace is the larger of the two, and the sum of a project is kept by deltas, so a
 // decision does no I/O and costs O(keys).
@@ -88,7 +88,7 @@ type State struct {
 	namespaces map[string]string
 	// members are the namespaces of a project.
 	members map[string]map[string]struct{}
-	// projects are the projects with a ProjectQuota.
+	// projects are the projects with a ProjectQuotaStatus.
 	projects map[string]*projectState
 	// refused are the namespaces whose write was refused over the quota of their project, by when.
 	refused map[string]time.Time
@@ -221,7 +221,7 @@ func (s *State) DeleteNamespace(name string) {
 }
 
 // SetProjectQuota records the limits of a project.
-func (s *State) SetProjectQuota(pq *v1alpha1.ProjectQuota) {
+func (s *State) SetProjectQuota(pq *v1alpha1.ProjectQuotaStatus) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	defer s.changedLocked()
@@ -431,7 +431,7 @@ func (s *State) inflightLocked(project string, key corev1.ResourceName) resource
 }
 
 // Covers reports whether the state has what a quorum list returned: every quota in its listed version
-// or a newer one, every namespace in its project, every ProjectQuota.
+// or a newer one, every namespace in its project, every ProjectQuotaStatus.
 func (s *State) Covers(listed []metav1.Object) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -446,7 +446,7 @@ func (s *State) Covers(listed []metav1.Object) bool {
 			if project := projectOf(o); project != "" && s.namespaces[o.Name] != project {
 				return false
 			}
-		case *v1alpha1.ProjectQuota:
+		case *v1alpha1.ProjectQuotaStatus:
 			if _, ok := s.projects[o.Name]; !ok {
 				return false
 			}

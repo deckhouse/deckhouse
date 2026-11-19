@@ -224,7 +224,7 @@ spec:
           namespaces: ["*"]
           verbs: ["get", "list", "watch"]
         - apiGroups: ["deckhouse.io"]
-          resources: ["projectquotas"]
+          resources: ["projectquotastatuses"]
           clusterScope: true
           verbs: ["get", "list", "watch"]
         - apiGroups: ["virtualization.deckhouse.io"]

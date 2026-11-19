@@ -145,9 +145,9 @@ spec:
                   description: |
                     Квота ресурсов на весь проект.
 
-                    Контроллер превращает её в объект ProjectQuota проекта, который ставит ResourceQuota `d8-project-quota` в каждый неймспейс проекта и суммирует потребление по ним. Очистка поля удаляет соответствующий ProjectQuota.
+                    Контроллер ставит ResourceQuota `d8-project-quota` в каждый неймспейс проекта, суммирует потребление по ним и показывает лимиты и потребление в объекте ProjectQuotaStatus проекта, доступном только для чтения. Очистка поля удаляет этот ProjectQuotaStatus.
 
-                    Созданный явно ProjectQuota поле не трогает. Пока существует ProjectQuota с именем проекта, задать поле нельзя. Для изменения поля нужно право на запись ProjectQuota проекта, а его ключи подчиняются правилам ProjectQuota.
+                    Для изменения поля нужно право `update` на `projects/quota` в группе `deckhouse.io` для проекта, которое выдаёт capability `manage_quotas` модуля `multitenancy-manager`.
 
                     Ключи и значения соответствуют формату `ResourceQuota.spec.hard`, например `requests.cpu: "100"`.
                     Для memory и storage нужна явная единица измерения (например `requests.memory: 2Gi`);

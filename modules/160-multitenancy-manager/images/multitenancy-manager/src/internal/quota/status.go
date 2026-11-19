@@ -218,9 +218,8 @@ func overshootMessage(message, previous string) string {
 
 // EnforcedInput is what the Enforced condition depends on.
 type EnforcedInput struct {
-	Config       Config
-	ProjectFound bool
-	NotServed    []string
+	Config    Config
+	NotServed []string
 	// NotCounted are keys of a family the ledger does not count, as its module is disabled.
 	NotCounted []string
 	Namespaces []Namespace
@@ -251,8 +250,6 @@ func EnforcedCondition(in EnforcedInput) metav1.Condition {
 		return condition(v1alpha1.ProjectQuotaReasonWebhookNotCalled,
 			"The API servers "+strings.Join(in.Config.WebhookNotCalledBy, ", ")+" admit objects without calling the d8-multitenancy-manager-quota-ledger webhook, "+
 				"so the sum over the namespaces is not checked for what they admit. Check the rules, namespaceSelector and matchConditions of the webhook.")
-	case !in.ProjectFound:
-		return condition(v1alpha1.ProjectQuotaReasonProjectNotFound, "There is no project of this name; the quota applies once the project is created.")
 	case len(in.NotServed) > 0:
 		return condition(v1alpha1.ProjectQuotaReasonKeyNotServed,
 			"Nothing counts these keys because the API server does not serve their resources yet: "+strings.Join(in.NotServed, ", ")+".")
@@ -294,7 +291,7 @@ func EnforcedCondition(in EnforcedInput) metav1.Condition {
 // most every StatusWriteInterval. The usage in the message of the Exceeded condition is not a change of
 // the condition while the same keys stay exceeded: it moves with every object of the project, and the
 // usage it shows is written as the usage is.
-func WriteDue(current, desired *v1alpha1.ProjectQuotaStatus, lastWrite, now time.Time) (bool, time.Duration) {
+func WriteDue(current, desired *v1alpha1.ProjectQuotaStatusStatus, lastWrite, now time.Time) (bool, time.Duration) {
 	sameExceeded := slices.Equal(ExceededKeys(current.Hard, current.Used), ExceededKeys(desired.Hard, desired.Used))
 	if current.ObservedGeneration != desired.ObservedGeneration ||
 		current.NamespaceCount != desired.NamespaceCount ||
@@ -353,4 +350,27 @@ func FindCondition(conditions []metav1.Condition, conditionType string) *metav1.
 		}
 	}
 	return nil
+}
+
+// BelowUsage warns of the limits a change of the quota of a project sets below what the project uses
+// already: hard is the new quota, previous the quota it replaces and used the usage of the project.
+// Such a change is allowed: nothing running is evicted, and creating more of the resource is denied
+// until the usage is back within the limit. A limit the change leaves as it was is not reported.
+func BelowUsage(hard, previous, used corev1.ResourceList) []string {
+	hard = Canonical(hard)
+	previous = Canonical(previous)
+	var warnings []string
+	for key, limit := range hard {
+		usage, ok := used[key]
+		if !ok || usage.Cmp(limit) <= 0 {
+			continue
+		}
+		if before, ok := previous[key]; ok && before.Cmp(limit) == 0 {
+			continue
+		}
+		warnings = append(warnings, fmt.Sprintf("%s: the limit %s is below what the project uses, %s; nothing running is evicted, and creating more is denied until the usage is back within the limit",
+			key, limit.String(), usage.String()))
+	}
+	slices.Sort(warnings)
+	return warnings
 }

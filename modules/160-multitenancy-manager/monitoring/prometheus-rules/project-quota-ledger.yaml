@@ -19,7 +19,7 @@
       plk_markup_format: "markdown"
       summary: No replica of the project quota ledger answers.
       description: |-
-        No replica of the `quota-ledger` container of the `multitenancy-manager` module holds its lease with synced informers. Creating the objects a ProjectQuota counts in the namespaces of projects with a quota fails with `project quota ledger unavailable`, or with `failed calling webhook "quota-ledger.multitenancy-manager.deckhouse.io"`. Deletions, running objects and other namespaces are not affected.
+        No replica of the `quota-ledger` container of the `multitenancy-manager` module holds its lease with synced informers. Creating the objects a project quota counts in the namespaces of projects with a quota fails with `project quota ledger unavailable`, or with `failed calling webhook "quota-ledger.multitenancy-manager.deckhouse.io"`. Deletions, running objects and other namespaces are not affected.
 
         1. Check the pods, the lease and the route:
 
@@ -105,7 +105,7 @@
       plk_markup_format: "markdown"
       summary: The webhook of the project quota ledger is missing or misconfigured.
       description: |-
-        The `d8-multitenancy-manager-quota-ledger` ValidatingWebhookConfiguration is missing, does not carry the CA of the `quota-ledger-certs` Secret, is changed so that writes of `d8-project-quota` do not reach the ledger (its rules, `namespaceSelector`, `objectSelector`, `matchConditions`, `failurePolicy` or service), or the API servers let the canary writes through without calling it. The sum of the project quotas is not checked; the `Enforced` condition of every ProjectQuota names the reason (`WebhookMissing`, `WebhookMisconfigured` or `WebhookNotCalled`) and the field or the API servers. Deckhouse puts the webhook back within about 4 minutes; if it does not, contact Deckhouse technical support. Compare the CA:
+        The `d8-multitenancy-manager-quota-ledger` ValidatingWebhookConfiguration is missing, does not carry the CA of the `quota-ledger-certs` Secret, is changed so that writes of `d8-project-quota` do not reach the ledger (its rules, `namespaceSelector`, `objectSelector`, `matchConditions`, `failurePolicy` or service), or the API servers let the canary writes through without calling it. The sum of the project quotas is not checked; the `Enforced` condition of every ProjectQuotaStatus names the reason (`WebhookMissing`, `WebhookMisconfigured` or `WebhookNotCalled`) and the field or the API servers. Deckhouse puts the webhook back within about 4 minutes; if it does not, contact Deckhouse technical support. Compare the CA:
 
         ```bash
         d8 k get validatingwebhookconfiguration d8-multitenancy-manager-quota-ledger -o jsonpath='{.webhooks[0].clientConfig.caBundle}' | base64 -d | openssl x509 -noout -subject
@@ -169,9 +169,9 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      summary: Usage of project `{{ $labels.project }}` has grown past its ProjectQuota.
+      summary: Usage of project `{{ $labels.project }}` has grown past its quota.
       description: |-
-        The usage of project `{{ $labels.project }}` grew past its quota. The ledger allows that only for a status write of a quota saved long after it was approved (a change of the ledger leader at that moment, a stalled etcd, another slow webhook) or when kube-controller-manager recounts a quota, and then by at most a tenth of a limit. The `Exceeded` condition of the ProjectQuota names the keys, the difference and the probable cause. Nothing running is evicted; creating more of these resources is denied until the usage is back within the quota.
+        The usage of project `{{ $labels.project }}` grew past its quota. The ledger allows that only for a status write of a quota saved long after it was approved (a change of the ledger leader at that moment, a stalled etcd, another slow webhook) or when kube-controller-manager recounts a quota, and then by at most a tenth of a limit. The `Exceeded` condition of the ProjectQuotaStatus names the keys, the difference and the probable cause. Nothing running is evicted; creating more of these resources is denied until the usage is back within the quota.
 
   - alert: D8ProjectQuotaLedgerDrift
     expr: |

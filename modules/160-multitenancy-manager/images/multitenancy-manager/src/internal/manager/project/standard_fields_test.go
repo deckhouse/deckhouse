@@ -53,7 +53,7 @@ func newManager(t *testing.T, objs ...client.Object) (*Manager, client.Client) {
 		}
 	}
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).
-		WithStatusSubresource(&v1alpha3.Project{}, &v1alpha1.ProjectQuota{}).Build()
+		WithStatusSubresource(&v1alpha3.Project{}, &v1alpha1.ProjectQuotaStatus{}).Build()
 	return New(c, nil, logr.Discard()), c
 }
 
@@ -66,9 +66,9 @@ func TestReconcileQuota(t *testing.T) {
 		"limits.memory": resource.MustParse("15Gi"),
 	}
 
-	requireNoConflict(t, m, project)
+	requireQuotaReconciled(t, m, project)
 
-	pq := &v1alpha1.ProjectQuota{}
+	pq := &v1alpha1.ProjectQuotaStatus{}
 	require.NoError(t, c.Get(ctx, client.ObjectKey{Name: "proj"}, pq))
 	assert.Equal(t, project.Spec.Quota, pq.Spec.Hard)
 	assert.Equal(t, v1alpha3.ManagedByController, pq.Labels[v1alpha3.ResourceLabelManagedBy])
@@ -76,15 +76,15 @@ func TestReconcileQuota(t *testing.T) {
 	assert.Equal(t, types.UID("proj-uid"), pq.OwnerReferences[0].UID)
 	assert.True(t, *pq.OwnerReferences[0].Controller)
 
-	// clearing the quota deletes the ProjectQuota made from it
+	// clearing the quota deletes the ProjectQuotaStatus made from it
 	project.Spec.Quota = nil
-	requireNoConflict(t, m, project)
+	requireQuotaReconciled(t, m, project)
 	err := c.Get(ctx, client.ObjectKey{Name: "proj"}, pq)
 	assert.True(t, apierrors.IsNotFound(err))
 }
 
 // The main namespace of a new project with a quota waits for its d8-project-quota like a namespace made
-// for a ProjectNamespace: it is labelled pending until the ProjectQuota controller has the quota
+// for a ProjectNamespace: it is labelled pending until the ProjectQuotaStatus controller has the quota
 // calculated. A namespace that has the label keeps it, and an older one is not held.
 // The main namespace is held by the state of the project, not by its age: a project that has not
 // deployed yet is held however long its first passes fail, and a deployed one, which runs workloads,
@@ -104,11 +104,11 @@ func TestReconcileQuotaHoldsTheMainNamespace(t *testing.T) {
 	live := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "live"}, Spec: v1alpha3.ProjectSpec{Quota: quotaOf}}
 	live.SetState(v1alpha3.ProjectStateDeployed)
 
-	requireNoConflict(t, m, &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "proj"}, Spec: v1alpha3.ProjectSpec{Quota: quotaOf}})
-	requireNoConflict(t, m, failing)
-	requireNoConflict(t, m, &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "done"}, Spec: v1alpha3.ProjectSpec{Quota: quotaOf}})
-	requireNoConflict(t, m, &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "none"}})
-	requireNoConflict(t, m, live)
+	requireQuotaReconciled(t, m, &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "proj"}, Spec: v1alpha3.ProjectSpec{Quota: quotaOf}})
+	requireQuotaReconciled(t, m, failing)
+	requireQuotaReconciled(t, m, &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "done"}, Spec: v1alpha3.ProjectSpec{Quota: quotaOf}})
+	requireQuotaReconciled(t, m, &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "none"}})
+	requireQuotaReconciled(t, m, live)
 
 	ns := new(corev1.Namespace)
 	require.NoError(t, c.Get(ctx, client.ObjectKey{Name: "proj"}, ns))
@@ -123,50 +123,38 @@ func TestReconcileQuotaHoldsTheMainNamespace(t *testing.T) {
 		"a deployed project with workloads that gets a quota, as on an upgrade, is not held")
 }
 
-func TestReconcileQuotaLeavesADirectProjectQuota(t *testing.T) {
+// Clearing spec.quota deletes the ProjectQuotaStatus of the project, whoever made it.
+func TestReconcileQuotaDeletesTheQuotaStatusWhenTheQuotaIsCleared(t *testing.T) {
 	ctx := context.Background()
-	direct := &v1alpha1.ProjectQuota{ObjectMeta: metav1.ObjectMeta{Name: "proj"}, Spec: v1alpha1.ProjectQuotaSpec{Hard: corev1.ResourceList{"pods": resource.MustParse("5")}}}
-	m, c := newManager(t, direct)
+	stale := &v1alpha1.ProjectQuotaStatus{ObjectMeta: metav1.ObjectMeta{Name: "proj"}, Spec: v1alpha1.ProjectQuotaStatusSpec{Hard: corev1.ResourceList{"pods": resource.MustParse("5")}}}
+	m, c := newManager(t, stale)
 	project := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "proj"}}
 
-	requireNoConflict(t, m, project)
-	assert.NoError(t, c.Get(ctx, client.ObjectKey{Name: "proj"}, &v1alpha1.ProjectQuota{}), "a ProjectQuota created directly stays")
+	requireQuotaReconciled(t, m, project)
+	err := c.Get(ctx, client.ObjectKey{Name: "proj"}, &v1alpha1.ProjectQuotaStatus{})
+	assert.True(t, apierrors.IsNotFound(err), "the ProjectQuotaStatus goes with spec.quota, got %v", err)
 }
 
-// spec.quota does not take a ProjectQuota over: one created directly keeps its limits, its labels and
-// its owners, and the project says why spec.quota is not applied.
-func TestReconcileQuotaDoesNotTakeADirectProjectQuotaOver(t *testing.T) {
+// spec.quota is the one place the quota of a project is set: a ProjectQuotaStatus the controller did not
+// make, left by an earlier image, is taken over with the limits, the labels and the owner of spec.quota.
+func TestReconcileQuotaTakesAQuotaStatusOver(t *testing.T) {
 	ctx := context.Background()
-	direct := &v1alpha1.ProjectQuota{ObjectMeta: metav1.ObjectMeta{Name: "proj"}, Spec: v1alpha1.ProjectQuotaSpec{Hard: corev1.ResourceList{"pods": resource.MustParse("5")}}}
-	m, c := newManager(t, direct)
+	stale := &v1alpha1.ProjectQuotaStatus{ObjectMeta: metav1.ObjectMeta{Name: "proj"}, Spec: v1alpha1.ProjectQuotaStatusSpec{Hard: corev1.ResourceList{"pods": resource.MustParse("5")}}}
+	m, c := newManager(t, stale)
 	project := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "proj", UID: "proj-uid"}}
 	project.Spec.Quota = corev1.ResourceList{"pods": resource.MustParse("50")}
-
-	conflict, err := m.reconcileQuota(ctx, project)
-	require.NoError(t, err, "a conflict is reported, not an error, so the rest of the project is reconciled")
-	assert.Contains(t, conflict, "'proj' ProjectQuota was created directly")
-	assert.Contains(t, conflict, "spec.quota")
-
-	pq := &v1alpha1.ProjectQuota{}
-	require.NoError(t, c.Get(ctx, client.ObjectKey{Name: "proj"}, pq))
-	assert.Equal(t, direct.Spec.Hard, pq.Spec.Hard, "its limits stay")
-	assert.Empty(t, pq.Labels, "it is not marked as the controller's")
-	assert.Empty(t, pq.OwnerReferences, "the project does not own it")
-
-	// the quota and the administrators are applied apart: the one that fails does not hold the other
 	project.Spec.Administrators = []v1alpha3.Administrator{{Kind: "User", Name: "alice@example.com"}}
-	conflict, err = m.reconcileStandardFields(ctx, project)
-	require.NoError(t, err)
-	assert.NotEmpty(t, conflict)
-	binding := &v1alpha3.ProjectRoleBinding{}
-	assert.NoError(t, c.Get(ctx, client.ObjectKey{Namespace: "proj", Name: v1alpha3.ProjectAdministratorsBinding}, binding))
 
-	// once it is deleted, spec.quota makes its own
-	require.NoError(t, c.Delete(ctx, pq))
-	requireNoConflict(t, m, project)
+	require.NoError(t, m.reconcileStandardFields(ctx, project))
+
+	pq := &v1alpha1.ProjectQuotaStatus{}
 	require.NoError(t, c.Get(ctx, client.ObjectKey{Name: "proj"}, pq))
 	assert.Equal(t, project.Spec.Quota, pq.Spec.Hard)
 	assert.Equal(t, v1alpha3.ManagedByController, pq.Labels[v1alpha3.ResourceLabelManagedBy])
+	require.Len(t, pq.OwnerReferences, 1)
+	assert.Equal(t, "proj", pq.OwnerReferences[0].Name)
+	binding := &v1alpha3.ProjectRoleBinding{}
+	assert.NoError(t, c.Get(ctx, client.ObjectKey{Namespace: "proj", Name: v1alpha3.ProjectAdministratorsBinding}, binding))
 }
 
 func TestReconcileQuotaDeletesTheQuotaOfAnEarlierRelease(t *testing.T) {
@@ -175,7 +163,7 @@ func TestReconcileQuotaDeletesTheQuotaOfAnEarlierRelease(t *testing.T) {
 		Labels: map[string]string{v1alpha3.ResourceLabelManagedBy: v1alpha3.ManagedByController}}}
 	m, c := newManager(t, legacy)
 
-	requireNoConflict(t, m, &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "proj"}})
+	requireQuotaReconciled(t, m, &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "proj"}})
 	err := c.Get(ctx, client.ObjectKey{Namespace: "proj", Name: v1alpha3.ProjectQuotaName}, new(corev1.ResourceQuota))
 	assert.True(t, apierrors.IsNotFound(err))
 }
@@ -190,7 +178,7 @@ func TestCollectUsage(t *testing.T) {
 	assert.Nil(t, usage)
 	assert.Nil(t, within, "a project without a quota has no QuotaWithinLimits condition")
 
-	pq := &v1alpha1.ProjectQuota{ObjectMeta: metav1.ObjectMeta{Name: "proj"}, Status: v1alpha1.ProjectQuotaStatus{
+	pq := &v1alpha1.ProjectQuotaStatus{ObjectMeta: metav1.ObjectMeta{Name: "proj"}, Status: v1alpha1.ProjectQuotaStatusStatus{
 		Used: corev1.ResourceList{"pods": resource.MustParse("12")},
 		Conditions: []metav1.Condition{{Type: v1alpha1.ProjectQuotaConditionExceeded, Status: metav1.ConditionTrue,
 			Reason: v1alpha1.ProjectQuotaReasonHardLowered, Message: "pods: used 12, hard 10"}},
@@ -266,12 +254,10 @@ func TestCollectNamespaceStatus(t *testing.T) {
 	assert.Equal(t, v1alpha3.NamespaceKindAdditional, statuses[1].Kind)
 }
 
-// requireNoConflict reconciles the quota of the project and expects neither an error nor a conflict.
-func requireNoConflict(t *testing.T, m *Manager, project *v1alpha3.Project) {
+// requireQuotaReconciled reconciles the quota of the project and expects no error.
+func requireQuotaReconciled(t *testing.T, m *Manager, project *v1alpha3.Project) {
 	t.Helper()
-	conflict, err := m.reconcileQuota(context.Background(), project)
-	require.NoError(t, err)
-	require.Empty(t, conflict)
+	require.NoError(t, m.reconcileQuota(context.Background(), project))
 }
 
 // In CE the status lists only the main namespace: any other namespace with the label of the project,

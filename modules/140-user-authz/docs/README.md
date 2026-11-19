@@ -823,6 +823,7 @@ read:
     - deckhouse.io/effectivelicenses
     - deckhouse.io/modulesettingsdefinitions
     - deckhouse.io/nodestaticpodrequests
+    - deckhouse.io/projectquotastatuses
     - deckhouse.io/registryconfigs
     - deckhouse.io/registryconfigs/sensitive
     - deckhouse.io/registrynodes
@@ -847,7 +848,6 @@ read-write:
     - deckhouse.io/nodeusers
     - deckhouse.io/packagerepositories
     - deckhouse.io/packagerepositoryoperations
-    - deckhouse.io/projectquotas
     - deckhouse.io/registryupstreams
     - deckhouse.io/sshcredentials
     - deckhouse.io/tokenexchangeproviders
@@ -862,6 +862,7 @@ read-write:
     - nodes/proxy
     - nodes/stats
 update:
+    - deckhouse.io/projects/quota
     - namespaces/finalize
 write:
     - cilium.io/ciliumclusterwidenetworkpolicies

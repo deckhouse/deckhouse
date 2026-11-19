@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	// NamespaceLabel marks a namespace of a project that has a ProjectQuota. The admission policies of
+	// NamespaceLabel marks a namespace of a project that has a ProjectQuotaStatus. The admission policies of
 	// the quota select namespaces by it: a namespace the controller creates for a ProjectNamespace
 	// gets LabelPending in the request that creates it, and a namespace gets LabelEnforced once its
 	// d8-project-quota ResourceQuota is calculated.

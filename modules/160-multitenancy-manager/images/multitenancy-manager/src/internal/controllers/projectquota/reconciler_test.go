@@ -76,7 +76,7 @@ func newFixture(t *testing.T, controlPlaneManaged string, objects ...client.Obje
 	c := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(append(objects, config, webhook, certs)...).
-		WithStatusSubresource(&v1alpha1.ProjectQuota{}, &corev1.ResourceQuota{}).
+		WithStatusSubresource(&v1alpha1.ProjectQuotaStatus{}, &corev1.ResourceQuota{}).
 		Build()
 	f := &fixture{t: t, client: c, now: time.Date(2026, 10, 29, 12, 0, 0, 0, time.UTC)}
 	f.r = &Reconciler{
@@ -112,9 +112,9 @@ func (f *fixture) reconcile() reconcile.Result {
 	return result
 }
 
-func (f *fixture) quota() *v1alpha1.ProjectQuota {
+func (f *fixture) quota() *v1alpha1.ProjectQuotaStatus {
 	f.t.Helper()
-	pq := new(v1alpha1.ProjectQuota)
+	pq := new(v1alpha1.ProjectQuotaStatus)
 	require.NoError(f.t, f.client.Get(context.Background(), client.ObjectKey{Name: projectName}, pq))
 	return pq
 }
@@ -163,14 +163,14 @@ func projectNamespace(name string, labels map[string]string) *corev1.Namespace {
 	return &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: name, Labels: all}}
 }
 
-func projectQuota(hard corev1.ResourceList) *v1alpha1.ProjectQuota {
-	return &v1alpha1.ProjectQuota{
+func projectQuota(hard corev1.ResourceList) *v1alpha1.ProjectQuotaStatus {
+	return &v1alpha1.ProjectQuotaStatus{
 		ObjectMeta: metav1.ObjectMeta{Name: projectName, UID: "quota-uid", Generation: 1},
-		Spec:       v1alpha1.ProjectQuotaSpec{Hard: hard},
+		Spec:       v1alpha1.ProjectQuotaStatusSpec{Hard: hard},
 	}
 }
 
-func condition(pq *v1alpha1.ProjectQuota, conditionType string) metav1.Condition {
+func condition(pq *v1alpha1.ProjectQuotaStatus, conditionType string) metav1.Condition {
 	c := quota.FindCondition(pq.Status.Conditions, conditionType)
 	if c == nil {
 		return metav1.Condition{}
@@ -282,15 +282,15 @@ func TestReconcileEnforcesAQuotaWithoutResourceQuotaLimits(t *testing.T) {
 	assert.Equal(t, metav1.ConditionTrue, condition(f.quota(), v1alpha1.ProjectQuotaConditionEnforced).Status)
 }
 
-// A quota an earlier release of the module made carries an owner reference to the ProjectQuota, with
-// which a foreground deletion of the ProjectQuota or of its project lets the garbage collector delete the
+// A quota an earlier release of the module made carries an owner reference to the ProjectQuotaStatus, with
+// which a foreground deletion of the ProjectQuotaStatus or of its project lets the garbage collector delete the
 // quota while the namespace is still labelled. The reference goes at the next reconcile.
 func TestReconcileDropsTheOwnerReferenceOfTheQuota(t *testing.T) {
 	owned := &corev1.ResourceQuota{ObjectMeta: metav1.ObjectMeta{Namespace: projectName, Name: v1alpha3.ProjectQuotaName,
 		Labels: map[string]string{v1alpha3.ResourceLabelHeritage: v1alpha3.ResourceHeritageMultitenancy, v1alpha3.ResourceLabelProject: projectName,
 			v1alpha3.ResourceLabelManagedBy: v1alpha3.ManagedByController},
 		OwnerReferences: []metav1.OwnerReference{
-			{APIVersion: v1alpha1.SchemeGroupVersion.String(), Kind: v1alpha1.ProjectQuotaKind, Name: projectName, UID: "quota-uid",
+			{APIVersion: v1alpha1.SchemeGroupVersion.String(), Kind: v1alpha1.ProjectQuotaStatusKind, Name: projectName, UID: "quota-uid",
 				Controller: ptr.To(true), BlockOwnerDeletion: ptr.To(true)},
 			{APIVersion: "v1", Kind: "ConfigMap", Name: "other", UID: "other-uid"},
 		}}}
@@ -298,7 +298,7 @@ func TestReconcileDropsTheOwnerReferenceOfTheQuota(t *testing.T) {
 	f.reconcile()
 
 	refs := f.resourceQuota(projectName).OwnerReferences
-	require.Len(t, refs, 1, "only the reference to the ProjectQuota goes")
+	require.Len(t, refs, 1, "only the reference to the ProjectQuotaStatus goes")
 	assert.Equal(t, "ConfigMap", refs[0].Kind)
 }
 
@@ -551,17 +551,52 @@ func TestReconcileUnlabelsTerminatingNamespaces(t *testing.T) {
 	assert.Equal(t, int32(1), f.quota().Status.NamespaceCount, "a namespace that is going is not counted")
 }
 
-// A quota whose project is gone, deleted without its namespaces or never owning them, still takes the
-// label off the namespaces of the project that are going, and leaves the others as they are.
-func TestReconcileUnlabelsTerminatingNamespacesWithoutAProject(t *testing.T) {
+// The quota of a project that is gone is deleted by the controller, and its release takes the label off
+// the namespaces of the project, the ones that are going included.
+func TestReconcileDeletesTheQuotaOfAProjectThatIsGone(t *testing.T) {
 	f := newFixture(t, "true",
 		projectNamespace(projectName, map[string]string{quota.NamespaceLabel: quota.LabelEnforced}),
 		terminatingNamespace(projectName+"-going", map[string]string{quota.NamespaceLabel: quota.LabelEnforced}),
 		projectQuota(rl("pods", "10")))
 	f.reconcile()
+	f.reconcile()
 
+	err := f.client.Get(context.Background(), client.ObjectKey{Name: projectName}, new(v1alpha1.ProjectQuotaStatus))
+	assert.True(t, apierrors.IsNotFound(err), "the quota of a project that is gone is deleted, got %v", err)
 	assert.NotContains(t, f.namespace(projectName+"-going").Labels, quota.NamespaceLabel)
-	assert.Equal(t, quota.LabelEnforced, f.namespace(projectName).Labels[quota.NamespaceLabel])
+	assert.NotContains(t, f.namespace(projectName).Labels, quota.NamespaceLabel)
+}
+
+// The quota of a project that is being deleted goes at once: a foreground or orphan deletion of the
+// project waits for it, and the garbage collector may not be let through the guard of the object.
+func TestReconcileDeletesTheQuotaOfAProjectThatIsGoing(t *testing.T) {
+	now := metav1.Now()
+	going := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: projectName, UID: "project-uid",
+		DeletionTimestamp: &now, Finalizers: []string{"foregroundDeletion"}}}
+	f := newFixture(t, "false",
+		projectNamespace(projectName, map[string]string{quota.NamespaceLabel: quota.LabelEnforced}),
+		going, projectQuota(rl("pods", "10")))
+	f.reconcile()
+	f.reconcile()
+
+	err := f.client.Get(context.Background(), client.ObjectKey{Name: projectName}, new(v1alpha1.ProjectQuotaStatus))
+	assert.True(t, apierrors.IsNotFound(err), "the quota of a project that is going is deleted, got %v", err)
+	assert.NotContains(t, f.namespace(projectName).Labels, quota.NamespaceLabel)
+}
+
+// A project the cache has not seen yet is read past it: its quota is not deleted.
+func TestReconcileKeepsTheQuotaOfAProjectTheCacheMissed(t *testing.T) {
+	f := newFixture(t, "true", projectNamespace(projectName, nil), projectQuota(rl("pods", "10")))
+	scheme := runtime.NewScheme()
+	require.NoError(t, v1alpha3.AddToScheme(scheme))
+	f.r.APIReader = fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(&v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: projectName, UID: "project-uid"}}).Build()
+	f.reconcile()
+
+	pq := f.quota()
+	assert.True(t, pq.DeletionTimestamp.IsZero(), "the quota stays")
+	require.Len(t, pq.OwnerReferences, 1)
+	assert.Equal(t, projectName, pq.OwnerReferences[0].Name)
 }
 
 // The release of a quota that is deleted must not wait for a change of its generation.
@@ -584,7 +619,7 @@ func TestReconcileAddsTheFinalizerToTheQuota(t *testing.T) {
 	assert.Equal(t, []string{v1alpha1.ProjectQuotaFinalizer}, f.quota().Finalizers, "it is added once")
 }
 
-// The garbage collector deletes the ResourceQuota objects a ProjectQuota owns once it is gone; the
+// The garbage collector deletes the ResourceQuota objects a ProjectQuotaStatus owns once it is gone; the
 // finalizer keeps it until the labels are off, so that no namespace is left labelled without its quota.
 func TestReconcileReleasesTheNamespacesBeforeTheQuotaGoes(t *testing.T) {
 	f := newFixture(t, "true", project(), projectNamespace(projectName, nil), projectNamespace(projectName+"-db", nil), projectQuota(rl("pods", "10")))
@@ -600,7 +635,7 @@ func TestReconcileReleasesTheNamespacesBeforeTheQuotaGoes(t *testing.T) {
 			switch obj.(type) {
 			case *corev1.Namespace:
 				calls = append(calls, "unlabel "+obj.GetName())
-			case *v1alpha1.ProjectQuota:
+			case *v1alpha1.ProjectQuotaStatus:
 				calls = append(calls, "finalizer")
 			}
 			return c.Patch(ctx, obj, patch, opts...)
@@ -623,7 +658,7 @@ func TestReconcileReleasesTheNamespacesBeforeTheQuotaGoes(t *testing.T) {
 		assert.Less(t, indexOf(calls, "unlabel "+ns), indexOf(calls, "finalizer"), "the label of %s goes before the quota", ns)
 		assert.Less(t, indexOf(calls, "unlabel "+ns), indexOf(calls, "delete "+ns+"/"+v1alpha3.ProjectQuotaName), "and before its ResourceQuota", ns)
 	}
-	err := f.client.Get(context.Background(), client.ObjectKey{Name: projectName}, new(v1alpha1.ProjectQuota))
+	err := f.client.Get(context.Background(), client.ObjectKey{Name: projectName}, new(v1alpha1.ProjectQuotaStatus))
 	assert.True(t, apierrors.IsNotFound(err), "the quota is gone once the finalizer is")
 }
 
@@ -636,7 +671,7 @@ func TestReconcileReleasesAQuotaWhoseProjectIsGone(t *testing.T) {
 
 	f.reconcile()
 	assert.NotContains(t, f.namespace(projectName).Labels, quota.NamespaceLabel)
-	err := f.client.Get(context.Background(), client.ObjectKey{Name: projectName}, new(v1alpha1.ProjectQuota))
+	err := f.client.Get(context.Background(), client.ObjectKey{Name: projectName}, new(v1alpha1.ProjectQuotaStatus))
 	assert.True(t, apierrors.IsNotFound(err))
 }
 
@@ -680,14 +715,6 @@ func indexOf(calls []string, call string) int {
 		}
 	}
 	return len(calls)
-}
-
-func TestReconcileWithoutTheProject(t *testing.T) {
-	f := newFixture(t, "true", projectQuota(rl("pods", "10")))
-	f.reconcile()
-	pq := f.quota()
-	assert.Empty(t, pq.OwnerReferences)
-	assert.Equal(t, v1alpha1.ProjectQuotaReasonProjectNotFound, condition(pq, v1alpha1.ProjectQuotaConditionEnforced).Reason)
 }
 
 func TestReconcileReportsTheStateOfTheLedger(t *testing.T) {
@@ -935,4 +962,42 @@ func TestReconcileEnforcesAQuotaOfLoadBalancersOnly(t *testing.T) {
 	assert.Equal(t, metav1.ConditionTrue, enforced.Status, enforced.Message)
 	addresses := pq.Status.Used["loadbalancers.network.deckhouse.io/addresses"]
 	assert.Equal(t, int64(1), addresses.Value())
+}
+
+func TestProjectDeletionStarted(t *testing.T) {
+	started := metav1.NewTime(time.Unix(100, 0))
+	later := metav1.NewTime(time.Unix(200, 0))
+	zero := metav1.Time{}
+	tests := []struct {
+		name         string
+		oldTimestamp *metav1.Time
+		newTimestamp *metav1.Time
+		want         bool
+	}{
+		{name: "deletion starts", newTimestamp: &started, want: true},
+		{name: "ordinary updates"},
+		{name: "still deleting", oldTimestamp: &started, newTimestamp: &started},
+		{name: "deletion timestamp changes", oldTimestamp: &started, newTimestamp: &later},
+		{name: "deletion timestamp removed", oldTimestamp: &started},
+		{name: "zero timestamp is not deletion", newTimestamp: &zero},
+		{name: "zero timestamp becomes deletion", oldTimestamp: &zero, newTimestamp: &started, want: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			oldProject := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{
+				Name: projectName, ResourceVersion: "1", Generation: 1, DeletionTimestamp: tt.oldTimestamp,
+			}}
+			newProject := oldProject.DeepCopy()
+			// Spec, metadata and status can change together with the timestamp.
+			newProject.ResourceVersion = "2"
+			newProject.Generation = 2
+			newProject.Annotations = map[string]string{"example.com/changed": "true"}
+			newProject.Spec.Quota = rl("pods", "20")
+			newProject.Status.State = v1alpha3.ProjectStateDeployed
+			newProject.DeletionTimestamp = tt.newTimestamp
+			assert.Equal(t, tt.want, projectDeletionStarted(event.UpdateEvent{
+				ObjectOld: oldProject, ObjectNew: newProject,
+			}))
+		})
+	}
 }

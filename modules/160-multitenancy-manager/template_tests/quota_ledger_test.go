@@ -151,7 +151,7 @@ var _ = Describe("Module :: multitenancy-manager :: helm template :: quota ledge
 					listed = append(listed, resource.String())
 				}
 			}
-			Expect(listed).To(ContainElements("resourcequotas", "namespaces", "projectquotas", "virtualmachines", "services", "metalloadbalancerclasses"))
+			Expect(listed).To(ContainElements("resourcequotas", "namespaces", "projectquotastatuses", "virtualmachines", "services", "metalloadbalancerclasses"))
 		})
 
 		It("lets only the ledger, Deckhouse and kube-system write the route and the lease of the ledger", func() {

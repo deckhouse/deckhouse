@@ -152,19 +152,18 @@ func TestEnforcedCondition(t *testing.T) {
 		status metav1.ConditionStatus
 		reason string
 	}{
-		{name: "enforced", in: EnforcedInput{Config: enforce, ProjectFound: true, Namespaces: ready}, status: metav1.ConditionTrue, reason: v1alpha1.ProjectQuotaReasonEnforced},
-		{name: "managed control plane", in: EnforcedInput{Config: Config{}, ProjectFound: true, Namespaces: ready},
+		{name: "enforced", in: EnforcedInput{Config: enforce, Namespaces: ready}, status: metav1.ConditionTrue, reason: v1alpha1.ProjectQuotaReasonEnforced},
+		{name: "managed control plane", in: EnforcedInput{Config: Config{}, Namespaces: ready},
 			status: metav1.ConditionFalse, reason: v1alpha1.ProjectQuotaReasonControlPlaneNotManaged},
-		{name: "no project", in: EnforcedInput{Config: enforce}, status: metav1.ConditionFalse, reason: v1alpha1.ProjectQuotaReasonProjectNotFound},
-		{name: "a key not served", in: EnforcedInput{Config: enforce, ProjectFound: true, NotServed: []string{"count/x.example.com"}, Namespaces: ready},
+		{name: "a key not served", in: EnforcedInput{Config: enforce, NotServed: []string{"count/x.example.com"}, Namespaces: ready},
 			status: metav1.ConditionFalse, reason: v1alpha1.ProjectQuotaReasonKeyNotServed},
-		{name: "a namespace not calculated", in: EnforcedInput{Config: enforce, ProjectFound: true, Namespaces: []Namespace{{Name: "a", Labelled: true}}},
+		{name: "a namespace not calculated", in: EnforcedInput{Config: enforce, Namespaces: []Namespace{{Name: "a", Labelled: true}}},
 			status: metav1.ConditionFalse, reason: v1alpha1.ProjectQuotaReasonKeyRollout},
-		{name: "a namespace not labelled", in: EnforcedInput{Config: enforce, ProjectFound: true, Namespaces: []Namespace{{Name: "a", Calculated: true}}},
+		{name: "a namespace not labelled", in: EnforcedInput{Config: enforce, Namespaces: []Namespace{{Name: "a", Calculated: true}}},
 			status: metav1.ConditionFalse, reason: v1alpha1.ProjectQuotaReasonKeyRollout},
 		{name: "an API server that does not call the webhook", in: EnforcedInput{Config: Config{ControlPlaneManaged: true, WebhookNotCalledBy: []string{"10.0.0.1:6443"}},
-			ProjectFound: true, Namespaces: ready}, status: metav1.ConditionFalse, reason: v1alpha1.ProjectQuotaReasonWebhookNotCalled},
-		{name: "a namespace without its quota", in: EnforcedInput{Config: enforce, ProjectFound: true, Namespaces: []Namespace{{Name: "a", Labelled: true, Problem: "forbidden"}}},
+			Namespaces: ready}, status: metav1.ConditionFalse, reason: v1alpha1.ProjectQuotaReasonWebhookNotCalled},
+		{name: "a namespace without its quota", in: EnforcedInput{Config: enforce, Namespaces: []Namespace{{Name: "a", Labelled: true, Problem: "forbidden"}}},
 			status: metav1.ConditionFalse, reason: v1alpha1.ProjectQuotaReasonKeyRollout},
 	}
 	for _, tt := range tests {
@@ -177,7 +176,7 @@ func TestEnforcedCondition(t *testing.T) {
 }
 
 func TestEnforcedConditionNamesTheProblem(t *testing.T) {
-	got := EnforcedCondition(EnforcedInput{Config: Config{ControlPlaneManaged: true}, ProjectFound: true,
+	got := EnforcedCondition(EnforcedInput{Config: Config{ControlPlaneManaged: true},
 		Namespaces: []Namespace{{Name: "a", Calculated: true, Labelled: true}, {Name: "b", Problem: "create the quota: forbidden"}}})
 	assert.Equal(t, metav1.ConditionFalse, got.Status)
 	assert.Contains(t, got.Message, "The controller fails to set it up in b: create the quota: forbidden.")
@@ -188,7 +187,7 @@ func TestEnforcedConditionNamesSomeNamespaces(t *testing.T) {
 	for i := range 15 {
 		namespaces = append(namespaces, Namespace{Name: fmt.Sprintf("ns-%02d", i)})
 	}
-	got := EnforcedCondition(EnforcedInput{Config: Config{ControlPlaneManaged: true}, ProjectFound: true, Namespaces: namespaces})
+	got := EnforcedCondition(EnforcedInput{Config: Config{ControlPlaneManaged: true}, Namespaces: namespaces})
 	assert.Contains(t, got.Message, "ns-09")
 	assert.NotContains(t, got.Message, "ns-10")
 	assert.Contains(t, got.Message, "and 5 more namespaces")
@@ -196,8 +195,8 @@ func TestEnforcedConditionNamesSomeNamespaces(t *testing.T) {
 
 func TestWriteDue(t *testing.T) {
 	now := time.Date(2026, 10, 29, 12, 0, 0, 0, time.UTC)
-	base := v1alpha1.ProjectQuotaStatus{Hard: rl("pods", "1000"), Used: rl("pods", "100"), NamespaceCount: 2, ObservedGeneration: 1}
-	with := func(edit func(s *v1alpha1.ProjectQuotaStatus)) *v1alpha1.ProjectQuotaStatus {
+	base := v1alpha1.ProjectQuotaStatusStatus{Hard: rl("pods", "1000"), Used: rl("pods", "100"), NamespaceCount: 2, ObservedGeneration: 1}
+	with := func(edit func(s *v1alpha1.ProjectQuotaStatusStatus)) *v1alpha1.ProjectQuotaStatusStatus {
 		out := base
 		out.Hard, out.Used = base.Hard.DeepCopy(), base.Used.DeepCopy()
 		edit(&out)
@@ -205,25 +204,25 @@ func TestWriteDue(t *testing.T) {
 	}
 	tests := []struct {
 		name      string
-		desired   *v1alpha1.ProjectQuotaStatus
+		desired   *v1alpha1.ProjectQuotaStatusStatus
 		lastWrite time.Time
 		due       bool
 		wait      time.Duration
 	}{
-		{name: "nothing changed", desired: with(func(*v1alpha1.ProjectQuotaStatus) {}), lastWrite: now.Add(-time.Hour)},
-		{name: "a new generation", desired: with(func(s *v1alpha1.ProjectQuotaStatus) { s.ObservedGeneration = 2 }), lastWrite: now, due: true},
-		{name: "a namespace more", desired: with(func(s *v1alpha1.ProjectQuotaStatus) { s.NamespaceCount = 3 }), lastWrite: now, due: true},
-		{name: "a new condition", desired: with(func(s *v1alpha1.ProjectQuotaStatus) {
+		{name: "nothing changed", desired: with(func(*v1alpha1.ProjectQuotaStatusStatus) {}), lastWrite: now.Add(-time.Hour)},
+		{name: "a new generation", desired: with(func(s *v1alpha1.ProjectQuotaStatusStatus) { s.ObservedGeneration = 2 }), lastWrite: now, due: true},
+		{name: "a namespace more", desired: with(func(s *v1alpha1.ProjectQuotaStatusStatus) { s.NamespaceCount = 3 }), lastWrite: now, due: true},
+		{name: "a new condition", desired: with(func(s *v1alpha1.ProjectQuotaStatusStatus) {
 			s.Conditions = []metav1.Condition{{Type: v1alpha1.ProjectQuotaConditionExceeded, Status: metav1.ConditionFalse}}
 		}), lastWrite: now, due: true},
-		{name: "a small move", desired: with(func(s *v1alpha1.ProjectQuotaStatus) { s.Used = rl("pods", "105") }), lastWrite: now.Add(-time.Hour)},
-		{name: "a move of 1% soon after a write", desired: with(func(s *v1alpha1.ProjectQuotaStatus) { s.Used = rl("pods", "110") }), lastWrite: now.Add(-4 * time.Second),
+		{name: "a small move", desired: with(func(s *v1alpha1.ProjectQuotaStatusStatus) { s.Used = rl("pods", "105") }), lastWrite: now.Add(-time.Hour)},
+		{name: "a move of 1% soon after a write", desired: with(func(s *v1alpha1.ProjectQuotaStatusStatus) { s.Used = rl("pods", "110") }), lastWrite: now.Add(-4 * time.Second),
 			wait: 6 * time.Second},
-		{name: "a move of 1% later", desired: with(func(s *v1alpha1.ProjectQuotaStatus) { s.Used = rl("pods", "110") }), lastWrite: now.Add(-StatusWriteInterval), due: true},
+		{name: "a move of 1% later", desired: with(func(s *v1alpha1.ProjectQuotaStatusStatus) { s.Used = rl("pods", "110") }), lastWrite: now.Add(-StatusWriteInterval), due: true},
 	}
 	// above the quota, the message of Exceeded shows the usage; that alone is throttled like the usage
-	over := func(used string) *v1alpha1.ProjectQuotaStatus {
-		return with(func(s *v1alpha1.ProjectQuotaStatus) {
+	over := func(used string) *v1alpha1.ProjectQuotaStatusStatus {
+		return with(func(s *v1alpha1.ProjectQuotaStatusStatus) {
 			s.Hard, s.Used = rl("pods", "100", "secrets", "1"), rl("pods", used, "secrets", "1")
 			s.Conditions = []metav1.Condition{exceededOver(s)}
 		})
@@ -231,13 +230,13 @@ func TestWriteDue(t *testing.T) {
 	overBase := over("150")
 	overTests := []struct {
 		name    string
-		desired *v1alpha1.ProjectQuotaStatus
+		desired *v1alpha1.ProjectQuotaStatusStatus
 		due     bool
 	}{
 		{name: "above the quota, a small move", desired: over("150")},
 		{name: "above the quota, a small move of the usage in the message", desired: over("150.5")},
 		{name: "back within the quota", desired: over("90"), due: true},
-		{name: "another key above the quota", desired: with(func(s *v1alpha1.ProjectQuotaStatus) {
+		{name: "another key above the quota", desired: with(func(s *v1alpha1.ProjectQuotaStatusStatus) {
 			s.Hard, s.Used = rl("pods", "100", "secrets", "1"), rl("pods", "150", "secrets", "1.005")
 			s.Conditions = []metav1.Condition{exceededOver(s)}
 		}), due: true},
@@ -258,7 +257,7 @@ func TestWriteDue(t *testing.T) {
 }
 
 // exceededOver is the Exceeded condition of a status above its quota, with the usage in its message.
-func exceededOver(s *v1alpha1.ProjectQuotaStatus) metav1.Condition {
+func exceededOver(s *v1alpha1.ProjectQuotaStatusStatus) metav1.Condition {
 	message := "The usage of the project is above the quota:"
 	for _, key := range ExceededKeys(s.Hard, s.Used) {
 		used, hard := s.Used[key], s.Hard[key]
@@ -279,9 +278,36 @@ func TestOvershootKeepsItsCause(t *testing.T) {
 
 func TestEnforcedByTheLedger(t *testing.T) {
 	ready := []Namespace{{Name: "a", Calculated: true, Labelled: true}}
-	got := EnforcedCondition(EnforcedInput{Config: Config{ControlPlaneManaged: true, Suspended: true}, ProjectFound: true, Namespaces: ready})
+	got := EnforcedCondition(EnforcedInput{Config: Config{ControlPlaneManaged: true, Suspended: true}, Namespaces: ready})
 	assert.Equal(t, v1alpha1.ProjectQuotaReasonSuspended, got.Reason)
-	got = EnforcedCondition(EnforcedInput{Config: Config{ControlPlaneManaged: true, WebhookMissing: true}, ProjectFound: true, Namespaces: ready})
+	got = EnforcedCondition(EnforcedInput{Config: Config{ControlPlaneManaged: true, WebhookMissing: true}, Namespaces: ready})
 	assert.Equal(t, v1alpha1.ProjectQuotaReasonWebhookMissing, got.Reason)
 	assert.Equal(t, "Suspended", Config{ControlPlaneManaged: true, Suspended: true}.MetricMode())
+}
+
+func TestBelowUsage(t *testing.T) {
+	q := resource.MustParse
+	tests := []struct {
+		name     string
+		hard     corev1.ResourceList
+		previous corev1.ResourceList
+		used     corev1.ResourceList
+		want     []string
+	}{
+		{name: "a limit lowered below the usage", hard: corev1.ResourceList{"pods": q("5")}, previous: corev1.ResourceList{"pods": q("20")}, used: corev1.ResourceList{"pods": q("12")},
+			want: []string{"pods: the limit 5 is below what the project uses, 12; nothing running is evicted, and creating more is denied until the usage is back within the limit"}},
+		{name: "a limit left as it was", hard: corev1.ResourceList{"pods": q("5")}, previous: corev1.ResourceList{"pods": q("5")}, used: corev1.ResourceList{"pods": q("12")}},
+		{name: "a limit above the usage", hard: corev1.ResourceList{"pods": q("15")}, previous: corev1.ResourceList{"pods": q("20")}, used: corev1.ResourceList{"pods": q("12")}},
+		{name: "a new quota below the usage", hard: corev1.ResourceList{"pods": q("5")}, used: corev1.ResourceList{"pods": q("12")},
+			want: []string{"pods: the limit 5 is below what the project uses, 12; nothing running is evicted, and creating more is denied until the usage is back within the limit"}},
+		{name: "an alias is compared under its key", hard: corev1.ResourceList{ProjectNamespacesAlias: q("1")}, used: corev1.ResourceList{ProjectNamespacesKey: q("3")},
+			want: []string{"count/projectnamespaces.deckhouse.io: the limit 1 is below what the project uses, 3; nothing running is evicted, and creating more is denied until the usage is back within the limit"}},
+		{name: "no usage yet", hard: corev1.ResourceList{"pods": q("5")}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, BelowUsage(tt.hard, tt.previous, tt.used))
+		})
+	}
 }

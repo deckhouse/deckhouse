@@ -34,11 +34,11 @@ import (
 )
 
 const (
-	quotaGuardPolicyName       = "d8-multitenancy-manager-quota-guard"
-	quotaPendingPolicyName     = "d8-multitenancy-manager-quota-pending"
-	projectQuotaPolicyName     = "d8-multitenancy-manager-project-quota"
-	projectQuotaStatusPolicy   = "d8-multitenancy-manager-project-quota-status"
-	projectQuotaCRStatusPolicy = "d8-multitenancy-manager-projectquota-status"
+	quotaGuardPolicyName      = "d8-multitenancy-manager-quota-guard"
+	quotaPendingPolicyName    = "d8-multitenancy-manager-quota-pending"
+	projectQuotaPolicyName    = "d8-multitenancy-manager-project-quota"
+	projectQuotaStatusPolicy  = "d8-multitenancy-manager-project-quota-status"
+	projectQuotaStatusWriters = "d8-multitenancy-manager-projectquotastatus-writers"
 
 	resourceQuotaController = "system:serviceaccount:kube-system:resourcequota-controller"
 	replicaSetController    = "system:serviceaccount:kube-system:replicaset-controller"
@@ -96,9 +96,17 @@ var _ = Describe("Module :: multitenancy-manager :: helm template :: project quo
 					Expect(hec.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", name).Exists()).To(Equal(c.managed), name)
 				}
 
-				for _, name := range []string{projectQuotaPolicyName, projectQuotaCRStatusPolicy} {
+				for _, name := range []string{projectQuotaPolicyName, projectQuotaStatusWriters} {
 					Expect(hec.KubernetesGlobalResource("ValidatingAdmissionPolicy", name).Exists()).To(BeTrue(), name)
 					Expect(hec.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", name).Exists()).To(BeTrue(), name)
+				}
+
+				// the garbage collector deletes the object only where its identity is known
+				writers := compileRenderedPolicy(hec.KubernetesGlobalResource("ValidatingAdmissionPolicy", projectQuotaStatusWriters).ToYaml())
+				for _, collector := range []string{"system:serviceaccount:kube-system:generic-garbage-collector", "system:kube-controller-manager"} {
+					allowed, _, err := writers.admit(write(projectQuotaStatuses, "", admission.Delete, "", "team", collector, nil), nil)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(allowed).To(Equal(c.managed), collector)
 				}
 			})
 		})
@@ -179,24 +187,18 @@ var _ = Describe("Module :: multitenancy-manager :: helm template :: project quo
 			Expect(allowed).To(BeTrue(), message)
 		})
 
-		It("serves the keys webhook of ProjectQuota and grants the quotas to IAM managers only", func() {
+		It("has no webhook of its own for ProjectQuotaStatus and grants the quotas to IAM managers only", func() {
 			webhooks := hec.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-multitenancy-manager-webhook")
-			found := false
 			for _, webhook := range webhooks.Field("webhooks").Array() {
-				if webhook.Get("name").String() != "projectquotas.multitenancy-webhook.deckhouse.io" {
-					continue
-				}
-				found = true
-				Expect(webhook.Get("rules.0.resources").String()).To(MatchJSON(`["projectquotas"]`))
-				Expect(webhook.Get("clientConfig.service.path").String()).To(Equal("/validate/v1alpha1/projectquotas"))
-				Expect(webhook.Get("matchConditions.0.name").String()).To(Equal("exclude-system-writers"))
+				Expect(webhook.Get("name").String()).NotTo(ContainSubstring("projectquota"))
 			}
-			Expect(found).To(BeTrue())
 
 			capability := hec.KubernetesGlobalResource("ClusterRole", "d8:system-capability:multitenancy-manager:manage_quotas")
 			Expect(capability.Exists()).To(BeTrue())
 			Expect(capability.Field(`metadata.labels.rbac\.deckhouse\.io/aggregate-to-iam-as`).String()).To(Equal("manager"))
-			Expect(capability.Field("rules.0.resources").String()).To(MatchJSON(`["projectquotas"]`))
+			Expect(capability.Field("rules.0.resources").String()).To(MatchJSON(`["projects/quota"]`))
+			Expect(capability.Field("rules.0.verbs").String()).To(MatchJSON(`["update"]`))
+			Expect(capability.Field("rules").Array()).To(HaveLen(1), "the object itself is the controller's and is not granted")
 		})
 
 		It("refuses the objects a quota counts until the quota is calculated", func() {
@@ -290,14 +292,32 @@ var _ = Describe("Module :: multitenancy-manager :: helm template :: project quo
 				Expect(allowed).To(Equal(tc.allowed), tc.name)
 			}
 
-			crStatus := compileRenderedPolicy(hec.KubernetesGlobalResource("ValidatingAdmissionPolicy", projectQuotaCRStatusPolicy).ToYaml())
-			projectQuotas := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "projectquotas"}
-			allowed, _, err := crStatus.admit(statusUpdate(projectQuotas, "", "team", controllerServiceAccount), nil)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(allowed).To(BeTrue())
-			allowed, _, err = crStatus.admit(statusUpdate(projectQuotas, "", "team", "admin@example.com"), nil)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(allowed).To(BeFalse())
+			writers := compileRenderedPolicy(hec.KubernetesGlobalResource("ValidatingAdmissionPolicy", projectQuotaStatusWriters).ToYaml())
+			collector := "system:serviceaccount:kube-system:generic-garbage-collector"
+			writes := []struct {
+				name    string
+				attrs   admission.Attributes
+				allowed bool
+			}{
+				{name: "the controller creates", attrs: write(projectQuotaStatuses, "", admission.Create, "", "team", controllerServiceAccount, nil), allowed: true},
+				{name: "the controller updates", attrs: write(projectQuotaStatuses, "", admission.Update, "", "team", controllerServiceAccount, nil), allowed: true},
+				{name: "the controller writes the status", attrs: statusUpdate(projectQuotaStatuses, "", "team", controllerServiceAccount), allowed: true},
+				{name: "the controller deletes", attrs: write(projectQuotaStatuses, "", admission.Delete, "", "team", controllerServiceAccount, nil), allowed: true},
+				{name: "the garbage collector deletes", attrs: write(projectQuotaStatuses, "", admission.Delete, "", "team", collector, nil), allowed: true},
+				{name: "the garbage collector updates the finalizers", attrs: write(projectQuotaStatuses, "", admission.Update, "", "team", collector, nil), allowed: true},
+				{name: "the garbage collector does not create", attrs: write(projectQuotaStatuses, "", admission.Create, "", "team", collector, nil)},
+				{name: "a cluster administrator creates", attrs: write(projectQuotaStatuses, "", admission.Create, "", "team", "admin@example.com", nil)},
+				{name: "a cluster administrator updates", attrs: write(projectQuotaStatuses, "", admission.Update, "", "team", "admin@example.com", nil)},
+				{name: "a cluster administrator writes the status", attrs: statusUpdate(projectQuotaStatuses, "", "team", "admin@example.com")},
+				{name: "a cluster administrator deletes", attrs: write(projectQuotaStatuses, "", admission.Delete, "", "team", "admin@example.com", nil)},
+				{name: "system:sudouser is not let through", attrs: write(projectQuotaStatuses, "", admission.Update, "", "team", "system:sudouser", nil)},
+				{name: "Deckhouse", attrs: write(projectQuotaStatuses, "", admission.Create, "", "team", "system:serviceaccount:d8-system:deckhouse", nil)},
+			}
+			for _, tc := range writes {
+				allowed, _, err := writers.admit(tc.attrs, nil)
+				Expect(err).ToNot(HaveOccurred(), tc.name)
+				Expect(allowed).To(Equal(tc.allowed), tc.name)
+			}
 		})
 	})
 })
@@ -356,6 +376,9 @@ func excludes(rule gjson.Result, attrs admission.Attributes) bool {
 	}
 	return in("apiGroups", attrs.GetResource().Group) && in("resources", resource) && in("resourceNames", attrs.GetName())
 }
+
+// projectQuotaStatuses is the resource of ProjectQuotaStatus.
+var projectQuotaStatuses = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "projectquotastatuses"}
 
 func core(resource string) schema.GroupVersionResource {
 	return schema.GroupVersionResource{Version: "v1", Resource: resource}

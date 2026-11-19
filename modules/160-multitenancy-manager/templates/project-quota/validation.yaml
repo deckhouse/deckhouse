@@ -48,7 +48,7 @@ spec:
 # the resource quota controller has not calculated the quota at all (status.hard is empty). A key added
 # to a quota that is calculated already is not held: the quota plugin of the API server does not count
 # it until the controller has calculated it, and holding every create of the project until then would
-# cost more than the gap; the Enforced condition of the ProjectQuota says KeyRollout meanwhile. A
+# cost more than the gap; the Enforced condition of the ProjectQuotaStatus says KeyRollout meanwhile. A
 # missing quota refuses every create but the objects the match constraints leave out, the quota among
 # them (parameterNotFoundAction: Deny: the API server looks the parameter up before it evaluates the
 # match conditions, so the writers they leave out are refused too); the controller labels the namespace
@@ -125,7 +125,7 @@ spec:
         operations:  ["CREATE", "UPDATE", "DELETE"]
         resources:   ["resourcequotas"]
   # The namespace controller and the garbage collector of kube-controller-manager delete the quota with
-  # its namespace or its ProjectQuota, as service accounts of kube-system or, where
+  # its namespace or its ProjectQuotaStatus, as service accounts of kube-system or, where
   # kube-controller-manager does not run a service account for each of its controllers, as
   # system:kube-controller-manager.
   matchConditions:
@@ -134,7 +134,7 @@ spec:
   validations:
     - expression: 'request.name != "d8-project-quota"'
       reason: Forbidden
-      message: 'd8-project-quota is the quota of the project, which the multitenancy-manager controller keeps in every namespace of the project. Change the limits in the ProjectQuota of the project or in spec.quota of the Project.'
+      message: 'd8-project-quota is the quota of the project, which the multitenancy-manager controller keeps in every namespace of the project. Change the limits in the ProjectQuotaStatus of the project or in spec.quota of the Project.'
     - expression: 'request.operation == "DELETE" || !has(object.spec.hard) || !object.spec.hard.exists(k, k == "resourcequotas" || k == "count/resourcequotas")'
       reason: Forbidden
       message: 'A ResourceQuota of a project namespace cannot limit resourcequotas: the d8-project-quota ResourceQuota of the project takes one in every namespace.'
@@ -192,11 +192,15 @@ spec:
   validationActions: [Deny, Audit]
 {{- end }}
 ---
-# The status of a ProjectQuota is the controller's.
+# A ProjectQuotaStatus is the controller's alone, its status included: the controller makes it from
+# Project.spec.quota, which is the one place the quota of a project is set, keeps it and deletes it with
+# the quota or the project. Everyone else reads it, cluster administrators too. The garbage collector
+# deletes it with its project only where Deckhouse manages the control plane and its identity is
+# known; elsewhere the controller deletes it itself. Disabling the module takes this policy away with it.
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
 kind: ValidatingAdmissionPolicy
 metadata:
-  name: {{ $policyName }}-projectquota-status
+  name: {{ $policyName }}-projectquotastatus-writers
   {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
 spec:
   failurePolicy: Fail
@@ -204,20 +208,24 @@ spec:
     resourceRules:
       - apiGroups:   ["deckhouse.io"]
         apiVersions: ["*"]
-        operations:  ["UPDATE"]
-        resources:   ["projectquotas/status"]
+        operations:  ["CREATE", "UPDATE", "DELETE"]
+        resources:   ["projectquotastatuses", "projectquotastatuses/status"]
   validations:
-    - expression: 'request.userInfo.username in ["{{ $controller }}", "system:sudouser"]'
+{{- if eq (include "multitenancy_manager_control_plane_managed" .) "true" }}
+    - expression: 'request.userInfo.username == "{{ $controller }}" || (request.operation != "CREATE" && request.userInfo.username in ["system:serviceaccount:kube-system:generic-garbage-collector", "system:kube-controller-manager"])'
+{{- else }}
+    - expression: 'request.userInfo.username == "{{ $controller }}"'
+{{- end }}
       reason: Forbidden
-      message: 'The status of a ProjectQuota is written by the multitenancy-manager controller only.'
+      message: 'A ProjectQuotaStatus is written by the multitenancy-manager controller only. Set the quota of a project in spec.quota of the Project.'
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
 metadata:
-  name: {{ $policyName }}-projectquota-status
+  name: {{ $policyName }}-projectquotastatus-writers
   {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
 spec:
-  policyName: {{ $policyName }}-projectquota-status
+  policyName: {{ $policyName }}-projectquotastatus-writers
   validationActions: [Deny, Audit]
 ---
 # The route to the quota ledger and its lease are written by the ledger alone: its leader publishes
