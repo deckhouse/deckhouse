@@ -921,7 +921,7 @@ DP поддерживает [проверку подписей образов](.
              example-operation-policy/enabled: "true"
      policies:
        allowedRepos:
-         - registry.private.ru
+         - registry.private.ru/labs/application/
    ```
 
     Название лейбла, указанного в `match.namespaceSelector.labelSelector.matchLabels`, может быть любым. Лейбл в селекторе политики должен совпадать с лейблом соответствующего неймспейса.
