@@ -14,8 +14,7 @@
 # limitations under the License.
 
 # Run golangci-lint only in Go modules touched by the diff between $DIFF_BASE
-# and HEAD. Nested modules are handled via longest-prefix matching so a change
-# under dhctl/foo/ goes to the dhctl/foo module, not the parent dhctl module.
+# and HEAD. The modules are found by changed-go-modules.sh.
 #
 # Inputs (env vars):
 #   DIFF_BASE          — git ref/SHA to diff against. Default: HEAD~1.
@@ -40,29 +39,10 @@ if ! command -v "$GOLANGCI_LINT_BIN" >/dev/null 2>&1; then
   exit 1
 fi
 
-# All module directories, repo-relative, sorted by descending path length so
-# the longest prefix wins for nested modules.
-mapfile -t MODULE_DIRS < <(
-  find . -name go.mod -type f \
-    -not -path '*/.git/*' \
-    -not -path '*/node_modules/*' \
-    -not -path './tools/*' \
-    -exec dirname {} \; \
-    | sed -e 's|^\./||' \
-    | awk '{ print length, $0 }' \
-    | sort -k1,1nr \
-    | cut -d' ' -f2-
-)
-
-if (( ${#MODULE_DIRS[@]} == 0 )); then
-  echo "No go.mod files found in repo."
-  exit 0
-fi
-
 # Files we care about: Go sources, module manifests, and per-module lint
 # configs. A README change under dhctl/ should not trigger dhctl's linter.
-mapfile -t CHANGED < <(
-  git diff --name-only "$DIFF_BASE"...HEAD -- \
+mapfile -t AFFECTED < <(
+  DIFF_BASE="$DIFF_BASE" bash "$(dirname "${BASH_SOURCE[0]}")/changed-go-modules.sh" \
     '*.go' \
     'go.mod' 'go.sum' \
     '**/go.mod' '**/go.sum' \
@@ -70,38 +50,16 @@ mapfile -t CHANGED < <(
     '**/.golangci.yaml' '**/.golangci.yml'
 )
 
-if (( ${#CHANGED[@]} == 0 )); then
-  echo "No Go-relevant files changed between $DIFF_BASE and HEAD."
-  exit 0
-fi
-
-# Match each changed file to its enclosing module (longest prefix wins).
-declare -A AFFECTED=()
-for file in "${CHANGED[@]}"; do
-  for mod in "${MODULE_DIRS[@]}"; do
-    if [[ "$mod" == "." ]]; then
-      # Root module — matches anything not already claimed by a deeper module
-      # (loop iterates deepest-first, so a deeper match would have hit first).
-      AFFECTED["."]=1
-      break
-    fi
-    if [[ "$file" == "$mod/"* ]]; then
-      AFFECTED["$mod"]=1
-      break
-    fi
-  done
-done
-
 if (( ${#AFFECTED[@]} == 0 )); then
-  echo "Changed files don't map to any Go module."
+  echo "No Go modules to lint."
   exit 0
 fi
 
 echo "Affected Go modules (diff base: $DIFF_BASE):"
-for mod in "${!AFFECTED[@]}"; do echo "  - $mod"; done
+for mod in "${AFFECTED[@]}"; do echo "  - $mod"; done
 
 FAILED=0
-for mod in "${!AFFECTED[@]}"; do
+for mod in "${AFFECTED[@]}"; do
   echo ""
   echo "============================================================"
   echo "Running golangci-lint in ./${mod}"

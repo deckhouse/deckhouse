@@ -243,6 +243,11 @@ lint-changed: ## Lint only Go modules touched by diff against DIFF_BASE (default
   ##~ run `make golangci-lint` first if you don't have it locally.
 	@bash tools/lint-changed.sh
 
+.PHONY: test-changed
+test-changed: ## Run go test only in nested Go modules touched by diff against DIFF_BASE (default: HEAD~1).
+  ##~ Skips modules that have their own CI job; see SKIP_MODULES in tools/test-changed.sh.
+	@bash tools/test-changed.sh
+
 .PHONY: lint-fix-all
 lint-fix-all: golangci-lint ## Run golangci-lint run --fix in all directories with go.mod
 	$(call iterateAllGoModules,Running golangci-lint --fix in,GOFLAGS="-buildvcs=false" golangci-lint run --fix --max-issues-per-linter 100 --max-same-issues 100)
