@@ -1,5 +1,7 @@
+{{- /* basic-auth-proxy is rendered only with its client certificate. The hook that issues it does not */}}
+{{- /* stop the module when the first issue fails, it reports the failure and retries instead. */}}
 {{- define "is_basic_auth_enabled" }}
-  {{- if .Values.userAuthn.internal.publishAPI.enabled }}
+  {{- if and .Values.userAuthn.internal.publishAPI.enabled .Values.userAuthn.internal.basicAuthProxyCert .Values.userAuthn.internal.basicAuthProxyKey }}
     {{- range $provider := .Values.userAuthn.internal.providers }}
       {{- if eq $provider.type "Crowd" }}
         {{- if $provider.crowd.enableBasicAuth }}

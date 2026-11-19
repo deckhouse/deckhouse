@@ -414,6 +414,41 @@ var _ = Describe("Module :: user-authn :: helm template :: basic auth proxy", fu
 		})
 	})
 
+	// The hook does not stop the module when it cannot issue the first certificate: until it does,
+	// basic authentication stays off and Kubernetes API requests go straight to the API server.
+	Context("With an LDAP provider with basic auth before the certificate is issued", func() {
+		BeforeEach(func() {
+			hec.ValuesSetFromYaml("global.discovery.apiVersions", `["deckhouse.io/v1alpha1/SecurityPolicyException"]`)
+			hec.ValuesSetFromYaml("userAuthn.internal.providers", ldapProvider)
+			hec.ValuesSet("userAuthn.internal.basicAuthProxyCert", "")
+			hec.ValuesSet("userAuthn.internal.basicAuthProxyKey", "")
+			hec.HelmRender()
+		})
+
+		It("Should leave out basic-auth-proxy and keep the exception for the Job that issues the certificate", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			Expect(hec.KubernetesResource("Deployment", "d8-user-authn", "basic-auth-proxy").Exists()).To(BeFalse())
+			Expect(hec.KubernetesResource("Secret", "d8-user-authn", "basic-auth-cert").Exists()).To(BeFalse())
+			Expect(hec.KubernetesResource("Role", "d8-user-authn", "basic-auth-proxy").Exists()).To(BeFalse())
+			Expect(hec.KubernetesResource("ConfigMap", "d8-user-authn", "control-plane-configurator").Field("data.enableBasicAuth").Exists()).To(BeFalse())
+			Expect(hec.KubernetesResource("SecurityPolicyException", "d8-system", "user-authn-proxy-cert-generate-job").Exists()).To(BeTrue())
+		})
+	})
+
+	Context("With an LDAP provider with basic auth and its certificate", func() {
+		BeforeEach(func() {
+			hec.ValuesSetFromYaml("userAuthn.internal.providers", ldapProvider)
+			hec.HelmRender()
+		})
+
+		It("Should render basic-auth-proxy and tell the control plane about it", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			Expect(hec.KubernetesResource("Deployment", "d8-user-authn", "basic-auth-proxy").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("Secret", "d8-user-authn", "basic-auth-cert").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("ConfigMap", "d8-user-authn", "control-plane-configurator").Field("data.enableBasicAuth").String()).To(Equal("true"))
+		})
+	})
+
 	// The hook creates the Job before Helm runs, so the exception must already exist
 	// when basic authentication is turned on.
 	speRenderedCases := []struct {

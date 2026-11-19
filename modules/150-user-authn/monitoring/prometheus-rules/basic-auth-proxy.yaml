@@ -1,0 +1,74 @@
+- name: d8.user-authn.basic-auth-proxy
+  rules:
+  - alert: D8UserAuthnBasicAuthProxyCertRenewalFailed
+    expr: max by (state) (d8_user_authn_basic_auth_proxy_cert_renewal_failed{state="expiring"}) == 1
+    for: 2h
+    labels:
+      severity_level: "5"
+      tier: cluster
+      d8_module: user-authn
+      d8_component: basic-auth-proxy
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Deckhouse cannot renew the basic-auth-proxy client certificate.
+      description: |-
+        Deckhouse has failed to renew the client certificate used by basic-auth-proxy to forward Kubernetes API requests with basic authentication (`enableBasicAuth` in a DexProvider). The proxy continues using its current certificate. When this certificate expires, the API server rejects forwarded requests.
+
+        After a failed attempt, the running Deckhouse pod waits at least 50 minutes before retrying while the current certificate remains valid, or at least 5 minutes if it is missing or expired. The hook checks every 5 minutes and on module runs. The certificate is signed by a `proxy-cert-generate-job-*` Job in the `d8-system` namespace on a control plane node. Deckhouse keeps a failed Job for inspection and removes it during a later attempt or through the Job TTL. Inspect the Job status, warning events, and Deckhouse log to identify the cause.
+
+        ```bash
+        d8 k -n d8-system get jobs -l name=proxy-cert-generate-job
+        d8 k -n d8-system get events --field-selector type=Warning | grep proxy-cert-generate-job
+        d8 k -n d8-system logs deploy/deckhouse | grep 'basic-auth-proxy client certificate'
+        ```
+
+        The alert stops after a renewed certificate is issued.
+
+  - alert: D8UserAuthnBasicAuthProxyCertMissing
+    expr: max by (state) (d8_user_authn_basic_auth_proxy_cert_renewal_failed{state="missing"}) == 1
+    labels:
+      severity_level: "5"
+      tier: cluster
+      d8_module: user-authn
+      d8_component: basic-auth-proxy
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: The basic-auth-proxy client certificate is missing.
+      description: |-
+        Deckhouse has failed to issue a client certificate for basic-auth-proxy. basic-auth-proxy is not deployed, and the published Kubernetes API cannot accept basic authentication (`enableBasicAuth` in a DexProvider) until a certificate is issued.
+
+        After a failed attempt, the running Deckhouse pod waits at least 50 minutes before retrying while the current certificate remains valid, or at least 5 minutes if it is missing or expired. The hook checks every 5 minutes and on module runs. The certificate is signed by a `proxy-cert-generate-job-*` Job in the `d8-system` namespace on a control plane node. Deckhouse keeps a failed Job for inspection and removes it during a later attempt or through the Job TTL. Inspect the Job status, warning events, and Deckhouse log to identify the cause.
+
+        ```bash
+        d8 k -n d8-system get jobs -l name=proxy-cert-generate-job
+        d8 k -n d8-system get events --field-selector type=Warning | grep proxy-cert-generate-job
+        d8 k -n d8-system logs deploy/deckhouse | grep 'basic-auth-proxy client certificate'
+        ```
+
+        The alert stops after a client certificate is issued.
+
+  - alert: D8UserAuthnBasicAuthProxyCertExpired
+    expr: max by (state) (d8_user_authn_basic_auth_proxy_cert_renewal_failed{state="expired"}) == 1
+    labels:
+      severity_level: "5"
+      tier: cluster
+      d8_module: user-authn
+      d8_component: basic-auth-proxy
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: The basic-auth-proxy client certificate has expired.
+      description: |-
+        The client certificate used by basic-auth-proxy has expired. The API server rejects Kubernetes API requests forwarded by the proxy with basic authentication (`enableBasicAuth` in a DexProvider). Deckhouse has failed to renew this certificate.
+
+        After a failed attempt, the running Deckhouse pod waits at least 50 minutes before retrying while the current certificate remains valid, or at least 5 minutes if it is missing or expired. The hook checks every 5 minutes and on module runs. The certificate is signed by a `proxy-cert-generate-job-*` Job in the `d8-system` namespace on a control plane node. Deckhouse keeps a failed Job for inspection and removes it during a later attempt or through the Job TTL. Inspect the Job status, warning events, and Deckhouse log to identify the cause.
+
+        ```bash
+        d8 k -n d8-system get jobs -l name=proxy-cert-generate-job
+        d8 k -n d8-system get events --field-selector type=Warning | grep proxy-cert-generate-job
+        d8 k -n d8-system logs deploy/deckhouse | grep 'basic-auth-proxy client certificate'
+        ```
+
+        The alert stops after a valid replacement certificate is issued.
