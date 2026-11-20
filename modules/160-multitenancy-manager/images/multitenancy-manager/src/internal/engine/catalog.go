@@ -37,7 +37,7 @@ const (
 	// MaxCatalogFields is the number of catalogFields entries that are projected; the rest is ignored.
 	MaxCatalogFields = 10
 	// MaxCatalogFieldValueBytes is the largest JSON serialization of a value that is projected.
-	MaxCatalogFieldValueBytes = 512
+	MaxCatalogFieldValueBytes = 1024
 )
 
 // The schema has no way to bound the catalog as a whole; this limit exists in code only.

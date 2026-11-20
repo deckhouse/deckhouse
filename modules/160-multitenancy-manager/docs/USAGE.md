@@ -1884,7 +1884,7 @@ Rules:
 - `name` is the key in `fields`, in lowerCamelCase; `path` is an RFC 9535 JSONPath singular query that selects one value: member names and array indexes only, without wildcards (`*`), descendant segments (`..`), slices or filters.
 - Paths that read `metadata.managedFields` or the `kubectl.kubernetes.io/last-applied-configuration` annotation, or a parent that contains them (for example, `$.metadata`), are not allowed: these fields hold a copy of the whole resource.
 - At most 10 fields can be listed.
-- A value longer than 512 bytes in JSON serialization is not shown; a field whose value is missing in the resource is not shown either.
+- A value longer than 1024 bytes in JSON serialization is not shown; a field whose value is missing in the resource is not shown either.
 - If the `status.available` list of an AvailableClusterResource with the fields of all resources would take more than 512 KiB in JSON serialization, no fields are shown in it; the names and the default stay.
 - `catalogFields` works only for definitions with `grantedResource`, which must be cluster-scoped.
 - The values are visible to all users of every project the resource is available to. List only non-secret data.

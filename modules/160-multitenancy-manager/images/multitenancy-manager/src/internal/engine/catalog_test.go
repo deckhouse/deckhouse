@@ -74,8 +74,8 @@ func TestProjectCatalogFields_Values(t *testing.T) {
 		"ratio":                1.5,
 		"spec":                 map[string]any{"zone": "a", "tags": []any{"x", "y"}},
 		"empty":                nil,
-		"exact":                strings.Repeat("a", MaxCatalogFieldValueBytes-2), // 512 bytes with the quotes
-		"over":                 strings.Repeat("a", MaxCatalogFieldValueBytes-1), // 513 bytes
+		"exact":                strings.Repeat("a", MaxCatalogFieldValueBytes-2), // 1024 bytes with the quotes
+		"over":                 strings.Repeat("a", MaxCatalogFieldValueBytes-1), // 1025 bytes
 	}
 	got := projected([]v1alpha1.CatalogField{
 		field("provisioner", "$.provisioner"),
@@ -344,9 +344,9 @@ func TestCatalogLimitsMatchTheCRDs(t *testing.T) {
 				t.Errorf("%s: the description of %s does not mention %d", c.file, c.field, n)
 			}
 		}
-		// Both fields state the value limit and the budget. Their numbers are equal (512), so each is
-		// looked up with its unit, bytes and KiB in Russian, spelled with escapes to keep this file free
-		// of Cyrillic.
+		// Both fields state the value limit and the budget. Each is looked up with its unit, bytes and
+		// KiB in Russian, so that one number cannot stand for the other; the units are spelled with
+		// escapes to keep this file free of Cyrillic.
 		if b := strconv.Itoa(MaxCatalogFieldValueBytes) + " \u0431\u0430\u0439\u0442"; !strings.Contains(text, b) {
 			t.Errorf("%s: the description of %s does not mention %d bytes", c.file, c.field, MaxCatalogFieldValueBytes)
 		}

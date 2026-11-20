@@ -85,7 +85,7 @@ spec:
                   - Applies only to definitions with `grantedResource`, which must be cluster-scoped. For values that are not represented by Kubernetes objects, the parameter is not allowed.
                   - At most 10 fields can be listed.
                   - A field whose value is missing in the resource is not shown.
-                  - A value longer than 512 bytes in JSON serialization is not shown.
+                  - A value longer than 1024 bytes in JSON serialization is not shown.
                   - If `status.available` of one AvailableClusterResource with the fields of all resources would take more than 512 KiB in JSON serialization, no fields are shown in it.
 
                   The paths are checked when the object is created or updated, and an invalid entry is refused. The result for the stored object is shown in the `CatalogFieldsValid` condition. Values left out for their size are reported by `CatalogFieldsSkipped` warning events on the GrantableClusterResourceDefinition.

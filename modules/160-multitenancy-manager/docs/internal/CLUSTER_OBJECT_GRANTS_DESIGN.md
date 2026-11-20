@@ -344,16 +344,21 @@ Rules (the projection lives in `internal/engine/catalog.go`):
   segments, so `$["metadata"]["managedFields"]` is caught too.
 - At most 10 fields (`maxItems` in the schema, and the projection takes the first 10 of an object that
   bypassed it; a duplicate name keeps its first entry).
-- A value longer than 512 bytes in its JSON serialization, an absent value and `null` are left out.
+- A value longer than 1024 bytes in its JSON serialization, an absent value and `null` are left out.
 - One catalog (one `AvailableClusterResource`) with its fields has a budget of 512 KiB
   (`engine.MaxCatalogFieldsBytes`, checked by `engine.CatalogSize`: the length of the JSON
   serialization of the whole `status.available` list, entries with their names, `default` flags and
   fields; exact for `status.available`, the rest of the object is not counted. The entries are
   counted one at a time and the count stops at the first one past the budget). A catalog over it
   carries no `fields` in any entry; names and default stay. All or nothing, so the result depends
-  only on the catalog, never on the order the objects are read in. Without the budget, hundreds of
-  objects × 10 fields × 512 bytes would push the object past the ~1.5 MiB etcd limit: the status
+  only on the catalog, never on the order the objects are read in. Without the budget, about 150
+  objects × 10 fields × 1024 bytes would push the object past the ~1.5 MiB etcd limit: the status
   write would fail and the catalog would freeze with every name in it.
+- The budget did not grow when the value limit went from 512 to 1024 bytes. A catalog is written to
+  every project namespace, so its size is multiplied by the number of namespaces, both in etcd and in
+  the API server watch cache: 512 KiB × 1000 namespaces is already 500 MiB. With every value at the
+  limit the budget holds about 50 objects; real definitions show fewer and shorter values (the fields
+  of a managed-service class such as `KafkaClass` take about 1.1 KB) and fit several hundred.
 - Near the budget a catalog can flap: a value that changes length moves the catalog across the
   threshold, and it switches between "with fields" and "without" on consecutive passes, each switch a
   status write in every project namespace the catalog is rendered in. There is no hysteresis; a
@@ -431,7 +436,7 @@ What is checked where:
   means "not reconciled yet". Both use `engine.DefinitionProblems`. An invalid entry that got stored
   anyway is still skipped during projection and breaks nothing else.
 - **The values** depend on the objects and on the project, so a condition on the cluster-wide
-  definition cannot carry them. A value over 512 bytes and a catalog over the budget are reported by a
+  definition cannot carry them. A value over 1024 bytes and a catalog over the budget are reported by a
   `Warning` event `CatalogFieldsSkipped` on the definition, naming the namespace, the catalog and the
   skipped `<object>/<field>` pairs (the first five, then "and N more"). The event is emitted on every
   pass that skips, so it does not expire while the skip lasts; the recorder's spam filter bounds it to

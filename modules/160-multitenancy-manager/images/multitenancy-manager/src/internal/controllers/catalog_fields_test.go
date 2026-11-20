@@ -430,7 +430,7 @@ func TestReconcile_CatalogFieldOversizedValueIsReported(t *testing.T) {
 	def := storageClassDefinition(v1alpha1.AvailabilityAll)
 	def.Spec.CatalogFields = []v1alpha1.CatalogField{{Name: "provisioner", Path: "$.provisioner"}, {Name: "big", Path: "$.parameters.big"}}
 	big := &storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "big"}, Provisioner: "x",
-		Parameters: map[string]string{"big": strings.Repeat("v", 600)}}
+		Parameters: map[string]string{"big": strings.Repeat("v", engine.MaxCatalogFieldValueBytes)}}
 	small := &storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "small"}, Provisioner: "y",
 		Parameters: map[string]string{"big": "fits"}}
 	ar, events := reconcileFieldsCatalog(t, def, big, small)
@@ -442,7 +442,7 @@ func TestReconcile_CatalogFieldOversizedValueIsReported(t *testing.T) {
 		t.Fatalf("small: %+v", ar.Status.Available[1])
 	}
 	if len(events) != 1 || !strings.HasPrefix(events[0], "Warning "+ReasonCatalogFieldsSkipped+" ") ||
-		!strings.Contains(events[0], "values longer than 512 bytes are left out, 1 in total: big/big.") {
+		!strings.Contains(events[0], fmt.Sprintf("values longer than %d bytes are left out, 1 in total: big/big.", engine.MaxCatalogFieldValueBytes)) {
 		t.Fatalf("events = %v", events)
 	}
 }
@@ -453,7 +453,7 @@ func TestReconcile_SameSkipsLogOnce(t *testing.T) {
 	def := storageClassDefinition(v1alpha1.AvailabilityAll)
 	def.Spec.CatalogFields = []v1alpha1.CatalogField{{Name: "big", Path: "$.parameters.big"}}
 	big := &storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "big"}, Provisioner: "x",
-		Parameters: map[string]string{"big": strings.Repeat("v", 600)}}
+		Parameters: map[string]string{"big": strings.Repeat("v", engine.MaxCatalogFieldValueBytes)}}
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "team-a", Labels: map[string]string{naming.ProjectLabel: "team-a"}}}
 	var infos int
 	ctx := ctrllog.IntoContext(context.Background(), funcr.New(func(_, args string) {
@@ -482,7 +482,7 @@ func TestReconcile_DeletedDefinitionForgetsSkips(t *testing.T) {
 	def := storageClassDefinition(v1alpha1.AvailabilityAll)
 	def.Spec.CatalogFields = []v1alpha1.CatalogField{{Name: "big", Path: "$.parameters.big"}}
 	big := &storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "big"}, Provisioner: "x",
-		Parameters: map[string]string{"big": strings.Repeat("v", 600)}}
+		Parameters: map[string]string{"big": strings.Repeat("v", engine.MaxCatalogFieldValueBytes)}}
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "team-a", Labels: map[string]string{naming.ProjectLabel: "team-a"}}}
 	var infos int
 	ctx := ctrllog.IntoContext(context.Background(), funcr.New(func(_, args string) {
