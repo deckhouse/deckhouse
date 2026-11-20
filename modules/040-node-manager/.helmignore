@@ -6,16 +6,43 @@ template_tests
 webhooks
 enabled
 README.md
+bashible_tests
+e2e
+monitoring_tests
+openapi
+requirements
+hack
+oss.yaml
+module.yaml
+.dmtlint.yaml
+Taskfile.yaml
 
 candi/cloud-providers/*/layouts
 candi/cloud-providers/*/openapi
 candi/cloud-providers/*/terraform-modules
 candi/cloud-providers/*/docs
 candi/cloud-providers/*/tools
+candi/cloud-providers/*/bashible/common-steps
+candi/cloud-providers/*/terraform_versions.yml
+candi/cloud-providers/*/cni-bootstrap.yml
 
 candi/bashible/docs
 candi/bashible/openapi.yaml
+candi/bashible/common-steps
+candi/bashible/preflight
+candi/bashible/bashible.sh.tpl
+candi/bashible/check_python.sh.tpl
+candi/bashible/cleanup_static_node.sh.tpl
+candi/bashible/bootstrap/02-bootstrap-bashible.sh.tpl
 
+candi/control-plane
 candi/control-plane-kubeadm
+candi/docs
 candi/openapi
+candi/tools
+candi/base_images.yml
+candi/alt_base_images.yml
+candi/feature_gates_map.yml
+candi/image_versions.yml
+candi/terraform_versions.yml
 candi/.gitignore

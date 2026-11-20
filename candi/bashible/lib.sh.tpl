@@ -276,8 +276,8 @@ bb-minget-install() {
 }
 {{- end }}
 bb-rpp-get-binary-ready() { "$1" version &>/dev/null; }
-# Without -f and --fail an error page is written out as if it were the manifest, and a proxy of an
-# earlier release reads as a substituted one.
+{{- /* Without -f and --fail an error page is written out as if it were the manifest, and a proxy of an
+earlier release reads as a substituted one. */}}
 bb-rpp-get-fetch() {
   if command -v d8-curl >/dev/null 2>&1; then
     d8-curl -sS -f -x "" --connect-timeout 10 --max-time 300 "http://$1"
@@ -290,9 +290,9 @@ bb-rpp-get-sha256() {
   sum="$(sha256sum "$1")" || return 1
   echo "sha256:${sum%% *}"
 }
-# bb-rpp-get-download <url> <digest> <dir> puts a verified rpp-get into <dir> or prints why not:
-# the manifest has to hash to the digest from the bundle and list the hash of the layer. A refusal
-# names how many bytes arrived, to compare with the size in the proxy log.
+{{- /* bb-rpp-get-download <url> <digest> <dir> puts a verified rpp-get into <dir> or prints why not:
+the manifest has to hash to the digest from the bundle and list the hash of the layer. A refusal
+names how many bytes arrived, to compare with the size in the proxy log. */}}
 bb-rpp-get-download() {
   local url="$1" digest="$2" dir="$3" layer_digest
   bb-rpp-get-fetch "${url}/manifest?digest=${digest}" > "$dir/manifest" || { echo "manifest download failed"; return 1; }
@@ -508,7 +508,9 @@ fetch_bootstrap() {
 get_phase2() {
   local token="$(<${BOOTSTRAP_DIR}/bootstrap-token)"
   local out="${TMPDIR}/phase2-response.json"
-  local path="/apis/bashible.deckhouse.io/v1alpha1/bootstrap/{{ .nodeGroup.name }}"
+  {{- $ngName := .nodeGroup.name | default "" -}}
+  {{- $ngPad := mod (sub 3 (mod (len $ngName) 3)) 3 | int }}
+  local{{ repeat $ngPad " " }} path="/apis/bashible.deckhouse.io/v1alpha1/bootstrap/{{ $ngName }}"
   local count_401=0
   local rc server url
   while :; do

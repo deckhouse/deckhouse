@@ -20,9 +20,10 @@ set -Eeo pipefail
 {{- $deckhouse := "/deckhouse/candi/bashible/lib.sh.tpl" -}}
 {{- $lib := .Files.Get $deckhouse | default (.Files.Get $candi) -}}
 {{- $ctx := . -}}
-{{- tpl (printf `%s
+{{- $rendered := tpl (printf `%s
 {{ template "bb-minget" $ }}
-{{ template "bb-discover-node-name" $ }}` $lib) $ctx }}
+{{ template "bb-discover-node-name" $ }}` $lib) $ctx -}}
+{{- regexReplaceAll "\n{2,}" (regexReplaceAll "(?m)^[ \t]+" $rendered "") "\n" | trim | nindent 0 }}
 export PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID="{{ .clusterUUID | default "" }}"
 export PACKAGES_PROXY_BOOTSTRAP_ADDRESSES="{{ .clusterMasterRPPBootstrapAddresses | join " " }}"
 {{ if gt (len .clusterMasterKubeAPIEndpoints) 0 }}
