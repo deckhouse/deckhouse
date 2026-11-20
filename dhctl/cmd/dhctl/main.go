@@ -257,7 +257,11 @@ func initGlobalVars() {
 	if val, ok := os.LookupEnv("DHCTL_SKIP_LOOKUP_EXEC_PATH"); !ok || val != "yes" {
 		// get current location of called binary
 		var err error
-		dhctlPath, err = os.Readlink(fmt.Sprintf("/proc/%d/exe", os.Getpid()))
+		dhctlPath, err = os.Executable()
+		if err != nil {
+			panic(err)
+		}
+		dhctlPath, err = filepath.EvalSymlinks(dhctlPath)
 		if err != nil {
 			panic(err)
 		}

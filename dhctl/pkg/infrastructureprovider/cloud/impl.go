@@ -22,6 +22,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -569,7 +570,7 @@ func (p *Provider) downloadInfraUtil(ctx context.Context, rootDir, errPrefix str
 }
 
 func (p *Provider) arch() string {
-	return "linux_amd64"
+	return runtime.GOOS + "_" + runtime.GOARCH
 }
 
 func (p *Provider) AddAfterCleanupFunc(group string, f infrastructure.AfterCleanupProviderFunc) {

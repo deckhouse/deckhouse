@@ -34,7 +34,7 @@ image: dhctl
 image: dhctl-base
 {{- end }}
 final: false
-from: base-for-go
+from: {{ index $.Images "builder/golang" }}
 import:
 - from: dhctl-src-artifact
   add: /src
