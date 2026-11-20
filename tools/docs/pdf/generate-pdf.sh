@@ -36,8 +36,8 @@ export WERF_DIR="${REPO_ROOT}/docs/documentation"
 export WERF_ENV="${WERF_ENV:-EE}"
 export WERF_BINARY=werf
 
-if [ -n "${GITHUB_ACTIONS:-}" ]; then
-  type werf && source $(werf ci-env github --verbose --as-file)
+if [ -n "${GITLAB_CI:-}" ]; then
+  type werf && source "$(werf ci-env gitlab --verbose --as-file)"
 else
   export WERF_REPO="localhost:4999/docs"
   export WERF_BINARY=bin/werf

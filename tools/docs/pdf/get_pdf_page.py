@@ -1486,7 +1486,7 @@ if __name__ == "__main__":
         for chunk_path in chunk_paths:
             page_args.extend(["page", chunk_path])
 
-        in_ci = bool(os.environ.get("CI") or os.environ.get("GITHUB_ACTIONS"))
+        in_ci = bool(os.environ.get("CI"))
         wkhtmltopdf_cmd = [
             "wkhtmltopdf",
             "--page-size", "A4",
