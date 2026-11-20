@@ -22,19 +22,20 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" (printf "%s-controller" .Chart.Name))) | nindent 2 }}
 rules:
   # The controller owns RegistryStorage and RegistryNode outright, and writes the
-  # status of RegistryConfig and RegistryUpstream, whose specs belong to other
-  # writers: the module (or an administrator during an incident) for
-  # RegistryConfig, and any module, administrator or user for RegistryUpstream.
+  # status of RegistryConfig, RegistryUpstream and RegistryMirror, whose specs belong to
+  # other writers: the module (or an administrator during an incident) for
+  # RegistryConfig, any module, administrator or user for RegistryUpstream, and an
+  # administrator for RegistryMirror.
   - apiGroups: ["deckhouse.io"]
-    resources: ["registryconfigs", "registryupstreams"]
+    resources: ["registryconfigs", "registryupstreams", "registrymirrors"]
     verbs: ["get", "list", "watch"]
-  # Authentication fields in both resources are marked as sensitive data and are required to
+  # Authentication fields in these resources are marked as sensitive data and are required to
   # configure the registry storage and node pull routes.
   - apiGroups: ["deckhouse.io"]
-    resources: ["registryconfigs/sensitive", "registryupstreams/sensitive"]
+    resources: ["registryconfigs/sensitive", "registryupstreams/sensitive", "registrymirrors/sensitive"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["deckhouse.io"]
-    resources: ["registryconfigs/status", "registryupstreams/status"]
+    resources: ["registryconfigs/status", "registryupstreams/status", "registrymirrors/status"]
     verbs: ["get", "update", "patch"]
   - apiGroups: ["deckhouse.io"]
     resources: ["registrystorages", "registrynodes"]

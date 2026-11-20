@@ -48,6 +48,10 @@ type registryStub struct {
 	// username and password it accepts.
 	username, password string
 
+	// public has the token service issue a token to anyone, as a registry does for a public
+	// repository.
+	public bool
+
 	// status of the manifest response, and its body.
 	status int
 	body   string
@@ -113,7 +117,7 @@ func (s *registryStub) start(t *testing.T) *registryStub {
 		s.scopes.Store(append(s.scopes.Load().([]string), request.URL.Query().Get("scope")))
 
 		username, password, ok := request.BasicAuth()
-		if !ok || username != s.username || password != s.password {
+		if !s.public && (!ok || username != s.username || password != s.password) {
 			writer.WriteHeader(http.StatusUnauthorized)
 			return
 		}

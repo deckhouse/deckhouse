@@ -167,6 +167,10 @@ type Server struct {
 	// them — see demotions.
 	demoted demotions
 
+	// mirrorRefused holds the digests a mirror served wrong content for, so that they are not asked
+	// of it again for a while. See verifiedBody.
+	mirrorRefused refusedDigests
+
 	// failing records targets whose last attempt did not work, keyed by name.
 	//
 	// Kept as "known to be failing" rather than "known to work" on purpose: a node
@@ -263,6 +267,8 @@ func (s *Server) forward(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	decision.Targets = s.mirrorTargetsFor(request, decision.Targets)
+
 	// Whatever failed a moment ago is asked last rather than first. Only reordered, never
 	// removed: when nothing else answers it is still worth asking.
 	promoted := s.demoted.order(decision.Targets)
@@ -289,21 +295,47 @@ func (s *Server) forward(writer http.ResponseWriter, request *http.Request) {
 		response, err := s.attempt(request.Context(), request, target)
 		if err != nil {
 			lastError = err
-			// Not held against the target when the client gave up: containerd abandons a pull
-			// for reasons of its own, and an attempt it cut short says nothing about whether
-			// the registry would have answered. Nor when the target's token service turned
-			// the credentials down — that is the refusal below, arriving one step earlier, and
-			// a registry that answers is not one to route around for reachability.
-			if alternatives && request.Context().Err() == nil && !isCredentialRefusal(err) {
+			// The client gave up: containerd abandons a pull for reasons of its own, and an
+			// attempt it cut short says nothing about whether the registry would have answered.
+			// Nothing is held against the target or counted as its failure, and the targets
+			// after it are not asked: every one would fail the same way, on the same context.
+			if request.Context().Err() != nil {
+				break
+			}
+
+			// Not held against the target either when its token service turned the credentials
+			// down — that is the refusal below, arriving one step earlier, and a registry that
+			// answers is not one to route around for reachability.
+			//
+			// A mirror is the exception: its refusal is held against it, because nothing else
+			// does — the backends behind it answer, so the pull succeeds, and without a demotion
+			// every request by digest would pay for another token exchange it is refused.
+			refused := isCredentialRefusal(err)
+			if alternatives && (!refused || target.Mirror != "") {
 				s.demoted.fail(target, started)
 			}
 			if unreachable(request.Context(), err) {
 				s.storageFailed(decision.Kind, target)
 			}
 			s.markFailing(target.Name)
-			s.failover(target.Name, metrics.ReasonUnreachable)
+			switch {
+			case refused && target.Mirror != "":
+				s.failover(target.Name, metrics.ReasonRefused)
+				s.mirrorResult(target, metrics.MirrorRefused)
+			case refused:
+				s.failover(target.Name, metrics.ReasonUnauthorized)
+			default:
+				s.failover(target.Name, metrics.ReasonUnreachable)
+				s.mirrorResult(target, metrics.MirrorUnavailable)
+			}
 			s.Log.Warn("a target did not answer, trying the next one",
 				"target", target.Name, "host", target.Host, "error", err.Error())
+			continue
+		}
+
+		// A mirror's answer short of the content is never the answer: see Target.Mirror.
+		if target.Mirror != "" && response.StatusCode >= http.StatusBadRequest {
+			s.passOverMirror(target, response, started)
 			continue
 		}
 
@@ -394,6 +426,10 @@ func (s *Server) forward(writer http.ResponseWriter, request *http.Request) {
 
 		if held != nil {
 			_ = held.Body.Close()
+		}
+		if target.Mirror != "" {
+			// Counted as a hit by verifiedBody, once the content is known to be right.
+			response.Body = s.verifiedBody(request, response, target)
 		}
 		s.count(string(decision.Kind), result(response.StatusCode))
 		s.relay(writer, response, request.URL.Path, target.Path)
@@ -501,12 +537,28 @@ func (s *Server) attempt(
 	// Only what the registry protocol needs. Copying the whole set would forward
 	// cookies and anything else the client happens to carry to a third party.
 	for _, header := range []string{"Accept", "Accept-Encoding", "Range", "User-Agent"} {
+		// Not the client's to a mirror: its content is checked against the digest as it passes, and
+		// the digest is of the content itself. With no Accept-Encoding of ours the transport asks for
+		// gzip itself and decodes it on the way in, so what is checked is the content; passed on, the
+		// client's header made the transport hand over the encoded bytes, which failed the check and
+		// had a correct digest refused for an hour. See verifiedBody.
+		if header == "Accept-Encoding" && target.Mirror != "" {
+			continue
+		}
 		for _, value := range original.Header.Values(header) {
 			request.Header.Add(header, value)
 		}
 	}
 
-	if target.Auth.IsEmpty() {
+	switch {
+	case target.Auth.IsEmpty() && target.Mirror != "":
+		// A mirror the cluster holds no credentials for is asked anonymously. The client's own are
+		// never its to see: they were offered to whatever challenged the client, which was a backend
+		// or the registry the client named, and a mirror is trusted with no more than its
+		// availability. Anonymously still means with a token where the mirror wants one, as a
+		// public Harbor project does — see retryAnonymously.
+		s.auth.authorizeAnonymously(request, target)
+	case target.Auth.IsEmpty():
 		// A target we hold no credentials for, reached with the client's own instead.
 		//
 		// Almost always a registry nobody configured. The credentials arrive here because
@@ -521,7 +573,7 @@ func (s *Server) attempt(
 		for _, value := range original.Header.Values("Authorization") {
 			request.Header.Add("Authorization", value)
 		}
-	} else {
+	default:
 		// A target the cluster holds credentials for is reached with those. The client's
 		// own are deliberately NOT passed on here: they belong to whoever wrote the
 		// imagePullSecret, and sending them to the Deckhouse upstream would hand them to a
@@ -540,6 +592,10 @@ func (s *Server) attempt(
 	}
 
 	response, err := client.Do(request)
+	if err == nil && target.Auth.IsEmpty() && target.Mirror != "" &&
+		response.StatusCode == http.StatusUnauthorized {
+		response, err = s.retryAnonymously(ctx, client, request, target, response)
+	}
 	if err != nil {
 		cancel()
 		return nil, err
@@ -551,6 +607,33 @@ func (s *Server) attempt(
 	// context deliberately carries no deadline of its own.
 	response.Body = newIdleBody(response.Body, s.idleTimeout(), cancel)
 	return response, nil
+}
+
+// retryAnonymously answers a mirror's bearer challenge with an anonymous token and asks again.
+//
+// The challenge cannot go to the runtime, as a backend's does: see Target.Mirror. Without this a
+// public project on a registry with token authentication — the usual Harbor proxy cache — refused
+// every request, and the mirror was never used. Any other challenge is left as it is, a refusal.
+func (s *Server) retryAnonymously(
+	ctx context.Context, client *http.Client, request *http.Request, target *Target, response *http.Response,
+) (*http.Response, error) {
+	// A token it was sent and refused is not offered again. See authenticator.forget.
+	s.auth.forget(target, request.Header.Get("Authorization"))
+
+	authCtx, authCancel := context.WithTimeout(ctx, s.responseTimeout())
+	token, bearer, err := s.auth.anonymousToken(authCtx, client, target, response.Header.Get("WWW-Authenticate"))
+	authCancel()
+	if !bearer {
+		return response, nil
+	}
+	_ = response.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	retry := request.Clone(ctx)
+	retry.Header.Set("Authorization", "Bearer "+token)
+	return client.Do(retry)
 }
 
 // responseTimeout is how long a target has to answer, defaulted.

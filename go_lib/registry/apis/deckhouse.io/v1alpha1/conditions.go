@@ -38,7 +38,7 @@ const (
 	ConditionStoreWritable = "StoreWritable"
 )
 
-// Condition types on RegistryUpstream.status.
+// Condition types on RegistryUpstream.status and RegistryMirror.status.
 const (
 	// ConditionAccepted reports whether the controller compiled this upstream
 	// into the per-node layout.
@@ -66,6 +66,7 @@ const (
 	ReasonFillFailed       = "FillFailed"
 	ReasonConverged        = "Converged"
 	ReasonMatchConflict    = "MatchConflict"
+	ReasonNodeConflict     = "NodeConflict"
 	ReasonShadowsPrimary   = "ShadowsPrimary"
 	ReasonInvalidSpec      = "InvalidSpec"
 	ReasonLimitExceeded    = "LimitExceeded"

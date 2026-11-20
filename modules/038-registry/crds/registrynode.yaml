@@ -308,6 +308,119 @@ spec:
                                       type: string
                                       description: |
                                         Key inside it.
+                primaryMirror:
+                  type: object
+                  description: |
+                    The accepted [RegistryMirror](cr.html#registrymirror) selecting this node, if any: a nearby copy of the primary image set.
+
+                    The agent asks it before `backends`, for manifests and blobs named by digest only. Whatever it answers short of the content — a miss, a refusal, a failure — sends the request on to `backends`, and content that does not match its digest is not relayed.
+                  required:
+                    - name
+                    - host
+                  properties:
+                    name:
+                      type: string
+                      minLength: 1
+                      description: |
+                        The RegistryMirror this comes from.
+                      x-doc-example: 'gpu-eu'
+                    scheme:
+                      type: string
+                      enum:
+                        - HTTP
+                        - HTTPS
+                      default: HTTPS
+                      description: |
+                        The protocol used to reach the mirror.
+                    host:
+                      type: string
+                      minLength: 1
+                      description: |
+                        The mirror host, optionally with a port.
+                      x-doc-example: 'harbor.eu.example.com'
+                    path:
+                      type: string
+                      description: |
+                        The prefix the mirror serves the image set under, in place of the image set's own.
+                      x-doc-example: '/d8-proxy/deckhouse/ee'
+                    ca:
+                      type: string
+                      description: |
+                        A PEM-encoded certificate authority bundle used to verify the mirror.
+                    auth:
+                      type: object
+                      description: |
+                        The location of the access keys to the mirror.
+
+                        Named rather than carried, for the same reason as in `backends`: this resource is readable by every node in the cluster.
+                      properties:
+                        secretRef:
+                          type: object
+                          description: |
+                            The Secret holding the credentials, and the key inside it.
+                          required:
+                            - name
+                            - key
+                          properties:
+                            name:
+                              type: string
+                              description: |
+                                Name of the Secret in the `d8-system` namespace.
+                            key:
+                              type: string
+                              description: |
+                                Key.
+                    mirrors:
+                      type: array
+                      description: |
+                        Other addresses serving the same content, asked in order after `host`.
+                      items:
+                        type: object
+                        required:
+                          - host
+                        properties:
+                          scheme:
+                            type: string
+                            enum:
+                              - HTTP
+                              - HTTPS
+                            default: HTTPS
+                            description: |
+                              The protocol used to reach the address.
+                          host:
+                            type: string
+                            minLength: 1
+                            description: |
+                              The host. If necessary, it is specified with a port.
+                          path:
+                            type: string
+                            description: |
+                              The prefix the image set is served under there.
+                          ca:
+                            type: string
+                            description: |
+                              A PEM-encoded certificate authority bundle used to verify the address.
+                          auth:
+                            type: object
+                            description: |
+                              The location of the access keys to the address.
+                            properties:
+                              secretRef:
+                                type: object
+                                description: |
+                                  The Secret holding the credentials, and the key inside it.
+                                required:
+                                  - name
+                                  - key
+                                properties:
+                                  name:
+                                    type: string
+                                    description: |
+                                      Name of the Secret in the `d8-system` namespace.
+                                  key:
+                                    type: string
+                                    description: |
+                                      Key.
             status:
               type: object
               description: |

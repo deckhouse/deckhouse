@@ -59,6 +59,7 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&RegistryConfig{}, &RegistryConfigList{},
 		&RegistryStorage{}, &RegistryStorageList{},
 		&RegistryUpstream{}, &RegistryUpstreamList{},
+		&RegistryMirror{}, &RegistryMirrorList{},
 		&RegistryNode{}, &RegistryNodeList{},
 		&RegistryOperation{}, &RegistryOperationList{},
 	)
@@ -71,6 +72,7 @@ const (
 	RegistryConfigKind   = "RegistryConfig"
 	RegistryStorageKind  = "RegistryStorage"
 	RegistryUpstreamKind = "RegistryUpstream"
+	RegistryMirrorKind   = "RegistryMirror"
 	RegistryNodeKind     = "RegistryNode"
 
 	RegistryOperationKind = "RegistryOperation"

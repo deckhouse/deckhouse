@@ -70,10 +70,13 @@ var _ = Describe("Module :: registry :: helm template :: user-authz", func() {
 				Expect(granted["registryupstreams"]).To(ConsistOf(
 					"get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"))
 				Expect(granted["registryupstreams/sensitive"]).To(ConsistOf(readVerbs))
+				Expect(granted["registrymirrors"]).To(ConsistOf(
+					"get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"))
+				Expect(granted["registrymirrors/sensitive"]).To(ConsistOf(readVerbs))
 				// Reading comes from User; the status is the controller's and the replicas'.
 				Expect(granted["registryoperations"]).To(ConsistOf("create", "update", "patch", "delete"))
 				// ClusterAdmin writes every ModuleConfig through the deckhouse module.
-				Expect(granted).To(HaveLen(7), "no status subresource and nothing outside the module")
+				Expect(granted).To(HaveLen(9), "no status subresource and nothing outside the module")
 			})
 		})
 	}

@@ -171,6 +171,7 @@ func newReconcilerWithProber(
 			&registryv1alpha1.RegistryStorage{},
 			&registryv1alpha1.RegistryNode{},
 			&registryv1alpha1.RegistryUpstream{},
+			&registryv1alpha1.RegistryMirror{},
 		).
 		Build()
 

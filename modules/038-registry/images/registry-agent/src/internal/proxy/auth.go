@@ -74,6 +74,16 @@ type flight struct {
 type tokenKey struct {
 	host  string
 	scope string
+
+	// anonymous marks a token obtained with no credentials, for a mirror the cluster holds none
+	// for. Kept apart from a token issued on credentials for the same host and scope, which may
+	// grant what an anonymous one does not.
+	anonymous bool
+}
+
+// tokenKeyFor is the key a target's token for the scope is kept under.
+func tokenKeyFor(target *Target, scope string) tokenKey {
+	return tokenKey{host: target.Host, scope: scope, anonymous: target.Auth.IsEmpty()}
 }
 
 type cachedToken struct {
@@ -112,7 +122,7 @@ func (a *authenticator) authorize(
 		return fmt.Errorf("working out what to ask a token for: %w", err)
 	}
 
-	key := tokenKey{host: target.Host, scope: scope}
+	key := tokenKeyFor(target, scope)
 	if token, ok := a.cached(key); ok {
 		request.Header.Set("Authorization", "Bearer "+token)
 		return nil
@@ -224,6 +234,45 @@ func (a *authenticator) fly(
 	}
 }
 
+// authorizeAnonymously adds the token held for a target the cluster has no credentials for, if one
+// is held. Nothing is asked of the target first: most registries a mirror is reached on want nothing
+// at all, and a probe on every request by digest would double what each costs. One that wants a token
+// says so with its answer — see anonymousToken.
+func (a *authenticator) authorizeAnonymously(request *http.Request, target *Target) {
+	scope, err := tokenScope(target)
+	if err != nil {
+		return
+	}
+	if token, ok := a.cached(tokenKeyFor(target, scope)); ok {
+		request.Header.Set("Authorization", "Bearer "+token)
+	}
+}
+
+// anonymousToken answers a target's bearer challenge with no credentials, the way a runtime does
+// for a public repository: Harbor, and registries with token authentication generally, want a token
+// even for one. Reports false when the challenge is not one a token answers.
+func (a *authenticator) anonymousToken(
+	ctx context.Context, client *http.Client, target *Target, header string,
+) (string, bool, error) {
+	challenge := parseChallenge(header)
+	if challenge == nil || challenge.scheme != schemeBearer {
+		return "", false, nil
+	}
+	scope, err := tokenScope(target)
+	if err != nil {
+		return "", true, fmt.Errorf("working out what to ask a token for: %w", err)
+	}
+
+	token, expires, err := a.exchange(ctx, client, challenge, nil, scope)
+	if err != nil {
+		return "", true, err
+	}
+	if expires.After(time.Now()) {
+		a.store(tokenKeyFor(target, scope), token, expires)
+	}
+	return token, true, nil
+}
+
 // tokenScope is the scope a token for this target's request is asked for: the repository the request
 // goes to on the target, which is not the one the client asked for — see authorize.
 func tokenScope(target *Target) (string, error) {
@@ -254,7 +303,7 @@ func (a *authenticator) forget(target *Target, authorization string) {
 	if err != nil {
 		return
 	}
-	key := tokenKey{host: target.Host, scope: scope}
+	key := tokenKeyFor(target, scope)
 	value, ok := a.tokens.Load(key)
 	if !ok {
 		return

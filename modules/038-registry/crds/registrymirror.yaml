@@ -1,0 +1,314 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: registrymirrors.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: registry
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: registrymirrors
+    singular: registrymirror
+    kind: RegistryMirror
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Host
+          type: string
+          description: "The mirror the selected nodes ask first."
+          jsonPath: .spec.source.host
+        - name: Nodes
+          type: integer
+          description: "How many nodes the mirror is laid out for."
+          jsonPath: .status.matchedNodes
+        - name: Accepted
+          type: string
+          description: "Whether the controller laid the mirror out for the nodes it selects."
+          jsonPath: .status.conditions[?(@.type=="Accepted")].status
+        - name: Reason
+          type: string
+          description: "Why the mirror is not laid out."
+          jsonPath: .status.conditions[?(@.type=="Accepted")].message
+          priority: 1
+        - name: Age
+          type: date
+          description: "Time since creation."
+          jsonPath: .metadata.creationTimestamp
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Declares a registry near a group of nodes that holds a copy of the primary image set, for those nodes to pull from instead of the in-cluster storage or the upstream.
+
+            Meant for nodes far from the control plane, such as workers in another region that pull large images across a slow or expensive link. The administrator runs and fills the mirror: a Harbor proxy-cache or replication project, a registry filled with `d8 mirror push`, or anything else that serves the image set by digest. The cluster only decides which nodes ask the mirror, and for what.
+
+            The registry agent on a selected node asks the mirror for manifests and blobs named by digest, and for nothing else. Tags are resolved where they are resolved without a mirror, so which version runs stays the cluster's decision. Whatever the mirror answers short of the content — a miss, a refusal, a server error, no answer at all — sends the request on to the in-cluster storage or the upstream, as without a mirror. Content that does not match its digest is not relayed, and the agent stops asking that address of the mirror for that digest for an hour.
+
+            A node is served by one mirror at most. Objects are accepted in creation order, starting with the earliest created object. An object that selects a node already served by an earlier one is not accepted at all, on any of the nodes it selects, and the message of its `Accepted` condition names the node and the object that holds it.
+
+            Applied only in the `Managed` mode of the module, where the registry agent serves the pull path of the nodes. In the other modes the controller that writes `status` does not run, so `status` keeps what it last said, including `Accepted=True` and the number of nodes, while no node applies the mirror.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - nodeSelector
+                - source
+              properties:
+                nodeSelector:
+                  type: object
+                  description: |
+                    The nodes that ask the mirror first, selected by their labels.
+
+                    An empty selector selects no node. A selector that selects no node is accepted all the same, with `status.matchedNodes` at zero: a node group scaled to zero gets the mirror once its nodes appear.
+                  x-doc-example: |
+                    ```yaml
+                    nodeSelector:
+                      matchLabels:
+                        node.deckhouse.io/group: gpu-eu
+                    ```
+                  properties:
+                    matchLabels:
+                      type: object
+                      additionalProperties:
+                        type: string
+                      description: |
+                        Labels and their values. A node is selected when it has every listed label with the given value.
+                    matchExpressions:
+                      type: array
+                      description: |
+                        Label requirements a node must meet.
+                      items:
+                        type: object
+                        required:
+                          - key
+                          - operator
+                        properties:
+                          key:
+                            type: string
+                            description: |
+                              The label name.
+                          operator:
+                            type: string
+                            enum:
+                              - In
+                              - NotIn
+                              - Exists
+                              - DoesNotExist
+                            description: |
+                              The comparison method with `values`.
+                          values:
+                            type: array
+                            items:
+                              type: string
+                            description: |
+                              The label values. Required with `In` and `NotIn`, empty with `Exists` and `DoesNotExist`.
+                source:
+                  type: object
+                  description: |
+                    The mirror: where it is, under which prefix it serves the image set, and how to authenticate to it.
+
+                    The prefix replaces the image set's own: an image the cluster names `registry.d8-system.svc:5001/system/deckhouse/<repository>@<digest>` is asked of the mirror as `<host>/<path>/<repository>@<digest>`.
+                  required:
+                    - host
+                    - path
+                  properties:
+                    scheme:
+                      type: string
+                      enum:
+                        - HTTP
+                        - HTTPS
+                      default: HTTPS
+                      description: |
+                        The protocol used to reach the mirror.
+                    host:
+                      type: string
+                      minLength: 1
+                      maxLength: 255
+                      description: |
+                        Mirror address. If necessary, it is specified with a port.
+
+                        An IPv6 address is written in brackets, followed by a port.
+                      x-doc-example: 'harbor.eu.example.com'
+                    path:
+                      type: string
+                      minLength: 1
+                      maxLength: 1024
+                      description: |
+                        The prefix the mirror serves the image set under. Required: the image of an embedded module names the image set's prefix as its whole repository, so a mirror serving the set at its root could not be asked for it.
+
+                        For a Harbor proxy-cache project of `registry.deckhouse.io`, it is the project followed by the path of the edition, such as `/<project>/deckhouse/ee`. For a project filled with `d8 mirror push <bundle> harbor.example.com/<project>/<path>`, it is `/<project>/<path>`.
+                      x-doc-example: '/d8-proxy/deckhouse/ee'
+                    ca:
+                      type: string
+                      maxLength: 65536
+                      description: |
+                        A PEM-encoded certificate authority bundle used to verify the mirror when `scheme` is `HTTPS`.
+
+                        Only `CERTIFICATE` blocks are accepted, and each must hold a valid X.509 certificate. A block of another type, such as a private key, or a certificate that cannot be read leaves the mirror rejected: `Accepted=False` with the reason `InvalidSpec`.
+                    auth:
+                      type: object
+                      description: |
+                        Credentials for the mirror. Read-only access is enough.
+
+                        Without them the mirror is asked anonymously. A mirror that asks for a token, as a public Harbor project does, gets an anonymous one. The credentials a pod's `imagePullSecrets` hold are never sent to the mirror.
+
+                        The controller transfers sensitive data to the module’s secret, and the nodes for which the mirror is configured read it from this secret.
+                      properties:
+                        username:
+                          type: string
+                          maxLength: 1024
+                          description: |
+                            The username for basic authentication.
+                        password:
+                          type: string
+                          x-kubernetes-sensitive-data: true
+                          maxLength: 4096
+                          description: |
+                            The password for basic authentication.
+
+                            If the caller is not allowed to read the `registrymirrors/sensitive` subresource, the API returns `<omitted>` instead of the value.
+                        auth:
+                          type: string
+                          x-kubernetes-sensitive-data: true
+                          maxLength: 4096
+                          description: |
+                            The encoded value is `"username:password"` in Base64.
+
+                            Takes precedence over `username` and `password` when set. When both forms are set, they must name the same credentials.
+
+                            If the caller is not allowed to read the `registrymirrors/sensitive` subresource, the API returns `<omitted>` instead of the value.
+                    mirrors:
+                      type: array
+                      maxItems: 8
+                      description: |
+                        Other addresses that return the same content as the mirror. They are queried in order after the main mirror.
+                      items:
+                        type: object
+                        required:
+                          - host
+                          - path
+                        properties:
+                          scheme:
+                            type: string
+                            enum:
+                              - HTTP
+                              - HTTPS
+                            default: HTTPS
+                            description: |
+                              The protocol used to reach the address.
+                          host:
+                            type: string
+                            minLength: 1
+                            maxLength: 255
+                            description: |
+                              Mirror address. If necessary, it is specified with a port.
+
+                              An IPv6 address is written in brackets, followed by a port.
+                          path:
+                            type: string
+                            minLength: 1
+                            maxLength: 1024
+                            description: |
+                              The prefix the image set is served under there. Required, as `source.path` is.
+                          ca:
+                            type: string
+                            maxLength: 65536
+                            description: |
+                              A PEM-encoded certificate authority bundle used to verify the address.
+                          auth:
+                            type: object
+                            description: |
+                              Credentials for the address.
+
+                              The controller transfers sensitive data to the module’s secret, and the nodes for which the mirror is configured read it from this secret.
+                            properties:
+                              username:
+                                type: string
+                                maxLength: 1024
+                                description: |
+                                  The username for basic authentication.
+                              password:
+                                type: string
+                                x-kubernetes-sensitive-data: true
+                                maxLength: 4096
+                                description: |
+                                  The password for basic authentication.
+
+                                  If the caller is not allowed to read the `registrymirrors/sensitive` subresource, the API returns `<omitted>` instead of the value.
+                              auth:
+                                type: string
+                                x-kubernetes-sensitive-data: true
+                                maxLength: 4096
+                                description: |
+                                  The encoded value is `"username:password"` in Base64.
+
+                                  If the caller is not allowed to read the `registrymirrors/sensitive` subresource, the API returns `<omitted>` instead of the value.
+            status:
+              type: object
+              properties:
+                observedGeneration:
+                  type: integer
+                  format: int64
+                  description: |
+                    The `spec` generation the controller last acted on.
+                matchedNodes:
+                  type: integer
+                  format: int32
+                  description: |
+                    The number of nodes for which the mirror is configured. The value is zero until the object is accepted.
+                conditions:
+                  type: array
+                  description: |
+                    The arbitration result with a machine-readable reason.
+
+                    - `Accepted` — whether the mirror is laid out for the nodes it selects. The reason `NodeConflict` means a node it selects is served by an earlier object; `InvalidSpec` means a field of `spec` is invalid.
+                  x-kubernetes-list-type: map
+                  x-kubernetes-list-map-keys:
+                    - type
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                      - lastTransitionTime
+                      - reason
+                    properties:
+                      type:
+                        type: string
+                        description: |
+                          The condition type.
+                      status:
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        description: |
+                          The condition status.
+                      observedGeneration:
+                        type: integer
+                        format: int64
+                        description: |
+                          The `spec` generation the condition was set for.
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                        description: |
+                          The time of the last change to the condition.
+                      reason:
+                        type: string
+                        description: |
+                          A machine-readable reason for the condition.
+                      message:
+                        type: string
+                        description: |
+                          A human-readable explanation.

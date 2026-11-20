@@ -176,7 +176,7 @@ func keyFor(t *testing.T, target *Target) tokenKey {
 
 	scope, err := tokenScope(target)
 	require.NoError(t, err)
-	return tokenKey{host: target.Host, scope: scope}
+	return tokenKeyFor(target, scope)
 }
 
 // tokenService is a registry that demands a bearer token and the token service that issues it,

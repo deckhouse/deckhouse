@@ -58,6 +58,26 @@ type RegistryNodeSpec struct {
 	// +listType=map
 	// +listMapKey=match
 	AdditionalRoutes []Route `json:"additionalRoutes,omitempty"`
+
+	// PrimaryMirror is the accepted RegistryMirror picking this node, if any: a nearby copy of the
+	// primary image set, asked before Backends for content named by digest, and for nothing else.
+	//
+	// A field of its own rather than a backend, because it is not one. Every backend answers for
+	// the whole image set, tags included, and its 404 is final; a mirror answers only for what it
+	// happens to hold, and its 404 sends the pull on to the backends. An agent that predates this
+	// field ignores it and pulls the usual way, which is what a rolling update needs: put among
+	// the backends, it would be asked for tags it does not serve and its 404 relayed as final.
+	// +optional
+	PrimaryMirror *PrimaryMirror `json:"primaryMirror,omitempty"`
+}
+
+// PrimaryMirror is a RegistryMirror as laid out for one node.
+type PrimaryMirror struct {
+	// Name is the RegistryMirror this comes from, for logs and metrics on the node.
+	Name string `json:"name"`
+
+	// Upstream is the mirror's source: the endpoint, then its mirrors, asked in order.
+	Upstream `json:",inline"`
 }
 
 // Backend is one source of the primary image set.

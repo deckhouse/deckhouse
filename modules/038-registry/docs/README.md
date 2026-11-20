@@ -76,6 +76,14 @@ spec:
 
 This approach — declaring an additional registry as a separate resource — was chosen because a module or a user adding their own registry should not have to edit a ModuleConfig they don't own. Such registries are always transit: pulls are routed through the node agent so that credentials and CA certificates live in one place, but nothing from them is ever cached.
 
+### Mirrors for remote nodes
+
+Nodes far from the control plane, such as GPU workers in another region, pull every image from the in-cluster cache on the control-plane nodes or from the upstream. For large images this is slow, and the nodes wait for it. A [RegistryMirror](cr.html#registrymirror) points a group of nodes at a registry near them that holds a copy of the image set, such as a Harbor proxy-cache project. You run and fill that registry yourself; the cluster only decides which nodes ask it, and for what.
+
+The agent on a selected node asks the mirror for manifests and blobs named by digest only. Tags are resolved by the cache or the upstream as before, so which version runs stays the cluster's decision, and the content the mirror serves is checked against its digest. If the mirror does not hold an image, refuses the request or does not answer, the pull goes to the cache or the upstream, as without a mirror. A node is served by one mirror at most.
+
+A mirror takes effect in the `Managed` mode of the module. See [the example](examples.html#pulling-from-a-mirror-near-the-nodes).
+
 ### Architecture
 
 <!--- Source: mermaid code from docs/internal/MANAGED.md --->

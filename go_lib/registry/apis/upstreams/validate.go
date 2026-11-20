@@ -114,16 +114,22 @@ func validateHostParts(host string) error {
 // scheme and host: the second table would overwrite the first, or make the file
 // unparsable.
 func ValidateUpstream(upstream *registryv1alpha1.Upstream) error {
+	return ValidateUpstreamAt(upstream, "spec.upstream")
+}
+
+// ValidateUpstreamAt is ValidateUpstream for an Upstream kept under another field, which the
+// errors name instead: RegistryMirror keeps it in spec.source.
+func ValidateUpstreamAt(upstream *registryv1alpha1.Upstream, field string) error {
 	if n := len(upstream.Mirrors); n > MaxMirrors {
-		return fmt.Errorf("spec.upstream.mirrors: %d mirrors, more than %d", n, MaxMirrors)
+		return fmt.Errorf("%s.mirrors: %d mirrors, more than %d", field, n, MaxMirrors)
 	}
 
 	endpoints := upstream.Endpoints()
 	seen := make(map[string]string, len(endpoints))
 	for i := range endpoints {
-		at := "spec.upstream"
+		at := field
 		if i > 0 {
-			at = fmt.Sprintf("spec.upstream.mirrors[%d]", i-1)
+			at = fmt.Sprintf("%s.mirrors[%d]", field, i-1)
 		}
 		if err := ValidateEndpoint(&endpoints[i]); err != nil {
 			return fmt.Errorf("%s: %w", at, err)
@@ -213,7 +219,7 @@ func validateAuth(auth *registryv1alpha1.Auth) error {
 		return nil
 	}
 	if !auth.SecretRef.IsEmpty() {
-		return errors.New("auth.secretRef is not served for a RegistryUpstream, and a node cannot resolve it")
+		return errors.New("auth.secretRef is set by the controller, never in the resource, and a node cannot resolve it")
 	}
 	if err := maxLength("auth.username", auth.Username, MaxUsernameLength); err != nil {
 		return err

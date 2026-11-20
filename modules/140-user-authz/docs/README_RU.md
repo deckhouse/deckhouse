@@ -842,6 +842,7 @@ read:
     - deckhouse.io/projectquotastatuses
     - deckhouse.io/registryconfigs
     - deckhouse.io/registryconfigs/sensitive
+    - deckhouse.io/registrymirrors/sensitive
     - deckhouse.io/registrynodes
     - deckhouse.io/registrystorages
     - deckhouse.io/registryupstreams/sensitive
@@ -866,6 +867,7 @@ read-write:
     - deckhouse.io/nodeusers
     - deckhouse.io/packagerepositories
     - deckhouse.io/packagerepositoryoperations
+    - deckhouse.io/registrymirrors
     - deckhouse.io/registryupstreams
     - deckhouse.io/sshcredentials
     - deckhouse.io/tokenexchangeproviders

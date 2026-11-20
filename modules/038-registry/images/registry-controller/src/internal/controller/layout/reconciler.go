@@ -53,6 +53,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/registry/apis/mirrors"
 	"github.com/deckhouse/deckhouse/go_lib/registry/apis/upstreams"
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 
@@ -183,6 +184,9 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 	w.Watches(&registryv1alpha1.RegistryNode{}, toSingleton)
 	// Any writer may declare an additional upstream at any time.
 	w.Watches(&registryv1alpha1.RegistryUpstream{}, toSingleton)
+	// A mirror is laid out for the nodes its selector picks, so the nodes' labels are an input
+	// too; the Node watch above carries those.
+	w.Watches(&registryv1alpha1.RegistryMirror{}, toSingleton)
 	// The storage lease, for who holds it: the publication endpoint follows the leader, and a push
 	// sent to the previous one until something else happens to trigger a pass is a push the cluster
 	// does not read. Renewals change the lease every few seconds and say nothing new, so only a
@@ -283,6 +287,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, fmt.Errorf("arbitrating RegistryUpstream objects: %w", err)
 	}
 
+	mirrorVerdicts, err := r.arbitrateMirrors(ctx, &inputs)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("arbitrating RegistryMirror objects: %w", err)
+	}
+
 	probeFailure := r.probeUpstream(ctx, cfg, &inputs)
 
 	desired := layout.Compute(inputs)
@@ -304,6 +313,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// can be alerted on.
 	observeAirGapWait(cfg.Spec.Primary.Upstream == nil, desired.HeldUpstream != nil)
 	observeRejections(verdicts)
+	observeMirrorRejections(mirrorVerdicts)
 
 	// Before anything that references them. The layouts below name keys in this Secret
 	// instead of carrying credentials, so an agent that reads a layout whose key is not
@@ -350,6 +360,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if err := r.patchUpstreamVerdicts(ctx, verdicts); err != nil {
 		return ctrl.Result{}, fmt.Errorf("patching status of RegistryUpstream objects: %w", err)
 	}
+	if err := r.patchMirrorVerdicts(ctx, mirrorVerdicts); err != nil {
+		return ctrl.Result{}, fmt.Errorf("patching status of RegistryMirror objects: %w", err)
+	}
 
 	// Last, and only once every node reports that the agent serves the pull path: what the previous
 	// implementation left answering the in-cluster address is removed here rather than by Helm. See
@@ -391,6 +404,78 @@ func (r *Reconciler) arbitrateUpstreams(
 	result := upstreams.Arbitrate(cfg.Spec.Primary.Upstream, list.Items)
 	inputs.Routes = result.Routes
 	return result.Verdicts, nil
+}
+
+// arbitrateMirrors decides which mirrors take effect on which nodes, and puts them into the layout
+// inputs.
+func (r *Reconciler) arbitrateMirrors(
+	ctx context.Context, inputs *layout.Inputs,
+) (map[string]mirrors.Verdict, error) {
+	list := &registryv1alpha1.RegistryMirrorList{}
+	if err := r.Client.List(ctx, list); err != nil {
+		return nil, err
+	}
+	if len(list.Items) == 0 {
+		return nil, nil
+	}
+
+	nodes := &corev1.NodeList{}
+	if err := r.Client.List(ctx, nodes); err != nil {
+		return nil, fmt.Errorf("listing nodes: %w", err)
+	}
+	candidates := make([]mirrors.Node, 0, len(nodes.Items))
+	for i := range nodes.Items {
+		candidates = append(candidates, mirrors.Node{Name: nodes.Items[i].Name, Labels: nodes.Items[i].Labels})
+	}
+
+	result := mirrors.Arbitrate(list.Items, candidates)
+	inputs.Mirrors = result.Nodes
+	return result.Verdicts, nil
+}
+
+// patchMirrorVerdicts tells each RegistryMirror whether, and for how many nodes, it took effect.
+func (r *Reconciler) patchMirrorVerdicts(ctx context.Context, verdicts map[string]mirrors.Verdict) error {
+	for name, verdict := range verdicts {
+		mirror := &registryv1alpha1.RegistryMirror{}
+		if err := r.Client.Get(ctx, types.NamespacedName{Name: name}, mirror); err != nil {
+			if apierrors.IsNotFound(err) {
+				// Deleted between the arbitration and now; nothing to tell anyone.
+				continue
+			}
+			return err
+		}
+
+		patch := client.MergeFromWithOptions(mirror.DeepCopy(), client.MergeFromWithOptimisticLock{})
+
+		condition := metav1.Condition{
+			Type:               registryv1alpha1.ConditionAccepted,
+			ObservedGeneration: mirror.Generation,
+			Reason:             verdict.Reason,
+		}
+		if verdict.Accepted {
+			condition.Status = metav1.ConditionTrue
+			condition.Message = fmt.Sprintf("The mirror is laid out for %d node(s).", verdict.MatchedNodes)
+		} else {
+			condition.Status = metav1.ConditionFalse
+			condition.Message = verdict.Message
+		}
+
+		unchanged := mirror.Status.MatchedNodes == verdict.MatchedNodes &&
+			mirror.Status.ObservedGeneration == mirror.Generation
+
+		mirror.Status.MatchedNodes = verdict.MatchedNodes
+		mirror.Status.ObservedGeneration = mirror.Generation
+		changed := apimeta.SetStatusCondition(&mirror.Status.Conditions, condition)
+
+		if unchanged && !changed {
+			continue
+		}
+		if err := r.Client.Status().Patch(ctx, mirror, patch); err != nil {
+			return fmt.Errorf("%s: %w", name, err)
+		}
+	}
+
+	return nil
 }
 
 // unchangedUpstream answers whether the configured upstream is the one already in effect.
@@ -486,6 +571,23 @@ func observeRejections(verdicts map[string]upstreams.Verdict) {
 	metrics.UpstreamsRejected.Reset()
 	for reason, count := range counts {
 		metrics.UpstreamsRejected.WithLabelValues(reason).Set(count)
+	}
+}
+
+// observeMirrorRejections records how many mirrors arbitration refused, reset each pass like
+// observeRejections.
+func observeMirrorRejections(verdicts map[string]mirrors.Verdict) {
+	counts := map[string]float64{}
+	for _, verdict := range verdicts {
+		if verdict.Accepted {
+			continue
+		}
+		counts[verdict.Reason]++
+	}
+
+	metrics.MirrorsRejected.Reset()
+	for reason, count := range counts {
+		metrics.MirrorsRejected.WithLabelValues(reason).Set(count)
 	}
 }
 

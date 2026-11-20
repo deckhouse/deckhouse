@@ -61,6 +61,12 @@ var (
 		Help: "Additional registries refused by arbitration, by reason.",
 	}, []string{"reason"})
 
+	// MirrorsRejected is how many RegistryMirror objects arbitration refused, by reason.
+	MirrorsRejected = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "d8_registry_mirrors_rejected",
+		Help: "Mirrors of the image set refused by arbitration, by reason.",
+	}, []string{"reason"})
+
 	// StorageUpdateBlocked is 1, under its reason, while the storage update refuses to replace
 	// the next replica of the cache; every other reason reads 0.
 	//
@@ -229,7 +235,7 @@ func init() {
 	// manager's own endpoint alongside the reconcile counters rather than from a second
 	// listener.
 	metrics.Registry.MustRegister(
-		UpstreamProbes, AirGapHeld, UpstreamsRejected, StorageUpdateBlocked, StorageReplicasOutdated,
+		UpstreamProbes, AirGapHeld, UpstreamsRejected, MirrorsRejected, StorageUpdateBlocked, StorageReplicasOutdated,
 		Managed, ConfigValid, EffectiveUpstream, Nodes, NodeReconciled, NodeFromCache,
 		StorageReplicas, StorageReplicaFull, StorageAllReplicasFull,
 		StorageSafeToDropUpstream, StorageStaleData,

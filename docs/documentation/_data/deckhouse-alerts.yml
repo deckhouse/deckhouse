@@ -5734,6 +5734,28 @@ alerts:
         The registry module is held on its v1 implementation.
       severity: "8"
       markupFormat: markdown
+    - name: D8RegistryMirrorRejected
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/registry.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        A `RegistryMirror` resource was not accepted, so the nodes it selects pull the way they
+        would without it: from the in-cluster cache or the upstream, however far those are.
+
+        Reason: `{{ $labels.reason }}`
+
+        - `NodeConflict` — a node it selects is served by a mirror created earlier. A node is
+          served by one mirror at most; narrow the `nodeSelector` of one of them.
+        - `InvalidSpec` — a field of `spec` is invalid.
+
+        ```shell
+        d8 k get registrymirrors -o wide
+        ```
+      summary: |
+        A mirror of the image set was refused.
+      severity: "6"
+      markupFormat: markdown
     - name: D8RegistryNodeForeignRegistryConfig
       sourceFile: modules/038-registry/monitoring/prometheus-rules/migration.yaml
       moduleUrl: 038-registry

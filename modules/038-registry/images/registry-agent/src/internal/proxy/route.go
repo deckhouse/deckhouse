@@ -84,6 +84,18 @@ type Target struct {
 
 	// Auth are the credentials for the target, if any.
 	Auth *registryv1alpha1.Auth
+
+	// Mirror is the RegistryMirror this target comes from, and empty for every other target.
+	//
+	// A mirror answers only for what it happens to hold. Whatever it answers short of the
+	// content — a miss, a refusal, a failure — sends the request on to the next target and is
+	// never relayed: the targets behind it answer for the whole image set, and their answer is
+	// the one that counts.
+	Mirror string
+
+	// Digest is the digest the request names, set on a mirror's targets only: the content of a
+	// mirror's answer is checked against it. See verifiedBody.
+	Digest string
 }
 
 // URL is the absolute request URL for this target.
@@ -420,6 +432,27 @@ func primaryTargets(
 	}
 
 	decision := Decision{Kind: KindPrimary}
+
+	// A nearby copy of the image set, for content named by its digest and nothing else. See
+	// RegistryNodeSpec.PrimaryMirror for why it comes first and why its answer never ends a
+	// request.
+	if mirror := spec.PrimaryMirror; mirror != nil {
+		if digest := digestReference(remainder); digest != "" {
+			for _, source := range mirror.Endpoints() {
+				decision.Targets = append(decision.Targets, Target{
+					Name:   TargetMirror,
+					Scheme: source.Scheme,
+					Host:   source.Host,
+					Path:   apiPath(joinRepository(source.Path, trimmed), remainder),
+					CA:     source.CA,
+					Auth:   source.Auth,
+					Mirror: mirror.Name,
+					Digest: digest,
+				})
+			}
+		}
+	}
+
 	for i := range spec.Backends {
 		backend := &spec.Backends[i]
 
@@ -433,6 +466,31 @@ func primaryTargets(
 		})
 	}
 	return decision, nil
+}
+
+// TargetMirror names every target of a RegistryMirror in logs and metrics. Neither a backend name
+// nor a host, so it can be told from both.
+const TargetMirror = "Mirror"
+
+// digestReference returns the digest a manifest or blob request names, and nothing for a request
+// that names a tag or does anything else.
+//
+// A tag never contains ':' and a digest always does, which is the whole test the reference grammar
+// needs: `<algorithm>:<encoded>`. An upload (`/blobs/uploads/...`) has none either, and is not a
+// read in the first place.
+func digestReference(remainder string) string {
+	for _, verb := range []string{"/manifests/", "/blobs/"} {
+		reference, found := strings.CutPrefix(remainder, verb)
+		if !found {
+			continue
+		}
+		algorithm, encoded, digest := strings.Cut(reference, ":")
+		if !digest || algorithm == "" || encoded == "" || strings.Contains(reference, "/") {
+			return ""
+		}
+		return reference
+	}
+	return ""
 }
 
 // routeDecision maps a request for an intercepted host onto its upstream and mirrors.

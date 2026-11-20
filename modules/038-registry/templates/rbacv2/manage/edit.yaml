@@ -14,8 +14,8 @@ metadata:
   annotations:
     en.meta.deckhouse.io/title: "Module registry: edit configuration"
     ru.meta.deckhouse.io/title: "Модуль registry: управление конфигурацией"
-    en.meta.deckhouse.io/description: "Manage the registry module configuration and the additional registries (RegistryUpstream), run operations on the in-cluster cache (RegistryOperation: garbage collection, verification, repair), and read the resolved configuration together with the registry credentials."
-    ru.meta.deckhouse.io/description: "Управление конфигурацией модуля registry и дополнительными registry (RegistryUpstream), запуск операций над внутрикластерным кешем (RegistryOperation: сборка мусора, проверка, ремонт), чтение итоговой конфигурации вместе с учётными данными registry."
+    en.meta.deckhouse.io/description: "Manage the registry module configuration, the additional registries (RegistryUpstream) and the mirrors for groups of nodes (RegistryMirror), run operations on the in-cluster cache (RegistryOperation: garbage collection, verification, repair), and read the resolved configuration together with the registry credentials."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией модуля registry, дополнительными registry (RegistryUpstream) и зеркалами для групп узлов (RegistryMirror), запуск операций над внутрикластерным кешем (RegistryOperation: сборка мусора, проверка, ремонт), чтение итоговой конфигурации вместе с учётными данными registry."
 rules:
 # Reading the configuration is reading the registry credentials (the license key or the upstream
 # password), so it belongs with the write verbs, not with the read-only capability. Deleting it is
@@ -47,11 +47,14 @@ rules:
   - list
   - watch
 # An upstream intercepts the pulls of its host on every node, so creating one is the power to
-# substitute images, on par with the NodeGroupConfiguration the same role already writes.
+# substitute images, on par with the NodeGroupConfiguration the same role already writes. A mirror
+# substitutes nothing — its content is checked against the digest — but it decides where the nodes
+# it selects send their pulls, and with whose credentials.
 - apiGroups:
   - deckhouse.io
   resources:
   - registryupstreams
+  - registrymirrors
   verbs:
   - get
   - list
@@ -81,13 +84,15 @@ rules:
   verbs:
   - get
   - list
-# Authentication fields in RegistryConfig and RegistryUpstream are marked as sensitive data.
-# The manager role already reads both parent resources and needs the same read access to their values.
+# Authentication fields in RegistryConfig, RegistryUpstream and RegistryMirror are marked as sensitive
+# data. The manager role already reads the parent resources and needs the same read access to their
+# values.
 - apiGroups:
   - deckhouse.io
   resources:
   - registryconfigs/sensitive
   - registryupstreams/sensitive
+  - registrymirrors/sensitive
   verbs:
   - get
   - list

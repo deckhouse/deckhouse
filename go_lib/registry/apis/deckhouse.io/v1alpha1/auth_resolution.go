@@ -54,6 +54,12 @@ func (s *RegistryNodeSpec) ReferencedAuths() []*Auth {
 			out = appendUnresolved(out, s.AdditionalRoutes[i].Mirrors[j].Auth)
 		}
 	}
+	if s.PrimaryMirror != nil {
+		out = appendUnresolved(out, s.PrimaryMirror.Endpoint.Auth)
+		for j := range s.PrimaryMirror.Mirrors {
+			out = appendUnresolved(out, s.PrimaryMirror.Mirrors[j].Auth)
+		}
+	}
 	return sortedAuths(out)
 }
 

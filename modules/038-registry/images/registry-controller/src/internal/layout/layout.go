@@ -162,6 +162,14 @@ type Inputs struct {
 	// arbitrated. Always transit, never cached.
 	Routes []registryv1alpha1.Route
 
+	// Mirrors are the accepted RegistryMirror objects, already arbitrated, keyed by the node
+	// each is laid out for. A node absent here has no mirror.
+	//
+	// Laid out whatever the backends are: a mirror is asked ahead of them for content named by
+	// digest, so it shortens the way to the cache, to the upstream when there is no cache, and to
+	// the cache alone in air-gap all the same.
+	Mirrors map[string]registryv1alpha1.PrimaryMirror
+
 	// StorageAccess is how agents reach the storage. Required when the cache is
 	// enabled, including at least one address.
 	StorageAccess Access
@@ -275,7 +283,7 @@ func compute(in Inputs) Desired {
 		// no air-gap to reach, but a failed probe still has to leave the nodes on the
 		// upstream that was working: a broken license must not stop them pulling.
 		return Desired{
-			Nodes:        nodeLayouts(in.Nodes, false, upstreamBackends(effectiveUpstream), in.Routes),
+			Nodes:        nodeLayouts(in.Nodes, false, upstreamBackends(effectiveUpstream), in.Routes, in.Mirrors),
 			HeldUpstream: effectiveUpstream,
 		}
 	}
@@ -291,7 +299,7 @@ func compute(in Inputs) Desired {
 		// controller that panics, and a panicking controller stops reconciling
 		// everything else too.
 		return Desired{
-			Nodes:        nodeLayouts(in.Nodes, false, upstreamBackends(effectiveUpstream), in.Routes),
+			Nodes:        nodeLayouts(in.Nodes, false, upstreamBackends(effectiveUpstream), in.Routes, in.Mirrors),
 			HeldUpstream: effectiveUpstream,
 		}
 	}
@@ -369,7 +377,7 @@ func compute(in Inputs) Desired {
 
 	return Desired{
 		Storage:      storage,
-		Nodes:        nodeLayouts(in.Nodes, true, backends, in.Routes),
+		Nodes:        nodeLayouts(in.Nodes, true, backends, in.Routes, in.Mirrors),
 		DropUpstream: dropUpstream,
 		HeldUpstream: heldUpstream,
 	}
@@ -429,9 +437,29 @@ func withReferencedAuth(d Desired) Desired {
 		}
 	}
 
+	referenceMirror := func(mirror *registryv1alpha1.PrimaryMirror) {
+		if mirror == nil {
+			return
+		}
+		// Keyed by the object it comes from: every node it is laid out for reads the same key.
+		key := mirrorObjectAuthKey(mirror.Name)
+		original := mirror.Endpoint
+		collectAuth(credentials, original, key)
+		mirror.Endpoint = authRef(original, key)
+		for j := range mirror.Mirrors {
+			mirrorKey := key
+			if mirror.Mirrors[j].Auth.Encoded() != original.Auth.Encoded() {
+				mirrorKey = mirrorObjectSpareAuthKey(key, j)
+			}
+			collectAuth(credentials, mirror.Mirrors[j], mirrorKey)
+			mirror.Mirrors[j] = authRef(mirror.Mirrors[j], mirrorKey)
+		}
+	}
+
 	for node, spec := range d.Nodes {
 		referenceBackends(spec.Backends)
 		referenceRoutes(spec.AdditionalRoutes)
+		referenceMirror(spec.PrimaryMirror)
 		d.Nodes[node] = spec
 	}
 
@@ -519,6 +547,28 @@ func routeAuthKey(match string) string {
 	}
 	sum := sha256.Sum256([]byte(match))
 	return "route_" + hex.EncodeToString(sum[:16])
+}
+
+// mirrorObjectAuthKey keys a RegistryMirror's credentials by the object's name. A name too long to
+// fit a key with a mirror's suffix is keyed by its digest, under a prefix no name key has: object
+// names contain no '_'.
+func mirrorObjectAuthKey(name string) string {
+	key := "registrymirror-" + name
+	if len(key)+len(mirrorObjectSpareAuthKey("", 99)) <= validation.DNS1123SubdomainMaxLength {
+		return key
+	}
+	sum := sha256.Sum256([]byte(name))
+	return "registrymirror_" + hex.EncodeToString(sum[:16])
+}
+
+// mirrorObjectSpareAuthKey keys the own credentials of a RegistryMirror's spare address.
+//
+// Not mirrorAuthKey: its `-mirror-<N>` suffix is something an object name can end with, so the
+// spare address of `eu` and the mirror `eu-mirror-0` would share `registrymirror-eu-mirror-0`, and
+// whichever node the layout loop met last would decide whose credentials both groups of nodes send.
+// An object name never contains '_', so a suffix after one cannot be part of a name.
+func mirrorObjectSpareAuthKey(base string, index int) string {
+	return fmt.Sprintf("%s_spare-%d", base, index)
 }
 
 // mirrorAuthKey keys a mirror's own credentials. Mirrors serve the same content but can
@@ -675,6 +725,7 @@ func upstreamBackends(upstream *registryv1alpha1.Upstream) []registryv1alpha1.Ba
 
 func nodeLayouts(
 	nodes []string, cache bool, backends []registryv1alpha1.Backend, routes []registryv1alpha1.Route,
+	mirrors map[string]registryv1alpha1.PrimaryMirror,
 ) map[string]registryv1alpha1.RegistryNodeSpec {
 	if len(nodes) == 0 {
 		return nil
@@ -685,11 +736,15 @@ func nodeLayouts(
 		// Every node gets its own copy. They are identical today, but they are
 		// separate objects and must not share backing arrays: a future per-node
 		// difference would otherwise mutate every other node's layout.
-		out[node] = registryv1alpha1.RegistryNodeSpec{
+		spec := registryv1alpha1.RegistryNodeSpec{
 			Cache:            cache,
 			Backends:         deepCopyBackends(backends),
 			AdditionalRoutes: deepCopyRoutes(routes),
 		}
+		if mirror, ok := mirrors[node]; ok {
+			spec.PrimaryMirror = mirror.DeepCopy()
+		}
+		out[node] = spec
 	}
 	return out
 }

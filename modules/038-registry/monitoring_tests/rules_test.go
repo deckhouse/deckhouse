@@ -216,6 +216,7 @@ func TestNothingAlertsOnAModuleManagingNothing(t *testing.T) {
 			"alert is the only report of",
 		"D8RegistryAirGapTransitionHeld": "the gauge only exists while the controller is running",
 		"D8RegistryUpstreamRejected":     "the gauge only exists while the controller is running",
+		"D8RegistryMirrorRejected":       "the gauge only exists while the controller is running",
 		"D8RegistryControllerDown": "guarded by the registry-controller Deployment existing, as " +
 			"kube-state-metrics sees it; d8_registry_managed is exported by the controller itself, " +
 			"so it would silence this alert exactly when the controller is gone",

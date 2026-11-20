@@ -54,6 +54,7 @@ var expectedCRDs = map[string]struct {
 	"registryconfig.yaml":    {name: "registryconfigs.deckhouse.io", kind: "RegistryConfig"},
 	"registrystorage.yaml":   {name: "registrystorages.deckhouse.io", kind: "RegistryStorage"},
 	"registryupstream.yaml":  {name: "registryupstreams.deckhouse.io", kind: "RegistryUpstream"},
+	"registrymirror.yaml":    {name: "registrymirrors.deckhouse.io", kind: "RegistryMirror"},
 	"registrynode.yaml":      {name: "registrynodes.deckhouse.io", kind: "RegistryNode"},
 	"registryoperation.yaml": {name: "registryoperations.deckhouse.io", kind: "RegistryOperation"},
 }

@@ -50,6 +50,13 @@ type Metrics struct {
 
 	// LayoutOrigin reports where the layout in use came from.
 	LayoutOrigin *prometheus.GaugeVec
+
+	// MirrorRequests counts what the node's RegistryMirror answered, by mirror and result.
+	//
+	// Its own counter because a mirror's answer never ends a request on its own — a miss goes on
+	// to the targets behind it — so Requests cannot tell how much the mirror actually serves. The
+	// share of hits is what says whether the mirror is filled with what the node pulls.
+	MirrorRequests *prometheus.CounterVec
 }
 
 // New registers the collectors and returns them.
@@ -71,11 +78,29 @@ func New(registry prometheus.Registerer) *Metrics {
 			Name: "d8_registry_agent_layout_origin",
 			Help: "1 for the origin of the layout currently in use.",
 		}, []string{"origin"}),
+		MirrorRequests: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Name: "d8_registry_agent_mirror_requests_total",
+			Help: "Requests the agent sent to the node's RegistryMirror, by mirror and result.",
+		}, []string{"mirror", "result"}),
 	}
 
-	registry.MustRegister(m.Requests, m.Failovers, m.Tokens, m.LayoutOrigin)
+	registry.MustRegister(m.Requests, m.Failovers, m.Tokens, m.LayoutOrigin, m.MirrorRequests)
 	return m
 }
+
+// Results of a request to a RegistryMirror.
+const (
+	// MirrorHit is the mirror serving the content.
+	MirrorHit = "hit"
+	// MirrorMiss is the mirror not holding it, which sends the request on.
+	MirrorMiss = "miss"
+	// MirrorRefused is the mirror refusing the request: its credentials, its permissions.
+	MirrorRefused = "refused"
+	// MirrorUnavailable is the mirror not answering, or answering with a server error.
+	MirrorUnavailable = "unavailable"
+	// MirrorDigestMismatch is the mirror serving content that is not what the digest names.
+	MirrorDigestMismatch = "digest_mismatch"
+)
 
 // Results a routed request can have.
 const (
@@ -95,6 +120,10 @@ const (
 	// reason because it is the one that points at this module rather than at the network:
 	// nothing the client did can cause it, and nothing the client does can fix it.
 	ReasonUnauthorized = "unauthorized"
+
+	// ReasonRefused is a mirror answering with a client error other than a miss. A mirror's
+	// refusal is never relayed, whoever's credentials it turned down.
+	ReasonRefused = "refused"
 )
 
 // Results of a token exchange.

@@ -225,6 +225,55 @@ d8 k get registryupstreams -o custom-columns=\
 NAME:.metadata.name,MATCH:.spec.match,ACCEPTED:.status.conditions[0].status,REASON:.status.conditions[0].reason
 ```
 
+## Pulling from a mirror near the nodes
+
+Nodes far from the control plane can pull the image set from a registry near them. Prepare the
+registry first: it has to serve the image set by digest under one prefix. For example:
+
+- a Harbor proxy-cache project of `registry.deckhouse.io`: the prefix is `/<project>/deckhouse/<edition>`;
+- a project filled with `d8 mirror push <bundle> harbor.example.com/<project>/<path>`: the prefix is
+  `/<project>/<path>`.
+
+Then select the nodes that ask it first:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: RegistryMirror
+metadata:
+  name: gpu-eu
+spec:
+  nodeSelector:
+    matchLabels:
+      node.deckhouse.io/group: gpu-eu
+  source:
+    host: harbor.eu.example.com
+    path: /d8-proxy/deckhouse/ee
+    auth:
+      username: robot
+      password: <PASSWORD>
+```
+
+The agent on every node of the `gpu-eu` group now asks `harbor.eu.example.com` for content named by
+digest before the cache or the upstream. Tags are still resolved by the cache or the upstream, and
+whatever the mirror does not serve is pulled from there.
+
+For a public project, leave out `auth`: the agent asks the mirror anonymously, with an anonymous token
+where the registry wants one.
+
+Check that the mirror has been accepted and for how many nodes:
+
+```bash
+d8 k get registrymirrors -o wide
+```
+
+The object is rejected when a node it selects is served by a mirror created earlier (the reason is
+`NodeConflict`; narrow the `nodeSelector` of one of them), or when a field of `spec` is invalid
+(`InvalidSpec`).
+
+How much the mirror serves is visible in the `d8_registry_agent_mirror_requests_total` metric of
+each node, by result: `hit`, `miss`, `refused`, `unavailable` and `digest_mismatch`. Many misses mean
+the mirror does not hold what the nodes pull; `refused` usually means wrong credentials.
+
 ## Pulling from a private registry without declaring it
 
 Nothing needs to be declared to pull from a registry the module does not know about. When the

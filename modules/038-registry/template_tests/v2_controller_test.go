@@ -402,10 +402,12 @@ var _ = Describe("Module :: registry :: helm template :: v2 controller", func() 
 			controllerVerbs := grantedVerbs(controllerRole)
 			Expect(controllerVerbs["registryconfigs/sensitive"]).To(ConsistOf("get", "list", "watch"))
 			Expect(controllerVerbs["registryupstreams/sensitive"]).To(ConsistOf("get", "list", "watch"))
+			Expect(controllerVerbs["registrymirrors/sensitive"]).To(ConsistOf("get", "list", "watch"))
 			// The controller may only write the status of the objects other writers
 			// own, never their spec.
 			Expect(controllerRole.Field("rules").String()).To(ContainSubstring("registryconfigs/status"))
 			Expect(controllerRole.Field("rules").String()).To(ContainSubstring("registryupstreams/status"))
+			Expect(controllerRole.Field("rules").String()).To(ContainSubstring("registrymirrors/status"))
 
 			// The agent authenticates with the kubelet's kubeconfig, so the binding
 			// is to the system:nodes group rather than to a ServiceAccount.

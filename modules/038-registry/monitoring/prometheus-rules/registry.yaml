@@ -392,6 +392,33 @@
         NAME:.metadata.name,MATCH:.spec.match,ACCEPTED:.status.conditions[0].status,REASON:.status.conditions[0].reason
         ```
 
+  - alert: D8RegistryMirrorRejected
+    expr: max by (reason) (d8_registry_mirrors_rejected) > 0
+    for: 15m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: registry
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: A mirror of the image set was refused.
+      description: |-
+        A `RegistryMirror` resource was not accepted, so the nodes it selects pull the way they
+        would without it: from the in-cluster cache or the upstream, however far those are.
+
+        Reason: `{{ $labels.reason }}`
+
+        - `NodeConflict` — a node it selects is served by a mirror created earlier. A node is
+          served by one mirror at most; narrow the `nodeSelector` of one of them.
+        - `InvalidSpec` — a field of `spec` is invalid.
+
+        ```shell
+        d8 k get registrymirrors -o wide
+        ```
+
   - alert: D8RegistryStaleCacheData
     expr: max by (node) (d8_registry_storage_stale_data_bytes) > 0
     for: 24h

@@ -45,6 +45,7 @@ func TestTheTextfileCarriesNothingButTheAgentsOwnFamilies(t *testing.T) {
 	collected.Failovers.WithLabelValues("storage", agentmetrics.ReasonUnreachable).Inc()
 	collected.Tokens.WithLabelValues(agentmetrics.TokenObtained).Inc()
 	collected.LayoutOrigin.WithLabelValues("api").Set(1)
+	collected.MirrorRequests.WithLabelValues("gpu-eu", agentmetrics.MirrorHit).Inc()
 
 	path := filepath.Join(t.TempDir(), "registry-agent.prom")
 	textfile := &agentmetrics.Textfile{
@@ -74,6 +75,7 @@ func TestTheTextfileCarriesNothingButTheAgentsOwnFamilies(t *testing.T) {
 		"d8_registry_agent_failovers_total":       true,
 		"d8_registry_agent_token_exchanges_total": true,
 		"d8_registry_agent_layout_origin":         true,
+		"d8_registry_agent_mirror_requests_total": true,
 	}, families)
 
 	// The loopback listener keeps what it had: someone on the node still gets the runtime along

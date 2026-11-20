@@ -6,9 +6,9 @@
 # Read access:
 # - registryoperations, the operations on the in-cluster cache
 # - registryimages, the images of the in-cluster cache
-# ModuleConfig/registry, RegistryConfig, RegistryUpstream and RegistryStorage all carry credentials
-# inline: the license key or the upstream password, and the bearer token of the storage. User reads
-# no Secrets, so none of them is here. A RegistryNode holds no credentials, but it lays out the
+# ModuleConfig/registry, RegistryConfig, RegistryUpstream, RegistryMirror and RegistryStorage all carry
+# credentials inline: the license key, the upstream or mirror password, and the bearer token of the
+# storage. User reads no Secrets, so none of them is here. A RegistryNode holds no credentials, but it lays out the
 # registry of the cluster: the upstream and mirror addresses, the CA bundles and every route. User is
 # granted to application developers across the cluster, so it stays with ClusterAdmin, unlike the
 # RBACv2 viewer of the cluster subsystem.
@@ -41,6 +41,7 @@ rules:
 # Includes the User permissions.
 # Full access:
 # - registryupstreams, the additional registries
+# - registrymirrors, the nearby copies of the image set for groups of nodes
 # Read access, with the credentials:
 # - registryconfigs, registrystorages
 # Read access:
@@ -70,11 +71,13 @@ rules:
   - list
   - watch
 # An upstream intercepts the pulls of its host on every node, so creating one is the power to
-# substitute images.
+# substitute images. A mirror decides where the nodes it selects send their pulls, and with whose
+# credentials.
 - apiGroups:
   - deckhouse.io
   resources:
   - registryupstreams
+  - registrymirrors
   verbs:
   - get
   - list
@@ -94,13 +97,14 @@ rules:
   - update
   - patch
   - delete
-# The authentication fields of RegistryConfig and RegistryUpstream are sensitive data: without
-# this subresource the API returns them as <omitted>.
+# The authentication fields of RegistryConfig, RegistryUpstream and RegistryMirror are sensitive
+# data: without this subresource the API returns them as <omitted>.
 - apiGroups:
   - deckhouse.io
   resources:
   - registryconfigs/sensitive
   - registryupstreams/sensitive
+  - registrymirrors/sensitive
   verbs:
   - get
   - list

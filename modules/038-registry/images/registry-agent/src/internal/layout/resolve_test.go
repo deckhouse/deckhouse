@@ -113,6 +113,38 @@ func TestResolveFillsInEveryReference(t *testing.T) {
 	assert.False(t, storage.Endpoint.Auth.NeedsResolution())
 }
 
+// TestResolveFillsInTheMirrorsReferences: the credentials of the node's RegistryMirror, its own and
+// those of a spare address, come by reference like every other. Missed here, the mirror is asked with
+// none and refuses every request, while the pull succeeds past it and nothing fails.
+func TestResolveFillsInTheMirrorsReferences(t *testing.T) {
+	secret := authSecret(map[string]string{
+		constant.AuthKeyStorage:         "dGVzdC12YWx1ZQ==",
+		constant.AuthKeyUpstream:        "dXNlcm5hbWU6cGFzc3dvcmQ=",
+		"registrymirror-gpu-eu":         "dXNlcm5hbWU6cGFzc3dvcmQ=",
+		"registrymirror-gpu-eu_spare-0": "dGVzdC12YWx1ZQ==",
+	})
+	kubeClient := clientWithSecrets(t, secret)
+	resolver := &Resolver{Namespace: testNamespace}
+
+	spec := referencingLayout()
+	spec.PrimaryMirror = &registryv1alpha1.PrimaryMirror{
+		Name: "gpu-eu",
+		Upstream: registryv1alpha1.Upstream{
+			Endpoint: registryv1alpha1.Endpoint{Host: "harbor.eu.example.com", Auth: ref("registrymirror-gpu-eu")},
+			Mirrors: []registryv1alpha1.Endpoint{{
+				Host: "harbor-2.eu.example.com",
+				Auth: ref("registrymirror-gpu-eu_spare-0"),
+			}},
+		},
+	}
+	require.NoError(t, resolver.Resolve(context.Background(), kubeClient, spec))
+
+	assert.Equal(t, "dXNlcm5hbWU6cGFzc3dvcmQ=", spec.PrimaryMirror.Endpoint.Auth.Auth)
+	assert.False(t, spec.PrimaryMirror.Endpoint.Auth.NeedsResolution())
+	assert.Equal(t, "dGVzdC12YWx1ZQ==", spec.PrimaryMirror.Mirrors[0].Auth.Auth)
+	assert.False(t, spec.PrimaryMirror.Mirrors[0].Auth.NeedsResolution())
+}
+
 // TestResolveRefusesAMissingKey: an endpoint whose credentials could not be found still
 // resolves to a syntactically fine layout, and the pull then fails with a 401 that says
 // nothing about a missing key. Refusing here is what turns that into a legible error.

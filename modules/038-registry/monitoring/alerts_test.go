@@ -75,6 +75,7 @@ var expectedFor = map[string]string{
 	"D8RegistryAirGapTransitionHeld":    "6h",
 	"D8RegistryUpstreamProbeFailing":    "15m",
 	"D8RegistryUpstreamRejected":        "15m",
+	"D8RegistryMirrorRejected":          "15m",
 	"D8RegistryStaleCacheData":          "24h",
 	"D8RegistryStorageNotReclaimed":     "1h",
 	"D8RegistryStoreCorrupted":          "2h",

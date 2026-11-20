@@ -167,12 +167,19 @@ func (d *demotions) order(targets []Target) []bool {
 	}
 	kept := make([]Target, 0, len(targets))
 	var moved []Target
+	// A mirror moved back promotes nothing: its 404 would never have been the answer, so the
+	// answer of a target that now comes before it stands for itself, as it would with the mirror
+	// up. See Target.Mirror.
+	var movedBackends int
 	for i := range targets {
 		if d.demoted(&targets[i]) {
 			moved = append(moved, targets[i])
+			if targets[i].Mirror == "" {
+				movedBackends++
+			}
 			continue
 		}
-		promoted[len(kept)] = len(moved) > 0
+		promoted[len(kept)] = movedBackends > 0
 		kept = append(kept, targets[i])
 	}
 	copy(targets, kept)
@@ -182,10 +189,18 @@ func (d *demotions) order(targets []Target) []bool {
 
 // demotionKey names the address a target is reached at. Case-folded, as hosts are compared
 // everywhere else, so that one registry written two ways is one record.
+//
+// A mirror's address is a record of its own, apart from a backend or a route on the same host. One
+// registry often serves both under different projects, and the mirror's project failing must not
+// move the other's traffic, nor that one answering lift the mirror's demotion.
 func demotionKey(target *Target) string {
 	scheme := target.Scheme
 	if scheme == "" {
 		scheme = registryv1alpha1.SchemeHTTPS
 	}
-	return scheme.Lower() + "://" + strings.ToLower(strings.TrimSpace(target.Host))
+	address := scheme.Lower() + "://" + strings.ToLower(strings.TrimSpace(target.Host))
+	if target.Mirror != "" {
+		return "mirror/" + target.Mirror + "@" + address
+	}
+	return address
 }
