@@ -1,0 +1,5 @@
+node-manager:
+  fixes:
+    - summary: >-
+        Reduce node-manager Helm release Secret size to avoid exceeding the 1 MiB etcd limit on clusters
+        with many Static or Hybrid NodeGroups.

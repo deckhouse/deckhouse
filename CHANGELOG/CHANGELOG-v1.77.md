@@ -1076,6 +1076,7 @@
  - **[node-manager]** Nodes trust the registry CA from a ModuleSource that has `dockerCfg` set again.
     bashible-apiserver no longer skips such ModuleSources, so their CA is added to the node configuration. Bashible will be rerun on all nodes.
  - **[node-manager]** Prevented a kube-api-proxy outage when upstreams.json contains null or empty data. [#20026](https://github.com/deckhouse/deckhouse/pull/20026)
+ - **[node-manager]** Reduce node-manager Helm release Secret size to avoid exceeding the 1 MiB etcd limit on clusters with many Static or Hybrid NodeGroups.
  - **[node-manager]** Reduced MachineDeployment creationTimeout to 5m for AWS spot instances. [#19073](https://github.com/deckhouse/deckhouse/pull/19073)
     <what to expect for users, possibly MULTI-LINE>, required if impact_level is high ↓
  - **[node-manager]** Removed the conflicting `ms` short name from the CAPI MachineSet CRD. [#21189](https://github.com/deckhouse/deckhouse/pull/21189)
