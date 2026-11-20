@@ -48,6 +48,7 @@ requirements:
   # requirement key that 1.75, 1.76 or 1.77.0 already checks can express this: none of them reads
   # the registry mode, and none refuses an update by the version it starts from.
   "registryImplementation": "V2" # modules/038-registry/requirements/check.go
+  "pssDefaultPolicyImplicitPrivileged": "false" # modules/015-admission-policy-engine/requirements/check.go
   # "checkContainerdV1NodesPresent": "false" # modules/040-node-manager/requirements/check.go; injected with 'true' only for CSE via .werf/werf-release-channel.yaml (CSE drops containerd v1)
 
 # map of disruptions, associated with a specific release. You have to register check functions before specified release
