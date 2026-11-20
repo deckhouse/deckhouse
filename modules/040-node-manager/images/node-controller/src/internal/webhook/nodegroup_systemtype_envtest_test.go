@@ -29,7 +29,6 @@ import (
 
 const (
 	systemTypeChangedMessage = ".spec.systemType DeckhouseEngine cannot be changed or removed"
-	cloudStaticMessage       = "systemType DeckhouseEngine is not supported for nodeType CloudStatic"
 	staticInstancesMessage   = "staticInstances cannot provision a DeckhouseEngine node. Add machines with d8 node add"
 )
 
@@ -64,7 +63,6 @@ func TestNodeGroupSystemTypeCRDRules(t *testing.T) {
 				version: "v1",
 				name:    "DeckhouseEngine on CloudStatic",
 				spec:    map[string]any{"nodeType": "CloudStatic", "systemType": "DeckhouseEngine"},
-				wantErr: cloudStaticMessage,
 			},
 			{
 				version: "v1",

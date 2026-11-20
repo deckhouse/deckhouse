@@ -1503,8 +1503,6 @@ spec:
               x-kubernetes-validations:
                 - rule: "!(oldSelf.?systemType.orValue('') in ['Immutable', 'DeckhouseEngine']) || self.?systemType.orValue('') in ['Immutable', 'DeckhouseEngine']"
                   message: .spec.systemType DeckhouseEngine cannot be changed or removed
-                - rule: "!(self.?systemType.orValue('') in ['Immutable', 'DeckhouseEngine']) || self.nodeType != 'CloudStatic'"
-                  message: systemType DeckhouseEngine is not supported for nodeType CloudStatic
                 - rule: "!(self.?systemType.orValue('') in ['Immutable', 'DeckhouseEngine']) || !has(self.staticInstances)"
                   message: "staticInstances cannot provision a DeckhouseEngine node. Add machines with d8 node add"
               properties:
@@ -1542,10 +1540,9 @@ spec:
                     `DeckhouseEngine` is supported for:
 
                     - `Static`: Machines must be added with `d8 node add`. `staticInstances` cannot be used.
+                    - `CloudStatic`: Machines must be created manually or using external tools.
                     - `CloudEphemeral`: Machines must be created by the cloud provider through Cluster API (CAPI).
                     - `CloudPermanent`: Machines are created by dhctl.
-
-                    `DeckhouseEngine` is not supported for `CloudStatic` groups.
 
                     A group can become `DeckhouseEngine` only while bashible has configured none of its nodes. `DeckhouseEngine` cannot be removed or changed to `GenericOS`.
                   type: string

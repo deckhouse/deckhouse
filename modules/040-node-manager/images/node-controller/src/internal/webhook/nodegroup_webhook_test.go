@@ -436,21 +436,59 @@ func TestValidation_SystemTypeImmutableNeedsCAPI(t *testing.T) {
 	}
 }
 
-// The CRD of deckhouse.io/v1alpha1 and v1alpha2 cannot refuse this: their Hybrid
-// becomes CloudStatic only at conversion, and the webhook sees every request as v1.
-func TestValidation_SystemTypeImmutableRefusesCloudStatic(t *testing.T) {
+func TestValidation_DeckhouseEngineCloudStaticRequestVersion(t *testing.T) {
+	const cloudStaticDenial = "systemType DeckhouseEngine is not supported for nodeType CloudStatic"
+
+	tests := []struct {
+		name           string
+		requestVersion string
+		wantDenied     string
+	}{
+		{name: "v1 with no original kind"},
+		{name: "v1", requestVersion: "v1"},
+		{name: "converted v1alpha1 Hybrid", requestVersion: "v1alpha1", wantDenied: cloudStaticDenial},
+		{name: "converted v1alpha2 Hybrid", requestVersion: "v1alpha2", wantDenied: cloudStaticDenial},
+	}
+
 	s := newScheme()
 	w := &NodeGroupValidator{Client: fake.NewClientBuilder().WithScheme(s).Build(), decoder: admission.NewDecoder(s)}
+	kind := metav1.GroupVersionKind{Group: v1.GroupVersion.Group, Version: v1.GroupVersion.Version, Kind: "NodeGroup"}
 
-	ng := baseNodeGroup("worker", v1.NodeTypeCloudStatic)
-	ng.Spec.SystemType = v1.SystemTypeLegacyImmutable
+	for _, tc := range tests {
+		for _, op := range []admissionv1.Operation{admissionv1.Create, admissionv1.Update} {
+			t.Run(tc.name+"/"+string(op), func(t *testing.T) {
+				ng := baseNodeGroup("worker", v1.NodeTypeCloudStatic)
+				ng.Spec.SystemType = v1.SystemTypeDeckhouseEngine
 
-	resp := w.Handle(t.Context(), makeAdmissionRequest(t, admissionv1.Create, ng, nil))
-	if resp.Allowed {
-		t.Fatal("want denied, got allowed")
-	}
-	if resp.Result.Message != cloudStaticMessage {
-		t.Fatalf("message = %q, want %q", resp.Result.Message, cloudStaticMessage)
+				var oldNG *v1.NodeGroup
+				if op == admissionv1.Update {
+					oldNG = ng.DeepCopy()
+					oldNG.Spec.SystemType = v1.SystemTypeGenericOS
+				}
+
+				req := makeAdmissionRequest(t, op, ng, oldNG)
+				req.Kind = kind
+
+				if tc.requestVersion != "" {
+					originalKind := kind
+					originalKind.Version = tc.requestVersion
+					req.RequestKind = &originalKind
+				}
+
+				resp := w.Handle(t.Context(), req)
+				if tc.wantDenied == "" {
+					if !resp.Allowed {
+						t.Fatalf("want allowed, got denied: %v", resp.Result)
+					}
+
+					return
+				}
+
+				if resp.Allowed || resp.Result == nil || !strings.Contains(resp.Result.Message, tc.wantDenied) {
+					t.Fatalf("want denial with %q, got %+v", tc.wantDenied, resp.AdmissionResponse)
+				}
+			})
+		}
 	}
 }
 
