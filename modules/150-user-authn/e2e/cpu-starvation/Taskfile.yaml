@@ -1,0 +1,33 @@
+version: "3"
+
+includes:
+  dex-noisy-neighbour:
+    taskfile: ./tests/dex-noisy-neighbour/Taskfile.yml
+    dir: ./tests/dex-noisy-neighbour
+  dex-high-load-average:
+    taskfile: ./tests/dex-high-load-average/Taskfile.yml
+    dir: ./tests/dex-high-load-average
+  dex-high-load-average-cpu-limit:
+    taskfile: ./tests/dex-high-load-average-cpu-limit/Taskfile.yml
+    dir: ./tests/dex-high-load-average-cpu-limit
+
+tasks:
+  run:
+    desc: Run all user-authn CPU starvation scenarios against the current kubectl context
+    cmds:
+      - task: dex-noisy-neighbour:run
+      - task: dex-high-load-average:run
+      - task: dex-high-load-average-cpu-limit:run
+
+  lint:
+    desc: Validate every test and the configuration against the Chainsaw schema without a cluster
+    cmds:
+      - task: dex-noisy-neighbour:lint:test
+      - task: dex-high-load-average:lint:test
+      - task: dex-high-load-average-cpu-limit:lint:test
+      - chainsaw lint configuration -f chainsaw-config.yaml
+
+  cleanup:
+    desc: Remove what interrupted runs left in the cluster of the current kubectl context
+    cmds:
+      - sh tests/common/scripts/cleanup.sh

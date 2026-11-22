@@ -1,0 +1,359 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: user-authn-dex-noisy-neighbour
+spec:
+  description: >-
+    A noisy neighbour takes the free CPU of the Dex node while Dex keeps its own small request and
+    serves an in-cluster login and refresh load. Dex and its kube-rbac-proxy must not restart, the
+    logins must work again within the recovery time after the pressure ends, the AuthRequests must
+    return to the count before the run, and the writes to the API server must not grow per login.
+
+  concurrent: false
+  timeouts:
+    apply: 60s
+    assert: 5m
+    delete: 5m
+    cleanup: 10m
+    exec: 10m
+
+  # Override with `chainsaw test --set <NAME>=<VALUE>`, e.g. `--set hold=900` for a manual run.
+  # Durations are in seconds.
+  bindings:
+    # Image of the load pod and the burner, pinned by digest.
+    - name: image
+      value: ($values.image || 'mirror.gcr.io/library/python:3.12-alpine@sha256:b658b05ce9c4eb97ec6fc19424818a1f31993659c2b505a532f470e83807815d')
+    - name: baseline
+      value: (to_string($values.baseline || `180`))
+    - name: hold
+      value: (to_string($values.hold || `300`))
+    - name: recovery
+      value: (to_string($values.recovery || `120`))
+    # Load kept after the release; it must cover the recovery time plus the 60s check window.
+    - name: after
+      value: (to_string($values.after || `300`))
+    # Burner threads per node CPU.
+    - name: threadsFactor
+      value: (to_string($values.threadsFactor || `1`))
+    # Busy threads per burner pod; 0 puts all threads into one pod.
+    - name: threadsPerPod
+      value: (to_string($values.threadsPerPod || `0`))
+    # Upper limit of the burner pods; the free pod slots of the node limit them as well.
+    - name: maxBurnerPods
+      value: (to_string($values.maxBurnerPods || `100`))
+    # Millicores of the node the burner leaves unrequested.
+    - name: cpuMargin
+      value: (to_string($values.cpuMargin || `100`))
+    - name: loginWorkers
+      value: (to_string($values.loginWorkers || `4`))
+    - name: refreshWorkers
+      value: (to_string($values.refreshWorkers || `4`))
+    - name: pause
+      value: (to_string($values.pause || `0.5`))
+    # Measured with a 10m Dex request: 1-3% of the logins succeed under this pressure, so the rate
+    # under the pressure is reported and not checked.
+    - name: minPressureSuccess
+      value: (to_string($values.minPressureSuccess || `0`))
+    - name: minRecoveredSuccess
+      value: (to_string($values.minRecoveredSuccess || `0.95`))
+    - name: writeFactor
+      value: (to_string($values.writeFactor || `2`))
+    - name: writeSlack
+      value: (to_string($values.writeSlack || `10`))
+    - name: authRequestDrain
+      value: (to_string($values.authRequestDrain || `960`))
+    - name: authRequestSlack
+      value: (to_string($values.authRequestSlack || `5`))
+    - name: assertRestarts
+      value: ($values.assertRestarts == null && 'true' || to_string($values.assertRestarts))
+    - name: assertLeases
+      value: ($values.assertLeases == null && 'true' || to_string($values.assertLeases))
+
+  catch:
+    - description: Show the pods of the test namespace
+      get:
+        apiVersion: v1
+        kind: Pod
+    - description: Show the events of the test namespace
+      events: {}
+    - description: Show the pods of user-authn
+      script:
+        content: kubectl -n d8-user-authn get pods -o wide
+    - description: Show the last flows of the load
+      podLogs:
+        name: dex-load
+        container: load
+        tail: 50
+    - description: Show the Dex logs
+      podLogs:
+        namespace: d8-user-authn
+        selector: app=dex
+        container: dex
+        tail: 100
+    - description: Show the events of user-authn
+      events:
+        namespace: d8-user-authn
+
+  steps:
+    - name: assert-module-ready
+      description: The user-authn module runs Dex and serves the DexClient and User resources
+      try:
+        - description: Assert the DexClient and User CRDs exist
+          assert:
+            resource:
+              apiVersion: apiextensions.k8s.io/v1
+              kind: CustomResourceDefinition
+              metadata:
+                name: dexclients.deckhouse.io
+        - assert:
+            resource:
+              apiVersion: apiextensions.k8s.io/v1
+              kind: CustomResourceDefinition
+              metadata:
+                name: users.deckhouse.io
+        - description: Wait for the Dex Deployment to be Available
+          wait:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: dex
+            namespace: d8-user-authn
+            timeout: 5m
+            for:
+              condition:
+                name: Available
+                value: 'True'
+        - description: Check that a node other than the Dex node can run the load
+          script:
+            content: |
+              . ../common/scripts/lib.sh
+              check_nodes
+
+    - name: deploy-load
+      description: >-
+        Create the OAuth2 client, the load pod on another node than Dex and two throwaway users with a
+        random password, then wait for the first successful login and refresh
+      try:
+        - description: Grant the load pod the watch of the module objects
+          apply:
+            file: ../common/manifests/load-rbac.yaml
+        - description: Create the DexClient of the load
+          apply:
+            file: ../common/manifests/dex-client.yaml
+        - description: Wait for Deckhouse to write the client secret
+          assert:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: dex-client-dex-load
+        - description: Publish the load scripts and find the Dex pod under test and its node
+          script:
+            content: |
+              . ../common/scripts/lib.sh
+              step_prepare_load
+            check:
+              ($error == null): true
+              (split(trim_space($stdout), ' ')[1] != null): true
+            outputs:
+              - name: dexNode
+                value: (split(trim_space($stdout), ' ')[0])
+              - name: dexURL
+                value: (split(trim_space($stdout), ' ')[1])
+        - description: Start the load pod
+          apply:
+            file: ../common/manifests/load-pod.yaml
+        - description: Read the password hash from the init container
+          script:
+            content: |
+              . ../common/scripts/lib.sh
+              step_password_hash
+            outputs:
+              - name: passwordHash
+                value: (trim_space($stdout))
+        - description: Create the users of the load
+          apply:
+            file: ../common/manifests/users.yaml
+        - description: Wait for a successful login and refresh
+          script:
+            timeout: 10m
+            content: |
+              . ../common/scripts/lib.sh
+              step_warmup
+      catch:
+        - description: Describe the load pod
+          describe:
+            apiVersion: v1
+            kind: Pod
+            name: dex-load
+        - description: Show the DexClient
+          get:
+            apiVersion: deckhouse.io/v1
+            kind: DexClient
+            name: dex-load
+
+    - name: record-baseline
+      description: Record the restarts, the leases and the AuthRequests, then measure the load without pressure
+      try:
+        - script:
+            timeout: 65m
+            env:
+              - name: BASELINE
+                value: ($baseline)
+            content: |
+              . ../common/scripts/lib.sh
+              step_record_baseline
+
+    - name: apply-pressure
+      description: >-
+        Start a burner on the Dex node that requests the free CPU of the node and burns one thread per
+        node CPU; Dex keeps its own request and gets a share of the node by that weight
+      try:
+        - description: Size the burner from the node allocatable CPU minus the pod requests and from the node CPUs
+          script:
+            env:
+              - name: THREADS_FACTOR
+                value: ($threadsFactor)
+              - name: CPU_MARGIN
+                value: ($cpuMargin)
+              - name: THREADS_PER_POD
+                value: ($threadsPerPod)
+              - name: MAX_PODS
+                value: ($maxBurnerPods)
+            content: |
+              . ../common/scripts/lib.sh
+              node=$(state_get dexNode)
+              size=$(step_stress_size)
+              echo "$node $size"
+            check:
+              ($error == null): true
+              (split(trim_space($stdout), ' ')[1] != null): true
+              (split(trim_space($stdout), ' ')[2] != null): true
+              (split(trim_space($stdout), ' ')[3] != null): true
+            outputs:
+              - name: dexNode
+                value: (split(trim_space($stdout), ' ')[0])
+              - name: cpuRequest
+                value: (split(trim_space($stdout), ' ')[1])
+              - name: threads
+                value: (split(trim_space($stdout), ' ')[2])
+              - name: replicas
+                value: (split(trim_space($stdout), ' ')[3])
+        - description: Start the burner
+          apply:
+            file: ../common/manifests/stress-deployment.yaml
+        - description: Wait for the burner to run
+          wait:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: cpu-stress
+            timeout: 5m
+            for:
+              condition:
+                name: Available
+                value: 'True'
+        - description: Mark the start of the pressure
+          script:
+            content: |
+              . ../common/scripts/lib.sh
+              step_mark_pressure
+      catch:
+        - description: Describe the burner pods
+          describe:
+            apiVersion: v1
+            kind: Pod
+            selector: app=cpu-stress
+
+    - name: hold-pressure
+      description: Keep the pressure for the hold time
+      try:
+        - script:
+            timeout: 65m
+            env:
+              - name: HOLD
+                value: ($hold)
+            content: |
+              . ../common/scripts/lib.sh
+              step_hold
+
+    - name: release-pressure
+      description: Delete the burner and mark the release
+      try:
+        - delete:
+            ref:
+              apiVersion: apps/v1
+              kind: Deployment
+              name: cpu-stress
+        - script:
+            content: |
+              . ../common/scripts/lib.sh
+              step_mark_release
+
+    - name: assert-pods-recover
+      description: Every pod of user-authn is Ready within the recovery time, none is in CrashLoopBackOff
+      try:
+        - script:
+            env:
+              - name: RECOVERY
+                value: ($recovery)
+            content: |
+              . ../common/scripts/lib.sh
+              step_assert_pods_recover
+
+    - name: observe-after
+      description: Keep the load running after the release to measure the recovery and the writes
+      try:
+        - script:
+            timeout: 65m
+            env:
+              - name: AFTER
+                value: ($after)
+            content: |
+              . ../common/scripts/lib.sh
+              step_observe_after
+
+    - name: evaluate
+      description: >-
+        Login success per phase and its recovery, the writes per completed flow, the Dex restarts and
+        the leases against the baseline
+      try:
+        - script:
+            env:
+              - name: RECOVERY
+                value: ($recovery)
+              - name: MIN_PRESSURE
+                value: ($minPressureSuccess)
+              - name: MIN_RECOVERED
+                value: ($minRecoveredSuccess)
+              - name: WRITE_FACTOR
+                value: ($writeFactor)
+              - name: WRITE_SLACK
+                value: ($writeSlack)
+              - name: ASSERT_RESTARTS
+                value: ($assertRestarts)
+              - name: ASSERT_LEASES
+                value: ($assertLeases)
+            content: |
+              . ../common/scripts/lib.sh
+              step_evaluate
+
+    - name: drain-authrequests
+      description: Stop the load; the AuthRequests return to the count before the run
+      try:
+        - script:
+            timeout: 65m
+            env:
+              - name: AUTHREQ_DRAIN
+                value: ($authRequestDrain)
+              - name: AUTHREQ_SLACK
+                value: ($authRequestSlack)
+            content: |
+              . ../common/scripts/lib.sh
+              step_drain_authrequests
+
+    - name: verdict
+      description: Fail the test when any check above failed
+      try:
+        - script:
+            content: |
+              . ../common/scripts/lib.sh
+              step_verdict

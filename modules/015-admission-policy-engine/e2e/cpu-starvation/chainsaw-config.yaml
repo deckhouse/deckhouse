@@ -1,0 +1,18 @@
+apiVersion: chainsaw.kyverno.io/v1alpha2
+kind: Configuration
+metadata:
+  name: admission-policy-engine-cpu-starvation-e2e
+spec:
+  timeouts:
+    apply: 60s
+    assert: 5m
+    error: 5m
+    delete: 5m
+    cleanup: 20m
+    exec: 15m
+  execution:
+    # The scenarios load whole nodes: never run them in parallel.
+    failFast: true
+    parallel: 1
+  discovery:
+    testFile: chainsaw-test.yaml

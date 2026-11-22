@@ -1,0 +1,52 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: admission-policy-engine-mutator-status
+spec:
+  description: >-
+    Gatekeeper reports every mutator as enforced in status.byPod, the way it reports constraints.
+  timeouts:
+    exec: 10m
+  steps:
+    - name: ensure-module
+      description: Enable the module if needed and wait until it is Ready and bootstrapped
+      try:
+        - description: Enable admission-policy-engine and wait for the bootstrap
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh
+            check:
+              ($error == null): true
+
+    - name: create-namespaces
+      description: Create the namespace the mutators match
+      try:
+        - description: Create e2e-ape-mutator-status
+          script:
+            content: bash "${E2E_LIB_DIR}/create-namespace.sh" e2e-ape-mutator-status
+            check:
+              ($error == null): true
+      cleanup:
+        - description: Delete the namespace of the test through its Project
+          script:
+            timeout: 6m
+            content: bash "${E2E_LIB_DIR}/delete-namespace.sh" e2e-ape-mutator-status
+
+    - name: mutator-status-reported
+      description: Both mutators report status.byPod with enforced=true
+      try:
+        - description: Create the Assign and the AssignMetadata
+          apply:
+            file: manifests/mutators.yaml
+        - description: Wait for status.byPod of both mutators
+          script:
+            content: bash ../common/scripts/wait-constraints.sh 300 assign/e2e-ape-status-grace-period assignmetadata/e2e-ape-status-label
+            check:
+              ($error == null): true
+      catch:
+        - description: Show the MutatorPodStatus objects and RBAC errors of the Gatekeeper pods
+          script:
+            content: |
+              kubectl -n d8-admission-policy-engine get mutatorpodstatuses.status.gatekeeper.sh -o name 2>&1 | head -20
+              kubectl -n d8-admission-policy-engine logs -l app=gatekeeper,control-plane=audit-controller -c manager --tail=2000 | grep -iE 'forbidden|mutator' | tail -20 || true
+              kubectl auth can-i update assign.mutations.gatekeeper.sh --subresource=status --as=system:serviceaccount:d8-admission-policy-engine:admission-policy-engine || true

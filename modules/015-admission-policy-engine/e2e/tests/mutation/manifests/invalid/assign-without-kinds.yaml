@@ -1,0 +1,16 @@
+apiVersion: mutations.gatekeeper.sh/v1
+kind: Assign
+metadata:
+  name: e2e-ape-invalid-kinds
+spec:
+  applyTo:
+    - groups: [""]
+      kinds: ["Pod"]
+      versions: ["v1"]
+  match:
+    scope: Namespaced
+    namespaces: ["e2e-ape-mutation"]
+  location: spec.terminationGracePeriodSeconds
+  parameters:
+    assign:
+      value: 7

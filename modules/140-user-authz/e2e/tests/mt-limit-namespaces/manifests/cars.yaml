@@ -1,0 +1,59 @@
+---
+# Editor limited to the suite namespace; @NAMESPACE@ is replaced with $NAMESPACE when applied.
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: e2e-authz-mt-limited
+  labels:
+    e2e.deckhouse.io/suite: user-authz
+spec:
+  accessLevel: Editor
+  limitNamespaces:
+  - "@NAMESPACE@"
+  subjects:
+  - kind: User
+    name: e2e-authz-mt-limited
+---
+# Editor without namespace limits: every namespace except the system ones.
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: e2e-authz-mt-nolimit
+  labels:
+    e2e.deckhouse.io/suite: user-authz
+spec:
+  accessLevel: Editor
+  subjects:
+  - kind: User
+    name: e2e-authz-mt-nolimit
+---
+# Editor without namespace limits that also opens the system namespaces.
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: e2e-authz-mt-system
+  labels:
+    e2e.deckhouse.io/suite: user-authz
+spec:
+  accessLevel: Editor
+  allowAccessToSystemNamespaces: true
+  subjects:
+  - kind: User
+    name: e2e-authz-mt-system
+---
+# Editor in the namespaces labeled e2e-authz-mt-selected=true.
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: e2e-authz-mt-selector
+  labels:
+    e2e.deckhouse.io/suite: user-authz
+spec:
+  accessLevel: Editor
+  namespaceSelector:
+    labelSelector:
+      matchLabels:
+        e2e-authz-mt-selected: "true"
+  subjects:
+  - kind: User
+    name: e2e-authz-mt-selector

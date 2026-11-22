@@ -1,0 +1,32 @@
+# Admission probe that every Pod Security Standard allows.
+# The tests submit it with `kubectl create --dry-run=server`, so the Pod is never stored or run.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ape-cpu-probe-allowed
+  labels:
+    e2e-test: ape-cpu-starvation
+spec:
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65535
+    runAsGroup: 65535
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: pause
+      image: registry.k8s.io/pause:3.10
+      imagePullPolicy: IfNotPresent
+      resources:
+        requests:
+          cpu: 1m
+          memory: 8Mi
+        limits:
+          memory: 8Mi
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop:
+            - ALL

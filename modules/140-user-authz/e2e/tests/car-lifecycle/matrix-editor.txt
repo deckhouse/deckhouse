@@ -1,0 +1,4 @@
+# The rule grants Editor.
+e2e-authz-lifecycle  get     -     pods         -  @ns  yes
+e2e-authz-lifecycle  get     -     secrets      -  @ns  yes
+e2e-authz-lifecycle  create  apps  deployments  -  @ns  yes

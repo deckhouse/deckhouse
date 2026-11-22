@@ -1,0 +1,123 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: admission-policy-engine-bootstrap-state
+spec:
+  description: >-
+    The module is bootstrapped: every ConstraintTemplate it ships is created, the webhooks and the
+    Pod Security Standards constraints are rendered, and the Deckhouse hook metric
+    d8_admission_policy_engine_not_bootstrapped does not report 1.
+  timeouts:
+    exec: 20m
+    assert: 2m
+  steps:
+    - name: ensure-module
+      description: Enable the module if needed and wait until it is Ready and bootstrapped
+      try:
+        - description: Enable admission-policy-engine and wait for the bootstrap
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh
+            check:
+              ($error == null): true
+      catch:
+        - description: Show the Module object
+          get:
+            apiVersion: deckhouse.io/v1alpha1
+            kind: Module
+            name: admission-policy-engine
+        - description: Show the pods of the module
+          get:
+            apiVersion: v1
+            kind: Pod
+            namespace: d8-admission-policy-engine
+
+    - name: constraint-templates-created
+      description: Every ConstraintTemplate of the module reports status.created=true
+      try:
+        - description: Check status.created of the module ConstraintTemplates
+          script:
+            content: |
+              set -e
+              kubectl get constrainttemplates -l heritage=deckhouse,module=admission-policy-engine -o json \
+                | jq -r '.items[] | "\(.metadata.name) \(.status.created // false)"' > /tmp/e2e-ape-templates.txt
+              cat /tmp/e2e-ape-templates.txt
+              total=$(wc -l < /tmp/e2e-ape-templates.txt)
+              notcreated=$(grep -c -v ' true$' /tmp/e2e-ape-templates.txt || true)
+              echo "templates: ${total}, not created: ${notcreated}"
+              [ "${total}" -ge 20 ] && [ "${notcreated}" -eq 0 ]
+            check:
+              ($error == null): true
+
+    - name: webhooks-and-constraints-rendered
+      description: >-
+        The bootstrap gate opens the release: the validating webhooks and the constraints of the
+        Pod Security Standards for user and system namespaces exist
+      try:
+        - description: Assert the validating webhook configuration with the main webhook
+          assert:
+            resource:
+              apiVersion: admissionregistration.k8s.io/v1
+              kind: ValidatingWebhookConfiguration
+              metadata:
+                name: d8-admission-policy-engine-config
+              (webhooks[?name == 'admission-policy-engine.deckhouse.io'] | length(@)): 1
+              (webhooks[?name == 'system-namespaces.admission-policy-engine.deckhouse.io'] | length(@)): 1
+              (webhooks[?name == 'system-namespaces-enforce.admission-policy-engine.deckhouse.io'] | length(@)): 1
+        - description: Assert the warn-only baseline constraint for system namespaces
+          assert:
+            resource:
+              apiVersion: constraints.gatekeeper.sh/v1beta1
+              kind: D8PrivilegedContainer
+              metadata:
+                name: d8-pod-security-baseline-system
+              spec:
+                enforcementAction: warn
+        - description: Assert the warn-only restricted constraint for system namespaces
+          assert:
+            resource:
+              apiVersion: constraints.gatekeeper.sh/v1beta1
+              kind: D8AllowedUsers
+              metadata:
+                name: d8-pod-security-restricted-system
+              spec:
+                enforcementAction: warn
+
+    - name: not-bootstrapped-metric
+      description: >-
+        The bootstrap hook expires d8_admission_policy_engine_not_bootstrapped once the module is
+        bootstrapped, so the Deckhouse hook metrics of the leader carry no sample equal to 1
+      try:
+        - description: Scrape the hook metrics of the Deckhouse leader and check the metric
+          script:
+            timeout: 3m
+            content: |
+              set -e
+              ip=$(kubectl -n d8-system get pod -l app=deckhouse,leader=true -o jsonpath='{.items[0].status.podIP}')
+              [ -n "${ip}" ] || { echo "No Deckhouse leader pod found"; exit 1; }
+              for i in $(seq 1 30); do
+                if metrics=$(curl -sf --max-time 10 "http://${ip}:4222/metrics/hooks"); then
+                  break
+                fi
+                sleep 5
+              done
+              [ -n "${metrics:-}" ] || { echo "Cannot scrape http://${ip}:4222/metrics/hooks"; exit 1; }
+              # The metric is expired once the module is bootstrapped, so its absence alone would pass
+              # on a wrong endpoint too. The hook metric every converge of the module sets proves the
+              # scrape reaches the hook metrics of this module.
+              if ! echo "${metrics}" | grep -q '^d8_admission_policy_engine_pss_default_action'; then
+                echo "d8_admission_policy_engine_pss_default_action is missing: the scrape does not reach the hook metrics of the module"
+                exit 1
+              fi
+              samples=$(echo "${metrics}" | grep '^d8_admission_policy_engine_not_bootstrapped' || true)
+              echo "Samples: ${samples:-<none, the metric is expired>}"
+              if echo "${samples}" | grep -Eq ' 1(\.0+)?$'; then
+                echo "The module reports itself as not bootstrapped"
+                exit 1
+              fi
+            check:
+              ($error == null): true
+      catch:
+        - description: Show the bootstrap hook log lines of Deckhouse
+          script:
+            content: kubectl -n d8-system logs -l app=deckhouse,leader=true -c deckhouse --tail=2000 | grep -i "bootstrapped" | tail -20 || true

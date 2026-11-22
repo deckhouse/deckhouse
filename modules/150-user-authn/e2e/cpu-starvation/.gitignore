@@ -1,0 +1,2 @@
+# Chainsaw JUnit reports are runtime artifacts and must not be committed.
+reports/

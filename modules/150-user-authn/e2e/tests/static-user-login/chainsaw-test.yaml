@@ -1,0 +1,215 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: user-authn-static-user-login
+spec:
+  description: >-
+    A static User in a Group signs in to Dex with the password form of the local connector and
+    gets an ID token with its email and the group. kube-apiserver accepts the token and maps the
+    email claim to the user name and the groups claim to the groups. Without a binding the user
+    cannot list pods; a ClusterRoleBinding to the group allows it.
+  concurrent: false
+
+  catch:
+    - description: Show the User without the password hash on failure
+      script:
+        shell: bash
+        shellArgs: ["-c"]
+        content: kubectl get users.deckhouse.io e2e-authn-login-user -o json | jq 'del(.spec.password)'
+    - description: Show the DexClient and DexAuthenticator objects on failure
+      script:
+        # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+        shell: bash
+        shellArgs: ["-c"]
+        env:
+          - name: NS
+            value: ($namespace)
+        content: |
+          kubectl -n "${NS}" get dexclients.deckhouse.io,dexauthenticators.deckhouse.io,secrets -o wide
+          kubectl -n d8-user-authn get oauth2clients.dex.coreos.com -o custom-columns=NAME:.metadata.name,ID:.id,PEERS:.trustedPeers
+    - description: Show Dex logs on failure
+      podLogs:
+        namespace: d8-user-authn
+        selector: app=dex
+        container: dex
+        tail: 100
+    - description: Show controller logs on failure
+      podLogs:
+        namespace: d8-user-authn
+        selector: app=user-authn-controller
+        tail: 100
+
+  steps:
+    - name: prerequisites
+      description: Make sure the module is enabled and converged and Dex answers
+      use:
+        template: ../common/steps/ensure-user-authn.yaml
+
+    - name: create-user-and-group
+      description: Create the User with a password hash generated at runtime and a Group with it as a member
+      try:
+        - description: Create User e2e-authn-login-user
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              create_user static-user-login e2e-authn-login-user e2e-authn-login-user@example.com
+        - description: Create Group e2e-authn-login-group
+          create:
+            file: manifests/group.yaml
+      cleanup:
+        - description: Delete the User
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            content: kubectl delete users.deckhouse.io e2e-authn-login-user --ignore-not-found
+
+    - name: assert-user-synced
+      description: The controller writes the group into User status, the Dex Password and the UserAccount
+      try:
+        - description: Assert User status lists the group and no lock
+          assert:
+            timeout: 2m
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: User
+              metadata:
+                name: e2e-authn-login-user
+              status:
+                groups:
+                  - e2e-authn-login-group
+                lock:
+                  state: false
+        - description: Assert the Dex Password object carries the email, the user name and the group
+          assert:
+            timeout: 2m
+            resource:
+              (x_k8s_list($client, 'dex.coreos.com/v1', 'Password', 'd8-user-authn').items[?username == 'e2e-authn-login-user']):
+                (length(@)): 1
+                ([0].email): e2e-authn-login-user@example.com
+                ([0].userID): e2e-authn-login-user
+                ([0].groups): [e2e-authn-login-group]
+        - description: Assert the UserAccount projection of the local account
+          assert:
+            timeout: 2m
+            resource:
+              (x_k8s_list($client, 'deckhouse.io/v1alpha1', 'UserAccount', '').items[?status.userRef == 'e2e-authn-login-user']):
+                (length(@)): 1
+                ([0].status.kind): Local
+                ([0].status.connectorID): local
+                ([0].status.email): e2e-authn-login-user@example.com
+                ([0].status.groups): [e2e-authn-login-group]
+                ([0].metadata.labels."userauthn.deckhouse.io/locked"): 'false'
+
+    - name: create-oidc-clients
+      description: >-
+        Create a DexClient allowed to request tokens for the API server and a DexAuthenticator with
+        the same permission, which makes the module render the `kubernetes` OAuth2Client
+      try:
+        - description: Create DexClient e2e-authn-login-client
+          create:
+            file: manifests/dex-client.yaml
+        - description: Create DexAuthenticator e2e-authn-k8s
+          create:
+            file: manifests/dex-authenticator.yaml
+        - description: Wait for the client Secret and OAuth2Client, and for the `kubernetes` client to trust the DexClient
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 10m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              wait_dex_client "${NS}" e2e-authn-login-client
+              wait_for 300 "the kubernetes client trusts dex-client-e2e-authn-login-client@${NS}" \
+                kubernetes_client_trusts "$(dex_client_id "${NS}" e2e-authn-login-client)"
+      cleanup:
+        - description: Delete the DexAuthenticator and wait until the module removes its objects
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            env:
+              - name: NS
+                value: ($namespace)
+            timeout: 6m
+            content: bash ../../tests/common/scripts/delete-dex-authenticator.sh "${NS}" e2e-authn-k8s
+
+    - name: sign-in
+      description: Sign in with the password form and check the ID token; a wrong password gets no code
+      try:
+        - description: Run the authorization code flow and exchange the code for tokens
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 6m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: >-
+              bash ../../tests/common/scripts/get-token.sh static-user-login "${NS}" e2e-authn-login-client
+              e2e-authn-login-user e2e-authn-login-user@example.com kubernetes
+        - description: Check the claims of the ID token and the response to a wrong password
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 2m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: bash scripts/check-token.sh
+
+    - name: api-server-identity
+      description: kube-apiserver accepts the ID token and reports the email as the user name and the group
+      try:
+        - description: Run kubectl auth whoami with the ID token only
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 12m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: bash scripts/whoami.sh
+
+    - name: rbac-without-binding
+      description: Without a binding the user cannot list pods
+      try:
+        - description: Assert can-i says no and kubectl get pods is forbidden for the user
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 2m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: bash scripts/rbac.sh denied
+
+    - name: rbac-with-binding
+      description: A ClusterRoleBinding of ClusterRole view to the group lets the user list pods
+      try:
+        - description: Create ClusterRoleBinding e2e-authn-login-view for the group
+          create:
+            file: manifests/cluster-role-binding.yaml
+        - description: Assert the user can list pods now and still cannot delete them
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 3m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: bash scripts/rbac.sh allowed

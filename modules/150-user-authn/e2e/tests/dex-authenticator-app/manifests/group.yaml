@@ -1,0 +1,9 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: Group
+metadata:
+  name: e2e-authn-app-group
+spec:
+  name: e2e-authn-app-group
+  members:
+    - kind: User
+      name: e2e-authn-app-user

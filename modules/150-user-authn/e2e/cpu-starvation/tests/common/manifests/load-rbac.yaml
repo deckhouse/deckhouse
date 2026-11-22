@@ -1,0 +1,64 @@
+# The load pod watches the writes of Dex and the controller to the API server (see writewatch.py).
+# Leases and refresh tokens are read in d8-user-authn only; the ClusterRole covers the cluster-scoped
+# useraccounts. The objects outside the test namespace carry the e2e label for `task cleanup`.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dex-load
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: (join('-', ['e2e-dex-load', $namespace]))
+  namespace: d8-user-authn
+  labels:
+    e2e-test: user-authn-cpu-starvation
+rules:
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["list", "watch"]
+  - apiGroups: ["dex.coreos.com"]
+    resources: ["refreshtokens"]
+    verbs: ["list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: (join('-', ['e2e-dex-load', $namespace]))
+  namespace: d8-user-authn
+  labels:
+    e2e-test: user-authn-cpu-starvation
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: (join('-', ['e2e-dex-load', $namespace]))
+subjects:
+  - kind: ServiceAccount
+    name: dex-load
+    namespace: ($namespace)
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: (join('-', ['e2e-dex-load', $namespace]))
+  labels:
+    e2e-test: user-authn-cpu-starvation
+rules:
+  - apiGroups: ["deckhouse.io"]
+    resources: ["useraccounts"]
+    verbs: ["list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: (join('-', ['e2e-dex-load', $namespace]))
+  labels:
+    e2e-test: user-authn-cpu-starvation
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: (join('-', ['e2e-dex-load', $namespace]))
+subjects:
+  - kind: ServiceAccount
+    name: dex-load
+    namespace: ($namespace)

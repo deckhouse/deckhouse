@@ -1,0 +1,178 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: car-lifecycle
+spec:
+  description: >-
+    Walk one ClusterAuthorizationRule through its life cycle: create it as Editor, narrow it to
+    User, delete it. After every change the controller must replace the bindings (prefix
+    user-authz:<rule>:) and the API server decisions must follow within 60 seconds.
+  timeouts:
+    apply: 60s
+    assert: 60s
+    error: 60s
+    delete: 2m
+    exec: 5m
+
+  catch:
+    - description: Show the test ClusterAuthorizationRule
+      get:
+        apiVersion: deckhouse.io/v1
+        kind: ClusterAuthorizationRule
+        name: e2e-authz-lifecycle
+    - description: Show the ClusterRoleBindings of the rule
+      script:
+        content: kubectl get clusterrolebindings -o wide | grep -E 'NAME|user-authz:e2e-authz-lifecycle:' || true
+    - description: Show user-authz-controller logs
+      podLogs:
+        namespace: d8-user-authz
+        selector: app=user-authz-controller
+        tail: 200
+
+  steps:
+    - name: prerequisites
+      description: Verify that the user-authz module and its controller are Ready
+      try:
+        - description: Wait for module user-authz and the user-authz-controller Deployment
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-user-authz.sh
+
+    - name: create-editor-rule
+      description: Create the rule with accessLevel Editor and wait for its bindings
+      try:
+        - description: Create ClusterAuthorizationRule e2e-authz-lifecycle
+          apply:
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: ClusterAuthorizationRule
+              metadata:
+                name: e2e-authz-lifecycle
+                labels:
+                  e2e.deckhouse.io/suite: user-authz
+              spec:
+                accessLevel: Editor
+                subjects:
+                  - kind: User
+                    name: e2e-authz-lifecycle
+        - description: Assert the rule is Ready with two bindings for generation 1
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: ClusterAuthorizationRule
+              metadata:
+                name: e2e-authz-lifecycle
+              (status.observedGeneration == metadata.generation): true
+              status:
+                bindings: 2
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+                    reason: BindingsApplied
+                    message: 2 bindings applied
+        - description: Assert the Editor binding exists
+          assert:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRoleBinding
+              metadata:
+                name: user-authz:e2e-authz-lifecycle:editor
+              roleRef:
+                name: user-authz:editor
+        - description: Assert the Editor aggregated-custom binding exists
+          assert:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRoleBinding
+              metadata:
+                name: user-authz:e2e-authz-lifecycle:editor:custom
+              roleRef:
+                name: user-authz:editor:custom
+        - description: Assert the Editor decisions
+          script:
+            content: bash ../common/scripts/sar-check.sh matrix-editor.txt 60
+
+    - name: narrow-to-user
+      description: Change accessLevel from Editor to User
+      try:
+        - description: Patch spec.accessLevel to User
+          patch:
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: ClusterAuthorizationRule
+              metadata:
+                name: e2e-authz-lifecycle
+              spec:
+                accessLevel: User
+        - description: Assert the controller observed the new generation
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: ClusterAuthorizationRule
+              metadata:
+                name: e2e-authz-lifecycle
+              (status.observedGeneration == metadata.generation): true
+              (metadata.generation > `1`): true
+              status:
+                bindings: 2
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+        - description: Assert the User binding exists
+          assert:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRoleBinding
+              metadata:
+                name: user-authz:e2e-authz-lifecycle:user
+              roleRef:
+                name: user-authz:user
+        - description: Assert the Editor binding is gone
+          error:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRoleBinding
+              metadata:
+                name: user-authz:e2e-authz-lifecycle:editor
+        - description: Assert the Editor aggregated-custom binding is gone
+          error:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRoleBinding
+              metadata:
+                name: user-authz:e2e-authz-lifecycle:editor:custom
+        - description: Assert the User decisions within 60 seconds
+          script:
+            content: bash ../common/scripts/sar-check.sh matrix-user.txt 60
+
+    - name: delete-rule
+      description: Delete the rule and verify that all its bindings and the access disappear
+      try:
+        - description: Delete ClusterAuthorizationRule e2e-authz-lifecycle
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1
+              kind: ClusterAuthorizationRule
+              name: e2e-authz-lifecycle
+        - description: Assert that no ClusterRoleBinding of the rule is left within 60 seconds
+          script:
+            content: |
+              set -eu
+              for _ in $(seq 1 12); do
+                # An API error must not look like "nothing left": check the exit status first.
+                if ! all="$(kubectl get clusterrolebindings -o name)"; then
+                  echo "listing ClusterRoleBindings failed, retrying"
+                  left="<unknown>"
+                  sleep 5
+                  continue
+                fi
+                left="$(printf '%s\n' "${all}" | grep -F 'clusterrolebinding.rbac.authorization.k8s.io/user-authz:e2e-authz-lifecycle:' || true)"
+                if [ -z "${left}" ]; then
+                  echo "No bindings of the rule are left"
+                  exit 0
+                fi
+                sleep 5
+              done
+              echo "Bindings left after 60s: ${left}" >&2
+              exit 1
+        - description: Assert the subject lost its access within 60 seconds
+          script:
+            content: bash ../common/scripts/sar-check.sh matrix-deleted.txt 60

@@ -1,0 +1,140 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: admission-policy-engine-pss-matrix-smoke
+spec:
+  description: >-
+    Pod Security Standards are routed by the namespace labels security.deckhouse.io/pod-policy and
+    security.deckhouse.io/pod-policy-action: Baseline denies a privileged container, Restricted
+    additionally denies running as root, the warn action admits a violation with a warning, and
+    compliant pods are admitted everywhere. Every probe is a server-side dry run.
+  timeouts:
+    exec: 20m
+  steps:
+    - name: ensure-module
+      description: Enable the module if needed and wait until it is Ready and bootstrapped
+      try:
+        - description: Enable admission-policy-engine and wait for the bootstrap
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh
+            check:
+              ($error == null): true
+
+    - name: create-namespaces
+      description: >-
+        Create the namespaces of the test with every label set at creation; multitenancy-manager
+        adopts them into Projects and refuses later changes of the managed labels
+      try:
+        - description: Create e2e-ape-pss-baseline with security.deckhouse.io/pod-policy=baseline, security.deckhouse.io/pod-policy-action=deny
+          script:
+            content: bash "${E2E_LIB_DIR}/create-namespace.sh" e2e-ape-pss-baseline security.deckhouse.io/pod-policy=baseline security.deckhouse.io/pod-policy-action=deny
+            check:
+              ($error == null): true
+        - description: Create e2e-ape-pss-restricted with security.deckhouse.io/pod-policy=restricted, security.deckhouse.io/pod-policy-action=deny
+          script:
+            content: bash "${E2E_LIB_DIR}/create-namespace.sh" e2e-ape-pss-restricted security.deckhouse.io/pod-policy=restricted security.deckhouse.io/pod-policy-action=deny
+            check:
+              ($error == null): true
+        - description: Create e2e-ape-pss-warn with security.deckhouse.io/pod-policy=baseline, security.deckhouse.io/pod-policy-action=warn
+          script:
+            content: bash "${E2E_LIB_DIR}/create-namespace.sh" e2e-ape-pss-warn security.deckhouse.io/pod-policy=baseline security.deckhouse.io/pod-policy-action=warn
+            check:
+              ($error == null): true
+      cleanup:
+        - description: Delete the namespaces of the test through their Projects
+          script:
+            timeout: 6m
+            content: bash "${E2E_LIB_DIR}/delete-namespace.sh" e2e-ape-pss-baseline e2e-ape-pss-restricted e2e-ape-pss-warn
+
+    - name: baseline-namespace
+      description: Baseline denies a privileged container and admits a root container and a compliant pod
+      try:
+        - description: A privileged container is denied by the Baseline privileged-container rule
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect deny --namespace e2e-ape-pss-baseline
+              --name privileged
+              --patch '.spec.containers[0].securityContext |= (.privileged = true | del(.allowPrivilegeEscalation))'
+              --match 'admission-policy-engine.deckhouse.io" denied the request'
+              --match 'd8-pod-security-baseline-deny'
+              --match 'Privileged container is not allowed'
+            check:
+              ($error == null): true
+        - description: A container running as root is admitted, Baseline does not restrict the user
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect allow --namespace e2e-ape-pss-baseline
+              --name root-user --timeout 60
+              --patch '.spec.securityContext |= (.runAsUser = 0 | .runAsNonRoot = false)'
+            check:
+              ($error == null): true
+        - description: A compliant pod is admitted
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect allow --namespace e2e-ape-pss-baseline
+              --name compliant --timeout 60
+            check:
+              ($error == null): true
+
+    - name: restricted-namespace
+      description: Restricted denies a root container and admits a compliant pod
+      try:
+        - description: A container running as root is denied by the Restricted allowed-users rule
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect deny --namespace e2e-ape-pss-restricted
+              --name root-user
+              --patch '.spec.securityContext |= (.runAsUser = 0 | .runAsNonRoot = false)'
+              --match 'd8-pod-security-restricted-deny'
+              --match 'is attempting to run as disallowed user'
+            check:
+              ($error == null): true
+        - description: A privileged container is denied there as well, Restricted includes Baseline
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect deny --namespace e2e-ape-pss-restricted
+              --name privileged --timeout 60
+              --patch '.spec.containers[0].securityContext |= (.privileged = true | del(.allowPrivilegeEscalation))'
+              --match 'Privileged container is not allowed'
+            check:
+              ($error == null): true
+        - description: A compliant pod is admitted
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect allow --namespace e2e-ape-pss-restricted
+              --name compliant --timeout 60
+            check:
+              ($error == null): true
+
+    - name: warn-namespace
+      description: >-
+        The warn action admits a privileged container with a warning. The constraint for a
+        non-default action is rendered only after the hook sees the labelled namespace, so the probe
+        waits for the next converge.
+      try:
+        - description: A privileged container is admitted with a Baseline warning
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect warn --namespace e2e-ape-pss-warn
+              --name privileged --timeout 600
+              --patch '.spec.containers[0].securityContext |= (.privileged = true | del(.allowPrivilegeEscalation))'
+              --match 'd8-pod-security-baseline-warn'
+              --match 'Privileged container is not allowed'
+            check:
+              ($error == null): true
+        - description: A compliant pod is admitted without a warning
+          script:
+            content: |
+              out=$(bash ../common/scripts/probe.sh --expect allow --namespace e2e-ape-pss-warn --name compliant --timeout 60) || exit 1
+              echo "${out}"
+              if echo "${out}" | grep -q "Warning:"; then echo "Unexpected warning for a compliant pod"; exit 1; fi
+            check:
+              ($error == null): true
+      catch:
+        - description: Show the Baseline privileged-container constraints
+          script:
+            content: kubectl get d8privilegedcontainer -o custom-columns=NAME:.metadata.name,ACTION:.spec.enforcementAction,SELECTOR:.spec.match.namespaceSelector
+        - description: Show the namespaces of the test
+          script:
+            content: kubectl get ns e2e-ape-pss-baseline e2e-ape-pss-restricted e2e-ape-pss-warn --show-labels

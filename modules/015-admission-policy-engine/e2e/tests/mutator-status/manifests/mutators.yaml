@@ -1,0 +1,35 @@
+apiVersion: mutations.gatekeeper.sh/v1
+kind: Assign
+metadata:
+  name: e2e-ape-status-grace-period
+spec:
+  applyTo:
+    - groups: [""]
+      kinds: ["Pod"]
+      versions: ["v1"]
+  match:
+    scope: Namespaced
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    namespaces: ["e2e-ape-mutator-status"]
+  location: spec.terminationGracePeriodSeconds
+  parameters:
+    assign:
+      value: 7
+---
+apiVersion: mutations.gatekeeper.sh/v1
+kind: AssignMetadata
+metadata:
+  name: e2e-ape-status-label
+spec:
+  match:
+    scope: Namespaced
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    namespaces: ["e2e-ape-mutator-status"]
+  location: metadata.labels.e2e-ape-mutated
+  parameters:
+    assign:
+      value: "true"

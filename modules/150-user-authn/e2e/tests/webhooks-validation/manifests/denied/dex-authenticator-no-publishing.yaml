@@ -1,0 +1,6 @@
+apiVersion: deckhouse.io/v1
+kind: DexAuthenticator
+metadata:
+  name: e2e-authn-hook-nowhere
+spec:
+  applicationDomain: e2e-authn-nowhere.example.com

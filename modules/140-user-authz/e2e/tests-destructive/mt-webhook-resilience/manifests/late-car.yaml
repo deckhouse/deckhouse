@@ -1,0 +1,12 @@
+# Created while user-authz-controller is being restarted.
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: e2e-authz-res-late
+  labels:
+    e2e.deckhouse.io/suite: user-authz
+spec:
+  accessLevel: User
+  subjects:
+  - kind: User
+    name: e2e-authz-res-late

@@ -1,0 +1,9 @@
+apiVersion: deckhouse.io/v1
+kind: DexClient
+metadata:
+  name: e2e-authn-k8s-client
+  annotations:
+    dexclient.deckhouse.io/allow-access-to-kubernetes: "true"
+spec:
+  redirectURIs:
+    - http://127.0.0.1:65535/callback

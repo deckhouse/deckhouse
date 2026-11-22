@@ -1,0 +1,10 @@
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: e2e-authn-reset-bad-hash
+spec:
+  user: e2e-authn-reset-user
+  type: ResetPassword
+  initiatorType: admin
+  resetPassword:
+    newPasswordHash: not-a-bcrypt-hash

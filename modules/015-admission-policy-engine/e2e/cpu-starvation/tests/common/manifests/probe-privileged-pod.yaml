@@ -1,0 +1,23 @@
+# Admission probe that the Baseline Pod Security Standard denies (privileged container).
+# The tests submit it with `kubectl create --dry-run=server`. A denial by the
+# `d8-pod-security-baseline-deny*` constraint proves that the webhook path works.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ape-cpu-probe-privileged
+  labels:
+    e2e-test: ape-cpu-starvation
+spec:
+  automountServiceAccountToken: false
+  containers:
+    - name: pause
+      image: registry.k8s.io/pause:3.10
+      imagePullPolicy: IfNotPresent
+      resources:
+        requests:
+          cpu: 1m
+          memory: 8Mi
+        limits:
+          memory: 8Mi
+      securityContext:
+        privileged: true

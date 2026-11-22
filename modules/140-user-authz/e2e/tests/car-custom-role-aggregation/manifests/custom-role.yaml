@@ -1,0 +1,19 @@
+# A custom role extending the Editor level. Only the annotation is set: the module hook
+# copies it into the user-authz.deckhouse.io/access-level label that the aggregation
+# rules of user-authz:<level>:custom select by.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: e2e-authz-custom-editor
+  labels:
+    e2e.deckhouse.io/suite: user-authz
+  annotations:
+    user-authz.deckhouse.io/access-level: Editor
+rules:
+- apiGroups:
+  - e2e-authz.example.com
+  resources:
+  - widgets
+  verbs:
+  - get
+  - list

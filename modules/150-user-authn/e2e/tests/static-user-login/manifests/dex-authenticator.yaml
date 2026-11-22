@@ -1,0 +1,13 @@
+# The module renders the `kubernetes` OAuth2Client only when a DexAuthenticator with access to
+# Kubernetes, publishAPI or kubeconfigGenerator needs it (templates/dex/oauth2client.yaml).
+# This authenticator makes sure the client exists. Its Ingress uses a class that no controller
+# serves, so it never publishes anything.
+apiVersion: deckhouse.io/v1
+kind: DexAuthenticator
+metadata:
+  name: e2e-authn-k8s
+  annotations:
+    dexauthenticator.deckhouse.io/allow-access-to-kubernetes: "true"
+spec:
+  applicationDomain: e2e-authn-login.example.com
+  applicationIngressClassName: e2e-authn-unused

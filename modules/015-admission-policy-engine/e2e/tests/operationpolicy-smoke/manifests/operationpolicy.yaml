@@ -1,0 +1,21 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: OperationPolicy
+metadata:
+  name: e2e-ape-op
+spec:
+  enforcementAction: Deny
+  match:
+    namespaceSelector:
+      matchNames:
+        - e2e-ape-op
+  policies:
+    allowedRepos:
+      - registry.k8s.io/e2e-test-images/
+    requiredResources:
+      limits:
+        - memory
+      requests:
+        - cpu
+        - memory
+    disallowedImageTags:
+      - latest

@@ -1,0 +1,12 @@
+# A DexAuthenticator with access to Kubernetes covers the second way to the `kubernetes`
+# OAuth2Client: the case checks that both the DexClient and this authenticator are among its
+# trusted peers. Its Ingress uses a class that no controller serves.
+apiVersion: deckhouse.io/v1
+kind: DexAuthenticator
+metadata:
+  name: e2e-authn-k8s-da
+  annotations:
+    dexauthenticator.deckhouse.io/allow-access-to-kubernetes: "true"
+spec:
+  applicationDomain: e2e-authn-k8s-access.example.com
+  applicationIngressClassName: e2e-authn-unused

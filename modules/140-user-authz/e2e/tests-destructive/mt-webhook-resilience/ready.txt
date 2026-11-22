@@ -1,0 +1,4 @@
+# Enforcement is live before the disruption starts.
+e2e-authz-res-editor   get     -     pods         -  @ns                         yes
+e2e-authz-res-limited  get     -     pods         -  @ns                         yes
+e2e-authz-res-limited  get     -     pods         -  e2e-authz-resilience-other  deny

@@ -1,0 +1,27 @@
+# Decisions in multitenancy mode. "deny" is an explicit deny of the authorization webhook;
+# RBAC alone (the Editor ClusterRoleBinding) would allow every one of these requests.
+#
+# limitNamespaces: only the listed namespace, no cluster-wide requests for namespaced resources.
+e2e-authz-mt-limited   get     -     pods         -  @ns        yes
+e2e-authz-mt-limited   create  apps  deployments  -  @ns        yes
+e2e-authz-mt-limited   get     -     pods         -  e2e-authz-mt-b  deny
+e2e-authz-mt-limited   create  apps  deployments  -  e2e-authz-mt-b  deny
+e2e-authz-mt-limited   get     -     pods         -  d8-system       deny
+e2e-authz-mt-limited   list    -     pods         -  -               deny
+e2e-authz-mt-limited   get     -     nodes        -  -               yes
+#
+# No limits: every namespace except the system ones (kube-*, d8-*, default).
+e2e-authz-mt-nolimit   get     -     pods         -  @ns        yes
+e2e-authz-mt-nolimit   get     -     pods         -  e2e-authz-mt-b  yes
+e2e-authz-mt-nolimit   get     -     pods         -  d8-system       deny
+e2e-authz-mt-nolimit   get     -     pods         -  kube-system     deny
+e2e-authz-mt-nolimit   get     -     pods         -  default         deny
+#
+# allowAccessToSystemNamespaces without limits: the webhook has no opinion, RBAC decides.
+e2e-authz-mt-system    get     -     pods         -  d8-system       yes
+e2e-authz-mt-system    get     -     pods         -  kube-system     yes
+e2e-authz-mt-system    get     -     pods         -  e2e-authz-mt-b  yes
+#
+# namespaceSelector: only the labeled namespace.
+e2e-authz-mt-selector  get     -     pods         -  e2e-authz-mt-b  yes
+e2e-authz-mt-selector  get     -     pods         -  @ns        deny

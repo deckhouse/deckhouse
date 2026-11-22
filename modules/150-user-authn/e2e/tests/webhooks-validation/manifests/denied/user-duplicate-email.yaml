@@ -1,0 +1,7 @@
+apiVersion: deckhouse.io/v1
+kind: User
+metadata:
+  name: e2e-authn-hook-user2
+spec:
+  email: e2e-authn-hook@example.com
+  password: not-a-real-hash

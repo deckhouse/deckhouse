@@ -1,0 +1,129 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: admission-policy-engine-securitypolicy-field-table
+spec:
+  description: >-
+    One SecurityPolicy with a table of fields. Deckhouse renders a constraint per field, the
+    webhook routes a pod of the selected namespace to them, and each field denies a pod that breaks
+    it with the message of its template. Compliant pods are admitted and the policy status reports
+    synced. A policy name with a reserved prefix is rejected by the module webhook.
+  timeouts:
+    exec: 20m
+  steps:
+    - name: ensure-module
+      description: Enable the module if needed and wait until it is Ready and bootstrapped
+      try:
+        - description: Enable admission-policy-engine and wait for the bootstrap
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh
+            check:
+              ($error == null): true
+
+    - name: create-namespaces
+      description: >-
+        Create the namespaces of the test with every label set at creation; multitenancy-manager
+        adopts them into Projects and refuses later changes of the managed labels
+      try:
+        - description: Create e2e-ape-sp-fields with security.deckhouse.io/pod-policy=privileged
+          script:
+            content: bash "${E2E_LIB_DIR}/create-namespace.sh" e2e-ape-sp-fields security.deckhouse.io/pod-policy=privileged
+            check:
+              ($error == null): true
+      cleanup:
+        - description: Delete the namespaces of the test through their Projects
+          script:
+            timeout: 6m
+            content: bash "${E2E_LIB_DIR}/delete-namespace.sh" e2e-ape-sp-fields
+
+    - name: reserved-name-rejected
+      description: The module webhook rejects a policy whose name claims a reserved constraint prefix
+      try:
+        - description: Create a SecurityPolicy named d8-system-default-* and expect a denial
+          script:
+            content: kubectl create --dry-run=server -f manifests/reserved-name.yaml
+            check:
+              ($error != null): true
+              (contains($stderr, 'starts with the reserved prefix')): true
+
+    - name: create-securitypolicy
+      description: Create the SecurityPolicy and wait until its constraints are enforced
+      try:
+        - description: Create the SecurityPolicy
+          apply:
+            file: manifests/securitypolicy.yaml
+        - description: Wait for every constraint rendered from the policy
+          script:
+            content: >-
+              bash ../common/scripts/wait-constraints.sh 600
+              d8privilegedcontainer/e2e-ape-sp-fields
+              d8allowprivilegeescalation/e2e-ape-sp-fields
+              d8hostnetwork/e2e-ape-sp-fields
+              d8hostprocesses/e2e-ape-sp-fields
+              d8allowedhostpaths/e2e-ape-sp-fields
+              d8allowedcapabilities/e2e-ape-sp-fields
+              d8allowedusers/e2e-ape-sp-fields
+              d8allowedseccompprofiles/e2e-ape-sp-fields
+              d8readonlyrootfilesystem/e2e-ape-sp-fields
+              d8automountserviceaccounttokenpod/e2e-ape-sp-fields
+            check:
+              ($error == null): true
+        - description: The constraints keep the Deny action and select the policy namespace
+          assert:
+            resource:
+              apiVersion: constraints.gatekeeper.sh/v1beta1
+              kind: D8AllowedUsers
+              metadata:
+                name: e2e-ape-sp-fields
+              spec:
+                enforcementAction: deny
+                match:
+                  namespaces:
+                    - e2e-ape-sp-fields
+                parameters:
+                  runAsUser:
+                    rule: MustRunAs
+      catch:
+        - description: Show the SecurityPolicy
+          get:
+            apiVersion: deckhouse.io/v1alpha1
+            kind: SecurityPolicy
+            name: e2e-ape-sp-fields
+        - description: Show the Deckhouse log lines about the module
+          script:
+            content: kubectl -n d8-system logs -l app=deckhouse,leader=true -c deckhouse --tail=3000 | grep admission-policy-engine | grep -iE 'error|fail' | tail -30 || true
+
+    - name: securitypolicy-synced
+      description: The status hook marks the policy as applied
+      try:
+        - description: Assert status.deckhouse.synced of the SecurityPolicy
+          assert:
+            timeout: 5m
+            resource:
+              apiVersion: deckhouse.io/v1alpha1
+              kind: SecurityPolicy
+              metadata:
+                name: e2e-ape-sp-fields
+              status:
+                deckhouse:
+                  synced: 'True'
+
+    - name: field-table
+      description: Every field denies the pod that breaks it, compliant pods are admitted
+      try:
+        - description: Run the field table
+          script:
+            content: bash check-fields.sh
+            check:
+              ($error == null): true
+      catch:
+        - description: Show the constraints of the policy
+          script:
+            content: kubectl get constraints -o json | jq -r '.items[] | select(.metadata.name == "e2e-ape-sp-fields") | "\(.kind) \(.spec.enforcementAction) enforced=\([.status.byPod[]?.enforced] | all)"'
+        - description: Show the Gatekeeper webhook logs
+          podLogs:
+            namespace: d8-admission-policy-engine
+            selector: app=gatekeeper,control-plane=controller-manager
+            container: manager
+            tail: 100

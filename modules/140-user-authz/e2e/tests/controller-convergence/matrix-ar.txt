@@ -1,0 +1,5 @@
+# AuthorizationRule e2e-authz-ar grants Editor in the test namespace only.
+e2e-authz-ar  create  apps  deployments  -  @ns                       yes
+e2e-authz-ar  get     -     secrets      -  @ns                       yes
+e2e-authz-ar  get     -     pods         -  e2e-authz-converge-other  no
+e2e-authz-ar  create  apps  deployments  -  e2e-authz-converge-other  no

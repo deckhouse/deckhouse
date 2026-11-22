@@ -1,0 +1,40 @@
+version: "3"
+
+includes:
+  audit-noisy-neighbour:
+    taskfile: ./tests/audit-noisy-neighbour/Taskfile.yml
+    dir: ./tests/audit-noisy-neighbour
+  webhook-high-load-average:
+    taskfile: ./tests/webhook-high-load-average/Taskfile.yml
+    dir: ./tests/webhook-high-load-average
+  webhook-high-load-average-cpu-limit:
+    taskfile: ./tests/webhook-high-load-average-cpu-limit/Taskfile.yml
+    dir: ./tests/webhook-high-load-average-cpu-limit
+  webhook-noisy-neighbour:
+    taskfile: ./tests/webhook-noisy-neighbour/Taskfile.yml
+    dir: ./tests/webhook-noisy-neighbour
+
+tasks:
+  run:
+    desc: Run all CPU starvation e2e tests
+    cmds:
+      - task: webhook-noisy-neighbour:run
+      - task: audit-noisy-neighbour:run
+      - task: webhook-high-load-average:run
+      - task: webhook-high-load-average-cpu-limit:run
+
+  dry-run:
+    desc: Validate all CPU starvation e2e tests without a cluster
+    cmds:
+      - task: webhook-noisy-neighbour:dry-run
+      - task: audit-noisy-neighbour:dry-run
+      - task: webhook-high-load-average:dry-run
+      - task: webhook-high-load-average-cpu-limit:dry-run
+
+  cleanup:
+    desc: Clean up after interrupted CPU starvation runs (stress pods, VPA mode, resized pods, namespaces)
+    cmds:
+      - >-
+        bash tests/common/scripts/cpu-starvation.sh cleanup
+        tests/webhook-noisy-neighbour tests/audit-noisy-neighbour
+        tests/webhook-high-load-average tests/webhook-high-load-average-cpu-limit

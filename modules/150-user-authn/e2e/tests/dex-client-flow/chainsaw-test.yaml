@@ -1,0 +1,122 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: user-authn-dex-client-flow
+spec:
+  description: >-
+    A DexClient makes the module create the client Secret with the requested labels and
+    annotations and the OAuth2Client objects of Dex (the current ID and the legacy one). A local
+    user signs in through the client and gets an ID token issued for it. A DexClient with
+    allowedGroups refuses a user outside the groups, and a wrong client secret is rejected.
+  concurrent: false
+
+  catch:
+    - description: Show DexClients and Secrets in the test namespace on failure
+      script:
+        # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+        shell: bash
+        shellArgs: ["-c"]
+        env:
+          - name: NS
+            value: ($namespace)
+        content: |
+          kubectl -n "${NS}" get dexclients.deckhouse.io,secrets --show-labels
+          kubectl -n d8-user-authn get oauth2clients.dex.coreos.com -o custom-columns=NAME:.metadata.name,ID:.id,REDIRECT:.redirectURIs,GROUPS:.allowedGroups
+    - description: Show Dex logs on failure
+      podLogs:
+        namespace: d8-user-authn
+        selector: app=dex
+        container: dex
+        tail: 100
+
+  steps:
+    - name: prerequisites
+      description: Make sure the module is enabled and converged and Dex answers
+      use:
+        template: ../common/steps/ensure-user-authn.yaml
+
+    - name: create-clients
+      description: Create the User and the two DexClients
+      try:
+        - description: Create User e2e-authn-client-user
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              create_user dex-client-flow e2e-authn-client-user e2e-authn-client-user@example.com
+        - description: Create DexClients e2e-authn-flow-client and e2e-authn-flow-restricted
+          create:
+            file: manifests/dex-clients.yaml
+      cleanup:
+        - description: Delete the User
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            content: kubectl delete users.deckhouse.io e2e-authn-client-user --ignore-not-found
+
+    - name: client-objects
+      description: The module renders the Secret and the OAuth2Client objects of the DexClient
+      try:
+        - description: Assert the Secret holds the client secret and the labels and annotations from secretMetadata
+          assert:
+            timeout: 5m
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: dex-client-e2e-authn-flow-client
+                labels:
+                  app: dex-client
+                  e2e.user-authn.deckhouse.io/secret: client
+                annotations:
+                  e2e.user-authn.deckhouse.io/note: dex-client-flow
+              (length(data.clientSecret) > `0`): true
+        - description: Assert the OAuth2Client with ID dex-client-NAME@NAMESPACE and the redirect URI
+          assert:
+            timeout: 2m
+            resource:
+              (x_k8s_list($client, 'dex.coreos.com/v1', 'OAuth2Client', 'd8-user-authn').items[?id == join('', ['dex-client-e2e-authn-flow-client@', $namespace])]):
+                (length(@)): 1
+                ([0].redirectURIs): [http://127.0.0.1:65535/callback]
+        - description: Assert the legacy OAuth2Client with ID dex-client-NAME:NAMESPACE
+          assert:
+            timeout: 2m
+            resource:
+              (length(x_k8s_list($client, 'dex.coreos.com/v1', 'OAuth2Client', 'd8-user-authn').items[?id == join('', ['dex-client-e2e-authn-flow-client:', $namespace])])): 1
+        - description: Assert the OAuth2Client of the restricted client carries allowedGroups
+          assert:
+            timeout: 2m
+            resource:
+              (x_k8s_list($client, 'dex.coreos.com/v1', 'OAuth2Client', 'd8-user-authn').items[?id == join('', ['dex-client-e2e-authn-flow-restricted@', $namespace])]):
+                (length(@)): 1
+                ([0].allowedGroups): [e2e-authn-nobody-group]
+
+    - name: sign-in
+      description: The user signs in through the client; the restricted client and a wrong secret are refused
+      try:
+        - description: Run the authorization code flow and exchange the code for tokens
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 6m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: >-
+              bash ../../tests/common/scripts/get-token.sh dex-client-flow "${NS}" e2e-authn-flow-client
+              e2e-authn-client-user e2e-authn-client-user@example.com
+        - description: Check the ID token, the restricted client and the wrong secret
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 2m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: bash scripts/check.sh

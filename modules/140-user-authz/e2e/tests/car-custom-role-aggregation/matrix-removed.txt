@@ -1,0 +1,3 @@
+# The custom role is deleted.
+e2e-authz-agg-editor         get  e2e-authz.example.com  widgets  -  @ns  no
+e2e-authz-agg-cluster-admin  get  e2e-authz.example.com  widgets  -  @ns  no
