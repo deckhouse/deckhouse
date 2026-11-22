@@ -272,6 +272,16 @@ Here:
 To update DP, its modules, and vulnerability databases to the latest versions in an air-gapped environment,
 download the latest patch releases of all required platform minor versions and modules, then upload them to your registry.
 
+{% alert level="warning" %}
+If a [single-master cluster](../glossary.html#single-master) is air-gapped, updating Deckhouse Platform to a new release that changes the in-cluster cache's own images restarts the only cache replica. While the replica is restarting, nodes cannot pull images from the cache, so pod startup may be delayed.
+{% endalert %}
+
+Do not delete the cache pod manually to speed up the update. If the new cache images are not on the node, the cache may fail to start.
+
+If the `D8RegistryStorageUpdateBlocked` alert fires, check its cause in the
+[How is the cache updated?](/modules/registry/latest/faq.html#how-is-the-cache-updated)
+section of the `registry` module FAQ.
+
 Running `d8 mirror pull --source='registry.deckhouse.io/deckhouse/ee' --license='<LICENSE_TOKEN>' $(pwd)/d8-bundle`
 downloads all [release channel](../glossary.html#release-channel) images and all modules (over 30 in DP EE).
 This results in a very large `d8-bundle` (at the time of writing, the volume of the `d8-bundle` directory is more than 50 GB).

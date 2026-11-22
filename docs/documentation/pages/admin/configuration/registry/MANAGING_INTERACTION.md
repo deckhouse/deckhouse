@@ -292,6 +292,20 @@ Turning the cache off is the same change in reverse, and just as safe. The blobs
 
 An isolated cluster has no upstream registry (it is not set in [`primary.upstream`](/modules/registry/latest/configuration.html#parameters-primary-upstream)). For such a cluster, the cache is the only source of images. The [`d8 mirror push`](../../../cli/d8/reference/#d8-mirror-push) command is used to fill the storage. To verify that all required images are present in the cache, specify the expected set of images [in the `storage.source` parameter](/modules/registry/latest/configuration.html#parameters-storage-source)
 
+Before switching the cluster to an air-gapped state, note that upgrading to a new Deckhouse Platform release may change the in-cluster cache's own images (the `registry-storage` StatefulSet in the `d8-system` namespace). If a [single-master cluster](../../../glossary.html#single-master) is air-gapped, the only cache replica is restarted when an update changes those images.
+
+{% alert level="warning" %}
+While the only in-cluster cache replica is restarting, nodes cannot pull images
+from the cache. Pod startup may be delayed.
+{% endalert %}
+
+Do not delete the cache pod manually to speed up the update. If the new cache
+images are not on the node, the cache may fail to start.
+
+If the `D8RegistryStorageUpdateBlocked` alert fires, check its cause in the
+[How is the cache updated?](/modules/registry/latest/faq.html#how-is-the-cache-updated)
+section of the `registry` module FAQ.
+
 To move the cluster to air-gapped, follow these steps:
 
 1. Pull the images on a machine that has internet access:

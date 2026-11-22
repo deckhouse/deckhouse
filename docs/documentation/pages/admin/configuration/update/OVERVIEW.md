@@ -37,4 +37,6 @@ The following features are supported:
 - [Checking dependencies before update](../../../architecture/updating.html#checking-dependencies-before-update):
   Checks for component dependencies before proceeding with an update to prevent conflicts.
 
-For more details on updating DP in air-gapped environment, see the ["Updating DP in air-gapped environment"](../../../guides/airgapped-update.html) guide.
+For more details on updating Deckhouse Platform in an air-gapped environment, see the [air-gapped update guide](../../../guides/airgapped-update.html).
+
+In an [air-gapped cluster](../../../glossary.html#air-gapped-cluster) with a single master node, in-cluster cache pod startup may be delayed when a Deckhouse Platform update changes the cache's own images. For details, see [How is the cache updated?](/modules/registry/latest/faq.html#how-is-the-cache-updated) in the `registry` module FAQ.
