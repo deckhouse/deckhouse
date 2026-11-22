@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 892517f..2e073c9 100644
+index 892517f..2598047 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,14 +1,14 @@
@@ -20,27 +20,31 @@ index 892517f..2e073c9 100644
  	github.com/go-logr/zapr v1.3.0
  	github.com/golang/protobuf v1.5.4
  	github.com/google/go-cmp v0.7.0
-@@ -22,20 +22,20 @@ require (
+@@ -20,22 +20,22 @@ require (
+ 	github.com/pkg/errors v0.9.1
+ 	github.com/prometheus/client_golang v1.23.2
  	github.com/spf13/cobra v1.10.2
- 	github.com/stretchr/testify v1.11.1
+-	github.com/stretchr/testify v1.11.1
++	github.com/stretchr/testify v1.12.1
  	go.opentelemetry.io/contrib/detectors/aws/ec2 v1.21.1
 -	go.opentelemetry.io/contrib/detectors/gcp v1.39.0
 -	go.opentelemetry.io/otel v1.43.0
 +	go.opentelemetry.io/contrib/detectors/gcp v1.44.0
-+	go.opentelemetry.io/otel v1.45.0
++	go.opentelemetry.io/otel v1.47.0
  	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.43.0
  	go.opentelemetry.io/otel/exporters/prometheus v0.62.0
 -	go.opentelemetry.io/otel/metric v1.43.0
 -	go.opentelemetry.io/otel/sdk v1.43.0
 -	go.opentelemetry.io/otel/sdk/metric v1.43.0
-+	go.opentelemetry.io/otel/metric v1.45.0
-+	go.opentelemetry.io/otel/sdk v1.45.0
-+	go.opentelemetry.io/otel/sdk/metric v1.45.0
++	go.opentelemetry.io/otel/metric v1.47.0
++	go.opentelemetry.io/otel/sdk v1.47.0
++	go.opentelemetry.io/otel/sdk/metric v1.47.0
  	go.uber.org/zap v1.27.1
  	go.yaml.in/yaml/v2 v2.4.3
- 	go.yaml.in/yaml/v3 v3.0.4
+-	go.yaml.in/yaml/v3 v3.0.4
 -	golang.org/x/oauth2 v0.35.0
 -	golang.org/x/sync v0.20.0
++	go.yaml.in/yaml/v3 v3.0.5
 +	golang.org/x/oauth2 v0.36.0
 +	golang.org/x/sync v0.24.0
  	golang.org/x/time v0.14.0
@@ -99,7 +103,7 @@ index 892517f..2e073c9 100644
  	github.com/tchap/go-patricia/v2 v2.3.3 // indirect
  	github.com/valyala/fastjson v1.6.7 // indirect
  	github.com/vektah/gqlparser/v2 v2.5.31 // indirect
-@@ -124,27 +122,26 @@ require (
+@@ -124,27 +122,27 @@ require (
  	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
  	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
  	github.com/yashtewari/glob-intersection v0.2.0 // indirect
@@ -114,7 +118,8 @@ index 892517f..2e073c9 100644
 -	go.opentelemetry.io/proto/otlp v1.10.0 // indirect
 +	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.45.0 // indirect
 +	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.45.0 // indirect
-+	go.opentelemetry.io/otel/trace v1.45.0 // indirect
++	go.opentelemetry.io/otel/log v1.47.0 // indirect
++	go.opentelemetry.io/otel/trace v1.47.0 // indirect
 +	go.opentelemetry.io/proto/otlp v1.11.0 // indirect
  	go.uber.org/atomic v1.11.0 // indirect
  	go.uber.org/multierr v1.11.0 // indirect
@@ -142,7 +147,7 @@ index 892517f..2e073c9 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/ini.v1 v1.67.1 // indirect
 diff --git a/go.sum b/go.sum
-index 43e8d7a..2bbbf3e 100644
+index 43e8d7a..307779a 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -1,24 +1,22 @@
@@ -324,7 +329,7 @@ index 43e8d7a..2bbbf3e 100644
  github.com/prometheus/client_model v0.6.2 h1:oBsgwpGs7iVziMvrGhE53c/GrLUsZdHnqNwqPLxwZyk=
  github.com/prometheus/client_model v0.6.2/go.mod h1:y3m2F6Gdpfy6Ut/GBsUqTWZqCUvMVzSfMLjcu6wAwpE=
  github.com/prometheus/common v0.67.5 h1:pIgK94WWlQt1WLwAC5j2ynLaBRDiinoAb86HZHTUGI4=
-@@ -271,8 +240,6 @@ github.com/spf13/cobra v1.10.2/go.mod h1:7C1pvHqHw5A4vrJfjNwvOdzYu0Gml16OCs2GRiT
+@@ -271,20 +240,19 @@ github.com/spf13/cobra v1.10.2/go.mod h1:7C1pvHqHw5A4vrJfjNwvOdzYu0Gml16OCs2GRiT
  github.com/spf13/pflag v1.0.9/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
  github.com/spf13/pflag v1.0.10 h1:4EBh2KAYBwaONj6b2Ye1GiHfwjqyROoF4RwYO+vPwFk=
  github.com/spf13/pflag v1.0.10/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
@@ -333,15 +338,23 @@ index 43e8d7a..2bbbf3e 100644
  github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
  github.com/stretchr/objx v0.4.0/go.mod h1:YvHI0jy2hoMjB+UWwv71VJQ9isScKT/TqJzVSSt89Yw=
  github.com/stretchr/objx v0.5.0/go.mod h1:Yh+to48EsGEfYuaHDzXPcE3xhTkx73EhmCGUpEOglKo=
-@@ -281,7 +248,6 @@ github.com/stretchr/objx v0.5.2/go.mod h1:FRsXN1f5AsAjCGJKqEizvkpNtU+EGNCLh3NxZ/
+-github.com/stretchr/objx v0.5.2 h1:xuMeJ0Sdp5ZMRXx/aWO6RZxdr3beISkG5/G/aIRr3pY=
+ github.com/stretchr/objx v0.5.2/go.mod h1:FRsXN1f5AsAjCGJKqEizvkpNtU+EGNCLh3NxZ/8L+MA=
++github.com/stretchr/objx v0.5.3 h1:jmXUvGomnU1o3W/V5h2VEradbpJDwGrzugQQvL0POH4=
++github.com/stretchr/objx v0.5.3/go.mod h1:rDQraq+vQZU7Fde9LOZLr8Tax6zZvy4kuNKF+QYS+U0=
  github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
  github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
  github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO+kdMU+MU=
 -github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
  github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
- github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
+-github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
  github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
-@@ -305,40 +271,40 @@ go.etcd.io/etcd/client/pkg/v3 v3.6.5 h1:Duz9fAzIZFhYWgRjp/FgNq2gO1jId9Yae/rLn3Rr
++github.com/stretchr/testify v1.12.1 h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWDWE=
++github.com/stretchr/testify v1.12.1/go.mod h1:MDEgiDPPsNp5cuIrHPPCyornHKgEVbtFUmoNlxoYthg=
+ github.com/tchap/go-patricia/v2 v2.3.3 h1:xfNEsODumaEcCcY3gI0hYPZ/PcpVv5ju6RMAhgwZDDc=
+ github.com/tchap/go-patricia/v2 v2.3.3/go.mod h1:VZRHKAb53DLaG+nA9EaYYiaEx6YztwDlLElMsnSHD4k=
+ github.com/valyala/fastjson v1.6.7 h1:ZE4tRy0CIkh+qDc5McjatheGX2czdn8slQjomexVpBM=
+@@ -305,40 +273,42 @@ go.etcd.io/etcd/client/pkg/v3 v3.6.5 h1:Duz9fAzIZFhYWgRjp/FgNq2gO1jId9Yae/rLn3Rr
  go.etcd.io/etcd/client/pkg/v3 v3.6.5/go.mod h1:8Wx3eGRPiy0qOFMZT/hfvdos+DjEaPxdIDiCDUv/FQk=
  go.etcd.io/etcd/client/v3 v3.6.5 h1:yRwZNFBx/35VKHTcLDeO7XVLbCBFbPi+XV4OC3QJf2U=
  go.etcd.io/etcd/client/v3 v3.6.5/go.mod h1:ZqwG/7TAFZ0BJ0jXRPoJjKQJtbFo/9NIY8uoFFKcCyo=
@@ -363,8 +376,8 @@ index 43e8d7a..2bbbf3e 100644
  go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.64.0/go.mod h1:GQ/474YrbE4Jx8gZ4q5I4hrhUzM6UPzyrqJYV2AqPoQ=
 -go.opentelemetry.io/otel v1.43.0 h1:mYIM03dnh5zfN7HautFE4ieIig9amkNANT+xcVxAj9I=
 -go.opentelemetry.io/otel v1.43.0/go.mod h1:JuG+u74mvjvcm8vj8pI5XiHy1zDeoCS2LB1spIq7Ay0=
-+go.opentelemetry.io/otel v1.45.0 h1:pdrWmLHofpubmArBv1LgFSv1Z0Ie/ppdZzu+kUN5EeU=
-+go.opentelemetry.io/otel v1.45.0/go.mod h1:XZxIqPapzEYnhNSScF5DIqXhm/rYi0FzCe2XddAwZfQ=
++go.opentelemetry.io/otel v1.47.0 h1:j7ALJ/zgkS7Z6aeJW09p8VC9804bC+PpeTfCD4XPnOM=
++go.opentelemetry.io/otel v1.47.0/go.mod h1:8wS9O2qfXrYrzp6hIF/HOYJJf/wIhFPhR2xLuP+iXQU=
  go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.43.0 h1:w1K+pCJoPpQifuVpsKamUdn9U0zM3xUziVOqsGksUrY=
  go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.43.0/go.mod h1:HBy4BjzgVE8139ieRI75oXm3EcDN+6GhD88JT1Kjvxg=
 -go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.40.0 h1:QKdN8ly8zEMrByybbQgv8cWBcdAarwmIPZ6FThrWXJs=
@@ -389,30 +402,36 @@ index 43e8d7a..2bbbf3e 100644
 -go.opentelemetry.io/otel/trace v1.43.0/go.mod h1:/QJhyVBUUswCphDVxq+8mld+AvhXZLhe+8WVFxiFff0=
 -go.opentelemetry.io/proto/otlp v1.10.0 h1:IQRWgT5srOCYfiWnpqUYz9CVmbO8bFmKcwYxpuCSL2g=
 -go.opentelemetry.io/proto/otlp v1.10.0/go.mod h1:/CV4QoCR/S9yaPj8utp3lvQPoqMtxXdzn7ozvvozVqk=
-+go.opentelemetry.io/otel/metric v1.45.0 h1:7Eg1uH7CJ5cXv9is6tnBe1FI6rj1nwUdbFypRm3br/M=
-+go.opentelemetry.io/otel/metric v1.45.0/go.mod h1:HAPbm1nd3p1PmFH7v2dR+6BjXxw+Lq4a2+pndMAm08s=
-+go.opentelemetry.io/otel/metric/x v0.67.0 h1:PcicCNZFkZ4bXfSooXdo3WN7RBOVOtjVdo1wD358Uns=
-+go.opentelemetry.io/otel/metric/x v0.67.0/go.mod h1:FBjCWZe6wgcqxcMtjdGiClDKXb2YxxXii0CXftE4QtI=
-+go.opentelemetry.io/otel/sdk v1.45.0 h1:4VVSMgQ83dUgW2aoX5f6JgLvHwIvzcuLnF9lUdCSpCw=
-+go.opentelemetry.io/otel/sdk v1.45.0/go.mod h1:Sr40LgXV7DsKMMJMKOhUWOgMWTfAaqvm2kF0g7ilwuA=
-+go.opentelemetry.io/otel/sdk/metric v1.45.0 h1:oVFszMfyj1Am6s24Vtc7wBb8BKLcwepJjNEYILuiE3o=
-+go.opentelemetry.io/otel/sdk/metric v1.45.0/go.mod h1:vUWUxDZvu1WVRj8JA8S0AdhsPrZoDpA2DdZauIh4mDA=
-+go.opentelemetry.io/otel/trace v1.45.0 h1:l/mP6Uv7oNO7/TblbhpbgMidxhq1uO/rPsikOyVhxag=
-+go.opentelemetry.io/otel/trace v1.45.0/go.mod h1:qoJJA2xNMnxRrdISU/kLtfUH2wNeQbiv+jhs/CxI8bc=
++go.opentelemetry.io/otel/log v1.47.0 h1:cOTS1CcLbSQeZKanGJ+0JpF/+t4PELi3O3bbl2lqCcI=
++go.opentelemetry.io/otel/log v1.47.0/go.mod h1:9byitSQ5pLC6PpqwGXjqdMKya6ZTswHRZh2vvXT33nw=
++go.opentelemetry.io/otel/metric v1.47.0 h1:4PptaldXx3Eat1XjMZ68pPJEs5wrhlemctZE9a3UdWY=
++go.opentelemetry.io/otel/metric v1.47.0/go.mod h1:ADGSXxRrXM6bjbvLo535EstVFlPpPYZm4LBKixjDHwU=
++go.opentelemetry.io/otel/metric/x v0.69.0 h1:DjRLr15H83v+hCW7JA9NoJvOkYTtmq5YoDRbe9deYpM=
++go.opentelemetry.io/otel/metric/x v0.69.0/go.mod h1:uVvsMPMFFyj/HUQfrUnH3JjnOQ1dwFDorgFLRBasM0k=
++go.opentelemetry.io/otel/sdk v1.47.0 h1:zWXEr4j2lFefG87TU6Yg8a7ngfohIKFZHKp0Hf5hC6I=
++go.opentelemetry.io/otel/sdk v1.47.0/go.mod h1:VUc24kiOeoGsxG8G9ULx3fWKvB7jMhnGE8Oi607lgR0=
++go.opentelemetry.io/otel/sdk/metric v1.47.0 h1:lfISg2j93VT6yqdk9OfUaZmw/GfcZqCCV3jdXtsPnKw=
++go.opentelemetry.io/otel/sdk/metric v1.47.0/go.mod h1:ypLp+mW1Nt2x+Szt3b5/i1syodyts49lMOwxpDI3VGw=
++go.opentelemetry.io/otel/trace v1.47.0 h1:JOjX/Oci8K94QHddo+bbfya/Ai/nf6/dt9ZfrFNWSrM=
++go.opentelemetry.io/otel/trace v1.47.0/go.mod h1:jNaSLa2PZEYFG6fRjJABAu+bw4FS08uDmPg28lTghu0=
 +go.opentelemetry.io/proto/otlp v1.11.0 h1:5rrYs0Ykyj50sdU/JU0x8etU+LubXWb+gED6TbEdMIk=
 +go.opentelemetry.io/proto/otlp v1.11.0/go.mod h1:SmVizdCOAm3XBtG1g1NnOdhW6jtddT72hLMhv8VwA8E=
  go.uber.org/atomic v1.11.0 h1:ZvwS0R+56ePWxUNi+Atn9dWONBPp/AUETXlHW0DxSjE=
  go.uber.org/atomic v1.11.0/go.mod h1:LUxbIzbOniOlMKjJjyPfpl4v+PKK2cNJn91OQbhoJI0=
  go.uber.org/goleak v1.3.0 h1:2K3zAYmnTNqV73imy9J1T3WC+gmCePx2hEGkimedGto=
-@@ -351,89 +317,42 @@ go.yaml.in/yaml/v2 v2.4.3 h1:6gvOSjQoTB3vt1l+CU+tSyi/HOjfOjRLJ4YwYZGwRO0=
+@@ -349,91 +319,45 @@ go.uber.org/zap v1.27.1 h1:08RqriUEv8+ArZRYSTXy1LeBScaMpVSTBhCeaZYfMYc=
+ go.uber.org/zap v1.27.1/go.mod h1:GB2qFLM7cTU87MWRP2mPIjqfIDnGu+VIO4V/SdhGo2E=
+ go.yaml.in/yaml/v2 v2.4.3 h1:6gvOSjQoTB3vt1l+CU+tSyi/HOjfOjRLJ4YwYZGwRO0=
  go.yaml.in/yaml/v2 v2.4.3/go.mod h1:zSxWcmIDjOzPXpjlTTbAsKokqkDNAVtZO0WOMiT90s8=
- go.yaml.in/yaml/v3 v3.0.4 h1:tfq32ie2Jv2UxXFdLJdh3jXuOzWiL1fo0bu/FbuKpbc=
+-go.yaml.in/yaml/v3 v3.0.4 h1:tfq32ie2Jv2UxXFdLJdh3jXuOzWiL1fo0bu/FbuKpbc=
  go.yaml.in/yaml/v3 v3.0.4/go.mod h1:DhzuOOF2ATzADvBadXxruRBLzYTpT36CKvDb3+aBEFg=
 -golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 -golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
 -golang.org/x/crypto v0.49.0 h1:+Ng2ULVvLHnJ/ZFEq4KdcDd/cfjrrjjNSXNzxg0Y4U4=
 -golang.org/x/crypto v0.49.0/go.mod h1:ErX4dUh2UM+CFYiXZRTcMpEcN8b/1gxEuv3nODoYtCA=
 -golang.org/x/exp v0.0.0-20190121172915-509febef88a4/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
++go.yaml.in/yaml/v3 v3.0.5 h1:N6y/pJk8buWs9NY5ERU2HSMfm+IuD/OtfdAnq6kESPw=
++go.yaml.in/yaml/v3 v3.0.5/go.mod h1:HVTZu1O7/Vkt2N+BFy8Zza+lnLsABggaTM2ZpNIGuKg=
 +golang.org/x/crypto v0.58.0 h1:COkYLr4k7nDI4r6QtMML2AfzeIswWHAJthLS6K/M/54=
 +golang.org/x/crypto v0.58.0/go.mod h1:Xh+kl5A+M0gMiWDytH2Hhr5Z7WbNCpv/eB/EFgfSk+w=
  golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f h1:XdNn9LlyWAhLVp6P/i8QYBW+hlyhrhei9uErw2B5GJo=
@@ -522,7 +541,7 @@ index 43e8d7a..2bbbf3e 100644
  google.golang.org/protobuf v1.36.11 h1:fV6ZwhNocDyBLK0dj+fg8ektcVegBBuEolpbTQyBNVE=
  google.golang.org/protobuf v1.36.11/go.mod h1:HTf+CrKn2C3g5S8VImy6tdcUvCska2kB7j23XfzDpco=
  gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
-@@ -451,8 +370,6 @@ gopkg.in/yaml.v2 v2.4.0/go.mod h1:RDklbk79AGWmwhnvt/jBztapEOGDOx6ZbXqjP6csGnQ=
+@@ -451,8 +375,6 @@ gopkg.in/yaml.v2 v2.4.0/go.mod h1:RDklbk79AGWmwhnvt/jBztapEOGDOx6ZbXqjP6csGnQ=
  gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
  gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
  gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
