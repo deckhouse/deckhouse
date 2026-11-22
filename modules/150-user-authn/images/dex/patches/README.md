@@ -1929,6 +1929,10 @@ It lists the `go.mod` requirements that the patch set changes over the upstream 
 |---|---|---|
 | `github.com/go-jose/go-jose/v4` | v4.1.5 | v4.1.6 |
 | `github.com/go-ldap/ldap/v3` | v3.4.14 | v3.4.15 |
+| `go.opentelemetry.io/otel/log` | — | v1.47.0 |
+| `go.opentelemetry.io/otel/metric` | v1.45.0 | v1.47.0 |
+| `go.opentelemetry.io/otel/trace` | v1.45.0 | v1.47.0 |
+| `go.opentelemetry.io/otel` | v1.45.0 | v1.47.0 |
 | `golang.org/x/crypto` | v0.57.0 | v0.58.0 |
 | `golang.org/x/net` | v0.59.0 | v0.62.0 |
 | `golang.org/x/sync` | v0.23.0 | v0.24.0 |
