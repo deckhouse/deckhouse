@@ -1,4 +1,10 @@
 # file contains setting for werf render for different editions
+
+# The licensing switch of BE, SE, SE-plus, EE and CSE: the goBuildTags they share.
+# `nolicensing` builds them without licensing, as CE is, while its tooling is not
+# ready; "" turns licensing on for all of them at once. FE keeps its own opt-in
+# (`licensing_optin`), CE never has licensing.
+paidEditionsGoBuildTags: &paidEditionsGoBuildTags nolicensing
 editions:
 - name: CE
   # path to version map file. Can be empty if version map does not exist
@@ -34,18 +40,21 @@ editions:
 
 - name: BE
   modulesDir: "ee/be/modules"
+  goBuildTags: *paidEditionsGoBuildTags
 
   # exclude modules from templates and images
   excludeModules:
 
 - name: SE
   modulesDir: "ee/se/modules"
+  goBuildTags: *paidEditionsGoBuildTags
 
   excludeModules:
   - dashboard
 
 - name: SE-plus
   modulesDir: "ee/se-plus/modules"
+  goBuildTags: *paidEditionsGoBuildTags
   terraformProviders:
     - vsphere
   excludeModules:
@@ -54,6 +63,7 @@ editions:
 - name: EE
   versionMapFile: "ee/candi/version_map.yml"
   modulesDir: "ee/modules"
+  goBuildTags: *paidEditionsGoBuildTags
   terraformProviders:
     - openstack
     - vcd
@@ -67,6 +77,7 @@ editions:
 - name: CSE
   versionMapFile: "ee/cse/candi/version_map.yml"
   modulesDir: "ee/cse/modules"
+  goBuildTags: *paidEditionsGoBuildTags
   excludeEditions:
   - FE
   availableModules:

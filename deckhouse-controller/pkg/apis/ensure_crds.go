@@ -56,6 +56,28 @@ var (
 // app.LicensingEnabled): without them the Console has no licensing section.
 var licensingCRDs = []string{"clusterlicense.yaml", "effectivelicense.yaml"}
 
+// licensingCRDNames are the licensing CRDs as they are named in the cluster.
+var licensingCRDNames = []string{"clusterlicenses.deckhouse.io", "effectivelicenses.deckhouse.io"}
+
+var crdGVR = schema.GroupVersionResource{Group: "apiextensions.k8s.io", Version: "v1", Resource: "customresourcedefinitions"}
+
+// removeLicensingCRDs deletes the licensing CRDs that Deckhouse 1.78.0 installed in
+// the editions now built without licensing. Left in place, they keep the licensing
+// section and the license banner in the Console. Their objects go with them: the
+// EffectiveLicense and the installed license keys. A failure is logged and retried
+// on the next start, it never stops Deckhouse.
+func removeLicensingCRDs(ctx context.Context, cli dynamic.Interface) {
+	for _, name := range licensingCRDNames {
+		err := cli.Resource(crdGVR).Delete(ctx, name, metav1.DeleteOptions{})
+		switch {
+		case err == nil:
+			log.Debug("The licensing CRD was deleted", slog.String("crd", name))
+		case !apierrors.IsNotFound(err):
+			log.Warn("Couldn't delete the licensing CRD", slog.String("crd", name), log.Err(err))
+		}
+	}
+}
+
 type kubeClient interface {
 	kubernetes.Interface
 	Dynamic() dynamic.Interface
@@ -86,6 +108,10 @@ func EnsureCRDs(ctx context.Context, client kubeClient) error {
 	// The first thing deckhouse-controller does on start, so licensing is settled
 	// here once for the CRDs below and for the licensing controller registered later.
 	app.ResolveLicensing(ctx, client.Dynamic())
+
+	if app.LicensingBuiltOut() {
+		removeLicensingCRDs(ctx, client.Dynamic())
+	}
 
 	inst := crdinstaller.NewCRDsInstaller(
 		client.Dynamic(),

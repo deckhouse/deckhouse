@@ -25,3 +25,7 @@ func ResolveLicensing(context.Context, dynamic.Interface) {}
 
 // LicensingEnabled reports whether this deckhouse runs licensing.
 func LicensingEnabled() bool { return false }
+
+// LicensingBuiltOut reports whether this deckhouse is built without licensing at
+// all, so the licensing CRDs an earlier version left behind are removed.
+func LicensingBuiltOut() bool { return true }

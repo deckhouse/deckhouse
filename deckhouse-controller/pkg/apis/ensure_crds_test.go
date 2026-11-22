@@ -149,3 +149,25 @@ func TestInstallCRDFile(t *testing.T) {
 		}
 	}
 }
+
+func TestRemoveLicensingCRDs(t *testing.T) {
+	ctx := context.Background()
+	crd := func(name string) *unstructured.Unstructured {
+		obj := &unstructured.Unstructured{}
+		obj.SetAPIVersion("apiextensions.k8s.io/v1")
+		obj.SetKind("CustomResourceDefinition")
+		obj.SetName(name)
+		return obj
+	}
+	listKinds := map[schema.GroupVersionResource]string{crdGVR: "CustomResourceDefinitionList"}
+	// One licensing CRD is already gone: a restart after a half-done removal.
+	cli := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), listKinds,
+		crd("clusterlicenses.deckhouse.io"), crd("modules.deckhouse.io"))
+
+	removeLicensingCRDs(ctx, cli)
+
+	list, err := cli.Resource(crdGVR).List(ctx, metav1.ListOptions{})
+	require.NoError(t, err)
+	require.Len(t, list.Items, 1)
+	require.Equal(t, "modules.deckhouse.io", list.Items[0].GetName())
+}
