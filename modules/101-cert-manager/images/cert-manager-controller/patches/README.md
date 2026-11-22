@@ -76,8 +76,8 @@ The changes of `cmd/acmesolver/go.mod`:
 | Module | Upstream | Patched |
 |---|---|---|
 | `github.com/go-logr/logr` | v1.4.3 | v1.4.4 |
-| `go.opentelemetry.io/otel/trace` | v1.43.0 | v1.45.0 |
-| `go.opentelemetry.io/otel` | v1.43.0 | v1.45.0 |
+| `go.opentelemetry.io/otel/trace` | v1.43.0 | v1.47.0 |
+| `go.opentelemetry.io/otel` | v1.43.0 | v1.47.0 |
 | `golang.org/x/net` | v0.55.0 | v0.62.0 |
 | `golang.org/x/sys` | v0.45.0 | v0.49.0 |
 | `golang.org/x/text` | v0.37.0 | v0.43.0 |
@@ -91,8 +91,9 @@ The changes of `cmd/cainjector/go.mod`:
 | Module | Upstream | Patched |
 |---|---|---|
 | `github.com/go-logr/logr` | v1.4.3 | v1.4.4 |
-| `go.opentelemetry.io/otel/trace` | v1.43.0 | v1.45.0 |
-| `go.opentelemetry.io/otel` | v1.43.0 | v1.45.0 |
+| `go.opentelemetry.io/otel/trace` | v1.43.0 | v1.47.0 |
+| `go.opentelemetry.io/otel` | v1.43.0 | v1.47.0 |
+| `go.yaml.in/yaml/v3` | v3.0.4 | v3.0.5 |
 | `golang.org/x/crypto` | v0.52.0 | v0.58.0 |
 | `golang.org/x/net` | v0.55.0 | v0.62.0 |
 | `golang.org/x/oauth2` | v0.35.0 | v0.36.0 |
@@ -112,13 +113,17 @@ The changes of `cmd/controller/go.mod`:
 | `github.com/go-jose/go-jose/v4` | v4.1.4 | v4.1.6 |
 | `github.com/go-logr/logr` | v1.4.3 | v1.4.4 |
 | `github.com/grpc-ecosystem/grpc-gateway/v2` | v2.27.1 | v2.29.0 |
+| `github.com/stretchr/objx` | v0.5.2 | v0.5.3 |
+| `github.com/stretchr/testify` | v1.11.1 | v1.12.1 |
 | `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc` | v1.37.0 | v1.45.0 |
 | `go.opentelemetry.io/otel/exporters/otlp/otlptrace` | v1.37.0 | v1.45.0 |
-| `go.opentelemetry.io/otel/metric` | v1.43.0 | v1.45.0 |
-| `go.opentelemetry.io/otel/sdk` | v1.43.0 | v1.45.0 |
-| `go.opentelemetry.io/otel/trace` | v1.43.0 | v1.45.0 |
-| `go.opentelemetry.io/otel` | v1.43.0 | v1.45.0 |
+| `go.opentelemetry.io/otel/log` | — | v1.47.0 |
+| `go.opentelemetry.io/otel/metric` | v1.43.0 | v1.47.0 |
+| `go.opentelemetry.io/otel/sdk` | v1.43.0 | v1.47.0 |
+| `go.opentelemetry.io/otel/trace` | v1.43.0 | v1.47.0 |
+| `go.opentelemetry.io/otel` | v1.43.0 | v1.47.0 |
 | `go.opentelemetry.io/proto/otlp` | v1.7.0 | v1.11.0 |
+| `go.yaml.in/yaml/v3` | v3.0.4 | v3.0.5 |
 | `golang.org/x/crypto` | v0.52.0 | v0.58.0 |
 | `golang.org/x/mod` | v0.35.0 | v0.41.0 |
 | `golang.org/x/net` | v0.55.0 | v0.62.0 |
@@ -147,11 +152,13 @@ The changes of `cmd/webhook/go.mod`:
 | `github.com/grpc-ecosystem/grpc-gateway/v2` | v2.27.1 | v2.29.0 |
 | `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc` | v1.37.0 | v1.45.0 |
 | `go.opentelemetry.io/otel/exporters/otlp/otlptrace` | v1.37.0 | v1.45.0 |
-| `go.opentelemetry.io/otel/metric` | v1.43.0 | v1.45.0 |
-| `go.opentelemetry.io/otel/sdk` | v1.43.0 | v1.45.0 |
-| `go.opentelemetry.io/otel/trace` | v1.43.0 | v1.45.0 |
-| `go.opentelemetry.io/otel` | v1.43.0 | v1.45.0 |
+| `go.opentelemetry.io/otel/log` | — | v1.47.0 |
+| `go.opentelemetry.io/otel/metric` | v1.43.0 | v1.47.0 |
+| `go.opentelemetry.io/otel/sdk` | v1.43.0 | v1.47.0 |
+| `go.opentelemetry.io/otel/trace` | v1.43.0 | v1.47.0 |
+| `go.opentelemetry.io/otel` | v1.43.0 | v1.47.0 |
 | `go.opentelemetry.io/proto/otlp` | v1.7.0 | v1.11.0 |
+| `go.yaml.in/yaml/v3` | v3.0.4 | v3.0.5 |
 | `golang.org/x/crypto` | v0.52.0 | v0.58.0 |
 | `golang.org/x/net` | v0.55.0 | v0.62.0 |
 | `golang.org/x/oauth2` | v0.35.0 | v0.36.0 |
