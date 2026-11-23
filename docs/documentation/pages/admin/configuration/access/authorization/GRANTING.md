@@ -103,7 +103,7 @@ spec:
   - kind: User
     name: dev-user@example.com
   # Available only with the enableMultiTenancy parameter of the user-authz module
-  # turned on (BE, SE, SE+, EE, and CSE editions).
+  # turned on (BE, SE, SE+, and EE editions).
   namespaceSelector:
     labelSelector:
       matchLabels:

@@ -5,7 +5,7 @@ search: user-authz, RBAC, role-based access control, authorization
 description: Architecture of the user-authz module in Deckhouse Platform.
 ---
 
-The [`user-authz`](/modules/user-authz/) module implements role-based access control (RBAC) in Deckhouse Platform (DP). The module creates cluster roles for managing user and group access to cluster resources, and, in the Ultimate, CSE Core, and CSE Pro [editions](../../glossary.html#edition) of DP, also supports namespace-scoped authorization ([multitenancy](./multitenancy.html)).
+The [`user-authz`](/modules/user-authz/) module implements role-based access control (RBAC) in Deckhouse Platform (DP). The module creates cluster roles for managing user and group access to cluster resources, and, in the Ultimate [edition](../../glossary.html#edition) of DP, also supports namespace-scoped authorization ([multitenancy](./multitenancy.html)).
 
 For more details about the role-based access control model, refer to the [corresponding section of the module documentation](/modules/user-authz/#granular-role-based-model).
 
@@ -14,7 +14,7 @@ The module works with the following custom resources of the `deckhouse.io` API g
 - [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule): Defines access rules at the cluster level.
 - [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule): Defines access rules within a single namespace.
 
-In the Ultimate, CSE Core, and CSE Pro editions of DP, the module additionally works with the following custom resources of the `authorization.deckhouse.io` API group:
+In the Ultimate edition of DP, the module additionally works with the following custom resources of the `authorization.deckhouse.io` API group:
 
 - BulkSubjectAccessReview: A resource for bulk-checking user permissions across multiple objects or actions.
 - AccessibleNamespace: A resource for retrieving the list of namespaces accessible to a specific user.
@@ -43,7 +43,7 @@ The module consists of the following components:
 
 1. **User-authz-controller** (Deployment): This component includes a single **user-authz-controller** container and watches the ClusterAuthorizationRule and AuthorizationRule custom resources, creating, updating, and deleting the corresponding ClusterRoleBinding and RoleBinding resources.
 
-The Ultimate, CSE Core, and CSE Pro editions of DP additionally include the following components:
+The Ultimate edition of DP additionally includes the following components:
 
 1. **User-authz-webhook** (DaemonSet): An optional component that implements the [Webhook authorization mode](https://kubernetes.io/docs/reference/access-authn-authz/webhook/) for kube-apiserver, placed between the built-in Node and RBAC authorizers in the authorization chain. The component runs on all [master nodes](../../glossary.html#master-node) with `hostNetwork` enabled.
 
