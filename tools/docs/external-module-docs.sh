@@ -29,7 +29,7 @@ OUTPUT_DIR="${OUTPUT_DIR:-${TEMPLATE_DIR}/public}"
 MODULE_PATH="${MODULE_PATH:-}"
 CHANNEL="${CHANNEL:-alpha}"
 MODULE_VERSION="${MODULE_VERSION:-v0.1.0}"
-HUGO_IMAGE="${HUGO_IMAGE:-ghcr.io/gohugoio/hugo:v0.169.0}"
+HUGO_IMAGE="${HUGO_IMAGE:-ghcr.io/gohugoio/hugo:v0.170.1}"
 
 if [[ -z "${MODULE_PATH}" ]]; then
   echo "MODULE_PATH is required." >&2
