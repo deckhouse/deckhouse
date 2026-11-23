@@ -60,7 +60,7 @@ The module consists of the following components:
    * Configures node network interfaces (port bonding, bridging, VLAN interface configuration).
    * Brings up additional, underlay, and system networks.
    * Implements a CNI server that the d8-sdn component connects to over a Unix socket.
-   * Implements a Dynamic Resource Allocation (DRA) driver for the `network.deckhouse.io` API group, registering itself as a DRA plugin with kubelet, for passing physical and virtual network devices through to a pod. This functionality is available in the DP Ultimate/EE, Certified Core/CSE Lite (1.73), and Certified Pro/CSE Pro (1.73) [editions](../../glossary.html#edition).
+   * Implements a Dynamic Resource Allocation (DRA) driver for the `network.deckhouse.io` API group, registering itself as a DRA plugin with kubelet, for passing physical and virtual network devices through to a pod. This functionality is available in the DP Ultimate/EE [edition](../../glossary.html#edition).
 
    The agent translates cluster node and pod configurations into low-level network interface and eBPF program settings that actually process traffic.
 

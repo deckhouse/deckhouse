@@ -20,7 +20,7 @@ Key features of the basic role model:
 - Controls access to scaling tools (via the `allowScale` parameter in the [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-allowscale) or [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule-v1alpha1-spec-allowscale) resource).
 - Controls access to port forwarding (via the `portForwarding` parameter in the [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-portforwarding) or [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule-v1alpha1-spec-portforwarding) resource).
 - Manages the list of allowed namespaces using the labelSelector format (via the `namespaceSelector` parameter in the [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-namespaceselector) resource).
-- Namespace restrictions (multitenancy mode, `namespaceSelector`, `limitNamespaces`) are available in the DP Ultimate/EE, Certified Lite, Certified Pro, BE, SE, SE+, and CSE [editions](../../../../glossary.html#edition).
+- Namespace restrictions (multitenancy mode, `namespaceSelector`, `limitNamespaces`) are available in the DP Ultimate/EE, BE, SE, and SE+ [editions](../../../../glossary.html#edition).
 
 ## High-level roles used in the basic model
 

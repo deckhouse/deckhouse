@@ -4,6 +4,6 @@ description: Verification of the integrity and authenticity of user application 
 lang: en
 ---
 
-At the build stage the image is signed with a private key using Cosign. The signature is published in the registry as a separate tag and does not change the image. In the cluster a SecurityPolicy with the `verifyImageSignatures` parameter lists the public keys, and the [`admission-policy-engine`](/modules/admission-policy-engine/) module with Ratify verifies the signature of every image when the pod is created. This is the part of [integrity control](glossary.html#integrity-control) available in all [editions](glossary.html#edition). Verification at the container runtime level exists only in Certified Core and Certified Pro.
+At the build stage the image is signed with a private key using Cosign. The signature is published in the registry as a separate tag and does not change the image. In the cluster a SecurityPolicy with the `verifyImageSignatures` parameter lists the public keys, and the [`admission-policy-engine`](/modules/admission-policy-engine/) module with Ratify verifies the signature of every image when the pod is created. This is the part of [integrity control](glossary.html#integrity-control) available in all [editions](glossary.html#edition).
 
 For details, see [Integrity control](architecture/security/integrity-control.html).

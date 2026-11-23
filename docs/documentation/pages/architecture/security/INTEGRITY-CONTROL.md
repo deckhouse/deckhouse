@@ -13,22 +13,9 @@ Deckhouse Platform (DP) provides the following mechanisms:
 - Integrity control of running containers: [runtime audit](../../glossary.html#runtime-audit).
 - Integrity protection of DP modules: modules are installed as immutable images.
 
-{% alert level="warning" %}
-Container image integrity control at the container runtime (CRI) level — cryptographic image signature verification and protection of unpacked layers from modification — is implemented only in DP Certified Core and Certified Pro [editions](../../glossary.html#edition). In other editions, this mechanism is unavailable (for details, refer to ["Container image integrity control at the CRI level"](#container-image-integrity-control-at-the-cri-level)).
-
-The edition restriction applies to this mechanism, not to DM-Verity itself. DM-Verity is a Linux kernel mechanism used in DP in two independent scenarios: for container image layers (only in Certified Core and Certified Pro) and for platform module images (in all editions; refer to ["Integrity protection of DP modules"](#integrity-protection-of-dp-modules)).
-{% endalert %}
-
 ## Container image integrity control at the CRI level
 
-Cryptographic image signature verification when a container image is pulled and a container starts, as well as protection of unpacked image layers from modification using DM-Verity, are implemented at the containerd level and are available **only in DP Certified Core and Certified Pro editions**. These editions use a modified version of containerd. The DM-Verity root hash is calculated for each image layer during the platform build and verified by containerd when the image is unpacked. Integrity control includes verification when image blocks are accessed and periodic re-verification:
-
-- After unpacking, DM-Verity verifies image blocks whenever they are accessed, throughout the entire container runtime.
-- In addition, containerd periodically (once per hour by default) rechecks running containers in protected namespaces. It verifies the image manifest signature again and fully checks image layers against the DM-Verity root hash (`veritysetup verify`). Layers are not checked all at once. The queue is processed at a rate of one container per minute, so a complete pass over a node takes longer as the number of containers on the node increases.
-
-Platform image signatures are verified against a built-in set of public certificates in containerd. The signing private key belongs to the platform vendor, and you cannot add your own verification key. For more details about this mechanism, refer to the Certified Core and Certified Pro documentation.
-
-In other DP editions (CE, BE, SE, SE+, EE, Ultimate, Core), image signature verification at the CRI level is not available:
+In DP editions CE, BE, SE, SE+, EE, Ultimate, and Core, image signature verification at the CRI level is not available:
 
 - When using containerd v2, the EROFS snapshotter is used. Each OCI image layer is converted into a separate EROFS file and mounted read-only. This reduces the risk of tampering with data in images already unpacked on a node, but does not eliminate it completely and does not replace image authenticity verification. For details on switching to containerd v2, refer to ["Migrating container runtime to containerd v2"](../../admin/configuration/platform-scaling/node/migrating.html).
 - The SHA-256 hash verification performed by containerd when pulling an image protects against data corruption in transit, but does not confirm the image authenticity, because it does not make it possible to determine who built the image.
@@ -38,7 +25,7 @@ To control the integrity and authenticity of user application images in these ed
 ## Integrity control of user workloads at startup
 
 {% alert level="warning" %}
-This feature is available in the following DP editions: SE+, EE, Ultimate, Certified Core, Certified Pro.
+This feature is available in the following DP editions: SE+, EE, Ultimate.
 {% endalert %}
 
 The integrity and authenticity of user application images are verified during Kubernetes API request validation, that is, before a Pod is created, rather than at the CRI level. The mechanism is implemented by the [`admission-policy-engine`](admission-policy-engine.html) module and relies on signatures created with [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/).
@@ -75,7 +62,7 @@ For more details on configuring runtime audit, refer to ["Runtime audit"](../../
 
 Starting with version 1.74, DP modules are installed not as a directory with files, but as an image in the EROFS format that is mounted read-only through the DM-Verity kernel mechanism. This protects the contents of an already installed module from being modified on the node. The module files cannot be overwritten in the mounted image, and DM-Verity verifies the image blocks when they are accessed.
 
-This is a separate mechanism unrelated to container image [integrity control](../../glossary.html#integrity-control) at the CRI level: here, the DP controller applies DM-Verity to the platform module image rather than containerd applying it to container image layers. Therefore, the edition restriction described in ["Container image integrity control at the CRI level"](#container-image-integrity-control-at-the-cri-level) does not apply to this mechanism.
+This mechanism protects platform module images rather than container image layers: the DP controller applies DM-Verity to the platform module image.
 
 The mechanism is enabled automatically if the `erofs` filesystem is registered in the kernel on the node running the DP controller (a [master node](../../glossary.html#master-node) by default), that is, the corresponding kernel module is either loaded or built into the kernel. To check it, run the following command:
 

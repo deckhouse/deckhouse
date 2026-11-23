@@ -439,7 +439,7 @@ Features:
 - Manages access to scaling tools (the `allowScale` parameter of the [ClusterAuthorizationRule](cr.html#clusterauthorizationrule-v1-spec-allowscale) or [AuthorizationRule](cr.html#authorizationrule-v1alpha1-spec-allowscale) custom resource);
 - Manages access to port forwarding (the `portForwarding` parameter of the [ClusterAuthorizationRule](cr.html#clusterauthorizationrule-v1-spec-portforwarding) or [AuthorizationRule](cr.html#authorizationrule-v1alpha1-spec-portforwarding) custom resource);
 - Manages the list of allowed namespaces with a labelSelector (the `namespaceSelector` parameter of the [ClusterAuthorizationRule](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) custom resource);
-- Namespace restrictions (multi-tenancy mode, `namespaceSelector`, `limitNamespaces`) are available in the BE, SE, SE+, EE, and CSE editions.
+- Namespace restrictions (multi-tenancy mode, `namespaceSelector`, `limitNamespaces`) are available in the BE, SE, SE+, and EE editions.
 
 In addition to the RBAC, you can use a set of high-level roles in the module:
 - `User` — has access to information about all objects (including viewing pod logs) but cannot exec into containers, read secrets, and perform port-forwarding;
