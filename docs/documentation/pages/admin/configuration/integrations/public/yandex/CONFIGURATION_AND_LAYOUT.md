@@ -321,7 +321,7 @@ spec:
         nodeNetworkCIDR: 192.168.12.0/24
 ```
 
-Deckhouse Platform divides [`nodeNetworkCIDR`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-nodenetworkcidr) into four equal parts and creates internal subnets for nodes in the corresponding availability zones. Each default zone has a fixed part of the range:
+When creating subnets automatically, Deckhouse Platform divides [`nodeNetworkCIDR`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-nodenetworkcidr) into four equal parts for internal node subnets. Each default zone has a fixed part of the range:
 
 | Zone | Part of the range |
 | --- | --- |
@@ -330,11 +330,17 @@ Deckhouse Platform divides [`nodeNetworkCIDR`](/modules/cloud-provider-yandex/co
 | `ru-central1-e` | Third |
 | `ru-central1-d` | Fourth |
 
-You can list up to four zones in [`zones`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-zones). If the parameter is not set, Deckhouse Platform uses all four zones in the table.
+You can explicitly list one to four supported zones in [`zones`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-zones). When creating subnets automatically, Deckhouse Platform creates or keeps the subnets in all four default zones if [`zones`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-zones) is unset or empty, or contains only default zones.
 
-Instructions for using the `ru-central1-f` zone are provided in ["Using the ru-central1-f zone"](/modules/cloud-provider-yandex/examples.html#using-the-ru-central1-f-zone).
+When installing a cluster or changing its configuration, you can select only `ru-central1-f`, without any default zones. For zone selection rules and a configuration example, see ["Selecting zones for the cluster"](/modules/cloud-provider-yandex/examples.html#selecting-zones-for-the-cluster).
 
-Nodes connect to the subnet in their zone. The range is divided this way in every [layout](../../../../glossary.html#layout). If [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap) is set, Deckhouse Platform uses the mapped subnets without creating new ones.
+Before changing zones, review the effects, complete the preparation, and select the instructions for your cluster configuration method in ["Changing the zone set in a running cluster"](/modules/cloud-provider-yandex/examples.html#changing-the-zone-set-in-a-running-cluster). Check quotas in every zone in the temporary and final node group zone lists, including zones already in use.
+
+{% alert level="warning" %}
+From December 16, 2026, Yandex Cloud restricts creating and modifying virtual machines in the `ru-central1-b` zone. Before this date, remove the zone from node group configurations and migrate the required data to other zones. Otherwise, Deckhouse Platform will be unable to create or recreate nodes in `ru-central1-b`. Step-by-step examples are provided in ["Decommissioning the ru-central1-b zone"](/modules/cloud-provider-yandex/examples.html#decommissioning-the-ru-central1-b-zone).
+{% endalert %}
+
+Nodes connect to the subnet in their zone. When subnets are created automatically, the range is divided into four parts in every [layout](../../../../glossary.html#layout). If [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap) contains entries, Deckhouse Platform uses the specified subnets but does not manage them. In this case, leaving [`zones`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-zones) unset or empty uses the zones from [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap). Keep at least one entry in this parameter; otherwise, Deckhouse Platform switches to automatic subnet creation.
 
 {% alert level="info" %}
 A subnet accepts only one route table, so two clusters with the [`cni-simple-bridge`](/modules/cni-simple-bridge/) module cannot use the same subnets.
@@ -346,13 +352,10 @@ To deploy such clusters in shared subnets, use the [`cni-cilium`](/modules/cni-c
 The [`externalSubnetIDs`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-externalsubnetids) parameter belongs to the `nodes.parameters` section of the ModuleConfig resource of the [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module and is set per [node group](../../../../glossary.html#node-group):
 
 - the key is the node group name;
-- the value is the list of Yandex Cloud subnet IDs that the external network interfaces of that group's nodes are attached to, in the order of the zones.
+- the value is a list of Yandex Cloud subnet IDs for external network interfaces of CloudPermanent nodes. Each node's subnet must match its zone.
 
-The parameter is required when you need to:
-
-- assign a public IP address;
-- define a default route for outgoing traffic from nodes;
-- use the `Auto` value in the [`externalIPAddresses`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-externalipaddresses) parameter.
+Set this parameter if CloudPermanent nodes need additional external network interfaces.
+If it is unset, [`externalIPAddresses`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-externalipaddresses) can assign public Yandex Cloud IP addresses.
 
 Example:
 
@@ -373,7 +376,7 @@ spec:
             - <RU_CENTRAL1_D_SUBNET_ID>
 ```
 
-The [`externalIPAddresses`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-externalipaddresses) parameter in the `nodes.parameters` section of the ModuleConfig resource of the [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module specifies a list of external IP addresses for each node group in the order of their availability zones.
+The [`externalIPAddresses`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-externalipaddresses) parameter in the `nodes.parameters` section of the ModuleConfig resource of the [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module specifies a list of external IP addresses for each CloudPermanent node group. The address from each list entry is used by the node with the corresponding index.
 
 ### DNS and DHCP settings for internal networks
 
@@ -424,11 +427,9 @@ or another method used in your system, for example `systemd-networkd` or `dhclie
 
 ### Using pre-existing subnets
 
-The [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap) parameter maps
-availability zones to pre-created subnets in Yandex Cloud.
-Set it when DP has to use existing subnets instead of creating new ones. The parameter belongs to the `nodes.parameters` section of the ModuleConfig resource of the [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module.
+If you have created subnets in Yandex Cloud and want to use them for cluster nodes, map their zones to subnet IDs in [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap). Deckhouse Platform uses these subnets but does not manage them. You can specify only one subnet ID per zone.
 
-Example:
+The following ModuleConfig fragment specifies five existing subnets, while [`zones`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-zones) restricts the cluster-wide list to `ru-central1-a` and `ru-central1-f`. Keep the other configuration parameters:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -441,13 +442,28 @@ spec:
     nodes:
       parameters:
         existingZoneToSubnetIDMap:
-          ru-central1-a: e2lu8r1tbbtryhdpa9ro
-          ru-central1-b: e2lu8r1tbbtryhdpa9ro
-          ru-central1-d: e2lu8r1tbbtryhdpa9ro
+          ru-central1-a: <RU_CENTRAL1_A_SUBNET_ID>
+          ru-central1-b: <RU_CENTRAL1_B_SUBNET_ID>
+          ru-central1-d: <RU_CENTRAL1_D_SUBNET_ID>
+          ru-central1-e: <RU_CENTRAL1_E_SUBNET_ID>
+          ru-central1-f: <RU_CENTRAL1_F_SUBNET_ID>
+        zones:
+          - ru-central1-a
+          - ru-central1-f
 ```
 
+Replace `<RU_CENTRAL1_A_SUBNET_ID>`, `<RU_CENTRAL1_B_SUBNET_ID>`, `<RU_CENTRAL1_D_SUBNET_ID>`, `<RU_CENTRAL1_E_SUBNET_ID>`, and `<RU_CENTRAL1_F_SUBNET_ID>` with subnet IDs from the corresponding zones.
+
+The `ru-central1-b`, `ru-central1-d`, and `ru-central1-e` subnets remain in [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap) and are kept in Yandex Cloud. In this configuration, their zones are outside the cluster-wide zone list for node placement.
+
+To place new nodes in one of these subnets, include its zone in [`zones`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-zones), keeping at most four zones in the list. If the relevant node groups have explicitly configured zone lists, add the same zone to those lists.
+
+If [`zones`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-zones) is unset or empty, the cluster-wide list includes all five zones from [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap).
+
+For adding subnets and configuring node group zone lists, see ["Using existing subnets"](/modules/cloud-provider-yandex/examples.html#using-existing-subnets).
+
 {% alert level="info" %}
-DP creates a route table but does not associate it with the subnets. Associate the table manually in the Yandex Cloud interface.
+Deckhouse Platform creates a route table but does not associate it with the subnets. Associate the table manually in the Yandex Cloud interface.
 {% endalert %}
 
 ### Additional external networks
@@ -496,7 +512,7 @@ Do not delete the rules that allow any traffic until you have configured the oth
 
 Errors in the rules disrupt the cluster. Before configuring the rules in a production cluster, consult the [security group usage details](https://yandex.cloud/en/docs/vpc/concepts/security-groups#security-groups-notes) in Yandex Cloud.
 
-If the cluster uses Cilium with pod traffic tunneling over VXLAN, allow UDP traffic between nodes on the ports listed in ["Network interaction of the platform components"](../../../../reference/network_interaction.html).
+If the cluster uses Cilium with pod traffic tunneling over VXLAN, allow UDP traffic between nodes on the ports listed in ["Network interaction of Deckhouse Platform components"](../../../../reference/network_interaction.html).
 
 To configure the rules of the security group:
 

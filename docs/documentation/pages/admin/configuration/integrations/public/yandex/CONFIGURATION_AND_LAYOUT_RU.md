@@ -311,7 +311,7 @@ spec:
         nodeNetworkCIDR: 192.168.12.0/24
 ```
 
-Deckhouse Platform делит [`nodeNetworkCIDR`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-nodenetworkcidr) на четыре равные части и создаёт внутренние подсети для узлов соответствующих зон доступности. За каждой зоной по умолчанию закреплена своя часть диапазона:
+При автоматическом создании подсетей Deckhouse Platform делит [`nodeNetworkCIDR`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-nodenetworkcidr) на четыре равные части для внутренних подсетей узлов. За каждой зоной по умолчанию закреплена своя часть диапазона:
 
 | Зона | Часть диапазона |
 | --- | --- |
@@ -320,11 +320,17 @@ Deckhouse Platform делит [`nodeNetworkCIDR`](/modules/cloud-provider-yandex
 | `ru-central1-e` | Третья |
 | `ru-central1-d` | Четвёртая |
 
-В [параметре `zones`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-zones) можно указать не более четырёх зон. Если параметр не задан, Deckhouse Platform использует все четыре зоны из таблицы.
+В [параметре `zones`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-zones) можно явно указать от одной до четырёх поддерживаемых зон. При автоматическом создании подсетей Deckhouse Platform создаёт или сохраняет подсети всех четырёх зон по умолчанию, если [`zones`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-zones) не задан, пуст или содержит только зоны по умолчанию.
 
-Как использовать зону `ru-central1-f`, описано [в разделе «Использование зоны ru-central1-f»](/modules/cloud-provider-yandex/examples.html#использование-зоны-ru-central1-f).
+При установке кластера и изменении его конфигурации можно выбрать только `ru-central1-f`, без зон по умолчанию. Правила выбора зон и пример настройки приведены [в разделе «Выбор зон для кластера»](/modules/cloud-provider-yandex/examples.html#выбор-зон-для-кластера).
 
-Узлы подключаются к подсети соответствующей зоны. Деление диапазона выполняется во всех [схемах размещения](../../../../glossary.html#layout). Если задан [параметр `existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap), Deckhouse Platform использует указанные в нём подсети и не создаёт новые.
+Перед изменением зон ознакомьтесь с последствиями, выполните подготовку и выберите инструкцию для способа конфигурации кластера в разделе [«Изменение состава зон в работающем кластере»](/modules/cloud-provider-yandex/examples.html#изменение-состава-зон-в-работающем-кластере). Проверяйте квоты во всех зонах из временных и итоговых списков зон групп узлов, включая уже используемые зоны.
+
+{% alert level="warning" %}
+С 16 декабря 2026 года Yandex Cloud ограничивает создание и изменение виртуальных машин в зоне `ru-central1-b`. До этой даты исключите зону из конфигурации групп узлов и перенесите необходимые данные в другие зоны. Иначе Deckhouse Platform не сможет создавать и пересоздавать узлы в `ru-central1-b`. Пошаговые примеры приведены в разделе [«Вывод из эксплуатации зоны ru-central1-b»](/modules/cloud-provider-yandex/examples.html#вывод-из-эксплуатации-зоны-ru-central1-b).
+{% endalert %}
+
+Узлы подключаются к подсети соответствующей зоны. При автоматическом создании подсетей диапазон делится на четыре части во всех [схемах размещения](../../../../glossary.html#layout). Если [параметр `existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap) содержит записи, Deckhouse Platform использует указанные подсети, но не управляет ими. В этом случае при незаданном или пустом [`zones`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-zones) используются зоны из [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap). Сохраняйте хотя бы одну запись в этом параметре, иначе Deckhouse Platform перейдёт к автоматическому созданию подсетей.
 
 {% alert level="info" %}
 К подсети привязывается только одна таблица маршрутизации, поэтому два кластера с модулем [`cni-simple-bridge`](/modules/cni-simple-bridge/) не могут использовать одни и те же подсети. Чтобы развернуть такие кластеры в общих подсетях, используйте модуль [`cni-cilium`](/modules/cni-cilium/).
@@ -335,13 +341,10 @@ Deckhouse Platform делит [`nodeNetworkCIDR`](/modules/cloud-provider-yandex
 [Параметр `externalSubnetIDs`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-externalsubnetids) задаётся в секции `nodes.parameters` ресурса ModuleConfig модуля [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) отдельно для каждой [группы узлов](../../../../glossary.html#node-group):
 
 - ключ — имя группы узлов;
-- значение — список идентификаторов подсетей Yandex Cloud, в которые подключаются внешние сетевые интерфейсы узлов этой группы, в порядке зон размещения.
+- значение — список идентификаторов подсетей Yandex Cloud для внешних сетевых интерфейсов узлов CloudPermanent. Подсеть каждого узла должна соответствовать его зоне.
 
-Параметр обязателен, если требуется:
-
-- назначить публичный IP-адрес;
-- определить маршрут по умолчанию для исходящего трафика с узлов;
-- использовать значение `Auto` в параметре [`externalIPAddresses`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-externalipaddresses).
+Задайте этот параметр, если узлам CloudPermanent нужны дополнительные внешние сетевые интерфейсы.
+Если параметр не задан, [`externalIPAddresses`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-externalipaddresses) позволяет назначать публичные IP-адреса Yandex Cloud.
 
 Пример:
 
@@ -362,7 +365,7 @@ spec:
             - <RU_CENTRAL1_D_SUBNET_ID>
 ```
 
-Параметр [`externalIPAddresses`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-externalipaddresses) в секции `nodes.parameters` ресурса ModuleConfig модуля [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) задаёт список внешних IP-адресов для каждой группы узлов в порядке зон размещения.
+Параметр [`externalIPAddresses`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-externalipaddresses) в секции `nodes.parameters` ресурса ModuleConfig модуля [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) задаёт список внешних IP-адресов для каждой группы узлов CloudPermanent. Адрес из каждого элемента списка используется узлом с соответствующим индексом.
 
 ### Настройка DNS и DHCP для внутренних сетей
 
@@ -411,9 +414,9 @@ netplan apply
 
 ### Использование заранее созданных подсетей
 
-[Параметр `existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap) задаёт соответствие между зонами доступности и ранее созданными подсетями в Yandex Cloud. Укажите его, если DP должна использовать готовые подсети, а не создавать новые. Параметр задаётся в секции `nodes.parameters` ресурса ModuleConfig модуля [`cloud-provider-yandex`](/modules/cloud-provider-yandex/).
+Если вы заранее создали подсети в Yandex Cloud и хотите использовать их для узлов кластера, укажите соответствие зон и идентификаторов подсетей в [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap). Deckhouse Platform использует эти подсети, но не управляет ими. Для каждой зоны можно указать только один идентификатор подсети.
 
-Пример использования:
+В следующем фрагменте ModuleConfig задано пять существующих подсетей, а [`zones`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-zones) ограничивает общий список зонами `ru-central1-a` и `ru-central1-f`. Сохраните остальные параметры конфигурации:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -426,13 +429,28 @@ spec:
     nodes:
       parameters:
         existingZoneToSubnetIDMap:
-          ru-central1-a: e2lu8r1tbbtryhdpa9ro
-          ru-central1-b: e2lu8r1tbbtryhdpa9ro
-          ru-central1-d: e2lu8r1tbbtryhdpa9ro
+          ru-central1-a: <RU_CENTRAL1_A_SUBNET_ID>
+          ru-central1-b: <RU_CENTRAL1_B_SUBNET_ID>
+          ru-central1-d: <RU_CENTRAL1_D_SUBNET_ID>
+          ru-central1-e: <RU_CENTRAL1_E_SUBNET_ID>
+          ru-central1-f: <RU_CENTRAL1_F_SUBNET_ID>
+        zones:
+          - ru-central1-a
+          - ru-central1-f
 ```
 
+Замените `<RU_CENTRAL1_A_SUBNET_ID>`, `<RU_CENTRAL1_B_SUBNET_ID>`, `<RU_CENTRAL1_D_SUBNET_ID>`, `<RU_CENTRAL1_E_SUBNET_ID>` и `<RU_CENTRAL1_F_SUBNET_ID>` идентификаторами подсетей соответствующих зон.
+
+Подсети `ru-central1-b`, `ru-central1-d` и `ru-central1-e` остаются в [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap) и сохраняются в Yandex Cloud. В приведённой конфигурации их зоны не входят в общий список зон для размещения узлов.
+
+Чтобы размещать новые узлы в одной из этих подсетей, включите её зону в [`zones`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-zones), сохранив в списке не более четырёх зон. Если в нужных группах узлов явно заданы списки зон, добавьте в них ту же зону.
+
+Если [`zones`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-zones) не задан или пуст, общий список включает все пять зон из [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap).
+
+Добавление подсетей и настройка списков зон групп узлов описаны [в разделе «Использование существующих подсетей»](/modules/cloud-provider-yandex/examples.html#использование-существующих-подсетей).
+
 {% alert level="info" %}
-Платформа создаёт таблицу маршрутизации, но не привязывает её к подсетям. Привяжите таблицу вручную в интерфейсе Yandex Cloud.
+Deckhouse Platform создаёт таблицу маршрутизации, но не привязывает её к подсетям. Привяжите таблицу вручную в интерфейсе Yandex Cloud.
 {% endalert %}
 
 ### Дополнительные внешние сети
@@ -480,7 +498,7 @@ spec:
 
 Ошибки в правилах нарушают работу кластера. Перед настройкой правил в production-кластере изучите [особенности работы групп безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups#security-groups-notes) в Yandex Cloud.
 
-Если в кластере используется Cilium с туннелированием трафика подов через VXLAN, разрешите UDP-трафик между узлами на портах, которые перечислены в разделе [«Сетевое взаимодействие компонентов платформы»](../../../../reference/network_interaction.html).
+Если в кластере используется Cilium с туннелированием трафика подов через VXLAN, разрешите UDP-трафик между узлами на портах, которые перечислены в разделе [«Сетевое взаимодействие компонентов Deckhouse Platform»](../../../../reference/network_interaction.html).
 
 Чтобы настроить правила группы безопасности:
 

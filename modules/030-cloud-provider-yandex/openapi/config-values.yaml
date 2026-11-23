@@ -98,7 +98,7 @@ properties:
             description: |-
               External IP addresses per node group name.
 
-              The key is the node group name (e.g., `system`, `master`, `worker`), and the value is the list of external IP addresses for nodes in that group, listed in the order of the zones where nodes will be created.
+              The key is the CloudPermanent node group name (e.g., `system`, `master`, `worker`), and the value is the list of external IP addresses ordered by node index. Each address must match its node's zone.
 
               The following values can be specified in the list:
               - IP address from an additional external network for the corresponding zone, listed in the [`externalSubnetIDs`](#parameters-nodes-parameters-externalsubnetids) parameter;
@@ -113,7 +113,7 @@ properties:
             description: |-
               IDs of additional external networks per node group name.
 
-              The key is the node group name (e.g., `system`, `master`, `worker`), and the value is the list of external subnet IDs for nodes in that group, listed in the order of the zones where nodes will be created.
+              The key is the CloudPermanent node group name (e.g., `system`, `master`, `worker`), and the value is the list of external subnet IDs ordered by node index. A shorter list repeats for subsequent nodes. Each subnet must be in its node's zone.
             type: object
           labels:
             additionalProperties:
@@ -144,7 +144,7 @@ properties:
               - `ru-central1-e` uses the third part.
               - `ru-central1-d` uses the fourth part.
 
-              Instructions for using the `ru-central1-f` zone are provided in ["Using the ru-central1-f zone"](examples.html#using-the-ru-central1-f-zone).
+              Instructions for managing zones are provided in ["Managing zones"](examples.html#managing-zones).
             type: string
           sshPublicKey:
             description: A public key for accessing nodes.
@@ -205,9 +205,9 @@ properties:
             description: |-
               Limits the zones where the cloud provider places cluster nodes.
 
-              You can list up to four zones. If the parameter is not set, Deckhouse Platform uses `ru-central1-a`, `ru-central1-b`, `ru-central1-d`, and `ru-central1-e`.
+              You can list up to four zones. If the parameter is unset or empty, Deckhouse Platform uses the zones from `existingZoneToSubnetIDMap`. If that parameter has no entries, `ru-central1-a`, `ru-central1-b`, `ru-central1-d`, and `ru-central1-e` are used.
 
-              Instructions for using the `ru-central1-f` zone are provided in ["Using the ru-central1-f zone"](examples.html#using-the-ru-central1-f-zone).
+              Instructions for managing zones are provided in ["Managing zones"](examples.html#managing-zones).
             items:
               enum:
               - ru-central1-a

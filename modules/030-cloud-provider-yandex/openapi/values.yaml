@@ -252,7 +252,7 @@ properties:
                   externalIPAddresses: &instanceClassExternalIPAddresses
                     type: array
                     description: |
-                      A list of external IP addresses, listed in the order of the zones where nodes will be created.
+                      A list of external IP addresses for nodes in the group.
 
                       The following values can be specified in the list:
                       - IP address from an additional external network for the corresponding zone (parameter `externalSubnetIDs`);
@@ -260,7 +260,7 @@ properties:
                       - `Auto`, to order a public IP address in the corresponding zone.
 
                       Please note:
-                      - The array elements must be listed according to the order of zones (parameter `zones`) in which the nodes will be created.
+                      - List entries correspond to node indices. Nodes are assigned to zones in alphabetical order, repeating the zone list if needed. Each address must match its node's zone.
 
                         For example:
 
@@ -270,7 +270,7 @@ properties:
                         - <RU-CENTRAL1-D-IP-ADDRESS>
                         ```
 
-                      - The number of elements in the `externalIPAddresses` array must equal the number of nodes in the group (the `replicas` parameter). To automatically order public IP addresses in the zone, use the value `Auto` in the list of the `externalIPAddresses` parameter at the corresponding position (matching the order of zones).
+                      - If the `externalIPAddresses` list is not empty, it must contain at least as many entries as the number of nodes in the group (`replicas`). To automatically reserve a public IP address, use `Auto` at the corresponding node's position.
                       - If `externalIPAddresses` is not specified, the nodes in the group will be ordered without external IP addresses.
                     items:
                       type: string
@@ -289,7 +289,7 @@ properties:
 
                       Also, a route for the node's internal network interface will be added for the entire subnet specified in [nodeNetworkCIDR](#yandexclusterconfiguration-nodenetworkcidr).
 
-                      The array elements **must** be listed in the same order as the zones (parameter `zones`) in which the nodes will be created. For example:
+                      List entries are selected by node index, repeating the list if needed. Each subnet must be in its node's zone. For example:
 
                       ```yaml
                       - <RU-CENTRAL1-A-SUBNET-ID>
@@ -441,7 +441,7 @@ properties:
               - `ru-central1-e` uses the third part.
               - `ru-central1-d` uses the fourth part.
 
-              Instructions for using the `ru-central1-f` zone are provided in ["Using the ru-central1-f zone"](examples.html#using-the-ru-central1-f-zone).
+              Instructions for managing zones are provided in ["Managing zones"](examples.html#managing-zones).
             x-unsafe: true
           existingZoneToSubnetIDMap:
             type: object
@@ -597,9 +597,9 @@ properties:
             description: |
               Limits the zones that the cloud provider works with.
 
-              You can list up to four zones. If the parameter is not set, Deckhouse Platform uses `ru-central1-a`, `ru-central1-b`, `ru-central1-d`, and `ru-central1-e`.
+              You can list up to four zones. If the parameter is unset or empty, Deckhouse Platform uses the zones from `existingZoneToSubnetIDMap`. If that parameter has no entries, `ru-central1-a`, `ru-central1-b`, `ru-central1-d`, and `ru-central1-e` are used.
 
-              Instructions for using the `ru-central1-f` zone are provided in ["Using the ru-central1-f zone"](examples.html#using-the-ru-central1-f-zone).
+              Instructions for managing zones are provided in ["Managing zones"](examples.html#managing-zones).
             items:
               enum:
                 - ru-central1-a
