@@ -5,7 +5,7 @@ memory: 50Mi
 
 {{- /* The controller uses the host network and occupies one port on the master. It serves the probes */}}
 {{- /* and the metrics on 127.0.0.1, and kube-rbac-proxy serves only the metrics on the node IP. */}}
-{{- $port := 4294 }}
+{{- $port := 4271 }}
 {{- $masterOnEngine := dig "fencing" "nodeGroups" "master" "engine" false .Values.nodeManager.internal }}
 
 {{- if include "fencing_enabled" . }}
