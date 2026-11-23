@@ -11,7 +11,6 @@ memory: 40Mi
 
 {{- $backupSchedule := $etcdBackup.cronSchedule | default "0 0 * * *" -}}
 {{- $backupHostPath := $etcdBackup.hostPath | default "/var/lib/etcd" -}}
-{{- $etcdQuotaBackendBytes := (.Values.controlPlaneManager.internal).etcdQuotaBackendBytes | default "2147483648" -}}
 
 {{- if and $backupEnabled .Values.global.clusterIsBootstrapped (hasKey .Values.controlPlaneManager.internal "mastersNode") }}
 {{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
@@ -103,8 +102,6 @@ spec:
             env:
             - name: BACKUP_DELAY_SECONDS
               value: {{ mul $i 900 | quote }}
-            - name: ETCDQUOTA
-              value: {{ $etcdQuotaBackendBytes | quote }}
             - name: HOSTPATH
               value: {{ $backupHostPath | quote }}
             - name: NODEIP

@@ -21,4 +21,12 @@ imageSpec:
       "Images" $.Images
       "name" (printf "%s/%s-pm-artifact" $.ModuleName $.ImageName)
       "packages" "bash gzip tar gawk coreutils"
-      "binaries" "/usr/bin/bash:/usr/bin/sh /usr/bin/gawk:/usr/bin/awk /usr/bin/gzip /usr/bin/tar /usr/bin/chmod /usr/bin/df /usr/bin/mv /usr/bin/sleep /usr/bin/tail") }}
+      "binaries" (list
+        "/usr/bin/bash:/bin/bash"
+        "/usr/bin/gawk:/usr/bin/awk"
+        "/usr/bin/gzip"
+        "/usr/bin/tar"
+        "/usr/bin/df"
+        "/usr/bin/mv"
+        "/usr/bin/rm"
+        "/usr/bin/sleep" | join " ")) }}
