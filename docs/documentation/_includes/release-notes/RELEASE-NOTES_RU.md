@@ -718,9 +718,18 @@ ClusterMesh в модуле `cni-cilium` (доступен в редакциях
 
 - DexAuthenticator больше не пишет в лог cookie запроса, включая refresh-токен, при ошибке CSRF (GHSA-hhqp-vx7f-5c6m).
 
-- В компонентах Istio и Kiali устранены уязвимости.
+В модулях и компонентах исправлены следующие CVE:
 
-- Исправлены уязвимости в `golang.org/x/net`, `golang.org/x/text`, `go-jose/v4`, `go-chi/chi/v5` и `klauspost/compress` в модулях [`user-authn`](https://deckhouse.ru/modules/user-authn/v1.78/), [`user-authz`](https://deckhouse.ru/modules/user-authz/v1.78/), [`multitenancy-manager`](https://deckhouse.ru/modules/multitenancy-manager/v1.78/) и модулях подсистемы Security.
+- [`cilium-hubble`](https://deckhouse.ru/modules/cilium-hubble/v1.78/) — CVE-2026-56742, CVE-2026-56743, CVE-2026-119299
+- [`cni-cilium`](https://deckhouse.ru/modules/cni-cilium/v1.78/) — CVE-2026-119299
+- [`deckhouse`](https://deckhouse.ru/modules/deckhouse/v1.78/) — CVE-2026-10722, CVE-2026-53493, CVE-2026-119299
+- [`deckhouse-tools`](https://deckhouse.ru/modules/deckhouse-tools/v1.78/) — CVE-2026-10722, CVE-2026-46603, CVE-2026-53493, CVE-2026-53495 CVE-2026-61711, CVE-2026-61712, CVE-2026-61801, CVE-2026-71556, CVE-2026-71557, CVE-2026-95838.
+- [`documentation`](https://deckhouse.ru/modules/documentation/v1.78/) — CVE-2026-100353, CVE-2026-103025
+- [`istio`](https://deckhouse.ru/modules/istio/v1.78/) — CVE-2026-53493, CVE-2026-53495, CVE-2026-95838
+- [`multitenancy-manager`](https://deckhouse.ru/modules/multitenancy-manager/v1.78/) — CVE-2026-53493, CVE-2026-53495, CVE-2026-95838
+- [`node-manager`](https://deckhouse.ru/modules/node-manager/v1.78/) (containerd) — CVE-2026-53493, CVE-2026-53495, CVE-2026-61801, CVE-2026-95838 CVE-2026-95839.
+- [Deckhouse CLI (`d8`)](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.78/cli/d8/) — CVE-2026-10722, CVE-2026-46603 CVE-2026-53493, CVE-2026-53495, CVE-2026-61711, CVE-2026-61712, CVE-2026-61801, CVE-2026-71556, CVE-2026-71557, CVE-2026-95838.
+- установщик `dhctl` — CVE-2026-53493
 
 ### Обновление версий компонентов
 

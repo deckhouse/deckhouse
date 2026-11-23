@@ -718,9 +718,18 @@ Security-related fixes:
 
 - DexAuthenticator no longer logs the request cookie, including the refresh token, on a CSRF error (GHSA-hhqp-vx7f-5c6m).
 
-- Vulnerabilities in Istio and Kiali components have been fixed.
+The following CVEs have been fixed in the modules and components:
 
-- Vulnerabilities in `golang.org/x/net`, `golang.org/x/text`, `go-jose/v4`, `go-chi/chi/v5`, and `klauspost/compress` have been fixed in the [`user-authn`](https://deckhouse.io/modules/user-authn/v1.78/), [`user-authz`](https://deckhouse.io/modules/user-authz/v1.78/), and [`multitenancy-manager`](https://deckhouse.io/modules/multitenancy-manager/v1.78/) modules and in the modules of the Security subsystem.
+- [`cilium-hubble`](https://deckhouse.io/modules/cilium-hubble/v1.78/): CVE-2026-56742, CVE-2026-56743, CVE-2026-119299
+- [`cni-cilium`](https://deckhouse.io/modules/cni-cilium/v1.78/): CVE-2026-119299
+- [`deckhouse`](https://deckhouse.io/modules/deckhouse/v1.78/): CVE-2026-10722, CVE-2026-53493, CVE-2026-119299
+- [`deckhouse-tools`](https://deckhouse.io/modules/deckhouse-tools/v1.78/): CVE-2026-10722, CVE-2026-46603, CVE-2026-53493, CVE-2026-53495, CVE-2026-61711, CVE-2026-61712, CVE-2026-61801 CVE-2026-71556, CVE-2026-71557, CVE-2026-95838.
+- [`documentation`](https://deckhouse.io/modules/documentation/v1.78/): CVE-2026-100353, CVE-2026-103025
+- [`istio`](https://deckhouse.io/modules/istio/v1.78/): CVE-2026-53493, CVE-2026-53495, CVE-2026-95838
+- [`multitenancy-manager`](https://deckhouse.io/modules/multitenancy-manager/v1.78/): CVE-2026-53493, CVE-2026-53495, CVE-2026-95838
+- [`node-manager`](https://deckhouse.io/modules/node-manager/v1.78/) (containerd): CVE-2026-53493, CVE-2026-53495, CVE-2026-61801, CVE-2026-95838, CVE-2026-95839
+- [Deckhouse CLI (`d8`)](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/cli/d8/): CVE-2026-10722, CVE-2026-46603 CVE-2026-53493, CVE-2026-53495, CVE-2026-61711, CVE-2026-61712, CVE-2026-61801, CVE-2026-71556, CVE-2026-71557, CVE-2026-95838.
+- the `dhctl` installer: CVE-2026-53493
 
 ### Component version updates
 
