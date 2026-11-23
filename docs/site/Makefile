@@ -5,7 +5,7 @@ export WERF_PLATFORM=linux/amd64
 ROOT_DIR := ../..
 WERF_BIN := $(ROOT_DIR)/bin/werf
 MODULE_PATH ?=
-HUGO_IMAGE ?= ghcr.io/gohugoio/hugo:v0.169.0
+HUGO_IMAGE ?= ghcr.io/gohugoio/hugo:v0.170.1
 AI_EXPORT_SRC ?= backends/docs-builder-template
 
 WERF_REPO ?= :local
