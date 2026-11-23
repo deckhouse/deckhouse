@@ -27,6 +27,43 @@ spec:
           namespace: testns
   namedExceptions: {}
   blocks:
+    - name: optional-port-ranges
+      gatorBlock: optional-port-ranges
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/no_port_ranges.yaml
+      cases:
+        - name: deny-host-network-without-port-ranges
+          violations: "yes"
+          fields:
+            - path: spec.hostNetwork
+              scenario: positive
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: deny-host-network
+              spec:
+                hostNetwork: true
+        - name: allow-host-port-without-port-ranges
+          violations: "no"
+          fields:
+            - path: spec.hostNetwork
+              scenario: negative
+            - path: spec.containers[].ports[].hostPort
+              scenario: positive
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allow-host-port
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 80
+                        hostPort: 8080
     - name: pss-baseline-functional
       gatorBlock: pss-baseline-functional
       defaultObjectBase: ""

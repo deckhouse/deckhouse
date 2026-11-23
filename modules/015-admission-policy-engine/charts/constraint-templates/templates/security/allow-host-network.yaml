@@ -88,8 +88,7 @@ spec:
                 spe_ports_path := ["spec", "network", "hostPorts"]
                 spe_ports_applied := path_value_resolved(spe, spe_ports_path)
                 spe_ports := allowed_values_or_empty(spe, spe_ports_path)
-                effective_ranges := port_ranges(spe_ports_applied)
-                range_result := check_ports_with_protocol_in_ranges(ports, "hostPorts", effective_ranges, spe_ports)
+                range_result := host_port_result(ports, spe_ports_applied, spe_ports)
                 failed := failed_result(bool_result, range_result)
                 msg := violation_message("The hostNetwork or hostPort are not allowed", sprintf("pod: %v", [obj.metadata.name]), failed.detail)
               }
@@ -172,7 +171,17 @@ spec:
                 ports := host_ports
               }
 
-              port_ranges(true) := []
+              # A missing range means no host-port restriction, not an undefined violation rule.
+              host_port_result(_, false, _) := {"allowed": true, "msg": "", "detail": {}} if {
+                object.get(input.parameters, "ranges", null) == null
+              }
 
-              port_ranges(false) := input.parameters.ranges
+              host_port_result(ports, false, spe_ports) := result if {
+                object.get(input.parameters, "ranges", null) != null
+                result := check_ports_with_protocol_in_ranges(ports, "hostPorts", input.parameters.ranges, spe_ports)
+              }
+
+              host_port_result(ports, true, spe_ports) := result if {
+                result := check_ports_with_protocol_in_ranges(ports, "hostPorts", [], spe_ports)
+              }
  
