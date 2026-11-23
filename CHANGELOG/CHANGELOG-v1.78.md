@@ -96,6 +96,9 @@
     rendered with the requested replicas and container resources applied, instead of
     from the package chart directly. Applications without `resourceRequests`, and all
     modules, are unaffected. Updating restarts the deckhouse Deployment.
+ - An update from Deckhouse 1.77 with the PSS requirement check is blocked while admission-policy-engine uses an implicit Privileged policy.
+    Before updating, explicitly set settings.podSecurityStandards.defaultPolicy in the admission-policy-engine ModuleConfig.
+    Set it to Privileged to keep the current policy. Verify that workloads comply before choosing Baseline or Restricted.
  - An update to 1.78 from DP 1.77.1 or later is blocked while the cluster runs Proxy or Local of the v1 registry implementation, or Direct without the registry ModuleConfig.
     Migrate the cluster to the registry module on 1.77 before updating (see the registry module FAQ), and update to 1.78 only from DP 1.77.1 or later.
  - Applying the change restarts control-plane components.
@@ -1202,6 +1205,10 @@
  - **[admission-policy-engine]** A SecurityPolicy that only forbids hostNetwork denies it again. [#23003](https://github.com/deckhouse/deckhouse/pull/23003)
     A SecurityPolicy that set `allowHostNetwork` without `allowedHostPorts` stopped denying anything at all, including the `hostNetwork` it forbade. Such a policy is enforced again. Review the policies that set only `allowHostNetwork`: workloads that ran under them may start being denied.
  - **[admission-policy-engine]** A SecurityPolicyException with several allowedValues now honours all of them, not only the first. [#21556](https://github.com/deckhouse/deckhouse/pull/21556)
+ - **[admission-policy-engine]** Activate the PSS default policy requirement for updates from Deckhouse 1.77 to 1.78.1.
+    An update from Deckhouse 1.77 with the PSS requirement check is blocked while admission-policy-engine uses an implicit Privileged policy.
+    Before updating, explicitly set settings.podSecurityStandards.defaultPolicy in the admission-policy-engine ModuleConfig.
+    Set it to Privileged to keep the current policy. Verify that workloads comply before choosing Baseline or Restricted.
  - **[admission-policy-engine]** Admission policies are now evaluated for ephemeral containers added with `kubectl debug`. [#22398](https://github.com/deckhouse/deckhouse/pull/22398)
     Containers attached through the `pods/ephemeralcontainers` subresource were not seen by
     the module's webhook, so no policy was evaluated for them: SecurityPolicy, OperationPolicy,

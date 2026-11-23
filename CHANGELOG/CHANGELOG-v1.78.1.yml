@@ -1,0 +1,29 @@
+admission-policy-engine:
+  fixes:
+    - summary: Activate the PSS default policy requirement for updates from Deckhouse 1.77 to 1.78.1.
+      impact: >-
+        An update from Deckhouse 1.77 with the PSS requirement check is blocked while admission-policy-engine
+        uses an implicit Privileged policy.
+
+        Before updating, explicitly set settings.podSecurityStandards.defaultPolicy in the admission-policy-engine
+        ModuleConfig.
+
+        Set it to Privileged to keep the current policy. Verify that workloads comply before choosing
+        Baseline or Restricted.
+candi:
+  fixes:
+    - summary: Bump base images to v4.0.19.
+docs:
+  fixes:
+    - summary: >-
+        Fix a performance regression in external module documentation rendering on the site. Update Hugo
+        to 0.170.1.
+documentation:
+  fixes:
+    - summary: Fix a performance regression in external module documentation rendering. Update Hugo to
+        0.170.1.
+      impact: Documentation pods will restart.
+node-manager:
+  fixes:
+    - summary: change fencing-controller metrics port
+      impact: correct port for fencing controller metrics and healthceck port
