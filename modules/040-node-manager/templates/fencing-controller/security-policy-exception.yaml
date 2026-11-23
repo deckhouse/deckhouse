@@ -17,7 +17,7 @@ spec:
           The proxy sends a new connection to a healthy API server when a master is down.
           Without the proxy (Deckhouse Engine, or control-plane-manager is disabled), the controller uses the ClusterIP of the API server.
     hostPorts:
-      - port: 4294
+      - port: 4271
         protocol: TCP
         metadata:
           description: HTTPS metrics endpoint exposed through kube-rbac-proxy.
