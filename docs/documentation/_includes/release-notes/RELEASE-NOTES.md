@@ -1,14 +1,770 @@
 ## Version 1.78
 
-### Important
+### Key changes
 
-- The v1 implementation of the container registry management, used up to and including DP 1.77 (the `Proxy` and `Local` modes set in the [`registry`](https://deckhouse.io/modules/deckhouse/v1.78/configuration.html#parameters-registry) section of the `deckhouse` ModuleConfig) has been removed.
-  A cluster can no longer be installed in these modes, and the update to DP 1.78 is blocked while the cluster runs `Proxy` or `Local`, or `Direct` without the `registry` ModuleConfig configured.
-  Migrate the cluster to the [`registry`](https://deckhouse.io/modules/registry/v1.78/) module on DP 1.77 before updating; the procedures are described in the [module FAQ](https://deckhouse.io/modules/registry/v1.78/faq.html#how-does-the-migration-to-the-registry-module-work).
-  Update to DP 1.78 only from DP 1.77.1 or later: that is the first release that checks which registry implementation the cluster runs. An update that skips it, for example an LTS release hop or an update constraint from an earlier release, can install DP 1.78 on a cluster still in `Proxy` or `Local` mode, which is not supported.
+Key changes in this version:
 
-- In Deckhouse Commander, checking, converging and deleting a cluster whose stored resources still set `registry.mode` to `Proxy` or `Local` in the `deckhouse` ModuleConfig now stop with an error and change nothing.
-  Before these operations, bring the resources in line with the cluster: replace the `deckhouse` ModuleConfig in them with the cluster's own and add the cluster's `registry` ModuleConfig, if it has one.
+- [Deckhouse Engine](#release-1-78-engine): A type 1 hypervisor for Deckhouse Platform nodes with an immutable root file system and declarative management.
+- [Bare-metal node management via BMC](#release-1-78-cloud-providers): The new [`infra-provider-baremetal`](https://deckhouse.io/modules/infra-provider-baremetal/v1.78/) module supports creating nodes on physical servers.
+- [New registry implementation](#release-1-78-registry): Image sources and access keys are validated before changes are applied. New capabilities include image pull recovery when Deckhouse Platform is unavailable and a highly available in-cluster cache with seamless switchover in isolated environments.
+- [Automatic selection of resource requests for control plane components](#release-1-78-control-plane): CPU and memory requests for etcd, `kube-apiserver`, `kube-controller-manager`, and `kube-scheduler` are calculated from actual consumption.
+- [Reworked fencing](#release-1-78-fencing): The workload is moved from a failed node only after the node is confirmed to be stopped. This protects StatefulSet applications and pods with ReadWriteOnce volumes from running on two nodes at the same time.
+- [Changing resource requests without recreating pods](#release-1-78-vpa): The default mode for new VPA objects. If resource requests cannot be changed without recreating the pod, the pod is recreated.
+- [Updated role model](#release-1-78-iam): A new set of subsystems and changes to the permissions of platform managers.
+- [User session management](#release-1-78-sessions): Viewing active sessions and ending individual sessions or all sessions of a user.
+- [Project management](#release-1-78-projects): Structured templates and, in commercial editions, multiple namespaces in one project with a shared quota.
+- [TokenExchangeProvider](#release-1-78-token-exchange): Access of external systems, such as CI/CD, to the Kubernetes API by exchanging tokens of a trusted issuer, without static credentials.
+- [ClusterMesh](#release-1-78-clustermesh): Experimental support for direct pod-to-pod network communication between clusters.
+- [Kubernetes 1.37 (preview)](#release-1-78-kubernetes) and [Istio 1.29](#release-1-78-istio-versions): New supported versions. Support for Kubernetes 1.32 has been discontinued. The default Kubernetes version has changed from 1.34 to 1.35.
+
+### Updating to 1.78
+
+Check the update requirements and prepare the components and integrations you use.
+When planning the work, take the restarts and temporary limitations into account. After the update, perform the migrations and checks listed below.
+
+Contents of the section:
+
+- [Impact on the cluster](#release-1-78-upgrade-impact)
+- [Update requirements and limitations](#release-1-78-upgrade-requirements)
+- [Preparing for the update](#release-1-78-before-upgrade)
+- [Checks and migrations after the update](#release-1-78-after-upgrade)
+
+#### Impact on the cluster {#release-1-78-upgrade-impact}
+
+When choosing the update time, take the following changes into account:
+
+- All Deckhouse Platform components will be restarted during the update.
+
+- Because of the switch to Topology Manager profiles, kubelet will be restarted on all nodes, and the memory available to pods (allocatable) on them will change slightly. Nodes with a policy other than `None` that run Guaranteed pods will be drained according to the `disruptions` rules of their NodeGroup. In the `Manual` mode, the drain starts only after approval. For details, see [Topology Manager profiles](#release-1-78-topology-manager).
+
+- On nodes with containerd v1, containerd and kubelet may be restarted during the registry migration. The number of restarts depends on the initial mode and on whether `Managed` is enabled afterwards.
+  Migration from `Direct` and migration on nodes with containerd v2 do not restart containerd. For details, see [restarts during the registry migration](https://deckhouse.io/modules/registry/v1.78/faq.html#does-the-migration-restart-containerd).
+
+- Validating webhooks of the [`admission-policy-engine`](https://deckhouse.io/modules/admission-policy-engine/v1.78/), [`user-authz`](https://deckhouse.io/modules/user-authz/v1.78/), and [`user-authn`](https://deckhouse.io/modules/user-authn/v1.78/) modules will be unavailable for 3–4 minutes.
+  During this time, these webhooks do not check security policies, RBAC objects (including protection against privilege escalation), users, and groups. Schedule the update for a time when these objects do not have to be changed.
+
+- Users of applications behind DexAuthenticator will have to sign in again once. For details, see [DexAuthenticator client IDs](#release-1-78-dexauthenticator-ids).
+
+#### Update requirements and limitations {#release-1-78-upgrade-requirements}
+
+Check the component versions and whether the configuration is ready for the update:
+
+- Update Deckhouse Platform to 1.78 only from version 1.77.1 or later. Version 1.77.1 introduced the check that the registry is ready for migration.
+
+- If the cluster runs Kubernetes 1.32, switch it to Kubernetes 1.33 or later. For details, see [supported Kubernetes versions](#release-1-78-kubernetes).
+
+- <a id="release-1-78-registry-migration"></a>If the cluster uses the old registry implementation (the `Direct`, `Proxy`, or `Local` mode in the [`registry` section of the `deckhouse` ModuleConfig](https://deckhouse.io/modules/deckhouse/v1.78/configuration.html#parameters-registry)), prepare it for handing control over to the `registry` module according to the [migration instructions](https://deckhouse.io/modules/registry/v1.78/faq.html#how-does-the-migration-to-the-registry-module-work). Do the preparation on version 1.77, before the update. The module takes control automatically after the update to 1.78. For a cluster that is not prepared, the update will be blocked. For details, see [the new registry implementation](#release-1-78-registry).
+
+- If the cluster uses Istio versions earlier than 1.25, switch them to version 1.25 or later. For details, see [supported Istio versions](#release-1-78-istio-versions).
+
+- If the cluster uses the [`sds-replicated-volume`](https://deckhouse.io/modules/sds-replicated-volume/) module, update it to version 0.9.5 or later.
+
+- If the cluster uses the [`cloud-provider-dvp`](https://deckhouse.io/modules/cloud-provider-dvp/) module, make sure that it is available from a [module source (ModuleSource)](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/reference/api/cr.html#modulesource). Otherwise, the update is impossible. For details, see [modules from external sources](#release-1-78-external-modules).
+
+- If the cluster was deployed on a Deckhouse Platform version earlier than 1.55, set the [`settings.podSecurityStandards.defaultPolicy`](https://deckhouse.io/modules/admission-policy-engine/v1.78/configuration.html#parameters-podsecuritystandards-defaultpolicy) parameter in the [`admission-policy-engine`](https://deckhouse.io/modules/admission-policy-engine/v1.78/) ModuleConfig. Without it, the update will be blocked. To keep the current behavior, specify `Privileged`. For details, see [the default Pod Security Standards policy](#release-1-78-pss-default).
+
+- If the cluster is deployed on Basis Dynamix, plan its reinstallation. The integration supports only Basis Dynamix [version 4.6 and later](https://deckhouse.io/modules/cloud-provider-dynamix/v1.78/environment.html#platform-version). In Deckhouse Platform 1.78, when a cluster on Basis Dynamix is deleted, its resources, including the disks of persistent volumes, are deleted permanently, without being moved to the recycle bin. Save the data you need outside the infrastructure being deleted. For details, see [changes in the integration with Basis Dynamix](#release-1-78-dynamix).
+
+#### Preparing for the update {#release-1-78-before-upgrade}
+
+Perform the checks and actions that apply to your configuration so that components and integrations keep working after the update.
+
+##### Network
+
+Check firewall rules, NetworkPolicy objects, and proxy settings:
+
+- If traffic to master nodes is restricted by a firewall, open ports `4281/TCP` and `4283/TCP` for the container registry instead of `5001` and `5003`. For details, see [container registry ports](#release-1-78-registry-ports).
+
+- If traffic in the DexAuthenticator namespace is restricted by a NetworkPolicy, allow traffic from DexAuthenticator to the `revocation-feed` service (`user-authn-controller` pods, port `8443/TCP`) in the `d8-user-authn` namespace. For details, see [DexAuthenticator requests to `revocation-feed`](#release-1-78-revocation-feed).
+
+- If [`proxy`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/reference/api/cr.html#clusterconfiguration-proxy) is set in ClusterConfiguration and the proxy has no access to the certificate authority address or to the public address of the cluster, add them to `noProxy`. For details, see [`cert-manager` operation through a proxy](#release-1-78-cert-manager-proxy).
+
+##### Nodes
+
+Check the NodeGroup settings and node dependencies:
+
+- If the `master` NodeGroup has a taint with a key from [`global.modules.placement.customTolerationKeys`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/reference/api/global.html#parameters-modules-placement-customtolerationkeys), remove this key before the update. For details, see [placement of registry components](#release-1-78-registry-tolerations).
+
+- If there are static nodes in AWS or Azure (a NodeGroup with `nodeType: Static`), check whether they depend on the cloud provider settings: `ecr-credential-provider`, the EROFS kernel module, or udev rules for Azure NVMe disks. For details, see [static nodes in the cloud](#release-1-78-static-cloud-nodes).
+
+- If master nodes have no access to NTP servers, for example in air-gapped clusters, specify available `ntpServers` or disable the check with the `earlyTimeSync.enabled: false` parameter. For details, see [time synchronization before kubelet starts](#release-1-78-early-time-sync).
+
+- If a NodeGroup has [`kubelet.memorySwap.swapBehavior: LimitedSwap`](https://deckhouse.io/modules/node-manager/v1.78/cr.html#nodegroup-v1-spec-kubelet-memoryswap-swapbehavior) set and the nodes of the group have no cgroup v2, remove `swapBehavior: LimitedSwap` from this group. For details, see [LimitedSwap validation](#release-1-78-limited-swap).
+
+- If fencing is enabled in the cluster, open ports `8500/TCP` and `8500/UDP` between the InternalIP addresses of all cluster nodes.
+  For groups with the `Watchdog` mode, check whether the response time of the `Slow` mode, which they will switch to after the update, is acceptable. For details, see [fencing](#release-1-78-fencing).
+
+- If a NodeGroup has the `spec.kubelet.topologyManager` parameter set, check how the switch to Topology Manager profiles affects the group:
+  - To keep the previous behavior of groups with `enabled: false` and a policy other than `None`, set `policy: None`.
+  - To keep CPU pinning in groups with `enabled: true` and `policy: None`, set `policy: BestEffort`.
+  - For the `Restricted` and `SingleNumaNode` policies on nodes with SMT (Hyper-Threading), fix the requests of Guaranteed containers with an odd number of CPUs.
+
+  For details, see [Topology Manager profiles](#release-1-78-topology-manager).
+
+##### Security policies and certificates
+
+Check the workloads, policies, and certificates that will go through the changed checks:
+
+- If the cluster has workloads with `seLinuxOptions`, check them and create a SecurityPolicyException for them if necessary. For details, see [the change in the SELinux check](#release-1-78-selinux).
+
+- If the cluster has constraints without `match.kinds` or with `kinds: ["*"]` that do not check `input.review.operation`, make sure that they do not deny exec and attach to the users who need these operations. For details, see [policies for `exec` and `attach`](#release-1-78-exec-attach).
+
+- If CA certificates and a key are set in the [`istio`](https://deckhouse.io/modules/istio/v1.78/) module settings, check that they are valid. With invalid data, the module cannot apply the configuration. For details, see [the CA check in Istio](#release-1-78-istio-ca).
+
+##### User and application access
+
+Check user permissions and the compatibility of integrations:
+
+- If users are assigned the `d8:system:manager`, `d8:subsystem:<SUBSYSTEM>:manager`, or deprecated `d8:manage:*:manager` roles, review how they work in module namespaces.
+  After the update, these roles grant only the viewer level there: users will no longer be able to read secrets, run `exec`, `attach`, and `port-forward`, or delete and scale pods.
+  Operations beyond the viewer level require the superadmin role of the subsystem. This role does not lift the restrictions on operations with protected `heritage: deckhouse` objects described in the next item. Managers of the system and of the `iam` subsystem will also no longer be able to assign the Admin, ClusterAdmin, and SuperAdmin levels through ClusterAuthorizationRule.
+  For details, see [changes in manager permissions](#release-1-78-iam).
+
+- If maintenance scenarios use `exec`, `attach`, `port-forward`, or `debug` on pods with the `heritage: deckhouse` label, or scale workloads with this label, adapt them.
+  After the update, these operations are available only to system users. For details, see [access restrictions](https://deckhouse.io/modules/deckhouse/v1.78/faq.html#who-can-run-exec-into-deckhouse-platform-pods-and-scale-deckhouse-platform-objects).
+
+- If a DexClient has the `dexclient.deckhouse.io/allow-access-to-kubernetes` annotation, remove it where the application does not need access to the Kubernetes API (except for the `cluster-<UUID>` DexClient objects created by Deckhouse Commander). To find such DexClient objects, run the following command:
+
+  ```bash
+  d8 k get dexclients.deckhouse.io -A -o json | jq -r '.items[] | select((.metadata.annotations["dexclient.deckhouse.io/allow-access-to-kubernetes"] // "") | ascii_downcase | IN("1","t","true")) | "\(.metadata.namespace)/\(.metadata.name)"'
+  ```
+
+  For details, see [the `allow-access-to-kubernetes` annotation](#release-1-78-dexclient-annotation).
+
+- Warn the users of applications behind DexAuthenticator that they will have to sign in again once after the update. If an application checks the `aud` claim of DexAuthenticator ID tokens, prepare it to accept the new value `dex-authenticator-<NAME>@<NAMESPACE>`. For details, see [DexAuthenticator client IDs](#release-1-78-dexauthenticator-ids).
+
+- If integrations call `user-api`, adapt them. After the update, the API accepts only ID tokens of the Deckhouse web UI, and the password reset endpoint is removed. For details, see [changes in `user-api`](#release-1-78-user-api).
+
+- If kubeconfig clients exchange tokens of an external provider for Dex tokens, reconfigure them. After the update, this exchange is unavailable. For details, see [token exchange in kubeconfig](#release-1-78-kubeconfig-token-exchange).
+
+##### Projects
+
+Check the templates, administrator permissions, and the state of projects:
+
+- If you use a ProjectTemplate with a Helm template in `resourcesTemplate`, prepare the recovery scenarios. After the update, restoring such a template from a backup, a GitOps bootstrap, and recreation will be rejected.
+  Existing templates keep working and can be edited. To restore or recreate a template, move it to structured fields and `manifests`.
+  For details, see [moving a template from a Helm text](https://deckhouse.io/modules/multitenancy-manager/v1.78/usage.html#moving-a-template-from-a-helm-text).
+
+- If the permissions of project administrators are extended with custom ClusterRole objects with the `user-authz.deckhouse.io/access-level` annotation, prepare a replacement for these extensions.
+  When projects on the built-in `default`, `secure`, and `secure-with-dedicated-nodes` templates are switched automatically, the `d8:project:admin` role replaces the AuthorizationRule of the Admin level and does not include these extensions.
+  To keep the access, use a custom role bound through ProjectRoleBinding. For details, see [switching a project from Helm templates](https://deckhouse.io/modules/multitenancy-manager/v1.78/usage.html#switching-a-project-from-a-helm-text).
+
+- If you move ClusterResourceGrantPolicy manifests from v1alpha1 to v1alpha2, rename `projectSelector` to `namespaceSelector`.
+  Changing only `apiVersion` changes which namespaces are selected. If the manifests stay on v1alpha1, no action is required. For details, see [compatibility of ClusterResourceGrantPolicy versions](#release-1-78-grant-policy).
+
+- If the cluster has projects that have lost their main namespace, find them and delete the ones you do not need. Such projects will be restored during the update. To find them, run the following command:
+
+  ```bash
+  d8 k get projects.deckhouse.io,namespaces -o json | jq -r '(INDEX(.items[] | select(.kind == "Namespace"); .metadata.name)) as $ns | .items[] | select(.kind == "Project" and .metadata.labels["projects.deckhouse.io/virtual-project"] != "true" and .spec.projectTemplateName != "virtual" and .metadata.deletionTimestamp == null) | .metadata.name | select($ns[.] == null or $ns[.].metadata.deletionTimestamp != null)'
+  ```
+
+  For details, see [restoring the main namespace of a project](#release-1-78-project-namespace-restore).
+
+##### The dhctl installer
+
+Check the automation that uses the CLI or the gRPC API of the installer:
+
+- If you use `dhctl bootstrap-phase abort` or call the `execute-bashible-bundle` and `exec-post-bootstrap` subcommands in automation, update the scripts. For details, see [changes in `dhctl bootstrap-phase abort`](#release-1-78-dhctl-abort).
+
+- If you develop or maintain a `dhctl` client or an integration that reads the list of phases, update the consumers of `dhctl` phases. For details, see [the change in the set of phases](#release-1-78-dhctl-phases).
+
+- If you set `--download-dir` manually and reuse this directory between `dhctl` versions, use a separate directory for each version or clean the old one before the update. For details, see [the `dhctl` download directory](#release-1-78-dhctl-download-dir).
+
+##### Cloud providers
+
+Check the conditions for creating and recreating cloud nodes:
+
+- If the cluster is deployed in vSphere, [enable DRS](https://deckhouse.io/modules/cloud-provider-vsphere/v1.78/#vsphere-requirement) for nodes on CAPI, because new node groups are created on CAPI by default. For details, see [the switch of vSphere to CAPI](#release-1-78-vsphere-capi).
+
+- If Yandex Cloud has node groups on CAPI with the [`preemptible: true` parameter](https://deckhouse.io/modules/cloud-provider-yandex/v1.78/cr.html#yandexinstanceclass-v1-spec-preemptible), note that their nodes will become preemptible after the next recreation. For details, see [preemptible nodes in Yandex Cloud](#release-1-78-yandex-preemptible).
+
+#### Checks and migrations after the update {#release-1-78-after-upgrade}
+
+Perform the configuration migrations and check the result of the automatic changes for the components you use.
+
+##### Configuration migrations
+
+Move the settings of the integration with Yandex Cloud and zVirt to the [`cloud-provider-yandex`](https://deckhouse.io/modules/cloud-provider-yandex/v1.78/configuration.html) and [`cloud-provider-zvirt`](https://deckhouse.io/modules/cloud-provider-zvirt/v1.78/) ModuleConfig according to the [migration instructions](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/faq.html#how-to-migrate-a-cloud-provider-to-moduleconfig-based-configurat).
+For clusters installed through [Deckhouse Commander](https://deckhouse.io/modules/commander/), the migration is not required until Deckhouse Commander 1.22. Virtual machines and disks are not recreated during the migration.
+Until it is done, the [D8CloudProviderYandexCloudMigrationPending](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/reference/alerts.html#cloud-provider-yandex-d8cloudprovideryandexcloudmigrationpending) and [D8CloudProviderZvirtMigrationPending](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/reference/alerts.html#cloud-provider-zvirt-d8cloudproviderzvirtmigrationpending) alerts fire.
+For details, see [the unified ModuleConfig contract](#release-1-78-cloud-moduleconfig).
+
+##### Result checks
+
+Check the result of the changes:
+
+- Make sure that the `registry` module has taken control of image pull paths. The check procedure is given in the [Which implementation is my cluster running?](https://deckhouse.io/modules/registry/v1.78/faq.html#which-implementation-is-my-cluster-running) section.
+
+- Check the warnings about Pod Security Standards violations in system namespaces (`d8-*`, `kube-*`). These namespaces are checked against the `Restricted` policy in the `warn` mode regardless of labels.
+  In Deckhouse Platform 1.79, these namespaces will be switched to the `deny` mode.
+
+- Check that the automatic switch of projects on the built-in `default`, `secure`, and `secure-with-dedicated-nodes` templates to structured fields has completed.
+  Project administrators are switched from the AuthorizationRule of the Admin level to the `d8:project:admin` role (the `d8-administrators` ProjectRoleBinding), and the `all-pods` quota is replaced with `d8-project-quota`.
+  Access is handed over without interruption. To keep custom access extensions, create a custom role and bind it through ProjectRoleBinding.
+  If the switch has not completed within 30 minutes, the [MultitenancyManagerProjectHandoverStuck](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/reference/alerts.html#multitenancy-manager-multitenancymanagerprojecthandoverstuck) alert fires.
+  For details, see [switching a project from Helm templates](https://deckhouse.io/modules/multitenancy-manager/v1.78/usage.html#switching-a-project-from-a-helm-text).
+
+### Deprecated and removed interfaces
+
+The status of deprecated settings, roles, commands, and APIs, and the replacements for removed interfaces.
+
+Still work but are deprecated:
+
+- The Kubernetes version, network, and domain fields in ClusterConfiguration. Move the settings to the [`control-plane-manager` ModuleConfig](#release-1-78-cluster-config).
+- Token exchange through DexProvider. Switch to [TokenExchangeProvider](#release-1-78-legacy-token-exchange) before the old mechanism is removed in future versions.
+- Helm templates of projects in `resourcesTemplate`. Switch to [structured fields and `manifests`](#release-1-78-helm-project-templates). Creating and restoring old templates is already restricted.
+- The previous names of RBACv2 subsystem roles, including `d8:manage:*`. They will be removed in 1.79. Use the [`d8:subsystem` roles](#release-1-78-rbac-subsystems) after checking the scope of permissions.
+- The `Watchdog` mode in `spec.fencing.mode` of a NodeGroup. In 1.78, it works as `Slow`. After the update, replace `Watchdog` with `Slow` to keep the behavior of version 1.78. To choose another response time, use the supported modes according to the [fencing configuration instructions](https://deckhouse.io/modules/node-manager/v1.78/faq.html#how-do-i-set-up-fencing-for-a-node-group).
+
+Accepted but ignored:
+
+- `spec.fencing.watchdog.timeout`. After the update, remove the parameter from the NodeGroup when [configuring fencing](#release-1-78-fencing).
+- `spec.kubelet.topologyManager.enabled`. Set the profile with the [`policy` parameter](#release-1-78-topology-manager).
+- The `--force-abort-from-cache` parameter of the `dhctl bootstrap-phase abort` command. Check the [abort scenarios](#release-1-78-dhctl-abort).
+- The `--download-cache-dir` parameter of the `dhctl` installer. Use the [`--download-dir` parameter](#release-1-78-dhctl-download-dir).
+
+Removed or no longer supported:
+
+- Support for Kubernetes 1.32 and Istio 1.21 has been discontinued. Switch the components to supported versions according to the [update requirements](#release-1-78-upgrade-requirements).
+- The previous registry implementation in the `deckhouse` ModuleConfig has been removed. Do the [preparation on 1.77](#release-1-78-registry-migration). After the update, control is handed over automatically.
+- The `dhctl execute-bashible-bundle` and `dhctl exec-post-bootstrap` commands have been removed. Adapt the automation to the [installer changes](#release-1-78-dhctl-abort).
+- The password reset endpoint in `user-api` has been removed. Check the integrations against the [changes in `user-api`](#release-1-78-user-api).
+- Exchange of external provider tokens through kubeconfig clients is unavailable. Adapt the integrations to the [changes in access to the Kubernetes API](#release-1-78-kubeconfig-token-exchange).
+
+### Changes by area
+
+Contents of the section:
+
+- [Infrastructure and nodes](#release-1-78-infrastructure)
+- [Kubernetes, workload placement and scaling](#release-1-78-kubernetes-scheduling)
+- [Users, access, and projects](#release-1-78-access-projects)
+- [Security and certificates](#release-1-78-security)
+- [Network and cross-cluster communication](#release-1-78-network)
+- [Platform and module management](#release-1-78-platform)
+
+#### Infrastructure and nodes {#release-1-78-infrastructure}
+
+Changes in cluster installation, infrastructure integrations, and node management.
+
+##### Nodes on Deckhouse Engine {#release-1-78-engine}
+
+Deckhouse Engine is a type 1 hypervisor for Deckhouse Platform nodes with an immutable root file system. Deckhouse Engine nodes are combined into groups in the same way as other cluster nodes and work in one cluster with groups on regular Linux distributions (Generic OS). The node management method is set for each NodeGroup separately. A node is managed by the `nodelet` agent: it brings the node to the state described in [NodeConfig](https://deckhouse.io/modules/node-manager/v1.78/cr.html#nodeconfig) and reports the result in its status.
+
+The state of such a node cannot be changed manually bypassing NodeConfig, so the configuration of the nodes of a group does not drift over time. The absence of a shell, an SSH server, and a package manager reduces the attack surface, and a failed operating system update is rolled back automatically.
+
+Differences between Deckhouse Engine nodes and Generic OS nodes:
+
+- The root file system is read-only. Its integrity is checked by dm-verity, and the signature of the root hash of the image is checked by the kernel. A node does not apply an image with an invalid signature.
+- The operating system has no shell, SSH server, or package manager. The node state is defined by the operating system image and NodeConfig, so the nodes of one group are configured identically.
+- A node is configured declaratively; SSH access and bashible are not used for this. The `nodelet` node agent brings the node to the state described in NodeConfig: network, disks, kernel parameters and modules, extensions, and static pods.
+- Node components, such as containerd and kubelet, are delivered as signed system extensions (systemd-sysext). Additional extensions, for example with kernel modules, are installed with NodeExtensionRequest.
+- The operating system is updated as a whole. A node pulls a new image from the container registry and reboots according to the update rules of its NodeGroup. If booting with the new image fails, the node automatically returns to the previous image.
+
+For details about Deckhouse Engine, see the [Deckhouse Platform documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/reference/deckhouse-engine.html).
+
+##### Node resources
+
+Changes in the accounting and reservation of node resources:
+
+- Node capacity is updated automatically after CPU and memory hot-plug. Every 5 minutes, kubelet compares the node resources with the ones it had at startup. If at least one CPU or at least 100 MiB of memory has been added, kubelet restarts itself. Previously, kubelet read the CPU and memory of a node only at startup, so after resources were hot-plugged into a virtual machine, the node capacity did not change until kubelet was restarted manually.
+
+- In the `Auto` mode of the [`spec.kubelet.resourceReservation`](https://deckhouse.io/modules/node-manager/v1.78/cr.html#nodegroup-v1-spec-kubelet-resourcereservation) parameter, the CPU reservation for the system is calculated from the number of node cores instead of the fixed `70m`. The reservation is 6% of the first core, 1% of the second, 0.5% each of the third and fourth, and 0.25% of each subsequent core. The new value is applied only if the pods of the node fit into the new amount of allocatable resources.
+
+- <a id="release-1-78-topology-manager"></a>**Topology Manager profiles and per-node calculation of kubelet NUMA settings.** The [`spec.kubelet.topologyManager.policy`](https://deckhouse.io/modules/node-manager/v1.78/cr.html#nodegroup-v1-spec-kubelet-topologymanager-policy) parameter of a NodeGroup sets the full kubelet profile: CPU Manager, Memory Manager, and Topology Manager. The [`enabled`](https://deckhouse.io/modules/node-manager/v1.78/cr.html#nodegroup-v1-spec-kubelet-topologymanager-enabled) parameter is deprecated and ignored. NUMA-dependent kubelet settings are calculated on each node separately. If the CPU Manager or Memory Manager checkpoint is outdated, for example after the CPU or memory of the node has changed, kubelet resets it and starts without stopping the running containers. Containers whose memory may have lost its binding to a NUMA node are shown by the NUMACheckpointReset event and the [D8KubeletCheckpointStateUnpinnedContainers](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/reference/alerts.html#node-manager-d8kubeletcheckpointstateunpinnedcontainers) alert. The binding is restored after the pod is recreated.
+
+  The switch to Topology Manager profiles changes the behavior of node groups:
+  - In groups with `enabled: false` (set explicitly or by default) and a policy other than `None`, the policy takes effect: CPU and memory of Guaranteed pods are pinned to NUMA nodes. kubelet starts rejecting pods that cannot be placed. With any policy, a pod is rejected with `UnexpectedAdmissionError` if the memory does not fit. With `Restricted` and `SingleNumaNode`, a pod is also rejected with `TopologyAffinityError` if the CPUs cannot be aligned. The scheduler does not take NUMA nodes into account, so a recreated pod can get to the same node again. To keep the previous behavior, set `policy: None`.
+  - Groups with `enabled: true` and `policy: None` stop pinning CPUs. To keep the pinning, set `policy: BestEffort`.
+  - For the `Restricted` and `SingleNumaNode` policies, the full-pcpus-only option of CPU Manager is enabled. A container gets only whole physical cores, so on nodes with SMT (Hyper-Threading), Guaranteed containers with an odd number of CPUs are rejected with `SMTAlignmentError`.
+
+  For details, see the [How do I give pods dedicated CPUs and NUMA alignment?](https://deckhouse.io/modules/node-manager/v1.78/faq.html#how-do-i-give-pods-dedicated-cpus-and-numa-alignment) section.
+
+- <a id="release-1-78-limited-swap"></a>Validation of [`kubelet.memorySwap.swapBehavior: LimitedSwap`](https://deckhouse.io/modules/node-manager/v1.78/cr.html#nodegroup-v1-spec-kubelet-memoryswap-swapbehavior) in NodeGroup has been fixed. The validation requires cgroup v2. A NodeGroup created with `LimitedSwap` on nodes without cgroup v2 can get stuck on deletion, because the update and the removal of the finalizer are rejected.
+
+##### Node maintenance and fault tolerance
+
+Changes in fencing, drain, and node maintenance:
+
+- <a id="release-1-78-fencing"></a>The reworked [fencing](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/glossary.html#fencing) moves the workload from a failed node only after the node is confirmed to be stopped.
+  This protects StatefulSet applications and pods with ReadWriteOnce volumes from the old and the new instance running on different nodes at the same time.
+  Previously, pods were deleted 60 seconds after the last Lease update, without confirmation that the node had stopped.
+
+  The `Critical`, `Normal`, and `Slow` modes let you choose the failure response speed for each NodeGroup with the [`spec.fencing.mode`](https://deckhouse.io/modules/node-manager/v1.78/cr.html#nodegroup-v1-spec-fencing-mode) parameter.
+  The target fencing response time is about 12, 30, and 60 seconds respectively, with a tolerance of ±20%.
+  A faster response increases the risk of stopping a node by mistake when the network or the control plane is delayed. The `Critical` mode is available only in commercial editions.
+
+  Fencing is disabled by default. It requires ports `8500/TCP` and `8500/UDP` to be open between the InternalIP addresses of all cluster nodes.
+  The `Watchdog` mode is deprecated and works as `Slow`, and the [`spec.fencing.watchdog.timeout`](https://deckhouse.io/modules/node-manager/v1.78/cr.html#nodegroup-v1-spec-fencing-watchdog-timeout) parameter is ignored.
+  For details, see the [How do I set up fencing for a node group?](https://deckhouse.io/modules/node-manager/v1.78/faq.html#how-do-i-set-up-fencing-for-a-node-group) section.
+
+- In a cluster with one master node, fencing cannot be enabled for an existing NodeGroup. When a NodeGroup with fencing is created, Deckhouse Platform shows a warning. For details, see the [Fencing in a cluster with one master node](https://deckhouse.io/modules/node-manager/v1.78/faq.html#fencing-in-a-cluster-with-one-master-node) section.
+
+- **Correct drain status.** A drain error or timeout is no longer recorded as successful completion. The node keeps the draining annotation, gets `update.node.deckhouse.io/drain-failed` with the error text, and retries. The NodeGroup update stops until the drain succeeds, and NodeStuckInDraining fires after five minutes. Removing the draining annotation cancels the pod eviction and returns the node to the scheduler. `status.eviction` of NodeOperation shows which pods the operation is still waiting for.
+
+- **Protection of NodeGroup and CAPI objects.** The master group cannot be deleted, and if it is deleted bypassing the check, it is restored with the previous parameters, labels, and annotations. Deleting the CAPI Cluster in `d8-cloud-instance-manager` is forbidden.
+
+- `node-controller` keeps the taints of other components when it processes Static and CloudPermanent nodes for the first time.
+
+- When kubelet is updated, static pods are restarted only if their manifest has changed. Previously, kubelet forcibly terminated all static pods of a node even if the manifest had not changed.
+
+- **Diagnostics of bashible errors.** The [Instance](https://deckhouse.io/modules/node-manager/v1.78/cr.html#instance) message shows the stderr of the failed step instead of the general exit code of the shell. The cause of an error can be found without connecting to the node over SSH.
+
+- An interrupted bootstrap of a static node continues from the saved state.
+
+- <a id="release-1-78-early-time-sync"></a>**Time synchronization before kubelet starts.** On master nodes, `nodelet` checks the time over NTP at every boot and corrects it before kubelet starts. The `earlyTimeSync.enabled` setting is enabled by default. If NTP servers are unavailable, the boot of a master node can take an additional 30 seconds. The default timeout is 30 seconds; on bashible nodes, it can be increased to 60 seconds with the `earlyTimeSync.timeoutSeconds` parameter. After a failed check, kubelet starts, and the [NodeTimeNotSynchronizedAtBoot](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/reference/alerts.html#chrony-nodetimenotsynchronizedatboot) alert reports the problem. For details, see the [Boot-time synchronization on master nodes](https://deckhouse.io/modules/chrony/v1.78/#boot-time-synchronization-on-master-nodes) section.
+
+##### Cluster installation
+
+Changes in the `dhctl` installer and the installation process:
+
+- **Declarative phases and operation of the CLI installer (`dhctl`) without SSH.** The `--skip-phase` parameter skips the specified bootstrap phases, for example when an interrupted installation is restarted. gRPC operations accept a kubeconfig and can run without available master nodes and without an SSH connection. The bootstrap, destroy, and converge phases are described by a single tree, so they run and are displayed identically in the CLI and gRPC. Separate state caches for static and managed clusters and a configuration without ClusterConfiguration are available.
+
+- <a id="release-1-78-dhctl-phases"></a>The set of phases that `dhctl` declares has changed in all operations. `FirstMaster` and `WaitForControlPlaneManagerReadiness` have become top-level phases. The format of gRPC messages has not changed, but clients with a fixed list or number of phases have to be updated.
+
+- <a id="release-1-78-dhctl-abort"></a>The behavior of `dhctl bootstrap-phase abort` has changed. The command rolls back the installation only from the state cache and does not delete the resources of a running cluster. To delete a cluster, use `dhctl destroy`. The `--force-abort-from-cache` parameter is accepted and ignored. The `execute-bashible-bundle` and `exec-post-bootstrap` commands have been removed. When aborting a static cluster, pass the same set of `--ssh-host` values as for the bootstrap.
+
+- <a id="release-1-78-dhctl-download-dir"></a>Do not use a shared download directory for different `dhctl` versions. `dhctl` unpacks candi, OpenTofu, terraform-manager, and the provider bundle into directories whose names contain the image digest. The `--download-dir` parameter applies to all commands, and `--download-cache-dir` is accepted and ignored.
+
+- **User SSH certificates in `dhctl`.** For each key from `--ssh-agent-private-keys`, `dhctl` reads the `<KEY>-cert.pub` certificate from the same directory. SSH CA authentication works both for target servers and for the bastion. The regular key is offered first, then its certificate and the other keys from `ssh-agent`.
+
+- NodeGroup and InstanceClass objects for CloudPermanent nodes are applied before the nodes are created, so an interrupted installation no longer leaves groups with zero replicas. The provider network is configured before bootstrap packages are installed, which makes it possible to download them from a master node in another zone.
+
+- Before running `rpp-get`, bashible checks the binary against the image digest from the bundle. `bashible-apiserver` accepts only TLS 1.2 and later with modern ciphers.
+
+##### Cloud and infrastructure providers {#release-1-78-cloud-providers}
+
+Changes in the configuration and modules of cloud and infrastructure providers:
+
+- **Cloud resource prefix in the `global` ModuleConfig.** The `cloud.prefix` parameter of ClusterConfiguration has been moved to [`spec.settings.prefix`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/reference/api/global.html#parameters-prefix). A one-time automatic migration is performed during the update. After it, cloud-controller-manager, the names of CAPI/MCM MachineDeployment objects, and cluster-autoscaler priorities read the prefix from the ModuleConfig. Changing the prefix in a running cluster is forbidden, because it would cause nodes to be recreated and the underlying infrastructure to be renamed.
+
+- **Provider selection at the NodeGroup level.** The [`spec.providerType`](https://deckhouse.io/modules/node-manager/v1.78/cr.html#nodegroup-v1-spec-providertype) parameter defines the provider type for each node group. `bashible-apiserver` already selects the provider configuration by NodeGroup. Groups with `nodeType: Static` no longer get cloud provider configuration steps.
+
+- <a id="release-1-78-static-cloud-nodes"></a>For static nodes (a NodeGroup with `nodeType: Static`) located in AWS and Azure, some of the cloud provider settings are no longer applied:
+  - AWS: `ecr-credential-provider` is not installed and is not added to the kubelet settings. If it was the only authentication method, nodes that are already configured will stop pulling private images from Amazon ECR. On Ubuntu, the EROFS kernel module is also no longer installed if it is needed for containerd v2.
+  - Azure: udev rules for discovering Azure NVMe disks are not installed. Rules that are already installed are not removed.
+
+- <a id="release-1-78-cloud-moduleconfig"></a>The configuration of the [`cloud-provider-yandex`](https://deckhouse.io/modules/cloud-provider-yandex/v1.78/) and [`cloud-provider-zvirt`](https://deckhouse.io/modules/cloud-provider-zvirt/v1.78/) modules has moved to the unified ModuleConfig contract. Nodes of all types are configured in the same way through InstanceClass and NodeGroup, and a separate ProviderClusterConfiguration is not needed. For details, see the [How to migrate a cloud provider to ModuleConfig-based configuration?](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/faq.html#how-to-migrate-a-cloud-provider-to-moduleconfig-based-configurat) section.
+
+- Changes in the [`cloud-provider-yandex`](https://deckhouse.io/modules/cloud-provider-yandex/v1.78/) module:
+  - The [disk block size](https://deckhouse.io/modules/cloud-provider-yandex/v1.78/configuration.html#parameters-storage-parameters-provisionedstorageclasses) is set in StorageClass, which makes it possible to create disks of up to 256 TiB.
+  - The size of network-ssd-nonreplicated and network-ssd-io-m3 disks is checked in advance, and an error is detected before the infrastructure is created.
+  - The `ru-central1-f` availability zone is supported. To use the zone, specify `ru-central1-f` in the [`zones`](https://deckhouse.io/modules/cloud-provider-yandex/v1.78/configuration.html#parameters-nodes-parameters-zones) parameter instead of one of the default zones. The configuration procedure is described in the [Using the ru-central1-f zone](https://deckhouse.io/modules/cloud-provider-yandex/v1.78/examples.html#using-the-ru-central1-f-zone) section.
+  - <a id="release-1-78-yandex-preemptible"></a>Existing nodes of groups on CAPI in Yandex Cloud with the [`preemptible: true` parameter](https://deckhouse.io/modules/cloud-provider-yandex/v1.78/cr.html#yandexinstanceclass-v1-spec-preemptible) will become preemptible after the [next recreation of the group nodes](https://deckhouse.io/modules/node-manager/v1.78/faq.html#how-do-i-redeploy-ephemeral-machines-in-the-cloud-with-a-new-configuration). Previously, such nodes were created as regular virtual machines.
+
+- In the [`cloud-provider-zvirt`](https://deckhouse.io/modules/cloud-provider-zvirt/v1.78/) module, the [`storageDomainID`](https://deckhouse.io/modules/cloud-provider-zvirt/v1.78/cr.html#zvirtinstanceclass-v1-spec-storagedomainid) and [`etcdDiskSizeGb`](https://deckhouse.io/modules/cloud-provider-zvirt/v1.78/cr.html#zvirtinstanceclass-v1-spec-etcddisksizegb) parameters are available in ZvirtInstanceClass. They let you choose the storage domain and the size of the etcd disk on master nodes.
+
+- Changes in the [`cloud-provider-vsphere`](https://deckhouse.io/modules/cloud-provider-vsphere/v1.78/) module:
+  - <a id="release-1-78-vsphere-capi"></a>The vSphere provider is based on Cluster API (CAPI) instead of Machine Controller Manager (MCM). Existing node groups stay on MCM, and new ones are created on CAPI. For nodes on CAPI in a vSphere cluster, [enable DRS](https://deckhouse.io/modules/cloud-provider-vsphere/v1.78/#vsphere-requirement). The procedure for moving an existing group is given in the [How to migrate node groups to Cluster API (CAPI)?](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/faq.html#how-to-migrate-node-groups-to-cluster-api-capi) section.
+  - The certificate of a corporate certificate authority for vCenter and NSX-T is set with the [`provider.caBundle`](https://deckhouse.io/modules/cloud-provider-vsphere/v1.78/cluster_configuration.html#vsphereclusterconfiguration-provider-cabundle) and [`nsxt.caBundle`](https://deckhouse.io/modules/cloud-provider-vsphere/v1.78/cluster_configuration.html#vsphereclusterconfiguration-nsxt-cabundle) parameters. Therefore, TLS certificate verification does not have to be disabled.
+
+- Changes in the [`cloud-provider-openstack`](https://deckhouse.io/modules/cloud-provider-openstack/v1.78/) module:
+  - A pre-created Octavia load balancer or a floating IP can be used for Ingress. This makes the Ingress address predictable. For details, see the [How do I set up LoadBalancer?](https://deckhouse.io/modules/cloud-provider-openstack/v1.78/faq.html#how-do-i-set-up-loadbalancer) section.
+  - Support for [preemptible nodes](https://deckhouse.io/modules/cloud-provider-openstack/v1.78/cr.html#openstackinstanceclass-v1-spec-preemptible) in the Selectel cloud for node groups on Cluster API.
+  - For the SimpleWithInternalNetwork layout, the internal subnet can be specified [by ID](https://deckhouse.io/modules/cloud-provider-openstack/v1.78/cluster_configuration.html#openstackclusterconfiguration-simplewithinternalnetwork-internalsubnetid), for example if the subnet has no name.
+  - Specifying `tenantName` and `tenantID` at the same time is forbidden.
+  - In OpenStack clusters with the [SimpleWithInternalNetwork](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/admin/integrations/private/openstack/configuration-and-layout-scheme.html#simplewithinternalnetwork) layout, the first run of `dhctl converge` after the update shows a change in the internal subnet lookup parameters in the plan. Nodes are not recreated.
+
+- <a id="release-1-78-dynamix"></a>Changes in the [`cloud-provider-dynamix`](https://deckhouse.io/modules/cloud-provider-dynamix/v1.78/) module:
+  - The integration supports only Basis Dynamix [version 4.6 and later](https://deckhouse.io/modules/cloud-provider-dynamix/v1.78/environment.html#platform-version). Clusters on Basis Dynamix created in previous Deckhouse Platform versions have to be reinstalled.
+  - When a cluster on Basis Dynamix is deleted, its resources, including the disks of persistent volumes, are deleted permanently, without being moved to the recycle bin.
+  - Disks are placed according to the Basis Dynamix [storage policy](https://deckhouse.io/modules/cloud-provider-dynamix/v1.78/cluster_configuration.html#dynamixclusterconfiguration-storagepolicy), which can be overridden for an individual node group. StorageClass objects are created for each available storage policy. The cluster account requires [access to the storage_policy API group](https://deckhouse.io/modules/cloud-provider-dynamix/v1.78/environment.html#account-permissions).
+  - For the Standard layout, DNS servers from the [`nameservers` parameter](https://deckhouse.io/modules/cloud-provider-dynamix/v1.78/cluster_configuration.html#dynamixclusterconfiguration-nameservers) are configured on all nodes.
+  - Basis Dynamix objects are looked up by exact name match, which rules out choosing the wrong object when names are similar. The `imageName` and `externalNetwork` values must be specified in full.
+  - Synchronization of the load balancer with nodes, deletion of LoadBalancer services, and SSH access to nodes connected to both ViNS and an external network have been fixed.
+
+- Changes in the [`cloud-provider-aws`](https://deckhouse.io/modules/cloud-provider-aws/v1.78/) module:
+  - Mandatory use of IMDSv2 on all EC2 instances of the cluster is enabled with the [`imdsv2` parameter](https://deckhouse.io/modules/cloud-provider-aws/v1.78/cluster_configuration.html#awsclusterconfiguration-imdsv2). This protects instance metadata from SSRF attacks. After it is enabled, the metadata service becomes unavailable to pods that do not use the host network.
+  - terraform-provider-aws has been updated to version 6.69.1, which adds support for new AWS regions, for example ap-southeast-6.
+
+- In the [`cloud-provider-huaweicloud`](https://deckhouse.io/modules/cloud-provider-huaweicloud/v1.78/) module, a single Huawei Cloud API error no longer stops the scaling of node groups.
+
+- The new [`infra-provider-baremetal`](https://deckhouse.io/modules/infra-provider-baremetal/v1.78/) module manages cluster nodes on bare-metal servers via BMC.
+
+- In the modules of the AWS, Azure, GCP, Yandex Cloud, OpenStack, VCD, and vSphere cloud providers, the [`csi-node`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/architecture/storage/csi-drivers/csi-driver.html#driver-components) DaemonSet uses a separate ServiceAccount to access the Kubernetes API. This eliminates authorization errors of CSI drivers when they read node information.
+
+- A hang of cluster installation in OpenStack and VCD at the stage of starting CAPI controllers has been fixed.
+
+#### Kubernetes, workload placement and scaling {#release-1-78-kubernetes-scheduling}
+
+Changes in control plane operation, pod placement, and management of pod resources.
+
+##### Control plane operation and update {#release-1-78-control-plane}
+
+Changes in Kubernetes versions and in the resources and update of control plane components:
+
+- <a id="release-1-78-kubernetes"></a>Kubernetes 1.37 is supported in the preview status. Support for Kubernetes 1.32 has been discontinued. The default version has changed from 1.34 to 1.35 (the `Default` value of the [`kubernetesVersion`](https://deckhouse.io/modules/control-plane-manager/v1.78/configuration.html#parameters-kubernetesversion) parameter). Supported versions are listed in the [Supported Kubernetes and OS versions](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/reference/supported_versions.html) section. Version management is described in the [Version control](https://deckhouse.io/modules/control-plane-manager/v1.78/#version-control) section.
+
+- **Automatic selection of resource requests for control plane components.** CPU and memory requests for etcd, `kube-apiserver`, `kube-controller-manager`, and `kube-scheduler` are selected from the actual consumption over 7 days with a 10% margin and are recalculated once a day. The scheduler takes the real control plane load on master nodes into account, and `resourcesRequests` does not have to be tuned manually. If the new requests do not fit on the smallest master node, they are not applied, and the [D8ControlPlaneComponentsResourcesInsufficientCapacity](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/reference/alerts.html#control-plane-manager-d8controlplanecomponentsresourcesinsufficientcapacity) alert fires. If [`resourcesRequests.cpu`](https://deckhouse.io/modules/control-plane-manager/v1.78/configuration.html#parameters-resourcesrequests-cpu) or [`resourcesRequests.memory`](https://deckhouse.io/modules/control-plane-manager/v1.78/configuration.html#parameters-resourcesrequests-memory) is set in the `control-plane-manager` ModuleConfig, automatic selection for that resource is disabled. For details, see the [Configuring Control Plane Resource Requests](https://deckhouse.io/modules/control-plane-manager/v1.78/#configuring-control-plane-resource-requests) section.
+
+- **Smooth control plane update.** `kube-apiserver` instances are updated one by one, so the majority of master nodes serve requests at all times. A `kube-apiserver` that is stopping has time to hand its clients over to other master nodes, and API requests are not interrupted. `kube-controller-manager` and `kube-scheduler` connect to the API through `kubernetes-api-proxy`, so a restart of `kube-apiserver` on their master node no longer causes their leaders to change. The leaders of etcd, `kube-controller-manager`, and `kube-scheduler` change once per update and move straight to an updated instance. In clusters with an etcd arbiter, a master node becomes the leader, and the arbiter does not.
+
+- etcd backups on master nodes are created in turn, with a 15-minute shift. Previously, backups were created on all master nodes at the same time, and the disk load could cause lease loss and restarts of `kube-controller-manager` and `kube-scheduler`. The most recent backup is stored on the master node with the lowest name, for example master-0. For details, see the [etcd backup and restore](https://deckhouse.io/modules/control-plane-manager/v1.78/faq.html#etcd-backup-and-restore) section.
+
+- **Health checks and shutdown of `kubernetes-api-proxy`.** Clients that access the Kubernetes API through `kubernetes-api-proxy` switch faster to a working `kube-apiserver` when one restarts or hangs. Slow but working `kube-apiserver` instances stay in rotation. Stopping, restarting, and hung instances stop receiving new connections, and hung client connections are closed so that they reconnect to a working instance. If no `kube-apiserver` is ready, the proxy checks each instance every 500 ms for 30 seconds. The state is available at `/upstreams`, and health checks are available at `127.0.0.1:6480` by default. After SIGTERM, the proxy keeps serving `127.0.0.1:6445` for 3 more seconds. When a master node is stopped, kubelet gives node-critical pods 25 seconds to terminate instead of 5 seconds.
+
+- Changes in auditing (the [`control-plane-manager`](https://deckhouse.io/modules/control-plane-manager/v1.78/) module):
+  - The basic audit policy records pods/exec in all namespaces again, as it did before Deckhouse Platform 1.77.
+  - The basic audit policy records pod status updates from kubelet with the request body, so container terminations and their reasons get into the audit log.
+
+- <a id="release-1-78-cluster-config"></a>The following cluster parameters have been moved from ClusterConfiguration to the [`control-plane-manager` ModuleConfig](https://deckhouse.io/modules/control-plane-manager/v1.78/configuration.html#parameters-kubernetesversion):
+  - Kubernetes version. It is set in [`settings.kubernetesVersion`](https://deckhouse.io/modules/control-plane-manager/v1.78/configuration.html#parameters-kubernetesversion): a specific version or `Default`. The `Automatic` value is allowed only in the deprecated ClusterConfiguration field.
+  - Pod address space ([`podSubnetCIDR`](https://deckhouse.io/modules/control-plane-manager/v1.78/configuration.html#parameters-network-podsubnetcidr)).
+  - Address space of cluster services ([`serviceSubnetCIDR`](https://deckhouse.io/modules/control-plane-manager/v1.78/configuration.html#parameters-network-servicesubnetcidr)).
+  - Prefix size of the pod subnet allocated to each node ([`podSubnetNodeCIDRPrefix`](https://deckhouse.io/modules/control-plane-manager/v1.78/configuration.html#parameters-network-podsubnetnodecidrprefix)).
+  - Cluster domain ([`clusterDomain`](https://deckhouse.io/modules/control-plane-manager/v1.78/configuration.html#parameters-network-clusterdomain)).
+
+  The corresponding ClusterConfiguration fields are deprecated but keep working. While they are filled in, the [D8ObsoleteNetworkFieldsInClusterConfiguration](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/reference/alerts.html#control-plane-manager-d8obsoletenetworkfieldsinclusterconfiguration) and [D8ObsoleteClusterDomainInClusterConfiguration](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/reference/alerts.html#control-plane-manager-d8obsoleteclusterdomaininclusterconfiguration) alerts fire and provide migration instructions. Move the parameters to the `control-plane-manager` ModuleConfig according to these instructions. After the cluster is installed, validation does not allow changing the network parameters and the cluster domain. The network parameters can be changed only with the `deckhouse.io/allow-unsafe=true` annotation.
+
+##### Pod scheduling {#release-1-78-scheduling}
+
+Changes in the `kube-scheduler` scheduler in the [`control-plane-manager`](https://deckhouse.io/modules/control-plane-manager/v1.78/) module:
+
+- **Simulation of pod placement in `kube-scheduler`.** A `POST /scheduler/simulate` request to the `control-plane-proxy` Service shows on which nodes a pod or a virtual machine can be placed and why the other nodes are not suitable. Access is granted by the `d8:control-plane-manager:scheduler-simulate` ClusterRole. For details, see [pod placement simulation](https://deckhouse.io/modules/control-plane-manager/v1.78/faq.html).
+
+- `kube-scheduler` metrics and the new "Scheduling" dashboard show requests to extenders and node selection decisions.
+
+- **Suspension of an unavailable extender.** If 10 requests in a row to an extender with `failurePolicy: Ignore` have failed, `kube-scheduler` suspends this extender for 30 seconds, and the workload is placed without it.
+
+- The [`sendPlacements`](https://deckhouse.io/modules/control-plane-manager/v1.78/cr.html#kubeschedulerwebhookconfiguration-v1alpha1-webhooks-sendplacements) parameter of KubeSchedulerWebhookConfiguration passes to the extender the pods that `kube-scheduler` has just placed. For details, see [extending the scheduler logic](https://deckhouse.io/modules/control-plane-manager/v1.78/faq.html#how-to-change-or-extend-the-scheduler-logic).
+
+##### Pod rescheduling
+
+Changes in the [`descheduler`](https://deckhouse.io/modules/descheduler/v1.78/) module:
+
+- **Check of the target node before eviction.** The LowNodeUtilization strategy uses [placement simulation](#release-1-78-scheduling) and evicts a workload only if `kube-scheduler` can place it on an underutilized node. For details, see [the eviction target check](https://deckhouse.io/modules/descheduler/v1.78/#eviction-target-check).
+
+- **Node load estimation by the average CPU utilization over 15 minutes from Prometheus.** To use it, set `metricsSource: Prometheus`. For details, see [CPU utilization over 15 minutes](https://deckhouse.io/modules/descheduler/v1.78/#cpu-utilization-averaged-over-15-minutes).
+
+- **Balancing relative to the average cluster load.** The [`useDeviationThresholds`](https://deckhouse.io/modules/descheduler/v1.78/cr.html#descheduler-v1alpha2-spec-strategies-lownodeutilization-usedeviationthresholds) parameter of the [LowNodeUtilization](https://deckhouse.io/modules/descheduler/v1.78/cr.html#descheduler-v1alpha2-spec-strategies-lownodeutilization) strategy sets the `thresholds` and `targetThresholds` as a deviation from the average load of cluster nodes. The [`evictionLimits.node`](https://deckhouse.io/modules/descheduler/v1.78/cr.html#descheduler-v1alpha2-spec-strategies-lownodeutilization-evictionlimits-node) parameter limits the number of pods evicted from one node. With [`metricsSource: Prometheus`](https://deckhouse.io/modules/descheduler/v1.78/cr.html#descheduler-v1alpha2-spec-strategies-lownodeutilization-metricssource), it sets how many pods to evict from a node per cycle. If the parameter is not set, one pod is evicted.
+
+- **Protection of pods with local disks from eviction.** Pods with a PersistentVolumeClaim can be protected from eviction by listing their StorageClass in [`spec.protectedStorageClasses`](https://deckhouse.io/modules/descheduler/v1.78/cr.html#descheduler-v1alpha2-spec-protectedstorageclasses).
+
+- The [`logLevel`](https://deckhouse.io/modules/descheduler/v1.78/configuration.html#parameters-loglevel) parameter sets the logging level.
+
+##### Vertical scaling {#release-1-78-vpa}
+
+Changes in the [`vertical-pod-autoscaler`](https://deckhouse.io/modules/vertical-pod-autoscaler/v1.78/) module:
+
+- By default, VPA changes pod resource requests without a restart. If the [`updateMode` parameter](https://deckhouse.io/modules/vertical-pod-autoscaler/v1.78/cr.html#verticalpodautoscaler-v1-spec-updatepolicy-updatemode) is not set, VerticalPodAutoscaler objects get the `InPlaceOrRecreate` mode instead of `Recreate` when they are created. In this mode, VPA changes pod resource requests without recreation, including for applications with one replica, and recreates a pod only if the requests could not be changed this way. Existing VPA objects keep their mode and are not changed.
+
+- **Factor for VPA recommendations.** The [`recommendationFactor`](https://deckhouse.io/modules/vertical-pod-autoscaler/v1.78/cr.html#verticalpodautoscaler-v1-spec-resourcepolicy-containerpolicies-recommendationfactor) parameter in [`spec.resourcePolicy.containerPolicies[]`](https://deckhouse.io/modules/vertical-pod-autoscaler/v1.78/cr.html#verticalpodautoscaler-v1-spec-resourcepolicy-containerpolicies) of VerticalPodAutoscaler multiplies the VPA recommendations for CPU and memory by the specified factor (no more than 10).
+
+- The [`logLevel`](https://deckhouse.io/modules/vertical-pod-autoscaler/v1.78/configuration.html#parameters-loglevel) parameter sets the VPA logging level.
+
+#### Users, access, and projects {#release-1-78-access-projects}
+
+Changes in access permissions, authentication of users and applications, and project management.
+
+##### Authorization {#release-1-78-iam}
+
+Changes in the role model and access permissions:
+
+- <a id="release-1-78-rbac-subsystems"></a>A new list of [subsystems of the role-based model](https://deckhouse.io/modules/user-authz/v1.78/#subsystems-of-the-role-based-model) in RBACv2. Subsystem roles have the form `d8:subsystem:<SUBSYSTEM>:<LEVEL>`. The subsystems are `iam`, `security`, `cluster`, `delivery`, `network`, `storage`, `observability`, and `managed-services`. The `deckhouse`, `infrastructure`, and `kubernetes` subsystems have been merged into `cluster`, and `networking` has been renamed to `network`. The [`user-authn`](https://deckhouse.io/modules/user-authn/v1.78/), [`user-authz`](https://deckhouse.io/modules/user-authz/v1.78/), and [`multitenancy-manager`](https://deckhouse.io/modules/multitenancy-manager/v1.78/) modules have been moved to `iam`. The manager of the `iam` subsystem also assigns roles. The deprecated `d8:manage:*` roles keep working but will be removed in 1.79. For details, see the [Deprecated role names](https://deckhouse.io/modules/user-authz/v1.78/#deprecated-role-names) section. The `d8:subsystem:cluster:*` replacement role grants more permissions than the previous roles, so before recreating the bindings, check which permissions the subjects need. Custom capabilities and modules with old aggregation labels trigger the [D8UserAuthzRetiredAggregationLabel](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/reference/alerts.html#user-authz-d8userauthzretiredaggregationlabel) and [D8UserAuthzLegacyUseCapability](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/reference/alerts.html#user-authz-d8userauthzlegacyusecapability) alerts.
+
+- The permissions of system and subsystem managers have been reduced:
+  - Users with the `d8:system:manager`, `d8:subsystem:<SUBSYSTEM>:manager`, and deprecated `d8:manage:*:manager` roles get the viewer level in the namespaces of their modules. They can no longer read secrets, run exec, attach, and port-forward, or delete and scale pods. Operations above the viewer level require the superadmin role of the subsystem. It does not lift the [restrictions on operations with protected platform objects](https://deckhouse.io/modules/deckhouse/v1.78/faq.html#who-can-run-exec-into-deckhouse-platform-pods-and-scale-deckhouse-platform-objects), including pods with the `heritage: deckhouse` label.
+  - Custom system and subsystem roles are projected into module namespaces at the viewer level at most. The roles affected by this are shown by the `d8_user_authz_projection_capped` metric.
+  - The `d8:system:manager` and `d8:subsystem:iam:manager` managers assign roles up to the manager and ClusterEditor levels. They cannot create ClusterAuthorizationRule objects of the Admin, ClusterAdmin, and SuperAdmin levels or ones that open access to system namespaces. Existing rules are kept. Such changes are made by a ClusterAdmin or SuperAdmin.
+
+- Listing objects with the `d8 k get` command and the `--scope` parameter supports aggregated APIs that declare this with the `scope.deckhouse.io/resources` annotation on APIService, as well as the `roles` and `rolebindings` resources.
+
+- The `d8:namespace:*` and `d8:project:*` roles grant access to namespaced Gateway API resources: read access from the viewer level and write access from the manager level.
+
+- On master nodes (host network), ports `4233/TCP` (metrics of the authorization webhook) and `4243/TCP` (the `kube-rbac-proxy` upstream on `127.0.0.1`, no firewall rule is required) are in use.
+
+- Only the Deckhouse Commander agent can create and change ClusterRole objects with the `d8:commander:` prefix.
+
+- **Hiding sensitive fields in the API.** Passwords and auth in RegistryConfig and RegistryUpstream, as well as `spec.passwordHash` of NodeUser, are hidden from users without access to the `/sensitive` subresources. For other readers, the API returns `<omitted>`, and the values are also masked in the audit.
+
+##### Users and sessions {#release-1-78-sessions}
+
+Changes in the management of users and their sessions:
+
+- **User session management.** Locking, a password or 2FA reset, deletion of a user, and the new Logout operation end the user's sessions in Dex, DexAuthenticator, and the Kubernetes API. Basic Authentication to the Kubernetes API through LDAP checks the password with Dex on each request, so `Logout` does not end it. For this, the `Logout` and `RequirePasswordChange` types are available in [UserOperation](https://deckhouse.io/modules/user-authn/v1.78/cr.html#useroperation). In the multitenancy mode on Kubernetes 1.34 and later, the API server stops accepting revoked ID tokens within several seconds.
+
+- **User devices.** [UserAccount.status.sessions](https://deckhouse.io/modules/user-authn/v1.78/cr.html#useraccount-v1alpha1-status-sessions) shows active sessions. The `Logout` operation ends one session or all sessions except the current one.
+
+- **Dex browser sessions.** The [`sessions`](https://deckhouse.io/modules/user-authn/v1.78/configuration.html#parameters-sessions) parameters enable single sign-on to all web interfaces of the platform, sign-out from the browser session in all DexAuthenticator instances, and back-channel logout. Browser sessions are disabled by default.
+
+- The [`postLogoutRedirectURIs`](https://deckhouse.io/modules/user-authn/v1.78/cr.html#dexclient-v1-spec-postlogoutredirecturis), [`backchannelLogoutURI`](https://deckhouse.io/modules/user-authn/v1.78/cr.html#dexclient-v1-spec-backchannellogouturi), and [`refreshTokenLifetime`](https://deckhouse.io/modules/user-authn/v1.78/cr.html#dexclient-v1-spec-refreshtokenlifetime) parameters are available in DexClient, and [`upstreamLogout`](https://deckhouse.io/modules/user-authn/v1.78/cr.html#dexprovider-v1-spec-oidc-upstreamlogout) is available in the OIDC DexProvider.
+
+- Locking ([Lock](https://deckhouse.io/modules/user-authn/v1.78/cr.html#useroperation-v1-spec-lock) with [`spec.target`](https://deckhouse.io/modules/user-authn/v1.78/cr.html#useroperation-v1-spec-target)) works for users of any provider, including OIDC, SAML, GitHub, GitLab, and Bitbucket Cloud. Signing in through a browser no longer removes a lock set by an administrator.
+
+- 2FA secrets and locks of Dex users are stored in UserIdentity. UserAccount is maintained for users of all providers.
+
+- The Lock and ResetPassword operations no longer reset the 2FA secret. To make a user register the authenticator app again, additionally [run Reset2FA (d8 iam user reset2fa)](https://deckhouse.io/modules/user-authn/v1.78/usage.html#the-second-factor-of-an-account).
+
+- Manual deletion of UserIdentity is forbidden. To delete a local user, delete the User, and to reset 2FA or a lock, use UserOperation. For details, see the [Can I delete a UserIdentity object?](https://deckhouse.io/modules/user-authn/v1.78/faq.html#can-i-delete-a-useridentity-object) section.
+
+- The request rate limit (`rateLimit`) applies to the 2FA steps and the password change page. With 2FA enabled, Dex requests the code before the password change. For details, see the [How is Dex protected against credential brute-forcing?](https://deckhouse.io/modules/user-authn/v1.78/faq.html#how-is-dex-protected-against-credential-brute-forcing) section.
+
+- Active Directory users with [`idAttr: objectGUID`](https://deckhouse.io/modules/user-authn/v1.78/cr.html#dexprovider-v1-spec-ldap-usersearch-idattr) can sign in.
+
+- <a id="release-1-78-user-api"></a>`user-api` accepts only ID tokens of the Deckhouse web UI. The password reset endpoint has been removed.
+
+##### Application access to the Kubernetes API
+
+Changes in the access of applications and external systems to the Kubernetes API:
+
+- <a id="release-1-78-token-exchange"></a>The [TokenExchangeProvider](https://deckhouse.io/modules/user-authn/v1.78/cr.html#tokenexchangeprovider) custom resource describes a trusted issuer whose tokens Dex exchanges for Kubernetes API tokens. It lets you configure access from CI/CD (for example, GitLab CI) without static credentials.
+
+- <a id="release-1-78-dexclient-annotation"></a>The `dexclient.deckhouse.io/allow-access-to-kubernetes` annotation of a DexClient is always in effect. The application of such a DexClient gets ID tokens that `kube-apiserver` accepts and can act in the Kubernetes API on behalf of signed-in users. Previously, the annotation had no effect without a DexAuthenticator with access to Kubernetes, `publishAPI`, or `kubeconfigGenerator`. For details about using the annotation, see the [Granting an application access to the Kubernetes API](https://deckhouse.io/modules/user-authn/v1.78/usage.html#granting-an-application-access-to-the-kubernetes-api) section.
+
+- <a id="release-1-78-kubeconfig-token-exchange"></a>kubeconfig clients can no longer exchange tokens of an external provider for Dex tokens.
+
+- <a id="release-1-78-legacy-token-exchange"></a>Token exchange through DexProvider is deprecated. In existing clusters that have a DexClient with the `dexclient.deckhouse.io/allow-access-to-kubernetes` annotation, the exchange through OIDC and GitLab DexProvider objects stays enabled with the `spec.tokenExchange.enabled` parameter, and it can only be disabled. When a token has been exchanged through a DexProvider during the last 24 hours, the [D8UserAuthnDexProviderTokenExchangeDeprecated](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/reference/alerts.html#user-authn-d8userauthndexprovidertokenexchangedeprecated) alert fires. Move the exchange to TokenExchangeProvider before this feature is removed after the next LTS release. The restriction for kubeconfig clients is already in effect in 1.78 regardless of the DexProvider setting. For details, see [TokenExchangeProvider](#release-1-78-token-exchange).
+
+##### Authentication for applications
+
+Changes in the operation of DexAuthenticator and Dex:
+
+- DexAuthenticator has been moved to `oauth2-proxy` 7.15.5. It verifies the Dex TLS certificate, uses PKCE, does not end user sessions when Dex is briefly unavailable, and supports signing in from several tabs. Signing out of an application revokes the refresh token in Dex. How DexAuthenticator works is described in the [Authentication flow with DexAuthenticator](https://deckhouse.io/modules/user-authn/v1.78/faq.html#authentication-flow-with-dexauthenticator) section.
+
+- <a id="release-1-78-dexauthenticator-ids"></a>DexAuthenticator clients have got unambiguous IDs. After the update, users of applications behind DexAuthenticator have to sign in again once. The `aud` claim of DexAuthenticator ID tokens changes to `dex-authenticator-<NAME>@<NAMESPACE>`. An application that checks `aud` must accept the new value. For details, see the [JWT token contents and processing considerations](https://deckhouse.io/modules/user-authn/v1.78/faq.html#jwt-token-contents-and-processing-considerations) section.
+
+- <a id="release-1-78-revocation-feed"></a>DexAuthenticator calls the `revocation-feed` service (`user-authn-controller` pods, port `8443/TCP`) in the `d8-user-authn` namespace. If outgoing traffic in the DexAuthenticator namespace is restricted by a NetworkPolicy, allow this traffic.
+
+- DexAuthenticator events (sign-ins, sign-outs, failed attempts, CSRF errors) are sent as security events when the [`security-events-manager` module](https://deckhouse.io/modules/security-events-manager/) is enabled.
+
+- The fault tolerance of Dex and protected applications has been improved:
+  - Dex does not restart in a loop when the issuer of an OIDC provider is unavailable and starts with the other providers.
+  - Dex does not restart when the node is short of CPU.
+  - Protected applications keep working when Dex is briefly unavailable and while it restarts.
+
+- DexAuthenticator replicas with [`spec.highAvailability`](https://deckhouse.io/modules/user-authn/v1.78/cr.html#dexauthenticator-v1-spec-highavailability) are spread across different nodes.
+
+- DexAuthenticator works in isolated projects and in projects with policies that require resource requests to be set.
+
+##### Project management {#release-1-78-projects}
+
+Changes in project quotas, templates, and namespaces:
+
+- Multiple namespaces in one project. In commercial editions, additional namespaces are created through [ProjectNamespace](https://deckhouse.io/modules/multitenancy-manager/v1.78/cr.html#projectnamespace). Permissions granted through ProjectRoleBinding apply across all project namespaces. In Deckhouse Platform Open (CE), a project has only its main namespace.
+
+- The project quota, set in [Project.spec.quota](https://deckhouse.io/modules/multitenancy-manager/v1.78/cr.html#project-v1alpha3-spec-quota), is a single quota for the whole project.
+  In commercial editions, the quota limits the total usage across all project namespaces. In Deckhouse Platform Open (CE), it limits usage in the project's only namespace, its main namespace.
+  Usage is shown in the read-only [ProjectQuotaStatus](https://deckhouse.io/modules/multitenancy-manager/v1.78/cr.html#projectquotastatus) object.
+  Creating an object that exceeds the project quota is rejected. The sum over the namespaces is enforced only when the [`control-plane-manager`](https://deckhouse.io/modules/control-plane-manager/v1.78/) module is enabled.
+  The quota can limit the virtual machines of a project (cores, guaranteed CPU, memory, GPU) and load balancers (by class, pool, and external address).
+
+- Changing [the project quota](https://deckhouse.io/modules/multitenancy-manager/v1.78/cr.html#project-v1alpha3-spec-quota) requires the `manage_quotas` capability. Quota usage is checked by the `quota-ledger.multitenancy-manager.deckhouse.io` webhook. While no `multitenancy-manager` replica responds, creating counted objects in the namespaces of projects with a quota fails with error 500 (`failed calling webhook`); error 503 means that the quota ledger is briefly unavailable, for example while its leader changes, and the request can be retried. When the [`control-plane-manager`](https://deckhouse.io/modules/control-plane-manager/v1.78/) module is enabled, the module runs in two replicas.
+
+- With [Project.spec.grants](https://deckhouse.io/modules/multitenancy-manager/v1.78/cr.html#project-v1alpha3-spec-grants), a project can be granted cluster-wide resources in addition to the ones granted by its template. The granting mechanism scales to thousands of objects.
+
+- A project template of version v1alpha2 is described with structured fields: pod security profile, network isolation, log collection, monitoring, and image vulnerability scanning. The controller creates objects from these fields in each namespace of the project and keeps them up to date, so a Helm template does not have to be written and maintained. For details, see the [Structured templates](https://deckhouse.io/modules/multitenancy-manager/v1.78/usage.html#structured-templates) section.
+
+- <a id="release-1-78-project-manifests"></a>The [`manifests`](https://deckhouse.io/modules/multitenancy-manager/v1.78/cr.html#projecttemplate-v1alpha2-spec-manifests) field of ProjectTemplate v1alpha2 sets templated namespaced objects that the controller applies on behalf of a project user with the `d8:project:admin` role, not with its own permissions. With `manifests`, you can create additional project namespaces (ProjectNamespace) and place objects in them. The procedure for moving a template to `manifests` is described in the [Moving a template from a Helm text](https://deckhouse.io/modules/multitenancy-manager/v1.78/usage.html#moving-a-template-from-a-helm-text) section.
+
+- When the [`multitenancy-manager`](https://deckhouse.io/modules/multitenancy-manager/v1.78/) module is enabled, the ways to create a namespace bypassing projects are closed: only system components and cluster administrators can create namespaces with names longer than 61 characters, with the `upmeter-` prefix, or with the name `deckhouse`. Namespaces left without a project are shown by the [D8NamespaceNotAdopted](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/reference/alerts.html#multitenancy-manager-d8namespacenotadopted) alert.
+
+- Deleting a project requires the permission to delete its namespaces. For details, see the [Additional project namespaces](https://deckhouse.io/modules/multitenancy-manager/v1.78/usage.html#additional-project-namespaces) section.
+
+- Labels and annotations of a namespace adopted into a project are no longer copied to the Project parameters, and the project release does not roll them back. Additional project namespaces do not inherit them. Set the labels you need in `spec.parameters.namespace.labels` of the project. A namespace adopted into a project keeps its Pod Security Standard.
+
+- The [`allowNamespacesWithoutProjects`](https://deckhouse.io/modules/multitenancy-manager/v1.78/configuration.html#parameters-allownamespaceswithoutprojects) parameter is no longer considered deprecated. The restriction is implemented with ValidatingAdmissionPolicy.
+
+- <a id="release-1-78-project-namespace-restore"></a>The main namespace of a project deleted bypassing the policy (for example, as `system:sudouser`) is restored by the controller together with the template objects. During the update, all projects that have lost their main namespace will be restored.
+
+- <a id="release-1-78-helm-project-templates"></a>Helm templates of projects (`resourcesTemplate`) are deprecated. A [ProjectTemplate](https://deckhouse.io/modules/multitenancy-manager/v1.78/cr.html#projecttemplate) can no longer be created through `deckhouse.io/v1alpha1`, and a new `resourcesTemplate` cannot be set either. Existing templates keep working and can be edited. However, restoring such a template from a backup, a GitOps bootstrap, or recreation will be rejected until the template is moved to structured fields and `manifests`. Such templates are shown by the [MultitenancyManagerHelmProjectTemplate](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/reference/alerts.html#multitenancy-manager-multitenancymanagerhelmprojecttemplate) alert. AuthorizationRule objects of the Admin level are forbidden in `manifests`; set project administrators in `spec.administrators`. For details, see [the `manifests` field](#release-1-78-project-manifests).
+
+- <a id="release-1-78-grant-policy"></a>[ClusterResourceGrantPolicy](https://deckhouse.io/modules/multitenancy-manager/v1.78/cr.html#clusterresourcegrantpolicy) is stored in version v1alpha2. Version v1alpha2 selects projects by Project labels and namespaces by a separate `namespaceSelector`. Policies written through v1alpha1 keep selecting the same namespaces. When moving a manifest to v1alpha2, rename `projectSelector` to `namespaceSelector`. If you change only `apiVersion`, the selector starts matching Project labels, and the policy stops applying to the namespaces you need. Additional namespaces inherit the template labels. For details, see the [How a policy selects namespaces](https://deckhouse.io/modules/multitenancy-manager/v1.78/usage.html#how-a-policy-selects-namespaces) section.
+
+#### Security and certificates {#release-1-78-security}
+
+Changes in security policies and certificate management.
+
+##### Security policies
+
+Changes in the [`admission-policy-engine`](https://deckhouse.io/modules/admission-policy-engine/v1.78/) module:
+
+- <a id="release-1-78-pss-default"></a>The default Pod Security Standards policy is always [Baseline](https://deckhouse.io/modules/admission-policy-engine/v1.78/configuration.html#parameters-podsecuritystandards-defaultpolicy).
+  In clusters deployed on a Deckhouse Platform version earlier than 1.55, the `Privileged` policy was the default.
+
+  In such clusters, the update is blocked until the [`settings.podSecurityStandards.defaultPolicy`](https://deckhouse.io/modules/admission-policy-engine/v1.78/configuration.html#parameters-podsecuritystandards-defaultpolicy) parameter is set in the [`admission-policy-engine`](https://deckhouse.io/modules/admission-policy-engine/v1.78/) ModuleConfig.
+
+  To keep the current behavior, specify `Privileged`. Before switching to `Baseline` or `Restricted`, make sure that the workloads in non-system namespaces comply with the chosen policy.
+
+  If only individual workloads do not meet the requirements, do not lower the policy for the whole cluster. Create [SecurityPolicyException](https://deckhouse.io/modules/admission-policy-engine/v1.78/#security-policy-exceptions) exceptions for them at the level of a pod or an individual container.
+
+- <a id="release-1-78-selinux"></a>The SELinux check in Pod Security Standards has changed. The `Baseline` and `Restricted` policies reject pods whose SELinux type differs from `container_t`, `container_init_t`, `container_kvm_t`, and `container_engine_t`, as well as pods with an SELinux user or role set. Before the update, such pods pass the check. An example of a policy with allowed SELinux types is given in the [How to allow some Pod Security Standards policies without disabling whole list?](https://deckhouse.io/modules/admission-policy-engine/v1.78/faq.html#how-to-allow-some-pod-security-standards-policies-without-disabling-whole-list) section.
+
+- [Pod Security Standards](https://deckhouse.io/modules/admission-policy-engine/v1.78/#pod-security-standards) rules are published as the `d8-pod-security-baseline` and `d8-pod-security-restricted` SecurityPolicy objects. The `d8-pod-security-`, `d8-system-default-`, and `d8-controllers-` name prefixes for SecurityPolicy and OperationPolicy are reserved for the module.
+
+- **Controller validation.** The check of controllers can be configured for each rule: [`podSecurityStandards.controllerValidationExcludedPolicies`](https://deckhouse.io/modules/admission-policy-engine/v1.78/configuration.html#parameters-podsecuritystandards-controllervalidationexcludedpolicies) for Pod Security Standards and `spec.controllerValidation` for [OperationPolicy](https://deckhouse.io/modules/admission-policy-engine/v1.78/cr.html#operationpolicy-v1alpha1-spec-controllervalidation) and [SecurityPolicy](https://deckhouse.io/modules/admission-policy-engine/v1.78/cr.html#securitypolicy-v1alpha1-spec-controllervalidation). For a transition period, a controller that creates pods and violates a policy with `enforcementAction: Deny` gets a warning instead of a rejection. The pods themselves are still rejected. To reject the controller as well, set [`controllerValidationEnforcement: Policy`](https://deckhouse.io/modules/admission-policy-engine/v1.78/configuration.html#parameters-podsecuritystandards-controllervalidationenforcement) or `spec.controllerValidation.mode: Enforce`.
+
+- In [SecurityPolicyException](https://deckhouse.io/modules/admission-policy-engine/v1.78/cr.html#securitypolicyexception) exceptions for hostPath, nested paths can be allowed with the `pathType` parameter set to `Prefix`. SecurityPolicyException also lets you set exceptions for sysctl, AppArmor Localhost profiles, and shared hostPath volumes.
+
+- <a id="release-1-78-exec-attach"></a>Policies for `exec` and `attach` are applied in user namespaces again, as in Deckhouse Platform 1.73–1.74. For details, see the [How to deny kubectl exec and kubectl attach to specific Pods?](https://deckhouse.io/modules/admission-policy-engine/v1.78/faq.html#how-to-deny-kubectl-exec-and-kubectl-attach-to-specific-pods) section.
+
+- Container registry credentials for image signature verification are cached for 5 minutes instead of 12 hours. The caching time is set by the [`imageSignatureVerification.registryCredentialsCacheTTLSeconds`](https://deckhouse.io/modules/admission-policy-engine/v1.78/configuration.html#parameters-imagesignatureverification-registrycredentialscachettlseconds) parameter.
+
+- Alerts about policy violations contain more details and fire separately for each policy and namespace.
+
+- Alerts report the unavailability of the `admission-policy-engine` module components and of the admission webhook. For details, see the [What to do if the validating webhook is unavailable?](https://deckhouse.io/modules/admission-policy-engine/v1.78/faq.html#what-to-do-if-the-validating-webhook-is-unavailable) section.
+
+- Policies stay in effect during an update that adds a constraint template. The Gatekeeper webhook stops sending requests to an unavailable node after 30 seconds instead of 5 minutes.
+
+- When the `admission-policy-engine` module is disabled, exec into pods and the Deckhouse Platform queue are no longer blocked.
+
+##### Certificate management
+
+Changes in the [`cert-manager`](https://deckhouse.io/modules/cert-manager/v1.78/) module:
+
+- <a id="release-1-78-cert-manager-proxy"></a>`cert-manager` uses the proxy from the [`proxy`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/reference/api/cr.html#clusterconfiguration-proxy) parameter of ClusterConfiguration. Requests to the ACME server, HashiCorp Vault, DNS provider APIs, and the HTTP-01 self-check go through the proxy. For details, see the [How does cert-manager work behind a proxy server?](https://deckhouse.io/modules/cert-manager/v1.78/faq.html#how-does-cert-manager-work-behind-a-proxy-server) section.
+
+- The [`highAvailability`](https://deckhouse.io/modules/cert-manager/v1.78/configuration.html#parameters-highavailability) parameter controls the high availability mode of the `cert-manager` module regardless of the global setting.
+
+- New parameters of the `cert-manager` module:
+  - [`enableACMERenewalInfo`](https://deckhouse.io/modules/cert-manager/v1.78/configuration.html#parameters-enableacmerenewalinfo): Enables ACME Renewal Information (ARI). `cert-manager` reissues a certificate in the window assigned by the ACME server, for example Let's Encrypt.
+  - [`http01WaitInsteadOfSelfCheck`](https://deckhouse.io/modules/cert-manager/v1.78/configuration.html#parameters-http01waitinsteadofselfcheck): Replaces the HTTP-01 self-check of the Let's Encrypt ClusterIssuer with a wait. Certificates are issued even in clusters that cannot reach their own public address, for example because of NAT without hairpinning or split-horizon DNS.
+  - [`certificateRequestMaximumBackoffDuration`](https://deckhouse.io/modules/cert-manager/v1.78/configuration.html#parameters-certificaterequestmaximumbackoffduration): Limits the delay between issuance attempts after a failed CertificateRequest. With a lower value, `cert-manager` retries the issuance sooner when the issuer is available again, for example after CA maintenance.
+
+- The `cert-manager` webhook keeps serving requests during the update and rotation of its CA. The mutating webhook is called only for new CertificateRequest objects.
+
+- The `spec.certificateOwnerRef` field of the standard `cert-manager` Certificate custom resource no longer causes an endless Secret update loop.
+
+#### Network and cross-cluster communication {#release-1-78-network}
+
+Changes in the publishing of system interfaces, Istio, and pod communication between clusters.
+
+##### Publishing system interfaces
+
+The global Deckhouse Platform parameter [`settings.modules.ingress`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/reference/api/global.html#parameters-modules-ingress) enables or disables the creation of Ingress resources for all modules that support it at once. An individual module can override it with its own `ingress.enabled` parameter.
+
+##### Service mesh based on Istio
+
+Changes in the [`istio`](https://deckhouse.io/modules/istio/v1.78/) module:
+
+- <a id="release-1-78-istio-versions"></a>Istio 1.29 is supported. Support for Istio 1.21 has been discontinued. The minimum supported version is 1.25.
+
+- <a id="release-1-78-istio-ca"></a>Before applying the settings, Istio checks the CA certificates and key. If the previously set data is invalid, the module cannot apply the configuration until it is fixed.
+
+- For Istio 1.27 and later, the native sidecar is used by default.
+
+- The CA certificate and key for Istio can be stored in a Secret, and the `istio` module settings can reference it instead of containing the values.
+
+- In the Ultimate/EE edition, the Istio configuration is checked regularly, with notifications about errors.
+
+- An external HTTP service can be used to authorize requests in Istio.
+
+- [OpenTelemetry and Zipkin](https://deckhouse.io/modules/istio/v1.78/examples.html#tracing-with-telemetry-api) are available as tracing providers for sending the traces of individual applications to the corresponding collectors.
+
+- IstioMulticluster statuses describe the causes of metadata exchange errors more precisely.
+
+- Istio proxy injection templates have been fixed. In some configurations, they prevented pods with a native sidecar from starting or did not add the required security settings and health check to the gateway proxy.
+
+- Detection of the Istio version for pods has been fixed. In some configurations, this eliminates false warnings about version mismatch and lets the sidecar be updated automatically.
+
+- The Istio 1.25 operator starts on nodes with containerd v2 when the container file system is read-only.
+
+- A bug has been fixed that could leave istiod 1.25 running after the Istio version was changed or the module was disabled.
+
+- If the Istio 1.25 Helm release gets stuck during installation, update, or deletion, the operator restores it and keeps applying the configuration.
+
+- Adding or removing an Istio version no longer causes a `kube-apiserver` restart.
+
+- The compatibility check before a Deckhouse Platform update also takes into account Istio versions whose removal has not completed yet.
+
+- In Istio 1.25, istiod replicas are placed on different nodes.
+
+- The User role can view [WaypointInstance](https://deckhouse.io/modules/istio/v1.78/cr.html#waypointinstance) objects, and the Editor role can manage them.
+
+- **Protection of metadata exchange between Istio clusters.** If the ID of a neighboring cluster changes, Deckhouse Platform stops exchanging private data and reports it. If a cluster is replaced intentionally, the connection has to be created again.
+
+##### Cross-cluster pod communication through ClusterMesh {#release-1-78-clustermesh}
+
+ClusterMesh in the `cni-cilium` module (available in the Ultimate/EE editions) is an experimental feature that provides direct pod-to-pod communication between clusters joined with the peering module. For details, see the [Cluster peering](https://deckhouse.io/modules/cni-cilium/v1.78/advanced_usage.html#cluster-peering) section.
+
+#### Platform and module management {#release-1-78-platform}
+
+Changes in the storage of platform component images, module delivery, and access to module documentation.
+
+##### Managing the storage of Deckhouse Platform images {#release-1-78-registry}
+
+Changes in the [`registry`](https://deckhouse.io/modules/registry/v1.78/) module:
+
+- **Management of the pull paths of Deckhouse Platform component images.** The upstream address and the use of the in-cluster cache change without rewriting image references and without updating all nodes, because `registry-agent` on each node configures containerd with a permanent in-cluster address. Both parameters are set independently in the [`registry` ModuleConfig](https://deckhouse.io/modules/registry/v1.78/configuration.html). With the cache, all nodes get images from the registry on master nodes. Without an upstream, the cluster works in isolation, and the cache becomes the only source of images. Before the upstream is removed, the module checks that the cache contains the expected set of images. The module takes control automatically after the update to 1.78 if the cluster was [prepared on version 1.77](#release-1-78-registry-migration).
+
+- <a id="release-1-78-registry-ports"></a>The container registry on master nodes uses port `4281/TCP` for pulls by agents and for replication and port `4283/TCP` for publishing through the registry-push Ingress, instead of `5001` and `5003`. `registry-agent` stays on `127.0.0.1:5001`, and the `registry.d8-system.svc:5001` references do not change. Publishing and pulling through the cache are allowed only in repositories under `system/deckhouse`. For details, see the [The in-cluster cache](https://deckhouse.io/modules/registry/v1.78/#the-in-cluster-cache) section.
+
+- <a id="release-1-78-registry-tolerations"></a>`registry-controller`, `registry-storage`, and `registry-packages-proxy` no longer take into account the keys from [`global.modules.placement.customTolerationKeys`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/reference/api/global.html#parameters-modules-placement-customtolerationkeys).
+
+- **Maintenance of the in-cluster cache of the `registry` module.** Garbage collection starts after the set of images is updated and when a write to the storage fails. It can be started manually through RegistryOperation, and storage replicas report the expected amount of space to be freed. Corrupted blobs are checked and restored in the background.
+
+- **Diagnostics of the registry cache.** The RegistryImage object shows the cache contents. `registry-agent` metrics are collected through the textfile collector of `node-exporter`. For details, see the [The cache keeps growing. What reclaims it?](https://deckhouse.io/modules/registry/v1.78/faq.html#the-cache-keeps-growing-what-reclaims-it) section.
+
+- **RegistryUpstream without `registry-agent`.** Additional container registries, for example vendor registries or your own ones, declared in RegistryUpstream are available to nodes both when the `registry` module is disabled and in the `Unmanaged` mode. The settings are applied on Generic OS and Deckhouse Engine nodes. `registry-agent` takes the `proxy` parameter of ClusterConfiguration into account when it accesses the upstream registry. For details, see the [Additional registries](https://deckhouse.io/modules/registry/v1.78/#additional-registries) section.
+
+- **Update and switchover of the registry storage.** The storage elects a new leader when a master node is lost or when the registry or a disk fails. The cache address on nodes is not switched prematurely during a leader change. The agent does not wait for an unavailable leader on every image pull. The cache update works in an air-gapped cluster with one master node, and the reason for a block is shown by the [D8RegistryStorageUpdateBlocked](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/reference/alerts.html#registry-d8registrystorageupdateblocked) alert. For details, see the [How is the cache updated?](https://deckhouse.io/modules/registry/v1.78/faq.html#how-is-the-cache-updated) section.
+
+- A hang of `registry-packages-proxy` after a cache error and the serving of corrupted packages, which blocked node updates, have been fixed.
+
+##### Modules from external sources {#release-1-78-external-modules}
+
+The following modules are loaded from external sources and are developed in a separate release cycle:
+
+- The [`cloud-provider-dvp`](https://deckhouse.io/modules/cloud-provider-dvp/) module. Deckhouse Platform can be updated with this module in use only if the module is available from a [module source (ModuleSource)](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/reference/api/cr.html#modulesource).
+- The [`service-with-healthchecks`](https://deckhouse.io/modules/service-with-healthchecks/) module. The module is installed automatically if it is enabled in the cluster.
+
+##### Module documentation
+
+Module documentation can be opened for any version, regardless of the version installed in the cluster. To view a specific version, select "View other versions" in the "Channel/version" menu on the module documentation page.
+
+### Vulnerability fixes
+
+Security-related fixes:
+
+- Proxy settings in ClusterConfiguration no longer allow running arbitrary shell commands during the bootstrap.
+
+- DexAuthenticator no longer logs the request cookie, including the refresh token, on a CSRF error (GHSA-hhqp-vx7f-5c6m).
+
+- Vulnerabilities in Istio and Kiali components have been fixed.
+
+- Vulnerabilities in `golang.org/x/net`, `golang.org/x/text`, `go-jose/v4`, `go-chi/chi/v5`, and `klauspost/compress` have been fixed in the [`user-authn`](https://deckhouse.io/modules/user-authn/v1.78/), [`user-authz`](https://deckhouse.io/modules/user-authz/v1.78/), and [`multitenancy-manager`](https://deckhouse.io/modules/multitenancy-manager/v1.78/) modules and in the modules of the Security subsystem.
+
+### Component version updates
+
+For components with several delivery variants, the updated versions of each variant are listed. Supported Kubernetes versions and the default version are given in the [description of control plane changes](#release-1-78-kubernetes).
+
+New versions of Deckhouse Platform components:
+
+- Amazon EC2 Utils: 2.3.0
+- Amazon ECR credential provider: v1.33.4, v1.34.3, v1.35.2, v1.36.0, v1.37.0
+- Amazon Web Services Cloud provider: v1.33.4, v1.34.3, v1.35.2, v1.36.0, v1.37.0
+- Amazon Web Services CSI driver: v1.54.0, v1.66.0
+- Amazon Web Services Terraform provider: 6.69.1
+- cert-manager: 1.21.2
+- cfssl: 1.7.1
+- Cluster API: 1.12.11
+- Cluster Autoscaler: v1.33.1, v1.34.4, v1.35.2, v1.36.1
+- containerd: 1.7.36, 2.2.10
+- Descheduler: 0.37.0
+- Dex: 2.46.0
+- Dynamix Terraform provider: 4.12.2
+- etcd: 3.6.15
+- Gatekeeper: 3.23.1
+- Google Cloud Platform Cloud provider: ccm/v33.4.0, ccm/v34.2.0, ccm/v35.0.5
+- Google Cloud Platform CSI driver: v1.15.4, v1.27.0
+- Istio: 1.29.6
+- Kiali: 2.21.0
+- Kubernetes: 1.33.13, 1.34.13, 1.35.10, 1.36.6, 1.37.2
+- Kubernetes Autoscaler: 1.8.1
+- Microsoft Azure Cloud provider: v1.33.6, v1.34.3, v1.36.1, v1.37.0
+- Microsoft Azure CSI driver: v1.33.8, v1.34.2, v1.36.0
+- OAuth2 Proxy: 7.15.5
+- OpenStack Cloud provider: v1.33.1, v1.34.1, v1.35.0, v1.36.0
+- OpenStack CSI driver: v1.33.1, v1.34.1, v1.35.0, v1.36.0
+- QEMU guest agent: 9.2.4
+- Ratify: 1.4.6
+- runc: 1.3.6
+- VMware vSphere Cloud provider: v1.33.1, v1.34.0, v1.35.1, v1.37.0
+- VMware vSphere Cluster API provider: v1.15.3
+- VMware vSphere CSI driver: v3.7.1, v3.7.3
+- VPA: 1.8.1
+
+The [`user-authn`](https://deckhouse.io/modules/user-authn/v1.78/), [`user-authz`](https://deckhouse.io/modules/user-authz/v1.78/), [`multitenancy-manager`](https://deckhouse.io/modules/multitenancy-manager/v1.78/), and [`admission-policy-engine`](https://deckhouse.io/modules/admission-policy-engine/v1.78/) modules use the distroless base image.
+
+The full list of changes is available in the [changelog for version 1.78](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-v1.78.md).
 
 ## Version 1.77
 
