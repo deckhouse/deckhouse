@@ -61,9 +61,10 @@ type registryStub struct {
 
 	server *httptest.Server
 
-	// requests records the paths asked for, and headers records the manifest request's
-	// headers.
+	// requests records the paths asked for, queries their query strings, and headers records the
+	// manifest request's headers.
 	requests atomic.Value
+	queries  atomic.Value
 	headers  atomic.Value
 	tokens   atomic.Int32
 
@@ -76,6 +77,7 @@ func (s *registryStub) start(t *testing.T) *registryStub {
 	t.Helper()
 
 	s.requests.Store([]string{})
+	s.queries.Store([]string{})
 	s.scopes.Store([]string{})
 	mux := http.NewServeMux()
 
@@ -90,6 +92,7 @@ func (s *registryStub) start(t *testing.T) *registryStub {
 		}
 
 		s.requests.Store(append(s.requests.Load().([]string), request.URL.Path))
+		s.queries.Store(append(s.queries.Load().([]string), request.URL.RawQuery))
 		s.headers.Store(request.Header.Clone())
 
 		if s.delay > 0 {
@@ -918,6 +921,31 @@ func TestServeAsksForTheWholeRepositoryWhenThatIsTheImage(t *testing.T) {
 	scopes := upstream.scopes.Load().([]string)
 	require.NotEmpty(t, scopes)
 	assert.Equal(t, "repository:deckhouse/ee:pull", scopes[0])
+}
+
+// TestServePassesTheQueryOn: the pagination cursor reaches the registry, `ns` does not. Without the
+// query every page was the first, and module discovery hung past a hundred modules.
+func TestServePassesTheQueryOn(t *testing.T) {
+	upstream := (&registryStub{name: "upstream", body: `{"tags":["virtualization-transfer"]}`}).start(t)
+
+	spec := &registryv1alpha1.RegistryNodeSpec{
+		Backends: []registryv1alpha1.Backend{
+			insecureBackend(registryv1alpha1.BackendUpstream, upstream, t, "/deckhouse/ee", nil),
+		},
+	}
+
+	front := httptest.NewServer(newServer(spec).Handler())
+	t.Cleanup(front.Close)
+
+	response, err := http.Get(front.URL + "/v2/system/deckhouse/modules/tags/list" +
+		"?ns=" + url.QueryEscape(constant.Host) + "&last=virtualization&n=100")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = response.Body.Close() })
+
+	assert.Equal(t, http.StatusOK, response.StatusCode)
+	assert.Equal(t, []string{"/v2/deckhouse/ee/modules/tags/list"}, upstream.asked())
+	assert.Equal(t, []string{"last=virtualization&n=100"}, upstream.queries.Load().([]string),
+		"the cursor reaches the registry, and `ns`, which is the runtime's, does not")
 }
 
 // TestPaginationLeadsBackToThisProxy is the header a client follows, and it used to lead somewhere

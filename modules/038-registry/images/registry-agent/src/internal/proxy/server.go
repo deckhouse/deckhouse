@@ -534,6 +534,12 @@ func (s *Server) attempt(
 		return nil, err
 	}
 
+	// The query carries pagination (`tags/list?last=...&n=...`); without it every page is the first.
+	// `ns` is containerd's routing hint for this agent, and a mirror upstream would misread it.
+	query := original.URL.Query()
+	query.Del("ns")
+	request.URL.RawQuery = query.Encode()
+
 	// Only what the registry protocol needs. Copying the whole set would forward
 	// cookies and anything else the client happens to carry to a third party.
 	for _, header := range []string{"Accept", "Accept-Encoding", "Range", "User-Agent"} {
