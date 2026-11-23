@@ -1,0 +1,34 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: user-authn-group-cycle-names
+spec:
+  description: Reject a group cycle when object names differ from group names.
+  steps:
+    - name: prerequisites
+      use:
+        template: ../common/steps/ensure-user-authn.yaml
+    - name: create-first-group
+      try:
+        - apply:
+            resource:
+              apiVersion: deckhouse.io/v1alpha1
+              kind: Group
+              metadata:
+                name: e2e-authn-cycle-object-a
+              spec:
+                name: e2e-authn-cycle-a
+                members:
+                  - kind: Group
+                    name: e2e-authn-cycle-b
+      cleanup:
+        - script:
+            content: kubectl delete groups.deckhouse.io e2e-authn-cycle-object-a e2e-authn-cycle-object-b --ignore-not-found
+    - name: reject-cycle
+      try:
+        - script:
+            shell: bash
+            shellArgs: ["-c"]
+            content: |
+              bash ../../tests/common/scripts/expect-denied.sh manifests/cycle.yaml \
+                'Invalid group hierarchy: cycle detected!'

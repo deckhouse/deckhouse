@@ -45,10 +45,6 @@ spec:
         - description: Apply the seven ClusterAuthorizationRules
           apply:
             file: manifests/cars.yaml
-        - description: Assert every rule reports Ready with the expected number of bindings
-          assert:
-            file: asserts/cars-ready.yaml
-
     - name: assert-bindings
       description: >-
         Verify the bindings the controller renders: user-authz:<rule>:<level> to

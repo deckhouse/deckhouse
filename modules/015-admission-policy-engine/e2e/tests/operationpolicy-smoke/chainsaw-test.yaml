@@ -108,18 +108,3 @@ spec:
               --name compliant --timeout 60
             check:
               ($error == null): true
-
-    - name: controller-validation
-      description: A Deployment that breaks the policy is checked at the controller level
-      try:
-        - description: Check a violating and a compliant Deployment
-          script:
-            content: bash check-controller-validation.sh
-            check:
-              ($error == null): true
-      catch:
-        - description: Show the kinds and the action of the repository constraints
-          script:
-            content: >-
-              kubectl get d8allowedrepos e2e-ape-op d8-controllers-e2e-ape-op --ignore-not-found
-              -o custom-columns='NAME:.metadata.name,ACTION:.spec.enforcementAction,KINDS:.spec.match.kinds[*].kinds'

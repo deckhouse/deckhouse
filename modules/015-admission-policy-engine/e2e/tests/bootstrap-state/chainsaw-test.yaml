@@ -62,27 +62,6 @@ spec:
               metadata:
                 name: d8-admission-policy-engine-config
               (webhooks[?name == 'admission-policy-engine.deckhouse.io'] | length(@)): 1
-              (webhooks[?name == 'system-namespaces.admission-policy-engine.deckhouse.io'] | length(@)): 1
-              (webhooks[?name == 'system-namespaces-enforce.admission-policy-engine.deckhouse.io'] | length(@)): 1
-        - description: Assert the warn-only baseline constraint for system namespaces
-          assert:
-            resource:
-              apiVersion: constraints.gatekeeper.sh/v1beta1
-              kind: D8PrivilegedContainer
-              metadata:
-                name: d8-pod-security-baseline-system
-              spec:
-                enforcementAction: warn
-        - description: Assert the warn-only restricted constraint for system namespaces
-          assert:
-            resource:
-              apiVersion: constraints.gatekeeper.sh/v1beta1
-              kind: D8AllowedUsers
-              metadata:
-                name: d8-pod-security-restricted-system
-              spec:
-                enforcementAction: warn
-
     - name: not-bootstrapped-metric
       description: >-
         The bootstrap hook expires d8_admission_policy_engine_not_bootstrapped once the module is

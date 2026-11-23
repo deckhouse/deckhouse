@@ -146,3 +146,7 @@ The following planned cases are not automated:
   rather than on the module.
 - Failure of a whole master in a multi-master cluster: the pipeline cluster may have a single master,
   and stopping it would stop the runner.
+
+### Release-1.77 differences
+
+Authorization rules are rendered by Deckhouse hooks and Helm in this release; they do not have controller status or controller ownership. The tests check the resulting bindings and authorization decisions. Controller self-healing and controller rollout scenarios apply to the newer controller architecture and are not run on this release.

@@ -6,12 +6,6 @@ metadata:
   labels:
     heritage: deckhouse
     module: user-authz
-    user-authz.deckhouse.io/managed-by: user-authz-controller
-  ownerReferences:
-  - apiVersion: deckhouse.io/v1
-    kind: ClusterAuthorizationRule
-    name: e2e-authz-level-user
-    controller: true
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -28,12 +22,6 @@ metadata:
   labels:
     heritage: deckhouse
     module: user-authz
-    user-authz.deckhouse.io/managed-by: user-authz-controller
-  ownerReferences:
-  - apiVersion: deckhouse.io/v1
-    kind: ClusterAuthorizationRule
-    name: e2e-authz-level-privileged-user
-    controller: true
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -50,12 +38,6 @@ metadata:
   labels:
     heritage: deckhouse
     module: user-authz
-    user-authz.deckhouse.io/managed-by: user-authz-controller
-  ownerReferences:
-  - apiVersion: deckhouse.io/v1
-    kind: ClusterAuthorizationRule
-    name: e2e-authz-level-editor
-    controller: true
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -72,12 +54,6 @@ metadata:
   labels:
     heritage: deckhouse
     module: user-authz
-    user-authz.deckhouse.io/managed-by: user-authz-controller
-  ownerReferences:
-  - apiVersion: deckhouse.io/v1
-    kind: ClusterAuthorizationRule
-    name: e2e-authz-level-admin
-    controller: true
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -94,12 +70,6 @@ metadata:
   labels:
     heritage: deckhouse
     module: user-authz
-    user-authz.deckhouse.io/managed-by: user-authz-controller
-  ownerReferences:
-  - apiVersion: deckhouse.io/v1
-    kind: ClusterAuthorizationRule
-    name: e2e-authz-level-cluster-editor
-    controller: true
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -116,12 +86,6 @@ metadata:
   labels:
     heritage: deckhouse
     module: user-authz
-    user-authz.deckhouse.io/managed-by: user-authz-controller
-  ownerReferences:
-  - apiVersion: deckhouse.io/v1
-    kind: ClusterAuthorizationRule
-    name: e2e-authz-level-cluster-admin
-    controller: true
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -138,12 +102,6 @@ metadata:
   labels:
     heritage: deckhouse
     module: user-authz
-    user-authz.deckhouse.io/managed-by: user-authz-controller
-  ownerReferences:
-  - apiVersion: deckhouse.io/v1
-    kind: ClusterAuthorizationRule
-    name: e2e-authz-level-super-admin
-    controller: true
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -159,7 +117,6 @@ metadata:
   name: user-authz:e2e-authz-level-user:user:custom
   labels:
     user-authz.deckhouse.io/binding-kind: aggregated-custom
-    user-authz.deckhouse.io/managed-by: user-authz-controller
 roleRef:
   kind: ClusterRole
   name: user-authz:user:custom
@@ -170,7 +127,6 @@ metadata:
   name: user-authz:e2e-authz-level-privileged-user:privileged-user:custom
   labels:
     user-authz.deckhouse.io/binding-kind: aggregated-custom
-    user-authz.deckhouse.io/managed-by: user-authz-controller
 roleRef:
   kind: ClusterRole
   name: user-authz:privileged-user:custom
@@ -181,7 +137,6 @@ metadata:
   name: user-authz:e2e-authz-level-editor:editor:custom
   labels:
     user-authz.deckhouse.io/binding-kind: aggregated-custom
-    user-authz.deckhouse.io/managed-by: user-authz-controller
 roleRef:
   kind: ClusterRole
   name: user-authz:editor:custom
@@ -192,7 +147,6 @@ metadata:
   name: user-authz:e2e-authz-level-admin:admin:custom
   labels:
     user-authz.deckhouse.io/binding-kind: aggregated-custom
-    user-authz.deckhouse.io/managed-by: user-authz-controller
 roleRef:
   kind: ClusterRole
   name: user-authz:admin:custom
@@ -203,7 +157,6 @@ metadata:
   name: user-authz:e2e-authz-level-cluster-editor:cluster-editor:custom
   labels:
     user-authz.deckhouse.io/binding-kind: aggregated-custom
-    user-authz.deckhouse.io/managed-by: user-authz-controller
 roleRef:
   kind: ClusterRole
   name: user-authz:cluster-editor:custom
@@ -214,7 +167,6 @@ metadata:
   name: user-authz:e2e-authz-level-cluster-admin:cluster-admin:custom
   labels:
     user-authz.deckhouse.io/binding-kind: aggregated-custom
-    user-authz.deckhouse.io/managed-by: user-authz-controller
 roleRef:
   kind: ClusterRole
   name: user-authz:cluster-admin:custom

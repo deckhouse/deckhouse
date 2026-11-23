@@ -1,0 +1,9 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: Group
+metadata:
+  name: e2e-authn-cycle-object-b
+spec:
+  name: e2e-authn-cycle-b
+  members:
+    - kind: Group
+      name: e2e-authn-cycle-a

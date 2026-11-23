@@ -1,7 +1,7 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: Group
 metadata:
-  name: e2e-authn-hook-group-b
+  name: e2e-authn-hook-b
 spec:
   name: e2e-authn-hook-b
   members:

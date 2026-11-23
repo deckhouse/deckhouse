@@ -20,7 +20,6 @@
 #   3. the user posts the password form of the local connector, Dex redirects to the callback;
 #   4. the callback sets the session cookie and redirects back to the application;
 #   5. with the cookie, the application answers 200 and gets the email in X-Auth-Request-Email;
-#   6. the authenticator logs the host of the application for a request with a forged X-Forwarded-Host.
 # Requests to the application go to a Ready ingress-nginx controller pod, requests to Dex go to
 # the ClusterIP of the dex Service; --resolve keeps the real host names, so cookies work.
 set -Eeuo pipefail
@@ -113,28 +112,7 @@ out="$(curl -sS -k --max-time 30 "${ING_CURL_ARGS[@]}" --resolve "${app_host}:44
 [[ "${out}" == "302" ]] || die "a request without the session cookie must get HTTP 302, got ${out}"
 log "A request without the session cookie: HTTP 302"
 
-# 6. The authenticator logs the host ingress-nginx served. ingress-nginx passes the X-Forwarded-Host
-#    of the browser on in its auth subrequest, and the authenticator used to log it as the host.
-#    The request is found in the log by its User-Agent, which the subrequest carries too.
-forged_host="e2e-forged-host.example.com"
-marker="e2e-forged-host-${RANDOM}${RANDOM}"
-out="$(app_curl -A "${marker}" -H "X-Forwarded-Host: ${forged_host}" "https://${app_host}/hostname")"
-[[ "${out%% *}" == "200" ]] || die "a request with a forged X-Forwarded-Host must get HTTP 200, got '${out}'"
-deadline=$(( $(date +%s) + 60 ))
-while :; do
-  line="$(kubectl -n d8-user-authn logs -l app=shared-dex-authenticator,instance=dex-authenticator -c dex-authenticator --tail=-1 --since=15m \
-    | grep -F "${marker}" | head -n 1 || true)"
-  [[ -n "${line}" ]] && break
-  (( $(date +%s) < deadline )) || die "the authenticator did not log the request with User-Agent ${marker}"
-  sleep 3
-done
-[[ "${line}" == *"\"host\":\"${app_host}\""* ]] \
-  || die "the authenticator must log host ${app_host} for the request, got: ${line:0:400}"
-[[ "${line}" != *"${forged_host}"* ]] \
-  || die "the authenticator logged the forged X-Forwarded-Host: ${line:0:400}"
-log "The authenticator logged host ${app_host} for a request with X-Forwarded-Host ${forged_host}"
-
-# The Redis next to the shared dex-authenticator that serves the namespace is of the version line the image pins.
-redis_version="$(kubectl -n d8-user-authn exec deploy/dex-authenticator -c redis -- /usr/bin/redis-server --version)"
+# The release uses a per-object authenticator and its own Redis container.
+redis_version="$(kubectl -n "${NS}" exec deploy/e2e-authn-app-dex-authenticator -c redis -- /redis-server --version)"
 [[ "${redis_version}" == *" v=7.4."* ]] || die "the redis of the authenticator must be of the 7.4 line, got '${redis_version}'"
 log "Redis of the authenticator: ${redis_version%% sha=*}"

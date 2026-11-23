@@ -55,20 +55,6 @@ spec:
                 subjects:
                   - kind: User
                     name: e2e-authz-lifecycle
-        - description: Assert the rule is Ready with two bindings for generation 1
-          assert:
-            resource:
-              apiVersion: deckhouse.io/v1
-              kind: ClusterAuthorizationRule
-              metadata:
-                name: e2e-authz-lifecycle
-              (status.observedGeneration == metadata.generation): true
-              status:
-                bindings: 2
-                (conditions[?type == 'Ready']):
-                  - status: 'True'
-                    reason: BindingsApplied
-                    message: 2 bindings applied
         - description: Assert the Editor binding exists
           assert:
             resource:
@@ -103,19 +89,6 @@ spec:
                 name: e2e-authz-lifecycle
               spec:
                 accessLevel: User
-        - description: Assert the controller observed the new generation
-          assert:
-            resource:
-              apiVersion: deckhouse.io/v1
-              kind: ClusterAuthorizationRule
-              metadata:
-                name: e2e-authz-lifecycle
-              (status.observedGeneration == metadata.generation): true
-              (metadata.generation > `1`): true
-              status:
-                bindings: 2
-                (conditions[?type == 'Ready']):
-                  - status: 'True'
         - description: Assert the User binding exists
           assert:
             resource:

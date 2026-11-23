@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Makes sure the user-authz module and its controller are up before a test
+# Makes sure the release-1.77 hook-based user-authz module is ready before a test
 # relies on them.
 #
 # Usage: ensure-user-authz.sh [--enable]
@@ -41,28 +41,13 @@ if ! kubectl wait module/user-authz --for=jsonpath='{.status.phase}'=Ready --tim
   exit 1
 fi
 
-kubectl -n d8-user-authz rollout status deployment/user-authz-controller --timeout=10m
+# The release renders rule bindings through a Deckhouse hook and Helm rather than a controller Deployment.
 kubectl get crd clusterauthorizationrules.deckhouse.io authorizationrules.deckhouse.io >/dev/null
-
-# A rolled-out Deployment does not mean a reconciling controller. When kube-apiserver restarts
-# (switching the multitenancy mode does that), the controller process can lose its lease and
-# restart; the new process then waits up to the 60 s lease of its previous incarnation
-# (images/user-authz-controller/src/cmd/main.go, leaseDuration) before it reconciles anything.
-# A canary rule proves the controller is leading and writing status before a test relies on it.
 canary="e2e-authz-canary"
-
-canary_ready() {
-  kubectl get clusterauthorizationrules.deckhouse.io "${canary}" -o json 2>/dev/null | jq -e '
-    .status.observedGeneration == .metadata.generation
-    and ([.status.conditions[]? | select(.type == "Ready" and .status == "True")] | length) > 0
-  ' >/dev/null
-}
-
 delete_canary() {
   kubectl delete clusterauthorizationrules.deckhouse.io "${canary}" --ignore-not-found --wait=true --timeout=60s >/dev/null 2>&1 || true
 }
 trap delete_canary EXIT
-
 kubectl apply -f - <<'CAR'
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
@@ -76,11 +61,11 @@ spec:
   - kind: User
     name: e2e-authz-canary
 CAR
-
-if ! wait_for 300 "user-authz-controller reconciles (canary rule ${canary} is Ready)" canary_ready; then
+canary_ready() {
+  kubectl get clusterrolebinding user-authz:e2e-authz-canary:user --ignore-not-found -o name | grep -Fxq 'clusterrolebinding.rbac.authorization.k8s.io/user-authz:e2e-authz-canary:user'
+}
+if ! wait_for 600 "user-authz hook renders the canary binding" canary_ready; then
   kubectl get clusterauthorizationrules.deckhouse.io "${canary}" -o yaml || true
-  kubectl -n d8-user-authz get lease user-authz-controller -o yaml || true
-  kubectl -n d8-user-authz get pods -l app=user-authz-controller -o wide || true
-  kubectl -n d8-user-authz logs -l app=user-authz-controller --tail=50 --prefix || true
+  kubectl -n d8-system get pods -l app=deckhouse -o wide || true
   exit 1
 fi

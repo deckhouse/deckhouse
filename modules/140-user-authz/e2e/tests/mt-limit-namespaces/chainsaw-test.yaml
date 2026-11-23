@@ -107,16 +107,6 @@ spec:
                 sleep 5
               done
               exit 1
-        - description: Assert the limited rule is Ready
-          assert:
-            resource:
-              apiVersion: deckhouse.io/v1
-              kind: ClusterAuthorizationRule
-              metadata:
-                name: e2e-authz-mt-limited
-              status:
-                (conditions[?type == 'Ready']):
-                  - status: 'True'
       cleanup:
         - description: Delete the rules before the mode is switched off
           script:

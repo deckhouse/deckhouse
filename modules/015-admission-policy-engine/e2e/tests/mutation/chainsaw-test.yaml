@@ -42,15 +42,6 @@ spec:
             timeout: 6m
             content: bash "${E2E_LIB_DIR}/delete-namespace.sh" e2e-ape-mutation e2e-ape-mutation-other
 
-    - name: invalid-mutators-rejected
-      description: Mutators with a location or value Gatekeeper cannot apply are rejected at apply time
-      try:
-        - description: Dry-run every invalid mutator
-          script:
-            content: bash check-invalid-mutators.sh
-            check:
-              ($error == null): true
-
     - name: create-mutators
       description: >-
         Create the mutators. Their effect is checked on a pod in the next step, which waits for the

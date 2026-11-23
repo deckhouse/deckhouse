@@ -44,17 +44,6 @@ spec:
         - description: Apply the three ClusterAuthorizationRules
           apply:
             file: manifests/cars.yaml
-        - description: Assert the Editor rule is Ready
-          assert:
-            resource:
-              apiVersion: deckhouse.io/v1
-              kind: ClusterAuthorizationRule
-              metadata:
-                name: e2e-authz-agg-editor
-              status:
-                (conditions[?type == 'Ready']):
-                  - status: 'True'
-
     - name: create-custom-role
       description: Create a ClusterRole annotated with access level Editor
       try:

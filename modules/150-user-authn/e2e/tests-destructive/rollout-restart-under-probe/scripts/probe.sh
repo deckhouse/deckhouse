@@ -19,10 +19,10 @@
 # HTTP code 000 means a connection error or a timeout (2 seconds). The probe also stops after
 # 30 minutes, or when the state directory is removed, so it never outlives the suite.
 #   dex            GET /.well-known/openid-configuration of the dex Service (expects 200);
-#   authenticator  GET /dex-authenticator/auth of Service d8-user-authn/dex-authenticator, the way
+#   authenticator  GET /dex-authenticator/auth of the per-object Service, the way
 #                  an ingress-nginx auth subrequest sends it: no X-Forwarded-Proto and
 #                  X-Original-URL with the applicationDomain of DexAuthenticator e2e-authn-ha, by
-#                  which the shared instance picks the object. Without a session cookie a served
+#                  which names the application. Without a session cookie a served
 #                  host gets 401; 403 means the instance does not know the host (expects 401).
 #                  /ping would not do: the instance answers it itself, naming no DexAuthenticator;
 #   user-api       GET /healthz of the user-api Service (expects 200).
@@ -51,9 +51,8 @@ svc_ip() {
   [[ "${ip}" == *:* ]] && ip="[${ip}]"
   printf '%s' "${ip}"
 }
-# The Service of the DexAuthenticator in the test namespace is an ExternalName without a ClusterIP,
-# so the probe goes to the Service of the shared instance, which every DexAuthenticator behind it uses.
-auth_ip="$(svc_ip d8-user-authn dex-authenticator)"
+# The release uses a ClusterIP Service in the DexAuthenticator namespace.
+auth_ip="$(svc_ip "${NS}" e2e-authn-ha-dex-authenticator)"
 app_host="$(kubectl -n "${NS}" get dexauthenticators.deckhouse.io e2e-authn-ha -o jsonpath='{.spec.applicationDomain}')"
 api_ip="$(svc_ip d8-user-authn user-api)"
 [[ -n "${auth_ip}" && -n "${api_ip}" && -n "${app_host}" ]] \

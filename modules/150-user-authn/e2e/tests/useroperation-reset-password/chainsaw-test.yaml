@@ -200,17 +200,23 @@ spec:
 
     - name: invalid-operations-fail
       description: >-
-        A ResetPassword with a hash that is not raw bcrypt is refused when it is applied; one for a user
-        that does not exist ends in phase Failed with the reason
+        A ResetPassword with a hash that is not raw bcrypt and one for a user that does not exist
+        both end in phase Failed with the reason.
       try:
-        - description: Refuse a ResetPassword operation with a hash that is not raw bcrypt
-          script:
-            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
-            shell: bash
-            shellArgs: ["-c"]
-            content: |
-              bash ../../tests/common/scripts/expect-denied.sh manifests/denied/reset-bad-hash.yaml \
-                'newPasswordHash must be a raw bcrypt hash starting with $2'
+        - description: Create a ResetPassword operation with an invalid hash
+          apply:
+            file: manifests/denied/reset-bad-hash.yaml
+        - description: Assert that the controller rejects the invalid hash
+          assert:
+            timeout: 2m
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: UserOperation
+              metadata:
+                name: e2e-authn-reset-bad-hash
+              status:
+                phase: Failed
+                message: 'resetPassword.newPasswordHash must be a raw bcrypt hash starting with $2'
         - description: Create a ResetPassword operation for a user that does not exist
           script:
             # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.

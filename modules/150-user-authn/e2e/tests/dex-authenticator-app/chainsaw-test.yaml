@@ -7,8 +7,7 @@ spec:
     An application behind ingress-nginx is protected by a DexAuthenticator. An anonymous request
     is redirected to sign in, the user signs in to Dex with a password, and the session cookie set
     by the authenticator lets requests reach the application, which receives the user email in the
-    X-Auth-Request-Email header. The authenticator logs the host of the application for a request
-    that carries a forged X-Forwarded-Host. The case needs an IngressNginxController and fails with an
+    X-Auth-Request-Email header. The case needs an IngressNginxController and fails with an
     explicit message when the cluster has none.
   concurrent: false
 
@@ -26,12 +25,12 @@ spec:
           kubectl -n "${NS}" describe ingress e2e-authn-app
     - description: Show events in the test namespace on failure
       events: {}
-    - description: Show the logs of the shared dex-authenticator on failure
-      podLogs:
-        namespace: d8-user-authn
-        selector: app=shared-dex-authenticator
-        container: dex-authenticator
-        tail: 100
+    - description: Show the logs of the per-object dex-authenticator on failure
+      script:
+        env:
+          - name: NS
+            value: ($namespace)
+        content: kubectl -n "${NS}" logs -l app=dex-authenticator,name=e2e-authn-app -c dex-authenticator --tail=100
     - description: Show Dex logs on failure
       podLogs:
         namespace: d8-user-authn
@@ -106,50 +105,28 @@ spec:
               - name: NS
                 value: ($namespace)
             content: bash scripts/setup.sh
-        - description: Assert the shared dex-authenticator serves the DexAuthenticator
+        - description: Assert the per-object dex-authenticator Deployment is available
           assert:
-            # The record of the object reaches the pods of the instance with the next sync of their
-            # volume, which takes up to a few minutes.
             timeout: 5m
             resource:
-              apiVersion: deckhouse.io/v1
-              kind: DexAuthenticator
+              apiVersion: apps/v1
+              kind: Deployment
               metadata:
-                name: e2e-authn-app
+                name: e2e-authn-app-dex-authenticator
               status:
-                (conditions[?type == 'Served']):
-                  - status: "True"
-        - description: Assert the Service of the DexAuthenticator points at the shared dex-authenticator
+                (availableReplicas >= `1`): true
+        - description: Assert the DexAuthenticator Service selects its own pods
           assert:
-            timeout: 1m
+            timeout: 2m
             resource:
               apiVersion: v1
               kind: Service
               metadata:
                 name: e2e-authn-app-dex-authenticator
-                labels:
-                  deckhouse.io/dex-authenticator-for: e2e-authn-app
               spec:
-                type: ExternalName
-        - description: Assert the namespace of the DexAuthenticator holds neither its pods nor its secrets
-          script:
-            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
-            shell: bash
-            shellArgs: ["-c"]
-            env:
-              - name: NS
-                value: ($namespace)
-            content: |
-              set -Eeuo pipefail
-              left="$(kubectl -n "${NS}" get deployments,pods,secrets -l app=dex-authenticator -o name)"
-              if [[ -n "${left}" ]]; then
-                >&2 echo "the namespace of the DexAuthenticator holds objects of a dex-authenticator: ${left}"
-                exit 1
-              fi
-              if kubectl -n "${NS}" get secret dex-authenticator-e2e-authn-app -o name 2>/dev/null; then
-                >&2 echo "the namespace of the DexAuthenticator holds a Secret with its secrets"
-                exit 1
-              fi
+                selector:
+                  app: dex-authenticator
+                  name: e2e-authn-app
         - description: Assert the module made the /dex-authenticator Ingress
           assert:
             timeout: 2m

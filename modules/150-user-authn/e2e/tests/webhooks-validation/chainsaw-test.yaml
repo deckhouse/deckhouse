@@ -46,7 +46,7 @@ spec:
               set -euo pipefail
               source ../../tests/common/scripts/lib.sh
               create_user webhooks-validation e2e-authn-hook-user1 e2e-authn-hook@example.com
-        - description: Create Group e2e-authn-hook-group-a that names the future Group e2e-authn-hook-b as a member
+        - description: Create Group e2e-authn-hook-a that names the future Group e2e-authn-hook-b as a member
           create:
             file: manifests/groups.yaml
         - description: Create DexAuthenticator e2e-authn-hook-first for domain e2e-authn-hooks.example.com
@@ -67,7 +67,7 @@ spec:
             timeout: 6m
             content: |
               kubectl delete users.deckhouse.io e2e-authn-hook-user1 e2e-authn-hook-user2 e2e-authn-hook-user3 e2e-authn-hook-upper e2e-authn-hook-system e2e-authn-hook-groups --ignore-not-found
-              kubectl delete groups.deckhouse.io e2e-authn-hook-group-a e2e-authn-hook-group-b e2e-authn-hook-group-c e2e-authn-hook-group-dup e2e-authn-hook-group-system --ignore-not-found
+              kubectl delete groups.deckhouse.io e2e-authn-hook-a e2e-authn-hook-b e2e-authn-hook-group-c e2e-authn-hook-group-dup e2e-authn-hook-group-system --ignore-not-found
               kubectl delete useroperations.deckhouse.io e2e-authn-hook-zero-lock e2e-authn-hook-target-reset --ignore-not-found
               bash ../../tests/common/scripts/delete-dex-authenticator.sh "${NS}" e2e-authn-hook-first
 

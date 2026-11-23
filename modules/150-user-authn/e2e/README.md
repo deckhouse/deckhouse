@@ -73,7 +73,7 @@ The `tests` directory contains the following cases:
 | `useroperation-reset-password` | `ResetPassword` succeeds, wipes the hash from its spec, deletes the refresh tokens of the user and sets `requireResetHashOnNextSuccLogin`. The old password and refresh token stop working; the new password leads to the forced change page; the changed password signs in. A hash that is not bcrypt and an unknown user end in `Failed` with the reason. |
 | `user-expire` | `spec.ttl: 2m` sets `status.expireAt` about two minutes after creation. Then the User is deleted and removed from the Group, together with its Password and UserAccount. A User without `ttl` stays. |
 | `webhooks-validation` | The API server refuses with the exact messages: duplicate email (also in another case), uppercase or `system:` email, deprecated `spec.groups`, a change of the password hash, a duplicate Group name, a `system:` Group name, membership cycles, a zero lock duration, `ResetPassword` for an external target, a DexAuthenticator with an IP domain, without a publishing method, with a dot in the name or with a domain another DexAuthenticator serves. |
-| `dex-authenticator-app` | An agnhost application behind ingress-nginx and a DexAuthenticator: an anonymous request is redirected to sign in; after the password form the session cookie gives HTTP 200 and the application receives `X-Auth-Request-Email`. The shared dex-authenticator of the module serves the DexAuthenticator: the object gets the `Served` condition, its Service points at the instance, and its namespace holds neither pods nor secrets of an authenticator. A request with a forged `X-Forwarded-Host` is logged by the instance with the host of the application. The Redis of the instance is of the version line its image pins. |
+| `dex-authenticator-app` | An agnhost application behind ingress-nginx and a per-object DexAuthenticator: an anonymous request is redirected to sign in; after the password form the session cookie gives HTTP 200 and the application receives `X-Auth-Request-Email`. Its Deployment, Service and Redis are checked in the test namespace. |
 | `dex-client-flow` | A DexClient gets the Secret with the labels and annotations from `secretMetadata` and both OAuth2Client objects. The ID token is issued for the client. A client with `allowedGroups` refuses a user outside them (HTTP 401 "Access denied"); a wrong client secret gets `invalid_client`. |
 | `dexclient-kubernetes-access` | A DexClient with the annotation `dexclient.deckhouse.io/allow-access-to-kubernetes: "true"` becomes a trusted peer of the `kubernetes` client, and kube-apiserver accepts its token. An annotated DexAuthenticator also makes the module render the `kubernetes` client. |
 | `dexclient-kubernetes-audience` | The annotation on a DexClient alone, without a DexAuthenticator, `publishAPI` or `kubeconfigGenerator`, makes the module render the `kubernetes` client with the DexClient among its trusted peers, and kube-apiserver accepts the token of the DexClient. Before that the case switches off `apiserver.publishAPI.ingress` of `control-plane-manager` and `kubeconfigGenerator` for its duration. When an annotated DexAuthenticator or DexClient of another module keeps the client rendered, the run logs `NOT PROVEN` and checks the end-to-end path only; `template_tests/kubernetes_oauth2client_test.go` is the regression guard of the DexClient-only path. |
@@ -96,8 +96,8 @@ In this mode the VerticalPodAutoscaler of a component may also evict its only po
 which makes the component unavailable until the replacement is ready.
 A failed request to Dex or `user-api` that follows an `EvictedByVPA` event of a pod of the same component
 within 60 seconds is reported in the log but does not fail the case; every other failed request does.
-The shared dex-authenticator always runs two replicas, so it has no such excuse.
-The case waits until the shared dex-authenticator serves its DexAuthenticator (the `Served` condition).
+The per-object DexAuthenticator is configured with two replicas, so it has no such excuse.
+The case waits for the per-object DexAuthenticator Deployment to become ready.
 A probe then requests the following endpoints every 200 ms through the ClusterIPs of their Services:
 
 - the Dex discovery document;
@@ -146,3 +146,9 @@ The following planned cases are not automated:
   The suite does not check the published API.
   It only switches the publication off for the duration of `dexclient-kubernetes-audience`,
   as described in [How the suite treats the cluster](#how-the-suite-treats-the-cluster).
+
+## Release-specific limitations
+
+The release uses a per-object DexAuthenticator and user-authn ModuleConfig schema version 2.
+The test does not check the shared authenticator or its forwarded-host logging, which belong to the newer architecture.
+The group-cycle-names regression checks that a cycle is rejected when resource names differ from `spec.name`.

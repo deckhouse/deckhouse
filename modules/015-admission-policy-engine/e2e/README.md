@@ -110,3 +110,7 @@ The following planned checks are not automated or are reduced, for the reasons g
 - `denyVulnerableImages` is not tested. The Trivy provider needs the `operator-trivy` module and a populated vulnerability database, which the suite cannot provide in its time budget, and the setting is deprecated in favour of `operator-trivy`.
 - High availability is not switched on for `gatekeeper-rollout-restart`. The module takes it from the global `highAvailability` setting, which would change every module of the cluster, and the required pod anti-affinity would leave the second replica Pending on a cluster with a single eligible node. On a single replica the case reports the number of webhook errors instead of requiring zero.
 - The Prometheus alerts of the module (`D8AdmissionPolicyEngineWebhookUnavailable` and others) are not checked. They fire after `for: 2m` or longer, and the outage of the destructive case is kept shorter to limit the impact on the cluster.
+
+### Release-1.77 differences
+
+This release does not provide the system-namespace warn-only webhooks, reserved SecurityPolicy name validation, validation of invalid mutators, or controller-level OperationPolicy validation tested on main. The suite checks the available pod-level enforcement, mutation, and platform workload health. The accompanying Gatekeeper status permissions fix enables provider and mutator status checks; the host-network constraint fix preserves enforcement when port ranges are omitted.

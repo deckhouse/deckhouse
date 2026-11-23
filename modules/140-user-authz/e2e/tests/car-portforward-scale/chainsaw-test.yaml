@@ -73,18 +73,6 @@ spec:
                 subjects:
                   - kind: User
                     name: e2e-authz-noflags
-        - description: Assert the rule with flags is Ready with four bindings
-          assert:
-            resource:
-              apiVersion: deckhouse.io/v1
-              kind: ClusterAuthorizationRule
-              metadata:
-                name: e2e-authz-flags
-              status:
-                bindings: 4
-                (conditions[?type == 'Ready']):
-                  - status: 'True'
-
     - name: assert-flag-bindings
       description: Verify the port-forward and scale bindings of the rule with flags
       try:

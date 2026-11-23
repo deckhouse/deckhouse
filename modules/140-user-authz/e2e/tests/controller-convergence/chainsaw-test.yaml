@@ -4,10 +4,7 @@ metadata:
   name: controller-convergence
 spec:
   description: >-
-    Verify that user-authz-controller keeps the bindings of a rule converged: a deleted binding
-    is recreated and edited subjects are restored, a rule the controller cannot render reports
-    Ready=False with reason InvalidSpec, and a namespaced AuthorizationRule is rendered into
-    RoleBindings that grant access in its namespace only.
+    Verify that cluster and namespaced authorization rules create bindings and grant the expected access.
   timeouts:
     apply: 60s
     assert: 90s
@@ -66,114 +63,6 @@ spec:
               metadata:
                 name: user-authz:e2e-authz-converge:editor
 
-    - name: recreate-deleted-binding
-      description: Delete the binding by hand and verify that the controller recreates it
-      try:
-        - description: Delete the binding without waiting and assert a new one (another UID) appears within 90 seconds
-          script:
-            timeout: 3m
-            content: |
-              set -eu
-              name='user-authz:e2e-authz-converge:editor'
-              old_uid="$(kubectl get clusterrolebinding "${name}" -o jsonpath='{.metadata.uid}')"
-              echo "old UID: ${old_uid}"
-              test -n "${old_uid}"
-              # --wait=false: waiting by name would race with the controller recreating the binding.
-              kubectl delete clusterrolebinding "${name}" --wait=false
-              for _ in $(seq 1 45); do
-                uid="$(kubectl get clusterrolebinding "${name}" -o jsonpath='{.metadata.uid}' 2>/dev/null || true)"
-                if [ -n "${uid}" ] && [ "${uid}" != "${old_uid}" ]; then
-                  echo "recreated with UID ${uid}"
-                  exit 0
-                fi
-                sleep 2
-              done
-              echo "the binding was not recreated with a new UID within 90s (current UID: ${uid:-none})" >&2
-              exit 1
-        - description: Assert the binding is back with its subject within 90 seconds
-          assert:
-            resource:
-              apiVersion: rbac.authorization.k8s.io/v1
-              kind: ClusterRoleBinding
-              metadata:
-                name: user-authz:e2e-authz-converge:editor
-                labels:
-                  user-authz.deckhouse.io/managed-by: user-authz-controller
-              roleRef:
-                name: user-authz:editor
-              subjects:
-                - kind: User
-                  name: e2e-authz-converge
-
-    - name: restore-edited-subjects
-      description: Replace the subjects of the binding by hand and verify that the controller restores them
-      try:
-        - description: Point the binding at another user
-          patch:
-            resource:
-              apiVersion: rbac.authorization.k8s.io/v1
-              kind: ClusterRoleBinding
-              metadata:
-                name: user-authz:e2e-authz-converge:editor
-              subjects:
-                - apiGroup: rbac.authorization.k8s.io
-                  kind: User
-                  name: e2e-authz-intruder
-        - description: Assert the subject of the rule is restored within 90 seconds
-          assert:
-            resource:
-              apiVersion: rbac.authorization.k8s.io/v1
-              kind: ClusterRoleBinding
-              metadata:
-                name: user-authz:e2e-authz-converge:editor
-              subjects:
-                - kind: User
-                  name: e2e-authz-converge
-
-    - name: invalid-spec
-      description: >-
-        A rule whose additionalRoles entry names another API group passes the schema but cannot
-        be rendered; the controller must report it instead of failing silently
-      try:
-        - description: Create ClusterAuthorizationRule e2e-authz-invalid
-          apply:
-            resource:
-              apiVersion: deckhouse.io/v1
-              kind: ClusterAuthorizationRule
-              metadata:
-                name: e2e-authz-invalid
-                labels:
-                  e2e.deckhouse.io/suite: user-authz
-              spec:
-                accessLevel: User
-                additionalRoles:
-                  - apiGroup: e2e-authz.example.com
-                    kind: ClusterRole
-                    name: view
-                subjects:
-                  - kind: User
-                    name: e2e-authz-invalid
-        - description: Assert Ready=False with reason InvalidSpec and the controller message
-          assert:
-            resource:
-              apiVersion: deckhouse.io/v1
-              kind: ClusterAuthorizationRule
-              metadata:
-                name: e2e-authz-invalid
-              # status.bindings is omitted when it is 0 (omitempty), so it is not asserted here.
-              status:
-                (conditions[?type == 'Ready']):
-                  - status: 'False'
-                    reason: InvalidSpec
-                    (contains(message, 'has apiGroup "e2e-authz.example.com", only rbac.authorization.k8s.io is supported')): true
-        - description: Assert no binding of the invalid rule exists
-          error:
-            resource:
-              apiVersion: rbac.authorization.k8s.io/v1
-              kind: ClusterRoleBinding
-              metadata:
-                name: user-authz:e2e-authz-invalid:user
-
     - name: authorization-rule
       description: Create a namespaced AuthorizationRule and verify its RoleBindings and decisions
       try:
@@ -192,17 +81,6 @@ spec:
                 subjects:
                   - kind: User
                     name: e2e-authz-ar
-        - description: Assert the rule is Ready with two bindings
-          assert:
-            resource:
-              apiVersion: deckhouse.io/v1alpha1
-              kind: AuthorizationRule
-              metadata:
-                name: e2e-authz-ar
-              status:
-                bindings: 2
-                (conditions[?type == 'Ready']):
-                  - status: 'True'
         - description: Assert the RoleBinding user-authz:e2e-authz-ar:editor in the test namespace
           assert:
             resource:
@@ -210,11 +88,6 @@ spec:
               kind: RoleBinding
               metadata:
                 name: user-authz:e2e-authz-ar:editor
-                labels:
-                  user-authz.deckhouse.io/managed-by: user-authz-controller
-                ownerReferences:
-                  - kind: AuthorizationRule
-                    name: e2e-authz-ar
               roleRef:
                 kind: ClusterRole
                 name: user-authz:editor

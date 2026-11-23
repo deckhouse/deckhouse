@@ -49,13 +49,13 @@ case "${action}" in
       [[ -f "${state_file}" ]] || jq -c '.spec' <<<"${mc}" > "${state_file}"
       [[ "${module}" == "user-authn" || "$(jq -r '.spec.version // empty' <<<"${mc}")" != "" ]] \
         || { >&2 echo "ModuleConfig ${module} has no spec.version; refusing to guess the settings version"; exit 1; }
-      patch="$(jq -c --argjson s "${fragment}" '{spec: ({settings: $s} + (if .spec.version == null then {version: 3} else {} end))}' <<<"${mc}")"
+      patch="$(jq -c --argjson s "${fragment}" '{spec: ({settings: $s} + (if .spec.version == null then {version: 2} else {} end))}' <<<"${mc}")"
       kubectl patch moduleconfig "${module}" --type merge -p "${patch}"
     else
       [[ "${module}" == "user-authn" ]] || { >&2 echo "ModuleConfig ${module} does not exist"; exit 1; }
       [[ -f "${state_file}" ]] || echo "ABSENT" > "${state_file}"
       jq -n --argjson s "${fragment}" '{apiVersion: "deckhouse.io/v1alpha1", kind: "ModuleConfig",
-          metadata: {name: "user-authn"}, spec: {version: 3, settings: $s}}' | kubectl create -f -
+          metadata: {name: "user-authn"}, spec: {version: 2, settings: $s}}' | kubectl create -f -
     fi
     echo "Applied ${module} settings: ${fragment}"
     ;;

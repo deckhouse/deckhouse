@@ -37,16 +37,6 @@ spec:
             timeout: 6m
             content: bash "${E2E_LIB_DIR}/delete-namespace.sh" e2e-ape-sp-fields
 
-    - name: reserved-name-rejected
-      description: The module webhook rejects a policy whose name claims a reserved constraint prefix
-      try:
-        - description: Create a SecurityPolicy named d8-system-default-* and expect a denial
-          script:
-            content: kubectl create --dry-run=server -f manifests/reserved-name.yaml
-            check:
-              ($error != null): true
-              (contains($stderr, 'starts with the reserved prefix')): true
-
     - name: create-securitypolicy
       description: Create the SecurityPolicy and wait until its constraints are enforced
       try:

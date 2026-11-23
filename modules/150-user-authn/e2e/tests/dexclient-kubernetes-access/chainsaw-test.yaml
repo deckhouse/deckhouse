@@ -86,7 +86,7 @@ spec:
                 namespace: d8-user-authn
               id: kubernetes
               (contains(trustedPeers, join('', ['dex-client-e2e-authn-k8s-client@', $namespace]))): true
-              (contains(trustedPeers, join('', ['dex-authenticator-e2e-authn-k8s-da@', $namespace]))): true
+              (contains(trustedPeers, join('', ['e2e-authn-k8s-da-', $namespace, '-dex-authenticator']))): true
 
     - name: token-for-api-server
       description: The DexClient gets an ID token for the audience kubernetes, which kube-apiserver accepts
