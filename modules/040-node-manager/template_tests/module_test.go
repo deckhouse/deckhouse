@@ -1502,10 +1502,28 @@ metadata:
 			}
 		})
 
+		// A CAPI machine boots from whatever bootstrap Secret exists first. Rendered before
+		// order_bootstrap_token has minted the NodeGroup's token, it carries `<no value>` as the
+		// token, and the node never joins (e2e-dhctl job 9026316).
+		Context("Yandex CAPI NodeGroup without a bootstrap token yet", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerYandexCAPI)
+				f.ValuesSet("nodeManager.internal.bootstrapTokens", map[string]string{"nopreempt": "t1", "preemptfalse": "t2"})
+				f.ValuesSet("nodeManager.internal.capiControllerManagerEnabled", true)
+				setBashibleAPIServerTLSValues(f)
+				f.HelmRender()
+			})
+
+			It("refuses to render instead of writing a bootstrap Secret without the token", func() {
+				Expect(f.RenderError).Should(HaveOccurred())
+				Expect(f.RenderError.Error()).To(ContainSubstring("bootstrap token for NodeGroup preempttrue hasn't been generated"))
+			})
+		})
+
 		Context("split mode with only CAPI autoscaler enabled", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerOpenstack)
-				f.ValuesSet("nodeManager.internal.bootstrapTokens", map[string]string{"worker": "mytoken"})
+				f.ValuesSet("nodeManager.internal.bootstrapTokens", map[string]string{"worker": "mytoken", "simple": "mytoken"})
 				f.ValuesSet("nodeManager.internal.capiControllerManagerEnabled", true)
 				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterKind", "OpenStackCluster")
 				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterAPIVersion", "infrastructure.cluster.x-k8s.io/v1beta1")
@@ -1802,7 +1820,7 @@ metadata:
 		Context("split mode with only CAPI autoscaler enabled and VXLAN pod network", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerOpenstack)
-				f.ValuesSet("nodeManager.internal.bootstrapTokens", map[string]string{"worker": "mytoken"})
+				f.ValuesSet("nodeManager.internal.bootstrapTokens", map[string]string{"worker": "mytoken", "simple": "mytoken"})
 				f.ValuesSet("nodeManager.internal.capiControllerManagerEnabled", true)
 				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterKind", "OpenStackCluster")
 				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterAPIVersion", "infrastructure.cluster.x-k8s.io/v1beta1")
@@ -1858,7 +1876,7 @@ metadata:
 		Context("split mode with OpenStack layout without API floating IP", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerOpenstack)
-				f.ValuesSet("nodeManager.internal.bootstrapTokens", map[string]string{"worker": "mytoken"})
+				f.ValuesSet("nodeManager.internal.bootstrapTokens", map[string]string{"worker": "mytoken", "simple": "mytoken"})
 				f.ValuesSet("nodeManager.internal.capiControllerManagerEnabled", true)
 				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterKind", "OpenStackCluster")
 				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterAPIVersion", "infrastructure.cluster.x-k8s.io/v1beta1")
@@ -2676,6 +2694,10 @@ internal:
   capiControllerManagerEnabled: true
   bootstrapTokens:
     worker: mytoken
+    without-labels-and-taints: mytoken
+    with-labels-only: mytoken
+    with-taints-only: mytoken
+    with-labels-and-taints: mytoken
   capiControllerManagerWebhookCert:
     ca: string
     key: string
@@ -2839,6 +2861,7 @@ internal:
   capiControllerManagerEnabled: true
   bootstrapTokens:
     worker: mytoken
+    worker-big: mytoken
   capiControllerManagerWebhookCert:
     ca: string
     key: string

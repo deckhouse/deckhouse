@@ -3,6 +3,10 @@
 {{- $ng := index . 1 }}
 {{- $zone_name := index . 2 }}
 {{- $bootstrap_secret_name := index . 3 }}
+{{- /* CAPI hands this Secret to the machine as soon as it exists, so a render without the token boots a node that never joins. */}}
+{{- if not (hasKey $context.Values.nodeManager.internal.bootstrapTokens $ng.name) }}
+  {{- fail (printf "ERROR: bootstrap token for NodeGroup %s hasn't been generated in hook order_bootstrap_token." $ng.name) }}
+{{- end }}
 ---
 apiVersion: v1
 kind: Secret
