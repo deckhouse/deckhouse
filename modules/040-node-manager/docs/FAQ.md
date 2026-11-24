@@ -1,7 +1,7 @@
 ---
-title: "Managing nodes: FAQ"
+title: "Node-manager module: FAQ"
 search: add a node to the cluster, set up a GPU-enabled node, ephemeral nodes
-description: Managing nodes of a Kubernetes cluster. Adding or removing nodes in a cluster. Changing the CRI of the node.
+description: Answers to questions about adding, configuring, and troubleshooting cluster nodes with the node-manager module in Deckhouse Platform.
 ---
 
 ## How do I add master nodes to a cloud cluster?
@@ -1789,7 +1789,7 @@ Fencing uses the `softdog` kernel module as the watchdog. Deckhouse loads the mo
 
 ### Deckhouse Engine nodes
 
-On nodes of groups with `systemType: Immutable` (Deckhouse Engine), `softdog` is built into the kernel. The NodeGroupConfiguration script does not run on these nodes.
+On nodes of groups with `systemType: DeckhouseEngine`, `softdog` is built into the kernel. The NodeGroupConfiguration script does not run on these nodes.
 
 If you installed a node before the Deckhouse Engine release with the built-in `softdog`, the node does not have the built-in `softdog`. The node gets `softdog` only after you reinstall it or update its boot partition.
 
@@ -1993,7 +1993,7 @@ The fencing-controller runs on the master nodes. In a cluster with several maste
 - The master node of the leader fails.
 - kubernetes-api-proxy restarts with a new manifest on the master node of the leader, for example, during an update of Deckhouse. The controller connects to the API server through this proxy.
 
-On the master nodes of Deckhouse Engine (`systemType: Immutable`), and when the `control-plane-manager` module is disabled, the controller connects to the API server through the ClusterIP of the `kubernetes` Service. When a master node fails, the requests of the controller can go to the failed master node for some seconds. Then the taint of the failed node comes later, and the leader can change.
+On the master nodes of Deckhouse Engine (`systemType: DeckhouseEngine`), and when the `control-plane-manager` module is disabled, the controller connects to the API server through the ClusterIP of the `kubernetes` Service. When a master node fails, the requests of the controller can go to the failed master node for some seconds. Then the taint of the failed node comes later, and the leader can change.
 
 When the master node of the controller fails, the controller starts on another master node only after Kubernetes marks the failed master node as unreachable. Until then, the controller does not set the taint. Refer to [How does fencing work on master nodes?](#how-does-fencing-work-on-master-nodes)
 
@@ -2058,3 +2058,57 @@ GPU nodes are managed by the [`gpu`](/modules/gpu/) module. The `node-manager` m
 The [`spec.gpu`](cr.html#nodegroup-v1-spec-gpu) section of a NodeGroup is used by the `gpu` module: it selects the node groups that the module serves in Device Plugin mode and sets the GPU sharing strategy for them. If the `gpu` module is disabled, the `spec.gpu` section has no effect and the `NodeGroupGPUModuleDisabled` alert fires.
 
 How to add GPU nodes, install the driver and NVIDIA Container Toolkit, configure sharing and MIG, and monitor GPUs is described in the [`gpu` module documentation](/modules/gpu/).
+
+## How do I work with Deckhouse Engine nodes?
+
+The procedure depends on whether you need to inspect, update, or reinstall the node.
+
+### How do I access a Deckhouse Engine node?
+
+Deckhouse Engine nodes have no `sshd` or shell. Use the following diagnostics to inspect a node.
+
+- **NodeConfig status.** Run `d8 k get nodeconfigs.internal.deckhouse.io <NODE_NAME> -o yaml`. The `status` field contains the node phase and the conditions for each subsystem, including error messages.
+- **Debug pod.** Run `d8 k debug node/<NODE_NAME> -it --image=<IMAGE>`. The node file system is available in the `/host` directory in the pod.
+- **Machine console.** The monitor and the serial port show the `nodelet` agent screen. The serial port also shows the full node log.
+
+If the node has not received a response from the cluster API for more than a minute, open the maintenance portal at `https://<NODE_ADDRESS>:50000`. Log in with the token from the `status.maintenanceToken` field of the [NodeConfig](cr.html#nodeconfig) resource. Reading this field requires [permission to access the `nodeconfigs/sensitive` subresource](cr.html#nodeconfig-v1alpha1-status-maintenancetoken). Use the portal to temporarily reconfigure the network or upload a corrected NodeConfig. After use, the node changes the token.
+
+### Where do I get the Deckhouse Engine installation image?
+
+Deckhouse Engine images ship with the `node-manager` module and are stored in the same container image registry as the Deckhouse Platform images. Run the following command in a running cluster to get the digest of the image containing the installation ISO.
+
+```shell
+d8 k -n d8-system exec -ti svc/deckhouse-leader -- bash -c "cat modules/images_digests.json | jq -r .nodeManager.engineMetalIso"
+```
+
+The ISO file is at `/disk/metal.iso` in the image. The image with the `engineNocloudQcow2` key contains a prebuilt virtual machine disk in qcow2 format at `/disk/nocloud.qcow2`.
+
+Before the cluster is installed, the same `images_digests.json` file is available in the installation image at `/deckhouse/candi/images_digests.json`. To extract the ISO, follow the [machine preparation procedure](/products/kubernetes-platform/documentation/v1/installing/deckhouse-engine.html#preparing-the-machines).
+
+### Why was NodeGroupConfiguration not applied on a Deckhouse Engine node?
+
+[bashible](/products/kubernetes-platform/documentation/v1/architecture/cluster-and-infrastructure/node-management/bashible.html) runs the scripts defined in [NodeGroupConfiguration](cr.html#nodegroupconfiguration). Deckhouse Engine nodes get their configuration from [NodeConfig](cr.html#nodeconfig), which [`node-controller`](/products/kubernetes-platform/documentation/v1/architecture/cluster-and-infrastructure/node-management/deckhouse-engine.html#how-a-node-receives-its-configuration) builds from [NodeGroup](cr.html#nodegroup) and module settings.
+
+### How do I update the kernel on Deckhouse Engine nodes?
+
+The kernel is updated with the Deckhouse Engine image when Deckhouse Platform is updated. The kernel cannot be updated separately.
+
+### How do I reinstall a Deckhouse Engine node?
+
+Boot the machine from the installation ISO file and add it with `d8 node add --wipe`. This formats and repartitions the disk. Use `--wipe` only with the installation media, which supplies the bootloader and the root image.
+
+### A Deckhouse Engine node did not boot. Where do I look?
+
+Check the output of the machine's serial console. The boot is divided into steps, and they show at which step it stopped. Three lines show how the boot went:
+
+```text
+node config acquired         source=config-partition
+provisioning decision        disk=/dev/sda hasLayout=true wipe=false provision=false
+mounted verified rootfs      slot=a image=... verity=/dev/mapper/... roothash=...
+```
+
+The first one shows where the configuration was taken from. The second one shows whether the disk will be partitioned. The third one means that the root is mounted and verified.
+
+If the machine prints nothing after the `nodeconfig: waiting for a PUT to /config on :50000` line, it is not hanging: the installer is waiting for the configuration. Pass it with the `d8 node add` command.
+
+A fatal error is printed as the `init: FATAL at <STEP>: <ERROR>` line.

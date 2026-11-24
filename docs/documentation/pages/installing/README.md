@@ -38,6 +38,8 @@ You can install Deckhouse Platform in the following ways::
 
 - **In an existing Kubernetes cluster.** The installer deploys Deckhouse Platform and integrates it with the current infrastructure. Step-by-step instructions for an existing cluster are available in [Getting started → Deckhouse Platform in existing cluster]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/existing/step2.html).
 
+If your nodes will run Deckhouse Engine, follow the [bare-metal installation guide](deckhouse-engine.html).
+
 ## Installation requirements
 
 Before starting the installation, review the Deckhouse Platform [deployment scenarios](../glossary.html#deployment-scenario) and installation requirements in the ["System Requirements"](../requirements/) section.

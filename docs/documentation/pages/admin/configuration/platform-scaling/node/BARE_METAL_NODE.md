@@ -8,6 +8,8 @@ For more details on sizing resources for a bare-metal cluster, see the [“Hardw
 
 ## Adding nodes to a bare-metal cluster
 
+To add a Deckhouse Engine node, follow the [worker node addition procedure](../../../../installing/deckhouse-engine.html#adding-a-worker-node).
+
 ### Manual method
 
 1. Enable the [`node-manager`](/modules/node-manager/cr.html) module.

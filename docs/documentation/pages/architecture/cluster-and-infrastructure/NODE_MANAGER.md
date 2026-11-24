@@ -18,3 +18,4 @@ The module architecture varies depending on the node type and differs in terms o
 * [Managing CloudStatic nodes](cloud-static-nodes.html)
 * [Managing Static nodes](static-nodes.html)
 * [Managing hybrid node groups and clusters](hybrid-nodegroups-and-clusters.html)
+* [Deckhouse Engine node architecture](deckhouse-engine.html)

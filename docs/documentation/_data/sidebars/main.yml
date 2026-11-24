@@ -14,9 +14,17 @@ entries:
             ru: Системные требования
           url: /requirements/
         - title:
-            en: Platform installation
-            ru: Установка платформы
-          url: /installing/
+            en: Installation
+            ru: Установка
+          folders:
+            - title:
+                en: Platform installation
+                ru: Установка платформы
+              url: /installing/
+            - title:
+                en: Platform installation with Deckhouse Engine
+                ru: Установка платформы с Deckhouse Engine
+              url: /installing/deckhouse-engine.html
         - title:
             en: Platform configuration
             ru: Настройка платформы
@@ -1735,6 +1743,10 @@ entries:
                     ru: Модуль node-manager
                   url: /architecture/cluster-and-infrastructure/node-management/node-manager.html
                 - title:
+                    en: Deckhouse Engine node architecture
+                    ru: Архитектура узлов Deckhouse Engine
+                  url: /architecture/cluster-and-infrastructure/node-management/deckhouse-engine.html
+                - title:
                     en: CloudEphemeral node management
                     ru: Управление CloudEphemeral-узлами
                   url: /architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html
@@ -2186,6 +2198,10 @@ entries:
             en: Supported K8s & OS versions
             ru: Поддерживаемые версии K8s и ОС
           url: /reference/supported_versions.html
+        - title:
+            en: Deckhouse Engine
+            ru: Deckhouse Engine
+          url: /reference/deckhouse-engine.html
         - title:
             en: Kubernetes conformance test results
             ru: Результаты Kubernetes conformance-тестов

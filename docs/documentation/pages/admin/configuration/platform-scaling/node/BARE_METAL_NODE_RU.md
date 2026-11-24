@@ -9,6 +9,8 @@ lang: ru
 
 ## Добавление узлов в bare-metal кластере
 
+Для узлов Deckhouse Engine используйте [сценарий добавления worker-узла](../../../../installing/deckhouse-engine.html#добавление-worker-узла).
+
 ### Ручной способ
 
 1. Включите модуль [`node-manager`](/modules/node-manager/cr.html).

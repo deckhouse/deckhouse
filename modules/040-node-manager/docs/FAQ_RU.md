@@ -1,6 +1,6 @@
 ---
-title: "Управление узлами: FAQ"
-description: Управление узлами кластера Kubernetes. Добавление, удаление узлов в кластере. Изменение CRI узла.
+title: "Модуль node-manager: FAQ"
+description: Ответы на вопросы о добавлении, настройке и диагностике узлов кластера с модулем node-manager в Deckhouse Platform.
 search: добавить ноду в кластер, добавить узел в кластер, настроить узел с GPU, эфемерные узлы
 ---
 
@@ -1790,7 +1790,7 @@ d8 k get nodes -o custom-columns='NAME:.metadata.name,READY:.status.conditions[?
 
 ### Узлы Deckhouse Engine
 
-На узлах групп с `systemType: Immutable` (Deckhouse Engine) `softdog` встроен в ядро. Скрипт NodeGroupConfiguration на этих узлах не выполняется.
+На узлах групп с `systemType: DeckhouseEngine` `softdog` встроен в ядро. Скрипт NodeGroupConfiguration на этих узлах не выполняется.
 
 На узлах, установленных до выпуска Deckhouse Engine со встроенным `softdog`, его нет. Такие узлы получают `softdog` только после переустановки или обновления загрузочного раздела.
 
@@ -1994,7 +1994,7 @@ fencing-controller работает на master-узлах. В кластере 
 - Отказал master-узел лидера.
 - На master-узле лидера kubernetes-api-proxy перезапустился с новым манифестом, например при обновлении Deckhouse. Контроллер подключается к API-серверу через этот прокси.
 
-На master-узлах Deckhouse Engine (`systemType: Immutable`) и при выключенном модуле `control-plane-manager` контроллер подключается к API-серверу через ClusterIP сервиса `kubernetes`. Когда master-узел отказывает, запросы контроллера в течение нескольких секунд могут уходить на отказавший master-узел. Тогда taint отказавшего узла ставится позже, и лидер может смениться.
+На master-узлах Deckhouse Engine (`systemType: DeckhouseEngine`) и при выключенном модуле `control-plane-manager` контроллер подключается к API-серверу через ClusterIP сервиса `kubernetes`. Когда master-узел отказывает, запросы контроллера в течение нескольких секунд могут уходить на отказавший master-узел. Тогда taint отказавшего узла ставится позже, и лидер может смениться.
 
 Когда отказывает master-узел контроллера, контроллер запускается на другом master-узле только после того, как Kubernetes пометит отказавший master-узел недоступным. До этого контроллер не ставит taint. Подробнее — в разделе [«Как fencing работает на master-узлах?»](#как-fencing-работает-на-master-узлах).
 
@@ -2059,3 +2059,57 @@ GPU-узлами управляет модуль [`gpu`](/modules/gpu/). Мод�
 Секцию [`spec.gpu`](cr.html#nodegroup-v1-spec-gpu) в NodeGroup использует модуль `gpu`: по ней он выбирает группы узлов, которые обслуживает в режиме Device Plugin, и задаёт для них стратегию разделения GPU. Если модуль `gpu` выключен, секция `spec.gpu` ни на что не влияет и срабатывает алерт `NodeGroupGPUModuleDisabled`.
 
 Как добавить GPU-узлы, установить драйвер и NVIDIA Container Toolkit, настроить разделение GPU и MIG, а также мониторинг GPU, описано в [документации модуля `gpu`](/modules/gpu/).
+
+## Как работать с узлами Deckhouse Engine?
+
+Порядок действий зависит от задачи: диагностика, обновление или переустановка узла.
+
+### Как попасть на узел Deckhouse Engine?
+
+Войти на узел Deckhouse Engine по SSH нельзя, `sshd` и командной оболочки на узле нет. Для этого используйте:
+
+- Статус ресурса NodeConfig узла — `d8 k get nodeconfigs.internal.deckhouse.io <NODE_NAME> -o yaml`. В `status` — фаза узла и условия по каждой подсистеме с текстом ошибки;
+- Отладочный под — `d8 k debug node/<NODE_NAME> -it --image=<IMAGE>`. Файловая система узла доступна в поде в каталоге `/host`;
+- Консоль машины — на мониторе и последовательном порту выводится экран агента `nodelet`, на последовательный порт — полный журнал узла.
+
+Если узел не получает ответа от API кластера дольше минуты, откройте портал обслуживания `https://<NODE_ADDRESS>:50000`. Для входа используйте токен из поля `status.maintenanceToken` ресурса [NodeConfig](cr.html#nodeconfig). Для чтения поля требуется [право на субресурс `nodeconfigs/sensitive`](cr.html#nodeconfig-v1alpha1-status-maintenancetoken). Через портал можно временно перенастроить сеть или загрузить исправленный NodeConfig. После использования узел меняет токен.
+
+### Где взять установочный образ Deckhouse Engine?
+
+Образы Deckhouse Engine поставляются в составе модуля `node-manager` и лежат в том же хранилище образов контейнеров, что и образы Deckhouse Platform. Узнать дайджест образа с установочным ISO в работающем кластере можно командой:
+
+```shell
+d8 k -n d8-system exec -ti svc/deckhouse-leader -- bash -c "cat modules/images_digests.json | jq -r .nodeManager.engineMetalIso"
+```
+
+ISO-файл лежит в образе по пути `/disk/metal.iso`. Готовый диск ВМ в формате qcow2 — в образе с ключом `engineNocloudQcow2` по пути `/disk/nocloud.qcow2`.
+
+До установки кластера тот же файл `images_digests.json` есть в установочном образе по пути `/deckhouse/candi/images_digests.json`. Команды для извлечения ISO приведены [в разделе подготовки машин](/products/kubernetes-platform/documentation/v1/installing/deckhouse-engine.html#подготовка-машин).
+
+### Почему на узле Deckhouse Engine не применился NodeGroupConfiguration?
+
+Ресурсы [NodeGroupConfiguration](cr.html#nodegroupconfiguration) выполняет [bashible](/products/kubernetes-platform/documentation/v1/architecture/cluster-and-infrastructure/node-management/bashible.html), а на узлах Deckhouse Engine его нет. Всё, что нужно узлу, задаётся через параметры [NodeGroup](cr.html#nodegroup) и модулей, из которых [`node-controller`](/products/kubernetes-platform/documentation/v1/architecture/cluster-and-infrastructure/node-management/deckhouse-engine.html#механизм-получения-конфигурации-узлом) собирает [NodeConfig](cr.html#nodeconfig).
+
+### Как обновить ядро на узлах Deckhouse Engine?
+
+Ядро обновляется вместе с образом Deckhouse Engine при обновлении Deckhouse Platform. Отдельно обновить ядро нельзя.
+
+### Как переустановить узел Deckhouse Engine?
+
+Загрузите машину с установочного ISO-файла и добавьте её командой `d8 node add` с флагом `--wipe`. Диск будет отформатирован и размечен заново. Без установочного носителя `--wipe` использовать нельзя — диск будет отформатирован, а загрузчик и образ корня взять будет неоткуда.
+
+### Узел Deckhouse Engine не загрузился. Куда смотреть?
+
+Смотрите вывод последовательной консоли машины. Загрузка размечена шагами, и по ним видно, на каком шаге она остановилась. Три строки показывают, как прошла загрузка:
+
+```text
+node config acquired         source=config-partition
+provisioning decision        disk=/dev/sda hasLayout=true wipe=false provision=false
+mounted verified rootfs      slot=a image=... verity=/dev/mapper/... roothash=...
+```
+
+Первая показывает, откуда взята конфигурация. Вторая — будет ли размечен диск. Третья означает, что корень смонтирован и проверен.
+
+Если машина ничего не выводит после строки `nodeconfig: waiting for a PUT to /config on :50000`, это не зависание: установщик ждёт конфигурацию. Передайте её командой `d8 node add`.
+
+Фатальная ошибка выводится строкой `init: FATAL at <STEP>: <ERROR>`.

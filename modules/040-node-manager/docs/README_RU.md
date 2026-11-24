@@ -37,6 +37,7 @@ description: Модуль `node-manager` в Deckhouse Platform управляе�
 
      Доступно как для [облачных провайдеров](#масштабирование-узлов-в-облаке), так и для статических узлов (при использовании [Cluster API Provider Static](#работа-со-статическими-узлами)).
 1. Управление Linux-пользователями на узлах.
+1. Установка кластера и добавление worker-узлов на Deckhouse Engine.
 
 Управление узлами осуществляется через управление группой узлов (ресурс [NodeGroup](cr.html#nodegroup)), где каждая такая группа выполняет определенные для нее задачи. Примеры групп узлов по выполняемым задачам:
 
@@ -238,6 +239,27 @@ CAPS включается автоматически, если в NodeGroup за
    Параметр [staticInstances.count](cr.html#nodegroup-v1-spec-staticinstances-count) определяет желаемое количество узлов в группе.  При изменении параметра, CAPS начинает добавлять или удалять необходимое количество узлов, запуская этот процесс параллельно.
 
 В соответствии с данными секции параметров [staticInstances](cr.html#nodegroup-v1-spec-staticinstances), CAPS будет пытаться поддерживать указанное (параметр [count](cr.html#nodegroup-v1-spec-staticinstances-count)) количество узлов в группе. При необходимости добавить узел в группу, CAPS выбирает соответствующий [фильтру](cr.html#nodegroup-v1-spec-staticinstances-labelselector) ресурс [StaticInstance](cr.html#staticinstance) находящийся в статусе `Pending`, настраивает сервер (ВМ) и добавляет узел в кластер. При необходимости удалить узел из группы, CAPS выбирает [StaticInstance](cr.html#staticinstance) находящийся в статусе `Running`, очищает сервер (ВМ) и удаляет узел из кластера (после чего, соответствующий `StaticInstance` переходит в состояние `Pending` и снова может быть использован).
+
+## Узлы Deckhouse Engine
+
+[Deckhouse Engine](/products/kubernetes-platform/documentation/v1/reference/deckhouse-engine.html) — гипервизор первого типа для узлов Deckhouse Platform: корень только для чтения, без bashible и без SSH. Группа узлов на Deckhouse Engine задаётся параметром [`spec.systemType: DeckhouseEngine`](cr.html#nodegroup-v1-spec-systemtype) ресурса NodeGroup. Без этого параметра или со значением `GenericOS` узлы группы настраивает bashible.
+
+Узлом Deckhouse Engine управляет агент `nodelet`. Желаемое состояние узла описывает ресурс [NodeConfig](cr.html#nodeconfig), по одному на узел:
+
+- NodeConfig создаётся при вводе узла — для первых master-узлов его пишет `dhctl bootstrap`, для статических узлов — команда `d8 node add`, для облачных — провайдер через cloud-init;
+- дальше NodeConfig отслеживает node-controller модуля, при изменении NodeGroup или параметров кластера он перегенерирует шаблон, сохраняя часть конфигурации машины (диск и сеть);
+- `nodelet` применяет `spec` и пишет результат в `status` — фазу узла и условия по каждой подсистеме.
+
+Шаблон NodeConfig для группы отдаёт агрегированный API `nodeconfigtemplates` (`templates.internal.deckhouse.io/v1alpha1`). Шаблон содержит действующие секреты группы (bootstrap-токен kubelet, доступ к хранилищу образов контейнеров), поэтому право читать его выдано роли `d8:manage:permission:module:node-manager:edit`, а не роли только для чтения. Этот API читает `d8 node add`.
+
+Особенности групп Deckhouse Engine:
+
+- `systemType: DeckhouseEngine` нельзя снять с группы или заменить на `GenericOS`. Группа может стать `DeckhouseEngine`, только пока в ней нет узлов, настроенных bashible.
+- Ресурс [NodeGroupConfiguration](cr.html#nodegroupconfiguration) на узлах Deckhouse Engine не выполняется.
+- Образ корня узла обновляется целиком, заменой образа и перезагрузкой. Обновление относится к прерывающим изменениям и выполняется по правилам [`disruptions`](cr.html#nodegroup-v1-spec-disruptions) группы. Если новый образ не загрузился, узел возвращается к прежнему.
+- Образы Deckhouse Engine (образ корня, установочный ISO-файл и готовый диск ВМ в формате qcow2) поставляются в составе модуля, их версия соответствует релизу платформы.
+
+Сценарий установки для статического кластера описан [в руководстве по установке и добавлению узлов](/products/kubernetes-platform/documentation/v1/installing/deckhouse-engine.html).
 
 ## Пользовательские настройки на узлах
 

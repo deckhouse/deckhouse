@@ -1,6 +1,6 @@
 ---
-title: "Managing nodes: examples"
-description: Examples of managing Kubernetes cluster nodes. Examples of creating a node group. Examples of automating the execution of arbitrary settings on a node.
+title: "Node-manager module: examples"
+description: Examples of creating node groups, adding Deckhouse Engine nodes, and configuring nodes with the node-manager module in Deckhouse Platform.
 ---
 
 Below are some examples of NodeGroup description, as well as installing the cert-manager plugin for `kubectl` and setting the `sysctl` parameter.

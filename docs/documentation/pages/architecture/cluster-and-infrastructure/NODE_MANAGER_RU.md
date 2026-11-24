@@ -19,3 +19,4 @@ description: Архитектура модуля node-manager в Deckhouse Platf
 * [Управление CloudStatic-узлами](cloud-static-nodes.html)
 * [Управление Static-узлами](static-nodes.html)
 * [Управление гибридными группами и кластерами](hybrid-nodegroups-and-clusters.html)
+* [Архитектура узлов Deckhouse Engine](deckhouse-engine.html)
