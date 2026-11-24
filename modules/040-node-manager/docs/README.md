@@ -1,11 +1,13 @@
 ---
-title: "Managing nodes"
-description: Deckhouse manages nodes of a Kubernetes cluster as a related group, configures and updates Kubernetes cluster node components, manages cluster scaling in the cloud, and manages Linux users on nodes.
+title: "Node-manager module"
+description: The `node-manager` module in Deckhouse Platform manages Kubernetes cluster nodes, configures and updates node components, scales nodes in the cloud, and manages Linux users.
 ---
 
-## Primary functions
+The `node-manager` module manages nodes in a Kubernetes cluster deployed with Deckhouse Platform. It configures and updates node software, supports cloud and static nodes, and manages Linux users.
 
-The `node-manager` module is responsible for managing nodes and has the following primary functions:
+## Main features
+
+The module provides the following features:
 
 1. Managing multiple nodes as a related group (**NodeGroup**):
     * The ability to define metadata that are inherited by all nodes in the group.
@@ -33,10 +35,7 @@ The `node-manager` module is responsible for managing nodes and has the followin
 
      Available for both [cloud providers](#scaling-nodes-in-the-cloud) and static nodes (when using [Cluster API Provider Static](#working-with-static-nodes)).
 1. Managing Linux users on nodes.
-1. Managing GPU resources on nodes:
-   * Automatic detection and enablement of NVIDIA GPU.
-   * Configurable GPU sharing modes per NodeGroup: Exclusive, TimeSlicing, MIG.
-   * Monitoring integration — ready-made Grafana dashboards are available to visualize key GPU metrics.
+1. Installing a cluster and adding worker nodes on Deckhouse Engine.
 
 Nodes are managed through the [NodeGroup](cr.html#nodegroup) resource, and each node group performs specific tasks. Below are examples of node groups pooled by their tasks performed:
 
@@ -66,7 +65,7 @@ The following node types that can be worked with within a node group (resource [
 - `Static` — a static node hosted on a bare metal or virtual machine. In the case of a cloud environment, the `cloud-controller-manager` does not manage the node even if one of the cloud providers is enabled. [Learn more about working with static nodes...](#working-with-static-nodes)
 
 {% alert level="info" %}
-For Deckhouse Virtualization Platform (DVP), the DVPClusterConfiguration resource is not used. The CloudPermanent node parameters are set in the [NodeGroup](cr.html#nodegroup), [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass), and [`cloud-provider-dvp`](/modules/cloud-provider-dvp/configuration.html) ModuleConfig resources.
+For Deckhouse Platform virtualization, the DVPClusterConfiguration resource is not used. The CloudPermanent node parameters are set in the [NodeGroup](cr.html#nodegroup), [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass), and [`cloud-provider-dvp`](/modules/cloud-provider-dvp/configuration.html) ModuleConfig resources.
 {% endalert %}
 
 ## Node grouping and group management
@@ -81,23 +80,23 @@ The following monitoring patterns are available for node groups:
 
 ## Delaying node reboot or shutdown while critical pods are running
 
-The `d8-shutdown-inhibitor` service in `node-manager` delays node shutdown or reboot if stateful applications or virtual machines (VMs) are running on the node. The delay is triggered if pods with the label `pod.deckhouse.io/inhibit-node-shutdown` are running on the node. DP delays the shutdown or reboot of the node so that the user can migrate critical pods or terminate them in a controlled manner. This is useful, for example, for stateful workloads and other scenarios where data loss must be avoided.
+The `d8-shutdown-inhibitor` service in `node-manager` delays node shutdown or reboot if stateful applications or virtual machines (VMs) are running on the node. The delay is triggered if pods with the label `pod.deckhouse.io/inhibit-node-shutdown` are running on the node. Deckhouse Platform delays the shutdown or reboot of the node so that the user can migrate critical pods or terminate them in a controlled manner. This is useful, for example, for stateful workloads and other scenarios where data loss must be avoided.
 
 ### How it works and key features
 
 The `d8-shutdown-inhibitor` service prevents a node from shutting down as long as there are pods on it with the `Running` status that are labeled `pod.deckhouse.io/inhibit-node-shutdown`. The `GracefulShutdownPostpone` condition is used for this blocking. Additionally, the node is cordoned off during the blocking period to prevent the scheduler from scheduling new pods on it. The kubelet reads the node’s `GracefulShutdownPostpone` condition and does not begin evicting pods marked with this label as long as the condition’s `status` is `True` and `reason` is `PodsWithLabelAreRunningOnNode`. If there are pods on the node with the label `pod.deckhouse.io/inhibit-node-shutdown`, a corresponding message is displayed in the node console (wall).
 
-#### Delaying mechanism features in DP
+#### Delaying mechanism features in Deckhouse Platform
 
-The delay in restarting or shutting down a node while critical pods are running on it has the following features in DP:
+The delay in restarting or shutting down a node while critical pods are running on it has the following features in Deckhouse Platform:
 
 * A label must be explicitly set on each pod that is to block shutdown. If pods are created via a Deployment, the label is specified in the pod template.
-* This mechanism works only with a modified kubelet version included in DP. The regular Kubernetes does not support this behavior.
+* This mechanism works only with a modified kubelet version included in Deckhouse Platform. The regular Kubernetes does not support this behavior.
 * The maximum block duration (`InhibitDelayMaxSec`) is `3` days. After this period expires, the shutdown may proceed regardless of whether there are pods on the node with the label `pod.deckhouse.io/inhibit-node-shutdown`.
 * This mechanism does not cancel the scheduling of [disruptive updates](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html#disruptive-updates) in `node-manager`. It only delays the actual reboot of the node at the time of shutdown.
 
 {% alert level="warning" %}
-To decide whether to block a node shutdown, DP additionally queries the NodeGroup. If the current node belongs to the `master` group and it is the only master node in the cluster, the shutdown block will not be applied to it.
+To decide whether to block a node shutdown, Deckhouse Platform additionally queries the NodeGroup. If the current node belongs to the `master` group and it is the only master node in the cluster, the shutdown block will not be applied to it.
 {% endalert %}
 
 For information on enabling the delay mechanism, refer to the section ["How to delay a node reboot while critical pods are running on it"](faq.html#how-to-enable-a-delay-before-a-node-shutdown-or-restart-while-critical-pods-are-running-on-it).
@@ -241,6 +240,27 @@ The workflow for dealing with static nodes when using Cluster API Provider Stati
 
 Using the data in the [staticInstances](cr.html#nodegroup-v1-spec-staticinstances) parameter section, CAPS attempts to maintain the specified number of nodes in the group ([count](cr.html#nodegroup-v1-spec-staticinstances-count) parameter). If a node needs to be added to the group, CAPS selects the resource [StaticInstance](cr.html#nodegroup-v1-spec-staticinstances-labelselector) that matches the [filter](cr.html#staticinstance) and is in the `Pending` state, configures the server (VM), and joins the node to the cluster. If a node needs to be removed from the group, CAPS selects the [StaticInstance](cr.html#staticinstance) that is in the `Running` state, cleans up the server (VM) and disconnects the node from the cluster (the corresponding `StaticInstance` then goes to the `Pending` state and can be reused).
 
+## Deckhouse Engine nodes
+
+[Deckhouse Engine](/products/kubernetes-platform/documentation/v1/reference/deckhouse-engine.html) is a type-1 hypervisor for Deckhouse Platform nodes with a read-only root file system. Deckhouse Engine nodes run without bashible or SSH. To use Deckhouse Engine for a node group, set [`spec.systemType: DeckhouseEngine`](cr.html#nodegroup-v1-spec-systemtype) in its NodeGroup. Bashible configures nodes in groups with `systemType: GenericOS` or with the field unset.
+
+The `nodelet` agent manages each node and uses its [NodeConfig](cr.html#nodeconfig) as the desired state.
+
+- NodeConfig is created when the node joins. `dhctl bootstrap` provides the configuration for the initial master nodes, `d8 node add` provides it for static nodes, and the cloud provider supplies it through cloud-init for cloud nodes.
+- The module's `node-controller` tracks NodeConfig. When NodeGroup or cluster settings change, it regenerates the template and preserves the machine's disk and network settings.
+- `nodelet` applies `spec` and records the node phase and the conditions for each subsystem in `status`.
+
+The `d8 node add` command reads the group's NodeConfig template from the aggregated `nodeconfigtemplates` API (`templates.internal.deckhouse.io/v1alpha1`). The template contains the group's active credentials, including the kubelet bootstrap token and credentials for the container image registry. Access to the template requires the `d8:manage:permission:module:node-manager:edit` role with edit permissions.
+
+Deckhouse Engine node groups use the following configuration and update rules.
+
+- Set `systemType: DeckhouseEngine` while the group has no nodes configured by bashible. The setting is permanent once applied to a group.
+- Deckhouse Engine nodes do not run scripts defined in [NodeGroupConfiguration](cr.html#nodegroupconfiguration).
+- A root image update replaces the entire image and reboots the node according to the group's [`disruptions`](cr.html#nodegroup-v1-spec-disruptions) rules. If the new image fails to boot, the node returns to the previous image.
+- The `node-manager` module ships the Deckhouse Engine root image, the installation ISO file, and a prebuilt virtual machine disk in qcow2 format. The image version corresponds to the Deckhouse Platform release.
+
+For a static cluster, follow the [installation and node addition guide](/products/kubernetes-platform/documentation/v1/installing/deckhouse-engine.html).
+
 ## Custom node settings
 
 The [NodeGroupConfiguration](cr.html#nodegroupconfiguration) resource allows you to automate actions on group nodes. It supports running bash scripts on nodes (you can use the [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster) command set) as well as the [Go Template](https://pkg.go.dev/text/template) templating engine, and is a great way to automate operations such as:
@@ -249,8 +269,7 @@ The [NodeGroupConfiguration](cr.html#nodegroupconfiguration) resource allows you
 
   Examples:  
 
-  - [installing the plugin for kubectl](examples.html#installing-the-cert-manager-plugin-for-kubectl-on-master-nodes);  
-  - [installing containerd with Nvidia GPU support](faq.html#how-to-use-containerd-with-nvidia-gpu-support).
+  - [installing the plugin for kubectl](examples.html#installing-the-cert-manager-plugin-for-kubectl-on-master-nodes).
 
 - Updating the OS kernel to a specific version.
   
@@ -420,7 +439,7 @@ The instrument (you can enable it for each `NodeGroup` individually) for unexpec
 
 ## Monitoring
 
-DP exports the group availability Prometheus metrics for each `NodeGroup`.
+Deckhouse Platform exports the group availability Prometheus metrics for each `NodeGroup`.
 
 ### What information does Prometheus collect and in what form?
 

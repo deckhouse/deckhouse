@@ -50,6 +50,8 @@ relatedLinks:
 
 - **В существующем кластере Kubernetes.** Установщик разворачивает Deckhouse Platform и интегрирует его с текущей инфраструктурой. Пошаговые инструкции по развертыванию в существующем кластере можно найти в разделе [«Быстрый старт» → «Deckhouse Platform в существующем кластере»]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/existing/step2.html).
 
+Если узлы будут работать на Deckhouse Engine, используйте [сценарий установки на bare metal](deckhouse-engine.html).
+
 ## Требования к установке
 
 Перед началом установки ознакомьтесь со сценариями развертывания Deckhouse Platform и требованиями к установке в разделе [«Системные требования»](../requirements/).

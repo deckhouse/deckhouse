@@ -265,7 +265,7 @@ properties:
             type: object
             default: {}
             description: |
-              Fencing mode and the Engine flag of every NodeGroup by group name. The mode is normalized: `Watchdog` is `Slow`, and `off`, `Notify` and unknown values are `Disabled`.
+              Fencing mode and the Deckhouse Engine flag of every NodeGroup by group name. The mode is normalized: `Watchdog` is `Slow`, and `off`, `Notify` and unknown values are `Disabled`.
             additionalProperties:
               type: object
               required: [mode]
@@ -276,7 +276,7 @@ properties:
                 engine:
                   type: boolean
                   description: |
-                    The NodeGroup runs on Deckhouse Engine (`spec.systemType: Immutable`).
+                    The NodeGroup runs on Deckhouse Engine (`spec.systemType: DeckhouseEngine`).
             x-examples:
               - workers:
                   mode: Slow

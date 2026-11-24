@@ -645,6 +645,31 @@ groups:
       en: This port may be needed for direct access to `kube-apiserver` bypassing Ingress / Gateway API when publishing through a [load balancer](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authentication/k8s-api-lb.html) is not configured or unavailable due to infrastructure constraints
       ru: Этот порт может понадобиться для прямого доступа к `kube-apiserver` в обход Ingress / Gateway API, если [публикация через балансировщик](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authentication/k8s-api-lb.html) не настроена или недоступна из-за особенностей инфраструктуры
 
+- group: ExternalToEngineNodes
+  description:
+    en: External traffic to Deckhouse Engine nodes
+    ru: Внешний трафик к узлам Deckhouse Engine
+  note:
+    en: "The ports in this section are needed only for nodes of groups with `systemType: DeckhouseEngine`."
+    ru: "Порты этого раздела нужны только для узлов групп с `systemType: DeckhouseEngine`."
+  destinations:
+  - ports: "50000"
+    protocol: TCP
+    description:
+      en: Passing the node configuration from `dhctl` or `d8 node add` to the machine, and the node maintenance portal
+      ru: Передача конфигурации узла на машину из `dhctl` или `d8 node add` и портал обслуживания узла
+    optional_description:
+      en: Access is needed from the host where `dhctl` or `d8 node add` runs. The installer does not check who passes the configuration, so allow access only from a trusted network
+      ru: Доступ нужен с хоста, где запускается `dhctl` или `d8 node add`. Установщик не проверяет, кто передаёт конфигурацию, поэтому разрешайте доступ только из доверенной сети
+  - ports: "50001"
+    protocol: TCP
+    description:
+      en: Handing over the access to the cluster to `dhctl` when installing the first master nodes
+      ru: Передача доступа к кластеру в `dhctl` при установке первых master-узлов
+    optional_description:
+      en: Required only when installing the first master nodes, from the host where `dhctl` runs
+      ru: Требуется только при установке первых master-узлов, с хоста, где запускается `dhctl`
+
 - group: ExternalToFrontends
   description:
     en: External traffic to frontend nodes
