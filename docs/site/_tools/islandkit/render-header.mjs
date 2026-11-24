@@ -64,6 +64,8 @@ const RU_LOCKUPS = {
   'observability-platform': 'observability',
   code: 'code',
   'development-portal': 'development-platform',
+  galleon: 'galleon',
+  airlock: 'airlock',
 }
 
 const args = process.argv.slice(2)
